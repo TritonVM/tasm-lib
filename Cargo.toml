@@ -1,0 +1,19 @@
+[package]
+name = "tasm-snippets"
+version = "0.1.0"
+edition = "2021"
+authors = ["Triton Software AG"]
+
+description = "Code snippets for Triton VM assembly with tests and statistics."
+readme = "../README.md"
+
+[dev-dependencies.cargo-husky]
+version = "1"
+default-features = false
+features = ["precommit-hook", "run-cargo-clippy", "run-cargo-fmt"]
+
+[dependencies]
+triton-vm = "0.3.1"
+
+# the twenty-first version must match the one used in triton-vm
+twenty-first = "0.3.1"
