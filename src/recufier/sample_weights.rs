@@ -47,13 +47,9 @@ decr:
 
 pub const SAMPLE_WEIGHT: &str = "
 sample_weight:
-    push 0
-    push 0
-    push 0
-    push 0
     hash
-    pop pop pop pop pop pop pop
-    write_io write_io write_io
+    pop pop pop 
+    pop pop pop pop
     return
 ";
 #[cfg(test)]
@@ -89,11 +85,8 @@ mod sample_weights_tests {
 
         XFieldElement::new([w0, w1, w2])
     }
-    // rust_output = [🥰😉🐶], [🍆🐍🐭], [😎😍👎]
-    // tasm_output = [🐷😎🐶], [😱🐱👏], [🤐😅😱]
-
-    // rust_output = [🤖🐭😅], [😆🐱🤑], [👍🤣🎂]
-    // tasm_output = [🐷😎🐶], [😱🐱👏], [🤐😅😱]
+    // rust_output = [🤖🙄🍺], [👽🙄🤖], [😆😱🐱]
+    // tasm_output = [🤐😋🤑], [🍑👍🍆], [😂😆🥰]
 
     #[test]
     fn run_sample_weight_equivalency_test() {
