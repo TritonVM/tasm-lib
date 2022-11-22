@@ -8,32 +8,45 @@ pub const SAMPLE_WEIGHTS: &str = "
 #[cfg(test)]
 mod sample_weights_tests {
     use itertools::Itertools;
+    use num::Zero;
     use rand::Rng;
-    use triton_vm::{stark::StarkHasher, vm::Program};
-    use twenty_first::{
-        shared_math::{
-            b_field_element::BFieldElement, rescue_prime_digest::Digest,
-            x_field_element::XFieldElement,
-        },
-        util_types::algebraic_hasher::{AlgebraicHasher, Hashable},
-    };
+    use rayon::prelude::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
+
+    use triton_vm::vm::Program;
+    use twenty_first::shared_math::b_field_element::BFieldElement;
+    use twenty_first::shared_math::rescue_prime_digest::Digest;
+    use twenty_first::shared_math::rescue_prime_regular::RescuePrimeRegular;
+    use twenty_first::shared_math::x_field_element::XFieldElement;
+    use twenty_first::util_types::algebraic_hasher::{AlgebraicHasher, Hashable};
 
     use super::*;
 
-    fn sample_weights(seed: Digest, num_weights: usize) -> Vec<XFieldElement> {
-        StarkHasher::get_n_hash_rounds(&seed, num_weights)
-            .iter()
-            .map(XFieldElement::sample)
-            .collect()
+    fn sample_weights<H: AlgebraicHasher>(seed: Digest, num_weights: usize) -> Vec<XFieldElement> {
+        let mut digests = Vec::with_capacity(num_weights);
+        (0..num_weights)
+            .into_par_iter()
+            .map(|counter: usize| sample_weight::<H>(&seed, counter))
+            .collect_into_vec(&mut digests);
+        digests
+    }
+
+    fn sample_weight<H: AlgebraicHasher>(seed: &Digest, counter: usize) -> XFieldElement {
+        let zero = BFieldElement::zero();
+        let counter = BFieldElement::new(counter as u64);
+        let left = Digest::new([zero, zero, zero, zero, counter]);
+        let [_, _, w0, w1, w2] = H::hash_pair(&left, seed).values();
+
+        XFieldElement::new([w0, w1, w2])
     }
 
     #[test]
     fn run_sample_weights_equivalency_test() {
+        type H = RescuePrimeRegular;
         let mut rng = rand::thread_rng();
         let num_weights = 4;
         let seed: Digest = rng.gen();
 
-        let rust_output: Vec<BFieldElement> = sample_weights(seed, num_weights)
+        let rust_output: Vec<BFieldElement> = sample_weights::<H>(seed, num_weights)
             .iter()
             .flat_map(|xfe| xfe.coefficients)
             .collect();
