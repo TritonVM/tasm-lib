@@ -1,7 +1,8 @@
-use triton_vm::{op_stack::OP_STACK_REG_COUNT, state::VMState, stdio::VecStream, vm::Program};
+use triton_vm::{op_stack::OP_STACK_REG_COUNT, state::VMState, vm::Program};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 mod other_snippets;
+mod recufier;
 
 pub struct ExecutionResult {
     pub output: Vec<BFieldElement>,
@@ -30,20 +31,17 @@ pub fn execute(
 
     // Run the program, including the stack preparation logic
     let program = Program::from_code(&executed_code).expect("Could not load source code: {}");
-    let mut std_input = VecStream::new(&std_in);
-    let mut secret_in = VecStream::new(&secret_in);
-    let mut output = VecStream::new(&[]);
-    let (execution_trace, err) = program.run(&mut std_input, &mut secret_in, &mut output);
+    let (execution_trace, output, err) = program.run(std_in, secret_in);
     if let Some(e) = err {
         panic!("Running the program failed: {}\n\n\n Program: {}", e, code)
     }
 
-    let end_state: VMState = execution_trace
+    let _end_state: VMState = execution_trace
         .last()
         .expect("VM state list cannot be empty")
         .to_owned();
-    assert!(!end_state.op_stack.is_too_shallow(), "Stack underflow");
-    *stack = end_state.op_stack.stack;
+    // assert!(!end_state.op_stack.is_too_shallow(), "Stack underflow");
+    // *stack = end_state.op_stack.stack;
 
     for _i in 0..OP_STACK_REG_COUNT {
         stack.remove(0);
@@ -56,7 +54,7 @@ pub fn execute(
     );
 
     ExecutionResult {
-        output: output.to_bword_vec(),
+        output,
 
         // Cycle count is cycles it took to run program excluding the cycles that were
         // spent on preparing the stack
