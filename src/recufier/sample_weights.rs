@@ -7,6 +7,7 @@ pub const SAMPLE_WEIGHTS: &str = "
 
 #[cfg(test)]
 mod sample_weights_tests {
+    use itertools::Itertools;
     use rand::Rng;
     use triton_vm::{stark::StarkHasher, vm::Program};
     use twenty_first::{
@@ -29,7 +30,7 @@ mod sample_weights_tests {
     #[test]
     fn run_sample_weights_equivalency_test() {
         let mut rng = rand::thread_rng();
-        let num_weights = 5;
+        let num_weights = 4;
         let seed: Digest = rng.gen();
 
         let rust_output: Vec<BFieldElement> = sample_weights(seed, num_weights)
@@ -56,13 +57,19 @@ mod sample_weights_tests {
 
         let program = Program::from_code(&test_code).unwrap();
 
-        let (_states, tasm_stdout, _err) = program.run(stdin, vec![]);
+        let (_states, tasm_output, _err) = program.run(stdin, vec![]);
 
         for state in _states.iter() {
             println!("{}", state);
         }
 
-        assert_eq!(rust_output, tasm_stdout)
+        let a = rust_output.iter().map(|bfe| bfe.emojihash()).join(", ");
+        let b = tasm_output.iter().map(|bfe| bfe.emojihash()).join(", ");
+        assert_eq!(
+            rust_output, tasm_output,
+            "\nrust_output = {}\ntasm_output = {}",
+            a, b,
+        );
 
         // tasm:
         // 4. kør programmet halt, navngiv det sample-weights: &str

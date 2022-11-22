@@ -14,7 +14,6 @@ features = ["precommit-hook", "run-cargo-clippy", "run-cargo-fmt"]
 
 [dependencies]
 triton-vm = "0.7.0"
-rand = "0.8.5"
-
-# the twenty-first version must match the one used in triton-vm
 twenty-first = "0.7.0"
+rand = "0.8.5"
+itertools = "0.10.5"
