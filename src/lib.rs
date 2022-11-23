@@ -41,12 +41,12 @@ pub fn execute(
         panic!("Running the program failed: {}\n\n\n Program: {}", e, code)
     }
 
-    let _end_state: VMState = execution_trace
+    let end_state: VMState = execution_trace
         .last()
         .expect("VM state list cannot be empty")
         .to_owned();
-    // assert!(!end_state.op_stack.is_too_shallow(), "Stack underflow");
-    // *stack = end_state.op_stack.stack;
+    assert!(!end_state.op_stack.is_too_shallow(), "Stack underflow");
+    *stack = end_state.op_stack.stack;
 
     assert_eq!(
         expected_final_stack_height,
@@ -59,6 +59,6 @@ pub fn execute(
 
         // Cycle count is cycles it took to run program excluding the cycles that were
         // spent on preparing the stack
-        cycle_count: execution_trace.len() - init_stack_length - 1,
+        cycle_count: execution_trace.len() - (init_stack_length - OP_STACK_REG_COUNT) - 1,
     }
 }
