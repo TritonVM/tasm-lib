@@ -28,7 +28,7 @@ mod tests {
         println!("Cycle count for `add`: {}", execution_result.cycle_count);
 
         // Rust
-        let mut rust_stack = init_stack.clone();
+        let mut rust_stack = init_stack;
         _halt_tasm(&mut rust_stack);
 
         // Check that the two functions agree
