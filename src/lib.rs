@@ -1,3 +1,4 @@
+use num_traits::Zero;
 use triton_vm::{op_stack::OP_STACK_REG_COUNT, state::VMState, vm::Program};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
@@ -9,11 +10,15 @@ pub struct ExecutionResult {
     pub cycle_count: usize,
 }
 
+pub fn get_init_tvm_stack() -> Vec<BFieldElement> {
+    vec![BFieldElement::zero(); OP_STACK_REG_COUNT]
+}
+
 /// Execute a Triton-VM program and return its output and execution trace length
 pub fn execute(
     code: &str,
     stack: &mut Vec<BFieldElement>,
-    final_stack_height: usize,
+    expected_final_stack_height: usize,
     std_in: Vec<BFieldElement>,
     secret_in: Vec<BFieldElement>,
 ) -> ExecutionResult {
@@ -22,7 +27,7 @@ pub fn execute(
     // Prepend to program the initial stack values such that stack is in the expected
     // state when program logic is executed
     let mut executed_code: String = String::default();
-    for element in stack.iter() {
+    for element in stack.iter().skip(OP_STACK_REG_COUNT) {
         executed_code.push_str(&format!("push {}\n", element.value()));
     }
 
@@ -43,12 +48,8 @@ pub fn execute(
     // assert!(!end_state.op_stack.is_too_shallow(), "Stack underflow");
     // *stack = end_state.op_stack.stack;
 
-    for _i in 0..OP_STACK_REG_COUNT {
-        stack.remove(0);
-    }
-
     assert_eq!(
-        final_stack_height,
+        expected_final_stack_height,
         stack.len(),
         "Stack must match expected height"
     );

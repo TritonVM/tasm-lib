@@ -65,6 +65,7 @@ mod sample_weights_tests {
     use twenty_first::shared_math::rescue_prime_regular::RescuePrimeRegular;
     use twenty_first::shared_math::x_field_element::XFieldElement;
     use twenty_first::util_types::algebraic_hasher::{AlgebraicHasher, Hashable};
+    use twenty_first::util_types::emojihash_trait::Emojihash;
 
     use super::*;
 
