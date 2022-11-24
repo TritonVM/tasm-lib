@@ -22,3 +22,9 @@ TVM version when appropriate.
 | halt    |     sword_smith     |    20221121 |       0.3.1 |                        ✅ |       |           0 |                 0 |
 | bfe_add |     sword_smith     |    20221121 |       0.3.1 |                        ✅ |       |           1 |                 0 |
 | hash    | sshine, sword_smith |    20221124 |       0.7.2 |                        ✅ |       |           0 |                 9 |
+
+## U32s, size 2
+| Name |      Author(s)      | Last edited | TVM version | Tested and Rust-shadowed | Notes | Cycle Count common | Cycle Count worst-case | Hash table height |
+| ---- | :-----------------: | ----------: | ----------: | -----------------------: | :---: | -----------------: | ---------------------: | ----------------: |
+| incr | sshine, sword_smith |    20221124 |       0.7.2 |                        ✅ |       |                  8 |                     20 |                 0 |
+| decr |     sword_smith     |    20221124 |       0.7.2 |                        ✅ |       |                  8 |                     20 |                 0 |
