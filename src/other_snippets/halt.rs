@@ -23,22 +23,25 @@ mod tests {
         // TASM
         let init_stack = get_init_tvm_stack();
 
-        let mut tvm_stack = init_stack.clone();
-        let execution_result = _halt_tasm(&mut tvm_stack);
-        println!("Cycle count for `add`: {}", execution_result.cycle_count);
+        let mut tasm_stack = init_stack.clone();
+        let execution_result = _halt_tasm(&mut tasm_stack);
+        println!("Cycle count for `halt`: {}", execution_result.cycle_count);
+        println!(
+            "Hash table height for `hash`: {}",
+            execution_result.hash_table_height
+        );
 
         // Rust
-        let mut rust_stack = init_stack;
+        let mut rust_stack = init_stack.clone();
         _halt_tasm(&mut rust_stack);
 
         // Check that the two functions agree
-        assert_eq!(tvm_stack, rust_stack, "Rust code must match TVM for `add`");
+        assert_eq!(
+            tasm_stack, rust_stack,
+            "Rust code must match TVM for `halt`"
+        );
 
         // Check that the expected result is returned
-        assert_eq!(
-            get_init_tvm_stack(),
-            tvm_stack,
-            "Stack must match expected value"
-        );
+        assert_eq!(init_stack, tasm_stack, "Stack must match expected value");
     }
 }

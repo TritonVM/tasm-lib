@@ -9,15 +9,16 @@ then add a new line to the appropriate table, add a comment to the two relevant 
 TVM version when appropriate.
 
 ## Consensus Code
-| Name     |      Author(s)                   |  Last edited |  TVM version |   Tested and Rust-shadowed  | Notes                            |  Cycle Count |
-|----------|:--------------------------------:|-------------:|-------------:|----------------------------:|:--------------------------------:|-------------:|
+| Name | Author(s) | Last edited | TVM version | Tested and Rust-shadowed | Notes | Cycle Count |
+| ---- | :-------: | ----------: | ----------: | -----------------------: | :---: | ----------: |
 
 ## Recufi Code
-| Name     |      Author(s)                   |  Last edited |  TVM version |   Tested and Rust-shadowed  | Notes                            |  Cycle Count |
-|----------|:--------------------------------:|-------------:|-------------:|----------------------------:|:--------------------------------:|-------------:|
+| Name | Author(s) | Last edited | TVM version | Tested and Rust-shadowed | Notes | Cycle Count |
+| ---- | :-------: | ----------: | ----------: | -----------------------: | :---: | ----------: |
 
 ## Other Code Snippets
-| Name     |      Author(s)                   |  Last edited |  TVM version |   Tested and Rust-shadowed  | Notes                            |  Cycle Count |
-|----------|:--------------------------------:|-------------:|-------------:|----------------------------:|:--------------------------------:|-------------:|
-| halt     |        sword_smith               |    20221121  | 0.3.1        |               ✅            |                                  | 0            |
-| bfe_add  |        sword_smith               |    20221121  | 0.3.1        |               ✅            |                                  | 1            |
+| Name    |      Author(s)      | Last edited | TVM version | Tested and Rust-shadowed | Notes | Cycle Count | Hash table height |
+| ------- | :-----------------: | ----------: | ----------: | -----------------------: | :---: | ----------: | ----------------: |
+| halt    |     sword_smith     |    20221121 |       0.3.1 |                        ✅ |       |           0 |                 0 |
+| bfe_add |     sword_smith     |    20221121 |       0.3.1 |                        ✅ |       |           1 |                 0 |
+| hash    | sshine, sword_smith |    20221124 |       0.7.2 |                        ✅ |       |           0 |                 9 |

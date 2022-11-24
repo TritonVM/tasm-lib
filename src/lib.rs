@@ -8,6 +8,7 @@ mod recufier;
 pub struct ExecutionResult {
     pub output: Vec<BFieldElement>,
     pub cycle_count: usize,
+    pub hash_table_height: usize,
 }
 
 pub fn get_init_tvm_stack() -> Vec<BFieldElement> {
@@ -36,9 +37,18 @@ pub fn execute(
 
     // Run the program, including the stack preparation logic
     let program = Program::from_code(&executed_code).expect("Could not load source code: {}");
-    let (execution_trace, output, err) = program.run(std_in, secret_in);
+    let (execution_trace, output, err) = program.run(std_in.clone(), secret_in.clone());
     if let Some(e) = err {
         panic!("Running the program failed: {}\n\n\n Program: {}", e, code)
+    }
+
+    // Simulate the program, since this gives us hash table output
+    let (simulation_trace, _simulation_output, err) = program.simulate(std_in, secret_in);
+    if let Some(e) = err {
+        panic!(
+            "Simulating the program failed: {}\n\n\n Program: {}",
+            e, code
+        )
     }
 
     let end_state: VMState = execution_trace
@@ -60,5 +70,8 @@ pub fn execute(
         // Cycle count is cycles it took to run program excluding the cycles that were
         // spent on preparing the stack
         cycle_count: execution_trace.len() - (init_stack_length - OP_STACK_REG_COUNT) - 1,
+
+        // Number of rows generated in the hash table after simulating program
+        hash_table_height: simulation_trace.hash_matrix.len(),
     }
 }

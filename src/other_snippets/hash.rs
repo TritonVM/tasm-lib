@@ -49,8 +49,7 @@ fn _hash_rust(stack: &mut Vec<BFieldElement>) {
 }
 
 #[cfg(test)]
-mod hashing_tests {
-
+mod tests {
     use crate::get_init_tvm_stack;
 
     use super::*;
@@ -62,6 +61,10 @@ mod hashing_tests {
         let mut tasm_stack = init_stack.clone();
         let execution_result = _hash_tasm(&mut tasm_stack);
         println!("Cycle count for `hash`: {}", execution_result.cycle_count);
+        println!(
+            "Hash table height for `hash`: {}",
+            execution_result.hash_table_height
+        );
 
         let mut rust_stack = init_stack;
         _hash_rust(&mut rust_stack);
