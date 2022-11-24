@@ -175,12 +175,12 @@ mod sample_weights_tests {
             println!("{}", state);
         }
 
-        let a = rust_output.iter().map(|bfe| bfe.emojihash()).join(", ");
-        let b = tasm_output.iter().map(|bfe| bfe.emojihash()).join(", ");
         assert_eq!(
-            rust_output, tasm_output,
+            rust_output,
+            tasm_output,
             "\nrust_output = {}\ntasm_output = {}",
-            a, b,
+            rust_output.emojihash(),
+            tasm_output.emojihash(),
         );
     }
 }
