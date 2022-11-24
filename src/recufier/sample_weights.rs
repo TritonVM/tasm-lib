@@ -45,7 +45,7 @@ decr:
     return
 ";
 
-pub const SAMPLE_WEIGHT: &str = "
+pub const _SAMPLE_WEIGHT: &str = "
 sample_weight:
     hash
     pop pop pop 
@@ -56,7 +56,6 @@ sample_weight:
 mod sample_weights_tests {
     use itertools::Itertools;
     use num::Zero;
-    use rand::Rng;
     use rayon::prelude::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
 
     use triton_vm::vm::Program;
@@ -90,9 +89,9 @@ mod sample_weights_tests {
     // tasm_output = [🤐😋🤑], [🍑👍🍆], [😂😆🥰]
 
     #[test]
+    #[ignore = "not completed"]
     fn run_sample_weight_equivalency_test() {
         type H = RescuePrimeRegular;
-        let mut rng = rand::thread_rng();
         let num_weights = 1;
         let seed: Digest = H::hash(&BFieldElement::from(1u64));
 
@@ -118,7 +117,7 @@ mod sample_weights_tests {
                 halt
         ";
 
-        let test_code = format!("{test_sample_weights}{SAMPLE_WEIGHT}");
+        let test_code = format!("{test_sample_weights}{_SAMPLE_WEIGHT}");
 
         let program = Program::from_code(&test_code).unwrap();
 
@@ -138,9 +137,9 @@ mod sample_weights_tests {
     }
 
     #[test]
+    #[ignore = "not completed"]
     fn run_sample_weights_equivalency_test() {
         type H = RescuePrimeRegular;
-        let mut rng = rand::thread_rng();
         let num_weights = 1;
         let seed: Digest = H::hash(&BFieldElement::from(1u64));
 
