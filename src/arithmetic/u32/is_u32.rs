@@ -4,11 +4,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::{execute, ExecutionResult};
 
-/// Place 1 on stack iff top element is less than $2^32$. Otherwise
-/// place 0 on stack. Consumes top element of stack, leaves a boolean
-/// on top of stack. So this subroutine does not change the height
-/// of the stack
-fn _u32_is_u32_tasm(stack: &mut Vec<BFieldElement>) -> ExecutionResult {
+pub fn _get_code() -> String {
     let mut unrolled_loop: String = String::default();
     for _ in 0..32 {
         unrolled_loop.push_str("lsb\n");
@@ -21,7 +17,21 @@ fn _u32_is_u32_tasm(stack: &mut Vec<BFieldElement>) -> ExecutionResult {
         eq
     "
     );
-    execute(code, stack, OP_STACK_REG_COUNT + 1, vec![], vec![])
+
+    code.to_string()
+}
+
+/// Place 1 on stack iff top element is less than $2^32$. Otherwise
+/// place 0 on stack. Consumes top element of stack, leaves a boolean
+/// on top of stack. So this subroutine does not change the height
+/// of the stack
+fn _u32_is_u32_tasm(stack: &mut Vec<BFieldElement>) -> ExecutionResult {
+    let mut unrolled_loop: String = String::default();
+    for _ in 0..32 {
+        unrolled_loop.push_str("lsb\n");
+        unrolled_loop.push_str("pop\n");
+    }
+    execute(&_get_code(), stack, OP_STACK_REG_COUNT + 1, vec![], vec![])
 }
 
 fn _u32_is_u32_rust(stack: &mut Vec<BFieldElement>) {
@@ -70,7 +80,7 @@ mod tests {
         for _ in 0..10 {
             prop_is_u32(BFieldElement::new(rng.next_u32() as u64), &stack_true);
             prop_is_u32(
-                BFieldElement::new((rng.next_u32() as u64) + 1u64 << 32),
+                BFieldElement::new((rng.next_u32() as u64) + (1u64 << 32)),
                 &stack_false,
             );
         }
