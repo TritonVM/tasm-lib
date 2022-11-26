@@ -5,6 +5,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 mod arithmetic;
 mod other_snippets;
 mod recufier;
+mod snippet_trait;
 
 pub struct ExecutionResult {
     pub output: Vec<BFieldElement>,
