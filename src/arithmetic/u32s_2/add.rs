@@ -53,7 +53,11 @@ impl Snippet for U32Add {
         code.to_string()
     }
 
-    fn rust_shadowing(stack: &mut Vec<BFieldElement>) {
+    fn rust_shadowing(
+        stack: &mut Vec<BFieldElement>,
+        _std_in: Vec<BFieldElement>,
+        _secret_in: Vec<BFieldElement>,
+    ) {
         // top element on stack
         let a0: u32 = stack.pop().unwrap().try_into().unwrap();
         let b0: u32 = stack.pop().unwrap().try_into().unwrap();
@@ -195,7 +199,7 @@ mod tests {
         );
 
         let mut rust_stack = init_stack;
-        U32Add::rust_shadowing(&mut rust_stack);
+        U32Add::rust_shadowing(&mut rust_stack, vec![], vec![]);
 
         assert_eq!(tasm_stack, rust_stack, "Rust code must match TVM for `add`");
         if let Some(expected) = expected {

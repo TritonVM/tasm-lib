@@ -15,7 +15,11 @@ impl Snippet for BfeAdd {
         "add".to_string()
     }
 
-    fn rust_shadowing(stack: &mut Vec<BFieldElement>) {
+    fn rust_shadowing(
+        stack: &mut Vec<BFieldElement>,
+        _std_in: Vec<BFieldElement>,
+        _secret_in: Vec<BFieldElement>,
+    ) {
         let a = stack.pop().unwrap();
         let b = stack.pop().unwrap();
         stack.push(a + b);
@@ -43,7 +47,7 @@ mod tests {
 
         // Rust
         let mut rust_stack = init_stack;
-        BfeAdd::rust_shadowing(&mut rust_stack);
+        BfeAdd::rust_shadowing(&mut rust_stack, vec![], vec![]);
 
         // Check that the two functions agree
         assert_eq!(tvm_stack, rust_stack, "Rust code must match TVM for `add`");

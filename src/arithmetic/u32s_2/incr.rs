@@ -45,7 +45,11 @@ impl Snippet for U322Incr {
         code.to_string()
     }
 
-    fn rust_shadowing(stack: &mut Vec<BFieldElement>) {
+    fn rust_shadowing(
+        stack: &mut Vec<BFieldElement>,
+        _std_in: Vec<BFieldElement>,
+        _secret_in: Vec<BFieldElement>,
+    ) {
         let a: u32 = stack.pop().unwrap().try_into().unwrap();
         let b: u32 = stack.pop().unwrap().try_into().unwrap();
         let ab = U32s::<2>::new([a, b]);
@@ -100,7 +104,7 @@ mod tests {
         init_stack.push(max_value.as_ref()[0].into());
 
         let mut rust_stack = init_stack;
-        U322Incr::rust_shadowing(&mut rust_stack);
+        U322Incr::rust_shadowing(&mut rust_stack, vec![], vec![]);
     }
 
     fn prop_incr(some_value: U32s<2>) {
@@ -120,7 +124,7 @@ mod tests {
         );
 
         let mut rust_stack = init_stack;
-        U322Incr::rust_shadowing(&mut rust_stack);
+        U322Incr::rust_shadowing(&mut rust_stack, vec![], vec![]);
 
         assert_eq!(
             tasm_stack, rust_stack,

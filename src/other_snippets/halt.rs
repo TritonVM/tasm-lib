@@ -15,7 +15,12 @@ impl Snippet for Halt {
         "halt".to_string()
     }
 
-    fn rust_shadowing(_stack: &mut Vec<BFieldElement>) {}
+    fn rust_shadowing(
+        _stack: &mut Vec<BFieldElement>,
+        _std_in: Vec<BFieldElement>,
+        _secret_in: Vec<BFieldElement>,
+    ) {
+    }
 }
 
 #[cfg(test)]
@@ -39,7 +44,7 @@ mod tests {
 
         // Rust
         let mut rust_stack = init_stack.clone();
-        Halt::rust_shadowing(&mut rust_stack);
+        Halt::rust_shadowing(&mut rust_stack, vec![], vec![]);
 
         // Check that the two functions agree
         assert_eq!(

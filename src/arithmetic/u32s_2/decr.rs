@@ -49,7 +49,11 @@ impl Snippet for U322Decr {
         code.to_string()
     }
 
-    fn rust_shadowing(stack: &mut Vec<BFieldElement>) {
+    fn rust_shadowing(
+        stack: &mut Vec<BFieldElement>,
+        _std_in: Vec<BFieldElement>,
+        _secret_in: Vec<BFieldElement>,
+    ) {
         let a: u32 = stack.pop().unwrap().try_into().unwrap();
         let b: u32 = stack.pop().unwrap().try_into().unwrap();
         let ab = U32s::<2>::new([a, b]);
@@ -90,7 +94,7 @@ mod tests {
         init_stack.push(zero.as_ref()[0].into());
 
         let mut tasm_stack = init_stack.clone();
-        U322Decr::rust_shadowing(&mut tasm_stack);
+        U322Decr::rust_shadowing(&mut tasm_stack, vec![], vec![]);
     }
 
     #[test]
@@ -140,7 +144,7 @@ mod tests {
         );
 
         let mut rust_stack = init_stack;
-        U322Decr::rust_shadowing(&mut rust_stack);
+        U322Decr::rust_shadowing(&mut rust_stack, vec![], vec![]);
 
         assert_eq!(
             tasm_stack, rust_stack,

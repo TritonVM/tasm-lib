@@ -33,7 +33,11 @@ impl Snippet for IsU32 {
         code.to_string()
     }
 
-    fn rust_shadowing(stack: &mut Vec<BFieldElement>) {
+    fn rust_shadowing(
+        stack: &mut Vec<BFieldElement>,
+        _std_in: Vec<BFieldElement>,
+        _secret_in: Vec<BFieldElement>,
+    ) {
         let top = stack.pop().unwrap();
         stack.push(if top.value() < (1 << 32) {
             BFieldElement::one()
@@ -102,7 +106,7 @@ mod tests {
         );
 
         let mut rust_stack = init_stack;
-        IsU32::rust_shadowing(&mut rust_stack);
+        IsU32::rust_shadowing(&mut rust_stack, vec![], vec![]);
 
         assert_eq!(
             tasm_stack, rust_stack,
