@@ -3,10 +3,19 @@ use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::algebraic_hasher::Hashable;
 
-use crate::{execute, ExecutionResult};
+use crate::snippet_trait::Snippet;
 
-fn _u32s_2_incr_tasm(stack: &mut Vec<BFieldElement>) -> ExecutionResult {
-    let code: &str = "
+pub struct U322Incr();
+
+impl Snippet for U322Incr {
+    const STACK_DIFF: isize = 0;
+
+    fn get_name() -> String {
+        "u32_2_incr".to_string()
+    }
+
+    fn get_code() -> String {
+        let code: &str = "
         call u32s_2_incr
         halt
 
@@ -33,17 +42,18 @@ fn _u32s_2_incr_tasm(stack: &mut Vec<BFieldElement>) -> ExecutionResult {
             push 0
             return
     ";
-    execute(code, stack, 0, vec![], vec![])
-}
+        code.to_string()
+    }
 
-fn _u32s_2_incr_rust(stack: &mut Vec<BFieldElement>) {
-    let a: u32 = stack.pop().unwrap().try_into().unwrap();
-    let b: u32 = stack.pop().unwrap().try_into().unwrap();
-    let ab = U32s::<2>::new([a, b]);
-    let ab_incr = ab + U32s::one();
-    let mut res = ab_incr.to_sequence();
-    for _ in 0..res.len() {
-        stack.push(res.pop().unwrap());
+    fn rust_shadowing(stack: &mut Vec<BFieldElement>) {
+        let a: u32 = stack.pop().unwrap().try_into().unwrap();
+        let b: u32 = stack.pop().unwrap().try_into().unwrap();
+        let ab = U32s::<2>::new([a, b]);
+        let ab_incr = ab + U32s::one();
+        let mut res = ab_incr.to_sequence();
+        for _ in 0..res.len() {
+            stack.push(res.pop().unwrap());
+        }
     }
 }
 
@@ -77,8 +87,8 @@ mod tests {
         init_stack.push(max_value.as_ref()[1].into());
         init_stack.push(max_value.as_ref()[0].into());
 
-        let mut tasm_stack = init_stack.clone();
-        let _execution_result = _u32s_2_incr_tasm(&mut tasm_stack);
+        let mut tasm_stack = init_stack;
+        U322Incr::run_tasm(&mut tasm_stack, vec![], vec![]);
     }
 
     #[test]
@@ -89,8 +99,8 @@ mod tests {
         init_stack.push(max_value.as_ref()[1].into());
         init_stack.push(max_value.as_ref()[0].into());
 
-        let mut tasm_stack = init_stack.clone();
-        _u32s_2_incr_rust(&mut tasm_stack);
+        let mut rust_stack = init_stack;
+        U322Incr::rust_shadowing(&mut rust_stack);
     }
 
     fn prop_incr(some_value: U32s<2>) {
@@ -99,7 +109,7 @@ mod tests {
         init_stack.push(some_value.as_ref()[0].into());
 
         let mut tasm_stack = init_stack.clone();
-        let execution_result = _u32s_2_incr_tasm(&mut tasm_stack);
+        let execution_result = U322Incr::run_tasm(&mut tasm_stack, vec![], vec![]);
         println!(
             "Cycle count for `u32s_2_incr`: {}",
             execution_result.cycle_count
@@ -110,7 +120,7 @@ mod tests {
         );
 
         let mut rust_stack = init_stack;
-        _u32s_2_incr_rust(&mut rust_stack);
+        U322Incr::rust_shadowing(&mut rust_stack);
 
         assert_eq!(
             tasm_stack, rust_stack,

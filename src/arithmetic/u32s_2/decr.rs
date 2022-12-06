@@ -3,13 +3,22 @@ use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::algebraic_hasher::Hashable;
 
-use crate::{execute, ExecutionResult};
+use crate::snippet_trait::Snippet;
 
-fn _u32s_2_decr_tasm(stack: &mut Vec<BFieldElement>) -> ExecutionResult {
-    const MINUS_ONE: &str = "18446744069414584320";
-    const U32_MAX: &str = "4294967295";
-    let code: &str = &format!(
-        "
+pub struct U322Decr();
+
+impl Snippet for U322Decr {
+    const STACK_DIFF: isize = 0;
+
+    fn get_name() -> String {
+        "u32_2_decr".to_string()
+    }
+
+    fn get_code() -> String {
+        const MINUS_ONE: &str = "18446744069414584320";
+        const U32_MAX: &str = "4294967295";
+        let code: &str = &format!(
+            "
         call u32s_2_decr
         halt
 
@@ -36,19 +45,19 @@ fn _u32s_2_decr_tasm(stack: &mut Vec<BFieldElement>) -> ExecutionResult {
             push {U32_MAX}
             return
     "
-    );
+        );
+        code.to_string()
+    }
 
-    execute(code, stack, 0, vec![], vec![])
-}
-
-fn _u32s_2_decr_rust(stack: &mut Vec<BFieldElement>) {
-    let a: u32 = stack.pop().unwrap().try_into().unwrap();
-    let b: u32 = stack.pop().unwrap().try_into().unwrap();
-    let ab = U32s::<2>::new([a, b]);
-    let ab_incr = ab - U32s::one();
-    let mut res = ab_incr.to_sequence();
-    for _ in 0..res.len() {
-        stack.push(res.pop().unwrap());
+    fn rust_shadowing(stack: &mut Vec<BFieldElement>) {
+        let a: u32 = stack.pop().unwrap().try_into().unwrap();
+        let b: u32 = stack.pop().unwrap().try_into().unwrap();
+        let ab = U32s::<2>::new([a, b]);
+        let ab_incr = ab - U32s::one();
+        let mut res = ab_incr.to_sequence();
+        for _ in 0..res.len() {
+            stack.push(res.pop().unwrap());
+        }
     }
 }
 
@@ -69,7 +78,7 @@ mod tests {
         init_stack.push(zero.as_ref()[0].into());
 
         let mut tasm_stack = init_stack.clone();
-        let _execution_result = _u32s_2_decr_tasm(&mut tasm_stack);
+        let _execution_result = U322Decr::run_tasm(&mut tasm_stack, vec![], vec![]);
     }
 
     #[test]
@@ -81,7 +90,7 @@ mod tests {
         init_stack.push(zero.as_ref()[0].into());
 
         let mut tasm_stack = init_stack.clone();
-        _u32s_2_decr_rust(&mut tasm_stack);
+        U322Decr::rust_shadowing(&mut tasm_stack);
     }
 
     #[test]
@@ -91,7 +100,7 @@ mod tests {
         tasm_stack.push(some_value.as_ref()[1].into());
         tasm_stack.push(some_value.as_ref()[0].into());
 
-        let _execution_result = _u32s_2_decr_tasm(&mut tasm_stack);
+        let _execution_result = U322Decr::run_tasm(&mut tasm_stack, vec![], vec![]);
 
         let expected_res = U32s::<2>::new([u32::MAX, 13]);
         let mut expected_stack = get_init_tvm_stack();
@@ -120,7 +129,7 @@ mod tests {
         init_stack.push(some_value.as_ref()[0].into());
 
         let mut tasm_stack = init_stack.clone();
-        let execution_result = _u32s_2_decr_tasm(&mut tasm_stack);
+        let execution_result = U322Decr::run_tasm(&mut tasm_stack, vec![], vec![]);
         println!(
             "Cycle count for `u32s_2_decr`: {}",
             execution_result.cycle_count
@@ -131,7 +140,7 @@ mod tests {
         );
 
         let mut rust_stack = init_stack;
-        _u32s_2_decr_rust(&mut rust_stack);
+        U322Decr::rust_shadowing(&mut rust_stack);
 
         assert_eq!(
             tasm_stack, rust_stack,

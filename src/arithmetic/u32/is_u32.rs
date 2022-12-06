@@ -91,7 +91,7 @@ mod tests {
         init_stack.push(some_value);
 
         let mut tasm_stack = init_stack.clone();
-        let execution_result = IsU32::run_tasm(&mut tasm_stack, 0, vec![], vec![]);
+        let execution_result = IsU32::run_tasm(&mut tasm_stack, vec![], vec![]);
         println!(
             "Cycle count for `u32_is_u32`: {}",
             execution_result.cycle_count

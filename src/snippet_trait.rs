@@ -9,17 +9,19 @@ pub trait Snippet {
     fn as_function() -> String {
         [Self::get_name(), Self::get_code(), "return".to_string()].join("\n")
     }
+
+    // TODO: The rust-shadowing function should probably take the same argument as the
+    // `run_tasm` function does.
     fn rust_shadowing(stack: &mut Vec<BFieldElement>);
     fn run_tasm(
         stack: &mut Vec<BFieldElement>,
-        expected_stack_diff: isize,
         std_in: Vec<BFieldElement>,
         secret_in: Vec<BFieldElement>,
     ) -> ExecutionResult {
         execute(
             &Self::get_code(),
             stack,
-            expected_stack_diff,
+            Self::STACK_DIFF,
             std_in,
             secret_in,
         )

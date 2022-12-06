@@ -2,13 +2,22 @@ use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::algebraic_hasher::Hashable;
 
-use crate::{arithmetic::u32::is_u32::IsU32, execute, snippet_trait::Snippet, ExecutionResult};
+use crate::{arithmetic::u32::is_u32::IsU32, snippet_trait::Snippet};
 
-fn _u32s_2_add_tasm(stack: &mut Vec<BFieldElement>) -> ExecutionResult {
-    let is_u32_code = IsU32::get_code();
-    const MINUS_2_POW_32: &str = "18446744065119617025";
-    let code: &str = &format!(
-        "
+pub struct U32Add();
+
+impl Snippet for U32Add {
+    const STACK_DIFF: isize = -2;
+
+    fn get_name() -> String {
+        "u32_2_add".to_string()
+    }
+
+    fn get_code() -> String {
+        let is_u32_code = IsU32::get_code();
+        const MINUS_2_POW_32: &str = "18446744065119617025";
+        let code: &str = &format!(
+            "
         call u32s_2_add_start
         halt
 
@@ -39,24 +48,26 @@ fn _u32s_2_add_tasm(stack: &mut Vec<BFieldElement>) -> ExecutionResult {
             swap2
             return
     "
-    );
-    execute(code, stack, -2, vec![], vec![])
-}
+        );
 
-fn _u32s_2_add_rust(stack: &mut Vec<BFieldElement>) {
-    // top element on stack
-    let a0: u32 = stack.pop().unwrap().try_into().unwrap();
-    let b0: u32 = stack.pop().unwrap().try_into().unwrap();
-    let ab0 = U32s::<2>::new([a0, b0]);
+        code.to_string()
+    }
 
-    // second element on stack
-    let a1: u32 = stack.pop().unwrap().try_into().unwrap();
-    let b1: u32 = stack.pop().unwrap().try_into().unwrap();
-    let ab1 = U32s::<2>::new([a1, b1]);
-    let ab0_plus_ab1 = ab0 + ab1;
-    let mut res = ab0_plus_ab1.to_sequence();
-    for _ in 0..res.len() {
-        stack.push(res.pop().unwrap());
+    fn rust_shadowing(stack: &mut Vec<BFieldElement>) {
+        // top element on stack
+        let a0: u32 = stack.pop().unwrap().try_into().unwrap();
+        let b0: u32 = stack.pop().unwrap().try_into().unwrap();
+        let ab0 = U32s::<2>::new([a0, b0]);
+
+        // second element on stack
+        let a1: u32 = stack.pop().unwrap().try_into().unwrap();
+        let b1: u32 = stack.pop().unwrap().try_into().unwrap();
+        let ab1 = U32s::<2>::new([a1, b1]);
+        let ab0_plus_ab1 = ab0 + ab1;
+        let mut res = ab0_plus_ab1.to_sequence();
+        for _ in 0..res.len() {
+            stack.push(res.pop().unwrap());
+        }
     }
 }
 
@@ -173,7 +184,7 @@ mod tests {
         init_stack.push(lhs.as_ref()[0].into());
 
         let mut tasm_stack = init_stack.clone();
-        let execution_result = _u32s_2_add_tasm(&mut tasm_stack);
+        let execution_result = U32Add::run_tasm(&mut tasm_stack, vec![], vec![]);
         println!(
             "Cycle count for `_u32s_2_add_tasm`: {}",
             execution_result.cycle_count
@@ -184,7 +195,7 @@ mod tests {
         );
 
         let mut rust_stack = init_stack;
-        _u32s_2_add_rust(&mut rust_stack);
+        U32Add::rust_shadowing(&mut rust_stack);
 
         assert_eq!(tasm_stack, rust_stack, "Rust code must match TVM for `add`");
         if let Some(expected) = expected {

@@ -1,15 +1,22 @@
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
-use crate::{execute, ExecutionResult};
+use crate::snippet_trait::Snippet;
 
-fn _halt_tasm(stack: &mut Vec<BFieldElement>) -> ExecutionResult {
-    let code: &str = "halt";
-    execute(code, stack, 0, vec![], vec![])
+pub struct Halt();
+
+impl Snippet for Halt {
+    const STACK_DIFF: isize = 0;
+
+    fn get_name() -> String {
+        "halt".to_string()
+    }
+
+    fn get_code() -> String {
+        "halt".to_string()
+    }
+
+    fn rust_shadowing(_stack: &mut Vec<BFieldElement>) {}
 }
-
-#[allow(unused_variables)]
-#[allow(clippy::ptr_arg)]
-fn _halt_rust(stack: &mut Vec<BFieldElement>) {}
 
 #[cfg(test)]
 mod tests {
@@ -23,7 +30,7 @@ mod tests {
         let init_stack = get_init_tvm_stack();
 
         let mut tasm_stack = init_stack.clone();
-        let execution_result = _halt_tasm(&mut tasm_stack);
+        let execution_result = Halt::run_tasm(&mut tasm_stack, vec![], vec![]);
         println!("Cycle count for `halt`: {}", execution_result.cycle_count);
         println!(
             "Hash table height for `hash`: {}",
@@ -32,7 +39,7 @@ mod tests {
 
         // Rust
         let mut rust_stack = init_stack.clone();
-        _halt_tasm(&mut rust_stack);
+        Halt::rust_shadowing(&mut rust_stack);
 
         // Check that the two functions agree
         assert_eq!(
