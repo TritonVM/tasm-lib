@@ -21,6 +21,7 @@ pub trait Snippet {
             &Self::get_code(),
             stack,
             // TODO: This should probably be changed to the stack diff value
+            // Currently it is the expected stack height at end of execution.
             (OP_STACK_REG_COUNT as isize + expected_stack_diff) as usize,
             std_in,
             secret_in,

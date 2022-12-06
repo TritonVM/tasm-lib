@@ -1,46 +1,46 @@
 use num::{One, Zero};
-use triton_vm::op_stack::OP_STACK_REG_COUNT;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
-use crate::{execute, ExecutionResult};
+use crate::snippet_trait::Snippet;
 
-pub fn _get_code() -> String {
-    let mut unrolled_loop: String = String::default();
-    for _ in 0..32 {
-        unrolled_loop.push_str("lsb\n");
-        unrolled_loop.push_str("pop\n");
+pub struct IsU32();
+
+impl Snippet for IsU32 {
+    const STACK_DIFF: isize = 0;
+
+    fn get_name() -> String {
+        "is_u32".to_string()
     }
-    let code: &str = &format!(
-        "
+
+    /// Place 1 on stack iff top element is less than $2^32$. Otherwise
+    /// place 0 on stack. Consumes top element of stack, leaves a boolean
+    /// on top of stack. So this subroutine does not change the height
+    /// of the stack
+    fn get_code() -> String {
+        let mut unrolled_loop: String = String::default();
+        for _ in 0..32 {
+            unrolled_loop.push_str("lsb\n");
+            unrolled_loop.push_str("pop\n");
+        }
+        let code: &str = &format!(
+            "
         {unrolled_loop}
         push 0
         eq
     "
-    );
+        );
 
-    code.to_string()
-}
-
-/// Place 1 on stack iff top element is less than $2^32$. Otherwise
-/// place 0 on stack. Consumes top element of stack, leaves a boolean
-/// on top of stack. So this subroutine does not change the height
-/// of the stack
-fn _u32_is_u32_tasm(stack: &mut Vec<BFieldElement>) -> ExecutionResult {
-    let mut unrolled_loop: String = String::default();
-    for _ in 0..32 {
-        unrolled_loop.push_str("lsb\n");
-        unrolled_loop.push_str("pop\n");
+        code.to_string()
     }
-    execute(&_get_code(), stack, OP_STACK_REG_COUNT + 1, vec![], vec![])
-}
 
-fn _u32_is_u32_rust(stack: &mut Vec<BFieldElement>) {
-    let top = stack.pop().unwrap();
-    stack.push(if top.value() < (1 << 32) {
-        BFieldElement::one()
-    } else {
-        BFieldElement::zero()
-    });
+    fn rust_shadowing(stack: &mut Vec<BFieldElement>) {
+        let top = stack.pop().unwrap();
+        stack.push(if top.value() < (1 << 32) {
+            BFieldElement::one()
+        } else {
+            BFieldElement::zero()
+        });
+    }
 }
 
 #[cfg(test)]
@@ -91,7 +91,7 @@ mod tests {
         init_stack.push(some_value);
 
         let mut tasm_stack = init_stack.clone();
-        let execution_result = _u32_is_u32_tasm(&mut tasm_stack);
+        let execution_result = IsU32::run_tasm(&mut tasm_stack, 1, vec![], vec![]);
         println!(
             "Cycle count for `u32_is_u32`: {}",
             execution_result.cycle_count
@@ -102,7 +102,7 @@ mod tests {
         );
 
         let mut rust_stack = init_stack;
-        _u32_is_u32_rust(&mut rust_stack);
+        IsU32::rust_shadowing(&mut rust_stack);
 
         assert_eq!(
             tasm_stack, rust_stack,

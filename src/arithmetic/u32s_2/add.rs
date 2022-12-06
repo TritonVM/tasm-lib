@@ -3,10 +3,10 @@ use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::algebraic_hasher::Hashable;
 
-use crate::{arithmetic::u32::is_u32, execute, ExecutionResult};
+use crate::{arithmetic::u32::is_u32::IsU32, execute, snippet_trait::Snippet, ExecutionResult};
 
 fn _u32s_2_add_tasm(stack: &mut Vec<BFieldElement>) -> ExecutionResult {
-    let is_u32_code = is_u32::_get_code();
+    let is_u32_code = IsU32::get_code();
     const MINUS_2_POW_32: &str = "18446744065119617025";
     let code: &str = &format!(
         "
