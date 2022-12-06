@@ -29,8 +29,9 @@ TVM version when appropriate.
 | is_u32 | sword_smith |    20221125 |       0.7.2 |                        ✅ |       |                 66 |                     66 |                 0 |
 
 ## U32s, size 2
-| Name |      Author(s)      | Last edited | TVM version | Tested and Rust-shadowed | Notes | Cycle Count common | Cycle Count worst-case | Hash table height |
-| ---- | :-----------------: | ----------: | ----------: | -----------------------: | :---: | -----------------: | ---------------------: | ----------------: |
-| incr | sshine, sword_smith |    20221124 |       0.7.2 |                        ✅ |       |                  8 |                     20 |                 0 |
-| decr |     sword_smith     |    20221124 |       0.7.2 |                        ✅ |       |                  8 |                     20 |                 0 |
-| add  |     sword_smith     |    20221124 |       0.7.2 |                        ✅ |       |                144 |                    154 |                 0 |
+| Name          |      Author(s)      | Last edited | TVM version | Tested and Rust-shadowed |                                  Notes                                   | Cycle Count common | Cycle Count worst-case | Hash table height |
+| ------------- | :-----------------: | ----------: | ----------: | -----------------------: | :----------------------------------------------------------------------: | -----------------: | ---------------------: | ----------------: |
+| incr          | sshine, sword_smith |    20221124 |       0.7.2 |                        ✅ |                                                                          |                  8 |                     20 |                 0 |
+| decr          |     sword_smith     |    20221124 |       0.7.2 |                        ✅ |                                                                          |                  8 |                     20 |                 0 |
+| add           |     sword_smith     |    20221124 |       0.7.2 |                        ✅ |                                                                          |                144 |                    154 |                 0 |
+| powers_of_two |     sword_smith     |    20221207 |       0.7.2 |                        ✅ | Adds 15 to cycle count for each increment of the exponent. Range: 15-966 |                501 |                    966 |                 0 |
