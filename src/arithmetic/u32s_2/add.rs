@@ -1,4 +1,3 @@
-use triton_vm::op_stack::OP_STACK_REG_COUNT;
 use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::algebraic_hasher::Hashable;
@@ -41,7 +40,7 @@ fn _u32s_2_add_tasm(stack: &mut Vec<BFieldElement>) -> ExecutionResult {
             return
     "
     );
-    execute(code, stack, OP_STACK_REG_COUNT + 2, vec![], vec![])
+    execute(code, stack, -2, vec![], vec![])
 }
 
 fn _u32s_2_add_rust(stack: &mut Vec<BFieldElement>) {

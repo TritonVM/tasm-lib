@@ -1,6 +1,5 @@
 use num::Zero;
 
-use triton_vm::op_stack::OP_STACK_REG_COUNT;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::rescue_prime_digest::Digest;
 use twenty_first::shared_math::rescue_prime_regular::{RescuePrimeRegular, DIGEST_LENGTH};
@@ -32,7 +31,7 @@ fn _top_digests(stack: &[BFieldElement]) -> (Digest, Digest) {
 
 fn _hash_tasm(stack: &mut Vec<BFieldElement>) -> ExecutionResult {
     let code: &str = "hash";
-    execute(code, stack, OP_STACK_REG_COUNT, vec![], vec![])
+    execute(code, stack, 0, vec![], vec![])
 }
 
 fn _hash_rust(stack: &mut Vec<BFieldElement>) {

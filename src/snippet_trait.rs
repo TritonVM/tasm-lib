@@ -1,4 +1,3 @@
-use triton_vm::op_stack::OP_STACK_REG_COUNT;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::{execute, ExecutionResult};
@@ -20,9 +19,7 @@ pub trait Snippet {
         execute(
             &Self::get_code(),
             stack,
-            // TODO: This should probably be changed to the stack diff value
-            // Currently it is the expected stack height at end of execution.
-            (OP_STACK_REG_COUNT as isize + expected_stack_diff) as usize,
+            expected_stack_diff,
             std_in,
             secret_in,
         )

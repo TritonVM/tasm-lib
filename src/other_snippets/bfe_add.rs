@@ -1,17 +1,10 @@
-use triton_vm::op_stack;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::{execute, ExecutionResult};
 
 fn _bfe_add_tasm(stack: &mut Vec<BFieldElement>) -> ExecutionResult {
     let code: &str = "add";
-    execute(
-        code,
-        stack,
-        1 + op_stack::OP_STACK_REG_COUNT,
-        vec![],
-        vec![],
-    )
+    execute(code, stack, -1, vec![], vec![])
 }
 
 fn _bfe_add_rust(stack: &mut Vec<BFieldElement>) {

@@ -21,7 +21,7 @@ pub fn get_init_tvm_stack() -> Vec<BFieldElement> {
 pub fn execute(
     code: &str,
     stack: &mut Vec<BFieldElement>,
-    expected_final_stack_height: usize,
+    expected_stack_diff: isize,
     std_in: Vec<BFieldElement>,
     secret_in: Vec<BFieldElement>,
 ) -> ExecutionResult {
@@ -60,10 +60,11 @@ pub fn execute(
     assert!(!end_state.op_stack.is_too_shallow(), "Stack underflow");
     *stack = end_state.op_stack.stack;
 
+    let stack_end_height = stack.len() as isize;
     assert_eq!(
-        expected_final_stack_height,
-        stack.len(),
-        "Stack must match expected height"
+        expected_stack_diff,
+        stack_end_height - init_stack_length as isize,
+        "Code must grow stack with expected number of elements.\ninit height: {init_stack_length}\nend height: {stack_end_height}\nExpected growth: {expected_stack_diff}"
     );
 
     ExecutionResult {

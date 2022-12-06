@@ -1,11 +1,10 @@
-use triton_vm::op_stack::OP_STACK_REG_COUNT;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::{execute, ExecutionResult};
 
 fn _halt_tasm(stack: &mut Vec<BFieldElement>) -> ExecutionResult {
     let code: &str = "halt";
-    execute(code, stack, OP_STACK_REG_COUNT, vec![], vec![])
+    execute(code, stack, 0, vec![], vec![])
 }
 
 #[allow(unused_variables)]
