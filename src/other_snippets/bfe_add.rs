@@ -11,7 +11,7 @@ impl Snippet for BfeAdd {
         "bfe_add".to_string()
     }
 
-    fn get_code() -> String {
+    fn get_function() -> String {
         "add".to_string()
     }
 

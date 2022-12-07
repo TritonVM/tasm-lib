@@ -11,7 +11,7 @@ impl Snippet for Halt {
         "halt".to_string()
     }
 
-    fn get_code() -> String {
+    fn get_function() -> String {
         "halt".to_string()
     }
 

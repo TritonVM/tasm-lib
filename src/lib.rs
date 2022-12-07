@@ -53,11 +53,23 @@ pub fn execute(
         )
     }
 
+    let start_state: VMState = execution_trace
+        .first()
+        .expect("VM state list must have initial element")
+        .to_owned();
+    let jump_stack_start = start_state.jump_stack;
+
     let end_state: VMState = execution_trace
         .last()
         .expect("VM state list cannot be empty")
         .to_owned();
+    let jump_stack_end = end_state.jump_stack;
     assert!(!end_state.op_stack.is_too_shallow(), "Stack underflow");
+    assert_eq!(
+        jump_stack_start, jump_stack_end,
+        "Jump stack must be unchanged after code execution"
+    );
+
     *stack = end_state.op_stack.stack;
 
     let stack_end_height = stack.len() as isize;

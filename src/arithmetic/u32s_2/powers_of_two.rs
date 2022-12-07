@@ -17,7 +17,7 @@ impl Snippet for U322PowersOfTwo {
         "u32_2_powers_of_two".to_string()
     }
 
-    fn get_code() -> String {
+    fn get_function() -> String {
         // Assumes that the top stack element is below 64. Otherwise undefined.
         let two_pow_32: &str = "4294967296";
         format!(

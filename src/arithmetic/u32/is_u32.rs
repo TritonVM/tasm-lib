@@ -16,7 +16,7 @@ impl Snippet for IsU32 {
     /// place 0 on stack. Consumes top element of stack, leaves a boolean
     /// on top of stack. So this subroutine does not change the height
     /// of the stack
-    fn get_code() -> String {
+    fn get_function() -> String {
         let mut unrolled_loop: String = String::default();
         for _ in 0..32 {
             unrolled_loop.push_str("lsb\n");

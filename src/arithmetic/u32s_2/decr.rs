@@ -14,25 +14,14 @@ impl Snippet for U322Decr {
         "u32_2_decr".to_string()
     }
 
-    fn get_code() -> String {
+    fn get_function() -> String {
         const MINUS_ONE: &str = "18446744069414584320";
         const U32_MAX: &str = "4294967295";
         let code: &str = &format!(
             "
         call u32s_2_decr
-        halt
 
-        u32s_2_decr:
-            push {MINUS_ONE}
-            add
-            dup0
-            push {MINUS_ONE}
-            eq
-            skiz
-                call u32s_2_carry_decr
-            return
-
-            u32s_2_carry_decr:
+        u32s_2_carry_decr:
             pop
             push {MINUS_ONE}
             add
@@ -44,6 +33,15 @@ impl Snippet for U322Decr {
             assert
             push {U32_MAX}
             return
+
+        u32s_2_decr:
+            push {MINUS_ONE}
+            add
+            dup0
+            push {MINUS_ONE}
+            eq
+            skiz
+                call u32s_2_carry_decr
     "
         );
         code.to_string()

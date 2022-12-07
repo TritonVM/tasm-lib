@@ -4,11 +4,8 @@ use crate::{execute, ExecutionResult};
 
 pub trait Snippet {
     const STACK_DIFF: isize;
-    fn get_name() -> String;
-    fn get_code() -> String;
-    fn as_function() -> String {
-        [Self::get_name(), Self::get_code(), "return".to_string()].join("\n")
-    }
+    const NAME: &'static str;
+    fn get_function() -> String;
 
     // The rust shadowing and the run tasm function must take the same argument
     // since this makes it possible to auto-generate tests for these two functions
@@ -25,7 +22,7 @@ pub trait Snippet {
         secret_in: Vec<BFieldElement>,
     ) -> ExecutionResult {
         execute(
-            &Self::get_code(),
+            &Self::get_function(),
             stack,
             Self::STACK_DIFF,
             std_in,

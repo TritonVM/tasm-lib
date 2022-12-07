@@ -7,41 +7,40 @@ use crate::snippet_trait::Snippet;
 
 pub struct U322Incr();
 
+const SNIPPET_NAME: &str = "u32_2_incr";
+
 impl Snippet for U322Incr {
     const STACK_DIFF: isize = 0;
+    const NAME: &'static str = SNIPPET_NAME;
 
-    fn get_name() -> String {
-        "u32_2_incr".to_string()
-    }
-
-    fn get_code() -> String {
-        let code: &str = "
-        call u32s_2_incr
-        halt
-
-        u32s_2_incr:
-            push 1
-            add
-            dup0
-            push 4294967296
-            eq
-            skiz
-                call u32s_2_carry_incr
-            return
-
-        u32s_2_carry_incr:
+    fn get_function() -> String {
+        const two_pow_32: &str = "4294967296";
+        let code: String = format!(
+            "
+        {SNIPPET_NAME}_carry:
             pop
             push 1
             add
             dup0
-            push 4294967296
+            push {two_pow_32}
             eq
             push 0
             eq
             assert
             push 0
             return
-    ";
+
+        {SNIPPET_NAME}:
+            push 1
+            add
+            dup0
+            push {two_pow_32}
+            eq
+            skiz
+                call u32s_2_incr_carry
+            return
+    ",
+        );
         code.to_string()
     }
 

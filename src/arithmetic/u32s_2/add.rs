@@ -13,13 +13,23 @@ impl Snippet for U32Add {
         "u32_2_add".to_string()
     }
 
-    fn get_code() -> String {
-        let is_u32_code = IsU32::get_code();
+    /// Four top elements of stack are assumed to be valid u32s. So to have
+    /// a value that's less than 2^32.
+    fn get_function() -> String {
+        let is_u32_code = IsU32::get_function();
         const MINUS_2_POW_32: &str = "18446744065119617025";
         let code: &str = &format!(
             "
         call u32s_2_add_start
-        halt
+
+        u32s_2_add_carry:
+            push {MINUS_2_POW_32}
+            add
+            swap2
+            push 1
+            add
+            swap2
+            return
 
         u32s_2_add_start:
             swap1
@@ -37,16 +47,6 @@ impl Snippet for U32Add {
             {is_u32_code}
             assert
             swap1
-            return
-
-        u32s_2_add_carry:
-            push {MINUS_2_POW_32}
-            add
-            swap2
-            push 1
-            add
-            swap2
-            return
     "
         );
 
