@@ -72,12 +72,39 @@ impl Snippet for U322PowersOfTwoMemory {
 
         format!(
             "
+            // Before: _ i      where i in [0;64[
+            // After:  _ hi lo  where (hi,lo) is a U32s<2> of 2^i
             {SNIPPET_NAME}:
                 call {SNIPPET_NAME}_init_mem
-                push 0    // will get overwritten
-                read_mem  // _ i (2^i)
+                push 0       // -> _ i 0
+                read_mem     // -> _ i (2^i)|0
+
+                push 1 dup1  // -> _ i (2^i)|0 1 (2^i)|0
+                  skiz call {SNIPPET_NAME}_lo_then   // skiz = don't skip if positive
+                  skiz call {SNIPPET_NAME}_hi_else   // -> _ hi lo, we popped 1 or 0
+
+                return
+
+            // Before: _ i (2^i) 1
+            // After:  _ 0 (2^i) 0
+            {SNIPPET_NAME}_lo_then:
+                push 0   // -> _ i (2^i) 1 0
+                swap3    // -> _ 0 (2^i) 1 i
+                pop pop  // -> _ 0 (2^i)
+                push 0   // -> _ 0 (2^i) 0
+                return
+
+            // Before: _ i (2^i)
+            // After:  _ (2^(i - 32)) 0 0
+            {SNIPPET_NAME}_hi_else:
+                pop        // -> _ i
+                push -32
+                add        // -> _ (i-32)
+                push 0     // -> _ (i-32) 0
+                read_mem   // -> _ (i-32) (2^(i-32))
                 swap1
-                pop
+                pop        // -> _ (2^(i-32))
+                push 0     // -> _ (2^(i-32)) 0
                 return
 
             {SNIPPET_NAME}_init_mem:
@@ -252,7 +279,7 @@ mod tests {
 
     #[test]
     fn memory_all_exponents() {
-        for i in 1..64 {
+        for i in 0..64 {
             prop_exp_memory(i);
         }
     }
