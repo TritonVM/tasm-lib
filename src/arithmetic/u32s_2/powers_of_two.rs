@@ -273,12 +273,7 @@ mod tests {
     }
 
     #[test]
-    fn memory_two_pow_zero_equals_one() {
-        prop_exp_memory(0);
-    }
-
-    #[test]
-    fn memory_all_exponents() {
+    fn all_exponents_memory() {
         for i in 0..64 {
             prop_exp_memory(i);
         }
@@ -323,7 +318,7 @@ mod tests {
     }
 
     #[test]
-    fn lookup_all_exponents() {
+    fn all_exponents_arithmetic_flat() {
         for i in 0..64 {
             prop_exp_arithmetic_flat(i);
         }
