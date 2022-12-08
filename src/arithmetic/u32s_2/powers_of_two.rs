@@ -21,7 +21,7 @@ impl Snippet for U322PowersOfTwoStatic {
     const NAME: &'static str = SNIPPET_NAME;
 
     fn get_function() -> String {
-        let the_big_skiz: String = (0..32)
+        let the_big_skiz: String = (0..64)
             .map(|j| {
                 format!(
                     "
@@ -34,16 +34,22 @@ impl Snippet for U322PowersOfTwoStatic {
             .collect::<Vec<_>>()
             .concat();
 
-        let the_big_lebowski: String = (0..32)
+        let the_big_lebowski: String = (0..64)
             .map(|j| {
-                let two_pow_j = 2u64.pow(j);
+                let two_pow_j = 2u64.pow(j % 32);
+                // Push the value inverted; inversion is fixed later by swap2
+                let push_val = if j < 32 {
+                    format!("push {two_pow_j} push 0")
+                } else {
+                    format!("push 0 push {two_pow_j}")
+                };
+
                 format!(
                     "
                     // Before: _ i
                     // After: _ hi lo i
                     {SNIPPET_NAME}_{j}:
-                        push {two_pow_j}
-                        push 0
+                        {push_val}
                         swap2
                         return
                 "
