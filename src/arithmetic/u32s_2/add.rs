@@ -183,10 +183,12 @@ mod tests {
 
     fn prop_add(lhs: U32s<2>, rhs: U32s<2>, expected: Option<&[BFieldElement]>) {
         let mut init_stack = get_init_tvm_stack();
-        init_stack.push(rhs.as_ref()[1].into());
-        init_stack.push(rhs.as_ref()[0].into());
-        init_stack.push(lhs.as_ref()[1].into());
-        init_stack.push(lhs.as_ref()[0].into());
+        for elem in rhs.to_sequence().into_iter().rev() {
+            init_stack.push(elem);
+        }
+        for elem in lhs.to_sequence().into_iter().rev() {
+            init_stack.push(elem);
+        }
 
         let mut tasm_stack = init_stack.clone();
         let execution_result = U32Add::run_tasm(&mut tasm_stack, vec![], vec![]);

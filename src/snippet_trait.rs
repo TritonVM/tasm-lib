@@ -14,6 +14,9 @@ pub trait Snippet {
     // const INIT_STACK_DESC: &'static str;
     // const FINAL_STACK_DESC: &'static str;
 
+    // TODO: Consider adding dependencies so that inclusion can happen exactly once.
+    // Dependencies can be listed as a vector of Strings containing names of snippets.
+
     // The rust shadowing and the run tasm function must take the same argument
     // since this makes it possible to auto-generate tests for these two functions
     // for any snippet of code since these two functions must mutate the stack in
