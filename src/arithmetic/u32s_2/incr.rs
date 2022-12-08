@@ -14,7 +14,7 @@ impl Snippet for U322Incr {
     const NAME: &'static str = SNIPPET_NAME;
 
     fn get_function() -> String {
-        const two_pow_32: &str = "4294967296";
+        const TWO_POW_32: &str = "4294967296";
         let code: String = format!(
             "
         {SNIPPET_NAME}_carry:
@@ -22,7 +22,7 @@ impl Snippet for U322Incr {
             push 1
             add
             dup0
-            push {two_pow_32}
+            push {TWO_POW_32}
             eq
             push 0
             eq
@@ -34,10 +34,10 @@ impl Snippet for U322Incr {
             push 1
             add
             dup0
-            push {two_pow_32}
+            push {TWO_POW_32}
             eq
             skiz
-                call u32s_2_incr_carry
+                call {SNIPPET_NAME}_carry
             return
     ",
         );

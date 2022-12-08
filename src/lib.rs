@@ -25,7 +25,7 @@ pub fn execute(
     std_in: Vec<BFieldElement>,
     secret_in: Vec<BFieldElement>,
 ) -> ExecutionResult {
-    let init_stack_length = stack.len();
+    let init_stack_height = stack.len();
 
     // Prepend to program the initial stack values such that stack is in the expected
     // state when program logic is executed
@@ -41,7 +41,10 @@ pub fn execute(
     let program = Program::from_code(&executed_code).expect("Could not load source code: {}");
     let (execution_trace, output, err) = program.run(std_in.clone(), secret_in.clone());
     if let Some(e) = err {
-        panic!("Running the program failed: {}\n\n\n Program: {}", e, code)
+        panic!(
+            "Running the program failed: {}\n\n\n Program:\n {}",
+            e, code
+        )
     }
 
     // Simulate the program, since this gives us hash table output
@@ -57,14 +60,15 @@ pub fn execute(
         .first()
         .expect("VM state list must have initial element")
         .to_owned();
-    let jump_stack_start = start_state.jump_stack;
 
     let end_state: VMState = execution_trace
         .last()
         .expect("VM state list cannot be empty")
         .to_owned();
-    let jump_stack_end = end_state.jump_stack;
     assert!(!end_state.op_stack.is_too_shallow(), "Stack underflow");
+
+    let jump_stack_start = start_state.jump_stack;
+    let jump_stack_end = end_state.jump_stack;
     assert_eq!(
         jump_stack_start, jump_stack_end,
         "Jump stack must be unchanged after code execution"
@@ -72,11 +76,11 @@ pub fn execute(
 
     *stack = end_state.op_stack.stack;
 
-    let stack_end_height = stack.len() as isize;
+    let final_stack_height = stack.len() as isize;
     assert_eq!(
         expected_stack_diff,
-        stack_end_height - init_stack_length as isize,
-        "Code must grow stack with expected number of elements.\ninit height: {init_stack_length}\nend height: {stack_end_height}\nExpected growth: {expected_stack_diff}"
+        final_stack_height - init_stack_height as isize,
+        "Code must grow stack with expected number of elements.\ninit height: {init_stack_height}\nend height: {final_stack_height}\nExpected growth: {expected_stack_diff}"
     );
 
     ExecutionResult {
@@ -84,7 +88,7 @@ pub fn execute(
 
         // Cycle count is cycles it took to run program excluding the cycles that were
         // spent on preparing the stack
-        cycle_count: execution_trace.len() - (init_stack_length - OP_STACK_REG_COUNT) - 1,
+        cycle_count: execution_trace.len() - (init_stack_height - OP_STACK_REG_COUNT) - 1,
 
         // Number of rows generated in the hash table after simulating program
         hash_table_height: simulation_trace.hash_matrix.len(),

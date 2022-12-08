@@ -5,28 +5,24 @@ use twenty_first::util_types::algebraic_hasher::Hashable;
 
 use crate::snippet_trait::Snippet;
 
+const SNIPPET_NAME: &str = "u32_2_decr";
+
 pub struct U322Decr();
 
 impl Snippet for U322Decr {
     const STACK_DIFF: isize = 0;
-
-    fn get_name() -> String {
-        "u32_2_decr".to_string()
-    }
+    const NAME: &'static str = SNIPPET_NAME;
 
     fn get_function() -> String {
-        const MINUS_ONE: &str = "18446744069414584320";
         const U32_MAX: &str = "4294967295";
         let code: &str = &format!(
             "
-        call u32s_2_decr
-
-        u32s_2_carry_decr:
+        {SNIPPET_NAME}_carry:
             pop
-            push {MINUS_ONE}
+            push -1
             add
             dup0
-            push {MINUS_ONE}
+            push -1
             eq
             push 0
             eq
@@ -34,14 +30,15 @@ impl Snippet for U322Decr {
             push {U32_MAX}
             return
 
-        u32s_2_decr:
-            push {MINUS_ONE}
+        {SNIPPET_NAME}:
+            push -1
             add
             dup0
-            push {MINUS_ONE}
+            push -1
             eq
             skiz
-                call u32s_2_carry_decr
+                call {SNIPPET_NAME}_carry
+            return
     "
         );
         code.to_string()

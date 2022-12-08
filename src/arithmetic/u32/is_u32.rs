@@ -3,14 +3,13 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::snippet_trait::Snippet;
 
+const SNIPPET_NAME: &str = "is_u32";
+
 pub struct IsU32();
 
 impl Snippet for IsU32 {
     const STACK_DIFF: isize = 0;
-
-    fn get_name() -> String {
-        "is_u32".to_string()
-    }
+    const NAME: &'static str = SNIPPET_NAME;
 
     /// Place 1 on stack iff top element is less than $2^32$. Otherwise
     /// place 0 on stack. Consumes top element of stack, leaves a boolean
@@ -24,9 +23,11 @@ impl Snippet for IsU32 {
         }
         let code: &str = &format!(
             "
-        {unrolled_loop}
-        push 0
-        eq
+        {SNIPPET_NAME}:
+            {unrolled_loop}
+            push 0
+            eq
+            return
     "
         );
 

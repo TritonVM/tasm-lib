@@ -4,15 +4,20 @@ use crate::snippet_trait::Snippet;
 
 pub struct BfeAdd();
 
+const SNIPPET_NAME: &str = "bfe_add";
+
 impl Snippet for BfeAdd {
     const STACK_DIFF: isize = -1;
-
-    fn get_name() -> String {
-        "bfe_add".to_string()
-    }
+    const NAME: &'static str = SNIPPET_NAME;
 
     fn get_function() -> String {
-        "add".to_string()
+        format!(
+            "
+        {SNIPPET_NAME}:
+            add
+            return
+        "
+        )
     }
 
     fn rust_shadowing(

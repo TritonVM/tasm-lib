@@ -6,39 +6,31 @@ use twenty_first::{
 
 use crate::snippet_trait::Snippet;
 
+const SNIPPET_NAME: &str = "u32_2_powers_of_two";
+
 /// Consumes top element which is interpreted as exponent. Pushes a
 /// U32<2> to the top of the stack. So grows the stack by 1.
 pub struct U322PowersOfTwo();
 
 impl Snippet for U322PowersOfTwo {
     const STACK_DIFF: isize = 1;
-
-    fn get_name() -> String {
-        "u32_2_powers_of_two".to_string()
-    }
+    const NAME: &'static str = SNIPPET_NAME;
 
     fn get_function() -> String {
         // Assumes that the top stack element is below 64. Otherwise undefined.
         let two_pow_32: &str = "4294967296";
         format!(
             "
-            call u32_2_powers_of_two_init
-            u32_2_powers_of_two_carry:
-                pop
-                pop
+            {SNIPPET_NAME}:
                 push 1
-                push 1
-                return
-            u32_2_powers_of_two_init:
-            push 1
-            push 0
-            swap2
-            dup0
-            push 0
-            eq
-            skiz
-                call u32_2_powers_of_two_end
-            call u32_2_powers_of_two_do_while
+                push 0
+                swap2
+                dup0
+                push 0
+                eq
+                skiz
+                    call u32_2_powers_of_two_end
+                call u32_2_powers_of_two_do_while
             u32_2_powers_of_two_do_while:
                 push -1
                 add
@@ -64,7 +56,14 @@ impl Snippet for U322PowersOfTwo {
                 eq
                 skiz
                     swap1
+                return
 
+            {SNIPPET_NAME}_carry:
+                pop
+                pop
+                push 1
+                push 1
+                return
         "
         )
     }
@@ -106,13 +105,13 @@ mod tests {
         let execution_result = U322PowersOfTwo::run_tasm(&mut tasm_stack, vec![], vec![]);
         println!(
             "Cycle count for {} ({})`: {}",
-            U322PowersOfTwo::get_name(),
+            U322PowersOfTwo::NAME,
             exponent,
             execution_result.cycle_count
         );
         println!(
             "Hash table height for `{}`: {}",
-            U322PowersOfTwo::get_name(),
+            U322PowersOfTwo::NAME,
             execution_result.hash_table_height
         );
 
