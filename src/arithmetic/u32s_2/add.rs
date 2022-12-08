@@ -6,46 +6,47 @@ use crate::{arithmetic::u32::is_u32::IsU32, snippet_trait::Snippet};
 
 pub struct U32Add();
 
+const SNIPPET_NAME: &str = "u32_2_add";
+
 impl Snippet for U32Add {
     const STACK_DIFF: isize = -2;
+    const NAME: &'static str = SNIPPET_NAME;
 
-    fn get_name() -> String {
-        "u32_2_add".to_string()
-    }
-
-    fn get_code() -> String {
-        let is_u32_code = IsU32::get_code();
+    /// Four top elements of stack are assumed to be valid u32s. So to have
+    /// a value that's less than 2^32.
+    fn get_function() -> String {
+        let is_u32_code = IsU32::get_function();
+        let is_u32_function_name = IsU32::NAME;
         const MINUS_2_POW_32: &str = "18446744065119617025";
         let code: &str = &format!(
             "
-        call u32s_2_add_start
-        halt
-
-        u32s_2_add_start:
-            swap1
-            swap2
-            add
-            dup0
-            {is_u32_code}
-            push 0
-            eq
-            skiz
-                call u32s_2_add_carry
-            swap2
-            add
-            dup0
-            {is_u32_code}
-            assert
-            swap1
-            return
-
-        u32s_2_add_carry:
+        // Import the `is_u32` function
+        {is_u32_code}
+        {SNIPPET_NAME}_carry:
             push {MINUS_2_POW_32}
             add
             swap2
             push 1
             add
             swap2
+            return
+
+        {SNIPPET_NAME}:
+            swap1
+            swap2
+            add
+            dup0
+            call {is_u32_function_name}
+            push 0
+            eq
+            skiz
+                call {SNIPPET_NAME}_carry
+            swap2
+            add
+            dup0
+            call {is_u32_function_name}
+            assert
+            swap1
             return
     "
         );
