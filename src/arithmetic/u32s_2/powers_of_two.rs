@@ -121,19 +121,19 @@ fn init_mem_code() -> String {
         .concat()
 }
 
-const ARITHMETIC_SNIPPET_NAME: &str = "u32_2_powers_of_two_lookup";
+const FLAT_ARITHMETIC_SNIPPET_NAME: &str = "u32_2_powers_of_two_arithmetic_flat";
 
 impl Snippet for U322PowersOfTwoArithmeticFlat {
     const STACK_DIFF: isize = 1;
 
-    const NAME: &'static str = ARITHMETIC_SNIPPET_NAME;
+    const NAME: &'static str = FLAT_ARITHMETIC_SNIPPET_NAME;
 
     fn get_function() -> String {
         let two_pow_32: &str = "4294967296";
         format!(
             "
             // This carry function will at most be called once
-            {ARITHMETIC_SNIPPET_NAME}_carry:
+            {FLAT_ARITHMETIC_SNIPPET_NAME}_carry:
                 pop
                 pop
                 push 1
@@ -144,7 +144,7 @@ impl Snippet for U322PowersOfTwoArithmeticFlat {
             // `exponent`
             // `ires = result % 2^32`
             // `indicator` which shows if `result = 2^32 * ires` or `result = ires`.
-            {ARITHMETIC_SNIPPET_NAME}_while:
+            {FLAT_ARITHMETIC_SNIPPET_NAME}_while:
                 push -1
                 add
                 swap2
@@ -155,7 +155,7 @@ impl Snippet for U322PowersOfTwoArithmeticFlat {
                 push {two_pow_32}
                 eq
                 skiz
-                    call {ARITHMETIC_SNIPPET_NAME}_carry
+                    call {FLAT_ARITHMETIC_SNIPPET_NAME}_carry
                 swap1
                 swap2
 
@@ -167,7 +167,7 @@ impl Snippet for U322PowersOfTwoArithmeticFlat {
                     return
                 recurse
 
-            {ARITHMETIC_SNIPPET_NAME}:
+            {FLAT_ARITHMETIC_SNIPPET_NAME}:
                 push 1
                 push 0
                 swap2
@@ -175,7 +175,7 @@ impl Snippet for U322PowersOfTwoArithmeticFlat {
                 // e == 0 => ret = 1
                 dup0
                 skiz
-                    call {ARITHMETIC_SNIPPET_NAME}_while
+                    call {FLAT_ARITHMETIC_SNIPPET_NAME}_while
 
                 // End of function: Check if indicator is set indicating
                 // that return value is greater than 2^32.

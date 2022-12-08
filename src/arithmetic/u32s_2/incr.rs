@@ -15,7 +15,7 @@ impl Snippet for U322Incr {
 
     fn get_function() -> String {
         const TWO_POW_32: &str = "4294967296";
-        let code: String = format!(
+        format!(
             "
         {SNIPPET_NAME}_carry:
             pop
@@ -40,8 +40,7 @@ impl Snippet for U322Incr {
                 call {SNIPPET_NAME}_carry
             return
     ",
-        );
-        code.to_string()
+        )
     }
 
     fn rust_shadowing(
