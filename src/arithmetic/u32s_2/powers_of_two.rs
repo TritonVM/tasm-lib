@@ -13,6 +13,69 @@ const SNIPPET_NAME: &str = "u32_2_powers_of_two";
 pub struct U322PowersOfTwoMemory();
 pub struct U322PowersOfTwoArithmeticFlat();
 
+pub struct U322PowersOfTwoStatic;
+
+impl Snippet for U322PowersOfTwoStatic {
+    const STACK_DIFF: isize = 1;
+
+    const NAME: &'static str = SNIPPET_NAME;
+
+    fn get_function() -> String {
+        let the_big_skiz: String = (0..32)
+            .map(|j| {
+                format!(
+                    "
+                    dup0
+                    push {j} eq
+                    skiz call {SNIPPET_NAME}_{j}
+                    "
+                )
+            })
+            .collect::<Vec<_>>()
+            .concat();
+
+        let the_big_lebowski: String = (0..32)
+            .map(|j| {
+                let two_pow_j = 2u64.pow(j);
+                format!(
+                    "
+                    // Before: _ i
+                    // After: _ hi lo i
+                    {SNIPPET_NAME}_{j}:
+                        push {two_pow_j}
+                        push 0
+                        swap2
+                        return
+                "
+                )
+            })
+            .collect::<Vec<_>>()
+            .concat();
+
+        format!(
+            "
+            // Before: _ i
+            // After: _ hi lo
+            {SNIPPET_NAME}:
+                {the_big_skiz}
+
+                pop
+                return
+
+            {the_big_lebowski}
+            "
+        )
+    }
+
+    fn rust_shadowing(
+        stack: &mut Vec<BFieldElement>,
+        std_in: Vec<BFieldElement>,
+        secret_in: Vec<BFieldElement>,
+    ) {
+        U322PowersOfTwoMemory::rust_shadowing(stack, std_in, secret_in);
+    }
+}
+
 impl Snippet for U322PowersOfTwoMemory {
     const STACK_DIFF: isize = 1;
     const NAME: &'static str = SNIPPET_NAME;
@@ -20,7 +83,16 @@ impl Snippet for U322PowersOfTwoMemory {
     fn get_function() -> String {
         // Assumes that the top stack element is below 64. Otherwise undefined.
         let two_pow_32: &str = "4294967296";
-        let init_mem_code: String = init_mem_code();
+        let init_mem_code: String = (0..32)
+            .map(|i| {
+                let two_pow_i = 2u64.pow(i);
+                format!(
+                    "
+                push {i} push {two_pow_i} write_mem pop pop\n"
+                )
+            })
+            .collect::<Vec<_>>()
+            .concat();
 
         let _tmp = format!(
             "
@@ -135,32 +207,17 @@ impl Snippet for U322PowersOfTwoMemory {
     }
 }
 
-fn init_mem_code() -> String {
-    (0..32)
-        .map(|i| {
-            let two_pow_i = 2u64.pow(i);
-            format!(
-                "
-                push {i} push {two_pow_i} write_mem pop pop\n"
-            )
-        })
-        .collect::<Vec<_>>()
-        .concat()
-}
-
-const FLAT_ARITHMETIC_SNIPPET_NAME: &str = "u32_2_powers_of_two_arithmetic_flat";
-
 impl Snippet for U322PowersOfTwoArithmeticFlat {
     const STACK_DIFF: isize = 1;
 
-    const NAME: &'static str = FLAT_ARITHMETIC_SNIPPET_NAME;
+    const NAME: &'static str = SNIPPET_NAME;
 
     fn get_function() -> String {
         let two_pow_32: &str = "4294967296";
         format!(
             "
             // This carry function will at most be called once
-            {FLAT_ARITHMETIC_SNIPPET_NAME}_carry:
+            {SNIPPET_NAME}_carry:
                 pop
                 pop
                 push 1
@@ -171,7 +228,7 @@ impl Snippet for U322PowersOfTwoArithmeticFlat {
             // `exponent`
             // `ires = result % 2^32`
             // `indicator` which shows if `result = 2^32 * ires` or `result = ires`.
-            {FLAT_ARITHMETIC_SNIPPET_NAME}_while:
+            {SNIPPET_NAME}_while:
                 push -1
                 add
                 swap2
@@ -182,7 +239,7 @@ impl Snippet for U322PowersOfTwoArithmeticFlat {
                 push {two_pow_32}
                 eq
                 skiz
-                    call {FLAT_ARITHMETIC_SNIPPET_NAME}_carry
+                    call {SNIPPET_NAME}_carry
                 swap1
                 swap2
 
@@ -194,7 +251,7 @@ impl Snippet for U322PowersOfTwoArithmeticFlat {
                     return
                 recurse
 
-            {FLAT_ARITHMETIC_SNIPPET_NAME}:
+            {SNIPPET_NAME}:
                 push 1
                 push 0
                 swap2
@@ -202,7 +259,7 @@ impl Snippet for U322PowersOfTwoArithmeticFlat {
                 // e == 0 => ret = 1
                 dup0
                 skiz
-                    call {FLAT_ARITHMETIC_SNIPPET_NAME}_while
+                    call {SNIPPET_NAME}_while
 
                 // End of function: Check if indicator is set indicating
                 // that return value is greater than 2^32.
@@ -230,6 +287,7 @@ impl Snippet for U322PowersOfTwoArithmeticFlat {
 #[cfg(test)]
 mod tests {
     use num::One;
+    use twenty_first::util_types::emojihash_trait::Emojihash;
 
     use crate::get_init_tvm_stack;
 
@@ -317,10 +375,60 @@ mod tests {
         assert_eq!(expected_res, actual_res);
     }
 
+    fn prop_exp_static(exponent: u8) {
+        let mut init_stack = get_init_tvm_stack();
+        init_stack.push(BFieldElement::new(exponent as u64));
+
+        let mut tasm_stack = init_stack.clone();
+        let execution_result = U322PowersOfTwoStatic::run_tasm(&mut tasm_stack, vec![], vec![]);
+        println!(
+            "Cycle count for {} ({})`: {}",
+            U322PowersOfTwoStatic::NAME,
+            exponent,
+            execution_result.cycle_count
+        );
+        println!(
+            "Hash table height for `{}`: {}",
+            U322PowersOfTwoStatic::NAME,
+            execution_result.hash_table_height
+        );
+
+        let mut rust_stack = init_stack;
+        U322PowersOfTwoStatic::rust_shadowing(&mut rust_stack, vec![], vec![]);
+        println!(
+            "{}\ntasm: {}\nrust: {}",
+            exponent,
+            tasm_stack.emojihash(),
+            rust_stack.emojihash()
+        );
+        assert_eq!(
+            tasm_stack, rust_stack,
+            "Rust code must match TVM for `U322PowersOfTwo`"
+        );
+        let a = tasm_stack.pop().unwrap().value();
+        assert!(a < u32::MAX as u64);
+        let b = tasm_stack.pop().unwrap().value();
+        assert!(b < u32::MAX as u64);
+        let actual_res = U32s::<2>::new([a as u32, b as u32]);
+        let mut expected_res = U32s::<2>::one();
+        for _ in 0..exponent {
+            expected_res.mul_two();
+        }
+
+        assert_eq!(expected_res, actual_res);
+    }
+
     #[test]
     fn all_exponents_arithmetic_flat() {
         for i in 0..64 {
             prop_exp_arithmetic_flat(i);
+        }
+    }
+
+    #[test]
+    fn all_exponents_static() {
+        for i in 0..64 {
+            prop_exp_static(i);
         }
     }
 }
