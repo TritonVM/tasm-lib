@@ -4,11 +4,11 @@ use twenty_first::util_types::algebraic_hasher::Hashable;
 
 use crate::{arithmetic::u32::is_u32::IsU32, snippet_trait::Snippet};
 
-pub struct U32Add();
+pub struct U32s2Add();
 
 const SNIPPET_NAME: &str = "u32_2_add";
 
-impl Snippet for U32Add {
+impl Snippet for U32s2Add {
     const STACK_DIFF: isize = -2;
     const NAME: &'static str = SNIPPET_NAME;
 
@@ -191,7 +191,7 @@ mod tests {
         }
 
         let mut tasm_stack = init_stack.clone();
-        let execution_result = U32Add::run_tasm(&mut tasm_stack, vec![], vec![]);
+        let execution_result = U32s2Add::run_tasm(&mut tasm_stack, vec![], vec![]);
         println!(
             "Cycle count for `_u32s_2_add_tasm`: {}",
             execution_result.cycle_count
@@ -202,7 +202,7 @@ mod tests {
         );
 
         let mut rust_stack = init_stack;
-        U32Add::rust_shadowing(&mut rust_stack, vec![], vec![]);
+        U32s2Add::rust_shadowing(&mut rust_stack, vec![], vec![]);
 
         assert_eq!(tasm_stack, rust_stack, "Rust code must match TVM for `add`");
         if let Some(expected) = expected {
