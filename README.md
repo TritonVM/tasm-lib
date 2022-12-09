@@ -40,7 +40,8 @@ TVM version when appropriate.
 | powers_of_two_static          | sshine, sword_smith |    20221209 |       0.9.0 |                                                                            |                264 |                    264 |                 0 |
 
 ## MMR
-| Name        |      Author(s)      | Last edited | TVM version |                             Notes                              | Cycle Count common | Cycle Count worst-case | Hash table height |
-| ----------- | :-----------------: | ----------: | ----------: | :------------------------------------------------------------: | -----------------: | ---------------------: | ----------------: |
-| left_child  | sshine, sword_smith |    20221209 |       0.9.0 |       Expensive because u32 arithmetic and no u32 table        |                354 |                    354 |                 0 |
-| right_child | sshine, sword_smith |    20221209 |       0.9.0 | You can call `decr` for `U32<2>` instead and save a few cycles |                 10 |                     22 |                 0 |
+| Name              |      Author(s)      | Last edited | TVM version |                             Notes                              | Cycle Count common | Cycle Count worst-case | Hash table height |
+| ----------------- | :-----------------: | ----------: | ----------: | :------------------------------------------------------------: | -----------------: | ---------------------: | ----------------: |
+| left_child        | sshine, sword_smith |    20221209 |       0.9.0 |       Expensive because u32 arithmetic and no u32 table        |                354 |                    354 |                 0 |
+| right_child       | sshine, sword_smith |    20221209 |       0.9.0 | You can call `decr` for `U32<2>` instead and save a few cycles |                 10 |                     22 |                 0 |
+| leftmost_ancestor | sshine, sword_smith |    20221209 |       0.9.0 | You can call `decr` for `U32<2>` instead and save a few cycles |              10953 |                  21060 |                 0 |
