@@ -3,6 +3,7 @@ use triton_vm::{op_stack::OP_STACK_REG_COUNT, state::VMState, vm::Program};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 mod arithmetic;
+mod mmr;
 mod other_snippets;
 mod recufier;
 mod snippet_trait;
@@ -80,7 +81,9 @@ pub fn execute(
     assert_eq!(
         expected_stack_diff,
         final_stack_height - init_stack_height as isize,
-        "Code must grow stack with expected number of elements.\ninit height: {init_stack_height}\nend height: {final_stack_height}\nExpected growth: {expected_stack_diff}"
+        "Code must grow stack with expected number of elements.\ninit height: {init_stack_height}\nend height: {final_stack_height}\nExpected growth: {expected_stack_diff}
+        \n\n
+        final_stack = {stack:?}"
     );
 
     ExecutionResult {
