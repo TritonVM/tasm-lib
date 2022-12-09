@@ -7,9 +7,9 @@ use crate::snippet_trait::Snippet;
 
 const SNIPPET_NAME: &str = "u32_2_decr";
 
-pub struct U322Decr();
+pub struct U32s2Decr();
 
-impl Snippet for U322Decr {
+impl Snippet for U32s2Decr {
     const STACK_DIFF: isize = 0;
     const NAME: &'static str = SNIPPET_NAME;
 
@@ -77,7 +77,7 @@ mod tests {
         init_stack.push(zero.as_ref()[0].into());
 
         let mut tasm_stack = init_stack.clone();
-        let _execution_result = U322Decr::run_tasm(&mut tasm_stack, vec![], vec![]);
+        let _execution_result = U32s2Decr::run_tasm(&mut tasm_stack, vec![], vec![]);
     }
 
     #[test]
@@ -89,7 +89,7 @@ mod tests {
         init_stack.push(zero.as_ref()[0].into());
 
         let mut tasm_stack = init_stack.clone();
-        U322Decr::rust_shadowing(&mut tasm_stack, vec![], vec![]);
+        U32s2Decr::rust_shadowing(&mut tasm_stack, vec![], vec![]);
     }
 
     #[test]
@@ -99,7 +99,7 @@ mod tests {
         tasm_stack.push(some_value.as_ref()[1].into());
         tasm_stack.push(some_value.as_ref()[0].into());
 
-        let _execution_result = U322Decr::run_tasm(&mut tasm_stack, vec![], vec![]);
+        let _execution_result = U32s2Decr::run_tasm(&mut tasm_stack, vec![], vec![]);
 
         let expected_res = U32s::<2>::new([u32::MAX, 13]);
         let mut expected_stack = get_init_tvm_stack();
@@ -128,7 +128,7 @@ mod tests {
         init_stack.push(some_value.as_ref()[0].into());
 
         let mut tasm_stack = init_stack.clone();
-        let execution_result = U322Decr::run_tasm(&mut tasm_stack, vec![], vec![]);
+        let execution_result = U32s2Decr::run_tasm(&mut tasm_stack, vec![], vec![]);
         println!(
             "Cycle count for `u32s_2_decr`: {}",
             execution_result.cycle_count
@@ -139,7 +139,7 @@ mod tests {
         );
 
         let mut rust_stack = init_stack;
-        U322Decr::rust_shadowing(&mut rust_stack, vec![], vec![]);
+        U32s2Decr::rust_shadowing(&mut rust_stack, vec![], vec![]);
 
         assert_eq!(
             tasm_stack, rust_stack,

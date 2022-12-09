@@ -38,3 +38,9 @@ TVM version when appropriate.
 | powers_of_two_arithmetic_flat |     sword_smith     |    20221208 |       0.8.0 | Adds 17 to cycle count for each increment of the exponent. Range: 11-1090  |                563 |                   1090 |                 0 |
 | powers_of_two_memory          |       sshine        |    20221208 |       0.8.0 | Assumes bounded input, writes table to memory, exp >= 32 => +3 cycle count |                177 |                    180 |                 0 |
 | powers_of_two_static          | sshine, sword_smith |    20221209 |       0.9.0 |                                                                            |                264 |                    264 |                 0 |
+
+## MMR
+| Name        |      Author(s)      | Last edited | TVM version |                             Notes                              | Cycle Count common | Cycle Count worst-case | Hash table height |
+| ----------- | :-----------------: | ----------: | ----------: | :------------------------------------------------------------: | -----------------: | ---------------------: | ----------------: |
+| left_child  | sshine, sword_smith |    20221209 |       0.9.0 |       Expensive because u32 arithmetic and no u32 table        |                354 |                    354 |                 0 |
+| right_child | sshine, sword_smith |    20221209 |       0.9.0 | You can call `decr` for `U32<2>` instead and save a few cycles |                 10 |                     22 |                 0 |
