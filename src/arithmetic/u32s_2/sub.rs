@@ -4,7 +4,7 @@ use crate::{arithmetic::u32::is_u32::IsU32, snippet_trait::Snippet};
 
 pub struct U32s2Sub();
 
-const SNIPPET_NAME: &str = "SNIPPET_NAME";
+const SNIPPET_NAME: &str = "u32_2_sub";
 
 impl Snippet for U32s2Sub {
     const STACK_DIFF: isize = -2;
