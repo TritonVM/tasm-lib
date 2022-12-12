@@ -1,5 +1,6 @@
 use num::BigUint;
 use twenty_first::amount::u32s::U32s;
+use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::algebraic_hasher::Hashable;
 use twenty_first::util_types::mmr;
 
@@ -33,9 +34,9 @@ impl Snippet for MmrRightChild {
     }
 
     fn rust_shadowing(
-        stack: &mut Vec<twenty_first::shared_math::b_field_element::BFieldElement>,
-        _std_in: Vec<twenty_first::shared_math::b_field_element::BFieldElement>,
-        _secret_in: Vec<twenty_first::shared_math::b_field_element::BFieldElement>,
+        stack: &mut Vec<BFieldElement>,
+        _std_in: Vec<BFieldElement>,
+        _secret_in: Vec<BFieldElement>,
     ) {
         let node_index_lo: u32 = stack.pop().unwrap().try_into().unwrap();
         let node_index_hi: u32 = stack.pop().unwrap().try_into().unwrap();

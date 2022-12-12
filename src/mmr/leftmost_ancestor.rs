@@ -1,15 +1,14 @@
 use num::BigUint;
-use twenty_first::{
-    amount::u32s::U32s,
-    shared_math::b_field_element::BFieldElement,
-    util_types::{algebraic_hasher::Hashable, mmr},
-};
+use twenty_first::amount::u32s::U32s;
+use twenty_first::shared_math::b_field_element::BFieldElement;
+use twenty_first::util_types::algebraic_hasher::Hashable;
+use twenty_first::util_types::mmr;
 
-use crate::{
-    arithmetic::u32s_2::{add::U32s2Add, decr::U32s2Decr, lt::U32s2Lt},
-    library::Library,
-    snippet_trait::Snippet,
-};
+use crate::arithmetic::u32s_2::add::U32s2Add;
+use crate::arithmetic::u32s_2::decr::U32s2Decr;
+use crate::arithmetic::u32s_2::lt::U32s2Lt;
+use crate::library::Library;
+use crate::snippet_trait::Snippet;
 
 pub struct MmrLeftmostAncestor();
 
@@ -67,9 +66,9 @@ impl Snippet for MmrLeftmostAncestor {
     }
 
     fn rust_shadowing(
-        stack: &mut Vec<twenty_first::shared_math::b_field_element::BFieldElement>,
-        _std_in: Vec<twenty_first::shared_math::b_field_element::BFieldElement>,
-        _secret_in: Vec<twenty_first::shared_math::b_field_element::BFieldElement>,
+        stack: &mut Vec<BFieldElement>,
+        _std_in: Vec<BFieldElement>,
+        _secret_in: Vec<BFieldElement>,
     ) {
         let node_index_lo: u32 = stack.pop().unwrap().try_into().unwrap();
         let node_index_hi: u32 = stack.pop().unwrap().try_into().unwrap();
