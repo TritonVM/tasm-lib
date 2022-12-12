@@ -7,10 +7,6 @@ use crate::snippet_trait::Snippet;
 pub struct IsU32();
 
 impl Snippet for IsU32 {
-    fn new() -> Self {
-        Self()
-    }
-
     fn stack_diff() -> isize {
         0
     }

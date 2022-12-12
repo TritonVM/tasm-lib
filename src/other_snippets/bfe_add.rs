@@ -6,10 +6,6 @@ use crate::snippet_trait::Snippet;
 pub struct BfeAdd();
 
 impl Snippet for BfeAdd {
-    fn new() -> Self {
-        Self()
-    }
-
     fn stack_diff() -> isize {
         -1
     }

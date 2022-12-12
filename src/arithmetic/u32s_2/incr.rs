@@ -9,10 +9,6 @@ use crate::snippet_trait::Snippet;
 pub struct U32s2Incr();
 
 impl Snippet for U32s2Incr {
-    fn new() -> Self {
-        Self()
-    }
-
     fn stack_diff() -> isize {
         0
     }

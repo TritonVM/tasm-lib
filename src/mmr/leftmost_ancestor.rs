@@ -14,10 +14,6 @@ use crate::{
 pub struct MmrLeftmostAncestor();
 
 impl Snippet for MmrLeftmostAncestor {
-    fn new() -> Self {
-        Self()
-    }
-
     fn stack_diff() -> isize {
         1
     }

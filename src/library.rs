@@ -47,6 +47,8 @@ mod tests {
     use num::One;
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
+    use crate::{get_init_tvm_stack, snippet_trait::rust_tasm_equivalence_prop};
+
     use super::*;
 
     struct A();
@@ -54,12 +56,8 @@ mod tests {
     struct C();
 
     impl Snippet for A {
-        fn new() -> Self {
-            Self()
-        }
-
         fn stack_diff() -> isize {
-            B::stack_diff() + C::stack_diff()
+            3
         }
 
         fn entrypoint() -> &'static str {
@@ -93,12 +91,8 @@ mod tests {
     }
 
     impl Snippet for B {
-        fn new() -> Self {
-            Self()
-        }
-
         fn stack_diff() -> isize {
-            C::stack_diff()
+            2
         }
 
         fn entrypoint() -> &'static str {
@@ -130,10 +124,6 @@ mod tests {
     }
 
     impl Snippet for C {
-        fn new() -> Self {
-            Self()
-        }
-
         fn stack_diff() -> isize {
             1
         }
@@ -164,5 +154,17 @@ mod tests {
     }
 
     #[test]
-    fn library_includes() {}
+    fn library_includes() {
+        let empty_stack = get_init_tvm_stack();
+
+        let expected = None;
+        let (_execution_result, _tasm_stack) =
+            rust_tasm_equivalence_prop::<A>(&empty_stack, &[], &[], expected);
+
+        let (_execution_result, _tasm_stack) =
+            rust_tasm_equivalence_prop::<B>(&empty_stack, &[], &[], expected);
+
+        let (_execution_result, _tasm_stack) =
+            rust_tasm_equivalence_prop::<C>(&empty_stack, &[], &[], expected);
+    }
 }

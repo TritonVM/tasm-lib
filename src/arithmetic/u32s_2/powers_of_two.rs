@@ -14,10 +14,6 @@ pub struct U32s2PowersOfTwoArithmeticFlat();
 pub struct U32s2PowersOfTwoStatic();
 
 impl Snippet for U32s2PowersOfTwoStatic {
-    fn new() -> Self {
-        Self()
-    }
-
     fn stack_diff() -> isize {
         1
     }
@@ -97,10 +93,6 @@ impl Snippet for U32s2PowersOfTwoStatic {
 }
 
 impl Snippet for U32s2PowersOfTwoMemory {
-    fn new() -> Self {
-        Self()
-    }
-
     fn stack_diff() -> isize {
         1
     }
@@ -190,10 +182,6 @@ impl Snippet for U32s2PowersOfTwoMemory {
 }
 
 impl Snippet for U32s2PowersOfTwoArithmeticFlat {
-    fn new() -> Self {
-        Self()
-    }
-
     fn stack_diff() -> isize {
         1
     }

@@ -9,10 +9,6 @@ use crate::{library::Library, snippet_trait::Snippet};
 pub struct MmrRightChild();
 
 impl Snippet for MmrRightChild {
-    fn new() -> Self {
-        Self()
-    }
-
     fn stack_diff() -> isize {
         0
     }

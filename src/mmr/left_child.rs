@@ -11,10 +11,6 @@ use crate::snippet_trait::Snippet;
 pub struct MmrLeftChild();
 
 impl Snippet for MmrLeftChild {
-    fn new() -> Self {
-        Self()
-    }
-
     fn stack_diff() -> isize {
         -1
     }

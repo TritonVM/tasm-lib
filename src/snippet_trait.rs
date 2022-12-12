@@ -5,10 +5,6 @@ use crate::library::Library;
 use crate::ExecutionResult;
 
 pub trait Snippet {
-    fn new() -> Self
-    where
-        Self: Sized;
-
     fn stack_diff() -> isize
     where
         Self: Sized;

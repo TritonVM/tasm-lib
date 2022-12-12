@@ -8,10 +8,6 @@ use crate::{arithmetic::u32::is_u32::IsU32, library::Library, snippet_trait::Sni
 pub struct U32s2Sub();
 
 impl Snippet for U32s2Sub {
-    fn new() -> Self {
-        Self()
-    }
-
     fn stack_diff() -> isize {
         -2
     }
