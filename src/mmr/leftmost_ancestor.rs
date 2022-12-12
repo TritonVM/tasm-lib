@@ -110,6 +110,7 @@ mod tests {
         prop_leftmost_ancestor(U32s::<2>::from(2), Some(&expected_stack));
         prop_leftmost_ancestor(U32s::<2>::from(3), Some(&expected_stack));
 
+        // leftmost_ancestor([4..7]) -> height = 2, index = 7
         let mut expected_stack = get_init_tvm_stack();
         expected_stack.push(BFieldElement::new(0));
         expected_stack.push(BFieldElement::new(7));
