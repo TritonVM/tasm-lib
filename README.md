@@ -1,12 +1,20 @@
-# tasm-snippets
+# tasm-lib
 
-This repo is a place to put your TASM snippets and for getting an overview of the run times of the consensus and the recufi code.
+This repository contains a collection of functions written in Triton VM assembly (tasm).
 
-Please place the code in the appropriate folders.
+There are two big projects to be written in tasm:
+ - The consensus logic of [Neptune](https://neptune.cash/)
+ - The recursive Triton VM STARK verifier (recufier)
 
-Please use this an append-only list. So if the cycle count changes because `triton-vm` is updated, or you find a better way of solving a problem,
-then add a new line to the appropriate table, add a comment to the two relevant lines, and add a counter to the algorithm name, or update the
-TVM version when appropriate.
+This repository helps get an overview of the run times of the consensus code and the recufier code.
+
+Please place code in the appropriate directories, or create them if non-existent.
+
+The lists below keep track of improvements to individual algorithms. If the
+cycle count changes because Triton VM is updated, or you find a better way of
+solving a problem, then add a new line to the appropriate table, add a comment
+to the two relevant lines, and add a counter to the algorithm name, or update
+the TVM version when appropriate.
 
 ## Consensus Code
 | Name | Author(s) | Last edited | TVM version | Tested and Rust-shadowed | Notes | Cycle Count | Asymptotic Runtime |
