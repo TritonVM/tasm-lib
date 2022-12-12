@@ -3,6 +3,7 @@ use triton_vm::{op_stack::OP_STACK_REG_COUNT, state::VMState, vm::Program};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 mod arithmetic;
+mod library;
 mod mmr;
 mod other_snippets;
 mod recufier;

@@ -1,23 +1,32 @@
 use num::{One, Zero};
-use twenty_first::{amount::u32s::U32s, shared_math::b_field_element::BFieldElement};
+use twenty_first::amount::u32s::U32s;
+use twenty_first::shared_math::b_field_element::BFieldElement;
 
+use crate::library::Library;
 use crate::snippet_trait::Snippet;
 
-pub struct U32s2Lt;
-
-const SNIPPET_NAME: &str = "u32_2_lt";
+pub struct U32s2Lt();
 
 impl Snippet for U32s2Lt {
-    const STACK_DIFF: isize = 1;
+    fn new() -> Self {
+        Self()
+    }
 
-    const NAME: &'static str = SNIPPET_NAME;
+    fn stack_diff() -> isize {
+        1
+    }
+
+    fn entrypoint() -> &'static str {
+        "u32_2_lt"
+    }
 
     /// Before: _ rhs_hi rhs_lo lhs_hi lhs_lo
     /// After: _ rhs_hi rhs_lo lhs_hi lhs_lo  (lhs < rhs)
-    fn get_function() -> String {
+    fn function_body(_library: &mut Library) -> String {
+        let entrypoint = Self::entrypoint();
         format!(
             "
-            {SNIPPET_NAME}:
+            {entrypoint}:
                 dup3
                 dup2
                 lt   // => _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_hi < rhs_hi)
@@ -30,14 +39,14 @@ impl Snippet for U32s2Lt {
                 dup3 // => _ rhs_hi rhs_lo lhs_hi lhs_lo 0 rhs_hi lhs_hi
                 eq   // => _ rhs_hi rhs_lo lhs_hi lhs_lo 0 (rhs_hi == lhs_hi)
                 skiz
-                    call {SNIPPET_NAME}_lo // => _ rhs_hi rhs_lo lhs_hi lhs_lo 0
+                    call {entrypoint}_lo // => _ rhs_hi rhs_lo lhs_hi lhs_lo 0
 
                 // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_lo < rhs_lo)|0
                 return
 
             // Before: _ rhs_hi rhs_lo lhs_hi lhs_lo 0
             // After: _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_lo < rhs_lo)
-            {SNIPPET_NAME}_lo:
+            {entrypoint}_lo:
                 pop   // _ rhs_hi rhs_lo lhs_hi lhs_lo
                 dup2  // _ rhs_hi rhs_lo lhs_hi lhs_lo rhs_lo
                 dup1  // _ rhs_hi rhs_lo lhs_hi lhs_lo rhs_lo lhs_lo
@@ -48,9 +57,9 @@ impl Snippet for U32s2Lt {
     }
 
     fn rust_shadowing(
-        stack: &mut Vec<twenty_first::shared_math::b_field_element::BFieldElement>,
-        _std_in: Vec<twenty_first::shared_math::b_field_element::BFieldElement>,
-        _secret_in: Vec<twenty_first::shared_math::b_field_element::BFieldElement>,
+        stack: &mut Vec<BFieldElement>,
+        _std_in: Vec<BFieldElement>,
+        _secret_in: Vec<BFieldElement>,
     ) {
         // top element on stack
         let a0: u32 = stack[stack.len() - 1].try_into().unwrap();
@@ -78,7 +87,7 @@ mod tests {
         shared_math::b_field_element::BFieldElement, util_types::algebraic_hasher::Hashable,
     };
 
-    use crate::get_init_tvm_stack;
+    use crate::{get_init_tvm_stack, snippet_trait::rust_tasm_equivalence_prop};
 
     use super::*;
 
@@ -211,29 +220,7 @@ mod tests {
             init_stack.push(elem);
         }
 
-        let mut tasm_stack = init_stack.clone();
-        let execution_result = U32s2Lt::run_tasm(&mut tasm_stack, vec![], vec![]);
-        println!(
-            "Cycle count for `{SNIPPET_NAME}`: {}",
-            execution_result.cycle_count
-        );
-        println!(
-            "Hash table height for `{SNIPPET_NAME}`: {}",
-            execution_result.hash_table_height
-        );
-
-        let mut rust_stack = init_stack;
-        U32s2Lt::rust_shadowing(&mut rust_stack, vec![], vec![]);
-
-        assert_eq!(
-            tasm_stack, rust_stack,
-            "Rust code must match TVM for `{SNIPPET_NAME}`"
-        );
-        if let Some(expected) = expected {
-            assert_eq!(
-                tasm_stack, expected,
-                "TVM must produce expected stack. lhs: {lhs}, rhs: {rhs}"
-            );
-        }
+        let (_execution_result, _tasm_stack) =
+            rust_tasm_equivalence_prop::<U32s2Lt>(&init_stack, &[], &[], expected);
     }
 }

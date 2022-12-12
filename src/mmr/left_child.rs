@@ -1,33 +1,37 @@
 use num::BigUint;
-use twenty_first::{
-    amount::u32s::U32s,
-    util_types::{algebraic_hasher::Hashable, mmr},
-};
+use twenty_first::amount::u32s::U32s;
+use twenty_first::util_types::algebraic_hasher::Hashable;
+use twenty_first::util_types::mmr;
 
-use crate::{
-    arithmetic::u32s_2::{powers_of_two::U322PowersOfTwoStatic, sub::U32s2Sub},
-    snippet_trait::Snippet,
-};
+use crate::arithmetic::u32s_2::powers_of_two::U32s2PowersOfTwoStatic;
+use crate::arithmetic::u32s_2::sub::U32s2Sub;
+use crate::library::Library;
+use crate::snippet_trait::Snippet;
 
-pub struct MmrLeftChild;
-
-const SNIPPET_NAME: &str = "mmr_left_child";
+pub struct MmrLeftChild();
 
 impl Snippet for MmrLeftChild {
-    const STACK_DIFF: isize = -1;
+    fn new() -> Self {
+        Self()
+    }
 
-    const NAME: &'static str = SNIPPET_NAME;
+    fn stack_diff() -> isize {
+        -1
+    }
 
-    fn get_function() -> String {
-        let powers_of_two = U322PowersOfTwoStatic::NAME;
-        let powers_of_two_function = U322PowersOfTwoStatic::get_function();
-        let u32s_2_sub = U32s2Sub::NAME;
-        let u32s_2_sub_function = U32s2Sub::get_function();
+    fn entrypoint() -> &'static str {
+        "mmr_left_child"
+    }
+
+    fn function_body(library: &mut Library) -> String {
+        let entrypoint = Self::entrypoint();
+        let powers_of_two = library.import::<U32s2PowersOfTwoStatic>();
+        let u32s_2_sub = library.import::<U32s2Sub>();
         format!(
             "
             // Before: _ ni_hi ni_lo height
             // After: _ left_child_hi left_child_lo
-            {SNIPPET_NAME}:
+            {entrypoint}:
                 call {powers_of_two} // -> _ ni_hi ni_lo (2^height)_hi (2^height)_lo
                 swap2
                 swap1
@@ -35,9 +39,6 @@ impl Snippet for MmrLeftChild {
                 swap1                // -> _ (2^height)_hi (2^height)_lo ni_hi ni_lo
                 call {u32s_2_sub}    // -> _ left_child_hi left_child_lo
                 return
-
-            {powers_of_two_function}
-            {u32s_2_sub_function}
             "
         )
     }
@@ -65,7 +66,7 @@ mod tests {
         shared_math::b_field_element::BFieldElement, util_types::algebraic_hasher::Hashable,
     };
 
-    use crate::get_init_tvm_stack;
+    use crate::{get_init_tvm_stack, snippet_trait::rust_tasm_equivalence_prop};
 
     use super::*;
 
@@ -99,29 +100,7 @@ mod tests {
         }
         init_stack.push(BFieldElement::new(height as u64));
 
-        let mut tasm_stack = init_stack.clone();
-        let execution_result = MmrLeftChild::run_tasm(&mut tasm_stack, vec![], vec![]);
-        println!(
-            "Cycle count for `{SNIPPET_NAME}`: {}",
-            execution_result.cycle_count
-        );
-        println!(
-            "Hash table height for `{SNIPPET_NAME}`: {}",
-            execution_result.hash_table_height
-        );
-
-        let mut rust_stack = init_stack;
-        MmrLeftChild::rust_shadowing(&mut rust_stack, vec![], vec![]);
-
-        assert_eq!(
-            tasm_stack, rust_stack,
-            "Rust code must match TVM for `{SNIPPET_NAME}`"
-        );
-        if let Some(expected) = expected {
-            assert_eq!(
-                tasm_stack, expected,
-                "TVM must produce expected stack. node_index: {node_index}, height: {height}"
-            );
-        }
+        let (_execution_result, _tasm_stack) =
+            rust_tasm_equivalence_prop::<MmrLeftChild>(&init_stack, &[], &[], expected);
     }
 }

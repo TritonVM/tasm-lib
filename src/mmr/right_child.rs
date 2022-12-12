@@ -1,33 +1,37 @@
 use num::BigUint;
-use twenty_first::{
-    amount::u32s::U32s,
-    util_types::{algebraic_hasher::Hashable, mmr},
-};
+use twenty_first::amount::u32s::U32s;
+use twenty_first::util_types::algebraic_hasher::Hashable;
+use twenty_first::util_types::mmr;
 
-use crate::{arithmetic::u32s_2::decr::U32s2Decr, snippet_trait::Snippet};
+use crate::arithmetic::u32s_2::decr::U32s2Decr;
+use crate::{library::Library, snippet_trait::Snippet};
 
-pub struct MmrRightChild;
-
-const SNIPPET_NAME: &str = "mmr_right_child";
+pub struct MmrRightChild();
 
 impl Snippet for MmrRightChild {
-    const STACK_DIFF: isize = 0;
+    fn new() -> Self {
+        Self()
+    }
 
-    const NAME: &'static str = SNIPPET_NAME;
+    fn stack_diff() -> isize {
+        0
+    }
+
+    fn entrypoint() -> &'static str {
+        "mmr_right_child"
+    }
 
     /// Consider inlining this, instead of calling a function
-    fn get_function() -> String {
-        let u32s_2_decr = U32s2Decr::NAME;
-        let u32s_2_decr_function = U32s2Decr::get_function();
+    fn function_body(library: &mut Library) -> String {
+        let entrypoint = Self::entrypoint();
+        let u32s_2_decr = library.import::<U32s2Decr>();
         format!(
             "
             // Before: _ nodex_index_hi node_index_lo
             // After: _ right_child_hi right_child_lo
-            {SNIPPET_NAME}:
+            {entrypoint}:
                 call {u32s_2_decr}
                 return
-
-            {u32s_2_decr_function}
             "
         )
     }
@@ -54,7 +58,7 @@ mod tests {
         shared_math::b_field_element::BFieldElement, util_types::algebraic_hasher::Hashable,
     };
 
-    use crate::get_init_tvm_stack;
+    use crate::{get_init_tvm_stack, snippet_trait::rust_tasm_equivalence_prop};
 
     use super::*;
 
@@ -82,29 +86,7 @@ mod tests {
             init_stack.push(elem);
         }
 
-        let mut tasm_stack = init_stack.clone();
-        let execution_result = MmrRightChild::run_tasm(&mut tasm_stack, vec![], vec![]);
-        println!(
-            "Cycle count for `{SNIPPET_NAME}`: {}",
-            execution_result.cycle_count
-        );
-        println!(
-            "Hash table height for `{SNIPPET_NAME}`: {}",
-            execution_result.hash_table_height
-        );
-
-        let mut rust_stack = init_stack;
-        MmrRightChild::rust_shadowing(&mut rust_stack, vec![], vec![]);
-
-        assert_eq!(
-            tasm_stack, rust_stack,
-            "Rust code must match TVM for `{SNIPPET_NAME}`"
-        );
-        if let Some(expected) = expected {
-            assert_eq!(
-                tasm_stack, expected,
-                "TVM must produce expected stack. node_index: {node_index}"
-            );
-        }
+        let (_execution_result, _tasm_stack) =
+            rust_tasm_equivalence_prop::<MmrRightChild>(&init_stack, &[], &[], expected);
     }
 }

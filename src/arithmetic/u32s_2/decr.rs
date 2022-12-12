@@ -3,45 +3,54 @@ use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::algebraic_hasher::Hashable;
 
+use crate::library::Library;
 use crate::snippet_trait::Snippet;
-
-const SNIPPET_NAME: &str = "u32_2_decr";
 
 pub struct U32s2Decr();
 
 impl Snippet for U32s2Decr {
-    const STACK_DIFF: isize = 0;
-    const NAME: &'static str = SNIPPET_NAME;
+    fn new() -> Self {
+        Self()
+    }
 
-    fn get_function() -> String {
+    fn stack_diff() -> isize {
+        0
+    }
+
+    fn entrypoint() -> &'static str {
+        "u32_2_decr"
+    }
+
+    fn function_body(_library: &mut Library) -> String {
+        let entrypoint = Self::entrypoint();
         const U32_MAX: &str = "4294967295";
-        let code: &str = &format!(
-            "
-        {SNIPPET_NAME}_carry:
-            pop
-            push -1
-            add
-            dup0
-            push -1
-            eq
-            push 0
-            eq
-            assert
-            push {U32_MAX}
-            return
 
-        {SNIPPET_NAME}:
-            push -1
-            add
-            dup0
-            push -1
-            eq
-            skiz
-                call {SNIPPET_NAME}_carry
-            return
-    "
-        );
-        code.to_string()
+        format!(
+            "
+            {entrypoint}:
+                push -1
+                add
+                dup0
+                push -1
+                eq
+                skiz
+                    call {entrypoint}_carry
+                return
+
+            {entrypoint}_carry:
+                pop
+                push -1
+                add
+                dup0
+                push -1
+                eq
+                push 0
+                eq
+                assert
+                push {U32_MAX}
+                return
+            "
+        )
     }
 
     fn rust_shadowing(
@@ -64,7 +73,7 @@ impl Snippet for U32s2Decr {
 mod tests {
     use rand::Rng;
 
-    use crate::get_init_tvm_stack;
+    use crate::{get_init_tvm_stack, snippet_trait::rust_tasm_equivalence_prop};
 
     use super::*;
 
@@ -124,26 +133,12 @@ mod tests {
 
     fn prop_decr(some_value: U32s<2>) {
         let mut init_stack = get_init_tvm_stack();
-        init_stack.push(some_value.as_ref()[1].into());
-        init_stack.push(some_value.as_ref()[0].into());
+        for elem in some_value.to_sequence().into_iter().rev() {
+            init_stack.push(elem);
+        }
 
-        let mut tasm_stack = init_stack.clone();
-        let execution_result = U32s2Decr::run_tasm(&mut tasm_stack, vec![], vec![]);
-        println!(
-            "Cycle count for `u32s_2_decr`: {}",
-            execution_result.cycle_count
-        );
-        println!(
-            "Hash table height for `u32s_2_decr`: {}",
-            execution_result.hash_table_height
-        );
-
-        let mut rust_stack = init_stack;
-        U32s2Decr::rust_shadowing(&mut rust_stack, vec![], vec![]);
-
-        assert_eq!(
-            tasm_stack, rust_stack,
-            "Rust code must match TVM for `hash`"
-        );
+        let expected = None;
+        let (_execution_result, _tasm_stack) =
+            rust_tasm_equivalence_prop::<U32s2Decr>(&init_stack, &[], &[], expected);
     }
 }

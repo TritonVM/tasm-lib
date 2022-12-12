@@ -2,56 +2,62 @@ use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::algebraic_hasher::Hashable;
 
-use crate::{arithmetic::u32::is_u32::IsU32, snippet_trait::Snippet};
+use crate::arithmetic::u32::is_u32::IsU32;
+use crate::library::Library;
+use crate::snippet_trait::Snippet;
 
 pub struct U32s2Add();
 
-const SNIPPET_NAME: &str = "u32_2_add";
-
 impl Snippet for U32s2Add {
-    const STACK_DIFF: isize = -2;
-    const NAME: &'static str = SNIPPET_NAME;
+    fn new() -> Self {
+        Self()
+    }
+
+    fn stack_diff() -> isize {
+        -2
+    }
+
+    fn entrypoint() -> &'static str {
+        "u32_2_add"
+    }
 
     /// Four top elements of stack are assumed to be valid u32s. So to have
     /// a value that's less than 2^32.
-    fn get_function() -> String {
-        let is_u32_code = IsU32::get_function();
-        let is_u32_function_name = IsU32::NAME;
+    fn function_body(library: &mut Library) -> String {
+        let entrypoint = Self::entrypoint();
+        let is_u32 = library.import::<IsU32>();
         const MINUS_2_POW_32: &str = "18446744065119617025";
-        let code: &str = &format!(
+
+        format!(
             "
-        // Import the `is_u32` function
-        {is_u32_code}
-        {SNIPPET_NAME}_carry:
-            push {MINUS_2_POW_32}
-            add
-            swap2
-            push 1
-            add
-            swap2
-            return
+            {entrypoint}:
+                swap1
+                swap2
+                add
+                dup0
+                call {is_u32}
+                push 0
+                eq
+                skiz
+                    call {entrypoint}_carry
+                swap2
+                add
+                dup0
+                call {is_u32}
+                assert
+                swap1
+                return
 
-        {SNIPPET_NAME}:
-            swap1
-            swap2
-            add
-            dup0
-            call {is_u32_function_name}
-            push 0
-            eq
-            skiz
-                call {SNIPPET_NAME}_carry
-            swap2
-            add
-            dup0
-            call {is_u32_function_name}
-            assert
-            swap1
-            return
-    "
-        );
-
-        code.to_string()
+            {entrypoint}_carry:
+                push {MINUS_2_POW_32}
+                add
+                swap2
+                push 1
+                add
+                swap2
+                return
+            "
+        )
     }
 
     fn rust_shadowing(
@@ -81,7 +87,7 @@ mod tests {
     use num::{One, Zero};
     use rand::RngCore;
 
-    use crate::get_init_tvm_stack;
+    use crate::{get_init_tvm_stack, snippet_trait::rust_tasm_equivalence_prop};
 
     use super::*;
 
@@ -190,26 +196,7 @@ mod tests {
             init_stack.push(elem);
         }
 
-        let mut tasm_stack = init_stack.clone();
-        let execution_result = U32s2Add::run_tasm(&mut tasm_stack, vec![], vec![]);
-        println!(
-            "Cycle count for `_u32s_2_add_tasm`: {}",
-            execution_result.cycle_count
-        );
-        println!(
-            "Hash table height for `_u32s_2_add_tasm`: {}",
-            execution_result.hash_table_height
-        );
-
-        let mut rust_stack = init_stack;
-        U32s2Add::rust_shadowing(&mut rust_stack, vec![], vec![]);
-
-        assert_eq!(tasm_stack, rust_stack, "Rust code must match TVM for `add`");
-        if let Some(expected) = expected {
-            assert_eq!(
-                tasm_stack, expected,
-                "TVM must produce expected stack. lhs: {lhs}, rhs: {rhs}"
-            );
-        }
+        let (_execution_result, _tasm_stack) =
+            rust_tasm_equivalence_prop::<U32s2Add>(&init_stack, &[], &[], expected);
     }
 }

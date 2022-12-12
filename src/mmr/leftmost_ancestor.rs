@@ -7,33 +7,38 @@ use twenty_first::{
 
 use crate::{
     arithmetic::u32s_2::{add::U32s2Add, decr::U32s2Decr, lt::U32s2Lt},
+    library::Library,
     snippet_trait::Snippet,
 };
 
-pub struct MmrLeftmostAncestor;
-
-const SNIPPET_NAME: &str = "mmr_leftmost_ancestor";
+pub struct MmrLeftmostAncestor();
 
 impl Snippet for MmrLeftmostAncestor {
-    const STACK_DIFF: isize = 1;
+    fn new() -> Self {
+        Self()
+    }
 
-    const NAME: &'static str = SNIPPET_NAME;
+    fn stack_diff() -> isize {
+        1
+    }
 
-    fn get_function() -> String {
-        let u32s_2_add = U32s2Add::NAME;
-        let u32s_2_add_function = U32s2Add::get_function();
-        let u32s_2_decr = U32s2Decr::NAME;
-        let u32s_2_decr_function = U32s2Decr::get_function();
-        let u32s_2_lt = U32s2Lt::NAME;
-        let u32s_2_lt_function = U32s2Lt::get_function();
+    fn entrypoint() -> &'static str {
+        "mmr_leftmost_ancestor"
+    }
+
+    fn function_body(library: &mut Library) -> String {
+        let entrypoint = Self::entrypoint();
+        let u32s_2_add = library.import::<U32s2Add>();
+        let u32s_2_decr = library.import::<U32s2Decr>();
+        let u32s_2_lt = library.import::<U32s2Lt>();
         format!(
             "
             // Before: _ node_index_hi node_index_lo
             // After: _ leftmost_ancestor_hi leftmost_ancestor_lo height
-            {SNIPPET_NAME}:
+            {entrypoint}:
                 push 0        // -> _ node_index_hi node_index_lo h
                 push 0 push 2 // -> _ node_index_hi node_index_lo h ret_hi ret_lo
-                call {SNIPPET_NAME}_while // -> _ node_index_hi node_index_lo (h + 1) ret_hi ret_lo node_index_hi node_index_lo (ret - 1)_hi (ret - 1)_lo
+                call {entrypoint}_while // -> _ node_index_hi node_index_lo (h + 1) ret_hi ret_lo node_index_hi node_index_lo (ret - 1)_hi (ret - 1)_lo
 
                 pop pop pop pop    // -> _ node_index_hi node_index_lo h ret_hi ret_lo
                 call {u32s_2_decr} // -> _ node_index_hi node_index_lo h (ret - 1)_hi (ret - 1)_lo
@@ -47,7 +52,7 @@ impl Snippet for MmrLeftmostAncestor {
 
             // Before: _ node_index_hi node_index_lo h ret_hi ret_lo
             // After: _ node_index_hi node_index_lo h ret_hi ret_lo node_index_hi node_index_lo (ret - 1)_hi (ret - 1)_lo
-            {SNIPPET_NAME}_while:
+            {entrypoint}_while:
                 dup4 dup4 // -> _ node_index_hi node_index_lo h ret_hi ret_lo node_index_hi node_index_lo
                 dup3 dup3 // -> _ node_index_hi node_index_lo h ret_hi ret_lo node_index_hi node_index_lo ret_hi ret_lo
                 call {u32s_2_decr} // -> _ node_index_hi node_index_lo h ret_hi ret_lo node_index_hi node_index_lo (ret - 1)_hi (ret - 1)_lo
@@ -61,10 +66,6 @@ impl Snippet for MmrLeftmostAncestor {
                 dup1 dup1              // -> _ node_index_hi node_index_lo (h + 1) ret_hi ret_lo ret_hi ret_lo
                 call {u32s_2_add}      // -> _ node_index_hi node_index_lo (h + 1) (2 * ret)_hi (2 * ret)_lo
                 recurse
-
-            {u32s_2_add_function}
-            {u32s_2_decr_function}
-            {u32s_2_lt_function}
             "
         )
     }
@@ -93,7 +94,7 @@ mod tests {
         shared_math::b_field_element::BFieldElement, util_types::algebraic_hasher::Hashable,
     };
 
-    use crate::get_init_tvm_stack;
+    use crate::{get_init_tvm_stack, snippet_trait::rust_tasm_equivalence_prop};
 
     use super::*;
 
@@ -181,29 +182,7 @@ mod tests {
             init_stack.push(elem);
         }
 
-        let mut tasm_stack = init_stack.clone();
-        let execution_result = MmrLeftmostAncestor::run_tasm(&mut tasm_stack, vec![], vec![]);
-        println!(
-            "Cycle count for `{SNIPPET_NAME}`: {}",
-            execution_result.cycle_count
-        );
-        println!(
-            "Hash table height for `{SNIPPET_NAME}`: {}",
-            execution_result.hash_table_height
-        );
-
-        let mut rust_stack = init_stack;
-        MmrLeftmostAncestor::rust_shadowing(&mut rust_stack, vec![], vec![]);
-
-        assert_eq!(
-            tasm_stack, rust_stack,
-            "Rust code must match TVM for `{SNIPPET_NAME}`"
-        );
-        if let Some(expected) = expected {
-            assert_eq!(
-                tasm_stack, expected,
-                "TVM must produce expected stack. node_index: {node_index}"
-            );
-        }
+        let (_execution_result, _tasm_stack) =
+            rust_tasm_equivalence_prop::<MmrLeftmostAncestor>(&init_stack, &[], &[], expected);
     }
 }

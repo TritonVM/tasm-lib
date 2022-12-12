@@ -3,43 +3,52 @@ use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::algebraic_hasher::Hashable;
 
+use crate::library::Library;
 use crate::snippet_trait::Snippet;
 
-pub struct U322Incr();
+pub struct U32s2Incr();
 
-const SNIPPET_NAME: &str = "u32_2_incr";
+impl Snippet for U32s2Incr {
+    fn new() -> Self {
+        Self()
+    }
 
-impl Snippet for U322Incr {
-    const STACK_DIFF: isize = 0;
-    const NAME: &'static str = SNIPPET_NAME;
+    fn stack_diff() -> isize {
+        0
+    }
 
-    fn get_function() -> String {
+    fn entrypoint() -> &'static str {
+        "u32_2_incr"
+    }
+
+    fn function_body(_library: &mut Library) -> String {
+        let entrypoint = Self::entrypoint();
         const TWO_POW_32: &str = "4294967296";
         format!(
             "
-        {SNIPPET_NAME}_carry:
-            pop
-            push 1
-            add
-            dup0
-            push {TWO_POW_32}
-            eq
-            push 0
-            eq
-            assert
-            push 0
-            return
+            {entrypoint}_carry:
+                pop
+                push 1
+                add
+                dup0
+                push {TWO_POW_32}
+                eq
+                push 0
+                eq
+                assert
+                push 0
+                return
 
-        {SNIPPET_NAME}:
-            push 1
-            add
-            dup0
-            push {TWO_POW_32}
-            eq
-            skiz
-                call {SNIPPET_NAME}_carry
-            return
-    ",
+            {entrypoint}:
+                push 1
+                add
+                dup0
+                push {TWO_POW_32}
+                eq
+                skiz
+                    call {entrypoint}_carry
+                return
+            ",
         )
     }
 
@@ -63,7 +72,7 @@ impl Snippet for U322Incr {
 mod tests {
     use rand::Rng;
 
-    use crate::get_init_tvm_stack;
+    use crate::{get_init_tvm_stack, snippet_trait::rust_tasm_equivalence_prop};
 
     use super::*;
 
@@ -90,7 +99,7 @@ mod tests {
         init_stack.push(max_value.as_ref()[0].into());
 
         let mut tasm_stack = init_stack;
-        U322Incr::run_tasm(&mut tasm_stack, vec![], vec![]);
+        U32s2Incr::run_tasm(&mut tasm_stack, vec![], vec![]);
     }
 
     #[test]
@@ -102,31 +111,17 @@ mod tests {
         init_stack.push(max_value.as_ref()[0].into());
 
         let mut rust_stack = init_stack;
-        U322Incr::rust_shadowing(&mut rust_stack, vec![], vec![]);
+        U32s2Incr::rust_shadowing(&mut rust_stack, vec![], vec![]);
     }
 
     fn prop_incr(some_value: U32s<2>) {
         let mut init_stack = get_init_tvm_stack();
-        init_stack.push(some_value.as_ref()[1].into());
-        init_stack.push(some_value.as_ref()[0].into());
+        for elem in some_value.to_sequence().into_iter().rev() {
+            init_stack.push(elem);
+        }
 
-        let mut tasm_stack = init_stack.clone();
-        let execution_result = U322Incr::run_tasm(&mut tasm_stack, vec![], vec![]);
-        println!(
-            "Cycle count for `u32s_2_incr`: {}",
-            execution_result.cycle_count
-        );
-        println!(
-            "Hash table height for `u32s_2_incr`: {}",
-            execution_result.hash_table_height
-        );
-
-        let mut rust_stack = init_stack;
-        U322Incr::rust_shadowing(&mut rust_stack, vec![], vec![]);
-
-        assert_eq!(
-            tasm_stack, rust_stack,
-            "Rust code must match TVM for `hash`"
-        );
+        let expected = None;
+        let (_execution_result, _tasm_stack) =
+            rust_tasm_equivalence_prop::<U32s2Incr>(&init_stack, &[], &[], expected);
     }
 }

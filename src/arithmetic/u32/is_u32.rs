@@ -1,34 +1,43 @@
 use num::{One, Zero};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
+use crate::library::Library;
 use crate::snippet_trait::Snippet;
-
-const SNIPPET_NAME: &str = "is_u32";
 
 pub struct IsU32();
 
 impl Snippet for IsU32 {
-    const STACK_DIFF: isize = 0;
-    const NAME: &'static str = SNIPPET_NAME;
+    fn new() -> Self {
+        Self()
+    }
+
+    fn stack_diff() -> isize {
+        0
+    }
+
+    fn entrypoint() -> &'static str {
+        "is_u32"
+    }
 
     /// Place 1 on stack iff top element is less than $2^32$. Otherwise
     /// place 0 on stack. Consumes top element of stack, leaves a boolean
     /// on top of stack. So this subroutine does not change the height
     /// of the stack
-    fn get_function() -> String {
+    fn function_body(_library: &mut Library) -> String {
         let mut unrolled_loop: String = String::default();
+        let entrypoint = Self::entrypoint();
         for _ in 0..32 {
             unrolled_loop.push_str("lsb\n");
             unrolled_loop.push_str("pop\n");
         }
         let code: &str = &format!(
             "
-        {SNIPPET_NAME}:
-            {unrolled_loop}
-            push 0
-            eq
-            return
-    "
+            {entrypoint}:
+                {unrolled_loop}
+                push 0
+                eq
+                return
+            "
         );
 
         code.to_string()
@@ -52,7 +61,7 @@ impl Snippet for IsU32 {
 mod tests {
     use rand::RngCore;
 
-    use crate::get_init_tvm_stack;
+    use crate::{get_init_tvm_stack, snippet_trait::rust_tasm_equivalence_prop};
 
     use super::*;
 
@@ -63,15 +72,18 @@ mod tests {
         let stack_false: Vec<BFieldElement> =
             vec![get_init_tvm_stack(), vec![BFieldElement::zero()]].concat();
 
-        prop_is_u32(BFieldElement::zero(), &stack_true);
-        prop_is_u32(BFieldElement::one(), &stack_true);
-        prop_is_u32(BFieldElement::new(1 << 10), &stack_true);
-        prop_is_u32(BFieldElement::new(1 << 20), &stack_true);
-        prop_is_u32(BFieldElement::new(1 << 30), &stack_true);
-        prop_is_u32(BFieldElement::new(1 << 40), &stack_false);
-        prop_is_u32(BFieldElement::new(1 << 50), &stack_false);
-        prop_is_u32(BFieldElement::new(1 << 60), &stack_false);
-        prop_is_u32(BFieldElement::new((1 << 63) + (1 << 42)), &stack_false);
+        prop_is_u32(BFieldElement::zero(), Some(&stack_true));
+        prop_is_u32(BFieldElement::one(), Some(&stack_true));
+        prop_is_u32(BFieldElement::new(1 << 10), Some(&stack_true));
+        prop_is_u32(BFieldElement::new(1 << 20), Some(&stack_true));
+        prop_is_u32(BFieldElement::new(1 << 30), Some(&stack_true));
+        prop_is_u32(BFieldElement::new(1 << 40), Some(&stack_false));
+        prop_is_u32(BFieldElement::new(1 << 50), Some(&stack_false));
+        prop_is_u32(BFieldElement::new(1 << 60), Some(&stack_false));
+        prop_is_u32(
+            BFieldElement::new((1 << 63) + (1 << 42)),
+            Some(&stack_false),
+        );
     }
 
     #[test]
@@ -83,36 +95,19 @@ mod tests {
 
         let mut rng = rand::thread_rng();
         for _ in 0..10 {
-            prop_is_u32(BFieldElement::new(rng.next_u32() as u64), &stack_true);
+            prop_is_u32(BFieldElement::new(rng.next_u32() as u64), Some(&stack_true));
             prop_is_u32(
                 BFieldElement::new((rng.next_u32() as u64) + (1u64 << 32)),
-                &stack_false,
+                Some(&stack_false),
             );
         }
     }
 
-    fn prop_is_u32(some_value: BFieldElement, expected: &[BFieldElement]) {
+    fn prop_is_u32(some_value: BFieldElement, expected: Option<&[BFieldElement]>) {
         let mut init_stack = get_init_tvm_stack();
         init_stack.push(some_value);
 
-        let mut tasm_stack = init_stack.clone();
-        let execution_result = IsU32::run_tasm(&mut tasm_stack, vec![], vec![]);
-        println!(
-            "Cycle count for `u32_is_u32`: {}",
-            execution_result.cycle_count
-        );
-        println!(
-            "Hash table height for `u32_is_u32`: {}",
-            execution_result.hash_table_height
-        );
-
-        let mut rust_stack = init_stack;
-        IsU32::rust_shadowing(&mut rust_stack, vec![], vec![]);
-
-        assert_eq!(
-            tasm_stack, rust_stack,
-            "Rust code must match TVM for `is_u32`"
-        );
-        assert_eq!(expected, tasm_stack, "End TASM stack must match expected state. input: {some_value}\n expected: {expected:?}");
+        let (_execution_result, _tasm_stack) =
+            rust_tasm_equivalence_prop::<IsU32>(&init_stack, &[], &[], expected);
     }
 }
