@@ -134,7 +134,7 @@ mod tests {
         }
 
         let expected = None;
-        let (_execution_result, _tasm_stack) =
+        let _execution_result =
             rust_tasm_equivalence_prop::<U32s2Decr>(&init_stack, &[], &[], expected);
     }
 }

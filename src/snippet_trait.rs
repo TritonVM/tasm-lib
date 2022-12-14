@@ -62,7 +62,7 @@ pub fn rust_tasm_equivalence_prop<T: Snippet>(
     stdin: &[BFieldElement],
     secret_in: &[BFieldElement],
     expected: Option<&[BFieldElement]>,
-) -> (ExecutionResult, Vec<BFieldElement>) {
+) -> ExecutionResult {
     let mut tasm_stack = stack.to_vec();
     let execution_result = T::run_tasm(&mut tasm_stack, stdin.to_vec(), secret_in.to_vec());
     println!(
@@ -89,5 +89,5 @@ pub fn rust_tasm_equivalence_prop<T: Snippet>(
         assert_eq!(tasm_stack, expected, "TVM must produce expected stack.");
     }
 
-    (execution_result, tasm_stack)
+    execution_result
 }

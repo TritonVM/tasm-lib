@@ -103,7 +103,7 @@ mod tests {
         let mut init_stack = get_init_tvm_stack();
         init_stack.push(some_value);
 
-        let (_execution_result, _tasm_stack) =
+        let _execution_result =
             rust_tasm_equivalence_prop::<IsU32>(&init_stack, &[], &[], expected);
     }
 }

@@ -96,7 +96,7 @@ mod tests {
         }
         init_stack.push(BFieldElement::new(height as u64));
 
-        let (_execution_result, _tasm_stack) =
+        let _execution_result =
             rust_tasm_equivalence_prop::<MmrLeftChild>(&init_stack, &[], &[], expected);
     }
 }

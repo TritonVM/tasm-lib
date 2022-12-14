@@ -216,7 +216,7 @@ mod tests {
             init_stack.push(elem);
         }
 
-        let (_execution_result, _tasm_stack) =
+        let _execution_result =
             rust_tasm_equivalence_prop::<U32s2Lt>(&init_stack, &[], &[], expected);
     }
 }

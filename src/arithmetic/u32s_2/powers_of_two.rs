@@ -275,13 +275,13 @@ mod tests {
         init_stack.push(BFieldElement::new(exponent as u64));
 
         let expected = None;
-        let (_execution_result, mut tasm_stack) =
+        let mut execution_result =
             rust_tasm_equivalence_prop::<U32s2PowersOfTwoMemory>(&init_stack, &[], &[], expected);
 
-        let a = tasm_stack.pop().unwrap().value();
+        let a = execution_result.final_stack.pop().unwrap().value();
         assert!(a < u32::MAX as u64);
 
-        let b = tasm_stack.pop().unwrap().value();
+        let b = execution_result.final_stack.pop().unwrap().value();
         assert!(b < u32::MAX as u64);
 
         let actual_res = U32s::<2>::new([a as u32, b as u32]);
@@ -304,12 +304,12 @@ mod tests {
         init_stack.push(BFieldElement::new(exponent as u64));
 
         let expected = None;
-        let (_execution_result, mut tasm_stack) =
+        let mut execution_result =
             rust_tasm_equivalence_prop::<U32s2PowersOfTwoMemory>(&init_stack, &[], &[], expected);
 
-        let a = tasm_stack.pop().unwrap().value();
+        let a = execution_result.final_stack.pop().unwrap().value();
         assert!(a < u32::MAX as u64);
-        let b = tasm_stack.pop().unwrap().value();
+        let b = execution_result.final_stack.pop().unwrap().value();
         assert!(b < u32::MAX as u64);
         let actual_res = U32s::<2>::new([a as u32, b as u32]);
         let mut expected_res = U32s::<2>::one();
@@ -325,12 +325,12 @@ mod tests {
         init_stack.push(BFieldElement::new(exponent as u64));
 
         let expected = None;
-        let (_execution_result, mut tasm_stack) =
+        let mut execution_result =
             rust_tasm_equivalence_prop::<U32s2PowersOfTwoMemory>(&init_stack, &[], &[], expected);
 
-        let a = tasm_stack.pop().unwrap().value();
+        let a = execution_result.final_stack.pop().unwrap().value();
         assert!(a < u32::MAX as u64);
-        let b = tasm_stack.pop().unwrap().value();
+        let b = execution_result.final_stack.pop().unwrap().value();
         assert!(b < u32::MAX as u64);
         let actual_res = U32s::<2>::new([a as u32, b as u32]);
         let mut expected_res = U32s::<2>::one();
