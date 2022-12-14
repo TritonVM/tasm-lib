@@ -1,5 +1,9 @@
 use num_traits::Zero;
-use triton_vm::{op_stack::OP_STACK_REG_COUNT, state::VMState, vm::Program};
+use std::collections::HashMap;
+
+use triton_vm::op_stack::OP_STACK_REG_COUNT;
+use triton_vm::state::VMState;
+use triton_vm::vm::Program;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 mod arithmetic;
@@ -11,6 +15,8 @@ mod snippet_trait;
 
 pub struct ExecutionResult {
     pub output: Vec<BFieldElement>,
+    pub final_stack: Vec<BFieldElement>,
+    pub final_ram: HashMap<BFieldElement, BFieldElement>,
     pub cycle_count: usize,
     pub hash_table_height: usize,
 }
@@ -82,13 +88,15 @@ pub fn execute(
     assert_eq!(
         expected_stack_diff,
         final_stack_height - init_stack_height as isize,
-        "Code must grow stack with expected number of elements.\ninit height: {init_stack_height}\nend height: {final_stack_height}\nExpected growth: {expected_stack_diff}
-        \n\n
-        final_stack = {stack:?}"
+        "Code must grow/shrink stack with expected number of elements.\ninit height: {init_stack_height}\nend height: {final_stack_height}\nexpected difference: {expected_stack_diff}\n\nfinal stack: {stack:?}"
     );
 
     ExecutionResult {
         output,
+
+        final_stack: stack.clone(),
+
+        final_ram: end_state.ram,
 
         // Cycle count is cycles it took to run program excluding the cycles that were
         // spent on preparing the stack
