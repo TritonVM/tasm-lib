@@ -5,17 +5,11 @@ use crate::library::Library;
 use crate::ExecutionResult;
 
 pub trait Snippet {
-    fn stack_diff() -> isize
-    where
-        Self: Sized;
+    fn stack_diff() -> isize;
 
-    fn entrypoint() -> &'static str
-    where
-        Self: Sized;
+    fn entrypoint() -> &'static str;
 
-    fn function_body(library: &mut Library) -> String
-    where
-        Self: Sized;
+    fn function_body(library: &mut Library) -> String;
 
     // TODO: Consider adding a generator for valid inputs to this trait
     // This input generator could then function as a form of documentation.
@@ -35,8 +29,7 @@ pub trait Snippet {
         stack: &mut Vec<BFieldElement>,
         std_in: Vec<BFieldElement>,
         secret_in: Vec<BFieldElement>,
-    ) where
-        Self: Sized;
+    );
 
     /// The TASM code is always run through a function call, so the 1st instruction
     /// is a call to the function in question.
@@ -44,10 +37,7 @@ pub trait Snippet {
         stack: &mut Vec<BFieldElement>,
         std_in: Vec<BFieldElement>,
         secret_in: Vec<BFieldElement>,
-    ) -> ExecutionResult
-    where
-        Self: Sized,
-    {
+    ) -> ExecutionResult {
         let mut library = Library::empty();
         let entrypoint = Self::entrypoint();
         let function_body = Self::function_body(&mut library);

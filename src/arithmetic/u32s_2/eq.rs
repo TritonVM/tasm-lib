@@ -8,24 +8,15 @@ use crate::snippet_trait::Snippet;
 pub struct U32s2Eq;
 
 impl Snippet for U32s2Eq {
-    fn stack_diff() -> isize
-    where
-        Self: Sized,
-    {
+    fn stack_diff() -> isize {
         -3
     }
 
-    fn entrypoint() -> &'static str
-    where
-        Self: Sized,
-    {
+    fn entrypoint() -> &'static str {
         "u32_2_eq"
     }
 
-    fn function_body(_library: &mut Library) -> String
-    where
-        Self: Sized,
-    {
+    fn function_body(_library: &mut Library) -> String {
         let entrypoint = Self::entrypoint();
         format!(
             "
@@ -72,9 +63,8 @@ impl Snippet for U32s2Eq {
 #[cfg(test)]
 mod tests {
     use rand::RngCore;
-    use twenty_first::{
-        shared_math::b_field_element::BFieldElement, util_types::algebraic_hasher::Hashable,
-    };
+    use twenty_first::shared_math::b_field_element::BFieldElement;
+    use twenty_first::util_types::algebraic_hasher::Hashable;
 
     use crate::{get_init_tvm_stack, snippet_trait::rust_tasm_equivalence_prop};
 
