@@ -10,7 +10,6 @@ use crate::{library::Library, snippet_trait::Snippet};
 /// U32<2> to the top of the stack. So grows the stack by 1.
 pub struct U32s2PowersOfTwoMemory();
 pub struct U32s2PowersOfTwoArithmeticFlat();
-
 pub struct U32s2PowersOfTwoStatic();
 
 impl Snippet for U32s2PowersOfTwoStatic {
@@ -101,17 +100,17 @@ impl Snippet for U32s2PowersOfTwoMemory {
         "u32_2_powers_of_two"
     }
 
-    fn function_body(_library: &mut Library) -> String {
+    // Assumes that the top stack element is below 64. Otherwise undefined.
+    fn function_body(library: &mut Library) -> String {
         let entrypoint = Self::entrypoint();
-        // Assumes that the top stack element is below 64. Otherwise undefined.
+        let lookup_addr = library.kmalloc(32);
+
+        // FIXME: Initializing the lookup table only needs to happen once.
         let init_mem_code: String = (0..32)
             .map(|i| {
-                let two_pow_i = 2u64.pow(i);
-                format!(
-                    "
-                    push {i} push {two_pow_i} write_mem pop pop
-                    "
-                )
+                let addr_i = lookup_addr + i;
+                let two_pow_i = 2u32.pow(i as u32);
+                format!("push {addr_i} push {two_pow_i} write_mem pop pop\n")
             })
             .collect::<Vec<_>>()
             .concat();
@@ -281,14 +280,15 @@ mod tests {
 
         let a = tasm_stack.pop().unwrap().value();
         assert!(a < u32::MAX as u64);
+
         let b = tasm_stack.pop().unwrap().value();
         assert!(b < u32::MAX as u64);
+
         let actual_res = U32s::<2>::new([a as u32, b as u32]);
         let mut expected_res = U32s::<2>::one();
         for _ in 0..exponent {
             expected_res.mul_two();
         }
-
         assert_eq!(expected_res, actual_res);
     }
 

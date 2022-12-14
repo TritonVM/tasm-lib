@@ -6,6 +6,7 @@ use crate::snippet_trait::Snippet;
 pub struct Library {
     seen_snippets: HashSet<&'static str>,
     function_bodies: HashSet<String>,
+    free_pointer: usize,
 }
 
 impl Library {
@@ -39,6 +40,12 @@ impl Library {
             .iter()
             .map(|s| format!("{s}\n"))
             .collect()
+    }
+
+    pub fn kmalloc(&mut self, num_words: usize) -> usize {
+        let address = self.free_pointer;
+        self.free_pointer += num_words;
+        address
     }
 }
 
