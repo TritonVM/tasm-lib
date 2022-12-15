@@ -1,185 +1,182 @@
-#[allow(dead_code)]
+use num::Zero;
+use twenty_first::shared_math::b_field_element::BFieldElement;
+use twenty_first::shared_math::rescue_prime_digest::Digest;
+use twenty_first::shared_math::rescue_prime_regular::DIGEST_LENGTH;
+use twenty_first::shared_math::x_field_element::EXTENSION_DEGREE;
 
-pub const SAMPLE_WEIGHTS: &str = "
-sample_weights:
-    swap5
-    dup0
-    skiz
-        call sample_weights_body
-    pop pop pop pop pop pop
-    return
+use crate::library::Library;
+use crate::snippet_trait::Snippet;
 
-sample_weights_body:
-    call decr
-    swap5
-    call dep5x6
-    call sample_weight
-    write_io write_io write_io
-    call sample_weights
-    return
+pub struct SampleWeights<const N: usize>();
 
-sample_weight:
-    push 0
-    push 0
-    push 0
-    push 0
-    hash
-    pop pop pop pop pop pop pop
-    return
+impl<const N: usize> Snippet for SampleWeights<N> {
+    fn stack_diff() -> isize {
+        -(DIGEST_LENGTH as isize)
+    }
 
-dup_digest:
-    dup4
-    dup4
-    dup4
-    dup4
-    dup4
-    return
+    fn entrypoint() -> &'static str {
+        "sample_weights"
+    }
 
-dep5x6:
-    dup5 dup5 dup5 dup5 dup5 dup5
-    return
+    fn function_body(library: &mut Library) -> String {
+        let entrypoint = Self::entrypoint();
+        let addr = library.kmalloc(EXTENSION_DEGREE * N);
 
-decr:
-    push -1
-    add
-    return
-";
+        let call_gen_single_code: String = (0..N)
+            .map(|i| {
+                format!(
+                    "
+                    push {i}                       // _ s4 s3 s2 s1 s0 addr i
+                    call {entrypoint}_gen_single   // _ s4 s3 s2 s1 s0 addr i w2 w1 w0
+                    call {entrypoint}_store_weight // _ s4 s3 s2 s1 s0 (addr + 3) i
+                    pop                            // _ s4 s3 s2 s1 s0 (addr + 3)
+                    "
+                )
+            })
+            .collect();
 
-pub const _SAMPLE_WEIGHT: &str = "
-sample_weight:
-    hash
-    pop pop pop 
-    pop pop pop pop
-    return
-";
+        format!(
+            "
+            // Before: _ s4 s3 s2 s1 s0
+            // After: _
+            {entrypoint}:
+                push {addr}                    // _ s4 s3 s2 s1 s0 addr
+                {call_gen_single_code}         // _ s4 s3 s2 s1 s0 (addr + 3*N)
+                // push 0                         // _ s4 s3 s2 s1 s0 addr i
+                // call {entrypoint}_gen_single   // _ s4 s3 s2 s1 s0 addr i w2 w1 w0
+                // call {entrypoint}_store_weight // _ s4 s3 s2 s1 s0 (addr + 3) i
+
+                // push 1 add                     // _ s4 s3 s2 s1 s0 (addr + 3) (i + 1)
+                // call {entrypoint}_gen_single   // _ s4 s3 s2 s1 s0 addr (i + 1) w2 w1 w0
+                // call {entrypoint}_store_weight // _ s4 s3 s2 s1 s0 (addr + 6) (i + 1)
+
+                pop pop pop pop pop pop        // _
+                return
+
+            // Before: _ s4 s3 s2 s1 s0 addr i
+            // After: _ s4 s3 s2 s1 s0 addr i w2 w1 w0
+            {entrypoint}_gen_single:
+                dup6 dup6 dup6 dup6 dup6       // _ s4 s3 s2 s1 s0 addr i s4 s3 s2 s1 s0
+                push 0 push 0 push 0 push 0    // _ s4 s3 s2 s1 s0 addr i s4 s3 s2 s1 s0 0 0 0 0
+                dup9                           // _ s4 s3 s2 s1 s0 addr i s4 s3 s2 s1 s0 0 0 0 0 i
+                hash                           // _ s4 s3 s2 s1 s0 addr i _w4 _w3 w2 w1 w0 0 0 0 0 0
+                pop pop pop pop pop            // _ s4 s3 s2 s1 s0 addr i _w4 _w3 w2 w1 w0
+                swap3 pop                      // _ s4 s3 s2 s1 s0 addr i _w4 w0 w2 w1
+                swap3 pop                      // _ s4 s3 s2 s1 s0 addr i w1 w0 w2
+                swap2                          // _ s4 s3 s2 s1 s0 addr i w2 w0 w1
+                swap1                          // _ s4 s3 s2 s1 s0 addr i w2 w1 w0
+                return
+
+            // Before: _ addr i w2 w1 w0
+            // After: _ (addr + 3) i
+            // Mem:
+            //   mem[addr]     := w0
+            //   mem[addr + 1] := w1
+            //   mem[addr + 2] := w2
+            {entrypoint}_store_weight:
+                dup4                           // _ addr i w2 w1 w0 addr
+                swap1                          // _ addr i w2 w1 addr w0
+                write_mem                      // mem[addr] := w0
+                pop                            // _ addr i w2 w1 addr
+
+                push 1 add                     // _ addr i w2 w1 (addr + 1)
+                swap1                          // _ addr i w2 (addr + 1) w1
+                write_mem                      // mem[addr + 1] := w1
+                pop                            // _ addr i w2 (addr + 1)
+
+                push 1 add                     // _ addr i w2 (addr + 2)
+                swap1                          // _ addr i (addr + 2) w2
+                write_mem                      // mem[addr + 2] := w2
+                pop                            // _ addr i (addr + 2)
+                push 1 add                     // _ addr i (addr + 3)
+                swap2                          // _ (addr + 3) i addr
+                pop                            // _ (addr + 3) i
+                return
+            "
+        )
+    }
+
+    fn rust_shadowing(
+        stack: &mut Vec<BFieldElement>,
+        _std_in: Vec<BFieldElement>,
+        _secret_in: Vec<BFieldElement>,
+    ) {
+        let _seed = Digest::new(pop_many(stack));
+    }
+}
+
+pub fn pop_many<const N: usize>(stack: &mut Vec<BFieldElement>) -> [BFieldElement; N] {
+    let expectable = format!("At least {N} elements on the stack");
+    let mut result = [BFieldElement::zero(); N];
+
+    for i in 0..N {
+        result[N - i - 1] = stack.pop().expect(&expectable)
+    }
+
+    result
+}
+
 #[cfg(test)]
-mod sample_weights_tests {
-    use itertools::Itertools;
-    use num::Zero;
-    use rayon::prelude::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
+mod tests {
+    use std::collections::HashMap;
 
-    use triton_vm::vm::Program;
-    use twenty_first::shared_math::b_field_element::BFieldElement;
+    use itertools::Itertools;
+    use triton_vm::table::challenges::AllChallenges;
     use twenty_first::shared_math::rescue_prime_digest::Digest;
     use twenty_first::shared_math::rescue_prime_regular::RescuePrimeRegular;
-    use twenty_first::shared_math::x_field_element::XFieldElement;
     use twenty_first::util_types::algebraic_hasher::{AlgebraicHasher, Hashable};
-    use twenty_first::util_types::emojihash_trait::Emojihash;
+
+    use crate::get_init_tvm_stack;
+    use crate::snippet_trait::rust_tasm_equivalence_prop;
 
     use super::*;
 
-    fn sample_weights<H: AlgebraicHasher>(seed: Digest, num_weights: usize) -> Vec<XFieldElement> {
-        let mut digests = Vec::with_capacity(num_weights);
-        (0..num_weights)
-            .into_par_iter()
-            .map(|counter: usize| sample_weight::<H>(&seed, counter))
-            .collect_into_vec(&mut digests);
-        digests
-    }
-
-    fn sample_weight<H: AlgebraicHasher>(seed: &Digest, counter: usize) -> XFieldElement {
-        let zero = BFieldElement::zero();
-        let counter = BFieldElement::new(counter as u64);
-        let left = Digest::new([zero, zero, zero, zero, counter]);
-        let [_, _, w0, w1, w2] = H::hash_pair(&left, seed).values();
-
-        XFieldElement::new([w0, w1, w2])
-    }
-    // rust_output = [🤖🙄🍺], [👽🙄🤖], [😆😱🐱]
-    // tasm_output = [🤐😋🤑], [🍑👍🍆], [😂😆🥰]
-
-    #[test]
-    #[ignore = "not completed"]
-    fn run_sample_weight_equivalency_test() {
-        type H = RescuePrimeRegular;
-        let num_weights = 1;
-        let seed: Digest = H::hash(&BFieldElement::from(1u64));
-
-        let rust_output: Vec<BFieldElement> =
-            sample_weight::<H>(&seed, num_weights).coefficients.into();
-
-        let mut stdin = vec![BFieldElement::new(num_weights as u64)];
-
-        stdin.append(&mut seed.to_sequence());
-
-        let test_sample_weights: &str = "
-            main:
-                read_io
-                read_io
-                read_io
-                read_io
-                read_io
-                read_io
-                call sample_weight
-                write_io
-                write_io
-                write_io
-                halt
-        ";
-
-        let test_code = format!("{test_sample_weights}{_SAMPLE_WEIGHT}");
-
-        let program = Program::from_code(&test_code).unwrap();
-
-        let (_states, tasm_output, _err) = program.run(stdin, vec![]);
-
-        for state in _states.iter() {
-            println!("{}", state);
-        }
-
-        let a = rust_output.iter().map(|bfe| bfe.emojihash()).join(", ");
-        let b = tasm_output.iter().map(|bfe| bfe.emojihash()).join(", ");
-        assert_eq!(
-            rust_output, tasm_output,
-            "\nrust_output = {}\ntasm_output = {}",
-            a, b,
-        );
-    }
-
-    #[test]
-    #[ignore = "not completed"]
-    fn run_sample_weights_equivalency_test() {
-        type H = RescuePrimeRegular;
-        let num_weights = 1;
-        let seed: Digest = H::hash(&BFieldElement::from(1u64));
-
-        let rust_output: Vec<BFieldElement> = sample_weights::<H>(seed, num_weights)
+    fn prop_sample_weights<H: AlgebraicHasher, const N: usize>(seed: &Digest) {
+        // FIXME: Move this to `rust_shadowing()` once it supports shadowing memory.
+        let rust_sample_weights = H::sample_weights(seed, N)
             .iter()
             .flat_map(|xfe| xfe.coefficients)
-            .collect();
+            .collect::<Vec<_>>();
 
-        let mut stdin = vec![BFieldElement::new(num_weights as u64)];
+        let mut init_stack = get_init_tvm_stack();
+        init_stack.append(&mut seed.to_sequence().into_iter().rev().collect());
+        let execution_result =
+            rust_tasm_equivalence_prop::<SampleWeights<N>>(&mut init_stack, &[], &[], None);
 
-        stdin.append(&mut seed.to_sequence());
+        let tvm_sample_weights = (0..EXTENSION_DEGREE * N)
+            .map(|addr| BFieldElement::new(addr as u64))
+            .map(|addr| execution_result.final_ram[&addr])
+            .collect::<Vec<_>>();
 
-        let test_sample_weights: &str = "
-            main:
-                read_io
-                read_io
-                read_io
-                read_io
-                read_io
-                read_io
-                call sample_weights
-                halt
-        ";
-
-        let test_code = format!("{test_sample_weights}{SAMPLE_WEIGHTS}");
-
-        let program = Program::from_code(&test_code).unwrap();
-
-        let (_states, tasm_output, _err) = program.run(stdin, vec![]);
-
-        for state in _states.iter() {
-            println!("{}", state);
-        }
+        print_ram(&execution_result.final_ram);
 
         assert_eq!(
-            rust_output,
-            tasm_output,
-            "\nrust_output = {}\ntasm_output = {}",
-            rust_output.emojihash(),
-            tasm_output.emojihash(),
-        );
+            rust_sample_weights, tvm_sample_weights,
+            "sample weights must equal"
+        )
+    }
+
+    fn print_ram(ram: &HashMap<BFieldElement, BFieldElement>) {
+        for addr in ram
+            .keys()
+            .sorted_by(|a, b| Ord::cmp(&a.value(), &b.value()))
+        {
+            let value = ram[addr];
+            println!("{addr}: {value}");
+        }
+    }
+
+    #[test]
+    fn sample_weights_test() {
+        let seed = Digest::new([
+            BFieldElement::new(2),
+            BFieldElement::new(3),
+            BFieldElement::new(5),
+            BFieldElement::new(7),
+            BFieldElement::new(11),
+        ]);
+
+        prop_sample_weights::<RescuePrimeRegular, 1>(&seed);
+        prop_sample_weights::<RescuePrimeRegular, { AllChallenges::TOTAL_CHALLENGES }>(&seed);
     }
 }
