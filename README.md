@@ -21,8 +21,9 @@ the TVM version when appropriate.
 | ---- | :-------: | ----------: | ----------: | -----------------------: | :---: | ----------: | -----------------: |
 
 ## Recufi Code
-| Name | Author(s) | Last edited | TVM version | Tested and Rust-shadowed | Notes | Cycle Count | Asymptotic Runtime |
-| ---- | :-------: | ----------: | ----------: | -----------------------: | :---: | ----------: | -----------------: |
+| Name                | Author(s) | Last edited | TVM version | Cycle Count | Hash table height |
+| ------------------- | :-------: | ----------: | ----------: | ----------: | ----------------: |
+| sample_weights(130) |  sshine   |    20221215 |         TBD |        5989 |              1170 |
 
 ## Other Code Snippets
 | Name    |      Author(s)      | Last edited | TVM version | Notes | Cycle Count | Hash table height | Asymptotic Runtime |
