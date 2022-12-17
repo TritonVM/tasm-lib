@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use num::{One, Zero};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
@@ -43,6 +45,7 @@ impl Snippet for IsU32 {
         stack: &mut Vec<BFieldElement>,
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,
+        _init_memory: HashMap<BFieldElement, BFieldElement>,
     ) {
         let top = stack.pop().unwrap();
         stack.push(if top.value() < (1 << 32) {
@@ -103,7 +106,12 @@ mod tests {
         let mut init_stack = get_init_tvm_stack();
         init_stack.push(some_value);
 
-        let _execution_result =
-            rust_tasm_equivalence_prop::<IsU32>(&init_stack, &[], &[], expected);
+        let _execution_result = rust_tasm_equivalence_prop::<IsU32>(
+            &init_stack,
+            &[],
+            &[],
+            HashMap::default(),
+            expected,
+        );
     }
 }

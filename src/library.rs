@@ -51,6 +51,8 @@ impl Library {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use num::One;
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
@@ -90,6 +92,7 @@ mod tests {
             stack: &mut Vec<BFieldElement>,
             _std_in: Vec<BFieldElement>,
             _secret_in: Vec<BFieldElement>,
+            _init_memory: HashMap<BFieldElement, BFieldElement>,
         ) {
             stack.push(BFieldElement::one());
             stack.push(BFieldElement::one());
@@ -124,6 +127,7 @@ mod tests {
             stack: &mut Vec<BFieldElement>,
             _std_in: Vec<BFieldElement>,
             _secret_in: Vec<BFieldElement>,
+            _init_memory: HashMap<BFieldElement, BFieldElement>,
         ) {
             stack.push(BFieldElement::one());
             stack.push(BFieldElement::one());
@@ -155,6 +159,7 @@ mod tests {
             stack: &mut Vec<BFieldElement>,
             _std_in: Vec<BFieldElement>,
             _secret_in: Vec<BFieldElement>,
+            _init_memory: HashMap<BFieldElement, BFieldElement>,
         ) {
             stack.push(BFieldElement::one())
         }
@@ -165,8 +170,11 @@ mod tests {
         let empty_stack = get_init_tvm_stack();
 
         let expected = None;
-        let _execution_result = rust_tasm_equivalence_prop::<A>(&empty_stack, &[], &[], expected);
-        let _execution_result = rust_tasm_equivalence_prop::<B>(&empty_stack, &[], &[], expected);
-        let _execution_result = rust_tasm_equivalence_prop::<C>(&empty_stack, &[], &[], expected);
+        let _execution_result =
+            rust_tasm_equivalence_prop::<A>(&empty_stack, &[], &[], HashMap::default(), expected);
+        let _execution_result =
+            rust_tasm_equivalence_prop::<B>(&empty_stack, &[], &[], HashMap::default(), expected);
+        let _execution_result =
+            rust_tasm_equivalence_prop::<C>(&empty_stack, &[], &[], HashMap::default(), expected);
     }
 }

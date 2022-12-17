@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::execute;
@@ -29,6 +31,7 @@ pub trait Snippet {
         stack: &mut Vec<BFieldElement>,
         std_in: Vec<BFieldElement>,
         secret_in: Vec<BFieldElement>,
+        init_memory: HashMap<BFieldElement, BFieldElement>,
     );
 
     /// The TASM code is always run through a function call, so the 1st instruction
@@ -37,6 +40,7 @@ pub trait Snippet {
         stack: &mut Vec<BFieldElement>,
         std_in: Vec<BFieldElement>,
         secret_in: Vec<BFieldElement>,
+        init_memory: HashMap<BFieldElement, BFieldElement>,
     ) -> ExecutionResult {
         let mut library = Library::empty();
         let entrypoint = Self::entrypoint();
@@ -52,7 +56,14 @@ pub trait Snippet {
             {library_code}
             "
         );
-        execute(&code, stack, Self::stack_diff(), std_in, secret_in)
+        execute(
+            &code,
+            stack,
+            Self::stack_diff(),
+            std_in,
+            secret_in,
+            init_memory,
+        )
     }
 }
 
@@ -61,10 +72,16 @@ pub fn rust_tasm_equivalence_prop<T: Snippet>(
     stack: &[BFieldElement],
     stdin: &[BFieldElement],
     secret_in: &[BFieldElement],
+    init_memory: HashMap<BFieldElement, BFieldElement>,
     expected: Option<&[BFieldElement]>,
 ) -> ExecutionResult {
     let mut tasm_stack = stack.to_vec();
-    let execution_result = T::run_tasm(&mut tasm_stack, stdin.to_vec(), secret_in.to_vec());
+    let execution_result = T::run_tasm(
+        &mut tasm_stack,
+        stdin.to_vec(),
+        secret_in.to_vec(),
+        init_memory.clone(),
+    );
     println!(
         "Cycle count for `{}`: {}",
         T::entrypoint(),
@@ -77,7 +94,12 @@ pub fn rust_tasm_equivalence_prop<T: Snippet>(
     );
 
     let mut rust_stack = stack.to_vec();
-    T::rust_shadowing(&mut rust_stack, stdin.to_vec(), secret_in.to_vec());
+    T::rust_shadowing(
+        &mut rust_stack,
+        stdin.to_vec(),
+        secret_in.to_vec(),
+        init_memory,
+    );
 
     assert_eq!(
         tasm_stack,

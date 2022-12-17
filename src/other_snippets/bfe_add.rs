@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
@@ -29,6 +31,7 @@ impl Snippet for BfeAdd {
         stack: &mut Vec<BFieldElement>,
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,
+        _init_memory: HashMap<BFieldElement, BFieldElement>,
     ) {
         let a = stack.pop().unwrap();
         let b = stack.pop().unwrap();
@@ -52,7 +55,12 @@ mod tests {
         .concat();
 
         let expected = None;
-        let _execution_result =
-            rust_tasm_equivalence_prop::<BfeAdd>(&init_stack, &[], &[], expected);
+        let _execution_result = rust_tasm_equivalence_prop::<BfeAdd>(
+            &init_stack,
+            &[],
+            &[],
+            HashMap::default(),
+            expected,
+        );
     }
 }

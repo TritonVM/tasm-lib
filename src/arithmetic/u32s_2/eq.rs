@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use num::{One, Zero};
 use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
@@ -41,6 +43,7 @@ impl Snippet for U32s2Eq {
         stack: &mut Vec<BFieldElement>,
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,
+        _init_memory: HashMap<BFieldElement, BFieldElement>,
     ) where
         Self: Sized,
     {
@@ -192,7 +195,12 @@ mod tests {
             init_stack.push(elem);
         }
 
-        let _execution_result =
-            rust_tasm_equivalence_prop::<U32s2Eq>(&init_stack, &[], &[], expected);
+        let _execution_result = rust_tasm_equivalence_prop::<U32s2Eq>(
+            &init_stack,
+            &[],
+            &[],
+            HashMap::default(),
+            expected,
+        );
     }
 }

@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use num::Zero;
 
 use twenty_first::shared_math::b_field_element::BFieldElement;
@@ -31,7 +33,7 @@ fn _top_digests(stack: &[BFieldElement]) -> (Digest, Digest) {
 
 fn _hash_tasm(stack: &mut Vec<BFieldElement>) -> ExecutionResult {
     let code: &str = "hash";
-    execute(code, stack, 0, vec![], vec![])
+    execute(code, stack, 0, vec![], vec![], HashMap::default())
 }
 
 fn _hash_rust(stack: &mut Vec<BFieldElement>) {

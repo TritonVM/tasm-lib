@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use num::One;
 use twenty_first::{
     amount::u32s::U32s, shared_math::b_field_element::BFieldElement,
@@ -86,8 +88,9 @@ impl Snippet for U32s2PowersOfTwoStatic {
         stack: &mut Vec<BFieldElement>,
         std_in: Vec<BFieldElement>,
         secret_in: Vec<BFieldElement>,
+        init_memory: HashMap<BFieldElement, BFieldElement>,
     ) {
-        U32s2PowersOfTwoMemory::rust_shadowing(stack, std_in, secret_in);
+        U32s2PowersOfTwoMemory::rust_shadowing(stack, std_in, secret_in, init_memory);
     }
 }
 
@@ -163,6 +166,7 @@ impl Snippet for U32s2PowersOfTwoMemory {
         stack: &mut Vec<BFieldElement>,
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,
+        _init_memory: HashMap<BFieldElement, BFieldElement>,
     ) {
         // Find exponent
         let mut exponent: u32 = stack.pop().unwrap().try_into().unwrap();
@@ -257,8 +261,9 @@ impl Snippet for U32s2PowersOfTwoArithmeticFlat {
         stack: &mut Vec<BFieldElement>,
         std_in: Vec<BFieldElement>,
         secret_in: Vec<BFieldElement>,
+        init_memory: HashMap<BFieldElement, BFieldElement>,
     ) {
-        U32s2PowersOfTwoMemory::rust_shadowing(stack, std_in, secret_in);
+        U32s2PowersOfTwoMemory::rust_shadowing(stack, std_in, secret_in, init_memory);
     }
 }
 
@@ -275,8 +280,13 @@ mod tests {
         init_stack.push(BFieldElement::new(exponent as u64));
 
         let expected = None;
-        let mut execution_result =
-            rust_tasm_equivalence_prop::<U32s2PowersOfTwoMemory>(&init_stack, &[], &[], expected);
+        let mut execution_result = rust_tasm_equivalence_prop::<U32s2PowersOfTwoMemory>(
+            &init_stack,
+            &[],
+            &[],
+            HashMap::default(),
+            expected,
+        );
 
         let a = execution_result.final_stack.pop().unwrap().value();
         assert!(a < u32::MAX as u64);
@@ -304,8 +314,13 @@ mod tests {
         init_stack.push(BFieldElement::new(exponent as u64));
 
         let expected = None;
-        let mut execution_result =
-            rust_tasm_equivalence_prop::<U32s2PowersOfTwoMemory>(&init_stack, &[], &[], expected);
+        let mut execution_result = rust_tasm_equivalence_prop::<U32s2PowersOfTwoMemory>(
+            &init_stack,
+            &[],
+            &[],
+            HashMap::default(),
+            expected,
+        );
 
         let a = execution_result.final_stack.pop().unwrap().value();
         assert!(a < u32::MAX as u64);
@@ -325,8 +340,13 @@ mod tests {
         init_stack.push(BFieldElement::new(exponent as u64));
 
         let expected = None;
-        let mut execution_result =
-            rust_tasm_equivalence_prop::<U32s2PowersOfTwoMemory>(&init_stack, &[], &[], expected);
+        let mut execution_result = rust_tasm_equivalence_prop::<U32s2PowersOfTwoMemory>(
+            &init_stack,
+            &[],
+            &[],
+            HashMap::default(),
+            expected,
+        );
 
         let a = execution_result.final_stack.pop().unwrap().value();
         assert!(a < u32::MAX as u64);

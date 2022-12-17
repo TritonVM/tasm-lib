@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use num::{One, Zero};
 use twenty_first::{shared_math::b_field_element::BFieldElement, util_types::mmr};
 
@@ -161,6 +163,7 @@ impl Snippet for MmrRightChildAndHeight {
         stack: &mut Vec<twenty_first::shared_math::b_field_element::BFieldElement>,
         _std_in: Vec<twenty_first::shared_math::b_field_element::BFieldElement>,
         _secret_in: Vec<twenty_first::shared_math::b_field_element::BFieldElement>,
+        _init_memory: HashMap<BFieldElement, BFieldElement>,
     ) where
         Self: Sized,
     {
@@ -399,7 +402,12 @@ mod tests {
             init_stack.push(elem);
         }
 
-        let _execution_result =
-            rust_tasm_equivalence_prop::<MmrRightChildAndHeight>(&init_stack, &[], &[], expected);
+        let _execution_result = rust_tasm_equivalence_prop::<MmrRightChildAndHeight>(
+            &init_stack,
+            &[],
+            &[],
+            HashMap::default(),
+            expected,
+        );
     }
 }

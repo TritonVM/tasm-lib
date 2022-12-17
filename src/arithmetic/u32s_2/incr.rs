@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use num::One;
 use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
@@ -52,6 +54,7 @@ impl Snippet for U32s2Incr {
         stack: &mut Vec<BFieldElement>,
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,
+        _init_memory: HashMap<BFieldElement, BFieldElement>,
     ) {
         let a: u32 = stack.pop().unwrap().try_into().unwrap();
         let b: u32 = stack.pop().unwrap().try_into().unwrap();
@@ -95,7 +98,7 @@ mod tests {
         init_stack.push(max_value.as_ref()[0].into());
 
         let mut tasm_stack = init_stack;
-        U32s2Incr::run_tasm(&mut tasm_stack, vec![], vec![]);
+        U32s2Incr::run_tasm(&mut tasm_stack, vec![], vec![], HashMap::default());
     }
 
     #[test]
@@ -107,7 +110,7 @@ mod tests {
         init_stack.push(max_value.as_ref()[0].into());
 
         let mut rust_stack = init_stack;
-        U32s2Incr::rust_shadowing(&mut rust_stack, vec![], vec![]);
+        U32s2Incr::rust_shadowing(&mut rust_stack, vec![], vec![], HashMap::default());
     }
 
     fn prop_incr(some_value: U32s<2>) {
@@ -117,7 +120,12 @@ mod tests {
         }
 
         let expected = None;
-        let _execution_result =
-            rust_tasm_equivalence_prop::<U32s2Incr>(&init_stack, &[], &[], expected);
+        let _execution_result = rust_tasm_equivalence_prop::<U32s2Incr>(
+            &init_stack,
+            &[],
+            &[],
+            HashMap::default(),
+            expected,
+        );
     }
 }

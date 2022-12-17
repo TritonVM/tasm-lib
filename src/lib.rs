@@ -8,6 +8,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 mod arithmetic;
 mod library;
+mod list;
 mod mmr;
 mod other_snippets;
 mod recufier;
@@ -32,6 +33,7 @@ pub fn execute(
     expected_stack_diff: isize,
     std_in: Vec<BFieldElement>,
     secret_in: Vec<BFieldElement>,
+    init_memory: HashMap<BFieldElement, BFieldElement>,
 ) -> ExecutionResult {
     let init_stack_height = stack.len();
 
@@ -42,10 +44,34 @@ pub fn execute(
         executed_code.push_str(&format!("push {}\n", element.value()));
     }
 
+    // Add all the initial memory to the VM
+    for (address, value) in init_memory {
+        // Prepare stack for writing
+        executed_code.push_str(&format!("push {}\n", address));
+        executed_code.push_str(&format!("push {}\n", value));
+
+        // Write value to memory
+        executed_code.push_str("write_mem\n");
+
+        // Clean stack after writing to memory
+        executed_code.push_str("pop\n");
+        executed_code.push_str("pop\n");
+    }
+
     // Add the program after the stack initialization has been performed
+    // Find the length of code used for setup. This length does not count towards execution length of snippet
+    // so it must be subtracted at the end.
+    let init_code_length = Program::from_code(&executed_code)
+        .expect("Could not load source code: {}")
+        .run(vec![], vec![])
+        .0
+        .len()
+        - 1;
+
+    // Construct the whole program (inclusive setup) to be run
     executed_code.push_str(code);
 
-    // Run the program, including the stack preparation logic
+    // Run the program, including the stack preparation and memory preparation logic
     let program = Program::from_code(&executed_code).expect("Could not load source code: {}");
     let (execution_trace, output, err) = program.run(std_in.clone(), secret_in.clone());
     if let Some(e) = err {
@@ -100,7 +126,7 @@ pub fn execute(
 
         // Cycle count is cycles it took to run program excluding the cycles that were
         // spent on preparing the stack
-        cycle_count: execution_trace.len() - (init_stack_height - OP_STACK_REG_COUNT) - 1,
+        cycle_count: execution_trace.len() - init_code_length - 1,
 
         // Number of rows generated in the hash table after simulating program
         hash_table_height: simulation_trace.hash_matrix.len(),
