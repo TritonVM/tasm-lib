@@ -92,7 +92,7 @@ mod tests {
             stack: &mut Vec<BFieldElement>,
             _std_in: Vec<BFieldElement>,
             _secret_in: Vec<BFieldElement>,
-            _init_memory: HashMap<BFieldElement, BFieldElement>,
+            _memory: &mut HashMap<BFieldElement, BFieldElement>,
         ) {
             stack.push(BFieldElement::one());
             stack.push(BFieldElement::one());
@@ -127,7 +127,7 @@ mod tests {
             stack: &mut Vec<BFieldElement>,
             _std_in: Vec<BFieldElement>,
             _secret_in: Vec<BFieldElement>,
-            _init_memory: HashMap<BFieldElement, BFieldElement>,
+            _memory: &mut HashMap<BFieldElement, BFieldElement>,
         ) {
             stack.push(BFieldElement::one());
             stack.push(BFieldElement::one());
@@ -159,7 +159,7 @@ mod tests {
             stack: &mut Vec<BFieldElement>,
             _std_in: Vec<BFieldElement>,
             _secret_in: Vec<BFieldElement>,
-            _init_memory: HashMap<BFieldElement, BFieldElement>,
+            _memory: &mut HashMap<BFieldElement, BFieldElement>,
         ) {
             stack.push(BFieldElement::one())
         }
@@ -170,11 +170,26 @@ mod tests {
         let empty_stack = get_init_tvm_stack();
 
         let expected = None;
-        let _execution_result =
-            rust_tasm_equivalence_prop::<A>(&empty_stack, &[], &[], HashMap::default(), expected);
-        let _execution_result =
-            rust_tasm_equivalence_prop::<B>(&empty_stack, &[], &[], HashMap::default(), expected);
-        let _execution_result =
-            rust_tasm_equivalence_prop::<C>(&empty_stack, &[], &[], HashMap::default(), expected);
+        let _execution_result = rust_tasm_equivalence_prop::<A>(
+            &empty_stack,
+            &[],
+            &[],
+            &mut HashMap::default(),
+            expected,
+        );
+        let _execution_result = rust_tasm_equivalence_prop::<B>(
+            &empty_stack,
+            &[],
+            &[],
+            &mut HashMap::default(),
+            expected,
+        );
+        let _execution_result = rust_tasm_equivalence_prop::<C>(
+            &empty_stack,
+            &[],
+            &[],
+            &mut HashMap::default(),
+            expected,
+        );
     }
 }

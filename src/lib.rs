@@ -33,7 +33,7 @@ pub fn execute(
     expected_stack_diff: isize,
     std_in: Vec<BFieldElement>,
     secret_in: Vec<BFieldElement>,
-    init_memory: HashMap<BFieldElement, BFieldElement>,
+    memory: &mut HashMap<BFieldElement, BFieldElement>,
 ) -> ExecutionResult {
     let init_stack_height = stack.len();
 
@@ -45,7 +45,7 @@ pub fn execute(
     }
 
     // Add all the initial memory to the VM
-    for (address, value) in init_memory {
+    for (address, value) in memory.iter() {
         // Prepare stack for writing
         executed_code.push_str(&format!("push {}\n", address));
         executed_code.push_str(&format!("push {}\n", value));
@@ -100,6 +100,8 @@ pub fn execute(
         .expect("VM state list cannot be empty")
         .to_owned();
     assert!(!end_state.op_stack.is_too_shallow(), "Stack underflow");
+
+    *memory = end_state.ram.clone();
 
     let jump_stack_start = start_state.jump_stack;
     let jump_stack_end = end_state.jump_stack;

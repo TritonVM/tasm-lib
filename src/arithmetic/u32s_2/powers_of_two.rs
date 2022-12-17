@@ -88,9 +88,9 @@ impl Snippet for U32s2PowersOfTwoStatic {
         stack: &mut Vec<BFieldElement>,
         std_in: Vec<BFieldElement>,
         secret_in: Vec<BFieldElement>,
-        init_memory: HashMap<BFieldElement, BFieldElement>,
+        memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
-        U32s2PowersOfTwoMemory::rust_shadowing(stack, std_in, secret_in, init_memory);
+        U32s2PowersOfTwoMemory::rust_shadowing(stack, std_in, secret_in, memory);
     }
 }
 
@@ -166,7 +166,7 @@ impl Snippet for U32s2PowersOfTwoMemory {
         stack: &mut Vec<BFieldElement>,
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,
-        _init_memory: HashMap<BFieldElement, BFieldElement>,
+        _memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
         // Find exponent
         let mut exponent: u32 = stack.pop().unwrap().try_into().unwrap();
@@ -261,9 +261,9 @@ impl Snippet for U32s2PowersOfTwoArithmeticFlat {
         stack: &mut Vec<BFieldElement>,
         std_in: Vec<BFieldElement>,
         secret_in: Vec<BFieldElement>,
-        init_memory: HashMap<BFieldElement, BFieldElement>,
+        memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
-        U32s2PowersOfTwoMemory::rust_shadowing(stack, std_in, secret_in, init_memory);
+        U32s2PowersOfTwoMemory::rust_shadowing(stack, std_in, secret_in, memory);
     }
 }
 
@@ -284,7 +284,7 @@ mod tests {
             &init_stack,
             &[],
             &[],
-            HashMap::default(),
+            &mut HashMap::default(),
             expected,
         );
 
@@ -318,7 +318,7 @@ mod tests {
             &init_stack,
             &[],
             &[],
-            HashMap::default(),
+            &mut HashMap::default(),
             expected,
         );
 
@@ -344,7 +344,7 @@ mod tests {
             &init_stack,
             &[],
             &[],
-            HashMap::default(),
+            &mut HashMap::default(),
             expected,
         );
 

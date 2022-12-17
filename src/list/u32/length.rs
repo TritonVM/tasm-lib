@@ -37,11 +37,11 @@ impl Snippet for LengthLong {
         stack: &mut Vec<twenty_first::shared_math::b_field_element::BFieldElement>,
         _std_in: Vec<twenty_first::shared_math::b_field_element::BFieldElement>,
         _secret_in: Vec<twenty_first::shared_math::b_field_element::BFieldElement>,
-        init_memory: HashMap<BFieldElement, BFieldElement>,
+        memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
         // Find the list in memory and push its length to the top of the stack
         let list_address = stack.pop().unwrap();
-        let list_length = init_memory[&list_address];
+        let list_length = memory[&list_address];
         stack.push(list_length);
     }
 }
@@ -77,11 +77,11 @@ impl Snippet for LengthShort {
         stack: &mut Vec<twenty_first::shared_math::b_field_element::BFieldElement>,
         _std_in: Vec<twenty_first::shared_math::b_field_element::BFieldElement>,
         _secret_in: Vec<twenty_first::shared_math::b_field_element::BFieldElement>,
-        init_memory: HashMap<BFieldElement, BFieldElement>,
+        memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
         // Find the list in memory and push its length to the top of the stack
         let list_address = *stack.last().as_ref().unwrap();
-        let list_length = init_memory[list_address];
+        let list_length = memory[list_address];
         stack.push(list_length);
     }
 }
@@ -129,8 +129,13 @@ mod tests_long {
             );
         }
 
-        let _execution_result =
-            rust_tasm_equivalence_prop::<LengthLong>(&init_stack, &[], &[], init_memory, expected);
+        let _execution_result = rust_tasm_equivalence_prop::<LengthLong>(
+            &init_stack,
+            &[],
+            &[],
+            &mut init_memory,
+            expected,
+        );
     }
 }
 
@@ -184,7 +189,12 @@ mod tests_short {
             );
         }
 
-        let _execution_result =
-            rust_tasm_equivalence_prop::<LengthShort>(&init_stack, &[], &[], init_memory, expected);
+        let _execution_result = rust_tasm_equivalence_prop::<LengthShort>(
+            &init_stack,
+            &[],
+            &[],
+            &mut init_memory,
+            expected,
+        );
     }
 }

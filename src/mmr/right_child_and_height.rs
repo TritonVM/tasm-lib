@@ -163,7 +163,7 @@ impl Snippet for MmrRightChildAndHeight {
         stack: &mut Vec<twenty_first::shared_math::b_field_element::BFieldElement>,
         _std_in: Vec<twenty_first::shared_math::b_field_element::BFieldElement>,
         _secret_in: Vec<twenty_first::shared_math::b_field_element::BFieldElement>,
-        _init_memory: HashMap<BFieldElement, BFieldElement>,
+        _memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) where
         Self: Sized,
     {
@@ -406,7 +406,7 @@ mod tests {
             &init_stack,
             &[],
             &[],
-            HashMap::default(),
+            &mut HashMap::default(),
             expected,
         );
     }

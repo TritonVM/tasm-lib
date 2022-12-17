@@ -55,7 +55,7 @@ impl Snippet for U32s2Decr {
         stack: &mut Vec<BFieldElement>,
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,
-        _init_memory: HashMap<BFieldElement, BFieldElement>,
+        _memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
         let a: u32 = stack.pop().unwrap().try_into().unwrap();
         let b: u32 = stack.pop().unwrap().try_into().unwrap();
@@ -86,7 +86,7 @@ mod tests {
 
         let mut tasm_stack = init_stack.clone();
         let _execution_result =
-            U32s2Decr::run_tasm(&mut tasm_stack, vec![], vec![], HashMap::default());
+            U32s2Decr::run_tasm(&mut tasm_stack, vec![], vec![], &mut HashMap::default());
     }
 
     #[test]
@@ -98,7 +98,7 @@ mod tests {
         init_stack.push(zero.as_ref()[0].into());
 
         let mut tasm_stack = init_stack.clone();
-        U32s2Decr::rust_shadowing(&mut tasm_stack, vec![], vec![], HashMap::default());
+        U32s2Decr::rust_shadowing(&mut tasm_stack, vec![], vec![], &mut HashMap::default());
     }
 
     #[test]
@@ -109,7 +109,7 @@ mod tests {
         tasm_stack.push(some_value.as_ref()[0].into());
 
         let _execution_result =
-            U32s2Decr::run_tasm(&mut tasm_stack, vec![], vec![], HashMap::default());
+            U32s2Decr::run_tasm(&mut tasm_stack, vec![], vec![], &mut HashMap::default());
 
         let expected_res = U32s::<2>::new([u32::MAX, 13]);
         let mut expected_stack = get_init_tvm_stack();
@@ -143,7 +143,7 @@ mod tests {
             &init_stack,
             &[],
             &[],
-            HashMap::default(),
+            &mut HashMap::default(),
             expected,
         );
     }

@@ -31,7 +31,7 @@ pub trait Snippet {
         stack: &mut Vec<BFieldElement>,
         std_in: Vec<BFieldElement>,
         secret_in: Vec<BFieldElement>,
-        init_memory: HashMap<BFieldElement, BFieldElement>,
+        memory: &mut HashMap<BFieldElement, BFieldElement>,
     );
 
     /// The TASM code is always run through a function call, so the 1st instruction
@@ -40,7 +40,7 @@ pub trait Snippet {
         stack: &mut Vec<BFieldElement>,
         std_in: Vec<BFieldElement>,
         secret_in: Vec<BFieldElement>,
-        init_memory: HashMap<BFieldElement, BFieldElement>,
+        memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) -> ExecutionResult {
         let mut library = Library::empty();
         let entrypoint = Self::entrypoint();
@@ -56,14 +56,7 @@ pub trait Snippet {
             {library_code}
             "
         );
-        execute(
-            &code,
-            stack,
-            Self::stack_diff(),
-            std_in,
-            secret_in,
-            init_memory,
-        )
+        execute(&code, stack, Self::stack_diff(), std_in, secret_in, memory)
     }
 }
 
@@ -72,15 +65,17 @@ pub fn rust_tasm_equivalence_prop<T: Snippet>(
     stack: &[BFieldElement],
     stdin: &[BFieldElement],
     secret_in: &[BFieldElement],
-    init_memory: HashMap<BFieldElement, BFieldElement>,
+    memory: &mut HashMap<BFieldElement, BFieldElement>,
     expected: Option<&[BFieldElement]>,
 ) -> ExecutionResult {
+    let init_memory = memory.clone();
     let mut tasm_stack = stack.to_vec();
+    let mut tasm_memory = init_memory.clone();
     let execution_result = T::run_tasm(
         &mut tasm_stack,
         stdin.to_vec(),
         secret_in.to_vec(),
-        init_memory.clone(),
+        &mut tasm_memory,
     );
     println!(
         "Cycle count for `{}`: {}",
@@ -93,12 +88,13 @@ pub fn rust_tasm_equivalence_prop<T: Snippet>(
         execution_result.hash_table_height
     );
 
+    let mut rust_memory = init_memory;
     let mut rust_stack = stack.to_vec();
     T::rust_shadowing(
         &mut rust_stack,
         stdin.to_vec(),
         secret_in.to_vec(),
-        init_memory,
+        &mut rust_memory,
     );
 
     assert_eq!(
@@ -110,6 +106,14 @@ pub fn rust_tasm_equivalence_prop<T: Snippet>(
     if let Some(expected) = expected {
         assert_eq!(tasm_stack, expected, "TVM must produce expected stack.");
     }
+
+    assert_eq!(
+        rust_memory, tasm_memory,
+        "Memory for both implementations must match after execution"
+    );
+
+    // Write back memory to be able to probe it in individual tests
+    *memory = tasm_memory;
 
     execution_result
 }

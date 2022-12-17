@@ -71,7 +71,7 @@ impl Snippet for MmrLeftmostAncestor {
         stack: &mut Vec<BFieldElement>,
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,
-        _init_memory: HashMap<BFieldElement, BFieldElement>,
+        _memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
         let node_index_lo: u32 = stack.pop().unwrap().try_into().unwrap();
         let node_index_hi: u32 = stack.pop().unwrap().try_into().unwrap();
@@ -185,7 +185,7 @@ mod tests {
             &init_stack,
             &[],
             &[],
-            HashMap::default(),
+            &mut HashMap::default(),
             expected,
         );
     }

@@ -62,7 +62,7 @@ impl Snippet for U32s2Add {
         stack: &mut Vec<BFieldElement>,
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,
-        _init_memory: HashMap<BFieldElement, BFieldElement>,
+        _memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
         // top element on stack
         let a0: u32 = stack.pop().unwrap().try_into().unwrap();
@@ -199,7 +199,7 @@ mod tests {
             &init_stack,
             &[],
             &[],
-            HashMap::default(),
+            &mut HashMap::default(),
             expected,
         );
     }

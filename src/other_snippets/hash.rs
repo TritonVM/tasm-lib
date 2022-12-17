@@ -33,7 +33,7 @@ fn _top_digests(stack: &[BFieldElement]) -> (Digest, Digest) {
 
 fn _hash_tasm(stack: &mut Vec<BFieldElement>) -> ExecutionResult {
     let code: &str = "hash";
-    execute(code, stack, 0, vec![], vec![], HashMap::default())
+    execute(code, stack, 0, vec![], vec![], &mut HashMap::default())
 }
 
 fn _hash_rust(stack: &mut Vec<BFieldElement>) {

@@ -31,7 +31,7 @@ impl Snippet for BfeAdd {
         stack: &mut Vec<BFieldElement>,
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,
-        _init_memory: HashMap<BFieldElement, BFieldElement>,
+        _memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
         let a = stack.pop().unwrap();
         let b = stack.pop().unwrap();
@@ -59,7 +59,7 @@ mod tests {
             &init_stack,
             &[],
             &[],
-            HashMap::default(),
+            &mut HashMap::default(),
             expected,
         );
     }
