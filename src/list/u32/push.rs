@@ -87,7 +87,6 @@ impl<const N: usize> Snippet for Push<N> {
         _secret_in: Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
-        // Find the list in memory and push its length to the top of the stack
         let list_address = stack[stack.len() - 1 - N];
         let initial_list_length = memory[&list_address];
 
@@ -101,6 +100,7 @@ impl<const N: usize> Snippet for Push<N> {
             next_free_address += BFieldElement::one();
         }
 
+        // Update length indicator
         memory.insert(list_address, initial_list_length + BFieldElement::one());
     }
 }
