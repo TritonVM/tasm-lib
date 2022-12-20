@@ -1,6 +1,8 @@
+use std::collections::HashMap;
+
 use crate::library::Library;
-#[allow(dead_code)]
 use crate::snippet_trait::Snippet;
+use num::Zero;
 use twenty_first::shared_math::rescue_prime_regular::RescuePrimeRegular;
 use twenty_first::shared_math::{b_field_element::BFieldElement, rescue_prime_digest::Digest};
 use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
@@ -24,7 +26,7 @@ impl Snippet for MtApVerify {
         "mt_ap_verify"
     }
 
-    fn function_body(library: &mut Library) -> String {
+    fn function_body(_library: &mut Library) -> String {
         let entrypoint = Self::entrypoint();
         format!(
             "
@@ -39,7 +41,7 @@ impl Snippet for MtApVerify {
                 pop pop pop pop pop pop pop              // leave clean stack: Merkle root
                                                          // stack: []
                 return                                   // done – should be “return”
-                        
+
                                                          // subroutine: check AP one at a time
                                                          // stack before: [* r4 r3 r2 r1 r0]
                                                          // stack after: [* r4 r3 r2 r1 r0]
@@ -58,7 +60,7 @@ impl Snippet for MtApVerify {
                 call {entrypoint}_assert_tree_top        //
                                                          // stack: [* r4 r3 r2 r1 r0]
                 recurse                                  // check next AP
-                
+
                                                          // subroutine: read index & hash leaf
                                                          // stack before: [*]
                                                          // stack afterwards: [* idx d4 d3 d2 d1 d0 0 0 0 0 0]
@@ -74,7 +76,7 @@ impl Snippet for MtApVerify {
             {entrypoint}_traverse_tree:                  // start function description:
                 dup10 push 1 eq skiz return              // break loop if node index is 1
                 divine_sibling hash recurse              // move up one level in the Merkle tree
-                
+
                                                          // subroutine: compare digests
                                                          // stack before: [* r4 r3 r2 r1 r0 idx a b c d e - - - - -]
                                                          // stack after: [* r4 r3 r2 r1 r0]
@@ -83,7 +85,7 @@ impl Snippet for MtApVerify {
                                                          // stack: [* r4 r3 r2 r1 r0 idx a b c d e]
                 swap1 swap2 swap3 swap4 swap5
                                                          // stack: [* r4 r3 r2 r1 r0 a b c d e idx]
-                assert                                   // 
+                assert                                   //
                                                          // stack: [* r4 r3 r2 r1 r0 a b c d e]
                 assert_vector                            // actually compare to root of tree
                 pop pop pop pop pop                      // clean up stack, leave only one root
@@ -94,10 +96,14 @@ impl Snippet for MtApVerify {
     //needs secret input with merkle siblings along all authentication paths
     //will need to update code when we switch to a new hash function
     fn rust_shadowing(
-        stack: &mut Vec<BFieldElement>,
+        _stack: &mut Vec<BFieldElement>,
         std_in: Vec<BFieldElement>,
         secret_in: Vec<BFieldElement>,
+        memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
+        // Leave memory as TASM leaves it:
+        memory.insert(BFieldElement::zero(), BFieldElement::zero());
+
         let num_of_aps: u32 = std_in[0].try_into().unwrap();
         let merkle_root = Digest::new([std_in[5], std_in[4], std_in[3], std_in[2], std_in[1]]);
         let mut input_index: usize = 6;
@@ -113,7 +119,7 @@ impl Snippet for MtApVerify {
             let zero: Digest = Digest::new([BFieldElement::new(0); 5]);
             let leaf: Digest = Digest::new(elems);
             let mut node_digest = RescuePrimeRegular::hash_pair(&zero, &leaf);
-            while (node_index != 1) {
+            while node_index != 1 {
                 //reversing the field elements of the siblings
                 let mut vector: Vec<BFieldElement> =
                     secret_in[secret_index..(secret_index + 5)].to_vec();
@@ -135,8 +141,8 @@ impl Snippet for MtApVerify {
 
 #[cfg(test)]
 mod merkle_authentication_verify_test {
-    use triton_vm::table::base_matrix::ProcessorMatrixRow;
-    use triton_vm::vm::Program;
+    use std::collections::HashMap;
+
     use twenty_first::shared_math::b_field_element::BFieldElement;
     use twenty_first::shared_math::rescue_prime_digest::Digest;
     use twenty_first::shared_math::rescue_prime_regular::RescuePrimeRegular;
@@ -148,48 +154,8 @@ mod merkle_authentication_verify_test {
 
     use crate::get_init_tvm_stack;
     use crate::snippet_trait::rust_tasm_equivalence_prop;
-    use crate::snippet_trait::Snippet;
 
     use super::MtApVerify;
-
-    fn rust_shadowing_debug(
-        stack: &mut Vec<BFieldElement>,
-        std_in: Vec<BFieldElement>,
-        secret_in: Vec<BFieldElement>,
-    ) {
-        let num_of_aps: u32 = std_in[0].try_into().unwrap();
-        let merkle_root = Digest::new([std_in[5], std_in[4], std_in[3], std_in[2], std_in[1]]);
-        let mut input_index: usize = 6;
-        let mut secret_index: usize = 0;
-        for _i in 0..num_of_aps {
-            let mut node_index: u32 = std_in[input_index].try_into().unwrap();
-            input_index += 1;
-            //reversing the field elements of the leaf nodes
-            let mut vector: Vec<BFieldElement> = std_in[input_index..input_index + 5].to_vec();
-            vector.reverse();
-            let elems: [BFieldElement; 5] = vector.try_into().unwrap();
-            input_index += 5;
-            let zero: Digest = Digest::new([BFieldElement::new(0); 5]);
-            let leaf: Digest = Digest::new(elems);
-            let mut node_digest = RescuePrimeRegular::hash_pair(&zero, &leaf);
-            while (node_index != 1) {
-                //reversing the field elements of the siblings
-                let mut vector: Vec<BFieldElement> =
-                    secret_in[secret_index..(secret_index + 5)].to_vec();
-                vector.reverse();
-                let sibling_elems: [BFieldElement; 5] = vector.try_into().unwrap();
-                let sibling: Digest = Digest::new(sibling_elems);
-                if node_index & 1 == 0 {
-                    node_digest = RescuePrimeRegular::hash_pair(&node_digest, &sibling);
-                } else {
-                    node_digest = RescuePrimeRegular::hash_pair(&sibling, &node_digest);
-                }
-                secret_index += 5;
-                node_index /= 2;
-            }
-            assert_eq!(node_digest, merkle_root);
-        }
-    }
 
     fn generate_leafs() -> Vec<Digest> {
         let two: u32 = 2;
@@ -229,12 +195,11 @@ mod merkle_authentication_verify_test {
     }
 
     //applies hash function to leafs to get leaf digests
-    fn get_leaf_digests(leafs: &Vec<Digest>) -> Vec<Digest> {
+    fn get_leaf_digests(leafs: &[Digest]) -> Vec<Digest> {
         let zero = Digest::new([BFieldElement::new(0); 5]);
         leafs
-            .clone()
-            .into_iter()
-            .map(|leaf| RescuePrimeRegular::hash_pair(&zero, &leaf))
+            .iter()
+            .map(|leaf| RescuePrimeRegular::hash_pair(&zero, leaf))
             .collect()
     }
 
@@ -246,7 +211,7 @@ mod merkle_authentication_verify_test {
         let number_of_authentication_paths = indices.len();
         let number_of_leaves = leafs.len();
         let number_of_aps: u32 = number_of_authentication_paths.try_into().unwrap();
-        let leaf_digests: Vec<Digest> = get_leaf_digests(&leafs);
+        let leaf_digests: Vec<Digest> = get_leaf_digests(leafs);
         let mt: &MerkleTree<RescuePrimeRegular, CpuParallel> =
             &MerkleTreeMaker::from_digests(&leaf_digests);
         let merkle_root = mt.nodes[1];
@@ -255,15 +220,15 @@ mod merkle_authentication_verify_test {
         let mut input: Vec<BFieldElement> = Vec::with_capacity(number_of_leaves + 5);
         input.push(BFieldElement::from(number_of_aps));
         input.append(&mut reverse_merkle_root);
-        for i in 0..number_of_authentication_paths {
-            let leaf_index_usize = indices[i];
+        for leaf_index_usize in indices {
             let leaf_index: u32 = (leaf_index_usize + number_of_leaves).try_into().unwrap();
             input.push(BFieldElement::from(leaf_index));
             let mut vector = leafs[leaf_index_usize].clone().values().to_vec();
             vector.reverse();
             input.append(&mut vector);
         }
-        return input;
+
+        input
     }
 
     //generate secret input for verifier
@@ -276,8 +241,7 @@ mod merkle_authentication_verify_test {
         let number_of_leaves = mt.get_leaf_count();
         let mut bfield_vector: Vec<BFieldElement> =
             Vec::with_capacity(number_of_aps * tree_height * 5);
-        for i in 0..number_of_aps {
-            let leaf_index = indices[i];
+        for leaf_index in indices {
             let mut node_index = leaf_index + number_of_leaves;
             for _j in 0..tree_height {
                 let node_parity = node_index & 1;
@@ -288,7 +252,7 @@ mod merkle_authentication_verify_test {
                 bfield_vector.append(&mut vector);
                 node_index /= 2;
             }
-            let node_parity = node_index % 2;
+            let _node_parity = node_index % 2;
         }
         bfield_vector
     }
@@ -302,13 +266,12 @@ mod merkle_authentication_verify_test {
             &MerkleTreeMaker::from_digests(&leaf_digests);
         let indices = choose_indices();
         let merkle_root = mt.nodes[1];
-        for j in 0..NUMBER_OF_AUTHENTICATION_PATHS {
-            let index = indices[j];
+        for index in indices {
             let leaf: Digest = leafs[index];
             let mut node_index = index;
             let mut node_digest = RescuePrimeRegular::hash_pair(&zero, &leaf);
             let authentication_path = mt.get_authentication_structure(&[index])[0].clone();
-            for i in (0..get_tree_height_usize()) {
+            for i in 0..get_tree_height_usize() {
                 let sibling: Digest =
                     unwrap_partial_authentication_path(&authentication_path)[i].unwrap();
                 if node_index & 1 == 0 {
@@ -332,8 +295,13 @@ mod merkle_authentication_verify_test {
         let secret_input: Vec<BFieldElement> = generate_siblings_as_vector(mt.clone(), indices);
         let stack: &mut Vec<BFieldElement> = &mut get_init_tvm_stack();
         let standard_input: Vec<BFieldElement> = generate_input(indices, &leafs);
-        //rust_shadowing_debug(stack, standard_input, secret_input);
 
-        rust_tasm_equivalence_prop::<MtApVerify>(stack, &standard_input, &secret_input, None);
+        rust_tasm_equivalence_prop::<MtApVerify>(
+            stack,
+            &standard_input,
+            &secret_input,
+            &mut HashMap::default(),
+            None,
+        );
     }
 }
