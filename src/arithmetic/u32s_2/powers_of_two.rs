@@ -90,7 +90,7 @@ impl Snippet for U32s2PowersOfTwoStatic {
         secret_in: Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
-        U32s2PowersOfTwoMemory::rust_shadowing(stack, std_in, secret_in, memory);
+        U32s2PowersOfTwoArithmeticFlat::rust_shadowing(stack, std_in, secret_in, memory)
     }
 }
 
@@ -166,8 +166,16 @@ impl Snippet for U32s2PowersOfTwoMemory {
         stack: &mut Vec<BFieldElement>,
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,
-        _memory: &mut HashMap<BFieldElement, BFieldElement>,
+        memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
+        // Insert all powers of two into memory, since that's what the TASM code does
+        for i in 0..32 {
+            memory.insert(
+                BFieldElement::new(i),
+                BFieldElement::new(2u32.pow(i as u32) as u64),
+            );
+        }
+
         // Find exponent
         let mut exponent: u32 = stack.pop().unwrap().try_into().unwrap();
         let mut res = U32s::<2>::one();
@@ -259,11 +267,23 @@ impl Snippet for U32s2PowersOfTwoArithmeticFlat {
 
     fn rust_shadowing(
         stack: &mut Vec<BFieldElement>,
-        std_in: Vec<BFieldElement>,
-        secret_in: Vec<BFieldElement>,
-        memory: &mut HashMap<BFieldElement, BFieldElement>,
+        _std_in: Vec<BFieldElement>,
+        _secret_in: Vec<BFieldElement>,
+        _memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
-        U32s2PowersOfTwoMemory::rust_shadowing(stack, std_in, secret_in, memory);
+        // Find exponent
+        let mut exponent: u32 = stack.pop().unwrap().try_into().unwrap();
+        let mut res = U32s::<2>::one();
+
+        while exponent > 0 {
+            res.mul_two();
+            exponent -= 1;
+        }
+
+        let mut res = res.to_sequence();
+        for _ in 0..res.len() {
+            stack.push(res.pop().unwrap());
+        }
     }
 }
 
@@ -314,7 +334,7 @@ mod tests {
         init_stack.push(BFieldElement::new(exponent as u64));
 
         let expected = None;
-        let mut execution_result = rust_tasm_equivalence_prop::<U32s2PowersOfTwoMemory>(
+        let mut execution_result = rust_tasm_equivalence_prop::<U32s2PowersOfTwoArithmeticFlat>(
             &init_stack,
             &[],
             &[],
@@ -340,7 +360,7 @@ mod tests {
         init_stack.push(BFieldElement::new(exponent as u64));
 
         let expected = None;
-        let mut execution_result = rust_tasm_equivalence_prop::<U32s2PowersOfTwoMemory>(
+        let mut execution_result = rust_tasm_equivalence_prop::<U32s2PowersOfTwoStatic>(
             &init_stack,
             &[],
             &[],
