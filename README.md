@@ -47,12 +47,13 @@ the TVM version when appropriate.
 | powers_of_two_memory          |       sshine        |    20221208 |       0.8.0 |    Memory unsafe (assumes bounded input), exp >= 32 => +3 cycle count     |         12 (+ 165) |             15 (+ 165) |                 0 |             $O(1)$ |
 | powers_of_two_static          | sshine, sword_smith |    20221209 |       0.9.0 |                                                                           |                264 |                    264 |                 0 |             $O(1)$ |
 
-## Lists
-| Name   | Author(s) | Last edited | TVM version | Notes | Cycle Count common | Cycle Count worst-case | Hash table height | Asymptotic Runtime |
-| ------ | :-------: | ----------: | ----------: | :---: | -----------------: | ---------------------: | ----------------: | -----------------: |
-| push   |           |             |             |       |                    |                        |                   |                    |
-| pop    |           |             |             |       |                    |                        |                   |                    |
-| length |           |             |             |       |                    |                        |                   |                    |
+## Lists (max length: `u32::MAX`)
+| Name           |  Author(s)  | Last edited | TVM version |                                 Notes                                  | Cycle Count common | Cycle Count worst-case | Hash table height | Asymptotic Runtime |
+| -------------- | :---------: | ----------: | ----------: | :--------------------------------------------------------------------: | -----------------: | ---------------------: | ----------------: | -----------------: |
+| length (long)  | sword_smith |    20221220 |       0.9.0 |                                                                        |                  6 |                      6 |                 0 |             $O(1)$ |
+| length (short) | sword_smith |    20221220 |       0.9.0 |                                                                        |                  4 |                      4 |                 0 |             $O(1)$ |
+| push           | sword_smith |    20221220 |       0.9.0 | parameterized over length of list elements, $N$, 1-16 B field elements |    13 + $5\cdot N$ |               13 + $N$ |                 0 |             $O(1)$ |
+| pop            | sword_smith |    20221220 |       0.9.0 | parameterized over length of list elements, $N$, 1-16 B field elements |    17 + $5\cdot N$ |               13 + $N$ |                 0 |             $O(1)$ |
 
 ## MMR
 | Name                                   |      Author(s)      | Last edited | TVM version |                             Notes                              | Cycle Count common | Cycle Count worst-case | Hash table height | Asymptotic Runtime |
