@@ -53,22 +53,22 @@ impl Snippet for MtApVerify {
                 skiz return                              // return if no authentication paths left
                 push -1 add write_mem pop pop            // decrease number of authentication paths left to check
                                                          // stack: [* r4 r3 r2 r1 r0]
-                call {entrypoint}_get_idx_and_hash_leaf  //
+                call {entrypoint}_get_idx_and_leaf       //
                                                          // stack: [* r4 r3 r2 r1 r0 idx d4 d3 d2 d1 d0 0 0 0 0 0]
                 call {entrypoint}_traverse_tree          //
                                                          // stack: [* r4 r3 r2 r1 r0 idx>>2 - - - - - - - - - -]
                 call {entrypoint}_assert_tree_top        //
                                                          // stack: [* r4 r3 r2 r1 r0]
                 recurse                                  // check next AP
-
-                                                         // subroutine: read index & hash leaf
+                
+                                                         // subroutine: read index & leaf
                                                          // stack before: [*]
                                                          // stack afterwards: [* idx d4 d3 d2 d1 d0 0 0 0 0 0]
-            {entrypoint}_get_idx_and_hash_leaf:          // start function description:
+            {entrypoint}_get_idx_and_leaf:               // start function description:
                 read_io                                  // read node index
                 read_io read_io read_io read_io read_io  // read leaf's value
-                push 0 push 0 push 0 push 0 push 0       // pad before fixed-length hash
-                hash return                              // compute leaf's digest
+                push 0 push 0 push 0 push 0 push 0       // add zeroes as preparation for divine sibling
+                return                                   // 
 
                                                          // subroutine: go up tree
                                                          // stack before: [* idx - - - - - - - - - -]
@@ -116,9 +116,8 @@ impl Snippet for MtApVerify {
             vector.reverse();
             let elems: [BFieldElement; 5] = vector.try_into().unwrap();
             input_index += 5;
-            let zero: Digest = Digest::new([BFieldElement::new(0); 5]);
             let leaf: Digest = Digest::new(elems);
-            let mut node_digest = RescuePrimeRegular::hash_pair(&zero, &leaf);
+            let mut node_digest = leaf;
             while node_index != 1 {
                 //reversing the field elements of the siblings
                 let mut vector: Vec<BFieldElement> =
@@ -194,15 +193,6 @@ mod merkle_authentication_verify_test {
         path.0
     }
 
-    //applies hash function to leafs to get leaf digests
-    fn get_leaf_digests(leafs: &[Digest]) -> Vec<Digest> {
-        let zero = Digest::new([BFieldElement::new(0); 5]);
-        leafs
-            .iter()
-            .map(|leaf| RescuePrimeRegular::hash_pair(&zero, leaf))
-            .collect()
-    }
-
     //generate standard (public) input for verifier
     fn generate_input(
         indices: [usize; NUMBER_OF_AUTHENTICATION_PATHS],
@@ -211,9 +201,8 @@ mod merkle_authentication_verify_test {
         let number_of_authentication_paths = indices.len();
         let number_of_leaves = leafs.len();
         let number_of_aps: u32 = number_of_authentication_paths.try_into().unwrap();
-        let leaf_digests: Vec<Digest> = get_leaf_digests(leafs);
         let mt: &MerkleTree<RescuePrimeRegular, CpuParallel> =
-            &MerkleTreeMaker::from_digests(&leaf_digests);
+            &MerkleTreeMaker::from_digests(&leafs);
         let merkle_root = mt.nodes[1];
         let mut reverse_merkle_root = merkle_root.values().to_vec();
         reverse_merkle_root.reverse();
@@ -252,24 +241,21 @@ mod merkle_authentication_verify_test {
                 bfield_vector.append(&mut vector);
                 node_index /= 2;
             }
-            let _node_parity = node_index % 2;
         }
         bfield_vector
     }
 
     #[test]
     fn merkle_tree_ap_verify_test1() {
-        let zero: Digest = Digest::new([BFieldElement::new(0); 5]);
         let leafs = generate_leafs();
-        let leaf_digests: Vec<Digest> = get_leaf_digests(&leafs);
         let mt: &MerkleTree<RescuePrimeRegular, CpuParallel> =
-            &MerkleTreeMaker::from_digests(&leaf_digests);
+            &MerkleTreeMaker::from_digests(&leafs);
         let indices = choose_indices();
         let merkle_root = mt.nodes[1];
         for index in indices {
             let leaf: Digest = leafs[index];
             let mut node_index = index;
-            let mut node_digest = RescuePrimeRegular::hash_pair(&zero, &leaf);
+            let mut node_digest = leaf;
             let authentication_path = mt.get_authentication_structure(&[index])[0].clone();
             for i in 0..get_tree_height_usize() {
                 let sibling: Digest =
@@ -288,9 +274,8 @@ mod merkle_authentication_verify_test {
     #[test]
     fn merkle_tree_ap_verify_test2() {
         let leafs = generate_leafs();
-        let leaf_digests: Vec<Digest> = get_leaf_digests(&leafs);
         let mt: &MerkleTree<RescuePrimeRegular, CpuParallel> =
-            &MerkleTreeMaker::from_digests(&leaf_digests);
+            &MerkleTreeMaker::from_digests(&leafs);
         let indices = choose_indices();
         let secret_input: Vec<BFieldElement> = generate_siblings_as_vector(mt.clone(), indices);
         let stack: &mut Vec<BFieldElement> = &mut get_init_tvm_stack();
