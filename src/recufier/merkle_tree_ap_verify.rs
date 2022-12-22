@@ -202,7 +202,7 @@ mod merkle_authentication_verify_test {
         let number_of_leaves = leafs.len();
         let number_of_aps: u32 = number_of_authentication_paths.try_into().unwrap();
         let mt: &MerkleTree<RescuePrimeRegular, CpuParallel> =
-            &MerkleTreeMaker::from_digests(&leafs);
+            &MerkleTreeMaker::from_digests(leafs);
         let merkle_root = mt.nodes[1];
         let mut reverse_merkle_root = merkle_root.values().to_vec();
         reverse_merkle_root.reverse();
