@@ -56,6 +56,7 @@ the TVM version when appropriate.
 | pop            | sword_smith |    20221220 |       0.9.0 | parameterized over length of list elements, $N$, 1-16 B field elements |    17 + $5\cdot N$ |               13 + $N$ |                 0 |             $O(1)$ |
 
 ## MMR
+An MMR is in this context always an MMR accumulator as used in the [`twenty-first`](https://github.com/Neptune-Crypto/twenty-first/blob/master/twenty-first/src/util_types/mmr/mmr_accumulator.rs). On the stack it is represented as `_ leaf_count peaks` where `leaf_count` is a u64 (two words of `u32` values) and where `peaks` is a pointer into memory where the peaks list is stored.
 | Name                                   |      Author(s)      | Last edited | TVM version |                             Notes                              | Cycle Count common | Cycle Count worst-case | Hash table height | Asymptotic Runtime |
 | -------------------------------------- | :-----------------: | ----------: | ----------: | :------------------------------------------------------------: | -----------------: | ---------------------: | ----------------: | -----------------: |
 | left_child                             | sshine, sword_smith |    20221209 |       0.9.0 |       Expensive because u32 arithmetic and no u32 table        |                354 |                    354 |                 0 |             $O(1)$ |
