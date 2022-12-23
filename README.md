@@ -31,9 +31,10 @@ the TVM version when appropriate.
 | hash    | sshine, sword_smith |    20221208 |       0.8.0 |       |           0 |                 9 |                    |
 
 ## u32
-| Name   |  Author(s)  | Last edited | TVM version | Notes | Cycle Count common | Cycle Count worst-case | Hash table height | Asymptotic Runtime |
-| ------ | :---------: | ----------: | ----------: | :---: | -----------------: | ---------------------: | ----------------: | -----------------: |
-| is_u32 | sword_smith |    20221208 |       0.8.0 |       |                 68 |                     68 |                 0 |                    |
+| Name        |  Author(s)  | Last edited | TVM version | Notes | Cycle Count common | Cycle Count worst-case | Hash table height | Asymptotic Runtime |
+| ----------- | :---------: | ----------: | ----------: | :---: | -----------------: | ---------------------: | ----------------: | -----------------: |
+| is_u32      | sword_smith |    20221208 |       0.8.0 |       |                 68 |                     68 |                 0 |                    |
+| log_2_floor | sword_smith |    20221223 |       0.9.0 |       |                180 |                    354 |                 0 |             $O(N)$ |
 
 ## U32s, size 2
 | Name                          |      Author(s)      | Last edited | TVM version |                                   Notes                                   | Cycle Count common | Cycle Count worst-case | Hash table height | Asymptotic Runtime |
@@ -64,8 +65,9 @@ An MMR is in this context always an MMR accumulator as used in the [`twenty-firs
 | leftmost_ancestor                      | sshine, sword_smith |    20221209 |       0.9.0 |    With a `U32` table, a constant time snippet can be made     |              10953 |                  21060 |                 0 |         $O(ln(N))$ |
 | right_child_and_height                 |     sword_smith     |    20221216 |       0.9.0 |        Cycle count is dominated by `leftmost_ancestor`         |              11153 |                  23000 |                 0 |      $O(ln^2(N))$? |
 | count_leaves                           |     sword_smith     |    20221216 |       0.9.0 |       Not really needed as leaf_count is a field in MMRA       |                  3 |                      3 |                 0 |             $O(1)$ |
+| get_height_from_data_index             |                     |             |             |         Needed by append through `non_leaf_nodes_left`         |                    |                        |                   |                    |
+| non_leaf_nodes_left                    |                     |             |             |      Needed by append through `data_index_to_node_index`       |                    |                        |                   |                    |
 | get_peak_heights                       |                     |             |             |                                                                |                    |                        |                   |                    |
-| get_height_from_data_index             |                     |             |             |                        Needed by append                        |                    |                        |                   |                    |
 | data_index_to_node_index               |                     |             |             |            Used by calculate_new_peaks_from_append             |                    |                        |                   |                    |
 | leaf_index_to_peak_index               |                     |             |             |                        Needed by append                        |                    |                        |                   |                    |
 | calculate_new_peaks_from_append        |                     |             |             |                  Main function for appending                   |                    |                        |                   |                    |
