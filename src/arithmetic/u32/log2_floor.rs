@@ -5,9 +5,9 @@ use twenty_first::shared_math::other::log_2_floor;
 use crate::library::Library;
 use crate::snippet_trait::Snippet;
 
-pub struct Log2Floor();
+pub struct Log2FloorU32();
 
-impl Snippet for Log2Floor {
+impl Snippet for Log2FloorU32 {
     fn stack_diff() -> isize {
         // pops a u32, pushes a u32
         0
@@ -154,7 +154,7 @@ mod tests {
         let mut init_stack = get_init_tvm_stack();
         init_stack.push(BFieldElement::new(value as u64));
 
-        let _execution_result = rust_tasm_equivalence_prop::<Log2Floor>(
+        let _execution_result = rust_tasm_equivalence_prop::<Log2FloorU32>(
             &init_stack,
             &[],
             &[],

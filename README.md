@@ -47,6 +47,7 @@ the TVM version when appropriate.
 | powers_of_two_arithmetic_flat |     sword_smith     |    20221208 |       0.8.0 | Adds 17 to cycle count for each increment of the exponent. Range: 11-1090 |                563 |                   1090 |                 0 |             $O(N)$ |
 | powers_of_two_memory          |       sshine        |    20221208 |       0.8.0 |    Memory unsafe (assumes bounded input), exp >= 32 => +3 cycle count     |         12 (+ 165) |             15 (+ 165) |                 0 |             $O(1)$ |
 | powers_of_two_static          | sshine, sword_smith |    20221209 |       0.9.0 |                                                                           |                264 |                    264 |                 0 |             $O(1)$ |
+| log_2_floor                   |     sword_smith     |    20221223 |       0.9.0 |                                                                           |                193 |                    369 |                 0 |         $O(ln(N))$ |
 
 ## Lists (max length: `u32::MAX`)
 | Name           |  Author(s)  | Last edited | TVM version |                                 Notes                                  | Cycle Count common | Cycle Count worst-case | Hash table height | Asymptotic Runtime |
