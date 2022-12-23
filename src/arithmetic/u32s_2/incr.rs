@@ -24,6 +24,8 @@ impl Snippet for U32s2Incr {
         const TWO_POW_32: &str = "4294967296";
         format!(
             "
+            // Before: _ value_hi value_lo
+            // After: _ (value + 1)_hi (value + 1)_lo
             {entrypoint}_carry:
                 pop
                 push 1
