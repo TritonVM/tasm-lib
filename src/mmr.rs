@@ -1,4 +1,5 @@
 pub mod count_leaves;
+pub mod data_index_to_node_index;
 pub mod get_height_from_data_index;
 pub mod left_child;
 pub mod leftmost_ancestor;
