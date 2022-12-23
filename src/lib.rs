@@ -1,9 +1,10 @@
 use num_traits::Zero;
 use std::collections::HashMap;
+use triton_opcodes::program::Program;
+use triton_vm::vm;
 
 use triton_vm::op_stack::OP_STACK_REG_COUNT;
 use triton_vm::state::VMState;
-use triton_vm::vm::Program;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 mod arithmetic;
@@ -61,11 +62,13 @@ pub fn execute(
     // Add the program after the stack initialization has been performed
     // Find the length of code used for setup. This length does not count towards execution length of snippet
     // so it must be subtracted at the end.
-    let init_code_length = Program::from_code(&executed_code)
-        .expect("Could not load source code: {}")
-        .run(vec![], vec![])
-        .0
-        .len()
+    let init_code_length = vm::run(
+        &Program::from_code(&executed_code).expect("Could not load source code: {}"),
+        vec![],
+        vec![],
+    )
+    .0
+    .len()
         - 1;
 
     // Construct the whole program (inclusive setup) to be run
@@ -73,7 +76,7 @@ pub fn execute(
 
     // Run the program, including the stack preparation and memory preparation logic
     let program = Program::from_code(&executed_code).expect("Could not load source code: {}");
-    let (execution_trace, output, err) = program.run(std_in.clone(), secret_in.clone());
+    let (execution_trace, output, err) = vm::run(&program, std_in.clone(), secret_in.clone());
     if let Some(e) = err {
         panic!(
             "Running the program failed: {}\n\n\n Program:\n {}",
@@ -82,7 +85,7 @@ pub fn execute(
     }
 
     // Simulate the program, since this gives us hash table output
-    let (simulation_trace, _simulation_output, err) = program.simulate(std_in, secret_in);
+    let (simulation_trace, _simulation_output, err) = vm::simulate(&program, std_in, secret_in);
     if let Some(e) = err {
         panic!(
             "Simulating the program failed: {}\n\n\n Program: {}",

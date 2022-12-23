@@ -58,7 +58,8 @@ mod sample_weights_tests {
     use num::Zero;
     use rayon::prelude::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
 
-    use triton_vm::vm::Program;
+    use triton_opcodes::program::Program;
+    use triton_vm::vm;
     use twenty_first::shared_math::b_field_element::BFieldElement;
     use twenty_first::shared_math::rescue_prime_digest::Digest;
     use twenty_first::shared_math::rescue_prime_regular::RescuePrimeRegular;
@@ -121,7 +122,7 @@ mod sample_weights_tests {
 
         let program = Program::from_code(&test_code).unwrap();
 
-        let (_states, tasm_output, _err) = program.run(stdin, vec![]);
+        let (_states, tasm_output, _err) = vm::run(&program, stdin, vec![]);
 
         for state in _states.iter() {
             println!("{}", state);
@@ -168,7 +169,7 @@ mod sample_weights_tests {
 
         let program = Program::from_code(&test_code).unwrap();
 
-        let (_states, tasm_output, _err) = program.run(stdin, vec![]);
+        let (_states, tasm_output, _err) = vm::run(&program, stdin, vec![]);
 
         for state in _states.iter() {
             println!("{}", state);
