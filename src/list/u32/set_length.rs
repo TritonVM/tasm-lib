@@ -17,7 +17,7 @@ impl Snippet for SetLength {
         "list_u32_set_length"
     }
 
-    fn function_body(library: &mut Library) -> String {
+    fn function_body(_library: &mut Library) -> String {
         let entry_point = Self::entrypoint();
         // It is assumed that the new length is a valid u32 value
         format!(
