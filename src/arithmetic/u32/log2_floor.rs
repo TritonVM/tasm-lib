@@ -159,6 +159,7 @@ mod tests {
             &[],
             &[],
             &mut HashMap::default(),
+            0,
             Some(expected),
         );
     }

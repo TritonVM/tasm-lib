@@ -86,7 +86,7 @@ mod tests {
 
         let mut tasm_stack = init_stack.clone();
         let _execution_result =
-            U32s2Decr::run_tasm(&mut tasm_stack, vec![], vec![], &mut HashMap::default());
+            U32s2Decr::run_tasm(&mut tasm_stack, vec![], vec![], &mut HashMap::default(), 0);
     }
 
     #[test]
@@ -109,7 +109,7 @@ mod tests {
         tasm_stack.push(some_value.as_ref()[0].into());
 
         let _execution_result =
-            U32s2Decr::run_tasm(&mut tasm_stack, vec![], vec![], &mut HashMap::default());
+            U32s2Decr::run_tasm(&mut tasm_stack, vec![], vec![], &mut HashMap::default(), 0);
 
         let expected_res = U32s::<2>::new([u32::MAX, 13]);
         let mut expected_stack = get_init_tvm_stack();
@@ -144,6 +144,7 @@ mod tests {
             &[],
             &[],
             &mut HashMap::default(),
+            0,
             expected,
         );
     }

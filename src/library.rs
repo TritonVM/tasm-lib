@@ -16,6 +16,12 @@ impl Library {
         Self::default()
     }
 
+    pub fn with_preallocated_memory(words_allocated: usize) -> Self {
+        let mut ret = Self::default();
+        ret.free_pointer = words_allocated;
+        ret
+    }
+
     /// Import `T: Snippet` into the library.
     ///
     /// This recursively imports `T`'s dependencies.
@@ -175,6 +181,7 @@ mod tests {
             &[],
             &[],
             &mut HashMap::default(),
+            0,
             expected,
         );
         let _execution_result = rust_tasm_equivalence_prop::<B>(
@@ -182,6 +189,7 @@ mod tests {
             &[],
             &[],
             &mut HashMap::default(),
+            0,
             expected,
         );
         let _execution_result = rust_tasm_equivalence_prop::<C>(
@@ -189,6 +197,7 @@ mod tests {
             &[],
             &[],
             &mut HashMap::default(),
+            0,
             expected,
         );
     }

@@ -100,7 +100,7 @@ mod tests {
         init_stack.push(max_value.as_ref()[0].into());
 
         let mut tasm_stack = init_stack;
-        U32s2Incr::run_tasm(&mut tasm_stack, vec![], vec![], &mut HashMap::default());
+        U32s2Incr::run_tasm(&mut tasm_stack, vec![], vec![], &mut HashMap::default(), 0);
     }
 
     #[test]
@@ -127,6 +127,7 @@ mod tests {
             &[],
             &[],
             &mut HashMap::default(),
+            0,
             expected,
         );
     }

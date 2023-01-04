@@ -134,6 +134,7 @@ mod tests_long {
             &[],
             &[],
             &mut init_memory,
+            0,
             expected,
         );
     }
@@ -194,6 +195,7 @@ mod tests_short {
             &[],
             &[],
             &mut init_memory,
+            0,
             expected,
         );
     }

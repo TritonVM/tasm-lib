@@ -173,6 +173,7 @@ mod tests_push {
             &[],
             &[],
             &mut vm_memory,
+            0,
             Some(&expected_end_stack),
         );
 

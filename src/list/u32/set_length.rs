@@ -83,6 +83,7 @@ mod tests_set_length {
             &[],
             &[],
             &mut vm_memory,
+            0,
             Some(&expected_end_stack),
         );
 

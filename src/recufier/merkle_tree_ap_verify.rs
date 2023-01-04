@@ -286,6 +286,7 @@ mod merkle_authentication_verify_test {
             &standard_input,
             &secret_input,
             &mut HashMap::default(),
+            0,
             None,
         );
     }
