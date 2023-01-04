@@ -206,31 +206,32 @@ impl Snippet for CalculateNewPeaksFromAppend {
         }
 
         // Write auth path into memory
+        let auth_path_pointer = BFieldElement::new(65);
         memory.insert(
-            BFieldElement::new(65),
+            auth_path_pointer,
             BFieldElement::new(mp.authentication_path.len() as u64),
         );
 
         for (i, digest) in mp.authentication_path.iter().enumerate() {
             let offset = BFieldElement::new((i as usize * DIGEST_LENGTH) as u64);
             memory.insert(
-                peaks_pointer + offset + BFieldElement::one(),
+                auth_path_pointer + offset + BFieldElement::one(),
                 digest.values()[0],
             );
             memory.insert(
-                peaks_pointer + offset + BFieldElement::new(2),
+                auth_path_pointer + offset + BFieldElement::new(2),
                 digest.values()[1],
             );
             memory.insert(
-                peaks_pointer + offset + BFieldElement::new(3),
+                auth_path_pointer + offset + BFieldElement::new(3),
                 digest.values()[2],
             );
             memory.insert(
-                peaks_pointer + offset + BFieldElement::new(4),
+                auth_path_pointer + offset + BFieldElement::new(4),
                 digest.values()[3],
             );
             memory.insert(
-                peaks_pointer + offset + BFieldElement::new(5),
+                auth_path_pointer + offset + BFieldElement::new(5),
                 digest.values()[4],
             );
         }
@@ -257,13 +258,24 @@ mod tests {
     use super::*;
 
     #[test]
-    fn mmra_append_test_simple() {
+    fn mmra_append_test_empty() {
         type H = RescuePrimeRegular;
         type Mmr = MmrAccumulator<H>;
-        let mut mmra: Mmr = MmrAccumulator::new(vec![]);
+        let mmra: Mmr = MmrAccumulator::new(vec![]);
         let digest = H::hash(&BFieldElement::zero());
         let expected_final_mmra = MmrAccumulator::new(vec![digest]);
         prop_calculate_new_peaks_from_append(mmra, digest, expected_final_mmra);
+    }
+
+    #[test]
+    fn mmra_append_test_single() {
+        type H = RescuePrimeRegular;
+        type Mmr = MmrAccumulator<H>;
+        let digest0 = H::hash(&BFieldElement::new(4545));
+        let digest1 = H::hash(&BFieldElement::new(12345));
+        let mmra: Mmr = MmrAccumulator::new(vec![digest0]);
+        let expected_final_mmra = MmrAccumulator::new(vec![digest0, digest1]);
+        prop_calculate_new_peaks_from_append(mmra, digest1, expected_final_mmra);
     }
 
     fn prop_calculate_new_peaks_from_append(
@@ -282,9 +294,9 @@ mod tests {
         init_stack.push(BFieldElement::new(old_leaf_count & u32::MAX as u64));
         init_stack.push(peaks_pointer);
 
-        // push digests
-        for value in new_leaf.values() {
-            init_stack.push(value);
+        // push digests such that element 0 of digest is on top of stack
+        for value in new_leaf.values().iter().rev() {
+            init_stack.push(*value);
         }
 
         // Initialize memory
