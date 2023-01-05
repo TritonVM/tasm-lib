@@ -9,7 +9,7 @@ use crate::{
 };
 
 use super::{
-    left_child::MmrLeftChild, leftmost_ancestor::MmrLeftmostAncestor, right_child::MmrRightChild,
+    left_child::MmrLeftChild, leftmost_ancestor::MmrLeftMostAncestor, right_child::MmrRightChild,
 };
 
 pub struct MmrRightChildAndHeight;
@@ -38,7 +38,7 @@ impl Snippet for MmrRightChildAndHeight {
         let u32s_2_lt = library.import::<U32s2Lt>();
         let left_child = library.import::<MmrLeftChild>();
         let right_child = library.import::<MmrRightChild>();
-        let leftmost_ancestor = library.import::<MmrLeftmostAncestor>();
+        let leftmost_ancestor = library.import::<MmrLeftMostAncestor>();
 
         format!(
             "

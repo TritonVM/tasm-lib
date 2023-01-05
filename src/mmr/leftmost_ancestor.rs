@@ -6,15 +6,15 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::algebraic_hasher::Hashable;
 use twenty_first::util_types::mmr;
 
-use crate::arithmetic::u32s_2::add::U32s2Add;
 use crate::arithmetic::u32s_2::decr::U32s2Decr;
-use crate::arithmetic::u32s_2::lt::U32s2Lt;
+use crate::arithmetic::u32s_2::log2_floor::U32s2Log2Floor;
+use crate::arithmetic::u32s_2::powers_of_two::U32s2PowersOfTwoStatic;
 use crate::library::Library;
 use crate::snippet_trait::Snippet;
 
-pub struct MmrLeftmostAncestor();
+pub struct MmrLeftMostAncestor();
 
-impl Snippet for MmrLeftmostAncestor {
+impl Snippet for MmrLeftMostAncestor {
     fn stack_diff() -> isize {
         1
     }
@@ -25,44 +25,36 @@ impl Snippet for MmrLeftmostAncestor {
 
     fn function_body(library: &mut Library) -> String {
         let entrypoint = Self::entrypoint();
-        let u32s_2_add = library.import::<U32s2Add>();
         let u32s_2_decr = library.import::<U32s2Decr>();
-        let u32s_2_lt = library.import::<U32s2Lt>();
+        let pow2 = library.import::<U32s2PowersOfTwoStatic>();
+        let log2_floor = library.import::<U32s2Log2Floor>();
         format!(
             "
             // Before: _ node_index_hi node_index_lo
             // After: _ leftmost_ancestor_hi leftmost_ancestor_lo height
             {entrypoint}:
-                push 0        // -> _ node_index_hi node_index_lo h
-                push 0 push 2 // -> _ node_index_hi node_index_lo h ret_hi ret_lo
-                call {entrypoint}_while // -> _ node_index_hi node_index_lo (h + 1) ret_hi ret_lo node_index_hi node_index_lo (ret - 1)_hi (ret - 1)_lo
+                call {log2_floor}
+                // stack: _ log2_floor
 
-                pop pop pop pop    // -> _ node_index_hi node_index_lo h ret_hi ret_lo
-                call {u32s_2_decr} // -> _ node_index_hi node_index_lo h (ret - 1)_hi (ret - 1)_lo
+                dup0
+                // notice that log2_floor = height
+                // stack: _ height log2_floor
 
-                swap3              // -> _ node_index_hi (ret - 1)_lo h (ret - 1)_hi node_index_lo
-                pop                // -> _ node_index_hi (ret - 1)_lo h (ret - 1)_hi
-                swap3              // -> _ (ret - 1)_hi (ret - 1)_lo h node_index_hi
-                pop                // -> _ (ret - 1)_hi (ret - 1)_lo h
+                push 1
+                add
+                // stack: _ height (log2_floor + 1)
+
+                call {pow2}
+                // stack: _ height 2^(log2_floor + 1)_hi 2^(log2_floor + 1)_lo
+
+                call {u32s_2_decr}
+                // stack: _ height leftmost_ancestor_hi leftmost_ancestor_lo
+
+                swap1
+                swap2
+                // stack: _ leftmost_ancestor_hi leftmost_ancestor_lo height
 
                 return
-
-            // Before: _ node_index_hi node_index_lo h ret_hi ret_lo
-            // After: _ node_index_hi node_index_lo h ret_hi ret_lo node_index_hi node_index_lo (ret - 1)_hi (ret - 1)_lo
-            {entrypoint}_while:
-                dup4 dup4 // -> _ node_index_hi node_index_lo h ret_hi ret_lo node_index_hi node_index_lo
-                dup3 dup3 // -> _ node_index_hi node_index_lo h ret_hi ret_lo node_index_hi node_index_lo ret_hi ret_lo
-                call {u32s_2_decr} // -> _ node_index_hi node_index_lo h ret_hi ret_lo node_index_hi node_index_lo (ret - 1)_hi (ret - 1)_lo
-                call {u32s_2_lt}   // -> _ node_index_hi node_index_lo h ret_hi ret_lo node_index_hi node_index_lo (ret - 1)_hi (ret - 1)_lo (ret - 1 < node_index)
-                push 0 eq          // -> _ node_index_hi node_index_lo h ret_hi ret_lo node_index_hi node_index_lo (ret - 1)_hi (ret - 1)_lo (ret - 1 >= node_index)
-                skiz return        // if (ret - 1 >= node_index) return
-
-                                       // -> _ node_index_hi node_index_lo h ret_hi ret_lo node_index_hi node_index_lo (ret - 1)_hi (ret - 1)_lo
-                pop pop pop pop        // -> _ node_index_hi node_index_lo h ret_hi ret_lo
-                swap2 push 1 add swap2 // -> _ node_index_hi node_index_lo (h + 1) ret_hi ret_lo
-                dup1 dup1              // -> _ node_index_hi node_index_lo (h + 1) ret_hi ret_lo ret_hi ret_lo
-                call {u32s_2_add}      // -> _ node_index_hi node_index_lo (h + 1) (2 * ret)_hi (2 * ret)_lo
-                recurse
             "
         )
     }
@@ -123,6 +115,7 @@ mod tests {
         prop_leftmost_ancestor(U32s::<2>::from(6), Some(&expected_stack));
         prop_leftmost_ancestor(U32s::<2>::from(7), Some(&expected_stack));
 
+        // leftmost_ancestor([8..15]) -> height = 3, index = 15
         let mut expected_stack = get_init_tvm_stack();
         expected_stack.push(BFieldElement::new(0));
         expected_stack.push(BFieldElement::new(15));
@@ -131,11 +124,23 @@ mod tests {
             prop_leftmost_ancestor(U32s::<2>::from(i), Some(&expected_stack));
         }
 
+        // leftmost_ancestor([16..31]) -> height = 3, index = 31
         let mut expected_stack = get_init_tvm_stack();
         expected_stack.push(BFieldElement::new(0));
         expected_stack.push(BFieldElement::new(31));
         expected_stack.push(BFieldElement::new(4));
-        prop_leftmost_ancestor(U32s::<2>::from(16), Some(&expected_stack));
+        for i in 16..=31 {
+            prop_leftmost_ancestor(U32s::<2>::from(i), Some(&expected_stack));
+        }
+
+        // leftmost_ancestor([32..63]) -> height = 4, index = 63
+        let mut expected_stack = get_init_tvm_stack();
+        expected_stack.push(BFieldElement::new(0));
+        expected_stack.push(BFieldElement::new(63));
+        expected_stack.push(BFieldElement::new(5));
+        for i in 32..=63 {
+            prop_leftmost_ancestor(U32s::<2>::from(i), Some(&expected_stack));
+        }
 
         let mut expected_stack = get_init_tvm_stack();
         expected_stack.push(BFieldElement::new(1));
@@ -181,7 +186,7 @@ mod tests {
             init_stack.push(elem);
         }
 
-        let _execution_result = rust_tasm_equivalence_prop::<MmrLeftmostAncestor>(
+        let _execution_result = rust_tasm_equivalence_prop::<MmrLeftMostAncestor>(
             &init_stack,
             &[],
             &[],

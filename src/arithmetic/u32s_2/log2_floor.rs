@@ -23,11 +23,11 @@ impl Snippet for U32s2Log2Floor {
 
         // assumes that top of stack is a valid u32s<2>
         // BEFORE: _ value_hi value_lo
-        // AFTER: _ log2_floor(value) = res
+        // AFTER: _ log2_floor(value)
         format!(
             "
                 // BEFORE: _ value_hi value_lo
-                // AFTER: _ log2_floor(value) = res
+                // AFTER: _ log2_floor(value)
                 {entrypoint}:
                     swap1
                     push 1
