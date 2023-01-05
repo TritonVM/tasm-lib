@@ -275,6 +275,7 @@ mod tests {
         expected_count: u32,
         expected_height: u32,
     ) {
+        println!("node_index = {node_index}");
         let mut init_stack = get_init_tvm_stack();
         let node_index_hi = BFieldElement::new(node_index >> 32);
         let node_index_lo = BFieldElement::new(node_index & u32::MAX as u64);
