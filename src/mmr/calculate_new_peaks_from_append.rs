@@ -1,27 +1,21 @@
 use std::collections::HashMap;
 
-use num::{BigUint, One, Zero};
-use twenty_first::amount::u32s::U32s;
+use num::One;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::rescue_prime_digest::Digest;
 use twenty_first::shared_math::rescue_prime_regular::{RescuePrimeRegular, DIGEST_LENGTH};
-use twenty_first::util_types::algebraic_hasher::{AlgebraicHasher, Hashable};
+use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 use twenty_first::util_types::mmr;
-use twenty_first::util_types::mmr::mmr_membership_proof::MmrMembershipProof;
 
-use crate::arithmetic::u32s_2::sub::U32s2Sub;
 use crate::library::Library;
 use crate::list::u32::pop::Pop;
-use crate::list::u32::set_length::{self, SetLength};
+use crate::list::u32::push::Push;
+use crate::list::u32::set_length::SetLength;
 use crate::rust_shadowing_helper_functions;
 use crate::snippet_trait::Snippet;
-use crate::{arithmetic::u32s_2::powers_of_two::U32s2PowersOfTwoStatic, list::u32::push::Push};
 
-use super::right_ancestor_count_and_own_height::{self, MmrRightAncestorCountAndHeight};
-use super::{
-    data_index_to_node_index::{self, DataIndexToNodeIndex},
-    right_child_and_height::MmrRightChildAndHeight,
-};
+use super::data_index_to_node_index::DataIndexToNodeIndex;
+use super::right_ancestor_count_and_own_height::MmrRightAncestorCountAndHeight;
 
 pub const MAX_MMR_HEIGHT: usize = 64;
 
@@ -242,10 +236,13 @@ impl Snippet for CalculateNewPeaksFromAppend {
 mod tests {
     use num::Zero;
     use twenty_first::{
-        shared_math::b_field_element::BFieldElement,
+        shared_math::{b_field_element::BFieldElement, other::random_elements},
         util_types::{
             algebraic_hasher::AlgebraicHasher,
-            mmr::{mmr_accumulator::MmrAccumulator, mmr_trait::Mmr},
+            mmr::{
+                mmr_accumulator::MmrAccumulator, mmr_membership_proof::MmrMembershipProof,
+                mmr_trait::Mmr,
+            },
         },
     };
 
@@ -274,10 +271,40 @@ mod tests {
         prop_calculate_new_peaks_from_append(mmra, digest1, expected_final_mmra);
     }
 
-    fn prop_calculate_new_peaks_from_append(
-        mut start_mmr: MmrAccumulator<RescuePrimeRegular>,
+    #[test]
+    fn mmra_append_test_two_leaves() {
+        type H = RescuePrimeRegular;
+        type Mmr = MmrAccumulator<H>;
+        let digest0 = H::hash(&BFieldElement::new(4545));
+        let digest1 = H::hash(&BFieldElement::new(12345));
+        let digest2 = H::hash(&BFieldElement::new(55488));
+        let mmra: Mmr = MmrAccumulator::new(vec![digest0, digest1]);
+        let expected_final_mmra = MmrAccumulator::new(vec![digest0, digest1, digest2]);
+        prop_calculate_new_peaks_from_append(mmra, digest2, expected_final_mmra);
+    }
+
+    #[test]
+    fn mmra_append_pbt() {
+        type H = RescuePrimeRegular;
+        type Mmr = MmrAccumulator<H>;
+
+        let inserted_digest: Digest = H::hash(&BFieldElement::new(1337));
+        for init_size in 0..40 {
+            println!("init_size = {init_size}");
+            let leaf_digests: Vec<Digest> = random_elements(init_size);
+            let init_mmra: Mmr = MmrAccumulator::new(leaf_digests.clone());
+            let expected_final_mmra: Mmr =
+                MmrAccumulator::new(vec![leaf_digests, vec![inserted_digest]].concat());
+            prop_calculate_new_peaks_from_append(init_mmra, inserted_digest, expected_final_mmra);
+        }
+    }
+
+    fn prop_calculate_new_peaks_from_append<
+        H: AlgebraicHasher + std::cmp::PartialEq + std::fmt::Debug,
+    >(
+        mut start_mmr: MmrAccumulator<H>,
         new_leaf: Digest,
-        expected_mmr: MmrAccumulator<RescuePrimeRegular>,
+        expected_mmr: MmrAccumulator<H>,
     ) {
         // We assume that the peaks can safely be stored in memory on address 0
         let peaks_pointer = BFieldElement::zero();
@@ -332,12 +359,41 @@ mod tests {
             produced_peaks.push(peak);
         }
 
-        let produced_mmr = MmrAccumulator::<RescuePrimeRegular>::init(
-            produced_peaks,
-            start_mmr.count_leaves() + 1,
-        );
+        let mut produced_mmr =
+            MmrAccumulator::<H>::init(produced_peaks, start_mmr.count_leaves() + 1);
 
         // Verify that both code paths produce the same MMR
         assert_eq!(expected_mmr, produced_mmr);
+
+        // Verify that produced auth paths are valid
+        let auth_path_element_count = memory[&auth_paths_pointer].value();
+        let mut produced_auth_path = vec![];
+        for i in 0..auth_path_element_count {
+            let offset = BFieldElement::new((i as usize * DIGEST_LENGTH) as u64);
+            let auth_path_element: Digest = Digest::new([
+                memory[&(auth_paths_pointer + offset + BFieldElement::one())],
+                memory[&(auth_paths_pointer + offset + BFieldElement::new(2))],
+                memory[&(auth_paths_pointer + offset + BFieldElement::new(3))],
+                memory[&(auth_paths_pointer + offset + BFieldElement::new(4))],
+                memory[&(auth_paths_pointer + offset + BFieldElement::new(5))],
+            ]);
+            produced_auth_path.push(auth_path_element);
+        }
+
+        let produced_mp = MmrMembershipProof::<H> {
+            data_index: start_mmr.count_leaves(),
+            authentication_path: produced_auth_path,
+            _hasher: std::marker::PhantomData,
+        };
+        assert!(
+            produced_mp
+                .verify(
+                    &produced_mmr.get_peaks(),
+                    &new_leaf,
+                    produced_mmr.count_leaves(),
+                )
+                .0,
+            "TASM-produced authentication path must be valid"
+        );
     }
 }

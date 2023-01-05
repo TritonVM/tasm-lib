@@ -17,9 +17,11 @@ impl Library {
     }
 
     pub fn with_preallocated_memory(words_allocated: usize) -> Self {
-        let mut ret = Self::default();
-        ret.free_pointer = words_allocated;
-        ret
+        Self {
+            seen_snippets: HashSet::default(),
+            function_bodies: HashSet::default(),
+            free_pointer: words_allocated,
+        }
     }
 
     /// Import `T: Snippet` into the library.
