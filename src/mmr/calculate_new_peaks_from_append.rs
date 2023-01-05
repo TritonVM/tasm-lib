@@ -1,17 +1,19 @@
 use std::collections::HashMap;
 
-use num::{BigUint, One};
+use num::{BigUint, One, Zero};
 use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::rescue_prime_digest::Digest;
 use twenty_first::shared_math::rescue_prime_regular::{RescuePrimeRegular, DIGEST_LENGTH};
-use twenty_first::util_types::algebraic_hasher::Hashable;
+use twenty_first::util_types::algebraic_hasher::{AlgebraicHasher, Hashable};
 use twenty_first::util_types::mmr;
+use twenty_first::util_types::mmr::mmr_membership_proof::MmrMembershipProof;
 
 use crate::arithmetic::u32s_2::sub::U32s2Sub;
 use crate::library::Library;
 use crate::list::u32::pop::Pop;
 use crate::list::u32::set_length::{self, SetLength};
+use crate::rust_shadowing_helper_functions;
 use crate::snippet_trait::Snippet;
 use crate::{arithmetic::u32s_2::powers_of_two::U32s2PowersOfTwoStatic, list::u32::push::Push};
 
@@ -144,9 +146,37 @@ impl Snippet for CalculateNewPeaksFromAppend {
         _secret_in: Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
+        type H = RescuePrimeRegular;
+
+        // TODO: Remove this when twenty-first is updated
+        fn right_ancestor_count_and_own_height(node_index: u128) -> (u32, u32) {
+            let (mut candidate, mut candidate_height) = mmr::shared::leftmost_ancestor(node_index);
+
+            // leftmost ancestor is always a left node, so count starts at 0.
+            let mut right_ancestor_count = 0;
+
+            loop {
+                if candidate == node_index {
+                    return (right_ancestor_count, candidate_height as u32);
+                }
+
+                let left_child = mmr::shared::left_child(candidate, candidate_height);
+                let candidate_is_right_child = left_child < node_index;
+                if candidate_is_right_child {
+                    candidate = mmr::shared::right_child(candidate);
+                    right_ancestor_count += 1;
+                } else {
+                    candidate = left_child;
+                    right_ancestor_count = 0;
+                };
+
+                candidate_height -= 1;
+            }
+        }
+
         // BEFORE: _ old_leaf_count_hi old_leaf_count_lo *peaks [digests (new_leaf)]
         // AFTER: _ *new_peaks *auth_path
-        let digest: Digest = Digest::new([
+        let new_leaf: Digest = Digest::new([
             stack.pop().unwrap(),
             stack.pop().unwrap(),
             stack.pop().unwrap(),
@@ -172,68 +202,34 @@ impl Snippet for CalculateNewPeaksFromAppend {
             ]));
         }
 
-        let (peaks, mp) = mmr::shared::calculate_new_peaks_from_append::<RescuePrimeRegular>(
-            old_leaf_count as u128,
-            old_peaks,
-            digest,
-        )
-        .unwrap();
-
-        // Write peaks_res back to memory
-        memory.insert(peaks_pointer, BFieldElement::new(peaks.len() as u64));
-        for (i, peak) in peaks.into_iter().enumerate() {
-            let offset = BFieldElement::new((i as usize * DIGEST_LENGTH) as u64);
-            memory.insert(
-                peaks_pointer + offset + BFieldElement::one(),
-                peak.values()[0],
-            );
-            memory.insert(
-                peaks_pointer + offset + BFieldElement::new(2),
-                peak.values()[1],
-            );
-            memory.insert(
-                peaks_pointer + offset + BFieldElement::new(3),
-                peak.values()[2],
-            );
-            memory.insert(
-                peaks_pointer + offset + BFieldElement::new(4),
-                peak.values()[3],
-            );
-            memory.insert(
-                peaks_pointer + offset + BFieldElement::new(5),
-                peak.values()[4],
-            );
-        }
-
-        // Write auth path into memory
+        // Run the actual `calculate_new_peaks_from_append` algorithm. This function
+        // is inlined here to make it manipulate memory the same way that the TASM code
+        // does.
         let auth_path_pointer = BFieldElement::new(65);
-        memory.insert(
-            auth_path_pointer,
-            BFieldElement::new(mp.authentication_path.len() as u64),
-        );
-
-        for (i, digest) in mp.authentication_path.iter().enumerate() {
-            let offset = BFieldElement::new((i as usize * DIGEST_LENGTH) as u64);
-            memory.insert(
-                auth_path_pointer + offset + BFieldElement::one(),
-                digest.values()[0],
+        rust_shadowing_helper_functions::list_new(auth_path_pointer, memory);
+        rust_shadowing_helper_functions::list_push(peaks_pointer, new_leaf.values(), memory);
+        let new_node_index = mmr::shared::data_index_to_node_index(old_leaf_count as u128);
+        let (mut right_lineage_count, _height) =
+            right_ancestor_count_and_own_height(new_node_index);
+        while right_lineage_count != 0 {
+            let new_hash = Digest::new(rust_shadowing_helper_functions::list_pop::<DIGEST_LENGTH>(
+                peaks_pointer,
+                memory,
+            ));
+            let previous_peak = Digest::new(rust_shadowing_helper_functions::list_pop::<
+                DIGEST_LENGTH,
+            >(peaks_pointer, memory));
+            rust_shadowing_helper_functions::list_push(
+                auth_path_pointer,
+                previous_peak.values(),
+                memory,
             );
-            memory.insert(
-                auth_path_pointer + offset + BFieldElement::new(2),
-                digest.values()[1],
+            rust_shadowing_helper_functions::list_push(
+                peaks_pointer,
+                H::hash_pair(&previous_peak, &new_hash).values(),
+                memory,
             );
-            memory.insert(
-                auth_path_pointer + offset + BFieldElement::new(3),
-                digest.values()[2],
-            );
-            memory.insert(
-                auth_path_pointer + offset + BFieldElement::new(4),
-                digest.values()[3],
-            );
-            memory.insert(
-                auth_path_pointer + offset + BFieldElement::new(5),
-                digest.values()[4],
-            );
+            right_lineage_count -= 1;
         }
 
         // Pop return values to stack
@@ -301,35 +297,9 @@ mod tests {
 
         // Initialize memory
         let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
-
-        // Store init length of peaks
-        memory.insert(
-            peaks_pointer,
-            BFieldElement::new(start_mmr.get_peaks().len() as u64),
-        );
-
-        for (i, peak) in start_mmr.get_peaks().iter().enumerate() {
-            let offset = BFieldElement::new((i as usize * DIGEST_LENGTH) as u64);
-            memory.insert(
-                peaks_pointer + offset + BFieldElement::one(),
-                peak.values()[0],
-            );
-            memory.insert(
-                peaks_pointer + offset + BFieldElement::new(2),
-                peak.values()[1],
-            );
-            memory.insert(
-                peaks_pointer + offset + BFieldElement::new(3),
-                peak.values()[2],
-            );
-            memory.insert(
-                peaks_pointer + offset + BFieldElement::new(4),
-                peak.values()[3],
-            );
-            memory.insert(
-                peaks_pointer + offset + BFieldElement::new(5),
-                peak.values()[4],
-            );
+        rust_shadowing_helper_functions::list_new(peaks_pointer, &mut memory);
+        for peak in start_mmr.get_peaks() {
+            rust_shadowing_helper_functions::list_push(peaks_pointer, peak.values(), &mut memory);
         }
 
         // We assume that the auth paths can safely be stored in memory on address 65

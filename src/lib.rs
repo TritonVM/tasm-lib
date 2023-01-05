@@ -13,6 +13,7 @@ mod list;
 mod mmr;
 mod other_snippets;
 mod recufier;
+mod rust_shadowing_helper_functions;
 mod snippet_trait;
 
 pub struct ExecutionResult {
