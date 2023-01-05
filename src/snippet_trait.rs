@@ -1,5 +1,5 @@
+use itertools::Itertools;
 use std::collections::HashMap;
-
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::execute;
@@ -41,8 +41,9 @@ pub trait Snippet {
         std_in: Vec<BFieldElement>,
         secret_in: Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
+        words_allocated: usize,
     ) -> ExecutionResult {
-        let mut library = Library::empty();
+        let mut library = Library::with_preallocated_memory(words_allocated);
         let entrypoint = Self::entrypoint();
         let function_body = Self::function_body(&mut library);
         let library_code = library.all_imports();
@@ -66,6 +67,7 @@ pub fn rust_tasm_equivalence_prop<T: Snippet>(
     stdin: &[BFieldElement],
     secret_in: &[BFieldElement],
     memory: &mut HashMap<BFieldElement, BFieldElement>,
+    words_allocated: usize,
     expected: Option<&[BFieldElement]>,
 ) -> ExecutionResult {
     let init_memory = memory.clone();
@@ -76,6 +78,7 @@ pub fn rust_tasm_equivalence_prop<T: Snippet>(
         stdin.to_vec(),
         secret_in.to_vec(),
         &mut tasm_memory,
+        words_allocated,
     );
     println!(
         "Cycle count for `{}`: {}",
@@ -100,17 +103,42 @@ pub fn rust_tasm_equivalence_prop<T: Snippet>(
     assert_eq!(
         tasm_stack,
         rust_stack,
-        "Rust code must match TVM for `{}`",
+        "Rust code must match TVM for `{}`\n\nTVM: {}\n\nRust: {}",
         T::entrypoint(),
+        tasm_stack
+            .iter()
+            .map(|x| x.to_string())
+            .collect_vec()
+            .join(","),
+        rust_stack
+            .iter()
+            .map(|x| x.to_string())
+            .collect_vec()
+            .join(","),
     );
     if let Some(expected) = expected {
         assert_eq!(tasm_stack, expected, "TVM must produce expected stack.");
     }
 
-    assert_eq!(
-        rust_memory, tasm_memory,
-        "Memory for both implementations must match after execution"
-    );
+    // Verify that memory behaves as expected
+    if rust_memory != tasm_memory {
+        let mut tasm_memory = tasm_memory.iter().collect_vec();
+        tasm_memory.sort_unstable_by(|&a, &b| a.0.value().partial_cmp(&b.0.value()).unwrap());
+        let tasm_mem_str = tasm_memory
+            .iter()
+            .map(|x| format!("({} => {})", x.0, x.1))
+            .collect_vec()
+            .join(",");
+
+        let mut rust_memory = rust_memory.iter().collect_vec();
+        rust_memory.sort_unstable_by(|&a, &b| a.0.value().partial_cmp(&b.0.value()).unwrap());
+        let rust_mem_str = rust_memory
+            .iter()
+            .map(|x| format!("({} => {})", x.0, x.1))
+            .collect_vec()
+            .join(",");
+        panic!("Memory for both implementations must match after execution.\n\nTVM: {tasm_mem_str}\n\nRust: {rust_mem_str}",)
+    }
 
     // Write back memory to be able to probe it in individual tests
     *memory = tasm_memory;

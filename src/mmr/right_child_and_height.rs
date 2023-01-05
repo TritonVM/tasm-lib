@@ -407,6 +407,7 @@ mod tests {
             &[],
             &[],
             &mut HashMap::default(),
+            0,
             expected,
         );
     }

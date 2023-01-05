@@ -305,6 +305,7 @@ mod tests {
             &[],
             &[],
             &mut HashMap::default(),
+            0,
             expected,
         );
 
@@ -339,6 +340,7 @@ mod tests {
             &[],
             &[],
             &mut HashMap::default(),
+            0,
             expected,
         );
 
@@ -365,6 +367,7 @@ mod tests {
             &[],
             &[],
             &mut HashMap::default(),
+            0,
             expected,
         );
 

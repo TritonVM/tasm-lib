@@ -24,6 +24,8 @@ impl Snippet for U32s2Lt {
         let entrypoint = Self::entrypoint();
         format!(
             "
+            // Before: _ rhs_hi rhs_lo lhs_hi lhs_lo
+            // After: _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs)
             {entrypoint}:
                 dup3
                 dup2
@@ -224,6 +226,7 @@ mod tests {
             &[],
             &[],
             &mut HashMap::default(),
+            0,
             expected,
         );
     }

@@ -104,7 +104,7 @@ impl<const N: usize> Snippet for Pop<N> {
 }
 
 #[cfg(test)]
-mod tests_push {
+mod tests_pop {
     use std::collections::HashMap;
 
     use itertools::Itertools;
@@ -115,6 +115,34 @@ mod tests_push {
     use crate::{get_init_tvm_stack, snippet_trait::rust_tasm_equivalence_prop};
 
     use super::*;
+
+    #[test]
+    #[should_panic]
+    fn panic_if_pop_on_empty_list_1() {
+        let list_address = BFieldElement::new(48);
+        prop_pop::<1>(list_address, 0);
+    }
+
+    #[test]
+    #[should_panic]
+    fn panic_if_pop_on_empty_list_2() {
+        let list_address = BFieldElement::new(48);
+        prop_pop::<2>(list_address, 0);
+    }
+
+    #[test]
+    #[should_panic]
+    fn panic_if_pop_on_empty_list_3() {
+        let list_address = BFieldElement::new(48);
+        prop_pop::<3>(list_address, 0);
+    }
+
+    #[test]
+    #[should_panic]
+    fn panic_if_pop_on_empty_list_4() {
+        let list_address = BFieldElement::new(48);
+        prop_pop::<4>(list_address, 0);
+    }
 
     #[test]
     fn list_u32_n_is_n_pop() {
@@ -173,6 +201,7 @@ mod tests_push {
             &[],
             &[],
             &mut vm_memory,
+            0,
             Some(&expected_end_stack),
         );
 
