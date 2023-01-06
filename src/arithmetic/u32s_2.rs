@@ -1,4 +1,5 @@
 pub mod add;
+pub mod and;
 pub mod decr;
 pub mod eq;
 pub mod incr;
