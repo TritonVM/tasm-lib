@@ -7,7 +7,7 @@ use crate::arithmetic::u32s_2::incr::U32s2Incr;
 use crate::library::Library;
 use crate::snippet_trait::Snippet;
 
-use super::non_leaf_nodes_left::MmrNonLeafNodesLeft;
+use super::non_leaf_nodes_left::MmrNonLeafNodesLeftOld;
 
 pub struct DataIndexToNodeIndex();
 
@@ -23,7 +23,7 @@ impl Snippet for DataIndexToNodeIndex {
 
     fn function_body(library: &mut Library) -> String {
         let entrypoint = Self::entrypoint();
-        let non_leaf_nodes_left = library.import::<MmrNonLeafNodesLeft>();
+        let non_leaf_nodes_left = library.import::<MmrNonLeafNodesLeftOld>();
         let incr = library.import::<U32s2Incr>();
         let add = library.import::<U32s2Add>();
         format!("

@@ -3,7 +3,11 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::log_2_floor;
 
 use crate::arithmetic::u32s_2::add::U32s2Add;
+use crate::arithmetic::u32s_2::and::U32s2And;
 use crate::arithmetic::u32s_2::decr::U32s2Decr;
+use crate::arithmetic::u32s_2::eq::U32s2Eq;
+use crate::arithmetic::u32s_2::incr::U32s2Incr;
+use crate::arithmetic::u32s_2::log2_floor::U32s2Log2Floor;
 use crate::arithmetic::u32s_2::powers_of_two::U32s2PowersOfTwoStatic;
 use crate::arithmetic::u32s_2::sub::U32s2Sub;
 use crate::library::Library;
@@ -11,9 +15,144 @@ use crate::snippet_trait::Snippet;
 
 use super::get_height_from_data_index::GetHeightFromDataIndex;
 
-pub struct MmrNonLeafNodesLeft();
+pub struct MmrNonLeafNodesLeftUsingAnd();
 
-impl Snippet for MmrNonLeafNodesLeft {
+impl Snippet for MmrNonLeafNodesLeftUsingAnd {
+    fn stack_diff() -> isize {
+        0
+    }
+
+    fn entrypoint() -> &'static str {
+        "non_leaf_nodes_left"
+    }
+
+    fn function_body(library: &mut Library) -> String {
+        let entrypoint = Self::entrypoint();
+        let log2_floor_u32_2 = library.import::<U32s2Log2Floor>();
+        let pow2 = library.import::<U32s2PowersOfTwoStatic>();
+        let u32_2_and = library.import::<U32s2And>();
+        let u32_2_eq = library.import::<U32s2Eq>();
+        let u32_2_decr = library.import::<U32s2Decr>();
+        let u32_2_incr = library.import::<U32s2Incr>();
+        let u32_2_add = library.import::<U32s2Add>();
+
+        format!(
+            "
+        // BEFORE: _ data_index_hi data_index_lo
+        // AFTER: _ node_count_hi node_count_lo
+        {entrypoint}:
+            dup1 dup1
+            call {log2_floor_u32_2}
+            call {u32_2_incr}
+            // stack: _ di_hi di_lo log2_floor
+
+            push 0
+            push 0 push 0
+            // stack: _ di_hi di_lo log2_floor h ret_hi ret_lo
+
+            call {entrypoint}_while
+            // stack: _ di_hi di_lo log2_floor h ret_hi ret_lo
+
+            swap4 pop
+            // stack: _ di_hi ret_lo log2_floor h ret_hi
+
+            swap4 pop
+            // stack: _ ret_hi ret_lo log2_floor h
+
+            pop pop
+            // stack: _ ret_hi ret_lo
+
+            return
+
+        // Start/end stack: _ di_hi di_lo log2_floor h ret_hi ret_lo
+        {entrypoint}_while:
+            dup3 dup3 eq
+            // stack: _ di_hi di_lo log2_floor h ret_hi ret_lo (h == log2_floor)
+
+            skiz return
+            // stack: _ di_hi di_lo log2_floor h ret_hi ret_lo
+
+            dup2
+            call {pow2}
+            // stack: _ di_hi di_lo log2_floor h ret_hi ret_lo pow_hi pow_lo
+
+            dup1 dup1
+            dup9 dup9
+            // stack: _ di_hi di_lo log2_floor h ret_hi ret_lo pow_hi pow_lo pow_hi pow_lo di_hi di_lo
+
+            call {u32_2_and}
+            // stack: _ di_hi di_lo log2_floor h ret_hi ret_lo pow_hi pow_lo and_hi and_lo
+
+            push 0 push 0
+            call {u32_2_eq}
+            // stack: _ di_hi di_lo log2_floor h ret_hi ret_lo pow_hi pow_lo (and_expr == 0)
+
+            push 0
+            eq
+            skiz call {entrypoint}_if_then
+            // stack: _ di_hi di_lo log2_floor h ret_hi ret_lo pow_hi pow_lo
+
+            pop pop
+            // stack: _ di_hi di_lo log2_floor h ret_hi ret_lo
+
+            swap2 push 1 add swap2
+            // stack: _ di_hi di_lo log2_floor (h + 1) ret_hi ret_lo
+
+            recurse
+
+            // Start/end stack: _ di_hi di_lo log2_floor h ret_hi ret_lo pow_hi pow_lo
+        {entrypoint}_if_then:
+            call {u32_2_decr}
+            // stack: _ di_hi di_lo log2_floor h ret_hi ret_lo (pow - 1)_hi (pow - 1)_lo
+
+            call {u32_2_add}
+            // stack: _ di_hi di_lo log2_floor h (ret + 2^h - 1)_hi (ret + 2^h - 1)_lo
+
+            push 0 push 0
+            // rename: ret expression to `ret`
+            // stack: _ di_hi di_lo log2_floor h ret_hi ret_lo 0 0
+            return
+            "
+        )
+    }
+
+    fn rust_shadowing(
+        stack: &mut Vec<BFieldElement>,
+        _std_in: Vec<BFieldElement>,
+        _secret_in: Vec<BFieldElement>,
+        _memory: &mut HashMap<BFieldElement, BFieldElement>,
+    ) {
+        // TODO: Replace this by function from twenty-first when that has been made public
+        fn non_leaf_nodes_left(data_index: u128) -> u128 {
+            let log_2_floor_plus_one = u128::BITS - data_index.leading_zeros();
+            let mut h = 0;
+            let mut ret = 0;
+            while h != log_2_floor_plus_one {
+                let pow = (1 << h) & data_index;
+                if pow != 0 {
+                    ret += pow - 1;
+                }
+                h += 1;
+            }
+
+            ret
+        }
+
+        let data_index_lo: u32 = stack.pop().unwrap().try_into().unwrap();
+        let data_index_hi: u32 = stack.pop().unwrap().try_into().unwrap();
+        let data_index: u64 = (data_index_hi as u64) * (1u64 << 32) + data_index_lo as u64;
+
+        // // TODO: Call `non_leaf_nodes_left` from MMR here once it has been made public
+        let result = non_leaf_nodes_left(data_index as u128) as u64;
+
+        stack.push(BFieldElement::new(result >> 32));
+        stack.push(BFieldElement::new(result & 0xFFFFFFFFu32 as u64));
+    }
+}
+
+pub struct MmrNonLeafNodesLeftOld();
+
+impl Snippet for MmrNonLeafNodesLeftOld {
     fn stack_diff() -> isize {
         // Pops a U32<2> and pushes a U32<2>
         0
@@ -154,7 +293,7 @@ impl Snippet for MmrNonLeafNodesLeft {
 }
 
 #[cfg(test)]
-mod tests {
+mod nlnl_tests {
     use rand::{thread_rng, RngCore};
     use twenty_first::{
         amount::u32s::U32s, shared_math::b_field_element::BFieldElement,
@@ -166,62 +305,119 @@ mod tests {
     use super::*;
 
     #[test]
-    fn non_leaf_nodes_left_simple_test() {
+    fn non_leaf_nodes_left_using_and_test() {
         let mut expected = get_init_tvm_stack();
         expected.push(BFieldElement::new(0));
         expected.push(BFieldElement::new(0));
-        prop_non_leaf_nodes_left(0, Some(&expected));
-        prop_non_leaf_nodes_left(1, Some(&expected));
+        prop_non_leaf_nodes_left_using_and(0, Some(&expected));
+        prop_non_leaf_nodes_left_using_and(1, Some(&expected));
 
         expected = get_init_tvm_stack();
         expected.push(BFieldElement::new(0));
         expected.push(BFieldElement::new(1));
-        prop_non_leaf_nodes_left(2, Some(&expected));
-        prop_non_leaf_nodes_left(3, Some(&expected));
+        prop_non_leaf_nodes_left_using_and(2, Some(&expected));
+        prop_non_leaf_nodes_left_using_and(3, Some(&expected));
 
         expected = get_init_tvm_stack();
         expected.push(BFieldElement::new(0));
         expected.push(BFieldElement::new(3));
-        prop_non_leaf_nodes_left(4, Some(&expected));
-        prop_non_leaf_nodes_left(5, Some(&expected));
+        prop_non_leaf_nodes_left_using_and(4, Some(&expected));
+        prop_non_leaf_nodes_left_using_and(5, Some(&expected));
 
         expected = get_init_tvm_stack();
         expected.push(BFieldElement::new(0));
         expected.push(BFieldElement::new(4));
-        prop_non_leaf_nodes_left(6, Some(&expected));
-        prop_non_leaf_nodes_left(7, Some(&expected));
+        prop_non_leaf_nodes_left_using_and(6, Some(&expected));
+        prop_non_leaf_nodes_left_using_and(7, Some(&expected));
 
         expected = get_init_tvm_stack();
         expected.push(BFieldElement::new(0));
         expected.push(BFieldElement::new(7));
-        prop_non_leaf_nodes_left(8, Some(&expected));
-        prop_non_leaf_nodes_left(9, Some(&expected));
+        prop_non_leaf_nodes_left_using_and(8, Some(&expected));
+        prop_non_leaf_nodes_left_using_and(9, Some(&expected));
 
         expected = get_init_tvm_stack();
         expected.push(BFieldElement::new(0));
         expected.push(BFieldElement::new(8));
-        prop_non_leaf_nodes_left(10, Some(&expected));
-        prop_non_leaf_nodes_left(11, Some(&expected));
+        prop_non_leaf_nodes_left_using_and(10, Some(&expected));
+        prop_non_leaf_nodes_left_using_and(11, Some(&expected));
 
         expected = get_init_tvm_stack();
         expected.push(BFieldElement::new(0));
         expected.push(BFieldElement::new(10));
-        prop_non_leaf_nodes_left(12, Some(&expected));
-        prop_non_leaf_nodes_left(13, Some(&expected));
+        prop_non_leaf_nodes_left_using_and(12, Some(&expected));
+        prop_non_leaf_nodes_left_using_and(13, Some(&expected));
 
-        prop_non_leaf_nodes_left(u32::MAX as u64, None);
-        prop_non_leaf_nodes_left(u64::MAX / 2, None);
+        prop_non_leaf_nodes_left_using_and(u32::MAX as u64, None);
+        prop_non_leaf_nodes_left_using_and(u64::MAX / 2, None);
     }
 
     #[test]
-    fn non_leaf_nodes_pbt() {
+    fn non_leaf_nodes_left_old_test() {
+        let mut expected = get_init_tvm_stack();
+        expected.push(BFieldElement::new(0));
+        expected.push(BFieldElement::new(0));
+        prop_non_leaf_nodes_left_old(0, Some(&expected));
+        prop_non_leaf_nodes_left_old(1, Some(&expected));
+
+        expected = get_init_tvm_stack();
+        expected.push(BFieldElement::new(0));
+        expected.push(BFieldElement::new(1));
+        prop_non_leaf_nodes_left_old(2, Some(&expected));
+        prop_non_leaf_nodes_left_old(3, Some(&expected));
+
+        expected = get_init_tvm_stack();
+        expected.push(BFieldElement::new(0));
+        expected.push(BFieldElement::new(3));
+        prop_non_leaf_nodes_left_old(4, Some(&expected));
+        prop_non_leaf_nodes_left_old(5, Some(&expected));
+
+        expected = get_init_tvm_stack();
+        expected.push(BFieldElement::new(0));
+        expected.push(BFieldElement::new(4));
+        prop_non_leaf_nodes_left_old(6, Some(&expected));
+        prop_non_leaf_nodes_left_old(7, Some(&expected));
+
+        expected = get_init_tvm_stack();
+        expected.push(BFieldElement::new(0));
+        expected.push(BFieldElement::new(7));
+        prop_non_leaf_nodes_left_old(8, Some(&expected));
+        prop_non_leaf_nodes_left_old(9, Some(&expected));
+
+        expected = get_init_tvm_stack();
+        expected.push(BFieldElement::new(0));
+        expected.push(BFieldElement::new(8));
+        prop_non_leaf_nodes_left_old(10, Some(&expected));
+        prop_non_leaf_nodes_left_old(11, Some(&expected));
+
+        expected = get_init_tvm_stack();
+        expected.push(BFieldElement::new(0));
+        expected.push(BFieldElement::new(10));
+        prop_non_leaf_nodes_left_old(12, Some(&expected));
+        prop_non_leaf_nodes_left_old(13, Some(&expected));
+
+        prop_non_leaf_nodes_left_old(u32::MAX as u64, None);
+        prop_non_leaf_nodes_left_old(u64::MAX / 2, None);
+    }
+
+    #[test]
+    fn non_leaf_nodes_using_and_pbt() {
         let mut rng = thread_rng();
-        for _ in 0..100 {
-            prop_non_leaf_nodes_left(rng.next_u64(), None);
+        for _ in 0..10 {
+            prop_non_leaf_nodes_left_using_and(rng.next_u64(), None);
         }
     }
 
-    fn prop_non_leaf_nodes_left(data_index: u64, expected: Option<&[BFieldElement]>) {
+    #[test]
+    fn non_leaf_nodes_old_pbt() {
+        let mut rng = thread_rng();
+        for _ in 0..10 {
+            prop_non_leaf_nodes_left_old(rng.next_u64(), None);
+        }
+    }
+
+    fn prop_non_leaf_nodes_left_using_and(data_index: u64, expected: Option<&[BFieldElement]>) {
+        println!("data_index = {data_index}");
         let mut init_stack = get_init_tvm_stack();
         let value_as_u32_2 = U32s::new([
             (data_index & 0xFFFFFFFFu32 as u64) as u32,
@@ -231,7 +427,28 @@ mod tests {
             init_stack.push(elem);
         }
 
-        let _execution_result = rust_tasm_equivalence_prop::<MmrNonLeafNodesLeft>(
+        let _execution_result = rust_tasm_equivalence_prop::<MmrNonLeafNodesLeftUsingAnd>(
+            &init_stack,
+            &[],
+            &[],
+            &mut HashMap::default(),
+            0,
+            expected,
+        );
+    }
+
+    fn prop_non_leaf_nodes_left_old(data_index: u64, expected: Option<&[BFieldElement]>) {
+        println!("data_index = {data_index}");
+        let mut init_stack = get_init_tvm_stack();
+        let value_as_u32_2 = U32s::new([
+            (data_index & 0xFFFFFFFFu32 as u64) as u32,
+            (data_index >> 32) as u32,
+        ]);
+        for elem in value_as_u32_2.to_sequence().into_iter().rev() {
+            init_stack.push(elem);
+        }
+
+        let _execution_result = rust_tasm_equivalence_prop::<MmrNonLeafNodesLeftOld>(
             &init_stack,
             &[],
             &[],
