@@ -22,7 +22,7 @@ impl<const N: usize> Snippet for Pop<N> {
         let entry_point = Self::entrypoint();
 
         let mut code_to_read_elements = String::default();
-        // Stark and end at loop: Stack: _  [elems], address_for_last_unread_element
+        // Start and end at loop: Stack: _  [elems], address_for_last_unread_element
         for i in 0..N {
             code_to_read_elements.push_str("push 0\n");
             code_to_read_elements.push_str("read_mem\n");

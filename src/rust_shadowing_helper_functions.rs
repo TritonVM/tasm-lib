@@ -3,6 +3,21 @@ use std::collections::HashMap;
 use num::{One, Zero};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
+/// Read an element from a list.
+pub fn list_read<const N: usize>(
+    list_pointer: BFieldElement,
+    index: usize,
+    memory: &HashMap<BFieldElement, BFieldElement>,
+) -> [BFieldElement; N] {
+    let mut ret: [BFieldElement; N] = [BFieldElement::zero(); N];
+
+    for i in 0..N {
+        ret[i] = memory[&(list_pointer + BFieldElement::new((N * index + 1 + i) as u64))];
+    }
+
+    ret
+}
+
 pub fn list_pop<const N: usize>(
     list_pointer: BFieldElement,
     memory: &mut HashMap<BFieldElement, BFieldElement>,
