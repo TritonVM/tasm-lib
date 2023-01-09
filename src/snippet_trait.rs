@@ -117,7 +117,22 @@ pub fn rust_tasm_equivalence_prop<T: Snippet>(
             .join(","),
     );
     if let Some(expected) = expected {
-        assert_eq!(tasm_stack, expected, "TVM must produce expected stack.");
+        assert_eq!(
+            tasm_stack,
+            expected,
+            "TVM must produce expected stack `{}`. \n\nTVM: {}\nExpected: {}",
+            T::entrypoint(),
+            tasm_stack
+                .iter()
+                .map(|x| x.to_string())
+                .collect_vec()
+                .join(","),
+            expected
+                .iter()
+                .map(|x| x.to_string())
+                .collect_vec()
+                .join(","),
+        );
     }
 
     // Verify that memory behaves as expected

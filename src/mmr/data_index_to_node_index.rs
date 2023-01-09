@@ -178,6 +178,16 @@ mod tests {
         expected.push(BFieldElement::new(2147483647));
         expected.push(BFieldElement::new(4294857690));
         prop_data_index_to_node_index((1u64 << 62) - 54778, Some(&expected));
+
+        println!("2^32");
+        prop_data_index_to_node_index((1u64 << 32) - 1, None);
+        prop_data_index_to_node_index(1u64 << 32, None);
+        prop_data_index_to_node_index((1u64 << 32) + 1, None);
+
+        println!("2^33");
+        prop_data_index_to_node_index((1u64 << 33) - 1, None);
+        prop_data_index_to_node_index(1u64 << 33, None);
+        prop_data_index_to_node_index((1u64 << 33) + 1, None);
     }
 
     #[test]

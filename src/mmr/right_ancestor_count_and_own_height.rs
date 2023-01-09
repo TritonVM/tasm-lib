@@ -265,6 +265,11 @@ mod tests {
         prop_right_ancestor_count_and_own_height(41, 0, 1);
 
         // Run test for big numbers
+        for i in 0..32 {
+            prop_right_ancestor_count_and_own_height(u32::MAX as u64 - i, i as u32, 31 - i as u32);
+        }
+
+        // Run test for very big numbers
         for i in 0..63 {
             prop_right_ancestor_count_and_own_height((u64::MAX >> 1) - i, i as u32, 62 - i as u32);
         }
