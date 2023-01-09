@@ -1,6 +1,7 @@
 pub mod add;
 pub mod and;
 pub mod decr;
+pub mod div_2;
 pub mod eq;
 pub mod incr;
 pub mod log2_floor;
