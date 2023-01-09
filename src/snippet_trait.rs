@@ -120,7 +120,7 @@ pub fn rust_tasm_equivalence_prop<T: Snippet>(
         assert_eq!(
             tasm_stack,
             expected,
-            "TVM must produce expected stack `{}`. \n\nTVM: {}\nExpected: {}",
+            "TVM must produce expected stack `{}`. \n\nTVM:\n{}\nExpected:\n{}",
             T::entrypoint(),
             tasm_stack
                 .iter()
