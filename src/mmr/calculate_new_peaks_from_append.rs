@@ -199,7 +199,7 @@ impl Snippet for CalculateNewPeaksFromAppend {
         // Run the actual `calculate_new_peaks_from_append` algorithm. This function
         // is inlined here to make it manipulate memory the same way that the TASM code
         // does.
-        let auth_path_pointer = BFieldElement::new(65);
+        let auth_path_pointer = BFieldElement::new((MAX_MMR_HEIGHT * DIGEST_LENGTH + 1) as u64);
         rust_shadowing_helper_functions::list_new(auth_path_pointer, memory);
         rust_shadowing_helper_functions::list_push(peaks_pointer, new_leaf.values(), memory);
         let new_node_index = mmr::shared::data_index_to_node_index(old_leaf_count as u128);
@@ -228,7 +228,7 @@ impl Snippet for CalculateNewPeaksFromAppend {
 
         // Pop return values to stack
         stack.push(peaks_pointer);
-        stack.push(BFieldElement::new(65)); // Can this be done in a more dynamic way?
+        stack.push(auth_path_pointer); // Can this be done in a more dynamic way?
     }
 }
 
@@ -299,6 +299,28 @@ mod tests {
         }
     }
 
+    #[test]
+    fn mmra_append_big_mmr() {
+        type H = RescuePrimeRegular;
+        type Mmr = MmrAccumulator<H>;
+
+        // Set MMR to be with 2^32 - 1 leaves and 32 peaks. Prepending one leaf should then reduce the number of leaves to 1.
+        let inserted_digest: Digest = H::hash(&BFieldElement::new(1337));
+        let init_mmra: Mmr =
+            MmrAccumulator::init(vec![H::hash(&BFieldElement::zero()); 32], (1 << 32) - 1);
+        let mut expected_final_mmr = init_mmra.clone();
+        expected_final_mmr.append(inserted_digest);
+        prop_calculate_new_peaks_from_append(init_mmra, inserted_digest, expected_final_mmr);
+
+        // Set MMR to be with 2^33 - 1 leaves and 33 peaks. Prepending one leaf should then reduce the number of leaves to 1.
+        let inserted_digest: Digest = H::hash(&BFieldElement::new(1337));
+        let init_mmra: Mmr =
+            MmrAccumulator::init(vec![H::hash(&BFieldElement::zero()); 33], (1 << 33) - 1);
+        let mut expected_final_mmr = init_mmra.clone();
+        expected_final_mmr.append(inserted_digest);
+        prop_calculate_new_peaks_from_append(init_mmra, inserted_digest, expected_final_mmr);
+    }
+
     fn prop_calculate_new_peaks_from_append<
         H: AlgebraicHasher + std::cmp::PartialEq + std::fmt::Debug,
     >(
@@ -330,7 +352,7 @@ mod tests {
         }
 
         // We assume that the auth paths can safely be stored in memory on address 65
-        let auth_paths_pointer = BFieldElement::new(65);
+        let auth_paths_pointer = BFieldElement::new((MAX_MMR_HEIGHT * DIGEST_LENGTH + 1) as u64);
         let mut expected_final_stack = get_init_tvm_stack();
         expected_final_stack.push(peaks_pointer);
         expected_final_stack.push(auth_paths_pointer);
@@ -340,7 +362,7 @@ mod tests {
             &[],
             &[],
             &mut memory,
-            65, // assume that 65 words are allocated in memory when code starts to run
+            MAX_MMR_HEIGHT * DIGEST_LENGTH + 1, // assume that 64 digests are allocated in memory when code starts to run
             Some(&expected_final_stack),
         );
 
