@@ -8,7 +8,7 @@ use twenty_first::util_types::mmr;
 
 use crate::arithmetic::u64::decr_u64::DecrU64;
 use crate::arithmetic::u64::log2_floor_u64::Log2FloorU64;
-use crate::arithmetic::u64::powers_of_two::U32s2PowersOfTwoStatic;
+use crate::arithmetic::u64::pow2_u64::Pow2StaticU64;
 use crate::library::Library;
 use crate::snippet_trait::Snippet;
 
@@ -26,7 +26,7 @@ impl Snippet for MmrLeftMostAncestor {
     fn function_body(library: &mut Library) -> String {
         let entrypoint = Self::entrypoint();
         let decr_u64 = library.import::<DecrU64>();
-        let pow2 = library.import::<U32s2PowersOfTwoStatic>();
+        let pow2_u64 = library.import::<Pow2StaticU64>();
         let log2_floor_u64 = library.import::<Log2FloorU64>();
         format!(
             "
@@ -44,7 +44,7 @@ impl Snippet for MmrLeftMostAncestor {
                 add
                 // stack: _ height (log2_floor + 1)
 
-                call {pow2}
+                call {pow2_u64}
                 // stack: _ height 2^(log2_floor + 1)_hi 2^(log2_floor + 1)_lo
 
                 call {decr_u64}

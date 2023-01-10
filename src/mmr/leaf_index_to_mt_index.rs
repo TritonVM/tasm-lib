@@ -10,7 +10,7 @@ use crate::arithmetic::u64::and_u64::AndU64;
 use crate::arithmetic::u64::eq_u64::EqU64;
 use crate::arithmetic::u64::log2_floor_u64::Log2FloorU64;
 use crate::arithmetic::u64::lt_u64::LtU64;
-use crate::arithmetic::u64::powers_of_two::U32s2PowersOfTwoStatic;
+use crate::arithmetic::u64::pow2_u64::Pow2StaticU64;
 use crate::arithmetic::u64::sub::U32s2Sub;
 use crate::library::Library;
 use crate::snippet_trait::Snippet;
@@ -33,7 +33,7 @@ impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
         let lt_u64 = library.import::<LtU64>();
         let add_u64 = library.import::<AddU64>();
         let and_u64 = library.import::<AndU64>();
-        let pow2 = library.import::<U32s2PowersOfTwoStatic>();
+        let pow2_u64 = library.import::<Pow2StaticU64>();
         let sub = library.import::<U32s2Sub>();
         let eq_u64 = library.import::<EqU64>();
 
@@ -79,7 +79,7 @@ impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
         // On return: stack: _ leaf_count_hi leaf_count_lo ret_hi ret_lo h peak_index maybe_pow_hi maybe_pow_lo
         {entrypoint}_loop:
             dup1
-            call {pow2}
+            call {pow2_u64}
             // stack: _ leaf_count_hi leaf_count_lo ret_hi ret_lo h peak_index pow_hi pow_lo
 
             dup7 dup7

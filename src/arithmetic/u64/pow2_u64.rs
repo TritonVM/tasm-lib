@@ -1,26 +1,26 @@
 use std::collections::HashMap;
 
 use num::One;
-use twenty_first::{
-    amount::u32s::U32s, shared_math::b_field_element::BFieldElement,
-    util_types::algebraic_hasher::Hashable,
-};
+use twenty_first::amount::u32s::U32s;
+use twenty_first::shared_math::b_field_element::BFieldElement;
+use twenty_first::util_types::algebraic_hasher::Hashable;
 
-use crate::{library::Library, snippet_trait::Snippet};
+use crate::library::Library;
+use crate::snippet_trait::Snippet;
 
 /// Consumes top element which is interpreted as exponent. Pushes a
 /// U32<2> to the top of the stack. So grows the stack by 1.
-pub struct U32s2PowersOfTwoMemory();
-pub struct U32s2PowersOfTwoArithmeticFlat();
-pub struct U32s2PowersOfTwoStatic();
+pub struct Pow2MemoryUnsafeU64();
+pub struct Pow2ArithmeticFlatU64();
+pub struct Pow2StaticU64();
 
-impl Snippet for U32s2PowersOfTwoStatic {
+impl Snippet for Pow2StaticU64 {
     fn stack_diff() -> isize {
         1
     }
 
     fn entrypoint() -> &'static str {
-        "u32_2_powers_of_two"
+        "pow2_u64"
     }
 
     fn function_body(_library: &mut Library) -> String {
@@ -90,17 +90,17 @@ impl Snippet for U32s2PowersOfTwoStatic {
         secret_in: Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
-        U32s2PowersOfTwoArithmeticFlat::rust_shadowing(stack, std_in, secret_in, memory)
+        Pow2ArithmeticFlatU64::rust_shadowing(stack, std_in, secret_in, memory)
     }
 }
 
-impl Snippet for U32s2PowersOfTwoMemory {
+impl Snippet for Pow2MemoryUnsafeU64 {
     fn stack_diff() -> isize {
         1
     }
 
     fn entrypoint() -> &'static str {
-        "u32_2_powers_of_two"
+        "pow2_u64"
     }
 
     // Assumes that the top stack element is below 64. Otherwise undefined.
@@ -192,13 +192,13 @@ impl Snippet for U32s2PowersOfTwoMemory {
     }
 }
 
-impl Snippet for U32s2PowersOfTwoArithmeticFlat {
+impl Snippet for Pow2ArithmeticFlatU64 {
     fn stack_diff() -> isize {
         1
     }
 
     fn entrypoint() -> &'static str {
-        "u32_2_powers_of_two"
+        "pow2_u64"
     }
 
     fn function_body(_library: &mut Library) -> String {
@@ -300,7 +300,7 @@ mod tests {
         init_stack.push(BFieldElement::new(exponent as u64));
 
         let expected = None;
-        let mut execution_result = rust_tasm_equivalence_prop::<U32s2PowersOfTwoMemory>(
+        let mut execution_result = rust_tasm_equivalence_prop::<Pow2MemoryUnsafeU64>(
             &init_stack,
             &[],
             &[],
@@ -335,7 +335,7 @@ mod tests {
         init_stack.push(BFieldElement::new(exponent as u64));
 
         let expected = None;
-        let mut execution_result = rust_tasm_equivalence_prop::<U32s2PowersOfTwoArithmeticFlat>(
+        let mut execution_result = rust_tasm_equivalence_prop::<Pow2ArithmeticFlatU64>(
             &init_stack,
             &[],
             &[],
@@ -362,7 +362,7 @@ mod tests {
         init_stack.push(BFieldElement::new(exponent as u64));
 
         let expected = None;
-        let mut execution_result = rust_tasm_equivalence_prop::<U32s2PowersOfTwoStatic>(
+        let mut execution_result = rust_tasm_equivalence_prop::<Pow2StaticU64>(
             &init_stack,
             &[],
             &[],
