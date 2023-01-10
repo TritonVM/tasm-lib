@@ -9,7 +9,7 @@ use crate::arithmetic::u64::eq_u64::EqU64;
 use crate::arithmetic::u64::incr_u64::IncrU64;
 use crate::arithmetic::u64::log2_floor_u64::Log2FloorU64;
 use crate::arithmetic::u64::pow2_u64::Pow2StaticU64;
-use crate::arithmetic::u64::sub::U32s2Sub;
+use crate::arithmetic::u64::sub_u64::SubU64;
 use crate::library::Library;
 use crate::snippet_trait::Snippet;
 
@@ -166,7 +166,7 @@ impl Snippet for MmrNonLeafNodesLeftOld {
         let entrypoint = Self::entrypoint();
         let get_height_from_data_index = library.import::<GetHeightFromDataIndex>();
         let decr_u64 = library.import::<DecrU64>();
-        let sub = library.import::<U32s2Sub>();
+        let sub_u64 = library.import::<SubU64>();
         let add_u64 = library.import::<AddU64>();
         let two_pow = library.import::<Pow2StaticU64>();
 
@@ -242,7 +242,7 @@ impl Snippet for MmrNonLeafNodesLeftOld {
                         swap2 swap1 swap3 swap1
                         // stack: _ new_ret_hi new_ret_lo two_pow_hi two_pow_lo dia_hi dia_lo
 
-                        call {sub}
+                        call {sub_u64}
                         // stack: _ new_ret_hi new_ret_lo new_dia_hi new_dia_lo
 
                         recurse

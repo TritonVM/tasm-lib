@@ -7,7 +7,7 @@ use twenty_first::util_types::algebraic_hasher::Hashable;
 use twenty_first::util_types::mmr;
 
 use crate::arithmetic::u64::pow2_u64::Pow2StaticU64;
-use crate::arithmetic::u64::sub::U32s2Sub;
+use crate::arithmetic::u64::sub_u64::SubU64;
 use crate::library::Library;
 use crate::snippet_trait::Snippet;
 
@@ -25,7 +25,7 @@ impl Snippet for MmrLeftChild {
     fn function_body(library: &mut Library) -> String {
         let entrypoint = Self::entrypoint();
         let pow2_u64 = library.import::<Pow2StaticU64>();
-        let u32s_2_sub = library.import::<U32s2Sub>();
+        let sub_u64 = library.import::<SubU64>();
         format!(
             "
             // Before: _ ni_hi ni_lo height
@@ -36,7 +36,7 @@ impl Snippet for MmrLeftChild {
                 swap1
                 swap3
                 swap1                // -> _ (2^height)_hi (2^height)_lo ni_hi ni_lo
-                call {u32s_2_sub}    // -> _ left_child_hi left_child_lo
+                call {sub_u64}    // -> _ left_child_hi left_child_lo
                 return
             "
         )

@@ -11,7 +11,7 @@ use crate::arithmetic::u64::eq_u64::EqU64;
 use crate::arithmetic::u64::log2_floor_u64::Log2FloorU64;
 use crate::arithmetic::u64::lt_u64::LtU64;
 use crate::arithmetic::u64::pow2_u64::Pow2StaticU64;
-use crate::arithmetic::u64::sub::U32s2Sub;
+use crate::arithmetic::u64::sub_u64::SubU64;
 use crate::library::Library;
 use crate::snippet_trait::Snippet;
 
@@ -34,7 +34,7 @@ impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
         let add_u64 = library.import::<AddU64>();
         let and_u64 = library.import::<AndU64>();
         let pow2_u64 = library.import::<Pow2StaticU64>();
-        let sub = library.import::<U32s2Sub>();
+        let sub_u64 = library.import::<SubU64>();
         let eq_u64 = library.import::<EqU64>();
 
         format!(
@@ -103,7 +103,7 @@ impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
             // stack: _ leaf_count_hi leaf_count_lo ret_hi ret_lo h peak_index maybe_pow_hi maybe_pow_lo
 
             // update ret: ret -> ret - maybe_pow
-            dup1 dup1 dup7 dup7 call {sub}
+            dup1 dup1 dup7 dup7 call {sub_u64}
             // stack: _ leaf_count_hi leaf_count_lo ret_hi ret_lo h peak_index maybe_pow_hi maybe_pow_lo (ret - maybe_pow)_hi (ret - maybe_pow)_lo
 
             swap6 pop swap6 pop

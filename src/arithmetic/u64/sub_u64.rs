@@ -7,15 +7,15 @@ use twenty_first::{
 
 use crate::{arithmetic::u32::is_u32::IsU32, library::Library, snippet_trait::Snippet};
 
-pub struct U32s2Sub();
+pub struct SubU64();
 
-impl Snippet for U32s2Sub {
+impl Snippet for SubU64 {
     fn stack_diff() -> isize {
         -2
     }
 
     fn entrypoint() -> &'static str {
-        "u32_2_sub"
+        "sub_u64"
     }
 
     /// Four top elements of stack are assumed to be valid u32s. So to have
@@ -144,7 +144,7 @@ mod tests {
             init_stack.push(elem);
         }
 
-        let _execution_result = rust_tasm_equivalence_prop::<U32s2Sub>(
+        let _execution_result = rust_tasm_equivalence_prop::<SubU64>(
             &init_stack,
             &[],
             &[],

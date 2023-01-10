@@ -7,4 +7,4 @@ pub mod incr_u64;
 pub mod log2_floor_u64;
 pub mod lt_u64;
 pub mod pow2_u64;
-pub mod sub;
+pub mod sub_u64;
