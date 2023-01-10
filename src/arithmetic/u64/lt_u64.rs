@@ -7,15 +7,15 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use crate::library::Library;
 use crate::snippet_trait::Snippet;
 
-pub struct U32s2Lt();
+pub struct LtU64();
 
-impl Snippet for U32s2Lt {
+impl Snippet for LtU64 {
     fn stack_diff() -> isize {
         1
     }
 
     fn entrypoint() -> &'static str {
-        "u32_2_lt"
+        "lt_u64"
     }
 
     /// Before: _ rhs_hi rhs_lo lhs_hi lhs_lo
@@ -221,7 +221,7 @@ mod tests {
             init_stack.push(elem);
         }
 
-        let _execution_result = rust_tasm_equivalence_prop::<U32s2Lt>(
+        let _execution_result = rust_tasm_equivalence_prop::<LtU64>(
             &init_stack,
             &[],
             &[],

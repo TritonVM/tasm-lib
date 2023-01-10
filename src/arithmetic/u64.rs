@@ -5,6 +5,6 @@ pub mod div2_u64;
 pub mod eq_u64;
 pub mod incr_u64;
 pub mod log2_floor_u64;
-pub mod lt;
+pub mod lt_u64;
 pub mod powers_of_two;
 pub mod sub;

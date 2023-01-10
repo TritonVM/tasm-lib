@@ -9,7 +9,7 @@ use crate::arithmetic::u64::add_u64::AddU64;
 use crate::arithmetic::u64::and_u64::AndU64;
 use crate::arithmetic::u64::eq_u64::EqU64;
 use crate::arithmetic::u64::log2_floor_u64::Log2FloorU64;
-use crate::arithmetic::u64::lt::U32s2Lt;
+use crate::arithmetic::u64::lt_u64::LtU64;
 use crate::arithmetic::u64::powers_of_two::U32s2PowersOfTwoStatic;
 use crate::arithmetic::u64::sub::U32s2Sub;
 use crate::library::Library;
@@ -30,7 +30,7 @@ impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
     fn function_body(library: &mut Library) -> String {
         let entrypoint = Self::entrypoint();
         let log2_floor_u64 = library.import::<Log2FloorU64>();
-        let lt = library.import::<U32s2Lt>();
+        let lt_u64 = library.import::<LtU64>();
         let add_u64 = library.import::<AddU64>();
         let and_u64 = library.import::<AndU64>();
         let pow2 = library.import::<U32s2PowersOfTwoStatic>();
@@ -43,7 +43,7 @@ impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
         // After: _ peak_index mt_index_hi mt_index_lo
         {entrypoint}:
             // assert that leaf_index < leaf_count
-            call {lt}
+            call {lt_u64}
             assert
             // stack: _ leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo
 
@@ -87,7 +87,7 @@ impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
             // stack: _ leaf_count_hi leaf_count_lo ret_hi ret_lo h peak_index maybe_pow_hi maybe_pow_lo
 
             // If h == 0 || ret < maybe_pow, then return from loop
-            dup5 dup5 call {lt}
+            dup5 dup5 call {lt_u64}
             // stack: _ leaf_count_hi leaf_count_lo ret_hi ret_lo h peak_index maybe_pow_hi maybe_pow_lo ret_hi ret_lo (ret < maybe_pow)
 
             swap2 pop pop
