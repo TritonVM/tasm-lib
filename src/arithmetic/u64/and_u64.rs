@@ -7,19 +7,17 @@ use twenty_first::util_types::algebraic_hasher::Hashable;
 use crate::library::Library;
 use crate::snippet_trait::Snippet;
 
-pub struct U32s2And();
+pub struct AndU64();
 
-impl Snippet for U32s2And {
+impl Snippet for AndU64 {
     fn stack_diff() -> isize {
         -2
     }
 
     fn entrypoint() -> &'static str {
-        "u32_2_and"
+        "and_u64"
     }
 
-    /// Four top elements of stack are assumed to be valid u32s. So to have
-    /// a value that's less than 2^32.
     fn function_body(_library: &mut Library) -> String {
         let entrypoint = Self::entrypoint();
         format!(
@@ -113,7 +111,7 @@ mod tests {
             expected_end_stack.push(elem);
         }
 
-        let _execution_result = rust_tasm_equivalence_prop::<U32s2And>(
+        let _execution_result = rust_tasm_equivalence_prop::<AndU64>(
             &init_stack,
             &[],
             &[],
