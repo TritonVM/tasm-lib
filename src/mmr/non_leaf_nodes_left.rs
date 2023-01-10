@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::log_2_floor;
 
-use crate::arithmetic::u64::add::U32s2Add;
+use crate::arithmetic::u64::add_u64::AddU64;
 use crate::arithmetic::u64::and::U32s2And;
 use crate::arithmetic::u64::decr::U32s2Decr;
 use crate::arithmetic::u64::eq::U32s2Eq;
@@ -34,7 +34,7 @@ impl Snippet for MmrNonLeafNodesLeftUsingAnd {
         let u32_2_eq = library.import::<U32s2Eq>();
         let u32_2_decr = library.import::<U32s2Decr>();
         let u32_2_incr = library.import::<U32s2Incr>();
-        let u32_2_add = library.import::<U32s2Add>();
+        let add_u64 = library.import::<AddU64>();
 
         format!(
             "
@@ -105,7 +105,7 @@ impl Snippet for MmrNonLeafNodesLeftUsingAnd {
             call {u32_2_decr}
             // stack: _ di_hi di_lo log2_floor h ret_hi ret_lo (pow - 1)_hi (pow - 1)_lo
 
-            call {u32_2_add}
+            call {add_u64}
             // stack: _ di_hi di_lo log2_floor h (ret + 2^h - 1)_hi (ret + 2^h - 1)_lo
 
             push 0 push 0
@@ -167,7 +167,7 @@ impl Snippet for MmrNonLeafNodesLeftOld {
         let get_height_from_data_index = library.import::<GetHeightFromDataIndex>();
         let decr = library.import::<U32s2Decr>();
         let sub = library.import::<U32s2Sub>();
-        let add = library.import::<U32s2Add>();
+        let add_u64 = library.import::<AddU64>();
         let two_pow = library.import::<U32s2PowersOfTwoStatic>();
 
         format!(
@@ -230,7 +230,7 @@ impl Snippet for MmrNonLeafNodesLeftOld {
                         dup5 dup5
                         // stack: _ two_pow_hi two_pow_lo dia_hi dia_lo ret_hi ret_lo two_pow_hi two_pow_lo
 
-                        call {add}
+                        call {add_u64}
                         // stack: _ two_pow_hi two_pow_lo dia_hi dia_lo (ret + two_pow)_hi (ret + two_pow)_lo
 
                         call {decr}

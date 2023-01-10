@@ -1,4 +1,4 @@
-pub mod add;
+pub mod add_u64;
 pub mod and;
 pub mod decr;
 pub mod div_2;

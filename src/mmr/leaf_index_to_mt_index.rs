@@ -5,7 +5,7 @@ use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::algebraic_hasher::Hashable;
 
-use crate::arithmetic::u64::add::U32s2Add;
+use crate::arithmetic::u64::add_u64::AddU64;
 use crate::arithmetic::u64::and::U32s2And;
 use crate::arithmetic::u64::eq::U32s2Eq;
 use crate::arithmetic::u64::log2_floor::U32s2Log2Floor;
@@ -31,7 +31,7 @@ impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
         let entrypoint = Self::entrypoint();
         let log2_floor = library.import::<U32s2Log2Floor>();
         let lt = library.import::<U32s2Lt>();
-        let add = library.import::<U32s2Add>();
+        let add_u64 = library.import::<AddU64>();
         let and = library.import::<U32s2And>();
         let pow2 = library.import::<U32s2PowersOfTwoStatic>();
         let sub = library.import::<U32s2Sub>();
@@ -61,7 +61,7 @@ impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
             // stack: _ leaf_count_hi leaf_count_lo ret_hi ret_lo h peak_index maybe_pow_hi maybe_pow_lo
 
             // ret -> ret + maybe_pow
-            dup5 dup5 call {add}
+            dup5 dup5 call {add_u64}
             // stack: _ leaf_count_hi leaf_count_lo ret_hi ret_lo h peak_index (ret + maybe_pow)_hi (ret + maybe_pow)_lo
 
             swap6 pop swap6 pop
