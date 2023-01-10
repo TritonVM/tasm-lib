@@ -1,7 +1,7 @@
 pub mod add_u64;
 pub mod and_u64;
 pub mod decr_u64;
-pub mod div_2;
+pub mod div2_u64;
 pub mod eq;
 pub mod incr;
 pub mod log2_floor;
