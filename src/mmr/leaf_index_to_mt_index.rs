@@ -40,7 +40,7 @@ impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
         format!(
             "
         // Before: _ leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo
-        // After: _ peak_index mt_index_hi mt_index_lo
+        // After: _ mt_index_hi mt_index_lo peak_index
         {entrypoint}:
             // assert that leaf_index < leaf_count
             call {lt_u64}
@@ -196,6 +196,12 @@ mod tests {
     use crate::{get_init_tvm_stack, snippet_trait::rust_tasm_equivalence_prop};
 
     use super::*;
+
+    #[test]
+    fn leaf_index_to_mt_index_size_is_one_test() {
+        // Leaf count = 1
+        prop_leaf_index_to_mt_index_and_peak_index(0, 1, 1, 0);
+    }
 
     #[test]
     fn leaf_index_to_mt_index_test() {

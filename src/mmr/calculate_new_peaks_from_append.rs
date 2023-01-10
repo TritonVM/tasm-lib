@@ -351,7 +351,6 @@ mod tests {
             rust_shadowing_helper_functions::list_push(peaks_pointer, peak.values(), &mut memory);
         }
 
-        // We assume that the auth paths can safely be stored in memory on address 65
         let auth_paths_pointer = BFieldElement::new((MAX_MMR_HEIGHT * DIGEST_LENGTH + 1) as u64);
         let mut expected_final_stack = get_init_tvm_stack();
         expected_final_stack.push(peaks_pointer);
@@ -362,7 +361,7 @@ mod tests {
             &[],
             &[],
             &mut memory,
-            MAX_MMR_HEIGHT * DIGEST_LENGTH + 1, // assume that 64 digests are allocated in memory when code starts to run
+            MAX_MMR_HEIGHT * DIGEST_LENGTH + 1,
             Some(&expected_final_stack),
         );
 
