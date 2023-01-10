@@ -32,7 +32,7 @@ impl Snippet for MmrNonLeafNodesLeftUsingAnd {
         let pow2 = library.import::<U32s2PowersOfTwoStatic>();
         let and_u64 = library.import::<AndU64>();
         let eq_u64 = library.import::<EqU64>();
-        let u32_2_decr = library.import::<DecrU64>();
+        let decr_u64 = library.import::<DecrU64>();
         let incr_u64 = library.import::<IncrU64>();
         let add_u64 = library.import::<AddU64>();
 
@@ -102,7 +102,7 @@ impl Snippet for MmrNonLeafNodesLeftUsingAnd {
 
             // Start/end stack: _ di_hi di_lo log2_floor h ret_hi ret_lo pow_hi pow_lo
         {entrypoint}_if_then:
-            call {u32_2_decr}
+            call {decr_u64}
             // stack: _ di_hi di_lo log2_floor h ret_hi ret_lo (pow - 1)_hi (pow - 1)_lo
 
             call {add_u64}
