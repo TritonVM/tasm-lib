@@ -36,7 +36,7 @@ impl Snippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
         let entrypoint = Self::entrypoint();
         let leaf_index_to_mt_index = library.import::<MmrLeafIndexToMtIndexAndPeakIndex>();
         let u32_is_odd = library.import::<U32IsOdd>();
-        let u32_2_eq = library.import::<EqU64>();
+        let u64_eq = library.import::<EqU64>();
         let get = library.import::<Get<DIGEST_LENGTH>>();
         let set = library.import::<Set<DIGEST_LENGTH>>();
         let div_2 = library.import::<Div2U64>();
@@ -59,10 +59,10 @@ impl Snippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
                 // _ *peaks *auth_paths [digest (new_leaf)] mt_index_hi mt_index_lo peak_index i [digest (acc_hash)]
 
                 dup15 dup7
-                // _ *peaks *auth_paths [digest (new_leaf)] peak_index mt_index_hi mt_index_lo i [digest (acc_hash)] *peaks peak_index
+                // _ *peaks *auth_paths [digest (new_leaf)] mt_index_hi mt_index_lo peak_index i [digest (acc_hash)] *peaks peak_index
 
                 call {set}
-                // _ *peaks *auth_paths [digest (new_leaf)] peak_index mt_index_hi mt_index_lo i
+                // _ *peaks *auth_paths [digest (new_leaf)] mt_index_hi mt_index_lo peak_index i
 
                 pop pop pop pop pop pop pop pop pop pop pop
                 // _
@@ -71,7 +71,7 @@ impl Snippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
 
             // start/end stack: _ *peaks *auth_paths [digest (new_leaf)] mt_index_hi mt_index_lo peak_index i [digest (acc_hash)]
             {entrypoint}_while:
-                dup8 dup8 push 0 push 1 call {u32_2_eq}
+                dup8 dup8 push 0 push 1 call {u64_eq}
                 // _ *peaks *auth_paths [digest (new_leaf)] mt_index_hi mt_index_lo peak_index i [digest (acc_hash)] (mt_index == 1)
                 skiz return
                 // _ *peaks *auth_paths [digest (new_leaf)] mt_index_hi mt_index_lo peak_index i [digest (acc_hash)]
@@ -168,7 +168,6 @@ impl Snippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
         }
 
         let mmr_mp = MmrMembershipProof::new(leaf_index as u128, auth_path);
-        println!("leaf_count = {leaf_count}");
         let new_peaks = mmr::shared::calculate_new_peaks_from_leaf_mutation::<RescuePrimeRegular>(
             &peaks,
             &new_leaf,
@@ -191,7 +190,7 @@ impl Snippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
 }
 
 #[cfg(test)]
-mod tests {
+mod leaf_mutation_tests {
     use num::Zero;
     use rand::{thread_rng, Rng};
     use twenty_first::{
@@ -221,11 +220,13 @@ mod tests {
         let mut archival_mmr: ArchivalMmr<H> = get_empty_archival_mmr();
         archival_mmr.append(digest0);
         let expected_final_mmra = MmrAccumulator::new(vec![digest1]);
+        let mutated_index = 0;
         prop_calculate_new_peaks_from_leaf_mutation(
-            &mut archival_mmr,
+            &mut archival_mmr.to_accumulator(),
             digest1,
-            0,
+            mutated_index,
             expected_final_mmra,
+            vec![],
         );
     }
 
@@ -239,11 +240,17 @@ mod tests {
         archival_mmr.append(digest0);
         archival_mmr.append(digest1);
         let expected_final_mmra = MmrAccumulator::new(vec![digest2, digest1]);
+        let mutated_index = 0;
+        let auth_path = archival_mmr
+            .prove_membership(mutated_index as u128)
+            .0
+            .authentication_path;
         prop_calculate_new_peaks_from_leaf_mutation(
-            &mut archival_mmr,
+            &mut archival_mmr.to_accumulator(),
             digest2,
-            0,
+            mutated_index,
             expected_final_mmra,
+            auth_path,
         );
     }
 
@@ -257,14 +264,19 @@ mod tests {
             get_archival_mmr_from_digests(init_leaf_digests.clone());
 
         for mutated_index in 0..leaf_count {
+            let auth_path = archival_mmr
+                .prove_membership(mutated_index as u128)
+                .0
+                .authentication_path;
             let mut final_digests = init_leaf_digests.clone();
             final_digests[mutated_index] = new_leaf;
             let expected_final_mmra = MmrAccumulator::new(final_digests);
             prop_calculate_new_peaks_from_leaf_mutation(
-                &mut archival_mmr,
+                &mut archival_mmr.to_accumulator(),
                 new_leaf,
                 mutated_index as u64,
                 expected_final_mmra,
+                auth_path,
             );
         }
     }
@@ -273,33 +285,124 @@ mod tests {
     fn mmra_leaf_mutate_test_many_leaf_sizes() {
         type H = RescuePrimeRegular;
 
-        for leaf_count in 1..25 {
+        for leaf_count in 1..30 {
+            println!("leaf_count = {leaf_count}");
             let init_leaf_digests: Vec<Digest> = random_elements(leaf_count);
             let new_leaf: Digest = thread_rng().gen();
             let mut archival_mmr: ArchivalMmr<H> =
                 get_archival_mmr_from_digests(init_leaf_digests.clone());
 
             for mutated_index in 0..leaf_count {
+                let auth_path = archival_mmr
+                    .prove_membership(mutated_index as u128)
+                    .0
+                    .authentication_path;
                 let mut final_digests = init_leaf_digests.clone();
                 final_digests[mutated_index] = new_leaf;
                 let expected_final_mmra = MmrAccumulator::new(final_digests);
                 prop_calculate_new_peaks_from_leaf_mutation(
-                    &mut archival_mmr,
+                    &mut archival_mmr.to_accumulator(),
                     new_leaf,
                     mutated_index as u64,
                     expected_final_mmra,
+                    auth_path,
                 );
             }
+        }
+    }
+
+    #[test]
+    fn mmra_leaf_mutate_test_other_leaf_sizes() {
+        type H = RescuePrimeRegular;
+
+        for leaf_count in [511, 1023] {
+            println!("leaf_count = {leaf_count}");
+            let init_leaf_digests: Vec<Digest> = random_elements(leaf_count);
+            let new_leaf: Digest = thread_rng().gen();
+            let mut archival_mmr: ArchivalMmr<H> =
+                get_archival_mmr_from_digests(init_leaf_digests.clone());
+
+            for mutated_index in [0, leaf_count - 100, leaf_count - 2, leaf_count - 1] {
+                let auth_path = archival_mmr
+                    .prove_membership(mutated_index as u128)
+                    .0
+                    .authentication_path;
+                let mut final_digests = init_leaf_digests.clone();
+                final_digests[mutated_index] = new_leaf;
+                let expected_final_mmra = MmrAccumulator::new(final_digests);
+                prop_calculate_new_peaks_from_leaf_mutation(
+                    &mut archival_mmr.to_accumulator(),
+                    new_leaf,
+                    mutated_index as u64,
+                    expected_final_mmra,
+                    auth_path,
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn mmra_leaf_mutate_big() {
+        type H = RescuePrimeRegular;
+
+        for log_sizes in [15u64, 20, 25, 32, 35, 40, 45, 50, 55, 60, 62, 63] {
+            println!("log_sizes = {log_sizes}");
+            let init_peak_digests: Vec<Digest> = random_elements(log_sizes as usize);
+            let new_leaf: Digest = thread_rng().gen();
+            let mut init_mmr: MmrAccumulator<H> =
+                MmrAccumulator::init(init_peak_digests.clone(), (1u64 << log_sizes) as u128 - 1);
+
+            let mut final_peaks = init_peak_digests.clone();
+            final_peaks[log_sizes as usize - 1] = new_leaf;
+            let expected_final_mmra: MmrAccumulator<H> =
+                MmrAccumulator::init(final_peaks, (1u64 << log_sizes) as u128 - 1);
+            prop_calculate_new_peaks_from_leaf_mutation(
+                &mut init_mmr,
+                new_leaf,
+                (1u64 << log_sizes) - 2,
+                expected_final_mmra,
+                vec![],
+            );
+        }
+    }
+
+    #[test]
+    fn mmra_leaf_mutate_advanced() {
+        type H = RescuePrimeRegular;
+
+        for log_size in [31, 63] {
+            println!("log_sizes = {log_size}");
+            let init_peak_digests: Vec<Digest> = random_elements(log_size as usize);
+            let new_leaf: Digest = thread_rng().gen();
+            let before_insertion_mmr: MmrAccumulator<H> =
+                MmrAccumulator::init(init_peak_digests.clone(), (1u64 << log_size) as u128 - 1);
+
+            // Insert a leaf such that a very long (log_size long) auth path is returned
+            let mut init_mmr = before_insertion_mmr.clone();
+            let mp = init_mmr.append(thread_rng().gen());
+
+            let mut final_mmr = init_mmr.clone();
+            final_mmr.mutate_leaf(&mp, &new_leaf);
+
+            // Mutate the last element for which we just acquired an authentication path
+            prop_calculate_new_peaks_from_leaf_mutation(
+                &mut init_mmr,
+                new_leaf,
+                (1u64 << log_size) - 1,
+                final_mmr,
+                mp.authentication_path,
+            );
         }
     }
 
     fn prop_calculate_new_peaks_from_leaf_mutation<
         H: AlgebraicHasher + std::cmp::PartialEq + std::fmt::Debug,
     >(
-        start_mmr: &mut ArchivalMmr<H>,
+        start_mmr: &mut MmrAccumulator<H>,
         new_leaf: Digest,
         new_leaf_index: u64,
         expected_mmr: MmrAccumulator<H>,
+        auth_path: Vec<Digest>,
     ) {
         // Init stack: _ *peaks *auth_paths [digest (new_leaf)] leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo
         let mut init_stack = get_init_tvm_stack();
@@ -330,8 +433,7 @@ mod tests {
 
         // We assume that the auth paths can safely be stored in memory on address 65
         rust_shadowing_helper_functions::list_new(auth_path_pointer, &mut memory);
-        let auth_path = start_mmr.prove_membership(new_leaf_index as u128).0;
-        for ap_element in auth_path.authentication_path.iter() {
+        for ap_element in auth_path.iter() {
             rust_shadowing_helper_functions::list_push(
                 auth_path_pointer,
                 ap_element.values(),
