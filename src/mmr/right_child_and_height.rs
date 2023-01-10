@@ -1,16 +1,16 @@
 use std::collections::HashMap;
 
 use num::{One, Zero};
-use twenty_first::{shared_math::b_field_element::BFieldElement, util_types::mmr};
+use twenty_first::shared_math::b_field_element::BFieldElement;
+use twenty_first::util_types::mmr;
 
-use crate::{
-    arithmetic::u32s_2::{eq::U32s2Eq, lt::U32s2Lt},
-    snippet_trait::Snippet,
-};
+use crate::arithmetic::u64::eq_u64::EqU64;
+use crate::arithmetic::u64::lt_u64::LtU64;
+use crate::snippet_trait::Snippet;
 
-use super::{
-    left_child::MmrLeftChild, leftmost_ancestor::MmrLeftMostAncestor, right_child::MmrRightChild,
-};
+use super::left_child::MmrLeftChild;
+use super::leftmost_ancestor::MmrLeftMostAncestor;
+use super::right_child::MmrRightChild;
 
 pub struct MmrRightChildAndHeight;
 
@@ -34,8 +34,8 @@ impl Snippet for MmrRightChildAndHeight {
         Self: Sized,
     {
         let entrypoint = Self::entrypoint();
-        let u32s_2_eq = library.import::<U32s2Eq>();
-        let u32s_2_lt = library.import::<U32s2Lt>();
+        let eq_u64 = library.import::<EqU64>();
+        let lt_u64 = library.import::<LtU64>();
         let left_child = library.import::<MmrLeftChild>();
         let right_child = library.import::<MmrRightChild>();
         let leftmost_ancestor = library.import::<MmrLeftMostAncestor>();
@@ -74,7 +74,7 @@ impl Snippet for MmrRightChildAndHeight {
                 dup5
                 dup3
                 dup3
-                call {u32s_2_eq}
+                call {eq_u64}
                 // Stack: _ ni_hi ni_lo is_r height c_hi c_lo (c == ni)
                 skiz return
 
@@ -95,7 +95,7 @@ impl Snippet for MmrRightChildAndHeight {
                 swap1
                 // Stack: ni_hi ni_lo is_r height c_hi c_lo ni_hi ni_lo lc_hi lc_lo
 
-                call {u32s_2_lt}
+                call {lt_u64}
 
 
                 // Stack: ni_hi ni_lo prev_is_r height c_hi c_lo ni_hi ni_lo lc_hi lc_lo is_r

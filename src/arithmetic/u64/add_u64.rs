@@ -8,15 +8,15 @@ use crate::arithmetic::u32::is_u32::IsU32;
 use crate::library::Library;
 use crate::snippet_trait::Snippet;
 
-pub struct U32s2Add();
+pub struct AddU64();
 
-impl Snippet for U32s2Add {
+impl Snippet for AddU64 {
     fn stack_diff() -> isize {
         -2
     }
 
     fn entrypoint() -> &'static str {
-        "u32_2_add"
+        "add_u64"
     }
 
     /// Four top elements of stack are assumed to be valid u32s. So to have
@@ -195,7 +195,7 @@ mod tests {
             init_stack.push(elem);
         }
 
-        let _execution_result = rust_tasm_equivalence_prop::<U32s2Add>(
+        let _execution_result = rust_tasm_equivalence_prop::<AddU64>(
             &init_stack,
             &[],
             &[],

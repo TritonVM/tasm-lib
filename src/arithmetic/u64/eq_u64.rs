@@ -7,15 +7,15 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use crate::library::Library;
 use crate::snippet_trait::Snippet;
 
-pub struct U32s2Eq;
+pub struct EqU64;
 
-impl Snippet for U32s2Eq {
+impl Snippet for EqU64 {
     fn stack_diff() -> isize {
         -3
     }
 
     fn entrypoint() -> &'static str {
-        "u32_2_eq"
+        "eq_u64"
     }
 
     fn function_body(_library: &mut Library) -> String {
@@ -195,7 +195,7 @@ mod tests {
             init_stack.push(elem);
         }
 
-        let _execution_result = rust_tasm_equivalence_prop::<U32s2Eq>(
+        let _execution_result = rust_tasm_equivalence_prop::<EqU64>(
             &init_stack,
             &[],
             &[],

@@ -6,15 +6,15 @@ use crate::arithmetic::u32::log2_floor::Log2FloorU32;
 use crate::library::Library;
 use crate::snippet_trait::Snippet;
 
-pub struct U32s2Log2Floor();
+pub struct Log2FloorU64();
 
-impl Snippet for U32s2Log2Floor {
+impl Snippet for Log2FloorU64 {
     fn stack_diff() -> isize {
         -1
     }
 
     fn entrypoint() -> &'static str {
-        "u32_2_log2_floor"
+        "log2_floor_u64"
     }
 
     fn function_body(library: &mut Library) -> String {
@@ -150,7 +150,7 @@ mod tests {
             init_stack.push(elem);
         }
 
-        let _execution_result = rust_tasm_equivalence_prop::<U32s2Log2Floor>(
+        let _execution_result = rust_tasm_equivalence_prop::<Log2FloorU64>(
             &init_stack,
             &[],
             &[],

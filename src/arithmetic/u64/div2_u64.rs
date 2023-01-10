@@ -5,16 +5,16 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use crate::library::Library;
 use crate::snippet_trait::Snippet;
 
-pub struct U32s2Div2;
+pub struct Div2U64;
 
-impl Snippet for U32s2Div2 {
+impl Snippet for Div2U64 {
     fn stack_diff() -> isize {
         // Pop the input argument (u64) and push the result (u64). Both input and output is two words.
         0
     }
 
     fn entrypoint() -> &'static str {
-        "u32_2_div_2"
+        "div2_u64"
     }
 
     fn function_body(_library: &mut Library) -> String {
@@ -116,7 +116,7 @@ mod tests {
         expected_stack.push(BFieldElement::new(res >> 32));
         expected_stack.push(BFieldElement::new(res & u32::MAX as u64));
 
-        let _execution_result = rust_tasm_equivalence_prop::<U32s2Div2>(
+        let _execution_result = rust_tasm_equivalence_prop::<Div2U64>(
             &init_stack,
             &[],
             &[],

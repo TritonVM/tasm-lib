@@ -5,13 +5,13 @@ use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::algebraic_hasher::Hashable;
 
-use crate::arithmetic::u32s_2::add::U32s2Add;
-use crate::arithmetic::u32s_2::and::U32s2And;
-use crate::arithmetic::u32s_2::eq::U32s2Eq;
-use crate::arithmetic::u32s_2::log2_floor::U32s2Log2Floor;
-use crate::arithmetic::u32s_2::lt::U32s2Lt;
-use crate::arithmetic::u32s_2::powers_of_two::U32s2PowersOfTwoStatic;
-use crate::arithmetic::u32s_2::sub::U32s2Sub;
+use crate::arithmetic::u64::add_u64::AddU64;
+use crate::arithmetic::u64::and_u64::AndU64;
+use crate::arithmetic::u64::eq_u64::EqU64;
+use crate::arithmetic::u64::log2_floor_u64::Log2FloorU64;
+use crate::arithmetic::u64::lt_u64::LtU64;
+use crate::arithmetic::u64::pow2_u64::Pow2StaticU64;
+use crate::arithmetic::u64::sub_u64::SubU64;
 use crate::library::Library;
 use crate::snippet_trait::Snippet;
 
@@ -29,13 +29,13 @@ impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
 
     fn function_body(library: &mut Library) -> String {
         let entrypoint = Self::entrypoint();
-        let log2_floor = library.import::<U32s2Log2Floor>();
-        let lt = library.import::<U32s2Lt>();
-        let add = library.import::<U32s2Add>();
-        let and = library.import::<U32s2And>();
-        let pow2 = library.import::<U32s2PowersOfTwoStatic>();
-        let sub = library.import::<U32s2Sub>();
-        let eq = library.import::<U32s2Eq>();
+        let log2_floor_u64 = library.import::<Log2FloorU64>();
+        let lt_u64 = library.import::<LtU64>();
+        let add_u64 = library.import::<AddU64>();
+        let and_u64 = library.import::<AndU64>();
+        let pow2_u64 = library.import::<Pow2StaticU64>();
+        let sub_u64 = library.import::<SubU64>();
+        let eq_u64 = library.import::<EqU64>();
 
         format!(
             "
@@ -43,12 +43,12 @@ impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
         // After: _ peak_index mt_index_hi mt_index_lo
         {entrypoint}:
             // assert that leaf_index < leaf_count
-            call {lt}
+            call {lt_u64}
             assert
             // stack: _ leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo
 
             dup3 dup3
-            call {log2_floor}
+            call {log2_floor_u64}
             // stack: _ leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo max_tree_height
 
             // Rename: max_tree_height -> h, leaf_index -> ret
@@ -61,7 +61,7 @@ impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
             // stack: _ leaf_count_hi leaf_count_lo ret_hi ret_lo h peak_index maybe_pow_hi maybe_pow_lo
 
             // ret -> ret + maybe_pow
-            dup5 dup5 call {add}
+            dup5 dup5 call {add_u64}
             // stack: _ leaf_count_hi leaf_count_lo ret_hi ret_lo h peak_index (ret + maybe_pow)_hi (ret + maybe_pow)_lo
 
             swap6 pop swap6 pop
@@ -79,15 +79,15 @@ impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
         // On return: stack: _ leaf_count_hi leaf_count_lo ret_hi ret_lo h peak_index maybe_pow_hi maybe_pow_lo
         {entrypoint}_loop:
             dup1
-            call {pow2}
+            call {pow2_u64}
             // stack: _ leaf_count_hi leaf_count_lo ret_hi ret_lo h peak_index pow_hi pow_lo
 
             dup7 dup7
-            call {and}
+            call {and_u64}
             // stack: _ leaf_count_hi leaf_count_lo ret_hi ret_lo h peak_index maybe_pow_hi maybe_pow_lo
 
             // If h == 0 || ret < maybe_pow, then return from loop
-            dup5 dup5 call {lt}
+            dup5 dup5 call {lt_u64}
             // stack: _ leaf_count_hi leaf_count_lo ret_hi ret_lo h peak_index maybe_pow_hi maybe_pow_lo ret_hi ret_lo (ret < maybe_pow)
 
             swap2 pop pop
@@ -103,7 +103,7 @@ impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
             // stack: _ leaf_count_hi leaf_count_lo ret_hi ret_lo h peak_index maybe_pow_hi maybe_pow_lo
 
             // update ret: ret -> ret - maybe_pow
-            dup1 dup1 dup7 dup7 call {sub}
+            dup1 dup1 dup7 dup7 call {sub_u64}
             // stack: _ leaf_count_hi leaf_count_lo ret_hi ret_lo h peak_index maybe_pow_hi maybe_pow_lo (ret - maybe_pow)_hi (ret - maybe_pow)_lo
 
             swap6 pop swap6 pop
@@ -112,7 +112,7 @@ impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
             // rename (ret - maybe_pow) -> ret
             // stack: _ leaf_count_hi leaf_count_lo ret_hi ret_lo h peak_index maybe_pow_hi maybe_pow_lo
 
-            push 0 push 0 call {eq} push 0 eq
+            push 0 push 0 call {eq_u64} push 0 eq
             // stack: _ leaf_count_hi leaf_count_lo ret_hi ret_lo h peak_index (maybe_pow != 0)
 
             add

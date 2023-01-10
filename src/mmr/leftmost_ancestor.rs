@@ -6,9 +6,9 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::algebraic_hasher::Hashable;
 use twenty_first::util_types::mmr;
 
-use crate::arithmetic::u32s_2::decr::U32s2Decr;
-use crate::arithmetic::u32s_2::log2_floor::U32s2Log2Floor;
-use crate::arithmetic::u32s_2::powers_of_two::U32s2PowersOfTwoStatic;
+use crate::arithmetic::u64::decr_u64::DecrU64;
+use crate::arithmetic::u64::log2_floor_u64::Log2FloorU64;
+use crate::arithmetic::u64::pow2_u64::Pow2StaticU64;
 use crate::library::Library;
 use crate::snippet_trait::Snippet;
 
@@ -25,15 +25,15 @@ impl Snippet for MmrLeftMostAncestor {
 
     fn function_body(library: &mut Library) -> String {
         let entrypoint = Self::entrypoint();
-        let u32s_2_decr = library.import::<U32s2Decr>();
-        let pow2 = library.import::<U32s2PowersOfTwoStatic>();
-        let log2_floor = library.import::<U32s2Log2Floor>();
+        let decr_u64 = library.import::<DecrU64>();
+        let pow2_u64 = library.import::<Pow2StaticU64>();
+        let log2_floor_u64 = library.import::<Log2FloorU64>();
         format!(
             "
             // Before: _ node_index_hi node_index_lo
             // After: _ leftmost_ancestor_hi leftmost_ancestor_lo height
             {entrypoint}:
-                call {log2_floor}
+                call {log2_floor_u64}
                 // stack: _ log2_floor
 
                 dup0
@@ -44,10 +44,10 @@ impl Snippet for MmrLeftMostAncestor {
                 add
                 // stack: _ height (log2_floor + 1)
 
-                call {pow2}
+                call {pow2_u64}
                 // stack: _ height 2^(log2_floor + 1)_hi 2^(log2_floor + 1)_lo
 
-                call {u32s_2_decr}
+                call {decr_u64}
                 // stack: _ height leftmost_ancestor_hi leftmost_ancestor_lo
 
                 swap1
