@@ -1,16 +1,16 @@
 use std::collections::HashMap;
 
 use num::{One, Zero};
-use twenty_first::{shared_math::b_field_element::BFieldElement, util_types::mmr};
+use twenty_first::shared_math::b_field_element::BFieldElement;
+use twenty_first::util_types::mmr;
 
-use crate::{
-    arithmetic::u32s_2::{eq::U32s2Eq, lt::U32s2Lt},
-    snippet_trait::Snippet,
-};
+use crate::arithmetic::u64::eq::U32s2Eq;
+use crate::arithmetic::u64::lt::U32s2Lt;
+use crate::snippet_trait::Snippet;
 
-use super::{
-    left_child::MmrLeftChild, leftmost_ancestor::MmrLeftMostAncestor, right_child::MmrRightChild,
-};
+use super::left_child::MmrLeftChild;
+use super::leftmost_ancestor::MmrLeftMostAncestor;
+use super::right_child::MmrRightChild;
 
 pub struct MmrRightChildAndHeight;
 

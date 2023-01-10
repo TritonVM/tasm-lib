@@ -6,8 +6,9 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::algebraic_hasher::Hashable;
 use twenty_first::util_types::mmr;
 
-use crate::arithmetic::u32s_2::decr::U32s2Decr;
-use crate::{library::Library, snippet_trait::Snippet};
+use crate::arithmetic::u64::decr::U32s2Decr;
+use crate::library::Library;
+use crate::snippet_trait::Snippet;
 
 pub struct MmrRightChild();
 

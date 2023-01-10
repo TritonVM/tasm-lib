@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::mmr;
 
-use crate::arithmetic::u32s_2::add::U32s2Add;
-use crate::arithmetic::u32s_2::incr::U32s2Incr;
+use crate::arithmetic::u64::add::U32s2Add;
+use crate::arithmetic::u64::incr::U32s2Incr;
 use crate::library::Library;
 use crate::snippet_trait::Snippet;
 

@@ -2,14 +2,14 @@ use std::collections::HashMap;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::log_2_floor;
 
-use crate::arithmetic::u32s_2::add::U32s2Add;
-use crate::arithmetic::u32s_2::and::U32s2And;
-use crate::arithmetic::u32s_2::decr::U32s2Decr;
-use crate::arithmetic::u32s_2::eq::U32s2Eq;
-use crate::arithmetic::u32s_2::incr::U32s2Incr;
-use crate::arithmetic::u32s_2::log2_floor::U32s2Log2Floor;
-use crate::arithmetic::u32s_2::powers_of_two::U32s2PowersOfTwoStatic;
-use crate::arithmetic::u32s_2::sub::U32s2Sub;
+use crate::arithmetic::u64::add::U32s2Add;
+use crate::arithmetic::u64::and::U32s2And;
+use crate::arithmetic::u64::decr::U32s2Decr;
+use crate::arithmetic::u64::eq::U32s2Eq;
+use crate::arithmetic::u64::incr::U32s2Incr;
+use crate::arithmetic::u64::log2_floor::U32s2Log2Floor;
+use crate::arithmetic::u64::powers_of_two::U32s2PowersOfTwoStatic;
+use crate::arithmetic::u64::sub::U32s2Sub;
 use crate::library::Library;
 use crate::snippet_trait::Snippet;
 

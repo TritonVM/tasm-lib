@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
-use twenty_first::shared_math::{b_field_element::BFieldElement, other::log_2_floor};
+use twenty_first::shared_math::b_field_element::BFieldElement;
+use twenty_first::shared_math::other::log_2_floor;
 
-use crate::{
-    arithmetic::u32s_2::{incr::U32s2Incr, log2_floor::U32s2Log2Floor},
-    snippet_trait::Snippet,
-};
+use crate::arithmetic::u64::incr::U32s2Incr;
+use crate::arithmetic::u64::log2_floor::U32s2Log2Floor;
+use crate::snippet_trait::Snippet;
 
 pub struct GetHeightFromDataIndex;
 
