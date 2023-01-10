@@ -7,7 +7,7 @@ use crate::arithmetic::u64::and_u64::AndU64;
 use crate::arithmetic::u64::decr_u64::DecrU64;
 use crate::arithmetic::u64::eq_u64::EqU64;
 use crate::arithmetic::u64::incr_u64::IncrU64;
-use crate::arithmetic::u64::log2_floor::U32s2Log2Floor;
+use crate::arithmetic::u64::log2_floor_u64::Log2FloorU64;
 use crate::arithmetic::u64::powers_of_two::U32s2PowersOfTwoStatic;
 use crate::arithmetic::u64::sub::U32s2Sub;
 use crate::library::Library;
@@ -28,7 +28,7 @@ impl Snippet for MmrNonLeafNodesLeftUsingAnd {
 
     fn function_body(library: &mut Library) -> String {
         let entrypoint = Self::entrypoint();
-        let log2_floor_u32_2 = library.import::<U32s2Log2Floor>();
+        let log2_floor_u64 = library.import::<Log2FloorU64>();
         let pow2 = library.import::<U32s2PowersOfTwoStatic>();
         let and_u64 = library.import::<AndU64>();
         let eq_u64 = library.import::<EqU64>();
@@ -42,7 +42,7 @@ impl Snippet for MmrNonLeafNodesLeftUsingAnd {
         // AFTER: _ node_count_hi node_count_lo
         {entrypoint}:
             dup1 dup1
-            call {log2_floor_u32_2}
+            call {log2_floor_u64}
             call {incr_u64}
             // stack: _ di_hi di_lo log2_floor
 
