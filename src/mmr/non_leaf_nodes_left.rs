@@ -4,7 +4,7 @@ use twenty_first::shared_math::other::log_2_floor;
 
 use crate::arithmetic::u64::add_u64::AddU64;
 use crate::arithmetic::u64::and_u64::AndU64;
-use crate::arithmetic::u64::decr::U32s2Decr;
+use crate::arithmetic::u64::decr_u64::DecrU64;
 use crate::arithmetic::u64::eq::U32s2Eq;
 use crate::arithmetic::u64::incr::U32s2Incr;
 use crate::arithmetic::u64::log2_floor::U32s2Log2Floor;
@@ -32,7 +32,7 @@ impl Snippet for MmrNonLeafNodesLeftUsingAnd {
         let pow2 = library.import::<U32s2PowersOfTwoStatic>();
         let and_u64 = library.import::<AndU64>();
         let u32_2_eq = library.import::<U32s2Eq>();
-        let u32_2_decr = library.import::<U32s2Decr>();
+        let u32_2_decr = library.import::<DecrU64>();
         let u32_2_incr = library.import::<U32s2Incr>();
         let add_u64 = library.import::<AddU64>();
 
@@ -165,7 +165,7 @@ impl Snippet for MmrNonLeafNodesLeftOld {
     fn function_body(library: &mut Library) -> String {
         let entrypoint = Self::entrypoint();
         let get_height_from_data_index = library.import::<GetHeightFromDataIndex>();
-        let decr = library.import::<U32s2Decr>();
+        let decr_u64 = library.import::<DecrU64>();
         let sub = library.import::<U32s2Sub>();
         let add_u64 = library.import::<AddU64>();
         let two_pow = library.import::<U32s2PowersOfTwoStatic>();
@@ -209,7 +209,7 @@ impl Snippet for MmrNonLeafNodesLeftOld {
                         // stack: _ ret_hi ret_lo dia_hi dia_lo
 
                         dup1 dup1
-                        call {decr}
+                        call {decr_u64}
                         // stack: _ ret_hi ret_lo dia_hi dia_lo (dia - 1)_hi (dia - 1)_lo
 
                         call {get_height_from_data_index}
@@ -233,7 +233,7 @@ impl Snippet for MmrNonLeafNodesLeftOld {
                         call {add_u64}
                         // stack: _ two_pow_hi two_pow_lo dia_hi dia_lo (ret + two_pow)_hi (ret + two_pow)_lo
 
-                        call {decr}
+                        call {decr_u64}
                         // stack: _ two_pow_hi two_pow_lo dia_hi dia_lo new_ret_hi new_ret_lo
 
                         swap4 swap1 swap5 swap1

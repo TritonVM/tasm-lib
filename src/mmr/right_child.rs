@@ -6,7 +6,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::algebraic_hasher::Hashable;
 use twenty_first::util_types::mmr;
 
-use crate::arithmetic::u64::decr::U32s2Decr;
+use crate::arithmetic::u64::decr_u64::DecrU64;
 use crate::library::Library;
 use crate::snippet_trait::Snippet;
 
@@ -24,13 +24,13 @@ impl Snippet for MmrRightChild {
     /// Consider inlining this, instead of calling a function
     fn function_body(library: &mut Library) -> String {
         let entrypoint = Self::entrypoint();
-        let u32s_2_decr = library.import::<U32s2Decr>();
+        let decr_u64 = library.import::<DecrU64>();
         format!(
             "
             // Before: _ nodex_index_hi node_index_lo
             // After: _ right_child_hi right_child_lo
             {entrypoint}:
-                call {u32s_2_decr}
+                call {decr_u64}
                 return
             "
         )

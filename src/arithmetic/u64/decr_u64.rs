@@ -8,15 +8,15 @@ use twenty_first::util_types::algebraic_hasher::Hashable;
 use crate::library::Library;
 use crate::snippet_trait::Snippet;
 
-pub struct U32s2Decr();
+pub struct DecrU64();
 
-impl Snippet for U32s2Decr {
+impl Snippet for DecrU64 {
     fn stack_diff() -> isize {
         0
     }
 
     fn entrypoint() -> &'static str {
-        "u32_2_decr"
+        "decr_u64"
     }
 
     fn function_body(_library: &mut Library) -> String {
@@ -86,7 +86,7 @@ mod tests {
 
         let mut tasm_stack = init_stack.clone();
         let _execution_result =
-            U32s2Decr::run_tasm(&mut tasm_stack, vec![], vec![], &mut HashMap::default(), 0);
+            DecrU64::run_tasm(&mut tasm_stack, vec![], vec![], &mut HashMap::default(), 0);
     }
 
     #[test]
@@ -98,7 +98,7 @@ mod tests {
         init_stack.push(zero.as_ref()[0].into());
 
         let mut tasm_stack = init_stack.clone();
-        U32s2Decr::rust_shadowing(&mut tasm_stack, vec![], vec![], &mut HashMap::default());
+        DecrU64::rust_shadowing(&mut tasm_stack, vec![], vec![], &mut HashMap::default());
     }
 
     #[test]
@@ -109,7 +109,7 @@ mod tests {
         tasm_stack.push(some_value.as_ref()[0].into());
 
         let _execution_result =
-            U32s2Decr::run_tasm(&mut tasm_stack, vec![], vec![], &mut HashMap::default(), 0);
+            DecrU64::run_tasm(&mut tasm_stack, vec![], vec![], &mut HashMap::default(), 0);
 
         let expected_res = U32s::<2>::new([u32::MAX, 13]);
         let mut expected_stack = get_init_tvm_stack();
@@ -139,7 +139,7 @@ mod tests {
         }
 
         let expected = None;
-        let _execution_result = rust_tasm_equivalence_prop::<U32s2Decr>(
+        let _execution_result = rust_tasm_equivalence_prop::<DecrU64>(
             &init_stack,
             &[],
             &[],

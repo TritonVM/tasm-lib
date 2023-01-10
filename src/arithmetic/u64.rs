@@ -1,6 +1,6 @@
 pub mod add_u64;
 pub mod and_u64;
-pub mod decr;
+pub mod decr_u64;
 pub mod div_2;
 pub mod eq;
 pub mod incr;
