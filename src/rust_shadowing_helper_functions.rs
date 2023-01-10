@@ -10,10 +10,10 @@ pub fn list_set<const N: usize>(
     value: [BFieldElement; N],
     memory: &mut HashMap<BFieldElement, BFieldElement>,
 ) {
-    for i in 0..N {
+    for (i, v) in value.into_iter().enumerate() {
         memory.insert(
             list_pointer + BFieldElement::new((N * index + 1 + i) as u64),
-            value[i],
+            v,
         );
     }
 }

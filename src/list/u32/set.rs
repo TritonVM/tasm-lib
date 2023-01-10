@@ -66,8 +66,8 @@ impl<const N: usize> Snippet for Set<N> {
         let index: u32 = stack.pop().unwrap().try_into().unwrap();
         let list_pointer = stack.pop().unwrap();
         let mut element: [BFieldElement; N] = [BFieldElement::new(0); N];
-        for i in 0..N {
-            element[i] = stack.pop().unwrap();
+        for ee in element.iter_mut() {
+            *ee = stack.pop().unwrap();
         }
         rust_shadowing_helper_functions::list_set(list_pointer, index as usize, element, memory);
     }
