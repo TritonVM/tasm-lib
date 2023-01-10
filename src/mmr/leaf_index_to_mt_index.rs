@@ -7,7 +7,7 @@ use twenty_first::util_types::algebraic_hasher::Hashable;
 
 use crate::arithmetic::u64::add_u64::AddU64;
 use crate::arithmetic::u64::and_u64::AndU64;
-use crate::arithmetic::u64::eq::U32s2Eq;
+use crate::arithmetic::u64::eq_u64::EqU64;
 use crate::arithmetic::u64::log2_floor::U32s2Log2Floor;
 use crate::arithmetic::u64::lt::U32s2Lt;
 use crate::arithmetic::u64::powers_of_two::U32s2PowersOfTwoStatic;
@@ -35,7 +35,7 @@ impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
         let and_u64 = library.import::<AndU64>();
         let pow2 = library.import::<U32s2PowersOfTwoStatic>();
         let sub = library.import::<U32s2Sub>();
-        let eq = library.import::<U32s2Eq>();
+        let eq_u64 = library.import::<EqU64>();
 
         format!(
             "
@@ -112,7 +112,7 @@ impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
             // rename (ret - maybe_pow) -> ret
             // stack: _ leaf_count_hi leaf_count_lo ret_hi ret_lo h peak_index maybe_pow_hi maybe_pow_lo
 
-            push 0 push 0 call {eq} push 0 eq
+            push 0 push 0 call {eq_u64} push 0 eq
             // stack: _ leaf_count_hi leaf_count_lo ret_hi ret_lo h peak_index (maybe_pow != 0)
 
             add

@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::mmr;
 
-use crate::arithmetic::u64::eq::U32s2Eq;
+use crate::arithmetic::u64::eq_u64::EqU64;
 use crate::arithmetic::u64::lt::U32s2Lt;
 use crate::snippet_trait::Snippet;
 
@@ -33,7 +33,7 @@ impl Snippet for MmrRightAncestorCountAndHeight {
         Self: Sized,
     {
         let entrypoint = Self::entrypoint();
-        let u32s_2_eq = library.import::<U32s2Eq>();
+        let eq_u64 = library.import::<EqU64>();
         let u32s_2_lt = library.import::<U32s2Lt>();
         let left_child = library.import::<MmrLeftChild>();
         let right_child = library.import::<MmrRightChild>();
@@ -74,7 +74,7 @@ impl Snippet for MmrRightAncestorCountAndHeight {
                 dup5
                 dup3
                 dup3
-                call {u32s_2_eq}
+                call {eq_u64}
                 // Stack: _ ni_hi ni_lo rac height c_hi c_lo (c == ni)
                 skiz return
 
