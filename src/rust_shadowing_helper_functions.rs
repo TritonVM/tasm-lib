@@ -4,6 +4,21 @@ use num::{One, Zero};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 /// Read an element from a list.
+pub fn list_set<const N: usize>(
+    list_pointer: BFieldElement,
+    index: usize,
+    value: [BFieldElement; N],
+    memory: &mut HashMap<BFieldElement, BFieldElement>,
+) {
+    for i in 0..N {
+        memory.insert(
+            list_pointer + BFieldElement::new((N * index + 1 + i) as u64),
+            value[i],
+        );
+    }
+}
+
+/// Read an element from a list.
 pub fn list_read<const N: usize>(
     list_pointer: BFieldElement,
     index: usize,
