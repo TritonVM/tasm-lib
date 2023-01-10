@@ -3,7 +3,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::mmr;
 
 use crate::arithmetic::u64::add_u64::AddU64;
-use crate::arithmetic::u64::incr::U32s2Incr;
+use crate::arithmetic::u64::incr_u64::IncrU64;
 use crate::library::Library;
 use crate::snippet_trait::Snippet;
 
@@ -24,7 +24,7 @@ impl Snippet for DataIndexToNodeIndex {
     fn function_body(library: &mut Library) -> String {
         let entrypoint = Self::entrypoint();
         let non_leaf_nodes_left = library.import::<MmrNonLeafNodesLeftOld>();
-        let incr = library.import::<U32s2Incr>();
+        let incr_u64 = library.import::<IncrU64>();
         let add_u64 = library.import::<AddU64>();
         format!("
                 // BEFORE: _ leaf_index_hi leaf_index_lo
@@ -37,7 +37,7 @@ impl Snippet for DataIndexToNodeIndex {
                     // stack: _ leaf_index_hi leaf_index_lo non_leaf_nodes_left_hi non_leaf_nodes_left_lo
 
                     call {add_u64}
-                    call {incr}
+                    call {incr_u64}
                     // stack: _ node_index_hi node_index_lo
 
                     return

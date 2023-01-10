@@ -3,7 +3,7 @@ pub mod and_u64;
 pub mod decr_u64;
 pub mod div2_u64;
 pub mod eq_u64;
-pub mod incr;
+pub mod incr_u64;
 pub mod log2_floor;
 pub mod lt;
 pub mod powers_of_two;

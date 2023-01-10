@@ -6,7 +6,7 @@ use crate::arithmetic::u64::add_u64::AddU64;
 use crate::arithmetic::u64::and_u64::AndU64;
 use crate::arithmetic::u64::decr_u64::DecrU64;
 use crate::arithmetic::u64::eq_u64::EqU64;
-use crate::arithmetic::u64::incr::U32s2Incr;
+use crate::arithmetic::u64::incr_u64::IncrU64;
 use crate::arithmetic::u64::log2_floor::U32s2Log2Floor;
 use crate::arithmetic::u64::powers_of_two::U32s2PowersOfTwoStatic;
 use crate::arithmetic::u64::sub::U32s2Sub;
@@ -33,7 +33,7 @@ impl Snippet for MmrNonLeafNodesLeftUsingAnd {
         let and_u64 = library.import::<AndU64>();
         let eq_u64 = library.import::<EqU64>();
         let u32_2_decr = library.import::<DecrU64>();
-        let u32_2_incr = library.import::<U32s2Incr>();
+        let incr_u64 = library.import::<IncrU64>();
         let add_u64 = library.import::<AddU64>();
 
         format!(
@@ -43,7 +43,7 @@ impl Snippet for MmrNonLeafNodesLeftUsingAnd {
         {entrypoint}:
             dup1 dup1
             call {log2_floor_u32_2}
-            call {u32_2_incr}
+            call {incr_u64}
             // stack: _ di_hi di_lo log2_floor
 
             push 0

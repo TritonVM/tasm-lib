@@ -8,15 +8,15 @@ use twenty_first::util_types::algebraic_hasher::Hashable;
 use crate::library::Library;
 use crate::snippet_trait::Snippet;
 
-pub struct U32s2Incr();
+pub struct IncrU64();
 
-impl Snippet for U32s2Incr {
+impl Snippet for IncrU64 {
     fn stack_diff() -> isize {
         0
     }
 
     fn entrypoint() -> &'static str {
-        "u32_2_incr"
+        "incr_u64"
     }
 
     fn function_body(_library: &mut Library) -> String {
@@ -100,7 +100,7 @@ mod tests {
         init_stack.push(max_value.as_ref()[0].into());
 
         let mut tasm_stack = init_stack;
-        U32s2Incr::run_tasm(&mut tasm_stack, vec![], vec![], &mut HashMap::default(), 0);
+        IncrU64::run_tasm(&mut tasm_stack, vec![], vec![], &mut HashMap::default(), 0);
     }
 
     #[test]
@@ -112,7 +112,7 @@ mod tests {
         init_stack.push(max_value.as_ref()[0].into());
 
         let mut rust_stack = init_stack;
-        U32s2Incr::rust_shadowing(&mut rust_stack, vec![], vec![], &mut HashMap::default());
+        IncrU64::rust_shadowing(&mut rust_stack, vec![], vec![], &mut HashMap::default());
     }
 
     fn prop_incr(some_value: U32s<2>) {
@@ -122,7 +122,7 @@ mod tests {
         }
 
         let expected = None;
-        let _execution_result = rust_tasm_equivalence_prop::<U32s2Incr>(
+        let _execution_result = rust_tasm_equivalence_prop::<IncrU64>(
             &init_stack,
             &[],
             &[],

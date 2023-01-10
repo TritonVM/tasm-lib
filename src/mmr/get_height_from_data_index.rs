@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::log_2_floor;
 
-use crate::arithmetic::u64::incr::U32s2Incr;
+use crate::arithmetic::u64::incr_u64::IncrU64;
 use crate::arithmetic::u64::log2_floor::U32s2Log2Floor;
 use crate::snippet_trait::Snippet;
 
@@ -21,7 +21,7 @@ impl Snippet for GetHeightFromDataIndex {
 
     fn function_body(library: &mut crate::library::Library) -> String {
         let entrypoint = Self::entrypoint();
-        let u32_2_increment = library.import::<U32s2Incr>();
+        let incr_u64 = library.import::<IncrU64>();
         let u32_2_log2_floor = library.import::<U32s2Log2Floor>();
         format!(
             "
@@ -29,7 +29,7 @@ impl Snippet for GetHeightFromDataIndex {
             // Before: _ data_index_hi data_index_lo
             // After: _ height
             {entrypoint}:
-                call {u32_2_increment}
+                call {incr_u64}
                 call {u32_2_log2_floor}
                 return"
         )
