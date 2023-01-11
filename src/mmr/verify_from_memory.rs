@@ -19,8 +19,6 @@ pub struct MmrVerifyFromMemory();
 
 impl Snippet for MmrVerifyFromMemory {
     fn stack_diff() -> isize {
-        // pops *peaks, *auth_path, [digest (leaf_hash)], leaf_count_hi, leaf_count_hi, leaf_index_hi, leaf_index_lo
-        // pushes a bool indicating validation result.
         -10
     }
 
@@ -37,53 +35,53 @@ impl Snippet for MmrVerifyFromMemory {
         let div_2 = library.import::<Div2U64>();
         format!(
             "
-                // BEFORE: _ *peaks *auth_path [digest (new_leaf)] leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo
+                // BEFORE: _ *peaks [digest (leaf_digest)] *auth_path leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo
                 // AFTER: _ validation_result
                 // Will crash if `leaf_index >= leaf_count`
                 {entrypoint}:
                     call {leaf_index_to_mt_index}
-                    // stack: _ *peaks *auth_path [digest (new_leaf)] mt_index_hi mt_index_lo peak_index
+                    // stack: _ *peaks [digest (leaf_digest)] *auth_path mt_index_hi mt_index_lo peak_index
 
                     push 0
-                    // stack: _ *peaks *auth_path [digest (new_leaf)] mt_index_hi mt_index_lo peak_index i
+                    // stack: _ *peaks [digest (leaf_digest)] *auth_path mt_index_hi mt_index_lo peak_index i
 
-                    dup8 dup8 dup8 dup8 dup8
-                    // stack: _ *peaks *auth_path [digest (new_leaf)] mt_index_hi mt_index_lo peak_index i [digest (new_leaf)]
-                    // rename: new_leaf -> acc_hash
+                    dup9 dup9 dup9 dup9 dup9
+                    // stack: _ *peaks [digest (leaf_digest)] *auth_path mt_index_hi mt_index_lo peak_index i [digest (leaf_digest)]
+                    // rename: leaf_digest -> acc_hash
 
                     call {entrypoint}_while
-                    // _ *peaks *auth_path [digest (new_leaf)] mt_index_hi mt_index_lo peak_index i [digest (acc_hash)]
+                    // _ *peaks [digest (leaf_digest)] *auth_path mt_index_hi mt_index_lo peak_index i [digest (acc_hash)]
 
                     dup15 dup7
-                    // _ *peaks *auth_path [digest (new_leaf)] mt_index_hi mt_index_lo peak_index i [digest (acc_hash)] *peaks peak_index
+                    // _ *peaks [digest (leaf_digest)] *auth_path mt_index_hi mt_index_lo peak_index i [digest (acc_hash)] *peaks peak_index
 
                     call {get}
-                    // _ *peaks *auth_path [digest (new_leaf)] mt_index_hi mt_index_lo peak_index i [digest (acc_hash)] [digest (expected_peak)]
+                    // _ *peaks [digest (leaf_digest)] *auth_path mt_index_hi mt_index_lo peak_index i [digest (acc_hash)] [digest (expected_peak)]
 
                     // Compare top two digests
-                    // _ *peaks *auth_path [digest (new_leaf)] mt_index_hi mt_index_lo peak_index i b4 b3 b2 b1 b0 a4 a3 a2 a1 a0
+                    // _ *peaks [digest (leaf_digest)] *auth_path mt_index_hi mt_index_lo peak_index i b4 b3 b2 b1 b0 a4 a3 a2 a1 a0
 
                     swap6 eq
-                    // _ *peaks *auth_path [digest (new_leaf)] mt_index_hi mt_index_lo peak_index i b4 b3 b2 a0 b0 a4 a3 a2 (a1 == b1)
+                    // _ *peaks [digest (leaf_digest)] *auth_path mt_index_hi mt_index_lo peak_index i b4 b3 b2 a0 b0 a4 a3 a2 (a1 == b1)
 
                     swap6 eq
-                    // _ *peaks *auth_path [digest (new_leaf)] mt_index_hi mt_index_lo peak_index i b4 b3 (a1 == b1) a0 b0 a4 a3 (a2 == b2)
+                    // _ *peaks [digest (leaf_digest)] *auth_path mt_index_hi mt_index_lo peak_index i b4 b3 (a1 == b1) a0 b0 a4 a3 (a2 == b2)
 
                     swap6 eq
-                    // _ *peaks *auth_path [digest (new_leaf)] mt_index_hi mt_index_lo peak_index i b4 (a2 == b2) (a1 == b1) a0 b0 a4 (a3 == b3)
+                    // _ *peaks [digest (leaf_digest)] *auth_path mt_index_hi mt_index_lo peak_index i b4 (a2 == b2) (a1 == b1) a0 b0 a4 (a3 == b3)
 
                     swap6 eq
-                    // _ *peaks *auth_path [digest (new_leaf)] mt_index_hi mt_index_lo peak_index i (a3 == b3) (a2 == b2) (a1 == b1) a0 b0 (a4 == b4)
+                    // _ *peaks [digest (leaf_digest)] *auth_path mt_index_hi mt_index_lo peak_index i (a3 == b3) (a2 == b2) (a1 == b1) a0 b0 (a4 == b4)
 
                     swap2 eq
-                    // _ *peaks *auth_path [digest (new_leaf)] mt_index_hi mt_index_lo peak_index i (a3 == b3) (a2 == b2) (a1 == b1) (a4 == b4) (a0 == b0)
+                    // _ *peaks [digest (leaf_digest)] *auth_path mt_index_hi mt_index_lo peak_index i (a3 == b3) (a2 == b2) (a1 == b1) (a4 == b4) (a0 == b0)
 
                     mul mul mul mul
-                    // _ *peaks *auth_path [digest (new_leaf)] mt_index_hi mt_index_lo peak_index i (a3 == b3)*(a2 == b2)*(a1 == b1)*(a4 == b4)*(a0 == b0)
+                    // _ *peaks [digest (leaf_digest)] *auth_path mt_index_hi mt_index_lo peak_index i (a3 == b3)*(a2 == b2)*(a1 == b1)*(a4 == b4)*(a0 == b0)
                     // rename: (a3 == b3)*(a2 == b2)*(a1 == b1)*(a4 == b4)*(a0 == b0) -> ret
 
                     swap11
-                    // _ ret *auth_path [digest (new_leaf)] mt_index_hi mt_index_lo peak_index i *peaks
+                    // _ ret [digest (leaf_digest)] *auth_path mt_index_hi mt_index_lo peak_index i *peaks
 
                     pop pop pop pop pop
                     pop pop pop pop pop
@@ -93,53 +91,53 @@ impl Snippet for MmrVerifyFromMemory {
                     return
 
                 // Note that this while loop is the same as one in `calculate_new_peaks_from_leaf_mutation`
-                // BEFORE/AFTER: _ *peaks *auth_path [digest (new_leaf)] mt_index_hi mt_index_lo peak_index i [digest (acc_hash)]
+                // BEFORE/AFTER: _ *peaks [digest (leaf_digest)] *auth_path mt_index_hi mt_index_lo peak_index i [digest (acc_hash)]
                 {entrypoint}_while:
                     dup8 dup8 push 0 push 1 call {eq_u64}
-                    // _ *peaks *auth_path [digest (new_leaf)] mt_index_hi mt_index_lo peak_index i [digest (acc_hash)] (mt_index == 1)
+                    // _ *peaks [digest (leaf_digest)] *auth_path mt_index_hi mt_index_lo peak_index i [digest (acc_hash)] (mt_index == 1)
 
                     skiz return
-                    // _ *peaks *auth_path [digest (new_leaf)] mt_index_hi mt_index_lo peak_index i [digest (acc_hash)]
+                    // _ *peaks [digest (leaf_digest)] *auth_path mt_index_hi mt_index_lo peak_index i [digest (acc_hash)]
 
-                    // declare `ap_element`
-                    dup14 dup6 call {get}
-                    // _ *peaks *auth_path [digest (new_leaf)] mt_index_hi mt_index_lo peak_index i [digest (acc_hash)] [digest (ap_element)]
+                    // declare `ap_element = auth_path[i]`
+                    dup9 dup6 call {get}
+                    // _ *peaks [digest (leaf_digest)] *auth_path mt_index_hi mt_index_lo peak_index i [digest (acc_hash)] [digest (ap_element)]
 
                     dup12 call {u32_is_odd} push 0 eq
-                    // _ *peaks *auth_paths [digest (new_leaf)] mt_index_hi mt_index_lo peak_index i [digest (acc_hash)] [digest (ap_element)] (mt_index % 2 == 0)
+                    // _ *peaks [digest (leaf_digest)] *auth_path mt_index_hi mt_index_lo peak_index i [digest (acc_hash)] [digest (ap_element)] (mt_index % 2 == 0)
 
                     skiz call {entrypoint}_swap_digests
-                    // _ *peaks *auth_paths [digest (new_leaf)] mt_index_hi mt_index_lo peak_index i [digest (right_node)] [digest (left_node)]
+                    // _ *peaks [digest (leaf_digest)] *auth_path mt_index_hi mt_index_lo peak_index i [digest (right_node)] [digest (left_node)]
 
                     hash
                     pop pop pop pop pop
-                    // _ *peaks *auth_paths [digest (new_leaf)] mt_index_hi mt_index_lo peak_index i [digest (new_acc_hash)]
+                    // _ *peaks [digest (leaf_digest)] *auth_path mt_index_hi mt_index_lo peak_index i [digest (new_acc_hash)]
 
                     // i -> i + 1
                     swap5 push 1 add swap5
-                    // _ *peaks *auth_paths [digest (new_leaf)] mt_index_hi mt_index_lo peak_index (i + 1) [digest (new_acc_hash)]
+                    // _ *peaks [digest (leaf_digest)] *auth_path mt_index_hi mt_index_lo peak_index (i + 1) [digest (new_acc_hash)]
 
                     // mt_index -> mt_index / 2
                     swap8 swap1 swap7
-                    // _ *peaks *auth_paths [digest (new_leaf)] peak_index acc_hash_0 acc_hash_1 (i + 1) acc_hash_4 acc_hash_3 acc_hash_2 mt_index_hi mt_index_lo
+                    // _ *peaks [digest (leaf_digest)] *auth_path peak_index acc_hash_0 acc_hash_1 (i + 1) acc_hash_4 acc_hash_3 acc_hash_2 mt_index_hi mt_index_lo
 
                     call {div_2}
-                    // _ *peaks *auth_paths [digest (new_leaf)] peak_index acc_hash_0 acc_hash_1 (i + 1) acc_hash_4 acc_hash_3 acc_hash_2 (mt_index / 2)_hi (mt_index / 2)_lo
+                    // _ *peaks [digest (leaf_digest)] *auth_path peak_index acc_hash_0 acc_hash_1 (i + 1) acc_hash_4 acc_hash_3 acc_hash_2 (mt_index / 2)_hi (mt_index / 2)_lo
 
                     swap7 swap1 swap8
-                    // _ *peaks *auth_paths [digest (new_leaf)] (mt_index / 2)_hi (mt_index / 2)_lo peak_index (i + 1) acc_hash_4 acc_hash_3 acc_hash_2 acc_hash_1 acc_hash_0
+                    // _ *peaks [digest (leaf_digest)] *auth_path (mt_index / 2)_hi (mt_index / 2)_lo peak_index (i + 1) acc_hash_4 acc_hash_3 acc_hash_2 acc_hash_1 acc_hash_0
 
                     recurse
 
                 // purpose: swap the two digests `i` (node with `acc_hash`) is left child
                 {entrypoint}_swap_digests:
-                // _ *peaks *auth_paths [digest (new_leaf)] mt_index_hi mt_index_lo peak_index i [digest (acc_hash)] [digest (ap_element)]
+                // _ *peaks *auth_paths [digest (leaf_digest)] mt_index_hi mt_index_lo peak_index i [digest (acc_hash)] [digest (ap_element)]
                         swap4 swap9 swap4
                         swap3 swap8 swap3
                         swap2 swap7 swap2
                         swap1 swap6 swap1
                         swap5
-                        // _ *peaks *auth_paths [digest (new_leaf)] mt_index_hi mt_index_lo peak_index i [digest (ap_element)] [digest (acc_hash)]
+                        // _ *peaks *auth_paths [digest (leaf_digest)] mt_index_hi mt_index_lo peak_index i [digest (ap_element)] [digest (acc_hash)]
 
                         return
                     "
@@ -154,7 +152,7 @@ impl Snippet for MmrVerifyFromMemory {
     ) {
         type H = RescuePrimeRegular;
 
-        // init stack: _ *peaks *auth_paths [digest (new_leaf)] leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo
+        // init stack: _ *peaks [digest (new_leaf)] *auth_paths leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo
         let leaf_index_lo: u32 = stack.pop().unwrap().try_into().unwrap();
         let leaf_index_hi: u32 = stack.pop().unwrap().try_into().unwrap();
         let leaf_index: u64 = ((leaf_index_hi as u64) << 32) + leaf_index_lo as u64;
@@ -163,6 +161,8 @@ impl Snippet for MmrVerifyFromMemory {
         let leaf_count_hi: u32 = stack.pop().unwrap().try_into().unwrap();
         let leaf_count: u64 = ((leaf_count_hi as u64) << 32) + leaf_count_lo as u64;
 
+        let auth_paths_pointer = stack.pop().unwrap();
+
         let mut new_leaf_digest_values = [BFieldElement::new(0); DIGEST_LENGTH];
         for elem in new_leaf_digest_values.iter_mut() {
             *elem = stack.pop().unwrap();
@@ -170,7 +170,6 @@ impl Snippet for MmrVerifyFromMemory {
 
         let leaf_hash = Digest::new(new_leaf_digest_values);
 
-        let auth_paths_pointer = stack.pop().unwrap();
         let peaks_pointer = stack.pop().unwrap();
 
         let peaks_count: u64 = memory[&peaks_pointer].value();
@@ -354,19 +353,39 @@ mod auth_path_verify_from_memory_tests {
             );
             let real_membership_proof_last = mmr.append(last_leaf);
 
+            // Positive tests
             prop_verify_from_memory(
                 &mut mmr,
                 second_to_last_leaf,
                 second_to_last_leaf_index,
-                real_membership_proof_second_to_last.authentication_path,
+                real_membership_proof_second_to_last
+                    .authentication_path
+                    .clone(),
                 true,
             );
             prop_verify_from_memory(
                 &mut mmr,
                 last_leaf,
                 last_leaf_index,
-                real_membership_proof_last.authentication_path,
+                real_membership_proof_last.authentication_path.clone(),
                 true,
+            );
+
+            // Negative tests
+            let bad_leaf: Digest = thread_rng().gen();
+            prop_verify_from_memory(
+                &mut mmr,
+                bad_leaf,
+                second_to_last_leaf_index,
+                real_membership_proof_second_to_last.authentication_path,
+                false,
+            );
+            prop_verify_from_memory(
+                &mut mmr,
+                bad_leaf,
+                last_leaf_index,
+                real_membership_proof_last.authentication_path,
+                false,
             );
         }
     }
@@ -378,19 +397,19 @@ mod auth_path_verify_from_memory_tests {
         auth_path: Vec<Digest>,
         expect_validation_success: bool,
     ) {
-        // Init stack: _ *peaks *auth_paths [digest (new_leaf)] leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo
+        // Init stack: _ *peaks [digest (new_leaf)] *auth_paths leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo
         let mut init_stack = get_init_tvm_stack();
         let peaks_pointer = BFieldElement::zero();
         init_stack.push(peaks_pointer);
-
-        // We assume that the auth paths can safely be stored in memory on this address
-        let auth_path_pointer = BFieldElement::new((MAX_MMR_HEIGHT * DIGEST_LENGTH + 1) as u64);
-        init_stack.push(auth_path_pointer);
 
         // push digests such that element 0 of digest is on top of stack
         for value in leaf.values().iter().rev() {
             init_stack.push(*value);
         }
+
+        // We assume that the auth paths can safely be stored in memory on this address
+        let auth_path_pointer = BFieldElement::new((MAX_MMR_HEIGHT * DIGEST_LENGTH + 1) as u64);
+        init_stack.push(auth_path_pointer);
 
         let leaf_count: u64 = mmr.count_leaves() as u64;
         init_stack.push(BFieldElement::new(leaf_count >> 32));
