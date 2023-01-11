@@ -161,15 +161,21 @@ impl Snippet for LtStandardU64 {
 
 #[cfg(test)]
 mod tests {
-    use num::BigUint;
     use rand::Rng;
-    use twenty_first::{
-        shared_math::b_field_element::BFieldElement, util_types::algebraic_hasher::Hashable,
-    };
+    use twenty_first::shared_math::b_field_element::BFieldElement;
+    use twenty_first::util_types::algebraic_hasher::Hashable;
 
-    use crate::{get_init_tvm_stack, snippet_trait::rust_tasm_equivalence_prop};
+    use crate::get_init_tvm_stack;
+    use crate::snippet_trait::rust_tasm_equivalence_prop;
 
     use super::*;
+
+    // FIXME: Use `rng.gen()` after this is released:
+    // https://github.com/Neptune-Crypto/twenty-first/pull/80
+    fn random_gen() -> U32s<2> {
+        let mut rng = rand::thread_rng();
+        U32s::new([rng.gen(), rng.gen()])
+    }
 
     #[test]
     fn u32s_lt_true_with_hi() {
@@ -181,11 +187,11 @@ mod tests {
             vec![BFieldElement::one()],
         ]
         .concat();
-        prop_lt(
-            U32s::from(BigUint::from(11 * (1u64 << 32))),
-            U32s::from(BigUint::from(15 * (1u64 << 32))),
-            Some(&expected_end_stack),
-        );
+
+        let lhs = U32s::try_from(11 * (1u64 << 32)).unwrap();
+        let rhs = U32s::try_from(15 * (1u64 << 32)).unwrap();
+        prop_lt(lhs, rhs, Some(&expected_end_stack));
+        prop_lt_standard(lhs, rhs);
     }
 
     #[test]
@@ -198,21 +204,18 @@ mod tests {
             vec![BFieldElement::zero()],
         ]
         .concat();
-        prop_lt(U32s::from(0), U32s::from(0), Some(&expected_end_stack));
+        let zero = U32s::zero();
+        prop_lt(zero, zero, Some(&expected_end_stack));
+        prop_lt_standard(zero, zero);
     }
 
     #[test]
     fn u32s_lt_pbt() {
-        let mut rng = rand::thread_rng();
         for _ in 0..100 {
-            let lhs: u64 = rng.gen();
-            let rhs: u64 = rng.gen();
-
-            prop_lt(
-                U32s::from(BigUint::from(lhs)),
-                U32s::from(BigUint::from(rhs)),
-                None,
-            );
+            let lhs: U32s<2> = random_gen();
+            let rhs: U32s<2> = random_gen();
+            prop_lt(lhs, rhs, None);
+            prop_lt_standard(lhs, rhs);
         }
     }
 
@@ -223,8 +226,8 @@ mod tests {
         for _ in 0..100 {
             let rhs: u64 = rng.gen();
             let lhs: u64 = rng.gen_range(0..rhs);
-            let lhs: U32s<2> = U32s::from(BigUint::from(lhs));
-            let rhs: U32s<2> = U32s::from(BigUint::from(rhs));
+            let rhs: U32s<2> = U32s::try_from(rhs).unwrap();
+            let lhs: U32s<2> = U32s::try_from(lhs).unwrap();
             let expected = vec![
                 init_stack.clone(),
                 rhs.to_sequence().into_iter().rev().collect(),
@@ -233,11 +236,8 @@ mod tests {
             ]
             .concat();
 
-            prop_lt(
-                U32s::from(BigUint::from(lhs)),
-                U32s::from(BigUint::from(rhs)),
-                Some(&expected),
-            );
+            prop_lt(lhs, rhs, Some(&expected));
+            prop_lt_standard(lhs, rhs);
         }
     }
 
@@ -248,8 +248,8 @@ mod tests {
         for _ in 0..100 {
             let lhs: u64 = rng.gen();
             let rhs: u64 = rng.gen_range(0..=lhs);
-            let lhs: U32s<2> = U32s::from(BigUint::from(lhs));
-            let rhs: U32s<2> = U32s::from(BigUint::from(rhs));
+            let rhs: U32s<2> = U32s::try_from(rhs).unwrap();
+            let lhs: U32s<2> = U32s::try_from(lhs).unwrap();
             let expected = vec![
                 init_stack.clone(),
                 rhs.to_sequence().into_iter().rev().collect(),
@@ -258,11 +258,8 @@ mod tests {
             ]
             .concat();
 
-            prop_lt(
-                U32s::from(BigUint::from(lhs)),
-                U32s::from(BigUint::from(rhs)),
-                Some(&expected),
-            );
+            prop_lt(lhs, rhs, Some(&expected));
+            prop_lt_standard(lhs, rhs);
         }
     }
 
@@ -273,8 +270,8 @@ mod tests {
         for _ in 0..100 {
             let lhs: u64 = rng.gen();
             let rhs: u64 = lhs;
-            let lhs: U32s<2> = U32s::from(BigUint::from(lhs));
-            let rhs: U32s<2> = U32s::from(BigUint::from(rhs));
+            let rhs: U32s<2> = U32s::try_from(rhs).unwrap();
+            let lhs: U32s<2> = U32s::try_from(lhs).unwrap();
             let expected = vec![
                 init_stack.clone(),
                 rhs.to_sequence().into_iter().rev().collect(),
@@ -283,29 +280,46 @@ mod tests {
             ]
             .concat();
 
-            prop_lt(
-                U32s::from(BigUint::from(lhs)),
-                U32s::from(BigUint::from(rhs)),
-                Some(&expected),
-            );
+            prop_lt(lhs, rhs, Some(&expected));
+            prop_lt_standard(lhs, rhs);
         }
     }
 
     fn prop_lt(lhs: U32s<2>, rhs: U32s<2>, expected: Option<&[BFieldElement]>) {
         let mut init_stack = get_init_tvm_stack();
-        for elem in rhs.to_sequence().into_iter().rev() {
-            init_stack.push(elem);
-        }
-        for elem in lhs.to_sequence().into_iter().rev() {
-            init_stack.push(elem);
-        }
+        init_stack.append(&mut rhs.to_sequence().into_iter().rev().collect());
+        init_stack.append(&mut lhs.to_sequence().into_iter().rev().collect());
 
+        let stdin = &[];
+        let secret_in = &[];
+        let mut memory = HashMap::default();
+        let words_allocated = 0;
         let _execution_result = rust_tasm_equivalence_prop::<LtU64>(
             &init_stack,
-            &[],
-            &[],
-            &mut HashMap::default(),
-            0,
+            stdin,
+            secret_in,
+            &mut memory,
+            words_allocated,
+            expected,
+        );
+    }
+
+    fn prop_lt_standard(lhs: U32s<2>, rhs: U32s<2>) {
+        let mut init_stack = get_init_tvm_stack();
+        init_stack.append(&mut rhs.to_sequence().into_iter().rev().collect());
+        init_stack.append(&mut lhs.to_sequence().into_iter().rev().collect());
+
+        let stdin = &[];
+        let secret_in = &[];
+        let mut memory = HashMap::default();
+        let words_allocated = 0;
+        let expected = None;
+        let _execution_result = rust_tasm_equivalence_prop::<LtU64>(
+            &init_stack,
+            stdin,
+            secret_in,
+            &mut memory,
+            words_allocated,
             expected,
         );
     }
