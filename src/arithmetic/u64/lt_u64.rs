@@ -9,6 +9,11 @@ use crate::snippet_trait::Snippet;
 
 pub struct LtU64();
 
+pub struct LtStandardU64();
+
+/// This `lt_u64` does not consume its arguments, which is the norm for tasm functions.
+///
+/// See `LtStandardU64` for a variant that does.
 impl Snippet for LtU64 {
     fn stack_diff() -> isize {
         1
@@ -80,17 +85,97 @@ impl Snippet for LtU64 {
     }
 }
 
+/// This `lt_standard_u64` does consume its argument.
+///
+/// The fastest way we know is to calculate without consuming, and then pop the operands.
+/// This is because there are three branches, so sharing cleanup unconditionally means
+/// less branching (fewer cycles) and less local cleanup (smaller program).
+impl Snippet for LtStandardU64 {
+    fn stack_diff() -> isize {
+        -3
+    }
+
+    fn entrypoint() -> &'static str {
+        "lt_standard_u64"
+    }
+
+    fn function_body(_library: &mut Library) -> String {
+        let entrypoint = Self::entrypoint();
+        format!(
+            "
+            // Before: _ rhs_hi rhs_lo lhs_hi lhs_lo
+            // After: _ (lhs < rhs)
+            {entrypoint}:
+                call {entrypoint}_aux // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs)
+                swap4 pop pop pop pop // _ (lhs < rhs)
+                return
+
+            // Before: _ rhs_hi rhs_lo lhs_hi lhs_lo
+            // After: _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs)
+            {entrypoint}_aux:
+                dup3 // _ rhs_hi rhs_lo lhs_hi lhs_lo rhs_hi
+                dup2 // _ rhs_hi rhs_lo lhs_hi lhs_lo rhs_hi lhs_hi
+                lt   // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_hi < rhs_hi)
+                dup0 // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_hi < rhs_hi) (lhs_hi < rhs_hi)
+                skiz return
+                     // true: _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs)
+                     // false: _ rhs_hi rhs_lo lhs_hi lhs_lo 0
+
+                dup4 // _ rhs_hi rhs_lo lhs_hi lhs_lo 0 rhs_hi
+                dup3 // _ rhs_hi rhs_lo lhs_hi lhs_lo 0 rhs_hi lhs_hi
+                eq   // _ rhs_hi rhs_lo lhs_hi lhs_lo 0 (lhs_hi == rhs_hi)
+                skiz call {entrypoint}_lo
+                     // true: _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs, aka lhs_lo < rhs_lo)
+                     // false: _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs, aka 0)
+                return
+
+            // Before: _ rhs_hi rhs_lo lhs_hi lhs_lo 0
+            // After: _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_lo < rhs_lo)
+            {entrypoint}_lo:
+                pop  // _ rhs_hi rhs_lo lhs_hi lhs_lo
+                dup2 // _ rhs_hi rhs_lo lhs_hi lhs_lo rhs_lo
+                dup1 // _ rhs_hi rhs_lo lhs_hi lhs_lo rhs_lo lhs_lo
+                lt   // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs)
+                return
+            "
+        )
+    }
+
+    fn rust_shadowing(
+        stack: &mut Vec<BFieldElement>,
+        _std_in: Vec<BFieldElement>,
+        _secret_in: Vec<BFieldElement>,
+        _memory: &mut HashMap<BFieldElement, BFieldElement>,
+    ) {
+        let lhs_lo: u32 = stack.pop().unwrap().try_into().unwrap();
+        let lhs_hi: u32 = stack.pop().unwrap().try_into().unwrap();
+        let lhs = U32s::new([lhs_lo, lhs_hi]);
+
+        let rhs_lo: u32 = stack.pop().unwrap().try_into().unwrap();
+        let rhs_hi: u32 = stack.pop().unwrap().try_into().unwrap();
+        let rhs = U32s::new([rhs_lo, rhs_hi]);
+
+        stack.push(BFieldElement::new((lhs < rhs) as u64));
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use num::BigUint;
     use rand::Rng;
-    use twenty_first::{
-        shared_math::b_field_element::BFieldElement, util_types::algebraic_hasher::Hashable,
-    };
+    use twenty_first::shared_math::b_field_element::BFieldElement;
+    use twenty_first::util_types::algebraic_hasher::Hashable;
 
-    use crate::{get_init_tvm_stack, snippet_trait::rust_tasm_equivalence_prop};
+    use crate::get_init_tvm_stack;
+    use crate::snippet_trait::rust_tasm_equivalence_prop;
 
     use super::*;
+
+    // FIXME: Use `rng.gen()` after this is released:
+    // https://github.com/Neptune-Crypto/twenty-first/pull/80
+    fn random_gen() -> U32s<2> {
+        let mut rng = rand::thread_rng();
+        U32s::new([rng.gen(), rng.gen()])
+    }
 
     #[test]
     fn u32s_lt_true_with_hi() {
@@ -102,11 +187,11 @@ mod tests {
             vec![BFieldElement::one()],
         ]
         .concat();
-        prop_lt(
-            U32s::from(BigUint::from(11 * (1u64 << 32))),
-            U32s::from(BigUint::from(15 * (1u64 << 32))),
-            Some(&expected_end_stack),
-        );
+
+        let lhs = U32s::try_from(11 * (1u64 << 32)).unwrap();
+        let rhs = U32s::try_from(15 * (1u64 << 32)).unwrap();
+        prop_lt(lhs, rhs, Some(&expected_end_stack));
+        prop_lt_standard(lhs, rhs);
     }
 
     #[test]
@@ -119,21 +204,18 @@ mod tests {
             vec![BFieldElement::zero()],
         ]
         .concat();
-        prop_lt(U32s::from(0), U32s::from(0), Some(&expected_end_stack));
+        let zero = U32s::zero();
+        prop_lt(zero, zero, Some(&expected_end_stack));
+        prop_lt_standard(zero, zero);
     }
 
     #[test]
     fn u32s_lt_pbt() {
-        let mut rng = rand::thread_rng();
         for _ in 0..100 {
-            let lhs: u64 = rng.gen();
-            let rhs: u64 = rng.gen();
-
-            prop_lt(
-                U32s::from(BigUint::from(lhs)),
-                U32s::from(BigUint::from(rhs)),
-                None,
-            );
+            let lhs: U32s<2> = random_gen();
+            let rhs: U32s<2> = random_gen();
+            prop_lt(lhs, rhs, None);
+            prop_lt_standard(lhs, rhs);
         }
     }
 
@@ -144,8 +226,8 @@ mod tests {
         for _ in 0..100 {
             let rhs: u64 = rng.gen();
             let lhs: u64 = rng.gen_range(0..rhs);
-            let lhs: U32s<2> = U32s::from(BigUint::from(lhs));
-            let rhs: U32s<2> = U32s::from(BigUint::from(rhs));
+            let rhs: U32s<2> = U32s::try_from(rhs).unwrap();
+            let lhs: U32s<2> = U32s::try_from(lhs).unwrap();
             let expected = vec![
                 init_stack.clone(),
                 rhs.to_sequence().into_iter().rev().collect(),
@@ -154,11 +236,8 @@ mod tests {
             ]
             .concat();
 
-            prop_lt(
-                U32s::from(BigUint::from(lhs)),
-                U32s::from(BigUint::from(rhs)),
-                Some(&expected),
-            );
+            prop_lt(lhs, rhs, Some(&expected));
+            prop_lt_standard(lhs, rhs);
         }
     }
 
@@ -169,8 +248,8 @@ mod tests {
         for _ in 0..100 {
             let lhs: u64 = rng.gen();
             let rhs: u64 = rng.gen_range(0..=lhs);
-            let lhs: U32s<2> = U32s::from(BigUint::from(lhs));
-            let rhs: U32s<2> = U32s::from(BigUint::from(rhs));
+            let rhs: U32s<2> = U32s::try_from(rhs).unwrap();
+            let lhs: U32s<2> = U32s::try_from(lhs).unwrap();
             let expected = vec![
                 init_stack.clone(),
                 rhs.to_sequence().into_iter().rev().collect(),
@@ -179,11 +258,8 @@ mod tests {
             ]
             .concat();
 
-            prop_lt(
-                U32s::from(BigUint::from(lhs)),
-                U32s::from(BigUint::from(rhs)),
-                Some(&expected),
-            );
+            prop_lt(lhs, rhs, Some(&expected));
+            prop_lt_standard(lhs, rhs);
         }
     }
 
@@ -194,8 +270,8 @@ mod tests {
         for _ in 0..100 {
             let lhs: u64 = rng.gen();
             let rhs: u64 = lhs;
-            let lhs: U32s<2> = U32s::from(BigUint::from(lhs));
-            let rhs: U32s<2> = U32s::from(BigUint::from(rhs));
+            let rhs: U32s<2> = U32s::try_from(rhs).unwrap();
+            let lhs: U32s<2> = U32s::try_from(lhs).unwrap();
             let expected = vec![
                 init_stack.clone(),
                 rhs.to_sequence().into_iter().rev().collect(),
@@ -204,29 +280,46 @@ mod tests {
             ]
             .concat();
 
-            prop_lt(
-                U32s::from(BigUint::from(lhs)),
-                U32s::from(BigUint::from(rhs)),
-                Some(&expected),
-            );
+            prop_lt(lhs, rhs, Some(&expected));
+            prop_lt_standard(lhs, rhs);
         }
     }
 
     fn prop_lt(lhs: U32s<2>, rhs: U32s<2>, expected: Option<&[BFieldElement]>) {
         let mut init_stack = get_init_tvm_stack();
-        for elem in rhs.to_sequence().into_iter().rev() {
-            init_stack.push(elem);
-        }
-        for elem in lhs.to_sequence().into_iter().rev() {
-            init_stack.push(elem);
-        }
+        init_stack.append(&mut rhs.to_sequence().into_iter().rev().collect());
+        init_stack.append(&mut lhs.to_sequence().into_iter().rev().collect());
 
+        let stdin = &[];
+        let secret_in = &[];
+        let mut memory = HashMap::default();
+        let words_allocated = 0;
         let _execution_result = rust_tasm_equivalence_prop::<LtU64>(
             &init_stack,
-            &[],
-            &[],
-            &mut HashMap::default(),
-            0,
+            stdin,
+            secret_in,
+            &mut memory,
+            words_allocated,
+            expected,
+        );
+    }
+
+    fn prop_lt_standard(lhs: U32s<2>, rhs: U32s<2>) {
+        let mut init_stack = get_init_tvm_stack();
+        init_stack.append(&mut rhs.to_sequence().into_iter().rev().collect());
+        init_stack.append(&mut lhs.to_sequence().into_iter().rev().collect());
+
+        let stdin = &[];
+        let secret_in = &[];
+        let mut memory = HashMap::default();
+        let words_allocated = 0;
+        let expected = None;
+        let _execution_result = rust_tasm_equivalence_prop::<LtU64>(
+            &init_stack,
+            stdin,
+            secret_in,
+            &mut memory,
+            words_allocated,
             expected,
         );
     }
