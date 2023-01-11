@@ -66,7 +66,8 @@ mod tests {
     use num::BigUint;
     use rand::{thread_rng, RngCore};
 
-    use crate::{get_init_tvm_stack, snippet::rust_tasm_equivalence_prop};
+    use crate::get_init_tvm_stack;
+    use crate::test_helpers::rust_tasm_equivalence_prop;
 
     use super::*;
 

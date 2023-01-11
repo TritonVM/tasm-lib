@@ -16,6 +16,7 @@ mod other_snippets;
 mod recufier;
 mod rust_shadowing_helper_functions;
 mod snippet;
+mod test_helpers;
 
 pub struct ExecutionResult {
     pub output: Vec<BFieldElement>,

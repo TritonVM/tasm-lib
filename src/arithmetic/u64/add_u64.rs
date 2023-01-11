@@ -86,7 +86,8 @@ mod tests {
     use num::{One, Zero};
     use rand::RngCore;
 
-    use crate::{get_init_tvm_stack, snippet::rust_tasm_equivalence_prop};
+    use crate::get_init_tvm_stack;
+    use crate::test_helpers::rust_tasm_equivalence_prop;
 
     use super::*;
 

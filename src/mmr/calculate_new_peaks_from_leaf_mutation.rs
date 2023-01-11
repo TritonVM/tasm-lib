@@ -196,8 +196,9 @@ mod leaf_mutation_tests {
     use twenty_first::util_types::mmr::mmr_membership_proof::MmrMembershipProof;
     use twenty_first::util_types::mmr::mmr_trait::Mmr;
 
+    use crate::get_init_tvm_stack;
     use crate::mmr::calculate_new_peaks_from_append::MAX_MMR_HEIGHT;
-    use crate::{get_init_tvm_stack, snippet::rust_tasm_equivalence_prop};
+    use crate::test_helpers::rust_tasm_equivalence_prop;
 
     use super::*;
 

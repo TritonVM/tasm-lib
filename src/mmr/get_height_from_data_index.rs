@@ -54,7 +54,8 @@ mod tests {
     use twenty_first::amount::u32s::U32s;
     use twenty_first::util_types::algebraic_hasher::Hashable;
 
-    use crate::{get_init_tvm_stack, snippet::rust_tasm_equivalence_prop};
+    use crate::get_init_tvm_stack;
+    use crate::test_helpers::rust_tasm_equivalence_prop;
 
     use super::*;
 

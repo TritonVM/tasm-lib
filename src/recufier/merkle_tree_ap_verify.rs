@@ -153,7 +153,7 @@ mod merkle_authentication_verify_test {
     use twenty_first::util_types::merkle_tree_maker::MerkleTreeMaker;
 
     use crate::get_init_tvm_stack;
-    use crate::snippet::rust_tasm_equivalence_prop;
+    use crate::test_helpers::rust_tasm_equivalence_prop;
 
     use super::MtApVerify;
 
