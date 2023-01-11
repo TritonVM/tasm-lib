@@ -1,11 +1,44 @@
 use std::collections::HashMap;
 
+use rand::RngCore;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
 use crate::snippet::Snippet;
+use crate::test_helpers::NewSnippet;
+use crate::{get_init_tvm_stack, ExecutionState};
 
 pub struct U32IsOdd();
+
+impl NewSnippet for U32IsOdd {
+    fn inputs() -> Vec<&'static str> {
+        vec!["value"]
+    }
+
+    fn outputs() -> Vec<&'static str> {
+        vec!["value % 2"]
+    }
+
+    fn crash_conditions() -> Vec<&'static str> {
+        vec!["if `value` is not a u32"]
+    }
+
+    fn gen_input_states() -> Vec<ExecutionState> {
+        let mut rng = rand::thread_rng();
+        let stack = vec![
+            get_init_tvm_stack(),
+            vec![BFieldElement::new(rng.next_u32() as u64)],
+        ]
+        .concat();
+        vec![ExecutionState {
+            stack,
+            std_in: vec![],
+            secret_in: vec![],
+            memory: HashMap::default(),
+            words_allocated: 0,
+        }]
+    }
+}
 
 impl Snippet for U32IsOdd {
     fn stack_diff() -> isize {
@@ -47,10 +80,17 @@ impl Snippet for U32IsOdd {
 mod u32_is_odd_tests {
     use rand::{thread_rng, RngCore};
 
-    use crate::get_init_tvm_stack;
-    use crate::test_helpers::rust_tasm_equivalence_prop;
+    use crate::{
+        get_init_tvm_stack,
+        test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new},
+    };
 
     use super::*;
+
+    #[test]
+    fn new_snippet_test() {
+        rust_tasm_equivalence_prop_new::<U32IsOdd>();
+    }
 
     #[test]
     fn u32_is_odd_test() {

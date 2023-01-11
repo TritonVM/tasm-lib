@@ -5,6 +5,50 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::snippet::Snippet;
 use crate::ExecutionResult;
+use crate::ExecutionState;
+
+pub trait NewSnippet: Snippet {
+    fn inputs() -> Vec<&'static str>;
+    fn outputs() -> Vec<&'static str>;
+    fn crash_conditions() -> Vec<&'static str>;
+    fn gen_input_states() -> Vec<ExecutionState>;
+
+    fn run_tasm(execution_state: &mut ExecutionState) -> ExecutionResult {
+        // TODO: Consider adding canaries here to ensure that stack is not modified below where the function
+
+        let stack_prior = execution_state.stack.clone();
+        let ret = <Self as Snippet>::run_tasm(
+            &mut execution_state.stack,
+            execution_state.std_in.clone(),
+            execution_state.secret_in.clone(),
+            &mut execution_state.memory,
+            execution_state.words_allocated,
+        );
+        let stack_after = execution_state.stack.clone();
+
+        assert_eq!(
+            stack_prior[0..(stack_prior.len() - Self::inputs().len())],
+            stack_after[0..(stack_after.len() - Self::outputs().len())]
+        );
+
+        ret
+    }
+}
+
+#[allow(dead_code)]
+pub fn rust_tasm_equivalence_prop_new<T: NewSnippet>() {
+    let mut execution_states = T::gen_input_states();
+    for execution_state in execution_states.iter_mut() {
+        let _execution_result = rust_tasm_equivalence_prop::<T>(
+            &execution_state.stack,
+            &execution_state.std_in,
+            &execution_state.secret_in,
+            &mut execution_state.memory,
+            execution_state.words_allocated,
+            None,
+        );
+    }
+}
 
 #[allow(dead_code)]
 pub fn rust_tasm_equivalence_prop<T: Snippet>(

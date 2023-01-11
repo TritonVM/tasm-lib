@@ -18,6 +18,14 @@ mod rust_shadowing_helper_functions;
 mod snippet;
 mod test_helpers;
 
+pub struct ExecutionState {
+    pub stack: Vec<BFieldElement>,
+    pub std_in: Vec<BFieldElement>,
+    pub secret_in: Vec<BFieldElement>,
+    pub memory: HashMap<BFieldElement, BFieldElement>,
+    pub words_allocated: usize,
+}
+
 pub struct ExecutionResult {
     pub output: Vec<BFieldElement>,
     pub final_stack: Vec<BFieldElement>,

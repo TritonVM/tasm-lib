@@ -11,7 +11,7 @@ use crate::arithmetic::u64::eq_u64::EqU64;
 use crate::library::Library;
 use crate::list::u32::get::Get;
 use crate::rust_shadowing_helper_functions;
-use crate::snippet_trait::Snippet;
+use crate::snippet::Snippet;
 
 use super::leaf_index_to_mt_index::MmrLeafIndexToMtIndexAndPeakIndex;
 
@@ -220,7 +220,7 @@ mod auth_path_verify_from_memory_tests {
 
     use crate::{
         get_init_tvm_stack, mmr::calculate_new_peaks_from_append::MAX_MMR_HEIGHT,
-        snippet_trait::rust_tasm_equivalence_prop,
+        test_helpers::rust_tasm_equivalence_prop,
     };
 
     use super::*;
