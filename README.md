@@ -36,18 +36,18 @@ the TVM version when appropriate.
 | is_u32      | sword_smith |    20221208 |       0.8.0 |       |                 68 |                     68 |                 0 |                    |
 | log_2_floor | sword_smith |    20221223 |       0.9.0 |       |                180 |                    354 |                 0 |             $O(N)$ |
 
-## U32s, size 2
-| Name                          |      Author(s)      | Last edited | TVM version |                                   Notes                                   | Cycle Count common | Cycle Count worst-case | Hash table height | Asymptotic Runtime |
-| ----------------------------- | :-----------------: | ----------: | ----------: | :-----------------------------------------------------------------------: | -----------------: | ---------------------: | ----------------: | -----------------: |
-| incr                          | sshine, sword_smith |    20221208 |       0.8.0 |                                                                           |                  8 |                     20 |                 0 |             $O(1)$ |
-| decr                          |     sword_smith     |    20221208 |       0.8.0 |                                                                           |                  8 |                     20 |                 0 |             $O(1)$ |
-| add                           |     sword_smith     |    20221208 |       0.8.0 |                                                                           |                150 |                    158 |                 0 |             $O(1)$ |
-| sub                           | sshine, sword_smith |    20221208 |       0.9.0 |                                                                           |                 84 |                     92 |                 0 |             $O(1)$ |
-| lt                            | sshine, sword_smith |    20221209 |       0.9.0 |                                                                           |                154 |                    311 |                 0 |             $O(1)$ |
-| powers_of_two_arithmetic_flat |     sword_smith     |    20221208 |       0.8.0 | Adds 17 to cycle count for each increment of the exponent. Range: 11-1090 |                563 |                   1090 |                 0 |             $O(N)$ |
-| powers_of_two_memory          |       sshine        |    20221208 |       0.8.0 |    Memory unsafe (assumes bounded input), exp >= 32 => +3 cycle count     |         12 (+ 165) |             15 (+ 165) |                 0 |             $O(1)$ |
-| powers_of_two_static          | sshine, sword_smith |    20221209 |       0.9.0 |                                                                           |                264 |                    264 |                 0 |             $O(1)$ |
-| log_2_floor                   |     sword_smith     |    20221223 |       0.9.0 |                                                                           |                193 |                    369 |                 0 |         $O(ln(N))$ |
+## u64 (2 x u32)
+| Name                 |      Author(s)      | Last edited | TVM version |                                   Notes                                   | Cycle Count common | Cycle Count worst-case | Hash table height | Asymptotic Runtime |
+| -------------------- | :-----------------: | ----------: | ----------: | :-----------------------------------------------------------------------: | -----------------: | ---------------------: | ----------------: | -----------------: |
+| incr_u64             | sshine, sword_smith |    20221208 |       0.8.0 |                                                                           |                  8 |                     20 |                 0 |             $O(1)$ |
+| decr_u64             |     sword_smith     |    20221208 |       0.8.0 |                                                                           |                  8 |                     20 |                 0 |             $O(1)$ |
+| add_u64              |     sword_smith     |    20221208 |       0.8.0 |                                                                           |                150 |                    158 |                 0 |             $O(1)$ |
+| sub_u64              | sshine, sword_smith |    20221208 |       0.9.0 |                                                                           |                 84 |                     92 |                 0 |             $O(1)$ |
+| lt_u64               | sshine, sword_smith |    20221209 |       0.9.0 |                                                                           |                154 |                    311 |                 0 |             $O(1)$ |
+| pow2_arithmetic_flat |     sword_smith     |    20221208 |       0.8.0 | Adds 17 to cycle count for each increment of the exponent. Range: 11-1090 |                563 |                   1090 |                 0 |             $O(N)$ |
+| pow2_memory_unsafe   |       sshine        |    20221208 |       0.8.0 |    Memory unsafe (assumes bounded input), exp >= 32 => +3 cycle count     |         12 (+ 165) |             15 (+ 165) |                 0 |             $O(1)$ |
+| pow2_static          | sshine, sword_smith |    20221209 |       0.9.0 |                                                                           |                264 |                    264 |                 0 |             $O(1)$ |
+| log2_floor_u64       |     sword_smith     |    20221223 |       0.9.0 |                                                                           |                193 |                    369 |                 0 |         $O(ln(N))$ |
 
 ## Lists (max length: `u32::MAX`)
 | Name           |  Author(s)  | Last edited | TVM version |                                 Notes                                  | Cycle Count common | Cycle Count worst-case | Hash table height | Asymptotic Runtime |
