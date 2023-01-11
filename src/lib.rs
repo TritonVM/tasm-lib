@@ -6,6 +6,7 @@ use triton_vm::vm;
 use triton_vm::op_stack::OP_STACK_REG_COUNT;
 use triton_vm::state::VMState;
 use twenty_first::shared_math::b_field_element::BFieldElement;
+use twenty_first::util_types::algebraic_hasher::Hashable;
 
 mod arithmetic;
 mod library;
@@ -26,6 +27,10 @@ pub struct ExecutionResult {
 
 pub fn get_init_tvm_stack() -> Vec<BFieldElement> {
     vec![BFieldElement::zero(); OP_STACK_REG_COUNT]
+}
+
+pub fn push_hashable<T: Hashable>(stack: &mut Vec<BFieldElement>, value: &T) {
+    stack.append(&mut value.to_sequence().into_iter().rev().collect());
 }
 
 /// Execute a Triton-VM program and return its output and execution trace length
