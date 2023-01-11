@@ -6,7 +6,7 @@ use twenty_first::util_types::algebraic_hasher::Hashable;
 
 use crate::arithmetic::u32::is_u32::IsU32;
 use crate::library::Library;
-use crate::snippet_trait::Snippet;
+use crate::snippet::Snippet;
 
 pub struct AddU64();
 
@@ -86,7 +86,7 @@ mod tests {
     use num::{One, Zero};
     use rand::RngCore;
 
-    use crate::{get_init_tvm_stack, snippet_trait::rust_tasm_equivalence_prop};
+    use crate::{get_init_tvm_stack, snippet::rust_tasm_equivalence_prop};
 
     use super::*;
 

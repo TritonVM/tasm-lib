@@ -48,6 +48,7 @@ the TVM version when appropriate.
 | pow2_memory_unsafe   |       sshine        |    20221208 |       0.8.0 |    Memory unsafe (assumes bounded input), exp >= 32 => +3 cycle count     |         12 (+ 165) |             15 (+ 165) |                 0 |             $O(1)$ |
 | pow2_static          | sshine, sword_smith |    20221209 |       0.9.0 |                                                                           |                264 |                    264 |                 0 |             $O(1)$ |
 | log2_floor_u64       |     sword_smith     |    20221223 |       0.9.0 |                                                                           |                193 |                    369 |                 0 |         $O(ln(N))$ |
+| lt_standard_u64      |       sshine        |    20230111 |      0.11.0 |
 
 ## Lists (max length: `u32::MAX`)
 | Name           |  Author(s)  | Last edited | TVM version |                                 Notes                                  | Cycle Count common | Cycle Count worst-case | Hash table height | Asymptotic Runtime |

@@ -1,24 +1,18 @@
 use std::collections::HashMap;
-use twenty_first::{
-    shared_math::{
-        b_field_element::BFieldElement,
-        rescue_prime_digest::Digest,
-        rescue_prime_regular::{RescuePrimeRegular, DIGEST_LENGTH},
-    },
-    util_types::mmr::{self, mmr_membership_proof::MmrMembershipProof},
-};
+use twenty_first::shared_math::b_field_element::BFieldElement;
+use twenty_first::shared_math::rescue_prime_digest::Digest;
+use twenty_first::shared_math::rescue_prime_regular::{RescuePrimeRegular, DIGEST_LENGTH};
+use twenty_first::util_types::mmr::{self, mmr_membership_proof::MmrMembershipProof};
 
 use super::leaf_index_to_mt_index::MmrLeafIndexToMtIndexAndPeakIndex;
-use crate::{
-    arithmetic::{
-        u32::is_odd::U32IsOdd,
-        u64::{div2_u64::Div2U64, eq_u64::EqU64},
-    },
-    library::Library,
-    list::u32::{get::Get, set::Set},
-    rust_shadowing_helper_functions,
-    snippet_trait::Snippet,
-};
+use crate::arithmetic::u32::is_odd::U32IsOdd;
+use crate::arithmetic::u64::div2_u64::Div2U64;
+use crate::arithmetic::u64::eq_u64::EqU64;
+use crate::library::Library;
+use crate::list::u32::get::Get;
+use crate::list::u32::set::Set;
+use crate::rust_shadowing_helper_functions;
+use crate::snippet::Snippet;
 
 /// Calculate new MMR peaks from a leaf mutation using Merkle tree indices walk up the tree
 pub struct MmrCalculateNewPeaksFromLeafMutationMtIndices();
@@ -193,22 +187,17 @@ impl Snippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
 mod leaf_mutation_tests {
     use num::Zero;
     use rand::{thread_rng, Rng};
-    use twenty_first::{
-        shared_math::{b_field_element::BFieldElement, other::random_elements},
-        test_shared::mmr::{get_archival_mmr_from_digests, get_empty_archival_mmr},
-        util_types::{
-            algebraic_hasher::AlgebraicHasher,
-            mmr::{
-                archival_mmr::ArchivalMmr, mmr_accumulator::MmrAccumulator,
-                mmr_membership_proof::MmrMembershipProof, mmr_trait::Mmr,
-            },
-        },
-    };
+    use twenty_first::shared_math::b_field_element::BFieldElement;
+    use twenty_first::shared_math::other::random_elements;
+    use twenty_first::test_shared::mmr::{get_archival_mmr_from_digests, get_empty_archival_mmr};
+    use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
+    use twenty_first::util_types::mmr::archival_mmr::ArchivalMmr;
+    use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
+    use twenty_first::util_types::mmr::mmr_membership_proof::MmrMembershipProof;
+    use twenty_first::util_types::mmr::mmr_trait::Mmr;
 
-    use crate::{
-        get_init_tvm_stack, mmr::calculate_new_peaks_from_append::MAX_MMR_HEIGHT,
-        snippet_trait::rust_tasm_equivalence_prop,
-    };
+    use crate::mmr::calculate_new_peaks_from_append::MAX_MMR_HEIGHT;
+    use crate::{get_init_tvm_stack, snippet::rust_tasm_equivalence_prop};
 
     use super::*;
 

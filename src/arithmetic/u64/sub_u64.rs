@@ -1,11 +1,12 @@
 use std::collections::HashMap;
 
-use twenty_first::{
-    amount::u32s::U32s, shared_math::b_field_element::BFieldElement,
-    util_types::algebraic_hasher::Hashable,
-};
+use twenty_first::amount::u32s::U32s;
+use twenty_first::shared_math::b_field_element::BFieldElement;
+use twenty_first::util_types::algebraic_hasher::Hashable;
 
-use crate::{arithmetic::u32::is_u32::IsU32, library::Library, snippet_trait::Snippet};
+use crate::arithmetic::u32::is_u32::IsU32;
+use crate::library::Library;
+use crate::snippet::Snippet;
 
 pub struct SubU64();
 
@@ -90,7 +91,7 @@ mod tests {
     use rand::Rng;
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
-    use crate::{get_init_tvm_stack, snippet_trait::rust_tasm_equivalence_prop};
+    use crate::{get_init_tvm_stack, snippet::rust_tasm_equivalence_prop};
 
     use super::*;
 

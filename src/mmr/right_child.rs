@@ -8,7 +8,7 @@ use twenty_first::util_types::mmr;
 
 use crate::arithmetic::u64::decr_u64::DecrU64;
 use crate::library::Library;
-use crate::snippet_trait::Snippet;
+use crate::snippet::Snippet;
 
 pub struct MmrRightChild();
 
@@ -55,11 +55,10 @@ impl Snippet for MmrRightChild {
 #[cfg(test)]
 mod tests {
     use num::Zero;
-    use twenty_first::{
-        shared_math::b_field_element::BFieldElement, util_types::algebraic_hasher::Hashable,
-    };
+    use twenty_first::shared_math::b_field_element::BFieldElement;
+    use twenty_first::util_types::algebraic_hasher::Hashable;
 
-    use crate::{get_init_tvm_stack, snippet_trait::rust_tasm_equivalence_prop};
+    use crate::{get_init_tvm_stack, snippet::rust_tasm_equivalence_prop};
 
     use super::*;
 

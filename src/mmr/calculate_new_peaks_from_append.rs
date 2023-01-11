@@ -12,7 +12,7 @@ use crate::list::u32::pop::Pop;
 use crate::list::u32::push::Push;
 use crate::list::u32::set_length::SetLength;
 use crate::rust_shadowing_helper_functions;
-use crate::snippet_trait::Snippet;
+use crate::snippet::Snippet;
 
 use super::data_index_to_node_index::DataIndexToNodeIndex;
 use super::right_ancestor_count_and_own_height::MmrRightAncestorCountAndHeight;
@@ -235,18 +235,14 @@ impl Snippet for CalculateNewPeaksFromAppend {
 #[cfg(test)]
 mod tests {
     use num::Zero;
-    use twenty_first::{
-        shared_math::{b_field_element::BFieldElement, other::random_elements},
-        util_types::{
-            algebraic_hasher::AlgebraicHasher,
-            mmr::{
-                mmr_accumulator::MmrAccumulator, mmr_membership_proof::MmrMembershipProof,
-                mmr_trait::Mmr,
-            },
-        },
-    };
+    use twenty_first::shared_math::b_field_element::BFieldElement;
+    use twenty_first::shared_math::other::random_elements;
+    use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
+    use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
+    use twenty_first::util_types::mmr::mmr_membership_proof::MmrMembershipProof;
+    use twenty_first::util_types::mmr::mmr_trait::Mmr;
 
-    use crate::{get_init_tvm_stack, snippet_trait::rust_tasm_equivalence_prop};
+    use crate::{get_init_tvm_stack, snippet::rust_tasm_equivalence_prop};
 
     use super::*;
 

@@ -6,7 +6,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::algebraic_hasher::Hashable;
 
 use crate::library::Library;
-use crate::snippet_trait::Snippet;
+use crate::snippet::Snippet;
 
 pub struct IncrU64();
 
@@ -73,7 +73,7 @@ impl Snippet for IncrU64 {
 mod tests {
     use rand::Rng;
 
-    use crate::{get_init_tvm_stack, snippet_trait::rust_tasm_equivalence_prop};
+    use crate::{get_init_tvm_stack, snippet::rust_tasm_equivalence_prop};
 
     use super::*;
 

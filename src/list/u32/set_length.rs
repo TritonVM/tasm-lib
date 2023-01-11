@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
-use crate::snippet_trait::Snippet;
+use crate::snippet::Snippet;
 
 pub struct SetLength;
 
@@ -55,7 +55,7 @@ impl Snippet for SetLength {
 mod tests_set_length {
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
-    use crate::{get_init_tvm_stack, snippet_trait::rust_tasm_equivalence_prop};
+    use crate::{get_init_tvm_stack, snippet::rust_tasm_equivalence_prop};
 
     use super::*;
 

@@ -5,7 +5,7 @@ use twenty_first::shared_math::other::log_2_floor;
 
 use crate::arithmetic::u64::incr_u64::IncrU64;
 use crate::arithmetic::u64::log2_floor_u64::Log2FloorU64;
-use crate::snippet_trait::Snippet;
+use crate::snippet::Snippet;
 
 pub struct GetHeightFromDataIndex;
 
@@ -51,9 +51,10 @@ impl Snippet for GetHeightFromDataIndex {
 
 #[cfg(test)]
 mod tests {
-    use twenty_first::{amount::u32s::U32s, util_types::algebraic_hasher::Hashable};
+    use twenty_first::amount::u32s::U32s;
+    use twenty_first::util_types::algebraic_hasher::Hashable;
 
-    use crate::{get_init_tvm_stack, snippet_trait::rust_tasm_equivalence_prop};
+    use crate::{get_init_tvm_stack, snippet::rust_tasm_equivalence_prop};
 
     use super::*;
 

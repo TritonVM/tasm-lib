@@ -13,7 +13,7 @@ use crate::arithmetic::u64::lt_u64::LtU64;
 use crate::arithmetic::u64::pow2_u64::Pow2StaticU64;
 use crate::arithmetic::u64::sub_u64::SubU64;
 use crate::library::Library;
-use crate::snippet_trait::Snippet;
+use crate::snippet::Snippet;
 
 pub struct MmrLeafIndexToMtIndexAndPeakIndex();
 
@@ -193,7 +193,7 @@ impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
 mod tests {
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
-    use crate::{get_init_tvm_stack, snippet_trait::rust_tasm_equivalence_prop};
+    use crate::{get_init_tvm_stack, snippet::rust_tasm_equivalence_prop};
 
     use super::*;
 

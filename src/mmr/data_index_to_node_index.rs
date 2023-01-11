@@ -5,7 +5,7 @@ use twenty_first::util_types::mmr;
 use crate::arithmetic::u64::add_u64::AddU64;
 use crate::arithmetic::u64::incr_u64::IncrU64;
 use crate::library::Library;
-use crate::snippet_trait::Snippet;
+use crate::snippet::Snippet;
 
 use super::non_leaf_nodes_left::MmrNonLeafNodesLeftOld;
 
@@ -63,12 +63,11 @@ impl Snippet for DataIndexToNodeIndex {
 #[cfg(test)]
 mod tests {
     use rand::{thread_rng, RngCore};
-    use twenty_first::{
-        amount::u32s::U32s, shared_math::b_field_element::BFieldElement,
-        util_types::algebraic_hasher::Hashable,
-    };
+    use twenty_first::amount::u32s::U32s;
+    use twenty_first::shared_math::b_field_element::BFieldElement;
+    use twenty_first::util_types::algebraic_hasher::Hashable;
 
-    use crate::{get_init_tvm_stack, snippet_trait::rust_tasm_equivalence_prop};
+    use crate::{get_init_tvm_stack, snippet::rust_tasm_equivalence_prop};
 
     use super::*;
 

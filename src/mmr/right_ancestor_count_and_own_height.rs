@@ -5,7 +5,7 @@ use twenty_first::util_types::mmr;
 
 use crate::arithmetic::u64::eq_u64::EqU64;
 use crate::arithmetic::u64::lt_u64::LtU64;
-use crate::snippet_trait::Snippet;
+use crate::snippet::Snippet;
 
 use super::left_child::MmrLeftChild;
 use super::leftmost_ancestor::MmrLeftMostAncestor;
@@ -162,9 +162,9 @@ impl Snippet for MmrRightAncestorCountAndHeight {
     }
 
     fn rust_shadowing(
-        stack: &mut Vec<twenty_first::shared_math::b_field_element::BFieldElement>,
-        _std_in: Vec<twenty_first::shared_math::b_field_element::BFieldElement>,
-        _secret_in: Vec<twenty_first::shared_math::b_field_element::BFieldElement>,
+        stack: &mut Vec<BFieldElement>,
+        _std_in: Vec<BFieldElement>,
+        _secret_in: Vec<BFieldElement>,
         _memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) where
         Self: Sized,
@@ -213,7 +213,7 @@ impl Snippet for MmrRightAncestorCountAndHeight {
 mod tests {
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
-    use crate::{get_init_tvm_stack, snippet_trait::rust_tasm_equivalence_prop};
+    use crate::{get_init_tvm_stack, snippet::rust_tasm_equivalence_prop};
 
     use super::*;
 

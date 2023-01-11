@@ -1,10 +1,11 @@
 use std::collections::HashMap;
 
 use crate::library::Library;
-use crate::snippet_trait::Snippet;
+use crate::snippet::Snippet;
 use num::Zero;
+use twenty_first::shared_math::b_field_element::BFieldElement;
+use twenty_first::shared_math::rescue_prime_digest::Digest;
 use twenty_first::shared_math::rescue_prime_regular::RescuePrimeRegular;
-use twenty_first::shared_math::{b_field_element::BFieldElement, rescue_prime_digest::Digest};
 use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
 pub struct MtApVerify();
@@ -152,7 +153,7 @@ mod merkle_authentication_verify_test {
     use twenty_first::util_types::merkle_tree_maker::MerkleTreeMaker;
 
     use crate::get_init_tvm_stack;
-    use crate::snippet_trait::rust_tasm_equivalence_prop;
+    use crate::snippet::rust_tasm_equivalence_prop;
 
     use super::MtApVerify;
 

@@ -11,7 +11,7 @@ use crate::arithmetic::u64::log2_floor_u64::Log2FloorU64;
 use crate::arithmetic::u64::pow2_u64::Pow2StaticU64;
 use crate::arithmetic::u64::sub_u64::SubU64;
 use crate::library::Library;
-use crate::snippet_trait::Snippet;
+use crate::snippet::Snippet;
 
 use super::get_height_from_data_index::GetHeightFromDataIndex;
 
@@ -295,12 +295,11 @@ impl Snippet for MmrNonLeafNodesLeftOld {
 #[cfg(test)]
 mod nlnl_tests {
     use rand::{thread_rng, RngCore};
-    use twenty_first::{
-        amount::u32s::U32s, shared_math::b_field_element::BFieldElement,
-        util_types::algebraic_hasher::Hashable,
-    };
+    use twenty_first::amount::u32s::U32s;
+    use twenty_first::shared_math::b_field_element::BFieldElement;
+    use twenty_first::util_types::algebraic_hasher::Hashable;
 
-    use crate::{get_init_tvm_stack, snippet_trait::rust_tasm_equivalence_prop};
+    use crate::{get_init_tvm_stack, snippet::rust_tasm_equivalence_prop};
 
     use super::*;
 
