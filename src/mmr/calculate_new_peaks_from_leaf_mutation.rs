@@ -63,6 +63,7 @@ impl Snippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
 
                 return
 
+            // Note that this while loop is the same as one in `verify_from_memory`
             // start/end stack: _ *peaks *auth_paths [digest (new_leaf)] mt_index_hi mt_index_lo peak_index i [digest (acc_hash)]
             {entrypoint}_while:
                 dup8 dup8 push 0 push 1 call {u64_eq}
@@ -88,13 +89,13 @@ impl Snippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
                 // _ *peaks *auth_paths [digest (new_leaf)] mt_index_hi mt_index_lo peak_index (i + 1) [digest (acc_hash)]
 
                 swap8 swap1 swap7
-                // _ *peaks *auth_paths [digest (new_leaf)] peak_index [~digest (acc_hash)] (i + 1) [~digest (acc_hash)] mt_index_hi mt_index_lo
+                // _ *peaks *auth_paths [digest (new_leaf)] acc_hash_0 acc_hash_1 peak_index (i + 1) acc_hash_4 acc_hash_3 acc_hash_2 mt_index_hi mt_index_lo
 
                 call {div_2}
-                // _ *peaks *auth_paths [digest (new_leaf)] peak_index [~digest (acc_hash)] (i + 1) [~digest (acc_hash)] (mt_index / 2)_hi (mt_index / 2)_lo
+                // _ *peaks *auth_paths [digest (new_leaf)] acc_hash_0 acc_hash_1 peak_index (i + 1) acc_hash_4 acc_hash_3 acc_hash_2 (mt_index / 2)_hi (mt_index / 2)_lo
 
                 swap7 swap1 swap8
-                // _ *peaks *auth_paths [digest (new_leaf)] (mt_index / 2)_hi (mt_index / 2)_lo peak_index (i + 1) [digest (acc_hash)]
+                // _ *peaks *auth_paths [digest (new_leaf)] (mt_index / 2)_hi (mt_index / 2)_lo peak_index (i + 1) acc_hash_4 acc_hash_3 acc_hash_2 acc_hash_1 acc_hash_0
 
                 recurse
 
@@ -399,6 +400,7 @@ mod leaf_mutation_tests {
         let peaks_pointer = BFieldElement::zero();
         init_stack.push(peaks_pointer);
 
+        // We assume that the auth paths can safely be stored in memory on this address
         let auth_path_pointer = BFieldElement::new((MAX_MMR_HEIGHT * DIGEST_LENGTH + 1) as u64);
         init_stack.push(auth_path_pointer);
 
@@ -421,7 +423,6 @@ mod leaf_mutation_tests {
             rust_shadowing_helper_functions::list_push(peaks_pointer, peak.values(), &mut memory);
         }
 
-        // We assume that the auth paths can safely be stored in memory on address 65
         rust_shadowing_helper_functions::list_new(auth_path_pointer, &mut memory);
         for ap_element in auth_path.iter() {
             rust_shadowing_helper_functions::list_push(
