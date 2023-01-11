@@ -9,6 +9,11 @@ use crate::snippet_trait::Snippet;
 
 pub struct LtU64();
 
+pub struct LtStandardU64();
+
+/// This `lt_u64` does not consume its arguments, which is the norm for tasm functions.
+///
+/// See `LtStandardU64` for a variant that does.
 impl Snippet for LtU64 {
     fn stack_diff() -> isize {
         1
@@ -77,6 +82,80 @@ impl Snippet for LtU64 {
         } else {
             BFieldElement::zero()
         });
+    }
+}
+
+/// This `lt_standard_u64` does consume its argument.
+///
+/// The fastest way we know is to calculate without consuming, and then pop the operands.
+/// This is because there are three branches, so sharing cleanup unconditionally means
+/// less branching (fewer cycles) and less local cleanup (smaller program).
+impl Snippet for LtStandardU64 {
+    fn stack_diff() -> isize {
+        -3
+    }
+
+    fn entrypoint() -> &'static str {
+        "lt_standard_u64"
+    }
+
+    fn function_body(_library: &mut Library) -> String {
+        let entrypoint = Self::entrypoint();
+        format!(
+            "
+            // Before: _ rhs_hi rhs_lo lhs_hi lhs_lo
+            // After: _ (lhs < rhs)
+            {entrypoint}:
+                call {entrypoint}_aux // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs)
+                swap4 pop pop pop pop // _ (lhs < rhs)
+                return
+
+            // Before: _ rhs_hi rhs_lo lhs_hi lhs_lo
+            // After: _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs)
+            {entrypoint}_aux:
+                dup3 // _ rhs_hi rhs_lo lhs_hi lhs_lo rhs_hi
+                dup2 // _ rhs_hi rhs_lo lhs_hi lhs_lo rhs_hi lhs_hi
+                lt   // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_hi < rhs_hi)
+                dup0 // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_hi < rhs_hi) (lhs_hi < rhs_hi)
+                skiz return
+                     // true: _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs)
+                     // false: _ rhs_hi rhs_lo lhs_hi lhs_lo 0
+
+                dup4 // _ rhs_hi rhs_lo lhs_hi lhs_lo 0 rhs_hi
+                dup3 // _ rhs_hi rhs_lo lhs_hi lhs_lo 0 rhs_hi lhs_hi
+                eq   // _ rhs_hi rhs_lo lhs_hi lhs_lo 0 (lhs_hi == rhs_hi)
+                skiz call {entrypoint}_lo
+                     // true: _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs, aka lhs_lo < rhs_lo)
+                     // false: _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs, aka 0)
+                return
+
+            // Before: _ rhs_hi rhs_lo lhs_hi lhs_lo 0
+            // After: _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_lo < rhs_lo)
+            {entrypoint}_lo:
+                pop  // _ rhs_hi rhs_lo lhs_hi lhs_lo
+                dup2 // _ rhs_hi rhs_lo lhs_hi lhs_lo rhs_lo
+                dup1 // _ rhs_hi rhs_lo lhs_hi lhs_lo rhs_lo lhs_lo
+                lt   // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs)
+                return
+            "
+        )
+    }
+
+    fn rust_shadowing(
+        stack: &mut Vec<BFieldElement>,
+        _std_in: Vec<BFieldElement>,
+        _secret_in: Vec<BFieldElement>,
+        _memory: &mut HashMap<BFieldElement, BFieldElement>,
+    ) {
+        let lhs_lo: u32 = stack.pop().unwrap().try_into().unwrap();
+        let lhs_hi: u32 = stack.pop().unwrap().try_into().unwrap();
+        let lhs = U32s::new([lhs_lo, lhs_hi]);
+
+        let rhs_lo: u32 = stack.pop().unwrap().try_into().unwrap();
+        let rhs_hi: u32 = stack.pop().unwrap().try_into().unwrap();
+        let rhs = U32s::new([rhs_lo, rhs_hi]);
+
+        stack.push(BFieldElement::new((lhs < rhs) as u64));
     }
 }
 
