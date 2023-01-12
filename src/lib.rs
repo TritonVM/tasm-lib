@@ -9,6 +9,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::algebraic_hasher::Hashable;
 
 mod arithmetic;
+mod hashing;
 mod library;
 mod list;
 mod mmr;
