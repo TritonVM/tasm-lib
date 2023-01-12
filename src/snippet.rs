@@ -1,4 +1,7 @@
 use std::collections::HashMap;
+use triton_opcodes::program::Program;
+use triton_vm::op_stack::OP_STACK_REG_COUNT;
+use triton_vm::vm::{self, AlgebraicExecutionTrace};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
@@ -83,4 +86,57 @@ pub trait NewSnippet: Snippet {
 
         ret
     }
+}
+
+#[allow(dead_code)]
+pub fn compile_snippet<T: Snippet>() -> String {
+    let mut library = Library::empty();
+    let main_entrypoint = T::entrypoint();
+    let main_function_body = T::function_body(&mut library);
+    let library_code = library.all_imports();
+
+    format!(
+        "
+        call {main_entrypoint}
+        halt
+
+        {main_function_body}
+        {library_code}
+        "
+    )
+}
+
+#[allow(dead_code)]
+pub fn simulate_snippet<T: Snippet>(
+    execution_state: ExecutionState,
+) -> (AlgebraicExecutionTrace, usize) {
+    let mut code: Vec<String> = vec![];
+    let mut inflated_clock_cycles: usize = 0;
+
+    // Prepend the snippet's code with code that injects expected stack
+    for element in execution_state.stack.iter().skip(OP_STACK_REG_COUNT) {
+        code.push(format!("push {}\n", element.value()));
+        inflated_clock_cycles += 1;
+    }
+
+    // Prepend the snippet's code with code that injects expected memory
+    for (address, value) in execution_state.memory.iter() {
+        code.push(format!("push {address} push {value} write_mem pop pop\n"));
+        inflated_clock_cycles += 5;
+    }
+
+    // Compile the snippet and its library dependencies
+    code.push(compile_snippet::<T>());
+
+    // Parse and run the program, bootloader and library
+    let code: String = code.concat();
+    let program = Program::from_code(&code).unwrap();
+    let std_in = execution_state.std_in;
+    let secret_in = execution_state.secret_in;
+    let (aet, _out, err) = vm::simulate(&program, std_in, secret_in);
+    if let Some(err) = err {
+        panic!("Program:\n{code}\nFailed:\n{err}");
+    }
+
+    (aet, inflated_clock_cycles)
 }

@@ -17,6 +17,7 @@ mod other_snippets;
 mod recufier;
 mod rust_shadowing_helper_functions;
 mod snippet;
+mod snippet_bencher;
 mod test_helpers;
 
 pub struct ExecutionState {
