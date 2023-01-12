@@ -4,9 +4,9 @@ use twenty_first::shared_math::{
     b_field_element::BFieldElement, rescue_prime_regular::DIGEST_LENGTH,
 };
 
-use crate::{
-    library::Library, list::u32::set_length::SetLength, snippet::Snippet, test_helpers::NewSnippet,
-};
+use crate::library::Library;
+use crate::list::u32::set_length::SetLength;
+use crate::snippet::{NewSnippet, Snippet};
 
 use super::MAX_MMR_HEIGHT;
 

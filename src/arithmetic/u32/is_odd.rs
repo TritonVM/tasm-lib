@@ -4,8 +4,7 @@ use rand::RngCore;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
-use crate::snippet::Snippet;
-use crate::test_helpers::NewSnippet;
+use crate::snippet::{NewSnippet, Snippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
 pub struct U32IsOdd();
