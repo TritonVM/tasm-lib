@@ -12,3 +12,5 @@ pub mod right_child;
 pub mod right_child_and_height;
 pub mod verify_from_memory;
 pub mod verify_from_secret_input_through_memory;
+
+pub const MAX_MMR_HEIGHT: usize = 64;

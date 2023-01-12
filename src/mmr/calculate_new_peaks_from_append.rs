@@ -16,8 +16,7 @@ use crate::snippet::Snippet;
 
 use super::data_index_to_node_index::DataIndexToNodeIndex;
 use super::right_ancestor_count_and_own_height::MmrRightAncestorCountAndHeight;
-
-pub const MAX_MMR_HEIGHT: usize = 64;
+use super::MAX_MMR_HEIGHT;
 
 pub struct CalculateNewPeaksFromAppend;
 
