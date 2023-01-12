@@ -54,7 +54,7 @@ impl Snippet for DataIndexToNodeIndex {
         let data_index_hi: u32 = stack.pop().unwrap().try_into().unwrap();
         let data_index: u64 = (data_index_hi as u64) * (1u64 << 32) + data_index_lo as u64;
 
-        let node_index: u64 = mmr::shared::data_index_to_node_index(data_index as u128) as u64;
+        let node_index: u64 = mmr::shared::leaf_index_to_node_index(data_index as u128) as u64;
         stack.push(BFieldElement::new(node_index >> 32));
         stack.push(BFieldElement::new(node_index & 0xFFFFFFFFu32 as u64));
     }

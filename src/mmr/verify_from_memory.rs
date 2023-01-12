@@ -330,7 +330,7 @@ mod auth_path_verify_from_memory_tests {
             let second_to_last_leaf_index = init_leaf_count;
             let mut real_membership_proof_second_to_last = mmr.append(second_to_last_leaf);
             assert_eq!(
-                real_membership_proof_second_to_last.data_index,
+                real_membership_proof_second_to_last.leaf_index,
                 second_to_last_leaf_index as u128
             );
 

@@ -150,7 +150,7 @@ impl Snippet for CalculateNewPeaksFromAppend {
 
             loop {
                 if candidate == node_index {
-                    return (right_ancestor_count, candidate_height as u32);
+                    return (right_ancestor_count, candidate_height);
                 }
 
                 let left_child = mmr::shared::left_child(candidate, candidate_height);
@@ -201,7 +201,7 @@ impl Snippet for CalculateNewPeaksFromAppend {
         let auth_path_pointer = BFieldElement::new((MAX_MMR_HEIGHT * DIGEST_LENGTH + 1) as u64);
         rust_shadowing_helper_functions::list_new(auth_path_pointer, memory);
         rust_shadowing_helper_functions::list_push(peaks_pointer, new_leaf.values(), memory);
-        let new_node_index = mmr::shared::data_index_to_node_index(old_leaf_count as u128);
+        let new_node_index = mmr::shared::leaf_index_to_node_index(old_leaf_count as u128);
         let (mut right_lineage_count, _height) =
             right_ancestor_count_and_own_height(new_node_index);
         while right_lineage_count != 0 {
@@ -398,7 +398,7 @@ mod tests {
         }
 
         let produced_mp = MmrMembershipProof::<H> {
-            data_index: start_mmr.count_leaves(),
+            leaf_index: start_mmr.count_leaves(),
             authentication_path: produced_auth_path,
             _hasher: std::marker::PhantomData,
         };

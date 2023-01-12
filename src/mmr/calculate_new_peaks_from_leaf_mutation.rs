@@ -489,7 +489,7 @@ mod leaf_mutation_tests {
         }
 
         let mmr_mp = MmrMembershipProof::<H> {
-            data_index: new_leaf_index as u128,
+            leaf_index: new_leaf_index as u128,
             authentication_path: auth_path,
             _hasher: std::marker::PhantomData,
         };

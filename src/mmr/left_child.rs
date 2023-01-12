@@ -52,7 +52,7 @@ impl Snippet for MmrLeftChild {
         let node_index_lo: u32 = stack.pop().unwrap().try_into().unwrap();
         let node_index_hi: u32 = stack.pop().unwrap().try_into().unwrap();
         let node_index: u64 = (node_index_hi as u64) * (1u64 << 32) + node_index_lo as u64;
-        let ret: u64 = mmr::shared::left_child(node_index as u128, height as u128) as u64;
+        let ret: u64 = mmr::shared::left_child(node_index as u128, height) as u64;
         let ret: U32s<2> = U32s::from(BigUint::from(ret));
 
         stack.append(&mut ret.to_sequence().into_iter().rev().collect());

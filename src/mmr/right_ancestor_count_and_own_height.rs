@@ -182,7 +182,7 @@ impl Snippet for MmrRightAncestorCountAndHeight {
 
             loop {
                 if candidate == node_index {
-                    return (right_ancestor_count, candidate_height as u32);
+                    return (right_ancestor_count, candidate_height);
                 }
 
                 let left_child = mmr::shared::left_child(candidate, candidate_height);

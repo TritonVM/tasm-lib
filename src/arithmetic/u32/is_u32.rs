@@ -74,23 +74,18 @@ impl Snippet for IsU32 {
     /// on top of stack. So this subroutine does not change the height
     /// of the stack
     fn function_body(_library: &mut Library) -> String {
-        let mut unrolled_loop: String = String::default();
         let entrypoint = Self::entrypoint();
-        for _ in 0..32 {
-            unrolled_loop.push_str("lsb\n");
-            unrolled_loop.push_str("pop\n");
-        }
-        let code: &str = &format!(
+        format!(
             "
             {entrypoint}:
-                {unrolled_loop}
-                push 0
-                eq
+                        // _ a
+                split   // _ hi lo
+                pop     // _ hi
+                push 0  // _ hi 0
+                eq      // _ (hi == 0)
                 return
             "
-        );
-
-        code.to_string()
+        )
     }
 
     fn rust_shadowing(

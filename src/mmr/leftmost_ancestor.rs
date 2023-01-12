@@ -69,9 +69,8 @@ impl Snippet for MmrLeftMostAncestor {
         let node_index_hi: u32 = stack.pop().unwrap().try_into().unwrap();
         let node_index: u64 = (node_index_hi as u64) * (1u64 << 32) + node_index_lo as u64;
 
-        let (ret, h): (u128, u128) = mmr::shared::leftmost_ancestor(node_index as u128);
+        let (ret, h): (u128, u32) = mmr::shared::leftmost_ancestor(node_index as u128);
         let ret: U32s<2> = U32s::from(BigUint::from(ret));
-        let h: u32 = h as u32;
 
         stack.append(&mut ret.to_sequence().into_iter().rev().collect());
         stack.push(BFieldElement::from(h));
