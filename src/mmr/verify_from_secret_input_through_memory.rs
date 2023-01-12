@@ -58,8 +58,8 @@ impl Snippet for MmrVerifyFromSecretInputThroughMemory {
         let entrypoint = Self::entrypoint();
         format!(
             "
-            // BEFORE: _ *peaks [digest (leaf_digest)] leaf_count_hi leaf_count_lo
-            // AFTER: _ *auth_path validation_result
+            // BEFORE: _ *peaks leaf_count_hi leaf_count_lo [digest (leaf_digest)]
+            // AFTER: _ *auth_path leaf_index_hi leaf_index_lo validation_result
                 {entrypoint}:
                     // allocate space in memory for the `auth_path`
                     push {static_auth_path_pointer}
