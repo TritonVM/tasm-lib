@@ -1,14 +1,50 @@
 use std::collections::HashMap;
 
 use num::One;
+use rand::RngCore;
 use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::algebraic_hasher::Hashable;
 
 use crate::library::Library;
-use crate::snippet::Snippet;
+use crate::snippet::{NewSnippet, Snippet};
+use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 
 pub struct IncrU64();
+
+impl NewSnippet for IncrU64 {
+    fn inputs() -> Vec<&'static str> {
+        vec!["value"]
+    }
+
+    fn outputs() -> Vec<&'static str> {
+        vec!["value + 1"]
+    }
+
+    fn crash_conditions() -> Vec<&'static str> {
+        vec!["value == u64::MAX"]
+    }
+
+    fn gen_input_states() -> Vec<ExecutionState> {
+        let mut rng = rand::thread_rng();
+        let values = vec![
+            U32s::new([u32::MAX, 0]),
+            U32s::new([0, u32::MAX]),
+            U32s::new([u32::MAX, u32::MAX - 1]),
+            // U32s::new([u32::MAX, u32::MAX])
+            U32s::<2>::try_from(rng.next_u32()).unwrap(),
+            U32s::<2>::try_from(rng.next_u64()).unwrap(),
+        ];
+        values
+            .into_iter()
+            .map(|value| {
+                let mut stack = get_init_tvm_stack();
+                push_hashable(&mut stack, &value);
+                ExecutionState::with_stack(stack)
+            })
+            .collect()
+    }
+}
 
 impl Snippet for IncrU64 {
     fn stack_diff() -> isize {
@@ -71,65 +107,37 @@ impl Snippet for IncrU64 {
 
 #[cfg(test)]
 mod tests {
-    use rand::Rng;
-
-    use crate::get_init_tvm_stack;
-    use crate::test_helpers::rust_tasm_equivalence_prop;
+    use crate::snippet_bencher::bench_and_write;
+    use crate::test_helpers::rust_tasm_equivalence_prop_new;
+    use crate::{get_init_tvm_stack, push_hashable};
 
     use super::*;
 
     #[test]
-    fn u32s_2_incr() {
-        let mut rng = rand::thread_rng();
+    fn decr_u64_test() {
+        rust_tasm_equivalence_prop_new::<IncrU64>();
+    }
 
-        prop_incr(U32s::new([u32::MAX, 0]));
-        prop_incr(U32s::new([0, u32::MAX]));
-        prop_incr(U32s::new([u32::MAX, u32::MAX - 1]));
-
-        for _ in 0..10 {
-            prop_incr(U32s::new([0, rng.gen()]));
-            prop_incr(U32s::new([rng.gen(), rng.gen()]));
-        }
+    #[test]
+    fn decr_u64_benchmark() {
+        bench_and_write::<IncrU64>();
     }
 
     #[test]
     #[should_panic]
-    fn u32s_2_incr_negative_tasm() {
-        let mut init_stack = get_init_tvm_stack();
-        let max_value = U32s::new([u32::MAX, u32::MAX]);
-        init_stack.push(max_value.as_ref()[1].into());
-        init_stack.push(max_value.as_ref()[0].into());
-
-        let mut tasm_stack = init_stack;
-        IncrU64::run_tasm(&mut tasm_stack, vec![], vec![], &mut HashMap::default(), 0);
+    fn incr_u64_negative_tasm_test() {
+        let mut stack = get_init_tvm_stack();
+        let u64_max = U32s::<2>::try_from(u64::MAX).unwrap();
+        push_hashable(&mut stack, &u64_max);
+        <IncrU64 as Snippet>::run_tasm(&mut stack, vec![], vec![], &mut HashMap::default(), 0);
     }
 
     #[test]
     #[should_panic]
-    fn u32s_2_incr_negative_rust() {
-        let mut init_stack = get_init_tvm_stack();
-        let max_value = U32s::new([u32::MAX, u32::MAX]);
-        init_stack.push(max_value.as_ref()[1].into());
-        init_stack.push(max_value.as_ref()[0].into());
-
-        let mut rust_stack = init_stack;
-        IncrU64::rust_shadowing(&mut rust_stack, vec![], vec![], &mut HashMap::default());
-    }
-
-    fn prop_incr(some_value: U32s<2>) {
-        let mut init_stack = get_init_tvm_stack();
-        for elem in some_value.to_sequence().into_iter().rev() {
-            init_stack.push(elem);
-        }
-
-        let expected = None;
-        let _execution_result = rust_tasm_equivalence_prop::<IncrU64>(
-            &init_stack,
-            &[],
-            &[],
-            &mut HashMap::default(),
-            0,
-            expected,
-        );
+    fn incr_u64_negative_rust_test() {
+        let mut stack = get_init_tvm_stack();
+        let u64_max = U32s::<2>::try_from(u64::MAX).unwrap();
+        push_hashable(&mut stack, &u64_max);
+        IncrU64::rust_shadowing(&mut stack, vec![], vec![], &mut HashMap::default());
     }
 }

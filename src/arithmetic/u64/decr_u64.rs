@@ -21,7 +21,7 @@ impl NewSnippet for DecrU64 {
     }
 
     fn crash_conditions() -> Vec<&'static str> {
-        vec![]
+        vec!["value == 0"]
     }
 
     fn gen_input_states() -> Vec<ExecutionState> {
