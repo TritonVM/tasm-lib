@@ -20,6 +20,7 @@ mod snippet;
 mod snippet_bencher;
 mod test_helpers;
 
+#[derive(Clone, Debug)]
 pub struct ExecutionState {
     pub stack: Vec<BFieldElement>,
     pub std_in: Vec<BFieldElement>,
