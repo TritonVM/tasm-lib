@@ -13,7 +13,7 @@ default-features = false
 features = ["precommit-hook", "run-cargo-clippy", "run-cargo-fmt"]
 
 [dependencies]
-triton-vm = "0.13"
+triton-vm = { version = "0.13", git = "https://github.com/TritonVM/triton-vm.git" }
 triton-opcodes = "0.13"
 twenty-first = "0.11"
 rand = "0.8.5"

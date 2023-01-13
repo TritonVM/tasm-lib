@@ -5,6 +5,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 use serde_json::to_writer_pretty;
+use triton_vm::table::master_table::MasterBaseTable;
 
 use crate::snippet::{simulate_snippet, NewSnippet, Snippet};
 
@@ -13,6 +14,7 @@ pub struct SnippetBenchmark {
     name: &'static str,
     processor_table_height: usize,
     hash_table_height: usize,
+    u32_table_height: usize,
 }
 
 #[allow(dead_code)]
@@ -26,6 +28,7 @@ pub fn benchmark_snippet<T: NewSnippet>() -> Vec<SnippetBenchmark> {
             name: T::entrypoint(),
             processor_table_height: aet.processor_matrix.nrows() - inflated_clock_cycles,
             hash_table_height: aet.hash_matrix.nrows(),
+            u32_table_height: MasterBaseTable::u32_table_length(&aet),
         };
         benchmarks.push(benchmark);
     }
