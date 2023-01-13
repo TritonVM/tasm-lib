@@ -1,2 +1,2 @@
-mod eq_digest;
-mod swap_digest;
+pub mod eq_digest;
+pub mod swap_digest;

@@ -19,6 +19,7 @@ mod rust_shadowing_helper_functions;
 mod snippet;
 mod test_helpers;
 
+#[derive(Clone, Debug)]
 pub struct ExecutionState {
     pub stack: Vec<BFieldElement>,
     pub std_in: Vec<BFieldElement>,
@@ -27,6 +28,7 @@ pub struct ExecutionState {
     pub words_allocated: usize,
 }
 
+#[derive(Clone, Debug)]
 pub struct ExecutionResult {
     pub output: Vec<BFieldElement>,
     pub final_stack: Vec<BFieldElement>,
