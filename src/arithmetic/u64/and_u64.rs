@@ -1,13 +1,39 @@
 use std::collections::HashMap;
 
+use rand::RngCore;
 use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::algebraic_hasher::Hashable;
 
 use crate::library::Library;
-use crate::snippet::Snippet;
+use crate::snippet::{NewSnippet, Snippet};
+use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 
 pub struct AndU64();
+
+impl NewSnippet for AndU64 {
+    fn inputs() -> Vec<&'static str> {
+        vec!["rhs_hi", "rhs_lo", "lhs_hi", "lhs_lo"]
+    }
+
+    fn outputs() -> Vec<&'static str> {
+        vec!["(lhs + rhs)_hi", "(lhs + rhs)_lo"]
+    }
+
+    fn crash_conditions() -> Vec<&'static str> {
+        vec![]
+    }
+
+    fn gen_input_states() -> Vec<ExecutionState> {
+        let mut rng = rand::thread_rng();
+        let lhs = U32s::<2>::try_from(rng.next_u64()).unwrap();
+        let rhs = U32s::<2>::try_from(rng.next_u64()).unwrap();
+        let mut stack = get_init_tvm_stack();
+        push_hashable(&mut stack, &lhs);
+        push_hashable(&mut stack, &rhs);
+        vec![ExecutionState::with_stack(stack)]
+    }
+}
 
 impl Snippet for AndU64 {
     fn stack_diff() -> isize {
@@ -67,9 +93,20 @@ mod tests {
     use rand::{thread_rng, RngCore};
 
     use crate::get_init_tvm_stack;
-    use crate::test_helpers::rust_tasm_equivalence_prop;
+    use crate::snippet_bencher::bench_and_write;
+    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
+
+    #[test]
+    fn and_u64_test() {
+        rust_tasm_equivalence_prop_new::<AndU64>();
+    }
+
+    #[test]
+    fn add_u64_benchmark() {
+        bench_and_write::<AndU64>();
+    }
 
     #[test]
     fn and_test_simple() {

@@ -33,7 +33,7 @@ impl NewSnippet for AddU64 {
         let small_a = U32s::<2>::try_from(rng.gen::<u32>()).unwrap();
         let small_b = U32s::<2>::try_from(rng.gen::<u32>()).unwrap();
         let large_a = U32s::<2>::try_from(rng.gen::<u64>()).unwrap();
-        let large_b = U32s::<2>::try_from(rng.gen::<u64>()).unwrap();
+        // let large_b = U32s::<2>::try_from(rng.gen::<u64>()).unwrap();
 
         let mut states = vec![];
 
@@ -53,28 +53,29 @@ impl NewSnippet for AddU64 {
             ExecutionState::with_stack(stack)
         });
 
-        // 2. one small, one large
-        states.push({
-            let mut stack = get_init_tvm_stack();
-            push_hashable(&mut stack, &small_a);
-            push_hashable(&mut stack, &large_a);
-            ExecutionState::with_stack(stack)
-        });
+        // FIXME: Disable benchmarks that may overflow, since the benchmark panics when the VM panics.
+        // // 2. one small, one large
+        // states.push({
+        //     let mut stack = get_init_tvm_stack();
+        //     push_hashable(&mut stack, &small_a);
+        //     push_hashable(&mut stack, &large_a);
+        //     ExecutionState::with_stack(stack)
+        // });
 
-        states.push({
-            let mut stack = get_init_tvm_stack();
-            push_hashable(&mut stack, &large_a);
-            push_hashable(&mut stack, &small_a);
-            ExecutionState::with_stack(stack)
-        });
+        // states.push({
+        //     let mut stack = get_init_tvm_stack();
+        //     push_hashable(&mut stack, &large_a);
+        //     push_hashable(&mut stack, &small_a);
+        //     ExecutionState::with_stack(stack)
+        // });
 
-        // 3. two large
-        states.push({
-            let mut stack = get_init_tvm_stack();
-            push_hashable(&mut stack, &large_a);
-            push_hashable(&mut stack, &large_b);
-            ExecutionState::with_stack(stack)
-        });
+        // // 3. two large
+        // states.push({
+        //     let mut stack = get_init_tvm_stack();
+        //     push_hashable(&mut stack, &large_a);
+        //     push_hashable(&mut stack, &large_b);
+        //     ExecutionState::with_stack(stack)
+        // });
 
         states
     }
