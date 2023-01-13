@@ -1,14 +1,84 @@
 use std::collections::HashMap;
 
+use num::Zero;
+use rand::Rng;
 use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::algebraic_hasher::Hashable;
 
 use crate::arithmetic::u32::is_u32::IsU32;
 use crate::library::Library;
-use crate::snippet::Snippet;
+use crate::snippet::{NewSnippet, Snippet};
+use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 
 pub struct AddU64();
+
+impl NewSnippet for AddU64 {
+    fn inputs() -> Vec<&'static str> {
+        vec!["rhs_hi", "rhs_lo", "lhs_hi", "lhs_lo"]
+    }
+
+    fn outputs() -> Vec<&'static str> {
+        vec!["(lhs + rhs)_hi", "(lhs + rhs)_lo"]
+    }
+
+    fn crash_conditions() -> Vec<&'static str> {
+        vec![]
+    }
+
+    fn gen_input_states() -> Vec<ExecutionState> {
+        let mut rng = rand::thread_rng();
+
+        let zero = U32s::<2>::zero();
+        let small_a = U32s::<2>::try_from(rng.gen::<u32>()).unwrap();
+        let small_b = U32s::<2>::try_from(rng.gen::<u32>()).unwrap();
+        let large_a = U32s::<2>::try_from(rng.gen::<u64>()).unwrap();
+        let large_b = U32s::<2>::try_from(rng.gen::<u64>()).unwrap();
+
+        let mut states = vec![];
+
+        // 0. one zero, one large
+        states.push({
+            let mut stack = get_init_tvm_stack();
+            push_hashable(&mut stack, &zero);
+            push_hashable(&mut stack, &large_a);
+            ExecutionState::with_stack(stack)
+        });
+
+        // 1. two small
+        states.push({
+            let mut stack = get_init_tvm_stack();
+            push_hashable(&mut stack, &small_a);
+            push_hashable(&mut stack, &small_b);
+            ExecutionState::with_stack(stack)
+        });
+
+        // 2. one small, one large
+        states.push({
+            let mut stack = get_init_tvm_stack();
+            push_hashable(&mut stack, &small_a);
+            push_hashable(&mut stack, &large_a);
+            ExecutionState::with_stack(stack)
+        });
+
+        states.push({
+            let mut stack = get_init_tvm_stack();
+            push_hashable(&mut stack, &large_a);
+            push_hashable(&mut stack, &small_a);
+            ExecutionState::with_stack(stack)
+        });
+
+        // 3. two large
+        states.push({
+            let mut stack = get_init_tvm_stack();
+            push_hashable(&mut stack, &large_a);
+            push_hashable(&mut stack, &large_b);
+            ExecutionState::with_stack(stack)
+        });
+
+        states
+    }
+}
 
 impl Snippet for AddU64 {
     fn stack_diff() -> isize {
@@ -87,9 +157,20 @@ mod tests {
     use rand::RngCore;
 
     use crate::get_init_tvm_stack;
-    use crate::test_helpers::rust_tasm_equivalence_prop;
+    use crate::snippet_bencher::bench_and_write;
+    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
+
+    #[test]
+    fn add_u64_test() {
+        rust_tasm_equivalence_prop_new::<AddU64>();
+    }
+
+    #[test]
+    fn add_u64_benchmark() {
+        bench_and_write::<AddU64>();
+    }
 
     #[test]
     fn u32s_2_add_no_overflow() {
