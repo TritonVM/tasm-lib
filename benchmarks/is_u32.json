@@ -1,12 +1,12 @@
 [
   {
     "name": "is_u32",
-    "processor_table_height": 3009,
+    "processor_table_height": 69,
     "hash_table_height": 0
   },
   {
     "name": "is_u32",
-    "processor_table_height": 3009,
+    "processor_table_height": 69,
     "hash_table_height": 0
   }
 ]

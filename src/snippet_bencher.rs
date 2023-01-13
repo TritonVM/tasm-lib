@@ -24,8 +24,8 @@ pub fn benchmark_snippet<T: NewSnippet>() -> Vec<SnippetBenchmark> {
         let (aet, inflated_clock_cycles) = simulate_snippet::<T>(execution_state);
         let benchmark = SnippetBenchmark {
             name: T::entrypoint(),
-            processor_table_height: aet.processor_matrix.len() - inflated_clock_cycles,
-            hash_table_height: aet.hash_matrix.len(),
+            processor_table_height: aet.processor_matrix.nrows() - inflated_clock_cycles,
+            hash_table_height: aet.hash_matrix.nrows(),
         };
         benchmarks.push(benchmark);
     }

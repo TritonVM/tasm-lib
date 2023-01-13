@@ -1,167 +1,167 @@
 [
   {
     "name": "log_2_floor_u32",
-    "processor_table_height": 644,
+    "processor_table_height": 14,
     "hash_table_height": 0
   },
   {
     "name": "log_2_floor_u32",
-    "processor_table_height": 644,
+    "processor_table_height": 14,
     "hash_table_height": 0
   },
   {
     "name": "log_2_floor_u32",
-    "processor_table_height": 1117,
+    "processor_table_height": 25,
     "hash_table_height": 0
   },
   {
     "name": "log_2_floor_u32",
-    "processor_table_height": 1590,
+    "processor_table_height": 36,
     "hash_table_height": 0
   },
   {
     "name": "log_2_floor_u32",
-    "processor_table_height": 2063,
+    "processor_table_height": 47,
     "hash_table_height": 0
   },
   {
     "name": "log_2_floor_u32",
-    "processor_table_height": 2536,
+    "processor_table_height": 58,
     "hash_table_height": 0
   },
   {
     "name": "log_2_floor_u32",
-    "processor_table_height": 3009,
+    "processor_table_height": 69,
     "hash_table_height": 0
   },
   {
     "name": "log_2_floor_u32",
-    "processor_table_height": 3482,
+    "processor_table_height": 80,
     "hash_table_height": 0
   },
   {
     "name": "log_2_floor_u32",
-    "processor_table_height": 3955,
+    "processor_table_height": 91,
     "hash_table_height": 0
   },
   {
     "name": "log_2_floor_u32",
-    "processor_table_height": 4428,
+    "processor_table_height": 102,
     "hash_table_height": 0
   },
   {
     "name": "log_2_floor_u32",
-    "processor_table_height": 4901,
+    "processor_table_height": 113,
     "hash_table_height": 0
   },
   {
     "name": "log_2_floor_u32",
-    "processor_table_height": 5374,
+    "processor_table_height": 124,
     "hash_table_height": 0
   },
   {
     "name": "log_2_floor_u32",
-    "processor_table_height": 5847,
+    "processor_table_height": 135,
     "hash_table_height": 0
   },
   {
     "name": "log_2_floor_u32",
-    "processor_table_height": 6320,
+    "processor_table_height": 146,
     "hash_table_height": 0
   },
   {
     "name": "log_2_floor_u32",
-    "processor_table_height": 6793,
+    "processor_table_height": 157,
     "hash_table_height": 0
   },
   {
     "name": "log_2_floor_u32",
-    "processor_table_height": 7266,
+    "processor_table_height": 168,
     "hash_table_height": 0
   },
   {
     "name": "log_2_floor_u32",
-    "processor_table_height": 7739,
+    "processor_table_height": 179,
     "hash_table_height": 0
   },
   {
     "name": "log_2_floor_u32",
-    "processor_table_height": 8212,
+    "processor_table_height": 190,
     "hash_table_height": 0
   },
   {
     "name": "log_2_floor_u32",
-    "processor_table_height": 8685,
+    "processor_table_height": 201,
     "hash_table_height": 0
   },
   {
     "name": "log_2_floor_u32",
-    "processor_table_height": 9158,
+    "processor_table_height": 212,
     "hash_table_height": 0
   },
   {
     "name": "log_2_floor_u32",
-    "processor_table_height": 9631,
+    "processor_table_height": 223,
     "hash_table_height": 0
   },
   {
     "name": "log_2_floor_u32",
-    "processor_table_height": 10104,
+    "processor_table_height": 234,
     "hash_table_height": 0
   },
   {
     "name": "log_2_floor_u32",
-    "processor_table_height": 10577,
+    "processor_table_height": 245,
     "hash_table_height": 0
   },
   {
     "name": "log_2_floor_u32",
-    "processor_table_height": 11050,
+    "processor_table_height": 256,
     "hash_table_height": 0
   },
   {
     "name": "log_2_floor_u32",
-    "processor_table_height": 11523,
+    "processor_table_height": 267,
     "hash_table_height": 0
   },
   {
     "name": "log_2_floor_u32",
-    "processor_table_height": 11996,
+    "processor_table_height": 278,
     "hash_table_height": 0
   },
   {
     "name": "log_2_floor_u32",
-    "processor_table_height": 12469,
+    "processor_table_height": 289,
     "hash_table_height": 0
   },
   {
     "name": "log_2_floor_u32",
-    "processor_table_height": 12942,
+    "processor_table_height": 300,
     "hash_table_height": 0
   },
   {
     "name": "log_2_floor_u32",
-    "processor_table_height": 13415,
+    "processor_table_height": 311,
     "hash_table_height": 0
   },
   {
     "name": "log_2_floor_u32",
-    "processor_table_height": 13888,
+    "processor_table_height": 322,
     "hash_table_height": 0
   },
   {
     "name": "log_2_floor_u32",
-    "processor_table_height": 14361,
+    "processor_table_height": 333,
     "hash_table_height": 0
   },
   {
     "name": "log_2_floor_u32",
-    "processor_table_height": 14834,
+    "processor_table_height": 344,
     "hash_table_height": 0
   },
   {
     "name": "log_2_floor_u32",
-    "processor_table_height": 15307,
+    "processor_table_height": 355,
     "hash_table_height": 0
   }
 ]
