@@ -4,7 +4,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::log_2_floor;
 
 use crate::arithmetic::u64::incr_u64::IncrU64;
-use crate::arithmetic::u64::log2_floor_u64::Log2FloorU64;
+use crate::arithmetic::u64::log_2_floor_u64::Log2FloorU64;
 use crate::snippet::Snippet;
 
 pub struct GetHeightFromDataIndex;
@@ -22,7 +22,7 @@ impl Snippet for GetHeightFromDataIndex {
     fn function_body(library: &mut crate::library::Library) -> String {
         let entrypoint = Self::entrypoint();
         let incr_u64 = library.import::<IncrU64>();
-        let log2_floor_u64 = library.import::<Log2FloorU64>();
+        let log_2_floor_u64 = library.import::<Log2FloorU64>();
         format!(
             "
             // Return the height of the MMR if this data index was the last leaf inserted
@@ -30,7 +30,7 @@ impl Snippet for GetHeightFromDataIndex {
             // After: _ height
             {entrypoint}:
                 call {incr_u64}
-                call {log2_floor_u64}
+                call {log_2_floor_u64}
                 return"
         )
     }

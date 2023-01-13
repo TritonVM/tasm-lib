@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::log_2_floor;
 
-use crate::arithmetic::u32::log2_floor::Log2FloorU32;
+use crate::arithmetic::u32::log_2_floor_u32::Log2FloorU32;
 use crate::library::Library;
 use crate::snippet::Snippet;
 
@@ -14,12 +14,12 @@ impl Snippet for Log2FloorU64 {
     }
 
     fn entrypoint() -> &'static str {
-        "log2_floor_u64"
+        "log_2_floor_u64"
     }
 
     fn function_body(library: &mut Library) -> String {
         let entrypoint = Self::entrypoint();
-        let log2_floor_u32 = library.import::<Log2FloorU32>();
+        let log_2_floor_u32 = library.import::<Log2FloorU32>();
 
         // assumes that top of stack is a valid u32s<2>
         // BEFORE: _ value_hi value_lo
@@ -48,7 +48,7 @@ impl Snippet for Log2FloorU64 {
                     pop
                     // stack: _ value_hi
 
-                    call {log2_floor_u32}
+                    call {log_2_floor_u32}
                     push 32
                     add
                     // stack: _ (log2_floor(value_hi) + 32)
@@ -62,7 +62,7 @@ impl Snippet for Log2FloorU64 {
                     // value_hi == 0
                     // stack: _ value_lo value_hi
                     pop
-                    call {log2_floor_u32}
+                    call {log_2_floor_u32}
                     return
                 "
         )
@@ -79,8 +79,8 @@ impl Snippet for Log2FloorU64 {
         let hi: u32 = stack.pop().unwrap().try_into().unwrap();
         let value_u64: u64 = lo as u64 + (1 << 32) * (hi as u64);
 
-        let log2_floor = log_2_floor(value_u64 as u128);
-        stack.push(BFieldElement::new(log2_floor));
+        let log_2_floor = log_2_floor(value_u64 as u128);
+        stack.push(BFieldElement::new(log_2_floor));
     }
 }
 

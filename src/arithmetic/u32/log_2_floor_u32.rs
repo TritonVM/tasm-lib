@@ -9,12 +9,11 @@ pub struct Log2FloorU32();
 
 impl Snippet for Log2FloorU32 {
     fn stack_diff() -> isize {
-        // pops a u32, pushes a u32
         0
     }
 
     fn entrypoint() -> &'static str {
-        "u32_log2_floor"
+        "log_2_floor_u32"
     }
 
     fn function_body(_library: &mut Library) -> String {
@@ -64,8 +63,8 @@ impl Snippet for Log2FloorU32 {
         _memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
         let val: u32 = stack.pop().unwrap().try_into().unwrap();
-        let log2_floor = log_2_floor(val as u128);
-        stack.push(BFieldElement::new(log2_floor));
+        let log_2_floor = log_2_floor(val as u128);
+        stack.push(BFieldElement::new(log_2_floor));
     }
 }
 

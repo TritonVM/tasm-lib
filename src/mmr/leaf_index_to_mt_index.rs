@@ -8,7 +8,7 @@ use twenty_first::util_types::algebraic_hasher::Hashable;
 use crate::arithmetic::u64::add_u64::AddU64;
 use crate::arithmetic::u64::and_u64::AndU64;
 use crate::arithmetic::u64::eq_u64::EqU64;
-use crate::arithmetic::u64::log2_floor_u64::Log2FloorU64;
+use crate::arithmetic::u64::log_2_floor_u64::Log2FloorU64;
 use crate::arithmetic::u64::lt_u64::LtU64;
 use crate::arithmetic::u64::pow2_u64::Pow2StaticU64;
 use crate::arithmetic::u64::sub_u64::SubU64;
@@ -29,7 +29,7 @@ impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
 
     fn function_body(library: &mut Library) -> String {
         let entrypoint = Self::entrypoint();
-        let log2_floor_u64 = library.import::<Log2FloorU64>();
+        let log_2_floor_u64 = library.import::<Log2FloorU64>();
         let lt_u64 = library.import::<LtU64>();
         let add_u64 = library.import::<AddU64>();
         let and_u64 = library.import::<AndU64>();
@@ -48,7 +48,7 @@ impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
             // stack: _ leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo
 
             dup3 dup3
-            call {log2_floor_u64}
+            call {log_2_floor_u64}
             // stack: _ leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo max_tree_height
 
             // Rename: max_tree_height -> h, leaf_index -> ret

@@ -7,7 +7,7 @@ use twenty_first::util_types::algebraic_hasher::Hashable;
 use twenty_first::util_types::mmr;
 
 use crate::arithmetic::u64::decr_u64::DecrU64;
-use crate::arithmetic::u64::log2_floor_u64::Log2FloorU64;
+use crate::arithmetic::u64::log_2_floor_u64::Log2FloorU64;
 use crate::arithmetic::u64::pow2_u64::Pow2StaticU64;
 use crate::library::Library;
 use crate::snippet::Snippet;
@@ -27,13 +27,13 @@ impl Snippet for MmrLeftMostAncestor {
         let entrypoint = Self::entrypoint();
         let decr_u64 = library.import::<DecrU64>();
         let pow2_u64 = library.import::<Pow2StaticU64>();
-        let log2_floor_u64 = library.import::<Log2FloorU64>();
+        let log_2_floor_u64 = library.import::<Log2FloorU64>();
         format!(
             "
             // Before: _ node_index_hi node_index_lo
             // After: _ leftmost_ancestor_hi leftmost_ancestor_lo height
             {entrypoint}:
-                call {log2_floor_u64}
+                call {log_2_floor_u64}
                 // stack: _ log2_floor
 
                 dup0
