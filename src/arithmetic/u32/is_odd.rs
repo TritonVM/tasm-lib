@@ -33,9 +33,14 @@ impl NewSnippet for U32IsOdd {
         let odd_value = n | 1;
         push_hashable(&mut odd_stack, &odd_value);
 
+        let mut bfe_stack = get_init_tvm_stack();
+        let bfe_value = BFieldElement::new(BFieldElement::MAX);
+        push_hashable(&mut bfe_stack, &bfe_value);
+
         vec![
             ExecutionState::with_stack(even_stack),
             ExecutionState::with_stack(odd_stack),
+            ExecutionState::with_stack(bfe_stack),
         ]
     }
 }
