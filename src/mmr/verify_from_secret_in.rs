@@ -45,7 +45,10 @@ impl NewSnippet for MmrVerifyLeafMembershipFromSecretIn {
     }
 
     fn crash_conditions() -> Vec<&'static str> {
-        vec!["secret input is too short"]
+        vec![
+            "secret input is too short",
+            "leaf index is not strictly less than leaf count",
+        ]
     }
 
     // BEFORE: _ *peaks leaf_count_hi leaf_count_lo [digest (leaf_digest)]
