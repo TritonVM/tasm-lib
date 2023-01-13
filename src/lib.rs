@@ -28,6 +28,18 @@ pub struct ExecutionState {
     pub words_allocated: usize,
 }
 
+impl ExecutionState {
+    pub fn with_stack(stack: Vec<BFieldElement>) -> Self {
+        ExecutionState {
+            stack,
+            std_in: vec![],
+            secret_in: vec![],
+            memory: HashMap::default(),
+            words_allocated: 0,
+        }
+    }
+}
+
 pub struct ExecutionResult {
     pub output: Vec<BFieldElement>,
     pub final_stack: Vec<BFieldElement>,

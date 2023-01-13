@@ -5,7 +5,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
 use crate::snippet::{NewSnippet, Snippet};
-use crate::{get_init_tvm_stack, ExecutionState};
+use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 
 pub struct U32IsOdd();
 
@@ -23,19 +23,20 @@ impl NewSnippet for U32IsOdd {
     }
 
     fn gen_input_states() -> Vec<ExecutionState> {
-        let mut rng = rand::thread_rng();
-        let stack = vec![
-            get_init_tvm_stack(),
-            vec![BFieldElement::new(rng.next_u32() as u64)],
+        let n: u32 = rand::thread_rng().next_u32();
+
+        let mut even_stack = get_init_tvm_stack();
+        let even_value = n - (n & 1);
+        push_hashable(&mut even_stack, &even_value);
+
+        let mut odd_stack = get_init_tvm_stack();
+        let odd_value = n | 1;
+        push_hashable(&mut odd_stack, &odd_value);
+
+        vec![
+            ExecutionState::with_stack(even_stack),
+            ExecutionState::with_stack(odd_stack),
         ]
-        .concat();
-        vec![ExecutionState {
-            stack,
-            std_in: vec![],
-            secret_in: vec![],
-            memory: HashMap::default(),
-            words_allocated: 0,
-        }]
     }
 }
 
@@ -88,8 +89,13 @@ mod u32_is_odd_tests {
     use super::*;
 
     #[test]
-    fn new_snippet_test() {
+    fn is_odd_u32_test() {
         rust_tasm_equivalence_prop_new::<U32IsOdd>();
+    }
+
+    #[test]
+    fn is_odd_u32_benchmark() {
+        bench_and_write::<U32IsOdd>();
     }
 
     #[test]
@@ -126,10 +132,5 @@ mod u32_is_odd_tests {
             0,
             Some(&expected_stack),
         );
-    }
-
-    #[test]
-    fn benchmark_is_odd() {
-        bench_and_write::<U32IsOdd>();
     }
 }
