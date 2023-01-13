@@ -10,6 +10,17 @@ This repository helps get an overview of the run times of the consensus code and
 
 Please place code in the appropriate directories, or create them if non-existent.
 
+## Conventions
+### U64
+A `u64` type is stored on the stack as two `u32` elements that Triton VM provides native support for. A `u64` is stored with the least significant part on top of the stack and the most significant part below it. So if the least significant part is `st0`, then the most significant part is stored in `st1`.
+
+### Authentication Paths from Secret In
+1st element is a length indicator that specifies the authentication path length in number of digests. The length indicator must be a valid `u32`. Then follows the digests. The digests are ordered as: `[digest_0_element_4,digest_0_element_3, digest_0_element_2, digest_0_element_1, digest_0_element_0, digest_1_element_4, digest_1_element_3 ... ]`.
+
+If the length of the authentication path is not needed for the algorithem, i.e. its clear from the context, then the length indicator can be dropped to save a few cycles in the runtime.
+
+## Runtimes
+
 The lists below keep track of improvements to individual algorithms. If the
 cycle count changes because Triton VM is updated, or you find a better way of
 solving a problem, then add a new line to the appropriate table, add a comment
