@@ -15,9 +15,9 @@ use crate::{
     ExecutionState,
 };
 
-pub struct LoadAuthPathFromSecretIn;
+pub struct LoadAuthPathFromStdIn;
 
-impl NewSnippet for LoadAuthPathFromSecretIn {
+impl NewSnippet for LoadAuthPathFromStdIn {
     fn inputs() -> Vec<&'static str> {
         vec![""]
     }
@@ -27,24 +27,21 @@ impl NewSnippet for LoadAuthPathFromSecretIn {
     }
 
     fn crash_conditions() -> Vec<&'static str> {
-        vec!["Not enough elements in secret input"]
+        vec!["Not enough elements in std input"]
     }
 
     fn gen_input_states() -> Vec<crate::ExecutionState> {
         let mut init_vm_states: Vec<ExecutionState> = vec![];
         for ap_length in 0..MAX_MMR_HEIGHT {
             let ap_elements: Vec<Digest> = random_elements(ap_length);
-            let mut secret_in = vec![BFieldElement::new(ap_length as u64)];
+            let mut std_in = vec![BFieldElement::new(ap_length as u64)];
             for ap_element in ap_elements.iter() {
-                rust_shadowing_helper_functions::write_digest_to_secret_in(
-                    &mut secret_in,
-                    *ap_element,
-                );
+                rust_shadowing_helper_functions::write_digest_to_std_in(&mut std_in, *ap_element);
             }
             let init_vm_state = ExecutionState {
                 stack: get_init_tvm_stack(),
-                std_in: vec![],
-                secret_in,
+                std_in,
+                secret_in: vec![],
                 memory: HashMap::default(),
                 words_allocated: 0,
             };
@@ -55,19 +52,19 @@ impl NewSnippet for LoadAuthPathFromSecretIn {
     }
 }
 
-impl Snippet for LoadAuthPathFromSecretIn {
+impl Snippet for LoadAuthPathFromStdIn {
     fn stack_diff() -> isize {
         1
     }
 
     fn entrypoint() -> &'static str {
-        "load_auth_path_from_secret_in"
+        "load_auth_path_from_std_in"
     }
 
     fn function_body(library: &mut crate::library::Library) -> String {
         let entrypoint = Self::entrypoint();
 
-        let read_digest_from_secret_in = "divine\n".repeat(DIGEST_LENGTH);
+        let read_digest_from_std_in = "read_io\n".repeat(DIGEST_LENGTH);
 
         let set_length = library.import::<SetLength>();
         let push = library.import::<Push<DIGEST_LENGTH>>();
@@ -83,7 +80,7 @@ impl Snippet for LoadAuthPathFromSecretIn {
                 // AFTER: *auth_path
                 {entrypoint}:
                     // Read length of authentication path
-                    divine
+                    read_io
                     // _ total_auth_path_length
 
                     // It shouldn't be necessary to validate that this is a u32 since
@@ -113,7 +110,7 @@ impl Snippet for LoadAuthPathFromSecretIn {
                     dup2 dup2 eq skiz return
                     // _ total_auth_path_length i *auth_path
 
-                    {read_digest_from_secret_in}
+                    {read_digest_from_std_in}
                     // _ total_auth_path_length i *auth_path [digests (ap_element)]
 
                     call {push}
@@ -130,25 +127,25 @@ impl Snippet for LoadAuthPathFromSecretIn {
 
     fn rust_shadowing(
         stack: &mut Vec<twenty_first::shared_math::b_field_element::BFieldElement>,
-        _std_in: Vec<twenty_first::shared_math::b_field_element::BFieldElement>,
-        secret_in: Vec<twenty_first::shared_math::b_field_element::BFieldElement>,
+        std_in: Vec<twenty_first::shared_math::b_field_element::BFieldElement>,
+        _secret_in: Vec<twenty_first::shared_math::b_field_element::BFieldElement>,
         memory: &mut std::collections::HashMap<
             twenty_first::shared_math::b_field_element::BFieldElement,
             twenty_first::shared_math::b_field_element::BFieldElement,
         >,
     ) {
-        let mut secret_in_cursor = 0;
-        let total_auth_path_length: u32 = secret_in[secret_in_cursor].value().try_into().unwrap();
-        secret_in_cursor += 1;
+        let mut std_in_cursor = 0;
+        let total_auth_path_length: u32 = std_in[std_in_cursor].value().try_into().unwrap();
+        std_in_cursor += 1;
 
         let auth_path_pointer = BFieldElement::zero();
         rust_shadowing_helper_functions::list_new(auth_path_pointer, memory);
 
         let mut i = 0;
         while i != total_auth_path_length {
-            let ap_element = rust_shadowing_helper_functions::read_digest_from_secret_in(
-                &secret_in,
-                &mut secret_in_cursor,
+            let ap_element = rust_shadowing_helper_functions::read_digest_from_std_in(
+                &std_in,
+                &mut std_in_cursor,
             );
             rust_shadowing_helper_functions::list_push(
                 auth_path_pointer,
@@ -164,12 +161,12 @@ impl Snippet for LoadAuthPathFromSecretIn {
 }
 
 #[cfg(test)]
-mod load_auth_path_from_secret_in_tests {
+mod load_auth_path_from_std_in_tests {
     use super::*;
     use crate::test_helpers::rust_tasm_equivalence_prop_new;
 
     #[test]
     fn new_snippet_test() {
-        rust_tasm_equivalence_prop_new::<LoadAuthPathFromSecretIn>();
+        rust_tasm_equivalence_prop_new::<LoadAuthPathFromStdIn>();
     }
 }
