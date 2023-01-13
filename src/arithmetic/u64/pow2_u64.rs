@@ -6,13 +6,38 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::algebraic_hasher::Hashable;
 
 use crate::library::Library;
-use crate::snippet::Snippet;
+use crate::snippet::{NewSnippet, Snippet};
+use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 
 /// Consumes top element which is interpreted as exponent. Pushes a
 /// U32<2> to the top of the stack. So grows the stack by 1.
 pub struct Pow2MemoryUnsafeU64();
 pub struct Pow2ArithmeticFlatU64();
 pub struct Pow2StaticU64();
+
+impl NewSnippet for Pow2StaticU64 {
+    fn inputs() -> Vec<&'static str> {
+        vec!["i"]
+    }
+
+    fn outputs() -> Vec<&'static str> {
+        vec!["(2^i)_hi", "(2^i)_lo"]
+    }
+
+    fn crash_conditions() -> Vec<&'static str> {
+        vec![]
+    }
+
+    fn gen_input_states() -> Vec<ExecutionState> {
+        (0..64)
+            .map(|i: u32| {
+                let mut stack = get_init_tvm_stack();
+                push_hashable(&mut stack, &i);
+                ExecutionState::with_stack(stack)
+            })
+            .collect()
+    }
+}
 
 impl Snippet for Pow2StaticU64 {
     fn stack_diff() -> isize {
@@ -292,9 +317,20 @@ mod tests {
     use num::One;
 
     use crate::get_init_tvm_stack;
-    use crate::test_helpers::rust_tasm_equivalence_prop;
+    use crate::snippet_bencher::bench_and_write;
+    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
+
+    #[test]
+    fn pow2_static_test() {
+        rust_tasm_equivalence_prop_new::<Pow2StaticU64>();
+    }
+
+    #[test]
+    fn pow2_static_benchmark() {
+        bench_and_write::<Pow2StaticU64>();
+    }
 
     fn prop_exp_memory(exponent: u8) {
         let mut init_stack = get_init_tvm_stack();
