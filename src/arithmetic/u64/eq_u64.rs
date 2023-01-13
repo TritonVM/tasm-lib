@@ -1,13 +1,41 @@
 use std::collections::HashMap;
 
 use num::{One, Zero};
+use rand::RngCore;
 use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
-use crate::snippet::Snippet;
+use crate::snippet::{NewSnippet, Snippet};
+use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 
 pub struct EqU64;
+
+impl NewSnippet for EqU64 {
+    fn inputs() -> Vec<&'static str> {
+        vec!["rhs_hi", "rhs_lo", "lhs_hi", "lhs_lo"]
+    }
+
+    fn outputs() -> Vec<&'static str> {
+        vec!["rhs_hi == lhs_hi && rhs_lo == rhs_lo"]
+    }
+
+    fn crash_conditions() -> Vec<&'static str> {
+        vec![]
+    }
+
+    fn gen_input_states() -> Vec<ExecutionState> {
+        let mut rng = rand::thread_rng();
+        let rhs = U32s::<2>::try_from(rng.next_u64()).unwrap();
+        let lhs = U32s::<2>::try_from(rng.next_u64()).unwrap();
+
+        let mut stack = get_init_tvm_stack();
+        push_hashable(&mut stack, &rhs);
+        push_hashable(&mut stack, &lhs);
+
+        vec![ExecutionState::with_stack(stack)]
+    }
+}
 
 impl Snippet for EqU64 {
     fn stack_diff() -> isize {
@@ -70,9 +98,20 @@ mod tests {
     use twenty_first::util_types::algebraic_hasher::Hashable;
 
     use crate::get_init_tvm_stack;
-    use crate::test_helpers::rust_tasm_equivalence_prop;
+    use crate::snippet_bencher::bench_and_write;
+    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
+
+    #[test]
+    fn eq_u64_test() {
+        rust_tasm_equivalence_prop_new::<EqU64>();
+    }
+
+    #[test]
+    fn eq_u64_benchmark() {
+        bench_and_write::<EqU64>();
+    }
 
     #[test]
     fn u32s_2_eq_false() {

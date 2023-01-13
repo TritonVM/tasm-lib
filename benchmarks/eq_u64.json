@@ -1,0 +1,7 @@
+[
+  {
+    "name": "eq_u64",
+    "processor_table_height": 10,
+    "hash_table_height": 0
+  }
+]
