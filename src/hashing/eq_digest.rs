@@ -1,11 +1,42 @@
 use std::collections::HashMap;
 
+use rand::Rng;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::rescue_prime_digest::Digest;
 
-use crate::snippet::Snippet;
+use crate::{
+    get_init_tvm_stack, push_hashable,
+    snippet::{NewSnippet, Snippet},
+    ExecutionState,
+};
 
 pub struct EqDigest();
+
+impl NewSnippet for EqDigest {
+    fn inputs() -> Vec<&'static str> {
+        vec!["b4", "b3", "b2", "b1", "b0", "a4", "a3", "a2", "a1", "a0"]
+    }
+
+    fn outputs() -> Vec<&'static str> {
+        vec!["(a3 = b3)·(a2 = b2)·(a1 = b1)·(a4 = b4)·(b0 = a0)"]
+    }
+
+    fn crash_conditions() -> Vec<&'static str> {
+        vec![]
+    }
+
+    fn gen_input_states() -> Vec<ExecutionState> {
+        let mut rng = rand::thread_rng();
+        let digest_a: Digest = rng.gen();
+        let digest_b: Digest = rng.gen();
+
+        let mut stack = get_init_tvm_stack();
+        push_hashable(&mut stack, &digest_b);
+        push_hashable(&mut stack, &digest_a);
+
+        vec![ExecutionState::with_stack(stack)]
+    }
+}
 
 impl Snippet for EqDigest {
     fn stack_diff() -> isize {
@@ -72,50 +103,18 @@ impl Snippet for EqDigest {
 
 #[cfg(test)]
 mod tests {
-    use rand::Rng;
-    use twenty_first::shared_math::rescue_prime_digest::Digest;
-    use twenty_first::util_types::algebraic_hasher::Hashable;
-
-    use crate::get_init_tvm_stack;
-    use crate::test_helpers::rust_tasm_equivalence_prop;
+    use crate::snippet_bencher::bench_and_write;
+    use crate::test_helpers::rust_tasm_equivalence_prop_new;
 
     use super::*;
 
-    fn eq_digest_prop(digest_a: Digest, digest_b: Digest) {
-        let mut stack = get_init_tvm_stack();
-        stack.append(&mut digest_b.to_sequence().into_iter().rev().collect());
-        stack.append(&mut digest_a.to_sequence().into_iter().rev().collect());
-
-        let stdin = &[];
-        let secret_in = &[];
-        let mut memory = HashMap::default();
-        let words_allocated = 0;
-        let expected = None;
-        let _execution_result = rust_tasm_equivalence_prop::<EqDigest>(
-            &stack,
-            stdin,
-            secret_in,
-            &mut memory,
-            words_allocated,
-            expected,
-        );
+    #[test]
+    fn swap_digest_test() {
+        rust_tasm_equivalence_prop_new::<EqDigest>();
     }
 
     #[test]
-    fn eq_digest_test() {
-        {
-            let digest_a = Digest::new([1, 2, 3, 4, 5].map(BFieldElement::new));
-            let digest_b = Digest::new([6, 7, 8, 9, 10].map(BFieldElement::new));
-
-            // Rust and tasm are equivalent when `eq_digest` is true.
-            eq_digest_prop(digest_a, digest_a);
-
-            // Rust and tasm are equivalent when `eq_digest` is false.
-            eq_digest_prop(digest_a, digest_b);
-
-            let mut rng = rand::thread_rng();
-            let digest_c: Digest = rng.gen();
-            eq_digest_prop(digest_a, digest_c);
-        }
+    fn swap_digest_benchmark() {
+        bench_and_write::<EqDigest>();
     }
 }

@@ -1,11 +1,39 @@
 use std::collections::HashMap;
 
-use twenty_first::shared_math::b_field_element::BFieldElement;
+use rand::Rng;
 use twenty_first::shared_math::rescue_prime_regular::DIGEST_LENGTH;
+use twenty_first::shared_math::{b_field_element::BFieldElement, rescue_prime_digest::Digest};
 
-use crate::snippet::Snippet;
+use crate::snippet::{NewSnippet, Snippet};
+use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 
 pub struct SwapDigest();
+
+impl NewSnippet for SwapDigest {
+    fn inputs() -> Vec<&'static str> {
+        vec!["b4", "b3", "b2", "b1", "b0", "a4", "a3", "a2", "a1", "a0"]
+    }
+
+    fn outputs() -> Vec<&'static str> {
+        vec!["a4", "a3", "a2", "a1", "a0", "b4", "b3", "b2", "b1", "b0"]
+    }
+
+    fn crash_conditions() -> Vec<&'static str> {
+        vec![]
+    }
+
+    fn gen_input_states() -> Vec<ExecutionState> {
+        let mut rng = rand::thread_rng();
+        let digest_a: Digest = rng.gen();
+        let digest_b: Digest = rng.gen();
+
+        let mut stack = get_init_tvm_stack();
+        push_hashable(&mut stack, &digest_b);
+        push_hashable(&mut stack, &digest_a);
+
+        vec![ExecutionState::with_stack(stack)]
+    }
+}
 
 impl Snippet for SwapDigest {
     fn stack_diff() -> isize {
@@ -59,55 +87,27 @@ impl Snippet for SwapDigest {
     ) {
         let h = stack.len();
         for i in 0..DIGEST_LENGTH {
-            stack.swap(h - i - 1, h - i - DIGEST_LENGTH - 1);
+            let ai_pos = h - i - 1;
+            let bi_pos = h - i - DIGEST_LENGTH - 1;
+            stack.swap(ai_pos, bi_pos);
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use rand::Rng;
-    use twenty_first::shared_math::rescue_prime_digest::Digest;
-    use twenty_first::util_types::algebraic_hasher::Hashable;
-
-    use crate::get_init_tvm_stack;
-    use crate::test_helpers::rust_tasm_equivalence_prop;
+    use crate::snippet_bencher::bench_and_write;
+    use crate::test_helpers::rust_tasm_equivalence_prop_new;
 
     use super::*;
 
-    fn swap_digest_prop(digest_a: Digest, digest_b: Digest) {
-        let mut stack = get_init_tvm_stack();
-        stack.append(&mut digest_b.to_sequence().into_iter().rev().collect());
-        stack.append(&mut digest_a.to_sequence().into_iter().rev().collect());
-
-        let stdin = &[];
-        let secret_in = &[];
-        let mut memory = HashMap::default();
-        let words_allocated = 0;
-        let expected = None;
-        let _execution_result = rust_tasm_equivalence_prop::<SwapDigest>(
-            &stack,
-            stdin,
-            secret_in,
-            &mut memory,
-            words_allocated,
-            expected,
-        );
+    #[test]
+    fn swap_digest_test() {
+        rust_tasm_equivalence_prop_new::<SwapDigest>();
     }
 
     #[test]
-    fn swap_digest_test() {
-        {
-            let digest_a = Digest::new([1, 2, 3, 4, 5].map(BFieldElement::new));
-            let digest_b = Digest::new([6, 7, 8, 9, 10].map(BFieldElement::new));
-            swap_digest_prop(digest_a, digest_b);
-        }
-
-        {
-            let mut rng = rand::thread_rng();
-            let digest_a: Digest = rng.gen();
-            let digest_b: Digest = rng.gen();
-            swap_digest_prop(digest_a, digest_b);
-        }
+    fn swap_digest_benchmark() {
+        bench_and_write::<SwapDigest>();
     }
 }
