@@ -37,10 +37,20 @@ impl NewSnippet for U32IsOdd {
         let bfe_value = BFieldElement::new(BFieldElement::MAX);
         push_hashable(&mut bfe_stack, &bfe_value);
 
+        let mut above_max_even_stack = get_init_tvm_stack();
+        let above_max_even_value = BFieldElement::new(2u64.pow(32));
+        push_hashable(&mut above_max_even_stack, &above_max_even_value);
+
+        let mut above_max_odd_stack = get_init_tvm_stack();
+        let above_max_odd_value = BFieldElement::new(2u64.pow(32) + 1);
+        push_hashable(&mut above_max_odd_stack, &above_max_odd_value);
+
         vec![
             ExecutionState::with_stack(even_stack),
             ExecutionState::with_stack(odd_stack),
             ExecutionState::with_stack(bfe_stack),
+            ExecutionState::with_stack(above_max_even_stack),
+            ExecutionState::with_stack(above_max_odd_stack),
         ]
     }
 }
@@ -76,8 +86,8 @@ impl Snippet for U32IsOdd {
         _secret_in: Vec<BFieldElement>,
         _memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
-        let value: u32 = stack.pop().unwrap().try_into().unwrap();
-        stack.push(BFieldElement::new((value % 2) as u64));
+        let value: u64 = stack.pop().unwrap().value();
+        stack.push(BFieldElement::new(value % 2));
     }
 }
 
@@ -85,11 +95,9 @@ impl Snippet for U32IsOdd {
 mod u32_is_odd_tests {
     use rand::{thread_rng, RngCore};
 
-    use crate::{
-        get_init_tvm_stack,
-        snippet_bencher::bench_and_write,
-        test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new},
-    };
+    use crate::get_init_tvm_stack;
+    use crate::snippet_bencher::bench_and_write;
+    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
 
