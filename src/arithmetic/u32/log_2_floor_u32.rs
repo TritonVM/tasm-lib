@@ -3,9 +3,64 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::log_2_floor;
 
 use crate::library::Library;
-use crate::snippet::Snippet;
+use crate::snippet::{NewSnippet, Snippet};
+use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 
 pub struct Log2FloorU32();
+
+impl NewSnippet for Log2FloorU32 {
+    fn inputs() -> Vec<&'static str> {
+        vec!["value"]
+    }
+
+    fn outputs() -> Vec<&'static str> {
+        vec!["log_2_floor(value)"]
+    }
+
+    fn crash_conditions() -> Vec<&'static str> {
+        vec![]
+    }
+
+    fn gen_input_states() -> Vec<ExecutionState> {
+        let mut states: Vec<ExecutionState> = (0..32)
+            .map(|log_i| {
+                let mut stack = get_init_tvm_stack();
+                push_hashable(&mut stack, &(2u32.pow(log_i)));
+
+                ExecutionState::with_stack(stack)
+            })
+            .collect();
+
+        states.insert(0, {
+            let mut zero_stack = get_init_tvm_stack();
+            push_hashable(&mut zero_stack, &0u32);
+            ExecutionState::with_stack(zero_stack)
+        });
+
+        states
+    }
+
+    fn run_tasm(execution_state: &mut ExecutionState) -> crate::ExecutionResult {
+        // TODO: Consider adding canaries here to ensure that stack is not modified below where the function
+
+        let stack_prior = execution_state.stack.clone();
+        let ret = <Self as Snippet>::run_tasm(
+            &mut execution_state.stack,
+            execution_state.std_in.clone(),
+            execution_state.secret_in.clone(),
+            &mut execution_state.memory,
+            execution_state.words_allocated,
+        );
+        let stack_after = execution_state.stack.clone();
+
+        assert_eq!(
+            stack_prior[0..(stack_prior.len() - Self::inputs().len())],
+            stack_after[0..(stack_after.len() - Self::outputs().len())]
+        );
+
+        ret
+    }
+}
 
 impl Snippet for Log2FloorU32 {
     fn stack_diff() -> isize {
@@ -73,9 +128,20 @@ mod tests {
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
     use crate::get_init_tvm_stack;
-    use crate::test_helpers::rust_tasm_equivalence_prop;
+    use crate::snippet_bencher::bench_and_write;
+    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
+
+    #[test]
+    fn log_2_floor_u32_test() {
+        rust_tasm_equivalence_prop_new::<Log2FloorU32>();
+    }
+
+    #[test]
+    fn log_2_floor_u32_benchmark() {
+        bench_and_write::<Log2FloorU32>();
+    }
 
     #[test]
     fn u32_log2_floor() {
