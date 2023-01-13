@@ -6,6 +6,7 @@ pub mod get_height_from_data_index;
 pub mod leaf_index_to_mt_index;
 pub mod left_child;
 pub mod leftmost_ancestor;
+pub mod load_from_secret_in_then_verify;
 pub mod non_leaf_nodes_left;
 pub mod right_ancestor_count_and_own_height;
 pub mod right_child;

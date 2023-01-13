@@ -81,7 +81,7 @@ impl Snippet for LoadAuthPathFromSecretIn {
         format!(
             "
                 // BEFORE: _
-                // AFTER: *auth_path
+                // AFTER: _ *auth_path
                 {entrypoint}:
                     // Read length of authentication path
                     divine
