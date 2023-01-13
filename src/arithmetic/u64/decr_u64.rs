@@ -6,9 +6,40 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::algebraic_hasher::Hashable;
 
 use crate::library::Library;
-use crate::snippet::Snippet;
+use crate::snippet::{NewSnippet, Snippet};
+use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 
 pub struct DecrU64();
+
+impl NewSnippet for DecrU64 {
+    fn inputs() -> Vec<&'static str> {
+        vec!["value_hi", "value_lo"]
+    }
+
+    fn outputs() -> Vec<&'static str> {
+        vec!["(value - 1)_hi", "(value - 1)_lo"]
+    }
+
+    fn crash_conditions() -> Vec<&'static str> {
+        vec![]
+    }
+
+    fn gen_input_states() -> Vec<ExecutionState> {
+        let values = vec![
+            // U32s::<2>::zero(),
+            U32s::<2>::new([0, 14]),
+            U32s::<2>::new([u32::MAX, 13]),
+        ];
+        values
+            .into_iter()
+            .map(|value| {
+                let mut stack = get_init_tvm_stack();
+                push_hashable(&mut stack, &value);
+                ExecutionState::with_stack(stack)
+            })
+            .collect()
+    }
+}
 
 impl Snippet for DecrU64 {
     fn stack_diff() -> isize {
@@ -70,83 +101,58 @@ impl Snippet for DecrU64 {
 
 #[cfg(test)]
 mod tests {
+    use num::Zero;
     use rand::Rng;
 
-    use crate::get_init_tvm_stack;
-    use crate::test_helpers::rust_tasm_equivalence_prop;
+    use crate::snippet_bencher::bench_and_write;
+    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
+    use crate::{get_init_tvm_stack, push_hashable};
 
     use super::*;
 
     #[test]
-    #[should_panic]
-    fn u32s_2_decr_negative_tasm() {
-        let mut init_stack = get_init_tvm_stack();
-        let zero = U32s::new([0, 0]);
-        init_stack.push(zero.as_ref()[1].into());
-        init_stack.push(zero.as_ref()[0].into());
+    fn decr_u64_test() {
+        rust_tasm_equivalence_prop_new::<DecrU64>();
+    }
 
-        let mut tasm_stack = init_stack.clone();
-        let _execution_result =
-            DecrU64::run_tasm(&mut tasm_stack, vec![], vec![], &mut HashMap::default(), 0);
+    #[test]
+    fn decr_u64_benchmark() {
+        bench_and_write::<DecrU64>();
     }
 
     #[test]
     #[should_panic]
-    fn u32s_2_decr_negative_rust() {
-        let mut init_stack = get_init_tvm_stack();
-        let zero = U32s::new([0, 0]);
-        init_stack.push(zero.as_ref()[1].into());
-        init_stack.push(zero.as_ref()[0].into());
-
-        let mut tasm_stack = init_stack.clone();
-        DecrU64::rust_shadowing(&mut tasm_stack, vec![], vec![], &mut HashMap::default());
+    fn decr_u64_negative_tasm_test() {
+        let mut stack = get_init_tvm_stack();
+        push_hashable(&mut stack, &U32s::<2>::zero());
+        <DecrU64 as Snippet>::run_tasm(&mut stack, vec![], vec![], &mut HashMap::default(), 0);
     }
 
     #[test]
-    fn u32s_2_decr_simple_tasm() {
-        let some_value = U32s::<2>::new([0, 14]);
-        let mut tasm_stack = get_init_tvm_stack();
-        tasm_stack.push(some_value.as_ref()[1].into());
-        tasm_stack.push(some_value.as_ref()[0].into());
-
-        let _execution_result =
-            DecrU64::run_tasm(&mut tasm_stack, vec![], vec![], &mut HashMap::default(), 0);
-
-        let expected_res = U32s::<2>::new([u32::MAX, 13]);
-        let mut expected_stack = get_init_tvm_stack();
-        expected_stack.push(expected_res.as_ref()[1].into());
-        expected_stack.push(expected_res.as_ref()[0].into());
-        assert_eq!(expected_stack, tasm_stack);
+    #[should_panic]
+    fn decr_u64_negative_rust_test() {
+        let mut stack = get_init_tvm_stack();
+        push_hashable(&mut stack, &U32s::<2>::zero());
+        DecrU64::rust_shadowing(&mut stack, vec![], vec![], &mut HashMap::default());
     }
 
     #[test]
-    fn u32s_2_decr_prop() {
-        prop_decr(U32s::new([u32::MAX, 0]));
-        prop_decr(U32s::new([0, u32::MAX]));
-        prop_decr(U32s::new([u32::MAX, u32::MAX - 1]));
-        prop_decr(U32s::new([0, 1]));
+    fn decr_u64_pbt() {
+        prop_decr_u64(U32s::new([u32::MAX, 0]));
+        prop_decr_u64(U32s::new([0, u32::MAX]));
+        prop_decr_u64(U32s::new([u32::MAX, u32::MAX - 1]));
+        prop_decr_u64(U32s::new([0, 1]));
 
         let mut rng = rand::thread_rng();
         for _ in 0..10 {
-            prop_decr(U32s::new([0, rng.gen()]));
-            prop_decr(U32s::new([rng.gen(), rng.gen()]));
+            prop_decr_u64(U32s::new([0, rng.gen()]));
+            prop_decr_u64(U32s::new([rng.gen(), rng.gen()]));
         }
     }
 
-    fn prop_decr(some_value: U32s<2>) {
-        let mut init_stack = get_init_tvm_stack();
-        for elem in some_value.to_sequence().into_iter().rev() {
-            init_stack.push(elem);
-        }
-
-        let expected = None;
-        let _execution_result = rust_tasm_equivalence_prop::<DecrU64>(
-            &init_stack,
-            &[],
-            &[],
-            &mut HashMap::default(),
-            0,
-            expected,
-        );
+    fn prop_decr_u64(value: U32s<2>) {
+        let mut stack = get_init_tvm_stack();
+        push_hashable(&mut stack, &value);
+        rust_tasm_equivalence_prop::<DecrU64>(&stack, &[], &[], &mut HashMap::default(), 0, None);
     }
 }

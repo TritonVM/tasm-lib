@@ -23,7 +23,7 @@ impl NewSnippet for AddU64 {
     }
 
     fn crash_conditions() -> Vec<&'static str> {
-        vec![]
+        vec!["if (lhs + rhs) overflows u64"]
     }
 
     fn gen_input_states() -> Vec<ExecutionState> {
