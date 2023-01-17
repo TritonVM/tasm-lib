@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use num::One;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
+use crate::library::Library;
 use crate::snippet::Snippet;
 
 pub struct Push<const N: usize>;
@@ -20,7 +21,7 @@ impl<const N: usize> Snippet for Push<N> {
     }
 
     // Push *one* element of size N to stack
-    fn function_body(_library: &mut crate::library::Library) -> String {
+    fn function_body(_library: &mut Library) -> String {
         assert!(N < 17, "Max element size supported for list is 16");
 
         // write the elements to memory

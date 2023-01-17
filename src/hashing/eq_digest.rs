@@ -5,7 +5,9 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::rescue_prime_digest::Digest;
 
 use crate::{
-    get_init_tvm_stack, push_hashable,
+    get_init_tvm_stack,
+    library::Library,
+    push_hashable,
     snippet::{NewSnippet, Snippet},
     ExecutionState,
 };
@@ -47,7 +49,7 @@ impl Snippet for EqDigest {
         "eq_digest"
     }
 
-    fn function_body(_library: &mut crate::library::Library) -> String {
+    fn function_body(_library: &mut Library) -> String {
         let entrypoint = Self::entrypoint();
         format!(
             "

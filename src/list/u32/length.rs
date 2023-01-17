@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
+use crate::library::Library;
 use crate::snippet::Snippet;
 
 // Called "Long" because this logic can be shortened
@@ -17,7 +18,7 @@ impl Snippet for LengthLong {
         "list_u32_length_long"
     }
 
-    fn function_body(_library: &mut crate::library::Library) -> String {
+    fn function_body(_library: &mut Library) -> String {
         let entry_point = Self::entrypoint();
         // Before: _ *list
         // After: _ list_length_u32
@@ -34,9 +35,9 @@ impl Snippet for LengthLong {
     }
 
     fn rust_shadowing(
-        stack: &mut Vec<twenty_first::shared_math::b_field_element::BFieldElement>,
-        _std_in: Vec<twenty_first::shared_math::b_field_element::BFieldElement>,
-        _secret_in: Vec<twenty_first::shared_math::b_field_element::BFieldElement>,
+        stack: &mut Vec<BFieldElement>,
+        _std_in: Vec<BFieldElement>,
+        _secret_in: Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
         // Find the list in memory and push its length to the top of the stack
@@ -59,7 +60,7 @@ impl Snippet for LengthShort {
         "list_u32_length_short"
     }
 
-    fn function_body(_library: &mut crate::library::Library) -> String {
+    fn function_body(_library: &mut Library) -> String {
         let entry_point = Self::entrypoint();
         // Before: _ *list
         // After: _ *list list_length_u32
@@ -74,9 +75,9 @@ impl Snippet for LengthShort {
     }
 
     fn rust_shadowing(
-        stack: &mut Vec<twenty_first::shared_math::b_field_element::BFieldElement>,
-        _std_in: Vec<twenty_first::shared_math::b_field_element::BFieldElement>,
-        _secret_in: Vec<twenty_first::shared_math::b_field_element::BFieldElement>,
+        stack: &mut Vec<BFieldElement>,
+        _std_in: Vec<BFieldElement>,
+        _secret_in: Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
         // Find the list in memory and push its length to the top of the stack

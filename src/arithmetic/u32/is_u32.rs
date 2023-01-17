@@ -23,7 +23,7 @@ impl NewSnippet for IsU32 {
         vec![]
     }
 
-    fn gen_input_states() -> Vec<crate::ExecutionState> {
+    fn gen_input_states() -> Vec<ExecutionState> {
         let n: u32 = rand::thread_rng().next_u32();
 
         let mut true_stack = get_init_tvm_stack();
@@ -38,7 +38,7 @@ impl NewSnippet for IsU32 {
         ]
     }
 
-    fn run_tasm(execution_state: &mut crate::ExecutionState) -> crate::ExecutionResult {
+    fn run_tasm(execution_state: &mut ExecutionState) -> crate::ExecutionResult {
         // TODO: Consider adding canaries here to ensure that stack is not modified below where the function
 
         let stack_prior = execution_state.stack.clone();

@@ -1,6 +1,9 @@
+use std::collections::HashMap;
+
 use num::One;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
+use crate::library::Library;
 use crate::snippet::Snippet;
 
 pub struct Pop<const N: usize>;
@@ -18,7 +21,7 @@ impl<const N: usize> Snippet for Pop<N> {
 
     /// Pop last element from list. Does *not* actually delete the last
     /// element but instead leaves it in memory.
-    fn function_body(_library: &mut crate::library::Library) -> String {
+    fn function_body(_library: &mut Library) -> String {
         let entry_point = Self::entrypoint();
 
         let mut code_to_read_elements = String::default();
@@ -84,7 +87,7 @@ impl<const N: usize> Snippet for Pop<N> {
         stack: &mut Vec<BFieldElement>,
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,
-        memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
+        memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
         let list_address = stack.pop().unwrap();
         let initial_list_length = memory[&list_address];
@@ -105,8 +108,6 @@ impl<const N: usize> Snippet for Pop<N> {
 
 #[cfg(test)]
 mod tests_pop {
-    use std::collections::HashMap;
-
     use itertools::Itertools;
     use num::Zero;
     use rand::{thread_rng, RngCore};

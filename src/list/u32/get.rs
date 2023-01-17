@@ -84,8 +84,6 @@ impl<const N: usize> Snippet for Get<N> {
 
 #[cfg(test)]
 mod get_element_tests {
-    use std::collections::HashMap;
-
     use itertools::Itertools;
     use rand::{thread_rng, RngCore};
     use twenty_first::shared_math::b_field_element::BFieldElement;

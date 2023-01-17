@@ -4,7 +4,7 @@ use twenty_first::shared_math::other::log_2_floor;
 
 use crate::library::Library;
 use crate::snippet::{NewSnippet, Snippet};
-use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
+use crate::{get_init_tvm_stack, push_hashable, ExecutionResult, ExecutionState};
 
 pub struct Log2FloorU32();
 
@@ -41,7 +41,7 @@ impl NewSnippet for Log2FloorU32 {
         states
     }
 
-    fn run_tasm(execution_state: &mut ExecutionState) -> crate::ExecutionResult {
+    fn run_tasm(execution_state: &mut ExecutionState) -> ExecutionResult {
         // TODO: Consider adding canaries here to ensure that stack is not modified below where the function
 
         let stack_prior = execution_state.stack.clone();

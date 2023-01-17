@@ -5,6 +5,7 @@ use twenty_first::shared_math::other::log_2_floor;
 
 use crate::arithmetic::u64::incr_u64::IncrU64;
 use crate::arithmetic::u64::log_2_floor_u64::Log2FloorU64;
+use crate::library::Library;
 use crate::snippet::Snippet;
 
 pub struct GetHeightFromDataIndex;
@@ -19,7 +20,7 @@ impl Snippet for GetHeightFromDataIndex {
         "get_height_from_data_index"
     }
 
-    fn function_body(library: &mut crate::library::Library) -> String {
+    fn function_body(library: &mut Library) -> String {
         let entrypoint = Self::entrypoint();
         let incr_u64 = library.import::<IncrU64>();
         let log_2_floor_u64 = library.import::<Log2FloorU64>();

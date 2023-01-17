@@ -53,7 +53,7 @@ impl NewSnippet for MmrVerifyLeafMembershipFromSecretIn {
 
     // BEFORE: _ *peaks leaf_count_hi leaf_count_lo [digest (leaf_digest)]
     // AFTER:  _ leaf_index_hi leaf_index_lo validation_result
-    fn gen_input_states() -> Vec<crate::ExecutionState> {
+    fn gen_input_states() -> Vec<ExecutionState> {
         type H = RescuePrimeRegular;
 
         /// Prepare the part of the state that can be derived from the MMR without

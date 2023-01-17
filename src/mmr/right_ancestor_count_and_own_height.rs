@@ -5,6 +5,7 @@ use twenty_first::util_types::mmr;
 
 use crate::arithmetic::u64::eq_u64::EqU64;
 use crate::arithmetic::u64::lt_u64::LtU64;
+use crate::library::Library;
 use crate::snippet::Snippet;
 
 use super::left_child::MmrLeftChild;
@@ -28,7 +29,7 @@ impl Snippet for MmrRightAncestorCountAndHeight {
         "right_ancestor_count_and_own_height"
     }
 
-    fn function_body(library: &mut crate::library::Library) -> String
+    fn function_body(library: &mut Library) -> String
     where
         Self: Sized,
     {

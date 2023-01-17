@@ -1,12 +1,13 @@
 use std::collections::HashMap;
 
-use crate::library::Library;
-use crate::snippet::Snippet;
 use num::Zero;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::rescue_prime_digest::Digest;
 use twenty_first::shared_math::rescue_prime_regular::RescuePrimeRegular;
 use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
+
+use crate::library::Library;
+use crate::snippet::Snippet;
 
 pub struct MtApVerify();
 /// TVM assembly to verify Merkle authentication paths

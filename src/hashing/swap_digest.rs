@@ -1,9 +1,11 @@
 use std::collections::HashMap;
 
 use rand::Rng;
+use twenty_first::shared_math::b_field_element::BFieldElement;
+use twenty_first::shared_math::rescue_prime_digest::Digest;
 use twenty_first::shared_math::rescue_prime_regular::DIGEST_LENGTH;
-use twenty_first::shared_math::{b_field_element::BFieldElement, rescue_prime_digest::Digest};
 
+use crate::library::Library;
 use crate::snippet::{NewSnippet, Snippet};
 use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 
@@ -44,7 +46,7 @@ impl Snippet for SwapDigest {
         "swap_digest"
     }
 
-    fn function_body(_library: &mut crate::library::Library) -> String {
+    fn function_body(_library: &mut Library) -> String {
         let entrypoint = Self::entrypoint();
         format!(
             "

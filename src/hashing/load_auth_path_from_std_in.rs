@@ -1,13 +1,14 @@
 use std::collections::HashMap;
 
 use num::Zero;
-use twenty_first::shared_math::{
-    b_field_element::BFieldElement, other::random_elements, rescue_prime_digest::Digest,
-    rescue_prime_regular::DIGEST_LENGTH,
-};
+use twenty_first::shared_math::b_field_element::BFieldElement;
+use twenty_first::shared_math::other::random_elements;
+use twenty_first::shared_math::rescue_prime_digest::Digest;
+use twenty_first::shared_math::rescue_prime_regular::DIGEST_LENGTH;
 
 use crate::{
     get_init_tvm_stack,
+    library::Library,
     list::u32::{push::Push, set_length::SetLength},
     mmr::MAX_MMR_HEIGHT,
     rust_shadowing_helper_functions,
@@ -30,7 +31,7 @@ impl NewSnippet for LoadAuthPathFromStdIn {
         vec!["Not enough elements in std input"]
     }
 
-    fn gen_input_states() -> Vec<crate::ExecutionState> {
+    fn gen_input_states() -> Vec<ExecutionState> {
         let mut init_vm_states: Vec<ExecutionState> = vec![];
         for ap_length in 0..MAX_MMR_HEIGHT {
             let ap_elements: Vec<Digest> = random_elements(ap_length);
@@ -61,7 +62,7 @@ impl Snippet for LoadAuthPathFromStdIn {
         "load_auth_path_from_std_in"
     }
 
-    fn function_body(library: &mut crate::library::Library) -> String {
+    fn function_body(library: &mut Library) -> String {
         let entrypoint = Self::entrypoint();
 
         let read_digest_from_std_in = "read_io\n".repeat(DIGEST_LENGTH);
@@ -126,13 +127,10 @@ impl Snippet for LoadAuthPathFromStdIn {
     }
 
     fn rust_shadowing(
-        stack: &mut Vec<twenty_first::shared_math::b_field_element::BFieldElement>,
-        std_in: Vec<twenty_first::shared_math::b_field_element::BFieldElement>,
-        _secret_in: Vec<twenty_first::shared_math::b_field_element::BFieldElement>,
-        memory: &mut std::collections::HashMap<
-            twenty_first::shared_math::b_field_element::BFieldElement,
-            twenty_first::shared_math::b_field_element::BFieldElement,
-        >,
+        stack: &mut Vec<BFieldElement>,
+        std_in: Vec<BFieldElement>,
+        _secret_in: Vec<BFieldElement>,
+        memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
         let mut std_in_cursor = 0;
         let total_auth_path_length: u32 = std_in[std_in_cursor].value().try_into().unwrap();
