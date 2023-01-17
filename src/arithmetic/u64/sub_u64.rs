@@ -18,11 +18,11 @@ impl NewSnippet for SubU64 {
     }
 
     fn outputs() -> Vec<&'static str> {
-        vec!["(lhs + rhs)_hi", "(lhs + rhs)_lo"]
+        vec!["(lhs - rhs)_hi", "(lhs - rhs)_lo"]
     }
 
     fn crash_conditions() -> Vec<&'static str> {
-        vec!["if (lhs + rhs) overflows u64"]
+        vec!["if (lhs - rhs) overflows u64"]
     }
 
     fn gen_input_states() -> Vec<ExecutionState> {
