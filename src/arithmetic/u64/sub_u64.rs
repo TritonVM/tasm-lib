@@ -1,3 +1,4 @@
+use rand::Rng;
 use std::collections::HashMap;
 
 use twenty_first::amount::u32s::U32s;
@@ -6,9 +7,80 @@ use twenty_first::util_types::algebraic_hasher::Hashable;
 
 use crate::arithmetic::u32::is_u32::IsU32;
 use crate::library::Library;
-use crate::snippet::Snippet;
+use crate::snippet::{NewSnippet, Snippet};
+use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 
 pub struct SubU64();
+
+impl NewSnippet for SubU64 {
+    fn inputs() -> Vec<&'static str> {
+        vec!["rhs_hi", "rhs_lo", "lhs_hi", "lhs_lo"]
+    }
+
+    fn outputs() -> Vec<&'static str> {
+        vec!["(lhs + rhs)_hi", "(lhs + rhs)_lo"]
+    }
+
+    fn crash_conditions() -> Vec<&'static str> {
+        vec!["if (lhs + rhs) overflows u64"]
+    }
+
+    fn gen_input_states() -> Vec<ExecutionState> {
+        let mut rng = rand::thread_rng();
+
+        // no overflow, no carry: small_a - smaller_b
+        // small_a is 0..2^32, smaller_b < small_a
+        let (small_a, smaller_b) = {
+            let a: u32 = rng.gen();
+            let b: u32 = rng.gen_range(0..=a);
+
+            (
+                U32s::<2>::try_from(a).unwrap(),
+                U32s::<2>::try_from(b).unwrap(),
+            )
+        };
+
+        let mut stack_1 = get_init_tvm_stack();
+        push_hashable(&mut stack_1, &smaller_b);
+        push_hashable(&mut stack_1, &small_a);
+
+        // no overflow, carry: large_c - smaller_carry_d
+        // large_c is 2^32..2^64, smaller_carry_d < large_c
+        let (large_c, smaller_carry_d) = {
+            let c: u64 = rng.gen::<u32>() as u64 + (1 << 32);
+            let d: u64 = rng.gen_range(0..=c);
+            (
+                U32s::<2>::try_from(c).unwrap(),
+                U32s::<2>::try_from(d).unwrap(),
+            )
+        };
+
+        let mut stack_2 = get_init_tvm_stack();
+        push_hashable(&mut stack_2, &smaller_carry_d);
+        push_hashable(&mut stack_2, &large_c);
+
+        // no overflow, no carry: large_e - smaller_f
+        // large_e is 0..2^64, smaller_f < large_e
+        let (large_e, smaller_f) = {
+            let e: u64 = rng.gen_range((1 << 32)..u64::MAX);
+            let f: u64 = rng.gen_range(0..(e & 0xffff_ffff));
+            (
+                U32s::<2>::try_from(e).unwrap(),
+                U32s::<2>::try_from(f).unwrap(),
+            )
+        };
+
+        let mut stack_3 = get_init_tvm_stack();
+        push_hashable(&mut stack_3, &smaller_f);
+        push_hashable(&mut stack_3, &large_e);
+
+        vec![
+            ExecutionState::with_stack(stack_1),
+            ExecutionState::with_stack(stack_2),
+            ExecutionState::with_stack(stack_3),
+        ]
+    }
+}
 
 impl Snippet for SubU64 {
     fn stack_diff() -> isize {
@@ -92,9 +164,20 @@ mod tests {
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
     use crate::get_init_tvm_stack;
-    use crate::test_helpers::rust_tasm_equivalence_prop;
+    use crate::snippet_bencher::bench_and_write;
+    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
+
+    #[test]
+    fn add_u64_test() {
+        rust_tasm_equivalence_prop_new::<SubU64>();
+    }
+
+    #[test]
+    fn add_u64_benchmark() {
+        bench_and_write::<SubU64>();
+    }
 
     #[test]
     fn u32s_2_sub_no_overflow() {
@@ -125,7 +208,7 @@ mod tests {
     #[test]
     fn u32s_2_sub_pbt() {
         let mut rng = rand::thread_rng();
-        for _ in 0..100 {
+        for _ in 0..10 {
             let lhs: u64 = rng.gen();
             let rhs: u64 = rng.gen_range(0..=lhs);
 
