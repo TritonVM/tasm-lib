@@ -161,9 +161,9 @@ pub fn execute(
 
         // Cycle count is cycles it took to run program excluding the cycles that were
         // spent on preparing the stack
-        cycle_count: simulation_trace.processor_matrix.nrows() - init_code_length - 1,
+        cycle_count: simulation_trace.processor_trace.nrows() - init_code_length - 1,
 
         // Number of rows generated in the hash table after simulating program
-        hash_table_height: simulation_trace.hash_matrix.nrows(),
+        hash_table_height: simulation_trace.hash_trace.nrows(),
     }
 }

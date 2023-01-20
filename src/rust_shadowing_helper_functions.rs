@@ -1,10 +1,8 @@
 use std::collections::HashMap;
 
 use num::{One, Zero};
-use twenty_first::shared_math::{
-    b_field_element::BFieldElement, rescue_prime_digest::Digest,
-    rescue_prime_regular::DIGEST_LENGTH,
-};
+use twenty_first::shared_math::b_field_element::BFieldElement;
+use twenty_first::shared_math::rescue_prime_digest::{Digest, DIGEST_LENGTH};
 
 /// Read an element from a list.
 pub fn list_set<const N: usize>(

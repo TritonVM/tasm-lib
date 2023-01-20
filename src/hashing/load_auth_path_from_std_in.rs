@@ -1,20 +1,18 @@
 use std::collections::HashMap;
 
 use num::Zero;
+
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::random_elements;
 use twenty_first::shared_math::rescue_prime_digest::Digest;
-use twenty_first::shared_math::rescue_prime_regular::DIGEST_LENGTH;
+use twenty_first::shared_math::rescue_prime_digest::DIGEST_LENGTH;
 
-use crate::{
-    get_init_tvm_stack,
-    library::Library,
-    list::u32::{push::Push, set_length::SetLength},
-    mmr::MAX_MMR_HEIGHT,
-    rust_shadowing_helper_functions,
-    snippet::{NewSnippet, Snippet},
-    ExecutionState,
-};
+use crate::library::Library;
+use crate::list::u32::{push::Push, set_length::SetLength};
+use crate::mmr::MAX_MMR_HEIGHT;
+use crate::rust_shadowing_helper_functions;
+use crate::snippet::{NewSnippet, Snippet};
+use crate::{get_init_tvm_stack, ExecutionState};
 
 pub struct LoadAuthPathFromStdIn;
 

@@ -1,10 +1,11 @@
 use std::collections::HashMap;
 
 use num::Zero;
+
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::random_elements;
 use twenty_first::shared_math::rescue_prime_digest::Digest;
-use twenty_first::shared_math::rescue_prime_regular::DIGEST_LENGTH;
+use twenty_first::shared_math::rescue_prime_digest::DIGEST_LENGTH;
 
 use crate::{
     get_init_tvm_stack,
