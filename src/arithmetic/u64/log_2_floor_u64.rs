@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::log_2_floor;
 
-use crate::arithmetic::u32::log_2_floor_u32::Log2FloorU32;
 use crate::library::Library;
 use crate::snippet::Snippet;
 
@@ -17,9 +16,8 @@ impl Snippet for Log2FloorU64 {
         "log_2_floor_u64"
     }
 
-    fn function_body(library: &mut Library) -> String {
+    fn function_body(_library: &mut Library) -> String {
         let entrypoint = Self::entrypoint();
-        let log_2_floor_u32 = library.import::<Log2FloorU32>();
 
         // assumes that top of stack is a valid u32s<2>
         // BEFORE: _ value_hi value_lo
@@ -48,7 +46,7 @@ impl Snippet for Log2FloorU64 {
                     pop
                     // stack: _ value_hi
 
-                    call {log_2_floor_u32}
+                    log_2_floor
                     push 32
                     add
                     // stack: _ (log2_floor(value_hi) + 32)
@@ -62,7 +60,7 @@ impl Snippet for Log2FloorU64 {
                     // value_hi == 0
                     // stack: _ value_lo value_hi
                     pop
-                    call {log_2_floor_u32}
+                    log_2_floor
                     return
                 "
         )

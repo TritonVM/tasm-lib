@@ -4,6 +4,7 @@ use rand::RngCore;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
+use crate::pseudo::lsb::Lsb;
 use crate::snippet::{NewSnippet, Snippet};
 use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 
@@ -67,14 +68,15 @@ impl Snippet for U32IsOdd {
         "is_odd"
     }
 
-    fn function_body(_library: &mut Library) -> String {
+    fn function_body(library: &mut Library) -> String {
         let entrypoint = Self::entrypoint();
+        let lsb = library.import::<Lsb>();
         format!(
             "
                 // BEFORE: _ value
                 // AFTER: _ (value % 2)
                 {entrypoint}:
-                    lsb
+                    [{lsb}]
                     swap1
                     pop
                     return

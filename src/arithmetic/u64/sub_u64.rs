@@ -114,7 +114,7 @@ impl Snippet for SubU64 {
             {entrypoint}:
                 swap1  // -> _ hi_r lo_r lo_l hi_l
                 swap2  // -> _ hi_r hi_l lo_l lo_r
-                neg
+                [neg]
                 add    // -> _ hi_r hi_l (lo_l - lo_r)
 
                 dup0
@@ -125,7 +125,7 @@ impl Snippet for SubU64 {
                     call {entrypoint}_carry
 
                 swap2  // -> lo_diff hi_l hi_r
-                neg
+                [neg]
                 add    // -> lo_diff (hi_l - hi_r)
                 swap1  // -> (hi_l - hi_r) lo_diff
 
@@ -170,12 +170,12 @@ mod tests {
     use super::*;
 
     #[test]
-    fn add_u64_test() {
+    fn sub_u64_test() {
         rust_tasm_equivalence_prop_new::<SubU64>();
     }
 
     #[test]
-    fn add_u64_benchmark() {
+    fn sub_u64_benchmark() {
         bench_and_write::<SubU64>();
     }
 

@@ -27,7 +27,7 @@ impl Snippet for Div2U64 {
                 // AFTER: _ (value / 2)_hi (value / 2)_lo
                 {entrypoint}:
                     // Divide the lower number
-                    lsb
+                    [lsb]
                     pop
                     // stack: _ value_hi (value_lo / 2)
 
@@ -35,7 +35,7 @@ impl Snippet for Div2U64 {
                     swap1
                     // stack: _ (value_lo / 2) value_hi
 
-                    lsb
+                    [lsb]
                     // stack: _ (value_lo / 2) (value_hi / 2) (value_hi % 2)
 
                     push {two_pow_31}
