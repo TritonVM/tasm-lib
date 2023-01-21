@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 
+use crate::pseudo::{lsb::Lsb, neg::Neg};
 use crate::snippet::Snippet;
 
 #[derive(Debug, Default)]
@@ -16,12 +17,17 @@ impl Library {
         Self::default()
     }
 
+    pub fn with_pseudo_instructions() -> Self {
+        let mut library = Self::empty();
+        library.import::<Lsb>();
+        library.import::<Neg>();
+        library
+    }
+
     pub fn with_preallocated_memory(words_allocated: usize) -> Self {
-        Self {
-            seen_snippets: HashSet::default(),
-            function_bodies: HashSet::default(),
-            free_pointer: words_allocated,
-        }
+        let mut library = Self::with_pseudo_instructions();
+        library.free_pointer = words_allocated;
+        library
     }
 
     /// Import `T: Snippet` into the library.

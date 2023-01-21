@@ -90,7 +90,7 @@ pub trait NewSnippet: Snippet {
 
 #[allow(dead_code)]
 pub fn compile_snippet<T: Snippet>() -> String {
-    let mut library = Library::empty();
+    let mut library = Library::with_pseudo_instructions();
     let main_entrypoint = T::entrypoint();
     let main_function_body = T::function_body(&mut library);
     let library_code = library.all_imports();
@@ -130,7 +130,7 @@ pub fn simulate_snippet<T: Snippet>(
 
     // Parse and run the program, bootloader and library
     let code: String = code.concat();
-    let program = Program::from_code(&code).unwrap();
+    let program = Program::from_code_nom(&code).unwrap();
     let std_in = execution_state.std_in;
     let secret_in = execution_state.secret_in;
     let (aet, _out, err) = vm::simulate(&program, std_in, secret_in);

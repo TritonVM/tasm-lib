@@ -14,6 +14,7 @@ mod library;
 mod list;
 mod mmr;
 mod other_snippets;
+mod pseudo;
 mod recufier;
 mod rust_shadowing_helper_functions;
 mod snippet;
@@ -93,7 +94,7 @@ pub fn execute(
     // Find the length of code used for setup. This length does not count towards execution length of snippet
     // so it must be subtracted at the end.
     let init_code_length = vm::run(
-        &Program::from_code(&executed_code).expect("Could not load source code: {}"),
+        &Program::from_code_nom(&executed_code).expect("Could not load source code: {}"),
         vec![],
         vec![],
     )
@@ -105,7 +106,7 @@ pub fn execute(
     executed_code.push_str(code);
 
     // Run the program, including the stack preparation and memory preparation logic
-    let program = Program::from_code(&executed_code).expect("Could not load source code: {}");
+    let program = Program::from_code_nom(&executed_code).expect("Could not load source code: {}");
     let (execution_trace, output, err) = vm::run(&program, std_in.clone(), secret_in.clone());
     if let Some(e) = err {
         panic!(
