@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 
+use crate::pseudo::sub::Sub;
 use crate::pseudo::{lsb::Lsb, neg::Neg};
 use crate::snippet::Snippet;
 
@@ -21,6 +22,7 @@ impl Library {
         let mut library = Self::empty();
         library.import::<Lsb>();
         library.import::<Neg>();
+        library.import::<Sub>();
         library
     }
 
