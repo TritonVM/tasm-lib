@@ -92,7 +92,6 @@ impl NewSnippet for MmrLoadFromSecretInThenVerify {
         let mut rng = thread_rng();
         let mut init_vm_states = vec![];
 
-        // Positive tests
         for size in 1..50 {
             // BEFORE: _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo [digest (leaf_digest)]
             // AFTER: _ *auth_path leaf_index_hi leaf_index_lo validation_result
