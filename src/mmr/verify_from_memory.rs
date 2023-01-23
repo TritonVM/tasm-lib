@@ -161,7 +161,7 @@ impl Snippet for MmrVerifyFromMemory {
             *elem = stack.pop().unwrap();
         }
 
-        let leaf_hash = Digest::new(new_leaf_digest_values);
+        let leaf_digest = Digest::new(new_leaf_digest_values);
 
         let leaf_index_lo: u32 = stack.pop().unwrap().try_into().unwrap();
         let leaf_index_hi: u32 = stack.pop().unwrap().try_into().unwrap();
@@ -184,7 +184,7 @@ impl Snippet for MmrVerifyFromMemory {
         }
 
         let valid_mp = MmrMembershipProof::<H>::new(leaf_index as u128, auth_path)
-            .verify(&peaks, &leaf_hash, leaf_count as u128)
+            .verify(&peaks, &leaf_digest, leaf_count as u128)
             .0;
 
         // stack.push(BFieldElement::new(valid_mp as u64));
