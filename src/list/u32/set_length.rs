@@ -24,44 +24,26 @@ impl NewSnippet for SetLength {
     }
 
     fn gen_input_states() -> Vec<ExecutionState> {
-        let list_pointer: BFieldElement = random();
-        let old_length: usize = thread_rng().gen_range(0..100);
-        let new_length: usize = thread_rng().gen_range(0..100);
-        let mut ret: Vec<ExecutionState> = vec![];
+        fn prepare_state<const N: usize>() -> ExecutionState {
+            let list_pointer: BFieldElement = random();
+            let old_length: usize = thread_rng().gen_range(0..100);
+            let new_length: usize = thread_rng().gen_range(0..100);
+            let mut stack = get_init_tvm_stack();
+            stack.push(list_pointer);
+            stack.push(BFieldElement::new(new_length as u64));
+            let mut memory = HashMap::default();
+            insert_random_list::<N>(list_pointer, old_length, &mut memory);
+            ExecutionState::with_stack_and_memory(stack, memory, 0)
+        }
 
-        // Element size = 1
-        let mut stack = get_init_tvm_stack();
-        stack.push(list_pointer);
-        stack.push(BFieldElement::new(new_length as u64));
-        let mut memory = HashMap::default();
-        insert_random_list::<1>(list_pointer, old_length, &mut memory);
-        ret.push(ExecutionState::with_stack_and_memory(stack, memory, 0));
-
-        // Element size = 3
-        stack = get_init_tvm_stack();
-        stack.push(list_pointer);
-        stack.push(BFieldElement::new(new_length as u64));
-        memory = HashMap::default();
-        insert_random_list::<3>(list_pointer, old_length, &mut memory);
-        ret.push(ExecutionState::with_stack_and_memory(stack, memory, 0));
-
-        // Element size = 5
-        stack = get_init_tvm_stack();
-        stack.push(list_pointer);
-        stack.push(BFieldElement::new(new_length as u64));
-        memory = HashMap::default();
-        insert_random_list::<5>(list_pointer, old_length, &mut memory);
-        ret.push(ExecutionState::with_stack_and_memory(stack, memory, 0));
-
-        // Element size = 14
-        stack = get_init_tvm_stack();
-        stack.push(list_pointer);
-        stack.push(BFieldElement::new(new_length as u64));
-        memory = HashMap::default();
-        insert_random_list::<14>(list_pointer, old_length, &mut memory);
-        ret.push(ExecutionState::with_stack_and_memory(stack, memory, 0));
-
-        ret
+        vec![
+            prepare_state::<1>(),
+            prepare_state::<2>(),
+            prepare_state::<3>(),
+            prepare_state::<4>(),
+            prepare_state::<5>(),
+            prepare_state::<14>(),
+        ]
     }
 }
 

@@ -2,9 +2,9 @@ use std::collections::HashMap;
 
 use rand::{random, thread_rng, Rng};
 use twenty_first::shared_math::b_field_element::BFieldElement;
-use twenty_first::shared_math::other::random_elements;
 
 use crate::library::Library;
+use crate::rust_shadowing_helper_functions::insert_random_list;
 use crate::snippet::{NewSnippet, Snippet};
 use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, ExecutionState};
 
@@ -37,18 +37,7 @@ impl<const N: usize> NewSnippet for Get<N> {
 
         let mut memory = HashMap::default();
 
-        // Insert length indicator of list, lives on offset = 0 from `list_address`
-        memory.insert(list_pointer, BFieldElement::new(list_length as u64));
-
-        // Insert random values for the elements in the list
-        let mut j = 1;
-        for _ in 0..list_length {
-            let element: [BFieldElement; N] = random_elements(N).try_into().unwrap();
-            for elem in element.iter() {
-                memory.insert(list_pointer + BFieldElement::new(j), *elem);
-                j += 1;
-            }
-        }
+        insert_random_list::<N>(list_pointer, list_length, &mut memory);
 
         vec![ExecutionState {
             stack,

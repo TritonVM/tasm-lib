@@ -1,12 +1,47 @@
 use std::collections::HashMap;
 
 use num::One;
+use rand::{random, thread_rng, Rng};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
-use crate::snippet::Snippet;
+use crate::rust_shadowing_helper_functions::insert_random_list;
+use crate::snippet::{NewSnippet, Snippet};
+use crate::{get_init_tvm_stack, ExecutionState};
 
 pub struct Pop<const N: usize>;
+
+impl<const N: usize> NewSnippet for Pop<N> {
+    fn inputs() -> Vec<&'static str> {
+        vec!["*list"]
+    }
+
+    fn outputs() -> Vec<&'static str> {
+        vec!["element"; N]
+    }
+
+    fn crash_conditions() -> Vec<&'static str> {
+        vec!["stack underflow"]
+    }
+
+    fn gen_input_states() -> Vec<ExecutionState> {
+        fn prepare_state<const N: usize>() -> ExecutionState {
+            let list_pointer: BFieldElement = random();
+            let old_length: usize = thread_rng().gen_range(0..100);
+            let mut stack = get_init_tvm_stack();
+            stack.push(list_pointer);
+            let mut memory = HashMap::default();
+            insert_random_list::<N>(list_pointer, old_length, &mut memory);
+            ExecutionState::with_stack_and_memory(stack, memory, 0)
+        }
+
+        vec![
+            prepare_state::<N>(),
+            prepare_state::<N>(),
+            prepare_state::<N>(),
+        ]
+    }
+}
 
 impl<const N: usize> Snippet for Pop<N> {
     fn stack_diff() -> isize {
@@ -114,9 +149,19 @@ mod tests_pop {
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
     use crate::get_init_tvm_stack;
-    use crate::test_helpers::rust_tasm_equivalence_prop;
+    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
+
+    #[test]
+    fn new_snippet_test() {
+        rust_tasm_equivalence_prop_new::<Pop<1>>();
+        rust_tasm_equivalence_prop_new::<Pop<2>>();
+        rust_tasm_equivalence_prop_new::<Pop<3>>();
+        rust_tasm_equivalence_prop_new::<Pop<4>>();
+        rust_tasm_equivalence_prop_new::<Pop<5>>();
+        rust_tasm_equivalence_prop_new::<Pop<14>>();
+    }
 
     #[test]
     #[should_panic]
