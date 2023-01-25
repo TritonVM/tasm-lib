@@ -196,7 +196,7 @@ mod list_set_tests {
             BFieldElement::new(888888882),
             BFieldElement::new(888888883),
         ];
-        prop_set(list_address, 2313, push_value, 589);
+        prop_set(list_address, 231, push_value, 69);
     }
 
     fn prop_set<const N: usize>(
