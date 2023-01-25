@@ -1,12 +1,57 @@
 use std::collections::HashMap;
 
+use rand::{random, thread_rng, Rng};
 use twenty_first::shared_math::b_field_element::BFieldElement;
+use twenty_first::shared_math::other::random_elements;
 
 use crate::library::Library;
-use crate::rust_shadowing_helper_functions;
-use crate::snippet::Snippet;
+use crate::rust_shadowing_helper_functions::insert_random_list;
+use crate::snippet::{NewSnippet, Snippet};
+use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, ExecutionState};
 
 pub struct Set<const N: usize>;
+
+impl<const N: usize> NewSnippet for Set<N> {
+    fn inputs() -> Vec<&'static str> {
+        // See: https://github.com/TritonVM/tasm-snippets/issues/13
+        // _ elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}} *list index
+        vec![vec!["element"; N], vec!["*list", "index"]].concat()
+    }
+
+    fn outputs() -> Vec<&'static str> {
+        vec![]
+    }
+
+    fn crash_conditions() -> Vec<&'static str> {
+        vec![]
+    }
+
+    fn gen_input_states() -> Vec<ExecutionState> {
+        fn prepare_state<const N: usize>() -> ExecutionState {
+            let list_length: usize = thread_rng().gen_range(1..100);
+            let index: usize = thread_rng().gen_range(0..list_length);
+            let mut stack = get_init_tvm_stack();
+            let mut push_value: Vec<BFieldElement> = random_elements(N);
+            while let Some(element) = push_value.pop() {
+                stack.push(element);
+            }
+
+            let list_pointer: BFieldElement = random();
+            stack.push(list_pointer);
+            stack.push(BFieldElement::new(index as u64));
+
+            let mut memory = HashMap::default();
+            insert_random_list::<N>(list_pointer, list_length, &mut memory);
+            ExecutionState::with_stack_and_memory(stack, memory, 0)
+        }
+
+        vec![
+            prepare_state::<N>(),
+            prepare_state::<N>(),
+            prepare_state::<N>(),
+        ]
+    }
+}
 
 impl<const N: usize> Snippet for Set<N> {
     fn stack_diff() -> isize {
@@ -75,13 +120,33 @@ impl<const N: usize> Snippet for Set<N> {
 
 #[cfg(test)]
 mod list_set_tests {
-    use rand::{thread_rng, RngCore};
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
     use crate::get_init_tvm_stack;
-    use crate::test_helpers::rust_tasm_equivalence_prop;
+    use crate::rust_shadowing_helper_functions::insert_random_list;
+    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
+
+    #[test]
+    fn new_snippet_test() {
+        rust_tasm_equivalence_prop_new::<Set<1>>();
+        rust_tasm_equivalence_prop_new::<Set<2>>();
+        rust_tasm_equivalence_prop_new::<Set<3>>();
+        rust_tasm_equivalence_prop_new::<Set<4>>();
+        rust_tasm_equivalence_prop_new::<Set<5>>();
+        rust_tasm_equivalence_prop_new::<Set<6>>();
+        rust_tasm_equivalence_prop_new::<Set<7>>();
+        rust_tasm_equivalence_prop_new::<Set<8>>();
+        rust_tasm_equivalence_prop_new::<Set<9>>();
+        rust_tasm_equivalence_prop_new::<Set<10>>();
+        rust_tasm_equivalence_prop_new::<Set<11>>();
+        rust_tasm_equivalence_prop_new::<Set<12>>();
+        rust_tasm_equivalence_prop_new::<Set<13>>();
+        rust_tasm_equivalence_prop_new::<Set<14>>();
+        rust_tasm_equivalence_prop_new::<Set<15>>();
+        rust_tasm_equivalence_prop_new::<Set<16>>();
+    }
 
     #[test]
     fn list_u32_n_is_one_set() {
@@ -152,16 +217,7 @@ mod list_set_tests {
         let mut vm_memory = HashMap::default();
 
         // Insert length indicator of list, lives on offset = 0 from `list_address`
-        vm_memory.insert(list_address, BFieldElement::new(init_list_length as u64));
-
-        // Insert random values for the elements in the list
-        let mut rng = thread_rng();
-        for i in 0..init_list_length {
-            vm_memory.insert(
-                list_address + BFieldElement::new((i + 1) as u64),
-                BFieldElement::new(rng.next_u64()),
-            );
-        }
+        insert_random_list::<N>(list_address, init_list_length as usize, &mut vm_memory);
 
         let _execution_result = rust_tasm_equivalence_prop::<Set<N>>(
             &init_stack,
