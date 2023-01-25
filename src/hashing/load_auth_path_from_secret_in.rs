@@ -21,7 +21,7 @@ pub struct LoadAuthPathFromSecretIn;
 
 impl NewSnippet for LoadAuthPathFromSecretIn {
     fn inputs() -> Vec<&'static str> {
-        vec![""]
+        vec![]
     }
 
     fn outputs() -> Vec<&'static str> {

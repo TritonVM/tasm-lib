@@ -18,7 +18,7 @@ pub struct LoadAuthPathFromStdIn;
 
 impl NewSnippet for LoadAuthPathFromStdIn {
     fn inputs() -> Vec<&'static str> {
-        vec![""]
+        vec![]
     }
 
     fn outputs() -> Vec<&'static str> {
