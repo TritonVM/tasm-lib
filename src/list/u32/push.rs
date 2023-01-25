@@ -1,12 +1,56 @@
 use std::collections::HashMap;
 
 use num::One;
+use rand::{random, thread_rng, Rng};
 use twenty_first::shared_math::b_field_element::BFieldElement;
+use twenty_first::shared_math::other::random_elements;
 
 use crate::library::Library;
-use crate::snippet::Snippet;
+use crate::rust_shadowing_helper_functions::insert_random_list;
+use crate::snippet::{NewSnippet, Snippet};
+use crate::{get_init_tvm_stack, ExecutionState};
 
 pub struct Push<const N: usize>;
+
+impl<const N: usize> NewSnippet for Push<N> {
+    fn inputs() -> Vec<&'static str> {
+        // See: https://github.com/TritonVM/tasm-snippets/issues/13
+        // _ *list, elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}
+        vec![vec!["*list"], vec!["element"; N]].concat()
+    }
+
+    fn outputs() -> Vec<&'static str> {
+        vec!["*list"]
+    }
+
+    fn crash_conditions() -> Vec<&'static str> {
+        vec![]
+    }
+
+    fn gen_input_states() -> Vec<ExecutionState> {
+        fn prepare_state<const N: usize>() -> ExecutionState {
+            let list_pointer: BFieldElement = random();
+            let init_length: usize = thread_rng().gen_range(0..100);
+            let mut stack = get_init_tvm_stack();
+            stack.push(list_pointer);
+            let mut push_value: Vec<BFieldElement> = random_elements(N);
+            while let Some(element) = push_value.pop() {
+                stack.push(element);
+            }
+
+            let mut memory = HashMap::default();
+            insert_random_list::<N>(list_pointer, init_length, &mut memory);
+            ExecutionState::with_stack_and_memory(stack, memory, 0)
+        }
+
+        vec![
+            prepare_state::<N>(),
+            prepare_state::<N>(),
+            prepare_state::<N>(),
+            prepare_state::<N>(),
+        ]
+    }
+}
 
 /// A parameterized version of `Push` where `N` is the size of an element in the list
 impl<const N: usize> Snippet for Push<N> {
@@ -108,13 +152,23 @@ impl<const N: usize> Snippet for Push<N> {
 
 #[cfg(test)]
 mod tests_push {
-    use rand::{thread_rng, RngCore};
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
     use crate::get_init_tvm_stack;
-    use crate::test_helpers::rust_tasm_equivalence_prop;
+    use crate::rust_shadowing_helper_functions::insert_random_list;
+    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
+
+    #[test]
+    fn new_snippet_test() {
+        rust_tasm_equivalence_prop_new::<Push<1>>();
+        rust_tasm_equivalence_prop_new::<Push<2>>();
+        rust_tasm_equivalence_prop_new::<Push<3>>();
+        rust_tasm_equivalence_prop_new::<Push<4>>();
+        rust_tasm_equivalence_prop_new::<Push<5>>();
+        rust_tasm_equivalence_prop_new::<Push<14>>();
+    }
 
     #[test]
     fn list_u32_n_is_one_push() {
@@ -155,25 +209,15 @@ mod tests_push {
         for i in 0..N {
             init_stack.push(push_value[N - 1 - i]);
         }
-        let mut vm_memory = HashMap::default();
+        let mut memory = HashMap::default();
 
-        // Insert length indicator of list, lives on offset = 0 from `list_address`
-        vm_memory.insert(list_address, BFieldElement::new(init_list_length as u64));
-
-        // Insert random values for the elements in the list
-        let mut rng = thread_rng();
-        for i in 0..init_list_length {
-            vm_memory.insert(
-                list_address + BFieldElement::new((i + 1) as u64),
-                BFieldElement::new(rng.next_u64()),
-            );
-        }
+        insert_random_list::<N>(list_address, init_list_length as usize, &mut memory);
 
         let _execution_result = rust_tasm_equivalence_prop::<Push<N>>(
             &init_stack,
             &[],
             &[],
-            &mut vm_memory,
+            &mut memory,
             0,
             Some(&expected_end_stack),
         );
@@ -181,14 +225,14 @@ mod tests_push {
         // Verify that length indicator has increased by one
         assert_eq!(
             BFieldElement::new((init_list_length + 1) as u64),
-            vm_memory[&list_address]
+            memory[&list_address]
         );
 
         // verify that value was inserted at expected place
         for i in 0..N {
             assert_eq!(
                 push_value[i],
-                vm_memory[&BFieldElement::new(
+                memory[&BFieldElement::new(
                     list_address.value() + 1 + N as u64 * init_list_length as u64 + i as u64
                 )]
             );
