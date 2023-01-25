@@ -125,6 +125,26 @@ impl Snippet for LtU64 {
 /// The fastest way we know is to calculate without consuming, and then pop the operands.
 /// This is because there are three branches, so sharing cleanup unconditionally means
 /// less branching (fewer cycles) and less local cleanup (smaller program).
+impl NewSnippet for LtStandardU64 {
+    fn inputs() -> Vec<&'static str> {
+        vec!["rhs_hi", "rhs_lo", "lhs_hi", "lhs_lo"]
+    }
+
+    fn outputs() -> Vec<&'static str> {
+        vec!["(lhs < rhs)"]
+    }
+
+    fn crash_conditions() -> Vec<&'static str> {
+        vec!["Either input is not u32"]
+    }
+
+    fn gen_input_states() -> Vec<ExecutionState> {
+        // The input states for the two u64::lt operators can be reused. But the
+        // rust shadowin cannot.
+        LtU64::gen_input_states()
+    }
+}
+
 impl Snippet for LtStandardU64 {
     fn stack_diff() -> isize {
         -3
@@ -213,8 +233,13 @@ mod tests {
     }
 
     #[test]
-    fn div_2_test_new_snippet() {
+    fn lt_u64_test_new_snippet() {
         rust_tasm_equivalence_prop_new::<LtU64>();
+    }
+
+    #[test]
+    fn standard_lt_u64_test_new_snippet() {
+        rust_tasm_equivalence_prop_new::<LtStandardU64>();
     }
 
     #[test]
