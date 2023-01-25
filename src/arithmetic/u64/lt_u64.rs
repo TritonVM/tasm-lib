@@ -1,15 +1,50 @@
 use std::collections::HashMap;
 
 use num::{One, Zero};
+use rand::RngCore;
 use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
-use crate::snippet::Snippet;
+use crate::snippet::{NewSnippet, Snippet};
+use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 
 pub struct LtU64();
 
 pub struct LtStandardU64();
+
+impl NewSnippet for LtU64 {
+    fn inputs() -> Vec<&'static str> {
+        vec!["rhs_hi", "rhs_lo", "lhs_hi", "lhs_lo"]
+    }
+
+    fn outputs() -> Vec<&'static str> {
+        vec!["rhs_hi", "rhs_lo", "lhs_hi", "lhs_lo", "(lhs < rhs)"]
+    }
+
+    fn crash_conditions() -> Vec<&'static str> {
+        vec!["if inputs are not u32"]
+    }
+
+    fn gen_input_states() -> Vec<crate::ExecutionState> {
+        let mut ret: Vec<ExecutionState> = vec![];
+
+        for _ in 0..30 {
+            let n: u64 = rand::thread_rng().next_u64();
+            let n: U32s<2> = n.try_into().unwrap();
+            let m: u64 = rand::thread_rng().next_u64();
+            let m: U32s<2> = m.try_into().unwrap();
+            let mut input_stack = get_init_tvm_stack();
+
+            push_hashable(&mut input_stack, &n);
+            push_hashable(&mut input_stack, &m);
+
+            ret.push(ExecutionState::with_stack(input_stack))
+        }
+
+        ret
+    }
+}
 
 /// This `lt_u64` does not consume its arguments, which is the norm for tasm functions.
 ///
@@ -166,7 +201,7 @@ mod tests {
     use twenty_first::util_types::algebraic_hasher::Hashable;
 
     use crate::get_init_tvm_stack;
-    use crate::test_helpers::rust_tasm_equivalence_prop;
+    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
 
@@ -175,6 +210,11 @@ mod tests {
     fn random_gen() -> U32s<2> {
         let mut rng = rand::thread_rng();
         U32s::new([rng.gen(), rng.gen()])
+    }
+
+    #[test]
+    fn div_2_test_new_snippet() {
+        rust_tasm_equivalence_prop_new::<LtU64>();
     }
 
     #[test]
