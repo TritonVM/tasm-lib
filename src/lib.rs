@@ -40,6 +40,20 @@ impl ExecutionState {
             words_allocated: 0,
         }
     }
+
+    pub fn with_stack_and_memory(
+        stack: Vec<BFieldElement>,
+        memory: HashMap<BFieldElement, BFieldElement>,
+        words_allocated: usize,
+    ) -> Self {
+        ExecutionState {
+            stack,
+            std_in: vec![],
+            secret_in: vec![],
+            memory,
+            words_allocated,
+        }
+    }
 }
 
 pub struct ExecutionResult {

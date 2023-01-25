@@ -1,12 +1,43 @@
 use std::collections::HashMap;
 
+use rand::{random, thread_rng, Rng};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
-use crate::snippet::Snippet;
+use crate::rust_shadowing_helper_functions::insert_random_list;
+use crate::snippet::{NewSnippet, Snippet};
+use crate::{get_init_tvm_stack, ExecutionState};
 
 // Called "Long" because this logic can be shortened
 pub struct LengthLong;
+
+impl NewSnippet for LengthLong {
+    fn inputs() -> Vec<&'static str> {
+        vec!["*list"]
+    }
+
+    fn outputs() -> Vec<&'static str> {
+        vec!["list_length"]
+    }
+
+    fn crash_conditions() -> Vec<&'static str> {
+        vec![]
+    }
+
+    fn gen_input_states() -> Vec<crate::ExecutionState> {
+        let mut rng = thread_rng();
+        let mut stack = get_init_tvm_stack();
+        let list_address: BFieldElement = random();
+        let list_length: usize = rng.gen_range(0..100);
+        stack.push(list_address);
+
+        let mut memory = HashMap::default();
+
+        insert_random_list::<3>(list_address, list_length, &mut memory);
+
+        vec![ExecutionState::with_stack_and_memory(stack, memory, 0)]
+    }
+}
 
 impl Snippet for LengthLong {
     fn stack_diff() -> isize {
@@ -49,6 +80,24 @@ impl Snippet for LengthLong {
 
 // Called "Short" because it's efficient code
 pub struct LengthShort;
+
+impl NewSnippet for LengthShort {
+    fn inputs() -> Vec<&'static str> {
+        vec!["*list"]
+    }
+
+    fn outputs() -> Vec<&'static str> {
+        vec!["*list", "list_length"]
+    }
+
+    fn crash_conditions() -> Vec<&'static str> {
+        vec![]
+    }
+
+    fn gen_input_states() -> Vec<ExecutionState> {
+        LengthLong::gen_input_states()
+    }
+}
 
 impl Snippet for LengthShort {
     fn stack_diff() -> isize {
@@ -94,9 +143,19 @@ mod tests_long {
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
     use crate::get_init_tvm_stack;
-    use crate::test_helpers::rust_tasm_equivalence_prop;
+    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
+
+    #[test]
+    fn new_snippet_test_long() {
+        rust_tasm_equivalence_prop_new::<LengthLong>();
+    }
+
+    #[test]
+    fn new_snippet_test_short() {
+        rust_tasm_equivalence_prop_new::<LengthShort>();
+    }
 
     #[test]
     fn list_u32_simple_long() {
