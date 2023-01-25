@@ -1,3 +1,4 @@
+use rand::{thread_rng, Rng};
 use std::collections::HashMap;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::mmr;
@@ -5,11 +6,41 @@ use twenty_first::util_types::mmr;
 use crate::arithmetic::u64::add_u64::AddU64;
 use crate::arithmetic::u64::incr_u64::IncrU64;
 use crate::library::Library;
-use crate::snippet::Snippet;
+use crate::snippet::{NewSnippet, Snippet};
+use crate::{get_init_tvm_stack, ExecutionState};
 
 use super::non_leaf_nodes_left::MmrNonLeafNodesLeftOld;
 
 pub struct DataIndexToNodeIndex();
+
+impl NewSnippet for DataIndexToNodeIndex {
+    fn inputs() -> Vec<&'static str> {
+        vec!["leaf_index_hi", "leaf_index_lo"]
+    }
+
+    fn outputs() -> Vec<&'static str> {
+        vec!["node_index_hi", "node_index_lo"]
+    }
+
+    fn crash_conditions() -> Vec<&'static str> {
+        vec!["leaf_index value is larger than 2^63"]
+    }
+
+    fn gen_input_states() -> Vec<ExecutionState> {
+        let mut ret: Vec<ExecutionState> = vec![];
+        for _ in 0..40 {
+            let mut stack = get_init_tvm_stack();
+            let leaf_index = thread_rng().gen_range(0..u64::MAX / 2);
+            let leaf_index_hi = BFieldElement::new(leaf_index >> 32);
+            let leaf_index_lo = BFieldElement::new(leaf_index & u32::MAX as u64);
+            stack.push(leaf_index_hi);
+            stack.push(leaf_index_lo);
+            ret.push(ExecutionState::with_stack(stack));
+        }
+
+        ret
+    }
+}
 
 impl Snippet for DataIndexToNodeIndex {
     fn stack_diff() -> isize {
@@ -68,9 +99,14 @@ mod tests {
     use twenty_first::util_types::algebraic_hasher::Hashable;
 
     use crate::get_init_tvm_stack;
-    use crate::test_helpers::rust_tasm_equivalence_prop;
+    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
+
+    #[test]
+    fn new_snippet_test() {
+        rust_tasm_equivalence_prop_new::<DataIndexToNodeIndex>();
+    }
 
     #[test]
     fn data_index_to_node_index_simple_test() {
