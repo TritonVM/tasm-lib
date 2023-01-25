@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use num::BigUint;
+use rand::{thread_rng, Rng};
 use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::algebraic_hasher::Hashable;
@@ -10,9 +11,39 @@ use crate::arithmetic::u64::decr_u64::DecrU64;
 use crate::arithmetic::u64::log_2_floor_u64::Log2FloorU64;
 use crate::arithmetic::u64::pow2_u64::Pow2StaticU64;
 use crate::library::Library;
-use crate::snippet::Snippet;
+use crate::snippet::{NewSnippet, Snippet};
+use crate::{get_init_tvm_stack, ExecutionState};
 
 pub struct MmrLeftMostAncestor();
+
+impl NewSnippet for MmrLeftMostAncestor {
+    fn inputs() -> Vec<&'static str> {
+        vec!["node_index_hi", "node_index_lo"]
+    }
+
+    fn outputs() -> Vec<&'static str> {
+        vec!["leftmost_ancestor_hi", "leftmost_ancestor_lo", "height"]
+    }
+
+    fn crash_conditions() -> Vec<&'static str> {
+        vec!["Inputs are not u32s", "Node index beyond ~2^63?"]
+    }
+
+    fn gen_input_states() -> Vec<crate::ExecutionState> {
+        let mut ret: Vec<ExecutionState> = vec![];
+        for _ in 0..10 {
+            let mut stack = get_init_tvm_stack();
+            let node_index = thread_rng().gen_range(0..u64::MAX / 2);
+            let node_index_hi = BFieldElement::new(node_index >> 32);
+            let node_index_lo = BFieldElement::new(node_index & u32::MAX as u64);
+            stack.push(node_index_hi);
+            stack.push(node_index_lo);
+            ret.push(ExecutionState::with_stack(stack));
+        }
+
+        ret
+    }
+}
 
 impl Snippet for MmrLeftMostAncestor {
     fn stack_diff() -> isize {
@@ -83,9 +114,14 @@ mod tests {
     use twenty_first::util_types::algebraic_hasher::Hashable;
 
     use crate::get_init_tvm_stack;
-    use crate::test_helpers::rust_tasm_equivalence_prop;
+    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
+
+    #[test]
+    fn new_snippet_test() {
+        rust_tasm_equivalence_prop_new::<MmrLeftMostAncestor>();
+    }
 
     #[test]
     fn u32s_leftmost_ancestor_simple() {
