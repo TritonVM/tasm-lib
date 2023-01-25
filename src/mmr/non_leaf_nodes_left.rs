@@ -1,3 +1,4 @@
+use rand::{thread_rng, Rng};
 use std::collections::HashMap;
 use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
@@ -13,12 +14,41 @@ use crate::arithmetic::u64::log_2_floor_u64::Log2FloorU64;
 use crate::arithmetic::u64::pow2_u64::Pow2StaticU64;
 use crate::arithmetic::u64::sub_u64::SubU64;
 use crate::library::Library;
-use crate::push_hashable;
-use crate::snippet::Snippet;
+use crate::snippet::{NewSnippet, Snippet};
+use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 
 use super::get_height_from_data_index::GetHeightFromDataIndex;
 
 pub struct MmrNonLeafNodesLeftUsingAnd();
+
+impl NewSnippet for MmrNonLeafNodesLeftUsingAnd {
+    fn inputs() -> Vec<&'static str> {
+        vec!["leaf_index_hi", "leaf_index_lo"]
+    }
+
+    fn outputs() -> Vec<&'static str> {
+        vec!["node_count_hi", "node_count_lo"]
+    }
+
+    fn crash_conditions() -> Vec<&'static str> {
+        vec!["Input values are not u32s"]
+    }
+
+    fn gen_input_states() -> Vec<crate::ExecutionState> {
+        let mut ret: Vec<ExecutionState> = vec![];
+        for _ in 0..10 {
+            let mut stack = get_init_tvm_stack();
+            let leaf_index = thread_rng().gen_range(0..u64::MAX / 2);
+            let leaf_index_hi = BFieldElement::new(leaf_index >> 32);
+            let leaf_index_lo = BFieldElement::new(leaf_index & u32::MAX as u64);
+            stack.push(leaf_index_hi);
+            stack.push(leaf_index_lo);
+            ret.push(ExecutionState::with_stack(stack));
+        }
+
+        ret
+    }
+}
 
 impl Snippet for MmrNonLeafNodesLeftUsingAnd {
     fn stack_diff() -> isize {
@@ -41,7 +71,7 @@ impl Snippet for MmrNonLeafNodesLeftUsingAnd {
 
         format!(
             "
-        // BEFORE: _ data_index_hi data_index_lo
+        // BEFORE: _ leaf_index_hi leaf_index_lo
         // AFTER: _ node_count_hi node_count_lo
         {entrypoint}:
             dup1 dup1
@@ -137,6 +167,24 @@ impl Snippet for MmrNonLeafNodesLeftUsingAnd {
 
 pub struct MmrNonLeafNodesLeftOld();
 
+impl NewSnippet for MmrNonLeafNodesLeftOld {
+    fn inputs() -> Vec<&'static str> {
+        vec!["leaf_index_hi", "leaf_index_lo"]
+    }
+
+    fn outputs() -> Vec<&'static str> {
+        vec!["node_count_hi", "node_count_lo"]
+    }
+
+    fn crash_conditions() -> Vec<&'static str> {
+        vec!["Inputs are not u32s"]
+    }
+
+    fn gen_input_states() -> Vec<ExecutionState> {
+        MmrNonLeafNodesLeftUsingAnd::gen_input_states()
+    }
+}
+
 impl Snippet for MmrNonLeafNodesLeftOld {
     fn stack_diff() -> isize {
         // Pops a U32<2> and pushes a U32<2>
@@ -149,7 +197,7 @@ impl Snippet for MmrNonLeafNodesLeftOld {
 
     fn function_body(library: &mut Library) -> String {
         let entrypoint = Self::entrypoint();
-        let get_height_from_data_index = library.import::<GetHeightFromDataIndex>();
+        let get_height_from_leaf_index = library.import::<GetHeightFromDataIndex>();
         let decr_u64 = library.import::<DecrU64>();
         let sub_u64 = library.import::<SubU64>();
         let add_u64 = library.import::<AddU64>();
@@ -157,20 +205,20 @@ impl Snippet for MmrNonLeafNodesLeftOld {
 
         format!(
             "
-                // BEFORE: _ data_index_hi data_index_lo
+                // BEFORE: _ leaf_index_hi leaf_index_lo
                 // AFTER: _ node_count_hi node_count_lo
                 {entrypoint}:
                     push 0
                     push 0
-                    // stack: _ data_index_hi data_index_lo 0 0
+                    // stack: _ leaf_index_hi leaf_index_lo 0 0
 
                     swap3
                     swap1
                     swap2
-                    // stack: _ 0 0 data_index_hi data_index_lo
+                    // stack: _ 0 0 leaf_index_hi leaf_index_lo
 
                     // rename (0 0) to (ret_hi ret_lo)
-                    // rename (data_index_hi data_index_lo) to (dia_hi dia_lo)
+                    // rename (leaf_index_hi leaf_index_lo) to (dia_hi dia_lo)
                     // stack: _ ret_hi ret_lo dia_hi dia_lo
 
                     call {entrypoint}_while
@@ -197,7 +245,7 @@ impl Snippet for MmrNonLeafNodesLeftOld {
                         call {decr_u64}
                         // stack: _ ret_hi ret_lo dia_hi dia_lo (dia - 1)_hi (dia - 1)_lo
 
-                        call {get_height_from_data_index}
+                        call {get_height_from_leaf_index}
                         // stack: _ ret_hi ret_lo dia_hi dia_lo left_data_height
 
                         call {two_pow}
@@ -242,35 +290,35 @@ impl Snippet for MmrNonLeafNodesLeftOld {
         _memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
         // TODO: REMOVE these two local functions once needed helper functions have been made public in twenty-first/MMR
-        fn non_leaf_nodes_left(data_index: u128) -> u128 {
-            fn get_height_from_data_index(data_index: u128) -> u128 {
-                log_2_floor(data_index + 1) as u128
+        fn non_leaf_nodes_left(leaf_index: u128) -> u128 {
+            fn get_height_from_leaf_index(leaf_index: u128) -> u128 {
+                log_2_floor(leaf_index + 1) as u128
             }
 
             let mut acc = 0;
-            let mut data_index_acc = data_index;
-            while data_index_acc > 0 {
+            let mut leaf_index_acc = leaf_index;
+            while leaf_index_acc > 0 {
                 // Accumulate how many nodes in the tree of the nearest left neighbor that are not leafs.
                 // We count this number for the nearest left neighbor since only the non-leafs in that
                 // tree were inserted prior to the leaf this function is called for.
                 // For a tree of height 2, there are 2^2 - 1 non-leaf nodes, note that height starts at
                 // 0.
                 // Since more than one subtree left of the requested index can contain non-leafs, we have
-                // to run this accumulater untill data_index_acc is zero.
-                let left_data_height = get_height_from_data_index(data_index_acc - 1);
+                // to run this accumulater untill leaf_index_acc is zero.
+                let left_data_height = get_height_from_leaf_index(leaf_index_acc - 1);
                 acc += (1 << left_data_height) - 1;
-                data_index_acc -= 1 << left_data_height;
+                leaf_index_acc -= 1 << left_data_height;
             }
 
             acc
         }
 
-        let data_index_lo: u32 = stack.pop().unwrap().try_into().unwrap();
-        let data_index_hi: u32 = stack.pop().unwrap().try_into().unwrap();
-        let data_index: u64 = (data_index_hi as u64) * (1u64 << 32) + data_index_lo as u64;
+        let leaf_index_lo: u32 = stack.pop().unwrap().try_into().unwrap();
+        let leaf_index_hi: u32 = stack.pop().unwrap().try_into().unwrap();
+        let leaf_index: u64 = (leaf_index_hi as u64) * (1u64 << 32) + leaf_index_lo as u64;
 
         // TODO: Call `non_leaf_nodes_left` from MMR here once it has been made public
-        let result = non_leaf_nodes_left(data_index as u128) as u64;
+        let result = non_leaf_nodes_left(leaf_index as u128) as u64;
 
         stack.push(BFieldElement::new(result >> 32));
         stack.push(BFieldElement::new(result & 0xFFFFFFFFu32 as u64));
@@ -285,9 +333,19 @@ mod nlnl_tests {
     use twenty_first::util_types::algebraic_hasher::Hashable;
 
     use crate::get_init_tvm_stack;
-    use crate::test_helpers::rust_tasm_equivalence_prop;
+    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
+
+    #[test]
+    fn new_snippet_test_and() {
+        rust_tasm_equivalence_prop_new::<MmrNonLeafNodesLeftUsingAnd>();
+    }
+
+    #[test]
+    fn new_snippet_test_old() {
+        rust_tasm_equivalence_prop_new::<MmrNonLeafNodesLeftOld>();
+    }
 
     #[test]
     fn non_leaf_nodes_left_using_and_test() {
@@ -402,12 +460,12 @@ mod nlnl_tests {
         }
     }
 
-    fn prop_non_leaf_nodes_left_using_and(data_index: u64, expected: Option<&[BFieldElement]>) {
-        println!("data_index = {data_index}");
+    fn prop_non_leaf_nodes_left_using_and(leaf_index: u64, expected: Option<&[BFieldElement]>) {
+        println!("leaf_index = {leaf_index}");
         let mut init_stack = get_init_tvm_stack();
         let value_as_u32_2 = U32s::new([
-            (data_index & 0xFFFFFFFFu32 as u64) as u32,
-            (data_index >> 32) as u32,
+            (leaf_index & 0xFFFFFFFFu32 as u64) as u32,
+            (leaf_index >> 32) as u32,
         ]);
         for elem in value_as_u32_2.to_sequence().into_iter().rev() {
             init_stack.push(elem);
@@ -423,12 +481,12 @@ mod nlnl_tests {
         );
     }
 
-    fn prop_non_leaf_nodes_left_old(data_index: u64, expected: Option<&[BFieldElement]>) {
-        println!("data_index = {data_index}");
+    fn prop_non_leaf_nodes_left_old(leaf_index: u64, expected: Option<&[BFieldElement]>) {
+        println!("leaf_index = {leaf_index}");
         let mut init_stack = get_init_tvm_stack();
         let value_as_u32_2 = U32s::new([
-            (data_index & 0xFFFFFFFFu32 as u64) as u32,
-            (data_index >> 32) as u32,
+            (leaf_index & 0xFFFFFFFFu32 as u64) as u32,
+            (leaf_index >> 32) as u32,
         ]);
         for elem in value_as_u32_2.to_sequence().into_iter().rev() {
             init_stack.push(elem);
