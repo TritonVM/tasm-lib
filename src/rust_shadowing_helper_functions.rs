@@ -17,7 +17,7 @@ pub fn insert_random_list<const N: usize>(
     }
 }
 
-/// Read an element from a list.
+/// Write an element to a list.
 pub fn list_set<const N: usize>(
     list_pointer: BFieldElement,
     index: usize,
