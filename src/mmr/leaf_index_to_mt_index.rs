@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use num::BigUint;
+use rand::{thread_rng, Rng};
 use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::algebraic_hasher::Hashable;
@@ -13,9 +14,49 @@ use crate::arithmetic::u64::lt_u64::LtU64;
 use crate::arithmetic::u64::pow2_u64::Pow2StaticU64;
 use crate::arithmetic::u64::sub_u64::SubU64;
 use crate::library::Library;
-use crate::snippet::Snippet;
+use crate::snippet::{NewSnippet, Snippet};
+use crate::{get_init_tvm_stack, ExecutionState};
 
 pub struct MmrLeafIndexToMtIndexAndPeakIndex();
+
+impl NewSnippet for MmrLeafIndexToMtIndexAndPeakIndex {
+    fn inputs() -> Vec<&'static str> {
+        vec![
+            "leaf_count_hi",
+            "leaf_count_lo",
+            "leaf_index_hi",
+            "leaf_index_lo",
+        ]
+    }
+
+    fn outputs() -> Vec<&'static str> {
+        vec!["mt_index_hi", "mt_index_lo", "peak_index"]
+    }
+
+    fn crash_conditions() -> Vec<&'static str> {
+        vec!["Input values are not valid u32s"]
+    }
+
+    fn gen_input_states() -> Vec<crate::ExecutionState> {
+        let mut ret: Vec<ExecutionState> = vec![];
+        for _ in 0..10 {
+            let mut stack = get_init_tvm_stack();
+            let leaf_count = thread_rng().gen_range(0..u64::MAX / 2);
+            let leaf_count_hi = BFieldElement::new(leaf_count >> 32);
+            let leaf_count_lo = BFieldElement::new(leaf_count & u32::MAX as u64);
+            stack.push(leaf_count_hi);
+            stack.push(leaf_count_lo);
+            let leaf_index = thread_rng().gen_range(0..leaf_count);
+            let leaf_index_hi = BFieldElement::new(leaf_index >> 32);
+            let leaf_index_lo = BFieldElement::new(leaf_index & u32::MAX as u64);
+            stack.push(leaf_index_hi);
+            stack.push(leaf_index_lo);
+            ret.push(ExecutionState::with_stack(stack));
+        }
+
+        ret
+    }
+}
 
 impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
     fn stack_diff() -> isize {
@@ -194,9 +235,14 @@ mod tests {
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
     use crate::get_init_tvm_stack;
-    use crate::test_helpers::rust_tasm_equivalence_prop;
+    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
+
+    #[test]
+    fn new_snippet_test() {
+        rust_tasm_equivalence_prop_new::<MmrLeafIndexToMtIndexAndPeakIndex>();
+    }
 
     #[test]
     fn leaf_index_to_mt_index_size_is_one_test() {
