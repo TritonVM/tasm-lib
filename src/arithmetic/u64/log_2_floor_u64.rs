@@ -1,11 +1,38 @@
+use rand::RngCore;
 use std::collections::HashMap;
+use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::log_2_floor;
 
 use crate::library::Library;
-use crate::snippet::Snippet;
+use crate::snippet::{NewSnippet, Snippet};
+use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 
 pub struct Log2FloorU64();
+
+impl NewSnippet for Log2FloorU64 {
+    fn inputs() -> Vec<&'static str> {
+        vec!["value_hi", "value_lo"]
+    }
+
+    fn outputs() -> Vec<&'static str> {
+        vec!["log2_floor(value)"]
+    }
+
+    fn crash_conditions() -> Vec<&'static str> {
+        vec!["if value_hi is not a u32", "if value_lo is not a u32"]
+    }
+
+    fn gen_input_states() -> Vec<crate::ExecutionState> {
+        let n: u64 = rand::thread_rng().next_u64();
+        let n: U32s<2> = n.try_into().unwrap();
+        let mut input_stack = get_init_tvm_stack();
+
+        push_hashable(&mut input_stack, &n);
+
+        vec![ExecutionState::with_stack(input_stack)]
+    }
+}
 
 impl Snippet for Log2FloorU64 {
     fn stack_diff() -> isize {
@@ -87,9 +114,66 @@ mod tests {
     use twenty_first::{amount::u32s::U32s, util_types::algebraic_hasher::Hashable};
 
     use crate::get_init_tvm_stack;
-    use crate::test_helpers::rust_tasm_equivalence_prop;
+    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
+
+    #[test]
+    fn u64_log2_floor_test() {
+        rust_tasm_equivalence_prop_new::<Log2FloorU64>();
+    }
+
+    #[should_panic]
+    #[test]
+    fn lo_is_not_u32() {
+        let mut init_stack = get_init_tvm_stack();
+        init_stack.push(BFieldElement::new(16));
+        init_stack.push(BFieldElement::new(u32::MAX as u64 + 1));
+
+        let _execution_result = rust_tasm_equivalence_prop::<Log2FloorU64>(
+            &init_stack,
+            &[],
+            &[],
+            &mut HashMap::default(),
+            0,
+            None,
+        );
+    }
+
+    #[should_panic]
+    #[test]
+    fn hi_is_not_u32() {
+        let mut init_stack = get_init_tvm_stack();
+        init_stack.push(BFieldElement::new(u32::MAX as u64 + 1));
+        init_stack.push(BFieldElement::new(16));
+
+        let _execution_result = rust_tasm_equivalence_prop::<Log2FloorU64>(
+            &init_stack,
+            &[],
+            &[],
+            &mut HashMap::default(),
+            0,
+            None,
+        );
+    }
+
+    #[should_panic]
+    #[test]
+    fn hi_is_not_u32_alt() {
+        let n: u64 = rand::thread_rng().next_u32() as u64;
+        let mut init_stack = get_init_tvm_stack();
+        init_stack.push(BFieldElement::new(u32::MAX as u64 + 1 + n));
+        init_stack.push(BFieldElement::new(16));
+
+        let _execution_result = rust_tasm_equivalence_prop::<Log2FloorU64>(
+            &init_stack,
+            &[],
+            &[],
+            &mut HashMap::default(),
+            0,
+            None,
+        );
+    }
 
     #[test]
     fn u32s_2_log2_floor() {
