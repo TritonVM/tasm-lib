@@ -1,7 +1,14 @@
+use num::Zero;
+use rand::{random, thread_rng, Rng};
 use std::collections::HashMap;
 use twenty_first::shared_math::b_field_element::BFieldElement;
+use twenty_first::shared_math::other::random_elements;
 use twenty_first::shared_math::rescue_prime_digest::{Digest, DIGEST_LENGTH};
 use twenty_first::shared_math::rescue_prime_regular::RescuePrimeRegular;
+use twenty_first::test_shared::mmr::get_archival_mmr_from_digests;
+use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
+use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
+use twenty_first::util_types::mmr::mmr_trait::Mmr;
 use twenty_first::util_types::mmr::{self, mmr_membership_proof::MmrMembershipProof};
 
 use super::leaf_index_to_mt_index::MmrLeafIndexToMtIndexAndPeakIndex;
@@ -11,11 +18,57 @@ use crate::arithmetic::u64::eq_u64::EqU64;
 use crate::library::Library;
 use crate::list::u32::get::Get;
 use crate::list::u32::set::Set;
-use crate::rust_shadowing_helper_functions;
-use crate::snippet::Snippet;
+use crate::mmr::MAX_MMR_HEIGHT;
+use crate::snippet::{NewSnippet, Snippet};
+use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, ExecutionState};
 
 /// Calculate new MMR peaks from a leaf mutation using Merkle tree indices walk up the tree
 pub struct MmrCalculateNewPeaksFromLeafMutationMtIndices();
+
+impl NewSnippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
+    fn inputs() -> Vec<&'static str> {
+        vec![
+            "*auth_path",
+            "leaf_index_hi",
+            "leaf_index_lo",
+            "*peaks",
+            "digest_4",
+            "digest_3",
+            "digest_2",
+            "digest_1",
+            "digest_0",
+            "leaf_count_hi",
+            "leaf_count_lo",
+        ]
+    }
+
+    fn outputs() -> Vec<&'static str> {
+        vec!["*auth_path", "leaf_index_hi", "leaf_index_lo"]
+    }
+
+    fn crash_conditions() -> Vec<&'static str> {
+        vec![]
+    }
+
+    fn gen_input_states() -> Vec<ExecutionState> {
+        type H = RescuePrimeRegular;
+        let mmr_size: usize = 10;
+        let digests: Vec<Digest> = random_elements(mmr_size);
+        let leaf_index: usize = thread_rng().gen_range(0..mmr_size);
+        let new_leaf: Digest = random();
+        let mut ammr = get_archival_mmr_from_digests::<H>(digests);
+        let mut mmra = ammr.to_accumulator();
+        let auth_path = ammr.prove_membership(leaf_index as u128);
+        let ret0 = prepare_state_with_mmra(
+            &mut mmra,
+            leaf_index as u64,
+            new_leaf,
+            auth_path.0.authentication_path,
+        );
+
+        vec![ret0.0]
+    }
+}
 
 impl Snippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
     fn stack_diff() -> isize {
@@ -195,9 +248,63 @@ impl Snippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
     }
 }
 
+// Returns: (execution state, auth path pointer, peaks pointer)
+fn prepare_state_with_mmra<H: AlgebraicHasher + std::cmp::PartialEq + std::fmt::Debug>(
+    start_mmr: &mut MmrAccumulator<H>,
+    leaf_index: u64,
+    new_leaf: Digest,
+    auth_path: Vec<Digest>,
+) -> (ExecutionState, BFieldElement, BFieldElement) {
+    let mut stack = get_init_tvm_stack();
+
+    // We assume that the auth paths can safely be stored in memory on this address
+    let auth_path_pointer = BFieldElement::new((MAX_MMR_HEIGHT * DIGEST_LENGTH + 1) as u64);
+    stack.push(auth_path_pointer);
+
+    stack.push(BFieldElement::new(leaf_index >> 32));
+    stack.push(BFieldElement::new(leaf_index & u32::MAX as u64));
+
+    let peaks_pointer = BFieldElement::zero();
+    stack.push(peaks_pointer);
+
+    // push digests such that element 0 of digest is on top of stack
+    for value in new_leaf.values().iter().rev() {
+        stack.push(*value);
+    }
+
+    let leaf_count: u64 = start_mmr.count_leaves() as u64;
+    stack.push(BFieldElement::new(leaf_count >> 32));
+    stack.push(BFieldElement::new(leaf_count & u32::MAX as u64));
+
+    // Initialize memory
+    let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
+    rust_shadowing_helper_functions::list_new(peaks_pointer, &mut memory);
+    for peak in start_mmr.get_peaks() {
+        rust_shadowing_helper_functions::list_push(peaks_pointer, peak.values(), &mut memory);
+    }
+
+    rust_shadowing_helper_functions::list_new(auth_path_pointer, &mut memory);
+    for ap_element in auth_path.iter() {
+        rust_shadowing_helper_functions::list_push(
+            auth_path_pointer,
+            ap_element.values(),
+            &mut memory,
+        );
+    }
+
+    (
+        ExecutionState::with_stack_and_memory(
+            stack,
+            memory,
+            2 * (MAX_MMR_HEIGHT * DIGEST_LENGTH + 1),
+        ),
+        auth_path_pointer,
+        peaks_pointer,
+    )
+}
+
 #[cfg(test)]
 mod leaf_mutation_tests {
-    use num::Zero;
     use rand::{thread_rng, Rng};
     use twenty_first::shared_math::b_field_element::BFieldElement;
     use twenty_first::shared_math::other::random_elements;
@@ -210,9 +317,14 @@ mod leaf_mutation_tests {
 
     use crate::get_init_tvm_stack;
     use crate::mmr::MAX_MMR_HEIGHT;
-    use crate::test_helpers::rust_tasm_equivalence_prop;
+    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
+
+    #[test]
+    fn new_snippet_test() {
+        rust_tasm_equivalence_prop_new::<MmrCalculateNewPeaksFromLeafMutationMtIndices>();
+    }
 
     #[test]
     fn mmra_leaf_mutate_test_single() {
@@ -406,44 +518,10 @@ mod leaf_mutation_tests {
         expected_mmr: MmrAccumulator<H>,
         auth_path: Vec<Digest>,
     ) {
-        // BEFORE: _ *auth_path leaf_index_hi leaf_index_lo *peaks [digest (leaf_digest)] leaf_count_hi leaf_count_lo
-        // AFTER: _ *auth_path leaf_index_hi leaf_index_lo
-        let mut init_stack = get_init_tvm_stack();
-
-        // We assume that the auth paths can safely be stored in memory on this address
-        let auth_path_pointer = BFieldElement::new((MAX_MMR_HEIGHT * DIGEST_LENGTH + 1) as u64);
-        init_stack.push(auth_path_pointer);
-
-        init_stack.push(BFieldElement::new(new_leaf_index >> 32));
-        init_stack.push(BFieldElement::new(new_leaf_index & u32::MAX as u64));
-
-        let peaks_pointer = BFieldElement::zero();
-        init_stack.push(peaks_pointer);
-
-        // push digests such that element 0 of digest is on top of stack
-        for value in new_leaf.values().iter().rev() {
-            init_stack.push(*value);
-        }
-
-        let leaf_count: u64 = start_mmr.count_leaves() as u64;
-        init_stack.push(BFieldElement::new(leaf_count >> 32));
-        init_stack.push(BFieldElement::new(leaf_count & u32::MAX as u64));
-
-        // Initialize memory
-        let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
-        rust_shadowing_helper_functions::list_new(peaks_pointer, &mut memory);
-        for peak in start_mmr.get_peaks() {
-            rust_shadowing_helper_functions::list_push(peaks_pointer, peak.values(), &mut memory);
-        }
-
-        rust_shadowing_helper_functions::list_new(auth_path_pointer, &mut memory);
-        for ap_element in auth_path.iter() {
-            rust_shadowing_helper_functions::list_push(
-                auth_path_pointer,
-                ap_element.values(),
-                &mut memory,
-            );
-        }
+        let (init_exec_state, auth_path_pointer, peaks_pointer) =
+            prepare_state_with_mmra(start_mmr, new_leaf_index, new_leaf, auth_path);
+        let init_stack = init_exec_state.stack;
+        let mut memory = init_exec_state.memory;
 
         // AFTER: _ *auth_path leaf_index_hi leaf_index_lo
         let mut expected_final_stack = get_init_tvm_stack();
