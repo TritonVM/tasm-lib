@@ -24,18 +24,48 @@ impl NewSnippet for LengthLong {
         vec![]
     }
 
-    fn gen_input_states() -> Vec<crate::ExecutionState> {
+    fn gen_input_states() -> Vec<ExecutionState> {
+        let mut ret: Vec<ExecutionState> = vec![];
         let mut rng = thread_rng();
         let mut stack = get_init_tvm_stack();
         let list_address: BFieldElement = random();
         let list_length: usize = rng.gen_range(0..100);
         stack.push(list_address);
 
+        // Test for various values of `N` (list-element size)
         let mut memory = HashMap::default();
-
+        insert_random_list::<1>(list_address, list_length, &mut memory);
+        ret.push(ExecutionState::with_stack_and_memory(
+            stack.clone(),
+            memory,
+            0,
+        ));
+        memory = HashMap::default();
+        insert_random_list::<2>(list_address, list_length, &mut memory);
+        ret.push(ExecutionState::with_stack_and_memory(
+            stack.clone(),
+            memory,
+            0,
+        ));
+        memory = HashMap::default();
         insert_random_list::<3>(list_address, list_length, &mut memory);
+        ret.push(ExecutionState::with_stack_and_memory(
+            stack.clone(),
+            memory,
+            0,
+        ));
+        memory = HashMap::default();
+        insert_random_list::<4>(list_address, list_length, &mut memory);
+        ret.push(ExecutionState::with_stack_and_memory(
+            stack.clone(),
+            memory,
+            0,
+        ));
+        memory = HashMap::default();
+        insert_random_list::<11>(list_address, list_length, &mut memory);
+        ret.push(ExecutionState::with_stack_and_memory(stack, memory, 0));
 
-        vec![ExecutionState::with_stack_and_memory(stack, memory, 0)]
+        ret
     }
 }
 
