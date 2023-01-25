@@ -27,7 +27,7 @@ impl<const N: usize> NewSnippet for Pop<N> {
     fn gen_input_states() -> Vec<ExecutionState> {
         fn prepare_state<const N: usize>() -> ExecutionState {
             let list_pointer: BFieldElement = random();
-            let old_length: usize = thread_rng().gen_range(0..100);
+            let old_length: usize = thread_rng().gen_range(1..30);
             let mut stack = get_init_tvm_stack();
             stack.push(list_pointer);
             let mut memory = HashMap::default();
@@ -36,6 +36,9 @@ impl<const N: usize> NewSnippet for Pop<N> {
         }
 
         vec![
+            prepare_state::<N>(),
+            prepare_state::<N>(),
+            prepare_state::<N>(),
             prepare_state::<N>(),
             prepare_state::<N>(),
             prepare_state::<N>(),
