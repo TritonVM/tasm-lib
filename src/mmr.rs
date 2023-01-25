@@ -1,6 +1,5 @@
 pub mod calculate_new_peaks_from_append;
 pub mod calculate_new_peaks_from_leaf_mutation;
-pub mod count_leaves;
 pub mod data_index_to_node_index;
 pub mod get_height_from_data_index;
 pub mod leaf_index_to_mt_index;
