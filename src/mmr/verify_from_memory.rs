@@ -328,10 +328,17 @@ mod auth_path_verify_from_memory_tests {
     };
 
     use crate::{
-        get_init_tvm_stack, mmr::MAX_MMR_HEIGHT, test_helpers::rust_tasm_equivalence_prop,
+        get_init_tvm_stack,
+        mmr::MAX_MMR_HEIGHT,
+        test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new},
     };
 
     use super::*;
+
+    #[test]
+    fn new_snippet_test() {
+        rust_tasm_equivalence_prop_new::<MmrVerifyFromMemory>();
+    }
 
     // This will crash the VM because leaf?index is not strictly less than leaf_count
     #[test]
