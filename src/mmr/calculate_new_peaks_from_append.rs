@@ -1,7 +1,6 @@
-use std::collections::HashMap;
-
 use num::Zero;
 use rand::random;
+use std::collections::HashMap;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::random_elements;
 use twenty_first::shared_math::rescue_prime_digest::{Digest, DIGEST_LENGTH};
@@ -11,16 +10,15 @@ use twenty_first::util_types::mmr;
 use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
 use twenty_first::util_types::mmr::mmr_trait::Mmr;
 
+use super::data_index_to_node_index::DataIndexToNodeIndex;
+use super::right_lineage_length::MmrRightLineageLength;
+use super::MAX_MMR_HEIGHT;
 use crate::library::Library;
 use crate::list::u32::pop::Pop;
 use crate::list::u32::push::Push;
 use crate::list::u32::set_length::SetLength;
 use crate::snippet::{NewSnippet, Snippet};
 use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, ExecutionState};
-
-use super::data_index_to_node_index::DataIndexToNodeIndex;
-use super::right_lineage_count_and_own_height::MmrRightLineageCountAndHeight;
-use super::MAX_MMR_HEIGHT;
 
 pub struct CalculateNewPeaksFromAppend;
 
@@ -102,7 +100,7 @@ impl Snippet for CalculateNewPeaksFromAppend {
     fn function_body(library: &mut Library) -> String {
         let entrypoint = Self::entrypoint();
         let data_index_to_node_index = library.import::<DataIndexToNodeIndex>();
-        let right_ancestor_count_and_own_height = library.import::<MmrRightLineageCountAndHeight>();
+        let right_lineage_length = library.import::<MmrRightLineageLength>();
         let push = library.import::<Push<DIGEST_LENGTH>>();
         let pop = library.import::<Pop<DIGEST_LENGTH>>();
         let set_length = library.import::<SetLength>();
@@ -137,12 +135,11 @@ impl Snippet for CalculateNewPeaksFromAppend {
                     call {data_index_to_node_index}
                     // stack: _ old_leaf_count_hi old_leaf_count_lo *auth_path *peaks new_ni_hi new_ni_lo
 
-                    call {right_ancestor_count_and_own_height}
-                    pop
-                    // stack: _ old_leaf_count_hi old_leaf_count_lo *auth_path *peaks rac
+                    call {right_lineage_length}
+                    // stack: _ old_leaf_count_hi old_leaf_count_lo *auth_path *peaks rll
 
                     call {entrypoint}_while
-                    // stack: _ old_leaf_count_hi old_leaf_count_lo *auth_path *peaks (rac = 0)
+                    // stack: _ old_leaf_count_hi old_leaf_count_lo *auth_path *peaks (rll = 0)
 
                     pop
                     swap3 pop swap1 pop
@@ -150,50 +147,50 @@ impl Snippet for CalculateNewPeaksFromAppend {
 
                     return
 
-                // Stack start and end: _ old_leaf_count_hi old_leaf_count_lo *auth_path *peaks rac
+                // Stack start and end: _ old_leaf_count_hi old_leaf_count_lo *auth_path *peaks rll
                 {entrypoint}_while:
                     dup0
                     push 0
                     eq
                     skiz
                         return
-                    // Stack: _ old_leaf_count_hi old_leaf_count_lo *auth_path *peaks rac
+                    // Stack: _ old_leaf_count_hi old_leaf_count_lo *auth_path *peaks rll
 
                     swap2 swap1
-                    // Stack: _ old_leaf_count_hi old_leaf_count_lo rac *auth_path *peaks
+                    // Stack: _ old_leaf_count_hi old_leaf_count_lo rll *auth_path *peaks
 
                     dup0
                     call {pop}
-                    // Stack: _ old_leaf_count_hi old_leaf_count_lo rac *auth_path *peaks [digest (new_hash)]
+                    // Stack: _ old_leaf_count_hi old_leaf_count_lo rll *auth_path *peaks [digest (new_hash)]
 
                     dup5
-                    // Stack: _ old_leaf_count_hi old_leaf_count_lo rac *auth_path *peaks [digest (new_hash)] *peaks
+                    // Stack: _ old_leaf_count_hi old_leaf_count_lo rll *auth_path *peaks [digest (new_hash)] *peaks
 
                     call {pop}
-                    // Stack: _ old_leaf_count_hi old_leaf_count_lo rac *auth_path *peaks [digest (new_hash)] [digests (previous_peak)]
+                    // Stack: _ old_leaf_count_hi old_leaf_count_lo rll *auth_path *peaks [digest (new_hash)] [digests (previous_peak)]
 
                     // Update authentication path with latest previous_peak
                     dup11
                     dup5 dup5 dup5 dup5 dup5
-                    // Stack: _ old_leaf_count_hi old_leaf_count_lo rac *auth_path *peaks [digest (new_hash)] [digests (previous_peak)] *auth_path [digests (previous_peak)]
+                    // Stack: _ old_leaf_count_hi old_leaf_count_lo rll *auth_path *peaks [digest (new_hash)] [digests (previous_peak)] *auth_path [digests (previous_peak)]
 
                     call {push}
                     pop
-                    // Stack: _ old_leaf_count_hi old_leaf_count_lo rac *auth_path *peaks [digest (new_hash)] [digests (previous_peak)]
+                    // Stack: _ old_leaf_count_hi old_leaf_count_lo rll *auth_path *peaks [digest (new_hash)] [digests (previous_peak)]
 
                     hash
                     pop pop pop pop pop
-                    // Stack: _ old_leaf_count_hi old_leaf_count_lo rac *auth_path *peaks [digests (new_peak)]
+                    // Stack: _ old_leaf_count_hi old_leaf_count_lo rll *auth_path *peaks [digests (new_peak)]
 
                     call {push}
-                    // Stack: _ old_leaf_count_hi old_leaf_count_lo rac *auth_path *peaks
+                    // Stack: _ old_leaf_count_hi old_leaf_count_lo rll *auth_path *peaks
 
                     swap1 swap2
-                    // Stack: _ old_leaf_count_hi old_leaf_count_lo *auth_path *peaks rac
+                    // Stack: _ old_leaf_count_hi old_leaf_count_lo *auth_path *peaks rll
 
                     push -1
                     add
-                    // Stack: _ old_leaf_count_hi old_leaf_count_lo *auth_path *peaks (rac - 1)
+                    // Stack: _ old_leaf_count_hi old_leaf_count_lo *auth_path *peaks (rll - 1)
 
                     recurse
                 "
