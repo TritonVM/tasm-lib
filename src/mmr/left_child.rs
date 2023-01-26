@@ -33,10 +33,13 @@ impl NewSnippet for MmrLeftChild {
         for _ in 0..10 {
             let mut stack = get_init_tvm_stack();
             let node_index = thread_rng().gen_range(0..u64::MAX / 2);
+            let (_, height) = mmr::shared::right_lineage_length_and_own_height(node_index as u128);
             let node_index_hi = BFieldElement::new(node_index >> 32);
             let node_index_lo = BFieldElement::new(node_index & u32::MAX as u64);
+            let height = BFieldElement::new(height as u64);
             stack.push(node_index_hi);
             stack.push(node_index_lo);
+            stack.push(height);
             ret.push(ExecutionState::with_stack(stack));
         }
 
