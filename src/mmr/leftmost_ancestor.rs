@@ -9,7 +9,7 @@ use twenty_first::util_types::mmr;
 
 use crate::arithmetic::u64::decr_u64::DecrU64;
 use crate::arithmetic::u64::log_2_floor_u64::Log2FloorU64;
-use crate::arithmetic::u64::pow2_u64::Pow2StaticU64;
+use crate::arithmetic::u64::pow2_u64::Pow2U64;
 use crate::library::Library;
 use crate::snippet::{NewSnippet, Snippet};
 use crate::{get_init_tvm_stack, ExecutionState};
@@ -57,7 +57,7 @@ impl Snippet for MmrLeftMostAncestor {
     fn function_body(library: &mut Library) -> String {
         let entrypoint = Self::entrypoint();
         let decr_u64 = library.import::<DecrU64>();
-        let pow2_u64 = library.import::<Pow2StaticU64>();
+        let pow2_u64 = library.import::<Pow2U64>();
         let log_2_floor_u64 = library.import::<Log2FloorU64>();
         format!(
             "

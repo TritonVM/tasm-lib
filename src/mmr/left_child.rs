@@ -7,7 +7,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::algebraic_hasher::Hashable;
 use twenty_first::util_types::mmr;
 
-use crate::arithmetic::u64::pow2_u64::Pow2StaticU64;
+use crate::arithmetic::u64::pow2_u64::Pow2U64;
 use crate::arithmetic::u64::sub_u64::SubU64;
 use crate::library::Library;
 use crate::snippet::{NewSnippet, Snippet};
@@ -58,7 +58,7 @@ impl Snippet for MmrLeftChild {
 
     fn function_body(library: &mut Library) -> String {
         let entrypoint = Self::entrypoint();
-        let pow2_u64 = library.import::<Pow2StaticU64>();
+        let pow2_u64 = library.import::<Pow2U64>();
         let sub_u64 = library.import::<SubU64>();
         format!(
             "

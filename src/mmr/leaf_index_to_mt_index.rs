@@ -11,7 +11,7 @@ use crate::arithmetic::u64::and_u64::AndU64;
 use crate::arithmetic::u64::eq_u64::EqU64;
 use crate::arithmetic::u64::log_2_floor_u64::Log2FloorU64;
 use crate::arithmetic::u64::lt_u64::LtU64;
-use crate::arithmetic::u64::pow2_u64::Pow2StaticU64;
+use crate::arithmetic::u64::pow2_u64::Pow2U64;
 use crate::arithmetic::u64::sub_u64::SubU64;
 use crate::library::Library;
 use crate::snippet::{NewSnippet, Snippet};
@@ -74,7 +74,7 @@ impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
         let lt_u64 = library.import::<LtU64>();
         let add_u64 = library.import::<AddU64>();
         let and_u64 = library.import::<AndU64>();
-        let pow2_u64 = library.import::<Pow2StaticU64>();
+        let pow2_u64 = library.import::<Pow2U64>();
         let sub_u64 = library.import::<SubU64>();
         let eq_u64 = library.import::<EqU64>();
 

@@ -11,9 +11,9 @@ use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 
 /// Consumes top element which is interpreted as exponent. Pushes a
 /// U32<2> to the top of the stack. So grows the stack by 1.
-pub struct Pow2StaticU64();
+pub struct Pow2U64;
 
-impl NewSnippet for Pow2StaticU64 {
+impl NewSnippet for Pow2U64 {
     fn inputs() -> Vec<&'static str> {
         vec!["i"]
     }
@@ -37,7 +37,7 @@ impl NewSnippet for Pow2StaticU64 {
     }
 }
 
-impl Snippet for Pow2StaticU64 {
+impl Snippet for Pow2U64 {
     fn stack_diff() -> isize {
         1
     }
@@ -48,61 +48,13 @@ impl Snippet for Pow2StaticU64 {
 
     fn function_body(_library: &mut Library) -> String {
         let entrypoint = Self::entrypoint();
-        let the_big_skiz: String = (0..64)
-            .map(|j| {
-                format!(
-                    "
-                    dup0
-                    push {j} eq
-                    skiz call {entrypoint}_{j}
-                    "
-                )
-            })
-            .collect::<Vec<_>>()
-            .concat();
-
-        let the_big_lebowski: String = (0..64)
-            .map(|j| {
-                let two_pow_j = 2u64.pow(j % 32);
-                let push_two_pow_j = if j < 32 {
-                    // 2^j is pushed in reverse for `swap2` to move `i` back to top
-                    format!(
-                        "push {two_pow_j} push 0  // -> _ i lo hi
-                        swap2  // -> _ hi lo i
-                        "
-                    )
-                } else {
-                    format!(
-                        "push 0 push {two_pow_j}  // -> _ i lo hi
-                        swap2  // -> _ hi lo i
-                        "
-                    )
-                };
-
-                format!(
-                    "
-                    // Before: _ i
-                    // After: _ hi lo i
-                    {entrypoint}_{j}:
-                        {push_two_pow_j}
-                        return
-                "
-                )
-            })
-            .collect::<Vec<_>>()
-            .concat();
 
         format!(
-            "
-            // Before: _ i
-            // After: _ hi lo
-            {entrypoint}:
-                {the_big_skiz}
-
-                pop
+            "{entrypoint}:
+                push 2
+                pow
+                split
                 return
-
-            {the_big_lebowski}
             "
         )
     }
@@ -141,12 +93,12 @@ mod tests {
 
     #[test]
     fn pow2_static_test() {
-        rust_tasm_equivalence_prop_new::<Pow2StaticU64>();
+        rust_tasm_equivalence_prop_new::<Pow2U64>();
     }
 
     #[test]
     fn pow2_static_benchmark() {
-        bench_and_write::<Pow2StaticU64>();
+        bench_and_write::<Pow2U64>();
     }
 
     fn prop_exp_static(exponent: u8) {
@@ -154,7 +106,7 @@ mod tests {
         init_stack.push(BFieldElement::new(exponent as u64));
 
         let expected = None;
-        let mut execution_result = rust_tasm_equivalence_prop::<Pow2StaticU64>(
+        let mut execution_result = rust_tasm_equivalence_prop::<Pow2U64>(
             &init_stack,
             &[],
             &[],
