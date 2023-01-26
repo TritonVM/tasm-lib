@@ -9,7 +9,7 @@ use crate::library::Library;
 use crate::snippet::{NewSnippet, Snippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
-use super::non_leaf_nodes_left::MmrNonLeafNodesLeftOld;
+use super::non_leaf_nodes_left::MmrNonLeafNodesLeftUsingAnd;
 
 pub struct DataIndexToNodeIndex();
 
@@ -54,7 +54,7 @@ impl Snippet for DataIndexToNodeIndex {
 
     fn function_body(library: &mut Library) -> String {
         let entrypoint = Self::entrypoint();
-        let non_leaf_nodes_left = library.import::<MmrNonLeafNodesLeftOld>();
+        let non_leaf_nodes_left = library.import::<MmrNonLeafNodesLeftUsingAnd>();
         let incr_u64 = library.import::<IncrU64>();
         let add_u64 = library.import::<AddU64>();
         format!("
