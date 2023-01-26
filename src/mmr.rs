@@ -10,6 +10,7 @@ pub mod non_leaf_nodes_left;
 pub mod right_child;
 pub mod right_child_and_height;
 pub mod right_lineage_count_and_own_height;
+pub mod right_lineage_length;
 pub mod verify_from_memory;
 pub mod verify_from_secret_in;
 

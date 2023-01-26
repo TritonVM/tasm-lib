@@ -255,64 +255,64 @@ mod tests {
 
     #[test]
     fn right_ancestor_count_test() {
-        prop_right_ancestor_count_and_own_height(1, 0, 0);
-        prop_right_ancestor_count_and_own_height(2, 1, 0);
-        prop_right_ancestor_count_and_own_height(3, 0, 1);
-        prop_right_ancestor_count_and_own_height(4, 0, 0);
-        prop_right_ancestor_count_and_own_height(5, 2, 0);
-        prop_right_ancestor_count_and_own_height(6, 1, 1);
-        prop_right_ancestor_count_and_own_height(7, 0, 2);
-        prop_right_ancestor_count_and_own_height(8, 0, 0);
-        prop_right_ancestor_count_and_own_height(9, 1, 0);
+        prop_right_lineage_count_and_own_height(1, 0, 0);
+        prop_right_lineage_count_and_own_height(2, 1, 0);
+        prop_right_lineage_count_and_own_height(3, 0, 1);
+        prop_right_lineage_count_and_own_height(4, 0, 0);
+        prop_right_lineage_count_and_own_height(5, 2, 0);
+        prop_right_lineage_count_and_own_height(6, 1, 1);
+        prop_right_lineage_count_and_own_height(7, 0, 2);
+        prop_right_lineage_count_and_own_height(8, 0, 0);
+        prop_right_lineage_count_and_own_height(9, 1, 0);
 
-        prop_right_ancestor_count_and_own_height(10, 0, 1);
-        prop_right_ancestor_count_and_own_height(11, 0, 0);
-        prop_right_ancestor_count_and_own_height(12, 3, 0);
-        prop_right_ancestor_count_and_own_height(13, 2, 1);
-        prop_right_ancestor_count_and_own_height(14, 1, 2);
-        prop_right_ancestor_count_and_own_height(15, 0, 3);
-        prop_right_ancestor_count_and_own_height(16, 0, 0);
-        prop_right_ancestor_count_and_own_height(17, 1, 0);
-        prop_right_ancestor_count_and_own_height(18, 0, 1);
-        prop_right_ancestor_count_and_own_height(19, 0, 0);
+        prop_right_lineage_count_and_own_height(10, 0, 1);
+        prop_right_lineage_count_and_own_height(11, 0, 0);
+        prop_right_lineage_count_and_own_height(12, 3, 0);
+        prop_right_lineage_count_and_own_height(13, 2, 1);
+        prop_right_lineage_count_and_own_height(14, 1, 2);
+        prop_right_lineage_count_and_own_height(15, 0, 3);
+        prop_right_lineage_count_and_own_height(16, 0, 0);
+        prop_right_lineage_count_and_own_height(17, 1, 0);
+        prop_right_lineage_count_and_own_height(18, 0, 1);
+        prop_right_lineage_count_and_own_height(19, 0, 0);
 
-        prop_right_ancestor_count_and_own_height(20, 2, 0);
-        prop_right_ancestor_count_and_own_height(21, 1, 1);
-        prop_right_ancestor_count_and_own_height(22, 0, 2);
-        prop_right_ancestor_count_and_own_height(23, 0, 0);
-        prop_right_ancestor_count_and_own_height(24, 1, 0);
-        prop_right_ancestor_count_and_own_height(25, 0, 1);
-        prop_right_ancestor_count_and_own_height(26, 0, 0);
-        prop_right_ancestor_count_and_own_height(27, 4, 0);
-        prop_right_ancestor_count_and_own_height(28, 3, 1);
-        prop_right_ancestor_count_and_own_height(29, 2, 2);
+        prop_right_lineage_count_and_own_height(20, 2, 0);
+        prop_right_lineage_count_and_own_height(21, 1, 1);
+        prop_right_lineage_count_and_own_height(22, 0, 2);
+        prop_right_lineage_count_and_own_height(23, 0, 0);
+        prop_right_lineage_count_and_own_height(24, 1, 0);
+        prop_right_lineage_count_and_own_height(25, 0, 1);
+        prop_right_lineage_count_and_own_height(26, 0, 0);
+        prop_right_lineage_count_and_own_height(27, 4, 0);
+        prop_right_lineage_count_and_own_height(28, 3, 1);
+        prop_right_lineage_count_and_own_height(29, 2, 2);
 
-        prop_right_ancestor_count_and_own_height(30, 1, 3);
-        prop_right_ancestor_count_and_own_height(31, 0, 4);
-        prop_right_ancestor_count_and_own_height(32, 0, 0);
-        prop_right_ancestor_count_and_own_height(33, 1, 0);
-        prop_right_ancestor_count_and_own_height(34, 0, 1);
-        prop_right_ancestor_count_and_own_height(35, 0, 0);
-        prop_right_ancestor_count_and_own_height(36, 2, 0);
-        prop_right_ancestor_count_and_own_height(37, 1, 1);
-        prop_right_ancestor_count_and_own_height(38, 0, 2);
-        prop_right_ancestor_count_and_own_height(39, 0, 0);
+        prop_right_lineage_count_and_own_height(30, 1, 3);
+        prop_right_lineage_count_and_own_height(31, 0, 4);
+        prop_right_lineage_count_and_own_height(32, 0, 0);
+        prop_right_lineage_count_and_own_height(33, 1, 0);
+        prop_right_lineage_count_and_own_height(34, 0, 1);
+        prop_right_lineage_count_and_own_height(35, 0, 0);
+        prop_right_lineage_count_and_own_height(36, 2, 0);
+        prop_right_lineage_count_and_own_height(37, 1, 1);
+        prop_right_lineage_count_and_own_height(38, 0, 2);
+        prop_right_lineage_count_and_own_height(39, 0, 0);
 
-        prop_right_ancestor_count_and_own_height(40, 1, 0);
-        prop_right_ancestor_count_and_own_height(41, 0, 1);
+        prop_right_lineage_count_and_own_height(40, 1, 0);
+        prop_right_lineage_count_and_own_height(41, 0, 1);
 
         // Run test for big numbers
         for i in 0..32 {
-            prop_right_ancestor_count_and_own_height(u32::MAX as u64 - i, i as u32, 31 - i as u32);
+            prop_right_lineage_count_and_own_height(u32::MAX as u64 - i, i as u32, 31 - i as u32);
         }
 
         // Run test for very big numbers
         for i in 0..63 {
-            prop_right_ancestor_count_and_own_height((u64::MAX >> 1) - i, i as u32, 62 - i as u32);
+            prop_right_lineage_count_and_own_height((u64::MAX >> 1) - i, i as u32, 62 - i as u32);
         }
     }
 
-    fn prop_right_ancestor_count_and_own_height(
+    fn prop_right_lineage_count_and_own_height(
         node_index: u64,
         expected_count: u32,
         expected_height: u32,
