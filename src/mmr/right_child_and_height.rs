@@ -1,19 +1,51 @@
 use std::collections::HashMap;
 
 use num::{One, Zero};
+use rand::{thread_rng, Rng};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::mmr;
 
 use crate::arithmetic::u64::eq_u64::EqU64;
 use crate::arithmetic::u64::lt_u64::LtU64;
 use crate::library::Library;
-use crate::snippet::Snippet;
+use crate::snippet::{NewSnippet, Snippet};
+use crate::{get_init_tvm_stack, ExecutionState};
 
 use super::left_child::MmrLeftChild;
 use super::leftmost_ancestor::MmrLeftMostAncestor;
 use super::right_child::MmrRightChild;
 
+// You probably don't want to use this but a right lineage count function instead
 pub struct MmrRightChildAndHeight;
+
+impl NewSnippet for MmrRightChildAndHeight {
+    fn inputs() -> Vec<&'static str> {
+        vec!["node_index_hi", "node_index_lo"]
+    }
+
+    fn outputs() -> Vec<&'static str> {
+        vec!["is_right_child", "height"]
+    }
+
+    fn crash_conditions() -> Vec<&'static str> {
+        vec![]
+    }
+
+    fn gen_input_states() -> Vec<crate::ExecutionState> {
+        let mut ret: Vec<ExecutionState> = vec![];
+        for _ in 0..10 {
+            let mut stack = get_init_tvm_stack();
+            let node_index = thread_rng().gen_range(0..u64::MAX);
+            let node_index_hi = BFieldElement::new(node_index >> 32);
+            let node_index_lo = BFieldElement::new(node_index & u32::MAX as u64);
+            stack.push(node_index_hi);
+            stack.push(node_index_lo);
+            ret.push(ExecutionState::with_stack(stack));
+        }
+
+        ret
+    }
+}
 
 impl Snippet for MmrRightChildAndHeight {
     fn stack_diff() -> isize
