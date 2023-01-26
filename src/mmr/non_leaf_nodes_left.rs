@@ -36,7 +36,7 @@ impl NewSnippet for MmrNonLeafNodesLeftUsingAnd {
 
     fn gen_input_states() -> Vec<crate::ExecutionState> {
         let mut ret: Vec<ExecutionState> = vec![];
-        for _ in 0..10 {
+        for _ in 0..30 {
             let mut stack = get_init_tvm_stack();
             let leaf_index = thread_rng().gen_range(0..u64::MAX / 2);
             let leaf_index_hi = BFieldElement::new(leaf_index >> 32);
@@ -45,6 +45,12 @@ impl NewSnippet for MmrNonLeafNodesLeftUsingAnd {
             stack.push(leaf_index_lo);
             ret.push(ExecutionState::with_stack(stack));
         }
+
+        // Ensure that we also test for leaf_index == 0
+        let mut stack = get_init_tvm_stack();
+        stack.push(BFieldElement::zero());
+        stack.push(BFieldElement::zero());
+        ret.push(ExecutionState::with_stack(stack));
 
         ret
     }
@@ -74,6 +80,13 @@ impl Snippet for MmrNonLeafNodesLeftUsingAnd {
         // BEFORE: _ leaf_index_hi leaf_index_lo
         // AFTER: _ node_count_hi node_count_lo
         {entrypoint}:
+            // Handle leaf_index == 0: if leaf_index == 0 => return leaf_index
+            dup1 dup1 push 0 push 0 call {eq_u64}
+            // _ leaf_index_hi leaf_index_lo (leaf_index == 0)
+
+            skiz return
+            // _ leaf_index_hi leaf_index_lo
+
             dup1 dup1
             call {log_2_floor_u64}
             call {incr_u64}
