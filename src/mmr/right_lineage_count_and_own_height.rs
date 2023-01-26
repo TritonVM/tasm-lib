@@ -1,20 +1,49 @@
+use rand::{thread_rng, Rng};
 use std::collections::HashMap;
-
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::mmr;
-
-use crate::arithmetic::u64::eq_u64::EqU64;
-use crate::arithmetic::u64::lt_u64::LtU64;
-use crate::library::Library;
-use crate::snippet::Snippet;
 
 use super::left_child::MmrLeftChild;
 use super::leftmost_ancestor::MmrLeftMostAncestor;
 use super::right_child::MmrRightChild;
+use crate::arithmetic::u64::eq_u64::EqU64;
+use crate::arithmetic::u64::lt_u64::LtU64;
+use crate::library::Library;
+use crate::snippet::{NewSnippet, Snippet};
+use crate::{get_init_tvm_stack, ExecutionState};
 
-pub struct MmrRightAncestorCountAndHeight;
+pub struct MmrRightLineageCountAndHeight;
 
-impl Snippet for MmrRightAncestorCountAndHeight {
+impl NewSnippet for MmrRightLineageCountAndHeight {
+    fn inputs() -> Vec<&'static str> {
+        vec!["node_index_hi", "node_index_lo"]
+    }
+
+    fn outputs() -> Vec<&'static str> {
+        vec!["right_lineage_count", "height"]
+    }
+
+    fn crash_conditions() -> Vec<&'static str> {
+        vec!["Input values are not valid u32s", "Node index beyond ~2^63"]
+    }
+
+    fn gen_input_states() -> Vec<crate::ExecutionState> {
+        let mut ret: Vec<ExecutionState> = vec![];
+        for _ in 0..10 {
+            let mut stack = get_init_tvm_stack();
+            let node_index = thread_rng().gen_range(0..u64::MAX / 2);
+            let node_index_hi = BFieldElement::new(node_index >> 32);
+            let node_index_lo = BFieldElement::new(node_index & u32::MAX as u64);
+            stack.push(node_index_hi);
+            stack.push(node_index_lo);
+            ret.push(ExecutionState::with_stack(stack));
+        }
+
+        ret
+    }
+}
+
+impl Snippet for MmrRightLineageCountAndHeight {
     fn stack_diff() -> isize
     where
         Self: Sized,
@@ -215,9 +244,14 @@ mod tests {
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
     use crate::get_init_tvm_stack;
-    use crate::test_helpers::rust_tasm_equivalence_prop;
+    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
+
+    #[test]
+    fn new_snippet_test() {
+        rust_tasm_equivalence_prop_new::<MmrRightLineageCountAndHeight>();
+    }
 
     #[test]
     fn right_ancestor_count_test() {
@@ -299,7 +333,7 @@ mod tests {
             ],
         ]
         .concat();
-        let _execution_result = rust_tasm_equivalence_prop::<MmrRightAncestorCountAndHeight>(
+        let _execution_result = rust_tasm_equivalence_prop::<MmrRightLineageCountAndHeight>(
             &init_stack,
             &[],
             &[],

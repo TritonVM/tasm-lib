@@ -19,7 +19,7 @@ use crate::snippet::{NewSnippet, Snippet};
 use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, ExecutionState};
 
 use super::data_index_to_node_index::DataIndexToNodeIndex;
-use super::right_ancestor_count_and_own_height::MmrRightAncestorCountAndHeight;
+use super::right_lineage_count_and_own_height::MmrRightLineageCountAndHeight;
 use super::MAX_MMR_HEIGHT;
 
 pub struct CalculateNewPeaksFromAppend;
@@ -102,8 +102,7 @@ impl Snippet for CalculateNewPeaksFromAppend {
     fn function_body(library: &mut Library) -> String {
         let entrypoint = Self::entrypoint();
         let data_index_to_node_index = library.import::<DataIndexToNodeIndex>();
-        let right_ancestor_count_and_own_height =
-            library.import::<MmrRightAncestorCountAndHeight>();
+        let right_ancestor_count_and_own_height = library.import::<MmrRightLineageCountAndHeight>();
         let push = library.import::<Push<DIGEST_LENGTH>>();
         let pop = library.import::<Pop<DIGEST_LENGTH>>();
         let set_length = library.import::<SetLength>();
