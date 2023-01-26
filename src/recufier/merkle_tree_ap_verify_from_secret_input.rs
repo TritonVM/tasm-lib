@@ -7,9 +7,27 @@ use twenty_first::shared_math::rescue_prime_regular::RescuePrimeRegular;
 use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
 use crate::library::Library;
-use crate::snippet::Snippet;
+use crate::snippet::{NewSnippet, Snippet};
 
-pub struct MtApVerify();
+impl NewSnippet for MtApVerifyFromSecretInput {
+    fn inputs() -> Vec<&'static str> {
+        vec![]
+    }
+
+    fn outputs() -> Vec<&'static str> {
+        vec![]
+    }
+
+    fn crash_conditions() -> Vec<&'static str> {
+        vec!["auth path in public input is invalid"]
+    }
+
+    fn gen_input_states() -> Vec<crate::ExecutionState> {
+        todo!()
+    }
+}
+
+pub struct MtApVerifyFromSecretInput;
 /// TVM assembly to verify Merkle authentication paths
 ///
 /// input: number of authentication paths, merkle root, authentication paths,
@@ -19,7 +37,7 @@ pub struct MtApVerify();
 /// output: Result<(), VMFail>
 ///
 /// uses RAM at address 0 to store the number of authentication paths
-impl Snippet for MtApVerify {
+impl Snippet for MtApVerifyFromSecretInput {
     fn stack_diff() -> isize {
         0
     }
@@ -62,7 +80,7 @@ impl Snippet for MtApVerify {
                 call {entrypoint}_assert_tree_top        //
                                                          // stack: [* r4 r3 r2 r1 r0]
                 recurse                                  // check next AP
-                
+
                                                          // subroutine: read index & leaf
                                                          // stack before: [*]
                                                          // stack afterwards: [* idx d4 d3 d2 d1 d0 0 0 0 0 0]
@@ -70,7 +88,7 @@ impl Snippet for MtApVerify {
                 read_io                                  // read node index
                 read_io read_io read_io read_io read_io  // read leaf's value
                 push 0 push 0 push 0 push 0 push 0       // add zeroes as preparation for divine sibling
-                return                                   // 
+                return                                   //
 
                                                          // subroutine: go up tree
                                                          // stack before: [* idx - - - - - - - - - -]
@@ -144,6 +162,7 @@ impl Snippet for MtApVerify {
 mod merkle_authentication_verify_test {
     use std::collections::HashMap;
 
+    use rand::random;
     use twenty_first::shared_math::b_field_element::BFieldElement;
     use twenty_first::shared_math::rescue_prime_digest::Digest;
     use twenty_first::shared_math::rescue_prime_regular::RescuePrimeRegular;
@@ -156,7 +175,7 @@ mod merkle_authentication_verify_test {
     use crate::get_init_tvm_stack;
     use crate::test_helpers::rust_tasm_equivalence_prop;
 
-    use super::MtApVerify;
+    use super::MtApVerifyFromSecretInput;
 
     fn generate_leafs() -> Vec<Digest> {
         let two: u32 = 2;
@@ -283,10 +302,36 @@ mod merkle_authentication_verify_test {
         let stack: &mut Vec<BFieldElement> = &mut get_init_tvm_stack();
         let standard_input: Vec<BFieldElement> = generate_input(indices, &leafs);
 
-        rust_tasm_equivalence_prop::<MtApVerify>(
+        rust_tasm_equivalence_prop::<MtApVerifyFromSecretInput>(
             stack,
             &standard_input,
             &secret_input,
+            &mut HashMap::default(),
+            0,
+            None,
+        );
+    }
+
+    #[should_panic]
+    #[test]
+    fn merkle_tree_ap_verify_negative_test() {
+        let leafs = generate_leafs();
+        let mt: &MerkleTree<RescuePrimeRegular, CpuParallel> =
+            &MerkleTreeMaker::from_digests(&leafs);
+        let indices = choose_indices();
+
+        // Generate invalid secret input
+        let mut bad_secret_input: Vec<BFieldElement> =
+            generate_siblings_as_vector(mt.clone(), indices);
+        bad_secret_input[0] = random();
+
+        let stack: &mut Vec<BFieldElement> = &mut get_init_tvm_stack();
+        let standard_input: Vec<BFieldElement> = generate_input(indices, &leafs);
+
+        rust_tasm_equivalence_prop::<MtApVerifyFromSecretInput>(
+            stack,
+            &standard_input,
+            &bad_secret_input,
             &mut HashMap::default(),
             0,
             None,
