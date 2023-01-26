@@ -224,9 +224,14 @@ mod tests {
     use twenty_first::util_types::algebraic_hasher::Hashable;
 
     use crate::get_init_tvm_stack;
-    use crate::test_helpers::rust_tasm_equivalence_prop;
+    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
+
+    #[test]
+    fn new_snippet_test_and() {
+        rust_tasm_equivalence_prop_new::<MmrRightChildAndHeight>();
+    }
 
     #[test]
     fn right_child_and_height_node_index_equal_leftmost_ancestor() {
