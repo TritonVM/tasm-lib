@@ -1,12 +1,23 @@
 use std::collections::HashMap;
 
 use num::{One, Zero};
-use twenty_first::shared_math::{
-    b_field_element::BFieldElement, rescue_prime_digest::Digest,
-    rescue_prime_regular::DIGEST_LENGTH,
-};
+use twenty_first::shared_math::b_field_element::BFieldElement;
+use twenty_first::shared_math::other::random_elements;
+use twenty_first::shared_math::rescue_prime_digest::{Digest, DIGEST_LENGTH};
 
-/// Read an element from a list.
+pub fn insert_random_list<const N: usize>(
+    list_pointer: BFieldElement,
+    list_length: usize,
+    memory: &mut HashMap<BFieldElement, BFieldElement>,
+) {
+    list_new(list_pointer, memory);
+    for _ in 0..list_length {
+        let random_element: [BFieldElement; N] = random_elements(N).try_into().unwrap();
+        list_push(list_pointer, random_element, memory);
+    }
+}
+
+/// Write an element to a list.
 pub fn list_set<const N: usize>(
     list_pointer: BFieldElement,
     index: usize,

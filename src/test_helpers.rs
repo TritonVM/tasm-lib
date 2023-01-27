@@ -11,13 +11,26 @@ use crate::ExecutionResult;
 pub fn rust_tasm_equivalence_prop_new<T: NewSnippet>() {
     let mut execution_states = T::gen_input_states();
     for execution_state in execution_states.iter_mut() {
-        let _execution_result = rust_tasm_equivalence_prop::<T>(
+        let stack_init = execution_state.stack.clone();
+        let execution_result = rust_tasm_equivalence_prop::<T>(
             &execution_state.stack,
             &execution_state.std_in,
             &execution_state.secret_in,
             &mut execution_state.memory,
             execution_state.words_allocated,
             None,
+        );
+
+        // Verify that stack grows with expected number of elements
+        let stack_final = execution_result.final_stack;
+        let observed_stack_growth: isize = stack_final.len() as isize - stack_init.len() as isize;
+        let expected_stack_growth: isize = T::outputs().len() as isize - T::inputs().len() as isize;
+        assert_eq!(
+            expected_stack_growth,
+            observed_stack_growth,
+            "Stack must pop and push expected number of elements. Got input: {}\nGot output: {}",
+            stack_init.iter().map(|x| x.to_string()).join(","),
+            stack_final.iter().map(|x| x.to_string()).join(",")
         );
     }
 }

@@ -4,8 +4,8 @@ use num::Zero;
 use rand::{thread_rng, Rng};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::random_elements;
-use twenty_first::shared_math::rescue_prime_digest::Digest;
-use twenty_first::shared_math::rescue_prime_regular::{RescuePrimeRegular, DIGEST_LENGTH};
+use twenty_first::shared_math::rescue_prime_digest::{Digest, DIGEST_LENGTH};
+use twenty_first::shared_math::rescue_prime_regular::RescuePrimeRegular;
 use twenty_first::test_shared::mmr::get_archival_mmr_from_digests;
 use twenty_first::util_types::mmr::archival_mmr::ArchivalMmr;
 use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
@@ -434,7 +434,7 @@ mod mmr_verify_from_secret_in_tests {
             let second_to_last_leaf_index = init_leaf_count;
             let mut real_membership_proof_second_to_last = mmr.append(second_to_last_leaf);
             assert_eq!(
-                real_membership_proof_second_to_last.data_index,
+                real_membership_proof_second_to_last.leaf_index,
                 second_to_last_leaf_index as u128
             );
 

@@ -1,20 +1,49 @@
+use rand::{thread_rng, Rng};
 use std::collections::HashMap;
-
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::mmr;
-
-use crate::arithmetic::u64::eq_u64::EqU64;
-use crate::arithmetic::u64::lt_u64::LtU64;
-use crate::library::Library;
-use crate::snippet::Snippet;
 
 use super::left_child::MmrLeftChild;
 use super::leftmost_ancestor::MmrLeftMostAncestor;
 use super::right_child::MmrRightChild;
+use crate::arithmetic::u64::eq_u64::EqU64;
+use crate::arithmetic::u64::lt_u64::LtU64;
+use crate::library::Library;
+use crate::snippet::{NewSnippet, Snippet};
+use crate::{get_init_tvm_stack, ExecutionState};
 
-pub struct MmrRightAncestorCountAndHeight;
+pub struct MmrRightLineageCountAndHeight;
 
-impl Snippet for MmrRightAncestorCountAndHeight {
+impl NewSnippet for MmrRightLineageCountAndHeight {
+    fn inputs() -> Vec<&'static str> {
+        vec!["node_index_hi", "node_index_lo"]
+    }
+
+    fn outputs() -> Vec<&'static str> {
+        vec!["right_lineage_count", "height"]
+    }
+
+    fn crash_conditions() -> Vec<&'static str> {
+        vec!["Input values are not valid u32s", "Node index beyond ~2^63"]
+    }
+
+    fn gen_input_states() -> Vec<crate::ExecutionState> {
+        let mut ret: Vec<ExecutionState> = vec![];
+        for _ in 0..10 {
+            let mut stack = get_init_tvm_stack();
+            let node_index = thread_rng().gen_range(0..u64::MAX / 2);
+            let node_index_hi = BFieldElement::new(node_index >> 32);
+            let node_index_lo = BFieldElement::new(node_index & u32::MAX as u64);
+            stack.push(node_index_hi);
+            stack.push(node_index_lo);
+            ret.push(ExecutionState::with_stack(stack));
+        }
+
+        ret
+    }
+}
+
+impl Snippet for MmrRightLineageCountAndHeight {
     fn stack_diff() -> isize
     where
         Self: Sized,
@@ -182,7 +211,7 @@ impl Snippet for MmrRightAncestorCountAndHeight {
 
             loop {
                 if candidate == node_index {
-                    return (right_ancestor_count, candidate_height as u32);
+                    return (right_ancestor_count, candidate_height);
                 }
 
                 let left_child = mmr::shared::left_child(candidate, candidate_height);
@@ -215,70 +244,75 @@ mod tests {
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
     use crate::get_init_tvm_stack;
-    use crate::test_helpers::rust_tasm_equivalence_prop;
+    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
 
     #[test]
+    fn new_snippet_test() {
+        rust_tasm_equivalence_prop_new::<MmrRightLineageCountAndHeight>();
+    }
+
+    #[test]
     fn right_ancestor_count_test() {
-        prop_right_ancestor_count_and_own_height(1, 0, 0);
-        prop_right_ancestor_count_and_own_height(2, 1, 0);
-        prop_right_ancestor_count_and_own_height(3, 0, 1);
-        prop_right_ancestor_count_and_own_height(4, 0, 0);
-        prop_right_ancestor_count_and_own_height(5, 2, 0);
-        prop_right_ancestor_count_and_own_height(6, 1, 1);
-        prop_right_ancestor_count_and_own_height(7, 0, 2);
-        prop_right_ancestor_count_and_own_height(8, 0, 0);
-        prop_right_ancestor_count_and_own_height(9, 1, 0);
+        prop_right_lineage_count_and_own_height(1, 0, 0);
+        prop_right_lineage_count_and_own_height(2, 1, 0);
+        prop_right_lineage_count_and_own_height(3, 0, 1);
+        prop_right_lineage_count_and_own_height(4, 0, 0);
+        prop_right_lineage_count_and_own_height(5, 2, 0);
+        prop_right_lineage_count_and_own_height(6, 1, 1);
+        prop_right_lineage_count_and_own_height(7, 0, 2);
+        prop_right_lineage_count_and_own_height(8, 0, 0);
+        prop_right_lineage_count_and_own_height(9, 1, 0);
 
-        prop_right_ancestor_count_and_own_height(10, 0, 1);
-        prop_right_ancestor_count_and_own_height(11, 0, 0);
-        prop_right_ancestor_count_and_own_height(12, 3, 0);
-        prop_right_ancestor_count_and_own_height(13, 2, 1);
-        prop_right_ancestor_count_and_own_height(14, 1, 2);
-        prop_right_ancestor_count_and_own_height(15, 0, 3);
-        prop_right_ancestor_count_and_own_height(16, 0, 0);
-        prop_right_ancestor_count_and_own_height(17, 1, 0);
-        prop_right_ancestor_count_and_own_height(18, 0, 1);
-        prop_right_ancestor_count_and_own_height(19, 0, 0);
+        prop_right_lineage_count_and_own_height(10, 0, 1);
+        prop_right_lineage_count_and_own_height(11, 0, 0);
+        prop_right_lineage_count_and_own_height(12, 3, 0);
+        prop_right_lineage_count_and_own_height(13, 2, 1);
+        prop_right_lineage_count_and_own_height(14, 1, 2);
+        prop_right_lineage_count_and_own_height(15, 0, 3);
+        prop_right_lineage_count_and_own_height(16, 0, 0);
+        prop_right_lineage_count_and_own_height(17, 1, 0);
+        prop_right_lineage_count_and_own_height(18, 0, 1);
+        prop_right_lineage_count_and_own_height(19, 0, 0);
 
-        prop_right_ancestor_count_and_own_height(20, 2, 0);
-        prop_right_ancestor_count_and_own_height(21, 1, 1);
-        prop_right_ancestor_count_and_own_height(22, 0, 2);
-        prop_right_ancestor_count_and_own_height(23, 0, 0);
-        prop_right_ancestor_count_and_own_height(24, 1, 0);
-        prop_right_ancestor_count_and_own_height(25, 0, 1);
-        prop_right_ancestor_count_and_own_height(26, 0, 0);
-        prop_right_ancestor_count_and_own_height(27, 4, 0);
-        prop_right_ancestor_count_and_own_height(28, 3, 1);
-        prop_right_ancestor_count_and_own_height(29, 2, 2);
+        prop_right_lineage_count_and_own_height(20, 2, 0);
+        prop_right_lineage_count_and_own_height(21, 1, 1);
+        prop_right_lineage_count_and_own_height(22, 0, 2);
+        prop_right_lineage_count_and_own_height(23, 0, 0);
+        prop_right_lineage_count_and_own_height(24, 1, 0);
+        prop_right_lineage_count_and_own_height(25, 0, 1);
+        prop_right_lineage_count_and_own_height(26, 0, 0);
+        prop_right_lineage_count_and_own_height(27, 4, 0);
+        prop_right_lineage_count_and_own_height(28, 3, 1);
+        prop_right_lineage_count_and_own_height(29, 2, 2);
 
-        prop_right_ancestor_count_and_own_height(30, 1, 3);
-        prop_right_ancestor_count_and_own_height(31, 0, 4);
-        prop_right_ancestor_count_and_own_height(32, 0, 0);
-        prop_right_ancestor_count_and_own_height(33, 1, 0);
-        prop_right_ancestor_count_and_own_height(34, 0, 1);
-        prop_right_ancestor_count_and_own_height(35, 0, 0);
-        prop_right_ancestor_count_and_own_height(36, 2, 0);
-        prop_right_ancestor_count_and_own_height(37, 1, 1);
-        prop_right_ancestor_count_and_own_height(38, 0, 2);
-        prop_right_ancestor_count_and_own_height(39, 0, 0);
+        prop_right_lineage_count_and_own_height(30, 1, 3);
+        prop_right_lineage_count_and_own_height(31, 0, 4);
+        prop_right_lineage_count_and_own_height(32, 0, 0);
+        prop_right_lineage_count_and_own_height(33, 1, 0);
+        prop_right_lineage_count_and_own_height(34, 0, 1);
+        prop_right_lineage_count_and_own_height(35, 0, 0);
+        prop_right_lineage_count_and_own_height(36, 2, 0);
+        prop_right_lineage_count_and_own_height(37, 1, 1);
+        prop_right_lineage_count_and_own_height(38, 0, 2);
+        prop_right_lineage_count_and_own_height(39, 0, 0);
 
-        prop_right_ancestor_count_and_own_height(40, 1, 0);
-        prop_right_ancestor_count_and_own_height(41, 0, 1);
+        prop_right_lineage_count_and_own_height(40, 1, 0);
+        prop_right_lineage_count_and_own_height(41, 0, 1);
 
         // Run test for big numbers
         for i in 0..32 {
-            prop_right_ancestor_count_and_own_height(u32::MAX as u64 - i, i as u32, 31 - i as u32);
+            prop_right_lineage_count_and_own_height(u32::MAX as u64 - i, i as u32, 31 - i as u32);
         }
 
         // Run test for very big numbers
         for i in 0..63 {
-            prop_right_ancestor_count_and_own_height((u64::MAX >> 1) - i, i as u32, 62 - i as u32);
+            prop_right_lineage_count_and_own_height((u64::MAX >> 1) - i, i as u32, 62 - i as u32);
         }
     }
 
-    fn prop_right_ancestor_count_and_own_height(
+    fn prop_right_lineage_count_and_own_height(
         node_index: u64,
         expected_count: u32,
         expected_height: u32,
@@ -299,7 +333,7 @@ mod tests {
             ],
         ]
         .concat();
-        let _execution_result = rust_tasm_equivalence_prop::<MmrRightAncestorCountAndHeight>(
+        let _execution_result = rust_tasm_equivalence_prop::<MmrRightLineageCountAndHeight>(
             &init_stack,
             &[],
             &[],

@@ -1,12 +1,53 @@
 use std::collections::HashMap;
 
+use rand::{random, thread_rng, Rng};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
-use crate::rust_shadowing_helper_functions;
-use crate::snippet::Snippet;
+use crate::rust_shadowing_helper_functions::insert_random_list;
+use crate::snippet::{NewSnippet, Snippet};
+use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, ExecutionState};
 
 pub struct Get<const N: usize>;
+
+impl<const N: usize> NewSnippet for Get<N> {
+    fn inputs() -> Vec<&'static str> {
+        assert!(N < 17, "Max element size supported for list is 16");
+        vec!["*list", "index"]
+    }
+
+    fn outputs() -> Vec<&'static str> {
+        // It would be cool if we could do string formatting here. But we might need to change the interface for that.
+        // This function returns element_0 on the top of the stack and the other elements below it. E.g.: _ elem_2 elem_1 elem_0
+        vec!["element"; N]
+    }
+
+    fn crash_conditions() -> Vec<&'static str> {
+        vec![""]
+    }
+
+    fn gen_input_states() -> Vec<crate::ExecutionState> {
+        let mut rng = thread_rng();
+        let list_pointer: BFieldElement = random();
+        let list_length: usize = rng.gen_range(0..100);
+        let index: usize = rng.gen_range(0..list_length);
+        let mut stack = get_init_tvm_stack();
+        stack.push(list_pointer);
+        stack.push(BFieldElement::new(index as u64));
+
+        let mut memory = HashMap::default();
+
+        insert_random_list::<N>(list_pointer, list_length, &mut memory);
+
+        vec![ExecutionState {
+            stack,
+            std_in: vec![],
+            secret_in: vec![],
+            memory,
+            words_allocated: 0,
+        }]
+    }
+}
 
 impl<const N: usize> Snippet for Get<N> {
     fn stack_diff() -> isize {
@@ -89,9 +130,14 @@ mod get_element_tests {
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
     use crate::get_init_tvm_stack;
-    use crate::test_helpers::rust_tasm_equivalence_prop;
+    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
+
+    #[test]
+    fn new_snippet_test() {
+        rust_tasm_equivalence_prop_new::<Get<7>>();
+    }
 
     #[test]
     fn get_simple_1() {

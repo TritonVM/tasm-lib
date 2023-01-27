@@ -14,6 +14,7 @@ mod library;
 mod list;
 mod mmr;
 mod other_snippets;
+mod pseudo;
 mod recufier;
 mod rust_shadowing_helper_functions;
 mod snippet;
@@ -37,6 +38,20 @@ impl ExecutionState {
             secret_in: vec![],
             memory: HashMap::default(),
             words_allocated: 0,
+        }
+    }
+
+    pub fn with_stack_and_memory(
+        stack: Vec<BFieldElement>,
+        memory: HashMap<BFieldElement, BFieldElement>,
+        words_allocated: usize,
+    ) -> Self {
+        ExecutionState {
+            stack,
+            std_in: vec![],
+            secret_in: vec![],
+            memory,
+            words_allocated,
         }
     }
 }
@@ -93,7 +108,7 @@ pub fn execute(
     // Find the length of code used for setup. This length does not count towards execution length of snippet
     // so it must be subtracted at the end.
     let init_code_length = vm::run(
-        &Program::from_code(&executed_code).expect("Could not load source code: {}"),
+        &Program::from_code_nom(&executed_code).expect("Could not load source code: {}"),
         vec![],
         vec![],
     )
@@ -105,7 +120,7 @@ pub fn execute(
     executed_code.push_str(code);
 
     // Run the program, including the stack preparation and memory preparation logic
-    let program = Program::from_code(&executed_code).expect("Could not load source code: {}");
+    let program = Program::from_code_nom(&executed_code).expect("Could not load source code: {}");
     let (execution_trace, output, err) = vm::run(&program, std_in.clone(), secret_in.clone());
     if let Some(e) = err {
         panic!(
@@ -161,9 +176,9 @@ pub fn execute(
 
         // Cycle count is cycles it took to run program excluding the cycles that were
         // spent on preparing the stack
-        cycle_count: simulation_trace.processor_matrix.nrows() - init_code_length - 1,
+        cycle_count: simulation_trace.processor_trace.nrows() - init_code_length - 1,
 
         // Number of rows generated in the hash table after simulating program
-        hash_table_height: simulation_trace.hash_matrix.nrows(),
+        hash_table_height: simulation_trace.hash_trace.nrows(),
     }
 }

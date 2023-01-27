@@ -13,9 +13,9 @@ default-features = false
 features = ["precommit-hook", "run-cargo-clippy", "run-cargo-fmt"]
 
 [dependencies]
-triton-vm = "0.11"
-triton-opcodes = "0.11"
-twenty-first = "0.10"
+triton-vm = "0.14"
+triton-opcodes = "0.14"
+twenty-first = "0.14.1"
 rand = "0.8.5"
 itertools = "0.10.5"
 num = "0.4.0"

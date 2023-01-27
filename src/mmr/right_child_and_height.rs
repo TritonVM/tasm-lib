@@ -1,19 +1,51 @@
 use std::collections::HashMap;
 
 use num::{One, Zero};
+use rand::{thread_rng, Rng};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::mmr;
 
 use crate::arithmetic::u64::eq_u64::EqU64;
 use crate::arithmetic::u64::lt_u64::LtU64;
 use crate::library::Library;
-use crate::snippet::Snippet;
+use crate::snippet::{NewSnippet, Snippet};
+use crate::{get_init_tvm_stack, ExecutionState};
 
 use super::left_child::MmrLeftChild;
 use super::leftmost_ancestor::MmrLeftMostAncestor;
 use super::right_child::MmrRightChild;
 
+// You probably don't want to use this but a right lineage count function instead
 pub struct MmrRightChildAndHeight;
+
+impl NewSnippet for MmrRightChildAndHeight {
+    fn inputs() -> Vec<&'static str> {
+        vec!["node_index_hi", "node_index_lo"]
+    }
+
+    fn outputs() -> Vec<&'static str> {
+        vec!["is_right_child", "height"]
+    }
+
+    fn crash_conditions() -> Vec<&'static str> {
+        vec!["Node index exceeds 2^63?"]
+    }
+
+    fn gen_input_states() -> Vec<crate::ExecutionState> {
+        let mut ret: Vec<ExecutionState> = vec![];
+        for _ in 0..10 {
+            let mut stack = get_init_tvm_stack();
+            let node_index = thread_rng().gen_range(0..u64::MAX / 2);
+            let node_index_hi = BFieldElement::new(node_index >> 32);
+            let node_index_lo = BFieldElement::new(node_index & u32::MAX as u64);
+            stack.push(node_index_hi);
+            stack.push(node_index_lo);
+            ret.push(ExecutionState::with_stack(stack));
+        }
+
+        ret
+    }
+}
 
 impl Snippet for MmrRightChildAndHeight {
     fn stack_diff() -> isize
@@ -172,8 +204,10 @@ impl Snippet for MmrRightChildAndHeight {
         let node_index_hi: u32 = stack.pop().unwrap().try_into().unwrap();
         let node_index: u64 = (node_index_hi as u64) * (1u64 << 32) + node_index_lo as u64;
 
-        let (ret, height) = mmr::shared::right_child_and_height(node_index as u128);
-        stack.push(if ret {
+        // FIXME: We probably want to remove `right_child_and_height`, but we're interested
+        // in seeing the relative clock cycle count after introducing the U32 Table.
+        let (ret, height) = mmr::shared::right_lineage_length_and_own_height(node_index as u128);
+        stack.push(if ret != 0 {
             BFieldElement::one()
         } else {
             BFieldElement::zero()
@@ -190,9 +224,14 @@ mod tests {
     use twenty_first::util_types::algebraic_hasher::Hashable;
 
     use crate::get_init_tvm_stack;
-    use crate::test_helpers::rust_tasm_equivalence_prop;
+    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
+
+    #[test]
+    fn new_snippet_test_and() {
+        rust_tasm_equivalence_prop_new::<MmrRightChildAndHeight>();
+    }
 
     #[test]
     fn right_child_and_height_node_index_equal_leftmost_ancestor() {

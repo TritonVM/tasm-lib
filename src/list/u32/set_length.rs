@@ -1,11 +1,51 @@
 use std::collections::HashMap;
 
+use rand::{random, thread_rng, Rng};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
-use crate::snippet::Snippet;
+use crate::rust_shadowing_helper_functions::insert_random_list;
+use crate::snippet::{NewSnippet, Snippet};
+use crate::{get_init_tvm_stack, ExecutionState};
 
 pub struct SetLength;
+
+impl NewSnippet for SetLength {
+    fn inputs() -> Vec<&'static str> {
+        vec!["*list", "list_length"]
+    }
+
+    fn outputs() -> Vec<&'static str> {
+        vec!["*list"]
+    }
+
+    fn crash_conditions() -> Vec<&'static str> {
+        vec![]
+    }
+
+    fn gen_input_states() -> Vec<ExecutionState> {
+        fn prepare_state<const N: usize>() -> ExecutionState {
+            let list_pointer: BFieldElement = random();
+            let old_length: usize = thread_rng().gen_range(0..100);
+            let new_length: usize = thread_rng().gen_range(0..100);
+            let mut stack = get_init_tvm_stack();
+            stack.push(list_pointer);
+            stack.push(BFieldElement::new(new_length as u64));
+            let mut memory = HashMap::default();
+            insert_random_list::<N>(list_pointer, old_length, &mut memory);
+            ExecutionState::with_stack_and_memory(stack, memory, 0)
+        }
+
+        vec![
+            prepare_state::<1>(),
+            prepare_state::<2>(),
+            prepare_state::<3>(),
+            prepare_state::<4>(),
+            prepare_state::<5>(),
+            prepare_state::<14>(),
+        ]
+    }
+}
 
 impl Snippet for SetLength {
     fn stack_diff() -> isize {
@@ -56,9 +96,14 @@ mod tests_set_length {
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
     use crate::get_init_tvm_stack;
-    use crate::test_helpers::rust_tasm_equivalence_prop;
+    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
+
+    #[test]
+    fn new_snippet_test() {
+        rust_tasm_equivalence_prop_new::<SetLength>();
+    }
 
     #[test]
     fn list_u32_n_is_five_push() {

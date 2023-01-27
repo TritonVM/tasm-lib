@@ -1,24 +1,90 @@
+use num::Zero;
+use rand::random;
 use std::collections::HashMap;
-
-use num::One;
 use twenty_first::shared_math::b_field_element::BFieldElement;
-use twenty_first::shared_math::rescue_prime_digest::Digest;
-use twenty_first::shared_math::rescue_prime_regular::{RescuePrimeRegular, DIGEST_LENGTH};
+use twenty_first::shared_math::other::random_elements;
+use twenty_first::shared_math::rescue_prime_digest::{Digest, DIGEST_LENGTH};
+use twenty_first::shared_math::rescue_prime_regular::RescuePrimeRegular;
 use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 use twenty_first::util_types::mmr;
+use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
+use twenty_first::util_types::mmr::mmr_trait::Mmr;
 
+use super::data_index_to_node_index::DataIndexToNodeIndex;
+use super::right_lineage_length::MmrRightLineageLength;
+use super::MAX_MMR_HEIGHT;
 use crate::library::Library;
 use crate::list::u32::pop::Pop;
 use crate::list::u32::push::Push;
 use crate::list::u32::set_length::SetLength;
-use crate::rust_shadowing_helper_functions;
-use crate::snippet::Snippet;
-
-use super::data_index_to_node_index::DataIndexToNodeIndex;
-use super::right_ancestor_count_and_own_height::MmrRightAncestorCountAndHeight;
-use super::MAX_MMR_HEIGHT;
+use crate::snippet::{NewSnippet, Snippet};
+use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, ExecutionState};
 
 pub struct CalculateNewPeaksFromAppend;
+
+impl NewSnippet for CalculateNewPeaksFromAppend {
+    fn inputs() -> Vec<&'static str> {
+        vec![
+            "old_leaf_count_hi",
+            "old_leaf_count_lo",
+            "*peaks",
+            "digest_elem_4",
+            "digest_elem_3",
+            "digest_elem_2",
+            "digest_elem_1",
+            "digest_elem_0",
+        ]
+    }
+
+    fn outputs() -> Vec<&'static str> {
+        vec!["*new_peaks", "*auth_path"]
+    }
+
+    fn crash_conditions() -> Vec<&'static str> {
+        vec!["Snippet arguments are not a valid MMR accumulator"]
+    }
+
+    fn gen_input_states() -> Vec<ExecutionState> {
+        fn prepare_state_with_mmra(
+            mut start_mmr: MmrAccumulator<RescuePrimeRegular>,
+            new_leaf: Digest,
+        ) -> ExecutionState {
+            // We assume that the peaks can safely be stored in memory on address 0
+            let peaks_pointer = BFieldElement::zero();
+
+            let mut stack = get_init_tvm_stack();
+            let old_leaf_count: u64 = start_mmr.count_leaves() as u64;
+            stack.push(BFieldElement::new(old_leaf_count >> 32));
+            stack.push(BFieldElement::new(old_leaf_count & u32::MAX as u64));
+            stack.push(peaks_pointer);
+
+            // push digests such that element 0 of digest is on top of stack
+            for value in new_leaf.values().iter().rev() {
+                stack.push(*value);
+            }
+
+            // Initialize memory
+            let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
+            rust_shadowing_helper_functions::list_new(peaks_pointer, &mut memory);
+            for peak in start_mmr.get_peaks() {
+                rust_shadowing_helper_functions::list_push(
+                    peaks_pointer,
+                    peak.values(),
+                    &mut memory,
+                );
+            }
+
+            ExecutionState::with_stack_and_memory(stack, memory, MAX_MMR_HEIGHT * DIGEST_LENGTH + 1)
+        }
+
+        let digests: Vec<Digest> = random_elements(10);
+        let new_leaf: Digest = random();
+        let mmra = MmrAccumulator::new(digests);
+        let ret0 = prepare_state_with_mmra(mmra, new_leaf);
+
+        vec![ret0]
+    }
+}
 
 impl Snippet for CalculateNewPeaksFromAppend {
     fn stack_diff() -> isize {
@@ -34,8 +100,7 @@ impl Snippet for CalculateNewPeaksFromAppend {
     fn function_body(library: &mut Library) -> String {
         let entrypoint = Self::entrypoint();
         let data_index_to_node_index = library.import::<DataIndexToNodeIndex>();
-        let right_ancestor_count_and_own_height =
-            library.import::<MmrRightAncestorCountAndHeight>();
+        let right_lineage_length = library.import::<MmrRightLineageLength>();
         let push = library.import::<Push<DIGEST_LENGTH>>();
         let pop = library.import::<Pop<DIGEST_LENGTH>>();
         let set_length = library.import::<SetLength>();
@@ -70,12 +135,11 @@ impl Snippet for CalculateNewPeaksFromAppend {
                     call {data_index_to_node_index}
                     // stack: _ old_leaf_count_hi old_leaf_count_lo *auth_path *peaks new_ni_hi new_ni_lo
 
-                    call {right_ancestor_count_and_own_height}
-                    pop
-                    // stack: _ old_leaf_count_hi old_leaf_count_lo *auth_path *peaks rac
+                    call {right_lineage_length}
+                    // stack: _ old_leaf_count_hi old_leaf_count_lo *auth_path *peaks rll
 
                     call {entrypoint}_while
-                    // stack: _ old_leaf_count_hi old_leaf_count_lo *auth_path *peaks (rac = 0)
+                    // stack: _ old_leaf_count_hi old_leaf_count_lo *auth_path *peaks (rll = 0)
 
                     pop
                     swap3 pop swap1 pop
@@ -83,50 +147,50 @@ impl Snippet for CalculateNewPeaksFromAppend {
 
                     return
 
-                // Stack start and end: _ old_leaf_count_hi old_leaf_count_lo *auth_path *peaks rac
+                // Stack start and end: _ old_leaf_count_hi old_leaf_count_lo *auth_path *peaks rll
                 {entrypoint}_while:
                     dup0
                     push 0
                     eq
                     skiz
                         return
-                    // Stack: _ old_leaf_count_hi old_leaf_count_lo *auth_path *peaks rac
+                    // Stack: _ old_leaf_count_hi old_leaf_count_lo *auth_path *peaks rll
 
                     swap2 swap1
-                    // Stack: _ old_leaf_count_hi old_leaf_count_lo rac *auth_path *peaks
+                    // Stack: _ old_leaf_count_hi old_leaf_count_lo rll *auth_path *peaks
 
                     dup0
                     call {pop}
-                    // Stack: _ old_leaf_count_hi old_leaf_count_lo rac *auth_path *peaks [digest (new_hash)]
+                    // Stack: _ old_leaf_count_hi old_leaf_count_lo rll *auth_path *peaks [digest (new_hash)]
 
                     dup5
-                    // Stack: _ old_leaf_count_hi old_leaf_count_lo rac *auth_path *peaks [digest (new_hash)] *peaks
+                    // Stack: _ old_leaf_count_hi old_leaf_count_lo rll *auth_path *peaks [digest (new_hash)] *peaks
 
                     call {pop}
-                    // Stack: _ old_leaf_count_hi old_leaf_count_lo rac *auth_path *peaks [digest (new_hash)] [digests (previous_peak)]
+                    // Stack: _ old_leaf_count_hi old_leaf_count_lo rll *auth_path *peaks [digest (new_hash)] [digests (previous_peak)]
 
                     // Update authentication path with latest previous_peak
                     dup11
                     dup5 dup5 dup5 dup5 dup5
-                    // Stack: _ old_leaf_count_hi old_leaf_count_lo rac *auth_path *peaks [digest (new_hash)] [digests (previous_peak)] *auth_path [digests (previous_peak)]
+                    // Stack: _ old_leaf_count_hi old_leaf_count_lo rll *auth_path *peaks [digest (new_hash)] [digests (previous_peak)] *auth_path [digests (previous_peak)]
 
                     call {push}
                     pop
-                    // Stack: _ old_leaf_count_hi old_leaf_count_lo rac *auth_path *peaks [digest (new_hash)] [digests (previous_peak)]
+                    // Stack: _ old_leaf_count_hi old_leaf_count_lo rll *auth_path *peaks [digest (new_hash)] [digests (previous_peak)]
 
                     hash
                     pop pop pop pop pop
-                    // Stack: _ old_leaf_count_hi old_leaf_count_lo rac *auth_path *peaks [digests (new_peak)]
+                    // Stack: _ old_leaf_count_hi old_leaf_count_lo rll *auth_path *peaks [digests (new_peak)]
 
                     call {push}
-                    // Stack: _ old_leaf_count_hi old_leaf_count_lo rac *auth_path *peaks
+                    // Stack: _ old_leaf_count_hi old_leaf_count_lo rll *auth_path *peaks
 
                     swap1 swap2
-                    // Stack: _ old_leaf_count_hi old_leaf_count_lo *auth_path *peaks rac
+                    // Stack: _ old_leaf_count_hi old_leaf_count_lo *auth_path *peaks rll
 
                     push -1
                     add
-                    // Stack: _ old_leaf_count_hi old_leaf_count_lo *auth_path *peaks (rac - 1)
+                    // Stack: _ old_leaf_count_hi old_leaf_count_lo *auth_path *peaks (rll - 1)
 
                     recurse
                 "
@@ -140,32 +204,6 @@ impl Snippet for CalculateNewPeaksFromAppend {
         memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
         type H = RescuePrimeRegular;
-
-        // TODO: Remove this when twenty-first is updated
-        fn right_ancestor_count_and_own_height(node_index: u128) -> (u32, u32) {
-            let (mut candidate, mut candidate_height) = mmr::shared::leftmost_ancestor(node_index);
-
-            // leftmost ancestor is always a left node, so count starts at 0.
-            let mut right_ancestor_count = 0;
-
-            loop {
-                if candidate == node_index {
-                    return (right_ancestor_count, candidate_height as u32);
-                }
-
-                let left_child = mmr::shared::left_child(candidate, candidate_height);
-                let candidate_is_right_child = left_child < node_index;
-                if candidate_is_right_child {
-                    candidate = mmr::shared::right_child(candidate);
-                    right_ancestor_count += 1;
-                } else {
-                    candidate = left_child;
-                    right_ancestor_count = 0;
-                };
-
-                candidate_height -= 1;
-            }
-        }
 
         // BEFORE: _ old_leaf_count_hi old_leaf_count_lo *peaks [digests (new_leaf)]
         // AFTER: _ *new_peaks *auth_path
@@ -185,14 +223,11 @@ impl Snippet for CalculateNewPeaksFromAppend {
         let peak_count = memory[&peaks_pointer].value() as u32;
 
         for i in 0..peak_count {
-            let offset = BFieldElement::new((i as usize * DIGEST_LENGTH) as u64);
-            old_peaks.push(Digest::new([
-                memory[&(peaks_pointer + offset + BFieldElement::one())],
-                memory[&(peaks_pointer + offset + BFieldElement::new(2))],
-                memory[&(peaks_pointer + offset + BFieldElement::new(3))],
-                memory[&(peaks_pointer + offset + BFieldElement::new(4))],
-                memory[&(peaks_pointer + offset + BFieldElement::new(5))],
-            ]));
+            old_peaks.push(Digest::new(rust_shadowing_helper_functions::list_read(
+                peaks_pointer,
+                i as usize,
+                memory,
+            )));
         }
 
         // Run the actual `calculate_new_peaks_from_append` algorithm. This function
@@ -201,9 +236,9 @@ impl Snippet for CalculateNewPeaksFromAppend {
         let auth_path_pointer = BFieldElement::new((MAX_MMR_HEIGHT * DIGEST_LENGTH + 1) as u64);
         rust_shadowing_helper_functions::list_new(auth_path_pointer, memory);
         rust_shadowing_helper_functions::list_push(peaks_pointer, new_leaf.values(), memory);
-        let new_node_index = mmr::shared::data_index_to_node_index(old_leaf_count as u128);
+        let new_node_index = mmr::shared::leaf_index_to_node_index(old_leaf_count as u128);
         let (mut right_lineage_count, _height) =
-            right_ancestor_count_and_own_height(new_node_index);
+            mmr::shared::right_lineage_length_and_own_height(new_node_index);
         while right_lineage_count != 0 {
             let new_hash = Digest::new(rust_shadowing_helper_functions::list_pop::<DIGEST_LENGTH>(
                 peaks_pointer,
@@ -242,9 +277,14 @@ mod tests {
     use twenty_first::util_types::mmr::mmr_trait::Mmr;
 
     use crate::get_init_tvm_stack;
-    use crate::test_helpers::rust_tasm_equivalence_prop;
+    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
+
+    #[test]
+    fn new_snippet_test() {
+        rust_tasm_equivalence_prop_new::<CalculateNewPeaksFromAppend>();
+    }
 
     #[test]
     fn mmra_append_test_empty() {
@@ -365,14 +405,11 @@ mod tests {
         let peaks_count = memory[&peaks_pointer].value();
         let mut produced_peaks = vec![];
         for i in 0..peaks_count {
-            let offset = BFieldElement::new((i as usize * DIGEST_LENGTH) as u64);
-            let peak: Digest = Digest::new([
-                memory[&(peaks_pointer + offset + BFieldElement::one())],
-                memory[&(peaks_pointer + offset + BFieldElement::new(2))],
-                memory[&(peaks_pointer + offset + BFieldElement::new(3))],
-                memory[&(peaks_pointer + offset + BFieldElement::new(4))],
-                memory[&(peaks_pointer + offset + BFieldElement::new(5))],
-            ]);
+            let peak = Digest::new(rust_shadowing_helper_functions::list_read(
+                peaks_pointer,
+                i as usize,
+                &memory,
+            ));
             produced_peaks.push(peak);
         }
 
@@ -386,19 +423,15 @@ mod tests {
         let auth_path_element_count = memory[&auth_paths_pointer].value();
         let mut produced_auth_path = vec![];
         for i in 0..auth_path_element_count {
-            let offset = BFieldElement::new((i as usize * DIGEST_LENGTH) as u64);
-            let auth_path_element: Digest = Digest::new([
-                memory[&(auth_paths_pointer + offset + BFieldElement::one())],
-                memory[&(auth_paths_pointer + offset + BFieldElement::new(2))],
-                memory[&(auth_paths_pointer + offset + BFieldElement::new(3))],
-                memory[&(auth_paths_pointer + offset + BFieldElement::new(4))],
-                memory[&(auth_paths_pointer + offset + BFieldElement::new(5))],
-            ]);
-            produced_auth_path.push(auth_path_element);
+            produced_auth_path.push(Digest::new(rust_shadowing_helper_functions::list_read(
+                auth_paths_pointer,
+                i as usize,
+                &memory,
+            )));
         }
 
         let produced_mp = MmrMembershipProof::<H> {
-            data_index: start_mmr.count_leaves(),
+            leaf_index: start_mmr.count_leaves(),
             authentication_path: produced_auth_path,
             _hasher: std::marker::PhantomData,
         };

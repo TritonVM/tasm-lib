@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use rand::Rng;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::rescue_prime_digest::Digest;
-use twenty_first::shared_math::rescue_prime_regular::DIGEST_LENGTH;
+use twenty_first::shared_math::rescue_prime_digest::DIGEST_LENGTH;
 
 use crate::library::Library;
 use crate::snippet::{NewSnippet, Snippet};

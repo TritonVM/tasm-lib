@@ -1,21 +1,63 @@
 use std::collections::HashMap;
 
 use num::BigUint;
+use rand::{thread_rng, Rng};
 use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::algebraic_hasher::Hashable;
+use twenty_first::util_types::mmr;
 
 use crate::arithmetic::u64::add_u64::AddU64;
 use crate::arithmetic::u64::and_u64::AndU64;
 use crate::arithmetic::u64::eq_u64::EqU64;
 use crate::arithmetic::u64::log_2_floor_u64::Log2FloorU64;
 use crate::arithmetic::u64::lt_u64::LtU64;
-use crate::arithmetic::u64::pow2_u64::Pow2StaticU64;
+use crate::arithmetic::u64::pow2_u64::Pow2U64;
 use crate::arithmetic::u64::sub_u64::SubU64;
 use crate::library::Library;
-use crate::snippet::Snippet;
+use crate::snippet::{NewSnippet, Snippet};
+use crate::{get_init_tvm_stack, ExecutionState};
 
-pub struct MmrLeafIndexToMtIndexAndPeakIndex();
+pub struct MmrLeafIndexToMtIndexAndPeakIndex;
+
+impl NewSnippet for MmrLeafIndexToMtIndexAndPeakIndex {
+    fn inputs() -> Vec<&'static str> {
+        vec![
+            "leaf_count_hi",
+            "leaf_count_lo",
+            "leaf_index_hi",
+            "leaf_index_lo",
+        ]
+    }
+
+    fn outputs() -> Vec<&'static str> {
+        vec!["mt_index_hi", "mt_index_lo", "peak_index"]
+    }
+
+    fn crash_conditions() -> Vec<&'static str> {
+        vec!["Input values are not valid u32s"]
+    }
+
+    fn gen_input_states() -> Vec<crate::ExecutionState> {
+        let mut ret: Vec<ExecutionState> = vec![];
+        for _ in 0..10 {
+            let mut stack = get_init_tvm_stack();
+            let leaf_count = thread_rng().gen_range(0..u64::MAX / 2);
+            let leaf_count_hi = BFieldElement::new(leaf_count >> 32);
+            let leaf_count_lo = BFieldElement::new(leaf_count & u32::MAX as u64);
+            stack.push(leaf_count_hi);
+            stack.push(leaf_count_lo);
+            let leaf_index = thread_rng().gen_range(0..leaf_count);
+            let leaf_index_hi = BFieldElement::new(leaf_index >> 32);
+            let leaf_index_lo = BFieldElement::new(leaf_index & u32::MAX as u64);
+            stack.push(leaf_index_hi);
+            stack.push(leaf_index_lo);
+            ret.push(ExecutionState::with_stack(stack));
+        }
+
+        ret
+    }
+}
 
 impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
     fn stack_diff() -> isize {
@@ -33,7 +75,7 @@ impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
         let lt_u64 = library.import::<LtU64>();
         let add_u64 = library.import::<AddU64>();
         let and_u64 = library.import::<AndU64>();
-        let pow2_u64 = library.import::<Pow2StaticU64>();
+        let pow2_u64 = library.import::<Pow2U64>();
         let sub_u64 = library.import::<SubU64>();
         let eq_u64 = library.import::<EqU64>();
 
@@ -139,38 +181,6 @@ impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
         _secret_in: Vec<BFieldElement>,
         _memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
-        // TODO: Remove this when twenty-first gets a new version with this function in it
-        fn leaf_index_to_mt_index_and_peak_index(
-            leaf_index: u128,
-            leaf_count: u128,
-        ) -> (u128, u32) {
-            // This assert also guarantees that leaf_count is never zero
-            assert!(
-                leaf_index < leaf_count,
-                "Leaf index must be stricly smaller than leaf count. Got leaf_index = {leaf_index}, leaf_count = {leaf_count}"
-            );
-
-            let max_tree_height = u128::BITS - leaf_count.leading_zeros() - 1;
-            let mut h = max_tree_height;
-            let mut ret = leaf_index;
-            let mut pow;
-            let mut peak_index: u32 = 0;
-            loop {
-                pow = 1 << h;
-                let maybe_pow = pow & leaf_count;
-                if h == 0 || (ret < maybe_pow) {
-                    break;
-                }
-                ret -= maybe_pow;
-                peak_index += (maybe_pow != 0) as u32;
-                h -= 1;
-            }
-
-            ret += pow;
-
-            (ret, peak_index)
-        }
-
         let leaf_index_lo: u32 = stack.pop().unwrap().try_into().unwrap();
         let leaf_index_hi: u32 = stack.pop().unwrap().try_into().unwrap();
         let leaf_index: u64 = ((leaf_index_hi as u64) << 32) + leaf_index_lo as u64;
@@ -179,8 +189,10 @@ impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
         let leaf_count_hi: u32 = stack.pop().unwrap().try_into().unwrap();
         let leaf_count: u64 = ((leaf_count_hi as u64) << 32) + leaf_count_lo as u64;
 
-        let (mt_index, peak_index) =
-            leaf_index_to_mt_index_and_peak_index(leaf_index as u128, leaf_count as u128);
+        let (mt_index, peak_index) = mmr::shared::leaf_index_to_mt_index_and_peak_index(
+            leaf_index as u128,
+            leaf_count as u128,
+        );
         let mt_index = mt_index as u64;
         let mt_index: U32s<2> = U32s::from(BigUint::from(mt_index));
 
@@ -194,9 +206,14 @@ mod tests {
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
     use crate::get_init_tvm_stack;
-    use crate::test_helpers::rust_tasm_equivalence_prop;
+    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
+
+    #[test]
+    fn new_snippet_test() {
+        rust_tasm_equivalence_prop_new::<MmrLeafIndexToMtIndexAndPeakIndex>();
+    }
 
     #[test]
     fn leaf_index_to_mt_index_size_is_one_test() {

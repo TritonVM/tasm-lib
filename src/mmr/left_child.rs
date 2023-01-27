@@ -1,17 +1,51 @@
 use std::collections::HashMap;
 
 use num::BigUint;
+use rand::{thread_rng, Rng};
 use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::algebraic_hasher::Hashable;
 use twenty_first::util_types::mmr;
 
-use crate::arithmetic::u64::pow2_u64::Pow2StaticU64;
+use crate::arithmetic::u64::pow2_u64::Pow2U64;
 use crate::arithmetic::u64::sub_u64::SubU64;
 use crate::library::Library;
-use crate::snippet::Snippet;
+use crate::snippet::{NewSnippet, Snippet};
+use crate::{get_init_tvm_stack, ExecutionState};
 
-pub struct MmrLeftChild();
+pub struct MmrLeftChild;
+
+impl NewSnippet for MmrLeftChild {
+    fn inputs() -> Vec<&'static str> {
+        vec!["node_index_hi", "node_index_lo", "height"]
+    }
+
+    fn outputs() -> Vec<&'static str> {
+        vec!["left_child_hi", "left_child_lo"]
+    }
+
+    fn crash_conditions() -> Vec<&'static str> {
+        vec!["Input values are not u32s"]
+    }
+
+    fn gen_input_states() -> Vec<crate::ExecutionState> {
+        let mut ret: Vec<ExecutionState> = vec![];
+        for _ in 0..10 {
+            let mut stack = get_init_tvm_stack();
+            let node_index = thread_rng().gen_range(0..u64::MAX / 2);
+            let (_, height) = mmr::shared::right_lineage_length_and_own_height(node_index as u128);
+            let node_index_hi = BFieldElement::new(node_index >> 32);
+            let node_index_lo = BFieldElement::new(node_index & u32::MAX as u64);
+            let height = BFieldElement::new(height as u64);
+            stack.push(node_index_hi);
+            stack.push(node_index_lo);
+            stack.push(height);
+            ret.push(ExecutionState::with_stack(stack));
+        }
+
+        ret
+    }
+}
 
 impl Snippet for MmrLeftChild {
     fn stack_diff() -> isize {
@@ -24,7 +58,7 @@ impl Snippet for MmrLeftChild {
 
     fn function_body(library: &mut Library) -> String {
         let entrypoint = Self::entrypoint();
-        let pow2_u64 = library.import::<Pow2StaticU64>();
+        let pow2_u64 = library.import::<Pow2U64>();
         let sub_u64 = library.import::<SubU64>();
         format!(
             "
@@ -52,7 +86,7 @@ impl Snippet for MmrLeftChild {
         let node_index_lo: u32 = stack.pop().unwrap().try_into().unwrap();
         let node_index_hi: u32 = stack.pop().unwrap().try_into().unwrap();
         let node_index: u64 = (node_index_hi as u64) * (1u64 << 32) + node_index_lo as u64;
-        let ret: u64 = mmr::shared::left_child(node_index as u128, height as u128) as u64;
+        let ret: u64 = mmr::shared::left_child(node_index as u128, height) as u64;
         let ret: U32s<2> = U32s::from(BigUint::from(ret));
 
         stack.append(&mut ret.to_sequence().into_iter().rev().collect());
@@ -66,9 +100,14 @@ mod tests {
     use twenty_first::util_types::algebraic_hasher::Hashable;
 
     use crate::get_init_tvm_stack;
-    use crate::test_helpers::rust_tasm_equivalence_prop;
+    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
+
+    #[test]
+    fn new_snippet_test() {
+        rust_tasm_equivalence_prop_new::<MmrLeftChild>();
+    }
 
     #[test]
     fn u32s_left_child_simple() {
