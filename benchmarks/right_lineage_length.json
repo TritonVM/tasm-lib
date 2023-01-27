@@ -1,0 +1,62 @@
+[
+  {
+    "name": "right_lineage_length",
+    "processor_table_height": 3775,
+    "hash_table_height": 0,
+    "u32_table_height": 3989
+  },
+  {
+    "name": "right_lineage_length",
+    "processor_table_height": 3715,
+    "hash_table_height": 0,
+    "u32_table_height": 4067
+  },
+  {
+    "name": "right_lineage_length",
+    "processor_table_height": 4165,
+    "hash_table_height": 0,
+    "u32_table_height": 4408
+  },
+  {
+    "name": "right_lineage_length",
+    "processor_table_height": 3891,
+    "hash_table_height": 0,
+    "u32_table_height": 4164
+  },
+  {
+    "name": "right_lineage_length",
+    "processor_table_height": 3826,
+    "hash_table_height": 0,
+    "u32_table_height": 3885
+  },
+  {
+    "name": "right_lineage_length",
+    "processor_table_height": 3462,
+    "hash_table_height": 0,
+    "u32_table_height": 3678
+  },
+  {
+    "name": "right_lineage_length",
+    "processor_table_height": 4284,
+    "hash_table_height": 0,
+    "u32_table_height": 4752
+  },
+  {
+    "name": "right_lineage_length",
+    "processor_table_height": 2684,
+    "hash_table_height": 0,
+    "u32_table_height": 2835
+  },
+  {
+    "name": "right_lineage_length",
+    "processor_table_height": 4793,
+    "hash_table_height": 0,
+    "u32_table_height": 5241
+  },
+  {
+    "name": "right_lineage_length",
+    "processor_table_height": 3865,
+    "hash_table_height": 0,
+    "u32_table_height": 4051
+  }
+]

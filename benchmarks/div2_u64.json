@@ -1,0 +1,8 @@
+[
+  {
+    "name": "div2_u64",
+    "processor_table_height": 20,
+    "hash_table_height": 0,
+    "u32_table_height": 68
+  }
+]

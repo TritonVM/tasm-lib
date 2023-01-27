@@ -1,0 +1,242 @@
+[
+  {
+    "name": "data_index_to_node_index",
+    "processor_table_height": 4273,
+    "hash_table_height": 0,
+    "u32_table_height": 6713
+  },
+  {
+    "name": "data_index_to_node_index",
+    "processor_table_height": 4293,
+    "hash_table_height": 0,
+    "u32_table_height": 6258
+  },
+  {
+    "name": "data_index_to_node_index",
+    "processor_table_height": 4419,
+    "hash_table_height": 0,
+    "u32_table_height": 7018
+  },
+  {
+    "name": "data_index_to_node_index",
+    "processor_table_height": 3956,
+    "hash_table_height": 0,
+    "u32_table_height": 6020
+  },
+  {
+    "name": "data_index_to_node_index",
+    "processor_table_height": 4407,
+    "hash_table_height": 0,
+    "u32_table_height": 6818
+  },
+  {
+    "name": "data_index_to_node_index",
+    "processor_table_height": 4253,
+    "hash_table_height": 0,
+    "u32_table_height": 6419
+  },
+  {
+    "name": "data_index_to_node_index",
+    "processor_table_height": 4025,
+    "hash_table_height": 0,
+    "u32_table_height": 6459
+  },
+  {
+    "name": "data_index_to_node_index",
+    "processor_table_height": 4175,
+    "hash_table_height": 0,
+    "u32_table_height": 6574
+  },
+  {
+    "name": "data_index_to_node_index",
+    "processor_table_height": 4179,
+    "hash_table_height": 0,
+    "u32_table_height": 6676
+  },
+  {
+    "name": "data_index_to_node_index",
+    "processor_table_height": 3928,
+    "hash_table_height": 0,
+    "u32_table_height": 6119
+  },
+  {
+    "name": "data_index_to_node_index",
+    "processor_table_height": 4215,
+    "hash_table_height": 0,
+    "u32_table_height": 6627
+  },
+  {
+    "name": "data_index_to_node_index",
+    "processor_table_height": 4531,
+    "hash_table_height": 0,
+    "u32_table_height": 6965
+  },
+  {
+    "name": "data_index_to_node_index",
+    "processor_table_height": 4023,
+    "hash_table_height": 0,
+    "u32_table_height": 6277
+  },
+  {
+    "name": "data_index_to_node_index",
+    "processor_table_height": 4031,
+    "hash_table_height": 0,
+    "u32_table_height": 6627
+  },
+  {
+    "name": "data_index_to_node_index",
+    "processor_table_height": 4472,
+    "hash_table_height": 0,
+    "u32_table_height": 6785
+  },
+  {
+    "name": "data_index_to_node_index",
+    "processor_table_height": 4089,
+    "hash_table_height": 0,
+    "u32_table_height": 6733
+  },
+  {
+    "name": "data_index_to_node_index",
+    "processor_table_height": 4379,
+    "hash_table_height": 0,
+    "u32_table_height": 6842
+  },
+  {
+    "name": "data_index_to_node_index",
+    "processor_table_height": 4260,
+    "hash_table_height": 0,
+    "u32_table_height": 6774
+  },
+  {
+    "name": "data_index_to_node_index",
+    "processor_table_height": 3985,
+    "hash_table_height": 0,
+    "u32_table_height": 6231
+  },
+  {
+    "name": "data_index_to_node_index",
+    "processor_table_height": 3846,
+    "hash_table_height": 0,
+    "u32_table_height": 6281
+  },
+  {
+    "name": "data_index_to_node_index",
+    "processor_table_height": 4172,
+    "hash_table_height": 0,
+    "u32_table_height": 6397
+  },
+  {
+    "name": "data_index_to_node_index",
+    "processor_table_height": 3965,
+    "hash_table_height": 0,
+    "u32_table_height": 6240
+  },
+  {
+    "name": "data_index_to_node_index",
+    "processor_table_height": 3775,
+    "hash_table_height": 0,
+    "u32_table_height": 6154
+  },
+  {
+    "name": "data_index_to_node_index",
+    "processor_table_height": 4125,
+    "hash_table_height": 0,
+    "u32_table_height": 6630
+  },
+  {
+    "name": "data_index_to_node_index",
+    "processor_table_height": 4125,
+    "hash_table_height": 0,
+    "u32_table_height": 6649
+  },
+  {
+    "name": "data_index_to_node_index",
+    "processor_table_height": 4119,
+    "hash_table_height": 0,
+    "u32_table_height": 6418
+  },
+  {
+    "name": "data_index_to_node_index",
+    "processor_table_height": 4317,
+    "hash_table_height": 0,
+    "u32_table_height": 6769
+  },
+  {
+    "name": "data_index_to_node_index",
+    "processor_table_height": 3354,
+    "hash_table_height": 0,
+    "u32_table_height": 5312
+  },
+  {
+    "name": "data_index_to_node_index",
+    "processor_table_height": 4511,
+    "hash_table_height": 0,
+    "u32_table_height": 7028
+  },
+  {
+    "name": "data_index_to_node_index",
+    "processor_table_height": 4147,
+    "hash_table_height": 0,
+    "u32_table_height": 6714
+  },
+  {
+    "name": "data_index_to_node_index",
+    "processor_table_height": 4115,
+    "hash_table_height": 0,
+    "u32_table_height": 6202
+  },
+  {
+    "name": "data_index_to_node_index",
+    "processor_table_height": 4005,
+    "hash_table_height": 0,
+    "u32_table_height": 6287
+  },
+  {
+    "name": "data_index_to_node_index",
+    "processor_table_height": 4117,
+    "hash_table_height": 0,
+    "u32_table_height": 6488
+  },
+  {
+    "name": "data_index_to_node_index",
+    "processor_table_height": 4381,
+    "hash_table_height": 0,
+    "u32_table_height": 6510
+  },
+  {
+    "name": "data_index_to_node_index",
+    "processor_table_height": 4299,
+    "hash_table_height": 0,
+    "u32_table_height": 6833
+  },
+  {
+    "name": "data_index_to_node_index",
+    "processor_table_height": 4397,
+    "hash_table_height": 0,
+    "u32_table_height": 6914
+  },
+  {
+    "name": "data_index_to_node_index",
+    "processor_table_height": 4043,
+    "hash_table_height": 0,
+    "u32_table_height": 6298
+  },
+  {
+    "name": "data_index_to_node_index",
+    "processor_table_height": 4311,
+    "hash_table_height": 0,
+    "u32_table_height": 6677
+  },
+  {
+    "name": "data_index_to_node_index",
+    "processor_table_height": 4261,
+    "hash_table_height": 0,
+    "u32_table_height": 6774
+  },
+  {
+    "name": "data_index_to_node_index",
+    "processor_table_height": 3991,
+    "hash_table_height": 0,
+    "u32_table_height": 6524
+  }
+]

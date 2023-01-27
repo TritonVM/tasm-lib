@@ -3,7 +3,7 @@
     "name": "is_u32",
     "processor_table_height": 7,
     "hash_table_height": 0,
-    "u32_table_height": 32
+    "u32_table_height": 30
   },
   {
     "name": "is_u32",

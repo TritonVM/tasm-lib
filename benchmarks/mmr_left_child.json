@@ -1,0 +1,62 @@
+[
+  {
+    "name": "mmr_left_child",
+    "processor_table_height": 38,
+    "hash_table_height": 0,
+    "u32_table_height": 39
+  },
+  {
+    "name": "mmr_left_child",
+    "processor_table_height": 38,
+    "hash_table_height": 0,
+    "u32_table_height": 38
+  },
+  {
+    "name": "mmr_left_child",
+    "processor_table_height": 38,
+    "hash_table_height": 0,
+    "u32_table_height": 39
+  },
+  {
+    "name": "mmr_left_child",
+    "processor_table_height": 38,
+    "hash_table_height": 0,
+    "u32_table_height": 37
+  },
+  {
+    "name": "mmr_left_child",
+    "processor_table_height": 38,
+    "hash_table_height": 0,
+    "u32_table_height": 38
+  },
+  {
+    "name": "mmr_left_child",
+    "processor_table_height": 38,
+    "hash_table_height": 0,
+    "u32_table_height": 38
+  },
+  {
+    "name": "mmr_left_child",
+    "processor_table_height": 38,
+    "hash_table_height": 0,
+    "u32_table_height": 36
+  },
+  {
+    "name": "mmr_left_child",
+    "processor_table_height": 38,
+    "hash_table_height": 0,
+    "u32_table_height": 38
+  },
+  {
+    "name": "mmr_left_child",
+    "processor_table_height": 38,
+    "hash_table_height": 0,
+    "u32_table_height": 38
+  },
+  {
+    "name": "mmr_left_child",
+    "processor_table_height": 38,
+    "hash_table_height": 0,
+    "u32_table_height": 39
+  }
+]

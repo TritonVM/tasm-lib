@@ -1,0 +1,62 @@
+[
+  {
+    "name": "right_child_and_height",
+    "processor_table_height": 5962,
+    "hash_table_height": 0,
+    "u32_table_height": 6516
+  },
+  {
+    "name": "right_child_and_height",
+    "processor_table_height": 5984,
+    "hash_table_height": 0,
+    "u32_table_height": 6391
+  },
+  {
+    "name": "right_child_and_height",
+    "processor_table_height": 6030,
+    "hash_table_height": 0,
+    "u32_table_height": 6516
+  },
+  {
+    "name": "right_child_and_height",
+    "processor_table_height": 6116,
+    "hash_table_height": 0,
+    "u32_table_height": 6620
+  },
+  {
+    "name": "right_child_and_height",
+    "processor_table_height": 6104,
+    "hash_table_height": 0,
+    "u32_table_height": 6440
+  },
+  {
+    "name": "right_child_and_height",
+    "processor_table_height": 5890,
+    "hash_table_height": 0,
+    "u32_table_height": 6167
+  },
+  {
+    "name": "right_child_and_height",
+    "processor_table_height": 5884,
+    "hash_table_height": 0,
+    "u32_table_height": 6176
+  },
+  {
+    "name": "right_child_and_height",
+    "processor_table_height": 5766,
+    "hash_table_height": 0,
+    "u32_table_height": 6078
+  },
+  {
+    "name": "right_child_and_height",
+    "processor_table_height": 5734,
+    "hash_table_height": 0,
+    "u32_table_height": 6197
+  },
+  {
+    "name": "right_child_and_height",
+    "processor_table_height": 5884,
+    "hash_table_height": 0,
+    "u32_table_height": 6290
+  }
+]
