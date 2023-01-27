@@ -33,7 +33,7 @@ pub trait Snippet {
     /// Examples of valid initial states for running this snippet
     fn gen_input_states() -> Vec<ExecutionState>;
 
-    fn get_function_body(library: &mut Library) -> Vec<LabelledInstruction<'static>> {
+    fn function_body_as_instructions(library: &mut Library) -> Vec<LabelledInstruction<'static>> {
         let f_body = Self::function_body(library);
 
         // parse the code to get the list of instructions
@@ -161,7 +161,7 @@ mod tests {
     fn can_return_code() {
         let mut empty_library = Library::default();
         let example_snippet =
-            arithmetic::u32::safe_add::SafeAdd::get_function_body(&mut empty_library);
+            arithmetic::u32::safe_add::SafeAdd::function_body_as_instructions(&mut empty_library);
         assert!(!example_snippet.is_empty());
         println!(
             "{}",
