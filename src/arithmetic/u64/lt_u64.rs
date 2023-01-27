@@ -221,6 +221,7 @@ mod tests {
     use twenty_first::util_types::algebraic_hasher::Hashable;
 
     use crate::get_init_tvm_stack;
+    use crate::snippet_bencher::bench_and_write;
     use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
@@ -240,6 +241,11 @@ mod tests {
     #[test]
     fn standard_lt_u64_test_new_snippet() {
         rust_tasm_equivalence_prop_new::<LtStandardU64>();
+    }
+
+    #[test]
+    fn log_2_floor_u64_benchmark() {
+        bench_and_write::<LtStandardU64>();
     }
 
     #[test]

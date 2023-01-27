@@ -71,12 +71,12 @@ mod tests {
     use super::*;
 
     #[test]
-    fn swap_digest_test() {
+    fn bfe_add_test() {
         rust_tasm_equivalence_prop_new::<BfeAdd>();
     }
 
     #[test]
-    fn swap_digest_benchmark() {
+    fn bfe_add_benchmark() {
         bench_and_write::<BfeAdd>();
     }
 }

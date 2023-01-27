@@ -315,29 +315,28 @@ fn prepare_vm_state<H: AlgebraicHasher + std::cmp::PartialEq + std::fmt::Debug>(
 #[cfg(test)]
 mod auth_path_verify_from_memory_tests {
     use rand::{thread_rng, Rng};
-    use twenty_first::{
-        shared_math::{b_field_element::BFieldElement, other::random_elements},
-        test_shared::mmr::{get_archival_mmr_from_digests, get_empty_archival_mmr},
-        util_types::{
-            algebraic_hasher::AlgebraicHasher,
-            mmr::{
-                archival_mmr::ArchivalMmr, mmr_accumulator::MmrAccumulator,
-                mmr_membership_proof::MmrMembershipProof, mmr_trait::Mmr,
-            },
-        },
-    };
 
-    use crate::{
-        get_init_tvm_stack,
-        mmr::MAX_MMR_HEIGHT,
-        test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new},
-    };
+    use twenty_first::shared_math::{b_field_element::BFieldElement, other::random_elements};
+    use twenty_first::test_shared::mmr::{get_archival_mmr_from_digests, get_empty_archival_mmr};
+    use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
+    use twenty_first::util_types::mmr::archival_mmr::ArchivalMmr;
+    use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
+    use twenty_first::util_types::mmr::{mmr_membership_proof::MmrMembershipProof, mmr_trait::Mmr};
+
+    use crate::snippet_bencher::bench_and_write;
+    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
+    use crate::{get_init_tvm_stack, mmr::MAX_MMR_HEIGHT};
 
     use super::*;
 
     #[test]
-    fn new_snippet_test() {
+    fn verify_from_memory_test() {
         rust_tasm_equivalence_prop_new::<MmrVerifyFromMemory>();
+    }
+
+    #[test]
+    fn verify_from_memory_benchmark() {
+        bench_and_write::<MmrVerifyFromMemory>();
     }
 
     // This will crash the VM because leaf?index is not strictly less than leaf_count

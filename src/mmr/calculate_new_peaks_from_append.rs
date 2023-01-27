@@ -277,13 +277,19 @@ mod tests {
     use twenty_first::util_types::mmr::mmr_trait::Mmr;
 
     use crate::get_init_tvm_stack;
+    use crate::snippet_bencher::bench_and_write;
     use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
 
     #[test]
-    fn new_snippet_test() {
+    fn calculate_new_peaks_from_append_test() {
         rust_tasm_equivalence_prop_new::<CalculateNewPeaksFromAppend>();
+    }
+
+    #[test]
+    fn calculate_new_peaks_from_append_benchmark() {
+        bench_and_write::<CalculateNewPeaksFromAppend>();
     }
 
     #[test]

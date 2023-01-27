@@ -114,13 +114,19 @@ mod tests {
     use twenty_first::{amount::u32s::U32s, util_types::algebraic_hasher::Hashable};
 
     use crate::get_init_tvm_stack;
+    use crate::snippet_bencher::bench_and_write;
     use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
 
     #[test]
-    fn u64_log2_floor_test() {
+    fn log_2_floor_u64_test() {
         rust_tasm_equivalence_prop_new::<Log2FloorU64>();
+    }
+
+    #[test]
+    fn log_2_floor_u64_benchmark() {
+        bench_and_write::<Log2FloorU64>();
     }
 
     #[should_panic]

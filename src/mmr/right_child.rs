@@ -90,13 +90,19 @@ mod tests {
     use twenty_first::util_types::algebraic_hasher::Hashable;
 
     use crate::get_init_tvm_stack;
+    use crate::snippet_bencher::bench_and_write;
     use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
 
     #[test]
-    fn new_snippet_test() {
+    fn left_child_test() {
         rust_tasm_equivalence_prop_new::<MmrRightChild>();
+    }
+
+    #[test]
+    fn left_child_benchmark() {
+        bench_and_write::<MmrRightChild>();
     }
 
     #[test]

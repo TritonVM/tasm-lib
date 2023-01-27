@@ -1,17 +1,20 @@
 [
   {
     "name": "sub_u64",
-    "processor_table_height": 85,
-    "hash_table_height": 0
+    "processor_table_height": 27,
+    "hash_table_height": 0,
+    "u32_table_height": 32
   },
   {
     "name": "sub_u64",
-    "processor_table_height": 93,
-    "hash_table_height": 0
+    "processor_table_height": 27,
+    "hash_table_height": 0,
+    "u32_table_height": 32
   },
   {
     "name": "sub_u64",
-    "processor_table_height": 85,
-    "hash_table_height": 0
+    "processor_table_height": 27,
+    "hash_table_height": 0,
+    "u32_table_height": 31
   }
 ]

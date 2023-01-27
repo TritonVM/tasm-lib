@@ -103,13 +103,19 @@ mod tests {
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
     use crate::get_init_tvm_stack;
+    use crate::snippet_bencher::bench_and_write;
     use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
 
     #[test]
-    fn div_2_test_new_snippet() {
+    fn div2_u64_test() {
         rust_tasm_equivalence_prop_new::<Div2U64>();
+    }
+
+    #[test]
+    fn div2_u64_benchmark() {
+        bench_and_write::<Div2U64>();
     }
 
     #[should_panic]

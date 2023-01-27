@@ -114,12 +114,12 @@ mod tests {
     use super::*;
 
     #[test]
-    fn decr_u64_test() {
+    fn incr_u64_test() {
         rust_tasm_equivalence_prop_new::<IncrU64>();
     }
 
     #[test]
-    fn decr_u64_benchmark() {
+    fn incr_u64_benchmark() {
         bench_and_write::<IncrU64>();
     }
 

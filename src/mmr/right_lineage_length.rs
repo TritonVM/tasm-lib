@@ -1,15 +1,13 @@
 use rand::{thread_rng, Rng};
 use twenty_first::{shared_math::b_field_element::BFieldElement, util_types::mmr};
 
-use crate::{
-    arithmetic::u64::{
-        decr_u64::DecrU64, incr_u64::IncrU64, log_2_floor_u64::Log2FloorU64, pow2_u64::Pow2U64,
-        sub_u64::SubU64,
-    },
-    get_init_tvm_stack,
-    snippet::{NewSnippet, Snippet},
-    ExecutionState,
-};
+use crate::arithmetic::u64::decr_u64::DecrU64;
+use crate::arithmetic::u64::incr_u64::IncrU64;
+use crate::arithmetic::u64::log_2_floor_u64::Log2FloorU64;
+use crate::arithmetic::u64::pow2_u64::Pow2U64;
+use crate::arithmetic::u64::sub_u64::SubU64;
+use crate::snippet::{NewSnippet, Snippet};
+use crate::{get_init_tvm_stack, ExecutionState};
 
 pub struct MmrRightLineageLength;
 
@@ -166,13 +164,19 @@ impl Snippet for MmrRightLineageLength {
 mod tests {
     use std::collections::HashMap;
 
+    use crate::snippet_bencher::bench_and_write;
     use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
 
     #[test]
-    fn new_snippet_test() {
+    fn right_lineage_length_test() {
         rust_tasm_equivalence_prop_new::<MmrRightLineageLength>();
+    }
+
+    #[test]
+    fn right_lineage_length_benchmark() {
+        bench_and_write::<MmrRightLineageLength>();
     }
 
     #[test]

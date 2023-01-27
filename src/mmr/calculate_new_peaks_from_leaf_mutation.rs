@@ -317,13 +317,19 @@ mod leaf_mutation_tests {
 
     use crate::get_init_tvm_stack;
     use crate::mmr::MAX_MMR_HEIGHT;
+    use crate::snippet_bencher::bench_and_write;
     use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
 
     #[test]
-    fn new_snippet_test() {
+    fn calculate_new_peaks_from_leaf_mutation_test() {
         rust_tasm_equivalence_prop_new::<MmrCalculateNewPeaksFromLeafMutationMtIndices>();
+    }
+
+    #[test]
+    fn calculate_new_peaks_from_leaf_mutation_benchmark() {
+        bench_and_write::<MmrCalculateNewPeaksFromLeafMutationMtIndices>();
     }
 
     #[test]

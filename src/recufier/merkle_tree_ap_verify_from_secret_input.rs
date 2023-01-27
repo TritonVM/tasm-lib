@@ -272,6 +272,7 @@ mod merkle_authentication_verify_test {
     use twenty_first::util_types::merkle_tree_maker::MerkleTreeMaker;
 
     use crate::get_init_tvm_stack;
+    use crate::snippet_bencher::bench_and_write;
     use crate::test_helpers::rust_tasm_equivalence_prop;
     use crate::test_helpers::rust_tasm_equivalence_prop_new;
 
@@ -285,8 +286,13 @@ mod merkle_authentication_verify_test {
     }
 
     #[test]
-    fn new_snippet_test() {
+    fn merkle_tree_ap_verify_from_secret_input_test() {
         rust_tasm_equivalence_prop_new::<MtApVerifyFromSecretInput>();
+    }
+
+    #[test]
+    fn merkle_tree_ap_verify_from_secret_input_benchmark() {
+        bench_and_write::<MtApVerifyFromSecretInput>();
     }
 
     #[test]

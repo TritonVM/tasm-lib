@@ -1,27 +1,14 @@
 [
   {
     "name": "is_odd",
-    "processor_table_height": 6,
-    "hash_table_height": 0
+    "processor_table_height": 10,
+    "hash_table_height": 0,
+    "u32_table_height": 36
   },
   {
     "name": "is_odd",
-    "processor_table_height": 6,
-    "hash_table_height": 0
-  },
-  {
-    "name": "is_odd",
-    "processor_table_height": 6,
-    "hash_table_height": 0
-  },
-  {
-    "name": "is_odd",
-    "processor_table_height": 6,
-    "hash_table_height": 0
-  },
-  {
-    "name": "is_odd",
-    "processor_table_height": 6,
-    "hash_table_height": 0
+    "processor_table_height": 10,
+    "hash_table_height": 0,
+    "u32_table_height": 36
   }
 ]

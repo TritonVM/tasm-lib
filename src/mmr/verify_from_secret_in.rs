@@ -1,7 +1,7 @@
-use std::collections::HashMap;
-
 use num::Zero;
 use rand::{thread_rng, Rng};
+use std::collections::HashMap;
+
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::random_elements;
 use twenty_first::shared_math::rescue_prime_digest::{Digest, DIGEST_LENGTH};
@@ -333,16 +333,21 @@ mod mmr_verify_from_secret_in_tests {
 
     use crate::{
         mmr::MAX_MMR_HEIGHT,
+        snippet_bencher::bench_and_write,
         test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new},
     };
 
     use super::*;
 
     #[test]
-    fn new_snippet_test() {
+    fn verify_from_secret_in_test() {
         rust_tasm_equivalence_prop_new::<MmrVerifyLeafMembershipFromSecretIn>();
     }
 
+    #[test]
+    fn verify_from_secret_in_benchmark() {
+        bench_and_write::<MmrVerifyLeafMembershipFromSecretIn>();
+    }
     #[test]
     fn mmra_ap_verify_test_one() {
         type H = RescuePrimeRegular;

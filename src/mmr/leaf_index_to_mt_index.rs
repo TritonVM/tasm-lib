@@ -206,13 +206,19 @@ mod tests {
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
     use crate::get_init_tvm_stack;
+    use crate::snippet_bencher::bench_and_write;
     use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
 
     #[test]
-    fn new_snippet_test() {
+    fn leaf_index_to_mt_index_test() {
         rust_tasm_equivalence_prop_new::<MmrLeafIndexToMtIndexAndPeakIndex>();
+    }
+
+    #[test]
+    fn leaf_index_to_mt_index_benchmark() {
+        bench_and_write::<MmrLeafIndexToMtIndexAndPeakIndex>();
     }
 
     #[test]
@@ -222,7 +228,7 @@ mod tests {
     }
 
     #[test]
-    fn leaf_index_to_mt_index_test() {
+    fn leaf_index_to_mt_index_tests() {
         // Leaf count = 1
         prop_leaf_index_to_mt_index_and_peak_index(0, 1, 1, 0);
 

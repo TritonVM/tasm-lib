@@ -265,10 +265,16 @@ impl Snippet for MmrLoadFromSecretInThenVerify {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::snippet_bencher::bench_and_write;
     use crate::test_helpers::rust_tasm_equivalence_prop_new;
 
     #[test]
-    fn new_snippet_test() {
+    fn load_from_secret_in_then_verify_test() {
         rust_tasm_equivalence_prop_new::<MmrLoadFromSecretInThenVerify>();
+    }
+
+    #[test]
+    fn load_from_secret_in_then_verify_benchmark() {
+        bench_and_write::<MmrLoadFromSecretInThenVerify>();
     }
 }
