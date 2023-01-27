@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use triton_opcodes::instruction::{parse, LabelledInstruction};
 use triton_opcodes::program::Program;
 use triton_vm::op_stack::OP_STACK_REG_COUNT;
 use triton_vm::vm::{self, AlgebraicExecutionTrace};
@@ -32,9 +33,12 @@ pub trait Snippet {
     /// Examples of valid initial states for running this snippet
     fn gen_input_states() -> Vec<ExecutionState>;
 
-    // TODO: Consider adding these associated constants
-    // const INIT_STACK_DESC: &'static str;
-    // const FINAL_STACK_DESC: &'static str;
+    fn get_function_body(library: &mut Library) -> Vec<LabelledInstruction<'static>> {
+        let f_body = Self::function_body(library);
+
+        // parse the code to get the list of instructions
+        parse(&f_body).unwrap()
+    }
 
     // The rust shadowing and the run tasm function must take the same argument
     // since this makes it possible to auto-generate tests for these two functions
@@ -144,4 +148,24 @@ pub fn simulate_snippet<T: Snippet>(
     }
 
     (aet, inflated_clock_cycles)
+}
+
+#[cfg(test)]
+mod tests {
+    use itertools::Itertools;
+
+    use super::*;
+    use crate::arithmetic;
+
+    #[test]
+    fn can_return_code() {
+        let mut empty_library = Library::default();
+        let example_snippet =
+            arithmetic::u32::safe_add::SafeAdd::get_function_body(&mut empty_library);
+        assert!(!example_snippet.is_empty());
+        println!(
+            "{}",
+            example_snippet.iter().map(|x| x.to_string()).join("\n")
+        );
+    }
 }
