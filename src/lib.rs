@@ -8,16 +8,16 @@ use triton_vm::state::VMState;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::algebraic_hasher::Hashable;
 
-mod arithmetic;
-mod hashing;
-mod library;
-mod list;
-mod mmr;
-mod other_snippets;
-mod pseudo;
-mod recufier;
+pub mod arithmetic;
+pub mod hashing;
+pub mod library;
+pub mod list;
+pub mod mmr;
+pub mod other_snippets;
+pub mod pseudo;
+pub mod recufier;
 mod rust_shadowing_helper_functions;
-mod snippet;
+pub mod snippet;
 mod snippet_bencher;
 mod test_helpers;
 
