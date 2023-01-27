@@ -93,8 +93,8 @@ pub fn execute(
     // Add all the initial memory to the VM
     for (address, value) in memory.iter() {
         // Prepare stack for writing
-        executed_code.push_str(&format!("push {}\n", address));
-        executed_code.push_str(&format!("push {}\n", value));
+        executed_code.push_str(&format!("push {address}\n"));
+        executed_code.push_str(&format!("push {value}\n"));
 
         // Write value to memory
         executed_code.push_str("write_mem\n");
@@ -123,19 +123,13 @@ pub fn execute(
     let program = Program::from_code_nom(&executed_code).expect("Could not load source code: {}");
     let (execution_trace, output, err) = vm::run(&program, std_in.clone(), secret_in.clone());
     if let Some(e) = err {
-        panic!(
-            "Running the program failed: {}\n\n\n Program:\n {}",
-            e, code
-        )
+        panic!("Running the program failed: {e}\n\n\n Program:\n {code}")
     }
 
     // Simulate the program, since this gives us hash table output
     let (simulation_trace, _simulation_output, err) = vm::simulate(&program, std_in, secret_in);
     if let Some(e) = err {
-        panic!(
-            "Simulating the program failed: {}\n\n\n Program: {}",
-            e, code
-        )
+        panic!("Simulating the program failed: {e}\n\n\n Program: {code}")
     }
 
     let start_state: VMState = execution_trace
