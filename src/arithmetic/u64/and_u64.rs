@@ -17,7 +17,7 @@ impl Snippet for AndU64 {
     }
 
     fn outputs() -> Vec<&'static str> {
-        vec!["(lhs + rhs)_hi", "(lhs + rhs)_lo"]
+        vec!["(lhs & rhs)_hi", "(lhs & rhs)_lo"]
     }
 
     fn crash_conditions() -> Vec<&'static str> {
