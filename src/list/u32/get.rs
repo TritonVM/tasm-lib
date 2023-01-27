@@ -5,12 +5,12 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
 use crate::rust_shadowing_helper_functions::insert_random_list;
-use crate::snippet::{NewSnippet, Snippet};
+use crate::snippet::Snippet;
 use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, ExecutionState};
 
 pub struct Get<const N: usize>;
 
-impl<const N: usize> NewSnippet for Get<N> {
+impl<const N: usize> Snippet for Get<N> {
     fn inputs() -> Vec<&'static str> {
         assert!(N < 17, "Max element size supported for list is 16");
         vec!["*list", "index"]
@@ -47,9 +47,7 @@ impl<const N: usize> NewSnippet for Get<N> {
             words_allocated: 0,
         }]
     }
-}
 
-impl<const N: usize> Snippet for Get<N> {
     fn stack_diff() -> isize {
         assert!(N < 17, "Max element size supported for list is 16");
 

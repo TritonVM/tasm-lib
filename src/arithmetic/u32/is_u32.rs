@@ -5,12 +5,12 @@ use rand::RngCore;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
-use crate::snippet::{NewSnippet, Snippet};
+use crate::snippet::Snippet;
 use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 
 pub struct IsU32();
 
-impl NewSnippet for IsU32 {
+impl Snippet for IsU32 {
     fn inputs() -> Vec<&'static str> {
         vec!["value"]
     }
@@ -38,29 +38,6 @@ impl NewSnippet for IsU32 {
         ]
     }
 
-    fn run_tasm(execution_state: &mut ExecutionState) -> crate::ExecutionResult {
-        // TODO: Consider adding canaries here to ensure that stack is not modified below where the function
-
-        let stack_prior = execution_state.stack.clone();
-        let ret = <Self as Snippet>::run_tasm(
-            &mut execution_state.stack,
-            execution_state.std_in.clone(),
-            execution_state.secret_in.clone(),
-            &mut execution_state.memory,
-            execution_state.words_allocated,
-        );
-        let stack_after = execution_state.stack.clone();
-
-        assert_eq!(
-            stack_prior[0..(stack_prior.len() - Self::inputs().len())],
-            stack_after[0..(stack_after.len() - Self::outputs().len())]
-        );
-
-        ret
-    }
-}
-
-impl Snippet for IsU32 {
     fn stack_diff() -> isize {
         0
     }

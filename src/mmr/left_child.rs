@@ -10,12 +10,12 @@ use twenty_first::util_types::mmr;
 use crate::arithmetic::u64::pow2_u64::Pow2U64;
 use crate::arithmetic::u64::sub_u64::SubU64;
 use crate::library::Library;
-use crate::snippet::{NewSnippet, Snippet};
+use crate::snippet::Snippet;
 use crate::{get_init_tvm_stack, ExecutionState};
 
 pub struct MmrLeftChild;
 
-impl NewSnippet for MmrLeftChild {
+impl Snippet for MmrLeftChild {
     fn inputs() -> Vec<&'static str> {
         vec!["node_index_hi", "node_index_lo", "height"]
     }
@@ -45,9 +45,7 @@ impl NewSnippet for MmrLeftChild {
 
         ret
     }
-}
 
-impl Snippet for MmrLeftChild {
     fn stack_diff() -> isize {
         -1
     }

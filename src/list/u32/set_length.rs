@@ -5,12 +5,12 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
 use crate::rust_shadowing_helper_functions::insert_random_list;
-use crate::snippet::{NewSnippet, Snippet};
+use crate::snippet::Snippet;
 use crate::{get_init_tvm_stack, ExecutionState};
 
 pub struct SetLength;
 
-impl NewSnippet for SetLength {
+impl Snippet for SetLength {
     fn inputs() -> Vec<&'static str> {
         vec!["*list", "list_length"]
     }
@@ -45,9 +45,7 @@ impl NewSnippet for SetLength {
             prepare_state::<14>(),
         ]
     }
-}
 
-impl Snippet for SetLength {
     fn stack_diff() -> isize {
         // pops list_length but leaves list_pointer on stack
         -1

@@ -3,15 +3,12 @@ use std::collections::HashMap;
 use rand::Rng;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
-use crate::{
-    get_init_tvm_stack,
-    snippet::{NewSnippet, Snippet},
-    ExecutionState,
-};
+use crate::snippet::Snippet;
+use crate::{get_init_tvm_stack, ExecutionState};
 
 pub struct Neg();
 
-impl NewSnippet for Neg {
+impl Snippet for Neg {
     fn inputs() -> Vec<&'static str> {
         vec!["value"]
     }
@@ -30,9 +27,7 @@ impl NewSnippet for Neg {
         stack.push(rng.gen());
         vec![ExecutionState::with_stack(stack)]
     }
-}
 
-impl Snippet for Neg {
     fn stack_diff() -> isize {
         0
     }

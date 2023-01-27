@@ -6,14 +6,14 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::algebraic_hasher::Hashable;
 
 use crate::library::Library;
-use crate::snippet::{NewSnippet, Snippet};
+use crate::snippet::Snippet;
 use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 
 /// Consumes top element which is interpreted as exponent. Pushes a
 /// U32<2> to the top of the stack. So grows the stack by 1.
 pub struct Pow2U64;
 
-impl NewSnippet for Pow2U64 {
+impl Snippet for Pow2U64 {
     fn inputs() -> Vec<&'static str> {
         vec!["i"]
     }
@@ -35,9 +35,7 @@ impl NewSnippet for Pow2U64 {
             })
             .collect()
     }
-}
 
-impl Snippet for Pow2U64 {
     fn stack_diff() -> isize {
         1
     }

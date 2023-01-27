@@ -9,10 +9,21 @@ use twenty_first::util_types::merkle_tree::{CpuParallel, MerkleTree};
 use twenty_first::util_types::merkle_tree_maker::MerkleTreeMaker;
 
 use crate::library::Library;
-use crate::snippet::{NewSnippet, Snippet};
+use crate::snippet::Snippet;
 use crate::{get_init_tvm_stack, ExecutionState};
 
-impl NewSnippet for MtApVerifyFromSecretInput {
+pub struct MtApVerifyFromSecretInput;
+
+/// TVM assembly to verify Merkle authentication paths
+///
+/// input: number of authentication paths, merkle root, authentication paths,
+/// each one preceded by the corresponding node index in the merkle tree,
+/// where the authentication path starts
+///
+/// output: Result<(), VMFail>
+///
+/// uses RAM at address 0 to store the number of authentication paths
+impl Snippet for MtApVerifyFromSecretInput {
     fn inputs() -> Vec<&'static str> {
         vec![]
     }
@@ -44,19 +55,7 @@ impl NewSnippet for MtApVerifyFromSecretInput {
 
         vec![ret0]
     }
-}
 
-pub struct MtApVerifyFromSecretInput;
-/// TVM assembly to verify Merkle authentication paths
-///
-/// input: number of authentication paths, merkle root, authentication paths,
-/// each one preceded by the corresponding node index in the merkle tree,
-/// where the authentication path starts
-///
-/// output: Result<(), VMFail>
-///
-/// uses RAM at address 0 to store the number of authentication paths
-impl Snippet for MtApVerifyFromSecretInput {
     fn stack_diff() -> isize {
         0
     }

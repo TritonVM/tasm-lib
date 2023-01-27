@@ -11,12 +11,12 @@ use crate::arithmetic::u64::decr_u64::DecrU64;
 use crate::arithmetic::u64::log_2_floor_u64::Log2FloorU64;
 use crate::arithmetic::u64::pow2_u64::Pow2U64;
 use crate::library::Library;
-use crate::snippet::{NewSnippet, Snippet};
+use crate::snippet::Snippet;
 use crate::{get_init_tvm_stack, ExecutionState};
 
 pub struct MmrLeftMostAncestor();
 
-impl NewSnippet for MmrLeftMostAncestor {
+impl Snippet for MmrLeftMostAncestor {
     fn inputs() -> Vec<&'static str> {
         vec!["node_index_hi", "node_index_lo"]
     }
@@ -43,9 +43,7 @@ impl NewSnippet for MmrLeftMostAncestor {
 
         ret
     }
-}
 
-impl Snippet for MmrLeftMostAncestor {
     fn stack_diff() -> isize {
         1
     }

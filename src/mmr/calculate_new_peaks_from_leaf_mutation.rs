@@ -19,13 +19,13 @@ use crate::library::Library;
 use crate::list::u32::get::Get;
 use crate::list::u32::set::Set;
 use crate::mmr::MAX_MMR_HEIGHT;
-use crate::snippet::{NewSnippet, Snippet};
+use crate::snippet::Snippet;
 use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, ExecutionState};
 
 /// Calculate new MMR peaks from a leaf mutation using Merkle tree indices walk up the tree
 pub struct MmrCalculateNewPeaksFromLeafMutationMtIndices();
 
-impl NewSnippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
+impl Snippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
     fn inputs() -> Vec<&'static str> {
         vec![
             "*auth_path",
@@ -68,9 +68,7 @@ impl NewSnippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
 
         vec![ret0.0]
     }
-}
 
-impl Snippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
     fn stack_diff() -> isize {
         -8
     }

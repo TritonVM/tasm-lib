@@ -2,12 +2,12 @@ use std::collections::HashMap;
 
 use twenty_first::shared_math::b_field_element::{BFieldElement, BFIELD_ONE, BFIELD_ZERO};
 
-use crate::snippet::{NewSnippet, Snippet};
+use crate::snippet::Snippet;
 use crate::{get_init_tvm_stack, ExecutionState};
 
 pub struct Lsb();
 
-impl NewSnippet for Lsb {
+impl Snippet for Lsb {
     fn inputs() -> Vec<&'static str> {
         vec!["a"]
     }
@@ -32,9 +32,7 @@ impl NewSnippet for Lsb {
             ExecutionState::with_stack(odd_stack),
         ]
     }
-}
 
-impl Snippet for Lsb {
     fn stack_diff() -> isize {
         1
     }

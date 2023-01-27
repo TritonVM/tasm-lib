@@ -6,12 +6,12 @@ use twenty_first::shared_math::rescue_prime_digest::Digest;
 use twenty_first::shared_math::rescue_prime_digest::DIGEST_LENGTH;
 
 use crate::library::Library;
-use crate::snippet::{NewSnippet, Snippet};
+use crate::snippet::Snippet;
 use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 
 pub struct SwapDigest();
 
-impl NewSnippet for SwapDigest {
+impl Snippet for SwapDigest {
     fn inputs() -> Vec<&'static str> {
         vec!["b4", "b3", "b2", "b1", "b0", "a4", "a3", "a2", "a1", "a0"]
     }
@@ -35,9 +35,7 @@ impl NewSnippet for SwapDigest {
 
         vec![ExecutionState::with_stack(stack)]
     }
-}
 
-impl Snippet for SwapDigest {
     fn stack_diff() -> isize {
         0
     }

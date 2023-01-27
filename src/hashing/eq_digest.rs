@@ -4,17 +4,13 @@ use rand::Rng;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::rescue_prime_digest::Digest;
 
-use crate::{
-    get_init_tvm_stack,
-    library::Library,
-    push_hashable,
-    snippet::{NewSnippet, Snippet},
-    ExecutionState,
-};
+use crate::library::Library;
+use crate::snippet::Snippet;
+use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 
 pub struct EqDigest();
 
-impl NewSnippet for EqDigest {
+impl Snippet for EqDigest {
     fn inputs() -> Vec<&'static str> {
         vec!["b4", "b3", "b2", "b1", "b0", "a4", "a3", "a2", "a1", "a0"]
     }
@@ -38,9 +34,7 @@ impl NewSnippet for EqDigest {
 
         vec![ExecutionState::with_stack(stack)]
     }
-}
 
-impl Snippet for EqDigest {
     fn stack_diff() -> isize {
         -9
     }

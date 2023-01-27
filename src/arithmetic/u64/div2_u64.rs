@@ -5,12 +5,12 @@ use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
-use crate::snippet::{NewSnippet, Snippet};
+use crate::snippet::Snippet;
 use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 
 pub struct Div2U64;
 
-impl NewSnippet for Div2U64 {
+impl Snippet for Div2U64 {
     fn inputs() -> Vec<&'static str> {
         vec!["value_hi", "value_lo"]
     }
@@ -32,11 +32,8 @@ impl NewSnippet for Div2U64 {
 
         vec![ExecutionState::with_stack(input_stack)]
     }
-}
 
-impl Snippet for Div2U64 {
     fn stack_diff() -> isize {
-        // Pop the input argument (u64) and push the result (u64). Both input and output is two words.
         0
     }
 

@@ -6,14 +6,17 @@ use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
-use crate::snippet::{NewSnippet, Snippet};
+use crate::snippet::Snippet;
 use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 
 pub struct LtU64();
 
 pub struct LtStandardU64();
 
-impl NewSnippet for LtU64 {
+/// This `lt_u64` does not consume its arguments, which is the norm for tasm functions.
+///
+/// See `LtStandardU64` for a variant that does.
+impl Snippet for LtU64 {
     fn inputs() -> Vec<&'static str> {
         vec!["rhs_hi", "rhs_lo", "lhs_hi", "lhs_lo"]
     }
@@ -44,12 +47,7 @@ impl NewSnippet for LtU64 {
 
         ret
     }
-}
 
-/// This `lt_u64` does not consume its arguments, which is the norm for tasm functions.
-///
-/// See `LtStandardU64` for a variant that does.
-impl Snippet for LtU64 {
     fn stack_diff() -> isize {
         1
     }
@@ -125,7 +123,7 @@ impl Snippet for LtU64 {
 /// The fastest way we know is to calculate without consuming, and then pop the operands.
 /// This is because there are three branches, so sharing cleanup unconditionally means
 /// less branching (fewer cycles) and less local cleanup (smaller program).
-impl NewSnippet for LtStandardU64 {
+impl Snippet for LtStandardU64 {
     fn inputs() -> Vec<&'static str> {
         vec!["rhs_hi", "rhs_lo", "lhs_hi", "lhs_lo"]
     }
@@ -143,9 +141,7 @@ impl NewSnippet for LtStandardU64 {
         // rust shadowin cannot.
         LtU64::gen_input_states()
     }
-}
 
-impl Snippet for LtStandardU64 {
     fn stack_diff() -> isize {
         -3
     }

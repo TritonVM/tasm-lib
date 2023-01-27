@@ -5,12 +5,12 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::log_2_floor;
 
 use crate::library::Library;
-use crate::snippet::{NewSnippet, Snippet};
+use crate::snippet::Snippet;
 use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 
 pub struct Log2FloorU64();
 
-impl NewSnippet for Log2FloorU64 {
+impl Snippet for Log2FloorU64 {
     fn inputs() -> Vec<&'static str> {
         vec!["value_hi", "value_lo"]
     }
@@ -32,9 +32,7 @@ impl NewSnippet for Log2FloorU64 {
 
         vec![ExecutionState::with_stack(input_stack)]
     }
-}
 
-impl Snippet for Log2FloorU64 {
     fn stack_diff() -> isize {
         -1
     }

@@ -8,7 +8,7 @@ use twenty_first::util_types::mmr;
 use crate::arithmetic::u64::eq_u64::EqU64;
 use crate::arithmetic::u64::lt_u64::LtU64;
 use crate::library::Library;
-use crate::snippet::{NewSnippet, Snippet};
+use crate::snippet::Snippet;
 use crate::{get_init_tvm_stack, ExecutionState};
 
 use super::left_child::MmrLeftChild;
@@ -18,7 +18,7 @@ use super::right_child::MmrRightChild;
 // You probably don't want to use this but a right lineage count function instead
 pub struct MmrRightChildAndHeight;
 
-impl NewSnippet for MmrRightChildAndHeight {
+impl Snippet for MmrRightChildAndHeight {
     fn inputs() -> Vec<&'static str> {
         vec!["node_index_hi", "node_index_lo"]
     }
@@ -45,9 +45,7 @@ impl NewSnippet for MmrRightChildAndHeight {
 
         ret
     }
-}
 
-impl Snippet for MmrRightChildAndHeight {
     fn stack_diff() -> isize
     where
         Self: Sized,

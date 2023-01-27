@@ -3,12 +3,11 @@ use std::collections::HashMap;
 use itertools::Itertools;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
-use crate::snippet::NewSnippet;
 use crate::snippet::Snippet;
 use crate::ExecutionResult;
 
 #[allow(dead_code)]
-pub fn rust_tasm_equivalence_prop_new<T: NewSnippet>() {
+pub fn rust_tasm_equivalence_prop_new<T: Snippet>() {
     let mut execution_states = T::gen_input_states();
     for execution_state in execution_states.iter_mut() {
         let stack_init = execution_state.stack.clone();
@@ -47,7 +46,7 @@ pub fn rust_tasm_equivalence_prop<T: Snippet>(
     let init_memory = memory.clone();
     let mut tasm_stack = stack.to_vec();
     let mut tasm_memory = init_memory.clone();
-    let execution_result = T::run_tasm(
+    let execution_result = T::run_tasm_old(
         &mut tasm_stack,
         stdin.to_vec(),
         secret_in.to_vec(),

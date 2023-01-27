@@ -6,12 +6,12 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::algebraic_hasher::Hashable;
 
 use crate::library::Library;
-use crate::snippet::{NewSnippet, Snippet};
+use crate::snippet::Snippet;
 use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 
 pub struct DecrU64();
 
-impl NewSnippet for DecrU64 {
+impl Snippet for DecrU64 {
     fn inputs() -> Vec<&'static str> {
         vec!["value_hi", "value_lo"]
     }
@@ -39,9 +39,7 @@ impl NewSnippet for DecrU64 {
             })
             .collect()
     }
-}
 
-impl Snippet for DecrU64 {
     fn stack_diff() -> isize {
         0
     }
@@ -125,7 +123,7 @@ mod tests {
     fn decr_u64_negative_tasm_test() {
         let mut stack = get_init_tvm_stack();
         push_hashable(&mut stack, &U32s::<2>::zero());
-        <DecrU64 as Snippet>::run_tasm(&mut stack, vec![], vec![], &mut HashMap::default(), 0);
+        DecrU64::run_tasm_old(&mut stack, vec![], vec![], &mut HashMap::default(), 0);
     }
 
     #[test]

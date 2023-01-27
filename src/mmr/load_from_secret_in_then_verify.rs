@@ -14,7 +14,7 @@ use twenty_first::util_types::mmr::mmr_trait::Mmr;
 
 use crate::hashing::load_auth_path_from_secret_in::LoadAuthPathFromSecretIn;
 use crate::library::Library;
-use crate::snippet::{NewSnippet, Snippet};
+use crate::snippet::Snippet;
 use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, ExecutionState};
 
 use super::verify_from_memory::MmrVerifyFromMemory;
@@ -23,7 +23,7 @@ use super::MAX_MMR_HEIGHT;
 /// First load from secret-in, then verify from memory
 pub struct MmrLoadFromSecretInThenVerify();
 
-impl NewSnippet for MmrLoadFromSecretInThenVerify {
+impl Snippet for MmrLoadFromSecretInThenVerify {
     fn inputs() -> Vec<&'static str> {
         vec![
             "peaks_pointer",
@@ -147,9 +147,7 @@ impl NewSnippet for MmrLoadFromSecretInThenVerify {
 
         init_vm_states
     }
-}
 
-impl Snippet for MmrLoadFromSecretInThenVerify {
     fn stack_diff() -> isize {
         -6
     }

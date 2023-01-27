@@ -17,12 +17,12 @@ use crate::library::Library;
 use crate::list::u32::pop::Pop;
 use crate::list::u32::push::Push;
 use crate::list::u32::set_length::SetLength;
-use crate::snippet::{NewSnippet, Snippet};
+use crate::snippet::Snippet;
 use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, ExecutionState};
 
 pub struct CalculateNewPeaksFromAppend;
 
-impl NewSnippet for CalculateNewPeaksFromAppend {
+impl Snippet for CalculateNewPeaksFromAppend {
     fn inputs() -> Vec<&'static str> {
         vec![
             "old_leaf_count_hi",
@@ -84,9 +84,7 @@ impl NewSnippet for CalculateNewPeaksFromAppend {
 
         vec![ret0]
     }
-}
 
-impl Snippet for CalculateNewPeaksFromAppend {
     fn stack_diff() -> isize {
         // pops: `old_leaf_count` (u32s<2>); old_peaks (*list); [digests (new_leaf)]
         // pushes: *list (new peaks); *auth_path_of_newly_added_leaf

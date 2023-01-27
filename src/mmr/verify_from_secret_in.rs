@@ -19,14 +19,14 @@ use crate::hashing::eq_digest::EqDigest;
 use crate::hashing::swap_digest::SwapDigest;
 use crate::library::Library;
 use crate::list::u32::get::Get;
-use crate::snippet::{NewSnippet, Snippet};
+use crate::snippet::Snippet;
 use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, ExecutionState};
 
 use super::leaf_index_to_mt_index::MmrLeafIndexToMtIndexAndPeakIndex;
 
 pub struct MmrVerifyLeafMembershipFromSecretIn();
 
-impl NewSnippet for MmrVerifyLeafMembershipFromSecretIn {
+impl Snippet for MmrVerifyLeafMembershipFromSecretIn {
     fn inputs() -> Vec<&'static str> {
         vec![
             "peaks_pointer",
@@ -144,9 +144,7 @@ impl NewSnippet for MmrVerifyLeafMembershipFromSecretIn {
 
         init_vm_states
     }
-}
 
-impl Snippet for MmrVerifyLeafMembershipFromSecretIn {
     fn stack_diff() -> isize {
         -5
     }

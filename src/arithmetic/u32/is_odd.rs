@@ -5,12 +5,12 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
 use crate::pseudo::lsb::Lsb;
-use crate::snippet::{NewSnippet, Snippet};
+use crate::snippet::Snippet;
 use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 
 pub struct U32IsOdd();
 
-impl NewSnippet for U32IsOdd {
+impl Snippet for U32IsOdd {
     fn inputs() -> Vec<&'static str> {
         vec!["value"]
     }
@@ -56,9 +56,7 @@ impl NewSnippet for U32IsOdd {
             // ExecutionState::with_stack(above_max_odd_stack),
         ]
     }
-}
 
-impl Snippet for U32IsOdd {
     fn stack_diff() -> isize {
         // pops a u32 from the stack and pushes a bool
         0

@@ -20,7 +20,7 @@ use crate::hashing::eq_digest::EqDigest;
 use crate::hashing::swap_digest::SwapDigest;
 use crate::library::Library;
 use crate::list::u32::get::Get;
-use crate::snippet::{NewSnippet, Snippet};
+use crate::snippet::Snippet;
 use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, ExecutionState};
 
 use super::leaf_index_to_mt_index::MmrLeafIndexToMtIndexAndPeakIndex;
@@ -28,7 +28,7 @@ use super::MAX_MMR_HEIGHT;
 
 pub struct MmrVerifyFromMemory();
 
-impl NewSnippet for MmrVerifyFromMemory {
+impl Snippet for MmrVerifyFromMemory {
     fn inputs() -> Vec<&'static str> {
         vec![
             "*peaks",
@@ -80,9 +80,7 @@ impl NewSnippet for MmrVerifyFromMemory {
 
         vec![ret0]
     }
-}
 
-impl Snippet for MmrVerifyFromMemory {
     fn stack_diff() -> isize {
         -7
     }

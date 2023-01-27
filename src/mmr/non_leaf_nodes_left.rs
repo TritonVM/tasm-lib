@@ -13,12 +13,12 @@ use crate::arithmetic::u64::incr_u64::IncrU64;
 use crate::arithmetic::u64::log_2_floor_u64::Log2FloorU64;
 use crate::arithmetic::u64::pow2_u64::Pow2U64;
 use crate::library::Library;
-use crate::snippet::{NewSnippet, Snippet};
+use crate::snippet::Snippet;
 use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 
 pub struct MmrNonLeafNodesLeftUsingAnd();
 
-impl NewSnippet for MmrNonLeafNodesLeftUsingAnd {
+impl Snippet for MmrNonLeafNodesLeftUsingAnd {
     fn inputs() -> Vec<&'static str> {
         vec!["leaf_index_hi", "leaf_index_lo"]
     }
@@ -51,9 +51,7 @@ impl NewSnippet for MmrNonLeafNodesLeftUsingAnd {
 
         ret
     }
-}
 
-impl Snippet for MmrNonLeafNodesLeftUsingAnd {
     fn stack_diff() -> isize {
         0
     }

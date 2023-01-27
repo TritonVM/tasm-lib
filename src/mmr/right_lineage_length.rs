@@ -6,12 +6,12 @@ use crate::arithmetic::u64::incr_u64::IncrU64;
 use crate::arithmetic::u64::log_2_floor_u64::Log2FloorU64;
 use crate::arithmetic::u64::pow2_u64::Pow2U64;
 use crate::arithmetic::u64::sub_u64::SubU64;
-use crate::snippet::{NewSnippet, Snippet};
+use crate::snippet::Snippet;
 use crate::{get_init_tvm_stack, ExecutionState};
 
 pub struct MmrRightLineageLength;
 
-impl NewSnippet for MmrRightLineageLength {
+impl Snippet for MmrRightLineageLength {
     fn inputs() -> Vec<&'static str> {
         vec!["node_index_hi", "node_index_lo"]
     }
@@ -38,9 +38,7 @@ impl NewSnippet for MmrRightLineageLength {
 
         ret
     }
-}
 
-impl Snippet for MmrRightLineageLength {
     fn stack_diff() -> isize {
         -1
     }

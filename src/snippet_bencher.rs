@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::to_writer_pretty;
 use triton_vm::table::master_table::MasterBaseTable;
 
-use crate::snippet::{simulate_snippet, NewSnippet, Snippet};
+use crate::snippet::{simulate_snippet, Snippet};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SnippetBenchmark {
@@ -16,7 +16,7 @@ pub struct SnippetBenchmark {
 }
 
 #[allow(dead_code)]
-pub fn benchmark_snippet<T: NewSnippet>() -> Vec<SnippetBenchmark> {
+pub fn benchmark_snippet<T: Snippet>() -> Vec<SnippetBenchmark> {
     let execution_states = T::gen_input_states();
     let mut benchmarks = Vec::with_capacity(execution_states.len());
 
@@ -46,6 +46,6 @@ pub fn write_benchmarks<T: Snippet>(benchmarks: Vec<SnippetBenchmark>) {
 }
 
 #[allow(dead_code)]
-pub fn bench_and_write<T: NewSnippet>() {
+pub fn bench_and_write<T: Snippet>() {
     write_benchmarks::<T>(benchmark_snippet::<T>());
 }

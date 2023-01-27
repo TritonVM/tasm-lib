@@ -7,12 +7,12 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::algebraic_hasher::Hashable;
 
 use crate::library::Library;
-use crate::snippet::{NewSnippet, Snippet};
+use crate::snippet::Snippet;
 use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 
 pub struct IncrU64();
 
-impl NewSnippet for IncrU64 {
+impl Snippet for IncrU64 {
     fn inputs() -> Vec<&'static str> {
         vec!["value"]
     }
@@ -44,9 +44,7 @@ impl NewSnippet for IncrU64 {
             })
             .collect()
     }
-}
 
-impl Snippet for IncrU64 {
     fn stack_diff() -> isize {
         0
     }
@@ -129,7 +127,7 @@ mod tests {
         let mut stack = get_init_tvm_stack();
         let u64_max = U32s::<2>::try_from(u64::MAX).unwrap();
         push_hashable(&mut stack, &u64_max);
-        <IncrU64 as Snippet>::run_tasm(&mut stack, vec![], vec![], &mut HashMap::default(), 0);
+        IncrU64::run_tasm_old(&mut stack, vec![], vec![], &mut HashMap::default(), 0);
     }
 
     #[test]

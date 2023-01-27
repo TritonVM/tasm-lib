@@ -7,12 +7,12 @@ use twenty_first::util_types::algebraic_hasher::Hashable;
 
 use crate::arithmetic::u32::is_u32::IsU32;
 use crate::library::Library;
-use crate::snippet::{NewSnippet, Snippet};
+use crate::snippet::Snippet;
 use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 
 pub struct SubU64();
 
-impl NewSnippet for SubU64 {
+impl Snippet for SubU64 {
     fn inputs() -> Vec<&'static str> {
         vec!["rhs_hi", "rhs_lo", "lhs_hi", "lhs_lo"]
     }
@@ -80,9 +80,7 @@ impl NewSnippet for SubU64 {
             ExecutionState::with_stack(stack_3),
         ]
     }
-}
 
-impl Snippet for SubU64 {
     fn stack_diff() -> isize {
         -2
     }

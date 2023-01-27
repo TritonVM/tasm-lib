@@ -115,6 +115,22 @@ mod tests {
             stack.push(BFieldElement::one());
             stack.push(BFieldElement::one());
         }
+
+        fn inputs() -> Vec<&'static str> {
+            vec![]
+        }
+
+        fn outputs() -> Vec<&'static str> {
+            vec!["1", "1", "1"]
+        }
+
+        fn crash_conditions() -> Vec<&'static str> {
+            vec![]
+        }
+
+        fn gen_input_states() -> Vec<crate::ExecutionState> {
+            vec![]
+        }
     }
 
     impl Snippet for B {
@@ -149,6 +165,22 @@ mod tests {
             stack.push(BFieldElement::one());
             stack.push(BFieldElement::one());
         }
+
+        fn inputs() -> Vec<&'static str> {
+            vec![]
+        }
+
+        fn outputs() -> Vec<&'static str> {
+            vec!["1", "1"]
+        }
+
+        fn crash_conditions() -> Vec<&'static str> {
+            vec![]
+        }
+
+        fn gen_input_states() -> Vec<crate::ExecutionState> {
+            vec![]
+        }
     }
 
     impl Snippet for C {
@@ -179,6 +211,22 @@ mod tests {
             _memory: &mut HashMap<BFieldElement, BFieldElement>,
         ) {
             stack.push(BFieldElement::one())
+        }
+
+        fn inputs() -> Vec<&'static str> {
+            vec![]
+        }
+
+        fn outputs() -> Vec<&'static str> {
+            vec!["1"]
+        }
+
+        fn crash_conditions() -> Vec<&'static str> {
+            vec![]
+        }
+
+        fn gen_input_states() -> Vec<crate::ExecutionState> {
+            vec![]
         }
     }
 

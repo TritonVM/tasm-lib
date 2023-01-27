@@ -4,12 +4,12 @@ use rand::Rng;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
-use crate::snippet::{NewSnippet, Snippet};
+use crate::snippet::Snippet;
 use crate::{get_init_tvm_stack, ExecutionState};
 
 pub struct BfeAdd();
 
-impl NewSnippet for BfeAdd {
+impl Snippet for BfeAdd {
     fn inputs() -> Vec<&'static str> {
         vec!["b", "a"]
     }
@@ -29,9 +29,7 @@ impl NewSnippet for BfeAdd {
         stack.push(rng.gen());
         vec![ExecutionState::with_stack(stack)]
     }
-}
 
-impl Snippet for BfeAdd {
     fn stack_diff() -> isize {
         -1
     }

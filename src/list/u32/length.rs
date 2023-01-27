@@ -5,13 +5,13 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
 use crate::rust_shadowing_helper_functions::insert_random_list;
-use crate::snippet::{NewSnippet, Snippet};
+use crate::snippet::Snippet;
 use crate::{get_init_tvm_stack, ExecutionState};
 
 // Called "Long" because this logic can be shortened
 pub struct LengthLong;
 
-impl NewSnippet for LengthLong {
+impl Snippet for LengthLong {
     fn inputs() -> Vec<&'static str> {
         vec!["*list"]
     }
@@ -67,9 +67,7 @@ impl NewSnippet for LengthLong {
 
         ret
     }
-}
 
-impl Snippet for LengthLong {
     fn stack_diff() -> isize {
         // Consumes a memory address and returns a length in the form of a u32
         0
@@ -111,7 +109,7 @@ impl Snippet for LengthLong {
 // Called "Short" because it's efficient code
 pub struct LengthShort;
 
-impl NewSnippet for LengthShort {
+impl Snippet for LengthShort {
     fn inputs() -> Vec<&'static str> {
         vec!["*list"]
     }
@@ -127,9 +125,7 @@ impl NewSnippet for LengthShort {
     fn gen_input_states() -> Vec<ExecutionState> {
         LengthLong::gen_input_states()
     }
-}
 
-impl Snippet for LengthShort {
     fn stack_diff() -> isize {
         // Adds the length of a vector in the form of a u32 to the top of the stack
         1

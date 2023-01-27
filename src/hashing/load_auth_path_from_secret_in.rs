@@ -7,19 +7,15 @@ use twenty_first::shared_math::other::random_elements;
 use twenty_first::shared_math::rescue_prime_digest::Digest;
 use twenty_first::shared_math::rescue_prime_digest::DIGEST_LENGTH;
 
-use crate::{
-    get_init_tvm_stack,
-    library::Library,
-    list::u32::{push::Push, set_length::SetLength},
-    mmr::MAX_MMR_HEIGHT,
-    rust_shadowing_helper_functions,
-    snippet::{NewSnippet, Snippet},
-    ExecutionState,
-};
+use crate::library::Library;
+use crate::list::u32::{push::Push, set_length::SetLength};
+use crate::mmr::MAX_MMR_HEIGHT;
+use crate::snippet::Snippet;
+use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, ExecutionState};
 
 pub struct LoadAuthPathFromSecretIn;
 
-impl NewSnippet for LoadAuthPathFromSecretIn {
+impl Snippet for LoadAuthPathFromSecretIn {
     fn inputs() -> Vec<&'static str> {
         vec![]
     }
@@ -55,9 +51,7 @@ impl NewSnippet for LoadAuthPathFromSecretIn {
 
         init_vm_states
     }
-}
 
-impl Snippet for LoadAuthPathFromSecretIn {
     fn stack_diff() -> isize {
         1
     }

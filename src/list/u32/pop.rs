@@ -6,12 +6,12 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
 use crate::rust_shadowing_helper_functions::insert_random_list;
-use crate::snippet::{NewSnippet, Snippet};
+use crate::snippet::Snippet;
 use crate::{get_init_tvm_stack, ExecutionState};
 
 pub struct Pop<const N: usize>;
 
-impl<const N: usize> NewSnippet for Pop<N> {
+impl<const N: usize> Snippet for Pop<N> {
     fn inputs() -> Vec<&'static str> {
         vec!["*list"]
     }
@@ -44,9 +44,7 @@ impl<const N: usize> NewSnippet for Pop<N> {
             prepare_state::<N>(),
         ]
     }
-}
 
-impl<const N: usize> Snippet for Pop<N> {
     fn stack_diff() -> isize {
         assert!(N < 17, "Max element size supported for list is 16");
         N as isize - 1

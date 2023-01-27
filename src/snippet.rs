@@ -9,14 +9,28 @@ use crate::ExecutionResult;
 use crate::{execute, ExecutionState};
 
 pub trait Snippet {
-    fn stack_diff() -> isize;
-
+    /// The name of a Snippet
+    ///
+    /// This is used as a unique identifier, e.g. when generating labels.
     fn entrypoint() -> &'static str;
 
+    /// The input stack
+    fn inputs() -> Vec<&'static str>;
+
+    /// The output stack
+    fn outputs() -> Vec<&'static str>;
+
+    /// The stack difference
+    fn stack_diff() -> isize;
+
+    /// The function body
     fn function_body(library: &mut Library) -> String;
 
-    // TODO: Consider adding a generator for valid inputs to this trait
-    // This input generator could then function as a form of documentation.
+    /// Ways in which this snippet can crash
+    fn crash_conditions() -> Vec<&'static str>;
+
+    /// Examples of valid initial states for running this snippet
+    fn gen_input_states() -> Vec<ExecutionState>;
 
     // TODO: Consider adding these associated constants
     // const INIT_STACK_DESC: &'static str;
@@ -35,7 +49,7 @@ pub trait Snippet {
 
     /// The TASM code is always run through a function call, so the 1st instruction
     /// is a call to the function in question.
-    fn run_tasm(
+    fn run_tasm_old(
         stack: &mut Vec<BFieldElement>,
         std_in: Vec<BFieldElement>,
         secret_in: Vec<BFieldElement>,
@@ -58,19 +72,10 @@ pub trait Snippet {
         );
         execute(&code, stack, Self::stack_diff(), std_in, secret_in, memory)
     }
-}
-
-pub trait NewSnippet: Snippet {
-    fn inputs() -> Vec<&'static str>;
-    fn outputs() -> Vec<&'static str>;
-    fn crash_conditions() -> Vec<&'static str>;
-    fn gen_input_states() -> Vec<ExecutionState>;
 
     fn run_tasm(execution_state: &mut ExecutionState) -> ExecutionResult {
-        // TODO: Consider adding canaries here to ensure that stack is not modified below where the function
-
         let stack_prior = execution_state.stack.clone();
-        let ret = <Self as Snippet>::run_tasm(
+        let ret = Self::run_tasm_old(
             &mut execution_state.stack,
             execution_state.std_in.clone(),
             execution_state.secret_in.clone(),

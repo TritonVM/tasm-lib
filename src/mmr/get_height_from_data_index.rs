@@ -7,12 +7,12 @@ use twenty_first::shared_math::other::log_2_floor;
 use crate::arithmetic::u64::incr_u64::IncrU64;
 use crate::arithmetic::u64::log_2_floor_u64::Log2FloorU64;
 use crate::library::Library;
-use crate::snippet::{NewSnippet, Snippet};
+use crate::snippet::Snippet;
 use crate::{get_init_tvm_stack, ExecutionState};
 
 pub struct GetHeightFromDataIndex;
 
-impl NewSnippet for GetHeightFromDataIndex {
+impl Snippet for GetHeightFromDataIndex {
     fn inputs() -> Vec<&'static str> {
         vec!["leaf_index_hi", "leaf_index_lo"]
     }
@@ -39,9 +39,7 @@ impl NewSnippet for GetHeightFromDataIndex {
 
         ret
     }
-}
 
-impl Snippet for GetHeightFromDataIndex {
     // Pops `leaf_index` from stack (U32s<2>). Returns height in the form of one u32.
     fn stack_diff() -> isize {
         -1

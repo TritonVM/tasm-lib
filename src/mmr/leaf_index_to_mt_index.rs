@@ -15,12 +15,12 @@ use crate::arithmetic::u64::lt_u64::LtU64;
 use crate::arithmetic::u64::pow2_u64::Pow2U64;
 use crate::arithmetic::u64::sub_u64::SubU64;
 use crate::library::Library;
-use crate::snippet::{NewSnippet, Snippet};
+use crate::snippet::Snippet;
 use crate::{get_init_tvm_stack, ExecutionState};
 
 pub struct MmrLeafIndexToMtIndexAndPeakIndex;
 
-impl NewSnippet for MmrLeafIndexToMtIndexAndPeakIndex {
+impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
     fn inputs() -> Vec<&'static str> {
         vec![
             "leaf_count_hi",
@@ -57,9 +57,7 @@ impl NewSnippet for MmrLeafIndexToMtIndexAndPeakIndex {
 
         ret
     }
-}
 
-impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
     fn stack_diff() -> isize {
         // Consumes leaf_index: u64 and leaf_count: u64. Pushes MT index: u64 and peak index: u32
         -1

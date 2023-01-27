@@ -6,14 +6,14 @@ use twenty_first::util_types::mmr;
 use crate::arithmetic::u64::add_u64::AddU64;
 use crate::arithmetic::u64::incr_u64::IncrU64;
 use crate::library::Library;
-use crate::snippet::{NewSnippet, Snippet};
+use crate::snippet::Snippet;
 use crate::{get_init_tvm_stack, ExecutionState};
 
 use super::non_leaf_nodes_left::MmrNonLeafNodesLeftUsingAnd;
 
 pub struct DataIndexToNodeIndex();
 
-impl NewSnippet for DataIndexToNodeIndex {
+impl Snippet for DataIndexToNodeIndex {
     fn inputs() -> Vec<&'static str> {
         vec!["leaf_index_hi", "leaf_index_lo"]
     }
@@ -40,9 +40,7 @@ impl NewSnippet for DataIndexToNodeIndex {
 
         ret
     }
-}
 
-impl Snippet for DataIndexToNodeIndex {
     fn stack_diff() -> isize {
         // Pops a U32s<2> and pushes a U32s<2>
         0

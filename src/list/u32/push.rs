@@ -7,12 +7,13 @@ use twenty_first::shared_math::other::random_elements;
 
 use crate::library::Library;
 use crate::rust_shadowing_helper_functions::insert_random_list;
-use crate::snippet::{NewSnippet, Snippet};
+use crate::snippet::Snippet;
 use crate::{get_init_tvm_stack, ExecutionState};
 
 pub struct Push<const N: usize>;
 
-impl<const N: usize> NewSnippet for Push<N> {
+/// A parameterized version of `Push` where `N` is the size of an element in the list
+impl<const N: usize> Snippet for Push<N> {
     fn inputs() -> Vec<&'static str> {
         // See: https://github.com/TritonVM/tasm-snippets/issues/13
         // _ *list, elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}
@@ -50,10 +51,7 @@ impl<const N: usize> NewSnippet for Push<N> {
             prepare_state::<N>(),
         ]
     }
-}
 
-/// A parameterized version of `Push` where `N` is the size of an element in the list
-impl<const N: usize> Snippet for Push<N> {
     fn stack_diff() -> isize {
         assert!(N < 17, "Max element size supported for list is 16");
         -(N as isize)

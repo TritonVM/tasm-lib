@@ -11,12 +11,12 @@ use crate::library::Library;
 use crate::list::u32::{push::Push, set_length::SetLength};
 use crate::mmr::MAX_MMR_HEIGHT;
 use crate::rust_shadowing_helper_functions;
-use crate::snippet::{NewSnippet, Snippet};
+use crate::snippet::Snippet;
 use crate::{get_init_tvm_stack, ExecutionState};
 
 pub struct LoadAuthPathFromStdIn;
 
-impl NewSnippet for LoadAuthPathFromStdIn {
+impl Snippet for LoadAuthPathFromStdIn {
     fn inputs() -> Vec<&'static str> {
         vec![]
     }
@@ -49,9 +49,7 @@ impl NewSnippet for LoadAuthPathFromStdIn {
 
         init_vm_states
     }
-}
 
-impl Snippet for LoadAuthPathFromStdIn {
     fn stack_diff() -> isize {
         1
     }

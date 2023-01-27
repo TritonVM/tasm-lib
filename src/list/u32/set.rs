@@ -6,12 +6,12 @@ use twenty_first::shared_math::other::random_elements;
 
 use crate::library::Library;
 use crate::rust_shadowing_helper_functions::insert_random_list;
-use crate::snippet::{NewSnippet, Snippet};
+use crate::snippet::Snippet;
 use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, ExecutionState};
 
 pub struct Set<const N: usize>;
 
-impl<const N: usize> NewSnippet for Set<N> {
+impl<const N: usize> Snippet for Set<N> {
     fn inputs() -> Vec<&'static str> {
         // See: https://github.com/TritonVM/tasm-snippets/issues/13
         // _ elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}} *list index
@@ -51,9 +51,7 @@ impl<const N: usize> NewSnippet for Set<N> {
             prepare_state::<N>(),
         ]
     }
-}
 
-impl<const N: usize> Snippet for Set<N> {
     fn stack_diff() -> isize {
         assert!(N < 17, "Max element size supported for list is 16");
 

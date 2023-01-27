@@ -6,12 +6,12 @@ use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
-use crate::snippet::{NewSnippet, Snippet};
+use crate::snippet::Snippet;
 use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 
 pub struct EqU64;
 
-impl NewSnippet for EqU64 {
+impl Snippet for EqU64 {
     fn inputs() -> Vec<&'static str> {
         vec!["rhs_hi", "rhs_lo", "lhs_hi", "lhs_lo"]
     }
@@ -35,9 +35,7 @@ impl NewSnippet for EqU64 {
 
         vec![ExecutionState::with_stack(stack)]
     }
-}
 
-impl Snippet for EqU64 {
     fn stack_diff() -> isize {
         -3
     }
