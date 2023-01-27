@@ -1,4 +1,4 @@
-prog :=tasm-snippets
+prog :=tasm-lib
 
 debug ?=
 
