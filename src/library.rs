@@ -1,5 +1,8 @@
 use std::collections::HashSet;
 
+use itertools::Itertools;
+use triton_opcodes::instruction::{parse, LabelledInstruction};
+
 use crate::pseudo::sub::Sub;
 use crate::pseudo::{lsb::Lsb, neg::Neg};
 use crate::snippet::Snippet;
@@ -56,6 +59,14 @@ impl Library {
             .iter()
             .map(|s| format!("{s}\n"))
             .collect()
+    }
+
+    pub fn all_imports_as_instruction_lists(&self) -> Vec<LabelledInstruction> {
+        self.function_bodies
+            .iter()
+            .map(|x| parse(x).unwrap())
+            .collect_vec()
+            .concat()
     }
 
     pub fn kmalloc(&mut self, num_words: usize) -> usize {
@@ -259,5 +270,15 @@ mod tests {
             0,
             expected,
         );
+    }
+
+    #[test]
+    fn all_imports_as_instruction_lists() {
+        let mut lib = Library::default();
+        lib.import::<A>();
+        lib.import::<A>();
+        lib.import::<C>();
+        let ret = lib.all_imports_as_instruction_lists();
+        println!("ret = {}", ret.iter().map(|x| x.to_string()).join("\n"));
     }
 }
