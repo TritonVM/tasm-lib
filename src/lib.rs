@@ -2,6 +2,7 @@ use itertools::Itertools;
 use num_traits::Zero;
 use std::collections::HashMap;
 use triton_opcodes::program::Program;
+use triton_vm::table::master_table::MasterBaseTable;
 use triton_vm::vm;
 
 use triton_vm::op_stack::OP_STACK_REG_COUNT;
@@ -63,6 +64,7 @@ pub struct ExecutionResult {
     pub final_ram: HashMap<BFieldElement, BFieldElement>,
     pub cycle_count: usize,
     pub hash_table_height: usize,
+    pub u32_table_height: usize,
 }
 
 pub fn get_init_tvm_stack() -> Vec<BFieldElement> {
@@ -179,5 +181,8 @@ pub fn execute(
 
         // Number of rows generated in the hash table after simulating program
         hash_table_height: simulation_trace.hash_trace.nrows(),
+
+        // Number of rows generated in the u32 table after simulating program
+        u32_table_height: MasterBaseTable::u32_table_length(&simulation_trace),
     }
 }
