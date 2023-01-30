@@ -21,14 +21,14 @@ impl Snippet for MmrRightLineageLength {
     }
 
     fn crash_conditions() -> Vec<&'static str> {
-        vec![]
+        vec!["node index exceeds 2^63"]
     }
 
     fn gen_input_states() -> Vec<crate::ExecutionState> {
         let mut ret: Vec<ExecutionState> = vec![];
         for _ in 0..10 {
             let mut stack = get_init_tvm_stack();
-            let node_index = thread_rng().gen_range(0..u64::MAX);
+            let node_index = thread_rng().gen_range(0..u64::MAX / 2);
             let node_index_hi = BFieldElement::new(node_index >> 32);
             let node_index_lo = BFieldElement::new(node_index & u32::MAX as u64);
             stack.push(node_index_hi);
