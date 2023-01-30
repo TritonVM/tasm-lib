@@ -152,7 +152,7 @@ impl Snippet for AddU64 {
 
 #[cfg(test)]
 mod tests {
-    use num::{One, Zero};
+    use num::{BigUint, One, Zero};
     use rand::RngCore;
 
     use crate::get_init_tvm_stack;
@@ -265,6 +265,38 @@ mod tests {
                 None,
             );
         }
+    }
+
+    #[should_panic]
+    #[test]
+    fn overflow_test() {
+        let lhs: U32s<2> = U32s::from(BigUint::from(1u64 << 63));
+        let rhs: U32s<2> = U32s::from(BigUint::from((1u64 << 63) + 1));
+        let mut init_stack = get_init_tvm_stack();
+        for elem in rhs.to_sequence().into_iter().rev() {
+            init_stack.push(elem);
+        }
+        for elem in lhs.to_sequence().into_iter().rev() {
+            init_stack.push(elem);
+        }
+
+        AddU64::run_tasm(&mut ExecutionState::with_stack(init_stack));
+    }
+
+    #[should_panic]
+    #[test]
+    fn overflow_test_2() {
+        let lhs: U32s<2> = U32s::from(BigUint::from(u64::MAX));
+        let rhs: U32s<2> = U32s::from(BigUint::from(u64::MAX));
+        let mut init_stack = get_init_tvm_stack();
+        for elem in rhs.to_sequence().into_iter().rev() {
+            init_stack.push(elem);
+        }
+        for elem in lhs.to_sequence().into_iter().rev() {
+            init_stack.push(elem);
+        }
+
+        AddU64::run_tasm(&mut ExecutionState::with_stack(init_stack));
     }
 
     fn prop_add(lhs: U32s<2>, rhs: U32s<2>, expected: Option<&[BFieldElement]>) {
