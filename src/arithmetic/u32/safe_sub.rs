@@ -3,11 +3,11 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::{get_init_tvm_stack, snippet::Snippet, ExecutionState};
 
-pub struct SafeAdd;
+pub struct SafeSub;
 
-impl Snippet for SafeAdd {
+impl Snippet for SafeSub {
     fn entrypoint() -> &'static str {
-        "safe_add_u32"
+        "safe_sub_u32"
     }
 
     fn inputs() -> Vec<&'static str> {
@@ -15,7 +15,7 @@ impl Snippet for SafeAdd {
     }
 
     fn outputs() -> Vec<&'static str> {
-        vec!["lhs + rhs"]
+        vec!["lhs - rhs"]
     }
 
     fn stack_diff() -> isize {
@@ -26,14 +26,19 @@ impl Snippet for SafeAdd {
         let entrypoint = Self::entrypoint();
         format!(
             "
+                // BEFORE: _ rhs lhs
+                // AFTER: _ (lhs - rhs)
                 {entrypoint}:
-                    add // _    lhs + rhs
-                    dup0 // _   (lhs + rhs) (lhs + rhs)
-                    split // _  (lhs + rhs) hi lo
-                    pop   // _  (lhs + rhs) hi
-                    push 0 // _ (lhs + rhs) hi 0
-                    eq     // _ (lhs + rhs) (hi == 0)
-                    assert // _ (lhs + rhs)
+                    swap1
+                    push -1
+                    mul
+                    add
+                    dup0 // _   (lhs - rhs) (lhs - rhs)
+                    split // _  (lhs - rhs) hi lo
+                    pop   // _  (lhs - rhs) hi
+                    push 0 // _ (lhs - rhs) hi 0
+                    eq     // _ (lhs - rhs) (hi == 0)
+                    assert // _ (lhs - rhs)
                     return
                     "
         )
@@ -48,7 +53,7 @@ impl Snippet for SafeAdd {
         for _ in 0..10 {
             let mut stack = get_init_tvm_stack();
             let lhs = thread_rng().gen_range(0..u32::MAX / 2);
-            let rhs = thread_rng().gen_range(0..u32::MAX / 2);
+            let rhs = thread_rng().gen_range(0..=lhs);
             let lhs = BFieldElement::new(lhs as u64);
             let rhs = BFieldElement::new(rhs as u64);
             stack.push(rhs);
@@ -71,8 +76,8 @@ impl Snippet for SafeAdd {
         let lhs: u32 = stack.pop().unwrap().try_into().unwrap();
         let rhs: u32 = stack.pop().unwrap().try_into().unwrap();
 
-        let sum = lhs + rhs;
-        stack.push(BFieldElement::new(sum as u64));
+        let diff = lhs - rhs;
+        stack.push(BFieldElement::new(diff as u64));
     }
 }
 
@@ -86,27 +91,44 @@ mod tests {
 
     #[test]
     fn snippet_test() {
-        rust_tasm_equivalence_prop_new::<SafeAdd>();
+        rust_tasm_equivalence_prop_new::<SafeSub>();
     }
 
     #[test]
-    fn safe_add_simple_test() {
-        prop_safe_add(1000, 1, Some(1001));
-        prop_safe_add(10_000, 900, Some(10_900));
+    fn safe_sub_simple_test() {
+        prop_safe_sub(1000, 1, Some(999));
+        prop_safe_sub(10_000, 900, Some(9_100));
+        prop_safe_sub(123, 123, Some(0));
+        prop_safe_sub(1230, 230, Some(1000));
+        prop_safe_sub(1 << 31, 1 << 30, Some(1 << 30));
+        prop_safe_sub(u32::MAX, 0, Some(u32::MAX));
+        prop_safe_sub(u32::MAX, u32::MAX, Some(0));
     }
 
     #[should_panic]
     #[test]
     fn overflow_test() {
-        prop_safe_add((1 << 31) + 1000, 1 << 31, None);
+        prop_safe_sub(1 << 31, (1 << 31) + 1000, None);
     }
 
-    fn prop_safe_add(lhs: u32, rhs: u32, expected: Option<u32>) {
+    #[should_panic]
+    #[test]
+    fn overflow_test_2() {
+        prop_safe_sub(0, 1, None);
+    }
+
+    #[should_panic]
+    #[test]
+    fn overflow_test_3() {
+        prop_safe_sub(0, u32::MAX, None);
+    }
+
+    fn prop_safe_sub(lhs: u32, rhs: u32, expected: Option<u32>) {
         let mut init_stack = get_init_tvm_stack();
         init_stack.push(BFieldElement::new(rhs as u64));
         init_stack.push(BFieldElement::new(lhs as u64));
 
-        let execution_result = rust_tasm_equivalence_prop::<SafeAdd>(
+        let execution_result = rust_tasm_equivalence_prop::<SafeSub>(
             &init_stack,
             &[],
             &[],
