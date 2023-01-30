@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use num_traits::Zero;
 use std::collections::HashMap;
 use triton_opcodes::program::Program;
@@ -158,7 +159,11 @@ pub fn execute(
     assert_eq!(
         expected_stack_diff,
         final_stack_height - init_stack_height as isize,
-        "Code must grow/shrink stack with expected number of elements.\ninit height: {init_stack_height}\nend height: {final_stack_height}\nexpected difference: {expected_stack_diff}\n\nfinal stack: {stack:?}"
+        "Code must grow/shrink stack with expected number of elements.\n
+        init height: {init_stack_height}\nend height: {final_stack_height}\n
+        expected difference: {expected_stack_diff}\n\n
+        final stack: {}",
+        stack.iter().map(|x| x.to_string()).join(",")
     );
 
     ExecutionResult {
