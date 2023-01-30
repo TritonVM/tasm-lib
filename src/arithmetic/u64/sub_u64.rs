@@ -112,7 +112,8 @@ impl Snippet for SubU64 {
             {entrypoint}:
                 swap1  // -> _ hi_r lo_r lo_l hi_l
                 swap2  // -> _ hi_r hi_l lo_l lo_r
-                [neg]
+                push -1
+                mul
                 add    // -> _ hi_r hi_l (lo_l - lo_r)
 
                 dup0
