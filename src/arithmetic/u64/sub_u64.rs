@@ -123,8 +123,12 @@ impl Snippet for SubU64 {
                     call {entrypoint}_carry
 
                 swap2  // -> lo_diff hi_l hi_r
-                [neg]
+                push -1
+                mul
                 add    // -> lo_diff (hi_l - hi_r)
+                dup0
+                call {is_u32}
+                assert
                 swap1  // -> (hi_l - hi_r) lo_diff
 
                 return
@@ -216,6 +220,22 @@ mod tests {
                 None,
             );
         }
+    }
+
+    #[should_panic]
+    #[test]
+    fn overflow_test() {
+        let lhs: U32s<2> = U32s::from(BigUint::from(1u64 << 33));
+        let rhs: U32s<2> = U32s::from(BigUint::from((1u64 << 33) + 1));
+        let mut init_stack = get_init_tvm_stack();
+        for elem in rhs.to_sequence().into_iter().rev() {
+            init_stack.push(elem);
+        }
+        for elem in lhs.to_sequence().into_iter().rev() {
+            init_stack.push(elem);
+        }
+
+        SubU64::run_tasm(&mut ExecutionState::with_stack(init_stack));
     }
 
     fn prop_sub(lhs: U32s<2>, rhs: U32s<2>, expected: Option<&[BFieldElement]>) {
