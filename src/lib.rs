@@ -10,6 +10,7 @@ use triton_vm::state::VMState;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::algebraic_hasher::Hashable;
 
+pub mod all_snippets;
 pub mod arithmetic;
 pub mod hashing;
 pub mod library;
