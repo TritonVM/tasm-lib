@@ -84,13 +84,14 @@ mod tests {
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
     use crate::get_init_tvm_stack;
+    use crate::snippet::DataType;
     use crate::test_helpers::rust_tasm_equivalence_prop;
 
     use super::*;
 
-    struct A();
-    struct B();
-    struct C();
+    struct A;
+    struct B;
+    struct C;
 
     impl Snippet for A {
         fn stack_diff() -> isize {
@@ -142,6 +143,14 @@ mod tests {
         fn gen_input_states() -> Vec<crate::ExecutionState> {
             vec![]
         }
+
+        fn input_types(&self) -> Vec<crate::snippet::DataType> {
+            vec![]
+        }
+
+        fn output_types(&self) -> Vec<crate::snippet::DataType> {
+            vec![DataType::BFE, DataType::BFE, DataType::BFE]
+        }
     }
 
     impl Snippet for B {
@@ -183,6 +192,14 @@ mod tests {
 
         fn outputs() -> Vec<&'static str> {
             vec!["1", "1"]
+        }
+
+        fn input_types(&self) -> Vec<crate::snippet::DataType> {
+            vec![]
+        }
+
+        fn output_types(&self) -> Vec<crate::snippet::DataType> {
+            vec![DataType::BFE, DataType::BFE]
         }
 
         fn crash_conditions() -> Vec<&'static str> {
@@ -232,6 +249,14 @@ mod tests {
             vec!["1"]
         }
 
+        fn input_types(&self) -> Vec<crate::snippet::DataType> {
+            vec![]
+        }
+
+        fn output_types(&self) -> Vec<crate::snippet::DataType> {
+            vec![DataType::BFE]
+        }
+
         fn crash_conditions() -> Vec<&'static str> {
             vec![]
         }
@@ -247,6 +272,7 @@ mod tests {
 
         let expected = None;
         let _execution_result = rust_tasm_equivalence_prop::<A>(
+            A,
             &empty_stack,
             &[],
             &[],
@@ -255,6 +281,7 @@ mod tests {
             expected,
         );
         let _execution_result = rust_tasm_equivalence_prop::<B>(
+            B,
             &empty_stack,
             &[],
             &[],
@@ -263,6 +290,7 @@ mod tests {
             expected,
         );
         let _execution_result = rust_tasm_equivalence_prop::<C>(
+            C,
             &empty_stack,
             &[],
             &[],

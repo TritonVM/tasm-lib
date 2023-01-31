@@ -5,10 +5,11 @@ use rand::RngCore;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
-use crate::snippet::Snippet;
+use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 
-pub struct IsU32();
+#[derive(Clone)]
+pub struct IsU32;
 
 impl Snippet for IsU32 {
     fn inputs() -> Vec<&'static str> {
@@ -17,6 +18,14 @@ impl Snippet for IsU32 {
 
     fn outputs() -> Vec<&'static str> {
         vec!["value < 2^32"]
+    }
+
+    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::U32]
+    }
+
+    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::Bool]
     }
 
     fn crash_conditions() -> Vec<&'static str> {
@@ -92,7 +101,7 @@ mod tests {
 
     #[test]
     fn is_u32_test() {
-        rust_tasm_equivalence_prop_new::<IsU32>();
+        rust_tasm_equivalence_prop_new::<IsU32>(IsU32);
     }
 
     #[test]
@@ -143,6 +152,7 @@ mod tests {
         init_stack.push(some_value);
 
         let _execution_result = rust_tasm_equivalence_prop::<IsU32>(
+            IsU32,
             &init_stack,
             &[],
             &[],

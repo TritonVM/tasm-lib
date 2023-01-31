@@ -13,10 +13,11 @@ use crate::arithmetic::u64::incr_u64::IncrU64;
 use crate::arithmetic::u64::log_2_floor_u64::Log2FloorU64;
 use crate::arithmetic::u64::pow2_u64::Pow2U64;
 use crate::library::Library;
-use crate::snippet::Snippet;
+use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 
-pub struct MmrNonLeafNodesLeftUsingAnd();
+#[derive(Clone)]
+pub struct MmrNonLeafNodesLeftUsingAnd;
 
 impl Snippet for MmrNonLeafNodesLeftUsingAnd {
     fn inputs() -> Vec<&'static str> {
@@ -25,6 +26,14 @@ impl Snippet for MmrNonLeafNodesLeftUsingAnd {
 
     fn outputs() -> Vec<&'static str> {
         vec!["node_count_hi", "node_count_lo"]
+    }
+
+    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::U64]
+    }
+
+    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::U64]
     }
 
     fn crash_conditions() -> Vec<&'static str> {
@@ -188,7 +197,7 @@ mod nlnl_tests {
 
     #[test]
     fn non_leaf_nodes_left_test() {
-        rust_tasm_equivalence_prop_new::<MmrNonLeafNodesLeftUsingAnd>();
+        rust_tasm_equivalence_prop_new::<MmrNonLeafNodesLeftUsingAnd>(MmrNonLeafNodesLeftUsingAnd);
     }
 
     #[test]
@@ -264,6 +273,7 @@ mod nlnl_tests {
         }
 
         let _execution_result = rust_tasm_equivalence_prop::<MmrNonLeafNodesLeftUsingAnd>(
+            MmrNonLeafNodesLeftUsingAnd,
             &init_stack,
             &[],
             &[],

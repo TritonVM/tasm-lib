@@ -11,10 +11,11 @@ use crate::arithmetic::u64::decr_u64::DecrU64;
 use crate::arithmetic::u64::log_2_floor_u64::Log2FloorU64;
 use crate::arithmetic::u64::pow2_u64::Pow2U64;
 use crate::library::Library;
-use crate::snippet::Snippet;
+use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
-pub struct MmrLeftMostAncestor();
+#[derive(Clone)]
+pub struct MmrLeftMostAncestor;
 
 impl Snippet for MmrLeftMostAncestor {
     fn inputs() -> Vec<&'static str> {
@@ -23,6 +24,14 @@ impl Snippet for MmrLeftMostAncestor {
 
     fn outputs() -> Vec<&'static str> {
         vec!["leftmost_ancestor_hi", "leftmost_ancestor_lo", "height"]
+    }
+
+    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::U64]
+    }
+
+    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::U64, DataType::U32]
     }
 
     fn crash_conditions() -> Vec<&'static str> {
@@ -119,7 +128,7 @@ mod tests {
 
     #[test]
     fn leftmost_ancestor_test() {
-        rust_tasm_equivalence_prop_new::<MmrLeftMostAncestor>();
+        rust_tasm_equivalence_prop_new::<MmrLeftMostAncestor>(MmrLeftMostAncestor);
     }
 
     #[test]
@@ -226,6 +235,7 @@ mod tests {
         }
 
         let _execution_result = rust_tasm_equivalence_prop::<MmrLeftMostAncestor>(
+            MmrLeftMostAncestor,
             &init_stack,
             &[],
             &[],

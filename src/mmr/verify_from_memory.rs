@@ -20,13 +20,14 @@ use crate::hashing::eq_digest::EqDigest;
 use crate::hashing::swap_digest::SwapDigest;
 use crate::library::Library;
 use crate::list::u32::get::Get;
-use crate::snippet::Snippet;
+use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, ExecutionState};
 
 use super::leaf_index_to_mt_index::MmrLeafIndexToMtIndexAndPeakIndex;
 use super::MAX_MMR_HEIGHT;
 
-pub struct MmrVerifyFromMemory();
+#[derive(Clone)]
+pub struct MmrVerifyFromMemory;
 
 impl Snippet for MmrVerifyFromMemory {
     fn inputs() -> Vec<&'static str> {
@@ -51,6 +52,24 @@ impl Snippet for MmrVerifyFromMemory {
             "leaf_index_hi",
             "leaf_index_lo",
             "validation_result",
+        ]
+    }
+
+    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![
+            DataType::List(Box::new(DataType::Digest)),
+            DataType::U64,
+            DataType::U64,
+            DataType::Digest,
+            DataType::List(Box::new(DataType::Digest)),
+        ]
+    }
+
+    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![
+            DataType::List(Box::new(DataType::Digest)),
+            DataType::U64,
+            DataType::Bool,
         ]
     }
 
@@ -329,7 +348,7 @@ mod auth_path_verify_from_memory_tests {
 
     #[test]
     fn verify_from_memory_test() {
-        rust_tasm_equivalence_prop_new::<MmrVerifyFromMemory>();
+        rust_tasm_equivalence_prop_new::<MmrVerifyFromMemory>(MmrVerifyFromMemory);
     }
 
     #[test]
@@ -525,6 +544,7 @@ mod auth_path_verify_from_memory_tests {
         expected_final_stack.push(BFieldElement::new(expect_validation_success as u64));
 
         let _execution_result = rust_tasm_equivalence_prop::<MmrVerifyFromMemory>(
+            MmrVerifyFromMemory,
             &init_stack,
             &[],
             &[],

@@ -7,11 +7,12 @@ use crate::snippet::Snippet;
 use crate::ExecutionResult;
 
 #[allow(dead_code)]
-pub fn rust_tasm_equivalence_prop_new<T: Snippet>() {
+pub fn rust_tasm_equivalence_prop_new<T: Snippet + Clone>(snippet_struct: T) {
     let mut execution_states = T::gen_input_states();
     for execution_state in execution_states.iter_mut() {
         let stack_init = execution_state.stack.clone();
         let execution_result = rust_tasm_equivalence_prop::<T>(
+            snippet_struct.clone(),
             &execution_state.stack,
             &execution_state.std_in,
             &execution_state.secret_in,
@@ -36,6 +37,7 @@ pub fn rust_tasm_equivalence_prop_new<T: Snippet>() {
 
 #[allow(dead_code)]
 pub fn rust_tasm_equivalence_prop<T: Snippet>(
+    snippet_struct: T,
     stack: &[BFieldElement],
     stdin: &[BFieldElement],
     secret_in: &[BFieldElement],
@@ -46,7 +48,7 @@ pub fn rust_tasm_equivalence_prop<T: Snippet>(
     let init_memory = memory.clone();
     let mut tasm_stack = stack.to_vec();
     let mut tasm_memory = init_memory.clone();
-    let execution_result = T::run_tasm_old(
+    let execution_result = snippet_struct.run_tasm_old(
         &mut tasm_stack,
         stdin.to_vec(),
         secret_in.to_vec(),

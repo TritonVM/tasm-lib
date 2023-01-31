@@ -3,9 +3,10 @@ use std::collections::HashMap;
 use rand::Rng;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
-use crate::snippet::Snippet;
+use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
+#[derive(Clone)]
 pub struct Sub();
 
 impl Snippet for Sub {
@@ -15,6 +16,14 @@ impl Snippet for Sub {
 
     fn outputs() -> Vec<&'static str> {
         vec!["a - b"]
+    }
+
+    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::BFE, DataType::BFE]
+    }
+
+    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::BFE]
     }
 
     fn crash_conditions() -> Vec<&'static str> {

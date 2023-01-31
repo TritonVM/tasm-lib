@@ -6,12 +6,13 @@ use twenty_first::util_types::mmr;
 use crate::arithmetic::u64::add_u64::AddU64;
 use crate::arithmetic::u64::incr_u64::IncrU64;
 use crate::library::Library;
-use crate::snippet::Snippet;
+use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
 use super::non_leaf_nodes_left::MmrNonLeafNodesLeftUsingAnd;
 
-pub struct DataIndexToNodeIndex();
+#[derive(Clone)]
+pub struct DataIndexToNodeIndex;
 
 impl Snippet for DataIndexToNodeIndex {
     fn inputs() -> Vec<&'static str> {
@@ -20,6 +21,14 @@ impl Snippet for DataIndexToNodeIndex {
 
     fn outputs() -> Vec<&'static str> {
         vec!["node_index_hi", "node_index_lo"]
+    }
+
+    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::U64]
+    }
+
+    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::U64]
     }
 
     fn crash_conditions() -> Vec<&'static str> {
@@ -104,7 +113,7 @@ mod tests {
 
     #[test]
     fn data_index_to_node_index_test() {
-        rust_tasm_equivalence_prop_new::<DataIndexToNodeIndex>();
+        rust_tasm_equivalence_prop_new::<DataIndexToNodeIndex>(DataIndexToNodeIndex);
     }
 
     #[test]
@@ -250,6 +259,7 @@ mod tests {
         }
 
         let _execution_result = rust_tasm_equivalence_prop::<DataIndexToNodeIndex>(
+            DataIndexToNodeIndex,
             &init_stack,
             &[],
             &[],

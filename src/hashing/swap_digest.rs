@@ -6,10 +6,12 @@ use twenty_first::shared_math::rescue_prime_digest::Digest;
 use twenty_first::shared_math::rescue_prime_digest::DIGEST_LENGTH;
 
 use crate::library::Library;
+use crate::snippet::DataType;
 use crate::snippet::Snippet;
 use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 
-pub struct SwapDigest();
+#[derive(Clone)]
+pub struct SwapDigest;
 
 impl Snippet for SwapDigest {
     fn inputs() -> Vec<&'static str> {
@@ -18,6 +20,14 @@ impl Snippet for SwapDigest {
 
     fn outputs() -> Vec<&'static str> {
         vec!["a4", "a3", "a2", "a1", "a0", "b4", "b3", "b2", "b1", "b0"]
+    }
+
+    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::Digest, DataType::Digest]
+    }
+
+    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::Digest, DataType::Digest]
     }
 
     fn crash_conditions() -> Vec<&'static str> {
@@ -103,7 +113,7 @@ mod tests {
 
     #[test]
     fn swap_digest_test() {
-        rust_tasm_equivalence_prop_new::<SwapDigest>();
+        rust_tasm_equivalence_prop_new::<SwapDigest>(SwapDigest);
     }
 
     #[test]

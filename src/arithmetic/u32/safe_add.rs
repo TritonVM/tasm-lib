@@ -1,8 +1,13 @@
 use rand::{thread_rng, Rng};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
-use crate::{get_init_tvm_stack, snippet::Snippet, ExecutionState};
+use crate::{
+    get_init_tvm_stack,
+    snippet::{DataType, Snippet},
+    ExecutionState,
+};
 
+#[derive(Clone)]
 pub struct SafeAdd;
 
 impl Snippet for SafeAdd {
@@ -16,6 +21,14 @@ impl Snippet for SafeAdd {
 
     fn outputs() -> Vec<&'static str> {
         vec!["lhs + rhs"]
+    }
+
+    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::U32, DataType::U32]
+    }
+
+    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::U32]
     }
 
     fn stack_diff() -> isize {
@@ -86,7 +99,7 @@ mod tests {
 
     #[test]
     fn snippet_test() {
-        rust_tasm_equivalence_prop_new::<SafeAdd>();
+        rust_tasm_equivalence_prop_new::<SafeAdd>(SafeAdd);
     }
 
     #[test]
@@ -107,6 +120,7 @@ mod tests {
         init_stack.push(BFieldElement::new(lhs as u64));
 
         let execution_result = rust_tasm_equivalence_prop::<SafeAdd>(
+            SafeAdd,
             &init_stack,
             &[],
             &[],

@@ -17,9 +17,10 @@ use crate::library::Library;
 use crate::list::u32::pop::Pop;
 use crate::list::u32::push::Push;
 use crate::list::u32::set_length::SetLength;
-use crate::snippet::Snippet;
+use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, ExecutionState};
 
+#[derive(Clone)]
 pub struct CalculateNewPeaksFromAppend;
 
 impl Snippet for CalculateNewPeaksFromAppend {
@@ -38,6 +39,21 @@ impl Snippet for CalculateNewPeaksFromAppend {
 
     fn outputs() -> Vec<&'static str> {
         vec!["*new_peaks", "*auth_path"]
+    }
+
+    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![
+            DataType::U64,
+            DataType::List(Box::new(DataType::Digest)),
+            DataType::Digest,
+        ]
+    }
+
+    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![
+            DataType::List(Box::new(DataType::Digest)),
+            DataType::List(Box::new(DataType::Digest)),
+        ]
     }
 
     fn crash_conditions() -> Vec<&'static str> {
@@ -282,7 +298,7 @@ mod tests {
 
     #[test]
     fn calculate_new_peaks_from_append_test() {
-        rust_tasm_equivalence_prop_new::<CalculateNewPeaksFromAppend>();
+        rust_tasm_equivalence_prop_new::<CalculateNewPeaksFromAppend>(CalculateNewPeaksFromAppend);
     }
 
     #[test]
@@ -397,6 +413,7 @@ mod tests {
         expected_final_stack.push(auth_paths_pointer);
 
         let _execution_result = rust_tasm_equivalence_prop::<CalculateNewPeaksFromAppend>(
+            CalculateNewPeaksFromAppend,
             &init_stack,
             &[],
             &[],

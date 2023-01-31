@@ -19,11 +19,12 @@ use crate::library::Library;
 use crate::list::u32::get::Get;
 use crate::list::u32::set::Set;
 use crate::mmr::MAX_MMR_HEIGHT;
-use crate::snippet::Snippet;
+use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, ExecutionState};
 
 /// Calculate new MMR peaks from a leaf mutation using Merkle tree indices walk up the tree
-pub struct MmrCalculateNewPeaksFromLeafMutationMtIndices();
+#[derive(Clone)]
+pub struct MmrCalculateNewPeaksFromLeafMutationMtIndices;
 
 impl Snippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
     fn inputs() -> Vec<&'static str> {
@@ -44,6 +45,20 @@ impl Snippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
 
     fn outputs() -> Vec<&'static str> {
         vec!["*auth_path", "leaf_index_hi", "leaf_index_lo"]
+    }
+
+    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![
+            DataType::List(Box::new(DataType::Digest)),
+            DataType::U64,
+            DataType::List(Box::new(DataType::Digest)),
+            DataType::Digest,
+            DataType::U64,
+        ]
+    }
+
+    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::List(Box::new(DataType::Digest)), DataType::U64]
     }
 
     fn crash_conditions() -> Vec<&'static str> {
@@ -322,7 +337,9 @@ mod leaf_mutation_tests {
 
     #[test]
     fn calculate_new_peaks_from_leaf_mutation_test() {
-        rust_tasm_equivalence_prop_new::<MmrCalculateNewPeaksFromLeafMutationMtIndices>();
+        rust_tasm_equivalence_prop_new::<MmrCalculateNewPeaksFromLeafMutationMtIndices>(
+            MmrCalculateNewPeaksFromLeafMutationMtIndices,
+        );
     }
 
     #[test]
@@ -535,6 +552,7 @@ mod leaf_mutation_tests {
 
         let _execution_result =
             rust_tasm_equivalence_prop::<MmrCalculateNewPeaksFromLeafMutationMtIndices>(
+                MmrCalculateNewPeaksFromLeafMutationMtIndices,
                 &init_stack,
                 &[],
                 &[],

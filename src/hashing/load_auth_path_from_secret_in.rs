@@ -10,9 +10,11 @@ use twenty_first::shared_math::rescue_prime_digest::DIGEST_LENGTH;
 use crate::library::Library;
 use crate::list::u32::{push::Push, set_length::SetLength};
 use crate::mmr::MAX_MMR_HEIGHT;
+use crate::snippet::DataType;
 use crate::snippet::Snippet;
 use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, ExecutionState};
 
+#[derive(Clone)]
 pub struct LoadAuthPathFromSecretIn;
 
 impl Snippet for LoadAuthPathFromSecretIn {
@@ -22,6 +24,14 @@ impl Snippet for LoadAuthPathFromSecretIn {
 
     fn outputs() -> Vec<&'static str> {
         vec!["auth_path_pointer"]
+    }
+
+    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![]
+    }
+
+    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::List(Box::new(DataType::Digest))]
     }
 
     fn crash_conditions() -> Vec<&'static str> {
@@ -164,7 +174,7 @@ mod load_auth_path_from_secret_in_tests {
 
     #[test]
     fn load_auth_path_from_secret_in_test() {
-        rust_tasm_equivalence_prop_new::<LoadAuthPathFromSecretIn>();
+        rust_tasm_equivalence_prop_new::<LoadAuthPathFromSecretIn>(LoadAuthPathFromSecretIn);
     }
 
     #[test]

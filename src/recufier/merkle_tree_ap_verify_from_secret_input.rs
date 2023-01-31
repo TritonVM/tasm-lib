@@ -12,6 +12,7 @@ use crate::library::Library;
 use crate::snippet::Snippet;
 use crate::{get_init_tvm_stack, ExecutionState};
 
+#[derive(Clone)]
 pub struct MtApVerifyFromSecretInput;
 
 /// TVM assembly to verify Merkle authentication paths
@@ -29,6 +30,14 @@ impl Snippet for MtApVerifyFromSecretInput {
     }
 
     fn outputs() -> Vec<&'static str> {
+        vec![]
+    }
+
+    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![]
+    }
+
+    fn output_types(&self) -> Vec<crate::snippet::DataType> {
         vec![]
     }
 
@@ -286,7 +295,7 @@ mod merkle_authentication_verify_test {
 
     #[test]
     fn merkle_tree_ap_verify_from_secret_input_test() {
-        rust_tasm_equivalence_prop_new::<MtApVerifyFromSecretInput>();
+        rust_tasm_equivalence_prop_new::<MtApVerifyFromSecretInput>(MtApVerifyFromSecretInput);
     }
 
     #[test]
@@ -331,6 +340,7 @@ mod merkle_authentication_verify_test {
         let standard_input: Vec<BFieldElement> = generate_input(indices, &leafs);
 
         rust_tasm_equivalence_prop::<MtApVerifyFromSecretInput>(
+            MtApVerifyFromSecretInput,
             stack,
             &standard_input,
             &secret_input,
@@ -357,6 +367,7 @@ mod merkle_authentication_verify_test {
         let standard_input: Vec<BFieldElement> = generate_input(indices, &leafs);
 
         rust_tasm_equivalence_prop::<MtApVerifyFromSecretInput>(
+            MtApVerifyFromSecretInput,
             stack,
             &standard_input,
             &bad_secret_input,

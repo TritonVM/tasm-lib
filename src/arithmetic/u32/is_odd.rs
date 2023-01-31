@@ -5,10 +5,11 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
 use crate::pseudo::lsb::Lsb;
-use crate::snippet::Snippet;
+use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 
-pub struct U32IsOdd();
+#[derive(Clone)]
+pub struct U32IsOdd;
 
 impl Snippet for U32IsOdd {
     fn inputs() -> Vec<&'static str> {
@@ -17,6 +18,14 @@ impl Snippet for U32IsOdd {
 
     fn outputs() -> Vec<&'static str> {
         vec!["value % 2"]
+    }
+
+    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::U32]
+    }
+
+    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::Bool]
     }
 
     fn crash_conditions() -> Vec<&'static str> {
@@ -105,7 +114,7 @@ mod u32_is_odd_tests {
 
     #[test]
     fn is_odd_u32_test() {
-        rust_tasm_equivalence_prop_new::<U32IsOdd>();
+        rust_tasm_equivalence_prop_new::<U32IsOdd>(U32IsOdd);
     }
 
     #[test]
@@ -140,6 +149,7 @@ mod u32_is_odd_tests {
         expected_stack.push(BFieldElement::new((value % 2) as u64));
 
         let _execution_result = rust_tasm_equivalence_prop::<U32IsOdd>(
+            U32IsOdd,
             &init_stack,
             &[],
             &[],

@@ -6,11 +6,12 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::algebraic_hasher::Hashable;
 
 use crate::library::Library;
-use crate::snippet::Snippet;
+use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 
 /// Consumes top element which is interpreted as exponent. Pushes a
 /// U32<2> to the top of the stack. So grows the stack by 1.
+#[derive(Clone)]
 pub struct Pow2U64;
 
 impl Snippet for Pow2U64 {
@@ -20,6 +21,14 @@ impl Snippet for Pow2U64 {
 
     fn outputs() -> Vec<&'static str> {
         vec!["(2^i)_hi", "(2^i)_lo"]
+    }
+
+    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::U32]
+    }
+
+    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::U64]
     }
 
     fn crash_conditions() -> Vec<&'static str> {
@@ -91,7 +100,7 @@ mod tests {
 
     #[test]
     fn pow2_static_test() {
-        rust_tasm_equivalence_prop_new::<Pow2U64>();
+        rust_tasm_equivalence_prop_new::<Pow2U64>(Pow2U64);
     }
 
     #[test]
@@ -105,6 +114,7 @@ mod tests {
 
         let expected = None;
         let mut execution_result = rust_tasm_equivalence_prop::<Pow2U64>(
+            Pow2U64,
             &init_stack,
             &[],
             &[],

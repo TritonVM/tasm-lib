@@ -5,10 +5,11 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
 use crate::rust_shadowing_helper_functions::insert_random_list;
-use crate::snippet::Snippet;
+use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
-pub struct SetLength;
+#[derive(Clone)]
+pub struct SetLength(pub DataType);
 
 impl Snippet for SetLength {
     fn inputs() -> Vec<&'static str> {
@@ -17,6 +18,14 @@ impl Snippet for SetLength {
 
     fn outputs() -> Vec<&'static str> {
         vec!["*list"]
+    }
+
+    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::List(Box::new(self.0.clone())), DataType::U32]
+    }
+
+    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::List(Box::new(self.0.clone()))]
     }
 
     fn crash_conditions() -> Vec<&'static str> {
@@ -100,18 +109,29 @@ mod tests_set_length {
 
     #[test]
     fn new_snippet_test() {
-        rust_tasm_equivalence_prop_new::<SetLength>();
+        rust_tasm_equivalence_prop_new::<SetLength>(SetLength(DataType::XFE));
+    }
+
+    #[test]
+    fn list_u32_n_is_one_push() {
+        let list_address = BFieldElement::new(58);
+        prop_set_length(DataType::BFE, list_address, 22, 14);
     }
 
     #[test]
     fn list_u32_n_is_five_push() {
         let list_address = BFieldElement::new(558);
-        prop_set_length(list_address, 2313, 14);
-        prop_set_length(list_address, 14, 0);
-        prop_set_length(list_address, 0, 0);
+        prop_set_length(DataType::Digest, list_address, 2313, 14);
+        prop_set_length(DataType::Digest, list_address, 14, 0);
+        prop_set_length(DataType::Digest, list_address, 0, 0);
     }
 
-    fn prop_set_length(list_address: BFieldElement, init_list_length: u32, new_list_length: u32) {
+    fn prop_set_length(
+        data_type: DataType,
+        list_address: BFieldElement,
+        init_list_length: u32,
+        new_list_length: u32,
+    ) {
         let expected_end_stack = vec![get_init_tvm_stack(), vec![list_address]].concat();
         let mut init_stack = get_init_tvm_stack();
         init_stack.push(list_address);
@@ -123,6 +143,7 @@ mod tests_set_length {
         vm_memory.insert(list_address, BFieldElement::new(init_list_length as u64));
 
         let _execution_result = rust_tasm_equivalence_prop::<SetLength>(
+            SetLength(data_type),
             &init_stack,
             &[],
             &[],

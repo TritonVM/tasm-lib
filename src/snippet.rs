@@ -4,10 +4,36 @@ use triton_opcodes::program::Program;
 use triton_vm::op_stack::OP_STACK_REG_COUNT;
 use triton_vm::vm::{self, AlgebraicExecutionTrace};
 use twenty_first::shared_math::b_field_element::BFieldElement;
+use twenty_first::shared_math::rescue_prime_digest::DIGEST_LENGTH;
 
 use crate::library::Library;
 use crate::ExecutionResult;
 use crate::{execute, ExecutionState};
+
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+pub enum DataType {
+    Bool,
+    U32,
+    U64,
+    BFE,
+    XFE,
+    Digest,
+    List(Box<DataType>),
+}
+
+impl DataType {
+    pub fn get_size(&self) -> usize {
+        match self {
+            DataType::Bool => 1,
+            DataType::U32 => 1,
+            DataType::U64 => 2,
+            DataType::BFE => 1,
+            DataType::XFE => 3,
+            DataType::Digest => DIGEST_LENGTH,
+            DataType::List(_) => 1,
+        }
+    }
+}
 
 pub trait Snippet {
     /// The name of a Snippet
@@ -17,6 +43,10 @@ pub trait Snippet {
 
     /// The input stack
     fn inputs() -> Vec<&'static str>;
+
+    fn input_types(&self) -> Vec<DataType>;
+
+    fn output_types(&self) -> Vec<DataType>;
 
     /// The output stack
     fn outputs() -> Vec<&'static str>;
@@ -54,6 +84,7 @@ pub trait Snippet {
     /// The TASM code is always run through a function call, so the 1st instruction
     /// is a call to the function in question.
     fn run_tasm_old(
+        &self,
         stack: &mut Vec<BFieldElement>,
         std_in: Vec<BFieldElement>,
         secret_in: Vec<BFieldElement>,
@@ -64,6 +95,14 @@ pub trait Snippet {
         let entrypoint = Self::entrypoint();
         let function_body = Self::function_body(&mut library);
         let library_code = library.all_imports();
+
+        let expected_length_prior: usize = self.input_types().iter().map(|x| x.get_size()).sum();
+        let expected_length_after: usize = self.output_types().iter().map(|x| x.get_size()).sum();
+        assert_eq!(
+            Self::stack_diff(),
+            (expected_length_after as isize - expected_length_prior as isize),
+            "Declared stack diff must match type indicators"
+        );
 
         let code = format!(
             "
@@ -77,9 +116,9 @@ pub trait Snippet {
         execute(&code, stack, Self::stack_diff(), std_in, secret_in, memory)
     }
 
-    fn run_tasm(execution_state: &mut ExecutionState) -> ExecutionResult {
+    fn run_tasm(&self, execution_state: &mut ExecutionState) -> ExecutionResult {
         let stack_prior = execution_state.stack.clone();
-        let ret = Self::run_tasm_old(
+        let ret = self.run_tasm_old(
             &mut execution_state.stack,
             execution_state.std_in.clone(),
             execution_state.secret_in.clone(),

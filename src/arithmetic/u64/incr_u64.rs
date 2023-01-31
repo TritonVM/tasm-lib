@@ -7,10 +7,11 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::algebraic_hasher::Hashable;
 
 use crate::library::Library;
-use crate::snippet::Snippet;
+use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 
-pub struct IncrU64();
+#[derive(Clone)]
+pub struct IncrU64;
 
 impl Snippet for IncrU64 {
     fn inputs() -> Vec<&'static str> {
@@ -19,6 +20,14 @@ impl Snippet for IncrU64 {
 
     fn outputs() -> Vec<&'static str> {
         vec!["value + 1"]
+    }
+
+    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::U64]
+    }
+
+    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::U64]
     }
 
     fn crash_conditions() -> Vec<&'static str> {
@@ -113,7 +122,7 @@ mod tests {
 
     #[test]
     fn incr_u64_test() {
-        rust_tasm_equivalence_prop_new::<IncrU64>();
+        rust_tasm_equivalence_prop_new::<IncrU64>(IncrU64);
     }
 
     #[test]
@@ -127,7 +136,7 @@ mod tests {
         let mut stack = get_init_tvm_stack();
         let u64_max = U32s::<2>::try_from(u64::MAX).unwrap();
         push_hashable(&mut stack, &u64_max);
-        IncrU64::run_tasm_old(&mut stack, vec![], vec![], &mut HashMap::default(), 0);
+        IncrU64.run_tasm_old(&mut stack, vec![], vec![], &mut HashMap::default(), 0);
     }
 
     #[test]

@@ -7,10 +7,11 @@ use twenty_first::util_types::algebraic_hasher::Hashable;
 
 use crate::arithmetic::u32::is_u32::IsU32;
 use crate::library::Library;
-use crate::snippet::Snippet;
+use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 
-pub struct SubU64();
+#[derive(Clone)]
+pub struct SubU64;
 
 impl Snippet for SubU64 {
     fn inputs() -> Vec<&'static str> {
@@ -19,6 +20,14 @@ impl Snippet for SubU64 {
 
     fn outputs() -> Vec<&'static str> {
         vec!["(lhs - rhs)_hi", "(lhs - rhs)_lo"]
+    }
+
+    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::U64, DataType::U64]
+    }
+
+    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::U64]
     }
 
     fn crash_conditions() -> Vec<&'static str> {
@@ -174,7 +183,7 @@ mod tests {
 
     #[test]
     fn sub_u64_test() {
-        rust_tasm_equivalence_prop_new::<SubU64>();
+        rust_tasm_equivalence_prop_new::<SubU64>(SubU64);
     }
 
     #[test]
@@ -236,7 +245,7 @@ mod tests {
             init_stack.push(elem);
         }
 
-        SubU64::run_tasm(&mut ExecutionState::with_stack(init_stack));
+        SubU64.run_tasm(&mut ExecutionState::with_stack(init_stack));
     }
 
     fn prop_sub(lhs: U32s<2>, rhs: U32s<2>, expected: Option<&[BFieldElement]>) {
@@ -249,6 +258,7 @@ mod tests {
         }
 
         let _execution_result = rust_tasm_equivalence_prop::<SubU64>(
+            SubU64,
             &init_stack,
             &[],
             &[],

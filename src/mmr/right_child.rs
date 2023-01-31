@@ -9,9 +9,10 @@ use twenty_first::util_types::mmr;
 
 use crate::arithmetic::u64::decr_u64::DecrU64;
 use crate::library::Library;
-use crate::snippet::Snippet;
+use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
+#[derive(Clone)]
 pub struct MmrRightChild;
 
 impl Snippet for MmrRightChild {
@@ -21,6 +22,14 @@ impl Snippet for MmrRightChild {
 
     fn outputs() -> Vec<&'static str> {
         vec!["right_child_hi", "right_child_lo"]
+    }
+
+    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::U64]
+    }
+
+    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::U64]
     }
 
     fn crash_conditions() -> Vec<&'static str> {
@@ -95,7 +104,7 @@ mod tests {
 
     #[test]
     fn left_child_test() {
-        rust_tasm_equivalence_prop_new::<MmrRightChild>();
+        rust_tasm_equivalence_prop_new::<MmrRightChild>(MmrRightChild);
     }
 
     #[test]
@@ -128,6 +137,7 @@ mod tests {
         }
 
         let _execution_result = rust_tasm_equivalence_prop::<MmrRightChild>(
+            MmrRightChild,
             &init_stack,
             &[],
             &[],

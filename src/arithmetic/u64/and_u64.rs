@@ -6,10 +6,11 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::algebraic_hasher::Hashable;
 
 use crate::library::Library;
-use crate::snippet::Snippet;
+use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 
-pub struct AndU64();
+#[derive(Clone)]
+pub struct AndU64;
 
 impl Snippet for AndU64 {
     fn inputs() -> Vec<&'static str> {
@@ -18,6 +19,14 @@ impl Snippet for AndU64 {
 
     fn outputs() -> Vec<&'static str> {
         vec!["(lhs & rhs)_hi", "(lhs & rhs)_lo"]
+    }
+
+    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::U64, DataType::U64]
+    }
+
+    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::U64]
     }
 
     fn crash_conditions() -> Vec<&'static str> {
@@ -98,7 +107,7 @@ mod tests {
 
     #[test]
     fn and_u64_test() {
-        rust_tasm_equivalence_prop_new::<AndU64>();
+        rust_tasm_equivalence_prop_new::<AndU64>(AndU64);
     }
 
     #[test]
@@ -148,6 +157,7 @@ mod tests {
         }
 
         let _execution_result = rust_tasm_equivalence_prop::<AndU64>(
+            AndU64,
             &init_stack,
             &[],
             &[],

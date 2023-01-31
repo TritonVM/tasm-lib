@@ -6,9 +6,10 @@ use crate::arithmetic::u64::incr_u64::IncrU64;
 use crate::arithmetic::u64::log_2_floor_u64::Log2FloorU64;
 use crate::arithmetic::u64::pow2_u64::Pow2U64;
 use crate::arithmetic::u64::sub_u64::SubU64;
-use crate::snippet::Snippet;
+use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
+#[derive(Clone)]
 pub struct MmrRightLineageLength;
 
 impl Snippet for MmrRightLineageLength {
@@ -18,6 +19,14 @@ impl Snippet for MmrRightLineageLength {
 
     fn outputs() -> Vec<&'static str> {
         vec!["right_lineage_length"]
+    }
+
+    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::U64]
+    }
+
+    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::U32]
     }
 
     fn crash_conditions() -> Vec<&'static str> {
@@ -169,7 +178,7 @@ mod tests {
 
     #[test]
     fn right_lineage_length_test() {
-        rust_tasm_equivalence_prop_new::<MmrRightLineageLength>();
+        rust_tasm_equivalence_prop_new::<MmrRightLineageLength>(MmrRightLineageLength);
     }
 
     #[test]
@@ -251,6 +260,7 @@ mod tests {
         ]
         .concat();
         let _execution_result = rust_tasm_equivalence_prop::<MmrRightLineageLength>(
+            MmrRightLineageLength,
             &init_stack,
             &[],
             &[],

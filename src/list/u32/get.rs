@@ -5,10 +5,11 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
 use crate::rust_shadowing_helper_functions::insert_random_list;
-use crate::snippet::Snippet;
+use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, ExecutionState};
 
-pub struct Get<const N: usize>;
+#[derive(Clone)]
+pub struct Get<const N: usize>(pub DataType);
 
 impl<const N: usize> Snippet for Get<N> {
     fn inputs() -> Vec<&'static str> {
@@ -20,6 +21,14 @@ impl<const N: usize> Snippet for Get<N> {
         // It would be cool if we could do string formatting here. But we might need to change the interface for that.
         // This function returns element_0 on the top of the stack and the other elements below it. E.g.: _ elem_2 elem_1 elem_0
         vec!["element"; N]
+    }
+
+    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::List(Box::new(self.0.clone())), DataType::U32]
+    }
+
+    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::BFE; N]
     }
 
     fn crash_conditions() -> Vec<&'static str> {
@@ -134,14 +143,14 @@ mod get_element_tests {
 
     #[test]
     fn new_snippet_test() {
-        rust_tasm_equivalence_prop_new::<Get<7>>();
+        rust_tasm_equivalence_prop_new::<Get<3>>(Get(DataType::XFE));
     }
 
     #[test]
     fn get_simple_1() {
         let list_address = BFieldElement::new(48);
         for i in 0..10 {
-            prop_get::<1>(list_address, i, 10);
+            prop_get::<1>(DataType::BFE, list_address, i, 10);
         }
     }
 
@@ -149,7 +158,7 @@ mod get_element_tests {
     fn get_simple_2() {
         let list_address = BFieldElement::new(48);
         for i in 0..10 {
-            prop_get::<2>(list_address, i, 10);
+            prop_get::<2>(DataType::U64, list_address, i, 10);
         }
     }
 
@@ -157,7 +166,7 @@ mod get_element_tests {
     fn get_simple_3() {
         let list_address = BFieldElement::new(48);
         for i in 0..10 {
-            prop_get::<3>(list_address, i, 10);
+            prop_get::<3>(DataType::XFE, list_address, i, 10);
         }
     }
 
@@ -165,11 +174,16 @@ mod get_element_tests {
     fn get_simple_15() {
         let list_address = BFieldElement::new(48);
         for i in 0..10 {
-            prop_get::<15>(list_address, i, 10);
+            prop_get::<5>(DataType::Digest, list_address, i, 10);
         }
     }
 
-    fn prop_get<const N: usize>(list_pointer: BFieldElement, index: u32, list_length: u32) {
+    fn prop_get<const N: usize>(
+        data_type: DataType,
+        list_pointer: BFieldElement,
+        index: u32,
+        list_length: u32,
+    ) {
         let mut init_stack = get_init_tvm_stack();
         init_stack.push(list_pointer);
         init_stack.push(BFieldElement::new(index as u64));
@@ -203,6 +217,7 @@ mod get_element_tests {
         }
 
         let _execution_result = rust_tasm_equivalence_prop::<Get<N>>(
+            Get::<N>(data_type),
             &init_stack,
             &[],
             &[],

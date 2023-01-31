@@ -5,10 +5,11 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::rescue_prime_digest::Digest;
 
 use crate::library::Library;
-use crate::snippet::Snippet;
+use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 
-pub struct EqDigest();
+#[derive(Clone)]
+pub struct EqDigest;
 
 impl Snippet for EqDigest {
     fn inputs() -> Vec<&'static str> {
@@ -17,6 +18,14 @@ impl Snippet for EqDigest {
 
     fn outputs() -> Vec<&'static str> {
         vec!["(a3 = b3)·(a2 = b2)·(a1 = b1)·(a4 = b4)·(b0 = a0)"]
+    }
+
+    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::Digest, DataType::Digest]
+    }
+
+    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::Bool]
     }
 
     fn crash_conditions() -> Vec<&'static str> {
@@ -106,7 +115,7 @@ mod tests {
 
     #[test]
     fn swap_digest_test() {
-        rust_tasm_equivalence_prop_new::<EqDigest>();
+        rust_tasm_equivalence_prop_new::<EqDigest>(EqDigest);
     }
 
     #[test]

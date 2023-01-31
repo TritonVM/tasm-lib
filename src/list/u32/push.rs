@@ -7,10 +7,11 @@ use twenty_first::shared_math::other::random_elements;
 
 use crate::library::Library;
 use crate::rust_shadowing_helper_functions::insert_random_list;
-use crate::snippet::Snippet;
+use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
-pub struct Push<const N: usize>;
+#[derive(Clone)]
+pub struct Push<const N: usize>(pub DataType);
 
 /// A parameterized version of `Push` where `N` is the size of an element in the list
 impl<const N: usize> Snippet for Push<N> {
@@ -22,6 +23,14 @@ impl<const N: usize> Snippet for Push<N> {
 
     fn outputs() -> Vec<&'static str> {
         vec!["*list"]
+    }
+
+    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::List(Box::new(self.0.clone())), self.0.clone()]
+    }
+
+    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::List(Box::new(self.0.clone()))]
     }
 
     fn crash_conditions() -> Vec<&'static str> {
@@ -160,26 +169,24 @@ mod tests_push {
 
     #[test]
     fn new_snippet_test() {
-        rust_tasm_equivalence_prop_new::<Push<1>>();
-        rust_tasm_equivalence_prop_new::<Push<2>>();
-        rust_tasm_equivalence_prop_new::<Push<3>>();
-        rust_tasm_equivalence_prop_new::<Push<4>>();
-        rust_tasm_equivalence_prop_new::<Push<5>>();
-        rust_tasm_equivalence_prop_new::<Push<14>>();
+        rust_tasm_equivalence_prop_new::<Push<1>>(Push(DataType::Bool));
+        rust_tasm_equivalence_prop_new::<Push<2>>(Push(DataType::U64));
+        rust_tasm_equivalence_prop_new::<Push<3>>(Push(DataType::XFE));
+        rust_tasm_equivalence_prop_new::<Push<5>>(Push(DataType::Digest));
     }
 
     #[test]
     fn list_u32_n_is_one_push() {
         let list_address = BFieldElement::new(48);
         let push_value = [BFieldElement::new(1337)];
-        prop_push(list_address, 20, push_value);
+        prop_push(DataType::BFE, list_address, 20, push_value);
     }
 
     #[test]
     fn list_u32_n_is_two_push() {
         let list_address = BFieldElement::new(1841);
         let push_value = [BFieldElement::new(133700), BFieldElement::new(32)];
-        prop_push(list_address, 20, push_value);
+        prop_push(DataType::U64, list_address, 20, push_value);
     }
 
     #[test]
@@ -192,10 +199,11 @@ mod tests_push {
             BFieldElement::new(19990),
             BFieldElement::new(88888888),
         ];
-        prop_push(list_address, 2313, push_value);
+        prop_push(DataType::Digest, list_address, 2313, push_value);
     }
 
     fn prop_push<const N: usize>(
+        data_type: DataType,
         list_address: BFieldElement,
         init_list_length: u32,
         push_value: [BFieldElement; N],
@@ -212,6 +220,7 @@ mod tests_push {
         insert_random_list::<N>(list_address, init_list_length as usize, &mut memory);
 
         let _execution_result = rust_tasm_equivalence_prop::<Push<N>>(
+            Push(data_type),
             &init_stack,
             &[],
             &[],

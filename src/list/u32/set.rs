@@ -6,10 +6,11 @@ use twenty_first::shared_math::other::random_elements;
 
 use crate::library::Library;
 use crate::rust_shadowing_helper_functions::insert_random_list;
-use crate::snippet::Snippet;
+use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, ExecutionState};
 
-pub struct Set<const N: usize>;
+#[derive(Clone)]
+pub struct Set<const N: usize>(pub DataType);
 
 impl<const N: usize> Snippet for Set<N> {
     fn inputs() -> Vec<&'static str> {
@@ -19,6 +20,18 @@ impl<const N: usize> Snippet for Set<N> {
     }
 
     fn outputs() -> Vec<&'static str> {
+        vec![]
+    }
+
+    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![
+            self.0.clone(),
+            DataType::List(Box::new(self.0.clone())),
+            DataType::U32,
+        ]
+    }
+
+    fn output_types(&self) -> Vec<crate::snippet::DataType> {
         vec![]
     }
 
@@ -128,36 +141,47 @@ mod list_set_tests {
 
     #[test]
     fn new_snippet_test() {
-        rust_tasm_equivalence_prop_new::<Set<1>>();
-        rust_tasm_equivalence_prop_new::<Set<2>>();
-        rust_tasm_equivalence_prop_new::<Set<3>>();
-        rust_tasm_equivalence_prop_new::<Set<4>>();
-        rust_tasm_equivalence_prop_new::<Set<5>>();
-        rust_tasm_equivalence_prop_new::<Set<6>>();
-        rust_tasm_equivalence_prop_new::<Set<7>>();
-        rust_tasm_equivalence_prop_new::<Set<8>>();
-        rust_tasm_equivalence_prop_new::<Set<9>>();
-        rust_tasm_equivalence_prop_new::<Set<10>>();
-        rust_tasm_equivalence_prop_new::<Set<11>>();
-        rust_tasm_equivalence_prop_new::<Set<12>>();
-        rust_tasm_equivalence_prop_new::<Set<13>>();
-        rust_tasm_equivalence_prop_new::<Set<14>>();
-        rust_tasm_equivalence_prop_new::<Set<15>>();
-        rust_tasm_equivalence_prop_new::<Set<16>>();
+        rust_tasm_equivalence_prop_new::<Set<1>>(Set(DataType::U32));
+        rust_tasm_equivalence_prop_new::<Set<2>>(Set(DataType::U64));
+        rust_tasm_equivalence_prop_new::<Set<3>>(Set(DataType::XFE));
+        // rust_tasm_equivalence_prop_new::<Set<4>>();
+        rust_tasm_equivalence_prop_new::<Set<5>>(Set(DataType::Digest));
+        // rust_tasm_equivalence_prop_new::<Set<6>>();
+        // rust_tasm_equivalence_prop_new::<Set<7>>();
+        // rust_tasm_equivalence_prop_new::<Set<8>>();
+        // rust_tasm_equivalence_prop_new::<Set<9>>();
+        // rust_tasm_equivalence_prop_new::<Set<10>>();
+        // rust_tasm_equivalence_prop_new::<Set<11>>();
+        // rust_tasm_equivalence_prop_new::<Set<12>>();
+        // rust_tasm_equivalence_prop_new::<Set<13>>();
+        // rust_tasm_equivalence_prop_new::<Set<14>>();
+        // rust_tasm_equivalence_prop_new::<Set<15>>();
+        // rust_tasm_equivalence_prop_new::<Set<16>>();
     }
 
     #[test]
     fn list_u32_n_is_one_set() {
         let list_address = BFieldElement::new(48);
         let insert_value = [BFieldElement::new(1337)];
-        prop_set(list_address, 20, insert_value, 2);
+        prop_set(DataType::BFE, list_address, 20, insert_value, 2);
+    }
+
+    #[test]
+    fn list_u32_n_is_three_set() {
+        let list_address = BFieldElement::new(48);
+        let insert_value = [
+            BFieldElement::new(1337),
+            BFieldElement::new(1337),
+            BFieldElement::new(1337),
+        ];
+        prop_set(DataType::XFE, list_address, 20, insert_value, 2);
     }
 
     #[test]
     fn list_u32_n_is_two_set() {
         let list_address = BFieldElement::new(1841);
         let push_value = [BFieldElement::new(133700), BFieldElement::new(32)];
-        prop_set(list_address, 20, push_value, 0);
+        prop_set(DataType::U64, list_address, 20, push_value, 0);
     }
 
     #[test]
@@ -170,34 +194,11 @@ mod list_set_tests {
             BFieldElement::new(19990),
             BFieldElement::new(88888888),
         ];
-        prop_set(list_address, 2313, push_value, 589);
-    }
-
-    #[test]
-    fn list_u32_n_is_sixteen_set() {
-        let list_address = BFieldElement::new(558);
-        let push_value = [
-            BFieldElement::new(133700),
-            BFieldElement::new(32),
-            BFieldElement::new(133700),
-            BFieldElement::new(19990),
-            BFieldElement::new(88888888),
-            BFieldElement::new(1337001),
-            BFieldElement::new(321),
-            BFieldElement::new(1337001),
-            BFieldElement::new(199901),
-            BFieldElement::new(888888881),
-            BFieldElement::new(1337002),
-            BFieldElement::new(322),
-            BFieldElement::new(1337002),
-            BFieldElement::new(199902),
-            BFieldElement::new(888888882),
-            BFieldElement::new(888888883),
-        ];
-        prop_set(list_address, 231, push_value, 69);
+        prop_set(DataType::Digest, list_address, 2313, push_value, 589);
     }
 
     fn prop_set<const N: usize>(
+        data_type: DataType,
         list_address: BFieldElement,
         init_list_length: u32,
         push_value: [BFieldElement; N],
@@ -218,6 +219,7 @@ mod list_set_tests {
         insert_random_list::<N>(list_address, init_list_length as usize, &mut vm_memory);
 
         let _execution_result = rust_tasm_equivalence_prop::<Set<N>>(
+            Set(data_type),
             &init_stack,
             &[],
             &[],

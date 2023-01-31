@@ -8,7 +8,7 @@ use twenty_first::util_types::mmr;
 use crate::arithmetic::u64::eq_u64::EqU64;
 use crate::arithmetic::u64::lt_u64::LtU64;
 use crate::library::Library;
-use crate::snippet::Snippet;
+use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
 use super::left_child::MmrLeftChild;
@@ -16,6 +16,7 @@ use super::leftmost_ancestor::MmrLeftMostAncestor;
 use super::right_child::MmrRightChild;
 
 // You probably don't want to use this but a right lineage count function instead
+#[derive(Clone)]
 pub struct MmrRightChildAndHeight;
 
 impl Snippet for MmrRightChildAndHeight {
@@ -25,6 +26,14 @@ impl Snippet for MmrRightChildAndHeight {
 
     fn outputs() -> Vec<&'static str> {
         vec!["is_right_child", "height"]
+    }
+
+    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::U64]
+    }
+
+    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::Bool, DataType::U32]
     }
 
     fn crash_conditions() -> Vec<&'static str> {
@@ -229,7 +238,7 @@ mod tests {
 
     #[test]
     fn right_child_and_height_test() {
-        rust_tasm_equivalence_prop_new::<MmrRightChildAndHeight>();
+        rust_tasm_equivalence_prop_new::<MmrRightChildAndHeight>(MmrRightChildAndHeight);
     }
 
     #[test]
@@ -447,6 +456,7 @@ mod tests {
         }
 
         let _execution_result = rust_tasm_equivalence_prop::<MmrRightChildAndHeight>(
+            MmrRightChildAndHeight,
             &init_stack,
             &[],
             &[],
