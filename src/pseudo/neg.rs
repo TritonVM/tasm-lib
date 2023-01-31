@@ -7,7 +7,7 @@ use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone)]
-pub struct Neg();
+pub struct Neg;
 
 impl Snippet for Neg {
     fn inputs() -> Vec<&'static str> {

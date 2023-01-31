@@ -55,17 +55,11 @@ impl Snippet for MmrRightChildAndHeight {
         ret
     }
 
-    fn stack_diff() -> isize
-    where
-        Self: Sized,
-    {
+    fn stack_diff() -> isize {
         0
     }
 
-    fn entrypoint() -> &'static str
-    where
-        Self: Sized,
-    {
+    fn entrypoint() -> &'static str {
         "right_child_and_height"
     }
 

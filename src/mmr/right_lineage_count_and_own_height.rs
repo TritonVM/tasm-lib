@@ -51,18 +51,12 @@ impl Snippet for MmrRightLineageCountAndHeight {
         ret
     }
 
-    fn stack_diff() -> isize
-    where
-        Self: Sized,
-    {
+    fn stack_diff() -> isize {
         0
     }
 
-    fn entrypoint() -> &'static str
-    where
-        Self: Sized,
-    {
-        "right_ancestor_count_and_own_height"
+    fn entrypoint() -> &'static str {
+        "right_lineage_count_and_own_height"
     }
 
     fn function_body(library: &mut Library) -> String

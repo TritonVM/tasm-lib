@@ -65,13 +65,12 @@ impl<const N: usize> Snippet for Get<N> {
     }
 
     fn entrypoint() -> &'static str {
-        assert!(N < 17, "Max element size supported for list is 16");
-
         "list_get_element"
     }
 
     fn function_body(_library: &mut Library) -> String {
         let entrypoint = Self::entrypoint();
+        assert!(N < 17, "Max element size supported for list is 16");
         // Code to read an element from a list. No bounds-check.
 
         let mut code_to_read_elements = String::default();

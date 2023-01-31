@@ -6,7 +6,7 @@ use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone)]
-pub struct Lsb();
+pub struct Lsb;
 
 impl Snippet for Lsb {
     fn inputs() -> Vec<&'static str> {

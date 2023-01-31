@@ -67,7 +67,6 @@ impl<const N: usize> Snippet for Push<N> {
     }
 
     fn entrypoint() -> &'static str {
-        assert!(N < 17, "Max element size supported for list is 16");
         "push_u32"
     }
 
