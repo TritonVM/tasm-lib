@@ -39,31 +39,48 @@ pub trait Snippet {
     /// The name of a Snippet
     ///
     /// This is used as a unique identifier, e.g. when generating labels.
-    fn entrypoint() -> &'static str;
+    fn entrypoint() -> &'static str
+    where
+        Self: Sized;
 
     /// The input stack
-    fn inputs() -> Vec<&'static str>;
+    fn inputs() -> Vec<&'static str>
+    where
+        Self: Sized;
 
     fn input_types(&self) -> Vec<DataType>;
 
     fn output_types(&self) -> Vec<DataType>;
 
     /// The output stack
-    fn outputs() -> Vec<&'static str>;
+    fn outputs() -> Vec<&'static str>
+    where
+        Self: Sized;
 
     /// The stack difference
-    fn stack_diff() -> isize;
+    fn stack_diff() -> isize
+    where
+        Self: Sized;
 
     /// The function body
-    fn function_body(library: &mut Library) -> String;
+    fn function_body(library: &mut Library) -> String
+    where
+        Self: Sized;
 
     /// Ways in which this snippet can crash
-    fn crash_conditions() -> Vec<&'static str>;
+    fn crash_conditions() -> Vec<&'static str>
+    where
+        Self: Sized;
 
     /// Examples of valid initial states for running this snippet
-    fn gen_input_states() -> Vec<ExecutionState>;
+    fn gen_input_states() -> Vec<ExecutionState>
+    where
+        Self: Sized;
 
-    fn function_body_as_instructions(library: &mut Library) -> Vec<LabelledInstruction<'static>> {
+    fn function_body_as_instructions(library: &mut Library) -> Vec<LabelledInstruction<'static>>
+    where
+        Self: Sized,
+    {
         let f_body = Self::function_body(library);
 
         // parse the code to get the list of instructions
@@ -79,7 +96,8 @@ pub trait Snippet {
         std_in: Vec<BFieldElement>,
         secret_in: Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
-    );
+    ) where
+        Self: Sized;
 
     /// The TASM code is always run through a function call, so the 1st instruction
     /// is a call to the function in question.
@@ -90,7 +108,10 @@ pub trait Snippet {
         secret_in: Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
         words_allocated: usize,
-    ) -> ExecutionResult {
+    ) -> ExecutionResult
+    where
+        Self: Sized,
+    {
         let mut library = Library::with_preallocated_memory(words_allocated);
         let entrypoint = Self::entrypoint();
         let function_body = Self::function_body(&mut library);
@@ -116,7 +137,10 @@ pub trait Snippet {
         execute(&code, stack, Self::stack_diff(), std_in, secret_in, memory)
     }
 
-    fn run_tasm(&self, execution_state: &mut ExecutionState) -> ExecutionResult {
+    fn run_tasm(&self, execution_state: &mut ExecutionState) -> ExecutionResult
+    where
+        Self: Sized,
+    {
         let stack_prior = execution_state.stack.clone();
         let ret = self.run_tasm_old(
             &mut execution_state.stack,
