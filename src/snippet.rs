@@ -7,7 +7,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::rescue_prime_digest::DIGEST_LENGTH;
 
 use crate::library::Library;
-use crate::ExecutionResult;
+use crate::{all_snippets, ExecutionResult};
 use crate::{execute, ExecutionState};
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
@@ -111,6 +111,11 @@ pub trait Snippet {
     where
         Self: Sized,
     {
+        // Verify that snippet can be found in `all_snippets`, so it's visible to the outside
+        // This call will panic if snippet is not found in that function call
+        // The data type value is a dummy value for all snippets except those that handle lists.
+        all_snippets::name_to_snippet(self.entrypoint(), Some(DataType::Digest));
+
         let mut library = Library::with_preallocated_memory(words_allocated);
         let entrypoint = self.entrypoint();
         let function_body = self.function_body(&mut library);
