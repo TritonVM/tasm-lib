@@ -2,7 +2,8 @@ use std::collections::{HashMap, HashSet};
 
 use itertools::Itertools;
 use num::One;
-use triton_opcodes::instruction::{parse, LabelledInstruction};
+use triton_opcodes::instruction::LabelledInstruction;
+use triton_opcodes::parser::{parse, to_labelled};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::pseudo::sub::Sub;
@@ -66,7 +67,7 @@ impl Library {
     pub fn all_imports_as_instruction_lists(&self) -> Vec<LabelledInstruction> {
         self.function_bodies
             .iter()
-            .map(|x| parse(x).unwrap())
+            .map(|x| to_labelled(&parse(x).unwrap()))
             .collect_vec()
             .concat()
     }

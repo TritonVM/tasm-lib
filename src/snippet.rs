@@ -1,5 +1,6 @@
 use std::collections::HashMap;
-use triton_opcodes::instruction::{parse, LabelledInstruction};
+use triton_opcodes::instruction::LabelledInstruction;
+use triton_opcodes::parser::{parse, to_labelled};
 use triton_opcodes::program::Program;
 use triton_vm::op_stack::OP_STACK_REG_COUNT;
 use triton_vm::vm::{self, AlgebraicExecutionTrace};
@@ -73,17 +74,14 @@ pub trait Snippet {
     where
         Self: Sized;
 
-    fn function_body_as_instructions(
-        &self,
-        library: &mut Library,
-    ) -> Vec<LabelledInstruction<'static>>
+    fn function_body_as_instructions(&self, library: &mut Library) -> Vec<LabelledInstruction>
     where
         Self: Sized,
     {
         let f_body = self.function_body(library);
 
         // parse the code to get the list of instructions
-        parse(&f_body).unwrap()
+        to_labelled(&parse(&f_body).unwrap())
     }
 
     // The rust shadowing and the run tasm function must take the same argument
@@ -207,7 +205,7 @@ pub fn simulate_snippet<T: Snippet>(
 
     // Parse and run the program, bootloader and library
     let code: String = code.concat();
-    let program = Program::from_code_nom(&code).unwrap();
+    let program = Program::from_code(&code).unwrap();
     let std_in = execution_state.std_in;
     let secret_in = execution_state.secret_in;
     let (aet, _out, err) = vm::simulate(&program, std_in, secret_in);
