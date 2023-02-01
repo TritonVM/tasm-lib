@@ -107,17 +107,17 @@ impl Snippet for CalculateNewPeaksFromAppend {
         -6
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "calculate_new_peaks_from_append"
     }
 
-    fn function_body(library: &mut Library) -> String {
-        let entrypoint = Self::entrypoint();
-        let data_index_to_node_index = library.import::<DataIndexToNodeIndex>();
-        let right_lineage_length = library.import::<MmrRightLineageLength>();
-        let push = library.import::<Push<DIGEST_LENGTH>>();
-        let pop = library.import::<Pop<DIGEST_LENGTH>>();
-        let set_length = library.import::<SetLength>();
+    fn function_body(&self, library: &mut Library) -> String {
+        let entrypoint = self.entrypoint();
+        let data_index_to_node_index = library.import::<DataIndexToNodeIndex>(DataIndexToNodeIndex);
+        let right_lineage_length = library.import::<MmrRightLineageLength>(MmrRightLineageLength);
+        let push = library.import::<Push<DIGEST_LENGTH>>(Push::<DIGEST_LENGTH>(DataType::Digest));
+        let pop = library.import::<Pop<DIGEST_LENGTH>>(Pop::<DIGEST_LENGTH>(DataType::Digest));
+        let set_length = library.import::<SetLength>(SetLength(DataType::Digest));
 
         // Allocate memory for the returned auth path for the newly inserted element
         // Warning: This auth path is only allocated *once* even though the code is called multiple times.
@@ -303,7 +303,7 @@ mod tests {
 
     #[test]
     fn calculate_new_peaks_from_append_benchmark() {
-        bench_and_write::<CalculateNewPeaksFromAppend>();
+        bench_and_write::<CalculateNewPeaksFromAppend>(CalculateNewPeaksFromAppend);
     }
 
     #[test]

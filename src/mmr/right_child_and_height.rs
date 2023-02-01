@@ -59,20 +59,20 @@ impl Snippet for MmrRightChildAndHeight {
         0
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "right_child_and_height"
     }
 
-    fn function_body(library: &mut Library) -> String
+    fn function_body(&self, library: &mut Library) -> String
     where
         Self: Sized,
     {
-        let entrypoint = Self::entrypoint();
-        let eq_u64 = library.import::<EqU64>();
-        let lt_u64 = library.import::<LtU64>();
-        let left_child = library.import::<MmrLeftChild>();
-        let right_child = library.import::<MmrRightChild>();
-        let leftmost_ancestor = library.import::<MmrLeftMostAncestor>();
+        let entrypoint = self.entrypoint();
+        let eq_u64 = library.import::<EqU64>(EqU64);
+        let lt_u64 = library.import::<LtU64>(LtU64);
+        let left_child = library.import::<MmrLeftChild>(MmrLeftChild);
+        let right_child = library.import::<MmrRightChild>(MmrRightChild);
+        let leftmost_ancestor = library.import::<MmrLeftMostAncestor>(MmrLeftMostAncestor);
 
         format!(
             "
@@ -237,7 +237,7 @@ mod tests {
 
     #[test]
     fn right_child_and_height_benchmark() {
-        bench_and_write::<MmrRightChildAndHeight>();
+        bench_and_write::<MmrRightChildAndHeight>(MmrRightChildAndHeight);
     }
 
     #[test]

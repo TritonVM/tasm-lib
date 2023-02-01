@@ -53,12 +53,12 @@ impl Snippet for DecrU64 {
         0
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "decr_u64"
     }
 
-    fn function_body(_library: &mut Library) -> String {
-        let entrypoint = Self::entrypoint();
+    fn function_body(&self, _library: &mut Library) -> String {
+        let entrypoint = self.entrypoint();
         const U32_MAX: &str = "4294967295";
 
         format!(
@@ -124,7 +124,7 @@ mod tests {
 
     #[test]
     fn decr_u64_benchmark() {
-        bench_and_write::<DecrU64>();
+        bench_and_write::<DecrU64>(DecrU64);
     }
 
     #[test]

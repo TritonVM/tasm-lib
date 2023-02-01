@@ -47,12 +47,12 @@ impl Snippet for AndU64 {
         -2
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "and_u64"
     }
 
-    fn function_body(_library: &mut Library) -> String {
-        let entrypoint = Self::entrypoint();
+    fn function_body(&self, _library: &mut Library) -> String {
+        let entrypoint = self.entrypoint();
         format!(
             "
             // BEFORE: rhs_hi rhs_lo lhs_hi lhs_lo
@@ -112,7 +112,7 @@ mod tests {
 
     #[test]
     fn add_u64_benchmark() {
-        bench_and_write::<AndU64>();
+        bench_and_write::<AndU64>(AndU64);
     }
 
     #[test]

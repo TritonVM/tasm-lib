@@ -55,15 +55,16 @@ impl Snippet for DataIndexToNodeIndex {
         0
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "data_index_to_node_index"
     }
 
-    fn function_body(library: &mut Library) -> String {
-        let entrypoint = Self::entrypoint();
-        let non_leaf_nodes_left = library.import::<MmrNonLeafNodesLeftUsingAnd>();
-        let incr_u64 = library.import::<IncrU64>();
-        let add_u64 = library.import::<AddU64>();
+    fn function_body(&self, library: &mut Library) -> String {
+        let entrypoint = self.entrypoint();
+        let non_leaf_nodes_left =
+            library.import::<MmrNonLeafNodesLeftUsingAnd>(MmrNonLeafNodesLeftUsingAnd);
+        let incr_u64 = library.import::<IncrU64>(IncrU64);
+        let add_u64 = library.import::<AddU64>(AddU64);
         format!("
                 // BEFORE: _ leaf_index_hi leaf_index_lo
                 // AFTER: _ node_index_hi node_index_lo
@@ -118,7 +119,7 @@ mod tests {
 
     #[test]
     fn data_index_to_node_index_benchmark() {
-        bench_and_write::<DataIndexToNodeIndex>();
+        bench_and_write::<DataIndexToNodeIndex>(DataIndexToNodeIndex);
     }
 
     #[test]

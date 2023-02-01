@@ -48,12 +48,12 @@ impl Snippet for EqDigest {
         -9
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "eq_digest"
     }
 
-    fn function_body(_library: &mut Library) -> String {
-        let entrypoint = Self::entrypoint();
+    fn function_body(&self, _library: &mut Library) -> String {
+        let entrypoint = self.entrypoint();
         format!(
             "
             // Before: _ b4 b3 b2 b1 b0 a4 a3 a2 a1 a0
@@ -120,6 +120,6 @@ mod tests {
 
     #[test]
     fn swap_digest_benchmark() {
-        bench_and_write::<EqDigest>();
+        bench_and_write::<EqDigest>(EqDigest);
     }
 }

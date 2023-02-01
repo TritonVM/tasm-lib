@@ -93,15 +93,15 @@ impl Snippet for AddU64 {
         -2
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "add_u64"
     }
 
     /// Four top elements of stack are assumed to be valid u32s. So to have
     /// a value that's less than 2^32.
-    fn function_body(library: &mut Library) -> String {
-        let entrypoint = Self::entrypoint();
-        let is_u32 = library.import::<IsU32>();
+    fn function_body(&self, library: &mut Library) -> String {
+        let entrypoint = self.entrypoint();
+        let is_u32 = library.import::<IsU32>(IsU32);
         const MINUS_2_POW_32: &str = "18446744065119617025";
 
         format!(
@@ -177,7 +177,7 @@ mod tests {
 
     #[test]
     fn add_u64_benchmark() {
-        bench_and_write::<AddU64>();
+        bench_and_write::<AddU64>(AddU64);
     }
 
     #[test]

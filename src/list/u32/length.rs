@@ -82,12 +82,12 @@ impl Snippet for LengthLong {
         0
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "list_u32_length_long"
     }
 
-    fn function_body(_library: &mut Library) -> String {
-        let entry_point = Self::entrypoint();
+    fn function_body(&self, _library: &mut Library) -> String {
+        let entry_point = self.entrypoint();
         // Before: _ *list
         // After: _ list_length_u32
         format!(
@@ -149,12 +149,12 @@ impl Snippet for LengthShort {
         1
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "list_u32_length_short"
     }
 
-    fn function_body(_library: &mut Library) -> String {
-        let entry_point = Self::entrypoint();
+    fn function_body(&self, _library: &mut Library) -> String {
+        let entry_point = self.entrypoint();
         // Before: _ *list
         // After: _ *list list_length_u32
         format!(

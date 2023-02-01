@@ -46,12 +46,12 @@ impl Snippet for Log2FloorU64 {
         -1
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "log_2_floor_u64"
     }
 
-    fn function_body(_library: &mut Library) -> String {
-        let entrypoint = Self::entrypoint();
+    fn function_body(&self, _library: &mut Library) -> String {
+        let entrypoint = self.entrypoint();
 
         // assumes that top of stack is a valid u32s<2>
         // BEFORE: _ value_hi value_lo
@@ -133,7 +133,7 @@ mod tests {
 
     #[test]
     fn log_2_floor_u64_benchmark() {
-        bench_and_write::<Log2FloorU64>();
+        bench_and_write::<Log2FloorU64>(Log2FloorU64);
     }
 
     #[should_panic]

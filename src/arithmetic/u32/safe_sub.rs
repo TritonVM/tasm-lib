@@ -11,7 +11,7 @@ use crate::{
 pub struct SafeSub;
 
 impl Snippet for SafeSub {
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "safe_sub_u32"
     }
 
@@ -35,8 +35,8 @@ impl Snippet for SafeSub {
         -1
     }
 
-    fn function_body(_library: &mut crate::library::Library) -> String {
-        let entrypoint = Self::entrypoint();
+    fn function_body(&self, _library: &mut crate::library::Library) -> String {
+        let entrypoint = self.entrypoint();
         format!(
             "
                 // BEFORE: _ rhs lhs

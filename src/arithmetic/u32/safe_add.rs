@@ -11,7 +11,7 @@ use crate::{
 pub struct SafeAdd;
 
 impl Snippet for SafeAdd {
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "safe_add_u32"
     }
 
@@ -35,8 +35,8 @@ impl Snippet for SafeAdd {
         -1
     }
 
-    fn function_body(_library: &mut crate::library::Library) -> String {
-        let entrypoint = Self::entrypoint();
+    fn function_body(&self, _library: &mut crate::library::Library) -> String {
+        let entrypoint = self.entrypoint();
         format!(
             "
                 {entrypoint}:

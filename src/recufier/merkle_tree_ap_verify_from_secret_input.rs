@@ -69,12 +69,12 @@ impl Snippet for MtApVerifyFromSecretInput {
         0
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "mt_ap_verify"
     }
 
-    fn function_body(_library: &mut Library) -> String {
-        let entrypoint = Self::entrypoint();
+    fn function_body(&self, _library: &mut Library) -> String {
+        let entrypoint = self.entrypoint();
         format!(
             "
             {entrypoint}:
@@ -300,7 +300,7 @@ mod merkle_authentication_verify_test {
 
     #[test]
     fn merkle_tree_ap_verify_from_secret_input_benchmark() {
-        bench_and_write::<MtApVerifyFromSecretInput>();
+        bench_and_write::<MtApVerifyFromSecretInput>(MtApVerifyFromSecretInput);
     }
 
     #[test]

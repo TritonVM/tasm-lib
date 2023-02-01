@@ -59,15 +59,15 @@ impl<const N: usize> Snippet for Pop<N> {
         N as isize - 1
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "pop_u32"
     }
 
     /// Pop last element from list. Does *not* actually delete the last
     /// element but instead leaves it in memory.
-    fn function_body(_library: &mut Library) -> String {
+    fn function_body(&self, _library: &mut Library) -> String {
         assert!(N < 17, "Max element size supported for list is 16");
-        let entry_point = Self::entrypoint();
+        let entry_point = self.entrypoint();
 
         let mut code_to_read_elements = String::default();
         // Start and end at loop: Stack: _  [elems], address_for_last_unread_element

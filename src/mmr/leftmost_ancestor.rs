@@ -57,15 +57,15 @@ impl Snippet for MmrLeftMostAncestor {
         1
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "mmr_leftmost_ancestor"
     }
 
-    fn function_body(library: &mut Library) -> String {
-        let entrypoint = Self::entrypoint();
-        let decr_u64 = library.import::<DecrU64>();
-        let pow2_u64 = library.import::<Pow2U64>();
-        let log_2_floor_u64 = library.import::<Log2FloorU64>();
+    fn function_body(&self, library: &mut Library) -> String {
+        let entrypoint = self.entrypoint();
+        let decr_u64 = library.import::<DecrU64>(DecrU64);
+        let pow2_u64 = library.import::<Pow2U64>(Pow2U64);
+        let log_2_floor_u64 = library.import::<Log2FloorU64>(Log2FloorU64);
         format!(
             "
             // Before: _ node_index_hi node_index_lo
@@ -133,7 +133,7 @@ mod tests {
 
     #[test]
     fn leftmost_ancestor_benchmark() {
-        bench_and_write::<MmrLeftMostAncestor>();
+        bench_and_write::<MmrLeftMostAncestor>(MmrLeftMostAncestor);
     }
 
     #[test]

@@ -170,14 +170,15 @@ impl Snippet for MmrLoadFromSecretInThenVerify {
         -6
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "verify_load_from_secret_in"
     }
 
-    fn function_body(library: &mut Library) -> String {
-        let entrypoint = Self::entrypoint();
-        let load_auth_path_from_secret_in = library.import::<LoadAuthPathFromSecretIn>();
-        let verify_from_memory = library.import::<MmrVerifyFromMemory>();
+    fn function_body(&self, library: &mut Library) -> String {
+        let entrypoint = self.entrypoint();
+        let load_auth_path_from_secret_in =
+            library.import::<LoadAuthPathFromSecretIn>(LoadAuthPathFromSecretIn);
+        let verify_from_memory = library.import::<MmrVerifyFromMemory>(MmrVerifyFromMemory);
 
         format!(
             "
@@ -293,6 +294,6 @@ mod tests {
 
     #[test]
     fn load_from_secret_in_then_verify_benchmark() {
-        bench_and_write::<MmrLoadFromSecretInThenVerify>();
+        bench_and_write::<MmrLoadFromSecretInThenVerify>(MmrLoadFromSecretInThenVerify);
     }
 }

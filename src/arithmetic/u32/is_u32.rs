@@ -51,7 +51,7 @@ impl Snippet for IsU32 {
         0
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "is_u32"
     }
 
@@ -59,8 +59,8 @@ impl Snippet for IsU32 {
     /// place 0 on stack. Consumes top element of stack, leaves a boolean
     /// on top of stack. So this subroutine does not change the height
     /// of the stack
-    fn function_body(_library: &mut Library) -> String {
-        let entrypoint = Self::entrypoint();
+    fn function_body(&self, _library: &mut Library) -> String {
+        let entrypoint = self.entrypoint();
         format!(
             "
             {entrypoint}:
@@ -106,7 +106,7 @@ mod tests {
 
     #[test]
     fn is_u32_benchmark() {
-        bench_and_write::<IsU32>();
+        bench_and_write::<IsU32>(IsU32);
     }
 
     #[test]

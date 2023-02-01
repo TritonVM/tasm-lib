@@ -62,14 +62,14 @@ impl Snippet for LtU64 {
         1
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "lt_u64"
     }
 
     /// Before: _ rhs_hi rhs_lo lhs_hi lhs_lo
     /// After: _ rhs_hi rhs_lo lhs_hi lhs_lo  (lhs < rhs)
-    fn function_body(_library: &mut Library) -> String {
-        let entrypoint = Self::entrypoint();
+    fn function_body(&self, _library: &mut Library) -> String {
+        let entrypoint = self.entrypoint();
         format!(
             "
             // Before: _ rhs_hi rhs_lo lhs_hi lhs_lo
@@ -164,12 +164,12 @@ impl Snippet for LtStandardU64 {
         -3
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "lt_standard_u64"
     }
 
-    fn function_body(_library: &mut Library) -> String {
-        let entrypoint = Self::entrypoint();
+    fn function_body(&self, _library: &mut Library) -> String {
+        let entrypoint = self.entrypoint();
         format!(
             "
             // Before: _ rhs_hi rhs_lo lhs_hi lhs_lo
@@ -259,7 +259,7 @@ mod tests {
 
     #[test]
     fn log_2_floor_u64_benchmark() {
-        bench_and_write::<LtStandardU64>();
+        bench_and_write::<LtStandardU64>(LtStandardU64);
     }
 
     #[test]

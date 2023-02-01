@@ -94,15 +94,15 @@ impl Snippet for SubU64 {
         -2
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "sub_u64"
     }
 
     /// Four top elements of stack are assumed to be valid u32s. So to have
     /// a value that's less than 2^32.
-    fn function_body(library: &mut Library) -> String {
-        let entrypoint = Self::entrypoint();
-        let is_u32 = library.import::<IsU32>();
+    fn function_body(&self, library: &mut Library) -> String {
+        let entrypoint = self.entrypoint();
+        let is_u32 = library.import::<IsU32>(IsU32);
         const TWO_POW_32: &str = "4294967296";
 
         format!(
@@ -188,7 +188,7 @@ mod tests {
 
     #[test]
     fn sub_u64_benchmark() {
-        bench_and_write::<SubU64>();
+        bench_and_write::<SubU64>(SubU64);
     }
 
     #[test]

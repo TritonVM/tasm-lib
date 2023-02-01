@@ -23,9 +23,9 @@ impl Library {
 
     pub fn with_pseudo_instructions() -> Self {
         let mut library = Self::empty();
-        library.import::<Lsb>();
-        library.import::<Neg>();
-        library.import::<Sub>();
+        library.import::<Lsb>(Lsb);
+        library.import::<Neg>(Neg);
+        library.import::<Sub>(Sub);
         library
     }
 
@@ -43,14 +43,14 @@ impl Library {
     ///
     /// Avoid cyclic dependencies by only calling `T::function_body()` which
     /// may call `.import()` if `.import::<T>()` wasn't already called once.
-    pub fn import<T: Snippet>(&mut self) -> &'static str {
-        let dep_entrypoint = T::entrypoint();
+    pub fn import<T: Snippet>(&mut self, snippet: T) -> &'static str {
+        let dep_entrypoint = snippet.entrypoint();
         if self.seen_snippets.insert(dep_entrypoint) {
-            let dep_function_body = T::function_body(self);
+            let dep_function_body = snippet.function_body(self);
             self.function_bodies.insert(dep_function_body);
         }
 
-        T::entrypoint()
+        snippet.entrypoint()
     }
 
     #[allow(dead_code)]
@@ -98,14 +98,14 @@ mod tests {
             3
         }
 
-        fn entrypoint() -> &'static str {
+        fn entrypoint(&self) -> &'static str {
             "a"
         }
 
-        fn function_body(library: &mut Library) -> String {
-            let entrypoint = Self::entrypoint();
-            let b = library.import::<B>();
-            let c = library.import::<C>();
+        fn function_body(&self, library: &mut Library) -> String {
+            let entrypoint = self.entrypoint();
+            let b = library.import::<B>(B);
+            let c = library.import::<C>(C);
 
             format!(
                 "
@@ -158,13 +158,13 @@ mod tests {
             2
         }
 
-        fn entrypoint() -> &'static str {
+        fn entrypoint(&self) -> &'static str {
             "b"
         }
 
-        fn function_body(library: &mut Library) -> String {
-            let entrypoint = Self::entrypoint();
-            let c = library.import::<C>();
+        fn function_body(&self, library: &mut Library) -> String {
+            let entrypoint = self.entrypoint();
+            let c = library.import::<C>(C);
 
             format!(
                 "
@@ -216,12 +216,12 @@ mod tests {
             1
         }
 
-        fn entrypoint() -> &'static str {
+        fn entrypoint(&self) -> &'static str {
             "c"
         }
 
-        fn function_body(_library: &mut Library) -> String {
-            let entrypoint = Self::entrypoint();
+        fn function_body(&self, _library: &mut Library) -> String {
+            let entrypoint = self.entrypoint();
 
             format!(
                 "
@@ -303,9 +303,9 @@ mod tests {
     #[test]
     fn all_imports_as_instruction_lists() {
         let mut lib = Library::default();
-        lib.import::<A>();
-        lib.import::<A>();
-        lib.import::<C>();
+        lib.import::<A>(A);
+        lib.import::<A>(A);
+        lib.import::<C>(C);
         let ret = lib.all_imports_as_instruction_lists();
         println!("ret = {}", ret.iter().map(|x| x.to_string()).join("\n"));
     }

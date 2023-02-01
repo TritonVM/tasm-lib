@@ -49,12 +49,12 @@ impl Snippet for Pow2U64 {
         1
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "pow2_u64"
     }
 
-    fn function_body(_library: &mut Library) -> String {
-        let entrypoint = Self::entrypoint();
+    fn function_body(&self, _library: &mut Library) -> String {
+        let entrypoint = self.entrypoint();
 
         format!(
             "{entrypoint}:
@@ -105,7 +105,7 @@ mod tests {
 
     #[test]
     fn pow2_static_benchmark() {
-        bench_and_write::<Pow2U64>();
+        bench_and_write::<Pow2U64>(Pow2U64);
     }
 
     fn prop_exp_static(exponent: u8) {

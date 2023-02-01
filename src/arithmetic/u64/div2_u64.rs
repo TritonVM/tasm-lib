@@ -46,12 +46,12 @@ impl Snippet for Div2U64 {
         0
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "div2_u64"
     }
 
-    fn function_body(_library: &mut Library) -> String {
-        let entrypoint = Self::entrypoint();
+    fn function_body(&self, _library: &mut Library) -> String {
+        let entrypoint = self.entrypoint();
         let two_pow_31 = (1u64 << 31).to_string();
 
         format!(
@@ -121,7 +121,7 @@ mod tests {
 
     #[test]
     fn div2_u64_benchmark() {
-        bench_and_write::<Div2U64>();
+        bench_and_write::<Div2U64>(Div2U64);
     }
 
     #[should_panic]

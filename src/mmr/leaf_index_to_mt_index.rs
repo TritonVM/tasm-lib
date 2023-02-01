@@ -72,19 +72,19 @@ impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
         -1
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "leaf_index_to_mt_index_and_peak_index"
     }
 
-    fn function_body(library: &mut Library) -> String {
-        let entrypoint = Self::entrypoint();
-        let log_2_floor_u64 = library.import::<Log2FloorU64>();
-        let lt_u64 = library.import::<LtU64>();
-        let add_u64 = library.import::<AddU64>();
-        let and_u64 = library.import::<AndU64>();
-        let pow2_u64 = library.import::<Pow2U64>();
-        let sub_u64 = library.import::<SubU64>();
-        let eq_u64 = library.import::<EqU64>();
+    fn function_body(&self, library: &mut Library) -> String {
+        let entrypoint = self.entrypoint();
+        let log_2_floor_u64 = library.import::<Log2FloorU64>(Log2FloorU64);
+        let lt_u64 = library.import::<LtU64>(LtU64);
+        let add_u64 = library.import::<AddU64>(AddU64);
+        let and_u64 = library.import::<AndU64>(AndU64);
+        let pow2_u64 = library.import::<Pow2U64>(Pow2U64);
+        let sub_u64 = library.import::<SubU64>(SubU64);
+        let eq_u64 = library.import::<EqU64>(EqU64);
 
         format!(
             "
@@ -227,7 +227,7 @@ mod tests {
 
     #[test]
     fn leaf_index_to_mt_index_benchmark() {
-        bench_and_write::<MmrLeafIndexToMtIndexAndPeakIndex>();
+        bench_and_write::<MmrLeafIndexToMtIndexAndPeakIndex>(MmrLeafIndexToMtIndexAndPeakIndex);
     }
 
     #[test]

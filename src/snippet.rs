@@ -39,9 +39,7 @@ pub trait Snippet {
     /// The name of a Snippet
     ///
     /// This is used as a unique identifier, e.g. when generating labels.
-    fn entrypoint() -> &'static str
-    where
-        Self: Sized;
+    fn entrypoint(&self) -> &'static str;
 
     /// The input stack
     fn inputs() -> Vec<&'static str>
@@ -63,7 +61,7 @@ pub trait Snippet {
         Self: Sized;
 
     /// The function body
-    fn function_body(library: &mut Library) -> String
+    fn function_body(&self, library: &mut Library) -> String
     where
         Self: Sized;
 
@@ -77,11 +75,14 @@ pub trait Snippet {
     where
         Self: Sized;
 
-    fn function_body_as_instructions(library: &mut Library) -> Vec<LabelledInstruction<'static>>
+    fn function_body_as_instructions(
+        &self,
+        library: &mut Library,
+    ) -> Vec<LabelledInstruction<'static>>
     where
         Self: Sized,
     {
-        let f_body = Self::function_body(library);
+        let f_body = self.function_body(library);
 
         // parse the code to get the list of instructions
         parse(&f_body).unwrap()
@@ -113,8 +114,8 @@ pub trait Snippet {
         Self: Sized,
     {
         let mut library = Library::with_preallocated_memory(words_allocated);
-        let entrypoint = Self::entrypoint();
-        let function_body = Self::function_body(&mut library);
+        let entrypoint = self.entrypoint();
+        let function_body = self.function_body(&mut library);
         let library_code = library.all_imports();
 
         let expected_length_prior: usize = self.input_types().iter().map(|x| x.get_size()).sum();
@@ -161,10 +162,10 @@ pub trait Snippet {
 }
 
 #[allow(dead_code)]
-pub fn compile_snippet<T: Snippet>() -> String {
+pub fn compile_snippet<T: Snippet>(snippet: T) -> String {
     let mut library = Library::with_pseudo_instructions();
-    let main_entrypoint = T::entrypoint();
-    let main_function_body = T::function_body(&mut library);
+    let main_entrypoint = snippet.entrypoint();
+    let main_function_body = snippet.function_body(&mut library);
     let library_code = library.all_imports();
 
     format!(
@@ -180,6 +181,7 @@ pub fn compile_snippet<T: Snippet>() -> String {
 
 #[allow(dead_code)]
 pub fn simulate_snippet<T: Snippet>(
+    snippet: T,
     execution_state: ExecutionState,
 ) -> (AlgebraicExecutionTrace, usize) {
     let mut code: Vec<String> = vec![];
@@ -198,7 +200,7 @@ pub fn simulate_snippet<T: Snippet>(
     }
 
     // Compile the snippet and its library dependencies
-    code.push(compile_snippet::<T>());
+    code.push(compile_snippet::<T>(snippet));
 
     // Parse and run the program, bootloader and library
     let code: String = code.concat();
@@ -224,7 +226,7 @@ mod tests {
     fn can_return_code() {
         let mut empty_library = Library::default();
         let example_snippet =
-            arithmetic::u32::safe_add::SafeAdd::function_body_as_instructions(&mut empty_library);
+            arithmetic::u32::safe_add::SafeAdd.function_body_as_instructions(&mut empty_library);
         assert!(!example_snippet.is_empty());
         println!(
             "{}",

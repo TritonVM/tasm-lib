@@ -54,14 +54,14 @@ impl Snippet for GetHeightFromDataIndex {
         -1
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "get_height_from_leaf_index"
     }
 
-    fn function_body(library: &mut Library) -> String {
-        let entrypoint = Self::entrypoint();
-        let incr_u64 = library.import::<IncrU64>();
-        let log_2_floor_u64 = library.import::<Log2FloorU64>();
+    fn function_body(&self, library: &mut Library) -> String {
+        let entrypoint = self.entrypoint();
+        let incr_u64 = library.import::<IncrU64>(IncrU64);
+        let log_2_floor_u64 = library.import::<Log2FloorU64>(Log2FloorU64);
         format!(
             "
             // Return the height of the MMR if this data index was the last leaf inserted
@@ -106,7 +106,7 @@ mod tests {
 
     #[test]
     fn get_height_from_data_index_benchmark() {
-        bench_and_write::<GetHeightFromDataIndex>();
+        bench_and_write::<GetHeightFromDataIndex>(GetHeightFromDataIndex);
     }
 
     #[test]

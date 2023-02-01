@@ -104,19 +104,20 @@ impl Snippet for MmrVerifyFromMemory {
         -7
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "verify_from_memory"
     }
 
-    fn function_body(library: &mut Library) -> String {
-        let leaf_index_to_mt_index = library.import::<MmrLeafIndexToMtIndexAndPeakIndex>();
-        let get = library.import::<Get<DIGEST_LENGTH>>();
-        let u32_is_odd = library.import::<U32IsOdd>();
-        let entrypoint = Self::entrypoint();
-        let eq_u64 = library.import::<EqU64>();
-        let div_2 = library.import::<Div2U64>();
-        let swap_digests = library.import::<SwapDigest>();
-        let eq_digest = library.import::<EqDigest>();
+    fn function_body(&self, library: &mut Library) -> String {
+        let leaf_index_to_mt_index =
+            library.import::<MmrLeafIndexToMtIndexAndPeakIndex>(MmrLeafIndexToMtIndexAndPeakIndex);
+        let get = library.import::<Get<DIGEST_LENGTH>>(Get::<DIGEST_LENGTH>(DataType::Digest));
+        let u32_is_odd = library.import::<U32IsOdd>(U32IsOdd);
+        let entrypoint = self.entrypoint();
+        let eq_u64 = library.import::<EqU64>(EqU64);
+        let div_2 = library.import::<Div2U64>(Div2U64);
+        let swap_digests = library.import::<SwapDigest>(SwapDigest);
+        let eq_digest = library.import::<EqDigest>(EqDigest);
         format!(
             "
                 // BEFORE: _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo [digest (leaf_digest)] *auth_path
@@ -353,7 +354,7 @@ mod auth_path_verify_from_memory_tests {
 
     #[test]
     fn verify_from_memory_benchmark() {
-        bench_and_write::<MmrVerifyFromMemory>();
+        bench_and_write::<MmrVerifyFromMemory>(MmrVerifyFromMemory);
     }
 
     // This will crash the VM because leaf?index is not strictly less than leaf_count

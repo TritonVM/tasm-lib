@@ -42,12 +42,12 @@ impl Snippet for Sub {
         -1
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "sub"
     }
 
-    fn function_body(_library: &mut crate::library::Library) -> String {
-        let entrypoint = Self::entrypoint();
+    fn function_body(&self, _library: &mut crate::library::Library) -> String {
+        let entrypoint = self.entrypoint();
         format!(
             "
             // before: _ b a

@@ -16,14 +16,14 @@ pub struct SnippetBenchmark {
 }
 
 #[allow(dead_code)]
-pub fn benchmark_snippet<T: Snippet>() -> Vec<SnippetBenchmark> {
+pub fn benchmark_snippet<T: Snippet + Clone>(snippet: T) -> Vec<SnippetBenchmark> {
     let execution_states = T::gen_input_states();
     let mut benchmarks = Vec::with_capacity(execution_states.len());
 
     for execution_state in execution_states {
-        let (aet, inflated_clock_cycles) = simulate_snippet::<T>(execution_state);
+        let (aet, inflated_clock_cycles) = simulate_snippet::<T>(snippet.clone(), execution_state);
         let benchmark = SnippetBenchmark {
-            name: T::entrypoint(),
+            name: snippet.entrypoint(),
             processor_table_height: aet.processor_trace.nrows() - inflated_clock_cycles,
             hash_table_height: aet.hash_trace.nrows(),
             u32_table_height: MasterBaseTable::u32_table_length(&aet),
@@ -35,17 +35,17 @@ pub fn benchmark_snippet<T: Snippet>() -> Vec<SnippetBenchmark> {
 }
 
 #[allow(dead_code)]
-pub fn write_benchmarks<T: Snippet>(benchmarks: Vec<SnippetBenchmark>) {
+pub fn write_benchmarks<T: Snippet>(benchmarks: Vec<SnippetBenchmark>, snippet: T) {
     let mut path = PathBuf::new();
     path.push("benchmarks");
     create_dir_all(&path).expect("benchmarks directory should exist");
 
-    path.push(Path::new(T::entrypoint()).with_extension("json"));
+    path.push(Path::new(snippet.entrypoint()).with_extension("json"));
     let output = File::create(&path).expect("open file for writing");
     to_writer_pretty(output, &benchmarks).expect("write json to file");
 }
 
 #[allow(dead_code)]
-pub fn bench_and_write<T: Snippet>() {
-    write_benchmarks::<T>(benchmark_snippet::<T>());
+pub fn bench_and_write<T: Snippet + Clone>(snippet: T) {
+    write_benchmarks::<T>(benchmark_snippet::<T>(snippet.clone()), snippet);
 }

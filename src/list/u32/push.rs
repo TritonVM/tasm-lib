@@ -66,12 +66,12 @@ impl<const N: usize> Snippet for Push<N> {
         -(N as isize)
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "push_u32"
     }
 
     // Push *one* element of size N to stack
-    fn function_body(_library: &mut Library) -> String {
+    fn function_body(&self, _library: &mut Library) -> String {
         assert!(N < 17, "Max element size supported for list is 16");
 
         // write the elements to memory
@@ -88,7 +88,7 @@ impl<const N: usize> Snippet for Push<N> {
             }
         }
 
-        let entry_point = Self::entrypoint();
+        let entry_point = self.entrypoint();
         format!(
             "
             // Before: _ *list, elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}

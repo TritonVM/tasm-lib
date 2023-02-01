@@ -57,12 +57,12 @@ pub fn rust_tasm_equivalence_prop<T: Snippet>(
     );
     println!(
         "Cycle count for `{}`: {}",
-        T::entrypoint(),
+        snippet_struct.entrypoint(),
         execution_result.cycle_count
     );
     println!(
         "Hash table height for `{}`: {}",
-        T::entrypoint(),
+        snippet_struct.entrypoint(),
         execution_result.hash_table_height
     );
 
@@ -79,7 +79,7 @@ pub fn rust_tasm_equivalence_prop<T: Snippet>(
         tasm_stack,
         rust_stack,
         "Rust code must match TVM for `{}`\n\nTVM: {}\n\nRust: {}",
-        T::entrypoint(),
+        snippet_struct.entrypoint(),
         tasm_stack
             .iter()
             .map(|x| x.to_string())
@@ -96,7 +96,7 @@ pub fn rust_tasm_equivalence_prop<T: Snippet>(
             tasm_stack,
             expected,
             "TVM must produce expected stack `{}`. \n\nTVM:\n{}\nExpected:\n{}",
-            T::entrypoint(),
+            snippet_struct.entrypoint(),
             tasm_stack
                 .iter()
                 .map(|x| x.to_string())

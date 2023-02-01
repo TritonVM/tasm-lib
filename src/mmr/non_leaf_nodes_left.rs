@@ -65,19 +65,19 @@ impl Snippet for MmrNonLeafNodesLeftUsingAnd {
         0
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "non_leaf_nodes_left"
     }
 
-    fn function_body(library: &mut Library) -> String {
-        let entrypoint = Self::entrypoint();
-        let log_2_floor_u64 = library.import::<Log2FloorU64>();
-        let pow2_u64 = library.import::<Pow2U64>();
-        let and_u64 = library.import::<AndU64>();
-        let eq_u64 = library.import::<EqU64>();
-        let decr_u64 = library.import::<DecrU64>();
-        let incr_u64 = library.import::<IncrU64>();
-        let add_u64 = library.import::<AddU64>();
+    fn function_body(&self, library: &mut Library) -> String {
+        let entrypoint = self.entrypoint();
+        let log_2_floor_u64 = library.import::<Log2FloorU64>(Log2FloorU64);
+        let pow2_u64 = library.import::<Pow2U64>(Pow2U64);
+        let and_u64 = library.import::<AndU64>(AndU64);
+        let eq_u64 = library.import::<EqU64>(EqU64);
+        let decr_u64 = library.import::<DecrU64>(DecrU64);
+        let incr_u64 = library.import::<IncrU64>(IncrU64);
+        let add_u64 = library.import::<AddU64>(AddU64);
 
         format!(
             "
@@ -202,7 +202,7 @@ mod nlnl_tests {
 
     #[test]
     fn non_leaf_nodes_left_benchmark() {
-        bench_and_write::<MmrNonLeafNodesLeftUsingAnd>();
+        bench_and_write::<MmrNonLeafNodesLeftUsingAnd>(MmrNonLeafNodesLeftUsingAnd);
     }
 
     #[test]

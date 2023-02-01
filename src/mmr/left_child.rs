@@ -59,14 +59,14 @@ impl Snippet for MmrLeftChild {
         -1
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "mmr_left_child"
     }
 
-    fn function_body(library: &mut Library) -> String {
-        let entrypoint = Self::entrypoint();
-        let pow2_u64 = library.import::<Pow2U64>();
-        let sub_u64 = library.import::<SubU64>();
+    fn function_body(&self, library: &mut Library) -> String {
+        let entrypoint = self.entrypoint();
+        let pow2_u64 = library.import::<Pow2U64>(Pow2U64);
+        let sub_u64 = library.import::<SubU64>(SubU64);
         format!(
             "
             // Before: _ ni_hi ni_lo height
@@ -119,7 +119,7 @@ mod tests {
 
     #[test]
     fn left_child_benchmark() {
-        bench_and_write::<MmrLeftChild>();
+        bench_and_write::<MmrLeftChild>(MmrLeftChild);
     }
 
     #[test]

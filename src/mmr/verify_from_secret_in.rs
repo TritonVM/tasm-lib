@@ -162,22 +162,23 @@ impl Snippet for MmrVerifyLeafMembershipFromSecretIn {
         -5
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "mmr_verify_from_secret_in"
     }
 
     // Already on stack (can be secret of public input): _ *peaks leaf_count_hi leaf_count_lo [digest (leaf)]
     // Secret input: _ (authentication_path: Vec<Digest>), (leaf_digest: Digest), (leaf_index: u64)
-    fn function_body(library: &mut Library) -> String {
-        let entrypoint = Self::entrypoint();
+    fn function_body(&self, library: &mut Library) -> String {
+        let entrypoint = self.entrypoint();
 
-        let leaf_index_to_mt_index = library.import::<MmrLeafIndexToMtIndexAndPeakIndex>();
-        let eq_u64 = library.import::<EqU64>();
-        let u32_is_odd = library.import::<U32IsOdd>();
-        let swap_digests = library.import::<SwapDigest>();
-        let compare_digest = library.import::<EqDigest>();
-        let div_2 = library.import::<Div2U64>();
-        let list_get = library.import::<Get<DIGEST_LENGTH>>();
+        let leaf_index_to_mt_index =
+            library.import::<MmrLeafIndexToMtIndexAndPeakIndex>(MmrLeafIndexToMtIndexAndPeakIndex);
+        let eq_u64 = library.import::<EqU64>(EqU64);
+        let u32_is_odd = library.import::<U32IsOdd>(U32IsOdd);
+        let swap_digests = library.import::<SwapDigest>(SwapDigest);
+        let compare_digest = library.import::<EqDigest>(EqDigest);
+        let div_2 = library.import::<Div2U64>(Div2U64);
+        let list_get = library.import::<Get<DIGEST_LENGTH>>(Get::<DIGEST_LENGTH>(DataType::Digest));
 
         let divine_digest = "divine\n".repeat(DIGEST_LENGTH);
 
@@ -359,7 +360,7 @@ mod mmr_verify_from_secret_in_tests {
 
     #[test]
     fn verify_from_secret_in_benchmark() {
-        bench_and_write::<MmrVerifyLeafMembershipFromSecretIn>();
+        bench_and_write::<MmrVerifyLeafMembershipFromSecretIn>(MmrVerifyLeafMembershipFromSecretIn);
     }
     #[test]
     fn mmra_ap_verify_test_one() {

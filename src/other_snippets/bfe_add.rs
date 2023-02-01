@@ -43,12 +43,12 @@ impl Snippet for BfeAdd {
         -1
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "bfe_add"
     }
 
-    fn function_body(_library: &mut Library) -> String {
-        let entrypoint = Self::entrypoint();
+    fn function_body(&self, _library: &mut Library) -> String {
+        let entrypoint = self.entrypoint();
         format!(
             "
             {entrypoint}:
@@ -84,6 +84,6 @@ mod tests {
 
     #[test]
     fn bfe_add_benchmark() {
-        bench_and_write::<BfeAdd>();
+        bench_and_write::<BfeAdd>(BfeAdd);
     }
 }

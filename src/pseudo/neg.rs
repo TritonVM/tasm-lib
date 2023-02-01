@@ -41,12 +41,12 @@ impl Snippet for Neg {
         0
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "neg"
     }
 
-    fn function_body(_library: &mut crate::library::Library) -> String {
-        let entrypoint = Self::entrypoint();
+    fn function_body(&self, _library: &mut crate::library::Library) -> String {
+        let entrypoint = self.entrypoint();
 
         format!(
             "

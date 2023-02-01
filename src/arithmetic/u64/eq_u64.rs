@@ -49,12 +49,12 @@ impl Snippet for EqU64 {
         -3
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "eq_u64"
     }
 
-    fn function_body(_library: &mut Library) -> String {
-        let entrypoint = Self::entrypoint();
+    fn function_body(&self, _library: &mut Library) -> String {
+        let entrypoint = self.entrypoint();
         format!(
             "
             // Before: _ hi_r lo_r hi_l lo_l
@@ -117,7 +117,7 @@ mod tests {
 
     #[test]
     fn eq_u64_benchmark() {
-        bench_and_write::<EqU64>();
+        bench_and_write::<EqU64>(EqU64);
     }
 
     #[test]

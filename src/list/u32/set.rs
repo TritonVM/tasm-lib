@@ -71,13 +71,13 @@ impl<const N: usize> Snippet for Set<N> {
         -2 - N as isize
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "list_set_element"
     }
 
-    fn function_body(_library: &mut Library) -> String {
+    fn function_body(&self, _library: &mut Library) -> String {
         assert!(N < 17, "Max element size supported for list is 16");
-        let entrypoint = Self::entrypoint();
+        let entrypoint = self.entrypoint();
 
         let mut write_elements_to_memory_code = String::default();
         for i in 0..N {

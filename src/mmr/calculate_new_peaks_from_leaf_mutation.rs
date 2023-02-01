@@ -88,18 +88,19 @@ impl Snippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
         -8
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "calculate_new_peaks_from_leaf_mutation"
     }
 
-    fn function_body(library: &mut Library) -> String {
-        let entrypoint = Self::entrypoint();
-        let leaf_index_to_mt_index = library.import::<MmrLeafIndexToMtIndexAndPeakIndex>();
-        let u32_is_odd = library.import::<U32IsOdd>();
-        let eq_u64 = library.import::<EqU64>();
-        let get = library.import::<Get<DIGEST_LENGTH>>();
-        let set = library.import::<Set<DIGEST_LENGTH>>();
-        let div_2 = library.import::<Div2U64>();
+    fn function_body(&self, library: &mut Library) -> String {
+        let entrypoint = self.entrypoint();
+        let leaf_index_to_mt_index =
+            library.import::<MmrLeafIndexToMtIndexAndPeakIndex>(MmrLeafIndexToMtIndexAndPeakIndex);
+        let u32_is_odd = library.import::<U32IsOdd>(U32IsOdd);
+        let eq_u64 = library.import::<EqU64>(EqU64);
+        let get = library.import::<Get<DIGEST_LENGTH>>(Get::<DIGEST_LENGTH>(DataType::Digest));
+        let set = library.import::<Set<DIGEST_LENGTH>>(Set::<DIGEST_LENGTH>(DataType::Digest));
+        let div_2 = library.import::<Div2U64>(Div2U64);
 
         format!(
             "
@@ -344,7 +345,9 @@ mod leaf_mutation_tests {
 
     #[test]
     fn calculate_new_peaks_from_leaf_mutation_benchmark() {
-        bench_and_write::<MmrCalculateNewPeaksFromLeafMutationMtIndices>();
+        bench_and_write::<MmrCalculateNewPeaksFromLeafMutationMtIndices>(
+            MmrCalculateNewPeaksFromLeafMutationMtIndices,
+        );
     }
 
     #[test]

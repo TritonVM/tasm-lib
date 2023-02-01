@@ -55,14 +55,14 @@ impl Snippet for MmrRightChild {
         0
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "mmr_right_child"
     }
 
     /// Consider inlining this, instead of calling a function
-    fn function_body(library: &mut Library) -> String {
-        let entrypoint = Self::entrypoint();
-        let decr_u64 = library.import::<DecrU64>();
+    fn function_body(&self, library: &mut Library) -> String {
+        let entrypoint = self.entrypoint();
+        let decr_u64 = library.import::<DecrU64>(DecrU64);
         format!(
             "
             // Before: _ nodex_index_hi node_index_lo
@@ -109,7 +109,7 @@ mod tests {
 
     #[test]
     fn left_child_benchmark() {
-        bench_and_write::<MmrRightChild>();
+        bench_and_write::<MmrRightChild>(MmrRightChild);
     }
 
     #[test]

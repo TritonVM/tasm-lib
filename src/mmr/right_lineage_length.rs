@@ -52,17 +52,17 @@ impl Snippet for MmrRightLineageLength {
         -1
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "right_lineage_length"
     }
 
-    fn function_body(library: &mut crate::library::Library) -> String {
-        let entrypoint = Self::entrypoint();
-        let log_2_floor_u64 = library.import::<Log2FloorU64>();
-        let pow2_u64 = library.import::<Pow2U64>();
-        let sub_u64 = library.import::<SubU64>();
-        let decr = library.import::<DecrU64>();
-        let incr = library.import::<IncrU64>();
+    fn function_body(&self, library: &mut crate::library::Library) -> String {
+        let entrypoint = self.entrypoint();
+        let log_2_floor_u64 = library.import::<Log2FloorU64>(Log2FloorU64);
+        let pow2_u64 = library.import::<Pow2U64>(Pow2U64);
+        let sub_u64 = library.import::<SubU64>(SubU64);
+        let decr = library.import::<DecrU64>(DecrU64);
+        let incr = library.import::<IncrU64>(IncrU64);
         format!(
             "// Before: _ ni_hi ni_lo
             // After: _ right_lineage_count
@@ -183,7 +183,7 @@ mod tests {
 
     #[test]
     fn right_lineage_length_benchmark() {
-        bench_and_write::<MmrRightLineageLength>();
+        bench_and_write::<MmrRightLineageLength>(MmrRightLineageLength);
     }
 
     #[test]

@@ -71,13 +71,13 @@ impl Snippet for U32IsOdd {
         0
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "is_odd"
     }
 
-    fn function_body(library: &mut Library) -> String {
-        let entrypoint = Self::entrypoint();
-        let lsb = library.import::<Lsb>();
+    fn function_body(&self, library: &mut Library) -> String {
+        let entrypoint = self.entrypoint();
+        let lsb = library.import::<Lsb>(Lsb);
         format!(
             "
                 // BEFORE: _ value
@@ -119,7 +119,7 @@ mod u32_is_odd_tests {
 
     #[test]
     fn is_odd_u32_benchmark() {
-        bench_and_write::<U32IsOdd>();
+        bench_and_write::<U32IsOdd>(U32IsOdd);
     }
 
     #[test]

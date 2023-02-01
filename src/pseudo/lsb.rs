@@ -46,12 +46,12 @@ impl Snippet for Lsb {
         1
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "lsb"
     }
 
-    fn function_body(_library: &mut crate::library::Library) -> String {
-        let entrypoint = Self::entrypoint();
+    fn function_body(&self, _library: &mut crate::library::Library) -> String {
+        let entrypoint = self.entrypoint();
         format!(
             "
             {entrypoint}:
