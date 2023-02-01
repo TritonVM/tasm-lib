@@ -6,10 +6,11 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::algebraic_hasher::Hashable;
 
 use crate::library::Library;
-use crate::snippet::Snippet;
+use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 
-pub struct DecrU64();
+#[derive(Clone)]
+pub struct DecrU64;
 
 impl Snippet for DecrU64 {
     fn inputs() -> Vec<&'static str> {
@@ -18,6 +19,14 @@ impl Snippet for DecrU64 {
 
     fn outputs() -> Vec<&'static str> {
         vec!["(value - 1)_hi", "(value - 1)_lo"]
+    }
+
+    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::U64]
+    }
+
+    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::U64]
     }
 
     fn crash_conditions() -> Vec<&'static str> {
@@ -44,12 +53,12 @@ impl Snippet for DecrU64 {
         0
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "decr_u64"
     }
 
-    fn function_body(_library: &mut Library) -> String {
-        let entrypoint = Self::entrypoint();
+    fn function_body(&self, _library: &mut Library) -> String {
+        let entrypoint = self.entrypoint();
         const U32_MAX: &str = "4294967295";
 
         format!(
@@ -110,12 +119,12 @@ mod tests {
 
     #[test]
     fn decr_u64_test() {
-        rust_tasm_equivalence_prop_new::<DecrU64>();
+        rust_tasm_equivalence_prop_new::<DecrU64>(DecrU64);
     }
 
     #[test]
     fn decr_u64_benchmark() {
-        bench_and_write::<DecrU64>();
+        bench_and_write::<DecrU64>(DecrU64);
     }
 
     #[test]
@@ -123,7 +132,7 @@ mod tests {
     fn decr_u64_negative_tasm_test() {
         let mut stack = get_init_tvm_stack();
         push_hashable(&mut stack, &U32s::<2>::zero());
-        DecrU64::run_tasm_old(&mut stack, vec![], vec![], &mut HashMap::default(), 0);
+        DecrU64.run_tasm_old(&mut stack, vec![], vec![], &mut HashMap::default(), 0);
     }
 
     #[test]
@@ -151,6 +160,14 @@ mod tests {
     fn prop_decr_u64(value: U32s<2>) {
         let mut stack = get_init_tvm_stack();
         push_hashable(&mut stack, &value);
-        rust_tasm_equivalence_prop::<DecrU64>(&stack, &[], &[], &mut HashMap::default(), 0, None);
+        rust_tasm_equivalence_prop::<DecrU64>(
+            DecrU64,
+            &stack,
+            &[],
+            &[],
+            &mut HashMap::default(),
+            0,
+            None,
+        );
     }
 }

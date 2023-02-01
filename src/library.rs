@@ -1,11 +1,14 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use itertools::Itertools;
-use triton_opcodes::instruction::{parse, LabelledInstruction};
+use num::One;
+use triton_opcodes::instruction::LabelledInstruction;
+use triton_opcodes::parser::{parse, to_labelled};
+use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::pseudo::sub::Sub;
 use crate::pseudo::{lsb::Lsb, neg::Neg};
-use crate::snippet::Snippet;
+use crate::snippet::{DataType, Snippet};
 
 #[derive(Debug, Default)]
 pub struct Library {
@@ -23,9 +26,9 @@ impl Library {
 
     pub fn with_pseudo_instructions() -> Self {
         let mut library = Self::empty();
-        library.import::<Lsb>();
-        library.import::<Neg>();
-        library.import::<Sub>();
+        library.import(Box::new(Lsb));
+        library.import(Box::new(Neg));
+        library.import(Box::new(Sub));
         library
     }
 
@@ -43,14 +46,14 @@ impl Library {
     ///
     /// Avoid cyclic dependencies by only calling `T::function_body()` which
     /// may call `.import()` if `.import::<T>()` wasn't already called once.
-    pub fn import<T: Snippet>(&mut self) -> &'static str {
-        let dep_entrypoint = T::entrypoint();
+    pub fn import(&mut self, snippet: Box<dyn Snippet>) -> &'static str {
+        let dep_entrypoint = snippet.entrypoint();
         if self.seen_snippets.insert(dep_entrypoint) {
-            let dep_function_body = T::function_body(self);
+            let dep_function_body = snippet.function_body(self);
             self.function_bodies.insert(dep_function_body);
         }
 
-        T::entrypoint()
+        snippet.entrypoint()
     }
 
     #[allow(dead_code)]
@@ -62,11 +65,7 @@ impl Library {
     }
 
     pub fn all_imports_as_instruction_lists(&self) -> Vec<LabelledInstruction> {
-        self.function_bodies
-            .iter()
-            .map(|x| parse(x).unwrap())
-            .collect_vec()
-            .concat()
+        to_labelled(&parse(&self.function_bodies.iter().join("\n")).unwrap())
     }
 
     pub fn kmalloc(&mut self, num_words: usize) -> usize {
@@ -76,177 +75,200 @@ impl Library {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use std::collections::HashMap;
+pub struct DummyTestSnippetA;
+pub struct DummyTestSnippetB;
+pub struct DummyTestSnippetC;
 
-    use num::One;
-    use twenty_first::shared_math::b_field_element::BFieldElement;
+impl Snippet for DummyTestSnippetA {
+    fn stack_diff() -> isize {
+        3
+    }
+
+    fn entrypoint(&self) -> &'static str {
+        "a_dummy_test_value"
+    }
+
+    fn function_body(&self, library: &mut Library) -> String {
+        let entrypoint = self.entrypoint();
+        let b = library.import(Box::new(DummyTestSnippetB));
+        let c = library.import(Box::new(DummyTestSnippetC));
+
+        format!(
+            "
+                {entrypoint}:
+                    call {b}
+                    call {c}
+                    return
+                "
+        )
+    }
+
+    fn rust_shadowing(
+        stack: &mut Vec<BFieldElement>,
+        _std_in: Vec<BFieldElement>,
+        _secret_in: Vec<BFieldElement>,
+        _memory: &mut HashMap<BFieldElement, BFieldElement>,
+    ) {
+        stack.push(BFieldElement::one());
+        stack.push(BFieldElement::one());
+        stack.push(BFieldElement::one());
+    }
+
+    fn inputs() -> Vec<&'static str> {
+        vec![]
+    }
+
+    fn outputs() -> Vec<&'static str> {
+        vec!["1", "1", "1"]
+    }
+
+    fn crash_conditions() -> Vec<&'static str> {
+        vec![]
+    }
+
+    fn gen_input_states() -> Vec<crate::ExecutionState> {
+        vec![]
+    }
+
+    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![]
+    }
+
+    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::BFE, DataType::BFE, DataType::BFE]
+    }
+}
+
+impl Snippet for DummyTestSnippetB {
+    fn stack_diff() -> isize {
+        2
+    }
+
+    fn entrypoint(&self) -> &'static str {
+        "b_dummy_test_value"
+    }
+
+    fn function_body(&self, library: &mut Library) -> String {
+        let entrypoint = self.entrypoint();
+        let c = library.import(Box::new(DummyTestSnippetC));
+
+        format!(
+            "
+                {entrypoint}:
+                    call {c}
+                    call {c}
+                    return
+                "
+        )
+    }
+
+    fn rust_shadowing(
+        stack: &mut Vec<BFieldElement>,
+        _std_in: Vec<BFieldElement>,
+        _secret_in: Vec<BFieldElement>,
+        _memory: &mut HashMap<BFieldElement, BFieldElement>,
+    ) {
+        stack.push(BFieldElement::one());
+        stack.push(BFieldElement::one());
+    }
+
+    fn inputs() -> Vec<&'static str> {
+        vec![]
+    }
+
+    fn outputs() -> Vec<&'static str> {
+        vec!["1", "1"]
+    }
+
+    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![]
+    }
+
+    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::BFE, DataType::BFE]
+    }
+
+    fn crash_conditions() -> Vec<&'static str> {
+        vec![]
+    }
+
+    fn gen_input_states() -> Vec<crate::ExecutionState> {
+        vec![]
+    }
+}
+
+impl Snippet for DummyTestSnippetC {
+    fn stack_diff() -> isize {
+        1
+    }
+
+    fn entrypoint(&self) -> &'static str {
+        "c_dummy_test_value"
+    }
+
+    fn function_body(&self, _library: &mut Library) -> String {
+        let entrypoint = self.entrypoint();
+
+        format!(
+            "
+                {entrypoint}:
+                    push 1
+                    return
+                "
+        )
+    }
+
+    fn rust_shadowing(
+        stack: &mut Vec<BFieldElement>,
+        _std_in: Vec<BFieldElement>,
+        _secret_in: Vec<BFieldElement>,
+        _memory: &mut HashMap<BFieldElement, BFieldElement>,
+    ) {
+        stack.push(BFieldElement::one())
+    }
+
+    fn inputs() -> Vec<&'static str> {
+        vec![]
+    }
+
+    fn outputs() -> Vec<&'static str> {
+        vec!["1"]
+    }
+
+    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![]
+    }
+
+    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::BFE]
+    }
+
+    fn crash_conditions() -> Vec<&'static str> {
+        vec![]
+    }
+
+    fn gen_input_states() -> Vec<crate::ExecutionState> {
+        vec![]
+    }
+}
+
+#[cfg(test)]
+pub mod library_tests {
+
+    use std::collections::HashMap;
 
     use crate::get_init_tvm_stack;
     use crate::test_helpers::rust_tasm_equivalence_prop;
 
     use super::*;
 
-    struct A();
-    struct B();
-    struct C();
-
-    impl Snippet for A {
-        fn stack_diff() -> isize {
-            3
-        }
-
-        fn entrypoint() -> &'static str {
-            "a"
-        }
-
-        fn function_body(library: &mut Library) -> String {
-            let entrypoint = Self::entrypoint();
-            let b = library.import::<B>();
-            let c = library.import::<C>();
-
-            format!(
-                "
-                {entrypoint}:
-                    call {b}
-                    call {c}
-                    return
-                "
-            )
-        }
-
-        fn rust_shadowing(
-            stack: &mut Vec<BFieldElement>,
-            _std_in: Vec<BFieldElement>,
-            _secret_in: Vec<BFieldElement>,
-            _memory: &mut HashMap<BFieldElement, BFieldElement>,
-        ) {
-            stack.push(BFieldElement::one());
-            stack.push(BFieldElement::one());
-            stack.push(BFieldElement::one());
-        }
-
-        fn inputs() -> Vec<&'static str> {
-            vec![]
-        }
-
-        fn outputs() -> Vec<&'static str> {
-            vec!["1", "1", "1"]
-        }
-
-        fn crash_conditions() -> Vec<&'static str> {
-            vec![]
-        }
-
-        fn gen_input_states() -> Vec<crate::ExecutionState> {
-            vec![]
-        }
-    }
-
-    impl Snippet for B {
-        fn stack_diff() -> isize {
-            2
-        }
-
-        fn entrypoint() -> &'static str {
-            "b"
-        }
-
-        fn function_body(library: &mut Library) -> String {
-            let entrypoint = Self::entrypoint();
-            let c = library.import::<C>();
-
-            format!(
-                "
-                {entrypoint}:
-                    call {c}
-                    call {c}
-                    return
-                "
-            )
-        }
-
-        fn rust_shadowing(
-            stack: &mut Vec<BFieldElement>,
-            _std_in: Vec<BFieldElement>,
-            _secret_in: Vec<BFieldElement>,
-            _memory: &mut HashMap<BFieldElement, BFieldElement>,
-        ) {
-            stack.push(BFieldElement::one());
-            stack.push(BFieldElement::one());
-        }
-
-        fn inputs() -> Vec<&'static str> {
-            vec![]
-        }
-
-        fn outputs() -> Vec<&'static str> {
-            vec!["1", "1"]
-        }
-
-        fn crash_conditions() -> Vec<&'static str> {
-            vec![]
-        }
-
-        fn gen_input_states() -> Vec<crate::ExecutionState> {
-            vec![]
-        }
-    }
-
-    impl Snippet for C {
-        fn stack_diff() -> isize {
-            1
-        }
-
-        fn entrypoint() -> &'static str {
-            "c"
-        }
-
-        fn function_body(_library: &mut Library) -> String {
-            let entrypoint = Self::entrypoint();
-
-            format!(
-                "
-                {entrypoint}:
-                    push 1
-                    return
-                "
-            )
-        }
-
-        fn rust_shadowing(
-            stack: &mut Vec<BFieldElement>,
-            _std_in: Vec<BFieldElement>,
-            _secret_in: Vec<BFieldElement>,
-            _memory: &mut HashMap<BFieldElement, BFieldElement>,
-        ) {
-            stack.push(BFieldElement::one())
-        }
-
-        fn inputs() -> Vec<&'static str> {
-            vec![]
-        }
-
-        fn outputs() -> Vec<&'static str> {
-            vec!["1"]
-        }
-
-        fn crash_conditions() -> Vec<&'static str> {
-            vec![]
-        }
-
-        fn gen_input_states() -> Vec<crate::ExecutionState> {
-            vec![]
-        }
-    }
-
     #[test]
     fn library_includes() {
         let empty_stack = get_init_tvm_stack();
 
         let expected = None;
-        let _execution_result = rust_tasm_equivalence_prop::<A>(
+        let _execution_result = rust_tasm_equivalence_prop::<DummyTestSnippetA>(
+            DummyTestSnippetA,
             &empty_stack,
             &[],
             &[],
@@ -254,7 +276,8 @@ mod tests {
             0,
             expected,
         );
-        let _execution_result = rust_tasm_equivalence_prop::<B>(
+        let _execution_result = rust_tasm_equivalence_prop::<DummyTestSnippetB>(
+            DummyTestSnippetB,
             &empty_stack,
             &[],
             &[],
@@ -262,7 +285,8 @@ mod tests {
             0,
             expected,
         );
-        let _execution_result = rust_tasm_equivalence_prop::<C>(
+        let _execution_result = rust_tasm_equivalence_prop::<DummyTestSnippetC>(
+            DummyTestSnippetC,
             &empty_stack,
             &[],
             &[],
@@ -275,10 +299,9 @@ mod tests {
     #[test]
     fn all_imports_as_instruction_lists() {
         let mut lib = Library::default();
-        lib.import::<A>();
-        lib.import::<A>();
-        lib.import::<C>();
-        let ret = lib.all_imports_as_instruction_lists();
-        println!("ret = {}", ret.iter().map(|x| x.to_string()).join("\n"));
+        lib.import(Box::new(DummyTestSnippetA));
+        lib.import(Box::new(DummyTestSnippetA));
+        lib.import(Box::new(DummyTestSnippetC));
+        let _ret = lib.all_imports_as_instruction_lists();
     }
 }

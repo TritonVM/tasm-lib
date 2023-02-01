@@ -1,0 +1,62 @@
+[
+  {
+    "name": "right_lineage_count_and_own_height",
+    "processor_table_height": 6182,
+    "hash_table_height": 0,
+    "u32_table_height": 7782
+  },
+  {
+    "name": "right_lineage_count_and_own_height",
+    "processor_table_height": 6512,
+    "hash_table_height": 0,
+    "u32_table_height": 8603
+  },
+  {
+    "name": "right_lineage_count_and_own_height",
+    "processor_table_height": 6454,
+    "hash_table_height": 0,
+    "u32_table_height": 8481
+  },
+  {
+    "name": "right_lineage_count_and_own_height",
+    "processor_table_height": 6418,
+    "hash_table_height": 0,
+    "u32_table_height": 8423
+  },
+  {
+    "name": "right_lineage_count_and_own_height",
+    "processor_table_height": 6352,
+    "hash_table_height": 0,
+    "u32_table_height": 8467
+  },
+  {
+    "name": "right_lineage_count_and_own_height",
+    "processor_table_height": 6452,
+    "hash_table_height": 0,
+    "u32_table_height": 8481
+  },
+  {
+    "name": "right_lineage_count_and_own_height",
+    "processor_table_height": 6474,
+    "hash_table_height": 0,
+    "u32_table_height": 8603
+  },
+  {
+    "name": "right_lineage_count_and_own_height",
+    "processor_table_height": 6470,
+    "hash_table_height": 0,
+    "u32_table_height": 8541
+  },
+  {
+    "name": "right_lineage_count_and_own_height",
+    "processor_table_height": 5940,
+    "hash_table_height": 0,
+    "u32_table_height": 7761
+  },
+  {
+    "name": "right_lineage_count_and_own_height",
+    "processor_table_height": 6350,
+    "hash_table_height": 0,
+    "u32_table_height": 8001
+  }
+]

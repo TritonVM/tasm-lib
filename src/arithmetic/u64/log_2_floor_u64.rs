@@ -5,10 +5,11 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::log_2_floor;
 
 use crate::library::Library;
-use crate::snippet::Snippet;
+use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 
-pub struct Log2FloorU64();
+#[derive(Clone)]
+pub struct Log2FloorU64;
 
 impl Snippet for Log2FloorU64 {
     fn inputs() -> Vec<&'static str> {
@@ -17,6 +18,14 @@ impl Snippet for Log2FloorU64 {
 
     fn outputs() -> Vec<&'static str> {
         vec!["log2_floor(value)"]
+    }
+
+    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::U64]
+    }
+
+    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::U32]
     }
 
     fn crash_conditions() -> Vec<&'static str> {
@@ -37,12 +46,12 @@ impl Snippet for Log2FloorU64 {
         -1
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "log_2_floor_u64"
     }
 
-    fn function_body(_library: &mut Library) -> String {
-        let entrypoint = Self::entrypoint();
+    fn function_body(&self, _library: &mut Library) -> String {
+        let entrypoint = self.entrypoint();
 
         // assumes that top of stack is a valid u32s<2>
         // BEFORE: _ value_hi value_lo
@@ -119,12 +128,12 @@ mod tests {
 
     #[test]
     fn log_2_floor_u64_test() {
-        rust_tasm_equivalence_prop_new::<Log2FloorU64>();
+        rust_tasm_equivalence_prop_new::<Log2FloorU64>(Log2FloorU64);
     }
 
     #[test]
     fn log_2_floor_u64_benchmark() {
-        bench_and_write::<Log2FloorU64>();
+        bench_and_write::<Log2FloorU64>(Log2FloorU64);
     }
 
     #[should_panic]
@@ -135,6 +144,7 @@ mod tests {
         init_stack.push(BFieldElement::new(u32::MAX as u64 + 1));
 
         let _execution_result = rust_tasm_equivalence_prop::<Log2FloorU64>(
+            Log2FloorU64,
             &init_stack,
             &[],
             &[],
@@ -152,6 +162,7 @@ mod tests {
         init_stack.push(BFieldElement::new(16));
 
         let _execution_result = rust_tasm_equivalence_prop::<Log2FloorU64>(
+            Log2FloorU64,
             &init_stack,
             &[],
             &[],
@@ -170,6 +181,7 @@ mod tests {
         init_stack.push(BFieldElement::new(16));
 
         let _execution_result = rust_tasm_equivalence_prop::<Log2FloorU64>(
+            Log2FloorU64,
             &init_stack,
             &[],
             &[],
@@ -238,6 +250,7 @@ mod tests {
         }
 
         let _execution_result = rust_tasm_equivalence_prop::<Log2FloorU64>(
+            Log2FloorU64,
             &init_stack,
             &[],
             &[],

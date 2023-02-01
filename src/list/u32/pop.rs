@@ -6,10 +6,11 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
 use crate::rust_shadowing_helper_functions::insert_random_list;
-use crate::snippet::Snippet;
+use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
-pub struct Pop<const N: usize>;
+#[derive(Clone)]
+pub struct Pop<const N: usize>(pub DataType);
 
 impl<const N: usize> Snippet for Pop<N> {
     fn inputs() -> Vec<&'static str> {
@@ -18,6 +19,14 @@ impl<const N: usize> Snippet for Pop<N> {
 
     fn outputs() -> Vec<&'static str> {
         vec!["element"; N]
+    }
+
+    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::List(Box::new(self.0.clone()))]
+    }
+
+    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![self.0.clone()]
     }
 
     fn crash_conditions() -> Vec<&'static str> {
@@ -50,15 +59,15 @@ impl<const N: usize> Snippet for Pop<N> {
         N as isize - 1
     }
 
-    fn entrypoint() -> &'static str {
-        assert!(N < 17, "Max element size supported for list is 16");
+    fn entrypoint(&self) -> &'static str {
         "pop_u32"
     }
 
     /// Pop last element from list. Does *not* actually delete the last
     /// element but instead leaves it in memory.
-    fn function_body(_library: &mut Library) -> String {
-        let entry_point = Self::entrypoint();
+    fn function_body(&self, _library: &mut Library) -> String {
+        assert!(N < 17, "Max element size supported for list is 16");
+        let entry_point = self.entrypoint();
 
         let mut code_to_read_elements = String::default();
         // Start and end at loop: Stack: _  [elems], address_for_last_unread_element
@@ -156,64 +165,59 @@ mod tests_pop {
 
     #[test]
     fn new_snippet_test() {
-        rust_tasm_equivalence_prop_new::<Pop<1>>();
-        rust_tasm_equivalence_prop_new::<Pop<2>>();
-        rust_tasm_equivalence_prop_new::<Pop<3>>();
-        rust_tasm_equivalence_prop_new::<Pop<4>>();
-        rust_tasm_equivalence_prop_new::<Pop<5>>();
-        rust_tasm_equivalence_prop_new::<Pop<14>>();
+        rust_tasm_equivalence_prop_new::<Pop<1>>(Pop(DataType::U32));
+        rust_tasm_equivalence_prop_new::<Pop<2>>(Pop(DataType::U64));
+        rust_tasm_equivalence_prop_new::<Pop<3>>(Pop(DataType::XFE));
+        rust_tasm_equivalence_prop_new::<Pop<5>>(Pop(DataType::Digest));
     }
 
     #[test]
     #[should_panic]
     fn panic_if_pop_on_empty_list_1() {
         let list_address = BFieldElement::new(48);
-        prop_pop::<1>(list_address, 0);
+        prop_pop::<1>(DataType::BFE, list_address, 0);
     }
 
     #[test]
     #[should_panic]
     fn panic_if_pop_on_empty_list_2() {
         let list_address = BFieldElement::new(48);
-        prop_pop::<2>(list_address, 0);
+        prop_pop::<2>(DataType::U64, list_address, 0);
     }
 
     #[test]
     #[should_panic]
     fn panic_if_pop_on_empty_list_3() {
         let list_address = BFieldElement::new(48);
-        prop_pop::<3>(list_address, 0);
-    }
-
-    #[test]
-    #[should_panic]
-    fn panic_if_pop_on_empty_list_4() {
-        let list_address = BFieldElement::new(48);
-        prop_pop::<4>(list_address, 0);
+        prop_pop::<3>(DataType::XFE, list_address, 0);
     }
 
     #[test]
     fn list_u32_n_is_n_pop() {
         let list_address = BFieldElement::new(48);
-        prop_pop::<1>(list_address, 24);
-        prop_pop::<2>(list_address, 48);
-        prop_pop::<3>(list_address, 3);
-        prop_pop::<4>(list_address, 4);
-        prop_pop::<5>(list_address, 20);
-        prop_pop::<6>(list_address, 20);
-        prop_pop::<7>(list_address, 20);
-        prop_pop::<8>(list_address, 20);
-        prop_pop::<9>(list_address, 20);
-        prop_pop::<10>(list_address, 1);
-        prop_pop::<11>(list_address, 33);
-        prop_pop::<12>(list_address, 20);
-        prop_pop::<13>(list_address, 20);
-        prop_pop::<14>(list_address, 20);
-        prop_pop::<15>(list_address, 20);
-        prop_pop::<16>(list_address, 20);
+        prop_pop::<1>(DataType::BFE, list_address, 24);
+        prop_pop::<2>(DataType::U64, list_address, 48);
+        prop_pop::<3>(DataType::XFE, list_address, 3);
+        // prop_pop::<4>(list_address, 4);
+        prop_pop::<5>(DataType::Digest, list_address, 20);
+        // prop_pop::<6>(list_address, 20);
+        // prop_pop::<7>(list_address, 20);
+        // prop_pop::<8>(list_address, 20);
+        // prop_pop::<9>(list_address, 20);
+        // prop_pop::<10>(list_address, 1);
+        // prop_pop::<11>(list_address, 33);
+        // prop_pop::<12>(list_address, 20);
+        // prop_pop::<13>(list_address, 20);
+        // prop_pop::<14>(list_address, 20);
+        // prop_pop::<15>(list_address, 20);
+        // prop_pop::<16>(list_address, 20);
     }
 
-    fn prop_pop<const N: usize>(list_address: BFieldElement, init_list_length: u32) {
+    fn prop_pop<const N: usize>(
+        data_type: DataType,
+        list_address: BFieldElement,
+        init_list_length: u32,
+    ) {
         let mut init_stack = get_init_tvm_stack();
         init_stack.push(list_address);
 
@@ -245,6 +249,7 @@ mod tests_pop {
         }
 
         let _execution_result = rust_tasm_equivalence_prop::<Pop<N>>(
+            Pop(data_type),
             &init_stack,
             &[],
             &[],

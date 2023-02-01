@@ -15,9 +15,10 @@ use crate::arithmetic::u64::lt_u64::LtU64;
 use crate::arithmetic::u64::pow2_u64::Pow2U64;
 use crate::arithmetic::u64::sub_u64::SubU64;
 use crate::library::Library;
-use crate::snippet::Snippet;
+use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
+#[derive(Clone)]
 pub struct MmrLeafIndexToMtIndexAndPeakIndex;
 
 impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
@@ -32,6 +33,14 @@ impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
 
     fn outputs() -> Vec<&'static str> {
         vec!["mt_index_hi", "mt_index_lo", "peak_index"]
+    }
+
+    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::U64, DataType::U64]
+    }
+
+    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::U64, DataType::U32]
     }
 
     fn crash_conditions() -> Vec<&'static str> {
@@ -63,19 +72,19 @@ impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
         -1
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "leaf_index_to_mt_index_and_peak_index"
     }
 
-    fn function_body(library: &mut Library) -> String {
-        let entrypoint = Self::entrypoint();
-        let log_2_floor_u64 = library.import::<Log2FloorU64>();
-        let lt_u64 = library.import::<LtU64>();
-        let add_u64 = library.import::<AddU64>();
-        let and_u64 = library.import::<AndU64>();
-        let pow2_u64 = library.import::<Pow2U64>();
-        let sub_u64 = library.import::<SubU64>();
-        let eq_u64 = library.import::<EqU64>();
+    fn function_body(&self, library: &mut Library) -> String {
+        let entrypoint = self.entrypoint();
+        let log_2_floor_u64 = library.import(Box::new(Log2FloorU64));
+        let lt_u64 = library.import(Box::new(LtU64));
+        let add_u64 = library.import(Box::new(AddU64));
+        let and_u64 = library.import(Box::new(AndU64));
+        let pow2_u64 = library.import(Box::new(Pow2U64));
+        let sub_u64 = library.import(Box::new(SubU64));
+        let eq_u64 = library.import(Box::new(EqU64));
 
         format!(
             "
@@ -211,12 +220,14 @@ mod tests {
 
     #[test]
     fn leaf_index_to_mt_index_test() {
-        rust_tasm_equivalence_prop_new::<MmrLeafIndexToMtIndexAndPeakIndex>();
+        rust_tasm_equivalence_prop_new::<MmrLeafIndexToMtIndexAndPeakIndex>(
+            MmrLeafIndexToMtIndexAndPeakIndex,
+        );
     }
 
     #[test]
     fn leaf_index_to_mt_index_benchmark() {
-        bench_and_write::<MmrLeafIndexToMtIndexAndPeakIndex>();
+        bench_and_write::<MmrLeafIndexToMtIndexAndPeakIndex>(MmrLeafIndexToMtIndexAndPeakIndex);
     }
 
     #[test]
@@ -367,6 +378,7 @@ mod tests {
         expected.push(BFieldElement::new(expected_peak_index as u64));
 
         let _execution_result = rust_tasm_equivalence_prop::<MmrLeafIndexToMtIndexAndPeakIndex>(
+            MmrLeafIndexToMtIndexAndPeakIndex,
             &init_stack,
             &[],
             &[],

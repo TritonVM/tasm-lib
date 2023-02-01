@@ -17,9 +17,10 @@ use crate::library::Library;
 use crate::list::u32::pop::Pop;
 use crate::list::u32::push::Push;
 use crate::list::u32::set_length::SetLength;
-use crate::snippet::Snippet;
+use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, ExecutionState};
 
+#[derive(Clone)]
 pub struct CalculateNewPeaksFromAppend;
 
 impl Snippet for CalculateNewPeaksFromAppend {
@@ -38,6 +39,21 @@ impl Snippet for CalculateNewPeaksFromAppend {
 
     fn outputs() -> Vec<&'static str> {
         vec!["*new_peaks", "*auth_path"]
+    }
+
+    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![
+            DataType::U64,
+            DataType::List(Box::new(DataType::Digest)),
+            DataType::Digest,
+        ]
+    }
+
+    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![
+            DataType::List(Box::new(DataType::Digest)),
+            DataType::List(Box::new(DataType::Digest)),
+        ]
     }
 
     fn crash_conditions() -> Vec<&'static str> {
@@ -91,17 +107,17 @@ impl Snippet for CalculateNewPeaksFromAppend {
         -6
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "calculate_new_peaks_from_append"
     }
 
-    fn function_body(library: &mut Library) -> String {
-        let entrypoint = Self::entrypoint();
-        let data_index_to_node_index = library.import::<DataIndexToNodeIndex>();
-        let right_lineage_length = library.import::<MmrRightLineageLength>();
-        let push = library.import::<Push<DIGEST_LENGTH>>();
-        let pop = library.import::<Pop<DIGEST_LENGTH>>();
-        let set_length = library.import::<SetLength>();
+    fn function_body(&self, library: &mut Library) -> String {
+        let entrypoint = self.entrypoint();
+        let data_index_to_node_index = library.import(Box::new(DataIndexToNodeIndex));
+        let right_lineage_length = library.import(Box::new(MmrRightLineageLength));
+        let push = library.import(Box::new(Push::<DIGEST_LENGTH>(DataType::Digest)));
+        let pop = library.import(Box::new(Pop::<DIGEST_LENGTH>(DataType::Digest)));
+        let set_length = library.import(Box::new(SetLength(DataType::Digest)));
 
         // Allocate memory for the returned auth path for the newly inserted element
         // Warning: This auth path is only allocated *once* even though the code is called multiple times.
@@ -282,12 +298,12 @@ mod tests {
 
     #[test]
     fn calculate_new_peaks_from_append_test() {
-        rust_tasm_equivalence_prop_new::<CalculateNewPeaksFromAppend>();
+        rust_tasm_equivalence_prop_new::<CalculateNewPeaksFromAppend>(CalculateNewPeaksFromAppend);
     }
 
     #[test]
     fn calculate_new_peaks_from_append_benchmark() {
-        bench_and_write::<CalculateNewPeaksFromAppend>();
+        bench_and_write::<CalculateNewPeaksFromAppend>(CalculateNewPeaksFromAppend);
     }
 
     #[test]
@@ -397,6 +413,7 @@ mod tests {
         expected_final_stack.push(auth_paths_pointer);
 
         let _execution_result = rust_tasm_equivalence_prop::<CalculateNewPeaksFromAppend>(
+            CalculateNewPeaksFromAppend,
             &init_stack,
             &[],
             &[],

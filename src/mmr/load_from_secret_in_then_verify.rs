@@ -14,14 +14,15 @@ use twenty_first::util_types::mmr::mmr_trait::Mmr;
 
 use crate::hashing::load_auth_path_from_secret_in::LoadAuthPathFromSecretIn;
 use crate::library::Library;
-use crate::snippet::Snippet;
+use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, ExecutionState};
 
 use super::verify_from_memory::MmrVerifyFromMemory;
 use super::MAX_MMR_HEIGHT;
 
 /// First load from secret-in, then verify from memory
-pub struct MmrLoadFromSecretInThenVerify();
+#[derive(Clone)]
+pub struct MmrLoadFromSecretInThenVerify;
 
 impl Snippet for MmrLoadFromSecretInThenVerify {
     fn inputs() -> Vec<&'static str> {
@@ -45,6 +46,23 @@ impl Snippet for MmrLoadFromSecretInThenVerify {
             "leaf_index_hi",
             "leaf_index_lo",
             "validation_result",
+        ]
+    }
+
+    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![
+            DataType::List(Box::new(DataType::Digest)),
+            DataType::U64,
+            DataType::U64,
+            DataType::Digest,
+        ]
+    }
+
+    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![
+            DataType::List(Box::new(DataType::Digest)),
+            DataType::U64,
+            DataType::Bool,
         ]
     }
 
@@ -152,14 +170,14 @@ impl Snippet for MmrLoadFromSecretInThenVerify {
         -6
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "verify_load_from_secret_in"
     }
 
-    fn function_body(library: &mut Library) -> String {
-        let entrypoint = Self::entrypoint();
-        let load_auth_path_from_secret_in = library.import::<LoadAuthPathFromSecretIn>();
-        let verify_from_memory = library.import::<MmrVerifyFromMemory>();
+    fn function_body(&self, library: &mut Library) -> String {
+        let entrypoint = self.entrypoint();
+        let load_auth_path_from_secret_in = library.import(Box::new(LoadAuthPathFromSecretIn));
+        let verify_from_memory = library.import(Box::new(MmrVerifyFromMemory));
 
         format!(
             "
@@ -268,11 +286,13 @@ mod tests {
 
     #[test]
     fn load_from_secret_in_then_verify_test() {
-        rust_tasm_equivalence_prop_new::<MmrLoadFromSecretInThenVerify>();
+        rust_tasm_equivalence_prop_new::<MmrLoadFromSecretInThenVerify>(
+            MmrLoadFromSecretInThenVerify,
+        );
     }
 
     #[test]
     fn load_from_secret_in_then_verify_benchmark() {
-        bench_and_write::<MmrLoadFromSecretInThenVerify>();
+        bench_and_write::<MmrLoadFromSecretInThenVerify>(MmrLoadFromSecretInThenVerify);
     }
 }

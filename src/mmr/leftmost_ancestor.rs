@@ -11,10 +11,11 @@ use crate::arithmetic::u64::decr_u64::DecrU64;
 use crate::arithmetic::u64::log_2_floor_u64::Log2FloorU64;
 use crate::arithmetic::u64::pow2_u64::Pow2U64;
 use crate::library::Library;
-use crate::snippet::Snippet;
+use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
-pub struct MmrLeftMostAncestor();
+#[derive(Clone)]
+pub struct MmrLeftMostAncestor;
 
 impl Snippet for MmrLeftMostAncestor {
     fn inputs() -> Vec<&'static str> {
@@ -23,6 +24,14 @@ impl Snippet for MmrLeftMostAncestor {
 
     fn outputs() -> Vec<&'static str> {
         vec!["leftmost_ancestor_hi", "leftmost_ancestor_lo", "height"]
+    }
+
+    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::U64]
+    }
+
+    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::U64, DataType::U32]
     }
 
     fn crash_conditions() -> Vec<&'static str> {
@@ -48,15 +57,15 @@ impl Snippet for MmrLeftMostAncestor {
         1
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "mmr_leftmost_ancestor"
     }
 
-    fn function_body(library: &mut Library) -> String {
-        let entrypoint = Self::entrypoint();
-        let decr_u64 = library.import::<DecrU64>();
-        let pow2_u64 = library.import::<Pow2U64>();
-        let log_2_floor_u64 = library.import::<Log2FloorU64>();
+    fn function_body(&self, library: &mut Library) -> String {
+        let entrypoint = self.entrypoint();
+        let decr_u64 = library.import(Box::new(DecrU64));
+        let pow2_u64 = library.import(Box::new(Pow2U64));
+        let log_2_floor_u64 = library.import(Box::new(Log2FloorU64));
         format!(
             "
             // Before: _ node_index_hi node_index_lo
@@ -119,12 +128,12 @@ mod tests {
 
     #[test]
     fn leftmost_ancestor_test() {
-        rust_tasm_equivalence_prop_new::<MmrLeftMostAncestor>();
+        rust_tasm_equivalence_prop_new::<MmrLeftMostAncestor>(MmrLeftMostAncestor);
     }
 
     #[test]
     fn leftmost_ancestor_benchmark() {
-        bench_and_write::<MmrLeftMostAncestor>();
+        bench_and_write::<MmrLeftMostAncestor>(MmrLeftMostAncestor);
     }
 
     #[test]
@@ -226,6 +235,7 @@ mod tests {
         }
 
         let _execution_result = rust_tasm_equivalence_prop::<MmrLeftMostAncestor>(
+            MmrLeftMostAncestor,
             &init_stack,
             &[],
             &[],

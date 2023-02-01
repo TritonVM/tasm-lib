@@ -11,9 +11,11 @@ use crate::library::Library;
 use crate::list::u32::{push::Push, set_length::SetLength};
 use crate::mmr::MAX_MMR_HEIGHT;
 use crate::rust_shadowing_helper_functions;
+use crate::snippet::DataType;
 use crate::snippet::Snippet;
 use crate::{get_init_tvm_stack, ExecutionState};
 
+#[derive(Clone)]
 pub struct LoadAuthPathFromStdIn;
 
 impl Snippet for LoadAuthPathFromStdIn {
@@ -23,6 +25,14 @@ impl Snippet for LoadAuthPathFromStdIn {
 
     fn outputs() -> Vec<&'static str> {
         vec!["auth_path_pointer"]
+    }
+
+    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![]
+    }
+
+    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::List(Box::new(DataType::Digest))]
     }
 
     fn crash_conditions() -> Vec<&'static str> {
@@ -54,17 +64,17 @@ impl Snippet for LoadAuthPathFromStdIn {
         1
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "load_auth_path_from_std_in"
     }
 
-    fn function_body(library: &mut Library) -> String {
-        let entrypoint = Self::entrypoint();
+    fn function_body(&self, library: &mut Library) -> String {
+        let entrypoint = self.entrypoint();
 
         let read_digest_from_std_in = "read_io\n".repeat(DIGEST_LENGTH);
 
-        let set_length = library.import::<SetLength>();
-        let push = library.import::<Push<DIGEST_LENGTH>>();
+        let set_length = library.import(Box::new(SetLength(DataType::Digest)));
+        let push = library.import(Box::new(Push::<DIGEST_LENGTH>(DataType::Digest)));
 
         // Allocate 1 word for length indication, and `DIGEST_LENGTH` words per auth path element
         // Warning: Statically allocated list. Will be overwritten at same location by subsequent
@@ -162,11 +172,11 @@ mod load_auth_path_from_std_in_tests {
 
     #[test]
     fn load_auth_path_from_std_in_test() {
-        rust_tasm_equivalence_prop_new::<LoadAuthPathFromStdIn>();
+        rust_tasm_equivalence_prop_new::<LoadAuthPathFromStdIn>(LoadAuthPathFromStdIn);
     }
 
     #[test]
     fn load_auth_path_from_std_in_benchmark() {
-        bench_and_write::<LoadAuthPathFromStdIn>();
+        bench_and_write::<LoadAuthPathFromStdIn>(LoadAuthPathFromStdIn);
     }
 }

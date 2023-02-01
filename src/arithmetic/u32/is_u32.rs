@@ -5,10 +5,11 @@ use rand::RngCore;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
-use crate::snippet::Snippet;
+use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 
-pub struct IsU32();
+#[derive(Clone)]
+pub struct IsU32;
 
 impl Snippet for IsU32 {
     fn inputs() -> Vec<&'static str> {
@@ -17,6 +18,14 @@ impl Snippet for IsU32 {
 
     fn outputs() -> Vec<&'static str> {
         vec!["value < 2^32"]
+    }
+
+    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::U32]
+    }
+
+    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::Bool]
     }
 
     fn crash_conditions() -> Vec<&'static str> {
@@ -42,7 +51,7 @@ impl Snippet for IsU32 {
         0
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "is_u32"
     }
 
@@ -50,8 +59,8 @@ impl Snippet for IsU32 {
     /// place 0 on stack. Consumes top element of stack, leaves a boolean
     /// on top of stack. So this subroutine does not change the height
     /// of the stack
-    fn function_body(_library: &mut Library) -> String {
-        let entrypoint = Self::entrypoint();
+    fn function_body(&self, _library: &mut Library) -> String {
+        let entrypoint = self.entrypoint();
         format!(
             "
             {entrypoint}:
@@ -92,12 +101,12 @@ mod tests {
 
     #[test]
     fn is_u32_test() {
-        rust_tasm_equivalence_prop_new::<IsU32>();
+        rust_tasm_equivalence_prop_new::<IsU32>(IsU32);
     }
 
     #[test]
     fn is_u32_benchmark() {
-        bench_and_write::<IsU32>();
+        bench_and_write::<IsU32>(IsU32);
     }
 
     #[test]
@@ -143,6 +152,7 @@ mod tests {
         init_stack.push(some_value);
 
         let _execution_result = rust_tasm_equivalence_prop::<IsU32>(
+            IsU32,
             &init_stack,
             &[],
             &[],

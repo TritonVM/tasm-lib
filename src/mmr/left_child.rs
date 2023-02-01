@@ -10,9 +10,10 @@ use twenty_first::util_types::mmr;
 use crate::arithmetic::u64::pow2_u64::Pow2U64;
 use crate::arithmetic::u64::sub_u64::SubU64;
 use crate::library::Library;
-use crate::snippet::Snippet;
+use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
+#[derive(Clone)]
 pub struct MmrLeftChild;
 
 impl Snippet for MmrLeftChild {
@@ -22,6 +23,14 @@ impl Snippet for MmrLeftChild {
 
     fn outputs() -> Vec<&'static str> {
         vec!["left_child_hi", "left_child_lo"]
+    }
+
+    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::U64, DataType::U32]
+    }
+
+    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::U64]
     }
 
     fn crash_conditions() -> Vec<&'static str> {
@@ -50,14 +59,14 @@ impl Snippet for MmrLeftChild {
         -1
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "mmr_left_child"
     }
 
-    fn function_body(library: &mut Library) -> String {
-        let entrypoint = Self::entrypoint();
-        let pow2_u64 = library.import::<Pow2U64>();
-        let sub_u64 = library.import::<SubU64>();
+    fn function_body(&self, library: &mut Library) -> String {
+        let entrypoint = self.entrypoint();
+        let pow2_u64 = library.import(Box::new(Pow2U64));
+        let sub_u64 = library.import(Box::new(SubU64));
         format!(
             "
             // Before: _ ni_hi ni_lo height
@@ -105,12 +114,12 @@ mod tests {
 
     #[test]
     fn left_child_test() {
-        rust_tasm_equivalence_prop_new::<MmrLeftChild>();
+        rust_tasm_equivalence_prop_new::<MmrLeftChild>(MmrLeftChild);
     }
 
     #[test]
     fn left_child_benchmark() {
-        bench_and_write::<MmrLeftChild>();
+        bench_and_write::<MmrLeftChild>(MmrLeftChild);
     }
 
     #[test]
@@ -144,6 +153,7 @@ mod tests {
         init_stack.push(BFieldElement::new(height as u64));
 
         let _execution_result = rust_tasm_equivalence_prop::<MmrLeftChild>(
+            MmrLeftChild,
             &init_stack,
             &[],
             &[],

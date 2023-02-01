@@ -9,9 +9,10 @@ use twenty_first::util_types::mmr;
 
 use crate::arithmetic::u64::decr_u64::DecrU64;
 use crate::library::Library;
-use crate::snippet::Snippet;
+use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
+#[derive(Clone)]
 pub struct MmrRightChild;
 
 impl Snippet for MmrRightChild {
@@ -21,6 +22,14 @@ impl Snippet for MmrRightChild {
 
     fn outputs() -> Vec<&'static str> {
         vec!["right_child_hi", "right_child_lo"]
+    }
+
+    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::U64]
+    }
+
+    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::U64]
     }
 
     fn crash_conditions() -> Vec<&'static str> {
@@ -46,14 +55,14 @@ impl Snippet for MmrRightChild {
         0
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "mmr_right_child"
     }
 
     /// Consider inlining this, instead of calling a function
-    fn function_body(library: &mut Library) -> String {
-        let entrypoint = Self::entrypoint();
-        let decr_u64 = library.import::<DecrU64>();
+    fn function_body(&self, library: &mut Library) -> String {
+        let entrypoint = self.entrypoint();
+        let decr_u64 = library.import(Box::new(DecrU64));
         format!(
             "
             // Before: _ nodex_index_hi node_index_lo
@@ -95,12 +104,12 @@ mod tests {
 
     #[test]
     fn left_child_test() {
-        rust_tasm_equivalence_prop_new::<MmrRightChild>();
+        rust_tasm_equivalence_prop_new::<MmrRightChild>(MmrRightChild);
     }
 
     #[test]
     fn left_child_benchmark() {
-        bench_and_write::<MmrRightChild>();
+        bench_and_write::<MmrRightChild>(MmrRightChild);
     }
 
     #[test]
@@ -128,6 +137,7 @@ mod tests {
         }
 
         let _execution_result = rust_tasm_equivalence_prop::<MmrRightChild>(
+            MmrRightChild,
             &init_stack,
             &[],
             &[],

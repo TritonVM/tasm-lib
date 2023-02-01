@@ -6,12 +6,14 @@ use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
-use crate::snippet::Snippet;
+use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 
-pub struct LtU64();
+#[derive(Clone)]
+pub struct LtU64;
 
-pub struct LtStandardU64();
+#[derive(Clone)]
+pub struct LtStandardU64;
 
 /// This `lt_u64` does not consume its arguments, which is the norm for tasm functions.
 ///
@@ -23,6 +25,14 @@ impl Snippet for LtU64 {
 
     fn outputs() -> Vec<&'static str> {
         vec!["rhs_hi", "rhs_lo", "lhs_hi", "lhs_lo", "(lhs < rhs)"]
+    }
+
+    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::U64, DataType::U64]
+    }
+
+    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::U64, DataType::U64, DataType::Bool]
     }
 
     fn crash_conditions() -> Vec<&'static str> {
@@ -52,14 +62,14 @@ impl Snippet for LtU64 {
         1
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "lt_u64"
     }
 
     /// Before: _ rhs_hi rhs_lo lhs_hi lhs_lo
     /// After: _ rhs_hi rhs_lo lhs_hi lhs_lo  (lhs < rhs)
-    fn function_body(_library: &mut Library) -> String {
-        let entrypoint = Self::entrypoint();
+    fn function_body(&self, _library: &mut Library) -> String {
+        let entrypoint = self.entrypoint();
         format!(
             "
             // Before: _ rhs_hi rhs_lo lhs_hi lhs_lo
@@ -132,6 +142,14 @@ impl Snippet for LtStandardU64 {
         vec!["(lhs < rhs)"]
     }
 
+    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::U64, DataType::U64]
+    }
+
+    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::Bool]
+    }
+
     fn crash_conditions() -> Vec<&'static str> {
         vec!["Either input is not u32"]
     }
@@ -146,12 +164,12 @@ impl Snippet for LtStandardU64 {
         -3
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "lt_standard_u64"
     }
 
-    fn function_body(_library: &mut Library) -> String {
-        let entrypoint = Self::entrypoint();
+    fn function_body(&self, _library: &mut Library) -> String {
+        let entrypoint = self.entrypoint();
         format!(
             "
             // Before: _ rhs_hi rhs_lo lhs_hi lhs_lo
@@ -231,17 +249,17 @@ mod tests {
 
     #[test]
     fn lt_u64_test_new_snippet() {
-        rust_tasm_equivalence_prop_new::<LtU64>();
+        rust_tasm_equivalence_prop_new::<LtU64>(LtU64);
     }
 
     #[test]
     fn standard_lt_u64_test_new_snippet() {
-        rust_tasm_equivalence_prop_new::<LtStandardU64>();
+        rust_tasm_equivalence_prop_new::<LtStandardU64>(LtStandardU64);
     }
 
     #[test]
     fn log_2_floor_u64_benchmark() {
-        bench_and_write::<LtStandardU64>();
+        bench_and_write::<LtStandardU64>(LtStandardU64);
     }
 
     #[test]
@@ -362,6 +380,7 @@ mod tests {
         let mut memory = HashMap::default();
         let words_allocated = 0;
         let _execution_result = rust_tasm_equivalence_prop::<LtU64>(
+            LtU64,
             &init_stack,
             stdin,
             secret_in,
@@ -382,6 +401,7 @@ mod tests {
         let words_allocated = 0;
         let expected = None;
         let _execution_result = rust_tasm_equivalence_prop::<LtU64>(
+            LtU64,
             &init_stack,
             stdin,
             secret_in,

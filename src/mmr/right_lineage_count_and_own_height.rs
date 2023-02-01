@@ -9,9 +9,10 @@ use super::right_child::MmrRightChild;
 use crate::arithmetic::u64::eq_u64::EqU64;
 use crate::arithmetic::u64::lt_u64::LtU64;
 use crate::library::Library;
-use crate::snippet::Snippet;
+use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
+#[derive(Clone)]
 pub struct MmrRightLineageCountAndHeight;
 
 impl Snippet for MmrRightLineageCountAndHeight {
@@ -21,6 +22,14 @@ impl Snippet for MmrRightLineageCountAndHeight {
 
     fn outputs() -> Vec<&'static str> {
         vec!["right_lineage_count", "height"]
+    }
+
+    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::U64]
+    }
+
+    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::U32, DataType::U32]
     }
 
     fn crash_conditions() -> Vec<&'static str> {
@@ -42,30 +51,24 @@ impl Snippet for MmrRightLineageCountAndHeight {
         ret
     }
 
-    fn stack_diff() -> isize
-    where
-        Self: Sized,
-    {
+    fn stack_diff() -> isize {
         0
     }
 
-    fn entrypoint() -> &'static str
-    where
-        Self: Sized,
-    {
-        "right_ancestor_count_and_own_height"
+    fn entrypoint(&self) -> &'static str {
+        "right_lineage_count_and_own_height"
     }
 
-    fn function_body(library: &mut Library) -> String
+    fn function_body(&self, library: &mut Library) -> String
     where
         Self: Sized,
     {
-        let entrypoint = Self::entrypoint();
-        let eq_u64 = library.import::<EqU64>();
-        let lt_u64 = library.import::<LtU64>();
-        let left_child = library.import::<MmrLeftChild>();
-        let right_child = library.import::<MmrRightChild>();
-        let leftmost_ancestor = library.import::<MmrLeftMostAncestor>();
+        let entrypoint = self.entrypoint();
+        let eq_u64 = library.import(Box::new(EqU64));
+        let lt_u64 = library.import(Box::new(LtU64));
+        let left_child = library.import(Box::new(MmrLeftChild));
+        let right_child = library.import(Box::new(MmrRightChild));
+        let leftmost_ancestor = library.import(Box::new(MmrLeftMostAncestor));
 
         format!(
             "
@@ -249,12 +252,14 @@ mod tests {
 
     #[test]
     fn left_child_test() {
-        rust_tasm_equivalence_prop_new::<MmrRightChild>();
+        rust_tasm_equivalence_prop_new::<MmrRightLineageCountAndHeight>(
+            MmrRightLineageCountAndHeight,
+        );
     }
 
     #[test]
     fn left_child_benchmark() {
-        bench_and_write::<MmrRightChild>();
+        bench_and_write::<MmrRightLineageCountAndHeight>(MmrRightLineageCountAndHeight);
     }
 
     #[test]
@@ -338,6 +343,7 @@ mod tests {
         ]
         .concat();
         let _execution_result = rust_tasm_equivalence_prop::<MmrRightLineageCountAndHeight>(
+            MmrRightLineageCountAndHeight,
             &init_stack,
             &[],
             &[],

@@ -19,11 +19,12 @@ use crate::library::Library;
 use crate::list::u32::get::Get;
 use crate::list::u32::set::Set;
 use crate::mmr::MAX_MMR_HEIGHT;
-use crate::snippet::Snippet;
+use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, ExecutionState};
 
 /// Calculate new MMR peaks from a leaf mutation using Merkle tree indices walk up the tree
-pub struct MmrCalculateNewPeaksFromLeafMutationMtIndices();
+#[derive(Clone)]
+pub struct MmrCalculateNewPeaksFromLeafMutationMtIndices;
 
 impl Snippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
     fn inputs() -> Vec<&'static str> {
@@ -44,6 +45,20 @@ impl Snippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
 
     fn outputs() -> Vec<&'static str> {
         vec!["*auth_path", "leaf_index_hi", "leaf_index_lo"]
+    }
+
+    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![
+            DataType::List(Box::new(DataType::Digest)),
+            DataType::U64,
+            DataType::List(Box::new(DataType::Digest)),
+            DataType::Digest,
+            DataType::U64,
+        ]
+    }
+
+    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::List(Box::new(DataType::Digest)), DataType::U64]
     }
 
     fn crash_conditions() -> Vec<&'static str> {
@@ -73,18 +88,18 @@ impl Snippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
         -8
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "calculate_new_peaks_from_leaf_mutation"
     }
 
-    fn function_body(library: &mut Library) -> String {
-        let entrypoint = Self::entrypoint();
-        let leaf_index_to_mt_index = library.import::<MmrLeafIndexToMtIndexAndPeakIndex>();
-        let u32_is_odd = library.import::<U32IsOdd>();
-        let eq_u64 = library.import::<EqU64>();
-        let get = library.import::<Get<DIGEST_LENGTH>>();
-        let set = library.import::<Set<DIGEST_LENGTH>>();
-        let div_2 = library.import::<Div2U64>();
+    fn function_body(&self, library: &mut Library) -> String {
+        let entrypoint = self.entrypoint();
+        let leaf_index_to_mt_index = library.import(Box::new(MmrLeafIndexToMtIndexAndPeakIndex));
+        let u32_is_odd = library.import(Box::new(U32IsOdd));
+        let eq_u64 = library.import(Box::new(EqU64));
+        let get = library.import(Box::new(Get::<DIGEST_LENGTH>(DataType::Digest)));
+        let set = library.import(Box::new(Set::<DIGEST_LENGTH>(DataType::Digest)));
+        let div_2 = library.import(Box::new(Div2U64));
 
         format!(
             "
@@ -322,12 +337,16 @@ mod leaf_mutation_tests {
 
     #[test]
     fn calculate_new_peaks_from_leaf_mutation_test() {
-        rust_tasm_equivalence_prop_new::<MmrCalculateNewPeaksFromLeafMutationMtIndices>();
+        rust_tasm_equivalence_prop_new::<MmrCalculateNewPeaksFromLeafMutationMtIndices>(
+            MmrCalculateNewPeaksFromLeafMutationMtIndices,
+        );
     }
 
     #[test]
     fn calculate_new_peaks_from_leaf_mutation_benchmark() {
-        bench_and_write::<MmrCalculateNewPeaksFromLeafMutationMtIndices>();
+        bench_and_write::<MmrCalculateNewPeaksFromLeafMutationMtIndices>(
+            MmrCalculateNewPeaksFromLeafMutationMtIndices,
+        );
     }
 
     #[test]
@@ -535,6 +554,7 @@ mod leaf_mutation_tests {
 
         let _execution_result =
             rust_tasm_equivalence_prop::<MmrCalculateNewPeaksFromLeafMutationMtIndices>(
+                MmrCalculateNewPeaksFromLeafMutationMtIndices,
                 &init_stack,
                 &[],
                 &[],

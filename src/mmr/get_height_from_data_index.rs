@@ -7,9 +7,10 @@ use twenty_first::shared_math::other::log_2_floor;
 use crate::arithmetic::u64::incr_u64::IncrU64;
 use crate::arithmetic::u64::log_2_floor_u64::Log2FloorU64;
 use crate::library::Library;
-use crate::snippet::Snippet;
+use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
+#[derive(Clone)]
 pub struct GetHeightFromDataIndex;
 
 impl Snippet for GetHeightFromDataIndex {
@@ -19,6 +20,14 @@ impl Snippet for GetHeightFromDataIndex {
 
     fn outputs() -> Vec<&'static str> {
         vec!["height"]
+    }
+
+    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::U64]
+    }
+
+    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::U32]
     }
 
     fn crash_conditions() -> Vec<&'static str> {
@@ -45,14 +54,14 @@ impl Snippet for GetHeightFromDataIndex {
         -1
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "get_height_from_leaf_index"
     }
 
-    fn function_body(library: &mut Library) -> String {
-        let entrypoint = Self::entrypoint();
-        let incr_u64 = library.import::<IncrU64>();
-        let log_2_floor_u64 = library.import::<Log2FloorU64>();
+    fn function_body(&self, library: &mut Library) -> String {
+        let entrypoint = self.entrypoint();
+        let incr_u64 = library.import(Box::new(IncrU64));
+        let log_2_floor_u64 = library.import(Box::new(Log2FloorU64));
         format!(
             "
             // Return the height of the MMR if this data index was the last leaf inserted
@@ -92,12 +101,12 @@ mod tests {
 
     #[test]
     fn get_height_from_data_index_test() {
-        rust_tasm_equivalence_prop_new::<GetHeightFromDataIndex>();
+        rust_tasm_equivalence_prop_new::<GetHeightFromDataIndex>(GetHeightFromDataIndex);
     }
 
     #[test]
     fn get_height_from_data_index_benchmark() {
-        bench_and_write::<GetHeightFromDataIndex>();
+        bench_and_write::<GetHeightFromDataIndex>(GetHeightFromDataIndex);
     }
 
     #[test]
@@ -181,6 +190,7 @@ mod tests {
         }
 
         let _execution_result = rust_tasm_equivalence_prop::<GetHeightFromDataIndex>(
+            GetHeightFromDataIndex,
             &init_stack,
             &[],
             &[],

@@ -6,9 +6,10 @@ use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
-use crate::snippet::Snippet;
+use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 
+#[derive(Clone)]
 pub struct EqU64;
 
 impl Snippet for EqU64 {
@@ -18,6 +19,14 @@ impl Snippet for EqU64 {
 
     fn outputs() -> Vec<&'static str> {
         vec!["rhs_hi == lhs_hi && rhs_lo == rhs_lo"]
+    }
+
+    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::U64, DataType::U64]
+    }
+
+    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::Bool]
     }
 
     fn crash_conditions() -> Vec<&'static str> {
@@ -40,12 +49,12 @@ impl Snippet for EqU64 {
         -3
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "eq_u64"
     }
 
-    fn function_body(_library: &mut Library) -> String {
-        let entrypoint = Self::entrypoint();
+    fn function_body(&self, _library: &mut Library) -> String {
+        let entrypoint = self.entrypoint();
         format!(
             "
             // Before: _ hi_r lo_r hi_l lo_l
@@ -103,12 +112,12 @@ mod tests {
 
     #[test]
     fn eq_u64_test() {
-        rust_tasm_equivalence_prop_new::<EqU64>();
+        rust_tasm_equivalence_prop_new::<EqU64>(EqU64);
     }
 
     #[test]
     fn eq_u64_benchmark() {
-        bench_and_write::<EqU64>();
+        bench_and_write::<EqU64>(EqU64);
     }
 
     #[test]
@@ -234,6 +243,7 @@ mod tests {
         }
 
         let _execution_result = rust_tasm_equivalence_prop::<EqU64>(
+            EqU64,
             &init_stack,
             &[],
             &[],

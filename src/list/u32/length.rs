@@ -5,11 +5,12 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
 use crate::rust_shadowing_helper_functions::insert_random_list;
-use crate::snippet::Snippet;
+use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
 // Called "Long" because this logic can be shortened
-pub struct LengthLong;
+#[derive(Clone)]
+pub struct LengthLong(pub DataType);
 
 impl Snippet for LengthLong {
     fn inputs() -> Vec<&'static str> {
@@ -18,6 +19,14 @@ impl Snippet for LengthLong {
 
     fn outputs() -> Vec<&'static str> {
         vec!["list_length"]
+    }
+
+    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::List(Box::new(self.0.clone()))]
+    }
+
+    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::U32]
     }
 
     fn crash_conditions() -> Vec<&'static str> {
@@ -73,12 +82,12 @@ impl Snippet for LengthLong {
         0
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "list_u32_length_long"
     }
 
-    fn function_body(_library: &mut Library) -> String {
-        let entry_point = Self::entrypoint();
+    fn function_body(&self, _library: &mut Library) -> String {
+        let entry_point = self.entrypoint();
         // Before: _ *list
         // After: _ list_length_u32
         format!(
@@ -107,7 +116,8 @@ impl Snippet for LengthLong {
 }
 
 // Called "Short" because it's efficient code
-pub struct LengthShort;
+#[derive(Clone)]
+pub struct LengthShort(pub DataType);
 
 impl Snippet for LengthShort {
     fn inputs() -> Vec<&'static str> {
@@ -116,6 +126,14 @@ impl Snippet for LengthShort {
 
     fn outputs() -> Vec<&'static str> {
         vec!["*list", "list_length"]
+    }
+
+    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::List(Box::new(self.0.clone()))]
+    }
+
+    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::List(Box::new(self.0.clone())), DataType::U32]
     }
 
     fn crash_conditions() -> Vec<&'static str> {
@@ -131,12 +149,12 @@ impl Snippet for LengthShort {
         1
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "list_u32_length_short"
     }
 
-    fn function_body(_library: &mut Library) -> String {
-        let entry_point = Self::entrypoint();
+    fn function_body(&self, _library: &mut Library) -> String {
+        let entry_point = self.entrypoint();
         // Before: _ *list
         // After: _ *list list_length_u32
         format!(
@@ -175,12 +193,12 @@ mod tests_long {
 
     #[test]
     fn new_snippet_test_long() {
-        rust_tasm_equivalence_prop_new::<LengthLong>();
+        rust_tasm_equivalence_prop_new::<LengthLong>(LengthLong(DataType::U64));
     }
 
     #[test]
     fn new_snippet_test_short() {
-        rust_tasm_equivalence_prop_new::<LengthShort>();
+        rust_tasm_equivalence_prop_new::<LengthShort>(LengthShort(DataType::XFE));
     }
 
     #[test]
@@ -217,6 +235,7 @@ mod tests_long {
         }
 
         let _execution_result = rust_tasm_equivalence_prop::<LengthLong>(
+            LengthLong(DataType::BFE),
             &init_stack,
             &[],
             &[],
@@ -279,6 +298,7 @@ mod tests_short {
         }
 
         let _execution_result = rust_tasm_equivalence_prop::<LengthShort>(
+            LengthShort(DataType::Bool),
             &init_stack,
             &[],
             &[],

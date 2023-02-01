@@ -6,10 +6,11 @@ use triton_vm::table::master_table::MasterBaseTable;
 use triton_vm::vm;
 
 use triton_vm::op_stack::OP_STACK_REG_COUNT;
-use triton_vm::state::VMState;
+use triton_vm::vm::VMState;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::algebraic_hasher::Hashable;
 
+pub mod all_snippets;
 pub mod arithmetic;
 pub mod hashing;
 pub mod library;
@@ -111,7 +112,7 @@ pub fn execute(
     // Find the length of code used for setup. This length does not count towards execution length of snippet
     // so it must be subtracted at the end.
     let init_code_length = vm::run(
-        &Program::from_code_nom(&executed_code).expect("Could not load source code: {}"),
+        &Program::from_code(&executed_code).expect("Could not load source code: {}"),
         vec![],
         vec![],
     )
@@ -123,7 +124,7 @@ pub fn execute(
     executed_code.push_str(code);
 
     // Run the program, including the stack preparation and memory preparation logic
-    let program = Program::from_code_nom(&executed_code).expect("Could not load source code: {}");
+    let program = Program::from_code(&executed_code).expect("Could not load source code: {}");
     let (execution_trace, output, err) = vm::run(&program, std_in.clone(), secret_in.clone());
     if let Some(e) = err {
         panic!("Running the program failed: {e}\n\n\n Program:\n {code}")

@@ -4,10 +4,11 @@ use rand::Rng;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
-use crate::snippet::Snippet;
+use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
-pub struct BfeAdd();
+#[derive(Clone)]
+pub struct BfeAdd;
 
 impl Snippet for BfeAdd {
     fn inputs() -> Vec<&'static str> {
@@ -16,6 +17,14 @@ impl Snippet for BfeAdd {
 
     fn outputs() -> Vec<&'static str> {
         vec!["a + b"]
+    }
+
+    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::BFE, DataType::BFE]
+    }
+
+    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::BFE]
     }
 
     fn crash_conditions() -> Vec<&'static str> {
@@ -34,12 +43,12 @@ impl Snippet for BfeAdd {
         -1
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "bfe_add"
     }
 
-    fn function_body(_library: &mut Library) -> String {
-        let entrypoint = Self::entrypoint();
+    fn function_body(&self, _library: &mut Library) -> String {
+        let entrypoint = self.entrypoint();
         format!(
             "
             {entrypoint}:
@@ -70,11 +79,11 @@ mod tests {
 
     #[test]
     fn bfe_add_test() {
-        rust_tasm_equivalence_prop_new::<BfeAdd>();
+        rust_tasm_equivalence_prop_new::<BfeAdd>(BfeAdd);
     }
 
     #[test]
     fn bfe_add_benchmark() {
-        bench_and_write::<BfeAdd>();
+        bench_and_write::<BfeAdd>(BfeAdd);
     }
 }

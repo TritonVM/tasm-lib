@@ -8,10 +8,11 @@ use twenty_first::util_types::algebraic_hasher::Hashable;
 
 use crate::arithmetic::u32::is_u32::IsU32;
 use crate::library::Library;
-use crate::snippet::Snippet;
+use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 
-pub struct AddU64();
+#[derive(Clone)]
+pub struct AddU64;
 
 impl Snippet for AddU64 {
     fn inputs() -> Vec<&'static str> {
@@ -20,6 +21,14 @@ impl Snippet for AddU64 {
 
     fn outputs() -> Vec<&'static str> {
         vec!["(lhs + rhs)_hi", "(lhs + rhs)_lo"]
+    }
+
+    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::U64, DataType::U64]
+    }
+
+    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::U64]
     }
 
     fn crash_conditions() -> Vec<&'static str> {
@@ -84,15 +93,15 @@ impl Snippet for AddU64 {
         -2
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "add_u64"
     }
 
     /// Four top elements of stack are assumed to be valid u32s. So to have
     /// a value that's less than 2^32.
-    fn function_body(library: &mut Library) -> String {
-        let entrypoint = Self::entrypoint();
-        let is_u32 = library.import::<IsU32>();
+    fn function_body(&self, library: &mut Library) -> String {
+        let entrypoint = self.entrypoint();
+        let is_u32 = library.import(Box::new(IsU32));
         const MINUS_2_POW_32: &str = "18446744065119617025";
 
         format!(
@@ -163,12 +172,12 @@ mod tests {
 
     #[test]
     fn add_u64_test() {
-        rust_tasm_equivalence_prop_new::<AddU64>();
+        rust_tasm_equivalence_prop_new::<AddU64>(AddU64);
     }
 
     #[test]
     fn add_u64_benchmark() {
-        bench_and_write::<AddU64>();
+        bench_and_write::<AddU64>(AddU64);
     }
 
     #[test]
@@ -280,7 +289,7 @@ mod tests {
             init_stack.push(elem);
         }
 
-        AddU64::run_tasm(&mut ExecutionState::with_stack(init_stack));
+        AddU64.run_tasm(&mut ExecutionState::with_stack(init_stack));
     }
 
     #[should_panic]
@@ -296,7 +305,7 @@ mod tests {
             init_stack.push(elem);
         }
 
-        AddU64::run_tasm(&mut ExecutionState::with_stack(init_stack));
+        AddU64.run_tasm(&mut ExecutionState::with_stack(init_stack));
     }
 
     fn prop_add(lhs: U32s<2>, rhs: U32s<2>, expected: Option<&[BFieldElement]>) {
@@ -309,6 +318,7 @@ mod tests {
         }
 
         let _execution_result = rust_tasm_equivalence_prop::<AddU64>(
+            AddU64,
             &init_stack,
             &[],
             &[],

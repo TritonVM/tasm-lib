@@ -3,10 +3,11 @@ use std::collections::HashMap;
 use rand::Rng;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
-use crate::snippet::Snippet;
+use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
-pub struct Neg();
+#[derive(Clone)]
+pub struct Neg;
 
 impl Snippet for Neg {
     fn inputs() -> Vec<&'static str> {
@@ -15,6 +16,14 @@ impl Snippet for Neg {
 
     fn outputs() -> Vec<&'static str> {
         vec!["-value"]
+    }
+
+    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::BFE]
+    }
+
+    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::BFE]
     }
 
     fn crash_conditions() -> Vec<&'static str> {
@@ -32,12 +41,12 @@ impl Snippet for Neg {
         0
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "neg"
     }
 
-    fn function_body(_library: &mut crate::library::Library) -> String {
-        let entrypoint = Self::entrypoint();
+    fn function_body(&self, _library: &mut crate::library::Library) -> String {
+        let entrypoint = self.entrypoint();
 
         format!(
             "

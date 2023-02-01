@@ -3,10 +3,11 @@ use std::collections::HashMap;
 use rand::Rng;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
-use crate::snippet::Snippet;
+use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
-pub struct Sub();
+#[derive(Clone)]
+pub struct Sub;
 
 impl Snippet for Sub {
     fn inputs() -> Vec<&'static str> {
@@ -15,6 +16,14 @@ impl Snippet for Sub {
 
     fn outputs() -> Vec<&'static str> {
         vec!["a - b"]
+    }
+
+    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::BFE, DataType::BFE]
+    }
+
+    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::BFE]
     }
 
     fn crash_conditions() -> Vec<&'static str> {
@@ -33,12 +42,12 @@ impl Snippet for Sub {
         -1
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "sub"
     }
 
-    fn function_body(_library: &mut crate::library::Library) -> String {
-        let entrypoint = Self::entrypoint();
+    fn function_body(&self, _library: &mut crate::library::Library) -> String {
+        let entrypoint = self.entrypoint();
         format!(
             "
             // before: _ b a

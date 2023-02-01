@@ -5,9 +5,10 @@ use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
-use crate::snippet::Snippet;
+use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 
+#[derive(Clone)]
 pub struct Div2U64;
 
 impl Snippet for Div2U64 {
@@ -17,6 +18,14 @@ impl Snippet for Div2U64 {
 
     fn outputs() -> Vec<&'static str> {
         vec!["(value / 2)_hi", "(value / 2)_lo"]
+    }
+
+    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::U64]
+    }
+
+    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::U64]
     }
 
     fn crash_conditions() -> Vec<&'static str> {
@@ -37,12 +46,12 @@ impl Snippet for Div2U64 {
         0
     }
 
-    fn entrypoint() -> &'static str {
+    fn entrypoint(&self) -> &'static str {
         "div2_u64"
     }
 
-    fn function_body(_library: &mut Library) -> String {
-        let entrypoint = Self::entrypoint();
+    fn function_body(&self, _library: &mut Library) -> String {
+        let entrypoint = self.entrypoint();
         let two_pow_31 = (1u64 << 31).to_string();
 
         format!(
@@ -51,7 +60,9 @@ impl Snippet for Div2U64 {
                 // AFTER: _ (value / 2)_hi (value / 2)_lo
                 {entrypoint}:
                     // Divide the lower number
-                    [lsb]
+                    push 2
+                    swap1
+                    div
                     pop
                     // stack: _ value_hi (value_lo / 2)
 
@@ -59,7 +70,9 @@ impl Snippet for Div2U64 {
                     swap1
                     // stack: _ (value_lo / 2) value_hi
 
-                    [lsb]
+                    push 2
+                    swap1
+                    div
                     // stack: _ (value_lo / 2) (value_hi / 2) (value_hi % 2)
 
                     push {two_pow_31}
@@ -107,12 +120,12 @@ mod tests {
 
     #[test]
     fn div2_u64_test() {
-        rust_tasm_equivalence_prop_new::<Div2U64>();
+        rust_tasm_equivalence_prop_new::<Div2U64>(Div2U64);
     }
 
     #[test]
     fn div2_u64_benchmark() {
-        bench_and_write::<Div2U64>();
+        bench_and_write::<Div2U64>(Div2U64);
     }
 
     #[should_panic]
@@ -123,6 +136,7 @@ mod tests {
         init_stack.push(BFieldElement::new(u32::MAX as u64 + 1));
 
         let _execution_result = rust_tasm_equivalence_prop::<Div2U64>(
+            Div2U64,
             &init_stack,
             &[],
             &[],
@@ -140,6 +154,7 @@ mod tests {
         init_stack.push(BFieldElement::new(16));
 
         let _execution_result = rust_tasm_equivalence_prop::<Div2U64>(
+            Div2U64,
             &init_stack,
             &[],
             &[],
@@ -187,6 +202,7 @@ mod tests {
         expected_stack.push(BFieldElement::new(res & u32::MAX as u64));
 
         let _execution_result = rust_tasm_equivalence_prop::<Div2U64>(
+            Div2U64,
             &init_stack,
             &[],
             &[],
