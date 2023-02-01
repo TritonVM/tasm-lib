@@ -109,15 +109,14 @@ impl Snippet for MmrVerifyFromMemory {
     }
 
     fn function_body(&self, library: &mut Library) -> String {
-        let leaf_index_to_mt_index =
-            library.import::<MmrLeafIndexToMtIndexAndPeakIndex>(MmrLeafIndexToMtIndexAndPeakIndex);
-        let get = library.import::<Get<DIGEST_LENGTH>>(Get::<DIGEST_LENGTH>(DataType::Digest));
-        let u32_is_odd = library.import::<U32IsOdd>(U32IsOdd);
+        let leaf_index_to_mt_index = library.import(Box::new(MmrLeafIndexToMtIndexAndPeakIndex));
+        let get = library.import(Box::new(Get::<DIGEST_LENGTH>(DataType::Digest)));
+        let u32_is_odd = library.import(Box::new(U32IsOdd));
         let entrypoint = self.entrypoint();
-        let eq_u64 = library.import::<EqU64>(EqU64);
-        let div_2 = library.import::<Div2U64>(Div2U64);
-        let swap_digests = library.import::<SwapDigest>(SwapDigest);
-        let eq_digest = library.import::<EqDigest>(EqDigest);
+        let eq_u64 = library.import(Box::new(EqU64));
+        let div_2 = library.import(Box::new(Div2U64));
+        let swap_digests = library.import(Box::new(SwapDigest));
+        let eq_digest = library.import(Box::new(EqDigest));
         format!(
             "
                 // BEFORE: _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo [digest (leaf_digest)] *auth_path

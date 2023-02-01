@@ -171,14 +171,13 @@ impl Snippet for MmrVerifyLeafMembershipFromSecretIn {
     fn function_body(&self, library: &mut Library) -> String {
         let entrypoint = self.entrypoint();
 
-        let leaf_index_to_mt_index =
-            library.import::<MmrLeafIndexToMtIndexAndPeakIndex>(MmrLeafIndexToMtIndexAndPeakIndex);
-        let eq_u64 = library.import::<EqU64>(EqU64);
-        let u32_is_odd = library.import::<U32IsOdd>(U32IsOdd);
-        let swap_digests = library.import::<SwapDigest>(SwapDigest);
-        let compare_digest = library.import::<EqDigest>(EqDigest);
-        let div_2 = library.import::<Div2U64>(Div2U64);
-        let list_get = library.import::<Get<DIGEST_LENGTH>>(Get::<DIGEST_LENGTH>(DataType::Digest));
+        let leaf_index_to_mt_index = library.import(Box::new(MmrLeafIndexToMtIndexAndPeakIndex));
+        let eq_u64 = library.import(Box::new(EqU64));
+        let u32_is_odd = library.import(Box::new(U32IsOdd));
+        let swap_digests = library.import(Box::new(SwapDigest));
+        let compare_digest = library.import(Box::new(EqDigest));
+        let div_2 = library.import(Box::new(Div2U64));
+        let get = library.import(Box::new(Get::<DIGEST_LENGTH>(DataType::Digest)));
 
         let divine_digest = "divine\n".repeat(DIGEST_LENGTH);
 
@@ -213,7 +212,7 @@ impl Snippet for MmrVerifyLeafMembershipFromSecretIn {
                 // _ leaf_index_hi leaf_index_lo *peaks peak_index mt_index_hi mt_index_lo [digest (acc_hash)]
 
                 // Compare `acc_hash` with `peaks[peak_index]`
-                dup8 dup8 call {list_get}
+                dup8 dup8 call {get}
                 // _ leaf_index_hi leaf_index_lo *peaks peak_index mt_index_hi mt_index_lo [digest (acc_hash)] [digest (peaks[peak_index])]
 
                 call {compare_digest}

@@ -73,8 +73,8 @@ impl Snippet for LoadAuthPathFromStdIn {
 
         let read_digest_from_std_in = "read_io\n".repeat(DIGEST_LENGTH);
 
-        let set_length = library.import::<SetLength>(SetLength(DataType::Digest));
-        let push = library.import::<Push<DIGEST_LENGTH>>(Push::<DIGEST_LENGTH>(DataType::Digest));
+        let set_length = library.import(Box::new(SetLength(DataType::Digest)));
+        let push = library.import(Box::new(Push::<DIGEST_LENGTH>(DataType::Digest)));
 
         // Allocate 1 word for length indication, and `DIGEST_LENGTH` words per auth path element
         // Warning: Statically allocated list. Will be overwritten at same location by subsequent

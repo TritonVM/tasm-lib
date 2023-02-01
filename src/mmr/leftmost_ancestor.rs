@@ -63,9 +63,9 @@ impl Snippet for MmrLeftMostAncestor {
 
     fn function_body(&self, library: &mut Library) -> String {
         let entrypoint = self.entrypoint();
-        let decr_u64 = library.import::<DecrU64>(DecrU64);
-        let pow2_u64 = library.import::<Pow2U64>(Pow2U64);
-        let log_2_floor_u64 = library.import::<Log2FloorU64>(Log2FloorU64);
+        let decr_u64 = library.import(Box::new(DecrU64));
+        let pow2_u64 = library.import(Box::new(Pow2U64));
+        let log_2_floor_u64 = library.import(Box::new(Log2FloorU64));
         format!(
             "
             // Before: _ node_index_hi node_index_lo

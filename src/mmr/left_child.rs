@@ -65,8 +65,8 @@ impl Snippet for MmrLeftChild {
 
     fn function_body(&self, library: &mut Library) -> String {
         let entrypoint = self.entrypoint();
-        let pow2_u64 = library.import::<Pow2U64>(Pow2U64);
-        let sub_u64 = library.import::<SubU64>(SubU64);
+        let pow2_u64 = library.import(Box::new(Pow2U64));
+        let sub_u64 = library.import(Box::new(SubU64));
         format!(
             "
             // Before: _ ni_hi ni_lo height

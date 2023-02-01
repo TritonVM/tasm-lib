@@ -71,13 +71,13 @@ impl Snippet for MmrNonLeafNodesLeftUsingAnd {
 
     fn function_body(&self, library: &mut Library) -> String {
         let entrypoint = self.entrypoint();
-        let log_2_floor_u64 = library.import::<Log2FloorU64>(Log2FloorU64);
-        let pow2_u64 = library.import::<Pow2U64>(Pow2U64);
-        let and_u64 = library.import::<AndU64>(AndU64);
-        let eq_u64 = library.import::<EqU64>(EqU64);
-        let decr_u64 = library.import::<DecrU64>(DecrU64);
-        let incr_u64 = library.import::<IncrU64>(IncrU64);
-        let add_u64 = library.import::<AddU64>(AddU64);
+        let log_2_floor_u64 = library.import(Box::new(Log2FloorU64));
+        let pow2_u64 = library.import(Box::new(Pow2U64));
+        let and_u64 = library.import(Box::new(AndU64));
+        let eq_u64 = library.import(Box::new(EqU64));
+        let decr_u64 = library.import(Box::new(DecrU64));
+        let incr_u64 = library.import(Box::new(IncrU64));
+        let add_u64 = library.import(Box::new(AddU64));
 
         format!(
             "

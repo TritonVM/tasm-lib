@@ -102,7 +102,7 @@ impl Snippet for SubU64 {
     /// a value that's less than 2^32.
     fn function_body(&self, library: &mut Library) -> String {
         let entrypoint = self.entrypoint();
-        let is_u32 = library.import::<IsU32>(IsU32);
+        let is_u32 = library.import(Box::new(IsU32));
         const TWO_POW_32: &str = "4294967296";
 
         format!(

@@ -23,9 +23,9 @@ impl Library {
 
     pub fn with_pseudo_instructions() -> Self {
         let mut library = Self::empty();
-        library.import::<Lsb>(Lsb);
-        library.import::<Neg>(Neg);
-        library.import::<Sub>(Sub);
+        library.import(Box::new(Lsb));
+        library.import(Box::new(Neg));
+        library.import(Box::new(Sub));
         library
     }
 
@@ -43,7 +43,7 @@ impl Library {
     ///
     /// Avoid cyclic dependencies by only calling `T::function_body()` which
     /// may call `.import()` if `.import::<T>()` wasn't already called once.
-    pub fn import<T: Snippet>(&mut self, snippet: T) -> &'static str {
+    pub fn import(&mut self, snippet: Box<dyn Snippet>) -> &'static str {
         let dep_entrypoint = snippet.entrypoint();
         if self.seen_snippets.insert(dep_entrypoint) {
             let dep_function_body = snippet.function_body(self);
@@ -104,8 +104,8 @@ mod tests {
 
         fn function_body(&self, library: &mut Library) -> String {
             let entrypoint = self.entrypoint();
-            let b = library.import::<B>(B);
-            let c = library.import::<C>(C);
+            let b = library.import(Box::new(B));
+            let c = library.import(Box::new(C));
 
             format!(
                 "
@@ -164,7 +164,7 @@ mod tests {
 
         fn function_body(&self, library: &mut Library) -> String {
             let entrypoint = self.entrypoint();
-            let c = library.import::<C>(C);
+            let c = library.import(Box::new(C));
 
             format!(
                 "
@@ -303,9 +303,9 @@ mod tests {
     #[test]
     fn all_imports_as_instruction_lists() {
         let mut lib = Library::default();
-        lib.import::<A>(A);
-        lib.import::<A>(A);
-        lib.import::<C>(C);
+        lib.import(Box::new(A));
+        lib.import(Box::new(A));
+        lib.import(Box::new(C));
         let ret = lib.all_imports_as_instruction_lists();
         println!("ret = {}", ret.iter().map(|x| x.to_string()).join("\n"));
     }

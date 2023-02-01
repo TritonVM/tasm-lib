@@ -113,11 +113,11 @@ impl Snippet for CalculateNewPeaksFromAppend {
 
     fn function_body(&self, library: &mut Library) -> String {
         let entrypoint = self.entrypoint();
-        let data_index_to_node_index = library.import::<DataIndexToNodeIndex>(DataIndexToNodeIndex);
-        let right_lineage_length = library.import::<MmrRightLineageLength>(MmrRightLineageLength);
-        let push = library.import::<Push<DIGEST_LENGTH>>(Push::<DIGEST_LENGTH>(DataType::Digest));
-        let pop = library.import::<Pop<DIGEST_LENGTH>>(Pop::<DIGEST_LENGTH>(DataType::Digest));
-        let set_length = library.import::<SetLength>(SetLength(DataType::Digest));
+        let data_index_to_node_index = library.import(Box::new(DataIndexToNodeIndex));
+        let right_lineage_length = library.import(Box::new(MmrRightLineageLength));
+        let push = library.import(Box::new(Push::<DIGEST_LENGTH>(DataType::Digest)));
+        let pop = library.import(Box::new(Pop::<DIGEST_LENGTH>(DataType::Digest)));
+        let set_length = library.import(Box::new(SetLength(DataType::Digest)));
 
         // Allocate memory for the returned auth path for the newly inserted element
         // Warning: This auth path is only allocated *once* even though the code is called multiple times.

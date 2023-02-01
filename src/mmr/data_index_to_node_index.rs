@@ -61,10 +61,9 @@ impl Snippet for DataIndexToNodeIndex {
 
     fn function_body(&self, library: &mut Library) -> String {
         let entrypoint = self.entrypoint();
-        let non_leaf_nodes_left =
-            library.import::<MmrNonLeafNodesLeftUsingAnd>(MmrNonLeafNodesLeftUsingAnd);
-        let incr_u64 = library.import::<IncrU64>(IncrU64);
-        let add_u64 = library.import::<AddU64>(AddU64);
+        let non_leaf_nodes_left = library.import(Box::new(MmrNonLeafNodesLeftUsingAnd));
+        let incr_u64 = library.import(Box::new(IncrU64));
+        let add_u64 = library.import(Box::new(AddU64));
         format!("
                 // BEFORE: _ leaf_index_hi leaf_index_lo
                 // AFTER: _ node_index_hi node_index_lo

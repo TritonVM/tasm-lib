@@ -61,9 +61,7 @@ pub trait Snippet {
         Self: Sized;
 
     /// The function body
-    fn function_body(&self, library: &mut Library) -> String
-    where
-        Self: Sized;
+    fn function_body(&self, library: &mut Library) -> String;
 
     /// Ways in which this snippet can crash
     fn crash_conditions() -> Vec<&'static str>

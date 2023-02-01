@@ -62,7 +62,7 @@ impl Snippet for MmrRightChild {
     /// Consider inlining this, instead of calling a function
     fn function_body(&self, library: &mut Library) -> String {
         let entrypoint = self.entrypoint();
-        let decr_u64 = library.import::<DecrU64>(DecrU64);
+        let decr_u64 = library.import(Box::new(DecrU64));
         format!(
             "
             // Before: _ nodex_index_hi node_index_lo

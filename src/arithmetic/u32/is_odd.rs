@@ -77,7 +77,7 @@ impl Snippet for U32IsOdd {
 
     fn function_body(&self, library: &mut Library) -> String {
         let entrypoint = self.entrypoint();
-        let lsb = library.import::<Lsb>(Lsb);
+        let lsb = library.import(Box::new(Lsb));
         format!(
             "
                 // BEFORE: _ value

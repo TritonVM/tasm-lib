@@ -78,13 +78,13 @@ impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
 
     fn function_body(&self, library: &mut Library) -> String {
         let entrypoint = self.entrypoint();
-        let log_2_floor_u64 = library.import::<Log2FloorU64>(Log2FloorU64);
-        let lt_u64 = library.import::<LtU64>(LtU64);
-        let add_u64 = library.import::<AddU64>(AddU64);
-        let and_u64 = library.import::<AndU64>(AndU64);
-        let pow2_u64 = library.import::<Pow2U64>(Pow2U64);
-        let sub_u64 = library.import::<SubU64>(SubU64);
-        let eq_u64 = library.import::<EqU64>(EqU64);
+        let log_2_floor_u64 = library.import(Box::new(Log2FloorU64));
+        let lt_u64 = library.import(Box::new(LtU64));
+        let add_u64 = library.import(Box::new(AddU64));
+        let and_u64 = library.import(Box::new(AndU64));
+        let pow2_u64 = library.import(Box::new(Pow2U64));
+        let sub_u64 = library.import(Box::new(SubU64));
+        let eq_u64 = library.import(Box::new(EqU64));
 
         format!(
             "

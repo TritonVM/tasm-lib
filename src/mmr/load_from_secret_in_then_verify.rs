@@ -176,9 +176,8 @@ impl Snippet for MmrLoadFromSecretInThenVerify {
 
     fn function_body(&self, library: &mut Library) -> String {
         let entrypoint = self.entrypoint();
-        let load_auth_path_from_secret_in =
-            library.import::<LoadAuthPathFromSecretIn>(LoadAuthPathFromSecretIn);
-        let verify_from_memory = library.import::<MmrVerifyFromMemory>(MmrVerifyFromMemory);
+        let load_auth_path_from_secret_in = library.import(Box::new(LoadAuthPathFromSecretIn));
+        let verify_from_memory = library.import(Box::new(MmrVerifyFromMemory));
 
         format!(
             "

@@ -68,11 +68,11 @@ impl Snippet for MmrRightChildAndHeight {
         Self: Sized,
     {
         let entrypoint = self.entrypoint();
-        let eq_u64 = library.import::<EqU64>(EqU64);
-        let lt_u64 = library.import::<LtU64>(LtU64);
-        let left_child = library.import::<MmrLeftChild>(MmrLeftChild);
-        let right_child = library.import::<MmrRightChild>(MmrRightChild);
-        let leftmost_ancestor = library.import::<MmrLeftMostAncestor>(MmrLeftMostAncestor);
+        let eq_u64 = library.import(Box::new(EqU64));
+        let lt_u64 = library.import(Box::new(LtU64));
+        let left_child = library.import(Box::new(MmrLeftChild));
+        let right_child = library.import(Box::new(MmrRightChild));
+        let leftmost_ancestor = library.import(Box::new(MmrLeftMostAncestor));
 
         format!(
             "

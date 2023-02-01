@@ -94,13 +94,12 @@ impl Snippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
 
     fn function_body(&self, library: &mut Library) -> String {
         let entrypoint = self.entrypoint();
-        let leaf_index_to_mt_index =
-            library.import::<MmrLeafIndexToMtIndexAndPeakIndex>(MmrLeafIndexToMtIndexAndPeakIndex);
-        let u32_is_odd = library.import::<U32IsOdd>(U32IsOdd);
-        let eq_u64 = library.import::<EqU64>(EqU64);
-        let get = library.import::<Get<DIGEST_LENGTH>>(Get::<DIGEST_LENGTH>(DataType::Digest));
-        let set = library.import::<Set<DIGEST_LENGTH>>(Set::<DIGEST_LENGTH>(DataType::Digest));
-        let div_2 = library.import::<Div2U64>(Div2U64);
+        let leaf_index_to_mt_index = library.import(Box::new(MmrLeafIndexToMtIndexAndPeakIndex));
+        let u32_is_odd = library.import(Box::new(U32IsOdd));
+        let eq_u64 = library.import(Box::new(EqU64));
+        let get = library.import(Box::new(Get::<DIGEST_LENGTH>(DataType::Digest)));
+        let set = library.import(Box::new(Set::<DIGEST_LENGTH>(DataType::Digest)));
+        let div_2 = library.import(Box::new(Div2U64));
 
         format!(
             "
