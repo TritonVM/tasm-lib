@@ -1,6 +1,9 @@
 use crate::{
     arithmetic::{
-        u32::{is_odd::U32IsOdd, is_u32::IsU32, safe_add::SafeAdd, safe_sub::SafeSub},
+        u32::{
+            is_odd::U32IsOdd, is_u32::IsU32, safe_add::SafeAdd, safe_mul::SafeMul,
+            safe_sub::SafeSub,
+        },
         u64::{
             add_u64::AddU64,
             and_u64::AndU64,
@@ -59,6 +62,7 @@ pub fn name_to_snippet(fn_name: &str, element_type: Option<DataType>) -> Box<dyn
         "is_u32" => Box::new(IsU32),
         "safe_add_u32" => Box::new(SafeAdd),
         "safe_sub_u32" => Box::new(SafeSub),
+        "u32_safe_mul" => Box::new(SafeMul),
 
         // u64
         "add_u64" => Box::new(AddU64),
