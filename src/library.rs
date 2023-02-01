@@ -65,11 +65,7 @@ impl Library {
     }
 
     pub fn all_imports_as_instruction_lists(&self) -> Vec<LabelledInstruction> {
-        self.function_bodies
-            .iter()
-            .map(|x| to_labelled(&parse(x).unwrap()))
-            .collect_vec()
-            .concat()
+        to_labelled(&parse(&self.function_bodies.iter().join("\n")).unwrap())
     }
 
     pub fn kmalloc(&mut self, num_words: usize) -> usize {
@@ -306,7 +302,6 @@ pub mod library_tests {
         lib.import(Box::new(DummyTestSnippetA));
         lib.import(Box::new(DummyTestSnippetA));
         lib.import(Box::new(DummyTestSnippetC));
-        let ret = lib.all_imports_as_instruction_lists();
-        println!("ret = {}", ret.iter().map(|x| x.to_string()).join("\n"));
+        let _ret = lib.all_imports_as_instruction_lists();
     }
 }
