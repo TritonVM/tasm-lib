@@ -119,8 +119,11 @@ impl Snippet for LoadAuthPathFromSecretIn {
                     dup2 dup2 eq skiz return
                     // _ total_auth_path_length i *auth_path
 
+                    dup0
+                    // _ total_auth_path_length i *auth_path *auth_path
+
                     {read_digest_from_secret_in}
-                    // _ total_auth_path_length i *auth_path [digests (ap_element)]
+                    // _ total_auth_path_length i *auth_path *auth_path [digests (ap_element)]
 
                     call {push}
                     // _ total_auth_path_length i *auth_path

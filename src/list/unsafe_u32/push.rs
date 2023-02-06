@@ -22,7 +22,7 @@ impl<const N: usize> Snippet for Push<N> {
     }
 
     fn outputs() -> Vec<&'static str> {
-        vec!["*list"]
+        vec![]
     }
 
     fn input_types(&self) -> Vec<crate::snippet::DataType> {
@@ -30,7 +30,7 @@ impl<const N: usize> Snippet for Push<N> {
     }
 
     fn output_types(&self) -> Vec<crate::snippet::DataType> {
-        vec![DataType::List(Box::new(self.0.clone()))]
+        vec![]
     }
 
     fn crash_conditions() -> Vec<&'static str> {
@@ -63,7 +63,7 @@ impl<const N: usize> Snippet for Push<N> {
 
     fn stack_diff() -> isize {
         assert!(N < 17, "Max element size supported for list is 16");
-        -(N as isize)
+        -(N as isize) - 1
     }
 
     fn entrypoint(&self) -> &'static str {
@@ -125,7 +125,8 @@ impl<const N: usize> Snippet for Push<N> {
 
                 write_mem
                 pop
-                // stack : _  *list
+                pop
+                // stack : _
 
                 return
                 "
@@ -150,6 +151,9 @@ impl<const N: usize> Snippet for Push<N> {
             memory.insert(next_free_address, elem);
             next_free_address += BFieldElement::one();
         }
+
+        // Remove list pointer
+        stack.pop().unwrap();
 
         // Update length indicator
         memory.insert(list_address, initial_list_length + BFieldElement::one());
@@ -207,7 +211,7 @@ mod tests_push {
         init_list_length: u32,
         push_value: [BFieldElement; N],
     ) {
-        let expected_end_stack = vec![get_init_tvm_stack(), vec![list_address]].concat();
+        let expected_end_stack = get_init_tvm_stack();
         let mut init_stack = get_init_tvm_stack();
         init_stack.push(list_address);
 

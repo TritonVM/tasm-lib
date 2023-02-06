@@ -129,7 +129,9 @@ impl Snippet for CalculateNewPeaksFromAppend {
                 // BEFORE: _ old_leaf_count_hi old_leaf_count_lo *peaks [digests (new_leaf)]
                 // AFTER: _ *new_peaks *auth_path
                 {entrypoint}:
+                    dup5 dup5 dup5 dup5 dup5 dup5
                     call {push}
+                    pop pop pop pop pop
                     // stack: _ old_leaf_count_hi old_leaf_count_lo *peaks
 
                     // Create auth_path return value (vector living in RAM)
@@ -174,27 +176,27 @@ impl Snippet for CalculateNewPeaksFromAppend {
                     // Stack: _ old_leaf_count_hi old_leaf_count_lo rll *auth_path *peaks
 
                     dup0
+                    dup0
                     call {pop}
-                    // Stack: _ old_leaf_count_hi old_leaf_count_lo rll *auth_path *peaks [digest (new_hash)]
+                    // Stack: _ old_leaf_count_hi old_leaf_count_lo rll *auth_path *peaks *peaks [digest (new_hash)]
 
                     dup5
-                    // Stack: _ old_leaf_count_hi old_leaf_count_lo rll *auth_path *peaks [digest (new_hash)] *peaks
+                    // Stack: _ old_leaf_count_hi old_leaf_count_lo rll *auth_path *peaks *peaks [digest (new_hash)] *peaks
 
                     call {pop}
-                    // Stack: _ old_leaf_count_hi old_leaf_count_lo rll *auth_path *peaks [digest (new_hash)] [digests (previous_peak)]
+                    // Stack: _ old_leaf_count_hi old_leaf_count_lo rll *auth_path *peaks *peaks [digest (new_hash)] [digests (previous_peak)]
 
                     // Update authentication path with latest previous_peak
-                    dup11
+                    dup12
                     dup5 dup5 dup5 dup5 dup5
-                    // Stack: _ old_leaf_count_hi old_leaf_count_lo rll *auth_path *peaks [digest (new_hash)] [digests (previous_peak)] *auth_path [digests (previous_peak)]
+                    // Stack: _ old_leaf_count_hi old_leaf_count_lo rll *auth_path *peaks *peaks [digest (new_hash)] [digests (previous_peak)] *auth_path [digests (previous_peak)]
 
                     call {push}
-                    pop
-                    // Stack: _ old_leaf_count_hi old_leaf_count_lo rll *auth_path *peaks [digest (new_hash)] [digests (previous_peak)]
+                    // Stack: _ old_leaf_count_hi old_leaf_count_lo rll *auth_path *peaks *peaks [digest (new_hash)] [digests (previous_peak)]
 
                     hash
                     pop pop pop pop pop
-                    // Stack: _ old_leaf_count_hi old_leaf_count_lo rll *auth_path *peaks [digests (new_peak)]
+                    // Stack: _ old_leaf_count_hi old_leaf_count_lo rll *auth_path *peaks *peaks [digests (new_peak)]
 
                     call {push}
                     // Stack: _ old_leaf_count_hi old_leaf_count_lo rll *auth_path *peaks
