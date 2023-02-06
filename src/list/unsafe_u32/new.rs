@@ -1,0 +1,127 @@
+use num::Zero;
+use std::collections::HashMap;
+use twenty_first::shared_math::b_field_element::BFieldElement;
+
+use crate::library::Library;
+use crate::rust_shadowing_helper_functions::{self};
+use crate::snippet::{DataType, Snippet};
+use crate::{get_init_tvm_stack, ExecutionState};
+
+const DEFAULT_LIST_CAPACITY: usize = 64;
+
+#[derive(Clone)]
+pub struct New(pub DataType);
+
+impl Snippet for New {
+    fn entrypoint(&self) -> &'static str {
+        "tasm_lib_list_unsafe_u32_new"
+    }
+
+    fn inputs() -> Vec<&'static str>
+    where
+        Self: Sized,
+    {
+        vec![]
+    }
+
+    fn input_types(&self) -> Vec<DataType> {
+        vec![]
+    }
+
+    fn output_types(&self) -> Vec<DataType> {
+        vec![DataType::List(Box::new(self.0.clone()))]
+    }
+
+    fn outputs() -> Vec<&'static str> {
+        vec!["list_pointer"]
+    }
+
+    fn stack_diff() -> isize
+    where
+        Self: Sized,
+    {
+        1
+    }
+
+    fn function_body(&self, library: &mut Library) -> String {
+        let entrypoint = self.entrypoint();
+
+        // Allocate memory for the returned auth path for the newly inserted element
+        // Warning: This auth path is only allocated *once* even though the code is called multiple times.
+        // So if this function is called multiple times, previous values are overwritten.
+        let element_size = self.0.get_size();
+        let static_list_pointer = library.kmalloc(element_size * DEFAULT_LIST_CAPACITY + 1);
+
+        format!(
+            "
+                // BEFORE: _
+                // AFTER: _ *list
+                {entrypoint}:
+                    push {static_list_pointer}
+                    // _ *list
+
+                    push 0
+                    write_mem
+                    // _ *list 0
+
+                    pop
+                    // _ *list
+
+                    return
+                    "
+        )
+    }
+
+    fn crash_conditions() -> Vec<&'static str>
+    where
+        Self: Sized,
+    {
+        vec![]
+    }
+
+    fn gen_input_states() -> Vec<ExecutionState>
+    where
+        Self: Sized,
+    {
+        fn prepare_state() -> ExecutionState {
+            ExecutionState::with_stack(get_init_tvm_stack())
+        }
+
+        vec![
+            prepare_state(),
+            prepare_state(),
+            prepare_state(),
+            prepare_state(),
+            prepare_state(),
+            prepare_state(),
+        ]
+    }
+
+    fn rust_shadowing(
+        stack: &mut Vec<BFieldElement>,
+        _std_in: Vec<BFieldElement>,
+        _secret_in: Vec<BFieldElement>,
+        memory: &mut HashMap<BFieldElement, BFieldElement>,
+    ) where
+        Self: Sized,
+    {
+        let list_pointer = BFieldElement::zero();
+        rust_shadowing_helper_functions::list_new(list_pointer, memory);
+        stack.push(list_pointer);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::test_helpers::rust_tasm_equivalence_prop_new;
+
+    use super::*;
+
+    #[test]
+    fn new_snippet_test() {
+        rust_tasm_equivalence_prop_new(New(DataType::U32));
+        rust_tasm_equivalence_prop_new(New(DataType::U64));
+        rust_tasm_equivalence_prop_new(New(DataType::XFE));
+        rust_tasm_equivalence_prop_new(New(DataType::Digest));
+    }
+}

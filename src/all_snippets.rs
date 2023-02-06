@@ -25,6 +25,7 @@ use crate::{
     list::unsafe_u32::{
         get::Get,
         length::{LengthLong, LengthShort},
+        new::New,
         pop::Pop,
         push::Push,
         set::Set,
@@ -83,6 +84,7 @@ pub fn name_to_snippet(fn_name: &str, element_type: Option<DataType>) -> Box<dyn
         "load_auth_path_from_std_in" => Box::new(LoadAuthPathFromStdIn),
         "swap_digest" => Box::new(SwapDigest),
 
+        // unsafe lists
         "list_get_element" => match element_type {
             Some(et) => match et {
                 DataType::Bool => Box::new(Get::<1>(et)),
@@ -139,6 +141,10 @@ pub fn name_to_snippet(fn_name: &str, element_type: Option<DataType>) -> Box<dyn
             },
             None => panic!("Must have element type for list"),
         },
+        "tasm_lib_list_unsafe_u32_new" => match element_type {
+            Some(et) => Box::new(New(et)),
+            None => panic!("Must have element type for list"),
+        }
         "list_u32_length_long" => Box::new(LengthLong(element_type.unwrap())),
         "list_u32_length_short" => Box::new(LengthShort(element_type.unwrap())),
         "list_u32_set_length" => Box::new(SetLength(element_type.unwrap())),
