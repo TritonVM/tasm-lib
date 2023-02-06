@@ -93,6 +93,14 @@ pub fn unsafe_list_new(
     memory.insert(list_pointer, BFieldElement::zero());
 }
 
+pub fn unsafe_list_set_length(
+    list_pointer: BFieldElement,
+    new_length: u32,
+    memory: &mut HashMap<BFieldElement, BFieldElement>,
+) {
+    memory.insert(list_pointer, BFieldElement::new(new_length as u64));
+}
+
 pub fn write_digest_to_std_in(std_in: &mut Vec<BFieldElement>, digest: Digest) {
     let digest_elements = digest.values();
     for i in 0..DIGEST_LENGTH {
