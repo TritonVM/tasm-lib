@@ -5,20 +5,20 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::random_elements;
 use twenty_first::shared_math::rescue_prime_digest::{Digest, DIGEST_LENGTH};
 
-pub fn insert_random_list<const N: usize>(
+pub fn unsafe_insert_random_list<const N: usize>(
     list_pointer: BFieldElement,
     list_length: usize,
     memory: &mut HashMap<BFieldElement, BFieldElement>,
 ) {
-    list_new(list_pointer, memory);
+    unsafe_list_new(list_pointer, memory);
     for _ in 0..list_length {
         let random_element: [BFieldElement; N] = random_elements(N).try_into().unwrap();
-        list_push(list_pointer, random_element, memory);
+        unsafe_list_push(list_pointer, random_element, memory);
     }
 }
 
 /// Write an element to a list.
-pub fn list_set<const N: usize>(
+pub fn unsafe_list_set<const N: usize>(
     list_pointer: BFieldElement,
     index: usize,
     value: [BFieldElement; N],
@@ -33,7 +33,7 @@ pub fn list_set<const N: usize>(
 }
 
 /// Read an element from a list.
-pub fn list_read<const N: usize>(
+pub fn unsafe_list_read<const N: usize>(
     list_pointer: BFieldElement,
     index: usize,
     memory: &HashMap<BFieldElement, BFieldElement>,
@@ -47,7 +47,7 @@ pub fn list_read<const N: usize>(
     ret
 }
 
-pub fn list_pop<const N: usize>(
+pub fn unsafe_list_pop<const N: usize>(
     list_pointer: BFieldElement,
     memory: &mut HashMap<BFieldElement, BFieldElement>,
 ) -> [BFieldElement; N] {
@@ -67,7 +67,7 @@ pub fn list_pop<const N: usize>(
     ret
 }
 
-pub fn list_push<const N: usize>(
+pub fn unsafe_list_push<const N: usize>(
     list_pointer: BFieldElement,
     value: [BFieldElement; N],
     memory: &mut HashMap<BFieldElement, BFieldElement>,
@@ -86,7 +86,10 @@ pub fn list_push<const N: usize>(
     }
 }
 
-pub fn list_new(list_pointer: BFieldElement, memory: &mut HashMap<BFieldElement, BFieldElement>) {
+pub fn unsafe_list_new(
+    list_pointer: BFieldElement,
+    memory: &mut HashMap<BFieldElement, BFieldElement>,
+) {
     memory.insert(list_pointer, BFieldElement::zero());
 }
 

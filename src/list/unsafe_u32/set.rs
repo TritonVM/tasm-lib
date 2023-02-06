@@ -5,7 +5,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::random_elements;
 
 use crate::library::Library;
-use crate::rust_shadowing_helper_functions::insert_random_list;
+use crate::rust_shadowing_helper_functions::unsafe_insert_random_list;
 use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, ExecutionState};
 
@@ -54,7 +54,7 @@ impl<const N: usize> Snippet for Set<N> {
             stack.push(BFieldElement::new(index as u64));
 
             let mut memory = HashMap::default();
-            insert_random_list::<N>(list_pointer, list_length, &mut memory);
+            unsafe_insert_random_list::<N>(list_pointer, list_length, &mut memory);
             ExecutionState::with_stack_and_memory(stack, memory, 0)
         }
 
@@ -125,7 +125,12 @@ impl<const N: usize> Snippet for Set<N> {
         for ee in element.iter_mut() {
             *ee = stack.pop().unwrap();
         }
-        rust_shadowing_helper_functions::list_set(list_pointer, index as usize, element, memory);
+        rust_shadowing_helper_functions::unsafe_list_set(
+            list_pointer,
+            index as usize,
+            element,
+            memory,
+        );
     }
 }
 
@@ -134,7 +139,7 @@ mod list_set_tests {
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
     use crate::get_init_tvm_stack;
-    use crate::rust_shadowing_helper_functions::insert_random_list;
+    use crate::rust_shadowing_helper_functions::unsafe_insert_random_list;
     use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
@@ -216,7 +221,7 @@ mod list_set_tests {
         let mut vm_memory = HashMap::default();
 
         // Insert length indicator of list, lives on offset = 0 from `list_address`
-        insert_random_list::<N>(list_address, init_list_length as usize, &mut vm_memory);
+        unsafe_insert_random_list::<N>(list_address, init_list_length as usize, &mut vm_memory);
 
         let _execution_result = rust_tasm_equivalence_prop::<Set<N>>(
             Set(data_type),

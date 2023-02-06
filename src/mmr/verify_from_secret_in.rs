@@ -85,9 +85,9 @@ impl Snippet for MmrVerifyLeafMembershipFromSecretIn {
 
             // Write peaks to memory
             let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
-            rust_shadowing_helper_functions::list_new(peaks_pointer, &mut memory);
+            rust_shadowing_helper_functions::unsafe_list_new(peaks_pointer, &mut memory);
             for peak in mmra.get_peaks() {
-                rust_shadowing_helper_functions::list_push(
+                rust_shadowing_helper_functions::unsafe_list_push(
                     peaks_pointer,
                     peak.values(),
                     &mut memory,
@@ -289,7 +289,7 @@ impl Snippet for MmrVerifyLeafMembershipFromSecretIn {
         let peaks_count: u64 = memory[&peaks_pointer].value();
         let mut peaks: Vec<Digest> = vec![];
         for i in 0..peaks_count {
-            let digest = Digest::new(rust_shadowing_helper_functions::list_read(
+            let digest = Digest::new(rust_shadowing_helper_functions::unsafe_list_read(
                 peaks_pointer,
                 i as usize,
                 memory,
@@ -536,9 +536,13 @@ mod mmr_verify_from_secret_in_tests {
 
         // Initialize memory with peaks list
         let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
-        rust_shadowing_helper_functions::list_new(peaks_pointer, &mut memory);
+        rust_shadowing_helper_functions::unsafe_list_new(peaks_pointer, &mut memory);
         for peak in mmr.get_peaks() {
-            rust_shadowing_helper_functions::list_push(peaks_pointer, peak.values(), &mut memory);
+            rust_shadowing_helper_functions::unsafe_list_push(
+                peaks_pointer,
+                peak.values(),
+                &mut memory,
+            );
         }
 
         let leaf_index_hi = BFieldElement::new(leaf_index >> 32);

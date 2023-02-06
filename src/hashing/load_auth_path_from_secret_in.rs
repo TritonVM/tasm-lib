@@ -145,7 +145,7 @@ impl Snippet for LoadAuthPathFromSecretIn {
         secret_in_cursor += 1;
 
         let auth_path_pointer = BFieldElement::zero();
-        rust_shadowing_helper_functions::list_new(auth_path_pointer, memory);
+        rust_shadowing_helper_functions::unsafe_list_new(auth_path_pointer, memory);
 
         let mut i = 0;
         while i != total_auth_path_length {
@@ -153,7 +153,7 @@ impl Snippet for LoadAuthPathFromSecretIn {
                 &secret_in,
                 &mut secret_in_cursor,
             );
-            rust_shadowing_helper_functions::list_push(
+            rust_shadowing_helper_functions::unsafe_list_push(
                 auth_path_pointer,
                 ap_element.values(),
                 memory,

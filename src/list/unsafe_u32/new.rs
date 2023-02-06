@@ -106,7 +106,7 @@ impl Snippet for New {
         Self: Sized,
     {
         let list_pointer = BFieldElement::zero();
-        rust_shadowing_helper_functions::list_new(list_pointer, memory);
+        rust_shadowing_helper_functions::unsafe_list_new(list_pointer, memory);
         stack.push(list_pointer);
     }
 }

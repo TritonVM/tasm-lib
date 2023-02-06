@@ -89,9 +89,9 @@ impl Snippet for MmrLoadFromSecretInThenVerify {
 
             // Write peaks to memory
             let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
-            rust_shadowing_helper_functions::list_new(peaks_pointer, &mut memory);
+            rust_shadowing_helper_functions::unsafe_list_new(peaks_pointer, &mut memory);
             for peak in mmra.get_peaks() {
-                rust_shadowing_helper_functions::list_push(
+                rust_shadowing_helper_functions::unsafe_list_push(
                     peaks_pointer,
                     peak.values(),
                     &mut memory,
@@ -224,7 +224,7 @@ impl Snippet for MmrLoadFromSecretInThenVerify {
         let peaks_count: u64 = memory[&peaks_pointer].value();
         let mut peaks: Vec<Digest> = vec![];
         for i in 0..peaks_count {
-            let digest = Digest::new(rust_shadowing_helper_functions::list_read(
+            let digest = Digest::new(rust_shadowing_helper_functions::unsafe_list_read(
                 peaks_pointer,
                 i as usize,
                 memory,
@@ -238,7 +238,7 @@ impl Snippet for MmrLoadFromSecretInThenVerify {
         secret_in_cursor += 1;
 
         let auth_path_pointer = BFieldElement::new((DIGEST_LENGTH * MAX_MMR_HEIGHT + 1) as u64);
-        rust_shadowing_helper_functions::list_new(auth_path_pointer, memory);
+        rust_shadowing_helper_functions::unsafe_list_new(auth_path_pointer, memory);
 
         let mut i = 0;
         while i != total_auth_path_length {
@@ -246,7 +246,7 @@ impl Snippet for MmrLoadFromSecretInThenVerify {
                 &secret_in,
                 &mut secret_in_cursor,
             );
-            rust_shadowing_helper_functions::list_push(
+            rust_shadowing_helper_functions::unsafe_list_push(
                 auth_path_pointer,
                 ap_element.values(),
                 memory,
@@ -259,7 +259,7 @@ impl Snippet for MmrLoadFromSecretInThenVerify {
         let auth_path_length = memory[&auth_path_pointer].value();
         let mut auth_path: Vec<Digest> = vec![];
         for i in 0..auth_path_length {
-            let digest = Digest::new(rust_shadowing_helper_functions::list_read(
+            let digest = Digest::new(rust_shadowing_helper_functions::unsafe_list_read(
                 auth_path_pointer,
                 i as usize,
                 memory,

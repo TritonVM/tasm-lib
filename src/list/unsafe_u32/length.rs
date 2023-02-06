@@ -4,7 +4,7 @@ use rand::{random, thread_rng, Rng};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
-use crate::rust_shadowing_helper_functions::insert_random_list;
+use crate::rust_shadowing_helper_functions::unsafe_insert_random_list;
 use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
@@ -43,35 +43,35 @@ impl Snippet for LengthLong {
 
         // Test for various values of `N` (list-element size)
         let mut memory = HashMap::default();
-        insert_random_list::<1>(list_address, list_length, &mut memory);
+        unsafe_insert_random_list::<1>(list_address, list_length, &mut memory);
         ret.push(ExecutionState::with_stack_and_memory(
             stack.clone(),
             memory,
             0,
         ));
         memory = HashMap::default();
-        insert_random_list::<2>(list_address, list_length, &mut memory);
+        unsafe_insert_random_list::<2>(list_address, list_length, &mut memory);
         ret.push(ExecutionState::with_stack_and_memory(
             stack.clone(),
             memory,
             0,
         ));
         memory = HashMap::default();
-        insert_random_list::<3>(list_address, list_length, &mut memory);
+        unsafe_insert_random_list::<3>(list_address, list_length, &mut memory);
         ret.push(ExecutionState::with_stack_and_memory(
             stack.clone(),
             memory,
             0,
         ));
         memory = HashMap::default();
-        insert_random_list::<4>(list_address, list_length, &mut memory);
+        unsafe_insert_random_list::<4>(list_address, list_length, &mut memory);
         ret.push(ExecutionState::with_stack_and_memory(
             stack.clone(),
             memory,
             0,
         ));
         memory = HashMap::default();
-        insert_random_list::<11>(list_address, list_length, &mut memory);
+        unsafe_insert_random_list::<11>(list_address, list_length, &mut memory);
         ret.push(ExecutionState::with_stack_and_memory(stack, memory, 0));
 
         ret

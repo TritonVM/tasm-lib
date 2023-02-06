@@ -6,7 +6,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::random_elements;
 
 use crate::library::Library;
-use crate::rust_shadowing_helper_functions::insert_random_list;
+use crate::rust_shadowing_helper_functions::unsafe_insert_random_list;
 use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
@@ -49,7 +49,7 @@ impl<const N: usize> Snippet for Push<N> {
             }
 
             let mut memory = HashMap::default();
-            insert_random_list::<N>(list_pointer, init_length, &mut memory);
+            unsafe_insert_random_list::<N>(list_pointer, init_length, &mut memory);
             ExecutionState::with_stack_and_memory(stack, memory, 0)
         }
 
@@ -161,7 +161,7 @@ mod tests_push {
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
     use crate::get_init_tvm_stack;
-    use crate::rust_shadowing_helper_functions::insert_random_list;
+    use crate::rust_shadowing_helper_functions::unsafe_insert_random_list;
     use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
@@ -216,7 +216,7 @@ mod tests_push {
         }
         let mut memory = HashMap::default();
 
-        insert_random_list::<N>(list_address, init_list_length as usize, &mut memory);
+        unsafe_insert_random_list::<N>(list_address, init_list_length as usize, &mut memory);
 
         let _execution_result = rust_tasm_equivalence_prop::<Push<N>>(
             Push(data_type),

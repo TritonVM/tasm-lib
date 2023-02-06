@@ -81,9 +81,9 @@ impl Snippet for CalculateNewPeaksFromAppend {
 
             // Initialize memory
             let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
-            rust_shadowing_helper_functions::list_new(peaks_pointer, &mut memory);
+            rust_shadowing_helper_functions::unsafe_list_new(peaks_pointer, &mut memory);
             for peak in start_mmr.get_peaks() {
-                rust_shadowing_helper_functions::list_push(
+                rust_shadowing_helper_functions::unsafe_list_push(
                     peaks_pointer,
                     peak.values(),
                     &mut memory,
@@ -237,36 +237,37 @@ impl Snippet for CalculateNewPeaksFromAppend {
         let peak_count = memory[&peaks_pointer].value() as u32;
 
         for i in 0..peak_count {
-            old_peaks.push(Digest::new(rust_shadowing_helper_functions::list_read(
-                peaks_pointer,
-                i as usize,
-                memory,
-            )));
+            old_peaks.push(Digest::new(
+                rust_shadowing_helper_functions::unsafe_list_read(
+                    peaks_pointer,
+                    i as usize,
+                    memory,
+                ),
+            ));
         }
 
         // Run the actual `calculate_new_peaks_from_append` algorithm. This function
         // is inlined here to make it manipulate memory the same way that the TASM code
         // does.
         let auth_path_pointer = BFieldElement::new((MAX_MMR_HEIGHT * DIGEST_LENGTH + 1) as u64);
-        rust_shadowing_helper_functions::list_new(auth_path_pointer, memory);
-        rust_shadowing_helper_functions::list_push(peaks_pointer, new_leaf.values(), memory);
+        rust_shadowing_helper_functions::unsafe_list_new(auth_path_pointer, memory);
+        rust_shadowing_helper_functions::unsafe_list_push(peaks_pointer, new_leaf.values(), memory);
         let new_node_index = mmr::shared::leaf_index_to_node_index(old_leaf_count as u128);
         let (mut right_lineage_count, _height) =
             mmr::shared::right_lineage_length_and_own_height(new_node_index);
         while right_lineage_count != 0 {
-            let new_hash = Digest::new(rust_shadowing_helper_functions::list_pop::<DIGEST_LENGTH>(
-                peaks_pointer,
-                memory,
-            ));
-            let previous_peak = Digest::new(rust_shadowing_helper_functions::list_pop::<
+            let new_hash = Digest::new(rust_shadowing_helper_functions::unsafe_list_pop::<
                 DIGEST_LENGTH,
             >(peaks_pointer, memory));
-            rust_shadowing_helper_functions::list_push(
+            let previous_peak = Digest::new(rust_shadowing_helper_functions::unsafe_list_pop::<
+                DIGEST_LENGTH,
+            >(peaks_pointer, memory));
+            rust_shadowing_helper_functions::unsafe_list_push(
                 auth_path_pointer,
                 previous_peak.values(),
                 memory,
             );
-            rust_shadowing_helper_functions::list_push(
+            rust_shadowing_helper_functions::unsafe_list_push(
                 peaks_pointer,
                 H::hash_pair(&previous_peak, &new_hash).values(),
                 memory,
@@ -402,9 +403,13 @@ mod tests {
 
         // Initialize memory
         let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
-        rust_shadowing_helper_functions::list_new(peaks_pointer, &mut memory);
+        rust_shadowing_helper_functions::unsafe_list_new(peaks_pointer, &mut memory);
         for peak in start_mmr.get_peaks() {
-            rust_shadowing_helper_functions::list_push(peaks_pointer, peak.values(), &mut memory);
+            rust_shadowing_helper_functions::unsafe_list_push(
+                peaks_pointer,
+                peak.values(),
+                &mut memory,
+            );
         }
 
         let auth_paths_pointer = BFieldElement::new((MAX_MMR_HEIGHT * DIGEST_LENGTH + 1) as u64);
@@ -426,7 +431,7 @@ mod tests {
         let peaks_count = memory[&peaks_pointer].value();
         let mut produced_peaks = vec![];
         for i in 0..peaks_count {
-            let peak = Digest::new(rust_shadowing_helper_functions::list_read(
+            let peak = Digest::new(rust_shadowing_helper_functions::unsafe_list_read(
                 peaks_pointer,
                 i as usize,
                 &memory,
@@ -444,11 +449,13 @@ mod tests {
         let auth_path_element_count = memory[&auth_paths_pointer].value();
         let mut produced_auth_path = vec![];
         for i in 0..auth_path_element_count {
-            produced_auth_path.push(Digest::new(rust_shadowing_helper_functions::list_read(
-                auth_paths_pointer,
-                i as usize,
-                &memory,
-            )));
+            produced_auth_path.push(Digest::new(
+                rust_shadowing_helper_functions::unsafe_list_read(
+                    auth_paths_pointer,
+                    i as usize,
+                    &memory,
+                ),
+            ));
         }
 
         let produced_mp = MmrMembershipProof::<H> {
