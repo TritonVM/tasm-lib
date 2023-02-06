@@ -19,7 +19,7 @@ pub mod mmr;
 pub mod other_snippets;
 pub mod pseudo;
 pub mod recufier;
-mod rust_shadowing_helper_functions;
+pub mod rust_shadowing_helper_functions;
 pub mod snippet;
 mod snippet_bencher;
 mod test_helpers;
