@@ -14,9 +14,9 @@ use super::data_index_to_node_index::DataIndexToNodeIndex;
 use super::right_lineage_length::MmrRightLineageLength;
 use super::MAX_MMR_HEIGHT;
 use crate::library::Library;
-use crate::list::u32::pop::Pop;
-use crate::list::u32::push::Push;
-use crate::list::u32::set_length::SetLength;
+use crate::list::unsafe_u32::pop::Pop;
+use crate::list::unsafe_u32::push::Push;
+use crate::list::unsafe_u32::set_length::SetLength;
 use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, ExecutionState};
 

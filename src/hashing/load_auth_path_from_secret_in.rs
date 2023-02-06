@@ -8,7 +8,7 @@ use twenty_first::shared_math::rescue_prime_digest::Digest;
 use twenty_first::shared_math::rescue_prime_digest::DIGEST_LENGTH;
 
 use crate::library::Library;
-use crate::list::u32::{push::Push, set_length::SetLength};
+use crate::list::unsafe_u32::{push::Push, set_length::SetLength};
 use crate::mmr::MAX_MMR_HEIGHT;
 use crate::snippet::DataType;
 use crate::snippet::Snippet;
