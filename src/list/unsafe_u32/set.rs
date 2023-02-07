@@ -10,16 +10,20 @@ use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, ExecutionState};
 
 #[derive(Clone)]
-pub struct Set<const N: usize>(pub DataType);
+pub struct Set(pub DataType);
 
-impl<const N: usize> Snippet for Set<N> {
-    fn inputs() -> Vec<&'static str> {
+impl Snippet for Set {
+    fn inputs(&self) -> Vec<String> {
         // See: https://github.com/TritonVM/tasm-snippets/issues/13
         // _ elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}} *list index
-        vec![vec!["element"; N], vec!["*list", "index"]].concat()
+        vec![
+            vec!["element".to_string(); self.0.get_size()],
+            vec!["*list".to_string(), "index".to_string()],
+        ]
+        .concat()
     }
 
-    fn outputs() -> Vec<&'static str> {
+    fn outputs(&self) -> Vec<String> {
         vec![]
     }
 
@@ -35,16 +39,16 @@ impl<const N: usize> Snippet for Set<N> {
         vec![]
     }
 
-    fn crash_conditions() -> Vec<&'static str> {
+    fn crash_conditions() -> Vec<String> {
         vec![]
     }
 
-    fn gen_input_states() -> Vec<ExecutionState> {
-        fn prepare_state<const N: usize>() -> ExecutionState {
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
+        fn prepare_state(data_type: &DataType) -> ExecutionState {
             let list_length: usize = thread_rng().gen_range(1..100);
             let index: usize = thread_rng().gen_range(0..list_length);
             let mut stack = get_init_tvm_stack();
-            let mut push_value: Vec<BFieldElement> = random_elements(N);
+            let mut push_value: Vec<BFieldElement> = random_elements(data_type.get_size());
             while let Some(element) = push_value.pop() {
                 stack.push(element);
             }
@@ -54,37 +58,35 @@ impl<const N: usize> Snippet for Set<N> {
             stack.push(BFieldElement::new(index as u64));
 
             let mut memory = HashMap::default();
-            unsafe_insert_random_list::<N>(list_pointer, list_length, &mut memory);
+            unsafe_insert_random_list(list_pointer, list_length, &mut memory, data_type.get_size());
             ExecutionState::with_stack_and_memory(stack, memory, 0)
         }
 
         vec![
-            prepare_state::<N>(),
-            prepare_state::<N>(),
-            prepare_state::<N>(),
+            prepare_state(&self.0),
+            prepare_state(&self.0),
+            prepare_state(&self.0),
         ]
     }
 
-    fn stack_diff() -> isize {
-        assert!(N < 17, "Max element size supported for list is 16");
-
-        -2 - N as isize
+    fn stack_diff(&self) -> isize {
+        -2 - self.0.get_size() as isize
     }
 
-    fn entrypoint(&self) -> &'static str {
-        "list_set_element"
+    fn entrypoint(&self) -> String {
+        "list_set_element".to_string()
     }
 
     fn function_body(&self, _library: &mut Library) -> String {
-        assert!(N < 17, "Max element size supported for list is 16");
         let entrypoint = self.entrypoint();
+        let element_size = self.0.get_size();
 
         let mut write_elements_to_memory_code = String::default();
-        for i in 0..N {
+        for i in 0..element_size {
             write_elements_to_memory_code.push_str("swap1\n");
             write_elements_to_memory_code.push_str("write_mem\n");
             write_elements_to_memory_code.push_str("pop\n");
-            if i != N - 1 {
+            if i != element_size - 1 {
                 // Prepare for next write. Not needed for last iteration.
                 write_elements_to_memory_code.push_str("push 1\n");
                 write_elements_to_memory_code.push_str("add\n");
@@ -96,7 +98,7 @@ impl<const N: usize> Snippet for Set<N> {
                 // BEFORE: _ elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}} *list index
                 // AFTER: _
                 {entrypoint}:
-                    push {N}
+                    push {element_size}
                     mul
                     push 1
                     add
@@ -114,6 +116,7 @@ impl<const N: usize> Snippet for Set<N> {
     }
 
     fn rust_shadowing(
+        &self,
         stack: &mut Vec<BFieldElement>,
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,
@@ -121,7 +124,7 @@ impl<const N: usize> Snippet for Set<N> {
     ) {
         let index: u32 = stack.pop().unwrap().try_into().unwrap();
         let list_pointer = stack.pop().unwrap();
-        let mut element: [BFieldElement; N] = [BFieldElement::new(0); N];
+        let mut element: Vec<BFieldElement> = vec![BFieldElement::new(0); self.0.get_size()];
         for ee in element.iter_mut() {
             *ee = stack.pop().unwrap();
         }
@@ -130,6 +133,7 @@ impl<const N: usize> Snippet for Set<N> {
             index as usize,
             element,
             memory,
+            self.0.get_size(),
         );
     }
 }
@@ -146,35 +150,25 @@ mod list_set_tests {
 
     #[test]
     fn new_snippet_test() {
-        rust_tasm_equivalence_prop_new::<Set<1>>(Set(DataType::U32));
-        rust_tasm_equivalence_prop_new::<Set<2>>(Set(DataType::U64));
-        rust_tasm_equivalence_prop_new::<Set<3>>(Set(DataType::XFE));
-        // rust_tasm_equivalence_prop_new::<Set<4>>();
-        rust_tasm_equivalence_prop_new::<Set<5>>(Set(DataType::Digest));
-        // rust_tasm_equivalence_prop_new::<Set<6>>();
-        // rust_tasm_equivalence_prop_new::<Set<7>>();
-        // rust_tasm_equivalence_prop_new::<Set<8>>();
-        // rust_tasm_equivalence_prop_new::<Set<9>>();
-        // rust_tasm_equivalence_prop_new::<Set<10>>();
-        // rust_tasm_equivalence_prop_new::<Set<11>>();
-        // rust_tasm_equivalence_prop_new::<Set<12>>();
-        // rust_tasm_equivalence_prop_new::<Set<13>>();
-        // rust_tasm_equivalence_prop_new::<Set<14>>();
-        // rust_tasm_equivalence_prop_new::<Set<15>>();
-        // rust_tasm_equivalence_prop_new::<Set<16>>();
+        rust_tasm_equivalence_prop_new::<Set>(Set(DataType::Bool));
+        rust_tasm_equivalence_prop_new::<Set>(Set(DataType::BFE));
+        rust_tasm_equivalence_prop_new::<Set>(Set(DataType::U32));
+        rust_tasm_equivalence_prop_new::<Set>(Set(DataType::U64));
+        rust_tasm_equivalence_prop_new::<Set>(Set(DataType::XFE));
+        rust_tasm_equivalence_prop_new::<Set>(Set(DataType::Digest));
     }
 
     #[test]
     fn list_u32_n_is_one_set() {
         let list_address = BFieldElement::new(48);
-        let insert_value = [BFieldElement::new(1337)];
+        let insert_value = vec![BFieldElement::new(1337)];
         prop_set(DataType::BFE, list_address, 20, insert_value, 2);
     }
 
     #[test]
     fn list_u32_n_is_three_set() {
         let list_address = BFieldElement::new(48);
-        let insert_value = [
+        let insert_value = vec![
             BFieldElement::new(1337),
             BFieldElement::new(1337),
             BFieldElement::new(1337),
@@ -185,14 +179,14 @@ mod list_set_tests {
     #[test]
     fn list_u32_n_is_two_set() {
         let list_address = BFieldElement::new(1841);
-        let push_value = [BFieldElement::new(133700), BFieldElement::new(32)];
+        let push_value = vec![BFieldElement::new(133700), BFieldElement::new(32)];
         prop_set(DataType::U64, list_address, 20, push_value, 0);
     }
 
     #[test]
     fn list_u32_n_is_five_set() {
         let list_address = BFieldElement::new(558);
-        let push_value = [
+        let push_value = vec![
             BFieldElement::new(133700),
             BFieldElement::new(32),
             BFieldElement::new(133700),
@@ -202,18 +196,18 @@ mod list_set_tests {
         prop_set(DataType::Digest, list_address, 2313, push_value, 589);
     }
 
-    fn prop_set<const N: usize>(
+    fn prop_set(
         data_type: DataType,
         list_address: BFieldElement,
         init_list_length: u32,
-        push_value: [BFieldElement; N],
+        push_value: Vec<BFieldElement>,
         index: u32,
     ) {
         let expected_end_stack = vec![get_init_tvm_stack()].concat();
         let mut init_stack = get_init_tvm_stack();
 
-        for i in 0..N {
-            init_stack.push(push_value[N - 1 - i]);
+        for i in 0..data_type.get_size() {
+            init_stack.push(push_value[data_type.get_size() - 1 - i]);
         }
         init_stack.push(list_address);
         init_stack.push(BFieldElement::new(index as u64));
@@ -221,10 +215,15 @@ mod list_set_tests {
         let mut vm_memory = HashMap::default();
 
         // Insert length indicator of list, lives on offset = 0 from `list_address`
-        unsafe_insert_random_list::<N>(list_address, init_list_length as usize, &mut vm_memory);
+        unsafe_insert_random_list(
+            list_address,
+            init_list_length as usize,
+            &mut vm_memory,
+            data_type.get_size(),
+        );
 
-        let _execution_result = rust_tasm_equivalence_prop::<Set<N>>(
-            Set(data_type),
+        let _execution_result = rust_tasm_equivalence_prop::<Set>(
+            Set(data_type.clone()),
             &init_stack,
             &[],
             &[],
@@ -240,11 +239,14 @@ mod list_set_tests {
         );
 
         // verify that value was inserted at expected place
-        for i in 0..N {
+        for i in 0..data_type.get_size() {
             assert_eq!(
                 push_value[i],
                 vm_memory[&BFieldElement::new(
-                    list_address.value() + 1 + N as u64 * index as u64 + i as u64
+                    list_address.value()
+                        + 1
+                        + data_type.get_size() as u64 * index as u64
+                        + i as u64
                 )]
             );
         }

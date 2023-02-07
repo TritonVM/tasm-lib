@@ -13,12 +13,12 @@ use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 pub struct DecrU64;
 
 impl Snippet for DecrU64 {
-    fn inputs() -> Vec<&'static str> {
-        vec!["value_hi", "value_lo"]
+    fn inputs(&self) -> Vec<String> {
+        vec!["value_hi".to_string(), "value_lo".to_string()]
     }
 
-    fn outputs() -> Vec<&'static str> {
-        vec!["(value - 1)_hi", "(value - 1)_lo"]
+    fn outputs(&self) -> Vec<String> {
+        vec!["(value - 1)_hi".to_string(), "(value - 1)_lo".to_string()]
     }
 
     fn input_types(&self) -> Vec<crate::snippet::DataType> {
@@ -29,11 +29,11 @@ impl Snippet for DecrU64 {
         vec![DataType::U64]
     }
 
-    fn crash_conditions() -> Vec<&'static str> {
-        vec!["value == 0"]
+    fn crash_conditions() -> Vec<String> {
+        vec!["value == 0".to_string()]
     }
 
-    fn gen_input_states() -> Vec<ExecutionState> {
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
         let values = vec![
             // U32s::<2>::zero(),
             U32s::<2>::new([0, 14]),
@@ -49,12 +49,12 @@ impl Snippet for DecrU64 {
             .collect()
     }
 
-    fn stack_diff() -> isize {
+    fn stack_diff(&self) -> isize {
         0
     }
 
-    fn entrypoint(&self) -> &'static str {
-        "decr_u64"
+    fn entrypoint(&self) -> String {
+        "decr_u64".to_string()
     }
 
     fn function_body(&self, _library: &mut Library) -> String {
@@ -90,6 +90,7 @@ impl Snippet for DecrU64 {
     }
 
     fn rust_shadowing(
+        &self,
         stack: &mut Vec<BFieldElement>,
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,
@@ -140,7 +141,13 @@ mod tests {
     fn decr_u64_negative_rust_test() {
         let mut stack = get_init_tvm_stack();
         push_hashable(&mut stack, &U32s::<2>::zero());
-        DecrU64::rust_shadowing(&mut stack, vec![], vec![], &mut HashMap::default());
+        DecrU64::rust_shadowing(
+            &DecrU64,
+            &mut stack,
+            vec![],
+            vec![],
+            &mut HashMap::default(),
+        );
     }
 
     #[test]

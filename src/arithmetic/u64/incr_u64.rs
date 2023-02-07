@@ -14,12 +14,12 @@ use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 pub struct IncrU64;
 
 impl Snippet for IncrU64 {
-    fn inputs() -> Vec<&'static str> {
-        vec!["value"]
+    fn inputs(&self) -> Vec<String> {
+        vec!["value".to_string()]
     }
 
-    fn outputs() -> Vec<&'static str> {
-        vec!["value + 1"]
+    fn outputs(&self) -> Vec<String> {
+        vec!["value + 1".to_string()]
     }
 
     fn input_types(&self) -> Vec<crate::snippet::DataType> {
@@ -30,11 +30,11 @@ impl Snippet for IncrU64 {
         vec![DataType::U64]
     }
 
-    fn crash_conditions() -> Vec<&'static str> {
-        vec!["value == u64::MAX"]
+    fn crash_conditions() -> Vec<String> {
+        vec!["value == u64::MAX".to_string()]
     }
 
-    fn gen_input_states() -> Vec<ExecutionState> {
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
         let mut rng = rand::thread_rng();
         let values = vec![
             U32s::new([u32::MAX, 0]),
@@ -54,12 +54,12 @@ impl Snippet for IncrU64 {
             .collect()
     }
 
-    fn stack_diff() -> isize {
+    fn stack_diff(&self) -> isize {
         0
     }
 
-    fn entrypoint(&self) -> &'static str {
-        "incr_u64"
+    fn entrypoint(&self) -> String {
+        "incr_u64".to_string()
     }
 
     fn function_body(&self, _library: &mut Library) -> String {
@@ -96,6 +96,7 @@ impl Snippet for IncrU64 {
     }
 
     fn rust_shadowing(
+        &self,
         stack: &mut Vec<BFieldElement>,
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,
@@ -145,6 +146,12 @@ mod tests {
         let mut stack = get_init_tvm_stack();
         let u64_max = U32s::<2>::try_from(u64::MAX).unwrap();
         push_hashable(&mut stack, &u64_max);
-        IncrU64::rust_shadowing(&mut stack, vec![], vec![], &mut HashMap::default());
+        IncrU64::rust_shadowing(
+            &IncrU64,
+            &mut stack,
+            vec![],
+            vec![],
+            &mut HashMap::default(),
+        );
     }
 }

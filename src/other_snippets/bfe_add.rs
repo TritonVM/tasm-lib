@@ -11,12 +11,12 @@ use crate::{get_init_tvm_stack, ExecutionState};
 pub struct BfeAdd;
 
 impl Snippet for BfeAdd {
-    fn inputs() -> Vec<&'static str> {
-        vec!["b", "a"]
+    fn inputs(&self) -> Vec<String> {
+        vec!["b".to_string(), "a".to_string()]
     }
 
-    fn outputs() -> Vec<&'static str> {
-        vec!["a + b"]
+    fn outputs(&self) -> Vec<String> {
+        vec!["a + b".to_string()]
     }
 
     fn input_types(&self) -> Vec<crate::snippet::DataType> {
@@ -27,11 +27,11 @@ impl Snippet for BfeAdd {
         vec![DataType::BFE]
     }
 
-    fn crash_conditions() -> Vec<&'static str> {
+    fn crash_conditions() -> Vec<String> {
         vec![]
     }
 
-    fn gen_input_states() -> Vec<ExecutionState> {
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
         let mut rng = rand::thread_rng();
         let mut stack = get_init_tvm_stack();
         stack.push(rng.gen());
@@ -39,12 +39,12 @@ impl Snippet for BfeAdd {
         vec![ExecutionState::with_stack(stack)]
     }
 
-    fn stack_diff() -> isize {
+    fn stack_diff(&self) -> isize {
         -1
     }
 
-    fn entrypoint(&self) -> &'static str {
-        "bfe_add"
+    fn entrypoint(&self) -> String {
+        "bfe_add".to_string()
     }
 
     fn function_body(&self, _library: &mut Library) -> String {
@@ -59,6 +59,7 @@ impl Snippet for BfeAdd {
     }
 
     fn rust_shadowing(
+        &self,
         stack: &mut Vec<BFieldElement>,
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,

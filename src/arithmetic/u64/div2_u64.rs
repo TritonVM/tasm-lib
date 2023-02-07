@@ -12,12 +12,12 @@ use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 pub struct Div2U64;
 
 impl Snippet for Div2U64 {
-    fn inputs() -> Vec<&'static str> {
-        vec!["value_hi", "value_lo"]
+    fn inputs(&self) -> Vec<String> {
+        vec!["value_hi".to_string(), "value_lo".to_string()]
     }
 
-    fn outputs() -> Vec<&'static str> {
-        vec!["(value / 2)_hi", "(value / 2)_lo"]
+    fn outputs(&self) -> Vec<String> {
+        vec!["(value / 2)_hi".to_string(), "(value / 2)_lo".to_string()]
     }
 
     fn input_types(&self) -> Vec<crate::snippet::DataType> {
@@ -28,11 +28,14 @@ impl Snippet for Div2U64 {
         vec![DataType::U64]
     }
 
-    fn crash_conditions() -> Vec<&'static str> {
-        vec!["If value_hi is not a u32", "If value_lo is not a u32"]
+    fn crash_conditions() -> Vec<String> {
+        vec![
+            "If value_hi is not a u32".to_string(),
+            "If value_lo is not a u32".to_string(),
+        ]
     }
 
-    fn gen_input_states() -> Vec<crate::ExecutionState> {
+    fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
         let n: u64 = rand::thread_rng().next_u64();
         let n: U32s<2> = n.try_into().unwrap();
         let mut input_stack = get_init_tvm_stack();
@@ -42,12 +45,12 @@ impl Snippet for Div2U64 {
         vec![ExecutionState::with_stack(input_stack)]
     }
 
-    fn stack_diff() -> isize {
+    fn stack_diff(&self) -> isize {
         0
     }
 
-    fn entrypoint(&self) -> &'static str {
-        "div2_u64"
+    fn entrypoint(&self) -> String {
+        "div2_u64".to_string()
     }
 
     fn function_body(&self, _library: &mut Library) -> String {
@@ -92,6 +95,7 @@ impl Snippet for Div2U64 {
     }
 
     fn rust_shadowing(
+        &self,
         stack: &mut Vec<BFieldElement>,
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,

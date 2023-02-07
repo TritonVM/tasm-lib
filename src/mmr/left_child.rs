@@ -17,12 +17,16 @@ use crate::{get_init_tvm_stack, ExecutionState};
 pub struct MmrLeftChild;
 
 impl Snippet for MmrLeftChild {
-    fn inputs() -> Vec<&'static str> {
-        vec!["node_index_hi", "node_index_lo", "height"]
+    fn inputs(&self) -> Vec<String> {
+        vec![
+            "node_index_hi".to_string(),
+            "node_index_lo".to_string(),
+            "height".to_string(),
+        ]
     }
 
-    fn outputs() -> Vec<&'static str> {
-        vec!["left_child_hi", "left_child_lo"]
+    fn outputs(&self) -> Vec<String> {
+        vec!["left_child_hi".to_string(), "left_child_lo".to_string()]
     }
 
     fn input_types(&self) -> Vec<crate::snippet::DataType> {
@@ -33,11 +37,11 @@ impl Snippet for MmrLeftChild {
         vec![DataType::U64]
     }
 
-    fn crash_conditions() -> Vec<&'static str> {
-        vec!["Input values are not u32s"]
+    fn crash_conditions() -> Vec<String> {
+        vec!["Input values are not u32s".to_string()]
     }
 
-    fn gen_input_states() -> Vec<crate::ExecutionState> {
+    fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
         let mut ret: Vec<ExecutionState> = vec![];
         for _ in 0..10 {
             let mut stack = get_init_tvm_stack();
@@ -55,12 +59,12 @@ impl Snippet for MmrLeftChild {
         ret
     }
 
-    fn stack_diff() -> isize {
+    fn stack_diff(&self) -> isize {
         -1
     }
 
-    fn entrypoint(&self) -> &'static str {
-        "mmr_left_child"
+    fn entrypoint(&self) -> String {
+        "mmr_left_child".to_string()
     }
 
     fn function_body(&self, library: &mut Library) -> String {
@@ -84,6 +88,7 @@ impl Snippet for MmrLeftChild {
     }
 
     fn rust_shadowing(
+        &self,
         stack: &mut Vec<BFieldElement>,
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,

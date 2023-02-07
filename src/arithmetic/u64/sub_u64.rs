@@ -14,12 +14,17 @@ use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 pub struct SubU64;
 
 impl Snippet for SubU64 {
-    fn inputs() -> Vec<&'static str> {
-        vec!["rhs_hi", "rhs_lo", "lhs_hi", "lhs_lo"]
+    fn inputs(&self) -> Vec<String> {
+        vec![
+            "rhs_hi".to_string(),
+            "rhs_lo".to_string(),
+            "lhs_hi".to_string(),
+            "lhs_lo".to_string(),
+        ]
     }
 
-    fn outputs() -> Vec<&'static str> {
-        vec!["(lhs - rhs)_hi", "(lhs - rhs)_lo"]
+    fn outputs(&self) -> Vec<String> {
+        vec!["(lhs - rhs)_hi".to_string(), "(lhs - rhs)_lo".to_string()]
     }
 
     fn input_types(&self) -> Vec<crate::snippet::DataType> {
@@ -30,11 +35,11 @@ impl Snippet for SubU64 {
         vec![DataType::U64]
     }
 
-    fn crash_conditions() -> Vec<&'static str> {
-        vec!["if (lhs - rhs) overflows u64"]
+    fn crash_conditions() -> Vec<String> {
+        vec!["if (lhs - rhs) overflows u64".to_string()]
     }
 
-    fn gen_input_states() -> Vec<ExecutionState> {
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
         let mut rng = rand::thread_rng();
 
         // no overflow, no carry: small_a - smaller_b
@@ -90,12 +95,12 @@ impl Snippet for SubU64 {
         ]
     }
 
-    fn stack_diff() -> isize {
+    fn stack_diff(&self) -> isize {
         -2
     }
 
-    fn entrypoint(&self) -> &'static str {
-        "sub_u64"
+    fn entrypoint(&self) -> String {
+        "sub_u64".to_string()
     }
 
     /// Four top elements of stack are assumed to be valid u32s. So to have
@@ -147,6 +152,7 @@ impl Snippet for SubU64 {
     }
 
     fn rust_shadowing(
+        &self,
         stack: &mut Vec<BFieldElement>,
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,

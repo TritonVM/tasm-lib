@@ -12,7 +12,7 @@ use crate::snippet::{DataType, Snippet};
 
 #[derive(Debug, Default)]
 pub struct Library {
-    seen_snippets: HashSet<&'static str>,
+    seen_snippets: HashSet<String>,
     function_bodies: HashSet<String>,
     free_pointer: usize,
 }
@@ -46,7 +46,7 @@ impl Library {
     ///
     /// Avoid cyclic dependencies by only calling `T::function_body()` which
     /// may call `.import()` if `.import::<T>()` wasn't already called once.
-    pub fn import(&mut self, snippet: Box<dyn Snippet>) -> &'static str {
+    pub fn import(&mut self, snippet: Box<dyn Snippet>) -> String {
         let dep_entrypoint = snippet.entrypoint();
         if self.seen_snippets.insert(dep_entrypoint) {
             let dep_function_body = snippet.function_body(self);
@@ -80,12 +80,12 @@ pub struct DummyTestSnippetB;
 pub struct DummyTestSnippetC;
 
 impl Snippet for DummyTestSnippetA {
-    fn stack_diff() -> isize {
+    fn stack_diff(&self) -> isize {
         3
     }
 
-    fn entrypoint(&self) -> &'static str {
-        "a_dummy_test_value"
+    fn entrypoint(&self) -> String {
+        "a_dummy_test_value".to_string()
     }
 
     fn function_body(&self, library: &mut Library) -> String {
@@ -104,6 +104,7 @@ impl Snippet for DummyTestSnippetA {
     }
 
     fn rust_shadowing(
+        &self,
         stack: &mut Vec<BFieldElement>,
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,
@@ -114,19 +115,19 @@ impl Snippet for DummyTestSnippetA {
         stack.push(BFieldElement::one());
     }
 
-    fn inputs() -> Vec<&'static str> {
+    fn inputs(&self) -> Vec<String> {
         vec![]
     }
 
-    fn outputs() -> Vec<&'static str> {
-        vec!["1", "1", "1"]
+    fn outputs(&self) -> Vec<String> {
+        vec!["1".to_string(), "1".to_string(), "1".to_string()]
     }
 
-    fn crash_conditions() -> Vec<&'static str> {
+    fn crash_conditions() -> Vec<String> {
         vec![]
     }
 
-    fn gen_input_states() -> Vec<crate::ExecutionState> {
+    fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
         vec![]
     }
 
@@ -140,12 +141,12 @@ impl Snippet for DummyTestSnippetA {
 }
 
 impl Snippet for DummyTestSnippetB {
-    fn stack_diff() -> isize {
+    fn stack_diff(&self) -> isize {
         2
     }
 
-    fn entrypoint(&self) -> &'static str {
-        "b_dummy_test_value"
+    fn entrypoint(&self) -> String {
+        "b_dummy_test_value".to_string()
     }
 
     fn function_body(&self, library: &mut Library) -> String {
@@ -163,6 +164,7 @@ impl Snippet for DummyTestSnippetB {
     }
 
     fn rust_shadowing(
+        &self,
         stack: &mut Vec<BFieldElement>,
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,
@@ -172,12 +174,12 @@ impl Snippet for DummyTestSnippetB {
         stack.push(BFieldElement::one());
     }
 
-    fn inputs() -> Vec<&'static str> {
+    fn inputs(&self) -> Vec<String> {
         vec![]
     }
 
-    fn outputs() -> Vec<&'static str> {
-        vec!["1", "1"]
+    fn outputs(&self) -> Vec<String> {
+        vec!["1".to_string(), "1".to_string()]
     }
 
     fn input_types(&self) -> Vec<crate::snippet::DataType> {
@@ -188,22 +190,22 @@ impl Snippet for DummyTestSnippetB {
         vec![DataType::BFE, DataType::BFE]
     }
 
-    fn crash_conditions() -> Vec<&'static str> {
+    fn crash_conditions() -> Vec<String> {
         vec![]
     }
 
-    fn gen_input_states() -> Vec<crate::ExecutionState> {
+    fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
         vec![]
     }
 }
 
 impl Snippet for DummyTestSnippetC {
-    fn stack_diff() -> isize {
+    fn stack_diff(&self) -> isize {
         1
     }
 
-    fn entrypoint(&self) -> &'static str {
-        "c_dummy_test_value"
+    fn entrypoint(&self) -> String {
+        "c_dummy_test_value".to_string()
     }
 
     fn function_body(&self, _library: &mut Library) -> String {
@@ -219,6 +221,7 @@ impl Snippet for DummyTestSnippetC {
     }
 
     fn rust_shadowing(
+        &self,
         stack: &mut Vec<BFieldElement>,
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,
@@ -227,12 +230,12 @@ impl Snippet for DummyTestSnippetC {
         stack.push(BFieldElement::one())
     }
 
-    fn inputs() -> Vec<&'static str> {
+    fn inputs(&self) -> Vec<String> {
         vec![]
     }
 
-    fn outputs() -> Vec<&'static str> {
-        vec!["1"]
+    fn outputs(&self) -> Vec<String> {
+        vec!["1".to_string()]
     }
 
     fn input_types(&self) -> Vec<crate::snippet::DataType> {
@@ -243,11 +246,11 @@ impl Snippet for DummyTestSnippetC {
         vec![DataType::BFE]
     }
 
-    fn crash_conditions() -> Vec<&'static str> {
+    fn crash_conditions() -> Vec<String> {
         vec![]
     }
 
-    fn gen_input_states() -> Vec<crate::ExecutionState> {
+    fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
         vec![]
     }
 }

@@ -16,12 +16,12 @@ use crate::{get_init_tvm_stack, ExecutionState};
 pub struct MmrRightLineageCountAndHeight;
 
 impl Snippet for MmrRightLineageCountAndHeight {
-    fn inputs() -> Vec<&'static str> {
-        vec!["node_index_hi", "node_index_lo"]
+    fn inputs(&self) -> Vec<String> {
+        vec!["node_index_hi".to_string(), "node_index_lo".to_string()]
     }
 
-    fn outputs() -> Vec<&'static str> {
-        vec!["right_lineage_count", "height"]
+    fn outputs(&self) -> Vec<String> {
+        vec!["right_lineage_count".to_string(), "height".to_string()]
     }
 
     fn input_types(&self) -> Vec<crate::snippet::DataType> {
@@ -32,11 +32,14 @@ impl Snippet for MmrRightLineageCountAndHeight {
         vec![DataType::U32, DataType::U32]
     }
 
-    fn crash_conditions() -> Vec<&'static str> {
-        vec!["Input values are not valid u32s", "Node index beyond ~2^63"]
+    fn crash_conditions() -> Vec<String> {
+        vec![
+            "Input values are not valid u32s".to_string(),
+            "Node index beyond ~2^63".to_string(),
+        ]
     }
 
-    fn gen_input_states() -> Vec<crate::ExecutionState> {
+    fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
         let mut ret: Vec<ExecutionState> = vec![];
         for _ in 0..10 {
             let mut stack = get_init_tvm_stack();
@@ -51,12 +54,12 @@ impl Snippet for MmrRightLineageCountAndHeight {
         ret
     }
 
-    fn stack_diff() -> isize {
+    fn stack_diff(&self) -> isize {
         0
     }
 
-    fn entrypoint(&self) -> &'static str {
-        "right_lineage_count_and_own_height"
+    fn entrypoint(&self) -> String {
+        "right_lineage_count_and_own_height".to_string()
     }
 
     fn function_body(&self, library: &mut Library) -> String
@@ -193,6 +196,7 @@ impl Snippet for MmrRightLineageCountAndHeight {
     }
 
     fn rust_shadowing(
+        &self,
         stack: &mut Vec<BFieldElement>,
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,

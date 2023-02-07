@@ -18,12 +18,16 @@ use crate::{get_init_tvm_stack, ExecutionState};
 pub struct MmrLeftMostAncestor;
 
 impl Snippet for MmrLeftMostAncestor {
-    fn inputs() -> Vec<&'static str> {
-        vec!["node_index_hi", "node_index_lo"]
+    fn inputs(&self) -> Vec<String> {
+        vec!["node_index_hi".to_string(), "node_index_lo".to_string()]
     }
 
-    fn outputs() -> Vec<&'static str> {
-        vec!["leftmost_ancestor_hi", "leftmost_ancestor_lo", "height"]
+    fn outputs(&self) -> Vec<String> {
+        vec![
+            "leftmost_ancestor_hi".to_string(),
+            "leftmost_ancestor_lo".to_string(),
+            "height".to_string(),
+        ]
     }
 
     fn input_types(&self) -> Vec<crate::snippet::DataType> {
@@ -34,11 +38,14 @@ impl Snippet for MmrLeftMostAncestor {
         vec![DataType::U64, DataType::U32]
     }
 
-    fn crash_conditions() -> Vec<&'static str> {
-        vec!["Inputs are not u32s", "Node index beyond ~2^63?"]
+    fn crash_conditions() -> Vec<String> {
+        vec![
+            "Inputs are not u32s".to_string(),
+            "Node index beyond ~2^63?".to_string(),
+        ]
     }
 
-    fn gen_input_states() -> Vec<crate::ExecutionState> {
+    fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
         let mut ret: Vec<ExecutionState> = vec![];
         for _ in 0..10 {
             let mut stack = get_init_tvm_stack();
@@ -53,12 +60,12 @@ impl Snippet for MmrLeftMostAncestor {
         ret
     }
 
-    fn stack_diff() -> isize {
+    fn stack_diff(&self) -> isize {
         1
     }
 
-    fn entrypoint(&self) -> &'static str {
-        "mmr_leftmost_ancestor"
+    fn entrypoint(&self) -> String {
+        "mmr_leftmost_ancestor".to_string()
     }
 
     fn function_body(&self, library: &mut Library) -> String {
@@ -98,6 +105,7 @@ impl Snippet for MmrLeftMostAncestor {
     }
 
     fn rust_shadowing(
+        &self,
         stack: &mut Vec<BFieldElement>,
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,

@@ -15,12 +15,12 @@ use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 pub struct Pow2U64;
 
 impl Snippet for Pow2U64 {
-    fn inputs() -> Vec<&'static str> {
-        vec!["i"]
+    fn inputs(&self) -> Vec<String> {
+        vec!["i".to_string()]
     }
 
-    fn outputs() -> Vec<&'static str> {
-        vec!["(2^i)_hi", "(2^i)_lo"]
+    fn outputs(&self) -> Vec<String> {
+        vec!["(2^i)_hi".to_string(), "(2^i)_lo".to_string()]
     }
 
     fn input_types(&self) -> Vec<crate::snippet::DataType> {
@@ -31,11 +31,11 @@ impl Snippet for Pow2U64 {
         vec![DataType::U64]
     }
 
-    fn crash_conditions() -> Vec<&'static str> {
+    fn crash_conditions() -> Vec<String> {
         vec![]
     }
 
-    fn gen_input_states() -> Vec<ExecutionState> {
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
         (0..64)
             .map(|i: u32| {
                 let mut stack = get_init_tvm_stack();
@@ -45,12 +45,12 @@ impl Snippet for Pow2U64 {
             .collect()
     }
 
-    fn stack_diff() -> isize {
+    fn stack_diff(&self) -> isize {
         1
     }
 
-    fn entrypoint(&self) -> &'static str {
-        "pow2_u64"
+    fn entrypoint(&self) -> String {
+        "pow2_u64".to_string()
     }
 
     fn function_body(&self, _library: &mut Library) -> String {
@@ -67,6 +67,7 @@ impl Snippet for Pow2U64 {
     }
 
     fn rust_shadowing(
+        &self,
         stack: &mut Vec<BFieldElement>,
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,

@@ -25,11 +25,11 @@ pub struct MtApVerifyFromSecretInput;
 ///
 /// uses RAM at address 0 to store the number of authentication paths
 impl Snippet for MtApVerifyFromSecretInput {
-    fn inputs() -> Vec<&'static str> {
+    fn inputs(&self) -> Vec<String> {
         vec![]
     }
 
-    fn outputs() -> Vec<&'static str> {
+    fn outputs(&self) -> Vec<String> {
         vec![]
     }
 
@@ -41,11 +41,11 @@ impl Snippet for MtApVerifyFromSecretInput {
         vec![]
     }
 
-    fn crash_conditions() -> Vec<&'static str> {
-        vec!["auth path in public input is invalid"]
+    fn crash_conditions() -> Vec<String> {
+        vec!["auth path in public input is invalid".to_string()]
     }
 
-    fn gen_input_states() -> Vec<ExecutionState> {
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
         let leafs = generate_leafs();
         let mt: &MerkleTree<RescuePrimeRegular, CpuParallel> =
             &MerkleTreeMaker::from_digests(&leafs);
@@ -65,12 +65,12 @@ impl Snippet for MtApVerifyFromSecretInput {
         vec![ret0]
     }
 
-    fn stack_diff() -> isize {
+    fn stack_diff(&self) -> isize {
         0
     }
 
-    fn entrypoint(&self) -> &'static str {
-        "mt_ap_verify"
+    fn entrypoint(&self) -> String {
+        "mt_ap_verify".to_string()
     }
 
     fn function_body(&self, _library: &mut Library) -> String {
@@ -143,6 +143,7 @@ impl Snippet for MtApVerifyFromSecretInput {
     //needs secret input with merkle siblings along all authentication paths
     //will need to update code when we switch to a new hash function
     fn rust_shadowing(
+        &self,
         _stack: &mut Vec<BFieldElement>,
         std_in: Vec<BFieldElement>,
         secret_in: Vec<BFieldElement>,

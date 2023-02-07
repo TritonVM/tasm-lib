@@ -28,21 +28,25 @@ use super::leaf_index_to_mt_index::MmrLeafIndexToMtIndexAndPeakIndex;
 pub struct MmrVerifyLeafMembershipFromSecretIn;
 
 impl Snippet for MmrVerifyLeafMembershipFromSecretIn {
-    fn inputs() -> Vec<&'static str> {
+    fn inputs(&self) -> Vec<String> {
         vec![
-            "peaks_pointer",
-            "leaf_count_hi",
-            "leaf_count_lo",
-            "leaf_digest_4",
-            "leaf_digest_3",
-            "leaf_digest_2",
-            "leaf_digest_1",
-            "leaf_digest_0",
+            "peaks_pointer".to_string(),
+            "leaf_count_hi".to_string(),
+            "leaf_count_lo".to_string(),
+            "leaf_digest_4".to_string(),
+            "leaf_digest_3".to_string(),
+            "leaf_digest_2".to_string(),
+            "leaf_digest_1".to_string(),
+            "leaf_digest_0".to_string(),
         ]
     }
 
-    fn outputs() -> Vec<&'static str> {
-        vec!["leaf_index_hi", "leaf_index_lo", "validation_result"]
+    fn outputs(&self) -> Vec<String> {
+        vec![
+            "leaf_index_hi".to_string(),
+            "leaf_index_lo".to_string(),
+            "validation_result".to_string(),
+        ]
     }
 
     fn input_types(&self) -> Vec<crate::snippet::DataType> {
@@ -57,16 +61,16 @@ impl Snippet for MmrVerifyLeafMembershipFromSecretIn {
         vec![DataType::U64, DataType::Bool]
     }
 
-    fn crash_conditions() -> Vec<&'static str> {
+    fn crash_conditions() -> Vec<String> {
         vec![
-            "secret input is too short",
-            "leaf index is not strictly less than leaf count",
+            "secret input is too short".to_string(),
+            "leaf index is not strictly less than leaf count".to_string(),
         ]
     }
 
     // BEFORE: _ *peaks leaf_count_hi leaf_count_lo [digest (leaf_digest)]
     // AFTER:  _ leaf_index_hi leaf_index_lo validation_result
-    fn gen_input_states() -> Vec<ExecutionState> {
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
         type H = RescuePrimeRegular;
 
         /// Prepare the part of the state that can be derived from the MMR without
@@ -89,8 +93,9 @@ impl Snippet for MmrVerifyLeafMembershipFromSecretIn {
             for peak in mmra.get_peaks() {
                 rust_shadowing_helper_functions::unsafe_list_push(
                     peaks_pointer,
-                    peak.values(),
+                    peak.values().to_vec(),
                     &mut memory,
+                    DIGEST_LENGTH,
                 );
             }
 
@@ -158,12 +163,12 @@ impl Snippet for MmrVerifyLeafMembershipFromSecretIn {
         init_vm_states
     }
 
-    fn stack_diff() -> isize {
+    fn stack_diff(&self) -> isize {
         -5
     }
 
-    fn entrypoint(&self) -> &'static str {
-        "mmr_verify_from_secret_in"
+    fn entrypoint(&self) -> String {
+        "mmr_verify_from_secret_in".to_string()
     }
 
     // Already on stack (can be secret of public input): _ *peaks leaf_count_hi leaf_count_lo [digest (leaf)]
@@ -177,7 +182,7 @@ impl Snippet for MmrVerifyLeafMembershipFromSecretIn {
         let swap_digests = library.import(Box::new(SwapDigest));
         let compare_digest = library.import(Box::new(EqDigest));
         let div_2 = library.import(Box::new(Div2U64));
-        let get = library.import(Box::new(Get::<DIGEST_LENGTH>(DataType::Digest)));
+        let get = library.import(Box::new(Get(DataType::Digest)));
 
         let divine_digest = "divine\n".repeat(DIGEST_LENGTH);
 
@@ -265,6 +270,7 @@ impl Snippet for MmrVerifyLeafMembershipFromSecretIn {
     }
 
     fn rust_shadowing(
+        &self,
         stack: &mut Vec<BFieldElement>,
         _std_in: Vec<BFieldElement>,
         secret_in: Vec<BFieldElement>,
@@ -289,11 +295,16 @@ impl Snippet for MmrVerifyLeafMembershipFromSecretIn {
         let peaks_count: u64 = memory[&peaks_pointer].value();
         let mut peaks: Vec<Digest> = vec![];
         for i in 0..peaks_count {
-            let digest = Digest::new(rust_shadowing_helper_functions::unsafe_list_read(
-                peaks_pointer,
-                i as usize,
-                memory,
-            ));
+            let digest = Digest::new(
+                rust_shadowing_helper_functions::unsafe_list_read(
+                    peaks_pointer,
+                    i as usize,
+                    memory,
+                    DIGEST_LENGTH,
+                )
+                .try_into()
+                .unwrap(),
+            );
             peaks.push(digest);
         }
 
@@ -540,8 +551,9 @@ mod mmr_verify_from_secret_in_tests {
         for peak in mmr.get_peaks() {
             rust_shadowing_helper_functions::unsafe_list_push(
                 peaks_pointer,
-                peak.values(),
+                peak.values().to_vec(),
                 &mut memory,
+                DIGEST_LENGTH,
             );
         }
 

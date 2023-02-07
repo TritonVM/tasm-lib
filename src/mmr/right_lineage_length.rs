@@ -13,12 +13,12 @@ use crate::{get_init_tvm_stack, ExecutionState};
 pub struct MmrRightLineageLength;
 
 impl Snippet for MmrRightLineageLength {
-    fn inputs() -> Vec<&'static str> {
-        vec!["node_index_hi", "node_index_lo"]
+    fn inputs(&self) -> Vec<String> {
+        vec!["node_index_hi".to_string(), "node_index_lo".to_string()]
     }
 
-    fn outputs() -> Vec<&'static str> {
-        vec!["right_lineage_length"]
+    fn outputs(&self) -> Vec<String> {
+        vec!["right_lineage_length".to_string()]
     }
 
     fn input_types(&self) -> Vec<crate::snippet::DataType> {
@@ -29,11 +29,11 @@ impl Snippet for MmrRightLineageLength {
         vec![DataType::U32]
     }
 
-    fn crash_conditions() -> Vec<&'static str> {
-        vec!["node index exceeds 2^63"]
+    fn crash_conditions() -> Vec<String> {
+        vec!["node index exceeds 2^63".to_string()]
     }
 
-    fn gen_input_states() -> Vec<crate::ExecutionState> {
+    fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
         let mut ret: Vec<ExecutionState> = vec![];
         for _ in 0..10 {
             let mut stack = get_init_tvm_stack();
@@ -48,12 +48,12 @@ impl Snippet for MmrRightLineageLength {
         ret
     }
 
-    fn stack_diff() -> isize {
+    fn stack_diff(&self) -> isize {
         -1
     }
 
-    fn entrypoint(&self) -> &'static str {
-        "right_lineage_length"
+    fn entrypoint(&self) -> String {
+        "right_lineage_length".to_string()
     }
 
     fn function_body(&self, library: &mut crate::library::Library) -> String {
@@ -149,6 +149,7 @@ impl Snippet for MmrRightLineageLength {
     }
 
     fn rust_shadowing(
+        &self,
         stack: &mut Vec<twenty_first::shared_math::b_field_element::BFieldElement>,
         _std_in: Vec<twenty_first::shared_math::b_field_element::BFieldElement>,
         _secret_in: Vec<twenty_first::shared_math::b_field_element::BFieldElement>,

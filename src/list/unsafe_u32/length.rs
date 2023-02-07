@@ -8,17 +8,17 @@ use crate::rust_shadowing_helper_functions::unsafe_insert_random_list;
 use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
-// Called "Long" because this logic can be shortened
+// Called "Long".to_string() because this logic can be shortened
 #[derive(Clone)]
 pub struct LengthLong(pub DataType);
 
 impl Snippet for LengthLong {
-    fn inputs() -> Vec<&'static str> {
-        vec!["*list"]
+    fn inputs(&self) -> Vec<String> {
+        vec!["*list".to_string()]
     }
 
-    fn outputs() -> Vec<&'static str> {
-        vec!["list_length"]
+    fn outputs(&self) -> Vec<String> {
+        vec!["list_length".to_string()]
     }
 
     fn input_types(&self) -> Vec<crate::snippet::DataType> {
@@ -29,11 +29,11 @@ impl Snippet for LengthLong {
         vec![DataType::U32]
     }
 
-    fn crash_conditions() -> Vec<&'static str> {
+    fn crash_conditions() -> Vec<String> {
         vec![]
     }
 
-    fn gen_input_states() -> Vec<ExecutionState> {
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
         let mut ret: Vec<ExecutionState> = vec![];
         let mut rng = thread_rng();
         let mut stack = get_init_tvm_stack();
@@ -43,47 +43,47 @@ impl Snippet for LengthLong {
 
         // Test for various values of `N` (list-element size)
         let mut memory = HashMap::default();
-        unsafe_insert_random_list::<1>(list_address, list_length, &mut memory);
+        unsafe_insert_random_list(list_address, list_length, &mut memory, 1);
         ret.push(ExecutionState::with_stack_and_memory(
             stack.clone(),
             memory,
             0,
         ));
         memory = HashMap::default();
-        unsafe_insert_random_list::<2>(list_address, list_length, &mut memory);
+        unsafe_insert_random_list(list_address, list_length, &mut memory, 2);
         ret.push(ExecutionState::with_stack_and_memory(
             stack.clone(),
             memory,
             0,
         ));
         memory = HashMap::default();
-        unsafe_insert_random_list::<3>(list_address, list_length, &mut memory);
+        unsafe_insert_random_list(list_address, list_length, &mut memory, 3);
         ret.push(ExecutionState::with_stack_and_memory(
             stack.clone(),
             memory,
             0,
         ));
         memory = HashMap::default();
-        unsafe_insert_random_list::<4>(list_address, list_length, &mut memory);
+        unsafe_insert_random_list(list_address, list_length, &mut memory, 4);
         ret.push(ExecutionState::with_stack_and_memory(
             stack.clone(),
             memory,
             0,
         ));
         memory = HashMap::default();
-        unsafe_insert_random_list::<11>(list_address, list_length, &mut memory);
+        unsafe_insert_random_list(list_address, list_length, &mut memory, 11);
         ret.push(ExecutionState::with_stack_and_memory(stack, memory, 0));
 
         ret
     }
 
-    fn stack_diff() -> isize {
+    fn stack_diff(&self) -> isize {
         // Consumes a memory address and returns a length in the form of a u32
         0
     }
 
-    fn entrypoint(&self) -> &'static str {
-        "list_u32_length_long"
+    fn entrypoint(&self) -> String {
+        "list_u32_length_long".to_string()
     }
 
     fn function_body(&self, _library: &mut Library) -> String {
@@ -103,6 +103,7 @@ impl Snippet for LengthLong {
     }
 
     fn rust_shadowing(
+        &self,
         stack: &mut Vec<BFieldElement>,
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,
@@ -120,12 +121,12 @@ impl Snippet for LengthLong {
 pub struct LengthShort(pub DataType);
 
 impl Snippet for LengthShort {
-    fn inputs() -> Vec<&'static str> {
-        vec!["*list"]
+    fn inputs(&self) -> Vec<String> {
+        vec!["*list".to_string()]
     }
 
-    fn outputs() -> Vec<&'static str> {
-        vec!["*list", "list_length"]
+    fn outputs(&self) -> Vec<String> {
+        vec!["*list".to_string(), "list_length".to_string()]
     }
 
     fn input_types(&self) -> Vec<crate::snippet::DataType> {
@@ -136,21 +137,21 @@ impl Snippet for LengthShort {
         vec![DataType::List(Box::new(self.0.clone())), DataType::U32]
     }
 
-    fn crash_conditions() -> Vec<&'static str> {
+    fn crash_conditions() -> Vec<String> {
         vec![]
     }
 
-    fn gen_input_states() -> Vec<ExecutionState> {
-        LengthLong::gen_input_states()
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
+        LengthLong::gen_input_states(&LengthLong(self.0.clone()))
     }
 
-    fn stack_diff() -> isize {
+    fn stack_diff(&self) -> isize {
         // Adds the length of a vector in the form of a u32 to the top of the stack
         1
     }
 
-    fn entrypoint(&self) -> &'static str {
-        "list_u32_length_short"
+    fn entrypoint(&self) -> String {
+        "list_u32_length_short".to_string()
     }
 
     fn function_body(&self, _library: &mut Library) -> String {
@@ -168,6 +169,7 @@ impl Snippet for LengthShort {
     }
 
     fn rust_shadowing(
+        &self,
         stack: &mut Vec<BFieldElement>,
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,

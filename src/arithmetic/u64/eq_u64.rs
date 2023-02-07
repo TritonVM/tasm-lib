@@ -13,12 +13,17 @@ use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 pub struct EqU64;
 
 impl Snippet for EqU64 {
-    fn inputs() -> Vec<&'static str> {
-        vec!["rhs_hi", "rhs_lo", "lhs_hi", "lhs_lo"]
+    fn inputs(&self) -> Vec<String> {
+        vec![
+            "rhs_hi".to_string(),
+            "rhs_lo".to_string(),
+            "lhs_hi".to_string(),
+            "lhs_lo".to_string(),
+        ]
     }
 
-    fn outputs() -> Vec<&'static str> {
-        vec!["rhs_hi == lhs_hi && rhs_lo == rhs_lo"]
+    fn outputs(&self) -> Vec<String> {
+        vec!["rhs_hi == lhs_hi && rhs_lo == rhs_lo".to_string()]
     }
 
     fn input_types(&self) -> Vec<crate::snippet::DataType> {
@@ -29,11 +34,11 @@ impl Snippet for EqU64 {
         vec![DataType::Bool]
     }
 
-    fn crash_conditions() -> Vec<&'static str> {
+    fn crash_conditions() -> Vec<String> {
         vec![]
     }
 
-    fn gen_input_states() -> Vec<ExecutionState> {
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
         let mut rng = rand::thread_rng();
         let rhs = U32s::<2>::try_from(rng.next_u64()).unwrap();
         let lhs = U32s::<2>::try_from(rng.next_u64()).unwrap();
@@ -45,12 +50,12 @@ impl Snippet for EqU64 {
         vec![ExecutionState::with_stack(stack)]
     }
 
-    fn stack_diff() -> isize {
+    fn stack_diff(&self) -> isize {
         -3
     }
 
-    fn entrypoint(&self) -> &'static str {
-        "eq_u64"
+    fn entrypoint(&self) -> String {
+        "eq_u64".to_string()
     }
 
     fn function_body(&self, _library: &mut Library) -> String {
@@ -75,6 +80,7 @@ impl Snippet for EqU64 {
     }
 
     fn rust_shadowing(
+        &self,
         stack: &mut Vec<BFieldElement>,
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,

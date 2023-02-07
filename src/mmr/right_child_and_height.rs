@@ -20,12 +20,12 @@ use super::right_child::MmrRightChild;
 pub struct MmrRightChildAndHeight;
 
 impl Snippet for MmrRightChildAndHeight {
-    fn inputs() -> Vec<&'static str> {
-        vec!["node_index_hi", "node_index_lo"]
+    fn inputs(&self) -> Vec<String> {
+        vec!["node_index_hi".to_string(), "node_index_lo".to_string()]
     }
 
-    fn outputs() -> Vec<&'static str> {
-        vec!["is_right_child", "height"]
+    fn outputs(&self) -> Vec<String> {
+        vec!["is_right_child".to_string(), "height".to_string()]
     }
 
     fn input_types(&self) -> Vec<crate::snippet::DataType> {
@@ -36,11 +36,11 @@ impl Snippet for MmrRightChildAndHeight {
         vec![DataType::Bool, DataType::U32]
     }
 
-    fn crash_conditions() -> Vec<&'static str> {
-        vec!["Node index exceeds 2^63?"]
+    fn crash_conditions() -> Vec<String> {
+        vec!["Node index exceeds 2^63?".to_string()]
     }
 
-    fn gen_input_states() -> Vec<crate::ExecutionState> {
+    fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
         let mut ret: Vec<ExecutionState> = vec![];
         for _ in 0..10 {
             let mut stack = get_init_tvm_stack();
@@ -55,12 +55,12 @@ impl Snippet for MmrRightChildAndHeight {
         ret
     }
 
-    fn stack_diff() -> isize {
+    fn stack_diff(&self) -> isize {
         0
     }
 
-    fn entrypoint(&self) -> &'static str {
-        "right_child_and_height"
+    fn entrypoint(&self) -> String {
+        "right_child_and_height".to_string()
     }
 
     fn function_body(&self, library: &mut Library) -> String
@@ -194,6 +194,7 @@ impl Snippet for MmrRightChildAndHeight {
     }
 
     fn rust_shadowing(
+        &self,
         stack: &mut Vec<BFieldElement>,
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,

@@ -9,7 +9,7 @@ use crate::snippet::{simulate_snippet, Snippet};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SnippetBenchmark {
-    name: &'static str,
+    name: String,
     processor_table_height: usize,
     hash_table_height: usize,
     u32_table_height: usize,
@@ -17,7 +17,7 @@ pub struct SnippetBenchmark {
 
 #[allow(dead_code)]
 pub fn benchmark_snippet<T: Snippet + Clone>(snippet: T) -> Vec<SnippetBenchmark> {
-    let execution_states = T::gen_input_states();
+    let execution_states = snippet.gen_input_states();
     let mut benchmarks = Vec::with_capacity(execution_states.len());
 
     for execution_state in execution_states {
@@ -40,7 +40,7 @@ pub fn write_benchmarks<T: Snippet>(benchmarks: Vec<SnippetBenchmark>, snippet: 
     path.push("benchmarks");
     create_dir_all(&path).expect("benchmarks directory should exist");
 
-    path.push(Path::new(snippet.entrypoint()).with_extension("json"));
+    path.push(Path::new(&snippet.entrypoint()).with_extension("json"));
     let output = File::create(&path).expect("open file for writing");
     to_writer_pretty(output, &benchmarks).expect("write json to file");
 }

@@ -11,16 +11,16 @@ use crate::{
 pub struct SafeSub;
 
 impl Snippet for SafeSub {
-    fn entrypoint(&self) -> &'static str {
-        "safe_sub_u32"
+    fn entrypoint(&self) -> String {
+        "safe_sub_u32".to_string()
     }
 
-    fn inputs() -> Vec<&'static str> {
-        vec!["rhs", "lhs"]
+    fn inputs(&self) -> Vec<String> {
+        vec!["rhs".to_string(), "lhs".to_string()]
     }
 
-    fn outputs() -> Vec<&'static str> {
-        vec!["lhs - rhs"]
+    fn outputs(&self) -> Vec<String> {
+        vec!["lhs - rhs".to_string()]
     }
 
     fn input_types(&self) -> Vec<crate::snippet::DataType> {
@@ -31,7 +31,7 @@ impl Snippet for SafeSub {
         vec![DataType::U32]
     }
 
-    fn stack_diff() -> isize {
+    fn stack_diff(&self) -> isize {
         -1
     }
 
@@ -57,11 +57,11 @@ impl Snippet for SafeSub {
         )
     }
 
-    fn crash_conditions() -> Vec<&'static str> {
-        vec!["u32 overflow"]
+    fn crash_conditions() -> Vec<String> {
+        vec!["u32 overflow".to_string()]
     }
 
-    fn gen_input_states() -> Vec<crate::ExecutionState> {
+    fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
         let mut ret: Vec<ExecutionState> = vec![];
         for _ in 0..10 {
             let mut stack = get_init_tvm_stack();
@@ -78,6 +78,7 @@ impl Snippet for SafeSub {
     }
 
     fn rust_shadowing(
+        &self,
         stack: &mut Vec<twenty_first::shared_math::b_field_element::BFieldElement>,
         _std_in: Vec<twenty_first::shared_math::b_field_element::BFieldElement>,
         _secret_in: Vec<twenty_first::shared_math::b_field_element::BFieldElement>,

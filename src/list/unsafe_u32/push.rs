@@ -11,17 +11,21 @@ use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone)]
-pub struct Push<const N: usize>(pub DataType);
+pub struct Push(pub DataType);
 
 /// A parameterized version of `Push` where `N` is the size of an element in the list
-impl<const N: usize> Snippet for Push<N> {
-    fn inputs() -> Vec<&'static str> {
+impl Snippet for Push {
+    fn inputs(&self) -> Vec<String> {
         // See: https://github.com/TritonVM/tasm-snippets/issues/13
         // _ *list, elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}
-        vec![vec!["*list"], vec!["element"; N]].concat()
+        vec![
+            vec!["*list".to_string()],
+            vec!["element".to_string(); self.0.get_size()],
+        ]
+        .concat()
     }
 
-    fn outputs() -> Vec<&'static str> {
+    fn outputs(&self) -> Vec<String> {
         vec![]
     }
 
@@ -33,55 +37,53 @@ impl<const N: usize> Snippet for Push<N> {
         vec![]
     }
 
-    fn crash_conditions() -> Vec<&'static str> {
+    fn crash_conditions() -> Vec<String> {
         vec![]
     }
 
-    fn gen_input_states() -> Vec<ExecutionState> {
-        fn prepare_state<const N: usize>() -> ExecutionState {
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
+        fn prepare_state(data_type: &DataType) -> ExecutionState {
             let list_pointer: BFieldElement = random();
             let init_length: usize = thread_rng().gen_range(0..100);
             let mut stack = get_init_tvm_stack();
             stack.push(list_pointer);
-            let mut push_value: Vec<BFieldElement> = random_elements(N);
+            let mut push_value: Vec<BFieldElement> = random_elements(data_type.get_size());
             while let Some(element) = push_value.pop() {
                 stack.push(element);
             }
 
             let mut memory = HashMap::default();
-            unsafe_insert_random_list::<N>(list_pointer, init_length, &mut memory);
+            unsafe_insert_random_list(list_pointer, init_length, &mut memory, data_type.get_size());
             ExecutionState::with_stack_and_memory(stack, memory, 0)
         }
 
         vec![
-            prepare_state::<N>(),
-            prepare_state::<N>(),
-            prepare_state::<N>(),
-            prepare_state::<N>(),
+            prepare_state(&self.0),
+            prepare_state(&self.0),
+            prepare_state(&self.0),
+            prepare_state(&self.0),
         ]
     }
 
-    fn stack_diff() -> isize {
-        assert!(N < 17, "Max element size supported for list is 16");
-        -(N as isize) - 1
+    fn stack_diff(&self) -> isize {
+        -(self.0.get_size() as isize) - 1
     }
 
-    fn entrypoint(&self) -> &'static str {
-        "push_u32"
+    fn entrypoint(&self) -> String {
+        "push_u32".to_string()
     }
 
     // Push *one* element of size N to stack
     fn function_body(&self, _library: &mut Library) -> String {
-        assert!(N < 17, "Max element size supported for list is 16");
-
+        let element_size = self.0.get_size();
         // write the elements to memory
         // Start and end of this loop: _  *list, [elements..], address_of_next_element -- top of stack is where we will store elements
         let mut write_elements_to_memory_code = String::default();
-        for i in 0..N {
+        for i in 0..element_size {
             write_elements_to_memory_code.push_str("swap1\n");
             write_elements_to_memory_code.push_str("write_mem\n");
             write_elements_to_memory_code.push_str("pop\n");
-            if i != N - 1 {
+            if i != element_size - 1 {
                 // Prepare for next write. Not needed for last iteration.
                 write_elements_to_memory_code.push_str("push 1\n");
                 write_elements_to_memory_code.push_str("add\n");
@@ -94,14 +96,14 @@ impl<const N: usize> Snippet for Push<N> {
             // Before: _ *list, elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}
             // After: _ *list
             {entry_point}:
-                dup{N}
+                dup{element_size}
                 // stack : _  *list, elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}, *list
 
                 push 0
                 read_mem
                 // stack : _  *list, elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}, *list, length
 
-                push {N}
+                push {element_size}
                 mul
                 // stack : _  *list, elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}, *list, length * elem_size
 
@@ -134,19 +136,20 @@ impl<const N: usize> Snippet for Push<N> {
     }
 
     fn rust_shadowing(
+        &self,
         stack: &mut Vec<BFieldElement>,
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
-        let list_address = stack[stack.len() - 1 - N];
+        let list_address = stack[stack.len() - 1 - self.0.get_size()];
         let initial_list_length = memory[&list_address];
 
         let mut next_free_address = list_address
-            + initial_list_length * BFieldElement::new(N as u64)
+            + initial_list_length * BFieldElement::new(self.0.get_size() as u64)
             + BFieldElement::one();
 
-        for _ in 0..N {
+        for _ in 0..self.0.get_size() {
             let elem = stack.pop().unwrap();
             memory.insert(next_free_address, elem);
             next_free_address += BFieldElement::one();
@@ -172,30 +175,30 @@ mod tests_push {
 
     #[test]
     fn new_snippet_test() {
-        rust_tasm_equivalence_prop_new::<Push<1>>(Push(DataType::Bool));
-        rust_tasm_equivalence_prop_new::<Push<2>>(Push(DataType::U64));
-        rust_tasm_equivalence_prop_new::<Push<3>>(Push(DataType::XFE));
-        rust_tasm_equivalence_prop_new::<Push<5>>(Push(DataType::Digest));
+        rust_tasm_equivalence_prop_new::<Push>(Push(DataType::Bool));
+        rust_tasm_equivalence_prop_new::<Push>(Push(DataType::U64));
+        rust_tasm_equivalence_prop_new::<Push>(Push(DataType::XFE));
+        rust_tasm_equivalence_prop_new::<Push>(Push(DataType::Digest));
     }
 
     #[test]
     fn list_u32_n_is_one_push() {
         let list_address = BFieldElement::new(48);
-        let push_value = [BFieldElement::new(1337)];
+        let push_value = vec![BFieldElement::new(1337)];
         prop_push(DataType::BFE, list_address, 20, push_value);
     }
 
     #[test]
     fn list_u32_n_is_two_push() {
         let list_address = BFieldElement::new(1841);
-        let push_value = [BFieldElement::new(133700), BFieldElement::new(32)];
+        let push_value = vec![BFieldElement::new(133700), BFieldElement::new(32)];
         prop_push(DataType::U64, list_address, 20, push_value);
     }
 
     #[test]
     fn list_u32_n_is_five_push() {
         let list_address = BFieldElement::new(558);
-        let push_value = [
+        let push_value = vec![
             BFieldElement::new(133700),
             BFieldElement::new(32),
             BFieldElement::new(133700),
@@ -205,25 +208,35 @@ mod tests_push {
         prop_push(DataType::Digest, list_address, 2313, push_value);
     }
 
-    fn prop_push<const N: usize>(
+    fn prop_push(
         data_type: DataType,
         list_address: BFieldElement,
         init_list_length: u32,
-        push_value: [BFieldElement; N],
+        push_value: Vec<BFieldElement>,
     ) {
+        assert_eq!(
+            data_type.get_size(),
+            push_value.len(),
+            "Push value length must match data size"
+        );
         let expected_end_stack = get_init_tvm_stack();
         let mut init_stack = get_init_tvm_stack();
         init_stack.push(list_address);
 
-        for i in 0..N {
-            init_stack.push(push_value[N - 1 - i]);
+        for i in 0..data_type.get_size() {
+            init_stack.push(push_value[data_type.get_size() - 1 - i]);
         }
         let mut memory = HashMap::default();
 
-        unsafe_insert_random_list::<N>(list_address, init_list_length as usize, &mut memory);
+        unsafe_insert_random_list(
+            list_address,
+            init_list_length as usize,
+            &mut memory,
+            data_type.get_size(),
+        );
 
-        let _execution_result = rust_tasm_equivalence_prop::<Push<N>>(
-            Push(data_type),
+        let _execution_result = rust_tasm_equivalence_prop::<Push>(
+            Push(data_type.clone()),
             &init_stack,
             &[],
             &[],
@@ -239,11 +252,14 @@ mod tests_push {
         );
 
         // verify that value was inserted at expected place
-        for i in 0..N {
+        for i in 0..data_type.get_size() {
             assert_eq!(
                 push_value[i],
                 memory[&BFieldElement::new(
-                    list_address.value() + 1 + N as u64 * init_list_length as u64 + i as u64
+                    list_address.value()
+                        + 1
+                        + data_type.get_size() as u64 * init_list_length as u64
+                        + i as u64
                 )]
             );
         }

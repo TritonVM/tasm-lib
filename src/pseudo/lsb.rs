@@ -9,12 +9,12 @@ use crate::{get_init_tvm_stack, ExecutionState};
 pub struct Lsb;
 
 impl Snippet for Lsb {
-    fn inputs() -> Vec<&'static str> {
-        vec!["a"]
+    fn inputs(&self) -> Vec<String> {
+        vec!["a".to_string()]
     }
 
-    fn outputs() -> Vec<&'static str> {
-        vec!["a % 2", "a / 2"]
+    fn outputs(&self) -> Vec<String> {
+        vec!["a % 2".to_string(), "a / 2".to_string()]
     }
 
     fn input_types(&self) -> Vec<crate::snippet::DataType> {
@@ -25,11 +25,11 @@ impl Snippet for Lsb {
         vec![DataType::BFE, DataType::BFE]
     }
 
-    fn crash_conditions() -> Vec<&'static str> {
+    fn crash_conditions() -> Vec<String> {
         vec![]
     }
 
-    fn gen_input_states() -> Vec<ExecutionState> {
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
         let mut even_stack = get_init_tvm_stack();
         even_stack.push(BFIELD_ZERO);
 
@@ -42,12 +42,12 @@ impl Snippet for Lsb {
         ]
     }
 
-    fn stack_diff() -> isize {
+    fn stack_diff(&self) -> isize {
         1
     }
 
-    fn entrypoint(&self) -> &'static str {
-        "lsb"
+    fn entrypoint(&self) -> String {
+        "lsb".to_string()
     }
 
     fn function_body(&self, _library: &mut crate::library::Library) -> String {
@@ -64,6 +64,7 @@ impl Snippet for Lsb {
     }
 
     fn rust_shadowing(
+        &self,
         stack: &mut Vec<BFieldElement>,
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,

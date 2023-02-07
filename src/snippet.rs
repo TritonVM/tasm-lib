@@ -40,10 +40,11 @@ pub trait Snippet {
     /// The name of a Snippet
     ///
     /// This is used as a unique identifier, e.g. when generating labels.
-    fn entrypoint(&self) -> &'static str;
+    // fn entrypoint(&self) -> String;
+    fn entrypoint(&self) -> String;
 
     /// The input stack
-    fn inputs() -> Vec<&'static str>
+    fn inputs(&self) -> Vec<String>
     where
         Self: Sized;
 
@@ -52,12 +53,12 @@ pub trait Snippet {
     fn output_types(&self) -> Vec<DataType>;
 
     /// The output stack
-    fn outputs() -> Vec<&'static str>
+    fn outputs(&self) -> Vec<String>
     where
         Self: Sized;
 
     /// The stack difference
-    fn stack_diff() -> isize
+    fn stack_diff(&self) -> isize
     where
         Self: Sized;
 
@@ -65,12 +66,12 @@ pub trait Snippet {
     fn function_body(&self, library: &mut Library) -> String;
 
     /// Ways in which this snippet can crash
-    fn crash_conditions() -> Vec<&'static str>
+    fn crash_conditions() -> Vec<String>
     where
         Self: Sized;
 
     /// Examples of valid initial states for running this snippet
-    fn gen_input_states() -> Vec<ExecutionState>
+    fn gen_input_states(&self) -> Vec<ExecutionState>
     where
         Self: Sized;
 
@@ -89,6 +90,7 @@ pub trait Snippet {
     // for any snippet of code since these two functions must mutate the stack in
     // the same manner.
     fn rust_shadowing(
+        &self,
         stack: &mut Vec<BFieldElement>,
         std_in: Vec<BFieldElement>,
         secret_in: Vec<BFieldElement>,
@@ -112,7 +114,7 @@ pub trait Snippet {
         // Verify that snippet can be found in `all_snippets`, so it's visible to the outside
         // This call will panic if snippet is not found in that function call
         // The data type value is a dummy value for all snippets except those that handle lists.
-        all_snippets::name_to_snippet(self.entrypoint(), Some(DataType::Digest));
+        all_snippets::name_to_snippet(&self.entrypoint(), Some(DataType::Digest));
 
         let mut library = Library::with_preallocated_memory(words_allocated);
         let entrypoint = self.entrypoint();
@@ -122,7 +124,7 @@ pub trait Snippet {
         let expected_length_prior: usize = self.input_types().iter().map(|x| x.get_size()).sum();
         let expected_length_after: usize = self.output_types().iter().map(|x| x.get_size()).sum();
         assert_eq!(
-            Self::stack_diff(),
+            Self::stack_diff(self),
             (expected_length_after as isize - expected_length_prior as isize),
             "Declared stack diff must match type indicators"
         );
@@ -136,7 +138,14 @@ pub trait Snippet {
             {library_code}
             "
         );
-        execute(&code, stack, Self::stack_diff(), std_in, secret_in, memory)
+        execute(
+            &code,
+            stack,
+            Self::stack_diff(self),
+            std_in,
+            secret_in,
+            memory,
+        )
     }
 
     fn run_tasm(&self, execution_state: &mut ExecutionState) -> ExecutionResult
@@ -154,8 +163,8 @@ pub trait Snippet {
         let stack_after = execution_state.stack.clone();
 
         assert_eq!(
-            stack_prior[0..(stack_prior.len() - Self::inputs().len())],
-            stack_after[0..(stack_after.len() - Self::outputs().len())]
+            stack_prior[0..(stack_prior.len() - Self::inputs(self).len())],
+            stack_after[0..(stack_after.len() - Self::outputs(self).len())]
         );
 
         ret

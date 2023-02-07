@@ -30,28 +30,28 @@ use super::MAX_MMR_HEIGHT;
 pub struct MmrVerifyFromMemory;
 
 impl Snippet for MmrVerifyFromMemory {
-    fn inputs() -> Vec<&'static str> {
+    fn inputs(&self) -> Vec<String> {
         vec![
-            "*peaks",
-            "leaf_count_hi",
-            "leaf_count_lo",
-            "leaf_index_hi",
-            "leaf_index_lo",
-            "leaf_digest_4",
-            "leaf_digest_3",
-            "leaf_digest_2",
-            "leaf_digest_1",
-            "leaf_digest_0",
-            "*auth_path",
+            "*peaks".to_string(),
+            "leaf_count_hi".to_string(),
+            "leaf_count_lo".to_string(),
+            "leaf_index_hi".to_string(),
+            "leaf_index_lo".to_string(),
+            "leaf_digest_4".to_string(),
+            "leaf_digest_3".to_string(),
+            "leaf_digest_2".to_string(),
+            "leaf_digest_1".to_string(),
+            "leaf_digest_0".to_string(),
+            "*auth_path".to_string(),
         ]
     }
 
-    fn outputs() -> Vec<&'static str> {
+    fn outputs(&self) -> Vec<String> {
         vec![
-            "*auth_path",
-            "leaf_index_hi",
-            "leaf_index_lo",
-            "validation_result",
+            "*auth_path".to_string(),
+            "leaf_index_hi".to_string(),
+            "leaf_index_lo".to_string(),
+            "validation_result".to_string(),
         ]
     }
 
@@ -73,11 +73,14 @@ impl Snippet for MmrVerifyFromMemory {
         ]
     }
 
-    fn crash_conditions() -> Vec<&'static str> {
-        vec!["leaf_index >= leaf_count", "leaf_index values not u32s"]
+    fn crash_conditions() -> Vec<String> {
+        vec![
+            "leaf_index >= leaf_count".to_string(),
+            "leaf_index values not u32s".to_string(),
+        ]
     }
 
-    fn gen_input_states() -> Vec<crate::ExecutionState> {
+    fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
         type H = RescuePrimeRegular;
         let mut rng = thread_rng();
         let max_size = 100;
@@ -100,17 +103,17 @@ impl Snippet for MmrVerifyFromMemory {
         vec![ret0]
     }
 
-    fn stack_diff() -> isize {
+    fn stack_diff(&self) -> isize {
         -7
     }
 
-    fn entrypoint(&self) -> &'static str {
-        "verify_from_memory"
+    fn entrypoint(&self) -> String {
+        "verify_from_memory".to_string()
     }
 
     fn function_body(&self, library: &mut Library) -> String {
         let leaf_index_to_mt_index = library.import(Box::new(MmrLeafIndexToMtIndexAndPeakIndex));
-        let get = library.import(Box::new(Get::<DIGEST_LENGTH>(DataType::Digest)));
+        let get = library.import(Box::new(Get(DataType::Digest)));
         let u32_is_odd = library.import(Box::new(U32IsOdd));
         let entrypoint = self.entrypoint();
         let eq_u64 = library.import(Box::new(EqU64));
@@ -214,6 +217,7 @@ impl Snippet for MmrVerifyFromMemory {
     }
 
     fn rust_shadowing(
+        &self,
         stack: &mut Vec<BFieldElement>,
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,
@@ -228,11 +232,16 @@ impl Snippet for MmrVerifyFromMemory {
         let auth_path_length = memory[&auth_path_pointer].value();
         let mut auth_path: Vec<Digest> = vec![];
         for i in 0..auth_path_length {
-            let digest = Digest::new(rust_shadowing_helper_functions::unsafe_list_read(
-                auth_path_pointer,
-                i as usize,
-                memory,
-            ));
+            let digest = Digest::new(
+                rust_shadowing_helper_functions::unsafe_list_read(
+                    auth_path_pointer,
+                    i as usize,
+                    memory,
+                    DIGEST_LENGTH,
+                )
+                .try_into()
+                .unwrap(),
+            );
             auth_path.push(digest);
         }
 
@@ -255,11 +264,16 @@ impl Snippet for MmrVerifyFromMemory {
         let peaks_count: u64 = memory[&peaks_pointer].value();
         let mut peaks: Vec<Digest> = vec![];
         for i in 0..peaks_count {
-            let digest = Digest::new(rust_shadowing_helper_functions::unsafe_list_read(
-                peaks_pointer,
-                i as usize,
-                memory,
-            ));
+            let digest = Digest::new(
+                rust_shadowing_helper_functions::unsafe_list_read(
+                    peaks_pointer,
+                    i as usize,
+                    memory,
+                    DIGEST_LENGTH,
+                )
+                .try_into()
+                .unwrap(),
+            );
             peaks.push(digest);
         }
 
@@ -312,8 +326,9 @@ fn prepare_vm_state<H: AlgebraicHasher + std::cmp::PartialEq + std::fmt::Debug>(
     for peak in mmr.get_peaks() {
         rust_shadowing_helper_functions::unsafe_list_push(
             peaks_pointer,
-            peak.values(),
+            peak.values().to_vec(),
             &mut memory,
+            DIGEST_LENGTH,
         );
     }
 
@@ -321,8 +336,9 @@ fn prepare_vm_state<H: AlgebraicHasher + std::cmp::PartialEq + std::fmt::Debug>(
     for ap_element in auth_path.iter() {
         rust_shadowing_helper_functions::unsafe_list_push(
             auth_path_pointer,
-            ap_element.values(),
+            ap_element.values().to_vec(),
             &mut memory,
+            DIGEST_LENGTH,
         );
     }
 

@@ -14,12 +14,12 @@ use crate::{get_init_tvm_stack, ExecutionState};
 pub struct GetHeightFromDataIndex;
 
 impl Snippet for GetHeightFromDataIndex {
-    fn inputs() -> Vec<&'static str> {
-        vec!["leaf_index_hi", "leaf_index_lo"]
+    fn inputs(&self) -> Vec<String> {
+        vec!["leaf_index_hi".to_string(), "leaf_index_lo".to_string()]
     }
 
-    fn outputs() -> Vec<&'static str> {
-        vec!["height"]
+    fn outputs(&self) -> Vec<String> {
+        vec!["height".to_string()]
     }
 
     fn input_types(&self) -> Vec<crate::snippet::DataType> {
@@ -30,11 +30,11 @@ impl Snippet for GetHeightFromDataIndex {
         vec![DataType::U32]
     }
 
-    fn crash_conditions() -> Vec<&'static str> {
+    fn crash_conditions() -> Vec<String> {
         vec![]
     }
 
-    fn gen_input_states() -> Vec<crate::ExecutionState> {
+    fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
         let mut ret: Vec<ExecutionState> = vec![];
         for _ in 0..40 {
             let mut stack = get_init_tvm_stack();
@@ -50,12 +50,12 @@ impl Snippet for GetHeightFromDataIndex {
     }
 
     // Pops `leaf_index` from stack (U32s<2>). Returns height in the form of one u32.
-    fn stack_diff() -> isize {
+    fn stack_diff(&self) -> isize {
         -1
     }
 
-    fn entrypoint(&self) -> &'static str {
-        "get_height_from_leaf_index"
+    fn entrypoint(&self) -> String {
+        "get_height_from_leaf_index".to_string()
     }
 
     fn function_body(&self, library: &mut Library) -> String {
@@ -75,6 +75,7 @@ impl Snippet for GetHeightFromDataIndex {
     }
 
     fn rust_shadowing(
+        &self,
         stack: &mut Vec<BFieldElement>,
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,

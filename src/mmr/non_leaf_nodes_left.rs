@@ -20,12 +20,12 @@ use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 pub struct MmrNonLeafNodesLeftUsingAnd;
 
 impl Snippet for MmrNonLeafNodesLeftUsingAnd {
-    fn inputs() -> Vec<&'static str> {
-        vec!["leaf_index_hi", "leaf_index_lo"]
+    fn inputs(&self) -> Vec<String> {
+        vec!["leaf_index_hi".to_string(), "leaf_index_lo".to_string()]
     }
 
-    fn outputs() -> Vec<&'static str> {
-        vec!["node_count_hi", "node_count_lo"]
+    fn outputs(&self) -> Vec<String> {
+        vec!["node_count_hi".to_string(), "node_count_lo".to_string()]
     }
 
     fn input_types(&self) -> Vec<crate::snippet::DataType> {
@@ -36,11 +36,11 @@ impl Snippet for MmrNonLeafNodesLeftUsingAnd {
         vec![DataType::U64]
     }
 
-    fn crash_conditions() -> Vec<&'static str> {
-        vec!["Input values are not u32s"]
+    fn crash_conditions() -> Vec<String> {
+        vec!["Input values are not u32s".to_string()]
     }
 
-    fn gen_input_states() -> Vec<crate::ExecutionState> {
+    fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
         let mut ret: Vec<ExecutionState> = vec![];
         for _ in 0..30 {
             let mut stack = get_init_tvm_stack();
@@ -61,12 +61,12 @@ impl Snippet for MmrNonLeafNodesLeftUsingAnd {
         ret
     }
 
-    fn stack_diff() -> isize {
+    fn stack_diff(&self) -> isize {
         0
     }
 
-    fn entrypoint(&self) -> &'static str {
-        "non_leaf_nodes_left"
+    fn entrypoint(&self) -> String {
+        "non_leaf_nodes_left".to_string()
     }
 
     fn function_body(&self, library: &mut Library) -> String {
@@ -167,6 +167,7 @@ impl Snippet for MmrNonLeafNodesLeftUsingAnd {
     }
 
     fn rust_shadowing(
+        &self,
         stack: &mut Vec<BFieldElement>,
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,

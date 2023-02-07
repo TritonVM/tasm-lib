@@ -13,15 +13,15 @@ use crate::{
 pub struct SafeMul;
 
 impl Snippet for SafeMul {
-    fn entrypoint(&self) -> &'static str {
-        "u32_safe_mul"
+    fn entrypoint(&self) -> String {
+        "u32_safe_mul".to_string()
     }
 
-    fn inputs() -> Vec<&'static str>
+    fn inputs(&self) -> Vec<String>
     where
         Self: Sized,
     {
-        vec!["lhs", "rhs"]
+        vec!["lhs".to_string(), "rhs".to_string()]
     }
 
     fn input_types(&self) -> Vec<DataType> {
@@ -32,14 +32,14 @@ impl Snippet for SafeMul {
         vec![DataType::U32]
     }
 
-    fn outputs() -> Vec<&'static str>
+    fn outputs(&self) -> Vec<String>
     where
         Self: Sized,
     {
-        vec!["lhs * rhs"]
+        vec!["lhs * rhs".to_string()]
     }
 
-    fn stack_diff() -> isize
+    fn stack_diff(&self) -> isize
     where
         Self: Sized,
     {
@@ -65,14 +65,14 @@ impl Snippet for SafeMul {
         )
     }
 
-    fn crash_conditions() -> Vec<&'static str>
+    fn crash_conditions() -> Vec<String>
     where
         Self: Sized,
     {
-        vec!["result overflows u32"]
+        vec!["result overflows u32".to_string()]
     }
 
-    fn gen_input_states() -> Vec<ExecutionState>
+    fn gen_input_states(&self) -> Vec<ExecutionState>
     where
         Self: Sized,
     {
@@ -92,6 +92,7 @@ impl Snippet for SafeMul {
     }
 
     fn rust_shadowing(
+        &self,
         stack: &mut Vec<BFieldElement>,
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,

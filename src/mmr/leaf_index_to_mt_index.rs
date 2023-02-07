@@ -22,17 +22,21 @@ use crate::{get_init_tvm_stack, ExecutionState};
 pub struct MmrLeafIndexToMtIndexAndPeakIndex;
 
 impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
-    fn inputs() -> Vec<&'static str> {
+    fn inputs(&self) -> Vec<String> {
         vec![
-            "leaf_count_hi",
-            "leaf_count_lo",
-            "leaf_index_hi",
-            "leaf_index_lo",
+            "leaf_count_hi".to_string(),
+            "leaf_count_lo".to_string(),
+            "leaf_index_hi".to_string(),
+            "leaf_index_lo".to_string(),
         ]
     }
 
-    fn outputs() -> Vec<&'static str> {
-        vec!["mt_index_hi", "mt_index_lo", "peak_index"]
+    fn outputs(&self) -> Vec<String> {
+        vec![
+            "mt_index_hi".to_string(),
+            "mt_index_lo".to_string(),
+            "peak_index".to_string(),
+        ]
     }
 
     fn input_types(&self) -> Vec<crate::snippet::DataType> {
@@ -43,11 +47,11 @@ impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
         vec![DataType::U64, DataType::U32]
     }
 
-    fn crash_conditions() -> Vec<&'static str> {
-        vec!["Input values are not valid u32s"]
+    fn crash_conditions() -> Vec<String> {
+        vec!["Input values are not valid u32s".to_string()]
     }
 
-    fn gen_input_states() -> Vec<crate::ExecutionState> {
+    fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
         let mut ret: Vec<ExecutionState> = vec![];
         for _ in 0..10 {
             let mut stack = get_init_tvm_stack();
@@ -67,13 +71,13 @@ impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
         ret
     }
 
-    fn stack_diff() -> isize {
+    fn stack_diff(&self) -> isize {
         // Consumes leaf_index: u64 and leaf_count: u64. Pushes MT index: u64 and peak index: u32
         -1
     }
 
-    fn entrypoint(&self) -> &'static str {
-        "leaf_index_to_mt_index_and_peak_index"
+    fn entrypoint(&self) -> String {
+        "leaf_index_to_mt_index_and_peak_index".to_string()
     }
 
     fn function_body(&self, library: &mut Library) -> String {
@@ -183,6 +187,7 @@ impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
     }
 
     fn rust_shadowing(
+        &self,
         stack: &mut Vec<BFieldElement>,
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,

@@ -10,15 +10,21 @@ use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone)]
-pub struct Pop<const N: usize>(pub DataType);
+pub struct Pop(pub DataType);
 
-impl<const N: usize> Snippet for Pop<N> {
-    fn inputs() -> Vec<&'static str> {
-        vec!["*list"]
+impl Snippet for Pop {
+    fn inputs(&self) -> Vec<String> {
+        vec!["*list".to_string()]
     }
 
-    fn outputs() -> Vec<&'static str> {
-        vec!["element"; N]
+    fn outputs(&self) -> Vec<String> {
+        let mut ret: Vec<String> = vec![];
+        let element_size = self.0.get_size();
+        for i in 0..element_size {
+            ret.push(format!("element_{}", element_size - 1 - i));
+        }
+
+        ret
     }
 
     fn input_types(&self) -> Vec<crate::snippet::DataType> {
@@ -29,62 +35,54 @@ impl<const N: usize> Snippet for Pop<N> {
         vec![self.0.clone()]
     }
 
-    fn crash_conditions() -> Vec<&'static str> {
-        vec!["stack underflow"]
+    fn crash_conditions() -> Vec<String> {
+        vec!["stack underflow".to_string()]
     }
 
-    fn gen_input_states() -> Vec<ExecutionState> {
-        fn prepare_state<const N: usize>() -> ExecutionState {
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
+        fn prepare_state(data_type: &DataType) -> ExecutionState {
             let list_pointer: BFieldElement = random();
             let old_length: usize = thread_rng().gen_range(1..30);
             let mut stack = get_init_tvm_stack();
             stack.push(list_pointer);
             let mut memory = HashMap::default();
-            unsafe_insert_random_list::<N>(list_pointer, old_length, &mut memory);
+            unsafe_insert_random_list(list_pointer, old_length, &mut memory, data_type.get_size());
             ExecutionState::with_stack_and_memory(stack, memory, 0)
         }
 
-        vec![
-            prepare_state::<N>(),
-            prepare_state::<N>(),
-            prepare_state::<N>(),
-            prepare_state::<N>(),
-            prepare_state::<N>(),
-            prepare_state::<N>(),
-        ]
+        vec![prepare_state(&self.0)]
     }
 
-    fn stack_diff() -> isize {
-        assert!(N < 17, "Max element size supported for list is 16");
-        N as isize - 1
+    fn stack_diff(&self) -> isize {
+        self.0.get_size() as isize - 1
     }
 
-    fn entrypoint(&self) -> &'static str {
-        "pop_u32"
+    fn entrypoint(&self) -> String {
+        "pop_u32".to_string()
     }
 
     /// Pop last element from list. Does *not* actually delete the last
     /// element but instead leaves it in memory.
     fn function_body(&self, _library: &mut Library) -> String {
-        assert!(N < 17, "Max element size supported for list is 16");
         let entry_point = self.entrypoint();
 
         let mut code_to_read_elements = String::default();
         // Start and end at loop: Stack: _  [elems], address_for_last_unread_element
-        for i in 0..N {
+        for i in 0..self.0.get_size() {
             code_to_read_elements.push_str("push 0\n");
             code_to_read_elements.push_str("read_mem\n");
             // stack: _  address_for_last_unread_element, elem_{{N - 1 - i}}
 
             code_to_read_elements.push_str("swap1\n");
             // stack: _  [..., elem_{{N - 1 - i}}], address_for_last_unread_element
-            if i != N - 1 {
+            if i != self.0.get_size() - 1 {
                 // Update offset for last unread element
                 code_to_read_elements.push_str("push -1\n");
                 code_to_read_elements.push_str("add\n");
             }
         }
 
+        let element_size = self.0.get_size();
         format!(
             // Before: _ *list
             // After: _ elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}
@@ -108,9 +106,9 @@ impl<const N: usize> Snippet for Pop<N> {
                 write_mem
                 // stack : _  *list, length - 1
 
-                push {N}
+                push {element_size}
                 mul
-                push {N}
+                push {element_size}
                 add
                 // stack : _  *list, offset_for_last_element = (N * initial_length)
 
@@ -129,6 +127,7 @@ impl<const N: usize> Snippet for Pop<N> {
     }
 
     fn rust_shadowing(
+        &self,
         stack: &mut Vec<BFieldElement>,
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,
@@ -141,9 +140,9 @@ impl<const N: usize> Snippet for Pop<N> {
         memory.insert(list_address, initial_list_length - BFieldElement::one());
 
         let mut last_used_address =
-            list_address + initial_list_length * BFieldElement::new(N as u64);
+            list_address + initial_list_length * BFieldElement::new(self.0.get_size() as u64);
 
-        for _ in 0..N {
+        for _ in 0..self.0.get_size() {
             let elem = memory[&last_used_address];
             stack.push(elem);
             last_used_address -= BFieldElement::one();
@@ -165,10 +164,10 @@ mod tests_pop {
 
     #[test]
     fn new_snippet_test() {
-        rust_tasm_equivalence_prop_new::<Pop<1>>(Pop(DataType::U32));
-        rust_tasm_equivalence_prop_new::<Pop<2>>(Pop(DataType::U64));
-        rust_tasm_equivalence_prop_new::<Pop<3>>(Pop(DataType::XFE));
-        rust_tasm_equivalence_prop_new::<Pop<5>>(Pop(DataType::Digest));
+        rust_tasm_equivalence_prop_new::<Pop>(Pop(DataType::U32));
+        rust_tasm_equivalence_prop_new::<Pop>(Pop(DataType::U64));
+        rust_tasm_equivalence_prop_new::<Pop>(Pop(DataType::XFE));
+        rust_tasm_equivalence_prop_new::<Pop>(Pop(DataType::Digest));
     }
 
     #[test]
@@ -248,7 +247,7 @@ mod tests_pop {
             expected_end_stack.push(last_element[N - 1 - i]);
         }
 
-        let _execution_result = rust_tasm_equivalence_prop::<Pop<N>>(
+        let _execution_result = rust_tasm_equivalence_prop::<Pop>(
             Pop(data_type),
             &init_stack,
             &[],

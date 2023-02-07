@@ -25,27 +25,27 @@ use super::MAX_MMR_HEIGHT;
 pub struct MmrLoadFromSecretInThenVerify;
 
 impl Snippet for MmrLoadFromSecretInThenVerify {
-    fn inputs() -> Vec<&'static str> {
+    fn inputs(&self) -> Vec<String> {
         vec![
-            "peaks_pointer",
-            "leaf_count_hi",
-            "leaf_count_lo",
-            "leaf_index_hi",
-            "leaf_index_lo",
-            "leaf_digest_4",
-            "leaf_digest_3",
-            "leaf_digest_2",
-            "leaf_digest_1",
-            "leaf_digest_0",
+            "peaks_pointer".to_string(),
+            "leaf_count_hi".to_string(),
+            "leaf_count_lo".to_string(),
+            "leaf_index_hi".to_string(),
+            "leaf_index_lo".to_string(),
+            "leaf_digest_4".to_string(),
+            "leaf_digest_3".to_string(),
+            "leaf_digest_2".to_string(),
+            "leaf_digest_1".to_string(),
+            "leaf_digest_0".to_string(),
         ]
     }
 
-    fn outputs() -> Vec<&'static str> {
+    fn outputs(&self) -> Vec<String> {
         vec![
-            "auth_path_pointer",
-            "leaf_index_hi",
-            "leaf_index_lo",
-            "validation_result",
+            "auth_path_pointer".to_string(),
+            "leaf_index_hi".to_string(),
+            "leaf_index_lo".to_string(),
+            "validation_result".to_string(),
         ]
     }
 
@@ -66,11 +66,11 @@ impl Snippet for MmrLoadFromSecretInThenVerify {
         ]
     }
 
-    fn crash_conditions() -> Vec<&'static str> {
-        vec!["Leaf index exceeds leaf count"]
+    fn crash_conditions() -> Vec<String> {
+        vec!["Leaf index exceeds leaf count".to_string()]
     }
 
-    fn gen_input_states() -> Vec<ExecutionState> {
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
         type H = RescuePrimeRegular;
 
         /// Prepare the part of the state that can be derived from the MMR without
@@ -93,8 +93,9 @@ impl Snippet for MmrLoadFromSecretInThenVerify {
             for peak in mmra.get_peaks() {
                 rust_shadowing_helper_functions::unsafe_list_push(
                     peaks_pointer,
-                    peak.values(),
+                    peak.values().to_vec(),
                     &mut memory,
+                    DIGEST_LENGTH,
                 );
             }
 
@@ -166,12 +167,12 @@ impl Snippet for MmrLoadFromSecretInThenVerify {
         init_vm_states
     }
 
-    fn stack_diff() -> isize {
+    fn stack_diff(&self) -> isize {
         -6
     }
 
-    fn entrypoint(&self) -> &'static str {
-        "verify_load_from_secret_in"
+    fn entrypoint(&self) -> String {
+        "verify_load_from_secret_in".to_string()
     }
 
     fn function_body(&self, library: &mut Library) -> String {
@@ -196,6 +197,7 @@ impl Snippet for MmrLoadFromSecretInThenVerify {
     }
 
     fn rust_shadowing(
+        &self,
         stack: &mut Vec<BFieldElement>,
         _std_in: Vec<BFieldElement>,
         secret_in: Vec<BFieldElement>,
@@ -224,11 +226,16 @@ impl Snippet for MmrLoadFromSecretInThenVerify {
         let peaks_count: u64 = memory[&peaks_pointer].value();
         let mut peaks: Vec<Digest> = vec![];
         for i in 0..peaks_count {
-            let digest = Digest::new(rust_shadowing_helper_functions::unsafe_list_read(
-                peaks_pointer,
-                i as usize,
-                memory,
-            ));
+            let digest = Digest::new(
+                rust_shadowing_helper_functions::unsafe_list_read(
+                    peaks_pointer,
+                    i as usize,
+                    memory,
+                    DIGEST_LENGTH,
+                )
+                .try_into()
+                .unwrap(),
+            );
             peaks.push(digest);
         }
 
@@ -248,8 +255,9 @@ impl Snippet for MmrLoadFromSecretInThenVerify {
             );
             rust_shadowing_helper_functions::unsafe_list_push(
                 auth_path_pointer,
-                ap_element.values(),
+                ap_element.values().to_vec(),
                 memory,
+                DIGEST_LENGTH,
             );
 
             i += 1;
@@ -259,11 +267,16 @@ impl Snippet for MmrLoadFromSecretInThenVerify {
         let auth_path_length = memory[&auth_path_pointer].value();
         let mut auth_path: Vec<Digest> = vec![];
         for i in 0..auth_path_length {
-            let digest = Digest::new(rust_shadowing_helper_functions::unsafe_list_read(
-                auth_path_pointer,
-                i as usize,
-                memory,
-            ));
+            let digest = Digest::new(
+                rust_shadowing_helper_functions::unsafe_list_read(
+                    auth_path_pointer,
+                    i as usize,
+                    memory,
+                    DIGEST_LENGTH,
+                )
+                .try_into()
+                .unwrap(),
+            );
             auth_path.push(digest);
         }
 

@@ -15,12 +15,12 @@ use super::non_leaf_nodes_left::MmrNonLeafNodesLeftUsingAnd;
 pub struct DataIndexToNodeIndex;
 
 impl Snippet for DataIndexToNodeIndex {
-    fn inputs() -> Vec<&'static str> {
-        vec!["leaf_index_hi", "leaf_index_lo"]
+    fn inputs(&self) -> Vec<String> {
+        vec!["leaf_index_hi".to_string(), "leaf_index_lo".to_string()]
     }
 
-    fn outputs() -> Vec<&'static str> {
-        vec!["node_index_hi", "node_index_lo"]
+    fn outputs(&self) -> Vec<String> {
+        vec!["node_index_hi".to_string(), "node_index_lo".to_string()]
     }
 
     fn input_types(&self) -> Vec<crate::snippet::DataType> {
@@ -31,11 +31,11 @@ impl Snippet for DataIndexToNodeIndex {
         vec![DataType::U64]
     }
 
-    fn crash_conditions() -> Vec<&'static str> {
-        vec!["leaf_index value is larger than 2^63"]
+    fn crash_conditions() -> Vec<String> {
+        vec!["leaf_index value is larger than 2^63".to_string()]
     }
 
-    fn gen_input_states() -> Vec<ExecutionState> {
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
         let mut ret: Vec<ExecutionState> = vec![];
         for _ in 0..40 {
             let mut stack = get_init_tvm_stack();
@@ -50,13 +50,13 @@ impl Snippet for DataIndexToNodeIndex {
         ret
     }
 
-    fn stack_diff() -> isize {
+    fn stack_diff(&self) -> isize {
         // Pops a U32s<2> and pushes a U32s<2>
         0
     }
 
-    fn entrypoint(&self) -> &'static str {
-        "data_index_to_node_index"
+    fn entrypoint(&self) -> String {
+        "data_index_to_node_index".to_string()
     }
 
     fn function_body(&self, library: &mut Library) -> String {
@@ -83,6 +83,7 @@ impl Snippet for DataIndexToNodeIndex {
     }
 
     fn rust_shadowing(
+        &self,
         stack: &mut Vec<BFieldElement>,
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,

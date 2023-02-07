@@ -19,12 +19,23 @@ pub struct LtStandardU64;
 ///
 /// See `LtStandardU64` for a variant that does.
 impl Snippet for LtU64 {
-    fn inputs() -> Vec<&'static str> {
-        vec!["rhs_hi", "rhs_lo", "lhs_hi", "lhs_lo"]
+    fn inputs(&self) -> Vec<String> {
+        vec![
+            "rhs_hi".to_string(),
+            "rhs_lo".to_string(),
+            "lhs_hi".to_string(),
+            "lhs_lo".to_string(),
+        ]
     }
 
-    fn outputs() -> Vec<&'static str> {
-        vec!["rhs_hi", "rhs_lo", "lhs_hi", "lhs_lo", "(lhs < rhs)"]
+    fn outputs(&self) -> Vec<String> {
+        vec![
+            "rhs_hi".to_string(),
+            "rhs_lo".to_string(),
+            "lhs_hi".to_string(),
+            "lhs_lo".to_string(),
+            "(lhs < rhs)".to_string(),
+        ]
     }
 
     fn input_types(&self) -> Vec<crate::snippet::DataType> {
@@ -35,11 +46,11 @@ impl Snippet for LtU64 {
         vec![DataType::U64, DataType::U64, DataType::Bool]
     }
 
-    fn crash_conditions() -> Vec<&'static str> {
-        vec!["if inputs are not u32"]
+    fn crash_conditions() -> Vec<String> {
+        vec!["if inputs are not u32".to_string()]
     }
 
-    fn gen_input_states() -> Vec<crate::ExecutionState> {
+    fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
         let mut ret: Vec<ExecutionState> = vec![];
 
         for _ in 0..30 {
@@ -58,12 +69,12 @@ impl Snippet for LtU64 {
         ret
     }
 
-    fn stack_diff() -> isize {
+    fn stack_diff(&self) -> isize {
         1
     }
 
-    fn entrypoint(&self) -> &'static str {
-        "lt_u64"
+    fn entrypoint(&self) -> String {
+        "lt_u64".to_string()
     }
 
     /// Before: _ rhs_hi rhs_lo lhs_hi lhs_lo
@@ -105,6 +116,7 @@ impl Snippet for LtU64 {
     }
 
     fn rust_shadowing(
+        &self,
         stack: &mut Vec<BFieldElement>,
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,
@@ -134,12 +146,17 @@ impl Snippet for LtU64 {
 /// This is because there are three branches, so sharing cleanup unconditionally means
 /// less branching (fewer cycles) and less local cleanup (smaller program).
 impl Snippet for LtStandardU64 {
-    fn inputs() -> Vec<&'static str> {
-        vec!["rhs_hi", "rhs_lo", "lhs_hi", "lhs_lo"]
+    fn inputs(&self) -> Vec<String> {
+        vec![
+            "rhs_hi".to_string(),
+            "rhs_lo".to_string(),
+            "lhs_hi".to_string(),
+            "lhs_lo".to_string(),
+        ]
     }
 
-    fn outputs() -> Vec<&'static str> {
-        vec!["(lhs < rhs)"]
+    fn outputs(&self) -> Vec<String> {
+        vec!["(lhs < rhs)".to_string()]
     }
 
     fn input_types(&self) -> Vec<crate::snippet::DataType> {
@@ -150,22 +167,22 @@ impl Snippet for LtStandardU64 {
         vec![DataType::Bool]
     }
 
-    fn crash_conditions() -> Vec<&'static str> {
-        vec!["Either input is not u32"]
+    fn crash_conditions() -> Vec<String> {
+        vec!["Either input is not u32".to_string()]
     }
 
-    fn gen_input_states() -> Vec<ExecutionState> {
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
         // The input states for the two u64::lt operators can be reused. But the
         // rust shadowin cannot.
-        LtU64::gen_input_states()
+        LtU64::gen_input_states(&LtU64)
     }
 
-    fn stack_diff() -> isize {
+    fn stack_diff(&self) -> isize {
         -3
     }
 
-    fn entrypoint(&self) -> &'static str {
-        "lt_standard_u64"
+    fn entrypoint(&self) -> String {
+        "lt_standard_u64".to_string()
     }
 
     fn function_body(&self, _library: &mut Library) -> String {
@@ -211,6 +228,7 @@ impl Snippet for LtStandardU64 {
     }
 
     fn rust_shadowing(
+        &self,
         stack: &mut Vec<BFieldElement>,
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,

@@ -24,21 +24,21 @@ use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, ExecutionState}
 pub struct CalculateNewPeaksFromAppend;
 
 impl Snippet for CalculateNewPeaksFromAppend {
-    fn inputs() -> Vec<&'static str> {
+    fn inputs(&self) -> Vec<String> {
         vec![
-            "old_leaf_count_hi",
-            "old_leaf_count_lo",
-            "*peaks",
-            "digest_elem_4",
-            "digest_elem_3",
-            "digest_elem_2",
-            "digest_elem_1",
-            "digest_elem_0",
+            "old_leaf_count_hi".to_string(),
+            "old_leaf_count_lo".to_string(),
+            "*peaks".to_string(),
+            "digest_elem_4".to_string(),
+            "digest_elem_3".to_string(),
+            "digest_elem_2".to_string(),
+            "digest_elem_1".to_string(),
+            "digest_elem_0".to_string(),
         ]
     }
 
-    fn outputs() -> Vec<&'static str> {
-        vec!["*new_peaks", "*auth_path"]
+    fn outputs(&self) -> Vec<String> {
+        vec!["*new_peaks".to_string(), "*auth_path".to_string()]
     }
 
     fn input_types(&self) -> Vec<crate::snippet::DataType> {
@@ -56,11 +56,11 @@ impl Snippet for CalculateNewPeaksFromAppend {
         ]
     }
 
-    fn crash_conditions() -> Vec<&'static str> {
-        vec!["Snippet arguments are not a valid MMR accumulator"]
+    fn crash_conditions() -> Vec<String> {
+        vec!["Snippet arguments are not a valid MMR accumulator".to_string()]
     }
 
-    fn gen_input_states() -> Vec<ExecutionState> {
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
         fn prepare_state_with_mmra(
             mut start_mmr: MmrAccumulator<RescuePrimeRegular>,
             new_leaf: Digest,
@@ -85,8 +85,9 @@ impl Snippet for CalculateNewPeaksFromAppend {
             for peak in start_mmr.get_peaks() {
                 rust_shadowing_helper_functions::unsafe_list_push(
                     peaks_pointer,
-                    peak.values(),
+                    peak.values().to_vec(),
                     &mut memory,
+                    DIGEST_LENGTH,
                 );
             }
 
@@ -101,22 +102,22 @@ impl Snippet for CalculateNewPeaksFromAppend {
         vec![ret0]
     }
 
-    fn stack_diff() -> isize {
+    fn stack_diff(&self) -> isize {
         // pops: `old_leaf_count` (u32s<2>); old_peaks (*list); [digests (new_leaf)]
         // pushes: *list (new peaks); *auth_path_of_newly_added_leaf
         -6
     }
 
-    fn entrypoint(&self) -> &'static str {
-        "calculate_new_peaks_from_append"
+    fn entrypoint(&self) -> String {
+        "calculate_new_peaks_from_append".to_string()
     }
 
     fn function_body(&self, library: &mut Library) -> String {
         let entrypoint = self.entrypoint();
         let data_index_to_node_index = library.import(Box::new(DataIndexToNodeIndex));
         let right_lineage_length = library.import(Box::new(MmrRightLineageLength));
-        let push = library.import(Box::new(Push::<DIGEST_LENGTH>(DataType::Digest)));
-        let pop = library.import(Box::new(Pop::<DIGEST_LENGTH>(DataType::Digest)));
+        let push = library.import(Box::new(Push(DataType::Digest)));
+        let pop = library.import(Box::new(Pop(DataType::Digest)));
         let set_length = library.import(Box::new(SetLength(DataType::Digest)));
 
         // Allocate memory for the returned auth path for the newly inserted element
@@ -214,6 +215,7 @@ impl Snippet for CalculateNewPeaksFromAppend {
     }
 
     fn rust_shadowing(
+        &self,
         stack: &mut Vec<BFieldElement>,
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,
@@ -244,7 +246,10 @@ impl Snippet for CalculateNewPeaksFromAppend {
                     peaks_pointer,
                     i as usize,
                     memory,
-                ),
+                    DIGEST_LENGTH,
+                )
+                .try_into()
+                .unwrap(),
             ));
         }
 
@@ -253,26 +258,45 @@ impl Snippet for CalculateNewPeaksFromAppend {
         // does.
         let auth_path_pointer = BFieldElement::new((MAX_MMR_HEIGHT * DIGEST_LENGTH + 1) as u64);
         rust_shadowing_helper_functions::unsafe_list_new(auth_path_pointer, memory);
-        rust_shadowing_helper_functions::unsafe_list_push(peaks_pointer, new_leaf.values(), memory);
+        rust_shadowing_helper_functions::unsafe_list_push(
+            peaks_pointer,
+            new_leaf.values().to_vec(),
+            memory,
+            DIGEST_LENGTH,
+        );
         let new_node_index = mmr::shared::leaf_index_to_node_index(old_leaf_count as u128);
         let (mut right_lineage_count, _height) =
             mmr::shared::right_lineage_length_and_own_height(new_node_index);
         while right_lineage_count != 0 {
-            let new_hash = Digest::new(rust_shadowing_helper_functions::unsafe_list_pop::<
-                DIGEST_LENGTH,
-            >(peaks_pointer, memory));
-            let previous_peak = Digest::new(rust_shadowing_helper_functions::unsafe_list_pop::<
-                DIGEST_LENGTH,
-            >(peaks_pointer, memory));
+            let new_hash = Digest::new(
+                rust_shadowing_helper_functions::unsafe_list_pop(
+                    peaks_pointer,
+                    memory,
+                    DIGEST_LENGTH,
+                )
+                .try_into()
+                .unwrap(),
+            );
+            let previous_peak = Digest::new(
+                rust_shadowing_helper_functions::unsafe_list_pop(
+                    peaks_pointer,
+                    memory,
+                    DIGEST_LENGTH,
+                )
+                .try_into()
+                .unwrap(),
+            );
             rust_shadowing_helper_functions::unsafe_list_push(
                 auth_path_pointer,
-                previous_peak.values(),
+                previous_peak.values().to_vec(),
                 memory,
+                DIGEST_LENGTH,
             );
             rust_shadowing_helper_functions::unsafe_list_push(
                 peaks_pointer,
-                H::hash_pair(&previous_peak, &new_hash).values(),
+                H::hash_pair(&previous_peak, &new_hash).values().to_vec(),
                 memory,
+                DIGEST_LENGTH,
             );
             right_lineage_count -= 1;
         }
@@ -409,8 +433,9 @@ mod tests {
         for peak in start_mmr.get_peaks() {
             rust_shadowing_helper_functions::unsafe_list_push(
                 peaks_pointer,
-                peak.values(),
+                peak.values().to_vec(),
                 &mut memory,
+                DIGEST_LENGTH,
             );
         }
 
@@ -433,11 +458,16 @@ mod tests {
         let peaks_count = memory[&peaks_pointer].value();
         let mut produced_peaks = vec![];
         for i in 0..peaks_count {
-            let peak = Digest::new(rust_shadowing_helper_functions::unsafe_list_read(
-                peaks_pointer,
-                i as usize,
-                &memory,
-            ));
+            let peak = Digest::new(
+                rust_shadowing_helper_functions::unsafe_list_read(
+                    peaks_pointer,
+                    i as usize,
+                    &memory,
+                    DIGEST_LENGTH,
+                )
+                .try_into()
+                .unwrap(),
+            );
             produced_peaks.push(peak);
         }
 
@@ -456,7 +486,10 @@ mod tests {
                     auth_paths_pointer,
                     i as usize,
                     &memory,
-                ),
+                    DIGEST_LENGTH,
+                )
+                .try_into()
+                .unwrap(),
             ));
         }
 

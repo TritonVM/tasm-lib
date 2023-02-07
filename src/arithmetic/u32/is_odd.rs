@@ -12,12 +12,12 @@ use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 pub struct U32IsOdd;
 
 impl Snippet for U32IsOdd {
-    fn inputs() -> Vec<&'static str> {
-        vec!["value"]
+    fn inputs(&self) -> Vec<String> {
+        vec!["value".to_string()]
     }
 
-    fn outputs() -> Vec<&'static str> {
-        vec!["value % 2"]
+    fn outputs(&self) -> Vec<String> {
+        vec!["value % 2".to_string()]
     }
 
     fn input_types(&self) -> Vec<crate::snippet::DataType> {
@@ -28,11 +28,11 @@ impl Snippet for U32IsOdd {
         vec![DataType::Bool]
     }
 
-    fn crash_conditions() -> Vec<&'static str> {
-        vec!["if `value` is not a u32"]
+    fn crash_conditions() -> Vec<String> {
+        vec!["if `value` is not a u32".to_string()]
     }
 
-    fn gen_input_states() -> Vec<ExecutionState> {
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
         let n: u32 = rand::thread_rng().next_u32();
 
         let mut even_stack = get_init_tvm_stack();
@@ -66,13 +66,13 @@ impl Snippet for U32IsOdd {
         ]
     }
 
-    fn stack_diff() -> isize {
+    fn stack_diff(&self) -> isize {
         // pops a u32 from the stack and pushes a bool
         0
     }
 
-    fn entrypoint(&self) -> &'static str {
-        "is_odd"
+    fn entrypoint(&self) -> String {
+        "is_odd".to_string()
     }
 
     fn function_body(&self, library: &mut Library) -> String {
@@ -92,6 +92,7 @@ impl Snippet for U32IsOdd {
     }
 
     fn rust_shadowing(
+        &self,
         stack: &mut Vec<BFieldElement>,
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,

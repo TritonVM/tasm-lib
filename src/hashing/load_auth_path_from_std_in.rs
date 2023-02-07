@@ -19,12 +19,12 @@ use crate::{get_init_tvm_stack, ExecutionState};
 pub struct LoadAuthPathFromStdIn;
 
 impl Snippet for LoadAuthPathFromStdIn {
-    fn inputs() -> Vec<&'static str> {
+    fn inputs(&self) -> Vec<String> {
         vec![]
     }
 
-    fn outputs() -> Vec<&'static str> {
-        vec!["auth_path_pointer"]
+    fn outputs(&self) -> Vec<String> {
+        vec!["auth_path_pointer".to_string()]
     }
 
     fn input_types(&self) -> Vec<crate::snippet::DataType> {
@@ -35,11 +35,11 @@ impl Snippet for LoadAuthPathFromStdIn {
         vec![DataType::List(Box::new(DataType::Digest))]
     }
 
-    fn crash_conditions() -> Vec<&'static str> {
-        vec!["Not enough elements in std input"]
+    fn crash_conditions() -> Vec<String> {
+        vec!["Not enough elements in std input".to_string()]
     }
 
-    fn gen_input_states() -> Vec<ExecutionState> {
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
         let mut init_vm_states: Vec<ExecutionState> = vec![];
         for ap_length in 0..MAX_MMR_HEIGHT {
             let ap_elements: Vec<Digest> = random_elements(ap_length);
@@ -60,12 +60,12 @@ impl Snippet for LoadAuthPathFromStdIn {
         init_vm_states
     }
 
-    fn stack_diff() -> isize {
+    fn stack_diff(&self) -> isize {
         1
     }
 
-    fn entrypoint(&self) -> &'static str {
-        "load_auth_path_from_std_in"
+    fn entrypoint(&self) -> String {
+        "load_auth_path_from_std_in".to_string()
     }
 
     fn function_body(&self, library: &mut Library) -> String {
@@ -74,7 +74,7 @@ impl Snippet for LoadAuthPathFromStdIn {
         let read_digest_from_std_in = "read_io\n".repeat(DIGEST_LENGTH);
 
         let set_length = library.import(Box::new(SetLength(DataType::Digest)));
-        let push = library.import(Box::new(Push::<DIGEST_LENGTH>(DataType::Digest)));
+        let push = library.import(Box::new(Push(DataType::Digest)));
 
         // Allocate 1 word for length indication, and `DIGEST_LENGTH` words per auth path element
         // Warning: Statically allocated list. Will be overwritten at same location by subsequent
@@ -136,6 +136,7 @@ impl Snippet for LoadAuthPathFromStdIn {
     }
 
     fn rust_shadowing(
+        &self,
         stack: &mut Vec<BFieldElement>,
         std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,
@@ -156,8 +157,9 @@ impl Snippet for LoadAuthPathFromStdIn {
             );
             rust_shadowing_helper_functions::unsafe_list_push(
                 auth_path_pointer,
-                ap_element.values(),
+                ap_element.values().to_vec(),
                 memory,
+                DIGEST_LENGTH,
             );
 
             i += 1;

@@ -8,7 +8,7 @@ use crate::ExecutionResult;
 
 #[allow(dead_code)]
 pub fn rust_tasm_equivalence_prop_new<T: Snippet + Clone>(snippet_struct: T) {
-    let mut execution_states = T::gen_input_states();
+    let mut execution_states = snippet_struct.gen_input_states();
     for execution_state in execution_states.iter_mut() {
         let stack_init = execution_state.stack.clone();
         let execution_result = rust_tasm_equivalence_prop::<T>(
@@ -24,7 +24,8 @@ pub fn rust_tasm_equivalence_prop_new<T: Snippet + Clone>(snippet_struct: T) {
         // Verify that stack grows with expected number of elements
         let stack_final = execution_result.final_stack;
         let observed_stack_growth: isize = stack_final.len() as isize - stack_init.len() as isize;
-        let expected_stack_growth: isize = T::outputs().len() as isize - T::inputs().len() as isize;
+        let expected_stack_growth: isize =
+            snippet_struct.outputs().len() as isize - snippet_struct.inputs().len() as isize;
         assert_eq!(
             expected_stack_growth,
             observed_stack_growth,
@@ -68,7 +69,7 @@ pub fn rust_tasm_equivalence_prop<T: Snippet>(
 
     let mut rust_memory = init_memory;
     let mut rust_stack = stack.to_vec();
-    T::rust_shadowing(
+    snippet_struct.rust_shadowing(
         &mut rust_stack,
         stdin.to_vec(),
         secret_in.to_vec(),

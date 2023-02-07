@@ -9,18 +9,22 @@ use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, ExecutionState};
 
 #[derive(Clone)]
-pub struct Get<const N: usize>(pub DataType);
+pub struct Get(pub DataType);
 
-impl<const N: usize> Snippet for Get<N> {
-    fn inputs() -> Vec<&'static str> {
-        assert!(N < 17, "Max element size supported for list is 16");
-        vec!["*list", "index"]
+impl Snippet for Get {
+    fn inputs(&self) -> Vec<String> {
+        vec!["*list".to_string(), "index".to_string()]
     }
 
-    fn outputs() -> Vec<&'static str> {
-        // It would be cool if we could do string formatting here. But we might need to change the interface for that.
+    fn outputs(&self) -> Vec<String> {
         // This function returns element_0 on the top of the stack and the other elements below it. E.g.: _ elem_2 elem_1 elem_0
-        vec!["element"; N]
+        let mut ret: Vec<String> = vec![];
+        let size = self.0.get_size();
+        for i in 0..size {
+            ret.push(format!("element_{}", size - 1 - i));
+        }
+
+        ret
     }
 
     fn input_types(&self) -> Vec<crate::snippet::DataType> {
@@ -28,14 +32,14 @@ impl<const N: usize> Snippet for Get<N> {
     }
 
     fn output_types(&self) -> Vec<crate::snippet::DataType> {
-        vec![DataType::BFE; N]
+        vec![DataType::BFE; self.0.get_size()]
     }
 
-    fn crash_conditions() -> Vec<&'static str> {
-        vec![""]
+    fn crash_conditions() -> Vec<String> {
+        vec![]
     }
 
-    fn gen_input_states() -> Vec<crate::ExecutionState> {
+    fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
         let mut rng = thread_rng();
         let list_pointer: BFieldElement = random();
         let list_length: usize = rng.gen_range(0..100);
@@ -46,7 +50,7 @@ impl<const N: usize> Snippet for Get<N> {
 
         let mut memory = HashMap::default();
 
-        unsafe_insert_random_list::<N>(list_pointer, list_length, &mut memory);
+        unsafe_insert_random_list(list_pointer, list_length, &mut memory, 4);
 
         vec![ExecutionState {
             stack,
@@ -57,37 +61,34 @@ impl<const N: usize> Snippet for Get<N> {
         }]
     }
 
-    fn stack_diff() -> isize {
-        assert!(N < 17, "Max element size supported for list is 16");
-
-        // pops a pointer to the list and an index into the list, returns an element of length `N` words
-        N as isize - 2
+    fn stack_diff(&self) -> isize {
+        self.0.get_size() as isize - 2
     }
 
-    fn entrypoint(&self) -> &'static str {
-        "list_get_element"
+    fn entrypoint(&self) -> String {
+        "list_get_element".to_string()
     }
 
     fn function_body(&self, _library: &mut Library) -> String {
         let entrypoint = self.entrypoint();
-        assert!(N < 17, "Max element size supported for list is 16");
         // Code to read an element from a list. No bounds-check.
 
         let mut code_to_read_elements = String::default();
 
         // Start and end at loop: Stack: _  [elems], address_of_next_element
-        for i in 0..N {
+        for i in 0..self.0.get_size() {
             code_to_read_elements.push_str("push 0\n");
             code_to_read_elements.push_str("read_mem\n");
             // stack: _  address_for_last_unread_element, elem_{{N - 1 - i}}
 
             code_to_read_elements.push_str("swap1\n");
             // stack: _  [..., elem_{{N - 1 - i}}], address_for_last_unread_element
-            if i != N - 1 {
+            if i != self.0.get_size() - 1 {
                 code_to_read_elements.push_str("push -1\n");
                 code_to_read_elements.push_str("add\n");
             }
         }
+        let size = self.0.get_size();
         format!(
             "
             // BEFORE: _ *list index
@@ -95,7 +96,7 @@ impl<const N: usize> Snippet for Get<N> {
             {entrypoint}:
                 push 1
                 add
-                push {N}
+                push {size}
                 mul
                 // stack: _ *list (N * (index + 1))
 
@@ -112,6 +113,7 @@ impl<const N: usize> Snippet for Get<N> {
     }
 
     fn rust_shadowing(
+        &self,
         stack: &mut Vec<BFieldElement>,
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,
@@ -119,11 +121,15 @@ impl<const N: usize> Snippet for Get<N> {
     ) {
         let index: u32 = stack.pop().unwrap().try_into().unwrap();
         let list_pointer = stack.pop().unwrap();
-        let element: [BFieldElement; N] =
-            rust_shadowing_helper_functions::unsafe_list_read(list_pointer, index as usize, memory);
+        let element: Vec<BFieldElement> = rust_shadowing_helper_functions::unsafe_list_read(
+            list_pointer,
+            index as usize,
+            memory,
+            self.0.get_size(),
+        );
 
         // elements are placed on stack as: `elem[N - 1] elem[N - 2] .. elem[0]`
-        for i in (0..N).rev() {
+        for i in (0..self.0.get_size()).rev() {
             stack.push(element[i]);
         }
     }
@@ -142,14 +148,14 @@ mod get_element_tests {
 
     #[test]
     fn new_snippet_test() {
-        rust_tasm_equivalence_prop_new::<Get<3>>(Get(DataType::XFE));
+        rust_tasm_equivalence_prop_new::<Get>(Get(DataType::XFE));
     }
 
     #[test]
     fn get_simple_1() {
         let list_address = BFieldElement::new(48);
         for i in 0..10 {
-            prop_get::<1>(DataType::BFE, list_address, i, 10);
+            prop_get(DataType::BFE, list_address, i, 10);
         }
     }
 
@@ -157,7 +163,7 @@ mod get_element_tests {
     fn get_simple_2() {
         let list_address = BFieldElement::new(48);
         for i in 0..10 {
-            prop_get::<2>(DataType::U64, list_address, i, 10);
+            prop_get(DataType::U64, list_address, i, 10);
         }
     }
 
@@ -165,7 +171,7 @@ mod get_element_tests {
     fn get_simple_3() {
         let list_address = BFieldElement::new(48);
         for i in 0..10 {
-            prop_get::<3>(DataType::XFE, list_address, i, 10);
+            prop_get(DataType::XFE, list_address, i, 10);
         }
     }
 
@@ -173,16 +179,11 @@ mod get_element_tests {
     fn get_simple_15() {
         let list_address = BFieldElement::new(48);
         for i in 0..10 {
-            prop_get::<5>(DataType::Digest, list_address, i, 10);
+            prop_get(DataType::Digest, list_address, i, 10);
         }
     }
 
-    fn prop_get<const N: usize>(
-        data_type: DataType,
-        list_pointer: BFieldElement,
-        index: u32,
-        list_length: u32,
-    ) {
+    fn prop_get(data_type: DataType, list_pointer: BFieldElement, index: u32, list_length: u32) {
         let mut init_stack = get_init_tvm_stack();
         init_stack.push(list_pointer);
         init_stack.push(BFieldElement::new(index as u64));
@@ -193,34 +194,34 @@ mod get_element_tests {
         memory.insert(list_pointer, BFieldElement::new(list_length as u64));
 
         // Insert random values for the elements in the list
+        let element_size = data_type.get_size();
         let mut rng = thread_rng();
         let mut j = 1;
         for _ in 0..list_length {
-            let element: [BFieldElement; N] = (0..N)
+            let element = (0..element_size)
                 .map(|_| BFieldElement::new(rng.next_u64()))
-                .collect_vec()
-                .try_into()
-                .unwrap();
+                .collect_vec();
             for elem in element.iter() {
                 memory.insert(list_pointer + BFieldElement::new(j), *elem);
                 j += 1;
             }
         }
-        let targeted_element: [BFieldElement; N] =
+        let targeted_element: Vec<BFieldElement> =
             rust_shadowing_helper_functions::unsafe_list_read(
                 list_pointer,
                 index as usize,
                 &memory,
+                element_size,
             );
 
         let mut expected_end_stack = get_init_tvm_stack();
 
-        for i in 0..N {
-            expected_end_stack.push(targeted_element[N - 1 - i]);
+        for i in 0..element_size {
+            expected_end_stack.push(targeted_element[element_size - 1 - i]);
         }
 
-        let _execution_result = rust_tasm_equivalence_prop::<Get<N>>(
-            Get::<N>(data_type),
+        let _execution_result = rust_tasm_equivalence_prop::<Get>(
+            Get(data_type),
             &init_stack,
             &[],
             &[],

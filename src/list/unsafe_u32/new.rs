@@ -13,11 +13,11 @@ const DEFAULT_LIST_CAPACITY: usize = 64;
 pub struct New(pub DataType);
 
 impl Snippet for New {
-    fn entrypoint(&self) -> &'static str {
-        "tasm_lib_list_unsafe_u32_new"
+    fn entrypoint(&self) -> String {
+        "tasm_lib_list_unsafe_u32_new".to_string()
     }
 
-    fn inputs() -> Vec<&'static str>
+    fn inputs(&self) -> Vec<String>
     where
         Self: Sized,
     {
@@ -32,11 +32,11 @@ impl Snippet for New {
         vec![DataType::List(Box::new(self.0.clone()))]
     }
 
-    fn outputs() -> Vec<&'static str> {
-        vec!["list_pointer"]
+    fn outputs(&self) -> Vec<String> {
+        vec!["list_pointer".to_string()]
     }
 
-    fn stack_diff() -> isize
+    fn stack_diff(&self) -> isize
     where
         Self: Sized,
     {
@@ -72,14 +72,14 @@ impl Snippet for New {
         )
     }
 
-    fn crash_conditions() -> Vec<&'static str>
+    fn crash_conditions() -> Vec<String>
     where
         Self: Sized,
     {
         vec![]
     }
 
-    fn gen_input_states() -> Vec<ExecutionState>
+    fn gen_input_states(&self) -> Vec<ExecutionState>
     where
         Self: Sized,
     {
@@ -98,6 +98,7 @@ impl Snippet for New {
     }
 
     fn rust_shadowing(
+        &self,
         stack: &mut Vec<BFieldElement>,
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,

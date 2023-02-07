@@ -10,12 +10,12 @@ use crate::{get_init_tvm_stack, ExecutionState};
 pub struct Neg;
 
 impl Snippet for Neg {
-    fn inputs() -> Vec<&'static str> {
-        vec!["value"]
+    fn inputs(&self) -> Vec<String> {
+        vec!["value".to_string()]
     }
 
-    fn outputs() -> Vec<&'static str> {
-        vec!["-value"]
+    fn outputs(&self) -> Vec<String> {
+        vec!["-value".to_string()]
     }
 
     fn input_types(&self) -> Vec<crate::snippet::DataType> {
@@ -26,23 +26,23 @@ impl Snippet for Neg {
         vec![DataType::BFE]
     }
 
-    fn crash_conditions() -> Vec<&'static str> {
+    fn crash_conditions() -> Vec<String> {
         vec![]
     }
 
-    fn gen_input_states() -> Vec<ExecutionState> {
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
         let mut rng = rand::thread_rng();
         let mut stack = get_init_tvm_stack();
         stack.push(rng.gen());
         vec![ExecutionState::with_stack(stack)]
     }
 
-    fn stack_diff() -> isize {
+    fn stack_diff(&self) -> isize {
         0
     }
 
-    fn entrypoint(&self) -> &'static str {
-        "neg"
+    fn entrypoint(&self) -> String {
+        "neg".to_string()
     }
 
     fn function_body(&self, _library: &mut crate::library::Library) -> String {
@@ -59,6 +59,7 @@ impl Snippet for Neg {
     }
 
     fn rust_shadowing(
+        &self,
         stack: &mut Vec<BFieldElement>,
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,

@@ -14,12 +14,34 @@ use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 pub struct SwapDigest;
 
 impl Snippet for SwapDigest {
-    fn inputs() -> Vec<&'static str> {
-        vec!["b4", "b3", "b2", "b1", "b0", "a4", "a3", "a2", "a1", "a0"]
+    fn inputs(&self) -> Vec<String> {
+        vec![
+            "b4".to_string(),
+            "b3".to_string(),
+            "b2".to_string(),
+            "b1".to_string(),
+            "b0".to_string(),
+            "a4".to_string(),
+            "a3".to_string(),
+            "a2".to_string(),
+            "a1".to_string(),
+            "a0".to_string(),
+        ]
     }
 
-    fn outputs() -> Vec<&'static str> {
-        vec!["a4", "a3", "a2", "a1", "a0", "b4", "b3", "b2", "b1", "b0"]
+    fn outputs(&self) -> Vec<String> {
+        vec![
+            "a4".to_string(),
+            "a3".to_string(),
+            "a2".to_string(),
+            "a1".to_string(),
+            "a0".to_string(),
+            "b4".to_string(),
+            "b3".to_string(),
+            "b2".to_string(),
+            "b1".to_string(),
+            "b0".to_string(),
+        ]
     }
 
     fn input_types(&self) -> Vec<crate::snippet::DataType> {
@@ -30,11 +52,11 @@ impl Snippet for SwapDigest {
         vec![DataType::Digest, DataType::Digest]
     }
 
-    fn crash_conditions() -> Vec<&'static str> {
+    fn crash_conditions() -> Vec<String> {
         vec![]
     }
 
-    fn gen_input_states() -> Vec<ExecutionState> {
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
         let mut rng = rand::thread_rng();
         let digest_a: Digest = rng.gen();
         let digest_b: Digest = rng.gen();
@@ -46,12 +68,12 @@ impl Snippet for SwapDigest {
         vec![ExecutionState::with_stack(stack)]
     }
 
-    fn stack_diff() -> isize {
+    fn stack_diff(&self) -> isize {
         0
     }
 
-    fn entrypoint(&self) -> &'static str {
-        "swap_digest"
+    fn entrypoint(&self) -> String {
+        "swap_digest".to_string()
     }
 
     fn function_body(&self, _library: &mut Library) -> String {
@@ -90,6 +112,7 @@ impl Snippet for SwapDigest {
     }
 
     fn rust_shadowing(
+        &self,
         stack: &mut Vec<BFieldElement>,
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,

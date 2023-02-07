@@ -12,12 +12,12 @@ use crate::{get_init_tvm_stack, ExecutionState};
 pub struct SetLength(pub DataType);
 
 impl Snippet for SetLength {
-    fn inputs() -> Vec<&'static str> {
-        vec!["*list", "list_length"]
+    fn inputs(&self) -> Vec<String> {
+        vec!["*list".to_string(), "list_length".to_string()]
     }
 
-    fn outputs() -> Vec<&'static str> {
-        vec!["*list"]
+    fn outputs(&self) -> Vec<String> {
+        vec!["*list".to_string()]
     }
 
     fn input_types(&self) -> Vec<crate::snippet::DataType> {
@@ -28,12 +28,12 @@ impl Snippet for SetLength {
         vec![DataType::List(Box::new(self.0.clone()))]
     }
 
-    fn crash_conditions() -> Vec<&'static str> {
+    fn crash_conditions() -> Vec<String> {
         vec![]
     }
 
-    fn gen_input_states() -> Vec<ExecutionState> {
-        fn prepare_state<const N: usize>() -> ExecutionState {
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
+        fn prepare_state(data_type: &DataType) -> ExecutionState {
             let list_pointer: BFieldElement = random();
             let old_length: usize = thread_rng().gen_range(0..100);
             let new_length: usize = thread_rng().gen_range(0..100);
@@ -41,27 +41,24 @@ impl Snippet for SetLength {
             stack.push(list_pointer);
             stack.push(BFieldElement::new(new_length as u64));
             let mut memory = HashMap::default();
-            unsafe_insert_random_list::<N>(list_pointer, old_length, &mut memory);
+            unsafe_insert_random_list(list_pointer, old_length, &mut memory, data_type.get_size());
             ExecutionState::with_stack_and_memory(stack, memory, 0)
         }
 
         vec![
-            prepare_state::<1>(),
-            prepare_state::<2>(),
-            prepare_state::<3>(),
-            prepare_state::<4>(),
-            prepare_state::<5>(),
-            prepare_state::<14>(),
+            prepare_state(&self.0),
+            prepare_state(&self.0),
+            prepare_state(&self.0),
         ]
     }
 
-    fn stack_diff() -> isize {
+    fn stack_diff(&self) -> isize {
         // pops list_length but leaves list_pointer on stack
         -1
     }
 
-    fn entrypoint(&self) -> &'static str {
-        "list_u32_set_length"
+    fn entrypoint(&self) -> String {
+        "list_u32_set_length".to_string()
     }
 
     fn function_body(&self, _library: &mut Library) -> String {
@@ -84,6 +81,7 @@ impl Snippet for SetLength {
     }
 
     fn rust_shadowing(
+        &self,
         stack: &mut Vec<BFieldElement>,
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,

@@ -12,12 +12,12 @@ use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 pub struct IsU32;
 
 impl Snippet for IsU32 {
-    fn inputs() -> Vec<&'static str> {
-        vec!["value"]
+    fn inputs(&self) -> Vec<String> {
+        vec!["value".to_string()]
     }
 
-    fn outputs() -> Vec<&'static str> {
-        vec!["value < 2^32"]
+    fn outputs(&self) -> Vec<String> {
+        vec!["value < 2^32".to_string()]
     }
 
     fn input_types(&self) -> Vec<crate::snippet::DataType> {
@@ -28,11 +28,11 @@ impl Snippet for IsU32 {
         vec![DataType::Bool]
     }
 
-    fn crash_conditions() -> Vec<&'static str> {
+    fn crash_conditions() -> Vec<String> {
         vec![]
     }
 
-    fn gen_input_states() -> Vec<ExecutionState> {
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
         let n: u32 = rand::thread_rng().next_u32();
 
         let mut true_stack = get_init_tvm_stack();
@@ -47,12 +47,12 @@ impl Snippet for IsU32 {
         ]
     }
 
-    fn stack_diff() -> isize {
+    fn stack_diff(&self) -> isize {
         0
     }
 
-    fn entrypoint(&self) -> &'static str {
-        "is_u32"
+    fn entrypoint(&self) -> String {
+        "is_u32".to_string()
     }
 
     /// Place 1 on stack iff top element is less than $2^32$. Otherwise
@@ -75,6 +75,7 @@ impl Snippet for IsU32 {
     }
 
     fn rust_shadowing(
+        &self,
         stack: &mut Vec<BFieldElement>,
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,

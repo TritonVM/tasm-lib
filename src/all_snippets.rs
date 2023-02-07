@@ -85,64 +85,43 @@ pub fn name_to_snippet(fn_name: &str, element_type: Option<DataType>) -> Box<dyn
         "swap_digest" => Box::new(SwapDigest),
 
         // unsafe lists
+        // TODO: Special-case on name, cf. #18
         "list_get_element" => match element_type {
-            Some(et) => match et {
-                DataType::Bool => Box::new(Get::<1>(et)),
-                DataType::U32 => Box::new(Get::<1>(et)),
-                DataType::U64 => Box::new(Get::<2>(et)),
-                DataType::BFE => Box::new(Get::<1>(et)),
-                DataType::XFE => Box::new(Get::<3>(et)),
-                DataType::Digest => Box::new(Get::<5>(et)),
-                DataType::List(_) => {
-                    panic!("Nested lists are not supported have element type for list")
-                }
-            },
+            Some(et) => {
+                assert!(!matches!(et, DataType::List(_)), "Nested lists not allowed");
+                Box::new(Get(et))},
             None => panic!("Must have element type for list"),
-        },
+        }
+
         "pop_u32" => match element_type {
-            Some(et) => match et {
-                DataType::Bool => Box::new(Pop::<1>(et)),
-                DataType::U32 => Box::new(Pop::<1>(et)),
-                DataType::U64 => Box::new(Pop::<2>(et)),
-                DataType::BFE => Box::new(Pop::<1>(et)),
-                DataType::XFE => Box::new(Pop::<3>(et)),
-                DataType::Digest => Box::new(Pop::<5>(et)),
-                DataType::List(_) => {
-                    panic!("Nested lists are not supported have element type for list")
-                }
+            Some(et) => {
+                assert!(!matches!(et, DataType::List(_)), "Nested lists not allowed");
+                Box::new(Pop(et))
             },
             None => panic!("Must have element type for list"),
-        },
+        }
+
         "push_u32" => match element_type {
-            Some(et) => match et {
-                DataType::Bool => Box::new(Push::<1>(et)),
-                DataType::U32 => Box::new(Push::<1>(et)),
-                DataType::U64 => Box::new(Push::<2>(et)),
-                DataType::BFE => Box::new(Push::<1>(et)),
-                DataType::XFE => Box::new(Push::<3>(et)),
-                DataType::Digest => Box::new(Push::<5>(et)),
-                DataType::List(_) => {
-                    panic!("Nested lists are not supported have element type for list")
-                }
+            Some(et) => {
+                assert!(!matches!(et, DataType::List(_)), "Nested lists not allowed");
+                Box::new(Push(et))
             },
             None => panic!("Must have element type for list"),
-        },
+        }
+
         "list_set_element" => match element_type {
-            Some(et) => match et {
-                DataType::Bool => Box::new(Set::<1>(et)),
-                DataType::U32 => Box::new(Set::<1>(et)),
-                DataType::U64 => Box::new(Set::<2>(et)),
-                DataType::BFE => Box::new(Set::<1>(et)),
-                DataType::XFE => Box::new(Set::<3>(et)),
-                DataType::Digest => Box::new(Set::<5>(et)),
-                DataType::List(_) => {
-                    panic!("Nested lists are not supported have element type for list")
-                }
+            Some(et) => {
+                assert!(!matches!(et, DataType::List(_)), "Nested lists not allowed");
+                Box::new(Set(et))
             },
             None => panic!("Must have element type for list"),
-        },
+        }
+
         "tasm_lib_list_unsafe_u32_new" => match element_type {
-            Some(et) => Box::new(New(et)),
+            Some(et) => {
+                assert!(!matches!(et, DataType::List(_)), "Nested lists not allowed");
+                Box::new(New(et))
+            },
             None => panic!("Must have element type for list"),
         }
         "list_u32_length_long" => Box::new(LengthLong(element_type.unwrap())),
