@@ -1,62 +1,62 @@
 [
   {
     "name": "tasm_mmr_right_lineage_count_and_own_height",
-    "processor_table_height": 6420,
+    "processor_table_height": 5722,
     "hash_table_height": 0,
-    "u32_table_height": 8481
+    "u32_table_height": 7096
   },
   {
     "name": "tasm_mmr_right_lineage_count_and_own_height",
-    "processor_table_height": 6462,
+    "processor_table_height": 5942,
     "hash_table_height": 0,
-    "u32_table_height": 8603
+    "u32_table_height": 7746
   },
   {
     "name": "tasm_mmr_right_lineage_count_and_own_height",
     "processor_table_height": 6270,
     "hash_table_height": 0,
+    "u32_table_height": 8026
+  },
+  {
+    "name": "tasm_mmr_right_lineage_count_and_own_height",
+    "processor_table_height": 6198,
+    "hash_table_height": 0,
+    "u32_table_height": 7838
+  },
+  {
+    "name": "tasm_mmr_right_lineage_count_and_own_height",
+    "processor_table_height": 6292,
+    "hash_table_height": 0,
+    "u32_table_height": 8088
+  },
+  {
+    "name": "tasm_mmr_right_lineage_count_and_own_height",
+    "processor_table_height": 6324,
+    "hash_table_height": 0,
+    "u32_table_height": 8088
+  },
+  {
+    "name": "tasm_mmr_right_lineage_count_and_own_height",
+    "processor_table_height": 6500,
+    "hash_table_height": 0,
+    "u32_table_height": 8541
+  },
+  {
+    "name": "tasm_mmr_right_lineage_count_and_own_height",
+    "processor_table_height": 6342,
+    "hash_table_height": 0,
+    "u32_table_height": 8107
+  },
+  {
+    "name": "tasm_mmr_right_lineage_count_and_own_height",
+    "processor_table_height": 6194,
+    "hash_table_height": 0,
     "u32_table_height": 8272
   },
   {
     "name": "tasm_mmr_right_lineage_count_and_own_height",
-    "processor_table_height": 6336,
+    "processor_table_height": 6504,
     "hash_table_height": 0,
-    "u32_table_height": 8467
-  },
-  {
-    "name": "tasm_mmr_right_lineage_count_and_own_height",
-    "processor_table_height": 6106,
-    "hash_table_height": 0,
-    "u32_table_height": 7938
-  },
-  {
-    "name": "tasm_mmr_right_lineage_count_and_own_height",
-    "processor_table_height": 5982,
-    "hash_table_height": 0,
-    "u32_table_height": 7911
-  },
-  {
-    "name": "tasm_mmr_right_lineage_count_and_own_height",
-    "processor_table_height": 6252,
-    "hash_table_height": 0,
-    "u32_table_height": 8162
-  },
-  {
-    "name": "tasm_mmr_right_lineage_count_and_own_height",
-    "processor_table_height": 5950,
-    "hash_table_height": 0,
-    "u32_table_height": 7465
-  },
-  {
-    "name": "tasm_mmr_right_lineage_count_and_own_height",
-    "processor_table_height": 6148,
-    "hash_table_height": 0,
-    "u32_table_height": 8074
-  },
-  {
-    "name": "tasm_mmr_right_lineage_count_and_own_height",
-    "processor_table_height": 6516,
-    "hash_table_height": 0,
-    "u32_table_height": 8603
+    "u32_table_height": 8541
   }
 ]

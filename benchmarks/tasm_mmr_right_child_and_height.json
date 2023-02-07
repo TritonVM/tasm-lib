@@ -1,62 +1,62 @@
 [
   {
     "name": "tasm_mmr_right_child_and_height",
-    "processor_table_height": 6332,
-    "hash_table_height": 0,
-    "u32_table_height": 8603
-  },
-  {
-    "name": "tasm_mmr_right_child_and_height",
-    "processor_table_height": 6358,
-    "hash_table_height": 0,
-    "u32_table_height": 8603
-  },
-  {
-    "name": "tasm_mmr_right_child_and_height",
-    "processor_table_height": 6220,
+    "processor_table_height": 6134,
     "hash_table_height": 0,
     "u32_table_height": 8330
   },
   {
     "name": "tasm_mmr_right_child_and_height",
-    "processor_table_height": 6356,
+    "processor_table_height": 6084,
+    "hash_table_height": 0,
+    "u32_table_height": 7966
+  },
+  {
+    "name": "tasm_mmr_right_child_and_height",
+    "processor_table_height": 6056,
+    "hash_table_height": 0,
+    "u32_table_height": 7776
+  },
+  {
+    "name": "tasm_mmr_right_child_and_height",
+    "processor_table_height": 6184,
+    "hash_table_height": 0,
+    "u32_table_height": 8088
+  },
+  {
+    "name": "tasm_mmr_right_child_and_height",
+    "processor_table_height": 6274,
+    "hash_table_height": 0,
+    "u32_table_height": 8407
+  },
+  {
+    "name": "tasm_mmr_right_child_and_height",
+    "processor_table_height": 6380,
     "hash_table_height": 0,
     "u32_table_height": 8541
   },
   {
     "name": "tasm_mmr_right_child_and_height",
-    "processor_table_height": 5976,
+    "processor_table_height": 6234,
     "hash_table_height": 0,
-    "u32_table_height": 7708
+    "u32_table_height": 8221
   },
   {
     "name": "tasm_mmr_right_child_and_height",
-    "processor_table_height": 6174,
-    "hash_table_height": 0,
-    "u32_table_height": 8209
-  },
-  {
-    "name": "tasm_mmr_right_child_and_height",
-    "processor_table_height": 5926,
-    "hash_table_height": 0,
-    "u32_table_height": 7938
-  },
-  {
-    "name": "tasm_mmr_right_child_and_height",
-    "processor_table_height": 6256,
-    "hash_table_height": 0,
-    "u32_table_height": 8343
-  },
-  {
-    "name": "tasm_mmr_right_child_and_height",
-    "processor_table_height": 6332,
-    "hash_table_height": 0,
-    "u32_table_height": 8343
-  },
-  {
-    "name": "tasm_mmr_right_child_and_height",
-    "processor_table_height": 6334,
+    "processor_table_height": 6310,
     "hash_table_height": 0,
     "u32_table_height": 8603
+  },
+  {
+    "name": "tasm_mmr_right_child_and_height",
+    "processor_table_height": 6140,
+    "hash_table_height": 0,
+    "u32_table_height": 7966
+  },
+  {
+    "name": "tasm_mmr_right_child_and_height",
+    "processor_table_height": 6276,
+    "hash_table_height": 0,
+    "u32_table_height": 8467
   }
 ]

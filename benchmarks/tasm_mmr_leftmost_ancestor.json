@@ -9,6 +9,24 @@
     "name": "tasm_mmr_leftmost_ancestor",
     "processor_table_height": 49,
     "hash_table_height": 0,
+    "u32_table_height": 70
+  },
+  {
+    "name": "tasm_mmr_leftmost_ancestor",
+    "processor_table_height": 49,
+    "hash_table_height": 0,
+    "u32_table_height": 66
+  },
+  {
+    "name": "tasm_mmr_leftmost_ancestor",
+    "processor_table_height": 49,
+    "hash_table_height": 0,
+    "u32_table_height": 72
+  },
+  {
+    "name": "tasm_mmr_leftmost_ancestor",
+    "processor_table_height": 49,
+    "hash_table_height": 0,
     "u32_table_height": 72
   },
   {
@@ -27,25 +45,7 @@
     "name": "tasm_mmr_leftmost_ancestor",
     "processor_table_height": 49,
     "hash_table_height": 0,
-    "u32_table_height": 68
-  },
-  {
-    "name": "tasm_mmr_leftmost_ancestor",
-    "processor_table_height": 49,
-    "hash_table_height": 0,
     "u32_table_height": 72
-  },
-  {
-    "name": "tasm_mmr_leftmost_ancestor",
-    "processor_table_height": 49,
-    "hash_table_height": 0,
-    "u32_table_height": 70
-  },
-  {
-    "name": "tasm_mmr_leftmost_ancestor",
-    "processor_table_height": 49,
-    "hash_table_height": 0,
-    "u32_table_height": 70
   },
   {
     "name": "tasm_mmr_leftmost_ancestor",

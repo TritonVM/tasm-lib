@@ -1,183 +1,183 @@
 [
   {
     "name": "tasm_mmr_non_leaf_nodes_left",
-    "processor_table_height": 3967,
+    "processor_table_height": 4177,
     "hash_table_height": 0,
-    "u32_table_height": 6490
+    "u32_table_height": 6669
   },
   {
     "name": "tasm_mmr_non_leaf_nodes_left",
-    "processor_table_height": 4443,
+    "processor_table_height": 4636,
     "hash_table_height": 0,
-    "u32_table_height": 6813
+    "u32_table_height": 6790
   },
   {
     "name": "tasm_mmr_non_leaf_nodes_left",
-    "processor_table_height": 4000,
+    "processor_table_height": 4023,
     "hash_table_height": 0,
-    "u32_table_height": 6355
+    "u32_table_height": 6522
   },
   {
     "name": "tasm_mmr_non_leaf_nodes_left",
-    "processor_table_height": 4159,
+    "processor_table_height": 4445,
     "hash_table_height": 0,
-    "u32_table_height": 6702
+    "u32_table_height": 6736
   },
   {
     "name": "tasm_mmr_non_leaf_nodes_left",
-    "processor_table_height": 3688,
+    "processor_table_height": 3985,
     "hash_table_height": 0,
-    "u32_table_height": 5492
+    "u32_table_height": 6299
   },
   {
     "name": "tasm_mmr_non_leaf_nodes_left",
-    "processor_table_height": 4058,
+    "processor_table_height": 4049,
     "hash_table_height": 0,
-    "u32_table_height": 6411
+    "u32_table_height": 5960
   },
   {
     "name": "tasm_mmr_non_leaf_nodes_left",
-    "processor_table_height": 3917,
+    "processor_table_height": 4063,
     "hash_table_height": 0,
-    "u32_table_height": 6024
+    "u32_table_height": 6670
   },
   {
     "name": "tasm_mmr_non_leaf_nodes_left",
-    "processor_table_height": 4080,
+    "processor_table_height": 3906,
     "hash_table_height": 0,
-    "u32_table_height": 6497
+    "u32_table_height": 6283
   },
   {
     "name": "tasm_mmr_non_leaf_nodes_left",
-    "processor_table_height": 3939,
+    "processor_table_height": 4076,
     "hash_table_height": 0,
-    "u32_table_height": 6053
+    "u32_table_height": 6370
   },
   {
     "name": "tasm_mmr_non_leaf_nodes_left",
-    "processor_table_height": 3927,
+    "processor_table_height": 4041,
     "hash_table_height": 0,
-    "u32_table_height": 6464
+    "u32_table_height": 6495
+  },
+  {
+    "name": "tasm_mmr_non_leaf_nodes_left",
+    "processor_table_height": 3907,
+    "hash_table_height": 0,
+    "u32_table_height": 6523
+  },
+  {
+    "name": "tasm_mmr_non_leaf_nodes_left",
+    "processor_table_height": 3787,
+    "hash_table_height": 0,
+    "u32_table_height": 6113
   },
   {
     "name": "tasm_mmr_non_leaf_nodes_left",
     "processor_table_height": 4255,
     "hash_table_height": 0,
-    "u32_table_height": 6767
+    "u32_table_height": 6684
   },
   {
     "name": "tasm_mmr_non_leaf_nodes_left",
-    "processor_table_height": 4177,
+    "processor_table_height": 3962,
     "hash_table_height": 0,
-    "u32_table_height": 6446
+    "u32_table_height": 6249
   },
   {
     "name": "tasm_mmr_non_leaf_nodes_left",
-    "processor_table_height": 4137,
-    "hash_table_height": 0,
-    "u32_table_height": 6651
-  },
-  {
-    "name": "tasm_mmr_non_leaf_nodes_left",
-    "processor_table_height": 4243,
-    "hash_table_height": 0,
-    "u32_table_height": 6191
-  },
-  {
-    "name": "tasm_mmr_non_leaf_nodes_left",
-    "processor_table_height": 4193,
-    "hash_table_height": 0,
-    "u32_table_height": 6605
-  },
-  {
-    "name": "tasm_mmr_non_leaf_nodes_left",
-    "processor_table_height": 4081,
-    "hash_table_height": 0,
-    "u32_table_height": 6398
-  },
-  {
-    "name": "tasm_mmr_non_leaf_nodes_left",
-    "processor_table_height": 4093,
+    "processor_table_height": 4288,
     "hash_table_height": 0,
     "u32_table_height": 6301
   },
   {
     "name": "tasm_mmr_non_leaf_nodes_left",
-    "processor_table_height": 3804,
+    "processor_table_height": 4172,
     "hash_table_height": 0,
-    "u32_table_height": 5707
+    "u32_table_height": 6540
   },
   {
     "name": "tasm_mmr_non_leaf_nodes_left",
-    "processor_table_height": 3947,
+    "processor_table_height": 3835,
     "hash_table_height": 0,
-    "u32_table_height": 6438
+    "u32_table_height": 6387
   },
   {
     "name": "tasm_mmr_non_leaf_nodes_left",
-    "processor_table_height": 4751,
+    "processor_table_height": 3750,
     "hash_table_height": 0,
-    "u32_table_height": 7045
+    "u32_table_height": 5878
   },
   {
     "name": "tasm_mmr_non_leaf_nodes_left",
-    "processor_table_height": 4022,
+    "processor_table_height": 4290,
     "hash_table_height": 0,
-    "u32_table_height": 6572
+    "u32_table_height": 6593
   },
   {
     "name": "tasm_mmr_non_leaf_nodes_left",
-    "processor_table_height": 3825,
+    "processor_table_height": 4063,
     "hash_table_height": 0,
-    "u32_table_height": 6130
+    "u32_table_height": 6288
   },
   {
     "name": "tasm_mmr_non_leaf_nodes_left",
-    "processor_table_height": 4153,
+    "processor_table_height": 4177,
     "hash_table_height": 0,
-    "u32_table_height": 6418
+    "u32_table_height": 6690
   },
   {
     "name": "tasm_mmr_non_leaf_nodes_left",
-    "processor_table_height": 4344,
+    "processor_table_height": 4116,
     "hash_table_height": 0,
-    "u32_table_height": 6525
+    "u32_table_height": 6498
   },
   {
     "name": "tasm_mmr_non_leaf_nodes_left",
-    "processor_table_height": 3945,
+    "processor_table_height": 3889,
     "hash_table_height": 0,
-    "u32_table_height": 6476
+    "u32_table_height": 6113
   },
   {
     "name": "tasm_mmr_non_leaf_nodes_left",
-    "processor_table_height": 3851,
+    "processor_table_height": 4255,
     "hash_table_height": 0,
-    "u32_table_height": 6505
+    "u32_table_height": 6798
+  },
+  {
+    "name": "tasm_mmr_non_leaf_nodes_left",
+    "processor_table_height": 4174,
+    "hash_table_height": 0,
+    "u32_table_height": 6522
+  },
+  {
+    "name": "tasm_mmr_non_leaf_nodes_left",
+    "processor_table_height": 3987,
+    "hash_table_height": 0,
+    "u32_table_height": 6442
+  },
+  {
+    "name": "tasm_mmr_non_leaf_nodes_left",
+    "processor_table_height": 4252,
+    "hash_table_height": 0,
+    "u32_table_height": 6538
+  },
+  {
+    "name": "tasm_mmr_non_leaf_nodes_left",
+    "processor_table_height": 4175,
+    "hash_table_height": 0,
+    "u32_table_height": 6391
+  },
+  {
+    "name": "tasm_mmr_non_leaf_nodes_left",
+    "processor_table_height": 4253,
+    "hash_table_height": 0,
+    "u32_table_height": 6739
   },
   {
     "name": "tasm_mmr_non_leaf_nodes_left",
     "processor_table_height": 4197,
     "hash_table_height": 0,
-    "u32_table_height": 6780
-  },
-  {
-    "name": "tasm_mmr_non_leaf_nodes_left",
-    "processor_table_height": 4369,
-    "hash_table_height": 0,
-    "u32_table_height": 6703
-  },
-  {
-    "name": "tasm_mmr_non_leaf_nodes_left",
-    "processor_table_height": 4099,
-    "hash_table_height": 0,
-    "u32_table_height": 6636
-  },
-  {
-    "name": "tasm_mmr_non_leaf_nodes_left",
-    "processor_table_height": 4016,
-    "hash_table_height": 0,
-    "u32_table_height": 6312
+    "u32_table_height": 6691
   },
   {
     "name": "tasm_mmr_non_leaf_nodes_left",

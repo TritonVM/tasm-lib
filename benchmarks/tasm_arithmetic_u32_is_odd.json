@@ -3,12 +3,12 @@
     "name": "tasm_arithmetic_u32_is_odd",
     "processor_table_height": 10,
     "hash_table_height": 0,
-    "u32_table_height": 31
+    "u32_table_height": 35
   },
   {
     "name": "tasm_arithmetic_u32_is_odd",
     "processor_table_height": 10,
     "hash_table_height": 0,
-    "u32_table_height": 31
+    "u32_table_height": 35
   }
 ]

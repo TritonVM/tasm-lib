@@ -3,6 +3,6 @@
     "name": "tasm_arithmetic_u64_div2",
     "processor_table_height": 16,
     "hash_table_height": 0,
-    "u32_table_height": 70
+    "u32_table_height": 72
   }
 ]

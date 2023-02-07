@@ -1,8 +1,0 @@
-[
-  {
-    "name": "verify_from_memory",
-    "processor_table_height": 696,
-    "hash_table_height": 45,
-    "u32_table_height": 150
-  }
-]

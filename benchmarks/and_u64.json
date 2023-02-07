@@ -1,8 +1,0 @@
-[
-  {
-    "name": "and_u64",
-    "processor_table_height": 7,
-    "hash_table_height": 0,
-    "u32_table_height": 64
-  }
-]
