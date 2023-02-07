@@ -8,7 +8,7 @@ use twenty_first::shared_math::rescue_prime_digest::Digest;
 use twenty_first::shared_math::rescue_prime_digest::DIGEST_LENGTH;
 
 use crate::library::Library;
-use crate::list::unsafe_u32::{push::Push, set_length::SetLength};
+use crate::list::unsafe_u32::{push::UnsafePush, set_length::UnsafeSetLength};
 use crate::mmr::MAX_MMR_HEIGHT;
 use crate::rust_shadowing_helper_functions;
 use crate::snippet::DataType;
@@ -73,8 +73,8 @@ impl Snippet for LoadAuthPathFromStdIn {
 
         let read_digest_from_std_in = "read_io\n".repeat(DIGEST_LENGTH);
 
-        let set_length = library.import(Box::new(SetLength(DataType::Digest)));
-        let push = library.import(Box::new(Push(DataType::Digest)));
+        let set_length = library.import(Box::new(UnsafeSetLength(DataType::Digest)));
+        let push = library.import(Box::new(UnsafePush(DataType::Digest)));
 
         // Allocate 1 word for length indication, and `DIGEST_LENGTH` words per auth path element
         // Warning: Statically allocated list. Will be overwritten at same location by subsequent

@@ -5,6 +5,8 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::random_elements;
 use twenty_first::shared_math::rescue_prime_digest::{Digest, DIGEST_LENGTH};
 
+use crate::list::safe_u32::SAFE_LIST_ELEMENT_CAPACITY;
+
 pub fn unsafe_insert_random_list(
     list_pointer: BFieldElement,
     list_length: usize,
@@ -157,6 +159,20 @@ pub fn read_digest_from_secret_in(
     }
 
     Digest::new(values)
+}
+
+pub fn safe_list_new(
+    list_pointer: BFieldElement,
+    memory: &mut HashMap<BFieldElement, BFieldElement>,
+) {
+    // Insert length
+    memory.insert(list_pointer, BFieldElement::zero());
+
+    // Insert capacity
+    memory.insert(
+        list_pointer + BFieldElement::one(),
+        BFieldElement::new(SAFE_LIST_ELEMENT_CAPACITY as u64),
+    );
 }
 
 // TODO: Remove this when twenty-first gets a new version with this function in it

@@ -11,10 +11,10 @@ use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone)]
-pub struct Push(pub DataType);
+pub struct UnsafePush(pub DataType);
 
 /// A parameterized version of `Push` where `N` is the size of an element in the list
-impl Snippet for Push {
+impl Snippet for UnsafePush {
     fn inputs(&self) -> Vec<String> {
         // See: https://github.com/TritonVM/tasm-snippets/issues/13
         // _ *list, elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}
@@ -175,10 +175,10 @@ mod tests_push {
 
     #[test]
     fn new_snippet_test() {
-        rust_tasm_equivalence_prop_new::<Push>(Push(DataType::Bool));
-        rust_tasm_equivalence_prop_new::<Push>(Push(DataType::U64));
-        rust_tasm_equivalence_prop_new::<Push>(Push(DataType::XFE));
-        rust_tasm_equivalence_prop_new::<Push>(Push(DataType::Digest));
+        rust_tasm_equivalence_prop_new::<UnsafePush>(UnsafePush(DataType::Bool));
+        rust_tasm_equivalence_prop_new::<UnsafePush>(UnsafePush(DataType::U64));
+        rust_tasm_equivalence_prop_new::<UnsafePush>(UnsafePush(DataType::XFE));
+        rust_tasm_equivalence_prop_new::<UnsafePush>(UnsafePush(DataType::Digest));
     }
 
     #[test]
@@ -235,8 +235,8 @@ mod tests_push {
             data_type.get_size(),
         );
 
-        let _execution_result = rust_tasm_equivalence_prop::<Push>(
-            Push(data_type.clone()),
+        let _execution_result = rust_tasm_equivalence_prop::<UnsafePush>(
+            UnsafePush(data_type.clone()),
             &init_stack,
             &[],
             &[],

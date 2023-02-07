@@ -18,7 +18,7 @@ use crate::arithmetic::u64::eq_u64::EqU64;
 use crate::hashing::eq_digest::EqDigest;
 use crate::hashing::swap_digest::SwapDigest;
 use crate::library::Library;
-use crate::list::unsafe_u32::get::Get;
+use crate::list::unsafe_u32::get::UnsafeGet;
 use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, ExecutionState};
 
@@ -182,7 +182,7 @@ impl Snippet for MmrVerifyLeafMembershipFromSecretIn {
         let swap_digests = library.import(Box::new(SwapDigest));
         let compare_digest = library.import(Box::new(EqDigest));
         let div_2 = library.import(Box::new(Div2U64));
-        let get = library.import(Box::new(Get(DataType::Digest)));
+        let get = library.import(Box::new(UnsafeGet(DataType::Digest)));
 
         let divine_digest = "divine\n".repeat(DIGEST_LENGTH);
 

@@ -16,8 +16,8 @@ use crate::arithmetic::u32::is_odd::U32IsOdd;
 use crate::arithmetic::u64::div2_u64::Div2U64;
 use crate::arithmetic::u64::eq_u64::EqU64;
 use crate::library::Library;
-use crate::list::unsafe_u32::get::Get;
-use crate::list::unsafe_u32::set::Set;
+use crate::list::unsafe_u32::get::UnsafeGet;
+use crate::list::unsafe_u32::set::UnsafeSet;
 use crate::mmr::MAX_MMR_HEIGHT;
 use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, ExecutionState};
@@ -101,8 +101,8 @@ impl Snippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
         let leaf_index_to_mt_index = library.import(Box::new(MmrLeafIndexToMtIndexAndPeakIndex));
         let u32_is_odd = library.import(Box::new(U32IsOdd));
         let eq_u64 = library.import(Box::new(EqU64));
-        let get = library.import(Box::new(Get(DataType::Digest)));
-        let set = library.import(Box::new(Set(DataType::Digest)));
+        let get = library.import(Box::new(UnsafeGet(DataType::Digest)));
+        let set = library.import(Box::new(UnsafeSet(DataType::Digest)));
         let div_2 = library.import(Box::new(Div2U64));
 
         format!(

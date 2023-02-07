@@ -14,9 +14,9 @@ use super::data_index_to_node_index::DataIndexToNodeIndex;
 use super::right_lineage_length::MmrRightLineageLength;
 use super::MAX_MMR_HEIGHT;
 use crate::library::Library;
-use crate::list::unsafe_u32::pop::Pop;
-use crate::list::unsafe_u32::push::Push;
-use crate::list::unsafe_u32::set_length::SetLength;
+use crate::list::unsafe_u32::pop::UnsafePop;
+use crate::list::unsafe_u32::push::UnsafePush;
+use crate::list::unsafe_u32::set_length::UnsafeSetLength;
 use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, ExecutionState};
 
@@ -116,9 +116,9 @@ impl Snippet for CalculateNewPeaksFromAppend {
         let entrypoint = self.entrypoint();
         let data_index_to_node_index = library.import(Box::new(DataIndexToNodeIndex));
         let right_lineage_length = library.import(Box::new(MmrRightLineageLength));
-        let push = library.import(Box::new(Push(DataType::Digest)));
-        let pop = library.import(Box::new(Pop(DataType::Digest)));
-        let set_length = library.import(Box::new(SetLength(DataType::Digest)));
+        let push = library.import(Box::new(UnsafePush(DataType::Digest)));
+        let pop = library.import(Box::new(UnsafePop(DataType::Digest)));
+        let set_length = library.import(Box::new(UnsafeSetLength(DataType::Digest)));
 
         // Allocate memory for the returned auth path for the newly inserted element
         // Warning: This auth path is only allocated *once* even though the code is called multiple times.

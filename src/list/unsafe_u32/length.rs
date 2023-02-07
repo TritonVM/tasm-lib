@@ -10,9 +10,9 @@ use crate::{get_init_tvm_stack, ExecutionState};
 
 // Called "Long".to_string() because this logic can be shortened
 #[derive(Clone)]
-pub struct LengthLong(pub DataType);
+pub struct UnsafeLengthLong(pub DataType);
 
-impl Snippet for LengthLong {
+impl Snippet for UnsafeLengthLong {
     fn inputs(&self) -> Vec<String> {
         vec!["*list".to_string()]
     }
@@ -118,9 +118,9 @@ impl Snippet for LengthLong {
 
 // Called "Short" because it's efficient code
 #[derive(Clone)]
-pub struct LengthShort(pub DataType);
+pub struct UnsafeLengthShort(pub DataType);
 
-impl Snippet for LengthShort {
+impl Snippet for UnsafeLengthShort {
     fn inputs(&self) -> Vec<String> {
         vec!["*list".to_string()]
     }
@@ -142,7 +142,7 @@ impl Snippet for LengthShort {
     }
 
     fn gen_input_states(&self) -> Vec<ExecutionState> {
-        LengthLong::gen_input_states(&LengthLong(self.0.clone()))
+        UnsafeLengthLong::gen_input_states(&UnsafeLengthLong(self.0.clone()))
     }
 
     fn stack_diff(&self) -> isize {
@@ -195,12 +195,12 @@ mod tests_long {
 
     #[test]
     fn new_snippet_test_long() {
-        rust_tasm_equivalence_prop_new::<LengthLong>(LengthLong(DataType::U64));
+        rust_tasm_equivalence_prop_new::<UnsafeLengthLong>(UnsafeLengthLong(DataType::U64));
     }
 
     #[test]
     fn new_snippet_test_short() {
-        rust_tasm_equivalence_prop_new::<LengthShort>(LengthShort(DataType::XFE));
+        rust_tasm_equivalence_prop_new::<UnsafeLengthShort>(UnsafeLengthShort(DataType::XFE));
     }
 
     #[test]
@@ -236,8 +236,8 @@ mod tests_long {
             );
         }
 
-        let _execution_result = rust_tasm_equivalence_prop::<LengthLong>(
-            LengthLong(DataType::BFE),
+        let _execution_result = rust_tasm_equivalence_prop::<UnsafeLengthLong>(
+            UnsafeLengthLong(DataType::BFE),
             &init_stack,
             &[],
             &[],
@@ -299,8 +299,8 @@ mod tests_short {
             );
         }
 
-        let _execution_result = rust_tasm_equivalence_prop::<LengthShort>(
-            LengthShort(DataType::Bool),
+        let _execution_result = rust_tasm_equivalence_prop::<UnsafeLengthShort>(
+            UnsafeLengthShort(DataType::Bool),
             &init_stack,
             &[],
             &[],

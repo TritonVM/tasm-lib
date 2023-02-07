@@ -10,9 +10,9 @@ use crate::{get_init_tvm_stack, ExecutionState};
 const DEFAULT_LIST_CAPACITY: usize = 64;
 
 #[derive(Clone)]
-pub struct New(pub DataType);
+pub struct UnsafeNew(pub DataType);
 
-impl Snippet for New {
+impl Snippet for UnsafeNew {
     fn entrypoint(&self) -> String {
         format!("tasm_list_unsafe_u32_new_{}", self.0)
     }
@@ -120,9 +120,9 @@ mod tests {
 
     #[test]
     fn new_snippet_test() {
-        rust_tasm_equivalence_prop_new(New(DataType::U32));
-        rust_tasm_equivalence_prop_new(New(DataType::U64));
-        rust_tasm_equivalence_prop_new(New(DataType::XFE));
-        rust_tasm_equivalence_prop_new(New(DataType::Digest));
+        rust_tasm_equivalence_prop_new(UnsafeNew(DataType::U32));
+        rust_tasm_equivalence_prop_new(UnsafeNew(DataType::U64));
+        rust_tasm_equivalence_prop_new(UnsafeNew(DataType::XFE));
+        rust_tasm_equivalence_prop_new(UnsafeNew(DataType::Digest));
     }
 }

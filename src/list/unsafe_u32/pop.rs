@@ -10,9 +10,9 @@ use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone)]
-pub struct Pop(pub DataType);
+pub struct UnsafePop(pub DataType);
 
-impl Snippet for Pop {
+impl Snippet for UnsafePop {
     fn inputs(&self) -> Vec<String> {
         vec!["*list".to_string()]
     }
@@ -164,10 +164,10 @@ mod tests_pop {
 
     #[test]
     fn new_snippet_test() {
-        rust_tasm_equivalence_prop_new::<Pop>(Pop(DataType::U32));
-        rust_tasm_equivalence_prop_new::<Pop>(Pop(DataType::U64));
-        rust_tasm_equivalence_prop_new::<Pop>(Pop(DataType::XFE));
-        rust_tasm_equivalence_prop_new::<Pop>(Pop(DataType::Digest));
+        rust_tasm_equivalence_prop_new::<UnsafePop>(UnsafePop(DataType::U32));
+        rust_tasm_equivalence_prop_new::<UnsafePop>(UnsafePop(DataType::U64));
+        rust_tasm_equivalence_prop_new::<UnsafePop>(UnsafePop(DataType::XFE));
+        rust_tasm_equivalence_prop_new::<UnsafePop>(UnsafePop(DataType::Digest));
     }
 
     #[test]
@@ -247,8 +247,8 @@ mod tests_pop {
             expected_end_stack.push(last_element[N - 1 - i]);
         }
 
-        let _execution_result = rust_tasm_equivalence_prop::<Pop>(
-            Pop(data_type),
+        let _execution_result = rust_tasm_equivalence_prop::<UnsafePop>(
+            UnsafePop(data_type),
             &init_stack,
             &[],
             &[],

@@ -9,9 +9,9 @@ use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, ExecutionState};
 
 #[derive(Clone)]
-pub struct Get(pub DataType);
+pub struct UnsafeGet(pub DataType);
 
-impl Snippet for Get {
+impl Snippet for UnsafeGet {
     fn inputs(&self) -> Vec<String> {
         vec!["*list".to_string(), "index".to_string()]
     }
@@ -148,7 +148,7 @@ mod get_element_tests {
 
     #[test]
     fn new_snippet_test() {
-        rust_tasm_equivalence_prop_new::<Get>(Get(DataType::XFE));
+        rust_tasm_equivalence_prop_new::<UnsafeGet>(UnsafeGet(DataType::XFE));
     }
 
     #[test]
@@ -220,8 +220,8 @@ mod get_element_tests {
             expected_end_stack.push(targeted_element[element_size - 1 - i]);
         }
 
-        let _execution_result = rust_tasm_equivalence_prop::<Get>(
-            Get(data_type),
+        let _execution_result = rust_tasm_equivalence_prop::<UnsafeGet>(
+            UnsafeGet(data_type),
             &init_stack,
             &[],
             &[],

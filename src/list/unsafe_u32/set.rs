@@ -10,9 +10,9 @@ use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, ExecutionState};
 
 #[derive(Clone)]
-pub struct Set(pub DataType);
+pub struct UnsafeSet(pub DataType);
 
-impl Snippet for Set {
+impl Snippet for UnsafeSet {
     fn inputs(&self) -> Vec<String> {
         // See: https://github.com/TritonVM/tasm-snippets/issues/13
         // _ elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}} *list index
@@ -150,12 +150,12 @@ mod list_set_tests {
 
     #[test]
     fn new_snippet_test() {
-        rust_tasm_equivalence_prop_new::<Set>(Set(DataType::Bool));
-        rust_tasm_equivalence_prop_new::<Set>(Set(DataType::BFE));
-        rust_tasm_equivalence_prop_new::<Set>(Set(DataType::U32));
-        rust_tasm_equivalence_prop_new::<Set>(Set(DataType::U64));
-        rust_tasm_equivalence_prop_new::<Set>(Set(DataType::XFE));
-        rust_tasm_equivalence_prop_new::<Set>(Set(DataType::Digest));
+        rust_tasm_equivalence_prop_new::<UnsafeSet>(UnsafeSet(DataType::Bool));
+        rust_tasm_equivalence_prop_new::<UnsafeSet>(UnsafeSet(DataType::BFE));
+        rust_tasm_equivalence_prop_new::<UnsafeSet>(UnsafeSet(DataType::U32));
+        rust_tasm_equivalence_prop_new::<UnsafeSet>(UnsafeSet(DataType::U64));
+        rust_tasm_equivalence_prop_new::<UnsafeSet>(UnsafeSet(DataType::XFE));
+        rust_tasm_equivalence_prop_new::<UnsafeSet>(UnsafeSet(DataType::Digest));
     }
 
     #[test]
@@ -222,8 +222,8 @@ mod list_set_tests {
             data_type.get_size(),
         );
 
-        let _execution_result = rust_tasm_equivalence_prop::<Set>(
-            Set(data_type.clone()),
+        let _execution_result = rust_tasm_equivalence_prop::<UnsafeSet>(
+            UnsafeSet(data_type.clone()),
             &init_stack,
             &[],
             &[],
