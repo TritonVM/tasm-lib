@@ -51,7 +51,7 @@ use crate::{
     snippet::{DataType, Snippet},
 };
 
-pub fn name_to_snippet(fn_name: &str, element_type: Option<DataType>) -> Box<dyn Snippet> {
+pub fn name_to_snippet(fn_name: &str) -> Box<dyn Snippet> {
     match fn_name {
         // dummy test values used for tests of `Library`
         "tasm_a_dummy_test_value" => Box::new(DummyTestSnippetA),
@@ -85,48 +85,102 @@ pub fn name_to_snippet(fn_name: &str, element_type: Option<DataType>) -> Box<dyn
         "tasm_hashing_swap_digest" => Box::new(SwapDigest),
 
         // unsafe lists
-        // TODO: Special-case on name, cf. #18
-        "tasm_list_unsafe_u32_get_element" => match element_type {
-            Some(et) => {
-                assert!(!matches!(et, DataType::List(_)), "Nested lists not allowed");
-                Box::new(Get(et))},
-            None => panic!("Must have element type for list"),
-        }
+        "tasm_list_unsafe_u32_get_element_bool" => Box::new(Get(DataType::Bool)),
+        "tasm_list_unsafe_u32_get_element_u32" => Box::new(Get(DataType::U32)),
+        "tasm_list_unsafe_u32_get_element_u64" => Box::new(Get(DataType::U64)),
+        "tasm_list_unsafe_u32_get_element_bfe" => Box::new(Get(DataType::BFE)),
+        "tasm_list_unsafe_u32_get_element_xfe" => Box::new(Get(DataType::XFE)),
+        "tasm_list_unsafe_u32_get_element_digest" => Box::new(Get(DataType::Digest)),
 
-        "tasm_list_unsafe_u32_pop" => match element_type {
-            Some(et) => {
-                assert!(!matches!(et, DataType::List(_)), "Nested lists not allowed");
-                Box::new(Pop(et))
-            },
-            None => panic!("Must have element type for list"),
-        }
+        "tasm_list_unsafe_u32_pop_bool" => Box::new(Pop(DataType::Bool)),
+        "tasm_list_unsafe_u32_pop_u32" => Box::new(Pop(DataType::U32)),
+        "tasm_list_unsafe_u32_pop_u64" => Box::new(Pop(DataType::U64)),
+        "tasm_list_unsafe_u32_pop_bfe" => Box::new(Pop(DataType::BFE)),
+        "tasm_list_unsafe_u32_pop_xfe" => Box::new(Pop(DataType::XFE)),
+        "tasm_list_unsafe_u32_pop_digest" => Box::new(Pop(DataType::Digest)),
 
-        "tasm_list_unsafe_u32_push" => match element_type {
-            Some(et) => {
-                assert!(!matches!(et, DataType::List(_)), "Nested lists not allowed");
-                Box::new(Push(et))
-            },
-            None => panic!("Must have element type for list"),
-        }
+        "tasm_list_unsafe_u32_push_bool" => Box::new(Push(DataType::Bool)),
+        "tasm_list_unsafe_u32_push_u32" => Box::new(Push(DataType::U32)),
+        "tasm_list_unsafe_u32_push_u64" => Box::new(Push(DataType::U64)),
+        "tasm_list_unsafe_u32_push_bfe" => Box::new(Push(DataType::BFE)),
+        "tasm_list_unsafe_u32_push_xfe" => Box::new(Push(DataType::XFE)),
+        "tasm_list_unsafe_u32_push_digest" => Box::new(Push(DataType::Digest)),
 
-        "tasm_list_unsafe_u32_set_element" => match element_type {
-            Some(et) => {
-                assert!(!matches!(et, DataType::List(_)), "Nested lists not allowed");
-                Box::new(Set(et))
-            },
-            None => panic!("Must have element type for list"),
-        }
+        "tasm_list_unsafe_u32_set_element_bool" => Box::new(Set(DataType::Bool)),
+        "tasm_list_unsafe_u32_set_element_u32" => Box::new(Set(DataType::U32)),
+        "tasm_list_unsafe_u32_set_element_u64" => Box::new(Set(DataType::U64)),
+        "tasm_list_unsafe_u32_set_element_bfe" => Box::new(Set(DataType::BFE)),
+        "tasm_list_unsafe_u32_set_element_xfe" => Box::new(Set(DataType::XFE)),
+        "tasm_list_unsafe_u32_set_element_digest" => Box::new(Set(DataType::Digest)),
 
-        "tasm_list_unsafe_u32_new" => match element_type {
-            Some(et) => {
-                assert!(!matches!(et, DataType::List(_)), "Nested lists not allowed");
-                Box::new(New(et))
-            },
-            None => panic!("Must have element type for list"),
-        }
-        "tasm_list_unsafe_u32_length_long" => Box::new(LengthLong(element_type.unwrap())),
-        "tasm_list_unsafe_u32_length_short" => Box::new(LengthShort(element_type.unwrap())),
-        "tasm_list_unsafe_u32_set_length" => Box::new(SetLength(element_type.unwrap())),
+        "tasm_list_unsafe_u32_new_bool" => Box::new(New(DataType::Bool)),
+        "tasm_list_unsafe_u32_new_u32" => Box::new(New(DataType::U32)),
+        "tasm_list_unsafe_u32_new_u64" => Box::new(New(DataType::U64)),
+        "tasm_list_unsafe_u32_new_bfe" => Box::new(New(DataType::BFE)),
+        "tasm_list_unsafe_u32_new_xfe" => Box::new(New(DataType::XFE)),
+        "tasm_list_unsafe_u32_new_digest" => Box::new(New(DataType::Digest)),
+
+        "tasm_list_unsafe_u32_length_long_bool" => Box::new(LengthLong(DataType::Bool)),
+        "tasm_list_unsafe_u32_length_long_u32" => Box::new(LengthLong(DataType::U32)),
+        "tasm_list_unsafe_u32_length_long_u64" => Box::new(LengthLong(DataType::U64)),
+        "tasm_list_unsafe_u32_length_long_bfe" => Box::new(LengthLong(DataType::BFE)),
+        "tasm_list_unsafe_u32_length_long_xfe" => Box::new(LengthLong(DataType::XFE)),
+        "tasm_list_unsafe_u32_length_long_digest" => Box::new(LengthLong(DataType::Digest)),
+
+        "tasm_list_unsafe_u32_length_short_bool" => Box::new(LengthShort(DataType::Bool)),
+        "tasm_list_unsafe_u32_length_short_u32" => Box::new(LengthShort(DataType::U32)),
+        "tasm_list_unsafe_u32_length_short_u64" => Box::new(LengthShort(DataType::U64)),
+        "tasm_list_unsafe_u32_length_short_bfe" => Box::new(LengthShort(DataType::BFE)),
+        "tasm_list_unsafe_u32_length_short_xfe" => Box::new(LengthShort(DataType::XFE)),
+        "tasm_list_unsafe_u32_length_short_digest" => Box::new(LengthShort(DataType::Digest)),
+
+        "tasm_list_unsafe_u32_set_length_bool" => Box::new(SetLength(DataType::Bool)),
+        "tasm_list_unsafe_u32_set_length_u32" => Box::new(SetLength(DataType::U32)),
+        "tasm_list_unsafe_u32_set_length_u64" => Box::new(SetLength(DataType::U64)),
+        "tasm_list_unsafe_u32_set_length_bfe" => Box::new(SetLength(DataType::BFE)),
+        "tasm_list_unsafe_u32_set_length_xfe" => Box::new(SetLength(DataType::XFE)),
+        "tasm_list_unsafe_u32_set_length_digest" => Box::new(SetLength(DataType::Digest)),
+        // "tasm_list_unsafe_u32_get_element" => match element_type {
+        //     Some(et) => {
+        //         assert!(!matches!(et, DataType::List(_)), "Nested lists not allowed");
+        //         Box::new(Get(et))},
+        //     None => panic!("Must have element type for list"),
+        // }
+
+        // "tasm_list_unsafe_u32_pop" => match element_type {
+        //     Some(et) => {
+        //         assert!(!matches!(et, DataType::List(_)), "Nested lists not allowed");
+        //         Box::new(Pop(et))
+        //     },
+        //     None => panic!("Must have element type for list"),
+        // }
+
+        // "tasm_list_unsafe_u32_push" => match element_type {
+        //     Some(et) => {
+        //         assert!(!matches!(et, DataType::List(_)), "Nested lists not allowed");
+        //         Box::new(Push(et))
+        //     },
+        //     None => panic!("Must have element type for list"),
+        // }
+
+        // "tasm_list_unsafe_u32_set_element" => match element_type {
+        //     Some(et) => {
+        //         assert!(!matches!(et, DataType::List(_)), "Nested lists not allowed");
+        //         Box::new(Set(et))
+        //     },
+        //     None => panic!("Must have element type for list"),
+        // }
+
+        // "tasm_list_unsafe_u32_new" => match element_type {
+        //     Some(et) => {
+        //         assert!(!matches!(et, DataType::List(_)), "Nested lists not allowed");
+        //         Box::new(New(et))
+        //     },
+        //     None => panic!("Must have element type for list"),
+        // }
+        // "tasm_list_unsafe_u32_length_long" => Box::new(LengthLong(element_type.unwrap())),
+        // "tasm_list_unsafe_u32_length_short" => Box::new(LengthShort(element_type.unwrap())),
+        // "tasm_list_unsafe_u32_set_length" => Box::new(SetLength(element_type.unwrap())),
 
         // MMR
         "tasm_mmr_calculate_new_peaks_from_append" => Box::new(CalculateNewPeaksFromAppend),

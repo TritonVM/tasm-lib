@@ -66,7 +66,7 @@ impl Snippet for Get {
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_list_unsafe_u32_get_element".to_string()
+        format!("tasm_list_unsafe_u32_get_element_{}", self.0)
     }
 
     fn function_body(&self, _library: &mut Library) -> String {

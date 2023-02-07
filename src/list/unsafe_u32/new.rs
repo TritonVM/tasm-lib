@@ -14,7 +14,7 @@ pub struct New(pub DataType);
 
 impl Snippet for New {
     fn entrypoint(&self) -> String {
-        "tasm_list_unsafe_u32_new".to_string()
+        format!("tasm_list_unsafe_u32_new_{}", self.0)
     }
 
     fn inputs(&self) -> Vec<String>

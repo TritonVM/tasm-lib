@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fmt::Display;
 use triton_opcodes::instruction::LabelledInstruction;
 use triton_opcodes::parser::{parse, to_labelled};
 use triton_opcodes::program::Program;
@@ -20,6 +21,25 @@ pub enum DataType {
     XFE,
     Digest,
     List(Box<DataType>),
+}
+
+// Display for list is used to derive seperate entrypoint names for snippet implementations that take a type parameter
+impl Display for DataType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                DataType::Bool => "bool".to_string(),
+                DataType::U32 => "u32".to_string(),
+                DataType::U64 => "u64".to_string(),
+                DataType::BFE => "bfe".to_string(),
+                DataType::XFE => "xfe".to_string(),
+                DataType::Digest => "digest".to_string(),
+                DataType::List(element_type) => format!("list({element_type})"),
+            }
+        )
+    }
 }
 
 impl DataType {
@@ -114,8 +134,7 @@ pub trait Snippet {
         // Verify that snippet can be found in `all_snippets`, so it's visible to the outside
         // This call will panic if snippet is not found in that function call
         // The data type value is a dummy value for all snippets except those that handle lists.
-        let looked_up_snippet =
-            all_snippets::name_to_snippet(&self.entrypoint(), Some(DataType::Digest));
+        let looked_up_snippet = all_snippets::name_to_snippet(&self.entrypoint());
         assert_eq!(
             self.entrypoint(),
             looked_up_snippet.entrypoint(),

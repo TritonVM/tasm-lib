@@ -83,7 +83,7 @@ impl Snippet for LengthLong {
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_list_unsafe_u32_length_long".to_string()
+        format!("tasm_list_unsafe_u32_length_long_{}", self.0)
     }
 
     fn function_body(&self, _library: &mut Library) -> String {
@@ -151,7 +151,7 @@ impl Snippet for LengthShort {
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_list_unsafe_u32_length_short".to_string()
+        format!("tasm_list_unsafe_u32_length_short_{}", self.0)
     }
 
     fn function_body(&self, _library: &mut Library) -> String {
