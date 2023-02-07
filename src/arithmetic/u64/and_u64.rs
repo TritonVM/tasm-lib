@@ -53,7 +53,7 @@ impl Snippet for AndU64 {
     }
 
     fn entrypoint(&self) -> String {
-        "and_u64".to_string()
+        "tasm_arithmetic_u64_and".to_string()
     }
 
     fn function_body(&self, _library: &mut Library) -> String {

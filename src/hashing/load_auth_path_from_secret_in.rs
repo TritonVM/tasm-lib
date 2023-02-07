@@ -67,7 +67,7 @@ impl Snippet for LoadAuthPathFromSecretIn {
     }
 
     fn entrypoint(&self) -> String {
-        "load_auth_path_from_secret_in".to_string()
+        "tasm_hashing_load_auth_path_from_secret_in".to_string()
     }
 
     fn function_body(&self, library: &mut Library) -> String {

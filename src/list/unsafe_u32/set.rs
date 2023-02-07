@@ -74,7 +74,7 @@ impl Snippet for Set {
     }
 
     fn entrypoint(&self) -> String {
-        "list_set_element".to_string()
+        "tasm_list_unsafe_u32_set_element".to_string()
     }
 
     fn function_body(&self, _library: &mut Library) -> String {

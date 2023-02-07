@@ -56,7 +56,7 @@ impl Snippet for MmrRightChild {
     }
 
     fn entrypoint(&self) -> String {
-        "mmr_right_child".to_string()
+        "tasm_mmr_right_child".to_string()
     }
 
     /// Consider inlining this, instead of calling a function

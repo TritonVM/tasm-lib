@@ -56,7 +56,7 @@ impl Snippet for DataIndexToNodeIndex {
     }
 
     fn entrypoint(&self) -> String {
-        "data_index_to_node_index".to_string()
+        "tasm_mmr_data_index_to_node_index".to_string()
     }
 
     fn function_body(&self, library: &mut Library) -> String {

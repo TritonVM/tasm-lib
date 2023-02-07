@@ -108,7 +108,7 @@ impl Snippet for MmrVerifyFromMemory {
     }
 
     fn entrypoint(&self) -> String {
-        "verify_from_memory".to_string()
+        "tasm_mmr_verify_from_memory".to_string()
     }
 
     fn function_body(&self, library: &mut Library) -> String {

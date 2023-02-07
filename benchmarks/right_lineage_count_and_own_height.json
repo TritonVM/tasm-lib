@@ -1,62 +1,62 @@
 [
   {
     "name": "right_lineage_count_and_own_height",
-    "processor_table_height": 6182,
+    "processor_table_height": 6048,
     "hash_table_height": 0,
-    "u32_table_height": 7782
+    "u32_table_height": 7828
   },
   {
     "name": "right_lineage_count_and_own_height",
-    "processor_table_height": 6512,
-    "hash_table_height": 0,
-    "u32_table_height": 8603
-  },
-  {
-    "name": "right_lineage_count_and_own_height",
-    "processor_table_height": 6454,
+    "processor_table_height": 6482,
     "hash_table_height": 0,
     "u32_table_height": 8481
   },
   {
     "name": "right_lineage_count_and_own_height",
-    "processor_table_height": 6418,
+    "processor_table_height": 6222,
     "hash_table_height": 0,
-    "u32_table_height": 8423
+    "u32_table_height": 8209
   },
   {
     "name": "right_lineage_count_and_own_height",
-    "processor_table_height": 6352,
+    "processor_table_height": 5586,
+    "hash_table_height": 0,
+    "u32_table_height": 6643
+  },
+  {
+    "name": "right_lineage_count_and_own_height",
+    "processor_table_height": 6480,
+    "hash_table_height": 0,
+    "u32_table_height": 8603
+  },
+  {
+    "name": "right_lineage_count_and_own_height",
+    "processor_table_height": 6344,
     "hash_table_height": 0,
     "u32_table_height": 8467
   },
   {
     "name": "right_lineage_count_and_own_height",
-    "processor_table_height": 6452,
+    "processor_table_height": 6228,
     "hash_table_height": 0,
-    "u32_table_height": 8481
+    "u32_table_height": 8209
   },
   {
     "name": "right_lineage_count_and_own_height",
-    "processor_table_height": 6474,
+    "processor_table_height": 6260,
     "hash_table_height": 0,
-    "u32_table_height": 8603
+    "u32_table_height": 8035
   },
   {
     "name": "right_lineage_count_and_own_height",
-    "processor_table_height": 6470,
+    "processor_table_height": 6330,
+    "hash_table_height": 0,
+    "u32_table_height": 8272
+  },
+  {
+    "name": "right_lineage_count_and_own_height",
+    "processor_table_height": 6488,
     "hash_table_height": 0,
     "u32_table_height": 8541
-  },
-  {
-    "name": "right_lineage_count_and_own_height",
-    "processor_table_height": 5940,
-    "hash_table_height": 0,
-    "u32_table_height": 7761
-  },
-  {
-    "name": "right_lineage_count_and_own_height",
-    "processor_table_height": 6350,
-    "hash_table_height": 0,
-    "u32_table_height": 8001
   }
 ]

@@ -93,7 +93,7 @@ impl Snippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
     }
 
     fn entrypoint(&self) -> String {
-        "calculate_new_peaks_from_leaf_mutation".to_string()
+        "tasm_mmr_calculate_new_peaks_from_leaf_mutation".to_string()
     }
 
     fn function_body(&self, library: &mut Library) -> String {

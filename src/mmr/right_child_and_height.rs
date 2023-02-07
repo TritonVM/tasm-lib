@@ -60,7 +60,7 @@ impl Snippet for MmrRightChildAndHeight {
     }
 
     fn entrypoint(&self) -> String {
-        "right_child_and_height".to_string()
+        "tasm_mmr_right_child_and_height".to_string()
     }
 
     fn function_body(&self, library: &mut Library) -> String

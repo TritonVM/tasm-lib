@@ -77,7 +77,7 @@ impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
     }
 
     fn entrypoint(&self) -> String {
-        "leaf_index_to_mt_index_and_peak_index".to_string()
+        "tasm_mmr_leaf_index_to_mt_index_and_peak_index".to_string()
     }
 
     fn function_body(&self, library: &mut Library) -> String {

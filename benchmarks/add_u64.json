@@ -3,12 +3,12 @@
     "name": "add_u64",
     "processor_table_height": 27,
     "hash_table_height": 0,
-    "u32_table_height": 62
+    "u32_table_height": 63
   },
   {
     "name": "add_u64",
-    "processor_table_height": 35,
+    "processor_table_height": 27,
     "hash_table_height": 0,
-    "u32_table_height": 35
+    "u32_table_height": 34
   }
 ]

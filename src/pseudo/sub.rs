@@ -43,7 +43,7 @@ impl Snippet for Sub {
     }
 
     fn entrypoint(&self) -> String {
-        "sub".to_string()
+        "tasm_pseudo_sub".to_string()
     }
 
     fn function_body(&self, _library: &mut crate::library::Library) -> String {

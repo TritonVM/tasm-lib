@@ -52,7 +52,7 @@ impl Snippet for IsU32 {
     }
 
     fn entrypoint(&self) -> String {
-        "is_u32".to_string()
+        "tasm_arithmetic_u32_is_u32".to_string()
     }
 
     /// Place 1 on stack iff top element is less than $2^32$. Otherwise

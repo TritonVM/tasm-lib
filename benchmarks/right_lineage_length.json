@@ -1,62 +1,62 @@
 [
   {
     "name": "right_lineage_length",
-    "processor_table_height": 3775,
+    "processor_table_height": 4241,
     "hash_table_height": 0,
-    "u32_table_height": 3989
+    "u32_table_height": 4852
   },
   {
     "name": "right_lineage_length",
-    "processor_table_height": 3715,
+    "processor_table_height": 5090,
     "hash_table_height": 0,
-    "u32_table_height": 4067
+    "u32_table_height": 5790
   },
   {
     "name": "right_lineage_length",
-    "processor_table_height": 4165,
+    "processor_table_height": 3969,
     "hash_table_height": 0,
-    "u32_table_height": 4408
+    "u32_table_height": 4152
   },
   {
     "name": "right_lineage_length",
-    "processor_table_height": 3891,
+    "processor_table_height": 3244,
     "hash_table_height": 0,
-    "u32_table_height": 4164
+    "u32_table_height": 3640
   },
   {
     "name": "right_lineage_length",
-    "processor_table_height": 3826,
+    "processor_table_height": 4272,
     "hash_table_height": 0,
-    "u32_table_height": 3885
+    "u32_table_height": 5044
   },
   {
     "name": "right_lineage_length",
-    "processor_table_height": 3462,
+    "processor_table_height": 3700,
     "hash_table_height": 0,
-    "u32_table_height": 3678
+    "u32_table_height": 4405
   },
   {
     "name": "right_lineage_length",
-    "processor_table_height": 4284,
+    "processor_table_height": 4360,
     "hash_table_height": 0,
-    "u32_table_height": 4752
+    "u32_table_height": 4813
   },
   {
     "name": "right_lineage_length",
-    "processor_table_height": 2684,
+    "processor_table_height": 3876,
     "hash_table_height": 0,
-    "u32_table_height": 2835
+    "u32_table_height": 4698
   },
   {
     "name": "right_lineage_length",
-    "processor_table_height": 4793,
+    "processor_table_height": 3555,
     "hash_table_height": 0,
-    "u32_table_height": 5241
+    "u32_table_height": 3965
   },
   {
     "name": "right_lineage_length",
-    "processor_table_height": 3865,
+    "processor_table_height": 3739,
     "hash_table_height": 0,
-    "u32_table_height": 4051
+    "u32_table_height": 4921
   }
 ]

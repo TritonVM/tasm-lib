@@ -14,7 +14,7 @@ pub struct SafeMul;
 
 impl Snippet for SafeMul {
     fn entrypoint(&self) -> String {
-        "u32_safe_mul".to_string()
+        "tasm_arithmetic_u32_u32_safe_mul".to_string()
     }
 
     fn inputs(&self) -> Vec<String>

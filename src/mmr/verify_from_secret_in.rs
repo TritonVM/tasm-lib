@@ -168,7 +168,7 @@ impl Snippet for MmrVerifyLeafMembershipFromSecretIn {
     }
 
     fn entrypoint(&self) -> String {
-        "mmr_verify_from_secret_in".to_string()
+        "tasm_mmr_verify_from_secret_in".to_string()
     }
 
     // Already on stack (can be secret of public input): _ *peaks leaf_count_hi leaf_count_lo [digest (leaf)]

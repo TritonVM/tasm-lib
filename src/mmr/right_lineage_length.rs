@@ -53,7 +53,7 @@ impl Snippet for MmrRightLineageLength {
     }
 
     fn entrypoint(&self) -> String {
-        "right_lineage_length".to_string()
+        "tasm_mmr_right_lineage_length".to_string()
     }
 
     fn function_body(&self, library: &mut crate::library::Library) -> String {

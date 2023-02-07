@@ -65,7 +65,7 @@ impl Snippet for MmrLeftMostAncestor {
     }
 
     fn entrypoint(&self) -> String {
-        "mmr_leftmost_ancestor".to_string()
+        "tasm_mmr_leftmost_ancestor".to_string()
     }
 
     fn function_body(&self, library: &mut Library) -> String {

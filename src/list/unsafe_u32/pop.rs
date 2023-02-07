@@ -58,7 +58,7 @@ impl Snippet for Pop {
     }
 
     fn entrypoint(&self) -> String {
-        "pop_u32".to_string()
+        "tasm_list_unsafe_u32_pop".to_string()
     }
 
     /// Pop last element from list. Does *not* actually delete the last

@@ -55,7 +55,7 @@ impl Snippet for GetHeightFromDataIndex {
     }
 
     fn entrypoint(&self) -> String {
-        "get_height_from_leaf_index".to_string()
+        "tasm_mmr_get_height_from_leaf_index".to_string()
     }
 
     fn function_body(&self, library: &mut Library) -> String {

@@ -100,7 +100,7 @@ impl Snippet for SubU64 {
     }
 
     fn entrypoint(&self) -> String {
-        "sub_u64".to_string()
+        "tasm_arithmetic_u64_sub".to_string()
     }
 
     /// Four top elements of stack are assumed to be valid u32s. So to have

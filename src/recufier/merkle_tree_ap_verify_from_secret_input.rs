@@ -70,7 +70,7 @@ impl Snippet for MtApVerifyFromSecretInput {
     }
 
     fn entrypoint(&self) -> String {
-        "mt_ap_verify".to_string()
+        "tasm_recufier_mt_ap_verify".to_string()
     }
 
     fn function_body(&self, _library: &mut Library) -> String {

@@ -44,7 +44,7 @@ impl Snippet for BfeAdd {
     }
 
     fn entrypoint(&self) -> String {
-        "bfe_add".to_string()
+        "tasm_other_bfe_add".to_string()
     }
 
     fn function_body(&self, _library: &mut Library) -> String {

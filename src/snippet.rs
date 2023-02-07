@@ -114,7 +114,13 @@ pub trait Snippet {
         // Verify that snippet can be found in `all_snippets`, so it's visible to the outside
         // This call will panic if snippet is not found in that function call
         // The data type value is a dummy value for all snippets except those that handle lists.
-        all_snippets::name_to_snippet(&self.entrypoint(), Some(DataType::Digest));
+        let looked_up_snippet =
+            all_snippets::name_to_snippet(&self.entrypoint(), Some(DataType::Digest));
+        assert_eq!(
+            self.entrypoint(),
+            looked_up_snippet.entrypoint(),
+            "Looked up snippet must match self"
+        );
 
         let mut library = Library::with_preallocated_memory(words_allocated);
         let entrypoint = self.entrypoint();

@@ -64,7 +64,7 @@ impl Snippet for MmrLeftChild {
     }
 
     fn entrypoint(&self) -> String {
-        "mmr_left_child".to_string()
+        "tasm_mmr_left_child".to_string()
     }
 
     fn function_body(&self, library: &mut Library) -> String {

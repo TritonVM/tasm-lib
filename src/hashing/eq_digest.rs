@@ -60,7 +60,7 @@ impl Snippet for EqDigest {
     }
 
     fn entrypoint(&self) -> String {
-        "eq_digest".to_string()
+        "tasm_hashing_eq_digest".to_string()
     }
 
     fn function_body(&self, _library: &mut Library) -> String {

@@ -59,7 +59,7 @@ impl Snippet for MmrRightLineageCountAndHeight {
     }
 
     fn entrypoint(&self) -> String {
-        "right_lineage_count_and_own_height".to_string()
+        "tasm_mmr_right_lineage_count_and_own_height".to_string()
     }
 
     fn function_body(&self, library: &mut Library) -> String

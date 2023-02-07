@@ -73,7 +73,7 @@ impl Snippet for SwapDigest {
     }
 
     fn entrypoint(&self) -> String {
-        "swap_digest".to_string()
+        "tasm_hashing_swap_digest".to_string()
     }
 
     fn function_body(&self, _library: &mut Library) -> String {

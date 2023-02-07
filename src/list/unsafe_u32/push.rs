@@ -70,7 +70,7 @@ impl Snippet for Push {
     }
 
     fn entrypoint(&self) -> String {
-        "push_u32".to_string()
+        "tasm_list_unsafe_u32_push".to_string()
     }
 
     // Push *one* element of size N to stack

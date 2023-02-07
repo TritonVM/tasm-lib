@@ -85,7 +85,7 @@ impl Snippet for DummyTestSnippetA {
     }
 
     fn entrypoint(&self) -> String {
-        "a_dummy_test_value".to_string()
+        "tasm_a_dummy_test_value".to_string()
     }
 
     fn function_body(&self, library: &mut Library) -> String {
@@ -146,7 +146,7 @@ impl Snippet for DummyTestSnippetB {
     }
 
     fn entrypoint(&self) -> String {
-        "b_dummy_test_value".to_string()
+        "tasm_b_dummy_test_value".to_string()
     }
 
     fn function_body(&self, library: &mut Library) -> String {
@@ -205,7 +205,7 @@ impl Snippet for DummyTestSnippetC {
     }
 
     fn entrypoint(&self) -> String {
-        "c_dummy_test_value".to_string()
+        "tasm_c_dummy_test_value".to_string()
     }
 
     fn function_body(&self, _library: &mut Library) -> String {

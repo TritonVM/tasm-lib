@@ -66,7 +66,7 @@ impl Snippet for MmrNonLeafNodesLeftUsingAnd {
     }
 
     fn entrypoint(&self) -> String {
-        "non_leaf_nodes_left".to_string()
+        "tasm_mmr_non_leaf_nodes_left".to_string()
     }
 
     fn function_body(&self, library: &mut Library) -> String {

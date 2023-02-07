@@ -109,7 +109,7 @@ impl Snippet for CalculateNewPeaksFromAppend {
     }
 
     fn entrypoint(&self) -> String {
-        "calculate_new_peaks_from_append".to_string()
+        "tasm_mmr_calculate_new_peaks_from_append".to_string()
     }
 
     fn function_body(&self, library: &mut Library) -> String {

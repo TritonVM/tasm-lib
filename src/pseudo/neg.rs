@@ -42,7 +42,7 @@ impl Snippet for Neg {
     }
 
     fn entrypoint(&self) -> String {
-        "neg".to_string()
+        "tasm_pseudo_neg".to_string()
     }
 
     fn function_body(&self, _library: &mut crate::library::Library) -> String {

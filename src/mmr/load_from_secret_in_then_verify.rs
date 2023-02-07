@@ -172,7 +172,7 @@ impl Snippet for MmrLoadFromSecretInThenVerify {
     }
 
     fn entrypoint(&self) -> String {
-        "verify_load_from_secret_in".to_string()
+        "tasm_mmr_verify_load_from_secret_in".to_string()
     }
 
     fn function_body(&self, library: &mut Library) -> String {

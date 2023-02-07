@@ -54,46 +54,46 @@ use crate::{
 pub fn name_to_snippet(fn_name: &str, element_type: Option<DataType>) -> Box<dyn Snippet> {
     match fn_name {
         // dummy test values used for tests of `Library`
-        "a_dummy_test_value" => Box::new(DummyTestSnippetA),
-        "b_dummy_test_value" => Box::new(DummyTestSnippetB),
-        "c_dummy_test_value" => Box::new(DummyTestSnippetC),
+        "tasm_a_dummy_test_value" => Box::new(DummyTestSnippetA),
+        "tasm_b_dummy_test_value" => Box::new(DummyTestSnippetB),
+        "tasm_c_dummy_test_value" => Box::new(DummyTestSnippetC),
 
         // u32
-        "is_odd" => Box::new(U32IsOdd),
-        "is_u32" => Box::new(IsU32),
-        "safe_add_u32" => Box::new(SafeAdd),
-        "safe_sub_u32" => Box::new(SafeSub),
-        "u32_safe_mul" => Box::new(SafeMul),
+        "tasm_arithmetic_u32_is_odd" => Box::new(U32IsOdd),
+        "tasm_arithmetic_u32_is_u32" => Box::new(IsU32),
+        "tasm_arithmetic_u32_safe_add_u32" => Box::new(SafeAdd),
+        "tasm_arithmetic_u32_safe_sub_u32" => Box::new(SafeSub),
+        "tasm_arithmetic_u32_u32_safe_mul" => Box::new(SafeMul),
 
         // u64
-        "add_u64" => Box::new(AddU64),
-        "and_u64" => Box::new(AndU64),
-        "decr_u64" => Box::new(DecrU64),
-        "div2_u64" => Box::new(Div2U64),
-        "eq_u64" => Box::new(EqU64),
-        "incr_u64" => Box::new(IncrU64),
-        "log_2_floor_u64" => Box::new(Log2FloorU64),
-        "lt_u64" => Box::new(LtU64),
-        "lt_standard_u64" => Box::new(LtStandardU64),
-        "pow2_u64" => Box::new(Pow2U64),
-        "sub_u64" => Box::new(SubU64),
+        "tasm_arithmetic_u64_add" => Box::new(AddU64),
+        "tasm_arithmetic_u64_and" => Box::new(AndU64),
+        "tasm_arithmetic_u64_decr" => Box::new(DecrU64),
+        "tasm_arithmetic_u64_div2" => Box::new(Div2U64),
+        "tasm_arithmetic_u64_eq" => Box::new(EqU64),
+        "tasm_arithmetic_u64_incr" => Box::new(IncrU64),
+        "tasm_arithmetic_u64_log_2_floor" => Box::new(Log2FloorU64),
+        "tasm_arithmetic_u64_lt" => Box::new(LtU64),
+        "tasm_arithmetic_u64_lt_standard" => Box::new(LtStandardU64),
+        "tasm_arithmetic_u64_pow2" => Box::new(Pow2U64),
+        "tasm_arithmetic_u64_sub" => Box::new(SubU64),
 
         // Hashing
-        "eq_digest" => Box::new(EqDigest),
-        "load_auth_path_from_secret_in" => Box::new(LoadAuthPathFromSecretIn),
-        "load_auth_path_from_std_in" => Box::new(LoadAuthPathFromStdIn),
-        "swap_digest" => Box::new(SwapDigest),
+        "tasm_hashing_eq_digest" => Box::new(EqDigest),
+        "tasm_hashing_load_auth_path_from_secret_in" => Box::new(LoadAuthPathFromSecretIn),
+        "tasm_hashing_load_auth_path_from_std_in" => Box::new(LoadAuthPathFromStdIn),
+        "tasm_hashing_swap_digest" => Box::new(SwapDigest),
 
         // unsafe lists
         // TODO: Special-case on name, cf. #18
-        "list_get_element" => match element_type {
+        "tasm_list_unsafe_u32_get_element" => match element_type {
             Some(et) => {
                 assert!(!matches!(et, DataType::List(_)), "Nested lists not allowed");
                 Box::new(Get(et))},
             None => panic!("Must have element type for list"),
         }
 
-        "pop_u32" => match element_type {
+        "tasm_list_unsafe_u32_pop" => match element_type {
             Some(et) => {
                 assert!(!matches!(et, DataType::List(_)), "Nested lists not allowed");
                 Box::new(Pop(et))
@@ -101,7 +101,7 @@ pub fn name_to_snippet(fn_name: &str, element_type: Option<DataType>) -> Box<dyn
             None => panic!("Must have element type for list"),
         }
 
-        "push_u32" => match element_type {
+        "tasm_list_unsafe_u32_push" => match element_type {
             Some(et) => {
                 assert!(!matches!(et, DataType::List(_)), "Nested lists not allowed");
                 Box::new(Push(et))
@@ -109,7 +109,7 @@ pub fn name_to_snippet(fn_name: &str, element_type: Option<DataType>) -> Box<dyn
             None => panic!("Must have element type for list"),
         }
 
-        "list_set_element" => match element_type {
+        "tasm_list_unsafe_u32_set_element" => match element_type {
             Some(et) => {
                 assert!(!matches!(et, DataType::List(_)), "Nested lists not allowed");
                 Box::new(Set(et))
@@ -117,46 +117,46 @@ pub fn name_to_snippet(fn_name: &str, element_type: Option<DataType>) -> Box<dyn
             None => panic!("Must have element type for list"),
         }
 
-        "tasm_lib_list_unsafe_u32_new" => match element_type {
+        "tasm_list_unsafe_u32_new" => match element_type {
             Some(et) => {
                 assert!(!matches!(et, DataType::List(_)), "Nested lists not allowed");
                 Box::new(New(et))
             },
             None => panic!("Must have element type for list"),
         }
-        "list_u32_length_long" => Box::new(LengthLong(element_type.unwrap())),
-        "list_u32_length_short" => Box::new(LengthShort(element_type.unwrap())),
-        "list_u32_set_length" => Box::new(SetLength(element_type.unwrap())),
+        "tasm_list_unsafe_u32_length_long" => Box::new(LengthLong(element_type.unwrap())),
+        "tasm_list_unsafe_u32_length_short" => Box::new(LengthShort(element_type.unwrap())),
+        "tasm_list_unsafe_u32_set_length" => Box::new(SetLength(element_type.unwrap())),
 
         // MMR
-        "calculate_new_peaks_from_append" => Box::new(CalculateNewPeaksFromAppend),
-        "calculate_new_peaks_from_leaf_mutation" => {
+        "tasm_mmr_calculate_new_peaks_from_append" => Box::new(CalculateNewPeaksFromAppend),
+        "tasm_mmr_calculate_new_peaks_from_leaf_mutation" => {
             Box::new(MmrCalculateNewPeaksFromLeafMutationMtIndices)
         }
-        "data_index_to_node_index" => Box::new(DataIndexToNodeIndex),
-        "get_height_from_leaf_index" => Box::new(GetHeightFromDataIndex),
-        "leaf_index_to_mt_index_and_peak_index" => Box::new(MmrLeafIndexToMtIndexAndPeakIndex),
-        "mmr_left_child" => Box::new(MmrLeftChild),
-        "mmr_leftmost_ancestor" => Box::new(MmrLeftMostAncestor),
-        "verify_load_from_secret_in" => Box::new(MmrLoadFromSecretInThenVerify),
-        "non_leaf_nodes_left" => Box::new(MmrNonLeafNodesLeftUsingAnd),
-        "right_child_and_height" => Box::new(MmrRightChildAndHeight),
-        "mmr_right_child" => Box::new(MmrRightChild),
-        "right_lineage_count_and_own_height" => Box::new(MmrRightLineageCountAndHeight),
-        "right_lineage_length" => Box::new(MmrRightLineageLength),
-        "verify_from_memory" => Box::new(MmrVerifyFromMemory),
-        "mmr_verify_from_secret_in" => Box::new(MmrVerifyLeafMembershipFromSecretIn),
+        "tasm_mmr_data_index_to_node_index" => Box::new(DataIndexToNodeIndex),
+        "tasm_mmr_get_height_from_leaf_index" => Box::new(GetHeightFromDataIndex),
+        "tasm_mmr_leaf_index_to_mt_index_and_peak_index" => Box::new(MmrLeafIndexToMtIndexAndPeakIndex),
+        "tasm_mmr_left_child" => Box::new(MmrLeftChild),
+        "tasm_mmr_leftmost_ancestor" => Box::new(MmrLeftMostAncestor),
+        "tasm_mmr_verify_load_from_secret_in" => Box::new(MmrLoadFromSecretInThenVerify),
+        "tasm_mmr_non_leaf_nodes_left" => Box::new(MmrNonLeafNodesLeftUsingAnd),
+        "tasm_mmr_right_child_and_height" => Box::new(MmrRightChildAndHeight),
+        "tasm_mmr_right_child" => Box::new(MmrRightChild),
+        "tasm_mmr_right_lineage_count_and_own_height" => Box::new(MmrRightLineageCountAndHeight),
+        "tasm_mmr_right_lineage_length" => Box::new(MmrRightLineageLength),
+        "tasm_mmr_verify_from_memory" => Box::new(MmrVerifyFromMemory),
+        "tasm_mmr_verify_from_secret_in" => Box::new(MmrVerifyLeafMembershipFromSecretIn),
 
         // other
-        "bfe_add" => Box::new(BfeAdd),
+        "tasm_other_bfe_add" => Box::new(BfeAdd),
 
         // pseudo
-        "lsb" => Box::new(Lsb),
-        "neg" => Box::new(Neg),
-        "sub" => Box::new(Sub),
+        "tasm_pseudo_lsb" => Box::new(Lsb),
+        "tasm_pseudo_neg" => Box::new(Neg),
+        "tasm_pseudo_sub" => Box::new(Sub),
 
         // recufy
-        "mt_ap_verify" => Box::new(MtApVerifyFromSecretInput),
+        "tasm_recufier_mt_ap_verify" => Box::new(MtApVerifyFromSecretInput),
 
         _ => panic!("Could not find \"{fn_name}\" in the function `name_to_snippet`. Did you include it there?"),
     }

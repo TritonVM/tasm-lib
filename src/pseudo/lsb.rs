@@ -47,7 +47,7 @@ impl Snippet for Lsb {
     }
 
     fn entrypoint(&self) -> String {
-        "lsb".to_string()
+        "tasm_pseudo_lsb".to_string()
     }
 
     fn function_body(&self, _library: &mut crate::library::Library) -> String {

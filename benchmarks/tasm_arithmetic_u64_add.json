@@ -1,0 +1,14 @@
+[
+  {
+    "name": "tasm_arithmetic_u64_add",
+    "processor_table_height": 27,
+    "hash_table_height": 0,
+    "u32_table_height": 65
+  },
+  {
+    "name": "tasm_arithmetic_u64_add",
+    "processor_table_height": 35,
+    "hash_table_height": 0,
+    "u32_table_height": 32
+  }
+]

@@ -74,7 +74,7 @@ impl Snippet for LtU64 {
     }
 
     fn entrypoint(&self) -> String {
-        "lt_u64".to_string()
+        "tasm_arithmetic_u64_lt".to_string()
     }
 
     /// Before: _ rhs_hi rhs_lo lhs_hi lhs_lo
@@ -182,7 +182,7 @@ impl Snippet for LtStandardU64 {
     }
 
     fn entrypoint(&self) -> String {
-        "lt_standard_u64".to_string()
+        "tasm_arithmetic_u64_lt_standard".to_string()
     }
 
     fn function_body(&self, _library: &mut Library) -> String {

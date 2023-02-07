@@ -72,7 +72,7 @@ impl Snippet for U32IsOdd {
     }
 
     fn entrypoint(&self) -> String {
-        "is_odd".to_string()
+        "tasm_arithmetic_u32_is_odd".to_string()
     }
 
     fn function_body(&self, library: &mut Library) -> String {

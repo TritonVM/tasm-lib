@@ -50,7 +50,7 @@ impl Snippet for Log2FloorU64 {
     }
 
     fn entrypoint(&self) -> String {
-        "log_2_floor_u64".to_string()
+        "tasm_arithmetic_u64_log_2_floor".to_string()
     }
 
     fn function_body(&self, _library: &mut Library) -> String {

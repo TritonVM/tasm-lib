@@ -1,0 +1,8 @@
+[
+  {
+    "name": "tasm_mmr_verify_from_memory",
+    "processor_table_height": 717,
+    "hash_table_height": 36,
+    "u32_table_height": 154
+  }
+]

@@ -12,7 +12,7 @@ pub struct SafeSub;
 
 impl Snippet for SafeSub {
     fn entrypoint(&self) -> String {
-        "safe_sub_u32".to_string()
+        "tasm_arithmetic_u32_safe_sub_u32".to_string()
     }
 
     fn inputs(&self) -> Vec<String> {

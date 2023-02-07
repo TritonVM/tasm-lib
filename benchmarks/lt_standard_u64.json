@@ -9,18 +9,6 @@
     "name": "lt_standard_u64",
     "processor_table_height": 15,
     "hash_table_height": 0,
-    "u32_table_height": 32
-  },
-  {
-    "name": "lt_standard_u64",
-    "processor_table_height": 19,
-    "hash_table_height": 0,
-    "u32_table_height": 33
-  },
-  {
-    "name": "lt_standard_u64",
-    "processor_table_height": 19,
-    "hash_table_height": 0,
     "u32_table_height": 33
   },
   {
@@ -32,90 +20,6 @@
   {
     "name": "lt_standard_u64",
     "processor_table_height": 15,
-    "hash_table_height": 0,
-    "u32_table_height": 33
-  },
-  {
-    "name": "lt_standard_u64",
-    "processor_table_height": 15,
-    "hash_table_height": 0,
-    "u32_table_height": 32
-  },
-  {
-    "name": "lt_standard_u64",
-    "processor_table_height": 15,
-    "hash_table_height": 0,
-    "u32_table_height": 33
-  },
-  {
-    "name": "lt_standard_u64",
-    "processor_table_height": 15,
-    "hash_table_height": 0,
-    "u32_table_height": 33
-  },
-  {
-    "name": "lt_standard_u64",
-    "processor_table_height": 15,
-    "hash_table_height": 0,
-    "u32_table_height": 32
-  },
-  {
-    "name": "lt_standard_u64",
-    "processor_table_height": 19,
-    "hash_table_height": 0,
-    "u32_table_height": 32
-  },
-  {
-    "name": "lt_standard_u64",
-    "processor_table_height": 19,
-    "hash_table_height": 0,
-    "u32_table_height": 33
-  },
-  {
-    "name": "lt_standard_u64",
-    "processor_table_height": 19,
-    "hash_table_height": 0,
-    "u32_table_height": 33
-  },
-  {
-    "name": "lt_standard_u64",
-    "processor_table_height": 19,
-    "hash_table_height": 0,
-    "u32_table_height": 33
-  },
-  {
-    "name": "lt_standard_u64",
-    "processor_table_height": 19,
-    "hash_table_height": 0,
-    "u32_table_height": 33
-  },
-  {
-    "name": "lt_standard_u64",
-    "processor_table_height": 15,
-    "hash_table_height": 0,
-    "u32_table_height": 33
-  },
-  {
-    "name": "lt_standard_u64",
-    "processor_table_height": 15,
-    "hash_table_height": 0,
-    "u32_table_height": 32
-  },
-  {
-    "name": "lt_standard_u64",
-    "processor_table_height": 19,
-    "hash_table_height": 0,
-    "u32_table_height": 33
-  },
-  {
-    "name": "lt_standard_u64",
-    "processor_table_height": 15,
-    "hash_table_height": 0,
-    "u32_table_height": 32
-  },
-  {
-    "name": "lt_standard_u64",
-    "processor_table_height": 19,
     "hash_table_height": 0,
     "u32_table_height": 33
   },
@@ -127,6 +31,42 @@
   },
   {
     "name": "lt_standard_u64",
+    "processor_table_height": 19,
+    "hash_table_height": 0,
+    "u32_table_height": 33
+  },
+  {
+    "name": "lt_standard_u64",
+    "processor_table_height": 19,
+    "hash_table_height": 0,
+    "u32_table_height": 33
+  },
+  {
+    "name": "lt_standard_u64",
+    "processor_table_height": 19,
+    "hash_table_height": 0,
+    "u32_table_height": 33
+  },
+  {
+    "name": "lt_standard_u64",
+    "processor_table_height": 19,
+    "hash_table_height": 0,
+    "u32_table_height": 33
+  },
+  {
+    "name": "lt_standard_u64",
+    "processor_table_height": 15,
+    "hash_table_height": 0,
+    "u32_table_height": 33
+  },
+  {
+    "name": "lt_standard_u64",
+    "processor_table_height": 15,
+    "hash_table_height": 0,
+    "u32_table_height": 33
+  },
+  {
+    "name": "lt_standard_u64",
     "processor_table_height": 15,
     "hash_table_height": 0,
     "u32_table_height": 33
@@ -145,6 +85,18 @@
   },
   {
     "name": "lt_standard_u64",
+    "processor_table_height": 19,
+    "hash_table_height": 0,
+    "u32_table_height": 33
+  },
+  {
+    "name": "lt_standard_u64",
+    "processor_table_height": 19,
+    "hash_table_height": 0,
+    "u32_table_height": 33
+  },
+  {
+    "name": "lt_standard_u64",
     "processor_table_height": 15,
     "hash_table_height": 0,
     "u32_table_height": 33
@@ -157,7 +109,19 @@
   },
   {
     "name": "lt_standard_u64",
-    "processor_table_height": 19,
+    "processor_table_height": 15,
+    "hash_table_height": 0,
+    "u32_table_height": 33
+  },
+  {
+    "name": "lt_standard_u64",
+    "processor_table_height": 15,
+    "hash_table_height": 0,
+    "u32_table_height": 33
+  },
+  {
+    "name": "lt_standard_u64",
+    "processor_table_height": 15,
     "hash_table_height": 0,
     "u32_table_height": 33
   },
@@ -175,8 +139,44 @@
   },
   {
     "name": "lt_standard_u64",
+    "processor_table_height": 15,
+    "hash_table_height": 0,
+    "u32_table_height": 33
+  },
+  {
+    "name": "lt_standard_u64",
     "processor_table_height": 19,
     "hash_table_height": 0,
     "u32_table_height": 33
+  },
+  {
+    "name": "lt_standard_u64",
+    "processor_table_height": 19,
+    "hash_table_height": 0,
+    "u32_table_height": 32
+  },
+  {
+    "name": "lt_standard_u64",
+    "processor_table_height": 15,
+    "hash_table_height": 0,
+    "u32_table_height": 33
+  },
+  {
+    "name": "lt_standard_u64",
+    "processor_table_height": 15,
+    "hash_table_height": 0,
+    "u32_table_height": 33
+  },
+  {
+    "name": "lt_standard_u64",
+    "processor_table_height": 15,
+    "hash_table_height": 0,
+    "u32_table_height": 33
+  },
+  {
+    "name": "lt_standard_u64",
+    "processor_table_height": 19,
+    "hash_table_height": 0,
+    "u32_table_height": 32
   }
 ]
