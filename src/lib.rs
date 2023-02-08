@@ -12,6 +12,7 @@ use twenty_first::util_types::algebraic_hasher::Hashable;
 
 pub mod all_snippets;
 pub mod arithmetic;
+pub mod dyn_malloc;
 pub mod hashing;
 pub mod library;
 pub mod list;

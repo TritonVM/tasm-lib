@@ -17,6 +17,7 @@ use crate::{
             sub_u64::SubU64,
         },
     },
+    dyn_malloc::DynMalloc,
     hashing::{
         eq_digest::EqDigest, load_auth_path_from_secret_in::LoadAuthPathFromSecretIn,
         load_auth_path_from_std_in::LoadAuthPathFromStdIn, swap_digest::SwapDigest,
@@ -211,6 +212,9 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn Snippet> {
 
         // recufy
         "tasm_recufier_mt_ap_verify" => Box::new(MtApVerifyFromSecretInput),
+
+        // dyn_malloc
+        "dyn_malloc" => Box::new(DynMalloc),
 
         _ => panic!("Could not find \"{fn_name}\" in the function `name_to_snippet`. Did you include it there?"),
     }
