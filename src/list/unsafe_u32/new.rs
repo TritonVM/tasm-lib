@@ -3,16 +3,16 @@ use std::collections::HashMap;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
-use crate::rust_shadowing_helper_functions::{self};
+use crate::rust_shadowing_helper_functions::unsafe_list::unsafe_list_new;
 use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
 const DEFAULT_LIST_CAPACITY: usize = 64;
 
 #[derive(Clone)]
-pub struct New(pub DataType);
+pub struct UnsafeNew(pub DataType);
 
-impl Snippet for New {
+impl Snippet for UnsafeNew {
     fn entrypoint(&self) -> String {
         format!("tasm_list_unsafe_u32_new_{}", self.0)
     }
@@ -107,7 +107,7 @@ impl Snippet for New {
         Self: Sized,
     {
         let list_pointer = BFieldElement::zero();
-        rust_shadowing_helper_functions::unsafe_list_new(list_pointer, memory);
+        unsafe_list_new(list_pointer, memory);
         stack.push(list_pointer);
     }
 }
@@ -120,9 +120,9 @@ mod tests {
 
     #[test]
     fn new_snippet_test() {
-        rust_tasm_equivalence_prop_new(New(DataType::U32));
-        rust_tasm_equivalence_prop_new(New(DataType::U64));
-        rust_tasm_equivalence_prop_new(New(DataType::XFE));
-        rust_tasm_equivalence_prop_new(New(DataType::Digest));
+        rust_tasm_equivalence_prop_new(UnsafeNew(DataType::U32));
+        rust_tasm_equivalence_prop_new(UnsafeNew(DataType::U64));
+        rust_tasm_equivalence_prop_new(UnsafeNew(DataType::XFE));
+        rust_tasm_equivalence_prop_new(UnsafeNew(DataType::Digest));
     }
 }

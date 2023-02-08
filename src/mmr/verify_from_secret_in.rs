@@ -18,7 +18,7 @@ use crate::arithmetic::u64::eq_u64::EqU64;
 use crate::hashing::eq_digest::EqDigest;
 use crate::hashing::swap_digest::SwapDigest;
 use crate::library::Library;
-use crate::list::unsafe_u32::get::Get;
+use crate::list::unsafe_u32::get::UnsafeGet;
 use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, ExecutionState};
 
@@ -89,9 +89,12 @@ impl Snippet for MmrVerifyLeafMembershipFromSecretIn {
 
             // Write peaks to memory
             let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
-            rust_shadowing_helper_functions::unsafe_list_new(peaks_pointer, &mut memory);
+            rust_shadowing_helper_functions::unsafe_list::unsafe_list_new(
+                peaks_pointer,
+                &mut memory,
+            );
             for peak in mmra.get_peaks() {
-                rust_shadowing_helper_functions::unsafe_list_push(
+                rust_shadowing_helper_functions::unsafe_list::unsafe_list_push(
                     peaks_pointer,
                     peak.values().to_vec(),
                     &mut memory,
@@ -182,7 +185,7 @@ impl Snippet for MmrVerifyLeafMembershipFromSecretIn {
         let swap_digests = library.import(Box::new(SwapDigest));
         let compare_digest = library.import(Box::new(EqDigest));
         let div_2 = library.import(Box::new(Div2U64));
-        let get = library.import(Box::new(Get(DataType::Digest)));
+        let get = library.import(Box::new(UnsafeGet(DataType::Digest)));
 
         let divine_digest = "divine\n".repeat(DIGEST_LENGTH);
 
@@ -296,7 +299,7 @@ impl Snippet for MmrVerifyLeafMembershipFromSecretIn {
         let mut peaks: Vec<Digest> = vec![];
         for i in 0..peaks_count {
             let digest = Digest::new(
-                rust_shadowing_helper_functions::unsafe_list_read(
+                rust_shadowing_helper_functions::unsafe_list::unsafe_list_read(
                     peaks_pointer,
                     i as usize,
                     memory,
@@ -547,9 +550,9 @@ mod mmr_verify_from_secret_in_tests {
 
         // Initialize memory with peaks list
         let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
-        rust_shadowing_helper_functions::unsafe_list_new(peaks_pointer, &mut memory);
+        rust_shadowing_helper_functions::unsafe_list::unsafe_list_new(peaks_pointer, &mut memory);
         for peak in mmr.get_peaks() {
-            rust_shadowing_helper_functions::unsafe_list_push(
+            rust_shadowing_helper_functions::unsafe_list::unsafe_list_push(
                 peaks_pointer,
                 peak.values().to_vec(),
                 &mut memory,

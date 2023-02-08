@@ -19,7 +19,7 @@ use crate::arithmetic::u64::eq_u64::EqU64;
 use crate::hashing::eq_digest::EqDigest;
 use crate::hashing::swap_digest::SwapDigest;
 use crate::library::Library;
-use crate::list::unsafe_u32::get::Get;
+use crate::list::unsafe_u32::get::UnsafeGet;
 use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, ExecutionState};
 
@@ -113,7 +113,7 @@ impl Snippet for MmrVerifyFromMemory {
 
     fn function_body(&self, library: &mut Library) -> String {
         let leaf_index_to_mt_index = library.import(Box::new(MmrLeafIndexToMtIndexAndPeakIndex));
-        let get = library.import(Box::new(Get(DataType::Digest)));
+        let get = library.import(Box::new(UnsafeGet(DataType::Digest)));
         let u32_is_odd = library.import(Box::new(U32IsOdd));
         let entrypoint = self.entrypoint();
         let eq_u64 = library.import(Box::new(EqU64));
@@ -233,7 +233,7 @@ impl Snippet for MmrVerifyFromMemory {
         let mut auth_path: Vec<Digest> = vec![];
         for i in 0..auth_path_length {
             let digest = Digest::new(
-                rust_shadowing_helper_functions::unsafe_list_read(
+                rust_shadowing_helper_functions::unsafe_list::unsafe_list_read(
                     auth_path_pointer,
                     i as usize,
                     memory,
@@ -265,7 +265,7 @@ impl Snippet for MmrVerifyFromMemory {
         let mut peaks: Vec<Digest> = vec![];
         for i in 0..peaks_count {
             let digest = Digest::new(
-                rust_shadowing_helper_functions::unsafe_list_read(
+                rust_shadowing_helper_functions::unsafe_list::unsafe_list_read(
                     peaks_pointer,
                     i as usize,
                     memory,
@@ -322,9 +322,9 @@ fn prepare_vm_state<H: AlgebraicHasher + std::cmp::PartialEq + std::fmt::Debug>(
 
     // Initialize memory
     let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
-    rust_shadowing_helper_functions::unsafe_list_new(peaks_pointer, &mut memory);
+    rust_shadowing_helper_functions::unsafe_list::unsafe_list_new(peaks_pointer, &mut memory);
     for peak in mmr.get_peaks() {
-        rust_shadowing_helper_functions::unsafe_list_push(
+        rust_shadowing_helper_functions::unsafe_list::unsafe_list_push(
             peaks_pointer,
             peak.values().to_vec(),
             &mut memory,
@@ -332,9 +332,9 @@ fn prepare_vm_state<H: AlgebraicHasher + std::cmp::PartialEq + std::fmt::Debug>(
         );
     }
 
-    rust_shadowing_helper_functions::unsafe_list_new(auth_path_pointer, &mut memory);
+    rust_shadowing_helper_functions::unsafe_list::unsafe_list_new(auth_path_pointer, &mut memory);
     for ap_element in auth_path.iter() {
-        rust_shadowing_helper_functions::unsafe_list_push(
+        rust_shadowing_helper_functions::unsafe_list::unsafe_list_push(
             auth_path_pointer,
             ap_element.values().to_vec(),
             &mut memory,

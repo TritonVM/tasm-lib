@@ -4,14 +4,16 @@ use rand::{random, thread_rng, Rng};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
-use crate::rust_shadowing_helper_functions::unsafe_insert_random_list;
+use crate::rust_shadowing_helper_functions::unsafe_list::{
+    unsafe_insert_random_list, unsafe_list_read,
+};
 use crate::snippet::{DataType, Snippet};
-use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, ExecutionState};
+use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone)]
-pub struct Get(pub DataType);
+pub struct UnsafeGet(pub DataType);
 
-impl Snippet for Get {
+impl Snippet for UnsafeGet {
     fn inputs(&self) -> Vec<String> {
         vec!["*list".to_string(), "index".to_string()]
     }
@@ -121,12 +123,8 @@ impl Snippet for Get {
     ) {
         let index: u32 = stack.pop().unwrap().try_into().unwrap();
         let list_pointer = stack.pop().unwrap();
-        let element: Vec<BFieldElement> = rust_shadowing_helper_functions::unsafe_list_read(
-            list_pointer,
-            index as usize,
-            memory,
-            self.0.get_size(),
-        );
+        let element: Vec<BFieldElement> =
+            unsafe_list_read(list_pointer, index as usize, memory, self.0.get_size());
 
         // elements are placed on stack as: `elem[N - 1] elem[N - 2] .. elem[0]`
         for i in (0..self.0.get_size()).rev() {
@@ -148,7 +146,7 @@ mod get_element_tests {
 
     #[test]
     fn new_snippet_test() {
-        rust_tasm_equivalence_prop_new::<Get>(Get(DataType::XFE));
+        rust_tasm_equivalence_prop_new::<UnsafeGet>(UnsafeGet(DataType::XFE));
     }
 
     #[test]
@@ -207,12 +205,7 @@ mod get_element_tests {
             }
         }
         let targeted_element: Vec<BFieldElement> =
-            rust_shadowing_helper_functions::unsafe_list_read(
-                list_pointer,
-                index as usize,
-                &memory,
-                element_size,
-            );
+            unsafe_list_read(list_pointer, index as usize, &memory, element_size);
 
         let mut expected_end_stack = get_init_tvm_stack();
 
@@ -220,8 +213,8 @@ mod get_element_tests {
             expected_end_stack.push(targeted_element[element_size - 1 - i]);
         }
 
-        let _execution_result = rust_tasm_equivalence_prop::<Get>(
-            Get(data_type),
+        let _execution_result = rust_tasm_equivalence_prop::<UnsafeGet>(
+            UnsafeGet(data_type),
             &init_stack,
             &[],
             &[],

@@ -6,23 +6,25 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::random_elements;
 
 use crate::library::Library;
-use crate::rust_shadowing_helper_functions::unsafe_insert_random_list;
+use crate::rust_shadowing_helper_functions::unsafe_list::unsafe_insert_random_list;
 use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone)]
-pub struct Push(pub DataType);
+pub struct UnsafePush(pub DataType);
 
 /// A parameterized version of `Push` where `N` is the size of an element in the list
-impl Snippet for Push {
+impl Snippet for UnsafePush {
     fn inputs(&self) -> Vec<String> {
-        // See: https://github.com/TritonVM/tasm-snippets/issues/13
+        let element_size = self.0.get_size();
+
         // _ *list, elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}
-        vec![
-            vec!["*list".to_string()],
-            vec!["element".to_string(); self.0.get_size()],
-        ]
-        .concat()
+        let mut ret = vec!["*list".to_string()];
+        for i in 0..element_size {
+            ret.push(format!("element_{}", element_size - 1 - i));
+        }
+
+        ret
     }
 
     fn outputs(&self) -> Vec<String> {
@@ -94,7 +96,7 @@ impl Snippet for Push {
         format!(
             "
             // Before: _ *list, elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}
-            // After: _ *list
+            // After: _
             {entry_point}:
                 dup{element_size}
                 // stack : _  *list, elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}, *list
@@ -168,17 +170,16 @@ mod tests_push {
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
     use crate::get_init_tvm_stack;
-    use crate::rust_shadowing_helper_functions::unsafe_insert_random_list;
     use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
 
     #[test]
     fn new_snippet_test() {
-        rust_tasm_equivalence_prop_new::<Push>(Push(DataType::Bool));
-        rust_tasm_equivalence_prop_new::<Push>(Push(DataType::U64));
-        rust_tasm_equivalence_prop_new::<Push>(Push(DataType::XFE));
-        rust_tasm_equivalence_prop_new::<Push>(Push(DataType::Digest));
+        rust_tasm_equivalence_prop_new::<UnsafePush>(UnsafePush(DataType::Bool));
+        rust_tasm_equivalence_prop_new::<UnsafePush>(UnsafePush(DataType::U64));
+        rust_tasm_equivalence_prop_new::<UnsafePush>(UnsafePush(DataType::XFE));
+        rust_tasm_equivalence_prop_new::<UnsafePush>(UnsafePush(DataType::Digest));
     }
 
     #[test]
@@ -235,8 +236,8 @@ mod tests_push {
             data_type.get_size(),
         );
 
-        let _execution_result = rust_tasm_equivalence_prop::<Push>(
-            Push(data_type.clone()),
+        let _execution_result = rust_tasm_equivalence_prop::<UnsafePush>(
+            UnsafePush(data_type.clone()),
             &init_stack,
             &[],
             &[],

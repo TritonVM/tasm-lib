@@ -8,7 +8,7 @@ use twenty_first::shared_math::rescue_prime_digest::Digest;
 use twenty_first::shared_math::rescue_prime_digest::DIGEST_LENGTH;
 
 use crate::library::Library;
-use crate::list::unsafe_u32::{push::Push, set_length::SetLength};
+use crate::list::unsafe_u32::{push::UnsafePush, set_length::UnsafeSetLength};
 use crate::mmr::MAX_MMR_HEIGHT;
 use crate::snippet::DataType;
 use crate::snippet::Snippet;
@@ -44,7 +44,7 @@ impl Snippet for LoadAuthPathFromSecretIn {
             let ap_elements: Vec<Digest> = random_elements(ap_length);
             let mut secret_in = vec![BFieldElement::new(ap_length as u64)];
             for ap_element in ap_elements.iter() {
-                rust_shadowing_helper_functions::write_digest_to_secret_in(
+                rust_shadowing_helper_functions::input::write_digest_to_secret_in(
                     &mut secret_in,
                     *ap_element,
                 );
@@ -75,8 +75,8 @@ impl Snippet for LoadAuthPathFromSecretIn {
 
         let read_digest_from_secret_in = "divine\n".repeat(DIGEST_LENGTH);
 
-        let set_length = library.import(Box::new(SetLength(DataType::Digest)));
-        let push = library.import(Box::new(Push(DataType::Digest)));
+        let set_length = library.import(Box::new(UnsafeSetLength(DataType::Digest)));
+        let push = library.import(Box::new(UnsafePush(DataType::Digest)));
 
         // Allocate 1 word for length indication, and `DIGEST_LENGTH` words per auth path element
         // Warning: Statically allocated list. Will be overwritten at same location by subsequent
@@ -149,15 +149,15 @@ impl Snippet for LoadAuthPathFromSecretIn {
         secret_in_cursor += 1;
 
         let auth_path_pointer = BFieldElement::zero();
-        rust_shadowing_helper_functions::unsafe_list_new(auth_path_pointer, memory);
+        rust_shadowing_helper_functions::unsafe_list::unsafe_list_new(auth_path_pointer, memory);
 
         let mut i = 0;
         while i != total_auth_path_length {
-            let ap_element = rust_shadowing_helper_functions::read_digest_from_secret_in(
+            let ap_element = rust_shadowing_helper_functions::input::read_digest_from_secret_in(
                 &secret_in,
                 &mut secret_in_cursor,
             );
-            rust_shadowing_helper_functions::unsafe_list_push(
+            rust_shadowing_helper_functions::unsafe_list::unsafe_list_push(
                 auth_path_pointer,
                 ap_element.values().to_vec(),
                 memory,

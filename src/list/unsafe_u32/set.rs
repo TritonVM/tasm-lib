@@ -5,14 +5,16 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::random_elements;
 
 use crate::library::Library;
-use crate::rust_shadowing_helper_functions::unsafe_insert_random_list;
+use crate::rust_shadowing_helper_functions::unsafe_list::{
+    unsafe_insert_random_list, unsafe_list_set,
+};
 use crate::snippet::{DataType, Snippet};
-use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, ExecutionState};
+use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone)]
-pub struct Set(pub DataType);
+pub struct UnsafeSet(pub DataType);
 
-impl Snippet for Set {
+impl Snippet for UnsafeSet {
     fn inputs(&self) -> Vec<String> {
         // See: https://github.com/TritonVM/tasm-snippets/issues/13
         // _ elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}} *list index
@@ -128,7 +130,7 @@ impl Snippet for Set {
         for ee in element.iter_mut() {
             *ee = stack.pop().unwrap();
         }
-        rust_shadowing_helper_functions::unsafe_list_set(
+        unsafe_list_set(
             list_pointer,
             index as usize,
             element,
@@ -143,19 +145,18 @@ mod list_set_tests {
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
     use crate::get_init_tvm_stack;
-    use crate::rust_shadowing_helper_functions::unsafe_insert_random_list;
     use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
 
     #[test]
     fn new_snippet_test() {
-        rust_tasm_equivalence_prop_new::<Set>(Set(DataType::Bool));
-        rust_tasm_equivalence_prop_new::<Set>(Set(DataType::BFE));
-        rust_tasm_equivalence_prop_new::<Set>(Set(DataType::U32));
-        rust_tasm_equivalence_prop_new::<Set>(Set(DataType::U64));
-        rust_tasm_equivalence_prop_new::<Set>(Set(DataType::XFE));
-        rust_tasm_equivalence_prop_new::<Set>(Set(DataType::Digest));
+        rust_tasm_equivalence_prop_new::<UnsafeSet>(UnsafeSet(DataType::Bool));
+        rust_tasm_equivalence_prop_new::<UnsafeSet>(UnsafeSet(DataType::BFE));
+        rust_tasm_equivalence_prop_new::<UnsafeSet>(UnsafeSet(DataType::U32));
+        rust_tasm_equivalence_prop_new::<UnsafeSet>(UnsafeSet(DataType::U64));
+        rust_tasm_equivalence_prop_new::<UnsafeSet>(UnsafeSet(DataType::XFE));
+        rust_tasm_equivalence_prop_new::<UnsafeSet>(UnsafeSet(DataType::Digest));
     }
 
     #[test]
@@ -222,8 +223,8 @@ mod list_set_tests {
             data_type.get_size(),
         );
 
-        let _execution_result = rust_tasm_equivalence_prop::<Set>(
-            Set(data_type.clone()),
+        let _execution_result = rust_tasm_equivalence_prop::<UnsafeSet>(
+            UnsafeSet(data_type.clone()),
             &init_stack,
             &[],
             &[],

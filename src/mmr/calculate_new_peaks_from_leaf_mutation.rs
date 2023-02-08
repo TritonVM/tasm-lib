@@ -16,8 +16,8 @@ use crate::arithmetic::u32::is_odd::U32IsOdd;
 use crate::arithmetic::u64::div2_u64::Div2U64;
 use crate::arithmetic::u64::eq_u64::EqU64;
 use crate::library::Library;
-use crate::list::unsafe_u32::get::Get;
-use crate::list::unsafe_u32::set::Set;
+use crate::list::unsafe_u32::get::UnsafeGet;
+use crate::list::unsafe_u32::set::UnsafeSet;
 use crate::mmr::MAX_MMR_HEIGHT;
 use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, ExecutionState};
@@ -101,8 +101,8 @@ impl Snippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
         let leaf_index_to_mt_index = library.import(Box::new(MmrLeafIndexToMtIndexAndPeakIndex));
         let u32_is_odd = library.import(Box::new(U32IsOdd));
         let eq_u64 = library.import(Box::new(EqU64));
-        let get = library.import(Box::new(Get(DataType::Digest)));
-        let set = library.import(Box::new(Set(DataType::Digest)));
+        let get = library.import(Box::new(UnsafeGet(DataType::Digest)));
+        let set = library.import(Box::new(UnsafeSet(DataType::Digest)));
         let div_2 = library.import(Box::new(Div2U64));
 
         format!(
@@ -221,7 +221,7 @@ impl Snippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
         let mut peaks: Vec<Digest> = vec![];
         for i in 0..peaks_count {
             let digest = Digest::new(
-                rust_shadowing_helper_functions::unsafe_list_read(
+                rust_shadowing_helper_functions::unsafe_list::unsafe_list_read(
                     peaks_pointer,
                     i as usize,
                     memory,
@@ -237,7 +237,7 @@ impl Snippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
         let mut auth_path: Vec<Digest> = vec![];
         for i in 0..auth_path_length {
             let digest = Digest::new(
-                rust_shadowing_helper_functions::unsafe_list_read(
+                rust_shadowing_helper_functions::unsafe_list::unsafe_list_read(
                     auth_paths_pointer,
                     i as usize,
                     memory,
@@ -261,7 +261,7 @@ impl Snippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
         // Write mutated peak back to memory
         // rust_shadowing_helper_functions::list_set(peaks_pointer, index, value, memory)
         for i in 0..peaks_count {
-            rust_shadowing_helper_functions::unsafe_list_set(
+            rust_shadowing_helper_functions::unsafe_list::unsafe_list_set(
                 peaks_pointer,
                 i as usize,
                 new_peaks[i as usize].values().to_vec(),
@@ -307,9 +307,9 @@ fn prepare_state_with_mmra<H: AlgebraicHasher + std::cmp::PartialEq + std::fmt::
 
     // Initialize memory
     let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
-    rust_shadowing_helper_functions::unsafe_list_new(peaks_pointer, &mut memory);
+    rust_shadowing_helper_functions::unsafe_list::unsafe_list_new(peaks_pointer, &mut memory);
     for peak in start_mmr.get_peaks() {
-        rust_shadowing_helper_functions::unsafe_list_push(
+        rust_shadowing_helper_functions::unsafe_list::unsafe_list_push(
             peaks_pointer,
             peak.values().to_vec(),
             &mut memory,
@@ -317,9 +317,9 @@ fn prepare_state_with_mmra<H: AlgebraicHasher + std::cmp::PartialEq + std::fmt::
         );
     }
 
-    rust_shadowing_helper_functions::unsafe_list_new(auth_path_pointer, &mut memory);
+    rust_shadowing_helper_functions::unsafe_list::unsafe_list_new(auth_path_pointer, &mut memory);
     for ap_element in auth_path.iter() {
-        rust_shadowing_helper_functions::unsafe_list_push(
+        rust_shadowing_helper_functions::unsafe_list::unsafe_list_push(
             auth_path_pointer,
             ap_element.values().to_vec(),
             &mut memory,
@@ -590,7 +590,7 @@ mod leaf_mutation_tests {
         let mut produced_peaks = vec![];
         for i in 0..peaks_count {
             let peak: Digest = Digest::new(
-                rust_shadowing_helper_functions::unsafe_list_read(
+                rust_shadowing_helper_functions::unsafe_list::unsafe_list_read(
                     peaks_pointer,
                     i as usize,
                     &memory,
@@ -612,7 +612,7 @@ mod leaf_mutation_tests {
         let mut auth_path = vec![];
         for i in 0..auth_path_element_count {
             let auth_path_element: Digest = Digest::new(
-                rust_shadowing_helper_functions::unsafe_list_read(
+                rust_shadowing_helper_functions::unsafe_list::unsafe_list_read(
                     auth_path_pointer,
                     i as usize,
                     &memory,
