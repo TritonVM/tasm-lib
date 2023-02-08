@@ -31,6 +31,30 @@ pub fn safe_list_new(
     );
 }
 
+/// Read an element from a list.
+pub fn safe_list_read(
+    list_pointer: BFieldElement,
+    index: usize,
+    memory: &HashMap<BFieldElement, BFieldElement>,
+    element_length: usize,
+) -> Vec<BFieldElement> {
+    // Bounds check
+    let length: u32 = memory[&list_pointer].value().try_into().unwrap();
+    assert!(
+        length > index as u32,
+        "Read index must be inside list bounds"
+    );
+
+    let mut ret: Vec<BFieldElement> = vec![BFieldElement::zero(); element_length];
+
+    for i in 0..element_length {
+        ret[i] =
+            memory[&(list_pointer + BFieldElement::new((element_length * index + 2 + i) as u64))];
+    }
+
+    ret
+}
+
 pub fn safe_list_pop(
     list_pointer: BFieldElement,
     memory: &mut HashMap<BFieldElement, BFieldElement>,

@@ -24,7 +24,7 @@ use crate::{
     },
     library::{DummyTestSnippetA, DummyTestSnippetB, DummyTestSnippetC},
     list::{
-        safe_u32::{length::SafeLength, new::SafeNew, pop::SafePop},
+        safe_u32::{get::SafeGet, length::SafeLength, new::SafeNew, pop::SafePop},
         unsafe_u32::{
             get::UnsafeGet,
             length::{UnsafeLengthLong, UnsafeLengthShort},
@@ -89,6 +89,13 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn Snippet> {
         "tasm_hashing_swap_digest" => Box::new(SwapDigest),
 
         // safe lists
+        "tasm_list_safe_u32_get_element_bool" => Box::new(SafeGet(DataType::Bool)),
+        "tasm_list_safe_u32_get_element_u32" => Box::new(SafeGet(DataType::U32)),
+        "tasm_list_safe_u32_get_element_u64" => Box::new(SafeGet(DataType::U64)),
+        "tasm_list_safe_u32_get_element_bfe" => Box::new(SafeGet(DataType::BFE)),
+        "tasm_list_safe_u32_get_element_xfe" => Box::new(SafeGet(DataType::XFE)),
+        "tasm_list_safe_u32_get_element_digest" => Box::new(SafeGet(DataType::Digest)),
+
         "tasm_list_safe_u32_new" => Box::new(SafeNew(DataType::BFE)),
 
         "tasm_list_safe_u32_pop_bool" => Box::new(SafePop(DataType::Bool)),
