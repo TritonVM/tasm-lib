@@ -31,6 +31,27 @@ pub fn safe_list_new(
     );
 }
 
+pub fn safe_list_pop(
+    list_pointer: BFieldElement,
+    memory: &mut HashMap<BFieldElement, BFieldElement>,
+    element_length: usize,
+) -> Vec<BFieldElement> {
+    let init_list_length = memory[&list_pointer];
+    assert!(!init_list_length.is_zero(), "Stack underflow");
+    memory.get_mut(&list_pointer).unwrap().decrement();
+
+    let mut ret = vec![BFieldElement::zero(); element_length];
+    for (i, elem) in ret.iter_mut().enumerate() {
+        let key = list_pointer
+            + BFieldElement::new(2)
+            + BFieldElement::new(element_length as u64) * (init_list_length - BFieldElement::one())
+            + BFieldElement::new(i as u64);
+        *elem = memory[&key];
+    }
+
+    ret
+}
+
 pub fn safe_list_push(
     list_pointer: BFieldElement,
     value: Vec<BFieldElement>,
