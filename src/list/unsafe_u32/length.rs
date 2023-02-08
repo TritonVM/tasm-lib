@@ -8,7 +8,7 @@ use crate::rust_shadowing_helper_functions::unsafe_list::unsafe_insert_random_li
 use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
-// Called "Long".to_string() because this logic can be shortened
+// Called "Long" because this logic can be shortened
 #[derive(Clone)]
 pub struct UnsafeLengthLong(pub DataType);
 

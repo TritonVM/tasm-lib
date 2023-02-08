@@ -10,6 +10,7 @@ use crate::{
 
 use super::SAFE_LIST_ELEMENT_CAPACITY;
 
+// TODO: Can we remove the data type from here?
 #[derive(Clone)]
 pub struct SafeNew(pub DataType);
 
