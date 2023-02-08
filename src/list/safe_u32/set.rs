@@ -81,7 +81,7 @@ impl Snippet for SafeSet {
     }
 
     fn entrypoint(&self) -> String {
-        format!("tasm_list_unsafe_u32_set_element_{}", self.0)
+        format!("tasm_list_safe_u32_set_element_{}", self.0)
     }
 
     fn function_body(&self, _library: &mut Library) -> String {
