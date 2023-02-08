@@ -165,8 +165,10 @@ mod tests_pop {
 
     #[test]
     fn new_snippet_test() {
+        rust_tasm_equivalence_prop_new::<SafePop>(SafePop(DataType::Bool));
         rust_tasm_equivalence_prop_new::<SafePop>(SafePop(DataType::U32));
         rust_tasm_equivalence_prop_new::<SafePop>(SafePop(DataType::U64));
+        rust_tasm_equivalence_prop_new::<SafePop>(SafePop(DataType::BFE));
         rust_tasm_equivalence_prop_new::<SafePop>(SafePop(DataType::XFE));
         rust_tasm_equivalence_prop_new::<SafePop>(SafePop(DataType::Digest));
     }

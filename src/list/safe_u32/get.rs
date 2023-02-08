@@ -44,7 +44,7 @@ impl Snippet for SafeGet {
         let mut rng = thread_rng();
         let list_pointer: BFieldElement = random();
         let capacity = rng.gen_range(1..1000);
-        let list_length: usize = rng.gen_range(1..cmp::max(capacity, 100));
+        let list_length: usize = rng.gen_range(1..cmp::min(capacity, 100));
         let index: usize = rng.gen_range(0..list_length);
         let mut stack = get_init_tvm_stack();
         stack.push(list_pointer);
@@ -52,7 +52,13 @@ impl Snippet for SafeGet {
 
         let mut memory = HashMap::default();
 
-        safe_insert_random_list(list_pointer, capacity as u32, list_length, &mut memory, 4);
+        safe_insert_random_list(
+            list_pointer,
+            capacity as u32,
+            list_length,
+            &mut memory,
+            self.0.get_size(),
+        );
 
         vec![ExecutionState {
             stack,
@@ -163,7 +169,14 @@ mod get_element_tests {
 
     #[test]
     fn new_snippet_test() {
-        rust_tasm_equivalence_prop_new::<SafeGet>(SafeGet(DataType::XFE));
+        for _ in 0..10 {
+            rust_tasm_equivalence_prop_new(SafeGet(DataType::Bool));
+            rust_tasm_equivalence_prop_new(SafeGet(DataType::U32));
+            rust_tasm_equivalence_prop_new(SafeGet(DataType::U64));
+            rust_tasm_equivalence_prop_new(SafeGet(DataType::BFE));
+            rust_tasm_equivalence_prop_new(SafeGet(DataType::XFE));
+            rust_tasm_equivalence_prop_new(SafeGet(DataType::Digest));
+        }
     }
 
     #[test]

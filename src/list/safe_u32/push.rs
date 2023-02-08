@@ -207,6 +207,7 @@ mod tests {
         rust_tasm_equivalence_prop_new::<SafePush>(SafePush(DataType::Bool));
         rust_tasm_equivalence_prop_new::<SafePush>(SafePush(DataType::U32));
         rust_tasm_equivalence_prop_new::<SafePush>(SafePush(DataType::U64));
+        rust_tasm_equivalence_prop_new::<SafePush>(SafePush(DataType::BFE));
         rust_tasm_equivalence_prop_new::<SafePush>(SafePush(DataType::XFE));
         rust_tasm_equivalence_prop_new::<SafePush>(SafePush(DataType::Digest));
     }

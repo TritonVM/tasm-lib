@@ -25,7 +25,8 @@ use crate::{
     library::{DummyTestSnippetA, DummyTestSnippetB, DummyTestSnippetC},
     list::{
         safe_u32::{
-            get::SafeGet, length::SafeLength, new::SafeNew, pop::SafePop, set_length::SafeSetLength,
+            get::SafeGet, length::SafeLength, new::SafeNew, pop::SafePop, push::SafePush,
+            set_length::SafeSetLength,
         },
         unsafe_u32::{
             get::UnsafeGet,
@@ -98,14 +99,19 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn Snippet> {
         "tasm_list_safe_u32_get_element_xfe" => Box::new(SafeGet(DataType::XFE)),
         "tasm_list_safe_u32_get_element_digest" => Box::new(SafeGet(DataType::Digest)),
 
-        "tasm_list_safe_u32_new" => Box::new(SafeNew(DataType::BFE)),
-
         "tasm_list_safe_u32_pop_bool" => Box::new(SafePop(DataType::Bool)),
         "tasm_list_safe_u32_pop_u32" => Box::new(SafePop(DataType::U32)),
         "tasm_list_safe_u32_pop_u64" => Box::new(SafePop(DataType::U64)),
         "tasm_list_safe_u32_pop_bfe" => Box::new(SafePop(DataType::BFE)),
         "tasm_list_safe_u32_pop_xfe" => Box::new(SafePop(DataType::XFE)),
         "tasm_list_safe_u32_pop_digest" => Box::new(SafePop(DataType::Digest)),
+
+        "tasm_list_safe_u32_push_bool" => Box::new(SafePush(DataType::Bool)),
+        "tasm_list_safe_u32_push_u32" => Box::new(SafePush(DataType::U32)),
+        "tasm_list_safe_u32_push_u64" => Box::new(SafePush(DataType::U64)),
+        "tasm_list_safe_u32_push_bfe" => Box::new(SafePush(DataType::BFE)),
+        "tasm_list_safe_u32_push_xfe" => Box::new(SafePush(DataType::XFE)),
+        "tasm_list_safe_u32_push_digest" => Box::new(SafePush(DataType::Digest)),
 
         "tasm_list_safe_u32_length_bool" => Box::new(SafeLength(DataType::Bool)),
         "tasm_list_safe_u32_length_u32" => Box::new(SafeLength(DataType::U32)),
@@ -120,6 +126,8 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn Snippet> {
         "tasm_list_safe_u32_set_length_bfe" => Box::new(SafeSetLength(DataType::BFE)),
         "tasm_list_safe_u32_set_length_xfe" => Box::new(SafeSetLength(DataType::XFE)),
         "tasm_list_safe_u32_set_length_digest" => Box::new(SafeSetLength(DataType::Digest)),
+
+        "tasm_list_safe_u32_new" => Box::new(SafeNew(DataType::BFE)),
 
         // unsafe lists
         "tasm_list_unsafe_u32_get_element_bool" => Box::new(UnsafeGet(DataType::Bool)),
