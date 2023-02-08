@@ -16,6 +16,27 @@ pub fn safe_insert_random_list(
     }
 }
 
+/// Write an element to a list.
+pub fn safe_list_set(
+    list_pointer: BFieldElement,
+    index: usize,
+    value: Vec<BFieldElement>,
+    memory: &mut HashMap<BFieldElement, BFieldElement>,
+    element_length: usize,
+) {
+    assert_eq!(
+        element_length,
+        value.len(),
+        "Element length must match indicated length"
+    );
+    for (i, v) in value.into_iter().enumerate() {
+        memory.insert(
+            list_pointer + BFieldElement::new((element_length * index + 2 + i) as u64),
+            v,
+        );
+    }
+}
+
 pub fn safe_list_new(
     list_pointer: BFieldElement,
     capacity: u32,
