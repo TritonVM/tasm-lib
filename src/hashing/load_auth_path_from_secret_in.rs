@@ -44,7 +44,7 @@ impl Snippet for LoadAuthPathFromSecretIn {
             let ap_elements: Vec<Digest> = random_elements(ap_length);
             let mut secret_in = vec![BFieldElement::new(ap_length as u64)];
             for ap_element in ap_elements.iter() {
-                rust_shadowing_helper_functions::write_digest_to_secret_in(
+                rust_shadowing_helper_functions::input::write_digest_to_secret_in(
                     &mut secret_in,
                     *ap_element,
                 );
@@ -149,15 +149,15 @@ impl Snippet for LoadAuthPathFromSecretIn {
         secret_in_cursor += 1;
 
         let auth_path_pointer = BFieldElement::zero();
-        rust_shadowing_helper_functions::unsafe_list_new(auth_path_pointer, memory);
+        rust_shadowing_helper_functions::unsafe_list::unsafe_list_new(auth_path_pointer, memory);
 
         let mut i = 0;
         while i != total_auth_path_length {
-            let ap_element = rust_shadowing_helper_functions::read_digest_from_secret_in(
+            let ap_element = rust_shadowing_helper_functions::input::read_digest_from_secret_in(
                 &secret_in,
                 &mut secret_in_cursor,
             );
-            rust_shadowing_helper_functions::unsafe_list_push(
+            rust_shadowing_helper_functions::unsafe_list::unsafe_list_push(
                 auth_path_pointer,
                 ap_element.values().to_vec(),
                 memory,

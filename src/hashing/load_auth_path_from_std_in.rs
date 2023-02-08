@@ -45,7 +45,10 @@ impl Snippet for LoadAuthPathFromStdIn {
             let ap_elements: Vec<Digest> = random_elements(ap_length);
             let mut std_in = vec![BFieldElement::new(ap_length as u64)];
             for ap_element in ap_elements.iter() {
-                rust_shadowing_helper_functions::write_digest_to_std_in(&mut std_in, *ap_element);
+                rust_shadowing_helper_functions::input::write_digest_to_std_in(
+                    &mut std_in,
+                    *ap_element,
+                );
             }
             let init_vm_state = ExecutionState {
                 stack: get_init_tvm_stack(),
@@ -147,15 +150,15 @@ impl Snippet for LoadAuthPathFromStdIn {
         std_in_cursor += 1;
 
         let auth_path_pointer = BFieldElement::zero();
-        rust_shadowing_helper_functions::unsafe_list_new(auth_path_pointer, memory);
+        rust_shadowing_helper_functions::unsafe_list::unsafe_list_new(auth_path_pointer, memory);
 
         let mut i = 0;
         while i != total_auth_path_length {
-            let ap_element = rust_shadowing_helper_functions::read_digest_from_std_in(
+            let ap_element = rust_shadowing_helper_functions::input::read_digest_from_std_in(
                 &std_in,
                 &mut std_in_cursor,
             );
-            rust_shadowing_helper_functions::unsafe_list_push(
+            rust_shadowing_helper_functions::unsafe_list::unsafe_list_push(
                 auth_path_pointer,
                 ap_element.values().to_vec(),
                 memory,

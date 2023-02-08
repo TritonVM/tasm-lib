@@ -5,9 +5,11 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::random_elements;
 
 use crate::library::Library;
-use crate::rust_shadowing_helper_functions::unsafe_insert_random_list;
+use crate::rust_shadowing_helper_functions::unsafe_list::{
+    unsafe_insert_random_list, unsafe_list_set,
+};
 use crate::snippet::{DataType, Snippet};
-use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, ExecutionState};
+use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone)]
 pub struct UnsafeSet(pub DataType);
@@ -128,7 +130,7 @@ impl Snippet for UnsafeSet {
         for ee in element.iter_mut() {
             *ee = stack.pop().unwrap();
         }
-        rust_shadowing_helper_functions::unsafe_list_set(
+        unsafe_list_set(
             list_pointer,
             index as usize,
             element,
@@ -143,7 +145,6 @@ mod list_set_tests {
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
     use crate::get_init_tvm_stack;
-    use crate::rust_shadowing_helper_functions::unsafe_insert_random_list;
     use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;

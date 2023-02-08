@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
-use crate::rust_shadowing_helper_functions::{self};
+use crate::rust_shadowing_helper_functions::unsafe_list::unsafe_list_new;
 use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
@@ -107,7 +107,7 @@ impl Snippet for UnsafeNew {
         Self: Sized,
     {
         let list_pointer = BFieldElement::zero();
-        rust_shadowing_helper_functions::unsafe_list_new(list_pointer, memory);
+        unsafe_list_new(list_pointer, memory);
         stack.push(list_pointer);
     }
 }

@@ -81,9 +81,12 @@ impl Snippet for CalculateNewPeaksFromAppend {
 
             // Initialize memory
             let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
-            rust_shadowing_helper_functions::unsafe_list_new(peaks_pointer, &mut memory);
+            rust_shadowing_helper_functions::unsafe_list::unsafe_list_new(
+                peaks_pointer,
+                &mut memory,
+            );
             for peak in start_mmr.get_peaks() {
-                rust_shadowing_helper_functions::unsafe_list_push(
+                rust_shadowing_helper_functions::unsafe_list::unsafe_list_push(
                     peaks_pointer,
                     peak.values().to_vec(),
                     &mut memory,
@@ -242,7 +245,7 @@ impl Snippet for CalculateNewPeaksFromAppend {
 
         for i in 0..peak_count {
             old_peaks.push(Digest::new(
-                rust_shadowing_helper_functions::unsafe_list_read(
+                rust_shadowing_helper_functions::unsafe_list::unsafe_list_read(
                     peaks_pointer,
                     i as usize,
                     memory,
@@ -257,8 +260,8 @@ impl Snippet for CalculateNewPeaksFromAppend {
         // is inlined here to make it manipulate memory the same way that the TASM code
         // does.
         let auth_path_pointer = BFieldElement::new((MAX_MMR_HEIGHT * DIGEST_LENGTH + 1) as u64);
-        rust_shadowing_helper_functions::unsafe_list_new(auth_path_pointer, memory);
-        rust_shadowing_helper_functions::unsafe_list_push(
+        rust_shadowing_helper_functions::unsafe_list::unsafe_list_new(auth_path_pointer, memory);
+        rust_shadowing_helper_functions::unsafe_list::unsafe_list_push(
             peaks_pointer,
             new_leaf.values().to_vec(),
             memory,
@@ -269,7 +272,7 @@ impl Snippet for CalculateNewPeaksFromAppend {
             mmr::shared::right_lineage_length_and_own_height(new_node_index);
         while right_lineage_count != 0 {
             let new_hash = Digest::new(
-                rust_shadowing_helper_functions::unsafe_list_pop(
+                rust_shadowing_helper_functions::unsafe_list::unsafe_list_pop(
                     peaks_pointer,
                     memory,
                     DIGEST_LENGTH,
@@ -278,7 +281,7 @@ impl Snippet for CalculateNewPeaksFromAppend {
                 .unwrap(),
             );
             let previous_peak = Digest::new(
-                rust_shadowing_helper_functions::unsafe_list_pop(
+                rust_shadowing_helper_functions::unsafe_list::unsafe_list_pop(
                     peaks_pointer,
                     memory,
                     DIGEST_LENGTH,
@@ -286,13 +289,13 @@ impl Snippet for CalculateNewPeaksFromAppend {
                 .try_into()
                 .unwrap(),
             );
-            rust_shadowing_helper_functions::unsafe_list_push(
+            rust_shadowing_helper_functions::unsafe_list::unsafe_list_push(
                 auth_path_pointer,
                 previous_peak.values().to_vec(),
                 memory,
                 DIGEST_LENGTH,
             );
-            rust_shadowing_helper_functions::unsafe_list_push(
+            rust_shadowing_helper_functions::unsafe_list::unsafe_list_push(
                 peaks_pointer,
                 H::hash_pair(&previous_peak, &new_hash).values().to_vec(),
                 memory,
@@ -429,9 +432,9 @@ mod tests {
 
         // Initialize memory
         let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
-        rust_shadowing_helper_functions::unsafe_list_new(peaks_pointer, &mut memory);
+        rust_shadowing_helper_functions::unsafe_list::unsafe_list_new(peaks_pointer, &mut memory);
         for peak in start_mmr.get_peaks() {
-            rust_shadowing_helper_functions::unsafe_list_push(
+            rust_shadowing_helper_functions::unsafe_list::unsafe_list_push(
                 peaks_pointer,
                 peak.values().to_vec(),
                 &mut memory,
@@ -459,7 +462,7 @@ mod tests {
         let mut produced_peaks = vec![];
         for i in 0..peaks_count {
             let peak = Digest::new(
-                rust_shadowing_helper_functions::unsafe_list_read(
+                rust_shadowing_helper_functions::unsafe_list::unsafe_list_read(
                     peaks_pointer,
                     i as usize,
                     &memory,
@@ -482,7 +485,7 @@ mod tests {
         let mut produced_auth_path = vec![];
         for i in 0..auth_path_element_count {
             produced_auth_path.push(Digest::new(
-                rust_shadowing_helper_functions::unsafe_list_read(
+                rust_shadowing_helper_functions::unsafe_list::unsafe_list_read(
                     auth_paths_pointer,
                     i as usize,
                     &memory,

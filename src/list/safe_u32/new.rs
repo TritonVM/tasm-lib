@@ -2,7 +2,8 @@ use num::Zero;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::{
-    get_init_tvm_stack, rust_shadowing_helper_functions,
+    get_init_tvm_stack,
+    rust_shadowing_helper_functions::safe_list::safe_list_new,
     snippet::{DataType, Snippet},
     ExecutionState,
 };
@@ -52,11 +53,12 @@ impl Snippet for SafeNew {
 
         // Data structure for `list::safe_u32` is: [length, capacity, element0, element1, ...]
         let element_size = self.0.get_size();
-        let static_list_pointer = library.kmalloc(2 + element_size * SAFE_LIST_ELEMENT_CAPACITY);
+        let static_list_pointer =
+            library.kmalloc(2 + element_size * SAFE_LIST_ELEMENT_CAPACITY as usize);
         format!(
             "
             {entrypoint}:
-                // TODO: For now we ignore capacity. Fix that!
+                // TODO: For now we ignore capacity provided as input. Fix that!
                 pop
 
 
@@ -117,7 +119,7 @@ impl Snippet for SafeNew {
 
         stack.pop();
         let list_pointer = BFieldElement::zero();
-        rust_shadowing_helper_functions::safe_list_new(list_pointer, memory);
+        safe_list_new(list_pointer, SAFE_LIST_ELEMENT_CAPACITY, memory);
         stack.push(list_pointer);
     }
 }

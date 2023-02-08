@@ -4,9 +4,11 @@ use rand::{random, thread_rng, Rng};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
-use crate::rust_shadowing_helper_functions::unsafe_insert_random_list;
+use crate::rust_shadowing_helper_functions::unsafe_list::{
+    unsafe_insert_random_list, unsafe_list_read,
+};
 use crate::snippet::{DataType, Snippet};
-use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, ExecutionState};
+use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone)]
 pub struct UnsafeGet(pub DataType);
@@ -121,12 +123,8 @@ impl Snippet for UnsafeGet {
     ) {
         let index: u32 = stack.pop().unwrap().try_into().unwrap();
         let list_pointer = stack.pop().unwrap();
-        let element: Vec<BFieldElement> = rust_shadowing_helper_functions::unsafe_list_read(
-            list_pointer,
-            index as usize,
-            memory,
-            self.0.get_size(),
-        );
+        let element: Vec<BFieldElement> =
+            unsafe_list_read(list_pointer, index as usize, memory, self.0.get_size());
 
         // elements are placed on stack as: `elem[N - 1] elem[N - 2] .. elem[0]`
         for i in (0..self.0.get_size()).rev() {
@@ -207,12 +205,7 @@ mod get_element_tests {
             }
         }
         let targeted_element: Vec<BFieldElement> =
-            rust_shadowing_helper_functions::unsafe_list_read(
-                list_pointer,
-                index as usize,
-                &memory,
-                element_size,
-            );
+            unsafe_list_read(list_pointer, index as usize, &memory, element_size);
 
         let mut expected_end_stack = get_init_tvm_stack();
 
