@@ -42,7 +42,7 @@ impl Snippet for SafePush {
     }
 
     fn crash_conditions() -> Vec<String> {
-        vec![]
+        vec!["New length exceeds capacity".to_string()]
     }
 
     fn gen_input_states(&self) -> Vec<ExecutionState> {
@@ -80,7 +80,7 @@ impl Snippet for SafePush {
     }
 
     fn entrypoint(&self) -> String {
-        format!("tasm_list_unsafe_u32_push_{}", self.0)
+        format!("tasm_list_safe_u32_push_{}", self.0)
     }
 
     // Push *one* element of size N to stack
