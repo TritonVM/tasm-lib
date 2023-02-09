@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use num::{One, Zero};
 use rand::Rng;
 use twenty_first::shared_math::b_field_element::{BFieldElement, BFIELD_ZERO};
 
@@ -57,7 +58,14 @@ impl Snippet for DynMalloc {
             {entrypoint}:
                 push {free_pointer_addr}  // _ size *free_pointer
                 push 0                    // _ size *free_pointer 0
-                read_mem                  // _ size *free_pointer *next_addr
+                read_mem                  // _ size *free_pointer *next_addr'
+
+                // add 1 iff `next_addr` was 0, i.e. uninitialized.
+                dup0                      // _ size *free_pointer *next_addr' *next_addr'
+                push 0                    // _ size *free_pointer *next_addr' *next_addr' 0
+                eq                        // _ size *free_pointer *next_addr' (*next_addr' == 0)
+                add                       // _ size *free_pointer *next_addr
+
                 dup0                      // _ size *free_pointer *next_addr *next_addr
                 dup3                      // _ size *free_pointer *next_addr *next_addr size
                 add                       // _ size *free_pointer *next_addr *(next_addr + size)
@@ -94,7 +102,13 @@ impl Snippet for DynMalloc {
         let mut memory = HashMap::<BFieldElement, BFieldElement>::new();
         memory.insert(free_pointer_addr, free_pointer);
 
-        vec![ExecutionState::with_stack_and_memory(stack, memory, 0)]
+        let ret: Vec<ExecutionState> = vec![
+            ExecutionState::with_stack_and_memory(stack, memory, 0),
+            // Add test case for empty memory. `next_addr` should return 1.
+            ExecutionState::with_stack(get_init_tvm_stack()),
+        ];
+
+        ret
     }
 
     fn rust_shadowing(
@@ -106,17 +120,23 @@ impl Snippet for DynMalloc {
     ) where
         Self: Sized,
     {
-        println!("{memory:?}");
         // FIXME: Static allocator not in scope.
-        let free_pointer_addr = BFIELD_ZERO;
-        let free_pointer = memory
-            .get_mut(&free_pointer_addr)
-            .expect("free_pointer in memory");
+        let allocator_addr = BFIELD_ZERO;
+        let used_memory = memory
+            .entry(allocator_addr)
+            .and_modify(|e| {
+                *e = if e.is_zero() {
+                    BFieldElement::one()
+                } else {
+                    *e
+                }
+            })
+            .or_insert(BFieldElement::one());
 
         let size = stack.pop().unwrap();
-        let next_addr = *free_pointer;
+        let next_addr = *used_memory;
         stack.push(next_addr);
-        *free_pointer += size;
+        *used_memory += size;
     }
 }
 
