@@ -1,4 +1,4 @@
-use num::Zero;
+use num::{One, Zero};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::{
@@ -59,9 +59,12 @@ impl Snippet for SafeNew {
             {entrypoint}:
                 // _ capacity
 
+                // Convert capacity in number of elements to number of VM words required for that list
                 dup0
                 push {element_size}
                 mul
+                push 2
+                add
                 // _ capacity (words to allocate)
 
                 call {dyn_alloc}
@@ -120,7 +123,21 @@ impl Snippet for SafeNew {
         Self: Sized,
     {
         let capacity: usize = stack.pop().unwrap().value().try_into().unwrap();
-        let list_pointer = BFieldElement::zero();
+        let allocator_addr = BFieldElement::zero();
+        let used_memory = memory
+            .entry(allocator_addr)
+            .and_modify(|e| {
+                *e = if e.is_zero() {
+                    BFieldElement::one()
+                } else {
+                    *e
+                }
+            })
+            .or_insert(BFieldElement::one());
+        let list_pointer = *used_memory;
+        *used_memory += BFieldElement::new(capacity as u64)
+            * BFieldElement::new(self.0.get_size() as u64)
+            + BFieldElement::new(2);
         safe_list_new(list_pointer, capacity as u32, memory);
         stack.push(list_pointer);
     }
@@ -155,9 +172,10 @@ mod tests {
         let data_type = DataType::Digest;
 
         // Verify that one list does not overwrite another list in memory
+        let capacity_as_bfe = BFieldElement::new(100);
         let mut stack = get_init_tvm_stack();
         let mut memory = HashMap::default();
-        stack.push(BFieldElement::new(100));
+        stack.push(capacity_as_bfe);
         SafeNew(data_type.clone()).run_tasm_old(&mut stack, vec![], vec![], &mut memory, 0);
         let first_list = stack.pop().unwrap();
 
@@ -167,7 +185,7 @@ mod tests {
         for elem in digest1.values().iter().rev() {
             stack.push(elem.to_owned());
         }
-        SafePush(data_type.clone()).run_tasm_old(&mut stack, vec![], vec![], &mut memory, 1);
+        SafePush(data_type.clone()).run_tasm_old(&mut stack, vec![], vec![], &mut memory, 0);
         assert_eq!(
             get_init_tvm_stack(),
             stack,
@@ -175,12 +193,16 @@ mod tests {
         );
 
         // Get another list in memory
-        stack.push(BFieldElement::new(100));
-        SafeNew(data_type.clone()).run_tasm_old(&mut stack, vec![], vec![], &mut memory, 1);
+        stack.push(capacity_as_bfe);
+        SafeNew(data_type.clone()).run_tasm_old(&mut stack, vec![], vec![], &mut memory, 0);
         let second_list = stack.pop().unwrap();
-        assert_ne!(
-            first_list, second_list,
-            "Address of 2nd list must be different from the 1st list"
+
+        // Verify that expected number of VM words were allocated for the first list
+        assert_eq!(
+            first_list
+                + BFieldElement::new(2)
+                + capacity_as_bfe * BFieldElement::new(data_type.get_size() as u64),
+            second_list
         );
 
         // Prepare stack for push to 2nd list
@@ -189,7 +211,7 @@ mod tests {
         for elem in digest2.values().iter().rev() {
             stack.push(elem.to_owned());
         }
-        SafePush(data_type.clone()).run_tasm_old(&mut stack, vec![], vec![], &mut memory, 1);
+        SafePush(data_type.clone()).run_tasm_old(&mut stack, vec![], vec![], &mut memory, 0);
         assert_eq!(
             get_init_tvm_stack(),
             stack,
