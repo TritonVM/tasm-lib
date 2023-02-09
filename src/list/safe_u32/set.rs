@@ -60,11 +60,11 @@ impl Snippet for SafeSet {
 
             let mut memory = HashMap::default();
             safe_insert_random_list(
+                data_type,
                 list_pointer_bfe,
                 capacity as u32,
                 list_length,
                 &mut memory,
-                data_type.get_size(),
             );
             ExecutionState::with_stack_and_memory(stack, memory, 0)
         }
@@ -308,11 +308,11 @@ mod list_set_tests {
 
         // Insert length indicator of list, lives on offset = 0 from `list_address`
         safe_insert_random_list(
+            &data_type,
             list_address,
             capacity,
             init_list_length as usize,
             &mut vm_memory,
-            data_type.get_size(),
         );
 
         let _execution_result = rust_tasm_equivalence_prop::<SafeSet>(

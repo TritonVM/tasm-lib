@@ -2,21 +2,18 @@ use num::Zero;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::{
-    get_init_tvm_stack,
+    dyn_malloc, get_init_tvm_stack,
     rust_shadowing_helper_functions::safe_list::safe_list_new,
     snippet::{DataType, Snippet},
     ExecutionState,
 };
 
-use super::SAFE_LIST_ELEMENT_CAPACITY;
-
-// TODO: Can we remove the data type from here?
 #[derive(Clone)]
 pub struct SafeNew(pub DataType);
 
 impl Snippet for SafeNew {
     fn entrypoint(&self) -> String {
-        "tasm_list_safe_u32_new".to_string()
+        format!("tasm_list_safe_u32_new_{}", self.0)
     }
 
     fn inputs(&self) -> Vec<String>
@@ -54,34 +51,40 @@ impl Snippet for SafeNew {
 
         // Data structure for `list::safe_u32` is: [length, capacity, element0, element1, ...]
         let element_size = self.0.get_size();
-        let static_list_pointer =
-            library.kmalloc(2 + element_size * SAFE_LIST_ELEMENT_CAPACITY as usize);
+        let dyn_alloc = library.import(Box::new(dyn_malloc::DynMalloc));
+        // input capacity is given in terms of `element_size`. So `element_size * capacity` words
+        // need to be allocated
         format!(
             "
             {entrypoint}:
-                // TODO: For now we ignore capacity provided as input. Fix that!
-                pop
+                // _ capacity
 
+                dup0
+                push {element_size}
+                mul
+                // _ capacity (words to allocate)
 
-                push {static_list_pointer}
-                // _ *list
+                call {dyn_alloc}
+                // _ capacity *list
 
+                // Write initial length = 0 to `*list`
                 push 0
                 write_mem
-                // _ *list 0
+                // _ capacity *list 0
 
+                // Write capactiy to memory location `*list + 1`
                 pop
                 push 1
                 add
-                // _ (*list + 1)
+                // _ capacity (*list + 1)
 
-                push {SAFE_LIST_ELEMENT_CAPACITY}
+                swap1
                 write_mem
                 // _ (*list + 1) capacity
 
                 pop
-                pop
-                push {static_list_pointer}
+                push -1
+                add
                 // _ *list
 
                 return
@@ -116,11 +119,9 @@ impl Snippet for SafeNew {
     ) where
         Self: Sized,
     {
-        // TODO: For now we ignore requested capacity. Fix that!
-
-        stack.pop();
+        let capacity: usize = stack.pop().unwrap().value().try_into().unwrap();
         let list_pointer = BFieldElement::zero();
-        safe_list_new(list_pointer, SAFE_LIST_ELEMENT_CAPACITY, memory);
+        safe_list_new(list_pointer, capacity as u32, memory);
         stack.push(list_pointer);
     }
 }

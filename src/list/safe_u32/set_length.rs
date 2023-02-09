@@ -44,11 +44,11 @@ impl Snippet for SafeSetLength {
             stack.push(BFieldElement::new(new_length as u64));
             let mut memory = HashMap::default();
             safe_insert_random_list(
+                data_type,
                 list_pointer,
                 capacity as u32,
                 old_length,
                 &mut memory,
-                data_type.get_size(),
             );
             ExecutionState::with_stack_and_memory(stack, memory, 0)
         }
@@ -275,7 +275,6 @@ mod tests_set_length {
         new_list_length: u32,
         capacity: u32,
     ) {
-        let element_size = data_type.get_size();
         let expected_end_stack = vec![get_init_tvm_stack(), vec![list_pointer]].concat();
         let mut init_stack = get_init_tvm_stack();
         init_stack.push(list_pointer);
@@ -285,11 +284,11 @@ mod tests_set_length {
 
         // Insert length indicator of list, lives on offset = 0 from `list_address`
         safe_insert_random_list(
+            &data_type,
             list_pointer,
             capacity,
             init_list_length as usize,
             &mut memory,
-            element_size,
         );
 
         let _execution_result = rust_tasm_equivalence_prop::<SafeSetLength>(

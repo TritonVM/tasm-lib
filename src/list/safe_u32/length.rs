@@ -40,37 +40,36 @@ impl Snippet for SafeLength {
         let list_length: usize = rng.gen_range(0..=capacity as usize);
         stack.push(list_pointer);
 
-        // Test for various values of `N` (list-element size)
         let mut memory = HashMap::default();
-        safe_insert_random_list(list_pointer, capacity, list_length, &mut memory, 1);
+        safe_insert_random_list(&self.0, list_pointer, capacity, list_length, &mut memory);
         ret.push(ExecutionState::with_stack_and_memory(
             stack.clone(),
             memory,
             0,
         ));
         memory = HashMap::default();
-        safe_insert_random_list(list_pointer, capacity, list_length, &mut memory, 2);
+        safe_insert_random_list(&self.0, list_pointer, capacity, list_length, &mut memory);
         ret.push(ExecutionState::with_stack_and_memory(
             stack.clone(),
             memory,
             0,
         ));
         memory = HashMap::default();
-        safe_insert_random_list(list_pointer, capacity, list_length, &mut memory, 3);
+        safe_insert_random_list(&self.0, list_pointer, capacity, list_length, &mut memory);
         ret.push(ExecutionState::with_stack_and_memory(
             stack.clone(),
             memory,
             0,
         ));
         memory = HashMap::default();
-        safe_insert_random_list(list_pointer, capacity, list_length, &mut memory, 4);
+        safe_insert_random_list(&self.0, list_pointer, capacity, list_length, &mut memory);
         ret.push(ExecutionState::with_stack_and_memory(
             stack.clone(),
             memory,
             0,
         ));
         memory = HashMap::default();
-        safe_insert_random_list(list_pointer, capacity, list_length, &mut memory, 11);
+        safe_insert_random_list(&self.0, list_pointer, capacity, list_length, &mut memory);
         ret.push(ExecutionState::with_stack_and_memory(stack, memory, 0));
 
         ret
@@ -185,11 +184,11 @@ mod tests {
         let mut memory = HashMap::default();
 
         safe_insert_random_list(
+            element_type,
             list_pointer,
             capacity,
             list_length,
             &mut memory,
-            element_type.get_size(),
         );
 
         let _execution_result = rust_tasm_equivalence_prop(

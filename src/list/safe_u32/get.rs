@@ -53,11 +53,11 @@ impl Snippet for SafeGet {
         let mut memory = HashMap::default();
 
         safe_insert_random_list(
+            &self.0,
             list_pointer,
             capacity as u32,
             list_length,
             &mut memory,
-            self.0.get_size(),
         );
 
         vec![ExecutionState {
@@ -183,15 +183,15 @@ mod get_element_tests {
     fn get_simple_1() {
         let list_address = BFieldElement::new(48);
         for i in 0..10 {
-            prop_get(DataType::BFE, list_address, i, 10);
+            prop_get(&DataType::BFE, list_address, i, 10);
         }
     }
 
     #[test]
     fn read_at_edge_1() {
         let list_address = BFieldElement::new(48);
-        prop_get(DataType::BFE, list_address, 8, 10);
-        prop_get(DataType::BFE, list_address, 9, 10);
+        prop_get(&DataType::BFE, list_address, 8, 10);
+        prop_get(&DataType::BFE, list_address, 9, 10);
     }
 
     #[should_panic]
@@ -200,7 +200,7 @@ mod get_element_tests {
         let list_address = BFieldElement::new(48);
         let length = 10;
         let index = 10;
-        prop_get(DataType::BFE, list_address, index, length);
+        prop_get(&DataType::BFE, list_address, index, length);
     }
 
     #[should_panic]
@@ -209,7 +209,7 @@ mod get_element_tests {
         let list_address = BFieldElement::new(48);
         let length = 10;
         let index = 11;
-        prop_get(DataType::BFE, list_address, index, length);
+        prop_get(&DataType::BFE, list_address, index, length);
     }
 
     #[should_panic]
@@ -218,24 +218,24 @@ mod get_element_tests {
         let list_address = BFieldElement::new(48);
         let length = 10;
         let index = 12;
-        prop_get(DataType::BFE, list_address, index, length);
+        prop_get(&DataType::BFE, list_address, index, length);
     }
 
     #[test]
     fn get_simple_2() {
         let list_address = BFieldElement::new(48);
         for i in 0..10 {
-            prop_get(DataType::U64, list_address, i, 10);
+            prop_get(&DataType::U64, list_address, i, 10);
         }
     }
 
     #[test]
     fn read_at_edge_2() {
         let list_address = BFieldElement::new(48);
-        prop_get(DataType::U64, list_address, 0, 10);
-        prop_get(DataType::U64, list_address, 1, 10);
-        prop_get(DataType::U64, list_address, 8, 10);
-        prop_get(DataType::U64, list_address, 9, 10);
+        prop_get(&DataType::U64, list_address, 0, 10);
+        prop_get(&DataType::U64, list_address, 1, 10);
+        prop_get(&DataType::U64, list_address, 8, 10);
+        prop_get(&DataType::U64, list_address, 9, 10);
     }
 
     #[should_panic]
@@ -244,7 +244,7 @@ mod get_element_tests {
         let list_address = BFieldElement::new(48);
         let length = 10;
         let index = 10;
-        prop_get(DataType::U64, list_address, index, length);
+        prop_get(&DataType::U64, list_address, index, length);
     }
 
     #[should_panic]
@@ -253,7 +253,7 @@ mod get_element_tests {
         let list_address = BFieldElement::new(48);
         let length = 10;
         let index = 11;
-        prop_get(DataType::U64, list_address, index, length);
+        prop_get(&DataType::U64, list_address, index, length);
     }
 
     #[should_panic]
@@ -262,14 +262,14 @@ mod get_element_tests {
         let list_address = BFieldElement::new(48);
         let length = 10;
         let index = 12;
-        prop_get(DataType::U64, list_address, index, length);
+        prop_get(&DataType::U64, list_address, index, length);
     }
 
     #[test]
     fn get_simple_3() {
         let list_address = BFieldElement::new(48);
         for i in 0..10 {
-            prop_get(DataType::XFE, list_address, i, 10);
+            prop_get(&DataType::XFE, list_address, i, 10);
         }
     }
 
@@ -277,17 +277,17 @@ mod get_element_tests {
     fn get_simple_5() {
         let list_address = BFieldElement::new(48);
         for i in 0..10 {
-            prop_get(DataType::Digest, list_address, i, 10);
+            prop_get(&DataType::Digest, list_address, i, 10);
         }
     }
 
     #[test]
     fn read_at_edge_5() {
         let list_address = BFieldElement::new(48);
-        prop_get(DataType::Digest, list_address, 0, 10);
-        prop_get(DataType::Digest, list_address, 1, 10);
-        prop_get(DataType::Digest, list_address, 8, 10);
-        prop_get(DataType::Digest, list_address, 9, 10);
+        prop_get(&DataType::Digest, list_address, 0, 10);
+        prop_get(&DataType::Digest, list_address, 1, 10);
+        prop_get(&DataType::Digest, list_address, 8, 10);
+        prop_get(&DataType::Digest, list_address, 9, 10);
     }
 
     #[should_panic]
@@ -296,7 +296,7 @@ mod get_element_tests {
         let list_address = BFieldElement::new(48);
         let length = 10;
         let index = 10;
-        prop_get(DataType::Digest, list_address, index, length);
+        prop_get(&DataType::Digest, list_address, index, length);
     }
 
     #[should_panic]
@@ -305,7 +305,7 @@ mod get_element_tests {
         let list_address = BFieldElement::new(48);
         let length = 10;
         let index = 11;
-        prop_get(DataType::Digest, list_address, index, length);
+        prop_get(&DataType::Digest, list_address, index, length);
     }
 
     #[should_panic]
@@ -314,10 +314,10 @@ mod get_element_tests {
         let list_address = BFieldElement::new(48);
         let length = 10;
         let index = 12;
-        prop_get(DataType::Digest, list_address, index, length);
+        prop_get(&DataType::Digest, list_address, index, length);
     }
 
-    fn prop_get(data_type: DataType, list_pointer: BFieldElement, index: u32, list_length: u32) {
+    fn prop_get(data_type: &DataType, list_pointer: BFieldElement, index: u32, list_length: u32) {
         let element_size = data_type.get_size();
 
         let mut init_stack = get_init_tvm_stack();
@@ -331,11 +331,11 @@ mod get_element_tests {
 
         let list_capacity = 100;
         safe_insert_random_list(
+            data_type,
             list_pointer,
             list_capacity,
             list_length as usize,
             &mut memory,
-            element_size,
         );
 
         let targeted_element: Vec<BFieldElement> =
@@ -348,7 +348,7 @@ mod get_element_tests {
         }
 
         let _execution_result = rust_tasm_equivalence_prop::<SafeGet>(
-            SafeGet(data_type),
+            SafeGet(data_type.to_owned()),
             &init_stack,
             &[],
             &[],

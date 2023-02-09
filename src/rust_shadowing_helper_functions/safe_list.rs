@@ -1,18 +1,22 @@
 use num::{One, Zero};
 use std::collections::HashMap;
-use twenty_first::shared_math::{b_field_element::BFieldElement, other::random_elements};
+use twenty_first::shared_math::b_field_element::BFieldElement;
+
+use crate::snippet::DataType;
 
 pub fn safe_insert_random_list(
+    data_type: &DataType,
     list_pointer: BFieldElement,
     capacity: u32,
     list_length: usize,
     memory: &mut HashMap<BFieldElement, BFieldElement>,
-    element_length: usize,
 ) {
     safe_list_new(list_pointer, capacity, memory);
-    for _ in 0..list_length {
-        let random_element: Vec<BFieldElement> = random_elements(element_length);
-        safe_list_push(list_pointer, random_element, memory, element_length);
+
+    let random_values = data_type.random_elements(list_length);
+
+    for element in random_values {
+        safe_list_push(list_pointer, element, memory, data_type.get_size());
     }
 }
 

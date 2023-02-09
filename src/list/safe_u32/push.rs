@@ -58,11 +58,11 @@ impl Snippet for SafePush {
 
             let mut memory = HashMap::default();
             safe_insert_random_list(
+                data_type,
                 list_pointer,
                 SAFE_LIST_ELEMENT_CAPACITY,
                 init_length,
                 &mut memory,
-                data_type.get_size(),
             );
             ExecutionState::with_stack_and_memory(stack, memory, 0)
         }
@@ -327,11 +327,11 @@ mod tests {
         let mut memory = HashMap::default();
 
         safe_insert_random_list(
+            &data_type,
             list_address,
             list_capacity,
             init_list_length as usize,
             &mut memory,
-            data_type.get_size(),
         );
 
         let _execution_result = rust_tasm_equivalence_prop(

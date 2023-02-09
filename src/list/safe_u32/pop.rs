@@ -47,11 +47,11 @@ impl Snippet for SafePop {
             stack.push(list_pointer);
             let mut memory = HashMap::default();
             safe_insert_random_list(
+                data_type,
                 list_pointer,
                 max_length as u32,
                 old_length,
                 &mut memory,
-                data_type.get_size(),
             );
             ExecutionState::with_stack_and_memory(stack, memory, 0)
         }
@@ -215,11 +215,11 @@ mod tests_pop {
 
         // Insert random values for the elements in the list
         safe_insert_random_list(
+            &data_type,
             list_pointer,
             list_capacity,
             init_list_length,
             &mut memory,
-            element_size,
         );
 
         let last_element: Vec<BFieldElement> =

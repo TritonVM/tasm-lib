@@ -1,3 +1,5 @@
+use itertools::Itertools;
+use rand::{thread_rng, Rng};
 use std::collections::HashMap;
 use std::fmt::Display;
 use triton_opcodes::instruction::LabelledInstruction;
@@ -7,6 +9,7 @@ use triton_vm::op_stack::OP_STACK_REG_COUNT;
 use triton_vm::vm::{self, AlgebraicExecutionTrace};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::rescue_prime_digest::DIGEST_LENGTH;
+use twenty_first::shared_math::x_field_element::EXTENSION_DEGREE;
 
 use crate::library::Library;
 use crate::{all_snippets, ExecutionResult};
@@ -21,6 +24,43 @@ pub enum DataType {
     XFE,
     Digest,
     List(Box<DataType>),
+}
+
+impl DataType {
+    pub fn random_elements(&self, count: usize) -> Vec<Vec<BFieldElement>> {
+        let mut rng = thread_rng();
+        match self {
+            DataType::Bool => {
+                let bools: Vec<bool> = (0..count).map(|_| rng.gen_bool(0.5)).collect();
+                bools
+                    .iter()
+                    .map(|x| vec![BFieldElement::new(*x as u64)])
+                    .collect_vec()
+            }
+            DataType::U32 => (0..count)
+                .map(|_| vec![BFieldElement::new(rng.gen_range(0..=u32::MAX as u64))])
+                .collect_vec(),
+            DataType::U64 => (0..2 * count)
+                .map(|_| BFieldElement::new(rng.gen_range(0..=u32::MAX as u64)))
+                .tuples()
+                .map(|(a, b)| vec![a, b])
+                .collect_vec(),
+            DataType::BFE => (0..count)
+                .map(|_| vec![BFieldElement::new(rng.gen_range(0..=BFieldElement::MAX))])
+                .collect_vec(),
+            DataType::XFE => (0..EXTENSION_DEGREE * count)
+                .map(|_| BFieldElement::new(rng.gen_range(0..=BFieldElement::MAX)))
+                .tuples()
+                .map(|(a, b, c)| vec![a, b, c])
+                .collect_vec(),
+            DataType::Digest => (0..DIGEST_LENGTH * count)
+                .map(|_| BFieldElement::new(rng.gen_range(0..=BFieldElement::MAX)))
+                .tuples()
+                .map(|(a, b, c, d, e)| vec![a, b, c, d, e])
+                .collect_vec(),
+            DataType::List(_) => panic!("Random generation of lists is not supported"),
+        }
+    }
 }
 
 // Display for list is used to derive seperate entrypoint names for snippet implementations that take a type parameter

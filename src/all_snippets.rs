@@ -120,6 +120,13 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn Snippet> {
         "tasm_list_safe_u32_set_element_xfe" => Box::new(SafeSet(DataType::XFE)),
         "tasm_list_safe_u32_set_element_digest" => Box::new(SafeSet(DataType::Digest)),
 
+        "tasm_list_safe_u32_new_bool" => Box::new(SafeNew(DataType::Bool)),
+        "tasm_list_safe_u32_new_u32" => Box::new(SafeNew(DataType::U32)),
+        "tasm_list_safe_u32_new_u64" => Box::new(SafeNew(DataType::U64)),
+        "tasm_list_safe_u32_new_bfe" => Box::new(SafeNew(DataType::BFE)),
+        "tasm_list_safe_u32_new_xfe" => Box::new(SafeNew(DataType::XFE)),
+        "tasm_list_safe_u32_new_digest" => Box::new(SafeNew(DataType::Digest)),
+
         "tasm_list_safe_u32_length_bool" => Box::new(SafeLength(DataType::Bool)),
         "tasm_list_safe_u32_length_u32" => Box::new(SafeLength(DataType::U32)),
         "tasm_list_safe_u32_length_u64" => Box::new(SafeLength(DataType::U64)),
@@ -133,8 +140,6 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn Snippet> {
         "tasm_list_safe_u32_set_length_bfe" => Box::new(SafeSetLength(DataType::BFE)),
         "tasm_list_safe_u32_set_length_xfe" => Box::new(SafeSetLength(DataType::XFE)),
         "tasm_list_safe_u32_set_length_digest" => Box::new(SafeSetLength(DataType::Digest)),
-
-        "tasm_list_safe_u32_new" => Box::new(SafeNew(DataType::BFE)),
 
         // unsafe lists
         "tasm_list_unsafe_u32_get_element_bool" => Box::new(UnsafeGet(DataType::Bool)),
@@ -192,47 +197,6 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn Snippet> {
         "tasm_list_unsafe_u32_set_length_bfe" => Box::new(UnsafeSetLength(DataType::BFE)),
         "tasm_list_unsafe_u32_set_length_xfe" => Box::new(UnsafeSetLength(DataType::XFE)),
         "tasm_list_unsafe_u32_set_length_digest" => Box::new(UnsafeSetLength(DataType::Digest)),
-        // "tasm_list_unsafe_u32_get_element" => match element_type {
-        //     Some(et) => {
-        //         assert!(!matches!(et, DataType::List(_)), "Nested lists not allowed");
-        //         Box::new(Get(et))},
-        //     None => panic!("Must have element type for list"),
-        // }
-
-        // "tasm_list_unsafe_u32_pop" => match element_type {
-        //     Some(et) => {
-        //         assert!(!matches!(et, DataType::List(_)), "Nested lists not allowed");
-        //         Box::new(Pop(et))
-        //     },
-        //     None => panic!("Must have element type for list"),
-        // }
-
-        // "tasm_list_unsafe_u32_push" => match element_type {
-        //     Some(et) => {
-        //         assert!(!matches!(et, DataType::List(_)), "Nested lists not allowed");
-        //         Box::new(Push(et))
-        //     },
-        //     None => panic!("Must have element type for list"),
-        // }
-
-        // "tasm_list_unsafe_u32_set_element" => match element_type {
-        //     Some(et) => {
-        //         assert!(!matches!(et, DataType::List(_)), "Nested lists not allowed");
-        //         Box::new(Set(et))
-        //     },
-        //     None => panic!("Must have element type for list"),
-        // }
-
-        // "tasm_list_unsafe_u32_new" => match element_type {
-        //     Some(et) => {
-        //         assert!(!matches!(et, DataType::List(_)), "Nested lists not allowed");
-        //         Box::new(New(et))
-        //     },
-        //     None => panic!("Must have element type for list"),
-        // }
-        // "tasm_list_unsafe_u32_length_long" => Box::new(LengthLong(element_type.unwrap())),
-        // "tasm_list_unsafe_u32_length_short" => Box::new(LengthShort(element_type.unwrap())),
-        // "tasm_list_unsafe_u32_set_length" => Box::new(SetLength(element_type.unwrap())),
 
         // MMR
         "tasm_mmr_calculate_new_peaks_from_append" => Box::new(CalculateNewPeaksFromAppend),
