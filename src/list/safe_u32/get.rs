@@ -169,7 +169,7 @@ mod get_element_tests {
 
     #[test]
     fn new_snippet_test() {
-        for _ in 0..10 {
+        for _ in 0..100 {
             rust_tasm_equivalence_prop_new(SafeGet(DataType::Bool));
             rust_tasm_equivalence_prop_new(SafeGet(DataType::U32));
             rust_tasm_equivalence_prop_new(SafeGet(DataType::U64));
