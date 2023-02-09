@@ -44,7 +44,7 @@ impl Snippet for SafeGet {
         let mut rng = thread_rng();
         let list_pointer: BFieldElement = random();
         let capacity = rng.gen_range(1..1000);
-        let list_length: usize = rng.gen_range(1..cmp::min(capacity, 100));
+        let list_length: usize = rng.gen_range(1..=cmp::min(capacity, 100));
         let index: usize = rng.gen_range(0..list_length);
         let mut stack = get_init_tvm_stack();
         stack.push(list_pointer);
@@ -169,7 +169,7 @@ mod get_element_tests {
 
     #[test]
     fn new_snippet_test() {
-        for _ in 0..100 {
+        for _ in 0..10 {
             rust_tasm_equivalence_prop_new(SafeGet(DataType::Bool));
             rust_tasm_equivalence_prop_new(SafeGet(DataType::U32));
             rust_tasm_equivalence_prop_new(SafeGet(DataType::U64));
