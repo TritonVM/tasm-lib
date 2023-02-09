@@ -11,6 +11,10 @@ pub fn write_digest_to_std_in(std_in: &mut Vec<BFieldElement>, digest: Digest) {
     }
 }
 
+pub fn write_value_to_secret_in(secret_in: &mut Vec<BFieldElement>, value: BFieldElement) {
+    secret_in.push(value)
+}
+
 pub fn write_digest_to_secret_in(secret_in: &mut Vec<BFieldElement>, digest: Digest) {
     let digest_elements = digest.values();
     for i in 0..DIGEST_LENGTH {

@@ -83,6 +83,8 @@ impl Snippet for LoadAuthPathFromSecretIn {
         // calls to this function
         let auth_path_pointer = library.kmalloc(DIGEST_LENGTH * MAX_MMR_HEIGHT + 1);
 
+        // Derive value that the authentication path length must be less than
+        let max_mmr_height_plus_one: usize = MAX_MMR_HEIGHT + 1;
         format!(
             "
                 // BEFORE: _
@@ -90,47 +92,53 @@ impl Snippet for LoadAuthPathFromSecretIn {
                 {entrypoint}:
                     // Read length of authentication path
                     divine
-                    // _ total_auth_path_length
+                    // _ auth_path_length
 
-                    // It shouldn't be necessary to validate that this is a u32 since
-                    // the below loop will never finish if it isn't.
+                    // Assert that the authentication path does not exceed the max allowed MMR height
+                    push {max_mmr_height_plus_one}
+                    dup1
+                    lt
+                    // _ auth_path_length max_length > auth_path_length
+
+                    assert
+                    // _ auth_path_length
 
                     // Initialize a counter counting how many elements was read
                     push 0
-                    // _ total_auth_path_length i
+                    // _ auth_path_length i
 
                     // Initialize list where the authentication path is stored
                     push {auth_path_pointer}
                     push 0
                     call {set_length}
-                    // _ total_auth_path_length i *auth_path
+                    // _ auth_path_length i *auth_path
 
                     call {entrypoint}_while
-                    // _ total_auth_path_length i *auth_path
+                    // _ auth_path_length i *auth_path
 
                     swap2 pop pop
                     // _ *auth_path
 
                     return
 
-                // Start/end stack: _ total_auth_path_length i *auth_path
+                // Start/end stack: _ auth_path_length i *auth_path
                 {entrypoint}_while:
-                    // Loop condition: end if (total_auth_path_length == i)
+                    // Loop condition: end if (auth_path_length == i)
                     dup2 dup2 eq skiz return
-                    // _ total_auth_path_length i *auth_path
+                    // _ auth_path_length i *auth_path
 
                     dup0
-                    // _ total_auth_path_length i *auth_path *auth_path
+                    // _ auth_path_length i *auth_path *auth_path
 
                     {read_digest_from_secret_in}
-                    // _ total_auth_path_length i *auth_path *auth_path [digests (ap_element)]
+                    // _ auth_path_length i *auth_path *auth_path [digests (ap_element)]
 
                     call {push}
-                    // _ total_auth_path_length i *auth_path
+                    // _ auth_path_length i *auth_path
 
                     // i -> i + 1
                     swap1 push 1 add swap1
-                    // _ total_auth_path_length (i + 1) *auth_path
+                    // _ auth_path_length (i + 1) *auth_path
 
                     recurse
                 "
@@ -173,9 +181,61 @@ impl Snippet for LoadAuthPathFromSecretIn {
 
 #[cfg(test)]
 mod load_auth_path_from_secret_in_tests {
+    use rand::random;
+
     use super::*;
     use crate::snippet_bencher::bench_and_write;
     use crate::test_helpers::rust_tasm_equivalence_prop_new;
+
+    #[should_panic]
+    #[test]
+    fn disallow_too_long_mmr_auth_paths() {
+        let mut secret_in = vec![];
+        let too_long_mmr_ap_length = MAX_MMR_HEIGHT + 1;
+        rust_shadowing_helper_functions::input::write_value_to_secret_in(
+            &mut secret_in,
+            BFieldElement::new(too_long_mmr_ap_length as u64),
+        );
+
+        for _ in 0..too_long_mmr_ap_length {
+            rust_shadowing_helper_functions::input::write_digest_to_secret_in(
+                &mut secret_in,
+                random(),
+            );
+        }
+
+        LoadAuthPathFromSecretIn.run_tasm_old(
+            &mut get_init_tvm_stack(),
+            vec![],
+            secret_in.to_vec(),
+            &mut HashMap::default(),
+            0,
+        );
+    }
+
+    #[test]
+    fn allow_max_mmr_auth_path_length() {
+        let mut secret_in = vec![];
+        let max_length_mmr_ap = MAX_MMR_HEIGHT;
+        rust_shadowing_helper_functions::input::write_value_to_secret_in(
+            &mut secret_in,
+            BFieldElement::new(max_length_mmr_ap as u64),
+        );
+
+        for _ in 0..max_length_mmr_ap {
+            rust_shadowing_helper_functions::input::write_digest_to_secret_in(
+                &mut secret_in,
+                random(),
+            );
+        }
+        LoadAuthPathFromSecretIn.run_tasm_old(
+            &mut get_init_tvm_stack(),
+            vec![],
+            secret_in.to_vec(),
+            &mut HashMap::default(),
+            0,
+        );
+    }
 
     #[test]
     fn load_auth_path_from_secret_in_test() {
