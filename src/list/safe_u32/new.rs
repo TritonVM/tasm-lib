@@ -128,7 +128,15 @@ impl Snippet for SafeNew {
 
 #[cfg(test)]
 mod tests {
-    use crate::test_helpers::rust_tasm_equivalence_prop_new;
+    use std::collections::HashMap;
+
+    use rand::random;
+    use twenty_first::shared_math::rescue_prime_digest::Digest;
+
+    use crate::{
+        list::safe_u32::push::SafePush, rust_shadowing_helper_functions,
+        test_helpers::rust_tasm_equivalence_prop_new,
+    };
 
     use super::*;
 
@@ -140,5 +148,83 @@ mod tests {
         rust_tasm_equivalence_prop_new(SafeNew(DataType::BFE));
         rust_tasm_equivalence_prop_new(SafeNew(DataType::XFE));
         rust_tasm_equivalence_prop_new(SafeNew(DataType::Digest));
+    }
+
+    #[test]
+    fn allow_multiple_lists_in_memory() {
+        let data_type = DataType::Digest;
+
+        // Verify that one list does not overwrite another list in memory
+        let mut stack = get_init_tvm_stack();
+        let mut memory = HashMap::default();
+        stack.push(BFieldElement::new(100));
+        SafeNew(data_type.clone()).run_tasm_old(&mut stack, vec![], vec![], &mut memory, 0);
+        let first_list = stack.pop().unwrap();
+
+        // Prepare stack for push to 1st list
+        stack.push(first_list);
+        let digest1: Digest = random();
+        for elem in digest1.values().iter().rev() {
+            stack.push(elem.to_owned());
+        }
+        SafePush(data_type.clone()).run_tasm_old(&mut stack, vec![], vec![], &mut memory, 1);
+        assert_eq!(
+            get_init_tvm_stack(),
+            stack,
+            "Stack must be empty after call to push"
+        );
+
+        // Get another list in memory
+        stack.push(BFieldElement::new(100));
+        SafeNew(data_type.clone()).run_tasm_old(&mut stack, vec![], vec![], &mut memory, 1);
+        let second_list = stack.pop().unwrap();
+        assert_ne!(
+            first_list, second_list,
+            "Address of 2nd list must be different from the 1st list"
+        );
+
+        // Prepare stack for push to 2nd list
+        stack.push(second_list);
+        let digest2: Digest = random();
+        for elem in digest2.values().iter().rev() {
+            stack.push(elem.to_owned());
+        }
+        SafePush(data_type.clone()).run_tasm_old(&mut stack, vec![], vec![], &mut memory, 1);
+        assert_eq!(
+            get_init_tvm_stack(),
+            stack,
+            "Stack must be empty after call to push"
+        );
+
+        // Verify that digest1 was not overwritten by digest2 in memory
+        let digest1_fetched = rust_shadowing_helper_functions::safe_list::safe_list_read(
+            first_list,
+            0,
+            &memory,
+            DataType::Digest.get_size(),
+        );
+        assert_eq!(
+            digest1.values().to_vec(),
+            digest1_fetched,
+            "Memory-fetched value must match expectation for digest 1"
+        );
+
+        let digest2_fetched = rust_shadowing_helper_functions::safe_list::safe_list_read(
+            second_list,
+            0,
+            &memory,
+            DataType::Digest.get_size(),
+        );
+        assert_eq!(
+            digest2.values().to_vec(),
+            digest2_fetched,
+            "Memory-fetched value must match expectation for digest 2"
+        );
+
+        // Because why not?
+        assert_ne!(
+            digest1, digest2,
+            "Randomly generated digests must be different"
+        );
     }
 }
