@@ -12,7 +12,7 @@ use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
 use twenty_first::util_types::mmr::mmr_membership_proof::MmrMembershipProof;
 use twenty_first::util_types::mmr::mmr_trait::Mmr;
 
-use crate::hashing::load_auth_path_from_secret_in::LoadAuthPathFromSecretIn;
+use crate::hashing::load_auth_path_from_secret_in_unsafe_list::LoadAuthPathFromSecretInUnsafeList;
 use crate::library::Library;
 use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, ExecutionState};
@@ -180,7 +180,8 @@ impl Snippet for MmrLoadFromSecretInThenVerify {
 
     fn function_body(&self, library: &mut Library) -> String {
         let entrypoint = self.entrypoint();
-        let load_auth_path_from_secret_in = library.import(Box::new(LoadAuthPathFromSecretIn));
+        let load_auth_path_from_secret_in =
+            library.import(Box::new(LoadAuthPathFromSecretInUnsafeList));
         let verify_from_memory = library.import(Box::new(MmrVerifyFromMemory));
 
         format!(

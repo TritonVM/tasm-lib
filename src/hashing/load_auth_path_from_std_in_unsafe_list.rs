@@ -16,9 +16,9 @@ use crate::snippet::Snippet;
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone)]
-pub struct LoadAuthPathFromStdIn;
+pub struct LoadAuthPathFromStdInUnsafeList;
 
-impl Snippet for LoadAuthPathFromStdIn {
+impl Snippet for LoadAuthPathFromStdInUnsafeList {
     fn inputs(&self) -> Vec<String> {
         vec![]
     }
@@ -68,7 +68,7 @@ impl Snippet for LoadAuthPathFromStdIn {
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_hashing_load_auth_path_from_std_in".to_string()
+        "tasm_hashing_load_auth_path_from_std_in_unsafe_list".to_string()
     }
 
     fn function_body(&self, library: &mut Library) -> String {
@@ -180,11 +180,13 @@ mod load_auth_path_from_std_in_tests {
 
     #[test]
     fn load_auth_path_from_std_in_test() {
-        rust_tasm_equivalence_prop_new::<LoadAuthPathFromStdIn>(LoadAuthPathFromStdIn);
+        rust_tasm_equivalence_prop_new::<LoadAuthPathFromStdInUnsafeList>(
+            LoadAuthPathFromStdInUnsafeList,
+        );
     }
 
     #[test]
     fn load_auth_path_from_std_in_benchmark() {
-        bench_and_write::<LoadAuthPathFromStdIn>(LoadAuthPathFromStdIn);
+        bench_and_write::<LoadAuthPathFromStdInUnsafeList>(LoadAuthPathFromStdInUnsafeList);
     }
 }

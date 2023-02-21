@@ -15,9 +15,9 @@ use crate::snippet::Snippet;
 use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, ExecutionState};
 
 #[derive(Clone)]
-pub struct LoadAuthPathFromSecretIn;
+pub struct LoadAuthPathFromSecretInUnsafeList;
 
-impl Snippet for LoadAuthPathFromSecretIn {
+impl Snippet for LoadAuthPathFromSecretInUnsafeList {
     fn inputs(&self) -> Vec<String> {
         vec![]
     }
@@ -67,7 +67,7 @@ impl Snippet for LoadAuthPathFromSecretIn {
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_hashing_load_auth_path_from_secret_in".to_string()
+        "tasm_hashing_load_auth_path_from_secret_in_unsafe_list".to_string()
     }
 
     fn function_body(&self, library: &mut Library) -> String {
@@ -204,7 +204,7 @@ mod load_auth_path_from_secret_in_tests {
             );
         }
 
-        LoadAuthPathFromSecretIn.run_tasm_old(
+        LoadAuthPathFromSecretInUnsafeList.run_tasm_old(
             &mut get_init_tvm_stack(),
             vec![],
             secret_in.to_vec(),
@@ -228,7 +228,7 @@ mod load_auth_path_from_secret_in_tests {
                 random(),
             );
         }
-        LoadAuthPathFromSecretIn.run_tasm_old(
+        LoadAuthPathFromSecretInUnsafeList.run_tasm_old(
             &mut get_init_tvm_stack(),
             vec![],
             secret_in.to_vec(),
@@ -239,11 +239,13 @@ mod load_auth_path_from_secret_in_tests {
 
     #[test]
     fn load_auth_path_from_secret_in_test() {
-        rust_tasm_equivalence_prop_new::<LoadAuthPathFromSecretIn>(LoadAuthPathFromSecretIn);
+        rust_tasm_equivalence_prop_new::<LoadAuthPathFromSecretInUnsafeList>(
+            LoadAuthPathFromSecretInUnsafeList,
+        );
     }
 
     #[test]
     fn load_auth_path_from_secret_in_benchmark() {
-        bench_and_write::<LoadAuthPathFromSecretIn>(LoadAuthPathFromSecretIn);
+        bench_and_write::<LoadAuthPathFromSecretInUnsafeList>(LoadAuthPathFromSecretInUnsafeList);
     }
 }
