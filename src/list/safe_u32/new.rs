@@ -211,7 +211,7 @@ mod tests {
         for elem in digest2.values().iter().rev() {
             stack.push(elem.to_owned());
         }
-        SafePush(data_type.clone()).run_tasm_old(&mut stack, vec![], vec![], &mut memory, 0);
+        SafePush(data_type).run_tasm_old(&mut stack, vec![], vec![], &mut memory, 0);
         assert_eq!(
             get_init_tvm_stack(),
             stack,
