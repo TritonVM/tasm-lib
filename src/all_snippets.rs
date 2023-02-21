@@ -20,7 +20,9 @@ use crate::{
     dyn_malloc::DynMalloc,
     hashing::{
         eq_digest::EqDigest,
+        load_auth_path_from_secret_in_safe_list::LoadAuthPathFromSecretInSafeList,
         load_auth_path_from_secret_in_unsafe_list::LoadAuthPathFromSecretInUnsafeList,
+        load_auth_path_from_std_in_safe_list::LoadAuthPathFromStdInSafeList,
         load_auth_path_from_std_in_unsafe_list::LoadAuthPathFromStdInUnsafeList,
         swap_digest::SwapDigest,
     },
@@ -91,6 +93,8 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn Snippet> {
         "tasm_hashing_eq_digest" => Box::new(EqDigest),
         "tasm_hashing_load_auth_path_from_secret_in_unsafe_list" => Box::new(LoadAuthPathFromSecretInUnsafeList),
         "tasm_hashing_load_auth_path_from_std_in_unsafe_list" => Box::new(LoadAuthPathFromStdInUnsafeList),
+        "tasm_hashing_load_auth_path_from_secret_in_safe_list" => Box::new(LoadAuthPathFromSecretInSafeList),
+        "tasm_hashing_load_auth_path_from_std_in_safe_list" => Box::new(LoadAuthPathFromStdInSafeList),
         "tasm_hashing_swap_digest" => Box::new(SwapDigest),
 
         // safe lists

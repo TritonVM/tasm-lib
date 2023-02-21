@@ -1,0 +1,386 @@
+[
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 50,
+    "hash_table_height": 0,
+    "u32_table_height": 0
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 113,
+    "hash_table_height": 0,
+    "u32_table_height": 8
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 176,
+    "hash_table_height": 0,
+    "u32_table_height": 16
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 239,
+    "hash_table_height": 0,
+    "u32_table_height": 24
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 302,
+    "hash_table_height": 0,
+    "u32_table_height": 32
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 365,
+    "hash_table_height": 0,
+    "u32_table_height": 40
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 428,
+    "hash_table_height": 0,
+    "u32_table_height": 48
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 491,
+    "hash_table_height": 0,
+    "u32_table_height": 56
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 554,
+    "hash_table_height": 0,
+    "u32_table_height": 64
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 617,
+    "hash_table_height": 0,
+    "u32_table_height": 72
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 680,
+    "hash_table_height": 0,
+    "u32_table_height": 80
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 743,
+    "hash_table_height": 0,
+    "u32_table_height": 88
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 806,
+    "hash_table_height": 0,
+    "u32_table_height": 96
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 869,
+    "hash_table_height": 0,
+    "u32_table_height": 104
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 932,
+    "hash_table_height": 0,
+    "u32_table_height": 112
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 995,
+    "hash_table_height": 0,
+    "u32_table_height": 120
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 1058,
+    "hash_table_height": 0,
+    "u32_table_height": 128
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 1121,
+    "hash_table_height": 0,
+    "u32_table_height": 136
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 1184,
+    "hash_table_height": 0,
+    "u32_table_height": 144
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 1247,
+    "hash_table_height": 0,
+    "u32_table_height": 152
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 1310,
+    "hash_table_height": 0,
+    "u32_table_height": 160
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 1373,
+    "hash_table_height": 0,
+    "u32_table_height": 168
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 1436,
+    "hash_table_height": 0,
+    "u32_table_height": 176
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 1499,
+    "hash_table_height": 0,
+    "u32_table_height": 184
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 1562,
+    "hash_table_height": 0,
+    "u32_table_height": 192
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 1625,
+    "hash_table_height": 0,
+    "u32_table_height": 200
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 1688,
+    "hash_table_height": 0,
+    "u32_table_height": 208
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 1751,
+    "hash_table_height": 0,
+    "u32_table_height": 216
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 1814,
+    "hash_table_height": 0,
+    "u32_table_height": 224
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 1877,
+    "hash_table_height": 0,
+    "u32_table_height": 232
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 1940,
+    "hash_table_height": 0,
+    "u32_table_height": 240
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 2003,
+    "hash_table_height": 0,
+    "u32_table_height": 248
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 2066,
+    "hash_table_height": 0,
+    "u32_table_height": 256
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 2129,
+    "hash_table_height": 0,
+    "u32_table_height": 264
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 2192,
+    "hash_table_height": 0,
+    "u32_table_height": 272
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 2255,
+    "hash_table_height": 0,
+    "u32_table_height": 280
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 2318,
+    "hash_table_height": 0,
+    "u32_table_height": 288
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 2381,
+    "hash_table_height": 0,
+    "u32_table_height": 296
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 2444,
+    "hash_table_height": 0,
+    "u32_table_height": 304
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 2507,
+    "hash_table_height": 0,
+    "u32_table_height": 312
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 2570,
+    "hash_table_height": 0,
+    "u32_table_height": 320
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 2633,
+    "hash_table_height": 0,
+    "u32_table_height": 328
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 2696,
+    "hash_table_height": 0,
+    "u32_table_height": 336
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 2759,
+    "hash_table_height": 0,
+    "u32_table_height": 344
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 2822,
+    "hash_table_height": 0,
+    "u32_table_height": 352
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 2885,
+    "hash_table_height": 0,
+    "u32_table_height": 360
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 2948,
+    "hash_table_height": 0,
+    "u32_table_height": 368
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 3011,
+    "hash_table_height": 0,
+    "u32_table_height": 376
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 3074,
+    "hash_table_height": 0,
+    "u32_table_height": 384
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 3137,
+    "hash_table_height": 0,
+    "u32_table_height": 392
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 3200,
+    "hash_table_height": 0,
+    "u32_table_height": 400
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 3263,
+    "hash_table_height": 0,
+    "u32_table_height": 408
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 3326,
+    "hash_table_height": 0,
+    "u32_table_height": 416
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 3389,
+    "hash_table_height": 0,
+    "u32_table_height": 424
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 3452,
+    "hash_table_height": 0,
+    "u32_table_height": 432
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 3515,
+    "hash_table_height": 0,
+    "u32_table_height": 440
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 3578,
+    "hash_table_height": 0,
+    "u32_table_height": 448
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 3641,
+    "hash_table_height": 0,
+    "u32_table_height": 456
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 3704,
+    "hash_table_height": 0,
+    "u32_table_height": 464
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 3767,
+    "hash_table_height": 0,
+    "u32_table_height": 472
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 3830,
+    "hash_table_height": 0,
+    "u32_table_height": 480
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 3893,
+    "hash_table_height": 0,
+    "u32_table_height": 488
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 3956,
+    "hash_table_height": 0,
+    "u32_table_height": 496
+  },
+  {
+    "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
+    "processor_table_height": 4019,
+    "hash_table_height": 0,
+    "u32_table_height": 504
+  }
+]
