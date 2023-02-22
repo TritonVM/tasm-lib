@@ -14,6 +14,7 @@ pub mod all_snippets;
 pub mod arithmetic;
 pub mod dyn_malloc;
 pub mod hashing;
+pub mod io;
 pub mod library;
 pub mod list;
 pub mod mmr;

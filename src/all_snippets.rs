@@ -26,6 +26,7 @@ use crate::{
         load_auth_path_from_std_in_unsafe_list::LoadAuthPathFromStdInUnsafeList,
         swap_digest::SwapDigest,
     },
+    io::{read_secret::ReadSecret, read_stdin::ReadStdIn},
     library::{DummyTestSnippetA, DummyTestSnippetB, DummyTestSnippetC},
     list::{
         safe_u32::{
@@ -96,6 +97,21 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn Snippet> {
         "tasm_hashing_load_auth_path_from_secret_in_safe_list" => Box::new(LoadAuthPathFromSecretInSafeList),
         "tasm_hashing_load_auth_path_from_std_in_safe_list" => Box::new(LoadAuthPathFromStdInSafeList),
         "tasm_hashing_swap_digest" => Box::new(SwapDigest),
+
+        // io
+        "tasm_io_read_secret_bool" => Box::new(ReadSecret(DataType::Bool)),
+        "tasm_io_read_secret_u32" => Box::new(ReadSecret(DataType::U32)),
+        "tasm_io_read_secret_u64" => Box::new(ReadSecret(DataType::U64)),
+        "tasm_io_read_secret_bfe" => Box::new(ReadSecret(DataType::BFE)),
+        "tasm_io_read_secret_xfe" => Box::new(ReadSecret(DataType::XFE)),
+        "tasm_io_read_secret_digest" => Box::new(ReadSecret(DataType::Digest)),
+
+        "tasm_io_read_stdin_bool" => Box::new(ReadStdIn(DataType::Bool)),
+        "tasm_io_read_stdin_u32" => Box::new(ReadStdIn(DataType::U32)),
+        "tasm_io_read_stdin_u64" => Box::new(ReadStdIn(DataType::U64)),
+        "tasm_io_read_stdin_bfe" => Box::new(ReadStdIn(DataType::BFE)),
+        "tasm_io_read_stdin_xfe" => Box::new(ReadStdIn(DataType::XFE)),
+        "tasm_io_read_stdin_digest" => Box::new(ReadStdIn(DataType::Digest)),
 
         // safe lists
         "tasm_list_safe_u32_get_element_bool" => Box::new(SafeGet(DataType::Bool)),
