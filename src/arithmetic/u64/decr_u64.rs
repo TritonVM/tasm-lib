@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use num::One;
+use num::{One, Zero};
 use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::algebraic_hasher::Hashable;
@@ -105,6 +105,34 @@ impl Snippet for DecrU64 {
             stack.push(res.pop().unwrap());
         }
     }
+
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        // no carry
+        ExecutionState::with_stack(
+            vec![
+                get_init_tvm_stack(),
+                vec![BFieldElement::zero(), BFieldElement::new(7)],
+            ]
+            .concat(),
+        )
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        // with carry
+        ExecutionState::with_stack(
+            vec![
+                get_init_tvm_stack(),
+                vec![BFieldElement::new(1000), BFieldElement::new(0)],
+            ]
+            .concat(),
+        )
+    }
 }
 
 #[cfg(test)]
@@ -120,12 +148,12 @@ mod tests {
 
     #[test]
     fn decr_u64_test() {
-        rust_tasm_equivalence_prop_new::<DecrU64>(DecrU64);
+        rust_tasm_equivalence_prop_new(DecrU64);
     }
 
     #[test]
     fn decr_u64_benchmark() {
-        bench_and_write::<DecrU64>(DecrU64);
+        bench_and_write(DecrU64);
     }
 
     #[test]

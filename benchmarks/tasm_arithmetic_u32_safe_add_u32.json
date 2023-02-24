@@ -1,16 +1,16 @@
 [
   {
-    "name": "tasm_arithmetic_u64_eq",
+    "name": "tasm_arithmetic_u32_safe_add_u32",
     "processor_table_height": 10,
     "hash_table_height": 0,
-    "u32_table_height": 0,
+    "u32_table_height": 13,
     "case": "CommonCase"
   },
   {
-    "name": "tasm_arithmetic_u64_eq",
+    "name": "tasm_arithmetic_u32_safe_add_u32",
     "processor_table_height": 10,
     "hash_table_height": 0,
-    "u32_table_height": 0,
+    "u32_table_height": 33,
     "case": "WorstCase"
   }
 ]

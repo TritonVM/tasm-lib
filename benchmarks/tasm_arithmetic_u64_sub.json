@@ -3,18 +3,14 @@
     "name": "tasm_arithmetic_u64_sub",
     "processor_table_height": 31,
     "hash_table_height": 0,
-    "u32_table_height": 32
+    "u32_table_height": 33,
+    "case": "CommonCase"
   },
   {
     "name": "tasm_arithmetic_u64_sub",
     "processor_table_height": 39,
     "hash_table_height": 0,
-    "u32_table_height": 34
-  },
-  {
-    "name": "tasm_arithmetic_u64_sub",
-    "processor_table_height": 31,
-    "hash_table_height": 0,
-    "u32_table_height": 64
+    "u32_table_height": 41,
+    "case": "WorstCase"
   }
 ]

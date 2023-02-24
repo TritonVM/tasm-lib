@@ -103,6 +103,20 @@ impl Snippet for MmrLeftChild {
 
         stack.append(&mut ret.to_sequence().into_iter().rev().collect());
     }
+
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
 }
 
 #[cfg(test)]

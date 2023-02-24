@@ -114,6 +114,20 @@ impl Snippet for UnsafeLengthLong {
         let list_length = memory[&list_address];
         stack.push(list_length);
     }
+
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
 }
 
 // Called "Short" because it's efficient code
@@ -179,6 +193,20 @@ impl Snippet for UnsafeLengthShort {
         let list_address = *stack.last().as_ref().unwrap();
         let list_length = memory[list_address];
         stack.push(list_length);
+    }
+
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        todo!()
     }
 }
 

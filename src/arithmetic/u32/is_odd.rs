@@ -43,26 +43,9 @@ impl Snippet for U32IsOdd {
         let odd_value = n | 1;
         push_hashable(&mut odd_stack, &odd_value);
 
-        // FIXME: Negative cases will panic.
-
-        // let mut bfe_stack = get_init_tvm_stack();
-        // let bfe_value = BFieldElement::new(BFieldElement::MAX);
-        // push_hashable(&mut bfe_stack, &bfe_value);
-
-        // let mut above_max_even_stack = get_init_tvm_stack();
-        // let above_max_even_value = BFieldElement::new(2u64.pow(32));
-        // push_hashable(&mut above_max_even_stack, &above_max_even_value);
-
-        // let mut above_max_odd_stack = get_init_tvm_stack();
-        // let above_max_odd_value = BFieldElement::new(2u64.pow(32) + 1);
-        // push_hashable(&mut above_max_odd_stack, &above_max_odd_value);
-
         vec![
             ExecutionState::with_stack(even_stack),
             ExecutionState::with_stack(odd_stack),
-            // ExecutionState::with_stack(bfe_stack),
-            // ExecutionState::with_stack(above_max_even_stack),
-            // ExecutionState::with_stack(above_max_odd_stack),
         ]
     }
 
@@ -101,6 +84,28 @@ impl Snippet for U32IsOdd {
         let value: u64 = stack.pop().unwrap().value();
         stack.push(BFieldElement::new(value % 2));
     }
+
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        ExecutionState::with_stack(
+            vec![get_init_tvm_stack(), vec![BFieldElement::new(1 << 16)]].concat(),
+        )
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        ExecutionState::with_stack(
+            vec![
+                get_init_tvm_stack(),
+                vec![BFieldElement::new((1 << 32) - 1)],
+            ]
+            .concat(),
+        )
+    }
 }
 
 #[cfg(test)]
@@ -115,12 +120,12 @@ mod u32_is_odd_tests {
 
     #[test]
     fn is_odd_u32_test() {
-        rust_tasm_equivalence_prop_new::<U32IsOdd>(U32IsOdd);
+        rust_tasm_equivalence_prop_new(U32IsOdd);
     }
 
     #[test]
     fn is_odd_u32_benchmark() {
-        bench_and_write::<U32IsOdd>(U32IsOdd);
+        bench_and_write(U32IsOdd);
     }
 
     #[test]

@@ -97,6 +97,20 @@ impl Snippet for DataIndexToNodeIndex {
         stack.push(BFieldElement::new(node_index >> 32));
         stack.push(BFieldElement::new(node_index & 0xFFFFFFFFu32 as u64));
     }
+
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
 }
 
 #[cfg(test)]

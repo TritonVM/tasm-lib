@@ -293,6 +293,20 @@ impl Snippet for MmrLoadFromSecretInThenVerify {
         stack.push(BFieldElement::new(leaf_index_lo as u64));
         stack.push(BFieldElement::new(valid_mp as u64));
     }
+
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
 }
 
 #[cfg(test)]

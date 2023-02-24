@@ -110,6 +110,20 @@ impl Snippet for UnsafeNew {
         unsafe_list_new(list_pointer, memory);
         stack.push(list_pointer);
     }
+
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
 }
 
 #[cfg(test)]

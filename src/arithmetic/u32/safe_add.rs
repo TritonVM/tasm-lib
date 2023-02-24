@@ -88,19 +88,56 @@ impl Snippet for SafeAdd {
         let sum = lhs + rhs;
         stack.push(BFieldElement::new(sum as u64));
     }
+
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        ExecutionState::with_stack(
+            vec![
+                get_init_tvm_stack(),
+                vec![BFieldElement::new(1 << 16), BFieldElement::new(1 << 15)],
+            ]
+            .concat(),
+        )
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        ExecutionState::with_stack(
+            vec![
+                get_init_tvm_stack(),
+                vec![
+                    BFieldElement::new((1 << 30) - 1),
+                    BFieldElement::new((1 << 31) - 1),
+                ],
+            ]
+            .concat(),
+        )
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
 
-    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
+    use crate::{
+        snippet_bencher::bench_and_write,
+        test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new},
+    };
 
     use super::*;
 
     #[test]
     fn snippet_test() {
         rust_tasm_equivalence_prop_new::<SafeAdd>(SafeAdd);
+    }
+
+    #[test]
+    fn safe_add_benchmark() {
+        bench_and_write(SafeAdd);
     }
 
     #[test]

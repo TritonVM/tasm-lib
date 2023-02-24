@@ -1,21 +1,39 @@
 [
   {
     "name": "tasm_mmr_leaf_index_to_mt_index_and_peak_index",
-    "processor_table_height": 99,
-    "hash_table_height": 0,
-    "u32_table_height": 253
-  },
-  {
-    "name": "tasm_mmr_leaf_index_to_mt_index_and_peak_index",
     "processor_table_height": 191,
     "hash_table_height": 0,
-    "u32_table_height": 419
+    "u32_table_height": 455
   },
   {
     "name": "tasm_mmr_leaf_index_to_mt_index_and_peak_index",
     "processor_table_height": 99,
     "hash_table_height": 0,
-    "u32_table_height": 264
+    "u32_table_height": 259
+  },
+  {
+    "name": "tasm_mmr_leaf_index_to_mt_index_and_peak_index",
+    "processor_table_height": 467,
+    "hash_table_height": 0,
+    "u32_table_height": 980
+  },
+  {
+    "name": "tasm_mmr_leaf_index_to_mt_index_and_peak_index",
+    "processor_table_height": 99,
+    "hash_table_height": 0,
+    "u32_table_height": 247
+  },
+  {
+    "name": "tasm_mmr_leaf_index_to_mt_index_and_peak_index",
+    "processor_table_height": 99,
+    "hash_table_height": 0,
+    "u32_table_height": 256
+  },
+  {
+    "name": "tasm_mmr_leaf_index_to_mt_index_and_peak_index",
+    "processor_table_height": 99,
+    "hash_table_height": 0,
+    "u32_table_height": 242
   },
   {
     "name": "tasm_mmr_leaf_index_to_mt_index_and_peak_index",
@@ -27,36 +45,18 @@
     "name": "tasm_mmr_leaf_index_to_mt_index_and_peak_index",
     "processor_table_height": 99,
     "hash_table_height": 0,
-    "u32_table_height": 265
-  },
-  {
-    "name": "tasm_mmr_leaf_index_to_mt_index_and_peak_index",
-    "processor_table_height": 99,
-    "hash_table_height": 0,
     "u32_table_height": 264
   },
   {
     "name": "tasm_mmr_leaf_index_to_mt_index_and_peak_index",
     "processor_table_height": 99,
     "hash_table_height": 0,
-    "u32_table_height": 237
-  },
-  {
-    "name": "tasm_mmr_leaf_index_to_mt_index_and_peak_index",
-    "processor_table_height": 651,
-    "hash_table_height": 0,
-    "u32_table_height": 1241
+    "u32_table_height": 265
   },
   {
     "name": "tasm_mmr_leaf_index_to_mt_index_and_peak_index",
     "processor_table_height": 99,
     "hash_table_height": 0,
-    "u32_table_height": 229
-  },
-  {
-    "name": "tasm_mmr_leaf_index_to_mt_index_and_peak_index",
-    "processor_table_height": 467,
-    "hash_table_height": 0,
-    "u32_table_height": 1004
+    "u32_table_height": 262
   }
 ]

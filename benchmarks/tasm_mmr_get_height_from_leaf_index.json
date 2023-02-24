@@ -3,7 +3,13 @@
     "name": "tasm_mmr_get_height_from_leaf_index",
     "processor_table_height": 27,
     "hash_table_height": 0,
-    "u32_table_height": 24
+    "u32_table_height": 30
+  },
+  {
+    "name": "tasm_mmr_get_height_from_leaf_index",
+    "processor_table_height": 27,
+    "hash_table_height": 0,
+    "u32_table_height": 32
   },
   {
     "name": "tasm_mmr_get_height_from_leaf_index",
@@ -15,7 +21,79 @@
     "name": "tasm_mmr_get_height_from_leaf_index",
     "processor_table_height": 27,
     "hash_table_height": 0,
-    "u32_table_height": 30
+    "u32_table_height": 32
+  },
+  {
+    "name": "tasm_mmr_get_height_from_leaf_index",
+    "processor_table_height": 27,
+    "hash_table_height": 0,
+    "u32_table_height": 31
+  },
+  {
+    "name": "tasm_mmr_get_height_from_leaf_index",
+    "processor_table_height": 27,
+    "hash_table_height": 0,
+    "u32_table_height": 27
+  },
+  {
+    "name": "tasm_mmr_get_height_from_leaf_index",
+    "processor_table_height": 27,
+    "hash_table_height": 0,
+    "u32_table_height": 32
+  },
+  {
+    "name": "tasm_mmr_get_height_from_leaf_index",
+    "processor_table_height": 27,
+    "hash_table_height": 0,
+    "u32_table_height": 31
+  },
+  {
+    "name": "tasm_mmr_get_height_from_leaf_index",
+    "processor_table_height": 27,
+    "hash_table_height": 0,
+    "u32_table_height": 31
+  },
+  {
+    "name": "tasm_mmr_get_height_from_leaf_index",
+    "processor_table_height": 27,
+    "hash_table_height": 0,
+    "u32_table_height": 32
+  },
+  {
+    "name": "tasm_mmr_get_height_from_leaf_index",
+    "processor_table_height": 27,
+    "hash_table_height": 0,
+    "u32_table_height": 31
+  },
+  {
+    "name": "tasm_mmr_get_height_from_leaf_index",
+    "processor_table_height": 27,
+    "hash_table_height": 0,
+    "u32_table_height": 32
+  },
+  {
+    "name": "tasm_mmr_get_height_from_leaf_index",
+    "processor_table_height": 27,
+    "hash_table_height": 0,
+    "u32_table_height": 32
+  },
+  {
+    "name": "tasm_mmr_get_height_from_leaf_index",
+    "processor_table_height": 27,
+    "hash_table_height": 0,
+    "u32_table_height": 32
+  },
+  {
+    "name": "tasm_mmr_get_height_from_leaf_index",
+    "processor_table_height": 27,
+    "hash_table_height": 0,
+    "u32_table_height": 32
+  },
+  {
+    "name": "tasm_mmr_get_height_from_leaf_index",
+    "processor_table_height": 27,
+    "hash_table_height": 0,
+    "u32_table_height": 31
   },
   {
     "name": "tasm_mmr_get_height_from_leaf_index",
@@ -51,18 +129,6 @@
     "name": "tasm_mmr_get_height_from_leaf_index",
     "processor_table_height": 27,
     "hash_table_height": 0,
-    "u32_table_height": 29
-  },
-  {
-    "name": "tasm_mmr_get_height_from_leaf_index",
-    "processor_table_height": 27,
-    "hash_table_height": 0,
-    "u32_table_height": 29
-  },
-  {
-    "name": "tasm_mmr_get_height_from_leaf_index",
-    "processor_table_height": 27,
-    "hash_table_height": 0,
     "u32_table_height": 31
   },
   {
@@ -87,31 +153,7 @@
     "name": "tasm_mmr_get_height_from_leaf_index",
     "processor_table_height": 27,
     "hash_table_height": 0,
-    "u32_table_height": 30
-  },
-  {
-    "name": "tasm_mmr_get_height_from_leaf_index",
-    "processor_table_height": 27,
-    "hash_table_height": 0,
-    "u32_table_height": 31
-  },
-  {
-    "name": "tasm_mmr_get_height_from_leaf_index",
-    "processor_table_height": 27,
-    "hash_table_height": 0,
-    "u32_table_height": 30
-  },
-  {
-    "name": "tasm_mmr_get_height_from_leaf_index",
-    "processor_table_height": 27,
-    "hash_table_height": 0,
     "u32_table_height": 32
-  },
-  {
-    "name": "tasm_mmr_get_height_from_leaf_index",
-    "processor_table_height": 27,
-    "hash_table_height": 0,
-    "u32_table_height": 30
   },
   {
     "name": "tasm_mmr_get_height_from_leaf_index",
@@ -135,25 +177,7 @@
     "name": "tasm_mmr_get_height_from_leaf_index",
     "processor_table_height": 27,
     "hash_table_height": 0,
-    "u32_table_height": 32
-  },
-  {
-    "name": "tasm_mmr_get_height_from_leaf_index",
-    "processor_table_height": 27,
-    "hash_table_height": 0,
-    "u32_table_height": 32
-  },
-  {
-    "name": "tasm_mmr_get_height_from_leaf_index",
-    "processor_table_height": 27,
-    "hash_table_height": 0,
     "u32_table_height": 30
-  },
-  {
-    "name": "tasm_mmr_get_height_from_leaf_index",
-    "processor_table_height": 27,
-    "hash_table_height": 0,
-    "u32_table_height": 32
   },
   {
     "name": "tasm_mmr_get_height_from_leaf_index",
@@ -183,36 +207,6 @@
     "name": "tasm_mmr_get_height_from_leaf_index",
     "processor_table_height": 27,
     "hash_table_height": 0,
-    "u32_table_height": 32
-  },
-  {
-    "name": "tasm_mmr_get_height_from_leaf_index",
-    "processor_table_height": 27,
-    "hash_table_height": 0,
-    "u32_table_height": 30
-  },
-  {
-    "name": "tasm_mmr_get_height_from_leaf_index",
-    "processor_table_height": 27,
-    "hash_table_height": 0,
-    "u32_table_height": 32
-  },
-  {
-    "name": "tasm_mmr_get_height_from_leaf_index",
-    "processor_table_height": 27,
-    "hash_table_height": 0,
-    "u32_table_height": 30
-  },
-  {
-    "name": "tasm_mmr_get_height_from_leaf_index",
-    "processor_table_height": 27,
-    "hash_table_height": 0,
-    "u32_table_height": 30
-  },
-  {
-    "name": "tasm_mmr_get_height_from_leaf_index",
-    "processor_table_height": 27,
-    "hash_table_height": 0,
     "u32_table_height": 31
   },
   {
@@ -225,13 +219,19 @@
     "name": "tasm_mmr_get_height_from_leaf_index",
     "processor_table_height": 27,
     "hash_table_height": 0,
+    "u32_table_height": 31
+  },
+  {
+    "name": "tasm_mmr_get_height_from_leaf_index",
+    "processor_table_height": 27,
+    "hash_table_height": 0,
     "u32_table_height": 30
   },
   {
     "name": "tasm_mmr_get_height_from_leaf_index",
     "processor_table_height": 27,
     "hash_table_height": 0,
-    "u32_table_height": 31
+    "u32_table_height": 32
   },
   {
     "name": "tasm_mmr_get_height_from_leaf_index",

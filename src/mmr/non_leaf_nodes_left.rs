@@ -181,6 +181,20 @@ impl Snippet for MmrNonLeafNodesLeftUsingAnd {
         let result = U32s::<2>::try_from(result).unwrap();
         push_hashable(stack, &result);
     }
+
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
 }
 
 #[cfg(test)]

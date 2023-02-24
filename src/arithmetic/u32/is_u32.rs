@@ -88,6 +88,28 @@ impl Snippet for IsU32 {
             BFieldElement::zero()
         });
     }
+
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        ExecutionState::with_stack(
+            vec![get_init_tvm_stack(), vec![BFieldElement::new(1 << 16)]].concat(),
+        )
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        ExecutionState::with_stack(
+            vec![
+                get_init_tvm_stack(),
+                vec![BFieldElement::new((1 << 32) - 1)],
+            ]
+            .concat(),
+        )
+    }
 }
 
 #[cfg(test)]
@@ -107,7 +129,7 @@ mod tests {
 
     #[test]
     fn is_u32_benchmark() {
-        bench_and_write::<IsU32>(IsU32);
+        bench_and_write(IsU32);
     }
 
     #[test]

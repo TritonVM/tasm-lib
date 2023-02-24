@@ -211,6 +211,20 @@ impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
         stack.append(&mut mt_index.to_sequence().into_iter().rev().collect());
         stack.push(BFieldElement::new(peak_index as u64));
     }
+
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
 }
 
 #[cfg(test)]

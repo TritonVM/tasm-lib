@@ -182,6 +182,20 @@ impl Snippet for LoadAuthPathFromSecretInSafeList {
 
         stack.push(auth_path_pointer);
     }
+
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
 }
 
 #[cfg(test)]

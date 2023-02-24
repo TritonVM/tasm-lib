@@ -68,4 +68,18 @@ impl Snippet for Neg {
         let elem = stack.pop().unwrap();
         stack.push(-elem);
     }
+
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
 }

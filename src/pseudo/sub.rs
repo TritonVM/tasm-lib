@@ -72,4 +72,18 @@ impl Snippet for Sub {
         let b = stack.pop().unwrap();
         stack.push(a - b);
     }
+
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
 }

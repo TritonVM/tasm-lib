@@ -121,6 +121,20 @@ impl Snippet for MmrLeftMostAncestor {
         stack.append(&mut ret.to_sequence().into_iter().rev().collect());
         stack.push(BFieldElement::from(h));
     }
+
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
 }
 
 #[cfg(test)]

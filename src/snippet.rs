@@ -135,6 +135,14 @@ pub trait Snippet {
     where
         Self: Sized;
 
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized;
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized;
+
     fn function_body_as_instructions(&self, library: &mut Library) -> Vec<LabelledInstruction>
     where
         Self: Sized,

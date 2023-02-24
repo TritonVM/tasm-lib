@@ -138,6 +138,20 @@ impl Snippet for DummyTestSnippetA {
     fn output_types(&self) -> Vec<crate::snippet::DataType> {
         vec![DataType::BFE, DataType::BFE, DataType::BFE]
     }
+
+    fn common_case_input_state(&self) -> crate::ExecutionState
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
+
+    fn worst_case_input_state(&self) -> crate::ExecutionState
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
 }
 
 impl Snippet for DummyTestSnippetB {
@@ -197,6 +211,20 @@ impl Snippet for DummyTestSnippetB {
     fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
         vec![]
     }
+
+    fn common_case_input_state(&self) -> crate::ExecutionState
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
+
+    fn worst_case_input_state(&self) -> crate::ExecutionState
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
 }
 
 impl Snippet for DummyTestSnippetC {
@@ -252,6 +280,20 @@ impl Snippet for DummyTestSnippetC {
 
     fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
         vec![]
+    }
+
+    fn common_case_input_state(&self) -> crate::ExecutionState
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
+
+    fn worst_case_input_state(&self) -> crate::ExecutionState
+    where
+        Self: Sized,
+    {
+        todo!()
     }
 }
 

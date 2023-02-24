@@ -308,6 +308,20 @@ impl Snippet for CalculateNewPeaksFromAppend {
         stack.push(peaks_pointer);
         stack.push(auth_path_pointer); // Can this be done in a more dynamic way?
     }
+
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
 }
 
 #[cfg(test)]

@@ -111,6 +111,34 @@ impl Snippet for IncrU64 {
             stack.push(res.pop().unwrap());
         }
     }
+
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        // no carry
+        ExecutionState::with_stack(
+            vec![
+                get_init_tvm_stack(),
+                vec![BFieldElement::new(1000), BFieldElement::new(7)],
+            ]
+            .concat(),
+        )
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        // with carry
+        ExecutionState::with_stack(
+            vec![
+                get_init_tvm_stack(),
+                vec![BFieldElement::new(1000), BFieldElement::new((1 << 32) - 1)],
+            ]
+            .concat(),
+        )
+    }
 }
 
 #[cfg(test)]
@@ -123,12 +151,12 @@ mod tests {
 
     #[test]
     fn incr_u64_test() {
-        rust_tasm_equivalence_prop_new::<IncrU64>(IncrU64);
+        rust_tasm_equivalence_prop_new(IncrU64);
     }
 
     #[test]
     fn incr_u64_benchmark() {
-        bench_and_write::<IncrU64>(IncrU64);
+        bench_and_write(IncrU64);
     }
 
     #[test]

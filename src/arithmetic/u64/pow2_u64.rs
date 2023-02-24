@@ -87,6 +87,24 @@ impl Snippet for Pow2U64 {
             stack.push(res.pop().unwrap());
         }
     }
+
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        ExecutionState::with_stack(
+            vec![get_init_tvm_stack(), vec![BFieldElement::new(31)]].concat(),
+        )
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        ExecutionState::with_stack(
+            vec![get_init_tvm_stack(), vec![BFieldElement::new(63)]].concat(),
+        )
+    }
 }
 
 #[cfg(test)]
@@ -101,12 +119,12 @@ mod tests {
 
     #[test]
     fn pow2_static_test() {
-        rust_tasm_equivalence_prop_new::<Pow2U64>(Pow2U64);
+        rust_tasm_equivalence_prop_new(Pow2U64);
     }
 
     #[test]
     fn pow2_static_benchmark() {
-        bench_and_write::<Pow2U64>(Pow2U64);
+        bench_and_write(Pow2U64);
     }
 
     fn prop_exp_static(exponent: u8) {
@@ -114,7 +132,7 @@ mod tests {
         init_stack.push(BFieldElement::new(exponent as u64));
 
         let expected = None;
-        let mut execution_result = rust_tasm_equivalence_prop::<Pow2U64>(
+        let mut execution_result = rust_tasm_equivalence_prop(
             Pow2U64,
             &init_stack,
             &[],

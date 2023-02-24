@@ -87,6 +87,20 @@ impl Snippet for GetHeightFromDataIndex {
         let height: u32 = log_2_floor(leaf_index as u128 + 1) as u32;
         stack.push(BFieldElement::new(height as u64));
     }
+
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
 }
 
 #[cfg(test)]

@@ -141,6 +141,20 @@ impl Snippet for SafeNew {
         safe_list_new(list_pointer, capacity as u32, memory);
         stack.push(list_pointer);
     }
+
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
 }
 
 #[cfg(test)]

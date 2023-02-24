@@ -116,6 +116,20 @@ impl Snippet for EqDigest {
 
         stack.push(BFieldElement::new((digest_a == digest_b) as u64));
     }
+
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
 }
 
 #[cfg(test)]

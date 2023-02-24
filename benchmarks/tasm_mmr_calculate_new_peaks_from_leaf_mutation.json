@@ -1,7 +1,7 @@
 [
   {
     "name": "tasm_mmr_calculate_new_peaks_from_leaf_mutation",
-    "processor_table_height": 503,
+    "processor_table_height": 473,
     "hash_table_height": 27,
     "u32_table_height": 91
   }

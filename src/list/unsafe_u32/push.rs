@@ -163,6 +163,20 @@ impl Snippet for UnsafePush {
         // Update length indicator
         memory.insert(list_address, initial_list_length + BFieldElement::one());
     }
+
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
 }
 
 #[cfg(test)]

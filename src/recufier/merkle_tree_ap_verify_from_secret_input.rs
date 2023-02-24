@@ -184,6 +184,20 @@ impl Snippet for MtApVerifyFromSecretInput {
             assert_eq!(node_digest, merkle_root);
         }
     }
+
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
 }
 
 const NUMBER_OF_AUTHENTICATION_PATHS: usize = 4;
