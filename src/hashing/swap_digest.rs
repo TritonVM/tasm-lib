@@ -130,14 +130,22 @@ impl Snippet for SwapDigest {
     where
         Self: Sized,
     {
-        todo!()
+        let mut rng = rand::thread_rng();
+        let mut stack = get_init_tvm_stack();
+        push_hashable(&mut stack, &rng.gen::<Digest>());
+        push_hashable(&mut stack, &rng.gen::<Digest>());
+        ExecutionState::with_stack(stack)
     }
 
     fn worst_case_input_state(&self) -> ExecutionState
     where
         Self: Sized,
     {
-        todo!()
+        let mut rng = rand::thread_rng();
+        let mut stack = get_init_tvm_stack();
+        push_hashable(&mut stack, &rng.gen::<Digest>());
+        push_hashable(&mut stack, &rng.gen::<Digest>());
+        ExecutionState::with_stack(stack)
     }
 }
 

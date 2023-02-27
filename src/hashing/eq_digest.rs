@@ -80,7 +80,7 @@ impl Snippet for EqDigest {
                 eq     // _ (a3 = b3) (a2 = b2) (a1 = b1) a0 b0 (a4 = b4)
                 swap2  // _ (a3 = b3) (a2 = b2) (a1 = b1) (a4 = b4) b0 a0
                 eq     // _ (a3 = b3) (a2 = b2) (a1 = b1) (a4 = b4) (b0 = a0)
-                
+
                 mul
                 mul
                 mul
@@ -121,14 +121,26 @@ impl Snippet for EqDigest {
     where
         Self: Sized,
     {
-        todo!()
+        let mut stack = get_init_tvm_stack();
+        push_hashable(&mut stack, &Digest::default());
+        push_hashable(&mut stack, &Digest::default());
+
+        ExecutionState::with_stack(stack)
     }
 
     fn worst_case_input_state(&self) -> ExecutionState
     where
         Self: Sized,
     {
-        todo!()
+        let mut rng = rand::thread_rng();
+        let digest_a: Digest = rng.gen();
+        let digest_b: Digest = rng.gen();
+
+        let mut stack = get_init_tvm_stack();
+        push_hashable(&mut stack, &digest_b);
+        push_hashable(&mut stack, &digest_a);
+
+        ExecutionState::with_stack(stack)
     }
 }
 
@@ -145,7 +157,7 @@ mod tests {
     }
 
     #[test]
-    fn swap_digest_benchmark() {
+    fn eq_digest_benchmark() {
         bench_and_write::<EqDigest>(EqDigest);
     }
 }

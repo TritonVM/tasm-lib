@@ -1,6 +1,7 @@
 use num::Zero;
 use twenty_first::shared_math::{
     b_field_element::BFieldElement,
+    other::random_elements,
     rescue_prime_digest::{Digest, DIGEST_LENGTH},
 };
 
@@ -19,6 +20,14 @@ pub fn write_digest_to_secret_in(secret_in: &mut Vec<BFieldElement>, digest: Dig
     let digest_elements = digest.values();
     for i in 0..DIGEST_LENGTH {
         secret_in.push(digest_elements[DIGEST_LENGTH - 1 - i]);
+    }
+}
+
+pub fn write_dummy_ap_path(input: &mut Vec<BFieldElement>, ap_length: usize) {
+    input.push(BFieldElement::new(ap_length as u64));
+    let ap_elements: Vec<Digest> = random_elements(ap_length);
+    for ap_element in ap_elements.iter() {
+        write_digest_to_secret_in(input, *ap_element);
     }
 }
 

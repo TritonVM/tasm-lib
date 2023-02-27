@@ -187,14 +187,37 @@ impl Snippet for LoadAuthPathFromSecretInSafeList {
     where
         Self: Sized,
     {
-        todo!()
+        // Common case is defined to be half of the maximum MMR height
+        let mut secret_in: Vec<BFieldElement> = vec![];
+        rust_shadowing_helper_functions::input::write_dummy_ap_path(
+            &mut secret_in,
+            MAX_MMR_HEIGHT / 2,
+        );
+
+        ExecutionState {
+            stack: get_init_tvm_stack(),
+            std_in: vec![],
+            secret_in,
+            memory: HashMap::default(),
+            words_allocated: 0,
+        }
     }
 
     fn worst_case_input_state(&self) -> ExecutionState
     where
         Self: Sized,
     {
-        todo!()
+        // Worst case is the maximum MMR height
+        let mut secret_in: Vec<BFieldElement> = vec![];
+        rust_shadowing_helper_functions::input::write_dummy_ap_path(&mut secret_in, MAX_MMR_HEIGHT);
+
+        ExecutionState {
+            stack: get_init_tvm_stack(),
+            std_in: vec![],
+            secret_in,
+            memory: HashMap::default(),
+            words_allocated: 0,
+        }
     }
 }
 
@@ -258,13 +281,11 @@ mod load_auth_path_from_secret_in_tests {
 
     #[test]
     fn load_auth_path_from_secret_in_test() {
-        rust_tasm_equivalence_prop_new::<LoadAuthPathFromSecretInSafeList>(
-            LoadAuthPathFromSecretInSafeList,
-        );
+        rust_tasm_equivalence_prop_new(LoadAuthPathFromSecretInSafeList);
     }
 
     #[test]
     fn load_auth_path_from_secret_in_benchmark() {
-        bench_and_write::<LoadAuthPathFromSecretInSafeList>(LoadAuthPathFromSecretInSafeList);
+        bench_and_write(LoadAuthPathFromSecretInSafeList);
     }
 }
