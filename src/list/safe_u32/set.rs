@@ -43,36 +43,23 @@ impl Snippet for SafeSet {
     }
 
     fn gen_input_states(&self) -> Vec<ExecutionState> {
-        fn prepare_state(data_type: &DataType) -> ExecutionState {
-            let capacity = 100;
-            let list_length: usize = thread_rng().gen_range(1..capacity);
-            let index: usize = thread_rng().gen_range(0..list_length);
-            let mut stack = get_init_tvm_stack();
-            let mut push_value: Vec<BFieldElement> = random_elements(data_type.get_size());
-            while let Some(element) = push_value.pop() {
-                stack.push(element);
-            }
-
-            let list_pointer: u32 = random();
-            let list_pointer_bfe = BFieldElement::new(list_pointer as u64);
-            stack.push(list_pointer_bfe);
-            stack.push(BFieldElement::new(index as u64));
-
-            let mut memory = HashMap::default();
-            safe_insert_random_list(
-                data_type,
-                list_pointer_bfe,
-                capacity as u32,
-                list_length,
-                &mut memory,
-            );
-            ExecutionState::with_stack_and_memory(stack, memory, 0)
-        }
-
+        let capacity = 100u32;
         vec![
-            prepare_state(&self.0),
-            prepare_state(&self.0),
-            prepare_state(&self.0),
+            prepare_state(
+                &self.0,
+                capacity,
+                thread_rng().gen_range(1..capacity) as usize,
+            ),
+            prepare_state(
+                &self.0,
+                capacity,
+                thread_rng().gen_range(1..capacity) as usize,
+            ),
+            prepare_state(
+                &self.0,
+                capacity,
+                thread_rng().gen_range(1..capacity) as usize,
+            ),
         ]
     }
 
@@ -167,15 +154,39 @@ impl Snippet for SafeSet {
     where
         Self: Sized,
     {
-        todo!()
+        prepare_state(&self.0, 1000, 1 << 5)
     }
 
     fn worst_case_input_state(&self) -> ExecutionState
     where
         Self: Sized,
     {
-        todo!()
+        prepare_state(&self.0, 1000, 1 << 6)
     }
+}
+
+fn prepare_state(data_type: &DataType, capacity: u32, list_length: usize) -> ExecutionState {
+    let index: usize = thread_rng().gen_range(0..list_length);
+    let mut stack = get_init_tvm_stack();
+    let mut push_value: Vec<BFieldElement> = random_elements(data_type.get_size());
+    while let Some(element) = push_value.pop() {
+        stack.push(element);
+    }
+
+    let list_pointer: u32 = random();
+    let list_pointer_bfe = BFieldElement::new(list_pointer as u64);
+    stack.push(list_pointer_bfe);
+    stack.push(BFieldElement::new(index as u64));
+
+    let mut memory = HashMap::default();
+    safe_insert_random_list(
+        data_type,
+        list_pointer_bfe,
+        capacity,
+        list_length,
+        &mut memory,
+    );
+    ExecutionState::with_stack_and_memory(stack, memory, 0)
 }
 
 #[cfg(test)]
@@ -183,6 +194,7 @@ mod list_set_tests {
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
     use crate::get_init_tvm_stack;
+    use crate::snippet_bencher::bench_and_write;
     use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
@@ -197,6 +209,11 @@ mod list_set_tests {
             rust_tasm_equivalence_prop_new::<SafeSet>(SafeSet(DataType::XFE));
             rust_tasm_equivalence_prop_new::<SafeSet>(SafeSet(DataType::Digest));
         }
+    }
+
+    #[test]
+    fn safe_set_benchmark() {
+        bench_and_write(SafeSet(DataType::Digest));
     }
 
     #[test]

@@ -146,14 +146,18 @@ impl Snippet for SafeNew {
     where
         Self: Sized,
     {
-        todo!()
+        ExecutionState::with_stack(
+            vec![get_init_tvm_stack(), vec![BFieldElement::new(1 << 5)]].concat(),
+        )
     }
 
     fn worst_case_input_state(&self) -> ExecutionState
     where
         Self: Sized,
     {
-        todo!()
+        ExecutionState::with_stack(
+            vec![get_init_tvm_stack(), vec![BFieldElement::new(1 << 6)]].concat(),
+        )
     }
 }
 
@@ -166,7 +170,7 @@ mod tests {
 
     use crate::{
         list::safe_u32::push::SafePush, rust_shadowing_helper_functions,
-        test_helpers::rust_tasm_equivalence_prop_new,
+        snippet_bencher::bench_and_write, test_helpers::rust_tasm_equivalence_prop_new,
     };
 
     use super::*;
@@ -179,6 +183,11 @@ mod tests {
         rust_tasm_equivalence_prop_new(SafeNew(DataType::BFE));
         rust_tasm_equivalence_prop_new(SafeNew(DataType::XFE));
         rust_tasm_equivalence_prop_new(SafeNew(DataType::Digest));
+    }
+
+    #[test]
+    fn safe_new_benchmark() {
+        bench_and_write(SafeNew(DataType::Digest));
     }
 
     #[test]
