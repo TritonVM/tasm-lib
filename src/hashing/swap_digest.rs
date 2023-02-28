@@ -141,11 +141,7 @@ impl Snippet for SwapDigest {
     where
         Self: Sized,
     {
-        let mut rng = rand::thread_rng();
-        let mut stack = get_init_tvm_stack();
-        push_hashable(&mut stack, &rng.gen::<Digest>());
-        push_hashable(&mut stack, &rng.gen::<Digest>());
-        ExecutionState::with_stack(stack)
+        self.common_case_input_state()
     }
 }
 
@@ -158,11 +154,11 @@ mod tests {
 
     #[test]
     fn swap_digest_test() {
-        rust_tasm_equivalence_prop_new::<SwapDigest>(SwapDigest);
+        rust_tasm_equivalence_prop_new(SwapDigest);
     }
 
     #[test]
     fn swap_digest_benchmark() {
-        bench_and_write::<SwapDigest>(SwapDigest);
+        bench_and_write(SwapDigest);
     }
 }
