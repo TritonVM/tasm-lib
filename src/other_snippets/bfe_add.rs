@@ -74,14 +74,26 @@ impl Snippet for BfeAdd {
     where
         Self: Sized,
     {
-        todo!()
+        ExecutionState::with_stack(
+            vec![
+                get_init_tvm_stack(),
+                vec![BFieldElement::new(10), BFieldElement::new(20)],
+            ]
+            .concat(),
+        )
     }
 
     fn worst_case_input_state(&self) -> ExecutionState
     where
         Self: Sized,
     {
-        todo!()
+        ExecutionState::with_stack(
+            vec![
+                get_init_tvm_stack(),
+                vec![BFieldElement::new(10), BFieldElement::new(20)],
+            ]
+            .concat(),
+        )
     }
 }
 
@@ -94,11 +106,11 @@ mod tests {
 
     #[test]
     fn bfe_add_test() {
-        rust_tasm_equivalence_prop_new::<BfeAdd>(BfeAdd);
+        rust_tasm_equivalence_prop_new(BfeAdd);
     }
 
     #[test]
     fn bfe_add_benchmark() {
-        bench_and_write::<BfeAdd>(BfeAdd);
+        bench_and_write(BfeAdd);
     }
 }
