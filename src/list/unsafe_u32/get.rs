@@ -43,24 +43,7 @@ impl Snippet for UnsafeGet {
 
     fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
         let mut rng = thread_rng();
-        let list_pointer: BFieldElement = random();
-        let list_length: usize = rng.gen_range(0..100);
-        let index: usize = rng.gen_range(0..list_length);
-        let mut stack = get_init_tvm_stack();
-        stack.push(list_pointer);
-        stack.push(BFieldElement::new(index as u64));
-
-        let mut memory = HashMap::default();
-
-        unsafe_insert_random_list(list_pointer, list_length, &mut memory, 4);
-
-        vec![ExecutionState {
-            stack,
-            std_in: vec![],
-            secret_in: vec![],
-            memory,
-            words_allocated: 0,
-        }]
+        vec![input_state(rng.gen_range(1..100))]
     }
 
     fn stack_diff(&self) -> isize {
@@ -136,14 +119,36 @@ impl Snippet for UnsafeGet {
     where
         Self: Sized,
     {
-        todo!()
+        input_state(1 << 5)
     }
 
     fn worst_case_input_state(&self) -> ExecutionState
     where
         Self: Sized,
     {
-        todo!()
+        input_state(1 << 6)
+    }
+}
+
+fn input_state(list_length: usize) -> ExecutionState {
+    let mut rng = thread_rng();
+    let list_pointer: u32 = random();
+    let list_pointer = BFieldElement::new(list_pointer as u64);
+    let index: usize = rng.gen_range(0..list_length);
+    let mut stack = get_init_tvm_stack();
+    stack.push(list_pointer);
+    stack.push(BFieldElement::new(index as u64));
+
+    let mut memory = HashMap::default();
+
+    unsafe_insert_random_list(list_pointer, list_length, &mut memory, 4);
+
+    ExecutionState {
+        stack,
+        std_in: vec![],
+        secret_in: vec![],
+        memory,
+        words_allocated: 0,
     }
 }
 
@@ -154,13 +159,19 @@ mod get_element_tests {
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
     use crate::get_init_tvm_stack;
+    use crate::snippet_bencher::bench_and_write;
     use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
 
     #[test]
     fn new_snippet_test() {
-        rust_tasm_equivalence_prop_new::<UnsafeGet>(UnsafeGet(DataType::XFE));
+        rust_tasm_equivalence_prop_new(UnsafeGet(DataType::XFE));
+    }
+
+    #[test]
+    fn unsafe_get_benchmark() {
+        bench_and_write(UnsafeGet(DataType::Digest));
     }
 
     #[test]

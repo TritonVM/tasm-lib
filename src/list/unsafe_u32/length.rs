@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use num::One;
 use rand::{random, thread_rng, Rng};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
@@ -119,14 +120,26 @@ impl Snippet for UnsafeLengthLong {
     where
         Self: Sized,
     {
-        todo!()
+        let mut stack = get_init_tvm_stack();
+        let list_address: u32 = random();
+        let list_address = BFieldElement::from(list_address as u64);
+        stack.push(list_address);
+        let mut memory = HashMap::default();
+        unsafe_insert_random_list(BFieldElement::one(), 1 << 5, &mut memory, 1);
+        ExecutionState::with_stack_and_memory(stack.clone(), memory, 0)
     }
 
     fn worst_case_input_state(&self) -> ExecutionState
     where
         Self: Sized,
     {
-        todo!()
+        let mut stack = get_init_tvm_stack();
+        let list_address: u32 = random();
+        let list_address = BFieldElement::from(list_address as u64);
+        stack.push(list_address);
+        let mut memory = HashMap::default();
+        unsafe_insert_random_list(BFieldElement::one(), 1 << 6, &mut memory, 1);
+        ExecutionState::with_stack_and_memory(stack.clone(), memory, 0)
     }
 }
 
@@ -217,18 +230,24 @@ mod tests_long {
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
     use crate::get_init_tvm_stack;
+    use crate::snippet_bencher::bench_and_write;
     use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
 
     #[test]
     fn new_snippet_test_long() {
-        rust_tasm_equivalence_prop_new::<UnsafeLengthLong>(UnsafeLengthLong(DataType::U64));
+        rust_tasm_equivalence_prop_new(UnsafeLengthLong(DataType::U64));
     }
 
     #[test]
     fn new_snippet_test_short() {
-        rust_tasm_equivalence_prop_new::<UnsafeLengthShort>(UnsafeLengthShort(DataType::XFE));
+        rust_tasm_equivalence_prop_new(UnsafeLengthShort(DataType::XFE));
+    }
+
+    #[test]
+    fn unsafe_length_long_benchmark() {
+        bench_and_write(UnsafeLengthLong(DataType::Digest));
     }
 
     #[test]

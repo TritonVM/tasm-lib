@@ -44,21 +44,6 @@ impl Snippet for UnsafePush {
     }
 
     fn gen_input_states(&self) -> Vec<ExecutionState> {
-        fn prepare_state(data_type: &DataType) -> ExecutionState {
-            let list_pointer: BFieldElement = random();
-            let init_length: usize = thread_rng().gen_range(0..100);
-            let mut stack = get_init_tvm_stack();
-            stack.push(list_pointer);
-            let mut push_value: Vec<BFieldElement> = random_elements(data_type.get_size());
-            while let Some(element) = push_value.pop() {
-                stack.push(element);
-            }
-
-            let mut memory = HashMap::default();
-            unsafe_insert_random_list(list_pointer, init_length, &mut memory, data_type.get_size());
-            ExecutionState::with_stack_and_memory(stack, memory, 0)
-        }
-
         vec![
             prepare_state(&self.0),
             prepare_state(&self.0),
@@ -168,15 +153,31 @@ impl Snippet for UnsafePush {
     where
         Self: Sized,
     {
-        todo!()
+        prepare_state(&self.0)
     }
 
     fn worst_case_input_state(&self) -> ExecutionState
     where
         Self: Sized,
     {
-        todo!()
+        prepare_state(&self.0)
     }
+}
+
+fn prepare_state(data_type: &DataType) -> ExecutionState {
+    let list_pointer: u32 = random();
+    let list_pointer = BFieldElement::new(list_pointer as u64);
+    let init_length: usize = thread_rng().gen_range(0..100);
+    let mut stack = get_init_tvm_stack();
+    stack.push(list_pointer);
+    let mut push_value: Vec<BFieldElement> = random_elements(data_type.get_size());
+    while let Some(element) = push_value.pop() {
+        stack.push(element);
+    }
+
+    let mut memory = HashMap::default();
+    unsafe_insert_random_list(list_pointer, init_length, &mut memory, data_type.get_size());
+    ExecutionState::with_stack_and_memory(stack, memory, 0)
 }
 
 #[cfg(test)]
@@ -184,6 +185,7 @@ mod tests_push {
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
     use crate::get_init_tvm_stack;
+    use crate::snippet_bencher::bench_and_write;
     use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
@@ -194,6 +196,11 @@ mod tests_push {
         rust_tasm_equivalence_prop_new::<UnsafePush>(UnsafePush(DataType::U64));
         rust_tasm_equivalence_prop_new::<UnsafePush>(UnsafePush(DataType::XFE));
         rust_tasm_equivalence_prop_new::<UnsafePush>(UnsafePush(DataType::Digest));
+    }
+
+    #[test]
+    fn unsafe_push_benchmark() {
+        bench_and_write(UnsafePush(DataType::Digest));
     }
 
     #[test]

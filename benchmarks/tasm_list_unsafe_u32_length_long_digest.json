@@ -1,0 +1,16 @@
+[
+  {
+    "name": "tasm_list_unsafe_u32_length_long_digest",
+    "processor_table_height": 7,
+    "hash_table_height": 0,
+    "u32_table_height": 0,
+    "case": "CommonCase"
+  },
+  {
+    "name": "tasm_list_unsafe_u32_length_long_digest",
+    "processor_table_height": 7,
+    "hash_table_height": 0,
+    "u32_table_height": 0,
+    "case": "WorstCase"
+  }
+]
