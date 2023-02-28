@@ -1,8 +1,16 @@
 [
   {
     "name": "tasm_recufier_mt_ap_verify",
-    "processor_table_height": 374,
-    "hash_table_height": 180,
-    "u32_table_height": 0
+    "processor_table_height": 877,
+    "hash_table_height": 630,
+    "u32_table_height": 0,
+    "case": "CommonCase"
+  },
+  {
+    "name": "tasm_recufier_mt_ap_verify",
+    "processor_table_height": 1073,
+    "hash_table_height": 882,
+    "u32_table_height": 0,
+    "case": "WorstCase"
   }
 ]

@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use num::Zero;
+use rand::Rng;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::rescue_prime_digest::Digest;
 use twenty_first::shared_math::rescue_prime_regular::RescuePrimeRegular;
@@ -46,23 +47,8 @@ impl Snippet for MtApVerifyFromSecretInput {
     }
 
     fn gen_input_states(&self) -> Vec<ExecutionState> {
-        let leafs = generate_leafs();
-        let mt: &MerkleTree<RescuePrimeRegular, CpuParallel> =
-            &MerkleTreeMaker::from_digests(&leafs);
-        let indices = choose_indices();
-        let secret_in: Vec<BFieldElement> = generate_siblings_as_vector(mt.clone(), indices);
-        let stack: Vec<BFieldElement> = get_init_tvm_stack();
-        let std_in: Vec<BFieldElement> = generate_input(indices, &leafs);
-
-        let ret0 = ExecutionState {
-            stack,
-            std_in,
-            secret_in,
-            memory: HashMap::default(),
-            words_allocated: 0,
-        };
-
-        vec![ret0]
+        let mt_height = 5;
+        vec![prepare_state(mt_height)]
     }
 
     fn stack_diff(&self) -> isize {
@@ -189,28 +175,60 @@ impl Snippet for MtApVerifyFromSecretInput {
     where
         Self: Sized,
     {
-        todo!()
+        let mt_height = 6;
+        prepare_state(mt_height)
     }
 
     fn worst_case_input_state(&self) -> ExecutionState
     where
         Self: Sized,
     {
-        todo!()
+        // `mt_height` should probably be 20 here, but that execution takes very long to run.
+        let mt_height = 12;
+        prepare_state(mt_height)
     }
 }
 
-const NUMBER_OF_AUTHENTICATION_PATHS: usize = 4;
-fn choose_indices() -> [usize; NUMBER_OF_AUTHENTICATION_PATHS] {
-    [2, 3, 7, 20]
+fn prepare_state(tree_height: usize) -> ExecutionState {
+    // fn gen_input_states(&self) -> Vec<ExecutionState> {
+    let leafs = generate_leafs(tree_height);
+    let mt: &MerkleTree<RescuePrimeRegular, CpuParallel> = &MerkleTreeMaker::from_digests(&leafs);
+    let indices = choose_indices(tree_height);
+    let secret_in: Vec<BFieldElement> =
+        generate_siblings_as_vector(mt.clone(), indices, tree_height);
+    let stack: Vec<BFieldElement> = get_init_tvm_stack();
+    let std_in: Vec<BFieldElement> = generate_input(indices, &leafs);
+
+    ExecutionState {
+        stack,
+        std_in,
+        secret_in,
+        memory: HashMap::default(),
+        words_allocated: 0,
+    }
+}
+
+const NUMBER_OF_AUTHENTICATION_PATHS: usize = 7;
+fn choose_indices(tree_height: usize) -> [usize; NUMBER_OF_AUTHENTICATION_PATHS] {
+    let mut indices = [0usize; NUMBER_OF_AUTHENTICATION_PATHS];
+    let mut i = 0;
+    while i < NUMBER_OF_AUTHENTICATION_PATHS {
+        let index = rand::thread_rng().gen_range(0..2u32.pow(tree_height as u32));
+        if !indices.contains(&(index as usize)) {
+            indices[i] = index as usize;
+            i += 1;
+        }
+    }
+
+    indices
 }
 
 //generate secret input for verifier
 fn generate_siblings_as_vector(
     mt: MerkleTree<RescuePrimeRegular, CpuParallel>,
     indices: [usize; NUMBER_OF_AUTHENTICATION_PATHS],
+    tree_height: usize,
 ) -> Vec<BFieldElement> {
-    let tree_height = get_tree_height_usize();
     let number_of_aps = indices.len();
     let number_of_leaves = mt.get_leaf_count();
     let mut bfield_vector: Vec<BFieldElement> = Vec::with_capacity(number_of_aps * tree_height * 5);
@@ -227,16 +245,6 @@ fn generate_siblings_as_vector(
         }
     }
     bfield_vector
-}
-
-const TREE_HEIGHT: u32 = 5;
-
-fn get_tree_height() -> u32 {
-    TREE_HEIGHT
-}
-
-fn get_tree_height_usize() -> usize {
-    get_tree_height().try_into().unwrap()
 }
 
 //generate standard (public) input for verifier
@@ -265,9 +273,8 @@ fn generate_input(
     input
 }
 
-fn generate_leafs() -> Vec<Digest> {
-    let two: u32 = 2;
-    let num_leafs: u32 = two.pow(get_tree_height());
+fn generate_leafs(height: usize) -> Vec<Digest> {
+    let num_leafs: u32 = 2u32.pow(height as u32);
     //generate merkle leafs
     let number_of_leaves: usize = num_leafs.try_into().unwrap();
     let mut leafs: Vec<Digest> = Vec::with_capacity(number_of_leaves);
@@ -320,17 +327,18 @@ mod merkle_authentication_verify_test {
 
     #[test]
     fn merkle_tree_ap_verify_test1() {
-        let leafs = generate_leafs();
+        let mt_height = 5;
+        let leafs = generate_leafs(mt_height);
         let mt: &MerkleTree<RescuePrimeRegular, CpuParallel> =
             &MerkleTreeMaker::from_digests(&leafs);
-        let indices = choose_indices();
+        let indices = choose_indices(mt_height);
         let merkle_root = mt.nodes[1];
         for index in indices {
             let leaf: Digest = leafs[index];
             let mut node_index = index;
             let mut node_digest = leaf;
             let authentication_path = mt.get_authentication_structure(&[index])[0].clone();
-            for i in 0..get_tree_height_usize() {
+            for i in 0..mt_height {
                 let sibling: Digest =
                     unwrap_partial_authentication_path(&authentication_path)[i].unwrap();
                 if node_index & 1 == 0 {
@@ -346,11 +354,13 @@ mod merkle_authentication_verify_test {
 
     #[test]
     fn merkle_tree_ap_verify_test2() {
-        let leafs = generate_leafs();
+        let mt_height = 5;
+        let leafs = generate_leafs(mt_height);
         let mt: &MerkleTree<RescuePrimeRegular, CpuParallel> =
             &MerkleTreeMaker::from_digests(&leafs);
-        let indices = choose_indices();
-        let secret_input: Vec<BFieldElement> = generate_siblings_as_vector(mt.clone(), indices);
+        let indices = choose_indices(mt_height);
+        let secret_input: Vec<BFieldElement> =
+            generate_siblings_as_vector(mt.clone(), indices, mt_height);
         let stack: &mut Vec<BFieldElement> = &mut get_init_tvm_stack();
         let standard_input: Vec<BFieldElement> = generate_input(indices, &leafs);
 
@@ -368,14 +378,15 @@ mod merkle_authentication_verify_test {
     #[should_panic]
     #[test]
     fn merkle_tree_ap_verify_negative_test() {
-        let leafs = generate_leafs();
+        let mt_height = 5;
+        let leafs = generate_leafs(mt_height);
         let mt: &MerkleTree<RescuePrimeRegular, CpuParallel> =
             &MerkleTreeMaker::from_digests(&leafs);
-        let indices = choose_indices();
+        let indices = choose_indices(mt_height);
 
         // Generate invalid secret input
         let mut bad_secret_input: Vec<BFieldElement> =
-            generate_siblings_as_vector(mt.clone(), indices);
+            generate_siblings_as_vector(mt.clone(), indices, mt_height);
         bad_secret_input[0] = random();
 
         let stack: &mut Vec<BFieldElement> = &mut get_init_tvm_stack();
