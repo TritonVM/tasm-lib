@@ -79,13 +79,35 @@ impl Snippet for Lsb {
     where
         Self: Sized,
     {
-        todo!()
+        ExecutionState::with_stack(
+            vec![get_init_tvm_stack(), vec![BFieldElement::new(1u64 << 20)]].concat(),
+        )
     }
 
     fn worst_case_input_state(&self) -> ExecutionState
     where
         Self: Sized,
     {
-        todo!()
+        ExecutionState::with_stack(
+            vec![get_init_tvm_stack(), vec![BFieldElement::new(1u64 << 31)]].concat(),
+        )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::snippet_bencher::bench_and_write;
+    use crate::test_helpers::rust_tasm_equivalence_prop_new;
+
+    use super::*;
+
+    #[test]
+    fn lsb_test() {
+        rust_tasm_equivalence_prop_new(Lsb);
+    }
+
+    #[test]
+    fn lsb_benchmark() {
+        bench_and_write(Lsb);
     }
 }

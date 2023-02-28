@@ -1,16 +1,16 @@
 [
   {
-    "name": "tasm_arithmetic_u64_pow2",
+    "name": "tasm_pseudo_lsb",
     "processor_table_height": 6,
     "hash_table_height": 0,
-    "u32_table_height": 39,
+    "u32_table_height": 25,
     "case": "CommonCase"
   },
   {
-    "name": "tasm_arithmetic_u64_pow2",
+    "name": "tasm_pseudo_lsb",
     "processor_table_height": 6,
     "hash_table_height": 0,
-    "u32_table_height": 40,
+    "u32_table_height": 36,
     "case": "WorstCase"
   }
 ]

@@ -33,9 +33,10 @@ impl Library {
     }
 
     pub fn with_preallocated_memory(words_allocated: usize) -> Self {
-        let mut library = Self::with_pseudo_instructions();
-        library.free_pointer = words_allocated;
-        library
+        Library {
+            free_pointer: words_allocated,
+            ..Default::default()
+        }
     }
 
     /// Import `T: Snippet` into the library.
