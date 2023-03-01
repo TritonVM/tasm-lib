@@ -269,14 +269,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn left_child_test() {
+    fn right_lineage_count_and_own_height_child_test() {
         rust_tasm_equivalence_prop_new::<MmrRightLineageCountAndHeight>(
             MmrRightLineageCountAndHeight,
         );
     }
 
     #[test]
-    fn left_child_benchmark() {
+    fn right_lineage_count_and_own_height_child_benchmark() {
         bench_and_write::<MmrRightLineageCountAndHeight>(MmrRightLineageCountAndHeight);
     }
 

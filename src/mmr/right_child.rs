@@ -118,12 +118,12 @@ mod tests {
     use super::*;
 
     #[test]
-    fn left_child_test() {
+    fn right_child_test() {
         rust_tasm_equivalence_prop_new::<MmrRightChild>(MmrRightChild);
     }
 
     #[test]
-    fn left_child_benchmark() {
+    fn right_child_benchmark() {
         bench_and_write::<MmrRightChild>(MmrRightChild);
     }
 

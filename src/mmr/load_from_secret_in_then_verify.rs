@@ -20,6 +20,8 @@ use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, ExecutionState}
 use super::verify_from_memory::MmrVerifyFromMemory;
 use super::MAX_MMR_HEIGHT;
 
+type H = RescuePrimeRegular;
+
 /// First load from secret-in, then verify from memory
 #[derive(Clone)]
 pub struct MmrLoadFromSecretInThenVerify;
@@ -71,100 +73,13 @@ impl Snippet for MmrLoadFromSecretInThenVerify {
     }
 
     fn gen_input_states(&self) -> Vec<ExecutionState> {
-        type H = RescuePrimeRegular;
-
-        /// Prepare the part of the state that can be derived from the MMR without
-        /// knowing e.g. the leaf index of the leaf digest that you want to authenticate
-        /// so this function does not populate e.g. `secret_in`. The caller has to do that.
-        fn mmr_to_init_vm_state(mmra: &mut MmrAccumulator<H>) -> ExecutionState {
-            let mut stack: Vec<BFieldElement> = get_init_tvm_stack();
-            let peaks_pointer = BFieldElement::zero();
-            stack.push(peaks_pointer);
-
-            let leaf_count = mmra.count_leaves() as u64;
-            let leaf_count_hi = BFieldElement::new(leaf_count >> 32);
-            let leaf_count_lo = BFieldElement::new(leaf_count & u32::MAX as u64);
-            stack.push(leaf_count_hi);
-            stack.push(leaf_count_lo);
-
-            // Write peaks to memory
-            let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
-            rust_shadowing_helper_functions::unsafe_list::unsafe_list_new(
-                peaks_pointer,
-                &mut memory,
-            );
-            for peak in mmra.get_peaks() {
-                rust_shadowing_helper_functions::unsafe_list::unsafe_list_push(
-                    peaks_pointer,
-                    peak.values().to_vec(),
-                    &mut memory,
-                    DIGEST_LENGTH,
-                );
-            }
-
-            ExecutionState {
-                stack,
-                std_in: vec![],
-                secret_in: vec![],
-                memory,
-                words_allocated: DIGEST_LENGTH * MAX_MMR_HEIGHT + 1,
-            }
-        }
-
         let mut rng = thread_rng();
         let mut init_vm_states = vec![];
 
         for size in 1..50 {
-            // BEFORE: _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo [digest (leaf_digest)]
-            // AFTER: _ *auth_path leaf_index_hi leaf_index_lo validation_result
-            let digests: Vec<Digest> = random_elements(size);
-            let mut ammr: ArchivalMmr<H> = get_archival_mmr_from_digests(digests.clone());
-            let mut vm_init_state = mmr_to_init_vm_state(&mut ammr.to_accumulator());
-
-            // Populate secret-in with the leaf index value, which is a u64
-            let leaf_index: u64 = rng.gen_range(0..size as u64);
-
-            // Populate secret-in with the correct authentication path
-            let mmr_mp = ammr.prove_membership(leaf_index as u128).0;
-            let authentication_path = mmr_mp.authentication_path;
-            vm_init_state
-                .secret_in
-                .push(BFieldElement::new(authentication_path.len() as u64));
-            for ap_element in authentication_path.iter() {
-                let mut ap_element_values = ap_element.values().to_vec();
-                for _ in 0..DIGEST_LENGTH {
-                    vm_init_state
-                        .secret_in
-                        .push(ap_element_values.pop().unwrap());
-                }
-            }
-
-            // Push leaf index to stack
-            vm_init_state
-                .stack
-                .push(BFieldElement::new(leaf_index >> 32));
-            vm_init_state
-                .stack
-                .push(BFieldElement::new(leaf_index & u32::MAX as u64));
-
-            // Push the correct leaf on the stack
-            let mut positive_test_vm_init_state = vm_init_state.clone();
-            let good_leaf = digests[leaf_index as usize];
-            for value in good_leaf.values().iter().rev() {
-                positive_test_vm_init_state.stack.push(*value);
-            }
-
-            init_vm_states.push(positive_test_vm_init_state);
-
-            // Negative test
-            // Push the false leaf on the stack
-            let mut negative_test_vm_init_state = vm_init_state.clone();
-            let bad_leaf = digests[(leaf_index as usize + 1) % size];
-            for value in bad_leaf.values().iter().rev() {
-                negative_test_vm_init_state.stack.push(*value);
-            }
-
-            init_vm_states.push(negative_test_vm_init_state);
+            let leaf_index = rng.gen_range(0..size);
+            init_vm_states.push(prepare_state(size, leaf_index as u64, true));
+            init_vm_states.push(prepare_state(size, leaf_index as u64, false));
         }
 
         init_vm_states
@@ -298,14 +213,103 @@ impl Snippet for MmrLoadFromSecretInThenVerify {
     where
         Self: Sized,
     {
-        todo!()
+        // This should be a bigger state, but that's not possible since
+        // the current implementation uses an archival MMR, which requires
+        // all MMR nodes to be stored in memory.
+        prepare_state(100, 50, true)
     }
 
     fn worst_case_input_state(&self) -> ExecutionState
     where
         Self: Sized,
     {
-        todo!()
+        // This should be a bigger state, but that's not possible since
+        // the current implementation uses an archival MMR, which requires
+        // all MMR nodes to be stored in memory.
+        prepare_state(2000, 1000, true)
+    }
+}
+
+fn prepare_state(size: usize, leaf_index: u64, produce_valid_input: bool) -> ExecutionState {
+    // BEFORE: _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo [digest (leaf_digest)]
+    // AFTER: _ *auth_path leaf_index_hi leaf_index_lo validation_result
+
+    let digests: Vec<Digest> = random_elements(size);
+    let mut ammr: ArchivalMmr<H> = get_archival_mmr_from_digests(digests.clone());
+    let mut vm_init_state = mmr_to_init_vm_state(&mut ammr.to_accumulator());
+
+    // Populate secret-in with the correct authentication path
+    let mmr_mp = ammr.prove_membership(leaf_index as u128).0;
+    let authentication_path = mmr_mp.authentication_path;
+    vm_init_state
+        .secret_in
+        .push(BFieldElement::new(authentication_path.len() as u64));
+    for ap_element in authentication_path.iter() {
+        let mut ap_element_values = ap_element.values().to_vec();
+        for _ in 0..DIGEST_LENGTH {
+            vm_init_state
+                .secret_in
+                .push(ap_element_values.pop().unwrap());
+        }
+    }
+
+    // Push leaf index to stack
+    vm_init_state
+        .stack
+        .push(BFieldElement::new(leaf_index >> 32));
+    vm_init_state
+        .stack
+        .push(BFieldElement::new(leaf_index & u32::MAX as u64));
+
+    // Push the correct leaf on the stack, or a different one if we want to produce invalid input
+    let mut vm_init_state = vm_init_state.clone();
+    if produce_valid_input {
+        let good_leaf = digests[leaf_index as usize];
+        for value in good_leaf.values().iter().rev() {
+            vm_init_state.stack.push(*value);
+        }
+    } else {
+        let bad_leaf = digests[(leaf_index as usize + 1) % size];
+        for value in bad_leaf.values().iter().rev() {
+            vm_init_state.stack.push(*value);
+        }
+    }
+
+    vm_init_state
+}
+
+/// Prepare the part of the state that can be derived from the MMR without
+/// knowing e.g. the leaf index of the leaf digest that you want to authenticate
+/// so this function does not populate e.g. `secret_in`. The caller has to do that.
+fn mmr_to_init_vm_state(mmra: &mut MmrAccumulator<H>) -> ExecutionState {
+    let mut stack: Vec<BFieldElement> = get_init_tvm_stack();
+    let peaks_pointer = BFieldElement::zero();
+    stack.push(peaks_pointer);
+
+    let leaf_count = mmra.count_leaves() as u64;
+    let leaf_count_hi = BFieldElement::new(leaf_count >> 32);
+    let leaf_count_lo = BFieldElement::new(leaf_count & u32::MAX as u64);
+    stack.push(leaf_count_hi);
+    stack.push(leaf_count_lo);
+
+    // Write peaks to memory
+    let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
+    rust_shadowing_helper_functions::unsafe_list::unsafe_list_new(peaks_pointer, &mut memory);
+    for peak in mmra.get_peaks() {
+        rust_shadowing_helper_functions::unsafe_list::unsafe_list_push(
+            peaks_pointer,
+            peak.values().to_vec(),
+            &mut memory,
+            DIGEST_LENGTH,
+        );
+    }
+
+    ExecutionState {
+        stack,
+        std_in: vec![],
+        secret_in: vec![],
+        memory,
+        words_allocated: DIGEST_LENGTH * MAX_MMR_HEIGHT + 1,
     }
 }
 
@@ -317,13 +321,11 @@ mod tests {
 
     #[test]
     fn load_from_secret_in_then_verify_test() {
-        rust_tasm_equivalence_prop_new::<MmrLoadFromSecretInThenVerify>(
-            MmrLoadFromSecretInThenVerify,
-        );
+        rust_tasm_equivalence_prop_new(MmrLoadFromSecretInThenVerify);
     }
 
     #[test]
     fn load_from_secret_in_then_verify_benchmark() {
-        bench_and_write::<MmrLoadFromSecretInThenVerify>(MmrLoadFromSecretInThenVerify);
+        bench_and_write(MmrLoadFromSecretInThenVerify);
     }
 }

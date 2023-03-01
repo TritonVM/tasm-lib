@@ -3,60 +3,14 @@
     "name": "tasm_mmr_leftmost_ancestor",
     "processor_table_height": 49,
     "hash_table_height": 0,
-    "u32_table_height": 72
+    "u32_table_height": 12,
+    "case": "CommonCase"
   },
   {
     "name": "tasm_mmr_leftmost_ancestor",
-    "processor_table_height": 49,
+    "processor_table_height": 37,
     "hash_table_height": 0,
-    "u32_table_height": 66
-  },
-  {
-    "name": "tasm_mmr_leftmost_ancestor",
-    "processor_table_height": 49,
-    "hash_table_height": 0,
-    "u32_table_height": 72
-  },
-  {
-    "name": "tasm_mmr_leftmost_ancestor",
-    "processor_table_height": 49,
-    "hash_table_height": 0,
-    "u32_table_height": 68
-  },
-  {
-    "name": "tasm_mmr_leftmost_ancestor",
-    "processor_table_height": 49,
-    "hash_table_height": 0,
-    "u32_table_height": 72
-  },
-  {
-    "name": "tasm_mmr_leftmost_ancestor",
-    "processor_table_height": 49,
-    "hash_table_height": 0,
-    "u32_table_height": 66
-  },
-  {
-    "name": "tasm_mmr_leftmost_ancestor",
-    "processor_table_height": 49,
-    "hash_table_height": 0,
-    "u32_table_height": 72
-  },
-  {
-    "name": "tasm_mmr_leftmost_ancestor",
-    "processor_table_height": 49,
-    "hash_table_height": 0,
-    "u32_table_height": 60
-  },
-  {
-    "name": "tasm_mmr_leftmost_ancestor",
-    "processor_table_height": 49,
-    "hash_table_height": 0,
-    "u32_table_height": 68
-  },
-  {
-    "name": "tasm_mmr_leftmost_ancestor",
-    "processor_table_height": 49,
-    "hash_table_height": 0,
-    "u32_table_height": 72
+    "u32_table_height": 74,
+    "case": "WorstCase"
   }
 ]
