@@ -42,13 +42,8 @@ impl Snippet for MmrRightLineageCountAndHeight {
     fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
         let mut ret: Vec<ExecutionState> = vec![];
         for _ in 0..10 {
-            let mut stack = get_init_tvm_stack();
             let node_index = thread_rng().gen_range(0..u64::MAX / 2);
-            let node_index_hi = BFieldElement::new(node_index >> 32);
-            let node_index_lo = BFieldElement::new(node_index & u32::MAX as u64);
-            stack.push(node_index_hi);
-            stack.push(node_index_lo);
-            ret.push(ExecutionState::with_stack(stack));
+            ret.push(prepare_state(node_index));
         }
 
         ret
@@ -247,15 +242,24 @@ impl Snippet for MmrRightLineageCountAndHeight {
     where
         Self: Sized,
     {
-        todo!()
+        prepare_state((1 << 31) + 1)
     }
 
     fn worst_case_input_state(&self) -> ExecutionState
     where
         Self: Sized,
     {
-        todo!()
+        prepare_state((1 << 62) + 1)
     }
+}
+
+fn prepare_state(node_index: u64) -> ExecutionState {
+    let mut stack = get_init_tvm_stack();
+    let node_index_hi = BFieldElement::new(node_index >> 32);
+    let node_index_lo = BFieldElement::new(node_index & u32::MAX as u64);
+    stack.push(node_index_hi);
+    stack.push(node_index_lo);
+    ExecutionState::with_stack(stack)
 }
 
 #[cfg(test)]
@@ -270,14 +274,12 @@ mod tests {
 
     #[test]
     fn right_lineage_count_and_own_height_child_test() {
-        rust_tasm_equivalence_prop_new::<MmrRightLineageCountAndHeight>(
-            MmrRightLineageCountAndHeight,
-        );
+        rust_tasm_equivalence_prop_new(MmrRightLineageCountAndHeight);
     }
 
     #[test]
     fn right_lineage_count_and_own_height_child_benchmark() {
-        bench_and_write::<MmrRightLineageCountAndHeight>(MmrRightLineageCountAndHeight);
+        bench_and_write(MmrRightLineageCountAndHeight);
     }
 
     #[test]
@@ -360,7 +362,7 @@ mod tests {
             ],
         ]
         .concat();
-        let _execution_result = rust_tasm_equivalence_prop::<MmrRightLineageCountAndHeight>(
+        let _execution_result = rust_tasm_equivalence_prop(
             MmrRightLineageCountAndHeight,
             &init_stack,
             &[],
