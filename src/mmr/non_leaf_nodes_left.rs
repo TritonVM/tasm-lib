@@ -1,4 +1,3 @@
-use num::Zero;
 use rand::{thread_rng, Rng};
 use std::collections::HashMap;
 use twenty_first::amount::u32s::U32s;
@@ -43,20 +42,12 @@ impl Snippet for MmrNonLeafNodesLeftUsingAnd {
     fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
         let mut ret: Vec<ExecutionState> = vec![];
         for _ in 0..30 {
-            let mut stack = get_init_tvm_stack();
             let leaf_index = thread_rng().gen_range(0..u64::MAX / 2);
-            let leaf_index_hi = BFieldElement::new(leaf_index >> 32);
-            let leaf_index_lo = BFieldElement::new(leaf_index & u32::MAX as u64);
-            stack.push(leaf_index_hi);
-            stack.push(leaf_index_lo);
-            ret.push(ExecutionState::with_stack(stack));
+            ret.push(prepare_state(leaf_index));
         }
 
         // Ensure that we also test for leaf_index == 0
-        let mut stack = get_init_tvm_stack();
-        stack.push(BFieldElement::zero());
-        stack.push(BFieldElement::zero());
-        ret.push(ExecutionState::with_stack(stack));
+        ret.push(prepare_state(0));
 
         ret
     }
@@ -186,15 +177,24 @@ impl Snippet for MmrNonLeafNodesLeftUsingAnd {
     where
         Self: Sized,
     {
-        todo!()
+        prepare_state((1 << 31) - 1)
     }
 
     fn worst_case_input_state(&self) -> ExecutionState
     where
         Self: Sized,
     {
-        todo!()
+        prepare_state((1 << 63) - 1)
     }
+}
+
+fn prepare_state(leaf_index: u64) -> ExecutionState {
+    let mut stack = get_init_tvm_stack();
+    let leaf_index_hi = BFieldElement::new(leaf_index >> 32);
+    let leaf_index_lo = BFieldElement::new(leaf_index & u32::MAX as u64);
+    stack.push(leaf_index_hi);
+    stack.push(leaf_index_lo);
+    ExecutionState::with_stack(stack)
 }
 
 #[cfg(test)]
@@ -212,12 +212,12 @@ mod nlnl_tests {
 
     #[test]
     fn non_leaf_nodes_left_test() {
-        rust_tasm_equivalence_prop_new::<MmrNonLeafNodesLeftUsingAnd>(MmrNonLeafNodesLeftUsingAnd);
+        rust_tasm_equivalence_prop_new(MmrNonLeafNodesLeftUsingAnd);
     }
 
     #[test]
     fn non_leaf_nodes_left_benchmark() {
-        bench_and_write::<MmrNonLeafNodesLeftUsingAnd>(MmrNonLeafNodesLeftUsingAnd);
+        bench_and_write(MmrNonLeafNodesLeftUsingAnd);
     }
 
     #[test]
