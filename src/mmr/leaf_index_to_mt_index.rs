@@ -207,14 +207,17 @@ impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
     where
         Self: Sized,
     {
-        prepare_state((1 << 31) - 1, (1 << 30) + 1)
+        prepare_state((1 << 32) - 1, (1 << 31) + (1 << 30) + 100000)
     }
 
     fn worst_case_input_state(&self) -> ExecutionState
     where
         Self: Sized,
     {
-        prepare_state((1 << 63) - 1, (1 << 62) + 1)
+        // This function has some pretty bad worst-case behavior. Common-case is orders of magnitudes
+        // better, it seems.
+        // The below input is the worst-case input I could find.
+        prepare_state((1 << 63) - 1, (1 << 63) - 63)
     }
 }
 

@@ -1,9 +1,9 @@
 [
   {
     "name": "tasm_mmr_non_leaf_nodes_left",
-    "processor_table_height": 2198,
+    "processor_table_height": 2502,
     "hash_table_height": 0,
-    "u32_table_height": 2235,
+    "u32_table_height": 2296,
     "case": "CommonCase"
   },
   {

@@ -1,16 +1,16 @@
 [
   {
     "name": "tasm_mmr_data_index_to_node_index",
-    "processor_table_height": 1453,
+    "processor_table_height": 2627,
     "hash_table_height": 0,
-    "u32_table_height": 1912,
+    "u32_table_height": 2470,
     "case": "CommonCase"
   },
   {
     "name": "tasm_mmr_data_index_to_node_index",
-    "processor_table_height": 2741,
+    "processor_table_height": 5701,
     "hash_table_height": 0,
-    "u32_table_height": 4236,
+    "u32_table_height": 7801,
     "case": "WorstCase"
   }
 ]
