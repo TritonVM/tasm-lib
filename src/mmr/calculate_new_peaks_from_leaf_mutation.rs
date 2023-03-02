@@ -280,14 +280,42 @@ impl Snippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
     where
         Self: Sized,
     {
-        todo!()
+        type H = RescuePrimeRegular;
+        let mmr_leaf_count_log2 = 31u64;
+        let mmr_size = 1 << mmr_leaf_count_log2;
+        let peaks: Vec<Digest> = random_elements(mmr_leaf_count_log2 as usize);
+        let mut mmra = MmrAccumulator::<H>::init(peaks, mmr_size as u128 - 1);
+        let inserted_leaf: Digest = random();
+        let leaf_after_mutation: Digest = random();
+        let auth_path = mmra.append(inserted_leaf).authentication_path;
+        prepare_state_with_mmra(
+            &mut mmra,
+            mmr_size - mmr_leaf_count_log2 - 1,
+            leaf_after_mutation,
+            auth_path,
+        )
+        .0
     }
 
     fn worst_case_input_state(&self) -> ExecutionState
     where
         Self: Sized,
     {
-        todo!()
+        type H = RescuePrimeRegular;
+        let mmr_leaf_count_log2 = 63u64;
+        let mmr_size = 1 << mmr_leaf_count_log2;
+        let peaks: Vec<Digest> = random_elements(mmr_leaf_count_log2 as usize);
+        let mut mmra = MmrAccumulator::<H>::init(peaks, mmr_size as u128 - 1);
+        let inserted_leaf: Digest = random();
+        let leaf_after_mutation: Digest = random();
+        let auth_path = mmra.append(inserted_leaf).authentication_path;
+        prepare_state_with_mmra(
+            &mut mmra,
+            mmr_size - mmr_leaf_count_log2 - 1,
+            leaf_after_mutation,
+            auth_path,
+        )
+        .0
     }
 }
 
@@ -373,16 +401,12 @@ mod leaf_mutation_tests {
 
     #[test]
     fn calculate_new_peaks_from_leaf_mutation_test() {
-        rust_tasm_equivalence_prop_new::<MmrCalculateNewPeaksFromLeafMutationMtIndices>(
-            MmrCalculateNewPeaksFromLeafMutationMtIndices,
-        );
+        rust_tasm_equivalence_prop_new(MmrCalculateNewPeaksFromLeafMutationMtIndices);
     }
 
     #[test]
     fn calculate_new_peaks_from_leaf_mutation_benchmark() {
-        bench_and_write::<MmrCalculateNewPeaksFromLeafMutationMtIndices>(
-            MmrCalculateNewPeaksFromLeafMutationMtIndices,
-        );
+        bench_and_write(MmrCalculateNewPeaksFromLeafMutationMtIndices);
     }
 
     #[test]
@@ -588,16 +612,15 @@ mod leaf_mutation_tests {
         expected_final_stack.push(BFieldElement::new(new_leaf_index >> 32));
         expected_final_stack.push(BFieldElement::new(new_leaf_index & u32::MAX as u64));
 
-        let _execution_result =
-            rust_tasm_equivalence_prop::<MmrCalculateNewPeaksFromLeafMutationMtIndices>(
-                MmrCalculateNewPeaksFromLeafMutationMtIndices,
-                &init_stack,
-                &[],
-                &[],
-                &mut memory,
-                MAX_MMR_HEIGHT * DIGEST_LENGTH + 1, // assume that 64 digests are allocated in memory when code starts to run
-                Some(&expected_final_stack),
-            );
+        let _execution_result = rust_tasm_equivalence_prop(
+            MmrCalculateNewPeaksFromLeafMutationMtIndices,
+            &init_stack,
+            &[],
+            &[],
+            &mut memory,
+            MAX_MMR_HEIGHT * DIGEST_LENGTH + 1, // assume that 64 digests are allocated in memory when code starts to run
+            Some(&expected_final_stack),
+        );
 
         // Find produced MMR
         let peaks_count = memory[&peaks_pointer].value();
