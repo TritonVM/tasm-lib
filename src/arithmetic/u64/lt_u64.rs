@@ -138,6 +138,34 @@ impl Snippet for LtU64 {
             BFieldElement::zero()
         });
     }
+
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        ExecutionState::with_stack(
+            vec![
+                get_init_tvm_stack(),
+                vec![BFieldElement::zero(), BFieldElement::new(1 << 31)],
+                vec![BFieldElement::one(), BFieldElement::new(1 << 30)],
+            ]
+            .concat(),
+        )
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        ExecutionState::with_stack(
+            vec![
+                get_init_tvm_stack(),
+                vec![BFieldElement::new(8), BFieldElement::new(1 << 31)],
+                vec![BFieldElement::new(8), BFieldElement::new(1 << 30)],
+            ]
+            .concat(),
+        )
+    }
 }
 
 /// This `lt_standard_u64` does consume its argument.
@@ -244,6 +272,34 @@ impl Snippet for LtStandardU64 {
 
         stack.push(BFieldElement::new((lhs < rhs) as u64));
     }
+
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        ExecutionState::with_stack(
+            vec![
+                get_init_tvm_stack(),
+                vec![BFieldElement::zero(), BFieldElement::new(1 << 31)],
+                vec![BFieldElement::one(), BFieldElement::new(1 << 30)],
+            ]
+            .concat(),
+        )
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        ExecutionState::with_stack(
+            vec![
+                get_init_tvm_stack(),
+                vec![BFieldElement::new(8), BFieldElement::new(1 << 31)],
+                vec![BFieldElement::new(8), BFieldElement::new(1 << 30)],
+            ]
+            .concat(),
+        )
+    }
 }
 
 #[cfg(test)]
@@ -267,17 +323,17 @@ mod tests {
 
     #[test]
     fn lt_u64_test_new_snippet() {
-        rust_tasm_equivalence_prop_new::<LtU64>(LtU64);
+        rust_tasm_equivalence_prop_new(LtU64);
     }
 
     #[test]
     fn standard_lt_u64_test_new_snippet() {
-        rust_tasm_equivalence_prop_new::<LtStandardU64>(LtStandardU64);
+        rust_tasm_equivalence_prop_new(LtStandardU64);
     }
 
     #[test]
-    fn log_2_floor_u64_benchmark() {
-        bench_and_write::<LtStandardU64>(LtStandardU64);
+    fn lt_u64_benchmark() {
+        bench_and_write(LtStandardU64);
     }
 
     #[test]

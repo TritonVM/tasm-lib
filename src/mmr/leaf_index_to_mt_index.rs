@@ -54,18 +54,9 @@ impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
     fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
         let mut ret: Vec<ExecutionState> = vec![];
         for _ in 0..10 {
-            let mut stack = get_init_tvm_stack();
             let leaf_count = thread_rng().gen_range(0..u64::MAX / 2);
-            let leaf_count_hi = BFieldElement::new(leaf_count >> 32);
-            let leaf_count_lo = BFieldElement::new(leaf_count & u32::MAX as u64);
-            stack.push(leaf_count_hi);
-            stack.push(leaf_count_lo);
             let leaf_index = thread_rng().gen_range(0..leaf_count);
-            let leaf_index_hi = BFieldElement::new(leaf_index >> 32);
-            let leaf_index_lo = BFieldElement::new(leaf_index & u32::MAX as u64);
-            stack.push(leaf_index_hi);
-            stack.push(leaf_index_lo);
-            ret.push(ExecutionState::with_stack(stack));
+            ret.push(prepare_state(leaf_count, leaf_index))
         }
 
         ret
@@ -211,6 +202,36 @@ impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
         stack.append(&mut mt_index.to_sequence().into_iter().rev().collect());
         stack.push(BFieldElement::new(peak_index as u64));
     }
+
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        prepare_state((1 << 32) - 1, (1 << 31) + (1 << 30) + 100000)
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        // This function has some pretty bad worst-case behavior. Common-case is orders of magnitudes
+        // better, it seems.
+        // The below input is the worst-case input I could find.
+        prepare_state((1 << 63) - 1, (1 << 63) - 63)
+    }
+}
+
+fn prepare_state(leaf_count: u64, leaf_index: u64) -> ExecutionState {
+    let mut stack = get_init_tvm_stack();
+    let leaf_count_hi = BFieldElement::new(leaf_count >> 32);
+    let leaf_count_lo = BFieldElement::new(leaf_count & u32::MAX as u64);
+    stack.push(leaf_count_hi);
+    stack.push(leaf_count_lo);
+    let leaf_index_hi = BFieldElement::new(leaf_index >> 32);
+    let leaf_index_lo = BFieldElement::new(leaf_index & u32::MAX as u64);
+    stack.push(leaf_index_hi);
+    stack.push(leaf_index_lo);
+    ExecutionState::with_stack(stack)
 }
 
 #[cfg(test)]
@@ -225,14 +246,12 @@ mod tests {
 
     #[test]
     fn leaf_index_to_mt_index_test() {
-        rust_tasm_equivalence_prop_new::<MmrLeafIndexToMtIndexAndPeakIndex>(
-            MmrLeafIndexToMtIndexAndPeakIndex,
-        );
+        rust_tasm_equivalence_prop_new(MmrLeafIndexToMtIndexAndPeakIndex);
     }
 
     #[test]
     fn leaf_index_to_mt_index_benchmark() {
-        bench_and_write::<MmrLeafIndexToMtIndexAndPeakIndex>(MmrLeafIndexToMtIndexAndPeakIndex);
+        bench_and_write(MmrLeafIndexToMtIndexAndPeakIndex);
     }
 
     #[test]

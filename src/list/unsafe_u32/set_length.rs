@@ -33,18 +33,6 @@ impl Snippet for UnsafeSetLength {
     }
 
     fn gen_input_states(&self) -> Vec<ExecutionState> {
-        fn prepare_state(data_type: &DataType) -> ExecutionState {
-            let list_pointer: BFieldElement = random();
-            let old_length: usize = thread_rng().gen_range(0..100);
-            let new_length: usize = thread_rng().gen_range(0..100);
-            let mut stack = get_init_tvm_stack();
-            stack.push(list_pointer);
-            stack.push(BFieldElement::new(new_length as u64));
-            let mut memory = HashMap::default();
-            unsafe_insert_random_list(list_pointer, old_length, &mut memory, data_type.get_size());
-            ExecutionState::with_stack_and_memory(stack, memory, 0)
-        }
-
         vec![
             prepare_state(&self.0),
             prepare_state(&self.0),
@@ -94,6 +82,32 @@ impl Snippet for UnsafeSetLength {
 
         stack.push(list_address);
     }
+
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        prepare_state(&self.0)
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        prepare_state(&self.0)
+    }
+}
+
+fn prepare_state(data_type: &DataType) -> ExecutionState {
+    let list_pointer: BFieldElement = random();
+    let old_length: usize = thread_rng().gen_range(0..100);
+    let new_length: usize = thread_rng().gen_range(0..100);
+    let mut stack = get_init_tvm_stack();
+    stack.push(list_pointer);
+    stack.push(BFieldElement::new(new_length as u64));
+    let mut memory = HashMap::default();
+    unsafe_insert_random_list(list_pointer, old_length, &mut memory, data_type.get_size());
+    ExecutionState::with_stack_and_memory(stack, memory, 0)
 }
 
 #[cfg(test)]
@@ -101,6 +115,7 @@ mod tests_set_length {
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
     use crate::get_init_tvm_stack;
+    use crate::snippet_bencher::bench_and_write;
     use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
@@ -108,6 +123,11 @@ mod tests_set_length {
     #[test]
     fn new_snippet_test() {
         rust_tasm_equivalence_prop_new::<UnsafeSetLength>(UnsafeSetLength(DataType::XFE));
+    }
+
+    #[test]
+    fn unsafe_set_length_benchmark() {
+        bench_and_write(UnsafeSetLength(DataType::Digest));
     }
 
     #[test]

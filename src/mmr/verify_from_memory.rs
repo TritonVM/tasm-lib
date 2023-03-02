@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use num::Zero;
-use rand::{thread_rng, Rng};
+use rand::{random, thread_rng, Rng};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::random_elements;
 use twenty_first::shared_math::rescue_prime_digest::{Digest, DIGEST_LENGTH};
@@ -286,6 +286,42 @@ impl Snippet for MmrVerifyFromMemory {
         stack.push(BFieldElement::new(leaf_index_lo as u64));
         stack.push(BFieldElement::new(valid_mp as u64));
     }
+
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        type H = RescuePrimeRegular;
+        let log2_size = 31;
+        let leaf_count_after_add = 1u64 << log2_size;
+        let peaks: Vec<Digest> = random_elements(log2_size as usize);
+        let mut mmra = MmrAccumulator::<H>::init(peaks, leaf_count_after_add as u128 - 1);
+        let new_leaf: Digest = random();
+        let mp = mmra.append(new_leaf);
+        let auth_path = mp.authentication_path;
+
+        // Sanity check of length of auth path
+        assert_eq!(log2_size, auth_path.len() as u64);
+        prepare_vm_state(&mut mmra, new_leaf, leaf_count_after_add - 1, auth_path).0
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        type H = RescuePrimeRegular;
+        let log2_size = 62;
+        let leaf_count_after_add = 1u64 << log2_size;
+        let peaks: Vec<Digest> = random_elements(log2_size as usize);
+        let mut mmra = MmrAccumulator::<H>::init(peaks, leaf_count_after_add as u128 - 1);
+        let new_leaf: Digest = random();
+        let mp = mmra.append(new_leaf);
+        let auth_path = mp.authentication_path;
+
+        // Sanity check of length of auth path
+        assert_eq!(log2_size, auth_path.len() as u64);
+        prepare_vm_state(&mut mmra, new_leaf, leaf_count_after_add - 1, auth_path).0
+    }
 }
 
 /// Returns (ExecutionState, auth_path_pointer, peaks_pointer)
@@ -368,12 +404,12 @@ mod auth_path_verify_from_memory_tests {
 
     #[test]
     fn verify_from_memory_test() {
-        rust_tasm_equivalence_prop_new::<MmrVerifyFromMemory>(MmrVerifyFromMemory);
+        rust_tasm_equivalence_prop_new(MmrVerifyFromMemory);
     }
 
     #[test]
     fn verify_from_memory_benchmark() {
-        bench_and_write::<MmrVerifyFromMemory>(MmrVerifyFromMemory);
+        bench_and_write(MmrVerifyFromMemory);
     }
 
     // This will crash the VM because leaf?index is not strictly less than leaf_count

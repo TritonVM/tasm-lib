@@ -57,6 +57,7 @@ impl Snippet for Sub {
                 push -1  // _ a b -1
                 mul      // _ a -b
                 add      // _ a-b
+                return
             "
         )
     }
@@ -71,5 +72,55 @@ impl Snippet for Sub {
         let a = stack.pop().unwrap();
         let b = stack.pop().unwrap();
         stack.push(a - b);
+    }
+
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        ExecutionState::with_stack(
+            vec![
+                get_init_tvm_stack(),
+                vec![
+                    BFieldElement::new(1u64 << 20),
+                    BFieldElement::new(1u64 << 25),
+                ],
+            ]
+            .concat(),
+        )
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        ExecutionState::with_stack(
+            vec![
+                get_init_tvm_stack(),
+                vec![
+                    BFieldElement::new(1u64 << 20),
+                    BFieldElement::new(1u64 << 20),
+                ],
+            ]
+            .concat(),
+        )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::snippet_bencher::bench_and_write;
+    use crate::test_helpers::rust_tasm_equivalence_prop_new;
+
+    use super::*;
+
+    #[test]
+    fn sub_test() {
+        rust_tasm_equivalence_prop_new(Sub);
+    }
+
+    #[test]
+    fn sub_benchmark() {
+        bench_and_write(Sub);
     }
 }

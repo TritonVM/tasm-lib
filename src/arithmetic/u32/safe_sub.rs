@@ -1,3 +1,4 @@
+use num::Zero;
 use rand::{thread_rng, Rng};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
@@ -93,19 +94,53 @@ impl Snippet for SafeSub {
         let diff = lhs - rhs;
         stack.push(BFieldElement::new(diff as u64));
     }
+
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        ExecutionState::with_stack(
+            vec![
+                get_init_tvm_stack(),
+                vec![BFieldElement::new(1 << 15), BFieldElement::new(1 << 16)],
+            ]
+            .concat(),
+        )
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        ExecutionState::with_stack(
+            vec![
+                get_init_tvm_stack(),
+                vec![BFieldElement::zero(), BFieldElement::new((1 << 32) - 1)],
+            ]
+            .concat(),
+        )
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
 
-    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
+    use crate::{
+        snippet_bencher::bench_and_write,
+        test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new},
+    };
 
     use super::*;
 
     #[test]
     fn snippet_test() {
         rust_tasm_equivalence_prop_new::<SafeSub>(SafeSub);
+    }
+
+    #[test]
+    fn safe_sub_benchmark() {
+        bench_and_write(SafeSub);
     }
 
     #[test]

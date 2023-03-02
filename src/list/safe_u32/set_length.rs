@@ -34,29 +34,26 @@ impl Snippet for SafeSetLength {
     }
 
     fn gen_input_states(&self) -> Vec<ExecutionState> {
-        fn prepare_state(data_type: &DataType) -> ExecutionState {
-            let capacity = 100;
-            let list_pointer: BFieldElement = random();
-            let old_length: usize = thread_rng().gen_range(0..capacity);
-            let new_length: usize = thread_rng().gen_range(0..capacity);
-            let mut stack = get_init_tvm_stack();
-            stack.push(list_pointer);
-            stack.push(BFieldElement::new(new_length as u64));
-            let mut memory = HashMap::default();
-            safe_insert_random_list(
-                data_type,
-                list_pointer,
-                capacity as u32,
-                old_length,
-                &mut memory,
-            );
-            ExecutionState::with_stack_and_memory(stack, memory, 0)
-        }
-
+        let capacity = 100;
         vec![
-            prepare_state(&self.0),
-            prepare_state(&self.0),
-            prepare_state(&self.0),
+            prepare_state(
+                &self.0,
+                capacity,
+                thread_rng().gen_range(0..capacity) as usize,
+                thread_rng().gen_range(0..capacity) as usize,
+            ),
+            prepare_state(
+                &self.0,
+                capacity,
+                thread_rng().gen_range(0..capacity) as usize,
+                thread_rng().gen_range(0..capacity) as usize,
+            ),
+            prepare_state(
+                &self.0,
+                capacity,
+                thread_rng().gen_range(0..capacity) as usize,
+                thread_rng().gen_range(0..capacity) as usize,
+            ),
         ]
     }
 
@@ -134,6 +131,35 @@ impl Snippet for SafeSetLength {
 
         stack.push(list_address);
     }
+
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        prepare_state(&self.0, 1000, 1 << 5, 1 << 4)
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        prepare_state(&self.0, 1000, 1 << 6, 1 << 5)
+    }
+}
+
+fn prepare_state(
+    data_type: &DataType,
+    capacity: u32,
+    init_length: usize,
+    new_length: usize,
+) -> ExecutionState {
+    let list_pointer: BFieldElement = random();
+    let mut stack = get_init_tvm_stack();
+    stack.push(list_pointer);
+    stack.push(BFieldElement::new(new_length as u64));
+    let mut memory = HashMap::default();
+    safe_insert_random_list(data_type, list_pointer, capacity, init_length, &mut memory);
+    ExecutionState::with_stack_and_memory(stack, memory, 0)
 }
 
 #[cfg(test)]
@@ -141,6 +167,7 @@ mod tests_set_length {
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
     use crate::get_init_tvm_stack;
+    use crate::snippet_bencher::bench_and_write;
     use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
@@ -153,6 +180,11 @@ mod tests_set_length {
         rust_tasm_equivalence_prop_new::<SafeSetLength>(SafeSetLength(DataType::BFE));
         rust_tasm_equivalence_prop_new::<SafeSetLength>(SafeSetLength(DataType::XFE));
         rust_tasm_equivalence_prop_new::<SafeSetLength>(SafeSetLength(DataType::Digest));
+    }
+
+    #[test]
+    fn safe_set_length_benchmark() {
+        bench_and_write(SafeSetLength(DataType::Digest));
     }
 
     #[test]

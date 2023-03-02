@@ -40,16 +40,6 @@ impl Snippet for UnsafePop {
     }
 
     fn gen_input_states(&self) -> Vec<ExecutionState> {
-        fn prepare_state(data_type: &DataType) -> ExecutionState {
-            let list_pointer: BFieldElement = random();
-            let old_length: usize = thread_rng().gen_range(1..30);
-            let mut stack = get_init_tvm_stack();
-            stack.push(list_pointer);
-            let mut memory = HashMap::default();
-            unsafe_insert_random_list(list_pointer, old_length, &mut memory, data_type.get_size());
-            ExecutionState::with_stack_and_memory(stack, memory, 0)
-        }
-
         vec![prepare_state(&self.0)]
     }
 
@@ -148,6 +138,31 @@ impl Snippet for UnsafePop {
             last_used_address -= BFieldElement::one();
         }
     }
+
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        prepare_state(&self.0)
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        prepare_state(&self.0)
+    }
+}
+
+fn prepare_state(data_type: &DataType) -> ExecutionState {
+    let list_pointer: u32 = random();
+    let list_pointer = BFieldElement::new(list_pointer as u64);
+    let old_length: usize = thread_rng().gen_range(1..30);
+    let mut stack = get_init_tvm_stack();
+    stack.push(list_pointer);
+    let mut memory = HashMap::default();
+    unsafe_insert_random_list(list_pointer, old_length, &mut memory, data_type.get_size());
+    ExecutionState::with_stack_and_memory(stack, memory, 0)
 }
 
 #[cfg(test)]
@@ -158,6 +173,7 @@ mod tests_pop {
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
     use crate::get_init_tvm_stack;
+    use crate::snippet_bencher::bench_and_write;
     use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
@@ -168,6 +184,11 @@ mod tests_pop {
         rust_tasm_equivalence_prop_new::<UnsafePop>(UnsafePop(DataType::U64));
         rust_tasm_equivalence_prop_new::<UnsafePop>(UnsafePop(DataType::XFE));
         rust_tasm_equivalence_prop_new::<UnsafePop>(UnsafePop(DataType::Digest));
+    }
+
+    #[test]
+    fn unsafe_pop_benchmark() {
+        bench_and_write(UnsafePop(DataType::Digest));
     }
 
     #[test]

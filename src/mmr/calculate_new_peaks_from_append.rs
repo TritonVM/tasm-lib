@@ -1,4 +1,4 @@
-use num::Zero;
+use num::One;
 use rand::random;
 use std::collections::HashMap;
 use twenty_first::shared_math::b_field_element::BFieldElement;
@@ -61,42 +61,6 @@ impl Snippet for CalculateNewPeaksFromAppend {
     }
 
     fn gen_input_states(&self) -> Vec<ExecutionState> {
-        fn prepare_state_with_mmra(
-            mut start_mmr: MmrAccumulator<RescuePrimeRegular>,
-            new_leaf: Digest,
-        ) -> ExecutionState {
-            // We assume that the peaks can safely be stored in memory on address 0
-            let peaks_pointer = BFieldElement::zero();
-
-            let mut stack = get_init_tvm_stack();
-            let old_leaf_count: u64 = start_mmr.count_leaves() as u64;
-            stack.push(BFieldElement::new(old_leaf_count >> 32));
-            stack.push(BFieldElement::new(old_leaf_count & u32::MAX as u64));
-            stack.push(peaks_pointer);
-
-            // push digests such that element 0 of digest is on top of stack
-            for value in new_leaf.values().iter().rev() {
-                stack.push(*value);
-            }
-
-            // Initialize memory
-            let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
-            rust_shadowing_helper_functions::unsafe_list::unsafe_list_new(
-                peaks_pointer,
-                &mut memory,
-            );
-            for peak in start_mmr.get_peaks() {
-                rust_shadowing_helper_functions::unsafe_list::unsafe_list_push(
-                    peaks_pointer,
-                    peak.values().to_vec(),
-                    &mut memory,
-                    DIGEST_LENGTH,
-                );
-            }
-
-            ExecutionState::with_stack_and_memory(stack, memory, MAX_MMR_HEIGHT * DIGEST_LENGTH + 1)
-        }
-
         let digests: Vec<Digest> = random_elements(10);
         let new_leaf: Digest = random();
         let mmra = MmrAccumulator::new(digests);
@@ -308,6 +272,59 @@ impl Snippet for CalculateNewPeaksFromAppend {
         stack.push(peaks_pointer);
         stack.push(auth_path_pointer); // Can this be done in a more dynamic way?
     }
+
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        let peaks: Vec<Digest> = random_elements(30);
+        let new_leaf: Digest = random();
+        let mmra = MmrAccumulator::init(peaks, (1 << 30) - 1);
+        prepare_state_with_mmra(mmra, new_leaf)
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        let peaks: Vec<Digest> = random_elements(62);
+        let new_leaf: Digest = random();
+        let mmra = MmrAccumulator::init(peaks, (1 << 62) - 1);
+        prepare_state_with_mmra(mmra, new_leaf)
+    }
+}
+
+fn prepare_state_with_mmra(
+    mut start_mmr: MmrAccumulator<RescuePrimeRegular>,
+    new_leaf: Digest,
+) -> ExecutionState {
+    // We assume that the peaks can safely be stored in memory on address 0
+    let peaks_pointer = BFieldElement::one();
+
+    let mut stack = get_init_tvm_stack();
+    let old_leaf_count: u64 = start_mmr.count_leaves() as u64;
+    stack.push(BFieldElement::new(old_leaf_count >> 32));
+    stack.push(BFieldElement::new(old_leaf_count & u32::MAX as u64));
+    stack.push(peaks_pointer);
+
+    // push digests such that element 0 of digest is on top of stack
+    for value in new_leaf.values().iter().rev() {
+        stack.push(*value);
+    }
+
+    // Initialize memory
+    let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
+    rust_shadowing_helper_functions::unsafe_list::unsafe_list_new(peaks_pointer, &mut memory);
+    for peak in start_mmr.get_peaks() {
+        rust_shadowing_helper_functions::unsafe_list::unsafe_list_push(
+            peaks_pointer,
+            peak.values().to_vec(),
+            &mut memory,
+            DIGEST_LENGTH,
+        );
+    }
+
+    ExecutionState::with_stack_and_memory(stack, memory, MAX_MMR_HEIGHT * DIGEST_LENGTH + 1)
 }
 
 #[cfg(test)]
@@ -333,7 +350,7 @@ mod tests {
 
     #[test]
     fn calculate_new_peaks_from_append_benchmark() {
-        bench_and_write::<CalculateNewPeaksFromAppend>(CalculateNewPeaksFromAppend);
+        bench_and_write(CalculateNewPeaksFromAppend);
     }
 
     #[test]

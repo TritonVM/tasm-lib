@@ -33,9 +33,10 @@ impl Library {
     }
 
     pub fn with_preallocated_memory(words_allocated: usize) -> Self {
-        let mut library = Self::with_pseudo_instructions();
-        library.free_pointer = words_allocated;
-        library
+        Library {
+            free_pointer: words_allocated,
+            ..Default::default()
+        }
     }
 
     /// Import `T: Snippet` into the library.
@@ -138,6 +139,20 @@ impl Snippet for DummyTestSnippetA {
     fn output_types(&self) -> Vec<crate::snippet::DataType> {
         vec![DataType::BFE, DataType::BFE, DataType::BFE]
     }
+
+    fn common_case_input_state(&self) -> crate::ExecutionState
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
+
+    fn worst_case_input_state(&self) -> crate::ExecutionState
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
 }
 
 impl Snippet for DummyTestSnippetB {
@@ -197,6 +212,20 @@ impl Snippet for DummyTestSnippetB {
     fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
         vec![]
     }
+
+    fn common_case_input_state(&self) -> crate::ExecutionState
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
+
+    fn worst_case_input_state(&self) -> crate::ExecutionState
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
 }
 
 impl Snippet for DummyTestSnippetC {
@@ -252,6 +281,20 @@ impl Snippet for DummyTestSnippetC {
 
     fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
         vec![]
+    }
+
+    fn common_case_input_state(&self) -> crate::ExecutionState
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
+
+    fn worst_case_input_state(&self) -> crate::ExecutionState
+    where
+        Self: Sized,
+    {
+        todo!()
     }
 }
 

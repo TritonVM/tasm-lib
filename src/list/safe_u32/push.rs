@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use num::One;
-use rand::{random, thread_rng, Rng};
+use rand::{thread_rng, Rng};
 use twenty_first::shared_math::{b_field_element::BFieldElement, other::random_elements};
 
 use crate::{
@@ -46,32 +46,23 @@ impl Snippet for SafePush {
     }
 
     fn gen_input_states(&self) -> Vec<ExecutionState> {
-        fn prepare_state(data_type: &DataType) -> ExecutionState {
-            let list_pointer: BFieldElement = random();
-            let init_length: usize = thread_rng().gen_range(0..100);
-            let mut stack = get_init_tvm_stack();
-            stack.push(list_pointer);
-            let mut push_value: Vec<BFieldElement> = random_elements(data_type.get_size());
-            while let Some(element) = push_value.pop() {
-                stack.push(element);
-            }
-
-            let mut memory = HashMap::default();
-            safe_insert_random_list(
-                data_type,
-                list_pointer,
-                SAFE_LIST_ELEMENT_CAPACITY,
-                init_length,
-                &mut memory,
-            );
-            ExecutionState::with_stack_and_memory(stack, memory, 0)
-        }
-
         vec![
-            prepare_state(&self.0),
-            prepare_state(&self.0),
-            prepare_state(&self.0),
-            prepare_state(&self.0),
+            prepare_execution_state(&self.0, SAFE_LIST_ELEMENT_CAPACITY, 0),
+            prepare_execution_state(
+                &self.0,
+                SAFE_LIST_ELEMENT_CAPACITY,
+                thread_rng().gen_range(0..100),
+            ),
+            prepare_execution_state(
+                &self.0,
+                SAFE_LIST_ELEMENT_CAPACITY,
+                thread_rng().gen_range(0..100),
+            ),
+            prepare_execution_state(
+                &self.0,
+                SAFE_LIST_ELEMENT_CAPACITY,
+                thread_rng().gen_range(0..100),
+            ),
         ]
     }
 
@@ -192,13 +183,49 @@ impl Snippet for SafePush {
         // Update length indicator
         memory.insert(list_pointer, initial_list_length + BFieldElement::one());
     }
+
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        prepare_execution_state(&self.0, SAFE_LIST_ELEMENT_CAPACITY, 1 << 5)
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        prepare_execution_state(&self.0, SAFE_LIST_ELEMENT_CAPACITY, 1 << 6)
+    }
+}
+
+fn prepare_execution_state(
+    data_type: &DataType,
+    capacity: u32,
+    init_length: usize,
+) -> ExecutionState {
+    let list_pointer: BFieldElement =
+        BFieldElement::new(thread_rng().gen_range(0..u32::MAX as u64));
+    let mut stack = get_init_tvm_stack();
+    stack.push(list_pointer);
+    let mut push_value: Vec<BFieldElement> = random_elements(data_type.get_size());
+    while let Some(element) = push_value.pop() {
+        stack.push(element);
+    }
+
+    let mut memory = HashMap::default();
+    safe_insert_random_list(data_type, list_pointer, capacity, init_length, &mut memory);
+    ExecutionState::with_stack_and_memory(stack, memory, 0)
 }
 
 #[cfg(test)]
 mod tests {
     use twenty_first::shared_math::rescue_prime_digest::DIGEST_LENGTH;
 
-    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
+    use crate::{
+        snippet_bencher::bench_and_write,
+        test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new},
+    };
 
     use super::*;
 
@@ -210,6 +237,11 @@ mod tests {
         rust_tasm_equivalence_prop_new::<SafePush>(SafePush(DataType::BFE));
         rust_tasm_equivalence_prop_new::<SafePush>(SafePush(DataType::XFE));
         rust_tasm_equivalence_prop_new::<SafePush>(SafePush(DataType::Digest));
+    }
+
+    #[test]
+    fn safe_push_benchmark() {
+        bench_and_write(SafePush(DataType::Digest));
     }
 
     #[test]

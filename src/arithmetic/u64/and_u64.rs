@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use num::Zero;
 use rand::RngCore;
 use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
@@ -98,6 +99,37 @@ impl Snippet for AndU64 {
             stack.push(res.pop().unwrap());
         }
     }
+
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        ExecutionState::with_stack(
+            vec![
+                get_init_tvm_stack(),
+                vec![BFieldElement::zero(), BFieldElement::new((1 << 31) - 1)],
+                vec![BFieldElement::zero(), BFieldElement::new((1 << 10) - 1)],
+            ]
+            .concat(),
+        )
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        ExecutionState::with_stack(
+            vec![
+                get_init_tvm_stack(),
+                vec![BFieldElement::new(1 << 31), BFieldElement::new(1 << 31)],
+                vec![
+                    BFieldElement::new(1 << 30),
+                    BFieldElement::new((1 << 31) + 10),
+                ],
+            ]
+            .concat(),
+        )
+    }
 }
 
 #[cfg(test)]
@@ -113,12 +145,12 @@ mod tests {
 
     #[test]
     fn and_u64_test() {
-        rust_tasm_equivalence_prop_new::<AndU64>(AndU64);
+        rust_tasm_equivalence_prop_new(AndU64);
     }
 
     #[test]
-    fn add_u64_benchmark() {
-        bench_and_write::<AndU64>(AndU64);
+    fn and_u64_benchmark() {
+        bench_and_write(AndU64);
     }
 
     #[test]

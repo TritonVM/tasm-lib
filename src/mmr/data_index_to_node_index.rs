@@ -38,13 +38,7 @@ impl Snippet for DataIndexToNodeIndex {
     fn gen_input_states(&self) -> Vec<ExecutionState> {
         let mut ret: Vec<ExecutionState> = vec![];
         for _ in 0..40 {
-            let mut stack = get_init_tvm_stack();
-            let leaf_index = thread_rng().gen_range(0..u64::MAX / 2);
-            let leaf_index_hi = BFieldElement::new(leaf_index >> 32);
-            let leaf_index_lo = BFieldElement::new(leaf_index & u32::MAX as u64);
-            stack.push(leaf_index_hi);
-            stack.push(leaf_index_lo);
-            ret.push(ExecutionState::with_stack(stack));
+            ret.push(prepare_state(thread_rng().gen_range(0..u64::MAX / 2)));
         }
 
         ret
@@ -97,6 +91,29 @@ impl Snippet for DataIndexToNodeIndex {
         stack.push(BFieldElement::new(node_index >> 32));
         stack.push(BFieldElement::new(node_index & 0xFFFFFFFFu32 as u64));
     }
+
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        prepare_state((1 << 32) - 1)
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        prepare_state((1 << 63) - 1)
+    }
+}
+
+fn prepare_state(leaf_index: u64) -> ExecutionState {
+    let mut stack = get_init_tvm_stack();
+    let leaf_index_hi = BFieldElement::new(leaf_index >> 32);
+    let leaf_index_lo = BFieldElement::new(leaf_index & u32::MAX as u64);
+    stack.push(leaf_index_hi);
+    stack.push(leaf_index_lo);
+    ExecutionState::with_stack(stack)
 }
 
 #[cfg(test)]
@@ -114,12 +131,12 @@ mod tests {
 
     #[test]
     fn data_index_to_node_index_test() {
-        rust_tasm_equivalence_prop_new::<DataIndexToNodeIndex>(DataIndexToNodeIndex);
+        rust_tasm_equivalence_prop_new(DataIndexToNodeIndex);
     }
 
     #[test]
     fn data_index_to_node_index_benchmark() {
-        bench_and_write::<DataIndexToNodeIndex>(DataIndexToNodeIndex);
+        bench_and_write(DataIndexToNodeIndex);
     }
 
     #[test]

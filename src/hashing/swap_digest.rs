@@ -125,6 +125,24 @@ impl Snippet for SwapDigest {
             stack.swap(ai_pos, bi_pos);
         }
     }
+
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        let mut rng = rand::thread_rng();
+        let mut stack = get_init_tvm_stack();
+        push_hashable(&mut stack, &rng.gen::<Digest>());
+        push_hashable(&mut stack, &rng.gen::<Digest>());
+        ExecutionState::with_stack(stack)
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        self.common_case_input_state()
+    }
 }
 
 #[cfg(test)]
@@ -136,11 +154,11 @@ mod tests {
 
     #[test]
     fn swap_digest_test() {
-        rust_tasm_equivalence_prop_new::<SwapDigest>(SwapDigest);
+        rust_tasm_equivalence_prop_new(SwapDigest);
     }
 
     #[test]
     fn swap_digest_benchmark() {
-        bench_and_write::<SwapDigest>(SwapDigest);
+        bench_and_write(SwapDigest);
     }
 }

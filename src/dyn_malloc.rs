@@ -138,6 +138,20 @@ impl Snippet for DynMalloc {
         stack.push(next_addr);
         *used_memory += size;
     }
+
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
 }
 
 #[cfg(test)]

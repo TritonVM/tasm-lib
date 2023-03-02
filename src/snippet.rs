@@ -135,6 +135,14 @@ pub trait Snippet {
     where
         Self: Sized;
 
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized;
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized;
+
     fn function_body_as_instructions(&self, library: &mut Library) -> Vec<LabelledInstruction>
     where
         Self: Sized,
@@ -238,7 +246,7 @@ pub trait Snippet {
 
 #[allow(dead_code)]
 pub fn compile_snippet<T: Snippet>(snippet: T) -> String {
-    let mut library = Library::with_pseudo_instructions();
+    let mut library = Library::default();
     let main_entrypoint = snippet.entrypoint();
     let main_function_body = snippet.function_body(&mut library);
     let library_code = library.all_imports();

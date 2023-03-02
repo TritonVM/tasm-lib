@@ -74,4 +74,40 @@ impl Snippet for Lsb {
         stack.push(BFieldElement::new(a / 2));
         stack.push(BFieldElement::new(a % 2));
     }
+
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        ExecutionState::with_stack(
+            vec![get_init_tvm_stack(), vec![BFieldElement::new(1u64 << 20)]].concat(),
+        )
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        ExecutionState::with_stack(
+            vec![get_init_tvm_stack(), vec![BFieldElement::new(1u64 << 31)]].concat(),
+        )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::snippet_bencher::bench_and_write;
+    use crate::test_helpers::rust_tasm_equivalence_prop_new;
+
+    use super::*;
+
+    #[test]
+    fn lsb_test() {
+        rust_tasm_equivalence_prop_new(Lsb);
+    }
+
+    #[test]
+    fn lsb_benchmark() {
+        bench_and_write(Lsb);
+    }
 }

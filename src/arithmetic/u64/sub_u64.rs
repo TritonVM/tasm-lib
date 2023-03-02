@@ -1,3 +1,4 @@
+use num::{One, Zero};
 use rand::Rng;
 use std::collections::HashMap;
 
@@ -173,6 +174,36 @@ impl Snippet for SubU64 {
             stack.push(res.pop().unwrap());
         }
     }
+
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        // no carry
+        ExecutionState::with_stack(
+            vec![
+                get_init_tvm_stack(),
+                vec![BFieldElement::zero(), BFieldElement::new((1 << 10) - 1)],
+                vec![BFieldElement::zero(), BFieldElement::new((1 << 31) - 1)],
+            ]
+            .concat(),
+        )
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        // with carry
+        ExecutionState::with_stack(
+            vec![
+                get_init_tvm_stack(),
+                vec![BFieldElement::one(), BFieldElement::new((1 << 31) - 1)],
+                vec![BFieldElement::new(100), BFieldElement::new((1 << 10) - 1)],
+            ]
+            .concat(),
+        )
+    }
 }
 
 #[cfg(test)]
@@ -189,12 +220,12 @@ mod tests {
 
     #[test]
     fn sub_u64_test() {
-        rust_tasm_equivalence_prop_new::<SubU64>(SubU64);
+        rust_tasm_equivalence_prop_new(SubU64);
     }
 
     #[test]
     fn sub_u64_benchmark() {
-        bench_and_write::<SubU64>(SubU64);
+        bench_and_write(SubU64);
     }
 
     #[test]

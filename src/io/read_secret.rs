@@ -102,11 +102,33 @@ impl Snippet for ReadSecret {
             stack.push(*elem)
         }
     }
+
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        let mut secret_in = vec![];
+        secret_in.append(&mut random_elements(self.0.get_size()));
+        ExecutionState {
+            stack: get_init_tvm_stack(),
+            std_in: vec![],
+            secret_in,
+            memory: HashMap::default(),
+            words_allocated: 0,
+        }
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        self.common_case_input_state()
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::test_helpers::rust_tasm_equivalence_prop_new;
+    use crate::{snippet_bencher::bench_and_write, test_helpers::rust_tasm_equivalence_prop_new};
 
     use super::*;
 
@@ -120,5 +142,10 @@ mod tests {
             rust_tasm_equivalence_prop_new(ReadSecret(DataType::XFE));
             rust_tasm_equivalence_prop_new(ReadSecret(DataType::Digest));
         }
+    }
+
+    #[test]
+    fn read_secret_benchmark() {
+        bench_and_write(ReadSecret(DataType::Digest));
     }
 }

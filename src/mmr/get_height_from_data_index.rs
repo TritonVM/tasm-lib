@@ -37,13 +37,8 @@ impl Snippet for GetHeightFromDataIndex {
     fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
         let mut ret: Vec<ExecutionState> = vec![];
         for _ in 0..40 {
-            let mut stack = get_init_tvm_stack();
             let leaf_index = thread_rng().gen_range(0..u64::MAX / 2);
-            let leaf_index_hi = BFieldElement::new(leaf_index >> 32);
-            let leaf_index_lo = BFieldElement::new(leaf_index & u32::MAX as u64);
-            stack.push(leaf_index_hi);
-            stack.push(leaf_index_lo);
-            ret.push(ExecutionState::with_stack(stack));
+            ret.push(prepare_state(leaf_index));
         }
 
         ret
@@ -87,6 +82,29 @@ impl Snippet for GetHeightFromDataIndex {
         let height: u32 = log_2_floor(leaf_index as u128 + 1) as u32;
         stack.push(BFieldElement::new(height as u64));
     }
+
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        prepare_state((1 << 32) - 1)
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        prepare_state((1 << 63) - 1)
+    }
+}
+
+fn prepare_state(leaf_index: u64) -> ExecutionState {
+    let mut stack = get_init_tvm_stack();
+    let leaf_index_hi = BFieldElement::new(leaf_index >> 32);
+    let leaf_index_lo = BFieldElement::new(leaf_index & u32::MAX as u64);
+    stack.push(leaf_index_hi);
+    stack.push(leaf_index_lo);
+    ExecutionState::with_stack(stack)
 }
 
 #[cfg(test)]

@@ -1,3 +1,4 @@
+use num::One;
 use rand::{random, thread_rng, Rng};
 use std::collections::HashMap;
 use twenty_first::shared_math::b_field_element::BFieldElement;
@@ -112,6 +113,47 @@ impl Snippet for SafeLength {
         let list_length = memory[&list_address];
         stack.push(list_length);
     }
+
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        const COMMON_LENGTH: usize = 1 << 5;
+        get_benchmark_input_state(COMMON_LENGTH, &self.0)
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        const COMMON_LENGTH: usize = 1 << 6;
+        get_benchmark_input_state(COMMON_LENGTH, &self.0)
+    }
+}
+
+fn get_benchmark_input_state(list_length: usize, data_type: &DataType) -> ExecutionState {
+    let mut memory = HashMap::default();
+    let list_pointer: BFieldElement = BFieldElement::one();
+
+    let capacity = list_length * 2;
+    safe_insert_random_list(
+        data_type,
+        list_pointer,
+        capacity as u32,
+        list_length,
+        &mut memory,
+    );
+
+    let mut stack = get_init_tvm_stack();
+    stack.push(list_pointer);
+
+    ExecutionState {
+        stack,
+        std_in: vec![],
+        secret_in: vec![],
+        memory,
+        words_allocated: 1,
+    }
 }
 
 #[cfg(test)]
@@ -120,6 +162,7 @@ mod tests {
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
     use crate::get_init_tvm_stack;
+    use crate::snippet_bencher::bench_and_write;
     use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
@@ -132,6 +175,11 @@ mod tests {
         rust_tasm_equivalence_prop_new(SafeLength(DataType::BFE));
         rust_tasm_equivalence_prop_new(SafeLength(DataType::XFE));
         rust_tasm_equivalence_prop_new(SafeLength(DataType::Digest));
+    }
+
+    #[test]
+    fn safe_length_benchmark() {
+        bench_and_write(SafeLength(DataType::Digest));
     }
 
     #[test]

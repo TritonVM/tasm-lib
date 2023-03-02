@@ -110,11 +110,25 @@ impl Snippet for UnsafeNew {
         unsafe_list_new(list_pointer, memory);
         stack.push(list_pointer);
     }
+
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        ExecutionState::with_stack(get_init_tvm_stack())
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        ExecutionState::with_stack(get_init_tvm_stack())
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::test_helpers::rust_tasm_equivalence_prop_new;
+    use crate::{snippet_bencher::bench_and_write, test_helpers::rust_tasm_equivalence_prop_new};
 
     use super::*;
 
@@ -124,5 +138,10 @@ mod tests {
         rust_tasm_equivalence_prop_new(UnsafeNew(DataType::U64));
         rust_tasm_equivalence_prop_new(UnsafeNew(DataType::XFE));
         rust_tasm_equivalence_prop_new(UnsafeNew(DataType::Digest));
+    }
+
+    #[test]
+    fn unsafe_new_benchmark() {
+        bench_and_write(UnsafeNew(DataType::Digest));
     }
 }

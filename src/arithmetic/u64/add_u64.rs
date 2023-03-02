@@ -67,30 +67,6 @@ impl Snippet for AddU64 {
             ExecutionState::with_stack(stack)
         });
 
-        // FIXME: Disable benchmarks that may overflow, since the benchmark panics when the VM panics.
-        // // 2. one small, one large
-        // states.push({
-        //     let mut stack = get_init_tvm_stack();
-        //     push_hashable(&mut stack, &small_a);
-        //     push_hashable(&mut stack, &large_a);
-        //     ExecutionState::with_stack(stack)
-        // });
-
-        // states.push({
-        //     let mut stack = get_init_tvm_stack();
-        //     push_hashable(&mut stack, &large_a);
-        //     push_hashable(&mut stack, &small_a);
-        //     ExecutionState::with_stack(stack)
-        // });
-
-        // // 3. two large
-        // states.push({
-        //     let mut stack = get_init_tvm_stack();
-        //     push_hashable(&mut stack, &large_a);
-        //     push_hashable(&mut stack, &large_b);
-        //     ExecutionState::with_stack(stack)
-        // });
-
         states
     }
 
@@ -163,6 +139,37 @@ impl Snippet for AddU64 {
             stack.push(res.pop().unwrap());
         }
     }
+
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        ExecutionState::with_stack(
+            vec![
+                get_init_tvm_stack(),
+                vec![BFieldElement::zero(), BFieldElement::new(1 << 31)],
+                vec![BFieldElement::zero(), BFieldElement::new(1 << 30)],
+            ]
+            .concat(),
+        )
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        ExecutionState::with_stack(
+            vec![
+                get_init_tvm_stack(),
+                vec![BFieldElement::new(1 << 31), BFieldElement::new(1 << 31)],
+                vec![
+                    BFieldElement::new(1 << 30),
+                    BFieldElement::new((1 << 31) + 10),
+                ],
+            ]
+            .concat(),
+        )
+    }
 }
 
 #[cfg(test)]
@@ -178,12 +185,12 @@ mod tests {
 
     #[test]
     fn add_u64_test() {
-        rust_tasm_equivalence_prop_new::<AddU64>(AddU64);
+        rust_tasm_equivalence_prop_new(AddU64);
     }
 
     #[test]
     fn add_u64_benchmark() {
-        bench_and_write::<AddU64>(AddU64);
+        bench_and_write(AddU64);
     }
 
     #[test]

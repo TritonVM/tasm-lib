@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use num::Zero;
 use rand::RngCore;
 use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
@@ -109,6 +110,35 @@ impl Snippet for Div2U64 {
         stack.push(BFieldElement::new(result >> 32));
         stack.push(BFieldElement::new(result & u32::MAX as u64));
     }
+
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        ExecutionState::with_stack(
+            vec![
+                get_init_tvm_stack(),
+                vec![BFieldElement::zero(), BFieldElement::new(1 << 31)],
+            ]
+            .concat(),
+        )
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        ExecutionState::with_stack(
+            vec![
+                get_init_tvm_stack(),
+                vec![
+                    BFieldElement::new((1 << 31) + 1),
+                    BFieldElement::new(1 << 31),
+                ],
+            ]
+            .concat(),
+        )
+    }
 }
 
 #[cfg(test)]
@@ -124,12 +154,12 @@ mod tests {
 
     #[test]
     fn div2_u64_test() {
-        rust_tasm_equivalence_prop_new::<Div2U64>(Div2U64);
+        rust_tasm_equivalence_prop_new(Div2U64);
     }
 
     #[test]
     fn div2_u64_benchmark() {
-        bench_and_write::<Div2U64>(Div2U64);
+        bench_and_write(Div2U64);
     }
 
     #[should_panic]

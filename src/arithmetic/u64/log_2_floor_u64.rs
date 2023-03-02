@@ -1,3 +1,4 @@
+use num::Zero;
 use rand::RngCore;
 use std::collections::HashMap;
 use twenty_first::amount::u32s::U32s;
@@ -118,6 +119,35 @@ impl Snippet for Log2FloorU64 {
         let log_2_floor = log_2_floor(value_u64 as u128);
         stack.push(BFieldElement::new(log_2_floor));
     }
+
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        ExecutionState::with_stack(
+            vec![
+                get_init_tvm_stack(),
+                vec![BFieldElement::zero(), BFieldElement::new(1 << 31)],
+            ]
+            .concat(),
+        )
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        ExecutionState::with_stack(
+            vec![
+                get_init_tvm_stack(),
+                vec![
+                    BFieldElement::new((1 << 31) + 1),
+                    BFieldElement::new(1 << 31),
+                ],
+            ]
+            .concat(),
+        )
+    }
 }
 
 #[cfg(test)]
@@ -132,12 +162,12 @@ mod tests {
 
     #[test]
     fn log_2_floor_u64_test() {
-        rust_tasm_equivalence_prop_new::<Log2FloorU64>(Log2FloorU64);
+        rust_tasm_equivalence_prop_new(Log2FloorU64);
     }
 
     #[test]
     fn log_2_floor_u64_benchmark() {
-        bench_and_write::<Log2FloorU64>(Log2FloorU64);
+        bench_and_write(Log2FloorU64);
     }
 
     #[should_panic]
@@ -147,7 +177,7 @@ mod tests {
         init_stack.push(BFieldElement::new(16));
         init_stack.push(BFieldElement::new(u32::MAX as u64 + 1));
 
-        let _execution_result = rust_tasm_equivalence_prop::<Log2FloorU64>(
+        let _execution_result = rust_tasm_equivalence_prop(
             Log2FloorU64,
             &init_stack,
             &[],

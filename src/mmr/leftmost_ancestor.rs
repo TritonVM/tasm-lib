@@ -48,13 +48,8 @@ impl Snippet for MmrLeftMostAncestor {
     fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
         let mut ret: Vec<ExecutionState> = vec![];
         for _ in 0..10 {
-            let mut stack = get_init_tvm_stack();
             let node_index = thread_rng().gen_range(0..u64::MAX / 2);
-            let node_index_hi = BFieldElement::new(node_index >> 32);
-            let node_index_lo = BFieldElement::new(node_index & u32::MAX as u64);
-            stack.push(node_index_hi);
-            stack.push(node_index_lo);
-            ret.push(ExecutionState::with_stack(stack));
+            ret.push(prepare_state(node_index));
         }
 
         ret
@@ -121,6 +116,29 @@ impl Snippet for MmrLeftMostAncestor {
         stack.append(&mut ret.to_sequence().into_iter().rev().collect());
         stack.push(BFieldElement::from(h));
     }
+
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        prepare_state((1 << 32) - 1)
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        prepare_state((1 << 63) - 1)
+    }
+}
+
+fn prepare_state(node_index: u64) -> ExecutionState {
+    let mut stack = get_init_tvm_stack();
+    let node_index_hi = BFieldElement::new(node_index >> 32);
+    let node_index_lo = BFieldElement::new(node_index & u32::MAX as u64);
+    stack.push(node_index_hi);
+    stack.push(node_index_lo);
+    ExecutionState::with_stack(stack)
 }
 
 #[cfg(test)]
@@ -136,12 +154,12 @@ mod tests {
 
     #[test]
     fn leftmost_ancestor_test() {
-        rust_tasm_equivalence_prop_new::<MmrLeftMostAncestor>(MmrLeftMostAncestor);
+        rust_tasm_equivalence_prop_new(MmrLeftMostAncestor);
     }
 
     #[test]
     fn leftmost_ancestor_benchmark() {
-        bench_and_write::<MmrLeftMostAncestor>(MmrLeftMostAncestor);
+        bench_and_write(MmrLeftMostAncestor);
     }
 
     #[test]

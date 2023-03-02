@@ -39,23 +39,6 @@ impl Snippet for SafePop {
     }
 
     fn gen_input_states(&self) -> Vec<ExecutionState> {
-        fn prepare_state(data_type: &DataType) -> ExecutionState {
-            let list_pointer: BFieldElement = random();
-            let max_length: usize = 30;
-            let old_length: usize = thread_rng().gen_range(1..max_length);
-            let mut stack = get_init_tvm_stack();
-            stack.push(list_pointer);
-            let mut memory = HashMap::default();
-            safe_insert_random_list(
-                data_type,
-                list_pointer,
-                max_length as u32,
-                old_length,
-                &mut memory,
-            );
-            ExecutionState::with_stack_and_memory(stack, memory, 0)
-        }
-
         vec![prepare_state(&self.0)]
     }
 
@@ -150,6 +133,37 @@ impl Snippet for SafePop {
             stack.push(popped.pop().unwrap());
         }
     }
+
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        prepare_state(&self.0)
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        prepare_state(&self.0)
+    }
+}
+
+fn prepare_state(data_type: &DataType) -> ExecutionState {
+    let list_pointer: BFieldElement = random();
+    let capacity: usize = 30;
+    let old_length: usize = thread_rng().gen_range(1..capacity);
+    let mut stack = get_init_tvm_stack();
+    stack.push(list_pointer);
+    let mut memory = HashMap::default();
+    safe_insert_random_list(
+        data_type,
+        list_pointer,
+        capacity as u32,
+        old_length,
+        &mut memory,
+    );
+    ExecutionState::with_stack_and_memory(stack, memory, 0)
 }
 
 #[cfg(test)]
@@ -159,6 +173,7 @@ mod tests_pop {
 
     use crate::get_init_tvm_stack;
     use crate::rust_shadowing_helper_functions::safe_list::safe_list_push;
+    use crate::snippet_bencher::bench_and_write;
     use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
@@ -171,6 +186,11 @@ mod tests_pop {
         rust_tasm_equivalence_prop_new::<SafePop>(SafePop(DataType::BFE));
         rust_tasm_equivalence_prop_new::<SafePop>(SafePop(DataType::XFE));
         rust_tasm_equivalence_prop_new::<SafePop>(SafePop(DataType::Digest));
+    }
+
+    #[test]
+    fn safe_pop_benchmark() {
+        bench_and_write(SafePop(DataType::Digest));
     }
 
     #[test]

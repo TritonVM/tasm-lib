@@ -46,24 +46,6 @@ impl Snippet for UnsafeSet {
     }
 
     fn gen_input_states(&self) -> Vec<ExecutionState> {
-        fn prepare_state(data_type: &DataType) -> ExecutionState {
-            let list_length: usize = thread_rng().gen_range(1..100);
-            let index: usize = thread_rng().gen_range(0..list_length);
-            let mut stack = get_init_tvm_stack();
-            let mut push_value: Vec<BFieldElement> = random_elements(data_type.get_size());
-            while let Some(element) = push_value.pop() {
-                stack.push(element);
-            }
-
-            let list_pointer: BFieldElement = random();
-            stack.push(list_pointer);
-            stack.push(BFieldElement::new(index as u64));
-
-            let mut memory = HashMap::default();
-            unsafe_insert_random_list(list_pointer, list_length, &mut memory, data_type.get_size());
-            ExecutionState::with_stack_and_memory(stack, memory, 0)
-        }
-
         vec![
             prepare_state(&self.0),
             prepare_state(&self.0),
@@ -138,6 +120,38 @@ impl Snippet for UnsafeSet {
             self.0.get_size(),
         );
     }
+
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        prepare_state(&self.0)
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        prepare_state(&self.0)
+    }
+}
+
+fn prepare_state(data_type: &DataType) -> ExecutionState {
+    let list_length: usize = thread_rng().gen_range(1..100);
+    let index: usize = thread_rng().gen_range(0..list_length);
+    let mut stack = get_init_tvm_stack();
+    let mut push_value: Vec<BFieldElement> = random_elements(data_type.get_size());
+    while let Some(element) = push_value.pop() {
+        stack.push(element);
+    }
+
+    let list_pointer: BFieldElement = random();
+    stack.push(list_pointer);
+    stack.push(BFieldElement::new(index as u64));
+
+    let mut memory = HashMap::default();
+    unsafe_insert_random_list(list_pointer, list_length, &mut memory, data_type.get_size());
+    ExecutionState::with_stack_and_memory(stack, memory, 0)
 }
 
 #[cfg(test)]
@@ -145,6 +159,7 @@ mod list_set_tests {
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
     use crate::get_init_tvm_stack;
+    use crate::snippet_bencher::bench_and_write;
     use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
@@ -157,6 +172,11 @@ mod list_set_tests {
         rust_tasm_equivalence_prop_new::<UnsafeSet>(UnsafeSet(DataType::U64));
         rust_tasm_equivalence_prop_new::<UnsafeSet>(UnsafeSet(DataType::XFE));
         rust_tasm_equivalence_prop_new::<UnsafeSet>(UnsafeSet(DataType::Digest));
+    }
+
+    #[test]
+    fn unsafe_set_benchmark() {
+        bench_and_write(UnsafeSet(DataType::Digest));
     }
 
     #[test]

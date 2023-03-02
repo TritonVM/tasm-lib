@@ -68,4 +68,39 @@ impl Snippet for Neg {
         let elem = stack.pop().unwrap();
         stack.push(-elem);
     }
+
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        ExecutionState::with_stack(
+            vec![get_init_tvm_stack(), vec![BFieldElement::new(1u64 << 20)]].concat(),
+        )
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        ExecutionState::with_stack(
+            vec![get_init_tvm_stack(), vec![BFieldElement::new(1u64 << 31)]].concat(),
+        )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::snippet_bencher::bench_and_write;
+    use crate::test_helpers::rust_tasm_equivalence_prop_new;
+
+    #[test]
+    fn lsb_test() {
+        rust_tasm_equivalence_prop_new(Neg);
+    }
+
+    #[test]
+    fn lsb_benchmark() {
+        bench_and_write(Neg);
+    }
 }

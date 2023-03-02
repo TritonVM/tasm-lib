@@ -13,20 +13,36 @@ pub struct SnippetBenchmark {
     processor_table_height: usize,
     hash_table_height: usize,
     u32_table_height: usize,
+    case: SnippetBenchmarkCase,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub enum SnippetBenchmarkCase {
+    CommonCase,
+    WorstCase,
 }
 
 #[allow(dead_code)]
 pub fn benchmark_snippet<T: Snippet + Clone>(snippet: T) -> Vec<SnippetBenchmark> {
-    let execution_states = snippet.gen_input_states();
-    let mut benchmarks = Vec::with_capacity(execution_states.len());
+    let mut benchmarks = Vec::with_capacity(2);
 
-    for execution_state in execution_states {
+    for (case, execution_state) in [
+        (
+            SnippetBenchmarkCase::CommonCase,
+            snippet.common_case_input_state(),
+        ),
+        (
+            SnippetBenchmarkCase::WorstCase,
+            snippet.worst_case_input_state(),
+        ),
+    ] {
         let (aet, inflated_clock_cycles) = simulate_snippet::<T>(snippet.clone(), execution_state);
         let benchmark = SnippetBenchmark {
             name: snippet.entrypoint(),
             processor_table_height: aet.processor_trace.nrows() - inflated_clock_cycles,
             hash_table_height: aet.hash_trace.nrows(),
             u32_table_height: MasterBaseTable::u32_table_length(&aet),
+            case,
         };
         benchmarks.push(benchmark);
     }

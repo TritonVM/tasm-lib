@@ -1,0 +1,16 @@
+[
+  {
+    "name": "tasm_pseudo_neg",
+    "processor_table_height": 5,
+    "hash_table_height": 0,
+    "u32_table_height": 0,
+    "case": "CommonCase"
+  },
+  {
+    "name": "tasm_pseudo_neg",
+    "processor_table_height": 5,
+    "hash_table_height": 0,
+    "u32_table_height": 0,
+    "case": "WorstCase"
+  }
+]
