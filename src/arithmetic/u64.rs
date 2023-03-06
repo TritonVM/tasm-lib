@@ -4,6 +4,7 @@ pub mod decr_u64;
 pub mod div2_u64;
 pub mod eq_u64;
 pub mod incr_u64;
+pub mod index_of_last_nonzero_bit;
 pub mod log_2_floor_u64;
 pub mod lt_u64;
 pub mod pow2_u64;

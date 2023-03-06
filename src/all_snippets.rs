@@ -11,6 +11,7 @@ use crate::{
             div2_u64::Div2U64,
             eq_u64::EqU64,
             incr_u64::IncrU64,
+            index_of_last_nonzero_bit::IndexOfLastNonZeroBitU64,
             log_2_floor_u64::Log2FloorU64,
             lt_u64::{LtStandardU64, LtU64},
             pow2_u64::Pow2U64,
@@ -89,6 +90,7 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn Snippet> {
         "tasm_arithmetic_u64_lt_standard" => Box::new(LtStandardU64),
         "tasm_arithmetic_u64_pow2" => Box::new(Pow2U64),
         "tasm_arithmetic_u64_sub" => Box::new(SubU64),
+        "tasm_arithmetic_u64_index_of_last_nonzero_bit" => Box::new(IndexOfLastNonZeroBitU64),
 
         // Hashing
         "tasm_hashing_eq_digest" => Box::new(EqDigest),
