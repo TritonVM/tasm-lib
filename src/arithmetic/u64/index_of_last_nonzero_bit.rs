@@ -167,7 +167,11 @@ fn prepare_state(value: u64) -> ExecutionState {
 mod tests {
     use std::collections::HashMap;
 
+    use num::Zero;
+
     use crate::{
+        execute,
+        library::Library,
         snippet_bencher::bench_and_write,
         test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new},
     };
@@ -201,6 +205,60 @@ mod tests {
             &mut HashMap::default(),
             0,
             Some(&expected_output),
+        );
+    }
+
+    #[should_panic]
+    #[test]
+    fn disallow_non_u32_input_hi() {
+        let mut init_stack = get_init_tvm_stack();
+        init_stack.push(BFieldElement::new(1 << 32));
+        init_stack.push(BFieldElement::zero());
+
+        let _execution_result = rust_tasm_equivalence_prop(
+            IndexOfLastNonZeroBitU64,
+            &init_stack,
+            &[],
+            &[],
+            &mut HashMap::default(),
+            0,
+            None,
+        );
+    }
+
+    #[should_panic]
+    #[test]
+    fn disallow_non_u32_input_lo() {
+        let mut init_stack = get_init_tvm_stack();
+        init_stack.push(BFieldElement::zero());
+        init_stack.push(BFieldElement::new(1 << 32));
+
+        let _execution_result = rust_tasm_equivalence_prop(
+            IndexOfLastNonZeroBitU64,
+            &init_stack,
+            &[],
+            &[],
+            &mut HashMap::default(),
+            0,
+            None,
+        );
+    }
+
+    #[should_panic]
+    #[test]
+    fn disallow_zero_input() {
+        let mut init_stack = get_init_tvm_stack();
+        init_stack.push(BFieldElement::zero());
+        init_stack.push(BFieldElement::zero());
+
+        let _execution_result = rust_tasm_equivalence_prop(
+            IndexOfLastNonZeroBitU64,
+            &init_stack,
+            &[],
+            &[],
+            &mut HashMap::default(),
+            0,
+            None,
         );
     }
 
