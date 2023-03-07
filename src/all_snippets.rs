@@ -16,6 +16,7 @@ use crate::{
             lt_u64::{LtStandardU64, LtU64},
             pow2_u64::Pow2U64,
             sub_u64::SubU64,
+            xor_u64::XorU64,
         },
     },
     dyn_malloc::DynMalloc,
@@ -81,6 +82,7 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn Snippet> {
         // u64
         "tasm_arithmetic_u64_add" => Box::new(AddU64),
         "tasm_arithmetic_u64_and" => Box::new(AndU64),
+        "tasm_arithmetic_u64_xor" => Box::new(XorU64),
         "tasm_arithmetic_u64_decr" => Box::new(DecrU64),
         "tasm_arithmetic_u64_div2" => Box::new(Div2U64),
         "tasm_arithmetic_u64_eq" => Box::new(EqU64),

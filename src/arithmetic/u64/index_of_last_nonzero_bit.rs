@@ -52,7 +52,7 @@ impl Snippet for IndexOfLastNonZeroBitU64 {
         format!(
             "
             // BEFORE: _ value_hi value_lo
-            // AFTER: _ log2_floor(value)
+            // AFTER: _ index_of_last_non-zero_bit
             {entrypoint}:
                 dup1 dup1
                 call {log_2_floor_u64}
