@@ -94,7 +94,10 @@ impl Snippet for IndexOfLastNonZeroBitU64 {
     where
         Self: Sized,
     {
-        vec![]
+        vec![
+            "input is zero".to_owned(),
+            "any input is not a u32".to_owned(),
+        ]
     }
 
     fn gen_input_states(&self) -> Vec<crate::ExecutionState>
