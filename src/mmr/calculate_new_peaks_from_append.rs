@@ -85,7 +85,7 @@ impl Snippet for CalculateNewPeaksFromAppend {
         let pop = library.import(Box::new(UnsafePop(DataType::Digest)));
         let set_length = library.import(Box::new(UnsafeSetLength(DataType::Digest)));
         let u64incr = library.import(Box::new(IncrU64));
-        let parent_count = library.import(Box::new(IndexOfLastNonZeroBitU64));
+        let right_lineage_count = library.import(Box::new(IndexOfLastNonZeroBitU64));
 
         // Allocate memory for the returned auth path for the newly inserted element
         // Warning: This auth path is only allocated *once* even though the code is called multiple times.
@@ -117,7 +117,7 @@ impl Snippet for CalculateNewPeaksFromAppend {
                     // stack: _ old_leaf_count_hi old_leaf_count_lo *auth_path *peaks old_leaf_count_hi old_leaf_count_lo
 
                     call {u64incr}
-                    call {parent_count}
+                    call {right_lineage_count}
 
                     call {entrypoint}_while
                     // stack: _ old_leaf_count_hi old_leaf_count_lo *auth_path *peaks (rll = 0)
