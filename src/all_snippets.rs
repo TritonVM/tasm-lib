@@ -9,6 +9,7 @@ use crate::{
             and_u64::AndU64,
             decr_u64::DecrU64,
             div2_u64::Div2U64,
+            double_pow2_u64::DoublePow2U64,
             eq_u64::EqU64,
             incr_u64::IncrU64,
             index_of_last_nonzero_bit::IndexOfLastNonZeroBitU64,
@@ -93,6 +94,7 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn Snippet> {
         "tasm_arithmetic_u64_pow2" => Box::new(Pow2U64),
         "tasm_arithmetic_u64_sub" => Box::new(SubU64),
         "tasm_arithmetic_u64_index_of_last_nonzero_bit" => Box::new(IndexOfLastNonZeroBitU64),
+        "tasm_arithmetic_pow2_double" => Box::new(DoublePow2U64),
 
         // Hashing
         "tasm_hashing_eq_digest" => Box::new(EqDigest),

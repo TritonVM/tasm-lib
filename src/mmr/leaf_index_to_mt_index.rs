@@ -9,11 +9,13 @@ use twenty_first::util_types::mmr;
 
 use crate::arithmetic::u64::add_u64::AddU64;
 use crate::arithmetic::u64::and_u64::AndU64;
+use crate::arithmetic::u64::decr_u64::DecrU64;
+use crate::arithmetic::u64::double_pow2_u64::DoublePow2U64;
 use crate::arithmetic::u64::eq_u64::EqU64;
 use crate::arithmetic::u64::log_2_floor_u64::Log2FloorU64;
 use crate::arithmetic::u64::lt_u64::LtU64;
 use crate::arithmetic::u64::pow2_u64::Pow2U64;
-use crate::arithmetic::u64::sub_u64::SubU64;
+use crate::arithmetic::u64::xor_u64::XorU64;
 use crate::library::Library;
 use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, ExecutionState};
@@ -78,8 +80,10 @@ impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
         let add_u64 = library.import(Box::new(AddU64));
         let and_u64 = library.import(Box::new(AndU64));
         let pow2_u64 = library.import(Box::new(Pow2U64));
-        let sub_u64 = library.import(Box::new(SubU64));
         let eq_u64 = library.import(Box::new(EqU64));
+        let xor_u64 = library.import(Box::new(XorU64));
+        let decr_u64 = library.import(Box::new(DecrU64));
+        let double_pow2_u64 = library.import(Box::new(DoublePow2U64));
 
         format!(
             "
@@ -91,88 +95,123 @@ impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
             assert
             // stack: _ leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo
 
-            dup3 dup3
+            // `discrepancies`
+            dup3
+            dup3
+            dup3
+            dup3
+
+            call {xor_u64}
+            // stack: _ leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo discrepancies_hi discrepancies_lo
+
+            // `local_mt_height`
             call {log_2_floor_u64}
-            // stack: _ leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo max_tree_height
+            // stack: _ leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo local_mt_height
 
-            // Rename: max_tree_height -> h, leaf_index -> ret
-            // stack: _ leaf_count_hi leaf_count_lo ret_hi ret_lo h
+            // `local_mt_leaf_count`
+            call {pow2_u64}
+            // stack: _ leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo local_mt_leaf_count_hi local_mt_leaf_count_lo
 
+            dup1 dup1
+            // stack: _ leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo local_mt_leaf_count_hi local_mt_leaf_count_lo local_mt_leaf_count_hi local_mt_leaf_count_lo
+
+            // `remainder_bitmask`
+            dup1
+            dup1
+            call {decr_u64}
+            // stack: _ leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo local_mt_leaf_count_hi local_mt_leaf_count_lo local_mt_leaf_count_hi local_mt_leaf_count_lo remainder_bitmask_hi remainder_bitmask_lo
+
+            // `local_leaf_index`
+            dup7
+            dup7
+            call {and_u64}
+            // stack: _ lc_hi lc_lo li_hi li_lo local_mt_leaf_count_hi local_mt_leaf_count_lo local_mt_leaf_count_hi local_mt_leaf_count_lo local_leaf_index_hi local_leaf_index_lo
+
+            // `mt_index`
+            call {add_u64}
+            // stack: _ lc_hi lc_lo li_hi li_lo local_mt_leaf_count_hi local_mt_leaf_count_lo mt_index_hi mt_index_lo
+
+            // declare `peak_index`, `cutoff`, and `search`
             push 0
-            // stack: _ leaf_count_hi leaf_count_lo ret_hi ret_lo h peak_index
+            // stack: _ lc_hi lc_lo li_hi li_lo local_mt_lc_hi local_mt_lc_lo mti_hi mti_lo pi
 
-            call {entrypoint}_loop
-            // stack: _ leaf_count_hi leaf_count_lo ret_hi ret_lo h peak_index maybe_pow_hi maybe_pow_lo
+            dup8 dup8
+            call {log_2_floor_u64}
+            call {pow2_u64}
+            // stack: _ lc_hi lc_lo li_hi li_lo local_mt_lc_hi local_mt_lc_lo mti_hi mti_lo pi cutoff_hi cutoff_lo
 
-            // ret -> ret + maybe_pow
-            dup5 dup5 call {add_u64}
-            // stack: _ leaf_count_hi leaf_count_lo ret_hi ret_lo h peak_index (ret + maybe_pow)_hi (ret + maybe_pow)_lo
+            dup6 dup6
+            // stack: _ lc_hi lc_lo li_hi li_lo local_mt_lc_hi local_mt_lc_lo mti_hi mti_lo pi cutoff_hi cutoff_lo search_hi search_lo
 
-            swap6 pop swap6 pop
-            // stack: _ (ret + maybe_pow)_hi (ret + maybe_pow)_lo ret_hi ret_lo h peak_index
+            call {entrypoint}_while
+            // stack: _ lc_hi lc_lo li_hi li_lo local_mt_lc_hi local_mt_lc_lo mti_hi mti_lo pi cutoff_hi cutoff_lo search_hi search_lo
 
-            swap3 pop pop pop
-            // stack: _ (ret + maybe_pow)_hi (ret + maybe_pow)_lo peak_index
+            pop
+            pop
+            pop
+            pop
+            swap6
+            pop
+            swap6
+            pop
+            swap6
+            pop
 
-            // rename: (ret + maybe_pow) -> ret
-            // stack: _ ret_hi ret_lo peak_index
+            pop
+            pop
+            pop
+            // After: _ mti_hi mti_lo pi
 
             return
 
-        // Start/end stack: // stack: _ leaf_count_hi leaf_count_lo ret_hi ret_lo h peak_index
-        // On return: stack: _ leaf_count_hi leaf_count_lo ret_hi ret_lo h peak_index maybe_pow_hi maybe_pow_lo
-        {entrypoint}_loop:
-            dup1
-            call {pow2_u64}
-            // stack: _ leaf_count_hi leaf_count_lo ret_hi ret_lo h peak_index pow_hi pow_lo
+            // stack: _ lc_hi lc_lo li_hi li_lo local_mt_lc_hi local_mt_lc_lo mti_hi mti_lo pi cutoff_hi cutoff_lo search_hi search_lo
+            {entrypoint}_while:
+                // while search != cutoff
+                dup3 dup3 dup3 dup3
+                call {eq_u64}
+                skiz
+                    return
 
-            dup7 dup7
-            call {and_u64}
-            // stack: _ leaf_count_hi leaf_count_lo ret_hi ret_lo h peak_index maybe_pow_hi maybe_pow_lo
+                // stack: _ lc_hi lc_lo li_hi li_lo local_mt_lc_hi local_mt_lc_lo mti_hi mti_lo pi cutoff_hi cutoff_lo search_hi search_lo
 
-            // If h == 0 || ret < maybe_pow, then return from loop
-            dup5 dup5 call {lt_u64}
-            // stack: _ leaf_count_hi leaf_count_lo ret_hi ret_lo h peak_index maybe_pow_hi maybe_pow_lo ret_hi ret_lo (ret < maybe_pow)
+                dup12 dup12
+                dup3 dup3
+                call {and_u64}
+                // stack: _ lc_hi lc_lo li_hi li_lo local_mt_lc_hi local_mt_lc_lo mti_hi mti_lo pi cutoff_hi cutoff_lo search_hi search_lo (search & leaf_count)_hi (search & leaf_count)_lo
 
-            swap2 pop pop
-            // stack: _ leaf_count_hi leaf_count_lo ret_hi ret_lo h peak_index maybe_pow_hi maybe_pow_lo (ret < maybe_pow)
+                push 0
+                eq
+                // stack: _ lc_hi lc_lo li_hi li_lo local_mt_lc_hi local_mt_lc_lo mti_hi mti_lo pi cutoff_hi cutoff_lo search_hi search_lo (search & leaf_count)_hi (search & leaf_count)_lo == 0
 
-            dup4 push 0 eq
-            // stack: _ leaf_count_hi leaf_count_lo ret_hi ret_lo h peak_index maybe_pow_hi maybe_pow_lo (ret < maybe_pow) (h == 0)
+                swap1
+                // stack: _ lc_hi lc_lo li_hi li_lo local_mt_lc_hi local_mt_lc_lo mti_hi mti_lo pi cutoff_hi cutoff_lo search_hi search_lo ((search & leaf_count)_lo == 0) (search & leaf_count)_hi
 
-            add
-            // stack: _ leaf_count_hi leaf_count_lo ret_hi ret_lo h peak_index maybe_pow_hi maybe_pow_lo (ret < maybe_pow || h == 0)
+                push 0
+                eq
+                // stack: _ lc_hi lc_lo li_hi li_lo local_mt_lc_hi local_mt_lc_lo mti_hi mti_lo pi cutoff_hi cutoff_lo search_hi search_lo ((search & leaf_count)_lo == 0) ((search & leaf_count)_hi == 0)
 
-            skiz return
-            // stack: _ leaf_count_hi leaf_count_lo ret_hi ret_lo h peak_index maybe_pow_hi maybe_pow_lo
+                add
+                push 2
+                eq
+                push 0
+                eq
+                // stack: _ lc_hi lc_lo li_hi li_lo local_mt_lc_hi local_mt_lc_lo mti_hi mti_lo pi cutoff_hi cutoff_lo search_hi search_lo !(((search & leaf_count)_lo == 0) && ((search & leaf_count)_hi == 0))
 
-            // update ret: ret -> ret - maybe_pow
-            dup1 dup1 dup7 dup7 call {sub_u64}
-            // stack: _ leaf_count_hi leaf_count_lo ret_hi ret_lo h peak_index maybe_pow_hi maybe_pow_lo (ret - maybe_pow)_hi (ret - maybe_pow)_lo
+                // update `peak_index` (pi) value with boolean value
+                dup5
+                add
+                swap5
+                pop
+                // stack: _ lc_hi lc_lo li_hi li_lo local_mt_lc_hi local_mt_lc_lo mti_hi mti_lo new_pi cutoff_hi cutoff_lo search_hi search_lo
 
-            swap6 pop swap6 pop
-            // stack: _ leaf_count_hi leaf_count_lo (ret - maybe_pow)_hi (ret - maybe_pow)_lo h peak_index maybe_pow_hi maybe_pow_lo
+                // update `search` by multiplying it by two
+                call {double_pow2_u64}
+                // stack: _ lc_hi lc_lo li_hi li_lo local_mt_lc_hi local_mt_lc_lo mti_hi mti_lo new_pi cutoff_hi cutoff_lo new_search_hi new_search_lo
 
-            // rename (ret - maybe_pow) -> ret
-            // stack: _ leaf_count_hi leaf_count_lo ret_hi ret_lo h peak_index maybe_pow_hi maybe_pow_lo
+                // rename: 'new' -> ''
+                // stack: _ lc_hi lc_lo li_hi li_lo local_mt_lc_hi local_mt_lc_lo mti_hi mti_lo pi cutoff_hi cutoff_lo search_hi search_lo
 
-            push 0 push 0 call {eq_u64} push 0 eq
-            // stack: _ leaf_count_hi leaf_count_lo ret_hi ret_lo h peak_index (maybe_pow != 0)
-
-            add
-            // stack: _ leaf_count_hi leaf_count_lo ret_hi ret_lo h (peak_index + (maybe_pow != 0))
-
-            // rename: (peak_index + (maybe_pow != 0)) -> peak_index
-            // stack: _ leaf_count_hi leaf_count_lo ret_hi ret_lo h peak_index
-
-            // update h -> h - 1
-            swap1 push -1 add swap1
-            // stack: _ leaf_count_hi leaf_count_lo ret_hi ret_lo (h - 1) peak_index
-
-            // rename: h - 1 -> h
-            // stack: _ leaf_count_hi leaf_count_lo ret_hi ret_lo h peak_index
-
-            recurse
+                recurse
             "
         )
     }
