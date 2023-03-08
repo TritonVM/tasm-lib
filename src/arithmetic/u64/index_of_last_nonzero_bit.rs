@@ -170,8 +170,6 @@ mod tests {
     use num::Zero;
 
     use crate::{
-        execute,
-        library::Library,
         snippet_bencher::bench_and_write,
         test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new},
     };
