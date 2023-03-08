@@ -29,7 +29,7 @@ impl Snippet for SafeNew {
 
     fn output_types(&self) -> Vec<DataType> {
         // List pointers are considered u32
-        vec![DataType::U32]
+        vec![DataType::List(Box::new(self.0.clone()))]
     }
 
     fn outputs(&self) -> Vec<String>
