@@ -1,16 +1,16 @@
 [
   {
     "name": "tasm_arithmetic_u64_index_of_last_nonzero_bit",
-    "processor_table_height": 894,
+    "processor_table_height": 38,
     "hash_table_height": 0,
-    "u32_table_height": 1845,
+    "u32_table_height": 165,
     "case": "CommonCase"
   },
   {
     "name": "tasm_arithmetic_u64_index_of_last_nonzero_bit",
-    "processor_table_height": 1736,
+    "processor_table_height": 55,
     "hash_table_height": 0,
-    "u32_table_height": 4107,
+    "u32_table_height": 132,
     "case": "WorstCase"
   }
 ]

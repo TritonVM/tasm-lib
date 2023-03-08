@@ -10,9 +10,9 @@ use twenty_first::util_types::mmr;
 use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
 use twenty_first::util_types::mmr::mmr_trait::Mmr;
 
-use super::data_index_to_node_index::DataIndexToNodeIndex;
-use super::right_lineage_length::MmrRightLineageLength;
 use super::MAX_MMR_HEIGHT;
+use crate::arithmetic::u64::incr_u64::IncrU64;
+use crate::arithmetic::u64::index_of_last_nonzero_bit::IndexOfLastNonZeroBitU64;
 use crate::library::Library;
 use crate::list::unsafe_u32::pop::UnsafePop;
 use crate::list::unsafe_u32::push::UnsafePush;
@@ -81,11 +81,11 @@ impl Snippet for CalculateNewPeaksFromAppend {
 
     fn function_body(&self, library: &mut Library) -> String {
         let entrypoint = self.entrypoint();
-        let data_index_to_node_index = library.import(Box::new(DataIndexToNodeIndex));
-        let right_lineage_length = library.import(Box::new(MmrRightLineageLength));
         let push = library.import(Box::new(UnsafePush(DataType::Digest)));
         let pop = library.import(Box::new(UnsafePop(DataType::Digest)));
         let set_length = library.import(Box::new(UnsafeSetLength(DataType::Digest)));
+        let u64incr = library.import(Box::new(IncrU64));
+        let right_lineage_count = library.import(Box::new(IndexOfLastNonZeroBitU64));
 
         // Allocate memory for the returned auth path for the newly inserted element
         // Warning: This auth path is only allocated *once* even though the code is called multiple times.
@@ -116,11 +116,8 @@ impl Snippet for CalculateNewPeaksFromAppend {
                     dup3 dup3
                     // stack: _ old_leaf_count_hi old_leaf_count_lo *auth_path *peaks old_leaf_count_hi old_leaf_count_lo
 
-                    call {data_index_to_node_index}
-                    // stack: _ old_leaf_count_hi old_leaf_count_lo *auth_path *peaks new_ni_hi new_ni_lo
-
-                    call {right_lineage_length}
-                    // stack: _ old_leaf_count_hi old_leaf_count_lo *auth_path *peaks rll
+                    call {u64incr}
+                    call {right_lineage_count}
 
                     call {entrypoint}_while
                     // stack: _ old_leaf_count_hi old_leaf_count_lo *auth_path *peaks (rll = 0)

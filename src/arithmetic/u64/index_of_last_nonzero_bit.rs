@@ -2,12 +2,13 @@ use rand::{thread_rng, RngCore};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::{
+    arithmetic::u64::{and_u64::AndU64, log_2_floor_u64::Log2FloorU64},
     get_init_tvm_stack,
     snippet::{DataType, Snippet},
     ExecutionState,
 };
 
-use super::log_2_floor_u64::Log2FloorU64;
+use super::{decr_u64::DecrU64, xor_u64::XorU64};
 
 #[derive(Clone)]
 pub struct IndexOfLastNonZeroBitU64;
@@ -48,90 +49,43 @@ impl Snippet for IndexOfLastNonZeroBitU64 {
 
     fn function_body(&self, library: &mut crate::library::Library) -> String {
         let entrypoint = self.entrypoint();
+        let decr = library.import(Box::new(DecrU64));
+        let xor = library.import(Box::new(XorU64));
+        let and = library.import(Box::new(AndU64));
         let log_2_floor_u64 = library.import(Box::new(Log2FloorU64));
+
+        const U32MAX: &str = "4294967295";
+        // Finds the least significant set bit using `x & ~(x - 1)` where
+        // ~ denotes bit-inversion. Bit-inversion is achieved using
+        // `x ^ (0xFFFFFFFF)`.
         format!(
             "
             // BEFORE: _ value_hi value_lo
-            // AFTER: _ log2_floor(value)
+            // AFTER: _ index_of_last_non-zero_bit
             {entrypoint}:
-                dup1 dup1
+                dup1
+                dup1
+                // _ value_hi value_lo value_hi value_lo
+
+                call {decr}
+                // _ value_hi value_lo (value - 1)_hi (value - 1)_lo
+
+                push {U32MAX}
+                push {U32MAX}
+                // _ value_hi value_lo (value - 1)_hi (value - 1)_lo 0xFFFFFFFF 0xFFFFFFFF
+
+                call {xor}
+                // _ value_hi value_lo ~(value - 1)_hi ~(value - 1)_lo
+
+                call {and}
+                // _ (value & ~(value - 1))_hi (value & ~(value - 1))_lo
+
+                // The above value is now a power of two in u64. Calling log2_floor on this
+                // value gives us the index we are looking for.
                 call {log_2_floor_u64}
-                // _ value_hi value_lo i
 
-                dup0
-                dup0
-                // rename: i -> ret
-                // _ value_hi value_lo ret i i
-
-                call {entrypoint}_while
-
-                // _ value_hi value_lo ret i i
-                pop
-                pop
-                swap2
-                pop
-                pop
                 return
 
-                // Start/end stack: // stack: _ value_hi value_lo ret i i
-                {entrypoint}_while:
-
-                    // return if i == 0
-                    dup0
-                    push -1
-                    eq
-                    skiz
-                        return
-                    // _ value_hi value_lo ret i i
-
-                    // TODO: U32 table height can probably be reduced if
-                    // we update the pow2 value with division instead of pow/split here.
-                    dup0
-                    push 2
-                    pow
-                    split
-                    // _ value_hi value_lo ret i i pow2_hi pow2_lo
-
-                    dup5
-                    and
-                    // _ value_hi value_lo ret i i pow2_hi (pow2_lo & value_lo)
-
-                    swap1
-                    dup6
-                    and
-                    // _ value_hi value_lo ret i i (pow2_lo & value_lo) (pow2_hi & value_hi)
-
-                    push 0
-                    eq
-                    swap1
-                    push 0
-                    eq
-                    // _ value_hi value_lo ret i i (pow2_hi & value_hi == 0) (pow2_lo & value_lo == 0)
-
-                    mul
-                    // _ value_hi value_lo ret i i (pow2_hi & value_hi == 0) && (pow2_lo & value_lo == 0)
-
-                    push 0
-                    eq
-                    // _ value_hi value_lo ret i i !((pow2_hi & value_hi == 0) && (pow2_lo & value_lo == 0))
-
-                    // rename: !((pow2_hi & value_hi == 0) && (pow2_lo & value_lo == 0)) -> nonzero
-                    // _ value_hi value_lo ret i i nonzero
-                    skiz
-                        // _ value_hi value_lo ret i i
-                        swap2
-                        // _ value_hi value_lo i i ret
-                    pop
-                    // _ value_hi value_lo ret i
-
-                    push -1
-                    add
-                    // _ value_hi value_lo ret (i - 1)
-
-                    dup0
-                    // _ value_hi value_lo ret (i - 1) (i - 1)
-
-                    recurse
             "
         )
     }
@@ -140,7 +94,10 @@ impl Snippet for IndexOfLastNonZeroBitU64 {
     where
         Self: Sized,
     {
-        vec![]
+        vec![
+            "input is zero".to_owned(),
+            "any input is not a u32".to_owned(),
+        ]
     }
 
     fn gen_input_states(&self) -> Vec<crate::ExecutionState>
@@ -210,7 +167,7 @@ fn prepare_state(value: u64) -> ExecutionState {
 mod tests {
     use std::collections::HashMap;
 
-    use num::{One, Zero};
+    use num::Zero;
 
     use crate::{
         snippet_bencher::bench_and_write,
@@ -229,14 +186,14 @@ mod tests {
         bench_and_write(IndexOfLastNonZeroBitU64);
     }
 
-    #[test]
-    fn ten_to_one() {
+    fn index_of_last_nonzero_bit_prop(value: u64, expected: u32) {
+        println!("value: {value}");
         let mut init_stack = get_init_tvm_stack();
-        init_stack.push(BFieldElement::zero());
-        init_stack.push(BFieldElement::new(10));
+        init_stack.push(BFieldElement::new(value >> 32));
+        init_stack.push(BFieldElement::new(value & u32::MAX as u64));
 
         let mut expected_output = get_init_tvm_stack();
-        expected_output.push(BFieldElement::one());
+        expected_output.push(BFieldElement::new(expected as u64));
 
         let _execution_result = rust_tasm_equivalence_prop(
             IndexOfLastNonZeroBitU64,
@@ -249,14 +206,12 @@ mod tests {
         );
     }
 
+    #[should_panic]
     #[test]
-    fn eleven_to_zero() {
+    fn disallow_non_u32_input_hi() {
         let mut init_stack = get_init_tvm_stack();
+        init_stack.push(BFieldElement::new(1 << 32));
         init_stack.push(BFieldElement::zero());
-        init_stack.push(BFieldElement::new(11));
-
-        let mut expected_output = get_init_tvm_stack();
-        expected_output.push(BFieldElement::zero());
 
         let _execution_result = rust_tasm_equivalence_prop(
             IndexOfLastNonZeroBitU64,
@@ -265,87 +220,66 @@ mod tests {
             &[],
             &mut HashMap::default(),
             0,
-            Some(&expected_output),
+            None,
+        );
+    }
+
+    #[should_panic]
+    #[test]
+    fn disallow_non_u32_input_lo() {
+        let mut init_stack = get_init_tvm_stack();
+        init_stack.push(BFieldElement::zero());
+        init_stack.push(BFieldElement::new(1 << 32));
+
+        let _execution_result = rust_tasm_equivalence_prop(
+            IndexOfLastNonZeroBitU64,
+            &init_stack,
+            &[],
+            &[],
+            &mut HashMap::default(),
+            0,
+            None,
+        );
+    }
+
+    #[should_panic]
+    #[test]
+    fn disallow_zero_input() {
+        let mut init_stack = get_init_tvm_stack();
+        init_stack.push(BFieldElement::zero());
+        init_stack.push(BFieldElement::zero());
+
+        let _execution_result = rust_tasm_equivalence_prop(
+            IndexOfLastNonZeroBitU64,
+            &init_stack,
+            &[],
+            &[],
+            &mut HashMap::default(),
+            0,
+            None,
         );
     }
 
     #[test]
-    fn twelve_to_two() {
-        let mut init_stack = get_init_tvm_stack();
-        init_stack.push(BFieldElement::zero());
-        init_stack.push(BFieldElement::new(12));
-
-        let mut expected_output = get_init_tvm_stack();
-        expected_output.push(BFieldElement::new(2));
-
-        let _execution_result = rust_tasm_equivalence_prop(
-            IndexOfLastNonZeroBitU64,
-            &init_stack,
-            &[],
-            &[],
-            &mut HashMap::default(),
-            0,
-            Some(&expected_output),
-        );
-    }
-
-    #[test]
-    fn three_to_zero() {
-        let mut init_stack = get_init_tvm_stack();
-        init_stack.push(BFieldElement::zero());
-        init_stack.push(BFieldElement::new(3));
-
-        let mut expected_output = get_init_tvm_stack();
-        expected_output.push(BFieldElement::zero());
-
-        let _execution_result = rust_tasm_equivalence_prop(
-            IndexOfLastNonZeroBitU64,
-            &init_stack,
-            &[],
-            &[],
-            &mut HashMap::default(),
-            0,
-            Some(&expected_output),
-        );
-    }
-
-    #[test]
-    fn two_to_one() {
-        let mut init_stack = get_init_tvm_stack();
-        init_stack.push(BFieldElement::zero());
-        init_stack.push(BFieldElement::new(2));
-
-        let mut expected_output = get_init_tvm_stack();
-        expected_output.push(BFieldElement::one());
-
-        let _execution_result = rust_tasm_equivalence_prop(
-            IndexOfLastNonZeroBitU64,
-            &init_stack,
-            &[],
-            &[],
-            &mut HashMap::default(),
-            0,
-            Some(&expected_output),
-        );
-    }
-
-    #[test]
-    fn one_to_zero() {
-        let mut init_stack = get_init_tvm_stack();
-        init_stack.push(BFieldElement::zero());
-        init_stack.push(BFieldElement::one());
-
-        let mut expected_output = get_init_tvm_stack();
-        expected_output.push(BFieldElement::zero());
-
-        let _execution_result = rust_tasm_equivalence_prop(
-            IndexOfLastNonZeroBitU64,
-            &init_stack,
-            &[],
-            &[],
-            &mut HashMap::default(),
-            0,
-            Some(&expected_output),
-        );
+    fn unit_tests() {
+        index_of_last_nonzero_bit_prop(1, 0);
+        index_of_last_nonzero_bit_prop(2, 1);
+        index_of_last_nonzero_bit_prop(3, 0);
+        index_of_last_nonzero_bit_prop(10, 1);
+        index_of_last_nonzero_bit_prop(11, 0);
+        index_of_last_nonzero_bit_prop(12, 2);
+        index_of_last_nonzero_bit_prop(64, 6);
+        index_of_last_nonzero_bit_prop(65, 0);
+        index_of_last_nonzero_bit_prop(66, 1);
+        index_of_last_nonzero_bit_prop(67, 0);
+        index_of_last_nonzero_bit_prop(68, 2);
+        index_of_last_nonzero_bit_prop(u32::MAX as u64, 0);
+        index_of_last_nonzero_bit_prop(1 << 32, 32);
+        index_of_last_nonzero_bit_prop((1 << 32) + (1 << 17), 17);
+        index_of_last_nonzero_bit_prop((1 << 62) + (1 << 17), 17);
+        index_of_last_nonzero_bit_prop((1 << 63) + (1 << 17), 17);
+        index_of_last_nonzero_bit_prop((1 << 63) + (1 << 41), 41);
+        index_of_last_nonzero_bit_prop((1 << 63) + (1 << 60), 60);
+        index_of_last_nonzero_bit_prop(1 << 63, 63);
     }
 }
