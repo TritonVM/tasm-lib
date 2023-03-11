@@ -69,7 +69,6 @@ impl Snippet for UnsafeSet {
         for i in 0..element_size {
             write_elements_to_memory_code.push_str("swap1\n");
             write_elements_to_memory_code.push_str("write_mem\n");
-            write_elements_to_memory_code.push_str("pop\n");
             if i != element_size - 1 {
                 // Prepare for next write. Not needed for last iteration.
                 write_elements_to_memory_code.push_str("push 1\n");
@@ -77,13 +76,17 @@ impl Snippet for UnsafeSet {
             }
         }
 
+        let mul_with_size = if element_size != 1 {
+            format!("push {element_size}\n mul\n")
+        } else {
+            String::default()
+        };
         format!(
             "
                 // BEFORE: _ elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}} *list index
                 // AFTER: _
                 {entrypoint}:
-                    push {element_size}
-                    mul
+                    {mul_with_size}
                     push 1
                     add
                     add

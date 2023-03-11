@@ -79,13 +79,19 @@ impl Snippet for SafeSet {
         for i in 0..element_size {
             write_elements_to_memory_code.push_str("swap1\n");
             write_elements_to_memory_code.push_str("write_mem\n");
-            write_elements_to_memory_code.push_str("pop\n");
             if i != element_size - 1 {
                 // Prepare for next write. Not needed for last iteration.
                 write_elements_to_memory_code.push_str("push 1\n");
                 write_elements_to_memory_code.push_str("add\n");
             }
         }
+
+        // Code to multiply with size. If size is 1, do nothing to save two clock cycles.
+        let mul_with_size = if element_size != 1 {
+            format!("push {element_size}\n mul\n")
+        } else {
+            String::default()
+        };
 
         format!(
             "
@@ -94,7 +100,6 @@ impl Snippet for SafeSet {
                 {entrypoint}:
                     // Verify that index is less than length
                     swap1
-                    push 0
                     read_mem
                     // _ elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}} index *list length
 
@@ -107,8 +112,7 @@ impl Snippet for SafeSet {
                     swap1
                     // _ elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}} *list index
 
-                    push {element_size}
-                    mul
+                    {mul_with_size}
                     push 2
                     add
                     add

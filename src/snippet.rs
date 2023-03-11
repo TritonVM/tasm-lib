@@ -278,8 +278,8 @@ pub fn simulate_snippet<T: Snippet>(
 
     // Prepend the snippet's code with code that injects expected memory
     for (address, value) in execution_state.memory.iter() {
-        code.push(format!("push {address} push {value} write_mem pop pop\n"));
-        inflated_clock_cycles += 5;
+        code.push(format!("push {address} push {value} write_mem pop\n"));
+        inflated_clock_cycles += 4;
     }
 
     // Compile the snippet and its library dependencies

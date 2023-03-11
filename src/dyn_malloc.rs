@@ -57,7 +57,6 @@ impl Snippet for DynMalloc {
             // After: _ *next_addr
             {entrypoint}:
                 push {free_pointer_addr}  // _ size *free_pointer
-                push 0                    // _ size *free_pointer 0
                 read_mem                  // _ size *free_pointer *next_addr'
 
                 // add 1 iff `next_addr` was 0, i.e. uninitialized.
@@ -73,7 +72,7 @@ impl Snippet for DynMalloc {
                 swap3                     // _ *next_addr *free_pointer *(next_addr + size) size
                 pop                       // _ *next_addr *free_pointer *(next_addr + size)
                 write_mem
-                pop pop                   // _ next_addr
+                pop                       // _ next_addr
                 return
             "
         )

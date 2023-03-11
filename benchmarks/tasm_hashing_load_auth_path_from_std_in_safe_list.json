@@ -1,14 +1,14 @@
 [
   {
     "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
-    "processor_table_height": 2066,
+    "processor_table_height": 1838,
     "hash_table_height": 0,
     "u32_table_height": 256,
     "case": "CommonCase"
   },
   {
     "name": "tasm_hashing_load_auth_path_from_std_in_safe_list",
-    "processor_table_height": 4082,
+    "processor_table_height": 3630,
     "hash_table_height": 0,
     "u32_table_height": 512,
     "case": "WorstCase"

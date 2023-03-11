@@ -1,16 +1,16 @@
 [
   {
     "name": "tasm_mmr_calculate_new_peaks_from_leaf_mutation",
-    "processor_table_height": 3138,
-    "hash_table_height": 279,
-    "u32_table_height": 1705,
+    "processor_table_height": 2978,
+    "hash_table_height": 186,
+    "u32_table_height": 803,
     "case": "CommonCase"
   },
   {
     "name": "tasm_mmr_calculate_new_peaks_from_leaf_mutation",
-    "processor_table_height": 6109,
-    "hash_table_height": 567,
-    "u32_table_height": 4762,
+    "processor_table_height": 5789,
+    "hash_table_height": 378,
+    "u32_table_height": 1101,
     "case": "WorstCase"
   }
 ]

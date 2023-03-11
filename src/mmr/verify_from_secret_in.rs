@@ -1,11 +1,11 @@
 use num::Zero;
 use rand::{random, thread_rng, Rng};
 use std::collections::HashMap;
+use std::marker::PhantomData;
+use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::random_elements;
-use twenty_first::shared_math::rescue_prime_digest::{Digest, DIGEST_LENGTH};
-use twenty_first::shared_math::rescue_prime_regular::RescuePrimeRegular;
 use twenty_first::test_shared::mmr::get_archival_mmr_from_digests;
 use twenty_first::util_types::mmr::archival_mmr::ArchivalMmr;
 use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
@@ -20,16 +20,16 @@ use crate::hashing::swap_digest::SwapDigest;
 use crate::library::Library;
 use crate::list::unsafe_u32::get::UnsafeGet;
 use crate::snippet::{DataType, Snippet};
-use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, ExecutionState};
+use crate::{
+    get_init_tvm_stack, rust_shadowing_helper_functions, Digest, ExecutionState, DIGEST_LENGTH,
+};
 
 use super::leaf_index_to_mt_index::MmrLeafIndexToMtIndexAndPeakIndex;
 
-type H = RescuePrimeRegular;
-
 #[derive(Clone)]
-pub struct MmrVerifyLeafMembershipFromSecretIn;
+pub struct MmrVerifyLeafMembershipFromSecretIn<H: AlgebraicHasher>(pub PhantomData<H>);
 
-impl Snippet for MmrVerifyLeafMembershipFromSecretIn {
+impl<H: AlgebraicHasher> Snippet for MmrVerifyLeafMembershipFromSecretIn<H> {
     fn inputs(&self) -> Vec<String> {
         vec![
             "peaks_pointer".to_string(),
@@ -79,10 +79,10 @@ impl Snippet for MmrVerifyLeafMembershipFromSecretIn {
         // Positive tests
         for size in 1..20 {
             let leaf_index = rng.gen_range(0..size) as u64;
-            init_vm_states.push(prepare_state_for_tests(size, leaf_index, true));
+            init_vm_states.push(prepare_state_for_tests::<H>(size, leaf_index, true));
 
             // Negative test
-            init_vm_states.push(prepare_state_for_tests(size, leaf_index, false));
+            init_vm_states.push(prepare_state_for_tests::<H>(size, leaf_index, false));
         }
 
         init_vm_states
@@ -201,8 +201,6 @@ impl Snippet for MmrVerifyLeafMembershipFromSecretIn {
         secret_in: Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
-        type H = RescuePrimeRegular;
-
         // BEFORE: _ *peaks leaf_count_hi leaf_count_lo [digest (leaf_digest)]
         // AFTER:  _ leaf_index_hi leaf_index_lo validation_result
         let mut leaf_digest_values = [BFieldElement::new(0); DIGEST_LENGTH];
@@ -275,21 +273,24 @@ impl Snippet for MmrVerifyLeafMembershipFromSecretIn {
     where
         Self: Sized,
     {
-        prepare_state_for_benchmark(31, 20)
+        prepare_state_for_benchmark::<H>(31, 20)
     }
 
     fn worst_case_input_state(&self) -> ExecutionState
     where
         Self: Sized,
     {
-        prepare_state_for_benchmark(63, 20)
+        prepare_state_for_benchmark::<H>(63, 20)
     }
 }
 
-fn prepare_state_for_benchmark(log_2_leaf_count: u8, leaf_index: u64) -> ExecutionState {
+fn prepare_state_for_benchmark<H: AlgebraicHasher>(
+    log_2_leaf_count: u8,
+    leaf_index: u64,
+) -> ExecutionState {
     let leaf_count = 2u64.pow(log_2_leaf_count as u32);
     let peaks: Vec<Digest> = random_elements(log_2_leaf_count as usize);
-    let mut mmra = MmrAccumulator::init(peaks, leaf_count as u128 - 1);
+    let mut mmra = MmrAccumulator::<H>::init(peaks, leaf_count as u128 - 1);
     let new_leaf: Digest = random();
     let authentication_path = mmra.append(new_leaf).authentication_path;
 
@@ -322,7 +323,7 @@ fn prepare_state_for_benchmark(log_2_leaf_count: u8, leaf_index: u64) -> Executi
 
 // BEFORE: _ *peaks [digest (leaf_digest)] leaf_count_hi leaf_count_lo
 // AFTER: _ *auth_path leaf_index_hi leaf_index_lo
-fn prepare_state_for_tests(
+fn prepare_state_for_tests<H: AlgebraicHasher>(
     size: usize,
     leaf_index: u64,
     generate_valid_proof: bool,
@@ -368,7 +369,7 @@ fn prepare_state_for_tests(
 /// Prepare the part of the state that can be derived from the MMR without
 /// knowing e.g. the leaf index of the leaf digest that you want to authenticate
 /// so this function does not populate e.g. `secret_in`. The caller has to do that.
-fn mmr_to_init_vm_state(mmra: &mut MmrAccumulator<H>) -> ExecutionState {
+fn mmr_to_init_vm_state<H: AlgebraicHasher>(mmra: &mut MmrAccumulator<H>) -> ExecutionState {
     let mut stack: Vec<BFieldElement> = get_init_tvm_stack();
     let peaks_pointer = BFieldElement::zero();
     stack.push(peaks_pointer);
@@ -410,24 +411,26 @@ mod mmr_verify_from_secret_in_tests {
         mmr::MAX_MMR_HEIGHT,
         snippet_bencher::bench_and_write,
         test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new},
+        VmHasher,
     };
 
     use super::*;
 
     #[test]
     fn verify_from_secret_in_test() {
-        rust_tasm_equivalence_prop_new(MmrVerifyLeafMembershipFromSecretIn);
+        rust_tasm_equivalence_prop_new(MmrVerifyLeafMembershipFromSecretIn(
+            PhantomData::<VmHasher>,
+        ));
     }
 
     #[test]
     fn verify_from_secret_in_benchmark() {
-        bench_and_write(MmrVerifyLeafMembershipFromSecretIn);
+        bench_and_write(MmrVerifyLeafMembershipFromSecretIn(PhantomData::<VmHasher>));
     }
     #[test]
     fn mmra_ap_verify_test_one() {
-        type H = RescuePrimeRegular;
-        let digest0 = H::hash(&BFieldElement::new(4545));
-        let mut archival_mmr: ArchivalMmr<H> = get_empty_archival_mmr();
+        let digest0 = VmHasher::hash(&BFieldElement::new(4545));
+        let mut archival_mmr: ArchivalMmr<VmHasher> = get_empty_archival_mmr();
         archival_mmr.append(digest0);
         let mut mmr = archival_mmr.to_accumulator();
         let leaf_index = 0;
@@ -436,11 +439,10 @@ mod mmr_verify_from_secret_in_tests {
 
     #[test]
     fn mmra_ap_verify_test_two() {
-        type H = RescuePrimeRegular;
-        let digest0 = H::hash(&BFieldElement::new(123));
-        let digest1 = H::hash(&BFieldElement::new(456));
+        let digest0 = VmHasher::hash(&BFieldElement::new(123));
+        let digest1 = VmHasher::hash(&BFieldElement::new(456));
 
-        let mut archival_mmr: ArchivalMmr<H> = get_empty_archival_mmr();
+        let mut archival_mmr: ArchivalMmr<VmHasher> = get_empty_archival_mmr();
         archival_mmr.append(digest0);
         archival_mmr.append(digest1);
         let mut mmr = archival_mmr.to_accumulator();
@@ -454,12 +456,12 @@ mod mmr_verify_from_secret_in_tests {
 
     #[test]
     fn mmra_ap_verify_test_pbt() {
-        type H = RescuePrimeRegular;
         let max_size = 19;
 
         for leaf_count in 0..max_size {
             let digests: Vec<Digest> = random_elements(leaf_count);
-            let mut archival_mmr: ArchivalMmr<H> = get_archival_mmr_from_digests(digests.clone());
+            let mut archival_mmr: ArchivalMmr<VmHasher> =
+                get_archival_mmr_from_digests(digests.clone());
             let mut mmr = archival_mmr.to_accumulator();
 
             let bad_leaf: Digest = thread_rng().gen();
@@ -489,8 +491,6 @@ mod mmr_verify_from_secret_in_tests {
 
     #[test]
     fn mmra_ap_verify_many_leafs() {
-        type H = RescuePrimeRegular;
-
         for init_leaf_count in [
             (1u64 << 40) + (1 << 21) + 510,
             (1 << 32) - 1,
@@ -506,7 +506,7 @@ mod mmr_verify_from_secret_in_tests {
             // We can't construct this large archival MMRs, so we have to handle it with an MMRA
             // and handle the membership proofs ourselves
             let fake_peaks: Vec<Digest> = random_elements(init_peak_count as usize);
-            let mut mmr: MmrAccumulator<H> =
+            let mut mmr: MmrAccumulator<VmHasher> =
                 MmrAccumulator::init(fake_peaks, init_leaf_count as u128);
 
             // Insert the 1st leaf
@@ -568,15 +568,13 @@ mod mmr_verify_from_secret_in_tests {
 
     // BEFORE: _ *peaks leaf_count_hi leaf_count_lo [digest (leaf_digest)]
     // AFTER:  _ leaf_index_hi leaf_index_lo validation_result
-    fn prop_verify_from_secret_in(
-        mmr: &mut MmrAccumulator<RescuePrimeRegular>,
+    fn prop_verify_from_secret_in<H: AlgebraicHasher>(
+        mmr: &mut MmrAccumulator<H>,
         leaf: Digest,
         leaf_index: u64,
         auth_path: Vec<Digest>,
         expect_validation_success: bool,
     ) {
-        type H = RescuePrimeRegular;
-
         let mut init_stack = get_init_tvm_stack();
 
         let peaks_pointer = BFieldElement::zero();
@@ -627,7 +625,7 @@ mod mmr_verify_from_secret_in_tests {
         }
 
         let _execution_result = rust_tasm_equivalence_prop(
-            MmrVerifyLeafMembershipFromSecretIn,
+            MmrVerifyLeafMembershipFromSecretIn(PhantomData::<VmHasher>),
             &init_stack,
             &[],
             &secret_in,

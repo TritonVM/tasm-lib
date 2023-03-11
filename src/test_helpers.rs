@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use itertools::Itertools;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
+use crate::library::Library;
 use crate::snippet::Snippet;
 use crate::ExecutionResult;
 
@@ -79,7 +80,7 @@ pub fn rust_tasm_equivalence_prop<T: Snippet>(
     assert_eq!(
         tasm_stack,
         rust_stack,
-        "Rust code must match TVM for `{}`\n\nTVM: {}\n\nRust: {}",
+        "Rust code must match TVM for `{}`\n\nTVM: {}\n\nRust: {}. Code was: {}",
         snippet_struct.entrypoint(),
         tasm_stack
             .iter()
@@ -91,6 +92,7 @@ pub fn rust_tasm_equivalence_prop<T: Snippet>(
             .map(|x| x.to_string())
             .collect_vec()
             .join(","),
+        snippet_struct.function_body(&mut Library::default())
     );
     if let Some(expected) = expected {
         assert_eq!(
@@ -128,7 +130,10 @@ pub fn rust_tasm_equivalence_prop<T: Snippet>(
             .map(|x| format!("({} => {})", x.0, x.1))
             .collect_vec()
             .join(",");
-        panic!("Memory for both implementations must match after execution.\n\nTVM: {tasm_mem_str}\n\nRust: {rust_mem_str}",)
+        panic!(
+            "Memory for both implementations must match after execution.\n\nTVM: {tasm_mem_str}\n\nRust: {rust_mem_str}. Code was:\n\n {}",
+            snippet_struct.function_body(&mut Library::default())
+        );
     }
 
     // Write back memory to be able to probe it in individual tests
