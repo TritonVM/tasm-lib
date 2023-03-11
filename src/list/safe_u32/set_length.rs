@@ -80,7 +80,6 @@ impl Snippet for SafeSetLength {
                     dup2
                     push 1
                     add
-                    push 0
                     read_mem
                     // Stack: *list list_length list_length (*list + 1) capacity
 
@@ -97,9 +96,6 @@ impl Snippet for SafeSetLength {
                     // Stack: *list list_length
 
                     write_mem
-                    // Stack: *list list_length
-
-                    pop
                     // Stack: *list
 
                     return

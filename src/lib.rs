@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use triton_opcodes::program::Program;
 use triton_vm::table::master_table::MasterBaseTable;
 use triton_vm::vm;
+use twenty_first::shared_math::tip5::{self, Tip5};
 
 use triton_vm::op_stack::OP_STACK_REG_COUNT;
 use triton_vm::vm::VMState;
@@ -25,6 +26,11 @@ pub mod rust_shadowing_helper_functions;
 pub mod snippet;
 mod snippet_bencher;
 mod test_helpers;
+
+// The hasher type must match whatever algebraic hasher the VM is using
+pub type VmHasher = Tip5;
+pub type Digest = tip5::Digest;
+pub const DIGEST_LENGTH: usize = tip5::DIGEST_LENGTH;
 
 #[derive(Clone, Debug)]
 pub struct ExecutionState {
@@ -106,7 +112,6 @@ pub fn execute(
         executed_code.push_str("write_mem\n");
 
         // Clean stack after writing to memory
-        executed_code.push_str("pop\n");
         executed_code.push_str("pop\n");
     }
 

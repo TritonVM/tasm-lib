@@ -54,6 +54,12 @@ impl Snippet for SafeNew {
         let dyn_alloc = library.import(Box::new(dyn_malloc::DynMalloc));
         // input capacity is given in terms of `element_size`. So `element_size * capacity` words
         // need to be allocated
+
+        let mul_with_size = if element_size != 1 {
+            format!("push {element_size}\n mul\n")
+        } else {
+            String::default()
+        };
         format!(
             "
             {entrypoint}:
@@ -61,8 +67,9 @@ impl Snippet for SafeNew {
 
                 // Convert capacity in number of elements to number of VM words required for that list
                 dup0
-                push {element_size}
-                mul
+                {mul_with_size}
+                // _ capacity (capacity_in_bfes)
+
                 push 2
                 add
                 // _ capacity (words to allocate)
@@ -73,10 +80,9 @@ impl Snippet for SafeNew {
                 // Write initial length = 0 to `*list`
                 push 0
                 write_mem
-                // _ capacity *list 0
+                // _ capacity *list
 
                 // Write capactiy to memory location `*list + 1`
-                pop
                 push 1
                 add
                 // _ capacity (*list + 1)
@@ -85,7 +91,6 @@ impl Snippet for SafeNew {
                 write_mem
                 // _ (*list + 1) capacity
 
-                pop
                 push -1
                 add
                 // _ *list

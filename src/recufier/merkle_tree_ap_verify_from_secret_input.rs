@@ -1,20 +1,19 @@
 use std::collections::HashMap;
+use std::marker::PhantomData;
 
 use num::Zero;
 use rand::Rng;
 use twenty_first::shared_math::b_field_element::BFieldElement;
-use twenty_first::shared_math::rescue_prime_digest::Digest;
-use twenty_first::shared_math::rescue_prime_regular::RescuePrimeRegular;
 use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 use twenty_first::util_types::merkle_tree::{CpuParallel, MerkleTree};
 use twenty_first::util_types::merkle_tree_maker::MerkleTreeMaker;
 
 use crate::library::Library;
 use crate::snippet::Snippet;
-use crate::{get_init_tvm_stack, ExecutionState};
+use crate::{get_init_tvm_stack, Digest, ExecutionState};
 
 #[derive(Clone)]
-pub struct MtApVerifyFromSecretInput;
+pub struct MtApVerifyFromSecretInput<H: AlgebraicHasher>(pub PhantomData<H>);
 
 /// TVM assembly to verify Merkle authentication paths
 ///
@@ -25,7 +24,7 @@ pub struct MtApVerifyFromSecretInput;
 /// output: Result<(), VMFail>
 ///
 /// uses RAM at address 0 to store the number of authentication paths
-impl Snippet for MtApVerifyFromSecretInput {
+impl<H: AlgebraicHasher> Snippet for MtApVerifyFromSecretInput<H> {
     fn inputs(&self) -> Vec<String> {
         vec![]
     }
@@ -48,7 +47,7 @@ impl Snippet for MtApVerifyFromSecretInput {
 
     fn gen_input_states(&self) -> Vec<ExecutionState> {
         let mt_height = 5;
-        vec![prepare_state(mt_height)]
+        vec![prepare_state::<H>(mt_height)]
     }
 
     fn stack_diff(&self) -> isize {
@@ -66,7 +65,7 @@ impl Snippet for MtApVerifyFromSecretInput {
             {entrypoint}:
                 read_io                                  // number of authentication paths to test
                                                          // stack: [num]
-                push 0 swap1 write_mem pop pop           // store number of APs at RAM address 0
+                push 0 swap1 write_mem pop               // store number of APs at RAM address 0
                                                          // stack: []
                 read_io read_io read_io read_io read_io  // read Merkle root
                                                          // stack: [r4 r3 r2 r1 r0]
@@ -79,12 +78,12 @@ impl Snippet for MtApVerifyFromSecretInput {
                                                          // stack before: [* r4 r3 r2 r1 r0]
                                                          // stack after: [* r4 r3 r2 r1 r0]
             {entrypoint}_check_aps:                      // start function description:
-                push 0 push 0 read_mem dup0              // get number of APs left to check
+                push 0 read_mem dup0                     // get number of APs left to check
                                                          // stack: [* r4 r3 r2 r1 r0 0 num_left num_left]
                 push 0 eq                                // see if there are authentication paths left
                                                          // stack: [* r4 r3 r2 r1 r0 0 num_left num_left==0]
                 skiz return                              // return if no authentication paths left
-                push -1 add write_mem pop pop            // decrease number of authentication paths left to check
+                push -1 add write_mem pop                // decrease number of authentication paths left to check
                                                          // stack: [* r4 r3 r2 r1 r0]
                 call {entrypoint}_get_idx_and_leaf       //
                                                          // stack: [* r4 r3 r2 r1 r0 idx d4 d3 d2 d1 d0 0 0 0 0 0]
@@ -160,9 +159,9 @@ impl Snippet for MtApVerifyFromSecretInput {
                 let sibling_elems: [BFieldElement; 5] = vector.try_into().unwrap();
                 let sibling: Digest = Digest::new(sibling_elems);
                 if node_index & 1 == 0 {
-                    node_digest = RescuePrimeRegular::hash_pair(&node_digest, &sibling);
+                    node_digest = H::hash_pair(&node_digest, &sibling);
                 } else {
-                    node_digest = RescuePrimeRegular::hash_pair(&sibling, &node_digest);
+                    node_digest = H::hash_pair(&sibling, &node_digest);
                 }
                 secret_index += 5;
                 node_index /= 2;
@@ -176,7 +175,7 @@ impl Snippet for MtApVerifyFromSecretInput {
         Self: Sized,
     {
         let mt_height = 6;
-        prepare_state(mt_height)
+        prepare_state::<H>(mt_height)
     }
 
     fn worst_case_input_state(&self) -> ExecutionState
@@ -185,19 +184,19 @@ impl Snippet for MtApVerifyFromSecretInput {
     {
         // `mt_height` should probably be 20 here, but that execution takes very long to run.
         let mt_height = 12;
-        prepare_state(mt_height)
+        prepare_state::<H>(mt_height)
     }
 }
 
-fn prepare_state(tree_height: usize) -> ExecutionState {
+fn prepare_state<H: AlgebraicHasher>(tree_height: usize) -> ExecutionState {
     // fn gen_input_states(&self) -> Vec<ExecutionState> {
-    let leafs = generate_leafs(tree_height);
-    let mt: &MerkleTree<RescuePrimeRegular, CpuParallel> = &MerkleTreeMaker::from_digests(&leafs);
+    let leafs = generate_leafs::<H>(tree_height);
+    let mt: &MerkleTree<H, CpuParallel> = &MerkleTreeMaker::from_digests(&leafs);
     let indices = choose_indices(tree_height);
     let secret_in: Vec<BFieldElement> =
         generate_siblings_as_vector(mt.clone(), indices, tree_height);
     let stack: Vec<BFieldElement> = get_init_tvm_stack();
-    let std_in: Vec<BFieldElement> = generate_input(indices, &leafs);
+    let std_in: Vec<BFieldElement> = generate_input::<H>(indices, &leafs);
 
     ExecutionState {
         stack,
@@ -224,8 +223,8 @@ fn choose_indices(tree_height: usize) -> [usize; NUMBER_OF_AUTHENTICATION_PATHS]
 }
 
 //generate secret input for verifier
-fn generate_siblings_as_vector(
-    mt: MerkleTree<RescuePrimeRegular, CpuParallel>,
+fn generate_siblings_as_vector<H: AlgebraicHasher>(
+    mt: MerkleTree<H, CpuParallel>,
     indices: [usize; NUMBER_OF_AUTHENTICATION_PATHS],
     tree_height: usize,
 ) -> Vec<BFieldElement> {
@@ -248,14 +247,14 @@ fn generate_siblings_as_vector(
 }
 
 //generate standard (public) input for verifier
-fn generate_input(
+fn generate_input<H: AlgebraicHasher>(
     indices: [usize; NUMBER_OF_AUTHENTICATION_PATHS],
     leafs: &Vec<Digest>,
 ) -> Vec<BFieldElement> {
     let number_of_authentication_paths = indices.len();
     let number_of_leaves = leafs.len();
     let number_of_aps: u32 = number_of_authentication_paths.try_into().unwrap();
-    let mt: &MerkleTree<RescuePrimeRegular, CpuParallel> = &MerkleTreeMaker::from_digests(leafs);
+    let mt: &MerkleTree<H, CpuParallel> = &MerkleTreeMaker::from_digests(leafs);
     let merkle_root = mt.nodes[1];
     let mut reverse_merkle_root = merkle_root.values().to_vec();
     reverse_merkle_root.reverse();
@@ -273,13 +272,13 @@ fn generate_input(
     input
 }
 
-fn generate_leafs(height: usize) -> Vec<Digest> {
+fn generate_leafs<H: AlgebraicHasher>(height: usize) -> Vec<Digest> {
     let num_leafs: u32 = 2u32.pow(height as u32);
     //generate merkle leafs
     let number_of_leaves: usize = num_leafs.try_into().unwrap();
     let mut leafs: Vec<Digest> = Vec::with_capacity(number_of_leaves);
     for i in 0..num_leafs {
-        leafs.push(RescuePrimeRegular::hash(&BFieldElement::from(i * i + 3)));
+        leafs.push(H::hash(&BFieldElement::from(i * i + 3)));
         // use digest.values() to access the field elements
     }
     //build other nodes
@@ -293,8 +292,6 @@ mod merkle_authentication_verify_test {
 
     use rand::random;
     use twenty_first::shared_math::b_field_element::BFieldElement;
-    use twenty_first::shared_math::rescue_prime_digest::Digest;
-    use twenty_first::shared_math::rescue_prime_regular::RescuePrimeRegular;
     use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
     use twenty_first::util_types::merkle_tree::CpuParallel;
     use twenty_first::util_types::merkle_tree::MerkleTree;
@@ -305,6 +302,7 @@ mod merkle_authentication_verify_test {
     use crate::snippet_bencher::bench_and_write;
     use crate::test_helpers::rust_tasm_equivalence_prop;
     use crate::test_helpers::rust_tasm_equivalence_prop_new;
+    use crate::VmHasher;
 
     use super::MtApVerifyFromSecretInput;
 
@@ -317,20 +315,19 @@ mod merkle_authentication_verify_test {
 
     #[test]
     fn merkle_tree_ap_verify_from_secret_input_test() {
-        rust_tasm_equivalence_prop_new::<MtApVerifyFromSecretInput>(MtApVerifyFromSecretInput);
+        rust_tasm_equivalence_prop_new(MtApVerifyFromSecretInput(PhantomData::<VmHasher>));
     }
 
     #[test]
     fn merkle_tree_ap_verify_from_secret_input_benchmark() {
-        bench_and_write::<MtApVerifyFromSecretInput>(MtApVerifyFromSecretInput);
+        bench_and_write(MtApVerifyFromSecretInput(PhantomData::<VmHasher>));
     }
 
     #[test]
     fn merkle_tree_ap_verify_test1() {
         let mt_height = 5;
-        let leafs = generate_leafs(mt_height);
-        let mt: &MerkleTree<RescuePrimeRegular, CpuParallel> =
-            &MerkleTreeMaker::from_digests(&leafs);
+        let leafs = generate_leafs::<VmHasher>(mt_height);
+        let mt: &MerkleTree<VmHasher, CpuParallel> = &MerkleTreeMaker::from_digests(&leafs);
         let indices = choose_indices(mt_height);
         let merkle_root = mt.nodes[1];
         for index in indices {
@@ -342,9 +339,9 @@ mod merkle_authentication_verify_test {
                 let sibling: Digest =
                     unwrap_partial_authentication_path(&authentication_path)[i].unwrap();
                 if node_index & 1 == 0 {
-                    node_digest = RescuePrimeRegular::hash_pair(&node_digest, &sibling);
+                    node_digest = VmHasher::hash_pair(&node_digest, &sibling);
                 } else {
-                    node_digest = RescuePrimeRegular::hash_pair(&sibling, &node_digest);
+                    node_digest = VmHasher::hash_pair(&sibling, &node_digest);
                 }
                 node_index /= 2;
             }
@@ -355,17 +352,16 @@ mod merkle_authentication_verify_test {
     #[test]
     fn merkle_tree_ap_verify_test2() {
         let mt_height = 5;
-        let leafs = generate_leafs(mt_height);
-        let mt: &MerkleTree<RescuePrimeRegular, CpuParallel> =
-            &MerkleTreeMaker::from_digests(&leafs);
+        let leafs = generate_leafs::<VmHasher>(mt_height);
+        let mt: &MerkleTree<VmHasher, CpuParallel> = &MerkleTreeMaker::from_digests(&leafs);
         let indices = choose_indices(mt_height);
         let secret_input: Vec<BFieldElement> =
             generate_siblings_as_vector(mt.clone(), indices, mt_height);
         let stack: &mut Vec<BFieldElement> = &mut get_init_tvm_stack();
-        let standard_input: Vec<BFieldElement> = generate_input(indices, &leafs);
+        let standard_input: Vec<BFieldElement> = generate_input::<VmHasher>(indices, &leafs);
 
-        rust_tasm_equivalence_prop::<MtApVerifyFromSecretInput>(
-            MtApVerifyFromSecretInput,
+        rust_tasm_equivalence_prop(
+            MtApVerifyFromSecretInput(PhantomData::<VmHasher>),
             stack,
             &standard_input,
             &secret_input,
@@ -379,9 +375,8 @@ mod merkle_authentication_verify_test {
     #[test]
     fn merkle_tree_ap_verify_negative_test() {
         let mt_height = 5;
-        let leafs = generate_leafs(mt_height);
-        let mt: &MerkleTree<RescuePrimeRegular, CpuParallel> =
-            &MerkleTreeMaker::from_digests(&leafs);
+        let leafs = generate_leafs::<VmHasher>(mt_height);
+        let mt: &MerkleTree<VmHasher, CpuParallel> = &MerkleTreeMaker::from_digests(&leafs);
         let indices = choose_indices(mt_height);
 
         // Generate invalid secret input
@@ -390,10 +385,10 @@ mod merkle_authentication_verify_test {
         bad_secret_input[0] = random();
 
         let stack: &mut Vec<BFieldElement> = &mut get_init_tvm_stack();
-        let standard_input: Vec<BFieldElement> = generate_input(indices, &leafs);
+        let standard_input: Vec<BFieldElement> = generate_input::<VmHasher>(indices, &leafs);
 
-        rust_tasm_equivalence_prop::<MtApVerifyFromSecretInput>(
-            MtApVerifyFromSecretInput,
+        rust_tasm_equivalence_prop(
+            MtApVerifyFromSecretInput(PhantomData::<VmHasher>),
             stack,
             &standard_input,
             &bad_secret_input,

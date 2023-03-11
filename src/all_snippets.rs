@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 use crate::{
     arithmetic::{
         u32::{
@@ -64,6 +66,7 @@ use crate::{
     pseudo::{lsb::Lsb, neg::Neg, sub::Sub},
     recufier::merkle_tree_ap_verify_from_secret_input::MtApVerifyFromSecretInput,
     snippet::{DataType, Snippet},
+    VmHasher,
 };
 
 pub fn name_to_snippet(fn_name: &str) -> Box<dyn Snippet> {
@@ -227,23 +230,23 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn Snippet> {
         "tasm_list_unsafe_u32_set_length_digest" => Box::new(UnsafeSetLength(DataType::Digest)),
 
         // MMR
-        "tasm_mmr_calculate_new_peaks_from_append" => Box::new(CalculateNewPeaksFromAppend),
+        "tasm_mmr_calculate_new_peaks_from_append" => Box::new(CalculateNewPeaksFromAppend(PhantomData::<VmHasher>)),
         "tasm_mmr_calculate_new_peaks_from_leaf_mutation" => {
-            Box::new(MmrCalculateNewPeaksFromLeafMutationMtIndices)
+            Box::new(MmrCalculateNewPeaksFromLeafMutationMtIndices(PhantomData::<VmHasher>))
         }
         "tasm_mmr_data_index_to_node_index" => Box::new(DataIndexToNodeIndex),
         "tasm_mmr_get_height_from_leaf_index" => Box::new(GetHeightFromDataIndex),
         "tasm_mmr_leaf_index_to_mt_index_and_peak_index" => Box::new(MmrLeafIndexToMtIndexAndPeakIndex),
         "tasm_mmr_left_child" => Box::new(MmrLeftChild),
         "tasm_mmr_leftmost_ancestor" => Box::new(MmrLeftMostAncestor),
-        "tasm_mmr_verify_load_from_secret_in" => Box::new(MmrLoadFromSecretInThenVerify),
+        "tasm_mmr_verify_load_from_secret_in" => Box::new(MmrLoadFromSecretInThenVerify(PhantomData::<VmHasher>)),
         "tasm_mmr_non_leaf_nodes_left" => Box::new(MmrNonLeafNodesLeftUsingAnd),
         "tasm_mmr_right_child_and_height" => Box::new(MmrRightChildAndHeight),
         "tasm_mmr_right_child" => Box::new(MmrRightChild),
         "tasm_mmr_right_lineage_count_and_own_height" => Box::new(MmrRightLineageCountAndHeight),
         "tasm_mmr_right_lineage_length" => Box::new(MmrRightLineageLength),
-        "tasm_mmr_verify_from_memory" => Box::new(MmrVerifyFromMemory),
-        "tasm_mmr_verify_from_secret_in" => Box::new(MmrVerifyLeafMembershipFromSecretIn),
+        "tasm_mmr_verify_from_memory" => Box::new(MmrVerifyFromMemory(PhantomData::<VmHasher>)),
+        "tasm_mmr_verify_from_secret_in" => Box::new(MmrVerifyLeafMembershipFromSecretIn(PhantomData::<VmHasher>)),
 
         // other
         "tasm_other_bfe_add" => Box::new(BfeAdd),
@@ -254,7 +257,7 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn Snippet> {
         "tasm_pseudo_sub" => Box::new(Sub),
 
         // recufy
-        "tasm_recufier_mt_ap_verify" => Box::new(MtApVerifyFromSecretInput),
+        "tasm_recufier_mt_ap_verify" => Box::new(MtApVerifyFromSecretInput(PhantomData::<VmHasher>)),
 
         // dyn_malloc
         "dyn_malloc" => Box::new(DynMalloc),

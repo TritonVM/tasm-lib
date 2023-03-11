@@ -62,9 +62,6 @@ impl Snippet for UnsafeNew {
 
                     push 0
                     write_mem
-                    // _ *list 0
-
-                    pop
                     // _ *list
 
                     return

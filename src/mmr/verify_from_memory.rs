@@ -1,11 +1,10 @@
 use std::collections::HashMap;
+use std::marker::PhantomData;
 
 use num::Zero;
 use rand::{random, thread_rng, Rng};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::random_elements;
-use twenty_first::shared_math::rescue_prime_digest::{Digest, DIGEST_LENGTH};
-use twenty_first::shared_math::rescue_prime_regular::RescuePrimeRegular;
 use twenty_first::test_shared::mmr::get_archival_mmr_from_digests;
 use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 use twenty_first::util_types::mmr::archival_mmr::ArchivalMmr;
@@ -21,15 +20,17 @@ use crate::hashing::swap_digest::SwapDigest;
 use crate::library::Library;
 use crate::list::unsafe_u32::get::UnsafeGet;
 use crate::snippet::{DataType, Snippet};
-use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, ExecutionState};
+use crate::{
+    get_init_tvm_stack, rust_shadowing_helper_functions, Digest, ExecutionState, DIGEST_LENGTH,
+};
 
 use super::leaf_index_to_mt_index::MmrLeafIndexToMtIndexAndPeakIndex;
 use super::MAX_MMR_HEIGHT;
 
 #[derive(Clone)]
-pub struct MmrVerifyFromMemory;
+pub struct MmrVerifyFromMemory<H: AlgebraicHasher>(pub PhantomData<H>);
 
-impl Snippet for MmrVerifyFromMemory {
+impl<H: AlgebraicHasher> Snippet for MmrVerifyFromMemory<H> {
     fn inputs(&self) -> Vec<String> {
         vec![
             "*peaks".to_string(),
@@ -81,7 +82,6 @@ impl Snippet for MmrVerifyFromMemory {
     }
 
     fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
-        type H = RescuePrimeRegular;
         let mut rng = thread_rng();
         let max_size = 100;
         let size = rng.gen_range(1..max_size);
@@ -223,8 +223,6 @@ impl Snippet for MmrVerifyFromMemory {
         _secret_in: Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
-        type H = RescuePrimeRegular;
-
         // BEFORE: _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo [digest (leaf_digest)] *auth_path
         // AFTER: _ *auth_path leaf_index_hi leaf_index_lo validation_result
         let auth_path_pointer = stack.pop().unwrap();
@@ -291,7 +289,6 @@ impl Snippet for MmrVerifyFromMemory {
     where
         Self: Sized,
     {
-        type H = RescuePrimeRegular;
         let log2_size = 31;
         let leaf_count_after_add = 1u64 << log2_size;
         let peaks: Vec<Digest> = random_elements(log2_size as usize);
@@ -309,7 +306,6 @@ impl Snippet for MmrVerifyFromMemory {
     where
         Self: Sized,
     {
-        type H = RescuePrimeRegular;
         let log2_size = 62;
         let leaf_count_after_add = 1u64 << log2_size;
         let peaks: Vec<Digest> = random_elements(log2_size as usize);
@@ -325,7 +321,7 @@ impl Snippet for MmrVerifyFromMemory {
 }
 
 /// Returns (ExecutionState, auth_path_pointer, peaks_pointer)
-fn prepare_vm_state<H: AlgebraicHasher + std::cmp::PartialEq + std::fmt::Debug>(
+fn prepare_vm_state<H: AlgebraicHasher>(
     mmr: &mut MmrAccumulator<H>,
     leaf: Digest,
     leaf_index: u64,
@@ -398,27 +394,27 @@ mod auth_path_verify_from_memory_tests {
 
     use crate::snippet_bencher::bench_and_write;
     use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
+    use crate::VmHasher;
     use crate::{get_init_tvm_stack, mmr::MAX_MMR_HEIGHT};
 
     use super::*;
 
     #[test]
     fn verify_from_memory_test() {
-        rust_tasm_equivalence_prop_new(MmrVerifyFromMemory);
+        rust_tasm_equivalence_prop_new(MmrVerifyFromMemory(PhantomData::<VmHasher>));
     }
 
     #[test]
     fn verify_from_memory_benchmark() {
-        bench_and_write(MmrVerifyFromMemory);
+        bench_and_write(MmrVerifyFromMemory(PhantomData::<VmHasher>));
     }
 
     // This will crash the VM because leaf?index is not strictly less than leaf_count
     #[test]
     #[should_panic]
     fn mmra_ap_verify_test_empty() {
-        type H = RescuePrimeRegular;
-        let digest0 = H::hash(&BFieldElement::new(4545));
-        let mut archival_mmr: ArchivalMmr<H> = get_empty_archival_mmr();
+        let digest0 = VmHasher::hash(&BFieldElement::new(4545));
+        let mut archival_mmr: ArchivalMmr<VmHasher> = get_empty_archival_mmr();
         let mut mmr = archival_mmr.to_accumulator();
         let leaf_index = 0;
         prop_verify_from_memory(&mut mmr, digest0, leaf_index, vec![], false);
@@ -426,9 +422,8 @@ mod auth_path_verify_from_memory_tests {
 
     #[test]
     fn mmra_ap_verify_test_one() {
-        type H = RescuePrimeRegular;
-        let digest0 = H::hash(&BFieldElement::new(4545));
-        let mut archival_mmr: ArchivalMmr<H> = get_empty_archival_mmr();
+        let digest0 = VmHasher::hash(&BFieldElement::new(4545));
+        let mut archival_mmr: ArchivalMmr<VmHasher> = get_empty_archival_mmr();
         archival_mmr.append(digest0);
         let mut mmr = archival_mmr.to_accumulator();
         let leaf_index = 0;
@@ -437,11 +432,10 @@ mod auth_path_verify_from_memory_tests {
 
     #[test]
     fn mmra_ap_verify_test_two() {
-        type H = RescuePrimeRegular;
-        let digest0 = H::hash(&BFieldElement::new(123));
-        let digest1 = H::hash(&BFieldElement::new(456));
+        let digest0 = VmHasher::hash(&BFieldElement::new(123));
+        let digest1 = VmHasher::hash(&BFieldElement::new(456));
 
-        let mut archival_mmr: ArchivalMmr<H> = get_empty_archival_mmr();
+        let mut archival_mmr: ArchivalMmr<VmHasher> = get_empty_archival_mmr();
         archival_mmr.append(digest0);
         archival_mmr.append(digest1);
         let mut mmr = archival_mmr.to_accumulator();
@@ -455,12 +449,12 @@ mod auth_path_verify_from_memory_tests {
 
     #[test]
     fn mmra_ap_verify_test_pbt() {
-        type H = RescuePrimeRegular;
         let max_size = 19;
 
         for leaf_count in 0..max_size {
             let digests: Vec<Digest> = random_elements(leaf_count);
-            let mut archival_mmr: ArchivalMmr<H> = get_archival_mmr_from_digests(digests.clone());
+            let mut archival_mmr: ArchivalMmr<VmHasher> =
+                get_archival_mmr_from_digests(digests.clone());
             let mut mmr = archival_mmr.to_accumulator();
 
             let bad_leaf: Digest = thread_rng().gen();
@@ -500,8 +494,6 @@ mod auth_path_verify_from_memory_tests {
 
     #[test]
     fn mmra_ap_verify_many_leafs() {
-        type H = RescuePrimeRegular;
-
         for init_leaf_count in [
             (1u64 << 40) + (1 << 21) + 510,
             (1 << 32) - 1,
@@ -517,7 +509,7 @@ mod auth_path_verify_from_memory_tests {
             // We can't construct this large archival MMRs, so we have to handle it with an MMRA
             // and handle the membership proofs ourselves
             let fake_peaks: Vec<Digest> = random_elements(init_peak_count as usize);
-            let mut mmr: MmrAccumulator<H> =
+            let mut mmr: MmrAccumulator<VmHasher> =
                 MmrAccumulator::init(fake_peaks, init_leaf_count as u128);
 
             // Insert the 1st leaf
@@ -599,8 +591,8 @@ mod auth_path_verify_from_memory_tests {
         expected_final_stack.push(leaf_index_lo);
         expected_final_stack.push(BFieldElement::new(expect_validation_success as u64));
 
-        let _execution_result = rust_tasm_equivalence_prop::<MmrVerifyFromMemory>(
-            MmrVerifyFromMemory,
+        let _execution_result = rust_tasm_equivalence_prop::<MmrVerifyFromMemory<VmHasher>>(
+            MmrVerifyFromMemory(PhantomData::<VmHasher>),
             &init_stack,
             &[],
             &[],

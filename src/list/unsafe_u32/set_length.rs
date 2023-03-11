@@ -60,9 +60,6 @@ impl Snippet for UnsafeSetLength {
                     write_mem
                     // Stack: *list list_length
 
-                    pop
-                    // Stack: *list
-
                     return
                 "
         )

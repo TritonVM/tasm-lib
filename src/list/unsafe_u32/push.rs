@@ -69,13 +69,18 @@ impl Snippet for UnsafePush {
         for i in 0..element_size {
             write_elements_to_memory_code.push_str("swap1\n");
             write_elements_to_memory_code.push_str("write_mem\n");
-            write_elements_to_memory_code.push_str("pop\n");
             if i != element_size - 1 {
                 // Prepare for next write. Not needed for last iteration.
                 write_elements_to_memory_code.push_str("push 1\n");
                 write_elements_to_memory_code.push_str("add\n");
             }
         }
+
+        let mul_with_size = if element_size != 1 {
+            format!("push {element_size}\n mul\n")
+        } else {
+            String::default()
+        };
 
         let entry_point = self.entrypoint();
         format!(
@@ -86,12 +91,10 @@ impl Snippet for UnsafePush {
                 dup{element_size}
                 // stack : _  *list, elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}, *list
 
-                push 0
                 read_mem
                 // stack : _  *list, elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}, *list, length
 
-                push {element_size}
-                mul
+                {mul_with_size}
                 // stack : _  *list, elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}, *list, length * elem_size
 
                 push 1
@@ -104,16 +107,16 @@ impl Snippet for UnsafePush {
                 {write_elements_to_memory_code}
                 // stack : _  *list, *list + length * elem_size + 1
 
+                pop
+                // stack : _  *list
+
                 // Increase length indicator by one
                 read_mem
-                // stack : _  *list, length
-
                 push 1
                 add
                 // stack : _  *list, length + 1
 
                 write_mem
-                pop
                 pop
                 // stack : _
 

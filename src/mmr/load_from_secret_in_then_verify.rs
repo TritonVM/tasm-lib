@@ -1,12 +1,13 @@
 use std::collections::HashMap;
+use std::marker::PhantomData;
 
 use num::Zero;
 use rand::{thread_rng, Rng};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::random_elements;
 use twenty_first::shared_math::rescue_prime_digest::{Digest, DIGEST_LENGTH};
-use twenty_first::shared_math::rescue_prime_regular::RescuePrimeRegular;
 use twenty_first::test_shared::mmr::get_archival_mmr_from_digests;
+use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 use twenty_first::util_types::mmr::archival_mmr::ArchivalMmr;
 use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
 use twenty_first::util_types::mmr::mmr_membership_proof::MmrMembershipProof;
@@ -20,13 +21,12 @@ use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, ExecutionState}
 use super::verify_from_memory::MmrVerifyFromMemory;
 use super::MAX_MMR_HEIGHT;
 
-type H = RescuePrimeRegular;
-
 /// First load from secret-in, then verify from memory
 #[derive(Clone)]
-pub struct MmrLoadFromSecretInThenVerify;
+pub struct MmrLoadFromSecretInThenVerify<H: AlgebraicHasher>(pub PhantomData<H>);
 
-impl Snippet for MmrLoadFromSecretInThenVerify {
+// TODO: Compiler complains without this explicit lifetime on `H`. But is it OK?
+impl<H: AlgebraicHasher + 'static> Snippet for MmrLoadFromSecretInThenVerify<H> {
     fn inputs(&self) -> Vec<String> {
         vec![
             "peaks_pointer".to_string(),
@@ -51,7 +51,7 @@ impl Snippet for MmrLoadFromSecretInThenVerify {
         ]
     }
 
-    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+    fn input_types(&self) -> Vec<DataType> {
         vec![
             DataType::List(Box::new(DataType::Digest)),
             DataType::U64,
@@ -60,7 +60,7 @@ impl Snippet for MmrLoadFromSecretInThenVerify {
         ]
     }
 
-    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+    fn output_types(&self) -> Vec<DataType> {
         vec![
             DataType::List(Box::new(DataType::Digest)),
             DataType::U64,
@@ -78,8 +78,8 @@ impl Snippet for MmrLoadFromSecretInThenVerify {
 
         for size in 1..50 {
             let leaf_index = rng.gen_range(0..size);
-            init_vm_states.push(prepare_state(size, leaf_index as u64, true));
-            init_vm_states.push(prepare_state(size, leaf_index as u64, false));
+            init_vm_states.push(prepare_state::<H>(size, leaf_index as u64, true));
+            init_vm_states.push(prepare_state::<H>(size, leaf_index as u64, false));
         }
 
         init_vm_states
@@ -97,7 +97,8 @@ impl Snippet for MmrLoadFromSecretInThenVerify {
         let entrypoint = self.entrypoint();
         let load_auth_path_from_secret_in =
             library.import(Box::new(LoadAuthPathFromSecretInUnsafeList));
-        let verify_from_memory = library.import(Box::new(MmrVerifyFromMemory));
+
+        let verify_from_memory = library.import(Box::new(MmrVerifyFromMemory(PhantomData::<H>)));
 
         format!(
             "
@@ -122,8 +123,6 @@ impl Snippet for MmrLoadFromSecretInThenVerify {
         secret_in: Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
-        type H = RescuePrimeRegular;
-
         // BEFORE: _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo [digest (leaf_digest)]
         // AFTER: _ *auth_path leaf_index_hi leaf_index_lo validation_result
         let mut new_leaf_digest_values = [BFieldElement::new(0); DIGEST_LENGTH];
@@ -216,7 +215,7 @@ impl Snippet for MmrLoadFromSecretInThenVerify {
         // This should be a bigger state, but that's not possible since
         // the current implementation uses an archival MMR, which requires
         // all MMR nodes to be stored in memory.
-        prepare_state(100, 50, true)
+        prepare_state::<H>(100, 50, true)
     }
 
     fn worst_case_input_state(&self) -> ExecutionState
@@ -226,11 +225,15 @@ impl Snippet for MmrLoadFromSecretInThenVerify {
         // This should be a bigger state, but that's not possible since
         // the current implementation uses an archival MMR, which requires
         // all MMR nodes to be stored in memory.
-        prepare_state(2000, 1000, true)
+        prepare_state::<H>(2000, 1000, true)
     }
 }
 
-fn prepare_state(size: usize, leaf_index: u64, produce_valid_input: bool) -> ExecutionState {
+fn prepare_state<H: AlgebraicHasher>(
+    size: usize,
+    leaf_index: u64,
+    produce_valid_input: bool,
+) -> ExecutionState {
     // BEFORE: _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo [digest (leaf_digest)]
     // AFTER: _ *auth_path leaf_index_hi leaf_index_lo validation_result
 
@@ -281,7 +284,7 @@ fn prepare_state(size: usize, leaf_index: u64, produce_valid_input: bool) -> Exe
 /// Prepare the part of the state that can be derived from the MMR without
 /// knowing e.g. the leaf index of the leaf digest that you want to authenticate
 /// so this function does not populate e.g. `secret_in`. The caller has to do that.
-fn mmr_to_init_vm_state(mmra: &mut MmrAccumulator<H>) -> ExecutionState {
+fn mmr_to_init_vm_state<H: AlgebraicHasher>(mmra: &mut MmrAccumulator<H>) -> ExecutionState {
     let mut stack: Vec<BFieldElement> = get_init_tvm_stack();
     let peaks_pointer = BFieldElement::zero();
     stack.push(peaks_pointer);
@@ -318,14 +321,15 @@ mod tests {
     use super::*;
     use crate::snippet_bencher::bench_and_write;
     use crate::test_helpers::rust_tasm_equivalence_prop_new;
+    use crate::VmHasher;
 
     #[test]
     fn load_from_secret_in_then_verify_test() {
-        rust_tasm_equivalence_prop_new(MmrLoadFromSecretInThenVerify);
+        rust_tasm_equivalence_prop_new(MmrLoadFromSecretInThenVerify(PhantomData::<VmHasher>));
     }
 
     #[test]
     fn load_from_secret_in_then_verify_benchmark() {
-        bench_and_write(MmrLoadFromSecretInThenVerify);
+        bench_and_write(MmrLoadFromSecretInThenVerify(PhantomData::<VmHasher>));
     }
 }

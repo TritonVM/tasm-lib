@@ -59,7 +59,6 @@ impl Snippet for UnsafePop {
         let mut code_to_read_elements = String::default();
         // Start and end at loop: Stack: _  [elems], address_for_last_unread_element
         for i in 0..self.0.get_size() {
-            code_to_read_elements.push_str("push 0\n");
             code_to_read_elements.push_str("read_mem\n");
             // stack: _  address_for_last_unread_element, elem_{{N - 1 - i}}
 
@@ -73,11 +72,15 @@ impl Snippet for UnsafePop {
         }
 
         let element_size = self.0.get_size();
+        let mul_with_size = if element_size != 1 {
+            format!("push {element_size}\n mul\n")
+        } else {
+            String::default()
+        };
         format!(
             // Before: _ *list
             // After: _ elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}
             "{entry_point}:
-                push 0
                 read_mem
                 // stack : _  *list, length
 
@@ -91,15 +94,15 @@ impl Snippet for UnsafePop {
                 // stack : _  *list, length
 
                 // Decrease length value by one and write back to memory
+                swap1
+                dup1
                 push -1
                 add
                 write_mem
-                // stack : _  *list, length - 1
+                swap1
+                // stack : _  *list, initial_length
 
-                push {element_size}
-                mul
-                push {element_size}
-                add
+                {mul_with_size}
                 // stack : _  *list, offset_for_last_element = (N * initial_length)
 
                 add

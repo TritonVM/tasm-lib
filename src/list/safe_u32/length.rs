@@ -92,7 +92,6 @@ impl Snippet for SafeLength {
         format!(
             "
             {entry_point}:
-                push 0
                 read_mem
                 swap1
                 pop

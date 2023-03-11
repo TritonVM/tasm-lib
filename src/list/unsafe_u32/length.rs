@@ -94,7 +94,6 @@ impl Snippet for UnsafeLengthLong {
         format!(
             "
             {entry_point}:
-                push 0
                 read_mem
                 swap1
                 pop
@@ -188,7 +187,6 @@ impl Snippet for UnsafeLengthShort {
         format!(
             "
             {entry_point}:
-                push 0
                 read_mem
                 return
                 "

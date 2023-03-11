@@ -3,14 +3,14 @@
     "name": "tasm_mmr_right_child_and_height",
     "processor_table_height": 3288,
     "hash_table_height": 0,
-    "u32_table_height": 1953,
+    "u32_table_height": 1826,
     "case": "CommonCase"
   },
   {
     "name": "tasm_mmr_right_child_and_height",
     "processor_table_height": 6114,
     "hash_table_height": 0,
-    "u32_table_height": 7611,
+    "u32_table_height": 4634,
     "case": "WorstCase"
   }
 ]

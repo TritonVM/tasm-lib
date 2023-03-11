@@ -3,14 +3,14 @@
     "name": "tasm_mmr_data_index_to_node_index",
     "processor_table_height": 2627,
     "hash_table_height": 0,
-    "u32_table_height": 2470,
+    "u32_table_height": 2396,
     "case": "CommonCase"
   },
   {
     "name": "tasm_mmr_data_index_to_node_index",
     "processor_table_height": 5701,
     "hash_table_height": 0,
-    "u32_table_height": 7801,
+    "u32_table_height": 5776,
     "case": "WorstCase"
   }
 ]

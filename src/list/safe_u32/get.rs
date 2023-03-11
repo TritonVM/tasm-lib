@@ -86,7 +86,6 @@ impl Snippet for SafeGet {
 
         // Start and end at loop: Stack: _  [elems], address_of_next_element
         for i in 0..self.0.get_size() {
-            code_to_read_elements.push_str("push 0\n");
             code_to_read_elements.push_str("read_mem\n");
             // stack: _  address_for_last_unread_element, elem_{{N - 1 - i}}
 
@@ -97,14 +96,20 @@ impl Snippet for SafeGet {
                 code_to_read_elements.push_str("add\n");
             }
         }
-        let size = self.0.get_size();
+        let element_size = self.0.get_size();
+
+        // Code to multiply with size. If size is 1, do nothing to save two clock cycles.
+        let mul_with_size = if element_size != 1 {
+            format!("push {element_size}\n mul\n")
+        } else {
+            String::default()
+        };
         format!(
             "
             // BEFORE: _ *list index
             // After: _ elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}
             {entrypoint}:
                 dup1
-                push 0
                 read_mem
                 // stack: _ *list index *list length
 
@@ -120,8 +125,7 @@ impl Snippet for SafeGet {
 
                 push 1
                 add
-                push {size}
-                mul
+                {mul_with_size}
                 // stack: _ *list (N * (index + 1))
 
                 add

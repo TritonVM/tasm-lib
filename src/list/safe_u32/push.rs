@@ -84,13 +84,19 @@ impl Snippet for SafePush {
         for i in 0..element_size {
             write_elements_to_memory_code.push_str("swap1\n");
             write_elements_to_memory_code.push_str("write_mem\n");
-            write_elements_to_memory_code.push_str("pop\n");
             if i != element_size - 1 {
                 // Prepare for next write. Not needed for last iteration.
                 write_elements_to_memory_code.push_str("push 1\n");
                 write_elements_to_memory_code.push_str("add\n");
             }
         }
+
+        // Code to multiply with size. If size is 1, do nothing to save two clock cycles.
+        let mul_with_size = if element_size != 1 {
+            format!("push {element_size}\n mul\n")
+        } else {
+            String::default()
+        };
 
         let entry_point = self.entrypoint();
         format!(
@@ -101,7 +107,6 @@ impl Snippet for SafePush {
                 dup{element_size}
                 // stack : _  *list, elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}, *list
 
-                push 0
                 read_mem
                 // stack : _  *list, elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}, *list, length
 
@@ -111,7 +116,6 @@ impl Snippet for SafePush {
                     add
                     // stack : _  *list, elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}, length, (*list + 1)
 
-                    push 0
                     read_mem
                     // stack : _  *list, elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}, length, (*list + 1), capacity
 
@@ -123,8 +127,7 @@ impl Snippet for SafePush {
 
                     swap1
 
-                push {element_size}
-                mul
+                {mul_with_size}
                 // stack : _  *list, elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}, (*list + 1), length * elem_size
 
                 add
@@ -133,7 +136,10 @@ impl Snippet for SafePush {
                 // stack : _  *list, elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}, (*list + length * elem_size + 2) -- top of stack is where we will store elements
 
                 {write_elements_to_memory_code}
-                // stack : _  *list, *list + length * elem_size + 1
+                // stack : _  *list, address
+
+                pop
+                // stack : _  *list
 
                 // Increase length indicator by one
                 read_mem
@@ -144,13 +150,8 @@ impl Snippet for SafePush {
                 // stack : _  *list, length + 1
 
                 write_mem
-                // stack : _  *list, length + 1
+                // stack : _  *list
 
-                // Verify that `length + 1` <= capacity
-
-
-
-                pop
                 pop
                 // stack : _
 
@@ -268,6 +269,45 @@ mod tests {
         let capacity = 20;
         prop_push(
             DataType::U32,
+            list_address,
+            init_length,
+            capacity,
+            push_value,
+        );
+    }
+
+    #[test]
+    fn push_to_capacity_xfe() {
+        let list_address = BFieldElement::new(1841);
+        let push_value = vec![
+            BFieldElement::new(133700),
+            BFieldElement::new(133701),
+            BFieldElement::new(133702),
+        ];
+        let init_length = 19;
+        let capacity = 20;
+        prop_push(
+            DataType::XFE,
+            list_address,
+            init_length,
+            capacity,
+            push_value,
+        );
+    }
+
+    #[should_panic]
+    #[test]
+    fn push_beyond_capacity_xfe() {
+        let list_address = BFieldElement::new(1841);
+        let push_value = vec![
+            BFieldElement::new(133700),
+            BFieldElement::new(133701),
+            BFieldElement::new(133702),
+        ];
+        let init_length = 20;
+        let capacity = 20;
+        prop_push(
+            DataType::XFE,
             list_address,
             init_length,
             capacity,
