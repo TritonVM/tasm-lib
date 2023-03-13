@@ -1,10 +1,10 @@
+use num::Zero;
 use rand::RngCore;
 use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::arithmetic::u64::add_u64::AddU64;
 use crate::arithmetic::u64::and_u64::AndU64;
-use crate::arithmetic::u64::div2_u64::Div2U64;
 use crate::arithmetic::u64::sub_u64::SubU64;
 use crate::arithmetic::u64::wrapping_mul_u64::WrappingMulU64;
 use crate::library::Library;
@@ -50,7 +50,6 @@ impl Snippet for PopCountU64 {
 
     fn function_body(&self, library: &mut Library) -> String {
         let entrypoint = self.entrypoint();
-        let div2_u64 = library.import(Box::new(Div2U64));
         let and_u64 = library.import(Box::new(AndU64));
         let add_u64 = library.import(Box::new(AddU64));
         let sub_u64 = library.import(Box::new(SubU64));
@@ -68,7 +67,23 @@ impl Snippet for PopCountU64 {
             {entrypoint}:
                 dup1
                 dup1
-                call {div2_u64}
+
+                // Bitshift right by 1
+                push 31
+                push 2
+                pow
+                mul
+                split
+                pop
+                swap1
+                push 31
+                push 2
+                pow
+                mul
+                split
+                pop
+                swap1
+
                 // x_hi x_lo (x >> 1)_hi (x >> 1)_lo
 
                 push {m1}
@@ -87,8 +102,22 @@ impl Snippet for PopCountU64 {
                 dup1
                 dup1
 
-                call {div2_u64}
-                call {div2_u64}
+                // Bitshift right by 2
+                // x_hi x_lo x_hi x_lo
+                push 30
+                push 2
+                pow
+                mul
+                split
+                pop
+                swap1
+                push 30
+                push 2
+                pow
+                mul
+                split
+                pop
+                swap1
                 // _ x_hi x_lo (x >> 2)_hi (x >> 2)_lo
 
                 push {m2}
@@ -113,10 +142,21 @@ impl Snippet for PopCountU64 {
                 dup1 dup1
                 // _ x_u64 x_u64
 
-                call {div2_u64}
-                call {div2_u64}
-                call {div2_u64}
-                call {div2_u64}
+                // Bitshift right by 4
+                push 28
+                push 2
+                pow
+                mul
+                split
+                pop
+                swap1
+                push 28
+                push 2
+                pow
+                mul
+                split
+                pop
+                swap1
                 // _ x_u64 (x >> 4)_u64
 
                 call {add_u64}
@@ -162,6 +202,27 @@ impl Snippet for PopCountU64 {
         for _ in 0..100 {
             ret.push(prepare_state(rng.next_u64()));
         }
+
+        // add cornercases
+        let mut init_stack_zero = get_init_tvm_stack();
+        init_stack_zero.push(BFieldElement::zero());
+        init_stack_zero.push(BFieldElement::zero());
+        ret.push(ExecutionState::with_stack(init_stack_zero));
+
+        let mut init_stack_max_value = get_init_tvm_stack();
+        init_stack_max_value.push(BFieldElement::new((1u64 << 32) - 1));
+        init_stack_max_value.push(BFieldElement::new((1u64 << 32) - 1));
+        ret.push(ExecutionState::with_stack(init_stack_max_value));
+
+        let mut init_stack_max_value2 = get_init_tvm_stack();
+        init_stack_max_value2.push(BFieldElement::new((1u64 << 32) - 1));
+        init_stack_max_value2.push(BFieldElement::new((1u64 << 30) - 1));
+        ret.push(ExecutionState::with_stack(init_stack_max_value2));
+
+        let mut init_stack_max_value3 = get_init_tvm_stack();
+        init_stack_max_value3.push(BFieldElement::new((1u64 << 30) - 1));
+        init_stack_max_value3.push(BFieldElement::new((1u64 << 32) - 1));
+        ret.push(ExecutionState::with_stack(init_stack_max_value3));
 
         ret
     }
