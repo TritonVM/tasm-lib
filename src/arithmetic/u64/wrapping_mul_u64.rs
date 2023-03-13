@@ -192,17 +192,17 @@ mod tests {
     use super::*;
 
     #[test]
-    fn mul_u64_test() {
+    fn wrapping_mul_u64_test() {
         rust_tasm_equivalence_prop_new(WrappingMulU64);
     }
 
     #[test]
-    fn mul_u64_benchmark() {
+    fn wrappingmul_u64_benchmark() {
         bench_and_write(WrappingMulU64);
     }
 
     #[test]
-    fn mul_u64_simple() {
+    fn wrapping_mul_u64_simple() {
         let mut init_stack = get_init_tvm_stack();
         init_stack.push(BFieldElement::zero());
         init_stack.push(BFieldElement::new(100));

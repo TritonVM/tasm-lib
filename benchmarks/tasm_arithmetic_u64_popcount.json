@@ -1,0 +1,16 @@
+[
+  {
+    "name": "tasm_arithmetic_u64_popcount",
+    "processor_table_height": 268,
+    "hash_table_height": 0,
+    "u32_table_height": 566,
+    "case": "CommonCase"
+  },
+  {
+    "name": "tasm_arithmetic_u64_popcount",
+    "processor_table_height": 268,
+    "hash_table_height": 0,
+    "u32_table_height": 566,
+    "case": "WorstCase"
+  }
+]
