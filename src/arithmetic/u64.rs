@@ -10,4 +10,5 @@ pub mod log_2_floor_u64;
 pub mod lt_u64;
 pub mod pow2_u64;
 pub mod sub_u64;
+pub mod wrapping_mul_u64;
 pub mod xor_u64;
