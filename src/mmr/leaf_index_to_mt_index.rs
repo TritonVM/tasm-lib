@@ -10,10 +10,9 @@ use twenty_first::util_types::mmr;
 use crate::arithmetic::u64::add_u64::AddU64;
 use crate::arithmetic::u64::and_u64::AndU64;
 use crate::arithmetic::u64::decr_u64::DecrU64;
-use crate::arithmetic::u64::double_pow2_u64::DoublePow2U64;
-use crate::arithmetic::u64::eq_u64::EqU64;
 use crate::arithmetic::u64::log_2_floor_u64::Log2FloorU64;
 use crate::arithmetic::u64::lt_u64::LtU64;
+use crate::arithmetic::u64::popcount_u64::PopCountU64;
 use crate::arithmetic::u64::pow2_u64::Pow2U64;
 use crate::arithmetic::u64::xor_u64::XorU64;
 use crate::library::Library;
@@ -80,10 +79,9 @@ impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
         let add_u64 = library.import(Box::new(AddU64));
         let and_u64 = library.import(Box::new(AndU64));
         let pow2_u64 = library.import(Box::new(Pow2U64));
-        let eq_u64 = library.import(Box::new(EqU64));
         let xor_u64 = library.import(Box::new(XorU64));
         let decr_u64 = library.import(Box::new(DecrU64));
-        let double_pow2_u64 = library.import(Box::new(DoublePow2U64));
+        let popcount_u64 = library.import(Box::new(PopCountU64));
 
         format!(
             "
@@ -122,96 +120,46 @@ impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
             // stack: _ leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo local_mt_leaf_count_hi local_mt_leaf_count_lo local_mt_leaf_count_hi local_mt_leaf_count_lo remainder_bitmask_hi remainder_bitmask_lo
 
             // `local_leaf_index`
-            dup7
-            dup7
+            dup1
+            dup1
+            dup9
+            dup9
             call {and_u64}
-            // stack: _ lc_hi lc_lo li_hi li_lo local_mt_leaf_count_hi local_mt_leaf_count_lo local_mt_leaf_count_hi local_mt_leaf_count_lo local_leaf_index_hi local_leaf_index_lo
+            // stack: _ leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo local_mt_leaf_count_hi local_mt_leaf_count_lo local_mt_leaf_count_hi local_mt_leaf_count_lo remainder_bitmask_hi remainder_bitmask_lo remainder_bitmask_hi remainder_bitmask_lo
 
             // `mt_index`
+            dup5 dup5
+            // stack: _ leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo local_mt_leaf_count_hi local_mt_leaf_count_lo local_mt_leaf_count_hi local_mt_leaf_count_lo remainder_bitmask_hi remainder_bitmask_lo lli_hi lli_lo local_mt_leaf_count_hi local_mt_leaf_count_lo
+
             call {add_u64}
-            // stack: _ lc_hi lc_lo li_hi li_lo local_mt_leaf_count_hi local_mt_leaf_count_lo mt_index_hi mt_index_lo
+            // stack: _ leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo local_mt_leaf_count_hi local_mt_leaf_count_lo local_mt_leaf_count_hi local_mt_leaf_count_lo remainder_bitmask_hi remainder_bitmask_lo mti_hi mti_lo
 
-            // declare `peak_index`, `cutoff`, and `search`
-            push 0
-            // stack: _ lc_hi lc_lo li_hi li_lo local_mt_lc_hi local_mt_lc_lo mti_hi mti_lo pi
+            // `all_the_ones`
+            swap10 swap1 swap11 swap1
+            // stack: _ mti_hi mti_lo leaf_index_hi leaf_index_lo local_mt_leaf_count_hi local_mt_leaf_count_lo local_mt_leaf_count_hi local_mt_leaf_count_lo remainder_bitmask_hi remainder_bitmask_lo lc_hi lc_lo
 
-            dup8 dup8
-            call {log_2_floor_u64}
-            call {pow2_u64}
-            // stack: _ lc_hi lc_lo li_hi li_lo local_mt_lc_hi local_mt_lc_lo mti_hi mti_lo pi cutoff_hi cutoff_lo
+            dup1 dup1
+            call {popcount_u64}
+            // stack: _ mti_hi mti_lo leaf_index_hi leaf_index_lo local_mt_leaf_count_hi local_mt_leaf_count_lo local_mt_leaf_count_hi local_mt_leaf_count_lo remainder_bitmask_hi remainder_bitmask_lo lc_hi lc_lo all_the_ones
 
-            dup6 dup6
-            // stack: _ lc_hi lc_lo li_hi li_lo local_mt_lc_hi local_mt_lc_lo mti_hi mti_lo pi cutoff_hi cutoff_lo search_hi search_lo
+            swap5 pop
+            // stack: _ mti_hi mti_lo leaf_index_hi leaf_index_lo local_mt_leaf_count_hi local_mt_leaf_count_lo local_mt_leaf_count_hi all_the_ones remainder_bitmask_hi remainder_bitmask_lo lc_hi lc_lo
 
-            call {entrypoint}_while
-            // stack: _ lc_hi lc_lo li_hi li_lo local_mt_lc_hi local_mt_lc_lo mti_hi mti_lo pi cutoff_hi cutoff_lo search_hi search_lo
+            call {and_u64}
+            call {popcount_u64}
+            // stack: _ mti_hi mti_lo leaf_index_hi leaf_index_lo local_mt_leaf_count_hi local_mt_leaf_count_lo local_mt_leaf_count_hi all_the_ones ones_to_subtract
 
-            pop
-            pop
-            pop
-            pop
-            swap6
-            pop
-            swap6
-            pop
-            swap6
-            pop
+            push -1
+            mul
+            add
+            push -1
+            add
+            // stack: _ mti_hi mti_lo leaf_index_hi leaf_index_lo local_mt_leaf_count_hi local_mt_leaf_count_lo local_mt_leaf_count_hi peak_index
 
-            pop
-            pop
-            pop
-            // After: _ mti_hi mti_lo pi
+            swap5 pop pop pop pop pop
+            // stack: _ mti_hi mti_lo peak_index
 
             return
-
-            // stack: _ lc_hi lc_lo li_hi li_lo local_mt_lc_hi local_mt_lc_lo mti_hi mti_lo pi cutoff_hi cutoff_lo search_hi search_lo
-            {entrypoint}_while:
-                // while search != cutoff
-                dup3 dup3 dup3 dup3
-                call {eq_u64}
-                skiz
-                    return
-
-                // stack: _ lc_hi lc_lo li_hi li_lo local_mt_lc_hi local_mt_lc_lo mti_hi mti_lo pi cutoff_hi cutoff_lo search_hi search_lo
-
-                dup12 dup12
-                dup3 dup3
-                call {and_u64}
-                // stack: _ lc_hi lc_lo li_hi li_lo local_mt_lc_hi local_mt_lc_lo mti_hi mti_lo pi cutoff_hi cutoff_lo search_hi search_lo (search & leaf_count)_hi (search & leaf_count)_lo
-
-                push 0
-                eq
-                // stack: _ lc_hi lc_lo li_hi li_lo local_mt_lc_hi local_mt_lc_lo mti_hi mti_lo pi cutoff_hi cutoff_lo search_hi search_lo (search & leaf_count)_hi (search & leaf_count)_lo == 0
-
-                swap1
-                // stack: _ lc_hi lc_lo li_hi li_lo local_mt_lc_hi local_mt_lc_lo mti_hi mti_lo pi cutoff_hi cutoff_lo search_hi search_lo ((search & leaf_count)_lo == 0) (search & leaf_count)_hi
-
-                push 0
-                eq
-                // stack: _ lc_hi lc_lo li_hi li_lo local_mt_lc_hi local_mt_lc_lo mti_hi mti_lo pi cutoff_hi cutoff_lo search_hi search_lo ((search & leaf_count)_lo == 0) ((search & leaf_count)_hi == 0)
-
-                add
-                push 2
-                eq
-                push 0
-                eq
-                // stack: _ lc_hi lc_lo li_hi li_lo local_mt_lc_hi local_mt_lc_lo mti_hi mti_lo pi cutoff_hi cutoff_lo search_hi search_lo !(((search & leaf_count)_lo == 0) && ((search & leaf_count)_hi == 0))
-
-                // update `peak_index` (pi) value with boolean value
-                dup5
-                add
-                swap5
-                pop
-                // stack: _ lc_hi lc_lo li_hi li_lo local_mt_lc_hi local_mt_lc_lo mti_hi mti_lo new_pi cutoff_hi cutoff_lo search_hi search_lo
-
-                // update `search` by multiplying it by two
-                call {double_pow2_u64}
-                // stack: _ lc_hi lc_lo li_hi li_lo local_mt_lc_hi local_mt_lc_lo mti_hi mti_lo new_pi cutoff_hi cutoff_lo new_search_hi new_search_lo
-
-                // rename: 'new' -> ''
-                // stack: _ lc_hi lc_lo li_hi li_lo local_mt_lc_hi local_mt_lc_lo mti_hi mti_lo pi cutoff_hi cutoff_lo search_hi search_lo
-
-                recurse
             "
         )
     }
