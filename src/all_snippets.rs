@@ -4,7 +4,7 @@ use crate::{
     arithmetic::{
         u32::{
             is_odd::U32IsOdd, is_u32::IsU32, safe_add::SafeAdd, safe_mul::SafeMul,
-            safe_sub::SafeSub,
+            safe_sub::SafeSub, shift_right::ShiftRightU32,
         },
         u64::{
             add_u64::AddU64,
@@ -85,6 +85,7 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn Snippet> {
         "tasm_arithmetic_u32_safe_add_u32" => Box::new(SafeAdd),
         "tasm_arithmetic_u32_safe_sub_u32" => Box::new(SafeSub),
         "tasm_arithmetic_u32_u32_safe_mul" => Box::new(SafeMul),
+        "tasm_arithmetic_u32_shift_right_u32" => Box::new(ShiftRightU32),
 
         // u64
         "tasm_arithmetic_u64_add" => Box::new(AddU64),
