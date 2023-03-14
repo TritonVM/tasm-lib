@@ -138,7 +138,7 @@ impl Snippet for SafeNew {
                     *e
                 }
             })
-            .or_insert(BFieldElement::one());
+            .or_insert_with(BFieldElement::one);
         let list_pointer = *used_memory;
         *used_memory += BFieldElement::new(capacity as u64)
             * BFieldElement::new(self.0.get_size() as u64)

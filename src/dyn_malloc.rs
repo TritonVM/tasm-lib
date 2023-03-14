@@ -130,7 +130,7 @@ impl Snippet for DynMalloc {
                     *e
                 }
             })
-            .or_insert(BFieldElement::one());
+            .or_insert_with(BFieldElement::one);
 
         let size = stack.pop().unwrap();
         let next_addr = *used_memory;
