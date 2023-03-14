@@ -5,6 +5,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::arithmetic::u64::add_u64::AddU64;
 use crate::arithmetic::u64::and_u64::AndU64;
+use crate::arithmetic::u64::shift_right_u64::ShiftRightU64;
 use crate::arithmetic::u64::sub_u64::SubU64;
 use crate::arithmetic::u64::wrapping_mul_u64::WrappingMulU64;
 use crate::library::Library;
@@ -53,6 +54,7 @@ impl Snippet for PopCountU64 {
         let and_u64 = library.import(Box::new(AndU64));
         let add_u64 = library.import(Box::new(AddU64));
         let sub_u64 = library.import(Box::new(SubU64));
+        let shift_right_u64 = library.import(Box::new(ShiftRightU64));
         let wrapping_mul_u64 = library.import(Box::new(WrappingMulU64));
         let m1 = BFieldElement::new(0x5555555555555555u64);
         let m2 = BFieldElement::new(0x3333333333333333u64);
@@ -69,20 +71,8 @@ impl Snippet for PopCountU64 {
                 dup1
 
                 // Bitshift right by 1
-                push 31
-                push 2
-                pow
-                mul
-                split
-                pop
-                swap1
-                push 31
-                push 2
-                pow
-                mul
-                split
-                pop
-                swap1
+                push 1
+                call {shift_right_u64}
 
                 // x_hi x_lo (x >> 1)_hi (x >> 1)_lo
 
@@ -103,22 +93,8 @@ impl Snippet for PopCountU64 {
                 dup1
 
                 // Bitshift right by 2
-                // x_hi x_lo x_hi x_lo
-                push 30
                 push 2
-                pow
-                mul
-                split
-                pop
-                swap1
-                push 30
-                push 2
-                pow
-                mul
-                split
-                pop
-                swap1
-                // _ x_hi x_lo (x >> 2)_hi (x >> 2)_lo
+                call {shift_right_u64}
 
                 push {m2}
                 split
@@ -143,20 +119,8 @@ impl Snippet for PopCountU64 {
                 // _ x_u64 x_u64
 
                 // Bitshift right by 4
-                push 28
-                push 2
-                pow
-                mul
-                split
-                pop
-                swap1
-                push 28
-                push 2
-                pow
-                mul
-                split
-                pop
-                swap1
+                push 4
+                call {shift_right_u64}
                 // _ x_u64 (x >> 4)_u64
 
                 call {add_u64}
