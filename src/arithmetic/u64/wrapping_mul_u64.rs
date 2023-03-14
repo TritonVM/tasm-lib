@@ -215,8 +215,8 @@ mod tests {
         rust_tasm_equivalence_prop(
             WrappingMulU64,
             &init_stack,
-            &vec![],
-            &vec![],
+            &[],
+            &[],
             &mut HashMap::default(),
             1,
             Some(&expected),
