@@ -2,6 +2,7 @@ use std::marker::PhantomData;
 
 use crate::{
     arithmetic::{
+        u128::add_u128::AddU128,
         u32::{
             is_odd::U32IsOdd, is_u32::IsU32, safe_add::SafeAdd, safe_mul::SafeMul,
             safe_sub::SafeSub, shift_left::ShiftLeftU32, shift_right::ShiftRightU32,
@@ -110,6 +111,9 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn Snippet> {
         "tasm_arithmetic_u64_popcount" => Box::new(PopCountU64),
         "tasm_arithmetic_u64_shift_right" => Box::new(ShiftRightU64),
         "tasm_arithmetic_u64_shift_left" => Box::new(ShiftLeftU64),
+
+        // u128
+        "tasm_arithmetic_u128_add" => Box::new(AddU128),
 
         // Hashing
         "tasm_hashing_eq_digest" => Box::new(EqDigest),

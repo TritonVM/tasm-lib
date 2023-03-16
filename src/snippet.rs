@@ -20,6 +20,7 @@ pub enum DataType {
     Bool,
     U32,
     U64,
+    U128,
     BFE,
     XFE,
     Digest,
@@ -44,6 +45,11 @@ impl DataType {
                 .map(|_| BFieldElement::new(rng.gen_range(0..=u32::MAX as u64)))
                 .tuples()
                 .map(|(a, b)| vec![a, b])
+                .collect_vec(),
+            DataType::U128 => (0..4 * count)
+                .map(|_| BFieldElement::new(rng.gen_range(0..=u32::MAX as u64)))
+                .tuples()
+                .map(|(a, b, c, d)| vec![a, b, c, d])
                 .collect_vec(),
             DataType::BFE => (0..count)
                 .map(|_| vec![BFieldElement::new(rng.gen_range(0..=BFieldElement::MAX))])
@@ -73,6 +79,7 @@ impl Display for DataType {
                 DataType::Bool => "bool".to_string(),
                 DataType::U32 => "u32".to_string(),
                 DataType::U64 => "u64".to_string(),
+                DataType::U128 => "u128".to_string(),
                 DataType::BFE => "bfe".to_string(),
                 DataType::XFE => "xfe".to_string(),
                 DataType::Digest => "digest".to_string(),
@@ -88,6 +95,7 @@ impl DataType {
             DataType::Bool => 1,
             DataType::U32 => 1,
             DataType::U64 => 2,
+            DataType::U128 => 4,
             DataType::BFE => 1,
             DataType::XFE => 3,
             DataType::Digest => DIGEST_LENGTH,
