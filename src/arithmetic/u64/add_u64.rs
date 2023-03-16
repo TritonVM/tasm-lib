@@ -6,7 +6,6 @@ use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::algebraic_hasher::Hashable;
 
-use crate::arithmetic::u32::is_u32::IsU32;
 use crate::library::Library;
 use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
@@ -80,38 +79,40 @@ impl Snippet for AddU64 {
 
     /// Four top elements of stack are assumed to be valid u32s. So to have
     /// a value that's less than 2^32.
-    fn function_body(&self, library: &mut Library) -> String {
+    fn function_body(&self, _library: &mut Library) -> String {
         let entrypoint = self.entrypoint();
-        let is_u32 = library.import(Box::new(IsU32));
-        const MINUS_2_POW_32: &str = "18446744065119617025";
 
         format!(
             "
+            // BEFORE: _ rhs_hi rhs_lo lhs_hi lhs_lo
+            // AFTER: _ sum_hi sum_lo
             {entrypoint}:
-                swap1
-                swap2
+                swap1 swap2
+                // _ rhs_hi lhs_hi lhs_lo rhs_lo
+
                 add
-                dup0
-                call {is_u32}
+                split
+                // _ rhs_hi lhs_hi carry sum_lo
+
+                swap3
+                // _ sum_lo lhs_hi carry rhs_hi
+
+                add
+                add
+                // _ sum_lo (lhs_hi+rhs_hi+carry)
+
+                split
+                // _ sum_lo overflow sum_hi
+
+                swap1
                 push 0
                 eq
-                skiz
-                    call {entrypoint}_carry
-                swap2
-                add
-                dup0
-                call {is_u32}
                 assert
-                swap1
-                return
+                // _ sum_lo sum_hi
 
-            {entrypoint}_carry:
-                push {MINUS_2_POW_32}
-                add
-                swap2
-                push 1
-                add
-                swap2
+                swap1
+                // _ sum_hi sum_lo
+
                 return
             "
         )

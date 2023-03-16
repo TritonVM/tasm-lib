@@ -1,14 +1,14 @@
 [
   {
     "name": "tasm_mmr_leaf_index_to_mt_index_and_peak_index",
-    "processor_table_height": 566,
+    "processor_table_height": 511,
     "hash_table_height": 0,
     "u32_table_height": 1280,
     "case": "CommonCase"
   },
   {
     "name": "tasm_mmr_leaf_index_to_mt_index_and_peak_index",
-    "processor_table_height": 566,
+    "processor_table_height": 511,
     "hash_table_height": 0,
     "u32_table_height": 1513,
     "case": "WorstCase"
