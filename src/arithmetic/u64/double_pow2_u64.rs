@@ -12,7 +12,7 @@ pub struct DoublePow2U64;
 
 impl Snippet for DoublePow2U64 {
     fn entrypoint(&self) -> String {
-        "tasm_arithmetic_pow2_double".to_string()
+        "tasm_arithmetic_u64_pow2_double".to_string()
     }
 
     fn inputs(&self) -> Vec<String>
