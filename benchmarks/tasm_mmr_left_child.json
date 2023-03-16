@@ -1,14 +1,14 @@
 [
   {
     "name": "tasm_mmr_left_child",
-    "processor_table_height": 50,
+    "processor_table_height": 36,
     "hash_table_height": 0,
     "u32_table_height": 37,
     "case": "CommonCase"
   },
   {
     "name": "tasm_mmr_left_child",
-    "processor_table_height": 50,
+    "processor_table_height": 36,
     "hash_table_height": 0,
     "u32_table_height": 68,
     "case": "WorstCase"

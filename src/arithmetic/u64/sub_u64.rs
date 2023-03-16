@@ -6,7 +6,6 @@ use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::algebraic_hasher::Hashable;
 
-use crate::arithmetic::u32::is_u32::IsU32;
 use crate::library::Library;
 use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
@@ -43,57 +42,59 @@ impl Snippet for SubU64 {
     fn gen_input_states(&self) -> Vec<ExecutionState> {
         let mut rng = rand::thread_rng();
 
-        // no overflow, no carry: small_a - smaller_b
-        // small_a is 0..2^32, smaller_b < small_a
-        let (small_a, smaller_b) = {
-            let a: u32 = rng.gen();
-            let b: u32 = rng.gen_range(0..=a);
+        let mut ret = vec![];
+        for _ in 0..30 {
+            // no overflow, no carry: small_a - smaller_b
+            // small_a is 0..2^32, smaller_b < small_a
+            let (small_a, smaller_b) = {
+                let a: u32 = rng.gen();
+                let b: u32 = rng.gen_range(0..=a);
 
-            (
-                U32s::<2>::try_from(a).unwrap(),
-                U32s::<2>::try_from(b).unwrap(),
-            )
-        };
+                (
+                    U32s::<2>::try_from(a).unwrap(),
+                    U32s::<2>::try_from(b).unwrap(),
+                )
+            };
 
-        let mut stack_1 = get_init_tvm_stack();
-        push_hashable(&mut stack_1, &smaller_b);
-        push_hashable(&mut stack_1, &small_a);
+            let mut stack_1 = get_init_tvm_stack();
+            push_hashable(&mut stack_1, &smaller_b);
+            push_hashable(&mut stack_1, &small_a);
+            ret.push(ExecutionState::with_stack(stack_1));
 
-        // no overflow, carry: large_c - smaller_carry_d
-        // large_c is 2^32..2^64, smaller_carry_d < large_c
-        let (large_c, smaller_carry_d) = {
-            let c: u64 = rng.gen::<u32>() as u64 + (1 << 32);
-            let d: u64 = rng.gen_range(0..=c);
-            (
-                U32s::<2>::try_from(c).unwrap(),
-                U32s::<2>::try_from(d).unwrap(),
-            )
-        };
+            // no overflow, carry: large_c - smaller_carry_d
+            // large_c is 2^32..2^64, smaller_carry_d < large_c
+            let (large_c, smaller_carry_d) = {
+                let c: u64 = rng.gen::<u32>() as u64 + (1 << 32);
+                let d: u64 = rng.gen_range(0..=c);
+                (
+                    U32s::<2>::try_from(c).unwrap(),
+                    U32s::<2>::try_from(d).unwrap(),
+                )
+            };
 
-        let mut stack_2 = get_init_tvm_stack();
-        push_hashable(&mut stack_2, &smaller_carry_d);
-        push_hashable(&mut stack_2, &large_c);
+            let mut stack_2 = get_init_tvm_stack();
+            push_hashable(&mut stack_2, &smaller_carry_d);
+            push_hashable(&mut stack_2, &large_c);
+            ret.push(ExecutionState::with_stack(stack_2));
 
-        // no overflow, no carry: large_e - smaller_f
-        // large_e is 0..2^64, smaller_f < large_e
-        let (large_e, smaller_f) = {
-            let e: u64 = rng.gen_range((1 << 32)..u64::MAX);
-            let f: u64 = rng.gen_range(0..(e & 0xffff_ffff));
-            (
-                U32s::<2>::try_from(e).unwrap(),
-                U32s::<2>::try_from(f).unwrap(),
-            )
-        };
+            // no overflow, no carry: large_e - smaller_f
+            // large_e is 0..2^64, smaller_f < large_e
+            let (large_e, smaller_f) = {
+                let e: u64 = rng.gen_range((1 << 32)..u64::MAX);
+                let f: u64 = rng.gen_range(0..(e & 0xffff_ffff));
+                (
+                    U32s::<2>::try_from(e).unwrap(),
+                    U32s::<2>::try_from(f).unwrap(),
+                )
+            };
 
-        let mut stack_3 = get_init_tvm_stack();
-        push_hashable(&mut stack_3, &smaller_f);
-        push_hashable(&mut stack_3, &large_e);
+            let mut stack_3 = get_init_tvm_stack();
+            push_hashable(&mut stack_3, &smaller_f);
+            push_hashable(&mut stack_3, &large_e);
+            ret.push(ExecutionState::with_stack(stack_3));
+        }
 
-        vec![
-            ExecutionState::with_stack(stack_1),
-            ExecutionState::with_stack(stack_2),
-            ExecutionState::with_stack(stack_3),
-        ]
+        ret
     }
 
     fn stack_diff(&self) -> isize {
@@ -106,46 +107,54 @@ impl Snippet for SubU64 {
 
     /// Four top elements of stack are assumed to be valid u32s. So to have
     /// a value that's less than 2^32.
-    fn function_body(&self, library: &mut Library) -> String {
+    fn function_body(&self, _library: &mut Library) -> String {
         let entrypoint = self.entrypoint();
-        let is_u32 = library.import(Box::new(IsU32));
         const TWO_POW_32: &str = "4294967296";
 
         format!(
             "
-            {entrypoint}_carry:
-                push {TWO_POW_32}
-                add
-                swap2  // -> _ lo_diff hi_l hi_r
-                push 1
-                add    // -> _ lo_diff hi_l (hi_r + 1)
-                swap2  // -> _ (hi_r + 1) hi_l lo_diff
-                return
-
-            // Before: _ hi_r lo_r hi_l lo_l
+            // Before: _ rhs_hi rhs_lo lhs_hi lhs_lo
             // After: _ hi_diff lo_diff
             {entrypoint}:
-                swap1  // -> _ hi_r lo_r lo_l hi_l
-                swap2  // -> _ hi_r hi_l lo_l lo_r
+                swap1 swap2
+                // _ rhs_hi lhs_hi lhs_lo rhs_lo
+
                 push -1
                 mul
-                add    // -> _ hi_r hi_l (lo_l - lo_r)
+                add
+                // _ rhs_hi lhs_hi (lhs_lo - rhs_lo)
 
-                dup0
-                call {is_u32}
+                push {TWO_POW_32}
+                add
+
+                split
+                // _ rhs_hi lhs_hi !carry diff_lo
+
+                swap3 swap1
+                // _ diff_lo lhs_hi rhs_hi !carry
+
                 push 0
                 eq
-                skiz
-                    call {entrypoint}_carry
+                // _ diff_lo lhs_hi rhs_hi carry
 
-                swap2  // -> lo_diff hi_l hi_r
+                add
+                // _ diff_lo lhs_hi rhs_hi'
+
                 push -1
                 mul
-                add    // -> lo_diff (hi_l - hi_r)
-                dup0
-                call {is_u32}
+                add
+                // _ diff_lo (lhs_hi - rhs_hi')
+
+                split
+                // _ diff_lo overflow diff_hi
+
+                swap1
+                push 0
+                eq
                 assert
-                swap1  // -> (hi_l - hi_r) lo_diff
+                // _ diff_lo diff_hi
+
+                swap1
 
                 return
             "
@@ -229,6 +238,45 @@ mod tests {
     }
 
     #[test]
+    fn subtraction_involving_zeros() {
+        // 0 - 0 = 0
+        let mut expected_end_stack = vec![
+            get_init_tvm_stack(),
+            vec![BFieldElement::zero(), BFieldElement::zero()],
+        ]
+        .concat();
+        prop_sub(U32s::from(0), U32s::from(0), Some(&expected_end_stack));
+
+        // 1 - 0 = 1
+        expected_end_stack = vec![
+            get_init_tvm_stack(),
+            vec![BFieldElement::zero(), BFieldElement::one()],
+        ]
+        .concat();
+        prop_sub(U32s::from(1), U32s::from(0), Some(&expected_end_stack));
+
+        // 1 - 1 = 0
+        expected_end_stack = vec![
+            get_init_tvm_stack(),
+            vec![BFieldElement::zero(), BFieldElement::zero()],
+        ]
+        .concat();
+        prop_sub(U32s::from(1), U32s::from(1), Some(&expected_end_stack));
+
+        // u64::MAX - u64::MAX = 0
+        expected_end_stack = vec![
+            get_init_tvm_stack(),
+            vec![BFieldElement::new(0), BFieldElement::new(0)],
+        ]
+        .concat();
+        prop_sub(
+            U32s::try_from(u64::MAX).unwrap(),
+            U32s::try_from(u64::MAX).unwrap(),
+            Some(&expected_end_stack),
+        );
+    }
+
+    #[test]
     fn u32s_2_sub_no_overflow() {
         // 256 - 129 = 127
         let expected_end_stack = vec![
@@ -257,7 +305,7 @@ mod tests {
     #[test]
     fn u32s_2_sub_pbt() {
         let mut rng = rand::thread_rng();
-        for _ in 0..10 {
+        for _ in 0..100 {
             let lhs: u64 = rng.gen();
             let rhs: u64 = rng.gen_range(0..=lhs);
 
