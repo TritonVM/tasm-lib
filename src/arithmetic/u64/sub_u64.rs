@@ -342,7 +342,7 @@ mod tests {
             init_stack.push(elem);
         }
 
-        let _execution_result = rust_tasm_equivalence_prop::<SubU64>(
+        let _execution_result = rust_tasm_equivalence_prop(
             SubU64,
             &init_stack,
             &[],
