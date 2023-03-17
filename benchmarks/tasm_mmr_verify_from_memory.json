@@ -1,16 +1,16 @@
 [
   {
     "name": "tasm_mmr_verify_from_memory",
-    "processor_table_height": 3331,
+    "processor_table_height": 2907,
     "hash_table_height": 186,
-    "u32_table_height": 1547,
+    "u32_table_height": 837,
     "case": "CommonCase"
   },
   {
     "name": "tasm_mmr_verify_from_memory",
-    "processor_table_height": 6035,
+    "processor_table_height": 5611,
     "hash_table_height": 372,
-    "u32_table_height": 1652,
+    "u32_table_height": 962,
     "case": "WorstCase"
   }
 ]

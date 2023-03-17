@@ -3,11 +3,6 @@ use rand::RngCore;
 use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
-use crate::arithmetic::u64::add_u64::AddU64;
-use crate::arithmetic::u64::and_u64::AndU64;
-use crate::arithmetic::u64::shift_right_u64::ShiftRightU64;
-use crate::arithmetic::u64::sub_u64::SubU64;
-use crate::arithmetic::u64::wrapping_mul_u64::WrappingMulU64;
 use crate::library::Library;
 use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
@@ -49,99 +44,17 @@ impl Snippet for PopCountU64 {
         -1
     }
 
-    fn function_body(&self, library: &mut Library) -> String {
+    fn function_body(&self, _library: &mut Library) -> String {
         let entrypoint = self.entrypoint();
-        let and_u64 = library.import(Box::new(AndU64));
-        let add_u64 = library.import(Box::new(AddU64));
-        let sub_u64 = library.import(Box::new(SubU64));
-        let shift_right_u64 = library.import(Box::new(ShiftRightU64));
-        let wrapping_mul_u64 = library.import(Box::new(WrappingMulU64));
-        let m1 = BFieldElement::new(0x5555555555555555u64);
-        let m2 = BFieldElement::new(0x3333333333333333u64);
-        let m4 = BFieldElement::new(0x0f0f0f0f0f0f0f0fu64);
-        let h01 = BFieldElement::new(0x0101010101010101u64);
-
-        // TODO: All right shifting here can be replaced by left shifting and splitting
         format!(
             "
             // Before: _ x_hi x_lo
             // After: _ popcount
             {entrypoint}:
-                dup 1
-                dup 1
-
-                // Bitshift right by 1
-                push 1
-                call {shift_right_u64}
-
-                // x_hi x_lo (x >> 1)_hi (x >> 1)_lo
-
-                push {m1}
-                split
-                call {and_u64}
-                // x_hi x_lo ((x >> 1) & m1)_hi ((x >> 1) & m1)_lo
-
-                swap 2 swap 1 swap 3 swap 1
-                // ((x >> 1) & m1)_hi ((x >> 1) & m1)_lo x_hi x_lo
-
-                call {sub_u64}
-                // (x - mask)_hi (x - mask)_lo
-
-                // rename (x - mask) -> x
-                // x_hi x_lo
-                dup 1
-                dup 1
-
-                // Bitshift right by 2
-                push 2
-                call {shift_right_u64}
-
-                push {m2}
-                split
-                call {and_u64}
-                // _ x_u64 (x >> 2) & m2)_u64
-
-                swap 2 swap 1 swap 3 swap 1
-                // _ (x >> 2) & m2)_u64 x_u64
-
-                push {m2}
-                split
-                call {and_u64}
-                // _ (x >> 2) & m2)_u64 (x & m2)_u64
-
-                call {add_u64}
-                // _ (x >> 2) & m2)_u64 + (x & m2)_u64
-
-                // rename (x & m2) + ((x >> 2) & m2) -> x
-                // _ x_hi x_lo
-
-                dup 1 dup 1
-                // _ x_u64 x_u64
-
-                // Bitshift right by 4
-                push 4
-                call {shift_right_u64}
-                // _ x_u64 (x >> 4)_u64
-
-                call {add_u64}
-                // _ (x + (x >> 4))_u64
-
-                push {m4}
-                split
-                call {and_u64}
-                // _ ((x + (x >> 4)) & m4)_u64
-
-                push {h01}
-                split
-                call {wrapping_mul_u64}
-                // _ (x * h01)_u64
-
-                // Read top 8 bits from `(x * h01)_u64`
-                pop         // _ (x * h01)_hi
-                push 256    // _ (x * h01)_hi * (1 << 8)
-                mul         // _ (x * h01)_hi << 8
-                split       // _ ((x * h01)_hi << 8)_hi ((x * h01)_hi << 8)_lo
-                pop         // _ ((x * h01)_hi << 8)_hi
+                pop_count
+                swap 1
+                pop_count
+                add
 
                 return
 
