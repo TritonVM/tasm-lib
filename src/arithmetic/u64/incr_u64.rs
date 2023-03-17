@@ -73,7 +73,7 @@ impl Snippet for IncrU64 {
                 pop
                 push 1
                 add
-                dup0
+                dup 0
                 push {TWO_POW_32}
                 eq
                 push 0
@@ -85,7 +85,7 @@ impl Snippet for IncrU64 {
             {entrypoint}:
                 push 1
                 add
-                dup0
+                dup 0
                 push {TWO_POW_32}
                 eq
                 skiz

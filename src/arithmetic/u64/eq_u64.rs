@@ -65,9 +65,9 @@ impl Snippet for EqU64 {
             // Before: _ hi_r lo_r hi_l lo_l
             // After: _ (r == l)
             {entrypoint}:
-                swap3
+                swap 3
                 eq
-                swap2
+                swap 2
                 eq
                 add
 

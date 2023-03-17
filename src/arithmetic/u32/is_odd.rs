@@ -67,7 +67,7 @@ impl Snippet for U32IsOdd {
                 // AFTER: _ (value % 2)
                 {entrypoint}:
                     [{lsb}]
-                    swap1
+                    swap 1
                     pop
                     return
                 "

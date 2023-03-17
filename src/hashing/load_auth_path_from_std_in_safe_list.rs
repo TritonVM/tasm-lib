@@ -105,7 +105,7 @@ impl Snippet for LoadAuthPathFromStdInSafeList {
                     call {entrypoint}_while
                     // _ total_auth_path_length i *auth_path
 
-                    swap2 pop pop
+                    swap 2 pop pop
                     // _ *auth_path
 
                     return
@@ -113,10 +113,10 @@ impl Snippet for LoadAuthPathFromStdInSafeList {
                 // Start/end stack: _ total_auth_path_length i *auth_path
                 {entrypoint}_while:
                     // Loop condition: end if (total_auth_path_length == i)
-                    dup2 dup2 eq skiz return
+                    dup 2 dup 2 eq skiz return
                     // _ total_auth_path_length i *auth_path
 
-                    dup0
+                    dup 0
                     // _ total_auth_path_length i *auth_path *auth_path
 
                     {read_digest_from_std_in}
@@ -126,7 +126,7 @@ impl Snippet for LoadAuthPathFromStdInSafeList {
                     // _ total_auth_path_length i *auth_path
 
                     // i -> i + 1
-                    swap1 push 1 add swap1
+                    swap 1 push 1 add swap 1
                     // _ total_auth_path_length (i + 1) *auth_path
 
                     recurse

@@ -66,7 +66,7 @@ impl Snippet for DecrU64 {
             {entrypoint}:
                 push -1
                 add
-                dup0
+                dup 0
                 push -1
                 eq
                 skiz
@@ -77,7 +77,7 @@ impl Snippet for DecrU64 {
                 pop
                 push -1
                 add
-                dup0
+                dup 0
                 push -1
                 eq
                 push 0

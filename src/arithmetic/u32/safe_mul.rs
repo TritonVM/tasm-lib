@@ -54,7 +54,7 @@ impl Snippet for SafeMul {
                 // AFTER: _ (lhs * rhs)
                 {entrypoint}:
                     mul
-                    dup0 // _   (lhs * rhs) (lhs * rhs)
+                    dup 0 // _   (lhs * rhs) (lhs * rhs)
                     split // _  (lhs * rhs) hi lo
                     pop   // _  (lhs * rhs) hi
                     push 0 // _ (lhs * rhs) hi 0

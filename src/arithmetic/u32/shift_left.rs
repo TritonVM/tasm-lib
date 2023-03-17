@@ -55,7 +55,7 @@ impl Snippet for ShiftLeftU32 {
             {entrypoint}:
                 // Bounds check. May be superfluous but this mimics Rust's behavior.
                 push 32
-                dup1
+                dup 1
                 lt
                 assert
 
@@ -63,7 +63,7 @@ impl Snippet for ShiftLeftU32 {
                 pow
                 mul
                 split
-                swap1
+                swap 1
                 pop
 
                 return

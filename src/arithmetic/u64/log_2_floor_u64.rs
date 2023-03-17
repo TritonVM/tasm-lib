@@ -65,9 +65,9 @@ impl Snippet for Log2FloorU64 {
                 // BEFORE: _ value_hi value_lo
                 // AFTER: _ log2_floor(value)
                 {entrypoint}:
-                    swap1
+                    swap 1
                     push 1
-                    dup1
+                    dup 1
                     // stack: _ value_lo value_hi 1 value_hi
 
                     skiz call {entrypoint}_then
@@ -80,7 +80,7 @@ impl Snippet for Log2FloorU64 {
                     // value_hi != 0
                     // stack: // stack: _ value_lo value_hi 1
                     pop
-                    swap1
+                    swap 1
                     pop
                     // stack: _ value_hi
 

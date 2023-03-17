@@ -84,27 +84,27 @@ impl Snippet for SwapDigest {
             // After:  _ a4 a3 a2 a1 a0 b4 b3 b2 b1 b0
             {entrypoint}:
                 // a4 <-> b4:
-                swap4 // _ b4 b3 b2 b1 b0 a0 a3 a2 a1 a4
-                swap9 // _ a4 b3 b2 b1 b0 a0 a3 a2 a1 b4
-                swap4 // _ a4 b3 b2 b1 b0 b4 a3 a2 a1 a0
+                swap 4 // _ b4 b3 b2 b1 b0 a0 a3 a2 a1 a4
+                swap 9 // _ a4 b3 b2 b1 b0 a0 a3 a2 a1 b4
+                swap 4 // _ a4 b3 b2 b1 b0 b4 a3 a2 a1 a0
 
                 // a3 <-> b3:
-                swap3 // _ a4 b3 b2 b1 b0 b4 a0 a2 a1 a3
-                swap8 // _ a4 a3 b2 b1 b0 b4 a0 a2 a1 b3
-                swap3 // _ a4 a3 b2 b1 b0 b4 b3 a2 a1 a0
+                swap 3 // _ a4 b3 b2 b1 b0 b4 a0 a2 a1 a3
+                swap 8 // _ a4 a3 b2 b1 b0 b4 a0 a2 a1 b3
+                swap 3 // _ a4 a3 b2 b1 b0 b4 b3 a2 a1 a0
 
                 // a2 <-> b2
-                swap2 // _ a4 a3 b2 b1 b0 b4 b3 a0 a1 a2
-                swap7 // _ a4 a3 a2 b1 b0 b4 b3 a0 a1 b2
-                swap2 // _ a4 a3 a2 b1 b0 b4 b3 b2 a1 a0
+                swap 2 // _ a4 a3 b2 b1 b0 b4 b3 a0 a1 a2
+                swap 7 // _ a4 a3 a2 b1 b0 b4 b3 a0 a1 b2
+                swap 2 // _ a4 a3 a2 b1 b0 b4 b3 b2 a1 a0
 
                 // a1 <-> b1
-                swap1 // _ a4 a3 a2 b1 b0 b4 b3 b2 a0 a1
-                swap6 // _ a4 a3 a2 a1 b0 b4 b3 b2 a0 b1
-                swap1 // _ a4 a3 a2 a1 b0 b4 b3 b2 b1 a0
+                swap 1 // _ a4 a3 a2 b1 b0 b4 b3 b2 a0 a1
+                swap 6 // _ a4 a3 a2 a1 b0 b4 b3 b2 a0 b1
+                swap 1 // _ a4 a3 a2 a1 b0 b4 b3 b2 b1 a0
 
                 // a0 <-> b0
-                swap5 // _ a4 a3 a2 a1 a0 b4 b3 b2 b1 b0
+                swap 5 // _ a4 a3 a2 a1 a0 b4 b3 b2 b1 b0
 
                 return
             "

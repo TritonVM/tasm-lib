@@ -53,7 +53,7 @@ impl Snippet for Sub {
             // before: _ b a
             // after: _ a-b
             {entrypoint}:
-                swap1    // _ a b
+                swap 1    // _ a b
                 push -1  // _ a b -1
                 mul      // _ a -b
                 add      // _ a-b

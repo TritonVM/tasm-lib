@@ -64,11 +64,11 @@ impl Snippet for AndU64 {
             // BEFORE: rhs_hi rhs_lo lhs_hi lhs_lo
             // AFTER: (rhs & lhs)_hi (rhs & lhs)_lo
             {entrypoint}:
-                swap3
+                swap 3
                 and
                 // stack: _ lhs_lo rhs_lo (lhs_hi & rhs_hi)
 
-                swap2
+                swap 2
                 and
                 // stack: _ (lhs_hi & rhs_hi) (rhs_lo & lhs_lo)
 

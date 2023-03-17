@@ -116,7 +116,7 @@ impl Snippet for SubU64 {
             // Before: _ rhs_hi rhs_lo lhs_hi lhs_lo
             // After: _ hi_diff lo_diff
             {entrypoint}:
-                swap1 swap2
+                swap 1 swap 2
                 // _ rhs_hi lhs_hi lhs_lo rhs_lo
 
                 push -1
@@ -130,7 +130,7 @@ impl Snippet for SubU64 {
                 split
                 // _ rhs_hi lhs_hi !carry diff_lo
 
-                swap3 swap1
+                swap 3 swap 1
                 // _ diff_lo lhs_hi rhs_hi !carry
 
                 push 0
@@ -148,13 +148,13 @@ impl Snippet for SubU64 {
                 split
                 // _ diff_lo overflow diff_hi
 
-                swap1
+                swap 1
                 push 0
                 eq
                 assert
                 // _ diff_lo diff_hi
 
-                swap1
+                swap 1
 
                 return
             "

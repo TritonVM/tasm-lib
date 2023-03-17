@@ -65,17 +65,17 @@ impl Snippet for Div2U64 {
                 {entrypoint}:
                     // Divide the lower number
                     push 2
-                    swap1
+                    swap 1
                     div
                     pop
                     // stack: _ value_hi (value_lo / 2)
 
                     // Divide the upper number and carry its least significant bit into the lower number
-                    swap1
+                    swap 1
                     // stack: _ (value_lo / 2) value_hi
 
                     push 2
-                    swap1
+                    swap 1
                     div
                     // stack: _ (value_lo / 2) (value_hi / 2) (value_hi % 2)
 
@@ -83,8 +83,8 @@ impl Snippet for Div2U64 {
                     mul
                     // stack: _ (value_lo / 2) (value_hi / 2) carry
 
-                    swap1
-                    swap2
+                    swap 1
+                    swap 2
                     // stack: _ (value_hi / 2) (value_lo / 2) carry
 
                     add

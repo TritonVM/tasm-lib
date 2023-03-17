@@ -67,8 +67,8 @@ impl Snippet for PopCountU64 {
             // Before: _ x_hi x_lo
             // After: _ popcount
             {entrypoint}:
-                dup1
-                dup1
+                dup 1
+                dup 1
 
                 // Bitshift right by 1
                 push 1
@@ -81,7 +81,7 @@ impl Snippet for PopCountU64 {
                 call {and_u64}
                 // x_hi x_lo ((x >> 1) & m1)_hi ((x >> 1) & m1)_lo
 
-                swap2 swap1 swap3 swap1
+                swap 2 swap 1 swap 3 swap 1
                 // ((x >> 1) & m1)_hi ((x >> 1) & m1)_lo x_hi x_lo
 
                 call {sub_u64}
@@ -89,8 +89,8 @@ impl Snippet for PopCountU64 {
 
                 // rename (x - mask) -> x
                 // x_hi x_lo
-                dup1
-                dup1
+                dup 1
+                dup 1
 
                 // Bitshift right by 2
                 push 2
@@ -101,7 +101,7 @@ impl Snippet for PopCountU64 {
                 call {and_u64}
                 // _ x_u64 (x >> 2) & m2)_u64
 
-                swap2 swap1 swap3 swap1
+                swap 2 swap 1 swap 3 swap 1
                 // _ (x >> 2) & m2)_u64 x_u64
 
                 push {m2}
@@ -115,7 +115,7 @@ impl Snippet for PopCountU64 {
                 // rename (x & m2) + ((x >> 2) & m2) -> x
                 // _ x_hi x_lo
 
-                dup1 dup1
+                dup 1 dup 1
                 // _ x_u64 x_u64
 
                 // Bitshift right by 4

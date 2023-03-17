@@ -76,14 +76,14 @@ impl Snippet for SafeSetLength {
                 // AFTER: _ *list
                 {entry_point}:
                     // Verify that new length does not exceed capacity
-                    dup0
-                    dup2
+                    dup 0
+                    dup 2
                     push 1
                     add
                     read_mem
                     // Stack: *list list_length list_length (*list + 1) capacity
 
-                    swap1
+                    swap 1
                     pop
                     // Stack: *list list_length list_length capacity
 

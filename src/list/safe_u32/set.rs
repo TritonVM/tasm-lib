@@ -77,7 +77,7 @@ impl Snippet for SafeSet {
 
         let mut write_elements_to_memory_code = String::default();
         for i in 0..element_size {
-            write_elements_to_memory_code.push_str("swap1\n");
+            write_elements_to_memory_code.push_str("swap 1\n");
             write_elements_to_memory_code.push_str("write_mem\n");
             if i != element_size - 1 {
                 // Prepare for next write. Not needed for last iteration.
@@ -99,17 +99,17 @@ impl Snippet for SafeSet {
                 // AFTER: _
                 {entrypoint}:
                     // Verify that index is less than length
-                    swap1
+                    swap 1
                     read_mem
                     // _ elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}} index *list length
 
-                    dup2 lt
+                    dup 2 lt
                     // _ elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}} index *list length < index
 
                     assert
                     // _ elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}} index *list
 
-                    swap1
+                    swap 1
                     // _ elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}} *list index
 
                     {mul_with_size}

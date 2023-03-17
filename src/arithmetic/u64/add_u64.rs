@@ -87,14 +87,14 @@ impl Snippet for AddU64 {
             // BEFORE: _ rhs_hi rhs_lo lhs_hi lhs_lo
             // AFTER: _ sum_hi sum_lo
             {entrypoint}:
-                swap1 swap2
+                swap 1 swap 2
                 // _ rhs_hi lhs_hi lhs_lo rhs_lo
 
                 add
                 split
                 // _ rhs_hi lhs_hi carry sum_lo
 
-                swap3
+                swap 3
                 // _ sum_lo lhs_hi carry rhs_hi
 
                 add
@@ -104,13 +104,13 @@ impl Snippet for AddU64 {
                 split
                 // _ sum_lo overflow sum_hi
 
-                swap1
+                swap 1
                 push 0
                 eq
                 assert
                 // _ sum_lo sum_hi
 
-                swap1
+                swap 1
                 // _ sum_hi sum_lo
 
                 return

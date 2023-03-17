@@ -82,7 +82,7 @@ impl Snippet for SafePush {
         // Start and end of this loop: _  *list, [elements..], address_of_next_element
         let mut write_elements_to_memory_code = String::default();
         for i in 0..element_size {
-            write_elements_to_memory_code.push_str("swap1\n");
+            write_elements_to_memory_code.push_str("swap 1\n");
             write_elements_to_memory_code.push_str("write_mem\n");
             if i != element_size - 1 {
                 // Prepare for next write. Not needed for last iteration.
@@ -104,14 +104,14 @@ impl Snippet for SafePush {
             // Before: _ *list, elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}
             // After: _
             {entry_point}:
-                dup{element_size}
+                dup {element_size}
                 // stack : _  *list, elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}, *list
 
                 read_mem
                 // stack : _  *list, elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}, *list, length
 
                 // Verify that length < capacity (before increasing length by 1)
-                    swap1
+                    swap 1
                     push 1
                     add
                     // stack : _  *list, elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}, length, (*list + 1)
@@ -119,13 +119,13 @@ impl Snippet for SafePush {
                     read_mem
                     // stack : _  *list, elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}, length, (*list + 1), capacity
 
-                    dup2 lt
+                    dup 2 lt
                     // stack : _  *list, elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}, length, (*list + 1), capacity > length
 
                     assert
                     // stack : _  *list, elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}, length, (*list + 1)
 
-                    swap1
+                    swap 1
 
                 {mul_with_size}
                 // stack : _  *list, elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}, (*list + 1), length * elem_size

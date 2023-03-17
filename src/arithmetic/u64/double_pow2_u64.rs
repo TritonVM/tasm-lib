@@ -55,7 +55,7 @@ impl Snippet for DoublePow2U64 {
             // BEFORE: _ value_hi value_lo
             // AFTER: _ (value * 2)_hi (value * 2)_lo
             {entrypoint}:
-                dup0
+                dup 0
                 push {TWO_POW_31}
                 eq
                 skiz
@@ -66,10 +66,10 @@ impl Snippet for DoublePow2U64 {
                 mul
                 // _ value_hi (value_lo * 2)
 
-                swap1
+                swap 1
                 push 2
                 mul
-                swap1
+                swap 1
                 // _ (value_hi * 2) (value_lo * 2)
 
                 return

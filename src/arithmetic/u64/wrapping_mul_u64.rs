@@ -57,16 +57,16 @@ impl Snippet for WrappingMulU64 {
                 // AFTER: _ prod_hi prod_lo
                 {entrypoint}:
                     // `lhs_lo * rhs_lo`:
-                    dup0 dup3 mul
+                    dup 0 dup 3 mul
                     // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_lo * rhs_lo)
 
                     // `rhs_hi * lhs_lo` (consume `rhs_hi` and `lhs_lo`):
-                    swap4
+                    swap 4
                     mul
                     // _ (lhs_lo * rhs_lo) rhs_lo lhs_hi (lhs_lo * rhs_hi)
 
                     // `rhs_lo * lhs_hi` (consume `rhs_lo` and `lhs_hi`):
-                    swap2
+                    swap 2
                     mul
                     // _ (lhs_lo * rhs_lo) (lhs_lo * rhs_hi) (lhs_hi * rhs_lo)
 
@@ -75,21 +75,21 @@ impl Snippet for WrappingMulU64 {
 
                     // Calculate `prod_hi = a_hi + b_lo + c_lo`:
                     split
-                    swap1
+                    swap 1
                     pop
                     // _ a b c_lo
 
-                    swap1
+                    swap 1
                     split
-                    swap1
+                    swap 1
                     pop
                     // _ a c_lo b_lo
 
-                    swap2
+                    swap 2
                     split
                     // _ b_lo c_lo a_hi a_lo
 
-                    swap3
+                    swap 3
                     // _ a_lo c_lo a_hi b_lo
 
                     add
@@ -97,11 +97,11 @@ impl Snippet for WrappingMulU64 {
                     // _ a_lo (c_lo + a_hi + b_lo)
 
                     split
-                    swap1
+                    swap 1
                     pop
                     // _ a_lo (c_lo + a_hi + b_lo)_lo
 
-                    swap1
+                    swap 1
                     // _ (c_lo + a_hi + b_lo)_lo a_lo
 
                     // _ prod_hi prod_lo

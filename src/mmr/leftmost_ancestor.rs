@@ -76,7 +76,7 @@ impl Snippet for MmrLeftMostAncestor {
                 call {log_2_floor_u64}
                 // stack: _ log2_floor
 
-                dup0
+                dup 0
                 // notice that log2_floor = height
                 // stack: _ height log2_floor
 
@@ -90,8 +90,8 @@ impl Snippet for MmrLeftMostAncestor {
                 call {decr_u64}
                 // stack: _ height leftmost_ancestor_hi leftmost_ancestor_lo
 
-                swap1
-                swap2
+                swap 1
+                swap 2
                 // stack: _ leftmost_ancestor_hi leftmost_ancestor_lo height
 
                 return

@@ -69,10 +69,10 @@ impl Snippet for MmrLeftChild {
             // After: _ left_child_hi left_child_lo
             {entrypoint}:
                 call {pow2_u64} // -> _ ni_hi ni_lo (2^height)_hi (2^height)_lo
-                swap2
-                swap1
-                swap3
-                swap1                // -> _ (2^height)_hi (2^height)_lo ni_hi ni_lo
+                swap 2
+                swap 1
+                swap 3
+                swap 1                // -> _ (2^height)_hi (2^height)_lo ni_hi ni_lo
                 call {sub_u64}    // -> _ left_child_hi left_child_lo
                 return
             "

@@ -94,10 +94,10 @@ impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
             // stack: _ leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo
 
             // `discrepancies`
-            dup3
-            dup3
-            dup3
-            dup3
+            dup 3
+            dup 3
+            dup 3
+            dup 3
 
             call {xor_u64}
             // stack: _ leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo discrepancies_hi discrepancies_lo
@@ -110,39 +110,39 @@ impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
             call {pow2_u64}
             // stack: _ leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo local_mt_leaf_count_hi local_mt_leaf_count_lo
 
-            dup1 dup1
+            dup 1 dup 1
             // stack: _ leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo local_mt_leaf_count_hi local_mt_leaf_count_lo local_mt_leaf_count_hi local_mt_leaf_count_lo
 
             // `remainder_bitmask`
-            dup1
-            dup1
+            dup 1
+            dup 1
             call {decr_u64}
             // stack: _ leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo local_mt_leaf_count_hi local_mt_leaf_count_lo local_mt_leaf_count_hi local_mt_leaf_count_lo remainder_bitmask_hi remainder_bitmask_lo
 
             // `local_leaf_index`
-            dup1
-            dup1
-            dup9
-            dup9
+            dup 1
+            dup 1
+            dup 9
+            dup 9
             call {and_u64}
             // stack: _ leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo local_mt_leaf_count_hi local_mt_leaf_count_lo local_mt_leaf_count_hi local_mt_leaf_count_lo remainder_bitmask_hi remainder_bitmask_lo remainder_bitmask_hi remainder_bitmask_lo
 
             // `mt_index`
-            dup5 dup5
+            dup 5 dup 5
             // stack: _ leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo local_mt_leaf_count_hi local_mt_leaf_count_lo local_mt_leaf_count_hi local_mt_leaf_count_lo remainder_bitmask_hi remainder_bitmask_lo lli_hi lli_lo local_mt_leaf_count_hi local_mt_leaf_count_lo
 
             call {add_u64}
             // stack: _ leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo local_mt_leaf_count_hi local_mt_leaf_count_lo local_mt_leaf_count_hi local_mt_leaf_count_lo remainder_bitmask_hi remainder_bitmask_lo mti_hi mti_lo
 
             // `all_the_ones`
-            swap10 swap1 swap11 swap1
+            swap 10 swap 1 swap 11 swap 1
             // stack: _ mti_hi mti_lo leaf_index_hi leaf_index_lo local_mt_leaf_count_hi local_mt_leaf_count_lo local_mt_leaf_count_hi local_mt_leaf_count_lo remainder_bitmask_hi remainder_bitmask_lo lc_hi lc_lo
 
-            dup1 dup1
+            dup 1 dup 1
             call {popcount_u64}
             // stack: _ mti_hi mti_lo leaf_index_hi leaf_index_lo local_mt_leaf_count_hi local_mt_leaf_count_lo local_mt_leaf_count_hi local_mt_leaf_count_lo remainder_bitmask_hi remainder_bitmask_lo lc_hi lc_lo all_the_ones
 
-            swap5 pop
+            swap 5 pop
             // stack: _ mti_hi mti_lo leaf_index_hi leaf_index_lo local_mt_leaf_count_hi local_mt_leaf_count_lo local_mt_leaf_count_hi all_the_ones remainder_bitmask_hi remainder_bitmask_lo lc_hi lc_lo
 
             call {and_u64}
@@ -156,7 +156,7 @@ impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
             add
             // stack: _ mti_hi mti_lo leaf_index_hi leaf_index_lo local_mt_leaf_count_hi local_mt_leaf_count_lo local_mt_leaf_count_hi peak_index
 
-            swap5 pop pop pop pop pop
+            swap 5 pop pop pop pop pop
             // stack: _ mti_hi mti_lo peak_index
 
             return

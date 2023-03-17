@@ -86,16 +86,16 @@ impl Snippet for LtU64 {
             // Before: _ rhs_hi rhs_lo lhs_hi lhs_lo
             // After: _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs)
             {entrypoint}:
-                dup3
-                dup2
+                dup 3
+                dup 2
                 lt   // => _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_hi < rhs_hi)
-                dup0
+                dup 0
                 skiz
                     return // => _ rhs_hi rhs_lo lhs_hi lhs_lo 1
 
                 // => _ rhs_hi rhs_lo lhs_hi lhs_lo 0
-                dup4 // => _ rhs_hi rhs_lo lhs_hi lhs_lo 0 rhs_hi
-                dup3 // => _ rhs_hi rhs_lo lhs_hi lhs_lo 0 rhs_hi lhs_hi
+                dup 4 // => _ rhs_hi rhs_lo lhs_hi lhs_lo 0 rhs_hi
+                dup 3 // => _ rhs_hi rhs_lo lhs_hi lhs_lo 0 rhs_hi lhs_hi
                 eq   // => _ rhs_hi rhs_lo lhs_hi lhs_lo 0 (rhs_hi == lhs_hi)
                 skiz
                     call {entrypoint}_lo // => _ rhs_hi rhs_lo lhs_hi lhs_lo 0
@@ -107,8 +107,8 @@ impl Snippet for LtU64 {
             // After: _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_lo < rhs_lo)
             {entrypoint}_lo:
                 pop   // _ rhs_hi rhs_lo lhs_hi lhs_lo
-                dup2  // _ rhs_hi rhs_lo lhs_hi lhs_lo rhs_lo
-                dup1  // _ rhs_hi rhs_lo lhs_hi lhs_lo rhs_lo lhs_lo
+                dup 2  // _ rhs_hi rhs_lo lhs_hi lhs_lo rhs_lo
+                dup 1  // _ rhs_hi rhs_lo lhs_hi lhs_lo rhs_lo lhs_lo
                 lt    // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_lo < rhs_lo)
                 return
             "
@@ -221,22 +221,22 @@ impl Snippet for LtStandardU64 {
             // After: _ (lhs < rhs)
             {entrypoint}:
                 call {entrypoint}_aux // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs)
-                swap4 pop pop pop pop // _ (lhs < rhs)
+                swap 4 pop pop pop pop // _ (lhs < rhs)
                 return
 
             // Before: _ rhs_hi rhs_lo lhs_hi lhs_lo
             // After: _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs)
             {entrypoint}_aux:
-                dup3 // _ rhs_hi rhs_lo lhs_hi lhs_lo rhs_hi
-                dup2 // _ rhs_hi rhs_lo lhs_hi lhs_lo rhs_hi lhs_hi
+                dup 3 // _ rhs_hi rhs_lo lhs_hi lhs_lo rhs_hi
+                dup 2 // _ rhs_hi rhs_lo lhs_hi lhs_lo rhs_hi lhs_hi
                 lt   // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_hi < rhs_hi)
-                dup0 // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_hi < rhs_hi) (lhs_hi < rhs_hi)
+                dup 0 // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_hi < rhs_hi) (lhs_hi < rhs_hi)
                 skiz return
                      // true: _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs)
                      // false: _ rhs_hi rhs_lo lhs_hi lhs_lo 0
 
-                dup4 // _ rhs_hi rhs_lo lhs_hi lhs_lo 0 rhs_hi
-                dup3 // _ rhs_hi rhs_lo lhs_hi lhs_lo 0 rhs_hi lhs_hi
+                dup 4 // _ rhs_hi rhs_lo lhs_hi lhs_lo 0 rhs_hi
+                dup 3 // _ rhs_hi rhs_lo lhs_hi lhs_lo 0 rhs_hi lhs_hi
                 eq   // _ rhs_hi rhs_lo lhs_hi lhs_lo 0 (lhs_hi == rhs_hi)
                 skiz call {entrypoint}_lo
                      // true: _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs, aka lhs_lo < rhs_lo)
@@ -247,8 +247,8 @@ impl Snippet for LtStandardU64 {
             // After: _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_lo < rhs_lo)
             {entrypoint}_lo:
                 pop  // _ rhs_hi rhs_lo lhs_hi lhs_lo
-                dup2 // _ rhs_hi rhs_lo lhs_hi lhs_lo rhs_lo
-                dup1 // _ rhs_hi rhs_lo lhs_hi lhs_lo rhs_lo lhs_lo
+                dup 2 // _ rhs_hi rhs_lo lhs_hi lhs_lo rhs_lo
+                dup 1 // _ rhs_hi rhs_lo lhs_hi lhs_lo rhs_lo lhs_lo
                 lt   // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs)
                 return
             "

@@ -75,21 +75,21 @@ impl Snippet for MmrRightLineageCountAndHeight {
             {entrypoint}:
                 // Get leftmost ancestor and its height on top of stack
                 push 0 // is `right_ancestor_count` (`rac`) onto stack
-                dup2
-                dup2
+                dup 2
+                dup 2
                 call {leftmost_ancestor}
                 // stack: _ ni_hi ni_lo rac c_hi c_lo height
 
-                swap2
-                swap1
+                swap 2
+                swap 1
                 // stack: _ ni_hi ni_lo rac height c_hi c_lo
                 call {entrypoint}_loop
                 // Stack: ni_hi ni_lo rac height c_hi c_lo
                 pop
                 pop
-                swap2
+                swap 2
                 pop
-                swap2
+                swap 2
                 pop
 
                 // Stack: _ rac height
@@ -99,36 +99,36 @@ impl Snippet for MmrRightLineageCountAndHeight {
             // _ ni_hi ni_lo rac height c_hi c_lo
             {entrypoint}_loop:
                 // Loop condition: Return if candidate (c) == node index (ni)
-                dup5
-                dup5
-                dup3
-                dup3
+                dup 5
+                dup 5
+                dup 3
+                dup 3
                 call {eq_u64}
                 // Stack: _ ni_hi ni_lo rac height c_hi c_lo (c == ni)
                 skiz return
 
                 // Stack: _ ni_hi ni_lo rac height c_hi c_lo
-                dup1
-                dup1
-                dup4
+                dup 1
+                dup 1
+                dup 4
                 // Stack: _ ni_hi ni_lo rac height c_hi c_lo c_hi c_lo height
 
                 call {left_child}
                 // Stack: ni_hi ni_lo rac height c_hi c_lo lc_hi lc_lo
 
-                dup7 dup7
+                dup 7 dup 7
                 // Stack: ni_hi ni_lo rac height c_hi c_lo lc_hi lc_lo ni_hi ni_lo
-                swap2
-                swap1
-                swap3
-                swap1
+                swap 2
+                swap 1
+                swap 3
+                swap 1
                 // Stack: ni_hi ni_lo rac height c_hi c_lo ni_hi ni_lo lc_hi lc_lo
 
                 call {lt_u64}
                 // Stack: ni_hi ni_lo rac height c_hi c_lo ni_hi ni_lo lc_hi lc_lo c_is_right
 
                 push 1
-                swap1
+                swap 1
                 // Stack: _ ni_hi ni_lo rac height c_hi c_lo ni_hi ni_lo lc_hi lc_lo 1 c_is_right
 
                 skiz call {entrypoint}_branch_then
@@ -136,10 +136,10 @@ impl Snippet for MmrRightLineageCountAndHeight {
                 // Stack: _ ni_hi ni_lo rac height c_hi c_lo
 
                 // Decrement height by one
-                swap2
+                swap 2
                 push -1
                 add
-                swap2
+                swap 2
 
                 // Stack: _ ni_hi ni_lo rac (height - 1) c_hi c_lo
 
@@ -149,10 +149,10 @@ impl Snippet for MmrRightLineageCountAndHeight {
                 // purpose: Set candidate to right child and increase rac by one
                 // Stack: _ ni_hi ni_lo rac height c_hi c_lo ni_hi ni_lo lc_hi lc_lo 1
                 pop
-                swap7
+                swap 7
                 push 1
                 add
-                swap7
+                swap 7
                 // Stack: _ ni_hi ni_lo (rac + 1) height c_hi c_lo ni_hi ni_lo lc_hi lc_lo
 
                 pop
@@ -171,13 +171,13 @@ impl Snippet for MmrRightLineageCountAndHeight {
                 // purpose: Set candidate to left child, set rac counter to zero
                 // Stack: _ ni_hi ni_lo rac height c_hi c_lo ni_hi ni_lo lc_hi lc_lo
 
-                swap7
+                swap 7
                 pop
                 push 0
-                swap7
+                swap 7
                 // Stack: _ ni_hi ni_lo (rac = 0) height c_hi c_lo ni_hi ni_lo lc_hi lc_lo
 
-                swap4 pop swap4 pop
+                swap 4 pop swap 4 pop
                 // Stack: ni_hi ni_lo (rac = 0) height lc_hi lc_lo ni_hi ni_lo
 
                 pop pop

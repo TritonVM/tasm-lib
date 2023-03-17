@@ -67,7 +67,7 @@ impl Snippet for UnsafeSet {
 
         let mut write_elements_to_memory_code = String::default();
         for i in 0..element_size {
-            write_elements_to_memory_code.push_str("swap1\n");
+            write_elements_to_memory_code.push_str("swap 1\n");
             write_elements_to_memory_code.push_str("write_mem\n");
             if i != element_size - 1 {
                 // Prepare for next write. Not needed for last iteration.

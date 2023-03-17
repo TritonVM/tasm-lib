@@ -63,8 +63,8 @@ impl Snippet for IndexOfLastNonZeroBitU64 {
             // BEFORE: _ value_hi value_lo
             // AFTER: _ index_of_last_non-zero_bit
             {entrypoint}:
-                dup1
-                dup1
+                dup 1
+                dup 1
                 // _ value_hi value_lo value_hi value_lo
 
                 call {decr}

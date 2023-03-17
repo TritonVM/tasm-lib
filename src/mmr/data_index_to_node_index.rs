@@ -62,7 +62,7 @@ impl Snippet for DataIndexToNodeIndex {
                 // BEFORE: _ leaf_index_hi leaf_index_lo
                 // AFTER: _ node_index_hi node_index_lo
                 {entrypoint}:
-                    dup1 dup1
+                    dup 1 dup 1
                     // stack: _ leaf_index_hi leaf_index_lo leaf_index_hi leaf_index_lo
 
                     call {non_leaf_nodes_left}

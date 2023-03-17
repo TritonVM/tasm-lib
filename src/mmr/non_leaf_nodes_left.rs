@@ -76,13 +76,13 @@ impl Snippet for MmrNonLeafNodesLeftUsingAnd {
         // AFTER: _ node_count_hi node_count_lo
         {entrypoint}:
             // Handle leaf_index == 0: if leaf_index == 0 => return leaf_index
-            dup1 dup1 push 0 push 0 call {eq_u64}
+            dup 1 dup 1 push 0 push 0 call {eq_u64}
             // _ leaf_index_hi leaf_index_lo (leaf_index == 0)
 
             skiz return
             // _ leaf_index_hi leaf_index_lo
 
-            dup1 dup1
+            dup 1 dup 1
             call {log_2_floor_u64}
             call {incr_u64}
             // stack: _ di_hi di_lo log2_floor
@@ -94,10 +94,10 @@ impl Snippet for MmrNonLeafNodesLeftUsingAnd {
             call {entrypoint}_while
             // stack: _ di_hi di_lo log2_floor h ret_hi ret_lo
 
-            swap4 pop
+            swap 4 pop
             // stack: _ di_hi ret_lo log2_floor h ret_hi
 
-            swap4 pop
+            swap 4 pop
             // stack: _ ret_hi ret_lo log2_floor h
 
             pop pop
@@ -107,18 +107,18 @@ impl Snippet for MmrNonLeafNodesLeftUsingAnd {
 
         // Start/end stack: _ di_hi di_lo log2_floor h ret_hi ret_lo
         {entrypoint}_while:
-            dup3 dup3 eq
+            dup 3 dup 3 eq
             // stack: _ di_hi di_lo log2_floor h ret_hi ret_lo (h == log2_floor)
 
             skiz return
             // stack: _ di_hi di_lo log2_floor h ret_hi ret_lo
 
-            dup2
+            dup 2
             call {pow2_u64}
             // stack: _ di_hi di_lo log2_floor h ret_hi ret_lo pow_hi pow_lo
 
-            dup1 dup1
-            dup9 dup9
+            dup 1 dup 1
+            dup 9 dup 9
             // stack: _ di_hi di_lo log2_floor h ret_hi ret_lo pow_hi pow_lo pow_hi pow_lo di_hi di_lo
 
             call {and_u64}
@@ -136,7 +136,7 @@ impl Snippet for MmrNonLeafNodesLeftUsingAnd {
             pop pop
             // stack: _ di_hi di_lo log2_floor h ret_hi ret_lo
 
-            swap2 push 1 add swap2
+            swap 2 push 1 add swap 2
             // stack: _ di_hi di_lo log2_floor (h + 1) ret_hi ret_lo
 
             recurse

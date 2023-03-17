@@ -60,16 +60,16 @@ impl Snippet for DynMalloc {
                 read_mem                  // _ size *free_pointer *next_addr'
 
                 // add 1 iff `next_addr` was 0, i.e. uninitialized.
-                dup0                      // _ size *free_pointer *next_addr' *next_addr'
+                dup 0                      // _ size *free_pointer *next_addr' *next_addr'
                 push 0                    // _ size *free_pointer *next_addr' *next_addr' 0
                 eq                        // _ size *free_pointer *next_addr' (*next_addr' == 0)
                 add                       // _ size *free_pointer *next_addr
 
-                dup0                      // _ size *free_pointer *next_addr *next_addr
-                dup3                      // _ size *free_pointer *next_addr *next_addr size
+                dup 0                      // _ size *free_pointer *next_addr *next_addr
+                dup 3                      // _ size *free_pointer *next_addr *next_addr size
                 add                       // _ size *free_pointer *next_addr *(next_addr + size)
-                swap1                     // _ size *free_pointer *(next_addr + size) *next_addr
-                swap3                     // _ *next_addr *free_pointer *(next_addr + size) size
+                swap 1                     // _ size *free_pointer *(next_addr + size) *next_addr
+                swap 3                     // _ *next_addr *free_pointer *(next_addr + size) size
                 pop                       // _ *next_addr *free_pointer *(next_addr + size)
                 write_mem
                 pop                       // _ next_addr

@@ -99,7 +99,7 @@ impl<H: AlgebraicHasher> Snippet for CalculateNewPeaksFromAppend<H> {
                 // BEFORE: _ old_leaf_count_hi old_leaf_count_lo *peaks [digests (new_leaf)]
                 // AFTER: _ *new_peaks *auth_path
                 {entrypoint}:
-                    dup5 dup5 dup5 dup5 dup5 dup5
+                    dup 5 dup 5 dup 5 dup 5 dup 5 dup 5
                     call {push}
                     pop pop pop pop pop
                     // stack: _ old_leaf_count_hi old_leaf_count_lo *peaks
@@ -112,10 +112,10 @@ impl<H: AlgebraicHasher> Snippet for CalculateNewPeaksFromAppend<H> {
                     call {set_length}
                     // stack: _ old_leaf_count_hi old_leaf_count_lo *peaks *auth_path
 
-                    swap1
+                    swap 1
                     // stack: _ old_leaf_count_hi old_leaf_count_lo *auth_path *peaks
 
-                    dup3 dup3
+                    dup 3 dup 3
                     // stack: _ old_leaf_count_hi old_leaf_count_lo *auth_path *peaks old_leaf_count_hi old_leaf_count_lo
 
                     call {u64incr}
@@ -125,37 +125,37 @@ impl<H: AlgebraicHasher> Snippet for CalculateNewPeaksFromAppend<H> {
                     // stack: _ old_leaf_count_hi old_leaf_count_lo *auth_path *peaks (rll = 0)
 
                     pop
-                    swap3 pop swap1 pop
+                    swap 3 pop swap 1 pop
                     // stack: _ *peaks *auth_path
 
                     return
 
                 // Stack start and end: _ old_leaf_count_hi old_leaf_count_lo *auth_path *peaks rll
                 {entrypoint}_while:
-                    dup0
+                    dup 0
                     push 0
                     eq
                     skiz
                         return
                     // Stack: _ old_leaf_count_hi old_leaf_count_lo *auth_path *peaks rll
 
-                    swap2 swap1
+                    swap 2 swap 1
                     // Stack: _ old_leaf_count_hi old_leaf_count_lo rll *auth_path *peaks
 
-                    dup0
-                    dup0
+                    dup 0
+                    dup 0
                     call {pop}
                     // Stack: _ old_leaf_count_hi old_leaf_count_lo rll *auth_path *peaks *peaks [digest (new_hash)]
 
-                    dup5
+                    dup 5
                     // Stack: _ old_leaf_count_hi old_leaf_count_lo rll *auth_path *peaks *peaks [digest (new_hash)] *peaks
 
                     call {pop}
                     // Stack: _ old_leaf_count_hi old_leaf_count_lo rll *auth_path *peaks *peaks [digest (new_hash)] [digests (previous_peak)]
 
                     // Update authentication path with latest previous_peak
-                    dup12
-                    dup5 dup5 dup5 dup5 dup5
+                    dup 12
+                    dup 5 dup 5 dup 5 dup 5 dup 5
                     // Stack: _ old_leaf_count_hi old_leaf_count_lo rll *auth_path *peaks *peaks [digest (new_hash)] [digests (previous_peak)] *auth_path [digests (previous_peak)]
 
                     call {push}
@@ -168,7 +168,7 @@ impl<H: AlgebraicHasher> Snippet for CalculateNewPeaksFromAppend<H> {
                     call {push}
                     // Stack: _ old_leaf_count_hi old_leaf_count_lo rll *auth_path *peaks
 
-                    swap1 swap2
+                    swap 1 swap 2
                     // Stack: _ old_leaf_count_hi old_leaf_count_lo *auth_path *peaks rll
 
                     push -1

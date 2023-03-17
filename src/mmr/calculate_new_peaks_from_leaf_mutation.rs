@@ -111,21 +111,21 @@ impl<H: AlgebraicHasher> Snippet for MmrCalculateNewPeaksFromLeafMutationMtIndic
             // BEFORE: _ *auth_path leaf_index_hi leaf_index_lo *peaks [digest (leaf_digest)] leaf_count_hi leaf_count_lo
             // AFTER: _ *auth_path leaf_index_hi leaf_index_lo
             {entrypoint}:
-                dup9 dup9
+                dup 9 dup 9
                 call {leaf_index_to_mt_index}
                 // stack: _ *auth_path leaf_index_hi leaf_index_lo *peaks [digest (leaf_digest)] mt_index_hi mt_index_lo peak_index
 
                 push 0
                 /// stack: _ *auth_path leaf_index_hi leaf_index_lo *peaks [digest (leaf_digest)] mt_index_hi mt_index_lo peak_index i
 
-                swap8 swap4 swap1 swap7 swap3 swap6 swap2 swap5 swap1
+                swap 8 swap 4 swap 1 swap 7 swap 3 swap 6 swap 2 swap 5 swap 1
                 /// stack: _ *auth_path leaf_index_hi leaf_index_lo *peaks i peak_index mt_index_hi mt_index_lo [digest (leaf_digest)]
                 // rename: leaf_digest -> acc_hash
 
                 call {entrypoint}_while
                 // _ _ *auth_path leaf_index_hi leaf_index_lo *peaks i peak_index mt_index_hi mt_index_lo [digest (acc_hash)]
 
-                dup9 dup8
+                dup 9 dup 8
                 // _ *auth_path leaf_index_hi leaf_index_lo *peaks i peak_index mt_index_hi mt_index_lo [digest [digest (acc_hash)] *peaks peak_index
 
                 call {set}
@@ -138,17 +138,17 @@ impl<H: AlgebraicHasher> Snippet for MmrCalculateNewPeaksFromLeafMutationMtIndic
             // Note that this while loop is the same as one in `verify_from_memory`
             // BEFORE/AFTER: _ *auth_path leaf_index_hi leaf_index_lo *peaks i peak_index mt_index_hi mt_index_lo [digest (leaf_digest)]
                 {entrypoint}_while:
-                    dup6 dup6 push 0 push 1 call {eq_u64}
+                    dup 6 dup 6 push 0 push 1 call {eq_u64}
                     // _ *auth_path leaf_index_hi leaf_index_lo *peaks i peak_index mt_index_hi mt_index_lo [digest (leaf_digest)] (mt_index == 1)
 
                     skiz return
                     // _ *auth_path leaf_index_hi leaf_index_lo *peaks i peak_index mt_index_hi mt_index_lo [digest (leaf_digest)]
 
                     // declare `ap_element = auth_path[i]`
-                    dup12 dup9 call {get}
+                    dup 12 dup 9 call {get}
                     // _ *auth_path leaf_index_hi leaf_index_lo *peaks i peak_index mt_index_hi mt_index_lo [digest (leaf_digest)] [digest (ap_element)]
 
-                    dup10 call {u32_is_odd} push 0 eq
+                    dup 10 call {u32_is_odd} push 0 eq
                     // _ *auth_path leaf_index_hi leaf_index_lo *peaks i peak_index mt_index_hi mt_index_lo [digest (acc_hash)] [digest (ap_element)] (mt_index % 2 == 0)
 
                     skiz call {entrypoint}_swap_digests
@@ -159,17 +159,17 @@ impl<H: AlgebraicHasher> Snippet for MmrCalculateNewPeaksFromLeafMutationMtIndic
                     // _ *auth_path leaf_index_hi leaf_index_lo *peaks i peak_index mt_index_hi mt_index_lo [digest (new_acc_hash)]
 
                     // i -> i + 1
-                    swap8 push 1 add swap8
+                    swap 8 push 1 add swap 8
                     // _ *auth_path leaf_index_hi leaf_index_lo *peaks (i + 1) peak_index mt_index_hi mt_index_lo [digest (new_acc_hash)]
 
                     // mt_index -> mt_index / 2
-                    swap6 swap1 swap5
+                    swap 6 swap 1 swap 5
                     // _ *auth_path [digest (leaf_digest)] *peaks peak_index acc_hash_0 acc_hash_1 (i + 1) acc_hash_4 acc_hash_3 acc_hash_2 mt_index_hi mt_index_lo
 
                     call {div_2}
                     // _ *auth_path [digest (leaf_digest)] *peaks peak_index acc_hash_0 acc_hash_1 (i + 1) acc_hash_4 acc_hash_3 acc_hash_2 (mt_index / 2)_hi (mt_index / 2)_lo
 
-                    swap5 swap1 swap6
+                    swap 5 swap 1 swap 6
                     // _ *auth_path [digest (leaf_digest)] *peaks (mt_index / 2)_hi (mt_index / 2)_lo peak_index (i + 1) acc_hash_4 acc_hash_3 acc_hash_2 acc_hash_1 acc_hash_0
 
                     recurse
@@ -177,11 +177,11 @@ impl<H: AlgebraicHasher> Snippet for MmrCalculateNewPeaksFromLeafMutationMtIndic
                 // purpose: swap the two digests `i` (node with `acc_hash`) is left child
                 {entrypoint}_swap_digests:
                 // _ *auth_path leaf_index_hi leaf_index_lo *peaks i peak_index mt_index_hi mt_index_lo [digest (acc_hash)] [digest (ap_element)]
-                        swap4 swap9 swap4
-                        swap3 swap8 swap3
-                        swap2 swap7 swap2
-                        swap1 swap6 swap1
-                        swap5
+                        swap 4 swap 9 swap 4
+                        swap 3 swap 8 swap 3
+                        swap 2 swap 7 swap 2
+                        swap 1 swap 6 swap 1
+                        swap 5
                         // _ *auth_path leaf_index_hi leaf_index_lo *peaks i peak_index mt_index_hi mt_index_lo [digest (ap_element)] [digest (acc_hash)]
 
                         return

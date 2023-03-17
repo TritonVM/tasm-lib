@@ -103,7 +103,7 @@ impl Snippet for AddU128 {
             // BEFORE: _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0
             // AFTER: _ sum_3 sum_2 sum_1 sum_0
             {entrypoint}:
-                swap1 swap4
+                swap 1 swap 4
                 add
                 // _ rhs_3 rhs_2 rhs_1 lhs_1 lhs_3 lhs_2 (lhs_0 + rhs_0)
 
@@ -113,13 +113,13 @@ impl Snippet for AddU128 {
                 // rename:
                 // _ rhs_3 rhs_2 rhs_1 lhs_1 lhs_3 lhs_2 carry_1 sum_0
 
-                swap4
+                swap 4
                 // _ rhs_3 rhs_2 rhs_1 sum_0 lhs_3 lhs_2 carry_1 lhs_1
 
                 add
                 // _ rhs_3 rhs_2 rhs_1 sum_0 lhs_3 lhs_2 lhs_1'
 
-                swap1 swap4
+                swap 1 swap 4
                 // _ rhs_3 rhs_2 lhs_2 sum_0 lhs_3 lhs_1' rhs_1
 
                 add
@@ -128,13 +128,13 @@ impl Snippet for AddU128 {
                 split
                 // _ rhs_3 rhs_2 lhs_2 sum_0 lhs_3 carry_2 sum_1
 
-                swap4
+                swap 4
                 // _ rhs_3 rhs_2 sum_1 sum_0 lhs_3 carry_2 lhs_2
 
                 add
                 // _ rhs_3 rhs_2 sum_1 sum_0 lhs_3 lhs_2'
 
-                swap1 swap4
+                swap 1 swap 4
                 // _ rhs_3 lhs_3 sum_1 sum_0 lhs_2' rhs_2
 
                 add
@@ -143,13 +143,13 @@ impl Snippet for AddU128 {
                 split
                 // _ rhs_3 lhs_3 sum_1 sum_0 carry_3 sum_2
 
-                swap4
+                swap 4
                 // _ rhs_3 sum_2 sum_1 sum_0 carry_3 lhs_3
 
                 add
                 // _ rhs_3 sum_2 sum_1 sum_0 lhs_3'
 
-                dup4
+                dup 4
                 // _ rhs_3 sum_2 sum_1 sum_0 lhs_3' rhs_3
 
                 add
@@ -158,7 +158,7 @@ impl Snippet for AddU128 {
                 split
                 // _ rhs_3 sum_2 sum_1 sum_0 overflow sum_3
 
-                swap5
+                swap 5
                 pop
                 // _ sum_3 sum_2 sum_1 sum_0 overflow
 

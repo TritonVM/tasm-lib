@@ -66,7 +66,7 @@ impl Snippet for SafeNew {
                 // _ capacity
 
                 // Convert capacity in number of elements to number of VM words required for that list
-                dup0
+                dup 0
                 {mul_with_size}
                 // _ capacity (capacity_in_bfes)
 
@@ -87,7 +87,7 @@ impl Snippet for SafeNew {
                 add
                 // _ capacity (*list + 1)
 
-                swap1
+                swap 1
                 write_mem
                 // _ (*list + 1) capacity
 

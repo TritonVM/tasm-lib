@@ -59,13 +59,13 @@ impl Snippet for ShiftRightU64 {
             {entrypoint}:
                 // Bounds check: Verify that shift amount is less than 64.
                 push 64
-                dup1
+                dup 1
                 lt
                 assert
                 // _ value_hi value_lo shift
 
                 // If shift amount is greater than 32, we need to special-case!
-                dup0
+                dup 0
                 push 32
                 lt
                 // _ value_hi value_lo shift (shift > 32)
@@ -84,8 +84,8 @@ impl Snippet for ShiftRightU64 {
                 pow
                 // _ value_hi value_lo (2 ^ (32 - shift))
 
-                swap1
-                dup1
+                swap 1
+                dup 1
                 // _ value_hi (2 ^ (32 - shift)) value_lo (2 ^ (32 - shift))
 
                 mul
@@ -93,15 +93,15 @@ impl Snippet for ShiftRightU64 {
                 pop
                 // _ value_hi (2 ^ (32 - shift)) (value_lo >> shift)
 
-                swap2
+                swap 2
                 mul
                 // _ (value_lo >> shift) (value_hi << (32 - shift))
 
                 split
                 // _ (value_lo >> shift) (value_hi >> shift) carry
 
-                swap1
-                swap2
+                swap 1
+                swap 2
                 // _ (value_hi >> shift) carry (value_lo >> shift)
 
                 add
@@ -115,13 +115,13 @@ impl Snippet for ShiftRightU64 {
                 add
                 // _ value_hi value_lo (shift - 32)
 
-                swap2 swap1 push 32
+                swap 2 swap 1 push 32
                 // _ (shift - 32) value_hi value_lo 32
 
                 call {entrypoint}
                 // _ (shift - 32) (value >> 32)_hi (value >> 32)_lo
 
-                swap1 swap2
+                swap 1 swap 2
                 // _ (value >> 32)_hi (value >> 32)_lo (shift - 32)
 
                 return

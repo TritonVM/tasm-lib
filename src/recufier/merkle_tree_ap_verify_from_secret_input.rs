@@ -65,7 +65,7 @@ impl<H: AlgebraicHasher> Snippet for MtApVerifyFromSecretInput<H> {
             {entrypoint}:
                 read_io                                  // number of authentication paths to test
                                                          // stack: [num]
-                push 0 swap1 write_mem pop               // store number of APs at RAM address 0
+                push 0 swap 1 write_mem pop               // store number of APs at RAM address 0
                                                          // stack: []
                 read_io read_io read_io read_io read_io  // read Merkle root
                                                          // stack: [r4 r3 r2 r1 r0]
@@ -78,7 +78,7 @@ impl<H: AlgebraicHasher> Snippet for MtApVerifyFromSecretInput<H> {
                                                          // stack before: [* r4 r3 r2 r1 r0]
                                                          // stack after: [* r4 r3 r2 r1 r0]
             {entrypoint}_check_aps:                      // start function description:
-                push 0 read_mem dup0                     // get number of APs left to check
+                push 0 read_mem dup 0                     // get number of APs left to check
                                                          // stack: [* r4 r3 r2 r1 r0 0 num_left num_left]
                 push 0 eq                                // see if there are authentication paths left
                                                          // stack: [* r4 r3 r2 r1 r0 0 num_left num_left==0]
@@ -106,7 +106,7 @@ impl<H: AlgebraicHasher> Snippet for MtApVerifyFromSecretInput<H> {
                                                          // stack before: [* idx - - - - - - - - - -]
                                                          // stack after: [* idx>>2 - - - - - - - - - -]
             {entrypoint}_traverse_tree:                  // start function description:
-                dup10 push 1 eq skiz return              // break loop if node index is 1
+                dup 10 push 1 eq skiz return              // break loop if node index is 1
                 divine_sibling hash recurse              // move up one level in the Merkle tree
 
                                                          // subroutine: compare digests
@@ -115,7 +115,7 @@ impl<H: AlgebraicHasher> Snippet for MtApVerifyFromSecretInput<H> {
             {entrypoint}_assert_tree_top:                // start function description:
                 pop pop pop pop pop                      // remove unnecessary “0”s from hashing
                                                          // stack: [* r4 r3 r2 r1 r0 idx a b c d e]
-                swap1 swap2 swap3 swap4 swap5
+                swap 1 swap 2 swap 3 swap 4 swap 5
                                                          // stack: [* r4 r3 r2 r1 r0 a b c d e idx]
                 assert                                   //
                                                          // stack: [* r4 r3 r2 r1 r0 a b c d e]

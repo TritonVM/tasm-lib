@@ -61,7 +61,7 @@ impl Snippet for SafePop {
             code_to_read_elements.push_str("read_mem\n");
             // stack: _  address_for_last_unread_element, elem_{{N - 1 - i}}
 
-            code_to_read_elements.push_str("swap1\n");
+            code_to_read_elements.push_str("swap 1\n");
             // stack: _  [..., elem_{{N - 1 - i}}], address_for_last_unread_element
             if i != self.0.get_size() - 1 {
                 // Update offset for last unread element
@@ -87,7 +87,7 @@ impl Snippet for SafePop {
                 // stack : _  *list, length
 
                 // Assert that length is not 0
-                dup0
+                dup 0
                 push 0
                 eq
                 push 0
@@ -96,12 +96,12 @@ impl Snippet for SafePop {
                 // stack : _  *list, length
 
                 // Decrease length value by one and write back to memory
-                swap1
-                dup1
+                swap 1
+                dup 1
                 push -1
                 add
                 write_mem
-                swap1
+                swap 1
                 // stack : _ *list initial_length
 
                 {mul_with_size}

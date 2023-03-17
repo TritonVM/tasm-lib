@@ -121,16 +121,16 @@ impl<H: AlgebraicHasher> Snippet for MmrVerifyLeafMembershipFromSecretIn<H> {
                 divine
                 divine
                 // _ *peaks leaf_count_hi leaf_count_lo [digest (leaf_digest)] leaf_index_hi leaf_index_lo
-                swap8 swap1 swap9 swap7
+                swap 8 swap 1 swap 9 swap 7
                 // _ leaf_index_hi leaf_index_lo *peaks [digest (leaf_digest)] leaf_count_hi leaf_count_lo
 
-                dup9 dup9
+                dup 9 dup 9
                 // _ leaf_index_hi leaf_index_lo *peaks [digest (leaf_digest)] leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo
 
                 call {leaf_index_to_mt_index}
                 // _ leaf_index_hi leaf_index_lo *peaks [digest (leaf_digest)] mt_index_hi mt_index_lo peak_index
 
-                swap7 swap4 swap1 swap5 swap2 swap6 swap3
+                swap 7 swap 4 swap 1 swap 5 swap 2 swap 6 swap 3
                 // _ leaf_index_hi leaf_index_lo *peaks peak_index mt_index_hi mt_index_lo [digest (leaf_digest)]
 
                 // We're reading the authentication path from secret in, so we don't need a counter variable for that. We
@@ -143,13 +143,13 @@ impl<H: AlgebraicHasher> Snippet for MmrVerifyLeafMembershipFromSecretIn<H> {
                 // _ leaf_index_hi leaf_index_lo *peaks peak_index mt_index_hi mt_index_lo [digest (acc_hash)]
 
                 // Compare `acc_hash` with `peaks[peak_index]`
-                dup8 dup8 call {get}
+                dup 8 dup 8 call {get}
                 // _ leaf_index_hi leaf_index_lo *peaks peak_index mt_index_hi mt_index_lo [digest (acc_hash)] [digest (peaks[peak_index])]
 
                 call {compare_digest}
                 // _ leaf_index_hi leaf_index_lo *peaks peak_index mt_index_hi mt_index_lo (acc_hash == peaks[peak_index])
 
-                swap4 pop
+                swap 4 pop
                 // _ leaf_index_hi leaf_index_lo (acc_hash == peaks[peak_index]) peak_index mt_index_hi mt_index_lo
 
                 pop pop pop
@@ -159,7 +159,7 @@ impl<H: AlgebraicHasher> Snippet for MmrVerifyLeafMembershipFromSecretIn<H> {
 
             // start/end: _ leaf_index_hi leaf_index_lo *peaks peak_index mt_index_hi mt_index_lo [digest (acc_hash)]
             {entrypoint}_while:
-                dup6 dup6 push 0 push 1 call {eq_u64}
+                dup 6 dup 6 push 0 push 1 call {eq_u64}
                 // __ leaf_index_hi leaf_index_lo *peaks peak_index mt_index_hi mt_index_lo [digest (acc_hash)] (mt_index == 1)
 
                 skiz return
@@ -169,7 +169,7 @@ impl<H: AlgebraicHasher> Snippet for MmrVerifyLeafMembershipFromSecretIn<H> {
                 {divine_digest}
                 // __ leaf_index_hi leaf_index_lo *peaks peak_index mt_index_hi mt_index_lo [digest (acc_hash)] [digest (ap_element)]
 
-                dup10 call {u32_is_odd} push 0 eq
+                dup 10 call {u32_is_odd} push 0 eq
                 // _ *auth_path leaf_index_hi leaf_index_lo *peaks i peak_index mt_index_hi mt_index_lo [digest (acc_hash)] [digest (ap_element)] (mt_index % 2 == 0)
 
                 skiz call {swap_digests}
@@ -179,13 +179,13 @@ impl<H: AlgebraicHasher> Snippet for MmrVerifyLeafMembershipFromSecretIn<H> {
                 // _ *auth_path leaf_index_hi leaf_index_lo *peaks i peak_index mt_index_hi mt_index_lo [digest (acc_hash)]
 
                 // mt_index -> mt_index / 2
-                swap6 swap1 swap5
+                swap 6 swap 1 swap 5
                 // _ *auth_path [digest (leaf_digest)] *peaks peak_index acc_hash_0 acc_hash_1 (i + 1) acc_hash_4 acc_hash_3 acc_hash_2 mt_index_hi mt_index_lo
 
                 call {div_2}
                 // _ *auth_path [digest (leaf_digest)] *peaks peak_index acc_hash_0 acc_hash_1 (i + 1) acc_hash_4 acc_hash_3 acc_hash_2 (mt_index / 2)_hi (mt_index / 2)_lo
 
-                swap5 swap1 swap6
+                swap 5 swap 1 swap 6
                 // _ *auth_path [digest (leaf_digest)] *peaks (mt_index / 2)_hi (mt_index / 2)_lo peak_index (i + 1) acc_hash_4 acc_hash_3 acc_hash_2 acc_hash_1 acc_hash_0
 
                 recurse

@@ -126,7 +126,7 @@ impl<H: AlgebraicHasher> Snippet for MmrVerifyFromMemory<H> {
                 // AFTER: _ *auth_path leaf_index_hi leaf_index_lo validation_result
                 // Will crash if `leaf_index >= leaf_count`
                 {entrypoint}:
-                    dup9 dup9 dup9 dup9
+                    dup 9 dup 9 dup 9 dup 9
                     call {leaf_index_to_mt_index}
                     // stack: _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo [digest (leaf_digest)] *auth_path mt_index_hi mt_index_lo peak_index
 
@@ -134,7 +134,7 @@ impl<H: AlgebraicHasher> Snippet for MmrVerifyFromMemory<H> {
                     push 0
                     /// stack: _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo [digest (leaf_digest)] *auth_path mt_index_hi mt_index_lo peak_index i
 
-                    swap9 swap4 swap8 swap3 swap6 swap1 swap7 swap2 swap5
+                    swap 9 swap 4 swap 8 swap 3 swap 6 swap 1 swap 7 swap 2 swap 5
                     // stack: _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo i *auth_path peak_index mt_index_hi mt_index_lo [digest (leaf_digest)]
 
                     // rename: leaf_digest -> acc_hash
@@ -144,7 +144,7 @@ impl<H: AlgebraicHasher> Snippet for MmrVerifyFromMemory<H> {
                     // _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo i *auth_path peak_index mt_index_hi mt_index_lo [digest (acc_hash)]
 
                     // Compare `acc_hash` to the `expected_peak`, where `expected_peak = peaks[peak_index]`
-                    dup14 dup8
+                    dup 14 dup 8
                     // _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo i *auth_path peak_index mt_index_hi mt_index_lo [digest (acc_hash)] *peaks peak_index
 
                     call {get}
@@ -158,16 +158,16 @@ impl<H: AlgebraicHasher> Snippet for MmrVerifyFromMemory<H> {
                     // _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo i *auth_path peak_index mt_index_hi mt_index_lo validation_result
 
                     // Cleanup stack
-                    swap7
+                    swap 7
                     // _ *peaks leaf_count_hi leaf_count_lo validation_result leaf_index_lo i *auth_path peak_index mt_index_hi mt_index_lo leaf_index_hi
 
-                    swap9 pop pop pop pop
+                    swap 9 pop pop pop pop
                     // _ *peaks leaf_index_hi leaf_count_lo validation_result leaf_index_lo i *auth_path
 
-                    swap6 pop pop
+                    swap 6 pop pop
                     // _ *auth_path leaf_index_hi leaf_count_lo validation_result leaf_index_lo
 
-                    swap2 pop
+                    swap 2 pop
                     // _ *auth_path leaf_index_hi leaf_index_lo validation_result
 
                     return
@@ -175,20 +175,20 @@ impl<H: AlgebraicHasher> Snippet for MmrVerifyFromMemory<H> {
                 // Note that this while loop is the same as one in `calculate_new_peaks_from_leaf_mutation`
                 // BEFORE/AFTER: _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo i *auth_path peak_index mt_index_hi mt_index_lo [digest (acc_hash)]
                 {entrypoint}_while:
-                    dup6 dup6 push 0 push 1 call {eq_u64}
+                    dup 6 dup 6 push 0 push 1 call {eq_u64}
                     // _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo i *auth_path peak_index mt_index_hi mt_index_lo [digest (acc_hash)] (mt_index == 1)
 
                     skiz return
                     // _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo i *auth_path peak_index mt_index_hi mt_index_lo [digest (acc_hash)]
 
                     // declare `ap_element = auth_path[i]`
-                    dup8 dup10
+                    dup 8 dup 10
                     // _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo i *auth_path peak_index mt_index_hi mt_index_lo *auth_path i
 
                     call {get}
                     // _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo i *auth_path peak_index mt_index_hi mt_index_lo [digest (acc_hash)] [digest (ap_element)]
 
-                    dup10 call {u32_is_odd} push 0 eq
+                    dup 10 call {u32_is_odd} push 0 eq
                     // _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo i *auth_path peak_index mt_index_hi mt_index_lo [digest (acc_hash)] [digest (ap_element)] (mt_index % 2 == 0)
 
                     skiz call {swap_digests}
@@ -199,13 +199,13 @@ impl<H: AlgebraicHasher> Snippet for MmrVerifyFromMemory<H> {
                     // _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo i *auth_path peak_index mt_index_hi mt_index_lo [digest (acc_hash)]
 
                     // i -> i + 1
-                    swap9 push 1 add swap9
+                    swap 9 push 1 add swap 9
                     // _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo (i + 1) *auth_path peak_index mt_index_hi mt_index_lo [digest (acc_hash)]
 
                     // mt_index -> mt_index / 2
-                    swap6 swap1 swap5
+                    swap 6 swap 1 swap 5
                     call {div_2}
-                    swap5 swap1 swap6
+                    swap 5 swap 1 swap 6
                     // _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo (i + 1) *auth_path peak_index (mt_index / 2)_hi (mt_index / 2)_lo acc_hash_4 acc_hash_3 acc_hash_2 acc_hash_1 acc_hash_0
 
                     // Rename: i + 1 -> i; (mt_index / 2) -> mt_index

@@ -68,7 +68,7 @@ impl Snippet for SubU128 {
             // BEFORE: _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0
             // AFTER: _ sum_3 sum_2 sum_1 sum_0
             {entrypoint}:
-                swap1 swap4
+                swap 1 swap 4
                 push -1
                 mul
                 add
@@ -80,7 +80,7 @@ impl Snippet for SubU128 {
                 split
                 // _ rhs_3 rhs_2 rhs_1 lhs_1 lhs_3 lhs_2 !carry diff_0
 
-                swap5 swap1
+                swap 5 swap 1
                 // _ rhs_3 rhs_2 diff_0 lhs_1 lhs_3 lhs_2 rhs_1 !carry
 
                 push 0
@@ -94,7 +94,7 @@ impl Snippet for SubU128 {
                 mul
                 // _ rhs_3 rhs_2 diff_0 lhs_1 lhs_3 lhs_2 -rhs_1'
 
-                swap1 swap3
+                swap 1 swap 3
                 // _ rhs_3 rhs_2 diff_0 lhs_2 lhs_3 -rhs_1' lhs_1
 
                 add
@@ -105,7 +105,7 @@ impl Snippet for SubU128 {
                 split
                 // _ rhs_3 rhs_2 diff_0 lhs_2 lhs_3 !carry diff_1
 
-                swap5 swap1
+                swap 5 swap 1
                 // _ rhs_3 diff_1 diff_0 lhs_2 lhs_3 rhs_2 !carry
 
                 push 0
@@ -119,7 +119,7 @@ impl Snippet for SubU128 {
                 mul
                 // _ rhs_3 diff_1 diff_0 lhs_2 lhs_3 -rhs_2'
 
-                swap1 swap2
+                swap 1 swap 2
                 // _ rhs_3 diff_1 diff_0 lhs_3 -rhs_2' lhs_2
 
                 add
@@ -130,7 +130,7 @@ impl Snippet for SubU128 {
                 split
                 // _ rhs_3 diff_1 diff_0 lhs_3 !carry diff_2
 
-                swap5 swap1
+                swap 5 swap 1
                 // _ diff_2 diff_1 diff_0 lhs_3 rhs_3 !carry
 
                 push 0
@@ -149,13 +149,13 @@ impl Snippet for SubU128 {
                 // _ diff_2 diff_1 diff_0 overflow diff_3
 
                 // Assert that there is no overflow
-                swap1
+                swap 1
                 push 0
                 eq
                 assert
                 // _ diff_2 diff_1 diff_0 diff_3
 
-                swap3 swap2 swap1
+                swap 3 swap 2 swap 1
                 // _ diff_3 diff_2 diff_1 diff_0
 
                 return

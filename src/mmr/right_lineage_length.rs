@@ -62,7 +62,7 @@ impl Snippet for MmrRightLineageLength {
             "// Before: _ ni_hi ni_lo
             // After: _ right_lineage_count
             {entrypoint}:
-                dup1 dup1 call {log_2_floor_u64}
+                dup 1 dup 1 call {log_2_floor_u64}
                 // _ ni_hi ni_lo log_2_floor
 
                 push 1
@@ -72,32 +72,32 @@ impl Snippet for MmrRightLineageLength {
                 // rename: log_2_floor_plus_one -> bit_width
                 // _ ni_hi ni_lo bit_width
 
-                dup2 dup2
+                dup 2 dup 2
                 // _ ni_hi ni_lo bit_width ni_hi ni_lo
 
-                dup2
+                dup 2
                 call {pow2_u64}
                 // _ ni_hi ni_lo bit_width ni_hi ni_lo npo2_hi npo2_lo
 
                 call {sub_u64}
                 // _ ni_hi ni_lo bit_width dist_hi dist_lo
 
-                dup1 push 0 eq push 0 eq
+                dup 1 push 0 eq push 0 eq
                 // _ ni_hi ni_lo bit_width dist_hi dist_lo (dist_hi != 0)
 
-                dup1 dup4 lt
+                dup 1 dup 4 lt
                 // _ ni_hi ni_lo bit_width dist_hi dist_lo (dist_hi != 0) (bit_width < dist_lo)
 
                 add
                 // _ ni_hi ni_lo bit_width dist_hi dist_lo (dist_hi != 0 || bit_width < dist_lo)
 
-                push 1 swap1
+                push 1 swap 1
                 skiz call {entrypoint}_then
                 skiz call {entrypoint}_else
 
                 // _ ni_hi ni_lo bit_width dist_hi ret
 
-                swap4 pop pop pop pop
+                swap 4 pop pop pop pop
                 // _ ret
 
                 return
@@ -108,7 +108,7 @@ impl Snippet for MmrRightLineageLength {
                     pop
                     // _ ni_hi ni_lo bit_width dist_hi dist_lo
 
-                    swap1 swap2
+                    swap 1 swap 2
                     // _ ni_hi ni_lo dist_hi dist_lo bit_width
 
                     call {decr}
@@ -117,7 +117,7 @@ impl Snippet for MmrRightLineageLength {
                     call {pow2_u64}
                     // _ ni_hi ni_lo dist_hi dist_lo (npo2 >> 1)_hi (npo2 >> 1)_lo
 
-                    dup5 dup5 call {sub_u64}
+                    dup 5 dup 5 call {sub_u64}
                     // _ ni_hi ni_lo dist_hi dist_lo (node_index - npo2 >> 1)_hi (node_index - npo2 >> 1)_lo
 
                     call {incr}

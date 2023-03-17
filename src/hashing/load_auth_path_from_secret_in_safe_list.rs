@@ -92,7 +92,7 @@ impl Snippet for LoadAuthPathFromSecretInSafeList {
 
                     // Assert that the authentication path does not exceed the max allowed MMR height
                     push {max_mmr_height_plus_one}
-                    dup1
+                    dup 1
                     lt
                     // _ auth_path_length max_length > auth_path_length
 
@@ -111,7 +111,7 @@ impl Snippet for LoadAuthPathFromSecretInSafeList {
                     call {entrypoint}_while
                     // _ auth_path_length i *auth_path
 
-                    swap2 pop pop
+                    swap 2 pop pop
                     // _ *auth_path
 
                     return
@@ -119,10 +119,10 @@ impl Snippet for LoadAuthPathFromSecretInSafeList {
                 // Start/end stack: _ auth_path_length i *auth_path
                 {entrypoint}_while:
                     // Loop condition: end if (auth_path_length == i)
-                    dup2 dup2 eq skiz return
+                    dup 2 dup 2 eq skiz return
                     // _ auth_path_length i *auth_path
 
-                    dup0
+                    dup 0
                     // _ auth_path_length i *auth_path *auth_path
 
                     {read_digest_from_secret_in}
@@ -132,7 +132,7 @@ impl Snippet for LoadAuthPathFromSecretInSafeList {
                     // _ auth_path_length i *auth_path
 
                     // i -> i + 1
-                    swap1 push 1 add swap1
+                    swap 1 push 1 add swap 1
                     // _ auth_path_length (i + 1) *auth_path
 
                     recurse

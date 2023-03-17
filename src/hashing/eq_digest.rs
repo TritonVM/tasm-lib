@@ -70,15 +70,15 @@ impl Snippet for EqDigest {
             // Before: _ b4 b3 b2 b1 b0 a4 a3 a2 a1 a0
             // After: _ (a3 = b3)·(a2 = b2)·(a1 = b1)·(a4 = b4)·(b0 = a0)
             {entrypoint}:
-                swap6  // _ b4 b3 b2 a0 b0 a4 a3 a2 a1 b1
+                swap 6  // _ b4 b3 b2 a0 b0 a4 a3 a2 a1 b1
                 eq     // _ b4 b3 b2 a0 b0 a4 a3 a2 (a1 = b1)
-                swap6  // _ b4 b3 (a1 = b1) a0 b0 a4 a3 a2 b2
+                swap 6  // _ b4 b3 (a1 = b1) a0 b0 a4 a3 a2 b2
                 eq     // _ b4 b3 (a1 = b1) a0 b0 a4 a3 (a2 = b2)
-                swap6  // _ b4 (a2 = b2) (a1 = b1) a0 b0 a4 a3 b3
+                swap 6  // _ b4 (a2 = b2) (a1 = b1) a0 b0 a4 a3 b3
                 eq     // _ b4 (a2 = b2) (a1 = b1) a0 b0 a4 (a3 = b3)
-                swap6  // _ (a3 = b3) (a2 = b2) (a1 = b1) a0 b0 a4 b4
+                swap 6  // _ (a3 = b3) (a2 = b2) (a1 = b1) a0 b0 a4 b4
                 eq     // _ (a3 = b3) (a2 = b2) (a1 = b1) a0 b0 (a4 = b4)
-                swap2  // _ (a3 = b3) (a2 = b2) (a1 = b1) (a4 = b4) b0 a0
+                swap 2  // _ (a3 = b3) (a2 = b2) (a1 = b1) (a4 = b4) b0 a0
                 eq     // _ (a3 = b3) (a2 = b2) (a1 = b1) (a4 = b4) (b0 = a0)
 
                 mul

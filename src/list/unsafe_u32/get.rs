@@ -65,7 +65,7 @@ impl Snippet for UnsafeGet {
             code_to_read_elements.push_str("read_mem\n");
             // stack: _  address_for_last_unread_element, elem_{{N - 1 - i}}
 
-            code_to_read_elements.push_str("swap1\n");
+            code_to_read_elements.push_str("swap 1\n");
             // stack: _  [..., elem_{{N - 1 - i}}], address_for_last_unread_element
             if i != self.0.get_size() - 1 {
                 code_to_read_elements.push_str("push -1\n");
