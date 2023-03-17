@@ -1,9 +1,9 @@
 [
   {
     "name": "tasm_mmr_calculate_new_peaks_from_append",
-    "processor_table_height": 5091,
-    "hash_table_height": 180,
-    "u32_table_height": 131,
+    "processor_table_height": 5257,
+    "hash_table_height": 186,
+    "u32_table_height": 132,
     "case": "CommonCase"
   },
   {

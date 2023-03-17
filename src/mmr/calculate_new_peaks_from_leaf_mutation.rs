@@ -297,7 +297,7 @@ impl<H: AlgebraicHasher> Snippet for MmrCalculateNewPeaksFromLeafMutationMtIndic
     where
         Self: Sized,
     {
-        let mmr_leaf_count_log2 = 63u64;
+        let mmr_leaf_count_log2 = 62u64;
         let mmr_size = 1 << mmr_leaf_count_log2;
         let peaks: Vec<Digest> = random_elements(mmr_leaf_count_log2 as usize);
         let mut mmra = MmrAccumulator::<VmHasher>::init(peaks, mmr_size - 1);

@@ -278,7 +278,7 @@ impl<H: AlgebraicHasher> Snippet for MmrVerifyLeafMembershipFromSecretIn<H> {
     where
         Self: Sized,
     {
-        prepare_state_for_benchmark::<H>(63, 20)
+        prepare_state_for_benchmark::<H>(62, 20)
     }
 }
 

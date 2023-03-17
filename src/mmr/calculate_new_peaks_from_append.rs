@@ -274,9 +274,9 @@ impl<H: AlgebraicHasher> Snippet for CalculateNewPeaksFromAppend<H> {
     where
         Self: Sized,
     {
-        let peaks: Vec<Digest> = random_elements(30);
+        let peaks: Vec<Digest> = random_elements(31);
         let new_leaf: Digest = random();
-        let mmra = MmrAccumulator::init(peaks, (1 << 30) - 1);
+        let mmra = MmrAccumulator::init(peaks, (1 << 31) - 1);
         prepare_state_with_mmra(mmra, new_leaf)
     }
 

@@ -8,9 +8,9 @@
   },
   {
     "name": "tasm_mmr_calculate_new_peaks_from_leaf_mutation",
-    "processor_table_height": 5764,
-    "hash_table_height": 378,
-    "u32_table_height": 1168,
+    "processor_table_height": 5662,
+    "hash_table_height": 372,
+    "u32_table_height": 1160,
     "case": "WorstCase"
   }
 ]
