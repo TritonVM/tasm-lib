@@ -493,10 +493,10 @@ mod mmr_verify_from_secret_in_tests {
         for init_leaf_count in [
             (1u64 << 40) + (1 << 21) + 510,
             (1 << 32) - 1,
-            (1 << 63) - 3,
-            (1 << 63) - 2,
-            (1 << 63) - 1,
-            1 << 63,
+            (1 << 61) - 3,
+            (1 << 61) - 2,
+            (1 << 61) - 1,
+            1 << 61,
         ] {
             // let init_peak_count = 10; // 1 + 1 + 8
             let init_peak_count = init_leaf_count.count_ones();

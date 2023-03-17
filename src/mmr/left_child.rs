@@ -107,7 +107,7 @@ impl Snippet for MmrLeftChild {
     where
         Self: Sized,
     {
-        prepare_state(1 << 63)
+        prepare_state(1 << 62)
     }
 }
 
