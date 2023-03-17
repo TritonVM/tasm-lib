@@ -57,6 +57,23 @@ impl Snippet for ShiftRightU64 {
             // BEFORE: _ value_hi value_lo shift
             // AFTER: _ (value >> shift)_hi (value >> shift)_lo
             {entrypoint}:
+                // Bounds check: Verify that shift amount is less than 64.
+                push 64
+                dup1
+                lt
+                assert
+                // _ value_hi value_lo shift
+
+                // If shift amount is greater than 32, we need to special-case!
+                dup0
+                push 32
+                lt
+                // _ value_hi value_lo shift (shift > 32)
+
+                skiz
+                    call {entrypoint}_handle_hi_shift
+                // _ value_hi value_lo shift
+
                 push -1
                 mul
                 push 32
@@ -90,6 +107,24 @@ impl Snippet for ShiftRightU64 {
                 add
 
                 return
+
+            // start: _ value_hi value_lo shift
+            // end: _ (value >> 32)_hi (value >> 32)_lo (shift - 32)
+            {entrypoint}_handle_hi_shift:
+                push -32
+                add
+                // _ value_hi value_lo (shift - 32)
+
+                swap2 swap1 push 32
+                // _ (shift - 32) value_hi value_lo 32
+
+                call {entrypoint}
+                // _ (shift - 32) (value >> 32)_hi (value >> 32)_lo
+
+                swap1 swap2
+                // _ (value >> 32)_hi (value >> 32)_lo (shift - 32)
+
+                return
             "
         )
     }
@@ -107,7 +142,7 @@ impl Snippet for ShiftRightU64 {
     {
         let mut rng = thread_rng();
         let mut ret = vec![];
-        for i in 0..32 {
+        for i in 0..64 {
             ret.push(prepare_state((rng.next_u32() as u64) * 2, i));
         }
 
@@ -125,7 +160,7 @@ impl Snippet for ShiftRightU64 {
     where
         Self: Sized,
     {
-        prepare_state(0x123, 1)
+        prepare_state(0x123, 33)
     }
 
     fn rust_shadowing(
@@ -181,6 +216,23 @@ mod tests {
     #[test]
     fn shift_right_unit_test() {
         prop_shift_right(8, 2);
+    }
+
+    #[test]
+    fn shift_right_max_value_test() {
+        for i in 0..64 {
+            prop_shift_right(u32::MAX as u64, i);
+        }
+    }
+
+    #[test]
+    #[should_panic]
+    fn shift_beyond_limit() {
+        let mut init_stack = get_init_tvm_stack();
+        init_stack.push(BFieldElement::new(u32::MAX as u64));
+        init_stack.push(BFieldElement::new(u32::MAX as u64));
+        init_stack.push(64u64.into());
+        ShiftRightU64.run_tasm(&mut ExecutionState::with_stack(init_stack));
     }
 
     fn prop_shift_right(value: u64, shift_amount: u32) {
