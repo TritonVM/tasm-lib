@@ -157,7 +157,8 @@ impl Snippet for MmrRightLineageLength {
         let node_index_hi: u32 = stack.pop().unwrap().try_into().unwrap();
         let node_index: u64 = ((node_index_hi as u64) << 32) + node_index_lo as u64;
 
-        let right_lineage_length = mmr::shared::right_lineage_length(node_index as u128);
+        let right_lineage_length =
+            mmr::shared_advanced::right_lineage_length_from_node_index(node_index);
 
         stack.push(BFieldElement::new(right_lineage_length as u64));
     }

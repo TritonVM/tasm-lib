@@ -2,7 +2,7 @@ use rand::{thread_rng, Rng};
 use std::collections::HashMap;
 use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
-use twenty_first::util_types::mmr::shared::non_leaf_nodes_left;
+use twenty_first::util_types::mmr::shared_basic::non_leaf_nodes_left;
 
 use crate::arithmetic::u64::add_u64::AddU64;
 use crate::arithmetic::u64::and_u64::AndU64;
@@ -168,7 +168,7 @@ impl Snippet for MmrNonLeafNodesLeftUsingAnd {
         let leaf_index_hi: u32 = stack.pop().unwrap().try_into().unwrap();
         let leaf_index: u64 = (leaf_index_hi as u64) * (1u64 << 32) + leaf_index_lo as u64;
 
-        let result = non_leaf_nodes_left(leaf_index as u128) as u64;
+        let result = non_leaf_nodes_left(leaf_index);
         let result = U32s::<2>::try_from(result).unwrap();
         push_hashable(stack, &result);
     }

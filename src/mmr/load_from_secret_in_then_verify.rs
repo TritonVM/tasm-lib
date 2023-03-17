@@ -6,7 +6,7 @@ use rand::{thread_rng, Rng};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::random_elements;
 use twenty_first::shared_math::rescue_prime_digest::{Digest, DIGEST_LENGTH};
-use twenty_first::test_shared::mmr::get_archival_mmr_from_digests;
+use twenty_first::test_shared::mmr::get_rustyleveldb_ammr_from_digests;
 use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 use twenty_first::util_types::mmr::archival_mmr::ArchivalMmr;
 use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
@@ -198,8 +198,8 @@ impl<H: AlgebraicHasher + 'static> Snippet for MmrLoadFromSecretInThenVerify<H> 
             auth_path.push(digest);
         }
 
-        let valid_mp = MmrMembershipProof::<H>::new(leaf_index as u128, auth_path)
-            .verify(&peaks, &leaf_digest, leaf_count as u128)
+        let valid_mp = MmrMembershipProof::<H>::new(leaf_index, auth_path)
+            .verify(&peaks, &leaf_digest, leaf_count)
             .0;
 
         stack.push(auth_path_pointer);
@@ -238,11 +238,11 @@ fn prepare_state<H: AlgebraicHasher>(
     // AFTER: _ *auth_path leaf_index_hi leaf_index_lo validation_result
 
     let digests: Vec<Digest> = random_elements(size);
-    let mut ammr: ArchivalMmr<H> = get_archival_mmr_from_digests(digests.clone());
+    let mut ammr: ArchivalMmr<H, _> = get_rustyleveldb_ammr_from_digests(digests.clone());
     let mut vm_init_state = mmr_to_init_vm_state(&mut ammr.to_accumulator());
 
     // Populate secret-in with the correct authentication path
-    let mmr_mp = ammr.prove_membership(leaf_index as u128).0;
+    let mmr_mp = ammr.prove_membership(leaf_index).0;
     let authentication_path = mmr_mp.authentication_path;
     vm_init_state
         .secret_in
@@ -289,7 +289,7 @@ fn mmr_to_init_vm_state<H: AlgebraicHasher>(mmra: &mut MmrAccumulator<H>) -> Exe
     let peaks_pointer = BFieldElement::zero();
     stack.push(peaks_pointer);
 
-    let leaf_count = mmra.count_leaves() as u64;
+    let leaf_count = mmra.count_leaves();
     let leaf_count_hi = BFieldElement::new(leaf_count >> 32);
     let leaf_count_lo = BFieldElement::new(leaf_count & u32::MAX as u64);
     stack.push(leaf_count_hi);

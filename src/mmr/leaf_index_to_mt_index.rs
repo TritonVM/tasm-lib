@@ -179,11 +179,8 @@ impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
         let leaf_count_hi: u32 = stack.pop().unwrap().try_into().unwrap();
         let leaf_count: u64 = ((leaf_count_hi as u64) << 32) + leaf_count_lo as u64;
 
-        let (mt_index, peak_index) = mmr::shared::leaf_index_to_mt_index_and_peak_index(
-            leaf_index as u128,
-            leaf_count as u128,
-        );
-        let mt_index = mt_index as u64;
+        let (mt_index, peak_index) =
+            mmr::shared_basic::leaf_index_to_mt_index_and_peak_index(leaf_index, leaf_count);
         let mt_index: U32s<2> = U32s::from(BigUint::from(mt_index));
 
         stack.append(&mut mt_index.to_sequence().into_iter().rev().collect());

@@ -5,7 +5,7 @@ use num::Zero;
 use rand::{random, thread_rng, Rng};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::random_elements;
-use twenty_first::test_shared::mmr::get_archival_mmr_from_digests;
+use twenty_first::test_shared::mmr::get_rustyleveldb_ammr_from_digests;
 use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 use twenty_first::util_types::mmr::archival_mmr::ArchivalMmr;
 use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
@@ -88,9 +88,9 @@ impl<H: AlgebraicHasher> Snippet for MmrVerifyFromMemory<H> {
         let digests: Vec<Digest> = random_elements(size);
         let leaf_index = rng.gen_range(0..size);
         let leaf = digests[leaf_index];
-        let mut ammr: ArchivalMmr<H> = get_archival_mmr_from_digests(digests);
+        let mut ammr: ArchivalMmr<H, _> = get_rustyleveldb_ammr_from_digests(digests);
         let auth_path = ammr
-            .prove_membership(leaf_index as u128)
+            .prove_membership(leaf_index as u64)
             .0
             .authentication_path;
         let (ret0, _, _) = prepare_vm_state(
@@ -275,8 +275,8 @@ impl<H: AlgebraicHasher> Snippet for MmrVerifyFromMemory<H> {
             peaks.push(digest);
         }
 
-        let valid_mp = MmrMembershipProof::<H>::new(leaf_index as u128, auth_path)
-            .verify(&peaks, &leaf_digest, leaf_count as u128)
+        let valid_mp = MmrMembershipProof::<H>::new(leaf_index, auth_path)
+            .verify(&peaks, &leaf_digest, leaf_count)
             .0;
 
         stack.push(auth_path_pointer);
@@ -292,7 +292,7 @@ impl<H: AlgebraicHasher> Snippet for MmrVerifyFromMemory<H> {
         let log2_size = 31;
         let leaf_count_after_add = 1u64 << log2_size;
         let peaks: Vec<Digest> = random_elements(log2_size as usize);
-        let mut mmra = MmrAccumulator::<H>::init(peaks, leaf_count_after_add as u128 - 1);
+        let mut mmra = MmrAccumulator::<H>::init(peaks, leaf_count_after_add - 1);
         let new_leaf: Digest = random();
         let mp = mmra.append(new_leaf);
         let auth_path = mp.authentication_path;
@@ -309,7 +309,7 @@ impl<H: AlgebraicHasher> Snippet for MmrVerifyFromMemory<H> {
         let log2_size = 62;
         let leaf_count_after_add = 1u64 << log2_size;
         let peaks: Vec<Digest> = random_elements(log2_size as usize);
-        let mut mmra = MmrAccumulator::<H>::init(peaks, leaf_count_after_add as u128 - 1);
+        let mut mmra = MmrAccumulator::<H>::init(peaks, leaf_count_after_add - 1);
         let new_leaf: Digest = random();
         let mp = mmra.append(new_leaf);
         let auth_path = mp.authentication_path;
@@ -334,7 +334,7 @@ fn prepare_vm_state<H: AlgebraicHasher>(
     let peaks_pointer = BFieldElement::zero();
     stack.push(peaks_pointer);
 
-    let leaf_count: u64 = mmr.count_leaves() as u64;
+    let leaf_count: u64 = mmr.count_leaves();
     stack.push(BFieldElement::new(leaf_count >> 32));
     stack.push(BFieldElement::new(leaf_count & u32::MAX as u64));
 
@@ -386,7 +386,7 @@ mod auth_path_verify_from_memory_tests {
     use rand::{thread_rng, Rng};
 
     use twenty_first::shared_math::{b_field_element::BFieldElement, other::random_elements};
-    use twenty_first::test_shared::mmr::{get_archival_mmr_from_digests, get_empty_archival_mmr};
+    use twenty_first::test_shared::mmr::get_empty_rustyleveldb_ammr;
     use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
     use twenty_first::util_types::mmr::archival_mmr::ArchivalMmr;
     use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
@@ -414,7 +414,7 @@ mod auth_path_verify_from_memory_tests {
     #[should_panic]
     fn mmra_ap_verify_test_empty() {
         let digest0 = VmHasher::hash(&BFieldElement::new(4545));
-        let mut archival_mmr: ArchivalMmr<VmHasher> = get_empty_archival_mmr();
+        let archival_mmr: ArchivalMmr<VmHasher, _> = get_empty_rustyleveldb_ammr();
         let mut mmr = archival_mmr.to_accumulator();
         let leaf_index = 0;
         prop_verify_from_memory(&mut mmr, digest0, leaf_index, vec![], false);
@@ -423,7 +423,7 @@ mod auth_path_verify_from_memory_tests {
     #[test]
     fn mmra_ap_verify_test_one() {
         let digest0 = VmHasher::hash(&BFieldElement::new(4545));
-        let mut archival_mmr: ArchivalMmr<VmHasher> = get_empty_archival_mmr();
+        let mut archival_mmr: ArchivalMmr<VmHasher, _> = get_empty_rustyleveldb_ammr();
         archival_mmr.append(digest0);
         let mut mmr = archival_mmr.to_accumulator();
         let leaf_index = 0;
@@ -435,7 +435,7 @@ mod auth_path_verify_from_memory_tests {
         let digest0 = VmHasher::hash(&BFieldElement::new(123));
         let digest1 = VmHasher::hash(&BFieldElement::new(456));
 
-        let mut archival_mmr: ArchivalMmr<VmHasher> = get_empty_archival_mmr();
+        let mut archival_mmr: ArchivalMmr<VmHasher, _> = get_empty_rustyleveldb_ammr();
         archival_mmr.append(digest0);
         archival_mmr.append(digest1);
         let mut mmr = archival_mmr.to_accumulator();
@@ -453,13 +453,13 @@ mod auth_path_verify_from_memory_tests {
 
         for leaf_count in 0..max_size {
             let digests: Vec<Digest> = random_elements(leaf_count);
-            let mut archival_mmr: ArchivalMmr<VmHasher> =
-                get_archival_mmr_from_digests(digests.clone());
+            let mut archival_mmr: ArchivalMmr<VmHasher, _> =
+                get_rustyleveldb_ammr_from_digests(digests.clone());
             let mut mmr = archival_mmr.to_accumulator();
 
             let bad_leaf: Digest = thread_rng().gen();
             for (leaf_index, leaf_digest) in digests.into_iter().enumerate() {
-                let (auth_path, _) = archival_mmr.prove_membership(leaf_index as u128);
+                let (auth_path, _) = archival_mmr.prove_membership(leaf_index as u64);
 
                 // Positive test
                 prop_verify_from_memory(
@@ -510,7 +510,7 @@ mod auth_path_verify_from_memory_tests {
             // and handle the membership proofs ourselves
             let fake_peaks: Vec<Digest> = random_elements(init_peak_count as usize);
             let mut mmr: MmrAccumulator<VmHasher> =
-                MmrAccumulator::init(fake_peaks, init_leaf_count as u128);
+                MmrAccumulator::init(fake_peaks, init_leaf_count);
 
             // Insert the 1st leaf
             let second_to_last_leaf: Digest = thread_rng().gen();
@@ -518,7 +518,7 @@ mod auth_path_verify_from_memory_tests {
             let mut real_membership_proof_second_to_last = mmr.append(second_to_last_leaf);
             assert_eq!(
                 real_membership_proof_second_to_last.leaf_index,
-                second_to_last_leaf_index as u128
+                second_to_last_leaf_index
             );
 
             // Insert one more leaf and update the existing membership proof
@@ -526,7 +526,7 @@ mod auth_path_verify_from_memory_tests {
             let last_leaf_index = second_to_last_leaf_index + 1;
             MmrMembershipProof::update_from_append(
                 &mut real_membership_proof_second_to_last,
-                init_leaf_count as u128 + 1,
+                init_leaf_count + 1,
                 &last_leaf,
                 &mmr.get_peaks(),
             );
@@ -604,7 +604,7 @@ mod auth_path_verify_from_memory_tests {
         // Verify that auth path expectation was correct
         assert_eq!(
             expect_validation_success,
-            MmrMembershipProof::<H>::new(leaf_index as u128, auth_path)
+            MmrMembershipProof::<H>::new(leaf_index, auth_path)
                 .verify(&mmr.get_peaks(), &leaf, mmr.count_leaves())
                 .0
         );

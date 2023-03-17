@@ -228,9 +228,9 @@ impl<H: AlgebraicHasher> Snippet for CalculateNewPeaksFromAppend<H> {
             memory,
             DIGEST_LENGTH,
         );
-        let new_node_index = mmr::shared::leaf_index_to_node_index(old_leaf_count as u128);
+        let new_node_index = mmr::shared_advanced::leaf_index_to_node_index(old_leaf_count);
         let (mut right_lineage_count, _height) =
-            mmr::shared::right_lineage_length_and_own_height(new_node_index);
+            mmr::shared_advanced::right_lineage_length_and_own_height(new_node_index);
         while right_lineage_count != 0 {
             let new_hash = Digest::new(
                 rust_shadowing_helper_functions::unsafe_list::unsafe_list_pop(
@@ -292,14 +292,14 @@ impl<H: AlgebraicHasher> Snippet for CalculateNewPeaksFromAppend<H> {
 }
 
 fn prepare_state_with_mmra(
-    mut start_mmr: MmrAccumulator<VmHasher>,
+    start_mmr: MmrAccumulator<VmHasher>,
     new_leaf: Digest,
 ) -> ExecutionState {
     // We assume that the peaks can safely be stored in memory on address 0
     let peaks_pointer = BFieldElement::one();
 
     let mut stack = get_init_tvm_stack();
-    let old_leaf_count: u64 = start_mmr.count_leaves() as u64;
+    let old_leaf_count: u64 = start_mmr.count_leaves();
     stack.push(BFieldElement::new(old_leaf_count >> 32));
     stack.push(BFieldElement::new(old_leaf_count & u32::MAX as u64));
     stack.push(peaks_pointer);
@@ -416,7 +416,7 @@ mod tests {
     }
 
     fn prop_calculate_new_peaks_from_append(
-        mut start_mmr: MmrAccumulator<VmHasher>,
+        start_mmr: MmrAccumulator<VmHasher>,
         new_leaf: Digest,
         expected_mmr: MmrAccumulator<VmHasher>,
     ) {
@@ -426,7 +426,7 @@ mod tests {
         // BEFORE: _ old_leaf_count_hi old_leaf_count_lo *peaks [digests (new_leaf)]
         // AFTER: _ *new_peaks *auth_path
         let mut init_stack = get_init_tvm_stack();
-        let old_leaf_count: u64 = start_mmr.count_leaves() as u64;
+        let old_leaf_count: u64 = start_mmr.count_leaves();
         init_stack.push(BFieldElement::new(old_leaf_count >> 32));
         init_stack.push(BFieldElement::new(old_leaf_count & u32::MAX as u64));
         init_stack.push(peaks_pointer);
@@ -480,8 +480,7 @@ mod tests {
             produced_peaks.push(peak);
         }
 
-        let mut produced_mmr: Mmra =
-            MmrAccumulator::init(produced_peaks, start_mmr.count_leaves() + 1);
+        let produced_mmr: Mmra = MmrAccumulator::init(produced_peaks, start_mmr.count_leaves() + 1);
 
         // Verify that both code paths produce the same MMR
         assert_eq!(expected_mmr, produced_mmr);

@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::marker::PhantomData;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::random_elements;
-use twenty_first::test_shared::mmr::get_archival_mmr_from_digests;
+use twenty_first::test_shared::mmr::get_rustyleveldb_ammr_from_digests;
 use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
 use twenty_first::util_types::mmr::mmr_trait::Mmr;
@@ -76,9 +76,9 @@ impl<H: AlgebraicHasher> Snippet for MmrCalculateNewPeaksFromLeafMutationMtIndic
         let digests: Vec<Digest> = random_elements(mmr_size);
         let leaf_index: usize = thread_rng().gen_range(0..mmr_size);
         let new_leaf: Digest = random();
-        let mut ammr = get_archival_mmr_from_digests::<VmHasher>(digests);
+        let mut ammr = get_rustyleveldb_ammr_from_digests::<VmHasher>(digests);
         let mut mmra = ammr.to_accumulator();
-        let auth_path = ammr.prove_membership(leaf_index as u128);
+        let auth_path = ammr.prove_membership(leaf_index as u64);
         let ret0 = prepare_state_with_mmra(
             &mut mmra,
             leaf_index as u64,
@@ -250,14 +250,10 @@ impl<H: AlgebraicHasher> Snippet for MmrCalculateNewPeaksFromLeafMutationMtIndic
             auth_path.push(digest);
         }
 
-        let mmr_mp = MmrMembershipProof::new(leaf_index as u128, auth_path);
-        let new_peaks = mmr::shared::calculate_new_peaks_from_leaf_mutation::<H>(
-            &peaks,
-            &new_leaf,
-            leaf_count as u128,
-            &mmr_mp,
-        )
-        .unwrap();
+        let mmr_mp = MmrMembershipProof::new(leaf_index, auth_path);
+        let new_peaks = mmr::shared_basic::calculate_new_peaks_from_leaf_mutation::<H>(
+            &peaks, &new_leaf, leaf_count, &mmr_mp,
+        );
 
         // Write mutated peak back to memory
         // rust_shadowing_helper_functions::list_set(peaks_pointer, index, value, memory)
@@ -284,7 +280,7 @@ impl<H: AlgebraicHasher> Snippet for MmrCalculateNewPeaksFromLeafMutationMtIndic
         let mmr_leaf_count_log2 = 31u64;
         let mmr_size = 1 << mmr_leaf_count_log2;
         let peaks: Vec<Digest> = random_elements(mmr_leaf_count_log2 as usize);
-        let mut mmra = MmrAccumulator::<VmHasher>::init(peaks, mmr_size as u128 - 1);
+        let mut mmra = MmrAccumulator::<VmHasher>::init(peaks, mmr_size - 1);
         let inserted_leaf: Digest = random();
         let leaf_after_mutation: Digest = random();
         let auth_path = mmra.append(inserted_leaf).authentication_path;
@@ -304,7 +300,7 @@ impl<H: AlgebraicHasher> Snippet for MmrCalculateNewPeaksFromLeafMutationMtIndic
         let mmr_leaf_count_log2 = 63u64;
         let mmr_size = 1 << mmr_leaf_count_log2;
         let peaks: Vec<Digest> = random_elements(mmr_leaf_count_log2 as usize);
-        let mut mmra = MmrAccumulator::<VmHasher>::init(peaks, mmr_size as u128 - 1);
+        let mut mmra = MmrAccumulator::<VmHasher>::init(peaks, mmr_size - 1);
         let inserted_leaf: Digest = random();
         let leaf_after_mutation: Digest = random();
         let auth_path = mmra.append(inserted_leaf).authentication_path;
@@ -342,7 +338,7 @@ fn prepare_state_with_mmra(
         stack.push(*value);
     }
 
-    let leaf_count: u64 = start_mmr.count_leaves() as u64;
+    let leaf_count: u64 = start_mmr.count_leaves();
     stack.push(BFieldElement::new(leaf_count >> 32));
     stack.push(BFieldElement::new(leaf_count & u32::MAX as u64));
 
@@ -384,7 +380,7 @@ mod leaf_mutation_tests {
     use rand::{thread_rng, Rng};
     use twenty_first::shared_math::b_field_element::BFieldElement;
     use twenty_first::shared_math::other::random_elements;
-    use twenty_first::test_shared::mmr::{get_archival_mmr_from_digests, get_empty_archival_mmr};
+    use twenty_first::test_shared::mmr::get_empty_rustyleveldb_ammr;
     use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
     use twenty_first::util_types::mmr::archival_mmr::ArchivalMmr;
     use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
@@ -416,7 +412,7 @@ mod leaf_mutation_tests {
     fn mmra_leaf_mutate_test_single() {
         let digest0 = VmHasher::hash(&BFieldElement::new(4545));
         let digest1 = VmHasher::hash(&BFieldElement::new(12345));
-        let mut archival_mmr: ArchivalMmr<VmHasher> = get_empty_archival_mmr();
+        let mut archival_mmr = get_empty_rustyleveldb_ammr();
         archival_mmr.append(digest0);
         let expected_final_mmra = MmrAccumulator::new(vec![digest1]);
         let mutated_index = 0;
@@ -434,13 +430,13 @@ mod leaf_mutation_tests {
         let digest0 = VmHasher::hash(&BFieldElement::new(4545));
         let digest1 = VmHasher::hash(&BFieldElement::new(12345));
         let digest2 = VmHasher::hash(&BFieldElement::new(55555555));
-        let mut archival_mmr: ArchivalMmr<VmHasher> = get_empty_archival_mmr();
+        let mut archival_mmr = get_empty_rustyleveldb_ammr();
         archival_mmr.append(digest0);
         archival_mmr.append(digest1);
         let expected_final_mmra = MmrAccumulator::new(vec![digest2, digest1]);
         let mutated_index = 0;
         let auth_path = archival_mmr
-            .prove_membership(mutated_index as u128)
+            .prove_membership(mutated_index)
             .0
             .authentication_path;
         prop_calculate_new_peaks_from_leaf_mutation(
@@ -457,12 +453,12 @@ mod leaf_mutation_tests {
         let leaf_count = 3;
         let init_leaf_digests: Vec<Digest> = random_elements(leaf_count);
         let new_leaf: Digest = thread_rng().gen();
-        let mut archival_mmr: ArchivalMmr<VmHasher> =
-            get_archival_mmr_from_digests(init_leaf_digests.clone());
+        let mut archival_mmr: ArchivalMmr<VmHasher, _> =
+            get_rustyleveldb_ammr_from_digests(init_leaf_digests.clone());
 
         for mutated_index in 0..leaf_count {
             let auth_path = archival_mmr
-                .prove_membership(mutated_index as u128)
+                .prove_membership(mutated_index as u64)
                 .0
                 .authentication_path;
             let mut final_digests = init_leaf_digests.clone();
@@ -484,12 +480,12 @@ mod leaf_mutation_tests {
             println!("leaf_count = {leaf_count}");
             let init_leaf_digests: Vec<Digest> = random_elements(leaf_count);
             let new_leaf: Digest = thread_rng().gen();
-            let mut archival_mmr: ArchivalMmr<VmHasher> =
-                get_archival_mmr_from_digests(init_leaf_digests.clone());
+            let mut archival_mmr: ArchivalMmr<VmHasher, _> =
+                get_rustyleveldb_ammr_from_digests(init_leaf_digests.clone());
 
             for mutated_index in 0..leaf_count {
                 let auth_path = archival_mmr
-                    .prove_membership(mutated_index as u128)
+                    .prove_membership(mutated_index as u64)
                     .0
                     .authentication_path;
                 let mut final_digests = init_leaf_digests.clone();
@@ -512,12 +508,12 @@ mod leaf_mutation_tests {
             println!("leaf_count = {leaf_count}");
             let init_leaf_digests: Vec<Digest> = random_elements(leaf_count);
             let new_leaf: Digest = thread_rng().gen();
-            let mut archival_mmr: ArchivalMmr<VmHasher> =
-                get_archival_mmr_from_digests(init_leaf_digests.clone());
+            let mut archival_mmr: ArchivalMmr<VmHasher, _> =
+                get_rustyleveldb_ammr_from_digests(init_leaf_digests.clone());
 
             for mutated_index in [0, leaf_count - 100, leaf_count - 2, leaf_count - 1] {
                 let auth_path = archival_mmr
-                    .prove_membership(mutated_index as u128)
+                    .prove_membership(mutated_index as u64)
                     .0
                     .authentication_path;
                 let mut final_digests = init_leaf_digests.clone();
@@ -541,12 +537,12 @@ mod leaf_mutation_tests {
             let init_peak_digests: Vec<Digest> = random_elements(log_sizes as usize);
             let new_leaf: Digest = thread_rng().gen();
             let mut init_mmr: MmrAccumulator<VmHasher> =
-                MmrAccumulator::init(init_peak_digests.clone(), (1u64 << log_sizes) as u128 - 1);
+                MmrAccumulator::init(init_peak_digests.clone(), (1u64 << log_sizes) - 1);
 
             let mut final_peaks = init_peak_digests.clone();
             final_peaks[log_sizes as usize - 1] = new_leaf;
             let expected_final_mmra: MmrAccumulator<VmHasher> =
-                MmrAccumulator::init(final_peaks, (1u64 << log_sizes) as u128 - 1);
+                MmrAccumulator::init(final_peaks, (1u64 << log_sizes) - 1);
             prop_calculate_new_peaks_from_leaf_mutation(
                 &mut init_mmr,
                 new_leaf,
@@ -564,7 +560,7 @@ mod leaf_mutation_tests {
             let init_peak_digests: Vec<Digest> = random_elements(log_size as usize);
             let new_leaf: Digest = thread_rng().gen();
             let before_insertion_mmr: MmrAccumulator<VmHasher> =
-                MmrAccumulator::init(init_peak_digests.clone(), (1u64 << log_size) as u128 - 1);
+                MmrAccumulator::init(init_peak_digests.clone(), (1u64 << log_size) - 1);
 
             // Insert a leaf such that a very long (log_size long) auth path is returned
             let mut init_mmr = before_insertion_mmr.clone();
@@ -629,7 +625,7 @@ mod leaf_mutation_tests {
             produced_peaks.push(peak);
         }
 
-        let mut produced_mmr =
+        let produced_mmr =
             MmrAccumulator::<VmHasher>::init(produced_peaks, start_mmr.count_leaves());
 
         // Verify that both code paths produce the same MMR
@@ -653,7 +649,7 @@ mod leaf_mutation_tests {
         }
 
         let mmr_mp = MmrMembershipProof::<VmHasher> {
-            leaf_index: new_leaf_index as u128,
+            leaf_index: new_leaf_index,
             authentication_path: auth_path,
             _hasher: std::marker::PhantomData,
         };

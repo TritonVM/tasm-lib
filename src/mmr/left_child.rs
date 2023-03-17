@@ -90,7 +90,7 @@ impl Snippet for MmrLeftChild {
         let node_index_lo: u32 = stack.pop().unwrap().try_into().unwrap();
         let node_index_hi: u32 = stack.pop().unwrap().try_into().unwrap();
         let node_index: u64 = (node_index_hi as u64) * (1u64 << 32) + node_index_lo as u64;
-        let ret: u64 = mmr::shared::left_child(node_index as u128, height) as u64;
+        let ret: u64 = mmr::shared_basic::left_child(node_index, height);
         let ret: U32s<2> = U32s::from(BigUint::from(ret));
 
         stack.append(&mut ret.to_sequence().into_iter().rev().collect());
@@ -115,7 +115,7 @@ fn prepare_state(node_index: u64) -> ExecutionState {
     let mut stack = get_init_tvm_stack();
     let node_index_hi = BFieldElement::new(node_index >> 32);
     let node_index_lo = BFieldElement::new(node_index & u32::MAX as u64);
-    let (_, height) = mmr::shared::right_lineage_length_and_own_height(node_index as u128);
+    let (_, height) = mmr::shared_advanced::right_lineage_length_and_own_height(node_index);
     let height = BFieldElement::new(height as u64);
     stack.push(node_index_hi);
     stack.push(node_index_lo);

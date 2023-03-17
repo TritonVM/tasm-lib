@@ -203,7 +203,7 @@ impl Snippet for MmrRightChildAndHeight {
 
         // FIXME: We probably want to remove `right_child_and_height`, but we're interested
         // in seeing the relative clock cycle count after introducing the U32 Table.
-        let (ret, height) = mmr::shared::right_lineage_length_and_own_height(node_index as u128);
+        let (ret, height) = mmr::shared_advanced::right_lineage_length_and_own_height(node_index);
         stack.push(if ret != 0 {
             BFieldElement::one()
         } else {

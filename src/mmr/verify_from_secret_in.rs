@@ -2,11 +2,12 @@ use num::Zero;
 use rand::{random, thread_rng, Rng};
 use std::collections::HashMap;
 use std::marker::PhantomData;
+use twenty_first::test_shared::mmr::get_rustyleveldb_ammr_from_digests;
 use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
+use twenty_first::util_types::mmr::shared_basic::leaf_index_to_mt_index_and_peak_index;
 
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::random_elements;
-use twenty_first::test_shared::mmr::get_archival_mmr_from_digests;
 use twenty_first::util_types::mmr::archival_mmr::ArchivalMmr;
 use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
 use twenty_first::util_types::mmr::mmr_membership_proof::MmrMembershipProof;
@@ -240,10 +241,7 @@ impl<H: AlgebraicHasher> Snippet for MmrVerifyLeafMembershipFromSecretIn<H> {
         let leaf_index: u64 = ((leaf_index_hi as u64) << 32) + leaf_index_lo as u64;
 
         let (mut mt_index, _peak_index) =
-            rust_shadowing_helper_functions::leaf_index_to_mt_index_and_peak_index(
-                leaf_index as u128,
-                leaf_count as u128,
-            );
+            leaf_index_to_mt_index_and_peak_index(leaf_index, leaf_count);
 
         let mut auth_path: Vec<Digest> = vec![];
         while mt_index != 1 {
@@ -258,8 +256,8 @@ impl<H: AlgebraicHasher> Snippet for MmrVerifyLeafMembershipFromSecretIn<H> {
             mt_index /= 2;
         }
 
-        let valid_mp = MmrMembershipProof::<H>::new(leaf_index as u128, auth_path)
-            .verify(&peaks, &leaf_digest, leaf_count as u128)
+        let valid_mp = MmrMembershipProof::<H>::new(leaf_index, auth_path)
+            .verify(&peaks, &leaf_digest, leaf_count)
             .0;
 
         // stack.push(BFieldElement::new(valid_mp as u64));
@@ -290,7 +288,7 @@ fn prepare_state_for_benchmark<H: AlgebraicHasher>(
 ) -> ExecutionState {
     let leaf_count = 2u64.pow(log_2_leaf_count as u32);
     let peaks: Vec<Digest> = random_elements(log_2_leaf_count as usize);
-    let mut mmra = MmrAccumulator::<H>::init(peaks, leaf_count as u128 - 1);
+    let mut mmra = MmrAccumulator::<H>::init(peaks, leaf_count - 1);
     let new_leaf: Digest = random();
     let authentication_path = mmra.append(new_leaf).authentication_path;
 
@@ -329,7 +327,7 @@ fn prepare_state_for_tests<H: AlgebraicHasher>(
     generate_valid_proof: bool,
 ) -> ExecutionState {
     let digests: Vec<Digest> = random_elements(size);
-    let mut ammr: ArchivalMmr<H> = get_archival_mmr_from_digests(digests.clone());
+    let mut ammr: ArchivalMmr<H, _> = get_rustyleveldb_ammr_from_digests(digests.clone());
     let mut vm_init_state = mmr_to_init_vm_state(&mut ammr.to_accumulator());
 
     // Populate secret-in with the leaf index value, which is a u64
@@ -341,7 +339,7 @@ fn prepare_state_for_tests<H: AlgebraicHasher>(
         .push(BFieldElement::new(leaf_index & u32::MAX as u64));
 
     // Populate secret-in with the correct authentication path
-    let mmr_mp = ammr.prove_membership(leaf_index as u128).0;
+    let mmr_mp = ammr.prove_membership(leaf_index).0;
     let authentication_path = mmr_mp.authentication_path;
     for ap_element in authentication_path.iter() {
         let mut ap_element_values = ap_element.values().to_vec();
@@ -374,7 +372,7 @@ fn mmr_to_init_vm_state<H: AlgebraicHasher>(mmra: &mut MmrAccumulator<H>) -> Exe
     let peaks_pointer = BFieldElement::zero();
     stack.push(peaks_pointer);
 
-    let leaf_count = mmra.count_leaves() as u64;
+    let leaf_count = mmra.count_leaves();
     let leaf_count_hi = BFieldElement::new(leaf_count >> 32);
     let leaf_count_lo = BFieldElement::new(leaf_count & u32::MAX as u64);
     stack.push(leaf_count_hi);
@@ -404,7 +402,8 @@ fn mmr_to_init_vm_state<H: AlgebraicHasher>(mmra: &mut MmrAccumulator<H>) -> Exe
 #[cfg(test)]
 mod mmr_verify_from_secret_in_tests {
     use twenty_first::{
-        test_shared::mmr::get_empty_archival_mmr, util_types::algebraic_hasher::AlgebraicHasher,
+        test_shared::mmr::get_empty_rustyleveldb_ammr,
+        util_types::algebraic_hasher::AlgebraicHasher,
     };
 
     use crate::{
@@ -430,7 +429,7 @@ mod mmr_verify_from_secret_in_tests {
     #[test]
     fn mmra_ap_verify_test_one() {
         let digest0 = VmHasher::hash(&BFieldElement::new(4545));
-        let mut archival_mmr: ArchivalMmr<VmHasher> = get_empty_archival_mmr();
+        let mut archival_mmr: ArchivalMmr<VmHasher, _> = get_empty_rustyleveldb_ammr();
         archival_mmr.append(digest0);
         let mut mmr = archival_mmr.to_accumulator();
         let leaf_index = 0;
@@ -442,7 +441,7 @@ mod mmr_verify_from_secret_in_tests {
         let digest0 = VmHasher::hash(&BFieldElement::new(123));
         let digest1 = VmHasher::hash(&BFieldElement::new(456));
 
-        let mut archival_mmr: ArchivalMmr<VmHasher> = get_empty_archival_mmr();
+        let mut archival_mmr: ArchivalMmr<VmHasher, _> = get_empty_rustyleveldb_ammr();
         archival_mmr.append(digest0);
         archival_mmr.append(digest1);
         let mut mmr = archival_mmr.to_accumulator();
@@ -460,13 +459,13 @@ mod mmr_verify_from_secret_in_tests {
 
         for leaf_count in 0..max_size {
             let digests: Vec<Digest> = random_elements(leaf_count);
-            let mut archival_mmr: ArchivalMmr<VmHasher> =
-                get_archival_mmr_from_digests(digests.clone());
+            let mut archival_mmr: ArchivalMmr<VmHasher, _> =
+                get_rustyleveldb_ammr_from_digests(digests.clone());
             let mut mmr = archival_mmr.to_accumulator();
 
             let bad_leaf: Digest = thread_rng().gen();
             for (leaf_index, leaf_digest) in digests.into_iter().enumerate() {
-                let (auth_path, _) = archival_mmr.prove_membership(leaf_index as u128);
+                let (auth_path, _) = archival_mmr.prove_membership(leaf_index as u64);
 
                 // Positive test
                 prop_verify_from_secret_in(
@@ -507,7 +506,7 @@ mod mmr_verify_from_secret_in_tests {
             // and handle the membership proofs ourselves
             let fake_peaks: Vec<Digest> = random_elements(init_peak_count as usize);
             let mut mmr: MmrAccumulator<VmHasher> =
-                MmrAccumulator::init(fake_peaks, init_leaf_count as u128);
+                MmrAccumulator::init(fake_peaks, init_leaf_count);
 
             // Insert the 1st leaf
             let second_to_last_leaf: Digest = thread_rng().gen();
@@ -515,7 +514,7 @@ mod mmr_verify_from_secret_in_tests {
             let mut real_membership_proof_second_to_last = mmr.append(second_to_last_leaf);
             assert_eq!(
                 real_membership_proof_second_to_last.leaf_index,
-                second_to_last_leaf_index as u128
+                second_to_last_leaf_index
             );
 
             // Insert one more leaf and update the existing membership proof
@@ -523,7 +522,7 @@ mod mmr_verify_from_secret_in_tests {
             let last_leaf_index = second_to_last_leaf_index + 1;
             MmrMembershipProof::update_from_append(
                 &mut real_membership_proof_second_to_last,
-                init_leaf_count as u128 + 1,
+                init_leaf_count + 1,
                 &last_leaf,
                 &mmr.get_peaks(),
             );
@@ -580,7 +579,7 @@ mod mmr_verify_from_secret_in_tests {
         let peaks_pointer = BFieldElement::zero();
         init_stack.push(peaks_pointer);
 
-        let leaf_count: u64 = mmr.count_leaves() as u64;
+        let leaf_count: u64 = mmr.count_leaves();
         let leaf_count_hi = BFieldElement::new(leaf_count >> 32);
         let leaf_count_lo = BFieldElement::new(leaf_count & u32::MAX as u64);
         init_stack.push(leaf_count_hi);
@@ -637,8 +636,8 @@ mod mmr_verify_from_secret_in_tests {
         // Sanity check
         assert_eq!(
             expect_validation_success,
-            MmrMembershipProof::<H>::new(leaf_index as u128, auth_path)
-                .verify(&mmr.get_peaks(), &leaf, leaf_count as u128)
+            MmrMembershipProof::<H>::new(leaf_index, auth_path)
+                .verify(&mmr.get_peaks(), &leaf, leaf_count)
                 .0
         );
     }

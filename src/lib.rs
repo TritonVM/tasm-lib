@@ -118,7 +118,7 @@ pub fn execute(
     // Add the program after the stack initialization has been performed
     // Find the length of code used for setup. This length does not count towards execution length of snippet
     // so it must be subtracted at the end.
-    let init_code_length = vm::run(
+    let init_code_length = vm::debug(
         &Program::from_code(&executed_code).expect("Could not load source code: {}"),
         vec![],
         vec![],
@@ -132,7 +132,7 @@ pub fn execute(
 
     // Run the program, including the stack preparation and memory preparation logic
     let program = Program::from_code(&executed_code).expect("Could not load source code: {}");
-    let (execution_trace, output, err) = vm::run(&program, std_in.clone(), secret_in.clone());
+    let (execution_trace, output, err) = vm::debug(&program, std_in.clone(), secret_in.clone());
     if let Some(e) = err {
         panic!("Running the program failed: {e}\n\n\n Program:\n {code}")
     }

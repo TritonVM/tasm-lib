@@ -1,7 +1,7 @@
 use rand::{thread_rng, Rng};
 use std::collections::HashMap;
 use twenty_first::shared_math::b_field_element::BFieldElement;
-use twenty_first::util_types::mmr;
+use twenty_first::util_types::mmr::shared_advanced::right_lineage_length_and_own_height;
 
 use super::left_child::MmrLeftChild;
 use super::leftmost_ancestor::MmrLeftMostAncestor;
@@ -199,40 +199,41 @@ impl Snippet for MmrRightLineageCountAndHeight {
     ) where
         Self: Sized,
     {
-        // TODO: Remove this when twenty-first is updated
-        /// Traversing from this node upwards, count how many of the ancestor (including itself)
-        /// is a right child. This number is used to determine how many nodes to insert when a
-        /// new leaf is added.
-        fn right_ancestor_count_and_own_height(node_index: u128) -> (u32, u32) {
-            let (mut candidate, mut candidate_height) = mmr::shared::leftmost_ancestor(node_index);
+        // // TODO: Remove this when twenty-first is updated
+        // /// Traversing from this node upwards, count how many of the ancestor (including itself)
+        // /// is a right child. This number is used to determine how many nodes to insert when a
+        // /// new leaf is added.
+        // fn right_ancestor_count_and_own_height(node_index: u64) -> (u32, u32) {
+        //     let (mut candidate, mut candidate_height) =
+        //         mmr::shared_advanced::leftmost_ancestor(node_index);
 
-            // leftmost ancestor is always a left node, so count starts at 0.
-            let mut right_ancestor_count = 0;
+        //     // leftmost ancestor is always a left node, so count starts at 0.
+        //     let mut right_ancestor_count = 0;
 
-            loop {
-                if candidate == node_index {
-                    return (right_ancestor_count, candidate_height);
-                }
+        //     loop {
+        //         if candidate == node_index {
+        //             return (right_ancestor_count, candidate_height);
+        //         }
 
-                let left_child = mmr::shared::left_child(candidate, candidate_height);
-                let candidate_is_right_child = left_child < node_index;
-                if candidate_is_right_child {
-                    candidate = mmr::shared::right_child(candidate);
-                    right_ancestor_count += 1;
-                } else {
-                    candidate = left_child;
-                    right_ancestor_count = 0;
-                };
+        //         let left_child = mmr::shared::left_child(candidate, candidate_height);
+        //         let candidate_is_right_child = left_child < node_index;
+        //         if candidate_is_right_child {
+        //             candidate = mmr::shared::right_child(candidate);
+        //             right_ancestor_count += 1;
+        //         } else {
+        //             candidate = left_child;
+        //             right_ancestor_count = 0;
+        //         };
 
-                candidate_height -= 1;
-            }
-        }
+        //         candidate_height -= 1;
+        //     }
+        // }
 
         let node_index_lo: u32 = stack.pop().unwrap().try_into().unwrap();
         let node_index_hi: u32 = stack.pop().unwrap().try_into().unwrap();
         let node_index: u64 = (node_index_hi as u64) * (1u64 << 32) + node_index_lo as u64;
 
-        let (ret, height) = right_ancestor_count_and_own_height(node_index as u128);
+        let (ret, height) = right_lineage_length_and_own_height(node_index);
         stack.push(BFieldElement::new(ret as u64));
 
         stack.push(BFieldElement::new(height as u64));
