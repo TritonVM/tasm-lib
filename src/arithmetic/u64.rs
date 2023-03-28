@@ -8,6 +8,7 @@ pub mod incr_u64;
 pub mod index_of_last_nonzero_bit;
 pub mod log_2_floor_u64;
 pub mod lt_u64;
+pub mod or_u64;
 pub mod popcount_u64;
 pub mod pow2_u64;
 pub mod safe_mul_u64;
