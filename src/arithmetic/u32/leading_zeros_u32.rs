@@ -140,7 +140,7 @@ mod tests {
     }
 
     #[test]
-    fn or_simple_test() {
+    fn leading_zeros_u32_simple_test() {
         prop_safe_leading_zeros(1, Some(31));
         prop_safe_leading_zeros(2, Some(30));
         prop_safe_leading_zeros(3, Some(30));

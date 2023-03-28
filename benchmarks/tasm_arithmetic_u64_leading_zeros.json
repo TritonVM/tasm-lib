@@ -1,0 +1,16 @@
+[
+  {
+    "name": "tasm_arithmetic_u64_leading_zeros",
+    "processor_table_height": 36,
+    "hash_table_height": 0,
+    "u32_table_height": 33,
+    "case": "CommonCase"
+  },
+  {
+    "name": "tasm_arithmetic_u64_leading_zeros",
+    "processor_table_height": 23,
+    "hash_table_height": 0,
+    "u32_table_height": 32,
+    "case": "WorstCase"
+  }
+]
