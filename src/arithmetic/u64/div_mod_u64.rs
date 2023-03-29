@@ -17,7 +17,7 @@ use crate::arithmetic::u64::shift_right_u64::ShiftRightU64;
 use crate::arithmetic::u64::sub_u64::SubU64;
 use crate::library::Library;
 use crate::snippet::{DataType, Snippet};
-use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
+use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone)]
 pub struct DivModU64;
@@ -488,43 +488,17 @@ impl Snippet for DivModU64 {
         Self: Sized,
     {
         let mut rng = rand::thread_rng();
-        let numerator = U32s::<2>::try_from(rng.next_u64()).unwrap();
-        let divisor = U32s::<2>::try_from(rng.next_u64()).unwrap();
-        let mut stack = get_init_tvm_stack();
-        push_hashable(&mut stack, &numerator);
-        push_hashable(&mut stack, &divisor);
-        vec![ExecutionState::with_stack(stack)]
+        let numerator = rng.next_u64();
+        let divisor = rng.next_u64();
+        vec![prepare_state(numerator, divisor)]
     }
 
-    fn common_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
-        ExecutionState::with_stack(
-            vec![
-                get_init_tvm_stack(),
-                vec![BFieldElement::zero(), BFieldElement::new((1 << 31) - 1)],
-                vec![BFieldElement::zero(), BFieldElement::new((1 << 10) - 1)],
-            ]
-            .concat(),
-        )
+    fn common_case_input_state(&self) -> ExecutionState {
+        prepare_state(u32::MAX as u64, 1 << 15)
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
-        ExecutionState::with_stack(
-            vec![
-                get_init_tvm_stack(),
-                vec![
-                    BFieldElement::new(u32::MAX as u64),
-                    BFieldElement::new(u32::MAX as u64),
-                ],
-                vec![BFieldElement::new(1), BFieldElement::new(45454545)],
-            ]
-            .concat(),
-        )
+    fn worst_case_input_state(&self) -> ExecutionState {
+        prepare_state(u64::MAX, (1 << 32) + 45454545)
     }
 
     fn rust_shadowing(
@@ -569,6 +543,23 @@ impl Snippet for DivModU64 {
     }
 }
 
+fn prepare_state(numerator: u64, divisor: u64) -> ExecutionState {
+    ExecutionState::with_stack(
+        vec![
+            get_init_tvm_stack(),
+            vec![
+                BFieldElement::new(numerator >> 32),
+                BFieldElement::new(numerator & u32::MAX as u64),
+            ],
+            vec![
+                BFieldElement::new(divisor >> 32),
+                BFieldElement::new(divisor & u32::MAX as u64),
+            ],
+        ]
+        .concat(),
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use num::BigUint;
@@ -590,12 +581,23 @@ mod tests {
     }
 
     #[test]
+    #[should_panic]
+    fn fail_vm_execution_on_divide_by_zero() {
+        // Verify that division by zero stops the VM from executing.
+        // TODO: `run_tasm` ought to return an error on failure instead of
+        // crashing!
+        let mut init_state = prepare_state(100, 0);
+        DivModU64.run_tasm(&mut init_state);
+    }
+
+    #[test]
     fn div_mod_u64_unit_test() {
         prop_div_mod(1000, 100);
         prop_div_mod(6098312677908545536, 6098805452391317504);
         prop_div_mod(5373808693584330752, 11428751156810088448);
         prop_div_mod(8268416007396130816, 6204028719464448000);
         prop_div_mod(u64::MAX, 2);
+        prop_div_mod(u64::MAX, (1 << 32) + 454545454);
     }
 
     fn prop_div_mod(numerator: u64, divisor: u64) {
