@@ -175,7 +175,7 @@ mod tests {
 
     fn prop_leading_zeros(value: u64, expected: Option<u64>) {
         let mut init_stack = get_init_tvm_stack();
-        init_stack.push(BFieldElement::new(value as u64));
+        init_stack.push(BFieldElement::new(value));
 
         let execution_result = rust_tasm_equivalence_prop(
             LeadingZerosU64,
