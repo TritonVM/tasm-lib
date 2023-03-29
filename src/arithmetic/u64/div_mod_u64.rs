@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use num::Zero;
+use num::{One, Zero};
 use rand::RngCore;
 use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
@@ -538,25 +538,30 @@ impl Snippet for DivModU64 {
         let numerator_lo: u32 = stack.pop().unwrap().try_into().unwrap();
         let numerator_hi: u32 = stack.pop().unwrap().try_into().unwrap();
         let numerator: u64 = numerator_lo as u64 + (numerator_hi as u64) << 32;
-        let quotient = divisor / numerator;
-        let remainder = divisor % numerator;
 
+        let quotient = numerator / divisor;
         let quotient = U32s::<2>::try_from(quotient).unwrap();
-        let remainder = U32s::<2>::try_from(remainder).unwrap();
         let mut quotient = quotient.to_sequence();
         for _ in 0..quotient.len() {
             stack.push(quotient.pop().unwrap());
         }
+
+        let remainder = numerator % divisor;
+        let remainder = U32s::<2>::try_from(remainder).unwrap();
         let mut remainder = remainder.to_sequence();
         for _ in 0..remainder.len() {
             stack.push(remainder.pop().unwrap());
         }
+
+        // Because of spilling to, the divisor is stored in memory
+        memory.insert(BFieldElement::zero(), BFieldElement::new(divisor_lo as u64));
+        memory.insert(BFieldElement::one(), BFieldElement::new(divisor_hi as u64));
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use num::Zero;
+    use num::{BigUint, Zero};
     use rand::Rng;
 
     use crate::snippet_bencher::bench_and_write;
@@ -570,33 +575,43 @@ mod tests {
         rust_tasm_equivalence_prop_new(DivModU64);
     }
 
+    #[test]
+    fn div_mod_u64_unit_test() {
+        prop_div_mod(1000, 100);
+    }
+
     fn prop_div_mod(numerator: u64, divisor: u64) {
         let mut init_stack = get_init_tvm_stack();
 
-        let rhs_u32_2 =
-            U32s::<2>::new([(divisor & u32::MAX as u64) as u32, (divisor >> 32) as u32]);
-        for elem in rhs_u32_2.to_sequence().into_iter().rev() {
+        let numerator_lo = (numerator & u32::MAX as u64) as u32;
+        let numerator_hi = (numerator >> 32) as u32;
+
+        let numerator = U32s::<2>::new([numerator_lo, numerator_hi]);
+        for elem in numerator.to_sequence().into_iter().rev() {
             init_stack.push(elem);
         }
 
-        let lhs_u32_2 = U32s::<2>::new([
-            (numerator & u32::MAX as u64) as u32,
-            (numerator >> 32) as u32,
-        ]);
-        for elem in lhs_u32_2.to_sequence().into_iter().rev() {
+        let divisor_lo = (divisor & u32::MAX as u64) as u32;
+        let divisor_hi = (divisor >> 32) as u32;
+        let divisor = U32s::<2>::new([divisor_lo, divisor_hi]);
+        for elem in divisor.to_sequence().into_iter().rev() {
             init_stack.push(elem);
         }
 
-        let expected_res: BigUint = (numerator & divisor).into();
-        println!("Expected: {expected_res}");
-        let expected_u32_2: U32s<2> = expected_res.into();
+        let expected_res: (BigUint, BigUint) =
+            ((numerator / divisor).into(), (numerator % divisor).into());
+        let expected_u32_2_quotient: U32s<2> = expected_res.0.into();
+        let expected_u32_2_remainder: U32s<2> = expected_res.1.into();
         let mut expected_end_stack = get_init_tvm_stack();
-        for elem in expected_u32_2.to_sequence().into_iter().rev() {
+        for elem in expected_u32_2_quotient.to_sequence().into_iter().rev() {
+            expected_end_stack.push(elem);
+        }
+        for elem in expected_u32_2_remainder.to_sequence().into_iter().rev() {
             expected_end_stack.push(elem);
         }
 
-        let _execution_result = rust_tasm_equivalence_prop::<AndU64>(
-            AndU64,
+        let _execution_result = rust_tasm_equivalence_prop(
+            DivModU64,
             &init_stack,
             &[],
             &[],
