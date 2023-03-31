@@ -10,10 +10,144 @@ use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 
 #[derive(Clone)]
-pub struct LtU64;
+pub struct LtStandardU64;
+
+/// This `lt_standard_u64` does consume its argument.
+///
+/// The fastest way we know is to calculate without consuming, and then pop the operands.
+/// This is because there are three branches, so sharing cleanup unconditionally means
+/// less branching (fewer cycles) and less local cleanup (smaller program).
+impl Snippet for LtStandardU64 {
+    fn inputs(&self) -> Vec<String> {
+        vec![
+            "rhs_hi".to_string(),
+            "rhs_lo".to_string(),
+            "lhs_hi".to_string(),
+            "lhs_lo".to_string(),
+        ]
+    }
+
+    fn outputs(&self) -> Vec<String> {
+        vec!["(lhs < rhs)".to_string()]
+    }
+
+    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::U64, DataType::U64]
+    }
+
+    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::Bool]
+    }
+
+    fn crash_conditions() -> Vec<String> {
+        vec!["Either input is not u32".to_string()]
+    }
+
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
+        // The input states for the two u64::lt operators can be reused. But the
+        // rust shadowin cannot.
+        LtU64::gen_input_states(&LtU64)
+    }
+
+    fn stack_diff(&self) -> isize {
+        -3
+    }
+
+    fn entrypoint(&self) -> String {
+        "tasm_arithmetic_u64_lt_standard".to_string()
+    }
+
+    fn function_body(&self, _library: &mut Library) -> String {
+        let entrypoint = self.entrypoint();
+        format!(
+            "
+            // Before: _ rhs_hi rhs_lo lhs_hi lhs_lo
+            // After: _ (lhs < rhs)
+            {entrypoint}:
+                call {entrypoint}_aux // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs)
+                swap 4 pop pop pop pop // _ (lhs < rhs)
+                return
+
+            // Before: _ rhs_hi rhs_lo lhs_hi lhs_lo
+            // After: _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs)
+            {entrypoint}_aux:
+                dup 3 // _ rhs_hi rhs_lo lhs_hi lhs_lo rhs_hi
+                dup 2 // _ rhs_hi rhs_lo lhs_hi lhs_lo rhs_hi lhs_hi
+                lt   // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_hi < rhs_hi)
+                dup 0 // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_hi < rhs_hi) (lhs_hi < rhs_hi)
+                skiz return
+                     // true: _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs)
+                     // false: _ rhs_hi rhs_lo lhs_hi lhs_lo 0
+
+                dup 4 // _ rhs_hi rhs_lo lhs_hi lhs_lo 0 rhs_hi
+                dup 3 // _ rhs_hi rhs_lo lhs_hi lhs_lo 0 rhs_hi lhs_hi
+                eq   // _ rhs_hi rhs_lo lhs_hi lhs_lo 0 (lhs_hi == rhs_hi)
+                skiz call {entrypoint}_lo
+                     // true: _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs, aka lhs_lo < rhs_lo)
+                     // false: _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs, aka 0)
+                return
+
+            // Before: _ rhs_hi rhs_lo lhs_hi lhs_lo 0
+            // After: _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_lo < rhs_lo)
+            {entrypoint}_lo:
+                pop  // _ rhs_hi rhs_lo lhs_hi lhs_lo
+                dup 2 // _ rhs_hi rhs_lo lhs_hi lhs_lo rhs_lo
+                dup 1 // _ rhs_hi rhs_lo lhs_hi lhs_lo rhs_lo lhs_lo
+                lt   // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs)
+                return
+            "
+        )
+    }
+
+    fn rust_shadowing(
+        &self,
+        stack: &mut Vec<BFieldElement>,
+        _std_in: Vec<BFieldElement>,
+        _secret_in: Vec<BFieldElement>,
+        _memory: &mut HashMap<BFieldElement, BFieldElement>,
+    ) {
+        let lhs_lo: u32 = stack.pop().unwrap().try_into().unwrap();
+        let lhs_hi: u32 = stack.pop().unwrap().try_into().unwrap();
+        let lhs = U32s::new([lhs_lo, lhs_hi]);
+
+        let rhs_lo: u32 = stack.pop().unwrap().try_into().unwrap();
+        let rhs_hi: u32 = stack.pop().unwrap().try_into().unwrap();
+        let rhs = U32s::new([rhs_lo, rhs_hi]);
+
+        stack.push(BFieldElement::new((lhs < rhs) as u64));
+    }
+
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        ExecutionState::with_stack(
+            vec![
+                get_init_tvm_stack(),
+                vec![BFieldElement::zero(), BFieldElement::new(1 << 31)],
+                vec![BFieldElement::one(), BFieldElement::new(1 << 30)],
+            ]
+            .concat(),
+        )
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        ExecutionState::with_stack(
+            vec![
+                get_init_tvm_stack(),
+                vec![BFieldElement::new(8), BFieldElement::new(1 << 31)],
+                vec![BFieldElement::new(8), BFieldElement::new(1 << 30)],
+            ]
+            .concat(),
+        )
+    }
+}
 
 #[derive(Clone)]
-pub struct LtStandardU64;
+pub struct LtU64;
 
 /// This `lt_u64` does not consume its arguments, which is the norm for tasm functions.
 ///
@@ -137,140 +271,6 @@ impl Snippet for LtU64 {
         } else {
             BFieldElement::zero()
         });
-    }
-
-    fn common_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
-        ExecutionState::with_stack(
-            vec![
-                get_init_tvm_stack(),
-                vec![BFieldElement::zero(), BFieldElement::new(1 << 31)],
-                vec![BFieldElement::one(), BFieldElement::new(1 << 30)],
-            ]
-            .concat(),
-        )
-    }
-
-    fn worst_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
-        ExecutionState::with_stack(
-            vec![
-                get_init_tvm_stack(),
-                vec![BFieldElement::new(8), BFieldElement::new(1 << 31)],
-                vec![BFieldElement::new(8), BFieldElement::new(1 << 30)],
-            ]
-            .concat(),
-        )
-    }
-}
-
-/// This `lt_standard_u64` does consume its argument.
-///
-/// The fastest way we know is to calculate without consuming, and then pop the operands.
-/// This is because there are three branches, so sharing cleanup unconditionally means
-/// less branching (fewer cycles) and less local cleanup (smaller program).
-impl Snippet for LtStandardU64 {
-    fn inputs(&self) -> Vec<String> {
-        vec![
-            "rhs_hi".to_string(),
-            "rhs_lo".to_string(),
-            "lhs_hi".to_string(),
-            "lhs_lo".to_string(),
-        ]
-    }
-
-    fn outputs(&self) -> Vec<String> {
-        vec!["(lhs < rhs)".to_string()]
-    }
-
-    fn input_types(&self) -> Vec<crate::snippet::DataType> {
-        vec![DataType::U64, DataType::U64]
-    }
-
-    fn output_types(&self) -> Vec<crate::snippet::DataType> {
-        vec![DataType::Bool]
-    }
-
-    fn crash_conditions() -> Vec<String> {
-        vec!["Either input is not u32".to_string()]
-    }
-
-    fn gen_input_states(&self) -> Vec<ExecutionState> {
-        // The input states for the two u64::lt operators can be reused. But the
-        // rust shadowin cannot.
-        LtU64::gen_input_states(&LtU64)
-    }
-
-    fn stack_diff(&self) -> isize {
-        -3
-    }
-
-    fn entrypoint(&self) -> String {
-        "tasm_arithmetic_u64_lt_standard".to_string()
-    }
-
-    fn function_body(&self, _library: &mut Library) -> String {
-        let entrypoint = self.entrypoint();
-        format!(
-            "
-            // Before: _ rhs_hi rhs_lo lhs_hi lhs_lo
-            // After: _ (lhs < rhs)
-            {entrypoint}:
-                call {entrypoint}_aux // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs)
-                swap 4 pop pop pop pop // _ (lhs < rhs)
-                return
-
-            // Before: _ rhs_hi rhs_lo lhs_hi lhs_lo
-            // After: _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs)
-            {entrypoint}_aux:
-                dup 3 // _ rhs_hi rhs_lo lhs_hi lhs_lo rhs_hi
-                dup 2 // _ rhs_hi rhs_lo lhs_hi lhs_lo rhs_hi lhs_hi
-                lt   // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_hi < rhs_hi)
-                dup 0 // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_hi < rhs_hi) (lhs_hi < rhs_hi)
-                skiz return
-                     // true: _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs)
-                     // false: _ rhs_hi rhs_lo lhs_hi lhs_lo 0
-
-                dup 4 // _ rhs_hi rhs_lo lhs_hi lhs_lo 0 rhs_hi
-                dup 3 // _ rhs_hi rhs_lo lhs_hi lhs_lo 0 rhs_hi lhs_hi
-                eq   // _ rhs_hi rhs_lo lhs_hi lhs_lo 0 (lhs_hi == rhs_hi)
-                skiz call {entrypoint}_lo
-                     // true: _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs, aka lhs_lo < rhs_lo)
-                     // false: _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs, aka 0)
-                return
-
-            // Before: _ rhs_hi rhs_lo lhs_hi lhs_lo 0
-            // After: _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_lo < rhs_lo)
-            {entrypoint}_lo:
-                pop  // _ rhs_hi rhs_lo lhs_hi lhs_lo
-                dup 2 // _ rhs_hi rhs_lo lhs_hi lhs_lo rhs_lo
-                dup 1 // _ rhs_hi rhs_lo lhs_hi lhs_lo rhs_lo lhs_lo
-                lt   // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs)
-                return
-            "
-        )
-    }
-
-    fn rust_shadowing(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        _std_in: Vec<BFieldElement>,
-        _secret_in: Vec<BFieldElement>,
-        _memory: &mut HashMap<BFieldElement, BFieldElement>,
-    ) {
-        let lhs_lo: u32 = stack.pop().unwrap().try_into().unwrap();
-        let lhs_hi: u32 = stack.pop().unwrap().try_into().unwrap();
-        let lhs = U32s::new([lhs_lo, lhs_hi]);
-
-        let rhs_lo: u32 = stack.pop().unwrap().try_into().unwrap();
-        let rhs_hi: u32 = stack.pop().unwrap().try_into().unwrap();
-        let rhs = U32s::new([rhs_lo, rhs_hi]);
-
-        stack.push(BFieldElement::new((lhs < rhs) as u64));
     }
 
     fn common_case_input_state(&self) -> ExecutionState

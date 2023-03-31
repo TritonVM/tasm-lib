@@ -1,0 +1,16 @@
+[
+  {
+    "name": "tasm_arithmetic_u64_div_mod",
+    "processor_table_height": 271,
+    "hash_table_height": 0,
+    "u32_table_height": 218,
+    "case": "CommonCase"
+  },
+  {
+    "name": "tasm_arithmetic_u64_div_mod",
+    "processor_table_height": 9598,
+    "hash_table_height": 0,
+    "u32_table_height": 11290,
+    "case": "WorstCase"
+  }
+]

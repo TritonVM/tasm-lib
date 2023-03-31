@@ -2,6 +2,7 @@ pub mod add_u64;
 pub mod and_u64;
 pub mod decr_u64;
 pub mod div2_u64;
+pub mod div_mod_u64;
 pub mod double_pow2_u64;
 pub mod eq_u64;
 pub mod incr_u64;

@@ -1,13 +1,23 @@
 use std::collections::HashMap;
 
+use num::{One, Zero};
 use rand::RngCore;
 use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::algebraic_hasher::Hashable;
 
+use crate::arithmetic::u32::safe_add::SafeAdd;
+use crate::arithmetic::u32::safe_sub::SafeSub;
+use crate::arithmetic::u64::and_u64::AndU64;
+use crate::arithmetic::u64::leading_zeros_u64::LeadingZerosU64;
+use crate::arithmetic::u64::lt_u64::LtStandardU64;
+use crate::arithmetic::u64::or_u64::OrU64;
+use crate::arithmetic::u64::shift_left_u64::ShiftLeftU64;
+use crate::arithmetic::u64::shift_right_u64::ShiftRightU64;
+use crate::arithmetic::u64::sub_u64::SubU64;
 use crate::library::Library;
 use crate::snippet::{DataType, Snippet};
-use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
+use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone)]
 pub struct DivModU64;
@@ -22,10 +32,10 @@ impl Snippet for DivModU64 {
         Self: Sized,
     {
         vec![
-            "rhs_hi".to_string(),
-            "rhs_lo".to_string(),
-            "lhs_hi".to_string(),
-            "lhs_lo".to_string(),
+            "numerator_hi".to_string(),
+            "numerator_lo".to_string(),
+            "divisor_hi".to_string(),
+            "divisor_lo".to_string(),
         ]
     }
 
@@ -34,36 +44,434 @@ impl Snippet for DivModU64 {
     }
 
     fn output_types(&self) -> Vec<crate::snippet::DataType> {
-        vec![DataType::U64]
+        vec![DataType::U64, DataType::U64]
     }
 
     fn outputs(&self) -> Vec<String>
     where
         Self: Sized,
     {
-        vec!["(lhs / rhs)_hi".to_string(), "(lhs / rhs)_lo".to_string()]
+        vec![
+            "(numerator / divisor)_hi".to_string(),
+            "(numerator / divisor)_lo".to_string(),
+            "(numerator % divisor)_hi".to_string(),
+            "(numerator % divisor)_lo".to_string(),
+        ]
     }
 
     fn stack_diff(&self) -> isize
     where
         Self: Sized,
     {
-        -2
+        0
     }
 
     fn function_body(&self, library: &mut Library) -> String {
         let entrypoint = self.entrypoint();
+        let shift_right_u64 = library.import(Box::new(ShiftRightU64));
+        let shift_left_u64 = library.import(Box::new(ShiftLeftU64));
+        let and_u64 = library.import(Box::new(AndU64));
+        let lt_u64 = library.import(Box::new(LtStandardU64));
+        let or_u64 = library.import(Box::new(OrU64));
+        let sub_u64 = library.import(Box::new(SubU64));
+        let sub_u32 = library.import(Box::new(SafeSub));
+        let leading_zeros_u64 = library.import(Box::new(LeadingZerosU64));
+        let add_u32 = library.import(Box::new(SafeAdd));
+        let mem_address_for_spilled_divisor = library.kmalloc(2);
+        let last_mem_address_for_spilled_divisor = mem_address_for_spilled_divisor + 1;
 
+        // The below code has been compiled from a Rust implementation of an LLVM function
+        // called `divmoddi4` that can do u64 divmod with only access to u32 bit divmod and
+        // some u64 arithmetic instructions or functions. The compiler used for this was the
+        // `tasm-lang` compiler: https://github.com/TritonVM/tasm-lang
+        // You could probably get a smaller cycle count if you hand-compiled the function.
         format!(
             "
             // BEFORE: _ numerator_hi numerator_lo divisor_hi divisor_lo
             // AFTER: _ quotient_hi quotient_lo remainder_hi remainder_lo
             {entrypoint}:
-
-                // divisor > numerator => return (0, numerator)
-                
-
-
+                push {mem_address_for_spilled_divisor}
+                dup 1
+                write_mem
+                push 1
+                add
+                dup 2
+                write_mem
+                pop
+                dup 3
+                dup 3
+                push 32
+                call {shift_right_u64}
+                swap 1
+                pop
+                dup 4
+                dup 4
+                push 00000000004294967295
+                push 0
+                swap 1
+                call {and_u64}
+                swap 1
+                pop
+                push {last_mem_address_for_spilled_divisor}
+                read_mem
+                swap 1
+                push -1
+                add
+                read_mem
+                swap 1
+                pop
+                push 32
+                call {shift_right_u64}
+                swap 1
+                pop
+                push {last_mem_address_for_spilled_divisor}
+                read_mem
+                swap 1
+                push -1
+                add
+                read_mem
+                swap 1
+                pop
+                push 00000000004294967295
+                push 0
+                swap 1
+                call {and_u64}
+                swap 1
+                pop
+                push 0
+                push 0
+                push 0
+                push 0
+                dup 11
+                dup 11
+                push {last_mem_address_for_spilled_divisor}
+                read_mem
+                swap 1
+                push -1
+                add
+                read_mem
+                swap 1
+                pop
+                dup 3
+                dup 3
+                call {lt_u64}
+                push 1
+                swap 1
+                skiz
+                call _binop_Gt_bool_bool_26_then
+                skiz
+                call _binop_Gt_bool_bool_26_else
+                pop
+                pop
+                swap 8
+                pop
+                swap 8
+                pop
+                swap 8
+                pop
+                swap 8
+                pop
+                pop
+                pop
+                pop
+                pop
+                return
+                _binop_Eq_bool_bool_53_then:
+                pop
+                dup 8
+                dup 7
+                swap 1
+                div
+                pop
+                push 0
+                swap 1
+                dup 10
+                dup 9
+                swap 1
+                div
+                swap 1
+                pop
+                push 0
+                swap 1
+                swap 6
+                pop
+                swap 6
+                pop
+                swap 6
+                pop
+                swap 6
+                pop
+                push 0
+                return
+                _binop_Eq_bool_bool_53_else:
+                return
+                _binop_Eq_bool_bool_47_then:
+                pop
+                dup 1
+                dup 1
+                push 0
+                push 0
+                swap 6
+                pop
+                swap 6
+                pop
+                swap 6
+                pop
+                swap 6
+                pop
+                push 0
+                return
+                _binop_Eq_bool_bool_47_else:
+                dup 9
+                push 0
+                eq
+                push 1
+                swap 1
+                skiz
+                call _binop_Eq_bool_bool_53_then
+                skiz
+                call _binop_Eq_bool_bool_53_else
+                return
+                _lit_u64_u64_99_then:
+                pop
+                push 0
+                push 0
+                push 0
+                return
+                _lit_u64_u64_99_else:
+                push 00000000004294967295
+                push 00000000004294967295
+                return
+                _binop_Gt_bool_bool_81_while_loop:
+                dup 4
+                push 0
+                lt
+                push 0
+                eq
+                skiz
+                return
+                dup 3
+                dup 3
+                push 1
+                call {shift_left_u64}
+                dup 8
+                dup 8
+                push 63
+                call {shift_right_u64}
+                call {or_u64}
+                swap 4
+                pop
+                swap 4
+                pop
+                dup 6
+                dup 6
+                push 1
+                call {shift_left_u64}
+                dup 3
+                dup 3
+                push 0
+                push 1
+                call {and_u64}
+                call {or_u64}
+                swap 7
+                pop
+                swap 7
+                pop
+                push {last_mem_address_for_spilled_divisor}
+                read_mem
+                swap 1
+                push -1
+                add
+                read_mem
+                swap 1
+                pop
+                dup 5
+                dup 5
+                call {lt_u64}
+                push 1
+                swap 1
+                skiz
+                call _lit_u64_u64_99_then
+                skiz
+                call _lit_u64_u64_99_else
+                swap 2
+                pop
+                swap 2
+                pop
+                dup 3
+                dup 3
+                push {last_mem_address_for_spilled_divisor}
+                read_mem
+                swap 1
+                push -1
+                add
+                read_mem
+                swap 1
+                pop
+                dup 5
+                dup 5
+                call {and_u64}
+                swap 3
+                swap 1
+                swap 3
+                swap 2
+                call {sub_u64}
+                swap 4
+                pop
+                swap 4
+                pop
+                dup 4
+                push 1
+                swap 1
+                call {sub_u32}
+                swap 5
+                pop
+                recurse
+                _binop_Or_bool_bool_44_then:
+                pop
+                push {last_mem_address_for_spilled_divisor}
+                read_mem
+                swap 1
+                push -1
+                add
+                read_mem
+                swap 1
+                pop
+                push 0
+                push 1
+                swap 3
+                eq
+                swap 2
+                eq
+                mul
+                push 1
+                swap 1
+                skiz
+                call _binop_Eq_bool_bool_47_then
+                skiz
+                call _binop_Eq_bool_bool_47_else
+                push 0
+                return
+                _binop_Or_bool_bool_44_else:
+                push {last_mem_address_for_spilled_divisor}
+                read_mem
+                swap 1
+                push -1
+                add
+                read_mem
+                swap 1
+                pop
+                call {leading_zeros_u64}
+                dup 2
+                dup 2
+                call {leading_zeros_u64}
+                swap 1
+                call {sub_u32}
+                push 1
+                call {add_u32}
+                dup 2
+                dup 2
+                dup 2
+                call {shift_right_u64}
+                dup 4
+                dup 4
+                push 64
+                dup 5
+                swap 1
+                call {sub_u32}
+                call {shift_left_u64}
+                swap 5
+                pop
+                swap 5
+                pop
+                push 0
+                push 0
+                call _binop_Gt_bool_bool_81_while_loop
+                dup 6
+                dup 6
+                push 1
+                call {shift_left_u64}
+                dup 3
+                dup 3
+                push 0
+                push 1
+                call {and_u64}
+                call {or_u64}
+                dup 5
+                dup 5
+                swap 11
+                pop
+                swap 11
+                pop
+                swap 11
+                pop
+                swap 11
+                pop
+                pop
+                pop
+                pop
+                pop
+                pop
+                return
+                _binop_Gt_bool_bool_26_then:
+                pop
+                push 0
+                push 0
+                dup 3
+                dup 3
+                swap 6
+                pop
+                swap 6
+                pop
+                swap 6
+                pop
+                swap 6
+                pop
+                push 0
+                return
+                _binop_Gt_bool_bool_26_else:
+                dup 7
+                push 0
+                eq
+                push {last_mem_address_for_spilled_divisor}
+                read_mem
+                swap 1
+                push -1
+                add
+                read_mem
+                swap 1
+                pop
+                push 0
+                push 1
+                swap 3
+                eq
+                swap 2
+                eq
+                mul
+                add
+                push 2
+                eq
+                dup 8
+                push 0
+                eq
+                dup 11
+                push 0
+                eq
+                add
+                push 2
+                eq
+                add
+                push 0
+                eq
+                push 0
+                eq
+                push 1
+                swap 1
+                skiz
+                call _binop_Or_bool_bool_44_then
+                skiz
+                call _binop_Or_bool_bool_44_else
+                return
             "
         )
     }
@@ -72,7 +480,7 @@ impl Snippet for DivModU64 {
     where
         Self: Sized,
     {
-        vec![]
+        vec!["inputs are not valid u32s".to_owned()]
     }
 
     fn gen_input_states(&self) -> Vec<ExecutionState>
@@ -80,58 +488,210 @@ impl Snippet for DivModU64 {
         Self: Sized,
     {
         let mut rng = rand::thread_rng();
-        let lhs = U32s::<2>::try_from(rng.next_u64()).unwrap();
-        let rhs = U32s::<2>::try_from(rng.next_u64()).unwrap();
-        let mut stack = get_init_tvm_stack();
-        push_hashable(&mut stack, &lhs);
-        push_hashable(&mut stack, &rhs);
-        vec![ExecutionState::with_stack(stack)]
+
+        let mut ret = vec![];
+        for i in 0..32 {
+            for j in 0..32 {
+                for _ in 0..2 {
+                    ret.push(prepare_state(
+                        rng.next_u32() as u64 + (1 << i),
+                        rng.next_u32() as u64 + (1 << j),
+                    ))
+                }
+            }
+        }
+
+        ret
     }
 
-    fn common_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
-        todo!()
+    fn common_case_input_state(&self) -> ExecutionState {
+        prepare_state(u32::MAX as u64, 1 << 15)
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
-        todo!()
+    fn worst_case_input_state(&self) -> ExecutionState {
+        prepare_state(u64::MAX, (1 << 32) + 45454545)
     }
 
     fn rust_shadowing(
         &self,
         stack: &mut Vec<BFieldElement>,
-        std_in: Vec<BFieldElement>,
-        secret_in: Vec<BFieldElement>,
+        _std_in: Vec<BFieldElement>,
+        _secret_in: Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) where
         Self: Sized,
     {
         // top element on stack
-        let numerator_lo: u32 = stack.pop().unwrap().try_into().unwrap();
-        let numerator_hi: u32 = stack.pop().unwrap().try_into().unwrap();
-        let numerator: u64 = numerator_lo as u64 + (numerator_hi as u64) << 32;
+        let divisor_lo: u32 = stack.pop().unwrap().try_into().unwrap();
+        let divisor_hi: u32 = stack.pop().unwrap().try_into().unwrap();
+        let divisor: u64 = divisor_lo as u64 + ((divisor_hi as u64) << 32);
 
         // second element on stack
-        let denominator_lo: u32 = stack.pop().unwrap().try_into().unwrap();
-        let denominator_hi: u32 = stack.pop().unwrap().try_into().unwrap();
-        let denominator: u64 = denominator_lo as u64 + (denominator_hi as u64) << 32;
-        let quotient = numerator / denominator;
-        let remainder = numerator % denominator;
+        let numerator_lo: u32 = stack.pop().unwrap().try_into().unwrap();
+        let numerator_hi: u32 = stack.pop().unwrap().try_into().unwrap();
+        let numerator: u64 = numerator_lo as u64 + ((numerator_hi as u64) << 32);
 
-        let quotient = U32s::<2>::try_from(quotient).unwrap();
-        let remainder = U32s::<2>::try_from(remainder).unwrap();
-        let mut quotient = quotient.to_sequence();
-        for _ in 0..quotient.len() {
-            stack.push(quotient.pop().unwrap());
+        let quotient = numerator / divisor;
+        let quotient_u32_2 = U32s::<2>::try_from(quotient).unwrap();
+        let mut quotient_as_bfes = quotient_u32_2.to_sequence();
+        for _ in 0..quotient_as_bfes.len() {
+            stack.push(quotient_as_bfes.pop().unwrap());
         }
+
+        let remainder = numerator % divisor;
+
+        let remainder = U32s::<2>::try_from(remainder).unwrap();
         let mut remainder = remainder.to_sequence();
         for _ in 0..remainder.len() {
             stack.push(remainder.pop().unwrap());
         }
+
+        // Because of spilling, the divisor is stored in memory.
+        // This spilling could probably be avoided if the code didn't
+        // go through the tasm-lang compiler but was handcompiled instead.
+        memory.insert(BFieldElement::zero(), BFieldElement::new(divisor_lo as u64));
+        memory.insert(BFieldElement::one(), BFieldElement::new(divisor_hi as u64));
+    }
+}
+
+fn prepare_state(numerator: u64, divisor: u64) -> ExecutionState {
+    ExecutionState::with_stack(
+        vec![
+            get_init_tvm_stack(),
+            vec![
+                BFieldElement::new(numerator >> 32),
+                BFieldElement::new(numerator & u32::MAX as u64),
+            ],
+            vec![
+                BFieldElement::new(divisor >> 32),
+                BFieldElement::new(divisor & u32::MAX as u64),
+            ],
+        ]
+        .concat(),
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use num::BigUint;
+
+    use crate::get_init_tvm_stack;
+    use crate::snippet_bencher::bench_and_write;
+    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
+
+    use super::*;
+
+    #[test]
+    fn div_mod_u64_benchmark() {
+        bench_and_write(DivModU64);
+    }
+
+    #[test]
+    fn div_mod_u64_test() {
+        rust_tasm_equivalence_prop_new(DivModU64);
+    }
+
+    #[test]
+    #[should_panic]
+    fn fail_vm_execution_on_divide_by_zero() {
+        // Verify that division by zero stops the VM from executing.
+        // TODO: `run_tasm` ought to return an error on failure instead of
+        // crashing!
+        let mut init_state = prepare_state(100, 0);
+        DivModU64.run_tasm(&mut init_state);
+    }
+
+    #[test]
+    fn div_mod_u64_unit_test() {
+        prop_div_mod(1000, 100);
+        prop_div_mod(0, 1);
+        prop_div_mod(0, 2);
+        prop_div_mod(0, 3);
+        prop_div_mod(0, 100);
+        prop_div_mod(0, u32::MAX as u64);
+        prop_div_mod(0, 0xFFFF_FFFF_0000_0000);
+        prop_div_mod(0, 11428751156810088448);
+
+        // Found in bug reports online
+        prop_div_mod(6098312677908545536, 6098805452391317504);
+        prop_div_mod(5373808693584330752, 11428751156810088448);
+        prop_div_mod(8268416007396130816, 6204028719464448000);
+
+        // Suggested by ChatGPT
+        prop_div_mod(u64::MAX, 1);
+        prop_div_mod(u64::MAX, 2);
+        prop_div_mod(u64::MAX, u64::MAX);
+        prop_div_mod(0x0000_0001_FFFF_FFFF, 0xFFFF_FFFF_0000_0000);
+        prop_div_mod(0xFFFF_FFFF_0000_0000, 0x0000_0000_FFFF_FFFF);
+        prop_div_mod(0xABCD_EF12_3456_789A, 0x1234_5678_9ABC_DEF0);
+
+        // Edge cases around powers of two
+        prop_div_mod(u64::MAX, (1 << 31) + 454545454);
+        prop_div_mod(u64::MAX, (1 << 32) + 454545454);
+        prop_div_mod(u64::MAX, (1 << 33) + 454545454);
+        prop_div_mod(u64::MAX, (1 << 34) + 454545454);
+        prop_div_mod(u64::MAX, (1 << 35) + 454545454);
+        prop_div_mod(u64::MAX, (1 << 31) + 1);
+        prop_div_mod(u64::MAX, (1 << 32) - 1);
+        prop_div_mod(u64::MAX, 1 << 32);
+
+        prop_div_mod(u64::MAX - 1, (1 << 32) - 2);
+        prop_div_mod(u64::MAX - 1, (1 << 32) - 1);
+        prop_div_mod(u64::MAX - 1, 1 << 32);
+        prop_div_mod(u64::MAX - 1, (1 << 32) + 1);
+        prop_div_mod(u64::MAX - 1, (1 << 32) + 2);
+        prop_div_mod(u64::MAX - 1, (1 << 32) + 3);
+
+        prop_div_mod(u64::MAX, (1 << 32) + 1);
+        prop_div_mod(u64::MAX, (1 << 32) + 2);
+        prop_div_mod(u64::MAX, (1 << 32) + 3);
+
+        prop_div_mod(u64::MAX - 1, (1 << 33) - 1);
+        prop_div_mod(u64::MAX - 1, 1 << 33);
+        prop_div_mod(u64::MAX - 1, (1 << 33) + 1);
+        prop_div_mod(u64::MAX, (1 << 33) - 1);
+        prop_div_mod(u64::MAX, 1 << 33);
+        prop_div_mod(u64::MAX, (1 << 33) + 1);
+    }
+
+    fn prop_div_mod(numerator: u64, divisor: u64) {
+        let mut init_stack = get_init_tvm_stack();
+
+        let numerator_lo = (numerator & u32::MAX as u64) as u32;
+        let numerator_hi = (numerator >> 32) as u32;
+
+        let numerator = U32s::<2>::new([numerator_lo, numerator_hi]);
+        for elem in numerator.to_sequence().into_iter().rev() {
+            init_stack.push(elem);
+        }
+
+        let divisor_lo = (divisor & u32::MAX as u64) as u32;
+        let divisor_hi = (divisor >> 32) as u32;
+        let divisor = U32s::<2>::new([divisor_lo, divisor_hi]);
+        for elem in divisor.to_sequence().into_iter().rev() {
+            init_stack.push(elem);
+        }
+
+        let expected_res: (BigUint, BigUint) =
+            ((numerator / divisor).into(), (numerator % divisor).into());
+        let expected_u32_2_quotient: U32s<2> = expected_res.0.into();
+        let expected_u32_2_remainder: U32s<2> = expected_res.1.into();
+        let mut expected_end_stack = get_init_tvm_stack();
+        for elem in expected_u32_2_quotient.to_sequence().into_iter().rev() {
+            expected_end_stack.push(elem);
+        }
+        for elem in expected_u32_2_remainder.to_sequence().into_iter().rev() {
+            expected_end_stack.push(elem);
+        }
+
+        let _execution_result = rust_tasm_equivalence_prop(
+            DivModU64,
+            &init_stack,
+            &[],
+            &[],
+            &mut HashMap::default(),
+            0,
+            Some(&expected_end_stack),
+        );
     }
 }
