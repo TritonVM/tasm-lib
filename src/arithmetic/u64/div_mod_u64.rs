@@ -353,6 +353,24 @@ impl Snippet for DivModU64 {
                 push 0
                 return
                 _binop_Or_bool_bool_44_else:
+                push 0
+                push 0
+                push {last_mem_address_for_spilled_divisor}
+                read_mem
+                swap 1
+                push -1
+                add
+                read_mem
+                swap 1
+                pop
+                swap 3
+                eq
+                swap 2
+                eq
+                mul
+                push 0
+                eq
+                assert
                 push {last_mem_address_for_spilled_divisor}
                 read_mem
                 swap 1
@@ -593,11 +611,23 @@ mod tests {
 
     #[test]
     #[should_panic]
-    fn fail_vm_execution_on_divide_by_zero() {
-        // Verify that division by zero stops the VM from executing.
+    fn fail_vm_execution_on_divide_by_zero_u32_numerator() {
+        // Verify that division by zero stops the VM from executing
+        // when numerator is small, `numerator < 1 ^ 32`.
         // TODO: `run_tasm` ought to return an error on failure instead of
         // crashing!
         let mut init_state = prepare_state(100, 0);
+        DivModU64.run_tasm(&mut init_state);
+    }
+
+    #[test]
+    #[should_panic]
+    fn fail_vm_execution_on_divide_by_zero_u64_numerator() {
+        // Verify that division by zero stops the VM from executing
+        // when numerator is big, `numerator >= 1 ^ 32`
+        // TODO: `run_tasm` ought to return an error on failure instead of
+        // crashing!
+        let mut init_state = prepare_state(1u64 << 33, 0);
         DivModU64.run_tasm(&mut init_state);
     }
 
