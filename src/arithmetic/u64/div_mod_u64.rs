@@ -80,7 +80,7 @@ impl Snippet for DivModU64 {
         let mem_address_for_spilled_divisor = library.kmalloc(2);
         let last_mem_address_for_spilled_divisor = mem_address_for_spilled_divisor + 1;
 
-        // The below code has been compiled from a Rust implementation of a LLVM function
+        // The below code has been compiled from a Rust implementation of an LLVM function
         // called `divmoddi4` that can do u64 divmod with only access to u32 bit divmod and
         // some u64 arithmetic instructions or functions. The compiler used for this was the
         // `tasm-lang` compiler: https://github.com/TritonVM/tasm-lang
@@ -488,9 +488,20 @@ impl Snippet for DivModU64 {
         Self: Sized,
     {
         let mut rng = rand::thread_rng();
-        let numerator = rng.next_u64();
-        let divisor = rng.next_u64();
-        vec![prepare_state(numerator, divisor)]
+
+        let mut ret = vec![];
+        for i in 0..32 {
+            for j in 0..32 {
+                for _ in 0..2 {
+                    ret.push(prepare_state(
+                        rng.next_u32() as u64 + (1 << i),
+                        rng.next_u32() as u64 + (1 << j),
+                    ))
+                }
+            }
+        }
+
+        ret
     }
 
     fn common_case_input_state(&self) -> ExecutionState {
@@ -593,11 +604,54 @@ mod tests {
     #[test]
     fn div_mod_u64_unit_test() {
         prop_div_mod(1000, 100);
+        prop_div_mod(0, 1);
+        prop_div_mod(0, 2);
+        prop_div_mod(0, 3);
+        prop_div_mod(0, 100);
+        prop_div_mod(0, u32::MAX as u64);
+        prop_div_mod(0, 0xFFFF_FFFF_0000_0000);
+        prop_div_mod(0, 11428751156810088448);
+
+        // Found in bug reports online
         prop_div_mod(6098312677908545536, 6098805452391317504);
         prop_div_mod(5373808693584330752, 11428751156810088448);
         prop_div_mod(8268416007396130816, 6204028719464448000);
+
+        // Suggested by ChatGPT
+        prop_div_mod(u64::MAX, 1);
         prop_div_mod(u64::MAX, 2);
+        prop_div_mod(u64::MAX, u64::MAX);
+        prop_div_mod(0x0000_0001_FFFF_FFFF, 0xFFFF_FFFF_0000_0000);
+        prop_div_mod(0xFFFF_FFFF_0000_0000, 0x0000_0000_FFFF_FFFF);
+        prop_div_mod(0xABCD_EF12_3456_789A, 0x1234_5678_9ABC_DEF0);
+
+        // Edge cases around powers of two
+        prop_div_mod(u64::MAX, (1 << 31) + 454545454);
         prop_div_mod(u64::MAX, (1 << 32) + 454545454);
+        prop_div_mod(u64::MAX, (1 << 33) + 454545454);
+        prop_div_mod(u64::MAX, (1 << 34) + 454545454);
+        prop_div_mod(u64::MAX, (1 << 35) + 454545454);
+        prop_div_mod(u64::MAX, (1 << 31) + 1);
+        prop_div_mod(u64::MAX, (1 << 32) - 1);
+        prop_div_mod(u64::MAX, 1 << 32);
+
+        prop_div_mod(u64::MAX - 1, (1 << 32) - 2);
+        prop_div_mod(u64::MAX - 1, (1 << 32) - 1);
+        prop_div_mod(u64::MAX - 1, 1 << 32);
+        prop_div_mod(u64::MAX - 1, (1 << 32) + 1);
+        prop_div_mod(u64::MAX - 1, (1 << 32) + 2);
+        prop_div_mod(u64::MAX - 1, (1 << 32) + 3);
+
+        prop_div_mod(u64::MAX, (1 << 32) + 1);
+        prop_div_mod(u64::MAX, (1 << 32) + 2);
+        prop_div_mod(u64::MAX, (1 << 32) + 3);
+
+        prop_div_mod(u64::MAX - 1, (1 << 33) - 1);
+        prop_div_mod(u64::MAX - 1, 1 << 33);
+        prop_div_mod(u64::MAX - 1, (1 << 33) + 1);
+        prop_div_mod(u64::MAX, (1 << 33) - 1);
+        prop_div_mod(u64::MAX, 1 << 33);
+        prop_div_mod(u64::MAX, (1 << 33) + 1);
     }
 
     fn prop_div_mod(numerator: u64, divisor: u64) {
