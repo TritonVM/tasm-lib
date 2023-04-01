@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::marker::PhantomData;
 
-use num::Zero;
+use num::One;
 use rand::{thread_rng, Rng};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::random_elements;
@@ -162,7 +162,7 @@ impl<H: AlgebraicHasher + 'static> Snippet for MmrLoadFromSecretInThenVerify<H> 
         let total_auth_path_length: u32 = secret_in[secret_in_cursor].value().try_into().unwrap();
         secret_in_cursor += 1;
 
-        let auth_path_pointer = BFieldElement::new((DIGEST_LENGTH * MAX_MMR_HEIGHT + 1) as u64);
+        let auth_path_pointer = BFieldElement::new((DIGEST_LENGTH * MAX_MMR_HEIGHT + 2) as u64);
         rust_shadowing_helper_functions::unsafe_list::unsafe_list_new(auth_path_pointer, memory);
 
         let mut i = 0;
@@ -286,7 +286,7 @@ fn prepare_state<H: AlgebraicHasher>(
 /// so this function does not populate e.g. `secret_in`. The caller has to do that.
 fn mmr_to_init_vm_state<H: AlgebraicHasher>(mmra: &mut MmrAccumulator<H>) -> ExecutionState {
     let mut stack: Vec<BFieldElement> = get_init_tvm_stack();
-    let peaks_pointer = BFieldElement::zero();
+    let peaks_pointer = BFieldElement::one();
     stack.push(peaks_pointer);
 
     let leaf_count = mmra.count_leaves();

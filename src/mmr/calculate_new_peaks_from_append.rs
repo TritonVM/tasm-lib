@@ -97,7 +97,7 @@ impl<H: AlgebraicHasher> Snippet for CalculateNewPeaksFromAppend<H> {
         // Allocate memory for the returned auth path for the newly inserted element
         // Warning: This auth path is only allocated *once* even though the code is called multiple times.
         // So if this function is called multiple times, the auth_paths will be overwritten.
-        let static_auth_path_pointer = library.kmalloc(DIGEST_LENGTH * MAX_MMR_HEIGHT);
+        let static_auth_path_pointer = library.kmalloc(DIGEST_LENGTH * MAX_MMR_HEIGHT + 1);
 
         format!(
             "
@@ -202,6 +202,7 @@ impl<H: AlgebraicHasher> Snippet for CalculateNewPeaksFromAppend<H> {
             stack.pop().unwrap(),
         ]);
         let peaks_pointer = stack.pop().unwrap();
+        println!("peaks_pointer = {peaks_pointer}");
         let old_leaf_count_lo = stack.pop().unwrap().value();
         let old_leaf_count_hi = stack.pop().unwrap().value();
         let old_leaf_count = (old_leaf_count_hi << 32) | old_leaf_count_lo;
@@ -225,7 +226,7 @@ impl<H: AlgebraicHasher> Snippet for CalculateNewPeaksFromAppend<H> {
         // Run the actual `calculate_new_peaks_from_append` algorithm. This function
         // is inlined here to make it manipulate memory the same way that the TASM code
         // does.
-        let auth_path_pointer = BFieldElement::new((MAX_MMR_HEIGHT * DIGEST_LENGTH + 1) as u64);
+        let auth_path_pointer = BFieldElement::new((MAX_MMR_HEIGHT * DIGEST_LENGTH + 2) as u64);
         rust_shadowing_helper_functions::unsafe_list::unsafe_list_new(auth_path_pointer, memory);
         rust_shadowing_helper_functions::unsafe_list::unsafe_list_push(
             peaks_pointer,
@@ -436,7 +437,7 @@ mod tests {
         expected_mmr: MmrAccumulator<VmHasher>,
     ) {
         // We assume that the peaks can safely be stored in memory on address 0
-        let peaks_pointer = BFieldElement::zero();
+        let peaks_pointer = BFieldElement::one();
 
         // BEFORE: _ old_leaf_count_hi old_leaf_count_lo *peaks [digests (new_leaf)]
         // AFTER: _ *new_peaks *auth_path
@@ -463,7 +464,7 @@ mod tests {
             );
         }
 
-        let auth_paths_pointer = BFieldElement::new((MAX_MMR_HEIGHT * DIGEST_LENGTH + 1) as u64);
+        let auth_paths_pointer = BFieldElement::new((MAX_MMR_HEIGHT * DIGEST_LENGTH + 2) as u64);
         let mut expected_final_stack = get_init_tvm_stack();
         expected_final_stack.push(peaks_pointer);
         expected_final_stack.push(auth_paths_pointer);

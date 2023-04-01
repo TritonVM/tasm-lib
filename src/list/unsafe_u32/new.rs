@@ -1,4 +1,4 @@
-use num::Zero;
+use num::One;
 use std::collections::HashMap;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
@@ -103,7 +103,7 @@ impl Snippet for UnsafeNew {
     ) where
         Self: Sized,
     {
-        let list_pointer = BFieldElement::zero();
+        let list_pointer = BFieldElement::one();
         unsafe_list_new(list_pointer, memory);
         stack.push(list_pointer);
     }

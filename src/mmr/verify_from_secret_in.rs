@@ -1,4 +1,4 @@
-use num::Zero;
+use num::{One, Zero};
 use rand::{random, thread_rng, Rng};
 use std::collections::HashMap;
 use std::marker::PhantomData;
@@ -26,6 +26,7 @@ use crate::{
 };
 
 use super::leaf_index_to_mt_index::MmrLeafIndexToMtIndexAndPeakIndex;
+use super::MAX_MMR_HEIGHT;
 
 #[derive(Clone)]
 pub struct MmrVerifyLeafMembershipFromSecretIn<H: AlgebraicHasher>(pub PhantomData<H>);
@@ -369,7 +370,7 @@ fn prepare_state_for_tests<H: AlgebraicHasher>(
 /// so this function does not populate e.g. `secret_in`. The caller has to do that.
 fn mmr_to_init_vm_state<H: AlgebraicHasher>(mmra: &mut MmrAccumulator<H>) -> ExecutionState {
     let mut stack: Vec<BFieldElement> = get_init_tvm_stack();
-    let peaks_pointer = BFieldElement::zero();
+    let peaks_pointer = BFieldElement::one();
     stack.push(peaks_pointer);
 
     let leaf_count = mmra.count_leaves();
@@ -395,7 +396,7 @@ fn mmr_to_init_vm_state<H: AlgebraicHasher>(mmra: &mut MmrAccumulator<H>) -> Exe
         std_in: vec![],
         secret_in: vec![],
         memory,
-        words_allocated: 0,
+        words_allocated: DIGEST_LENGTH * MAX_MMR_HEIGHT + 1,
     }
 }
 
@@ -576,7 +577,7 @@ mod mmr_verify_from_secret_in_tests {
     ) {
         let mut init_stack = get_init_tvm_stack();
 
-        let peaks_pointer = BFieldElement::zero();
+        let peaks_pointer = BFieldElement::one();
         init_stack.push(peaks_pointer);
 
         let leaf_count: u64 = mmr.count_leaves();

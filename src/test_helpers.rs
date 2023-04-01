@@ -3,9 +3,10 @@ use std::collections::HashMap;
 use itertools::Itertools;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
+use crate::dyn_malloc::DYN_MALLOC_ADDRESS;
 use crate::library::Library;
 use crate::snippet::Snippet;
-use crate::ExecutionResult;
+use crate::{rust_shadowing_helper_functions, ExecutionResult};
 
 #[allow(dead_code)]
 pub fn rust_tasm_equivalence_prop_new<T: Snippet + Clone>(snippet_struct: T) {
@@ -44,7 +45,7 @@ pub fn rust_tasm_equivalence_prop<T: Snippet>(
     stdin: &[BFieldElement],
     secret_in: &[BFieldElement],
     memory: &mut HashMap<BFieldElement, BFieldElement>,
-    words_allocated: usize,
+    words_statically_allocated: usize,
     expected: Option<&[BFieldElement]>,
 ) -> ExecutionResult {
     let init_memory = memory.clone();
@@ -55,7 +56,7 @@ pub fn rust_tasm_equivalence_prop<T: Snippet>(
         stdin.to_vec(),
         secret_in.to_vec(),
         &mut tasm_memory,
-        words_allocated,
+        words_statically_allocated,
     );
     println!(
         "Cycle count for `{}`: {}",
@@ -70,6 +71,13 @@ pub fn rust_tasm_equivalence_prop<T: Snippet>(
 
     let mut rust_memory = init_memory;
     let mut rust_stack = stack.to_vec();
+
+    if words_statically_allocated > 0 {
+        rust_shadowing_helper_functions::dyn_malloc::rust_dyn_malloc_initialize(
+            &mut rust_memory,
+            words_statically_allocated + 1,
+        );
+    }
     snippet_struct.rust_shadowing(
         &mut rust_stack,
         stdin.to_vec(),
@@ -113,7 +121,12 @@ pub fn rust_tasm_equivalence_prop<T: Snippet>(
         );
     }
 
-    // Verify that memory behaves as expected
+    // Verify that memory behaves as expected, except for the dyn malloc initialization address which
+    // is too cumbersome to monitor this way. Its behavior should be tested elsewhere.
+    // Alternatively the rust shadowing trait function must take a `Library` argument as input
+    // and statically allocate memory from there.
+    rust_memory.remove(&BFieldElement::new(DYN_MALLOC_ADDRESS as u64));
+    tasm_memory.remove(&BFieldElement::new(DYN_MALLOC_ADDRESS as u64));
     if rust_memory != tasm_memory {
         let mut tasm_memory = tasm_memory.iter().collect_vec();
         tasm_memory.sort_unstable_by(|&a, &b| a.0.value().partial_cmp(&b.0.value()).unwrap());

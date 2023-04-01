@@ -1,4 +1,4 @@
-use num::Zero;
+use num::One;
 use rand::{random, thread_rng, Rng};
 use std::collections::HashMap;
 use std::marker::PhantomData;
@@ -324,13 +324,13 @@ fn prepare_state_with_mmra(
     let mut stack = get_init_tvm_stack();
 
     // We assume that the auth paths can safely be stored in memory on this address
-    let auth_path_pointer = BFieldElement::new((MAX_MMR_HEIGHT * DIGEST_LENGTH + 1) as u64);
+    let auth_path_pointer = BFieldElement::new((MAX_MMR_HEIGHT * DIGEST_LENGTH + 2) as u64);
     stack.push(auth_path_pointer);
 
     stack.push(BFieldElement::new(leaf_index >> 32));
     stack.push(BFieldElement::new(leaf_index & u32::MAX as u64));
 
-    let peaks_pointer = BFieldElement::zero();
+    let peaks_pointer = BFieldElement::one();
     stack.push(peaks_pointer);
 
     // push digests such that element 0 of digest is on top of stack

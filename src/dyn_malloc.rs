@@ -16,6 +16,20 @@ use crate::{
 #[derive(Clone)]
 pub struct DynMalloc;
 
+impl DynMalloc {
+    pub fn get_initialization_code(words_statically_allocated: u32) -> String {
+        let mut ret = String::default();
+        if words_statically_allocated > 0 {
+            ret.push_str(&format!("push {DYN_MALLOC_ADDRESS}\n"));
+            ret.push_str(&format!("push {words_statically_allocated}\n"));
+            ret.push_str("write_mem\n");
+            ret.push_str("pop\n");
+        }
+
+        ret
+    }
+}
+
 impl Snippet for DynMalloc {
     fn entrypoint(&self) -> String {
         "dyn_malloc".to_string()

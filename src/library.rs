@@ -8,6 +8,11 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::snippet::{DataType, Snippet};
 
+// Ensure that static allocator does not overwrite the address
+// dedicated to the dynamic allocator. Dynamic allocator is,
+// by convention, always on address 0.
+pub const STATIC_MEMORY_START_ADDRESS: usize = 1;
+
 #[derive(Debug)]
 pub struct Library {
     seen_snippets: HashSet<String>,
@@ -20,10 +25,7 @@ impl Default for Library {
         Self {
             seen_snippets: Default::default(),
             function_bodies: Default::default(),
-            // Ensure that static allocator does not overwrite the address
-            // dedicated to the dynamic allocator. Dynamic allocator is,
-            // by convention, always on address 0.
-            free_pointer: 1,
+            free_pointer: STATIC_MEMORY_START_ADDRESS,
         }
     }
 }
@@ -37,7 +39,7 @@ impl Library {
 
     pub fn with_preallocated_memory(words_allocated: usize) -> Self {
         Library {
-            free_pointer: words_allocated,
+            free_pointer: words_allocated + STATIC_MEMORY_START_ADDRESS,
             ..Default::default()
         }
     }
@@ -58,6 +60,11 @@ impl Library {
         }
 
         snippet.entrypoint()
+    }
+
+    /// Return number of statically allocated words
+    pub fn get_statically_allocated_word_count(&self) -> usize {
+        self.free_pointer - STATIC_MEMORY_START_ADDRESS
     }
 
     #[allow(dead_code)]

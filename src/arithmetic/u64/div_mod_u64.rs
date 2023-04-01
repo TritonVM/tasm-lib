@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use num::{One, Zero};
+use num::One;
 use rand::RngCore;
 use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
@@ -567,8 +567,8 @@ impl Snippet for DivModU64 {
         // Because of spilling, the divisor is stored in memory.
         // This spilling could probably be avoided if the code didn't
         // go through the tasm-lang compiler but was handcompiled instead.
-        memory.insert(BFieldElement::zero(), BFieldElement::new(divisor_lo as u64));
-        memory.insert(BFieldElement::one(), BFieldElement::new(divisor_hi as u64));
+        memory.insert(BFieldElement::one(), BFieldElement::new(divisor_lo as u64));
+        memory.insert(BFieldElement::new(2), BFieldElement::new(divisor_hi as u64));
     }
 }
 

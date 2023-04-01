@@ -92,6 +92,7 @@ pub fn execute(
     std_in: Vec<BFieldElement>,
     secret_in: Vec<BFieldElement>,
     memory: &mut HashMap<BFieldElement, BFieldElement>,
+    words_statically_allocated: usize,
 ) -> ExecutionResult {
     let init_stack_height = stack.len();
 
@@ -114,6 +115,12 @@ pub fn execute(
         // Clean stack after writing to memory
         executed_code.push_str("pop\n");
     }
+
+    // Ensure that the dynamic allocator is initialized such that it does not overwrite
+    // any statically allocated memory.
+    executed_code.push_str(&dyn_malloc::DynMalloc::get_initialization_code(
+        words_statically_allocated.try_into().unwrap(),
+    ));
 
     // Add the program after the stack initialization has been performed
     // Find the length of code used for setup. This length does not count towards execution length of snippet

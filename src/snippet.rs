@@ -179,7 +179,7 @@ pub trait Snippet {
         std_in: Vec<BFieldElement>,
         secret_in: Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
-        words_allocated: usize,
+        words_statically_allocated: usize,
     ) -> ExecutionResult
     where
         Self: Sized,
@@ -194,7 +194,7 @@ pub trait Snippet {
             "Looked up snippet must match self"
         );
 
-        let mut library = Library::with_preallocated_memory(words_allocated);
+        let mut library = Library::with_preallocated_memory(words_statically_allocated);
         let entrypoint = self.entrypoint();
         let function_body = self.function_body(&mut library);
         let library_code = library.all_imports();
@@ -223,6 +223,7 @@ pub trait Snippet {
             std_in,
             secret_in,
             memory,
+            library.get_statically_allocated_word_count(),
         )
     }
 

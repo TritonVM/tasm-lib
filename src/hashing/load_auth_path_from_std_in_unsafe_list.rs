@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use num::Zero;
+use num::One;
 
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::random_elements;
@@ -149,7 +149,7 @@ impl Snippet for LoadAuthPathFromStdInUnsafeList {
         let total_auth_path_length: u32 = std_in[std_in_cursor].value().try_into().unwrap();
         std_in_cursor += 1;
 
-        let auth_path_pointer = BFieldElement::zero();
+        let auth_path_pointer = BFieldElement::one();
         rust_shadowing_helper_functions::unsafe_list::unsafe_list_new(auth_path_pointer, memory);
 
         let mut i = 0;

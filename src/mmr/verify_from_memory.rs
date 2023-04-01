@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::marker::PhantomData;
 
-use num::Zero;
+use num::One;
 use rand::{random, thread_rng, Rng};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::random_elements;
@@ -331,7 +331,7 @@ fn prepare_vm_state<H: AlgebraicHasher>(
     // AFTER: _ *auth_path leaf_index_hi leaf_index_lo validation_result
     let mut stack = get_init_tvm_stack();
 
-    let peaks_pointer = BFieldElement::zero();
+    let peaks_pointer = BFieldElement::one();
     stack.push(peaks_pointer);
 
     let leaf_count: u64 = mmr.count_leaves();
