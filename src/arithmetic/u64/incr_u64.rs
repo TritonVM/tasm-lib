@@ -15,11 +15,11 @@ pub struct IncrU64;
 
 impl Snippet for IncrU64 {
     fn inputs(&self) -> Vec<String> {
-        vec!["value".to_string()]
+        vec!["value_hi".to_string(), "value_lo".to_string()]
     }
 
     fn outputs(&self) -> Vec<String> {
-        vec!["value + 1".to_string()]
+        vec!["(value + 1)_hi".to_string(), "(value + 1)_lo".to_string()]
     }
 
     fn input_types(&self) -> Vec<crate::snippet::DataType> {
