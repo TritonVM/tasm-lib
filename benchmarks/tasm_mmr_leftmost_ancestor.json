@@ -1,14 +1,14 @@
 [
   {
     "name": "tasm_mmr_leftmost_ancestor",
-    "processor_table_height": 44,
+    "clock_cycle_count": 43,
     "hash_table_height": 0,
     "u32_table_height": 42,
     "case": "CommonCase"
   },
   {
     "name": "tasm_mmr_leftmost_ancestor",
-    "processor_table_height": 49,
+    "clock_cycle_count": 48,
     "hash_table_height": 0,
     "u32_table_height": 72,
     "case": "WorstCase"

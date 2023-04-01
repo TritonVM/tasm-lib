@@ -9,7 +9,7 @@ use crate::snippet::Snippet;
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SnippetBenchmark {
     name: String,
-    processor_table_height: usize,
+    clock_cycle_count: usize,
     hash_table_height: usize,
     u32_table_height: usize,
     case: SnippetBenchmarkCase,
@@ -38,7 +38,7 @@ pub fn benchmark_snippet<T: Snippet + Clone>(snippet: T) -> Vec<SnippetBenchmark
         let execution_result = snippet.run_tasm(&mut execution_state);
         let benchmark = SnippetBenchmark {
             name: snippet.entrypoint(),
-            processor_table_height: execution_result.cycle_count,
+            clock_cycle_count: execution_result.cycle_count,
             hash_table_height: execution_result.hash_table_height,
             u32_table_height: execution_result.u32_table_height,
             case,

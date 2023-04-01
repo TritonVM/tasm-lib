@@ -1,14 +1,14 @@
 [
   {
     "name": "dyn_malloc",
-    "processor_table_height": 27,
+    "clock_cycle_count": 26,
     "hash_table_height": 0,
     "u32_table_height": 10,
     "case": "CommonCase"
   },
   {
     "name": "dyn_malloc",
-    "processor_table_height": 27,
+    "clock_cycle_count": 26,
     "hash_table_height": 0,
     "u32_table_height": 66,
     "case": "WorstCase"
