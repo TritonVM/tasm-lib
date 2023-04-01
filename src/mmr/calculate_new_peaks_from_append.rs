@@ -63,12 +63,17 @@ impl<H: AlgebraicHasher> Snippet for CalculateNewPeaksFromAppend<H> {
     }
 
     fn gen_input_states(&self) -> Vec<ExecutionState> {
-        let digests: Vec<Digest> = random_elements(10);
-        let new_leaf: Digest = random();
-        let mmra = MmrAccumulator::new(digests);
-        let ret0 = prepare_state_with_mmra(mmra, new_leaf);
+        let mut ret = vec![];
+        for mmr_size in [
+            0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 100, 1000,
+        ] {
+            let digests: Vec<Digest> = random_elements(mmr_size);
+            let new_leaf: Digest = random();
+            let mmra = MmrAccumulator::new(digests);
+            ret.push(prepare_state_with_mmra(mmra, new_leaf));
+        }
 
-        vec![ret0]
+        ret
     }
 
     fn stack_diff(&self) -> isize {
@@ -295,7 +300,7 @@ fn prepare_state_with_mmra(
     start_mmr: MmrAccumulator<VmHasher>,
     new_leaf: Digest,
 ) -> ExecutionState {
-    // We assume that the peaks can safely be stored in memory on address 0
+    // We assume that the peaks can safely be stored in memory on address 1
     let peaks_pointer = BFieldElement::one();
 
     let mut stack = get_init_tvm_stack();
@@ -345,6 +350,16 @@ mod tests {
     #[test]
     fn calculate_new_peaks_from_append_test() {
         rust_tasm_equivalence_prop_new(CalculateNewPeaksFromAppend(PhantomData::<VmHasher>));
+    }
+
+    #[test]
+    fn mmr_sanity_check_new_and_init() {
+        for mmr_size in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 14, 100, 1000] {
+            let digests: Vec<Digest> = random_elements(mmr_size);
+            let mmr_by_new: Mmra = MmrAccumulator::new(digests);
+            let mmr_by_init: Mmra = MmrAccumulator::init(mmr_by_new.get_peaks(), mmr_size as u64);
+            assert_eq!(mmr_by_new, mmr_by_init);
+        }
     }
 
     #[test]
