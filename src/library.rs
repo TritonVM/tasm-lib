@@ -6,15 +6,26 @@ use triton_opcodes::instruction::LabelledInstruction;
 use triton_opcodes::parser::{parse, to_labelled};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
-use crate::pseudo::sub::Sub;
-use crate::pseudo::{lsb::Lsb, neg::Neg};
 use crate::snippet::{DataType, Snippet};
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct Library {
     seen_snippets: HashSet<String>,
     function_bodies: HashSet<String>,
     free_pointer: usize,
+}
+
+impl Default for Library {
+    fn default() -> Self {
+        Self {
+            seen_snippets: Default::default(),
+            function_bodies: Default::default(),
+            // Ensure that static allocator does not overwrite the address
+            // dedicated to the dynamic allocator. Dynamic allocator is,
+            // by convention, always on address 0.
+            free_pointer: 1,
+        }
+    }
 }
 
 impl Library {
@@ -22,14 +33,6 @@ impl Library {
     #[allow(dead_code)]
     pub fn empty() -> Self {
         Self::default()
-    }
-
-    pub fn with_pseudo_instructions() -> Self {
-        let mut library = Self::empty();
-        library.import(Box::new(Lsb));
-        library.import(Box::new(Neg));
-        library.import(Box::new(Sub));
-        library
     }
 
     pub fn with_preallocated_memory(words_allocated: usize) -> Self {

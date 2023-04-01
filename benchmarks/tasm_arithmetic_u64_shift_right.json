@@ -1,14 +1,14 @@
 [
   {
     "name": "tasm_arithmetic_u64_shift_right",
-    "processor_table_height": 28,
+    "clock_cycle_count": 27,
     "hash_table_height": 0,
     "u32_table_height": 51,
     "case": "CommonCase"
   },
   {
     "name": "tasm_arithmetic_u64_shift_right",
-    "processor_table_height": 64,
+    "clock_cycle_count": 63,
     "hash_table_height": 0,
     "u32_table_height": 48,
     "case": "WorstCase"

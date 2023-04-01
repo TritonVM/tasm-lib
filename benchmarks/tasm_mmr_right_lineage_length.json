@@ -1,14 +1,14 @@
 [
   {
     "name": "tasm_mmr_right_lineage_length",
-    "processor_table_height": 3552,
+    "clock_cycle_count": 3551,
     "hash_table_height": 0,
     "u32_table_height": 2045,
     "case": "CommonCase"
   },
   {
     "name": "tasm_mmr_right_lineage_length",
-    "processor_table_height": 7422,
+    "clock_cycle_count": 7421,
     "hash_table_height": 0,
     "u32_table_height": 5226,
     "case": "WorstCase"

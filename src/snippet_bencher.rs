@@ -3,14 +3,13 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 use serde_json::to_writer_pretty;
-use triton_vm::table::master_table::MasterBaseTable;
 
-use crate::snippet::{simulate_snippet, Snippet};
+use crate::snippet::Snippet;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SnippetBenchmark {
     name: String,
-    processor_table_height: usize,
+    clock_cycle_count: usize,
     hash_table_height: usize,
     u32_table_height: usize,
     case: SnippetBenchmarkCase,
@@ -26,7 +25,7 @@ pub enum SnippetBenchmarkCase {
 pub fn benchmark_snippet<T: Snippet + Clone>(snippet: T) -> Vec<SnippetBenchmark> {
     let mut benchmarks = Vec::with_capacity(2);
 
-    for (case, execution_state) in [
+    for (case, mut execution_state) in [
         (
             SnippetBenchmarkCase::CommonCase,
             snippet.common_case_input_state(),
@@ -36,12 +35,12 @@ pub fn benchmark_snippet<T: Snippet + Clone>(snippet: T) -> Vec<SnippetBenchmark
             snippet.worst_case_input_state(),
         ),
     ] {
-        let (aet, inflated_clock_cycles) = simulate_snippet::<T>(snippet.clone(), execution_state);
+        let execution_result = snippet.run_tasm(&mut execution_state);
         let benchmark = SnippetBenchmark {
             name: snippet.entrypoint(),
-            processor_table_height: aet.processor_trace.nrows() - inflated_clock_cycles,
-            hash_table_height: aet.hash_trace.nrows(),
-            u32_table_height: MasterBaseTable::u32_table_length(&aet),
+            clock_cycle_count: execution_result.cycle_count,
+            hash_table_height: execution_result.hash_table_height,
+            u32_table_height: execution_result.u32_table_height,
             case,
         };
         benchmarks.push(benchmark);

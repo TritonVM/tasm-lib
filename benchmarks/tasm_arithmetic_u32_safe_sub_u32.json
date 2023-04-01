@@ -1,14 +1,14 @@
 [
   {
     "name": "tasm_arithmetic_u32_safe_sub_u32",
-    "processor_table_height": 13,
+    "clock_cycle_count": 12,
     "hash_table_height": 0,
     "u32_table_height": 17,
     "case": "CommonCase"
   },
   {
     "name": "tasm_arithmetic_u32_safe_sub_u32",
-    "processor_table_height": 13,
+    "clock_cycle_count": 12,
     "hash_table_height": 0,
     "u32_table_height": 33,
     "case": "WorstCase"
