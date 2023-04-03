@@ -56,6 +56,15 @@ pub fn safe_list_new(
     );
 }
 
+pub fn safe_list_get_length(
+    list_pointer: BFieldElement,
+    memory: &HashMap<BFieldElement, BFieldElement>,
+) -> usize {
+    let length: u32 = memory[&list_pointer].value().try_into().unwrap();
+
+    length as usize
+}
+
 /// Read an element from a list.
 pub fn safe_list_read(
     list_pointer: BFieldElement,
@@ -132,5 +141,43 @@ pub fn safe_list_push(
                 + BFieldElement::new(i as u64),
             *elem,
         );
+    }
+}
+
+#[cfg(test)]
+mod rust_shadowing_helper_tests {
+    use super::*;
+
+    #[test]
+    fn new_list_read_length_test_digest() {
+        let mut memory = HashMap::default();
+        let list_pointer = BFieldElement::new(20);
+        let list_length = 99;
+        safe_insert_random_list(
+            &DataType::Digest,
+            list_pointer,
+            105,
+            list_length,
+            &mut memory,
+        );
+        assert_eq!(list_length, safe_list_get_length(list_pointer, &memory));
+    }
+
+    #[test]
+    fn new_list_read_length_test_u64() {
+        let mut memory = HashMap::default();
+        let list_pointer = BFieldElement::new(20);
+        let list_length = 99;
+        safe_insert_random_list(&DataType::U64, list_pointer, 105, list_length, &mut memory);
+        assert_eq!(list_length, safe_list_get_length(list_pointer, &memory));
+    }
+
+    #[test]
+    fn new_list_read_length_test_bfe() {
+        let mut memory = HashMap::default();
+        let list_pointer = BFieldElement::new(20);
+        let list_length = 99;
+        safe_insert_random_list(&DataType::BFE, list_pointer, 105, list_length, &mut memory);
+        assert_eq!(list_length, safe_list_get_length(list_pointer, &memory));
     }
 }
