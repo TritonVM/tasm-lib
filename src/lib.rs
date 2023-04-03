@@ -92,7 +92,7 @@ pub fn execute(
     std_in: Vec<BFieldElement>,
     secret_in: Vec<BFieldElement>,
     memory: &mut HashMap<BFieldElement, BFieldElement>,
-    words_statically_allocated: usize,
+    initilialize_dynamic_allocator_to: Option<usize>,
 ) -> ExecutionResult {
     let init_stack_height = stack.len();
 
@@ -117,10 +117,12 @@ pub fn execute(
     }
 
     // Ensure that the dynamic allocator is initialized such that it does not overwrite
-    // any statically allocated memory.
-    executed_code.push_str(&dyn_malloc::DynMalloc::get_initialization_code(
-        words_statically_allocated.try_into().unwrap(),
-    ));
+    // any statically allocated memory, if the caller requests this.
+    if let Some(dyn_malloc_initial_value) = initilialize_dynamic_allocator_to {
+        executed_code.push_str(&dyn_malloc::DynMalloc::get_initialization_code(
+            dyn_malloc_initial_value.try_into().unwrap(),
+        ));
+    }
 
     // Add the program after the stack initialization has been performed
     // Find the length of code used for setup. This length does not count towards execution length of snippet
@@ -199,5 +201,49 @@ pub fn execute(
 
         // Number of rows generated in the u32 table after simulating program
         u32_table_height: MasterBaseTable::u32_table_length(&simulation_trace),
+    }
+}
+
+#[cfg(test)]
+mod lib_tests {
+    use super::*;
+    use crate::dyn_malloc::DYN_MALLOC_ADDRESS;
+
+    #[test]
+    fn initialize_dyn_malloc() {
+        let mut memory = HashMap::default();
+        let initial_dyn_malloc_value = 14;
+        execute(
+            "halt",
+            &mut get_init_tvm_stack(),
+            0,
+            vec![],
+            vec![],
+            &mut memory,
+            Some(initial_dyn_malloc_value),
+        );
+        assert_eq!(
+            initial_dyn_malloc_value,
+            memory[&BFieldElement::new(DYN_MALLOC_ADDRESS as u64)].value() as usize
+        );
+    }
+
+    #[test]
+    fn do_not_initialize_dyn_malloc() {
+        // Ensure that dyn malloc is not initialized if no such initialization is requested
+        let mut memory = HashMap::default();
+        execute(
+            "halt",
+            &mut get_init_tvm_stack(),
+            0,
+            vec![],
+            vec![],
+            &mut memory,
+            None,
+        );
+        assert!(memory
+            .get(&BFieldElement::new(DYN_MALLOC_ADDRESS as u64))
+            .unwrap_or(&BFieldElement::zero())
+            .is_zero());
     }
 }

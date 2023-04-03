@@ -223,7 +223,7 @@ pub trait Snippet {
             std_in,
             secret_in,
             memory,
-            library.get_statically_allocated_word_count(),
+            Some(library.get_statically_allocated_word_count()),
         )
     }
 
