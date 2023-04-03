@@ -1,4 +1,5 @@
 use itertools::Itertools;
+use num::Zero;
 use rand::{thread_rng, Rng};
 use std::collections::HashMap;
 use std::fmt::Display;
@@ -8,6 +9,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::rescue_prime_digest::DIGEST_LENGTH;
 use twenty_first::shared_math::x_field_element::EXTENSION_DEGREE;
 
+use crate::dyn_malloc::DYN_MALLOC_ADDRESS;
 use crate::library::Library;
 use crate::{all_snippets, ExecutionResult};
 use crate::{execute, ExecutionState};
@@ -216,6 +218,20 @@ pub trait Snippet {
             {library_code}
             "
         );
+
+        // Initialize a value for malloc, but only if that would increase its value
+        let current_dyn_malloc_free_pointer_value: usize = memory
+            .get(&BFieldElement::new(DYN_MALLOC_ADDRESS as u64))
+            .unwrap_or(&BFieldElement::zero())
+            .value()
+            .try_into()
+            .unwrap();
+        let dyn_malloc_init_value =
+            if current_dyn_malloc_free_pointer_value < library.get_next_free_address() {
+                library.get_next_free_address()
+            } else {
+                current_dyn_malloc_free_pointer_value
+            };
         execute(
             &code,
             stack,
@@ -223,7 +239,7 @@ pub trait Snippet {
             std_in,
             secret_in,
             memory,
-            Some(library.get_statically_allocated_word_count()),
+            Some(dyn_malloc_init_value),
         )
     }
 

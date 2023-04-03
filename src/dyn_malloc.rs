@@ -21,11 +21,12 @@ use crate::{
 pub struct DynMalloc;
 
 impl DynMalloc {
-    pub fn get_initialization_code(words_statically_allocated: u32) -> String {
+    pub fn get_initialization_code(malloc_init_value: u32) -> String {
         let mut ret = String::default();
-        if words_statically_allocated > 0 {
+
+        if malloc_init_value > 0 {
             ret.push_str(&format!("push {DYN_MALLOC_ADDRESS}\n"));
-            ret.push_str(&format!("push {words_statically_allocated}\n"));
+            ret.push_str(&format!("push {malloc_init_value}\n"));
             ret.push_str("write_mem\n");
             ret.push_str("pop\n");
         }
@@ -142,15 +143,11 @@ impl Snippet for DynMalloc {
         let mut stack = get_init_tvm_stack();
         stack.push(BFieldElement::new(rng.gen_range(0..10_000)));
 
-        let free_pointer_addr = DYN_MALLOC_ADDRESS;
-        let first_free_addr = free_pointer_addr + 1;
-        let free_pointer = BFieldElement::new(rng.gen_range(first_free_addr..10_000) as u64);
-        let mut memory = HashMap::<BFieldElement, BFieldElement>::new();
-        memory.insert(BFieldElement::new(free_pointer_addr as u64), free_pointer);
+        let allocation_size = rng.gen_range(0..10_000);
+        let memory = HashMap::<BFieldElement, BFieldElement>::new();
 
         let ret: Vec<ExecutionState> = vec![
-            ExecutionState::with_stack_and_memory(stack, memory, 0),
-            // Add test case for empty memory. `next_addr` should return 1.
+            ExecutionState::with_stack_and_memory(stack, memory, allocation_size),
             ExecutionState::with_stack(get_init_tvm_stack()),
         ];
 
@@ -213,6 +210,12 @@ mod tests {
     use crate::{snippet_bencher::bench_and_write, test_helpers::rust_tasm_equivalence_prop_new};
 
     use super::*;
+
+    #[test]
+    fn sane_address_chosen_for_dyn_malloc() {
+        // It's probably a really bad idea to use any other value than 0.
+        assert_eq!(0, DYN_MALLOC_ADDRESS);
+    }
 
     #[test]
     fn dyn_malloc_test() {

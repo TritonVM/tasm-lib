@@ -62,9 +62,9 @@ impl Library {
         snippet.entrypoint()
     }
 
-    /// Return number of statically allocated words
-    pub fn get_statically_allocated_word_count(&self) -> usize {
-        self.free_pointer - STATIC_MEMORY_START_ADDRESS
+    /// Return the next free address without allocating anything
+    pub fn get_next_free_address(&self) -> usize {
+        self.free_pointer
     }
 
     #[allow(dead_code)]
