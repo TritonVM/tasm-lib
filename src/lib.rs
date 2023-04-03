@@ -127,7 +127,7 @@ pub fn execute(
     // Add the program after the stack initialization has been performed
     // Find the length of code used for setup. This length does not count towards execution length of snippet
     // so it must be subtracted at the end.
-    let init_code_length = vm::debug(
+    let initialization_clock_cycle_count = vm::debug(
         &Program::from_code(&executed_code).expect("Could not load source code: {}"),
         vec![],
         vec![],
@@ -194,7 +194,9 @@ pub fn execute(
 
         // Cycle count is cycles it took to run program excluding the cycles that were
         // spent on preparing the stack
-        cycle_count: simulation_trace.processor_trace.nrows() - init_code_length - 1,
+        cycle_count: simulation_trace.processor_trace.nrows()
+            - initialization_clock_cycle_count
+            - 1,
 
         // Number of rows generated in the hash table after simulating program
         hash_table_height: simulation_trace.hash_trace.nrows(),
