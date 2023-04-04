@@ -1,5 +1,4 @@
 use itertools::Itertools;
-use num::Zero;
 use rand::{thread_rng, Rng};
 use std::collections::HashMap;
 use std::fmt::Display;
@@ -219,19 +218,12 @@ pub trait Snippet {
             "
         );
 
-        // Initialize a value for malloc, but only if that would increase its value
-        let current_dyn_malloc_free_pointer_value: usize = memory
-            .get(&BFieldElement::new(DYN_MALLOC_ADDRESS as u64))
-            .unwrap_or(&BFieldElement::zero())
-            .value()
-            .try_into()
-            .unwrap();
-        let dyn_malloc_init_value =
-            if current_dyn_malloc_free_pointer_value < library.get_next_free_address() {
-                library.get_next_free_address()
-            } else {
-                current_dyn_malloc_free_pointer_value
-            };
+        // Initialize a value for malloc, but only if it isn't already set
+        let dyn_malloc_init_value = match memory.get(&BFieldElement::new(DYN_MALLOC_ADDRESS as u64))
+        {
+            Some(_value) => None,
+            None => Some(library.get_next_free_address()),
+        };
         execute(
             &code,
             stack,
@@ -239,7 +231,7 @@ pub trait Snippet {
             std_in,
             secret_in,
             memory,
-            Some(dyn_malloc_init_value),
+            dyn_malloc_init_value,
         )
     }
 
