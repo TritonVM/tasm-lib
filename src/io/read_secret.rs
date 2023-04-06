@@ -52,7 +52,7 @@ impl Snippet for ReadSecret {
         self.0.get_size() as isize
     }
 
-    fn function_body(&self, _library: &mut crate::library::Library) -> String {
+    fn function_body(&self, _library: &mut crate::snippet_state::SnippetState) -> String {
         let entrypoint = self.entrypoint();
         let read_an_element = "divine\n".repeat(self.0.get_size());
 

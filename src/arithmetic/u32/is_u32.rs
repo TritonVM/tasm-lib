@@ -4,8 +4,8 @@ use num::{One, Zero};
 use rand::RngCore;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
-use crate::library::Library;
 use crate::snippet::{DataType, Snippet};
+use crate::snippet_state::SnippetState;
 use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 
 #[derive(Clone)]
@@ -59,7 +59,7 @@ impl Snippet for IsU32 {
     /// place 0 on stack. Consumes top element of stack, leaves a boolean
     /// on top of stack. So this subroutine does not change the height
     /// of the stack
-    fn function_body(&self, _library: &mut Library) -> String {
+    fn function_body(&self, _library: &mut SnippetState) -> String {
         let entrypoint = self.entrypoint();
         format!(
             "

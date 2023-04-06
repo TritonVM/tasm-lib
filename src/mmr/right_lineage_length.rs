@@ -51,7 +51,7 @@ impl Snippet for MmrRightLineageLength {
         "tasm_mmr_right_lineage_length".to_string()
     }
 
-    fn function_body(&self, library: &mut crate::library::Library) -> String {
+    fn function_body(&self, library: &mut crate::snippet_state::SnippetState) -> String {
         let entrypoint = self.entrypoint();
         let log_2_floor_u64 = library.import(Box::new(Log2FloorU64));
         let pow2_u64 = library.import(Box::new(Pow2U64));

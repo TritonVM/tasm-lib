@@ -5,8 +5,8 @@ use rand::RngCore;
 use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
-use crate::library::Library;
 use crate::snippet::{DataType, Snippet};
+use crate::snippet_state::SnippetState;
 use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 
 #[derive(Clone)]
@@ -57,7 +57,7 @@ impl Snippet for LtStandardU64 {
         "tasm_arithmetic_u64_lt_standard".to_string()
     }
 
-    fn function_body(&self, _library: &mut Library) -> String {
+    fn function_body(&self, _library: &mut SnippetState) -> String {
         let entrypoint = self.entrypoint();
         format!(
             "
@@ -213,7 +213,7 @@ impl Snippet for LtU64 {
 
     /// Before: _ rhs_hi rhs_lo lhs_hi lhs_lo
     /// After: _ rhs_hi rhs_lo lhs_hi lhs_lo  (lhs < rhs)
-    fn function_body(&self, _library: &mut Library) -> String {
+    fn function_body(&self, _library: &mut SnippetState) -> String {
         let entrypoint = self.entrypoint();
         format!(
             "

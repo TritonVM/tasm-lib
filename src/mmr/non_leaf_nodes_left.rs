@@ -10,9 +10,9 @@ use crate::arithmetic::u64::eq_u64::EqU64;
 use crate::arithmetic::u64::incr_u64::IncrU64;
 use crate::arithmetic::u64::log_2_floor_u64::Log2FloorU64;
 use crate::arithmetic::u64::pow2_u64::Pow2U64;
-use crate::library::Library;
 use crate::rust_shadowing_helper_functions::non_leaf_nodes_left;
 use crate::snippet::{DataType, Snippet};
+use crate::snippet_state::SnippetState;
 use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 
 #[derive(Clone)]
@@ -60,7 +60,7 @@ impl Snippet for MmrNonLeafNodesLeftUsingAnd {
         "tasm_mmr_non_leaf_nodes_left".to_string()
     }
 
-    fn function_body(&self, library: &mut Library) -> String {
+    fn function_body(&self, library: &mut SnippetState) -> String {
         let entrypoint = self.entrypoint();
         let log_2_floor_u64 = library.import(Box::new(Log2FloorU64));
         let pow2_u64 = library.import(Box::new(Pow2U64));

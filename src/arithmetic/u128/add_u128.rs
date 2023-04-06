@@ -8,10 +8,9 @@ use twenty_first::{
 };
 
 use crate::{
-    get_init_tvm_stack,
-    library::Library,
-    push_hashable,
+    get_init_tvm_stack, push_hashable,
     snippet::{DataType, Snippet},
+    snippet_state::SnippetState,
     ExecutionState,
 };
 
@@ -96,7 +95,7 @@ impl Snippet for AddU128 {
 
     /// Four top elements of stack are assumed to be valid u32s. So to have
     /// a value that's less than 2^32.
-    fn function_body(&self, _library: &mut Library) -> String {
+    fn function_body(&self, _library: &mut SnippetState) -> String {
         let entrypoint = self.entrypoint();
         format!(
             "

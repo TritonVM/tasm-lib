@@ -15,8 +15,8 @@ use crate::arithmetic::u64::lt_u64::LtU64;
 use crate::arithmetic::u64::popcount_u64::PopCountU64;
 use crate::arithmetic::u64::pow2_u64::Pow2U64;
 use crate::arithmetic::u64::xor_u64::XorU64;
-use crate::library::Library;
 use crate::snippet::{DataType, Snippet};
+use crate::snippet_state::SnippetState;
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone)]
@@ -72,7 +72,7 @@ impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
         "tasm_mmr_leaf_index_to_mt_index_and_peak_index".to_string()
     }
 
-    fn function_body(&self, library: &mut Library) -> String {
+    fn function_body(&self, library: &mut SnippetState) -> String {
         let entrypoint = self.entrypoint();
         let log_2_floor_u64 = library.import(Box::new(Log2FloorU64));
         let lt_u64 = library.import(Box::new(LtU64));

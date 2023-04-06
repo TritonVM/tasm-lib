@@ -4,11 +4,11 @@ use rand::{random, thread_rng, Rng};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::random_elements;
 
-use crate::library::Library;
 use crate::rust_shadowing_helper_functions::unsafe_list::{
     unsafe_insert_random_list, unsafe_list_set,
 };
 use crate::snippet::{DataType, Snippet};
+use crate::snippet_state::SnippetState;
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone)]
@@ -61,7 +61,7 @@ impl Snippet for UnsafeSet {
         format!("tasm_list_unsafe_u32_set_element_{}", self.0)
     }
 
-    fn function_body(&self, _library: &mut Library) -> String {
+    fn function_body(&self, _library: &mut SnippetState) -> String {
         let entrypoint = self.entrypoint();
         let element_size = self.0.get_size();
 

@@ -2,9 +2,9 @@ use num::One;
 use std::collections::HashMap;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
-use crate::library::Library;
 use crate::rust_shadowing_helper_functions::unsafe_list::unsafe_list_new;
 use crate::snippet::{DataType, Snippet};
+use crate::snippet_state::SnippetState;
 use crate::{get_init_tvm_stack, ExecutionState};
 
 const DEFAULT_LIST_CAPACITY: usize = 64;
@@ -43,7 +43,7 @@ impl Snippet for UnsafeNew {
         1
     }
 
-    fn function_body(&self, library: &mut Library) -> String {
+    fn function_body(&self, library: &mut SnippetState) -> String {
         let entrypoint = self.entrypoint();
 
         // Allocate memory for the returned auth path for the newly inserted element

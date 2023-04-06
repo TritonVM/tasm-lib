@@ -4,8 +4,8 @@ use itertools::Itertools;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::dyn_malloc::DYN_MALLOC_ADDRESS;
-use crate::library::Library;
 use crate::snippet::Snippet;
+use crate::snippet_state::SnippetState;
 use crate::{rust_shadowing_helper_functions, ExecutionResult};
 
 #[allow(dead_code)]
@@ -100,7 +100,7 @@ pub fn rust_tasm_equivalence_prop<T: Snippet>(
             .map(|x| x.to_string())
             .collect_vec()
             .join(","),
-        snippet_struct.function_body(&mut Library::default())
+        snippet_struct.function_body(&mut SnippetState::default())
     );
     if let Some(expected) = expected {
         assert_eq!(
@@ -145,7 +145,7 @@ pub fn rust_tasm_equivalence_prop<T: Snippet>(
             .join(",");
         panic!(
             "Memory for both implementations must match after execution.\n\nTVM: {tasm_mem_str}\n\nRust: {rust_mem_str}. Code was:\n\n {}",
-            snippet_struct.function_body(&mut Library::default())
+            snippet_struct.function_body(&mut SnippetState::default())
         );
     }
 

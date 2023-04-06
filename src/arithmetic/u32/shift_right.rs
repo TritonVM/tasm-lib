@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use rand::{thread_rng, Rng, RngCore};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
-use crate::library::Library;
 use crate::snippet::{DataType, Snippet};
+use crate::snippet_state::SnippetState;
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone)]
@@ -44,7 +44,7 @@ impl Snippet for ShiftRightU32 {
         -1
     }
 
-    fn function_body(&self, _library: &mut Library) -> String {
+    fn function_body(&self, _library: &mut SnippetState) -> String {
         let entrypoint = self.entrypoint();
 
         format!(

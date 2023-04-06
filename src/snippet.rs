@@ -9,7 +9,7 @@ use twenty_first::shared_math::rescue_prime_digest::DIGEST_LENGTH;
 use twenty_first::shared_math::x_field_element::EXTENSION_DEGREE;
 
 use crate::dyn_malloc::DYN_MALLOC_ADDRESS;
-use crate::library::Library;
+use crate::snippet_state::SnippetState;
 use crate::{all_snippets, ExecutionResult};
 use crate::{execute, ExecutionState};
 
@@ -129,7 +129,7 @@ pub trait Snippet {
         Self: Sized;
 
     /// The function body
-    fn function_body(&self, library: &mut Library) -> String;
+    fn function_body(&self, library: &mut SnippetState) -> String;
 
     /// Ways in which this snippet can crash
     fn crash_conditions() -> Vec<String>
@@ -149,7 +149,7 @@ pub trait Snippet {
     where
         Self: Sized;
 
-    fn function_body_as_instructions(&self, library: &mut Library) -> Vec<LabelledInstruction>
+    fn function_body_as_instructions(&self, library: &mut SnippetState) -> Vec<LabelledInstruction>
     where
         Self: Sized,
     {
@@ -195,7 +195,7 @@ pub trait Snippet {
             "Looked up snippet must match self"
         );
 
-        let mut library = Library::with_preallocated_memory(words_statically_allocated);
+        let mut library = SnippetState::with_preallocated_memory(words_statically_allocated);
         let entrypoint = self.entrypoint();
         let function_body = self.function_body(&mut library);
         let library_code = library.all_imports();
@@ -267,7 +267,7 @@ mod tests {
 
     #[test]
     fn can_return_code() {
-        let mut empty_library = Library::default();
+        let mut empty_library = SnippetState::default();
         let example_snippet =
             arithmetic::u32::safe_add::SafeAdd.function_body_as_instructions(&mut empty_library);
         assert!(!example_snippet.is_empty());

@@ -8,8 +8,8 @@ use twenty_first::{
 
 use crate::{
     get_init_tvm_stack,
-    library::Library,
     snippet::{DataType, Snippet},
+    snippet_state::SnippetState,
     ExecutionState,
 };
 
@@ -59,7 +59,7 @@ impl Snippet for SubU128 {
         -4
     }
 
-    fn function_body(&self, _library: &mut Library) -> String {
+    fn function_body(&self, _library: &mut SnippetState) -> String {
         let entrypoint = self.entrypoint();
         const TWO_POW_32: &str = "4294967296";
 

@@ -3,9 +3,9 @@ use std::collections::HashMap;
 use rand::{random, thread_rng, Rng};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
-use crate::library::Library;
 use crate::rust_shadowing_helper_functions::unsafe_list::unsafe_insert_random_list;
 use crate::snippet::{DataType, Snippet};
+use crate::snippet_state::SnippetState;
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone)]
@@ -49,7 +49,7 @@ impl Snippet for UnsafeSetLength {
         format!("tasm_list_unsafe_u32_set_length_{}", self.0)
     }
 
-    fn function_body(&self, _library: &mut Library) -> String {
+    fn function_body(&self, _library: &mut SnippetState) -> String {
         let entry_point = self.entrypoint();
         // It is assumed that the new length is a valid u32 value
         format!(

@@ -12,8 +12,8 @@ pub const DYN_MALLOC_ADDRESS: u32 = 0;
 
 use crate::{
     get_init_tvm_stack,
-    library::Library,
     snippet::{DataType, Snippet},
+    snippet_state::SnippetState,
     ExecutionState,
 };
 
@@ -76,7 +76,7 @@ impl Snippet for DynMalloc {
         0
     }
 
-    fn function_body(&self, _library: &mut Library) -> String {
+    fn function_body(&self, _library: &mut SnippetState) -> String {
         let entrypoint = self.entrypoint();
         format!(
             "

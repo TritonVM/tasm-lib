@@ -47,7 +47,7 @@ impl Snippet for IndexOfLastNonZeroBitU64 {
         -1
     }
 
-    fn function_body(&self, library: &mut crate::library::Library) -> String {
+    fn function_body(&self, library: &mut crate::snippet_state::SnippetState) -> String {
         let entrypoint = self.entrypoint();
         let decr = library.import(Box::new(DecrU64));
         let xor = library.import(Box::new(XorU64));

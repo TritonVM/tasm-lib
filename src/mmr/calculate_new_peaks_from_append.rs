@@ -12,11 +12,11 @@ use twenty_first::util_types::mmr::mmr_trait::Mmr;
 use super::MAX_MMR_HEIGHT;
 use crate::arithmetic::u64::incr_u64::IncrU64;
 use crate::arithmetic::u64::index_of_last_nonzero_bit::IndexOfLastNonZeroBitU64;
-use crate::library::Library;
 use crate::list::unsafe_u32::pop::UnsafePop;
 use crate::list::unsafe_u32::push::UnsafePush;
 use crate::list::unsafe_u32::set_length::UnsafeSetLength;
 use crate::snippet::{DataType, Snippet};
+use crate::snippet_state::SnippetState;
 use crate::{
     get_init_tvm_stack, rust_shadowing_helper_functions, Digest, ExecutionState, VmHasher,
     DIGEST_LENGTH,
@@ -86,7 +86,7 @@ impl<H: AlgebraicHasher> Snippet for CalculateNewPeaksFromAppend<H> {
         "tasm_mmr_calculate_new_peaks_from_append".to_string()
     }
 
-    fn function_body(&self, library: &mut Library) -> String {
+    fn function_body(&self, library: &mut SnippetState) -> String {
         let entrypoint = self.entrypoint();
         let push = library.import(Box::new(UnsafePush(DataType::Digest)));
         let pop = library.import(Box::new(UnsafePop(DataType::Digest)));

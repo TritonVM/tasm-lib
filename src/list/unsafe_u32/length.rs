@@ -4,9 +4,9 @@ use num::One;
 use rand::{random, thread_rng, Rng};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
-use crate::library::Library;
 use crate::rust_shadowing_helper_functions::unsafe_list::unsafe_insert_random_list;
 use crate::snippet::{DataType, Snippet};
+use crate::snippet_state::SnippetState;
 use crate::{get_init_tvm_stack, ExecutionState};
 
 // Called "Long" because this logic can be shortened
@@ -87,7 +87,7 @@ impl Snippet for UnsafeLengthLong {
         format!("tasm_list_unsafe_u32_length_long_{}", self.0)
     }
 
-    fn function_body(&self, _library: &mut Library) -> String {
+    fn function_body(&self, _library: &mut SnippetState) -> String {
         let entry_point = self.entrypoint();
         // Before: _ *list
         // After: _ list_length_u32
@@ -180,7 +180,7 @@ impl Snippet for UnsafeLengthShort {
         format!("tasm_list_unsafe_u32_length_short_{}", self.0)
     }
 
-    fn function_body(&self, _library: &mut Library) -> String {
+    fn function_body(&self, _library: &mut SnippetState) -> String {
         let entry_point = self.entrypoint();
         // Before: _ *list
         // After: _ *list list_length_u32

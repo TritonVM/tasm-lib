@@ -42,7 +42,6 @@ use crate::{
         swap_digest::SwapDigest,
     },
     io::{read_secret::ReadSecret, read_stdin::ReadStdIn},
-    library::{DummyTestSnippetA, DummyTestSnippetB, DummyTestSnippetC},
     list::{
         safe_u32::{
             get::SafeGet, length::SafeLength, new::SafeNew, pop::SafePop, push::SafePush,
@@ -76,6 +75,7 @@ use crate::{
     pseudo::{lsb::Lsb, neg::Neg, sub::Sub},
     recufier::merkle_tree_ap_verify_from_secret_input::MtApVerifyFromSecretInput,
     snippet::{DataType, Snippet},
+    snippet_state::{DummyTestSnippetA, DummyTestSnippetB, DummyTestSnippetC},
     VmHasher,
 };
 

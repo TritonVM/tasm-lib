@@ -14,13 +14,13 @@ use crate::snippet::{DataType, Snippet};
 pub const STATIC_MEMORY_START_ADDRESS: usize = 1;
 
 #[derive(Debug)]
-pub struct Library {
+pub struct SnippetState {
     seen_snippets: HashSet<String>,
     function_bodies: HashSet<String>,
     free_pointer: usize,
 }
 
-impl Default for Library {
+impl Default for SnippetState {
     fn default() -> Self {
         Self {
             seen_snippets: Default::default(),
@@ -30,7 +30,7 @@ impl Default for Library {
     }
 }
 
-impl Library {
+impl SnippetState {
     /// Create an empty library.
     #[allow(dead_code)]
     pub fn empty() -> Self {
@@ -38,7 +38,7 @@ impl Library {
     }
 
     pub fn with_preallocated_memory(words_allocated: usize) -> Self {
-        Library {
+        SnippetState {
             free_pointer: words_allocated + STATIC_MEMORY_START_ADDRESS,
             ..Default::default()
         }
@@ -99,7 +99,7 @@ impl Snippet for DummyTestSnippetA {
         "tasm_a_dummy_test_value".to_string()
     }
 
-    fn function_body(&self, library: &mut Library) -> String {
+    fn function_body(&self, library: &mut SnippetState) -> String {
         let entrypoint = self.entrypoint();
         let b = library.import(Box::new(DummyTestSnippetB));
         let c = library.import(Box::new(DummyTestSnippetC));
@@ -174,7 +174,7 @@ impl Snippet for DummyTestSnippetB {
         "tasm_b_dummy_test_value".to_string()
     }
 
-    fn function_body(&self, library: &mut Library) -> String {
+    fn function_body(&self, library: &mut SnippetState) -> String {
         let entrypoint = self.entrypoint();
         let c = library.import(Box::new(DummyTestSnippetC));
 
@@ -247,7 +247,7 @@ impl Snippet for DummyTestSnippetC {
         "tasm_c_dummy_test_value".to_string()
     }
 
-    fn function_body(&self, _library: &mut Library) -> String {
+    fn function_body(&self, _library: &mut SnippetState) -> String {
         let entrypoint = self.entrypoint();
 
         format!(
@@ -354,7 +354,7 @@ pub mod library_tests {
 
     #[test]
     fn all_imports_as_instruction_lists() {
-        let mut lib = Library::default();
+        let mut lib = SnippetState::default();
         lib.import(Box::new(DummyTestSnippetA));
         lib.import(Box::new(DummyTestSnippetA));
         lib.import(Box::new(DummyTestSnippetC));

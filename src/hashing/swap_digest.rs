@@ -5,9 +5,9 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::rescue_prime_digest::Digest;
 use twenty_first::shared_math::rescue_prime_digest::DIGEST_LENGTH;
 
-use crate::library::Library;
 use crate::snippet::DataType;
 use crate::snippet::Snippet;
+use crate::snippet_state::SnippetState;
 use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
 
 #[derive(Clone)]
@@ -76,7 +76,7 @@ impl Snippet for SwapDigest {
         "tasm_hashing_swap_digest".to_string()
     }
 
-    fn function_body(&self, _library: &mut Library) -> String {
+    fn function_body(&self, _library: &mut SnippetState) -> String {
         let entrypoint = self.entrypoint();
         format!(
             "

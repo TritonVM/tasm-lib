@@ -45,7 +45,7 @@ impl Snippet for Neg {
         "tasm_pseudo_neg".to_string()
     }
 
-    fn function_body(&self, _library: &mut crate::library::Library) -> String {
+    fn function_body(&self, _library: &mut crate::snippet_state::SnippetState) -> String {
         let entrypoint = self.entrypoint();
 
         format!(

@@ -15,8 +15,8 @@ use crate::arithmetic::u64::or_u64::OrU64;
 use crate::arithmetic::u64::shift_left_u64::ShiftLeftU64;
 use crate::arithmetic::u64::shift_right_u64::ShiftRightU64;
 use crate::arithmetic::u64::sub_u64::SubU64;
-use crate::library::Library;
 use crate::snippet::{DataType, Snippet};
+use crate::snippet_state::SnippetState;
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone)]
@@ -66,7 +66,7 @@ impl Snippet for DivModU64 {
         0
     }
 
-    fn function_body(&self, library: &mut Library) -> String {
+    fn function_body(&self, library: &mut SnippetState) -> String {
         let entrypoint = self.entrypoint();
         let shift_right_u64 = library.import(Box::new(ShiftRightU64));
         let shift_left_u64 = library.import(Box::new(ShiftLeftU64));

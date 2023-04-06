@@ -8,12 +8,12 @@ use twenty_first::shared_math::other::random_elements;
 use twenty_first::shared_math::rescue_prime_digest::Digest;
 use twenty_first::shared_math::rescue_prime_digest::DIGEST_LENGTH;
 
-use crate::library::Library;
 use crate::list::safe_u32::new::SafeNew;
 use crate::list::safe_u32::push::SafePush;
 use crate::mmr::MAX_MMR_HEIGHT;
 use crate::snippet::DataType;
 use crate::snippet::Snippet;
+use crate::snippet_state::SnippetState;
 use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, ExecutionState};
 
 #[derive(Clone)]
@@ -72,7 +72,7 @@ impl Snippet for LoadAuthPathFromSecretInSafeList {
         "tasm_hashing_load_auth_path_from_secret_in_safe_list".to_string()
     }
 
-    fn function_body(&self, library: &mut Library) -> String {
+    fn function_body(&self, library: &mut SnippetState) -> String {
         let entrypoint = self.entrypoint();
         let read_digest_from_secret_in = "divine\n".repeat(DIGEST_LENGTH);
 

@@ -46,7 +46,7 @@ impl Snippet for SafeNew {
         0
     }
 
-    fn function_body(&self, library: &mut crate::library::Library) -> String {
+    fn function_body(&self, library: &mut crate::snippet_state::SnippetState) -> String {
         let entrypoint = self.entrypoint();
 
         // Data structure for `list::safe_u32` is: [length, capacity, element0, element1, ...]

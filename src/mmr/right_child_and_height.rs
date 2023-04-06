@@ -7,8 +7,8 @@ use twenty_first::util_types::mmr;
 
 use crate::arithmetic::u64::eq_u64::EqU64;
 use crate::arithmetic::u64::lt_u64::LtU64;
-use crate::library::Library;
 use crate::snippet::{DataType, Snippet};
+use crate::snippet_state::SnippetState;
 use crate::{get_init_tvm_stack, ExecutionState};
 
 use super::left_child::MmrLeftChild;
@@ -58,7 +58,7 @@ impl Snippet for MmrRightChildAndHeight {
         "tasm_mmr_right_child_and_height".to_string()
     }
 
-    fn function_body(&self, library: &mut Library) -> String
+    fn function_body(&self, library: &mut SnippetState) -> String
     where
         Self: Sized,
     {

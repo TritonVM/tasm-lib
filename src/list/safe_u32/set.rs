@@ -3,9 +3,9 @@ use std::collections::HashMap;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::random_elements;
 
-use crate::library::Library;
 use crate::rust_shadowing_helper_functions::safe_list::{safe_insert_random_list, safe_list_set};
 use crate::snippet::{DataType, Snippet};
+use crate::snippet_state::SnippetState;
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone)]
@@ -71,7 +71,7 @@ impl Snippet for SafeSet {
         format!("tasm_list_safe_u32_set_element_{}", self.0)
     }
 
-    fn function_body(&self, _library: &mut Library) -> String {
+    fn function_body(&self, _library: &mut SnippetState) -> String {
         let entrypoint = self.entrypoint();
         let element_size = self.0.get_size();
 
