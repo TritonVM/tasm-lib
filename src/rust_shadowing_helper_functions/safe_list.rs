@@ -1,8 +1,28 @@
 use num::{One, Zero};
 use std::collections::HashMap;
-use twenty_first::shared_math::b_field_element::BFieldElement;
+use twenty_first::{
+    shared_math::b_field_element::BFieldElement, util_types::algebraic_hasher::Hashable,
+};
 
 use crate::snippet::DataType;
+
+pub fn safe_list_insert<T: Hashable>(
+    list_pointer: BFieldElement,
+    capacity: u32,
+    vector: Vec<T>,
+    memory: &mut HashMap<BFieldElement, BFieldElement>,
+) {
+    safe_list_new(list_pointer, capacity, memory);
+
+    for element in vector {
+        safe_list_push(
+            list_pointer,
+            element.to_sequence(),
+            memory,
+            element.to_sequence().len(),
+        );
+    }
+}
 
 pub fn safe_insert_random_list(
     data_type: &DataType,
@@ -146,7 +166,26 @@ pub fn safe_list_push(
 
 #[cfg(test)]
 mod rust_shadowing_helper_tests {
+    use twenty_first::shared_math::{other::random_elements, tip5::Digest};
+
     use super::*;
+
+    #[test]
+    fn new_list_digest() {
+        let mut memory = HashMap::default();
+        let list_pointer = BFieldElement::new(20);
+        let list_length = 99;
+        let capacity = 200_000_000;
+        let digests: Vec<Digest> = random_elements(list_length);
+        safe_list_insert(list_pointer, capacity, digests.clone(), &mut memory);
+        assert_eq!(list_length, safe_list_get_length(list_pointer, &memory));
+        for (i, elem) in digests.into_iter().enumerate() {
+            assert_eq!(
+                elem.to_sequence(),
+                safe_list_read(list_pointer, i, &memory, 5)
+            );
+        }
+    }
 
     #[test]
     fn new_list_read_length_test_digest() {
