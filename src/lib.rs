@@ -1,3 +1,4 @@
+use anyhow::bail;
 use itertools::Itertools;
 use num_traits::Zero;
 use std::collections::HashMap;
@@ -93,7 +94,7 @@ pub fn execute(
     secret_in: Vec<BFieldElement>,
     memory: &mut HashMap<BFieldElement, BFieldElement>,
     initilialize_dynamic_allocator_to: Option<usize>,
-) -> ExecutionResult {
+) -> anyhow::Result<ExecutionResult> {
     let init_stack_height = stack.len();
 
     // Prepend to program the initial stack values such that stack is in the expected
@@ -143,13 +144,13 @@ pub fn execute(
     let program = Program::from_code(&executed_code).expect("Could not load source code: {}");
     let (execution_trace, output, err) = vm::debug(&program, std_in.clone(), secret_in.clone());
     if let Some(e) = err {
-        panic!("Running the program failed: {e}\n\n\n Program:\n {code}")
+        bail!("`debug` failed with error: {e}")
     }
 
     // Simulate the program, since this gives us hash table output
     let (simulation_trace, _simulation_output, err) = vm::simulate(&program, std_in, secret_in);
     if let Some(e) = err {
-        panic!("Simulating the program failed: {e}\n\n\n Program: {code}")
+        bail!("`simulate` failed with error: {e}")
     }
 
     let start_state: VMState = execution_trace
@@ -161,31 +162,32 @@ pub fn execute(
         .last()
         .expect("VM state list cannot be empty")
         .to_owned();
-    assert!(!end_state.op_stack.is_too_shallow(), "Stack underflow");
+    if end_state.op_stack.is_too_shallow() {
+        bail!("Stack underflow")
+    }
 
     *memory = end_state.ram.clone();
 
     let jump_stack_start = start_state.jump_stack;
     let jump_stack_end = end_state.jump_stack;
-    assert_eq!(
-        jump_stack_start, jump_stack_end,
-        "Jump stack must be unchanged after code execution"
-    );
+    if jump_stack_start != jump_stack_end {
+        bail!("Jump stack must be unchanged after code execution")
+    }
 
     *stack = end_state.op_stack.stack;
 
     let final_stack_height = stack.len() as isize;
-    assert_eq!(
-        expected_stack_diff,
-        final_stack_height - init_stack_height as isize,
-        "Code must grow/shrink stack with expected number of elements.\n
+    if expected_stack_diff != final_stack_height - init_stack_height as isize {
+        bail!(
+            "Code must grow/shrink stack with expected number of elements.\n
         init height: {init_stack_height}\nend height: {final_stack_height}\n
         expected difference: {expected_stack_diff}\n\n
         final stack: {}",
-        stack.iter().map(|x| x.to_string()).join(",")
-    );
+            stack.iter().map(|x| x.to_string()).join(",")
+        )
+    }
 
-    ExecutionResult {
+    Ok(ExecutionResult {
         output,
 
         final_stack: stack.clone(),
@@ -203,7 +205,7 @@ pub fn execute(
 
         // Number of rows generated in the u32 table after simulating program
         u32_table_height: MasterBaseTable::u32_table_length(&simulation_trace),
-    }
+    })
 }
 
 #[cfg(test)]
@@ -223,7 +225,8 @@ mod lib_tests {
             vec![],
             &mut memory,
             Some(initial_dyn_malloc_value),
-        );
+        )
+        .unwrap();
         assert_eq!(
             initial_dyn_malloc_value,
             memory[&BFieldElement::new(DYN_MALLOC_ADDRESS as u64)].value() as usize
@@ -242,7 +245,8 @@ mod lib_tests {
             vec![],
             &mut memory,
             None,
-        );
+        )
+        .unwrap();
         assert!(memory
             .get(&BFieldElement::new(DYN_MALLOC_ADDRESS as u64))
             .unwrap_or(&BFieldElement::zero())

@@ -233,6 +233,7 @@ pub trait Snippet {
             memory,
             dyn_malloc_init_value,
         )
+        .unwrap()
     }
 
     fn run_tasm(&self, execution_state: &mut ExecutionState) -> ExecutionResult
