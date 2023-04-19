@@ -68,6 +68,7 @@ impl ExecutionState {
     }
 }
 
+#[derive(Debug)]
 pub struct ExecutionResult {
     pub output: Vec<BFieldElement>,
     pub final_stack: Vec<BFieldElement>,
