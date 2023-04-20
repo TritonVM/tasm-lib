@@ -13,7 +13,7 @@ use crate::snippet::{DataType, Snippet};
 // by convention, always on address 0.
 pub const STATIC_MEMORY_START_ADDRESS: usize = 1;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct SnippetState {
     seen_snippets: HashSet<String>,
     function_bodies: HashSet<String>,
