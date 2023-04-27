@@ -133,6 +133,8 @@ pub fn execute(
         &Program::from_code(&executed_code).expect("Could not load source code: {}"),
         vec![],
         vec![],
+        None,
+        None,
     )
     .0
     .len()
@@ -143,7 +145,8 @@ pub fn execute(
 
     // Run the program, including the stack preparation and memory preparation logic
     let program = Program::from_code(&executed_code).expect("Could not load source code: {}");
-    let (execution_trace, output, err) = vm::debug(&program, std_in.clone(), secret_in.clone());
+    let (execution_trace, output, err) =
+        vm::debug(&program, std_in.clone(), secret_in.clone(), None, None);
     if let Some(e) = err {
         bail!("`debug` failed with error: {e}")
     }
