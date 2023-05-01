@@ -1,42 +1,35 @@
-use std::fs::{create_dir_all, File};
-use std::path::{Path, PathBuf};
-
 use serde::{Deserialize, Serialize};
 use serde_json::to_writer_pretty;
+use std::fs::{create_dir_all, File};
+use std::path::{Path, PathBuf};
 
 use crate::snippet::Snippet;
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct SnippetBenchmark {
-    name: String,
-    clock_cycle_count: usize,
-    hash_table_height: usize,
-    u32_table_height: usize,
-    case: SnippetBenchmarkCase,
+pub struct BenchmarkResult {
+    pub name: String,
+    pub clock_cycle_count: usize,
+    pub hash_table_height: usize,
+    pub u32_table_height: usize,
+    pub case: BenchmarkCase,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub enum SnippetBenchmarkCase {
+pub enum BenchmarkCase {
     CommonCase,
     WorstCase,
 }
 
 #[allow(dead_code)]
-pub fn benchmark_snippet<T: Snippet + Clone>(snippet: T) -> Vec<SnippetBenchmark> {
+pub fn benchmark_snippet<T: Snippet>(snippet: T) -> Vec<BenchmarkResult> {
     let mut benchmarks = Vec::with_capacity(2);
 
     for (case, mut execution_state) in [
-        (
-            SnippetBenchmarkCase::CommonCase,
-            snippet.common_case_input_state(),
-        ),
-        (
-            SnippetBenchmarkCase::WorstCase,
-            snippet.worst_case_input_state(),
-        ),
+        (BenchmarkCase::CommonCase, snippet.common_case_input_state()),
+        (BenchmarkCase::WorstCase, snippet.worst_case_input_state()),
     ] {
         let execution_result = snippet.run_tasm(&mut execution_state);
-        let benchmark = SnippetBenchmark {
+        let benchmark = BenchmarkResult {
             name: snippet.entrypoint(),
             clock_cycle_count: execution_result.cycle_count,
             hash_table_height: execution_result.hash_table_height,
@@ -50,17 +43,25 @@ pub fn benchmark_snippet<T: Snippet + Clone>(snippet: T) -> Vec<SnippetBenchmark
 }
 
 #[allow(dead_code)]
-pub fn write_benchmarks<T: Snippet>(benchmarks: Vec<SnippetBenchmark>, snippet: T) {
+pub fn write_benchmarks(benchmarks: Vec<BenchmarkResult>) {
     let mut path = PathBuf::new();
     path.push("benchmarks");
     create_dir_all(&path).expect("benchmarks directory should exist");
 
-    path.push(Path::new(&snippet.entrypoint()).with_extension("json"));
+    let function_name = &benchmarks[0].name;
+    for fnname in benchmarks.iter().map(|x| &x.name) {
+        assert_eq!(
+            function_name, fnname,
+            "all fn names must agree for benchmark writing to disk"
+        );
+    }
+
+    path.push(Path::new(&function_name).with_extension("json"));
     let output = File::create(&path).expect("open file for writing");
     to_writer_pretty(output, &benchmarks).expect("write json to file");
 }
 
 #[allow(dead_code)]
-pub fn bench_and_write<T: Snippet + Clone>(snippet: T) {
-    write_benchmarks::<T>(benchmark_snippet::<T>(snippet.clone()), snippet);
+pub fn bench_and_write<T: Snippet>(snippet: T) {
+    write_benchmarks(benchmark_snippet(snippet));
 }

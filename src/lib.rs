@@ -24,7 +24,7 @@ pub mod pseudo;
 pub mod recufier;
 pub mod rust_shadowing_helper_functions;
 pub mod snippet;
-mod snippet_bencher;
+pub mod snippet_bencher;
 pub mod snippet_state;
 mod test_helpers;
 
