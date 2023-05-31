@@ -13,14 +13,14 @@ default-features = false
 features = ["precommit-hook", "run-cargo-clippy", "run-cargo-fmt"]
 
 [dependencies]
-anyhow = "1.0"
+anyhow = "1"
 triton-vm = "0.25.1"
 triton-opcodes = "0.25.1"
 twenty-first = "0.25.1"
-rand = "0.8.5"
-itertools = "0.10.5"
-num = "0.4.0"
+rand = "0"
+itertools = "0"
+num = "0"
 num-traits = "0"
-rayon = "1.6"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
+rayon = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
