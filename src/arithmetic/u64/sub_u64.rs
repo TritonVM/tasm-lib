@@ -1,14 +1,14 @@
 use num::{One, Zero};
 use rand::Rng;
 use std::collections::HashMap;
+use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
 use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
-use twenty_first::util_types::algebraic_hasher::Hashable;
 
 use crate::snippet::{DataType, Snippet};
 use crate::snippet_state::SnippetState;
-use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
+use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
 
 #[derive(Clone)]
 pub struct SubU64;
@@ -57,8 +57,8 @@ impl Snippet for SubU64 {
             };
 
             let mut stack_1 = get_init_tvm_stack();
-            push_hashable(&mut stack_1, &smaller_b);
-            push_hashable(&mut stack_1, &small_a);
+            push_encodable(&mut stack_1, &smaller_b);
+            push_encodable(&mut stack_1, &small_a);
             ret.push(ExecutionState::with_stack(stack_1));
 
             // no overflow, carry: large_c - smaller_carry_d
@@ -73,8 +73,8 @@ impl Snippet for SubU64 {
             };
 
             let mut stack_2 = get_init_tvm_stack();
-            push_hashable(&mut stack_2, &smaller_carry_d);
-            push_hashable(&mut stack_2, &large_c);
+            push_encodable(&mut stack_2, &smaller_carry_d);
+            push_encodable(&mut stack_2, &large_c);
             ret.push(ExecutionState::with_stack(stack_2));
 
             // no overflow, no carry: large_e - smaller_f
@@ -89,8 +89,8 @@ impl Snippet for SubU64 {
             };
 
             let mut stack_3 = get_init_tvm_stack();
-            push_hashable(&mut stack_3, &smaller_f);
-            push_hashable(&mut stack_3, &large_e);
+            push_encodable(&mut stack_3, &smaller_f);
+            push_encodable(&mut stack_3, &large_e);
             ret.push(ExecutionState::with_stack(stack_3));
         }
 
@@ -178,7 +178,7 @@ impl Snippet for SubU64 {
         let b1: u32 = stack.pop().unwrap().try_into().unwrap();
         let ab1 = U32s::<2>::new([a1, b1]);
         let ab0_minus_ab1 = ab0 - ab1;
-        let mut res = ab0_minus_ab1.to_sequence();
+        let mut res = ab0_minus_ab1.encode();
         for _ in 0..res.len() {
             stack.push(res.pop().unwrap());
         }
@@ -323,10 +323,10 @@ mod tests {
         let lhs: U32s<2> = U32s::from(BigUint::from(1u64 << 33));
         let rhs: U32s<2> = U32s::from(BigUint::from((1u64 << 33) + 1));
         let mut init_stack = get_init_tvm_stack();
-        for elem in rhs.to_sequence().into_iter().rev() {
+        for elem in rhs.encode().into_iter().rev() {
             init_stack.push(elem);
         }
-        for elem in lhs.to_sequence().into_iter().rev() {
+        for elem in lhs.encode().into_iter().rev() {
             init_stack.push(elem);
         }
 
@@ -335,10 +335,10 @@ mod tests {
 
     fn prop_sub(lhs: U32s<2>, rhs: U32s<2>, expected: Option<&[BFieldElement]>) {
         let mut init_stack = get_init_tvm_stack();
-        for elem in rhs.to_sequence().into_iter().rev() {
+        for elem in rhs.encode().into_iter().rev() {
             init_stack.push(elem);
         }
-        for elem in lhs.to_sequence().into_iter().rev() {
+        for elem in lhs.encode().into_iter().rev() {
             init_stack.push(elem);
         }
 

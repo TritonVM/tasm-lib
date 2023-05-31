@@ -5,8 +5,6 @@ use num::Zero;
 
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::random_elements;
-use twenty_first::shared_math::rescue_prime_digest::Digest;
-use twenty_first::shared_math::rescue_prime_digest::DIGEST_LENGTH;
 
 use crate::list::safe_u32::new::SafeNew;
 use crate::list::safe_u32::push::SafePush;
@@ -14,6 +12,8 @@ use crate::mmr::MAX_MMR_HEIGHT;
 use crate::snippet::DataType;
 use crate::snippet::Snippet;
 use crate::snippet_state::SnippetState;
+use crate::Digest;
+use crate::DIGEST_LENGTH;
 use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, ExecutionState};
 
 #[derive(Clone)]

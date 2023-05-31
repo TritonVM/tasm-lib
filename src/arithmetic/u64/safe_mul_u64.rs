@@ -4,7 +4,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::snippet::{DataType, Snippet};
 use crate::snippet_state::SnippetState;
-use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
+use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
 
 #[derive(Clone)]
 pub struct SafeMulU64;
@@ -197,8 +197,8 @@ fn prepare_state(a: u64, b: u64) -> ExecutionState {
     let a = U32s::<2>::try_from(a).unwrap();
     let b = U32s::<2>::try_from(b).unwrap();
     let mut init_stack = get_init_tvm_stack();
-    push_hashable(&mut init_stack, &a);
-    push_hashable(&mut init_stack, &b);
+    push_encodable(&mut init_stack, &a);
+    push_encodable(&mut init_stack, &b);
     ExecutionState::with_stack(init_stack)
 }
 
@@ -207,7 +207,7 @@ mod tests {
     use std::collections::HashMap;
 
     use num::Zero;
-    use twenty_first::util_types::algebraic_hasher::Hashable;
+    use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
     use crate::snippet_bencher::bench_and_write;
     use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
@@ -231,10 +231,10 @@ mod tests {
         let lhs: U32s<2> = U32s::try_from(1u64 << 32).unwrap();
         let rhs: U32s<2> = U32s::try_from(1u64 << 32).unwrap();
         let mut init_stack = get_init_tvm_stack();
-        for elem in rhs.to_sequence().into_iter().rev() {
+        for elem in rhs.encode().into_iter().rev() {
             init_stack.push(elem);
         }
-        for elem in lhs.to_sequence().into_iter().rev() {
+        for elem in lhs.encode().into_iter().rev() {
             init_stack.push(elem);
         }
 
@@ -248,10 +248,10 @@ mod tests {
         let lhs: U32s<2> = U32s::try_from(1u64 << 31).unwrap();
         let rhs: U32s<2> = U32s::try_from(1u64 << 33).unwrap();
         let mut init_stack = get_init_tvm_stack();
-        for elem in rhs.to_sequence().into_iter().rev() {
+        for elem in rhs.encode().into_iter().rev() {
             init_stack.push(elem);
         }
-        for elem in lhs.to_sequence().into_iter().rev() {
+        for elem in lhs.encode().into_iter().rev() {
             init_stack.push(elem);
         }
 
@@ -265,10 +265,10 @@ mod tests {
         let lhs: U32s<2> = U32s::try_from(1u64 << 33).unwrap();
         let rhs: U32s<2> = U32s::try_from(1u64 << 31).unwrap();
         let mut init_stack = get_init_tvm_stack();
-        for elem in rhs.to_sequence().into_iter().rev() {
+        for elem in rhs.encode().into_iter().rev() {
             init_stack.push(elem);
         }
-        for elem in lhs.to_sequence().into_iter().rev() {
+        for elem in lhs.encode().into_iter().rev() {
             init_stack.push(elem);
         }
 
@@ -282,10 +282,10 @@ mod tests {
         let lhs: U32s<2> = U32s::try_from((1u64 << 33) + 5).unwrap();
         let rhs: U32s<2> = U32s::try_from((1u64 << 31) - 1).unwrap();
         let mut init_stack = get_init_tvm_stack();
-        for elem in rhs.to_sequence().into_iter().rev() {
+        for elem in rhs.encode().into_iter().rev() {
             init_stack.push(elem);
         }
-        for elem in lhs.to_sequence().into_iter().rev() {
+        for elem in lhs.encode().into_iter().rev() {
             init_stack.push(elem);
         }
 

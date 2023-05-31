@@ -7,7 +7,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::snippet::{DataType, Snippet};
 use crate::snippet_state::SnippetState;
-use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
+use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
 
 #[derive(Clone)]
 pub struct Div2U64;
@@ -41,7 +41,7 @@ impl Snippet for Div2U64 {
         let n: U32s<2> = n.try_into().unwrap();
         let mut input_stack = get_init_tvm_stack();
 
-        push_hashable(&mut input_stack, &n);
+        push_encodable(&mut input_stack, &n);
 
         vec![ExecutionState::with_stack(input_stack)]
     }

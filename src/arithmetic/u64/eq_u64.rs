@@ -7,7 +7,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::snippet::{DataType, Snippet};
 use crate::snippet_state::SnippetState;
-use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
+use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
 
 #[derive(Clone)]
 pub struct EqU64;
@@ -44,8 +44,8 @@ impl Snippet for EqU64 {
         let lhs = U32s::<2>::try_from(rng.next_u64()).unwrap();
 
         let mut stack = get_init_tvm_stack();
-        push_hashable(&mut stack, &rhs);
-        push_hashable(&mut stack, &lhs);
+        push_encodable(&mut stack, &rhs);
+        push_encodable(&mut stack, &lhs);
 
         vec![ExecutionState::with_stack(stack)]
     }
@@ -139,7 +139,7 @@ impl Snippet for EqU64 {
 mod tests {
     use rand::RngCore;
     use twenty_first::shared_math::b_field_element::BFieldElement;
-    use twenty_first::util_types::algebraic_hasher::Hashable;
+    use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
     use crate::get_init_tvm_stack;
     use crate::snippet_bencher::bench_and_write;
@@ -272,10 +272,10 @@ mod tests {
 
     fn prop_eq(lhs: U32s<2>, rhs: U32s<2>, expected: Option<&[BFieldElement]>) {
         let mut init_stack = get_init_tvm_stack();
-        for elem in rhs.to_sequence().into_iter().rev() {
+        for elem in rhs.encode().into_iter().rev() {
             init_stack.push(elem);
         }
-        for elem in lhs.to_sequence().into_iter().rev() {
+        for elem in lhs.encode().into_iter().rev() {
             init_stack.push(elem);
         }
 

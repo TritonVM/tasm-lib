@@ -2,7 +2,7 @@ use num::Zero;
 use twenty_first::{amount::u32s::U32s, shared_math::b_field_element::BFieldElement};
 
 use crate::{
-    get_init_tvm_stack, push_hashable,
+    get_init_tvm_stack, push_encodable,
     snippet::{DataType, Snippet},
     ExecutionState,
 };
@@ -104,7 +104,7 @@ impl Snippet for DoublePow2U64 {
             let n: U32s<2> = (1u64 >> n).try_into().unwrap();
             let mut input_stack = get_init_tvm_stack();
 
-            push_hashable(&mut input_stack, &n);
+            push_encodable(&mut input_stack, &n);
 
             ret.push(ExecutionState::with_stack(input_stack))
         }

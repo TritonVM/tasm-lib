@@ -5,12 +5,12 @@ use std::collections::HashMap;
 use triton_opcodes::program::Program;
 use triton_vm::table::master_table::MasterBaseTable;
 use triton_vm::vm;
+use twenty_first::shared_math::bfield_codec::BFieldCodec;
 use twenty_first::shared_math::tip5::{self, Tip5};
 
 use triton_vm::op_stack::OP_STACK_REG_COUNT;
 use triton_vm::vm::VMState;
 use twenty_first::shared_math::b_field_element::BFieldElement;
-use twenty_first::util_types::algebraic_hasher::Hashable;
 
 pub mod all_snippets;
 pub mod arithmetic;
@@ -82,8 +82,8 @@ pub fn get_init_tvm_stack() -> Vec<BFieldElement> {
     vec![BFieldElement::zero(); OP_STACK_REG_COUNT]
 }
 
-pub fn push_hashable<T: Hashable>(stack: &mut Vec<BFieldElement>, value: &T) {
-    stack.append(&mut value.to_sequence().into_iter().rev().collect());
+pub fn push_encodable<T: BFieldCodec>(stack: &mut Vec<BFieldElement>, value: &T) {
+    stack.append(&mut value.encode().into_iter().rev().collect());
 }
 
 /// Execute a Triton-VM program and return its output and execution trace length

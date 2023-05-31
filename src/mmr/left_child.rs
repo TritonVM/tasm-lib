@@ -4,7 +4,7 @@ use num::BigUint;
 use rand::{thread_rng, Rng};
 use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
-use twenty_first::util_types::algebraic_hasher::Hashable;
+use twenty_first::shared_math::bfield_codec::BFieldCodec;
 use twenty_first::util_types::mmr;
 
 use crate::arithmetic::u64::pow2_u64::Pow2U64;
@@ -93,7 +93,7 @@ impl Snippet for MmrLeftChild {
         let ret: u64 = mmr::shared_basic::left_child(node_index, height);
         let ret: U32s<2> = U32s::from(BigUint::from(ret));
 
-        stack.append(&mut ret.to_sequence().into_iter().rev().collect());
+        stack.append(&mut ret.encode().into_iter().rev().collect());
     }
 
     fn common_case_input_state(&self) -> ExecutionState
@@ -127,7 +127,6 @@ fn prepare_state(node_index: u64) -> ExecutionState {
 mod tests {
     use num::Zero;
     use twenty_first::shared_math::b_field_element::BFieldElement;
-    use twenty_first::util_types::algebraic_hasher::Hashable;
 
     use crate::get_init_tvm_stack;
     use crate::snippet_bencher::bench_and_write;
@@ -170,7 +169,7 @@ mod tests {
 
     fn prop_left_child(node_index: U32s<2>, height: u32, expected: Option<&[BFieldElement]>) {
         let mut init_stack = get_init_tvm_stack();
-        for elem in node_index.to_sequence().into_iter().rev() {
+        for elem in node_index.encode().into_iter().rev() {
             init_stack.push(elem);
         }
         init_stack.push(BFieldElement::new(height as u64));

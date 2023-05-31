@@ -13,7 +13,7 @@ use crate::arithmetic::u64::pow2_u64::Pow2U64;
 use crate::rust_shadowing_helper_functions::non_leaf_nodes_left;
 use crate::snippet::{DataType, Snippet};
 use crate::snippet_state::SnippetState;
-use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
+use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
 
 #[derive(Clone)]
 pub struct MmrNonLeafNodesLeftUsingAnd;
@@ -170,7 +170,7 @@ impl Snippet for MmrNonLeafNodesLeftUsingAnd {
 
         let result = non_leaf_nodes_left(leaf_index);
         let result = U32s::<2>::try_from(result).unwrap();
-        push_hashable(stack, &result);
+        push_encodable(stack, &result);
     }
 
     fn common_case_input_state(&self) -> ExecutionState
@@ -202,7 +202,7 @@ mod nlnl_tests {
     use rand::{thread_rng, RngCore};
     use twenty_first::amount::u32s::U32s;
     use twenty_first::shared_math::b_field_element::BFieldElement;
-    use twenty_first::util_types::algebraic_hasher::Hashable;
+    use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
     use crate::get_init_tvm_stack;
     use crate::snippet_bencher::bench_and_write;
@@ -283,7 +283,7 @@ mod nlnl_tests {
             (leaf_index & 0xFFFFFFFFu32 as u64) as u32,
             (leaf_index >> 32) as u32,
         ]);
-        for elem in value_as_u32_2.to_sequence().into_iter().rev() {
+        for elem in value_as_u32_2.encode().into_iter().rev() {
             init_stack.push(elem);
         }
 

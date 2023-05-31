@@ -6,7 +6,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::snippet::{DataType, Snippet};
 use crate::snippet_state::SnippetState;
-use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
+use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
 
 #[derive(Clone)]
 pub struct IsU32;
@@ -36,10 +36,10 @@ impl Snippet for IsU32 {
         let n: u32 = rand::thread_rng().next_u32();
 
         let mut true_stack = get_init_tvm_stack();
-        push_hashable(&mut true_stack, &n);
+        push_encodable(&mut true_stack, &n);
 
         let mut false_stack = get_init_tvm_stack();
-        push_hashable(&mut false_stack, &(u32::MAX));
+        push_encodable(&mut false_stack, &(u32::MAX));
 
         vec![
             ExecutionState::with_stack(true_stack),

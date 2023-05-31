@@ -4,7 +4,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::snippet::{DataType, Snippet};
 use crate::snippet_state::SnippetState;
-use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
+use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
 
 #[derive(Clone)]
 pub struct WrappingMulU64;
@@ -175,8 +175,8 @@ fn prepare_state(a: u64, b: u64) -> ExecutionState {
     let a = U32s::<2>::try_from(a).unwrap();
     let b = U32s::<2>::try_from(b).unwrap();
     let mut init_stack = get_init_tvm_stack();
-    push_hashable(&mut init_stack, &a);
-    push_hashable(&mut init_stack, &b);
+    push_encodable(&mut init_stack, &a);
+    push_encodable(&mut init_stack, &b);
     ExecutionState::with_stack(init_stack)
 }
 

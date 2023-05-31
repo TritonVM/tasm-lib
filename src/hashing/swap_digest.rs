@@ -2,13 +2,13 @@ use std::collections::HashMap;
 
 use rand::Rng;
 use twenty_first::shared_math::b_field_element::BFieldElement;
-use twenty_first::shared_math::rescue_prime_digest::Digest;
-use twenty_first::shared_math::rescue_prime_digest::DIGEST_LENGTH;
 
 use crate::snippet::DataType;
 use crate::snippet::Snippet;
 use crate::snippet_state::SnippetState;
-use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
+use crate::Digest;
+use crate::DIGEST_LENGTH;
+use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
 
 #[derive(Clone)]
 pub struct SwapDigest;
@@ -62,8 +62,8 @@ impl Snippet for SwapDigest {
         let digest_b: Digest = rng.gen();
 
         let mut stack = get_init_tvm_stack();
-        push_hashable(&mut stack, &digest_b);
-        push_hashable(&mut stack, &digest_a);
+        push_encodable(&mut stack, &digest_b);
+        push_encodable(&mut stack, &digest_a);
 
         vec![ExecutionState::with_stack(stack)]
     }
@@ -132,8 +132,8 @@ impl Snippet for SwapDigest {
     {
         let mut rng = rand::thread_rng();
         let mut stack = get_init_tvm_stack();
-        push_hashable(&mut stack, &rng.gen::<Digest>());
-        push_hashable(&mut stack, &rng.gen::<Digest>());
+        push_encodable(&mut stack, &rng.gen::<Digest>());
+        push_encodable(&mut stack, &rng.gen::<Digest>());
         ExecutionState::with_stack(stack)
     }
 

@@ -2,8 +2,8 @@ use std::collections::HashMap;
 
 use rand::Rng;
 use twenty_first::{
-    amount::u32s::U32s, shared_math::b_field_element::BFieldElement,
-    util_types::algebraic_hasher::Hashable,
+    amount::u32s::U32s,
+    shared_math::{b_field_element::BFieldElement, bfield_codec::BFieldCodec},
 };
 
 use crate::{
@@ -237,7 +237,7 @@ impl Snippet for SubU128 {
         let d1: u32 = stack.pop().unwrap().try_into().unwrap();
         let ab1 = U32s::<4>::new([a1, b1, c1, d1]);
         let ab0_minus_ab1 = ab0 - ab1;
-        let mut res = ab0_minus_ab1.to_sequence();
+        let mut res = ab0_minus_ab1.encode();
         for _ in 0..res.len() {
             stack.push(res.pop().unwrap());
         }
@@ -246,10 +246,10 @@ impl Snippet for SubU128 {
 
 fn prepare_state(lhs: u128, rhs: u128) -> ExecutionState {
     let mut init_stack = get_init_tvm_stack();
-    for elem in rhs.to_sequence().into_iter().rev() {
+    for elem in rhs.encode().into_iter().rev() {
         init_stack.push(elem);
     }
-    for elem in lhs.to_sequence().into_iter().rev() {
+    for elem in lhs.encode().into_iter().rev() {
         init_stack.push(elem);
     }
 
@@ -374,10 +374,10 @@ mod tests {
 
     fn prop_sub(lhs: U32s<4>, rhs: U32s<4>, expected: Option<&[BFieldElement]>) {
         let mut init_stack = get_init_tvm_stack();
-        for elem in rhs.to_sequence().into_iter().rev() {
+        for elem in rhs.encode().into_iter().rev() {
             init_stack.push(elem);
         }
-        for elem in lhs.to_sequence().into_iter().rev() {
+        for elem in lhs.encode().into_iter().rev() {
             init_stack.push(elem);
         }
 

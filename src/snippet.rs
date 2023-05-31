@@ -5,12 +5,11 @@ use std::fmt::Display;
 use triton_opcodes::instruction::LabelledInstruction;
 use triton_opcodes::parser::{parse, to_labelled};
 use twenty_first::shared_math::b_field_element::BFieldElement;
-use twenty_first::shared_math::rescue_prime_digest::DIGEST_LENGTH;
 use twenty_first::shared_math::x_field_element::EXTENSION_DEGREE;
 
 use crate::dyn_malloc::DYN_MALLOC_ADDRESS;
 use crate::snippet_state::SnippetState;
-use crate::{all_snippets, ExecutionResult};
+use crate::{all_snippets, ExecutionResult, DIGEST_LENGTH};
 use crate::{execute, ExecutionState};
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]

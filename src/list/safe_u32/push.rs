@@ -221,11 +221,10 @@ fn prepare_execution_state(
 
 #[cfg(test)]
 mod tests {
-    use twenty_first::shared_math::rescue_prime_digest::DIGEST_LENGTH;
-
     use crate::{
         snippet_bencher::bench_and_write,
         test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new},
+        DIGEST_LENGTH,
     };
 
     use super::*;

@@ -2,7 +2,7 @@ use rand::{thread_rng, RngCore};
 use twenty_first::{amount::u32s::U32s, shared_math::b_field_element::BFieldElement};
 
 use crate::{
-    get_init_tvm_stack, push_hashable,
+    get_init_tvm_stack, push_encodable,
     snippet::{DataType, Snippet},
     ExecutionState,
 };
@@ -138,8 +138,8 @@ fn prepare_state(a: u64, b: u64) -> ExecutionState {
     let a = U32s::<2>::try_from(a).unwrap();
     let b = U32s::<2>::try_from(b).unwrap();
     let mut init_stack = get_init_tvm_stack();
-    push_hashable(&mut init_stack, &a);
-    push_hashable(&mut init_stack, &b);
+    push_encodable(&mut init_stack, &a);
+    push_encodable(&mut init_stack, &b);
     ExecutionState::with_stack(init_stack)
 }
 
@@ -186,8 +186,8 @@ mod tests {
         let rhs = U32s::<2>::try_from(rhs).unwrap();
         let lhs = U32s::<2>::try_from(lhs).unwrap();
         let mut init_stack = get_init_tvm_stack();
-        push_hashable(&mut init_stack, &rhs);
-        push_hashable(&mut init_stack, &lhs);
+        push_encodable(&mut init_stack, &rhs);
+        push_encodable(&mut init_stack, &lhs);
 
         let execution_result = rust_tasm_equivalence_prop(
             OrU64,

@@ -88,7 +88,7 @@ impl<H: AlgebraicHasher> Snippet for MmrVerifyFromMemory<H> {
         let digests: Vec<Digest> = random_elements(size);
         let leaf_index = rng.gen_range(0..size);
         let leaf = digests[leaf_index];
-        let mut ammr: ArchivalMmr<H, _> = get_rustyleveldb_ammr_from_digests(digests);
+        let ammr: ArchivalMmr<H, _> = get_rustyleveldb_ammr_from_digests(digests);
         let auth_path = ammr
             .prove_membership(leaf_index as u64)
             .0
@@ -453,7 +453,7 @@ mod auth_path_verify_from_memory_tests {
 
         for leaf_count in 0..max_size {
             let digests: Vec<Digest> = random_elements(leaf_count);
-            let mut archival_mmr: ArchivalMmr<VmHasher, _> =
+            let archival_mmr: ArchivalMmr<VmHasher, _> =
                 get_rustyleveldb_ammr_from_digests(digests.clone());
             let mut mmr = archival_mmr.to_accumulator();
 

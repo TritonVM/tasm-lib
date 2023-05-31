@@ -76,7 +76,7 @@ impl<H: AlgebraicHasher> Snippet for MmrCalculateNewPeaksFromLeafMutationMtIndic
         let digests: Vec<Digest> = random_elements(mmr_size);
         let leaf_index: usize = thread_rng().gen_range(0..mmr_size);
         let new_leaf: Digest = random();
-        let mut ammr = get_rustyleveldb_ammr_from_digests::<VmHasher>(digests);
+        let ammr = get_rustyleveldb_ammr_from_digests::<VmHasher>(digests);
         let mut mmra = ammr.to_accumulator();
         let auth_path = ammr.prove_membership(leaf_index as u64);
         let ret0 = prepare_state_with_mmra(
@@ -453,7 +453,7 @@ mod leaf_mutation_tests {
         let leaf_count = 3;
         let init_leaf_digests: Vec<Digest> = random_elements(leaf_count);
         let new_leaf: Digest = thread_rng().gen();
-        let mut archival_mmr: ArchivalMmr<VmHasher, _> =
+        let archival_mmr: ArchivalMmr<VmHasher, _> =
             get_rustyleveldb_ammr_from_digests(init_leaf_digests.clone());
 
         for mutated_index in 0..leaf_count {
@@ -480,7 +480,7 @@ mod leaf_mutation_tests {
             println!("leaf_count = {leaf_count}");
             let init_leaf_digests: Vec<Digest> = random_elements(leaf_count);
             let new_leaf: Digest = thread_rng().gen();
-            let mut archival_mmr: ArchivalMmr<VmHasher, _> =
+            let archival_mmr: ArchivalMmr<VmHasher, _> =
                 get_rustyleveldb_ammr_from_digests(init_leaf_digests.clone());
 
             for mutated_index in 0..leaf_count {
@@ -508,7 +508,7 @@ mod leaf_mutation_tests {
             println!("leaf_count = {leaf_count}");
             let init_leaf_digests: Vec<Digest> = random_elements(leaf_count);
             let new_leaf: Digest = thread_rng().gen();
-            let mut archival_mmr: ArchivalMmr<VmHasher, _> =
+            let archival_mmr: ArchivalMmr<VmHasher, _> =
                 get_rustyleveldb_ammr_from_digests(init_leaf_digests.clone());
 
             for mutated_index in [0, leaf_count - 100, leaf_count - 2, leaf_count - 1] {

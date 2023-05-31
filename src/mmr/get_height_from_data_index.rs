@@ -110,7 +110,7 @@ fn prepare_state(leaf_index: u64) -> ExecutionState {
 #[cfg(test)]
 mod tests {
     use twenty_first::amount::u32s::U32s;
-    use twenty_first::util_types::algebraic_hasher::Hashable;
+    use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
     use crate::get_init_tvm_stack;
     use crate::snippet_bencher::bench_and_write;
@@ -204,7 +204,7 @@ mod tests {
             (leaf_index & 0xFFFFFFFFu32 as u64) as u32,
             (leaf_index >> 32) as u32,
         ]);
-        for elem in leaf_index_as_u32_2.to_sequence().into_iter().rev() {
+        for elem in leaf_index_as_u32_2.encode().into_iter().rev() {
             init_stack.push(elem);
         }
 

@@ -3,12 +3,12 @@ use std::collections::HashMap;
 use num::Zero;
 use rand::Rng;
 use twenty_first::{
-    amount::u32s::U32s, shared_math::b_field_element::BFieldElement,
-    util_types::algebraic_hasher::Hashable,
+    amount::u32s::U32s,
+    shared_math::{b_field_element::BFieldElement, bfield_codec::BFieldCodec},
 };
 
 use crate::{
-    get_init_tvm_stack, push_hashable,
+    get_init_tvm_stack, push_encodable,
     snippet::{DataType, Snippet},
     snippet_state::SnippetState,
     ExecutionState,
@@ -68,16 +68,16 @@ impl Snippet for AddU128 {
             // 0. one zero, one large
             states.push({
                 let mut stack = get_init_tvm_stack();
-                push_hashable(&mut stack, &zero);
-                push_hashable(&mut stack, &large_a);
+                push_encodable(&mut stack, &zero);
+                push_encodable(&mut stack, &large_a);
                 ExecutionState::with_stack(stack)
             });
 
             // 1. two small
             states.push({
                 let mut stack = get_init_tvm_stack();
-                push_hashable(&mut stack, &small_a);
-                push_hashable(&mut stack, &small_b);
+                push_encodable(&mut stack, &small_a);
+                push_encodable(&mut stack, &small_b);
                 ExecutionState::with_stack(stack)
             });
         }
@@ -192,7 +192,7 @@ impl Snippet for AddU128 {
         let d1: u32 = stack.pop().unwrap().try_into().unwrap();
         let ab1 = U32s::<4>::new([a1, b1, c1, d1]);
         let ab0_plus_ab1 = ab0 + ab1;
-        let mut res = ab0_plus_ab1.to_sequence();
+        let mut res = ab0_plus_ab1.encode();
         for _ in 0..res.len() {
             stack.push(res.pop().unwrap());
         }
@@ -233,6 +233,8 @@ impl Snippet for AddU128 {
 
 #[cfg(test)]
 mod tests {
+    use twenty_first::shared_math::bfield_codec::BFieldCodec;
+
     use crate::snippet_bencher::bench_and_write;
     use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
@@ -260,10 +262,10 @@ mod tests {
 
     fn prop_add(lhs: u128, rhs: u128, expected: Option<&[BFieldElement]>) {
         let mut init_stack = get_init_tvm_stack();
-        for elem in rhs.to_sequence().into_iter().rev() {
+        for elem in rhs.encode().into_iter().rev() {
             init_stack.push(elem);
         }
-        for elem in lhs.to_sequence().into_iter().rev() {
+        for elem in lhs.encode().into_iter().rev() {
             init_stack.push(elem);
         }
 

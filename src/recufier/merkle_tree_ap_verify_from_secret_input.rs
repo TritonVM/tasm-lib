@@ -191,7 +191,7 @@ impl<H: AlgebraicHasher> Snippet for MtApVerifyFromSecretInput<H> {
 fn prepare_state<H: AlgebraicHasher>(tree_height: usize) -> ExecutionState {
     // fn gen_input_states(&self) -> Vec<ExecutionState> {
     let leafs = generate_leafs::<H>(tree_height);
-    let mt: &MerkleTree<H, CpuParallel> = &MerkleTreeMaker::from_digests(&leafs);
+    let mt: &MerkleTree<H> = &CpuParallel::from_digests(&leafs);
     let indices = choose_indices(tree_height);
     let secret_in: Vec<BFieldElement> =
         generate_siblings_as_vector(mt.clone(), indices, tree_height);
@@ -224,7 +224,7 @@ fn choose_indices(tree_height: usize) -> [usize; NUMBER_OF_AUTHENTICATION_PATHS]
 
 //generate secret input for verifier
 fn generate_siblings_as_vector<H: AlgebraicHasher>(
-    mt: MerkleTree<H, CpuParallel>,
+    mt: MerkleTree<H>,
     indices: [usize; NUMBER_OF_AUTHENTICATION_PATHS],
     tree_height: usize,
 ) -> Vec<BFieldElement> {
@@ -254,7 +254,7 @@ fn generate_input<H: AlgebraicHasher>(
     let number_of_authentication_paths = indices.len();
     let number_of_leaves = leafs.len();
     let number_of_aps: u32 = number_of_authentication_paths.try_into().unwrap();
-    let mt: &MerkleTree<H, CpuParallel> = &MerkleTreeMaker::from_digests(leafs);
+    let mt: &MerkleTree<H> = &CpuParallel::from_digests(leafs);
     let merkle_root = mt.nodes[1];
     let mut reverse_merkle_root = merkle_root.values().to_vec();
     reverse_merkle_root.reverse();
@@ -327,7 +327,7 @@ mod merkle_authentication_verify_test {
     fn merkle_tree_ap_verify_test1() {
         let mt_height = 5;
         let leafs = generate_leafs::<VmHasher>(mt_height);
-        let mt: &MerkleTree<VmHasher, CpuParallel> = &MerkleTreeMaker::from_digests(&leafs);
+        let mt: &MerkleTree<VmHasher> = &CpuParallel::from_digests(&leafs);
         let indices = choose_indices(mt_height);
         let merkle_root = mt.nodes[1];
         for index in indices {
@@ -353,7 +353,7 @@ mod merkle_authentication_verify_test {
     fn merkle_tree_ap_verify_test2() {
         let mt_height = 5;
         let leafs = generate_leafs::<VmHasher>(mt_height);
-        let mt: &MerkleTree<VmHasher, CpuParallel> = &MerkleTreeMaker::from_digests(&leafs);
+        let mt: &MerkleTree<VmHasher> = &CpuParallel::from_digests(&leafs);
         let indices = choose_indices(mt_height);
         let secret_input: Vec<BFieldElement> =
             generate_siblings_as_vector(mt.clone(), indices, mt_height);
@@ -376,7 +376,7 @@ mod merkle_authentication_verify_test {
     fn merkle_tree_ap_verify_negative_test() {
         let mt_height = 5;
         let leafs = generate_leafs::<VmHasher>(mt_height);
-        let mt: &MerkleTree<VmHasher, CpuParallel> = &MerkleTreeMaker::from_digests(&leafs);
+        let mt: &MerkleTree<VmHasher> = &CpuParallel::from_digests(&leafs);
         let indices = choose_indices(mt_height);
 
         // Generate invalid secret input

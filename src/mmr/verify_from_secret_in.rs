@@ -328,7 +328,7 @@ fn prepare_state_for_tests<H: AlgebraicHasher>(
     generate_valid_proof: bool,
 ) -> ExecutionState {
     let digests: Vec<Digest> = random_elements(size);
-    let mut ammr: ArchivalMmr<H, _> = get_rustyleveldb_ammr_from_digests(digests.clone());
+    let ammr: ArchivalMmr<H, _> = get_rustyleveldb_ammr_from_digests(digests.clone());
     let mut vm_init_state = mmr_to_init_vm_state(&mut ammr.to_accumulator());
 
     // Populate secret-in with the leaf index value, which is a u64
@@ -460,7 +460,7 @@ mod mmr_verify_from_secret_in_tests {
 
         for leaf_count in 0..max_size {
             let digests: Vec<Digest> = random_elements(leaf_count);
-            let mut archival_mmr: ArchivalMmr<VmHasher, _> =
+            let archival_mmr: ArchivalMmr<VmHasher, _> =
                 get_rustyleveldb_ammr_from_digests(digests.clone());
             let mut mmr = archival_mmr.to_accumulator();
 

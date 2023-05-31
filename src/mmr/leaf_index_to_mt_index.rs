@@ -4,7 +4,7 @@ use num::BigUint;
 use rand::{thread_rng, Rng};
 use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
-use twenty_first::util_types::algebraic_hasher::Hashable;
+use twenty_first::shared_math::bfield_codec::BFieldCodec;
 use twenty_first::util_types::mmr;
 
 use crate::arithmetic::u64::add_u64::AddU64;
@@ -183,7 +183,7 @@ impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
             mmr::shared_basic::leaf_index_to_mt_index_and_peak_index(leaf_index, leaf_count);
         let mt_index: U32s<2> = U32s::from(BigUint::from(mt_index));
 
-        stack.append(&mut mt_index.to_sequence().into_iter().rev().collect());
+        stack.append(&mut mt_index.encode().into_iter().rev().collect());
         stack.push(BFieldElement::new(peak_index as u64));
     }
 

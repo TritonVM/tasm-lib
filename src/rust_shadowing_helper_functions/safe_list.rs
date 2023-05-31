@@ -1,12 +1,10 @@
 use num::{One, Zero};
 use std::collections::HashMap;
-use twenty_first::{
-    shared_math::b_field_element::BFieldElement, util_types::algebraic_hasher::Hashable,
-};
+use twenty_first::shared_math::{b_field_element::BFieldElement, bfield_codec::BFieldCodec};
 
 use crate::snippet::DataType;
 
-pub fn safe_list_insert<T: Hashable>(
+pub fn safe_list_insert<T: BFieldCodec>(
     list_pointer: BFieldElement,
     capacity: u32,
     vector: Vec<T>,
@@ -17,9 +15,9 @@ pub fn safe_list_insert<T: Hashable>(
     for element in vector {
         safe_list_push(
             list_pointer,
-            element.to_sequence(),
+            element.encode(),
             memory,
-            element.to_sequence().len(),
+            element.encode().len(),
         );
     }
 }
@@ -180,10 +178,7 @@ mod rust_shadowing_helper_tests {
         safe_list_insert(list_pointer, capacity, digests.clone(), &mut memory);
         assert_eq!(list_length, safe_list_get_length(list_pointer, &memory));
         for (i, elem) in digests.into_iter().enumerate() {
-            assert_eq!(
-                elem.to_sequence(),
-                safe_list_read(list_pointer, i, &memory, 5)
-            );
+            assert_eq!(elem.encode(), safe_list_read(list_pointer, i, &memory, 5));
         }
     }
 

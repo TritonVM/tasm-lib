@@ -241,7 +241,7 @@ fn prepare_state(node_index: u64) -> ExecutionState {
 mod tests {
     use twenty_first::amount::u32s::U32s;
     use twenty_first::shared_math::b_field_element::BFieldElement;
-    use twenty_first::util_types::algebraic_hasher::Hashable;
+    use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
     use crate::get_init_tvm_stack;
     use crate::snippet_bencher::bench_and_write;
@@ -464,7 +464,7 @@ mod tests {
 
     fn prop_right_child_and_height(node_index: U32s<2>, expected: Option<&[BFieldElement]>) {
         let mut init_stack = get_init_tvm_stack();
-        for elem in node_index.to_sequence().into_iter().rev() {
+        for elem in node_index.encode().into_iter().rev() {
             init_stack.push(elem);
         }
 

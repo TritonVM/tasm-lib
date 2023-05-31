@@ -3,11 +3,11 @@ use std::collections::HashMap;
 use num::One;
 use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
-use twenty_first::util_types::algebraic_hasher::Hashable;
+use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
 use crate::snippet::{DataType, Snippet};
 use crate::snippet_state::SnippetState;
-use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
+use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
 
 /// Consumes top element which is interpreted as exponent. Pushes a
 /// U32<2> to the top of the stack. So grows the stack by 1.
@@ -39,7 +39,7 @@ impl Snippet for Pow2U64 {
         (0..64)
             .map(|i: u32| {
                 let mut stack = get_init_tvm_stack();
-                push_hashable(&mut stack, &i);
+                push_encodable(&mut stack, &i);
                 ExecutionState::with_stack(stack)
             })
             .collect()
@@ -82,7 +82,7 @@ impl Snippet for Pow2U64 {
             exponent -= 1;
         }
 
-        let mut res = res.to_sequence();
+        let mut res = res.encode();
         for _ in 0..res.len() {
             stack.push(res.pop().unwrap());
         }

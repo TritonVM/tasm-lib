@@ -7,7 +7,7 @@ use twenty_first::shared_math::other::log_2_floor;
 
 use crate::snippet::{DataType, Snippet};
 use crate::snippet_state::SnippetState;
-use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
+use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
 
 #[derive(Clone)]
 pub struct Log2FloorU64;
@@ -41,7 +41,7 @@ impl Snippet for Log2FloorU64 {
         let n: U32s<2> = n.try_into().unwrap();
         let mut input_stack = get_init_tvm_stack();
 
-        push_hashable(&mut input_stack, &n);
+        push_encodable(&mut input_stack, &n);
 
         vec![ExecutionState::with_stack(input_stack)]
     }
@@ -152,7 +152,8 @@ impl Snippet for Log2FloorU64 {
 
 #[cfg(test)]
 mod tests {
-    use twenty_first::{amount::u32s::U32s, util_types::algebraic_hasher::Hashable};
+    use twenty_first::amount::u32s::U32s;
+    use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
     use crate::get_init_tvm_stack;
     use crate::snippet_bencher::bench_and_write;
@@ -279,7 +280,7 @@ mod tests {
         let mut init_stack = get_init_tvm_stack();
         let value_as_u32_2 =
             U32s::new([(value & 0xFFFFFFFFu32 as u64) as u32, (value >> 32) as u32]);
-        for elem in value_as_u32_2.to_sequence().into_iter().rev() {
+        for elem in value_as_u32_2.encode().into_iter().rev() {
             init_stack.push(elem);
         }
 

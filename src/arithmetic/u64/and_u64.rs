@@ -4,11 +4,11 @@ use num::Zero;
 use rand::RngCore;
 use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
-use twenty_first::util_types::algebraic_hasher::Hashable;
+use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
 use crate::snippet::{DataType, Snippet};
 use crate::snippet_state::SnippetState;
-use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
+use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
 
 #[derive(Clone)]
 pub struct AndU64;
@@ -44,8 +44,8 @@ impl Snippet for AndU64 {
         let lhs = U32s::<2>::try_from(rng.next_u64()).unwrap();
         let rhs = U32s::<2>::try_from(rng.next_u64()).unwrap();
         let mut stack = get_init_tvm_stack();
-        push_hashable(&mut stack, &lhs);
-        push_hashable(&mut stack, &rhs);
+        push_encodable(&mut stack, &lhs);
+        push_encodable(&mut stack, &rhs);
         vec![ExecutionState::with_stack(stack)]
     }
 
@@ -94,7 +94,7 @@ impl Snippet for AndU64 {
 
         // Perform calculation and write the result back to the stack
         let and_res = U32s::<2>::new([a_lo & b_lo, a_hi & b_hi]);
-        let mut res = and_res.to_sequence();
+        let mut res = and_res.encode();
         for _ in 0..res.len() {
             stack.push(res.pop().unwrap());
         }
@@ -177,12 +177,12 @@ mod tests {
         let mut init_stack = get_init_tvm_stack();
 
         let rhs_u32_2 = U32s::<2>::new([(rhs & u32::MAX as u64) as u32, (rhs >> 32) as u32]);
-        for elem in rhs_u32_2.to_sequence().into_iter().rev() {
+        for elem in rhs_u32_2.encode().into_iter().rev() {
             init_stack.push(elem);
         }
 
         let lhs_u32_2 = U32s::<2>::new([(lhs & u32::MAX as u64) as u32, (lhs >> 32) as u32]);
-        for elem in lhs_u32_2.to_sequence().into_iter().rev() {
+        for elem in lhs_u32_2.encode().into_iter().rev() {
             init_stack.push(elem);
         }
 
@@ -190,7 +190,7 @@ mod tests {
         println!("Expected: {expected_res}");
         let expected_u32_2: U32s<2> = expected_res.into();
         let mut expected_end_stack = get_init_tvm_stack();
-        for elem in expected_u32_2.to_sequence().into_iter().rev() {
+        for elem in expected_u32_2.encode().into_iter().rev() {
             expected_end_stack.push(elem);
         }
 

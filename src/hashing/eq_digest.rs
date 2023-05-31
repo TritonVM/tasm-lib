@@ -2,11 +2,10 @@ use std::collections::HashMap;
 
 use rand::Rng;
 use twenty_first::shared_math::b_field_element::BFieldElement;
-use twenty_first::shared_math::rescue_prime_digest::Digest;
 
 use crate::snippet::{DataType, Snippet};
 use crate::snippet_state::SnippetState;
-use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
+use crate::{get_init_tvm_stack, push_encodable, Digest, ExecutionState};
 
 #[derive(Clone)]
 pub struct EqDigest;
@@ -49,8 +48,8 @@ impl Snippet for EqDigest {
         let digest_b: Digest = rng.gen();
 
         let mut stack = get_init_tvm_stack();
-        push_hashable(&mut stack, &digest_b);
-        push_hashable(&mut stack, &digest_a);
+        push_encodable(&mut stack, &digest_b);
+        push_encodable(&mut stack, &digest_a);
 
         vec![ExecutionState::with_stack(stack)]
     }
@@ -122,8 +121,8 @@ impl Snippet for EqDigest {
         Self: Sized,
     {
         let mut stack = get_init_tvm_stack();
-        push_hashable(&mut stack, &Digest::default());
-        push_hashable(&mut stack, &Digest::default());
+        push_encodable(&mut stack, &Digest::default());
+        push_encodable(&mut stack, &Digest::default());
 
         ExecutionState::with_stack(stack)
     }
@@ -137,8 +136,8 @@ impl Snippet for EqDigest {
         let digest_b: Digest = rng.gen();
 
         let mut stack = get_init_tvm_stack();
-        push_hashable(&mut stack, &digest_b);
-        push_hashable(&mut stack, &digest_a);
+        push_encodable(&mut stack, &digest_b);
+        push_encodable(&mut stack, &digest_a);
 
         ExecutionState::with_stack(stack)
     }

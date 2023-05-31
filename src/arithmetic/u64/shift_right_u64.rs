@@ -4,7 +4,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::snippet::{DataType, Snippet};
 use crate::snippet_state::SnippetState;
-use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
+use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
 
 #[derive(Clone)]
 pub struct ShiftRightU64;
@@ -189,7 +189,7 @@ impl Snippet for ShiftRightU64 {
 fn prepare_state(value: u64, shift_amount: u32) -> ExecutionState {
     let value = U32s::<2>::try_from(value).unwrap();
     let mut init_stack = get_init_tvm_stack();
-    push_hashable(&mut init_stack, &value);
+    push_encodable(&mut init_stack, &value);
     init_stack.push(BFieldElement::new(shift_amount as u64));
     ExecutionState::with_stack(init_stack)
 }

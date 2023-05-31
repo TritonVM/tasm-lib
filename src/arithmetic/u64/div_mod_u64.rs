@@ -4,7 +4,7 @@ use num::One;
 use rand::RngCore;
 use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
-use twenty_first::util_types::algebraic_hasher::Hashable;
+use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
 use crate::arithmetic::u32::safe_add::SafeAdd;
 use crate::arithmetic::u32::safe_sub::SafeSub;
@@ -551,7 +551,7 @@ impl Snippet for DivModU64 {
 
         let quotient = numerator / divisor;
         let quotient_u32_2 = U32s::<2>::try_from(quotient).unwrap();
-        let mut quotient_as_bfes = quotient_u32_2.to_sequence();
+        let mut quotient_as_bfes = quotient_u32_2.encode();
         for _ in 0..quotient_as_bfes.len() {
             stack.push(quotient_as_bfes.pop().unwrap());
         }
@@ -559,7 +559,7 @@ impl Snippet for DivModU64 {
         let remainder = numerator % divisor;
 
         let remainder = U32s::<2>::try_from(remainder).unwrap();
-        let mut remainder = remainder.to_sequence();
+        let mut remainder = remainder.encode();
         for _ in 0..remainder.len() {
             stack.push(remainder.pop().unwrap());
         }
@@ -691,14 +691,14 @@ mod tests {
         let numerator_hi = (numerator >> 32) as u32;
 
         let numerator = U32s::<2>::new([numerator_lo, numerator_hi]);
-        for elem in numerator.to_sequence().into_iter().rev() {
+        for elem in numerator.encode().into_iter().rev() {
             init_stack.push(elem);
         }
 
         let divisor_lo = (divisor & u32::MAX as u64) as u32;
         let divisor_hi = (divisor >> 32) as u32;
         let divisor = U32s::<2>::new([divisor_lo, divisor_hi]);
-        for elem in divisor.to_sequence().into_iter().rev() {
+        for elem in divisor.encode().into_iter().rev() {
             init_stack.push(elem);
         }
 
@@ -707,10 +707,10 @@ mod tests {
         let expected_u32_2_quotient: U32s<2> = expected_res.0.into();
         let expected_u32_2_remainder: U32s<2> = expected_res.1.into();
         let mut expected_end_stack = get_init_tvm_stack();
-        for elem in expected_u32_2_quotient.to_sequence().into_iter().rev() {
+        for elem in expected_u32_2_quotient.encode().into_iter().rev() {
             expected_end_stack.push(elem);
         }
-        for elem in expected_u32_2_remainder.to_sequence().into_iter().rev() {
+        for elem in expected_u32_2_remainder.encode().into_iter().rev() {
             expected_end_stack.push(elem);
         }
 

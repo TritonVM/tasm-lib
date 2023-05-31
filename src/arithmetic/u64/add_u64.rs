@@ -4,11 +4,11 @@ use num::Zero;
 use rand::Rng;
 use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
-use twenty_first::util_types::algebraic_hasher::Hashable;
+use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
 use crate::snippet::{DataType, Snippet};
 use crate::snippet_state::SnippetState;
-use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
+use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
 
 #[derive(Clone)]
 pub struct AddU64;
@@ -53,16 +53,16 @@ impl Snippet for AddU64 {
         // 0. one zero, one large
         states.push({
             let mut stack = get_init_tvm_stack();
-            push_hashable(&mut stack, &zero);
-            push_hashable(&mut stack, &large_a);
+            push_encodable(&mut stack, &zero);
+            push_encodable(&mut stack, &large_a);
             ExecutionState::with_stack(stack)
         });
 
         // 1. two small
         states.push({
             let mut stack = get_init_tvm_stack();
-            push_hashable(&mut stack, &small_a);
-            push_hashable(&mut stack, &small_b);
+            push_encodable(&mut stack, &small_a);
+            push_encodable(&mut stack, &small_b);
             ExecutionState::with_stack(stack)
         });
 
@@ -135,7 +135,7 @@ impl Snippet for AddU64 {
         let b1: u32 = stack.pop().unwrap().try_into().unwrap();
         let ab1 = U32s::<2>::new([a1, b1]);
         let ab0_plus_ab1 = ab0 + ab1;
-        let mut res = ab0_plus_ab1.to_sequence();
+        let mut res = ab0_plus_ab1.encode();
         for _ in 0..res.len() {
             stack.push(res.pop().unwrap());
         }
@@ -296,10 +296,10 @@ mod tests {
         let lhs: U32s<2> = U32s::from(BigUint::from(1u64 << 63));
         let rhs: U32s<2> = U32s::from(BigUint::from((1u64 << 63) + 1));
         let mut init_stack = get_init_tvm_stack();
-        for elem in rhs.to_sequence().into_iter().rev() {
+        for elem in rhs.encode().into_iter().rev() {
             init_stack.push(elem);
         }
-        for elem in lhs.to_sequence().into_iter().rev() {
+        for elem in lhs.encode().into_iter().rev() {
             init_stack.push(elem);
         }
 
@@ -312,10 +312,10 @@ mod tests {
         let lhs: U32s<2> = U32s::from(BigUint::from(u64::MAX));
         let rhs: U32s<2> = U32s::from(BigUint::from(u64::MAX));
         let mut init_stack = get_init_tvm_stack();
-        for elem in rhs.to_sequence().into_iter().rev() {
+        for elem in rhs.encode().into_iter().rev() {
             init_stack.push(elem);
         }
-        for elem in lhs.to_sequence().into_iter().rev() {
+        for elem in lhs.encode().into_iter().rev() {
             init_stack.push(elem);
         }
 
@@ -324,10 +324,10 @@ mod tests {
 
     fn prop_add(lhs: U32s<2>, rhs: U32s<2>, expected: Option<&[BFieldElement]>) {
         let mut init_stack = get_init_tvm_stack();
-        for elem in rhs.to_sequence().into_iter().rev() {
+        for elem in rhs.encode().into_iter().rev() {
             init_stack.push(elem);
         }
-        for elem in lhs.to_sequence().into_iter().rev() {
+        for elem in lhs.encode().into_iter().rev() {
             init_stack.push(elem);
         }
 

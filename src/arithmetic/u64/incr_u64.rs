@@ -4,11 +4,11 @@ use num::One;
 use rand::RngCore;
 use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
-use twenty_first::util_types::algebraic_hasher::Hashable;
+use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
 use crate::snippet::{DataType, Snippet};
 use crate::snippet_state::SnippetState;
-use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
+use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
 
 #[derive(Clone)]
 pub struct IncrU64;
@@ -48,7 +48,7 @@ impl Snippet for IncrU64 {
             .into_iter()
             .map(|value| {
                 let mut stack = get_init_tvm_stack();
-                push_hashable(&mut stack, &value);
+                push_encodable(&mut stack, &value);
                 ExecutionState::with_stack(stack)
             })
             .collect()
@@ -106,7 +106,7 @@ impl Snippet for IncrU64 {
         let b: u32 = stack.pop().unwrap().try_into().unwrap();
         let ab = U32s::<2>::new([a, b]);
         let ab_incr = ab + U32s::one();
-        let mut res = ab_incr.to_sequence();
+        let mut res = ab_incr.encode();
         for _ in 0..res.len() {
             stack.push(res.pop().unwrap());
         }
@@ -145,7 +145,7 @@ impl Snippet for IncrU64 {
 mod tests {
     use crate::snippet_bencher::bench_and_write;
     use crate::test_helpers::rust_tasm_equivalence_prop_new;
-    use crate::{get_init_tvm_stack, push_hashable};
+    use crate::{get_init_tvm_stack, push_encodable};
 
     use super::*;
 
@@ -164,7 +164,7 @@ mod tests {
     fn incr_u64_negative_tasm_test() {
         let mut stack = get_init_tvm_stack();
         let u64_max = U32s::<2>::try_from(u64::MAX).unwrap();
-        push_hashable(&mut stack, &u64_max);
+        push_encodable(&mut stack, &u64_max);
         IncrU64.run_tasm_old(&mut stack, vec![], vec![], &mut HashMap::default(), 0);
     }
 
@@ -173,7 +173,7 @@ mod tests {
     fn incr_u64_negative_rust_test() {
         let mut stack = get_init_tvm_stack();
         let u64_max = U32s::<2>::try_from(u64::MAX).unwrap();
-        push_hashable(&mut stack, &u64_max);
+        push_encodable(&mut stack, &u64_max);
         IncrU64::rust_shadowing(
             &IncrU64,
             &mut stack,

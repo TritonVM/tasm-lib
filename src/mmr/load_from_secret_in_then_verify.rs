@@ -5,7 +5,6 @@ use num::One;
 use rand::{thread_rng, Rng};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::random_elements;
-use twenty_first::shared_math::rescue_prime_digest::{Digest, DIGEST_LENGTH};
 use twenty_first::test_shared::mmr::get_rustyleveldb_ammr_from_digests;
 use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 use twenty_first::util_types::mmr::archival_mmr::ArchivalMmr;
@@ -16,7 +15,9 @@ use twenty_first::util_types::mmr::mmr_trait::Mmr;
 use crate::hashing::load_auth_path_from_secret_in_unsafe_list::LoadAuthPathFromSecretInUnsafeList;
 use crate::snippet::{DataType, Snippet};
 use crate::snippet_state::SnippetState;
-use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, ExecutionState};
+use crate::{
+    get_init_tvm_stack, rust_shadowing_helper_functions, Digest, ExecutionState, DIGEST_LENGTH,
+};
 
 use super::verify_from_memory::MmrVerifyFromMemory;
 use super::MAX_MMR_HEIGHT;
@@ -238,7 +239,7 @@ fn prepare_state<H: AlgebraicHasher>(
     // AFTER: _ *auth_path leaf_index_hi leaf_index_lo validation_result
 
     let digests: Vec<Digest> = random_elements(size);
-    let mut ammr: ArchivalMmr<H, _> = get_rustyleveldb_ammr_from_digests(digests.clone());
+    let ammr: ArchivalMmr<H, _> = get_rustyleveldb_ammr_from_digests(digests.clone());
     let mut vm_init_state = mmr_to_init_vm_state(&mut ammr.to_accumulator());
 
     // Populate secret-in with the correct authentication path

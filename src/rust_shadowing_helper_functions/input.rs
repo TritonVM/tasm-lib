@@ -1,9 +1,7 @@
 use num::Zero;
-use twenty_first::shared_math::{
-    b_field_element::BFieldElement,
-    other::random_elements,
-    rescue_prime_digest::{Digest, DIGEST_LENGTH},
-};
+use twenty_first::shared_math::{b_field_element::BFieldElement, other::random_elements};
+
+use crate::{Digest, DIGEST_LENGTH};
 
 pub fn write_digest_to_std_in(std_in: &mut Vec<BFieldElement>, digest: Digest) {
     let digest_elements = digest.values();

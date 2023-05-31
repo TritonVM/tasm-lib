@@ -7,7 +7,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::snippet::{DataType, Snippet};
 use crate::snippet_state::SnippetState;
-use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
+use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
 
 #[derive(Clone)]
 pub struct LtStandardU64;
@@ -194,8 +194,8 @@ impl Snippet for LtU64 {
             let m: U32s<2> = m.try_into().unwrap();
             let mut input_stack = get_init_tvm_stack();
 
-            push_hashable(&mut input_stack, &n);
-            push_hashable(&mut input_stack, &m);
+            push_encodable(&mut input_stack, &n);
+            push_encodable(&mut input_stack, &m);
 
             ret.push(ExecutionState::with_stack(input_stack))
         }
@@ -306,7 +306,7 @@ impl Snippet for LtU64 {
 mod tests {
     use rand::Rng;
     use twenty_first::shared_math::b_field_element::BFieldElement;
-    use twenty_first::util_types::algebraic_hasher::Hashable;
+    use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
     use crate::get_init_tvm_stack;
     use crate::snippet_bencher::bench_and_write;
@@ -389,8 +389,8 @@ mod tests {
             let lhs: U32s<2> = U32s::try_from(lhs).unwrap();
             let expected = vec![
                 init_stack.clone(),
-                rhs.to_sequence().into_iter().rev().collect(),
-                lhs.to_sequence().into_iter().rev().collect(),
+                rhs.encode().into_iter().rev().collect(),
+                lhs.encode().into_iter().rev().collect(),
                 vec![BFieldElement::one()],
             ]
             .concat();
@@ -411,8 +411,8 @@ mod tests {
             let lhs: U32s<2> = U32s::try_from(lhs).unwrap();
             let expected = vec![
                 init_stack.clone(),
-                rhs.to_sequence().into_iter().rev().collect(),
-                lhs.to_sequence().into_iter().rev().collect(),
+                rhs.encode().into_iter().rev().collect(),
+                lhs.encode().into_iter().rev().collect(),
                 vec![BFieldElement::zero()],
             ]
             .concat();
@@ -433,8 +433,8 @@ mod tests {
             let lhs: U32s<2> = U32s::try_from(lhs).unwrap();
             let expected = vec![
                 init_stack.clone(),
-                rhs.to_sequence().into_iter().rev().collect(),
-                lhs.to_sequence().into_iter().rev().collect(),
+                rhs.encode().into_iter().rev().collect(),
+                lhs.encode().into_iter().rev().collect(),
                 vec![BFieldElement::zero()],
             ]
             .concat();
@@ -446,8 +446,8 @@ mod tests {
 
     fn prop_lt(lhs: U32s<2>, rhs: U32s<2>, expected: Option<&[BFieldElement]>) {
         let mut init_stack = get_init_tvm_stack();
-        init_stack.append(&mut rhs.to_sequence().into_iter().rev().collect());
-        init_stack.append(&mut lhs.to_sequence().into_iter().rev().collect());
+        init_stack.append(&mut rhs.encode().into_iter().rev().collect());
+        init_stack.append(&mut lhs.encode().into_iter().rev().collect());
 
         let stdin = &[];
         let secret_in = &[];
@@ -466,8 +466,8 @@ mod tests {
 
     fn prop_lt_standard(lhs: U32s<2>, rhs: U32s<2>) {
         let mut init_stack = get_init_tvm_stack();
-        init_stack.append(&mut rhs.to_sequence().into_iter().rev().collect());
-        init_stack.append(&mut lhs.to_sequence().into_iter().rev().collect());
+        init_stack.append(&mut rhs.encode().into_iter().rev().collect());
+        init_stack.append(&mut lhs.encode().into_iter().rev().collect());
 
         let stdin = &[];
         let secret_in = &[];

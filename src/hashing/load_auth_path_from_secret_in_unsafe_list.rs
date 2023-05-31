@@ -2,15 +2,15 @@ use num::One;
 use std::collections::HashMap;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::random_elements;
-use twenty_first::shared_math::rescue_prime_digest::Digest;
-use twenty_first::shared_math::rescue_prime_digest::DIGEST_LENGTH;
 
 use crate::list::unsafe_u32::{push::UnsafePush, set_length::UnsafeSetLength};
 use crate::mmr::MAX_MMR_HEIGHT;
 use crate::snippet::DataType;
 use crate::snippet::Snippet;
 use crate::snippet_state::SnippetState;
-use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, ExecutionState};
+use crate::{
+    get_init_tvm_stack, rust_shadowing_helper_functions, Digest, ExecutionState, DIGEST_LENGTH,
+};
 
 #[derive(Clone)]
 pub struct LoadAuthPathFromSecretInUnsafeList;

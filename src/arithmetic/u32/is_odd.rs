@@ -6,7 +6,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use crate::pseudo::lsb::Lsb;
 use crate::snippet::{DataType, Snippet};
 use crate::snippet_state::SnippetState;
-use crate::{get_init_tvm_stack, push_hashable, ExecutionState};
+use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
 
 #[derive(Clone)]
 pub struct U32IsOdd;
@@ -37,11 +37,11 @@ impl Snippet for U32IsOdd {
 
         let mut even_stack = get_init_tvm_stack();
         let even_value = n - (n & 1);
-        push_hashable(&mut even_stack, &even_value);
+        push_encodable(&mut even_stack, &even_value);
 
         let mut odd_stack = get_init_tvm_stack();
         let odd_value = n | 1;
-        push_hashable(&mut odd_stack, &odd_value);
+        push_encodable(&mut odd_stack, &odd_value);
 
         vec![
             ExecutionState::with_stack(even_stack),

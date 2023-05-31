@@ -171,11 +171,10 @@ mod tests {
     use std::collections::HashMap;
 
     use rand::random;
-    use twenty_first::shared_math::rescue_prime_digest::Digest;
 
     use crate::{
         list::safe_u32::push::SafePush, rust_shadowing_helper_functions,
-        snippet_bencher::bench_and_write, test_helpers::rust_tasm_equivalence_prop_new,
+        snippet_bencher::bench_and_write, test_helpers::rust_tasm_equivalence_prop_new, Digest,
     };
 
     use super::*;
