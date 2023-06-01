@@ -41,7 +41,7 @@ use crate::{
         load_auth_path_from_std_in_unsafe_list::LoadAuthPathFromStdInUnsafeList,
         swap_digest::SwapDigest,
     },
-    io::{read_secret::ReadSecret, read_stdin::ReadStdIn},
+    io::{load_from_input::LoadFromInput, read_secret::ReadSecret, read_stdin::ReadStdIn},
     list::{
         safe_u32::{
             get::SafeGet, length::SafeLength, new::SafeNew, pop::SafePop, push::SafePush,
@@ -74,7 +74,7 @@ use crate::{
     other_snippets::bfe_add::BfeAdd,
     pseudo::{lsb::Lsb, neg::Neg, sub::Sub},
     recufier::merkle_tree_ap_verify_from_secret_input::MtApVerifyFromSecretInput,
-    snippet::{DataType, Snippet},
+    snippet::{DataType, InputSource, Snippet},
     snippet_state::{DummyTestSnippetA, DummyTestSnippetB, DummyTestSnippetC},
     VmHasher,
 };
@@ -147,6 +147,9 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn Snippet> {
         "tasm_io_read_stdin_bfe" => Box::new(ReadStdIn(DataType::BFE)),
         "tasm_io_read_stdin_xfe" => Box::new(ReadStdIn(DataType::XFE)),
         "tasm_io_read_stdin_digest" => Box::new(ReadStdIn(DataType::Digest)),
+
+        "tasm_io_load_from_input_stdin" => Box::new(LoadFromInput(InputSource::StdIn)),
+        "tasm_io_load_from_input_secin" => Box::new(LoadFromInput(InputSource::SecretIn)),
 
         // safe lists
         "tasm_list_safe_u32_get_element_bool" => Box::new(SafeGet(DataType::Bool)),

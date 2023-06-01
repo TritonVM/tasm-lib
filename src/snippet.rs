@@ -13,6 +13,23 @@ use crate::{all_snippets, ExecutionResult, DIGEST_LENGTH};
 use crate::{execute, ExecutionState};
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
+pub enum InputSource {
+    StdIn,
+    SecretIn,
+}
+
+impl Display for InputSource {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let str = match self {
+            InputSource::StdIn => "stdin",
+            InputSource::SecretIn => "secin",
+        };
+
+        write!(f, "{}", str)
+    }
+}
+
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub enum DataType {
     Bool,
     U32,

@@ -1,0 +1,276 @@
+use rand::Rng;
+use triton_opcodes::shortcuts::{divine, read_io};
+use triton_vm::BFieldElement;
+use twenty_first::shared_math::other::random_elements;
+
+use crate::{
+    dyn_malloc, get_init_tvm_stack,
+    rust_shadowing_helper_functions::dyn_malloc::rust_dyn_malloc_initialize,
+    snippet::{DataType, InputSource, Snippet},
+    ExecutionState,
+};
+
+#[derive(Clone)]
+pub struct LoadFromInput(pub InputSource);
+
+/// Load a list of words from the input source into memory.
+/// The first element of the input source is the length of the list
+/// that is loaded into memory. Returns a pointer to the first element
+/// in memory.
+impl Snippet for LoadFromInput {
+    fn entrypoint(&self) -> String {
+        format!("tasm_io_load_from_input_{}", self.0)
+    }
+
+    fn inputs(&self) -> Vec<String>
+    where
+        Self: Sized,
+    {
+        vec![]
+    }
+
+    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![]
+    }
+
+    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+        vec![DataType::BFE]
+    }
+
+    fn outputs(&self) -> Vec<String>
+    where
+        Self: Sized,
+    {
+        vec!["*addr".to_string()]
+    }
+
+    fn stack_diff(&self) -> isize
+    where
+        Self: Sized,
+    {
+        1
+    }
+
+    fn function_body(&self, library: &mut crate::snippet_state::SnippetState) -> String {
+        let entrypoint = self.entrypoint();
+
+        let dyn_alloc = library.import(Box::new(dyn_malloc::DynMalloc));
+
+        let read_instruction = match self.0 {
+            InputSource::StdIn => read_io(),
+            InputSource::SecretIn => divine(),
+        };
+
+        format!(
+            "
+            // BEFORE: _
+            // AFTER: _ *addr
+            {entrypoint}:
+                {read_instruction}
+                // _ length
+
+                dup 0
+                call {dyn_alloc}
+                // _ length *addr
+
+                // set element counter i = 0
+                push 0
+                // _ length *addr i
+                call {entrypoint}_loop
+
+                // _ length *addr i
+                pop swap 1 pop
+                // _ *addr
+
+                return
+
+                // TODO: You could probably calculate the end address here,
+                // and use that in the loop termination condition instead of
+                // keeping track of two variables, length and i.
+
+                // START and END of loop: _ length *addr i
+                {entrypoint}_loop:
+                    // check while-loop condition
+                    dup 0
+                    dup 3
+                    eq
+
+                    // _ length *addr i (i == length)
+                    skiz
+                        return
+
+                    // _ length *addr i
+
+                    dup 1
+                    dup 1
+                    add
+                    // _ length *addr i (*addr + i)
+
+                    {read_instruction}
+                    // _ length *addr i (*addr + i) value_from_input
+
+                    write_mem
+                    // _ length *addr i (*addr + i)
+
+                    pop
+                    // _ length *addr i
+
+                    push 1
+                    add
+                    // _ length *addr (i + 1)
+
+                    recurse
+                "
+        )
+    }
+
+    fn crash_conditions() -> Vec<String>
+    where
+        Self: Sized,
+    {
+        vec![
+            "size exceeds 2^32".to_owned(),
+            "allocated memory exceeds 2^32".to_owned(),
+            "input is shorter than indicated length".to_owned(),
+            "input is empty".to_owned(),
+        ]
+    }
+
+    fn gen_input_states(&self) -> Vec<crate::ExecutionState>
+    where
+        Self: Sized,
+    {
+        let mut ret = vec![];
+        let mut thread_rng = rand::thread_rng();
+        for _ in 0..10 {
+            let length = thread_rng.gen_range(0..(1 << 10)) as u64;
+            let input: Vec<BFieldElement> = vec![
+                vec![BFieldElement::new(length)],
+                random_elements(length as usize),
+            ]
+            .concat();
+            ret.push(match self.0 {
+                InputSource::StdIn => ExecutionState {
+                    stack: get_init_tvm_stack(),
+                    memory: std::collections::HashMap::new(),
+                    std_in: input,
+                    secret_in: vec![],
+                    words_allocated: 0,
+                },
+                InputSource::SecretIn => ExecutionState {
+                    stack: get_init_tvm_stack(),
+                    memory: std::collections::HashMap::new(),
+                    std_in: vec![],
+                    secret_in: input,
+                    words_allocated: 0,
+                },
+            });
+        }
+
+        ret
+    }
+
+    fn common_case_input_state(&self) -> crate::ExecutionState
+    where
+        Self: Sized,
+    {
+        let length = 1u64 << 9;
+        let input: Vec<BFieldElement> = vec![
+            vec![BFieldElement::new(length)],
+            random_elements(length as usize),
+        ]
+        .concat();
+        match self.0 {
+            InputSource::StdIn => ExecutionState {
+                stack: get_init_tvm_stack(),
+                memory: std::collections::HashMap::new(),
+                std_in: input,
+                secret_in: vec![],
+                words_allocated: 0,
+            },
+            InputSource::SecretIn => ExecutionState {
+                stack: get_init_tvm_stack(),
+                memory: std::collections::HashMap::new(),
+                std_in: vec![],
+                secret_in: input,
+                words_allocated: 0,
+            },
+        }
+    }
+
+    fn worst_case_input_state(&self) -> crate::ExecutionState
+    where
+        Self: Sized,
+    {
+        let length = 1u64 << 13;
+        let input: Vec<BFieldElement> = vec![
+            vec![BFieldElement::new(length)],
+            random_elements(length as usize),
+        ]
+        .concat();
+        match self.0 {
+            InputSource::StdIn => ExecutionState {
+                stack: get_init_tvm_stack(),
+                memory: std::collections::HashMap::new(),
+                std_in: input,
+                secret_in: vec![],
+                words_allocated: 0,
+            },
+            InputSource::SecretIn => ExecutionState {
+                stack: get_init_tvm_stack(),
+                memory: std::collections::HashMap::new(),
+                std_in: vec![],
+                secret_in: input,
+                words_allocated: 0,
+            },
+        }
+    }
+
+    fn rust_shadowing(
+        &self,
+        stack: &mut Vec<triton_vm::BFieldElement>,
+        std_in: Vec<triton_vm::BFieldElement>,
+        secret_in: Vec<triton_vm::BFieldElement>,
+        memory: &mut std::collections::HashMap<triton_vm::BFieldElement, triton_vm::BFieldElement>,
+    ) where
+        Self: Sized,
+    {
+        // BEFORE: _
+        // AFTER: _ *addr
+        let input = match self.0 {
+            InputSource::StdIn => std_in,
+            InputSource::SecretIn => secret_in,
+        };
+
+        rust_dyn_malloc_initialize(memory, 1);
+
+        let indicated_length: usize = input[0].value() as usize;
+
+        for i in 0..indicated_length {
+            let value_from_input = input[i + 1];
+            let addr = BFieldElement::new(i as u64 + 1);
+            memory.insert(addr, value_from_input);
+        }
+
+        stack.push(BFieldElement::new(1));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{snippet_bencher::bench_and_write, test_helpers::rust_tasm_equivalence_prop_new};
+
+    use super::*;
+
+    #[test]
+    fn new_snippet_test() {
+        rust_tasm_equivalence_prop_new(LoadFromInput(InputSource::SecretIn));
+        rust_tasm_equivalence_prop_new(LoadFromInput(InputSource::StdIn));
+    }
+
+    #[test]
+    fn load_from_input_benchmark() {
+        bench_and_write(LoadFromInput(InputSource::SecretIn));
+        bench_and_write(LoadFromInput(InputSource::StdIn));
+    }
+}
