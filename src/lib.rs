@@ -1,6 +1,8 @@
 use anyhow::bail;
 use itertools::Itertools;
 use num_traits::Zero;
+use snippet::Snippet;
+use snippet_state::SnippetState;
 use std::collections::HashMap;
 use triton_opcodes::program::Program;
 use triton_vm::table::master_table::MasterBaseTable;
@@ -84,6 +86,28 @@ pub fn get_init_tvm_stack() -> Vec<BFieldElement> {
 
 pub fn push_encodable<T: BFieldCodec>(stack: &mut Vec<BFieldElement>, value: &T) {
     stack.append(&mut value.encode().into_iter().rev().collect());
+}
+
+pub fn execute_with_execution_state(
+    mut init_state: ExecutionState,
+    snippet: Box<dyn Snippet>,
+    expected_stack_diff: isize,
+) -> anyhow::Result<ExecutionResult> {
+    let mut library = SnippetState::default();
+    let entrypoint = snippet.entrypoint();
+    let mut code = format!("call {entrypoint}\n");
+    code.push_str("halt\n");
+    code.push_str(&snippet.function_body(&mut library));
+    code.push_str(&library.all_imports());
+    execute(
+        &code,
+        &mut init_state.stack,
+        expected_stack_diff,
+        init_state.std_in,
+        init_state.secret_in,
+        &mut init_state.memory,
+        None,
+    )
 }
 
 /// Execute a Triton-VM program and return its output and execution trace length

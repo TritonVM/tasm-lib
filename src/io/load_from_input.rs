@@ -69,17 +69,34 @@ impl Snippet for LoadFromInput {
                 {read_instruction}
                 // _ length
 
+                // allocate memory for the input, including its own length indicator
                 dup 0
+                push 1
+                add
                 call {dyn_alloc}
                 // _ length *addr
 
+                // store the length indicator in the first element of dedicated memory
+                dup 1
+                write_mem
+                // _ length *addr
+
+                push 1
+                add
+                // _ length (*addr + 1)
+
                 // set element counter i = 0
                 push 0
-                // _ length *addr i
+                // _ length (*addr + 1) i
                 call {entrypoint}_loop
 
-                // _ length *addr i
-                pop swap 1 pop
+                // _ length (*addr + 1) i
+                pop
+                push -1
+                add
+                // _ length *addr
+
+                swap 1 pop
                 // _ *addr
 
                 return
@@ -88,36 +105,36 @@ impl Snippet for LoadFromInput {
                 // and use that in the loop termination condition instead of
                 // keeping track of two variables, length and i.
 
-                // START and END of loop: _ length *addr i
+                // START and END of loop: _ length (*addr + 1) i
                 {entrypoint}_loop:
                     // check while-loop condition
                     dup 0
                     dup 3
                     eq
 
-                    // _ length *addr i (i == length)
+                    // _ length (*addr + 1) i (i == length)
                     skiz
                         return
 
-                    // _ length *addr i
+                    // _ length (*addr + 1) i
 
                     dup 1
                     dup 1
                     add
-                    // _ length *addr i (*addr + i)
+                    // _ length (*addr + 1) i (*addr + 1 + i)
 
                     {read_instruction}
-                    // _ length *addr i (*addr + i) value_from_input
+                    // _ length (*addr + 1) i (*addr + 1 + i) value_from_input
 
                     write_mem
-                    // _ length *addr i (*addr + i)
+                    // _ length (*addr + 1) i (*addr + 1 + i)
 
                     pop
-                    // _ length *addr i
+                    // _ length (*addr + 1) i
 
                     push 1
                     add
-                    // _ length *addr (i + 1)
+                    // _ length (*addr + 1) (i + 1)
 
                     recurse
                 "
@@ -245,10 +262,14 @@ impl Snippet for LoadFromInput {
         rust_dyn_malloc_initialize(memory, 1);
 
         let indicated_length: usize = input[0].value() as usize;
+        memory.insert(
+            BFieldElement::new(1),
+            BFieldElement::new(indicated_length as u64),
+        );
 
         for i in 0..indicated_length {
             let value_from_input = input[i + 1];
-            let addr = BFieldElement::new(i as u64 + 1);
+            let addr = BFieldElement::new(i as u64 + 2);
             memory.insert(addr, value_from_input);
         }
 
@@ -258,7 +279,10 @@ impl Snippet for LoadFromInput {
 
 #[cfg(test)]
 mod tests {
-    use crate::{snippet_bencher::bench_and_write, test_helpers::rust_tasm_equivalence_prop_new};
+    use crate::{
+        execute_with_execution_state, snippet_bencher::bench_and_write,
+        test_helpers::rust_tasm_equivalence_prop_new,
+    };
 
     use super::*;
 
@@ -272,5 +296,40 @@ mod tests {
     fn load_from_input_benchmark() {
         bench_and_write(LoadFromInput(InputSource::SecretIn));
         bench_and_write(LoadFromInput(InputSource::StdIn));
+    }
+
+    #[test]
+    fn verify_dyn_malloc_shows_correct_next_value() {
+        for length in 0..10 {
+            let state = ExecutionState {
+                stack: get_init_tvm_stack(),
+                memory: std::collections::HashMap::new(),
+                std_in: vec![
+                    vec![BFieldElement::new(length)],
+                    random_elements(length as usize),
+                ]
+                .concat(),
+                secret_in: vec![],
+                words_allocated: 0,
+            };
+            let snippet = LoadFromInput(InputSource::StdIn);
+            let stack_diff = snippet.stack_diff();
+            let res = execute_with_execution_state(state, Box::new(snippet), stack_diff).unwrap();
+
+            // Verify final state of dyn malloc. dyn malloc should be set to the next available
+            // memory address.
+            // Expected memory layout after running above program:
+            // 0: dynamic allocator value
+            // 1: indicated length
+            // 2..N: elements of input, after indicated length
+            // N+1: next available memory address
+            let indicated_next_free_address =
+                res.final_ram[&BFieldElement::new(dyn_malloc::DYN_MALLOC_ADDRESS as u64)].value();
+            assert_eq!(length + 2, indicated_next_free_address);
+            assert!(res
+                .final_ram
+                .get(&BFieldElement::new(indicated_next_free_address))
+                .is_none());
+        }
     }
 }
