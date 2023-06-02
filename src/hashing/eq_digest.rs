@@ -7,7 +7,7 @@ use crate::snippet::{DataType, Snippet};
 use crate::snippet_state::SnippetState;
 use crate::{get_init_tvm_stack, push_encodable, Digest, ExecutionState};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct EqDigest;
 
 impl Snippet for EqDigest {

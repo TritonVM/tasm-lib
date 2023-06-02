@@ -12,7 +12,7 @@ use crate::snippet::Snippet;
 use crate::snippet_state::SnippetState;
 use crate::{get_init_tvm_stack, Digest, ExecutionState};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct MtApVerifyFromSecretInput<H: AlgebraicHasher>(pub PhantomData<H>);
 
 /// TVM assembly to verify Merkle authentication paths

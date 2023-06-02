@@ -14,7 +14,7 @@ use crate::{
     ExecutionState,
 };
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct AddU128;
 
 impl Snippet for AddU128 {

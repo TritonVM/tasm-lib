@@ -11,7 +11,7 @@ use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
 
 /// Consumes top element which is interpreted as exponent. Pushes a
 /// U32<2> to the top of the stack. So grows the stack by 1.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Pow2U64;
 
 impl Snippet for Pow2U64 {

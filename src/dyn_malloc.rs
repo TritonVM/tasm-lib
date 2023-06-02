@@ -17,7 +17,7 @@ use crate::{
     ExecutionState,
 };
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct DynMalloc;
 
 impl DynMalloc {

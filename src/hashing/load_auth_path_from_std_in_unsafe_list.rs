@@ -13,7 +13,7 @@ use crate::snippet_state::SnippetState;
 use crate::{get_init_tvm_stack, ExecutionState, DIGEST_LENGTH};
 use crate::{rust_shadowing_helper_functions, Digest};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct LoadAuthPathFromStdInUnsafeList;
 
 impl Snippet for LoadAuthPathFromStdInUnsafeList {

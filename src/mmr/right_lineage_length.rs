@@ -9,7 +9,7 @@ use crate::arithmetic::u64::sub_u64::SubU64;
 use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct MmrRightLineageLength;
 
 impl Snippet for MmrRightLineageLength {

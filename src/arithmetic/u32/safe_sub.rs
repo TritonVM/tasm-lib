@@ -8,7 +8,7 @@ use crate::{
     ExecutionState,
 };
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SafeSub;
 
 impl Snippet for SafeSub {

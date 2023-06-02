@@ -23,7 +23,7 @@ use super::verify_from_memory::MmrVerifyFromMemory;
 use super::MAX_MMR_HEIGHT;
 
 /// First load from secret-in, then verify from memory
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct MmrLoadFromSecretInThenVerify<H: AlgebraicHasher>(pub PhantomData<H>);
 
 // TODO: Compiler complains without this explicit lifetime on `H`. But is it OK?

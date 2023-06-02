@@ -16,7 +16,7 @@ use crate::Digest;
 use crate::DIGEST_LENGTH;
 use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, ExecutionState};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct LoadAuthPathFromSecretInSafeList;
 
 impl Snippet for LoadAuthPathFromSecretInSafeList {

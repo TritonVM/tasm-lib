@@ -27,7 +27,7 @@ use crate::{
 use super::leaf_index_to_mt_index::MmrLeafIndexToMtIndexAndPeakIndex;
 use super::MAX_MMR_HEIGHT;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct MmrVerifyFromMemory<H: AlgebraicHasher>(pub PhantomData<H>);
 
 impl<H: AlgebraicHasher> Snippet for MmrVerifyFromMemory<H> {

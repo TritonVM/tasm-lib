@@ -9,7 +9,7 @@ use crate::{get_init_tvm_stack, ExecutionState};
 
 const DEFAULT_LIST_CAPACITY: usize = 64;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct UnsafeNew(pub DataType);
 
 impl Snippet for UnsafeNew {

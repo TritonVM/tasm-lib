@@ -10,7 +10,7 @@ use crate::Digest;
 use crate::DIGEST_LENGTH;
 use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SwapDigest;
 
 impl Snippet for SwapDigest {

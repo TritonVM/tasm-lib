@@ -10,7 +10,7 @@ use crate::snippet_state::SnippetState;
 use crate::{get_init_tvm_stack, ExecutionState};
 
 // Called "Long" because this logic can be shortened
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct UnsafeLengthLong(pub DataType);
 
 impl Snippet for UnsafeLengthLong {
@@ -143,7 +143,7 @@ impl Snippet for UnsafeLengthLong {
 }
 
 // Called "Short" because it's efficient code
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct UnsafeLengthShort(pub DataType);
 
 impl Snippet for UnsafeLengthShort {

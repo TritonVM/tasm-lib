@@ -13,7 +13,7 @@ use crate::snippet::{DataType, Snippet};
 use crate::snippet_state::SnippetState;
 use crate::{get_init_tvm_stack, ExecutionState};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct MmrLeftChild;
 
 impl Snippet for MmrLeftChild {

@@ -5,7 +5,7 @@ use twenty_first::shared_math::b_field_element::{BFieldElement, BFIELD_ONE, BFIE
 use crate::snippet::{DataType, Snippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Lsb;
 
 impl Snippet for Lsb {

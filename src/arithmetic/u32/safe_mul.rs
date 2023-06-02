@@ -9,7 +9,7 @@ use crate::{
 
 /// If the inputs, are valid u32s, then the output is guaranteed to be to.
 /// Crashes on overflow.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SafeMul;
 
 impl Snippet for SafeMul {

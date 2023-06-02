@@ -16,7 +16,7 @@ use super::leftmost_ancestor::MmrLeftMostAncestor;
 use super::right_child::MmrRightChild;
 
 // You probably don't want to use this but a right lineage count function instead
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct MmrRightChildAndHeight;
 
 impl Snippet for MmrRightChildAndHeight {

@@ -13,7 +13,7 @@ use crate::{
     ExecutionState,
 };
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SubU128;
 
 impl Snippet for SubU128 {

@@ -10,7 +10,7 @@ use crate::snippet::{DataType, Snippet};
 use crate::snippet_state::SnippetState;
 use crate::{get_init_tvm_stack, ExecutionState};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct UnsafePush(pub DataType);
 
 /// A parameterized version of `Push` where `N` is the size of an element in the list

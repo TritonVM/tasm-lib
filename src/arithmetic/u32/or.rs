@@ -7,7 +7,7 @@ use crate::{
     ExecutionState,
 };
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct OrU32;
 
 impl Snippet for OrU32 {

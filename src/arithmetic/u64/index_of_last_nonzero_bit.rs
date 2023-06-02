@@ -10,7 +10,7 @@ use crate::{
 
 use super::{decr_u64::DecrU64, xor_u64::XorU64};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct IndexOfLastNonZeroBitU64;
 
 impl Snippet for IndexOfLastNonZeroBitU64 {

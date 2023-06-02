@@ -7,7 +7,7 @@ use crate::{
     ExecutionState,
 };
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct DoublePow2U64;
 
 impl Snippet for DoublePow2U64 {

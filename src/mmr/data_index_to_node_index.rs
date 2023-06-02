@@ -11,7 +11,7 @@ use crate::{get_init_tvm_stack, ExecutionState};
 
 use super::non_leaf_nodes_left::MmrNonLeafNodesLeftUsingAnd;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct DataIndexToNodeIndex;
 
 impl Snippet for DataIndexToNodeIndex {

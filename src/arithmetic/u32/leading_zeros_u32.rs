@@ -7,7 +7,7 @@ use crate::{
     ExecutionState,
 };
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct LeadingZerosU32;
 
 impl Snippet for LeadingZerosU32 {

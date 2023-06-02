@@ -10,7 +10,7 @@ use crate::{
     ExecutionState,
 };
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct LoadFromInput(pub InputSource);
 
 /// Load a list of words from the input source into memory.

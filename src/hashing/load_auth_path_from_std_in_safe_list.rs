@@ -17,7 +17,7 @@ use crate::Digest;
 use crate::DIGEST_LENGTH;
 use crate::{get_init_tvm_stack, ExecutionState};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct LoadAuthPathFromStdInSafeList;
 
 impl Snippet for LoadAuthPathFromStdInSafeList {

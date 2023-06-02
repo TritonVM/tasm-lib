@@ -9,7 +9,7 @@ use crate::snippet::{DataType, Snippet};
 use crate::snippet_state::SnippetState;
 use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct LtStandardU64;
 
 /// This `lt_standard_u64` does consume its argument.
@@ -146,7 +146,7 @@ impl Snippet for LtStandardU64 {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct LtU64;
 
 /// This `lt_u64` does not consume its arguments, which is the norm for tasm functions.

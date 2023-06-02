@@ -7,7 +7,7 @@ use crate::{
     ExecutionState,
 };
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SafeAdd;
 
 impl Snippet for SafeAdd {

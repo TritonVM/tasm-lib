@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 
 use crate::snippet::Snippet;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct BenchmarkResult {
     pub name: String,
     pub clock_cycle_count: usize,
@@ -14,7 +14,7 @@ pub struct BenchmarkResult {
     pub case: BenchmarkCase,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub enum BenchmarkCase {
     CommonCase,
     WorstCase,

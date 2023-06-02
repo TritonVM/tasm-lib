@@ -9,7 +9,7 @@ use crate::snippet::{DataType, Snippet};
 use crate::snippet_state::SnippetState;
 use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Log2FloorU64;
 
 impl Snippet for Log2FloorU64 {

@@ -8,7 +8,7 @@ use crate::{
     ExecutionState,
 };
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SafeNew(pub DataType);
 
 impl Snippet for SafeNew {

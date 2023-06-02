@@ -13,7 +13,7 @@ use crate::{
     ExecutionState,
 };
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SafePush(pub DataType);
 
 impl Snippet for SafePush {
