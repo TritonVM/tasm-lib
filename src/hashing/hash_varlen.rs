@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
-use num::{One, Zero};
+use num::Zero;
+use rand::random;
 use twenty_first::{
     shared_math::b_field_element::BFieldElement, util_types::algebraic_hasher::AlgebraicHasher,
 };
@@ -65,18 +66,17 @@ impl Snippet for HashVarlen {
                 // absorb all chunks of 10 elements
                 push 1
                 call {entrypoint}_loop
-                // _ *addr first_time length
-
-                swap 1 // _ *addr length first_time
+                // _ *new_addr length_remaining first_time
 
                 // pad
-                dup 2 // _ *addr length first_time length
+                dup 1 // _ *addr length first_time length
                 push -9 // _ *addr length first_time length -9
-                mul // _ *addr length first_time length-9
+                add // _ *addr length first_time length-9
                 push -1 // _ *addr length first_time length-9 -1
                 mul // _ *addr length first_time 9-length
                 dup 3 // _ *addr length first_time 9-length *addr
                 dup 3 // _ *addr length first_time 9-length *addr length
+
                 call {entrypoint}_pad_varnum_zeros
                 // _ addr length first_time 0^(9-length) 0 *addr length
                 swap 2 // _ *addr length first_time 0^(9-length) length *addr 0
@@ -86,18 +86,19 @@ impl Snippet for HashVarlen {
                 // read remaining elements from memory
                 call {entrypoint}_read_remaining_elements
                 // _ *addr length first_time 0^(9-length) 1 re^length *addr 0
+
                 pop pop // _ *addr length first_time 0^(9-length) 1 re^length
 
                 // absorb_init if first_time is 1; otherwise absorb
-                dup 10 // _ *addr length first_time [0,1] [0,1] [0,1] [0,1] [0,1] [0,1] [0,1] [0,1] [0,1] [0,1] first_time
-                push 1 // _ *addr length first_time [0,1] [0,1] [0,1] [0,1] [0,1] [0,1] [0,1] [0,1] [0,1] [0,1] first_time 1
-                swap 1 // _ *addr length first_time [0,1] [0,1] [0,1] [0,1] [0,1] [0,1] [0,1] [0,1] [0,1] [0,1] 1 first_time
+                dup 10 // _ *addr length first_time 0^(9-length) 1 re^length first_time
+                push 1 // _ *addr length first_time 0^(9-length) 1 re^length first_time 1
+                swap 1 // _ *addr length first_time 0^(9-length) 1 re^length 1 first_time
                 skiz call {entrypoint}_if_first_time_absob_init
                 skiz absorb
 
-                // _ *addr length first_time [0,1] [0,1] [0,1] [0,1] [0,1] [0,1] [0,1] [0,1] [0,1] [0,1]
+                // _ *addr length first_time 0^(9-length) 1 re^length
 
-                pop pop pop // _ *addr length first_time  [0,1] [0,1] [0,1] [0,1] [0,1] [0,1] [0,1]
+                pop pop pop // _ *addr length first_time  * * * * * * *
 
                 // squeeze 5 elements
                 squeeze // _ d9 d8 d7 d6 d5 d4 d3 d2 d1 d0
@@ -109,8 +110,10 @@ impl Snippet for HashVarlen {
             // INVARIANT: _ *addr length first_time 0^(9-len) len *addr length
             // AFTER: _ addr length first_time 0^(9-length) 0 *addr length
             {entrypoint}_pad_varnum_zeros:
+
                 // evaluate return condition
                 dup 2 // _ *addr length first_time 0^(9-len) len *addr length len
+                push 0 eq  // _ *addr length first_time 0^(9-len) len *addr length len==0
                 skiz return
 
                 // _ *addr length first_time 0^(9-len) len *addr length
@@ -129,6 +132,8 @@ impl Snippet for HashVarlen {
             {entrypoint}_read_remaining_elements:
                 // evaluate return condition
                 dup 0 // _ *addr length first_time 0^(9-length) 1 re^* *addr length length
+                push 0 eq // _ *adr length first_time 0^(9-length) 1 re^* addr length length==0
+                
                 skiz return
 
                 // _ *addr length first_time 0^(9-length) 1 re^* *addr length
@@ -148,10 +153,13 @@ impl Snippet for HashVarlen {
 
                 recurse
 
+            // BEFORE: _ *addr length first_time 0^(9-length) 1 re^length 1
+            // AFTER: _ *addr length first_time 0^(9-length) 1 re^length 0
             {entrypoint}_if_first_time_absob_init:
-                pop
-                absorb_init
-                push 0
+                pop // _ *addr length first_time 0^(9-length) 1 re^length
+
+                absorb_init // _ *addr length first_time 0^(9-length) 1 re^length
+                push 0 // _ *addr length first_time 0^(9-length) 1 re^length 0
                 return
 
             // BEFORE: _ *addr length first_time=1
@@ -162,11 +170,15 @@ impl Snippet for HashVarlen {
                 push 10 // _ *addr first_time length 10
                 dup 1 // _ *addr first_time length 10 length
                 lt // _ *addr first_time length (length < 10)
+                swap 2 // _ *addr (length < 10) length first_time
+                swap 1 // _ *addr (length < 10) first_time length
+                swap 2 // _ *addr length first_time (length < 10)
 
                 // check condition
                 skiz
                     return
-                // _ *addr first_time length
+                // _ *addr length first_time
+                swap 1 // _ *addr first_time length
 
                 // body
                 // read 10 elements to stack
@@ -218,6 +230,7 @@ impl Snippet for HashVarlen {
                 swap 12  // _ length element_0 *addr element_9 element_8 element_7 element_6 element_5 element_4 element_3 element_2 element_1 element_0 first_time
                 push 1   // _ length element_0 *addr element_9 element_8 element_7 element_6 element_5 element_4 element_3 element_2 element_1 element_0 first_time 1
                 swap 1   // _ length element_0 *addr element_9 element_8 element_7 element_6 element_5 element_4 element_3 element_2 element_1 element_0 1 first_time
+
                 skiz
                     call {entrypoint}_if_branch
                 skiz
@@ -255,7 +268,6 @@ impl Snippet for HashVarlen {
     where
         Self: Sized,
     {
-        // TODO: Add crash conditions, if any
         vec!["Length exceeds u32::MAX".to_string()]
     }
 
@@ -263,56 +275,35 @@ impl Snippet for HashVarlen {
     where
         Self: Sized,
     {
-        let empty_memory_state_read_0 = ExecutionState {
-            stack: vec![
-                get_init_tvm_stack(),
-                vec![BFieldElement::one(), BFieldElement::new(0)],
-            ]
-            .concat(),
-            std_in: vec![],
-            secret_in: vec![],
-            memory: HashMap::new(),
-            words_allocated: 1,
-        };
-        let empty_memory_state_read_10 = ExecutionState {
-            stack: vec![
-                get_init_tvm_stack(),
-                vec![BFieldElement::one(), BFieldElement::new(10)],
-            ]
-            .concat(),
-            std_in: vec![],
-            secret_in: vec![],
-            memory: HashMap::new(),
-            words_allocated: 1,
-        };
-        let empty_memory_state_read_20 = ExecutionState {
-            stack: vec![
-                get_init_tvm_stack(),
-                vec![BFieldElement::one(), BFieldElement::new(20)],
-            ]
-            .concat(),
-            std_in: vec![],
-            secret_in: vec![],
-            memory: HashMap::new(),
-            words_allocated: 1,
-        };
-        let empty_memory_state_read_30 = ExecutionState {
-            stack: vec![
-                get_init_tvm_stack(),
-                vec![BFieldElement::one(), BFieldElement::new(30)],
-            ]
-            .concat(),
-            std_in: vec![],
-            secret_in: vec![],
-            memory: HashMap::new(),
-            words_allocated: 1,
+        let random_memory_state_read_k = |k| {
+            let memory_start: BFieldElement = random();
+            let memory: HashMap<BFieldElement, BFieldElement> = (0..k)
+                .map(|i| (memory_start + BFieldElement::new(i), random()))
+                .collect();
+
+            ExecutionState {
+                stack: vec![
+                    get_init_tvm_stack(),
+                    vec![memory_start, BFieldElement::new(k)],
+                ]
+                .concat(),
+                std_in: vec![],
+                secret_in: vec![],
+                memory,
+                words_allocated: 1,
+            }
         };
 
         vec![
-            empty_memory_state_read_0,
-            empty_memory_state_read_10,
-            empty_memory_state_read_20,
-            empty_memory_state_read_30,
+            random_memory_state_read_k(0),
+            random_memory_state_read_k(1),
+            random_memory_state_read_k(5),
+            random_memory_state_read_k(9),
+            random_memory_state_read_k(10),
+            random_memory_state_read_k(11),
+            random_memory_state_read_k(19),
+            random_memory_state_read_k(20),
+            random_memory_state_read_k(21),
         ]
     }
 
