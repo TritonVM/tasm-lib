@@ -1,4 +1,4 @@
-use std::{collections::HashMap, hash::Hash};
+use std::collections::HashMap;
 
 use num::{One, Zero};
 use twenty_first::{
@@ -62,29 +62,97 @@ impl Snippet for HashVarlen {
             // BEFORE: _ *addr length
             // AFTER: _ digest_element_4 digest_element_3 digest_element_2 digest_element_1 digest_element_0
             {entrypoint}:
+                // absorb all chunks of 10 elements
+                push 1
+                call {entrypoint}_loop
+                // _ *addr first_time length
 
-            // absorb all chunks of 10 elements
-            push 1
-            call {entrypoint}_loop
-            // _ *addr first_time length
+                swap 1 // _ *addr length first_time
 
-            swap 1
-            pop
-            // _ *addr length
+                // pad
+                dup 2 // _ *addr length first_time length
+                push -9 // _ *addr length first_time length -9
+                mul // _ *addr length first_time length-9
+                push -1 // _ *addr length first_time length-9 -1
+                mul // _ *addr length first_time 9-length
+                dup 3 // _ *addr length first_time 9-length *addr
+                dup 3 // _ *addr length first_time 9-length *addr length
+                call {entrypoint}_pad_varnum_zeros
+                // _ addr length first_time 0^(9-length) 0 *addr length
+                swap 2 // _ *addr length first_time 0^(9-length) length *addr 0
+                push 1 add // _ *addr length first_time 0^(9-length) length *addr 1
+                swap 2 // _ *addr length first_time 0^(9-length) 1 *addr length
 
-            // read remaining elements from memory
-            // for now we assume that length = 0 (mod 10)
+                // read remaining elements from memory
+                call {entrypoint}_read_remaining_elements
+                // _ *addr length first_time 0^(9-length) 1 re^length *addr 0
+                pop pop // _ *addr length first_time 0^(9-length) 1 re^length
 
-            // pad input
-            push 0 push 0 push 0 push 0 push 0 push 0 push 0 push 0 push 0 push 1
-            absorb
-            pop pop // _ *addr length * * * * * * * *
+                // absorb_init if first_time is 1; otherwise absorb
+                dup 10 // _ *addr length first_time [0,1] [0,1] [0,1] [0,1] [0,1] [0,1] [0,1] [0,1] [0,1] [0,1] first_time
+                push 1 // _ *addr length first_time [0,1] [0,1] [0,1] [0,1] [0,1] [0,1] [0,1] [0,1] [0,1] [0,1] first_time 1
+                swap 1 // _ *addr length first_time [0,1] [0,1] [0,1] [0,1] [0,1] [0,1] [0,1] [0,1] [0,1] [0,1] 1 first_time
+                skiz call {entrypoint}_if_first_time_absob_init
+                skiz absorb
 
-            // squeeze 5 elements
-            squeeze // _ d9 d8 d7 d6 d5 d4 d3 d2 d1 d0
-            swap 5 pop swap 5 pop swap 5 pop swap 5 pop swap 5 pop  // _ d4 d3 d2 d1 d0
+                // _ *addr length first_time [0,1] [0,1] [0,1] [0,1] [0,1] [0,1] [0,1] [0,1] [0,1] [0,1]
 
-            return
+                pop pop pop // _ *addr length first_time  [0,1] [0,1] [0,1] [0,1] [0,1] [0,1] [0,1]
+
+                // squeeze 5 elements
+                squeeze // _ d9 d8 d7 d6 d5 d4 d3 d2 d1 d0
+                swap 5 pop swap 5 pop swap 5 pop swap 5 pop swap 5 pop  // _ d4 d3 d2 d1 d0
+
+                return
+
+            // BEFORE: _ *addr length first_time 9-length *addr length
+            // INVARIANT: _ *addr length first_time 0^(9-len) len *addr length
+            // AFTER: _ addr length first_time 0^(9-length) 0 *addr length
+            {entrypoint}_pad_varnum_zeros:
+                // evaluate return condition
+                dup 2 // _ *addr length first_time 0^(9-len) len *addr length len
+                skiz return
+
+                // _ *addr length first_time 0^(9-len) len *addr length
+                push 0 // _ *addr length first_time 0^(9-len) len *addr length 0
+                swap 3 // _ *addr length first_time 0^(9-len) 0 *addr length len
+                push -1 // _ *addr length first_time 0^(9-len) 0 *addr length len -1
+                add // _ *addr length first_time 0^(9-len) 0 *addr length len-1
+                swap 2 // _ *addr length first_time 0^(9-len) 0 len-1 length *addr
+                swap 1 // _ *addr length first_time 0^(9-len) 0 len-1 *addr length
+                // _ *addr length first_time 0^(9-len+1) len-1 *addr length
+
+                recurse
+
+            // BEFORE: _ *addr length first_time 0^(9-length) 1 *addr length
+            // AFTER: _ *addr length first_time 0^(9-length) 1 re^length *addr 0
+            {entrypoint}_read_remaining_elements:
+                // evaluate return condition
+                dup 0 // _ *addr length first_time 0^(9-length) 1 re^* *addr length length
+                skiz return
+
+                // _ *addr length first_time 0^(9-length) 1 re^* *addr length
+
+                dup 1 // _ *addr length first_time 0^(9-length) 1 re^* *addr length *addr
+                dup 1 // _ *addr length first_time 0^(9-length) 1 re^* *addr length *addr length
+                add // _ *addr length first_time 0^(9-length) 1 re^* *addr length *addr+length
+                push -1 add // _ *addr length first_time 0^(9-length) 1 re^* *addr length *addr+length-1
+                read_mem // _ *addr length first_time 0^(9-length) 1 re^* *addr length *addr+length-1 re
+                swap 3
+                swap 2
+                swap 1
+                // _ *addr length first_time 0^(9-length) 1 re^* re *addr length *addr+length-1
+                pop // _ *addr length first_time 0^(9-length) 1 re^* re *addr length
+                push -1 add // _ *addr length first_time 0^(9-length) 1 re^* re *addr length-1
+                // _ *addr length first_time 0^(9-length) 1 re^* *addr length-1
+
+                recurse
+
+            {entrypoint}_if_first_time_absob_init:
+                pop
+                absorb_init
+                push 0
+                return
 
             // BEFORE: _ *addr length first_time=1
             // AFTER: _ *addr length first_time=0
@@ -209,7 +277,7 @@ impl Snippet for HashVarlen {
         let empty_memory_state_read_10 = ExecutionState {
             stack: vec![
                 get_init_tvm_stack(),
-                vec![BFieldElement::one(), BFieldElement::new(30)],
+                vec![BFieldElement::one(), BFieldElement::new(10)],
             ]
             .concat(),
             std_in: vec![],
@@ -220,7 +288,7 @@ impl Snippet for HashVarlen {
         let empty_memory_state_read_20 = ExecutionState {
             stack: vec![
                 get_init_tvm_stack(),
-                vec![BFieldElement::one(), BFieldElement::new(30)],
+                vec![BFieldElement::one(), BFieldElement::new(20)],
             ]
             .concat(),
             std_in: vec![],
