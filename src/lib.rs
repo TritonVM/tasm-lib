@@ -172,7 +172,10 @@ pub fn execute(
     let (execution_trace, output, err) =
         vm::debug(&program, std_in.clone(), secret_in.clone(), None, None);
     if let Some(e) = err {
-        bail!("`debug` failed with error: {e}")
+        bail!(
+            "`debug` failed with error: {e}\nLast state before crash:\n{}",
+            execution_trace.last().unwrap()
+        )
     }
 
     // Simulate the program, since this gives us hash table output
