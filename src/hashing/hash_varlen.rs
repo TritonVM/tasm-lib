@@ -15,6 +15,27 @@ use crate::{
 #[derive(Clone, Debug)]
 pub struct HashVarlen;
 
+impl HashVarlen {
+    fn random_memory_state_read_k(k: u64) -> ExecutionState {
+        let memory_start: BFieldElement = random();
+        let memory: HashMap<BFieldElement, BFieldElement> = (0..k)
+            .map(|i| (memory_start + BFieldElement::new(i), random()))
+            .collect();
+
+        ExecutionState {
+            stack: vec![
+                get_init_tvm_stack(),
+                vec![memory_start, BFieldElement::new(k)],
+            ]
+            .concat(),
+            std_in: vec![],
+            secret_in: vec![],
+            memory,
+            words_allocated: 1,
+        }
+    }
+}
+
 impl Snippet for HashVarlen {
     fn entrypoint(&self) -> String {
         "tasm_hashing_hash_varlen".to_string()
@@ -275,35 +296,16 @@ impl Snippet for HashVarlen {
     where
         Self: Sized,
     {
-        let random_memory_state_read_k = |k| {
-            let memory_start: BFieldElement = random();
-            let memory: HashMap<BFieldElement, BFieldElement> = (0..k)
-                .map(|i| (memory_start + BFieldElement::new(i), random()))
-                .collect();
-
-            ExecutionState {
-                stack: vec![
-                    get_init_tvm_stack(),
-                    vec![memory_start, BFieldElement::new(k)],
-                ]
-                .concat(),
-                std_in: vec![],
-                secret_in: vec![],
-                memory,
-                words_allocated: 1,
-            }
-        };
-
         vec![
-            random_memory_state_read_k(0),
-            random_memory_state_read_k(1),
-            random_memory_state_read_k(5),
-            random_memory_state_read_k(9),
-            random_memory_state_read_k(10),
-            random_memory_state_read_k(11),
-            random_memory_state_read_k(19),
-            random_memory_state_read_k(20),
-            random_memory_state_read_k(21),
+            Self::random_memory_state_read_k(0),
+            Self::random_memory_state_read_k(1),
+            Self::random_memory_state_read_k(5),
+            Self::random_memory_state_read_k(9),
+            Self::random_memory_state_read_k(10),
+            Self::random_memory_state_read_k(11),
+            Self::random_memory_state_read_k(19),
+            Self::random_memory_state_read_k(20),
+            Self::random_memory_state_read_k(21),
         ]
     }
 
@@ -311,14 +313,14 @@ impl Snippet for HashVarlen {
     where
         Self: Sized,
     {
-        todo!()
+        Self::random_memory_state_read_k(25)
     }
 
     fn worst_case_input_state(&self) -> crate::ExecutionState
     where
         Self: Sized,
     {
-        todo!()
+        Self::random_memory_state_read_k(1000)
     }
 
     fn rust_shadowing(
@@ -350,12 +352,17 @@ impl Snippet for HashVarlen {
 
 #[cfg(test)]
 mod tests {
-    use crate::test_helpers::rust_tasm_equivalence_prop_new;
+    use crate::{snippet_bencher::bench_and_write, test_helpers::rust_tasm_equivalence_prop_new};
 
     use super::*;
 
     #[test]
     fn new_prop_test() {
         rust_tasm_equivalence_prop_new(HashVarlen);
+    }
+
+    #[test]
+    fn leaf_index_to_mt_index_benchmark() {
+        bench_and_write(HashVarlen);
     }
 }
