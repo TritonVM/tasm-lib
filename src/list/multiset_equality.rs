@@ -41,11 +41,11 @@ impl MultisetEquality {
         for i in 0..length {
             for j in 0..DIGEST_LENGTH {
                 memory.insert(
-                    BFieldElement::new((1 + i * DIGEST_LENGTH + j) as u64),
+                    memory_a + BFieldElement::new((1 + i * DIGEST_LENGTH + j) as u64),
                     list_a[i].values()[j],
                 );
                 memory.insert(
-                    BFieldElement::new((1 + i * DIGEST_LENGTH + j) as u64),
+                    memory_b + BFieldElement::new((1 + i * DIGEST_LENGTH + j) as u64),
                     list_b[i].values()[j],
                 );
             }
@@ -71,11 +71,11 @@ impl MultisetEquality {
         for i in 0..length {
             for j in 0..DIGEST_LENGTH {
                 memory.insert(
-                    BFieldElement::new((1 + i * DIGEST_LENGTH + j) as u64),
+                    memory_a + BFieldElement::new((1 + i * DIGEST_LENGTH + j) as u64),
                     list_a[i].values()[j],
                 );
                 memory.insert(
-                    BFieldElement::new((1 + i * DIGEST_LENGTH + j) as u64),
+                    memory_b + BFieldElement::new((1 + i * DIGEST_LENGTH + j) as u64),
                     list_b[i].values()[j],
                 );
             }
@@ -98,19 +98,19 @@ impl MultisetEquality {
         let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
         memory.insert(memory_a, BFieldElement::new(length_a as u64));
         memory.insert(memory_b, BFieldElement::new(length_b as u64));
-        for i in 0..length_a {
+        for (i, list_ai) in list_a.iter().enumerate() {
             for j in 0..DIGEST_LENGTH {
                 memory.insert(
-                    BFieldElement::new((1 + i * DIGEST_LENGTH + j) as u64),
-                    list_a[i].values()[j],
+                    memory_a + BFieldElement::new((1 + i * DIGEST_LENGTH + j) as u64),
+                    list_ai.values()[j],
                 );
             }
         }
-        for i in 0..length_b {
+        for (i, list_bi) in list_b.iter().enumerate() {
             for j in 0..DIGEST_LENGTH {
                 memory.insert(
-                    BFieldElement::new((1 + i * DIGEST_LENGTH + j) as u64),
-                    list_b[i].values()[j],
+                    memory_b + BFieldElement::new((1 + i * DIGEST_LENGTH + j) as u64),
+                    list_bi.values()[j],
                 );
             }
         }
@@ -320,20 +320,19 @@ impl Snippet for MultisetEquality {
     {
         vec![
             Self::random_equal_lists(0),
-            // Self::random_equal_lists(1),
-            // Self::random_equal_lists(2),
-            // Self::random_equal_lists(10),
-            // Self::random_equal_lists(21),
-            // Self::random_unequal_lists(0),
-            // Self::random_unequal_lists(1),
-            // Self::random_unequal_lists(2),
-            // Self::random_unequal_lists(10),
-            // Self::random_unequal_lists(21),
-            // Self::random_unequal_length_lists(0, 5),
-            // Self::random_unequal_length_lists(1, 2),
-            // Self::random_unequal_length_lists(2, 1),
-            // Self::random_unequal_length_lists(10, 17),
-            // Self::random_unequal_length_lists(21, 0),
+            Self::random_equal_lists(1),
+            Self::random_equal_lists(2),
+            Self::random_equal_lists(10),
+            Self::random_equal_lists(21),
+            Self::random_unequal_lists(1),
+            Self::random_unequal_lists(2),
+            Self::random_unequal_lists(10),
+            Self::random_unequal_lists(21),
+            Self::random_unequal_length_lists(0, 5),
+            Self::random_unequal_length_lists(1, 2),
+            Self::random_unequal_length_lists(2, 1),
+            Self::random_unequal_length_lists(10, 17),
+            Self::random_unequal_length_lists(21, 0),
         ]
     }
 
