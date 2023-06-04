@@ -447,7 +447,7 @@ impl Snippet for MultisetEquality {
 
 #[cfg(test)]
 mod tests {
-    use crate::test_helpers::rust_tasm_equivalence_prop_new;
+    use crate::{snippet_bencher::bench_and_write, test_helpers::rust_tasm_equivalence_prop_new};
 
     use super::*;
 
@@ -456,8 +456,8 @@ mod tests {
         rust_tasm_equivalence_prop_new(MultisetEquality);
     }
 
-    // #[test]
-    // fn leaf_index_to_mt_index_benchmark() {
-    //     bench_and_write(MultisetEquality);
-    // }
+    #[test]
+    fn leaf_index_to_mt_index_benchmark() {
+        bench_and_write(MultisetEquality);
+    }
 }
