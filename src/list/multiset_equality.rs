@@ -1,15 +1,16 @@
-use std::collections::HashMap;
-
 use num::Zero;
 use num_traits::One;
 use rand::random;
+use std::collections::HashMap;
 use twenty_first::shared_math::other::random_elements;
 use twenty_first::shared_math::x_field_element::{XFieldElement, EXTENSION_DEGREE};
 use twenty_first::{
     shared_math::b_field_element::BFieldElement, util_types::algebraic_hasher::AlgebraicHasher,
 };
 
+use super::ListType;
 use crate::hashing::hash_varlen::HashVarlen;
+use crate::list::safe_u32::length::SafeLength;
 use crate::list::unsafe_u32::length::UnsafeLength;
 use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, Digest, DIGEST_LENGTH};
 use crate::{
@@ -19,7 +20,7 @@ use crate::{
 };
 
 #[derive(Clone, Debug)]
-pub struct MultisetEquality;
+pub struct MultisetEquality(pub ListType);
 
 /// Determine whether two lists are equal up to permutation. The
 /// lists are given as lists of digests. This function uses hashing
@@ -29,7 +30,7 @@ pub struct MultisetEquality;
 /// support for permutation checks instead of Fiat-Shamir and running
 /// products.
 impl MultisetEquality {
-    fn random_equal_lists(length: usize) -> ExecutionState {
+    fn random_equal_lists(&self, length: usize) -> ExecutionState {
         let list_a: Vec<Digest> = random_elements(length);
         let mut list_b = list_a.clone();
         list_b.sort();
@@ -39,16 +40,38 @@ impl MultisetEquality {
 
         let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
 
-        rust_shadowing_helper_functions::unsafe_list::unsafe_list_insert(
-            pointer_a,
-            list_a,
-            &mut memory,
-        );
-        rust_shadowing_helper_functions::unsafe_list::unsafe_list_insert(
-            pointer_b,
-            list_b,
-            &mut memory,
-        );
+        match self.0 {
+            ListType::Safe => {
+                // equality must be independent of the capacity of the list
+                let capacity_a = length as u32 + random::<u32>() % 10;
+                let capacity_b = length as u32 + random::<u32>() % 10;
+
+                rust_shadowing_helper_functions::safe_list::safe_list_insert(
+                    pointer_a,
+                    capacity_a,
+                    list_a,
+                    &mut memory,
+                );
+                rust_shadowing_helper_functions::safe_list::safe_list_insert(
+                    pointer_b,
+                    capacity_b,
+                    list_b,
+                    &mut memory,
+                );
+            }
+            ListType::Unsafe => {
+                rust_shadowing_helper_functions::unsafe_list::unsafe_list_insert(
+                    pointer_a,
+                    list_a,
+                    &mut memory,
+                );
+                rust_shadowing_helper_functions::unsafe_list::unsafe_list_insert(
+                    pointer_b,
+                    list_b,
+                    &mut memory,
+                );
+            }
+        }
 
         ExecutionState {
             stack: vec![get_init_tvm_stack(), vec![pointer_a, pointer_b]].concat(),
@@ -59,7 +82,7 @@ impl MultisetEquality {
         }
     }
 
-    fn random_unequal_lists(length: usize) -> ExecutionState {
+    fn random_unequal_lists(&self, length: usize) -> ExecutionState {
         let list_a: Vec<Digest> = random_elements(length);
         let list_b: Vec<Digest> = random_elements(length);
         let pointer_a: BFieldElement = random();
@@ -67,16 +90,35 @@ impl MultisetEquality {
             BFieldElement::new(pointer_a.value() + random::<u32>() as u64);
         let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
 
-        rust_shadowing_helper_functions::unsafe_list::unsafe_list_insert(
-            pointer_a,
-            list_a,
-            &mut memory,
-        );
-        rust_shadowing_helper_functions::unsafe_list::unsafe_list_insert(
-            pointer_b,
-            list_b,
-            &mut memory,
-        );
+        match self.0 {
+            ListType::Safe => {
+                let capacity = length as u32 + random::<u32>() % 10;
+                rust_shadowing_helper_functions::safe_list::safe_list_insert(
+                    pointer_a,
+                    capacity,
+                    list_a,
+                    &mut memory,
+                );
+                rust_shadowing_helper_functions::safe_list::safe_list_insert(
+                    pointer_b,
+                    capacity,
+                    list_b,
+                    &mut memory,
+                );
+            }
+            ListType::Unsafe => {
+                rust_shadowing_helper_functions::unsafe_list::unsafe_list_insert(
+                    pointer_a,
+                    list_a,
+                    &mut memory,
+                );
+                rust_shadowing_helper_functions::unsafe_list::unsafe_list_insert(
+                    pointer_b,
+                    list_b,
+                    &mut memory,
+                );
+            }
+        }
 
         ExecutionState {
             stack: vec![get_init_tvm_stack(), vec![pointer_a, pointer_b]].concat(),
@@ -87,23 +129,43 @@ impl MultisetEquality {
         }
     }
 
-    fn random_unequal_length_lists(length_a: usize, length_b: usize) -> ExecutionState {
+    fn random_unequal_length_lists(&self, length_a: usize, length_b: usize) -> ExecutionState {
         let list_a: Vec<Digest> = random_elements(length_a);
         let list_b: Vec<Digest> = random_elements(length_b);
         let pointer_a: BFieldElement = random();
         let pointer_b: BFieldElement =
             BFieldElement::new(pointer_a.value() + random::<u32>() as u64);
         let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
-        rust_shadowing_helper_functions::unsafe_list::unsafe_list_insert(
-            pointer_a,
-            list_a,
-            &mut memory,
-        );
-        rust_shadowing_helper_functions::unsafe_list::unsafe_list_insert(
-            pointer_b,
-            list_b,
-            &mut memory,
-        );
+        match self.0 {
+            ListType::Safe => {
+                let capacity_a = length_a as u32 + random::<u32>() % 10;
+                rust_shadowing_helper_functions::safe_list::safe_list_insert(
+                    pointer_a,
+                    capacity_a,
+                    list_a,
+                    &mut memory,
+                );
+                let capacity_b = length_b as u32 + random::<u32>() % 10;
+                rust_shadowing_helper_functions::safe_list::safe_list_insert(
+                    pointer_b,
+                    capacity_b,
+                    list_b,
+                    &mut memory,
+                );
+            }
+            ListType::Unsafe => {
+                rust_shadowing_helper_functions::unsafe_list::unsafe_list_insert(
+                    pointer_a,
+                    list_a,
+                    &mut memory,
+                );
+                rust_shadowing_helper_functions::unsafe_list::unsafe_list_insert(
+                    pointer_b,
+                    list_b,
+                    &mut memory,
+                );
+            }
+        }
 
         ExecutionState {
             stack: vec![get_init_tvm_stack(), vec![pointer_a, pointer_b]].concat(),
@@ -114,7 +176,7 @@ impl MultisetEquality {
         }
     }
 
-    fn random_lists_one_element_flipped(length: usize) -> ExecutionState {
+    fn random_lists_one_element_flipped(&self, length: usize) -> ExecutionState {
         let list_a: Vec<Digest> = random_elements(length);
         let mut list_b = list_a.clone();
         list_b.sort();
@@ -127,16 +189,35 @@ impl MultisetEquality {
 
         let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
 
-        rust_shadowing_helper_functions::unsafe_list::unsafe_list_insert(
-            pointer_a,
-            list_a,
-            &mut memory,
-        );
-        rust_shadowing_helper_functions::unsafe_list::unsafe_list_insert(
-            pointer_b,
-            list_b,
-            &mut memory,
-        );
+        match self.0 {
+            ListType::Safe => {
+                let capacity = length as u32 + 4;
+                rust_shadowing_helper_functions::safe_list::safe_list_insert(
+                    pointer_a,
+                    capacity,
+                    list_a,
+                    &mut memory,
+                );
+                rust_shadowing_helper_functions::safe_list::safe_list_insert(
+                    pointer_b,
+                    capacity,
+                    list_b,
+                    &mut memory,
+                );
+            }
+            ListType::Unsafe => {
+                rust_shadowing_helper_functions::unsafe_list::unsafe_list_insert(
+                    pointer_a,
+                    list_a,
+                    &mut memory,
+                );
+                rust_shadowing_helper_functions::unsafe_list::unsafe_list_insert(
+                    pointer_b,
+                    list_b,
+                    &mut memory,
+                );
+            }
+        }
 
         ExecutionState {
             stack: vec![get_init_tvm_stack(), vec![pointer_a, pointer_b]].concat(),
@@ -150,7 +231,7 @@ impl MultisetEquality {
 
 impl Snippet for MultisetEquality {
     fn entrypoint(&self) -> String {
-        "tasm_list_unsafe_u32_multiset_equality".to_string()
+        format!("tasm_list_{}_u32_multiset_equality", self.0)
     }
 
     fn inputs(&self) -> Vec<String>
@@ -186,7 +267,14 @@ impl Snippet for MultisetEquality {
     }
 
     fn function_body(&self, library: &mut SnippetState) -> String {
-        let unsafe_length = library.import(Box::new(UnsafeLength(DataType::Digest)));
+        let length_snippet = match self.0 {
+            ListType::Safe => library.import(Box::new(SafeLength(DataType::Digest))),
+            ListType::Unsafe => library.import(Box::new(UnsafeLength(DataType::Digest))),
+        };
+        let first_element_offset = match self.0 {
+            ListType::Safe => 2,
+            ListType::Unsafe => 1,
+        };
         let hash_varlen = library.import(Box::new(HashVarlen));
         let entrypoint = self.entrypoint();
 
@@ -198,9 +286,9 @@ impl Snippet for MultisetEquality {
 
                 // read lengths of lists
                 dup 1 dup 1 // _ list_a list_b list_a list_b
-                call {unsafe_length} // _ list_a list_b list_a len_b
+                call {length_snippet} // _ list_a list_b list_a len_b
                 swap 1 // _ list_a list_b len_b list_a
-                call {unsafe_length} // _ list_a list_b len_b len_a
+                call {length_snippet} // _ list_a list_b len_b len_a
 
                 // equate lengths and return early if possible
                 dup 1 // _ list_a list_b len_b len_a len_b
@@ -232,12 +320,14 @@ impl Snippet for MultisetEquality {
 
                 // hash list_a
                 dup 2 // _ list_a list_b len list_a
+                push {first_element_offset} add // _ list_a list_b len (list_a+n)
                 dup 1 // _ list_a list_b len list_a len
                 push {DIGEST_LENGTH} mul // _ list_a list_b len list_a) (len*{DIGEST_LENGTH})
                 call {hash_varlen} // _ list_a list_b len da4 da3 da2 da1 da0
 
                 // hash list_b
                 dup 6 // _ list_a list_b len da4 da3 da2 da1 da0 list_b
+                push {first_element_offset} add // _ list_a list_b len (list_a+n)
                 dup 6 // _ list_a list_b len da4 da3 da2 da1 da0 list_b len
                 push {DIGEST_LENGTH} mul // _ list_a list_b len da4 da3 da2 da1 da0 list_b (len*{DIGEST_LENGTH})
                 call {hash_varlen} // _ list_a list_b len da4 da3 da2 da1 da0 db4 db3 db2 db1 db0
@@ -275,7 +365,7 @@ impl Snippet for MultisetEquality {
             {entrypoint}_running_product:
                 // initialize loop
                 dup 4 // _ list len d2 d1 d0 list
-                push 1 add // _ list len d2 d1 d0 addr
+                push {first_element_offset} add // _ list len d2 d1 d0 addr
                 dup 4 // _ list len d2 d1 d0 addr itrs_left
                 push 0 push 0 push 1 // _ list len d2 d1 d0 addr itrs_left 0 0 1
 
@@ -345,36 +435,41 @@ impl Snippet for MultisetEquality {
         Self: Sized,
     {
         vec![
-            Self::random_equal_lists(0),
-            Self::random_equal_lists(1),
-            Self::random_equal_lists(2),
-            Self::random_equal_lists(3),
-            Self::random_equal_lists(4),
-            Self::random_equal_lists(5),
-            Self::random_equal_lists(6),
-            Self::random_equal_lists(7),
-            Self::random_equal_lists(8),
-            Self::random_equal_lists(9),
-            Self::random_equal_lists(10),
-            Self::random_equal_lists(21),
-            Self::random_unequal_lists(1),
-            Self::random_unequal_lists(2),
-            Self::random_unequal_lists(3),
-            Self::random_unequal_lists(10),
-            Self::random_unequal_lists(21),
-            Self::random_unequal_length_lists(0, 5),
-            Self::random_unequal_length_lists(1, 2),
-            Self::random_unequal_length_lists(2, 1),
-            Self::random_unequal_length_lists(10, 17),
-            Self::random_unequal_length_lists(21, 0),
-            Self::random_lists_one_element_flipped(1),
-            Self::random_lists_one_element_flipped(2),
-            Self::random_lists_one_element_flipped(3),
-            Self::random_lists_one_element_flipped(4),
-            Self::random_lists_one_element_flipped(5),
-            Self::random_lists_one_element_flipped(7),
-            Self::random_lists_one_element_flipped(20),
-            Self::random_lists_one_element_flipped(21),
+            self.random_equal_lists(0),
+            self.random_equal_lists(1),
+            self.random_equal_lists(2),
+            self.random_equal_lists(3),
+            self.random_equal_lists(4),
+            self.random_equal_lists(5),
+            self.random_equal_lists(6),
+            self.random_equal_lists(7),
+            self.random_equal_lists(8),
+            self.random_equal_lists(9),
+            self.random_equal_lists(10),
+            self.random_equal_lists(11),
+            self.random_equal_lists(12),
+            self.random_equal_lists(13),
+            self.random_equal_lists(14),
+            self.random_equal_lists(15),
+            self.random_equal_lists(21),
+            self.random_unequal_lists(1),
+            self.random_unequal_lists(2),
+            self.random_unequal_lists(3),
+            self.random_unequal_lists(10),
+            self.random_unequal_lists(21),
+            self.random_unequal_length_lists(0, 5),
+            self.random_unequal_length_lists(1, 2),
+            self.random_unequal_length_lists(2, 1),
+            self.random_unequal_length_lists(10, 17),
+            self.random_unequal_length_lists(21, 0),
+            self.random_lists_one_element_flipped(1),
+            self.random_lists_one_element_flipped(2),
+            self.random_lists_one_element_flipped(3),
+            self.random_lists_one_element_flipped(4),
+            self.random_lists_one_element_flipped(5),
+            self.random_lists_one_element_flipped(7),
+            self.random_lists_one_element_flipped(20),
+            self.random_lists_one_element_flipped(21),
         ]
     }
 
@@ -382,14 +477,14 @@ impl Snippet for MultisetEquality {
     where
         Self: Sized,
     {
-        Self::random_equal_lists(2)
+        self.random_equal_lists(2)
     }
 
     fn worst_case_input_state(&self) -> ExecutionState
     where
         Self: Sized,
     {
-        Self::random_equal_lists(100)
+        self.random_equal_lists(100)
     }
 
     fn rust_shadowing(
@@ -416,25 +511,27 @@ impl Snippet for MultisetEquality {
         let len = len_a;
 
         // prepare lists for hashing
-        let mut list_a_bfes = vec![BFieldElement::new(len as u64)];
-        let mut list_b_bfes = vec![BFieldElement::new(len as u64)];
+        let mut list_a_bfes = vec![];
+        let mut list_b_bfes = vec![];
+
+        let rust_shadowing_helper_list_read = match self.0 {
+            ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_read,
+            ListType::Unsafe => rust_shadowing_helper_functions::unsafe_list::unsafe_list_read,
+        };
+
         for i in 0..len as usize {
-            list_a_bfes.append(
-                &mut rust_shadowing_helper_functions::unsafe_list::unsafe_list_read(
-                    list_a,
-                    i,
-                    &memory,
-                    DIGEST_LENGTH,
-                ),
-            );
-            list_b_bfes.append(
-                &mut rust_shadowing_helper_functions::unsafe_list::unsafe_list_read(
-                    list_a,
-                    i,
-                    &memory,
-                    DIGEST_LENGTH,
-                ),
-            );
+            list_a_bfes.append(&mut rust_shadowing_helper_list_read(
+                list_a,
+                i,
+                memory,
+                DIGEST_LENGTH,
+            ));
+            list_b_bfes.append(&mut rust_shadowing_helper_list_read(
+                list_b,
+                i,
+                memory,
+                DIGEST_LENGTH,
+            ));
         }
 
         // hash to get Fiat-Shamir challenge
@@ -447,24 +544,16 @@ impl Snippet for MultisetEquality {
         // compute running products
         let mut running_product_a = XFieldElement::one();
         for i in 0..len as u64 {
-            let digest_elems = rust_shadowing_helper_functions::unsafe_list::unsafe_list_read(
-                list_a,
-                i as usize,
-                &memory,
-                DIGEST_LENGTH,
-            );
+            let digest_elems =
+                rust_shadowing_helper_list_read(list_a, i as usize, memory, DIGEST_LENGTH);
             let m = XFieldElement::new([digest_elems[0], digest_elems[1], digest_elems[2]]);
             let factor = indeterminate - m;
             running_product_a *= factor;
         }
         let mut running_product_b = XFieldElement::one();
         for i in 0..len as u64 {
-            let digest_elems = rust_shadowing_helper_functions::unsafe_list::unsafe_list_read(
-                list_b,
-                i as usize,
-                &memory,
-                DIGEST_LENGTH,
-            );
+            let digest_elems =
+                rust_shadowing_helper_list_read(list_b, i as usize, memory, DIGEST_LENGTH);
             let m = XFieldElement::new([digest_elems[0], digest_elems[1], digest_elems[2]]);
             let factor = indeterminate - m;
             running_product_b *= factor;
@@ -472,7 +561,7 @@ impl Snippet for MultisetEquality {
 
         // equate and push result to stack
         let result = running_product_a == running_product_b;
-        println!("result: {}", result);
+        // println!("result: {}", result);
         stack.push(BFieldElement::new(result as u64))
     }
 }
@@ -484,12 +573,22 @@ mod tests {
     use super::*;
 
     #[test]
-    fn new_prop_test() {
-        rust_tasm_equivalence_prop_new(MultisetEquality);
+    fn unsafe_list_prop_test() {
+        rust_tasm_equivalence_prop_new(MultisetEquality(ListType::Unsafe));
     }
 
     #[test]
-    fn multiset_eq_benchmark() {
-        bench_and_write(MultisetEquality);
+    fn with_safe_list_prop_test() {
+        rust_tasm_equivalence_prop_new(MultisetEquality(ListType::Safe));
+    }
+
+    #[test]
+    fn unsafe_list_multiset_eq_benchmark() {
+        bench_and_write(MultisetEquality(ListType::Unsafe));
+    }
+
+    #[test]
+    fn safe_list_multiset_eq_benchmark() {
+        bench_and_write(MultisetEquality(ListType::Safe));
     }
 }
