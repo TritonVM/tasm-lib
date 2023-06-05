@@ -43,7 +43,6 @@ use crate::{
     },
     io::{load_from_input::LoadFromInput, read_secret::ReadSecret, read_stdin::ReadStdIn},
     list::{
-        multiset_equality::MultisetEquality,
         safe_u32::{
             get::SafeGet, length::SafeLength, new::SafeNew, pop::SafePop, push::SafePush,
             set::SafeSet, set_length::SafeSetLength,
@@ -248,7 +247,7 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn Snippet> {
         "tasm_list_unsafe_u32_set_length_xfe" => Box::new(UnsafeSetLength(DataType::XFE)),
         "tasm_list_unsafe_u32_set_length_digest" => Box::new(UnsafeSetLength(DataType::Digest)),
 
-        "tasm_list_multiset_equality" => Box::new(MultisetEquality),
+        "tasm_list_unsafe_u32_multiset_equality" => Box::new(crate::list::unsafe_u32::multiset_equality::MultisetEquality),
 
         // MMR
         "tasm_mmr_calculate_new_peaks_from_append" => Box::new(CalculateNewPeaksFromAppend(PhantomData::<VmHasher>)),

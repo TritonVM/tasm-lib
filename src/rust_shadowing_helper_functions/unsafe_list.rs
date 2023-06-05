@@ -1,6 +1,25 @@
 use num::{One, Zero};
 use std::collections::HashMap;
-use twenty_first::shared_math::{b_field_element::BFieldElement, other::random_elements};
+use twenty_first::shared_math::{
+    b_field_element::BFieldElement, bfield_codec::BFieldCodec, other::random_elements,
+};
+
+pub fn unsafe_list_insert<T: BFieldCodec>(
+    list_pointer: BFieldElement,
+    vector: Vec<T>,
+    memory: &mut HashMap<BFieldElement, BFieldElement>,
+) {
+    unsafe_list_new(list_pointer, memory);
+
+    for element in vector {
+        unsafe_list_push(
+            list_pointer,
+            element.encode(),
+            memory,
+            element.encode().len(),
+        );
+    }
+}
 
 pub fn unsafe_insert_random_list(
     list_pointer: BFieldElement,
