@@ -232,16 +232,14 @@ impl Snippet for MultisetEquality {
 
                 // hash list_a
                 dup 2 // _ list_a list_b len list_a
-                push 1 add // _ list_a list_b len (list_a+1)
-                dup 1 // _ list_a list_b len (list_a+1) len
-                push {DIGEST_LENGTH} mul // _ list_a list_b len (list_a+1) (len*{DIGEST_LENGTH})
+                dup 1 // _ list_a list_b len list_a len
+                push {DIGEST_LENGTH} mul // _ list_a list_b len list_a) (len*{DIGEST_LENGTH})
                 call {hash_varlen} // _ list_a list_b len da4 da3 da2 da1 da0
 
                 // hash list_b
                 dup 6 // _ list_a list_b len da4 da3 da2 da1 da0 list_b
-                push 1 add // _ list_a list_b len da4 da3 da2 da1 da0 (list_b+1)
-                dup 6 // _ list_a list_b len da4 da3 da2 da1 da0 (list_b+1) len
-                push {DIGEST_LENGTH} mul // _ list_a list_b len da4 da3 da2 da1 da0 (list_b+1) (len*{DIGEST_LENGTH})
+                dup 6 // _ list_a list_b len da4 da3 da2 da1 da0 list_b len
+                push {DIGEST_LENGTH} mul // _ list_a list_b len da4 da3 da2 da1 da0 list_b (len*{DIGEST_LENGTH})
                 call {hash_varlen} // _ list_a list_b len da4 da3 da2 da1 da0 db4 db3 db2 db1 db0
 
                 // hash together
@@ -418,8 +416,8 @@ impl Snippet for MultisetEquality {
         let len = len_a;
 
         // prepare lists for hashing
-        let mut list_a_bfes = vec![];
-        let mut list_b_bfes = vec![];
+        let mut list_a_bfes = vec![BFieldElement::new(len as u64)];
+        let mut list_b_bfes = vec![BFieldElement::new(len as u64)];
         for i in 0..len as usize {
             list_a_bfes.append(
                 &mut rust_shadowing_helper_functions::unsafe_list::unsafe_list_read(
