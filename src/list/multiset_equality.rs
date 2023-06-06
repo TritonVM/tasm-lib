@@ -515,8 +515,8 @@ impl Snippet for MultisetEquality {
         let mut list_b_bfes = vec![];
 
         let rust_shadowing_helper_list_read = match self.0 {
-            ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_read,
-            ListType::Unsafe => rust_shadowing_helper_functions::unsafe_list::unsafe_list_read,
+            ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_get,
+            ListType::Unsafe => rust_shadowing_helper_functions::unsafe_list::unsafe_list_get,
         };
 
         for i in 0..len as usize {

@@ -212,7 +212,7 @@ impl<H: AlgebraicHasher> Snippet for CalculateNewPeaksFromAppend<H> {
 
         for i in 0..peak_count {
             old_peaks.push(Digest::new(
-                rust_shadowing_helper_functions::unsafe_list::unsafe_list_read(
+                rust_shadowing_helper_functions::unsafe_list::unsafe_list_get(
                     peaks_pointer,
                     i as usize,
                     memory,
@@ -484,7 +484,7 @@ mod tests {
         let mut produced_peaks = vec![];
         for i in 0..peaks_count {
             let peak = Digest::new(
-                rust_shadowing_helper_functions::unsafe_list::unsafe_list_read(
+                rust_shadowing_helper_functions::unsafe_list::unsafe_list_get(
                     peaks_pointer,
                     i as usize,
                     &memory,
@@ -506,7 +506,7 @@ mod tests {
         let mut produced_auth_path = vec![];
         for i in 0..auth_path_element_count {
             produced_auth_path.push(Digest::new(
-                rust_shadowing_helper_functions::unsafe_list::unsafe_list_read(
+                rust_shadowing_helper_functions::unsafe_list::unsafe_list_get(
                     auth_paths_pointer,
                     i as usize,
                     &memory,

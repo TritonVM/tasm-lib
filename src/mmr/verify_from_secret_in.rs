@@ -221,7 +221,7 @@ impl<H: AlgebraicHasher> Snippet for MmrVerifyLeafMembershipFromSecretIn<H> {
         let mut peaks: Vec<Digest> = vec![];
         for i in 0..peaks_count {
             let digest = Digest::new(
-                rust_shadowing_helper_functions::unsafe_list::unsafe_list_read(
+                rust_shadowing_helper_functions::unsafe_list::unsafe_list_get(
                     peaks_pointer,
                     i as usize,
                     memory,

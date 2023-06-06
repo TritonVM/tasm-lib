@@ -246,7 +246,7 @@ mod tests {
         );
 
         // Verify that digest1 was not overwritten by digest2 in memory
-        let digest1_fetched = rust_shadowing_helper_functions::safe_list::safe_list_read(
+        let digest1_fetched = rust_shadowing_helper_functions::safe_list::safe_list_get(
             first_list,
             0,
             &memory,
@@ -258,7 +258,7 @@ mod tests {
             "Memory-fetched value must match expectation for digest 1"
         );
 
-        let digest2_fetched = rust_shadowing_helper_functions::safe_list::safe_list_read(
+        let digest2_fetched = rust_shadowing_helper_functions::safe_list::safe_list_get(
             second_list,
             0,
             &memory,

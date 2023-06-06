@@ -146,7 +146,7 @@ impl<H: AlgebraicHasher + 'static> Snippet for MmrLoadFromSecretInThenVerify<H> 
         let mut peaks: Vec<Digest> = vec![];
         for i in 0..peaks_count {
             let digest = Digest::new(
-                rust_shadowing_helper_functions::unsafe_list::unsafe_list_read(
+                rust_shadowing_helper_functions::unsafe_list::unsafe_list_get(
                     peaks_pointer,
                     i as usize,
                     memory,
@@ -187,7 +187,7 @@ impl<H: AlgebraicHasher + 'static> Snippet for MmrLoadFromSecretInThenVerify<H> 
         let mut auth_path: Vec<Digest> = vec![];
         for i in 0..auth_path_length {
             let digest = Digest::new(
-                rust_shadowing_helper_functions::unsafe_list::unsafe_list_read(
+                rust_shadowing_helper_functions::unsafe_list::unsafe_list_get(
                     auth_path_pointer,
                     i as usize,
                     memory,
