@@ -11,9 +11,9 @@ use crate::{get_init_tvm_stack, ExecutionState};
 
 // Called "Long" because this logic can be shortened
 #[derive(Clone, Debug)]
-pub struct UnsafeLengthLong(pub DataType);
+pub struct UnsafeLength(pub DataType);
 
-impl Snippet for UnsafeLengthLong {
+impl Snippet for UnsafeLength {
     fn inputs(&self) -> Vec<String> {
         vec!["*list".to_string()]
     }
@@ -142,87 +142,8 @@ impl Snippet for UnsafeLengthLong {
     }
 }
 
-// Called "Short" because it's efficient code
-#[derive(Clone, Debug)]
-pub struct UnsafeLengthShort(pub DataType);
-
-impl Snippet for UnsafeLengthShort {
-    fn inputs(&self) -> Vec<String> {
-        vec!["*list".to_string()]
-    }
-
-    fn outputs(&self) -> Vec<String> {
-        vec!["*list".to_string(), "list_length".to_string()]
-    }
-
-    fn input_types(&self) -> Vec<crate::snippet::DataType> {
-        vec![DataType::List(Box::new(self.0.clone()))]
-    }
-
-    fn output_types(&self) -> Vec<crate::snippet::DataType> {
-        vec![DataType::List(Box::new(self.0.clone())), DataType::U32]
-    }
-
-    fn crash_conditions() -> Vec<String> {
-        vec![]
-    }
-
-    fn gen_input_states(&self) -> Vec<ExecutionState> {
-        UnsafeLengthLong::gen_input_states(&UnsafeLengthLong(self.0.clone()))
-    }
-
-    fn stack_diff(&self) -> isize {
-        // Adds the length of a vector in the form of a u32 to the top of the stack
-        1
-    }
-
-    fn entrypoint(&self) -> String {
-        format!("tasm_list_unsafe_u32_length_short_{}", self.0)
-    }
-
-    fn function_body(&self, _library: &mut SnippetState) -> String {
-        let entry_point = self.entrypoint();
-        // Before: _ *list
-        // After: _ *list list_length_u32
-        format!(
-            "
-            {entry_point}:
-                read_mem
-                return
-                "
-        )
-    }
-
-    fn rust_shadowing(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        _std_in: Vec<BFieldElement>,
-        _secret_in: Vec<BFieldElement>,
-        memory: &mut HashMap<BFieldElement, BFieldElement>,
-    ) {
-        // Find the list in memory and push its length to the top of the stack
-        let list_address = *stack.last().as_ref().unwrap();
-        let list_length = memory[list_address];
-        stack.push(list_length);
-    }
-
-    fn common_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
-        todo!()
-    }
-
-    fn worst_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
-        todo!()
-    }
-}
-
 #[cfg(test)]
-mod tests_long {
+mod tests {
     use num::One;
     use rand::{thread_rng, RngCore};
     use twenty_first::shared_math::b_field_element::BFieldElement;
@@ -235,17 +156,14 @@ mod tests_long {
 
     #[test]
     fn new_snippet_test_long() {
-        rust_tasm_equivalence_prop_new(UnsafeLengthLong(DataType::U64));
-    }
-
-    #[test]
-    fn new_snippet_test_short() {
-        rust_tasm_equivalence_prop_new(UnsafeLengthShort(DataType::XFE));
+        rust_tasm_equivalence_prop_new(UnsafeLength(DataType::BFE));
+        rust_tasm_equivalence_prop_new(UnsafeLength(DataType::U64));
+        rust_tasm_equivalence_prop_new(UnsafeLength(DataType::Digest));
     }
 
     #[test]
     fn unsafe_length_long_benchmark() {
-        bench_and_write(UnsafeLengthLong(DataType::Digest));
+        bench_and_write(UnsafeLength(DataType::Digest));
     }
 
     #[test]
@@ -281,71 +199,8 @@ mod tests_long {
             );
         }
 
-        let _execution_result = rust_tasm_equivalence_prop::<UnsafeLengthLong>(
-            UnsafeLengthLong(DataType::BFE),
-            &init_stack,
-            &[],
-            &[],
-            &mut init_memory,
-            0,
-            expected,
-        );
-    }
-}
-
-#[cfg(test)]
-mod tests_short {
-    use rand::{thread_rng, RngCore};
-    use twenty_first::shared_math::b_field_element::BFieldElement;
-
-    use crate::get_init_tvm_stack;
-    use crate::test_helpers::rust_tasm_equivalence_prop;
-
-    use super::*;
-
-    #[test]
-    fn list_u32_simple_short() {
-        let expected_end_stack = vec![
-            get_init_tvm_stack(),
-            vec![BFieldElement::new(48), BFieldElement::new(42)],
-        ]
-        .concat();
-        prop_length_long(BFieldElement::new(48), 42, Some(&expected_end_stack));
-
-        let expected_end_stack = vec![
-            get_init_tvm_stack(),
-            vec![BFieldElement::new(8888906), BFieldElement::new(588)],
-        ]
-        .concat();
-        prop_length_long(BFieldElement::new(8888906), 588, Some(&expected_end_stack));
-    }
-
-    // Note that the *actual list* of length `list_length` is *actually constructed in the VM in this test. So you may not
-    // want to exaggerate that number.
-    fn prop_length_long(
-        list_address: BFieldElement,
-        list_length: u32,
-        expected: Option<&[BFieldElement]>,
-    ) {
-        let mut init_stack = get_init_tvm_stack();
-        init_stack.push(list_address);
-
-        let mut init_memory = HashMap::default();
-
-        // Insert length indicator of list, lives on offset = 0 from `list_address`
-        init_memory.insert(list_address, BFieldElement::new(list_length as u64));
-
-        // Insert random values for the elements in the list
-        let mut rng = thread_rng();
-        for i in 0..list_length {
-            init_memory.insert(
-                list_address + BFieldElement::new((i + 1) as u64),
-                BFieldElement::new(rng.next_u64()),
-            );
-        }
-
-        let _execution_result = rust_tasm_equivalence_prop::<UnsafeLengthShort>(
-            UnsafeLengthShort(DataType::Bool),
+        let _execution_result = rust_tasm_equivalence_prop::<UnsafeLength>(
+            UnsafeLength(DataType::BFE),
             &init_stack,
             &[],
             &[],
