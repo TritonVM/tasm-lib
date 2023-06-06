@@ -182,8 +182,7 @@ pub trait Snippet: std::fmt::Debug {
         std_in: Vec<BFieldElement>,
         secret_in: Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
-    ) where
-        Self: Sized;
+    );
 
     /// The TASM code is always run through a function call, so the 1st instruction
     /// is a call to the function in question.

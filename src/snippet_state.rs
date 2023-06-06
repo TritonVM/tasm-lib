@@ -62,6 +62,14 @@ impl SnippetState {
         snippet.entrypoint()
     }
 
+    pub fn explicit_import(&mut self, name: &str, body: String) -> String {
+        if self.seen_snippets.insert(name.to_string()) {
+            self.function_bodies.insert(body);
+        }
+
+        name.to_string()
+    }
+
     /// Return the next free address without allocating anything
     pub fn get_next_free_address(&self) -> usize {
         self.free_pointer
@@ -327,7 +335,7 @@ pub mod library_tests {
 
         let expected = None;
         let _execution_result = rust_tasm_equivalence_prop::<DummyTestSnippetA>(
-            DummyTestSnippetA,
+            &DummyTestSnippetA,
             &empty_stack,
             &[],
             &[],
@@ -336,7 +344,7 @@ pub mod library_tests {
             expected,
         );
         let _execution_result = rust_tasm_equivalence_prop::<DummyTestSnippetB>(
-            DummyTestSnippetB,
+            &DummyTestSnippetB,
             &empty_stack,
             &[],
             &[],
@@ -345,7 +353,7 @@ pub mod library_tests {
             expected,
         );
         let _execution_result = rust_tasm_equivalence_prop::<DummyTestSnippetC>(
-            DummyTestSnippetC,
+            &DummyTestSnippetC,
             &empty_stack,
             &[],
             &[],

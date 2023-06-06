@@ -1,10 +1,11 @@
+use itertools::Itertools;
 use num::Zero;
 use rand::{thread_rng, Rng};
+use std::cell::RefCell;
 use std::collections::HashMap;
-use twenty_first::shared_math::other::random_elements;
-use twenty_first::{
-    shared_math::b_field_element::BFieldElement, util_types::algebraic_hasher::AlgebraicHasher,
-};
+use std::fmt::Debug;
+use triton_opcodes::instruction::LabelledInstruction;
+use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::list::safe_u32::get::SafeGet;
 use crate::list::safe_u32::length::SafeLength;
@@ -23,19 +24,67 @@ use crate::{get_init_tvm_stack, rust_shadowing_helper_functions};
 use crate::{
     snippet::{DataType, Snippet},
     snippet_state::SnippetState,
-    ExecutionState, VmHasher,
+    ExecutionState,
 };
+
+/// A data structure for describing an inner function to a map without using a snippet
+pub struct RawCode {
+    pub entrypoint: String,
+    pub function_body: Vec<LabelledInstruction>,
+    pub input_types: Vec<DataType>,
+    pub output_types: Vec<DataType>,
+    pub rust_shadowing: Option<Box<RefCell<dyn FnMut(&mut Vec<BFieldElement>)>>>,
+}
+
+impl Debug for RawCode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RawCode")
+            .field("entrypoint", &self.entrypoint)
+            .field("input_types", &self.input_types)
+            .field("output_types", &self.output_types)
+            .finish()
+    }
+}
+
+#[derive(Debug)]
+pub enum InnerFunction {
+    RawCode(RawCode),
+    Snippet(Box<dyn Snippet>),
+}
+
+impl InnerFunction {
+    fn get_input_types(&self) -> Vec<DataType> {
+        match self {
+            InnerFunction::RawCode(raw) => raw.input_types.clone(),
+            InnerFunction::Snippet(f) => f.input_types(),
+        }
+    }
+
+    fn get_output_types(&self) -> Vec<DataType> {
+        match self {
+            InnerFunction::RawCode(rc) => rc.output_types.clone(),
+            InnerFunction::Snippet(sn) => sn.output_types(),
+        }
+    }
+
+    fn entrypoint(&self) -> String {
+        match self {
+            InnerFunction::RawCode(rc) => rc.entrypoint.clone(),
+            InnerFunction::Snippet(sn) => sn.entrypoint(),
+        }
+    }
+}
 
 /// Applies a given function to every element of a list, and collects
 /// the new elements into a new list. The function must be given as
 /// an object as well as a dynamic type parameter.
-#[derive(Debug, Clone)]
-pub struct Map<Function: Snippet + 'static + Clone> {
+#[derive(Debug)]
+pub struct Map {
     pub list_type: ListType,
-    pub f: Function,
+    pub f: InnerFunction,
 }
 
-impl<Function: Snippet + 'static + Clone> Map<Function> {
+impl Map {
     fn generate_input_state(
         &self,
         list_pointer: BFieldElement,
@@ -46,18 +95,21 @@ impl<Function: Snippet + 'static + Clone> Map<Function> {
         stack.push(list_pointer);
 
         let mut memory = HashMap::default();
+        let input_type = match self.f.get_input_types().len() {
+            1 => self.f.get_input_types()[0].clone(),
+            _ => panic!("Can only be used with functions taking one argument"),
+        };
         memory.insert(
             BFieldElement::zero(),
             match self.list_type {
-                ListType::Safe => BFieldElement::new(
-                    (1 + 2 + list_length * self.f.input_types()[0].get_size()) as u64,
-                ),
-                ListType::Unsafe => BFieldElement::new(
-                    (1 + 1 + list_length * self.f.input_types()[0].get_size()) as u64,
-                ),
+                ListType::Safe => {
+                    BFieldElement::new((1 + 2 + list_length * input_type.get_size()) as u64)
+                }
+                ListType::Unsafe => {
+                    BFieldElement::new((1 + 1 + list_length * input_type.get_size()) as u64)
+                }
             },
         );
-        let input_type = self.f.input_types()[0].clone();
 
         match self.list_type {
             ListType::Safe => safe_insert_random_list(
@@ -85,7 +137,7 @@ impl<Function: Snippet + 'static + Clone> Map<Function> {
     }
 }
 
-impl<Function: Snippet + 'static + Clone> Snippet for Map<Function> {
+impl Snippet for Map {
     fn entrypoint(&self) -> String {
         format!(
             "tasm_list_higher_order_{}_u32_map_{}",
@@ -103,13 +155,13 @@ impl<Function: Snippet + 'static + Clone> Snippet for Map<Function> {
 
     fn input_types(&self) -> Vec<crate::snippet::DataType> {
         vec![DataType::List(Box::new(
-            self.f.input_types().first().unwrap().clone(),
+            self.f.get_input_types()[0].clone(),
         ))]
     }
 
     fn output_types(&self) -> Vec<crate::snippet::DataType> {
         vec![DataType::List(Box::new(
-            self.f.output_types().first().unwrap().clone(),
+            self.f.get_output_types()[0].clone(),
         ))]
     }
 
@@ -128,8 +180,14 @@ impl<Function: Snippet + 'static + Clone> Snippet for Map<Function> {
     }
 
     fn function_body(&self, library: &mut SnippetState) -> String {
-        let input_type = self.f.input_types()[0].clone();
-        let output_type = self.f.output_types()[0].clone();
+        let input_type = match self.f.get_input_types().len() {
+            1 => self.f.get_input_types()[0].clone(),
+            _ => panic!("Can only map over functions with one input"),
+        };
+        let output_type = match self.f.get_output_types().len() {
+            1 => self.f.get_output_types()[0].clone(),
+            _ => panic!("Can only map over functions with one output"),
+        };
         let output_size_plus_one = 1 + output_type.get_size();
         let get_length = match self.list_type {
             ListType::Safe => library.import(Box::new(SafeLength(input_type.clone()))),
@@ -151,7 +209,21 @@ impl<Function: Snippet + 'static + Clone> Snippet for Map<Function> {
             ListType::Safe => library.import(Box::new(SafeSet(output_type))),
             ListType::Unsafe => library.import(Box::new(UnsafeSet(output_type))),
         };
-        let function = library.import(Box::new(self.f.clone()));
+
+        let inner_function_name = match &self.f {
+            InnerFunction::RawCode(rc) => rc.entrypoint.to_owned(),
+            InnerFunction::Snippet(sn) => {
+                let fn_body = sn.function_body(library);
+                library.explicit_import(&sn.entrypoint(), fn_body)
+            }
+        };
+
+        // If function was supplied as raw instructions, we need to append the inner function to the function
+        // body. Otherwise, `library` handles the imports.
+        let maybe_inner_function_body_raw = match &self.f {
+            InnerFunction::RawCode(rc) => rc.function_body.iter().map(|x| x.to_string()).join("\n"),
+            InnerFunction::Snippet(_) => String::default(),
+        };
         let entrypoint = self.entrypoint();
 
         format!(
@@ -191,7 +263,7 @@ impl<Function: Snippet + 'static + Clone> Snippet for Map<Function> {
                 call {list_get} // _ input_list output_list index [input_element]
 
                 // map
-                call {function} // _ input_list output_list index [output_element]
+                call {inner_function_name} // _ input_list output_list index [output_element]
 
                 // write
                 dup {output_size_plus_one} // _ input_list output_list index [output_element] output_list
@@ -199,6 +271,8 @@ impl<Function: Snippet + 'static + Clone> Snippet for Map<Function> {
                 call {list_set} // _ input_list output_list index
 
                 recurse
+
+            {maybe_inner_function_body_raw}
             "
         )
     }
@@ -255,12 +329,14 @@ impl<Function: Snippet + 'static + Clone> Snippet for Map<Function> {
     ) where
         Self: Sized,
     {
-        let input_types = self.f.input_types();
-        let output_types = self.f.output_types();
-        assert_eq!(input_types.len(), 1);
-        assert_eq!(output_types.len(), 1);
-        let input_type = input_types.first().unwrap().to_owned();
-        let output_type = output_types.first().unwrap().to_owned();
+        let input_type = match self.f.get_input_types().len() {
+            1 => self.f.get_input_types()[0].clone(),
+            _ => panic!("Input length must be one when using function in map)"),
+        };
+        let output_type = match self.f.get_output_types().len() {
+            1 => self.f.get_output_types()[0].clone(),
+            _ => panic!("Input length must be one when using function in map)"),
+        };
         let list_pointer = stack.pop().unwrap();
 
         // get list length
@@ -345,9 +421,19 @@ impl<Function: Snippet + 'static + Clone> Snippet for Map<Function> {
                 stack.push(input_item.pop().unwrap());
             }
 
-            // map
-            self.f
-                .rust_shadowing(stack, std_in.clone(), secret_in.clone(), memory);
+            match &self.f {
+                InnerFunction::RawCode(rc) => {
+                    if let Some(func) = &rc.rust_shadowing {
+                        let mut func = func.borrow_mut();
+                        (*func)(stack)
+                    } else {
+                        panic!("Raw code must have rust shadowing for equivalence testing")
+                    }
+                }
+                InnerFunction::Snippet(sn) => {
+                    sn.rust_shadowing(stack, std_in.clone(), secret_in.clone(), memory)
+                }
+            };
 
             // pull from stack
             let mut output_item = vec![];
@@ -363,57 +449,73 @@ impl<Function: Snippet + 'static + Clone> Snippet for Map<Function> {
     }
 }
 
-#[derive(Debug, Clone)]
-struct TestHashXFieldElement;
+#[cfg(test)]
+mod tests {
+    use triton_opcodes::shortcuts::*;
+    use twenty_first::{
+        shared_math::{
+            other::random_elements, traits::FiniteField, x_field_element::XFieldElement,
+        },
+        util_types::algebraic_hasher::AlgebraicHasher,
+    };
 
-impl Snippet for TestHashXFieldElement {
-    fn entrypoint(&self) -> String {
-        "test_hash_xfield_element".to_string()
-    }
+    use crate::{
+        snippet_bencher::bench_and_write, test_helpers::rust_tasm_equivalence_prop_new, VmHasher,
+    };
 
-    fn inputs(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
-        vec![
-            "elem2".to_string(),
-            "elem1".to_string(),
-            "elem0".to_string(),
-        ]
-    }
+    use super::*;
 
-    fn input_types(&self) -> Vec<DataType> {
-        vec![DataType::XFE]
-    }
+    #[derive(Debug, Clone)]
+    struct TestHashXFieldElement;
 
-    fn output_types(&self) -> Vec<DataType> {
-        vec![DataType::Digest]
-    }
+    impl Snippet for TestHashXFieldElement {
+        fn entrypoint(&self) -> String {
+            "test_hash_xfield_element".to_string()
+        }
 
-    fn outputs(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
-        vec![
-            "digelem4".to_string(),
-            "digelem3".to_string(),
-            "digelem2".to_string(),
-            "digelem1".to_string(),
-            "digelem0".to_string(),
-        ]
-    }
+        fn inputs(&self) -> Vec<String>
+        where
+            Self: Sized,
+        {
+            vec![
+                "elem2".to_string(),
+                "elem1".to_string(),
+                "elem0".to_string(),
+            ]
+        }
 
-    fn stack_diff(&self) -> isize
-    where
-        Self: Sized,
-    {
-        2
-    }
+        fn input_types(&self) -> Vec<DataType> {
+            vec![DataType::XFE]
+        }
 
-    fn function_body(&self, _library: &mut SnippetState) -> String {
-        let entrypoint = self.entrypoint();
-        format!(
-            "
+        fn output_types(&self) -> Vec<DataType> {
+            vec![DataType::Digest]
+        }
+
+        fn outputs(&self) -> Vec<String>
+        where
+            Self: Sized,
+        {
+            vec![
+                "digelem4".to_string(),
+                "digelem3".to_string(),
+                "digelem2".to_string(),
+                "digelem1".to_string(),
+                "digelem0".to_string(),
+            ]
+        }
+
+        fn stack_diff(&self) -> isize
+        where
+            Self: Sized,
+        {
+            2
+        }
+
+        fn function_body(&self, _library: &mut SnippetState) -> String {
+            let entrypoint = self.entrypoint();
+            format!(
+                "
         // BEFORE: _ x2 x1 x0
         // AFTER: _ d4 d3 d2 d1 d0
         {entrypoint}:
@@ -434,87 +536,81 @@ impl Snippet for TestHashXFieldElement {
             swap 5 pop
             return
         "
-        )
-    }
-
-    fn crash_conditions() -> Vec<String>
-    where
-        Self: Sized,
-    {
-        vec![]
-    }
-
-    fn gen_input_states(&self) -> Vec<ExecutionState>
-    where
-        Self: Sized,
-    {
-        vec![ExecutionState::with_stack(
-            vec![
-                vec![BFieldElement::zero(); 16],
-                random_elements::<BFieldElement>(3),
-            ]
-            .concat(),
-        )]
-    }
-
-    fn common_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
-        ExecutionState::with_stack(
-            vec![
-                vec![BFieldElement::zero(); 16],
-                random_elements::<BFieldElement>(3),
-            ]
-            .concat(),
-        )
-    }
-
-    fn worst_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
-        ExecutionState::with_stack(
-            vec![
-                vec![BFieldElement::zero(); 16],
-                random_elements::<BFieldElement>(3),
-            ]
-            .concat(),
-        )
-    }
-
-    fn rust_shadowing(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        _std_in: Vec<BFieldElement>,
-        _secret_in: Vec<BFieldElement>,
-        _memory: &mut HashMap<BFieldElement, BFieldElement>,
-    ) where
-        Self: Sized,
-    {
-        let mut xfield_element = vec![];
-        for _ in 0..3 {
-            xfield_element.push(stack.pop().unwrap());
+            )
         }
-        let mut digest = VmHasher::hash_varlen(&xfield_element).values().to_vec();
-        while !digest.is_empty() {
-            stack.push(digest.pop().unwrap());
+
+        fn crash_conditions() -> Vec<String>
+        where
+            Self: Sized,
+        {
+            vec![]
+        }
+
+        fn gen_input_states(&self) -> Vec<ExecutionState>
+        where
+            Self: Sized,
+        {
+            vec![ExecutionState::with_stack(
+                vec![
+                    vec![BFieldElement::zero(); 16],
+                    random_elements::<BFieldElement>(3),
+                ]
+                .concat(),
+            )]
+        }
+
+        fn common_case_input_state(&self) -> ExecutionState
+        where
+            Self: Sized,
+        {
+            ExecutionState::with_stack(
+                vec![
+                    vec![BFieldElement::zero(); 16],
+                    random_elements::<BFieldElement>(3),
+                ]
+                .concat(),
+            )
+        }
+
+        fn worst_case_input_state(&self) -> ExecutionState
+        where
+            Self: Sized,
+        {
+            ExecutionState::with_stack(
+                vec![
+                    vec![BFieldElement::zero(); 16],
+                    random_elements::<BFieldElement>(3),
+                ]
+                .concat(),
+            )
+        }
+
+        fn rust_shadowing(
+            &self,
+            stack: &mut Vec<BFieldElement>,
+            _std_in: Vec<BFieldElement>,
+            _secret_in: Vec<BFieldElement>,
+            _memory: &mut HashMap<BFieldElement, BFieldElement>,
+        ) where
+            Self: Sized,
+        {
+            let mut xfield_element = vec![];
+            for _ in 0..3 {
+                xfield_element.push(stack.pop().unwrap());
+            }
+            let mut digest = VmHasher::hash_varlen(&xfield_element).values().to_vec();
+            while !digest.is_empty() {
+                stack.push(digest.pop().unwrap());
+            }
         }
     }
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::{snippet_bencher::bench_and_write, test_helpers::rust_tasm_equivalence_prop_new};
-
-    use super::*;
 
     #[test]
     fn unsafe_list_prop_test() {
         rust_tasm_equivalence_prop_new(
-            Map::<TestHashXFieldElement> {
+            &Map {
                 list_type: ListType::Unsafe,
-                f: TestHashXFieldElement,
+                f: InnerFunction::Snippet(Box::new(TestHashXFieldElement)),
             },
             false,
         );
@@ -523,9 +619,9 @@ mod tests {
     #[test]
     fn with_safe_list_prop_test() {
         rust_tasm_equivalence_prop_new(
-            Map::<TestHashXFieldElement> {
+            &Map {
                 list_type: ListType::Safe,
-                f: TestHashXFieldElement,
+                f: InnerFunction::Snippet(Box::new(TestHashXFieldElement)),
             },
             false,
         );
@@ -533,17 +629,104 @@ mod tests {
 
     #[test]
     fn unsafe_list_map_benchmark() {
-        bench_and_write(Map::<TestHashXFieldElement> {
+        bench_and_write(Map {
             list_type: ListType::Unsafe,
-            f: TestHashXFieldElement,
+            f: InnerFunction::Snippet(Box::new(TestHashXFieldElement)),
         });
     }
 
     #[test]
     fn safe_list_map_benchmark() {
-        bench_and_write(Map::<TestHashXFieldElement> {
+        bench_and_write(Map {
             list_type: ListType::Safe,
-            f: TestHashXFieldElement,
+            f: InnerFunction::Snippet(Box::new(TestHashXFieldElement)),
         });
+    }
+
+    #[test]
+    fn test_with_raw_function_identity_on_bfe() {
+        let rawcode = RawCode {
+            entrypoint: "identity_bfe".to_string(),
+            function_body: vec![
+                LabelledInstruction::Label("identity_bfe".to_string()),
+                return_(),
+            ],
+            input_types: vec![DataType::BFE],
+            output_types: vec![DataType::BFE],
+            rust_shadowing: Some(Box::new(RefCell::new(|_vec: &mut Vec<BFieldElement>| {}))),
+        };
+        rust_tasm_equivalence_prop_new(
+            &Map {
+                list_type: ListType::Unsafe,
+                f: InnerFunction::RawCode(rawcode),
+            },
+            false,
+        );
+    }
+
+    #[test]
+    fn test_with_raw_function_square_on_bfe() {
+        let rawcode = RawCode {
+            entrypoint: "square_bfe".to_string(),
+            function_body: vec![
+                LabelledInstruction::Label("square_bfe".to_string()),
+                dup(0),
+                mul(),
+                return_(),
+            ],
+            input_types: vec![DataType::BFE],
+            output_types: vec![DataType::BFE],
+            rust_shadowing: Some(Box::new(RefCell::new(|vec: &mut Vec<BFieldElement>| {
+                let new_value = vec.pop().unwrap().square();
+                vec.push(new_value);
+            }))),
+        };
+        rust_tasm_equivalence_prop_new(
+            &Map {
+                list_type: ListType::Unsafe,
+                f: InnerFunction::RawCode(rawcode),
+            },
+            false,
+        );
+    }
+
+    #[test]
+    fn test_with_raw_function_square_on_xfe() {
+        let rawcode = RawCode {
+            entrypoint: "square_xfe".to_string(),
+            function_body: vec![
+                LabelledInstruction::Label("square_xfe".to_string()),
+                dup(2),
+                dup(2),
+                dup(2),
+                xxmul(),
+                swap(3),
+                pop(),
+                swap(3),
+                pop(),
+                swap(3),
+                pop(),
+                return_(),
+            ],
+            input_types: vec![DataType::XFE],
+            output_types: vec![DataType::XFE],
+            rust_shadowing: Some(Box::new(RefCell::new(|vec: &mut Vec<BFieldElement>| {
+                let x0 = vec.pop().unwrap();
+                let x1 = vec.pop().unwrap();
+                let x2 = vec.pop().unwrap();
+                let xfe = XFieldElement::new([x0, x1, x2]);
+                let new_value = xfe.square();
+                vec.push(new_value.coefficients[2]);
+                vec.push(new_value.coefficients[1]);
+                vec.push(new_value.coefficients[0]);
+            }))),
+        };
+        rust_tasm_equivalence_prop_new(
+            &Map {
+                list_type: ListType::Unsafe,
+                f: InnerFunction::RawCode(rawcode),
+            },
+            false,
+        );
     }
 }
