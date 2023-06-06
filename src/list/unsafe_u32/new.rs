@@ -1,4 +1,3 @@
-use num::One;
 use std::collections::HashMap;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
@@ -6,8 +5,6 @@ use crate::rust_shadowing_helper_functions::unsafe_list::unsafe_list_new;
 use crate::snippet::{DataType, Snippet};
 use crate::snippet_state::SnippetState;
 use crate::{get_init_tvm_stack, ExecutionState};
-
-const DEFAULT_LIST_CAPACITY: usize = 64;
 
 #[derive(Clone, Debug)]
 pub struct UnsafeNew(pub DataType);
@@ -21,11 +18,11 @@ impl Snippet for UnsafeNew {
     where
         Self: Sized,
     {
-        vec![]
+        vec!["capacity".to_string()]
     }
 
     fn input_types(&self) -> Vec<DataType> {
-        vec![]
+        vec![DataType::U32]
     }
 
     fn output_types(&self) -> Vec<DataType> {
@@ -40,32 +37,45 @@ impl Snippet for UnsafeNew {
     where
         Self: Sized,
     {
-        1
+        0
     }
 
     fn function_body(&self, library: &mut SnippetState) -> String {
         let entrypoint = self.entrypoint();
 
-        // Allocate memory for the returned auth path for the newly inserted element
-        // Warning: This auth path is only allocated *once* even though the code is called multiple times.
-        // So if this function is called multiple times, previous values are overwritten.
+        // Data structure for `list::safe_u32` is: [length, element0, element1, ...]
         let element_size = self.0.get_size();
-        let static_list_pointer = library.kmalloc(element_size * DEFAULT_LIST_CAPACITY + 1);
+        let dyn_alloc = library.import(Box::new(crate::dyn_malloc::DynMalloc));
+
+        let mul_with_size = if element_size != 1 {
+            format!("push {element_size}\n mul\n")
+        } else {
+            String::default()
+        };
 
         format!(
             "
-                // BEFORE: _
-                // AFTER: _ *list
-                {entrypoint}:
-                    push {static_list_pointer}
-                    // _ *list
+            {entrypoint}:
+                // _ capacity
 
-                    push 0
-                    write_mem
-                    // _ *list
+                // Convert capacity in number of elements to number of VM words required for that list
+                {mul_with_size}
+                // _ (capacity_in_bfes)
 
-                    return
-                    "
+                push 1
+                add
+                // _ (words to allocate)
+
+                call {dyn_alloc}
+                // _ *list
+
+                // Write initial length = 0 to `*list`
+                push 0
+                write_mem
+                // _ *list
+
+                return
+            "
         )
     }
 
@@ -73,38 +83,41 @@ impl Snippet for UnsafeNew {
     where
         Self: Sized,
     {
-        vec![]
+        vec!["Requested list size exceeds u32::MAX bfe words".to_string()]
     }
 
     fn gen_input_states(&self) -> Vec<ExecutionState>
     where
         Self: Sized,
     {
-        fn prepare_state() -> ExecutionState {
-            ExecutionState::with_stack(get_init_tvm_stack())
-        }
-
         vec![
-            prepare_state(),
-            prepare_state(),
-            prepare_state(),
-            prepare_state(),
-            prepare_state(),
-            prepare_state(),
+            prepare_state(0),
+            prepare_state(1),
+            prepare_state(2),
+            prepare_state(3),
+            prepare_state(5),
+            prepare_state(102),
         ]
     }
 
     fn rust_shadowing(
         &self,
         stack: &mut Vec<BFieldElement>,
-        _std_in: Vec<BFieldElement>,
-        _secret_in: Vec<BFieldElement>,
+        std_in: Vec<BFieldElement>,
+        secret_in: Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) where
         Self: Sized,
     {
-        let list_pointer = BFieldElement::one();
+        // let list_pointer = BFieldElement::one();
+        let capacity_in_elements = stack.pop().unwrap().value() as usize;
+        let capacity_in_bfes = capacity_in_elements * self.0.get_size();
+        stack.push(BFieldElement::new(capacity_in_bfes as u64));
+        crate::dyn_malloc::DynMalloc.rust_shadowing(stack, std_in, secret_in, memory);
+
+        let list_pointer = stack.pop().unwrap();
         unsafe_list_new(list_pointer, memory);
+
         stack.push(list_pointer);
     }
 
@@ -112,15 +125,21 @@ impl Snippet for UnsafeNew {
     where
         Self: Sized,
     {
-        ExecutionState::with_stack(get_init_tvm_stack())
+        prepare_state(2)
     }
 
     fn worst_case_input_state(&self) -> ExecutionState
     where
         Self: Sized,
     {
-        ExecutionState::with_stack(get_init_tvm_stack())
+        prepare_state(1000000)
     }
+}
+
+fn prepare_state(capacity: u32) -> ExecutionState {
+    let mut stack = get_init_tvm_stack();
+    stack.push(BFieldElement::new(capacity as u64));
+    ExecutionState::with_stack(stack)
 }
 
 #[cfg(test)]
@@ -131,6 +150,8 @@ mod tests {
 
     #[test]
     fn new_snippet_test() {
+        rust_tasm_equivalence_prop_new(UnsafeNew(DataType::Bool));
+        rust_tasm_equivalence_prop_new(UnsafeNew(DataType::BFE));
         rust_tasm_equivalence_prop_new(UnsafeNew(DataType::U32));
         rust_tasm_equivalence_prop_new(UnsafeNew(DataType::U64));
         rust_tasm_equivalence_prop_new(UnsafeNew(DataType::XFE));
