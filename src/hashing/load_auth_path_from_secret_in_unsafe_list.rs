@@ -274,7 +274,7 @@ mod load_auth_path_from_secret_in_tests {
 
     #[test]
     fn load_auth_path_from_secret_in_test() {
-        rust_tasm_equivalence_prop_new(LoadAuthPathFromSecretInUnsafeList);
+        rust_tasm_equivalence_prop_new(LoadAuthPathFromSecretInUnsafeList, true);
     }
 
     #[test]

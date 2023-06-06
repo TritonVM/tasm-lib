@@ -178,7 +178,7 @@ mod tests {
 
     #[test]
     fn index_of_last_nonzero_bit_test() {
-        rust_tasm_equivalence_prop_new(IndexOfLastNonZeroBitU64);
+        rust_tasm_equivalence_prop_new(IndexOfLastNonZeroBitU64, true);
     }
 
     #[test]

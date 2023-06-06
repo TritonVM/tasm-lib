@@ -315,7 +315,7 @@ mod merkle_authentication_verify_test {
 
     #[test]
     fn merkle_tree_ap_verify_from_secret_input_test() {
-        rust_tasm_equivalence_prop_new(MtApVerifyFromSecretInput(PhantomData::<VmHasher>));
+        rust_tasm_equivalence_prop_new(MtApVerifyFromSecretInput(PhantomData::<VmHasher>), true);
     }
 
     #[test]

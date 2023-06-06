@@ -6,12 +6,25 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use crate::dyn_malloc::DYN_MALLOC_ADDRESS;
 use crate::snippet::Snippet;
 use crate::snippet_state::SnippetState;
-use crate::{rust_shadowing_helper_functions, ExecutionResult};
+use crate::{all_snippets, rust_shadowing_helper_functions, ExecutionResult};
 
 #[allow(dead_code)]
 pub fn rust_tasm_equivalence_prop_new<T: Snippet + Clone>(
     snippet_struct: T,
+    export_snippet: bool,
 ) -> Vec<ExecutionResult> {
+    // Verify that snippet can be found in `all_snippets`, so it's visible to the outside
+    // This call will panic if snippet is not found in that function call
+    // The data type value is a dummy value for all snippets except those that handle lists.
+    if export_snippet {
+        let looked_up_snippet = all_snippets::name_to_snippet(&snippet_struct.entrypoint());
+        assert_eq!(
+            snippet_struct.entrypoint(),
+            looked_up_snippet.entrypoint(),
+            "Looked up snippet must match self"
+        );
+    }
+
     let mut execution_states = snippet_struct.gen_input_states();
 
     let mut final_execution_results = vec![];

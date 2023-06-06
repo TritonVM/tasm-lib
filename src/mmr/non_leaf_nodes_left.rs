@@ -212,7 +212,7 @@ mod nlnl_tests {
 
     #[test]
     fn non_leaf_nodes_left_test() {
-        rust_tasm_equivalence_prop_new(MmrNonLeafNodesLeftUsingAnd);
+        rust_tasm_equivalence_prop_new(MmrNonLeafNodesLeftUsingAnd, true);
     }
 
     #[test]

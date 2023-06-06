@@ -148,7 +148,7 @@ mod tests {
 
     #[test]
     fn decr_u64_test() {
-        rust_tasm_equivalence_prop_new(DecrU64);
+        rust_tasm_equivalence_prop_new(DecrU64, true);
     }
 
     #[test]

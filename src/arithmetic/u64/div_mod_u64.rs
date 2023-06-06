@@ -606,7 +606,7 @@ mod tests {
 
     #[test]
     fn div_mod_u64_test() {
-        rust_tasm_equivalence_prop_new(DivModU64);
+        rust_tasm_equivalence_prop_new(DivModU64, true);
     }
 
     #[test]

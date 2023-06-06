@@ -396,9 +396,10 @@ mod leaf_mutation_tests {
 
     #[test]
     fn calculate_new_peaks_from_leaf_mutation_test() {
-        rust_tasm_equivalence_prop_new(MmrCalculateNewPeaksFromLeafMutationMtIndices(
-            PhantomData::<VmHasher>,
-        ));
+        rust_tasm_equivalence_prop_new(
+            MmrCalculateNewPeaksFromLeafMutationMtIndices(PhantomData::<VmHasher>),
+            true,
+        );
     }
 
     #[test]

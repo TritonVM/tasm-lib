@@ -106,7 +106,7 @@ mod tests {
 
     #[test]
     fn bfe_add_test() {
-        rust_tasm_equivalence_prop_new(BfeAdd);
+        rust_tasm_equivalence_prop_new(BfeAdd, true);
     }
 
     #[test]

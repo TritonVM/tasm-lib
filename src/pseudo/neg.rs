@@ -96,7 +96,7 @@ mod tests {
 
     #[test]
     fn lsb_test() {
-        rust_tasm_equivalence_prop_new(Neg);
+        rust_tasm_equivalence_prop_new(Neg, true);
     }
 
     #[test]

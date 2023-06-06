@@ -149,7 +149,7 @@ mod tests {
 
     #[test]
     fn eq_u64_test() {
-        rust_tasm_equivalence_prop_new(EqU64);
+        rust_tasm_equivalence_prop_new(EqU64, true);
     }
 
     #[test]

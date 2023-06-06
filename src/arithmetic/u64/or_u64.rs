@@ -156,7 +156,7 @@ mod tests {
 
     #[test]
     fn snippet_test() {
-        rust_tasm_equivalence_prop_new(OrU64);
+        rust_tasm_equivalence_prop_new(OrU64, true);
     }
 
     #[test]

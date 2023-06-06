@@ -145,7 +145,7 @@ mod tests {
 
     #[test]
     fn and_u64_test() {
-        rust_tasm_equivalence_prop_new(AndU64);
+        rust_tasm_equivalence_prop_new(AndU64, true);
     }
 
     #[test]

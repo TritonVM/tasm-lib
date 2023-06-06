@@ -152,7 +152,7 @@ mod tests {
 
     #[test]
     fn shift_right_test() {
-        rust_tasm_equivalence_prop_new(ShiftRightU32);
+        rust_tasm_equivalence_prop_new(ShiftRightU32, true);
     }
 
     #[test]

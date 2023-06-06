@@ -193,7 +193,7 @@ mod tests {
 
     #[test]
     fn wrapping_mul_u64_test() {
-        rust_tasm_equivalence_prop_new(WrappingMulU64);
+        rust_tasm_equivalence_prop_new(WrappingMulU64, true);
     }
 
     #[test]

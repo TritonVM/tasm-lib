@@ -205,7 +205,7 @@ mod tests {
 
     #[test]
     fn shift_right_u64_test() {
-        rust_tasm_equivalence_prop_new(ShiftRightU64);
+        rust_tasm_equivalence_prop_new(ShiftRightU64, true);
     }
 
     #[test]

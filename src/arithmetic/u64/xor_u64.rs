@@ -145,7 +145,7 @@ mod tests {
 
     #[test]
     fn xor_u64_test() {
-        rust_tasm_equivalence_prop_new(XorU64);
+        rust_tasm_equivalence_prop_new(XorU64, true);
     }
 
     #[test]

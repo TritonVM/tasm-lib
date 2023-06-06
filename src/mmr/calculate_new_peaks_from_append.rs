@@ -350,7 +350,7 @@ mod tests {
 
     #[test]
     fn calculate_new_peaks_from_append_test() {
-        rust_tasm_equivalence_prop_new(CalculateNewPeaksFromAppend(PhantomData::<VmHasher>));
+        rust_tasm_equivalence_prop_new(CalculateNewPeaksFromAppend(PhantomData::<VmHasher>), true);
     }
 
     #[test]

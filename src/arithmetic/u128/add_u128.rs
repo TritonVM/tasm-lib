@@ -242,7 +242,7 @@ mod tests {
 
     #[test]
     fn add_u128_test() {
-        rust_tasm_equivalence_prop_new(AddU128);
+        rust_tasm_equivalence_prop_new(AddU128, true);
     }
 
     #[test]

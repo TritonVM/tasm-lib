@@ -119,7 +119,7 @@ mod tests {
 
     #[test]
     fn pow2_static_test() {
-        rust_tasm_equivalence_prop_new(Pow2U64);
+        rust_tasm_equivalence_prop_new(Pow2U64, true);
     }
 
     #[test]

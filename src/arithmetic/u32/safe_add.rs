@@ -132,7 +132,7 @@ mod tests {
 
     #[test]
     fn snippet_test() {
-        rust_tasm_equivalence_prop_new::<SafeAdd>(SafeAdd);
+        rust_tasm_equivalence_prop_new(SafeAdd, true);
     }
 
     #[test]

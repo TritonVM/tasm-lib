@@ -206,12 +206,12 @@ mod list_set_tests {
     #[test]
     fn new_snippet_test() {
         for _ in 0..6 {
-            rust_tasm_equivalence_prop_new::<SafeSet>(SafeSet(DataType::Bool));
-            rust_tasm_equivalence_prop_new::<SafeSet>(SafeSet(DataType::BFE));
-            rust_tasm_equivalence_prop_new::<SafeSet>(SafeSet(DataType::U32));
-            rust_tasm_equivalence_prop_new::<SafeSet>(SafeSet(DataType::U64));
-            rust_tasm_equivalence_prop_new::<SafeSet>(SafeSet(DataType::XFE));
-            rust_tasm_equivalence_prop_new::<SafeSet>(SafeSet(DataType::Digest));
+            rust_tasm_equivalence_prop_new(SafeSet(DataType::Bool), true);
+            rust_tasm_equivalence_prop_new(SafeSet(DataType::BFE), true);
+            rust_tasm_equivalence_prop_new(SafeSet(DataType::U32), true);
+            rust_tasm_equivalence_prop_new(SafeSet(DataType::U64), true);
+            rust_tasm_equivalence_prop_new(SafeSet(DataType::XFE), true);
+            rust_tasm_equivalence_prop_new(SafeSet(DataType::Digest), true);
         }
     }
 

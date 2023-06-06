@@ -574,12 +574,12 @@ mod tests {
 
     #[test]
     fn unsafe_list_prop_test() {
-        rust_tasm_equivalence_prop_new(MultisetEquality(ListType::Unsafe));
+        rust_tasm_equivalence_prop_new(MultisetEquality(ListType::Unsafe), true);
     }
 
     #[test]
     fn with_safe_list_prop_test() {
-        rust_tasm_equivalence_prop_new(MultisetEquality(ListType::Safe));
+        rust_tasm_equivalence_prop_new(MultisetEquality(ListType::Safe), true);
     }
 
     #[test]

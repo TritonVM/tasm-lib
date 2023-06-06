@@ -77,11 +77,6 @@ use crate::{
 
 pub fn name_to_snippet(fn_name: &str) -> Box<dyn Snippet> {
     match fn_name {
-        // dummy test values used for tests of `Library`
-        "tasm_a_dummy_test_value" => Box::new(DummyTestSnippetA),
-        "tasm_b_dummy_test_value" => Box::new(DummyTestSnippetB),
-        "tasm_c_dummy_test_value" => Box::new(DummyTestSnippetC),
-
         // u32
         "tasm_arithmetic_u32_is_odd" => Box::new(U32IsOdd),
         "tasm_arithmetic_u32_is_u32" => Box::new(IsU32),

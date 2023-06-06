@@ -418,9 +418,10 @@ mod mmr_verify_from_secret_in_tests {
 
     #[test]
     fn verify_from_secret_in_test() {
-        rust_tasm_equivalence_prop_new(MmrVerifyLeafMembershipFromSecretIn(
-            PhantomData::<VmHasher>,
-        ));
+        rust_tasm_equivalence_prop_new(
+            MmrVerifyLeafMembershipFromSecretIn(PhantomData::<VmHasher>),
+            true,
+        );
     }
 
     #[test]

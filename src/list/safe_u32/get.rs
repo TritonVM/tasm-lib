@@ -223,12 +223,12 @@ mod get_element_tests {
     #[test]
     fn new_snippet_test() {
         for _ in 0..10 {
-            rust_tasm_equivalence_prop_new(SafeGet(DataType::Bool));
-            rust_tasm_equivalence_prop_new(SafeGet(DataType::U32));
-            rust_tasm_equivalence_prop_new(SafeGet(DataType::U64));
-            rust_tasm_equivalence_prop_new(SafeGet(DataType::BFE));
-            rust_tasm_equivalence_prop_new(SafeGet(DataType::XFE));
-            rust_tasm_equivalence_prop_new(SafeGet(DataType::Digest));
+            rust_tasm_equivalence_prop_new(SafeGet(DataType::Bool), true);
+            rust_tasm_equivalence_prop_new(SafeGet(DataType::U32), true);
+            rust_tasm_equivalence_prop_new(SafeGet(DataType::U64), true);
+            rust_tasm_equivalence_prop_new(SafeGet(DataType::BFE), true);
+            rust_tasm_equivalence_prop_new(SafeGet(DataType::XFE), true);
+            rust_tasm_equivalence_prop_new(SafeGet(DataType::Digest), true);
         }
     }
 

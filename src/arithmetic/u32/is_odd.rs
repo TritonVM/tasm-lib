@@ -120,7 +120,7 @@ mod u32_is_odd_tests {
 
     #[test]
     fn is_odd_u32_test() {
-        rust_tasm_equivalence_prop_new(U32IsOdd);
+        rust_tasm_equivalence_prop_new(U32IsOdd, true);
     }
 
     #[test]

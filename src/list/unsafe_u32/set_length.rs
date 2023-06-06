@@ -119,7 +119,7 @@ mod tests_set_length {
 
     #[test]
     fn new_snippet_test() {
-        rust_tasm_equivalence_prop_new::<UnsafeSetLength>(UnsafeSetLength(DataType::XFE));
+        rust_tasm_equivalence_prop_new(UnsafeSetLength(DataType::XFE), true);
     }
 
     #[test]

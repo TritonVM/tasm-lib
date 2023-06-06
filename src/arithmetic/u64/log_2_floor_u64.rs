@@ -163,7 +163,7 @@ mod tests {
 
     #[test]
     fn log_2_floor_u64_test() {
-        rust_tasm_equivalence_prop_new(Log2FloorU64);
+        rust_tasm_equivalence_prop_new(Log2FloorU64, true);
     }
 
     #[test]

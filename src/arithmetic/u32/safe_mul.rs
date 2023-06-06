@@ -150,7 +150,7 @@ mod tests {
 
     #[test]
     fn snippet_test() {
-        rust_tasm_equivalence_prop_new(SafeMul);
+        rust_tasm_equivalence_prop_new(SafeMul, true);
     }
 
     #[test]

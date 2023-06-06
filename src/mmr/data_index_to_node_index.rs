@@ -131,7 +131,7 @@ mod tests {
 
     #[test]
     fn data_index_to_node_index_test() {
-        rust_tasm_equivalence_prop_new(DataIndexToNodeIndex);
+        rust_tasm_equivalence_prop_new(DataIndexToNodeIndex, true);
     }
 
     #[test]

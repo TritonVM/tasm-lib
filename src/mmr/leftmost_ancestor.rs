@@ -153,7 +153,7 @@ mod tests {
 
     #[test]
     fn leftmost_ancestor_test() {
-        rust_tasm_equivalence_prop_new(MmrLeftMostAncestor);
+        rust_tasm_equivalence_prop_new(MmrLeftMostAncestor, true);
     }
 
     #[test]

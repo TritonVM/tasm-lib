@@ -131,7 +131,7 @@ mod tests {
 
     #[test]
     fn snippet_test() {
-        rust_tasm_equivalence_prop_new(LeadingZerosU32);
+        rust_tasm_equivalence_prop_new(LeadingZerosU32, true);
     }
 
     #[test]

@@ -229,7 +229,7 @@ mod tests {
 
     #[test]
     fn sub_u64_test() {
-        rust_tasm_equivalence_prop_new(SubU64);
+        rust_tasm_equivalence_prop_new(SubU64, true);
     }
 
     #[test]

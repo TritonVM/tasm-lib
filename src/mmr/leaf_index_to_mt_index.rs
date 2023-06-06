@@ -230,7 +230,7 @@ mod tests {
 
     #[test]
     fn leaf_index_to_mt_index_test() {
-        rust_tasm_equivalence_prop_new(MmrLeafIndexToMtIndexAndPeakIndex);
+        rust_tasm_equivalence_prop_new(MmrLeafIndexToMtIndexAndPeakIndex, true);
     }
 
     #[test]

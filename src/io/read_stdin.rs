@@ -135,12 +135,12 @@ mod tests {
     #[test]
     fn new_snippet_test() {
         for _ in 0..10 {
-            rust_tasm_equivalence_prop_new(ReadStdIn(DataType::Bool));
-            rust_tasm_equivalence_prop_new(ReadStdIn(DataType::U32));
-            rust_tasm_equivalence_prop_new(ReadStdIn(DataType::U64));
-            rust_tasm_equivalence_prop_new(ReadStdIn(DataType::BFE));
-            rust_tasm_equivalence_prop_new(ReadStdIn(DataType::XFE));
-            rust_tasm_equivalence_prop_new(ReadStdIn(DataType::Digest));
+            rust_tasm_equivalence_prop_new(ReadStdIn(DataType::Bool), true);
+            rust_tasm_equivalence_prop_new(ReadStdIn(DataType::U32), true);
+            rust_tasm_equivalence_prop_new(ReadStdIn(DataType::U64), true);
+            rust_tasm_equivalence_prop_new(ReadStdIn(DataType::BFE), true);
+            rust_tasm_equivalence_prop_new(ReadStdIn(DataType::XFE), true);
+            rust_tasm_equivalence_prop_new(ReadStdIn(DataType::Digest), true);
         }
     }
 

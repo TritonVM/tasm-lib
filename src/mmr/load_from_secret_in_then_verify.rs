@@ -326,7 +326,10 @@ mod tests {
 
     #[test]
     fn load_from_secret_in_then_verify_test() {
-        rust_tasm_equivalence_prop_new(MmrLoadFromSecretInThenVerify(PhantomData::<VmHasher>));
+        rust_tasm_equivalence_prop_new(
+            MmrLoadFromSecretInThenVerify(PhantomData::<VmHasher>),
+            true,
+        );
     }
 
     #[test]

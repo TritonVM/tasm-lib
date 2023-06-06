@@ -168,12 +168,12 @@ mod tests {
 
     #[test]
     fn new_snippet_test_long() {
-        rust_tasm_equivalence_prop_new(SafeLength(DataType::Bool));
-        rust_tasm_equivalence_prop_new(SafeLength(DataType::U32));
-        rust_tasm_equivalence_prop_new(SafeLength(DataType::U64));
-        rust_tasm_equivalence_prop_new(SafeLength(DataType::BFE));
-        rust_tasm_equivalence_prop_new(SafeLength(DataType::XFE));
-        rust_tasm_equivalence_prop_new(SafeLength(DataType::Digest));
+        rust_tasm_equivalence_prop_new(SafeLength(DataType::Bool), true);
+        rust_tasm_equivalence_prop_new(SafeLength(DataType::U32), true);
+        rust_tasm_equivalence_prop_new(SafeLength(DataType::U64), true);
+        rust_tasm_equivalence_prop_new(SafeLength(DataType::BFE), true);
+        rust_tasm_equivalence_prop_new(SafeLength(DataType::XFE), true);
+        rust_tasm_equivalence_prop_new(SafeLength(DataType::Digest), true);
     }
 
     #[test]

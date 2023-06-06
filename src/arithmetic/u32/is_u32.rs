@@ -124,7 +124,7 @@ mod tests {
 
     #[test]
     fn is_u32_test() {
-        rust_tasm_equivalence_prop_new::<IsU32>(IsU32);
+        rust_tasm_equivalence_prop_new(IsU32, true);
     }
 
     #[test]

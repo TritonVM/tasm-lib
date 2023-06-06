@@ -135,7 +135,7 @@ mod tests {
 
     #[test]
     fn snippet_test() {
-        rust_tasm_equivalence_prop_new::<SafeSub>(SafeSub);
+        rust_tasm_equivalence_prop_new(SafeSub, true);
     }
 
     #[test]

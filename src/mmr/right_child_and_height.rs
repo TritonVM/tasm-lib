@@ -251,7 +251,7 @@ mod tests {
 
     #[test]
     fn right_child_and_height_test() {
-        rust_tasm_equivalence_prop_new(MmrRightChildAndHeight);
+        rust_tasm_equivalence_prop_new(MmrRightChildAndHeight, true);
     }
 
     #[test]

@@ -154,7 +154,7 @@ mod tests {
 
     #[test]
     fn div2_u64_test() {
-        rust_tasm_equivalence_prop_new(Div2U64);
+        rust_tasm_equivalence_prop_new(Div2U64, true);
     }
 
     #[test]

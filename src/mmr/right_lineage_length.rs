@@ -198,7 +198,7 @@ mod tests {
 
     #[test]
     fn right_lineage_length_test() {
-        rust_tasm_equivalence_prop_new(MmrRightLineageLength);
+        rust_tasm_equivalence_prop_new(MmrRightLineageLength, true);
     }
 
     #[test]

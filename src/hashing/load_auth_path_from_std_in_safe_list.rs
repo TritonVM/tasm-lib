@@ -223,9 +223,7 @@ mod load_auth_path_from_std_in_tests {
 
     #[test]
     fn load_auth_path_from_std_in_test() {
-        rust_tasm_equivalence_prop_new::<LoadAuthPathFromStdInSafeList>(
-            LoadAuthPathFromStdInSafeList,
-        );
+        rust_tasm_equivalence_prop_new(LoadAuthPathFromStdInSafeList, true);
     }
 
     #[test]

@@ -401,7 +401,7 @@ mod auth_path_verify_from_memory_tests {
 
     #[test]
     fn verify_from_memory_test() {
-        rust_tasm_equivalence_prop_new(MmrVerifyFromMemory(PhantomData::<VmHasher>));
+        rust_tasm_equivalence_prop_new(MmrVerifyFromMemory(PhantomData::<VmHasher>), true);
     }
 
     #[test]

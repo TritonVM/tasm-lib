@@ -124,7 +124,7 @@ mod tests {
 
     #[test]
     fn right_child_test() {
-        rust_tasm_equivalence_prop_new(MmrRightChild);
+        rust_tasm_equivalence_prop_new(MmrRightChild, true);
     }
 
     #[test]

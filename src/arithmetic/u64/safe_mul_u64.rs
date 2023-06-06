@@ -216,7 +216,7 @@ mod tests {
 
     #[test]
     fn safe_mul_u64_test() {
-        rust_tasm_equivalence_prop_new(SafeMulU64);
+        rust_tasm_equivalence_prop_new(SafeMulU64, true);
     }
 
     #[test]

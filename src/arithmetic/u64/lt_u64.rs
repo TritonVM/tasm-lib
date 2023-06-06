@@ -323,12 +323,12 @@ mod tests {
 
     #[test]
     fn lt_u64_test_new_snippet() {
-        rust_tasm_equivalence_prop_new(LtU64);
+        rust_tasm_equivalence_prop_new(LtU64, true);
     }
 
     #[test]
     fn standard_lt_u64_test_new_snippet() {
-        rust_tasm_equivalence_prop_new(LtStandardU64);
+        rust_tasm_equivalence_prop_new(LtStandardU64, true);
     }
 
     #[test]

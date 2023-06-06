@@ -171,7 +171,7 @@ mod get_element_tests {
 
     #[test]
     fn new_snippet_test() {
-        rust_tasm_equivalence_prop_new(UnsafeGet(DataType::XFE));
+        rust_tasm_equivalence_prop_new(UnsafeGet(DataType::XFE), true);
     }
 
     #[test]

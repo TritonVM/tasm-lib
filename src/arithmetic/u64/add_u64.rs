@@ -186,7 +186,7 @@ mod tests {
 
     #[test]
     fn add_u64_test() {
-        rust_tasm_equivalence_prop_new(AddU64);
+        rust_tasm_equivalence_prop_new(AddU64, true);
     }
 
     #[test]

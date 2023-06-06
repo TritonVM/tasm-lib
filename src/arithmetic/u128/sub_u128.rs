@@ -269,7 +269,7 @@ mod tests {
 
     #[test]
     fn sub_u128_test() {
-        rust_tasm_equivalence_prop_new(SubU128);
+        rust_tasm_equivalence_prop_new(SubU128, true);
     }
 
     #[test]
