@@ -22,10 +22,10 @@ use crate::{
     DIGEST_LENGTH,
 };
 
-#[derive(Clone, Default)]
-pub struct CalculateNewPeaksFromAppend<H: AlgebraicHasher>(pub PhantomData<H>);
+#[derive(Clone, Default, Debug)]
+pub struct CalculateNewPeaksFromAppend<H: AlgebraicHasher + std::fmt::Debug>(pub PhantomData<H>);
 
-impl<H: AlgebraicHasher> Snippet for CalculateNewPeaksFromAppend<H> {
+impl<H: AlgebraicHasher + std::fmt::Debug> Snippet for CalculateNewPeaksFromAppend<H> {
     fn inputs(&self) -> Vec<String> {
         vec![
             "old_leaf_count_hi".to_string(),

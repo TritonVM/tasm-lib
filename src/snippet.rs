@@ -118,7 +118,7 @@ impl DataType {
     }
 }
 
-pub trait Snippet {
+pub trait Snippet: std::fmt::Debug {
     /// The name of a Snippet
     ///
     /// This is used as a unique identifier, e.g. when generating labels.
