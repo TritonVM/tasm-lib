@@ -278,8 +278,8 @@ impl<Function: Snippet + 'static + Clone> Snippet for Map<Function> {
         };
 
         let list_element = match self.list_type {
-            ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_read,
-            ListType::Unsafe => rust_shadowing_helper_functions::unsafe_list::unsafe_list_read,
+            ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_get,
+            ListType::Unsafe => rust_shadowing_helper_functions::unsafe_list::unsafe_list_get,
         };
 
         let set_element = match self.list_type {
@@ -511,18 +511,24 @@ mod tests {
 
     #[test]
     fn unsafe_list_prop_test() {
-        rust_tasm_equivalence_prop_new(Map::<TestHashXFieldElement> {
-            list_type: ListType::Unsafe,
-            f: TestHashXFieldElement,
-        });
+        rust_tasm_equivalence_prop_new(
+            Map::<TestHashXFieldElement> {
+                list_type: ListType::Unsafe,
+                f: TestHashXFieldElement,
+            },
+            false,
+        );
     }
 
     #[test]
     fn with_safe_list_prop_test() {
-        rust_tasm_equivalence_prop_new(Map::<TestHashXFieldElement> {
-            list_type: ListType::Safe,
-            f: TestHashXFieldElement,
-        });
+        rust_tasm_equivalence_prop_new(
+            Map::<TestHashXFieldElement> {
+                list_type: ListType::Safe,
+                f: TestHashXFieldElement,
+            },
+            false,
+        );
     }
 
     #[test]

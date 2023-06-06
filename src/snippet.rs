@@ -5,7 +5,6 @@ use std::fmt::Display;
 use triton_opcodes::instruction::LabelledInstruction;
 use triton_opcodes::parser::{parse, to_labelled};
 use twenty_first::shared_math::b_field_element::BFieldElement;
-use twenty_first::shared_math::x_field_element::EXTENSION_DEGREE;
 
 use crate::dyn_malloc::DYN_MALLOC_ADDRESS;
 use crate::snippet_state::SnippetState;
