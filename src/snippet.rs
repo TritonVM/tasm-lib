@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use rand::{thread_rng, Rng};
+use rand::{random, thread_rng, Rng};
 use std::collections::HashMap;
 use std::fmt::Display;
 use triton_opcodes::instruction::LabelledInstruction;
@@ -68,10 +68,8 @@ impl DataType {
             DataType::BFE => (0..count)
                 .map(|_| vec![BFieldElement::new(rng.gen_range(0..=BFieldElement::MAX))])
                 .collect_vec(),
-            DataType::XFE => (0..EXTENSION_DEGREE * count)
-                .map(|_| BFieldElement::new(rng.gen_range(0..=BFieldElement::MAX)))
-                .tuples()
-                .map(|(a, b, c)| vec![a, b, c])
+            DataType::XFE => (0..count)
+                .map(|_| vec![random(), random(), random()])
                 .collect_vec(),
             DataType::Digest => (0..DIGEST_LENGTH * count)
                 .map(|_| BFieldElement::new(rng.gen_range(0..=BFieldElement::MAX)))
