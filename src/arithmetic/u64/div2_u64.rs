@@ -29,7 +29,7 @@ impl Snippet for Div2U64 {
         vec![DataType::U64]
     }
 
-    fn crash_conditions() -> Vec<String> {
+    fn crash_conditions(&self) -> Vec<String> {
         vec![
             "If value_hi is not a u32".to_string(),
             "If value_lo is not a u32".to_string(),

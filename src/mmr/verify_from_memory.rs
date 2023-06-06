@@ -74,7 +74,7 @@ impl<H: AlgebraicHasher + std::fmt::Debug> Snippet for MmrVerifyFromMemory<H> {
         ]
     }
 
-    fn crash_conditions() -> Vec<String> {
+    fn crash_conditions(&self) -> Vec<String> {
         vec![
             "leaf_index >= leaf_count".to_string(),
             "leaf_index values not u32s".to_string(),

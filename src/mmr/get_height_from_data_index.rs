@@ -30,7 +30,7 @@ impl Snippet for GetHeightFromDataIndex {
         vec![DataType::U32]
     }
 
-    fn crash_conditions() -> Vec<String> {
+    fn crash_conditions(&self) -> Vec<String> {
         vec![]
     }
 

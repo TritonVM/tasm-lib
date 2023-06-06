@@ -29,7 +29,7 @@ impl Snippet for MmrRightLineageLength {
         vec![DataType::U32]
     }
 
-    fn crash_conditions() -> Vec<String> {
+    fn crash_conditions(&self) -> Vec<String> {
         vec!["node index exceeds 2^63".to_string()]
     }
 

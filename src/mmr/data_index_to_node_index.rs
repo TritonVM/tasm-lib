@@ -31,7 +31,7 @@ impl Snippet for DataIndexToNodeIndex {
         vec![DataType::U64]
     }
 
-    fn crash_conditions() -> Vec<String> {
+    fn crash_conditions(&self) -> Vec<String> {
         vec!["leaf_index value is larger than 2^63".to_string()]
     }
 

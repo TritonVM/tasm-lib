@@ -58,7 +58,7 @@ impl Snippet for SafeSub {
         )
     }
 
-    fn crash_conditions() -> Vec<String> {
+    fn crash_conditions(&self) -> Vec<String> {
         vec!["u32 overflow".to_string()]
     }
 

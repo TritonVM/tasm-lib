@@ -71,7 +71,7 @@ impl<H: AlgebraicHasher + std::fmt::Debug> Snippet
         vec![DataType::List(Box::new(DataType::Digest)), DataType::U64]
     }
 
-    fn crash_conditions() -> Vec<String> {
+    fn crash_conditions(&self) -> Vec<String> {
         vec![]
     }
 

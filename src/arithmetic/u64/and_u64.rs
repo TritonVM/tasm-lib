@@ -35,7 +35,7 @@ impl Snippet for AndU64 {
         vec![DataType::U64]
     }
 
-    fn crash_conditions() -> Vec<String> {
+    fn crash_conditions(&self) -> Vec<String> {
         vec![]
     }
 

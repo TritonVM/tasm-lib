@@ -115,7 +115,7 @@ impl DataType {
     }
 }
 
-pub trait Snippet: std::fmt::Debug {
+pub trait Snippet {
     /// The name of a Snippet
     ///
     /// This is used as a unique identifier, e.g. when generating labels.
@@ -123,49 +123,35 @@ pub trait Snippet: std::fmt::Debug {
     fn entrypoint(&self) -> String;
 
     /// The input stack
-    fn inputs(&self) -> Vec<String>
-    where
-        Self: Sized;
+    fn inputs(&self) -> Vec<String>;
 
     fn input_types(&self) -> Vec<DataType>;
 
     fn output_types(&self) -> Vec<DataType>;
 
     /// The output stack
-    fn outputs(&self) -> Vec<String>
-    where
-        Self: Sized;
+    fn outputs(&self) -> Vec<String>;
 
     /// The stack difference
-    fn stack_diff(&self) -> isize
-    where
-        Self: Sized;
+    fn stack_diff(&self) -> isize;
 
     /// The function body
     fn function_body(&self, library: &mut SnippetState) -> String;
 
     /// Ways in which this snippet can crash
-    fn crash_conditions() -> Vec<String>
-    where
-        Self: Sized;
+    fn crash_conditions(&self) -> Vec<String>;
 
     /// Examples of valid initial states for running this snippet
-    fn gen_input_states(&self) -> Vec<ExecutionState>
-    where
-        Self: Sized;
+    fn gen_input_states(&self) -> Vec<ExecutionState>;
 
-    fn common_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized;
+    fn common_case_input_state(&self) -> ExecutionState;
 
-    fn worst_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized;
+    fn worst_case_input_state(&self) -> ExecutionState;
 
-    fn function_body_as_instructions(&self, library: &mut SnippetState) -> Vec<LabelledInstruction>
-    where
-        Self: Sized,
-    {
+    fn function_body_as_instructions(
+        &self,
+        library: &mut SnippetState,
+    ) -> Vec<LabelledInstruction> {
         let f_body = self.function_body(library);
 
         // parse the code to get the list of instructions
@@ -193,10 +179,7 @@ pub trait Snippet: std::fmt::Debug {
         secret_in: Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
         words_statically_allocated: usize,
-    ) -> ExecutionResult
-    where
-        Self: Sized,
-    {
+    ) -> ExecutionResult {
         let mut library = SnippetState::with_preallocated_memory(words_statically_allocated);
         let entrypoint = self.entrypoint();
         let function_body = self.function_body(&mut library);
@@ -238,10 +221,7 @@ pub trait Snippet: std::fmt::Debug {
         .unwrap()
     }
 
-    fn run_tasm(&self, execution_state: &mut ExecutionState) -> ExecutionResult
-    where
-        Self: Sized,
-    {
+    fn run_tasm(&self, execution_state: &mut ExecutionState) -> ExecutionResult {
         let stack_prior = execution_state.stack.clone();
         let ret = self.run_tasm_old(
             &mut execution_state.stack,

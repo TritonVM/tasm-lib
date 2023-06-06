@@ -58,7 +58,7 @@ impl<H: AlgebraicHasher + std::fmt::Debug> Snippet for CalculateNewPeaksFromAppe
         ]
     }
 
-    fn crash_conditions() -> Vec<String> {
+    fn crash_conditions(&self) -> Vec<String> {
         vec!["Snippet arguments are not a valid MMR accumulator".to_string()]
     }
 

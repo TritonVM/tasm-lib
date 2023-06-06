@@ -28,7 +28,7 @@ impl Snippet for U32IsOdd {
         vec![DataType::Bool]
     }
 
-    fn crash_conditions() -> Vec<String> {
+    fn crash_conditions(&self) -> Vec<String> {
         vec!["if `value` is not a u32".to_string()]
     }
 

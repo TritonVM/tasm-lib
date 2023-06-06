@@ -62,7 +62,7 @@ impl Snippet for LeadingZerosU32 {
         )
     }
 
-    fn crash_conditions() -> Vec<String> {
+    fn crash_conditions(&self) -> Vec<String> {
         vec!["Input is not u32".to_owned()]
     }
 

@@ -285,7 +285,7 @@ impl Snippet for HashVarlen {
         )
     }
 
-    fn crash_conditions() -> Vec<String>
+    fn crash_conditions(&self) -> Vec<String>
     where
         Self: Sized,
     {

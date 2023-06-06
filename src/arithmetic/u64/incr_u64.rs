@@ -30,7 +30,7 @@ impl Snippet for IncrU64 {
         vec![DataType::U64]
     }
 
-    fn crash_conditions() -> Vec<String> {
+    fn crash_conditions(&self) -> Vec<String> {
         vec!["value == u64::MAX".to_string()]
     }
 

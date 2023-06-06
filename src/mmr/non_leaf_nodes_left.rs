@@ -35,7 +35,7 @@ impl Snippet for MmrNonLeafNodesLeftUsingAnd {
         vec![DataType::U64]
     }
 
-    fn crash_conditions() -> Vec<String> {
+    fn crash_conditions(&self) -> Vec<String> {
         vec!["Input values are not u32s".to_string()]
     }
 

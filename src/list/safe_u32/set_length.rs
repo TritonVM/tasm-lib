@@ -29,7 +29,7 @@ impl Snippet for SafeSetLength {
         vec![DataType::List(Box::new(self.0.clone()))]
     }
 
-    fn crash_conditions() -> Vec<String> {
+    fn crash_conditions(&self) -> Vec<String> {
         vec!["New length exceeds capacity".to_string()]
     }
 

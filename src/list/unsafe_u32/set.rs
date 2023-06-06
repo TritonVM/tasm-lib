@@ -41,7 +41,7 @@ impl Snippet for UnsafeSet {
         vec![]
     }
 
-    fn crash_conditions() -> Vec<String> {
+    fn crash_conditions(&self) -> Vec<String> {
         vec![]
     }
 

@@ -47,7 +47,7 @@ impl Snippet for SubU128 {
         vec![DataType::U128]
     }
 
-    fn crash_conditions() -> Vec<String> {
+    fn crash_conditions(&self) -> Vec<String> {
         vec!["(lhs - rhs) overflows u128".to_string()]
     }
 

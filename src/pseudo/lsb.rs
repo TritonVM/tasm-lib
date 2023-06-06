@@ -25,7 +25,7 @@ impl Snippet for Lsb {
         vec![DataType::BFE, DataType::BFE]
     }
 
-    fn crash_conditions() -> Vec<String> {
+    fn crash_conditions(&self) -> Vec<String> {
         vec![]
     }
 

@@ -29,7 +29,7 @@ impl Snippet for Log2FloorU64 {
         vec![DataType::U32]
     }
 
-    fn crash_conditions() -> Vec<String> {
+    fn crash_conditions(&self) -> Vec<String> {
         vec![
             "if value_hi is not a u32".to_string(),
             "if value_lo is not a u32".to_string(),

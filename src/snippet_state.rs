@@ -145,7 +145,7 @@ impl Snippet for DummyTestSnippetA {
         vec!["1".to_string(), "1".to_string(), "1".to_string()]
     }
 
-    fn crash_conditions() -> Vec<String> {
+    fn crash_conditions(&self) -> Vec<String> {
         vec![]
     }
 
@@ -226,7 +226,7 @@ impl Snippet for DummyTestSnippetB {
         vec![DataType::BFE, DataType::BFE]
     }
 
-    fn crash_conditions() -> Vec<String> {
+    fn crash_conditions(&self) -> Vec<String> {
         vec![]
     }
 
@@ -296,7 +296,7 @@ impl Snippet for DummyTestSnippetC {
         vec![DataType::BFE]
     }
 
-    fn crash_conditions() -> Vec<String> {
+    fn crash_conditions(&self) -> Vec<String> {
         vec![]
     }
 

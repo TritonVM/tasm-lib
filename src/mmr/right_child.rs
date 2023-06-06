@@ -32,7 +32,7 @@ impl Snippet for MmrRightChild {
         vec![DataType::U64]
     }
 
-    fn crash_conditions() -> Vec<String> {
+    fn crash_conditions(&self) -> Vec<String> {
         vec!["node_index == 0".to_string()]
     }
 

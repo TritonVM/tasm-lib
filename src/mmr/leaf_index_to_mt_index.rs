@@ -48,7 +48,7 @@ impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
         vec![DataType::U64, DataType::U32]
     }
 
-    fn crash_conditions() -> Vec<String> {
+    fn crash_conditions(&self) -> Vec<String> {
         vec!["Input values are not valid u32s".to_string()]
     }
 

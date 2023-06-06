@@ -35,7 +35,7 @@ impl Snippet for AddU64 {
         vec![DataType::U64]
     }
 
-    fn crash_conditions() -> Vec<String> {
+    fn crash_conditions(&self) -> Vec<String> {
         vec!["if (lhs + rhs) overflows u64".to_string()]
     }
 

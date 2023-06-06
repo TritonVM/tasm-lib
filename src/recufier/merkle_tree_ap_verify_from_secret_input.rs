@@ -41,7 +41,7 @@ impl<H: AlgebraicHasher + std::fmt::Debug> Snippet for MtApVerifyFromSecretInput
         vec![]
     }
 
-    fn crash_conditions() -> Vec<String> {
+    fn crash_conditions(&self) -> Vec<String> {
         vec!["auth path in public input is invalid".to_string()]
     }
 

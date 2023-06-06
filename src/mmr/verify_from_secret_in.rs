@@ -67,7 +67,7 @@ impl<H: AlgebraicHasher + std::fmt::Debug> Snippet for MmrVerifyLeafMembershipFr
         vec![DataType::U64, DataType::Bool]
     }
 
-    fn crash_conditions() -> Vec<String> {
+    fn crash_conditions(&self) -> Vec<String> {
         vec![
             "secret input is too short".to_string(),
             "leaf index is not strictly less than leaf count".to_string(),

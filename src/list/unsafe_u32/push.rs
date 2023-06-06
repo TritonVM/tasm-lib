@@ -39,7 +39,7 @@ impl Snippet for UnsafePush {
         vec![]
     }
 
-    fn crash_conditions() -> Vec<String> {
+    fn crash_conditions(&self) -> Vec<String> {
         vec![]
     }
 

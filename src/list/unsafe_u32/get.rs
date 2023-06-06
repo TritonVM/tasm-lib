@@ -37,7 +37,7 @@ impl Snippet for UnsafeGet {
         vec![DataType::BFE; self.0.get_size()]
     }
 
-    fn crash_conditions() -> Vec<String> {
+    fn crash_conditions(&self) -> Vec<String> {
         vec![]
     }
 

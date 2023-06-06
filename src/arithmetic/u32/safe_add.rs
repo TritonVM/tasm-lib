@@ -52,7 +52,7 @@ impl Snippet for SafeAdd {
         )
     }
 
-    fn crash_conditions() -> Vec<String> {
+    fn crash_conditions(&self) -> Vec<String> {
         vec!["u32 overflow".to_string()]
     }
 

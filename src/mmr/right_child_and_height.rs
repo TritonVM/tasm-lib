@@ -36,7 +36,7 @@ impl Snippet for MmrRightChildAndHeight {
         vec![DataType::Bool, DataType::U32]
     }
 
-    fn crash_conditions() -> Vec<String> {
+    fn crash_conditions(&self) -> Vec<String> {
         vec!["Node index exceeds 2^63?".to_string()]
     }
 

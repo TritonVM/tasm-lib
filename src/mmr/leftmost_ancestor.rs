@@ -38,7 +38,7 @@ impl Snippet for MmrLeftMostAncestor {
         vec![DataType::U64, DataType::U32]
     }
 
-    fn crash_conditions() -> Vec<String> {
+    fn crash_conditions(&self) -> Vec<String> {
         vec![
             "Inputs are not u32s".to_string(),
             "Node index beyond ~2^63?".to_string(),

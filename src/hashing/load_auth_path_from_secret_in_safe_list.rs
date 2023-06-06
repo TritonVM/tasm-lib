@@ -36,7 +36,7 @@ impl Snippet for LoadAuthPathFromSecretInSafeList {
         vec![DataType::List(Box::new(DataType::Digest))]
     }
 
-    fn crash_conditions() -> Vec<String> {
+    fn crash_conditions(&self) -> Vec<String> {
         vec!["Not enough elements in secret input".to_string()]
     }
 

@@ -32,7 +32,7 @@ impl Snippet for MmrRightLineageCountAndHeight {
         vec![DataType::U32, DataType::U32]
     }
 
-    fn crash_conditions() -> Vec<String> {
+    fn crash_conditions(&self) -> Vec<String> {
         vec![
             "Input values are not valid u32s".to_string(),
             "Node index beyond ~2^63".to_string(),

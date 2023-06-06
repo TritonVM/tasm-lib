@@ -26,7 +26,7 @@ impl Snippet for Sub {
         vec![DataType::BFE]
     }
 
-    fn crash_conditions() -> Vec<String> {
+    fn crash_conditions(&self) -> Vec<String> {
         vec![]
     }
 

@@ -65,7 +65,7 @@ impl Snippet for ReadSecret {
         )
     }
 
-    fn crash_conditions() -> Vec<String>
+    fn crash_conditions(&self) -> Vec<String>
     where
         Self: Sized,
     {

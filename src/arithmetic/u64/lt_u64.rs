@@ -39,7 +39,7 @@ impl Snippet for LtStandardU64 {
         vec![DataType::Bool]
     }
 
-    fn crash_conditions() -> Vec<String> {
+    fn crash_conditions(&self) -> Vec<String> {
         vec!["Either input is not u32".to_string()]
     }
 
@@ -180,7 +180,7 @@ impl Snippet for LtU64 {
         vec![DataType::U64, DataType::U64, DataType::Bool]
     }
 
-    fn crash_conditions() -> Vec<String> {
+    fn crash_conditions(&self) -> Vec<String> {
         vec!["if inputs are not u32".to_string()]
     }
 

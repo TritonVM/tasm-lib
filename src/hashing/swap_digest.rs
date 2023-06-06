@@ -52,7 +52,7 @@ impl Snippet for SwapDigest {
         vec![DataType::Digest, DataType::Digest]
     }
 
-    fn crash_conditions() -> Vec<String> {
+    fn crash_conditions(&self) -> Vec<String> {
         vec![]
     }
 

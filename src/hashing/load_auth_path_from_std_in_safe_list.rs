@@ -37,7 +37,7 @@ impl Snippet for LoadAuthPathFromStdInSafeList {
         vec![DataType::List(Box::new(DataType::Digest))]
     }
 
-    fn crash_conditions() -> Vec<String> {
+    fn crash_conditions(&self) -> Vec<String> {
         vec!["Not enough elements in std input".to_string()]
     }
 

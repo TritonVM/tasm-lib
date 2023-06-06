@@ -48,7 +48,7 @@ impl Snippet for AddU128 {
         vec![DataType::U128]
     }
 
-    fn crash_conditions() -> Vec<String> {
+    fn crash_conditions(&self) -> Vec<String> {
         vec!["if (lhs + rhs) overflows u128".to_string()]
     }
 

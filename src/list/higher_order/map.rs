@@ -3,7 +3,6 @@ use num::Zero;
 use rand::{thread_rng, Rng};
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::fmt::Debug;
 use triton_opcodes::instruction::LabelledInstruction;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
@@ -36,17 +35,6 @@ pub struct RawCode {
     pub rust_shadowing: Option<Box<RefCell<dyn FnMut(&mut Vec<BFieldElement>)>>>,
 }
 
-impl Debug for RawCode {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("RawCode")
-            .field("entrypoint", &self.entrypoint)
-            .field("input_types", &self.input_types)
-            .field("output_types", &self.output_types)
-            .finish()
-    }
-}
-
-#[derive(Debug)]
 pub enum InnerFunction {
     RawCode(RawCode),
     Snippet(Box<dyn Snippet>),
@@ -78,7 +66,6 @@ impl InnerFunction {
 /// Applies a given function to every element of a list, and collects
 /// the new elements into a new list. The function must be given as
 /// an object as well as a dynamic type parameter.
-#[derive(Debug)]
 pub struct Map {
     pub list_type: ListType,
     pub f: InnerFunction,
@@ -277,7 +264,7 @@ impl Snippet for Map {
         )
     }
 
-    fn crash_conditions() -> Vec<String>
+    fn crash_conditions(&self) -> Vec<String>
     where
         Self: Sized,
     {
@@ -539,7 +526,7 @@ mod tests {
             )
         }
 
-        fn crash_conditions() -> Vec<String>
+        fn crash_conditions(&self) -> Vec<String>
         where
             Self: Sized,
         {
