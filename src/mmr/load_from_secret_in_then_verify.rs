@@ -24,10 +24,10 @@ use super::MAX_MMR_HEIGHT;
 
 /// First load from secret-in, then verify from memory
 #[derive(Clone, Debug)]
-pub struct MmrLoadFromSecretInThenVerify<H: AlgebraicHasher>(pub PhantomData<H>);
+pub struct MmrLoadFromSecretInThenVerify<H: AlgebraicHasher + std::fmt::Debug>(pub PhantomData<H>);
 
 // TODO: Compiler complains without this explicit lifetime on `H`. But is it OK?
-impl<H: AlgebraicHasher + 'static> Snippet for MmrLoadFromSecretInThenVerify<H> {
+impl<H: AlgebraicHasher + 'static + std::fmt::Debug> Snippet for MmrLoadFromSecretInThenVerify<H> {
     fn inputs(&self) -> Vec<String> {
         vec![
             "peaks_pointer".to_string(),

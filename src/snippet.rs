@@ -1,11 +1,10 @@
 use itertools::Itertools;
-use rand::{thread_rng, Rng};
+use rand::{random, thread_rng, Rng};
 use std::collections::HashMap;
 use std::fmt::Display;
 use triton_opcodes::instruction::LabelledInstruction;
 use triton_opcodes::parser::{parse, to_labelled};
 use twenty_first::shared_math::b_field_element::BFieldElement;
-use twenty_first::shared_math::x_field_element::EXTENSION_DEGREE;
 
 use crate::dyn_malloc::DYN_MALLOC_ADDRESS;
 use crate::snippet_state::SnippetState;
@@ -68,10 +67,8 @@ impl DataType {
             DataType::BFE => (0..count)
                 .map(|_| vec![BFieldElement::new(rng.gen_range(0..=BFieldElement::MAX))])
                 .collect_vec(),
-            DataType::XFE => (0..EXTENSION_DEGREE * count)
-                .map(|_| BFieldElement::new(rng.gen_range(0..=BFieldElement::MAX)))
-                .tuples()
-                .map(|(a, b, c)| vec![a, b, c])
+            DataType::XFE => (0..count)
+                .map(|_| vec![random(), random(), random()])
                 .collect_vec(),
             DataType::Digest => (0..DIGEST_LENGTH * count)
                 .map(|_| BFieldElement::new(rng.gen_range(0..=BFieldElement::MAX)))
@@ -118,7 +115,7 @@ impl DataType {
     }
 }
 
-pub trait Snippet {
+pub trait Snippet: std::fmt::Debug {
     /// The name of a Snippet
     ///
     /// This is used as a unique identifier, e.g. when generating labels.

@@ -13,7 +13,7 @@ use crate::snippet_state::SnippetState;
 use crate::{get_init_tvm_stack, Digest, ExecutionState};
 
 #[derive(Clone, Debug)]
-pub struct MtApVerifyFromSecretInput<H: AlgebraicHasher>(pub PhantomData<H>);
+pub struct MtApVerifyFromSecretInput<H: AlgebraicHasher + std::fmt::Debug>(pub PhantomData<H>);
 
 /// TVM assembly to verify Merkle authentication paths
 ///
@@ -24,7 +24,7 @@ pub struct MtApVerifyFromSecretInput<H: AlgebraicHasher>(pub PhantomData<H>);
 /// output: Result<(), VMFail>
 ///
 /// uses RAM at address 0 to store the number of authentication paths
-impl<H: AlgebraicHasher> Snippet for MtApVerifyFromSecretInput<H> {
+impl<H: AlgebraicHasher + std::fmt::Debug> Snippet for MtApVerifyFromSecretInput<H> {
     fn inputs(&self) -> Vec<String> {
         vec![]
     }

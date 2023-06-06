@@ -29,9 +29,11 @@ use super::leaf_index_to_mt_index::MmrLeafIndexToMtIndexAndPeakIndex;
 use super::MAX_MMR_HEIGHT;
 
 #[derive(Clone, Debug)]
-pub struct MmrVerifyLeafMembershipFromSecretIn<H: AlgebraicHasher>(pub PhantomData<H>);
+pub struct MmrVerifyLeafMembershipFromSecretIn<H: AlgebraicHasher + std::fmt::Debug>(
+    pub PhantomData<H>,
+);
 
-impl<H: AlgebraicHasher> Snippet for MmrVerifyLeafMembershipFromSecretIn<H> {
+impl<H: AlgebraicHasher + std::fmt::Debug> Snippet for MmrVerifyLeafMembershipFromSecretIn<H> {
     fn inputs(&self) -> Vec<String> {
         vec![
             "peaks_pointer".to_string(),

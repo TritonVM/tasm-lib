@@ -25,10 +25,14 @@ use crate::{
 };
 
 /// Calculate new MMR peaks from a leaf mutation using Merkle tree indices walk up the tree
-#[derive(Clone, Default)]
-pub struct MmrCalculateNewPeaksFromLeafMutationMtIndices<H: AlgebraicHasher>(pub PhantomData<H>);
+#[derive(Clone, Default, Debug)]
+pub struct MmrCalculateNewPeaksFromLeafMutationMtIndices<H: AlgebraicHasher + std::fmt::Debug>(
+    pub PhantomData<H>,
+);
 
-impl<H: AlgebraicHasher> Snippet for MmrCalculateNewPeaksFromLeafMutationMtIndices<H> {
+impl<H: AlgebraicHasher + std::fmt::Debug> Snippet
+    for MmrCalculateNewPeaksFromLeafMutationMtIndices<H>
+{
     fn inputs(&self) -> Vec<String> {
         vec![
             "*auth_path".to_string(),

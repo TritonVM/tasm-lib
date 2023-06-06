@@ -86,8 +86,11 @@ impl SnippetState {
     }
 }
 
+#[derive(Debug)]
 pub struct DummyTestSnippetA;
+#[derive(Debug)]
 pub struct DummyTestSnippetB;
+#[derive(Debug)]
 pub struct DummyTestSnippetC;
 
 impl Snippet for DummyTestSnippetA {
