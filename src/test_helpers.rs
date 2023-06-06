@@ -9,8 +9,8 @@ use crate::snippet_state::SnippetState;
 use crate::{all_snippets, rust_shadowing_helper_functions, ExecutionResult};
 
 #[allow(dead_code)]
-pub fn rust_tasm_equivalence_prop_new<T: Snippet + Clone>(
-    snippet_struct: T,
+pub fn rust_tasm_equivalence_prop_new<T: Snippet>(
+    snippet_struct: &T,
     export_snippet: bool,
 ) -> Vec<ExecutionResult> {
     // Verify that snippet can be found in `all_snippets`, so it's visible to the outside
@@ -31,7 +31,7 @@ pub fn rust_tasm_equivalence_prop_new<T: Snippet + Clone>(
     for execution_state in execution_states.iter_mut() {
         let stack_init = execution_state.stack.clone();
         let execution_result = rust_tasm_equivalence_prop::<T>(
-            snippet_struct.clone(),
+            snippet_struct,
             &execution_state.stack,
             &execution_state.std_in,
             &execution_state.secret_in,
@@ -61,7 +61,7 @@ pub fn rust_tasm_equivalence_prop_new<T: Snippet + Clone>(
 
 #[allow(dead_code)]
 pub fn rust_tasm_equivalence_prop<T: Snippet>(
-    snippet_struct: T,
+    snippet_struct: &T,
     stack: &[BFieldElement],
     stdin: &[BFieldElement],
     secret_in: &[BFieldElement],

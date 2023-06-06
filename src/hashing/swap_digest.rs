@@ -154,7 +154,7 @@ mod tests {
 
     #[test]
     fn swap_digest_test() {
-        rust_tasm_equivalence_prop_new(SwapDigest, true);
+        rust_tasm_equivalence_prop_new(&SwapDigest, true);
     }
 
     #[test]

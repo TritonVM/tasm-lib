@@ -156,7 +156,7 @@ mod tests {
 
     #[test]
     fn snippet_test() {
-        rust_tasm_equivalence_prop_new(OrU64, true);
+        rust_tasm_equivalence_prop_new(&OrU64, true);
     }
 
     #[test]
@@ -190,7 +190,7 @@ mod tests {
         push_encodable(&mut init_stack, &lhs);
 
         let execution_result = rust_tasm_equivalence_prop(
-            OrU64,
+            &OrU64,
             &init_stack,
             &[],
             &[],

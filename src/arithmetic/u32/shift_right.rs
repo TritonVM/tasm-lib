@@ -152,7 +152,7 @@ mod tests {
 
     #[test]
     fn shift_right_test() {
-        rust_tasm_equivalence_prop_new(ShiftRightU32, true);
+        rust_tasm_equivalence_prop_new(&ShiftRightU32, true);
     }
 
     #[test]
@@ -187,7 +187,7 @@ mod tests {
         expected_stack.push((expected_u32 as u64).into());
 
         let _execution_result = rust_tasm_equivalence_prop(
-            ShiftRightU32,
+            &ShiftRightU32,
             &init_stack,
             &[],
             &[],

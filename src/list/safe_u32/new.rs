@@ -181,12 +181,12 @@ mod tests {
 
     #[test]
     fn new_snippet_test() {
-        rust_tasm_equivalence_prop_new(SafeNew(DataType::Bool), true);
-        rust_tasm_equivalence_prop_new(SafeNew(DataType::U32), true);
-        rust_tasm_equivalence_prop_new(SafeNew(DataType::U64), true);
-        rust_tasm_equivalence_prop_new(SafeNew(DataType::BFE), true);
-        rust_tasm_equivalence_prop_new(SafeNew(DataType::XFE), true);
-        rust_tasm_equivalence_prop_new(SafeNew(DataType::Digest), true);
+        rust_tasm_equivalence_prop_new(&SafeNew(DataType::Bool), true);
+        rust_tasm_equivalence_prop_new(&SafeNew(DataType::U32), true);
+        rust_tasm_equivalence_prop_new(&SafeNew(DataType::U64), true);
+        rust_tasm_equivalence_prop_new(&SafeNew(DataType::BFE), true);
+        rust_tasm_equivalence_prop_new(&SafeNew(DataType::XFE), true);
+        rust_tasm_equivalence_prop_new(&SafeNew(DataType::Digest), true);
     }
 
     #[test]

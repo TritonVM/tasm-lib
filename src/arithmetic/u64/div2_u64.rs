@@ -154,7 +154,7 @@ mod tests {
 
     #[test]
     fn div2_u64_test() {
-        rust_tasm_equivalence_prop_new(Div2U64, true);
+        rust_tasm_equivalence_prop_new(&Div2U64, true);
     }
 
     #[test]
@@ -170,7 +170,7 @@ mod tests {
         init_stack.push(BFieldElement::new(u32::MAX as u64 + 1));
 
         let _execution_result = rust_tasm_equivalence_prop::<Div2U64>(
-            Div2U64,
+            &Div2U64,
             &init_stack,
             &[],
             &[],
@@ -188,7 +188,7 @@ mod tests {
         init_stack.push(BFieldElement::new(16));
 
         let _execution_result = rust_tasm_equivalence_prop::<Div2U64>(
-            Div2U64,
+            &Div2U64,
             &init_stack,
             &[],
             &[],
@@ -236,7 +236,7 @@ mod tests {
         expected_stack.push(BFieldElement::new(res & u32::MAX as u64));
 
         let _execution_result = rust_tasm_equivalence_prop::<Div2U64>(
-            Div2U64,
+            &Div2U64,
             &init_stack,
             &[],
             &[],

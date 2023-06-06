@@ -170,7 +170,7 @@ mod tests {
 
     #[test]
     fn double_pow2_u64_test() {
-        rust_tasm_equivalence_prop_new(DoublePow2U64, true);
+        rust_tasm_equivalence_prop_new(&DoublePow2U64, true);
     }
 
     #[test]

@@ -119,7 +119,7 @@ mod tests_set_length {
 
     #[test]
     fn new_snippet_test() {
-        rust_tasm_equivalence_prop_new(UnsafeSetLength(DataType::XFE), true);
+        rust_tasm_equivalence_prop_new(&UnsafeSetLength(DataType::XFE), true);
     }
 
     #[test]
@@ -157,8 +157,8 @@ mod tests_set_length {
         // Insert length indicator of list, lives on offset = 0 from `list_address`
         vm_memory.insert(list_address, BFieldElement::new(init_list_length as u64));
 
-        let _execution_result = rust_tasm_equivalence_prop::<UnsafeSetLength>(
-            UnsafeSetLength(data_type),
+        let _execution_result = rust_tasm_equivalence_prop(
+            &UnsafeSetLength(data_type),
             &init_stack,
             &[],
             &[],

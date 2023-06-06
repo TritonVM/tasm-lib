@@ -193,7 +193,7 @@ mod tests {
 
     #[test]
     fn wrapping_mul_u64_test() {
-        rust_tasm_equivalence_prop_new(WrappingMulU64, true);
+        rust_tasm_equivalence_prop_new(&WrappingMulU64, true);
     }
 
     #[test]
@@ -213,7 +213,7 @@ mod tests {
         expected.push(BFieldElement::zero());
         expected.push(BFieldElement::new(20_000));
         rust_tasm_equivalence_prop(
-            WrappingMulU64,
+            &WrappingMulU64,
             &init_stack,
             &[],
             &[],

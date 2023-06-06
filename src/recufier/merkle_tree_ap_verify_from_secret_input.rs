@@ -315,7 +315,7 @@ mod merkle_authentication_verify_test {
 
     #[test]
     fn merkle_tree_ap_verify_from_secret_input_test() {
-        rust_tasm_equivalence_prop_new(MtApVerifyFromSecretInput(PhantomData::<VmHasher>), true);
+        rust_tasm_equivalence_prop_new(&MtApVerifyFromSecretInput(PhantomData::<VmHasher>), true);
     }
 
     #[test]
@@ -361,7 +361,7 @@ mod merkle_authentication_verify_test {
         let standard_input: Vec<BFieldElement> = generate_input::<VmHasher>(indices, &leafs);
 
         rust_tasm_equivalence_prop(
-            MtApVerifyFromSecretInput(PhantomData::<VmHasher>),
+            &MtApVerifyFromSecretInput(PhantomData::<VmHasher>),
             stack,
             &standard_input,
             &secret_input,
@@ -388,7 +388,7 @@ mod merkle_authentication_verify_test {
         let standard_input: Vec<BFieldElement> = generate_input::<VmHasher>(indices, &leafs);
 
         rust_tasm_equivalence_prop(
-            MtApVerifyFromSecretInput(PhantomData::<VmHasher>),
+            &MtApVerifyFromSecretInput(PhantomData::<VmHasher>),
             stack,
             &standard_input,
             &bad_secret_input,

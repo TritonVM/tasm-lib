@@ -401,7 +401,7 @@ mod auth_path_verify_from_memory_tests {
 
     #[test]
     fn verify_from_memory_test() {
-        rust_tasm_equivalence_prop_new(MmrVerifyFromMemory(PhantomData::<VmHasher>), true);
+        rust_tasm_equivalence_prop_new(&MmrVerifyFromMemory(PhantomData::<VmHasher>), true);
     }
 
     #[test]
@@ -592,7 +592,7 @@ mod auth_path_verify_from_memory_tests {
         expected_final_stack.push(BFieldElement::new(expect_validation_success as u64));
 
         let _execution_result = rust_tasm_equivalence_prop::<MmrVerifyFromMemory<VmHasher>>(
-            MmrVerifyFromMemory(PhantomData::<VmHasher>),
+            &MmrVerifyFromMemory(PhantomData::<VmHasher>),
             &init_stack,
             &[],
             &[],

@@ -219,7 +219,7 @@ mod tests {
 
     #[test]
     fn dyn_malloc_test() {
-        rust_tasm_equivalence_prop_new(DynMalloc, true);
+        rust_tasm_equivalence_prop_new(&DynMalloc, true);
     }
 
     #[test]

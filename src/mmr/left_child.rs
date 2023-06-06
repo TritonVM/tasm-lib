@@ -136,7 +136,7 @@ mod tests {
 
     #[test]
     fn left_child_test() {
-        rust_tasm_equivalence_prop_new(MmrLeftChild, true);
+        rust_tasm_equivalence_prop_new(&MmrLeftChild, true);
     }
 
     #[test]
@@ -175,7 +175,7 @@ mod tests {
         init_stack.push(BFieldElement::new(height as u64));
 
         let _execution_result = rust_tasm_equivalence_prop::<MmrLeftChild>(
-            MmrLeftChild,
+            &MmrLeftChild,
             &init_stack,
             &[],
             &[],

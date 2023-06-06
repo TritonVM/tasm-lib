@@ -148,7 +148,7 @@ mod tests {
 
     #[test]
     fn decr_u64_test() {
-        rust_tasm_equivalence_prop_new(DecrU64, true);
+        rust_tasm_equivalence_prop_new(&DecrU64, true);
     }
 
     #[test]
@@ -195,14 +195,6 @@ mod tests {
     fn prop_decr_u64(value: U32s<2>) {
         let mut stack = get_init_tvm_stack();
         push_encodable(&mut stack, &value);
-        rust_tasm_equivalence_prop::<DecrU64>(
-            DecrU64,
-            &stack,
-            &[],
-            &[],
-            &mut HashMap::default(),
-            0,
-            None,
-        );
+        rust_tasm_equivalence_prop(&DecrU64, &stack, &[], &[], &mut HashMap::default(), 0, None);
     }
 }

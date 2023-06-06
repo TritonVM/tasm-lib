@@ -156,9 +156,9 @@ mod tests {
 
     #[test]
     fn new_snippet_test_long() {
-        rust_tasm_equivalence_prop_new(UnsafeLength(DataType::BFE), true);
-        rust_tasm_equivalence_prop_new(UnsafeLength(DataType::U64), true);
-        rust_tasm_equivalence_prop_new(UnsafeLength(DataType::Digest), true);
+        rust_tasm_equivalence_prop_new(&UnsafeLength(DataType::BFE), true);
+        rust_tasm_equivalence_prop_new(&UnsafeLength(DataType::U64), true);
+        rust_tasm_equivalence_prop_new(&UnsafeLength(DataType::Digest), true);
     }
 
     #[test]
@@ -199,8 +199,8 @@ mod tests {
             );
         }
 
-        let _execution_result = rust_tasm_equivalence_prop::<UnsafeLength>(
-            UnsafeLength(DataType::BFE),
+        let _execution_result = rust_tasm_equivalence_prop(
+            &UnsafeLength(DataType::BFE),
             &init_stack,
             &[],
             &[],

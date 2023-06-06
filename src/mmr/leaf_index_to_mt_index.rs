@@ -230,7 +230,7 @@ mod tests {
 
     #[test]
     fn leaf_index_to_mt_index_test() {
-        rust_tasm_equivalence_prop_new(MmrLeafIndexToMtIndexAndPeakIndex, true);
+        rust_tasm_equivalence_prop_new(&MmrLeafIndexToMtIndexAndPeakIndex, true);
     }
 
     #[test]
@@ -386,7 +386,7 @@ mod tests {
         expected.push(BFieldElement::new(expected_peak_index as u64));
 
         let _execution_result = rust_tasm_equivalence_prop::<MmrLeafIndexToMtIndexAndPeakIndex>(
-            MmrLeafIndexToMtIndexAndPeakIndex,
+            &MmrLeafIndexToMtIndexAndPeakIndex,
             &init_stack,
             &[],
             &[],

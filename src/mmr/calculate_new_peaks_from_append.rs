@@ -350,7 +350,7 @@ mod tests {
 
     #[test]
     fn calculate_new_peaks_from_append_test() {
-        rust_tasm_equivalence_prop_new(CalculateNewPeaksFromAppend(PhantomData::<VmHasher>), true);
+        rust_tasm_equivalence_prop_new(&CalculateNewPeaksFromAppend(PhantomData::<VmHasher>), true);
     }
 
     #[test]
@@ -470,7 +470,7 @@ mod tests {
         expected_final_stack.push(auth_paths_pointer);
 
         let _execution_result = rust_tasm_equivalence_prop(
-            CalculateNewPeaksFromAppend(PhantomData::<VmHasher>),
+            &CalculateNewPeaksFromAppend(PhantomData::<VmHasher>),
             &init_stack,
             &[],
             &[],

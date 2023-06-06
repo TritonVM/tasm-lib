@@ -169,12 +169,12 @@ mod list_set_tests {
 
     #[test]
     fn new_snippet_test() {
-        rust_tasm_equivalence_prop_new(UnsafeSet(DataType::Bool), true);
-        rust_tasm_equivalence_prop_new(UnsafeSet(DataType::BFE), true);
-        rust_tasm_equivalence_prop_new(UnsafeSet(DataType::U32), true);
-        rust_tasm_equivalence_prop_new(UnsafeSet(DataType::U64), true);
-        rust_tasm_equivalence_prop_new(UnsafeSet(DataType::XFE), true);
-        rust_tasm_equivalence_prop_new(UnsafeSet(DataType::Digest), true);
+        rust_tasm_equivalence_prop_new(&UnsafeSet(DataType::Bool), true);
+        rust_tasm_equivalence_prop_new(&UnsafeSet(DataType::BFE), true);
+        rust_tasm_equivalence_prop_new(&UnsafeSet(DataType::U32), true);
+        rust_tasm_equivalence_prop_new(&UnsafeSet(DataType::U64), true);
+        rust_tasm_equivalence_prop_new(&UnsafeSet(DataType::XFE), true);
+        rust_tasm_equivalence_prop_new(&UnsafeSet(DataType::Digest), true);
     }
 
     #[test]
@@ -246,8 +246,8 @@ mod list_set_tests {
             data_type.get_size(),
         );
 
-        let _execution_result = rust_tasm_equivalence_prop::<UnsafeSet>(
-            UnsafeSet(data_type.clone()),
+        let _execution_result = rust_tasm_equivalence_prop(
+            &UnsafeSet(data_type.clone()),
             &init_stack,
             &[],
             &[],

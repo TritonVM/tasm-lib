@@ -150,7 +150,7 @@ mod tests {
 
     #[test]
     fn snippet_test() {
-        rust_tasm_equivalence_prop_new(SafeMul, true);
+        rust_tasm_equivalence_prop_new(&SafeMul, true);
     }
 
     #[test]
@@ -192,7 +192,7 @@ mod tests {
         init_stack.push(BFieldElement::new(lhs as u64));
 
         let execution_result = rust_tasm_equivalence_prop(
-            SafeMul,
+            &SafeMul,
             &init_stack,
             &[],
             &[],

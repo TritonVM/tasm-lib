@@ -143,7 +143,7 @@ mod tests {
 
     #[test]
     fn snippet_test() {
-        rust_tasm_equivalence_prop_new(LeadingZerosU64, true);
+        rust_tasm_equivalence_prop_new(&LeadingZerosU64, true);
     }
 
     #[test]
@@ -178,7 +178,7 @@ mod tests {
         init_stack.push(BFieldElement::new(value));
 
         let execution_result = rust_tasm_equivalence_prop(
-            LeadingZerosU64,
+            &LeadingZerosU64,
             &init_stack,
             &[],
             &[],

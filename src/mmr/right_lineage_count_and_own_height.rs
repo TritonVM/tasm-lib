@@ -275,7 +275,7 @@ mod tests {
 
     #[test]
     fn right_lineage_count_and_own_height_child_test() {
-        rust_tasm_equivalence_prop_new(MmrRightLineageCountAndHeight, true);
+        rust_tasm_equivalence_prop_new(&MmrRightLineageCountAndHeight, true);
     }
 
     #[test]
@@ -364,7 +364,7 @@ mod tests {
         ]
         .concat();
         let _execution_result = rust_tasm_equivalence_prop(
-            MmrRightLineageCountAndHeight,
+            &MmrRightLineageCountAndHeight,
             &init_stack,
             &[],
             &[],

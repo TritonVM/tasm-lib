@@ -149,7 +149,7 @@ mod tests {
 
     #[test]
     fn eq_u64_test() {
-        rust_tasm_equivalence_prop_new(EqU64, true);
+        rust_tasm_equivalence_prop_new(&EqU64, true);
     }
 
     #[test]
@@ -279,8 +279,8 @@ mod tests {
             init_stack.push(elem);
         }
 
-        let _execution_result = rust_tasm_equivalence_prop::<EqU64>(
-            EqU64,
+        let _execution_result = rust_tasm_equivalence_prop(
+            &EqU64,
             &init_stack,
             &[],
             &[],

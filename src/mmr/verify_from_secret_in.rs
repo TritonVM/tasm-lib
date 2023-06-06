@@ -421,7 +421,7 @@ mod mmr_verify_from_secret_in_tests {
     #[test]
     fn verify_from_secret_in_test() {
         rust_tasm_equivalence_prop_new(
-            MmrVerifyLeafMembershipFromSecretIn(PhantomData::<VmHasher>),
+            &MmrVerifyLeafMembershipFromSecretIn(PhantomData::<VmHasher>),
             true,
         );
     }
@@ -628,7 +628,7 @@ mod mmr_verify_from_secret_in_tests {
         }
 
         let _execution_result = rust_tasm_equivalence_prop(
-            MmrVerifyLeafMembershipFromSecretIn(PhantomData::<VmHasher>),
+            &MmrVerifyLeafMembershipFromSecretIn(PhantomData::<VmHasher>),
             &init_stack,
             &[],
             &secret_in,

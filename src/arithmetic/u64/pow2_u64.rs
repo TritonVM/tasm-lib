@@ -119,7 +119,7 @@ mod tests {
 
     #[test]
     fn pow2_static_test() {
-        rust_tasm_equivalence_prop_new(Pow2U64, true);
+        rust_tasm_equivalence_prop_new(&Pow2U64, true);
     }
 
     #[test]
@@ -133,7 +133,7 @@ mod tests {
 
         let expected = None;
         let mut execution_result = rust_tasm_equivalence_prop(
-            Pow2U64,
+            &Pow2U64,
             &init_stack,
             &[],
             &[],

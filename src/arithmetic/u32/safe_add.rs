@@ -132,7 +132,7 @@ mod tests {
 
     #[test]
     fn snippet_test() {
-        rust_tasm_equivalence_prop_new(SafeAdd, true);
+        rust_tasm_equivalence_prop_new(&SafeAdd, true);
     }
 
     #[test]
@@ -158,7 +158,7 @@ mod tests {
         init_stack.push(BFieldElement::new(lhs as u64));
 
         let execution_result = rust_tasm_equivalence_prop::<SafeAdd>(
-            SafeAdd,
+            &SafeAdd,
             &init_stack,
             &[],
             &[],

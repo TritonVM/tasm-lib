@@ -120,7 +120,7 @@ mod tests {
 
     #[test]
     fn get_height_from_data_index_test() {
-        rust_tasm_equivalence_prop_new(GetHeightFromDataIndex, true);
+        rust_tasm_equivalence_prop_new(&GetHeightFromDataIndex, true);
     }
 
     #[test]
@@ -209,7 +209,7 @@ mod tests {
         }
 
         let _execution_result = rust_tasm_equivalence_prop::<GetHeightFromDataIndex>(
-            GetHeightFromDataIndex,
+            &GetHeightFromDataIndex,
             &init_stack,
             &[],
             &[],

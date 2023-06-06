@@ -154,13 +154,13 @@ mod tests {
 
     #[test]
     fn new_snippet_test() {
-        rust_tasm_equivalence_prop_new(UnsafeNew(DataType::Bool), true);
-        rust_tasm_equivalence_prop_new(UnsafeNew(DataType::BFE), true);
-        rust_tasm_equivalence_prop_new(UnsafeNew(DataType::U32), true);
-        rust_tasm_equivalence_prop_new(UnsafeNew(DataType::XFE), true);
-        rust_tasm_equivalence_prop_new(UnsafeNew(DataType::Digest), true);
+        rust_tasm_equivalence_prop_new(&UnsafeNew(DataType::Bool), true);
+        rust_tasm_equivalence_prop_new(&UnsafeNew(DataType::BFE), true);
+        rust_tasm_equivalence_prop_new(&UnsafeNew(DataType::U32), true);
+        rust_tasm_equivalence_prop_new(&UnsafeNew(DataType::XFE), true);
+        rust_tasm_equivalence_prop_new(&UnsafeNew(DataType::Digest), true);
 
-        let execution_states = rust_tasm_equivalence_prop_new(UnsafeNew(DataType::U64), true);
+        let execution_states = rust_tasm_equivalence_prop_new(&UnsafeNew(DataType::U64), true);
         let dyn_malloc_address = BFieldElement::new(DYN_MALLOC_ADDRESS as u64);
         for execution_state in execution_states {
             assert_eq!(execution_state.final_stack.len(), OP_STACK_REG_COUNT + 1);

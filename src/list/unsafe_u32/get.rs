@@ -171,7 +171,7 @@ mod get_element_tests {
 
     #[test]
     fn new_snippet_test() {
-        rust_tasm_equivalence_prop_new(UnsafeGet(DataType::XFE), true);
+        rust_tasm_equivalence_prop_new(&UnsafeGet(DataType::XFE), true);
     }
 
     #[test]
@@ -243,8 +243,8 @@ mod get_element_tests {
             expected_end_stack.push(targeted_element[element_size - 1 - i]);
         }
 
-        let _execution_result = rust_tasm_equivalence_prop::<UnsafeGet>(
-            UnsafeGet(data_type),
+        let _execution_result = rust_tasm_equivalence_prop(
+            &UnsafeGet(data_type),
             &init_stack,
             &[],
             &[],

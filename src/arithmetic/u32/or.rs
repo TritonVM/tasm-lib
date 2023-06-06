@@ -138,7 +138,7 @@ mod tests {
 
     #[test]
     fn snippet_test() {
-        rust_tasm_equivalence_prop_new(OrU32, true);
+        rust_tasm_equivalence_prop_new(&OrU32, true);
     }
 
     #[test]
@@ -166,7 +166,7 @@ mod tests {
         init_stack.push(BFieldElement::new(lhs as u64));
 
         let execution_result = rust_tasm_equivalence_prop(
-            OrU32,
+            &OrU32,
             &init_stack,
             &[],
             &[],

@@ -103,7 +103,7 @@ mod tests {
 
     #[test]
     fn lsb_test() {
-        rust_tasm_equivalence_prop_new(Lsb, true);
+        rust_tasm_equivalence_prop_new(&Lsb, true);
     }
 
     #[test]

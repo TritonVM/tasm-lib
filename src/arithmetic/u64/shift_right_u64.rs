@@ -205,7 +205,7 @@ mod tests {
 
     #[test]
     fn shift_right_u64_test() {
-        rust_tasm_equivalence_prop_new(ShiftRightU64, true);
+        rust_tasm_equivalence_prop_new(&ShiftRightU64, true);
     }
 
     #[test]
@@ -248,7 +248,7 @@ mod tests {
         expected_stack.push((expected_u64 & u32::MAX as u64).into());
 
         let _execution_result = rust_tasm_equivalence_prop(
-            ShiftRightU64,
+            &ShiftRightU64,
             &init_stack,
             &[],
             &[],

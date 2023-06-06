@@ -163,7 +163,7 @@ mod tests {
 
     #[test]
     fn log_2_floor_u64_test() {
-        rust_tasm_equivalence_prop_new(Log2FloorU64, true);
+        rust_tasm_equivalence_prop_new(&Log2FloorU64, true);
     }
 
     #[test]
@@ -179,7 +179,7 @@ mod tests {
         init_stack.push(BFieldElement::new(u32::MAX as u64 + 1));
 
         let _execution_result = rust_tasm_equivalence_prop(
-            Log2FloorU64,
+            &Log2FloorU64,
             &init_stack,
             &[],
             &[],
@@ -196,8 +196,8 @@ mod tests {
         init_stack.push(BFieldElement::new(u32::MAX as u64 + 1));
         init_stack.push(BFieldElement::new(16));
 
-        let _execution_result = rust_tasm_equivalence_prop::<Log2FloorU64>(
-            Log2FloorU64,
+        let _execution_result = rust_tasm_equivalence_prop(
+            &Log2FloorU64,
             &init_stack,
             &[],
             &[],
@@ -215,8 +215,8 @@ mod tests {
         init_stack.push(BFieldElement::new(u32::MAX as u64 + 1 + n));
         init_stack.push(BFieldElement::new(16));
 
-        let _execution_result = rust_tasm_equivalence_prop::<Log2FloorU64>(
-            Log2FloorU64,
+        let _execution_result = rust_tasm_equivalence_prop(
+            &Log2FloorU64,
             &init_stack,
             &[],
             &[],
@@ -284,8 +284,8 @@ mod tests {
             init_stack.push(elem);
         }
 
-        let _execution_result = rust_tasm_equivalence_prop::<Log2FloorU64>(
-            Log2FloorU64,
+        let _execution_result = rust_tasm_equivalence_prop(
+            &Log2FloorU64,
             &init_stack,
             &[],
             &[],

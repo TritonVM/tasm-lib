@@ -178,7 +178,7 @@ mod tests {
 
     #[test]
     fn index_of_last_nonzero_bit_test() {
-        rust_tasm_equivalence_prop_new(IndexOfLastNonZeroBitU64, true);
+        rust_tasm_equivalence_prop_new(&IndexOfLastNonZeroBitU64, true);
     }
 
     #[test]
@@ -196,7 +196,7 @@ mod tests {
         expected_output.push(BFieldElement::new(expected as u64));
 
         let _execution_result = rust_tasm_equivalence_prop(
-            IndexOfLastNonZeroBitU64,
+            &IndexOfLastNonZeroBitU64,
             &init_stack,
             &[],
             &[],
@@ -214,7 +214,7 @@ mod tests {
         init_stack.push(BFieldElement::zero());
 
         let _execution_result = rust_tasm_equivalence_prop(
-            IndexOfLastNonZeroBitU64,
+            &IndexOfLastNonZeroBitU64,
             &init_stack,
             &[],
             &[],
@@ -232,7 +232,7 @@ mod tests {
         init_stack.push(BFieldElement::new(1 << 32));
 
         let _execution_result = rust_tasm_equivalence_prop(
-            IndexOfLastNonZeroBitU64,
+            &IndexOfLastNonZeroBitU64,
             &init_stack,
             &[],
             &[],
@@ -250,7 +250,7 @@ mod tests {
         init_stack.push(BFieldElement::zero());
 
         let _execution_result = rust_tasm_equivalence_prop(
-            IndexOfLastNonZeroBitU64,
+            &IndexOfLastNonZeroBitU64,
             &init_stack,
             &[],
             &[],

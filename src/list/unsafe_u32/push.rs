@@ -195,10 +195,10 @@ mod tests_push {
 
     #[test]
     fn new_snippet_test() {
-        rust_tasm_equivalence_prop_new(UnsafePush(DataType::Bool), true);
-        rust_tasm_equivalence_prop_new(UnsafePush(DataType::U64), true);
-        rust_tasm_equivalence_prop_new(UnsafePush(DataType::XFE), true);
-        rust_tasm_equivalence_prop_new(UnsafePush(DataType::Digest), true);
+        rust_tasm_equivalence_prop_new(&UnsafePush(DataType::Bool), true);
+        rust_tasm_equivalence_prop_new(&UnsafePush(DataType::U64), true);
+        rust_tasm_equivalence_prop_new(&UnsafePush(DataType::XFE), true);
+        rust_tasm_equivalence_prop_new(&UnsafePush(DataType::Digest), true);
     }
 
     #[test]
@@ -260,8 +260,8 @@ mod tests_push {
             data_type.get_size(),
         );
 
-        let _execution_result = rust_tasm_equivalence_prop::<UnsafePush>(
-            UnsafePush(data_type.clone()),
+        let _execution_result = rust_tasm_equivalence_prop(
+            &UnsafePush(data_type.clone()),
             &init_stack,
             &[],
             &[],

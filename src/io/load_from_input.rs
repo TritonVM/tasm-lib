@@ -288,8 +288,8 @@ mod tests {
 
     #[test]
     fn new_snippet_test() {
-        rust_tasm_equivalence_prop_new(LoadFromInput(InputSource::SecretIn), true);
-        rust_tasm_equivalence_prop_new(LoadFromInput(InputSource::StdIn), true);
+        rust_tasm_equivalence_prop_new(&LoadFromInput(InputSource::SecretIn), true);
+        rust_tasm_equivalence_prop_new(&LoadFromInput(InputSource::StdIn), true);
     }
 
     #[test]

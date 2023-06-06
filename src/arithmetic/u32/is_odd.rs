@@ -120,7 +120,7 @@ mod u32_is_odd_tests {
 
     #[test]
     fn is_odd_u32_test() {
-        rust_tasm_equivalence_prop_new(U32IsOdd, true);
+        rust_tasm_equivalence_prop_new(&U32IsOdd, true);
     }
 
     #[test]
@@ -154,8 +154,8 @@ mod u32_is_odd_tests {
         let mut expected_stack = get_init_tvm_stack();
         expected_stack.push(BFieldElement::new((value % 2) as u64));
 
-        let _execution_result = rust_tasm_equivalence_prop::<U32IsOdd>(
-            U32IsOdd,
+        let _execution_result = rust_tasm_equivalence_prop(
+            &U32IsOdd,
             &init_stack,
             &[],
             &[],

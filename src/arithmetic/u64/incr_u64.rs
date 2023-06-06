@@ -151,7 +151,7 @@ mod tests {
 
     #[test]
     fn incr_u64_test() {
-        rust_tasm_equivalence_prop_new(IncrU64, true);
+        rust_tasm_equivalence_prop_new(&IncrU64, true);
     }
 
     #[test]

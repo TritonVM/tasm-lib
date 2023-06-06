@@ -155,7 +155,7 @@ mod tests {
 
     #[test]
     fn popcount_u64_test() {
-        rust_tasm_equivalence_prop_new(PopCountU64, true);
+        rust_tasm_equivalence_prop_new(&PopCountU64, true);
     }
 
     #[test]

@@ -145,7 +145,7 @@ mod tests {
 
     #[test]
     fn and_u64_test() {
-        rust_tasm_equivalence_prop_new(AndU64, true);
+        rust_tasm_equivalence_prop_new(&AndU64, true);
     }
 
     #[test]
@@ -194,8 +194,8 @@ mod tests {
             expected_end_stack.push(elem);
         }
 
-        let _execution_result = rust_tasm_equivalence_prop::<AndU64>(
-            AndU64,
+        let _execution_result = rust_tasm_equivalence_prop(
+            &AndU64,
             &init_stack,
             &[],
             &[],

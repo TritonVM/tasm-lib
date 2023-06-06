@@ -124,7 +124,7 @@ mod tests {
 
     #[test]
     fn is_u32_test() {
-        rust_tasm_equivalence_prop_new(IsU32, true);
+        rust_tasm_equivalence_prop_new(&IsU32, true);
     }
 
     #[test]
@@ -175,7 +175,7 @@ mod tests {
         init_stack.push(some_value);
 
         let _execution_result = rust_tasm_equivalence_prop::<IsU32>(
-            IsU32,
+            &IsU32,
             &init_stack,
             &[],
             &[],

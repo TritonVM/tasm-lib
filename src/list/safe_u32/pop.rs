@@ -184,12 +184,12 @@ mod tests_pop {
 
     #[test]
     fn new_snippet_test() {
-        rust_tasm_equivalence_prop_new(SafePop(DataType::Bool), true);
-        rust_tasm_equivalence_prop_new(SafePop(DataType::U32), true);
-        rust_tasm_equivalence_prop_new(SafePop(DataType::U64), true);
-        rust_tasm_equivalence_prop_new(SafePop(DataType::BFE), true);
-        rust_tasm_equivalence_prop_new(SafePop(DataType::XFE), true);
-        rust_tasm_equivalence_prop_new(SafePop(DataType::Digest), true);
+        rust_tasm_equivalence_prop_new(&SafePop(DataType::Bool), true);
+        rust_tasm_equivalence_prop_new(&SafePop(DataType::U32), true);
+        rust_tasm_equivalence_prop_new(&SafePop(DataType::U64), true);
+        rust_tasm_equivalence_prop_new(&SafePop(DataType::BFE), true);
+        rust_tasm_equivalence_prop_new(&SafePop(DataType::XFE), true);
+        rust_tasm_equivalence_prop_new(&SafePop(DataType::Digest), true);
     }
 
     #[test]
@@ -261,8 +261,8 @@ mod tests_pop {
             expected_end_stack.push(last_element[element_size - 1 - i]);
         }
 
-        let _execution_result = rust_tasm_equivalence_prop::<SafePop>(
-            SafePop(data_type),
+        let _execution_result = rust_tasm_equivalence_prop(
+            &SafePop(data_type),
             &init_stack,
             &[],
             &[],

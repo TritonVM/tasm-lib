@@ -145,7 +145,7 @@ mod tests {
 
     #[test]
     fn xor_u64_test() {
-        rust_tasm_equivalence_prop_new(XorU64, true);
+        rust_tasm_equivalence_prop_new(&XorU64, true);
     }
 
     #[test]
@@ -192,8 +192,8 @@ mod tests {
             expected_end_stack.push(elem);
         }
 
-        let _execution_result = rust_tasm_equivalence_prop::<XorU64>(
-            XorU64,
+        let _execution_result = rust_tasm_equivalence_prop(
+            &XorU64,
             &init_stack,
             &[],
             &[],

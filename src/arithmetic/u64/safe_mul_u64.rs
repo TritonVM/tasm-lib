@@ -216,7 +216,7 @@ mod tests {
 
     #[test]
     fn safe_mul_u64_test() {
-        rust_tasm_equivalence_prop_new(SafeMulU64, true);
+        rust_tasm_equivalence_prop_new(&SafeMulU64, true);
     }
 
     #[test]
@@ -304,7 +304,7 @@ mod tests {
         expected.push(BFieldElement::zero());
         expected.push(BFieldElement::new(20_000));
         rust_tasm_equivalence_prop(
-            SafeMulU64,
+            &SafeMulU64,
             &init_stack,
             &[],
             &[],

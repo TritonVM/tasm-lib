@@ -401,7 +401,7 @@ mod leaf_mutation_tests {
     #[test]
     fn calculate_new_peaks_from_leaf_mutation_test() {
         rust_tasm_equivalence_prop_new(
-            MmrCalculateNewPeaksFromLeafMutationMtIndices(PhantomData::<VmHasher>),
+            &MmrCalculateNewPeaksFromLeafMutationMtIndices(PhantomData::<VmHasher>),
             true,
         );
     }
@@ -604,7 +604,7 @@ mod leaf_mutation_tests {
         expected_final_stack.push(BFieldElement::new(new_leaf_index & u32::MAX as u64));
 
         let _execution_result = rust_tasm_equivalence_prop(
-            MmrCalculateNewPeaksFromLeafMutationMtIndices(PhantomData::<VmHasher>),
+            &MmrCalculateNewPeaksFromLeafMutationMtIndices(PhantomData::<VmHasher>),
             &init_stack,
             &[],
             &[],

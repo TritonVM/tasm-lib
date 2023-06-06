@@ -183,10 +183,10 @@ mod tests_pop {
 
     #[test]
     fn new_snippet_test() {
-        rust_tasm_equivalence_prop_new(UnsafePop(DataType::U32), true);
-        rust_tasm_equivalence_prop_new(UnsafePop(DataType::U64), true);
-        rust_tasm_equivalence_prop_new(UnsafePop(DataType::XFE), true);
-        rust_tasm_equivalence_prop_new(UnsafePop(DataType::Digest), true);
+        rust_tasm_equivalence_prop_new(&UnsafePop(DataType::U32), true);
+        rust_tasm_equivalence_prop_new(&UnsafePop(DataType::U64), true);
+        rust_tasm_equivalence_prop_new(&UnsafePop(DataType::XFE), true);
+        rust_tasm_equivalence_prop_new(&UnsafePop(DataType::Digest), true);
     }
 
     #[test]
@@ -271,8 +271,8 @@ mod tests_pop {
             expected_end_stack.push(last_element[N - 1 - i]);
         }
 
-        let _execution_result = rust_tasm_equivalence_prop::<UnsafePop>(
-            UnsafePop(data_type),
+        let _execution_result = rust_tasm_equivalence_prop(
+            &UnsafePop(data_type),
             &init_stack,
             &[],
             &[],

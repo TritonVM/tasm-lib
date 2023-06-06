@@ -358,7 +358,7 @@ mod tests {
 
     #[test]
     fn new_prop_test() {
-        rust_tasm_equivalence_prop_new(HashVarlen, true);
+        rust_tasm_equivalence_prop_new(&HashVarlen, true);
     }
 
     #[test]

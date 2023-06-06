@@ -116,7 +116,7 @@ mod tests {
 
     #[test]
     fn sub_test() {
-        rust_tasm_equivalence_prop_new(Sub, true);
+        rust_tasm_equivalence_prop_new(&Sub, true);
     }
 
     #[test]

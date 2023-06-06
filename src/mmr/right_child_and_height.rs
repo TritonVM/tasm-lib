@@ -251,7 +251,7 @@ mod tests {
 
     #[test]
     fn right_child_and_height_test() {
-        rust_tasm_equivalence_prop_new(MmrRightChildAndHeight, true);
+        rust_tasm_equivalence_prop_new(&MmrRightChildAndHeight, true);
     }
 
     #[test]
@@ -469,7 +469,7 @@ mod tests {
         }
 
         let _execution_result = rust_tasm_equivalence_prop::<MmrRightChildAndHeight>(
-            MmrRightChildAndHeight,
+            &MmrRightChildAndHeight,
             &init_stack,
             &[],
             &[],
