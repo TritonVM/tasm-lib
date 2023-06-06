@@ -9,8 +9,8 @@ use twenty_first::shared_math::x_field_element::EXTENSION_DEGREE;
 
 use crate::dyn_malloc::DYN_MALLOC_ADDRESS;
 use crate::snippet_state::SnippetState;
-use crate::{all_snippets, ExecutionResult, DIGEST_LENGTH};
 use crate::{execute, ExecutionState};
+use crate::{ExecutionResult, DIGEST_LENGTH};
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub enum InputSource {

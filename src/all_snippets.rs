@@ -71,7 +71,6 @@ use crate::{
     pseudo::{lsb::Lsb, neg::Neg, sub::Sub},
     recufier::merkle_tree_ap_verify_from_secret_input::MtApVerifyFromSecretInput,
     snippet::{DataType, InputSource, Snippet},
-    snippet_state::{DummyTestSnippetA, DummyTestSnippetB, DummyTestSnippetC},
     VmHasher,
 };
 
