@@ -58,10 +58,13 @@ impl Snippet for UnsafeSet {
     }
 
     fn entrypoint(&self) -> String {
-        format!("tasm_list_unsafe_u32_set_element_{}", self.0)
+        format!(
+            "tasm_list_unsafe_u32_set_element_{}",
+            self.0.label_friendly_name()
+        )
     }
 
-    fn function_body(&self, _library: &mut SnippetState) -> String {
+    fn function_code(&self, _library: &mut SnippetState) -> String {
         let entrypoint = self.entrypoint();
         let element_size = self.0.get_size();
 

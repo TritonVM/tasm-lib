@@ -55,7 +55,7 @@ impl SnippetState {
     pub fn import(&mut self, snippet: Box<dyn Snippet>) -> String {
         let dep_entrypoint = snippet.entrypoint();
         if self.seen_snippets.insert(dep_entrypoint) {
-            let dep_function_body = snippet.function_body(self);
+            let dep_function_body = snippet.function_code(self);
             self.function_bodies.insert(dep_function_body);
         }
 
@@ -110,7 +110,7 @@ impl Snippet for DummyTestSnippetA {
         "tasm_a_dummy_test_value".to_string()
     }
 
-    fn function_body(&self, library: &mut SnippetState) -> String {
+    fn function_code(&self, library: &mut SnippetState) -> String {
         let entrypoint = self.entrypoint();
         let b = library.import(Box::new(DummyTestSnippetB));
         let c = library.import(Box::new(DummyTestSnippetC));
@@ -185,7 +185,7 @@ impl Snippet for DummyTestSnippetB {
         "tasm_b_dummy_test_value".to_string()
     }
 
-    fn function_body(&self, library: &mut SnippetState) -> String {
+    fn function_code(&self, library: &mut SnippetState) -> String {
         let entrypoint = self.entrypoint();
         let c = library.import(Box::new(DummyTestSnippetC));
 
@@ -258,7 +258,7 @@ impl Snippet for DummyTestSnippetC {
         "tasm_c_dummy_test_value".to_string()
     }
 
-    fn function_body(&self, _library: &mut SnippetState) -> String {
+    fn function_code(&self, _library: &mut SnippetState) -> String {
         let entrypoint = self.entrypoint();
 
         format!(

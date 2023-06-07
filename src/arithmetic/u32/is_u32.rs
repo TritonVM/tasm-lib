@@ -59,7 +59,7 @@ impl Snippet for IsU32 {
     /// place 0 on stack. Consumes top element of stack, leaves a boolean
     /// on top of stack. So this subroutine does not change the height
     /// of the stack
-    fn function_body(&self, _library: &mut SnippetState) -> String {
+    fn function_code(&self, _library: &mut SnippetState) -> String {
         let entrypoint = self.entrypoint();
         format!(
             "

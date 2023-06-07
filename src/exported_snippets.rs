@@ -32,7 +32,6 @@ use crate::{
             xor_u64::XorU64,
         },
     },
-    dyn_malloc::DynMalloc,
     hashing::{
         eq_digest::EqDigest, hash_varlen::HashVarlen,
         load_auth_path_from_secret_in_safe_list::LoadAuthPathFromSecretInSafeList,
@@ -53,6 +52,7 @@ use crate::{
         },
         ListType,
     },
+    memory::{dyn_malloc::DynMalloc, memcpy::MemCpy},
     mmr::{
         calculate_new_peaks_from_append::CalculateNewPeaksFromAppend,
         calculate_new_peaks_from_leaf_mutation::MmrCalculateNewPeaksFromLeafMutationMtIndices,
@@ -276,8 +276,9 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn Snippet> {
         // recufy
         "tasm_recufier_mt_ap_verify" => Box::new(MtApVerifyFromSecretInput(PhantomData::<VmHasher>)),
 
-        // dyn_malloc
-        "dyn_malloc" => Box::new(DynMalloc),
+        // memory
+        "tasm_memory_dyn_malloc" => Box::new(DynMalloc),
+        "tasm_memory_memcpy" => Box::new(MemCpy),
 
         _ => panic!("Could not find \"{fn_name}\" in the function `name_to_snippet`. Did you include it there?"),
     }

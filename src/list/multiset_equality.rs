@@ -266,7 +266,7 @@ impl Snippet for MultisetEquality {
         -1
     }
 
-    fn function_body(&self, library: &mut SnippetState) -> String {
+    fn function_code(&self, library: &mut SnippetState) -> String {
         let length_snippet = match self.0 {
             ListType::Safe => library.import(Box::new(SafeLength(DataType::Digest))),
             ListType::Unsafe => library.import(Box::new(UnsafeLength(DataType::Digest))),

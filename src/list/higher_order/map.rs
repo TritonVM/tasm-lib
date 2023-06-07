@@ -237,7 +237,7 @@ impl Snippet for Map {
         0
     }
 
-    fn function_body(&self, library: &mut SnippetState) -> String {
+    fn function_code(&self, library: &mut SnippetState) -> String {
         let input_type = match self.f.get_input_types().len() {
             1 => self.f.get_input_types()[0].clone(),
             _ => panic!("Can only map over functions with one input"),
@@ -271,7 +271,7 @@ impl Snippet for Map {
         let inner_function_name = match &self.f {
             InnerFunction::RawCode(rc) => rc.entrypoint(),
             InnerFunction::Snippet(sn) => {
-                let fn_body = sn.function_body(library);
+                let fn_body = sn.function_code(library);
                 library.explicit_import(&sn.entrypoint(), fn_body)
             }
         };
@@ -308,7 +308,7 @@ impl Snippet for Map {
             {entrypoint}_loop:
                 // test return condition
                 dup 0 // _ input_list output_list itr itr
-                push 0 eq // _ input_list output_list itr itr!=0
+                push 0 eq // _ input_list output_list itr itr==0
 
                 skiz return
                 // _ input_list output_list itr
@@ -558,7 +558,7 @@ mod tests {
             2
         }
 
-        fn function_body(&self, _library: &mut SnippetState) -> String {
+        fn function_code(&self, _library: &mut SnippetState) -> String {
             let entrypoint = self.entrypoint();
             format!(
                 "

@@ -84,10 +84,13 @@ impl Snippet for UnsafeLength {
     }
 
     fn entrypoint(&self) -> String {
-        format!("tasm_list_unsafe_u32_length_long_{}", self.0)
+        format!(
+            "tasm_list_unsafe_u32_length_long_{}",
+            self.0.label_friendly_name()
+        )
     }
 
-    fn function_body(&self, _library: &mut SnippetState) -> String {
+    fn function_code(&self, _library: &mut SnippetState) -> String {
         let entry_point = self.entrypoint();
         // Before: _ *list
         // After: _ list_length_u32

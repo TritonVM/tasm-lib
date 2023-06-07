@@ -95,7 +95,7 @@ impl Snippet for AddU128 {
 
     /// Four top elements of stack are assumed to be valid u32s. So to have
     /// a value that's less than 2^32.
-    fn function_body(&self, _library: &mut SnippetState) -> String {
+    fn function_code(&self, _library: &mut SnippetState) -> String {
         let entrypoint = self.entrypoint();
         format!(
             "

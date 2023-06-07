@@ -57,7 +57,7 @@ impl Snippet for LtStandardU64 {
         "tasm_arithmetic_u64_lt_standard".to_string()
     }
 
-    fn function_body(&self, _library: &mut SnippetState) -> String {
+    fn function_code(&self, _library: &mut SnippetState) -> String {
         let entrypoint = self.entrypoint();
         format!(
             "
@@ -213,7 +213,7 @@ impl Snippet for LtU64 {
 
     /// Before: _ rhs_hi rhs_lo lhs_hi lhs_lo
     /// After: _ rhs_hi rhs_lo lhs_hi lhs_lo  (lhs < rhs)
-    fn function_body(&self, _library: &mut SnippetState) -> String {
+    fn function_code(&self, _library: &mut SnippetState) -> String {
         let entrypoint = self.entrypoint();
         format!(
             "

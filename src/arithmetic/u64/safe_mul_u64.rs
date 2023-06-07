@@ -48,7 +48,7 @@ impl Snippet for SafeMulU64 {
         -2
     }
 
-    fn function_body(&self, _library: &mut SnippetState) -> String {
+    fn function_code(&self, _library: &mut SnippetState) -> String {
         let entrypoint = self.entrypoint();
 
         format!(

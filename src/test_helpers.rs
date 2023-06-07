@@ -6,7 +6,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use crate::dyn_malloc::DYN_MALLOC_ADDRESS;
 use crate::snippet::Snippet;
 use crate::snippet_state::SnippetState;
-use crate::{all_snippets, rust_shadowing_helper_functions, ExecutionResult};
+use crate::{exported_snippets, rust_shadowing_helper_functions, ExecutionResult};
 
 #[allow(dead_code)]
 pub fn rust_tasm_equivalence_prop_new<T: Snippet>(
@@ -17,7 +17,7 @@ pub fn rust_tasm_equivalence_prop_new<T: Snippet>(
     // This call will panic if snippet is not found in that function call
     // The data type value is a dummy value for all snippets except those that handle lists.
     if export_snippet {
-        let looked_up_snippet = all_snippets::name_to_snippet(&snippet_struct.entrypoint());
+        let looked_up_snippet = exported_snippets::name_to_snippet(&snippet_struct.entrypoint());
         assert_eq!(
             snippet_struct.entrypoint(),
             looked_up_snippet.entrypoint(),
@@ -121,7 +121,7 @@ pub fn rust_tasm_equivalence_prop<T: Snippet>(
             .map(|x| x.to_string())
             .collect_vec()
             .join(","),
-        snippet_struct.function_body(&mut SnippetState::default())
+        snippet_struct.function_code(&mut SnippetState::default())
     );
     if let Some(expected) = expected {
         assert_eq!(
@@ -166,7 +166,7 @@ pub fn rust_tasm_equivalence_prop<T: Snippet>(
             .join(",");
         panic!(
             "Memory for both implementations must match after execution.\n\nTVM: {tasm_mem_str}\n\nRust: {rust_mem_str}. Code was:\n\n {}",
-            snippet_struct.function_body(&mut SnippetState::default())
+            snippet_struct.function_code(&mut SnippetState::default())
         );
     }
 

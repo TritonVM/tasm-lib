@@ -54,7 +54,7 @@ impl Snippet for Div2U64 {
         "tasm_arithmetic_u64_div2".to_string()
     }
 
-    fn function_body(&self, _library: &mut SnippetState) -> String {
+    fn function_code(&self, _library: &mut SnippetState) -> String {
         let entrypoint = self.entrypoint();
         let two_pow_31 = (1u64 << 31).to_string();
 

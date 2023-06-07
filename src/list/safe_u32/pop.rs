@@ -47,12 +47,12 @@ impl Snippet for SafePop {
     }
 
     fn entrypoint(&self) -> String {
-        format!("tasm_list_safe_u32_pop_{}", self.0)
+        format!("tasm_list_safe_u32_pop_{}", self.0.label_friendly_name())
     }
 
     /// Pop last element from list. Does *not* actually delete the last
     /// element but instead leaves it in memory.
-    fn function_body(&self, _library: &mut SnippetState) -> String {
+    fn function_code(&self, _library: &mut SnippetState) -> String {
         let entry_point = self.entrypoint();
 
         let mut code_to_read_elements = String::default();

@@ -63,7 +63,7 @@ impl Snippet for MmrLeftMostAncestor {
         "tasm_mmr_leftmost_ancestor".to_string()
     }
 
-    fn function_body(&self, library: &mut SnippetState) -> String {
+    fn function_code(&self, library: &mut SnippetState) -> String {
         let entrypoint = self.entrypoint();
         let decr_u64 = library.import(Box::new(DecrU64));
         let pow2_u64 = library.import(Box::new(Pow2U64));

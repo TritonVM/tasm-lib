@@ -66,7 +66,7 @@ impl Snippet for DivModU64 {
         0
     }
 
-    fn function_body(&self, library: &mut SnippetState) -> String {
+    fn function_code(&self, library: &mut SnippetState) -> String {
         let entrypoint = self.entrypoint();
         let shift_right_u64 = library.import(Box::new(ShiftRightU64));
         let shift_left_u64 = library.import(Box::new(ShiftLeftU64));

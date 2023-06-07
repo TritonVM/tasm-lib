@@ -44,7 +44,7 @@ impl DynMalloc {
 
 impl Snippet for DynMalloc {
     fn entrypoint(&self) -> String {
-        "dyn_malloc".to_string()
+        "tasm_memory_dyn_malloc".to_string()
     }
 
     fn inputs(&self) -> Vec<String>
@@ -76,7 +76,7 @@ impl Snippet for DynMalloc {
         0
     }
 
-    fn function_body(&self, _library: &mut SnippetState) -> String {
+    fn function_code(&self, _library: &mut SnippetState) -> String {
         let entrypoint = self.entrypoint();
         format!(
             "

@@ -55,7 +55,7 @@ impl Snippet for MmrRightChild {
     }
 
     /// Consider inlining this, instead of calling a function
-    fn function_body(&self, library: &mut SnippetState) -> String {
+    fn function_code(&self, library: &mut SnippetState) -> String {
         let entrypoint = self.entrypoint();
         let decr_u64 = library.import(Box::new(DecrU64));
         format!(

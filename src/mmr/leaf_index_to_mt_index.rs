@@ -72,7 +72,7 @@ impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
         "tasm_mmr_leaf_index_to_mt_index_and_peak_index".to_string()
     }
 
-    fn function_body(&self, library: &mut SnippetState) -> String {
+    fn function_code(&self, library: &mut SnippetState) -> String {
         let entrypoint = self.entrypoint();
         let log_2_floor_u64 = library.import(Box::new(Log2FloorU64));
         let lt_u64 = library.import(Box::new(LtU64));

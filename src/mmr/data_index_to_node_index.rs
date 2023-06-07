@@ -53,7 +53,7 @@ impl Snippet for DataIndexToNodeIndex {
         "tasm_mmr_data_index_to_node_index".to_string()
     }
 
-    fn function_body(&self, library: &mut SnippetState) -> String {
+    fn function_code(&self, library: &mut SnippetState) -> String {
         let entrypoint = self.entrypoint();
         let non_leaf_nodes_left = library.import(Box::new(MmrNonLeafNodesLeftUsingAnd));
         let incr_u64 = library.import(Box::new(IncrU64));

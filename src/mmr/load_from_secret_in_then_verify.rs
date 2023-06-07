@@ -94,7 +94,7 @@ impl<H: AlgebraicHasher + 'static + std::fmt::Debug> Snippet for MmrLoadFromSecr
         "tasm_mmr_verify_load_from_secret_in".to_string()
     }
 
-    fn function_body(&self, library: &mut SnippetState) -> String {
+    fn function_code(&self, library: &mut SnippetState) -> String {
         let entrypoint = self.entrypoint();
         let load_auth_path_from_secret_in =
             library.import(Box::new(LoadAuthPathFromSecretInUnsafeList));

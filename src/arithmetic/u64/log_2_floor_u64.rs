@@ -54,7 +54,7 @@ impl Snippet for Log2FloorU64 {
         "tasm_arithmetic_u64_log_2_floor".to_string()
     }
 
-    fn function_body(&self, _library: &mut SnippetState) -> String {
+    fn function_code(&self, _library: &mut SnippetState) -> String {
         let entrypoint = self.entrypoint();
 
         // assumes that top of stack is a valid u32s<2>

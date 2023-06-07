@@ -59,7 +59,7 @@ impl Snippet for SubU128 {
         -4
     }
 
-    fn function_body(&self, _library: &mut SnippetState) -> String {
+    fn function_code(&self, _library: &mut SnippetState) -> String {
         let entrypoint = self.entrypoint();
         const TWO_POW_32: &str = "4294967296";
 

@@ -53,7 +53,7 @@ impl Snippet for Pow2U64 {
         "tasm_arithmetic_u64_pow2".to_string()
     }
 
-    fn function_body(&self, _library: &mut SnippetState) -> String {
+    fn function_code(&self, _library: &mut SnippetState) -> String {
         let entrypoint = self.entrypoint();
 
         format!(

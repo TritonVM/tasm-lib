@@ -101,7 +101,7 @@ impl<H: AlgebraicHasher + std::fmt::Debug> Snippet
         "tasm_mmr_calculate_new_peaks_from_leaf_mutation".to_string()
     }
 
-    fn function_body(&self, library: &mut SnippetState) -> String {
+    fn function_code(&self, library: &mut SnippetState) -> String {
         let entrypoint = self.entrypoint();
         let leaf_index_to_mt_index = library.import(Box::new(MmrLeafIndexToMtIndexAndPeakIndex));
         let u32_is_odd = library.import(Box::new(U32IsOdd));

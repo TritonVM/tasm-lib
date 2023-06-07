@@ -35,7 +35,7 @@ impl Snippet for OrU32 {
         -1
     }
 
-    fn function_body(&self, _library: &mut crate::snippet_state::SnippetState) -> String {
+    fn function_code(&self, _library: &mut crate::snippet_state::SnippetState) -> String {
         let entrypoint = self.entrypoint();
         format!(
             "

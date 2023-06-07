@@ -86,7 +86,7 @@ impl<H: AlgebraicHasher + std::fmt::Debug> Snippet for CalculateNewPeaksFromAppe
         "tasm_mmr_calculate_new_peaks_from_append".to_string()
     }
 
-    fn function_body(&self, library: &mut SnippetState) -> String {
+    fn function_code(&self, library: &mut SnippetState) -> String {
         let entrypoint = self.entrypoint();
         let push = library.import(Box::new(UnsafePush(DataType::Digest)));
         let pop = library.import(Box::new(UnsafePop(DataType::Digest)));

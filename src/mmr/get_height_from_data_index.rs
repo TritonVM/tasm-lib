@@ -53,7 +53,7 @@ impl Snippet for GetHeightFromDataIndex {
         "tasm_mmr_get_height_from_leaf_index".to_string()
     }
 
-    fn function_body(&self, library: &mut SnippetState) -> String {
+    fn function_code(&self, library: &mut SnippetState) -> String {
         let entrypoint = self.entrypoint();
         let incr_u64 = library.import(Box::new(IncrU64));
         let log_2_floor_u64 = library.import(Box::new(Log2FloorU64));

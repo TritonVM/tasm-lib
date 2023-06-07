@@ -59,7 +59,7 @@ impl Snippet for MmrLeftChild {
         "tasm_mmr_left_child".to_string()
     }
 
-    fn function_body(&self, library: &mut SnippetState) -> String {
+    fn function_code(&self, library: &mut SnippetState) -> String {
         let entrypoint = self.entrypoint();
         let pow2_u64 = library.import(Box::new(Pow2U64));
         let sub_u64 = library.import(Box::new(SubU64));

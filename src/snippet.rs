@@ -38,6 +38,8 @@ pub enum DataType {
     XFE,
     Digest,
     List(Box<DataType>),
+    Pair(Box<DataType>, Box<DataType>),
+    VoidPointer,
 }
 
 impl DataType {
@@ -76,6 +78,16 @@ impl DataType {
                 .map(|(a, b, c, d, e)| vec![a, b, c, d, e])
                 .collect_vec(),
             DataType::List(_) => panic!("Random generation of lists is not supported"),
+            DataType::Pair(left, right) => (0..count)
+                .map(|_| {
+                    vec![
+                        left.random_elements(1)[0].clone(),
+                        right.random_elements(1)[0].clone(),
+                    ]
+                    .concat()
+                })
+                .collect_vec(),
+            DataType::VoidPointer => vec![vec![random::<BFieldElement>()]],
         }
     }
 }
@@ -83,24 +95,35 @@ impl DataType {
 // Display for list is used to derive seperate entrypoint names for snippet implementations that take a type parameter
 impl Display for DataType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                DataType::Bool => "bool".to_string(),
-                DataType::U32 => "u32".to_string(),
-                DataType::U64 => "u64".to_string(),
-                DataType::U128 => "u128".to_string(),
-                DataType::BFE => "bfe".to_string(),
-                DataType::XFE => "xfe".to_string(),
-                DataType::Digest => "digest".to_string(),
-                DataType::List(element_type) => format!("list({element_type})"),
-            }
-        )
+        let str = match self {
+            DataType::Bool => "bool".to_string(),
+            DataType::U32 => "u32".to_string(),
+            DataType::U64 => "u64".to_string(),
+            DataType::U128 => "u128".to_string(),
+            DataType::BFE => "bfe".to_string(),
+            DataType::XFE => "xfe".to_string(),
+            DataType::Digest => "digest".to_string(),
+            DataType::List(element_type) => format!("list({element_type})"),
+            DataType::Pair(left, right) => format!("pair({left},{right})"),
+            DataType::VoidPointer => "void-pointer".to_string(),
+        };
+        write!(f, "{str}",)
     }
 }
 
 impl DataType {
+    pub fn label_friendly_name(&self) -> String {
+        match self {
+            DataType::Pair(left, right) => format!(
+                "pair_L{}_and_{}R",
+                left.label_friendly_name(),
+                right.label_friendly_name()
+            ),
+            DataType::List(inner_type) => format!("list_L{}R", inner_type),
+            DataType::VoidPointer => "void_pointer".to_string(),
+            _ => format!("{}", self),
+        }
+    }
     pub fn get_size(&self) -> usize {
         match self {
             DataType::Bool => 1,
@@ -111,6 +134,8 @@ impl DataType {
             DataType::XFE => 3,
             DataType::Digest => DIGEST_LENGTH,
             DataType::List(_) => 1,
+            DataType::Pair(left, right) => left.get_size() + right.get_size(),
+            DataType::VoidPointer => 1,
         }
     }
 }
@@ -135,8 +160,8 @@ pub trait Snippet {
     /// The stack difference
     fn stack_diff(&self) -> isize;
 
-    /// The function body
-    fn function_body(&self, library: &mut SnippetState) -> String;
+    /// The function
+    fn function_code(&self, library: &mut SnippetState) -> String;
 
     /// Ways in which this snippet can crash
     fn crash_conditions(&self) -> Vec<String>;
@@ -148,11 +173,11 @@ pub trait Snippet {
 
     fn worst_case_input_state(&self) -> ExecutionState;
 
-    fn function_body_as_instructions(
+    fn function_code_as_instructions(
         &self,
         library: &mut SnippetState,
     ) -> Vec<LabelledInstruction> {
-        let f_body = self.function_body(library);
+        let f_body = self.function_code(library);
 
         // parse the code to get the list of instructions
         to_labelled(&parse(&f_body).unwrap())
@@ -182,7 +207,7 @@ pub trait Snippet {
     ) -> ExecutionResult {
         let mut library = SnippetState::with_preallocated_memory(words_statically_allocated);
         let entrypoint = self.entrypoint();
-        let function_body = self.function_body(&mut library);
+        let function_body = self.function_code(&mut library);
         let library_code = library.all_imports();
 
         let expected_length_prior: usize = self.input_types().iter().map(|x| x.get_size()).sum();
@@ -252,7 +277,7 @@ mod tests {
     fn can_return_code() {
         let mut empty_library = SnippetState::default();
         let example_snippet =
-            arithmetic::u32::safe_add::SafeAdd.function_body_as_instructions(&mut empty_library);
+            arithmetic::u32::safe_add::SafeAdd.function_code_as_instructions(&mut empty_library);
         assert!(!example_snippet.is_empty());
         println!(
             "{}",

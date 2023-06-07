@@ -1,5 +1,6 @@
 use anyhow::bail;
 use itertools::Itertools;
+use memory::dyn_malloc;
 use num_traits::Zero;
 use snippet::Snippet;
 use snippet_state::SnippetState;
@@ -14,12 +15,12 @@ use triton_vm::op_stack::OP_STACK_REG_COUNT;
 use triton_vm::vm::VMState;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
-pub mod all_snippets;
 pub mod arithmetic;
-pub mod dyn_malloc;
+pub mod exported_snippets;
 pub mod hashing;
 pub mod io;
 pub mod list;
+pub mod memory;
 pub mod mmr;
 pub mod other_snippets;
 pub mod pseudo;
@@ -41,6 +42,12 @@ pub struct ExecutionState {
     pub std_in: Vec<BFieldElement>,
     pub secret_in: Vec<BFieldElement>,
     pub memory: HashMap<BFieldElement, BFieldElement>,
+
+    // Ensures that you're not overwriting statically alocated memory
+    // when using the dynamic allocator.
+    // When you're writing a propgram you need to know how many words
+    // are statically allocated and then you need to feed that value
+    // to the dynamic allocator otherwise you are *** [redacted].
     pub words_allocated: usize,
 }
 
@@ -97,7 +104,7 @@ pub fn execute_with_execution_state(
     let entrypoint = snippet.entrypoint();
     let mut code = format!("call {entrypoint}\n");
     code.push_str("halt\n");
-    code.push_str(&snippet.function_body(&mut library));
+    code.push_str(&snippet.function_code(&mut library));
     code.push_str(&library.all_imports());
     execute(
         &code,

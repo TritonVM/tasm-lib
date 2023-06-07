@@ -58,7 +58,7 @@ impl Snippet for U32IsOdd {
         "tasm_arithmetic_u32_is_odd".to_string()
     }
 
-    fn function_body(&self, library: &mut SnippetState) -> String {
+    fn function_code(&self, library: &mut SnippetState) -> String {
         let entrypoint = self.entrypoint();
         let lsb = library.import(Box::new(Lsb));
         format!(

@@ -58,7 +58,7 @@ impl Snippet for EqU64 {
         "tasm_arithmetic_u64_eq".to_string()
     }
 
-    fn function_body(&self, _library: &mut SnippetState) -> String {
+    fn function_code(&self, _library: &mut SnippetState) -> String {
         let entrypoint = self.entrypoint();
         format!(
             "

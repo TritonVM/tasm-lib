@@ -13,7 +13,7 @@ pub struct SafeNew(pub DataType);
 
 impl Snippet for SafeNew {
     fn entrypoint(&self) -> String {
-        format!("tasm_list_safe_u32_new_{}", self.0)
+        format!("tasm_list_safe_u32_new_{}", self.0.label_friendly_name())
     }
 
     fn inputs(&self) -> Vec<String>
@@ -46,7 +46,7 @@ impl Snippet for SafeNew {
         0
     }
 
-    fn function_body(&self, library: &mut crate::snippet_state::SnippetState) -> String {
+    fn function_code(&self, library: &mut crate::snippet_state::SnippetState) -> String {
         let entrypoint = self.entrypoint();
 
         // Data structure for `list::safe_u32` is: [length, capacity, element0, element1, ...]

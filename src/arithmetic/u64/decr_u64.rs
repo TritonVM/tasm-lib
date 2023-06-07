@@ -57,7 +57,7 @@ impl Snippet for DecrU64 {
         "tasm_arithmetic_u64_decr".to_string()
     }
 
-    fn function_body(&self, _library: &mut SnippetState) -> String {
+    fn function_code(&self, _library: &mut SnippetState) -> String {
         let entrypoint = self.entrypoint();
         const U32_MAX: &str = "4294967295";
 

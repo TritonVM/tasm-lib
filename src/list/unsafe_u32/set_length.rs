@@ -46,10 +46,13 @@ impl Snippet for UnsafeSetLength {
     }
 
     fn entrypoint(&self) -> String {
-        format!("tasm_list_unsafe_u32_set_length_{}", self.0)
+        format!(
+            "tasm_list_unsafe_u32_set_length_{}",
+            self.0.label_friendly_name()
+        )
     }
 
-    fn function_body(&self, _library: &mut SnippetState) -> String {
+    fn function_code(&self, _library: &mut SnippetState) -> String {
         let entry_point = self.entrypoint();
         // It is assumed that the new length is a valid u32 value
         format!(

@@ -68,7 +68,7 @@ impl Snippet for LoadAuthPathFromSecretInUnsafeList {
         "tasm_hashing_load_auth_path_from_secret_in_unsafe_list".to_string()
     }
 
-    fn function_body(&self, library: &mut SnippetState) -> String {
+    fn function_code(&self, library: &mut SnippetState) -> String {
         let entrypoint = self.entrypoint();
 
         let read_digest_from_secret_in = "divine\n".repeat(DIGEST_LENGTH);

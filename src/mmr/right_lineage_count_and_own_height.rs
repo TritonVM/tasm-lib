@@ -57,7 +57,7 @@ impl Snippet for MmrRightLineageCountAndHeight {
         "tasm_mmr_right_lineage_count_and_own_height".to_string()
     }
 
-    fn function_body(&self, library: &mut SnippetState) -> String
+    fn function_code(&self, library: &mut SnippetState) -> String
     where
         Self: Sized,
     {

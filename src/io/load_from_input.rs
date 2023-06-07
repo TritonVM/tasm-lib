@@ -51,7 +51,7 @@ impl Snippet for LoadFromInput {
         1
     }
 
-    fn function_body(&self, library: &mut crate::snippet_state::SnippetState) -> String {
+    fn function_code(&self, library: &mut crate::snippet_state::SnippetState) -> String {
         let entrypoint = self.entrypoint();
 
         let dyn_alloc = library.import(Box::new(dyn_malloc::DynMalloc));

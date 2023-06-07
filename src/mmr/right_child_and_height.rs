@@ -58,7 +58,7 @@ impl Snippet for MmrRightChildAndHeight {
         "tasm_mmr_right_child_and_height".to_string()
     }
 
-    fn function_body(&self, library: &mut SnippetState) -> String
+    fn function_code(&self, library: &mut SnippetState) -> String
     where
         Self: Sized,
     {

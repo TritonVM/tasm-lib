@@ -60,7 +60,7 @@ impl Snippet for MmrNonLeafNodesLeftUsingAnd {
         "tasm_mmr_non_leaf_nodes_left".to_string()
     }
 
-    fn function_body(&self, library: &mut SnippetState) -> String {
+    fn function_code(&self, library: &mut SnippetState) -> String {
         let entrypoint = self.entrypoint();
         let log_2_floor_u64 = library.import(Box::new(Log2FloorU64));
         let pow2_u64 = library.import(Box::new(Pow2U64));

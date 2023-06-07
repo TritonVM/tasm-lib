@@ -111,7 +111,7 @@ impl<H: AlgebraicHasher + std::fmt::Debug> Snippet for MmrVerifyFromMemory<H> {
         "tasm_mmr_verify_from_memory".to_string()
     }
 
-    fn function_body(&self, library: &mut SnippetState) -> String {
+    fn function_code(&self, library: &mut SnippetState) -> String {
         let leaf_index_to_mt_index = library.import(Box::new(MmrLeafIndexToMtIndexAndPeakIndex));
         let get = library.import(Box::new(UnsafeGet(DataType::Digest)));
         let u32_is_odd = library.import(Box::new(U32IsOdd));
