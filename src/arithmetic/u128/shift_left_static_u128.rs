@@ -13,7 +13,7 @@ impl<const N: u8> Snippet for ShiftLeftStaticU128<N> {
     fn entrypoint(&self) -> String {
         assert!(
             N <= 32,
-            "Static shift-snippet cannot shift by more than 32 bits"
+            "Static left-shift snippet cannot shift by more than 32 bits"
         );
         format!("tasm_arithmetic_u128_shift_left_static_{N}")
     }
@@ -141,8 +141,6 @@ impl<const N: u8> Snippet for ShiftLeftStaticU128<N> {
     ) where
         Self: Sized,
     {
-        // Find shift amount
-
         // Original value
         let mut value = 0u128;
         for i in 0..4 {
