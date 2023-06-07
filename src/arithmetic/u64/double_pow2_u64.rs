@@ -15,10 +15,7 @@ impl Snippet for DoublePow2U64 {
         "tasm_arithmetic_u64_pow2_double".to_string()
     }
 
-    fn inputs(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
+    fn inputs(&self) -> Vec<String> {
         vec!["value_hi".to_string(), "value_lo".to_string()]
     }
 
@@ -30,17 +27,11 @@ impl Snippet for DoublePow2U64 {
         vec![DataType::U64]
     }
 
-    fn outputs(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
+    fn outputs(&self) -> Vec<String> {
         vec!["(value * 2)_hi".to_string(), "(value * 2)_lo".to_string()]
     }
 
-    fn stack_diff(&self) -> isize
-    where
-        Self: Sized,
-    {
+    fn stack_diff(&self) -> isize {
         0
     }
 
@@ -88,17 +79,11 @@ impl Snippet for DoublePow2U64 {
         )
     }
 
-    fn crash_conditions(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
+    fn crash_conditions(&self) -> Vec<String> {
         vec![]
     }
 
-    fn gen_input_states(&self) -> Vec<crate::ExecutionState>
-    where
-        Self: Sized,
-    {
+    fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
         let mut ret = vec![];
         for n in 0..63 {
             let n: U32s<2> = (1u64 >> n).try_into().unwrap();
@@ -112,10 +97,7 @@ impl Snippet for DoublePow2U64 {
         ret
     }
 
-    fn common_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn common_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
             vec![
                 get_init_tvm_stack(),
@@ -125,10 +107,7 @@ impl Snippet for DoublePow2U64 {
         )
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn worst_case_input_state(&self) -> ExecutionState {
         // worst-case has carry from lower-bits to higher-bits
         ExecutionState::with_stack(
             vec![
@@ -148,9 +127,7 @@ impl Snippet for DoublePow2U64 {
             twenty_first::shared_math::b_field_element::BFieldElement,
             twenty_first::shared_math::b_field_element::BFieldElement,
         >,
-    ) where
-        Self: Sized,
-    {
+    ) {
         let value_lo: u32 = stack.pop().unwrap().try_into().unwrap();
         let value_hi: u32 = stack.pop().unwrap().try_into().unwrap();
         let value: u64 = ((value_hi as u64) << 32) + value_lo as u64;

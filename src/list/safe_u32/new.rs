@@ -16,10 +16,7 @@ impl Snippet for SafeNew {
         format!("tasm_list_safe_u32_new_{}", self.0.label_friendly_name())
     }
 
-    fn inputs(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
+    fn inputs(&self) -> Vec<String> {
         vec!["capacity".to_string()]
     }
 
@@ -32,17 +29,11 @@ impl Snippet for SafeNew {
         vec![DataType::List(Box::new(self.0.clone()))]
     }
 
-    fn outputs(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
+    fn outputs(&self) -> Vec<String> {
         vec!["*list".to_string()]
     }
 
-    fn stack_diff(&self) -> isize
-    where
-        Self: Sized,
-    {
+    fn stack_diff(&self) -> isize {
         0
     }
 
@@ -100,17 +91,11 @@ impl Snippet for SafeNew {
         )
     }
 
-    fn crash_conditions(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
+    fn crash_conditions(&self) -> Vec<String> {
         vec![]
     }
 
-    fn gen_input_states(&self) -> Vec<ExecutionState>
-    where
-        Self: Sized,
-    {
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
         let mut stack = get_init_tvm_stack();
 
         // push capacity to stack
@@ -124,9 +109,7 @@ impl Snippet for SafeNew {
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,
         memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
-    ) where
-        Self: Sized,
-    {
+    ) {
         let capacity: usize = stack.pop().unwrap().value().try_into().unwrap();
         let allocator_addr = BFieldElement::zero();
         let used_memory = memory
@@ -147,19 +130,13 @@ impl Snippet for SafeNew {
         stack.push(list_pointer);
     }
 
-    fn common_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn common_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
             vec![get_init_tvm_stack(), vec![BFieldElement::new(1 << 5)]].concat(),
         )
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn worst_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
             vec![get_init_tvm_stack(), vec![BFieldElement::new(1 << 6)]].concat(),
         )

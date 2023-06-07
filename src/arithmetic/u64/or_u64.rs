@@ -119,17 +119,11 @@ impl Snippet for OrU64 {
         stack.push(BFieldElement::new(or & u32::MAX as u64));
     }
 
-    fn common_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn common_case_input_state(&self) -> ExecutionState {
         prepare_state(u32::MAX as u64, u32::MAX as u64)
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn worst_case_input_state(&self) -> ExecutionState {
         prepare_state(u64::MAX, u64::MAX)
     }
 }

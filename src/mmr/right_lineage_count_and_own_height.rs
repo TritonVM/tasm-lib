@@ -57,10 +57,7 @@ impl Snippet for MmrRightLineageCountAndHeight {
         "tasm_mmr_right_lineage_count_and_own_height".to_string()
     }
 
-    fn function_code(&self, library: &mut SnippetState) -> String
-    where
-        Self: Sized,
-    {
+    fn function_code(&self, library: &mut SnippetState) -> String {
         let entrypoint = self.entrypoint();
         let eq_u64 = library.import(Box::new(EqU64));
         let lt_u64 = library.import(Box::new(LtU64));
@@ -196,9 +193,7 @@ impl Snippet for MmrRightLineageCountAndHeight {
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,
         _memory: &mut HashMap<BFieldElement, BFieldElement>,
-    ) where
-        Self: Sized,
-    {
+    ) {
         // // TODO: Remove this when twenty-first is updated
         // /// Traversing from this node upwards, count how many of the ancestor (including itself)
         // /// is a right child. This number is used to determine how many nodes to insert when a
@@ -239,17 +234,11 @@ impl Snippet for MmrRightLineageCountAndHeight {
         stack.push(BFieldElement::new(height as u64));
     }
 
-    fn common_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn common_case_input_state(&self) -> ExecutionState {
         prepare_state((1 << 31) + 1)
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn worst_case_input_state(&self) -> ExecutionState {
         prepare_state((1 << 62) + 1)
     }
 }

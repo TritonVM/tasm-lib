@@ -184,10 +184,7 @@ impl Snippet for SubU64 {
         }
     }
 
-    fn common_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn common_case_input_state(&self) -> ExecutionState {
         // no carry
         ExecutionState::with_stack(
             vec![
@@ -199,10 +196,7 @@ impl Snippet for SubU64 {
         )
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn worst_case_input_state(&self) -> ExecutionState {
         // with carry
         ExecutionState::with_stack(
             vec![

@@ -41,10 +41,7 @@ impl Snippet for HashVarlen {
         "tasm_hashing_hash_varlen".to_string()
     }
 
-    fn inputs(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
+    fn inputs(&self) -> Vec<String> {
         vec!["*addr".to_string(), "length".to_string()]
     }
 
@@ -56,10 +53,7 @@ impl Snippet for HashVarlen {
         vec![DataType::Digest]
     }
 
-    fn outputs(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
+    fn outputs(&self) -> Vec<String> {
         vec![
             "elemement_4".to_string(),
             "elemement_3".to_string(),
@@ -69,10 +63,7 @@ impl Snippet for HashVarlen {
         ]
     }
 
-    fn stack_diff(&self) -> isize
-    where
-        Self: Sized,
-    {
+    fn stack_diff(&self) -> isize {
         3
     }
 
@@ -285,17 +276,11 @@ impl Snippet for HashVarlen {
         )
     }
 
-    fn crash_conditions(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
+    fn crash_conditions(&self) -> Vec<String> {
         vec!["Length exceeds u32::MAX".to_string()]
     }
 
-    fn gen_input_states(&self) -> Vec<crate::ExecutionState>
-    where
-        Self: Sized,
-    {
+    fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
         vec![
             Self::random_memory_state_read_k(0),
             Self::random_memory_state_read_k(1),
@@ -309,17 +294,11 @@ impl Snippet for HashVarlen {
         ]
     }
 
-    fn common_case_input_state(&self) -> crate::ExecutionState
-    where
-        Self: Sized,
-    {
+    fn common_case_input_state(&self) -> crate::ExecutionState {
         Self::random_memory_state_read_k(25)
     }
 
-    fn worst_case_input_state(&self) -> crate::ExecutionState
-    where
-        Self: Sized,
-    {
+    fn worst_case_input_state(&self) -> crate::ExecutionState {
         Self::random_memory_state_read_k(1000)
     }
 
@@ -329,9 +308,7 @@ impl Snippet for HashVarlen {
         _std_in: Vec<triton_vm::BFieldElement>,
         _secret_in: Vec<triton_vm::BFieldElement>,
         memory: &mut std::collections::HashMap<triton_vm::BFieldElement, triton_vm::BFieldElement>,
-    ) where
-        Self: Sized,
-    {
+    ) {
         let length: u32 = stack.pop().unwrap().try_into().unwrap();
         let memory_pointer: BFieldElement = stack.pop().unwrap();
 

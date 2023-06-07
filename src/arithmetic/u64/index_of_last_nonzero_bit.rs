@@ -18,10 +18,7 @@ impl Snippet for IndexOfLastNonZeroBitU64 {
         "tasm_arithmetic_u64_index_of_last_nonzero_bit".to_string()
     }
 
-    fn inputs(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
+    fn inputs(&self) -> Vec<String> {
         vec!["value_hi".to_string(), "value_lo".to_string()]
     }
 
@@ -33,17 +30,11 @@ impl Snippet for IndexOfLastNonZeroBitU64 {
         vec![DataType::U32]
     }
 
-    fn outputs(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
+    fn outputs(&self) -> Vec<String> {
         vec!["index_of_last_nonzero_bit(value)".to_string()]
     }
 
-    fn stack_diff(&self) -> isize
-    where
-        Self: Sized,
-    {
+    fn stack_diff(&self) -> isize {
         -1
     }
 
@@ -90,20 +81,14 @@ impl Snippet for IndexOfLastNonZeroBitU64 {
         )
     }
 
-    fn crash_conditions(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
+    fn crash_conditions(&self) -> Vec<String> {
         vec![
             "input is zero".to_owned(),
             "any input is not a u32".to_owned(),
         ]
     }
 
-    fn gen_input_states(&self) -> Vec<crate::ExecutionState>
-    where
-        Self: Sized,
-    {
+    fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
         let mut rng = thread_rng();
         let mut ret = vec![];
         for _ in 0..10 {
@@ -113,17 +98,11 @@ impl Snippet for IndexOfLastNonZeroBitU64 {
         ret
     }
 
-    fn common_case_input_state(&self) -> crate::ExecutionState
-    where
-        Self: Sized,
-    {
+    fn common_case_input_state(&self) -> crate::ExecutionState {
         prepare_state(1 << 31)
     }
 
-    fn worst_case_input_state(&self) -> crate::ExecutionState
-    where
-        Self: Sized,
-    {
+    fn worst_case_input_state(&self) -> crate::ExecutionState {
         prepare_state(1 << 62)
     }
 
@@ -136,9 +115,7 @@ impl Snippet for IndexOfLastNonZeroBitU64 {
             twenty_first::shared_math::b_field_element::BFieldElement,
             twenty_first::shared_math::b_field_element::BFieldElement,
         >,
-    ) where
-        Self: Sized,
-    {
+    ) {
         let value_lo: u32 = stack.pop().unwrap().try_into().unwrap();
         let value_hi: u32 = stack.pop().unwrap().try_into().unwrap();
         let value: u64 = ((value_hi as u64) << 32) + value_lo as u64;

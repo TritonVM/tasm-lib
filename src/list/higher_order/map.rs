@@ -96,10 +96,7 @@ impl Snippet for Map {
         )
     }
 
-    fn inputs(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
+    fn inputs(&self) -> Vec<String> {
         vec!["input_list".to_string()]
     }
 
@@ -115,17 +112,11 @@ impl Snippet for Map {
         ))]
     }
 
-    fn outputs(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
+    fn outputs(&self) -> Vec<String> {
         vec!["output_list".to_string()]
     }
 
-    fn stack_diff(&self) -> isize
-    where
-        Self: Sized,
-    {
+    fn stack_diff(&self) -> isize {
         0
     }
 
@@ -227,10 +218,7 @@ impl Snippet for Map {
         )
     }
 
-    fn crash_conditions(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
+    fn crash_conditions(&self) -> Vec<String> {
         vec![
             "Map function does not take 1 element.".to_string(),
             "Map function does not yield 1 element.".to_string(),
@@ -238,10 +226,7 @@ impl Snippet for Map {
         ]
     }
 
-    fn gen_input_states(&self) -> Vec<ExecutionState>
-    where
-        Self: Sized,
-    {
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
         // Create random list of input data type
         let list_pointer = BFieldElement::new(1u64);
         let mut rng = thread_rng();
@@ -250,20 +235,14 @@ impl Snippet for Map {
         vec![self.generate_input_state(list_pointer, list_length)]
     }
 
-    fn common_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn common_case_input_state(&self) -> ExecutionState {
         // Create random list of input data type
         let list_pointer = BFieldElement::new(1u64);
         let list_length: usize = 10;
         self.generate_input_state(list_pointer, list_length)
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn worst_case_input_state(&self) -> ExecutionState {
         // Create random list of input data type
         let list_pointer = BFieldElement::new(1u64);
         let list_length: usize = 400;
@@ -276,9 +255,7 @@ impl Snippet for Map {
         std_in: Vec<triton_vm::BFieldElement>,
         secret_in: Vec<triton_vm::BFieldElement>,
         memory: &mut std::collections::HashMap<triton_vm::BFieldElement, triton_vm::BFieldElement>,
-    ) where
-        Self: Sized,
-    {
+    ) {
         let input_type = match self.f.get_input_types().len() {
             1 => self.f.get_input_types()[0].clone(),
             _ => panic!("Input length must be one when using function in map)"),

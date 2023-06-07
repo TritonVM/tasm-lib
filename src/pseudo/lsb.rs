@@ -75,19 +75,13 @@ impl Snippet for Lsb {
         stack.push(BFieldElement::new(a % 2));
     }
 
-    fn common_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn common_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
             vec![get_init_tvm_stack(), vec![BFieldElement::new(1u64 << 20)]].concat(),
         )
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn worst_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
             vec![get_init_tvm_stack(), vec![BFieldElement::new(1u64 << 31)]].concat(),
         )

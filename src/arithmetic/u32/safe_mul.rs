@@ -17,10 +17,7 @@ impl Snippet for SafeMul {
         "tasm_arithmetic_u32_u32_safe_mul".to_string()
     }
 
-    fn inputs(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
+    fn inputs(&self) -> Vec<String> {
         vec!["lhs".to_string(), "rhs".to_string()]
     }
 
@@ -32,17 +29,11 @@ impl Snippet for SafeMul {
         vec![DataType::U32]
     }
 
-    fn outputs(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
+    fn outputs(&self) -> Vec<String> {
         vec!["lhs * rhs".to_string()]
     }
 
-    fn stack_diff(&self) -> isize
-    where
-        Self: Sized,
-    {
+    fn stack_diff(&self) -> isize {
         -1
     }
 
@@ -65,17 +56,11 @@ impl Snippet for SafeMul {
         )
     }
 
-    fn crash_conditions(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
+    fn crash_conditions(&self) -> Vec<String> {
         vec!["result overflows u32".to_string()]
     }
 
-    fn gen_input_states(&self) -> Vec<ExecutionState>
-    where
-        Self: Sized,
-    {
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
         let mut ret: Vec<ExecutionState> = vec![];
         for _ in 0..10 {
             let mut stack = get_init_tvm_stack();
@@ -97,9 +82,7 @@ impl Snippet for SafeMul {
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,
         _memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
-    ) where
-        Self: Sized,
-    {
+    ) {
         let lhs: u32 = stack.pop().unwrap().try_into().unwrap();
         let rhs: u32 = stack.pop().unwrap().try_into().unwrap();
 
@@ -107,10 +90,7 @@ impl Snippet for SafeMul {
         stack.push(BFieldElement::new(prod as u64));
     }
 
-    fn common_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn common_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
             vec![
                 get_init_tvm_stack(),
@@ -120,10 +100,7 @@ impl Snippet for SafeMul {
         )
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn worst_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
             vec![
                 get_init_tvm_stack(),

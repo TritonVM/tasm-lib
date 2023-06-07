@@ -183,10 +183,7 @@ impl Snippet for LoadAuthPathFromSecretInSafeList {
         stack.push(auth_path_pointer);
     }
 
-    fn common_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn common_case_input_state(&self) -> ExecutionState {
         // Common case is defined to be half of the maximum MMR height
         let mut secret_in: Vec<BFieldElement> = vec![];
         rust_shadowing_helper_functions::input::write_dummy_ap_path(
@@ -203,10 +200,7 @@ impl Snippet for LoadAuthPathFromSecretInSafeList {
         }
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn worst_case_input_state(&self) -> ExecutionState {
         // Worst case is the maximum MMR height
         let mut secret_in: Vec<BFieldElement> = vec![];
         rust_shadowing_helper_functions::input::write_dummy_ap_path(&mut secret_in, MAX_MMR_HEIGHT);

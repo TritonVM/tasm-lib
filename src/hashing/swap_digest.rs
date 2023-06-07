@@ -126,10 +126,7 @@ impl Snippet for SwapDigest {
         }
     }
 
-    fn common_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn common_case_input_state(&self) -> ExecutionState {
         let mut rng = rand::thread_rng();
         let mut stack = get_init_tvm_stack();
         push_encodable(&mut stack, &rng.gen::<Digest>());
@@ -137,10 +134,7 @@ impl Snippet for SwapDigest {
         ExecutionState::with_stack(stack)
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn worst_case_input_state(&self) -> ExecutionState {
         self.common_case_input_state()
     }
 }

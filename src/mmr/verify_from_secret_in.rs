@@ -270,17 +270,11 @@ impl<H: AlgebraicHasher + std::fmt::Debug> Snippet for MmrVerifyLeafMembershipFr
         stack.push(BFieldElement::new(valid_mp as u64));
     }
 
-    fn common_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn common_case_input_state(&self) -> ExecutionState {
         prepare_state_for_benchmark::<H>(31, 20)
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn worst_case_input_state(&self) -> ExecutionState {
         prepare_state_for_benchmark::<H>(62, 20)
     }
 }

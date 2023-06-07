@@ -163,10 +163,7 @@ impl Snippet for SubU128 {
         )
     }
 
-    fn gen_input_states(&self) -> Vec<ExecutionState>
-    where
-        Self: Sized,
-    {
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
         let mut rng = rand::thread_rng();
 
         let mut ret = vec![];
@@ -199,17 +196,11 @@ impl Snippet for SubU128 {
         ret
     }
 
-    fn common_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn common_case_input_state(&self) -> ExecutionState {
         prepare_state(1u128 << 127, 1u128 << 126)
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn worst_case_input_state(&self) -> ExecutionState {
         prepare_state(
             (1u128 << 127) + (1u128 << 64),
             (1u128 << 126) + (1u128 << 56),

@@ -152,17 +152,11 @@ impl Snippet for UnsafePush {
         memory.insert(list_address, initial_list_length + BFieldElement::one());
     }
 
-    fn common_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn common_case_input_state(&self) -> ExecutionState {
         prepare_state(&self.0)
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn worst_case_input_state(&self) -> ExecutionState {
         prepare_state(&self.0)
     }
 }

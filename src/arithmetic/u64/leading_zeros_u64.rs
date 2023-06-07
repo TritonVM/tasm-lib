@@ -106,17 +106,11 @@ impl Snippet for LeadingZerosU64 {
         stack.push(BFieldElement::new(value as u64));
     }
 
-    fn common_case_input_state(&self) -> crate::ExecutionState
-    where
-        Self: Sized,
-    {
+    fn common_case_input_state(&self) -> crate::ExecutionState {
         prepare_state(1 << 31)
     }
 
-    fn worst_case_input_state(&self) -> crate::ExecutionState
-    where
-        Self: Sized,
-    {
+    fn worst_case_input_state(&self) -> crate::ExecutionState {
         prepare_state(1 << 62)
     }
 }

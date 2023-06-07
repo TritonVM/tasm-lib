@@ -14,10 +14,7 @@ impl Snippet for UnsafeNew {
         format!("tasm_list_unsafe_u32_new_{}", self.0.label_friendly_name())
     }
 
-    fn inputs(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
+    fn inputs(&self) -> Vec<String> {
         vec!["capacity".to_string()]
     }
 
@@ -33,10 +30,7 @@ impl Snippet for UnsafeNew {
         vec!["list_pointer".to_string()]
     }
 
-    fn stack_diff(&self) -> isize
-    where
-        Self: Sized,
-    {
+    fn stack_diff(&self) -> isize {
         0
     }
 
@@ -79,17 +73,11 @@ impl Snippet for UnsafeNew {
         )
     }
 
-    fn crash_conditions(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
+    fn crash_conditions(&self) -> Vec<String> {
         vec!["Requested list size exceeds u32::MAX bfe words".to_string()]
     }
 
-    fn gen_input_states(&self) -> Vec<ExecutionState>
-    where
-        Self: Sized,
-    {
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
         vec![
             prepare_state(0),
             prepare_state(1),
@@ -106,9 +94,7 @@ impl Snippet for UnsafeNew {
         std_in: Vec<BFieldElement>,
         secret_in: Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
-    ) where
-        Self: Sized,
-    {
+    ) {
         // let list_pointer = BFieldElement::one();
         let capacity_in_elements = stack.pop().unwrap().value() as usize;
         let capacity_in_bfes = capacity_in_elements * self.0.get_size();
@@ -121,17 +107,11 @@ impl Snippet for UnsafeNew {
         stack.push(list_pointer);
     }
 
-    fn common_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn common_case_input_state(&self) -> ExecutionState {
         prepare_state(2)
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn worst_case_input_state(&self) -> ExecutionState {
         prepare_state(1000000)
     }
 }

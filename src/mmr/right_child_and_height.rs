@@ -58,10 +58,7 @@ impl Snippet for MmrRightChildAndHeight {
         "tasm_mmr_right_child_and_height".to_string()
     }
 
-    fn function_code(&self, library: &mut SnippetState) -> String
-    where
-        Self: Sized,
-    {
+    fn function_code(&self, library: &mut SnippetState) -> String {
         let entrypoint = self.entrypoint();
         let eq_u64 = library.import(Box::new(EqU64));
         let lt_u64 = library.import(Box::new(LtU64));
@@ -194,9 +191,7 @@ impl Snippet for MmrRightChildAndHeight {
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,
         _memory: &mut HashMap<BFieldElement, BFieldElement>,
-    ) where
-        Self: Sized,
-    {
+    ) {
         let node_index_lo: u32 = stack.pop().unwrap().try_into().unwrap();
         let node_index_hi: u32 = stack.pop().unwrap().try_into().unwrap();
         let node_index: u64 = (node_index_hi as u64) * (1u64 << 32) + node_index_lo as u64;
@@ -213,17 +208,11 @@ impl Snippet for MmrRightChildAndHeight {
         stack.push(BFieldElement::new(height as u64));
     }
 
-    fn common_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn common_case_input_state(&self) -> ExecutionState {
         prepare_state((1 << 32) + 1)
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn worst_case_input_state(&self) -> ExecutionState {
         prepare_state((1 << 62) + 1)
     }
 }

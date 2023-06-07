@@ -157,17 +157,11 @@ impl Snippet for SafeSet {
         );
     }
 
-    fn common_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn common_case_input_state(&self) -> ExecutionState {
         prepare_state(&self.0, 1000, 1 << 5)
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn worst_case_input_state(&self) -> ExecutionState {
         prepare_state(&self.0, 1000, 1 << 6)
     }
 }

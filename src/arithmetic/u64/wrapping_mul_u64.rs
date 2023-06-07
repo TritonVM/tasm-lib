@@ -14,10 +14,7 @@ impl Snippet for WrappingMulU64 {
         "tasm_arithmetic_u64_wrapping_mul".to_string()
     }
 
-    fn inputs(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
+    fn inputs(&self) -> Vec<String> {
         vec![
             "lhs_hi".to_string(),
             "lhs_lo".to_string(),
@@ -34,17 +31,11 @@ impl Snippet for WrappingMulU64 {
         vec![DataType::U64]
     }
 
-    fn outputs(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
+    fn outputs(&self) -> Vec<String> {
         vec!["prod_hi".to_string(), "prod_lo".to_string()]
     }
 
-    fn stack_diff(&self) -> isize
-    where
-        Self: Sized,
-    {
+    fn stack_diff(&self) -> isize {
         -2
     }
 
@@ -111,17 +102,11 @@ impl Snippet for WrappingMulU64 {
         )
     }
 
-    fn crash_conditions(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
+    fn crash_conditions(&self) -> Vec<String> {
         todo!()
     }
 
-    fn gen_input_states(&self) -> Vec<ExecutionState>
-    where
-        Self: Sized,
-    {
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
         let mut rng = rand::thread_rng();
 
         let mut ret = vec![];
@@ -132,17 +117,11 @@ impl Snippet for WrappingMulU64 {
         ret
     }
 
-    fn common_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn common_case_input_state(&self) -> ExecutionState {
         prepare_state(1 << 60, (1 << 42) - 1)
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn worst_case_input_state(&self) -> ExecutionState {
         prepare_state(1 << 60, (1 << 42) - 1)
     }
 
@@ -152,9 +131,7 @@ impl Snippet for WrappingMulU64 {
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,
         _memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
-    ) where
-        Self: Sized,
-    {
+    ) {
         // top element on stack
         let a_lo: u32 = stack.pop().unwrap().try_into().unwrap();
         let a_hi: u32 = stack.pop().unwrap().try_into().unwrap();

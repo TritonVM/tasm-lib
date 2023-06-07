@@ -14,10 +14,7 @@ impl Snippet for ShiftRightU64 {
         "tasm_arithmetic_u64_shift_right".to_string()
     }
 
-    fn inputs(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
+    fn inputs(&self) -> Vec<String> {
         vec![
             "value_hi".to_string(),
             "value_lo".to_string(),
@@ -33,20 +30,14 @@ impl Snippet for ShiftRightU64 {
         vec![DataType::U64]
     }
 
-    fn outputs(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
+    fn outputs(&self) -> Vec<String> {
         vec![
             "shifted_value_hi".to_string(),
             "shifted_value_lo".to_string(),
         ]
     }
 
-    fn stack_diff(&self) -> isize
-    where
-        Self: Sized,
-    {
+    fn stack_diff(&self) -> isize {
         -1
     }
 
@@ -129,17 +120,11 @@ impl Snippet for ShiftRightU64 {
         )
     }
 
-    fn crash_conditions(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
+    fn crash_conditions(&self) -> Vec<String> {
         vec![]
     }
 
-    fn gen_input_states(&self) -> Vec<ExecutionState>
-    where
-        Self: Sized,
-    {
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
         let mut rng = thread_rng();
         let mut ret = vec![];
         for i in 0..64 {
@@ -149,17 +134,11 @@ impl Snippet for ShiftRightU64 {
         ret
     }
 
-    fn common_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn common_case_input_state(&self) -> ExecutionState {
         prepare_state(0x642, 15)
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn worst_case_input_state(&self) -> ExecutionState {
         prepare_state(0x123, 33)
     }
 
@@ -169,9 +148,7 @@ impl Snippet for ShiftRightU64 {
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,
         _memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
-    ) where
-        Self: Sized,
-    {
+    ) {
         // Find shift amount
         let shift_amount: u32 = stack.pop().unwrap().try_into().unwrap();
 

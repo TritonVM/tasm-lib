@@ -118,10 +118,7 @@ impl Snippet for UnsafeLength {
         stack.push(list_length);
     }
 
-    fn common_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn common_case_input_state(&self) -> ExecutionState {
         let mut stack = get_init_tvm_stack();
         let list_address: u32 = random();
         let list_address = BFieldElement::from(list_address as u64);
@@ -131,10 +128,7 @@ impl Snippet for UnsafeLength {
         ExecutionState::with_stack_and_memory(stack.clone(), memory, 0)
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn worst_case_input_state(&self) -> ExecutionState {
         let mut stack = get_init_tvm_stack();
         let list_address: u32 = random();
         let list_address = BFieldElement::from(list_address as u64);
