@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use crate::{
     arithmetic::{
-        u128::{add_u128::AddU128, sub_u128::SubU128},
+        u128::{add_u128::AddU128, shift_right_u128::ShiftRightU128, sub_u128::SubU128},
         u32::{
             is_odd::U32IsOdd, is_u32::IsU32, leading_zeros_u32::LeadingZerosU32, or::OrU32,
             safe_add::SafeAdd, safe_mul::SafeMul, safe_sub::SafeSub, shift_left::ShiftLeftU32,
@@ -113,6 +113,7 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn Snippet> {
 
         // u128
         "tasm_arithmetic_u128_add" => Box::new(AddU128),
+        "tasm_arithmetic_u128_shift_right" => Box::new(ShiftRightU128),
         "tasm_arithmetic_u128_sub" => Box::new(SubU128),
 
         // Hashing
@@ -280,6 +281,6 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn Snippet> {
         "tasm_memory_dyn_malloc" => Box::new(DynMalloc),
         "tasm_memory_memcpy" => Box::new(MemCpy),
 
-        _ => panic!("Could not find \"{fn_name}\" in the function `name_to_snippet`. Did you include it there?"),
+        _ => panic!("Could not find \"{fn_name}\" in the function `exported_snippets`. Did you include it there?"),
     }
 }
