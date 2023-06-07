@@ -60,7 +60,7 @@ impl<const N: u8> Snippet for ShiftLeftStaticU128<N> {
     fn function_code(&self, _library: &mut SnippetState) -> String {
         assert!(
             N <= 32,
-            "Static shift-snippet cannot shift by more than 32 bits"
+            "Static shift-snippet cannot left-shift by more than 32 bits"
         );
         let entrypoint = self.entrypoint();
         let pow_2_n = 2u64.pow(N as u32);
