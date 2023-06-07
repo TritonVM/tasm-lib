@@ -187,17 +187,11 @@ impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
         stack.push(BFieldElement::new(peak_index as u64));
     }
 
-    fn common_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn common_case_input_state(&self) -> ExecutionState {
         prepare_state((1 << 32) - 1, (1 << 31) + (1 << 30) + 100000)
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn worst_case_input_state(&self) -> ExecutionState {
         // This function has some pretty bad worst-case behavior. Common-case is orders of magnitudes
         // better, it seems.
         // The below input is the worst-case input I could find.

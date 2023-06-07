@@ -170,18 +170,12 @@ impl<H: AlgebraicHasher + std::fmt::Debug> Snippet for MtApVerifyFromSecretInput
         }
     }
 
-    fn common_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn common_case_input_state(&self) -> ExecutionState {
         let mt_height = 6;
         prepare_state::<H>(mt_height)
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn worst_case_input_state(&self) -> ExecutionState {
         // `mt_height` should probably be 20 here, but that execution takes very long to run.
         let mt_height = 12;
         prepare_state::<H>(mt_height)

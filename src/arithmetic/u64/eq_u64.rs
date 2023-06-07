@@ -85,9 +85,7 @@ impl Snippet for EqU64 {
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,
         _memory: &mut HashMap<BFieldElement, BFieldElement>,
-    ) where
-        Self: Sized,
-    {
+    ) {
         let a_lo: u32 = stack.pop().unwrap().try_into().unwrap();
         let a_hi: u32 = stack.pop().unwrap().try_into().unwrap();
         let a = U32s::<2>::new([a_lo, a_hi]);
@@ -103,10 +101,7 @@ impl Snippet for EqU64 {
         })
     }
 
-    fn common_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn common_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
             vec![
                 get_init_tvm_stack(),
@@ -117,10 +112,7 @@ impl Snippet for EqU64 {
         )
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn worst_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
             vec![
                 get_init_tvm_stack(),

@@ -70,10 +70,7 @@ impl Snippet for BfeAdd {
         stack.push(a + b);
     }
 
-    fn common_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn common_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
             vec![
                 get_init_tvm_stack(),
@@ -83,10 +80,7 @@ impl Snippet for BfeAdd {
         )
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn worst_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
             vec![
                 get_init_tvm_stack(),

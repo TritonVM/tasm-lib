@@ -209,20 +209,14 @@ impl<H: AlgebraicHasher + 'static + std::fmt::Debug> Snippet for MmrLoadFromSecr
         stack.push(BFieldElement::new(valid_mp as u64));
     }
 
-    fn common_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn common_case_input_state(&self) -> ExecutionState {
         // This should be a bigger state, but that's not possible since
         // the current implementation uses an archival MMR, which requires
         // all MMR nodes to be stored in memory.
         prepare_state::<H>(100, 50, true)
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn worst_case_input_state(&self) -> ExecutionState {
         // This should be a bigger state, but that's not possible since
         // the current implementation uses an archival MMR, which requires
         // all MMR nodes to be stored in memory.

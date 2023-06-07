@@ -113,18 +113,12 @@ impl Snippet for SafeLength {
         stack.push(list_length);
     }
 
-    fn common_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn common_case_input_state(&self) -> ExecutionState {
         const COMMON_LENGTH: usize = 1 << 5;
         get_benchmark_input_state(COMMON_LENGTH, &self.0)
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn worst_case_input_state(&self) -> ExecutionState {
         const COMMON_LENGTH: usize = 1 << 6;
         get_benchmark_input_state(COMMON_LENGTH, &self.0)
     }

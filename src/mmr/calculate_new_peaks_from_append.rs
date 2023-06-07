@@ -276,20 +276,14 @@ impl<H: AlgebraicHasher + std::fmt::Debug> Snippet for CalculateNewPeaksFromAppe
         stack.push(auth_path_pointer); // Can this be done in a more dynamic way?
     }
 
-    fn common_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn common_case_input_state(&self) -> ExecutionState {
         let peaks: Vec<Digest> = random_elements(31);
         let new_leaf: Digest = random();
         let mmra = MmrAccumulator::init(peaks, (1 << 31) - 1);
         prepare_state_with_mmra(mmra, new_leaf)
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn worst_case_input_state(&self) -> ExecutionState {
         let peaks: Vec<Digest> = random_elements(62);
         let new_leaf: Digest = random();
         let mmra = MmrAccumulator::init(peaks, (1 << 62) - 1);

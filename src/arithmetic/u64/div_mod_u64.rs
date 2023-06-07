@@ -27,10 +27,7 @@ impl Snippet for DivModU64 {
         "tasm_arithmetic_u64_div_mod".to_string()
     }
 
-    fn inputs(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
+    fn inputs(&self) -> Vec<String> {
         vec![
             "numerator_hi".to_string(),
             "numerator_lo".to_string(),
@@ -47,10 +44,7 @@ impl Snippet for DivModU64 {
         vec![DataType::U64, DataType::U64]
     }
 
-    fn outputs(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
+    fn outputs(&self) -> Vec<String> {
         vec![
             "(numerator / divisor)_hi".to_string(),
             "(numerator / divisor)_lo".to_string(),
@@ -59,10 +53,7 @@ impl Snippet for DivModU64 {
         ]
     }
 
-    fn stack_diff(&self) -> isize
-    where
-        Self: Sized,
-    {
+    fn stack_diff(&self) -> isize {
         0
     }
 
@@ -494,17 +485,11 @@ impl Snippet for DivModU64 {
         )
     }
 
-    fn crash_conditions(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
+    fn crash_conditions(&self) -> Vec<String> {
         vec!["inputs are not valid u32s".to_owned()]
     }
 
-    fn gen_input_states(&self) -> Vec<ExecutionState>
-    where
-        Self: Sized,
-    {
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
         let mut rng = rand::thread_rng();
 
         let mut ret = vec![];
@@ -536,9 +521,7 @@ impl Snippet for DivModU64 {
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
-    ) where
-        Self: Sized,
-    {
+    ) {
         // top element on stack
         let divisor_lo: u32 = stack.pop().unwrap().try_into().unwrap();
         let divisor_hi: u32 = stack.pop().unwrap().try_into().unwrap();

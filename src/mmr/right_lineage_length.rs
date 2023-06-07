@@ -163,17 +163,11 @@ impl Snippet for MmrRightLineageLength {
         stack.push(BFieldElement::new(right_lineage_length as u64));
     }
 
-    fn common_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn common_case_input_state(&self) -> ExecutionState {
         prepare_state((1 << 31) - 32)
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn worst_case_input_state(&self) -> ExecutionState {
         prepare_state((1 << 62) - 63)
     }
 }

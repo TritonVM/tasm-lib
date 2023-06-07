@@ -22,10 +22,7 @@ impl Snippet for LoadFromInput {
         format!("tasm_io_load_from_input_{}", self.0)
     }
 
-    fn inputs(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
+    fn inputs(&self) -> Vec<String> {
         vec![]
     }
 
@@ -37,17 +34,11 @@ impl Snippet for LoadFromInput {
         vec![DataType::BFE]
     }
 
-    fn outputs(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
+    fn outputs(&self) -> Vec<String> {
         vec!["*addr".to_string()]
     }
 
-    fn stack_diff(&self) -> isize
-    where
-        Self: Sized,
-    {
+    fn stack_diff(&self) -> isize {
         1
     }
 
@@ -141,10 +132,7 @@ impl Snippet for LoadFromInput {
         )
     }
 
-    fn crash_conditions(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
+    fn crash_conditions(&self) -> Vec<String> {
         vec![
             "size exceeds 2^32".to_owned(),
             "allocated memory exceeds 2^32".to_owned(),
@@ -153,10 +141,7 @@ impl Snippet for LoadFromInput {
         ]
     }
 
-    fn gen_input_states(&self) -> Vec<crate::ExecutionState>
-    where
-        Self: Sized,
-    {
+    fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
         let mut ret = vec![];
         let mut thread_rng = rand::thread_rng();
         for _ in 0..10 {
@@ -187,10 +172,7 @@ impl Snippet for LoadFromInput {
         ret
     }
 
-    fn common_case_input_state(&self) -> crate::ExecutionState
-    where
-        Self: Sized,
-    {
+    fn common_case_input_state(&self) -> crate::ExecutionState {
         let length = 1u64 << 9;
         let input: Vec<BFieldElement> = vec![
             vec![BFieldElement::new(length)],
@@ -215,10 +197,7 @@ impl Snippet for LoadFromInput {
         }
     }
 
-    fn worst_case_input_state(&self) -> crate::ExecutionState
-    where
-        Self: Sized,
-    {
+    fn worst_case_input_state(&self) -> crate::ExecutionState {
         let length = 1u64 << 13;
         let input: Vec<BFieldElement> = vec![
             vec![BFieldElement::new(length)],
@@ -249,9 +228,7 @@ impl Snippet for LoadFromInput {
         std_in: Vec<triton_vm::BFieldElement>,
         secret_in: Vec<triton_vm::BFieldElement>,
         memory: &mut std::collections::HashMap<triton_vm::BFieldElement, triton_vm::BFieldElement>,
-    ) where
-        Self: Sized,
-    {
+    ) {
         // BEFORE: _
         // AFTER: _ *addr
         let input = match self.0 {

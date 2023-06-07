@@ -120,10 +120,7 @@ impl Snippet for Log2FloorU64 {
         stack.push(BFieldElement::new(log_2_floor));
     }
 
-    fn common_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn common_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
             vec![
                 get_init_tvm_stack(),
@@ -133,10 +130,7 @@ impl Snippet for Log2FloorU64 {
         )
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn worst_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
             vec![
                 get_init_tvm_stack(),

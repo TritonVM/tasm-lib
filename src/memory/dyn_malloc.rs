@@ -47,10 +47,7 @@ impl Snippet for DynMalloc {
         "tasm_memory_dyn_malloc".to_string()
     }
 
-    fn inputs(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
+    fn inputs(&self) -> Vec<String> {
         vec!["size".to_string()]
     }
 
@@ -62,17 +59,11 @@ impl Snippet for DynMalloc {
         vec![DataType::U32]
     }
 
-    fn outputs(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
+    fn outputs(&self) -> Vec<String> {
         vec!["*addr".to_string()]
     }
 
-    fn stack_diff(&self) -> isize
-    where
-        Self: Sized,
-    {
+    fn stack_diff(&self) -> isize {
         0
     }
 
@@ -124,20 +115,14 @@ impl Snippet for DynMalloc {
         )
     }
 
-    fn crash_conditions(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
+    fn crash_conditions(&self) -> Vec<String> {
         vec![
             "Caller attempts to allocate more than 2^32 words".to_owned(),
             "More than 2^32 words allocated to memory".to_owned(),
         ]
     }
 
-    fn gen_input_states(&self) -> Vec<ExecutionState>
-    where
-        Self: Sized,
-    {
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
         let mut rng = rand::thread_rng();
 
         let mut stack = get_init_tvm_stack();
@@ -160,9 +145,7 @@ impl Snippet for DynMalloc {
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
-    ) where
-        Self: Sized,
-    {
+    ) {
         let allocator_addr = BFIELD_ZERO;
         let used_memory = memory
             .entry(allocator_addr)
@@ -186,19 +169,13 @@ impl Snippet for DynMalloc {
         assert!(used_memory.value() < (1u64 << 32));
     }
 
-    fn common_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn common_case_input_state(&self) -> ExecutionState {
         let mut init_stack = get_init_tvm_stack();
         init_stack.push(BFieldElement::new(10));
         ExecutionState::with_stack(init_stack)
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn worst_case_input_state(&self) -> ExecutionState {
         let mut init_stack = get_init_tvm_stack();
         init_stack.push(BFieldElement::new(1 << 31));
         ExecutionState::with_stack(init_stack)

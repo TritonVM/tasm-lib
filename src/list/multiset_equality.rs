@@ -234,10 +234,7 @@ impl Snippet for MultisetEquality {
         format!("tasm_list_{}_u32_multiset_equality", self.0)
     }
 
-    fn inputs(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
+    fn inputs(&self) -> Vec<String> {
         vec!["list_a".to_string(), "list_b".to_string()]
     }
 
@@ -252,17 +249,11 @@ impl Snippet for MultisetEquality {
         vec![DataType::Bool]
     }
 
-    fn outputs(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
+    fn outputs(&self) -> Vec<String> {
         vec!["multisets_are_equal".to_string()]
     }
 
-    fn stack_diff(&self) -> isize
-    where
-        Self: Sized,
-    {
+    fn stack_diff(&self) -> isize {
         -1
     }
 
@@ -423,17 +414,11 @@ impl Snippet for MultisetEquality {
         )
     }
 
-    fn crash_conditions(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
+    fn crash_conditions(&self) -> Vec<String> {
         vec!["Length exceeds u32::MAX".to_string()]
     }
 
-    fn gen_input_states(&self) -> Vec<ExecutionState>
-    where
-        Self: Sized,
-    {
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
         vec![
             self.random_equal_lists(0),
             self.random_equal_lists(1),
@@ -473,17 +458,11 @@ impl Snippet for MultisetEquality {
         ]
     }
 
-    fn common_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn common_case_input_state(&self) -> ExecutionState {
         self.random_equal_lists(2)
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn worst_case_input_state(&self) -> ExecutionState {
         self.random_equal_lists(100)
     }
 
@@ -493,9 +472,7 @@ impl Snippet for MultisetEquality {
         _std_in: Vec<triton_vm::BFieldElement>,
         _secret_in: Vec<triton_vm::BFieldElement>,
         memory: &mut std::collections::HashMap<triton_vm::BFieldElement, triton_vm::BFieldElement>,
-    ) where
-        Self: Sized,
-    {
+    ) {
         let list_b = stack.pop().unwrap();
         let list_a = stack.pop().unwrap();
 

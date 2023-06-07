@@ -114,10 +114,7 @@ impl Snippet for Zip {
         )
     }
 
-    fn inputs(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
+    fn inputs(&self) -> Vec<String> {
         vec!["left_list".to_string(), "right_list".to_string()]
     }
 
@@ -135,17 +132,11 @@ impl Snippet for Zip {
         )))]
     }
 
-    fn outputs(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
+    fn outputs(&self) -> Vec<String> {
         vec!["output_list".to_string()]
     }
 
-    fn stack_diff(&self) -> isize
-    where
-        Self: Sized,
-    {
+    fn stack_diff(&self) -> isize {
         -1
     }
 
@@ -282,20 +273,14 @@ impl Snippet for Zip {
         )
     }
 
-    fn crash_conditions(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
+    fn crash_conditions(&self) -> Vec<String> {
         vec![
             "Lengths do not agree".to_string(),
             "Length exceeds u32::MAX".to_string(),
         ]
     }
 
-    fn gen_input_states(&self) -> Vec<ExecutionState>
-    where
-        Self: Sized,
-    {
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
         // Create random list of input data type
         let mut rng = thread_rng();
         let list_length: usize = rng.gen_range(1..=100);
@@ -303,19 +288,13 @@ impl Snippet for Zip {
         vec![self.generate_input_state(list_length, list_length)]
     }
 
-    fn common_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn common_case_input_state(&self) -> ExecutionState {
         // Create random list of input data type
         let list_length: usize = 10;
         self.generate_input_state(list_length, list_length)
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn worst_case_input_state(&self) -> ExecutionState {
         // Create random list of input data type
         let list_length: usize = 400;
         self.generate_input_state(list_length, list_length)
@@ -327,9 +306,7 @@ impl Snippet for Zip {
         _std_in: Vec<triton_vm::BFieldElement>,
         _secret_in: Vec<triton_vm::BFieldElement>,
         memory: &mut std::collections::HashMap<triton_vm::BFieldElement, triton_vm::BFieldElement>,
-    ) where
-        Self: Sized,
-    {
+    ) {
         let right_pointer = stack.pop().unwrap();
         let left_pointer = stack.pop().unwrap();
 

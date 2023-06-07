@@ -117,17 +117,11 @@ impl Snippet for MmrLeftMostAncestor {
         stack.push(BFieldElement::from(h));
     }
 
-    fn common_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn common_case_input_state(&self) -> ExecutionState {
         prepare_state((1 << 32) - 1)
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn worst_case_input_state(&self) -> ExecutionState {
         prepare_state((1 << 63) - 1)
     }
 }

@@ -277,10 +277,7 @@ impl<H: AlgebraicHasher + std::fmt::Debug> Snippet
         stack.push(BFieldElement::new(leaf_index_lo as u64));
     }
 
-    fn common_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn common_case_input_state(&self) -> ExecutionState {
         let mmr_leaf_count_log2 = 31u64;
         let mmr_size = 1 << mmr_leaf_count_log2;
         let peaks: Vec<Digest> = random_elements(mmr_leaf_count_log2 as usize);
@@ -297,10 +294,7 @@ impl<H: AlgebraicHasher + std::fmt::Debug> Snippet
         .0
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn worst_case_input_state(&self) -> ExecutionState {
         let mmr_leaf_count_log2 = 62u64;
         let mmr_size = 1 << mmr_leaf_count_log2;
         let peaks: Vec<Digest> = random_elements(mmr_leaf_count_log2 as usize);

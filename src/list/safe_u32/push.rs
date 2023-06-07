@@ -169,9 +169,7 @@ impl Snippet for SafePush {
             twenty_first::shared_math::b_field_element::BFieldElement,
             twenty_first::shared_math::b_field_element::BFieldElement,
         >,
-    ) where
-        Self: Sized,
-    {
+    ) {
         let mut elements: Vec<BFieldElement> = vec![];
         for _ in 0..self.0.get_size() {
             elements.push(stack.pop().unwrap());
@@ -185,17 +183,11 @@ impl Snippet for SafePush {
         memory.insert(list_pointer, initial_list_length + BFieldElement::one());
     }
 
-    fn common_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn common_case_input_state(&self) -> ExecutionState {
         prepare_execution_state(&self.0, SAFE_LIST_ELEMENT_CAPACITY, 1 << 5)
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn worst_case_input_state(&self) -> ExecutionState {
         prepare_execution_state(&self.0, SAFE_LIST_ELEMENT_CAPACITY, 1 << 6)
     }
 }

@@ -285,10 +285,7 @@ impl<H: AlgebraicHasher + std::fmt::Debug> Snippet for MmrVerifyFromMemory<H> {
         stack.push(BFieldElement::new(valid_mp as u64));
     }
 
-    fn common_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn common_case_input_state(&self) -> ExecutionState {
         let log2_size = 31;
         let leaf_count_after_add = 1u64 << log2_size;
         let peaks: Vec<Digest> = random_elements(log2_size as usize);
@@ -302,10 +299,7 @@ impl<H: AlgebraicHasher + std::fmt::Debug> Snippet for MmrVerifyFromMemory<H> {
         prepare_vm_state(&mut mmra, new_leaf, leaf_count_after_add - 1, auth_path).0
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn worst_case_input_state(&self) -> ExecutionState {
         let log2_size = 62;
         let leaf_count_after_add = 1u64 << log2_size;
         let peaks: Vec<Digest> = random_elements(log2_size as usize);

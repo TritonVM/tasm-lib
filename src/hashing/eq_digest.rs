@@ -116,10 +116,7 @@ impl Snippet for EqDigest {
         stack.push(BFieldElement::new((digest_a == digest_b) as u64));
     }
 
-    fn common_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn common_case_input_state(&self) -> ExecutionState {
         let mut stack = get_init_tvm_stack();
         push_encodable(&mut stack, &Digest::default());
         push_encodable(&mut stack, &Digest::default());
@@ -127,10 +124,7 @@ impl Snippet for EqDigest {
         ExecutionState::with_stack(stack)
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn worst_case_input_state(&self) -> ExecutionState {
         let mut rng = rand::thread_rng();
         let digest_a: Digest = rng.gen();
         let digest_b: Digest = rng.gen();

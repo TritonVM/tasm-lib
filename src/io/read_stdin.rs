@@ -16,10 +16,7 @@ impl Snippet for ReadStdIn {
         format!("tasm_io_read_stdin_{}", self.0)
     }
 
-    fn inputs(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
+    fn inputs(&self) -> Vec<String> {
         vec![]
     }
 
@@ -31,10 +28,7 @@ impl Snippet for ReadStdIn {
         vec![self.0.clone()]
     }
 
-    fn outputs(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
+    fn outputs(&self) -> Vec<String> {
         // This function returns element_0 on the top of the stack and the other elements below it. E.g.: _ elem_2 elem_1 elem_0
         let mut ret: Vec<String> = vec![];
         let size = self.0.get_size();
@@ -45,10 +39,7 @@ impl Snippet for ReadStdIn {
         ret
     }
 
-    fn stack_diff(&self) -> isize
-    where
-        Self: Sized,
-    {
+    fn stack_diff(&self) -> isize {
         self.0.get_size() as isize
     }
 
@@ -65,17 +56,11 @@ impl Snippet for ReadStdIn {
         )
     }
 
-    fn crash_conditions(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
+    fn crash_conditions(&self) -> Vec<String> {
         vec!["std input too short".to_string()]
     }
 
-    fn gen_input_states(&self) -> Vec<crate::ExecutionState>
-    where
-        Self: Sized,
-    {
+    fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
         let std_in: Vec<BFieldElement> = random_elements(self.0.get_size());
         vec![ExecutionState {
             stack: get_init_tvm_stack(),
@@ -95,18 +80,13 @@ impl Snippet for ReadStdIn {
             twenty_first::shared_math::b_field_element::BFieldElement,
             twenty_first::shared_math::b_field_element::BFieldElement,
         >,
-    ) where
-        Self: Sized,
-    {
+    ) {
         for elem in std_in.iter().take(self.0.get_size()) {
             stack.push(*elem)
         }
     }
 
-    fn common_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn common_case_input_state(&self) -> ExecutionState {
         let mut std_in = vec![];
         std_in.append(&mut random_elements(self.0.get_size()));
         ExecutionState {
@@ -118,10 +98,7 @@ impl Snippet for ReadStdIn {
         }
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn worst_case_input_state(&self) -> ExecutionState {
         self.common_case_input_state()
     }
 }

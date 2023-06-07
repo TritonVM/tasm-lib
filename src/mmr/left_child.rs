@@ -96,17 +96,11 @@ impl Snippet for MmrLeftChild {
         stack.append(&mut ret.encode().into_iter().rev().collect());
     }
 
-    fn common_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn common_case_input_state(&self) -> ExecutionState {
         prepare_state(1 << 32)
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn worst_case_input_state(&self) -> ExecutionState {
         prepare_state(1 << 62)
     }
 }

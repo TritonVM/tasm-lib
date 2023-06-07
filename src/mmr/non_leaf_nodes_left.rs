@@ -173,17 +173,11 @@ impl Snippet for MmrNonLeafNodesLeftUsingAnd {
         push_encodable(stack, &result);
     }
 
-    fn common_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn common_case_input_state(&self) -> ExecutionState {
         prepare_state((1 << 31) - 1)
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn worst_case_input_state(&self) -> ExecutionState {
         prepare_state((1 << 63) - 1)
     }
 }

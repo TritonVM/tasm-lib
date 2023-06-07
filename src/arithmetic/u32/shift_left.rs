@@ -15,10 +15,7 @@ impl Snippet for ShiftLeftU32 {
         "tasm_arithmetic_u32_shift_left_u32".to_string()
     }
 
-    fn inputs(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
+    fn inputs(&self) -> Vec<String> {
         vec!["value".to_string(), "shift".to_string()]
     }
 
@@ -30,17 +27,11 @@ impl Snippet for ShiftLeftU32 {
         vec![DataType::U32]
     }
 
-    fn outputs(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
+    fn outputs(&self) -> Vec<String> {
         vec!["value << shift".to_string()]
     }
 
-    fn stack_diff(&self) -> isize
-    where
-        Self: Sized,
-    {
+    fn stack_diff(&self) -> isize {
         -1
     }
 
@@ -71,10 +62,7 @@ impl Snippet for ShiftLeftU32 {
         )
     }
 
-    fn crash_conditions(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
+    fn crash_conditions(&self) -> Vec<String> {
         vec![
             "inputs are not valid u32s".to_string(),
             "attempting to left shift with a value greater than 31".to_string(),
@@ -93,17 +81,11 @@ impl Snippet for ShiftLeftU32 {
         ret
     }
 
-    fn common_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn common_case_input_state(&self) -> ExecutionState {
         prepare_state((1 << 16) - 1, 16)
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
+    fn worst_case_input_state(&self) -> ExecutionState {
         prepare_state(u32::MAX, 31)
     }
 
@@ -113,9 +95,7 @@ impl Snippet for ShiftLeftU32 {
         _std_in: Vec<BFieldElement>,
         _secret_in: Vec<BFieldElement>,
         _memory: &mut HashMap<BFieldElement, BFieldElement>,
-    ) where
-        Self: Sized,
-    {
+    ) {
         // Find shift amount
         let shift_amount: u32 = stack.pop().unwrap().try_into().unwrap();
 
