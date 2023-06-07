@@ -28,12 +28,60 @@ use crate::{
 
 /// A data structure for describing an inner function to a map without using a snippet
 pub struct RawCode {
-    pub entrypoint: String,
-    pub function_body: Vec<LabelledInstruction>,
+    pub function: Vec<LabelledInstruction>,
     pub input_types: Vec<DataType>,
     pub output_types: Vec<DataType>,
     #[allow(clippy::type_complexity)]
-    pub rust_shadowing: Option<Box<RefCell<dyn FnMut(&mut Vec<BFieldElement>)>>>,
+    rust_shadowing: Option<Box<RefCell<dyn FnMut(&mut Vec<BFieldElement>)>>>,
+}
+
+impl RawCode {
+    pub fn new(
+        function: Vec<LabelledInstruction>,
+        input_types: Vec<DataType>,
+        output_types: Vec<DataType>,
+    ) -> Self {
+        // Verify that 1st line is a label
+        assert!(
+            function.len() >= 2,
+            "Inner function must have at least two lines: a label and a return or recurse"
+        );
+        assert!(
+            matches!(function[0], LabelledInstruction::Label(_)),
+            "First line of inner function must be label. Got: {}",
+            function[0]
+        );
+        assert!(
+            matches!(
+                function.last().unwrap(),
+                LabelledInstruction::Instruction(
+                    triton_opcodes::instruction::AnInstruction::Return
+                ) | LabelledInstruction::Instruction(
+                    triton_opcodes::instruction::AnInstruction::Recurse
+                )
+            ),
+            "Last line of inner function must be either return or recurse. Got: {}",
+            function.last().unwrap()
+        );
+
+        Self {
+            function,
+            input_types,
+            output_types,
+            rust_shadowing: None,
+        }
+    }
+}
+
+impl RawCode {
+    fn entrypoint(&self) -> String {
+        match &self.function[0] {
+            LabelledInstruction::Instruction(inst) => {
+                panic!("First line of inner function must be a label. Got: {inst}")
+            }
+            LabelledInstruction::Label(label) => label.to_owned(),
+        }
+    }
 }
 
 pub enum InnerFunction {
@@ -58,7 +106,7 @@ impl InnerFunction {
 
     fn entrypoint(&self) -> String {
         match self {
-            InnerFunction::RawCode(rc) => rc.entrypoint.clone(),
+            InnerFunction::RawCode(rc) => rc.entrypoint(),
             InnerFunction::Snippet(sn) => sn.entrypoint(),
         }
     }
@@ -221,7 +269,7 @@ impl Snippet for Map {
         };
 
         let inner_function_name = match &self.f {
-            InnerFunction::RawCode(rc) => rc.entrypoint.to_owned(),
+            InnerFunction::RawCode(rc) => rc.entrypoint(),
             InnerFunction::Snippet(sn) => {
                 let fn_body = sn.function_body(library);
                 library.explicit_import(&sn.entrypoint(), fn_body)
@@ -231,7 +279,7 @@ impl Snippet for Map {
         // If function was supplied as raw instructions, we need to append the inner function to the function
         // body. Otherwise, `library` handles the imports.
         let maybe_inner_function_body_raw = match &self.f {
-            InnerFunction::RawCode(rc) => rc.function_body.iter().map(|x| x.to_string()).join("\n"),
+            InnerFunction::RawCode(rc) => rc.function.iter().map(|x| x.to_string()).join("\n"),
             InnerFunction::Snippet(_) => String::default(),
         };
         let entrypoint = self.entrypoint();
@@ -644,8 +692,7 @@ mod tests {
     #[test]
     fn test_with_raw_function_identity_on_bfe() {
         let rawcode = RawCode {
-            entrypoint: "identity_bfe".to_string(),
-            function_body: vec![
+            function: vec![
                 LabelledInstruction::Label("identity_bfe".to_string()),
                 return_(),
             ],
@@ -665,8 +712,7 @@ mod tests {
     #[test]
     fn test_with_raw_function_square_on_bfe() {
         let rawcode = RawCode {
-            entrypoint: "square_bfe".to_string(),
-            function_body: vec![
+            function: vec![
                 LabelledInstruction::Label("square_bfe".to_string()),
                 dup(0),
                 mul(),
@@ -691,8 +737,7 @@ mod tests {
     #[test]
     fn test_with_raw_function_square_on_xfe() {
         let rawcode = RawCode {
-            entrypoint: "square_xfe".to_string(),
-            function_body: vec![
+            function: vec![
                 LabelledInstruction::Label("square_xfe".to_string()),
                 dup(2),
                 dup(2),
