@@ -8,9 +8,9 @@
   },
   {
     "name": "tasm_arithmetic_u128_shift_left",
-    "clock_cycle_count": 77,
+    "clock_cycle_count": 177,
     "hash_table_height": 0,
-    "u32_table_height": 158,
+    "u32_table_height": 161,
     "case": "WorstCase"
   }
 ]

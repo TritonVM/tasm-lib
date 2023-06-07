@@ -1,4 +1,4 @@
-use rand::{thread_rng, RngCore};
+use rand::random;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
@@ -59,7 +59,7 @@ impl Snippet for ShiftLeftU128 {
         format!(
             "
             // BEFORE: _ limb3 limb2 limb1 limb0 shamt
-            // AFTER: _ (value << shift)_3 (value << shift)_2(value << shift)_1 (value << shift)_0
+            // AFTER: _ (value << shift)_3 (value << shift)_2 (value << shift)_1 (value << shift)_0
             {entrypoint}:
                 // Bounds check: Verify that shift amount is less than 128.
                 push 128
@@ -81,14 +81,13 @@ impl Snippet for ShiftLeftU128 {
                 push 2
                 pow
                 // _ v3 v2 v1 v0 (2 ^ shift)
-                
+
                 dup 0 // _ v3 v2 v1 v0 (2 ^ shift) (2 ^ shift)
                 swap 5 // _ (2 ^ shift) v2 v1 v0 (2 ^ shift) v3
 
                 mul // _ (2 ^ shift) v2 v1 v0 v3<<shift
                 swap 4 // _ v3<<shift v2 v1 v0 (2^shift)
                 xbmul  // _ v3<<shift v2<<shift v1<<shift v0<<shift
-                // _ (2^shift) v3s v1s v0s v2s
 
                 split  // _ v3s v2s v1s v0s_hi v0s_lo
                 swap 2 // _ v3s v2s v0s_lo v0s_hi v1s
@@ -132,6 +131,13 @@ impl Snippet for ShiftLeftU128 {
                 swap 3 // _ (shift - 32) (value << 32)_2 (value << 32)_1 (value << 32)_0 (value << 32)_3
                 swap 4 // _ (value << 32)_3 (value << 32)_2 (value << 32)_1 (value << 32)_0 (shift - 32)
 
+                // if (shift - 32) > 32, we need to special-case again
+                dup 0
+                push 32
+                lt
+                skiz
+                    recurse
+
                 return
             "
         )
@@ -151,14 +157,12 @@ impl Snippet for ShiftLeftU128 {
     where
         Self: Sized,
     {
-        let mut rng = thread_rng();
         let mut ret = vec![];
-        // for _ in 0..30 {
-        //     for i in 0..128 {
-        //         ret.push(prepare_state((rng.next_u64() as u128) * 2, i));
-        //     }
-        // }
-        ret.push(prepare_state((rng.next_u64() as u128) * 2, 65));
+        for _ in 0..3 {
+            for i in 0..128 {
+                ret.push(prepare_state(random::<u128>(), i));
+            }
+        }
         ret
     }
 
@@ -173,7 +177,7 @@ impl Snippet for ShiftLeftU128 {
     where
         Self: Sized,
     {
-        prepare_state(0x123456789abcdef, 33)
+        prepare_state(0x123456789abcdef, 125)
     }
 
     fn rust_shadowing(
@@ -197,7 +201,7 @@ impl Snippet for ShiftLeftU128 {
         value <<= shift_amount;
 
         for i in 0..4 {
-            let limb = (value >> ((3 - i) * 32)) as u32;
+            let limb = ((value >> ((3 - i) * 32)) & u32::MAX as u128) as u32;
             stack.push(BFieldElement::new(limb as u64));
         }
     }
@@ -231,15 +235,16 @@ mod tests {
 
     #[test]
     fn shift_left_simple_test() {
+        prop_left_left(1, 1);
         prop_left_left(8, 2);
     }
 
     #[test]
     fn shift_left_max_values_test() {
-        // for i in 0..128 {
-        //     prop_left_left(u128::MAX, i);
-        // }
-        prop_left_left(u128::MAX, 65);
+        for i in 0..128 {
+            prop_left_left(u128::MAX, i);
+        }
+        // prop_left_left(u128::MAX, 65);
     }
 
     #[test]
@@ -257,7 +262,9 @@ mod tests {
     fn prop_left_left(value: u128, shift_amount: u32) {
         let mut init_stack = get_init_tvm_stack();
         for i in 0..4 {
-            init_stack.push(BFieldElement::new(((value >> (32 * i)) as u32) as u64));
+            init_stack.push(BFieldElement::new(
+                ((value >> (32 * (3 - i))) as u32) as u64,
+            ));
         }
         init_stack.push(BFieldElement::new(shift_amount as u64));
 
@@ -267,7 +274,7 @@ mod tests {
         let mut expected_stack = get_init_tvm_stack();
         for i in 0..4 {
             expected_stack.push(BFieldElement::new(
-                ((expected_u128 >> (32 * (3 - i))) as u32) as u64,
+                ((expected_u128 >> (32 * (3 - i))) & u32::MAX as u128) as u64,
             ));
         }
 
