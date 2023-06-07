@@ -32,6 +32,7 @@ pub struct RawCode {
     pub function_body: Vec<LabelledInstruction>,
     pub input_types: Vec<DataType>,
     pub output_types: Vec<DataType>,
+    #[allow(clippy::type_complexity)]
     pub rust_shadowing: Option<Box<RefCell<dyn FnMut(&mut Vec<BFieldElement>)>>>,
 }
 
@@ -60,6 +61,28 @@ impl InnerFunction {
             InnerFunction::RawCode(rc) => rc.entrypoint.clone(),
             InnerFunction::Snippet(sn) => sn.entrypoint(),
         }
+    }
+
+    fn rust_shadowing(
+        &self,
+        std_in: &[BFieldElement],
+        secret_in: &[BFieldElement],
+        stack: &mut Vec<BFieldElement>,
+        memory: &mut HashMap<BFieldElement, BFieldElement>,
+    ) {
+        match &self {
+            InnerFunction::RawCode(rc) => {
+                if let Some(func) = &rc.rust_shadowing {
+                    let mut func = func.borrow_mut();
+                    (*func)(stack)
+                } else {
+                    panic!("Raw code must have rust shadowing for equivalence testing")
+                }
+            }
+            InnerFunction::Snippet(sn) => {
+                sn.rust_shadowing(stack, std_in.to_vec(), secret_in.to_vec(), memory)
+            }
+        };
     }
 }
 
@@ -408,19 +431,7 @@ impl Snippet for Map {
                 stack.push(input_item.pop().unwrap());
             }
 
-            match &self.f {
-                InnerFunction::RawCode(rc) => {
-                    if let Some(func) = &rc.rust_shadowing {
-                        let mut func = func.borrow_mut();
-                        (*func)(stack)
-                    } else {
-                        panic!("Raw code must have rust shadowing for equivalence testing")
-                    }
-                }
-                InnerFunction::Snippet(sn) => {
-                    sn.rust_shadowing(stack, std_in.clone(), secret_in.clone(), memory)
-                }
-            };
+            self.f.rust_shadowing(&std_in, &secret_in, stack, memory);
 
             // pull from stack
             let mut output_item = vec![];
