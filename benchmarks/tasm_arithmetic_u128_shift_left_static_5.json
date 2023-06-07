@@ -1,0 +1,16 @@
+[
+  {
+    "name": "tasm_arithmetic_u128_shift_left_static_5",
+    "clock_cycle_count": 23,
+    "hash_table_height": 0,
+    "u32_table_height": 20,
+    "case": "CommonCase"
+  },
+  {
+    "name": "tasm_arithmetic_u128_shift_left_static_5",
+    "clock_cycle_count": 23,
+    "hash_table_height": 0,
+    "u32_table_height": 63,
+    "case": "WorstCase"
+  }
+]
