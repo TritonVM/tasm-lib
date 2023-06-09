@@ -1,9 +1,7 @@
 use itertools::Itertools;
 use num::Zero;
 use rand::{thread_rng, Rng};
-use std::cell::RefCell;
 use std::collections::HashMap;
-use triton_opcodes::instruction::LabelledInstruction;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::list::safe_u32::get::SafeGet;
@@ -26,113 +24,7 @@ use crate::{
     ExecutionState,
 };
 
-/// A data structure for describing an inner function to a map without using a snippet
-pub struct RawCode {
-    pub function: Vec<LabelledInstruction>,
-    pub input_types: Vec<DataType>,
-    pub output_types: Vec<DataType>,
-    #[allow(clippy::type_complexity)]
-    rust_shadowing: Option<Box<RefCell<dyn FnMut(&mut Vec<BFieldElement>)>>>,
-}
-
-impl RawCode {
-    pub fn new(
-        function: Vec<LabelledInstruction>,
-        input_types: Vec<DataType>,
-        output_types: Vec<DataType>,
-    ) -> Self {
-        // Verify that 1st line is a label
-        assert!(
-            function.len() >= 2,
-            "Inner function must have at least two lines: a label and a return or recurse"
-        );
-        assert!(
-            matches!(function[0], LabelledInstruction::Label(_)),
-            "First line of inner function must be label. Got: {}",
-            function[0]
-        );
-        assert!(
-            matches!(
-                function.last().unwrap(),
-                LabelledInstruction::Instruction(
-                    triton_opcodes::instruction::AnInstruction::Return
-                ) | LabelledInstruction::Instruction(
-                    triton_opcodes::instruction::AnInstruction::Recurse
-                )
-            ),
-            "Last line of inner function must be either return or recurse. Got: {}",
-            function.last().unwrap()
-        );
-
-        Self {
-            function,
-            input_types,
-            output_types,
-            rust_shadowing: None,
-        }
-    }
-}
-
-impl RawCode {
-    fn entrypoint(&self) -> String {
-        match &self.function[0] {
-            LabelledInstruction::Instruction(inst) => {
-                panic!("First line of inner function must be a label. Got: {inst}")
-            }
-            LabelledInstruction::Label(label) => label.to_owned(),
-        }
-    }
-}
-
-pub enum InnerFunction {
-    RawCode(RawCode),
-    Snippet(Box<dyn Snippet>),
-}
-
-impl InnerFunction {
-    fn get_input_types(&self) -> Vec<DataType> {
-        match self {
-            InnerFunction::RawCode(raw) => raw.input_types.clone(),
-            InnerFunction::Snippet(f) => f.input_types(),
-        }
-    }
-
-    fn get_output_types(&self) -> Vec<DataType> {
-        match self {
-            InnerFunction::RawCode(rc) => rc.output_types.clone(),
-            InnerFunction::Snippet(sn) => sn.output_types(),
-        }
-    }
-
-    fn entrypoint(&self) -> String {
-        match self {
-            InnerFunction::RawCode(rc) => rc.entrypoint(),
-            InnerFunction::Snippet(sn) => sn.entrypoint(),
-        }
-    }
-
-    fn rust_shadowing(
-        &self,
-        std_in: &[BFieldElement],
-        secret_in: &[BFieldElement],
-        stack: &mut Vec<BFieldElement>,
-        memory: &mut HashMap<BFieldElement, BFieldElement>,
-    ) {
-        match &self {
-            InnerFunction::RawCode(rc) => {
-                if let Some(func) = &rc.rust_shadowing {
-                    let mut func = func.borrow_mut();
-                    (*func)(stack)
-                } else {
-                    panic!("Raw code must have rust shadowing for equivalence testing")
-                }
-            }
-            InnerFunction::Snippet(sn) => {
-                sn.rust_shadowing(stack, std_in.to_vec(), secret_in.to_vec(), memory)
-            }
-        };
-    }
-}
+use super::inner_function::InnerFunction;
 
 /// Applies a given function to every element of a list, and collects
 /// the new elements into a new list. The function must be given as
@@ -497,7 +389,10 @@ impl Snippet for Map {
 
 #[cfg(test)]
 mod tests {
-    use triton_opcodes::shortcuts::*;
+
+    use std::cell::RefCell;
+
+    use triton_opcodes::{instruction::LabelledInstruction, shortcuts::*};
     use twenty_first::{
         shared_math::{
             other::random_elements, traits::FiniteField, x_field_element::XFieldElement,
@@ -506,7 +401,8 @@ mod tests {
     };
 
     use crate::{
-        snippet_bencher::bench_and_write, test_helpers::rust_tasm_equivalence_prop_new, VmHasher,
+        list::higher_order::inner_function::RawCode, snippet_bencher::bench_and_write,
+        test_helpers::rust_tasm_equivalence_prop_new, VmHasher,
     };
 
     use super::*;
@@ -691,15 +587,15 @@ mod tests {
 
     #[test]
     fn test_with_raw_function_identity_on_bfe() {
-        let rawcode = RawCode {
-            function: vec![
+        let rawcode = RawCode::new_with_shadowing(
+            vec![
                 LabelledInstruction::Label("identity_bfe".to_string()),
                 return_(),
             ],
-            input_types: vec![DataType::BFE],
-            output_types: vec![DataType::BFE],
-            rust_shadowing: Some(Box::new(RefCell::new(|_vec: &mut Vec<BFieldElement>| {}))),
-        };
+            vec![DataType::BFE],
+            vec![DataType::BFE],
+            Box::new(RefCell::new(|_vec: &mut Vec<BFieldElement>| {})),
+        );
         rust_tasm_equivalence_prop_new(
             &Map {
                 list_type: ListType::Unsafe,
@@ -711,20 +607,20 @@ mod tests {
 
     #[test]
     fn test_with_raw_function_square_on_bfe() {
-        let rawcode = RawCode {
-            function: vec![
+        let rawcode = RawCode::new_with_shadowing(
+            vec![
                 LabelledInstruction::Label("square_bfe".to_string()),
                 dup(0),
                 mul(),
                 return_(),
             ],
-            input_types: vec![DataType::BFE],
-            output_types: vec![DataType::BFE],
-            rust_shadowing: Some(Box::new(RefCell::new(|vec: &mut Vec<BFieldElement>| {
+            vec![DataType::BFE],
+            vec![DataType::BFE],
+            Box::new(RefCell::new(|vec: &mut Vec<BFieldElement>| {
                 let new_value = vec.pop().unwrap().square();
                 vec.push(new_value);
-            }))),
-        };
+            })),
+        );
         rust_tasm_equivalence_prop_new(
             &Map {
                 list_type: ListType::Unsafe,
@@ -736,8 +632,8 @@ mod tests {
 
     #[test]
     fn test_with_raw_function_square_on_xfe() {
-        let rawcode = RawCode {
-            function: vec![
+        let rawcode = RawCode::new_with_shadowing(
+            vec![
                 LabelledInstruction::Label("square_xfe".to_string()),
                 dup(2),
                 dup(2),
@@ -751,9 +647,9 @@ mod tests {
                 pop(),
                 return_(),
             ],
-            input_types: vec![DataType::XFE],
-            output_types: vec![DataType::XFE],
-            rust_shadowing: Some(Box::new(RefCell::new(|vec: &mut Vec<BFieldElement>| {
+            vec![DataType::XFE],
+            vec![DataType::XFE],
+            Box::new(RefCell::new(|vec: &mut Vec<BFieldElement>| {
                 let x0 = vec.pop().unwrap();
                 let x1 = vec.pop().unwrap();
                 let x2 = vec.pop().unwrap();
@@ -762,8 +658,8 @@ mod tests {
                 vec.push(new_value.coefficients[2]);
                 vec.push(new_value.coefficients[1]);
                 vec.push(new_value.coefficients[0]);
-            }))),
-        };
+            })),
+        );
         rust_tasm_equivalence_prop_new(
             &Map {
                 list_type: ListType::Unsafe,
