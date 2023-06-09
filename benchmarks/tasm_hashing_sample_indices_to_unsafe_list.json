@@ -1,0 +1,16 @@
+[
+  {
+    "name": "tasm_hashing_sample_indices_to_unsafe_list",
+    "clock_cycle_count": 1860,
+    "hash_table_height": 0,
+    "u32_table_height": 2303,
+    "case": "CommonCase"
+  },
+  {
+    "name": "tasm_hashing_sample_indices_to_unsafe_list",
+    "clock_cycle_count": 6037,
+    "hash_table_height": 0,
+    "u32_table_height": 9785,
+    "case": "WorstCase"
+  }
+]
