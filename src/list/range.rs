@@ -162,6 +162,7 @@ impl Snippet for Range {
             Self::init_state(0, 1),
             Self::init_state(0, 10),
             Self::init_state(5, 15),
+            Self::init_state(12, 12), // should generate empty list
         ]
     }
 
@@ -246,7 +247,10 @@ impl Snippet for Range {
 #[cfg(test)]
 mod tests {
 
-    use crate::{snippet_bencher::bench_and_write, test_helpers::rust_tasm_equivalence_prop_new};
+    use crate::{
+        execute_with_execution_state, snippet_bencher::bench_and_write,
+        test_helpers::rust_tasm_equivalence_prop_new,
+    };
 
     use super::*;
 
@@ -264,6 +268,34 @@ mod tests {
             },
             true,
         );
+    }
+
+    #[test]
+    fn bad_range_safe_test() {
+        let init_state = Range::init_state(10, 5);
+        let snippet = Range {
+            list_type: ListType::Safe,
+        };
+        let res = execute_with_execution_state(
+            init_state,
+            Box::new(snippet.clone()),
+            snippet.stack_diff(),
+        );
+        assert!(res.is_err());
+    }
+
+    #[test]
+    fn bad_range_unsafe_test() {
+        let init_state = Range::init_state(13, 12);
+        let snippet = Range {
+            list_type: ListType::Unsafe,
+        };
+        let res = execute_with_execution_state(
+            init_state,
+            Box::new(snippet.clone()),
+            snippet.stack_diff(),
+        );
+        assert!(res.is_err());
     }
 
     #[test]
