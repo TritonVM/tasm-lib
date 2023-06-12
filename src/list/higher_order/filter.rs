@@ -39,6 +39,7 @@ impl Filter {
         &self,
         list_pointer: BFieldElement,
         list_length: usize,
+        random: bool,
     ) -> ExecutionState {
         let capacity = list_length;
         let mut stack = get_init_tvm_stack();
@@ -53,29 +54,53 @@ impl Filter {
             BFieldElement::zero(),
             match self.list_type {
                 ListType::Safe => {
-                    BFieldElement::new((1 + 2 + list_length * input_type.get_size()) as u64)
+                    list_pointer
+                        + BFieldElement::new((2 + list_length * input_type.get_size()) as u64)
                 }
                 ListType::Unsafe => {
-                    BFieldElement::new((1 + 1 + list_length * input_type.get_size()) as u64)
+                    list_pointer
+                        + BFieldElement::new((1 + list_length * input_type.get_size()) as u64)
                 }
             },
         );
 
-        match self.list_type {
-            ListType::Safe => safe_insert_random_list(
-                &input_type,
-                list_pointer,
-                capacity as u32,
-                list_length,
-                &mut memory,
-            ),
-            ListType::Unsafe => unsafe_insert_random_list(
-                list_pointer,
-                list_length,
-                &mut memory,
-                input_type.get_size(),
-            ),
-        };
+        if random {
+            match self.list_type {
+                ListType::Safe => safe_insert_random_list(
+                    &input_type,
+                    list_pointer,
+                    capacity as u32,
+                    list_length,
+                    &mut memory,
+                ),
+                ListType::Unsafe => unsafe_insert_random_list(
+                    list_pointer,
+                    list_length,
+                    &mut memory,
+                    input_type.get_size(),
+                ),
+            };
+        } else {
+            match self.list_type {
+                ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_insert(
+                    list_pointer,
+                    capacity as u32,
+                    (0..list_length as u64)
+                        .map(BFieldElement::new)
+                        .collect_vec(),
+                    &mut memory,
+                ),
+                ListType::Unsafe => {
+                    rust_shadowing_helper_functions::unsafe_list::unsafe_list_insert(
+                        list_pointer,
+                        (0..list_length as u64)
+                            .map(BFieldElement::new)
+                            .collect_vec(),
+                        &mut memory,
+                    )
+                }
+            };
+        }
 
         ExecutionState {
             stack,
@@ -275,11 +300,15 @@ impl Snippet for Filter {
         Self: Sized,
     {
         // Create random list of input data type
-        let list_pointer = BFieldElement::new(1u64);
         let mut rng = thread_rng();
-        let list_length: usize = rng.gen_range(1..=100);
+        let mut ret = vec![];
+        for _ in 0..10 {
+            let list_pointer = BFieldElement::new(rng.gen_range(1u64..=1000));
+            let list_length: usize = rng.gen_range(1..=100);
+            ret.push(self.generate_input_state(list_pointer, list_length, true))
+        }
 
-        vec![self.generate_input_state(list_pointer, list_length)]
+        ret
     }
 
     fn common_case_input_state(&self) -> ExecutionState
@@ -289,7 +318,7 @@ impl Snippet for Filter {
         // Create random list of input data type
         let list_pointer = BFieldElement::new(1u64);
         let list_length: usize = 10;
-        self.generate_input_state(list_pointer, list_length)
+        self.generate_input_state(list_pointer, list_length, false)
     }
 
     fn worst_case_input_state(&self) -> ExecutionState
@@ -299,7 +328,7 @@ impl Snippet for Filter {
         // Create random list of input data type
         let list_pointer = BFieldElement::new(1u64);
         let list_length: usize = 400;
-        self.generate_input_state(list_pointer, list_length)
+        self.generate_input_state(list_pointer, list_length, false)
     }
 
     fn rust_shadowing(
