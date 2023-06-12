@@ -22,6 +22,7 @@ pub mod io;
 pub mod list;
 pub mod memory;
 pub mod mmr;
+pub mod neptune;
 pub mod other_snippets;
 pub mod pseudo;
 pub mod recufier;

@@ -72,6 +72,7 @@ use crate::{
         right_lineage_length::MmrRightLineageLength, verify_from_memory::MmrVerifyFromMemory,
         verify_from_secret_in::MmrVerifyLeafMembershipFromSecretIn,
     },
+    neptune::commit::Commit,
     other_snippets::bfe_add::BfeAdd,
     pseudo::{lsb::Lsb, neg::Neg, sub::Sub},
     recufier::merkle_tree_ap_verify_from_secret_input::MtApVerifyFromSecretInput,
@@ -365,6 +366,9 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn Snippet> {
         // memory
         "tasm_memory_dyn_malloc" => Box::new(DynMalloc),
         "tasm_memory_memcpy" => Box::new(MemCpy),
+
+        // mutator sets
+        "tasm_neptune_mutator_set_commit" => Box::new(Commit),
 
         _ => panic!("Could not find \"{fn_name}\" in the function `exported_snippets`. Did you include it there?"),
     }
