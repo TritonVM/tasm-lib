@@ -72,7 +72,7 @@ use crate::{
         right_lineage_length::MmrRightLineageLength, verify_from_memory::MmrVerifyFromMemory,
         verify_from_secret_in::MmrVerifyLeafMembershipFromSecretIn,
     },
-    neptune::mutator_set::commit::Commit,
+    neptune::mutator_set::{commit::Commit, get_swbf_indices::GetSwbfIndices},
     other_snippets::bfe_add::BfeAdd,
     pseudo::{lsb::Lsb, neg::Neg, sub::Sub},
     recufier::merkle_tree_ap_verify_from_secret_input::MtApVerifyFromSecretInput,
@@ -369,6 +369,7 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn Snippet> {
 
         // mutator sets
         "tasm_neptune_mutator_set_commit" => Box::new(Commit),
+        "tasm_neptune_mutator_get_swbf_indices_1048576_45" => Box::new(GetSwbfIndices{ window_size: 1048576, num_trials: 45 }),
 
         _ => panic!("Could not find \"{fn_name}\" in the function `exported_snippets`. Did you include it there?"),
     }
