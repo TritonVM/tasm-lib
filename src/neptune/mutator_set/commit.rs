@@ -211,16 +211,10 @@ mod tests {
     #[test]
     fn new_prop_test() {
         rust_tasm_equivalence_prop_new(&Commit, true);
-        rust_tasm_equivalence_prop_new(&Commit, true);
     }
 
     #[test]
-    fn sample_indices_benchmark_safe() {
-        bench_and_write(Commit);
-    }
-
-    #[test]
-    fn sample_indices_benchmark_unsafe() {
+    fn commit_benchmark_unsafe() {
         bench_and_write(Commit);
     }
 }
