@@ -7,7 +7,7 @@ use twenty_first::{
         other::is_power_of_two,
         tip5::{Tip5, Tip5State},
     },
-    util_types::algebraic_hasher::{Domain, SpongeHasher},
+    util_types::algebraic_hasher::{AlgebraicHasher, Domain, SpongeHasher},
 };
 
 use crate::{
@@ -20,7 +20,7 @@ use crate::{
     },
     rust_shadowing_helper_functions,
     snippet::{DataType, Snippet},
-    ExecutionState,
+    ExecutionState, VmHasher,
 };
 
 #[derive(Clone, Debug)]
@@ -300,7 +300,7 @@ impl Snippet for SampleIndices {
         };
 
         // sample indices
-        let mut indices: Vec<u64> = vec![];
+        let mut indices: Vec<u32> = vec![];
         let mut sponge_state = Tip5State::new(Domain::VariableLength);
         let mut squeezed = vec![];
         while indices.len() < number {
@@ -313,9 +313,17 @@ impl Snippet for SampleIndices {
 
             let element = squeezed.pop().unwrap();
             if element != BFieldElement::new(BFieldElement::MAX) {
-                indices.push(element.value() % upper_bound as u64);
+                indices.push(element.value() as u32 % upper_bound);
             }
         }
+
+        // double-shadow with twenty-first
+        let twenty_first_indices = VmHasher::sample_indices(
+            &mut Tip5State::new(Domain::VariableLength),
+            upper_bound,
+            number,
+        );
+        assert_eq!(twenty_first_indices, indices);
 
         // create list object
         let capacity = number;
@@ -363,7 +371,7 @@ impl Snippet for SampleIndices {
             set_element(
                 list,
                 i,
-                vec![BFieldElement::new(index)],
+                vec![BFieldElement::new(index as u64)],
                 memory,
                 DataType::U32.get_size(),
             );
