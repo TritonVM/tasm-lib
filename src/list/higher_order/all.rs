@@ -32,6 +32,7 @@ impl All {
         &self,
         list_pointer: BFieldElement,
         list_length: usize,
+        random: bool,
     ) -> ExecutionState {
         let capacity = list_length;
         let mut stack = get_init_tvm_stack();
@@ -46,29 +47,53 @@ impl All {
             BFieldElement::zero(),
             match self.list_type {
                 ListType::Safe => {
-                    BFieldElement::new((1 + 2 + list_length * input_type.get_size()) as u64)
+                    list_pointer
+                        + BFieldElement::new((2 + list_length * input_type.get_size()) as u64)
                 }
                 ListType::Unsafe => {
-                    BFieldElement::new((1 + 1 + list_length * input_type.get_size()) as u64)
+                    list_pointer
+                        + BFieldElement::new((1 + list_length * input_type.get_size()) as u64)
                 }
             },
         );
 
-        match self.list_type {
-            ListType::Safe => safe_insert_random_list(
-                &input_type,
-                list_pointer,
-                capacity as u32,
-                list_length,
-                &mut memory,
-            ),
-            ListType::Unsafe => unsafe_insert_random_list(
-                list_pointer,
-                list_length,
-                &mut memory,
-                input_type.get_size(),
-            ),
-        };
+        if random {
+            match self.list_type {
+                ListType::Safe => safe_insert_random_list(
+                    &input_type,
+                    list_pointer,
+                    capacity as u32,
+                    list_length,
+                    &mut memory,
+                ),
+                ListType::Unsafe => unsafe_insert_random_list(
+                    list_pointer,
+                    list_length,
+                    &mut memory,
+                    input_type.get_size(),
+                ),
+            };
+        } else {
+            match self.list_type {
+                ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_insert(
+                    list_pointer,
+                    capacity as u32,
+                    (0..list_length as u64)
+                        .map(BFieldElement::new)
+                        .collect_vec(),
+                    &mut memory,
+                ),
+                ListType::Unsafe => {
+                    rust_shadowing_helper_functions::unsafe_list::unsafe_list_insert(
+                        list_pointer,
+                        (0..list_length as u64)
+                            .map(BFieldElement::new)
+                            .collect_vec(),
+                        &mut memory,
+                    )
+                }
+            };
+        }
 
         ExecutionState {
             stack,
@@ -112,7 +137,7 @@ impl Snippet for All {
     where
         Self: Sized,
     {
-        vec!["output_list".to_string()]
+        vec!["result".to_string()]
     }
 
     fn stack_diff(&self) -> isize
@@ -164,9 +189,9 @@ impl Snippet for All {
             {entrypoint}:
                 push 1 // _ input_list res
                 swap 1 // _ res input_list
-                dup 1 // _  resinput_list input_list
+                dup 0 // _  res input_list input_list
                 call {get_length} // _ res input_list len
-        
+
                 call {entrypoint}_loop // _ res input_list 0
 
                 pop // _ res input_list
@@ -195,8 +220,8 @@ impl Snippet for All {
 
                 // accumulate
                 dup 3 // _ res input_list index b res
-                and //    _ res input_list index b&&res
-                swap 3 // _ b&&res input_list index res
+                mul //    _ res input_list index (b && res)
+                swap 3 // _ (b && res) input_list index res
                 pop
 
                 recurse
@@ -226,7 +251,7 @@ impl Snippet for All {
         let mut rng = thread_rng();
         let list_length: usize = rng.gen_range(1..=100);
 
-        vec![self.generate_input_state(list_pointer, list_length)]
+        vec![self.generate_input_state(list_pointer, list_length, true)]
     }
 
     fn common_case_input_state(&self) -> ExecutionState
@@ -236,7 +261,7 @@ impl Snippet for All {
         // Create random list of input data type
         let list_pointer = BFieldElement::new(1u64);
         let list_length: usize = 10;
-        self.generate_input_state(list_pointer, list_length)
+        self.generate_input_state(list_pointer, list_length, false)
     }
 
     fn worst_case_input_state(&self) -> ExecutionState
@@ -246,7 +271,7 @@ impl Snippet for All {
         // Create random list of input data type
         let list_pointer = BFieldElement::new(1u64);
         let list_length: usize = 400;
-        self.generate_input_state(list_pointer, list_length)
+        self.generate_input_state(list_pointer, list_length, false)
     }
 
     fn rust_shadowing(
@@ -312,14 +337,15 @@ mod tests {
 
     use std::cell::RefCell;
 
+    use num::One;
     use triton_opcodes::{instruction::LabelledInstruction, shortcuts::*};
-    use twenty_first::{
-        shared_math::other::random_elements, util_types::algebraic_hasher::AlgebraicHasher,
-    };
+    use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
     use crate::{
-        list::higher_order::inner_function::RawCode, snippet_bencher::bench_and_write,
-        test_helpers::rust_tasm_equivalence_prop_new, VmHasher,
+        list::higher_order::inner_function::RawCode,
+        snippet_bencher::bench_and_write,
+        test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new},
+        VmHasher,
     };
 
     use super::*;
@@ -332,10 +358,7 @@ mod tests {
             "test_hash_xfield_element_lsb".to_string()
         }
 
-        fn inputs(&self) -> Vec<String>
-        where
-            Self: Sized,
-        {
+        fn inputs(&self) -> Vec<String> {
             vec![
                 "elem2".to_string(),
                 "elem1".to_string(),
@@ -351,17 +374,11 @@ mod tests {
             vec![DataType::Bool]
         }
 
-        fn outputs(&self) -> Vec<String>
-        where
-            Self: Sized,
-        {
+        fn outputs(&self) -> Vec<String> {
             vec!["bool".to_string()]
         }
 
-        fn stack_diff(&self) -> isize
-        where
-            Self: Sized,
-        {
+        fn stack_diff(&self) -> isize {
             -2
         }
 
@@ -401,47 +418,49 @@ mod tests {
             )
         }
 
-        fn crash_conditions(&self) -> Vec<String>
-        where
-            Self: Sized,
-        {
+        fn crash_conditions(&self) -> Vec<String> {
             vec![]
         }
 
-        fn gen_input_states(&self) -> Vec<ExecutionState>
-        where
-            Self: Sized,
-        {
+        fn gen_input_states(&self) -> Vec<ExecutionState> {
+            // Function does not output random values, since that would make the benchmark output
+            // non-deterministic.
             vec![ExecutionState::with_stack(
                 vec![
                     vec![BFieldElement::zero(); 16],
-                    random_elements::<BFieldElement>(3),
+                    vec![
+                        BFieldElement::new(4888),
+                        BFieldElement::new(1u64 << 63),
+                        BFieldElement::new((1u64 << 51) + 1000),
+                    ],
                 ]
                 .concat(),
             )]
         }
 
-        fn common_case_input_state(&self) -> ExecutionState
-        where
-            Self: Sized,
-        {
+        fn common_case_input_state(&self) -> ExecutionState {
             ExecutionState::with_stack(
                 vec![
                     vec![BFieldElement::zero(); 16],
-                    random_elements::<BFieldElement>(3),
+                    vec![
+                        BFieldElement::new(4888),
+                        BFieldElement::new(1u64 << 63),
+                        BFieldElement::new((1u64 << 51) + 1000),
+                    ],
                 ]
                 .concat(),
             )
         }
 
-        fn worst_case_input_state(&self) -> ExecutionState
-        where
-            Self: Sized,
-        {
+        fn worst_case_input_state(&self) -> ExecutionState {
             ExecutionState::with_stack(
                 vec![
                     vec![BFieldElement::zero(); 16],
-                    random_elements::<BFieldElement>(3),
+                    vec![
+                        BFieldElement::new(488800000),
+                        BFieldElement::new(1u64 << 62),
+                        BFieldElement::new((1u64 << 41) + 1001),
+                    ],
                 ]
                 .concat(),
             )
@@ -453,9 +472,7 @@ mod tests {
             _std_in: Vec<BFieldElement>,
             _secret_in: Vec<BFieldElement>,
             _memory: &mut HashMap<BFieldElement, BFieldElement>,
-        ) where
-            Self: Sized,
-        {
+        ) {
             let mut xfield_element = vec![];
             for _ in 0..3 {
                 xfield_element.push(stack.pop().unwrap());
@@ -497,11 +514,69 @@ mod tests {
     }
 
     #[test]
-    fn safe_list_all_benchmark() {
-        bench_and_write(All {
+    fn safe_list_all_lt_test() {
+        const TWO_POW_31: u64 = 1u64 << 31;
+        let rawcode = RawCode::new_with_shadowing(
+            vec![
+                LabelledInstruction::Label("less_than_2_pow_31".to_string()),
+                push(TWO_POW_31),
+                swap(1),
+                lt(),
+                return_(),
+            ],
+            vec![DataType::BFE],
+            vec![DataType::Bool],
+            Box::new(RefCell::new(|vec: &mut Vec<BFieldElement>| {
+                let new_value = vec.pop().unwrap().value() < TWO_POW_31;
+                vec.push(BFieldElement::new(new_value as u64));
+            })),
+        );
+        let snippet = All {
             list_type: ListType::Safe,
-            f: InnerFunction::Snippet(Box::new(TestHashXFieldElementLsb)),
-        });
+            f: InnerFunction::RawCode(rawcode),
+        };
+        let mut memory = HashMap::new();
+
+        // Should return true
+        rust_shadowing_helper_functions::safe_list::safe_list_insert(
+            BFieldElement::new(42),
+            42,
+            (0..30).map(BFieldElement::new).collect_vec(),
+            &mut memory,
+        );
+        let input_stack = vec![get_init_tvm_stack(), vec![BFieldElement::new(42)]].concat();
+        let expected_end_stack_true =
+            vec![get_init_tvm_stack(), vec![BFieldElement::one()]].concat();
+        rust_tasm_equivalence_prop(
+            &snippet,
+            &input_stack,
+            &[],
+            &[],
+            &mut memory,
+            1,
+            Some(&expected_end_stack_true),
+        );
+
+        // Should return false
+        rust_shadowing_helper_functions::safe_list::safe_list_insert(
+            BFieldElement::new(42),
+            42,
+            (0..30)
+                .map(|x| BFieldElement::new(x + TWO_POW_31 - 20))
+                .collect_vec(),
+            &mut memory,
+        );
+        let expected_end_stack_false =
+            vec![get_init_tvm_stack(), vec![BFieldElement::zero()]].concat();
+        rust_tasm_equivalence_prop(
+            &snippet,
+            &input_stack,
+            &[],
+            &[],
+            &mut memory,
+            1,
+            Some(&expected_end_stack_false),
+        );
     }
 
     #[test]

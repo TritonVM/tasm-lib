@@ -3,14 +3,14 @@
     "name": "tasm_list_higher_order_unsafe_u32_all_test_hash_xfield_element_lsb",
     "clock_cycle_count": 678,
     "hash_table_height": 0,
-    "u32_table_height": 650,
+    "u32_table_height": 327,
     "case": "CommonCase"
   },
   {
     "name": "tasm_list_higher_order_unsafe_u32_all_test_hash_xfield_element_lsb",
     "clock_cycle_count": 26418,
     "hash_table_height": 0,
-    "u32_table_height": 25903,
+    "u32_table_height": 8720,
     "case": "WorstCase"
   }
 ]
