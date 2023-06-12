@@ -148,6 +148,21 @@ pub fn rust_tasm_equivalence_prop<T: Snippet>(
     // and statically allocate memory from there.
     rust_memory.remove(&BFieldElement::new(DYN_MALLOC_ADDRESS as u64));
     tasm_memory.remove(&BFieldElement::new(DYN_MALLOC_ADDRESS as u64));
+    let memory_difference = rust_memory
+        .iter()
+        .filter(|(k, v)| match tasm_memory.get(*k) {
+            Some(b) => *b != **v,
+            None => true,
+        })
+        .chain(
+            tasm_memory
+                .iter()
+                .filter(|(k, v)| match rust_memory.get(*k) {
+                    Some(b) => *b != **v,
+                    None => true,
+                }),
+        )
+        .collect_vec();
     if rust_memory != tasm_memory {
         let mut tasm_memory = tasm_memory.iter().collect_vec();
         tasm_memory.sort_unstable_by(|&a, &b| a.0.value().partial_cmp(&b.0.value()).unwrap());
@@ -164,8 +179,13 @@ pub fn rust_tasm_equivalence_prop<T: Snippet>(
             .map(|x| format!("({} => {})", x.0, x.1))
             .collect_vec()
             .join(",");
+        let diff_str = memory_difference
+            .iter()
+            .map(|x| format!("({} => {})", x.0, x.1))
+            .collect_vec()
+            .join(",");
         panic!(
-            "Memory for both implementations must match after execution.\n\nTVM: {tasm_mem_str}\n\nRust: {rust_mem_str}. Code was:\n\n {}",
+            "Memory for both implementations must match after execution.\n\nTVM: {tasm_mem_str}\n\nRust: {rust_mem_str}\n\nDifference: {diff_str}\n\nCode was:\n\n {}",
             snippet_struct.function_code(&mut SnippetState::default())
         );
     }

@@ -45,6 +45,7 @@ use crate::{
     },
     io::{load_from_input::LoadFromInput, read_secret::ReadSecret, read_stdin::ReadStdIn},
     list::{
+        range::Range,
         safe_u32::{
             get::SafeGet, length::SafeLength, new::SafeNew, pop::SafePop, push::SafePush,
             set::SafeSet, set_length::SafeSetLength,
@@ -201,6 +202,8 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn Snippet> {
 
         "tasm_list_safe_u32_multiset_equality" => Box::new(crate::list::multiset_equality::MultisetEquality(ListType::Safe)),
 
+        "tasm_list_safe_range" => Box::new(Range{list_type: ListType::Safe}),
+
         // unsafe lists
         "tasm_list_unsafe_u32_get_element_bool" => Box::new(UnsafeGet(DataType::Bool)),
         "tasm_list_unsafe_u32_get_element_u32" => Box::new(UnsafeGet(DataType::U32)),
@@ -252,6 +255,7 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn Snippet> {
         "tasm_list_unsafe_u32_set_length_digest" => Box::new(UnsafeSetLength(DataType::Digest)),
 
         "tasm_list_unsafe_u32_multiset_equality" => Box::new(crate::list::multiset_equality::MultisetEquality(ListType::Unsafe)),
+        "tasm_list_unsafe_range" => Box::new(Range{list_type: ListType::Unsafe}),
 
         // MMR
         "tasm_mmr_calculate_new_peaks_from_append" => Box::new(CalculateNewPeaksFromAppend(PhantomData::<VmHasher>)),
