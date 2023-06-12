@@ -72,7 +72,7 @@ use crate::{
         right_lineage_length::MmrRightLineageLength, verify_from_memory::MmrVerifyFromMemory,
         verify_from_secret_in::MmrVerifyLeafMembershipFromSecretIn,
     },
-    neptune::commit::Commit,
+    neptune::mutator_set::commit::Commit,
     other_snippets::bfe_add::BfeAdd,
     pseudo::{lsb::Lsb, neg::Neg, sub::Sub},
     recufier::merkle_tree_ap_verify_from_secret_input::MtApVerifyFromSecretInput,

@@ -1,1 +1,1 @@
-pub mod get_swbf_indices;
+pub mod commit;
