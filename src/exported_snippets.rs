@@ -72,7 +72,12 @@ use crate::{
         right_lineage_length::MmrRightLineageLength, verify_from_memory::MmrVerifyFromMemory,
         verify_from_secret_in::MmrVerifyLeafMembershipFromSecretIn,
     },
-    neptune::mutator_set::{commit::Commit, get_swbf_indices::GetSwbfIndices},
+    neptune::{
+        mutator_set::{commit::Commit, get_swbf_indices::GetSwbfIndices},
+        transaction::get_transaction_kernel_field::{
+            GetTransactionKernelField, TransactionKernelField,
+        },
+    },
     other_snippets::bfe_add::BfeAdd,
     pseudo::{lsb::Lsb, neg::Neg, sub::Sub},
     recufier::merkle_tree_ap_verify_from_secret_input::MtApVerifyFromSecretInput,
@@ -370,6 +375,15 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn Snippet> {
         // mutator sets
         "tasm_neptune_mutator_set_commit" => Box::new(Commit),
         "tasm_neptune_mutator_get_swbf_indices_1048576_45" => Box::new(GetSwbfIndices{ window_size: 1048576, num_trials: 45 }),
+
+        // transaction
+        "tasm_neptune_transaction_get_transaction_kernel_field_inputs" => Box::new(GetTransactionKernelField(TransactionKernelField::Inputs)),
+        "tasm_neptune_transaction_get_transaction_kernel_field_outputs" => Box::new(GetTransactionKernelField(TransactionKernelField::Outputs)),
+        "tasm_neptune_transaction_get_transaction_kernel_field_pubscript_hashes_and_inputs" => Box::new(GetTransactionKernelField(TransactionKernelField::PubscriptHashesAndInputs)),
+        "tasm_neptune_transaction_get_transaction_kernel_field_fee" => Box::new(GetTransactionKernelField(TransactionKernelField::Fee)),
+        "tasm_neptune_transaction_get_transaction_kernel_field_coinbase" => Box::new(GetTransactionKernelField(TransactionKernelField::Coinbase)),
+        "tasm_neptune_transaction_get_transaction_kernel_field_timestamp" => Box::new(GetTransactionKernelField(TransactionKernelField::Timestamp)),
+        "tasm_neptune_transaction_get_transaction_kernel_field_mutator_set_hash" => Box::new(GetTransactionKernelField(TransactionKernelField::MutatorSetHash)),
 
         _ => panic!("Could not find \"{fn_name}\" in the function `exported_snippets`. Did you include it there?"),
     }
