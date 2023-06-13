@@ -59,7 +59,7 @@ use crate::{
     },
     memory::{dyn_malloc::DynMalloc, memcpy::MemCpy},
     mmr::{
-        calculate_new_peaks_from_append::CalculateNewPeaksFromAppend,
+        bag_peaks::BagPeaks, calculate_new_peaks_from_append::CalculateNewPeaksFromAppend,
         calculate_new_peaks_from_leaf_mutation::MmrCalculateNewPeaksFromLeafMutationMtIndices,
         data_index_to_node_index::DataIndexToNodeIndex,
         get_height_from_data_index::GetHeightFromDataIndex,
@@ -355,7 +355,7 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn Snippet> {
         "tasm_mmr_verify_from_memory_safe" => Box::new(MmrVerifyFromMemory { list_type: ListType::Safe} ),
         "tasm_mmr_verify_from_secret_in_unsafe" => Box::new(MmrVerifyLeafMembershipFromSecretIn { list_type: ListType::Unsafe }),
         "tasm_mmr_verify_from_secret_in_safe" => Box::new(MmrVerifyLeafMembershipFromSecretIn { list_type: ListType::Safe }),
-
+        "tasm_mmr_bag_peaks" => Box::new(BagPeaks),
 
         // other
         "tasm_other_bfe_add" => Box::new(BfeAdd),

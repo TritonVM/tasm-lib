@@ -1,3 +1,4 @@
+pub mod bag_peaks;
 pub mod calculate_new_peaks_from_append;
 pub mod calculate_new_peaks_from_leaf_mutation;
 pub mod data_index_to_node_index;
