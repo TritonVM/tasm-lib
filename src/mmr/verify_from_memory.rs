@@ -1,8 +1,6 @@
-use std::collections::HashMap;
-use std::marker::PhantomData;
-
 use num::One;
 use rand::{random, thread_rng, Rng};
+use std::collections::HashMap;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::random_elements;
 use twenty_first::test_shared::mmr::get_rustyleveldb_ammr_from_digests;
@@ -17,20 +15,122 @@ use crate::arithmetic::u64::div2_u64::Div2U64;
 use crate::arithmetic::u64::eq_u64::EqU64;
 use crate::hashing::eq_digest::EqDigest;
 use crate::hashing::swap_digest::SwapDigest;
+use crate::list::safe_u32::get::SafeGet;
 use crate::list::unsafe_u32::get::UnsafeGet;
+use crate::list::ListType;
 use crate::snippet::{DataType, Snippet};
 use crate::snippet_state::SnippetState;
 use crate::{
-    get_init_tvm_stack, rust_shadowing_helper_functions, Digest, ExecutionState, DIGEST_LENGTH,
+    get_init_tvm_stack, rust_shadowing_helper_functions, Digest, ExecutionState, VmHasher,
+    DIGEST_LENGTH,
 };
 
 use super::leaf_index_to_mt_index::MmrLeafIndexToMtIndexAndPeakIndex;
 use super::MAX_MMR_HEIGHT;
 
 #[derive(Clone, Debug)]
-pub struct MmrVerifyFromMemory<H: AlgebraicHasher + std::fmt::Debug>(pub PhantomData<H>);
+pub struct MmrVerifyFromMemory {
+    pub list_type: ListType,
+}
 
-impl<H: AlgebraicHasher + std::fmt::Debug> Snippet for MmrVerifyFromMemory<H> {
+impl MmrVerifyFromMemory {
+    /// Returns (ExecutionState, auth_path_pointer, peaks_pointer)
+    fn prepare_vm_state<H: AlgebraicHasher>(
+        &self,
+        mmr: &MmrAccumulator<H>,
+        leaf: Digest,
+        leaf_index: u64,
+        auth_path: Vec<Digest>,
+    ) -> (ExecutionState, BFieldElement, BFieldElement) {
+        // BEFORE: _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo [digest (leaf_digest)] *auth_path
+        // AFTER: _ *auth_path leaf_index_hi leaf_index_lo validation_result
+        let mut stack = get_init_tvm_stack();
+
+        let peaks_pointer = BFieldElement::one();
+        stack.push(peaks_pointer);
+
+        let leaf_count: u64 = mmr.count_leaves();
+        stack.push(BFieldElement::new(leaf_count >> 32));
+        stack.push(BFieldElement::new(leaf_count & u32::MAX as u64));
+
+        let leaf_index_hi = BFieldElement::new(leaf_index >> 32);
+        let leaf_index_lo = BFieldElement::new(leaf_index & u32::MAX as u64);
+        stack.push(leaf_index_hi);
+        stack.push(leaf_index_lo);
+
+        // push digests such that element 0 of digest is on top of stack
+        for value in leaf.values().iter().rev() {
+            stack.push(*value);
+        }
+
+        // We assume that the auth paths can safely be stored in memory on this address
+        let auth_path_pointer = BFieldElement::new((MAX_MMR_HEIGHT * DIGEST_LENGTH + 1) as u64);
+        stack.push(auth_path_pointer);
+
+        // Initialize memory
+        let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
+        match self.list_type {
+            ListType::Safe => {
+                rust_shadowing_helper_functions::safe_list::safe_list_new(
+                    peaks_pointer,
+                    MAX_MMR_HEIGHT as u32,
+                    &mut memory,
+                );
+            }
+            ListType::Unsafe => {
+                rust_shadowing_helper_functions::unsafe_list::unsafe_list_new(
+                    peaks_pointer,
+                    &mut memory,
+                );
+            }
+        }
+
+        let list_push = match self.list_type {
+            ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_push,
+            ListType::Unsafe => rust_shadowing_helper_functions::unsafe_list::unsafe_list_push,
+        };
+        for peak in mmr.get_peaks() {
+            list_push(
+                peaks_pointer,
+                peak.values().to_vec(),
+                &mut memory,
+                DIGEST_LENGTH,
+            );
+        }
+
+        match self.list_type {
+            ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_new(
+                auth_path_pointer,
+                MAX_MMR_HEIGHT as u32,
+                &mut memory,
+            ),
+            ListType::Unsafe => rust_shadowing_helper_functions::unsafe_list::unsafe_list_new(
+                auth_path_pointer,
+                &mut memory,
+            ),
+        }
+        for ap_element in auth_path.iter() {
+            list_push(
+                auth_path_pointer,
+                ap_element.values().to_vec(),
+                &mut memory,
+                DIGEST_LENGTH,
+            );
+        }
+
+        (
+            ExecutionState::with_stack_and_memory(
+                stack,
+                memory,
+                2 * (MAX_MMR_HEIGHT * DIGEST_LENGTH),
+            ),
+            auth_path_pointer,
+            peaks_pointer,
+        )
+    }
+}
+
+impl Snippet for MmrVerifyFromMemory {
     fn inputs(&self) -> Vec<String> {
         vec![
             "*peaks".to_string(),
@@ -88,17 +188,13 @@ impl<H: AlgebraicHasher + std::fmt::Debug> Snippet for MmrVerifyFromMemory<H> {
         let digests: Vec<Digest> = random_elements(size);
         let leaf_index = rng.gen_range(0..size);
         let leaf = digests[leaf_index];
-        let ammr: ArchivalMmr<H, _> = get_rustyleveldb_ammr_from_digests(digests);
+        let ammr: ArchivalMmr<VmHasher, _> = get_rustyleveldb_ammr_from_digests(digests);
         let auth_path = ammr
             .prove_membership(leaf_index as u64)
             .0
             .authentication_path;
-        let (ret0, _, _) = prepare_vm_state(
-            &mut ammr.to_accumulator(),
-            leaf,
-            leaf_index as u64,
-            auth_path,
-        );
+        let (ret0, _, _) =
+            self.prepare_vm_state(&ammr.to_accumulator(), leaf, leaf_index as u64, auth_path);
 
         vec![ret0]
     }
@@ -108,12 +204,15 @@ impl<H: AlgebraicHasher + std::fmt::Debug> Snippet for MmrVerifyFromMemory<H> {
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_mmr_verify_from_memory".to_string()
+        format!("tasm_mmr_verify_from_memory_{}", self.list_type)
     }
 
     fn function_code(&self, library: &mut SnippetState) -> String {
         let leaf_index_to_mt_index = library.import(Box::new(MmrLeafIndexToMtIndexAndPeakIndex));
-        let get = library.import(Box::new(UnsafeGet(DataType::Digest)));
+        let get_list_element = match self.list_type {
+            ListType::Safe => library.import(Box::new(SafeGet(DataType::Digest))),
+            ListType::Unsafe => library.import(Box::new(UnsafeGet(DataType::Digest))),
+        };
         let u32_is_odd = library.import(Box::new(U32IsOdd));
         let entrypoint = self.entrypoint();
         let eq_u64 = library.import(Box::new(EqU64));
@@ -147,7 +246,7 @@ impl<H: AlgebraicHasher + std::fmt::Debug> Snippet for MmrVerifyFromMemory<H> {
                     dup 14 dup 8
                     // _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo i *auth_path peak_index mt_index_hi mt_index_lo [digest (acc_hash)] *peaks peak_index
 
-                    call {get}
+                    call {get_list_element}
                     // _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo i *auth_path peak_index mt_index_hi mt_index_lo [digest (acc_hash)] [digest (expected_peak)]
 
                     // Compare top two digests
@@ -185,7 +284,7 @@ impl<H: AlgebraicHasher + std::fmt::Debug> Snippet for MmrVerifyFromMemory<H> {
                     dup 8 dup 10
                     // _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo i *auth_path peak_index mt_index_hi mt_index_lo *auth_path i
 
-                    call {get}
+                    call {get_list_element}
                     // _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo i *auth_path peak_index mt_index_hi mt_index_lo [digest (acc_hash)] [digest (ap_element)]
 
                     dup 10 call {u32_is_odd} push 0 eq
@@ -227,18 +326,17 @@ impl<H: AlgebraicHasher + std::fmt::Debug> Snippet for MmrVerifyFromMemory<H> {
         // AFTER: _ *auth_path leaf_index_hi leaf_index_lo validation_result
         let auth_path_pointer = stack.pop().unwrap();
 
+        let list_get = match self.list_type {
+            ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_get,
+            ListType::Unsafe => rust_shadowing_helper_functions::unsafe_list::unsafe_list_get,
+        };
         let auth_path_length = memory[&auth_path_pointer].value();
         let mut auth_path: Vec<Digest> = vec![];
         for i in 0..auth_path_length {
             let digest = Digest::new(
-                rust_shadowing_helper_functions::unsafe_list::unsafe_list_get(
-                    auth_path_pointer,
-                    i as usize,
-                    memory,
-                    DIGEST_LENGTH,
-                )
-                .try_into()
-                .unwrap(),
+                list_get(auth_path_pointer, i as usize, memory, DIGEST_LENGTH)
+                    .try_into()
+                    .unwrap(),
             );
             auth_path.push(digest);
         }
@@ -263,19 +361,14 @@ impl<H: AlgebraicHasher + std::fmt::Debug> Snippet for MmrVerifyFromMemory<H> {
         let mut peaks: Vec<Digest> = vec![];
         for i in 0..peaks_count {
             let digest = Digest::new(
-                rust_shadowing_helper_functions::unsafe_list::unsafe_list_get(
-                    peaks_pointer,
-                    i as usize,
-                    memory,
-                    DIGEST_LENGTH,
-                )
-                .try_into()
-                .unwrap(),
+                list_get(peaks_pointer, i as usize, memory, DIGEST_LENGTH)
+                    .try_into()
+                    .unwrap(),
             );
             peaks.push(digest);
         }
 
-        let valid_mp = MmrMembershipProof::<H>::new(leaf_index, auth_path)
+        let valid_mp = MmrMembershipProof::<VmHasher>::new(leaf_index, auth_path)
             .verify(&peaks, &leaf_digest, leaf_count)
             .0;
 
@@ -289,90 +382,31 @@ impl<H: AlgebraicHasher + std::fmt::Debug> Snippet for MmrVerifyFromMemory<H> {
         let log2_size = 31;
         let leaf_count_after_add = 1u64 << log2_size;
         let peaks: Vec<Digest> = random_elements(log2_size as usize);
-        let mut mmra = MmrAccumulator::<H>::init(peaks, leaf_count_after_add - 1);
+        let mut mmra = MmrAccumulator::<VmHasher>::init(peaks, leaf_count_after_add - 1);
         let new_leaf: Digest = random();
         let mp = mmra.append(new_leaf);
         let auth_path = mp.authentication_path;
 
         // Sanity check of length of auth path
         assert_eq!(log2_size, auth_path.len() as u64);
-        prepare_vm_state(&mut mmra, new_leaf, leaf_count_after_add - 1, auth_path).0
+        self.prepare_vm_state(&mmra, new_leaf, leaf_count_after_add - 1, auth_path)
+            .0
     }
 
     fn worst_case_input_state(&self) -> ExecutionState {
         let log2_size = 62;
         let leaf_count_after_add = 1u64 << log2_size;
         let peaks: Vec<Digest> = random_elements(log2_size as usize);
-        let mut mmra = MmrAccumulator::<H>::init(peaks, leaf_count_after_add - 1);
+        let mut mmra = MmrAccumulator::<VmHasher>::init(peaks, leaf_count_after_add - 1);
         let new_leaf: Digest = random();
         let mp = mmra.append(new_leaf);
         let auth_path = mp.authentication_path;
 
         // Sanity check of length of auth path
         assert_eq!(log2_size, auth_path.len() as u64);
-        prepare_vm_state(&mut mmra, new_leaf, leaf_count_after_add - 1, auth_path).0
+        self.prepare_vm_state(&mmra, new_leaf, leaf_count_after_add - 1, auth_path)
+            .0
     }
-}
-
-/// Returns (ExecutionState, auth_path_pointer, peaks_pointer)
-fn prepare_vm_state<H: AlgebraicHasher>(
-    mmr: &mut MmrAccumulator<H>,
-    leaf: Digest,
-    leaf_index: u64,
-    auth_path: Vec<Digest>,
-) -> (ExecutionState, BFieldElement, BFieldElement) {
-    // BEFORE: _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo [digest (leaf_digest)] *auth_path
-    // AFTER: _ *auth_path leaf_index_hi leaf_index_lo validation_result
-    let mut stack = get_init_tvm_stack();
-
-    let peaks_pointer = BFieldElement::one();
-    stack.push(peaks_pointer);
-
-    let leaf_count: u64 = mmr.count_leaves();
-    stack.push(BFieldElement::new(leaf_count >> 32));
-    stack.push(BFieldElement::new(leaf_count & u32::MAX as u64));
-
-    let leaf_index_hi = BFieldElement::new(leaf_index >> 32);
-    let leaf_index_lo = BFieldElement::new(leaf_index & u32::MAX as u64);
-    stack.push(leaf_index_hi);
-    stack.push(leaf_index_lo);
-
-    // push digests such that element 0 of digest is on top of stack
-    for value in leaf.values().iter().rev() {
-        stack.push(*value);
-    }
-
-    // We assume that the auth paths can safely be stored in memory on this address
-    let auth_path_pointer = BFieldElement::new((MAX_MMR_HEIGHT * DIGEST_LENGTH + 1) as u64);
-    stack.push(auth_path_pointer);
-
-    // Initialize memory
-    let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
-    rust_shadowing_helper_functions::unsafe_list::unsafe_list_new(peaks_pointer, &mut memory);
-    for peak in mmr.get_peaks() {
-        rust_shadowing_helper_functions::unsafe_list::unsafe_list_push(
-            peaks_pointer,
-            peak.values().to_vec(),
-            &mut memory,
-            DIGEST_LENGTH,
-        );
-    }
-
-    rust_shadowing_helper_functions::unsafe_list::unsafe_list_new(auth_path_pointer, &mut memory);
-    for ap_element in auth_path.iter() {
-        rust_shadowing_helper_functions::unsafe_list::unsafe_list_push(
-            auth_path_pointer,
-            ap_element.values().to_vec(),
-            &mut memory,
-            DIGEST_LENGTH,
-        );
-    }
-
-    (
-        ExecutionState::with_stack_and_memory(stack, memory, 2 * (MAX_MMR_HEIGHT * DIGEST_LENGTH)),
-        auth_path_pointer,
-        peaks_pointer,
-    )
 }
 
 #[cfg(test)]
@@ -394,13 +428,37 @@ mod auth_path_verify_from_memory_tests {
     use super::*;
 
     #[test]
-    fn verify_from_memory_test() {
-        rust_tasm_equivalence_prop_new(&MmrVerifyFromMemory(PhantomData::<VmHasher>), true);
+    fn verify_from_memory_test_unsafe_list() {
+        rust_tasm_equivalence_prop_new(
+            &MmrVerifyFromMemory {
+                list_type: ListType::Unsafe,
+            },
+            true,
+        );
     }
 
     #[test]
-    fn verify_from_memory_benchmark() {
-        bench_and_write(MmrVerifyFromMemory(PhantomData::<VmHasher>));
+    fn verify_from_memory_test_safe_list() {
+        rust_tasm_equivalence_prop_new(
+            &MmrVerifyFromMemory {
+                list_type: ListType::Safe,
+            },
+            true,
+        );
+    }
+
+    #[test]
+    fn verify_from_memory_benchmark_unsafe_lists() {
+        bench_and_write(MmrVerifyFromMemory {
+            list_type: ListType::Unsafe,
+        });
+    }
+
+    #[test]
+    fn verify_from_memory_benchmark_safe_lists() {
+        bench_and_write(MmrVerifyFromMemory {
+            list_type: ListType::Safe,
+        });
     }
 
     // This will crash the VM because leaf?index is not strictly less than leaf_count
@@ -570,8 +628,11 @@ mod auth_path_verify_from_memory_tests {
         auth_path: Vec<Digest>,
         expect_validation_success: bool,
     ) {
+        let snippet_for_unsafe_lists = MmrVerifyFromMemory {
+            list_type: ListType::Unsafe,
+        };
         let (exec_state, auth_path_pointer, _peaks_pointer) =
-            prepare_vm_state(mmr, leaf, leaf_index, auth_path.clone());
+            snippet_for_unsafe_lists.prepare_vm_state(mmr, leaf, leaf_index, auth_path.clone());
 
         let leaf_index_hi = BFieldElement::new(leaf_index >> 32);
         let leaf_index_lo = BFieldElement::new(leaf_index & u32::MAX as u64);
@@ -585,8 +646,8 @@ mod auth_path_verify_from_memory_tests {
         expected_final_stack.push(leaf_index_lo);
         expected_final_stack.push(BFieldElement::new(expect_validation_success as u64));
 
-        let _execution_result = rust_tasm_equivalence_prop::<MmrVerifyFromMemory<VmHasher>>(
-            &MmrVerifyFromMemory(PhantomData::<VmHasher>),
+        let _execution_result = rust_tasm_equivalence_prop(
+            &snippet_for_unsafe_lists,
             &init_stack,
             &[],
             &[],

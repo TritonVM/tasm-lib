@@ -271,13 +271,15 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn Snippet> {
         "tasm_mmr_leaf_index_to_mt_index_and_peak_index" => Box::new(MmrLeafIndexToMtIndexAndPeakIndex),
         "tasm_mmr_left_child" => Box::new(MmrLeftChild),
         "tasm_mmr_leftmost_ancestor" => Box::new(MmrLeftMostAncestor),
-        "tasm_mmr_verify_load_from_secret_in" => Box::new(MmrLoadFromSecretInThenVerify(PhantomData::<VmHasher>)),
+        "tasm_mmr_verify_load_from_secret_in_unsafe" => Box::new(MmrLoadFromSecretInThenVerify { list_type: ListType::Unsafe }),
+        "tasm_mmr_verify_load_from_secret_in_safe" => Box::new(MmrLoadFromSecretInThenVerify { list_type: ListType::Safe }),
         "tasm_mmr_non_leaf_nodes_left" => Box::new(MmrNonLeafNodesLeftUsingAnd),
         "tasm_mmr_right_child_and_height" => Box::new(MmrRightChildAndHeight),
         "tasm_mmr_right_child" => Box::new(MmrRightChild),
         "tasm_mmr_right_lineage_count_and_own_height" => Box::new(MmrRightLineageCountAndHeight),
         "tasm_mmr_right_lineage_length" => Box::new(MmrRightLineageLength),
-        "tasm_mmr_verify_from_memory" => Box::new(MmrVerifyFromMemory(PhantomData::<VmHasher>)),
+        "tasm_mmr_verify_from_memory_unsafe" => Box::new(MmrVerifyFromMemory { list_type: ListType::Unsafe} ),
+        "tasm_mmr_verify_from_memory_safe" => Box::new(MmrVerifyFromMemory { list_type: ListType::Safe} ),
         "tasm_mmr_verify_from_secret_in" => Box::new(MmrVerifyLeafMembershipFromSecretIn(PhantomData::<VmHasher>)),
 
         // other
