@@ -1,7 +1,6 @@
 use num::One;
 use rand::random;
 use std::collections::HashMap;
-use std::marker::PhantomData;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::random_elements;
 use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
@@ -12,9 +11,15 @@ use twenty_first::util_types::mmr::mmr_trait::Mmr;
 use super::MAX_MMR_HEIGHT;
 use crate::arithmetic::u64::incr_u64::IncrU64;
 use crate::arithmetic::u64::index_of_last_nonzero_bit::IndexOfLastNonZeroBitU64;
+use crate::list::safe_u32::new::SafeNew;
+use crate::list::safe_u32::pop::SafePop;
+use crate::list::safe_u32::push::SafePush;
+use crate::list::safe_u32::set_length::SafeSetLength;
+use crate::list::unsafe_u32::new::UnsafeNew;
 use crate::list::unsafe_u32::pop::UnsafePop;
 use crate::list::unsafe_u32::push::UnsafePush;
 use crate::list::unsafe_u32::set_length::UnsafeSetLength;
+use crate::list::ListType;
 use crate::snippet::{DataType, Snippet};
 use crate::snippet_state::SnippetState;
 use crate::{
@@ -22,10 +27,79 @@ use crate::{
     DIGEST_LENGTH,
 };
 
-#[derive(Clone, Default, Debug)]
-pub struct CalculateNewPeaksFromAppend<H: AlgebraicHasher + std::fmt::Debug>(pub PhantomData<H>);
+#[derive(Clone, Debug)]
+pub struct CalculateNewPeaksFromAppend {
+    pub list_type: ListType,
+}
 
-impl<H: AlgebraicHasher + std::fmt::Debug> Snippet for CalculateNewPeaksFromAppend<H> {
+impl CalculateNewPeaksFromAppend {
+    fn prepare_state_with_mmra(
+        &self,
+        start_mmr: MmrAccumulator<VmHasher>,
+        new_leaf: Digest,
+    ) -> ExecutionState {
+        // We assume that the peaks can safely be stored in memory on address 1
+        let peaks_pointer = BFieldElement::one();
+
+        let mut stack = get_init_tvm_stack();
+        let old_leaf_count: u64 = start_mmr.count_leaves();
+        stack.push(BFieldElement::new(old_leaf_count >> 32));
+        stack.push(BFieldElement::new(old_leaf_count & u32::MAX as u64));
+        stack.push(peaks_pointer);
+
+        // push digests such that element 0 of digest is on top of stack
+        for value in new_leaf.values().iter().rev() {
+            stack.push(*value);
+        }
+
+        // Initialize memory
+        let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
+        match self.list_type {
+            ListType::Safe => {
+                rust_shadowing_helper_functions::safe_list::safe_list_new(
+                    peaks_pointer,
+                    MAX_MMR_HEIGHT as u32,
+                    &mut memory,
+                );
+                for peak in start_mmr.get_peaks() {
+                    rust_shadowing_helper_functions::safe_list::safe_list_push(
+                        peaks_pointer,
+                        peak.values().to_vec(),
+                        &mut memory,
+                        DIGEST_LENGTH,
+                    );
+                }
+            }
+            ListType::Unsafe => {
+                rust_shadowing_helper_functions::unsafe_list::unsafe_list_new(
+                    peaks_pointer,
+                    &mut memory,
+                );
+                for peak in start_mmr.get_peaks() {
+                    rust_shadowing_helper_functions::unsafe_list::unsafe_list_push(
+                        peaks_pointer,
+                        peak.values().to_vec(),
+                        &mut memory,
+                        DIGEST_LENGTH,
+                    );
+                }
+            }
+        }
+
+        let list_meta_data_size = match self.list_type {
+            ListType::Safe => 2,
+            ListType::Unsafe => 1,
+        };
+
+        ExecutionState::with_stack_and_memory(
+            stack,
+            memory,
+            MAX_MMR_HEIGHT * DIGEST_LENGTH + list_meta_data_size,
+        )
+    }
+}
+
+impl Snippet for CalculateNewPeaksFromAppend {
     fn inputs(&self) -> Vec<String> {
         vec![
             "old_leaf_count_hi".to_string(),
@@ -70,7 +144,7 @@ impl<H: AlgebraicHasher + std::fmt::Debug> Snippet for CalculateNewPeaksFromAppe
             let digests: Vec<Digest> = random_elements(mmr_size);
             let new_leaf: Digest = random();
             let mmra = MmrAccumulator::new(digests);
-            ret.push(prepare_state_with_mmra(mmra, new_leaf));
+            ret.push(self.prepare_state_with_mmra(mmra, new_leaf));
         }
 
         ret
@@ -83,22 +157,36 @@ impl<H: AlgebraicHasher + std::fmt::Debug> Snippet for CalculateNewPeaksFromAppe
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_mmr_calculate_new_peaks_from_append".to_string()
+        format!(
+            "tasm_mmr_calculate_new_peaks_from_append_{}",
+            self.list_type
+        )
     }
 
     fn function_code(&self, library: &mut SnippetState) -> String {
         let entrypoint = self.entrypoint();
-        let push = library.import(Box::new(UnsafePush(DataType::Digest)));
-        let pop = library.import(Box::new(UnsafePop(DataType::Digest)));
-        let set_length = library.import(Box::new(UnsafeSetLength(DataType::Digest)));
+        let new_list = match self.list_type {
+            ListType::Safe => library.import(Box::new(SafeNew(DataType::Digest))),
+            ListType::Unsafe => library.import(Box::new(UnsafeNew(DataType::Digest))),
+        };
+        let push = match self.list_type {
+            ListType::Safe => library.import(Box::new(SafePush(DataType::Digest))),
+            ListType::Unsafe => library.import(Box::new(UnsafePush(DataType::Digest))),
+        };
+        let pop = match self.list_type {
+            ListType::Safe => library.import(Box::new(SafePop(DataType::Digest))),
+            ListType::Unsafe => library.import(Box::new(UnsafePop(DataType::Digest))),
+        };
+        let set_length = match self.list_type {
+            ListType::Safe => library.import(Box::new(SafeSetLength(DataType::Digest))),
+            ListType::Unsafe => library.import(Box::new(UnsafeSetLength(DataType::Digest))),
+        };
         let u64incr = library.import(Box::new(IncrU64));
         let right_lineage_count = library.import(Box::new(IndexOfLastNonZeroBitU64));
 
         // Allocate memory for the returned auth path for the newly inserted element
         // Warning: This auth path is only allocated *once* even though the code is called multiple times.
         // So if this function is called multiple times, the auth_paths will be overwritten.
-        let static_auth_path_pointer = library.kmalloc(DIGEST_LENGTH * MAX_MMR_HEIGHT + 1);
-
         format!(
             "
                 // BEFORE: _ old_leaf_count_hi old_leaf_count_lo *peaks [digests (new_leaf)]
@@ -110,9 +198,8 @@ impl<H: AlgebraicHasher + std::fmt::Debug> Snippet for CalculateNewPeaksFromAppe
                     // stack: _ old_leaf_count_hi old_leaf_count_lo *peaks
 
                     // Create auth_path return value (vector living in RAM)
-                    // Notice that this will always allocate to the same pointer in memory, even
-                    // if this function is called multiple times.
-                    push {static_auth_path_pointer}
+                    push {MAX_MMR_HEIGHT} // All MMR auth paths have capacity for 64 digests
+                    call {new_list}
                     push 0
                     call {set_length}
                     // stack: _ old_leaf_count_hi old_leaf_count_lo *peaks *auth_path
@@ -210,25 +297,48 @@ impl<H: AlgebraicHasher + std::fmt::Debug> Snippet for CalculateNewPeaksFromAppe
         let mut old_peaks: Vec<Digest> = vec![];
         let peak_count = memory[&peaks_pointer].value() as u32;
 
+        let list_get = match self.list_type {
+            ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_get,
+            ListType::Unsafe => rust_shadowing_helper_functions::unsafe_list::unsafe_list_get,
+        };
+        let list_push = match self.list_type {
+            ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_push,
+            ListType::Unsafe => rust_shadowing_helper_functions::unsafe_list::unsafe_list_push,
+        };
+        let list_pop = match self.list_type {
+            ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_pop,
+            ListType::Unsafe => rust_shadowing_helper_functions::unsafe_list::unsafe_list_pop,
+        };
+
         for i in 0..peak_count {
             old_peaks.push(Digest::new(
-                rust_shadowing_helper_functions::unsafe_list::unsafe_list_get(
-                    peaks_pointer,
-                    i as usize,
-                    memory,
-                    DIGEST_LENGTH,
-                )
-                .try_into()
-                .unwrap(),
+                list_get(peaks_pointer, i as usize, memory, DIGEST_LENGTH)
+                    .try_into()
+                    .unwrap(),
             ));
         }
 
         // Run the actual `calculate_new_peaks_from_append` algorithm. This function
         // is inlined here to make it manipulate memory the same way that the TASM code
         // does.
-        let auth_path_pointer = BFieldElement::new((MAX_MMR_HEIGHT * DIGEST_LENGTH + 2) as u64);
-        rust_shadowing_helper_functions::unsafe_list::unsafe_list_new(auth_path_pointer, memory);
-        rust_shadowing_helper_functions::unsafe_list::unsafe_list_push(
+        let list_meta_data_size = match self.list_type {
+            ListType::Safe => 2,
+            ListType::Unsafe => 1,
+        };
+        let auth_path_pointer =
+            BFieldElement::new((MAX_MMR_HEIGHT * DIGEST_LENGTH + 1 + list_meta_data_size) as u64);
+        match self.list_type {
+            ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_new(
+                auth_path_pointer,
+                MAX_MMR_HEIGHT as u32,
+                memory,
+            ),
+            ListType::Unsafe => rust_shadowing_helper_functions::unsafe_list::unsafe_list_new(
+                auth_path_pointer,
+                memory,
+            ),
+        }
+        list_push(
             peaks_pointer,
             new_leaf.values().to_vec(),
             memory,
@@ -239,32 +349,26 @@ impl<H: AlgebraicHasher + std::fmt::Debug> Snippet for CalculateNewPeaksFromAppe
             mmr::shared_advanced::right_lineage_length_and_own_height(new_node_index);
         while right_lineage_count != 0 {
             let new_hash = Digest::new(
-                rust_shadowing_helper_functions::unsafe_list::unsafe_list_pop(
-                    peaks_pointer,
-                    memory,
-                    DIGEST_LENGTH,
-                )
-                .try_into()
-                .unwrap(),
+                list_pop(peaks_pointer, memory, DIGEST_LENGTH)
+                    .try_into()
+                    .unwrap(),
             );
             let previous_peak = Digest::new(
-                rust_shadowing_helper_functions::unsafe_list::unsafe_list_pop(
-                    peaks_pointer,
-                    memory,
-                    DIGEST_LENGTH,
-                )
-                .try_into()
-                .unwrap(),
+                list_pop(peaks_pointer, memory, DIGEST_LENGTH)
+                    .try_into()
+                    .unwrap(),
             );
-            rust_shadowing_helper_functions::unsafe_list::unsafe_list_push(
+            list_push(
                 auth_path_pointer,
                 previous_peak.values().to_vec(),
                 memory,
                 DIGEST_LENGTH,
             );
-            rust_shadowing_helper_functions::unsafe_list::unsafe_list_push(
+            list_push(
                 peaks_pointer,
-                H::hash_pair(&previous_peak, &new_hash).values().to_vec(),
+                VmHasher::hash_pair(&previous_peak, &new_hash)
+                    .values()
+                    .to_vec(),
                 memory,
                 DIGEST_LENGTH,
             );
@@ -280,48 +384,15 @@ impl<H: AlgebraicHasher + std::fmt::Debug> Snippet for CalculateNewPeaksFromAppe
         let peaks: Vec<Digest> = random_elements(31);
         let new_leaf: Digest = random();
         let mmra = MmrAccumulator::init(peaks, (1 << 31) - 1);
-        prepare_state_with_mmra(mmra, new_leaf)
+        self.prepare_state_with_mmra(mmra, new_leaf)
     }
 
     fn worst_case_input_state(&self) -> ExecutionState {
         let peaks: Vec<Digest> = random_elements(62);
         let new_leaf: Digest = random();
         let mmra = MmrAccumulator::init(peaks, (1 << 62) - 1);
-        prepare_state_with_mmra(mmra, new_leaf)
+        self.prepare_state_with_mmra(mmra, new_leaf)
     }
-}
-
-fn prepare_state_with_mmra(
-    start_mmr: MmrAccumulator<VmHasher>,
-    new_leaf: Digest,
-) -> ExecutionState {
-    // We assume that the peaks can safely be stored in memory on address 1
-    let peaks_pointer = BFieldElement::one();
-
-    let mut stack = get_init_tvm_stack();
-    let old_leaf_count: u64 = start_mmr.count_leaves();
-    stack.push(BFieldElement::new(old_leaf_count >> 32));
-    stack.push(BFieldElement::new(old_leaf_count & u32::MAX as u64));
-    stack.push(peaks_pointer);
-
-    // push digests such that element 0 of digest is on top of stack
-    for value in new_leaf.values().iter().rev() {
-        stack.push(*value);
-    }
-
-    // Initialize memory
-    let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
-    rust_shadowing_helper_functions::unsafe_list::unsafe_list_new(peaks_pointer, &mut memory);
-    for peak in start_mmr.get_peaks() {
-        rust_shadowing_helper_functions::unsafe_list::unsafe_list_push(
-            peaks_pointer,
-            peak.values().to_vec(),
-            &mut memory,
-            DIGEST_LENGTH,
-        );
-    }
-
-    ExecutionState::with_stack_and_memory(stack, memory, MAX_MMR_HEIGHT * DIGEST_LENGTH + 1)
 }
 
 #[cfg(test)]
@@ -343,8 +414,23 @@ mod tests {
     type Mmra = MmrAccumulator<VmHasher>;
 
     #[test]
-    fn calculate_new_peaks_from_append_test() {
-        rust_tasm_equivalence_prop_new(&CalculateNewPeaksFromAppend(PhantomData::<VmHasher>), true);
+    fn calculate_new_peaks_from_append_test_unsafe_lists() {
+        rust_tasm_equivalence_prop_new(
+            &CalculateNewPeaksFromAppend {
+                list_type: ListType::Unsafe,
+            },
+            true,
+        );
+    }
+
+    #[test]
+    fn calculate_new_peaks_from_append_test_safe_lists() {
+        rust_tasm_equivalence_prop_new(
+            &CalculateNewPeaksFromAppend {
+                list_type: ListType::Safe,
+            },
+            true,
+        );
     }
 
     #[test]
@@ -359,7 +445,12 @@ mod tests {
 
     #[test]
     fn calculate_new_peaks_from_append_benchmark() {
-        bench_and_write(CalculateNewPeaksFromAppend(PhantomData::<VmHasher>));
+        bench_and_write(CalculateNewPeaksFromAppend {
+            list_type: ListType::Unsafe,
+        });
+        bench_and_write(CalculateNewPeaksFromAppend {
+            list_type: ListType::Safe,
+        });
     }
 
     #[test]
@@ -464,7 +555,9 @@ mod tests {
         expected_final_stack.push(auth_paths_pointer);
 
         let _execution_result = rust_tasm_equivalence_prop(
-            &CalculateNewPeaksFromAppend(PhantomData::<VmHasher>),
+            &CalculateNewPeaksFromAppend {
+                list_type: ListType::Unsafe,
+            },
             &init_stack,
             &[],
             &[],

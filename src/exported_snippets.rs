@@ -258,7 +258,8 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn Snippet> {
         "tasm_list_unsafe_range" => Box::new(Range{list_type: ListType::Unsafe}),
 
         // MMR
-        "tasm_mmr_calculate_new_peaks_from_append" => Box::new(CalculateNewPeaksFromAppend(PhantomData::<VmHasher>)),
+        "tasm_mmr_calculate_new_peaks_from_append_unsafe" => Box::new(CalculateNewPeaksFromAppend { list_type: ListType::Unsafe }),
+        "tasm_mmr_calculate_new_peaks_from_append_safe" => Box::new(CalculateNewPeaksFromAppend { list_type: ListType::Safe }),
         "tasm_mmr_calculate_new_peaks_from_leaf_mutation" => {
             Box::new(MmrCalculateNewPeaksFromLeafMutationMtIndices(PhantomData::<VmHasher>))
         }
