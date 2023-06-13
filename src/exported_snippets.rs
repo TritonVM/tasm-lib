@@ -280,7 +280,9 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn Snippet> {
         "tasm_mmr_right_lineage_length" => Box::new(MmrRightLineageLength),
         "tasm_mmr_verify_from_memory_unsafe" => Box::new(MmrVerifyFromMemory { list_type: ListType::Unsafe} ),
         "tasm_mmr_verify_from_memory_safe" => Box::new(MmrVerifyFromMemory { list_type: ListType::Safe} ),
-        "tasm_mmr_verify_from_secret_in" => Box::new(MmrVerifyLeafMembershipFromSecretIn(PhantomData::<VmHasher>)),
+        "tasm_mmr_verify_from_secret_in_unsafe" => Box::new(MmrVerifyLeafMembershipFromSecretIn { list_type: ListType::Unsafe }),
+        "tasm_mmr_verify_from_secret_in_safe" => Box::new(MmrVerifyLeafMembershipFromSecretIn { list_type: ListType::Safe }),
+
 
         // other
         "tasm_other_bfe_add" => Box::new(BfeAdd),
