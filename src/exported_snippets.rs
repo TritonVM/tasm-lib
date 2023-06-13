@@ -260,8 +260,11 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn Snippet> {
         // MMR
         "tasm_mmr_calculate_new_peaks_from_append_unsafe" => Box::new(CalculateNewPeaksFromAppend { list_type: ListType::Unsafe }),
         "tasm_mmr_calculate_new_peaks_from_append_safe" => Box::new(CalculateNewPeaksFromAppend { list_type: ListType::Safe }),
-        "tasm_mmr_calculate_new_peaks_from_leaf_mutation" => {
-            Box::new(MmrCalculateNewPeaksFromLeafMutationMtIndices(PhantomData::<VmHasher>))
+        "tasm_mmr_calculate_new_peaks_from_leaf_mutation_unsafe" => {
+            Box::new(MmrCalculateNewPeaksFromLeafMutationMtIndices{ list_type: ListType::Unsafe} )
+        }
+        "tasm_mmr_calculate_new_peaks_from_leaf_mutation_safe" => {
+            Box::new(MmrCalculateNewPeaksFromLeafMutationMtIndices{ list_type: ListType::Safe} )
         }
         "tasm_mmr_data_index_to_node_index" => Box::new(DataIndexToNodeIndex),
         "tasm_mmr_get_height_from_leaf_index" => Box::new(GetHeightFromDataIndex),

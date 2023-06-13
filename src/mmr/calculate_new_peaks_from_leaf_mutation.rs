@@ -1,11 +1,9 @@
 use num::One;
 use rand::{random, thread_rng, Rng};
 use std::collections::HashMap;
-use std::marker::PhantomData;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::random_elements;
 use twenty_first::test_shared::mmr::get_rustyleveldb_ammr_from_digests;
-use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
 use twenty_first::util_types::mmr::mmr_trait::Mmr;
 use twenty_first::util_types::mmr::{self, mmr_membership_proof::MmrMembershipProof};
@@ -14,8 +12,11 @@ use super::leaf_index_to_mt_index::MmrLeafIndexToMtIndexAndPeakIndex;
 use crate::arithmetic::u32::is_odd::U32IsOdd;
 use crate::arithmetic::u64::div2_u64::Div2U64;
 use crate::arithmetic::u64::eq_u64::EqU64;
+use crate::list::safe_u32::get::SafeGet;
+use crate::list::safe_u32::set::SafeSet;
 use crate::list::unsafe_u32::get::UnsafeGet;
 use crate::list::unsafe_u32::set::UnsafeSet;
+use crate::list::ListType;
 use crate::mmr::MAX_MMR_HEIGHT;
 use crate::snippet::{DataType, Snippet};
 use crate::snippet_state::SnippetState;
@@ -25,14 +26,108 @@ use crate::{
 };
 
 /// Calculate new MMR peaks from a leaf mutation using Merkle tree indices walk up the tree
-#[derive(Clone, Default, Debug)]
-pub struct MmrCalculateNewPeaksFromLeafMutationMtIndices<H: AlgebraicHasher + std::fmt::Debug>(
-    pub PhantomData<H>,
-);
+#[derive(Clone, Debug)]
+pub struct MmrCalculateNewPeaksFromLeafMutationMtIndices {
+    pub list_type: ListType,
+}
 
-impl<H: AlgebraicHasher + std::fmt::Debug> Snippet
-    for MmrCalculateNewPeaksFromLeafMutationMtIndices<H>
-{
+impl MmrCalculateNewPeaksFromLeafMutationMtIndices {
+    // Returns: (execution state, auth path pointer, peaks pointer)
+    fn prepare_state_with_mmra(
+        &self,
+        start_mmr: &mut MmrAccumulator<VmHasher>,
+        leaf_index: u64,
+        new_leaf: Digest,
+        auth_path: Vec<Digest>,
+    ) -> (ExecutionState, BFieldElement, BFieldElement) {
+        let mut stack = get_init_tvm_stack();
+
+        // We assume that the auth paths can safely be stored in memory on this address
+        let auth_path_pointer = BFieldElement::new((MAX_MMR_HEIGHT * DIGEST_LENGTH + 2) as u64);
+        stack.push(auth_path_pointer);
+
+        stack.push(BFieldElement::new(leaf_index >> 32));
+        stack.push(BFieldElement::new(leaf_index & u32::MAX as u64));
+
+        let peaks_pointer = BFieldElement::one();
+        stack.push(peaks_pointer);
+
+        // push digests such that element 0 of digest is on top of stack
+        for value in new_leaf.values().iter().rev() {
+            stack.push(*value);
+        }
+
+        let leaf_count: u64 = start_mmr.count_leaves();
+        stack.push(BFieldElement::new(leaf_count >> 32));
+        stack.push(BFieldElement::new(leaf_count & u32::MAX as u64));
+
+        // Initialize memory
+        let list_push = match self.list_type {
+            ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_push,
+            ListType::Unsafe => rust_shadowing_helper_functions::unsafe_list::unsafe_list_push,
+        };
+        let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
+        match self.list_type {
+            ListType::Safe => {
+                rust_shadowing_helper_functions::safe_list::safe_list_new(
+                    peaks_pointer,
+                    MAX_MMR_HEIGHT as u32,
+                    &mut memory,
+                );
+            }
+            ListType::Unsafe => {
+                rust_shadowing_helper_functions::unsafe_list::unsafe_list_new(
+                    peaks_pointer,
+                    &mut memory,
+                );
+            }
+        }
+        for peak in start_mmr.get_peaks() {
+            list_push(
+                peaks_pointer,
+                peak.values().to_vec(),
+                &mut memory,
+                DIGEST_LENGTH,
+            );
+        }
+
+        match self.list_type {
+            ListType::Safe => {
+                rust_shadowing_helper_functions::safe_list::safe_list_new(
+                    auth_path_pointer,
+                    MAX_MMR_HEIGHT as u32,
+                    &mut memory,
+                );
+            }
+            ListType::Unsafe => {
+                rust_shadowing_helper_functions::unsafe_list::unsafe_list_new(
+                    auth_path_pointer,
+                    &mut memory,
+                );
+            }
+        }
+        for ap_element in auth_path.iter() {
+            list_push(
+                auth_path_pointer,
+                ap_element.values().to_vec(),
+                &mut memory,
+                DIGEST_LENGTH,
+            );
+        }
+
+        (
+            ExecutionState::with_stack_and_memory(
+                stack,
+                memory,
+                2 * (MAX_MMR_HEIGHT * DIGEST_LENGTH + 1),
+            ),
+            auth_path_pointer,
+            peaks_pointer,
+        )
+    }
+}
+
+impl Snippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
     fn inputs(&self) -> Vec<String> {
         vec![
             "*auth_path".to_string(),
@@ -83,7 +178,7 @@ impl<H: AlgebraicHasher + std::fmt::Debug> Snippet
         let ammr = get_rustyleveldb_ammr_from_digests::<VmHasher>(digests);
         let mut mmra = ammr.to_accumulator();
         let auth_path = ammr.prove_membership(leaf_index as u64);
-        let ret0 = prepare_state_with_mmra(
+        let ret0 = self.prepare_state_with_mmra(
             &mut mmra,
             leaf_index as u64,
             new_leaf,
@@ -98,7 +193,10 @@ impl<H: AlgebraicHasher + std::fmt::Debug> Snippet
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_mmr_calculate_new_peaks_from_leaf_mutation".to_string()
+        format!(
+            "tasm_mmr_calculate_new_peaks_from_leaf_mutation_{}",
+            self.list_type
+        )
     }
 
     fn function_code(&self, library: &mut SnippetState) -> String {
@@ -106,8 +204,14 @@ impl<H: AlgebraicHasher + std::fmt::Debug> Snippet
         let leaf_index_to_mt_index = library.import(Box::new(MmrLeafIndexToMtIndexAndPeakIndex));
         let u32_is_odd = library.import(Box::new(U32IsOdd));
         let eq_u64 = library.import(Box::new(EqU64));
-        let get = library.import(Box::new(UnsafeGet(DataType::Digest)));
-        let set = library.import(Box::new(UnsafeSet(DataType::Digest)));
+        let get = match self.list_type {
+            ListType::Safe => library.import(Box::new(SafeGet(DataType::Digest))),
+            ListType::Unsafe => library.import(Box::new(UnsafeGet(DataType::Digest))),
+        };
+        let set = match self.list_type {
+            ListType::Safe => library.import(Box::new(SafeSet(DataType::Digest))),
+            ListType::Unsafe => library.import(Box::new(UnsafeSet(DataType::Digest))),
+        };
         let div_2 = library.import(Box::new(Div2U64));
 
         format!(
@@ -222,18 +326,22 @@ impl<H: AlgebraicHasher + std::fmt::Debug> Snippet
 
         let auth_paths_pointer = stack.pop().unwrap();
 
+        let list_get = match self.list_type {
+            ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_get,
+            ListType::Unsafe => rust_shadowing_helper_functions::unsafe_list::unsafe_list_get,
+        };
+        let list_set = match self.list_type {
+            ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_set,
+            ListType::Unsafe => rust_shadowing_helper_functions::unsafe_list::unsafe_list_set,
+        };
+
         let peaks_count: u64 = memory[&peaks_pointer].value();
         let mut peaks: Vec<Digest> = vec![];
         for i in 0..peaks_count {
             let digest = Digest::new(
-                rust_shadowing_helper_functions::unsafe_list::unsafe_list_get(
-                    peaks_pointer,
-                    i as usize,
-                    memory,
-                    DIGEST_LENGTH,
-                )
-                .try_into()
-                .unwrap(),
+                list_get(peaks_pointer, i as usize, memory, DIGEST_LENGTH)
+                    .try_into()
+                    .unwrap(),
             );
             peaks.push(digest);
         }
@@ -242,27 +350,22 @@ impl<H: AlgebraicHasher + std::fmt::Debug> Snippet
         let mut auth_path: Vec<Digest> = vec![];
         for i in 0..auth_path_length {
             let digest = Digest::new(
-                rust_shadowing_helper_functions::unsafe_list::unsafe_list_get(
-                    auth_paths_pointer,
-                    i as usize,
-                    memory,
-                    DIGEST_LENGTH,
-                )
-                .try_into()
-                .unwrap(),
+                list_get(auth_paths_pointer, i as usize, memory, DIGEST_LENGTH)
+                    .try_into()
+                    .unwrap(),
             );
             auth_path.push(digest);
         }
 
         let mmr_mp = MmrMembershipProof::new(leaf_index, auth_path);
-        let new_peaks = mmr::shared_basic::calculate_new_peaks_from_leaf_mutation::<H>(
+        let new_peaks = mmr::shared_basic::calculate_new_peaks_from_leaf_mutation::<VmHasher>(
             &peaks, &new_leaf, leaf_count, &mmr_mp,
         );
 
         // Write mutated peak back to memory
         // rust_shadowing_helper_functions::list_set(peaks_pointer, index, value, memory)
         for i in 0..peaks_count {
-            rust_shadowing_helper_functions::unsafe_list::unsafe_list_set(
+            list_set(
                 peaks_pointer,
                 i as usize,
                 new_peaks[i as usize].values().to_vec(),
@@ -285,7 +388,7 @@ impl<H: AlgebraicHasher + std::fmt::Debug> Snippet
         let inserted_leaf: Digest = random();
         let leaf_after_mutation: Digest = random();
         let auth_path = mmra.append(inserted_leaf).authentication_path;
-        prepare_state_with_mmra(
+        self.prepare_state_with_mmra(
             &mut mmra,
             mmr_size - mmr_leaf_count_log2 - 1,
             leaf_after_mutation,
@@ -302,7 +405,7 @@ impl<H: AlgebraicHasher + std::fmt::Debug> Snippet
         let inserted_leaf: Digest = random();
         let leaf_after_mutation: Digest = random();
         let auth_path = mmra.append(inserted_leaf).authentication_path;
-        prepare_state_with_mmra(
+        self.prepare_state_with_mmra(
             &mut mmra,
             mmr_size - mmr_leaf_count_log2 - 1,
             leaf_after_mutation,
@@ -310,67 +413,6 @@ impl<H: AlgebraicHasher + std::fmt::Debug> Snippet
         )
         .0
     }
-}
-
-// Returns: (execution state, auth path pointer, peaks pointer)
-fn prepare_state_with_mmra(
-    start_mmr: &mut MmrAccumulator<VmHasher>,
-    leaf_index: u64,
-    new_leaf: Digest,
-    auth_path: Vec<Digest>,
-) -> (ExecutionState, BFieldElement, BFieldElement) {
-    let mut stack = get_init_tvm_stack();
-
-    // We assume that the auth paths can safely be stored in memory on this address
-    let auth_path_pointer = BFieldElement::new((MAX_MMR_HEIGHT * DIGEST_LENGTH + 2) as u64);
-    stack.push(auth_path_pointer);
-
-    stack.push(BFieldElement::new(leaf_index >> 32));
-    stack.push(BFieldElement::new(leaf_index & u32::MAX as u64));
-
-    let peaks_pointer = BFieldElement::one();
-    stack.push(peaks_pointer);
-
-    // push digests such that element 0 of digest is on top of stack
-    for value in new_leaf.values().iter().rev() {
-        stack.push(*value);
-    }
-
-    let leaf_count: u64 = start_mmr.count_leaves();
-    stack.push(BFieldElement::new(leaf_count >> 32));
-    stack.push(BFieldElement::new(leaf_count & u32::MAX as u64));
-
-    // Initialize memory
-    let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
-    rust_shadowing_helper_functions::unsafe_list::unsafe_list_new(peaks_pointer, &mut memory);
-    for peak in start_mmr.get_peaks() {
-        rust_shadowing_helper_functions::unsafe_list::unsafe_list_push(
-            peaks_pointer,
-            peak.values().to_vec(),
-            &mut memory,
-            DIGEST_LENGTH,
-        );
-    }
-
-    rust_shadowing_helper_functions::unsafe_list::unsafe_list_new(auth_path_pointer, &mut memory);
-    for ap_element in auth_path.iter() {
-        rust_shadowing_helper_functions::unsafe_list::unsafe_list_push(
-            auth_path_pointer,
-            ap_element.values().to_vec(),
-            &mut memory,
-            DIGEST_LENGTH,
-        );
-    }
-
-    (
-        ExecutionState::with_stack_and_memory(
-            stack,
-            memory,
-            2 * (MAX_MMR_HEIGHT * DIGEST_LENGTH + 1),
-        ),
-        auth_path_pointer,
-        peaks_pointer,
-    )
 }
 
 #[cfg(test)]
@@ -393,18 +435,37 @@ mod leaf_mutation_tests {
     use super::*;
 
     #[test]
-    fn calculate_new_peaks_from_leaf_mutation_test() {
+    fn calculate_new_peaks_from_leaf_mutation_test_unsafe_lists() {
         rust_tasm_equivalence_prop_new(
-            &MmrCalculateNewPeaksFromLeafMutationMtIndices(PhantomData::<VmHasher>),
+            &MmrCalculateNewPeaksFromLeafMutationMtIndices {
+                list_type: ListType::Unsafe,
+            },
             true,
         );
     }
 
     #[test]
-    fn calculate_new_peaks_from_leaf_mutation_benchmark() {
-        bench_and_write(MmrCalculateNewPeaksFromLeafMutationMtIndices(
-            PhantomData::<VmHasher>,
-        ));
+    fn calculate_new_peaks_from_leaf_mutation_test_safe_lists() {
+        rust_tasm_equivalence_prop_new(
+            &MmrCalculateNewPeaksFromLeafMutationMtIndices {
+                list_type: ListType::Safe,
+            },
+            true,
+        );
+    }
+
+    #[test]
+    fn calculate_new_peaks_from_leaf_mutation_benchmark_unsafe_lists() {
+        bench_and_write(MmrCalculateNewPeaksFromLeafMutationMtIndices {
+            list_type: ListType::Unsafe,
+        });
+    }
+
+    #[test]
+    fn calculate_new_peaks_from_leaf_mutation_benchmark_safe_lists() {
+        bench_and_write(MmrCalculateNewPeaksFromLeafMutationMtIndices {
+            list_type: ListType::Safe,
+        });
     }
 
     #[test]
@@ -586,8 +647,11 @@ mod leaf_mutation_tests {
         expected_mmr: MmrAccumulator<VmHasher>,
         auth_path: Vec<Digest>,
     ) {
-        let (init_exec_state, auth_path_pointer, peaks_pointer) =
-            prepare_state_with_mmra(start_mmr, new_leaf_index, new_leaf, auth_path);
+        let implementation_with_unsafe_lists = MmrCalculateNewPeaksFromLeafMutationMtIndices {
+            list_type: ListType::Unsafe,
+        };
+        let (init_exec_state, auth_path_pointer, peaks_pointer) = implementation_with_unsafe_lists
+            .prepare_state_with_mmra(start_mmr, new_leaf_index, new_leaf, auth_path);
         let init_stack = init_exec_state.stack;
         let mut memory = init_exec_state.memory;
 
@@ -598,7 +662,9 @@ mod leaf_mutation_tests {
         expected_final_stack.push(BFieldElement::new(new_leaf_index & u32::MAX as u64));
 
         let _execution_result = rust_tasm_equivalence_prop(
-            &MmrCalculateNewPeaksFromLeafMutationMtIndices(PhantomData::<VmHasher>),
+            &MmrCalculateNewPeaksFromLeafMutationMtIndices {
+                list_type: ListType::Unsafe,
+            },
             &init_stack,
             &[],
             &[],
