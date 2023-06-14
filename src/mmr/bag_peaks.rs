@@ -8,6 +8,7 @@ use twenty_first::{shared_math::other::random_elements, util_types::shared::bag_
 use crate::{
     get_init_tvm_stack,
     list::unsafe_u32::{get::UnsafeGet, length::UnsafeLength},
+    rust_shadowing_helper_functions,
     snippet::{DataType, Snippet},
     Digest, ExecutionState, VmHasher, DIGEST_LENGTH,
 };
@@ -20,23 +21,14 @@ impl BagPeaks {
         let address: BFieldElement = random();
         let mut stack = get_init_tvm_stack();
         stack.push(address);
-        let safety_offset = 1; // unsafe lists
         let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
 
-        // set length
-        memory.insert(address, BFieldElement::new(num_peaks as u64));
-        // set capacity? no; assuming unsafe lists
-        // insert elements
-        for (i, peak) in peaks.into_iter().enumerate() {
-            for j in 0..DIGEST_LENGTH {
-                memory.insert(
-                    address
-                        + BFieldElement::new(safety_offset)
-                        + BFieldElement::new((i as u64) * (DIGEST_LENGTH as u64) + (j as u64)),
-                    peak.values()[j],
-                );
-            }
-        }
+        // Insert list into memory
+        rust_shadowing_helper_functions::unsafe_list::unsafe_list_insert(
+            address,
+            peaks,
+            &mut memory,
+        );
 
         ExecutionState {
             stack,
@@ -95,9 +87,11 @@ impl Snippet for BagPeaks {
             call {get_length} // _ *peaks length
 
             // special case 0
-            push 1 dup 1 push 0 eq // _ *peaks length 1 length==0
+            push 1 dup 1 push 0 eq // _ *peaks length 1 (length==0)
             skiz call {entrypoint}_length_is_zero
             skiz call {entrypoint}_length_is_not_zero
+
+            // _ [digest_elements]
             return
 
         // BEFORE: _ *peaks length 1
@@ -117,7 +111,7 @@ impl Snippet for BagPeaks {
             swap 5 pop
             push 0
             return
-        
+
         // BEFORE: _ *peaks length
         // AFTER: _ d4 d3 d2 d1 d0
         {entrypoint}_length_is_not_zero:
@@ -126,7 +120,7 @@ impl Snippet for BagPeaks {
             skiz call {entrypoint}_length_is_one
             skiz call {entrypoint}_length_is_not_one
             return
-        
+
         // BEFORE: _ *peaks length 1
         // AFTER: _ d4 d3 d2 d1 d0 0
         {entrypoint}_length_is_one:
@@ -171,7 +165,7 @@ impl Snippet for BagPeaks {
             // evaluate termination condition
             dup 10 // _ *peaks elements_left d9 d8 d7 d6 d5 d4 d3 d2 d1 d0 elements_left
             push 0 eq // _ *peaks elements_left d9 d8 d7 d6 d5 d4 d3 d2 d1 d0 elements_left==0
-            skiz return 
+            skiz return
             // _ *peak elements_left d9 d8 d7 d6 d5 d4 d3 d2 d1 d0
 
             // body
@@ -201,21 +195,15 @@ impl Snippet for BagPeaks {
     }
 
     fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
-        vec![
-            Self::input_state(0),
-            Self::input_state(1),
-            Self::input_state(2),
-            Self::input_state(3),
-            Self::input_state(10),
-        ]
+        (0..30).map(Self::input_state).collect()
     }
 
     fn common_case_input_state(&self) -> crate::ExecutionState {
-        Self::input_state(10)
+        Self::input_state(30)
     }
 
     fn worst_case_input_state(&self) -> crate::ExecutionState {
-        Self::input_state(30)
+        Self::input_state(60)
     }
 
     fn rust_shadowing(
