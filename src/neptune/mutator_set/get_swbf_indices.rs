@@ -6,7 +6,7 @@ use rand::random;
 use triton_vm::BFieldElement;
 use twenty_first::{
     shared_math::tip5::{Tip5, Tip5State},
-    util_types::algebraic_hasher::{Domain, SpongeHasher},
+    util_types::algebraic_hasher::{AlgebraicHasher, Domain, SpongeHasher},
 };
 
 use crate::{
@@ -15,7 +15,7 @@ use crate::{
     list::ListType,
     rust_shadowing_helper_functions,
     snippet::{DataType, Snippet},
-    Digest, ExecutionState,
+    Digest, ExecutionState, VmHasher,
 };
 
 /// Derives the indices that make up the removal record from the item
@@ -27,12 +27,23 @@ pub struct GetSwbfIndices {
 }
 
 impl GetSwbfIndices {
-    fn generate_input_state() -> ExecutionState {
+    fn generate_input_state(stochastic: bool) -> ExecutionState {
         let mut stack = get_init_tvm_stack();
-        let item: Digest = random();
-        let sender_randomness: Digest = random();
-        let receiver_preimage: Digest = random();
-        let aocl_leaf_index: u64 = random();
+        let (item, sender_randomness, receiver_preimage, aocl_leaf_index): (
+            Digest,
+            Digest,
+            Digest,
+            u64,
+        ) = if stochastic {
+            (random(), random(), random(), random())
+        } else {
+            (
+                VmHasher::hash_varlen(&[BFieldElement::new(0)]),
+                VmHasher::hash_varlen(&[BFieldElement::new(1)]),
+                VmHasher::hash_varlen(&[BFieldElement::new(2)]),
+                ((u32::MAX as u64) << 3) + 2,
+            )
+        };
         stack.push(BFieldElement::new(aocl_leaf_index >> 32));
         stack.push(BFieldElement::new(aocl_leaf_index & u32::MAX as u64));
         stack.push(receiver_preimage.values()[4]);
@@ -152,7 +163,7 @@ impl Snippet for GetSwbfIndices {
             push {num_trials} // _ number
             push {window_size} // _ number upper_bound
             call {sample_indices} // _ list_of_indices
-        
+
             return
             "
         )
@@ -163,15 +174,15 @@ impl Snippet for GetSwbfIndices {
     }
 
     fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
-        vec![Self::generate_input_state()]
+        vec![Self::generate_input_state(true)]
     }
 
     fn common_case_input_state(&self) -> crate::ExecutionState {
-        Self::generate_input_state()
+        Self::generate_input_state(false)
     }
 
     fn worst_case_input_state(&self) -> crate::ExecutionState {
-        Self::generate_input_state()
+        Self::generate_input_state(false)
     }
 
     fn rust_shadowing(
