@@ -250,12 +250,13 @@ mod tests {
     }
 
     #[test]
-    fn shift_right_max_values_test() {
+    fn shift_right_max_values_and_zeros_test() {
         for i in 0..128 {
             prop_shift_right((u64::MAX as u128) << 38, i);
         }
         for i in 0..128 {
             prop_shift_right(u128::MAX, i);
+            prop_shift_right(0, i);
         }
     }
 

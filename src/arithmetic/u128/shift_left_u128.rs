@@ -240,11 +240,11 @@ mod tests {
     }
 
     #[test]
-    fn shift_left_max_values_test() {
+    fn shift_left_max_values_and_zeros_test() {
         for i in 0..128 {
             prop_left_left(u128::MAX, i);
+            prop_left_left(0, i);
         }
-        // prop_left_left(u128::MAX, 65);
     }
 
     #[test]

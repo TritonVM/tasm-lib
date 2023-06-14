@@ -230,6 +230,16 @@ mod tests {
     }
 
     #[test]
+    fn shift_left_zero_test() {
+        prop_left_left::<0>(0);
+        prop_left_left::<1>(0);
+        prop_left_left::<12>(0);
+        prop_left_left::<24>(0);
+        prop_left_left::<31>(0);
+        prop_left_left::<32>(0);
+    }
+
+    #[test]
     #[should_panic]
     fn shift_beyond_limit() {
         let mut init_stack = get_init_tvm_stack();
