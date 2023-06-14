@@ -1,0 +1,16 @@
+[
+  {
+    "name": "tasm_neptune_transaction_transaction_kernel_mast_hash",
+    "clock_cycle_count": 9194,
+    "hash_table_height": 42,
+    "u32_table_height": 498,
+    "case": "CommonCase"
+  },
+  {
+    "name": "tasm_neptune_transaction_transaction_kernel_mast_hash",
+    "clock_cycle_count": 70268,
+    "hash_table_height": 42,
+    "u32_table_height": 6302,
+    "case": "WorstCase"
+  }
+]
