@@ -216,28 +216,28 @@ impl Snippet for LtU64 {
             {entrypoint}:
                 dup 3
                 dup 2
-                lt   // => _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_hi < rhs_hi)
+                lt          // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_hi < rhs_hi)
                 dup 0
                 skiz
-                    return // => _ rhs_hi rhs_lo lhs_hi lhs_lo 1
+                    return  // => _ rhs_hi rhs_lo lhs_hi lhs_lo 1
 
                 // => _ rhs_hi rhs_lo lhs_hi lhs_lo 0
-                dup 4 // => _ rhs_hi rhs_lo lhs_hi lhs_lo 0 rhs_hi
-                dup 3 // => _ rhs_hi rhs_lo lhs_hi lhs_lo 0 rhs_hi lhs_hi
-                eq   // => _ rhs_hi rhs_lo lhs_hi lhs_lo 0 (rhs_hi == lhs_hi)
+                dup 4      // => _ rhs_hi rhs_lo lhs_hi lhs_lo 0 rhs_hi
+                dup 3      // => _ rhs_hi rhs_lo lhs_hi lhs_lo 0 rhs_hi lhs_hi
+                eq         // => _ rhs_hi rhs_lo lhs_hi lhs_lo 0 (rhs_hi == lhs_hi)
                 skiz
                     call {entrypoint}_lo // => _ rhs_hi rhs_lo lhs_hi lhs_lo 0
 
-                // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_lo < rhs_lo)|0
+                           // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_lo < rhs_lo)|0
                 return
 
             // Before: _ rhs_hi rhs_lo lhs_hi lhs_lo 0
             // After: _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_lo < rhs_lo)
             {entrypoint}_lo:
-                pop   // _ rhs_hi rhs_lo lhs_hi lhs_lo
-                dup 2  // _ rhs_hi rhs_lo lhs_hi lhs_lo rhs_lo
-                dup 1  // _ rhs_hi rhs_lo lhs_hi lhs_lo rhs_lo lhs_lo
-                lt    // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_lo < rhs_lo)
+                pop        // _ rhs_hi rhs_lo lhs_hi lhs_lo
+                dup 2      // _ rhs_hi rhs_lo lhs_hi lhs_lo rhs_lo
+                dup 1      // _ rhs_hi rhs_lo lhs_hi lhs_lo rhs_lo lhs_lo
+                lt         // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_lo < rhs_lo)
                 return
             "
         )
