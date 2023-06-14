@@ -255,13 +255,17 @@ mod tests {
     use super::*;
 
     #[test]
-    fn new_snippet_test() {
+    fn new_snippet_test_safe_lists() {
         rust_tasm_equivalence_prop_new(
             &Range {
                 list_type: ListType::Safe,
             },
             true,
         );
+    }
+
+    #[test]
+    fn new_snippet_test_unsafe_lists() {
         rust_tasm_equivalence_prop_new(
             &Range {
                 list_type: ListType::Unsafe,

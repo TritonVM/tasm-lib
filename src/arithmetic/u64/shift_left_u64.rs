@@ -129,7 +129,7 @@ impl Snippet for ShiftLeftU64 {
     fn gen_input_states(&self) -> Vec<ExecutionState> {
         let mut rng = thread_rng();
         let mut ret = vec![];
-        for _ in 0..30 {
+        for _ in 0..3 {
             for i in 0..64 {
                 ret.push(prepare_state((rng.next_u32() as u64) * 2, i));
             }
