@@ -1,26 +1,26 @@
 use std::collections::HashMap;
 
-use itertools::Itertools;
-
 use rand::random;
 use triton_vm::BFieldElement;
 
 use crate::{
     get_init_tvm_stack,
-    neptune::transaction::transaction_kernel::random_transaction_kernel_encoding,
+    neptune::transaction::{
+        get_transaction_kernel_field::GetTransactionKernelField,
+        transaction_kernel::random_transaction_kernel_encoding,
+    },
     snippet::{DataType, Snippet},
     ExecutionState, DIGEST_LENGTH,
 };
 
 use super::transaction_kernel::{pseudorandom_transaction_kernel_encoding, TransactionKernelField};
 
-/// Gets the size, in number of BFieldElements, of a named field from
-/// a TransactionKernel object.
+/// Gets a named field from a TransactionKernel object.
 #[derive(Debug, Clone)]
-pub struct GetTransactionKernelField(pub TransactionKernelField);
+pub struct GetTransactionKernelFieldSize(pub TransactionKernelField);
 
-impl GetTransactionKernelField {
-    fn skip_field(field: TransactionKernelField) -> String {
+impl GetTransactionKernelFieldSize {
+    fn local_field_size(field: TransactionKernelField) -> String {
         match field {
             TransactionKernelField::Inputs => {
                 // The field `inputs` is a `Vec` of `RemovalRecord`s, whose
@@ -30,10 +30,10 @@ impl GetTransactionKernelField {
                 // BFieldElements. Yay!
                 "
                 read_mem // _ *inputs len
-                add // _ *inputs+len
-                push 1 add // _ *inputs+len+1
-                // _ *outputs"
-                    .to_string()
+                push 1 add // _ *inputs len+1
+                swap 1 pop // _ len+1
+                "
+                .to_string()
             }
             TransactionKernelField::Outputs => {
                 // The field `outputs` is a `Vec` of `AdditionRecord`s, which
@@ -45,9 +45,8 @@ impl GetTransactionKernelField {
                 read_mem // _ *outputs num_outputs
                 push {DIGEST_LENGTH} // _ *outputs num_outputs digest_length
                 mul // _ *outputs len
-                add // _ *outputs+len
-                push 1 add // _ *outputs+len+1
-                // _ *pubscript_hashes_and_inputs"
+                push 1 add // _ *outputs len+1
+                swap 1 pop"
                 )
             }
             TransactionKernelField::PubscriptHashesAndInputs => {
@@ -58,10 +57,10 @@ impl GetTransactionKernelField {
                 // BFieldElements. Yay!
                 "
                 read_mem // _ *pubscript_hashes_and_inputs len
-                add // _ *pubscript_hashes_and_inputs+len
-                push 1 add // _ *pubscript_hashes_and_input+len+1
-                // _ *fee"
-                    .to_string()
+                push 1 add // _ *pubscript_hashes_and_input len+1
+                swap 1 pop
+                "
+                .to_string()
             }
             TransactionKernelField::Fee => {
                 // The field `fee` is an `Amount`, which currently consists of 4
@@ -69,9 +68,9 @@ impl GetTransactionKernelField {
                 // at compile time!
                 "
                 push 4 // _ *fee 4
-                add // _ *fee+4
-                // _ *coinbase"
-                    .to_string()
+                swap 1 pop
+                "
+                .to_string()
             }
             TransactionKernelField::Coinbase => {
                 // The field `coinbase` is an `Option` of `Amount`, so its length
@@ -84,63 +83,27 @@ impl GetTransactionKernelField {
                     push 4 // _ *coinbase opt 4
                     mul // _ *coinbase opt*4
                     push 1 add // _ *coinbase opt*4+1
-                    add // _ *timestamp"
+                    swap 1 pop"
                     .to_string()
             }
             TransactionKernelField::Timestamp => {
                 // The field `timestamp` is just a single `BFieldElement` with
                 // static size 1.
-                "push 1 add".to_string()
+                "push 1
+                swap 1 pop
+                "
+                .to_string()
             }
             TransactionKernelField::MutatorSetHash => {
                 // The field `mutator_set_hash` is a Digest with static size
                 // DIGEST_LENGTH.
-                format!("push {DIGEST_LENGTH} add")
+                format!(
+                    "push {DIGEST_LENGTH}
+                swap 1 pop"
+                )
             }
         }
     }
-
-    pub fn skip_fields_upto(field: TransactionKernelField) -> String {
-        let predecessor_fields = match field {
-            TransactionKernelField::Inputs => vec![],
-            TransactionKernelField::Outputs => vec![TransactionKernelField::Inputs],
-            TransactionKernelField::PubscriptHashesAndInputs => vec![
-                TransactionKernelField::Inputs,
-                TransactionKernelField::Outputs,
-            ],
-            TransactionKernelField::Fee => vec![
-                TransactionKernelField::Inputs,
-                TransactionKernelField::Outputs,
-                TransactionKernelField::PubscriptHashesAndInputs,
-            ],
-            TransactionKernelField::Coinbase => vec![
-                TransactionKernelField::Inputs,
-                TransactionKernelField::Outputs,
-                TransactionKernelField::PubscriptHashesAndInputs,
-                TransactionKernelField::Fee,
-            ],
-            TransactionKernelField::Timestamp => vec![
-                TransactionKernelField::Inputs,
-                TransactionKernelField::Outputs,
-                TransactionKernelField::PubscriptHashesAndInputs,
-                TransactionKernelField::Fee,
-                TransactionKernelField::Coinbase,
-            ],
-            TransactionKernelField::MutatorSetHash => vec![
-                TransactionKernelField::Inputs,
-                TransactionKernelField::Outputs,
-                TransactionKernelField::PubscriptHashesAndInputs,
-                TransactionKernelField::Fee,
-                TransactionKernelField::Coinbase,
-                TransactionKernelField::Timestamp,
-            ],
-        };
-        predecessor_fields
-            .into_iter()
-            .map(Self::skip_field)
-            .join("\n\n")
-    }
-
     fn input_state(
         address: BFieldElement,
         transaction_kernel_encoded: &[BFieldElement],
@@ -161,10 +124,10 @@ impl GetTransactionKernelField {
     }
 }
 
-impl Snippet for GetTransactionKernelField {
+impl Snippet for GetTransactionKernelFieldSize {
     fn entrypoint(&self) -> String {
         format!(
-            "tasm_neptune_transaction_get_transaction_kernel_field_{}",
+            "tasm_neptune_transaction_get_transaction_kernel_field_size_{}",
             self.0
         )
     }
@@ -178,7 +141,7 @@ impl Snippet for GetTransactionKernelField {
     }
 
     fn output_types(&self) -> Vec<crate::snippet::DataType> {
-        vec![DataType::VoidPointer]
+        vec![DataType::U32]
     }
 
     fn outputs(&self) -> Vec<String> {
@@ -191,14 +154,16 @@ impl Snippet for GetTransactionKernelField {
 
     fn function_code(&self, _library: &mut crate::snippet_state::SnippetState) -> String {
         let entrypoint = self.entrypoint();
-        let skip_fields = Self::skip_fields_upto(self.0);
+        let skip_fields = GetTransactionKernelField::skip_fields_upto(self.0);
+        let local_size = Self::local_field_size(self.0);
 
         format!(
             "
         // BEFORE: _ *addr
-        // AFTER: _ *field_addr
+        // AFTER: _ field_size
         {entrypoint}:
             {skip_fields}
+            {local_size}
             return
             "
         )
@@ -251,35 +216,56 @@ impl Snippet for GetTransactionKernelField {
         // read address
         let mut address = stack.pop().unwrap();
 
-        // for each field, add offset to address
-        if !matches!(self.0, TransactionKernelField::Inputs) {
+        // traverse down all fields until we find the one we are interested in; get the size of that one
+        let size;
+        let inputs_distance = BFieldElement::new(1) + *memory.get(&address).unwrap();
+        if matches!(self.0, TransactionKernelField::Inputs) {
+            size = inputs_distance.value() as usize;
+        } else {
             // vec of variable width elements => prepended with encoding length
-            address += BFieldElement::new(1) + *memory.get(&address).unwrap();
+            address += inputs_distance;
 
-            if !matches!(self.0, TransactionKernelField::Outputs) {
+            let outputs_distance = BFieldElement::new(1)
+                + *memory.get(&address).unwrap() * BFieldElement::new(DIGEST_LENGTH as u64);
+            if matches!(self.0, TransactionKernelField::Outputs) {
+                size = outputs_distance.value() as usize;
+            } else {
                 // vec of fixed length elements => prepended with number of elements
-                address += BFieldElement::new(1)
-                    + *memory.get(&address).unwrap() * BFieldElement::new(DIGEST_LENGTH as u64);
+                address += outputs_distance;
 
-                if !matches!(self.0, TransactionKernelField::PubscriptHashesAndInputs) {
+                let pubscript_distance = BFieldElement::new(1) + *memory.get(&address).unwrap();
+                if matches!(self.0, TransactionKernelField::PubscriptHashesAndInputs) {
+                    size = pubscript_distance.value() as usize;
+                } else {
                     // vec of variable width elements => prepended with encoding length
-                    address += BFieldElement::new(1) + *memory.get(&address).unwrap();
+                    address += pubscript_distance;
 
-                    if !matches!(self.0, TransactionKernelField::Fee) {
+                    if matches!(self.0, TransactionKernelField::Fee) {
+                        size = 4;
+                    } else {
                         // fixed length
                         address += BFieldElement::new(4);
 
-                        if !matches!(self.0, TransactionKernelField::Coinbase) {
+                        let coinbase_distance = BFieldElement::new(1)
+                            + BFieldElement::new(4) * *memory.get(&address).unwrap();
+                        if matches!(self.0, TransactionKernelField::Coinbase) {
+                            size = coinbase_distance.value() as usize;
+                        } else {
                             // option of fixed length element
-                            address += BFieldElement::new(1)
-                                + BFieldElement::new(4) * *memory.get(&address).unwrap();
+                            address += coinbase_distance;
 
-                            if !matches!(self.0, TransactionKernelField::Timestamp) {
+                            if matches!(self.0, TransactionKernelField::Timestamp) {
+                                size = 1;
+                            } else {
                                 // fixed length element
                                 address += BFieldElement::new(1);
 
-                                if !matches!(self.0, TransactionKernelField::MutatorSetHash) {
-                                    unreachable!("field in TransactionKernel is not matched by any enum variant")
+                                if matches!(self.0, TransactionKernelField::MutatorSetHash) {
+                                    size = DIGEST_LENGTH;
+                                } else {
+                                    unreachable!(
+                                        "Enum TransactionKernelField must match with some variant."
+                                    );
                                 }
                             }
                         }
@@ -289,7 +275,7 @@ impl Snippet for GetTransactionKernelField {
         }
 
         // write resulting address back
-        stack.push(address)
+        stack.push(BFieldElement::new(size as u64));
     }
 }
 
@@ -297,51 +283,59 @@ impl Snippet for GetTransactionKernelField {
 mod tests {
     use crate::{snippet_bencher::bench_and_write, test_helpers::rust_tasm_equivalence_prop_new};
 
-    use super::{GetTransactionKernelField, TransactionKernelField};
+    use super::{GetTransactionKernelFieldSize, TransactionKernelField};
 
     #[test]
     fn new_prop_test() {
         rust_tasm_equivalence_prop_new(
-            &GetTransactionKernelField(TransactionKernelField::Inputs),
+            &GetTransactionKernelFieldSize(TransactionKernelField::Inputs),
             true,
         );
         rust_tasm_equivalence_prop_new(
-            &GetTransactionKernelField(TransactionKernelField::Outputs),
+            &GetTransactionKernelFieldSize(TransactionKernelField::Outputs),
             true,
         );
         rust_tasm_equivalence_prop_new(
-            &GetTransactionKernelField(TransactionKernelField::PubscriptHashesAndInputs),
+            &GetTransactionKernelFieldSize(TransactionKernelField::PubscriptHashesAndInputs),
             true,
         );
         rust_tasm_equivalence_prop_new(
-            &GetTransactionKernelField(TransactionKernelField::Fee),
+            &GetTransactionKernelFieldSize(TransactionKernelField::Fee),
             true,
         );
         rust_tasm_equivalence_prop_new(
-            &GetTransactionKernelField(TransactionKernelField::Coinbase),
+            &GetTransactionKernelFieldSize(TransactionKernelField::Coinbase),
             true,
         );
         rust_tasm_equivalence_prop_new(
-            &GetTransactionKernelField(TransactionKernelField::Timestamp),
+            &GetTransactionKernelFieldSize(TransactionKernelField::Timestamp),
             true,
         );
         rust_tasm_equivalence_prop_new(
-            &GetTransactionKernelField(TransactionKernelField::MutatorSetHash),
+            &GetTransactionKernelFieldSize(TransactionKernelField::MutatorSetHash),
             true,
         );
     }
 
     #[test]
-    fn get_transaction_kernel_field_benchmark() {
-        bench_and_write(GetTransactionKernelField(TransactionKernelField::Inputs));
-        bench_and_write(GetTransactionKernelField(TransactionKernelField::Outputs));
-        bench_and_write(GetTransactionKernelField(
+    fn get_transaction_kernel_field_size_benchmark() {
+        bench_and_write(GetTransactionKernelFieldSize(
+            TransactionKernelField::Inputs,
+        ));
+        bench_and_write(GetTransactionKernelFieldSize(
+            TransactionKernelField::Outputs,
+        ));
+        bench_and_write(GetTransactionKernelFieldSize(
             TransactionKernelField::PubscriptHashesAndInputs,
         ));
-        bench_and_write(GetTransactionKernelField(TransactionKernelField::Fee));
-        bench_and_write(GetTransactionKernelField(TransactionKernelField::Coinbase));
-        bench_and_write(GetTransactionKernelField(TransactionKernelField::Timestamp));
-        bench_and_write(GetTransactionKernelField(
+        bench_and_write(GetTransactionKernelFieldSize(TransactionKernelField::Fee));
+        bench_and_write(GetTransactionKernelFieldSize(
+            TransactionKernelField::Coinbase,
+        ));
+        bench_and_write(GetTransactionKernelFieldSize(
+            TransactionKernelField::Timestamp,
+        ));
+        bench_and_write(GetTransactionKernelFieldSize(
             TransactionKernelField::MutatorSetHash,
         ));
     }
