@@ -245,7 +245,7 @@ pub fn execute(
             output: output.clone(),
         };
 
-        let code_header = &code[0..100];
+        let code_header = &code[0..std::cmp::min(code.len(), 100)];
         println!("Execution suceeded. Now proving {code_header}");
         let tick = SystemTime::now();
         let proof =
@@ -258,7 +258,7 @@ pub fn execute(
         assert!(
             triton_vm::verify(&StarkParameters::default(), &proof),
             "Generated proof must verify for program:\n {}\n\n Whole program was:\n\n{}",
-            &code[0..100],
+            code_header,
             executed_code
         );
     }
