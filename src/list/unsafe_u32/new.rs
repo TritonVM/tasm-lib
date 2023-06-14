@@ -49,6 +49,8 @@ impl Snippet for UnsafeNew {
 
         format!(
             "
+            // BEFORE: _ capacity
+            // AFTER: _ *list
             {entrypoint}:
                 // _ capacity
 

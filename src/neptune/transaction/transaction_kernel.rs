@@ -1,6 +1,7 @@
-use std::fmt::Display;
+use std::{collections::HashMap, fmt::Display};
 
 use itertools::Itertools;
+use num_traits::Zero;
 use rand::{random, rngs::StdRng, thread_rng, Rng, RngCore, SeedableRng};
 use triton_vm::BFieldElement;
 use twenty_first::{
@@ -8,7 +9,7 @@ use twenty_first::{
     shared_math::{bfield_codec::BFieldCodec, other::random_elements},
 };
 
-use crate::Digest;
+use crate::{get_init_tvm_stack, Digest, ExecutionState};
 
 #[derive(Copy, Clone, Debug)]
 pub enum TransactionKernelField {
@@ -130,4 +131,31 @@ pub fn pseudorandom_transaction_kernel_encoding(
         mutator_set_hash.encode(),
     ]
     .concat()
+}
+
+pub fn input_state_with_kernel_in_memory(
+    address: BFieldElement,
+    transaction_kernel_encoded: &[BFieldElement],
+) -> ExecutionState {
+    // populate memory
+    let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
+    for (i, t) in transaction_kernel_encoded.iter().enumerate() {
+        memory.insert(address + BFieldElement::new(i as u64), *t);
+    }
+
+    // set dynamic allocator
+    memory.insert(
+        BFieldElement::zero(),
+        BFieldElement::new(transaction_kernel_encoded.len() as u64) + address,
+    );
+
+    let mut stack = get_init_tvm_stack();
+    stack.push(address);
+    ExecutionState {
+        stack,
+        std_in: vec![],
+        secret_in: vec![],
+        memory,
+        words_allocated: 0,
+    }
 }

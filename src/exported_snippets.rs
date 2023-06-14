@@ -78,6 +78,7 @@ use crate::{
             get_transaction_kernel_field::GetTransactionKernelField,
             get_transaction_kernel_field_size::GetTransactionKernelFieldSize,
             transaction_kernel::TransactionKernelField,
+            transaction_kernel_mast_hash::TransactionKernelMastHash,
         },
     },
     other_snippets::bfe_add::BfeAdd,
@@ -393,6 +394,7 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn Snippet> {
         "tasm_neptune_transaction_get_transaction_kernel_field_size_coinbase" => Box::new(GetTransactionKernelFieldSize(TransactionKernelField::Coinbase)),
         "tasm_neptune_transaction_get_transaction_kernel_field_size_timestamp" => Box::new(GetTransactionKernelFieldSize(TransactionKernelField::Timestamp)),
         "tasm_neptune_transaction_get_transaction_kernel_field_size_mutator_set_hash" => Box::new(GetTransactionKernelFieldSize(TransactionKernelField::MutatorSetHash)),
+        "tasm_neptune_transaction_transaction_kernel_mast_hash" => Box::new(TransactionKernelMastHash),
 
         _ => panic!("Could not find \"{fn_name}\" in the function `exported_snippets`. Did you include it there?"),
     }

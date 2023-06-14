@@ -1,15 +1,14 @@
-use std::collections::HashMap;
-
 use itertools::Itertools;
 
 use rand::random;
 use triton_vm::BFieldElement;
 
 use crate::{
-    get_init_tvm_stack,
-    neptune::transaction::transaction_kernel::random_transaction_kernel_encoding,
+    neptune::transaction::transaction_kernel::{
+        input_state_with_kernel_in_memory, random_transaction_kernel_encoding,
+    },
     snippet::{DataType, Snippet},
-    ExecutionState, DIGEST_LENGTH,
+    DIGEST_LENGTH,
 };
 
 use super::transaction_kernel::{pseudorandom_transaction_kernel_encoding, TransactionKernelField};
@@ -30,10 +29,12 @@ impl GetTransactionKernelField {
                 // BFieldElements. Yay!
                 "
                 read_mem // _ *inputs len
-                add // _ *inputs+len
-                push 1 add // _ *inputs+len+1
-                // _ *outputs"
-                    .to_string()
+                push 1 // _ *inputs len 1
+                add // _ *inputs len+1
+                add // _ *inputs+len+1
+                // _ *outputs
+                "
+                .to_string()
             }
             TransactionKernelField::Outputs => {
                 // The field `outputs` is a `Vec` of `AdditionRecord`s, which
@@ -140,25 +141,6 @@ impl GetTransactionKernelField {
             .map(Self::skip_field)
             .join("\n\n")
     }
-
-    fn input_state(
-        address: BFieldElement,
-        transaction_kernel_encoded: &[BFieldElement],
-    ) -> ExecutionState {
-        let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
-        for (i, t) in transaction_kernel_encoded.iter().enumerate() {
-            memory.insert(address + BFieldElement::new(i as u64), *t);
-        }
-        let mut stack = get_init_tvm_stack();
-        stack.push(address);
-        ExecutionState {
-            stack,
-            std_in: vec![],
-            secret_in: vec![],
-            memory,
-            words_allocated: 0,
-        }
-    }
 }
 
 impl Snippet for GetTransactionKernelField {
@@ -210,10 +192,10 @@ impl Snippet for GetTransactionKernelField {
 
     fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
         vec![
-            Self::input_state(random(), &random_transaction_kernel_encoding()),
-            Self::input_state(random(), &random_transaction_kernel_encoding()),
-            Self::input_state(random(), &random_transaction_kernel_encoding()),
-            Self::input_state(random(), &random_transaction_kernel_encoding()),
+            input_state_with_kernel_in_memory(random(), &random_transaction_kernel_encoding()),
+            input_state_with_kernel_in_memory(random(), &random_transaction_kernel_encoding()),
+            input_state_with_kernel_in_memory(random(), &random_transaction_kernel_encoding()),
+            input_state_with_kernel_in_memory(random(), &random_transaction_kernel_encoding()),
         ]
     }
 
@@ -223,7 +205,7 @@ impl Snippet for GetTransactionKernelField {
         seed[1] = 0xdd;
         seed[2] = 0xbe;
         seed[3] = 0xef;
-        Self::input_state(
+        input_state_with_kernel_in_memory(
             BFieldElement::new(1),
             &pseudorandom_transaction_kernel_encoding(seed, 360, 2, 500),
         )
@@ -235,7 +217,7 @@ impl Snippet for GetTransactionKernelField {
         seed[1] = 0xdd;
         seed[2] = 0xbe;
         seed[3] = 0xef;
-        Self::input_state(
+        input_state_with_kernel_in_memory(
             BFieldElement::new(1),
             &pseudorandom_transaction_kernel_encoding(seed, 3600, 20, 5000),
         )

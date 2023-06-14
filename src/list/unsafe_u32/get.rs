@@ -86,7 +86,7 @@ impl Snippet for UnsafeGet {
         format!(
             "
             // BEFORE: _ *list index
-            // After: _ elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}
+            // AFTER: _ elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}
             {entrypoint}:
                 push 1
                 add

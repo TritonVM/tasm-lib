@@ -90,14 +90,14 @@ impl Snippet for UnsafeSet {
                 // AFTER: _
                 {entrypoint}:
                     {mul_with_size}
-                    push 1
+                    push 1 // safety offset
                     add
                     add
 
-                    // stack: _ elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}} *list + offset
+                    // stack: _ elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}} *addr
 
                     {write_elements_to_memory_code}
-                    // stack: _ *list + offset
+                    // stack: _ *addr
                     pop
 
                     return
