@@ -245,6 +245,13 @@ pub fn execute(
             output: output.clone(),
         };
 
+        println!(
+            "\ntable heights:\nprocessor table: {}\nhash table: {}\nu32 table: {}",
+            simulation_trace.processor_trace.len(),
+            simulation_trace.hash_trace.len(),
+            simulation_trace.u32_entries.len()
+        );
+
         let code_header = &code[0..std::cmp::min(code.len(), 100)];
         println!("Execution suceeded. Now proving {code_header}");
         let tick = SystemTime::now();

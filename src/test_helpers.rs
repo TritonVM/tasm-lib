@@ -89,6 +89,11 @@ pub fn rust_tasm_equivalence_prop<T: Snippet>(
         snippet_struct.entrypoint(),
         execution_result.hash_table_height
     );
+    println!(
+        "U32 table height for `{}`: {}",
+        snippet_struct.entrypoint(),
+        execution_result.u32_table_height
+    );
 
     let mut rust_memory = init_memory;
     let mut rust_stack = stack.to_vec();

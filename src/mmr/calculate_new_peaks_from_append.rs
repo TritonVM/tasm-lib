@@ -444,44 +444,97 @@ mod tests {
     }
 
     #[test]
-    fn calculate_new_peaks_from_append_benchmark() {
+    fn calculate_new_peaks_from_append_unsafe_lists_benchmark() {
         bench_and_write(CalculateNewPeaksFromAppend {
             list_type: ListType::Unsafe,
         });
+    }
+
+    #[test]
+    fn calculate_new_peaks_from_append_safe_lists_benchmark() {
         bench_and_write(CalculateNewPeaksFromAppend {
             list_type: ListType::Safe,
         });
     }
 
     #[test]
-    fn mmra_append_test_empty() {
+    fn mmra_append_test_empty_unsafe() {
         let mmra: Mmra = MmrAccumulator::new(vec![]);
         let digest = VmHasher::hash(&BFieldElement::zero());
         let expected_final_mmra = MmrAccumulator::new(vec![digest]);
-        prop_calculate_new_peaks_from_append(mmra, digest, expected_final_mmra);
+        prop_calculate_new_peaks_from_append(mmra, digest, expected_final_mmra, ListType::Unsafe);
     }
 
     #[test]
-    fn mmra_append_test_single() {
+    fn mmra_append_test_empty_safe() {
+        let mmra: Mmra = MmrAccumulator::new(vec![]);
+        let digest = VmHasher::hash(&BFieldElement::zero());
+        let expected_final_mmra = MmrAccumulator::new(vec![digest]);
+        prop_calculate_new_peaks_from_append(mmra, digest, expected_final_mmra, ListType::Safe);
+    }
+
+    #[test]
+    fn mmra_append_test_single_unsafe() {
         let digest0 = VmHasher::hash(&BFieldElement::new(4545));
         let digest1 = VmHasher::hash(&BFieldElement::new(12345));
         let mmra: Mmra = MmrAccumulator::new(vec![digest0]);
         let expected_final_mmra = MmrAccumulator::new(vec![digest0, digest1]);
-        prop_calculate_new_peaks_from_append(mmra, digest1, expected_final_mmra);
+        prop_calculate_new_peaks_from_append(mmra, digest1, expected_final_mmra, ListType::Unsafe);
     }
 
     #[test]
-    fn mmra_append_test_two_leaves() {
+    fn mmra_append_test_single_safe() {
+        let digest0 = VmHasher::hash(&BFieldElement::new(4545));
+        let digest1 = VmHasher::hash(&BFieldElement::new(12345));
+        let mmra: Mmra = MmrAccumulator::new(vec![digest0]);
+        let expected_final_mmra = MmrAccumulator::new(vec![digest0, digest1]);
+        prop_calculate_new_peaks_from_append(mmra, digest1, expected_final_mmra, ListType::Safe);
+    }
+
+    #[test]
+    fn mmra_append_test_two_leaves_unsafe() {
         let digest0 = VmHasher::hash(&BFieldElement::new(4545));
         let digest1 = VmHasher::hash(&BFieldElement::new(12345));
         let digest2 = VmHasher::hash(&BFieldElement::new(55488));
         let mmra: Mmra = MmrAccumulator::new(vec![digest0, digest1]);
         let expected_final_mmra = MmrAccumulator::new(vec![digest0, digest1, digest2]);
-        prop_calculate_new_peaks_from_append(mmra, digest2, expected_final_mmra);
+        prop_calculate_new_peaks_from_append(mmra, digest2, expected_final_mmra, ListType::Unsafe);
     }
 
     #[test]
-    fn mmra_append_pbt() {
+    fn mmra_append_test_two_leaves_safe() {
+        let digest0 = VmHasher::hash(&BFieldElement::new(4545));
+        let digest1 = VmHasher::hash(&BFieldElement::new(12345));
+        let digest2 = VmHasher::hash(&BFieldElement::new(55488));
+        let mmra: Mmra = MmrAccumulator::new(vec![digest0, digest1]);
+        let expected_final_mmra = MmrAccumulator::new(vec![digest0, digest1, digest2]);
+        prop_calculate_new_peaks_from_append(mmra, digest2, expected_final_mmra, ListType::Safe);
+    }
+
+    #[test]
+    fn mmra_append_test_three_leaves_unsafe() {
+        let digest0 = VmHasher::hash(&BFieldElement::new(4545));
+        let digest1 = VmHasher::hash(&BFieldElement::new(12345));
+        let digest2 = VmHasher::hash(&BFieldElement::new(55488));
+        let digest3 = VmHasher::hash(&BFieldElement::new(554880000000));
+        let mmra: Mmra = MmrAccumulator::new(vec![digest0, digest1, digest2]);
+        let expected_final_mmra = MmrAccumulator::new(vec![digest0, digest1, digest2, digest3]);
+        prop_calculate_new_peaks_from_append(mmra, digest3, expected_final_mmra, ListType::Unsafe);
+    }
+
+    #[test]
+    fn mmra_append_test_three_leaves_safe() {
+        let digest0 = VmHasher::hash(&BFieldElement::new(4545));
+        let digest1 = VmHasher::hash(&BFieldElement::new(12345));
+        let digest2 = VmHasher::hash(&BFieldElement::new(55488));
+        let digest3 = VmHasher::hash(&BFieldElement::new(554880000000));
+        let mmra: Mmra = MmrAccumulator::new(vec![digest0, digest1, digest2]);
+        let expected_final_mmra = MmrAccumulator::new(vec![digest0, digest1, digest2, digest3]);
+        prop_calculate_new_peaks_from_append(mmra, digest3, expected_final_mmra, ListType::Safe);
+    }
+
+    #[test]
+    fn mmra_append_pbt_unsafe_lists() {
         let inserted_digest: Digest = VmHasher::hash(&BFieldElement::new(1337));
         for init_size in 0..40 {
             println!("init_size = {init_size}");
@@ -489,7 +542,30 @@ mod tests {
             let init_mmra: Mmra = MmrAccumulator::new(leaf_digests.clone());
             let expected_final_mmra: Mmra =
                 MmrAccumulator::new(vec![leaf_digests, vec![inserted_digest]].concat());
-            prop_calculate_new_peaks_from_append(init_mmra, inserted_digest, expected_final_mmra);
+            prop_calculate_new_peaks_from_append(
+                init_mmra,
+                inserted_digest,
+                expected_final_mmra,
+                ListType::Unsafe,
+            );
+        }
+    }
+
+    #[test]
+    fn mmra_append_pbt_safe_lists() {
+        let inserted_digest: Digest = VmHasher::hash(&BFieldElement::new(1337));
+        for init_size in 0..40 {
+            println!("init_size = {init_size}");
+            let leaf_digests: Vec<Digest> = random_elements(init_size);
+            let init_mmra: Mmra = MmrAccumulator::new(leaf_digests.clone());
+            let expected_final_mmra: Mmra =
+                MmrAccumulator::new(vec![leaf_digests, vec![inserted_digest]].concat());
+            prop_calculate_new_peaks_from_append(
+                init_mmra,
+                inserted_digest,
+                expected_final_mmra,
+                ListType::Safe,
+            );
         }
     }
 
@@ -503,7 +579,12 @@ mod tests {
         );
         let mut expected_final_mmr = init_mmra.clone();
         expected_final_mmr.append(inserted_digest);
-        prop_calculate_new_peaks_from_append(init_mmra, inserted_digest, expected_final_mmr);
+        prop_calculate_new_peaks_from_append(
+            init_mmra,
+            inserted_digest,
+            expected_final_mmr,
+            ListType::Unsafe,
+        );
 
         // Set MMR to be with 2^33 - 1 leaves and 33 peaks. Prepending one leaf should then reduce the number of leaves to 1.
         let inserted_digest: Digest = VmHasher::hash(&BFieldElement::new(1337));
@@ -513,13 +594,19 @@ mod tests {
         );
         let mut expected_final_mmr = init_mmra.clone();
         expected_final_mmr.append(inserted_digest);
-        prop_calculate_new_peaks_from_append(init_mmra, inserted_digest, expected_final_mmr);
+        prop_calculate_new_peaks_from_append(
+            init_mmra,
+            inserted_digest,
+            expected_final_mmr,
+            ListType::Unsafe,
+        );
     }
 
     fn prop_calculate_new_peaks_from_append(
         start_mmr: MmrAccumulator<VmHasher>,
         new_leaf: Digest,
         expected_mmr: MmrAccumulator<VmHasher>,
+        list_type: ListType,
     ) {
         // We assume that the peaks can safely be stored in memory on address 0
         let peaks_pointer = BFieldElement::one();
@@ -539,9 +626,29 @@ mod tests {
 
         // Initialize memory
         let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
-        rust_shadowing_helper_functions::unsafe_list::unsafe_list_new(peaks_pointer, &mut memory);
+
+        match list_type {
+            ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_new(
+                peaks_pointer,
+                MAX_MMR_HEIGHT as u32,
+                &mut memory,
+            ),
+            ListType::Unsafe => rust_shadowing_helper_functions::unsafe_list::unsafe_list_new(
+                peaks_pointer,
+                &mut memory,
+            ),
+        }
+
+        let list_push = match list_type {
+            ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_push,
+            ListType::Unsafe => rust_shadowing_helper_functions::unsafe_list::unsafe_list_push,
+        };
+        let list_get = match list_type {
+            ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_get,
+            ListType::Unsafe => rust_shadowing_helper_functions::unsafe_list::unsafe_list_get,
+        };
         for peak in start_mmr.get_peaks() {
-            rust_shadowing_helper_functions::unsafe_list::unsafe_list_push(
+            list_push(
                 peaks_pointer,
                 peak.values().to_vec(),
                 &mut memory,
@@ -549,20 +656,22 @@ mod tests {
             );
         }
 
-        let auth_paths_pointer = BFieldElement::new((MAX_MMR_HEIGHT * DIGEST_LENGTH + 2) as u64);
+        let words_allocated = match list_type {
+            ListType::Safe => MAX_MMR_HEIGHT * DIGEST_LENGTH + 2,
+            ListType::Unsafe => MAX_MMR_HEIGHT * DIGEST_LENGTH + 1,
+        };
+        let auth_paths_pointer = BFieldElement::new((words_allocated + 1) as u64);
         let mut expected_final_stack = get_init_tvm_stack();
         expected_final_stack.push(peaks_pointer);
         expected_final_stack.push(auth_paths_pointer);
 
         let _execution_result = rust_tasm_equivalence_prop(
-            &CalculateNewPeaksFromAppend {
-                list_type: ListType::Unsafe,
-            },
+            &CalculateNewPeaksFromAppend { list_type },
             &init_stack,
             &[],
             &[],
             &mut memory,
-            MAX_MMR_HEIGHT * DIGEST_LENGTH + 1,
+            words_allocated,
             Some(&expected_final_stack),
         );
 
@@ -571,14 +680,9 @@ mod tests {
         let mut produced_peaks = vec![];
         for i in 0..peaks_count {
             let peak = Digest::new(
-                rust_shadowing_helper_functions::unsafe_list::unsafe_list_get(
-                    peaks_pointer,
-                    i as usize,
-                    &memory,
-                    DIGEST_LENGTH,
-                )
-                .try_into()
-                .unwrap(),
+                list_get(peaks_pointer, i as usize, &memory, DIGEST_LENGTH)
+                    .try_into()
+                    .unwrap(),
             );
             produced_peaks.push(peak);
         }
@@ -593,14 +697,9 @@ mod tests {
         let mut produced_auth_path = vec![];
         for i in 0..auth_path_element_count {
             produced_auth_path.push(Digest::new(
-                rust_shadowing_helper_functions::unsafe_list::unsafe_list_get(
-                    auth_paths_pointer,
-                    i as usize,
-                    &memory,
-                    DIGEST_LENGTH,
-                )
-                .try_into()
-                .unwrap(),
+                list_get(auth_paths_pointer, i as usize, &memory, DIGEST_LENGTH)
+                    .try_into()
+                    .unwrap(),
             ));
         }
 
