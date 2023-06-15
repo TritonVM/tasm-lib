@@ -189,11 +189,11 @@ pub fn execute(
     }
 
     // Simulate the program, since this gives us hash table output
-    let (simulation_trace, _simulation_output, err) =
-        vm::simulate(&program, std_in.clone(), secret_in.clone());
-    if let Some(e) = err {
-        bail!("`simulate` failed with error: {e}")
-    }
+    let (simulation_trace, _simulation_output) =
+        match vm::simulate(&program, std_in.clone(), secret_in.clone()) {
+            Ok(res) => res,
+            Err(e) => bail!("`simulate` failed with error: {e}"),
+        };
 
     let start_state: VMState = execution_trace
         .first()
