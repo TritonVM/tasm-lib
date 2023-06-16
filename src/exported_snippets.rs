@@ -85,6 +85,7 @@ use crate::{
     pseudo::{lsb::Lsb, neg::Neg, sub::Sub},
     recufier::merkle_tree_ap_verify_from_secret_input::MtApVerifyFromSecretInput,
     snippet::{DataType, InputSource, Snippet},
+    structure::{get_field::GetField, get_field_with_size::GetFieldWithSize},
     VmHasher,
 };
 
@@ -374,6 +375,10 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn Snippet> {
         // memory
         "tasm_memory_dyn_malloc" => Box::new(DynMalloc),
         "tasm_memory_memcpy" => Box::new(MemCpy),
+
+        // structure
+        "tasm_structure_get_field" => Box::new(GetField),
+        "tasm_structure_get_field_with_size" => Box::new(GetFieldWithSize),
 
         // mutator sets
         "tasm_neptune_mutator_set_commit" => Box::new(Commit),

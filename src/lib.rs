@@ -32,6 +32,7 @@ pub mod rust_shadowing_helper_functions;
 pub mod snippet;
 pub mod snippet_bencher;
 pub mod snippet_state;
+pub mod structure;
 mod test_helpers;
 
 // The hasher type must match whatever algebraic hasher the VM is using
