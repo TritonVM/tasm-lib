@@ -1,6 +1,2 @@
-pub mod get_removal_record_integrity_witness_field;
-pub mod get_transaction_kernel_field;
-pub mod get_transaction_kernel_field_size;
-pub mod removal_record_integrity_witness;
 pub mod transaction_kernel;
 pub mod transaction_kernel_mast_hash;
