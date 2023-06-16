@@ -11,13 +11,10 @@ use crate::{
     list::unsafe_u32::{
         get::UnsafeGet, new::UnsafeNew, set::UnsafeSet, set_length::UnsafeSetLength,
     },
-    neptune::transaction::{
-        get_transaction_kernel_field::GetTransactionKernelField,
-        get_transaction_kernel_field_size::GetTransactionKernelFieldSize,
-        transaction_kernel::random_transaction_kernel_encoding,
-    },
+    neptune::transaction::transaction_kernel::random_transaction_kernel_encoding,
     rust_shadowing_helper_functions,
     snippet::{DataType, Snippet},
+    structure::get_field_with_size::GetFieldWithSize,
     Digest, VmHasher, DIGEST_LENGTH,
 };
 
@@ -65,49 +62,7 @@ impl Snippet for TransactionKernelMastHash {
         let set_element = library.import(Box::new(UnsafeSet(DataType::Digest)));
         let set_length = library.import(Box::new(UnsafeSetLength(DataType::Digest)));
 
-        let get_field_inputs = library.import(Box::new(GetTransactionKernelField(
-            TransactionKernelField::Inputs,
-        )));
-        let get_field_outputs = library.import(Box::new(GetTransactionKernelField(
-            TransactionKernelField::Outputs,
-        )));
-        let get_field_pubscript_hashes_and_inputs = library.import(Box::new(
-            GetTransactionKernelField(TransactionKernelField::PubscriptHashesAndInputs),
-        ));
-        let get_field_fee = library.import(Box::new(GetTransactionKernelField(
-            TransactionKernelField::Fee,
-        )));
-        let get_field_coinbase = library.import(Box::new(GetTransactionKernelField(
-            TransactionKernelField::Coinbase,
-        )));
-        let get_field_timestamp = library.import(Box::new(GetTransactionKernelField(
-            TransactionKernelField::Timestamp,
-        )));
-        let get_field_mutator_set_hash = library.import(Box::new(GetTransactionKernelField(
-            TransactionKernelField::MutatorSetHash,
-        )));
-
-        let get_field_size_inputs = library.import(Box::new(GetTransactionKernelFieldSize(
-            TransactionKernelField::Inputs,
-        )));
-        let get_field_size_outputs = library.import(Box::new(GetTransactionKernelFieldSize(
-            TransactionKernelField::Outputs,
-        )));
-        let get_field_size_pubscript_hashes_and_inputs = library.import(Box::new(
-            GetTransactionKernelFieldSize(TransactionKernelField::PubscriptHashesAndInputs),
-        ));
-        let get_field_size_fee = library.import(Box::new(GetTransactionKernelFieldSize(
-            TransactionKernelField::Fee,
-        )));
-        let get_field_size_coinbase = library.import(Box::new(GetTransactionKernelFieldSize(
-            TransactionKernelField::Coinbase,
-        )));
-        let get_field_size_timestamp = library.import(Box::new(GetTransactionKernelFieldSize(
-            TransactionKernelField::Timestamp,
-        )));
-        let get_field_size_mutator_set_hash = library.import(Box::new(
-            GetTransactionKernelFieldSize(TransactionKernelField::MutatorSetHash),
-        ));
+        let get_field_with_size = library.import(Box::new(GetFieldWithSize));
 
         let hash_varlen = library.import(Box::new(HashVarlen));
 
@@ -125,63 +80,56 @@ impl Snippet for TransactionKernelMastHash {
 
             // populate list[8] with inputs digest
             dup 1                       // _ *kernel *list *kernel
-            call {get_field_inputs}     // _ *kernel *list *inputs
-            dup 2                       // _ *kernel *list *inputs *kernel
-            call {get_field_size_inputs} // _ *kernel *list *inputs *inputs_size
+            push 0
+            call {get_field_with_size}  // _ *kernel *list *inputs *inputs_size
             call {hash_varlen}          // _ *kernel *list d4 d3 d2 d1 d0
             dup 5 push 8                // _ *kernel *list d4 d3 d2 d1 d0 *list 8
             call {set_element}          // _ *kernel *list
 
             // populate list[9] with outputs digest
             dup 1                       // _ *kernel *list *kernel
-            call {get_field_outputs}    // _ *kernel *list *outputs
-            dup 2                       // _ *kernel *list *outputs *kernel
-            call {get_field_size_outputs} // _ *kernel *list *outputs *outputs_size
+            push 1
+            call {get_field_with_size}  // _ *kernel *list *outputs *outputs_size
             call {hash_varlen}          // _ *kernel *list d4 d3 d2 d1 d0
             dup 5 push 9                // _ *kernel *list d4 d3 d2 d1 d0 *list 9
             call {set_element}          // _ *kernel *list
 
             // populate list[10] with pubscript_hashes_and_inputs digest
             dup 1                       // _ *kernel *list *kernel
-            call {get_field_pubscript_hashes_and_inputs} // _ *kernel *list *pubscript_hashes_and_inputs
-            dup 2                       // _ *kernel *list *pubscript_hashes_and_inputs *kernel
-            call {get_field_size_pubscript_hashes_and_inputs} // _ *kernel *list *pubscript_hashes_and_inputs *pubscript_hashes_and_inputs_size_size
+            push 2
+            call {get_field_with_size}  // _ *kernel *list *pubscript_hashes_and_inputs *pubscript_hashes_and_inputs_size_size
             call {hash_varlen}          // _ *kernel *list d4 d3 d2 d1 d0
             dup 5 push 10               // _ *kernel *list d4 d3 d2 d1 d0 *list 10
             call {set_element}          // _ *kernel *list
 
             // populate list[11] with fee digest
             dup 1                       // _ *kernel *list *kernel
-            call {get_field_fee}        // _ *kernel *list *fee
-            dup 2                       // _ *kernel *list *fee *kernel
-            call {get_field_size_fee}   // _ *kernel *list *fee *fee_size
+            push 3
+            call {get_field_with_size}  // _ *kernel *list *fee *fee_size
             call {hash_varlen}          // _ *kernel *list d4 d3 d2 d1 d0
             dup 5 push 11               // _ *kernel *list d4 d3 d2 d1 d0 *list 11
             call {set_element}          // _ *kernel *list
 
             // populate list[12] with coinbase digest
             dup 1                       // _ *kernel *list *kernel
-            call {get_field_coinbase}   // _ *kernel *list *coinbase
-            dup 2                       // _ *kernel *list *coinbase *kernel
-            call {get_field_size_coinbase} // _ *kernel *list *coinbase *coinbase_size
+            push 4
+            call {get_field_with_size}  // _ *kernel *list *coinbase *coinbase_size
             call {hash_varlen}          // _ *kernel *list d4 d3 d2 d1 d0
             dup 5 push 12               // _ *kernel *list d4 d3 d2 d1 d0 *list 12
             call {set_element}          // _ *kernel *list
 
             // populate list[13] with timestamp digest
             dup 1                       // _ *kernel *list *kernel
-            call {get_field_timestamp}  // _ *kernel *list *timestamp
-            dup 2                       // _ *kernel *list *timestamp *kernel
-            call {get_field_size_timestamp} // _ *kernel *list *timestamp *timestamp_size
+            push 5
+            call {get_field_with_size}  // _ *kernel *list *timestamp *timestamp_size
             call {hash_varlen}          // _ *kernel *list d4 d3 d2 d1 d0
             dup 5 push 13               // _ *kernel *list d4 d3 d2 d1 d0 *list 13
             call {set_element}          // _ *kernel *list
 
             // populate list[14] with mutator set hash digest
             dup 1                       // _ *kernel *list *kernel
-            call {get_field_mutator_set_hash} // _ *kernel *list *mutator_set_hash
-            dup 2                       // _ *kernel *list *mutator_set_hash *kernel
-            call {get_field_size_mutator_set_hash} // _ *kernel *list *mutator_set_hash *mutator_set_hash_size
+            push 6
+            call {get_field_with_size}  // _ *kernel *list *mutator_set_hash *mutator_set_hash_size
             call {hash_varlen}          // _ *kernel *list d4 d3 d2 d1 d0
             dup 5 push 14               // _ *kernel *list d4 d3 d2 d1 d0 *list 14
             call {set_element}          // _ *kernel *list
