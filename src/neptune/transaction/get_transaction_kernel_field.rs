@@ -1,14 +1,15 @@
 use itertools::Itertools;
 
+use num_traits::One;
 use rand::random;
 use triton_vm::BFieldElement;
 
 use crate::{
     neptune::transaction::transaction_kernel::{
-        input_state_with_kernel_in_memory, random_transaction_kernel_encoding,
+        example_transaction_kernel_encoded, input_state_with_kernel_in_memory,
+        random_transaction_kernel_encoding,
     },
     snippet::{DataType, Snippet},
-    DIGEST_LENGTH,
 };
 
 use super::transaction_kernel::{pseudorandom_transaction_kernel_encoding, TransactionKernelField};
@@ -19,86 +20,12 @@ use super::transaction_kernel::{pseudorandom_transaction_kernel_encoding, Transa
 pub struct GetTransactionKernelField(pub TransactionKernelField);
 
 impl GetTransactionKernelField {
-    fn skip_field(field: TransactionKernelField) -> String {
-        match field {
-            TransactionKernelField::Inputs => {
-                // The field `inputs` is a `Vec` of `RemovalRecord`s, whose
-                // sizes are not known at compile time because of SWBF
-                // authentication paths.
-                // So the entire vector is prepended with its length in
-                // BFieldElements. Yay!
-                "
-                read_mem // _ *inputs len
-                push 1 // _ *inputs len 1
-                add // _ *inputs len+1
-                add // _ *inputs+len+1
-                // _ *outputs
-                "
-                .to_string()
-            }
-            TransactionKernelField::Outputs => {
-                // The field `outputs` is a `Vec` of `AdditionRecord`s, which
-                // are just wrapped `Digest`s and have lengths known at compile
-                // time.
-                // So the vector is prepended with the number of elements.
-                format!(
-                    "
-                read_mem // _ *outputs num_outputs
-                push {DIGEST_LENGTH} // _ *outputs num_outputs digest_length
-                mul // _ *outputs len
-                add // _ *outputs+len
-                push 1 add // _ *outputs+len+1
-                // _ *pubscript_hashes_and_inputs"
-                )
-            }
-            TransactionKernelField::PubscriptHashesAndInputs => {
-                // The field `pubscript_hashes_and_inputs` is a `Vec` of pairs
-                // of `Digest` and `Vec<BFieldElement>`, the latter of which has
-                // length unknown at compile time.
-                // So the entire vector is prepended with its length in
-                // BFieldElements. Yay!
-                "
-                read_mem // _ *pubscript_hashes_and_inputs len
-                add // _ *pubscript_hashes_and_inputs+len
-                push 1 add // _ *pubscript_hashes_and_input+len+1
-                // _ *fee"
-                    .to_string()
-            }
-            TransactionKernelField::Fee => {
-                // The field `fee` is an `Amount`, which currently consists of 4
-                // U32s. But this will change in the future to something unknown
-                // at compile time!
-                "
-                push 4 // _ *fee 4
-                add // _ *fee+4
-                // _ *coinbase"
-                    .to_string()
-            }
-            TransactionKernelField::Coinbase => {
-                // The field `coinbase` is an `Option` of `Amount`, so its length
-                // is not known at compile time. So we have to read the length
-                // indicator (which can be 0 or 1) and then add 4 (current size of
-                // `Amount`) if it is set, in addition to the 1 we add to account
-                // for the length indicator.
-                "
-                    read_mem // _ *coinbase opt
-                    push 4 // _ *coinbase opt 4
-                    mul // _ *coinbase opt*4
-                    push 1 add // _ *coinbase opt*4+1
-                    add // _ *timestamp"
-                    .to_string()
-            }
-            TransactionKernelField::Timestamp => {
-                // The field `timestamp` is just a single `BFieldElement` with
-                // static size 1.
-                "push 1 add".to_string()
-            }
-            TransactionKernelField::MutatorSetHash => {
-                // The field `mutator_set_hash` is a Digest with static size
-                // DIGEST_LENGTH.
-                format!("push {DIGEST_LENGTH} add")
-            }
-        }
+    fn skip_field(_field: TransactionKernelField) -> String {
+        "
+        read_mem add
+        push 1 add
+        "
+        .to_string()
     }
 
     pub fn skip_fields_upto(field: TransactionKernelField) -> String {
@@ -181,6 +108,7 @@ impl Snippet for GetTransactionKernelField {
         // AFTER: _ *field_addr
         {entrypoint}:
             {skip_fields}
+            push 1 add
             return
             "
         )
@@ -196,6 +124,7 @@ impl Snippet for GetTransactionKernelField {
             input_state_with_kernel_in_memory(random(), &random_transaction_kernel_encoding()),
             input_state_with_kernel_in_memory(random(), &random_transaction_kernel_encoding()),
             input_state_with_kernel_in_memory(random(), &random_transaction_kernel_encoding()),
+            input_state_with_kernel_in_memory(random(), &example_transaction_kernel_encoded()),
         ]
     }
 
@@ -219,7 +148,7 @@ impl Snippet for GetTransactionKernelField {
         seed[3] = 0xef;
         input_state_with_kernel_in_memory(
             BFieldElement::new(1),
-            &pseudorandom_transaction_kernel_encoding(seed, 3600, 20, 5000),
+            &pseudorandom_transaction_kernel_encoding(seed, 1000, 5, 1500),
         )
     }
 
@@ -233,41 +162,63 @@ impl Snippet for GetTransactionKernelField {
         // read address
         let mut address = stack.pop().unwrap();
 
-        // for each field, add offset to address
+        let one = BFieldElement::one();
+
         if !matches!(self.0, TransactionKernelField::Inputs) {
-            // vec of variable width elements => prepended with encoding length
-            address += BFieldElement::new(1) + *memory.get(&address).unwrap();
-
+            // inputs
+            let inputs_size = *memory.get(&address).expect("could not read inputs size");
+            address += one + inputs_size;
             if !matches!(self.0, TransactionKernelField::Outputs) {
-                // vec of fixed length elements => prepended with number of elements
-                address += BFieldElement::new(1)
-                    + *memory.get(&address).unwrap() * BFieldElement::new(DIGEST_LENGTH as u64);
-
+                // outputs
+                let outputs_size = *memory.get(&address).expect("could not read outputs size");
+                address += one + outputs_size;
                 if !matches!(self.0, TransactionKernelField::PubscriptHashesAndInputs) {
-                    // vec of variable width elements => prepended with encoding length
-                    address += BFieldElement::new(1) + *memory.get(&address).unwrap();
-
+                    // pubscript_hashes_and_inputs
+                    let pubscript_hashes_and_inputs_size = *memory
+                        .get(&address)
+                        .expect("could not read pubscripts size");
+                    address += one + pubscript_hashes_and_inputs_size;
                     if !matches!(self.0, TransactionKernelField::Fee) {
-                        // fixed length
-                        address += BFieldElement::new(4);
-
+                        // fee
+                        let fee_size = *memory.get(&address).expect("could not read fee size");
+                        address += one + fee_size;
                         if !matches!(self.0, TransactionKernelField::Coinbase) {
-                            // option of fixed length element
-                            address += BFieldElement::new(1)
-                                + BFieldElement::new(4) * *memory.get(&address).unwrap();
-
+                            // coinbase
+                            let coinbase_size =
+                                *memory.get(&address).expect("could not read coinbase size");
+                            address += one + coinbase_size;
+                            // timestamp
                             if !matches!(self.0, TransactionKernelField::Timestamp) {
-                                // fixed length element
-                                address += BFieldElement::new(1);
-
+                                let timestamp_size =
+                                    *memory.get(&address).expect("could not read timestamp size");
+                                address += one + timestamp_size;
                                 if !matches!(self.0, TransactionKernelField::MutatorSetHash) {
-                                    unreachable!("field in TransactionKernel is not matched by any enum variant")
+                                    // mutator_set_hash
+                                    let mutator_set_hash_size = *memory
+                                        .get(&address)
+                                        .expect("could not read mutator set hash size");
+                                    address += one + mutator_set_hash_size;
+                                    unreachable!("Enum field 0 does not match any variant.");
+                                } else {
+                                    address += one;
                                 }
+                            } else {
+                                address += one;
                             }
+                        } else {
+                            address += one;
                         }
+                    } else {
+                        address += one;
                     }
+                } else {
+                    address += one;
                 }
+            } else {
+                address += one;
             }
+        } else {
+            address += one;
         }
 
         // write resulting address back

@@ -126,7 +126,7 @@ impl Snippet for TransactionKernelMastHash {
             // populate list[8] with inputs digest
             dup 1                       // _ *kernel *list *kernel
             call {get_field_inputs}     // _ *kernel *list *inputs
-            dup 0                       // _ *kernel *list *inputs *inputs
+            dup 2                       // _ *kernel *list *inputs *kernel
             call {get_field_size_inputs} // _ *kernel *list *inputs *inputs_size
             call {hash_varlen}          // _ *kernel *list d4 d3 d2 d1 d0
             dup 5 push 8                // _ *kernel *list d4 d3 d2 d1 d0 *list 8
@@ -171,7 +171,7 @@ impl Snippet for TransactionKernelMastHash {
             // populate list[13] with timestamp digest
             dup 1                       // _ *kernel *list *kernel
             call {get_field_timestamp}  // _ *kernel *list *timestamp
-            dup 0 // _ *kernel *list *timestamp *timestamp
+            dup 2                       // _ *kernel *list *timestamp *kernel
             call {get_field_size_timestamp} // _ *kernel *list *timestamp *timestamp_size
             call {hash_varlen}          // _ *kernel *list d4 d3 d2 d1 d0
             dup 5 push 13               // _ *kernel *list d4 d3 d2 d1 d0 *list 13
@@ -295,6 +295,10 @@ impl Snippet for TransactionKernelMastHash {
                 BFieldElement::new(thread_rng().next_u64() % (1 << 20)),
                 &random_transaction_kernel_encoding(),
             ),
+            input_state_with_kernel_in_memory(
+                BFieldElement::new(thread_rng().next_u64() % (1 << 20)),
+                &example_transaction_kernel_encoded(),
+            ),
         ]
     }
 
@@ -334,10 +338,10 @@ impl Snippet for TransactionKernelMastHash {
 
         // inputs
         let inputs_size = memory.get(&address).unwrap().value() as usize;
-        let inputs_encoded = (0..inputs_size + 1)
+        let inputs_encoded = (0..inputs_size)
             .map(|i| {
                 *memory
-                    .get(&(address + BFieldElement::new(i as u64)))
+                    .get(&(address + BFieldElement::new(1 + i as u64)))
                     .unwrap()
             })
             .collect_vec();
@@ -345,12 +349,11 @@ impl Snippet for TransactionKernelMastHash {
         address += BFieldElement::one() + BFieldElement::new(inputs_size as u64);
 
         // outputs
-        let outputs_length = memory.get(&address).unwrap().value() as usize;
-        let outputs_size = outputs_length * DIGEST_LENGTH;
-        let outputs_encoded = (0..outputs_size + 1)
+        let outputs_size = memory.get(&address).unwrap().value() as usize;
+        let outputs_encoded = (0..outputs_size)
             .map(|i| {
                 *memory
-                    .get(&(address + BFieldElement::new(i as u64)))
+                    .get(&(address + BFieldElement::new(1 + i as u64)))
                     .unwrap()
             })
             .collect_vec();
@@ -359,10 +362,10 @@ impl Snippet for TransactionKernelMastHash {
 
         // pubscript_hashes_and_inputs
         let pubscript_hashes_and_inputs_size = memory.get(&address).unwrap().value() as usize;
-        let pubscript_hashes_and_inputs_encoded = (0..pubscript_hashes_and_inputs_size + 1)
+        let pubscript_hashes_and_inputs_encoded = (0..pubscript_hashes_and_inputs_size)
             .map(|i| {
                 *memory
-                    .get(&(address + BFieldElement::new(i as u64)))
+                    .get(&(address + BFieldElement::new(1 + i as u64)))
                     .unwrap()
             })
             .collect_vec();
@@ -372,53 +375,53 @@ impl Snippet for TransactionKernelMastHash {
             BFieldElement::one() + BFieldElement::new(pubscript_hashes_and_inputs_size as u64);
 
         // fee
-        let fee_size = 4;
+        let fee_size = memory.get(&address).unwrap().value() as usize;
         let fee_encoded = (0..fee_size)
             .map(|i| {
                 *memory
-                    .get(&(address + BFieldElement::new(i as u64)))
+                    .get(&(address + BFieldElement::new(1 + i as u64)))
                     .unwrap()
             })
             .collect_vec();
         let fee_hash = VmHasher::hash_varlen(&fee_encoded);
-        address += BFieldElement::new(fee_size as u64);
+        address += BFieldElement::one() + BFieldElement::new(fee_size as u64);
 
         // coinbase
-        let opt = memory.get(&address).unwrap().value() as usize;
-        let coinbase_size = 4 * opt;
-        let fcoinbase_encoded = (0..coinbase_size + 1)
+        let coinbase_size = memory.get(&address).unwrap().value() as usize;
+        let coinbase_encoded = (0..coinbase_size)
             .map(|i| {
                 *memory
-                    .get(&(address + BFieldElement::new(i as u64)))
+                    .get(&(address + BFieldElement::new(1 + i as u64)))
                     .unwrap()
             })
             .collect_vec();
-        let coinbase_hash = VmHasher::hash_varlen(&fcoinbase_encoded);
+        let coinbase_hash = VmHasher::hash_varlen(&coinbase_encoded);
         address += BFieldElement::one() + BFieldElement::new(coinbase_size as u64);
 
         // timestamp
-        let timestamp_size = 1;
+        let timestamp_size = memory.get(&address).unwrap().value() as usize;
+        assert_eq!(timestamp_size, 1);
         let timestamp_encoded = (0..timestamp_size)
             .map(|i| {
                 *memory
-                    .get(&(address + BFieldElement::new(i as u64)))
+                    .get(&(address + BFieldElement::new(1 + i as u64)))
                     .unwrap()
             })
             .collect_vec();
         let timestamp_hash = VmHasher::hash_varlen(&timestamp_encoded);
-        address += BFieldElement::new(timestamp_size as u64);
+        address += BFieldElement::one() + BFieldElement::new(timestamp_size as u64);
 
         // mutator_set_hash
-        let mutator_set_hash_size = DIGEST_LENGTH;
+        let mutator_set_hash_size = memory.get(&address).unwrap().value() as usize;
         let mutator_set_hash_encoded = (0..mutator_set_hash_size)
             .map(|i| {
                 *memory
-                    .get(&(address + BFieldElement::new(i as u64)))
+                    .get(&(address + BFieldElement::new(1 + i as u64)))
                     .unwrap()
             })
             .collect_vec();
         let mutator_set_hash_hash = VmHasher::hash_varlen(&mutator_set_hash_encoded);
-        address += BFieldElement::new(mutator_set_hash_size as u64);
+        address += BFieldElement::one() + BFieldElement::new(mutator_set_hash_size as u64);
 
         // padding
         let zero = Digest::default();
