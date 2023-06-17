@@ -47,6 +47,8 @@ impl Snippet for SafePush {
 
     fn gen_input_states(&self) -> Vec<ExecutionState> {
         vec![
+            prepare_execution_state(&self.0, 1, 0),
+            prepare_execution_state(&self.0, 2, 0),
             prepare_execution_state(&self.0, SAFE_LIST_ELEMENT_CAPACITY, 0),
             prepare_execution_state(
                 &self.0,
@@ -350,6 +352,22 @@ mod tests {
             capacity,
             push_value,
         );
+    }
+
+    #[test]
+    fn push_to_empty_and_almost_empty_list_digest() {
+        let list_address = BFieldElement::new(1);
+        let push_value = vec![BFieldElement::new(133700); DIGEST_LENGTH];
+        for init_length in 0..1 {
+            let capacity = 64;
+            prop_push(
+                DataType::Digest,
+                list_address,
+                init_length,
+                capacity,
+                push_value.clone(),
+            );
+        }
     }
 
     #[should_panic]

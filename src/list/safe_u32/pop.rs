@@ -39,7 +39,12 @@ impl Snippet for SafePop {
     }
 
     fn gen_input_states(&self) -> Vec<ExecutionState> {
-        vec![prepare_state(&self.0)]
+        let mut ret = vec![];
+        for i in 1..=10 {
+            ret.push(prepare_state(&self.0, i))
+        }
+
+        ret
     }
 
     fn stack_diff(&self) -> isize {
@@ -139,18 +144,17 @@ impl Snippet for SafePop {
     }
 
     fn common_case_input_state(&self) -> ExecutionState {
-        prepare_state(&self.0)
+        prepare_state(&self.0, 30)
     }
 
     fn worst_case_input_state(&self) -> ExecutionState {
-        prepare_state(&self.0)
+        prepare_state(&self.0, 30)
     }
 }
 
-fn prepare_state(data_type: &DataType) -> ExecutionState {
+fn prepare_state(data_type: &DataType, old_length: usize) -> ExecutionState {
     let list_pointer: BFieldElement = random();
     let capacity: usize = 30;
-    let old_length: usize = thread_rng().gen_range(1..capacity);
     let mut stack = get_init_tvm_stack();
     stack.push(list_pointer);
     let mut memory = HashMap::default();
@@ -195,37 +199,50 @@ mod tests_pop {
     #[should_panic]
     fn panic_if_pop_on_empty_list_1() {
         let list_address = BFieldElement::new(48);
-        prop_pop(DataType::BFE, list_address, 0);
+        prop_pop(DataType::BFE, list_address, 0, 107);
     }
 
     #[test]
     #[should_panic]
     fn panic_if_pop_on_empty_list_2() {
         let list_address = BFieldElement::new(48);
-        prop_pop(DataType::U64, list_address, 0);
+        prop_pop(DataType::U64, list_address, 0, 107);
     }
 
     #[test]
     #[should_panic]
     fn panic_if_pop_on_empty_list_3() {
         let list_address = BFieldElement::new(48);
-        prop_pop(DataType::XFE, list_address, 0);
+        prop_pop(DataType::XFE, list_address, 0, 107);
     }
 
     #[test]
     fn list_u32_n_is_n_pop() {
+        prop_pop(DataType::Digest, BFieldElement::new(1), 1, 1);
+        prop_pop(DataType::Digest, BFieldElement::new(2), 1, 1);
+        prop_pop(DataType::Digest, BFieldElement::new(1), 1, 2);
+        prop_pop(DataType::Digest, BFieldElement::new(2), 1, 2);
+        prop_pop(DataType::Digest, BFieldElement::new(1), 2, 2);
+        prop_pop(DataType::Digest, BFieldElement::new(2), 2, 2);
+        prop_pop(DataType::Digest, BFieldElement::new(1), 2, 3);
+        prop_pop(DataType::Digest, BFieldElement::new(2), 2, 3);
+
         let list_address = BFieldElement::new(48);
-        prop_pop(DataType::BFE, list_address, 24);
-        prop_pop(DataType::Bool, list_address, 24);
-        prop_pop(DataType::U32, list_address, 24);
-        prop_pop(DataType::U64, list_address, 48);
-        prop_pop(DataType::XFE, list_address, 3);
-        prop_pop(DataType::Digest, list_address, 20);
+        prop_pop(DataType::BFE, list_address, 24, 107);
+        prop_pop(DataType::Bool, list_address, 24, 107);
+        prop_pop(DataType::U32, list_address, 24, 107);
+        prop_pop(DataType::U64, list_address, 48, 107);
+        prop_pop(DataType::XFE, list_address, 3, 107);
+        prop_pop(DataType::Digest, list_address, 20, 107);
     }
 
-    fn prop_pop(data_type: DataType, list_pointer: BFieldElement, init_list_length: usize) {
+    fn prop_pop(
+        data_type: DataType,
+        list_pointer: BFieldElement,
+        init_list_length: usize,
+        list_capacity: u32,
+    ) {
         let element_size = data_type.get_size();
-        let list_capacity = 107;
         let mut init_stack = get_init_tvm_stack();
         init_stack.push(list_pointer);
 
