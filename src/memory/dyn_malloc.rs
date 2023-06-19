@@ -128,11 +128,11 @@ impl Snippet for DynMalloc {
         let mut stack = get_init_tvm_stack();
         stack.push(BFieldElement::new(rng.gen_range(0..10_000)));
 
-        let allocation_size = rng.gen_range(0..10_000);
+        let static_allocation_size = rng.gen_range(0..10_000);
         let memory = HashMap::<BFieldElement, BFieldElement>::new();
 
         let ret: Vec<ExecutionState> = vec![
-            ExecutionState::with_stack_and_memory(stack, memory, allocation_size),
+            ExecutionState::with_stack_and_memory(stack, memory, static_allocation_size),
             ExecutionState::with_stack(get_init_tvm_stack()),
         ];
 
@@ -197,6 +197,20 @@ mod tests {
     #[test]
     fn dyn_malloc_test() {
         test_rust_equivalence_multiple(&DynMalloc, true);
+    }
+
+    #[test]
+    fn unit_test() {
+        let mut init_stack = get_init_tvm_stack();
+        init_stack.push(BFieldElement::new(10));
+        let mut empty_memory_state = ExecutionState::with_stack(init_stack.clone());
+        DynMalloc.link_and_run_tasm_from_state_for_test(&mut empty_memory_state);
+        assert!(empty_memory_state.stack.pop().unwrap().is_one());
+
+        let mut non_empty_memory_state =
+            ExecutionState::with_stack_and_memory(init_stack, HashMap::default(), 100);
+        DynMalloc.link_and_run_tasm_from_state_for_test(&mut non_empty_memory_state);
+        assert_eq!(100, non_empty_memory_state.stack.pop().unwrap().value());
     }
 
     #[test]

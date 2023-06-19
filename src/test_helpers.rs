@@ -67,7 +67,7 @@ pub fn test_rust_equivalence_given_input_state<T: Snippet>(
     if words_statically_allocated > 0 {
         rust_shadowing_helper_functions::dyn_malloc::rust_dyn_malloc_initialize(
             &mut rust_memory,
-            words_statically_allocated + 1,
+            words_statically_allocated,
         );
     }
     snippet_struct.rust_shadowing(
