@@ -106,7 +106,7 @@ mod tests {
     use num::One;
 
     use crate::get_init_tvm_stack;
-    use crate::snippet_bencher::bench_and_write;
+
     use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
@@ -114,11 +114,6 @@ mod tests {
     #[test]
     fn pow2_static_test() {
         rust_tasm_equivalence_prop_new(&Pow2U64, true);
-    }
-
-    #[test]
-    fn pow2_static_benchmark() {
-        bench_and_write(Pow2U64);
     }
 
     fn prop_exp_static(exponent: u8) {
@@ -154,5 +149,16 @@ mod tests {
         for i in 0..64 {
             prop_exp_static(i);
         }
+    }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::snippet_bencher::bench_and_write;
+
+    #[test]
+    fn pow2_static_benchmark() {
+        bench_and_write(Pow2U64);
     }
 }

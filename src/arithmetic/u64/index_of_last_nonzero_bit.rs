@@ -146,21 +146,13 @@ mod tests {
 
     use num::Zero;
 
-    use crate::{
-        snippet_bencher::bench_and_write,
-        test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new},
-    };
+    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
 
     #[test]
     fn index_of_last_nonzero_bit_test() {
         rust_tasm_equivalence_prop_new(&IndexOfLastNonZeroBitU64, true);
-    }
-
-    #[test]
-    fn index_of_last_nonzero_bit_benchmark() {
-        bench_and_write(IndexOfLastNonZeroBitU64);
     }
 
     fn index_of_last_nonzero_bit_prop(value: u64, expected: u32) {
@@ -258,5 +250,16 @@ mod tests {
         index_of_last_nonzero_bit_prop((1 << 63) + (1 << 41), 41);
         index_of_last_nonzero_bit_prop((1 << 63) + (1 << 60), 60);
         index_of_last_nonzero_bit_prop(1 << 63, 63);
+    }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::snippet_bencher::bench_and_write;
+
+    #[test]
+    fn index_of_last_nonzero_bit_benchmark() {
+        bench_and_write(IndexOfLastNonZeroBitU64);
     }
 }

@@ -577,15 +577,10 @@ mod tests {
     use num::BigUint;
 
     use crate::get_init_tvm_stack;
-    use crate::snippet_bencher::bench_and_write;
+
     use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
-
-    #[test]
-    fn div_mod_u64_benchmark() {
-        bench_and_write(DivModU64);
-    }
 
     #[test]
     fn div_mod_u64_test() {
@@ -706,5 +701,16 @@ mod tests {
             0,
             Some(&expected_end_stack),
         );
+    }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::snippet_bencher::bench_and_write;
+
+    #[test]
+    fn div_mod_u64_benchmark() {
+        bench_and_write(DivModU64);
     }
 }

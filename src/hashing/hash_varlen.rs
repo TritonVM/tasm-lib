@@ -329,7 +329,7 @@ impl Snippet for HashVarlen {
 
 #[cfg(test)]
 mod tests {
-    use crate::{snippet_bencher::bench_and_write, test_helpers::rust_tasm_equivalence_prop_new};
+    use crate::test_helpers::rust_tasm_equivalence_prop_new;
 
     use super::*;
 
@@ -337,6 +337,12 @@ mod tests {
     fn new_prop_test() {
         rust_tasm_equivalence_prop_new(&HashVarlen, true);
     }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::snippet_bencher::bench_and_write;
 
     #[test]
     fn leaf_index_to_mt_index_benchmark() {

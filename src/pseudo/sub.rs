@@ -103,7 +103,7 @@ impl Snippet for Sub {
 
 #[cfg(test)]
 mod tests {
-    use crate::snippet_bencher::bench_and_write;
+
     use crate::test_helpers::rust_tasm_equivalence_prop_new;
 
     use super::*;
@@ -112,6 +112,12 @@ mod tests {
     fn sub_test() {
         rust_tasm_equivalence_prop_new(&Sub, true);
     }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::snippet_bencher::bench_and_write;
 
     #[test]
     fn sub_benchmark() {

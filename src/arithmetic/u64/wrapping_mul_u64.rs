@@ -163,7 +163,6 @@ mod tests {
 
     use num::Zero;
 
-    use crate::snippet_bencher::bench_and_write;
     use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
@@ -171,11 +170,6 @@ mod tests {
     #[test]
     fn wrapping_mul_u64_test() {
         rust_tasm_equivalence_prop_new(&WrappingMulU64, true);
-    }
-
-    #[test]
-    fn wrappingmul_u64_benchmark() {
-        bench_and_write(WrappingMulU64);
     }
 
     #[test]
@@ -198,5 +192,16 @@ mod tests {
             1,
             Some(&expected),
         );
+    }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::snippet_bencher::bench_and_write;
+
+    #[test]
+    fn wrappingmul_u64_benchmark() {
+        bench_and_write(WrappingMulU64);
     }
 }

@@ -116,21 +116,13 @@ impl Snippet for LeadingZerosU32 {
 mod tests {
     use std::collections::HashMap;
 
-    use crate::{
-        snippet_bencher::bench_and_write,
-        test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new},
-    };
+    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
 
     #[test]
     fn snippet_test() {
         rust_tasm_equivalence_prop_new(&LeadingZerosU32, true);
-    }
-
-    #[test]
-    fn u32_leading_zeros_benchmark() {
-        bench_and_write(LeadingZerosU32);
     }
 
     #[test]
@@ -167,5 +159,16 @@ mod tests {
         if let Some(res) = expected {
             assert_eq!(BFieldElement::new(res as u64), final_stack.pop().unwrap());
         };
+    }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::snippet_bencher::bench_and_write;
+
+    #[test]
+    fn u32_leading_zeros_benchmark() {
+        bench_and_write(LeadingZerosU32);
     }
 }

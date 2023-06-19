@@ -247,10 +247,7 @@ impl Snippet for Range {
 #[cfg(test)]
 mod tests {
 
-    use crate::{
-        execute_with_execution_state, snippet_bencher::bench_and_write,
-        test_helpers::rust_tasm_equivalence_prop_new,
-    };
+    use crate::{execute_with_execution_state, test_helpers::rust_tasm_equivalence_prop_new};
 
     use super::*;
 
@@ -302,17 +299,23 @@ mod tests {
         assert!(res.is_err());
     }
 
-    #[test]
-    fn safe_benchmark() {
-        bench_and_write(Range {
-            list_type: ListType::Safe,
-        });
-    }
+    #[cfg(test)]
+    mod benches {
+        use super::*;
+        use crate::snippet_bencher::bench_and_write;
 
-    #[test]
-    fn unsafe_benchmark() {
-        bench_and_write(Range {
-            list_type: ListType::Unsafe,
-        });
+        #[test]
+        fn safe_benchmark() {
+            bench_and_write(Range {
+                list_type: ListType::Safe,
+            });
+        }
+
+        #[test]
+        fn unsafe_benchmark() {
+            bench_and_write(Range {
+                list_type: ListType::Unsafe,
+            });
+        }
     }
 }

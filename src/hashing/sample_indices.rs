@@ -383,10 +383,7 @@ impl Snippet for SampleIndices {
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        list::ListType, snippet_bencher::bench_and_write,
-        test_helpers::rust_tasm_equivalence_prop_new,
-    };
+    use crate::{list::ListType, test_helpers::rust_tasm_equivalence_prop_new};
 
     use super::SampleIndices;
 
@@ -406,17 +403,23 @@ mod tests {
         );
     }
 
-    #[test]
-    fn sample_indices_benchmark_safe() {
-        bench_and_write(SampleIndices {
-            list_type: ListType::Safe,
-        });
-    }
+    #[cfg(test)]
+    mod benches {
+        use super::*;
+        use crate::snippet_bencher::bench_and_write;
 
-    #[test]
-    fn sample_indices_benchmark_unsafe() {
-        bench_and_write(SampleIndices {
-            list_type: ListType::Unsafe,
-        });
+        #[test]
+        fn sample_indices_benchmark_safe() {
+            bench_and_write(SampleIndices {
+                list_type: ListType::Safe,
+            });
+        }
+
+        #[test]
+        fn sample_indices_benchmark_unsafe() {
+            bench_and_write(SampleIndices {
+                list_type: ListType::Unsafe,
+            });
+        }
     }
 }

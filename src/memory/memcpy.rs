@@ -156,7 +156,7 @@ impl Snippet for MemCpy {
 
 #[cfg(test)]
 mod tests {
-    use crate::{snippet_bencher::bench_and_write, test_helpers::rust_tasm_equivalence_prop_new};
+    use crate::test_helpers::rust_tasm_equivalence_prop_new;
 
     use super::*;
 
@@ -164,6 +164,12 @@ mod tests {
     fn memcpy_test() {
         rust_tasm_equivalence_prop_new(&MemCpy, true);
     }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::snippet_bencher::bench_and_write;
 
     #[test]
     fn memcpy_benchmark() {

@@ -185,7 +185,6 @@ fn prepare_state(node_index: u64) -> ExecutionState {
 mod tests {
     use std::collections::HashMap;
 
-    use crate::snippet_bencher::bench_and_write;
     use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
@@ -193,11 +192,6 @@ mod tests {
     #[test]
     fn right_lineage_length_test() {
         rust_tasm_equivalence_prop_new(&MmrRightLineageLength, true);
-    }
-
-    #[test]
-    fn right_lineage_length_benchmark() {
-        bench_and_write(MmrRightLineageLength);
     }
 
     #[test]
@@ -282,5 +276,16 @@ mod tests {
             0,
             Some(&expected),
         );
+    }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::snippet_bencher::bench_and_write;
+
+    #[test]
+    fn right_lineage_length_benchmark() {
+        bench_and_write(MmrRightLineageLength);
     }
 }

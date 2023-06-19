@@ -179,7 +179,6 @@ fn prepare_state(value: u64, shift_amount: u32) -> ExecutionState {
 mod tests {
     use std::collections::HashMap;
 
-    use crate::snippet_bencher::bench_and_write;
     use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
@@ -187,11 +186,6 @@ mod tests {
     #[test]
     fn shift_left_u64_test() {
         rust_tasm_equivalence_prop_new(&ShiftLeftU64, true);
-    }
-
-    #[test]
-    fn shift_left_u64_benchmark() {
-        bench_and_write(ShiftLeftU64);
     }
 
     #[test]
@@ -238,5 +232,16 @@ mod tests {
             0,
             Some(&expected_stack),
         );
+    }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::snippet_bencher::bench_and_write;
+
+    #[test]
+    fn shift_left_u64_benchmark() {
+        bench_and_write(ShiftLeftU64);
     }
 }

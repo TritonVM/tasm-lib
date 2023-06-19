@@ -275,7 +275,7 @@ impl Snippet for GetSwbfIndices {
 
 #[cfg(test)]
 mod tests {
-    use crate::{snippet_bencher::bench_and_write, test_helpers::rust_tasm_equivalence_prop_new};
+    use crate::test_helpers::rust_tasm_equivalence_prop_new;
 
     use super::GetSwbfIndices;
 
@@ -289,6 +289,12 @@ mod tests {
             true,
         );
     }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::snippet_bencher::bench_and_write;
 
     #[test]
     fn commit_benchmark_unsafe() {

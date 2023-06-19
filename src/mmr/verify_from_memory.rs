@@ -420,7 +420,6 @@ mod auth_path_verify_from_memory_tests {
     use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
     use twenty_first::util_types::mmr::{mmr_membership_proof::MmrMembershipProof, mmr_trait::Mmr};
 
-    use crate::snippet_bencher::bench_and_write;
     use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
     use crate::VmHasher;
     use crate::{get_init_tvm_stack, mmr::MAX_MMR_HEIGHT};
@@ -447,18 +446,24 @@ mod auth_path_verify_from_memory_tests {
         );
     }
 
-    #[test]
-    fn verify_from_memory_benchmark_unsafe_lists() {
-        bench_and_write(MmrVerifyFromMemory {
-            list_type: ListType::Unsafe,
-        });
-    }
+    #[cfg(test)]
+    mod benches {
+        use super::*;
+        use crate::snippet_bencher::bench_and_write;
 
-    #[test]
-    fn verify_from_memory_benchmark_safe_lists() {
-        bench_and_write(MmrVerifyFromMemory {
-            list_type: ListType::Safe,
-        });
+        #[test]
+        fn verify_from_memory_benchmark_unsafe_lists() {
+            bench_and_write(MmrVerifyFromMemory {
+                list_type: ListType::Unsafe,
+            });
+        }
+
+        #[test]
+        fn verify_from_memory_benchmark_safe_lists() {
+            bench_and_write(MmrVerifyFromMemory {
+                list_type: ListType::Safe,
+            });
+        }
     }
 
     // This will crash the VM because leaf?index is not strictly less than leaf_count

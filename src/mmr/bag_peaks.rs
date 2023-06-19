@@ -249,7 +249,7 @@ impl Snippet for BagPeaks {
 
 #[cfg(test)]
 mod tests {
-    use crate::{snippet_bencher::bench_and_write, test_helpers::rust_tasm_equivalence_prop_new};
+    use crate::test_helpers::rust_tasm_equivalence_prop_new;
 
     use super::BagPeaks;
 
@@ -257,6 +257,12 @@ mod tests {
     fn new_prop_test() {
         rust_tasm_equivalence_prop_new(&BagPeaks, true);
     }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::snippet_bencher::bench_and_write;
 
     #[test]
     fn bag_peaks_benchmark() {

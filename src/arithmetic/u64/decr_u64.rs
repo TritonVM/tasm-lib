@@ -134,7 +134,6 @@ mod tests {
     use num::Zero;
     use rand::Rng;
 
-    use crate::snippet_bencher::bench_and_write;
     use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
     use crate::{get_init_tvm_stack, push_encodable};
 
@@ -143,11 +142,6 @@ mod tests {
     #[test]
     fn decr_u64_test() {
         rust_tasm_equivalence_prop_new(&DecrU64, true);
-    }
-
-    #[test]
-    fn decr_u64_benchmark() {
-        bench_and_write(DecrU64);
     }
 
     #[test]
@@ -190,5 +184,16 @@ mod tests {
         let mut stack = get_init_tvm_stack();
         push_encodable(&mut stack, &value);
         rust_tasm_equivalence_prop(&DecrU64, &stack, &[], &[], &mut HashMap::default(), 0, None);
+    }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::snippet_bencher::bench_and_write;
+
+    #[test]
+    fn decr_u64_benchmark() {
+        bench_and_write(DecrU64);
     }
 }

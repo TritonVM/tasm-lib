@@ -132,7 +132,7 @@ mod tests {
     use rand::{thread_rng, RngCore};
 
     use crate::get_init_tvm_stack;
-    use crate::snippet_bencher::bench_and_write;
+
     use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
@@ -140,11 +140,6 @@ mod tests {
     #[test]
     fn xor_u64_test() {
         rust_tasm_equivalence_prop_new(&XorU64, true);
-    }
-
-    #[test]
-    fn xor_u64_benchmark() {
-        bench_and_write(XorU64);
     }
 
     #[test]
@@ -195,5 +190,16 @@ mod tests {
             0,
             Some(&expected_end_stack),
         );
+    }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::snippet_bencher::bench_and_write;
+
+    #[test]
+    fn xor_u64_benchmark() {
+        bench_and_write(XorU64);
     }
 }

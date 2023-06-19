@@ -125,7 +125,6 @@ fn prepare_state(a: u64) -> ExecutionState {
 #[cfg(test)]
 mod tests {
 
-    use crate::snippet_bencher::bench_and_write;
     use crate::test_helpers::rust_tasm_equivalence_prop_new;
 
     use super::*;
@@ -134,6 +133,12 @@ mod tests {
     fn popcount_u64_test() {
         rust_tasm_equivalence_prop_new(&PopCountU64, true);
     }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::snippet_bencher::bench_and_write;
 
     #[test]
     fn popcount_u64_benchmark() {

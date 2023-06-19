@@ -107,7 +107,7 @@ mod u32_is_odd_tests {
     use rand::{thread_rng, RngCore};
 
     use crate::get_init_tvm_stack;
-    use crate::snippet_bencher::bench_and_write;
+
     use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
@@ -115,11 +115,6 @@ mod u32_is_odd_tests {
     #[test]
     fn is_odd_u32_test() {
         rust_tasm_equivalence_prop_new(&U32IsOdd, true);
-    }
-
-    #[test]
-    fn is_odd_u32_benchmark() {
-        bench_and_write(U32IsOdd);
     }
 
     #[test]
@@ -157,5 +152,16 @@ mod u32_is_odd_tests {
             0,
             Some(&expected_stack),
         );
+    }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::snippet_bencher::bench_and_write;
+
+    #[test]
+    fn is_odd_u32_benchmark() {
+        bench_and_write(U32IsOdd);
     }
 }

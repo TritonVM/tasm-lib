@@ -218,10 +218,7 @@ mod tests {
 
     use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
-    use crate::{
-        snippet_bencher::bench_and_write,
-        test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new},
-    };
+    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
 
@@ -260,11 +257,6 @@ mod tests {
         }
     }
 
-    #[test]
-    fn benchmark() {
-        bench_and_write(ShiftRightU128);
-    }
-
     fn prop_shift_right(value: u128, shift_amount: u32) {
         let mut init_stack = get_init_tvm_stack();
         let value_as_u32s = U32s::<4>::try_from(value).unwrap();
@@ -291,5 +283,16 @@ mod tests {
             0,
             Some(&expected_stack),
         );
+    }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::snippet_bencher::bench_and_write;
+
+    #[test]
+    fn benchmark() {
+        bench_and_write(ShiftRightU128);
     }
 }

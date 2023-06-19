@@ -137,7 +137,7 @@ impl Snippet for IncrU64 {
 
 #[cfg(test)]
 mod tests {
-    use crate::snippet_bencher::bench_and_write;
+
     use crate::test_helpers::rust_tasm_equivalence_prop_new;
     use crate::{get_init_tvm_stack, push_encodable};
 
@@ -146,11 +146,6 @@ mod tests {
     #[test]
     fn incr_u64_test() {
         rust_tasm_equivalence_prop_new(&IncrU64, true);
-    }
-
-    #[test]
-    fn incr_u64_benchmark() {
-        bench_and_write(IncrU64);
     }
 
     #[test]
@@ -175,5 +170,16 @@ mod tests {
             vec![],
             &mut HashMap::default(),
         );
+    }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::snippet_bencher::bench_and_write;
+
+    #[test]
+    fn incr_u64_benchmark() {
+        bench_and_write(IncrU64);
     }
 }

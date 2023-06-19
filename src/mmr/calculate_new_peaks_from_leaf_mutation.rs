@@ -429,7 +429,7 @@ mod leaf_mutation_tests {
 
     use crate::get_init_tvm_stack;
     use crate::mmr::MAX_MMR_HEIGHT;
-    use crate::snippet_bencher::bench_and_write;
+
     use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
@@ -454,18 +454,24 @@ mod leaf_mutation_tests {
         );
     }
 
-    #[test]
-    fn calculate_new_peaks_from_leaf_mutation_benchmark_unsafe_lists() {
-        bench_and_write(MmrCalculateNewPeaksFromLeafMutationMtIndices {
-            list_type: ListType::Unsafe,
-        });
-    }
+    #[cfg(test)]
+    mod benches {
+        use super::*;
+        use crate::snippet_bencher::bench_and_write;
 
-    #[test]
-    fn calculate_new_peaks_from_leaf_mutation_benchmark_safe_lists() {
-        bench_and_write(MmrCalculateNewPeaksFromLeafMutationMtIndices {
-            list_type: ListType::Safe,
-        });
+        #[test]
+        fn calculate_new_peaks_from_leaf_mutation_benchmark_unsafe_lists() {
+            bench_and_write(MmrCalculateNewPeaksFromLeafMutationMtIndices {
+                list_type: ListType::Unsafe,
+            });
+        }
+
+        #[test]
+        fn calculate_new_peaks_from_leaf_mutation_benchmark_safe_lists() {
+            bench_and_write(MmrCalculateNewPeaksFromLeafMutationMtIndices {
+                list_type: ListType::Safe,
+            });
+        }
     }
 
     #[test]

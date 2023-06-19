@@ -253,7 +253,7 @@ mod tests {
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
     use crate::get_init_tvm_stack;
-    use crate::snippet_bencher::bench_and_write;
+
     use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
@@ -261,11 +261,6 @@ mod tests {
     #[test]
     fn sub_u128_test() {
         rust_tasm_equivalence_prop_new(&SubU128, true);
-    }
-
-    #[test]
-    fn sub_u128_benchmark() {
-        bench_and_write(SubU128);
     }
 
     #[test]
@@ -381,5 +376,16 @@ mod tests {
             0,
             expected,
         );
+    }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::snippet_bencher::bench_and_write;
+
+    #[test]
+    fn sub_u128_benchmark() {
+        bench_and_write(SubU128);
     }
 }

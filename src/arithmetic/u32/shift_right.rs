@@ -123,21 +123,13 @@ fn prepare_state(value: u32, shift: u32) -> ExecutionState {
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        snippet_bencher::bench_and_write,
-        test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new},
-    };
+    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
 
     #[test]
     fn shift_right_test() {
         rust_tasm_equivalence_prop_new(&ShiftRightU32, true);
-    }
-
-    #[test]
-    fn shift_right_benchmark() {
-        bench_and_write(ShiftRightU32);
     }
 
     #[test]
@@ -175,5 +167,16 @@ mod tests {
             0,
             Some(&expected_stack),
         );
+    }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::snippet_bencher::bench_and_write;
+
+    #[test]
+    fn shift_right_benchmark() {
+        bench_and_write(ShiftRightU32);
     }
 }

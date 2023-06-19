@@ -117,21 +117,13 @@ impl Snippet for SafeAdd {
 mod tests {
     use std::collections::HashMap;
 
-    use crate::{
-        snippet_bencher::bench_and_write,
-        test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new},
-    };
+    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
 
     #[test]
     fn snippet_test() {
         rust_tasm_equivalence_prop_new(&SafeAdd, true);
-    }
-
-    #[test]
-    fn safe_add_benchmark() {
-        bench_and_write(SafeAdd);
     }
 
     #[test]
@@ -165,5 +157,16 @@ mod tests {
         if let Some(res) = expected {
             assert_eq!(BFieldElement::new(res as u64), final_stack.pop().unwrap());
         };
+    }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::snippet_bencher::bench_and_write;
+
+    #[test]
+    fn safe_add_benchmark() {
+        bench_and_write(SafeAdd);
     }
 }

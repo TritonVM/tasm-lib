@@ -150,7 +150,7 @@ mod tests {
     use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
     use crate::get_init_tvm_stack;
-    use crate::snippet_bencher::bench_and_write;
+
     use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
@@ -158,11 +158,6 @@ mod tests {
     #[test]
     fn log_2_floor_u64_test() {
         rust_tasm_equivalence_prop_new(&Log2FloorU64, true);
-    }
-
-    #[test]
-    fn log_2_floor_u64_benchmark() {
-        bench_and_write(Log2FloorU64);
     }
 
     #[should_panic]
@@ -287,5 +282,16 @@ mod tests {
             0,
             Some(expected),
         );
+    }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::snippet_bencher::bench_and_write;
+
+    #[test]
+    fn log_2_floor_u64_benchmark() {
+        bench_and_write(Log2FloorU64);
     }
 }

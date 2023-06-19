@@ -141,21 +141,13 @@ fn prepare_state(a: u64, b: u64) -> ExecutionState {
 mod tests {
     use std::collections::HashMap;
 
-    use crate::{
-        snippet_bencher::bench_and_write,
-        test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new},
-    };
+    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
 
     #[test]
     fn snippet_test() {
         rust_tasm_equivalence_prop_new(&OrU64, true);
-    }
-
-    #[test]
-    fn u64_or_benchmark() {
-        bench_and_write(OrU64);
     }
 
     #[test]
@@ -199,5 +191,16 @@ mod tests {
             let hi: u32 = final_stack.pop().unwrap().try_into().unwrap();
             assert_eq!(res, lo as u64 + ((hi as u64) << 32));
         };
+    }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::snippet_bencher::bench_and_write;
+
+    #[test]
+    fn u64_or_benchmark() {
+        bench_and_write(OrU64);
     }
 }

@@ -350,7 +350,7 @@ impl Snippet for MmrLoadFromSecretInThenVerify {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::snippet_bencher::bench_and_write;
+
     use crate::test_helpers::rust_tasm_equivalence_prop_new;
 
     #[test]
@@ -373,17 +373,23 @@ mod tests {
         );
     }
 
-    #[test]
-    fn load_from_secret_in_then_verify_benchmark_unsafe_lists() {
-        bench_and_write(MmrLoadFromSecretInThenVerify {
-            list_type: ListType::Unsafe,
-        });
-    }
+    #[cfg(test)]
+    mod benches {
+        use super::*;
+        use crate::snippet_bencher::bench_and_write;
 
-    #[test]
-    fn load_from_secret_in_then_verify_benchmark_safe_lists() {
-        bench_and_write(MmrLoadFromSecretInThenVerify {
-            list_type: ListType::Safe,
-        });
+        #[test]
+        fn load_from_secret_in_then_verify_benchmark_unsafe_lists() {
+            bench_and_write(MmrLoadFromSecretInThenVerify {
+                list_type: ListType::Unsafe,
+            });
+        }
+
+        #[test]
+        fn load_from_secret_in_then_verify_benchmark_safe_lists() {
+            bench_and_write(MmrLoadFromSecretInThenVerify {
+                list_type: ListType::Safe,
+            });
+        }
     }
 }

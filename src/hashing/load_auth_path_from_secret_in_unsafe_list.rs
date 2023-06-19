@@ -213,7 +213,7 @@ mod load_auth_path_from_secret_in_tests {
     use rand::random;
 
     use super::*;
-    use crate::snippet_bencher::bench_and_write;
+
     use crate::test_helpers::rust_tasm_equivalence_prop_new;
 
     #[should_panic]
@@ -270,6 +270,12 @@ mod load_auth_path_from_secret_in_tests {
     fn load_auth_path_from_secret_in_test() {
         rust_tasm_equivalence_prop_new(&LoadAuthPathFromSecretInUnsafeList, true);
     }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::snippet_bencher::bench_and_write;
 
     #[test]
     fn load_auth_path_from_secret_in_benchmark() {

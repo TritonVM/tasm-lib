@@ -186,7 +186,6 @@ mod tests {
     use num::Zero;
     use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
-    use crate::snippet_bencher::bench_and_write;
     use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
@@ -194,11 +193,6 @@ mod tests {
     #[test]
     fn safe_mul_u64_test() {
         rust_tasm_equivalence_prop_new(&SafeMulU64, true);
-    }
-
-    #[test]
-    fn safe_u64_benchmark() {
-        bench_and_write(SafeMulU64);
     }
 
     #[should_panic]
@@ -289,5 +283,16 @@ mod tests {
             1,
             Some(&expected),
         );
+    }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::snippet_bencher::bench_and_write;
+
+    #[test]
+    fn safe_u64_benchmark() {
+        bench_and_write(SafeMulU64);
     }
 }

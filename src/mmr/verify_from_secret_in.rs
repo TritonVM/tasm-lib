@@ -425,7 +425,6 @@ mod mmr_verify_from_secret_in_tests {
 
     use crate::{
         mmr::MAX_MMR_HEIGHT,
-        snippet_bencher::bench_and_write,
         test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new},
         VmHasher,
     };
@@ -452,18 +451,24 @@ mod mmr_verify_from_secret_in_tests {
         );
     }
 
-    #[test]
-    fn verify_from_secret_in_benchmark_unsafe_lists() {
-        bench_and_write(MmrVerifyLeafMembershipFromSecretIn {
-            list_type: ListType::Unsafe,
-        });
-    }
+    #[cfg(test)]
+    mod benches {
+        use super::*;
+        use crate::snippet_bencher::bench_and_write;
 
-    #[test]
-    fn verify_from_secret_in_benchmark_safe_lists() {
-        bench_and_write(MmrVerifyLeafMembershipFromSecretIn {
-            list_type: ListType::Safe,
-        });
+        #[test]
+        fn verify_from_secret_in_benchmark_unsafe_lists() {
+            bench_and_write(MmrVerifyLeafMembershipFromSecretIn {
+                list_type: ListType::Unsafe,
+            });
+        }
+
+        #[test]
+        fn verify_from_secret_in_benchmark_safe_lists() {
+            bench_and_write(MmrVerifyLeafMembershipFromSecretIn {
+                list_type: ListType::Safe,
+            });
+        }
     }
 
     #[test]

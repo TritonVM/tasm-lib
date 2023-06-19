@@ -413,9 +413,7 @@ mod tests {
         shared_math::other::random_elements, util_types::algebraic_hasher::AlgebraicHasher,
     };
 
-    use crate::{
-        snippet_bencher::bench_and_write, test_helpers::rust_tasm_equivalence_prop_new, VmHasher,
-    };
+    use crate::{test_helpers::rust_tasm_equivalence_prop_new, VmHasher};
 
     use super::*;
 
@@ -583,21 +581,27 @@ mod tests {
         );
     }
 
-    #[test]
-    fn unsafe_list_map_benchmark() {
-        bench_and_write(Zip {
-            list_type: ListType::Unsafe,
-            left_type: DataType::XFE,
-            right_type: DataType::Digest,
-        });
-    }
+    #[cfg(test)]
+    mod benches {
+        use super::*;
+        use crate::snippet_bencher::bench_and_write;
 
-    #[test]
-    fn safe_list_map_benchmark() {
-        bench_and_write(Zip {
-            list_type: ListType::Safe,
-            left_type: DataType::XFE,
-            right_type: DataType::Digest,
-        });
+        #[test]
+        fn unsafe_list_map_benchmark() {
+            bench_and_write(Zip {
+                list_type: ListType::Unsafe,
+                left_type: DataType::XFE,
+                right_type: DataType::Digest,
+            });
+        }
+
+        #[test]
+        fn safe_list_map_benchmark() {
+            bench_and_write(Zip {
+                list_type: ListType::Safe,
+                left_type: DataType::XFE,
+                right_type: DataType::Digest,
+            });
+        }
     }
 }

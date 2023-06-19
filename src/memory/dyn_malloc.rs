@@ -184,7 +184,7 @@ impl Snippet for DynMalloc {
 
 #[cfg(test)]
 mod tests {
-    use crate::{snippet_bencher::bench_and_write, test_helpers::rust_tasm_equivalence_prop_new};
+    use crate::test_helpers::rust_tasm_equivalence_prop_new;
 
     use super::*;
 
@@ -200,16 +200,22 @@ mod tests {
     }
 
     #[test]
-    fn dyn_malloc_benchmark() {
-        bench_and_write(DynMalloc);
-    }
-
-    #[test]
     fn get_initialization_code_equivalence() {
         // Verify that code returning `Vec<LabelledInstruction>` and `String` agree
         let init_code_string = DynMalloc::get_initialization_code(4);
         let init_code_vec = DynMalloc::get_initialization_code_as_instructions(4);
         let string_parsed = to_labelled(&parse(&init_code_string).unwrap());
         assert_eq!(string_parsed, init_code_vec);
+    }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::snippet_bencher::bench_and_write;
+
+    #[test]
+    fn dyn_malloc_benchmark() {
+        bench_and_write(DynMalloc);
     }
 }
