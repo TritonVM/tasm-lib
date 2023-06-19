@@ -127,12 +127,16 @@ impl MmrLoadFromSecretInThenVerify {
             );
         }
 
+        let list_meta_data_size = match self.list_type {
+            ListType::Safe => 2,
+            ListType::Unsafe => 1,
+        };
         ExecutionState {
             stack,
             std_in: vec![],
             secret_in: vec![],
             memory,
-            words_allocated: DIGEST_LENGTH * MAX_MMR_HEIGHT + 1,
+            words_allocated: DIGEST_LENGTH * MAX_MMR_HEIGHT + 1 + list_meta_data_size,
         }
     }
 }
@@ -277,7 +281,10 @@ impl Snippet for MmrLoadFromSecretInThenVerify {
         let total_auth_path_length: u32 = secret_in[secret_in_cursor].value().try_into().unwrap();
         secret_in_cursor += 1;
 
-        let auth_path_pointer = BFieldElement::new((DIGEST_LENGTH * MAX_MMR_HEIGHT + 2) as u64);
+        let auth_path_pointer = match self.list_type {
+            ListType::Safe => BFieldElement::new((DIGEST_LENGTH * MAX_MMR_HEIGHT + 1 + 2) as u64),
+            ListType::Unsafe => BFieldElement::new((DIGEST_LENGTH * MAX_MMR_HEIGHT + 1 + 1) as u64),
+        };
         match self.list_type {
             ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_new(
                 auth_path_pointer,

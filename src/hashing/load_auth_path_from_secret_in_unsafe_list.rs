@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::random_elements;
 
+use crate::list::unsafe_u32::new::UnsafeNew;
 use crate::list::unsafe_u32::{push::UnsafePush, set_length::UnsafeSetLength};
 use crate::mmr::MAX_MMR_HEIGHT;
 use crate::snippet::DataType;
@@ -52,7 +53,7 @@ impl Snippet for LoadAuthPathFromSecretInUnsafeList {
                 std_in: vec![],
                 secret_in,
                 memory: HashMap::default(),
-                words_allocated: 0,
+                words_allocated: 1,
             };
             init_vm_states.push(init_vm_state);
         }
@@ -75,11 +76,7 @@ impl Snippet for LoadAuthPathFromSecretInUnsafeList {
 
         let set_length = library.import(Box::new(UnsafeSetLength(DataType::Digest)));
         let push = library.import(Box::new(UnsafePush(DataType::Digest)));
-
-        // Allocate 1 word for length indication, and `DIGEST_LENGTH` words per auth path element
-        // Warning: Statically allocated list. Will be overwritten at same location by subsequent
-        // calls to this function
-        let auth_path_pointer = library.kmalloc(DIGEST_LENGTH * MAX_MMR_HEIGHT + 1);
+        let new_list = library.import(Box::new(UnsafeNew(DataType::Digest)));
 
         // Derive value that the authentication path length must be less than
         let max_mmr_height_plus_one: usize = MAX_MMR_HEIGHT + 1;
@@ -106,7 +103,8 @@ impl Snippet for LoadAuthPathFromSecretInUnsafeList {
                     // _ auth_path_length i
 
                     // Initialize list where the authentication path is stored
-                    push {auth_path_pointer}
+                    push {MAX_MMR_HEIGHT}
+                    call {new_list}
                     push 0
                     call {set_length}
                     // _ auth_path_length i *auth_path

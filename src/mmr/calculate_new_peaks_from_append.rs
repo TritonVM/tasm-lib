@@ -94,7 +94,7 @@ impl CalculateNewPeaksFromAppend {
         ExecutionState::with_stack_and_memory(
             stack,
             memory,
-            MAX_MMR_HEIGHT * DIGEST_LENGTH + list_meta_data_size,
+            MAX_MMR_HEIGHT * DIGEST_LENGTH + list_meta_data_size + 1,
         )
     }
 }
@@ -644,10 +644,10 @@ mod tests {
         }
 
         let words_allocated = match list_type {
-            ListType::Safe => MAX_MMR_HEIGHT * DIGEST_LENGTH + 2,
-            ListType::Unsafe => MAX_MMR_HEIGHT * DIGEST_LENGTH + 1,
+            ListType::Safe => 1 + MAX_MMR_HEIGHT * DIGEST_LENGTH + 2,
+            ListType::Unsafe => 1 + MAX_MMR_HEIGHT * DIGEST_LENGTH + 1,
         };
-        let auth_paths_pointer = BFieldElement::new((words_allocated + 1) as u64);
+        let auth_paths_pointer = BFieldElement::new((words_allocated) as u64);
         let mut expected_final_stack = get_init_tvm_stack();
         expected_final_stack.push(peaks_pointer);
         expected_final_stack.push(auth_paths_pointer);

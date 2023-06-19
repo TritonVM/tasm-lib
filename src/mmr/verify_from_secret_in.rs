@@ -158,12 +158,16 @@ impl MmrVerifyLeafMembershipFromSecretIn {
             );
         }
 
+        let list_metadata_size = match self.list_type {
+            ListType::Safe => 2,
+            ListType::Unsafe => 1,
+        };
         ExecutionState {
             stack,
             std_in: vec![],
             secret_in: vec![],
             memory,
-            words_allocated: DIGEST_LENGTH * MAX_MMR_HEIGHT + 1,
+            words_allocated: DIGEST_LENGTH * MAX_MMR_HEIGHT + 1 + list_metadata_size,
         }
     }
 }
