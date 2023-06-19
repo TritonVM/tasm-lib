@@ -164,23 +164,23 @@ mod tests {
         let mut init_stack = get_init_tvm_stack();
         init_stack.push(BFieldElement::new(rhs as u64));
         init_stack.push(BFieldElement::new(lhs as u64));
-        // let maybe_difference = lhs.checked_sub(rhs).unwrap();
         let expected = lhs.checked_sub(rhs);
-        let expected = expected
-            .map(|x| vec![get_init_tvm_stack(), vec![BFieldElement::new(x as u64)]].concat());
-        let expected = match expected {
-            Some(exps) => Some(&exps as &[BFieldElement]),
-            None => None,
-        };
+        let expected = vec![
+            get_init_tvm_stack(),
+            vec![expected
+                .map(|x| BFieldElement::new(x as u64))
+                .unwrap_or_else(BFieldElement::zero)],
+        ]
+        .concat();
 
-        let execution_result = test_rust_equivalence_given_input_state::<SafeSub>(
+        test_rust_equivalence_given_input_state(
             &SafeSub,
             &init_stack,
             &[],
             &[],
             &mut HashMap::default(),
             0,
-            expected,
+            Some(&expected),
         );
     }
 }

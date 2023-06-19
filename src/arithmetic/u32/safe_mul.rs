@@ -118,6 +118,8 @@ impl Snippet for SafeMul {
 mod tests {
     use std::collections::HashMap;
 
+    use num::Zero;
+
     use crate::test_helpers::{
         test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
     };
@@ -162,20 +164,24 @@ mod tests {
         init_stack.push(BFieldElement::new(rhs as u64));
         init_stack.push(BFieldElement::new(lhs as u64));
 
-        let execution_result = test_rust_equivalence_given_input_state(
+        let expected = lhs.checked_mul(rhs);
+        let expected = vec![
+            get_init_tvm_stack(),
+            vec![expected
+                .map(|x| BFieldElement::new(x as u64))
+                .unwrap_or_else(BFieldElement::zero)],
+        ]
+        .concat();
+
+        test_rust_equivalence_given_input_state(
             &SafeMul,
             &init_stack,
             &[],
             &[],
             &mut HashMap::default(),
             0,
-            None,
+            Some(&expected),
         );
-
-        let mut final_stack = execution_result.final_stack;
-        if let Some(res) = expected {
-            assert_eq!(BFieldElement::new(res as u64), final_stack.pop().unwrap());
-        };
     }
 }
 

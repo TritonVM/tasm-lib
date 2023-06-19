@@ -180,8 +180,7 @@ pub fn execute_bench(
 
     // Run the program, including the stack preparation and memory preparation logic
     let program = Program::from_code(&executed_code).expect("Could not load source code: {}");
-    let (execution_trace, output, err) =
-        vm::debug(&program, std_in.clone(), secret_in.clone(), None, None);
+    let (execution_trace, err) = vm::debug(&program, std_in.clone(), secret_in.clone(), None, None);
     if let Some(e) = err {
         bail!(
             "`debug` failed with error: {e}\nLast state before crash:\n{}",
@@ -190,11 +189,11 @@ pub fn execute_bench(
     }
 
     // Simulate the program, since this gives us hash table output
-    let (simulation_trace, _simulation_output) =
-        match vm::simulate(&program, std_in.clone(), secret_in.clone()) {
-            Ok(res) => res,
-            Err(e) => bail!("`simulate` failed with error: {e}"),
-        };
+    let (simulation_trace, output) = match vm::simulate(&program, std_in.clone(), secret_in.clone())
+    {
+        Ok(res) => res,
+        Err(e) => bail!("`simulate` failed with error: {e}"),
+    };
 
     let start_state: VMState = execution_trace
         .first()
@@ -339,34 +338,19 @@ pub fn execute_test(
     let program = Program::from_code(&executed_code).expect("Could not load source code: {}");
     // let (execution_trace, output, err) =
     //     vm::debug(&program, std_in.clone(), secret_in.clone(), None, None);
-    let final_state = vm::run_with_final_state(&program, std_in.clone(), secret_in.clone())?;
-    // if let Some(e) = err {
-    //     bail!(
-    //         "`debug` failed with error: {e}\nLast state before crash:\n{}",
-    //         execution_trace.last().unwrap()
-    //     )
-    // }
+    let final_state = vm::debug_terminal_state(&program, std_in.clone(), secret_in.clone())?;
 
-    // let start_state: VMState = execution_trace
-    //     .first()
-    //     .expect("VM state list must have initial element")
-    //     .to_owned();
-
-    // let end_state: VMState = execution_trace
-    //     .last()
-    //     .expect("VM state list cannot be empty")
-    //     .to_owned();
-    if final_state.stack.len() < OP_STACK_REG_COUNT {
+    if final_state.op_stack.is_too_shallow() {
         bail!("Stack underflow")
     }
 
-    *memory = final_state.memory.clone();
+    *memory = final_state.ram;
 
     if !final_state.jump_stack.is_empty() {
         bail!("Jump stack must be unchanged after code execution")
     }
 
-    *stack = final_state.stack;
+    *stack = final_state.op_stack.stack;
 
     let final_stack_height = stack.len() as isize;
     if expected_stack_diff != final_stack_height - init_stack_height as isize {
@@ -392,7 +376,7 @@ pub fn execute_test(
         let claim = Claim {
             program_digest: VmHasher::hash_varlen(&program.encode()),
             input: std_in.clone(),
-            output: final_state.output,
+            output: final_state.public_output,
         };
 
         let (simulation_trace, _) = vm::simulate(&program, std_in, secret_in.clone()).unwrap();

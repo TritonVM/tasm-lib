@@ -147,6 +147,13 @@ mod tests {
         let mut init_stack = get_init_tvm_stack();
         init_stack.push(BFieldElement::new(value as u64));
 
+        let expected = value.leading_zeros();
+        let expected = vec![
+            get_init_tvm_stack(),
+            vec![BFieldElement::new(expected as u64)],
+        ]
+        .concat();
+
         let execution_result = test_rust_equivalence_given_input_state(
             &LeadingZerosU32,
             &init_stack,
@@ -154,13 +161,8 @@ mod tests {
             &[],
             &mut HashMap::default(),
             0,
-            None,
+            Some(&expected),
         );
-
-        let mut final_stack = execution_result.final_stack;
-        if let Some(res) = expected {
-            assert_eq!(BFieldElement::new(res as u64), final_stack.pop().unwrap());
-        };
     }
 }
 
