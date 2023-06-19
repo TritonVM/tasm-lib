@@ -58,6 +58,11 @@ bench-no-run:
 
 all: lint build test bench-no-run
 
+# Run prove/verify on all produced snippets, one at a time. Will take a *long* time. Meant as a test of Triton-VM
+# more than a test of the snippets contained in this repo.
+prove:
+	RUSTFLAGS="-C opt-level=3 -C debug-assertions=no" DYING_TO_PROVE=1 cargo t -- --test-threads=1 --nocapture
+
 help:
 	@echo "usage: make [debug=1]"
 
