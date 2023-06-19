@@ -233,11 +233,7 @@ pub fn execute_bench(
     // will be proven and then verified.
     // Notice that this is only done after the successful execution of the program above, so all
     // produced proofs here should be valid.
-    // If you run this, make sure to set this in your Cargo.toml:
-    // ```
-    // [profile.test]
-    // opt-level = 3
-    // ```
+    // If you run this, make sure `opt-level` is set to 3.
     if std::env::var("DYING_TO_PROVE").is_ok() {
         prove_and_verify(
             &program,
@@ -346,11 +342,7 @@ pub fn execute_test(
     // will be proven and then verified.
     // Notice that this is only done after the successful execution of the program above, so all
     // produced proofs here should be valid.
-    // If you run this, make sure to set this in your Cargo.toml:
-    // ```
-    // [profile.test]
-    // opt-level = 3
-    // ```
+    // If you run this, make sure `opt-level` is set to 3.
     if std::env::var("DYING_TO_PROVE").is_ok() {
         prove_and_verify(
             &program,
@@ -365,11 +357,7 @@ pub fn execute_test(
     Ok(())
 }
 
-// If you run this, make sure to set this in your Cargo.toml:
-// ```
-// [profile.test]
-// opt-level = 3
-// ```
+// If you run this, make sure `opt-level` is set to 3.
 fn prove_and_verify(
     program: &Program,
     code: &str,
