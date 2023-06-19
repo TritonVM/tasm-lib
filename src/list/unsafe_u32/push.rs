@@ -182,7 +182,7 @@ mod tests_push {
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
     use crate::get_init_tvm_stack;
-    use crate::snippet_bencher::bench_and_write;
+    
     use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
@@ -193,11 +193,6 @@ mod tests_push {
         rust_tasm_equivalence_prop_new(&UnsafePush(DataType::U64), true);
         rust_tasm_equivalence_prop_new(&UnsafePush(DataType::XFE), true);
         rust_tasm_equivalence_prop_new(&UnsafePush(DataType::Digest), true);
-    }
-
-    #[test]
-    fn unsafe_push_benchmark() {
-        bench_and_write(UnsafePush(DataType::Digest));
     }
 
     #[test]
@@ -282,5 +277,16 @@ mod tests_push {
                 )]
             );
         }
+    }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::snippet_bencher::bench_and_write;
+
+    #[test]
+    fn unsafe_push_benchmark() {
+        bench_and_write(UnsafePush(DataType::Digest));
     }
 }

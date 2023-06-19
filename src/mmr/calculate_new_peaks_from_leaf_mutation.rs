@@ -454,26 +454,6 @@ mod leaf_mutation_tests {
         );
     }
 
-    #[cfg(test)]
-    mod benches {
-        use super::*;
-        use crate::snippet_bencher::bench_and_write;
-
-        #[test]
-        fn calculate_new_peaks_from_leaf_mutation_benchmark_unsafe_lists() {
-            bench_and_write(MmrCalculateNewPeaksFromLeafMutationMtIndices {
-                list_type: ListType::Unsafe,
-            });
-        }
-
-        #[test]
-        fn calculate_new_peaks_from_leaf_mutation_benchmark_safe_lists() {
-            bench_and_write(MmrCalculateNewPeaksFromLeafMutationMtIndices {
-                list_type: ListType::Safe,
-            });
-        }
-    }
-
     #[test]
     fn mmra_leaf_mutate_test_single() {
         let digest0 = VmHasher::hash(&BFieldElement::new(4545));
@@ -748,5 +728,25 @@ mod leaf_mutation_tests {
                 )
                 .0
         );
+    }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::snippet_bencher::bench_and_write;
+
+    #[test]
+    fn calculate_new_peaks_from_leaf_mutation_benchmark_unsafe_lists() {
+        bench_and_write(MmrCalculateNewPeaksFromLeafMutationMtIndices {
+            list_type: ListType::Unsafe,
+        });
+    }
+
+    #[test]
+    fn calculate_new_peaks_from_leaf_mutation_benchmark_safe_lists() {
+        bench_and_write(MmrCalculateNewPeaksFromLeafMutationMtIndices {
+            list_type: ListType::Safe,
+        });
     }
 }

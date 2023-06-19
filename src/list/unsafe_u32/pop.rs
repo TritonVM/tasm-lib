@@ -170,7 +170,7 @@ mod tests_pop {
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
     use crate::get_init_tvm_stack;
-    use crate::snippet_bencher::bench_and_write;
+    
     use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
@@ -181,11 +181,6 @@ mod tests_pop {
         rust_tasm_equivalence_prop_new(&UnsafePop(DataType::U64), true);
         rust_tasm_equivalence_prop_new(&UnsafePop(DataType::XFE), true);
         rust_tasm_equivalence_prop_new(&UnsafePop(DataType::Digest), true);
-    }
-
-    #[test]
-    fn unsafe_pop_benchmark() {
-        bench_and_write(UnsafePop(DataType::Digest));
     }
 
     #[test]
@@ -280,5 +275,16 @@ mod tests_pop {
             BFieldElement::new(init_list_length as u64) - BFieldElement::one(),
             vm_memory[&list_address]
         );
+    }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::snippet_bencher::bench_and_write;
+
+    #[test]
+    fn unsafe_pop_benchmark() {
+        bench_and_write(UnsafePop(DataType::Digest));
     }
 }

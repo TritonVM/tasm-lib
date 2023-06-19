@@ -298,24 +298,24 @@ mod tests {
         );
         assert!(res.is_err());
     }
+}
 
-    #[cfg(test)]
-    mod benches {
-        use super::*;
-        use crate::snippet_bencher::bench_and_write;
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::snippet_bencher::bench_and_write;
 
-        #[test]
-        fn safe_benchmark() {
-            bench_and_write(Range {
-                list_type: ListType::Safe,
-            });
-        }
+    #[test]
+    fn safe_benchmark() {
+        bench_and_write(Range {
+            list_type: ListType::Safe,
+        });
+    }
 
-        #[test]
-        fn unsafe_benchmark() {
-            bench_and_write(Range {
-                list_type: ListType::Unsafe,
-            });
-        }
+    #[test]
+    fn unsafe_benchmark() {
+        bench_and_write(Range {
+            list_type: ListType::Unsafe,
+        });
     }
 }

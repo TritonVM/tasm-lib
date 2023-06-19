@@ -151,7 +151,7 @@ mod tests {
 
     use crate::{
         list::safe_u32::push::SafePush, rust_shadowing_helper_functions,
-        snippet_bencher::bench_and_write, test_helpers::rust_tasm_equivalence_prop_new, Digest,
+        test_helpers::rust_tasm_equivalence_prop_new, Digest,
     };
 
     use super::*;
@@ -164,11 +164,6 @@ mod tests {
         rust_tasm_equivalence_prop_new(&SafeNew(DataType::BFE), true);
         rust_tasm_equivalence_prop_new(&SafeNew(DataType::XFE), true);
         rust_tasm_equivalence_prop_new(&SafeNew(DataType::Digest), true);
-    }
-
-    #[test]
-    fn safe_new_benchmark() {
-        bench_and_write(SafeNew(DataType::Digest));
     }
 
     #[test]
@@ -252,5 +247,16 @@ mod tests {
             digest1, digest2,
             "Randomly generated digests must be different"
         );
+    }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::snippet_bencher::bench_and_write;
+
+    #[test]
+    fn safe_new_benchmark() {
+        bench_and_write(SafeNew(DataType::Digest));
     }
 }

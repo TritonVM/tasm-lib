@@ -212,16 +212,21 @@ impl Snippet for LoadAuthPathFromStdInSafeList {
 #[cfg(test)]
 mod load_auth_path_from_std_in_tests {
     use super::*;
-    use crate::snippet_bencher::bench_and_write;
     use crate::test_helpers::rust_tasm_equivalence_prop_new;
 
     #[test]
     fn load_auth_path_from_std_in_test() {
         rust_tasm_equivalence_prop_new(&LoadAuthPathFromStdInSafeList, true);
     }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::snippet_bencher::bench_and_write;
 
     #[test]
     fn load_auth_path_from_std_in_benchmark() {
-        bench_and_write::<LoadAuthPathFromStdInSafeList>(LoadAuthPathFromStdInSafeList);
+        bench_and_write(LoadAuthPathFromStdInSafeList);
     }
 }

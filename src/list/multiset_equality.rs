@@ -545,7 +545,7 @@ impl Snippet for MultisetEquality {
 
 #[cfg(test)]
 mod tests {
-    use crate::{snippet_bencher::bench_and_write, test_helpers::rust_tasm_equivalence_prop_new};
+    use crate::test_helpers::rust_tasm_equivalence_prop_new;
 
     use super::*;
 
@@ -558,6 +558,12 @@ mod tests {
     fn with_safe_list_prop_test() {
         rust_tasm_equivalence_prop_new(&MultisetEquality(ListType::Safe), true);
     }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::snippet_bencher::bench_and_write;
 
     #[test]
     fn unsafe_list_multiset_eq_benchmark() {

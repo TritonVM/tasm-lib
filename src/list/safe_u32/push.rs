@@ -216,7 +216,6 @@ fn prepare_execution_state(
 #[cfg(test)]
 mod tests {
     use crate::{
-        snippet_bencher::bench_and_write,
         test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new},
         DIGEST_LENGTH,
     };
@@ -231,11 +230,6 @@ mod tests {
         rust_tasm_equivalence_prop_new(&SafePush(DataType::BFE), true);
         rust_tasm_equivalence_prop_new(&SafePush(DataType::XFE), true);
         rust_tasm_equivalence_prop_new(&SafePush(DataType::Digest), true);
-    }
-
-    #[test]
-    fn safe_push_benchmark() {
-        bench_and_write(SafePush(DataType::Digest));
     }
 
     #[test]
@@ -443,5 +437,16 @@ mod tests {
                 )]
             );
         }
+    }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::snippet_bencher::bench_and_write;
+
+    #[test]
+    fn safe_push_benchmark() {
+        bench_and_write(SafePush(DataType::Digest));
     }
 }

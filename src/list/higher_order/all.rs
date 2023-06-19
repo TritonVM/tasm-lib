@@ -3,6 +3,7 @@ use num::Zero;
 use rand::{thread_rng, Rng};
 use std::collections::HashMap;
 use twenty_first::shared_math::b_field_element::BFieldElement;
+use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
 use crate::list::safe_u32::get::SafeGet;
 use crate::list::safe_u32::length::SafeLength;
@@ -11,7 +12,7 @@ use crate::list::unsafe_u32::length::UnsafeLength;
 use crate::list::ListType;
 use crate::rust_shadowing_helper_functions::safe_list::safe_insert_random_list;
 use crate::rust_shadowing_helper_functions::unsafe_list::unsafe_insert_random_list;
-use crate::{get_init_tvm_stack, rust_shadowing_helper_functions};
+use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, VmHasher};
 use crate::{
     snippet::{DataType, Snippet},
     snippet_state::SnippetState,
@@ -332,60 +333,43 @@ impl Snippet for All {
     }
 }
 
-#[cfg(test)]
-mod tests {
+// Only used for tests. Please don't export this.
+#[derive(Debug, Clone)]
+struct TestHashXFieldElementLsb;
 
-    use std::cell::RefCell;
+impl Snippet for TestHashXFieldElementLsb {
+    fn entrypoint(&self) -> String {
+        "test_hash_xfield_element_lsb".to_string()
+    }
 
-    use num::One;
-    use triton_opcodes::{instruction::LabelledInstruction, shortcuts::*};
-    use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
+    fn inputs(&self) -> Vec<String> {
+        vec![
+            "elem2".to_string(),
+            "elem1".to_string(),
+            "elem0".to_string(),
+        ]
+    }
 
-    use crate::{
-        list::higher_order::inner_function::RawCode,
-        snippet_bencher::bench_and_write,
-        test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new},
-        VmHasher,
-    };
+    fn input_types(&self) -> Vec<DataType> {
+        vec![DataType::XFE]
+    }
 
-    use super::*;
+    fn output_types(&self) -> Vec<DataType> {
+        vec![DataType::Bool]
+    }
 
-    #[derive(Debug, Clone)]
-    struct TestHashXFieldElementLsb;
+    fn outputs(&self) -> Vec<String> {
+        vec!["bool".to_string()]
+    }
 
-    impl Snippet for TestHashXFieldElementLsb {
-        fn entrypoint(&self) -> String {
-            "test_hash_xfield_element_lsb".to_string()
-        }
+    fn stack_diff(&self) -> isize {
+        -2
+    }
 
-        fn inputs(&self) -> Vec<String> {
-            vec![
-                "elem2".to_string(),
-                "elem1".to_string(),
-                "elem0".to_string(),
-            ]
-        }
-
-        fn input_types(&self) -> Vec<DataType> {
-            vec![DataType::XFE]
-        }
-
-        fn output_types(&self) -> Vec<DataType> {
-            vec![DataType::Bool]
-        }
-
-        fn outputs(&self) -> Vec<String> {
-            vec!["bool".to_string()]
-        }
-
-        fn stack_diff(&self) -> isize {
-            -2
-        }
-
-        fn function_code(&self, _library: &mut SnippetState) -> String {
-            let entrypoint = self.entrypoint();
-            format!(
-                "
+    fn function_code(&self, _library: &mut SnippetState) -> String {
+        let entrypoint = self.entrypoint();
+        format!(
+            "
         // BEFORE: _ x2 x1 x0
         // AFTER: _ b
         {entrypoint}:
@@ -415,73 +399,86 @@ mod tests {
             pop pop pop pop pop pop
             return
         "
-            )
-        }
-
-        fn crash_conditions(&self) -> Vec<String> {
-            vec![]
-        }
-
-        fn gen_input_states(&self) -> Vec<ExecutionState> {
-            // Function does not output random values, since that would make the benchmark output
-            // non-deterministic.
-            vec![ExecutionState::with_stack(
-                vec![
-                    vec![BFieldElement::zero(); 16],
-                    vec![
-                        BFieldElement::new(4888),
-                        BFieldElement::new(1u64 << 63),
-                        BFieldElement::new((1u64 << 51) + 1000),
-                    ],
-                ]
-                .concat(),
-            )]
-        }
-
-        fn common_case_input_state(&self) -> ExecutionState {
-            ExecutionState::with_stack(
-                vec![
-                    vec![BFieldElement::zero(); 16],
-                    vec![
-                        BFieldElement::new(4888),
-                        BFieldElement::new(1u64 << 63),
-                        BFieldElement::new((1u64 << 51) + 1000),
-                    ],
-                ]
-                .concat(),
-            )
-        }
-
-        fn worst_case_input_state(&self) -> ExecutionState {
-            ExecutionState::with_stack(
-                vec![
-                    vec![BFieldElement::zero(); 16],
-                    vec![
-                        BFieldElement::new(488800000),
-                        BFieldElement::new(1u64 << 62),
-                        BFieldElement::new((1u64 << 41) + 1001),
-                    ],
-                ]
-                .concat(),
-            )
-        }
-
-        fn rust_shadowing(
-            &self,
-            stack: &mut Vec<BFieldElement>,
-            _std_in: Vec<BFieldElement>,
-            _secret_in: Vec<BFieldElement>,
-            _memory: &mut HashMap<BFieldElement, BFieldElement>,
-        ) {
-            let mut xfield_element = vec![];
-            for _ in 0..3 {
-                xfield_element.push(stack.pop().unwrap());
-            }
-            let digest = VmHasher::hash_varlen(&xfield_element).values().to_vec();
-            let b = digest[0].value() % 2;
-            stack.push(BFieldElement::new(b));
-        }
+        )
     }
+
+    fn crash_conditions(&self) -> Vec<String> {
+        vec![]
+    }
+
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
+        // Function does not output random values, since that would make the benchmark output
+        // non-deterministic.
+        vec![ExecutionState::with_stack(
+            vec![
+                vec![BFieldElement::zero(); 16],
+                vec![
+                    BFieldElement::new(4888),
+                    BFieldElement::new(1u64 << 63),
+                    BFieldElement::new((1u64 << 51) + 1000),
+                ],
+            ]
+            .concat(),
+        )]
+    }
+
+    fn common_case_input_state(&self) -> ExecutionState {
+        ExecutionState::with_stack(
+            vec![
+                vec![BFieldElement::zero(); 16],
+                vec![
+                    BFieldElement::new(4888),
+                    BFieldElement::new(1u64 << 63),
+                    BFieldElement::new((1u64 << 51) + 1000),
+                ],
+            ]
+            .concat(),
+        )
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState {
+        ExecutionState::with_stack(
+            vec![
+                vec![BFieldElement::zero(); 16],
+                vec![
+                    BFieldElement::new(488800000),
+                    BFieldElement::new(1u64 << 62),
+                    BFieldElement::new((1u64 << 41) + 1001),
+                ],
+            ]
+            .concat(),
+        )
+    }
+
+    fn rust_shadowing(
+        &self,
+        stack: &mut Vec<BFieldElement>,
+        _std_in: Vec<BFieldElement>,
+        _secret_in: Vec<BFieldElement>,
+        _memory: &mut HashMap<BFieldElement, BFieldElement>,
+    ) {
+        let mut xfield_element = vec![];
+        for _ in 0..3 {
+            xfield_element.push(stack.pop().unwrap());
+        }
+        let digest = VmHasher::hash_varlen(&xfield_element).values().to_vec();
+        let b = digest[0].value() % 2;
+        stack.push(BFieldElement::new(b));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use num::One;
+    use std::cell::RefCell;
+    use triton_opcodes::{instruction::LabelledInstruction, shortcuts::*};
+
+    use crate::{
+        list::higher_order::inner_function::RawCode,
+        test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new},
+    };
+
+    use super::*;
 
     #[test]
     fn unsafe_list_prop_test() {
@@ -503,14 +500,6 @@ mod tests {
             },
             false,
         );
-    }
-
-    #[test]
-    fn unsafe_list_all_benchmark() {
-        bench_and_write(All {
-            list_type: ListType::Unsafe,
-            f: InnerFunction::Snippet(Box::new(TestHashXFieldElementLsb)),
-        });
     }
 
     #[test]
@@ -641,5 +630,19 @@ mod tests {
             },
             false,
         );
+    }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::snippet_bencher::bench_and_write;
+
+    #[test]
+    fn unsafe_list_all_benchmark() {
+        bench_and_write(All {
+            list_type: ListType::Unsafe,
+            f: InnerFunction::Snippet(Box::new(TestHashXFieldElementLsb)),
+        });
     }
 }

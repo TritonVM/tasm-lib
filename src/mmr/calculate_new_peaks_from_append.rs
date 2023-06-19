@@ -405,7 +405,6 @@ mod tests {
     use twenty_first::util_types::mmr::mmr_membership_proof::MmrMembershipProof;
     use twenty_first::util_types::mmr::mmr_trait::Mmr;
 
-    use crate::snippet_bencher::bench_and_write;
     use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
     use crate::{get_init_tvm_stack, VmHasher};
 
@@ -441,20 +440,6 @@ mod tests {
             let mmr_by_init: Mmra = MmrAccumulator::init(mmr_by_new.get_peaks(), mmr_size as u64);
             assert_eq!(mmr_by_new, mmr_by_init);
         }
-    }
-
-    #[test]
-    fn calculate_new_peaks_from_append_unsafe_lists_benchmark() {
-        bench_and_write(CalculateNewPeaksFromAppend {
-            list_type: ListType::Unsafe,
-        });
-    }
-
-    #[test]
-    fn calculate_new_peaks_from_append_safe_lists_benchmark() {
-        bench_and_write(CalculateNewPeaksFromAppend {
-            list_type: ListType::Safe,
-        });
     }
 
     #[test]
@@ -718,5 +703,24 @@ mod tests {
                 .0,
             "TASM-produced authentication path must be valid"
         );
+    }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::snippet_bencher::bench_and_write;
+    #[test]
+    fn calculate_new_peaks_from_append_unsafe_lists_benchmark() {
+        bench_and_write(CalculateNewPeaksFromAppend {
+            list_type: ListType::Unsafe,
+        });
+    }
+
+    #[test]
+    fn calculate_new_peaks_from_append_safe_lists_benchmark() {
+        bench_and_write(CalculateNewPeaksFromAppend {
+            list_type: ListType::Safe,
+        });
     }
 }

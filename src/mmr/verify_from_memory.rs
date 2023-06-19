@@ -446,26 +446,6 @@ mod auth_path_verify_from_memory_tests {
         );
     }
 
-    #[cfg(test)]
-    mod benches {
-        use super::*;
-        use crate::snippet_bencher::bench_and_write;
-
-        #[test]
-        fn verify_from_memory_benchmark_unsafe_lists() {
-            bench_and_write(MmrVerifyFromMemory {
-                list_type: ListType::Unsafe,
-            });
-        }
-
-        #[test]
-        fn verify_from_memory_benchmark_safe_lists() {
-            bench_and_write(MmrVerifyFromMemory {
-                list_type: ListType::Safe,
-            });
-        }
-    }
-
     // This will crash the VM because leaf?index is not strictly less than leaf_count
     #[test]
     #[should_panic]
@@ -668,5 +648,25 @@ mod auth_path_verify_from_memory_tests {
                 .verify(&mmr.get_peaks(), &leaf, mmr.count_leaves())
                 .0
         );
+    }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::snippet_bencher::bench_and_write;
+
+    #[test]
+    fn verify_from_memory_benchmark_unsafe_lists() {
+        bench_and_write(MmrVerifyFromMemory {
+            list_type: ListType::Unsafe,
+        });
+    }
+
+    #[test]
+    fn verify_from_memory_benchmark_safe_lists() {
+        bench_and_write(MmrVerifyFromMemory {
+            list_type: ListType::Safe,
+        });
     }
 }

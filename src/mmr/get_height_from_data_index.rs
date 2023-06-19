@@ -107,7 +107,7 @@ mod tests {
     use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
     use crate::get_init_tvm_stack;
-    use crate::snippet_bencher::bench_and_write;
+    
     use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
@@ -115,11 +115,6 @@ mod tests {
     #[test]
     fn get_height_from_data_index_test() {
         rust_tasm_equivalence_prop_new(&GetHeightFromDataIndex, true);
-    }
-
-    #[test]
-    fn get_height_from_data_index_benchmark() {
-        bench_and_write::<GetHeightFromDataIndex>(GetHeightFromDataIndex);
     }
 
     #[test]
@@ -211,5 +206,16 @@ mod tests {
             0,
             Some(expected),
         );
+    }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::snippet_bencher::bench_and_write;
+
+    #[test]
+    fn get_height_from_data_index_benchmark() {
+        bench_and_write(GetHeightFromDataIndex);
     }
 }

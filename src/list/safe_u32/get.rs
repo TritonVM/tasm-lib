@@ -206,16 +206,9 @@ fn get_benchmark_input_state(list_length: usize, data_type: &DataType) -> Execut
 mod get_element_tests {
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
-    use crate::get_init_tvm_stack;
-    use crate::snippet_bencher::bench_and_write;
-    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
-
     use super::*;
-
-    #[test]
-    fn safe_get_benchmark() {
-        bench_and_write(SafeGet(DataType::Digest));
-    }
+    use crate::get_init_tvm_stack;
+    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     #[test]
     fn new_snippet_test() {
@@ -406,5 +399,16 @@ mod get_element_tests {
             0,
             Some(&expected_end_stack),
         );
+    }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::snippet_bencher::bench_and_write;
+
+    #[test]
+    fn safe_get_benchmark() {
+        bench_and_write(SafeGet(DataType::Digest));
     }
 }

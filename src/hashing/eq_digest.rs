@@ -139,7 +139,6 @@ impl Snippet for EqDigest {
 
 #[cfg(test)]
 mod tests {
-    use crate::snippet_bencher::bench_and_write;
     use crate::test_helpers::rust_tasm_equivalence_prop_new;
 
     use super::*;
@@ -148,9 +147,15 @@ mod tests {
     fn swap_digest_test() {
         rust_tasm_equivalence_prop_new(&EqDigest, true);
     }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::snippet_bencher::bench_and_write;
 
     #[test]
     fn eq_digest_benchmark() {
-        bench_and_write::<EqDigest>(EqDigest);
+        bench_and_write(EqDigest);
     }
 }

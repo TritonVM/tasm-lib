@@ -293,7 +293,6 @@ mod merkle_authentication_verify_test {
     use twenty_first::util_types::merkle_tree_maker::MerkleTreeMaker;
 
     use crate::get_init_tvm_stack;
-    use crate::snippet_bencher::bench_and_write;
     use crate::test_helpers::rust_tasm_equivalence_prop;
     use crate::test_helpers::rust_tasm_equivalence_prop_new;
     use crate::VmHasher;
@@ -310,11 +309,6 @@ mod merkle_authentication_verify_test {
     #[test]
     fn merkle_tree_ap_verify_from_secret_input_test() {
         rust_tasm_equivalence_prop_new(&MtApVerifyFromSecretInput(PhantomData::<VmHasher>), true);
-    }
-
-    #[test]
-    fn merkle_tree_ap_verify_from_secret_input_benchmark() {
-        bench_and_write(MtApVerifyFromSecretInput(PhantomData::<VmHasher>));
     }
 
     #[test]
@@ -390,5 +384,16 @@ mod merkle_authentication_verify_test {
             0,
             None,
         );
+    }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::{snippet_bencher::bench_and_write, VmHasher};
+
+    #[test]
+    fn merkle_tree_ap_verify_from_secret_input_benchmark() {
+        bench_and_write(MtApVerifyFromSecretInput(PhantomData::<VmHasher>));
     }
 }

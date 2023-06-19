@@ -105,9 +105,8 @@ impl Snippet for ReadSecret {
 
 #[cfg(test)]
 mod tests {
-    use crate::{snippet_bencher::bench_and_write, test_helpers::rust_tasm_equivalence_prop_new};
-
     use super::*;
+    use crate::test_helpers::rust_tasm_equivalence_prop_new;
 
     #[test]
     fn new_snippet_test() {
@@ -120,6 +119,12 @@ mod tests {
             rust_tasm_equivalence_prop_new(&ReadSecret(DataType::Digest), true);
         }
     }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::snippet_bencher::bench_and_write;
 
     #[test]
     fn read_secret_benchmark() {

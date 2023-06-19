@@ -157,7 +157,7 @@ pub fn init_state_field_i_in_struct(
 
 #[cfg(test)]
 mod tests {
-    use crate::{snippet_bencher::bench_and_write, test_helpers::rust_tasm_equivalence_prop_new};
+    use crate::test_helpers::rust_tasm_equivalence_prop_new;
 
     use super::GetField;
 
@@ -165,6 +165,12 @@ mod tests {
     fn new_prop_test() {
         rust_tasm_equivalence_prop_new(&GetField, true);
     }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::snippet_bencher::bench_and_write;
 
     #[test]
     fn get_transaction_kernel_field_size_benchmark() {

@@ -402,24 +402,24 @@ mod tests {
             true,
         );
     }
+}
 
-    #[cfg(test)]
-    mod benches {
-        use super::*;
-        use crate::snippet_bencher::bench_and_write;
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::snippet_bencher::bench_and_write;
 
-        #[test]
-        fn sample_indices_benchmark_safe() {
-            bench_and_write(SampleIndices {
-                list_type: ListType::Safe,
-            });
-        }
+    #[test]
+    fn sample_indices_benchmark_safe() {
+        bench_and_write(SampleIndices {
+            list_type: ListType::Safe,
+        });
+    }
 
-        #[test]
-        fn sample_indices_benchmark_unsafe() {
-            bench_and_write(SampleIndices {
-                list_type: ListType::Unsafe,
-            });
-        }
+    #[test]
+    fn sample_indices_benchmark_unsafe() {
+        bench_and_write(SampleIndices {
+            list_type: ListType::Unsafe,
+        });
     }
 }

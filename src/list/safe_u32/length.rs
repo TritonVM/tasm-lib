@@ -155,7 +155,6 @@ mod tests {
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
     use crate::get_init_tvm_stack;
-    use crate::snippet_bencher::bench_and_write;
     use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
@@ -168,11 +167,6 @@ mod tests {
         rust_tasm_equivalence_prop_new(&SafeLength(DataType::BFE), true);
         rust_tasm_equivalence_prop_new(&SafeLength(DataType::XFE), true);
         rust_tasm_equivalence_prop_new(&SafeLength(DataType::Digest), true);
-    }
-
-    #[test]
-    fn safe_length_benchmark() {
-        bench_and_write(SafeLength(DataType::Digest));
     }
 
     #[test]
@@ -241,5 +235,16 @@ mod tests {
             0,
             expected,
         );
+    }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::snippet_bencher::bench_and_write;
+
+    #[test]
+    fn safe_length_benchmark() {
+        bench_and_write(SafeLength(DataType::Digest));
     }
 }

@@ -175,7 +175,6 @@ mod tests_pop {
 
     use crate::get_init_tvm_stack;
     use crate::rust_shadowing_helper_functions::safe_list::safe_list_push;
-    use crate::snippet_bencher::bench_and_write;
     use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
@@ -188,11 +187,6 @@ mod tests_pop {
         rust_tasm_equivalence_prop_new(&SafePop(DataType::BFE), true);
         rust_tasm_equivalence_prop_new(&SafePop(DataType::XFE), true);
         rust_tasm_equivalence_prop_new(&SafePop(DataType::Digest), true);
-    }
-
-    #[test]
-    fn safe_pop_benchmark() {
-        bench_and_write(SafePop(DataType::Digest));
     }
 
     #[test]
@@ -293,5 +287,16 @@ mod tests_pop {
             BFieldElement::new(list_capacity as u64),
             memory[&(list_pointer + BFieldElement::one())]
         );
+    }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::snippet_bencher::bench_and_write;
+
+    #[test]
+    fn safe_pop_benchmark() {
+        bench_and_write(SafePop(DataType::Digest));
     }
 }

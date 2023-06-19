@@ -256,10 +256,7 @@ impl Snippet for LoadFromInput {
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        execute_with_execution_state, snippet_bencher::bench_and_write,
-        test_helpers::rust_tasm_equivalence_prop_new,
-    };
+    use crate::{execute_with_execution_state, test_helpers::rust_tasm_equivalence_prop_new};
 
     use super::*;
 
@@ -267,12 +264,6 @@ mod tests {
     fn new_snippet_test() {
         rust_tasm_equivalence_prop_new(&LoadFromInput(InputSource::SecretIn), true);
         rust_tasm_equivalence_prop_new(&LoadFromInput(InputSource::StdIn), true);
-    }
-
-    #[test]
-    fn load_from_input_benchmark() {
-        bench_and_write(LoadFromInput(InputSource::SecretIn));
-        bench_and_write(LoadFromInput(InputSource::StdIn));
     }
 
     #[test]
@@ -308,5 +299,17 @@ mod tests {
                 .get(&BFieldElement::new(indicated_next_free_address))
                 .is_none());
         }
+    }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::snippet_bencher::bench_and_write;
+
+    #[test]
+    fn load_from_input_benchmark() {
+        bench_and_write(LoadFromInput(InputSource::SecretIn));
+        bench_and_write(LoadFromInput(InputSource::StdIn));
     }
 }

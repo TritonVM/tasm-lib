@@ -3,6 +3,8 @@ use num::Zero;
 use rand::{thread_rng, Rng};
 use std::collections::HashMap;
 use twenty_first::shared_math::b_field_element::BFieldElement;
+use twenty_first::shared_math::other::random_elements;
+use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
 use crate::list::safe_u32::get::SafeGet;
 use crate::list::safe_u32::length::SafeLength;
@@ -16,7 +18,7 @@ use crate::list::{self, ListType};
 use crate::memory::memcpy::MemCpy;
 use crate::rust_shadowing_helper_functions::safe_list::safe_insert_random_list;
 use crate::rust_shadowing_helper_functions::unsafe_list::unsafe_insert_random_list;
-use crate::{get_init_tvm_stack, rust_shadowing_helper_functions};
+use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, VmHasher};
 use crate::{
     snippet::{DataType, Snippet},
     snippet_state::SnippetState,
@@ -474,164 +476,160 @@ impl Snippet for Filter {
     }
 }
 
+#[derive(Debug, Clone)]
+struct TestHashXFieldElementLsb;
+
+impl Snippet for TestHashXFieldElementLsb {
+    fn entrypoint(&self) -> String {
+        "test_hash_xfield_element_lsb".to_string()
+    }
+
+    fn inputs(&self) -> Vec<String>
+    where
+        Self: Sized,
+    {
+        vec![
+            "elem2".to_string(),
+            "elem1".to_string(),
+            "elem0".to_string(),
+        ]
+    }
+
+    fn input_types(&self) -> Vec<DataType> {
+        vec![DataType::XFE]
+    }
+
+    fn output_types(&self) -> Vec<DataType> {
+        vec![DataType::Bool]
+    }
+
+    fn outputs(&self) -> Vec<String>
+    where
+        Self: Sized,
+    {
+        vec!["bool".to_string()]
+    }
+
+    fn stack_diff(&self) -> isize
+    where
+        Self: Sized,
+    {
+        -2
+    }
+
+    fn function_code(&self, _library: &mut SnippetState) -> String {
+        let entrypoint = self.entrypoint();
+        format!(
+            "
+    // BEFORE: _ x2 x1 x0
+    // AFTER: _ b
+    {entrypoint}:
+        push 0
+        push 0
+        push 0
+        push 1 // _ x2 x1 x0 0 0 0 1
+        push 0 swap 7 // _ 0 x1 x0 0 0 0 1 x2
+        push 0 swap 7 // _ 0 0 x0 0 0 0 1 x2 x1
+        push 0 swap 7 // _ 0 0 0 0 0 0 1 x2 x1 x0
+
+        absorb_init
+        squeeze // _ d9 d8 d7 d6 d5 d4 d3 d2 d1 d0
+        swap 5 pop // _ d9 d8 d7 d6 d0 d4 d3 d2 d1
+        swap 5 pop // _ d9 d8 d7 d1 d0 d4 d3 d2
+        swap 5 pop
+        swap 5 pop
+        swap 5 pop
+
+        // _ d4 d3 d2 d1 d0
+
+        split // _ d4 d3 d2 d1 hi lo
+        push 2 // _ d4 d3 d2 d1 hi lo 2
+        swap 1
+        div // _ d4 d3 d2 d1 hi q r
+        swap 6
+        pop pop pop pop pop pop
+        return
+    "
+        )
+    }
+
+    fn crash_conditions(&self) -> Vec<String>
+    where
+        Self: Sized,
+    {
+        vec![]
+    }
+
+    fn gen_input_states(&self) -> Vec<ExecutionState>
+    where
+        Self: Sized,
+    {
+        vec![ExecutionState::with_stack(
+            vec![
+                vec![BFieldElement::zero(); 16],
+                random_elements::<BFieldElement>(3),
+            ]
+            .concat(),
+        )]
+    }
+
+    fn common_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        ExecutionState::with_stack(
+            vec![
+                vec![BFieldElement::zero(); 16],
+                random_elements::<BFieldElement>(3),
+            ]
+            .concat(),
+        )
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState
+    where
+        Self: Sized,
+    {
+        ExecutionState::with_stack(
+            vec![
+                vec![BFieldElement::zero(); 16],
+                random_elements::<BFieldElement>(3),
+            ]
+            .concat(),
+        )
+    }
+
+    fn rust_shadowing(
+        &self,
+        stack: &mut Vec<BFieldElement>,
+        _std_in: Vec<BFieldElement>,
+        _secret_in: Vec<BFieldElement>,
+        _memory: &mut HashMap<BFieldElement, BFieldElement>,
+    ) where
+        Self: Sized,
+    {
+        let mut xfield_element = vec![];
+        for _ in 0..3 {
+            xfield_element.push(stack.pop().unwrap());
+        }
+        let digest = VmHasher::hash_varlen(&xfield_element).values().to_vec();
+        let b = digest[0].value() % 2;
+        stack.push(BFieldElement::new(b));
+    }
+}
+
 #[cfg(test)]
 mod tests {
 
     use std::cell::RefCell;
 
     use triton_opcodes::{instruction::LabelledInstruction, shortcuts::*};
-    use twenty_first::{
-        shared_math::other::random_elements, util_types::algebraic_hasher::AlgebraicHasher,
-    };
 
     use crate::{
-        list::higher_order::inner_function::RawCode, snippet_bencher::bench_and_write,
-        test_helpers::rust_tasm_equivalence_prop_new, VmHasher,
+        list::higher_order::inner_function::RawCode, test_helpers::rust_tasm_equivalence_prop_new,
     };
 
     use super::*;
-
-    #[derive(Debug, Clone)]
-    struct TestHashXFieldElementLsb;
-
-    impl Snippet for TestHashXFieldElementLsb {
-        fn entrypoint(&self) -> String {
-            "test_hash_xfield_element_lsb".to_string()
-        }
-
-        fn inputs(&self) -> Vec<String>
-        where
-            Self: Sized,
-        {
-            vec![
-                "elem2".to_string(),
-                "elem1".to_string(),
-                "elem0".to_string(),
-            ]
-        }
-
-        fn input_types(&self) -> Vec<DataType> {
-            vec![DataType::XFE]
-        }
-
-        fn output_types(&self) -> Vec<DataType> {
-            vec![DataType::Bool]
-        }
-
-        fn outputs(&self) -> Vec<String>
-        where
-            Self: Sized,
-        {
-            vec!["bool".to_string()]
-        }
-
-        fn stack_diff(&self) -> isize
-        where
-            Self: Sized,
-        {
-            -2
-        }
-
-        fn function_code(&self, _library: &mut SnippetState) -> String {
-            let entrypoint = self.entrypoint();
-            format!(
-                "
-        // BEFORE: _ x2 x1 x0
-        // AFTER: _ b
-        {entrypoint}:
-            push 0
-            push 0
-            push 0
-            push 1 // _ x2 x1 x0 0 0 0 1
-            push 0 swap 7 // _ 0 x1 x0 0 0 0 1 x2
-            push 0 swap 7 // _ 0 0 x0 0 0 0 1 x2 x1
-            push 0 swap 7 // _ 0 0 0 0 0 0 1 x2 x1 x0
-
-            absorb_init
-            squeeze // _ d9 d8 d7 d6 d5 d4 d3 d2 d1 d0
-            swap 5 pop // _ d9 d8 d7 d6 d0 d4 d3 d2 d1
-            swap 5 pop // _ d9 d8 d7 d1 d0 d4 d3 d2
-            swap 5 pop
-            swap 5 pop
-            swap 5 pop
-
-            // _ d4 d3 d2 d1 d0
-
-            split // _ d4 d3 d2 d1 hi lo
-            push 2 // _ d4 d3 d2 d1 hi lo 2
-            swap 1
-            div // _ d4 d3 d2 d1 hi q r
-            swap 6
-            pop pop pop pop pop pop
-            return
-        "
-            )
-        }
-
-        fn crash_conditions(&self) -> Vec<String>
-        where
-            Self: Sized,
-        {
-            vec![]
-        }
-
-        fn gen_input_states(&self) -> Vec<ExecutionState>
-        where
-            Self: Sized,
-        {
-            vec![ExecutionState::with_stack(
-                vec![
-                    vec![BFieldElement::zero(); 16],
-                    random_elements::<BFieldElement>(3),
-                ]
-                .concat(),
-            )]
-        }
-
-        fn common_case_input_state(&self) -> ExecutionState
-        where
-            Self: Sized,
-        {
-            ExecutionState::with_stack(
-                vec![
-                    vec![BFieldElement::zero(); 16],
-                    random_elements::<BFieldElement>(3),
-                ]
-                .concat(),
-            )
-        }
-
-        fn worst_case_input_state(&self) -> ExecutionState
-        where
-            Self: Sized,
-        {
-            ExecutionState::with_stack(
-                vec![
-                    vec![BFieldElement::zero(); 16],
-                    random_elements::<BFieldElement>(3),
-                ]
-                .concat(),
-            )
-        }
-
-        fn rust_shadowing(
-            &self,
-            stack: &mut Vec<BFieldElement>,
-            _std_in: Vec<BFieldElement>,
-            _secret_in: Vec<BFieldElement>,
-            _memory: &mut HashMap<BFieldElement, BFieldElement>,
-        ) where
-            Self: Sized,
-        {
-            let mut xfield_element = vec![];
-            for _ in 0..3 {
-                xfield_element.push(stack.pop().unwrap());
-            }
-            let digest = VmHasher::hash_varlen(&xfield_element).values().to_vec();
-            let b = digest[0].value() % 2;
-            stack.push(BFieldElement::new(b));
-        }
-    }
 
     #[test]
     fn unsafe_list_prop_test() {
@@ -653,22 +651,6 @@ mod tests {
             },
             false,
         );
-    }
-
-    #[test]
-    fn unsafe_list_filter_benchmark() {
-        bench_and_write(Filter {
-            list_type: ListType::Unsafe,
-            f: InnerFunction::Snippet(Box::new(TestHashXFieldElementLsb)),
-        });
-    }
-
-    #[test]
-    fn safe_list_filter_benchmark() {
-        bench_and_write(Filter {
-            list_type: ListType::Safe,
-            f: InnerFunction::Snippet(Box::new(TestHashXFieldElementLsb)),
-        });
     }
 
     #[test]
@@ -733,5 +715,27 @@ mod tests {
             },
             false,
         );
+    }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::snippet_bencher::bench_and_write;
+
+    #[test]
+    fn unsafe_list_filter_benchmark() {
+        bench_and_write(Filter {
+            list_type: ListType::Unsafe,
+            f: InnerFunction::Snippet(Box::new(TestHashXFieldElementLsb)),
+        });
+    }
+
+    #[test]
+    fn safe_list_filter_benchmark() {
+        bench_and_write(Filter {
+            list_type: ListType::Safe,
+            f: InnerFunction::Snippet(Box::new(TestHashXFieldElementLsb)),
+        });
     }
 }

@@ -195,7 +195,7 @@ mod list_set_tests {
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
     use crate::get_init_tvm_stack;
-    use crate::snippet_bencher::bench_and_write;
+    
     use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;
@@ -210,11 +210,6 @@ mod list_set_tests {
             rust_tasm_equivalence_prop_new(&SafeSet(DataType::XFE), true);
             rust_tasm_equivalence_prop_new(&SafeSet(DataType::Digest), true);
         }
-    }
-
-    #[test]
-    fn safe_set_benchmark() {
-        bench_and_write(SafeSet(DataType::Digest));
     }
 
     #[test]
@@ -375,5 +370,16 @@ mod list_set_tests {
                 )]
             );
         }
+    }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::snippet_bencher::bench_and_write;
+
+    #[test]
+    fn safe_set_benchmark() {
+        bench_and_write(SafeSet(DataType::Digest));
     }
 }

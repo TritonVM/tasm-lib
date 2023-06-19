@@ -130,7 +130,7 @@ mod tests {
 
     use super::*;
     use crate::{
-        dyn_malloc::DYN_MALLOC_ADDRESS, snippet_bencher::bench_and_write,
+        dyn_malloc::DYN_MALLOC_ADDRESS,
         test_helpers::rust_tasm_equivalence_prop_new,
     };
 
@@ -159,6 +159,12 @@ mod tests {
             );
         }
     }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::snippet_bencher::bench_and_write;
 
     #[test]
     fn unsafe_new_benchmark() {
