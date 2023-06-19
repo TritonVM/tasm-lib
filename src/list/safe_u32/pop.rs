@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use rand::{random, thread_rng, Rng};
+use rand::random;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::rust_shadowing_helper_functions::safe_list::{safe_insert_random_list, safe_list_pop};
