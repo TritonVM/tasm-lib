@@ -254,13 +254,15 @@ mod tests {
 
     use crate::get_init_tvm_stack;
 
-    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
+    use crate::test_helpers::{
+        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+    };
 
     use super::*;
 
     #[test]
     fn sub_u128_test() {
-        rust_tasm_equivalence_prop_new(&SubU128, true);
+        test_rust_equivalence_multiple(&SubU128, true);
     }
 
     #[test]
@@ -367,7 +369,7 @@ mod tests {
             init_stack.push(elem);
         }
 
-        let _execution_result = rust_tasm_equivalence_prop(
+        let _execution_result = test_rust_equivalence_given_input_state(
             &SubU128,
             &init_stack,
             &[],

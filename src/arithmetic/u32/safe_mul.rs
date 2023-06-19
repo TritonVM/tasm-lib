@@ -118,13 +118,15 @@ impl Snippet for SafeMul {
 mod tests {
     use std::collections::HashMap;
 
-    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
+    use crate::test_helpers::{
+        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+    };
 
     use super::*;
 
     #[test]
     fn snippet_test() {
-        rust_tasm_equivalence_prop_new(&SafeMul, true);
+        test_rust_equivalence_multiple(&SafeMul, true);
     }
 
     #[test]
@@ -160,7 +162,7 @@ mod tests {
         init_stack.push(BFieldElement::new(rhs as u64));
         init_stack.push(BFieldElement::new(lhs as u64));
 
-        let execution_result = rust_tasm_equivalence_prop(
+        let execution_result = test_rust_equivalence_given_input_state(
             &SafeMul,
             &init_stack,
             &[],

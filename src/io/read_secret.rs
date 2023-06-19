@@ -106,17 +106,17 @@ impl Snippet for ReadSecret {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_helpers::rust_tasm_equivalence_prop_new;
+    use crate::test_helpers::test_rust_equivalence_multiple;
 
     #[test]
     fn new_snippet_test() {
         for _ in 0..10 {
-            rust_tasm_equivalence_prop_new(&ReadSecret(DataType::Bool), true);
-            rust_tasm_equivalence_prop_new(&ReadSecret(DataType::U32), true);
-            rust_tasm_equivalence_prop_new(&ReadSecret(DataType::U64), true);
-            rust_tasm_equivalence_prop_new(&ReadSecret(DataType::BFE), true);
-            rust_tasm_equivalence_prop_new(&ReadSecret(DataType::XFE), true);
-            rust_tasm_equivalence_prop_new(&ReadSecret(DataType::Digest), true);
+            test_rust_equivalence_multiple(&ReadSecret(DataType::Bool), true);
+            test_rust_equivalence_multiple(&ReadSecret(DataType::U32), true);
+            test_rust_equivalence_multiple(&ReadSecret(DataType::U64), true);
+            test_rust_equivalence_multiple(&ReadSecret(DataType::BFE), true);
+            test_rust_equivalence_multiple(&ReadSecret(DataType::XFE), true);
+            test_rust_equivalence_multiple(&ReadSecret(DataType::Digest), true);
         }
     }
 }

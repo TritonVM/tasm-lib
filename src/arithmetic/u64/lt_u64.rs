@@ -298,7 +298,9 @@ mod tests {
 
     use crate::get_init_tvm_stack;
 
-    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
+    use crate::test_helpers::{
+        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+    };
 
     use super::*;
 
@@ -311,12 +313,12 @@ mod tests {
 
     #[test]
     fn lt_u64_test_new_snippet() {
-        rust_tasm_equivalence_prop_new(&LtU64, true);
+        test_rust_equivalence_multiple(&LtU64, true);
     }
 
     #[test]
     fn standard_lt_u64_test_new_snippet() {
-        rust_tasm_equivalence_prop_new(&LtStandardU64, true);
+        test_rust_equivalence_multiple(&LtStandardU64, true);
     }
 
     #[test]
@@ -436,7 +438,7 @@ mod tests {
         let secret_in = &[];
         let mut memory = HashMap::default();
         let words_allocated = 0;
-        let _execution_result = rust_tasm_equivalence_prop(
+        let _execution_result = test_rust_equivalence_given_input_state(
             &LtU64,
             &init_stack,
             stdin,
@@ -457,7 +459,7 @@ mod tests {
         let mut memory = HashMap::default();
         let words_allocated = 0;
         let expected = None;
-        let _execution_result = rust_tasm_equivalence_prop(
+        let _execution_result = test_rust_equivalence_given_input_state(
             &LtU64,
             &init_stack,
             stdin,

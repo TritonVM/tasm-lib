@@ -420,7 +420,9 @@ mod tests {
     use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
     use twenty_first::util_types::mmr::{mmr_membership_proof::MmrMembershipProof, mmr_trait::Mmr};
 
-    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
+    use crate::test_helpers::{
+        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+    };
     use crate::VmHasher;
     use crate::{get_init_tvm_stack, mmr::MAX_MMR_HEIGHT};
 
@@ -428,7 +430,7 @@ mod tests {
 
     #[test]
     fn verify_from_memory_test_unsafe_list() {
-        rust_tasm_equivalence_prop_new(
+        test_rust_equivalence_multiple(
             &MmrVerifyFromMemory {
                 list_type: ListType::Unsafe,
             },
@@ -438,7 +440,7 @@ mod tests {
 
     #[test]
     fn verify_from_memory_test_safe_list() {
-        rust_tasm_equivalence_prop_new(
+        test_rust_equivalence_multiple(
             &MmrVerifyFromMemory {
                 list_type: ListType::Safe,
             },
@@ -631,7 +633,7 @@ mod tests {
         expected_final_stack.push(leaf_index_lo);
         expected_final_stack.push(BFieldElement::new(expect_validation_success as u64));
 
-        let _execution_result = rust_tasm_equivalence_prop(
+        let _execution_result = test_rust_equivalence_given_input_state(
             &snippet_for_unsafe_lists,
             &init_stack,
             &[],

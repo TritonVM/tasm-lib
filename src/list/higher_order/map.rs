@@ -515,14 +515,14 @@ mod tests {
     use twenty_first::shared_math::{traits::FiniteField, x_field_element::XFieldElement};
 
     use crate::{
-        list::higher_order::inner_function::RawCode, test_helpers::rust_tasm_equivalence_prop_new,
+        list::higher_order::inner_function::RawCode, test_helpers::test_rust_equivalence_multiple,
     };
 
     use super::*;
 
     #[test]
     fn unsafe_list_prop_test() {
-        rust_tasm_equivalence_prop_new(
+        test_rust_equivalence_multiple(
             &Map {
                 list_type: ListType::Unsafe,
                 f: InnerFunction::Snippet(Box::new(TestHashXFieldElement)),
@@ -533,7 +533,7 @@ mod tests {
 
     #[test]
     fn with_safe_list_prop_test() {
-        rust_tasm_equivalence_prop_new(
+        test_rust_equivalence_multiple(
             &Map {
                 list_type: ListType::Safe,
                 f: InnerFunction::Snippet(Box::new(TestHashXFieldElement)),
@@ -553,7 +553,7 @@ mod tests {
             vec![DataType::BFE],
             Box::new(RefCell::new(|_vec: &mut Vec<BFieldElement>| {})),
         );
-        rust_tasm_equivalence_prop_new(
+        test_rust_equivalence_multiple(
             &Map {
                 list_type: ListType::Unsafe,
                 f: InnerFunction::RawCode(rawcode),
@@ -578,7 +578,7 @@ mod tests {
                 vec.push(new_value);
             })),
         );
-        rust_tasm_equivalence_prop_new(
+        test_rust_equivalence_multiple(
             &Map {
                 list_type: ListType::Unsafe,
                 f: InnerFunction::RawCode(rawcode),
@@ -617,7 +617,7 @@ mod tests {
                 vec.push(new_value.coefficients[0]);
             })),
         );
-        rust_tasm_equivalence_prop_new(
+        test_rust_equivalence_multiple(
             &Map {
                 list_type: ListType::Unsafe,
                 f: InnerFunction::RawCode(rawcode),

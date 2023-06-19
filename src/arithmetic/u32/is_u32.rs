@@ -112,13 +112,15 @@ mod tests {
 
     use crate::get_init_tvm_stack;
 
-    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
+    use crate::test_helpers::{
+        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+    };
 
     use super::*;
 
     #[test]
     fn is_u32_test() {
-        rust_tasm_equivalence_prop_new(&IsU32, true);
+        test_rust_equivalence_multiple(&IsU32, true);
     }
 
     #[test]
@@ -163,7 +165,7 @@ mod tests {
         let mut init_stack = get_init_tvm_stack();
         init_stack.push(some_value);
 
-        let _execution_result = rust_tasm_equivalence_prop::<IsU32>(
+        let _execution_result = test_rust_equivalence_given_input_state::<IsU32>(
             &IsU32,
             &init_stack,
             &[],

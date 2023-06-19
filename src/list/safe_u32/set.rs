@@ -196,19 +196,21 @@ mod tests {
 
     use crate::get_init_tvm_stack;
 
-    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
+    use crate::test_helpers::{
+        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+    };
 
     use super::*;
 
     #[test]
     fn new_snippet_test() {
         for _ in 0..6 {
-            rust_tasm_equivalence_prop_new(&SafeSet(DataType::Bool), true);
-            rust_tasm_equivalence_prop_new(&SafeSet(DataType::BFE), true);
-            rust_tasm_equivalence_prop_new(&SafeSet(DataType::U32), true);
-            rust_tasm_equivalence_prop_new(&SafeSet(DataType::U64), true);
-            rust_tasm_equivalence_prop_new(&SafeSet(DataType::XFE), true);
-            rust_tasm_equivalence_prop_new(&SafeSet(DataType::Digest), true);
+            test_rust_equivalence_multiple(&SafeSet(DataType::Bool), true);
+            test_rust_equivalence_multiple(&SafeSet(DataType::BFE), true);
+            test_rust_equivalence_multiple(&SafeSet(DataType::U32), true);
+            test_rust_equivalence_multiple(&SafeSet(DataType::U64), true);
+            test_rust_equivalence_multiple(&SafeSet(DataType::XFE), true);
+            test_rust_equivalence_multiple(&SafeSet(DataType::Digest), true);
         }
     }
 
@@ -342,7 +344,7 @@ mod tests {
             &mut vm_memory,
         );
 
-        let _execution_result = rust_tasm_equivalence_prop::<SafeSet>(
+        let _execution_result = test_rust_equivalence_given_input_state::<SafeSet>(
             &SafeSet(data_type.clone()),
             &init_stack,
             &[],

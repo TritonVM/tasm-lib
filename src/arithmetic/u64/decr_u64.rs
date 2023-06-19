@@ -134,14 +134,16 @@ mod tests {
     use num::Zero;
     use rand::Rng;
 
-    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
+    use crate::test_helpers::{
+        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+    };
     use crate::{get_init_tvm_stack, push_encodable};
 
     use super::*;
 
     #[test]
     fn decr_u64_test() {
-        rust_tasm_equivalence_prop_new(&DecrU64, true);
+        test_rust_equivalence_multiple(&DecrU64, true);
     }
 
     #[test]
@@ -149,7 +151,7 @@ mod tests {
     fn decr_u64_negative_tasm_test() {
         let mut stack = get_init_tvm_stack();
         push_encodable(&mut stack, &U32s::<2>::zero());
-        DecrU64.run_tasm_old(&mut stack, vec![], vec![], &mut HashMap::default(), 0);
+        DecrU64.link_and_run_tasm_for_test(&mut stack, vec![], vec![], &mut HashMap::default(), 0);
     }
 
     #[test]
@@ -183,7 +185,15 @@ mod tests {
     fn prop_decr_u64(value: U32s<2>) {
         let mut stack = get_init_tvm_stack();
         push_encodable(&mut stack, &value);
-        rust_tasm_equivalence_prop(&DecrU64, &stack, &[], &[], &mut HashMap::default(), 0, None);
+        test_rust_equivalence_given_input_state(
+            &DecrU64,
+            &stack,
+            &[],
+            &[],
+            &mut HashMap::default(),
+            0,
+            None,
+        );
     }
 }
 

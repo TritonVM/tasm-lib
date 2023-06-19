@@ -156,13 +156,13 @@ impl Snippet for MemCpy {
 
 #[cfg(test)]
 mod tests {
-    use crate::test_helpers::rust_tasm_equivalence_prop_new;
+    use crate::test_helpers::test_rust_equivalence_multiple;
 
     use super::*;
 
     #[test]
     fn memcpy_test() {
-        rust_tasm_equivalence_prop_new(&MemCpy, true);
+        test_rust_equivalence_multiple(&MemCpy, true);
     }
 }
 

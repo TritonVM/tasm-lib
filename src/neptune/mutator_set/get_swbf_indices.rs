@@ -275,13 +275,13 @@ impl Snippet for GetSwbfIndices {
 
 #[cfg(test)]
 mod tests {
-    use crate::test_helpers::rust_tasm_equivalence_prop_new;
+    use crate::test_helpers::test_rust_equivalence_multiple;
 
     use super::GetSwbfIndices;
 
     #[test]
     fn new_prop_test() {
-        rust_tasm_equivalence_prop_new(
+        test_rust_equivalence_multiple(
             &GetSwbfIndices {
                 window_size: 1048576,
                 num_trials: 45,

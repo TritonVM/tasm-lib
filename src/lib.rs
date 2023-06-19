@@ -33,7 +33,7 @@ pub mod snippet;
 pub mod snippet_bencher;
 pub mod snippet_state;
 pub mod structure;
-mod test_helpers;
+pub mod test_helpers;
 
 // The hasher type must match whatever algebraic hasher the VM is using
 pub type VmHasher = Tip5;
@@ -110,7 +110,7 @@ pub fn execute_with_execution_state(
     code.push_str("halt\n");
     code.push_str(&snippet.function_code(&mut library));
     code.push_str(&library.all_imports());
-    execute(
+    execute_bench(
         &code,
         &mut init_state.stack,
         expected_stack_diff,
@@ -122,7 +122,7 @@ pub fn execute_with_execution_state(
 }
 
 /// Execute a Triton-VM program and return its output and execution trace length
-pub fn execute(
+pub fn execute_bench(
     code: &str,
     stack: &mut Vec<BFieldElement>,
     expected_stack_diff: isize,
@@ -239,12 +239,19 @@ pub fn execute(
     // [profile.test]
     // opt-level = 3
     // ```
-    if std::env::var("MY_COMPUTER_HAS_NOTHING_BETTER_TO_DO").is_ok() {
+    if std::env::var("DYING_TO_PROVE").is_ok() {
         let claim = Claim {
             program_digest: VmHasher::hash_varlen(&program.encode()),
             input: std_in,
             output: output.clone(),
         };
+
+        println!(
+            "\ntable heights:\nprocessor table: {}\nhash table: {}\nu32 table: {}",
+            simulation_trace.processor_trace.len(),
+            simulation_trace.hash_trace.len(),
+            simulation_trace.u32_entries.len()
+        );
 
         let code_header = &code[0..std::cmp::min(code.len(), 100)];
         println!("Execution suceeded. Now proving {code_header}");
@@ -254,12 +261,6 @@ pub fn execute(
         println!(
             "Done proving. Elapsed time: {:?}",
             tick.elapsed().expect("Don't mess with time")
-        );
-        println!(
-            "\nProof was generated from:\ntable heights:\nprocessor table: {}\nhash table: {}\nu32 table: {}",
-            simulation_trace.processor_trace.rows().into_iter().count(),
-            simulation_trace.hash_trace.rows().into_iter().count(),
-            simulation_trace.u32_entries.len(),
         );
 
         assert!(
@@ -291,6 +292,138 @@ pub fn execute(
     })
 }
 
+/// Execute a Triton-VM program; modify stack and memory
+pub fn execute_test(
+    code: &str,
+    stack: &mut Vec<BFieldElement>,
+    expected_stack_diff: isize,
+    std_in: Vec<BFieldElement>,
+    secret_in: Vec<BFieldElement>,
+    memory: &mut HashMap<BFieldElement, BFieldElement>,
+    initilialize_dynamic_allocator_to: Option<usize>,
+) -> anyhow::Result<()> {
+    let init_stack_height = stack.len();
+
+    // Prepend to program the initial stack values such that stack is in the expected
+    // state when program logic is executed
+    let mut executed_code: String = String::default();
+    for element in stack.iter().skip(OP_STACK_REG_COUNT) {
+        executed_code.push_str(&format!("push {}\n", element.value()));
+    }
+
+    // Add all the initial memory to the VM
+    for (address, value) in memory.iter() {
+        // Prepare stack for writing
+        executed_code.push_str(&format!("push {address}\n"));
+        executed_code.push_str(&format!("push {value}\n"));
+
+        // Write value to memory
+        executed_code.push_str("write_mem\n");
+
+        // Clean stack after writing to memory
+        executed_code.push_str("pop\n");
+    }
+
+    // Ensure that the dynamic allocator is initialized such that it does not overwrite
+    // any statically allocated memory, if the caller requests this.
+    if let Some(dyn_malloc_initial_value) = initilialize_dynamic_allocator_to {
+        executed_code.push_str(&dyn_malloc::DynMalloc::get_initialization_code(
+            dyn_malloc_initial_value.try_into().unwrap(),
+        ));
+    }
+
+    // Construct the whole program (inclusive setup) to be run
+    executed_code.push_str(code);
+
+    // Run the program, including the stack preparation and memory preparation logic
+    let program = Program::from_code(&executed_code).expect("Could not load source code: {}");
+    // let (execution_trace, output, err) =
+    //     vm::debug(&program, std_in.clone(), secret_in.clone(), None, None);
+    let final_state = vm::run_with_final_state(&program, std_in.clone(), secret_in.clone())?;
+    // if let Some(e) = err {
+    //     bail!(
+    //         "`debug` failed with error: {e}\nLast state before crash:\n{}",
+    //         execution_trace.last().unwrap()
+    //     )
+    // }
+
+    // let start_state: VMState = execution_trace
+    //     .first()
+    //     .expect("VM state list must have initial element")
+    //     .to_owned();
+
+    // let end_state: VMState = execution_trace
+    //     .last()
+    //     .expect("VM state list cannot be empty")
+    //     .to_owned();
+    if final_state.stack.len() < OP_STACK_REG_COUNT {
+        bail!("Stack underflow")
+    }
+
+    *memory = final_state.memory.clone();
+
+    if !final_state.jump_stack.is_empty() {
+        bail!("Jump stack must be unchanged after code execution")
+    }
+
+    *stack = final_state.stack;
+
+    let final_stack_height = stack.len() as isize;
+    if expected_stack_diff != final_stack_height - init_stack_height as isize {
+        bail!(
+            "Code must grow/shrink stack with expected number of elements.\n
+        init height: {init_stack_height}\nend height: {final_stack_height}\n
+        expected difference: {expected_stack_diff}\n\n
+        final stack: {}",
+            stack.iter().map(|x| x.to_string()).join(",")
+        )
+    }
+
+    // If this environment variable is set, all programs, including the code to prepare the state,
+    // will be proven and then verified.
+    // Notice that this is only done after the successful execution of the program above, so all
+    // produced proofs here should be valid.
+    // If you run this, make sure to set this in your Cargo.toml:
+    // ```
+    // [profile.test]
+    // opt-level = 3
+    // ```
+    if std::env::var("DYING_TO_PROVE").is_ok() {
+        let claim = Claim {
+            program_digest: VmHasher::hash_varlen(&program.encode()),
+            input: std_in.clone(),
+            output: final_state.output,
+        };
+
+        let (simulation_trace, _) = vm::simulate(&program, std_in, secret_in.clone()).unwrap();
+
+        let code_header = &code[0..std::cmp::min(code.len(), 100)];
+        println!("Execution suceeded. Now proving {code_header}");
+        let tick = SystemTime::now();
+        let proof =
+            triton_vm::prove(&StarkParameters::default(), &claim, &program, &secret_in).unwrap();
+        println!(
+            "Done proving. Elapsed time: {:?}",
+            tick.elapsed().expect("Don't mess with time")
+        );
+        println!(
+            "\nProof was generated from:\ntable heights:\nprocessor table: {}\nhash table: {}\nu32 table: {}",
+            simulation_trace.processor_trace.rows().into_iter().count(),
+            simulation_trace.hash_trace.rows().into_iter().count(),
+            simulation_trace.u32_entries.len(),
+        );
+
+        assert!(
+            triton_vm::verify(&StarkParameters::default(), &proof),
+            "Generated proof must verify for program:\n {}\n\n Whole program was:\n\n{}",
+            code_header,
+            executed_code
+        );
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -300,7 +433,7 @@ mod tests {
     fn initialize_dyn_malloc() {
         let mut memory = HashMap::default();
         let initial_dyn_malloc_value = 14;
-        execute(
+        execute_bench(
             "halt",
             &mut get_init_tvm_stack(),
             0,
@@ -320,7 +453,7 @@ mod tests {
     fn do_not_initialize_dyn_malloc() {
         // Ensure that dyn malloc is not initialized if no such initialization is requested
         let mut memory = HashMap::default();
-        execute(
+        execute_bench(
             "halt",
             &mut get_init_tvm_stack(),
             0,

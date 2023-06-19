@@ -170,16 +170,18 @@ mod tests {
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
     use crate::get_init_tvm_stack;
-    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
+    use crate::test_helpers::{
+        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+    };
 
     use super::*;
 
     #[test]
     fn new_snippet_test() {
-        rust_tasm_equivalence_prop_new(&UnsafePop(DataType::U32), true);
-        rust_tasm_equivalence_prop_new(&UnsafePop(DataType::U64), true);
-        rust_tasm_equivalence_prop_new(&UnsafePop(DataType::XFE), true);
-        rust_tasm_equivalence_prop_new(&UnsafePop(DataType::Digest), true);
+        test_rust_equivalence_multiple(&UnsafePop(DataType::U32), true);
+        test_rust_equivalence_multiple(&UnsafePop(DataType::U64), true);
+        test_rust_equivalence_multiple(&UnsafePop(DataType::XFE), true);
+        test_rust_equivalence_multiple(&UnsafePop(DataType::Digest), true);
     }
 
     #[test]
@@ -259,7 +261,7 @@ mod tests {
             expected_end_stack.push(last_element[N - 1 - i]);
         }
 
-        let _execution_result = rust_tasm_equivalence_prop(
+        let _execution_result = test_rust_equivalence_given_input_state(
             &UnsafePop(data_type),
             &init_stack,
             &[],

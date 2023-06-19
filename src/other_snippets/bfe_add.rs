@@ -94,13 +94,13 @@ impl Snippet for BfeAdd {
 #[cfg(test)]
 mod tests {
 
-    use crate::test_helpers::rust_tasm_equivalence_prop_new;
+    use crate::test_helpers::test_rust_equivalence_multiple;
 
     use super::*;
 
     #[test]
     fn bfe_add_test() {
-        rust_tasm_equivalence_prop_new(&BfeAdd, true);
+        test_rust_equivalence_multiple(&BfeAdd, true);
     }
 }
 

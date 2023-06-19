@@ -217,13 +217,15 @@ mod tests {
 
     use crate::get_init_tvm_stack;
 
-    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
+    use crate::test_helpers::{
+        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+    };
 
     use super::*;
 
     #[test]
     fn sub_u64_test() {
-        rust_tasm_equivalence_prop_new(&SubU64, true);
+        test_rust_equivalence_multiple(&SubU64, true);
     }
 
     #[test]
@@ -319,7 +321,7 @@ mod tests {
             init_stack.push(elem);
         }
 
-        SubU64.run_tasm(&mut ExecutionState::with_stack(init_stack));
+        SubU64.link_and_run_tasm_from_state_for_test(&mut ExecutionState::with_stack(init_stack));
     }
 
     fn prop_sub(lhs: U32s<2>, rhs: U32s<2>, expected: Option<&[BFieldElement]>) {
@@ -331,7 +333,7 @@ mod tests {
             init_stack.push(elem);
         }
 
-        let _execution_result = rust_tasm_equivalence_prop(
+        let _execution_result = test_rust_equivalence_given_input_state(
             &SubU64,
             &init_stack,
             &[],

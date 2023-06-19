@@ -475,14 +475,14 @@ mod tests {
 
     use crate::{
         list::higher_order::inner_function::RawCode,
-        test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new},
+        test_helpers::{test_rust_equivalence_given_input_state, test_rust_equivalence_multiple},
     };
 
     use super::*;
 
     #[test]
     fn unsafe_list_prop_test() {
-        rust_tasm_equivalence_prop_new(
+        test_rust_equivalence_multiple(
             &All {
                 list_type: ListType::Unsafe,
                 f: InnerFunction::Snippet(Box::new(TestHashXFieldElementLsb)),
@@ -493,7 +493,7 @@ mod tests {
 
     #[test]
     fn with_safe_list_prop_test() {
-        rust_tasm_equivalence_prop_new(
+        test_rust_equivalence_multiple(
             &All {
                 list_type: ListType::Safe,
                 f: InnerFunction::Snippet(Box::new(TestHashXFieldElementLsb)),
@@ -536,7 +536,7 @@ mod tests {
         let input_stack = vec![get_init_tvm_stack(), vec![BFieldElement::new(42)]].concat();
         let expected_end_stack_true =
             vec![get_init_tvm_stack(), vec![BFieldElement::one()]].concat();
-        rust_tasm_equivalence_prop(
+        test_rust_equivalence_given_input_state(
             &snippet,
             &input_stack,
             &[],
@@ -557,7 +557,7 @@ mod tests {
         );
         let expected_end_stack_false =
             vec![get_init_tvm_stack(), vec![BFieldElement::zero()]].concat();
-        rust_tasm_equivalence_prop(
+        test_rust_equivalence_given_input_state(
             &snippet,
             &input_stack,
             &[],
@@ -589,7 +589,7 @@ mod tests {
                 vec.push(BFieldElement::new(new_value));
             })),
         );
-        rust_tasm_equivalence_prop_new(
+        test_rust_equivalence_multiple(
             &All {
                 list_type: ListType::Unsafe,
                 f: InnerFunction::RawCode(rawcode),
@@ -623,7 +623,7 @@ mod tests {
                 vec.push(BFieldElement::new(new_value));
             })),
         );
-        rust_tasm_equivalence_prop_new(
+        test_rust_equivalence_multiple(
             &All {
                 list_type: ListType::Unsafe,
                 f: InnerFunction::RawCode(rawcode),

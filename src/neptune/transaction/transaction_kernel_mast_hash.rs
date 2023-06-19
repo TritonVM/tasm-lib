@@ -421,13 +421,13 @@ impl Snippet for TransactionKernelMastHash {
 
 #[cfg(test)]
 mod tests {
-    use crate::test_helpers::rust_tasm_equivalence_prop_new;
+    use crate::test_helpers::test_rust_equivalence_multiple;
 
     use super::TransactionKernelMastHash;
 
     #[test]
     fn new_prop_test() {
-        rust_tasm_equivalence_prop_new(&TransactionKernelMastHash, true);
+        test_rust_equivalence_multiple(&TransactionKernelMastHash, true);
     }
 }
 

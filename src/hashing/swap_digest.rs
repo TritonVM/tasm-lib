@@ -142,13 +142,13 @@ impl Snippet for SwapDigest {
 #[cfg(test)]
 mod tests {
 
-    use crate::test_helpers::rust_tasm_equivalence_prop_new;
+    use crate::test_helpers::test_rust_equivalence_multiple;
 
     use super::*;
 
     #[test]
     fn swap_digest_test() {
-        rust_tasm_equivalence_prop_new(&SwapDigest, true);
+        test_rust_equivalence_multiple(&SwapDigest, true);
     }
 }
 

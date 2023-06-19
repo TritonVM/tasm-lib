@@ -185,13 +185,15 @@ fn prepare_state(node_index: u64) -> ExecutionState {
 mod tests {
     use std::collections::HashMap;
 
-    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
+    use crate::test_helpers::{
+        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+    };
 
     use super::*;
 
     #[test]
     fn right_lineage_length_test() {
-        rust_tasm_equivalence_prop_new(&MmrRightLineageLength, true);
+        test_rust_equivalence_multiple(&MmrRightLineageLength, true);
     }
 
     #[test]
@@ -267,7 +269,7 @@ mod tests {
             vec![BFieldElement::new(expected_count as u64)],
         ]
         .concat();
-        let _execution_result = rust_tasm_equivalence_prop(
+        let _execution_result = test_rust_equivalence_given_input_state(
             &MmrRightLineageLength,
             &init_stack,
             &[],

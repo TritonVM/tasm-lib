@@ -430,13 +430,15 @@ mod tests {
     use crate::get_init_tvm_stack;
     use crate::mmr::MAX_MMR_HEIGHT;
 
-    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
+    use crate::test_helpers::{
+        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+    };
 
     use super::*;
 
     #[test]
     fn calculate_new_peaks_from_leaf_mutation_test_unsafe_lists() {
-        rust_tasm_equivalence_prop_new(
+        test_rust_equivalence_multiple(
             &MmrCalculateNewPeaksFromLeafMutationMtIndices {
                 list_type: ListType::Unsafe,
             },
@@ -446,7 +448,7 @@ mod tests {
 
     #[test]
     fn calculate_new_peaks_from_leaf_mutation_test_safe_lists() {
-        rust_tasm_equivalence_prop_new(
+        test_rust_equivalence_multiple(
             &MmrCalculateNewPeaksFromLeafMutationMtIndices {
                 list_type: ListType::Safe,
             },
@@ -647,7 +649,7 @@ mod tests {
         expected_final_stack.push(BFieldElement::new(new_leaf_index >> 32));
         expected_final_stack.push(BFieldElement::new(new_leaf_index & u32::MAX as u64));
 
-        let _execution_result = rust_tasm_equivalence_prop(
+        let _execution_result = test_rust_equivalence_given_input_state(
             &MmrCalculateNewPeaksFromLeafMutationMtIndices {
                 list_type: ListType::Unsafe,
             },

@@ -175,18 +175,20 @@ mod tests {
 
     use crate::get_init_tvm_stack;
     use crate::rust_shadowing_helper_functions::safe_list::safe_list_push;
-    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
+    use crate::test_helpers::{
+        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+    };
 
     use super::*;
 
     #[test]
     fn new_snippet_test() {
-        rust_tasm_equivalence_prop_new(&SafePop(DataType::Bool), true);
-        rust_tasm_equivalence_prop_new(&SafePop(DataType::U32), true);
-        rust_tasm_equivalence_prop_new(&SafePop(DataType::U64), true);
-        rust_tasm_equivalence_prop_new(&SafePop(DataType::BFE), true);
-        rust_tasm_equivalence_prop_new(&SafePop(DataType::XFE), true);
-        rust_tasm_equivalence_prop_new(&SafePop(DataType::Digest), true);
+        test_rust_equivalence_multiple(&SafePop(DataType::Bool), true);
+        test_rust_equivalence_multiple(&SafePop(DataType::U32), true);
+        test_rust_equivalence_multiple(&SafePop(DataType::U64), true);
+        test_rust_equivalence_multiple(&SafePop(DataType::BFE), true);
+        test_rust_equivalence_multiple(&SafePop(DataType::XFE), true);
+        test_rust_equivalence_multiple(&SafePop(DataType::Digest), true);
     }
 
     #[test]
@@ -266,7 +268,7 @@ mod tests {
             expected_end_stack.push(last_element[element_size - 1 - i]);
         }
 
-        let _execution_result = rust_tasm_equivalence_prop(
+        let _execution_result = test_rust_equivalence_given_input_state(
             &SafePop(data_type),
             &init_stack,
             &[],

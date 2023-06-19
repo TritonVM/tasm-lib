@@ -578,13 +578,15 @@ mod tests {
 
     use crate::get_init_tvm_stack;
 
-    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
+    use crate::test_helpers::{
+        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+    };
 
     use super::*;
 
     #[test]
     fn div_mod_u64_test() {
-        rust_tasm_equivalence_prop_new(&DivModU64, true);
+        test_rust_equivalence_multiple(&DivModU64, true);
     }
 
     #[test]
@@ -595,7 +597,7 @@ mod tests {
         // TODO: `run_tasm` ought to return an error on failure instead of
         // crashing!
         let mut init_state = prepare_state(100, 0);
-        DivModU64.run_tasm(&mut init_state);
+        DivModU64.link_and_run_tasm_from_state_for_test(&mut init_state);
     }
 
     #[test]
@@ -606,7 +608,7 @@ mod tests {
         // TODO: `run_tasm` ought to return an error on failure instead of
         // crashing!
         let mut init_state = prepare_state(1u64 << 33, 0);
-        DivModU64.run_tasm(&mut init_state);
+        DivModU64.link_and_run_tasm_from_state_for_test(&mut init_state);
     }
 
     #[test]
@@ -692,7 +694,7 @@ mod tests {
             expected_end_stack.push(elem);
         }
 
-        let _execution_result = rust_tasm_equivalence_prop(
+        let _execution_result = test_rust_equivalence_given_input_state(
             &DivModU64,
             &init_stack,
             &[],

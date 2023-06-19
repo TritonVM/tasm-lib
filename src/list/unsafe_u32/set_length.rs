@@ -110,13 +110,15 @@ mod tests {
 
     use crate::get_init_tvm_stack;
 
-    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
+    use crate::test_helpers::{
+        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+    };
 
     use super::*;
 
     #[test]
     fn new_snippet_test() {
-        rust_tasm_equivalence_prop_new(&UnsafeSetLength(DataType::XFE), true);
+        test_rust_equivalence_multiple(&UnsafeSetLength(DataType::XFE), true);
     }
 
     #[test]
@@ -149,7 +151,7 @@ mod tests {
         // Insert length indicator of list, lives on offset = 0 from `list_address`
         vm_memory.insert(list_address, BFieldElement::new(init_list_length as u64));
 
-        let _execution_result = rust_tasm_equivalence_prop(
+        let _execution_result = test_rust_equivalence_given_input_state(
             &UnsafeSetLength(data_type),
             &init_stack,
             &[],

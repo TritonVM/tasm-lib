@@ -120,13 +120,15 @@ impl Snippet for SafeSub {
 mod tests {
     use std::collections::HashMap;
 
-    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
+    use crate::test_helpers::{
+        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+    };
 
     use super::*;
 
     #[test]
     fn snippet_test() {
-        rust_tasm_equivalence_prop_new(&SafeSub, true);
+        test_rust_equivalence_multiple(&SafeSub, true);
     }
 
     #[test]
@@ -162,21 +164,24 @@ mod tests {
         let mut init_stack = get_init_tvm_stack();
         init_stack.push(BFieldElement::new(rhs as u64));
         init_stack.push(BFieldElement::new(lhs as u64));
+        // let maybe_difference = lhs.checked_sub(rhs).unwrap();
+        let expected = lhs.checked_sub(rhs);
+        let expected = expected
+            .map(|x| vec![get_init_tvm_stack(), vec![BFieldElement::new(x as u64)]].concat());
+        let expected = match expected {
+            Some(exps) => Some(&exps as &[BFieldElement]),
+            None => None,
+        };
 
-        let execution_result = rust_tasm_equivalence_prop::<SafeSub>(
+        let execution_result = test_rust_equivalence_given_input_state::<SafeSub>(
             &SafeSub,
             &init_stack,
             &[],
             &[],
             &mut HashMap::default(),
             0,
-            None,
+            expected,
         );
-
-        let mut final_stack = execution_result.final_stack;
-        if let Some(res) = expected {
-            assert_eq!(BFieldElement::new(res as u64), final_stack.pop().unwrap());
-        };
     }
 }
 

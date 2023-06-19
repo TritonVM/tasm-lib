@@ -116,13 +116,15 @@ impl Snippet for LeadingZerosU32 {
 mod tests {
     use std::collections::HashMap;
 
-    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
+    use crate::test_helpers::{
+        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+    };
 
     use super::*;
 
     #[test]
     fn snippet_test() {
-        rust_tasm_equivalence_prop_new(&LeadingZerosU32, true);
+        test_rust_equivalence_multiple(&LeadingZerosU32, true);
     }
 
     #[test]
@@ -145,7 +147,7 @@ mod tests {
         let mut init_stack = get_init_tvm_stack();
         init_stack.push(BFieldElement::new(value as u64));
 
-        let execution_result = rust_tasm_equivalence_prop(
+        let execution_result = test_rust_equivalence_given_input_state(
             &LeadingZerosU32,
             &init_stack,
             &[],

@@ -383,19 +383,19 @@ impl Snippet for SampleIndices {
 
 #[cfg(test)]
 mod tests {
-    use crate::{list::ListType, test_helpers::rust_tasm_equivalence_prop_new};
+    use crate::{list::ListType, test_helpers::test_rust_equivalence_multiple};
 
     use super::SampleIndices;
 
     #[test]
     fn new_prop_test() {
-        rust_tasm_equivalence_prop_new(
+        test_rust_equivalence_multiple(
             &SampleIndices {
                 list_type: ListType::Safe,
             },
             true,
         );
-        rust_tasm_equivalence_prop_new(
+        test_rust_equivalence_multiple(
             &SampleIndices {
                 list_type: ListType::Unsafe,
             },

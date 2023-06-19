@@ -208,17 +208,19 @@ mod tests {
 
     use super::*;
     use crate::get_init_tvm_stack;
-    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
+    use crate::test_helpers::{
+        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+    };
 
     #[test]
     fn new_snippet_test() {
         for _ in 0..10 {
-            rust_tasm_equivalence_prop_new(&SafeGet(DataType::Bool), true);
-            rust_tasm_equivalence_prop_new(&SafeGet(DataType::U32), true);
-            rust_tasm_equivalence_prop_new(&SafeGet(DataType::U64), true);
-            rust_tasm_equivalence_prop_new(&SafeGet(DataType::BFE), true);
-            rust_tasm_equivalence_prop_new(&SafeGet(DataType::XFE), true);
-            rust_tasm_equivalence_prop_new(&SafeGet(DataType::Digest), true);
+            test_rust_equivalence_multiple(&SafeGet(DataType::Bool), true);
+            test_rust_equivalence_multiple(&SafeGet(DataType::U32), true);
+            test_rust_equivalence_multiple(&SafeGet(DataType::U64), true);
+            test_rust_equivalence_multiple(&SafeGet(DataType::BFE), true);
+            test_rust_equivalence_multiple(&SafeGet(DataType::XFE), true);
+            test_rust_equivalence_multiple(&SafeGet(DataType::Digest), true);
         }
     }
 
@@ -390,7 +392,7 @@ mod tests {
             expected_end_stack.push(targeted_element[element_size - 1 - i]);
         }
 
-        let _execution_result = rust_tasm_equivalence_prop(
+        let _execution_result = test_rust_equivalence_given_input_state(
             &SafeGet(data_type.to_owned()),
             &init_stack,
             &[],

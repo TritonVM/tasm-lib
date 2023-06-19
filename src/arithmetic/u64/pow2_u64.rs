@@ -103,45 +103,38 @@ impl Snippet for Pow2U64 {
 
 #[cfg(test)]
 mod tests {
-    use num::One;
 
     use crate::get_init_tvm_stack;
 
-    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
+    use crate::test_helpers::{
+        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+    };
 
     use super::*;
 
     #[test]
     fn pow2_static_test() {
-        rust_tasm_equivalence_prop_new(&Pow2U64, true);
+        test_rust_equivalence_multiple(&Pow2U64, true);
     }
 
     fn prop_exp_static(exponent: u8) {
         let mut init_stack = get_init_tvm_stack();
         init_stack.push(BFieldElement::new(exponent as u64));
 
-        let expected = None;
-        let mut execution_result = rust_tasm_equivalence_prop(
+        // let expected = None;
+        let mut expected = get_init_tvm_stack();
+        let res = 2u64.pow(exponent as u32);
+        expected.push(BFieldElement::new(res >> 32));
+        expected.push(BFieldElement::new(res & u32::MAX as u64));
+        let mut execution_result = test_rust_equivalence_given_input_state(
             &Pow2U64,
             &init_stack,
             &[],
             &[],
             &mut HashMap::default(),
             0,
-            expected,
+            Some(&expected),
         );
-
-        let a = execution_result.final_stack.pop().unwrap().value();
-        assert!(a < u32::MAX as u64);
-        let b = execution_result.final_stack.pop().unwrap().value();
-        assert!(b < u32::MAX as u64);
-        let actual_res = U32s::<2>::new([a as u32, b as u32]);
-        let mut expected_res = U32s::<2>::one();
-        for _ in 0..exponent {
-            expected_res.mul_two();
-        }
-
-        assert_eq!(expected_res, actual_res);
     }
 
     #[test]

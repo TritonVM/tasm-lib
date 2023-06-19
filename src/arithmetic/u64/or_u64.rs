@@ -141,13 +141,15 @@ fn prepare_state(a: u64, b: u64) -> ExecutionState {
 mod tests {
     use std::collections::HashMap;
 
-    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
+    use crate::test_helpers::{
+        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+    };
 
     use super::*;
 
     #[test]
     fn snippet_test() {
-        rust_tasm_equivalence_prop_new(&OrU64, true);
+        test_rust_equivalence_multiple(&OrU64, true);
     }
 
     #[test]
@@ -169,28 +171,26 @@ mod tests {
     }
 
     fn prop_safe_or(lhs: u64, rhs: u64, expected: Option<u64>) {
+        let res = lhs | rhs;
         let rhs = U32s::<2>::try_from(rhs).unwrap();
         let lhs = U32s::<2>::try_from(lhs).unwrap();
         let mut init_stack = get_init_tvm_stack();
         push_encodable(&mut init_stack, &rhs);
         push_encodable(&mut init_stack, &lhs);
 
-        let execution_result = rust_tasm_equivalence_prop(
+        let mut expected = get_init_tvm_stack();
+        expected.push(BFieldElement::new(res >> 32));
+        expected.push(BFieldElement::new(res & u32::MAX as u64));
+
+        let execution_result = test_rust_equivalence_given_input_state(
             &OrU64,
             &init_stack,
             &[],
             &[],
             &mut HashMap::default(),
             0,
-            None,
+            Some(&expected),
         );
-
-        let mut final_stack = execution_result.final_stack;
-        if let Some(res) = expected {
-            let lo: u32 = final_stack.pop().unwrap().try_into().unwrap();
-            let hi: u32 = final_stack.pop().unwrap().try_into().unwrap();
-            assert_eq!(res, lo as u64 + ((hi as u64) << 32));
-        };
     }
 }
 

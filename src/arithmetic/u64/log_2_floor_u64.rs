@@ -151,13 +151,15 @@ mod tests {
 
     use crate::get_init_tvm_stack;
 
-    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
+    use crate::test_helpers::{
+        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+    };
 
     use super::*;
 
     #[test]
     fn log_2_floor_u64_test() {
-        rust_tasm_equivalence_prop_new(&Log2FloorU64, true);
+        test_rust_equivalence_multiple(&Log2FloorU64, true);
     }
 
     #[should_panic]
@@ -167,7 +169,7 @@ mod tests {
         init_stack.push(BFieldElement::new(16));
         init_stack.push(BFieldElement::new(u32::MAX as u64 + 1));
 
-        let _execution_result = rust_tasm_equivalence_prop(
+        let _execution_result = test_rust_equivalence_given_input_state(
             &Log2FloorU64,
             &init_stack,
             &[],
@@ -185,7 +187,7 @@ mod tests {
         init_stack.push(BFieldElement::new(u32::MAX as u64 + 1));
         init_stack.push(BFieldElement::new(16));
 
-        let _execution_result = rust_tasm_equivalence_prop(
+        let _execution_result = test_rust_equivalence_given_input_state(
             &Log2FloorU64,
             &init_stack,
             &[],
@@ -204,7 +206,7 @@ mod tests {
         init_stack.push(BFieldElement::new(u32::MAX as u64 + 1 + n));
         init_stack.push(BFieldElement::new(16));
 
-        let _execution_result = rust_tasm_equivalence_prop(
+        let _execution_result = test_rust_equivalence_given_input_state(
             &Log2FloorU64,
             &init_stack,
             &[],
@@ -273,7 +275,7 @@ mod tests {
             init_stack.push(elem);
         }
 
-        let _execution_result = rust_tasm_equivalence_prop(
+        let _execution_result = test_rust_equivalence_given_input_state(
             &Log2FloorU64,
             &init_stack,
             &[],

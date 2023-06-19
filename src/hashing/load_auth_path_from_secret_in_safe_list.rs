@@ -221,7 +221,7 @@ mod tests {
 
     use super::*;
 
-    use crate::test_helpers::rust_tasm_equivalence_prop_new;
+    use crate::test_helpers::test_rust_equivalence_multiple;
 
     #[should_panic]
     #[test]
@@ -240,7 +240,7 @@ mod tests {
             );
         }
 
-        LoadAuthPathFromSecretInSafeList.run_tasm_old(
+        LoadAuthPathFromSecretInSafeList.link_and_run_tasm_for_test(
             &mut get_init_tvm_stack(),
             vec![],
             secret_in.to_vec(),
@@ -264,7 +264,7 @@ mod tests {
                 random(),
             );
         }
-        LoadAuthPathFromSecretInSafeList.run_tasm_old(
+        LoadAuthPathFromSecretInSafeList.link_and_run_tasm_for_test(
             &mut get_init_tvm_stack(),
             vec![],
             secret_in.to_vec(),
@@ -275,7 +275,7 @@ mod tests {
 
     #[test]
     fn load_auth_path_from_secret_in_test() {
-        rust_tasm_equivalence_prop_new(&LoadAuthPathFromSecretInSafeList, true);
+        test_rust_equivalence_multiple(&LoadAuthPathFromSecretInSafeList, true);
     }
 }
 

@@ -425,7 +425,7 @@ mod tests {
 
     use crate::{
         mmr::MAX_MMR_HEIGHT,
-        test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new},
+        test_helpers::{test_rust_equivalence_given_input_state, test_rust_equivalence_multiple},
         VmHasher,
     };
 
@@ -433,7 +433,7 @@ mod tests {
 
     #[test]
     fn verify_from_secret_in_test_unsafe_lists() {
-        rust_tasm_equivalence_prop_new(
+        test_rust_equivalence_multiple(
             &MmrVerifyLeafMembershipFromSecretIn {
                 list_type: ListType::Unsafe,
             },
@@ -443,7 +443,7 @@ mod tests {
 
     #[test]
     fn verify_from_secret_in_test_safe_lists() {
-        rust_tasm_equivalence_prop_new(
+        test_rust_equivalence_multiple(
             &MmrVerifyLeafMembershipFromSecretIn {
                 list_type: ListType::Safe,
             },
@@ -671,7 +671,7 @@ mod tests {
         let snippet_with_unsafe_lists = MmrVerifyLeafMembershipFromSecretIn {
             list_type: ListType::Unsafe,
         };
-        let _execution_result = rust_tasm_equivalence_prop(
+        let _execution_result = test_rust_equivalence_given_input_state(
             &snippet_with_unsafe_lists,
             &init_stack,
             &[],

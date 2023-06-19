@@ -229,13 +229,15 @@ impl Snippet for AddU128 {
 mod tests {
     use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
-    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
+    use crate::test_helpers::{
+        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+    };
 
     use super::*;
 
     #[test]
     fn add_u128_test() {
-        rust_tasm_equivalence_prop_new(&AddU128, true);
+        test_rust_equivalence_multiple(&AddU128, true);
     }
 
     #[test]
@@ -257,7 +259,7 @@ mod tests {
             init_stack.push(elem);
         }
 
-        let _execution_result = rust_tasm_equivalence_prop::<AddU128>(
+        let _execution_result = test_rust_equivalence_given_input_state::<AddU128>(
             &AddU128,
             &init_stack,
             &[],

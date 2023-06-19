@@ -545,18 +545,18 @@ impl Snippet for MultisetEquality {
 
 #[cfg(test)]
 mod tests {
-    use crate::test_helpers::rust_tasm_equivalence_prop_new;
+    use crate::test_helpers::test_rust_equivalence_multiple;
 
     use super::*;
 
     #[test]
     fn unsafe_list_prop_test() {
-        rust_tasm_equivalence_prop_new(&MultisetEquality(ListType::Unsafe), true);
+        test_rust_equivalence_multiple(&MultisetEquality(ListType::Unsafe), true);
     }
 
     #[test]
     fn with_safe_list_prop_test() {
-        rust_tasm_equivalence_prop_new(&MultisetEquality(ListType::Safe), true);
+        test_rust_equivalence_multiple(&MultisetEquality(ListType::Safe), true);
     }
 }
 

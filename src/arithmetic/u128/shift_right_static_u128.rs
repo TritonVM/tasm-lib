@@ -175,45 +175,47 @@ fn prepare_state(value: u128) -> ExecutionState {
 mod tests {
     use std::collections::HashMap;
 
-    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
+    use crate::test_helpers::{
+        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+    };
 
     use super::*;
 
     #[test]
     fn shift_right_u128_test() {
-        rust_tasm_equivalence_prop_new(&ShiftRightStaticU128::<0>, false);
-        rust_tasm_equivalence_prop_new(&ShiftRightStaticU128::<1>, true);
-        rust_tasm_equivalence_prop_new(&ShiftRightStaticU128::<2>, true);
-        rust_tasm_equivalence_prop_new(&ShiftRightStaticU128::<3>, true);
-        rust_tasm_equivalence_prop_new(&ShiftRightStaticU128::<4>, true);
-        rust_tasm_equivalence_prop_new(&ShiftRightStaticU128::<5>, true);
-        rust_tasm_equivalence_prop_new(&ShiftRightStaticU128::<6>, true);
-        rust_tasm_equivalence_prop_new(&ShiftRightStaticU128::<7>, true);
-        rust_tasm_equivalence_prop_new(&ShiftRightStaticU128::<8>, true);
-        rust_tasm_equivalence_prop_new(&ShiftRightStaticU128::<9>, true);
-        rust_tasm_equivalence_prop_new(&ShiftRightStaticU128::<10>, true);
-        rust_tasm_equivalence_prop_new(&ShiftRightStaticU128::<11>, true);
-        rust_tasm_equivalence_prop_new(&ShiftRightStaticU128::<12>, true);
-        rust_tasm_equivalence_prop_new(&ShiftRightStaticU128::<13>, true);
-        rust_tasm_equivalence_prop_new(&ShiftRightStaticU128::<14>, true);
-        rust_tasm_equivalence_prop_new(&ShiftRightStaticU128::<15>, true);
-        rust_tasm_equivalence_prop_new(&ShiftRightStaticU128::<16>, true);
-        rust_tasm_equivalence_prop_new(&ShiftRightStaticU128::<17>, true);
-        rust_tasm_equivalence_prop_new(&ShiftRightStaticU128::<18>, true);
-        rust_tasm_equivalence_prop_new(&ShiftRightStaticU128::<19>, true);
-        rust_tasm_equivalence_prop_new(&ShiftRightStaticU128::<20>, true);
-        rust_tasm_equivalence_prop_new(&ShiftRightStaticU128::<21>, true);
-        rust_tasm_equivalence_prop_new(&ShiftRightStaticU128::<22>, true);
-        rust_tasm_equivalence_prop_new(&ShiftRightStaticU128::<23>, true);
-        rust_tasm_equivalence_prop_new(&ShiftRightStaticU128::<24>, true);
-        rust_tasm_equivalence_prop_new(&ShiftRightStaticU128::<25>, true);
-        rust_tasm_equivalence_prop_new(&ShiftRightStaticU128::<26>, true);
-        rust_tasm_equivalence_prop_new(&ShiftRightStaticU128::<27>, true);
-        rust_tasm_equivalence_prop_new(&ShiftRightStaticU128::<28>, true);
-        rust_tasm_equivalence_prop_new(&ShiftRightStaticU128::<29>, true);
-        rust_tasm_equivalence_prop_new(&ShiftRightStaticU128::<30>, true);
-        rust_tasm_equivalence_prop_new(&ShiftRightStaticU128::<31>, true);
-        rust_tasm_equivalence_prop_new(&ShiftRightStaticU128::<32>, true);
+        test_rust_equivalence_multiple(&ShiftRightStaticU128::<0>, false);
+        test_rust_equivalence_multiple(&ShiftRightStaticU128::<1>, true);
+        test_rust_equivalence_multiple(&ShiftRightStaticU128::<2>, true);
+        test_rust_equivalence_multiple(&ShiftRightStaticU128::<3>, true);
+        test_rust_equivalence_multiple(&ShiftRightStaticU128::<4>, true);
+        test_rust_equivalence_multiple(&ShiftRightStaticU128::<5>, true);
+        test_rust_equivalence_multiple(&ShiftRightStaticU128::<6>, true);
+        test_rust_equivalence_multiple(&ShiftRightStaticU128::<7>, true);
+        test_rust_equivalence_multiple(&ShiftRightStaticU128::<8>, true);
+        test_rust_equivalence_multiple(&ShiftRightStaticU128::<9>, true);
+        test_rust_equivalence_multiple(&ShiftRightStaticU128::<10>, true);
+        test_rust_equivalence_multiple(&ShiftRightStaticU128::<11>, true);
+        test_rust_equivalence_multiple(&ShiftRightStaticU128::<12>, true);
+        test_rust_equivalence_multiple(&ShiftRightStaticU128::<13>, true);
+        test_rust_equivalence_multiple(&ShiftRightStaticU128::<14>, true);
+        test_rust_equivalence_multiple(&ShiftRightStaticU128::<15>, true);
+        test_rust_equivalence_multiple(&ShiftRightStaticU128::<16>, true);
+        test_rust_equivalence_multiple(&ShiftRightStaticU128::<17>, true);
+        test_rust_equivalence_multiple(&ShiftRightStaticU128::<18>, true);
+        test_rust_equivalence_multiple(&ShiftRightStaticU128::<19>, true);
+        test_rust_equivalence_multiple(&ShiftRightStaticU128::<20>, true);
+        test_rust_equivalence_multiple(&ShiftRightStaticU128::<21>, true);
+        test_rust_equivalence_multiple(&ShiftRightStaticU128::<22>, true);
+        test_rust_equivalence_multiple(&ShiftRightStaticU128::<23>, true);
+        test_rust_equivalence_multiple(&ShiftRightStaticU128::<24>, true);
+        test_rust_equivalence_multiple(&ShiftRightStaticU128::<25>, true);
+        test_rust_equivalence_multiple(&ShiftRightStaticU128::<26>, true);
+        test_rust_equivalence_multiple(&ShiftRightStaticU128::<27>, true);
+        test_rust_equivalence_multiple(&ShiftRightStaticU128::<28>, true);
+        test_rust_equivalence_multiple(&ShiftRightStaticU128::<29>, true);
+        test_rust_equivalence_multiple(&ShiftRightStaticU128::<30>, true);
+        test_rust_equivalence_multiple(&ShiftRightStaticU128::<31>, true);
+        test_rust_equivalence_multiple(&ShiftRightStaticU128::<32>, true);
     }
 
     #[test]
@@ -256,7 +258,8 @@ mod tests {
         init_stack.push(BFieldElement::new(u32::MAX as u64));
         init_stack.push(BFieldElement::new(u32::MAX as u64));
         init_stack.push(BFieldElement::new(u32::MAX as u64));
-        ShiftRightStaticU128::<33>.run_tasm(&mut ExecutionState::with_stack(init_stack));
+        ShiftRightStaticU128::<33>
+            .link_and_run_tasm_from_state_for_test(&mut ExecutionState::with_stack(init_stack));
     }
 
     fn prop<const N: u8>(value: u128) {
@@ -277,7 +280,7 @@ mod tests {
             ));
         }
 
-        let _execution_result = rust_tasm_equivalence_prop(
+        let _execution_result = test_rust_equivalence_given_input_state(
             &ShiftRightStaticU128::<N>,
             &init_stack,
             &[],

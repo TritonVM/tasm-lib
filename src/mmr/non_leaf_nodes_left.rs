@@ -200,13 +200,15 @@ mod tests {
 
     use crate::get_init_tvm_stack;
 
-    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
+    use crate::test_helpers::{
+        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+    };
 
     use super::*;
 
     #[test]
     fn non_leaf_nodes_left_test() {
-        rust_tasm_equivalence_prop_new(&MmrNonLeafNodesLeftUsingAnd, true);
+        test_rust_equivalence_multiple(&MmrNonLeafNodesLeftUsingAnd, true);
     }
 
     #[test]
@@ -276,15 +278,16 @@ mod tests {
             init_stack.push(elem);
         }
 
-        let _execution_result = rust_tasm_equivalence_prop::<MmrNonLeafNodesLeftUsingAnd>(
-            &MmrNonLeafNodesLeftUsingAnd,
-            &init_stack,
-            &[],
-            &[],
-            &mut HashMap::default(),
-            0,
-            expected,
-        );
+        let _execution_result =
+            test_rust_equivalence_given_input_state::<MmrNonLeafNodesLeftUsingAnd>(
+                &MmrNonLeafNodesLeftUsingAnd,
+                &init_stack,
+                &[],
+                &[],
+                &mut HashMap::default(),
+                0,
+                expected,
+            );
     }
 }
 

@@ -413,7 +413,7 @@ mod tests {
         shared_math::other::random_elements, util_types::algebraic_hasher::AlgebraicHasher,
     };
 
-    use crate::{test_helpers::rust_tasm_equivalence_prop_new, VmHasher};
+    use crate::{test_helpers::test_rust_equivalence_multiple, VmHasher};
 
     use super::*;
 
@@ -559,7 +559,7 @@ mod tests {
 
     #[test]
     fn unsafe_list_prop_test() {
-        rust_tasm_equivalence_prop_new(
+        test_rust_equivalence_multiple(
             &Zip {
                 list_type: ListType::Unsafe,
                 left_type: DataType::XFE,
@@ -571,7 +571,7 @@ mod tests {
 
     #[test]
     fn with_safe_list_prop_test() {
-        rust_tasm_equivalence_prop_new(
+        test_rust_equivalence_multiple(
             &Zip {
                 list_type: ListType::Safe,
                 left_type: DataType::XFE,

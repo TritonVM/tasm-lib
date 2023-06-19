@@ -91,13 +91,13 @@ impl Snippet for Lsb {
 #[cfg(test)]
 mod tests {
 
-    use crate::test_helpers::rust_tasm_equivalence_prop_new;
+    use crate::test_helpers::test_rust_equivalence_multiple;
 
     use super::*;
 
     #[test]
     fn lsb_test() {
-        rust_tasm_equivalence_prop_new(&Lsb, true);
+        test_rust_equivalence_multiple(&Lsb, true);
     }
 }
 

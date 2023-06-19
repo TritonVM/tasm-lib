@@ -405,7 +405,9 @@ mod tests {
     use twenty_first::util_types::mmr::mmr_membership_proof::MmrMembershipProof;
     use twenty_first::util_types::mmr::mmr_trait::Mmr;
 
-    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
+    use crate::test_helpers::{
+        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+    };
     use crate::{get_init_tvm_stack, VmHasher};
 
     use super::*;
@@ -414,7 +416,7 @@ mod tests {
 
     #[test]
     fn calculate_new_peaks_from_append_test_unsafe_lists() {
-        rust_tasm_equivalence_prop_new(
+        test_rust_equivalence_multiple(
             &CalculateNewPeaksFromAppend {
                 list_type: ListType::Unsafe,
             },
@@ -424,7 +426,7 @@ mod tests {
 
     #[test]
     fn calculate_new_peaks_from_append_test_safe_lists() {
-        rust_tasm_equivalence_prop_new(
+        test_rust_equivalence_multiple(
             &CalculateNewPeaksFromAppend {
                 list_type: ListType::Safe,
             },
@@ -650,7 +652,7 @@ mod tests {
         expected_final_stack.push(peaks_pointer);
         expected_final_stack.push(auth_paths_pointer);
 
-        let _execution_result = rust_tasm_equivalence_prop(
+        let _execution_result = test_rust_equivalence_given_input_state(
             &CalculateNewPeaksFromAppend { list_type },
             &init_stack,
             &[],

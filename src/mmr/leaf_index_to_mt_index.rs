@@ -218,13 +218,15 @@ mod tests {
 
     use crate::get_init_tvm_stack;
 
-    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
+    use crate::test_helpers::{
+        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+    };
 
     use super::*;
 
     #[test]
     fn leaf_index_to_mt_index_test() {
-        rust_tasm_equivalence_prop_new(&MmrLeafIndexToMtIndexAndPeakIndex, true);
+        test_rust_equivalence_multiple(&MmrLeafIndexToMtIndexAndPeakIndex, true);
     }
 
     #[test]
@@ -374,15 +376,16 @@ mod tests {
         expected.push(BFieldElement::new(expected_mt_index & u32::MAX as u64));
         expected.push(BFieldElement::new(expected_peak_index as u64));
 
-        let _execution_result = rust_tasm_equivalence_prop::<MmrLeafIndexToMtIndexAndPeakIndex>(
-            &MmrLeafIndexToMtIndexAndPeakIndex,
-            &init_stack,
-            &[],
-            &[],
-            &mut HashMap::default(),
-            0,
-            Some(&expected),
-        );
+        let _execution_result =
+            test_rust_equivalence_given_input_state::<MmrLeafIndexToMtIndexAndPeakIndex>(
+                &MmrLeafIndexToMtIndexAndPeakIndex,
+                &init_stack,
+                &[],
+                &[],
+                &mut HashMap::default(),
+                0,
+                Some(&expected),
+            );
     }
 }
 

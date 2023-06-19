@@ -293,8 +293,8 @@ mod tests {
     use twenty_first::util_types::merkle_tree_maker::MerkleTreeMaker;
 
     use crate::get_init_tvm_stack;
-    use crate::test_helpers::rust_tasm_equivalence_prop;
-    use crate::test_helpers::rust_tasm_equivalence_prop_new;
+    use crate::test_helpers::test_rust_equivalence_given_input_state;
+    use crate::test_helpers::test_rust_equivalence_multiple;
     use crate::VmHasher;
 
     use super::MtApVerifyFromSecretInput;
@@ -308,7 +308,7 @@ mod tests {
 
     #[test]
     fn merkle_tree_ap_verify_from_secret_input_test() {
-        rust_tasm_equivalence_prop_new(&MtApVerifyFromSecretInput(PhantomData::<VmHasher>), true);
+        test_rust_equivalence_multiple(&MtApVerifyFromSecretInput(PhantomData::<VmHasher>), true);
     }
 
     #[test]
@@ -348,7 +348,7 @@ mod tests {
         let stack: &mut Vec<BFieldElement> = &mut get_init_tvm_stack();
         let standard_input: Vec<BFieldElement> = generate_input::<VmHasher>(indices, &leafs);
 
-        rust_tasm_equivalence_prop(
+        test_rust_equivalence_given_input_state(
             &MtApVerifyFromSecretInput(PhantomData::<VmHasher>),
             stack,
             &standard_input,
@@ -375,7 +375,7 @@ mod tests {
         let stack: &mut Vec<BFieldElement> = &mut get_init_tvm_stack();
         let standard_input: Vec<BFieldElement> = generate_input::<VmHasher>(indices, &leafs);
 
-        rust_tasm_equivalence_prop(
+        test_rust_equivalence_given_input_state(
             &MtApVerifyFromSecretInput(PhantomData::<VmHasher>),
             stack,
             &standard_input,

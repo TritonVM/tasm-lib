@@ -119,13 +119,15 @@ fn prepare_state(value: u32, shift: u32) -> ExecutionState {
 
 #[cfg(test)]
 mod tests {
-    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
+    use crate::test_helpers::{
+        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+    };
 
     use super::*;
 
     #[test]
     fn shift_left_test() {
-        rust_tasm_equivalence_prop_new(&ShiftLeftU32, true);
+        test_rust_equivalence_multiple(&ShiftLeftU32, true);
     }
 
     #[test]
@@ -141,7 +143,8 @@ mod tests {
         let mut init_stack = get_init_tvm_stack();
         init_stack.push(BFieldElement::new(u32::MAX as u64));
         init_stack.push(32u64.into());
-        ShiftLeftU32.run_tasm(&mut ExecutionState::with_stack(init_stack));
+        ShiftLeftU32
+            .link_and_run_tasm_from_state_for_test(&mut ExecutionState::with_stack(init_stack));
     }
 
     fn prop_shift_left(value: u32, shift_amount: u32) {
@@ -154,7 +157,7 @@ mod tests {
         let mut expected_stack = get_init_tvm_stack();
         expected_stack.push((expected_u32 as u64).into());
 
-        let _execution_result = rust_tasm_equivalence_prop(
+        let _execution_result = test_rust_equivalence_given_input_state(
             &ShiftLeftU32,
             &init_stack,
             &[],

@@ -105,19 +105,19 @@ impl Snippet for ReadStdIn {
 
 #[cfg(test)]
 mod tests {
-    use crate::test_helpers::rust_tasm_equivalence_prop_new;
+    use crate::test_helpers::test_rust_equivalence_multiple;
 
     use super::*;
 
     #[test]
     fn new_snippet_test() {
         for _ in 0..10 {
-            rust_tasm_equivalence_prop_new(&ReadStdIn(DataType::Bool), true);
-            rust_tasm_equivalence_prop_new(&ReadStdIn(DataType::U32), true);
-            rust_tasm_equivalence_prop_new(&ReadStdIn(DataType::U64), true);
-            rust_tasm_equivalence_prop_new(&ReadStdIn(DataType::BFE), true);
-            rust_tasm_equivalence_prop_new(&ReadStdIn(DataType::XFE), true);
-            rust_tasm_equivalence_prop_new(&ReadStdIn(DataType::Digest), true);
+            test_rust_equivalence_multiple(&ReadStdIn(DataType::Bool), true);
+            test_rust_equivalence_multiple(&ReadStdIn(DataType::U32), true);
+            test_rust_equivalence_multiple(&ReadStdIn(DataType::U64), true);
+            test_rust_equivalence_multiple(&ReadStdIn(DataType::BFE), true);
+            test_rust_equivalence_multiple(&ReadStdIn(DataType::XFE), true);
+            test_rust_equivalence_multiple(&ReadStdIn(DataType::Digest), true);
         }
     }
 }

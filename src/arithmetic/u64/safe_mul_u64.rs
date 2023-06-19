@@ -186,13 +186,15 @@ mod tests {
     use num::Zero;
     use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
-    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
+    use crate::test_helpers::{
+        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+    };
 
     use super::*;
 
     #[test]
     fn safe_mul_u64_test() {
-        rust_tasm_equivalence_prop_new(&SafeMulU64, true);
+        test_rust_equivalence_multiple(&SafeMulU64, true);
     }
 
     #[should_panic]
@@ -209,7 +211,8 @@ mod tests {
             init_stack.push(elem);
         }
 
-        SafeMulU64.run_tasm(&mut ExecutionState::with_stack(init_stack));
+        SafeMulU64
+            .link_and_run_tasm_from_state_for_test(&mut ExecutionState::with_stack(init_stack));
     }
 
     #[should_panic]
@@ -226,7 +229,8 @@ mod tests {
             init_stack.push(elem);
         }
 
-        SafeMulU64.run_tasm(&mut ExecutionState::with_stack(init_stack));
+        SafeMulU64
+            .link_and_run_tasm_from_state_for_test(&mut ExecutionState::with_stack(init_stack));
     }
 
     #[should_panic]
@@ -243,7 +247,8 @@ mod tests {
             init_stack.push(elem);
         }
 
-        SafeMulU64.run_tasm(&mut ExecutionState::with_stack(init_stack));
+        SafeMulU64
+            .link_and_run_tasm_from_state_for_test(&mut ExecutionState::with_stack(init_stack));
     }
 
     #[should_panic]
@@ -260,7 +265,8 @@ mod tests {
             init_stack.push(elem);
         }
 
-        SafeMulU64.run_tasm(&mut ExecutionState::with_stack(init_stack));
+        SafeMulU64
+            .link_and_run_tasm_from_state_for_test(&mut ExecutionState::with_stack(init_stack));
     }
 
     #[test]
@@ -274,7 +280,7 @@ mod tests {
         let mut expected = get_init_tvm_stack();
         expected.push(BFieldElement::zero());
         expected.push(BFieldElement::new(20_000));
-        rust_tasm_equivalence_prop(
+        test_rust_equivalence_given_input_state(
             &SafeMulU64,
             &init_stack,
             &[],

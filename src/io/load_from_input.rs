@@ -256,14 +256,14 @@ impl Snippet for LoadFromInput {
 
 #[cfg(test)]
 mod tests {
-    use crate::{execute_with_execution_state, test_helpers::rust_tasm_equivalence_prop_new};
+    use crate::{execute_with_execution_state, test_helpers::test_rust_equivalence_multiple};
 
     use super::*;
 
     #[test]
     fn new_snippet_test() {
-        rust_tasm_equivalence_prop_new(&LoadFromInput(InputSource::SecretIn), true);
-        rust_tasm_equivalence_prop_new(&LoadFromInput(InputSource::StdIn), true);
+        test_rust_equivalence_multiple(&LoadFromInput(InputSource::SecretIn), true);
+        test_rust_equivalence_multiple(&LoadFromInput(InputSource::StdIn), true);
     }
 
     #[test]

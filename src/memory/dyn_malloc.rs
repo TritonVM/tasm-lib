@@ -184,7 +184,7 @@ impl Snippet for DynMalloc {
 
 #[cfg(test)]
 mod tests {
-    use crate::test_helpers::rust_tasm_equivalence_prop_new;
+    use crate::test_helpers::test_rust_equivalence_multiple;
 
     use super::*;
 
@@ -196,7 +196,7 @@ mod tests {
 
     #[test]
     fn dyn_malloc_test() {
-        rust_tasm_equivalence_prop_new(&DynMalloc, true);
+        test_rust_equivalence_multiple(&DynMalloc, true);
     }
 
     #[test]

@@ -86,11 +86,11 @@ impl Snippet for Neg {
 mod tests {
     use super::*;
 
-    use crate::test_helpers::rust_tasm_equivalence_prop_new;
+    use crate::test_helpers::test_rust_equivalence_multiple;
 
     #[test]
     fn lsb_test() {
-        rust_tasm_equivalence_prop_new(&Neg, true);
+        test_rust_equivalence_multiple(&Neg, true);
     }
 }
 

@@ -1,3 +1,4 @@
+use anyhow::Result;
 use itertools::Itertools;
 use rand::{random, thread_rng, Rng};
 use std::collections::HashMap;
@@ -6,10 +7,9 @@ use triton_opcodes::instruction::LabelledInstruction;
 use triton_opcodes::parser::{parse, to_labelled};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
-use crate::dyn_malloc::DYN_MALLOC_ADDRESS;
 use crate::snippet_state::SnippetState;
-use crate::{execute, ExecutionState};
-use crate::{ExecutionResult, DIGEST_LENGTH};
+use crate::{execute_bench, ExecutionResult, DIGEST_LENGTH};
+use crate::{execute_test, ExecutionState};
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub enum InputSource {
@@ -163,7 +163,7 @@ pub trait Snippet {
     /// The function
     fn function_code(&self, library: &mut SnippetState) -> String;
 
-    /// Ways in which this snippet can crash
+    /// Ways in which this snippet can crash at runtime
     fn crash_conditions(&self) -> Vec<String>;
 
     /// Examples of valid initial states for running this snippet
@@ -195,29 +195,14 @@ pub trait Snippet {
         memory: &mut HashMap<BFieldElement, BFieldElement>,
     );
 
-    /// The TASM code is always run through a function call, so the 1st instruction
-    /// is a call to the function in question.
-    fn run_tasm_old(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        std_in: Vec<BFieldElement>,
-        secret_in: Vec<BFieldElement>,
-        memory: &mut HashMap<BFieldElement, BFieldElement>,
-        words_statically_allocated: usize,
-    ) -> ExecutionResult {
-        let mut library = SnippetState::with_preallocated_memory(words_statically_allocated);
+    fn link_for_isolated_run(&self, words_statically_allocated: usize) -> String {
+        let mut snippet_state = SnippetState::with_preallocated_memory(words_statically_allocated);
         let entrypoint = self.entrypoint();
-        let function_body = self.function_code(&mut library);
-        let library_code = library.all_imports();
+        let function_body = self.function_code(&mut snippet_state);
+        let library_code = snippet_state.all_imports();
 
-        let expected_length_prior: usize = self.input_types().iter().map(|x| x.get_size()).sum();
-        let expected_length_after: usize = self.output_types().iter().map(|x| x.get_size()).sum();
-        assert_eq!(
-            Self::stack_diff(self),
-            (expected_length_after as isize - expected_length_prior as isize),
-            "Declared stack diff must match type indicators"
-        );
-
+        // The TASM code is always run through a function call, so the 1st instruction
+        // is a call to the function in question.
         let code = format!(
             "
             call {entrypoint}
@@ -228,27 +213,91 @@ pub trait Snippet {
             "
         );
 
-        // Initialize a value for malloc, but only if it isn't already set
-        let dyn_malloc_init_value = match memory.get(&BFieldElement::new(DYN_MALLOC_ADDRESS as u64))
-        {
-            Some(_value) => None,
-            None => Some(library.get_next_free_address()),
-        };
-        execute(
+        code
+    }
+
+    fn link_and_run_tasm_for_test(
+        &self,
+        stack: &mut Vec<BFieldElement>,
+        std_in: Vec<BFieldElement>,
+        secret_in: Vec<BFieldElement>,
+        memory: &mut HashMap<BFieldElement, BFieldElement>,
+        words_statically_allocated: usize,
+    ) {
+        let expected_length_prior: usize = self.input_types().iter().map(|x| x.get_size()).sum();
+        let expected_length_after: usize = self.output_types().iter().map(|x| x.get_size()).sum();
+        assert_eq!(
+            Self::stack_diff(self),
+            (expected_length_after as isize - expected_length_prior as isize),
+            "Declared stack diff must match type indicators"
+        );
+
+        let code = self.link_for_isolated_run(words_statically_allocated);
+
+        execute_test(
             &code,
             stack,
             Self::stack_diff(self),
             std_in,
             secret_in,
             memory,
-            dyn_malloc_init_value,
+            Some(words_statically_allocated),
         )
-        .unwrap()
+        .unwrap();
     }
 
-    fn run_tasm(&self, execution_state: &mut ExecutionState) -> ExecutionResult {
+    fn link_and_run_tasm_for_bench(
+        &self,
+        stack: &mut Vec<BFieldElement>,
+        std_in: Vec<BFieldElement>,
+        secret_in: Vec<BFieldElement>,
+        memory: &mut HashMap<BFieldElement, BFieldElement>,
+        words_statically_allocated: usize,
+    ) -> Result<ExecutionResult> {
+        let expected_length_prior: usize = self.input_types().iter().map(|x| x.get_size()).sum();
+        let expected_length_after: usize = self.output_types().iter().map(|x| x.get_size()).sum();
+        assert_eq!(
+            Self::stack_diff(self),
+            (expected_length_after as isize - expected_length_prior as isize),
+            "Declared stack diff must match type indicators"
+        );
+
+        let code = self.link_for_isolated_run(words_statically_allocated);
+
+        execute_bench(
+            &code,
+            stack,
+            Self::stack_diff(self),
+            std_in,
+            secret_in,
+            memory,
+            Some(words_statically_allocated),
+        )
+    }
+
+    fn link_and_run_tasm_from_state_for_test(&self, execution_state: &mut ExecutionState) {
         let stack_prior = execution_state.stack.clone();
-        let ret = self.run_tasm_old(
+        self.link_and_run_tasm_for_test(
+            &mut execution_state.stack,
+            execution_state.std_in.clone(),
+            execution_state.secret_in.clone(),
+            &mut execution_state.memory,
+            execution_state.words_allocated,
+        );
+        let stack_after = execution_state.stack.clone();
+
+        assert_eq!(
+            stack_prior[0..(stack_prior.len() - Self::inputs(self).len())],
+            stack_after[0..(stack_after.len() - Self::outputs(self).len())]
+        );
+    }
+
+    fn link_and_run_tasm_from_state_for_bench(
+        &self,
+        execution_state: &mut ExecutionState,
+    ) -> Result<ExecutionResult> {
+        let stack_prior = execution_state.stack.clone();
+        let ret = self.link_and_run_tasm_for_bench(
             &mut execution_state.stack,
             execution_state.std_in.clone(),
             execution_state.secret_in.clone(),

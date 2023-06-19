@@ -157,13 +157,13 @@ pub fn init_state_field_i_in_struct(
 
 #[cfg(test)]
 mod tests {
-    use crate::test_helpers::rust_tasm_equivalence_prop_new;
+    use crate::test_helpers::test_rust_equivalence_multiple;
 
     use super::GetField;
 
     #[test]
     fn new_prop_test() {
-        rust_tasm_equivalence_prop_new(&GetField, true);
+        test_rust_equivalence_multiple(&GetField, true);
     }
 }
 

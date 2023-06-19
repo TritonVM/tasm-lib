@@ -626,14 +626,14 @@ mod tests {
     use triton_opcodes::{instruction::LabelledInstruction, shortcuts::*};
 
     use crate::{
-        list::higher_order::inner_function::RawCode, test_helpers::rust_tasm_equivalence_prop_new,
+        list::higher_order::inner_function::RawCode, test_helpers::test_rust_equivalence_multiple,
     };
 
     use super::*;
 
     #[test]
     fn unsafe_list_prop_test() {
-        rust_tasm_equivalence_prop_new(
+        test_rust_equivalence_multiple(
             &Filter {
                 list_type: ListType::Unsafe,
                 f: InnerFunction::Snippet(Box::new(TestHashXFieldElementLsb)),
@@ -644,7 +644,7 @@ mod tests {
 
     #[test]
     fn with_safe_list_prop_test() {
-        rust_tasm_equivalence_prop_new(
+        test_rust_equivalence_multiple(
             &Filter {
                 list_type: ListType::Safe,
                 f: InnerFunction::Snippet(Box::new(TestHashXFieldElementLsb)),
@@ -674,7 +674,7 @@ mod tests {
                 vec.push(BFieldElement::new(new_value));
             })),
         );
-        rust_tasm_equivalence_prop_new(
+        test_rust_equivalence_multiple(
             &Filter {
                 list_type: ListType::Unsafe,
                 f: InnerFunction::RawCode(rawcode),
@@ -708,7 +708,7 @@ mod tests {
                 vec.push(BFieldElement::new(new_value));
             })),
         );
-        rust_tasm_equivalence_prop_new(
+        test_rust_equivalence_multiple(
             &Filter {
                 list_type: ListType::Unsafe,
                 f: InnerFunction::RawCode(rawcode),

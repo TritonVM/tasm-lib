@@ -151,19 +151,19 @@ mod tests {
 
     use crate::{
         list::safe_u32::push::SafePush, rust_shadowing_helper_functions,
-        test_helpers::rust_tasm_equivalence_prop_new, Digest,
+        test_helpers::test_rust_equivalence_multiple, Digest,
     };
 
     use super::*;
 
     #[test]
     fn new_snippet_test() {
-        rust_tasm_equivalence_prop_new(&SafeNew(DataType::Bool), true);
-        rust_tasm_equivalence_prop_new(&SafeNew(DataType::U32), true);
-        rust_tasm_equivalence_prop_new(&SafeNew(DataType::U64), true);
-        rust_tasm_equivalence_prop_new(&SafeNew(DataType::BFE), true);
-        rust_tasm_equivalence_prop_new(&SafeNew(DataType::XFE), true);
-        rust_tasm_equivalence_prop_new(&SafeNew(DataType::Digest), true);
+        test_rust_equivalence_multiple(&SafeNew(DataType::Bool), true);
+        test_rust_equivalence_multiple(&SafeNew(DataType::U32), true);
+        test_rust_equivalence_multiple(&SafeNew(DataType::U64), true);
+        test_rust_equivalence_multiple(&SafeNew(DataType::BFE), true);
+        test_rust_equivalence_multiple(&SafeNew(DataType::XFE), true);
+        test_rust_equivalence_multiple(&SafeNew(DataType::Digest), true);
     }
 
     #[test]
@@ -175,7 +175,13 @@ mod tests {
         let mut stack = get_init_tvm_stack();
         let mut memory = HashMap::default();
         stack.push(capacity_as_bfe);
-        SafeNew(data_type.clone()).run_tasm_old(&mut stack, vec![], vec![], &mut memory, 0);
+        SafeNew(data_type.clone()).link_and_run_tasm_for_test(
+            &mut stack,
+            vec![],
+            vec![],
+            &mut memory,
+            0,
+        );
         let first_list = stack.pop().unwrap();
 
         // Prepare stack for push to 1st list
@@ -184,7 +190,13 @@ mod tests {
         for elem in digest1.values().iter().rev() {
             stack.push(elem.to_owned());
         }
-        SafePush(data_type.clone()).run_tasm_old(&mut stack, vec![], vec![], &mut memory, 0);
+        SafePush(data_type.clone()).link_and_run_tasm_for_test(
+            &mut stack,
+            vec![],
+            vec![],
+            &mut memory,
+            0,
+        );
         assert_eq!(
             get_init_tvm_stack(),
             stack,
@@ -193,7 +205,13 @@ mod tests {
 
         // Get another list in memory
         stack.push(capacity_as_bfe);
-        SafeNew(data_type.clone()).run_tasm_old(&mut stack, vec![], vec![], &mut memory, 0);
+        SafeNew(data_type.clone()).link_and_run_tasm_for_test(
+            &mut stack,
+            vec![],
+            vec![],
+            &mut memory,
+            0,
+        );
         let second_list = stack.pop().unwrap();
 
         // Verify that expected number of VM words were allocated for the first list
@@ -210,7 +228,7 @@ mod tests {
         for elem in digest2.values().iter().rev() {
             stack.push(elem.to_owned());
         }
-        SafePush(data_type).run_tasm_old(&mut stack, vec![], vec![], &mut memory, 0);
+        SafePush(data_type).link_and_run_tasm_for_test(&mut stack, vec![], vec![], &mut memory, 0);
         assert_eq!(
             get_init_tvm_stack(),
             stack,

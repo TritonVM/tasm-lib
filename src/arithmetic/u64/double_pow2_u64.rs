@@ -141,13 +141,13 @@ impl Snippet for DoublePow2U64 {
 #[cfg(test)]
 mod tests {
 
-    use crate::test_helpers::rust_tasm_equivalence_prop_new;
+    use crate::test_helpers::test_rust_equivalence_multiple;
 
     use super::*;
 
     #[test]
     fn double_pow2_u64_test() {
-        rust_tasm_equivalence_prop_new(&DoublePow2U64, true);
+        test_rust_equivalence_multiple(&DoublePow2U64, true);
     }
 }
 

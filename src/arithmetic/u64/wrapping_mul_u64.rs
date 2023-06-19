@@ -163,13 +163,15 @@ mod tests {
 
     use num::Zero;
 
-    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
+    use crate::test_helpers::{
+        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+    };
 
     use super::*;
 
     #[test]
     fn wrapping_mul_u64_test() {
-        rust_tasm_equivalence_prop_new(&WrappingMulU64, true);
+        test_rust_equivalence_multiple(&WrappingMulU64, true);
     }
 
     #[test]
@@ -183,7 +185,7 @@ mod tests {
         let mut expected = get_init_tvm_stack();
         expected.push(BFieldElement::zero());
         expected.push(BFieldElement::new(20_000));
-        rust_tasm_equivalence_prop(
+        test_rust_equivalence_given_input_state(
             &WrappingMulU64,
             &init_stack,
             &[],

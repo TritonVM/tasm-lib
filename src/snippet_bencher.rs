@@ -28,7 +28,9 @@ pub fn benchmark_snippet<T: Snippet>(snippet: T) -> Vec<BenchmarkResult> {
         (BenchmarkCase::CommonCase, snippet.common_case_input_state()),
         (BenchmarkCase::WorstCase, snippet.worst_case_input_state()),
     ] {
-        let execution_result = snippet.run_tasm(&mut execution_state);
+        let execution_result = snippet
+            .link_and_run_tasm_from_state_for_bench(&mut execution_state)
+            .unwrap();
         let benchmark = BenchmarkResult {
             name: snippet.entrypoint(),
             clock_cycle_count: execution_result.cycle_count,

@@ -108,13 +108,15 @@ mod tests {
 
     use crate::get_init_tvm_stack;
 
-    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
+    use crate::test_helpers::{
+        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+    };
 
     use super::*;
 
     #[test]
     fn is_odd_u32_test() {
-        rust_tasm_equivalence_prop_new(&U32IsOdd, true);
+        test_rust_equivalence_multiple(&U32IsOdd, true);
     }
 
     #[test]
@@ -143,7 +145,7 @@ mod tests {
         let mut expected_stack = get_init_tvm_stack();
         expected_stack.push(BFieldElement::new((value % 2) as u64));
 
-        let _execution_result = rust_tasm_equivalence_prop(
+        let _execution_result = test_rust_equivalence_given_input_state(
             &U32IsOdd,
             &init_stack,
             &[],

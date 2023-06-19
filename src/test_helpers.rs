@@ -6,13 +6,10 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use crate::dyn_malloc::DYN_MALLOC_ADDRESS;
 use crate::snippet::Snippet;
 use crate::snippet_state::SnippetState;
-use crate::{exported_snippets, rust_shadowing_helper_functions, ExecutionResult};
+use crate::{exported_snippets, rust_shadowing_helper_functions};
 
 #[allow(dead_code)]
-pub fn rust_tasm_equivalence_prop_new<T: Snippet>(
-    snippet_struct: &T,
-    export_snippet: bool,
-) -> Vec<ExecutionResult> {
+pub fn test_rust_equivalence_multiple<T: Snippet>(snippet_struct: &T, export_snippet: bool) {
     // Verify that snippet can be found in `all_snippets`, so it's visible to the outside
     // This call will panic if snippet is not found in that function call
     // The data type value is a dummy value for all snippets except those that handle lists.
@@ -27,10 +24,8 @@ pub fn rust_tasm_equivalence_prop_new<T: Snippet>(
 
     let mut execution_states = snippet_struct.gen_input_states();
 
-    let mut final_execution_results = vec![];
     for execution_state in execution_states.iter_mut() {
-        let stack_init = execution_state.stack.clone();
-        let execution_result = rust_tasm_equivalence_prop::<T>(
+        test_rust_equivalence_given_input_state::<T>(
             snippet_struct,
             &execution_state.stack,
             &execution_state.std_in,
@@ -39,60 +34,31 @@ pub fn rust_tasm_equivalence_prop_new<T: Snippet>(
             execution_state.words_allocated,
             None,
         );
-
-        // Verify that stack grows with expected number of elements
-        let stack_final = execution_result.final_stack.clone();
-        let observed_stack_growth: isize = stack_final.len() as isize - stack_init.len() as isize;
-        let expected_stack_growth: isize =
-            snippet_struct.outputs().len() as isize - snippet_struct.inputs().len() as isize;
-        assert_eq!(
-            expected_stack_growth,
-            observed_stack_growth,
-            "Stack must pop and push expected number of elements. Got input: {}\nGot output: {}",
-            stack_init.iter().map(|x| x.to_string()).join(","),
-            stack_final.iter().map(|x| x.to_string()).join(",")
-        );
-
-        final_execution_results.push(execution_result);
     }
 
-    final_execution_results
+    // final_execution_results
 }
 
 #[allow(dead_code)]
-pub fn rust_tasm_equivalence_prop<T: Snippet>(
+pub fn test_rust_equivalence_given_input_state<T: Snippet>(
     snippet_struct: &T,
     stack: &[BFieldElement],
     stdin: &[BFieldElement],
     secret_in: &[BFieldElement],
     memory: &mut HashMap<BFieldElement, BFieldElement>,
     words_statically_allocated: usize,
-    expected: Option<&[BFieldElement]>,
-) -> ExecutionResult {
+    expected_final_stack: Option<&[BFieldElement]>,
+) {
     let init_memory = memory.clone();
+    let init_stack = stack.to_vec();
     let mut tasm_stack = stack.to_vec();
     let mut tasm_memory = init_memory.clone();
-    let execution_result = snippet_struct.run_tasm_old(
+    snippet_struct.link_and_run_tasm_for_test(
         &mut tasm_stack,
         stdin.to_vec(),
         secret_in.to_vec(),
         &mut tasm_memory,
         words_statically_allocated,
-    );
-    println!(
-        "Cycle count for `{}`: {}",
-        snippet_struct.entrypoint(),
-        execution_result.cycle_count
-    );
-    println!(
-        "Hash table height for `{}`: {}",
-        snippet_struct.entrypoint(),
-        execution_result.hash_table_height
-    );
-    println!(
-        "U32 table height for `{}`: {}",
-        snippet_struct.entrypoint(),
-        execution_result.u32_table_height
     );
 
     let mut rust_memory = init_memory;
@@ -128,7 +94,7 @@ pub fn rust_tasm_equivalence_prop<T: Snippet>(
             .join(","),
         snippet_struct.function_code(&mut SnippetState::default())
     );
-    if let Some(expected) = expected {
+    if let Some(expected) = expected_final_stack {
         assert_eq!(
             tasm_stack,
             expected,
@@ -198,5 +164,16 @@ pub fn rust_tasm_equivalence_prop<T: Snippet>(
     // Write back memory to be able to probe it in individual tests
     *memory = tasm_memory;
 
-    execution_result
+    // Verify that stack grows with expected number of elements
+    let stack_final = tasm_stack.clone();
+    let observed_stack_growth: isize = stack_final.len() as isize - init_stack.len() as isize;
+    let expected_stack_growth: isize =
+        snippet_struct.outputs().len() as isize - snippet_struct.inputs().len() as isize;
+    assert_eq!(
+        expected_stack_growth,
+        observed_stack_growth,
+        "Stack must pop and push expected number of elements. Got input: {}\nGot output: {}",
+        init_stack.iter().map(|x| x.to_string()).join(","),
+        stack_final.iter().map(|x| x.to_string()).join(",")
+    );
 }

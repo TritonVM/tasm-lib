@@ -107,14 +107,16 @@ mod tests {
     use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
     use crate::get_init_tvm_stack;
-    
-    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
+
+    use crate::test_helpers::{
+        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+    };
 
     use super::*;
 
     #[test]
     fn get_height_from_data_index_test() {
-        rust_tasm_equivalence_prop_new(&GetHeightFromDataIndex, true);
+        test_rust_equivalence_multiple(&GetHeightFromDataIndex, true);
     }
 
     #[test]
@@ -197,7 +199,7 @@ mod tests {
             init_stack.push(elem);
         }
 
-        let _execution_result = rust_tasm_equivalence_prop::<GetHeightFromDataIndex>(
+        let _execution_result = test_rust_equivalence_given_input_state::<GetHeightFromDataIndex>(
             &GetHeightFromDataIndex,
             &init_stack,
             &[],

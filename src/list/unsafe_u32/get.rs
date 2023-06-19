@@ -162,13 +162,15 @@ mod tests {
 
     use crate::get_init_tvm_stack;
 
-    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
+    use crate::test_helpers::{
+        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+    };
 
     use super::*;
 
     #[test]
     fn new_snippet_test() {
-        rust_tasm_equivalence_prop_new(&UnsafeGet(DataType::XFE), true);
+        test_rust_equivalence_multiple(&UnsafeGet(DataType::XFE), true);
     }
 
     #[test]
@@ -235,7 +237,7 @@ mod tests {
             expected_end_stack.push(targeted_element[element_size - 1 - i]);
         }
 
-        let _execution_result = rust_tasm_equivalence_prop(
+        let _execution_result = test_rust_equivalence_given_input_state(
             &UnsafeGet(data_type),
             &init_stack,
             &[],

@@ -128,13 +128,15 @@ fn prepare_state(value: u64) -> ExecutionState {
 mod tests {
     use std::collections::HashMap;
 
-    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
+    use crate::test_helpers::{
+        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+    };
 
     use super::*;
 
     #[test]
     fn snippet_test() {
-        rust_tasm_equivalence_prop_new(&LeadingZerosU64, true);
+        test_rust_equivalence_multiple(&LeadingZerosU64, true);
     }
 
     #[test]
@@ -163,22 +165,19 @@ mod tests {
         let mut init_stack = get_init_tvm_stack();
         init_stack.push(BFieldElement::new(value));
 
-        let execution_result = rust_tasm_equivalence_prop(
+        let leading_zeros = value.leading_zeros();
+        let mut expected_stack = get_init_tvm_stack();
+        expected_stack.push(BFieldElement::new(leading_zeros as u64));
+
+        let execution_result = test_rust_equivalence_given_input_state(
             &LeadingZerosU64,
             &init_stack,
             &[],
             &[],
             &mut HashMap::default(),
             0,
-            None,
+            Some(&expected_stack),
         );
-
-        let mut final_stack = execution_result.final_stack;
-        if let Some(res) = expected {
-            let lo: u32 = final_stack.pop().unwrap().try_into().unwrap();
-            let hi: u32 = final_stack.pop().unwrap().try_into().unwrap();
-            assert_eq!(res, lo as u64 + ((hi as u64) << 32));
-        };
     }
 }
 

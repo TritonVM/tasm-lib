@@ -249,13 +249,13 @@ impl Snippet for BagPeaks {
 
 #[cfg(test)]
 mod tests {
-    use crate::test_helpers::rust_tasm_equivalence_prop_new;
+    use crate::test_helpers::test_rust_equivalence_multiple;
 
     use super::BagPeaks;
 
     #[test]
     fn new_prop_test() {
-        rust_tasm_equivalence_prop_new(&BagPeaks, true);
+        test_rust_equivalence_multiple(&BagPeaks, true);
     }
 }
 

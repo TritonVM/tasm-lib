@@ -351,11 +351,11 @@ impl Snippet for MmrLoadFromSecretInThenVerify {
 mod tests {
     use super::*;
 
-    use crate::test_helpers::rust_tasm_equivalence_prop_new;
+    use crate::test_helpers::test_rust_equivalence_multiple;
 
     #[test]
     fn load_from_secret_in_then_verify_test_safe_lists() {
-        rust_tasm_equivalence_prop_new(
+        test_rust_equivalence_multiple(
             &MmrLoadFromSecretInThenVerify {
                 list_type: ListType::Safe,
             },
@@ -365,7 +365,7 @@ mod tests {
 
     #[test]
     fn load_from_secret_in_then_verify_test_unsafe_lists() {
-        rust_tasm_equivalence_prop_new(
+        test_rust_equivalence_multiple(
             &MmrLoadFromSecretInThenVerify {
                 list_type: ListType::Unsafe,
             },

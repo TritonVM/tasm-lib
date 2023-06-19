@@ -125,13 +125,13 @@ fn prepare_state(a: u64) -> ExecutionState {
 #[cfg(test)]
 mod tests {
 
-    use crate::test_helpers::rust_tasm_equivalence_prop_new;
+    use crate::test_helpers::test_rust_equivalence_multiple;
 
     use super::*;
 
     #[test]
     fn popcount_u64_test() {
-        rust_tasm_equivalence_prop_new(&PopCountU64, true);
+        test_rust_equivalence_multiple(&PopCountU64, true);
     }
 }
 

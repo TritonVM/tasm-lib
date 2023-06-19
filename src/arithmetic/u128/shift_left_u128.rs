@@ -218,13 +218,15 @@ fn prepare_state(value: u128, shift_amount: u32) -> ExecutionState {
 mod tests {
     use std::collections::HashMap;
 
-    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
+    use crate::test_helpers::{
+        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+    };
 
     use super::*;
 
     #[test]
     fn shift_left_u128_test() {
-        rust_tasm_equivalence_prop_new(&ShiftLeftU128, true);
+        test_rust_equivalence_multiple(&ShiftLeftU128, true);
     }
 
     #[test]
@@ -250,7 +252,8 @@ mod tests {
         init_stack.push(BFieldElement::new(u32::MAX as u64));
         init_stack.push(BFieldElement::new(u32::MAX as u64));
         init_stack.push(128u64.into());
-        ShiftLeftU128.run_tasm(&mut ExecutionState::with_stack(init_stack));
+        ShiftLeftU128
+            .link_and_run_tasm_from_state_for_test(&mut ExecutionState::with_stack(init_stack));
     }
 
     fn prop_left_left(value: u128, shift_amount: u32) {
@@ -272,7 +275,7 @@ mod tests {
             ));
         }
 
-        let _execution_result = rust_tasm_equivalence_prop(
+        let _execution_result = test_rust_equivalence_given_input_state(
             &ShiftLeftU128,
             &init_stack,
             &[],

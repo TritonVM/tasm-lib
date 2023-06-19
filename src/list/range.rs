@@ -247,13 +247,13 @@ impl Snippet for Range {
 #[cfg(test)]
 mod tests {
 
-    use crate::{execute_with_execution_state, test_helpers::rust_tasm_equivalence_prop_new};
+    use crate::{execute_with_execution_state, test_helpers::test_rust_equivalence_multiple};
 
     use super::*;
 
     #[test]
     fn new_snippet_test_safe_lists() {
-        rust_tasm_equivalence_prop_new(
+        test_rust_equivalence_multiple(
             &Range {
                 list_type: ListType::Safe,
             },
@@ -263,7 +263,7 @@ mod tests {
 
     #[test]
     fn new_snippet_test_unsafe_lists() {
-        rust_tasm_equivalence_prop_new(
+        test_rust_equivalence_multiple(
             &Range {
                 list_type: ListType::Unsafe,
             },

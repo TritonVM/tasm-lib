@@ -218,13 +218,15 @@ mod tests {
 
     use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
-    use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
+    use crate::test_helpers::{
+        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+    };
 
     use super::*;
 
     #[test]
     fn shift_right_u128_test() {
-        rust_tasm_equivalence_prop_new(&ShiftRightU128, true);
+        test_rust_equivalence_multiple(&ShiftRightU128, true);
     }
 
     #[test]
@@ -274,7 +276,7 @@ mod tests {
             expected_stack.push(limb);
         }
 
-        let _execution_result = rust_tasm_equivalence_prop(
+        let _execution_result = test_rust_equivalence_given_input_state(
             &ShiftRightU128,
             &init_stack,
             &[],

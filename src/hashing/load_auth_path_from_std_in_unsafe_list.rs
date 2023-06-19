@@ -204,11 +204,11 @@ impl Snippet for LoadAuthPathFromStdInUnsafeList {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_helpers::rust_tasm_equivalence_prop_new;
+    use crate::test_helpers::test_rust_equivalence_multiple;
 
     #[test]
     fn load_auth_path_from_std_in_test() {
-        rust_tasm_equivalence_prop_new(&LoadAuthPathFromStdInUnsafeList, true);
+        test_rust_equivalence_multiple(&LoadAuthPathFromStdInUnsafeList, true);
     }
 }
 

@@ -138,14 +138,14 @@ impl Snippet for IncrU64 {
 #[cfg(test)]
 mod tests {
 
-    use crate::test_helpers::rust_tasm_equivalence_prop_new;
+    use crate::test_helpers::test_rust_equivalence_multiple;
     use crate::{get_init_tvm_stack, push_encodable};
 
     use super::*;
 
     #[test]
     fn incr_u64_test() {
-        rust_tasm_equivalence_prop_new(&IncrU64, true);
+        test_rust_equivalence_multiple(&IncrU64, true);
     }
 
     #[test]
@@ -154,7 +154,7 @@ mod tests {
         let mut stack = get_init_tvm_stack();
         let u64_max = U32s::<2>::try_from(u64::MAX).unwrap();
         push_encodable(&mut stack, &u64_max);
-        IncrU64.run_tasm_old(&mut stack, vec![], vec![], &mut HashMap::default(), 0);
+        IncrU64.link_and_run_tasm_for_test(&mut stack, vec![], vec![], &mut HashMap::default(), 0);
     }
 
     #[test]
