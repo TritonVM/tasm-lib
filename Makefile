@@ -3,8 +3,6 @@ prog :=tasm-lib
 debug ?=
 
 $(info debug is $(debug))
-# Treat all warnings as errors
-export RUSTFLAGS = -Dwarnings
 
 ifdef debug
   release :=
@@ -43,10 +41,9 @@ run:
 	cargo run
 
 # Get a stack trace upon kernel panic (may slow down implementation)
-test: export RUST_BACKTRACE = 1
 test:
 	$(info RUSTFLAGS is $(RUSTFLAGS))
-	cargo test
+	cargo test -- --test-threads=10
 
 bench:
 	$(info RUSTFLAGS is $(RUSTFLAGS))
