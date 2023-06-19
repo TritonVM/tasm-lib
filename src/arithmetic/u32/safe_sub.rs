@@ -160,7 +160,7 @@ mod tests {
         prop_safe_sub(0, u32::MAX, None);
     }
 
-    fn prop_safe_sub(lhs: u32, rhs: u32, expected: Option<u32>) {
+    fn prop_safe_sub(lhs: u32, rhs: u32, _expected: Option<u32>) {
         let mut init_stack = get_init_tvm_stack();
         init_stack.push(BFieldElement::new(rhs as u64));
         init_stack.push(BFieldElement::new(lhs as u64));

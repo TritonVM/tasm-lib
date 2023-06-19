@@ -143,7 +143,7 @@ mod tests {
         prop_safe_leading_zeros(u32::MAX, Some(0));
     }
 
-    fn prop_safe_leading_zeros(value: u32, expected: Option<u32>) {
+    fn prop_safe_leading_zeros(value: u32, _expected: Option<u32>) {
         let mut init_stack = get_init_tvm_stack();
         init_stack.push(BFieldElement::new(value as u64));
 
@@ -154,7 +154,7 @@ mod tests {
         ]
         .concat();
 
-        let execution_result = test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_state(
             &LeadingZerosU32,
             &init_stack,
             &[],

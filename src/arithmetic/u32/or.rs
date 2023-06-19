@@ -148,7 +148,7 @@ mod tests {
         prop_safe_or(u32::MAX, u32::MAX, Some(u32::MAX));
     }
 
-    fn prop_safe_or(lhs: u32, rhs: u32, expected: Option<u32>) {
+    fn prop_safe_or(lhs: u32, rhs: u32, _expected: Option<u32>) {
         let mut init_stack = get_init_tvm_stack();
         init_stack.push(BFieldElement::new(rhs as u64));
         init_stack.push(BFieldElement::new(lhs as u64));
@@ -160,7 +160,7 @@ mod tests {
         ]
         .concat();
 
-        let execution_result = test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_state(
             &OrU32,
             &init_stack,
             &[],

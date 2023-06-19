@@ -163,13 +163,18 @@ mod tests {
 
     fn prop_leading_zeros(value: u64, expected: Option<u64>) {
         let mut init_stack = get_init_tvm_stack();
-        init_stack.push(BFieldElement::new(value));
+        init_stack.push(BFieldElement::new(value >> 32));
+        init_stack.push(BFieldElement::new(value & u32::MAX as u64));
 
         let leading_zeros = value.leading_zeros();
+        if let Some(exp) = expected {
+            assert_eq!(exp, leading_zeros as u64);
+        }
+
         let mut expected_stack = get_init_tvm_stack();
         expected_stack.push(BFieldElement::new(leading_zeros as u64));
 
-        let execution_result = test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_state(
             &LeadingZerosU64,
             &init_stack,
             &[],

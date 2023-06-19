@@ -126,7 +126,7 @@ mod tests {
         let res = 2u64.pow(exponent as u32);
         expected.push(BFieldElement::new(res >> 32));
         expected.push(BFieldElement::new(res & u32::MAX as u64));
-        let mut execution_result = test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_state(
             &Pow2U64,
             &init_stack,
             &[],

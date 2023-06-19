@@ -172,6 +172,10 @@ mod tests {
 
     fn prop_safe_or(lhs: u64, rhs: u64, expected: Option<u64>) {
         let res = lhs | rhs;
+        if let Some(exp) = expected {
+            assert_eq!(exp, res as u64);
+        }
+
         let rhs = U32s::<2>::try_from(rhs).unwrap();
         let lhs = U32s::<2>::try_from(lhs).unwrap();
         let mut init_stack = get_init_tvm_stack();
@@ -182,7 +186,7 @@ mod tests {
         expected.push(BFieldElement::new(res >> 32));
         expected.push(BFieldElement::new(res & u32::MAX as u64));
 
-        let execution_result = test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_state(
             &OrU64,
             &init_stack,
             &[],
