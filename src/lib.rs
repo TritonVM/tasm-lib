@@ -239,34 +239,13 @@ pub fn execute_bench(
     // opt-level = 3
     // ```
     if std::env::var("DYING_TO_PROVE").is_ok() {
-        let claim = Claim {
-            program_digest: VmHasher::hash_varlen(&program.encode()),
-            input: std_in,
-            output: output.clone(),
-        };
-
-        println!(
-            "\ntable heights:\nprocessor table: {}\nhash table: {}\nu32 table: {}",
-            simulation_trace.processor_trace.len(),
-            simulation_trace.hash_trace.len(),
-            simulation_trace.u32_entries.len()
-        );
-
-        let code_header = &code[0..std::cmp::min(code.len(), 100)];
-        println!("Execution suceeded. Now proving {code_header}");
-        let tick = SystemTime::now();
-        let proof =
-            triton_vm::prove(&StarkParameters::default(), &claim, &program, &secret_in).unwrap();
-        println!(
-            "Done proving. Elapsed time: {:?}",
-            tick.elapsed().expect("Don't mess with time")
-        );
-
-        assert!(
-            triton_vm::verify(&StarkParameters::default(), &proof),
-            "Generated proof must verify for program:\n {}\n\n Whole program was:\n\n{}",
-            code_header,
-            executed_code
+        prove_and_verify(
+            &program,
+            code,
+            &executed_code,
+            std_in,
+            secret_in,
+            output.clone(),
         );
     }
 
@@ -373,39 +352,61 @@ pub fn execute_test(
     // opt-level = 3
     // ```
     if std::env::var("DYING_TO_PROVE").is_ok() {
-        let claim = Claim {
-            program_digest: VmHasher::hash_varlen(&program.encode()),
-            input: std_in.clone(),
-            output: final_state.public_output,
-        };
-
-        let (simulation_trace, _) = vm::simulate(&program, std_in, secret_in.clone()).unwrap();
-
-        let code_header = &code[0..std::cmp::min(code.len(), 100)];
-        println!("Execution suceeded. Now proving {code_header}");
-        let tick = SystemTime::now();
-        let proof =
-            triton_vm::prove(&StarkParameters::default(), &claim, &program, &secret_in).unwrap();
-        println!(
-            "Done proving. Elapsed time: {:?}",
-            tick.elapsed().expect("Don't mess with time")
-        );
-        println!(
-            "\nProof was generated from:\ntable heights:\nprocessor table: {}\nhash table: {}\nu32 table: {}",
-            simulation_trace.processor_trace.rows().into_iter().count(),
-            simulation_trace.hash_trace.rows().into_iter().count(),
-            simulation_trace.u32_entries.len(),
-        );
-
-        assert!(
-            triton_vm::verify(&StarkParameters::default(), &proof),
-            "Generated proof must verify for program:\n {}\n\n Whole program was:\n\n{}",
-            code_header,
-            executed_code
+        prove_and_verify(
+            &program,
+            code,
+            &executed_code,
+            std_in,
+            secret_in,
+            final_state.public_output,
         );
     }
 
     Ok(())
+}
+
+// If you run this, make sure to set this in your Cargo.toml:
+// ```
+// [profile.test]
+// opt-level = 3
+// ```
+fn prove_and_verify(
+    program: &Program,
+    code: &str,
+    executed_code: &str,
+    std_in: Vec<BFieldElement>,
+    secret_in: Vec<BFieldElement>,
+    output: Vec<BFieldElement>,
+) {
+    let claim = Claim {
+        program_digest: VmHasher::hash_varlen(&program.encode()),
+        input: std_in.clone(),
+        output,
+    };
+
+    let (simulation_trace, _) = vm::simulate(program, std_in, secret_in.clone()).unwrap();
+
+    let code_header = &code[0..std::cmp::min(code.len(), 100)];
+    println!("Execution suceeded. Now proving {code_header}");
+    let tick = SystemTime::now();
+    let proof = triton_vm::prove(&StarkParameters::default(), &claim, program, &secret_in).unwrap();
+    println!(
+        "Done proving. Elapsed time: {:?}",
+        tick.elapsed().expect("Don't mess with time")
+    );
+    println!(
+        "\nProof was generated from:\ntable heights:\nprocessor table: {}\nhash table: {}\nu32 table: {}",
+        simulation_trace.processor_trace.rows().into_iter().count(),
+        simulation_trace.hash_trace.rows().into_iter().count(),
+        simulation_trace.u32_entries.len(),
+    );
+
+    assert!(
+        triton_vm::verify(&StarkParameters::default(), &proof),
+        "Generated proof must verify for program:\n {}\n\n Whole program was:\n\n{}",
+        code_header,
+        executed_code
+    );
 }
 
 #[cfg(test)]
