@@ -193,7 +193,7 @@ mod tests {
             );
         }
 
-        let _execution_result = test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_state(
             &UnsafeLength(DataType::BFE),
             &init_stack,
             &[],

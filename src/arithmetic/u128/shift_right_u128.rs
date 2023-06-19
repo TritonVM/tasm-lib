@@ -276,7 +276,7 @@ mod tests {
             expected_stack.push(limb);
         }
 
-        let _execution_result = test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_state(
             &ShiftRightU128,
             &init_stack,
             &[],

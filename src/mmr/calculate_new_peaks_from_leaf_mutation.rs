@@ -649,7 +649,7 @@ mod tests {
         expected_final_stack.push(BFieldElement::new(new_leaf_index >> 32));
         expected_final_stack.push(BFieldElement::new(new_leaf_index & u32::MAX as u64));
 
-        let _execution_result = test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_state(
             &MmrCalculateNewPeaksFromLeafMutationMtIndices {
                 list_type: ListType::Unsafe,
             },

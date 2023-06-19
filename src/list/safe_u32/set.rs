@@ -344,7 +344,7 @@ mod tests {
             &mut vm_memory,
         );
 
-        let _execution_result = test_rust_equivalence_given_input_state::<SafeSet>(
+        test_rust_equivalence_given_input_state::<SafeSet>(
             &SafeSet(data_type.clone()),
             &init_stack,
             &[],

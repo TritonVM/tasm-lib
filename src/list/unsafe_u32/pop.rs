@@ -261,7 +261,7 @@ mod tests {
             expected_end_stack.push(last_element[N - 1 - i]);
         }
 
-        let _execution_result = test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_state(
             &UnsafePop(data_type),
             &init_stack,
             &[],

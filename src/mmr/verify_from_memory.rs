@@ -633,7 +633,7 @@ mod tests {
         expected_final_stack.push(leaf_index_lo);
         expected_final_stack.push(BFieldElement::new(expect_validation_success as u64));
 
-        let _execution_result = test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_state(
             &snippet_for_unsafe_lists,
             &init_stack,
             &[],

@@ -652,7 +652,7 @@ mod tests {
         expected_final_stack.push(peaks_pointer);
         expected_final_stack.push(auth_paths_pointer);
 
-        let _execution_result = test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_state(
             &CalculateNewPeaksFromAppend { list_type },
             &init_stack,
             &[],

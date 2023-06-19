@@ -376,16 +376,15 @@ mod tests {
         expected.push(BFieldElement::new(expected_mt_index & u32::MAX as u64));
         expected.push(BFieldElement::new(expected_peak_index as u64));
 
-        let _execution_result =
-            test_rust_equivalence_given_input_state::<MmrLeafIndexToMtIndexAndPeakIndex>(
-                &MmrLeafIndexToMtIndexAndPeakIndex,
-                &init_stack,
-                &[],
-                &[],
-                &mut HashMap::default(),
-                0,
-                Some(&expected),
-            );
+        test_rust_equivalence_given_input_state(
+            &MmrLeafIndexToMtIndexAndPeakIndex,
+            &init_stack,
+            &[],
+            &[],
+            &mut HashMap::default(),
+            0,
+            Some(&expected),
+        );
     }
 }
 

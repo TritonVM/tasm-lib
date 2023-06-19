@@ -316,7 +316,7 @@ mod tests {
         let empty_stack = get_init_tvm_stack();
 
         let expected = None;
-        let _execution_result = test_rust_equivalence_given_input_state::<DummyTestSnippetA>(
+        test_rust_equivalence_given_input_state::<DummyTestSnippetA>(
             &DummyTestSnippetA,
             &empty_stack,
             &[],
@@ -325,7 +325,7 @@ mod tests {
             0,
             expected,
         );
-        let _execution_result = test_rust_equivalence_given_input_state::<DummyTestSnippetB>(
+        test_rust_equivalence_given_input_state::<DummyTestSnippetB>(
             &DummyTestSnippetB,
             &empty_stack,
             &[],
@@ -334,7 +334,7 @@ mod tests {
             0,
             expected,
         );
-        let _execution_result = test_rust_equivalence_given_input_state::<DummyTestSnippetC>(
+        test_rust_equivalence_given_input_state::<DummyTestSnippetC>(
             &DummyTestSnippetC,
             &empty_stack,
             &[],

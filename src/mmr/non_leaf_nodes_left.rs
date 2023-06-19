@@ -278,16 +278,15 @@ mod tests {
             init_stack.push(elem);
         }
 
-        let _execution_result =
-            test_rust_equivalence_given_input_state::<MmrNonLeafNodesLeftUsingAnd>(
-                &MmrNonLeafNodesLeftUsingAnd,
-                &init_stack,
-                &[],
-                &[],
-                &mut HashMap::default(),
-                0,
-                expected,
-            );
+        test_rust_equivalence_given_input_state(
+            &MmrNonLeafNodesLeftUsingAnd,
+            &init_stack,
+            &[],
+            &[],
+            &mut HashMap::default(),
+            0,
+            expected,
+        );
     }
 }
 

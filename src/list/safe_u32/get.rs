@@ -392,7 +392,7 @@ mod tests {
             expected_end_stack.push(targeted_element[element_size - 1 - i]);
         }
 
-        let _execution_result = test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_state(
             &SafeGet(data_type.to_owned()),
             &init_stack,
             &[],

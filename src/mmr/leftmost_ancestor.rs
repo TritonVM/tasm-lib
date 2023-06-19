@@ -250,7 +250,7 @@ mod tests {
             init_stack.push(elem);
         }
 
-        let _execution_result = test_rust_equivalence_given_input_state::<MmrLeftMostAncestor>(
+        test_rust_equivalence_given_input_state::<MmrLeftMostAncestor>(
             &MmrLeftMostAncestor,
             &init_stack,
             &[],

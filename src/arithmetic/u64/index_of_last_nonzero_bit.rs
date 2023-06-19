@@ -166,7 +166,7 @@ mod tests {
         let mut expected_output = get_init_tvm_stack();
         expected_output.push(BFieldElement::new(expected as u64));
 
-        let _execution_result = test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_state(
             &IndexOfLastNonZeroBitU64,
             &init_stack,
             &[],
@@ -184,7 +184,7 @@ mod tests {
         init_stack.push(BFieldElement::new(1 << 32));
         init_stack.push(BFieldElement::zero());
 
-        let _execution_result = test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_state(
             &IndexOfLastNonZeroBitU64,
             &init_stack,
             &[],
@@ -202,7 +202,7 @@ mod tests {
         init_stack.push(BFieldElement::zero());
         init_stack.push(BFieldElement::new(1 << 32));
 
-        let _execution_result = test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_state(
             &IndexOfLastNonZeroBitU64,
             &init_stack,
             &[],
@@ -220,7 +220,7 @@ mod tests {
         init_stack.push(BFieldElement::zero());
         init_stack.push(BFieldElement::zero());
 
-        let _execution_result = test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_state(
             &IndexOfLastNonZeroBitU64,
             &init_stack,
             &[],

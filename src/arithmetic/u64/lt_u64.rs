@@ -438,7 +438,7 @@ mod tests {
         let secret_in = &[];
         let mut memory = HashMap::default();
         let words_allocated = 0;
-        let _execution_result = test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_state(
             &LtU64,
             &init_stack,
             stdin,
@@ -459,7 +459,7 @@ mod tests {
         let mut memory = HashMap::default();
         let words_allocated = 0;
         let expected = None;
-        let _execution_result = test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_state(
             &LtU64,
             &init_stack,
             stdin,

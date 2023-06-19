@@ -269,7 +269,7 @@ mod tests {
             vec![BFieldElement::new(expected_count as u64)],
         ]
         .concat();
-        let _execution_result = test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_state(
             &MmrRightLineageLength,
             &init_stack,
             &[],

@@ -165,7 +165,7 @@ mod tests {
         }
         init_stack.push(BFieldElement::new(height as u64));
 
-        let _execution_result = test_rust_equivalence_given_input_state::<MmrLeftChild>(
+        test_rust_equivalence_given_input_state::<MmrLeftChild>(
             &MmrLeftChild,
             &init_stack,
             &[],

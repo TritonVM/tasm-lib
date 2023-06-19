@@ -165,7 +165,7 @@ mod tests {
         let mut init_stack = get_init_tvm_stack();
         init_stack.push(some_value);
 
-        let _execution_result = test_rust_equivalence_given_input_state::<IsU32>(
+        test_rust_equivalence_given_input_state::<IsU32>(
             &IsU32,
             &init_stack,
             &[],

@@ -169,7 +169,7 @@ mod tests {
         init_stack.push(BFieldElement::new(16));
         init_stack.push(BFieldElement::new(u32::MAX as u64 + 1));
 
-        let _execution_result = test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_state(
             &Log2FloorU64,
             &init_stack,
             &[],
@@ -187,7 +187,7 @@ mod tests {
         init_stack.push(BFieldElement::new(u32::MAX as u64 + 1));
         init_stack.push(BFieldElement::new(16));
 
-        let _execution_result = test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_state(
             &Log2FloorU64,
             &init_stack,
             &[],
@@ -206,7 +206,7 @@ mod tests {
         init_stack.push(BFieldElement::new(u32::MAX as u64 + 1 + n));
         init_stack.push(BFieldElement::new(16));
 
-        let _execution_result = test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_state(
             &Log2FloorU64,
             &init_stack,
             &[],
@@ -275,7 +275,7 @@ mod tests {
             init_stack.push(elem);
         }
 
-        let _execution_result = test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_state(
             &Log2FloorU64,
             &init_stack,
             &[],

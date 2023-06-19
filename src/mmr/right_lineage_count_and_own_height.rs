@@ -349,7 +349,7 @@ mod tests {
             ],
         ]
         .concat();
-        let _execution_result = test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_state(
             &MmrRightLineageCountAndHeight,
             &init_stack,
             &[],

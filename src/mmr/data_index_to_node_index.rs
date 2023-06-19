@@ -267,7 +267,7 @@ mod tests {
             init_stack.push(elem);
         }
 
-        let _execution_result = test_rust_equivalence_given_input_state::<DataIndexToNodeIndex>(
+        test_rust_equivalence_given_input_state::<DataIndexToNodeIndex>(
             &DataIndexToNodeIndex,
             &init_stack,
             &[],

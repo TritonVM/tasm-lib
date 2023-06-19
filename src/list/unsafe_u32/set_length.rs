@@ -151,7 +151,7 @@ mod tests {
         // Insert length indicator of list, lives on offset = 0 from `list_address`
         vm_memory.insert(list_address, BFieldElement::new(init_list_length as u64));
 
-        let _execution_result = test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_state(
             &UnsafeSetLength(data_type),
             &init_stack,
             &[],

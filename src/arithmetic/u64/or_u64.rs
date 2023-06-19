@@ -173,7 +173,7 @@ mod tests {
     fn prop_safe_or(lhs: u64, rhs: u64, expected: Option<u64>) {
         let res = lhs | rhs;
         if let Some(exp) = expected {
-            assert_eq!(exp, res as u64);
+            assert_eq!(exp, { res });
         }
 
         let rhs = U32s::<2>::try_from(rhs).unwrap();

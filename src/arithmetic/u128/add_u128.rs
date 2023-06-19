@@ -259,7 +259,7 @@ mod tests {
             init_stack.push(elem);
         }
 
-        let _execution_result = test_rust_equivalence_given_input_state::<AddU128>(
+        test_rust_equivalence_given_input_state::<AddU128>(
             &AddU128,
             &init_stack,
             &[],

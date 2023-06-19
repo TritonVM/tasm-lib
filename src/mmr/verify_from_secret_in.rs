@@ -675,7 +675,7 @@ mod tests {
         let snippet_with_unsafe_lists = MmrVerifyLeafMembershipFromSecretIn {
             list_type: ListType::Unsafe,
         };
-        let _execution_result = test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_state(
             &snippet_with_unsafe_lists,
             &init_stack,
             &[],

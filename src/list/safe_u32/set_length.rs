@@ -313,7 +313,7 @@ mod tests {
             &mut memory,
         );
 
-        let _execution_result = test_rust_equivalence_given_input_state::<SafeSetLength>(
+        test_rust_equivalence_given_input_state::<SafeSetLength>(
             &SafeSetLength(data_type),
             &init_stack,
             &[],

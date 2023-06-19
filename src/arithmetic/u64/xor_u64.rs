@@ -183,7 +183,7 @@ mod tests {
             expected_end_stack.push(elem);
         }
 
-        let _execution_result = test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_state(
             &XorU64,
             &init_stack,
             &[],

@@ -145,7 +145,7 @@ mod tests {
         let mut expected_stack = get_init_tvm_stack();
         expected_stack.push(BFieldElement::new((value % 2) as u64));
 
-        let _execution_result = test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_state(
             &U32IsOdd,
             &init_stack,
             &[],

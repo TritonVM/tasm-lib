@@ -160,7 +160,7 @@ mod tests {
         init_stack.push(BFieldElement::new(16));
         init_stack.push(BFieldElement::new(u32::MAX as u64 + 1));
 
-        let _execution_result = test_rust_equivalence_given_input_state::<Div2U64>(
+        test_rust_equivalence_given_input_state::<Div2U64>(
             &Div2U64,
             &init_stack,
             &[],
@@ -178,7 +178,7 @@ mod tests {
         init_stack.push(BFieldElement::new(u32::MAX as u64 + 1));
         init_stack.push(BFieldElement::new(16));
 
-        let _execution_result = test_rust_equivalence_given_input_state::<Div2U64>(
+        test_rust_equivalence_given_input_state::<Div2U64>(
             &Div2U64,
             &init_stack,
             &[],
@@ -226,7 +226,7 @@ mod tests {
         expected_stack.push(BFieldElement::new(res >> 32));
         expected_stack.push(BFieldElement::new(res & u32::MAX as u64));
 
-        let _execution_result = test_rust_equivalence_given_input_state::<Div2U64>(
+        test_rust_equivalence_given_input_state::<Div2U64>(
             &Div2U64,
             &init_stack,
             &[],
