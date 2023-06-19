@@ -4,6 +4,9 @@ debug ?=
 
 $(info debug is $(debug))
 
+# Treat all warnings as errors
+export RUSTFLAGS = -Dwarnings
+
 ifdef debug
   release :=
   target :=debug
