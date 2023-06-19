@@ -15,7 +15,8 @@ features = ["precommit-hook", "run-cargo-clippy", "run-cargo-fmt"]
 [dependencies]
 anyhow = "1"
 # triton-vm = "0.29.1"
-triton-vm = {path = "../triton-vm/triton-vm"}
+# triton-vm = {path = "../triton-vm/triton-vm"}
+triton-vm = { git = "https://github.com/TritonVM/triton-vm" }
 triton-opcodes = "0.29.1"
 # triton-opcodes = {path = "../triton-vm/triton-opcodes" }
 twenty-first = "0.28.0"
