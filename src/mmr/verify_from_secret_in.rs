@@ -417,7 +417,7 @@ impl Snippet for MmrVerifyLeafMembershipFromSecretIn {
 }
 
 #[cfg(test)]
-mod mmr_verify_from_secret_in_tests {
+mod tests {
     use twenty_first::{
         test_shared::mmr::get_empty_rustyleveldb_ammr,
         util_types::algebraic_hasher::AlgebraicHasher,

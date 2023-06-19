@@ -169,7 +169,7 @@ fn prepare_state(data_type: &DataType, old_length: usize) -> ExecutionState {
 }
 
 #[cfg(test)]
-mod tests_pop {
+mod tests {
     use num::One;
     use twenty_first::shared_math::b_field_element::BFieldElement;
 

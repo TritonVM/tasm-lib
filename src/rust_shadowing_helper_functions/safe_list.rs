@@ -171,7 +171,7 @@ pub fn safe_list_set_length(
 }
 
 #[cfg(test)]
-mod rust_shadowing_helper_tests {
+mod tests {
     use twenty_first::shared_math::{other::random_elements, tip5::Digest};
 
     use super::*;

@@ -192,7 +192,7 @@ fn prepare_state(leaf_index: u64) -> ExecutionState {
 }
 
 #[cfg(test)]
-mod nlnl_tests {
+mod tests {
     use rand::{thread_rng, RngCore};
     use twenty_first::amount::u32s::U32s;
     use twenty_first::shared_math::b_field_element::BFieldElement;

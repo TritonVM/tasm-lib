@@ -416,7 +416,7 @@ impl Snippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
 }
 
 #[cfg(test)]
-mod leaf_mutation_tests {
+mod tests {
     use rand::{thread_rng, Rng};
     use twenty_first::shared_math::b_field_element::BFieldElement;
     use twenty_first::shared_math::other::random_elements;

@@ -144,7 +144,7 @@ pub fn unsafe_list_set_length(
 }
 
 #[cfg(test)]
-mod rust_shadowing_helper_tests {
+mod tests {
     use super::*;
 
     #[test]

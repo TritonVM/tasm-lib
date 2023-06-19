@@ -202,7 +202,7 @@ impl Snippet for LoadAuthPathFromStdInUnsafeList {
 }
 
 #[cfg(test)]
-mod load_auth_path_from_std_in_tests {
+mod tests {
     use super::*;
     use crate::test_helpers::rust_tasm_equivalence_prop_new;
 

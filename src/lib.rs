@@ -292,7 +292,7 @@ pub fn execute(
 }
 
 #[cfg(test)]
-mod lib_tests {
+mod tests {
     use super::*;
     use crate::dyn_malloc::DYN_MALLOC_ADDRESS;
 

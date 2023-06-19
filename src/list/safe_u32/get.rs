@@ -203,7 +203,7 @@ fn get_benchmark_input_state(list_length: usize, data_type: &DataType) -> Execut
 }
 
 #[cfg(test)]
-mod get_element_tests {
+mod tests {
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
     use super::*;

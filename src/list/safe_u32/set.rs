@@ -191,11 +191,11 @@ fn prepare_state(data_type: &DataType, capacity: u32, list_length: usize) -> Exe
 }
 
 #[cfg(test)]
-mod list_set_tests {
+mod tests {
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
     use crate::get_init_tvm_stack;
-    
+
     use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;

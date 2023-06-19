@@ -155,13 +155,13 @@ fn input_state(list_length: usize) -> ExecutionState {
 }
 
 #[cfg(test)]
-mod get_element_tests {
+mod tests {
     use itertools::Itertools;
     use rand::{thread_rng, RngCore};
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
     use crate::get_init_tvm_stack;
-    
+
     use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;

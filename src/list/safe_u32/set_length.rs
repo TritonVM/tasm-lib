@@ -156,11 +156,11 @@ fn prepare_state(
 }
 
 #[cfg(test)]
-mod tests_set_length {
+mod tests {
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
     use crate::get_init_tvm_stack;
-    
+
     use crate::test_helpers::{rust_tasm_equivalence_prop, rust_tasm_equivalence_prop_new};
 
     use super::*;

@@ -302,7 +302,7 @@ impl Snippet for DummyTestSnippetC {
 }
 
 #[cfg(test)]
-pub mod library_tests {
+mod tests {
 
     use std::collections::HashMap;
 

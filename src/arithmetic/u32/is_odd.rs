@@ -103,7 +103,7 @@ impl Snippet for U32IsOdd {
 }
 
 #[cfg(test)]
-mod u32_is_odd_tests {
+mod tests {
     use rand::{thread_rng, RngCore};
 
     use crate::get_init_tvm_stack;

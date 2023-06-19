@@ -280,7 +280,7 @@ fn generate_leafs<H: AlgebraicHasher>(height: usize) -> Vec<Digest> {
 }
 
 #[cfg(test)]
-mod merkle_authentication_verify_test {
+mod tests {
     use super::*;
     use std::collections::HashMap;
 

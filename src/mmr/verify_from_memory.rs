@@ -410,7 +410,7 @@ impl Snippet for MmrVerifyFromMemory {
 }
 
 #[cfg(test)]
-mod auth_path_verify_from_memory_tests {
+mod tests {
     use rand::{thread_rng, Rng};
 
     use twenty_first::shared_math::{b_field_element::BFieldElement, other::random_elements};

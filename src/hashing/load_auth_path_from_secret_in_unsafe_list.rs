@@ -209,7 +209,7 @@ impl Snippet for LoadAuthPathFromSecretInUnsafeList {
 }
 
 #[cfg(test)]
-mod load_auth_path_from_secret_in_tests {
+mod tests {
     use rand::random;
 
     use super::*;
