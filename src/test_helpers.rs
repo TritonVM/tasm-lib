@@ -117,6 +117,7 @@ pub fn test_rust_equivalence_given_input_state<T: Snippet>(
     // is too cumbersome to monitor this way. Its behavior should be tested elsewhere.
     // Alternatively the rust shadowing trait function must take a `Library` argument as input
     // and statically allocate memory from there.
+    // TODO: Check if we could perform this check on dyn malloc too
     rust_memory.remove(&BFieldElement::new(DYN_MALLOC_ADDRESS as u64));
     tasm_memory.remove(&BFieldElement::new(DYN_MALLOC_ADDRESS as u64));
     let memory_difference = rust_memory

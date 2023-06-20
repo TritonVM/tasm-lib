@@ -136,7 +136,7 @@ pub fn execute_bench(
     // Prepend to program the initial stack values such that stack is in the expected
     // state when program logic is executed
     let mut executed_code: String =
-        state_preparation_code(&stack, &memory, initilialize_dynamic_allocator_to);
+        state_preparation_code(stack, memory, initilialize_dynamic_allocator_to);
 
     // Add the program after the stack initialization has been performed
     // Find the length of code used for setup. This length does not count towards execution length of snippet
@@ -258,7 +258,7 @@ pub fn execute_test(
     // Prepend to program the initial stack values such that stack is in the expected
     // state when program logic is executed
     let mut executed_code: String =
-        state_preparation_code(&stack, &memory, initilialize_dynamic_allocator_to);
+        state_preparation_code(stack, memory, initilialize_dynamic_allocator_to);
 
     // Construct the whole program (inclusive setup) to be run
     executed_code.push_str(code);

@@ -316,7 +316,7 @@ mod tests {
         let empty_stack = get_init_tvm_stack();
 
         let expected = None;
-        test_rust_equivalence_given_input_state::<DummyTestSnippetA>(
+        test_rust_equivalence_given_input_state(
             &DummyTestSnippetA,
             &empty_stack,
             &[],
@@ -325,7 +325,7 @@ mod tests {
             0,
             expected,
         );
-        test_rust_equivalence_given_input_state::<DummyTestSnippetB>(
+        test_rust_equivalence_given_input_state(
             &DummyTestSnippetB,
             &empty_stack,
             &[],
@@ -334,7 +334,7 @@ mod tests {
             0,
             expected,
         );
-        test_rust_equivalence_given_input_state::<DummyTestSnippetC>(
+        test_rust_equivalence_given_input_state(
             &DummyTestSnippetC,
             &empty_stack,
             &[],
@@ -352,5 +352,27 @@ mod tests {
         lib.import(Box::new(DummyTestSnippetA));
         lib.import(Box::new(DummyTestSnippetC));
         let _ret = lib.all_imports_as_instruction_lists();
+    }
+
+    #[test]
+    fn kmalloc_test() {
+        let mut lib = SnippetState::default();
+        assert_eq!(1, lib.get_next_free_address());
+
+        // allocate 1 word and verify that 1 is returned, and that the next free address is 2
+        let first_free_address = lib.kmalloc(1);
+        assert_eq!(1, first_free_address);
+        assert_eq!(2, lib.get_next_free_address());
+
+        // allocate 7 words and verify that 2 is returned, and that the next free address
+        // is 9.
+        let second_free_address = lib.kmalloc(7);
+        assert_eq!(2, second_free_address);
+        assert_eq!(9, lib.get_next_free_address());
+
+        // Allocate 1000 words.
+        let third_free_address = lib.kmalloc(1000);
+        assert_eq!(9, third_free_address);
+        assert_eq!(1009, lib.get_next_free_address());
     }
 }
