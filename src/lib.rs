@@ -135,31 +135,8 @@ pub fn execute_bench(
 
     // Prepend to program the initial stack values such that stack is in the expected
     // state when program logic is executed
-    let mut executed_code: String = String::default();
-    for element in stack.iter().skip(OP_STACK_REG_COUNT) {
-        executed_code.push_str(&format!("push {}\n", element.value()));
-    }
-
-    // Add all the initial memory to the VM
-    for (address, value) in memory.iter() {
-        // Prepare stack for writing
-        executed_code.push_str(&format!("push {address}\n"));
-        executed_code.push_str(&format!("push {value}\n"));
-
-        // Write value to memory
-        executed_code.push_str("write_mem\n");
-
-        // Clean stack after writing to memory
-        executed_code.push_str("pop\n");
-    }
-
-    // Ensure that the dynamic allocator is initialized such that it does not overwrite
-    // any statically allocated memory, if the caller requests this.
-    if let Some(dyn_malloc_initial_value) = initilialize_dynamic_allocator_to {
-        executed_code.push_str(&dyn_malloc::DynMalloc::get_initialization_code(
-            dyn_malloc_initial_value.try_into().unwrap(),
-        ));
-    }
+    let mut executed_code: String =
+        state_preparation_code(&stack, &memory, initilialize_dynamic_allocator_to);
 
     // Add the program after the stack initialization has been performed
     // Find the length of code used for setup. This length does not count towards execution length of snippet
@@ -280,31 +257,8 @@ pub fn execute_test(
 
     // Prepend to program the initial stack values such that stack is in the expected
     // state when program logic is executed
-    let mut executed_code: String = String::default();
-    for element in stack.iter().skip(OP_STACK_REG_COUNT) {
-        executed_code.push_str(&format!("push {}\n", element.value()));
-    }
-
-    // Add all the initial memory to the VM
-    for (address, value) in memory.iter() {
-        // Prepare stack for writing
-        executed_code.push_str(&format!("push {address}\n"));
-        executed_code.push_str(&format!("push {value}\n"));
-
-        // Write value to memory
-        executed_code.push_str("write_mem\n");
-
-        // Clean stack after writing to memory
-        executed_code.push_str("pop\n");
-    }
-
-    // Ensure that the dynamic allocator is initialized such that it does not overwrite
-    // any statically allocated memory, if the caller requests this.
-    if let Some(dyn_malloc_initial_value) = initilialize_dynamic_allocator_to {
-        executed_code.push_str(&dyn_malloc::DynMalloc::get_initialization_code(
-            dyn_malloc_initial_value.try_into().unwrap(),
-        ));
-    }
+    let mut executed_code: String =
+        state_preparation_code(&stack, &memory, initilialize_dynamic_allocator_to);
 
     // Construct the whole program (inclusive setup) to be run
     executed_code.push_str(code);
@@ -358,6 +312,41 @@ pub fn execute_test(
     }
 
     Ok(())
+}
+
+/// Produce the code to set the stack and memory into a certain state
+fn state_preparation_code(
+    stack: &[BFieldElement],
+    memory: &HashMap<BFieldElement, BFieldElement>,
+    initilialize_dynamic_allocator_to: Option<usize>,
+) -> String {
+    let mut state_preparation_code = String::default();
+    for element in stack.iter().skip(OP_STACK_REG_COUNT) {
+        state_preparation_code.push_str(&format!("push {}\n", element.value()));
+    }
+
+    // Add all the initial memory to the VM
+    for (address, value) in memory.iter() {
+        // Prepare stack for writing
+        state_preparation_code.push_str(&format!("push {address}\n"));
+        state_preparation_code.push_str(&format!("push {value}\n"));
+
+        // Write value to memory
+        state_preparation_code.push_str("write_mem\n");
+
+        // Clean stack after writing to memory
+        state_preparation_code.push_str("pop\n");
+    }
+
+    // Ensure that the dynamic allocator is initialized such that it does not overwrite
+    // any statically allocated memory, if the caller requests this.
+    if let Some(dyn_malloc_initial_value) = initilialize_dynamic_allocator_to {
+        state_preparation_code.push_str(&dyn_malloc::DynMalloc::get_initialization_code(
+            dyn_malloc_initial_value.try_into().unwrap(),
+        ));
+    }
+
+    state_preparation_code
 }
 
 // If you run this, make sure `opt-level` is set to 3.
