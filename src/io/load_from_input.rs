@@ -5,7 +5,6 @@ use twenty_first::shared_math::other::random_elements;
 
 use crate::{
     dyn_malloc, get_init_tvm_stack,
-    rust_shadowing_helper_functions::dyn_malloc::rust_dyn_malloc_initialize,
     snippet::{DataType, InputSource, Snippet},
     ExecutionState,
 };
@@ -31,7 +30,7 @@ impl Snippet for LoadFromInput {
     }
 
     fn output_types(&self) -> Vec<crate::snippet::DataType> {
-        vec![DataType::BFE]
+        vec![DataType::VoidPointer]
     }
 
     fn outputs(&self) -> Vec<String> {
@@ -236,21 +235,18 @@ impl Snippet for LoadFromInput {
             InputSource::SecretIn => secret_in,
         };
 
-        rust_dyn_malloc_initialize(memory, 1);
-
         let indicated_length: usize = input[0].value() as usize;
-        memory.insert(
-            BFieldElement::new(1),
-            BFieldElement::new(indicated_length as u64),
+        let pointer = crate::rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator(
+            indicated_length + 1,
+            memory,
         );
 
-        for i in 0..indicated_length {
-            let value_from_input = input[i + 1];
-            let addr = BFieldElement::new(i as u64 + 2);
+        for (i, value_from_input) in input.into_iter().enumerate() {
+            let addr = pointer + BFieldElement::new(i as u64);
             memory.insert(addr, value_from_input);
         }
 
-        stack.push(BFieldElement::new(1));
+        stack.push(pointer);
     }
 }
 
