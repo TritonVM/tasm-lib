@@ -142,7 +142,7 @@ mod tests {
     use std::collections::HashMap;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
     };
 
     use super::*;
@@ -186,7 +186,7 @@ mod tests {
         expected.push(BFieldElement::new(res >> 32));
         expected.push(BFieldElement::new(res & u32::MAX as u64));
 
-        test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_values(
             &OrU64,
             &init_stack,
             &[],

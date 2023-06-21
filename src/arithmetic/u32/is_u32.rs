@@ -113,7 +113,7 @@ mod tests {
     use crate::get_init_tvm_stack;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
     };
 
     use super::*;
@@ -165,7 +165,7 @@ mod tests {
         let mut init_stack = get_init_tvm_stack();
         init_stack.push(some_value);
 
-        test_rust_equivalence_given_input_state::<IsU32>(
+        test_rust_equivalence_given_input_values::<IsU32>(
             &IsU32,
             &init_stack,
             &[],

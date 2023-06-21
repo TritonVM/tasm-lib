@@ -230,7 +230,7 @@ mod tests {
     use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
     };
 
     use super::*;
@@ -259,7 +259,7 @@ mod tests {
             init_stack.push(elem);
         }
 
-        test_rust_equivalence_given_input_state::<AddU128>(
+        test_rust_equivalence_given_input_values::<AddU128>(
             &AddU128,
             &init_stack,
             &[],

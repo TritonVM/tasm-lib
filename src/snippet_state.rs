@@ -307,7 +307,7 @@ mod tests {
     use std::collections::HashMap;
 
     use crate::get_init_tvm_stack;
-    use crate::test_helpers::test_rust_equivalence_given_input_state;
+    use crate::test_helpers::test_rust_equivalence_given_input_values;
 
     use super::*;
 
@@ -316,7 +316,7 @@ mod tests {
         let empty_stack = get_init_tvm_stack();
 
         let expected = None;
-        test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_values(
             &DummyTestSnippetA,
             &empty_stack,
             &[],
@@ -325,7 +325,7 @@ mod tests {
             0,
             expected,
         );
-        test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_values(
             &DummyTestSnippetB,
             &empty_stack,
             &[],
@@ -334,7 +334,7 @@ mod tests {
             0,
             expected,
         );
-        test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_values(
             &DummyTestSnippetC,
             &empty_stack,
             &[],

@@ -475,7 +475,7 @@ mod tests {
 
     use crate::{
         list::higher_order::inner_function::RawCode,
-        test_helpers::{test_rust_equivalence_given_input_state, test_rust_equivalence_multiple},
+        test_helpers::{test_rust_equivalence_given_input_values, test_rust_equivalence_multiple},
     };
 
     use super::*;
@@ -536,7 +536,7 @@ mod tests {
         let input_stack = vec![get_init_tvm_stack(), vec![BFieldElement::new(42)]].concat();
         let expected_end_stack_true =
             vec![get_init_tvm_stack(), vec![BFieldElement::one()]].concat();
-        test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_values(
             &snippet,
             &input_stack,
             &[],
@@ -557,7 +557,7 @@ mod tests {
         );
         let expected_end_stack_false =
             vec![get_init_tvm_stack(), vec![BFieldElement::zero()]].concat();
-        test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_values(
             &snippet,
             &input_stack,
             &[],

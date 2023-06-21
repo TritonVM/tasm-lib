@@ -431,7 +431,7 @@ mod tests {
     use crate::mmr::MAX_MMR_HEIGHT;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
     };
 
     use super::*;
@@ -649,7 +649,7 @@ mod tests {
         expected_final_stack.push(BFieldElement::new(new_leaf_index >> 32));
         expected_final_stack.push(BFieldElement::new(new_leaf_index & u32::MAX as u64));
 
-        test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_values(
             &MmrCalculateNewPeaksFromLeafMutationMtIndices {
                 list_type: ListType::Unsafe,
             },

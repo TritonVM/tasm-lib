@@ -135,7 +135,7 @@ mod tests {
     use rand::Rng;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
     };
     use crate::{get_init_tvm_stack, push_encodable};
 
@@ -185,7 +185,7 @@ mod tests {
     fn prop_decr_u64(value: U32s<2>) {
         let mut stack = get_init_tvm_stack();
         push_encodable(&mut stack, &value);
-        test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_values(
             &DecrU64,
             &stack,
             &[],

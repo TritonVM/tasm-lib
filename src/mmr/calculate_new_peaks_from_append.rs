@@ -406,7 +406,7 @@ mod tests {
     use twenty_first::util_types::mmr::mmr_trait::Mmr;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
     };
     use crate::{get_init_tvm_stack, VmHasher};
 
@@ -652,7 +652,7 @@ mod tests {
         expected_final_stack.push(peaks_pointer);
         expected_final_stack.push(auth_paths_pointer);
 
-        test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_values(
             &CalculateNewPeaksFromAppend { list_type },
             &init_stack,
             &[],

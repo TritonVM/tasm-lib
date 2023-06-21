@@ -143,7 +143,7 @@ mod tests {
     use crate::get_init_tvm_stack;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
     };
 
     use super::*;
@@ -160,7 +160,7 @@ mod tests {
         init_stack.push(BFieldElement::new(16));
         init_stack.push(BFieldElement::new(u32::MAX as u64 + 1));
 
-        test_rust_equivalence_given_input_state::<Div2U64>(
+        test_rust_equivalence_given_input_values::<Div2U64>(
             &Div2U64,
             &init_stack,
             &[],
@@ -178,7 +178,7 @@ mod tests {
         init_stack.push(BFieldElement::new(u32::MAX as u64 + 1));
         init_stack.push(BFieldElement::new(16));
 
-        test_rust_equivalence_given_input_state::<Div2U64>(
+        test_rust_equivalence_given_input_values::<Div2U64>(
             &Div2U64,
             &init_stack,
             &[],
@@ -226,7 +226,7 @@ mod tests {
         expected_stack.push(BFieldElement::new(res >> 32));
         expected_stack.push(BFieldElement::new(res & u32::MAX as u64));
 
-        test_rust_equivalence_given_input_state::<Div2U64>(
+        test_rust_equivalence_given_input_values::<Div2U64>(
             &Div2U64,
             &init_stack,
             &[],

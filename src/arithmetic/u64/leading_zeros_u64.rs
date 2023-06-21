@@ -129,7 +129,7 @@ mod tests {
     use std::collections::HashMap;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
     };
 
     use super::*;
@@ -174,7 +174,7 @@ mod tests {
         let mut expected_stack = get_init_tvm_stack();
         expected_stack.push(BFieldElement::new(leading_zeros as u64));
 
-        test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_values(
             &LeadingZerosU64,
             &init_stack,
             &[],

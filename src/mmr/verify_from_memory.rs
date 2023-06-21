@@ -421,7 +421,7 @@ mod tests {
     use twenty_first::util_types::mmr::{mmr_membership_proof::MmrMembershipProof, mmr_trait::Mmr};
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
     };
     use crate::VmHasher;
     use crate::{get_init_tvm_stack, mmr::MAX_MMR_HEIGHT};
@@ -633,7 +633,7 @@ mod tests {
         expected_final_stack.push(leaf_index_lo);
         expected_final_stack.push(BFieldElement::new(expect_validation_success as u64));
 
-        test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_values(
             &snippet_for_unsafe_lists,
             &init_stack,
             &[],

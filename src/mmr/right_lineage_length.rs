@@ -186,7 +186,7 @@ mod tests {
     use std::collections::HashMap;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
     };
 
     use super::*;
@@ -269,7 +269,7 @@ mod tests {
             vec![BFieldElement::new(expected_count as u64)],
         ]
         .concat();
-        test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_values(
             &MmrRightLineageLength,
             &init_stack,
             &[],

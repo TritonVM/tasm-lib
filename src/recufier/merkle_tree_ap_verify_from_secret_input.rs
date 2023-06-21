@@ -293,7 +293,7 @@ mod tests {
     use twenty_first::util_types::merkle_tree_maker::MerkleTreeMaker;
 
     use crate::get_init_tvm_stack;
-    use crate::test_helpers::test_rust_equivalence_given_input_state;
+    use crate::test_helpers::test_rust_equivalence_given_input_values;
     use crate::test_helpers::test_rust_equivalence_multiple;
     use crate::VmHasher;
 
@@ -348,7 +348,7 @@ mod tests {
         let stack: &mut Vec<BFieldElement> = &mut get_init_tvm_stack();
         let standard_input: Vec<BFieldElement> = generate_input::<VmHasher>(indices, &leafs);
 
-        test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_values(
             &MtApVerifyFromSecretInput(PhantomData::<VmHasher>),
             stack,
             &standard_input,
@@ -375,7 +375,7 @@ mod tests {
         let stack: &mut Vec<BFieldElement> = &mut get_init_tvm_stack();
         let standard_input: Vec<BFieldElement> = generate_input::<VmHasher>(indices, &leafs);
 
-        test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_values(
             &MtApVerifyFromSecretInput(PhantomData::<VmHasher>),
             stack,
             &standard_input,

@@ -111,7 +111,7 @@ mod tests {
     use crate::get_init_tvm_stack;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
     };
 
     use super::*;
@@ -151,7 +151,7 @@ mod tests {
         // Insert length indicator of list, lives on offset = 0 from `list_address`
         vm_memory.insert(list_address, BFieldElement::new(init_list_length as u64));
 
-        test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_values(
             &UnsafeSetLength(data_type),
             &init_stack,
             &[],

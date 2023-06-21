@@ -134,7 +134,7 @@ mod tests {
     use crate::get_init_tvm_stack;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
     };
 
     use super::*;
@@ -183,7 +183,7 @@ mod tests {
             expected_end_stack.push(elem);
         }
 
-        test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_values(
             &XorU64,
             &init_stack,
             &[],

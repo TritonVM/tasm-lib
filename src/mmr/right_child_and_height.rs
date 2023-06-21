@@ -235,7 +235,7 @@ mod tests {
     use crate::get_init_tvm_stack;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
     };
 
     use super::*;
@@ -454,7 +454,7 @@ mod tests {
             init_stack.push(elem);
         }
 
-        test_rust_equivalence_given_input_state::<MmrRightChildAndHeight>(
+        test_rust_equivalence_given_input_values::<MmrRightChildAndHeight>(
             &MmrRightChildAndHeight,
             &init_stack,
             &[],

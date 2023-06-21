@@ -187,7 +187,7 @@ mod tests {
     use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
     };
 
     use super::*;
@@ -280,7 +280,7 @@ mod tests {
         let mut expected = get_init_tvm_stack();
         expected.push(BFieldElement::zero());
         expected.push(BFieldElement::new(20_000));
-        test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_values(
             &SafeMulU64,
             &init_stack,
             &[],

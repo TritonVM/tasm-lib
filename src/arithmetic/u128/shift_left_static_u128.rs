@@ -167,7 +167,7 @@ mod tests {
     use std::collections::HashMap;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
     };
 
     use super::*;
@@ -265,7 +265,7 @@ mod tests {
             ));
         }
 
-        test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_values(
             &ShiftLeftStaticU128::<N>,
             &init_stack,
             &[],

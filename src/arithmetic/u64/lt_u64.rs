@@ -299,7 +299,7 @@ mod tests {
     use crate::get_init_tvm_stack;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
     };
 
     use super::*;
@@ -438,7 +438,7 @@ mod tests {
         let secret_in = &[];
         let mut memory = HashMap::default();
         let words_allocated = 0;
-        test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_values(
             &LtU64,
             &init_stack,
             stdin,
@@ -459,7 +459,7 @@ mod tests {
         let mut memory = HashMap::default();
         let words_allocated = 0;
         let expected = None;
-        test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_values(
             &LtU64,
             &init_stack,
             stdin,

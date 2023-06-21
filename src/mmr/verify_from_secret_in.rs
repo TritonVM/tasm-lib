@@ -429,7 +429,7 @@ mod tests {
 
     use crate::{
         mmr::MAX_MMR_HEIGHT,
-        test_helpers::{test_rust_equivalence_given_input_state, test_rust_equivalence_multiple},
+        test_helpers::{test_rust_equivalence_given_input_values, test_rust_equivalence_multiple},
         VmHasher,
     };
 
@@ -675,7 +675,7 @@ mod tests {
         let snippet_with_unsafe_lists = MmrVerifyLeafMembershipFromSecretIn {
             list_type: ListType::Unsafe,
         };
-        test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_values(
             &snippet_with_unsafe_lists,
             &init_stack,
             &[],

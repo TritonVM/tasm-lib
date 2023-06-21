@@ -161,7 +161,7 @@ mod tests {
     use crate::get_init_tvm_stack;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
     };
 
     use super::*;
@@ -240,7 +240,7 @@ mod tests {
             data_type.get_size(),
         );
 
-        test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_values(
             &UnsafeSet(data_type.clone()),
             &init_stack,
             &[],

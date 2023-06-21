@@ -124,7 +124,7 @@ fn prepare_state(value: u32, shift: u32) -> ExecutionState {
 #[cfg(test)]
 mod tests {
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
     };
 
     use super::*;
@@ -161,7 +161,7 @@ mod tests {
         let mut expected_stack = get_init_tvm_stack();
         expected_stack.push((expected_u32 as u64).into());
 
-        test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_values(
             &ShiftRightU32,
             &init_stack,
             &[],

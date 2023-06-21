@@ -171,7 +171,7 @@ mod tests {
 
     use crate::get_init_tvm_stack;
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
     };
 
     use super::*;
@@ -261,7 +261,7 @@ mod tests {
             expected_end_stack.push(last_element[N - 1 - i]);
         }
 
-        test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_values(
             &UnsafePop(data_type),
             &init_stack,
             &[],

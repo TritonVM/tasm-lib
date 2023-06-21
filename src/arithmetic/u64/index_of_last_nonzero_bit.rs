@@ -147,7 +147,7 @@ mod tests {
     use num::Zero;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
     };
 
     use super::*;
@@ -166,7 +166,7 @@ mod tests {
         let mut expected_output = get_init_tvm_stack();
         expected_output.push(BFieldElement::new(expected as u64));
 
-        test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_values(
             &IndexOfLastNonZeroBitU64,
             &init_stack,
             &[],
@@ -184,7 +184,7 @@ mod tests {
         init_stack.push(BFieldElement::new(1 << 32));
         init_stack.push(BFieldElement::zero());
 
-        test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_values(
             &IndexOfLastNonZeroBitU64,
             &init_stack,
             &[],
@@ -202,7 +202,7 @@ mod tests {
         init_stack.push(BFieldElement::zero());
         init_stack.push(BFieldElement::new(1 << 32));
 
-        test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_values(
             &IndexOfLastNonZeroBitU64,
             &init_stack,
             &[],
@@ -220,7 +220,7 @@ mod tests {
         init_stack.push(BFieldElement::zero());
         init_stack.push(BFieldElement::zero());
 
-        test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_values(
             &IndexOfLastNonZeroBitU64,
             &init_stack,
             &[],

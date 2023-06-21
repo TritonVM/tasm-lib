@@ -6,10 +6,13 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use crate::dyn_malloc::DYN_MALLOC_ADDRESS;
 use crate::snippet::Snippet;
 use crate::snippet_state::SnippetState;
-use crate::{exported_snippets, rust_shadowing_helper_functions};
+use crate::{exported_snippets, rust_shadowing_helper_functions, ExecutionState, VmOutputState};
 
 #[allow(dead_code)]
-pub fn test_rust_equivalence_multiple<T: Snippet>(snippet_struct: &T, export_snippet: bool) {
+pub fn test_rust_equivalence_multiple<T: Snippet>(
+    snippet_struct: &T,
+    export_snippet: bool,
+) -> Vec<VmOutputState> {
     // Verify that snippet can be found in `all_snippets`, so it's visible to the outside
     // This call will panic if snippet is not found in that function call
     // The data type value is a dummy value for all snippets except those that handle lists.
@@ -24,8 +27,9 @@ pub fn test_rust_equivalence_multiple<T: Snippet>(snippet_struct: &T, export_sni
 
     let mut execution_states = snippet_struct.gen_input_states();
 
+    let mut vm_output_states = vec![];
     for execution_state in execution_states.iter_mut() {
-        test_rust_equivalence_given_input_state::<T>(
+        let vm_output_state = test_rust_equivalence_given_input_values::<T>(
             snippet_struct,
             &execution_state.stack,
             &execution_state.std_in,
@@ -34,13 +38,30 @@ pub fn test_rust_equivalence_multiple<T: Snippet>(snippet_struct: &T, export_sni
             execution_state.words_allocated,
             None,
         );
+        vm_output_states.push(vm_output_state);
     }
 
-    // final_execution_results
+    vm_output_states
 }
 
 #[allow(dead_code)]
-pub fn test_rust_equivalence_given_input_state<T: Snippet>(
+pub fn test_rust_equivalence_given_execution_state<T: Snippet>(
+    snippet_struct: &T,
+    mut execution_state: ExecutionState,
+) -> VmOutputState {
+    test_rust_equivalence_given_input_values::<T>(
+        snippet_struct,
+        &execution_state.stack,
+        &execution_state.std_in,
+        &execution_state.secret_in,
+        &mut execution_state.memory,
+        execution_state.words_allocated,
+        None,
+    )
+}
+
+#[allow(dead_code)]
+pub fn test_rust_equivalence_given_input_values<T: Snippet>(
     snippet_struct: &T,
     stack: &[BFieldElement],
     stdin: &[BFieldElement],
@@ -48,12 +69,12 @@ pub fn test_rust_equivalence_given_input_state<T: Snippet>(
     memory: &mut HashMap<BFieldElement, BFieldElement>,
     words_statically_allocated: usize,
     expected_final_stack: Option<&[BFieldElement]>,
-) {
+) -> VmOutputState {
     let init_memory = memory.clone();
     let init_stack = stack.to_vec();
     let mut tasm_stack = stack.to_vec();
     let mut tasm_memory = init_memory.clone();
-    snippet_struct.link_and_run_tasm_for_test(
+    let vm_output_state = snippet_struct.link_and_run_tasm_for_test(
         &mut tasm_stack,
         stdin.to_vec(),
         secret_in.to_vec(),
@@ -177,4 +198,6 @@ pub fn test_rust_equivalence_given_input_state<T: Snippet>(
         init_stack.iter().map(|x| x.to_string()).join(","),
         stack_final.iter().map(|x| x.to_string()).join(",")
     );
+
+    vm_output_state
 }

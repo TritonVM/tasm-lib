@@ -216,7 +216,7 @@ fn prepare_execution_state(
 #[cfg(test)]
 mod tests {
     use crate::{
-        test_helpers::{test_rust_equivalence_given_input_state, test_rust_equivalence_multiple},
+        test_helpers::{test_rust_equivalence_given_input_values, test_rust_equivalence_multiple},
         DIGEST_LENGTH,
     };
 
@@ -409,7 +409,7 @@ mod tests {
             &mut memory,
         );
 
-        test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_values(
             &SafePush(data_type.clone()),
             &init_stack,
             &[],

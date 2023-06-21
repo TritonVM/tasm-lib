@@ -8,7 +8,7 @@ use triton_opcodes::parser::{parse, to_labelled};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::snippet_state::SnippetState;
-use crate::{execute_bench, ExecutionResult, DIGEST_LENGTH};
+use crate::{execute_bench, ExecutionResult, VmOutputState, DIGEST_LENGTH};
 use crate::{execute_test, ExecutionState};
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
@@ -223,7 +223,7 @@ pub trait Snippet {
         secret_in: Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
         words_statically_allocated: usize,
-    ) {
+    ) -> VmOutputState {
         let expected_length_prior: usize = self.input_types().iter().map(|x| x.get_size()).sum();
         let expected_length_after: usize = self.output_types().iter().map(|x| x.get_size()).sum();
         assert_eq!(
@@ -243,7 +243,7 @@ pub trait Snippet {
             memory,
             Some(words_statically_allocated),
         )
-        .unwrap();
+        .unwrap()
     }
 
     fn link_and_run_tasm_for_bench(
@@ -275,9 +275,12 @@ pub trait Snippet {
         )
     }
 
-    fn link_and_run_tasm_from_state_for_test(&self, execution_state: &mut ExecutionState) {
+    fn link_and_run_tasm_from_state_for_test(
+        &self,
+        execution_state: &mut ExecutionState,
+    ) -> VmOutputState {
         let stack_prior = execution_state.stack.clone();
-        self.link_and_run_tasm_for_test(
+        let ret = self.link_and_run_tasm_for_test(
             &mut execution_state.stack,
             execution_state.std_in.clone(),
             execution_state.secret_in.clone(),
@@ -290,6 +293,8 @@ pub trait Snippet {
             stack_prior[0..(stack_prior.len() - Self::inputs(self).len())],
             stack_after[0..(stack_after.len() - Self::outputs(self).len())]
         );
+
+        ret
     }
 
     fn link_and_run_tasm_from_state_for_bench(

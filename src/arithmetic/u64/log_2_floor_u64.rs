@@ -152,7 +152,7 @@ mod tests {
     use crate::get_init_tvm_stack;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
     };
 
     use super::*;
@@ -169,7 +169,7 @@ mod tests {
         init_stack.push(BFieldElement::new(16));
         init_stack.push(BFieldElement::new(u32::MAX as u64 + 1));
 
-        test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_values(
             &Log2FloorU64,
             &init_stack,
             &[],
@@ -187,7 +187,7 @@ mod tests {
         init_stack.push(BFieldElement::new(u32::MAX as u64 + 1));
         init_stack.push(BFieldElement::new(16));
 
-        test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_values(
             &Log2FloorU64,
             &init_stack,
             &[],
@@ -206,7 +206,7 @@ mod tests {
         init_stack.push(BFieldElement::new(u32::MAX as u64 + 1 + n));
         init_stack.push(BFieldElement::new(16));
 
-        test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_values(
             &Log2FloorU64,
             &init_stack,
             &[],
@@ -275,7 +275,7 @@ mod tests {
             init_stack.push(elem);
         }
 
-        test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_values(
             &Log2FloorU64,
             &init_stack,
             &[],

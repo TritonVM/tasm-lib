@@ -121,7 +121,7 @@ mod tests {
     use num::Zero;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_state, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
     };
 
     use super::*;
@@ -173,7 +173,7 @@ mod tests {
         ]
         .concat();
 
-        test_rust_equivalence_given_input_state(
+        test_rust_equivalence_given_input_values(
             &SafeMul,
             &init_stack,
             &[],

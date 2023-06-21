@@ -91,6 +91,13 @@ pub struct ExecutionResult {
     pub u32_table_height: usize,
 }
 
+#[derive(Clone, Debug)]
+pub struct VmOutputState {
+    pub output: Vec<BFieldElement>,
+    pub final_stack: Vec<BFieldElement>,
+    pub final_ram: HashMap<BFieldElement, BFieldElement>,
+}
+
 pub fn get_init_tvm_stack() -> Vec<BFieldElement> {
     vec![BFieldElement::zero(); OP_STACK_REG_COUNT]
 }
@@ -212,14 +219,7 @@ pub fn execute_bench(
     // produced proofs here should be valid.
     // If you run this, make sure `opt-level` is set to 3.
     if std::env::var("DYING_TO_PROVE").is_ok() {
-        prove_and_verify(
-            &program,
-            code,
-            &executed_code,
-            std_in,
-            secret_in,
-            output.clone(),
-        );
+        prove_and_verify(&program, code, &executed_code, &std_in, &secret_in, &output);
     }
 
     Ok(ExecutionResult {
@@ -252,7 +252,7 @@ pub fn execute_test(
     secret_in: Vec<BFieldElement>,
     memory: &mut HashMap<BFieldElement, BFieldElement>,
     initilialize_dynamic_allocator_to: Option<usize>,
-) -> anyhow::Result<()> {
+) -> anyhow::Result<VmOutputState> {
     let init_stack_height = stack.len();
 
     // Prepend to program the initial stack values such that stack is in the expected
@@ -276,7 +276,7 @@ pub fn execute_test(
         bail!("Stack underflow")
     }
 
-    *memory = final_state.ram;
+    *memory = final_state.ram.clone();
 
     if !final_state.jump_stack.is_empty() {
         bail!("Jump stack must be unchanged after code execution")
@@ -305,13 +305,17 @@ pub fn execute_test(
             &program,
             code,
             &executed_code,
-            std_in,
-            secret_in,
-            final_state.public_output,
+            &std_in,
+            &secret_in,
+            &final_state.public_output,
         );
     }
 
-    Ok(())
+    Ok(VmOutputState {
+        output: final_state.public_output,
+        final_stack: stack.to_owned(),
+        final_ram: final_state.ram,
+    })
 }
 
 /// Produce the code to set the stack and memory into a certain state
@@ -354,17 +358,18 @@ fn prove_and_verify(
     program: &Program,
     code: &str,
     executed_code: &str,
-    std_in: Vec<BFieldElement>,
-    secret_in: Vec<BFieldElement>,
-    output: Vec<BFieldElement>,
+    std_in: &[BFieldElement],
+    secret_in: &[BFieldElement],
+    output: &[BFieldElement],
 ) {
     let claim = Claim {
         program_digest: VmHasher::hash_varlen(&program.encode()),
-        input: std_in.clone(),
-        output,
+        input: std_in.to_owned(),
+        output: output.to_owned(),
     };
 
-    let (simulation_trace, _) = vm::simulate(program, std_in, secret_in.clone()).unwrap();
+    let (simulation_trace, _) =
+        vm::simulate(program, std_in.to_owned(), secret_in.to_owned()).unwrap();
 
     let code_header = &code[0..std::cmp::min(code.len(), 100)];
     println!("Execution suceeded. Now proving {code_header}");
