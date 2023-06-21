@@ -374,7 +374,7 @@ fn prove_and_verify(
     let code_header = &code[0..std::cmp::min(code.len(), 100)];
     println!("Execution suceeded. Now proving {code_header}");
     let tick = SystemTime::now();
-    let proof = triton_vm::prove(&StarkParameters::default(), &claim, program, &secret_in).unwrap();
+    let proof = triton_vm::prove(&StarkParameters::default(), &claim, program, secret_in).unwrap();
     println!(
         "Done proving. Elapsed time: {:?}",
         tick.elapsed().expect("Don't mess with time")
