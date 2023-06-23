@@ -383,6 +383,7 @@ impl Snippet for SampleIndices {
 
 #[cfg(test)]
 mod tests {
+
     use crate::{list::ListType, test_helpers::test_rust_equivalence_multiple};
 
     use super::SampleIndices;

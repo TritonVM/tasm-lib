@@ -6,7 +6,10 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use crate::dyn_malloc::DYN_MALLOC_ADDRESS;
 use crate::snippet::Snippet;
 use crate::snippet_state::SnippetState;
-use crate::{exported_snippets, rust_shadowing_helper_functions, ExecutionState, VmOutputState};
+use crate::{
+    exported_snippets, rust_shadowing_helper_functions, ExecutionState, VmOutputState,
+    DIGEST_LENGTH,
+};
 
 #[allow(dead_code)]
 pub fn test_rust_equivalence_multiple<T: Snippet>(
@@ -71,62 +74,100 @@ pub fn test_rust_equivalence_given_input_values<T: Snippet>(
     expected_final_stack: Option<&[BFieldElement]>,
 ) -> VmOutputState {
     let init_memory = memory.clone();
-    let init_stack = stack.to_vec();
     let mut tasm_stack = stack.to_vec();
     let mut tasm_memory = init_memory.clone();
-    let vm_output_state = snippet_struct.link_and_run_tasm_for_test(
-        &mut tasm_stack,
-        stdin.to_vec(),
-        secret_in.to_vec(),
-        &mut tasm_memory,
-        words_statically_allocated,
-    );
 
     let mut rust_memory = init_memory;
     let mut rust_stack = stack.to_vec();
 
+    test_rust_equivalence_given_input_values_and_initial_stacks_and_memories(
+        snippet_struct,
+        stack,
+        stdin,
+        secret_in,
+        memory,
+        words_statically_allocated,
+        expected_final_stack,
+        &mut tasm_stack,
+        &mut rust_stack,
+        &mut tasm_memory,
+        &mut rust_memory,
+    )
+}
+
+#[allow(dead_code)]
+#[allow(clippy::ptr_arg)]
+#[allow(clippy::too_many_arguments)]
+pub fn test_rust_equivalence_given_input_values_and_initial_stacks_and_memories<T: Snippet>(
+    snippet_struct: &T,
+    stack: &[BFieldElement],
+    stdin: &[BFieldElement],
+    secret_in: &[BFieldElement],
+    memory: &mut HashMap<BFieldElement, BFieldElement>,
+    words_statically_allocated: usize,
+    expected_final_stack: Option<&[BFieldElement]>,
+    tasm_stack: &mut Vec<BFieldElement>,
+    rust_stack: &mut Vec<BFieldElement>,
+    tasm_memory: &mut HashMap<BFieldElement, BFieldElement>,
+    rust_memory: &mut HashMap<BFieldElement, BFieldElement>,
+) -> VmOutputState {
+    let init_stack = stack.to_vec();
+
     if words_statically_allocated > 0 {
         rust_shadowing_helper_functions::dyn_malloc::rust_dyn_malloc_initialize(
-            &mut rust_memory,
+            rust_memory,
             words_statically_allocated,
         );
     }
-    snippet_struct.rust_shadowing(
-        &mut rust_stack,
+
+    // run rust shadow
+    snippet_struct.rust_shadowing(rust_stack, stdin.to_vec(), secret_in.to_vec(), rust_memory);
+
+    // run tvm
+    let vm_output_state = snippet_struct.link_and_run_tasm_for_test(
+        tasm_stack,
         stdin.to_vec(),
         secret_in.to_vec(),
-        &mut rust_memory,
+        tasm_memory,
+        words_statically_allocated,
     );
 
+    // assert stacks are equal, up to program hash
+    let tasm_stack_skip_program_hash = tasm_stack.iter().cloned().skip(DIGEST_LENGTH).collect_vec();
+    let rust_stack_skip_program_hash = rust_stack.iter().cloned().skip(DIGEST_LENGTH).collect_vec();
     assert_eq!(
-        tasm_stack,
-        rust_stack,
+        tasm_stack_skip_program_hash,
+        rust_stack_skip_program_hash,
         "Rust code must match TVM for `{}`\n\nTVM: {}\n\nRust: {}. Code was: {}",
         snippet_struct.entrypoint(),
-        tasm_stack
+        tasm_stack_skip_program_hash
             .iter()
             .map(|x| x.to_string())
             .collect_vec()
             .join(","),
-        rust_stack
+        rust_stack_skip_program_hash
             .iter()
             .map(|x| x.to_string())
             .collect_vec()
             .join(","),
         snippet_struct.function_code(&mut SnippetState::default())
     );
+
+    // if expected final stack is given, test against it
     if let Some(expected) = expected_final_stack {
+        let expected_final_stack_skip_program_hash =
+            expected.iter().skip(DIGEST_LENGTH).cloned().collect_vec();
         assert_eq!(
-            tasm_stack,
-            expected,
+            tasm_stack_skip_program_hash,
+            expected_final_stack_skip_program_hash,
             "TVM must produce expected stack `{}`. \n\nTVM:\n{}\nExpected:\n{}",
             snippet_struct.entrypoint(),
-            tasm_stack
+            tasm_stack_skip_program_hash
                 .iter()
                 .map(|x| x.to_string())
                 .collect_vec()
                 .join(","),
-            expected
+            expected_final_stack_skip_program_hash
                 .iter()
                 .map(|x| x.to_string())
                 .collect_vec()
@@ -184,7 +225,7 @@ pub fn test_rust_equivalence_given_input_values<T: Snippet>(
     }
 
     // Write back memory to be able to probe it in individual tests
-    *memory = tasm_memory;
+    *memory = tasm_memory.clone();
 
     // Verify that stack grows with expected number of elements
     let stack_final = tasm_stack.clone();
@@ -200,4 +241,56 @@ pub fn test_rust_equivalence_given_input_values<T: Snippet>(
     );
 
     vm_output_state
+}
+
+#[cfg(test)]
+mod test {
+    use std::collections::HashMap;
+
+    use rand::random;
+    use triton_vm::BFieldElement;
+    use twenty_first::shared_math::tip5::DIGEST_LENGTH;
+
+    use crate::{get_init_tvm_stack, hashing::sample_indices::SampleIndices, list::ListType};
+
+    use super::test_rust_equivalence_given_input_values_and_initial_stacks_and_memories;
+
+    /// TIP6 sets the bottom of the stack to the program hash. While testing Snippets,
+    /// which are not standalone programs and therefore do not come with a well defined
+    /// program hash, we want to verify that the tasm and rust stacks are identical up
+    /// to these first five elements. This unit test tests this.
+    #[test]
+    fn test_program_hash_ignored() {
+        let snippet_struct = SampleIndices {
+            list_type: ListType::Safe,
+        };
+        let mut stack = get_init_tvm_stack();
+        stack.push(BFieldElement::new(45u64));
+        stack.push(BFieldElement::new(1u64 << 12));
+
+        let mut init_memory = HashMap::new();
+        let mut tasm_stack = stack.to_vec();
+        for item in tasm_stack.iter_mut().take(DIGEST_LENGTH) {
+            *item = random();
+        }
+
+        let mut tasm_memory = init_memory.clone();
+
+        let mut rust_memory = init_memory.clone();
+        let mut rust_stack = stack.to_vec();
+
+        test_rust_equivalence_given_input_values_and_initial_stacks_and_memories(
+            &snippet_struct,
+            &stack,
+            &[],
+            &[],
+            &mut init_memory,
+            1,
+            None,
+            &mut tasm_stack,
+            &mut rust_stack,
+            &mut tasm_memory,
+            &mut rust_memory,
+        );
+    }
 }
