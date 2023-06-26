@@ -1,12 +1,11 @@
 use std::fmt::Display;
 
+pub mod contiguous_list;
 pub mod higher_order;
 pub mod multiset_equality;
 pub mod range;
 pub mod safe_u32;
 pub mod unsafe_u32;
-
-pub mod contiguous_list;
 
 #[derive(Clone, Debug)]
 pub enum ListType {
