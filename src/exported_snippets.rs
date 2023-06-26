@@ -46,6 +46,7 @@ use crate::{
     },
     io::{load_from_input::LoadFromInput, read_secret::ReadSecret, read_stdin::ReadStdIn},
     list::{
+        contiguous_list,
         range::Range,
         safe_u32::{
             get::SafeGet, length::SafeLength, new::SafeNew, pop::SafePop, push::SafePush,
@@ -329,6 +330,9 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn Snippet> {
 
         "tasm_list_unsafe_u32_multiset_equality" => Box::new(crate::list::multiset_equality::MultisetEquality(ListType::Unsafe)),
         "tasm_list_unsafe_range" => Box::new(Range{list_type: ListType::Unsafe}),
+
+        // Contiguous lists
+        "tasm_list_contiguous_list_get_length" => Box::new(contiguous_list::get_length::GetLength),
 
         // MMR
         "tasm_mmr_calculate_new_peaks_from_append_unsafe" => Box::new(CalculateNewPeaksFromAppend { list_type: ListType::Unsafe }),

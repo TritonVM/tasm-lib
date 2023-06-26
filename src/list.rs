@@ -6,6 +6,8 @@ pub mod range;
 pub mod safe_u32;
 pub mod unsafe_u32;
 
+pub mod contiguous_list;
+
 #[derive(Clone, Debug)]
 pub enum ListType {
     Safe,
