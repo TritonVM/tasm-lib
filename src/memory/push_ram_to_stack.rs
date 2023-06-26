@@ -117,15 +117,15 @@ impl Snippet for PushRamToStack {
     fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
         let mut rng = thread_rng();
         let ram_address = BFieldElement::new(rng.gen_range(0..(1 << 31)));
-        vec![Self::get_init_state(&self, ram_address)]
+        vec![Self::get_init_state(self, ram_address)]
     }
 
     fn common_case_input_state(&self) -> crate::ExecutionState {
-        Self::get_init_state(&self, BFieldElement::one())
+        Self::get_init_state(self, BFieldElement::one())
     }
 
     fn worst_case_input_state(&self) -> crate::ExecutionState {
-        Self::get_init_state(&self, BFieldElement::new((1 << 31) + 127))
+        Self::get_init_state(self, BFieldElement::new((1 << 31) + 127))
     }
 
     fn rust_shadowing(
