@@ -42,7 +42,7 @@ use crate::{
         load_auth_path_from_secret_in_unsafe_list::LoadAuthPathFromSecretInUnsafeList,
         load_auth_path_from_std_in_safe_list::LoadAuthPathFromStdInSafeList,
         load_auth_path_from_std_in_unsafe_list::LoadAuthPathFromStdInUnsafeList,
-        sample_indices::SampleIndices, swap_digest::SwapDigest,
+        reverse_digest::ReverseDigest, sample_indices::SampleIndices, swap_digest::SwapDigest,
     },
     io::{load_from_input::LoadFromInput, read_secret::ReadSecret, read_stdin::ReadStdIn},
     list::{
@@ -203,6 +203,7 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn Snippet> {
         "tasm_hashing_hash_varlen" => Box::new(HashVarlen),
         "tasm_hashing_sample_indices_to_safe_list" => Box::new(SampleIndices{list_type: ListType::Safe}),
         "tasm_hashing_sample_indices_to_unsafe_list" => Box::new(SampleIndices{list_type: ListType::Unsafe}),
+        "tasm_hashing_reverse_digest" => Box::new(ReverseDigest),
 
         // io
         "tasm_io_read_secret_bool" => Box::new(ReadSecret(DataType::Bool)),
