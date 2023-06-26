@@ -57,7 +57,7 @@ use crate::{
         },
         ListType,
     },
-    memory::{dyn_malloc::DynMalloc, memcpy::MemCpy},
+    memory::{dyn_malloc::DynMalloc, memcpy::MemCpy, push_ram_to_stack::PushRamToStack},
     mmr::{
         bag_peaks::BagPeaks, calculate_new_peaks_from_append::CalculateNewPeaksFromAppend,
         calculate_new_peaks_from_leaf_mutation::MmrCalculateNewPeaksFromLeafMutationMtIndices,
@@ -370,6 +370,31 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn Snippet> {
         // memory
         "tasm_memory_dyn_malloc" => Box::new(DynMalloc),
         "tasm_memory_memcpy" => Box::new(MemCpy),
+
+        "tasm_memory_push_ram_to_stack_digest" => Box::new(PushRamToStack {
+            output_type: DataType::Digest,
+        }),
+        "tasm_memory_push_ram_to_stack_bool" => Box::new(PushRamToStack {
+            output_type: DataType::Bool,
+        }),
+        "tasm_memory_push_ram_to_stack_u32" => Box::new(PushRamToStack {
+            output_type: DataType::U32,
+        }),
+        "tasm_memory_push_ram_to_stack_u64" => Box::new(PushRamToStack {
+            output_type: DataType::U64,
+        }),
+        "tasm_memory_push_ram_to_stack_u128" => Box::new(PushRamToStack {
+            output_type: DataType::U128,
+        }),
+        "tasm_memory_push_ram_to_stack_void_pointer" => Box::new(PushRamToStack {
+            output_type: DataType::VoidPointer,
+        }),
+        "tasm_memory_push_ram_to_stack_bfe" => Box::new(PushRamToStack {
+            output_type: DataType::BFE,
+        }),
+        "tasm_memory_push_ram_to_stack_xfe" => Box::new(PushRamToStack {
+            output_type: DataType::XFE,
+        }),
 
         // structure
         "tasm_structure_get_field" => Box::new(GetField),
