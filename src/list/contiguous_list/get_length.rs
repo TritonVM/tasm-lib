@@ -105,7 +105,7 @@ impl Snippet for GetLength {
             // _ *cl si *sth element_count
 
             swap 3 // _ element_count si *sth *cl
-            pop pop pop // _ element_count 
+            pop pop pop // _ element_count
 
             return
 
@@ -164,13 +164,16 @@ impl Snippet for GetLength {
         memory: &mut std::collections::HashMap<triton_vm::BFieldElement, triton_vm::BFieldElement>,
     ) {
         let address = stack.pop().unwrap();
-
-        let size = memory.get(&address).unwrap().value() as usize;
-        let mut encoding = vec![BFieldElement::new(size as u64)];
-        for i in 0..size {
+        let size = memory.get(&address).unwrap().value();
+        assert!(
+            address.value() + size < u32::MAX as u64,
+            "Memory address may not exceed u32::MAX"
+        );
+        let mut encoding = vec![];
+        for i in 0..=size {
             encoding.push(
                 memory
-                    .get(&(address + BFieldElement::new(i as u64)))
+                    .get(&(address + BFieldElement::new(i)))
                     .unwrap()
                     .to_owned(),
             );
