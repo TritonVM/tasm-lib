@@ -4,7 +4,7 @@ use rand::{random, thread_rng, Rng};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::rust_shadowing_helper_functions::unsafe_list::{
-    unsafe_insert_random_list, unsafe_list_get,
+    unsafe_list_get, untyped_unsafe_insert_random_list,
 };
 use crate::snippet::{DataType, Snippet};
 use crate::snippet_state::SnippetState;
@@ -143,7 +143,7 @@ fn input_state(list_length: usize) -> ExecutionState {
 
     let mut memory = HashMap::default();
 
-    unsafe_insert_random_list(list_pointer, list_length, &mut memory, 4);
+    untyped_unsafe_insert_random_list(list_pointer, list_length, &mut memory, 4);
 
     ExecutionState {
         stack,

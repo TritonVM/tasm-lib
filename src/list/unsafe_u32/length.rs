@@ -4,7 +4,7 @@ use num::One;
 use rand::{random, thread_rng, Rng};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
-use crate::rust_shadowing_helper_functions::unsafe_list::unsafe_insert_random_list;
+use crate::rust_shadowing_helper_functions::unsafe_list::untyped_unsafe_insert_random_list;
 use crate::snippet::{DataType, Snippet};
 use crate::snippet_state::SnippetState;
 use crate::{get_init_tvm_stack, ExecutionState};
@@ -44,35 +44,35 @@ impl Snippet for UnsafeLength {
 
         // Test for various values of `N` (list-element size)
         let mut memory = HashMap::default();
-        unsafe_insert_random_list(list_address, list_length, &mut memory, 1);
+        untyped_unsafe_insert_random_list(list_address, list_length, &mut memory, 1);
         ret.push(ExecutionState::with_stack_and_memory(
             stack.clone(),
             memory,
             0,
         ));
         memory = HashMap::default();
-        unsafe_insert_random_list(list_address, list_length, &mut memory, 2);
+        untyped_unsafe_insert_random_list(list_address, list_length, &mut memory, 2);
         ret.push(ExecutionState::with_stack_and_memory(
             stack.clone(),
             memory,
             0,
         ));
         memory = HashMap::default();
-        unsafe_insert_random_list(list_address, list_length, &mut memory, 3);
+        untyped_unsafe_insert_random_list(list_address, list_length, &mut memory, 3);
         ret.push(ExecutionState::with_stack_and_memory(
             stack.clone(),
             memory,
             0,
         ));
         memory = HashMap::default();
-        unsafe_insert_random_list(list_address, list_length, &mut memory, 4);
+        untyped_unsafe_insert_random_list(list_address, list_length, &mut memory, 4);
         ret.push(ExecutionState::with_stack_and_memory(
             stack.clone(),
             memory,
             0,
         ));
         memory = HashMap::default();
-        unsafe_insert_random_list(list_address, list_length, &mut memory, 11);
+        untyped_unsafe_insert_random_list(list_address, list_length, &mut memory, 11);
         ret.push(ExecutionState::with_stack_and_memory(stack, memory, 0));
 
         ret
@@ -124,7 +124,7 @@ impl Snippet for UnsafeLength {
         let list_address = BFieldElement::from(list_address as u64);
         stack.push(list_address);
         let mut memory = HashMap::default();
-        unsafe_insert_random_list(BFieldElement::one(), 1 << 5, &mut memory, 1);
+        untyped_unsafe_insert_random_list(BFieldElement::one(), 1 << 5, &mut memory, 1);
         ExecutionState::with_stack_and_memory(stack.clone(), memory, 0)
     }
 
@@ -134,7 +134,7 @@ impl Snippet for UnsafeLength {
         let list_address = BFieldElement::from(list_address as u64);
         stack.push(list_address);
         let mut memory = HashMap::default();
-        unsafe_insert_random_list(BFieldElement::one(), 1 << 6, &mut memory, 1);
+        untyped_unsafe_insert_random_list(BFieldElement::one(), 1 << 6, &mut memory, 1);
         ExecutionState::with_stack_and_memory(stack.clone(), memory, 0)
     }
 }

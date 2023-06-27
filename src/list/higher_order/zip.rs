@@ -13,7 +13,7 @@ use crate::list::unsafe_u32::set_length::UnsafeSetLength;
 use crate::list::ListType;
 use crate::memory::memcpy::MemCpy;
 use crate::rust_shadowing_helper_functions::safe_list::safe_insert_random_list;
-use crate::rust_shadowing_helper_functions::unsafe_list::unsafe_insert_random_list;
+use crate::rust_shadowing_helper_functions::unsafe_list::untyped_unsafe_insert_random_list;
 use crate::{get_init_tvm_stack, rust_shadowing_helper_functions};
 use crate::{
     snippet::{DataType, Snippet},
@@ -66,7 +66,7 @@ impl Zip {
                 left_length,
                 &mut memory,
             ),
-            ListType::Unsafe => unsafe_insert_random_list(
+            ListType::Unsafe => untyped_unsafe_insert_random_list(
                 left_pointer,
                 left_length,
                 &mut memory,
@@ -81,7 +81,7 @@ impl Zip {
                 right_length,
                 &mut memory,
             ),
-            ListType::Unsafe => unsafe_insert_random_list(
+            ListType::Unsafe => untyped_unsafe_insert_random_list(
                 right_pointer,
                 right_length,
                 &mut memory,

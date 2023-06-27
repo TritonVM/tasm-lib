@@ -11,7 +11,7 @@ use crate::list::unsafe_u32::get::UnsafeGet;
 use crate::list::unsafe_u32::length::UnsafeLength;
 use crate::list::ListType;
 use crate::rust_shadowing_helper_functions::safe_list::safe_insert_random_list;
-use crate::rust_shadowing_helper_functions::unsafe_list::unsafe_insert_random_list;
+use crate::rust_shadowing_helper_functions::unsafe_list::untyped_unsafe_insert_random_list;
 use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, VmHasher};
 use crate::{
     snippet::{DataType, Snippet},
@@ -67,7 +67,7 @@ impl All {
                     list_length,
                     &mut memory,
                 ),
-                ListType::Unsafe => unsafe_insert_random_list(
+                ListType::Unsafe => untyped_unsafe_insert_random_list(
                     list_pointer,
                     list_length,
                     &mut memory,

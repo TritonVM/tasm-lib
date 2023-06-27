@@ -4,6 +4,8 @@ use twenty_first::shared_math::{
     b_field_element::BFieldElement, bfield_codec::BFieldCodec, other::random_elements,
 };
 
+use crate::snippet::DataType;
+
 pub fn unsafe_list_insert<T: BFieldCodec>(
     list_pointer: BFieldElement,
     vector: Vec<T>,
@@ -22,6 +24,22 @@ pub fn unsafe_list_insert<T: BFieldCodec>(
 }
 
 pub fn unsafe_insert_random_list(
+    data_type: &DataType,
+    list_pointer: BFieldElement,
+    list_length: usize,
+    memory: &mut HashMap<BFieldElement, BFieldElement>,
+) {
+    unsafe_list_new(list_pointer, memory);
+
+    let random_values = data_type.random_elements(list_length);
+
+    for element in random_values {
+        unsafe_list_push(list_pointer, element, memory, data_type.get_size());
+    }
+}
+
+// TODO: Get rid of this stupid "helper" function
+pub fn untyped_unsafe_insert_random_list(
     list_pointer: BFieldElement,
     list_length: usize,
     memory: &mut HashMap<BFieldElement, BFieldElement>,

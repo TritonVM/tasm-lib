@@ -77,10 +77,10 @@ impl Map {
                 &mut memory,
             ),
             ListType::Unsafe => unsafe_insert_random_list(
+                &input_element_type,
                 list_pointer,
                 list_length,
                 &mut memory,
-                input_element_type.get_size(),
             ),
         };
 

@@ -5,7 +5,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::random_elements;
 
 use crate::rust_shadowing_helper_functions::unsafe_list::{
-    unsafe_insert_random_list, unsafe_list_set,
+    unsafe_list_set, untyped_unsafe_insert_random_list,
 };
 use crate::snippet::{DataType, Snippet};
 use crate::snippet_state::SnippetState;
@@ -150,7 +150,7 @@ fn prepare_state(data_type: &DataType) -> ExecutionState {
     stack.push(BFieldElement::new(index as u64));
 
     let mut memory = HashMap::default();
-    unsafe_insert_random_list(list_pointer, list_length, &mut memory, data_type.get_size());
+    untyped_unsafe_insert_random_list(list_pointer, list_length, &mut memory, data_type.get_size());
     ExecutionState::with_stack_and_memory(stack, memory, 0)
 }
 
@@ -233,7 +233,7 @@ mod tests {
         let mut vm_memory = HashMap::default();
 
         // Insert length indicator of list, lives on offset = 0 from `list_address`
-        unsafe_insert_random_list(
+        untyped_unsafe_insert_random_list(
             list_address,
             init_list_length as usize,
             &mut vm_memory,
