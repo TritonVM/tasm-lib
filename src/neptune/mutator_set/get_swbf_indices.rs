@@ -1,21 +1,29 @@
-use std::collections::HashMap;
-
 use itertools::Itertools;
 use num_traits::{One, Zero};
 use rand::random;
+use std::collections::HashMap;
 use triton_vm::BFieldElement;
 use twenty_first::{
-    shared_math::tip5::{Tip5, Tip5State},
+    shared_math::{
+        bfield_codec::BFieldCodec,
+        tip5::{Tip5, Tip5State},
+    },
     util_types::algebraic_hasher::{AlgebraicHasher, Domain, SpongeHasher},
 };
 
 use crate::{
     get_init_tvm_stack,
     hashing::sample_indices::SampleIndices,
-    list::ListType,
+    list::{
+        higher_order::{
+            inner_function::{InnerFunction, RawCode},
+            map::Map,
+        },
+        ListType,
+    },
     rust_shadowing_helper_functions,
     snippet::{DataType, Snippet},
-    Digest, ExecutionState, VmHasher,
+    Digest, ExecutionState, VmHasher, DIGEST_LENGTH,
 };
 
 /// Derives the indices that make up the removal record from the item
@@ -81,8 +89,8 @@ impl Snippet for GetSwbfIndices {
 
     fn inputs(&self) -> Vec<String> {
         vec![
-            "aocl_leaf_index1".to_string(),
-            "aocl_leaf_index0".to_string(),
+            "aocl_leaf_hi".to_string(),
+            "aocl_leaf_lo".to_string(),
             "receiver_preimage4".to_string(),
             "receiver_preimage3".to_string(),
             "receiver_preimage2".to_string(),
@@ -128,33 +136,34 @@ impl Snippet for GetSwbfIndices {
         let sample_indices = _library.import(Box::new(SampleIndices {
             list_type: ListType::Unsafe,
         }));
+
         let entrypoint = self.entrypoint();
 
         format!(
             "
-        // BEFORE: _ index1 index0 r4 r3 r2 r1 r0 s4 s3 s2 s1 s0 i4 i3 i2 i1 i0
+        // BEFORE: _ li_hi li_lo r4 r3 r2 r1 r0 s4 s3 s2 s1 s0 i4 i3 i2 i1 i0
         // AFTER: _ index_list
         {entrypoint}:
 
             absorb_init
             pop pop pop pop pop
             pop pop pop pop pop
-            // _ index1 index0 r4 r3 r2 r1 r0
+            // _ li_hi li_lo r4 r3 r2 r1 r0
 
             push 1 push 0 push 0
-            // _ index1 index0 r4 r3 r2 r1 r0 1 0 0
+            // _ li_hi li_lo r4 r3 r2 r1 r0 1 0 0
 
-            swap 9 // _ 0 index0 r4 r3 r2 r1 r0 1 0 index1
-            swap 6 // _ 0 index0 r4 index1 r2 r1 r0 1 0 r3
-            swap 3 // _ 0 index0 r4 index1 r2 r1 r3 1 0 r0
+            swap 9 // _ 0 li_lo r4 r3 r2 r1 r0 1 0 li_hi
+            swap 6 // _ 0 li_lo r4 li_hi r2 r1 r0 1 0 r3
+            swap 3 // _ 0 li_lo r4 li_hi r2 r1 r3 1 0 r0
 
-            swap 1 // _ 0 index0 r4 index1 r2 r1 r3 1 r0 0
-            swap 8 // _ 0 0 r4 index1 r2 r1 r3 1 r0 index0
-            swap 5 // _ 0 0 r4 index1 index0 r1 r3 1 r0 r2
-            swap 2 // _ 0 0 r4 index1 index0 r1 r3 r2 r0 1
-            swap 7 // _ 0 0 1 index1 index0 r1 r3 r2 r0 r4
-            swap 4 // _ 0 0 1 index1 index0 r4 r3 r2 r0 r1
-            swap 1 // _ 0 0 1 index1 index0 r4 r3 r2 r1 r0
+            swap 1 // _ 0 li_lo r4 li_hi r2 r1 r3 1 r0 0
+            swap 8 // _ 0 0 r4 li_hi r2 r1 r3 1 r0 li_lo
+            swap 5 // _ 0 0 r4 li_hi li_lo r1 r3 1 r0 r2
+            swap 2 // _ 0 0 r4 li_hi li_lo r1 r3 r2 r0 1
+            swap 7 // _ 0 0 1 li_hi li_lo r1 r3 r2 r0 r4
+            swap 4 // _ 0 0 1 li_hi li_lo r4 r3 r2 r0 r1
+            swap 1 // _ 0 0 1 li_hi li_lo r4 r3 r2 r1 r0
 
             absorb
             pop pop pop pop pop
@@ -162,7 +171,7 @@ impl Snippet for GetSwbfIndices {
 
             push {num_trials} // _ number
             push {window_size} // _ number upper_bound
-            call {sample_indices} // _ list_of_indices
+            call {sample_indices} // _ list_of_indices_as_u32s
 
             return
             "
@@ -213,8 +222,10 @@ impl Snippet for GetSwbfIndices {
             stack.pop().unwrap(),
             stack.pop().unwrap(),
         ]);
-        let aocl_leaf_index_hi: u32 = stack.pop().unwrap().value().try_into().unwrap();
         let aocl_leaf_index_lo: u32 = stack.pop().unwrap().value().try_into().unwrap();
+        let aocl_leaf_index_hi: u32 = stack.pop().unwrap().value().try_into().unwrap();
+        let aocl_leaf_index_u64: u64 =
+            ((aocl_leaf_index_hi as u64) << 32) + aocl_leaf_index_lo as u64;
 
         let mut vector = vec![];
         for i in item.values() {
@@ -226,8 +237,8 @@ impl Snippet for GetSwbfIndices {
         for s in receiver_preimage.values() {
             vector.push(s);
         }
-        vector.push(BFieldElement::new(aocl_leaf_index_hi as u64));
         vector.push(BFieldElement::new(aocl_leaf_index_lo as u64));
+        vector.push(BFieldElement::new(aocl_leaf_index_hi as u64));
         vector.push(BFieldElement::one());
         vector.push(BFieldElement::zero());
         vector.push(BFieldElement::zero());
@@ -236,16 +247,15 @@ impl Snippet for GetSwbfIndices {
         Tip5::absorb_repeatedly(&mut sponge, vector.iter());
 
         let mut indices = vec![];
-        let mut scalars = Tip5::squeeze(&mut sponge).into_iter().rev().collect_vec();
+        let mut squeezed_elements = vec![];
         while indices.len() != self.num_trials {
-            if scalars.is_empty() {
-                scalars = Tip5::squeeze(&mut sponge).into_iter().rev().collect_vec();
+            if squeezed_elements.is_empty() {
+                squeezed_elements = Tip5::squeeze(&mut sponge).into_iter().rev().collect_vec();
             }
-            let scalar = scalars.pop().unwrap();
-            if scalar == -BFieldElement::one() {
-                continue;
+            let element = squeezed_elements.pop().unwrap();
+            if element != BFieldElement::new(BFieldElement::MAX) {
+                indices.push(element.value() as u32 % self.window_size);
             }
-            indices.push(scalar.value() as u32 % self.window_size);
         }
 
         let size_in_words = self.num_trials + 1;
@@ -259,18 +269,82 @@ impl Snippet for GetSwbfIndices {
             memory,
         );
 
-        for (i, index) in indices.into_iter().enumerate() {
+        for (i, index) in indices.iter().enumerate() {
             rust_shadowing_helper_functions::unsafe_list::unsafe_list_set(
                 list_pointer,
                 i,
-                vec![BFieldElement::new(index as u64)],
+                vec![BFieldElement::new(*index as u64)],
                 memory,
                 1,
             );
         }
 
+        // Compare derived indices to actual implementation (copy-pasted from
+        // mutator set implementaion.
+        let indices_from_function = get_swbf_indices::<VmHasher>(
+            &item,
+            &sender_randomness,
+            &receiver_preimage,
+            aocl_leaf_index_u64,
+        );
+
+        println!(
+            "indices_from_function {}",
+            indices_from_function.iter().join(",")
+        );
+        let mut mod_reduced_indices_from_function = indices_from_function
+            .iter()
+            .map(|x| *x % WINDOW_SIZE as u128)
+            .collect_vec();
+        mod_reduced_indices_from_function.sort();
+        println!(
+            "\n\nindices_from_function mod WINDOW_SIZE\n{}",
+            mod_reduced_indices_from_function.iter().join(",")
+        );
+        indices.sort();
+        println!("\n\nindices_calculated\n{}", indices.iter().join(","));
+
         stack.push(list_pointer);
     }
+}
+
+// Copy-pasted from mutator set implementation
+const NUM_TRIALS: usize = 45;
+const BATCH_SIZE: u32 = 8;
+const CHUNK_SIZE: u32 = 0x1000;
+const WINDOW_SIZE: u32 = 0x100000;
+fn get_swbf_indices<H: AlgebraicHasher>(
+    item: &Digest,
+    sender_randomness: &Digest,
+    receiver_preimage: &Digest,
+    aocl_leaf_index: u64,
+) -> [u128; 45 as usize] {
+    let batch_index: u128 = aocl_leaf_index as u128 / BATCH_SIZE as u128;
+    let batch_offset: u128 = batch_index * CHUNK_SIZE as u128;
+    let leaf_index_bfes = aocl_leaf_index.encode();
+    let input = [
+        item.encode(),
+        sender_randomness.encode(),
+        receiver_preimage.encode(),
+        leaf_index_bfes,
+        // Pad with zeros until length is a multiple of RATE; according to spec
+        vec![
+            BFieldElement::one(),
+            BFieldElement::zero(),
+            BFieldElement::zero(),
+        ],
+    ]
+    .concat();
+    assert_eq!(input.len() % DIGEST_LENGTH, 0);
+    let mut sponge = <H as SpongeHasher>::init();
+    println!("sponge input: {}", input.iter().join(","));
+    H::absorb_repeatedly(&mut sponge, input.iter());
+    H::sample_indices(&mut sponge, WINDOW_SIZE, NUM_TRIALS as usize)
+        .into_iter()
+        .map(|sample_index| sample_index as u128 + batch_offset)
+        .collect_vec()
+        .try_into()
+        .unwrap()
 }
 
 #[cfg(test)]
