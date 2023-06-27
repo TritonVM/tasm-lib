@@ -65,7 +65,7 @@ impl Map {
         };
         rust_shadowing_helper_functions::dyn_malloc::rust_dyn_malloc_initialize(
             &mut memory,
-            input_list_size.value() as usize + 1,
+            (input_list_size + list_pointer).value() as usize,
         );
 
         match self.list_type {
@@ -260,9 +260,9 @@ impl Snippet for Map {
 
     fn gen_input_states(&self) -> Vec<ExecutionState> {
         // Create random list of input data type
-        let list_pointer = BFieldElement::new(1u64);
         let mut rng = thread_rng();
-        let list_length: usize = rng.gen_range(1..=100);
+        let list_pointer = BFieldElement::new(rng.gen_range(1..=1000));
+        let list_length: usize = rng.gen_range(1..=1000);
         let additional_inputs = self.f.additional_inputs();
         let additional_inputs = additional_inputs
             .iter()
@@ -558,7 +558,9 @@ mod tests {
     use std::cell::RefCell;
 
     use triton_opcodes::{instruction::LabelledInstruction, shortcuts::*};
-    use twenty_first::shared_math::{traits::FiniteField, x_field_element::XFieldElement};
+    use twenty_first::shared_math::{
+        bfield_codec::BFieldCodec, traits::FiniteField, x_field_element::XFieldElement,
+    };
 
     use crate::{
         list::higher_order::inner_function::RawCode, test_helpers::test_rust_equivalence_multiple,
@@ -747,6 +749,77 @@ mod tests {
                 vec.push(new_value.coefficients[2]);
                 vec.push(new_value.coefficients[1]);
                 vec.push(new_value.coefficients[0]);
+            })),
+        );
+        test_rust_equivalence_multiple(
+            &Map {
+                list_type: ListType::Unsafe,
+                f: InnerFunction::RawCode(rawcode),
+            },
+            false,
+        );
+    }
+
+    #[test]
+    fn test_u32_list_to_u128_list_plus_x() {
+        let rawcode = RawCode::new_with_shadowing(
+            vec![
+                LabelledInstruction::Label("u32_to_u128_add_another_u128".to_string()),
+                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index input_u32
+                dup(4),
+                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index input_u32 x_0
+                add(),
+                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index (input_u32 + x_0)
+                split(),
+                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index carry_to_1 output_0
+                swap(1),
+                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 carry_to_1
+                dup(6),
+                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 carry_to_1 x_1
+                add(),
+                split(),
+                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 carry_to_2 output_1
+                swap(1),
+                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 output_1 carry_to_2
+                dup(8),
+                add(),
+                split(),
+                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 output_1 carry_to_3 output_2
+                swap(1),
+                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 output_1 output_2 carry_to_3
+                dup(10),
+                add(),
+                split(),
+                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 output_1 output_2 overflow output_3
+                swap(1),
+                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 output_1 output_2 output_3 overflow
+
+                // verify no overflow
+                push(0),
+                eq(),
+                assert_(),
+                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 output_1 output_2 output_3
+                swap(3),
+                swap(1),
+                swap(2),
+                swap(1),
+                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_3 output_2 output_1 output_0
+                return_(),
+            ],
+            vec![DataType::U128, DataType::U32],
+            vec![DataType::U128],
+            Box::new(RefCell::new(|vec: &mut Vec<BFieldElement>| {
+                let list_element = vec.pop().unwrap().value();
+                let u128_value = vec[vec.len() - 1].value() as u128
+                    + ((vec[vec.len() - 2].value() as u128) << 32)
+                    + ((vec[vec.len() - 3].value() as u128) << 64)
+                    + ((vec[vec.len() - 4].value() as u128) << 96);
+
+                let new_value = list_element as u128 + u128_value;
+                let encoded = new_value.encode();
+                for elem in encoded.into_iter().rev() {
+                    vec.push(elem);
+                }
             })),
         );
         test_rust_equivalence_multiple(
