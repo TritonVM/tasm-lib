@@ -1,7 +1,8 @@
 use itertools::Itertools;
 use num_traits::{One, Zero};
 use rand::random;
-use std::collections::HashMap;
+use std::{cell::RefCell, collections::HashMap};
+use triton_opcodes::{instruction::*, shortcuts::*};
 use triton_vm::BFieldElement;
 use twenty_first::{
     shared_math::{
@@ -12,6 +13,7 @@ use twenty_first::{
 };
 
 use crate::{
+    arithmetic::u128::{shift_left_static_u128, shift_right_static_u128},
     get_init_tvm_stack,
     hashing::sample_indices::SampleIndices,
     list::{
@@ -130,14 +132,87 @@ impl Snippet for GetSwbfIndices {
         -16
     }
 
-    fn function_code(&self, _library: &mut crate::snippet_state::SnippetState) -> String {
+    fn function_code(&self, library: &mut crate::snippet_state::SnippetState) -> String {
         let num_trials = self.num_trials;
         let window_size = self.window_size;
-        let sample_indices = _library.import(Box::new(SampleIndices {
+        let sample_indices = library.import(Box::new(SampleIndices {
             list_type: ListType::Unsafe,
         }));
 
         let entrypoint = self.entrypoint();
+
+        let rawcode_for_inner_function_u128_plus_u32 = RawCode::new_with_shadowing(
+            vec![
+                LabelledInstruction::Label("u32_to_u128_add_another_u128".to_string()),
+                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index input_u32
+                dup(4),
+                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index input_u32 x_0
+                add(),
+                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index (input_u32 + x_0)
+                split(),
+                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index carry_to_1 output_0
+                swap(1),
+                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 carry_to_1
+                dup(6),
+                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 carry_to_1 x_1
+                add(),
+                split(),
+                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 carry_to_2 output_1
+                swap(1),
+                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 output_1 carry_to_2
+                dup(8),
+                add(),
+                split(),
+                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 output_1 carry_to_3 output_2
+                swap(1),
+                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 output_1 output_2 carry_to_3
+                dup(10),
+                add(),
+                split(),
+                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 output_1 output_2 overflow output_3
+                swap(1),
+                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 output_1 output_2 output_3 overflow
+
+                // verify no overflow
+                push(0),
+                eq(),
+                assert_(),
+                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 output_1 output_2 output_3
+                swap(3),
+                swap(1),
+                swap(2),
+                swap(1),
+                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_3 output_2 output_1 output_0
+                return_(),
+            ],
+            vec![DataType::U128, DataType::U32],
+            vec![DataType::U128],
+            Box::new(RefCell::new(|vec: &mut Vec<BFieldElement>| {
+                let list_element = vec.pop().unwrap().value();
+                let u128_value = vec[vec.len() - 1].value() as u128
+                    + ((vec[vec.len() - 2].value() as u128) << 32)
+                    + ((vec[vec.len() - 3].value() as u128) << 64)
+                    + ((vec[vec.len() - 4].value() as u128) << 96);
+
+                let new_value = list_element as u128 + u128_value;
+                let encoded = new_value.encode();
+                for elem in encoded.into_iter().rev() {
+                    vec.push(elem);
+                }
+            })),
+        );
+        let map_add_batch_offset = library.import(Box::new(Map {
+            list_type: ListType::Unsafe,
+            f: InnerFunction::RawCode(rawcode_for_inner_function_u128_plus_u32),
+        }));
+
+        // TODO: This can be replaced by a bit-mask to save some clock cycles
+        let divide_by_batch_size = library.import(Box::new(
+            shift_right_static_u128::ShiftRightStaticU128::<LOG2_BATCH_SIZE>,
+        ));
+        let mul_by_chunk_size = library.import(Box::new(
+            shift_left_static_u128::ShiftLeftStaticU128::<LOG2_CHUNK_SIZE>,
+        ));
 
         format!(
             "
@@ -167,11 +242,20 @@ impl Snippet for GetSwbfIndices {
 
             absorb
             pop pop pop pop pop
-            pop pop pop pop pop
+            // _ 0 0 1 li_hi li_lo
 
-            push {num_trials} // _ number
-            push {window_size} // _ number upper_bound
-            call {sample_indices} // _ list_of_indices_as_u32s
+            swap 2 // _ 0 0 li_lo li_hi 1
+            pop    // _ 0 0 li_lo li_hi
+            swap 1
+            call {divide_by_batch_size}
+            call {mul_by_chunk_size}
+            // _ batch_offset_3 batch_offset_2 batch_offset_1 batch_offset_0
+
+            push {num_trials} // _ [batch_offset_u128] number
+            push {window_size} // _ [batch_offset_u128] number upper_bound
+            call {sample_indices} // _ [batch_offset_u128] list_of_indices_as_u32s
+            call {map_add_batch_offset}
+            // _ list_of_absolute_indices_as_u128s
 
             return
             "
@@ -246,32 +330,34 @@ impl Snippet for GetSwbfIndices {
         let mut sponge = Tip5State::new(Domain::VariableLength);
         Tip5::absorb_repeatedly(&mut sponge, vector.iter());
 
-        let mut indices = vec![];
+        let mut u32_indices = vec![];
         let mut squeezed_elements = vec![];
-        while indices.len() != self.num_trials {
+        while u32_indices.len() != self.num_trials {
             if squeezed_elements.is_empty() {
                 squeezed_elements = Tip5::squeeze(&mut sponge).into_iter().rev().collect_vec();
             }
             let element = squeezed_elements.pop().unwrap();
             if element != BFieldElement::new(BFieldElement::MAX) {
-                indices.push(element.value() as u32 % self.window_size);
+                u32_indices.push(element.value() as u32 % self.window_size);
             }
         }
 
-        let size_in_words = self.num_trials + 1;
-        let list_pointer =
-            rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator(size_in_words, memory);
-        rust_shadowing_helper_functions::unsafe_list::unsafe_list_new(list_pointer, memory);
+        let u32_list_size_in_words = self.num_trials + 1;
+        let u32_list_pointer = rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator(
+            u32_list_size_in_words,
+            memory,
+        );
+        rust_shadowing_helper_functions::unsafe_list::unsafe_list_new(u32_list_pointer, memory);
 
         rust_shadowing_helper_functions::unsafe_list::unsafe_list_set_length(
-            list_pointer,
+            u32_list_pointer,
             self.num_trials as u32,
             memory,
         );
 
-        for (i, index) in indices.iter().enumerate() {
+        for (i, index) in u32_indices.iter().enumerate() {
             rust_shadowing_helper_functions::unsafe_list::unsafe_list_set(
-                list_pointer,
+                u32_list_pointer,
                 i,
                 vec![BFieldElement::new(*index as u64)],
                 memory,
@@ -281,46 +367,56 @@ impl Snippet for GetSwbfIndices {
 
         // Compare derived indices to actual implementation (copy-pasted from
         // mutator set implementaion.
-        let indices_from_function = get_swbf_indices::<VmHasher>(
+        let indices_from_mutator_set = get_swbf_indices::<VmHasher>(
             &item,
             &sender_randomness,
             &receiver_preimage,
             aocl_leaf_index_u64,
         );
 
-        println!(
-            "indices_from_function {}",
-            indices_from_function.iter().join(",")
-        );
-        let mut mod_reduced_indices_from_function = indices_from_function
-            .iter()
-            .map(|x| *x % WINDOW_SIZE as u128)
+        // let batch_offset = aocl_leaf_index_u64 as u128 /  (1 << LOG2_BATCH_SIZE)  as u128;
+        let batch_index: u128 = aocl_leaf_index_u64 as u128 / (1 << LOG2_BATCH_SIZE) as u128;
+        let batch_offset: u128 = batch_index * (1 << LOG2_CHUNK_SIZE) as u128;
+        let u128_indices = u32_indices
+            .into_iter()
+            .map(|x| (x as u128) + batch_offset)
             .collect_vec();
-        mod_reduced_indices_from_function.sort();
-        println!(
-            "\n\nindices_from_function mod WINDOW_SIZE\n{}",
-            mod_reduced_indices_from_function.iter().join(",")
-        );
-        indices.sort();
-        println!("\n\nindices_calculated\n{}", indices.iter().join(","));
 
-        stack.push(list_pointer);
+        // Sanity check that this RUST-shadowing agrees with the real deal
+        assert_eq!(
+            indices_from_mutator_set.to_vec(),
+            u128_indices,
+            "VM-calculated indices must match that from mutator set module"
+        );
+
+        let u128_list_size_in_words = self.num_trials * 4 + 1;
+        let u128_list_pointer = rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator(
+            u128_list_size_in_words,
+            memory,
+        );
+        rust_shadowing_helper_functions::unsafe_list::unsafe_list_insert(
+            u128_list_pointer,
+            u128_indices,
+            memory,
+        );
+
+        stack.push(u128_list_pointer);
     }
 }
 
 // Copy-pasted from mutator set implementation
 const NUM_TRIALS: usize = 45;
-const BATCH_SIZE: u32 = 8;
-const CHUNK_SIZE: u32 = 0x1000;
-const WINDOW_SIZE: u32 = 0x100000;
+const LOG2_BATCH_SIZE: u8 = 3;
+const LOG2_CHUNK_SIZE: u8 = 12;
+const LOG2_WINDOW_SIZE: u32 = 20;
 fn get_swbf_indices<H: AlgebraicHasher>(
     item: &Digest,
     sender_randomness: &Digest,
     receiver_preimage: &Digest,
     aocl_leaf_index: u64,
-) -> [u128; 45 as usize] {
-    let batch_index: u128 = aocl_leaf_index as u128 / BATCH_SIZE as u128;
-    let batch_offset: u128 = batch_index * CHUNK_SIZE as u128;
+) -> [u128; 45_usize] {
+    let batch_index: u128 = aocl_leaf_index as u128 / (1 << LOG2_BATCH_SIZE) as u128;
+    let batch_offset: u128 = batch_index * (1 << LOG2_CHUNK_SIZE) as u128;
     let leaf_index_bfes = aocl_leaf_index.encode();
     let input = [
         item.encode(),
@@ -337,9 +433,8 @@ fn get_swbf_indices<H: AlgebraicHasher>(
     .concat();
     assert_eq!(input.len() % DIGEST_LENGTH, 0);
     let mut sponge = <H as SpongeHasher>::init();
-    println!("sponge input: {}", input.iter().join(","));
     H::absorb_repeatedly(&mut sponge, input.iter());
-    H::sample_indices(&mut sponge, WINDOW_SIZE, NUM_TRIALS as usize)
+    H::sample_indices(&mut sponge, 1 << LOG2_WINDOW_SIZE, NUM_TRIALS)
         .into_iter()
         .map(|sample_index| sample_index as u128 + batch_offset)
         .collect_vec()
