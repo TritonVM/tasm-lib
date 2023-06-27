@@ -1,10 +1,23 @@
+use num_traits::One;
+use rand::{thread_rng, Rng};
+use triton_vm::BFieldElement;
+use twenty_first::shared_math::bfield_codec::BFieldCodec;
+
 use crate::{
-    list::{self, contiguous_list, ListType},
+    list::{
+        self,
+        contiguous_list::{
+            self,
+            get_length::{DummyOuterDataStructure, GetLength},
+        },
+        ListType,
+    },
+    rust_shadowing_helper_functions,
     snippet::{DataType, Snippet},
 };
 
 pub struct GetPointerList {
-    output_list_type: ListType,
+    pub output_list_type: ListType,
 }
 
 impl Snippet for GetPointerList {
@@ -149,15 +162,29 @@ impl Snippet for GetPointerList {
     }
 
     fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
-        todo!()
+        let mut rng = thread_rng();
+        vec![
+            GetLength::pseudorandom_input_state(rng.gen(), 0),
+            GetLength::pseudorandom_input_state(rng.gen(), 1),
+            GetLength::pseudorandom_input_state(rng.gen(), 3),
+            GetLength::pseudorandom_input_state(rng.gen(), 4),
+            GetLength::pseudorandom_input_state(rng.gen(), 5),
+            GetLength::pseudorandom_input_state(rng.gen(), 10),
+        ]
     }
 
     fn common_case_input_state(&self) -> crate::ExecutionState {
-        todo!()
+        let mut seed = [0u8; 32];
+        seed[0] = 0x01;
+        seed[1] = 0xdd;
+        GetLength::pseudorandom_input_state(seed, 2)
     }
 
     fn worst_case_input_state(&self) -> crate::ExecutionState {
-        todo!()
+        let mut seed = [0u8; 32];
+        seed[0] = 0xa1;
+        seed[1] = 0xde;
+        GetLength::pseudorandom_input_state(seed, 5)
     }
 
     fn rust_shadowing(
@@ -167,12 +194,69 @@ impl Snippet for GetPointerList {
         secret_in: Vec<triton_vm::BFieldElement>,
         memory: &mut std::collections::HashMap<triton_vm::BFieldElement, triton_vm::BFieldElement>,
     ) {
-        let contiguous_list_pointer = stack.pop().unwrap();
+        // read address
+        let mut address = stack.last().unwrap().to_owned();
+        let size = memory.get(&address).unwrap().value();
 
-        let cl_length =
-            contiguous_list::get_length::GetLength.rust_shadowing(stack, std_in, secret_in, memory);
+        // read length
+        contiguous_list::get_length::GetLength.rust_shadowing(stack, std_in, secret_in, memory);
+        let length = stack.pop().unwrap().value() as usize;
 
-        todo!()
+        // read object
+        let mut encoding = vec![BFieldElement::new(size)];
+        for i in 0..size {
+            encoding.push(
+                memory
+                    .get(&(address + BFieldElement::new(1u64 + i)))
+                    .unwrap()
+                    .to_owned(),
+            );
+        }
+
+        // decode object
+        let dummy_list: Vec<DummyOuterDataStructure> =
+            *Vec::<DummyOuterDataStructure>::decode(&encoding).unwrap();
+        assert_eq!(dummy_list.len(), length);
+
+        // create list
+        let output_list_pointer =
+            rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator(length, memory);
+        match self.output_list_type {
+            ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_new(
+                output_list_pointer,
+                length as u32,
+                memory,
+            ),
+            ListType::Unsafe => rust_shadowing_helper_functions::unsafe_list::unsafe_list_new(
+                output_list_pointer,
+                memory,
+            ),
+        };
+
+        // populate list
+        address.increment();
+        for d in dummy_list.into_iter() {
+            match self.output_list_type {
+                ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_push(
+                    output_list_pointer,
+                    vec![address],
+                    memory,
+                    1,
+                ),
+                ListType::Unsafe => rust_shadowing_helper_functions::unsafe_list::unsafe_list_push(
+                    output_list_pointer,
+                    vec![address],
+                    memory,
+                    1,
+                ),
+            };
+            let size_indicator = *memory.get(&address).unwrap();
+
+            assert_eq!(size_indicator.value() as usize, d.encode().len());
+            address += size_indicator + BFieldElement::one();
+        }
+
+        stack.push(output_list_pointer);
     }
 }
 
@@ -196,5 +280,26 @@ mod tests {
             },
             true,
         );
+    }
+}
+
+#[cfg(test)]
+mod benches {
+    use crate::{list::ListType, snippet_bencher::bench_and_write};
+
+    use super::GetPointerList;
+
+    #[test]
+    fn get_pointer_list_unsafe_benchmark() {
+        bench_and_write(GetPointerList {
+            output_list_type: ListType::Unsafe,
+        });
+    }
+
+    #[test]
+    fn get_pointer_list_safe_benchmark() {
+        bench_and_write(GetPointerList {
+            output_list_type: ListType::Safe,
+        });
     }
 }

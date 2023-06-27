@@ -15,7 +15,7 @@ use crate::{
 pub struct GetLength;
 
 #[derive(Clone, Debug, BFieldCodec)]
-struct DummyOuterDataStructure {
+pub(super) struct DummyOuterDataStructure {
     a: Vec<DummyInnerDataStructure>,
     b: Vec<Digest>,
     c: Vec<BFieldElement>,
@@ -29,7 +29,7 @@ struct DummyInnerDataStructure {
 }
 
 impl GetLength {
-    fn pseudorandom_input_state(seed: [u8; 32], length: usize) -> ExecutionState {
+    pub(super) fn pseudorandom_input_state(seed: [u8; 32], length: usize) -> ExecutionState {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
         let mut data = vec![];
 

@@ -333,6 +333,8 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn Snippet> {
 
         // Contiguous lists
         "tasm_list_contiguous_list_get_length" => Box::new(contiguous_list::get_length::GetLength),
+        "tasm_list_contiguous_list_get_pointer_list_unsafe" => Box::new(contiguous_list::get_pointer_list::GetPointerList{output_list_type:ListType::Unsafe}),
+        "tasm_list_contiguous_list_get_pointer_list_safe" => Box::new(contiguous_list::get_pointer_list::GetPointerList{output_list_type:ListType::Safe}),
 
         // MMR
         "tasm_mmr_calculate_new_peaks_from_append_unsafe" => Box::new(CalculateNewPeaksFromAppend { list_type: ListType::Unsafe }),
