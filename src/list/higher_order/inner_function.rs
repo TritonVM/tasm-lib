@@ -5,7 +5,8 @@ use triton_vm::BFieldElement;
 
 use crate::snippet::{DataType, Snippet};
 
-/// A data structure for describing an inner function predicate to filter with
+/// A data structure for describing an inner function predicate to filter with,
+/// or to map with.
 pub struct RawCode {
     pub function: Vec<LabelledInstruction>,
     pub input_types: Vec<DataType>,
@@ -91,6 +92,7 @@ impl RawCode {
 }
 
 impl RawCode {
+    /// Return the entrypoint, label, of the inner function. Used to make a call to this function.
     pub fn entrypoint(&self) -> String {
         match &self.function[0] {
             LabelledInstruction::Instruction(inst) => {
@@ -107,6 +109,7 @@ pub enum InnerFunction {
 }
 
 impl InnerFunction {
+    /// Return the input types this inner function accepts
     pub fn get_input_types(&self) -> Vec<DataType> {
         match self {
             InnerFunction::RawCode(raw) => raw.input_types.clone(),
@@ -114,6 +117,27 @@ impl InnerFunction {
         }
     }
 
+    /// Return the expected type of list element this function accepts
+    pub fn input_list_element_type(&self) -> DataType {
+        self.get_input_types().last().unwrap().to_owned()
+    }
+
+    /// Return all input types apart from the element type of the input list.
+    /// May be the empty list.
+    pub fn additional_inputs(&self) -> Vec<DataType> {
+        let mut input_types = self.get_input_types();
+        input_types.pop().unwrap();
+
+        input_types
+    }
+
+    /// Return the size in words for the additional elements, all elements
+    /// apart from the element from the input list.
+    pub fn size_of_additional_inputs(&self) -> usize {
+        self.additional_inputs().iter().map(|x| x.get_size()).sum()
+    }
+
+    /// Return types this function outputs.
     pub fn get_output_types(&self) -> Vec<DataType> {
         match self {
             InnerFunction::RawCode(rc) => rc.output_types.clone(),
@@ -121,6 +145,7 @@ impl InnerFunction {
         }
     }
 
+    /// Return the entrypoint, label, of the inner function. Used to make a call to this function.
     pub fn entrypoint(&self) -> String {
         match self {
             InnerFunction::RawCode(rc) => rc.entrypoint(),
@@ -128,6 +153,7 @@ impl InnerFunction {
         }
     }
 
+    /// For testing purposes, this function can mirror what the TASM code does.
     pub fn rust_shadowing(
         &self,
         std_in: &[BFieldElement],

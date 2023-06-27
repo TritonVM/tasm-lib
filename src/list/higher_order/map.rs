@@ -41,31 +41,36 @@ impl Map {
         &self,
         list_pointer: BFieldElement,
         list_length: usize,
+        additional_function_args: Vec<BFieldElement>,
     ) -> ExecutionState {
         let capacity = list_length;
         let mut stack = get_init_tvm_stack();
+
+        // Add additional input args to stack, if they exist
+        for additional_function_arg in additional_function_args.into_iter().rev() {
+            stack.push(additional_function_arg);
+        }
+
         stack.push(list_pointer);
 
         let mut memory = HashMap::default();
-        let input_type = match self.f.get_input_types().len() {
-            1 => self.f.get_input_types()[0].clone(),
-            _ => panic!("Can only be used with functions taking one argument"),
+        let input_element_type = self.f.input_list_element_type();
+        let input_list_size = match self.list_type {
+            ListType::Safe => {
+                BFieldElement::new((2 + list_length * input_element_type.get_size()) as u64)
+            }
+            ListType::Unsafe => {
+                BFieldElement::new((1 + list_length * input_element_type.get_size()) as u64)
+            }
         };
-        memory.insert(
-            BFieldElement::zero(),
-            match self.list_type {
-                ListType::Safe => {
-                    BFieldElement::new((1 + 2 + list_length * input_type.get_size()) as u64)
-                }
-                ListType::Unsafe => {
-                    BFieldElement::new((1 + 1 + list_length * input_type.get_size()) as u64)
-                }
-            },
+        rust_shadowing_helper_functions::dyn_malloc::rust_dyn_malloc_initialize(
+            &mut memory,
+            input_list_size.value() as usize + 1,
         );
 
         match self.list_type {
             ListType::Safe => safe_insert_random_list(
-                &input_type,
+                &input_element_type,
                 list_pointer,
                 capacity as u32,
                 list_length,
@@ -75,7 +80,7 @@ impl Map {
                 list_pointer,
                 list_length,
                 &mut memory,
-                input_type.get_size(),
+                input_element_type.get_size(),
             ),
         };
 
@@ -99,13 +104,21 @@ impl Snippet for Map {
     }
 
     fn inputs(&self) -> Vec<String> {
-        vec!["input_list".to_string()]
+        let mut ret = vec![];
+        let additional_input_size = self.f.size_of_additional_inputs();
+        for i in 0..additional_input_size {
+            ret.push(format!("additional_input_{i}"));
+        }
+
+        ret.push("*input_list".to_owned());
+
+        ret
     }
 
     fn input_types(&self) -> Vec<crate::snippet::DataType> {
-        vec![DataType::List(Box::new(
-            self.f.get_input_types()[0].clone(),
-        ))]
+        let input_list_type = DataType::List(Box::new(self.f.input_list_element_type()));
+        let additional_inputs = self.f.additional_inputs();
+        vec![additional_inputs, vec![input_list_type]].concat()
     }
 
     fn output_types(&self) -> Vec<crate::snippet::DataType> {
@@ -119,40 +132,44 @@ impl Snippet for Map {
     }
 
     fn stack_diff(&self) -> isize {
-        0
+        -(self.f.size_of_additional_inputs() as isize)
     }
 
     fn function_code(&self, library: &mut SnippetState) -> String {
-        let input_type = match self.f.get_input_types().len() {
-            1 => self.f.get_input_types()[0].clone(),
-            _ => panic!("Can only map over functions with one input"),
-        };
+        let input_list_element_type = self.f.input_list_element_type();
         let output_type = match self.f.get_output_types().len() {
             1 => self.f.get_output_types()[0].clone(),
             _ => panic!("Can only map over functions with one output"),
         };
         let output_size_plus_one = 1 + output_type.get_size();
         let get_length = match self.list_type {
-            ListType::Safe => library.import(Box::new(SafeLength(input_type.clone()))),
-            ListType::Unsafe => library.import(Box::new(UnsafeLength(input_type.clone()))),
+            ListType::Safe => library.import(Box::new(SafeLength(input_list_element_type.clone()))),
+            ListType::Unsafe => {
+                library.import(Box::new(UnsafeLength(input_list_element_type.clone())))
+            }
         };
         let set_length = match self.list_type {
-            ListType::Safe => library.import(Box::new(SafeSetLength(input_type.clone()))),
-            ListType::Unsafe => library.import(Box::new(UnsafeSetLength(input_type.clone()))),
+            ListType::Safe => {
+                library.import(Box::new(SafeSetLength(input_list_element_type.clone())))
+            }
+            ListType::Unsafe => {
+                library.import(Box::new(UnsafeSetLength(input_list_element_type.clone())))
+            }
         };
         let new_list = match self.list_type {
             ListType::Safe => library.import(Box::new(SafeNew(output_type.clone()))),
             ListType::Unsafe => library.import(Box::new(UnsafeNew(output_type.clone()))),
         };
         let list_get = match self.list_type {
-            ListType::Safe => library.import(Box::new(SafeGet(input_type))),
-            ListType::Unsafe => library.import(Box::new(UnsafeGet(input_type))),
+            ListType::Safe => library.import(Box::new(SafeGet(input_list_element_type))),
+            ListType::Unsafe => library.import(Box::new(UnsafeGet(input_list_element_type))),
         };
         let list_set = match self.list_type {
             ListType::Safe => library.import(Box::new(SafeSet(output_type))),
             ListType::Unsafe => library.import(Box::new(UnsafeSet(output_type))),
         };
 
+        // Declare the inner function entrypoint name and import inner function in case it's a snippet
         let inner_function_name = match &self.f {
             InnerFunction::RawCode(rc) => rc.entrypoint(),
             InnerFunction::Snippet(sn) => {
@@ -169,49 +186,62 @@ impl Snippet for Map {
         };
         let entrypoint = self.entrypoint();
 
+        let additional_input_arg_size = self.f.size_of_additional_inputs();
+        let clean_addition_inputs_args_from_stack = match additional_input_arg_size {
+            0 => String::default(),
+            n => {
+                let mut stack_cleanup_code = format!("swap {additional_input_arg_size}\n");
+                stack_cleanup_code.push_str(&"pop\n".repeat(n));
+                stack_cleanup_code
+            }
+        };
+
         format!(
             "
-            // BEFORE: _ input_list
+            // BEFORE: _ <[additional_input_args]> input_list
             // AFTER: _ output_list
             {entrypoint}:
-                dup 0 // _ input_list input_list
-                call {get_length} // _ input_list len
-                dup 0 // _ input_list len len
-                call {new_list} // _ input_list len output_list
-                dup 1 //  _input_list len output_list len
-                call {set_length} // _input_list len output_list
-                swap 1 // _ input_list output_list len
+                dup 0                   // _ <aia> input_list input_list
+                call {get_length}       // _ <aia> input_list len
+                dup 0                   // _ <aia> input_list len len
+                call {new_list}         // _ <aia> input_list len output_list
+                dup 1                   // _ <aia> input_list len output_list len
+                call {set_length}       // _ <aia> input_list len output_list
+                swap 1                  // _ <aia> input_list output_list len
 
-                call {entrypoint}_loop // _ input_list output_list 0
+                call {entrypoint}_loop  // _ <aia> input_list output_list 0
 
-                pop // _ input_list output_list
-                swap 1 // _ output_list input_list
-                pop // _ output_list
+                pop                     // _ <aia> input_list output_list
+                swap 1                  // _ <aia> output_list input_list
+                pop                     // _ <aia> output_list
+                {clean_addition_inputs_args_from_stack}
+                // _ output_list
+
                 return
 
-            // INVARIANT: _ input_list output_list itr
+            // INVARIANT: _ <aia> input_list output_list itr
             {entrypoint}_loop:
                 // test return condition
-                dup 0 // _ input_list output_list itr itr
-                push 0 eq // _ input_list output_list itr itr==0
+                dup 0                   // _ <aia> input_list output_list itr itr
+                push 0 eq               // _ <aia> input_list output_list itr itr==0
 
                 skiz return
                 // _ input_list output_list itr
 
                 // body
-                push -1 add // _input_list output_list index
+                push -1 add             // _ <aia> input_list output_list index
 
                 // read
-                dup 2 dup 1 // _input_list output_list index _input_list index
-                call {list_get} // _ input_list output_list index [input_element]
+                dup 2 dup 1             // _ <aia> input_list output_list index _input_list index
+                call {list_get}         // _ <aia> input_list output_list index [input_element]
 
                 // map
-                call {inner_function_name} // _ input_list output_list index [output_element]
+                call {inner_function_name} // _ <aia> input_list output_list index [output_element]
 
                 // write
-                dup {output_size_plus_one} // _ input_list output_list index [output_element] output_list
-                dup {output_size_plus_one} // _ input_list output_list index [output_element] output_list index
-                call {list_set} // _ input_list output_list index
+                dup {output_size_plus_one} // _ <aia> input_list output_list index [output_element] output_list
+                dup {output_size_plus_one} // _ <aia> input_list output_list index [output_element] output_list index
+                call {list_set}            // _ <aia> input_list output_list index
 
                 recurse
 
@@ -233,22 +263,37 @@ impl Snippet for Map {
         let list_pointer = BFieldElement::new(1u64);
         let mut rng = thread_rng();
         let list_length: usize = rng.gen_range(1..=100);
+        let additional_inputs = self.f.additional_inputs();
+        let additional_inputs = additional_inputs
+            .iter()
+            .flat_map(|x| x.random_elements(1)[0].clone())
+            .collect_vec();
 
-        vec![self.generate_input_state(list_pointer, list_length)]
+        vec![self.generate_input_state(list_pointer, list_length, additional_inputs)]
     }
 
     fn common_case_input_state(&self) -> ExecutionState {
         // Create random list of input data type
         let list_pointer = BFieldElement::new(1u64);
         let list_length: usize = 10;
-        self.generate_input_state(list_pointer, list_length)
+        let additional_inputs = self.f.additional_inputs();
+        let additional_inputs = additional_inputs
+            .iter()
+            .flat_map(|x| x.random_elements(1)[0].clone())
+            .collect_vec();
+        self.generate_input_state(list_pointer, list_length, additional_inputs)
     }
 
     fn worst_case_input_state(&self) -> ExecutionState {
         // Create random list of input data type
         let list_pointer = BFieldElement::new(1u64);
         let list_length: usize = 400;
-        self.generate_input_state(list_pointer, list_length)
+        let additional_inputs = self.f.additional_inputs();
+        let additional_inputs = additional_inputs
+            .iter()
+            .flat_map(|x| x.random_elements(1)[0].clone())
+            .collect_vec();
+        self.generate_input_state(list_pointer, list_length, additional_inputs)
     }
 
     fn rust_shadowing(
@@ -258,14 +303,12 @@ impl Snippet for Map {
         secret_in: Vec<triton_vm::BFieldElement>,
         memory: &mut std::collections::HashMap<triton_vm::BFieldElement, triton_vm::BFieldElement>,
     ) {
-        let input_type = match self.f.get_input_types().len() {
-            1 => self.f.get_input_types()[0].clone(),
-            _ => panic!("Input length must be one when using function in map)"),
-        };
+        let input_list_element_type = self.f.input_list_element_type();
         let output_type = match self.f.get_output_types().len() {
             1 => self.f.get_output_types()[0].clone(),
             _ => panic!("Input length must be one when using function in map)"),
         };
+
         let list_pointer = stack.pop().unwrap();
 
         // get list length
@@ -293,29 +336,26 @@ impl Snippet for Map {
         };
 
         let output_list_capacity = len;
-        let output_list = match self.list_type {
-            ListType::Safe => {
-                // Push capacity to stack
-                stack.push(BFieldElement::new(output_list_capacity as u64));
-                list::safe_u32::new::SafeNew(input_type.clone()).rust_shadowing(
-                    stack,
-                    std_in.clone(),
-                    secret_in.clone(),
-                    memory,
-                );
-                stack.pop().unwrap()
-            }
-            ListType::Unsafe => {
-                stack.push(BFieldElement::new(output_list_capacity as u64));
-                list::unsafe_u32::new::UnsafeNew(input_type.clone()).rust_shadowing(
-                    stack,
-                    std_in.clone(),
-                    secret_in.clone(),
-                    memory,
-                );
-                stack.pop().unwrap()
-            }
-        };
+        let output_list =
+            match self.list_type {
+                ListType::Safe => {
+                    // Push capacity to stack
+                    stack.push(BFieldElement::new(output_list_capacity as u64));
+                    list::safe_u32::new::SafeNew(input_list_element_type.clone()).rust_shadowing(
+                        stack,
+                        std_in.clone(),
+                        secret_in.clone(),
+                        memory,
+                    );
+                    stack.pop().unwrap()
+                }
+                ListType::Unsafe => {
+                    stack.push(BFieldElement::new(output_list_capacity as u64));
+                    list::unsafe_u32::new::UnsafeNew(input_list_element_type.clone())
+                        .rust_shadowing(stack, std_in.clone(), secret_in.clone(), memory);
+                    stack.pop().unwrap()
+                }
+            };
 
         // set length
         stack.push(output_list);
@@ -343,7 +383,8 @@ impl Snippet for Map {
         // forall elements, read + map + write
         for i in 0..len {
             // read
-            let mut input_item = list_element(list_pointer, i, memory, input_type.get_size());
+            let mut input_item =
+                list_element(list_pointer, i, memory, input_list_element_type.get_size());
 
             // put on stack
             while !input_item.is_empty() {
@@ -360,6 +401,11 @@ impl Snippet for Map {
 
             // write
             set_element(output_list, i, output_item, memory, output_type.get_size());
+        }
+
+        // Remove all additional arguments from stack
+        for _ in 0..self.f.size_of_additional_inputs() {
+            stack.pop();
         }
 
         stack.push(output_list);
@@ -588,6 +634,36 @@ mod tests {
     }
 
     #[test]
+    fn test_with_raw_function_square_plus_n_on_bfe() {
+        // Inner function calculates `|(n, x)| -> x*x + n`, where `x` is the list
+        // element, and `n` is the same value for all elements.
+        let rawcode = RawCode::new_with_shadowing(
+            vec![
+                LabelledInstruction::Label("square_plus_n_bfe".to_string()),
+                dup(0),
+                mul(),
+                dup(4),
+                add(),
+                return_(),
+            ],
+            vec![DataType::BFE, DataType::BFE],
+            vec![DataType::BFE],
+            Box::new(RefCell::new(|vec: &mut Vec<BFieldElement>| {
+                let mut new_value = vec.pop().unwrap().square();
+                new_value += vec[vec.len() - 1];
+                vec.push(new_value);
+            })),
+        );
+        test_rust_equivalence_multiple(
+            &Map {
+                list_type: ListType::Unsafe,
+                f: InnerFunction::RawCode(rawcode),
+            },
+            false,
+        );
+    }
+
+    #[test]
     fn test_with_raw_function_square_on_xfe() {
         let rawcode = RawCode::new_with_shadowing(
             vec![
@@ -612,6 +688,62 @@ mod tests {
                 let x2 = vec.pop().unwrap();
                 let xfe = XFieldElement::new([x0, x1, x2]);
                 let new_value = xfe.square();
+                vec.push(new_value.coefficients[2]);
+                vec.push(new_value.coefficients[1]);
+                vec.push(new_value.coefficients[0]);
+            })),
+        );
+        test_rust_equivalence_multiple(
+            &Map {
+                list_type: ListType::Unsafe,
+                f: InnerFunction::RawCode(rawcode),
+            },
+            false,
+        );
+    }
+
+    #[test]
+    fn test_with_raw_function_square_on_xfe_plus_another_xfe() {
+        let rawcode = RawCode::new_with_shadowing(
+            vec![
+                LabelledInstruction::Label("square_xfe_plus_another_xfe".to_string()),
+                dup(2),
+                dup(2),
+                dup(2),
+                xxmul(),
+                swap(3),
+                pop(),
+                swap(3),
+                pop(),
+                swap(3),
+                pop(),
+                dup(8),
+                dup(8),
+                dup(8),
+                xxadd(),
+                swap(3),
+                pop(),
+                swap(3),
+                pop(),
+                swap(3),
+                pop(),
+                return_(),
+            ],
+            vec![DataType::XFE, DataType::XFE],
+            vec![DataType::XFE],
+            Box::new(RefCell::new(|vec: &mut Vec<BFieldElement>| {
+                let x0 = vec.pop().unwrap();
+                let x1 = vec.pop().unwrap();
+                let x2 = vec.pop().unwrap();
+                let xfe = XFieldElement::new([x0, x1, x2]);
+                let mut new_value = xfe.square();
+
+                let y0 = vec[vec.len() - 1];
+                let y1 = vec[vec.len() - 2];
+                let y2 = vec[vec.len() - 3];
+                let another_xfe = XFieldElement::new([y0, y1, y2]);
+                new_value += another_xfe;
+
                 vec.push(new_value.coefficients[2]);
                 vec.push(new_value.coefficients[1]);
                 vec.push(new_value.coefficients[0]);
