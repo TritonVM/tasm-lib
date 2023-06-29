@@ -16,6 +16,7 @@ use crate::{
     snippet::{DataType, Snippet},
 };
 
+// All of `contiguous_list` assumes that each element has its length prepended
 pub struct GetPointerList {
     pub output_list_type: ListType,
 }
@@ -105,10 +106,10 @@ impl Snippet for GetPointerList {
                 // _ (*cl + 1) list_length *list_of_pointers
 
                 push 0
-                // _ *first_element list_length *list_of_pointers index
+                // _ *element_size list_length *list_of_pointers index
 
                 call {entrypoint}_loop
-                // _ *element list_length *list_of_pointers index
+                // _ *element_size list_length *list_of_pointers index
 
                 pop
                 swap 2
@@ -118,7 +119,7 @@ impl Snippet for GetPointerList {
 
                 return
 
-            // Invariant: _ *element list_length *list_of_pointers index
+            // Invariant: _ *element_size list_length *list_of_pointers index
             {entrypoint}_loop:
 
                 // check terminal condition
@@ -127,30 +128,30 @@ impl Snippet for GetPointerList {
                 eq
                 skiz return
 
-                // _ *element list_length *list_of_pointers index
+                // _ *element_size list_length *list_of_pointers index
 
                 swap 3
-                // _ index list_length *list_of_pointers *element
+                // _ index list_length *list_of_pointers *element_size
 
-                dup 0 dup 2 dup 5
-                // _ index list_length *list_of_pointers *element *element *list_of_pointers index
+                dup 0 push 1 add dup 2 dup 5
+                // _ index list_length *list_of_pointers *element_size *element *list_of_pointers index
 
                 call {set_element}
-                // _ index list_length *list_of_pointers *element
+                // _ index list_length *list_of_pointers *element_size
 
                 read_mem
-                // _ index list_length *list_of_pointers *element element_size
+                // _ index list_length *list_of_pointers *element_size element_size
 
                 push 1 add
 
                 add
-                // _ index list_length *list_of_pointers *next_element
+                // _ index list_length *list_of_pointers *next_element_size
 
                 swap 3
-                // _ *next_element list_length *list_of_pointers index
+                // _ *next_element_size list_length *list_of_pointers index
 
                 push 1 add
-                // _ *next_element list_length *list_of_pointers (index + 1)
+                // _ *next_element_size list_length *list_of_pointers (index + 1)
 
                 recurse
         "
@@ -234,22 +235,18 @@ impl Snippet for GetPointerList {
         };
 
         // populate list
+        let list_push = match self.output_list_type {
+            ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_push,
+            ListType::Unsafe => rust_shadowing_helper_functions::unsafe_list::unsafe_list_push,
+        };
         address.increment();
         for d in dummy_list.into_iter() {
-            match self.output_list_type {
-                ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_push(
-                    output_list_pointer,
-                    vec![address],
-                    memory,
-                    1,
-                ),
-                ListType::Unsafe => rust_shadowing_helper_functions::unsafe_list::unsafe_list_push(
-                    output_list_pointer,
-                    vec![address],
-                    memory,
-                    1,
-                ),
-            };
+            list_push(
+                output_list_pointer,
+                vec![address + BFieldElement::one()],
+                memory,
+                1,
+            );
             let size_indicator = *memory.get(&address).unwrap();
 
             assert_eq!(size_indicator.value() as usize, d.encode().len());
@@ -262,24 +259,67 @@ impl Snippet for GetPointerList {
 
 #[cfg(test)]
 mod tests {
+
     use crate::test_helpers::test_rust_equivalence_multiple;
 
     use super::*;
 
     #[test]
-    fn get_pointer_list_test() {
+    fn get_pointer_list_safe_test() {
         test_rust_equivalence_multiple(
             &GetPointerList {
                 output_list_type: ListType::Safe,
             },
             true,
         );
-        test_rust_equivalence_multiple(
+    }
+
+    #[test]
+    fn get_pointer_list_unsafe_test() {
+        let output_states = test_rust_equivalence_multiple(
             &GetPointerList {
                 output_list_type: ListType::Unsafe,
             },
             true,
         );
+
+        // Verify that the pointers in the list actually point to correctly encoded objects.
+        for output_state in output_states {
+            let mut stack = output_state.final_stack;
+            let memory = output_state.final_ram;
+            let output_list_pointer = stack.pop().unwrap();
+            let num_elements = rust_shadowing_helper_functions::unsafe_list::unsafe_list_get_length(
+                output_list_pointer,
+                &memory,
+            );
+            if num_elements < 2 {
+                continue;
+            }
+
+            let start = rust_shadowing_helper_functions::unsafe_list::unsafe_list_get(
+                output_list_pointer,
+                0,
+                &memory,
+                1,
+            )[0];
+            let stop = rust_shadowing_helper_functions::unsafe_list::unsafe_list_get(
+                output_list_pointer,
+                1,
+                &memory,
+                1,
+            )[0] - BFieldElement::one();
+
+            let mut addr = start;
+            let mut encoding = vec![];
+            while addr != stop {
+                encoding.push(*memory.get(&addr).unwrap());
+                addr.increment();
+            }
+
+            let decoded_object = *DummyOuterDataStructure::decode(&encoding).unwrap();
+            let reencoded_object = decoded_object.encode();
+            assert_eq!(reencoded_object, encoding);
+        }
     }
 }
 
