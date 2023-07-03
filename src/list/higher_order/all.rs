@@ -173,6 +173,7 @@ impl Snippet for All {
                 let fn_body = sn.function_code(library);
                 library.explicit_import(&sn.entrypoint(), fn_body)
             }
+            InnerFunction::NoFunctionBody(_) => todo!(),
         };
 
         // If function was supplied as raw instructions, we need to append the inner function to the function
@@ -180,6 +181,7 @@ impl Snippet for All {
         let maybe_inner_function_body_raw = match &self.f {
             InnerFunction::RawCode(rc) => rc.function.iter().map(|x| x.to_string()).join("\n"),
             InnerFunction::Snippet(_) => String::default(),
+            InnerFunction::NoFunctionBody(_) => todo!(),
         };
         let entrypoint = self.entrypoint();
 

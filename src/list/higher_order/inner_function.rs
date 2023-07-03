@@ -106,6 +106,16 @@ impl RawCode {
 pub enum InnerFunction {
     RawCode(RawCode),
     Snippet(Box<dyn Snippet>),
+
+    // Used when a snippet is declared somewhere else, and it's not the responsibility of
+    // the higher order function to import it.
+    NoFunctionBody(NoFunctionBody),
+}
+
+pub struct NoFunctionBody {
+    pub label_name: String,
+    pub input_types: Vec<DataType>,
+    pub output_types: Vec<DataType>,
 }
 
 impl InnerFunction {
@@ -114,6 +124,7 @@ impl InnerFunction {
         match self {
             InnerFunction::RawCode(raw) => raw.input_types.clone(),
             InnerFunction::Snippet(f) => f.input_types(),
+            InnerFunction::NoFunctionBody(f) => f.input_types.clone(),
         }
     }
 
@@ -142,6 +153,7 @@ impl InnerFunction {
         match self {
             InnerFunction::RawCode(rc) => rc.output_types.clone(),
             InnerFunction::Snippet(sn) => sn.output_types(),
+            InnerFunction::NoFunctionBody(lnat) => lnat.output_types.clone(),
         }
     }
 
@@ -150,6 +162,7 @@ impl InnerFunction {
         match self {
             InnerFunction::RawCode(rc) => rc.entrypoint(),
             InnerFunction::Snippet(sn) => sn.entrypoint(),
+            InnerFunction::NoFunctionBody(sn) => sn.label_name.to_owned(),
         }
     }
 
@@ -172,6 +185,9 @@ impl InnerFunction {
             }
             InnerFunction::Snippet(sn) => {
                 sn.rust_shadowing(stack, std_in.to_vec(), secret_in.to_vec(), memory)
+            }
+            InnerFunction::NoFunctionBody(_lnat) => {
+                panic!("Cannot rust shadow inner function without function body")
             }
         };
     }

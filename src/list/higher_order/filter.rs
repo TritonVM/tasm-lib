@@ -194,6 +194,7 @@ impl Snippet for Filter {
                 let fn_body = sn.function_code(library);
                 library.explicit_import(&sn.entrypoint(), fn_body)
             }
+            InnerFunction::NoFunctionBody(_) => todo!(),
         };
 
         let memcpy = library.import(Box::new(MemCpy));
@@ -203,6 +204,7 @@ impl Snippet for Filter {
         let maybe_inner_function_body_raw = match &self.f {
             InnerFunction::RawCode(rc) => rc.function.iter().map(|x| x.to_string()).join("\n"),
             InnerFunction::Snippet(_) => String::default(),
+            InnerFunction::NoFunctionBody(_) => todo!(),
         };
         let entrypoint = self.entrypoint();
 
@@ -218,7 +220,7 @@ impl Snippet for Filter {
                 dup 1 //  _input_list len output_list len
                 call {set_length} // _input_list len output_list
                 swap 1 // _ input_list output_list input_len
-        
+
                 push 0 push 0 // _ input_list output_list input_len 0 0
                 call {entrypoint}_loop // _ input_list output_list input_len input_len output_len
 

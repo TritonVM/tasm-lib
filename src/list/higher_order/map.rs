@@ -176,6 +176,7 @@ impl Snippet for Map {
                 let fn_body = sn.function_code(library);
                 library.explicit_import(&sn.entrypoint(), fn_body)
             }
+            InnerFunction::NoFunctionBody(lnat) => lnat.label_name.to_owned(),
         };
 
         // If function was supplied as raw instructions, we need to append the inner function to the function
@@ -183,6 +184,7 @@ impl Snippet for Map {
         let maybe_inner_function_body_raw = match &self.f {
             InnerFunction::RawCode(rc) => rc.function.iter().map(|x| x.to_string()).join("\n"),
             InnerFunction::Snippet(_) => String::default(),
+            InnerFunction::NoFunctionBody(_) => String::default(),
         };
         let entrypoint = self.entrypoint();
 
