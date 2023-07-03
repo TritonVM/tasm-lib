@@ -265,12 +265,13 @@ pub fn execute_test(
 
     // Run the program, including the stack preparation and memory preparation logic
     let program = Program::from_code(&executed_code).expect("Could not load source code: {}");
-    let final_state = match vm::debug_terminal_state(&program, std_in.clone(), secret_in.clone()) {
-        Ok(fs) => fs,
-        Err((err, fs)) => {
-            bail!("VM execution failed with error: {err}.\nLast state before crash:\n{fs}")
-        }
-    };
+    let final_state =
+        match vm::debug_terminal_state(&program, std_in.clone(), secret_in.clone(), None, None) {
+            Ok(fs) => fs,
+            Err((err, fs)) => {
+                bail!("VM execution failed with error: {err}.\nLast state before crash:\n{fs}")
+            }
+        };
 
     if final_state.op_stack.is_too_shallow() {
         bail!("Stack underflow")
