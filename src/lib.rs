@@ -380,7 +380,7 @@ fn prove_and_verify(
     );
 
     assert!(
-        triton_vm::verify(&StarkParameters::default(), &proof),
+        triton_vm::verify(&StarkParameters::default(), &claim, &proof),
         "Generated proof must verify for program:\n {}\n\n Whole program was:\n\n{}",
         code_header,
         executed_code
