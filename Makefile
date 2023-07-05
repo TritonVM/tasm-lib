@@ -6,6 +6,7 @@ $(info debug is $(debug))
 
 # Treat all warnings as errors
 export RUSTFLAGS = -Dwarnings
+export CARGO_TARGET_DIR=./makefile-target
 
 ifdef debug
   release :=
