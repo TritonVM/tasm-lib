@@ -46,7 +46,7 @@ run:
 # Get a stack trace upon kernel panic (may slow down implementation)
 test:
 	$(info RUSTFLAGS is $(RUSTFLAGS))
-	cargo test -- --test-threads=10
+	cargo test -- --test-threads=5
 
 bench:
 	$(info RUSTFLAGS is $(RUSTFLAGS))
