@@ -146,7 +146,7 @@ impl Snippet for PushRamToStack {
 
 #[cfg(test)]
 mod tests {
-    use triton_vm::op_stack::OP_STACK_REG_COUNT;
+    use triton_vm::op_stack::NUM_OP_STACK_REGISTERS;
 
     use crate::{test_helpers::test_rust_equivalence_multiple, DIGEST_LENGTH};
 
@@ -168,7 +168,7 @@ mod tests {
         }
 
         // Below the digest values it must be all zeros
-        for _ in 0..(OP_STACK_REG_COUNT - DIGEST_LENGTH) {
+        for _ in 0..(NUM_OP_STACK_REGISTERS - DIGEST_LENGTH) {
             assert!(stack.pop().unwrap().is_zero());
         }
 

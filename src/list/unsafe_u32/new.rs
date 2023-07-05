@@ -141,8 +141,8 @@ mod tests {
         // let _execution_states = rust_tasm_equivalence_prop_new(&UnsafeNew(DataType::U64), true);
         // let dyn_malloc_address = BFieldElement::new(DYN_MALLOC_ADDRESS as u64);
         // for execution_state in execution_states {
-        //     assert_eq!(execution_state.final_stack.len(), OP_STACK_REG_COUNT + 1);
-        //     assert!(execution_state.final_stack[0..OP_STACK_REG_COUNT]
+        //     assert_eq!(execution_state.final_stack.len(), NUM_OP_STACK_REGISTERS + 1);
+        //     assert!(execution_state.final_stack[0..NUM_OP_STACK_REGISTERS]
         //         .iter()
         //         .all(|x| x.value() == 0));
         //     assert!(!execution_state.final_ram.is_empty());

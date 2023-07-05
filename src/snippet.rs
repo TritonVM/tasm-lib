@@ -289,9 +289,11 @@ pub trait Snippet {
         );
         let stack_after = execution_state.stack.clone();
 
+        // Assert equality of stack elements under input arguments, but don't check program
+        // hash that's located at the bottom of the stack.
         assert_eq!(
-            stack_prior[0..(stack_prior.len() - Self::inputs(self).len())],
-            stack_after[0..(stack_after.len() - Self::outputs(self).len())]
+            stack_prior[DIGEST_LENGTH..(stack_prior.len() - Self::inputs(self).len())],
+            stack_after[DIGEST_LENGTH..(stack_after.len() - Self::outputs(self).len())]
         );
 
         ret
@@ -311,9 +313,11 @@ pub trait Snippet {
         );
         let stack_after = execution_state.stack.clone();
 
+        // Assert equality of stack elements under input arguments, but don't check program
+        // hash that's located at the bottom of the stack.
         assert_eq!(
-            stack_prior[0..(stack_prior.len() - Self::inputs(self).len())],
-            stack_after[0..(stack_after.len() - Self::outputs(self).len())]
+            stack_prior[DIGEST_LENGTH..(stack_prior.len() - Self::inputs(self).len())],
+            stack_after[DIGEST_LENGTH..(stack_after.len() - Self::outputs(self).len())]
         );
 
         ret

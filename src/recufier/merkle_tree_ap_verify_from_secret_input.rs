@@ -223,18 +223,13 @@ fn generate_siblings_as_vector<H: AlgebraicHasher>(
     tree_height: usize,
 ) -> Vec<BFieldElement> {
     let number_of_aps = indices.len();
-    let number_of_leaves = mt.get_leaf_count();
     let mut bfield_vector: Vec<BFieldElement> = Vec::with_capacity(number_of_aps * tree_height * 5);
     for leaf_index in indices {
-        let mut node_index = leaf_index + number_of_leaves;
-        for _j in 0..tree_height {
-            let node_parity = node_index & 1;
-            let sibling_index = node_index + 1 - 2 * node_parity;
-            let sibling = mt.nodes[sibling_index];
-            let mut vector = sibling.values().to_vec();
+        let auth_path = mt.get_authentication_structure(&[leaf_index]);
+        for sibling_digest in auth_path {
+            let mut vector = sibling_digest.values().to_vec();
             vector.reverse();
             bfield_vector.append(&mut vector);
-            node_index /= 2;
         }
     }
     bfield_vector
@@ -249,7 +244,7 @@ fn generate_input<H: AlgebraicHasher>(
     let number_of_leaves = leafs.len();
     let number_of_aps: u32 = number_of_authentication_paths.try_into().unwrap();
     let mt: &MerkleTree<H> = &CpuParallel::from_digests(leafs);
-    let merkle_root = mt.nodes[1];
+    let merkle_root = mt.get_root();
     let mut reverse_merkle_root = merkle_root.values().to_vec();
     reverse_merkle_root.reverse();
     let mut input: Vec<BFieldElement> = Vec::with_capacity(number_of_leaves + 5);
@@ -289,7 +284,6 @@ mod tests {
     use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
     use twenty_first::util_types::merkle_tree::CpuParallel;
     use twenty_first::util_types::merkle_tree::MerkleTree;
-    use twenty_first::util_types::merkle_tree::PartialAuthenticationPath;
     use twenty_first::util_types::merkle_tree_maker::MerkleTreeMaker;
 
     use crate::get_init_tvm_stack;
@@ -298,13 +292,6 @@ mod tests {
     use crate::VmHasher;
 
     use super::MtApVerifyFromSecretInput;
-
-    fn unwrap_partial_authentication_path(
-        partial_auth_path: &PartialAuthenticationPath<Digest>,
-    ) -> Vec<Option<Digest>> {
-        let path = partial_auth_path.clone();
-        path.0
-    }
 
     #[test]
     fn merkle_tree_ap_verify_from_secret_input_test() {
@@ -317,20 +304,19 @@ mod tests {
         let leafs = generate_leafs::<VmHasher>(mt_height);
         let mt: &MerkleTree<VmHasher> = &CpuParallel::from_digests(&leafs);
         let indices = choose_indices(mt_height);
-        let merkle_root = mt.nodes[1];
+        let merkle_root = mt.get_root();
         for index in indices {
             let leaf: Digest = leafs[index];
             let mut node_index = index;
             let mut node_digest = leaf;
-            let authentication_path = mt.get_authentication_structure(&[index])[0].clone();
-            for i in 0..mt_height {
-                let sibling: Digest =
-                    unwrap_partial_authentication_path(&authentication_path)[i].unwrap();
+            let authentication_path = mt.get_authentication_structure(&[index]);
+            for sibling in authentication_path {
                 if node_index & 1 == 0 {
-                    node_digest = VmHasher::hash_pair(&node_digest, &sibling);
+                    node_digest = VmHasher::hash_pair(&node_digest, &sibling)
                 } else {
                     node_digest = VmHasher::hash_pair(&sibling, &node_digest);
                 }
+
                 node_index /= 2;
             }
             assert_eq!(node_digest, merkle_root);

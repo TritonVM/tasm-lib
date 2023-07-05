@@ -386,7 +386,7 @@ impl Snippet for TransactionKernelMastHash {
             zero,
         ];
         let tree = <CpuParallel as MerkleTreeMaker<VmHasher>>::from_digests(&leafs);
-        let root = tree.get_root();
+        let mt_root = tree.get_root();
 
         // populate memory with merkle tree
         let list_address = rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator(
@@ -399,7 +399,24 @@ impl Snippet for TransactionKernelMastHash {
             16,
             memory,
         );
-        for (i, node) in tree.nodes.into_iter().enumerate().skip(1) {
+
+        // Build the Merkle tree locally here, since the nodes of the Merkle tree are not publicly accessible
+        let leaf_count = leafs.len();
+        let node_count = leaf_count * 2;
+        let mut nodes: Vec<Digest> = vec![Digest::default(); node_count];
+        nodes[leaf_count..].clone_from_slice(&leafs);
+        for i in (1..leaf_count).rev() {
+            nodes[i] = VmHasher::hash_pair(&nodes[i * 2], &nodes[i * 2 + 1]);
+        }
+
+        // sanity check before we use `nodes` as MT representation
+        assert_eq!(
+            mt_root, nodes[1],
+            "Calculated MT root must match expected MT root"
+        );
+
+        // Populate memory with `nodes`
+        for (i, node) in nodes.into_iter().enumerate().skip(1) {
             for j in 0..DIGEST_LENGTH {
                 memory.insert(
                     list_address
@@ -411,11 +428,11 @@ impl Snippet for TransactionKernelMastHash {
         }
 
         // write digest to stack
-        stack.push(root.values()[4]);
-        stack.push(root.values()[3]);
-        stack.push(root.values()[2]);
-        stack.push(root.values()[1]);
-        stack.push(root.values()[0]);
+        stack.push(mt_root.values()[4]);
+        stack.push(mt_root.values()[3]);
+        stack.push(mt_root.values()[2]);
+        stack.push(mt_root.values()[1]);
+        stack.push(mt_root.values()[0]);
     }
 }
 

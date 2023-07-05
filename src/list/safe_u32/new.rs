@@ -151,7 +151,7 @@ mod tests {
 
     use crate::{
         list::safe_u32::push::SafePush, rust_shadowing_helper_functions,
-        test_helpers::test_rust_equivalence_multiple, Digest,
+        test_helpers::test_rust_equivalence_multiple, Digest, DIGEST_LENGTH,
     };
 
     use super::*;
@@ -198,9 +198,9 @@ mod tests {
             0,
         );
         assert_eq!(
-            get_init_tvm_stack(),
-            stack,
-            "Stack must be empty after call to push"
+            get_init_tvm_stack()[DIGEST_LENGTH..],
+            stack[DIGEST_LENGTH..],
+            "Stack must be empty after call to push, except for program hash"
         );
 
         // Get another list in memory
@@ -230,9 +230,9 @@ mod tests {
         }
         SafePush(data_type).link_and_run_tasm_for_test(&mut stack, vec![], vec![], &mut memory, 0);
         assert_eq!(
-            get_init_tvm_stack(),
-            stack,
-            "Stack must be empty after call to push"
+            get_init_tvm_stack()[DIGEST_LENGTH..],
+            stack[DIGEST_LENGTH..],
+            "Stack must be empty after call to push, except for program hash"
         );
 
         // Verify that digest1 was not overwritten by digest2 in memory

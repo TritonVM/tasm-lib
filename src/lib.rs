@@ -7,13 +7,12 @@ use snippet_state::SnippetState;
 use std::collections::HashMap;
 use std::time::SystemTime;
 use triton_opcodes::program::Program;
-use triton_vm::table::master_table::MasterBaseTable;
 use triton_vm::{vm, Claim, StarkParameters};
 use twenty_first::shared_math::bfield_codec::BFieldCodec;
 use twenty_first::shared_math::tip5::{self, Tip5};
 use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
-use triton_vm::op_stack::OP_STACK_REG_COUNT;
+use triton_vm::op_stack::NUM_OP_STACK_REGISTERS;
 use triton_vm::vm::VMState;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
@@ -99,7 +98,7 @@ pub struct VmOutputState {
 }
 
 pub fn get_init_tvm_stack() -> Vec<BFieldElement> {
-    vec![BFieldElement::zero(); OP_STACK_REG_COUNT]
+    vec![BFieldElement::zero(); NUM_OP_STACK_REGISTERS]
 }
 
 pub fn push_encodable<T: BFieldCodec>(stack: &mut Vec<BFieldElement>, value: &T) {
@@ -188,9 +187,6 @@ pub fn execute_bench(
         .last()
         .expect("VM state list cannot be empty")
         .to_owned();
-    if end_state.op_stack.is_too_shallow() {
-        bail!("Stack underflow")
-    }
 
     *memory = end_state.ram.clone();
 
@@ -239,7 +235,7 @@ pub fn execute_bench(
         hash_table_height: simulation_trace.hash_trace.nrows(),
 
         // Number of rows generated in the u32 table after simulating program
-        u32_table_height: MasterBaseTable::u32_table_length(&simulation_trace),
+        u32_table_height: simulation_trace.u32_table_length(),
     })
 }
 
@@ -272,10 +268,6 @@ pub fn execute_test(
                 bail!("VM execution failed with error: {err}.\nLast state before crash:\n{fs}")
             }
         };
-
-    if final_state.op_stack.is_too_shallow() {
-        bail!("Stack underflow")
-    }
 
     *memory = final_state.ram.clone();
 
@@ -326,7 +318,7 @@ fn state_preparation_code(
     initilialize_dynamic_allocator_to: Option<usize>,
 ) -> String {
     let mut state_preparation_code = String::default();
-    for element in stack.iter().skip(OP_STACK_REG_COUNT) {
+    for element in stack.iter().skip(NUM_OP_STACK_REGISTERS) {
         state_preparation_code.push_str(&format!("push {}\n", element.value()));
     }
 
