@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use itertools::Itertools;
 use num::One;
@@ -15,8 +15,7 @@ pub const STATIC_MEMORY_START_ADDRESS: usize = 1;
 
 #[derive(Clone, Debug)]
 pub struct SnippetState {
-    seen_snippets: HashSet<String>,
-    function_bodies: HashSet<String>,
+    seen_snippets: HashMap<String, String>,
     free_pointer: usize,
 }
 
@@ -24,7 +23,6 @@ impl Default for SnippetState {
     fn default() -> Self {
         Self {
             seen_snippets: Default::default(),
-            function_bodies: Default::default(),
             free_pointer: STATIC_MEMORY_START_ADDRESS,
         }
     }
@@ -50,21 +48,26 @@ impl SnippetState {
     ///
     /// Does not import the snippets with the same entrypoint twice.
     ///
-    /// Avoid cyclic dependencies by only calling `T::function_body()` which
+    /// Avoid cyclic dependencies by only calling `T::function_code()` which
     /// may call `.import()` if `.import::<T>()` wasn't already called once.
     pub fn import(&mut self, snippet: Box<dyn Snippet>) -> String {
         let dep_entrypoint = snippet.entrypoint();
-        if self.seen_snippets.insert(dep_entrypoint) {
-            let dep_function_body = snippet.function_code(self);
-            self.function_bodies.insert(dep_function_body);
+
+        // The linter's suggestion doesn't work. This suppression is fine imo.
+        #[allow(clippy::map_entry)]
+        if !self.seen_snippets.contains_key(&dep_entrypoint) {
+            let dep_body = snippet.function_code(self);
+            self.seen_snippets.insert(dep_entrypoint, dep_body);
         }
 
         snippet.entrypoint()
     }
 
     pub fn explicit_import(&mut self, name: &str, body: String) -> String {
-        if self.seen_snippets.insert(name.to_string()) {
-            self.function_bodies.insert(body);
+        // The linter's suggestion doesn't work. This suppression is fine imo.
+        #[allow(clippy::map_entry)]
+        if !self.seen_snippets.contains_key(name) {
+            self.seen_snippets.insert(name.to_owned(), body);
         }
 
         name.to_string()
@@ -77,14 +80,17 @@ impl SnippetState {
 
     #[allow(dead_code)]
     pub fn all_imports(&self) -> String {
-        self.function_bodies
+        // Collect all imports and return as a string. All snippets are sorted
+        // alphabetically to ensure that generated programs are deterministic.
+        self.seen_snippets
             .iter()
-            .map(|s| format!("{s}\n"))
+            .sorted_unstable_by_key(|(k, _)| *k)
+            .map(|(_, s)| format!("{s}\n"))
             .collect()
     }
 
     pub fn all_imports_as_instruction_lists(&self) -> Vec<LabelledInstruction> {
-        to_labelled(&parse(&self.function_bodies.iter().join("\n")).unwrap())
+        to_labelled(&parse(&self.all_imports()).unwrap())
     }
 
     pub fn kmalloc(&mut self, num_words: usize) -> usize {
@@ -303,10 +309,12 @@ impl Snippet for DummyTestSnippetC {
 
 #[cfg(test)]
 mod tests {
-
     use std::collections::HashMap;
+    use triton_opcodes::program::Program;
 
     use crate::get_init_tvm_stack;
+    use crate::neptune::transaction::transaction_kernel_mast_hash::TransactionKernelMastHash;
+    use crate::structure::get_field::GetField;
     use crate::test_helpers::test_rust_equivalence_given_input_values;
 
     use super::*;
@@ -352,6 +360,39 @@ mod tests {
         lib.import(Box::new(DummyTestSnippetA));
         lib.import(Box::new(DummyTestSnippetC));
         let _ret = lib.all_imports_as_instruction_lists();
+    }
+
+    #[test]
+    fn program_is_deterministic() {
+        // Ensure that a generated program is deterministic, by checking that the imports
+        // are always sorted the same way.
+        fn smaller_program() -> Program {
+            let mut library = SnippetState::default();
+            let get_field = library.import(Box::new(GetField));
+            let transaction_kernel_mast_hash = library.import(Box::new(TransactionKernelMastHash));
+
+            let code = format!(
+                "
+                lala_entrypoint:
+                    push 1 call {get_field}
+                    call {transaction_kernel_mast_hash}
+
+                    return
+                    "
+            );
+
+            let mut src = code;
+            let imports = library.all_imports();
+            src.push_str(&imports);
+
+            Program::from_code(&src).unwrap()
+        }
+
+        for _ in 0..100 {
+            let program = smaller_program();
+            let same_program = smaller_program();
+            assert_eq!(program, same_program);
+        }
     }
 
     #[test]
