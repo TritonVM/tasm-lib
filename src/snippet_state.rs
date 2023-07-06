@@ -313,7 +313,8 @@ mod tests {
     use triton_opcodes::program::Program;
 
     use crate::get_init_tvm_stack;
-    use crate::hashing::hash_varlen::HashVarlen;
+    use crate::list::ListType;
+    use crate::mmr::calculate_new_peaks_from_leaf_mutation::MmrCalculateNewPeaksFromLeafMutationMtIndices;
     use crate::structure::get_field::GetField;
     use crate::test_helpers::test_rust_equivalence_given_input_values;
 
@@ -369,13 +370,16 @@ mod tests {
         fn smaller_program() -> Program {
             let mut library = SnippetState::default();
             let get_field = library.import(Box::new(GetField));
-            let hash_varlen = library.import(Box::new(HashVarlen));
+            let calculate_new_peaks_from_leaf_mutation =
+                library.import(Box::new(MmrCalculateNewPeaksFromLeafMutationMtIndices {
+                    list_type: ListType::Safe,
+                }));
 
             let code = format!(
                 "
                 lala_entrypoint:
                     push 1 call {get_field}
-                    call {hash_varlen}
+                    call {calculate_new_peaks_from_leaf_mutation}
 
                     return
                     "
