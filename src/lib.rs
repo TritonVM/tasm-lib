@@ -10,7 +10,6 @@ use triton_opcodes::program::Program;
 use triton_vm::{vm, Claim, StarkParameters};
 use twenty_first::shared_math::bfield_codec::BFieldCodec;
 use twenty_first::shared_math::tip5::{self, Tip5};
-use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
 use triton_vm::op_stack::NUM_OP_STACK_REGISTERS;
 use triton_vm::vm::VMState;
@@ -356,7 +355,7 @@ fn prove_and_verify(
     output: &[BFieldElement],
 ) {
     let claim = Claim {
-        program_digest: VmHasher::hash_varlen(&program.encode()),
+        program_digest: program.hash::<VmHasher>(),
         input: std_in.to_owned(),
         output: output.to_owned(),
     };
