@@ -313,7 +313,7 @@ mod tests {
     use triton_opcodes::program::Program;
 
     use crate::get_init_tvm_stack;
-    use crate::neptune::transaction::transaction_kernel_mast_hash::TransactionKernelMastHash;
+    use crate::hashing::hash_varlen::HashVarlen;
     use crate::structure::get_field::GetField;
     use crate::test_helpers::test_rust_equivalence_given_input_values;
 
@@ -369,13 +369,13 @@ mod tests {
         fn smaller_program() -> Program {
             let mut library = SnippetState::default();
             let get_field = library.import(Box::new(GetField));
-            let transaction_kernel_mast_hash = library.import(Box::new(TransactionKernelMastHash));
+            let hash_varlen = library.import(Box::new(HashVarlen));
 
             let code = format!(
                 "
                 lala_entrypoint:
                     push 1 call {get_field}
-                    call {transaction_kernel_mast_hash}
+                    call {hash_varlen}
 
                     return
                     "
