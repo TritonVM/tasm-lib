@@ -473,7 +473,7 @@ impl Snippet for TestHashXFieldElementLsb {
 mod tests {
     use num::One;
     use std::cell::RefCell;
-    use triton_opcodes::{instruction::LabelledInstruction, shortcuts::*};
+    use triton_vm::triton_asm;
 
     use crate::{
         list::higher_order::inner_function::RawCode,
@@ -508,13 +508,13 @@ mod tests {
     fn safe_list_all_lt_test() {
         const TWO_POW_31: u64 = 1u64 << 31;
         let rawcode = RawCode::new_with_shadowing(
-            vec![
-                LabelledInstruction::Label("less_than_2_pow_31".to_string()),
-                push(TWO_POW_31),
-                swap(1),
-                lt(),
-                return_(),
-            ],
+            triton_asm!(
+                less_than_2_pow_31:
+                    push 2147483648 // == 2^31
+                    swap 1
+                    lt
+                    return
+            ),
             vec![DataType::BFE],
             vec![DataType::Bool],
             Box::new(RefCell::new(|vec: &mut Vec<BFieldElement>| {
@@ -573,17 +573,17 @@ mod tests {
     #[test]
     fn test_with_raw_function_lsb_on_bfe() {
         let rawcode = RawCode::new_with_shadowing(
-            vec![
-                LabelledInstruction::Label("lsb_bfe".to_string()),
-                split(), // _ hi lo
-                push(2), // _ hi lo 2
-                swap(1), // _ hi 2 lo
-                div(),   // _ hi q r
-                swap(2), // _ r q hi
-                pop(),   // _ r q
-                pop(),   // _ r
-                return_(),
-            ],
+            triton_asm!(
+                lsb_bfe:
+                split    // _ hi lo
+                push 2   // _ hi lo 2
+                swap 1   // _ hi 2 lo
+                div      // _ hi q r
+                swap 2   // _ r q hi
+                pop      // _ r q
+                pop      // _ r
+                return
+            ),
             vec![DataType::BFE],
             vec![DataType::Bool],
             Box::new(RefCell::new(|vec: &mut Vec<BFieldElement>| {
@@ -603,19 +603,19 @@ mod tests {
     #[test]
     fn test_with_raw_function_lsb_on_xfe() {
         let rawcode = RawCode::new_with_shadowing(
-            vec![
-                LabelledInstruction::Label("lsb_xfe".to_string()),
-                split(), // _ x2 x1 hi lo
-                push(2), // _ x2 x1 hi lo 2
-                swap(1), // _ x2 x1 hi 2 lo
-                div(),   // _ x2 x1 hi q r
-                swap(4), // _ r x1 q hi x2
-                pop(),   // _ r x1 q hi
-                pop(),   // _ r x1 q
-                pop(),   // _ r q
-                pop(),   // _ r
-                return_(),
-            ],
+            triton_asm!(
+                lsb_xfe:
+                split    // _ x2 x1 hi lo
+                push 2   // _ x2 x1 hi lo 2
+                swap 1   // _ x2 x1 hi 2 lo
+                div      // _ x2 x1 hi q r
+                swap 4   // _ r x1 q hi x2
+                pop      // _ r x1 q hi
+                pop      // _ r x1 q
+                pop      // _ r q
+                pop      // _ r
+                return
+            ),
             vec![DataType::XFE],
             vec![DataType::Bool],
             Box::new(RefCell::new(|vec: &mut Vec<BFieldElement>| {

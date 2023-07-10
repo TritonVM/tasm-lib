@@ -559,7 +559,7 @@ mod tests {
 
     use std::cell::RefCell;
 
-    use triton_opcodes::{instruction::LabelledInstruction, shortcuts::*};
+    use triton_vm::triton_asm;
     use twenty_first::shared_math::{
         bfield_codec::BFieldCodec, traits::FiniteField, x_field_element::XFieldElement,
     };
@@ -595,10 +595,7 @@ mod tests {
     #[test]
     fn test_with_raw_function_identity_on_bfe() {
         let rawcode = RawCode::new_with_shadowing(
-            vec![
-                LabelledInstruction::Label("identity_bfe".to_string()),
-                return_(),
-            ],
+            triton_asm!(identity_bfe: return),
             vec![DataType::BFE],
             vec![DataType::BFE],
             Box::new(RefCell::new(|_vec: &mut Vec<BFieldElement>| {})),
@@ -615,12 +612,7 @@ mod tests {
     #[test]
     fn test_with_raw_function_square_on_bfe() {
         let rawcode = RawCode::new_with_shadowing(
-            vec![
-                LabelledInstruction::Label("square_bfe".to_string()),
-                dup(0),
-                mul(),
-                return_(),
-            ],
+            triton_asm!(square_bfe: dup 0 mul return),
             vec![DataType::BFE],
             vec![DataType::BFE],
             Box::new(RefCell::new(|vec: &mut Vec<BFieldElement>| {
@@ -642,14 +634,7 @@ mod tests {
         // Inner function calculates `|(n, x)| -> x*x + n`, where `x` is the list
         // element, and `n` is the same value for all elements.
         let rawcode = RawCode::new_with_shadowing(
-            vec![
-                LabelledInstruction::Label("square_plus_n_bfe".to_string()),
-                dup(0),
-                mul(),
-                dup(4),
-                add(),
-                return_(),
-            ],
+            triton_asm!(square_plus_n_bfe: dup 0 mul dup 4 add return),
             vec![DataType::BFE, DataType::BFE],
             vec![DataType::BFE],
             Box::new(RefCell::new(|vec: &mut Vec<BFieldElement>| {
@@ -670,20 +655,9 @@ mod tests {
     #[test]
     fn test_with_raw_function_square_on_xfe() {
         let rawcode = RawCode::new_with_shadowing(
-            vec![
-                LabelledInstruction::Label("square_xfe".to_string()),
-                dup(2),
-                dup(2),
-                dup(2),
-                xxmul(),
-                swap(3),
-                pop(),
-                swap(3),
-                pop(),
-                swap(3),
-                pop(),
-                return_(),
-            ],
+            triton_asm!(
+                square_xfe: dup 2 dup 2 dup 2 xxmul swap 3 pop swap 3 pop swap 3 pop return
+            ),
             vec![DataType::XFE],
             vec![DataType::XFE],
             Box::new(RefCell::new(|vec: &mut Vec<BFieldElement>| {
@@ -709,30 +683,14 @@ mod tests {
     #[test]
     fn test_with_raw_function_square_on_xfe_plus_another_xfe() {
         let rawcode = RawCode::new_with_shadowing(
-            vec![
-                LabelledInstruction::Label("square_xfe_plus_another_xfe".to_string()),
-                dup(2),
-                dup(2),
-                dup(2),
-                xxmul(),
-                swap(3),
-                pop(),
-                swap(3),
-                pop(),
-                swap(3),
-                pop(),
-                dup(8),
-                dup(8),
-                dup(8),
-                xxadd(),
-                swap(3),
-                pop(),
-                swap(3),
-                pop(),
-                swap(3),
-                pop(),
-                return_(),
-            ],
+            triton_asm!(
+                square_xfe_plus_another_xfe:
+                    dup 2 dup 2 dup 2 xxmul
+                    swap 3 pop swap 3 pop swap 3 pop
+                    dup 8 dup 8 dup 8 xxadd
+                    swap 3 pop swap 3 pop swap 3 pop
+                    return
+            ),
             vec![DataType::XFE, DataType::XFE],
             vec![DataType::XFE],
             Box::new(RefCell::new(|vec: &mut Vec<BFieldElement>| {
@@ -765,49 +723,49 @@ mod tests {
     #[test]
     fn test_u32_list_to_u128_list_plus_x() {
         let rawcode = RawCode::new_with_shadowing(
-            vec![
-                LabelledInstruction::Label("u32_to_u128_add_another_u128".to_string()),
+            triton_asm!(
+                u32_to_u128_add_another_u128:
                 // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index input_u32
-                dup(4),
+                dup 4
                 // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index input_u32 x_0
-                add(),
+                add
                 // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index (input_u32 + x_0)
-                split(),
+                split
                 // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index carry_to_1 output_0
-                swap(1),
+                swap 1
                 // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 carry_to_1
-                dup(6),
+                dup 6
                 // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 carry_to_1 x_1
-                add(),
-                split(),
+                add
+                split
                 // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 carry_to_2 output_1
-                swap(1),
+                swap 1
                 // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 output_1 carry_to_2
-                dup(8),
-                add(),
-                split(),
+                dup 8
+                add
+                split
                 // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 output_1 carry_to_3 output_2
-                swap(1),
+                swap 1
                 // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 output_1 output_2 carry_to_3
-                dup(10),
-                add(),
-                split(),
+                dup 10
+                add
+                split
                 // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 output_1 output_2 overflow output_3
-                swap(1),
+                swap 1
                 // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 output_1 output_2 output_3 overflow
 
                 // verify no overflow
-                push(0),
-                eq(),
-                assert_(),
+                push 0
+                eq
+                assert
                 // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 output_1 output_2 output_3
-                swap(3),
-                swap(1),
-                swap(2),
-                swap(1),
+                swap 3
+                swap 1
+                swap 2
+                swap 1
                 // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_3 output_2 output_1 output_0
-                return_(),
-            ],
+                return
+            ),
             vec![DataType::U128, DataType::U32],
             vec![DataType::U128],
             Box::new(RefCell::new(|vec: &mut Vec<BFieldElement>| {

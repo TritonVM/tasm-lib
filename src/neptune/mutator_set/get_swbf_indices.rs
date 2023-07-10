@@ -2,8 +2,7 @@ use itertools::Itertools;
 use num_traits::{One, Zero};
 use rand::random;
 use std::{cell::RefCell, collections::HashMap};
-use triton_opcodes::{instruction::*, shortcuts::*};
-use triton_vm::BFieldElement;
+use triton_vm::{triton_asm, BFieldElement};
 use twenty_first::{
     shared_math::{
         bfield_codec::BFieldCodec,
@@ -142,49 +141,49 @@ impl Snippet for GetSwbfIndices {
         let entrypoint = self.entrypoint();
 
         let rawcode_for_inner_function_u128_plus_u32 = RawCode::new_with_shadowing(
-            vec![
-                LabelledInstruction::Label("u32_to_u128_add_another_u128".to_string()),
+            triton_asm!(
+                u32_to_u128_add_another_u128:
                 // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index input_u32
-                dup(4),
+                dup 4
                 // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index input_u32 x_0
-                add(),
+                add
                 // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index (input_u32 + x_0)
-                split(),
+                split
                 // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index carry_to_1 output_0
-                swap(1),
+                swap 1
                 // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 carry_to_1
-                dup(6),
+                dup 6
                 // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 carry_to_1 x_1
-                add(),
-                split(),
+                add
+                split
                 // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 carry_to_2 output_1
-                swap(1),
+                swap 1
                 // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 output_1 carry_to_2
-                dup(8),
-                add(),
-                split(),
+                dup 8
+                add
+                split
                 // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 output_1 carry_to_3 output_2
-                swap(1),
+                swap 1
                 // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 output_1 output_2 carry_to_3
-                dup(10),
-                add(),
-                split(),
+                dup 10
+                add
+                split
                 // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 output_1 output_2 overflow output_3
-                swap(1),
+                swap 1
                 // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 output_1 output_2 output_3 overflow
 
                 // verify no overflow
-                push(0),
-                eq(),
-                assert_(),
+                push 0
+                eq
+                assert
                 // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 output_1 output_2 output_3
-                swap(3),
-                swap(1),
-                swap(2),
-                swap(1),
+                swap 3
+                swap 1
+                swap 2
+                swap 1
                 // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_3 output_2 output_1 output_0
-                return_(),
-            ],
+                return
+            ),
             vec![DataType::U128, DataType::U32],
             vec![DataType::U128],
             Box::new(RefCell::new(|vec: &mut Vec<BFieldElement>| {

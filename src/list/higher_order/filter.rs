@@ -625,7 +625,7 @@ mod tests {
 
     use std::cell::RefCell;
 
-    use triton_opcodes::{instruction::LabelledInstruction, shortcuts::*};
+    use triton_vm::triton_asm;
 
     use crate::{
         list::higher_order::inner_function::RawCode, test_helpers::test_rust_equivalence_multiple,
@@ -658,17 +658,17 @@ mod tests {
     #[test]
     fn test_with_raw_function_lsb_on_bfe() {
         let rawcode = RawCode::new_with_shadowing(
-            vec![
-                LabelledInstruction::Label("lsb_bfe".to_string()),
-                split(), // _ hi lo
-                push(2), // _ hi lo 2
-                swap(1), // _ hi 2 lo
-                div(),   // _ hi q r
-                swap(2), // _ r q hi
-                pop(),   // _ r q
-                pop(),   // _ r
-                return_(),
-            ],
+            triton_asm!(
+                lsb_bfe:
+                    split   // _ hi lo
+                    push 2  // _ hi lo 2
+                    swap 1  // _ hi 2 lo
+                    div     // _ hi q r
+                    swap 2  // _ r q hi
+                    pop     // _ r q
+                    pop     // _ r
+                    return
+            ),
             vec![DataType::BFE],
             vec![DataType::Bool],
             Box::new(RefCell::new(|vec: &mut Vec<BFieldElement>| {
@@ -688,19 +688,19 @@ mod tests {
     #[test]
     fn test_with_raw_function_lsb_on_xfe() {
         let rawcode = RawCode::new_with_shadowing(
-            vec![
-                LabelledInstruction::Label("lsb_xfe".to_string()),
-                split(), // _ x2 x1 hi lo
-                push(2), // _ x2 x1 hi lo 2
-                swap(1), // _ x2 x1 hi 2 lo
-                div(),   // _ x2 x1 hi q r
-                swap(4), // _ r x1 q hi x2
-                pop(),   // _ r x1 q hi
-                pop(),   // _ r x1 q
-                pop(),   // _ r q
-                pop(),   // _ r
-                return_(),
-            ],
+            triton_asm!(
+                lsb_xfe:
+                    split   // _ x2 x1 hi lo
+                    push 2  // _ x2 x1 hi lo 2
+                    swap 1  // _ x2 x1 hi 2 lo
+                    div     // _ x2 x1 hi q r
+                    swap 4  // _ r x1 q hi x2
+                    pop     // _ r x1 q hi
+                    pop     // _ r x1 q
+                    pop     // _ r q
+                    pop     // _ r
+                    return
+            ),
             vec![DataType::XFE],
             vec![DataType::Bool],
             Box::new(RefCell::new(|vec: &mut Vec<BFieldElement>| {

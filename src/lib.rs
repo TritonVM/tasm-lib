@@ -1,3 +1,4 @@
+use anyhow::anyhow;
 use anyhow::bail;
 use itertools::Itertools;
 use memory::dyn_malloc;
@@ -6,8 +7,8 @@ use snippet::Snippet;
 use snippet_state::SnippetState;
 use std::collections::HashMap;
 use std::time::SystemTime;
-use triton_opcodes::program::Program;
-use triton_vm::{vm, Claim, StarkParameters};
+use triton_vm::program::Program;
+use triton_vm::{Claim, StarkParameters};
 use twenty_first::shared_math::bfield_codec::BFieldCodec;
 use twenty_first::shared_math::tip5::{self, Tip5};
 
@@ -45,9 +46,9 @@ pub struct ExecutionState {
     pub secret_in: Vec<BFieldElement>,
     pub memory: HashMap<BFieldElement, BFieldElement>,
 
-    // Ensures that you're not overwriting statically alocated memory
+    // Ensures that you're not overwriting statically allocated memory
     // when using the dynamic allocator.
-    // When you're writing a propgram you need to know how many words
+    // When you're writing a program you need to know how many words
     // are statically allocated and then you need to feed that value
     // to the dynamic allocator otherwise you are *** [redacted].
     pub words_allocated: usize,
@@ -144,25 +145,18 @@ pub fn execute_bench(
         state_preparation_code(stack, memory, initilialize_dynamic_allocator_to);
 
     // Add the program after the stack initialization has been performed
-    // Find the length of code used for setup. This length does not count towards execution length of snippet
-    // so it must be subtracted at the end.
-    let initialization_clock_cycle_count = vm::debug(
-        &Program::from_code(&executed_code).expect("Could not load source code: {}"),
-        vec![],
-        vec![],
-        None,
-        None,
-    )
-    .0
-    .len()
-        - 1;
+    // Find the length of code used for setup. This length does not count towards execution length
+    // of snippet so it must be subtracted at the end.
+    let program = Program::from_code(&executed_code)?;
+    let (all_states, _) = program.debug(vec![], vec![], None, None);
+    let initialization_clock_cycle_count = all_states.len() - 1;
 
     // Construct the whole program (inclusive setup) to be run
     executed_code.push_str(code);
+    let program = Program::from_code(&executed_code)?;
 
     // Run the program, including the stack preparation and memory preparation logic
-    let program = Program::from_code(&executed_code).expect("Could not load source code: {}");
-    let (execution_trace, err) = vm::debug(&program, std_in.clone(), secret_in.clone(), None, None);
+    let (execution_trace, err) = program.debug(std_in.clone(), secret_in.clone(), None, None);
     if let Some(e) = err {
         bail!(
             "`debug` failed with error: {e}\nLast state before crash:\n{}",
@@ -171,11 +165,9 @@ pub fn execute_bench(
     }
 
     // Simulate the program, since this gives us hash table output
-    let (simulation_trace, output) = match vm::simulate(&program, std_in.clone(), secret_in.clone())
-    {
-        Ok(res) => res,
-        Err(e) => bail!("`simulate` failed with error: {e}"),
-    };
+    let (simulation_trace, output) = program
+        .trace_execution(std_in.clone(), secret_in.clone())
+        .map_err(|error| anyhow!("`simulate` failed with error: {error}"))?;
 
     let start_state: VMState = execution_trace
         .first()
@@ -260,13 +252,11 @@ pub fn execute_test(
 
     // Run the program, including the stack preparation and memory preparation logic
     let program = Program::from_code(&executed_code).expect("Could not load source code: {}");
-    let final_state =
-        match vm::debug_terminal_state(&program, std_in.clone(), secret_in.clone(), None, None) {
-            Ok(fs) => fs,
-            Err((err, fs)) => {
-                bail!("VM execution failed with error: {err}.\nLast state before crash:\n{fs}")
-            }
-        };
+    let final_state = program
+        .debug_terminal_state(std_in.clone(), secret_in.clone(), None, None)
+        .map_err(|(err, fs)| {
+            anyhow!("VM execution failed with error: {err}.\nLast state before crash:\n{fs}")
+        })?;
 
     *memory = final_state.ram.clone();
 
@@ -360,8 +350,9 @@ fn prove_and_verify(
         output: output.to_owned(),
     };
 
-    let (simulation_trace, _) =
-        vm::simulate(program, std_in.to_owned(), secret_in.to_owned()).unwrap();
+    let (simulation_trace, _) = program
+        .trace_execution(std_in.to_owned(), secret_in.to_owned())
+        .unwrap();
 
     let code_header = &code[0..std::cmp::min(code.len(), 100)];
     println!("Execution suceeded. Now proving {code_header}");

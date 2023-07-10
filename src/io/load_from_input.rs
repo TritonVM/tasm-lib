@@ -1,5 +1,4 @@
 use rand::Rng;
-use triton_opcodes::shortcuts::{divine, read_io};
 use triton_vm::BFieldElement;
 use twenty_first::shared_math::other::random_elements;
 
@@ -47,8 +46,8 @@ impl Snippet for LoadFromInput {
         let dyn_alloc = library.import(Box::new(dyn_malloc::DynMalloc));
 
         let read_instruction = match self.0 {
-            InputSource::StdIn => read_io(),
-            InputSource::SecretIn => divine(),
+            InputSource::StdIn => "read_io",
+            InputSource::SecretIn => "divine",
         };
 
         format!(
