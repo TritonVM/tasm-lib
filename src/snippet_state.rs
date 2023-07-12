@@ -2,8 +2,8 @@ use std::collections::HashMap;
 
 use itertools::Itertools;
 use num::One;
-use triton_vm::instruction::LabelledInstruction;
-use triton_vm::parser::{parse, to_labelled};
+use triton_vm::parser::parse;
+use triton_vm::{instruction::LabelledInstruction, parser::to_labelled_instructions};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::snippet::{DataType, Snippet};
@@ -90,7 +90,7 @@ impl SnippetState {
     }
 
     pub fn all_imports_as_instruction_lists(&self) -> Vec<LabelledInstruction> {
-        to_labelled(&parse(&self.all_imports()).unwrap())
+        to_labelled_instructions(&parse(&self.all_imports()).unwrap())
     }
 
     pub fn kmalloc(&mut self, num_words: usize) -> usize {

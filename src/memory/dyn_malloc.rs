@@ -4,7 +4,7 @@ use num::{One, Zero};
 use rand::Rng;
 use triton_vm::{
     instruction::LabelledInstruction,
-    parser::{parse, to_labelled},
+    parser::{parse, to_labelled_instructions},
 };
 use twenty_first::shared_math::b_field_element::{BFieldElement, BFIELD_ZERO};
 
@@ -38,7 +38,7 @@ impl DynMalloc {
         words_statically_allocated: u32,
     ) -> Vec<LabelledInstruction> {
         let code = Self::get_initialization_code(words_statically_allocated);
-        to_labelled(&parse(&code).unwrap())
+        to_labelled_instructions(&parse(&code).unwrap())
     }
 }
 
@@ -218,7 +218,7 @@ mod tests {
         // Verify that code returning `Vec<LabelledInstruction>` and `String` agree
         let init_code_string = DynMalloc::get_initialization_code(4);
         let init_code_vec = DynMalloc::get_initialization_code_as_instructions(4);
-        let string_parsed = to_labelled(&parse(&init_code_string).unwrap());
+        let string_parsed = to_labelled_instructions(&parse(&init_code_string).unwrap());
         assert_eq!(string_parsed, init_code_vec);
     }
 }

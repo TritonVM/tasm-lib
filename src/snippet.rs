@@ -4,7 +4,7 @@ use rand::{random, thread_rng, Rng};
 use std::collections::HashMap;
 use std::fmt::Display;
 use triton_vm::instruction::LabelledInstruction;
-use triton_vm::parser::{parse, to_labelled};
+use triton_vm::parser::{parse, to_labelled_instructions};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::snippet_state::SnippetState;
@@ -180,7 +180,7 @@ pub trait Snippet {
         let f_body = self.function_code(library);
 
         // parse the code to get the list of instructions
-        to_labelled(&parse(&f_body).unwrap())
+        to_labelled_instructions(&parse(&f_body).unwrap())
     }
 
     // The rust shadowing and the run tasm function must take the same argument
