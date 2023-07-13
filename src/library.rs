@@ -23,24 +23,28 @@ pub struct Library {
 
 impl Default for Library {
     fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Library {
+    pub fn new() -> Self {
         Self {
             seen_snippets: Default::default(),
             free_pointer: STATIC_MEMORY_START_ADDRESS,
         }
     }
-}
 
-impl Library {
     /// Create an empty library.
     #[allow(dead_code)]
     pub fn empty() -> Self {
-        Self::default()
+        Self::new()
     }
 
     pub fn with_preallocated_memory(words_allocated: usize) -> Self {
         Library {
             free_pointer: words_allocated + STATIC_MEMORY_START_ADDRESS,
-            ..Default::default()
+            ..Self::new()
         }
     }
 
@@ -358,7 +362,7 @@ mod tests {
 
     #[test]
     fn all_imports_as_instruction_lists() {
-        let mut lib = Library::default();
+        let mut lib = Library::new();
         lib.import(Box::new(DummyTestSnippetA));
         lib.import(Box::new(DummyTestSnippetA));
         lib.import(Box::new(DummyTestSnippetC));
@@ -370,7 +374,7 @@ mod tests {
         // Ensure that a generated program is deterministic, by checking that the imports
         // are always sorted the same way.
         fn smaller_program() -> Program {
-            let mut library = Library::default();
+            let mut library = Library::new();
             let get_field = library.import(Box::new(GetField));
             let calculate_new_peaks_from_leaf_mutation =
                 library.import(Box::new(MmrCalculateNewPeaksFromLeafMutationMtIndices {
@@ -403,7 +407,7 @@ mod tests {
 
     #[test]
     fn kmalloc_test() {
-        let mut lib = Library::default();
+        let mut lib = Library::new();
         assert_eq!(1, lib.get_next_free_address());
 
         // allocate 1 word and verify that 1 is returned, and that the next free address is 2

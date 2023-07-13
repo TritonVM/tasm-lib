@@ -150,7 +150,7 @@ pub fn test_rust_equivalence_given_input_values_and_initial_stacks_and_memories<
             .map(|x| x.to_string())
             .collect_vec()
             .join(","),
-        snippet_struct.function_code(&mut Library::default())
+        snippet_struct.function_code(&mut Library::new())
     );
 
     // if expected final stack is given, test against it
@@ -220,7 +220,7 @@ pub fn test_rust_equivalence_given_input_values_and_initial_stacks_and_memories<
             .join(",");
         panic!(
             "Memory for both implementations must match after execution.\n\nTVM: {tasm_mem_str}\n\nRust: {rust_mem_str}\n\nDifference: {diff_str}\n\nCode was:\n\n {}",
-            snippet_struct.function_code(&mut Library::default())
+            snippet_struct.function_code(&mut Library::new())
         );
     }
 

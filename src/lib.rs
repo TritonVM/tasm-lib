@@ -110,7 +110,7 @@ pub fn execute_with_execution_state(
     snippet: Box<dyn Snippet>,
     expected_stack_diff: isize,
 ) -> anyhow::Result<ExecutionResult> {
-    let mut library = Library::default();
+    let mut library = Library::new();
     let entrypoint = snippet.entrypoint();
     let mut code = format!("call {entrypoint}\n");
     code.push_str("halt\n");
