@@ -5,8 +5,8 @@ use twenty_first::util_types::mmr;
 
 use crate::arithmetic::u64::add_u64::AddU64;
 use crate::arithmetic::u64::incr_u64::IncrU64;
+use crate::library::Library;
 use crate::snippet::{DataType, Snippet};
-use crate::snippet_state::SnippetState;
 use crate::{get_init_tvm_stack, ExecutionState};
 
 use super::non_leaf_nodes_left::MmrNonLeafNodesLeftUsingAnd;
@@ -53,7 +53,7 @@ impl Snippet for DataIndexToNodeIndex {
         "tasm_mmr_data_index_to_node_index".to_string()
     }
 
-    fn function_code(&self, library: &mut SnippetState) -> String {
+    fn function_code(&self, library: &mut Library) -> String {
         let entrypoint = self.entrypoint();
         let non_leaf_nodes_left = library.import(Box::new(MmrNonLeafNodesLeftUsingAnd));
         let incr_u64 = library.import(Box::new(IncrU64));

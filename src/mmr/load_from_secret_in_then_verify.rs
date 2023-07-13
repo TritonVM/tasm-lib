@@ -11,9 +11,9 @@ use twenty_first::util_types::mmr::mmr_trait::Mmr;
 
 use crate::hashing::load_auth_path_from_secret_in_safe_list::LoadAuthPathFromSecretInSafeList;
 use crate::hashing::load_auth_path_from_secret_in_unsafe_list::LoadAuthPathFromSecretInUnsafeList;
+use crate::library::Library;
 use crate::list::ListType;
 use crate::snippet::{DataType, Snippet};
-use crate::snippet_state::SnippetState;
 use crate::{
     get_init_tvm_stack, rust_shadowing_helper_functions, Digest, ExecutionState, VmHasher,
     DIGEST_LENGTH,
@@ -209,7 +209,7 @@ impl Snippet for MmrLoadFromSecretInThenVerify {
         format!("tasm_mmr_verify_load_from_secret_in_{}", self.list_type)
     }
 
-    fn function_code(&self, library: &mut SnippetState) -> String {
+    fn function_code(&self, library: &mut Library) -> String {
         let entrypoint = self.entrypoint();
         let load_auth_path_from_secret_in = match self.list_type {
             ListType::Safe => library.import(Box::new(LoadAuthPathFromSecretInSafeList)),

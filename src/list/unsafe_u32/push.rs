@@ -5,9 +5,9 @@ use rand::{random, thread_rng, Rng};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::random_elements;
 
+use crate::library::Library;
 use crate::rust_shadowing_helper_functions::unsafe_list::untyped_unsafe_insert_random_list;
 use crate::snippet::{DataType, Snippet};
-use crate::snippet_state::SnippetState;
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
@@ -61,7 +61,7 @@ impl Snippet for UnsafePush {
     }
 
     // Push *one* element of size N to stack
-    fn function_code(&self, _library: &mut SnippetState) -> String {
+    fn function_code(&self, _library: &mut Library) -> String {
         let element_size = self.0.get_size();
         // write the elements to memory
         // Start and end of this loop: _  *list, [elements..], address_of_next_element -- top of stack is where we will store elements

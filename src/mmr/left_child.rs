@@ -9,8 +9,8 @@ use twenty_first::util_types::mmr;
 
 use crate::arithmetic::u64::pow2_u64::Pow2U64;
 use crate::arithmetic::u64::sub_u64::SubU64;
+use crate::library::Library;
 use crate::snippet::{DataType, Snippet};
-use crate::snippet_state::SnippetState;
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
@@ -59,7 +59,7 @@ impl Snippet for MmrLeftChild {
         "tasm_mmr_left_child".to_string()
     }
 
-    fn function_code(&self, library: &mut SnippetState) -> String {
+    fn function_code(&self, library: &mut Library) -> String {
         let entrypoint = self.entrypoint();
         let pow2_u64 = library.import(Box::new(Pow2U64));
         let sub_u64 = library.import(Box::new(SubU64));

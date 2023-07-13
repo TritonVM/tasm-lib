@@ -76,7 +76,7 @@ impl Snippet for LoadStructFromInput {
         0
     }
 
-    fn function_code(&self, library: &mut crate::snippet_state::SnippetState) -> String {
+    fn function_code(&self, library: &mut crate::library::Library) -> String {
         let entrypoint = self.entrypoint();
 
         let load_from_io = library.import(Box::new(LoadFromInput(self.input_source.clone())));

@@ -3,11 +3,11 @@ use std::collections::HashMap;
 use rand::{random, thread_rng, Rng};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
+use crate::library::Library;
 use crate::rust_shadowing_helper_functions::unsafe_list::{
     unsafe_list_get, untyped_unsafe_insert_random_list,
 };
 use crate::snippet::{DataType, Snippet};
-use crate::snippet_state::SnippetState;
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
@@ -57,7 +57,7 @@ impl Snippet for UnsafeGet {
         )
     }
 
-    fn function_code(&self, _library: &mut SnippetState) -> String {
+    fn function_code(&self, _library: &mut Library) -> String {
         let entrypoint = self.entrypoint();
         // Code to read an element from a list. No bounds-check.
 

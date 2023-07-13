@@ -6,8 +6,8 @@ use twenty_first::shared_math::other::log_2_floor;
 
 use crate::arithmetic::u64::incr_u64::IncrU64;
 use crate::arithmetic::u64::log_2_floor_u64::Log2FloorU64;
+use crate::library::Library;
 use crate::snippet::{DataType, Snippet};
-use crate::snippet_state::SnippetState;
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
@@ -53,7 +53,7 @@ impl Snippet for GetHeightFromDataIndex {
         "tasm_mmr_get_height_from_leaf_index".to_string()
     }
 
-    fn function_code(&self, library: &mut SnippetState) -> String {
+    fn function_code(&self, library: &mut Library) -> String {
         let entrypoint = self.entrypoint();
         let incr_u64 = library.import(Box::new(IncrU64));
         let log_2_floor_u64 = library.import(Box::new(Log2FloorU64));

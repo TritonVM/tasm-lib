@@ -3,9 +3,9 @@ use std::collections::HashMap;
 use rand::RngCore;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
+use crate::library::Library;
 use crate::pseudo::lsb::Lsb;
 use crate::snippet::{DataType, Snippet};
-use crate::snippet_state::SnippetState;
 use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
 
 #[derive(Clone, Debug)]
@@ -58,7 +58,7 @@ impl Snippet for U32IsOdd {
         "tasm_arithmetic_u32_is_odd".to_string()
     }
 
-    fn function_code(&self, library: &mut SnippetState) -> String {
+    fn function_code(&self, library: &mut Library) -> String {
         let entrypoint = self.entrypoint();
         let lsb = library.import(Box::new(Lsb));
         format!(

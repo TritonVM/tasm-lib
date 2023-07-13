@@ -49,7 +49,7 @@ impl Snippet for GetPointerList {
         0
     }
 
-    fn function_code(&self, library: &mut crate::snippet_state::SnippetState) -> String {
+    fn function_code(&self, library: &mut crate::library::Library) -> String {
         let entrypoint = self.entrypoint();
         let get_list_length = library.import(Box::new(contiguous_list::get_length::GetLength));
         let new_list = match self.output_list_type {

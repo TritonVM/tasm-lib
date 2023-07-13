@@ -16,8 +16,8 @@ use crate::rust_shadowing_helper_functions::safe_list::safe_insert_random_list;
 use crate::rust_shadowing_helper_functions::unsafe_list::untyped_unsafe_insert_random_list;
 use crate::{get_init_tvm_stack, rust_shadowing_helper_functions};
 use crate::{
+    library::Library,
     snippet::{DataType, Snippet},
-    snippet_state::SnippetState,
     ExecutionState,
 };
 
@@ -140,7 +140,7 @@ impl Snippet for Zip {
         -1
     }
 
-    fn function_code(&self, library: &mut SnippetState) -> String {
+    fn function_code(&self, library: &mut Library) -> String {
         let safety_offset = match self.list_type {
             ListType::Safe => 2,
             ListType::Unsafe => 1,
@@ -464,7 +464,7 @@ mod tests {
             2
         }
 
-        fn function_code(&self, _library: &mut SnippetState) -> String {
+        fn function_code(&self, _library: &mut Library) -> String {
             let entrypoint = self.entrypoint();
             format!(
                 "

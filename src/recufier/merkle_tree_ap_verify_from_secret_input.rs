@@ -8,8 +8,8 @@ use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 use twenty_first::util_types::merkle_tree::{CpuParallel, MerkleTree};
 use twenty_first::util_types::merkle_tree_maker::MerkleTreeMaker;
 
+use crate::library::Library;
 use crate::snippet::Snippet;
-use crate::snippet_state::SnippetState;
 use crate::{get_init_tvm_stack, Digest, ExecutionState};
 
 #[derive(Clone, Debug)]
@@ -58,7 +58,7 @@ impl<H: AlgebraicHasher + std::fmt::Debug> Snippet for MtApVerifyFromSecretInput
         "tasm_recufier_mt_ap_verify".to_string()
     }
 
-    fn function_code(&self, _library: &mut SnippetState) -> String {
+    fn function_code(&self, _library: &mut Library) -> String {
         let entrypoint = self.entrypoint();
         format!(
             "

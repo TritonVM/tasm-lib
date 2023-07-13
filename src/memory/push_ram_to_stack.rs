@@ -70,7 +70,7 @@ impl Snippet for PushRamToStack {
         self.output_type.get_size() as isize - 1isize
     }
 
-    fn function_code(&self, _library: &mut crate::snippet_state::SnippetState) -> String {
+    fn function_code(&self, _library: &mut crate::library::Library) -> String {
         let entrypoint = self.entrypoint();
 
         let mut ram_to_stack_code = String::default();

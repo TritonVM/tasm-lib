@@ -2,8 +2,8 @@ use rand::RngCore;
 use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
+use crate::library::Library;
 use crate::snippet::{DataType, Snippet};
-use crate::snippet_state::SnippetState;
 use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
 
 #[derive(Clone, Debug)]
@@ -39,7 +39,7 @@ impl Snippet for WrappingMulU64 {
         -2
     }
 
-    fn function_code(&self, _library: &mut SnippetState) -> String {
+    fn function_code(&self, _library: &mut Library) -> String {
         let entrypoint = self.entrypoint();
 
         format!(

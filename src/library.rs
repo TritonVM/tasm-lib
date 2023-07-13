@@ -13,13 +13,15 @@ use crate::snippet::{DataType, Snippet};
 // by convention, always on address 0.
 pub const STATIC_MEMORY_START_ADDRESS: usize = 1;
 
+/// A Library represents a set of imports for a single Program or Snippet, and moreover
+/// tracks some data used for initializing the memory allocator.
 #[derive(Clone, Debug)]
-pub struct SnippetState {
+pub struct Library {
     seen_snippets: HashMap<String, String>,
     free_pointer: usize,
 }
 
-impl Default for SnippetState {
+impl Default for Library {
     fn default() -> Self {
         Self {
             seen_snippets: Default::default(),
@@ -28,7 +30,7 @@ impl Default for SnippetState {
     }
 }
 
-impl SnippetState {
+impl Library {
     /// Create an empty library.
     #[allow(dead_code)]
     pub fn empty() -> Self {
@@ -36,7 +38,7 @@ impl SnippetState {
     }
 
     pub fn with_preallocated_memory(words_allocated: usize) -> Self {
-        SnippetState {
+        Library {
             free_pointer: words_allocated + STATIC_MEMORY_START_ADDRESS,
             ..Default::default()
         }
@@ -116,7 +118,7 @@ impl Snippet for DummyTestSnippetA {
         "tasm_a_dummy_test_value".to_string()
     }
 
-    fn function_code(&self, library: &mut SnippetState) -> String {
+    fn function_code(&self, library: &mut Library) -> String {
         let entrypoint = self.entrypoint();
         let b = library.import(Box::new(DummyTestSnippetB));
         let c = library.import(Box::new(DummyTestSnippetC));
@@ -185,7 +187,7 @@ impl Snippet for DummyTestSnippetB {
         "tasm_b_dummy_test_value".to_string()
     }
 
-    fn function_code(&self, library: &mut SnippetState) -> String {
+    fn function_code(&self, library: &mut Library) -> String {
         let entrypoint = self.entrypoint();
         let c = library.import(Box::new(DummyTestSnippetC));
 
@@ -252,7 +254,7 @@ impl Snippet for DummyTestSnippetC {
         "tasm_c_dummy_test_value".to_string()
     }
 
-    fn function_code(&self, _library: &mut SnippetState) -> String {
+    fn function_code(&self, _library: &mut Library) -> String {
         let entrypoint = self.entrypoint();
 
         format!(
@@ -356,7 +358,7 @@ mod tests {
 
     #[test]
     fn all_imports_as_instruction_lists() {
-        let mut lib = SnippetState::default();
+        let mut lib = Library::default();
         lib.import(Box::new(DummyTestSnippetA));
         lib.import(Box::new(DummyTestSnippetA));
         lib.import(Box::new(DummyTestSnippetC));
@@ -368,7 +370,7 @@ mod tests {
         // Ensure that a generated program is deterministic, by checking that the imports
         // are always sorted the same way.
         fn smaller_program() -> Program {
-            let mut library = SnippetState::default();
+            let mut library = Library::default();
             let get_field = library.import(Box::new(GetField));
             let calculate_new_peaks_from_leaf_mutation =
                 library.import(Box::new(MmrCalculateNewPeaksFromLeafMutationMtIndices {
@@ -401,7 +403,7 @@ mod tests {
 
     #[test]
     fn kmalloc_test() {
-        let mut lib = SnippetState::default();
+        let mut lib = Library::default();
         assert_eq!(1, lib.get_next_free_address());
 
         // allocate 1 word and verify that 1 is returned, and that the next free address is 2

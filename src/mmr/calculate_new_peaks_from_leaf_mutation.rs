@@ -12,6 +12,7 @@ use super::leaf_index_to_mt_index::MmrLeafIndexToMtIndexAndPeakIndex;
 use crate::arithmetic::u32::is_odd::U32IsOdd;
 use crate::arithmetic::u64::div2_u64::Div2U64;
 use crate::arithmetic::u64::eq_u64::EqU64;
+use crate::library::Library;
 use crate::list::safe_u32::get::SafeGet;
 use crate::list::safe_u32::set::SafeSet;
 use crate::list::unsafe_u32::get::UnsafeGet;
@@ -19,7 +20,6 @@ use crate::list::unsafe_u32::set::UnsafeSet;
 use crate::list::ListType;
 use crate::mmr::MAX_MMR_HEIGHT;
 use crate::snippet::{DataType, Snippet};
-use crate::snippet_state::SnippetState;
 use crate::{
     get_init_tvm_stack, rust_shadowing_helper_functions, Digest, ExecutionState, VmHasher,
     DIGEST_LENGTH,
@@ -199,7 +199,7 @@ impl Snippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
         )
     }
 
-    fn function_code(&self, library: &mut SnippetState) -> String {
+    fn function_code(&self, library: &mut Library) -> String {
         let entrypoint = self.entrypoint();
         let leaf_index_to_mt_index = library.import(Box::new(MmrLeafIndexToMtIndexAndPeakIndex));
         let u32_is_odd = library.import(Box::new(U32IsOdd));

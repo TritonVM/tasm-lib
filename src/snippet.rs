@@ -7,7 +7,7 @@ use triton_vm::instruction::LabelledInstruction;
 use triton_vm::parser::{parse, to_labelled_instructions};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
-use crate::snippet_state::SnippetState;
+use crate::library::Library;
 use crate::{execute_bench, ExecutionResult, VmOutputState, DIGEST_LENGTH};
 use crate::{execute_test, ExecutionState};
 
@@ -161,7 +161,7 @@ pub trait Snippet {
     fn stack_diff(&self) -> isize;
 
     /// The function
-    fn function_code(&self, library: &mut SnippetState) -> String;
+    fn function_code(&self, library: &mut Library) -> String;
 
     /// Ways in which this snippet can crash at runtime
     fn crash_conditions(&self) -> Vec<String>;
@@ -173,10 +173,7 @@ pub trait Snippet {
 
     fn worst_case_input_state(&self) -> ExecutionState;
 
-    fn function_code_as_instructions(
-        &self,
-        library: &mut SnippetState,
-    ) -> Vec<LabelledInstruction> {
+    fn function_code_as_instructions(&self, library: &mut Library) -> Vec<LabelledInstruction> {
         let f_body = self.function_code(library);
 
         // parse the code to get the list of instructions
@@ -196,7 +193,7 @@ pub trait Snippet {
     );
 
     fn link_for_isolated_run(&self, words_statically_allocated: usize) -> String {
-        let mut snippet_state = SnippetState::with_preallocated_memory(words_statically_allocated);
+        let mut snippet_state = Library::with_preallocated_memory(words_statically_allocated);
         let entrypoint = self.entrypoint();
         let function_body = self.function_code(&mut snippet_state);
         let library_code = snippet_state.all_imports();
@@ -331,7 +328,7 @@ mod tests {
 
     #[test]
     fn can_return_code() {
-        let mut empty_library = SnippetState::default();
+        let mut empty_library = Library::default();
         let example_snippet =
             arithmetic::u32::safe_add::SafeAdd.function_code_as_instructions(&mut empty_library);
         assert!(!example_snippet.is_empty());

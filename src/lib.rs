@@ -1,10 +1,10 @@
 use anyhow::anyhow;
 use anyhow::bail;
 use itertools::Itertools;
+use library::Library;
 use memory::dyn_malloc;
 use num_traits::Zero;
 use snippet::Snippet;
-use snippet_state::SnippetState;
 use std::collections::HashMap;
 use std::time::SystemTime;
 use triton_vm::program::Program;
@@ -20,6 +20,7 @@ pub mod arithmetic;
 pub mod exported_snippets;
 pub mod hashing;
 pub mod io;
+pub mod library;
 pub mod list;
 pub mod memory;
 pub mod mmr;
@@ -30,7 +31,6 @@ pub mod recufier;
 pub mod rust_shadowing_helper_functions;
 pub mod snippet;
 pub mod snippet_bencher;
-pub mod snippet_state;
 pub mod structure;
 pub mod test_helpers;
 
@@ -110,7 +110,7 @@ pub fn execute_with_execution_state(
     snippet: Box<dyn Snippet>,
     expected_stack_diff: isize,
 ) -> anyhow::Result<ExecutionResult> {
-    let mut library = SnippetState::default();
+    let mut library = Library::default();
     let entrypoint = snippet.entrypoint();
     let mut code = format!("call {entrypoint}\n");
     code.push_str("halt\n");

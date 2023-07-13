@@ -10,8 +10,8 @@ use twenty_first::util_types::mmr;
 use crate::arithmetic::u64::decr_u64::DecrU64;
 use crate::arithmetic::u64::log_2_floor_u64::Log2FloorU64;
 use crate::arithmetic::u64::pow2_u64::Pow2U64;
+use crate::library::Library;
 use crate::snippet::{DataType, Snippet};
-use crate::snippet_state::SnippetState;
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
@@ -63,7 +63,7 @@ impl Snippet for MmrLeftMostAncestor {
         "tasm_mmr_leftmost_ancestor".to_string()
     }
 
-    fn function_code(&self, library: &mut SnippetState) -> String {
+    fn function_code(&self, library: &mut Library) -> String {
         let entrypoint = self.entrypoint();
         let decr_u64 = library.import(Box::new(DecrU64));
         let pow2_u64 = library.import(Box::new(Pow2U64));

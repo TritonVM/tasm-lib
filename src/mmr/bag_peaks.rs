@@ -71,7 +71,7 @@ impl Snippet for BagPeaks {
         4
     }
 
-    fn function_code(&self, library: &mut crate::snippet_state::SnippetState) -> String {
+    fn function_code(&self, library: &mut crate::library::Library) -> String {
         let entrypoint = self.entrypoint();
 
         let get_element = library.import(Box::new(UnsafeGet(DataType::Digest)));

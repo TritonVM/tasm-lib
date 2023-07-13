@@ -131,7 +131,7 @@ impl Snippet for GetSwbfIndices {
         -16
     }
 
-    fn function_code(&self, library: &mut crate::snippet_state::SnippetState) -> String {
+    fn function_code(&self, library: &mut crate::library::Library) -> String {
         let num_trials = self.num_trials;
         let window_size = self.window_size;
         let sample_indices = library.import(Box::new(SampleIndices {

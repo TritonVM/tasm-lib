@@ -85,7 +85,7 @@ impl Snippet for SampleIndices {
         -1
     }
 
-    fn function_code(&self, library: &mut crate::snippet_state::SnippetState) -> String {
+    fn function_code(&self, library: &mut crate::library::Library) -> String {
         let entrypoint = self.entrypoint();
         let new_list = match self.list_type {
             ListType::Safe => library.import(Box::new(SafeNew(DataType::U32))),

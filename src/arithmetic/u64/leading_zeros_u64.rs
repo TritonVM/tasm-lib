@@ -36,7 +36,7 @@ impl Snippet for LeadingZerosU64 {
         -1
     }
 
-    fn function_code(&self, library: &mut crate::snippet_state::SnippetState) -> String {
+    fn function_code(&self, library: &mut crate::library::Library) -> String {
         let leading_zeros_u32 = library.import(Box::new(LeadingZerosU32));
         let entrypoint = self.entrypoint();
         format!(

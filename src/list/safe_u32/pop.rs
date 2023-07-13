@@ -3,9 +3,9 @@ use std::collections::HashMap;
 use rand::random;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
+use crate::library::Library;
 use crate::rust_shadowing_helper_functions::safe_list::{safe_insert_random_list, safe_list_pop};
 use crate::snippet::{DataType, Snippet};
-use crate::snippet_state::SnippetState;
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
@@ -57,7 +57,7 @@ impl Snippet for SafePop {
 
     /// Pop last element from list. Does *not* actually delete the last
     /// element but instead leaves it in memory.
-    fn function_code(&self, _library: &mut SnippetState) -> String {
+    fn function_code(&self, _library: &mut Library) -> String {
         let entry_point = self.entrypoint();
 
         let mut code_to_read_elements = String::default();

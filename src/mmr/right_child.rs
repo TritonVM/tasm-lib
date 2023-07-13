@@ -8,8 +8,8 @@ use twenty_first::shared_math::bfield_codec::BFieldCodec;
 use twenty_first::util_types::mmr;
 
 use crate::arithmetic::u64::decr_u64::DecrU64;
+use crate::library::Library;
 use crate::snippet::{DataType, Snippet};
-use crate::snippet_state::SnippetState;
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
@@ -55,7 +55,7 @@ impl Snippet for MmrRightChild {
     }
 
     /// Consider inlining this, instead of calling a function
-    fn function_code(&self, library: &mut SnippetState) -> String {
+    fn function_code(&self, library: &mut Library) -> String {
         let entrypoint = self.entrypoint();
         let decr_u64 = library.import(Box::new(DecrU64));
         format!(

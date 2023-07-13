@@ -35,7 +35,7 @@ impl Snippet for DoublePow2U64 {
         0
     }
 
-    fn function_code(&self, _library: &mut crate::snippet_state::SnippetState) -> String {
+    fn function_code(&self, _library: &mut crate::library::Library) -> String {
         let entrypoint = self.entrypoint();
         const TWO_POW_31: &str = "2147483648";
         const ONE_HALF: &str = "9223372034707292161";

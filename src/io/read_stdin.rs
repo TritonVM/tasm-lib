@@ -43,7 +43,7 @@ impl Snippet for ReadStdIn {
         self.0.get_size() as isize
     }
 
-    fn function_code(&self, _library: &mut crate::snippet_state::SnippetState) -> String {
+    fn function_code(&self, _library: &mut crate::library::Library) -> String {
         let entrypoint = self.entrypoint();
         let read_an_element = "read_io\n".repeat(self.0.get_size());
 

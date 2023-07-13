@@ -35,7 +35,7 @@ impl Snippet for SafeAdd {
         -1
     }
 
-    fn function_code(&self, _library: &mut crate::snippet_state::SnippetState) -> String {
+    fn function_code(&self, _library: &mut crate::library::Library) -> String {
         let entrypoint = self.entrypoint();
         format!(
             "

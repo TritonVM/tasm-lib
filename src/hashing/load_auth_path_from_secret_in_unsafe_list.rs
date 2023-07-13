@@ -3,12 +3,12 @@ use std::collections::HashMap;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::random_elements;
 
+use crate::library::Library;
 use crate::list::unsafe_u32::new::UnsafeNew;
 use crate::list::unsafe_u32::{push::UnsafePush, set_length::UnsafeSetLength};
 use crate::mmr::MAX_MMR_HEIGHT;
 use crate::snippet::DataType;
 use crate::snippet::Snippet;
-use crate::snippet_state::SnippetState;
 use crate::{
     get_init_tvm_stack, rust_shadowing_helper_functions, Digest, ExecutionState, DIGEST_LENGTH,
 };
@@ -69,7 +69,7 @@ impl Snippet for LoadAuthPathFromSecretInUnsafeList {
         "tasm_hashing_load_auth_path_from_secret_in_unsafe_list".to_string()
     }
 
-    fn function_code(&self, library: &mut SnippetState) -> String {
+    fn function_code(&self, library: &mut Library) -> String {
         let entrypoint = self.entrypoint();
 
         let read_digest_from_secret_in = "divine\n".repeat(DIGEST_LENGTH);

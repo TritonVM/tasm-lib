@@ -8,8 +8,8 @@ use super::leftmost_ancestor::MmrLeftMostAncestor;
 use super::right_child::MmrRightChild;
 use crate::arithmetic::u64::eq_u64::EqU64;
 use crate::arithmetic::u64::lt_u64::LtU64;
+use crate::library::Library;
 use crate::snippet::{DataType, Snippet};
-use crate::snippet_state::SnippetState;
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
@@ -57,7 +57,7 @@ impl Snippet for MmrRightLineageCountAndHeight {
         "tasm_mmr_right_lineage_count_and_own_height".to_string()
     }
 
-    fn function_code(&self, library: &mut SnippetState) -> String {
+    fn function_code(&self, library: &mut Library) -> String {
         let entrypoint = self.entrypoint();
         let eq_u64 = library.import(Box::new(EqU64));
         let lt_u64 = library.import(Box::new(LtU64));

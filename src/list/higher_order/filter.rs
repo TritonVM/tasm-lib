@@ -20,8 +20,8 @@ use crate::rust_shadowing_helper_functions::safe_list::safe_insert_random_list;
 use crate::rust_shadowing_helper_functions::unsafe_list::untyped_unsafe_insert_random_list;
 use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, VmHasher};
 use crate::{
+    library::Library,
     snippet::{DataType, Snippet},
-    snippet_state::SnippetState,
     ExecutionState,
 };
 
@@ -156,7 +156,7 @@ impl Snippet for Filter {
         0
     }
 
-    fn function_code(&self, library: &mut SnippetState) -> String {
+    fn function_code(&self, library: &mut Library) -> String {
         let input_type = match self.f.get_input_types().len() {
             1 => self.f.get_input_types()[0].clone(),
             _ => panic!("Can only filter with functions with one input"),
@@ -519,7 +519,7 @@ impl Snippet for TestHashXFieldElementLsb {
         -2
     }
 
-    fn function_code(&self, _library: &mut SnippetState) -> String {
+    fn function_code(&self, _library: &mut Library) -> String {
         let entrypoint = self.entrypoint();
         format!(
             "

@@ -3,9 +3,9 @@ use std::collections::HashMap;
 use rand::Rng;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
+use crate::library::Library;
 use crate::snippet::DataType;
 use crate::snippet::Snippet;
-use crate::snippet_state::SnippetState;
 use crate::Digest;
 use crate::DIGEST_LENGTH;
 use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
@@ -76,7 +76,7 @@ impl Snippet for SwapDigest {
         "tasm_hashing_swap_digest".to_string()
     }
 
-    fn function_code(&self, _library: &mut SnippetState) -> String {
+    fn function_code(&self, _library: &mut Library) -> String {
         let entrypoint = self.entrypoint();
         format!(
             "

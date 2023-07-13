@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
+use crate::library::Library;
 use crate::rust_shadowing_helper_functions::unsafe_list::unsafe_list_new;
 use crate::snippet::{DataType, Snippet};
-use crate::snippet_state::SnippetState;
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
@@ -34,7 +34,7 @@ impl Snippet for UnsafeNew {
         0
     }
 
-    fn function_code(&self, library: &mut SnippetState) -> String {
+    fn function_code(&self, library: &mut Library) -> String {
         let entrypoint = self.entrypoint();
 
         // Data structure for `list::safe_u32` is: [length, element0, element1, ...]

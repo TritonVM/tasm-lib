@@ -5,11 +5,11 @@ use num::One;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::random_elements;
 
+use crate::library::Library;
 use crate::list::unsafe_u32::{push::UnsafePush, set_length::UnsafeSetLength};
 use crate::mmr::MAX_MMR_HEIGHT;
 use crate::snippet::DataType;
 use crate::snippet::Snippet;
-use crate::snippet_state::SnippetState;
 use crate::{get_init_tvm_stack, ExecutionState, DIGEST_LENGTH};
 use crate::{rust_shadowing_helper_functions, Digest};
 
@@ -69,7 +69,7 @@ impl Snippet for LoadAuthPathFromStdInUnsafeList {
         "tasm_hashing_load_auth_path_from_std_in_unsafe_list".to_string()
     }
 
-    fn function_code(&self, library: &mut SnippetState) -> String {
+    fn function_code(&self, library: &mut Library) -> String {
         let entrypoint = self.entrypoint();
 
         let read_digest_from_std_in = "read_io\n".repeat(DIGEST_LENGTH);

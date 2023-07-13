@@ -21,8 +21,8 @@ use crate::rust_shadowing_helper_functions::safe_list::safe_insert_random_list;
 use crate::rust_shadowing_helper_functions::unsafe_list::unsafe_insert_random_list;
 use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, VmHasher};
 use crate::{
+    library::Library,
     snippet::{DataType, Snippet},
-    snippet_state::SnippetState,
     ExecutionState,
 };
 
@@ -135,7 +135,7 @@ impl Snippet for Map {
         -(self.f.size_of_additional_inputs() as isize)
     }
 
-    fn function_code(&self, library: &mut SnippetState) -> String {
+    fn function_code(&self, library: &mut Library) -> String {
         let input_list_element_type = self.f.input_list_element_type();
         let output_type = match self.f.get_output_types().len() {
             1 => self.f.get_output_types()[0].clone(),
@@ -461,7 +461,7 @@ impl Snippet for TestHashXFieldElement {
         2
     }
 
-    fn function_code(&self, _library: &mut SnippetState) -> String {
+    fn function_code(&self, _library: &mut Library) -> String {
         let entrypoint = self.entrypoint();
         format!(
             "
