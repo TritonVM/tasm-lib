@@ -1,5 +1,3 @@
-use std::collections::VecDeque;
-
 use crate::library::Library;
 use anyhow::Result;
 use triton_vm::instruction::LabelledInstruction;
@@ -8,8 +6,8 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 pub trait CompiledProgram {
     fn rust_shadow(
-        public_input: &mut VecDeque<BFieldElement>,
-        secret_input: &mut VecDeque<BFieldElement>,
+        public_input: &[BFieldElement],
+        secret_input: &[BFieldElement],
     ) -> Result<Vec<BFieldElement>>;
 
     fn program() -> Program {
@@ -21,11 +19,11 @@ pub trait CompiledProgram {
     }
 
     fn run(
-        public_input: &mut VecDeque<BFieldElement>,
-        secret_input: &mut VecDeque<BFieldElement>,
+        public_input: &[BFieldElement],
+        secret_input: &[BFieldElement],
     ) -> Result<Vec<BFieldElement>> {
         let p = Self::program();
-        p.run(public_input.clone().into(), secret_input.clone().into())
+        p.run(public_input.to_vec(), secret_input.to_vec())
     }
 
     fn code() -> (Vec<LabelledInstruction>, Library);
@@ -36,26 +34,19 @@ pub trait CompiledProgram {
 }
 
 pub fn test_rust_shadow<P: CompiledProgram>(
-    public_input: &mut VecDeque<BFieldElement>,
-    secret_input: &mut VecDeque<BFieldElement>,
+    public_input: &[BFieldElement],
+    secret_input: &[BFieldElement],
 ) {
-    let mut rust_public_input = public_input.clone();
-    let mut rust_secret_input = secret_input.clone();
-    let mut tasm_public_input = public_input.clone();
-    let mut tasm_secret_input = secret_input.clone();
-    let rust_output = P::rust_shadow(&mut rust_public_input, &mut rust_secret_input).unwrap();
-    let tasm_output = P::run(&mut tasm_public_input, &mut tasm_secret_input).unwrap();
-    // to be activated when the VM is updated to consume input
-    // assert_eq!(rust_public_input, tasm_public_input);
-    // assert_eq!(rust_secret_input, tasm_secret_input);
+    let rust_output = P::rust_shadow(public_input, secret_input).unwrap();
+    let tasm_output = P::run(public_input, secret_input).unwrap();
     assert_eq!(rust_output, tasm_output);
 }
 
 pub fn bench_program<P: CompiledProgram>(
     name: String,
     case: crate::snippet_bencher::BenchmarkCase,
-    public_input: &mut VecDeque<BFieldElement>,
-    secret_input: &mut VecDeque<BFieldElement>,
+    public_input: &[BFieldElement],
+    secret_input: &[BFieldElement],
 ) {
     use std::{
         fs::{create_dir_all, File},
@@ -71,25 +62,24 @@ pub fn bench_program<P: CompiledProgram>(
     let program = Program::new(&all_instructions);
 
     // run in trace mode to get table heights
-    let benchmark =
-        match program.trace_execution(public_input.clone().into(), secret_input.clone().into()) {
-            Ok((aet, _output)) => BenchmarkResult {
-                case,
-                name: name.clone(),
-                clock_cycle_count: aet.processor_table_length(),
-                hash_table_height: aet.hash_table_length(),
-                u32_table_height: aet.u32_table_length(),
-            },
-            Err(_) => panic!(),
-        };
+    let benchmark = match program.trace_execution(public_input.to_vec(), secret_input.to_vec()) {
+        Ok((aet, _output)) => BenchmarkResult {
+            case,
+            name: name.clone(),
+            clock_cycle_count: aet.processor_table_length(),
+            hash_table_height: aet.hash_table_length(),
+            u32_table_height: aet.u32_table_length(),
+        },
+        Err(_) => panic!(),
+    };
 
     crate::snippet_bencher::write_benchmarks(vec![benchmark]);
 
     // run in profile mode to get picture of call graph running times
     let (_output, profile) = triton_vm::program::Program::profile(
         &all_instructions,
-        public_input.clone().into(),
-        secret_input.clone().into(),
+        public_input.to_vec(),
+        secret_input.to_vec(),
     )
     .unwrap();
     let mut str = format!("{name}:\n");
@@ -115,8 +105,6 @@ pub fn bench_program<P: CompiledProgram>(
 
 #[cfg(test)]
 mod test {
-    use std::collections::VecDeque;
-
     use triton_vm::{triton_asm, BFieldElement};
 
     use crate::{library::Library, snippet_bencher::BenchmarkCase};
@@ -126,13 +114,10 @@ mod test {
     struct FiboTest;
     impl CompiledProgram for FiboTest {
         fn rust_shadow(
-            public_input: &mut std::collections::VecDeque<triton_vm::BFieldElement>,
-            _secret_input: &mut std::collections::VecDeque<triton_vm::BFieldElement>,
+            public_input: &[triton_vm::BFieldElement],
+            _secret_input: &[triton_vm::BFieldElement],
         ) -> anyhow::Result<Vec<triton_vm::BFieldElement>> {
-            let num_iterations = match public_input.remove(0) {
-                Some(bfe) => bfe.value() as usize,
-                None => panic!("cannot remove element 0 from public_input because buffer is empty"),
-            };
+            let num_iterations = public_input[0].value() as usize;
             let mut a = BFieldElement::new(0);
             let mut b = BFieldElement::new(1);
             for _ in 0..num_iterations {
@@ -176,20 +161,20 @@ mod test {
 
     #[test]
     fn test_fibo_shadow() {
-        let mut public_input: VecDeque<_> = vec![BFieldElement::new(501)].into();
-        let mut secret_input: VecDeque<BFieldElement> = vec![].into();
-        test_rust_shadow::<FiboTest>(&mut public_input, &mut secret_input);
+        let public_input = vec![BFieldElement::new(501)];
+        let secret_input = vec![];
+        test_rust_shadow::<FiboTest>(&public_input, &secret_input);
     }
 
     #[test]
     fn bench_fibo() {
-        let mut public_input: VecDeque<_> = vec![BFieldElement::new(501)].into();
-        let mut secret_input: VecDeque<BFieldElement> = vec![].into();
+        let public_input = vec![BFieldElement::new(501)];
+        let secret_input = vec![];
         bench_program::<FiboTest>(
             "fibo_test".to_string(),
             BenchmarkCase::CommonCase,
-            &mut public_input,
-            &mut secret_input,
+            &public_input,
+            &secret_input,
         );
     }
 }
