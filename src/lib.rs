@@ -17,6 +17,7 @@ use triton_vm::vm::VMState;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 pub mod arithmetic;
+pub mod compiled_program;
 pub mod exported_snippets;
 pub mod hashing;
 pub mod io;
