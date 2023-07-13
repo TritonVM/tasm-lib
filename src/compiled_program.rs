@@ -1,7 +1,9 @@
+use std::cmp::min;
+
 use crate::library::Library;
 use anyhow::Result;
 use triton_vm::instruction::LabelledInstruction;
-use triton_vm::program::Program;
+use triton_vm::program::{ProfileLine, Program};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 pub trait CompiledProgram {
@@ -83,7 +85,24 @@ pub fn bench_program<P: CompiledProgram>(
     )
     .unwrap();
     let mut str = format!("{name}:\n");
+    str = format!("{str}\n# call graph\n");
+    for line in profile.iter() {
+        let indentation = vec!["  "; line.call_stack_depth].join("");
+        let label = &line.label;
+        let cycle_count = line.cycle_count;
+        str = format!("{str}{indentation} {label}: {cycle_count}\n");
+    }
+    str = format!("{str}\n# aggregated\n");
+    let mut aggregated: Vec<ProfileLine> = vec![];
     for line in profile {
+        if let Some(agg) = aggregated.iter_mut().find(|a| a.label == line.label) {
+            agg.cycle_count += line.cycle_count;
+            agg.call_stack_depth = min(agg.call_stack_depth, line.call_stack_depth);
+        } else {
+            aggregated.push(line);
+        }
+    }
+    for line in aggregated {
         let indentation = vec!["  "; line.call_stack_depth].join("");
         let label = line.label;
         let cycle_count = line.cycle_count;
