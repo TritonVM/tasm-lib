@@ -6,7 +6,7 @@ use snippet::Snippet;
 use snippet_state::SnippetState;
 use std::collections::HashMap;
 use std::time::SystemTime;
-use triton_opcodes::program::Program;
+use triton_vm::program::Program;
 use triton_vm::{vm, Claim, StarkParameters};
 use twenty_first::shared_math::bfield_codec::BFieldCodec;
 use twenty_first::shared_math::tip5::{self, Tip5};

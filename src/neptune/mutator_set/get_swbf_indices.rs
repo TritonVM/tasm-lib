@@ -2,7 +2,8 @@ use itertools::Itertools;
 use num_traits::{One, Zero};
 use rand::random;
 use std::{cell::RefCell, collections::HashMap};
-use triton_opcodes::{instruction::*, shortcuts::*};
+use triton_vm::instruction::LabelledInstruction;
+use triton_vm::instruction_shortcuts::*;
 use triton_vm::BFieldElement;
 use twenty_first::{
     shared_math::{

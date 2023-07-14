@@ -1,7 +1,6 @@
 use std::{cell::RefCell, collections::HashMap};
 
-use triton_opcodes::instruction::LabelledInstruction;
-use triton_vm::BFieldElement;
+use triton_vm::{instruction::LabelledInstruction, BFieldElement};
 
 use crate::snippet::{DataType, Snippet};
 
@@ -34,11 +33,10 @@ impl RawCode {
         assert!(
             matches!(
                 function.last().unwrap(),
-                LabelledInstruction::Instruction(
-                    triton_opcodes::instruction::AnInstruction::Return
-                ) | LabelledInstruction::Instruction(
-                    triton_opcodes::instruction::AnInstruction::Recurse
-                )
+                LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Return)
+                    | LabelledInstruction::Instruction(
+                        triton_vm::instruction::AnInstruction::Recurse
+                    )
             ),
             "Last line of inner function must be either return or recurse. Got: {}",
             function.last().unwrap()
@@ -72,11 +70,10 @@ impl RawCode {
         assert!(
             matches!(
                 function.last().unwrap(),
-                LabelledInstruction::Instruction(
-                    triton_opcodes::instruction::AnInstruction::Return
-                ) | LabelledInstruction::Instruction(
-                    triton_opcodes::instruction::AnInstruction::Recurse
-                )
+                LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Return)
+                    | LabelledInstruction::Instruction(
+                        triton_vm::instruction::AnInstruction::Recurse
+                    )
             ),
             "Last line of inner function must be either return or recurse. Got: {}",
             function.last().unwrap()

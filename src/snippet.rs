@@ -3,8 +3,8 @@ use itertools::Itertools;
 use rand::{random, thread_rng, Rng};
 use std::collections::HashMap;
 use std::fmt::Display;
-use triton_opcodes::instruction::LabelledInstruction;
-use triton_opcodes::parser::{parse, to_labelled};
+use triton_vm::instruction::LabelledInstruction;
+use triton_vm::parser::{parse, to_labelled};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::snippet_state::SnippetState;

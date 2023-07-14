@@ -559,7 +559,7 @@ mod tests {
 
     use std::cell::RefCell;
 
-    use triton_opcodes::{instruction::LabelledInstruction, shortcuts::*};
+    use triton_vm::{instruction::LabelledInstruction, instruction_shortcuts::*};
     use twenty_first::shared_math::{
         bfield_codec::BFieldCodec, traits::FiniteField, x_field_element::XFieldElement,
     };

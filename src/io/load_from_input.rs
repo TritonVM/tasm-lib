@@ -1,6 +1,5 @@
 use rand::Rng;
-use triton_opcodes::shortcuts::{divine, read_io};
-use triton_vm::BFieldElement;
+use triton_vm::{instruction_shortcuts::*, BFieldElement};
 use twenty_first::shared_math::other::random_elements;
 
 use crate::{

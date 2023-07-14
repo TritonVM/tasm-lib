@@ -625,7 +625,7 @@ mod tests {
 
     use std::cell::RefCell;
 
-    use triton_opcodes::{instruction::LabelledInstruction, shortcuts::*};
+    use triton_vm::{instruction::LabelledInstruction, instruction_shortcuts::*};
 
     use crate::{
         list::higher_order::inner_function::RawCode, test_helpers::test_rust_equivalence_multiple,

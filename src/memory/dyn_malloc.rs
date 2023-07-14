@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use num::{One, Zero};
 use rand::Rng;
-use triton_opcodes::{
+use triton_vm::{
     instruction::LabelledInstruction,
     parser::{parse, to_labelled},
 };

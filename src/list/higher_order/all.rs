@@ -473,7 +473,7 @@ impl Snippet for TestHashXFieldElementLsb {
 mod tests {
     use num::One;
     use std::cell::RefCell;
-    use triton_opcodes::{instruction::LabelledInstruction, shortcuts::*};
+    use triton_vm::{instruction::LabelledInstruction, instruction_shortcuts::*};
 
     use crate::{
         list::higher_order::inner_function::RawCode,

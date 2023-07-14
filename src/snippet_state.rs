@@ -2,8 +2,10 @@ use std::collections::HashMap;
 
 use itertools::Itertools;
 use num::One;
-use triton_opcodes::instruction::LabelledInstruction;
-use triton_opcodes::parser::{parse, to_labelled};
+use triton_vm::{
+    instruction::LabelledInstruction,
+    parser::{parse, to_labelled},
+};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::snippet::{DataType, Snippet};
@@ -310,7 +312,8 @@ impl Snippet for DummyTestSnippetC {
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
-    use triton_opcodes::program::Program;
+
+    use triton_vm::program::Program;
 
     use crate::get_init_tvm_stack;
     use crate::list::ListType;
