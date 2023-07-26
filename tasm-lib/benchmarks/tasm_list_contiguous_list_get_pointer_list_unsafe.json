@@ -1,16 +1,16 @@
 [
   {
     "name": "tasm_list_contiguous_list_get_pointer_list_unsafe",
-    "clock_cycle_count": 163,
+    "clock_cycle_count": 120,
     "hash_table_height": 0,
-    "u32_table_height": 70,
+    "u32_table_height": 48,
     "case": "CommonCase"
   },
   {
     "name": "tasm_list_contiguous_list_get_pointer_list_unsafe",
-    "clock_cycle_count": 292,
+    "clock_cycle_count": 120,
     "hash_table_height": 0,
-    "u32_table_height": 134,
+    "u32_table_height": 48,
     "case": "WorstCase"
   }
 ]
