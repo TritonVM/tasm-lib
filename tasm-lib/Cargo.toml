@@ -15,6 +15,7 @@ features = ["precommit-hook", "run-cargo-clippy", "run-cargo-fmt"]
 
 [dependencies]
 anyhow = "1"
+derive_tasm_object = { path = "../derive_tasm_object" }
 triton-vm = { path = "../../triton-vm/triton-vm" }
 # twenty-first = "0.30"
 twenty-first = { path = "../../twenty-first/twenty-first/" }

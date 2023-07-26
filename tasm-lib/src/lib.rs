@@ -40,6 +40,16 @@ pub type VmHasher = Tip5;
 pub type Digest = tip5::Digest;
 pub const DIGEST_LENGTH: usize = tip5::DIGEST_LENGTH;
 
+// This is needed for `#[derive(TasmObject)]` macro to work consistently across crates.
+// Specifically:
+// From inside the `tasm-lib` crate, we need to refer to `tasm-lib` by `crate`.
+// However, from outside the `tasm-lib` crate, we need to refer to it by `tasm_lib`.
+// The re-export below allows using identifier `tasm_lib` even from inside `tasm-lib`.
+//
+// See also:
+// https://github.com/bkchr/proc-macro-crate/issues/2#issuecomment-572914520
+extern crate self as tasm_lib;
+
 #[derive(Clone, Debug)]
 pub struct ExecutionState {
     pub stack: Vec<BFieldElement>,
