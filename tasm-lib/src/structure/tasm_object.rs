@@ -48,6 +48,74 @@ pub trait TasmObject {
     fn get_field_start_with_jump_distance(field_name: &str) -> Vec<LabelledInstruction>;
 }
 
+pub trait TasmObjectFieldName {
+    fn tasm_object_field_name(&self) -> String;
+}
+
+impl TasmObjectFieldName for &str {
+    fn tasm_object_field_name(&self) -> String {
+        self.to_string()
+    }
+}
+
+impl TasmObjectFieldName for i32 {
+    fn tasm_object_field_name(&self) -> String {
+        format!("field_{}", self)
+    }
+}
+
+/// Convenience macro, so that we don't have to write
+/// ```
+/// let field_f = <StructWithNamedFields as TasmObject>::get_field("f");
+/// let field_0 = <StructWithUnnamedFields as TasmObject>::get_field("field_0");
+/// ```
+/// but instead
+/// ```
+/// let field_f = tasm_object::field!(StructWithNamedFields::f);
+/// let field_0 = tasm_object::field!(StructWithUnnamedFields::0);
+/// ```
+/// and for numbered fields.
+#[macro_export]
+macro_rules! field {
+    { $o : ident :: $e : ident } => {
+        <$o as $crate::structure::tasm_object::TasmObject>
+            ::get_field(& $crate::structure::tasm_object::TasmObjectFieldName::tasm_object_field_name(&stringify!($e))
+        )
+    };
+    { $o : ident :: $e : expr } => {
+        <$o as $crate::structure::tasm_object::TasmObject>
+            ::get_field(& $crate::structure::tasm_object::TasmObjectFieldName::tasm_object_field_name(&$e)
+        )
+    };
+}
+
+/// Convenience macro, so that we don't have to write
+/// ```
+/// let field_f = <StructWithNamedFields as TasmObject>::get_field_with_size("f");
+/// let field_0 = <StructWithUnnamedFields as TasmObject>::get_field_with_size("field_0");
+/// ```
+/// but instead
+/// ```
+/// let field_f = tasm_object::field_with_size!(StructWithNamedFields::f);
+/// let field_0 = tasm_object::field_with_size!(StructWithUnnamedFields::0);
+/// ```
+/// and for numbered fields.
+#[macro_export]
+macro_rules! field_with_size {
+    { $o : ident :: $e : ident } => {
+        <$o as $crate::structure::tasm_object::TasmObject>
+            ::get_field_with_size(
+                & $crate::structure::tasm_object::TasmObjectFieldName::tasm_object_field_name(&stringify!($e))
+            )
+    };
+    { $o : ident :: $e : expr } => {
+        <$o as $crate::structure::tasm_object::TasmObject>
+            ::get_field_with_size(
+                & $crate::structure::tasm_object::TasmObjectFieldName::tasm_object_field_name(&$e)
+            )
+    };
+}
+
 #[cfg(test)]
 mod test {
     use std::collections::HashMap;
@@ -142,14 +210,12 @@ mod test {
 
         fn function_code(&self, library: &mut crate::library::Library) -> String {
             let entrypoint = self.entrypoint();
-            <OuterStruct as TasmObject>::get_field_start_with_jump_distance("a");
-            let object_to_a_with_size = <OuterStruct as TasmObject>::get_field_with_size("a");
-            <OuterStruct as TasmObject>::get_field_start_with_jump_distance("b");
-            let object_to_b = <OuterStruct as TasmObject>::get_field("b");
-            let object_to_c_with_size = <OuterStruct as TasmObject>::get_field_with_size("c");
-            let object_to_p_with_size = <OuterStruct as TasmObject>::get_field_with_size("p");
-            let b_to_0_with_size = <InnerStruct as TasmObject>::get_field_with_size("field_0");
-            let b_to_1_with_size = <InnerStruct as TasmObject>::get_field_with_size("field_1");
+            let object_to_a_with_size = field_with_size!(OuterStruct::a);
+            let object_to_b = field!(OuterStruct::b);
+            let object_to_c_with_size = field_with_size!(OuterStruct::c);
+            let object_to_p_with_size = field_with_size!(OuterStruct::p);
+            let b_to_0_with_size = field_with_size!(InnerStruct::0);
+            let b_to_1_with_size = field_with_size!(InnerStruct::1);
             let memcpy = library.import(Box::new(memory::memcpy::MemCpy));
             let load_object_from_stdin =
                 library.import(Box::new(io::load_struct_from_input::LoadStructFromInput {
