@@ -34,18 +34,18 @@ pub trait TasmObject {
     fn get_field_with_size(field_name: &str) -> Vec<LabelledInstruction>;
 
     /// Returns tasm code that returns a pointer to the start of the field of the object,
-    /// along with the size of the field. Note that:
+    /// along with the jump distance to the next field. Note that:
     ///
     ///  -  *field_start == *field      if the size is statically known, but
     ///  -  *field_start == *field-1    if the size is not statically known.
     ///
     /// BEFORE: _ *object
     ///
-    /// AFTER: _ *field_start field_size
+    /// AFTER: _ *field_start field_jump_distance
     ///
     /// This function is used internally for the derive macro. You probably want to use
     /// `get_field` or `get_field_with_size` instead.
-    fn get_field_start_with_size(field_name: &str) -> Vec<LabelledInstruction>;
+    fn get_field_start_with_jump_distance(field_name: &str) -> Vec<LabelledInstruction>;
 }
 
 #[cfg(test)]
@@ -142,9 +142,9 @@ mod test {
 
         fn function_code(&self, library: &mut crate::library::Library) -> String {
             let entrypoint = self.entrypoint();
-            <OuterStruct as TasmObject>::get_field_start_with_size("a");
+            <OuterStruct as TasmObject>::get_field_start_with_jump_distance("a");
             let object_to_a_with_size = <OuterStruct as TasmObject>::get_field_with_size("a");
-            <OuterStruct as TasmObject>::get_field_start_with_size("b");
+            <OuterStruct as TasmObject>::get_field_start_with_jump_distance("b");
             let object_to_b = <OuterStruct as TasmObject>::get_field("b");
             let object_to_c_with_size = <OuterStruct as TasmObject>::get_field_with_size("c");
             let object_to_p_with_size = <OuterStruct as TasmObject>::get_field_with_size("p");

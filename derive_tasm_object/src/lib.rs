@@ -64,7 +64,7 @@ fn impl_derive_tasm_object_macro(ast: syn::DeriveInput) -> TokenStream {
                 let previous_field_name_as_string = &field_names[not_zero - 1].to_string();
                 quote! {
                     [
-                        Self::get_field_start_with_size(#previous_field_name_as_string),
+                        Self::get_field_start_with_jump_distance(#previous_field_name_as_string),
                             // _ *prev_field_start prev_jump_amount
                         [triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add)].to_vec(),
                             // _ *current_field_start
@@ -120,7 +120,7 @@ fn impl_derive_tasm_object_macro(ast: syn::DeriveInput) -> TokenStream {
                         #name_as_string => {
                             let prev =
                             [
-                                Self::get_field_start_with_size(#previous_field_name_as_string),
+                                Self::get_field_start_with_jump_distance(#previous_field_name_as_string),
                                     // _ *prev_field_start prev_field_size
                                 [triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add)].to_vec(),
                                     // _ *current_field_start
@@ -150,7 +150,7 @@ fn impl_derive_tasm_object_macro(ast: syn::DeriveInput) -> TokenStream {
                 }
             }
 
-            fn get_field_start_with_size( field_name : &str ) -> Vec<triton_vm::instruction::LabelledInstruction> {
+            fn get_field_start_with_jump_distance( field_name : &str ) -> Vec<triton_vm::instruction::LabelledInstruction> {
                 match field_name {
                     #( #field_starter_clauses ,)*
                     unknown_field_name => panic!("Cannot match on field name `{unknown_field_name}`."),
