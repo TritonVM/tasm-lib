@@ -65,13 +65,23 @@ mod test {
         ExecutionState,
     };
 
+    #[derive(BFieldCodec)]
+    enum InnerEnum {
+        Cow(u32),
+        Horse(u128),
+        Pig(XFieldElement),
+        Sheep([BFieldElement; 13]),
+    }
+
     #[derive(BFieldCodec, TasmObject)]
     struct InnerStruct(XFieldElement, u32);
 
     #[derive(BFieldCodec, TasmObject)]
     struct OuterStruct {
+        o: InnerEnum,
         a: Vec<Option<bool>>,
         b: InnerStruct,
+        p: InnerEnum,
         c: BFieldElement,
     }
 
@@ -95,8 +105,10 @@ mod test {
         let c: BFieldElement = rng.gen();
 
         OuterStruct {
+            o: InnerEnum::Pig(XFieldElement::new_const(443u64.into())),
             a,
             b: InnerStruct(b0, b1),
+            p: InnerEnum::Cow(999),
             c,
         }
     }
@@ -135,6 +147,7 @@ mod test {
             <OuterStruct as TasmObject>::get_field_start_with_size("b");
             let object_to_b = <OuterStruct as TasmObject>::get_field("b");
             let object_to_c_with_size = <OuterStruct as TasmObject>::get_field_with_size("c");
+            let object_to_p_with_size = <OuterStruct as TasmObject>::get_field_with_size("p");
             let b_to_0_with_size = <InnerStruct as TasmObject>::get_field_with_size("field_0");
             let b_to_1_with_size = <InnerStruct as TasmObject>::get_field_with_size("field_1");
             let memcpy = library.import(Box::new(memory::memcpy::MemCpy));
@@ -173,7 +186,13 @@ mod test {
                     dup 0
                     {&object_to_c_with_size} // *object *c c_size
                     push 4337
-                    swap 1 // *object *c 1337 c_size
+                    swap 1 // *object *c 4337 c_size
+                    call {memcpy} // *object
+
+                    dup 0
+                    {&object_to_p_with_size} // *object *p p_size
+                    push 6337
+                    swap 1 // *object *p 6337 p_size
                     call {memcpy} // *object
 
                     pop
@@ -288,6 +307,10 @@ mod test {
 
             for (i, o) in object.c.encode().iter().enumerate() {
                 memory.insert(BFieldElement::new(4337u64 + i as u64), *o);
+            }
+
+            for (i, p) in object.p.encode().iter().enumerate() {
+                memory.insert(BFieldElement::new(6337u64 + i as u64), *p);
             }
         }
     }

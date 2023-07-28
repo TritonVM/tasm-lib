@@ -118,7 +118,7 @@ fn impl_derive_tasm_object_macro(ast: syn::DeriveInput) -> TokenStream {
                     let previous_field_name_as_string = field_names[not_zero-1].to_string();
                     quote! {
                         #name_as_string => {
-                            let prev = 
+                            let prev =
                             [
                                 Self::get_field_start_with_size(#previous_field_name_as_string),
                                     // _ *prev_field_start prev_field_size
@@ -193,10 +193,9 @@ fn generate_tokens_for_struct_with_named_fields(
         .collect::<std::vec::Vec<_>>();
 
     let jumpers = named_fields
-    .clone()
+        .clone()
         .map(|f| generate_tasm_for_extend_field_start_with_jump_amount(&f.ty))
         .collect::<std::vec::Vec<_>>();
-
 
     (field_names_list, getters, sizers, jumpers)
 }
