@@ -8,6 +8,7 @@ use crate::{
     ExecutionState,
 };
 
+/// Move an element of type `DataType` from standard in to the stack
 #[derive(Clone, Debug)]
 pub struct ReadStdIn(pub DataType);
 

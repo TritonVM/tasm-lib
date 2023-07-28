@@ -8,6 +8,7 @@ use crate::{
     ExecutionState,
 };
 
+/// Move an element of type `DataType` from secret in to the stack
 #[derive(Clone, Debug)]
 pub struct ReadSecret(pub DataType);
 

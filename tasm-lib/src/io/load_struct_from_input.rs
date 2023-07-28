@@ -13,6 +13,15 @@ use crate::{
 
 use super::load_from_input;
 
+/// Load a given number of lists of words from the input source into memory.
+/// The first element of each list is the length of the list
+/// that is loaded into memory. Returns a pointer to the first element
+/// in memory. This function is named `load_struct_from_input` because
+/// structs are encoded as a sequence of length-prepended lists of words.
+/// Note that the `field_count` input argument may never be set through
+/// user input, rather it should be known statically.
+/// This snippet assumes that the dynamic allocator will allocate all
+/// fields contiguously in memory.
 #[derive(Clone, Debug)]
 pub struct LoadStructFromInput {
     pub input_source: InputSource,
@@ -41,16 +50,6 @@ struct DummyStructSize5 {
     field_4: Vec<BFieldElement>,
     field_5: Vec<BFieldElement>,
 }
-
-/// Load several list of words from the input source into memory.
-/// The first element of each list is the length of the list
-/// that is loaded into memory. Returns a pointer to the first element
-/// in memory. This function is named `load_struct_from_input` because
-/// structs are encoded as a sequence of length-prepended lists of words.
-/// Note that the `field_count` input argument may never be set through
-/// user input, rather it should be known statically.
-/// This snippet assumes that the dynamic allocator will allocate all
-/// fields contiguously in memory.
 impl Snippet for LoadStructFromInput {
     fn entrypoint(&self) -> String {
         format!("tasm_io_load_struct_from_input_{}", self.input_source)
@@ -89,9 +88,12 @@ impl Snippet for LoadStructFromInput {
                 // Get pointer to the 1st field of the struct (num_fields should not be 0)
                 // Futhermore, `num_fields` should be set in the code (known statically),
                 // not ever set through user input
-                call {load_from_io}
+                call {load_from_io} // _ num_fields *addr
+
+
                 swap 1
                 push -1 add                 // _ *addr num_fields-1
+
                 call {entrypoint}_loop
                                             // *addr 0
 
