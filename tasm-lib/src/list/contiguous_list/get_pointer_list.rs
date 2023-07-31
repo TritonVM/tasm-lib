@@ -197,18 +197,21 @@ impl Snippet for GetPointerList {
     ) {
         // read address
         let mut address = stack.last().unwrap().to_owned();
-        let size = memory.get(&address).unwrap().value();
+        let size = memory
+            .get(&(address - BFieldElement::new(1)))
+            .unwrap()
+            .value();
 
         // read length
         contiguous_list::get_length::GetLength.rust_shadowing(stack, std_in, secret_in, memory);
         let length = stack.pop().unwrap().value() as usize;
 
         // read object
-        let mut encoding = vec![BFieldElement::new(size)];
+        let mut encoding = vec![];
         for i in 0..size {
             encoding.push(
                 memory
-                    .get(&(address + BFieldElement::new(1u64 + i)))
+                    .get(&(address + BFieldElement::new(i)))
                     .unwrap()
                     .to_owned(),
             );

@@ -320,8 +320,8 @@ mod tests {
 
     use crate::get_init_tvm_stack;
     use crate::list::ListType;
+    use crate::memory::memcpy::MemCpy;
     use crate::mmr::calculate_new_peaks_from_leaf_mutation::MmrCalculateNewPeaksFromLeafMutationMtIndices;
-    use crate::structure::get_field::GetField;
     use crate::test_helpers::test_rust_equivalence_given_input_values;
 
     use super::*;
@@ -375,7 +375,7 @@ mod tests {
         // are always sorted the same way.
         fn smaller_program() -> Program {
             let mut library = Library::new();
-            let get_field = library.import(Box::new(GetField));
+            let memcpy = library.import(Box::new(MemCpy));
             let calculate_new_peaks_from_leaf_mutation =
                 library.import(Box::new(MmrCalculateNewPeaksFromLeafMutationMtIndices {
                     list_type: ListType::Safe,
@@ -384,7 +384,7 @@ mod tests {
             let code = format!(
                 "
                 lala_entrypoint:
-                    push 1 call {get_field}
+                    push 1 call {memcpy}
                     call {calculate_new_peaks_from_leaf_mutation}
 
                     return

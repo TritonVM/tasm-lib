@@ -28,6 +28,13 @@ struct DummyInnerDataStructure {
     c: Vec<BFieldElement>,
 }
 
+/// Determine the length (number of elements) of the given contiguous list. This method
+/// assumes that the elements have statically unknown size, since determining the length
+/// for lists of elements with statically known size is trivial.
+///
+/// BEFORE: _ *contiguous_list
+///
+/// AFTER: _ length
 impl GetLength {
     pub(super) fn pseudorandom_input_state(seed: [u8; 32], length: usize) -> ExecutionState {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
@@ -51,9 +58,11 @@ impl GetLength {
         }
 
         let mut address = BFieldElement::new(rng.gen_range(1..(1 << 20)));
-        let stack = vec![get_init_tvm_stack(), vec![address]].concat();
         let mut memory = HashMap::default();
         let encoded = data.encode();
+        memory.insert(address, BFieldElement::new(encoded.len() as u64));
+        address.increment();
+        let stack = vec![get_init_tvm_stack(), vec![address]].concat();
         for word in encoded {
             memory.insert(address, word);
             address.increment();
@@ -96,38 +105,10 @@ impl Snippet for GetLength {
         // BEFORE: _ *contiguous_list
         // AFTER: _ length
         {entrypoint}:
-            dup 0 // _ *contiguous_list *contiguous_list
-            read_mem // _ *cl *cl si
-            swap 1 // _ *cl si *cl
-            push 1 add // _ *cl si *start
-            push 0 // _ *cl si *start 0
-            call {entrypoint}_loop
-            // _ *cl si *sth element_count
-
-            swap 3 // _ element_count si *sth *cl
-            pop pop pop // _ element_count
-
+            read_mem
+            swap 1 pop
             return
-
-        // INVARIANT: _ *cl si *elem counter
-        {entrypoint}_loop:
-            // evaluate termination criterion
-            dup 3 dup 3 add // _ *cl si *elem counter *cl+si
-            dup 2 // _ *cl si *elem counter *cl+si *elem
-            lt // _ *cl si *elem  counter *elem<*cl+si
-            push 0 eq // _ *cl si *elem counter *elem>=*cl+si
-            skiz return
-
-            push 1 add // _ *cl si *elem counter+1
-
-            swap 1 // _ *cl si counter+1 *elem
-            read_mem // _ *cl si counter+1 *elem elem_size
-            add // _ *cl si counter+1 *elem+size
-            push 1 add // _ *cl si counter+1 *next_elem
-            swap 1 // _ *cl si *next_elem counter+1
-
-            recurse
-            "
+        "
         )
     }
 
@@ -164,13 +145,16 @@ impl Snippet for GetLength {
         memory: &mut std::collections::HashMap<triton_vm::BFieldElement, triton_vm::BFieldElement>,
     ) {
         let address = stack.pop().unwrap();
-        let size = memory.get(&address).unwrap().value();
+        let size = memory
+            .get(&(address - BFieldElement::new(1u64)))
+            .unwrap()
+            .value();
         assert!(
             address.value() + size < u32::MAX as u64,
             "Memory address may not exceed u32::MAX"
         );
         let mut encoding = vec![];
-        for i in 0..=size {
+        for i in 0..size {
             encoding.push(
                 memory
                     .get(&(address + BFieldElement::new(i)))
