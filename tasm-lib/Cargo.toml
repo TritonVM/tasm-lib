@@ -1,6 +1,6 @@
 [package]
 name = "tasm-lib"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 authors = ["Triton Software AG"]
 
@@ -16,10 +16,9 @@ features = ["precommit-hook", "run-cargo-clippy", "run-cargo-fmt"]
 [dependencies]
 anyhow = "1"
 derive_tasm_object = { path = "../derive_tasm_object" }
-triton-vm = { path = "../../triton-vm/triton-vm" }
-# twenty-first = "0.30"
-twenty-first = { path = "../../twenty-first/twenty-first/" }
-rand = "0"
+triton-vm = "0.32"
+twenty-first = "0.31"
+rand = "0.8.5"
 itertools = "0"
 num = "0"
 num-traits = "0"
