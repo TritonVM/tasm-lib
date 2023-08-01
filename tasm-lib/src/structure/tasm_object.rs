@@ -1,6 +1,10 @@
 pub use derive_tasm_object::TasmObject;
 
-use triton_vm::instruction::LabelledInstruction;
+use triton_vm::{instruction::LabelledInstruction, triton_asm};
+use twenty_first::util_types::{
+    algebraic_hasher::AlgebraicHasher,
+    mmr::{mmr_accumulator::MmrAccumulator, mmr_membership_proof::MmrMembershipProof},
+};
 
 /// TasmObject
 ///
@@ -48,6 +52,59 @@ pub trait TasmObject {
     fn get_field_start_with_jump_distance(field_name: &str) -> Vec<LabelledInstruction>;
 }
 
+impl<H: AlgebraicHasher> TasmObject for MmrMembershipProof<H> {
+    fn get_field(field_name: &str) -> Vec<LabelledInstruction> {
+        match field_name {
+            "leaf_index" => triton_asm! {},
+            "authentication_path" => triton_asm! { push 2 add },
+            unknown => panic!("cannot match on field {unknown}"),
+        }
+    }
+
+    fn get_field_with_size(field_name: &str) -> Vec<LabelledInstruction> {
+        match field_name {
+            "leaf_index" => triton_asm! { push 2 },
+            "authentication_path" => triton_asm! { push 2 add read_mem swap 1 push 1 add swap 1 },
+            unknown => panic!("cannot match on field {unknown}"),
+        }
+    }
+
+    fn get_field_start_with_jump_distance(field_name: &str) -> Vec<LabelledInstruction> {
+        match field_name {
+            "leaf_index" => triton_asm! { push 2 },
+            "authentication_path" => triton_asm! { push 2 add read_mem push 1 add },
+            unknown => panic!("cannot match on field {unknown}"),
+        }
+    }
+}
+
+impl<H: AlgebraicHasher> TasmObject for MmrAccumulator<H> {
+    fn get_field(field_name: &str) -> Vec<LabelledInstruction> {
+        match field_name {
+            "leaf_count" => triton_asm! {},
+            "peaks" => triton_asm! { push 3 add },
+            unknown => panic!("cannot match on field {unknown}"),
+        }
+    }
+
+    fn get_field_with_size(field_name: &str) -> Vec<LabelledInstruction> {
+        match field_name {
+            "leaf_count" => triton_asm! { push 2 },
+            "peaks" => triton_asm! { push 3 add read_mem swap 1 push 1 add swap 1 },
+            unknown => panic!("cannot match on field {unknown}"),
+        }
+    }
+
+    fn get_field_start_with_jump_distance(field_name: &str) -> Vec<LabelledInstruction> {
+        match field_name {
+            "leaf_count" => triton_asm! { push 2 },
+            "peaks" => triton_asm! { push 2 add read_mem push 1 add },
+            unknown => panic!("cannot match on field {unknown}"),
+        }
+    }
+}
+
+/// Convenience struct for converting between string literals and field name identifiers.
 pub trait TasmObjectFieldName {
     fn tasm_object_field_name(&self) -> String;
 }
@@ -75,6 +132,9 @@ impl TasmObjectFieldName for i32 {
 /// let field_0 = tasm_object::field!(StructWithUnnamedFields::0);
 /// ```
 /// and for numbered fields.
+///
+/// **Limitations** The type descriptor cannot have generic type arguments. To get around
+/// this, define a new type via `type Custom = Generic<T>` and use that instead.
 #[macro_export]
 macro_rules! field {
     { $o : ident :: $e : ident } => {
@@ -100,6 +160,9 @@ macro_rules! field {
 /// let field_0 = tasm_object::field_with_size!(StructWithUnnamedFields::0);
 /// ```
 /// and for numbered fields.
+///
+/// **Limitations** The type descriptor cannot have generic type arguments. To get around
+/// this, define a new type via `type Custom = Generic<T>` and use that instead.
 #[macro_export]
 macro_rules! field_with_size {
     { $o : ident :: $e : ident } => {
