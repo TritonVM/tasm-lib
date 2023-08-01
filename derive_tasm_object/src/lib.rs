@@ -20,20 +20,6 @@ pub fn derive_tasm_object(input: TokenStream) -> TokenStream {
     impl_derive_tasm_object_macro(ast)
 }
 
-/// Add a bound `T: BFieldCodec` to every type parameter T, unless we ignore it.
-fn add_trait_bounds(mut generics: syn::Generics) -> syn::Generics {
-    for param in &mut generics.params {
-        let syn::GenericParam::Type(type_param) = param else {
-            continue
-        };
-        type_param.bounds.push(syn::parse_quote!(
-            twenty_first::shared_math::bfield_codec::BFieldCodec
-        ));
-        type_param.bounds.push(syn::parse_quote!(TasmObject));
-    }
-    generics
-}
-
 fn impl_derive_tasm_object_macro(ast: syn::DeriveInput) -> TokenStream {
     let (field_names, getters, sizers, jumpers) = match &ast.data {
         syn::Data::Struct(syn::DataStruct {
@@ -49,11 +35,8 @@ fn impl_derive_tasm_object_macro(ast: syn::DeriveInput) -> TokenStream {
 
     let name = &ast.ident;
 
-    // Add a bound `T: BFieldCodec` to every type parameter T.
-    let generics = add_trait_bounds(ast.generics);
-
     // Extract the generics of the struct/enum.
-    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+    let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
 
     // generate clauses for match statements
     let get_current_field_start_with_jump = (0..field_names.len()).map(|index| {
