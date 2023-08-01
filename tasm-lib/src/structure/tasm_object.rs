@@ -122,14 +122,14 @@ impl TasmObjectFieldName for i32 {
 }
 
 /// Convenience macro, so that we don't have to write
-/// ```
-/// let field_f = <StructWithNamedFields as TasmObject>::get_field("f");
-/// let field_0 = <StructWithUnnamedFields as TasmObject>::get_field("field_0");
+/// ```ignore
+/// let field_f = <StructWithNamedFields as TasmObject>::get_field!("f");
+/// let field_0 = <StructWithUnnamedFields as TasmObject>::get_field!("field_0");
 /// ```
 /// but instead
-/// ```
-/// let field_f = tasm_object::field!(StructWithNamedFields::f);
-/// let field_0 = tasm_object::field!(StructWithUnnamedFields::0);
+/// ```ignore
+/// let field_f = field!(StructWithNamedFields::f);
+/// let field_0 = field!(StructWithUnnamedFields::0);
 /// ```
 /// and for numbered fields.
 ///
@@ -150,14 +150,14 @@ macro_rules! field {
 }
 
 /// Convenience macro, so that we don't have to write
-/// ```
-/// let field_f = <StructWithNamedFields as TasmObject>::get_field_with_size("f");
-/// let field_0 = <StructWithUnnamedFields as TasmObject>::get_field_with_size("field_0");
+/// ```ignore
+/// let field_f = <StructWithNamedFields as TasmObject>::get_field_with_size!("f");
+/// let field_0 = <StructWithUnnamedFields as TasmObject>::get_field_with_size!("field_0");
 /// ```
 /// but instead
-/// ```
-/// let field_f = tasm_object::field_with_size!(StructWithNamedFields::f);
-/// let field_0 = tasm_object::field_with_size!(StructWithUnnamedFields::0);
+/// ```ignore
+/// let field_f = field_with_size!(StructWithNamedFields::f);
+/// let field_0 = field_with_size!(StructWithUnnamedFields::0);
 /// ```
 /// and for numbered fields.
 ///
