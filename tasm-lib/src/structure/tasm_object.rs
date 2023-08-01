@@ -72,7 +72,7 @@ impl<H: AlgebraicHasher> TasmObject for MmrMembershipProof<H> {
     fn get_field_start_with_jump_distance(field_name: &str) -> Vec<LabelledInstruction> {
         match field_name {
             "leaf_index" => triton_asm! { push 2 },
-            "authentication_path" => triton_asm! { push 3 add read_mem push 1 add },
+            "authentication_path" => triton_asm! { push 2 add read_mem push 1 add },
             unknown => panic!("cannot match on field {unknown}"),
         }
     }
@@ -90,7 +90,7 @@ impl<H: AlgebraicHasher> TasmObject for MmrAccumulator<H> {
     fn get_field_with_size(field_name: &str) -> Vec<LabelledInstruction> {
         match field_name {
             "leaf_count" => triton_asm! { push 2 },
-            "peaks" => triton_asm! { push 3 add read_mem swap 1 push 1 add swap 1 },
+            "peaks" => triton_asm! { push 2 add read_mem swap 1 push 1 add swap 1 },
             unknown => panic!("cannot match on field {unknown}"),
         }
     }
