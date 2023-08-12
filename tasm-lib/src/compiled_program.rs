@@ -25,7 +25,7 @@ pub trait CompiledProgram {
         secret_input: &[BFieldElement],
     ) -> Result<Vec<BFieldElement>> {
         let p = Self::program();
-        p.run(public_input.to_vec(), secret_input.to_vec())
+        p.run(public_input.into(), secret_input.into())
     }
 
     fn code() -> (Vec<LabelledInstruction>, Library);
@@ -64,7 +64,7 @@ pub fn bench_program<P: CompiledProgram>(
     let program = Program::new(&all_instructions);
 
     // run in trace mode to get table heights
-    let benchmark = match program.trace_execution(public_input.to_vec(), secret_input.to_vec()) {
+    let benchmark = match program.trace_execution(public_input.into(), secret_input.into()) {
         Ok((aet, _output)) => BenchmarkResult {
             case,
             name: name.clone(),
@@ -80,8 +80,8 @@ pub fn bench_program<P: CompiledProgram>(
     // run in profile mode to get picture of call graph running times
     let (_output, profile) = triton_vm::program::Program::profile(
         &all_instructions,
-        public_input.to_vec(),
-        secret_input.to_vec(),
+        public_input.into(),
+        secret_input.into(),
     )
     .unwrap();
     let mut str = format!("{name}:\n");

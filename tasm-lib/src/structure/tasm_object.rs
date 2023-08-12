@@ -185,7 +185,7 @@ mod test {
 
     use itertools::Itertools;
     use rand::{rngs::StdRng, Rng, SeedableRng};
-    use triton_vm::{instruction::LabelledInstructions, triton_asm, BFieldElement};
+    use triton_vm::{instruction::stringify_instructions, triton_asm, BFieldElement};
     use twenty_first::shared_math::{bfield_codec::BFieldCodec, x_field_element::XFieldElement};
 
     use crate::{
@@ -299,7 +299,7 @@ mod test {
                     call {memcpy} // *object
 
                     dup 0 // *object *object
-                    {&object_to_b.clone()}
+                    {&object_to_b}
                     {&b_to_0_with_size}
                     push 2337
                     swap 1 // *object *b.0 2337 *b.0_size
@@ -328,7 +328,9 @@ mod test {
                     return
             };
 
-            LabelledInstructions(code).to_string()
+            // LabelledInstructions(code).to_string()
+            // code.to_string()
+            stringify_instructions(&code)
         }
 
         fn crash_conditions(&self) -> Vec<String> {

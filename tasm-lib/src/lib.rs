@@ -160,7 +160,12 @@ pub fn execute_bench(
     // Find the length of code used for setup. This length does not count towards execution length
     // of snippet so it must be subtracted at the end.
     let program = Program::from_code(&executed_code)?;
-    let (all_states, _) = program.debug(vec![], vec![], None, None);
+    let (all_states, _) = program.debug(
+        Vec::<BFieldElement>::default().into(),
+        Vec::<BFieldElement>::default().into(),
+        None,
+        None,
+    );
     let initialization_clock_cycle_count = all_states.len() - 1;
 
     // Construct the whole program (inclusive setup) to be run
@@ -168,7 +173,9 @@ pub fn execute_bench(
     let program = Program::from_code(&executed_code)?;
 
     // Run the program, including the stack preparation and memory preparation logic
-    let (execution_trace, err) = program.debug(std_in.clone(), secret_in.clone(), None, None);
+    // TODO: Add option of providing non-determinism through RAM here
+    let (execution_trace, err) =
+        program.debug(std_in.clone().into(), secret_in.clone().into(), None, None);
     if let Some(e) = err {
         bail!(
             "`debug` failed with error: {e}\nLast state before crash:\n{}",
@@ -178,7 +185,7 @@ pub fn execute_bench(
 
     // Simulate the program, since this gives us hash table output
     let (simulation_trace, output) = program
-        .trace_execution(std_in.clone(), secret_in.clone())
+        .trace_execution(std_in.clone().into(), secret_in.clone().into())
         .map_err(|error| anyhow!("`simulate` failed with error: {error}"))?;
 
     let start_state: VMState = execution_trace
@@ -265,7 +272,7 @@ pub fn execute_test(
     // Run the program, including the stack preparation and memory preparation logic
     let program = Program::from_code(&executed_code).expect("Could not load source code: {}");
     let final_state = program
-        .debug_terminal_state(std_in.clone(), secret_in.clone(), None, None)
+        .debug_terminal_state(std_in.clone().into(), secret_in.clone().into(), None, None)
         .map_err(|(err, fs)| {
             anyhow!("VM execution failed with error: {err}.\nLast state before crash:\n{fs}")
         })?;
@@ -363,13 +370,19 @@ fn prove_and_verify(
     };
 
     let (simulation_trace, _) = program
-        .trace_execution(std_in.to_owned(), secret_in.to_owned())
+        .trace_execution(std_in.into(), secret_in.into())
         .unwrap();
 
     let code_header = &code[0..std::cmp::min(code.len(), 100)];
     println!("Execution suceeded. Now proving {code_header}");
     let tick = SystemTime::now();
-    let proof = triton_vm::prove(&StarkParameters::default(), &claim, program, secret_in).unwrap();
+    let proof = triton_vm::prove(
+        &StarkParameters::default(),
+        &claim,
+        program,
+        secret_in.into(),
+    )
+    .unwrap();
     println!(
         "Done proving. Elapsed time: {:?}",
         tick.elapsed().expect("Don't mess with time")

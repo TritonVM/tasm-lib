@@ -16,8 +16,8 @@ features = ["precommit-hook", "run-cargo-clippy", "run-cargo-fmt"]
 [dependencies]
 anyhow = "1"
 derive_tasm_object = { path = "../derive_tasm_object" }
-triton-vm = "0.32.1"
-twenty-first = "0.32"
+triton-vm = "0.33"
+twenty-first = "0.32.1"
 rand = "0.8.5"
 itertools = "0"
 num = "0"
