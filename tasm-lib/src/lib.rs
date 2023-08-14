@@ -13,9 +13,11 @@ use snippet::DepracatedSnippet;
 use snippet::RustShadowed;
 use std::collections::HashMap;
 use std::time::SystemTime;
+use triton_vm::instruction::AnInstruction;
 use triton_vm::instruction::LabelledInstruction;
 use triton_vm::program::Program;
 use triton_vm::triton_asm;
+use triton_vm::triton_instr;
 use triton_vm::NonDeterminism;
 use triton_vm::PublicInput;
 use triton_vm::{Claim, StarkParameters};
@@ -168,13 +170,13 @@ pub fn execute_bench(
 
     // Prepend to program the initial stack values such that stack is in the expected
     // state when program logic is executed
-    let mut executed_code: String =
+    let mut prep: Vec<LabelledInstruction> =
         state_preparation_code(stack, memory, initilialize_dynamic_allocator_to);
 
     // Add the program after the stack initialization has been performed
     // Find the length of code used for setup. This length does not count towards execution length
     // of snippet so it must be subtracted at the end.
-    let program = Program::from_code(&executed_code)?;
+    let program = Program::new(&prep);
     let (all_states, _) = program.debug(
         PublicInput::new(vec![]),
         NonDeterminism::new(vec![]),
@@ -184,8 +186,9 @@ pub fn execute_bench(
     let initialization_clock_cycle_count = all_states.len() - 1;
 
     // Construct the whole program (inclusive setup) to be run
-    executed_code.push_str(code);
-    let program = Program::from_code(&executed_code)?;
+    let mut executed_code = prep;
+    executed_code.extend_from_slice(code);
+    let program = Program::new(&executed_code);
 
     // Run the program, including the stack preparation and memory preparation logic
     let (execution_trace, err) = program.debug(
@@ -281,9 +284,9 @@ pub fn execute_test(
 
     // Prepend to program the initial stack values such that stack is in the expected
     // state when program logic is executed
-    let mut prep: String = state_preparation_code(stack, memory, initilialize_dynamic_allocator_to);
-    let prep_instruction_tokens = triton_vm::parser::parse(&prep).unwrap();
-    let mut executed_code = triton_vm::parser::to_labelled_instructions(&prep_instruction_tokens);
+    let mut prep: Vec<LabelledInstruction> =
+        state_preparation_code(stack, memory, initilialize_dynamic_allocator_to);
+    let mut executed_code = prep;
 
     // Construct the whole program (inclusive setup) to be run
     executed_code.append(&mut code.to_vec());
@@ -346,29 +349,29 @@ fn state_preparation_code(
     stack: &[BFieldElement],
     memory: &HashMap<BFieldElement, BFieldElement>,
     initilialize_dynamic_allocator_to: Option<usize>,
-) -> String {
-    let mut state_preparation_code = String::default();
+) -> Vec<LabelledInstruction> {
+    let mut state_preparation_code = Vec::default();
     for element in stack.iter().skip(NUM_OP_STACK_REGISTERS) {
-        state_preparation_code.push_str(&format!("push {}\n", element.value()));
+        state_preparation_code.push(triton_instr!(push element.value()));
     }
 
     // Add all the initial memory to the VM
     for (address, value) in memory.iter() {
         // Prepare stack for writing
-        state_preparation_code.push_str(&format!("push {address}\n"));
-        state_preparation_code.push_str(&format!("push {value}\n"));
+        state_preparation_code.push(triton_instr!(push address.value()));
+        state_preparation_code.push(triton_instr!(push value.value()));
 
         // Write value to memory
-        state_preparation_code.push_str("write_mem\n");
+        state_preparation_code.push(triton_instr!(write_mem));
 
         // Clean stack after writing to memory
-        state_preparation_code.push_str("pop\n");
+        state_preparation_code.push(triton_instr!(pop));
     }
 
     // Ensure that the dynamic allocator is initialized such that it does not overwrite
     // any statically allocated memory, if the caller requests this.
     if let Some(dyn_malloc_initial_value) = initilialize_dynamic_allocator_to {
-        state_preparation_code.push_str(&dyn_malloc::DynMalloc::get_initialization_code(
+        state_preparation_code.append(&mut dyn_malloc::DynMalloc::get_initialization_code(
             dyn_malloc_initial_value.try_into().unwrap(),
         ));
     }
@@ -431,7 +434,7 @@ mod tests {
         let mut memory = HashMap::default();
         let initial_dyn_malloc_value = 14;
         execute_bench(
-            "halt",
+            &triton_asm!(halt),
             &mut get_init_tvm_stack(),
             0,
             vec![],
@@ -451,7 +454,7 @@ mod tests {
         // Ensure that dyn malloc is not initialized if no such initialization is requested
         let mut memory = HashMap::default();
         execute_bench(
-            "halt",
+            &triton_asm!(halt),
             &mut get_init_tvm_stack(),
             0,
             vec![],

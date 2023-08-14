@@ -5,6 +5,7 @@ use rand::Rng;
 use triton_vm::{
     instruction::LabelledInstruction,
     parser::{parse, to_labelled_instructions},
+    triton_instr,
 };
 use twenty_first::shared_math::b_field_element::{BFieldElement, BFIELD_ZERO};
 
@@ -21,24 +22,17 @@ use crate::{
 pub struct DynMalloc;
 
 impl DynMalloc {
-    pub fn get_initialization_code(malloc_init_value: u32) -> String {
-        let mut ret = String::default();
+    pub fn get_initialization_code(malloc_init_value: u32) -> Vec<LabelledInstruction> {
+        let mut ret = Vec::default();
 
         if malloc_init_value > 0 {
-            ret.push_str(&format!("push {DYN_MALLOC_ADDRESS}\n"));
-            ret.push_str(&format!("push {malloc_init_value}\n"));
-            ret.push_str("write_mem\n");
-            ret.push_str("pop\n");
+            ret.push(triton_instr!(push DYN_MALLOC_ADDRESS as u64));
+            ret.push(triton_instr!(push malloc_init_value as u64));
+            ret.push(triton_instr!(write_mem));
+            ret.push(triton_instr!(pop));
         }
 
         ret
-    }
-
-    pub fn get_initialization_code_as_instructions(
-        words_statically_allocated: u32,
-    ) -> Vec<LabelledInstruction> {
-        let code = Self::get_initialization_code(words_statically_allocated);
-        to_labelled_instructions(&parse(&code).unwrap())
     }
 }
 
@@ -211,15 +205,6 @@ mod tests {
             ExecutionState::with_stack_and_memory(init_stack, HashMap::default(), 100);
         DynMalloc.link_and_run_tasm_from_state_for_test(&mut non_empty_memory_state);
         assert_eq!(100, non_empty_memory_state.stack.pop().unwrap().value());
-    }
-
-    #[test]
-    fn get_initialization_code_equivalence() {
-        // Verify that code returning `Vec<LabelledInstruction>` and `String` agree
-        let init_code_string = DynMalloc::get_initialization_code(4);
-        let init_code_vec = DynMalloc::get_initialization_code_as_instructions(4);
-        let string_parsed = to_labelled_instructions(&parse(&init_code_string).unwrap());
-        assert_eq!(string_parsed, init_code_vec);
     }
 }
 
