@@ -8,14 +8,14 @@ use crate::library::Library;
 use crate::rust_shadowing_helper_functions::unsafe_list::{
     unsafe_list_set, untyped_unsafe_insert_random_list,
 };
-use crate::snippet::{DataType, Snippet};
+use crate::snippet::{DataType, DepracatedSnippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct UnsafeSet(pub DataType);
 
-impl Snippet for UnsafeSet {
-    fn inputs(&self) -> Vec<String> {
+impl DepracatedSnippet for UnsafeSet {
+    fn input_field_names(&self) -> Vec<String> {
         // See: https://github.com/TritonVM/tasm-snippets/issues/13
         // _ elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}} *list index
         vec![
@@ -25,7 +25,7 @@ impl Snippet for UnsafeSet {
         .concat()
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec![]
     }
 
@@ -57,7 +57,7 @@ impl Snippet for UnsafeSet {
         -2 - self.0.get_size() as isize
     }
 
-    fn entrypoint(&self) -> String {
+    fn entrypoint_name(&self) -> String {
         format!(
             "tasm_list_unsafe_u32_set_element_{}",
             self.0.label_friendly_name()
@@ -65,7 +65,7 @@ impl Snippet for UnsafeSet {
     }
 
     fn function_code(&self, _library: &mut Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
         let element_size = self.0.get_size();
 
         let mut write_elements_to_memory_code = String::default();
@@ -243,7 +243,6 @@ mod tests {
         test_rust_equivalence_given_input_values(
             &UnsafeSet(data_type.clone()),
             &init_stack,
-            &[],
             &[],
             &mut vm_memory,
             0,

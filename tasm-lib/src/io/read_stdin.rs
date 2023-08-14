@@ -1,10 +1,11 @@
 use std::collections::HashMap;
 
+use triton_vm::NonDeterminism;
 use twenty_first::shared_math::{b_field_element::BFieldElement, other::random_elements};
 
 use crate::{
     get_init_tvm_stack,
-    snippet::{DataType, Snippet},
+    snippet::{DataType, DepracatedSnippet},
     ExecutionState,
 };
 
@@ -12,12 +13,12 @@ use crate::{
 #[derive(Clone, Debug)]
 pub struct ReadStdIn(pub DataType);
 
-impl Snippet for ReadStdIn {
-    fn entrypoint(&self) -> String {
+impl DepracatedSnippet for ReadStdIn {
+    fn entrypoint_name(&self) -> String {
         format!("tasm_io_read_stdin_{}", self.0)
     }
 
-    fn inputs(&self) -> Vec<String> {
+    fn input_field_names(&self) -> Vec<String> {
         vec![]
     }
 
@@ -29,7 +30,7 @@ impl Snippet for ReadStdIn {
         vec![self.0.clone()]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         // This function returns element_0 on the top of the stack and the other elements below it. E.g.: _ elem_2 elem_1 elem_0
         let mut ret: Vec<String> = vec![];
         let size = self.0.get_size();
@@ -45,7 +46,7 @@ impl Snippet for ReadStdIn {
     }
 
     fn function_code(&self, _library: &mut crate::library::Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
         let read_an_element = "read_io\n".repeat(self.0.get_size());
 
         format!(
@@ -66,7 +67,7 @@ impl Snippet for ReadStdIn {
         vec![ExecutionState {
             stack: get_init_tvm_stack(),
             std_in,
-            secret_in: vec![],
+            nondeterminism: NonDeterminism::new(vec![]),
             memory: HashMap::default(),
             words_allocated: 0,
         }]
@@ -93,7 +94,7 @@ impl Snippet for ReadStdIn {
         ExecutionState {
             stack: get_init_tvm_stack(),
             std_in,
-            secret_in: vec![],
+            nondeterminism: NonDeterminism::new(vec![]),
             memory: HashMap::default(),
             words_allocated: 0,
         }

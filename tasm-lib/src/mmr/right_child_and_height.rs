@@ -8,7 +8,7 @@ use twenty_first::util_types::mmr;
 use crate::arithmetic::u64::eq_u64::EqU64;
 use crate::arithmetic::u64::lt_u64::LtU64;
 use crate::library::Library;
-use crate::snippet::{DataType, Snippet};
+use crate::snippet::{DataType, DepracatedSnippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
 use super::left_child::MmrLeftChild;
@@ -19,12 +19,12 @@ use super::right_child::MmrRightChild;
 #[derive(Clone, Debug)]
 pub struct MmrRightChildAndHeight;
 
-impl Snippet for MmrRightChildAndHeight {
-    fn inputs(&self) -> Vec<String> {
+impl DepracatedSnippet for MmrRightChildAndHeight {
+    fn input_field_names(&self) -> Vec<String> {
         vec!["node_index_hi".to_string(), "node_index_lo".to_string()]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec!["is_right_child".to_string(), "height".to_string()]
     }
 
@@ -54,12 +54,12 @@ impl Snippet for MmrRightChildAndHeight {
         0
     }
 
-    fn entrypoint(&self) -> String {
+    fn entrypoint_name(&self) -> String {
         "tasm_mmr_right_child_and_height".to_string()
     }
 
     fn function_code(&self, library: &mut Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
         let eq_u64 = library.import(Box::new(EqU64));
         let lt_u64 = library.import(Box::new(LtU64));
         let left_child = library.import(Box::new(MmrLeftChild));
@@ -457,7 +457,6 @@ mod tests {
         test_rust_equivalence_given_input_values::<MmrRightChildAndHeight>(
             &MmrRightChildAndHeight,
             &init_stack,
-            &[],
             &[],
             &mut HashMap::default(),
             0,

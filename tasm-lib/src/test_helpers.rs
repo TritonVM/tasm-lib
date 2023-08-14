@@ -1,24 +1,27 @@
 use std::collections::HashMap;
 
 use itertools::Itertools;
+use triton_vm::{triton_asm, NonDeterminism};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::dyn_malloc::DYN_MALLOC_ADDRESS;
 use crate::library::Library;
-use crate::snippet::Snippet;
+use crate::snippet::{BasicSnippet, RustShadowed};
 use crate::{
-    exported_snippets, rust_shadowing_helper_functions, ExecutionState, VmOutputState,
-    DIGEST_LENGTH,
+    execute_test, exported_snippets, rust_shadowing_helper_functions, ExecutionState,
+    VmOutputState, DIGEST_LENGTH,
 };
 
 #[allow(dead_code)]
-pub fn test_rust_equivalence_multiple<T: Snippet>(
+pub fn test_rust_equivalence_multiple<T: RustShadowed>(
     snippet_struct: &T,
     export_snippet: bool,
 ) -> Vec<VmOutputState> {
-    // Verify that snippet can be found in `all_snippets`, so it's visible to the outside
-    // This call will panic if snippet is not found in that function call
-    // The data type value is a dummy value for all snippets except those that handle lists.
+    // Verify that snippet can be found in `all_snippets`, so that
+    // it iss visible to the outside.
+    // This call will panic if snippet is not found in that
+    // function call. The data type value is a dummy value for all
+    // snippets except those that handle lists.
     if export_snippet {
         let looked_up_snippet = exported_snippets::name_to_snippet(&snippet_struct.entrypoint());
         assert_eq!(
@@ -28,18 +31,13 @@ pub fn test_rust_equivalence_multiple<T: Snippet>(
         );
     }
 
-    let mut execution_states = snippet_struct.gen_input_states();
+    let mut execution_states = snippet_struct.generate_test_states();
 
     let mut vm_output_states = vec![];
     for execution_state in execution_states.iter_mut() {
-        let vm_output_state = test_rust_equivalence_given_input_values::<T>(
+        let vm_output_state = test_rust_equivalence_given_execution_state::<T>(
             snippet_struct,
-            &execution_state.stack,
-            &execution_state.std_in,
-            &execution_state.secret_in,
-            &mut execution_state.memory,
-            execution_state.words_allocated,
-            None,
+            execution_state.clone(),
         );
         vm_output_states.push(vm_output_state);
     }
@@ -48,15 +46,16 @@ pub fn test_rust_equivalence_multiple<T: Snippet>(
 }
 
 #[allow(dead_code)]
-pub fn test_rust_equivalence_given_execution_state<T: Snippet>(
+pub fn test_rust_equivalence_given_execution_state<T: RustShadowed>(
     snippet_struct: &T,
     mut execution_state: ExecutionState,
 ) -> VmOutputState {
-    test_rust_equivalence_given_input_values::<T>(
+    let nondeterminism = execution_state.nondeterminism;
+    test_rust_equivalence_given_complete_state::<T>(
         snippet_struct,
         &execution_state.stack,
         &execution_state.std_in,
-        &execution_state.secret_in,
+        &nondeterminism,
         &mut execution_state.memory,
         execution_state.words_allocated,
         None,
@@ -64,54 +63,106 @@ pub fn test_rust_equivalence_given_execution_state<T: Snippet>(
 }
 
 #[allow(dead_code)]
-pub fn test_rust_equivalence_given_input_values<T: Snippet>(
+pub fn test_rust_equivalence_given_input_values<T: RustShadowed>(
     snippet_struct: &T,
     stack: &[BFieldElement],
     stdin: &[BFieldElement],
-    secret_in: &[BFieldElement],
     memory: &mut HashMap<BFieldElement, BFieldElement>,
     words_statically_allocated: usize,
     expected_final_stack: Option<&[BFieldElement]>,
 ) -> VmOutputState {
     let init_memory = memory.clone();
-    let mut tasm_stack = stack.to_vec();
-    let mut tasm_memory = init_memory.clone();
+    let nondeterminism = NonDeterminism::<BFieldElement>::new(vec![]);
 
-    let mut rust_memory = init_memory;
-    let mut rust_stack = stack.to_vec();
-
-    test_rust_equivalence_given_input_values_and_initial_stacks_and_memories(
+    test_rust_equivalence_given_complete_state(
         snippet_struct,
         stack,
         stdin,
-        secret_in,
+        &nondeterminism,
         memory,
         words_statically_allocated,
         expected_final_stack,
-        &mut tasm_stack,
-        &mut rust_stack,
-        &mut tasm_memory,
-        &mut rust_memory,
     )
+}
+
+fn link_for_isolated_run<T: RustShadowed>(
+    snippet_struct: &T,
+    words_statically_allocated: usize,
+) -> String {
+    let mut snippet_state = Library::with_preallocated_memory(words_statically_allocated);
+    let entrypoint = snippet_struct.entrypoint();
+    let function_body = snippet_struct.code(&mut snippet_state);
+    let library_code = snippet_state.all_imports();
+
+    // The TASM code is always run through a function call, so the 1st instruction
+    // is a call to the function in question.
+    let code = triton_asm!(
+        call {entrypoint}
+        halt
+
+        {&function_body}
+        {library_code}
+    );
+
+    code
+}
+
+fn link_and_run_tasm_for_test<T: RustShadowed>(
+    snippet_struct: &T,
+    stack: &mut Vec<BFieldElement>,
+    std_in: Vec<BFieldElement>,
+    secret_in: Vec<BFieldElement>,
+    memory: &mut HashMap<BFieldElement, BFieldElement>,
+    words_statically_allocated: usize,
+) -> VmOutputState {
+    let expected_length_prior: usize = snippet_struct
+        .inputs()
+        .iter()
+        .map(|(x, n)| x.get_size())
+        .sum();
+    let expected_length_after: usize = snippet_struct
+        .outputs()
+        .iter()
+        .map(|(x, n)| x.get_size())
+        .sum();
+    assert_eq!(
+        snippet_struct.stack_diff(),
+        (expected_length_after as isize - expected_length_prior as isize),
+        "Declared stack diff must match type indicators"
+    );
+
+    let code = link_for_isolated_run(snippet_struct, words_statically_allocated);
+
+    execute_test(
+        &code,
+        stack,
+        snippet_struct.stack_diff(),
+        std_in,
+        NonDeterminism::new(secret_in),
+        memory,
+        Some(words_statically_allocated),
+    )
+    .unwrap()
 }
 
 #[allow(dead_code)]
 #[allow(clippy::ptr_arg)]
 #[allow(clippy::too_many_arguments)]
-pub fn test_rust_equivalence_given_input_values_and_initial_stacks_and_memories<T: Snippet>(
+pub fn test_rust_equivalence_given_complete_state<T: RustShadowed>(
     snippet_struct: &T,
     stack: &[BFieldElement],
     stdin: &[BFieldElement],
-    secret_in: &[BFieldElement],
+    nondeterminism: &NonDeterminism<BFieldElement>,
     memory: &mut HashMap<BFieldElement, BFieldElement>,
     words_statically_allocated: usize,
     expected_final_stack: Option<&[BFieldElement]>,
-    tasm_stack: &mut Vec<BFieldElement>,
-    rust_stack: &mut Vec<BFieldElement>,
-    tasm_memory: &mut HashMap<BFieldElement, BFieldElement>,
-    rust_memory: &mut HashMap<BFieldElement, BFieldElement>,
 ) -> VmOutputState {
     let init_stack = stack.to_vec();
+
+    let mut rust_memory = memory.clone();
+    let mut tasm_memory = memory.clone();
+    let mut rust_stack = stack.to_vec();
+    let mut tasm_stack = stack.to_vec();
 
     if words_statically_allocated > 0 {
         rust_shadowing_helper_functions::dyn_malloc::rust_dyn_malloc_initialize(
@@ -121,13 +172,18 @@ pub fn test_rust_equivalence_given_input_values_and_initial_stacks_and_memories<
     }
 
     // run rust shadow
-    snippet_struct.rust_shadowing(rust_stack, stdin.to_vec(), secret_in.to_vec(), rust_memory);
+    snippet_struct.rust_shadow_wrapper(
+        &stdin.to_vec(),
+        nondeterminism,
+        &mut rust_stack,
+        &mut rust_memory,
+    );
 
     // run tvm
     let vm_output_state = snippet_struct.link_and_run_tasm_for_test(
         tasm_stack,
         stdin.to_vec(),
-        secret_in.to_vec(),
+        nondeterminism,
         tasm_memory,
         words_statically_allocated,
     );
@@ -253,7 +309,7 @@ mod test {
 
     use crate::{get_init_tvm_stack, hashing::sample_indices::SampleIndices, list::ListType};
 
-    use super::test_rust_equivalence_given_input_values_and_initial_stacks_and_memories;
+    use super::test_rust_equivalence_given_complete_state;
 
     /// TIP6 sets the bottom of the stack to the program hash. While testing Snippets,
     /// which are not standalone programs and therefore do not come with a well defined
@@ -279,7 +335,7 @@ mod test {
         let mut rust_memory = init_memory.clone();
         let mut rust_stack = stack.to_vec();
 
-        test_rust_equivalence_given_input_values_and_initial_stacks_and_memories(
+        test_rust_equivalence_given_complete_state(
             &snippet_struct,
             &stack,
             &[],

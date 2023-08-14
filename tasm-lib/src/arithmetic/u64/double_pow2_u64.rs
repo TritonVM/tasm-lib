@@ -3,19 +3,19 @@ use twenty_first::{amount::u32s::U32s, shared_math::b_field_element::BFieldEleme
 
 use crate::{
     get_init_tvm_stack, push_encodable,
-    snippet::{DataType, Snippet},
+    snippet::{DataType, DepracatedSnippet},
     ExecutionState,
 };
 
 #[derive(Clone, Debug)]
 pub struct DoublePow2U64;
 
-impl Snippet for DoublePow2U64 {
-    fn entrypoint(&self) -> String {
+impl DepracatedSnippet for DoublePow2U64 {
+    fn entrypoint_name(&self) -> String {
         "tasm_arithmetic_u64_pow2_double".to_string()
     }
 
-    fn inputs(&self) -> Vec<String> {
+    fn input_field_names(&self) -> Vec<String> {
         vec!["value_hi".to_string(), "value_lo".to_string()]
     }
 
@@ -27,7 +27,7 @@ impl Snippet for DoublePow2U64 {
         vec![DataType::U64]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec!["(value * 2)_hi".to_string(), "(value * 2)_lo".to_string()]
     }
 
@@ -36,7 +36,7 @@ impl Snippet for DoublePow2U64 {
     }
 
     fn function_code(&self, _library: &mut crate::library::Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
         const TWO_POW_31: &str = "2147483648";
         const ONE_HALF: &str = "9223372034707292161";
 

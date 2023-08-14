@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use triton_vm::NonDeterminism;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::{
@@ -9,7 +10,7 @@ use crate::{
         unsafe_u32::{new::UnsafeNew, set_length::UnsafeSetLength},
     },
     rust_shadowing_helper_functions::{self},
-    snippet::{DataType, Snippet},
+    snippet::{DataType, DepracatedSnippet},
     ExecutionState,
 };
 
@@ -31,19 +32,19 @@ impl Range {
         ExecutionState {
             stack,
             std_in: vec![],
-            secret_in: vec![],
+            nondeterminism: NonDeterminism::new(vec![]),
             memory: HashMap::new(),
             words_allocated: 1,
         }
     }
 }
 
-impl Snippet for Range {
-    fn entrypoint(&self) -> String {
+impl DepracatedSnippet for Range {
+    fn entrypoint_name(&self) -> String {
         format!("tasm_list_{}_range", self.list_type)
     }
 
-    fn inputs(&self) -> Vec<String>
+    fn input_field_names(&self) -> Vec<String>
     where
         Self: Sized,
     {
@@ -58,7 +59,7 @@ impl Snippet for Range {
         vec![DataType::List(Box::new(DataType::U32))]
     }
 
-    fn outputs(&self) -> Vec<String>
+    fn output_field_names(&self) -> Vec<String>
     where
         Self: Sized,
     {
@@ -73,7 +74,7 @@ impl Snippet for Range {
     }
 
     fn function_code(&self, library: &mut crate::library::Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
 
         let new_list = match self.list_type {
             ListType::Safe => library.import(Box::new(SafeNew(DataType::U32))),

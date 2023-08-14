@@ -9,15 +9,15 @@ use crate::{
     library::Library,
     list::safe_u32::SAFE_LIST_ELEMENT_CAPACITY,
     rust_shadowing_helper_functions::safe_list::{safe_insert_random_list, safe_list_push},
-    snippet::{DataType, Snippet},
+    snippet::{DataType, DepracatedSnippet},
     ExecutionState,
 };
 
 #[derive(Clone, Debug)]
 pub struct SafePush(pub DataType);
 
-impl Snippet for SafePush {
-    fn inputs(&self) -> Vec<String> {
+impl DepracatedSnippet for SafePush {
+    fn input_field_names(&self) -> Vec<String> {
         let element_size = self.0.get_size();
 
         // _ *list, elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}
@@ -29,7 +29,7 @@ impl Snippet for SafePush {
         ret
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec![]
     }
 
@@ -72,7 +72,7 @@ impl Snippet for SafePush {
         -(self.0.get_size() as isize) - 1
     }
 
-    fn entrypoint(&self) -> String {
+    fn entrypoint_name(&self) -> String {
         format!("tasm_list_safe_u32_push_{}", self.0.label_friendly_name())
     }
 
@@ -100,7 +100,7 @@ impl Snippet for SafePush {
             String::default()
         };
 
-        let entry_point = self.entrypoint();
+        let entry_point = self.entrypoint_name();
         format!(
             "
             // Before: _ *list, elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}
@@ -412,7 +412,6 @@ mod tests {
         test_rust_equivalence_given_input_values(
             &SafePush(data_type.clone()),
             &init_stack,
-            &[],
             &[],
             &mut memory,
             1,

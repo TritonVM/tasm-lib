@@ -1,6 +1,7 @@
 use num::One;
 use rand::{thread_rng, Rng};
 use std::collections::HashMap;
+use triton_vm::NonDeterminism;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::random_elements;
 use twenty_first::test_shared::mmr::get_rustyleveldb_ammr_from_digests;
@@ -13,7 +14,7 @@ use crate::hashing::load_auth_path_from_secret_in_safe_list::LoadAuthPathFromSec
 use crate::hashing::load_auth_path_from_secret_in_unsafe_list::LoadAuthPathFromSecretInUnsafeList;
 use crate::library::Library;
 use crate::list::ListType;
-use crate::snippet::{DataType, Snippet};
+use crate::snippet::{DataType, DepracatedSnippet};
 use crate::{
     get_init_tvm_stack, rust_shadowing_helper_functions, Digest, ExecutionState, VmHasher,
     DIGEST_LENGTH,
@@ -46,13 +47,15 @@ impl MmrLoadFromSecretInThenVerify {
         let mmr_mp = ammr.prove_membership(leaf_index).0;
         let authentication_path = mmr_mp.authentication_path;
         vm_init_state
-            .secret_in
+            .nondeterminism
+            .individual_tokens
             .push(BFieldElement::new(authentication_path.len() as u64));
         for ap_element in authentication_path.iter() {
             let mut ap_element_values = ap_element.values().to_vec();
             for _ in 0..DIGEST_LENGTH {
                 vm_init_state
-                    .secret_in
+                    .nondeterminism
+                    .individual_tokens
                     .push(ap_element_values.pop().unwrap());
             }
         }
@@ -134,7 +137,7 @@ impl MmrLoadFromSecretInThenVerify {
         ExecutionState {
             stack,
             std_in: vec![],
-            secret_in: vec![],
+            nondeterminism: NonDeterminism::new(vec![]),
             memory,
             words_allocated: DIGEST_LENGTH * MAX_MMR_HEIGHT + 1 + list_meta_data_size,
         }
@@ -142,8 +145,8 @@ impl MmrLoadFromSecretInThenVerify {
 }
 
 // TODO: Compiler complains without this explicit lifetime on `H`. But is it OK?
-impl Snippet for MmrLoadFromSecretInThenVerify {
-    fn inputs(&self) -> Vec<String> {
+impl DepracatedSnippet for MmrLoadFromSecretInThenVerify {
+    fn input_field_names(&self) -> Vec<String> {
         vec![
             "peaks_pointer".to_string(),
             "leaf_count_hi".to_string(),
@@ -158,7 +161,7 @@ impl Snippet for MmrLoadFromSecretInThenVerify {
         ]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec![
             "auth_path_pointer".to_string(),
             "leaf_index_hi".to_string(),
@@ -205,12 +208,12 @@ impl Snippet for MmrLoadFromSecretInThenVerify {
         -6
     }
 
-    fn entrypoint(&self) -> String {
+    fn entrypoint_name(&self) -> String {
         format!("tasm_mmr_verify_load_from_secret_in_{}", self.list_type)
     }
 
     fn function_code(&self, library: &mut Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
         let load_auth_path_from_secret_in = match self.list_type {
             ListType::Safe => library.import(Box::new(LoadAuthPathFromSecretInSafeList)),
             ListType::Unsafe => library.import(Box::new(LoadAuthPathFromSecretInUnsafeList)),

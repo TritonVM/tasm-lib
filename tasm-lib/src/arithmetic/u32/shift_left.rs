@@ -4,18 +4,18 @@ use rand::{thread_rng, Rng, RngCore};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
-use crate::snippet::{DataType, Snippet};
+use crate::snippet::{DataType, DepracatedSnippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct ShiftLeftU32;
 
-impl Snippet for ShiftLeftU32 {
-    fn entrypoint(&self) -> String {
+impl DepracatedSnippet for ShiftLeftU32 {
+    fn entrypoint_name(&self) -> String {
         "tasm_arithmetic_u32_shift_left_u32".to_string()
     }
 
-    fn inputs(&self) -> Vec<String> {
+    fn input_field_names(&self) -> Vec<String> {
         vec!["value".to_string(), "shift".to_string()]
     }
 
@@ -27,7 +27,7 @@ impl Snippet for ShiftLeftU32 {
         vec![DataType::U32]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec!["value << shift".to_string()]
     }
 
@@ -36,7 +36,7 @@ impl Snippet for ShiftLeftU32 {
     }
 
     fn function_code(&self, _library: &mut Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
 
         // I'm unsure if we should do a bounds check to check if `shift < 32`
         format!(
@@ -160,7 +160,6 @@ mod tests {
         test_rust_equivalence_given_input_values(
             &ShiftLeftU32,
             &init_stack,
-            &[],
             &[],
             &mut HashMap::default(),
             0,

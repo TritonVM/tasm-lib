@@ -4,7 +4,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use crate::{
     arithmetic::u64::{and_u64::AndU64, log_2_floor_u64::Log2FloorU64},
     get_init_tvm_stack,
-    snippet::{DataType, Snippet},
+    snippet::{DataType, DepracatedSnippet},
     ExecutionState,
 };
 
@@ -13,12 +13,12 @@ use super::{decr_u64::DecrU64, xor_u64::XorU64};
 #[derive(Clone, Debug)]
 pub struct IndexOfLastNonZeroBitU64;
 
-impl Snippet for IndexOfLastNonZeroBitU64 {
-    fn entrypoint(&self) -> String {
+impl DepracatedSnippet for IndexOfLastNonZeroBitU64 {
+    fn entrypoint_name(&self) -> String {
         "tasm_arithmetic_u64_index_of_last_nonzero_bit".to_string()
     }
 
-    fn inputs(&self) -> Vec<String> {
+    fn input_field_names(&self) -> Vec<String> {
         vec!["value_hi".to_string(), "value_lo".to_string()]
     }
 
@@ -30,7 +30,7 @@ impl Snippet for IndexOfLastNonZeroBitU64 {
         vec![DataType::U32]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec!["index_of_last_nonzero_bit(value)".to_string()]
     }
 
@@ -39,7 +39,7 @@ impl Snippet for IndexOfLastNonZeroBitU64 {
     }
 
     fn function_code(&self, library: &mut crate::library::Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
         let decr = library.import(Box::new(DecrU64));
         let xor = library.import(Box::new(XorU64));
         let and = library.import(Box::new(AndU64));
@@ -170,7 +170,6 @@ mod tests {
             &IndexOfLastNonZeroBitU64,
             &init_stack,
             &[],
-            &[],
             &mut HashMap::default(),
             0,
             Some(&expected_output),
@@ -187,7 +186,6 @@ mod tests {
         test_rust_equivalence_given_input_values(
             &IndexOfLastNonZeroBitU64,
             &init_stack,
-            &[],
             &[],
             &mut HashMap::default(),
             0,
@@ -206,7 +204,6 @@ mod tests {
             &IndexOfLastNonZeroBitU64,
             &init_stack,
             &[],
-            &[],
             &mut HashMap::default(),
             0,
             None,
@@ -223,7 +220,6 @@ mod tests {
         test_rust_equivalence_given_input_values(
             &IndexOfLastNonZeroBitU64,
             &init_stack,
-            &[],
             &[],
             &mut HashMap::default(),
             0,

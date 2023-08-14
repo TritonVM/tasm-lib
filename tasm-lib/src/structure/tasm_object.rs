@@ -185,12 +185,12 @@ mod test {
 
     use itertools::Itertools;
     use rand::{rngs::StdRng, Rng, SeedableRng};
-    use triton_vm::{instruction::LabelledInstructions, triton_asm, BFieldElement};
+    use triton_vm::{triton_asm, BFieldElement, NonDeterminism};
     use twenty_first::shared_math::{bfield_codec::BFieldCodec, x_field_element::XFieldElement};
 
     use crate::{
         get_init_tvm_stack, io, memory,
-        snippet::{DataType, InputSource, Snippet},
+        snippet::{DataType, DepracatedSnippet, InputSource},
         structure::tasm_object::TasmObject,
         test_helpers::test_rust_equivalence_multiple,
         ExecutionState,
@@ -246,12 +246,12 @@ mod test {
 
     struct TestObjectFieldGetter;
 
-    impl Snippet for TestObjectFieldGetter {
-        fn entrypoint(&self) -> String {
+    impl DepracatedSnippet for TestObjectFieldGetter {
+        fn entrypoint_name(&self) -> String {
             "tasm_test_object_field_getter".to_string()
         }
 
-        fn inputs(&self) -> Vec<String> {
+        fn input_field_names(&self) -> Vec<String> {
             vec!["object".to_string()]
         }
 
@@ -263,7 +263,7 @@ mod test {
             vec![]
         }
 
-        fn outputs(&self) -> Vec<String> {
+        fn output_field_names(&self) -> Vec<String> {
             vec![]
         }
 
@@ -272,7 +272,7 @@ mod test {
         }
 
         fn function_code(&self, library: &mut crate::library::Library) -> String {
-            let entrypoint = self.entrypoint();
+            let entrypoint = self.entrypoint_name();
             let object_to_a_with_size = field_with_size!(OuterStruct::a);
             let object_to_b = field!(OuterStruct::b);
             let object_to_c_with_size = field_with_size!(OuterStruct::c);
@@ -299,7 +299,7 @@ mod test {
                     call {memcpy} // *object
 
                     dup 0 // *object *object
-                    {&object_to_b.clone()}
+                    {&object_to_b}
                     {&b_to_0_with_size}
                     push 2337
                     swap 1 // *object *b.0 2337 *b.0_size
@@ -328,7 +328,7 @@ mod test {
                     return
             };
 
-            LabelledInstructions(code).to_string()
+            format!("{}\n", code.iter().join("\n"))
         }
 
         fn crash_conditions(&self) -> Vec<String> {
@@ -349,11 +349,10 @@ mod test {
                 let std_in = object.encode().encode();
                 println!("object, encoded twice: {}", std_in.iter().join(","));
                 println!("length of object encoding: {}", object.encode().len());
-                let secret_in = vec![];
                 let input_state = ExecutionState {
                     stack: stack.clone(),
                     std_in,
-                    secret_in,
+                    nondeterminism: NonDeterminism::new(vec![]),
                     memory: memory.clone(),
                     words_allocated: 1,
                 };
@@ -373,12 +372,11 @@ mod test {
             let memory = HashMap::<BFieldElement, BFieldElement>::new();
             let object = pseudorandom_object(rng.gen());
             let std_in = object.encode().encode();
-            let secret_in = vec![];
 
             ExecutionState {
                 stack,
                 std_in,
-                secret_in,
+                nondeterminism: NonDeterminism::new(vec![]),
                 memory,
                 words_allocated: 1,
             }
@@ -394,12 +392,11 @@ mod test {
             let memory = HashMap::<BFieldElement, BFieldElement>::new();
             let object = pseudorandom_object(rng.gen());
             let std_in = object.encode().encode();
-            let secret_in = vec![];
 
             ExecutionState {
                 stack,
                 std_in,
-                secret_in,
+                nondeterminism: NonDeterminism::new(vec![]),
                 memory,
                 words_allocated: 1,
             }

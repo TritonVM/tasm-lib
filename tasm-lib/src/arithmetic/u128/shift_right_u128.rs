@@ -6,18 +6,18 @@ use crate::{
     get_init_tvm_stack,
     library::Library,
     push_encodable,
-    snippet::{DataType, Snippet},
+    snippet::{DataType, DepracatedSnippet},
     ExecutionState,
 };
 
 pub struct ShiftRightU128;
 
-impl Snippet for ShiftRightU128 {
-    fn entrypoint(&self) -> String {
+impl DepracatedSnippet for ShiftRightU128 {
+    fn entrypoint_name(&self) -> String {
         "tasm_arithmetic_u128_shift_right".to_string()
     }
 
-    fn inputs(&self) -> Vec<String> {
+    fn input_field_names(&self) -> Vec<String> {
         vec![
             "input_3".to_string(),
             "input_2".to_string(),
@@ -35,7 +35,7 @@ impl Snippet for ShiftRightU128 {
         vec![DataType::U128]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec![
             "shifted_value_3".to_string(),
             "shifted_value_2".to_string(),
@@ -49,7 +49,7 @@ impl Snippet for ShiftRightU128 {
     }
 
     fn function_code(&self, _library: &mut Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
         format!(
             "
             // BEFORE: _ v_3 v_2 v_1 v_0 shift
@@ -280,7 +280,6 @@ mod tests {
         test_rust_equivalence_given_input_values(
             &ShiftRightU128,
             &init_stack,
-            &[],
             &[],
             &mut HashMap::default(),
             0,

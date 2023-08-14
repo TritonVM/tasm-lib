@@ -19,7 +19,7 @@ use crate::library::Library;
 use crate::list::safe_u32::get::SafeGet;
 use crate::list::unsafe_u32::get::UnsafeGet;
 use crate::list::ListType;
-use crate::snippet::{DataType, Snippet};
+use crate::snippet::{DataType, DepracatedSnippet};
 use crate::{
     get_init_tvm_stack, rust_shadowing_helper_functions, Digest, ExecutionState, VmHasher,
     DIGEST_LENGTH,
@@ -130,8 +130,8 @@ impl MmrVerifyFromMemory {
     }
 }
 
-impl Snippet for MmrVerifyFromMemory {
-    fn inputs(&self) -> Vec<String> {
+impl DepracatedSnippet for MmrVerifyFromMemory {
+    fn input_field_names(&self) -> Vec<String> {
         vec![
             "*peaks".to_string(),
             "leaf_count_hi".to_string(),
@@ -147,7 +147,7 @@ impl Snippet for MmrVerifyFromMemory {
         ]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec![
             "*auth_path".to_string(),
             "leaf_index_hi".to_string(),
@@ -203,7 +203,7 @@ impl Snippet for MmrVerifyFromMemory {
         -7
     }
 
-    fn entrypoint(&self) -> String {
+    fn entrypoint_name(&self) -> String {
         format!("tasm_mmr_verify_from_memory_{}", self.list_type)
     }
 
@@ -214,7 +214,7 @@ impl Snippet for MmrVerifyFromMemory {
             ListType::Unsafe => library.import(Box::new(UnsafeGet(DataType::Digest))),
         };
         let u32_is_odd = library.import(Box::new(U32IsOdd));
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
         let eq_u64 = library.import(Box::new(EqU64));
         let div_2 = library.import(Box::new(Div2U64));
         let swap_digests = library.import(Box::new(SwapDigest));
@@ -636,7 +636,6 @@ mod tests {
         test_rust_equivalence_given_input_values(
             &snippet_for_unsafe_lists,
             &init_stack,
-            &[],
             &[],
             &mut memory,
             MAX_MMR_HEIGHT * DIGEST_LENGTH + 1, // assume that 64 digests are allocated in memory when code starts to run

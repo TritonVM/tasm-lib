@@ -12,18 +12,18 @@ use crate::arithmetic::u64::log_2_floor_u64::Log2FloorU64;
 use crate::arithmetic::u64::pow2_u64::Pow2U64;
 use crate::library::Library;
 use crate::rust_shadowing_helper_functions::non_leaf_nodes_left;
-use crate::snippet::{DataType, Snippet};
+use crate::snippet::{DataType, DepracatedSnippet};
 use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct MmrNonLeafNodesLeftUsingAnd;
 
-impl Snippet for MmrNonLeafNodesLeftUsingAnd {
-    fn inputs(&self) -> Vec<String> {
+impl DepracatedSnippet for MmrNonLeafNodesLeftUsingAnd {
+    fn input_field_names(&self) -> Vec<String> {
         vec!["leaf_index_hi".to_string(), "leaf_index_lo".to_string()]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec!["node_count_hi".to_string(), "node_count_lo".to_string()]
     }
 
@@ -56,12 +56,12 @@ impl Snippet for MmrNonLeafNodesLeftUsingAnd {
         0
     }
 
-    fn entrypoint(&self) -> String {
+    fn entrypoint_name(&self) -> String {
         "tasm_mmr_non_leaf_nodes_left".to_string()
     }
 
     fn function_code(&self, library: &mut Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
         let log_2_floor_u64 = library.import(Box::new(Log2FloorU64));
         let pow2_u64 = library.import(Box::new(Pow2U64));
         let and_u64 = library.import(Box::new(AndU64));
@@ -281,7 +281,6 @@ mod tests {
         test_rust_equivalence_given_input_values(
             &MmrNonLeafNodesLeftUsingAnd,
             &init_stack,
-            &[],
             &[],
             &mut HashMap::default(),
             0,

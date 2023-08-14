@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use itertools::Itertools;
+use triton_vm::NonDeterminism;
 use twenty_first::{
     shared_math::{
         b_field_element::BFieldElement,
@@ -19,7 +20,7 @@ use crate::{
         ListType,
     },
     rust_shadowing_helper_functions,
-    snippet::{DataType, Snippet},
+    snippet::{DataType, DepracatedSnippet},
     ExecutionState, VmHasher,
 };
 
@@ -44,19 +45,19 @@ impl SampleIndices {
             ]
             .concat(),
             std_in: vec![],
-            secret_in: vec![],
+            nondeterminism: NonDeterminism::new(vec![]),
             memory: HashMap::new(),
             words_allocated: 1,
         }
     }
 }
 
-impl Snippet for SampleIndices {
-    fn entrypoint(&self) -> String {
+impl DepracatedSnippet for SampleIndices {
+    fn entrypoint_name(&self) -> String {
         format!("tasm_hashing_sample_indices_to_{}_list", self.list_type)
     }
 
-    fn inputs(&self) -> Vec<String>
+    fn input_field_names(&self) -> Vec<String>
     where
         Self: Sized,
     {
@@ -71,7 +72,7 @@ impl Snippet for SampleIndices {
         vec![DataType::List(Box::new(DataType::U32))]
     }
 
-    fn outputs(&self) -> Vec<String>
+    fn output_field_names(&self) -> Vec<String>
     where
         Self: Sized,
     {
@@ -86,7 +87,7 @@ impl Snippet for SampleIndices {
     }
 
     fn function_code(&self, library: &mut crate::library::Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
         let new_list = match self.list_type {
             ListType::Safe => library.import(Box::new(SafeNew(DataType::U32))),
             ListType::Unsafe => library.import(Box::new(UnsafeNew(DataType::U32))),

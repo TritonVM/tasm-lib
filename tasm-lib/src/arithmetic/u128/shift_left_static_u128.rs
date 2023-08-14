@@ -3,14 +3,14 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
 use crate::library::Library;
-use crate::snippet::{DataType, Snippet};
+use crate::snippet::{DataType, DepracatedSnippet};
 use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct ShiftLeftStaticU128<const N: u8>;
 
-impl<const N: u8> Snippet for ShiftLeftStaticU128<N> {
-    fn entrypoint(&self) -> String {
+impl<const N: u8> DepracatedSnippet for ShiftLeftStaticU128<N> {
+    fn entrypoint_name(&self) -> String {
         assert!(
             N <= 32,
             "Static left-shift snippet cannot shift by more than 32 bits"
@@ -18,7 +18,7 @@ impl<const N: u8> Snippet for ShiftLeftStaticU128<N> {
         format!("tasm_arithmetic_u128_shift_left_static_{N}")
     }
 
-    fn inputs(&self) -> Vec<String>
+    fn input_field_names(&self) -> Vec<String>
     where
         Self: Sized,
     {
@@ -38,7 +38,7 @@ impl<const N: u8> Snippet for ShiftLeftStaticU128<N> {
         vec![DataType::U128]
     }
 
-    fn outputs(&self) -> Vec<String>
+    fn output_field_names(&self) -> Vec<String>
     where
         Self: Sized,
     {
@@ -62,7 +62,7 @@ impl<const N: u8> Snippet for ShiftLeftStaticU128<N> {
             N <= 32,
             "Static shift-snippet cannot left-shift by more than 32 bits"
         );
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
         let pow_2_n = 2u64.pow(N as u32);
         format!(
             "
@@ -268,7 +268,6 @@ mod tests {
         test_rust_equivalence_given_input_values(
             &ShiftLeftStaticU128::<N>,
             &init_stack,
-            &[],
             &[],
             &mut HashMap::default(),
             0,

@@ -1,6 +1,7 @@
 use num::{One, Zero};
 use rand::{random, thread_rng, Rng};
 use std::collections::HashMap;
+use triton_vm::NonDeterminism;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::random_elements;
 use twenty_first::test_shared::mmr::get_rustyleveldb_ammr_from_digests;
@@ -21,7 +22,7 @@ use crate::library::Library;
 use crate::list::safe_u32::get::SafeGet;
 use crate::list::unsafe_u32::get::UnsafeGet;
 use crate::list::ListType;
-use crate::snippet::{DataType, Snippet};
+use crate::snippet::{DataType, DepracatedSnippet};
 use crate::{
     get_init_tvm_stack, rust_shadowing_helper_functions, Digest, ExecutionState, VmHasher,
     DIGEST_LENGTH,
@@ -47,10 +48,12 @@ impl MmrVerifyLeafMembershipFromSecretIn {
 
         // Populate secret-in with the leaf index value, which is a u64
         vm_init_state
-            .secret_in
+            .nondeterminism
+            .individual_tokens
             .push(BFieldElement::new(leaf_index >> 32));
         vm_init_state
-            .secret_in
+            .nondeterminism
+            .individual_tokens
             .push(BFieldElement::new(leaf_index & u32::MAX as u64));
 
         // Populate secret-in with the correct authentication path
@@ -60,7 +63,8 @@ impl MmrVerifyLeafMembershipFromSecretIn {
             let mut ap_element_values = ap_element.values().to_vec();
             for _ in 0..DIGEST_LENGTH {
                 vm_init_state
-                    .secret_in
+                    .nondeterminism
+                    .individual_tokens
                     .push(ap_element_values.pop().unwrap());
             }
         }
@@ -90,10 +94,12 @@ impl MmrVerifyLeafMembershipFromSecretIn {
 
         // Populate secret-in with the leaf index value, which is a u64
         vm_init_state
-            .secret_in
+            .nondeterminism
+            .individual_tokens
             .push(BFieldElement::new(leaf_index >> 32));
         vm_init_state
-            .secret_in
+            .nondeterminism
+            .individual_tokens
             .push(BFieldElement::new(leaf_index & u32::MAX as u64));
 
         // Populate secret-in with the correct authentication path
@@ -101,7 +107,8 @@ impl MmrVerifyLeafMembershipFromSecretIn {
             let mut ap_element_values = ap_element.values().to_vec();
             for _ in 0..DIGEST_LENGTH {
                 vm_init_state
-                    .secret_in
+                    .nondeterminism
+                    .individual_tokens
                     .push(ap_element_values.pop().unwrap());
             }
         }
@@ -165,15 +172,15 @@ impl MmrVerifyLeafMembershipFromSecretIn {
         ExecutionState {
             stack,
             std_in: vec![],
-            secret_in: vec![],
+            nondeterminism: NonDeterminism::new(vec![]),
             memory,
             words_allocated: DIGEST_LENGTH * MAX_MMR_HEIGHT + 1 + list_metadata_size,
         }
     }
 }
 
-impl Snippet for MmrVerifyLeafMembershipFromSecretIn {
-    fn inputs(&self) -> Vec<String> {
+impl DepracatedSnippet for MmrVerifyLeafMembershipFromSecretIn {
+    fn input_field_names(&self) -> Vec<String> {
         vec![
             "peaks_pointer".to_string(),
             "leaf_count_hi".to_string(),
@@ -186,7 +193,7 @@ impl Snippet for MmrVerifyLeafMembershipFromSecretIn {
         ]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec![
             "leaf_index_hi".to_string(),
             "leaf_index_lo".to_string(),
@@ -235,14 +242,14 @@ impl Snippet for MmrVerifyLeafMembershipFromSecretIn {
         -5
     }
 
-    fn entrypoint(&self) -> String {
+    fn entrypoint_name(&self) -> String {
         format!("tasm_mmr_verify_from_secret_in_{}", self.list_type)
     }
 
     // Already on stack (can be secret of public input): _ *peaks leaf_count_hi leaf_count_lo [digest (leaf)]
     // Secret input: _ (authentication_path: Vec<Digest>), (leaf_digest: Digest), (leaf_index: u64)
     fn function_code(&self, library: &mut Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
 
         let leaf_index_to_mt_index = library.import(Box::new(MmrLeafIndexToMtIndexAndPeakIndex));
         let eq_u64 = library.import(Box::new(EqU64));
@@ -422,6 +429,7 @@ impl Snippet for MmrVerifyLeafMembershipFromSecretIn {
 
 #[cfg(test)]
 mod tests {
+    use triton_vm::NonDeterminism;
     use twenty_first::{
         test_shared::mmr::get_empty_rustyleveldb_ammr,
         util_types::algebraic_hasher::AlgebraicHasher,
@@ -429,7 +437,9 @@ mod tests {
 
     use crate::{
         mmr::MAX_MMR_HEIGHT,
-        test_helpers::{test_rust_equivalence_given_input_values, test_rust_equivalence_multiple},
+        test_helpers::{
+            test_rust_equivalence_given_complete_state, test_rust_equivalence_multiple,
+        },
         VmHasher,
     };
 
@@ -675,11 +685,11 @@ mod tests {
         let snippet_with_unsafe_lists = MmrVerifyLeafMembershipFromSecretIn {
             list_type: ListType::Unsafe,
         };
-        test_rust_equivalence_given_input_values(
+        test_rust_equivalence_given_complete_state(
             &snippet_with_unsafe_lists,
             &init_stack,
             &[],
-            &secret_in,
+            &NonDeterminism::new(secret_in),
             &mut memory,
             MAX_MMR_HEIGHT * DIGEST_LENGTH + 1,
             Some(&expected_final_stack),

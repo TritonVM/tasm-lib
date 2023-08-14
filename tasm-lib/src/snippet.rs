@@ -5,9 +5,11 @@ use std::collections::HashMap;
 use std::fmt::Display;
 use triton_vm::instruction::LabelledInstruction;
 use triton_vm::parser::{parse, to_labelled_instructions};
+use triton_vm::{triton_asm, NonDeterminism};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
+use crate::test_helpers::test_rust_equivalence_given_execution_state;
 use crate::{execute_bench, ExecutionResult, VmOutputState, DIGEST_LENGTH};
 use crate::{execute_test, ExecutionState};
 
@@ -140,22 +142,80 @@ impl DataType {
     }
 }
 
-pub trait Snippet {
+pub enum SnippetType {
+    // A Snippet can do anything, but is on its way out.
+    DepracatedSnippet,
+
+    // A Closure modifies the top of the stack without reading memory.
+    Closure,
+
+    // A Function can modify the top of the stack, and can read and extend memory.
+    // Specifically: any memory writes have to happen to addresses larger than the
+    // dynamic memory allocator and the dynamic memory allocator value has to be updated
+    // accordingly.
+    Function,
+
+    // An Algorithm can modify memory even at addresses below the dynamic memory
+    // allocator, and can take nondeterministic input.
+    Algorithm,
+
+    // A Procedure can do the above and read from standard in and write to standard out.
+    Procedure,
+
+    // A CompiledProgram can do the above and additionally be proven and verified.
+    CompiledProgram,
+}
+
+pub trait BasicSnippet {
+    fn inputs(&self) -> Vec<(DataType, String)>;
+    fn outputs(&self) -> Vec<(DataType, String)>;
+    fn entrypoint(&self) -> String;
+    fn code(&self, library: &mut Library) -> Vec<LabelledInstruction>;
+
+    fn stack_diff(&self) -> isize {
+        let mut diff = 0isize;
+        for (dt, name) in self.inputs() {
+            diff -= dt.get_size() as isize;
+        }
+        for (dt, name) in self.outputs() {
+            diff += dt.get_size() as isize;
+        }
+        diff
+    }
+}
+
+pub(crate) trait RustShadowed: BasicSnippet {
+    fn rust_shadow_wrapper(
+        &self, // necessary to accomodate for Snippet
+        stdin: &[BFieldElement],
+        nondeterminism: &NonDeterminism<BFieldElement>,
+        stack: &mut Vec<BFieldElement>,
+        memory: &mut HashMap<BFieldElement, BFieldElement>,
+    ) -> Vec<BFieldElement>;
+
+    fn generate_test_states(&self) -> Vec<ExecutionState>;
+
+    fn test(&self);
+
+    fn bench(&self);
+}
+
+pub trait DepracatedSnippet {
     /// The name of a Snippet
     ///
     /// This is used as a unique identifier, e.g. when generating labels.
     // fn entrypoint(&self) -> String;
-    fn entrypoint(&self) -> String;
+    fn entrypoint_name(&self) -> String;
 
     /// The input stack
-    fn inputs(&self) -> Vec<String>;
+    fn input_field_names(&self) -> Vec<String>;
 
     fn input_types(&self) -> Vec<DataType>;
 
-    fn output_types(&self) -> Vec<DataType>;
-
     /// The output stack
-    fn outputs(&self) -> Vec<String>;
+    fn output_field_names(&self) -> Vec<String>;
+
+    fn output_types(&self) -> Vec<DataType>;
 
     /// The stack difference
     fn stack_diff(&self) -> isize;
@@ -192,22 +252,20 @@ pub trait Snippet {
         memory: &mut HashMap<BFieldElement, BFieldElement>,
     );
 
-    fn link_for_isolated_run(&self, words_statically_allocated: usize) -> String {
+    fn link_for_isolated_run(&self, words_statically_allocated: usize) -> Vec<LabelledInstruction> {
         let mut snippet_state = Library::with_preallocated_memory(words_statically_allocated);
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
         let function_body = self.function_code(&mut snippet_state);
         let library_code = snippet_state.all_imports();
 
         // The TASM code is always run through a function call, so the 1st instruction
         // is a call to the function in question.
-        let code = format!(
-            "
+        let code = triton_asm!(
             call {entrypoint}
             halt
 
             {function_body}
             {library_code}
-            "
         );
 
         code
@@ -236,7 +294,7 @@ pub trait Snippet {
             stack,
             Self::stack_diff(self),
             std_in,
-            secret_in,
+            NonDeterminism::new(secret_in),
             memory,
             Some(words_statically_allocated),
         )
@@ -266,7 +324,7 @@ pub trait Snippet {
             stack,
             Self::stack_diff(self),
             std_in,
-            secret_in,
+            NonDeterminism::new(secret_in),
             memory,
             Some(words_statically_allocated),
         )
@@ -280,7 +338,7 @@ pub trait Snippet {
         let ret = self.link_and_run_tasm_for_test(
             &mut execution_state.stack,
             execution_state.std_in.clone(),
-            execution_state.secret_in.clone(),
+            execution_state.nondeterminism.individual_tokens.clone(),
             &mut execution_state.memory,
             execution_state.words_allocated,
         );
@@ -289,8 +347,8 @@ pub trait Snippet {
         // Assert equality of stack elements under input arguments, but don't check program
         // hash that's located at the bottom of the stack.
         assert_eq!(
-            stack_prior[DIGEST_LENGTH..(stack_prior.len() - Self::inputs(self).len())],
-            stack_after[DIGEST_LENGTH..(stack_after.len() - Self::outputs(self).len())]
+            stack_prior[DIGEST_LENGTH..(stack_prior.len() - Self::input_field_names(self).len())],
+            stack_after[DIGEST_LENGTH..(stack_after.len() - Self::output_field_names(self).len())]
         );
 
         ret
@@ -304,7 +362,7 @@ pub trait Snippet {
         let ret = self.link_and_run_tasm_for_bench(
             &mut execution_state.stack,
             execution_state.std_in.clone(),
-            execution_state.secret_in.clone(),
+            execution_state.nondeterminism.individual_tokens.clone(),
             &mut execution_state.memory,
             execution_state.words_allocated,
         );
@@ -313,11 +371,71 @@ pub trait Snippet {
         // Assert equality of stack elements under input arguments, but don't check program
         // hash that's located at the bottom of the stack.
         assert_eq!(
-            stack_prior[DIGEST_LENGTH..(stack_prior.len() - Self::inputs(self).len())],
-            stack_after[DIGEST_LENGTH..(stack_after.len() - Self::outputs(self).len())]
+            stack_prior[DIGEST_LENGTH..(stack_prior.len() - Self::input_field_names(self).len())],
+            stack_after[DIGEST_LENGTH..(stack_after.len() - Self::output_field_names(self).len())]
         );
 
         ret
+    }
+}
+
+impl<S: DepracatedSnippet> RustShadowed for S {
+    fn rust_shadow_wrapper(
+        &self,
+        stdin: &[BFieldElement],
+        nondeterminism: &NonDeterminism<BFieldElement>,
+        stack: &mut Vec<BFieldElement>,
+        memory: &mut HashMap<BFieldElement, BFieldElement>,
+    ) -> Vec<BFieldElement> {
+        let mut stack_copy = stack.to_vec();
+        self.rust_shadowing(
+            &mut stack_copy,
+            stdin.to_vec(),
+            nondeterminism.individual_tokens.clone(),
+            memory,
+        );
+        *stack = stack_copy;
+        vec![]
+    }
+
+    fn test(&self) {
+        let mut execution_states = self.gen_input_states();
+
+        for execution_state in execution_states.iter_mut() {
+            test_rust_equivalence_given_execution_state(self, *execution_state);
+        }
+    }
+
+    fn bench(&self) {
+        todo!()
+    }
+
+    fn generate_test_states(&self) -> Vec<ExecutionState> {
+        self.gen_input_states()
+    }
+}
+
+impl<S: DepracatedSnippet> BasicSnippet for S {
+    fn inputs(&self) -> Vec<(DataType, String)> {
+        self.input_types()
+            .into_iter()
+            .zip(self.input_field_names())
+            .collect()
+    }
+
+    fn outputs(&self) -> Vec<(DataType, String)> {
+        self.output_types()
+            .into_iter()
+            .zip(self.output_field_names())
+            .collect()
+    }
+
+    fn entrypoint(&self) -> String {
+        self.entrypoint_name()
+    }
+
+    fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
+        self.function_code_as_instructions(library)
     }
 }
 

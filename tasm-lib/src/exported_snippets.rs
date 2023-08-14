@@ -1,5 +1,3 @@
-use std::marker::PhantomData;
-
 use crate::{
     arithmetic::{
         u128::{
@@ -76,12 +74,11 @@ use crate::{
     neptune::mutator_set::{commit::Commit, get_swbf_indices::GetSwbfIndices},
     other_snippets::bfe_add::BfeAdd,
     pseudo::{lsb::Lsb, neg::Neg, sub::Sub},
-    recufier::merkle_tree_ap_verify_from_secret_input::MtApVerifyFromSecretInput,
-    snippet::{DataType, InputSource, Snippet},
-    VmHasher,
+    recufier::merkle_verify::MerkleVerify,
+    snippet::{BasicSnippet, DataType, InputSource},
 };
 
-pub fn name_to_snippet(fn_name: &str) -> Box<dyn Snippet> {
+pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
     match fn_name {
         // u32
         "tasm_arithmetic_u32_is_odd" => Box::new(U32IsOdd),
@@ -368,7 +365,7 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn Snippet> {
         "tasm_pseudo_sub" => Box::new(Sub),
 
         // recufy
-        "tasm_recufier_mt_ap_verify" => Box::new(MtApVerifyFromSecretInput(PhantomData::<VmHasher>)),
+        "tasm_recufier_mt_ap_verify" => Box::new(MerkleVerify),
 
         // memory
         "tasm_memory_dyn_malloc" => Box::new(DynMalloc),

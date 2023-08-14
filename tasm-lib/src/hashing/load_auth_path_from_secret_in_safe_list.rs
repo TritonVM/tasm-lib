@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use num::One;
 use num::Zero;
 
+use triton_vm::NonDeterminism;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::random_elements;
 
@@ -11,7 +12,7 @@ use crate::list::safe_u32::new::SafeNew;
 use crate::list::safe_u32::push::SafePush;
 use crate::mmr::MAX_MMR_HEIGHT;
 use crate::snippet::DataType;
-use crate::snippet::Snippet;
+use crate::snippet::DepracatedSnippet;
 use crate::Digest;
 use crate::DIGEST_LENGTH;
 use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, ExecutionState};
@@ -19,12 +20,12 @@ use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, ExecutionState}
 #[derive(Clone, Debug)]
 pub struct LoadAuthPathFromSecretInSafeList;
 
-impl Snippet for LoadAuthPathFromSecretInSafeList {
-    fn inputs(&self) -> Vec<String> {
+impl DepracatedSnippet for LoadAuthPathFromSecretInSafeList {
+    fn input_field_names(&self) -> Vec<String> {
         vec![]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec!["auth_path_pointer".to_string()]
     }
 
@@ -54,7 +55,7 @@ impl Snippet for LoadAuthPathFromSecretInSafeList {
             let init_vm_state = ExecutionState {
                 stack: get_init_tvm_stack(),
                 std_in: vec![],
-                secret_in,
+                nondeterminism: NonDeterminism::new(secret_in),
                 memory: HashMap::default(),
                 words_allocated: 0,
             };
@@ -68,12 +69,12 @@ impl Snippet for LoadAuthPathFromSecretInSafeList {
         1
     }
 
-    fn entrypoint(&self) -> String {
+    fn entrypoint_name(&self) -> String {
         "tasm_hashing_load_auth_path_from_secret_in_safe_list".to_string()
     }
 
     fn function_code(&self, library: &mut Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
         let read_digest_from_secret_in = "divine\n".repeat(DIGEST_LENGTH);
 
         let push = library.import(Box::new(SafePush(DataType::Digest)));
@@ -194,7 +195,7 @@ impl Snippet for LoadAuthPathFromSecretInSafeList {
         ExecutionState {
             stack: get_init_tvm_stack(),
             std_in: vec![],
-            secret_in,
+            nondeterminism: NonDeterminism::new(secret_in),
             memory: HashMap::default(),
             words_allocated: 0,
         }
@@ -208,7 +209,7 @@ impl Snippet for LoadAuthPathFromSecretInSafeList {
         ExecutionState {
             stack: get_init_tvm_stack(),
             std_in: vec![],
-            secret_in,
+            nondeterminism: NonDeterminism::new(secret_in),
             memory: HashMap::default(),
             words_allocated: 0,
         }

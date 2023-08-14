@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use num::One;
 
+use triton_vm::NonDeterminism;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::random_elements;
 
@@ -9,19 +10,19 @@ use crate::library::Library;
 use crate::list::unsafe_u32::{push::UnsafePush, set_length::UnsafeSetLength};
 use crate::mmr::MAX_MMR_HEIGHT;
 use crate::snippet::DataType;
-use crate::snippet::Snippet;
+use crate::snippet::DepracatedSnippet;
 use crate::{get_init_tvm_stack, ExecutionState, DIGEST_LENGTH};
 use crate::{rust_shadowing_helper_functions, Digest};
 
 #[derive(Clone, Debug)]
 pub struct LoadAuthPathFromStdInUnsafeList;
 
-impl Snippet for LoadAuthPathFromStdInUnsafeList {
-    fn inputs(&self) -> Vec<String> {
+impl DepracatedSnippet for LoadAuthPathFromStdInUnsafeList {
+    fn input_field_names(&self) -> Vec<String> {
         vec![]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec!["auth_path_pointer".to_string()]
     }
 
@@ -51,7 +52,7 @@ impl Snippet for LoadAuthPathFromStdInUnsafeList {
             let init_vm_state = ExecutionState {
                 stack: get_init_tvm_stack(),
                 std_in,
-                secret_in: vec![],
+                nondeterminism: NonDeterminism::new(vec![]),
                 memory: HashMap::default(),
                 words_allocated: 0,
             };
@@ -65,12 +66,12 @@ impl Snippet for LoadAuthPathFromStdInUnsafeList {
         1
     }
 
-    fn entrypoint(&self) -> String {
+    fn entrypoint_name(&self) -> String {
         "tasm_hashing_load_auth_path_from_std_in_unsafe_list".to_string()
     }
 
     fn function_code(&self, library: &mut Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
 
         let read_digest_from_std_in = "read_io\n".repeat(DIGEST_LENGTH);
 
@@ -180,7 +181,7 @@ impl Snippet for LoadAuthPathFromStdInUnsafeList {
         ExecutionState {
             stack: get_init_tvm_stack(),
             std_in,
-            secret_in: vec![],
+            nondeterminism: NonDeterminism::new(vec![]),
             memory: HashMap::default(),
             words_allocated: 0,
         }
@@ -194,7 +195,7 @@ impl Snippet for LoadAuthPathFromStdInUnsafeList {
         ExecutionState {
             stack: get_init_tvm_stack(),
             std_in,
-            secret_in: vec![],
+            nondeterminism: NonDeterminism::new(vec![]),
             memory: HashMap::default(),
             words_allocated: 0,
         }

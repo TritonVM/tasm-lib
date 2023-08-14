@@ -7,14 +7,14 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
 use crate::library::Library;
-use crate::snippet::{DataType, Snippet};
+use crate::snippet::{DataType, DepracatedSnippet};
 use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct AddU64;
 
-impl Snippet for AddU64 {
-    fn inputs(&self) -> Vec<String> {
+impl DepracatedSnippet for AddU64 {
+    fn input_field_names(&self) -> Vec<String> {
         vec![
             "rhs_hi".to_string(),
             "rhs_lo".to_string(),
@@ -23,7 +23,7 @@ impl Snippet for AddU64 {
         ]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec!["(lhs + rhs)_hi".to_string(), "(lhs + rhs)_lo".to_string()]
     }
 
@@ -73,14 +73,14 @@ impl Snippet for AddU64 {
         -2
     }
 
-    fn entrypoint(&self) -> String {
+    fn entrypoint_name(&self) -> String {
         "tasm_arithmetic_u64_add".to_string()
     }
 
     /// Four top elements of stack are assumed to be valid u32s. So to have
     /// a value that's less than 2^32.
     fn function_code(&self, _library: &mut Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
 
         format!(
             "
@@ -325,7 +325,6 @@ mod tests {
         test_rust_equivalence_given_input_values(
             &AddU64,
             &init_stack,
-            &[],
             &[],
             &mut HashMap::default(),
             0,

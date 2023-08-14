@@ -6,19 +6,19 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
 use crate::rust_shadowing_helper_functions::unsafe_list::untyped_unsafe_insert_random_list;
-use crate::snippet::{DataType, Snippet};
+use crate::snippet::{DataType, DepracatedSnippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
 // Called "Long" because this logic can be shortened
 #[derive(Clone, Debug)]
 pub struct UnsafeLength(pub DataType);
 
-impl Snippet for UnsafeLength {
-    fn inputs(&self) -> Vec<String> {
+impl DepracatedSnippet for UnsafeLength {
+    fn input_field_names(&self) -> Vec<String> {
         vec!["*list".to_string()]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec!["list_length".to_string()]
     }
 
@@ -83,7 +83,7 @@ impl Snippet for UnsafeLength {
         0
     }
 
-    fn entrypoint(&self) -> String {
+    fn entrypoint_name(&self) -> String {
         format!(
             "tasm_list_unsafe_u32_length_long_{}",
             self.0.label_friendly_name()
@@ -91,7 +91,7 @@ impl Snippet for UnsafeLength {
     }
 
     fn function_code(&self, _library: &mut Library) -> String {
-        let entry_point = self.entrypoint();
+        let entry_point = self.entrypoint_name();
         // Before: _ *list
         // After: _ list_length_u32
         format!(
@@ -196,7 +196,6 @@ mod tests {
         test_rust_equivalence_given_input_values(
             &UnsafeLength(DataType::BFE),
             &init_stack,
-            &[],
             &[],
             &mut init_memory,
             0,

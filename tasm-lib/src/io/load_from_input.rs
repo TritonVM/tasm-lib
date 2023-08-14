@@ -1,10 +1,10 @@
 use rand::Rng;
-use triton_vm::BFieldElement;
+use triton_vm::{BFieldElement, NonDeterminism};
 use twenty_first::shared_math::other::random_elements;
 
 use crate::{
     dyn_malloc, get_init_tvm_stack,
-    snippet::{DataType, InputSource, Snippet},
+    snippet::{DataType, DepracatedSnippet, InputSource},
     ExecutionState,
 };
 
@@ -15,12 +15,12 @@ pub struct LoadFromInput(pub InputSource);
 /// The first element of the input source is the length of the list
 /// that is loaded into memory. Returns a pointer to the first element
 /// in memory.
-impl Snippet for LoadFromInput {
-    fn entrypoint(&self) -> String {
+impl DepracatedSnippet for LoadFromInput {
+    fn entrypoint_name(&self) -> String {
         format!("tasm_io_load_from_input_{}", self.0)
     }
 
-    fn inputs(&self) -> Vec<String> {
+    fn input_field_names(&self) -> Vec<String> {
         vec![]
     }
 
@@ -32,7 +32,7 @@ impl Snippet for LoadFromInput {
         vec![DataType::VoidPointer]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec!["*addr".to_string()]
     }
 
@@ -41,7 +41,7 @@ impl Snippet for LoadFromInput {
     }
 
     fn function_code(&self, library: &mut crate::library::Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
 
         let dyn_alloc = library.import(Box::new(dyn_malloc::DynMalloc));
 
@@ -154,14 +154,14 @@ impl Snippet for LoadFromInput {
                     stack: get_init_tvm_stack(),
                     memory: std::collections::HashMap::new(),
                     std_in: input,
-                    secret_in: vec![],
+                    nondeterminism: NonDeterminism::new(vec![]),
                     words_allocated: 0,
                 },
                 InputSource::SecretIn => ExecutionState {
                     stack: get_init_tvm_stack(),
                     memory: std::collections::HashMap::new(),
                     std_in: vec![],
-                    secret_in: input,
+                    nondeterminism: NonDeterminism::new(input),
                     words_allocated: 0,
                 },
             });
@@ -182,14 +182,14 @@ impl Snippet for LoadFromInput {
                 stack: get_init_tvm_stack(),
                 memory: std::collections::HashMap::new(),
                 std_in: input,
-                secret_in: vec![],
+                nondeterminism: NonDeterminism::new(vec![]),
                 words_allocated: 0,
             },
             InputSource::SecretIn => ExecutionState {
                 stack: get_init_tvm_stack(),
                 memory: std::collections::HashMap::new(),
                 std_in: vec![],
-                secret_in: input,
+                nondeterminism: NonDeterminism::new(input),
                 words_allocated: 0,
             },
         }
@@ -207,14 +207,14 @@ impl Snippet for LoadFromInput {
                 stack: get_init_tvm_stack(),
                 memory: std::collections::HashMap::new(),
                 std_in: input,
-                secret_in: vec![],
+                nondeterminism: NonDeterminism::new(vec![]),
                 words_allocated: 0,
             },
             InputSource::SecretIn => ExecutionState {
                 stack: get_init_tvm_stack(),
                 memory: std::collections::HashMap::new(),
                 std_in: vec![],
-                secret_in: input,
+                nondeterminism: NonDeterminism::new(input),
                 words_allocated: 0,
             },
         }
@@ -272,7 +272,7 @@ mod tests {
                     random_elements(length as usize),
                 ]
                 .concat(),
-                secret_in: vec![],
+                nondeterminism: NonDeterminism::new(vec![]),
                 words_allocated: 0,
             };
             let snippet = LoadFromInput(InputSource::StdIn);

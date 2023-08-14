@@ -5,18 +5,18 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
 use crate::pseudo::lsb::Lsb;
-use crate::snippet::{DataType, Snippet};
+use crate::snippet::{DataType, DepracatedSnippet};
 use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct U32IsOdd;
 
-impl Snippet for U32IsOdd {
-    fn inputs(&self) -> Vec<String> {
+impl DepracatedSnippet for U32IsOdd {
+    fn input_field_names(&self) -> Vec<String> {
         vec!["value".to_string()]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec!["value % 2".to_string()]
     }
 
@@ -54,12 +54,12 @@ impl Snippet for U32IsOdd {
         0
     }
 
-    fn entrypoint(&self) -> String {
+    fn entrypoint_name(&self) -> String {
         "tasm_arithmetic_u32_is_odd".to_string()
     }
 
     fn function_code(&self, library: &mut Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
         let lsb = library.import(Box::new(Lsb));
         format!(
             "
@@ -148,7 +148,6 @@ mod tests {
         test_rust_equivalence_given_input_values(
             &U32IsOdd,
             &init_stack,
-            &[],
             &[],
             &mut HashMap::default(),
             0,

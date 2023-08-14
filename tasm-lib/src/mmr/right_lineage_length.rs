@@ -6,18 +6,18 @@ use crate::arithmetic::u64::incr_u64::IncrU64;
 use crate::arithmetic::u64::log_2_floor_u64::Log2FloorU64;
 use crate::arithmetic::u64::pow2_u64::Pow2U64;
 use crate::arithmetic::u64::sub_u64::SubU64;
-use crate::snippet::{DataType, Snippet};
+use crate::snippet::{DataType, DepracatedSnippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct MmrRightLineageLength;
 
-impl Snippet for MmrRightLineageLength {
-    fn inputs(&self) -> Vec<String> {
+impl DepracatedSnippet for MmrRightLineageLength {
+    fn input_field_names(&self) -> Vec<String> {
         vec!["node_index_hi".to_string(), "node_index_lo".to_string()]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec!["right_lineage_length".to_string()]
     }
 
@@ -47,12 +47,12 @@ impl Snippet for MmrRightLineageLength {
         -1
     }
 
-    fn entrypoint(&self) -> String {
+    fn entrypoint_name(&self) -> String {
         "tasm_mmr_right_lineage_length".to_string()
     }
 
     fn function_code(&self, library: &mut crate::library::Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
         let log_2_floor_u64 = library.import(Box::new(Log2FloorU64));
         let pow2_u64 = library.import(Box::new(Pow2U64));
         let sub_u64 = library.import(Box::new(SubU64));
@@ -272,7 +272,6 @@ mod tests {
         test_rust_equivalence_given_input_values(
             &MmrRightLineageLength,
             &init_stack,
-            &[],
             &[],
             &mut HashMap::default(),
             0,

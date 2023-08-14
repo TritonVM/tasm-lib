@@ -3,23 +3,23 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::{
     get_init_tvm_stack,
-    snippet::{DataType, Snippet},
+    snippet::{DataType, DepracatedSnippet},
     ExecutionState,
 };
 
 #[derive(Clone, Debug)]
 pub struct LeadingZerosU32;
 
-impl Snippet for LeadingZerosU32 {
-    fn entrypoint(&self) -> String {
+impl DepracatedSnippet for LeadingZerosU32 {
+    fn entrypoint_name(&self) -> String {
         "tasm_arithmetic_u32_leading_zeros_u32".to_string()
     }
 
-    fn inputs(&self) -> Vec<String> {
+    fn input_field_names(&self) -> Vec<String> {
         vec!["value".to_string()]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec!["leading zeros in value".to_string()]
     }
 
@@ -36,7 +36,7 @@ impl Snippet for LeadingZerosU32 {
     }
 
     fn function_code(&self, _library: &mut crate::library::Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
         format!(
             "
                 // BEFORE: _ value
@@ -157,7 +157,6 @@ mod tests {
         test_rust_equivalence_given_input_values(
             &LeadingZerosU32,
             &init_stack,
-            &[],
             &[],
             &mut HashMap::default(),
             0,

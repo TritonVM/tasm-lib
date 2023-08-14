@@ -6,7 +6,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
 use crate::library::Library;
-use crate::snippet::{DataType, Snippet};
+use crate::snippet::{DataType, DepracatedSnippet};
 use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
 
 /// Consumes top element which is interpreted as exponent. Pushes a
@@ -14,12 +14,12 @@ use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
 #[derive(Clone, Debug)]
 pub struct Pow2U64;
 
-impl Snippet for Pow2U64 {
-    fn inputs(&self) -> Vec<String> {
+impl DepracatedSnippet for Pow2U64 {
+    fn input_field_names(&self) -> Vec<String> {
         vec!["i".to_string()]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec!["(2^i)_hi".to_string(), "(2^i)_lo".to_string()]
     }
 
@@ -49,12 +49,12 @@ impl Snippet for Pow2U64 {
         1
     }
 
-    fn entrypoint(&self) -> String {
+    fn entrypoint_name(&self) -> String {
         "tasm_arithmetic_u64_pow2".to_string()
     }
 
     fn function_code(&self, _library: &mut Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
 
         format!(
             "{entrypoint}:
@@ -129,7 +129,6 @@ mod tests {
         test_rust_equivalence_given_input_values(
             &Pow2U64,
             &init_stack,
-            &[],
             &[],
             &mut HashMap::default(),
             0,

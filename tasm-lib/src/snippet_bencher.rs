@@ -3,7 +3,7 @@ use serde_json::to_writer_pretty;
 use std::fs::{create_dir_all, File};
 use std::path::{Path, PathBuf};
 
-use crate::snippet::Snippet;
+use crate::snippet::DepracatedSnippet;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct BenchmarkResult {
@@ -21,7 +21,7 @@ pub enum BenchmarkCase {
 }
 
 #[allow(dead_code)]
-pub fn benchmark_snippet<T: Snippet>(snippet: T) -> Vec<BenchmarkResult> {
+pub fn benchmark_snippet<T: DepracatedSnippet>(snippet: T) -> Vec<BenchmarkResult> {
     let mut benchmarks = Vec::with_capacity(2);
 
     for (case, mut execution_state) in [
@@ -32,7 +32,7 @@ pub fn benchmark_snippet<T: Snippet>(snippet: T) -> Vec<BenchmarkResult> {
             .link_and_run_tasm_from_state_for_bench(&mut execution_state)
             .unwrap();
         let benchmark = BenchmarkResult {
-            name: snippet.entrypoint(),
+            name: snippet.entrypoint_name(),
             clock_cycle_count: execution_result.cycle_count,
             hash_table_height: execution_result.hash_table_height,
             u32_table_height: execution_result.u32_table_height,
@@ -64,6 +64,6 @@ pub fn write_benchmarks(benchmarks: Vec<BenchmarkResult>) {
 }
 
 #[allow(dead_code)]
-pub fn bench_and_write<T: Snippet>(snippet: T) {
+pub fn bench_and_write<T: DepracatedSnippet>(snippet: T) {
     write_benchmarks(benchmark_snippet(snippet));
 }

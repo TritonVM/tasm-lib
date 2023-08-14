@@ -7,7 +7,7 @@ use twenty_first::shared_math::{bfield_codec::BFieldCodec, other::random_element
 
 use crate::{
     get_init_tvm_stack,
-    snippet::{DataType, Snippet},
+    snippet::{DataType, DepracatedSnippet},
     Digest, ExecutionState,
 };
 
@@ -72,12 +72,12 @@ impl GetLength {
     }
 }
 
-impl Snippet for GetLength {
-    fn entrypoint(&self) -> String {
+impl DepracatedSnippet for GetLength {
+    fn entrypoint_name(&self) -> String {
         "tasm_list_contiguous_list_get_length".to_string()
     }
 
-    fn inputs(&self) -> Vec<String> {
+    fn input_field_names(&self) -> Vec<String> {
         vec!["*contiguous_list".to_string()]
     }
 
@@ -89,7 +89,7 @@ impl Snippet for GetLength {
         vec![DataType::U32]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec!["length".to_string()]
     }
 
@@ -98,7 +98,7 @@ impl Snippet for GetLength {
     }
 
     fn function_code(&self, _library: &mut crate::library::Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
 
         format!(
             "

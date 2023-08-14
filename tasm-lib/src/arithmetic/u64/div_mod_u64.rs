@@ -16,18 +16,18 @@ use crate::arithmetic::u64::shift_left_u64::ShiftLeftU64;
 use crate::arithmetic::u64::shift_right_u64::ShiftRightU64;
 use crate::arithmetic::u64::sub_u64::SubU64;
 use crate::library::Library;
-use crate::snippet::{DataType, Snippet};
+use crate::snippet::{DataType, DepracatedSnippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct DivModU64;
 
-impl Snippet for DivModU64 {
-    fn entrypoint(&self) -> String {
+impl DepracatedSnippet for DivModU64 {
+    fn entrypoint_name(&self) -> String {
         "tasm_arithmetic_u64_div_mod".to_string()
     }
 
-    fn inputs(&self) -> Vec<String> {
+    fn input_field_names(&self) -> Vec<String> {
         vec![
             "numerator_hi".to_string(),
             "numerator_lo".to_string(),
@@ -44,7 +44,7 @@ impl Snippet for DivModU64 {
         vec![DataType::U64, DataType::U64]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec![
             "(numerator / divisor)_hi".to_string(),
             "(numerator / divisor)_lo".to_string(),
@@ -58,7 +58,7 @@ impl Snippet for DivModU64 {
     }
 
     fn function_code(&self, library: &mut Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
         let shift_right_u64 = library.import(Box::new(ShiftRightU64));
         let shift_left_u64 = library.import(Box::new(ShiftLeftU64));
         let and_u64 = library.import(Box::new(AndU64));
@@ -697,7 +697,6 @@ mod tests {
         test_rust_equivalence_given_input_values(
             &DivModU64,
             &init_stack,
-            &[],
             &[],
             &mut HashMap::default(),
             0,

@@ -7,14 +7,14 @@ use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
-use crate::snippet::{DataType, Snippet};
+use crate::snippet::{DataType, DepracatedSnippet};
 use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct SubU64;
 
-impl Snippet for SubU64 {
-    fn inputs(&self) -> Vec<String> {
+impl DepracatedSnippet for SubU64 {
+    fn input_field_names(&self) -> Vec<String> {
         vec![
             "rhs_hi".to_string(),
             "rhs_lo".to_string(),
@@ -23,7 +23,7 @@ impl Snippet for SubU64 {
         ]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec!["(lhs - rhs)_hi".to_string(), "(lhs - rhs)_lo".to_string()]
     }
 
@@ -101,14 +101,14 @@ impl Snippet for SubU64 {
         -2
     }
 
-    fn entrypoint(&self) -> String {
+    fn entrypoint_name(&self) -> String {
         "tasm_arithmetic_u64_sub".to_string()
     }
 
     /// Four top elements of stack are assumed to be valid u32s. So to have
     /// a value that's less than 2^32.
     fn function_code(&self, _library: &mut Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
         const TWO_POW_32: &str = "4294967296";
 
         format!(
@@ -336,7 +336,6 @@ mod tests {
         test_rust_equivalence_given_input_values(
             &SubU64,
             &init_stack,
-            &[],
             &[],
             &mut HashMap::default(),
             0,

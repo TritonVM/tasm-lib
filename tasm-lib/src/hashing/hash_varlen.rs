@@ -2,13 +2,14 @@ use std::collections::HashMap;
 
 use num::Zero;
 use rand::random;
+use triton_vm::NonDeterminism;
 use twenty_first::{
     shared_math::b_field_element::BFieldElement, util_types::algebraic_hasher::AlgebraicHasher,
 };
 
 use crate::{
     get_init_tvm_stack,
-    snippet::{DataType, Snippet},
+    snippet::{DataType, DepracatedSnippet},
     ExecutionState, VmHasher,
 };
 
@@ -29,19 +30,19 @@ impl HashVarlen {
             ]
             .concat(),
             std_in: vec![],
-            secret_in: vec![],
+            nondeterminism: NonDeterminism::new(vec![]),
             memory,
             words_allocated: 1,
         }
     }
 }
 
-impl Snippet for HashVarlen {
-    fn entrypoint(&self) -> String {
+impl DepracatedSnippet for HashVarlen {
+    fn entrypoint_name(&self) -> String {
         "tasm_hashing_hash_varlen".to_string()
     }
 
-    fn inputs(&self) -> Vec<String> {
+    fn input_field_names(&self) -> Vec<String> {
         vec!["*addr".to_string(), "length".to_string()]
     }
 
@@ -53,7 +54,7 @@ impl Snippet for HashVarlen {
         vec![DataType::Digest]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec![
             "elemement_4".to_string(),
             "elemement_3".to_string(),
@@ -68,7 +69,7 @@ impl Snippet for HashVarlen {
     }
 
     fn function_code(&self, _library: &mut crate::library::Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
 
         format!(
             "

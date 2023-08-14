@@ -2,14 +2,14 @@ use std::collections::HashMap;
 
 use itertools::Itertools;
 use rand::random;
-use triton_vm::BFieldElement;
+use triton_vm::{BFieldElement, NonDeterminism};
 use twenty_first::{shared_math::other::random_elements, util_types::shared::bag_peaks};
 
 use crate::{
     get_init_tvm_stack,
     list::unsafe_u32::{get::UnsafeGet, length::UnsafeLength},
     rust_shadowing_helper_functions,
-    snippet::{DataType, Snippet},
+    snippet::{DataType, DepracatedSnippet},
     Digest, ExecutionState, VmHasher, DIGEST_LENGTH,
 };
 
@@ -33,19 +33,19 @@ impl BagPeaks {
         ExecutionState {
             stack,
             std_in: vec![],
-            secret_in: vec![],
+            nondeterminism: NonDeterminism::new(vec![]),
             memory,
             words_allocated: 0,
         }
     }
 }
 
-impl Snippet for BagPeaks {
-    fn entrypoint(&self) -> String {
+impl DepracatedSnippet for BagPeaks {
+    fn entrypoint_name(&self) -> String {
         "tasm_mmr_bag_peaks".to_string()
     }
 
-    fn inputs(&self) -> Vec<String> {
+    fn input_field_names(&self) -> Vec<String> {
         vec!["*peaks".to_string()]
     }
 
@@ -57,7 +57,7 @@ impl Snippet for BagPeaks {
         vec![DataType::Digest]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec![
             "d4".to_string(),
             "d3".to_string(),
@@ -72,7 +72,7 @@ impl Snippet for BagPeaks {
     }
 
     fn function_code(&self, library: &mut crate::library::Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
 
         let get_element = library.import(Box::new(UnsafeGet(DataType::Digest)));
         let get_length = library.import(Box::new(UnsafeLength(DataType::Digest)));

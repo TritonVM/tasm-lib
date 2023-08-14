@@ -4,23 +4,23 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use crate::{
     arithmetic::u32::leading_zeros_u32::LeadingZerosU32,
     get_init_tvm_stack,
-    snippet::{DataType, Snippet},
+    snippet::{DataType, DepracatedSnippet},
     ExecutionState,
 };
 
 #[derive(Clone, Debug)]
 pub struct LeadingZerosU64;
 
-impl Snippet for LeadingZerosU64 {
-    fn entrypoint(&self) -> String {
+impl DepracatedSnippet for LeadingZerosU64 {
+    fn entrypoint_name(&self) -> String {
         "tasm_arithmetic_u64_leading_zeros".to_string()
     }
 
-    fn inputs(&self) -> Vec<String> {
+    fn input_field_names(&self) -> Vec<String> {
         vec!["value_hi".to_string(), "value_lo".to_string()]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec!["leading zeros in value".to_string()]
     }
 
@@ -38,7 +38,7 @@ impl Snippet for LeadingZerosU64 {
 
     fn function_code(&self, library: &mut crate::library::Library) -> String {
         let leading_zeros_u32 = library.import(Box::new(LeadingZerosU32));
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
         format!(
             "
                 // BEFORE: _ value_hi value_lo
@@ -177,7 +177,6 @@ mod tests {
         test_rust_equivalence_given_input_values(
             &LeadingZerosU64,
             &init_stack,
-            &[],
             &[],
             &mut HashMap::default(),
             0,

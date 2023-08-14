@@ -7,15 +7,15 @@ use twenty_first::shared_math::other::random_elements;
 
 use crate::library::Library;
 use crate::rust_shadowing_helper_functions::unsafe_list::untyped_unsafe_insert_random_list;
-use crate::snippet::{DataType, Snippet};
+use crate::snippet::{DataType, DepracatedSnippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct UnsafePush(pub DataType);
 
 /// A parameterized version of `Push` where `N` is the size of an element in the list
-impl Snippet for UnsafePush {
-    fn inputs(&self) -> Vec<String> {
+impl DepracatedSnippet for UnsafePush {
+    fn input_field_names(&self) -> Vec<String> {
         let element_size = self.0.get_size();
 
         // _ *list, elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}
@@ -27,7 +27,7 @@ impl Snippet for UnsafePush {
         ret
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec![]
     }
 
@@ -56,7 +56,7 @@ impl Snippet for UnsafePush {
         -(self.0.get_size() as isize) - 1
     }
 
-    fn entrypoint(&self) -> String {
+    fn entrypoint_name(&self) -> String {
         format!("tasm_list_unsafe_u32_push_{}", self.0.label_friendly_name())
     }
 
@@ -82,7 +82,7 @@ impl Snippet for UnsafePush {
             String::default()
         };
 
-        let entry_point = self.entrypoint();
+        let entry_point = self.entrypoint_name();
         format!(
             "
             // Before: _ *list, elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}
@@ -254,7 +254,6 @@ mod tests {
         test_rust_equivalence_given_input_values(
             &UnsafePush(data_type.clone()),
             &init_stack,
-            &[],
             &[],
             &mut memory,
             0,

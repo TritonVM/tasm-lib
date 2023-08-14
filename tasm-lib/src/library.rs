@@ -6,7 +6,7 @@ use triton_vm::parser::parse;
 use triton_vm::{instruction::LabelledInstruction, parser::to_labelled_instructions};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
-use crate::snippet::{DataType, Snippet};
+use crate::snippet::{BasicSnippet, DataType, DepracatedSnippet};
 
 // Ensure that static allocator does not overwrite the address
 // dedicated to the dynamic allocator. Dynamic allocator is,
@@ -17,7 +17,7 @@ pub const STATIC_MEMORY_START_ADDRESS: usize = 1;
 /// tracks some data used for initializing the memory allocator.
 #[derive(Clone, Debug)]
 pub struct Library {
-    seen_snippets: HashMap<String, String>,
+    seen_snippets: HashMap<String, Vec<LabelledInstruction>>,
     free_pointer: usize,
 }
 
@@ -56,24 +56,24 @@ impl Library {
     ///
     /// Avoid cyclic dependencies by only calling `T::function_code()` which
     /// may call `.import()` if `.import::<T>()` wasn't already called once.
-    pub fn import(&mut self, snippet: Box<dyn Snippet>) -> String {
+    pub fn import(&mut self, snippet: Box<dyn BasicSnippet>) -> String {
         let dep_entrypoint = snippet.entrypoint();
 
         // The linter's suggestion doesn't work. This suppression is fine imo.
         #[allow(clippy::map_entry)]
         if !self.seen_snippets.contains_key(&dep_entrypoint) {
-            let dep_body = snippet.function_code(self);
+            let dep_body = snippet.code(self);
             self.seen_snippets.insert(dep_entrypoint, dep_body);
         }
 
         snippet.entrypoint()
     }
 
-    pub fn explicit_import(&mut self, name: &str, body: String) -> String {
+    pub fn explicit_import(&mut self, name: &str, body: &[LabelledInstruction]) -> String {
         // The linter's suggestion doesn't work. This suppression is fine imo.
         #[allow(clippy::map_entry)]
         if !self.seen_snippets.contains_key(name) {
-            self.seen_snippets.insert(name.to_owned(), body);
+            self.seen_snippets.insert(name.to_owned(), body.to_vec());
         }
 
         name.to_string()
@@ -85,18 +85,14 @@ impl Library {
     }
 
     #[allow(dead_code)]
-    pub fn all_imports(&self) -> String {
-        // Collect all imports and return as a string. All snippets are sorted
+    pub fn all_imports(&self) -> Vec<LabelledInstruction> {
+        // Collect all imports and return. All snippets are sorted
         // alphabetically to ensure that generated programs are deterministic.
         self.seen_snippets
             .iter()
             .sorted_unstable_by_key(|(k, _)| *k)
-            .map(|(_, s)| format!("{s}\n"))
+            .flat_map(|(_, s)| s.clone())
             .collect()
-    }
-
-    pub fn all_imports_as_instruction_lists(&self) -> Vec<LabelledInstruction> {
-        to_labelled_instructions(&parse(&self.all_imports()).unwrap())
     }
 
     pub fn kmalloc(&mut self, num_words: usize) -> usize {
@@ -113,17 +109,17 @@ pub struct DummyTestSnippetB;
 #[derive(Debug)]
 pub struct DummyTestSnippetC;
 
-impl Snippet for DummyTestSnippetA {
+impl DepracatedSnippet for DummyTestSnippetA {
     fn stack_diff(&self) -> isize {
         3
     }
 
-    fn entrypoint(&self) -> String {
+    fn entrypoint_name(&self) -> String {
         "tasm_a_dummy_test_value".to_string()
     }
 
     fn function_code(&self, library: &mut Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
         let b = library.import(Box::new(DummyTestSnippetB));
         let c = library.import(Box::new(DummyTestSnippetC));
 
@@ -149,11 +145,11 @@ impl Snippet for DummyTestSnippetA {
         stack.push(BFieldElement::one());
     }
 
-    fn inputs(&self) -> Vec<String> {
+    fn input_field_names(&self) -> Vec<String> {
         vec![]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec!["1".to_string(), "1".to_string(), "1".to_string()]
     }
 
@@ -182,17 +178,17 @@ impl Snippet for DummyTestSnippetA {
     }
 }
 
-impl Snippet for DummyTestSnippetB {
+impl DepracatedSnippet for DummyTestSnippetB {
     fn stack_diff(&self) -> isize {
         2
     }
 
-    fn entrypoint(&self) -> String {
+    fn entrypoint_name(&self) -> String {
         "tasm_b_dummy_test_value".to_string()
     }
 
     fn function_code(&self, library: &mut Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
         let c = library.import(Box::new(DummyTestSnippetC));
 
         format!(
@@ -216,11 +212,11 @@ impl Snippet for DummyTestSnippetB {
         stack.push(BFieldElement::one());
     }
 
-    fn inputs(&self) -> Vec<String> {
+    fn input_field_names(&self) -> Vec<String> {
         vec![]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec!["1".to_string(), "1".to_string()]
     }
 
@@ -249,17 +245,17 @@ impl Snippet for DummyTestSnippetB {
     }
 }
 
-impl Snippet for DummyTestSnippetC {
+impl DepracatedSnippet for DummyTestSnippetC {
     fn stack_diff(&self) -> isize {
         1
     }
 
-    fn entrypoint(&self) -> String {
+    fn entrypoint_name(&self) -> String {
         "tasm_c_dummy_test_value".to_string()
     }
 
     fn function_code(&self, _library: &mut Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
 
         format!(
             "
@@ -280,11 +276,11 @@ impl Snippet for DummyTestSnippetC {
         stack.push(BFieldElement::one())
     }
 
-    fn inputs(&self) -> Vec<String> {
+    fn input_field_names(&self) -> Vec<String> {
         vec![]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec!["1".to_string()]
     }
 
@@ -317,6 +313,7 @@ impl Snippet for DummyTestSnippetC {
 mod tests {
     use std::collections::HashMap;
     use triton_vm::program::Program;
+    use triton_vm::triton_asm;
 
     use crate::get_init_tvm_stack;
     use crate::list::ListType;
@@ -335,7 +332,6 @@ mod tests {
             &DummyTestSnippetA,
             &empty_stack,
             &[],
-            &[],
             &mut HashMap::default(),
             0,
             expected,
@@ -344,7 +340,6 @@ mod tests {
             &DummyTestSnippetB,
             &empty_stack,
             &[],
-            &[],
             &mut HashMap::default(),
             0,
             expected,
@@ -352,7 +347,6 @@ mod tests {
         test_rust_equivalence_given_input_values(
             &DummyTestSnippetC,
             &empty_stack,
-            &[],
             &[],
             &mut HashMap::default(),
             0,
@@ -366,7 +360,7 @@ mod tests {
         lib.import(Box::new(DummyTestSnippetA));
         lib.import(Box::new(DummyTestSnippetA));
         lib.import(Box::new(DummyTestSnippetC));
-        let _ret = lib.all_imports_as_instruction_lists();
+        let _ret = lib.all_imports();
     }
 
     #[test]
@@ -381,21 +375,19 @@ mod tests {
                     list_type: ListType::Safe,
                 }));
 
-            let code = format!(
-                "
+            let code = triton_asm!(
                 lala_entrypoint:
                     push 1 call {memcpy}
                     call {calculate_new_peaks_from_leaf_mutation}
 
                     return
-                    "
             );
 
             let mut src = code;
             let imports = library.all_imports();
-            src.push_str(&imports);
+            src.append(&mut imports);
 
-            Program::from_code(&src).unwrap()
+            Program::new(&src)
         }
 
         for _ in 0..100 {

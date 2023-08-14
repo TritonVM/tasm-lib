@@ -2,7 +2,7 @@ use itertools::Itertools;
 use num_traits::{One, Zero};
 use rand::random;
 use std::{cell::RefCell, collections::HashMap};
-use triton_vm::{triton_asm, BFieldElement};
+use triton_vm::{triton_asm, BFieldElement, NonDeterminism};
 use twenty_first::{
     shared_math::{
         bfield_codec::BFieldCodec,
@@ -23,7 +23,7 @@ use crate::{
         ListType,
     },
     rust_shadowing_helper_functions,
-    snippet::{DataType, Snippet},
+    snippet::{DataType, DepracatedSnippet},
     Digest, ExecutionState, VmHasher, DIGEST_LENGTH,
 };
 
@@ -73,22 +73,22 @@ impl GetSwbfIndices {
         ExecutionState {
             stack,
             std_in: vec![],
-            secret_in: vec![],
+            nondeterminism: NonDeterminism::new(vec![]),
             memory: HashMap::new(),
             words_allocated: 0,
         }
     }
 }
 
-impl Snippet for GetSwbfIndices {
-    fn entrypoint(&self) -> String {
+impl DepracatedSnippet for GetSwbfIndices {
+    fn entrypoint_name(&self) -> String {
         format!(
             "tasm_neptune_mutator_get_swbf_indices_{}_{}",
             self.window_size, self.num_trials
         )
     }
 
-    fn inputs(&self) -> Vec<String> {
+    fn input_field_names(&self) -> Vec<String> {
         vec![
             "aocl_leaf_hi".to_string(),
             "aocl_leaf_lo".to_string(),
@@ -123,7 +123,7 @@ impl Snippet for GetSwbfIndices {
         vec![DataType::List(Box::new(DataType::U32))]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec!["index_list".to_string()]
     }
 
@@ -138,7 +138,7 @@ impl Snippet for GetSwbfIndices {
             list_type: ListType::Unsafe,
         }));
 
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
 
         let rawcode_for_inner_function_u128_plus_u32 = RawCode::new_with_shadowing(
             triton_asm!(

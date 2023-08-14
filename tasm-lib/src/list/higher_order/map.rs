@@ -2,6 +2,7 @@ use itertools::Itertools;
 use num::Zero;
 use rand::{thread_rng, Rng};
 use std::collections::HashMap;
+use triton_vm::NonDeterminism;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::random_elements;
 use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
@@ -22,7 +23,7 @@ use crate::rust_shadowing_helper_functions::unsafe_list::unsafe_insert_random_li
 use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, VmHasher};
 use crate::{
     library::Library,
-    snippet::{DataType, Snippet},
+    snippet::{DataType, DepracatedSnippet},
     ExecutionState,
 };
 
@@ -87,15 +88,15 @@ impl Map {
         ExecutionState {
             stack,
             std_in: vec![],
-            secret_in: vec![],
+            nondeterminism: NonDeterminism::new(vec![]),
             memory,
             words_allocated: 0,
         }
     }
 }
 
-impl Snippet for Map {
-    fn entrypoint(&self) -> String {
+impl DepracatedSnippet for Map {
+    fn entrypoint_name(&self) -> String {
         format!(
             "tasm_list_higher_order_{}_u32_map_{}",
             self.list_type,
@@ -103,7 +104,7 @@ impl Snippet for Map {
         )
     }
 
-    fn inputs(&self) -> Vec<String> {
+    fn input_field_names(&self) -> Vec<String> {
         let mut ret = vec![];
         let additional_input_size = self.f.size_of_additional_inputs();
         for i in 0..additional_input_size {
@@ -127,7 +128,7 @@ impl Snippet for Map {
         ))]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec!["output_list".to_string()]
     }
 
@@ -174,7 +175,10 @@ impl Snippet for Map {
             InnerFunction::RawCode(rc) => rc.entrypoint(),
             InnerFunction::Snippet(sn) => {
                 let fn_body = sn.function_code(library);
-                library.explicit_import(&sn.entrypoint(), fn_body)
+                let instructions = triton_vm::parser::parse(&fn_body).unwrap();
+                let labelled_instructions =
+                    triton_vm::parser::to_labelled_instructions(&instructions);
+                library.explicit_import(&sn.entrypoint_name(), &labelled_instructions)
             }
             InnerFunction::NoFunctionBody(lnat) => lnat.label_name.to_owned(),
         };
@@ -186,7 +190,7 @@ impl Snippet for Map {
             InnerFunction::Snippet(_) => String::default(),
             InnerFunction::NoFunctionBody(_) => String::default(),
         };
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
 
         let additional_input_arg_size = self.f.size_of_additional_inputs();
         let clean_addition_inputs_args_from_stack = match additional_input_arg_size {
@@ -417,12 +421,12 @@ impl Snippet for Map {
 #[derive(Debug, Clone)]
 struct TestHashXFieldElement;
 
-impl Snippet for TestHashXFieldElement {
-    fn entrypoint(&self) -> String {
+impl DepracatedSnippet for TestHashXFieldElement {
+    fn entrypoint_name(&self) -> String {
         "test_hash_xfield_element".to_string()
     }
 
-    fn inputs(&self) -> Vec<String>
+    fn input_field_names(&self) -> Vec<String>
     where
         Self: Sized,
     {
@@ -441,7 +445,7 @@ impl Snippet for TestHashXFieldElement {
         vec![DataType::Digest]
     }
 
-    fn outputs(&self) -> Vec<String>
+    fn output_field_names(&self) -> Vec<String>
     where
         Self: Sized,
     {
@@ -462,7 +466,7 @@ impl Snippet for TestHashXFieldElement {
     }
 
     fn function_code(&self, _library: &mut Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
         format!(
             "
         // BEFORE: _ x2 x1 x0

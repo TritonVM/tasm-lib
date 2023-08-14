@@ -19,7 +19,7 @@ use crate::list::unsafe_u32::get::UnsafeGet;
 use crate::list::unsafe_u32::set::UnsafeSet;
 use crate::list::ListType;
 use crate::mmr::MAX_MMR_HEIGHT;
-use crate::snippet::{DataType, Snippet};
+use crate::snippet::{DataType, DepracatedSnippet};
 use crate::{
     get_init_tvm_stack, rust_shadowing_helper_functions, Digest, ExecutionState, VmHasher,
     DIGEST_LENGTH,
@@ -127,8 +127,8 @@ impl MmrCalculateNewPeaksFromLeafMutationMtIndices {
     }
 }
 
-impl Snippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
-    fn inputs(&self) -> Vec<String> {
+impl DepracatedSnippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
+    fn input_field_names(&self) -> Vec<String> {
         vec![
             "*auth_path".to_string(),
             "leaf_index_hi".to_string(),
@@ -144,7 +144,7 @@ impl Snippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
         ]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec![
             "*auth_path".to_string(),
             "leaf_index_hi".to_string(),
@@ -192,7 +192,7 @@ impl Snippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
         -8
     }
 
-    fn entrypoint(&self) -> String {
+    fn entrypoint_name(&self) -> String {
         format!(
             "tasm_mmr_calculate_new_peaks_from_leaf_mutation_{}",
             self.list_type
@@ -200,7 +200,7 @@ impl Snippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
     }
 
     fn function_code(&self, library: &mut Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
         let leaf_index_to_mt_index = library.import(Box::new(MmrLeafIndexToMtIndexAndPeakIndex));
         let u32_is_odd = library.import(Box::new(U32IsOdd));
         let eq_u64 = library.import(Box::new(EqU64));
@@ -654,7 +654,6 @@ mod tests {
                 list_type: ListType::Unsafe,
             },
             &init_stack,
-            &[],
             &[],
             &mut memory,
             MAX_MMR_HEIGHT * DIGEST_LENGTH + 1, // assume that 64 digests are allocated in memory when code starts to run

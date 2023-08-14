@@ -11,18 +11,18 @@ use crate::arithmetic::u64::decr_u64::DecrU64;
 use crate::arithmetic::u64::log_2_floor_u64::Log2FloorU64;
 use crate::arithmetic::u64::pow2_u64::Pow2U64;
 use crate::library::Library;
-use crate::snippet::{DataType, Snippet};
+use crate::snippet::{DataType, DepracatedSnippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct MmrLeftMostAncestor;
 
-impl Snippet for MmrLeftMostAncestor {
-    fn inputs(&self) -> Vec<String> {
+impl DepracatedSnippet for MmrLeftMostAncestor {
+    fn input_field_names(&self) -> Vec<String> {
         vec!["node_index_hi".to_string(), "node_index_lo".to_string()]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec![
             "leftmost_ancestor_hi".to_string(),
             "leftmost_ancestor_lo".to_string(),
@@ -59,12 +59,12 @@ impl Snippet for MmrLeftMostAncestor {
         1
     }
 
-    fn entrypoint(&self) -> String {
+    fn entrypoint_name(&self) -> String {
         "tasm_mmr_leftmost_ancestor".to_string()
     }
 
     fn function_code(&self, library: &mut Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
         let decr_u64 = library.import(Box::new(DecrU64));
         let pow2_u64 = library.import(Box::new(Pow2U64));
         let log_2_floor_u64 = library.import(Box::new(Log2FloorU64));
@@ -253,7 +253,6 @@ mod tests {
         test_rust_equivalence_given_input_values::<MmrLeftMostAncestor>(
             &MmrLeftMostAncestor,
             &init_stack,
-            &[],
             &[],
             &mut HashMap::default(),
             0,

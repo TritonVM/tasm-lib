@@ -3,18 +3,18 @@ use std::collections::HashMap;
 use rand::Rng;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
-use crate::snippet::{DataType, Snippet};
+use crate::snippet::{DataType, DepracatedSnippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct Neg;
 
-impl Snippet for Neg {
-    fn inputs(&self) -> Vec<String> {
+impl DepracatedSnippet for Neg {
+    fn input_field_names(&self) -> Vec<String> {
         vec!["value".to_string()]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec!["-value".to_string()]
     }
 
@@ -41,12 +41,12 @@ impl Snippet for Neg {
         0
     }
 
-    fn entrypoint(&self) -> String {
+    fn entrypoint_name(&self) -> String {
         "tasm_pseudo_neg".to_string()
     }
 
     fn function_code(&self, _library: &mut crate::library::Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
 
         format!(
             "

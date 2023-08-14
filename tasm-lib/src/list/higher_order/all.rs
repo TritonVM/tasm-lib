@@ -2,6 +2,7 @@ use itertools::Itertools;
 use num::Zero;
 use rand::{thread_rng, Rng};
 use std::collections::HashMap;
+use triton_vm::NonDeterminism;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
@@ -15,7 +16,7 @@ use crate::rust_shadowing_helper_functions::unsafe_list::untyped_unsafe_insert_r
 use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, VmHasher};
 use crate::{
     library::Library,
-    snippet::{DataType, Snippet},
+    snippet::{DataType, DepracatedSnippet},
     ExecutionState,
 };
 
@@ -99,15 +100,15 @@ impl All {
         ExecutionState {
             stack,
             std_in: vec![],
-            secret_in: vec![],
+            nondeterminism: NonDeterminism::new(vec![]),
             memory,
             words_allocated: 0,
         }
     }
 }
 
-impl Snippet for All {
-    fn entrypoint(&self) -> String {
+impl DepracatedSnippet for All {
+    fn entrypoint_name(&self) -> String {
         format!(
             "tasm_list_higher_order_{}_u32_all_{}",
             self.list_type,
@@ -115,7 +116,7 @@ impl Snippet for All {
         )
     }
 
-    fn inputs(&self) -> Vec<String>
+    fn input_field_names(&self) -> Vec<String>
     where
         Self: Sized,
     {
@@ -134,7 +135,7 @@ impl Snippet for All {
         ))]
     }
 
-    fn outputs(&self) -> Vec<String>
+    fn output_field_names(&self) -> Vec<String>
     where
         Self: Sized,
     {
@@ -171,7 +172,10 @@ impl Snippet for All {
             InnerFunction::RawCode(rc) => rc.entrypoint(),
             InnerFunction::Snippet(sn) => {
                 let fn_body = sn.function_code(library);
-                library.explicit_import(&sn.entrypoint(), fn_body)
+                let instructions = triton_vm::parser::parse(&fn_body).unwrap();
+                let labelled_instructions =
+                    triton_vm::parser::to_labelled_instructions(&instructions);
+                library.explicit_import(&sn.entrypoint_name(), &labelled_instructions)
             }
             InnerFunction::NoFunctionBody(_) => todo!(),
         };
@@ -183,7 +187,7 @@ impl Snippet for All {
             InnerFunction::Snippet(_) => String::default(),
             InnerFunction::NoFunctionBody(_) => todo!(),
         };
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
 
         format!(
             "
@@ -339,12 +343,12 @@ impl Snippet for All {
 #[derive(Debug, Clone)]
 struct TestHashXFieldElementLsb;
 
-impl Snippet for TestHashXFieldElementLsb {
-    fn entrypoint(&self) -> String {
+impl DepracatedSnippet for TestHashXFieldElementLsb {
+    fn entrypoint_name(&self) -> String {
         "test_hash_xfield_element_lsb".to_string()
     }
 
-    fn inputs(&self) -> Vec<String> {
+    fn input_field_names(&self) -> Vec<String> {
         vec![
             "elem2".to_string(),
             "elem1".to_string(),
@@ -360,7 +364,7 @@ impl Snippet for TestHashXFieldElementLsb {
         vec![DataType::Bool]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec!["bool".to_string()]
     }
 
@@ -369,7 +373,7 @@ impl Snippet for TestHashXFieldElementLsb {
     }
 
     fn function_code(&self, _library: &mut Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
         format!(
             "
         // BEFORE: _ x2 x1 x0
@@ -542,7 +546,6 @@ mod tests {
             &snippet,
             &input_stack,
             &[],
-            &[],
             &mut memory,
             1,
             Some(&expected_end_stack_true),
@@ -562,7 +565,6 @@ mod tests {
         test_rust_equivalence_given_input_values(
             &snippet,
             &input_stack,
-            &[],
             &[],
             &mut memory,
             1,

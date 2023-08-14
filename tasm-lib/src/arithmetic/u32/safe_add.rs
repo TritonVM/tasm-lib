@@ -3,23 +3,23 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::{
     get_init_tvm_stack,
-    snippet::{DataType, Snippet},
+    snippet::{DataType, DepracatedSnippet},
     ExecutionState,
 };
 
 #[derive(Clone, Debug)]
 pub struct SafeAdd;
 
-impl Snippet for SafeAdd {
-    fn entrypoint(&self) -> String {
+impl DepracatedSnippet for SafeAdd {
+    fn entrypoint_name(&self) -> String {
         "tasm_arithmetic_u32_safe_add_u32".to_string()
     }
 
-    fn inputs(&self) -> Vec<String> {
+    fn input_field_names(&self) -> Vec<String> {
         vec!["rhs".to_string(), "lhs".to_string()]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec!["lhs + rhs".to_string()]
     }
 
@@ -36,7 +36,7 @@ impl Snippet for SafeAdd {
     }
 
     fn function_code(&self, _library: &mut crate::library::Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
         format!(
             "
                 {entrypoint}:
@@ -159,7 +159,6 @@ mod tests {
         test_rust_equivalence_given_input_values::<SafeAdd>(
             &SafeAdd,
             &init_stack,
-            &[],
             &[],
             &mut HashMap::default(),
             0,

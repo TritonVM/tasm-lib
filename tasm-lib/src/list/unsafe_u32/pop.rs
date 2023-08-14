@@ -6,18 +6,18 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
 use crate::rust_shadowing_helper_functions::unsafe_list::untyped_unsafe_insert_random_list;
-use crate::snippet::{DataType, Snippet};
+use crate::snippet::{DataType, DepracatedSnippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct UnsafePop(pub DataType);
 
-impl Snippet for UnsafePop {
-    fn inputs(&self) -> Vec<String> {
+impl DepracatedSnippet for UnsafePop {
+    fn input_field_names(&self) -> Vec<String> {
         vec!["*list".to_string()]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         let mut ret: Vec<String> = vec![];
         let element_size = self.0.get_size();
         for i in 0..element_size {
@@ -47,14 +47,14 @@ impl Snippet for UnsafePop {
         self.0.get_size() as isize - 1
     }
 
-    fn entrypoint(&self) -> String {
+    fn entrypoint_name(&self) -> String {
         format!("tasm_list_unsafe_u32_pop_{}", self.0.label_friendly_name())
     }
 
     /// Pop last element from list. Does *not* actually delete the last
     /// element but instead leaves it in memory.
     fn function_code(&self, _library: &mut Library) -> String {
-        let entry_point = self.entrypoint();
+        let entry_point = self.entrypoint_name();
 
         let mut code_to_read_elements = String::default();
         // Start and end at loop: Stack: _  [elems], address_for_last_unread_element
@@ -264,7 +264,6 @@ mod tests {
         test_rust_equivalence_given_input_values(
             &UnsafePop(data_type),
             &init_stack,
-            &[],
             &[],
             &mut vm_memory,
             0,

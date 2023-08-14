@@ -6,7 +6,7 @@ use triton_vm::BFieldElement;
 
 use crate::{
     get_init_tvm_stack,
-    snippet::{DataType, Snippet},
+    snippet::{DataType, DepracatedSnippet},
     ExecutionState,
 };
 
@@ -32,8 +32,8 @@ impl PushRamToStack {
     }
 }
 
-impl Snippet for PushRamToStack {
-    fn entrypoint(&self) -> String {
+impl DepracatedSnippet for PushRamToStack {
+    fn entrypoint_name(&self) -> String {
         assert!(
             !self.output_type.get_size().is_zero(),
             "Cannot move value of size 0 to stack"
@@ -44,7 +44,7 @@ impl Snippet for PushRamToStack {
         )
     }
 
-    fn inputs(&self) -> Vec<String> {
+    fn input_field_names(&self) -> Vec<String> {
         vec!["*ram_pointer".to_owned()]
     }
 
@@ -56,7 +56,7 @@ impl Snippet for PushRamToStack {
         vec![self.output_type.to_owned()]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         let mut ret = vec![];
 
         for i in (0..self.output_type.get_size()).rev() {
@@ -71,7 +71,7 @@ impl Snippet for PushRamToStack {
     }
 
     fn function_code(&self, _library: &mut crate::library::Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
 
         let mut ram_to_stack_code = String::default();
         let dataype_size = self.output_type.get_size();

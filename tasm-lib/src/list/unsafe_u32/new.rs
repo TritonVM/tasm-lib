@@ -3,18 +3,18 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
 use crate::rust_shadowing_helper_functions::unsafe_list::unsafe_list_new;
-use crate::snippet::{DataType, Snippet};
+use crate::snippet::{DataType, DepracatedSnippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct UnsafeNew(pub DataType);
 
-impl Snippet for UnsafeNew {
-    fn entrypoint(&self) -> String {
+impl DepracatedSnippet for UnsafeNew {
+    fn entrypoint_name(&self) -> String {
         format!("tasm_list_unsafe_u32_new_{}", self.0.label_friendly_name())
     }
 
-    fn inputs(&self) -> Vec<String> {
+    fn input_field_names(&self) -> Vec<String> {
         vec!["capacity".to_string()]
     }
 
@@ -26,7 +26,7 @@ impl Snippet for UnsafeNew {
         vec![DataType::List(Box::new(self.0.clone()))]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec!["list_pointer".to_string()]
     }
 
@@ -35,7 +35,7 @@ impl Snippet for UnsafeNew {
     }
 
     fn function_code(&self, library: &mut Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
 
         // Data structure for `list::safe_u32` is: [length, element0, element1, ...]
         let element_size = self.0.get_size();

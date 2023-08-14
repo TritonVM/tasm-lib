@@ -6,7 +6,7 @@ use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
-use crate::snippet::{DataType, Snippet};
+use crate::snippet::{DataType, DepracatedSnippet};
 use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
 
 #[derive(Clone, Debug)]
@@ -17,8 +17,8 @@ pub struct LtStandardU64;
 /// The fastest way we know is to calculate without consuming, and then pop the operands.
 /// This is because there are three branches, so sharing cleanup unconditionally means
 /// less branching (fewer cycles) and less local cleanup (smaller program).
-impl Snippet for LtStandardU64 {
-    fn inputs(&self) -> Vec<String> {
+impl DepracatedSnippet for LtStandardU64 {
+    fn input_field_names(&self) -> Vec<String> {
         vec![
             "rhs_hi".to_string(),
             "rhs_lo".to_string(),
@@ -27,7 +27,7 @@ impl Snippet for LtStandardU64 {
         ]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec!["(lhs < rhs)".to_string()]
     }
 
@@ -53,12 +53,12 @@ impl Snippet for LtStandardU64 {
         -3
     }
 
-    fn entrypoint(&self) -> String {
+    fn entrypoint_name(&self) -> String {
         "tasm_arithmetic_u64_lt_standard".to_string()
     }
 
     fn function_code(&self, _library: &mut Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
         format!(
             "
             // Before: _ rhs_hi rhs_lo lhs_hi lhs_lo
@@ -146,8 +146,8 @@ pub struct LtU64;
 /// This `lt_u64` does not consume its arguments, which is the norm for tasm functions.
 ///
 /// See `LtStandardU64` for a variant that does.
-impl Snippet for LtU64 {
-    fn inputs(&self) -> Vec<String> {
+impl DepracatedSnippet for LtU64 {
+    fn input_field_names(&self) -> Vec<String> {
         vec![
             "rhs_hi".to_string(),
             "rhs_lo".to_string(),
@@ -156,7 +156,7 @@ impl Snippet for LtU64 {
         ]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec![
             "rhs_hi".to_string(),
             "rhs_lo".to_string(),
@@ -201,14 +201,14 @@ impl Snippet for LtU64 {
         1
     }
 
-    fn entrypoint(&self) -> String {
+    fn entrypoint_name(&self) -> String {
         "tasm_arithmetic_u64_lt".to_string()
     }
 
     /// Before: _ rhs_hi rhs_lo lhs_hi lhs_lo
     /// After: _ rhs_hi rhs_lo lhs_hi lhs_lo  (lhs < rhs)
     fn function_code(&self, _library: &mut Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
         format!(
             "
             // Before: _ rhs_hi rhs_lo lhs_hi lhs_lo
@@ -435,14 +435,12 @@ mod tests {
         init_stack.append(&mut lhs.encode().into_iter().rev().collect());
 
         let stdin = &[];
-        let secret_in = &[];
         let mut memory = HashMap::default();
         let words_allocated = 0;
         test_rust_equivalence_given_input_values(
             &LtU64,
             &init_stack,
             stdin,
-            secret_in,
             &mut memory,
             words_allocated,
             expected,
@@ -455,7 +453,6 @@ mod tests {
         init_stack.append(&mut lhs.encode().into_iter().rev().collect());
 
         let stdin = &[];
-        let secret_in = &[];
         let mut memory = HashMap::default();
         let words_allocated = 0;
         let expected = None;
@@ -463,7 +460,6 @@ mod tests {
             &LtU64,
             &init_stack,
             stdin,
-            secret_in,
             &mut memory,
             words_allocated,
             expected,

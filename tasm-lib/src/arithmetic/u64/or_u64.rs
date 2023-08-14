@@ -3,19 +3,19 @@ use twenty_first::{amount::u32s::U32s, shared_math::b_field_element::BFieldEleme
 
 use crate::{
     get_init_tvm_stack, push_encodable,
-    snippet::{DataType, Snippet},
+    snippet::{DataType, DepracatedSnippet},
     ExecutionState,
 };
 
 #[derive(Clone, Debug)]
 pub struct OrU64;
 
-impl Snippet for OrU64 {
-    fn entrypoint(&self) -> String {
+impl DepracatedSnippet for OrU64 {
+    fn entrypoint_name(&self) -> String {
         "tasm_arithmetic_u64_or_u64".to_string()
     }
 
-    fn inputs(&self) -> Vec<String> {
+    fn input_field_names(&self) -> Vec<String> {
         vec![
             "rhs_hi".to_string(),
             "rhs_lo".to_string(),
@@ -24,7 +24,7 @@ impl Snippet for OrU64 {
         ]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec!["(lhs | rhs)_hi".to_string(), "(lhs | rhs)_lo".to_string()]
     }
 
@@ -41,7 +41,7 @@ impl Snippet for OrU64 {
     }
 
     fn function_code(&self, _library: &mut crate::library::Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
         format!(
             "
                 // BEFORE: _ rhs_hi rhs_lo lhs_hi lhs_lo
@@ -189,7 +189,6 @@ mod tests {
         test_rust_equivalence_given_input_values(
             &OrU64,
             &init_stack,
-            &[],
             &[],
             &mut HashMap::default(),
             0,

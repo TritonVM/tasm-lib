@@ -21,7 +21,7 @@ use crate::list::unsafe_u32::pop::UnsafePop;
 use crate::list::unsafe_u32::push::UnsafePush;
 use crate::list::unsafe_u32::set_length::UnsafeSetLength;
 use crate::list::ListType;
-use crate::snippet::{DataType, Snippet};
+use crate::snippet::{DataType, DepracatedSnippet};
 use crate::{
     get_init_tvm_stack, rust_shadowing_helper_functions, Digest, ExecutionState, VmHasher,
     DIGEST_LENGTH,
@@ -99,8 +99,8 @@ impl CalculateNewPeaksFromAppend {
     }
 }
 
-impl Snippet for CalculateNewPeaksFromAppend {
-    fn inputs(&self) -> Vec<String> {
+impl DepracatedSnippet for CalculateNewPeaksFromAppend {
+    fn input_field_names(&self) -> Vec<String> {
         vec![
             "old_leaf_count_hi".to_string(),
             "old_leaf_count_lo".to_string(),
@@ -113,7 +113,7 @@ impl Snippet for CalculateNewPeaksFromAppend {
         ]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec!["*new_peaks".to_string(), "*auth_path".to_string()]
     }
 
@@ -156,7 +156,7 @@ impl Snippet for CalculateNewPeaksFromAppend {
         -6
     }
 
-    fn entrypoint(&self) -> String {
+    fn entrypoint_name(&self) -> String {
         format!(
             "tasm_mmr_calculate_new_peaks_from_append_{}",
             self.list_type
@@ -164,7 +164,7 @@ impl Snippet for CalculateNewPeaksFromAppend {
     }
 
     fn function_code(&self, library: &mut Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
         let new_list = match self.list_type {
             ListType::Safe => library.import(Box::new(SafeNew(DataType::Digest))),
             ListType::Unsafe => library.import(Box::new(UnsafeNew(DataType::Digest))),
@@ -655,7 +655,6 @@ mod tests {
         test_rust_equivalence_given_input_values(
             &CalculateNewPeaksFromAppend { list_type },
             &init_stack,
-            &[],
             &[],
             &mut memory,
             words_allocated,

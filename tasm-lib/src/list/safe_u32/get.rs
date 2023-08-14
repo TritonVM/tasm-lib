@@ -3,22 +3,23 @@ use std::collections::HashMap;
 
 use num::One;
 use rand::{random, thread_rng, Rng};
+use triton_vm::NonDeterminism;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
 use crate::rust_shadowing_helper_functions::safe_list::{safe_insert_random_list, safe_list_get};
-use crate::snippet::{DataType, Snippet};
+use crate::snippet::{DataType, DepracatedSnippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct SafeGet(pub DataType);
 
-impl Snippet for SafeGet {
-    fn inputs(&self) -> Vec<String> {
+impl DepracatedSnippet for SafeGet {
+    fn input_field_names(&self) -> Vec<String> {
         vec!["*list".to_string(), "index".to_string()]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         // This function returns element_0 on the top of the stack and the other elements below it. E.g.: _ elem_2 elem_1 elem_0
         let mut ret: Vec<String> = vec![];
         let size = self.0.get_size();
@@ -64,7 +65,7 @@ impl Snippet for SafeGet {
         vec![ExecutionState {
             stack,
             std_in: vec![],
-            secret_in: vec![],
+            nondeterminism: NonDeterminism::new(vec![]),
             memory,
             words_allocated: 0,
         }]
@@ -74,7 +75,7 @@ impl Snippet for SafeGet {
         self.0.get_size() as isize - 2
     }
 
-    fn entrypoint(&self) -> String {
+    fn entrypoint_name(&self) -> String {
         format!(
             "tasm_list_safe_u32_get_element_{}",
             self.0.label_friendly_name()
@@ -82,7 +83,7 @@ impl Snippet for SafeGet {
     }
 
     fn function_code(&self, _library: &mut Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
         // Code to read an element from a list. With bounds check.
 
         let mut code_to_read_elements = String::default();
@@ -196,7 +197,7 @@ fn get_benchmark_input_state(list_length: usize, data_type: &DataType) -> Execut
     ExecutionState {
         stack,
         std_in: vec![],
-        secret_in: vec![],
+        nondeterminism: NonDeterminism::new(vec![]),
         memory,
         words_allocated: 1,
     }
@@ -395,7 +396,6 @@ mod tests {
         test_rust_equivalence_given_input_values(
             &SafeGet(data_type.to_owned()),
             &init_stack,
-            &[],
             &[],
             &mut memory,
             0,

@@ -4,14 +4,14 @@ use rand::Rng;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
-use crate::snippet::{DataType, Snippet};
+use crate::snippet::{DataType, DepracatedSnippet};
 use crate::{get_init_tvm_stack, push_encodable, Digest, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct EqDigest;
 
-impl Snippet for EqDigest {
-    fn inputs(&self) -> Vec<String> {
+impl DepracatedSnippet for EqDigest {
+    fn input_field_names(&self) -> Vec<String> {
         vec![
             "b4".to_string(),
             "b3".to_string(),
@@ -26,7 +26,7 @@ impl Snippet for EqDigest {
         ]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec!["(a3 = b3)·(a2 = b2)·(a1 = b1)·(a4 = b4)·(b0 = a0)".to_string()]
     }
 
@@ -58,12 +58,12 @@ impl Snippet for EqDigest {
         -9
     }
 
-    fn entrypoint(&self) -> String {
+    fn entrypoint_name(&self) -> String {
         "tasm_hashing_eq_digest".to_string()
     }
 
     fn function_code(&self, _library: &mut Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
         format!(
             "
             // Before: _ b4 b3 b2 b1 b0 a4 a3 a2 a1 a0

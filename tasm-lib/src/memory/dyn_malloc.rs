@@ -13,7 +13,7 @@ pub const DYN_MALLOC_ADDRESS: u32 = 0;
 use crate::{
     get_init_tvm_stack,
     library::Library,
-    snippet::{DataType, Snippet},
+    snippet::{DataType, DepracatedSnippet},
     ExecutionState,
 };
 
@@ -42,12 +42,12 @@ impl DynMalloc {
     }
 }
 
-impl Snippet for DynMalloc {
-    fn entrypoint(&self) -> String {
+impl DepracatedSnippet for DynMalloc {
+    fn entrypoint_name(&self) -> String {
         "tasm_memory_dyn_malloc".to_string()
     }
 
-    fn inputs(&self) -> Vec<String> {
+    fn input_field_names(&self) -> Vec<String> {
         vec!["size".to_string()]
     }
 
@@ -59,7 +59,7 @@ impl Snippet for DynMalloc {
         vec![DataType::U32]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec!["*addr".to_string()]
     }
 
@@ -68,7 +68,7 @@ impl Snippet for DynMalloc {
     }
 
     fn function_code(&self, _library: &mut Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
         format!(
             "
             // Return a pointer to a free address and allocate `size` words for this pointer

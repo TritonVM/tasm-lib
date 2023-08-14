@@ -1,10 +1,11 @@
 use std::collections::HashMap;
 
-use twenty_first::shared_math::{b_field_element::BFieldElement, other::random_elements};
+use triton_vm::NonDeterminism;
+use twenty_first::shared_math::other::random_elements;
 
 use crate::{
     get_init_tvm_stack,
-    snippet::{DataType, Snippet},
+    snippet::{DataType, DepracatedSnippet},
     ExecutionState,
 };
 
@@ -12,12 +13,12 @@ use crate::{
 #[derive(Clone, Debug)]
 pub struct ReadSecret(pub DataType);
 
-impl Snippet for ReadSecret {
-    fn entrypoint(&self) -> String {
+impl DepracatedSnippet for ReadSecret {
+    fn entrypoint_name(&self) -> String {
         format!("tasm_io_read_secret_{}", self.0)
     }
 
-    fn inputs(&self) -> Vec<String> {
+    fn input_field_names(&self) -> Vec<String> {
         vec![]
     }
 
@@ -29,7 +30,7 @@ impl Snippet for ReadSecret {
         vec![self.0.clone()]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         // This function returns element_0 on the top of the stack and the other elements below it. E.g.: _ elem_2 elem_1 elem_0
         let mut ret: Vec<String> = vec![];
         let size = self.0.get_size();
@@ -45,7 +46,7 @@ impl Snippet for ReadSecret {
     }
 
     fn function_code(&self, _library: &mut crate::library::Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
         let read_an_element = "divine\n".repeat(self.0.get_size());
 
         format!(
@@ -62,11 +63,10 @@ impl Snippet for ReadSecret {
     }
 
     fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
-        let secret_in: Vec<BFieldElement> = random_elements(self.0.get_size());
         vec![ExecutionState {
             stack: get_init_tvm_stack(),
             std_in: vec![],
-            secret_in,
+            nondeterminism: NonDeterminism::new(random_elements(self.0.get_size())),
             memory: HashMap::default(),
             words_allocated: 0,
         }]
@@ -88,12 +88,10 @@ impl Snippet for ReadSecret {
     }
 
     fn common_case_input_state(&self) -> ExecutionState {
-        let mut secret_in = vec![];
-        secret_in.append(&mut random_elements(self.0.get_size()));
         ExecutionState {
             stack: get_init_tvm_stack(),
             std_in: vec![],
-            secret_in,
+            nondeterminism: NonDeterminism::new(random_elements(self.0.get_size())),
             memory: HashMap::default(),
             words_allocated: 0,
         }

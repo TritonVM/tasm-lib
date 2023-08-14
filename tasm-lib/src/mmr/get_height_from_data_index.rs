@@ -7,18 +7,18 @@ use twenty_first::shared_math::other::log_2_floor;
 use crate::arithmetic::u64::incr_u64::IncrU64;
 use crate::arithmetic::u64::log_2_floor_u64::Log2FloorU64;
 use crate::library::Library;
-use crate::snippet::{DataType, Snippet};
+use crate::snippet::{DataType, DepracatedSnippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct GetHeightFromDataIndex;
 
-impl Snippet for GetHeightFromDataIndex {
-    fn inputs(&self) -> Vec<String> {
+impl DepracatedSnippet for GetHeightFromDataIndex {
+    fn input_field_names(&self) -> Vec<String> {
         vec!["leaf_index_hi".to_string(), "leaf_index_lo".to_string()]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec!["height".to_string()]
     }
 
@@ -49,12 +49,12 @@ impl Snippet for GetHeightFromDataIndex {
         -1
     }
 
-    fn entrypoint(&self) -> String {
+    fn entrypoint_name(&self) -> String {
         "tasm_mmr_get_height_from_leaf_index".to_string()
     }
 
     fn function_code(&self, library: &mut Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
         let incr_u64 = library.import(Box::new(IncrU64));
         let log_2_floor_u64 = library.import(Box::new(Log2FloorU64));
         format!(
@@ -202,7 +202,6 @@ mod tests {
         test_rust_equivalence_given_input_values::<GetHeightFromDataIndex>(
             &GetHeightFromDataIndex,
             &init_stack,
-            &[],
             &[],
             &mut HashMap::default(),
             0,

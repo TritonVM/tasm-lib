@@ -11,15 +11,15 @@ use crate::{
     get_init_tvm_stack,
     library::Library,
     push_encodable,
-    snippet::{DataType, Snippet},
+    snippet::{DataType, DepracatedSnippet},
     ExecutionState,
 };
 
 #[derive(Clone, Debug)]
 pub struct AddU128;
 
-impl Snippet for AddU128 {
-    fn inputs(&self) -> Vec<String> {
+impl DepracatedSnippet for AddU128 {
+    fn input_field_names(&self) -> Vec<String> {
         vec![
             "rhs_3".to_string(),
             "rhs_2".to_string(),
@@ -32,7 +32,7 @@ impl Snippet for AddU128 {
         ]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec![
             "(lhs + rhs)_3".to_string(),
             "(lhs + rhs)_2".to_string(),
@@ -90,14 +90,14 @@ impl Snippet for AddU128 {
         -4
     }
 
-    fn entrypoint(&self) -> String {
+    fn entrypoint_name(&self) -> String {
         "tasm_arithmetic_u128_add".to_string()
     }
 
     /// Four top elements of stack are assumed to be valid u32s. So to have
     /// a value that's less than 2^32.
     fn function_code(&self, _library: &mut Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
         format!(
             "
             // BEFORE: _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0
@@ -263,7 +263,6 @@ mod tests {
         test_rust_equivalence_given_input_values::<AddU128>(
             &AddU128,
             &init_stack,
-            &[],
             &[],
             &mut HashMap::default(),
             0,

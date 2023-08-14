@@ -2,7 +2,7 @@ use rand::random;
 
 use crate::{
     get_init_tvm_stack,
-    snippet::{DataType, Snippet},
+    snippet::{DataType, DepracatedSnippet},
     Digest, ExecutionState, DIGEST_LENGTH,
 };
 
@@ -17,12 +17,12 @@ impl ReverseDigest {
     }
 }
 
-impl Snippet for ReverseDigest {
-    fn entrypoint(&self) -> String {
+impl DepracatedSnippet for ReverseDigest {
+    fn entrypoint_name(&self) -> String {
         "tasm_hashing_reverse_digest".to_owned()
     }
 
-    fn inputs(&self) -> Vec<String> {
+    fn input_field_names(&self) -> Vec<String> {
         vec![
             "d4".to_owned(),
             "d3".to_owned(),
@@ -40,7 +40,7 @@ impl Snippet for ReverseDigest {
         vec![DataType::Digest]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec![
             "d0".to_owned(),
             "d1".to_owned(),
@@ -55,7 +55,7 @@ impl Snippet for ReverseDigest {
     }
 
     fn function_code(&self, _library: &mut crate::library::Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
 
         format!(
             "

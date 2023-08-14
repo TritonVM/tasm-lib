@@ -2,6 +2,7 @@ use itertools::Itertools;
 use num::Zero;
 use rand::{thread_rng, Rng};
 use std::collections::HashMap;
+use triton_vm::NonDeterminism;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::list::safe_u32::length::SafeLength;
@@ -17,7 +18,7 @@ use crate::rust_shadowing_helper_functions::unsafe_list::untyped_unsafe_insert_r
 use crate::{get_init_tvm_stack, rust_shadowing_helper_functions};
 use crate::{
     library::Library,
-    snippet::{DataType, Snippet},
+    snippet::{DataType, DepracatedSnippet},
     ExecutionState,
 };
 
@@ -97,15 +98,15 @@ impl Zip {
         ExecutionState {
             stack,
             std_in: vec![],
-            secret_in: vec![],
+            nondeterminism: NonDeterminism::new(vec![]),
             memory,
             words_allocated: 0,
         }
     }
 }
 
-impl Snippet for Zip {
-    fn entrypoint(&self) -> String {
+impl DepracatedSnippet for Zip {
+    fn entrypoint_name(&self) -> String {
         format!(
             "tasm_list_higher_order_{}_u32_zip_{}_with_{}",
             self.list_type,
@@ -114,7 +115,7 @@ impl Snippet for Zip {
         )
     }
 
-    fn inputs(&self) -> Vec<String> {
+    fn input_field_names(&self) -> Vec<String> {
         vec!["left_list".to_string(), "right_list".to_string()]
     }
 
@@ -132,7 +133,7 @@ impl Snippet for Zip {
         )))]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec!["output_list".to_string()]
     }
 
@@ -178,7 +179,7 @@ impl Snippet for Zip {
         // helper function for memory
         let memcpy = library.import(Box::new(MemCpy));
 
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
 
         format!(
             "
@@ -420,12 +421,12 @@ mod tests {
     #[derive(Debug, Clone)]
     struct TestHashXFieldElement;
 
-    impl Snippet for TestHashXFieldElement {
-        fn entrypoint(&self) -> String {
+    impl DepracatedSnippet for TestHashXFieldElement {
+        fn entrypoint_name(&self) -> String {
             "test_hash_xfield_element".to_string()
         }
 
-        fn inputs(&self) -> Vec<String>
+        fn input_field_names(&self) -> Vec<String>
         where
             Self: Sized,
         {
@@ -444,7 +445,7 @@ mod tests {
             vec![DataType::Digest]
         }
 
-        fn outputs(&self) -> Vec<String>
+        fn output_field_names(&self) -> Vec<String>
         where
             Self: Sized,
         {
@@ -465,7 +466,7 @@ mod tests {
         }
 
         fn function_code(&self, _library: &mut Library) -> String {
-            let entrypoint = self.entrypoint();
+            let entrypoint = self.entrypoint_name();
             format!(
                 "
         // BEFORE: _ x2 x1 x0

@@ -9,15 +9,15 @@ use twenty_first::{
 use crate::{
     get_init_tvm_stack,
     library::Library,
-    snippet::{DataType, Snippet},
+    snippet::{DataType, DepracatedSnippet},
     ExecutionState,
 };
 
 #[derive(Clone, Debug)]
 pub struct SubU128;
 
-impl Snippet for SubU128 {
-    fn inputs(&self) -> Vec<String> {
+impl DepracatedSnippet for SubU128 {
+    fn input_field_names(&self) -> Vec<String> {
         vec![
             "rhs_3".to_string(),
             "rhs_2".to_string(),
@@ -30,7 +30,7 @@ impl Snippet for SubU128 {
         ]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec![
             "(lhs - rhs)_3".to_string(),
             "(lhs - rhs)_2".to_string(),
@@ -51,7 +51,7 @@ impl Snippet for SubU128 {
         vec!["(lhs - rhs) overflows u128".to_string()]
     }
 
-    fn entrypoint(&self) -> String {
+    fn entrypoint_name(&self) -> String {
         "tasm_arithmetic_u128_sub".to_string()
     }
 
@@ -60,7 +60,7 @@ impl Snippet for SubU128 {
     }
 
     fn function_code(&self, _library: &mut Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
         const TWO_POW_32: &str = "4294967296";
 
         format!(
@@ -372,7 +372,6 @@ mod tests {
         test_rust_equivalence_given_input_values(
             &SubU128,
             &init_stack,
-            &[],
             &[],
             &mut HashMap::default(),
             0,

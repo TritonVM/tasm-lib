@@ -6,18 +6,18 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
 use crate::library::Library;
-use crate::snippet::{DataType, Snippet};
+use crate::snippet::{DataType, DepracatedSnippet};
 use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct DecrU64;
 
-impl Snippet for DecrU64 {
-    fn inputs(&self) -> Vec<String> {
+impl DepracatedSnippet for DecrU64 {
+    fn input_field_names(&self) -> Vec<String> {
         vec!["value_hi".to_string(), "value_lo".to_string()]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec!["(value - 1)_hi".to_string(), "(value - 1)_lo".to_string()]
     }
 
@@ -53,12 +53,12 @@ impl Snippet for DecrU64 {
         0
     }
 
-    fn entrypoint(&self) -> String {
+    fn entrypoint_name(&self) -> String {
         "tasm_arithmetic_u64_decr".to_string()
     }
 
     fn function_code(&self, _library: &mut Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
         const U32_MAX: &str = "4294967295";
 
         format!(
@@ -188,7 +188,6 @@ mod tests {
         test_rust_equivalence_given_input_values(
             &DecrU64,
             &stack,
-            &[],
             &[],
             &mut HashMap::default(),
             0,

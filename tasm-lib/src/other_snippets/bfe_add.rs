@@ -4,18 +4,18 @@ use rand::Rng;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
-use crate::snippet::{DataType, Snippet};
+use crate::snippet::{DataType, DepracatedSnippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct BfeAdd;
 
-impl Snippet for BfeAdd {
-    fn inputs(&self) -> Vec<String> {
+impl DepracatedSnippet for BfeAdd {
+    fn input_field_names(&self) -> Vec<String> {
         vec!["b".to_string(), "a".to_string()]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec!["a + b".to_string()]
     }
 
@@ -43,12 +43,12 @@ impl Snippet for BfeAdd {
         -1
     }
 
-    fn entrypoint(&self) -> String {
+    fn entrypoint_name(&self) -> String {
         "tasm_other_bfe_add".to_string()
     }
 
     fn function_code(&self, _library: &mut Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
         format!(
             "
             {entrypoint}:

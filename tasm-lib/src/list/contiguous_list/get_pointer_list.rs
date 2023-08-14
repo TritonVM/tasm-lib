@@ -13,7 +13,7 @@ use crate::{
         ListType,
     },
     rust_shadowing_helper_functions,
-    snippet::{DataType, Snippet},
+    snippet::{DataType, DepracatedSnippet},
 };
 
 // All of `contiguous_list` assumes that each element has its length prepended
@@ -21,15 +21,15 @@ pub struct GetPointerList {
     pub output_list_type: ListType,
 }
 
-impl Snippet for GetPointerList {
-    fn entrypoint(&self) -> String {
+impl DepracatedSnippet for GetPointerList {
+    fn entrypoint_name(&self) -> String {
         format!(
             "tasm_list_contiguous_list_get_pointer_list_{}",
             self.output_list_type
         )
     }
 
-    fn inputs(&self) -> Vec<String> {
+    fn input_field_names(&self) -> Vec<String> {
         vec!["*contiguous_list".to_owned()]
     }
 
@@ -41,7 +41,7 @@ impl Snippet for GetPointerList {
         vec![DataType::List(Box::new(DataType::VoidPointer))]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec!["*list_of_pointers".to_owned()]
     }
 
@@ -50,7 +50,7 @@ impl Snippet for GetPointerList {
     }
 
     fn function_code(&self, library: &mut crate::library::Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
         let get_list_length = library.import(Box::new(contiguous_list::get_length::GetLength));
         let new_list = match self.output_list_type {
             ListType::Safe => library.import(Box::new(list::safe_u32::new::SafeNew(

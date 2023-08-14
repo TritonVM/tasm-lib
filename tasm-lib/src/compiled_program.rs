@@ -4,6 +4,7 @@ use crate::library::Library;
 use anyhow::Result;
 use triton_vm::instruction::LabelledInstruction;
 use triton_vm::program::{ProfileLine, Program};
+use triton_vm::{NonDeterminism, PublicInput};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 pub trait CompiledProgram {
@@ -15,7 +16,7 @@ pub trait CompiledProgram {
     fn program() -> Program {
         let (program_instructions, library) = Self::code();
 
-        let library_instructions = library.all_imports_as_instruction_lists();
+        let library_instructions = library.all_imports();
 
         Program::new(&vec![program_instructions, library_instructions].concat())
     }
@@ -25,7 +26,10 @@ pub trait CompiledProgram {
         secret_input: &[BFieldElement],
     ) -> Result<Vec<BFieldElement>> {
         let p = Self::program();
-        p.run(public_input.to_vec(), secret_input.to_vec())
+        p.run(
+            PublicInput::new(public_input.to_vec()),
+            NonDeterminism::new(secret_input.to_vec()),
+        )
     }
 
     fn code() -> (Vec<LabelledInstruction>, Library);
@@ -59,12 +63,15 @@ pub fn bench_program<P: CompiledProgram>(
     use std::io::Write;
 
     let (program_instructions, library) = P::code();
-    let library_instructions = library.all_imports_as_instruction_lists();
+    let library_instructions = library.all_imports();
     let all_instructions = vec![program_instructions, library_instructions].concat();
     let program = Program::new(&all_instructions);
 
     // run in trace mode to get table heights
-    let benchmark = match program.trace_execution(public_input.to_vec(), secret_input.to_vec()) {
+    let benchmark = match program.trace_execution(
+        PublicInput::new(public_input.to_vec()),
+        NonDeterminism::new(secret_input.to_vec()),
+    ) {
         Ok((aet, _output)) => BenchmarkResult {
             case,
             name: name.clone(),
@@ -80,8 +87,8 @@ pub fn bench_program<P: CompiledProgram>(
     // run in profile mode to get picture of call graph running times
     let (_output, profile) = triton_vm::program::Program::profile(
         &all_instructions,
-        public_input.to_vec(),
-        secret_input.to_vec(),
+        PublicInput::new(public_input.to_vec()),
+        NonDeterminism::new(secret_input.to_vec()),
     )
     .unwrap();
     let mut str = format!("{name}:\n");

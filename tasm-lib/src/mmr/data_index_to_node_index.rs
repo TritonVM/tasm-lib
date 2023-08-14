@@ -6,7 +6,7 @@ use twenty_first::util_types::mmr;
 use crate::arithmetic::u64::add_u64::AddU64;
 use crate::arithmetic::u64::incr_u64::IncrU64;
 use crate::library::Library;
-use crate::snippet::{DataType, Snippet};
+use crate::snippet::{DataType, DepracatedSnippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
 use super::non_leaf_nodes_left::MmrNonLeafNodesLeftUsingAnd;
@@ -14,12 +14,12 @@ use super::non_leaf_nodes_left::MmrNonLeafNodesLeftUsingAnd;
 #[derive(Clone, Debug)]
 pub struct DataIndexToNodeIndex;
 
-impl Snippet for DataIndexToNodeIndex {
-    fn inputs(&self) -> Vec<String> {
+impl DepracatedSnippet for DataIndexToNodeIndex {
+    fn input_field_names(&self) -> Vec<String> {
         vec!["leaf_index_hi".to_string(), "leaf_index_lo".to_string()]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec!["node_index_hi".to_string(), "node_index_lo".to_string()]
     }
 
@@ -49,12 +49,12 @@ impl Snippet for DataIndexToNodeIndex {
         0
     }
 
-    fn entrypoint(&self) -> String {
+    fn entrypoint_name(&self) -> String {
         "tasm_mmr_data_index_to_node_index".to_string()
     }
 
     fn function_code(&self, library: &mut Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
         let non_leaf_nodes_left = library.import(Box::new(MmrNonLeafNodesLeftUsingAnd));
         let incr_u64 = library.import(Box::new(IncrU64));
         let add_u64 = library.import(Box::new(AddU64));
@@ -270,7 +270,6 @@ mod tests {
         test_rust_equivalence_given_input_values::<DataIndexToNodeIndex>(
             &DataIndexToNodeIndex,
             &init_stack,
-            &[],
             &[],
             &mut HashMap::default(),
             0,

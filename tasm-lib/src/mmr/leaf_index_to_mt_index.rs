@@ -16,14 +16,14 @@ use crate::arithmetic::u64::popcount_u64::PopCountU64;
 use crate::arithmetic::u64::pow2_u64::Pow2U64;
 use crate::arithmetic::u64::xor_u64::XorU64;
 use crate::library::Library;
-use crate::snippet::{DataType, Snippet};
+use crate::snippet::{DataType, DepracatedSnippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct MmrLeafIndexToMtIndexAndPeakIndex;
 
-impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
-    fn inputs(&self) -> Vec<String> {
+impl DepracatedSnippet for MmrLeafIndexToMtIndexAndPeakIndex {
+    fn input_field_names(&self) -> Vec<String> {
         vec![
             "leaf_count_hi".to_string(),
             "leaf_count_lo".to_string(),
@@ -32,7 +32,7 @@ impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
         ]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec![
             "mt_index_hi".to_string(),
             "mt_index_lo".to_string(),
@@ -68,12 +68,12 @@ impl Snippet for MmrLeafIndexToMtIndexAndPeakIndex {
         -1
     }
 
-    fn entrypoint(&self) -> String {
+    fn entrypoint_name(&self) -> String {
         "tasm_mmr_leaf_index_to_mt_index_and_peak_index".to_string()
     }
 
     fn function_code(&self, library: &mut Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
         let log_2_floor_u64 = library.import(Box::new(Log2FloorU64));
         let lt_u64 = library.import(Box::new(LtU64));
         let add_u64 = library.import(Box::new(AddU64));
@@ -379,7 +379,6 @@ mod tests {
         test_rust_equivalence_given_input_values(
             &MmrLeafIndexToMtIndexAndPeakIndex,
             &init_stack,
-            &[],
             &[],
             &mut HashMap::default(),
             0,

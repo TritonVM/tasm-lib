@@ -4,7 +4,7 @@ use triton_vm::instruction::AnInstruction;
 use triton_vm::instruction::LabelledInstruction;
 use triton_vm::BFieldElement;
 
-use crate::snippet::{DataType, Snippet};
+use crate::snippet::{DataType, DepracatedSnippet};
 
 /// A data structure for describing an inner function predicate to filter with,
 /// or to map with.
@@ -100,7 +100,7 @@ impl RawCode {
 
 pub enum InnerFunction {
     RawCode(RawCode),
-    Snippet(Box<dyn Snippet>),
+    Snippet(Box<dyn DepracatedSnippet>),
 
     // Used when a snippet is declared somewhere else, and it's not the responsibility of
     // the higher order function to import it.
@@ -156,7 +156,7 @@ impl InnerFunction {
     pub fn entrypoint(&self) -> String {
         match self {
             InnerFunction::RawCode(rc) => rc.entrypoint(),
-            InnerFunction::Snippet(sn) => sn.entrypoint(),
+            InnerFunction::Snippet(sn) => sn.entrypoint_name(),
             InnerFunction::NoFunctionBody(sn) => sn.label_name.to_owned(),
         }
     }

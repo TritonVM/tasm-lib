@@ -6,18 +6,18 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
 use crate::rust_shadowing_helper_functions::safe_list::safe_insert_random_list;
-use crate::snippet::{DataType, Snippet};
+use crate::snippet::{DataType, DepracatedSnippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct SafeSetLength(pub DataType);
 
-impl Snippet for SafeSetLength {
-    fn inputs(&self) -> Vec<String> {
+impl DepracatedSnippet for SafeSetLength {
+    fn input_field_names(&self) -> Vec<String> {
         vec!["*list".to_string(), "list_length".to_string()]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec!["*list".to_string()]
     }
 
@@ -63,7 +63,7 @@ impl Snippet for SafeSetLength {
         -1
     }
 
-    fn entrypoint(&self) -> String {
+    fn entrypoint_name(&self) -> String {
         format!(
             "tasm_list_safe_u32_set_length_{}",
             self.0.label_friendly_name()
@@ -71,7 +71,7 @@ impl Snippet for SafeSetLength {
     }
 
     fn function_code(&self, _library: &mut Library) -> String {
-        let entry_point = self.entrypoint();
+        let entry_point = self.entrypoint_name();
         // It is assumed that the new length is a valid u32 value
         format!(
             "
@@ -316,7 +316,6 @@ mod tests {
         test_rust_equivalence_given_input_values::<SafeSetLength>(
             &SafeSetLength(data_type),
             &init_stack,
-            &[],
             &[],
             &mut memory,
             0,

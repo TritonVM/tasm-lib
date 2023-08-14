@@ -2,6 +2,7 @@ use num::Zero;
 use num_traits::One;
 use rand::random;
 use std::collections::HashMap;
+use triton_vm::NonDeterminism;
 use twenty_first::shared_math::other::random_elements;
 use twenty_first::shared_math::x_field_element::{XFieldElement, EXTENSION_DEGREE};
 use twenty_first::{
@@ -15,7 +16,7 @@ use crate::list::unsafe_u32::length::UnsafeLength;
 use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, Digest, DIGEST_LENGTH};
 use crate::{
     library::Library,
-    snippet::{DataType, Snippet},
+    snippet::{DataType, DepracatedSnippet},
     ExecutionState, VmHasher,
 };
 
@@ -76,7 +77,7 @@ impl MultisetEquality {
         ExecutionState {
             stack: vec![get_init_tvm_stack(), vec![pointer_a, pointer_b]].concat(),
             std_in: vec![],
-            secret_in: vec![],
+            nondeterminism: NonDeterminism::new(vec![]),
             memory,
             words_allocated: 1,
         }
@@ -123,7 +124,7 @@ impl MultisetEquality {
         ExecutionState {
             stack: vec![get_init_tvm_stack(), vec![pointer_a, pointer_b]].concat(),
             std_in: vec![],
-            secret_in: vec![],
+            nondeterminism: NonDeterminism::new(vec![]),
             memory,
             words_allocated: 1,
         }
@@ -170,7 +171,7 @@ impl MultisetEquality {
         ExecutionState {
             stack: vec![get_init_tvm_stack(), vec![pointer_a, pointer_b]].concat(),
             std_in: vec![],
-            secret_in: vec![],
+            nondeterminism: NonDeterminism::new(vec![]),
             memory,
             words_allocated: 1,
         }
@@ -222,19 +223,19 @@ impl MultisetEquality {
         ExecutionState {
             stack: vec![get_init_tvm_stack(), vec![pointer_a, pointer_b]].concat(),
             std_in: vec![],
-            secret_in: vec![],
+            nondeterminism: NonDeterminism::new(vec![]),
             memory,
             words_allocated: 1,
         }
     }
 }
 
-impl Snippet for MultisetEquality {
-    fn entrypoint(&self) -> String {
+impl DepracatedSnippet for MultisetEquality {
+    fn entrypoint_name(&self) -> String {
         format!("tasm_list_{}_u32_multiset_equality", self.0)
     }
 
-    fn inputs(&self) -> Vec<String> {
+    fn input_field_names(&self) -> Vec<String> {
         vec!["list_a".to_string(), "list_b".to_string()]
     }
 
@@ -249,7 +250,7 @@ impl Snippet for MultisetEquality {
         vec![DataType::Bool]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec!["multisets_are_equal".to_string()]
     }
 
@@ -267,7 +268,7 @@ impl Snippet for MultisetEquality {
             ListType::Unsafe => 1,
         };
         let hash_varlen = library.import(Box::new(HashVarlen));
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
 
         format!(
             "

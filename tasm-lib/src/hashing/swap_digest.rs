@@ -5,7 +5,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
 use crate::snippet::DataType;
-use crate::snippet::Snippet;
+use crate::snippet::DepracatedSnippet;
 use crate::Digest;
 use crate::DIGEST_LENGTH;
 use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
@@ -13,8 +13,8 @@ use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
 #[derive(Clone, Debug)]
 pub struct SwapDigest;
 
-impl Snippet for SwapDigest {
-    fn inputs(&self) -> Vec<String> {
+impl DepracatedSnippet for SwapDigest {
+    fn input_field_names(&self) -> Vec<String> {
         vec![
             "b4".to_string(),
             "b3".to_string(),
@@ -29,7 +29,7 @@ impl Snippet for SwapDigest {
         ]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec![
             "a4".to_string(),
             "a3".to_string(),
@@ -72,12 +72,12 @@ impl Snippet for SwapDigest {
         0
     }
 
-    fn entrypoint(&self) -> String {
+    fn entrypoint_name(&self) -> String {
         "tasm_hashing_swap_digest".to_string()
     }
 
     fn function_code(&self, _library: &mut Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
         format!(
             "
             // Before: _ b4 b3 b2 b1 b0 a4 a3 a2 a1 a0

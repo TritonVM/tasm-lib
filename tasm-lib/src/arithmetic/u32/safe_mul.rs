@@ -3,7 +3,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::{
     get_init_tvm_stack,
-    snippet::{DataType, Snippet},
+    snippet::{DataType, DepracatedSnippet},
     ExecutionState,
 };
 
@@ -12,12 +12,12 @@ use crate::{
 #[derive(Clone, Debug)]
 pub struct SafeMul;
 
-impl Snippet for SafeMul {
-    fn entrypoint(&self) -> String {
+impl DepracatedSnippet for SafeMul {
+    fn entrypoint_name(&self) -> String {
         "tasm_arithmetic_u32_u32_safe_mul".to_string()
     }
 
-    fn inputs(&self) -> Vec<String> {
+    fn input_field_names(&self) -> Vec<String> {
         vec!["lhs".to_string(), "rhs".to_string()]
     }
 
@@ -29,7 +29,7 @@ impl Snippet for SafeMul {
         vec![DataType::U32]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec!["lhs * rhs".to_string()]
     }
 
@@ -38,7 +38,7 @@ impl Snippet for SafeMul {
     }
 
     fn function_code(&self, _library: &mut crate::library::Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
         format!(
             "
                 // BEFORE: _ rhs lhs
@@ -176,7 +176,6 @@ mod tests {
         test_rust_equivalence_given_input_values(
             &SafeMul,
             &init_stack,
-            &[],
             &[],
             &mut HashMap::default(),
             0,

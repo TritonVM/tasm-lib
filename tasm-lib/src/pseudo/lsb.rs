@@ -2,18 +2,18 @@ use std::collections::HashMap;
 
 use twenty_first::shared_math::b_field_element::{BFieldElement, BFIELD_ONE, BFIELD_ZERO};
 
-use crate::snippet::{DataType, Snippet};
+use crate::snippet::{DataType, DepracatedSnippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct Lsb;
 
-impl Snippet for Lsb {
-    fn inputs(&self) -> Vec<String> {
+impl DepracatedSnippet for Lsb {
+    fn input_field_names(&self) -> Vec<String> {
         vec!["a".to_string()]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec!["a % 2".to_string(), "a / 2".to_string()]
     }
 
@@ -46,12 +46,12 @@ impl Snippet for Lsb {
         1
     }
 
-    fn entrypoint(&self) -> String {
+    fn entrypoint_name(&self) -> String {
         "tasm_pseudo_lsb".to_string()
     }
 
     fn function_code(&self, _library: &mut crate::library::Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
         format!(
             "
             {entrypoint}:

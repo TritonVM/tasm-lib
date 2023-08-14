@@ -1,13 +1,23 @@
+// Recursion limit for macro_rules expansions, used for
+// triton_asm!
+#![recursion_limit = "1024"]
+
 use anyhow::anyhow;
 use anyhow::bail;
 use itertools::Itertools;
 use library::Library;
 use memory::dyn_malloc;
 use num_traits::Zero;
-use snippet::Snippet;
+use snippet::BasicSnippet;
+use snippet::DepracatedSnippet;
+use snippet::RustShadowed;
 use std::collections::HashMap;
 use std::time::SystemTime;
+use triton_vm::instruction::LabelledInstruction;
 use triton_vm::program::Program;
+use triton_vm::triton_asm;
+use triton_vm::NonDeterminism;
+use triton_vm::PublicInput;
 use triton_vm::{Claim, StarkParameters};
 use twenty_first::shared_math::bfield_codec::BFieldCodec;
 use twenty_first::shared_math::tip5::{self, Tip5};
@@ -28,6 +38,7 @@ pub mod mmr;
 pub mod neptune;
 pub mod other_snippets;
 
+pub mod algorithm;
 pub mod pseudo;
 pub mod recufier;
 pub mod rust_shadowing_helper_functions;
@@ -55,7 +66,7 @@ extern crate self as tasm_lib;
 pub struct ExecutionState {
     pub stack: Vec<BFieldElement>,
     pub std_in: Vec<BFieldElement>,
-    pub secret_in: Vec<BFieldElement>,
+    pub nondeterminism: NonDeterminism<BFieldElement>,
     pub memory: HashMap<BFieldElement, BFieldElement>,
 
     // Ensures that you're not overwriting statically allocated memory
@@ -71,7 +82,7 @@ impl ExecutionState {
         ExecutionState {
             stack,
             std_in: vec![],
-            secret_in: vec![],
+            nondeterminism: NonDeterminism::new(vec![]),
             memory: HashMap::default(),
             words_allocated: 0,
         }
@@ -85,7 +96,7 @@ impl ExecutionState {
         ExecutionState {
             stack,
             std_in: vec![],
-            secret_in: vec![],
+            nondeterminism: NonDeterminism::new(vec![]),
             memory,
             words_allocated,
         }
@@ -119,21 +130,25 @@ pub fn push_encodable<T: BFieldCodec>(stack: &mut Vec<BFieldElement>, value: &T)
 
 pub fn execute_with_execution_state(
     mut init_state: ExecutionState,
-    snippet: Box<dyn Snippet>,
+    snippet: Box<dyn RustShadowed>,
     expected_stack_diff: isize,
 ) -> anyhow::Result<ExecutionResult> {
     let mut library = Library::new();
     let entrypoint = snippet.entrypoint();
-    let mut code = format!("call {entrypoint}\n");
-    code.push_str("halt\n");
-    code.push_str(&snippet.function_code(&mut library));
-    code.push_str(&library.all_imports());
+    let insert_me = snippet.code(&mut library);
+    let insert_library = library.all_imports();
+    let mut code = triton_asm!(
+        call {entrypoint}
+        halt
+        {&insert_me}
+        {&insert_library}
+    );
     execute_bench(
         &code,
         &mut init_state.stack,
         expected_stack_diff,
         init_state.std_in,
-        init_state.secret_in,
+        init_state.nondeterminism,
         &mut init_state.memory,
         None,
     )
@@ -141,11 +156,11 @@ pub fn execute_with_execution_state(
 
 /// Execute a Triton-VM program and return its output and execution trace length
 pub fn execute_bench(
-    code: &str,
+    code: &[LabelledInstruction],
     stack: &mut Vec<BFieldElement>,
     expected_stack_diff: isize,
     std_in: Vec<BFieldElement>,
-    secret_in: Vec<BFieldElement>,
+    nondeterminism: NonDeterminism<BFieldElement>,
     memory: &mut HashMap<BFieldElement, BFieldElement>,
     initilialize_dynamic_allocator_to: Option<usize>,
 ) -> anyhow::Result<ExecutionResult> {
@@ -160,7 +175,12 @@ pub fn execute_bench(
     // Find the length of code used for setup. This length does not count towards execution length
     // of snippet so it must be subtracted at the end.
     let program = Program::from_code(&executed_code)?;
-    let (all_states, _) = program.debug(vec![], vec![], None, None);
+    let (all_states, _) = program.debug(
+        PublicInput::new(vec![]),
+        NonDeterminism::new(vec![]),
+        None,
+        None,
+    );
     let initialization_clock_cycle_count = all_states.len() - 1;
 
     // Construct the whole program (inclusive setup) to be run
@@ -168,7 +188,12 @@ pub fn execute_bench(
     let program = Program::from_code(&executed_code)?;
 
     // Run the program, including the stack preparation and memory preparation logic
-    let (execution_trace, err) = program.debug(std_in.clone(), secret_in.clone(), None, None);
+    let (execution_trace, err) = program.debug(
+        PublicInput::new(std_in.clone()),
+        nondeterminism.clone(),
+        None,
+        None,
+    );
     if let Some(e) = err {
         bail!(
             "`debug` failed with error: {e}\nLast state before crash:\n{}",
@@ -178,7 +203,7 @@ pub fn execute_bench(
 
     // Simulate the program, since this gives us hash table output
     let (simulation_trace, output) = program
-        .trace_execution(std_in.clone(), secret_in.clone())
+        .trace_execution(PublicInput::new(std_in.clone()), nondeterminism.clone())
         .map_err(|error| anyhow!("`simulate` failed with error: {error}"))?;
 
     let start_state: VMState = execution_trace
@@ -218,7 +243,7 @@ pub fn execute_bench(
     // produced proofs here should be valid.
     // If you run this, make sure `opt-level` is set to 3.
     if std::env::var("DYING_TO_PROVE").is_ok() {
-        prove_and_verify(&program, code, &executed_code, &std_in, &secret_in, &output);
+        prove_and_verify(&program, &std_in, &nondeterminism, &output);
     }
 
     Ok(ExecutionResult {
@@ -244,11 +269,11 @@ pub fn execute_bench(
 
 /// Execute a Triton-VM program; modify stack and memory
 pub fn execute_test(
-    code: &str,
+    code: &[LabelledInstruction],
     stack: &mut Vec<BFieldElement>,
     expected_stack_diff: isize,
     std_in: Vec<BFieldElement>,
-    secret_in: Vec<BFieldElement>,
+    nondeterminism: NonDeterminism<BFieldElement>,
     memory: &mut HashMap<BFieldElement, BFieldElement>,
     initilialize_dynamic_allocator_to: Option<usize>,
 ) -> anyhow::Result<VmOutputState> {
@@ -256,16 +281,22 @@ pub fn execute_test(
 
     // Prepend to program the initial stack values such that stack is in the expected
     // state when program logic is executed
-    let mut executed_code: String =
-        state_preparation_code(stack, memory, initilialize_dynamic_allocator_to);
+    let mut prep: String = state_preparation_code(stack, memory, initilialize_dynamic_allocator_to);
+    let prep_instruction_tokens = triton_vm::parser::parse(&prep).unwrap();
+    let mut executed_code = triton_vm::parser::to_labelled_instructions(&prep_instruction_tokens);
 
     // Construct the whole program (inclusive setup) to be run
-    executed_code.push_str(code);
+    executed_code.append(&mut code.to_vec());
 
     // Run the program, including the stack preparation and memory preparation logic
-    let program = Program::from_code(&executed_code).expect("Could not load source code: {}");
+    let program = Program::new(&executed_code);
     let final_state = program
-        .debug_terminal_state(std_in.clone(), secret_in.clone(), None, None)
+        .debug_terminal_state(
+            PublicInput::new(std_in.clone()),
+            nondeterminism.clone(),
+            None,
+            None,
+        )
         .map_err(|(err, fs)| {
             anyhow!("VM execution failed with error: {err}.\nLast state before crash:\n{fs}")
         })?;
@@ -297,10 +328,8 @@ pub fn execute_test(
     if std::env::var("DYING_TO_PROVE").is_ok() {
         prove_and_verify(
             &program,
-            code,
-            &executed_code,
             &std_in,
-            &secret_in,
+            &nondeterminism,
             &final_state.public_output,
         );
     }
@@ -350,10 +379,8 @@ fn state_preparation_code(
 // If you run this, make sure `opt-level` is set to 3.
 fn prove_and_verify(
     program: &Program,
-    code: &str,
-    executed_code: &str,
     std_in: &[BFieldElement],
-    secret_in: &[BFieldElement],
+    nondeterminism: &NonDeterminism<BFieldElement>,
     output: &[BFieldElement],
 ) {
     let claim = Claim {
@@ -363,13 +390,19 @@ fn prove_and_verify(
     };
 
     let (simulation_trace, _) = program
-        .trace_execution(std_in.to_owned(), secret_in.to_owned())
+        .trace_execution(PublicInput::new(std_in.to_owned()), nondeterminism.clone())
         .unwrap();
 
-    let code_header = &code[0..std::cmp::min(code.len(), 100)];
-    println!("Execution suceeded. Now proving {code_header}");
+    // let code_header = &code[0..std::cmp::min(code.len(), 100)];
+    // println!("Execution suceeded. Now proving {code_header}");
     let tick = SystemTime::now();
-    let proof = triton_vm::prove(&StarkParameters::default(), &claim, program, secret_in).unwrap();
+    let proof = triton_vm::prove(
+        &StarkParameters::default(),
+        &claim,
+        program,
+        nondeterminism.clone(),
+    )
+    .unwrap();
     println!(
         "Done proving. Elapsed time: {:?}",
         tick.elapsed().expect("Don't mess with time")
@@ -383,9 +416,8 @@ fn prove_and_verify(
 
     assert!(
         triton_vm::verify(&StarkParameters::default(), &claim, &proof),
-        "Generated proof must verify for program:\n {}\n\n Whole program was:\n\n{}",
-        code_header,
-        executed_code
+        "Generated proof must verify for program:\n {}",
+        program,
     );
 }
 
@@ -403,7 +435,7 @@ mod tests {
             &mut get_init_tvm_stack(),
             0,
             vec![],
-            vec![],
+            NonDeterminism::new(vec![]),
             &mut memory,
             Some(initial_dyn_malloc_value),
         )
@@ -423,7 +455,7 @@ mod tests {
             &mut get_init_tvm_stack(),
             0,
             vec![],
-            vec![],
+            NonDeterminism::new(vec![]),
             &mut memory,
             None,
         )

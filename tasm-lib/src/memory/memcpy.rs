@@ -2,9 +2,9 @@ use std::collections::HashMap;
 
 use num_traits::Zero;
 use rand::{random, thread_rng, Rng, RngCore};
-use triton_vm::BFieldElement;
+use triton_vm::{BFieldElement, NonDeterminism};
 
-use crate::{get_init_tvm_stack, snippet::Snippet};
+use crate::{get_init_tvm_stack, snippet::DepracatedSnippet};
 
 pub struct MemCpy; // TODO: add field `static_length : Option<usize>` to avoid loop
 impl MemCpy {
@@ -30,19 +30,19 @@ impl MemCpy {
         crate::ExecutionState {
             stack,
             std_in: vec![],
-            secret_in: vec![],
+            nondeterminism: NonDeterminism::new(vec![]),
             memory,
             words_allocated: 0,
         }
     }
 }
 
-impl Snippet for MemCpy {
-    fn entrypoint(&self) -> String {
+impl DepracatedSnippet for MemCpy {
+    fn entrypoint_name(&self) -> String {
         "tasm_memory_memcpy".to_string()
     }
 
-    fn inputs(&self) -> Vec<String> {
+    fn input_field_names(&self) -> Vec<String> {
         vec![
             "read_source".to_string(),
             "write_dest".to_string(),
@@ -62,7 +62,7 @@ impl Snippet for MemCpy {
         vec![]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec![]
     }
 
@@ -71,7 +71,7 @@ impl Snippet for MemCpy {
     }
 
     fn function_code(&self, _library: &mut crate::library::Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
         format!(
             "
         // BEFORE: _ read_source write_dest num_words

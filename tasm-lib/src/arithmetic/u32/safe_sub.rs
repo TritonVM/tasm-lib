@@ -4,23 +4,23 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::{
     get_init_tvm_stack,
-    snippet::{DataType, Snippet},
+    snippet::{DataType, DepracatedSnippet},
     ExecutionState,
 };
 
 #[derive(Clone, Debug)]
 pub struct SafeSub;
 
-impl Snippet for SafeSub {
-    fn entrypoint(&self) -> String {
+impl DepracatedSnippet for SafeSub {
+    fn entrypoint_name(&self) -> String {
         "tasm_arithmetic_u32_safe_sub_u32".to_string()
     }
 
-    fn inputs(&self) -> Vec<String> {
+    fn input_field_names(&self) -> Vec<String> {
         vec!["rhs".to_string(), "lhs".to_string()]
     }
 
-    fn outputs(&self) -> Vec<String> {
+    fn output_field_names(&self) -> Vec<String> {
         vec!["lhs - rhs".to_string()]
     }
 
@@ -37,7 +37,7 @@ impl Snippet for SafeSub {
     }
 
     fn function_code(&self, _library: &mut crate::library::Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
         format!(
             "
                 // BEFORE: _ rhs lhs
@@ -176,7 +176,6 @@ mod tests {
         test_rust_equivalence_given_input_values(
             &SafeSub,
             &init_stack,
-            &[],
             &[],
             &mut HashMap::default(),
             0,

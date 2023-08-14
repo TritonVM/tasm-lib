@@ -1,11 +1,12 @@
 use std::collections::HashMap;
 
 use rand::random;
+use triton_vm::NonDeterminism;
 use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
 use crate::{
     get_init_tvm_stack,
-    snippet::{DataType, Snippet},
+    snippet::{DataType, DepracatedSnippet},
     Digest, ExecutionState, VmHasher,
 };
 
@@ -52,19 +53,19 @@ impl Commit {
         ExecutionState {
             stack,
             std_in: vec![],
-            secret_in: vec![],
+            nondeterminism: NonDeterminism::new(vec![]),
             memory: HashMap::new(),
             words_allocated: 1,
         }
     }
 }
 
-impl Snippet for Commit {
-    fn entrypoint(&self) -> String {
+impl DepracatedSnippet for Commit {
+    fn entrypoint_name(&self) -> String {
         "tasm_neptune_mutator_set_commit".to_string()
     }
 
-    fn inputs(&self) -> Vec<String>
+    fn input_field_names(&self) -> Vec<String>
     where
         Self: Sized,
     {
@@ -95,7 +96,7 @@ impl Snippet for Commit {
         vec![DataType::Digest]
     }
 
-    fn outputs(&self) -> Vec<String>
+    fn output_field_names(&self) -> Vec<String>
     where
         Self: Sized,
     {
@@ -116,7 +117,7 @@ impl Snippet for Commit {
     }
 
     fn function_code(&self, _library: &mut crate::library::Library) -> String {
-        let entrypoint = self.entrypoint();
+        let entrypoint = self.entrypoint_name();
 
         format!(
             "
