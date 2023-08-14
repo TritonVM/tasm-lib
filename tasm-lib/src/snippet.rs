@@ -265,7 +265,7 @@ pub trait DepracatedSnippet {
             halt
 
             {function_body}
-            {library_code}
+            {&library_code}
         );
 
         code

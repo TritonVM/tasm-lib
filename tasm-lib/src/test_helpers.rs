@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use itertools::Itertools;
+use triton_vm::instruction::LabelledInstruction;
 use triton_vm::{triton_asm, NonDeterminism};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
@@ -88,7 +89,7 @@ pub fn test_rust_equivalence_given_input_values<T: RustShadowed>(
 fn link_for_isolated_run<T: RustShadowed>(
     snippet_struct: &T,
     words_statically_allocated: usize,
-) -> String {
+) -> Vec<LabelledInstruction> {
     let mut snippet_state = Library::with_preallocated_memory(words_statically_allocated);
     let entrypoint = snippet_struct.entrypoint();
     let function_body = snippet_struct.code(&mut snippet_state);
@@ -101,7 +102,7 @@ fn link_for_isolated_run<T: RustShadowed>(
         halt
 
         {&function_body}
-        {library_code}
+        {&library_code}
     );
 
     code
@@ -166,7 +167,7 @@ pub fn test_rust_equivalence_given_complete_state<T: RustShadowed>(
 
     if words_statically_allocated > 0 {
         rust_shadowing_helper_functions::dyn_malloc::rust_dyn_malloc_initialize(
-            rust_memory,
+            &mut rust_memory,
             words_statically_allocated,
         );
     }
@@ -206,7 +207,7 @@ pub fn test_rust_equivalence_given_complete_state<T: RustShadowed>(
             .map(|x| x.to_string())
             .collect_vec()
             .join(","),
-        snippet_struct.function_code(&mut Library::new())
+        snippet_struct.code(&mut Library::new()).iter().join("\n")
     );
 
     // if expected final stack is given, test against it
@@ -276,7 +277,7 @@ pub fn test_rust_equivalence_given_complete_state<T: RustShadowed>(
             .join(",");
         panic!(
             "Memory for both implementations must match after execution.\n\nTVM: {tasm_mem_str}\n\nRust: {rust_mem_str}\n\nDifference: {diff_str}\n\nCode was:\n\n {}",
-            snippet_struct.function_code(&mut Library::new())
+            snippet_struct.code(&mut Library::new()).iter().join("\n")
         );
     }
 
