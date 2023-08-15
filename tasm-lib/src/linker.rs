@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 
+use itertools::Itertools;
 use triton_vm::{
-    instruction::LabelledInstruction, triton_asm, BFieldElement, NonDeterminism, Program,
-    PublicInput,
+    instruction::LabelledInstruction, triton_asm, triton_instr, BFieldElement, NonDeterminism,
+    Program, PublicInput,
 };
 
 use crate::{
@@ -49,7 +50,8 @@ pub fn execute_bench(
     // Add the program after the stack initialization has been performed
     // Find the length of code used for setup. This length does not count towards
     // execution length of snippet so it must be subtracted at the end.
-    let initialization_program = Program::new(&prep);
+    let initialization_program =
+        Program::new(&vec![prep.clone(), vec![triton_instr!(halt)]].concat());
     let terminal_state = initialization_program.debug_terminal_state(
         PublicInput::new(vec![]),
         NonDeterminism::new(vec![]),

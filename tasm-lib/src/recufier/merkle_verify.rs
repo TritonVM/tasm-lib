@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use itertools::Itertools;
 use rand::rngs::StdRng;
-use rand::{Rng, RngCore, SeedableRng};
+use rand::{Rng, SeedableRng};
 use triton_vm::{triton_asm, NonDeterminism};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
@@ -24,6 +24,7 @@ use crate::{get_init_tvm_stack, Digest, VmHasher};
 ///  - root : Digest
 ///  - leaf index: u32
 ///  - leaf : Digest
+///  - tree height: u32
 ///
 /// outputs:
 ///
@@ -39,8 +40,9 @@ impl BasicSnippet for MerkleVerify {
     fn inputs(&self) -> Vec<(crate::snippet::DataType, String)> {
         vec![
             (DataType::Digest, "root".to_string()),
-            (DataType::U32, "index".to_string()),
+            (DataType::U32, "leaf_index".to_string()),
             (DataType::Digest, "leaf".to_string()),
+            (DataType::U32, "tree_height".to_string()),
         ]
     }
 
@@ -53,22 +55,28 @@ impl BasicSnippet for MerkleVerify {
         let traverse_tree = format!("{entrypoint}_traverse_tree");
         let assert_tree_top = format!("{entrypoint}_assert_tree_top");
         triton_asm!(
-            // BEFORE: _ r4 r3 r2 r1 r0 index l4 l3 l2 l1 l0
+            // BEFORE: _ r4 r3 r2 r1 r0 leaf_index l4 l3 l2 l1 l0 tree_height
             // AFTER: _
             {entrypoint}:
-                push 0 push 0 push 0 push 0 push 0       // stack: [* r4 r3 r2 r1 f0 index l4 l3 l2 l1 l0 0 0 0 0 0]
+                // calculate node index from tree height and leaf index:
+                push 2 pow                               // stack: [* r4 r3 r2 r1 r0 leaf_index l4 l3 l2 l1 l0 2^tree_height]
+                dup 6 add                                // stack: [* r4 r3 r2 r1 r0 leaf_index l4 l3 l2 l1 l0 (2^tree_height + leaf_index)]
+                swap 6 pop                               // stack: [* r4 r3 r2 r1 r0 node_index l4 l3 l2 l1 l0]
+
+                // walt up tree, to the root
+                push 0 push 0 push 0 push 0 push 0       // stack: [* r4 r3 r2 r1 f0 node_index l4 l3 l2 l1 l0 0 0 0 0 0]
                 call {traverse_tree}                     //
-                                                         // stack: [* r4 r3 r2 r1 r0 idx>>2 - - - - - - - - - -]
+                                                         // stack: [* r4 r3 r2 r1 r0 idx>>1 - - - - - - - - - -]
                 call {assert_tree_top}                   //
                                                          // stack: [* r4 r3 r2 r1 r0]
                 pop pop pop pop pop                      // _
                 return
 
             // subroutine: go up tree
-            // stack before: [* idx - - - - - - - - - -]
-            // stack after: [* idx>>2 - - - - - - - - - -]
+            // stack before: [* node_index - - - - - - - - - -]
+            // stack after: [* node_index>>1 - - - - - - - - - -]
             {traverse_tree}:                             // start function description:
-                dup 10 push 1 eq skiz return             // break loop if node index is 1
+                dup 10 push 1 eq skiz return             // break loop if node leaf_index is 1
                 divine_sibling hash recurse              // move up one level in the Merkle tree
 
             // subroutine: compare digests
@@ -98,8 +106,10 @@ impl Algorithm for MerkleVerify {
         // read inputs:
         //
         //  - root : Digest
-        //  - leaf index: u64
+        //  - leaf index: u32
         //  - leaf : Digest
+        //  - tree height: u32
+        let tree_height: u32 = stack.pop().unwrap().value().try_into().unwrap();
         let leaf = Digest::new([
             stack.pop().unwrap(),
             stack.pop().unwrap(),
@@ -107,7 +117,7 @@ impl Algorithm for MerkleVerify {
             stack.pop().unwrap(),
             stack.pop().unwrap(),
         ]);
-        let mut leaf_index: u32 = stack.pop().unwrap().value().try_into().unwrap();
+        let leaf_index: u32 = stack.pop().unwrap().value().try_into().unwrap();
         let root = Digest::new([
             stack.pop().unwrap(),
             stack.pop().unwrap(),
@@ -116,17 +126,18 @@ impl Algorithm for MerkleVerify {
             stack.pop().unwrap(),
         ]);
 
-        let mut sibling_index: usize = 0;
         let mut node_digest = leaf;
-        while leaf_index != 1 {
-            let sibling = nondeterminism.digests[sibling_index];
-            if leaf_index & 1 == 0 {
+        let mut sibling_height = 0;
+        let mut node_index = leaf_index + (1 << tree_height);
+        while node_index != 1 {
+            let sibling = nondeterminism.digests[sibling_height];
+            if node_index & 1 == 0 {
                 node_digest = VmHasher::hash_pair(&node_digest, &sibling);
             } else {
                 node_digest = VmHasher::hash_pair(&sibling, &node_digest);
             }
-            sibling_index += 1;
-            leaf_index /= 2;
+            sibling_height += 1;
+            node_index /= 2;
         }
         assert_eq!(node_digest, root);
     }
@@ -148,27 +159,29 @@ impl Algorithm for MerkleVerify {
                     BenchmarkCase::WorstCase => 20,
                 }
             } else {
-                rng.next_u32() % 20
+                rng.gen_range(0..20)
             };
 
             // sample unconstrained inputs directly
-            let index = rng.next_u32() % (1 << tree_height);
+            let leaf_index = rng.gen_range(0..(1 << tree_height));
             let path: Vec<Digest> = (0..tree_height).map(|_| rng.gen()).collect_vec();
             let leaf: Digest = rng.gen();
 
             // walk up tree to calculate root
-            let mut leaf_index = index;
-            let mut sibling_index = 0;
             let mut node_digest = leaf;
-            while leaf_index != 1 {
-                let sibling = path[sibling_index];
-                if leaf_index & 1 == 0 {
+            let mut node_index = leaf_index + (1 << tree_height);
+            let mut sibling_height = 0;
+            while node_index != 1 {
+                let sibling = path[sibling_height];
+                if node_index & 1 == 0 {
+                    // Node is a left child
                     node_digest = VmHasher::hash_pair(&node_digest, &sibling);
                 } else {
+                    // Node is a right child
                     node_digest = VmHasher::hash_pair(&sibling, &node_digest);
                 }
-                sibling_index += 1;
-                leaf_index /= 2;
+                sibling_height += 1;
+                node_index /= 2;
             }
             let root = node_digest;
 
@@ -177,10 +190,12 @@ impl Algorithm for MerkleVerify {
             for r in root.0.into_iter().rev() {
                 stack.push(r);
             }
-            stack.push(BFieldElement::new(index as u64));
+            stack.push(BFieldElement::new(leaf_index as u64));
             for l in leaf.0.into_iter().rev() {
                 stack.push(l);
             }
+
+            stack.push(BFieldElement::new(tree_height as u64));
 
             // prepare non-determinism
             let nondeterminism = NonDeterminism::new(vec![]).with_digests(path);
@@ -206,9 +221,13 @@ mod tests {
     use super::MerkleVerify;
 
     #[test]
-    fn merkle_verify() {
-        let mv = MerkleVerify;
-        mv.test()
+    fn merkle_verify_test() {
+        MerkleVerify.test()
+    }
+
+    #[test]
+    fn merkle_verify_bench() {
+        MerkleVerify.bench()
     }
 
     #[should_panic]

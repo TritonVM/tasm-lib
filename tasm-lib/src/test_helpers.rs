@@ -406,6 +406,10 @@ pub(crate) fn test_rust_equivalence_given_complete_state<T: BasicSnippet + RustS
         words_statically_allocated,
     );
 
+    // Sanity checks
+    assert_eq!(vm_output_state.final_ram, tasm_memory);
+    assert_eq!(vm_output_state.final_stack, tasm_stack);
+
     // assert stacks are equal, up to program hash
     let tasm_stack_skip_program_hash = tasm_stack.iter().cloned().skip(DIGEST_LENGTH).collect_vec();
     let rust_stack_skip_program_hash = rust_stack.iter().cloned().skip(DIGEST_LENGTH).collect_vec();

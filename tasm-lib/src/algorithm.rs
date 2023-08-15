@@ -1,6 +1,6 @@
-use std::collections::HashMap;
-
+use itertools::Itertools;
 use rand::{rngs::StdRng, thread_rng, Rng, SeedableRng};
+use std::collections::HashMap;
 use triton_vm::{BFieldElement, NonDeterminism};
 
 use crate::{
@@ -50,9 +50,9 @@ impl<T: Algorithm> RustShadow for T {
         for _ in 0..num_states {
             let seed: [u8; 32] = rng.gen();
             println!(
-                "testing {} common case with seed: {}",
+                "testing {} common case with seed: {:x?}",
                 self.entrypoint(),
-                hex::encode(seed)
+                seed
             );
             let (stack, memory, nondeterminism) = self.pseudorandom_initial_state(seed, None);
 
