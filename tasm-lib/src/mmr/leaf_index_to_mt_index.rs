@@ -16,13 +16,13 @@ use crate::arithmetic::u64::popcount_u64::PopCountU64;
 use crate::arithmetic::u64::pow2_u64::Pow2U64;
 use crate::arithmetic::u64::xor_u64::XorU64;
 use crate::library::Library;
-use crate::snippet::{DataType, DepracatedSnippet};
+use crate::snippet::{DataType, DeprecatedSnippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct MmrLeafIndexToMtIndexAndPeakIndex;
 
-impl DepracatedSnippet for MmrLeafIndexToMtIndexAndPeakIndex {
+impl DeprecatedSnippet for MmrLeafIndexToMtIndexAndPeakIndex {
     fn input_field_names(&self) -> Vec<String> {
         vec![
             "leaf_count_hi".to_string(),
@@ -219,14 +219,15 @@ mod tests {
     use crate::get_init_tvm_stack;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values_deprecated,
+        test_rust_equivalence_multiple_deprecated,
     };
 
     use super::*;
 
     #[test]
     fn leaf_index_to_mt_index_test() {
-        test_rust_equivalence_multiple(&MmrLeafIndexToMtIndexAndPeakIndex, true);
+        test_rust_equivalence_multiple_deprecated(&MmrLeafIndexToMtIndexAndPeakIndex, true);
     }
 
     #[test]
@@ -376,7 +377,7 @@ mod tests {
         expected.push(BFieldElement::new(expected_mt_index & u32::MAX as u64));
         expected.push(BFieldElement::new(expected_peak_index as u64));
 
-        test_rust_equivalence_given_input_values(
+        test_rust_equivalence_given_input_values_deprecated(
             &MmrLeafIndexToMtIndexAndPeakIndex,
             &init_stack,
             &[],

@@ -3,7 +3,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::{
     get_init_tvm_stack,
-    snippet::{DataType, DepracatedSnippet},
+    snippet::{DataType, DeprecatedSnippet},
     ExecutionState,
 };
 
@@ -12,7 +12,7 @@ use crate::{
 #[derive(Clone, Debug)]
 pub struct SafeMul;
 
-impl DepracatedSnippet for SafeMul {
+impl DeprecatedSnippet for SafeMul {
     fn entrypoint_name(&self) -> String {
         "tasm_arithmetic_u32_u32_safe_mul".to_string()
     }
@@ -121,14 +121,15 @@ mod tests {
     use num::Zero;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values_deprecated,
+        test_rust_equivalence_multiple_deprecated,
     };
 
     use super::*;
 
     #[test]
     fn snippet_test() {
-        test_rust_equivalence_multiple(&SafeMul, true);
+        test_rust_equivalence_multiple_deprecated(&SafeMul, true);
     }
 
     #[test]
@@ -173,7 +174,7 @@ mod tests {
         ]
         .concat();
 
-        test_rust_equivalence_given_input_values(
+        test_rust_equivalence_given_input_values_deprecated(
             &SafeMul,
             &init_stack,
             &[],

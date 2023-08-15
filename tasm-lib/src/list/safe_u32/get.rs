@@ -8,13 +8,13 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
 use crate::rust_shadowing_helper_functions::safe_list::{safe_insert_random_list, safe_list_get};
-use crate::snippet::{DataType, DepracatedSnippet};
+use crate::snippet::{DataType, DeprecatedSnippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct SafeGet(pub DataType);
 
-impl DepracatedSnippet for SafeGet {
+impl DeprecatedSnippet for SafeGet {
     fn input_field_names(&self) -> Vec<String> {
         vec!["*list".to_string(), "index".to_string()]
     }
@@ -210,18 +210,19 @@ mod tests {
     use super::*;
     use crate::get_init_tvm_stack;
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values_deprecated,
+        test_rust_equivalence_multiple_deprecated,
     };
 
     #[test]
     fn new_snippet_test() {
         for _ in 0..10 {
-            test_rust_equivalence_multiple(&SafeGet(DataType::Bool), true);
-            test_rust_equivalence_multiple(&SafeGet(DataType::U32), true);
-            test_rust_equivalence_multiple(&SafeGet(DataType::U64), true);
-            test_rust_equivalence_multiple(&SafeGet(DataType::BFE), true);
-            test_rust_equivalence_multiple(&SafeGet(DataType::XFE), true);
-            test_rust_equivalence_multiple(&SafeGet(DataType::Digest), true);
+            test_rust_equivalence_multiple_deprecated(&SafeGet(DataType::Bool), true);
+            test_rust_equivalence_multiple_deprecated(&SafeGet(DataType::U32), true);
+            test_rust_equivalence_multiple_deprecated(&SafeGet(DataType::U64), true);
+            test_rust_equivalence_multiple_deprecated(&SafeGet(DataType::BFE), true);
+            test_rust_equivalence_multiple_deprecated(&SafeGet(DataType::XFE), true);
+            test_rust_equivalence_multiple_deprecated(&SafeGet(DataType::Digest), true);
         }
     }
 
@@ -393,7 +394,7 @@ mod tests {
             expected_end_stack.push(targeted_element[element_size - 1 - i]);
         }
 
-        test_rust_equivalence_given_input_values(
+        test_rust_equivalence_given_input_values_deprecated(
             &SafeGet(data_type.to_owned()),
             &init_stack,
             &[],

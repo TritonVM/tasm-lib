@@ -7,13 +7,13 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
 use crate::library::Library;
-use crate::snippet::{DataType, DepracatedSnippet};
+use crate::snippet::{DataType, DeprecatedSnippet};
 use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct XorU64;
 
-impl DepracatedSnippet for XorU64 {
+impl DeprecatedSnippet for XorU64 {
     fn input_field_names(&self) -> Vec<String> {
         vec![
             "rhs_hi".to_string(),
@@ -134,14 +134,15 @@ mod tests {
     use crate::get_init_tvm_stack;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values_deprecated,
+        test_rust_equivalence_multiple_deprecated,
     };
 
     use super::*;
 
     #[test]
     fn xor_u64_test() {
-        test_rust_equivalence_multiple(&XorU64, true);
+        test_rust_equivalence_multiple_deprecated(&XorU64, true);
     }
 
     #[test]
@@ -183,7 +184,7 @@ mod tests {
             expected_end_stack.push(elem);
         }
 
-        test_rust_equivalence_given_input_values(
+        test_rust_equivalence_given_input_values_deprecated(
             &XorU64,
             &init_stack,
             &[],

@@ -9,11 +9,9 @@ use library::Library;
 use memory::dyn_malloc;
 use num_traits::Zero;
 use snippet::BasicSnippet;
-use snippet::DepracatedSnippet;
-use snippet::RustShadowed;
+use snippet::DeprecatedSnippet;
 use std::collections::HashMap;
 use std::time::SystemTime;
-use triton_vm::instruction::AnInstruction;
 use triton_vm::instruction::LabelledInstruction;
 use triton_vm::program::Program;
 use triton_vm::triton_asm;
@@ -41,6 +39,7 @@ pub mod neptune;
 pub mod other_snippets;
 
 pub mod algorithm;
+pub mod linker;
 pub mod pseudo;
 pub mod recufier;
 pub mod rust_shadowing_helper_functions;
@@ -130,22 +129,22 @@ pub fn push_encodable<T: BFieldCodec>(stack: &mut Vec<BFieldElement>, value: &T)
     stack.append(&mut value.encode().into_iter().rev().collect());
 }
 
-pub fn execute_with_execution_state(
+pub(crate) fn execute_with_execution_state_deprecated<T: DeprecatedSnippet>(
+    snippet: T,
     mut init_state: ExecutionState,
-    snippet: Box<dyn RustShadowed>,
     expected_stack_diff: isize,
 ) -> anyhow::Result<ExecutionResult> {
     let mut library = Library::new();
     let entrypoint = snippet.entrypoint();
     let insert_me = snippet.code(&mut library);
     let insert_library = library.all_imports();
-    let mut code = triton_asm!(
+    let code = triton_asm!(
         call {entrypoint}
         halt
         {&insert_me}
         {&insert_library}
     );
-    execute_bench(
+    execute_bench_deprecated(
         &code,
         &mut init_state.stack,
         expected_stack_diff,
@@ -157,7 +156,7 @@ pub fn execute_with_execution_state(
 }
 
 /// Execute a Triton-VM program and return its output and execution trace length
-pub fn execute_bench(
+pub fn execute_bench_deprecated(
     code: &[LabelledInstruction],
     stack: &mut Vec<BFieldElement>,
     expected_stack_diff: isize,
@@ -170,7 +169,7 @@ pub fn execute_bench(
 
     // Prepend to program the initial stack values such that stack is in the expected
     // state when program logic is executed
-    let mut prep: Vec<LabelledInstruction> =
+    let prep: Vec<LabelledInstruction> =
         state_preparation_code(stack, memory, initilialize_dynamic_allocator_to);
 
     // Add the program after the stack initialization has been performed
@@ -270,13 +269,13 @@ pub fn execute_bench(
     })
 }
 
-/// Execute a Triton-VM program; modify stack and memory
+/// Execute a Triton-VM program for test; modify stack and memory
 pub fn execute_test(
     code: &[LabelledInstruction],
     stack: &mut Vec<BFieldElement>,
     expected_stack_diff: isize,
     std_in: Vec<BFieldElement>,
-    nondeterminism: NonDeterminism<BFieldElement>,
+    nondeterminism: &NonDeterminism<BFieldElement>,
     memory: &mut HashMap<BFieldElement, BFieldElement>,
     initilialize_dynamic_allocator_to: Option<usize>,
 ) -> anyhow::Result<VmOutputState> {
@@ -284,7 +283,7 @@ pub fn execute_test(
 
     // Prepend to program the initial stack values such that stack is in the expected
     // state when program logic is executed
-    let mut prep: Vec<LabelledInstruction> =
+    let prep: Vec<LabelledInstruction> =
         state_preparation_code(stack, memory, initilialize_dynamic_allocator_to);
     let mut executed_code = prep;
 
@@ -433,7 +432,7 @@ mod tests {
     fn initialize_dyn_malloc() {
         let mut memory = HashMap::default();
         let initial_dyn_malloc_value = 14;
-        execute_bench(
+        execute_bench_deprecated(
             &triton_asm!(halt),
             &mut get_init_tvm_stack(),
             0,
@@ -453,7 +452,7 @@ mod tests {
     fn do_not_initialize_dyn_malloc() {
         // Ensure that dyn malloc is not initialized if no such initialization is requested
         let mut memory = HashMap::default();
-        execute_bench(
+        execute_bench_deprecated(
             &triton_asm!(halt),
             &mut get_init_tvm_stack(),
             0,

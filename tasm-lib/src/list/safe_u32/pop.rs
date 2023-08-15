@@ -5,13 +5,13 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
 use crate::rust_shadowing_helper_functions::safe_list::{safe_insert_random_list, safe_list_pop};
-use crate::snippet::{DataType, DepracatedSnippet};
+use crate::snippet::{DataType, DeprecatedSnippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct SafePop(pub DataType);
 
-impl DepracatedSnippet for SafePop {
+impl DeprecatedSnippet for SafePop {
     fn input_field_names(&self) -> Vec<String> {
         vec!["*list".to_string()]
     }
@@ -176,19 +176,20 @@ mod tests {
     use crate::get_init_tvm_stack;
     use crate::rust_shadowing_helper_functions::safe_list::safe_list_push;
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values_deprecated,
+        test_rust_equivalence_multiple_deprecated,
     };
 
     use super::*;
 
     #[test]
     fn new_snippet_test() {
-        test_rust_equivalence_multiple(&SafePop(DataType::Bool), true);
-        test_rust_equivalence_multiple(&SafePop(DataType::U32), true);
-        test_rust_equivalence_multiple(&SafePop(DataType::U64), true);
-        test_rust_equivalence_multiple(&SafePop(DataType::BFE), true);
-        test_rust_equivalence_multiple(&SafePop(DataType::XFE), true);
-        test_rust_equivalence_multiple(&SafePop(DataType::Digest), true);
+        test_rust_equivalence_multiple_deprecated(&SafePop(DataType::Bool), true);
+        test_rust_equivalence_multiple_deprecated(&SafePop(DataType::U32), true);
+        test_rust_equivalence_multiple_deprecated(&SafePop(DataType::U64), true);
+        test_rust_equivalence_multiple_deprecated(&SafePop(DataType::BFE), true);
+        test_rust_equivalence_multiple_deprecated(&SafePop(DataType::XFE), true);
+        test_rust_equivalence_multiple_deprecated(&SafePop(DataType::Digest), true);
     }
 
     #[test]
@@ -268,7 +269,7 @@ mod tests {
             expected_end_stack.push(last_element[element_size - 1 - i]);
         }
 
-        test_rust_equivalence_given_input_values(
+        test_rust_equivalence_given_input_values_deprecated(
             &SafePop(data_type),
             &init_stack,
             &[],

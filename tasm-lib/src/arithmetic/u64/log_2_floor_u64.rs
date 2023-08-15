@@ -6,13 +6,13 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::log_2_floor;
 
 use crate::library::Library;
-use crate::snippet::{DataType, DepracatedSnippet};
+use crate::snippet::{DataType, DeprecatedSnippet};
 use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct Log2FloorU64;
 
-impl DepracatedSnippet for Log2FloorU64 {
+impl DeprecatedSnippet for Log2FloorU64 {
     fn input_field_names(&self) -> Vec<String> {
         vec!["value_hi".to_string(), "value_lo".to_string()]
     }
@@ -152,14 +152,15 @@ mod tests {
     use crate::get_init_tvm_stack;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values_deprecated,
+        test_rust_equivalence_multiple_deprecated,
     };
 
     use super::*;
 
     #[test]
     fn log_2_floor_u64_test() {
-        test_rust_equivalence_multiple(&Log2FloorU64, true);
+        test_rust_equivalence_multiple_deprecated(&Log2FloorU64, true);
     }
 
     #[should_panic]
@@ -169,7 +170,7 @@ mod tests {
         init_stack.push(BFieldElement::new(16));
         init_stack.push(BFieldElement::new(u32::MAX as u64 + 1));
 
-        test_rust_equivalence_given_input_values(
+        test_rust_equivalence_given_input_values_deprecated(
             &Log2FloorU64,
             &init_stack,
             &[],
@@ -186,7 +187,7 @@ mod tests {
         init_stack.push(BFieldElement::new(u32::MAX as u64 + 1));
         init_stack.push(BFieldElement::new(16));
 
-        test_rust_equivalence_given_input_values(
+        test_rust_equivalence_given_input_values_deprecated(
             &Log2FloorU64,
             &init_stack,
             &[],
@@ -204,7 +205,7 @@ mod tests {
         init_stack.push(BFieldElement::new(u32::MAX as u64 + 1 + n));
         init_stack.push(BFieldElement::new(16));
 
-        test_rust_equivalence_given_input_values(
+        test_rust_equivalence_given_input_values_deprecated(
             &Log2FloorU64,
             &init_stack,
             &[],
@@ -272,7 +273,7 @@ mod tests {
             init_stack.push(elem);
         }
 
-        test_rust_equivalence_given_input_values(
+        test_rust_equivalence_given_input_values_deprecated(
             &Log2FloorU64,
             &init_stack,
             &[],

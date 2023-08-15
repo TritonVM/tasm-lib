@@ -7,13 +7,13 @@ use twenty_first::shared_math::other::log_2_floor;
 use crate::arithmetic::u64::incr_u64::IncrU64;
 use crate::arithmetic::u64::log_2_floor_u64::Log2FloorU64;
 use crate::library::Library;
-use crate::snippet::{DataType, DepracatedSnippet};
+use crate::snippet::{DataType, DeprecatedSnippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct GetHeightFromDataIndex;
 
-impl DepracatedSnippet for GetHeightFromDataIndex {
+impl DeprecatedSnippet for GetHeightFromDataIndex {
     fn input_field_names(&self) -> Vec<String> {
         vec!["leaf_index_hi".to_string(), "leaf_index_lo".to_string()]
     }
@@ -109,14 +109,15 @@ mod tests {
     use crate::get_init_tvm_stack;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values_deprecated,
+        test_rust_equivalence_multiple_deprecated,
     };
 
     use super::*;
 
     #[test]
     fn get_height_from_data_index_test() {
-        test_rust_equivalence_multiple(&GetHeightFromDataIndex, true);
+        test_rust_equivalence_multiple_deprecated(&GetHeightFromDataIndex, true);
     }
 
     #[test]
@@ -199,7 +200,7 @@ mod tests {
             init_stack.push(elem);
         }
 
-        test_rust_equivalence_given_input_values::<GetHeightFromDataIndex>(
+        test_rust_equivalence_given_input_values_deprecated::<GetHeightFromDataIndex>(
             &GetHeightFromDataIndex,
             &init_stack,
             &[],

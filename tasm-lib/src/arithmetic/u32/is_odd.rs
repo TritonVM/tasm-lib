@@ -5,13 +5,13 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
 use crate::pseudo::lsb::Lsb;
-use crate::snippet::{DataType, DepracatedSnippet};
+use crate::snippet::{DataType, DeprecatedSnippet};
 use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct U32IsOdd;
 
-impl DepracatedSnippet for U32IsOdd {
+impl DeprecatedSnippet for U32IsOdd {
     fn input_field_names(&self) -> Vec<String> {
         vec!["value".to_string()]
     }
@@ -66,7 +66,7 @@ impl DepracatedSnippet for U32IsOdd {
                 // BEFORE: _ value
                 // AFTER: _ (value % 2)
                 {entrypoint}:
-                    [{lsb}]
+                    call {lsb}
                     swap 1
                     pop
                     return
@@ -109,14 +109,15 @@ mod tests {
     use crate::get_init_tvm_stack;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values_deprecated,
+        test_rust_equivalence_multiple_deprecated,
     };
 
     use super::*;
 
     #[test]
     fn is_odd_u32_test() {
-        test_rust_equivalence_multiple(&U32IsOdd, true);
+        test_rust_equivalence_multiple_deprecated(&U32IsOdd, true);
     }
 
     #[test]
@@ -145,7 +146,7 @@ mod tests {
         let mut expected_stack = get_init_tvm_stack();
         expected_stack.push(BFieldElement::new((value % 2) as u64));
 
-        test_rust_equivalence_given_input_values(
+        test_rust_equivalence_given_input_values_deprecated(
             &U32IsOdd,
             &init_stack,
             &[],

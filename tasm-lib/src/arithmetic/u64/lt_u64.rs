@@ -6,7 +6,7 @@ use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
-use crate::snippet::{DataType, DepracatedSnippet};
+use crate::snippet::{DataType, DeprecatedSnippet};
 use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
 
 #[derive(Clone, Debug)]
@@ -17,7 +17,7 @@ pub struct LtStandardU64;
 /// The fastest way we know is to calculate without consuming, and then pop the operands.
 /// This is because there are three branches, so sharing cleanup unconditionally means
 /// less branching (fewer cycles) and less local cleanup (smaller program).
-impl DepracatedSnippet for LtStandardU64 {
+impl DeprecatedSnippet for LtStandardU64 {
     fn input_field_names(&self) -> Vec<String> {
         vec![
             "rhs_hi".to_string(),
@@ -146,7 +146,7 @@ pub struct LtU64;
 /// This `lt_u64` does not consume its arguments, which is the norm for tasm functions.
 ///
 /// See `LtStandardU64` for a variant that does.
-impl DepracatedSnippet for LtU64 {
+impl DeprecatedSnippet for LtU64 {
     fn input_field_names(&self) -> Vec<String> {
         vec![
             "rhs_hi".to_string(),
@@ -299,7 +299,8 @@ mod tests {
     use crate::get_init_tvm_stack;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values_deprecated,
+        test_rust_equivalence_multiple_deprecated,
     };
 
     use super::*;
@@ -313,12 +314,12 @@ mod tests {
 
     #[test]
     fn lt_u64_test_new_snippet() {
-        test_rust_equivalence_multiple(&LtU64, true);
+        test_rust_equivalence_multiple_deprecated(&LtU64, true);
     }
 
     #[test]
     fn standard_lt_u64_test_new_snippet() {
-        test_rust_equivalence_multiple(&LtStandardU64, true);
+        test_rust_equivalence_multiple_deprecated(&LtStandardU64, true);
     }
 
     #[test]
@@ -437,7 +438,7 @@ mod tests {
         let stdin = &[];
         let mut memory = HashMap::default();
         let words_allocated = 0;
-        test_rust_equivalence_given_input_values(
+        test_rust_equivalence_given_input_values_deprecated(
             &LtU64,
             &init_stack,
             stdin,
@@ -456,7 +457,7 @@ mod tests {
         let mut memory = HashMap::default();
         let words_allocated = 0;
         let expected = None;
-        test_rust_equivalence_given_input_values(
+        test_rust_equivalence_given_input_values_deprecated(
             &LtU64,
             &init_stack,
             stdin,

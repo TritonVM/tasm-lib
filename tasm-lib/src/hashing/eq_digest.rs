@@ -4,13 +4,13 @@ use rand::Rng;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
-use crate::snippet::{DataType, DepracatedSnippet};
+use crate::snippet::{DataType, DeprecatedSnippet};
 use crate::{get_init_tvm_stack, push_encodable, Digest, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct EqDigest;
 
-impl DepracatedSnippet for EqDigest {
+impl DeprecatedSnippet for EqDigest {
     fn input_field_names(&self) -> Vec<String> {
         vec![
             "b4".to_string(),
@@ -139,13 +139,13 @@ impl DepracatedSnippet for EqDigest {
 
 #[cfg(test)]
 mod tests {
-    use crate::test_helpers::test_rust_equivalence_multiple;
+    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     use super::*;
 
     #[test]
     fn swap_digest_test() {
-        test_rust_equivalence_multiple(&EqDigest, true);
+        test_rust_equivalence_multiple_deprecated(&EqDigest, true);
     }
 }
 

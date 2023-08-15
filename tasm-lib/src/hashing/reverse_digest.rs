@@ -2,7 +2,7 @@ use rand::random;
 
 use crate::{
     get_init_tvm_stack,
-    snippet::{DataType, DepracatedSnippet},
+    snippet::{DataType, DeprecatedSnippet},
     Digest, ExecutionState, DIGEST_LENGTH,
 };
 
@@ -17,7 +17,7 @@ impl ReverseDigest {
     }
 }
 
-impl DepracatedSnippet for ReverseDigest {
+impl DeprecatedSnippet for ReverseDigest {
     fn entrypoint_name(&self) -> String {
         "tasm_hashing_reverse_digest".to_owned()
     }
@@ -116,11 +116,11 @@ impl DepracatedSnippet for ReverseDigest {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_helpers::test_rust_equivalence_multiple;
+    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     #[test]
     fn reverse_digest_test() {
-        test_rust_equivalence_multiple(&ReverseDigest, true);
+        test_rust_equivalence_multiple_deprecated(&ReverseDigest, true);
     }
 }
 

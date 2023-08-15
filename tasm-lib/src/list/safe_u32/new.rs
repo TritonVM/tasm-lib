@@ -4,14 +4,14 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use crate::{
     dyn_malloc, get_init_tvm_stack,
     rust_shadowing_helper_functions::safe_list::safe_list_new,
-    snippet::{DataType, DepracatedSnippet},
+    snippet::{DataType, DeprecatedSnippet},
     ExecutionState,
 };
 
 #[derive(Clone, Debug)]
 pub struct SafeNew(pub DataType);
 
-impl DepracatedSnippet for SafeNew {
+impl DeprecatedSnippet for SafeNew {
     fn entrypoint_name(&self) -> String {
         format!("tasm_list_safe_u32_new_{}", self.0.label_friendly_name())
     }
@@ -151,19 +151,19 @@ mod tests {
 
     use crate::{
         list::safe_u32::push::SafePush, rust_shadowing_helper_functions,
-        test_helpers::test_rust_equivalence_multiple, Digest, DIGEST_LENGTH,
+        test_helpers::test_rust_equivalence_multiple_deprecated, Digest, DIGEST_LENGTH,
     };
 
     use super::*;
 
     #[test]
     fn new_snippet_test() {
-        test_rust_equivalence_multiple(&SafeNew(DataType::Bool), true);
-        test_rust_equivalence_multiple(&SafeNew(DataType::U32), true);
-        test_rust_equivalence_multiple(&SafeNew(DataType::U64), true);
-        test_rust_equivalence_multiple(&SafeNew(DataType::BFE), true);
-        test_rust_equivalence_multiple(&SafeNew(DataType::XFE), true);
-        test_rust_equivalence_multiple(&SafeNew(DataType::Digest), true);
+        test_rust_equivalence_multiple_deprecated(&SafeNew(DataType::Bool), true);
+        test_rust_equivalence_multiple_deprecated(&SafeNew(DataType::U32), true);
+        test_rust_equivalence_multiple_deprecated(&SafeNew(DataType::U64), true);
+        test_rust_equivalence_multiple_deprecated(&SafeNew(DataType::BFE), true);
+        test_rust_equivalence_multiple_deprecated(&SafeNew(DataType::XFE), true);
+        test_rust_equivalence_multiple_deprecated(&SafeNew(DataType::Digest), true);
     }
 
     #[test]

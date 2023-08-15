@@ -6,7 +6,7 @@ use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
 use crate::{
     get_init_tvm_stack,
-    snippet::{DataType, DepracatedSnippet},
+    snippet::{DataType, DeprecatedSnippet},
     Digest, ExecutionState, VmHasher,
 };
 
@@ -60,7 +60,7 @@ impl Commit {
     }
 }
 
-impl DepracatedSnippet for Commit {
+impl DeprecatedSnippet for Commit {
     fn entrypoint_name(&self) -> String {
         "tasm_neptune_mutator_set_commit".to_string()
     }
@@ -205,13 +205,13 @@ impl DepracatedSnippet for Commit {
 
 #[cfg(test)]
 mod tests {
-    use crate::test_helpers::test_rust_equivalence_multiple;
+    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     use super::Commit;
 
     #[test]
     fn new_prop_test() {
-        test_rust_equivalence_multiple(&Commit, true);
+        test_rust_equivalence_multiple_deprecated(&Commit, true);
     }
 }
 

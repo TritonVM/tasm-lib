@@ -2,11 +2,7 @@ use std::collections::HashMap;
 
 use num::{One, Zero};
 use rand::Rng;
-use triton_vm::{
-    instruction::LabelledInstruction,
-    parser::{parse, to_labelled_instructions},
-    triton_instr,
-};
+use triton_vm::{instruction::LabelledInstruction, triton_instr};
 use twenty_first::shared_math::b_field_element::{BFieldElement, BFIELD_ZERO};
 
 pub const DYN_MALLOC_ADDRESS: u32 = 0;
@@ -14,7 +10,7 @@ pub const DYN_MALLOC_ADDRESS: u32 = 0;
 use crate::{
     get_init_tvm_stack,
     library::Library,
-    snippet::{DataType, DepracatedSnippet},
+    snippet::{DataType, DeprecatedSnippet},
     ExecutionState,
 };
 
@@ -36,7 +32,7 @@ impl DynMalloc {
     }
 }
 
-impl DepracatedSnippet for DynMalloc {
+impl DeprecatedSnippet for DynMalloc {
     fn entrypoint_name(&self) -> String {
         "tasm_memory_dyn_malloc".to_string()
     }
@@ -178,7 +174,7 @@ impl DepracatedSnippet for DynMalloc {
 
 #[cfg(test)]
 mod tests {
-    use crate::test_helpers::test_rust_equivalence_multiple;
+    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     use super::*;
 
@@ -190,7 +186,7 @@ mod tests {
 
     #[test]
     fn dyn_malloc_test() {
-        test_rust_equivalence_multiple(&DynMalloc, true);
+        test_rust_equivalence_multiple_deprecated(&DynMalloc, true);
     }
 
     #[test]

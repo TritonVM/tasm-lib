@@ -4,7 +4,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use crate::{
     arithmetic::u64::{and_u64::AndU64, log_2_floor_u64::Log2FloorU64},
     get_init_tvm_stack,
-    snippet::{DataType, DepracatedSnippet},
+    snippet::{DataType, DeprecatedSnippet},
     ExecutionState,
 };
 
@@ -13,7 +13,7 @@ use super::{decr_u64::DecrU64, xor_u64::XorU64};
 #[derive(Clone, Debug)]
 pub struct IndexOfLastNonZeroBitU64;
 
-impl DepracatedSnippet for IndexOfLastNonZeroBitU64 {
+impl DeprecatedSnippet for IndexOfLastNonZeroBitU64 {
     fn entrypoint_name(&self) -> String {
         "tasm_arithmetic_u64_index_of_last_nonzero_bit".to_string()
     }
@@ -147,14 +147,15 @@ mod tests {
     use num::Zero;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values_deprecated,
+        test_rust_equivalence_multiple_deprecated,
     };
 
     use super::*;
 
     #[test]
     fn index_of_last_nonzero_bit_test() {
-        test_rust_equivalence_multiple(&IndexOfLastNonZeroBitU64, true);
+        test_rust_equivalence_multiple_deprecated(&IndexOfLastNonZeroBitU64, true);
     }
 
     fn index_of_last_nonzero_bit_prop(value: u64, expected: u32) {
@@ -166,7 +167,7 @@ mod tests {
         let mut expected_output = get_init_tvm_stack();
         expected_output.push(BFieldElement::new(expected as u64));
 
-        test_rust_equivalence_given_input_values(
+        test_rust_equivalence_given_input_values_deprecated(
             &IndexOfLastNonZeroBitU64,
             &init_stack,
             &[],
@@ -183,7 +184,7 @@ mod tests {
         init_stack.push(BFieldElement::new(1 << 32));
         init_stack.push(BFieldElement::zero());
 
-        test_rust_equivalence_given_input_values(
+        test_rust_equivalence_given_input_values_deprecated(
             &IndexOfLastNonZeroBitU64,
             &init_stack,
             &[],
@@ -200,7 +201,7 @@ mod tests {
         init_stack.push(BFieldElement::zero());
         init_stack.push(BFieldElement::new(1 << 32));
 
-        test_rust_equivalence_given_input_values(
+        test_rust_equivalence_given_input_values_deprecated(
             &IndexOfLastNonZeroBitU64,
             &init_stack,
             &[],
@@ -217,7 +218,7 @@ mod tests {
         init_stack.push(BFieldElement::zero());
         init_stack.push(BFieldElement::zero());
 
-        test_rust_equivalence_given_input_values(
+        test_rust_equivalence_given_input_values_deprecated(
             &IndexOfLastNonZeroBitU64,
             &init_stack,
             &[],

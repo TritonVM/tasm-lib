@@ -5,7 +5,7 @@ use twenty_first::shared_math::other::random_elements;
 
 use crate::{
     get_init_tvm_stack,
-    snippet::{DataType, DepracatedSnippet},
+    snippet::{DataType, DeprecatedSnippet},
     ExecutionState,
 };
 
@@ -13,7 +13,7 @@ use crate::{
 #[derive(Clone, Debug)]
 pub struct ReadSecret(pub DataType);
 
-impl DepracatedSnippet for ReadSecret {
+impl DeprecatedSnippet for ReadSecret {
     fn entrypoint_name(&self) -> String {
         format!("tasm_io_read_secret_{}", self.0)
     }
@@ -105,17 +105,17 @@ impl DepracatedSnippet for ReadSecret {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_helpers::test_rust_equivalence_multiple;
+    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     #[test]
     fn new_snippet_test() {
         for _ in 0..10 {
-            test_rust_equivalence_multiple(&ReadSecret(DataType::Bool), true);
-            test_rust_equivalence_multiple(&ReadSecret(DataType::U32), true);
-            test_rust_equivalence_multiple(&ReadSecret(DataType::U64), true);
-            test_rust_equivalence_multiple(&ReadSecret(DataType::BFE), true);
-            test_rust_equivalence_multiple(&ReadSecret(DataType::XFE), true);
-            test_rust_equivalence_multiple(&ReadSecret(DataType::Digest), true);
+            test_rust_equivalence_multiple_deprecated(&ReadSecret(DataType::Bool), true);
+            test_rust_equivalence_multiple_deprecated(&ReadSecret(DataType::U32), true);
+            test_rust_equivalence_multiple_deprecated(&ReadSecret(DataType::U64), true);
+            test_rust_equivalence_multiple_deprecated(&ReadSecret(DataType::BFE), true);
+            test_rust_equivalence_multiple_deprecated(&ReadSecret(DataType::XFE), true);
+            test_rust_equivalence_multiple_deprecated(&ReadSecret(DataType::Digest), true);
         }
     }
 }

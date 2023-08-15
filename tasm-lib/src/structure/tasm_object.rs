@@ -190,9 +190,9 @@ mod test {
 
     use crate::{
         get_init_tvm_stack, io, memory,
-        snippet::{DataType, DepracatedSnippet, InputSource},
+        snippet::{DataType, DeprecatedSnippet, InputSource},
         structure::tasm_object::TasmObject,
-        test_helpers::test_rust_equivalence_multiple,
+        test_helpers::test_rust_equivalence_multiple_deprecated,
         ExecutionState,
     };
 
@@ -246,7 +246,7 @@ mod test {
 
     struct TestObjectFieldGetter;
 
-    impl DepracatedSnippet for TestObjectFieldGetter {
+    impl DeprecatedSnippet for TestObjectFieldGetter {
         fn entrypoint_name(&self) -> String {
             "tasm_test_object_field_getter".to_string()
         }
@@ -443,6 +443,6 @@ mod test {
 
     #[test]
     fn test_tasm_object_field_getter() {
-        test_rust_equivalence_multiple(&TestObjectFieldGetter, false);
+        test_rust_equivalence_multiple_deprecated(&TestObjectFieldGetter, false);
     }
 }

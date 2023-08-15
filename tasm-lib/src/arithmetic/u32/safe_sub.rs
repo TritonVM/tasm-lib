@@ -4,14 +4,14 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::{
     get_init_tvm_stack,
-    snippet::{DataType, DepracatedSnippet},
+    snippet::{DataType, DeprecatedSnippet},
     ExecutionState,
 };
 
 #[derive(Clone, Debug)]
 pub struct SafeSub;
 
-impl DepracatedSnippet for SafeSub {
+impl DeprecatedSnippet for SafeSub {
     fn entrypoint_name(&self) -> String {
         "tasm_arithmetic_u32_safe_sub_u32".to_string()
     }
@@ -121,14 +121,15 @@ mod tests {
     use std::collections::HashMap;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values_deprecated,
+        test_rust_equivalence_multiple_deprecated,
     };
 
     use super::*;
 
     #[test]
     fn snippet_test() {
-        test_rust_equivalence_multiple(&SafeSub, true);
+        test_rust_equivalence_multiple_deprecated(&SafeSub, true);
     }
 
     #[test]
@@ -173,7 +174,7 @@ mod tests {
         ]
         .concat();
 
-        test_rust_equivalence_given_input_values(
+        test_rust_equivalence_given_input_values_deprecated(
             &SafeSub,
             &init_stack,
             &[],

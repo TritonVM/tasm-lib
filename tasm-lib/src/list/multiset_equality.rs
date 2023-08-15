@@ -16,7 +16,7 @@ use crate::list::unsafe_u32::length::UnsafeLength;
 use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, Digest, DIGEST_LENGTH};
 use crate::{
     library::Library,
-    snippet::{DataType, DepracatedSnippet},
+    snippet::{DataType, DeprecatedSnippet},
     ExecutionState, VmHasher,
 };
 
@@ -230,7 +230,7 @@ impl MultisetEquality {
     }
 }
 
-impl DepracatedSnippet for MultisetEquality {
+impl DeprecatedSnippet for MultisetEquality {
     fn entrypoint_name(&self) -> String {
         format!("tasm_list_{}_u32_multiset_equality", self.0)
     }
@@ -546,18 +546,18 @@ impl DepracatedSnippet for MultisetEquality {
 
 #[cfg(test)]
 mod tests {
-    use crate::test_helpers::test_rust_equivalence_multiple;
+    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     use super::*;
 
     #[test]
     fn unsafe_list_prop_test() {
-        test_rust_equivalence_multiple(&MultisetEquality(ListType::Unsafe), true);
+        test_rust_equivalence_multiple_deprecated(&MultisetEquality(ListType::Unsafe), true);
     }
 
     #[test]
     fn with_safe_list_prop_test() {
-        test_rust_equivalence_multiple(&MultisetEquality(ListType::Safe), true);
+        test_rust_equivalence_multiple_deprecated(&MultisetEquality(ListType::Safe), true);
     }
 }
 

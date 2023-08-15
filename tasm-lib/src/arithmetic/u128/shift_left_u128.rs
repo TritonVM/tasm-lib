@@ -3,13 +3,13 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
 use crate::library::Library;
-use crate::snippet::{DataType, DepracatedSnippet};
+use crate::snippet::{DataType, DeprecatedSnippet};
 use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct ShiftLeftU128;
 
-impl DepracatedSnippet for ShiftLeftU128 {
+impl DeprecatedSnippet for ShiftLeftU128 {
     fn entrypoint_name(&self) -> String {
         "tasm_arithmetic_u128_shift_left".to_string()
     }
@@ -219,14 +219,15 @@ mod tests {
     use std::collections::HashMap;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values_deprecated,
+        test_rust_equivalence_multiple_deprecated,
     };
 
     use super::*;
 
     #[test]
     fn shift_left_u128_test() {
-        test_rust_equivalence_multiple(&ShiftLeftU128, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftLeftU128, true);
     }
 
     #[test]
@@ -275,7 +276,7 @@ mod tests {
             ));
         }
 
-        test_rust_equivalence_given_input_values(
+        test_rust_equivalence_given_input_values_deprecated(
             &ShiftLeftU128,
             &init_stack,
             &[],

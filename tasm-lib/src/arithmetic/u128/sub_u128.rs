@@ -9,14 +9,14 @@ use twenty_first::{
 use crate::{
     get_init_tvm_stack,
     library::Library,
-    snippet::{DataType, DepracatedSnippet},
+    snippet::{DataType, DeprecatedSnippet},
     ExecutionState,
 };
 
 #[derive(Clone, Debug)]
 pub struct SubU128;
 
-impl DepracatedSnippet for SubU128 {
+impl DeprecatedSnippet for SubU128 {
     fn input_field_names(&self) -> Vec<String> {
         vec![
             "rhs_3".to_string(),
@@ -255,14 +255,15 @@ mod tests {
     use crate::get_init_tvm_stack;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values_deprecated,
+        test_rust_equivalence_multiple_deprecated,
     };
 
     use super::*;
 
     #[test]
     fn sub_u128_test() {
-        test_rust_equivalence_multiple(&SubU128, true);
+        test_rust_equivalence_multiple_deprecated(&SubU128, true);
     }
 
     #[test]
@@ -369,7 +370,7 @@ mod tests {
             init_stack.push(elem);
         }
 
-        test_rust_equivalence_given_input_values(
+        test_rust_equivalence_given_input_values_deprecated(
             &SubU128,
             &init_stack,
             &[],

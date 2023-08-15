@@ -5,13 +5,13 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
 use crate::rust_shadowing_helper_functions::unsafe_list::untyped_unsafe_insert_random_list;
-use crate::snippet::{DataType, DepracatedSnippet};
+use crate::snippet::{DataType, DeprecatedSnippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct UnsafeSetLength(pub DataType);
 
-impl DepracatedSnippet for UnsafeSetLength {
+impl DeprecatedSnippet for UnsafeSetLength {
     fn input_field_names(&self) -> Vec<String> {
         vec!["*list".to_string(), "list_length".to_string()]
     }
@@ -111,14 +111,15 @@ mod tests {
     use crate::get_init_tvm_stack;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values_deprecated,
+        test_rust_equivalence_multiple_deprecated,
     };
 
     use super::*;
 
     #[test]
     fn new_snippet_test() {
-        test_rust_equivalence_multiple(&UnsafeSetLength(DataType::XFE), true);
+        test_rust_equivalence_multiple_deprecated(&UnsafeSetLength(DataType::XFE), true);
     }
 
     #[test]
@@ -151,7 +152,7 @@ mod tests {
         // Insert length indicator of list, lives on offset = 0 from `list_address`
         vm_memory.insert(list_address, BFieldElement::new(init_list_length as u64));
 
-        test_rust_equivalence_given_input_values(
+        test_rust_equivalence_given_input_values_deprecated(
             &UnsafeSetLength(data_type),
             &init_stack,
             &[],

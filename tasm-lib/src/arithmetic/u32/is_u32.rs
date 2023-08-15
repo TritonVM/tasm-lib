@@ -5,13 +5,13 @@ use rand::RngCore;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
-use crate::snippet::{DataType, DepracatedSnippet};
+use crate::snippet::{DataType, DeprecatedSnippet};
 use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct IsU32;
 
-impl DepracatedSnippet for IsU32 {
+impl DeprecatedSnippet for IsU32 {
     fn input_field_names(&self) -> Vec<String> {
         vec!["value".to_string()]
     }
@@ -113,14 +113,15 @@ mod tests {
     use crate::get_init_tvm_stack;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values_deprecated,
+        test_rust_equivalence_multiple_deprecated,
     };
 
     use super::*;
 
     #[test]
     fn is_u32_test() {
-        test_rust_equivalence_multiple(&IsU32, true);
+        test_rust_equivalence_multiple_deprecated(&IsU32, true);
     }
 
     #[test]
@@ -165,7 +166,7 @@ mod tests {
         let mut init_stack = get_init_tvm_stack();
         init_stack.push(some_value);
 
-        test_rust_equivalence_given_input_values::<IsU32>(
+        test_rust_equivalence_given_input_values_deprecated::<IsU32>(
             &IsU32,
             &init_stack,
             &[],

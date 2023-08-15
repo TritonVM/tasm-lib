@@ -3,7 +3,7 @@ use serde_json::to_writer_pretty;
 use std::fs::{create_dir_all, File};
 use std::path::{Path, PathBuf};
 
-use crate::snippet::DepracatedSnippet;
+use crate::snippet::DeprecatedSnippet;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct BenchmarkResult {
@@ -21,7 +21,7 @@ pub enum BenchmarkCase {
 }
 
 #[allow(dead_code)]
-pub fn benchmark_snippet<T: DepracatedSnippet>(snippet: T) -> Vec<BenchmarkResult> {
+pub fn benchmark_snippet_deprecated<T: DeprecatedSnippet>(snippet: T) -> Vec<BenchmarkResult> {
     let mut benchmarks = Vec::with_capacity(2);
 
     for (case, mut execution_state) in [
@@ -64,6 +64,6 @@ pub fn write_benchmarks(benchmarks: Vec<BenchmarkResult>) {
 }
 
 #[allow(dead_code)]
-pub fn bench_and_write<T: DepracatedSnippet>(snippet: T) {
-    write_benchmarks(benchmark_snippet(snippet));
+pub fn bench_and_write<T: DeprecatedSnippet>(snippet: T) {
+    write_benchmarks(benchmark_snippet_deprecated(snippet));
 }

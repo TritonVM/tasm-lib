@@ -14,7 +14,7 @@ use crate::hashing::load_auth_path_from_secret_in_safe_list::LoadAuthPathFromSec
 use crate::hashing::load_auth_path_from_secret_in_unsafe_list::LoadAuthPathFromSecretInUnsafeList;
 use crate::library::Library;
 use crate::list::ListType;
-use crate::snippet::{DataType, DepracatedSnippet};
+use crate::snippet::{DataType, DeprecatedSnippet};
 use crate::{
     get_init_tvm_stack, rust_shadowing_helper_functions, Digest, ExecutionState, VmHasher,
     DIGEST_LENGTH,
@@ -145,7 +145,7 @@ impl MmrLoadFromSecretInThenVerify {
 }
 
 // TODO: Compiler complains without this explicit lifetime on `H`. But is it OK?
-impl DepracatedSnippet for MmrLoadFromSecretInThenVerify {
+impl DeprecatedSnippet for MmrLoadFromSecretInThenVerify {
     fn input_field_names(&self) -> Vec<String> {
         vec![
             "peaks_pointer".to_string(),
@@ -361,11 +361,11 @@ impl DepracatedSnippet for MmrLoadFromSecretInThenVerify {
 mod tests {
     use super::*;
 
-    use crate::test_helpers::test_rust_equivalence_multiple;
+    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     #[test]
     fn load_from_secret_in_then_verify_test_safe_lists() {
-        test_rust_equivalence_multiple(
+        test_rust_equivalence_multiple_deprecated(
             &MmrLoadFromSecretInThenVerify {
                 list_type: ListType::Safe,
             },
@@ -375,7 +375,7 @@ mod tests {
 
     #[test]
     fn load_from_secret_in_then_verify_test_unsafe_lists() {
-        test_rust_equivalence_multiple(
+        test_rust_equivalence_multiple_deprecated(
             &MmrLoadFromSecretInThenVerify {
                 list_type: ListType::Unsafe,
             },

@@ -3,13 +3,13 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
 use crate::library::Library;
-use crate::snippet::{DataType, DepracatedSnippet};
+use crate::snippet::{DataType, DeprecatedSnippet};
 use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct ShiftLeftStaticU128<const N: u8>;
 
-impl<const N: u8> DepracatedSnippet for ShiftLeftStaticU128<N> {
+impl<const N: u8> DeprecatedSnippet for ShiftLeftStaticU128<N> {
     fn entrypoint_name(&self) -> String {
         assert!(
             N <= 32,
@@ -167,46 +167,47 @@ mod tests {
     use std::collections::HashMap;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values_deprecated,
+        test_rust_equivalence_multiple_deprecated,
     };
 
     use super::*;
 
     #[test]
     fn shift_left_u128_test() {
-        test_rust_equivalence_multiple(&ShiftLeftStaticU128::<0>, false);
-        test_rust_equivalence_multiple(&ShiftLeftStaticU128::<1>, true);
-        test_rust_equivalence_multiple(&ShiftLeftStaticU128::<2>, true);
-        test_rust_equivalence_multiple(&ShiftLeftStaticU128::<3>, true);
-        test_rust_equivalence_multiple(&ShiftLeftStaticU128::<4>, true);
-        test_rust_equivalence_multiple(&ShiftLeftStaticU128::<5>, true);
-        test_rust_equivalence_multiple(&ShiftLeftStaticU128::<6>, true);
-        test_rust_equivalence_multiple(&ShiftLeftStaticU128::<7>, true);
-        test_rust_equivalence_multiple(&ShiftLeftStaticU128::<8>, true);
-        test_rust_equivalence_multiple(&ShiftLeftStaticU128::<9>, true);
-        test_rust_equivalence_multiple(&ShiftLeftStaticU128::<10>, true);
-        test_rust_equivalence_multiple(&ShiftLeftStaticU128::<11>, true);
-        test_rust_equivalence_multiple(&ShiftLeftStaticU128::<12>, true);
-        test_rust_equivalence_multiple(&ShiftLeftStaticU128::<13>, true);
-        test_rust_equivalence_multiple(&ShiftLeftStaticU128::<14>, true);
-        test_rust_equivalence_multiple(&ShiftLeftStaticU128::<15>, true);
-        test_rust_equivalence_multiple(&ShiftLeftStaticU128::<16>, true);
-        test_rust_equivalence_multiple(&ShiftLeftStaticU128::<17>, true);
-        test_rust_equivalence_multiple(&ShiftLeftStaticU128::<18>, true);
-        test_rust_equivalence_multiple(&ShiftLeftStaticU128::<19>, true);
-        test_rust_equivalence_multiple(&ShiftLeftStaticU128::<20>, true);
-        test_rust_equivalence_multiple(&ShiftLeftStaticU128::<21>, true);
-        test_rust_equivalence_multiple(&ShiftLeftStaticU128::<22>, true);
-        test_rust_equivalence_multiple(&ShiftLeftStaticU128::<23>, true);
-        test_rust_equivalence_multiple(&ShiftLeftStaticU128::<24>, true);
-        test_rust_equivalence_multiple(&ShiftLeftStaticU128::<25>, true);
-        test_rust_equivalence_multiple(&ShiftLeftStaticU128::<26>, true);
-        test_rust_equivalence_multiple(&ShiftLeftStaticU128::<27>, true);
-        test_rust_equivalence_multiple(&ShiftLeftStaticU128::<28>, true);
-        test_rust_equivalence_multiple(&ShiftLeftStaticU128::<29>, true);
-        test_rust_equivalence_multiple(&ShiftLeftStaticU128::<30>, true);
-        test_rust_equivalence_multiple(&ShiftLeftStaticU128::<31>, true);
-        test_rust_equivalence_multiple(&ShiftLeftStaticU128::<32>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<0>, false);
+        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<1>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<2>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<3>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<4>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<5>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<6>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<7>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<8>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<9>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<10>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<11>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<12>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<13>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<14>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<15>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<16>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<17>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<18>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<19>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<20>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<21>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<22>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<23>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<24>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<25>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<26>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<27>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<28>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<29>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<30>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<31>, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftLeftStaticU128::<32>, true);
     }
 
     #[test]
@@ -265,7 +266,7 @@ mod tests {
             ));
         }
 
-        test_rust_equivalence_given_input_values(
+        test_rust_equivalence_given_input_values_deprecated(
             &ShiftLeftStaticU128::<N>,
             &init_stack,
             &[],

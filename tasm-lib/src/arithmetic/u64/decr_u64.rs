@@ -6,13 +6,13 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
 use crate::library::Library;
-use crate::snippet::{DataType, DepracatedSnippet};
+use crate::snippet::{DataType, DeprecatedSnippet};
 use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct DecrU64;
 
-impl DepracatedSnippet for DecrU64 {
+impl DeprecatedSnippet for DecrU64 {
     fn input_field_names(&self) -> Vec<String> {
         vec!["value_hi".to_string(), "value_lo".to_string()]
     }
@@ -135,7 +135,8 @@ mod tests {
     use rand::Rng;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values_deprecated,
+        test_rust_equivalence_multiple_deprecated,
     };
     use crate::{get_init_tvm_stack, push_encodable};
 
@@ -143,7 +144,7 @@ mod tests {
 
     #[test]
     fn decr_u64_test() {
-        test_rust_equivalence_multiple(&DecrU64, true);
+        test_rust_equivalence_multiple_deprecated(&DecrU64, true);
     }
 
     #[test]
@@ -185,7 +186,7 @@ mod tests {
     fn prop_decr_u64(value: U32s<2>) {
         let mut stack = get_init_tvm_stack();
         push_encodable(&mut stack, &value);
-        test_rust_equivalence_given_input_values(
+        test_rust_equivalence_given_input_values_deprecated(
             &DecrU64,
             &stack,
             &[],

@@ -8,7 +8,7 @@ use twenty_first::util_types::mmr;
 use crate::arithmetic::u64::eq_u64::EqU64;
 use crate::arithmetic::u64::lt_u64::LtU64;
 use crate::library::Library;
-use crate::snippet::{DataType, DepracatedSnippet};
+use crate::snippet::{DataType, DeprecatedSnippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
 use super::left_child::MmrLeftChild;
@@ -19,7 +19,7 @@ use super::right_child::MmrRightChild;
 #[derive(Clone, Debug)]
 pub struct MmrRightChildAndHeight;
 
-impl DepracatedSnippet for MmrRightChildAndHeight {
+impl DeprecatedSnippet for MmrRightChildAndHeight {
     fn input_field_names(&self) -> Vec<String> {
         vec!["node_index_hi".to_string(), "node_index_lo".to_string()]
     }
@@ -235,14 +235,15 @@ mod tests {
     use crate::get_init_tvm_stack;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values_deprecated,
+        test_rust_equivalence_multiple_deprecated,
     };
 
     use super::*;
 
     #[test]
     fn right_child_and_height_test() {
-        test_rust_equivalence_multiple(&MmrRightChildAndHeight, true);
+        test_rust_equivalence_multiple_deprecated(&MmrRightChildAndHeight, true);
     }
 
     #[test]
@@ -454,7 +455,7 @@ mod tests {
             init_stack.push(elem);
         }
 
-        test_rust_equivalence_given_input_values::<MmrRightChildAndHeight>(
+        test_rust_equivalence_given_input_values_deprecated::<MmrRightChildAndHeight>(
             &MmrRightChildAndHeight,
             &init_stack,
             &[],

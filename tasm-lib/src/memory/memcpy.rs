@@ -4,7 +4,7 @@ use num_traits::Zero;
 use rand::{random, thread_rng, Rng, RngCore};
 use triton_vm::{BFieldElement, NonDeterminism};
 
-use crate::{get_init_tvm_stack, snippet::DepracatedSnippet};
+use crate::{get_init_tvm_stack, snippet::DeprecatedSnippet};
 
 pub struct MemCpy; // TODO: add field `static_length : Option<usize>` to avoid loop
 impl MemCpy {
@@ -37,7 +37,7 @@ impl MemCpy {
     }
 }
 
-impl DepracatedSnippet for MemCpy {
+impl DeprecatedSnippet for MemCpy {
     fn entrypoint_name(&self) -> String {
         "tasm_memory_memcpy".to_string()
     }
@@ -156,13 +156,13 @@ impl DepracatedSnippet for MemCpy {
 
 #[cfg(test)]
 mod tests {
-    use crate::test_helpers::test_rust_equivalence_multiple;
+    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     use super::*;
 
     #[test]
     fn memcpy_test() {
-        test_rust_equivalence_multiple(&MemCpy, true);
+        test_rust_equivalence_multiple_deprecated(&MemCpy, true);
     }
 }
 

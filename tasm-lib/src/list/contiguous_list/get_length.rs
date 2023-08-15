@@ -7,7 +7,7 @@ use twenty_first::shared_math::{bfield_codec::BFieldCodec, other::random_element
 
 use crate::{
     get_init_tvm_stack,
-    snippet::{DataType, DepracatedSnippet},
+    snippet::{DataType, DeprecatedSnippet},
     Digest, ExecutionState,
 };
 
@@ -72,7 +72,7 @@ impl GetLength {
     }
 }
 
-impl DepracatedSnippet for GetLength {
+impl DeprecatedSnippet for GetLength {
     fn entrypoint_name(&self) -> String {
         "tasm_list_contiguous_list_get_length".to_string()
     }
@@ -171,13 +171,13 @@ impl DepracatedSnippet for GetLength {
 
 #[cfg(test)]
 mod tests {
-    use crate::test_helpers::test_rust_equivalence_multiple;
+    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     use super::GetLength;
 
     #[test]
     fn get_length_test() {
-        test_rust_equivalence_multiple(&GetLength, true);
+        test_rust_equivalence_multiple_deprecated(&GetLength, true);
     }
 }
 

@@ -19,7 +19,7 @@ use crate::library::Library;
 use crate::list::safe_u32::get::SafeGet;
 use crate::list::unsafe_u32::get::UnsafeGet;
 use crate::list::ListType;
-use crate::snippet::{DataType, DepracatedSnippet};
+use crate::snippet::{DataType, DeprecatedSnippet};
 use crate::{
     get_init_tvm_stack, rust_shadowing_helper_functions, Digest, ExecutionState, VmHasher,
     DIGEST_LENGTH,
@@ -130,7 +130,7 @@ impl MmrVerifyFromMemory {
     }
 }
 
-impl DepracatedSnippet for MmrVerifyFromMemory {
+impl DeprecatedSnippet for MmrVerifyFromMemory {
     fn input_field_names(&self) -> Vec<String> {
         vec![
             "*peaks".to_string(),
@@ -421,7 +421,8 @@ mod tests {
     use twenty_first::util_types::mmr::{mmr_membership_proof::MmrMembershipProof, mmr_trait::Mmr};
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values_deprecated,
+        test_rust_equivalence_multiple_deprecated,
     };
     use crate::VmHasher;
     use crate::{get_init_tvm_stack, mmr::MAX_MMR_HEIGHT};
@@ -430,7 +431,7 @@ mod tests {
 
     #[test]
     fn verify_from_memory_test_unsafe_list() {
-        test_rust_equivalence_multiple(
+        test_rust_equivalence_multiple_deprecated(
             &MmrVerifyFromMemory {
                 list_type: ListType::Unsafe,
             },
@@ -440,7 +441,7 @@ mod tests {
 
     #[test]
     fn verify_from_memory_test_safe_list() {
-        test_rust_equivalence_multiple(
+        test_rust_equivalence_multiple_deprecated(
             &MmrVerifyFromMemory {
                 list_type: ListType::Safe,
             },
@@ -633,7 +634,7 @@ mod tests {
         expected_final_stack.push(leaf_index_lo);
         expected_final_stack.push(BFieldElement::new(expect_validation_success as u64));
 
-        test_rust_equivalence_given_input_values(
+        test_rust_equivalence_given_input_values_deprecated(
             &snippet_for_unsafe_lists,
             &init_stack,
             &[],

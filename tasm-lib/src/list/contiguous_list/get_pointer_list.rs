@@ -13,7 +13,7 @@ use crate::{
         ListType,
     },
     rust_shadowing_helper_functions,
-    snippet::{DataType, DepracatedSnippet},
+    snippet::{DataType, DeprecatedSnippet},
 };
 
 // All of `contiguous_list` assumes that each element has its length prepended
@@ -21,7 +21,7 @@ pub struct GetPointerList {
     pub output_list_type: ListType,
 }
 
-impl DepracatedSnippet for GetPointerList {
+impl DeprecatedSnippet for GetPointerList {
     fn entrypoint_name(&self) -> String {
         format!(
             "tasm_list_contiguous_list_get_pointer_list_{}",
@@ -263,13 +263,13 @@ impl DepracatedSnippet for GetPointerList {
 #[cfg(test)]
 mod tests {
 
-    use crate::test_helpers::test_rust_equivalence_multiple;
+    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     use super::*;
 
     #[test]
     fn get_pointer_list_safe_test() {
-        test_rust_equivalence_multiple(
+        test_rust_equivalence_multiple_deprecated(
             &GetPointerList {
                 output_list_type: ListType::Safe,
             },
@@ -279,7 +279,7 @@ mod tests {
 
     #[test]
     fn get_pointer_list_unsafe_test() {
-        let output_states = test_rust_equivalence_multiple(
+        let output_states = test_rust_equivalence_multiple_deprecated(
             &GetPointerList {
                 output_list_type: ListType::Unsafe,
             },

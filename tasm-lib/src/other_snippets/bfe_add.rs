@@ -4,13 +4,13 @@ use rand::Rng;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
-use crate::snippet::{DataType, DepracatedSnippet};
+use crate::snippet::{DataType, DeprecatedSnippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct BfeAdd;
 
-impl DepracatedSnippet for BfeAdd {
+impl DeprecatedSnippet for BfeAdd {
     fn input_field_names(&self) -> Vec<String> {
         vec!["b".to_string(), "a".to_string()]
     }
@@ -94,13 +94,13 @@ impl DepracatedSnippet for BfeAdd {
 #[cfg(test)]
 mod tests {
 
-    use crate::test_helpers::test_rust_equivalence_multiple;
+    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     use super::*;
 
     #[test]
     fn bfe_add_test() {
-        test_rust_equivalence_multiple(&BfeAdd, true);
+        test_rust_equivalence_multiple_deprecated(&BfeAdd, true);
     }
 }
 

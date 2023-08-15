@@ -7,7 +7,7 @@ use twenty_first::shared_math::{bfield_codec::BFieldCodec, other::random_element
 use crate::{
     get_init_tvm_stack,
     io::load_from_input::LoadFromInput,
-    snippet::{DataType, DepracatedSnippet, InputSource},
+    snippet::{DataType, DeprecatedSnippet, InputSource},
     ExecutionState,
 };
 
@@ -50,7 +50,7 @@ struct DummyStructSize5 {
     field_4: Vec<BFieldElement>,
     field_5: Vec<BFieldElement>,
 }
-impl DepracatedSnippet for LoadStructFromInput {
+impl DeprecatedSnippet for LoadStructFromInput {
     fn entrypoint_name(&self) -> String {
         format!("tasm_io_load_struct_from_input_{}", self.input_source)
     }
@@ -319,14 +319,14 @@ impl DepracatedSnippet for LoadStructFromInput {
 
 #[cfg(test)]
 mod tests {
-    use crate::test_helpers::test_rust_equivalence_multiple;
+    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     use super::*;
 
     #[test]
     fn new_snippet_test() {
-        test_rust_equivalence_multiple(&LoadFromInput(InputSource::SecretIn), true);
-        test_rust_equivalence_multiple(&LoadFromInput(InputSource::StdIn), true);
+        test_rust_equivalence_multiple_deprecated(&LoadFromInput(InputSource::SecretIn), true);
+        test_rust_equivalence_multiple_deprecated(&LoadFromInput(InputSource::StdIn), true);
     }
 
     // TODO: Comment this test in and fix it if you feel like it.

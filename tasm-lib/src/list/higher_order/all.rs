@@ -16,7 +16,7 @@ use crate::rust_shadowing_helper_functions::unsafe_list::untyped_unsafe_insert_r
 use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, VmHasher};
 use crate::{
     library::Library,
-    snippet::{DataType, DepracatedSnippet},
+    snippet::{DataType, DeprecatedSnippet},
     ExecutionState,
 };
 
@@ -107,7 +107,7 @@ impl All {
     }
 }
 
-impl DepracatedSnippet for All {
+impl DeprecatedSnippet for All {
     fn entrypoint_name(&self) -> String {
         format!(
             "tasm_list_higher_order_{}_u32_all_{}",
@@ -343,7 +343,7 @@ impl DepracatedSnippet for All {
 #[derive(Debug, Clone)]
 struct TestHashXFieldElementLsb;
 
-impl DepracatedSnippet for TestHashXFieldElementLsb {
+impl DeprecatedSnippet for TestHashXFieldElementLsb {
     fn entrypoint_name(&self) -> String {
         "test_hash_xfield_element_lsb".to_string()
     }
@@ -481,14 +481,17 @@ mod tests {
 
     use crate::{
         list::higher_order::inner_function::RawCode,
-        test_helpers::{test_rust_equivalence_given_input_values, test_rust_equivalence_multiple},
+        test_helpers::{
+            test_rust_equivalence_given_input_values_deprecated,
+            test_rust_equivalence_multiple_deprecated,
+        },
     };
 
     use super::*;
 
     #[test]
     fn unsafe_list_prop_test() {
-        test_rust_equivalence_multiple(
+        test_rust_equivalence_multiple_deprecated(
             &All {
                 list_type: ListType::Unsafe,
                 f: InnerFunction::Snippet(Box::new(TestHashXFieldElementLsb)),
@@ -499,7 +502,7 @@ mod tests {
 
     #[test]
     fn with_safe_list_prop_test() {
-        test_rust_equivalence_multiple(
+        test_rust_equivalence_multiple_deprecated(
             &All {
                 list_type: ListType::Safe,
                 f: InnerFunction::Snippet(Box::new(TestHashXFieldElementLsb)),
@@ -542,7 +545,7 @@ mod tests {
         let input_stack = vec![get_init_tvm_stack(), vec![BFieldElement::new(42)]].concat();
         let expected_end_stack_true =
             vec![get_init_tvm_stack(), vec![BFieldElement::one()]].concat();
-        test_rust_equivalence_given_input_values(
+        test_rust_equivalence_given_input_values_deprecated(
             &snippet,
             &input_stack,
             &[],
@@ -562,7 +565,7 @@ mod tests {
         );
         let expected_end_stack_false =
             vec![get_init_tvm_stack(), vec![BFieldElement::zero()]].concat();
-        test_rust_equivalence_given_input_values(
+        test_rust_equivalence_given_input_values_deprecated(
             &snippet,
             &input_stack,
             &[],
@@ -593,7 +596,7 @@ mod tests {
                 vec.push(BFieldElement::new(new_value));
             })),
         );
-        test_rust_equivalence_multiple(
+        test_rust_equivalence_multiple_deprecated(
             &All {
                 list_type: ListType::Unsafe,
                 f: InnerFunction::RawCode(rawcode),
@@ -627,7 +630,7 @@ mod tests {
                 vec.push(BFieldElement::new(new_value));
             })),
         );
-        test_rust_equivalence_multiple(
+        test_rust_equivalence_multiple_deprecated(
             &All {
                 list_type: ListType::Unsafe,
                 f: InnerFunction::RawCode(rawcode),

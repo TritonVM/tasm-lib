@@ -9,7 +9,7 @@ use crate::list::unsafe_u32::new::UnsafeNew;
 use crate::list::unsafe_u32::{push::UnsafePush, set_length::UnsafeSetLength};
 use crate::mmr::MAX_MMR_HEIGHT;
 use crate::snippet::DataType;
-use crate::snippet::DepracatedSnippet;
+use crate::snippet::DeprecatedSnippet;
 use crate::{
     get_init_tvm_stack, rust_shadowing_helper_functions, Digest, ExecutionState, DIGEST_LENGTH,
 };
@@ -17,7 +17,7 @@ use crate::{
 #[derive(Clone, Debug)]
 pub struct LoadAuthPathFromSecretInUnsafeList;
 
-impl DepracatedSnippet for LoadAuthPathFromSecretInUnsafeList {
+impl DeprecatedSnippet for LoadAuthPathFromSecretInUnsafeList {
     fn input_field_names(&self) -> Vec<String> {
         vec![]
     }
@@ -213,7 +213,7 @@ mod tests {
 
     use super::*;
 
-    use crate::test_helpers::test_rust_equivalence_multiple;
+    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     #[should_panic]
     #[test]
@@ -267,7 +267,7 @@ mod tests {
 
     #[test]
     fn load_auth_path_from_secret_in_test() {
-        test_rust_equivalence_multiple(&LoadAuthPathFromSecretInUnsafeList, true);
+        test_rust_equivalence_multiple_deprecated(&LoadAuthPathFromSecretInUnsafeList, true);
     }
 }
 

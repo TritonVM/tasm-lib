@@ -6,7 +6,7 @@ use triton_vm::BFieldElement;
 
 use crate::{
     get_init_tvm_stack,
-    snippet::{DataType, DepracatedSnippet},
+    snippet::{DataType, DeprecatedSnippet},
     ExecutionState,
 };
 
@@ -32,7 +32,7 @@ impl PushRamToStack {
     }
 }
 
-impl DepracatedSnippet for PushRamToStack {
+impl DeprecatedSnippet for PushRamToStack {
     fn entrypoint_name(&self) -> String {
         assert!(
             !self.output_type.get_size().is_zero(),
@@ -148,13 +148,13 @@ impl DepracatedSnippet for PushRamToStack {
 mod tests {
     use triton_vm::op_stack::NUM_OP_STACK_REGISTERS;
 
-    use crate::{test_helpers::test_rust_equivalence_multiple, DIGEST_LENGTH};
+    use crate::{test_helpers::test_rust_equivalence_multiple_deprecated, DIGEST_LENGTH};
 
     use super::*;
 
     #[test]
     fn push_ram_to_stack_test() {
-        let ret_for_digest = test_rust_equivalence_multiple(
+        let ret_for_digest = test_rust_equivalence_multiple_deprecated(
             &PushRamToStack {
                 output_type: DataType::Digest,
             },
@@ -172,49 +172,49 @@ mod tests {
             assert!(stack.pop().unwrap().is_zero());
         }
 
-        test_rust_equivalence_multiple(
+        test_rust_equivalence_multiple_deprecated(
             &PushRamToStack {
                 output_type: DataType::Bool,
             },
             true,
         );
-        test_rust_equivalence_multiple(
+        test_rust_equivalence_multiple_deprecated(
             &PushRamToStack {
                 output_type: DataType::U32,
             },
             true,
         );
-        test_rust_equivalence_multiple(
+        test_rust_equivalence_multiple_deprecated(
             &PushRamToStack {
                 output_type: DataType::U64,
             },
             true,
         );
-        test_rust_equivalence_multiple(
+        test_rust_equivalence_multiple_deprecated(
             &PushRamToStack {
                 output_type: DataType::U128,
             },
             true,
         );
-        test_rust_equivalence_multiple(
+        test_rust_equivalence_multiple_deprecated(
             &PushRamToStack {
                 output_type: DataType::VoidPointer,
             },
             true,
         );
-        test_rust_equivalence_multiple(
+        test_rust_equivalence_multiple_deprecated(
             &PushRamToStack {
                 output_type: DataType::BFE,
             },
             true,
         );
-        test_rust_equivalence_multiple(
+        test_rust_equivalence_multiple_deprecated(
             &PushRamToStack {
                 output_type: DataType::XFE,
             },
             true,
         );
-        test_rust_equivalence_multiple(
+        test_rust_equivalence_multiple_deprecated(
             &PushRamToStack {
                 output_type: DataType::XFE,
             },

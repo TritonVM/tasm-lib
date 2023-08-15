@@ -6,14 +6,14 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
 use crate::rust_shadowing_helper_functions::unsafe_list::untyped_unsafe_insert_random_list;
-use crate::snippet::{DataType, DepracatedSnippet};
+use crate::snippet::{DataType, DeprecatedSnippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
 // Called "Long" because this logic can be shortened
 #[derive(Clone, Debug)]
 pub struct UnsafeLength(pub DataType);
 
-impl DepracatedSnippet for UnsafeLength {
+impl DeprecatedSnippet for UnsafeLength {
     fn input_field_names(&self) -> Vec<String> {
         vec!["*list".to_string()]
     }
@@ -148,16 +148,17 @@ mod tests {
     use crate::get_init_tvm_stack;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values_deprecated,
+        test_rust_equivalence_multiple_deprecated,
     };
 
     use super::*;
 
     #[test]
     fn new_snippet_test_long() {
-        test_rust_equivalence_multiple(&UnsafeLength(DataType::BFE), true);
-        test_rust_equivalence_multiple(&UnsafeLength(DataType::U64), true);
-        test_rust_equivalence_multiple(&UnsafeLength(DataType::Digest), true);
+        test_rust_equivalence_multiple_deprecated(&UnsafeLength(DataType::BFE), true);
+        test_rust_equivalence_multiple_deprecated(&UnsafeLength(DataType::U64), true);
+        test_rust_equivalence_multiple_deprecated(&UnsafeLength(DataType::Digest), true);
     }
 
     #[test]
@@ -193,7 +194,7 @@ mod tests {
             );
         }
 
-        test_rust_equivalence_given_input_values(
+        test_rust_equivalence_given_input_values_deprecated(
             &UnsafeLength(DataType::BFE),
             &init_stack,
             &[],

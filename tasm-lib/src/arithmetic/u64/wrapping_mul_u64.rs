@@ -3,13 +3,13 @@ use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
-use crate::snippet::{DataType, DepracatedSnippet};
+use crate::snippet::{DataType, DeprecatedSnippet};
 use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct WrappingMulU64;
 
-impl DepracatedSnippet for WrappingMulU64 {
+impl DeprecatedSnippet for WrappingMulU64 {
     fn entrypoint_name(&self) -> String {
         "tasm_arithmetic_u64_wrapping_mul".to_string()
     }
@@ -164,14 +164,15 @@ mod tests {
     use num::Zero;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values_deprecated,
+        test_rust_equivalence_multiple_deprecated,
     };
 
     use super::*;
 
     #[test]
     fn wrapping_mul_u64_test() {
-        test_rust_equivalence_multiple(&WrappingMulU64, true);
+        test_rust_equivalence_multiple_deprecated(&WrappingMulU64, true);
     }
 
     #[test]
@@ -185,7 +186,7 @@ mod tests {
         let mut expected = get_init_tvm_stack();
         expected.push(BFieldElement::zero());
         expected.push(BFieldElement::new(20_000));
-        test_rust_equivalence_given_input_values(
+        test_rust_equivalence_given_input_values_deprecated(
             &WrappingMulU64,
             &init_stack,
             &[],

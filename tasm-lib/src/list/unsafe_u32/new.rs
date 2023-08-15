@@ -3,13 +3,13 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
 use crate::rust_shadowing_helper_functions::unsafe_list::unsafe_list_new;
-use crate::snippet::{DataType, DepracatedSnippet};
+use crate::snippet::{DataType, DeprecatedSnippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct UnsafeNew(pub DataType);
 
-impl DepracatedSnippet for UnsafeNew {
+impl DeprecatedSnippet for UnsafeNew {
     fn entrypoint_name(&self) -> String {
         format!("tasm_list_unsafe_u32_new_{}", self.0.label_friendly_name())
     }
@@ -127,17 +127,17 @@ fn prepare_state(capacity: u32) -> ExecutionState {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_helpers::test_rust_equivalence_multiple;
+    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     #[test]
     fn new_snippet_test() {
-        test_rust_equivalence_multiple(&UnsafeNew(DataType::Bool), true);
-        test_rust_equivalence_multiple(&UnsafeNew(DataType::BFE), true);
-        test_rust_equivalence_multiple(&UnsafeNew(DataType::U32), true);
-        test_rust_equivalence_multiple(&UnsafeNew(DataType::XFE), true);
-        test_rust_equivalence_multiple(&UnsafeNew(DataType::Digest), true);
+        test_rust_equivalence_multiple_deprecated(&UnsafeNew(DataType::Bool), true);
+        test_rust_equivalence_multiple_deprecated(&UnsafeNew(DataType::BFE), true);
+        test_rust_equivalence_multiple_deprecated(&UnsafeNew(DataType::U32), true);
+        test_rust_equivalence_multiple_deprecated(&UnsafeNew(DataType::XFE), true);
+        test_rust_equivalence_multiple_deprecated(&UnsafeNew(DataType::Digest), true);
 
-        test_rust_equivalence_multiple(&UnsafeNew(DataType::U64), true);
+        test_rust_equivalence_multiple_deprecated(&UnsafeNew(DataType::U64), true);
         // let _execution_states = rust_tasm_equivalence_prop_new(&UnsafeNew(DataType::U64), true);
         // let dyn_malloc_address = BFieldElement::new(DYN_MALLOC_ADDRESS as u64);
         // for execution_state in execution_states {

@@ -8,13 +8,13 @@ use crate::library::Library;
 use crate::rust_shadowing_helper_functions::unsafe_list::{
     unsafe_list_set, untyped_unsafe_insert_random_list,
 };
-use crate::snippet::{DataType, DepracatedSnippet};
+use crate::snippet::{DataType, DeprecatedSnippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct UnsafeSet(pub DataType);
 
-impl DepracatedSnippet for UnsafeSet {
+impl DeprecatedSnippet for UnsafeSet {
     fn input_field_names(&self) -> Vec<String> {
         // See: https://github.com/TritonVM/tasm-snippets/issues/13
         // _ elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}} *list index
@@ -161,19 +161,20 @@ mod tests {
     use crate::get_init_tvm_stack;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values_deprecated,
+        test_rust_equivalence_multiple_deprecated,
     };
 
     use super::*;
 
     #[test]
     fn new_snippet_test() {
-        test_rust_equivalence_multiple(&UnsafeSet(DataType::Bool), true);
-        test_rust_equivalence_multiple(&UnsafeSet(DataType::BFE), true);
-        test_rust_equivalence_multiple(&UnsafeSet(DataType::U32), true);
-        test_rust_equivalence_multiple(&UnsafeSet(DataType::U64), true);
-        test_rust_equivalence_multiple(&UnsafeSet(DataType::XFE), true);
-        test_rust_equivalence_multiple(&UnsafeSet(DataType::Digest), true);
+        test_rust_equivalence_multiple_deprecated(&UnsafeSet(DataType::Bool), true);
+        test_rust_equivalence_multiple_deprecated(&UnsafeSet(DataType::BFE), true);
+        test_rust_equivalence_multiple_deprecated(&UnsafeSet(DataType::U32), true);
+        test_rust_equivalence_multiple_deprecated(&UnsafeSet(DataType::U64), true);
+        test_rust_equivalence_multiple_deprecated(&UnsafeSet(DataType::XFE), true);
+        test_rust_equivalence_multiple_deprecated(&UnsafeSet(DataType::Digest), true);
     }
 
     #[test]
@@ -240,7 +241,7 @@ mod tests {
             data_type.get_size(),
         );
 
-        test_rust_equivalence_given_input_values(
+        test_rust_equivalence_given_input_values_deprecated(
             &UnsafeSet(data_type.clone()),
             &init_stack,
             &[],

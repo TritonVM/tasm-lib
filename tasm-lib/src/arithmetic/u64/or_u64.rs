@@ -3,14 +3,14 @@ use twenty_first::{amount::u32s::U32s, shared_math::b_field_element::BFieldEleme
 
 use crate::{
     get_init_tvm_stack, push_encodable,
-    snippet::{DataType, DepracatedSnippet},
+    snippet::{DataType, DeprecatedSnippet},
     ExecutionState,
 };
 
 #[derive(Clone, Debug)]
 pub struct OrU64;
 
-impl DepracatedSnippet for OrU64 {
+impl DeprecatedSnippet for OrU64 {
     fn entrypoint_name(&self) -> String {
         "tasm_arithmetic_u64_or_u64".to_string()
     }
@@ -142,14 +142,15 @@ mod tests {
     use std::collections::HashMap;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values_deprecated,
+        test_rust_equivalence_multiple_deprecated,
     };
 
     use super::*;
 
     #[test]
     fn snippet_test() {
-        test_rust_equivalence_multiple(&OrU64, true);
+        test_rust_equivalence_multiple_deprecated(&OrU64, true);
     }
 
     #[test]
@@ -186,7 +187,7 @@ mod tests {
         expected.push(BFieldElement::new(res >> 32));
         expected.push(BFieldElement::new(res & u32::MAX as u64));
 
-        test_rust_equivalence_given_input_values(
+        test_rust_equivalence_given_input_values_deprecated(
             &OrU64,
             &init_stack,
             &[],

@@ -22,7 +22,7 @@ use crate::rust_shadowing_helper_functions::unsafe_list::untyped_unsafe_insert_r
 use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, VmHasher};
 use crate::{
     library::Library,
-    snippet::{DataType, DepracatedSnippet},
+    snippet::{DataType, DeprecatedSnippet},
     ExecutionState,
 };
 
@@ -115,7 +115,7 @@ impl Filter {
     }
 }
 
-impl DepracatedSnippet for Filter {
+impl DeprecatedSnippet for Filter {
     fn entrypoint_name(&self) -> String {
         format!(
             "tasm_list_higher_order_{}_u32_filter_{}",
@@ -485,7 +485,7 @@ impl DepracatedSnippet for Filter {
 #[derive(Debug, Clone)]
 struct TestHashXFieldElementLsb;
 
-impl DepracatedSnippet for TestHashXFieldElementLsb {
+impl DeprecatedSnippet for TestHashXFieldElementLsb {
     fn entrypoint_name(&self) -> String {
         "test_hash_xfield_element_lsb".to_string()
     }
@@ -632,14 +632,15 @@ mod tests {
     use triton_vm::triton_asm;
 
     use crate::{
-        list::higher_order::inner_function::RawCode, test_helpers::test_rust_equivalence_multiple,
+        list::higher_order::inner_function::RawCode,
+        test_helpers::test_rust_equivalence_multiple_deprecated,
     };
 
     use super::*;
 
     #[test]
     fn unsafe_list_prop_test() {
-        test_rust_equivalence_multiple(
+        test_rust_equivalence_multiple_deprecated(
             &Filter {
                 list_type: ListType::Unsafe,
                 f: InnerFunction::Snippet(Box::new(TestHashXFieldElementLsb)),
@@ -650,7 +651,7 @@ mod tests {
 
     #[test]
     fn with_safe_list_prop_test() {
-        test_rust_equivalence_multiple(
+        test_rust_equivalence_multiple_deprecated(
             &Filter {
                 list_type: ListType::Safe,
                 f: InnerFunction::Snippet(Box::new(TestHashXFieldElementLsb)),
@@ -680,7 +681,7 @@ mod tests {
                 vec.push(BFieldElement::new(new_value));
             })),
         );
-        test_rust_equivalence_multiple(
+        test_rust_equivalence_multiple_deprecated(
             &Filter {
                 list_type: ListType::Unsafe,
                 f: InnerFunction::RawCode(rawcode),
@@ -714,7 +715,7 @@ mod tests {
                 vec.push(BFieldElement::new(new_value));
             })),
         );
-        test_rust_equivalence_multiple(
+        test_rust_equivalence_multiple_deprecated(
             &Filter {
                 list_type: ListType::Unsafe,
                 f: InnerFunction::RawCode(rawcode),

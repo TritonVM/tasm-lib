@@ -3,14 +3,14 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::{
     get_init_tvm_stack,
-    snippet::{DataType, DepracatedSnippet},
+    snippet::{DataType, DeprecatedSnippet},
     ExecutionState,
 };
 
 #[derive(Clone, Debug)]
 pub struct SafeAdd;
 
-impl DepracatedSnippet for SafeAdd {
+impl DeprecatedSnippet for SafeAdd {
     fn entrypoint_name(&self) -> String {
         "tasm_arithmetic_u32_safe_add_u32".to_string()
     }
@@ -120,14 +120,15 @@ mod tests {
     use num::Zero;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values_deprecated,
+        test_rust_equivalence_multiple_deprecated,
     };
 
     use super::*;
 
     #[test]
     fn snippet_test() {
-        test_rust_equivalence_multiple(&SafeAdd, true);
+        test_rust_equivalence_multiple_deprecated(&SafeAdd, true);
     }
 
     #[test]
@@ -156,7 +157,7 @@ mod tests {
         ]
         .concat();
 
-        test_rust_equivalence_given_input_values::<SafeAdd>(
+        test_rust_equivalence_given_input_values_deprecated::<SafeAdd>(
             &SafeAdd,
             &init_stack,
             &[],

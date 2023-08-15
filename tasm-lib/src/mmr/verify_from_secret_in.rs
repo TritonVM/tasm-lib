@@ -22,7 +22,7 @@ use crate::library::Library;
 use crate::list::safe_u32::get::SafeGet;
 use crate::list::unsafe_u32::get::UnsafeGet;
 use crate::list::ListType;
-use crate::snippet::{DataType, DepracatedSnippet};
+use crate::snippet::{DataType, DeprecatedSnippet};
 use crate::{
     get_init_tvm_stack, rust_shadowing_helper_functions, Digest, ExecutionState, VmHasher,
     DIGEST_LENGTH,
@@ -179,7 +179,7 @@ impl MmrVerifyLeafMembershipFromSecretIn {
     }
 }
 
-impl DepracatedSnippet for MmrVerifyLeafMembershipFromSecretIn {
+impl DeprecatedSnippet for MmrVerifyLeafMembershipFromSecretIn {
     fn input_field_names(&self) -> Vec<String> {
         vec![
             "peaks_pointer".to_string(),
@@ -438,7 +438,8 @@ mod tests {
     use crate::{
         mmr::MAX_MMR_HEIGHT,
         test_helpers::{
-            test_rust_equivalence_given_complete_state, test_rust_equivalence_multiple,
+            test_rust_equivalence_given_complete_state_deprecated,
+            test_rust_equivalence_multiple_deprecated,
         },
         VmHasher,
     };
@@ -447,7 +448,7 @@ mod tests {
 
     #[test]
     fn verify_from_secret_in_test_unsafe_lists() {
-        test_rust_equivalence_multiple(
+        test_rust_equivalence_multiple_deprecated(
             &MmrVerifyLeafMembershipFromSecretIn {
                 list_type: ListType::Unsafe,
             },
@@ -457,7 +458,7 @@ mod tests {
 
     #[test]
     fn verify_from_secret_in_test_safe_lists() {
-        test_rust_equivalence_multiple(
+        test_rust_equivalence_multiple_deprecated(
             &MmrVerifyLeafMembershipFromSecretIn {
                 list_type: ListType::Safe,
             },
@@ -685,7 +686,7 @@ mod tests {
         let snippet_with_unsafe_lists = MmrVerifyLeafMembershipFromSecretIn {
             list_type: ListType::Unsafe,
         };
-        test_rust_equivalence_given_complete_state(
+        test_rust_equivalence_given_complete_state_deprecated(
             &snippet_with_unsafe_lists,
             &init_stack,
             &[],

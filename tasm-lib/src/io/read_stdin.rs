@@ -5,7 +5,7 @@ use twenty_first::shared_math::{b_field_element::BFieldElement, other::random_el
 
 use crate::{
     get_init_tvm_stack,
-    snippet::{DataType, DepracatedSnippet},
+    snippet::{DataType, DeprecatedSnippet},
     ExecutionState,
 };
 
@@ -13,7 +13,7 @@ use crate::{
 #[derive(Clone, Debug)]
 pub struct ReadStdIn(pub DataType);
 
-impl DepracatedSnippet for ReadStdIn {
+impl DeprecatedSnippet for ReadStdIn {
     fn entrypoint_name(&self) -> String {
         format!("tasm_io_read_stdin_{}", self.0)
     }
@@ -107,19 +107,19 @@ impl DepracatedSnippet for ReadStdIn {
 
 #[cfg(test)]
 mod tests {
-    use crate::test_helpers::test_rust_equivalence_multiple;
+    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     use super::*;
 
     #[test]
     fn new_snippet_test() {
         for _ in 0..10 {
-            test_rust_equivalence_multiple(&ReadStdIn(DataType::Bool), true);
-            test_rust_equivalence_multiple(&ReadStdIn(DataType::U32), true);
-            test_rust_equivalence_multiple(&ReadStdIn(DataType::U64), true);
-            test_rust_equivalence_multiple(&ReadStdIn(DataType::BFE), true);
-            test_rust_equivalence_multiple(&ReadStdIn(DataType::XFE), true);
-            test_rust_equivalence_multiple(&ReadStdIn(DataType::Digest), true);
+            test_rust_equivalence_multiple_deprecated(&ReadStdIn(DataType::Bool), true);
+            test_rust_equivalence_multiple_deprecated(&ReadStdIn(DataType::U32), true);
+            test_rust_equivalence_multiple_deprecated(&ReadStdIn(DataType::U64), true);
+            test_rust_equivalence_multiple_deprecated(&ReadStdIn(DataType::BFE), true);
+            test_rust_equivalence_multiple_deprecated(&ReadStdIn(DataType::XFE), true);
+            test_rust_equivalence_multiple_deprecated(&ReadStdIn(DataType::Digest), true);
         }
     }
 }

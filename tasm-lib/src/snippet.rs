@@ -3,14 +3,15 @@ use itertools::Itertools;
 use rand::{random, thread_rng, Rng};
 use std::collections::HashMap;
 use std::fmt::Display;
+use std::ops::Deref;
 use triton_vm::instruction::LabelledInstruction;
-use triton_vm::parser::{parse, to_labelled_instructions};
+use triton_vm::parser::{to_labelled_instructions, tokenize};
 use triton_vm::{triton_asm, NonDeterminism};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
-use crate::test_helpers::test_rust_equivalence_given_execution_state;
-use crate::{execute_bench, ExecutionResult, VmOutputState, DIGEST_LENGTH};
+use crate::test_helpers::test_rust_equivalence_given_execution_state_deprecated;
+use crate::{execute_bench_deprecated, ExecutionResult, VmOutputState, DIGEST_LENGTH};
 use crate::{execute_test, ExecutionState};
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
@@ -174,33 +175,43 @@ pub trait BasicSnippet {
 
     fn stack_diff(&self) -> isize {
         let mut diff = 0isize;
-        for (dt, name) in self.inputs() {
+        for (dt, _name) in self.inputs() {
             diff -= dt.get_size() as isize;
         }
-        for (dt, name) in self.outputs() {
+        for (dt, _name) in self.outputs() {
             diff += dt.get_size() as isize;
         }
         diff
     }
 }
 
-pub(crate) trait RustShadowed: BasicSnippet {
+/// ShadowWrapper is a new type that extends a snippet-like type with standardized rust
+/// shadowing and other test-related functions.
+pub struct ShadowWrapper<T>(pub Box<T>);
+
+impl<T: BasicSnippet> Deref for ShadowWrapper<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+pub(crate) trait RustShadow {
     fn rust_shadow_wrapper(
-        &self, // necessary to accomodate for Snippet
+        &self,
         stdin: &[BFieldElement],
         nondeterminism: &NonDeterminism<BFieldElement>,
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) -> Vec<BFieldElement>;
 
-    fn generate_test_states(&self) -> Vec<ExecutionState>;
-
     fn test(&self);
 
     fn bench(&self);
 }
 
-pub trait DepracatedSnippet {
+pub trait DeprecatedSnippet {
     /// The name of a Snippet
     ///
     /// This is used as a unique identifier, e.g. when generating labels.
@@ -236,8 +247,9 @@ pub trait DepracatedSnippet {
     fn function_code_as_instructions(&self, library: &mut Library) -> Vec<LabelledInstruction> {
         let f_body = self.function_code(library);
 
-        // parse the code to get the list of instructions
-        to_labelled_instructions(&parse(&f_body).unwrap())
+        // parse the string without link-checking
+        let (_, tokens) = tokenize(&f_body).unwrap();
+        to_labelled_instructions(&tokens)
     }
 
     // The rust shadowing and the run tasm function must take the same argument
@@ -294,7 +306,7 @@ pub trait DepracatedSnippet {
             stack,
             Self::stack_diff(self),
             std_in,
-            NonDeterminism::new(secret_in),
+            &NonDeterminism::new(secret_in),
             memory,
             Some(words_statically_allocated),
         )
@@ -319,7 +331,7 @@ pub trait DepracatedSnippet {
 
         let code = self.link_for_isolated_run(words_statically_allocated);
 
-        execute_bench(
+        execute_bench_deprecated(
             &code,
             stack,
             Self::stack_diff(self),
@@ -379,7 +391,7 @@ pub trait DepracatedSnippet {
     }
 }
 
-impl<S: DepracatedSnippet> RustShadowed for S {
+impl<S: DeprecatedSnippet> RustShadow for ShadowWrapper<S> {
     fn rust_shadow_wrapper(
         &self,
         stdin: &[BFieldElement],
@@ -402,20 +414,19 @@ impl<S: DepracatedSnippet> RustShadowed for S {
         let mut execution_states = self.gen_input_states();
 
         for execution_state in execution_states.iter_mut() {
-            test_rust_equivalence_given_execution_state(self, *execution_state);
+            test_rust_equivalence_given_execution_state_deprecated(
+                &*self.0,
+                execution_state.clone(),
+            );
         }
     }
 
     fn bench(&self) {
         todo!()
     }
-
-    fn generate_test_states(&self) -> Vec<ExecutionState> {
-        self.gen_input_states()
-    }
 }
 
-impl<S: DepracatedSnippet> BasicSnippet for S {
+impl<S: DeprecatedSnippet> BasicSnippet for S {
     fn inputs(&self) -> Vec<(DataType, String)> {
         self.input_types()
             .into_iter()
@@ -436,6 +447,62 @@ impl<S: DepracatedSnippet> BasicSnippet for S {
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
         self.function_code_as_instructions(library)
+    }
+}
+
+impl DeprecatedSnippet for ShadowWrapper<Box<dyn DeprecatedSnippet>> {
+    fn entrypoint_name(&self) -> String {
+        self.0.entrypoint_name()
+    }
+
+    fn input_field_names(&self) -> Vec<String> {
+        self.0.input_field_names()
+    }
+
+    fn input_types(&self) -> Vec<DataType> {
+        self.0.input_types()
+    }
+
+    fn output_field_names(&self) -> Vec<String> {
+        self.0.output_field_names()
+    }
+
+    fn output_types(&self) -> Vec<DataType> {
+        self.0.output_types()
+    }
+
+    fn stack_diff(&self) -> isize {
+        self.0.stack_diff()
+    }
+
+    fn function_code(&self, library: &mut Library) -> String {
+        self.0.function_code(library)
+    }
+
+    fn crash_conditions(&self) -> Vec<String> {
+        self.0.crash_conditions()
+    }
+
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
+        self.0.gen_input_states()
+    }
+
+    fn common_case_input_state(&self) -> ExecutionState {
+        self.0.common_case_input_state()
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState {
+        self.0.worst_case_input_state()
+    }
+
+    fn rust_shadowing(
+        &self,
+        stack: &mut Vec<BFieldElement>,
+        std_in: Vec<BFieldElement>,
+        secret_in: Vec<BFieldElement>,
+        memory: &mut HashMap<BFieldElement, BFieldElement>,
+    ) {
+        self.0.rust_shadowing(stack, std_in, secret_in, memory)
     }
 }
 

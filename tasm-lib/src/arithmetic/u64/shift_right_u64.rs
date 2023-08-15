@@ -3,13 +3,13 @@ use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
-use crate::snippet::{DataType, DepracatedSnippet};
+use crate::snippet::{DataType, DeprecatedSnippet};
 use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct ShiftRightU64;
 
-impl DepracatedSnippet for ShiftRightU64 {
+impl DeprecatedSnippet for ShiftRightU64 {
     fn entrypoint_name(&self) -> String {
         "tasm_arithmetic_u64_shift_right".to_string()
     }
@@ -176,14 +176,15 @@ mod tests {
     use std::collections::HashMap;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values_deprecated,
+        test_rust_equivalence_multiple_deprecated,
     };
 
     use super::*;
 
     #[test]
     fn shift_right_u64_test() {
-        test_rust_equivalence_multiple(&ShiftRightU64, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftRightU64, true);
     }
 
     #[test]
@@ -221,7 +222,7 @@ mod tests {
         expected_stack.push((expected_u64 >> 32).into());
         expected_stack.push((expected_u64 & u32::MAX as u64).into());
 
-        test_rust_equivalence_given_input_values(
+        test_rust_equivalence_given_input_values_deprecated(
             &ShiftRightU64,
             &init_stack,
             &[],

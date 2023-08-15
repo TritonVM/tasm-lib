@@ -4,13 +4,13 @@ use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
-use crate::snippet::{DataType, DepracatedSnippet};
+use crate::snippet::{DataType, DeprecatedSnippet};
 use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct PopCountU64;
 
-impl DepracatedSnippet for PopCountU64 {
+impl DeprecatedSnippet for PopCountU64 {
     fn entrypoint_name(&self) -> String {
         "tasm_arithmetic_u64_popcount".to_string()
     }
@@ -125,13 +125,13 @@ fn prepare_state(a: u64) -> ExecutionState {
 #[cfg(test)]
 mod tests {
 
-    use crate::test_helpers::test_rust_equivalence_multiple;
+    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     use super::*;
 
     #[test]
     fn popcount_u64_test() {
-        test_rust_equivalence_multiple(&PopCountU64, true);
+        test_rust_equivalence_multiple_deprecated(&PopCountU64, true);
     }
 }
 

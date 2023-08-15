@@ -7,13 +7,13 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
 use crate::library::Library;
-use crate::snippet::{DataType, DepracatedSnippet};
+use crate::snippet::{DataType, DeprecatedSnippet};
 use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct IncrU64;
 
-impl DepracatedSnippet for IncrU64 {
+impl DeprecatedSnippet for IncrU64 {
     fn input_field_names(&self) -> Vec<String> {
         vec!["value_hi".to_string(), "value_lo".to_string()]
     }
@@ -138,14 +138,14 @@ impl DepracatedSnippet for IncrU64 {
 #[cfg(test)]
 mod tests {
 
-    use crate::test_helpers::test_rust_equivalence_multiple;
+    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
     use crate::{get_init_tvm_stack, push_encodable};
 
     use super::*;
 
     #[test]
     fn incr_u64_test() {
-        test_rust_equivalence_multiple(&IncrU64, true);
+        test_rust_equivalence_multiple_deprecated(&IncrU64, true);
     }
 
     #[test]

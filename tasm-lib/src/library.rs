@@ -2,11 +2,10 @@ use std::collections::HashMap;
 
 use itertools::Itertools;
 use num::One;
-use triton_vm::parser::parse;
-use triton_vm::{instruction::LabelledInstruction, parser::to_labelled_instructions};
+use triton_vm::instruction::LabelledInstruction;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
-use crate::snippet::{BasicSnippet, DataType, DepracatedSnippet};
+use crate::snippet::{BasicSnippet, DataType, DeprecatedSnippet};
 
 // Ensure that static allocator does not overwrite the address
 // dedicated to the dynamic allocator. Dynamic allocator is,
@@ -109,7 +108,7 @@ pub struct DummyTestSnippetB;
 #[derive(Debug)]
 pub struct DummyTestSnippetC;
 
-impl DepracatedSnippet for DummyTestSnippetA {
+impl DeprecatedSnippet for DummyTestSnippetA {
     fn stack_diff(&self) -> isize {
         3
     }
@@ -178,7 +177,7 @@ impl DepracatedSnippet for DummyTestSnippetA {
     }
 }
 
-impl DepracatedSnippet for DummyTestSnippetB {
+impl DeprecatedSnippet for DummyTestSnippetB {
     fn stack_diff(&self) -> isize {
         2
     }
@@ -245,7 +244,7 @@ impl DepracatedSnippet for DummyTestSnippetB {
     }
 }
 
-impl DepracatedSnippet for DummyTestSnippetC {
+impl DeprecatedSnippet for DummyTestSnippetC {
     fn stack_diff(&self) -> isize {
         1
     }
@@ -319,7 +318,7 @@ mod tests {
     use crate::list::ListType;
     use crate::memory::memcpy::MemCpy;
     use crate::mmr::calculate_new_peaks_from_leaf_mutation::MmrCalculateNewPeaksFromLeafMutationMtIndices;
-    use crate::test_helpers::test_rust_equivalence_given_input_values;
+    use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
 
     use super::*;
 
@@ -328,7 +327,7 @@ mod tests {
         let empty_stack = get_init_tvm_stack();
 
         let expected = None;
-        test_rust_equivalence_given_input_values(
+        test_rust_equivalence_given_input_values_deprecated(
             &DummyTestSnippetA,
             &empty_stack,
             &[],
@@ -336,7 +335,7 @@ mod tests {
             0,
             expected,
         );
-        test_rust_equivalence_given_input_values(
+        test_rust_equivalence_given_input_values_deprecated(
             &DummyTestSnippetB,
             &empty_stack,
             &[],
@@ -344,7 +343,7 @@ mod tests {
             0,
             expected,
         );
-        test_rust_equivalence_given_input_values(
+        test_rust_equivalence_given_input_values_deprecated(
             &DummyTestSnippetC,
             &empty_stack,
             &[],
@@ -384,7 +383,7 @@ mod tests {
             );
 
             let mut src = code;
-            let imports = library.all_imports();
+            let mut imports = library.all_imports();
             src.append(&mut imports);
 
             Program::new(&src)

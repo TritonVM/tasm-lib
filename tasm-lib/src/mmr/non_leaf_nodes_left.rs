@@ -12,13 +12,13 @@ use crate::arithmetic::u64::log_2_floor_u64::Log2FloorU64;
 use crate::arithmetic::u64::pow2_u64::Pow2U64;
 use crate::library::Library;
 use crate::rust_shadowing_helper_functions::non_leaf_nodes_left;
-use crate::snippet::{DataType, DepracatedSnippet};
+use crate::snippet::{DataType, DeprecatedSnippet};
 use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct MmrNonLeafNodesLeftUsingAnd;
 
-impl DepracatedSnippet for MmrNonLeafNodesLeftUsingAnd {
+impl DeprecatedSnippet for MmrNonLeafNodesLeftUsingAnd {
     fn input_field_names(&self) -> Vec<String> {
         vec!["leaf_index_hi".to_string(), "leaf_index_lo".to_string()]
     }
@@ -201,14 +201,15 @@ mod tests {
     use crate::get_init_tvm_stack;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values_deprecated,
+        test_rust_equivalence_multiple_deprecated,
     };
 
     use super::*;
 
     #[test]
     fn non_leaf_nodes_left_test() {
-        test_rust_equivalence_multiple(&MmrNonLeafNodesLeftUsingAnd, true);
+        test_rust_equivalence_multiple_deprecated(&MmrNonLeafNodesLeftUsingAnd, true);
     }
 
     #[test]
@@ -278,7 +279,7 @@ mod tests {
             init_stack.push(elem);
         }
 
-        test_rust_equivalence_given_input_values(
+        test_rust_equivalence_given_input_values_deprecated(
             &MmrNonLeafNodesLeftUsingAnd,
             &init_stack,
             &[],

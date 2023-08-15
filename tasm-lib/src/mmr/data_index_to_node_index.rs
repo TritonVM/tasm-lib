@@ -6,7 +6,7 @@ use twenty_first::util_types::mmr;
 use crate::arithmetic::u64::add_u64::AddU64;
 use crate::arithmetic::u64::incr_u64::IncrU64;
 use crate::library::Library;
-use crate::snippet::{DataType, DepracatedSnippet};
+use crate::snippet::{DataType, DeprecatedSnippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
 use super::non_leaf_nodes_left::MmrNonLeafNodesLeftUsingAnd;
@@ -14,7 +14,7 @@ use super::non_leaf_nodes_left::MmrNonLeafNodesLeftUsingAnd;
 #[derive(Clone, Debug)]
 pub struct DataIndexToNodeIndex;
 
-impl DepracatedSnippet for DataIndexToNodeIndex {
+impl DeprecatedSnippet for DataIndexToNodeIndex {
     fn input_field_names(&self) -> Vec<String> {
         vec!["leaf_index_hi".to_string(), "leaf_index_lo".to_string()]
     }
@@ -120,14 +120,15 @@ mod tests {
     use crate::get_init_tvm_stack;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values_deprecated,
+        test_rust_equivalence_multiple_deprecated,
     };
 
     use super::*;
 
     #[test]
     fn data_index_to_node_index_test() {
-        test_rust_equivalence_multiple(&DataIndexToNodeIndex, true);
+        test_rust_equivalence_multiple_deprecated(&DataIndexToNodeIndex, true);
     }
 
     #[test]
@@ -267,7 +268,7 @@ mod tests {
             init_stack.push(elem);
         }
 
-        test_rust_equivalence_given_input_values::<DataIndexToNodeIndex>(
+        test_rust_equivalence_given_input_values_deprecated::<DataIndexToNodeIndex>(
             &DataIndexToNodeIndex,
             &init_stack,
             &[],

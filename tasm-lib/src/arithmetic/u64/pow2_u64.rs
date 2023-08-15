@@ -6,7 +6,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
 use crate::library::Library;
-use crate::snippet::{DataType, DepracatedSnippet};
+use crate::snippet::{DataType, DeprecatedSnippet};
 use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
 
 /// Consumes top element which is interpreted as exponent. Pushes a
@@ -14,7 +14,7 @@ use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
 #[derive(Clone, Debug)]
 pub struct Pow2U64;
 
-impl DepracatedSnippet for Pow2U64 {
+impl DeprecatedSnippet for Pow2U64 {
     fn input_field_names(&self) -> Vec<String> {
         vec!["i".to_string()]
     }
@@ -107,14 +107,15 @@ mod tests {
     use crate::get_init_tvm_stack;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values_deprecated,
+        test_rust_equivalence_multiple_deprecated,
     };
 
     use super::*;
 
     #[test]
     fn pow2_static_test() {
-        test_rust_equivalence_multiple(&Pow2U64, true);
+        test_rust_equivalence_multiple_deprecated(&Pow2U64, true);
     }
 
     fn prop_exp_static(exponent: u8) {
@@ -126,7 +127,7 @@ mod tests {
         let res = 2u64.pow(exponent as u32);
         expected.push(BFieldElement::new(res >> 32));
         expected.push(BFieldElement::new(res & u32::MAX as u64));
-        test_rust_equivalence_given_input_values(
+        test_rust_equivalence_given_input_values_deprecated(
             &Pow2U64,
             &init_stack,
             &[],

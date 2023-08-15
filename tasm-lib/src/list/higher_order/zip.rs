@@ -18,7 +18,7 @@ use crate::rust_shadowing_helper_functions::unsafe_list::untyped_unsafe_insert_r
 use crate::{get_init_tvm_stack, rust_shadowing_helper_functions};
 use crate::{
     library::Library,
-    snippet::{DataType, DepracatedSnippet},
+    snippet::{DataType, DeprecatedSnippet},
     ExecutionState,
 };
 
@@ -105,7 +105,7 @@ impl Zip {
     }
 }
 
-impl DepracatedSnippet for Zip {
+impl DeprecatedSnippet for Zip {
     fn entrypoint_name(&self) -> String {
         format!(
             "tasm_list_higher_order_{}_u32_zip_{}_with_{}",
@@ -414,14 +414,14 @@ mod tests {
         shared_math::other::random_elements, util_types::algebraic_hasher::AlgebraicHasher,
     };
 
-    use crate::{test_helpers::test_rust_equivalence_multiple, VmHasher};
+    use crate::{test_helpers::test_rust_equivalence_multiple_deprecated, VmHasher};
 
     use super::*;
 
     #[derive(Debug, Clone)]
     struct TestHashXFieldElement;
 
-    impl DepracatedSnippet for TestHashXFieldElement {
+    impl DeprecatedSnippet for TestHashXFieldElement {
         fn entrypoint_name(&self) -> String {
             "test_hash_xfield_element".to_string()
         }
@@ -560,7 +560,7 @@ mod tests {
 
     #[test]
     fn unsafe_list_prop_test() {
-        test_rust_equivalence_multiple(
+        test_rust_equivalence_multiple_deprecated(
             &Zip {
                 list_type: ListType::Unsafe,
                 left_type: DataType::XFE,
@@ -572,7 +572,7 @@ mod tests {
 
     #[test]
     fn with_safe_list_prop_test() {
-        test_rust_equivalence_multiple(
+        test_rust_equivalence_multiple_deprecated(
             &Zip {
                 list_type: ListType::Safe,
                 left_type: DataType::XFE,

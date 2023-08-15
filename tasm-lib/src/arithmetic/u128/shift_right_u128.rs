@@ -6,13 +6,13 @@ use crate::{
     get_init_tvm_stack,
     library::Library,
     push_encodable,
-    snippet::{DataType, DepracatedSnippet},
+    snippet::{DataType, DeprecatedSnippet},
     ExecutionState,
 };
 
 pub struct ShiftRightU128;
 
-impl DepracatedSnippet for ShiftRightU128 {
+impl DeprecatedSnippet for ShiftRightU128 {
     fn entrypoint_name(&self) -> String {
         "tasm_arithmetic_u128_shift_right".to_string()
     }
@@ -220,14 +220,15 @@ mod tests {
     use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values_deprecated,
+        test_rust_equivalence_multiple_deprecated,
     };
 
     use super::*;
 
     #[test]
     fn shift_right_u128_test() {
-        test_rust_equivalence_multiple(&ShiftRightU128, true);
+        test_rust_equivalence_multiple_deprecated(&ShiftRightU128, true);
     }
 
     #[test]
@@ -277,7 +278,7 @@ mod tests {
             expected_stack.push(limb);
         }
 
-        test_rust_equivalence_given_input_values(
+        test_rust_equivalence_given_input_values_deprecated(
             &ShiftRightU128,
             &init_stack,
             &[],

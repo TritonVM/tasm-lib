@@ -9,13 +9,13 @@ use super::right_child::MmrRightChild;
 use crate::arithmetic::u64::eq_u64::EqU64;
 use crate::arithmetic::u64::lt_u64::LtU64;
 use crate::library::Library;
-use crate::snippet::{DataType, DepracatedSnippet};
+use crate::snippet::{DataType, DeprecatedSnippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct MmrRightLineageCountAndHeight;
 
-impl DepracatedSnippet for MmrRightLineageCountAndHeight {
+impl DeprecatedSnippet for MmrRightLineageCountAndHeight {
     fn input_field_names(&self) -> Vec<String> {
         vec!["node_index_hi".to_string(), "node_index_lo".to_string()]
     }
@@ -259,14 +259,15 @@ mod tests {
     use crate::get_init_tvm_stack;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values_deprecated,
+        test_rust_equivalence_multiple_deprecated,
     };
 
     use super::*;
 
     #[test]
     fn right_lineage_count_and_own_height_child_test() {
-        test_rust_equivalence_multiple(&MmrRightLineageCountAndHeight, true);
+        test_rust_equivalence_multiple_deprecated(&MmrRightLineageCountAndHeight, true);
     }
 
     #[test]
@@ -349,7 +350,7 @@ mod tests {
             ],
         ]
         .concat();
-        test_rust_equivalence_given_input_values(
+        test_rust_equivalence_given_input_values_deprecated(
             &MmrRightLineageCountAndHeight,
             &init_stack,
             &[],

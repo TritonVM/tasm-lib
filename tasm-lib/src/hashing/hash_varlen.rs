@@ -9,7 +9,7 @@ use twenty_first::{
 
 use crate::{
     get_init_tvm_stack,
-    snippet::{DataType, DepracatedSnippet},
+    snippet::{DataType, DeprecatedSnippet},
     ExecutionState, VmHasher,
 };
 
@@ -37,7 +37,7 @@ impl HashVarlen {
     }
 }
 
-impl DepracatedSnippet for HashVarlen {
+impl DeprecatedSnippet for HashVarlen {
     fn entrypoint_name(&self) -> String {
         "tasm_hashing_hash_varlen".to_string()
     }
@@ -330,13 +330,13 @@ impl DepracatedSnippet for HashVarlen {
 
 #[cfg(test)]
 mod tests {
-    use crate::test_helpers::test_rust_equivalence_multiple;
+    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     use super::*;
 
     #[test]
     fn new_prop_test() {
-        test_rust_equivalence_multiple(&HashVarlen, true);
+        test_rust_equivalence_multiple_deprecated(&HashVarlen, true);
     }
 }
 

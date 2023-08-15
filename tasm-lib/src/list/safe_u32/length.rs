@@ -6,13 +6,13 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
 use crate::rust_shadowing_helper_functions::safe_list::safe_insert_random_list;
-use crate::snippet::{DataType, DepracatedSnippet};
+use crate::snippet::{DataType, DeprecatedSnippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct SafeLength(pub DataType);
 
-impl DepracatedSnippet for SafeLength {
+impl DeprecatedSnippet for SafeLength {
     fn input_field_names(&self) -> Vec<String> {
         vec!["*list".to_string()]
     }
@@ -157,19 +157,20 @@ mod tests {
 
     use crate::get_init_tvm_stack;
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values_deprecated,
+        test_rust_equivalence_multiple_deprecated,
     };
 
     use super::*;
 
     #[test]
     fn new_snippet_test_long() {
-        test_rust_equivalence_multiple(&SafeLength(DataType::Bool), true);
-        test_rust_equivalence_multiple(&SafeLength(DataType::U32), true);
-        test_rust_equivalence_multiple(&SafeLength(DataType::U64), true);
-        test_rust_equivalence_multiple(&SafeLength(DataType::BFE), true);
-        test_rust_equivalence_multiple(&SafeLength(DataType::XFE), true);
-        test_rust_equivalence_multiple(&SafeLength(DataType::Digest), true);
+        test_rust_equivalence_multiple_deprecated(&SafeLength(DataType::Bool), true);
+        test_rust_equivalence_multiple_deprecated(&SafeLength(DataType::U32), true);
+        test_rust_equivalence_multiple_deprecated(&SafeLength(DataType::U64), true);
+        test_rust_equivalence_multiple_deprecated(&SafeLength(DataType::BFE), true);
+        test_rust_equivalence_multiple_deprecated(&SafeLength(DataType::XFE), true);
+        test_rust_equivalence_multiple_deprecated(&SafeLength(DataType::Digest), true);
     }
 
     #[test]
@@ -229,7 +230,7 @@ mod tests {
             &mut memory,
         );
 
-        test_rust_equivalence_given_input_values(
+        test_rust_equivalence_given_input_values_deprecated(
             &SafeLength(DataType::BFE),
             &init_stack,
             &[],

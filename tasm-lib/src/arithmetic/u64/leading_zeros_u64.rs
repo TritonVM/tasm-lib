@@ -4,14 +4,14 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use crate::{
     arithmetic::u32::leading_zeros_u32::LeadingZerosU32,
     get_init_tvm_stack,
-    snippet::{DataType, DepracatedSnippet},
+    snippet::{DataType, DeprecatedSnippet},
     ExecutionState,
 };
 
 #[derive(Clone, Debug)]
 pub struct LeadingZerosU64;
 
-impl DepracatedSnippet for LeadingZerosU64 {
+impl DeprecatedSnippet for LeadingZerosU64 {
     fn entrypoint_name(&self) -> String {
         "tasm_arithmetic_u64_leading_zeros".to_string()
     }
@@ -129,14 +129,15 @@ mod tests {
     use std::collections::HashMap;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values_deprecated,
+        test_rust_equivalence_multiple_deprecated,
     };
 
     use super::*;
 
     #[test]
     fn snippet_test() {
-        test_rust_equivalence_multiple(&LeadingZerosU64, true);
+        test_rust_equivalence_multiple_deprecated(&LeadingZerosU64, true);
     }
 
     #[test]
@@ -174,7 +175,7 @@ mod tests {
         let mut expected_stack = get_init_tvm_stack();
         expected_stack.push(BFieldElement::new(leading_zeros as u64));
 
-        test_rust_equivalence_given_input_values(
+        test_rust_equivalence_given_input_values_deprecated(
             &LeadingZerosU64,
             &init_stack,
             &[],

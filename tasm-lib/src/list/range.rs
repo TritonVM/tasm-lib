@@ -10,7 +10,7 @@ use crate::{
         unsafe_u32::{new::UnsafeNew, set_length::UnsafeSetLength},
     },
     rust_shadowing_helper_functions::{self},
-    snippet::{DataType, DepracatedSnippet},
+    snippet::{DataType, DeprecatedSnippet},
     ExecutionState,
 };
 
@@ -39,7 +39,7 @@ impl Range {
     }
 }
 
-impl DepracatedSnippet for Range {
+impl DeprecatedSnippet for Range {
     fn entrypoint_name(&self) -> String {
         format!("tasm_list_{}_range", self.list_type)
     }
@@ -248,13 +248,16 @@ impl DepracatedSnippet for Range {
 #[cfg(test)]
 mod tests {
 
-    use crate::{execute_with_execution_state, test_helpers::test_rust_equivalence_multiple};
+    use crate::{
+        execute_with_execution_state_deprecated,
+        test_helpers::test_rust_equivalence_multiple_deprecated,
+    };
 
     use super::*;
 
     #[test]
     fn new_snippet_test_safe_lists() {
-        test_rust_equivalence_multiple(
+        test_rust_equivalence_multiple_deprecated(
             &Range {
                 list_type: ListType::Safe,
             },
@@ -264,7 +267,7 @@ mod tests {
 
     #[test]
     fn new_snippet_test_unsafe_lists() {
-        test_rust_equivalence_multiple(
+        test_rust_equivalence_multiple_deprecated(
             &Range {
                 list_type: ListType::Unsafe,
             },
@@ -278,9 +281,9 @@ mod tests {
         let snippet = Range {
             list_type: ListType::Safe,
         };
-        let res = execute_with_execution_state(
+        let res = execute_with_execution_state_deprecated(
+            snippet.clone(),
             init_state,
-            Box::new(snippet.clone()),
             snippet.stack_diff(),
         );
         assert!(res.is_err());
@@ -292,9 +295,9 @@ mod tests {
         let snippet = Range {
             list_type: ListType::Unsafe,
         };
-        let res = execute_with_execution_state(
+        let res = execute_with_execution_state_deprecated(
+            snippet.clone(),
             init_state,
-            Box::new(snippet.clone()),
             snippet.stack_diff(),
         );
         assert!(res.is_err());

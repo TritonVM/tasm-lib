@@ -6,13 +6,13 @@ use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
-use crate::snippet::{DataType, DepracatedSnippet};
+use crate::snippet::{DataType, DeprecatedSnippet};
 use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct Div2U64;
 
-impl DepracatedSnippet for Div2U64 {
+impl DeprecatedSnippet for Div2U64 {
     fn input_field_names(&self) -> Vec<String> {
         vec!["value_hi".to_string(), "value_lo".to_string()]
     }
@@ -143,14 +143,15 @@ mod tests {
     use crate::get_init_tvm_stack;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values_deprecated,
+        test_rust_equivalence_multiple_deprecated,
     };
 
     use super::*;
 
     #[test]
     fn div2_u64_test() {
-        test_rust_equivalence_multiple(&Div2U64, true);
+        test_rust_equivalence_multiple_deprecated(&Div2U64, true);
     }
 
     #[should_panic]
@@ -160,7 +161,7 @@ mod tests {
         init_stack.push(BFieldElement::new(16));
         init_stack.push(BFieldElement::new(u32::MAX as u64 + 1));
 
-        test_rust_equivalence_given_input_values::<Div2U64>(
+        test_rust_equivalence_given_input_values_deprecated::<Div2U64>(
             &Div2U64,
             &init_stack,
             &[],
@@ -177,7 +178,7 @@ mod tests {
         init_stack.push(BFieldElement::new(u32::MAX as u64 + 1));
         init_stack.push(BFieldElement::new(16));
 
-        test_rust_equivalence_given_input_values::<Div2U64>(
+        test_rust_equivalence_given_input_values_deprecated::<Div2U64>(
             &Div2U64,
             &init_stack,
             &[],
@@ -224,7 +225,7 @@ mod tests {
         expected_stack.push(BFieldElement::new(res >> 32));
         expected_stack.push(BFieldElement::new(res & u32::MAX as u64));
 
-        test_rust_equivalence_given_input_values::<Div2U64>(
+        test_rust_equivalence_given_input_values_deprecated::<Div2U64>(
             &Div2U64,
             &init_stack,
             &[],

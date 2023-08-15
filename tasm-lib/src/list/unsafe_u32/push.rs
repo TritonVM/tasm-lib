@@ -7,14 +7,14 @@ use twenty_first::shared_math::other::random_elements;
 
 use crate::library::Library;
 use crate::rust_shadowing_helper_functions::unsafe_list::untyped_unsafe_insert_random_list;
-use crate::snippet::{DataType, DepracatedSnippet};
+use crate::snippet::{DataType, DeprecatedSnippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct UnsafePush(pub DataType);
 
 /// A parameterized version of `Push` where `N` is the size of an element in the list
-impl DepracatedSnippet for UnsafePush {
+impl DeprecatedSnippet for UnsafePush {
     fn input_field_names(&self) -> Vec<String> {
         let element_size = self.0.get_size();
 
@@ -184,17 +184,18 @@ mod tests {
     use crate::get_init_tvm_stack;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values_deprecated,
+        test_rust_equivalence_multiple_deprecated,
     };
 
     use super::*;
 
     #[test]
     fn new_snippet_test() {
-        test_rust_equivalence_multiple(&UnsafePush(DataType::Bool), true);
-        test_rust_equivalence_multiple(&UnsafePush(DataType::U64), true);
-        test_rust_equivalence_multiple(&UnsafePush(DataType::XFE), true);
-        test_rust_equivalence_multiple(&UnsafePush(DataType::Digest), true);
+        test_rust_equivalence_multiple_deprecated(&UnsafePush(DataType::Bool), true);
+        test_rust_equivalence_multiple_deprecated(&UnsafePush(DataType::U64), true);
+        test_rust_equivalence_multiple_deprecated(&UnsafePush(DataType::XFE), true);
+        test_rust_equivalence_multiple_deprecated(&UnsafePush(DataType::Digest), true);
     }
 
     #[test]
@@ -251,7 +252,7 @@ mod tests {
             data_type.get_size(),
         );
 
-        test_rust_equivalence_given_input_values(
+        test_rust_equivalence_given_input_values_deprecated(
             &UnsafePush(data_type.clone()),
             &init_stack,
             &[],

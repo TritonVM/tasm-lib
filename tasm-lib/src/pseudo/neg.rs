@@ -3,13 +3,13 @@ use std::collections::HashMap;
 use rand::Rng;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
-use crate::snippet::{DataType, DepracatedSnippet};
+use crate::snippet::{DataType, DeprecatedSnippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct Neg;
 
-impl DepracatedSnippet for Neg {
+impl DeprecatedSnippet for Neg {
     fn input_field_names(&self) -> Vec<String> {
         vec!["value".to_string()]
     }
@@ -86,11 +86,11 @@ impl DepracatedSnippet for Neg {
 mod tests {
     use super::*;
 
-    use crate::test_helpers::test_rust_equivalence_multiple;
+    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     #[test]
     fn lsb_test() {
-        test_rust_equivalence_multiple(&Neg, true);
+        test_rust_equivalence_multiple_deprecated(&Neg, true);
     }
 }
 

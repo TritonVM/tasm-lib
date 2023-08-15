@@ -21,7 +21,7 @@ use crate::list::unsafe_u32::pop::UnsafePop;
 use crate::list::unsafe_u32::push::UnsafePush;
 use crate::list::unsafe_u32::set_length::UnsafeSetLength;
 use crate::list::ListType;
-use crate::snippet::{DataType, DepracatedSnippet};
+use crate::snippet::{DataType, DeprecatedSnippet};
 use crate::{
     get_init_tvm_stack, rust_shadowing_helper_functions, Digest, ExecutionState, VmHasher,
     DIGEST_LENGTH,
@@ -99,7 +99,7 @@ impl CalculateNewPeaksFromAppend {
     }
 }
 
-impl DepracatedSnippet for CalculateNewPeaksFromAppend {
+impl DeprecatedSnippet for CalculateNewPeaksFromAppend {
     fn input_field_names(&self) -> Vec<String> {
         vec![
             "old_leaf_count_hi".to_string(),
@@ -406,7 +406,8 @@ mod tests {
     use twenty_first::util_types::mmr::mmr_trait::Mmr;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values_deprecated,
+        test_rust_equivalence_multiple_deprecated,
     };
     use crate::{get_init_tvm_stack, VmHasher};
 
@@ -416,7 +417,7 @@ mod tests {
 
     #[test]
     fn calculate_new_peaks_from_append_test_unsafe_lists() {
-        test_rust_equivalence_multiple(
+        test_rust_equivalence_multiple_deprecated(
             &CalculateNewPeaksFromAppend {
                 list_type: ListType::Unsafe,
             },
@@ -426,7 +427,7 @@ mod tests {
 
     #[test]
     fn calculate_new_peaks_from_append_test_safe_lists() {
-        test_rust_equivalence_multiple(
+        test_rust_equivalence_multiple_deprecated(
             &CalculateNewPeaksFromAppend {
                 list_type: ListType::Safe,
             },
@@ -652,7 +653,7 @@ mod tests {
         expected_final_stack.push(peaks_pointer);
         expected_final_stack.push(auth_paths_pointer);
 
-        test_rust_equivalence_given_input_values(
+        test_rust_equivalence_given_input_values_deprecated(
             &CalculateNewPeaksFromAppend { list_type },
             &init_stack,
             &[],

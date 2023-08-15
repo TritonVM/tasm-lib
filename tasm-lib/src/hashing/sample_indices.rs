@@ -20,7 +20,7 @@ use crate::{
         ListType,
     },
     rust_shadowing_helper_functions,
-    snippet::{DataType, DepracatedSnippet},
+    snippet::{DataType, DeprecatedSnippet},
     ExecutionState, VmHasher,
 };
 
@@ -52,7 +52,7 @@ impl SampleIndices {
     }
 }
 
-impl DepracatedSnippet for SampleIndices {
+impl DeprecatedSnippet for SampleIndices {
     fn entrypoint_name(&self) -> String {
         format!("tasm_hashing_sample_indices_to_{}_list", self.list_type)
     }
@@ -385,19 +385,19 @@ impl DepracatedSnippet for SampleIndices {
 #[cfg(test)]
 mod tests {
 
-    use crate::{list::ListType, test_helpers::test_rust_equivalence_multiple};
+    use crate::{list::ListType, test_helpers::test_rust_equivalence_multiple_deprecated};
 
     use super::SampleIndices;
 
     #[test]
     fn new_prop_test() {
-        test_rust_equivalence_multiple(
+        test_rust_equivalence_multiple_deprecated(
             &SampleIndices {
                 list_type: ListType::Safe,
             },
             true,
         );
-        test_rust_equivalence_multiple(
+        test_rust_equivalence_multiple_deprecated(
             &SampleIndices {
                 list_type: ListType::Unsafe,
             },

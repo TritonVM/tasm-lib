@@ -23,7 +23,7 @@ use crate::rust_shadowing_helper_functions::unsafe_list::unsafe_insert_random_li
 use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, VmHasher};
 use crate::{
     library::Library,
-    snippet::{DataType, DepracatedSnippet},
+    snippet::{DataType, DeprecatedSnippet},
     ExecutionState,
 };
 
@@ -95,7 +95,7 @@ impl Map {
     }
 }
 
-impl DepracatedSnippet for Map {
+impl DeprecatedSnippet for Map {
     fn entrypoint_name(&self) -> String {
         format!(
             "tasm_list_higher_order_{}_u32_map_{}",
@@ -421,7 +421,7 @@ impl DepracatedSnippet for Map {
 #[derive(Debug, Clone)]
 struct TestHashXFieldElement;
 
-impl DepracatedSnippet for TestHashXFieldElement {
+impl DeprecatedSnippet for TestHashXFieldElement {
     fn entrypoint_name(&self) -> String {
         "test_hash_xfield_element".to_string()
     }
@@ -569,14 +569,15 @@ mod tests {
     };
 
     use crate::{
-        list::higher_order::inner_function::RawCode, test_helpers::test_rust_equivalence_multiple,
+        list::higher_order::inner_function::RawCode,
+        test_helpers::test_rust_equivalence_multiple_deprecated,
     };
 
     use super::*;
 
     #[test]
     fn unsafe_list_prop_test() {
-        test_rust_equivalence_multiple(
+        test_rust_equivalence_multiple_deprecated(
             &Map {
                 list_type: ListType::Unsafe,
                 f: InnerFunction::Snippet(Box::new(TestHashXFieldElement)),
@@ -587,7 +588,7 @@ mod tests {
 
     #[test]
     fn with_safe_list_prop_test() {
-        test_rust_equivalence_multiple(
+        test_rust_equivalence_multiple_deprecated(
             &Map {
                 list_type: ListType::Safe,
                 f: InnerFunction::Snippet(Box::new(TestHashXFieldElement)),
@@ -604,7 +605,7 @@ mod tests {
             vec![DataType::BFE],
             Box::new(RefCell::new(|_vec: &mut Vec<BFieldElement>| {})),
         );
-        test_rust_equivalence_multiple(
+        test_rust_equivalence_multiple_deprecated(
             &Map {
                 list_type: ListType::Unsafe,
                 f: InnerFunction::RawCode(rawcode),
@@ -624,7 +625,7 @@ mod tests {
                 vec.push(new_value);
             })),
         );
-        test_rust_equivalence_multiple(
+        test_rust_equivalence_multiple_deprecated(
             &Map {
                 list_type: ListType::Unsafe,
                 f: InnerFunction::RawCode(rawcode),
@@ -647,7 +648,7 @@ mod tests {
                 vec.push(new_value);
             })),
         );
-        test_rust_equivalence_multiple(
+        test_rust_equivalence_multiple_deprecated(
             &Map {
                 list_type: ListType::Unsafe,
                 f: InnerFunction::RawCode(rawcode),
@@ -675,7 +676,7 @@ mod tests {
                 vec.push(new_value.coefficients[0]);
             })),
         );
-        test_rust_equivalence_multiple(
+        test_rust_equivalence_multiple_deprecated(
             &Map {
                 list_type: ListType::Unsafe,
                 f: InnerFunction::RawCode(rawcode),
@@ -715,7 +716,7 @@ mod tests {
                 vec.push(new_value.coefficients[0]);
             })),
         );
-        test_rust_equivalence_multiple(
+        test_rust_equivalence_multiple_deprecated(
             &Map {
                 list_type: ListType::Unsafe,
                 f: InnerFunction::RawCode(rawcode),
@@ -786,7 +787,7 @@ mod tests {
                 }
             })),
         );
-        test_rust_equivalence_multiple(
+        test_rust_equivalence_multiple_deprecated(
             &Map {
                 list_type: ListType::Unsafe,
                 f: InnerFunction::RawCode(rawcode),

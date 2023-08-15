@@ -23,7 +23,7 @@ use crate::{
         ListType,
     },
     rust_shadowing_helper_functions,
-    snippet::{DataType, DepracatedSnippet},
+    snippet::{DataType, DeprecatedSnippet},
     Digest, ExecutionState, VmHasher, DIGEST_LENGTH,
 };
 
@@ -80,7 +80,7 @@ impl GetSwbfIndices {
     }
 }
 
-impl DepracatedSnippet for GetSwbfIndices {
+impl DeprecatedSnippet for GetSwbfIndices {
     fn entrypoint_name(&self) -> String {
         format!(
             "tasm_neptune_mutator_get_swbf_indices_{}_{}",
@@ -443,13 +443,13 @@ fn get_swbf_indices<H: AlgebraicHasher>(
 
 #[cfg(test)]
 mod tests {
-    use crate::test_helpers::test_rust_equivalence_multiple;
+    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     use super::GetSwbfIndices;
 
     #[test]
     fn new_prop_test() {
-        test_rust_equivalence_multiple(
+        test_rust_equivalence_multiple_deprecated(
             &GetSwbfIndices {
                 window_size: 1048576,
                 num_trials: 45,

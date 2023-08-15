@@ -3,14 +3,14 @@ use twenty_first::{amount::u32s::U32s, shared_math::b_field_element::BFieldEleme
 
 use crate::{
     get_init_tvm_stack, push_encodable,
-    snippet::{DataType, DepracatedSnippet},
+    snippet::{DataType, DeprecatedSnippet},
     ExecutionState,
 };
 
 #[derive(Clone, Debug)]
 pub struct DoublePow2U64;
 
-impl DepracatedSnippet for DoublePow2U64 {
+impl DeprecatedSnippet for DoublePow2U64 {
     fn entrypoint_name(&self) -> String {
         "tasm_arithmetic_u64_pow2_double".to_string()
     }
@@ -141,13 +141,13 @@ impl DepracatedSnippet for DoublePow2U64 {
 #[cfg(test)]
 mod tests {
 
-    use crate::test_helpers::test_rust_equivalence_multiple;
+    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     use super::*;
 
     #[test]
     fn double_pow2_u64_test() {
-        test_rust_equivalence_multiple(&DoublePow2U64, true);
+        test_rust_equivalence_multiple_deprecated(&DoublePow2U64, true);
     }
 }
 

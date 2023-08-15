@@ -6,13 +6,13 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
 use crate::rust_shadowing_helper_functions::unsafe_list::untyped_unsafe_insert_random_list;
-use crate::snippet::{DataType, DepracatedSnippet};
+use crate::snippet::{DataType, DeprecatedSnippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct UnsafePop(pub DataType);
 
-impl DepracatedSnippet for UnsafePop {
+impl DeprecatedSnippet for UnsafePop {
     fn input_field_names(&self) -> Vec<String> {
         vec!["*list".to_string()]
     }
@@ -171,17 +171,18 @@ mod tests {
 
     use crate::get_init_tvm_stack;
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values_deprecated,
+        test_rust_equivalence_multiple_deprecated,
     };
 
     use super::*;
 
     #[test]
     fn new_snippet_test() {
-        test_rust_equivalence_multiple(&UnsafePop(DataType::U32), true);
-        test_rust_equivalence_multiple(&UnsafePop(DataType::U64), true);
-        test_rust_equivalence_multiple(&UnsafePop(DataType::XFE), true);
-        test_rust_equivalence_multiple(&UnsafePop(DataType::Digest), true);
+        test_rust_equivalence_multiple_deprecated(&UnsafePop(DataType::U32), true);
+        test_rust_equivalence_multiple_deprecated(&UnsafePop(DataType::U64), true);
+        test_rust_equivalence_multiple_deprecated(&UnsafePop(DataType::XFE), true);
+        test_rust_equivalence_multiple_deprecated(&UnsafePop(DataType::Digest), true);
     }
 
     #[test]
@@ -261,7 +262,7 @@ mod tests {
             expected_end_stack.push(last_element[N - 1 - i]);
         }
 
-        test_rust_equivalence_given_input_values(
+        test_rust_equivalence_given_input_values_deprecated(
             &UnsafePop(data_type),
             &init_stack,
             &[],

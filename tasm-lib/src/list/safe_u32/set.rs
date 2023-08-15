@@ -5,13 +5,13 @@ use twenty_first::shared_math::other::random_elements;
 
 use crate::library::Library;
 use crate::rust_shadowing_helper_functions::safe_list::{safe_insert_random_list, safe_list_set};
-use crate::snippet::{DataType, DepracatedSnippet};
+use crate::snippet::{DataType, DeprecatedSnippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct SafeSet(pub DataType);
 
-impl DepracatedSnippet for SafeSet {
+impl DeprecatedSnippet for SafeSet {
     fn input_field_names(&self) -> Vec<String> {
         // See: https://github.com/TritonVM/tasm-snippets/issues/13
         // _ elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}} *list index
@@ -197,7 +197,8 @@ mod tests {
     use crate::get_init_tvm_stack;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values_deprecated,
+        test_rust_equivalence_multiple_deprecated,
     };
 
     use super::*;
@@ -205,12 +206,12 @@ mod tests {
     #[test]
     fn new_snippet_test() {
         for _ in 0..6 {
-            test_rust_equivalence_multiple(&SafeSet(DataType::Bool), true);
-            test_rust_equivalence_multiple(&SafeSet(DataType::BFE), true);
-            test_rust_equivalence_multiple(&SafeSet(DataType::U32), true);
-            test_rust_equivalence_multiple(&SafeSet(DataType::U64), true);
-            test_rust_equivalence_multiple(&SafeSet(DataType::XFE), true);
-            test_rust_equivalence_multiple(&SafeSet(DataType::Digest), true);
+            test_rust_equivalence_multiple_deprecated(&SafeSet(DataType::Bool), true);
+            test_rust_equivalence_multiple_deprecated(&SafeSet(DataType::BFE), true);
+            test_rust_equivalence_multiple_deprecated(&SafeSet(DataType::U32), true);
+            test_rust_equivalence_multiple_deprecated(&SafeSet(DataType::U64), true);
+            test_rust_equivalence_multiple_deprecated(&SafeSet(DataType::XFE), true);
+            test_rust_equivalence_multiple_deprecated(&SafeSet(DataType::Digest), true);
         }
     }
 
@@ -344,7 +345,7 @@ mod tests {
             &mut vm_memory,
         );
 
-        test_rust_equivalence_given_input_values::<SafeSet>(
+        test_rust_equivalence_given_input_values_deprecated::<SafeSet>(
             &SafeSet(data_type.clone()),
             &init_stack,
             &[],

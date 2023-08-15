@@ -9,14 +9,14 @@ use crate::{
     library::Library,
     list::safe_u32::SAFE_LIST_ELEMENT_CAPACITY,
     rust_shadowing_helper_functions::safe_list::{safe_insert_random_list, safe_list_push},
-    snippet::{DataType, DepracatedSnippet},
+    snippet::{DataType, DeprecatedSnippet},
     ExecutionState,
 };
 
 #[derive(Clone, Debug)]
 pub struct SafePush(pub DataType);
 
-impl DepracatedSnippet for SafePush {
+impl DeprecatedSnippet for SafePush {
     fn input_field_names(&self) -> Vec<String> {
         let element_size = self.0.get_size();
 
@@ -216,7 +216,10 @@ fn prepare_execution_state(
 #[cfg(test)]
 mod tests {
     use crate::{
-        test_helpers::{test_rust_equivalence_given_input_values, test_rust_equivalence_multiple},
+        test_helpers::{
+            test_rust_equivalence_given_input_values_deprecated,
+            test_rust_equivalence_multiple_deprecated,
+        },
         DIGEST_LENGTH,
     };
 
@@ -224,12 +227,12 @@ mod tests {
 
     #[test]
     fn new_snippet_test() {
-        test_rust_equivalence_multiple(&SafePush(DataType::Bool), true);
-        test_rust_equivalence_multiple(&SafePush(DataType::U32), true);
-        test_rust_equivalence_multiple(&SafePush(DataType::U64), true);
-        test_rust_equivalence_multiple(&SafePush(DataType::BFE), true);
-        test_rust_equivalence_multiple(&SafePush(DataType::XFE), true);
-        test_rust_equivalence_multiple(&SafePush(DataType::Digest), true);
+        test_rust_equivalence_multiple_deprecated(&SafePush(DataType::Bool), true);
+        test_rust_equivalence_multiple_deprecated(&SafePush(DataType::U32), true);
+        test_rust_equivalence_multiple_deprecated(&SafePush(DataType::U64), true);
+        test_rust_equivalence_multiple_deprecated(&SafePush(DataType::BFE), true);
+        test_rust_equivalence_multiple_deprecated(&SafePush(DataType::XFE), true);
+        test_rust_equivalence_multiple_deprecated(&SafePush(DataType::Digest), true);
     }
 
     #[test]
@@ -409,7 +412,7 @@ mod tests {
             &mut memory,
         );
 
-        test_rust_equivalence_given_input_values(
+        test_rust_equivalence_given_input_values_deprecated(
             &SafePush(data_type.clone()),
             &init_stack,
             &[],

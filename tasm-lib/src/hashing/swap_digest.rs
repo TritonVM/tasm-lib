@@ -5,7 +5,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
 use crate::snippet::DataType;
-use crate::snippet::DepracatedSnippet;
+use crate::snippet::DeprecatedSnippet;
 use crate::Digest;
 use crate::DIGEST_LENGTH;
 use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
@@ -13,7 +13,7 @@ use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
 #[derive(Clone, Debug)]
 pub struct SwapDigest;
 
-impl DepracatedSnippet for SwapDigest {
+impl DeprecatedSnippet for SwapDigest {
     fn input_field_names(&self) -> Vec<String> {
         vec![
             "b4".to_string(),
@@ -142,13 +142,13 @@ impl DepracatedSnippet for SwapDigest {
 #[cfg(test)]
 mod tests {
 
-    use crate::test_helpers::test_rust_equivalence_multiple;
+    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     use super::*;
 
     #[test]
     fn swap_digest_test() {
-        test_rust_equivalence_multiple(&SwapDigest, true);
+        test_rust_equivalence_multiple_deprecated(&SwapDigest, true);
     }
 }
 

@@ -11,13 +11,13 @@ use crate::arithmetic::u64::decr_u64::DecrU64;
 use crate::arithmetic::u64::log_2_floor_u64::Log2FloorU64;
 use crate::arithmetic::u64::pow2_u64::Pow2U64;
 use crate::library::Library;
-use crate::snippet::{DataType, DepracatedSnippet};
+use crate::snippet::{DataType, DeprecatedSnippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct MmrLeftMostAncestor;
 
-impl DepracatedSnippet for MmrLeftMostAncestor {
+impl DeprecatedSnippet for MmrLeftMostAncestor {
     fn input_field_names(&self) -> Vec<String> {
         vec!["node_index_hi".to_string(), "node_index_lo".to_string()]
     }
@@ -142,14 +142,15 @@ mod tests {
     use crate::get_init_tvm_stack;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values_deprecated,
+        test_rust_equivalence_multiple_deprecated,
     };
 
     use super::*;
 
     #[test]
     fn leftmost_ancestor_test() {
-        test_rust_equivalence_multiple(&MmrLeftMostAncestor, true);
+        test_rust_equivalence_multiple_deprecated(&MmrLeftMostAncestor, true);
     }
 
     #[test]
@@ -250,7 +251,7 @@ mod tests {
             init_stack.push(elem);
         }
 
-        test_rust_equivalence_given_input_values::<MmrLeftMostAncestor>(
+        test_rust_equivalence_given_input_values_deprecated::<MmrLeftMostAncestor>(
             &MmrLeftMostAncestor,
             &init_stack,
             &[],

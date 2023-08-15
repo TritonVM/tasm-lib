@@ -16,13 +16,13 @@ use crate::arithmetic::u64::shift_left_u64::ShiftLeftU64;
 use crate::arithmetic::u64::shift_right_u64::ShiftRightU64;
 use crate::arithmetic::u64::sub_u64::SubU64;
 use crate::library::Library;
-use crate::snippet::{DataType, DepracatedSnippet};
+use crate::snippet::{DataType, DeprecatedSnippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct DivModU64;
 
-impl DepracatedSnippet for DivModU64 {
+impl DeprecatedSnippet for DivModU64 {
     fn entrypoint_name(&self) -> String {
         "tasm_arithmetic_u64_div_mod".to_string()
     }
@@ -579,14 +579,15 @@ mod tests {
     use crate::get_init_tvm_stack;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values_deprecated,
+        test_rust_equivalence_multiple_deprecated,
     };
 
     use super::*;
 
     #[test]
     fn div_mod_u64_test() {
-        test_rust_equivalence_multiple(&DivModU64, true);
+        test_rust_equivalence_multiple_deprecated(&DivModU64, true);
     }
 
     #[test]
@@ -694,7 +695,7 @@ mod tests {
             expected_end_stack.push(elem);
         }
 
-        test_rust_equivalence_given_input_values(
+        test_rust_equivalence_given_input_values_deprecated(
             &DivModU64,
             &init_stack,
             &[],

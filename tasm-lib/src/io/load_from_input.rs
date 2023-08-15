@@ -4,7 +4,7 @@ use twenty_first::shared_math::other::random_elements;
 
 use crate::{
     dyn_malloc, get_init_tvm_stack,
-    snippet::{DataType, DepracatedSnippet, InputSource},
+    snippet::{DataType, DeprecatedSnippet, InputSource},
     ExecutionState,
 };
 
@@ -15,7 +15,7 @@ pub struct LoadFromInput(pub InputSource);
 /// The first element of the input source is the length of the list
 /// that is loaded into memory. Returns a pointer to the first element
 /// in memory.
-impl DepracatedSnippet for LoadFromInput {
+impl DeprecatedSnippet for LoadFromInput {
     fn entrypoint_name(&self) -> String {
         format!("tasm_io_load_from_input_{}", self.0)
     }
@@ -251,14 +251,17 @@ impl DepracatedSnippet for LoadFromInput {
 
 #[cfg(test)]
 mod tests {
-    use crate::{execute_with_execution_state, test_helpers::test_rust_equivalence_multiple};
+    use crate::{
+        execute_with_execution_state_deprecated,
+        test_helpers::test_rust_equivalence_multiple_deprecated,
+    };
 
     use super::*;
 
     #[test]
     fn new_snippet_test() {
-        test_rust_equivalence_multiple(&LoadFromInput(InputSource::SecretIn), true);
-        test_rust_equivalence_multiple(&LoadFromInput(InputSource::StdIn), true);
+        test_rust_equivalence_multiple_deprecated(&LoadFromInput(InputSource::SecretIn), true);
+        test_rust_equivalence_multiple_deprecated(&LoadFromInput(InputSource::StdIn), true);
     }
 
     #[test]
@@ -277,7 +280,7 @@ mod tests {
             };
             let snippet = LoadFromInput(InputSource::StdIn);
             let stack_diff = snippet.stack_diff();
-            let res = execute_with_execution_state(state, Box::new(snippet), stack_diff).unwrap();
+            let res = execute_with_execution_state_deprecated(snippet, state, stack_diff).unwrap();
 
             // Verify final state of dyn malloc. dyn malloc should be set to the next available
             // memory address.

@@ -9,7 +9,7 @@ use crate::{
     get_init_tvm_stack,
     list::unsafe_u32::{get::UnsafeGet, length::UnsafeLength},
     rust_shadowing_helper_functions,
-    snippet::{DataType, DepracatedSnippet},
+    snippet::{DataType, DeprecatedSnippet},
     Digest, ExecutionState, VmHasher, DIGEST_LENGTH,
 };
 
@@ -40,7 +40,7 @@ impl BagPeaks {
     }
 }
 
-impl DepracatedSnippet for BagPeaks {
+impl DeprecatedSnippet for BagPeaks {
     fn entrypoint_name(&self) -> String {
         "tasm_mmr_bag_peaks".to_string()
     }
@@ -249,13 +249,13 @@ impl DepracatedSnippet for BagPeaks {
 
 #[cfg(test)]
 mod tests {
-    use crate::test_helpers::test_rust_equivalence_multiple;
+    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     use super::BagPeaks;
 
     #[test]
     fn new_prop_test() {
-        test_rust_equivalence_multiple(&BagPeaks, true);
+        test_rust_equivalence_multiple_deprecated(&BagPeaks, true);
     }
 }
 

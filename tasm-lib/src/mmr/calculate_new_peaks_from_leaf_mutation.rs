@@ -19,7 +19,7 @@ use crate::list::unsafe_u32::get::UnsafeGet;
 use crate::list::unsafe_u32::set::UnsafeSet;
 use crate::list::ListType;
 use crate::mmr::MAX_MMR_HEIGHT;
-use crate::snippet::{DataType, DepracatedSnippet};
+use crate::snippet::{DataType, DeprecatedSnippet};
 use crate::{
     get_init_tvm_stack, rust_shadowing_helper_functions, Digest, ExecutionState, VmHasher,
     DIGEST_LENGTH,
@@ -127,7 +127,7 @@ impl MmrCalculateNewPeaksFromLeafMutationMtIndices {
     }
 }
 
-impl DepracatedSnippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
+impl DeprecatedSnippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
     fn input_field_names(&self) -> Vec<String> {
         vec![
             "*auth_path".to_string(),
@@ -431,14 +431,15 @@ mod tests {
     use crate::mmr::MAX_MMR_HEIGHT;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values_deprecated,
+        test_rust_equivalence_multiple_deprecated,
     };
 
     use super::*;
 
     #[test]
     fn calculate_new_peaks_from_leaf_mutation_test_unsafe_lists() {
-        test_rust_equivalence_multiple(
+        test_rust_equivalence_multiple_deprecated(
             &MmrCalculateNewPeaksFromLeafMutationMtIndices {
                 list_type: ListType::Unsafe,
             },
@@ -448,7 +449,7 @@ mod tests {
 
     #[test]
     fn calculate_new_peaks_from_leaf_mutation_test_safe_lists() {
-        test_rust_equivalence_multiple(
+        test_rust_equivalence_multiple_deprecated(
             &MmrCalculateNewPeaksFromLeafMutationMtIndices {
                 list_type: ListType::Safe,
             },
@@ -649,7 +650,7 @@ mod tests {
         expected_final_stack.push(BFieldElement::new(new_leaf_index >> 32));
         expected_final_stack.push(BFieldElement::new(new_leaf_index & u32::MAX as u64));
 
-        test_rust_equivalence_given_input_values(
+        test_rust_equivalence_given_input_values_deprecated(
             &MmrCalculateNewPeaksFromLeafMutationMtIndices {
                 list_type: ListType::Unsafe,
             },

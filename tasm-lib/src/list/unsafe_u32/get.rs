@@ -8,13 +8,13 @@ use crate::library::Library;
 use crate::rust_shadowing_helper_functions::unsafe_list::{
     unsafe_list_get, untyped_unsafe_insert_random_list,
 };
-use crate::snippet::{DataType, DepracatedSnippet};
+use crate::snippet::{DataType, DeprecatedSnippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct UnsafeGet(pub DataType);
 
-impl DepracatedSnippet for UnsafeGet {
+impl DeprecatedSnippet for UnsafeGet {
     fn input_field_names(&self) -> Vec<String> {
         vec!["*list".to_string(), "index".to_string()]
     }
@@ -164,14 +164,15 @@ mod tests {
     use crate::get_init_tvm_stack;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values_deprecated,
+        test_rust_equivalence_multiple_deprecated,
     };
 
     use super::*;
 
     #[test]
     fn new_snippet_test() {
-        test_rust_equivalence_multiple(&UnsafeGet(DataType::XFE), true);
+        test_rust_equivalence_multiple_deprecated(&UnsafeGet(DataType::XFE), true);
     }
 
     #[test]
@@ -238,7 +239,7 @@ mod tests {
             expected_end_stack.push(targeted_element[element_size - 1 - i]);
         }
 
-        test_rust_equivalence_given_input_values(
+        test_rust_equivalence_given_input_values_deprecated(
             &UnsafeGet(data_type),
             &init_stack,
             &[],

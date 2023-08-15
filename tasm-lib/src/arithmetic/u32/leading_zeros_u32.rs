@@ -3,14 +3,14 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::{
     get_init_tvm_stack,
-    snippet::{DataType, DepracatedSnippet},
+    snippet::{DataType, DeprecatedSnippet},
     ExecutionState,
 };
 
 #[derive(Clone, Debug)]
 pub struct LeadingZerosU32;
 
-impl DepracatedSnippet for LeadingZerosU32 {
+impl DeprecatedSnippet for LeadingZerosU32 {
     fn entrypoint_name(&self) -> String {
         "tasm_arithmetic_u32_leading_zeros_u32".to_string()
     }
@@ -117,14 +117,15 @@ mod tests {
     use std::collections::HashMap;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values_deprecated,
+        test_rust_equivalence_multiple_deprecated,
     };
 
     use super::*;
 
     #[test]
     fn snippet_test() {
-        test_rust_equivalence_multiple(&LeadingZerosU32, true);
+        test_rust_equivalence_multiple_deprecated(&LeadingZerosU32, true);
     }
 
     #[test]
@@ -154,7 +155,7 @@ mod tests {
         ]
         .concat();
 
-        test_rust_equivalence_given_input_values(
+        test_rust_equivalence_given_input_values_deprecated(
             &LeadingZerosU32,
             &init_stack,
             &[],

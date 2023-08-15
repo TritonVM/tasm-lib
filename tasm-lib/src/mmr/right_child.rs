@@ -9,13 +9,13 @@ use twenty_first::util_types::mmr;
 
 use crate::arithmetic::u64::decr_u64::DecrU64;
 use crate::library::Library;
-use crate::snippet::{DataType, DepracatedSnippet};
+use crate::snippet::{DataType, DeprecatedSnippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct MmrRightChild;
 
-impl DepracatedSnippet for MmrRightChild {
+impl DeprecatedSnippet for MmrRightChild {
     fn input_field_names(&self) -> Vec<String> {
         vec!["node_index_hi".to_string(), "node_index_lo".to_string()]
     }
@@ -113,14 +113,15 @@ mod tests {
     use crate::get_init_tvm_stack;
 
     use crate::test_helpers::{
-        test_rust_equivalence_given_input_values, test_rust_equivalence_multiple,
+        test_rust_equivalence_given_input_values_deprecated,
+        test_rust_equivalence_multiple_deprecated,
     };
 
     use super::*;
 
     #[test]
     fn right_child_test() {
-        test_rust_equivalence_multiple(&MmrRightChild, true);
+        test_rust_equivalence_multiple_deprecated(&MmrRightChild, true);
     }
 
     #[test]
@@ -147,7 +148,7 @@ mod tests {
             init_stack.push(elem);
         }
 
-        test_rust_equivalence_given_input_values::<MmrRightChild>(
+        test_rust_equivalence_given_input_values_deprecated::<MmrRightChild>(
             &MmrRightChild,
             &init_stack,
             &[],
