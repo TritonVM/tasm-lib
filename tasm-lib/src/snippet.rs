@@ -197,7 +197,9 @@ impl<T: BasicSnippet> Deref for ShadowWrapper<T> {
     }
 }
 
-pub(crate) trait RustShadow {
+pub trait RustShadow {
+    fn inner(&self) -> Box<dyn BasicSnippet>;
+
     fn rust_shadow_wrapper(
         &self,
         stdin: &[BFieldElement],
@@ -391,7 +393,11 @@ pub trait DeprecatedSnippet {
     }
 }
 
-impl<S: DeprecatedSnippet> RustShadow for ShadowWrapper<S> {
+struct DeprecatedSnippetWrapper<S: DeprecatedSnippet> {
+    pub deprecated_snippet: S,
+}
+
+impl<S: DeprecatedSnippet + Clone + 'static> RustShadow for DeprecatedSnippetWrapper<S> {
     fn rust_shadow_wrapper(
         &self,
         stdin: &[BFieldElement],
@@ -400,7 +406,7 @@ impl<S: DeprecatedSnippet> RustShadow for ShadowWrapper<S> {
         memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) -> Vec<BFieldElement> {
         let mut stack_copy = stack.to_vec();
-        self.rust_shadowing(
+        self.deprecated_snippet.rust_shadowing(
             &mut stack_copy,
             stdin.to_vec(),
             nondeterminism.individual_tokens.clone(),
@@ -411,11 +417,11 @@ impl<S: DeprecatedSnippet> RustShadow for ShadowWrapper<S> {
     }
 
     fn test(&self) {
-        let mut execution_states = self.gen_input_states();
+        let mut execution_states = self.deprecated_snippet.gen_input_states();
 
         for execution_state in execution_states.iter_mut() {
             test_rust_equivalence_given_execution_state_deprecated(
-                &*self.0,
+                &self.deprecated_snippet,
                 execution_state.clone(),
             );
         }
@@ -423,6 +429,10 @@ impl<S: DeprecatedSnippet> RustShadow for ShadowWrapper<S> {
 
     fn bench(&self) {
         todo!()
+    }
+
+    fn inner(&self) -> Box<dyn BasicSnippet> {
+        Box::new(self.deprecated_snippet.clone())
     }
 }
 

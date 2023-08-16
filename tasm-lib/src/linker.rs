@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use itertools::Itertools;
 use triton_vm::{
     instruction::LabelledInstruction, triton_asm, triton_instr, BFieldElement, NonDeterminism,
     Program, PublicInput,

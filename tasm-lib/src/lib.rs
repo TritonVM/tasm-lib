@@ -39,6 +39,7 @@ pub mod neptune;
 pub mod other_snippets;
 
 pub mod algorithm;
+pub mod function;
 pub mod linker;
 pub mod pseudo;
 pub mod recufier;

@@ -345,7 +345,7 @@ mod test {
 }
 
 #[allow(dead_code)]
-pub(crate) fn test_rust_equivalence_given_input_values<T: BasicSnippet + RustShadow>(
+pub(crate) fn test_rust_equivalence_given_input_values<T: RustShadow>(
     snippet_struct: &T,
     stack: &[BFieldElement],
     stdin: &[BFieldElement],
@@ -370,8 +370,8 @@ pub(crate) fn test_rust_equivalence_given_input_values<T: BasicSnippet + RustSha
 #[allow(dead_code)]
 #[allow(clippy::ptr_arg)]
 #[allow(clippy::too_many_arguments)]
-pub(crate) fn test_rust_equivalence_given_complete_state<T: BasicSnippet + RustShadow>(
-    snippet_struct: &T,
+pub(crate) fn test_rust_equivalence_given_complete_state<T: RustShadow>(
+    shadowed_snippet: &T,
     stack: &[BFieldElement],
     stdin: &[BFieldElement],
     nondeterminism: &NonDeterminism<BFieldElement>,
@@ -394,11 +394,11 @@ pub(crate) fn test_rust_equivalence_given_complete_state<T: BasicSnippet + RustS
     }
 
     // run rust shadow
-    snippet_struct.rust_shadow_wrapper(stdin, nondeterminism, &mut rust_stack, &mut rust_memory);
+    shadowed_snippet.rust_shadow_wrapper(stdin, nondeterminism, &mut rust_stack, &mut rust_memory);
 
     // run tvm
     let vm_output_state = link_and_run_tasm_for_test(
-        snippet_struct,
+        shadowed_snippet,
         &mut tasm_stack,
         stdin.to_vec(),
         nondeterminism,
@@ -417,7 +417,7 @@ pub(crate) fn test_rust_equivalence_given_complete_state<T: BasicSnippet + RustS
         tasm_stack_skip_program_hash,
         rust_stack_skip_program_hash,
         "Rust code must match TVM for `{}`\n\nTVM: {}\n\nRust: {}. Code was: {}",
-        snippet_struct.entrypoint(),
+        shadowed_snippet.inner().entrypoint(),
         tasm_stack_skip_program_hash
             .iter()
             .map(|x| x.to_string())
@@ -428,7 +428,11 @@ pub(crate) fn test_rust_equivalence_given_complete_state<T: BasicSnippet + RustS
             .map(|x| x.to_string())
             .collect_vec()
             .join(","),
-        snippet_struct.code(&mut Library::new()).iter().join("\n")
+        shadowed_snippet
+            .inner()
+            .code(&mut Library::new())
+            .iter()
+            .join("\n")
     );
 
     // if expected final stack is given, test against it
@@ -439,7 +443,7 @@ pub(crate) fn test_rust_equivalence_given_complete_state<T: BasicSnippet + RustS
             tasm_stack_skip_program_hash,
             expected_final_stack_skip_program_hash,
             "TVM must produce expected stack `{}`. \n\nTVM:\n{}\nExpected:\n{}",
-            snippet_struct.entrypoint(),
+            shadowed_snippet.inner().entrypoint(),
             tasm_stack_skip_program_hash
                 .iter()
                 .map(|x| x.to_string())
@@ -498,14 +502,14 @@ pub(crate) fn test_rust_equivalence_given_complete_state<T: BasicSnippet + RustS
             .join(",");
         panic!(
             "Memory for both implementations must match after execution.\n\nTVM: {tasm_mem_str}\n\nRust: {rust_mem_str}\n\nDifference: {diff_str}\n\nCode was:\n\n {}",
-            snippet_struct.code(&mut Library::new()).iter().join("\n")
+            shadowed_snippet.inner().code(&mut Library::new()).iter().join("\n")
         );
     }
 
     // Verify that stack grows with expected number of elements
     let stack_final = tasm_stack.clone();
     let observed_stack_growth: isize = stack_final.len() as isize - init_stack.len() as isize;
-    let expected_stack_growth: isize = snippet_struct.stack_diff();
+    let expected_stack_growth: isize = shadowed_snippet.inner().stack_diff();
     assert_eq!(
         expected_stack_growth,
         observed_stack_growth,
@@ -517,7 +521,7 @@ pub(crate) fn test_rust_equivalence_given_complete_state<T: BasicSnippet + RustS
     vm_output_state
 }
 
-fn link_and_run_tasm_for_test<T: BasicSnippet + RustShadow>(
+fn link_and_run_tasm_for_test<T: RustShadow>(
     snippet_struct: &T,
     stack: &mut Vec<BFieldElement>,
     std_in: Vec<BFieldElement>,
@@ -526,17 +530,19 @@ fn link_and_run_tasm_for_test<T: BasicSnippet + RustShadow>(
     words_statically_allocated: usize,
 ) -> VmOutputState {
     let expected_length_prior: usize = snippet_struct
+        .inner()
         .inputs()
         .iter()
         .map(|(x, _n)| x.get_size())
         .sum();
     let expected_length_after: usize = snippet_struct
+        .inner()
         .outputs()
         .iter()
         .map(|(x, _n)| x.get_size())
         .sum();
     assert_eq!(
-        snippet_struct.stack_diff(),
+        snippet_struct.inner().stack_diff(),
         (expected_length_after as isize - expected_length_prior as isize),
         "Declared stack diff must match type indicators"
     );
@@ -546,7 +552,7 @@ fn link_and_run_tasm_for_test<T: BasicSnippet + RustShadow>(
     execute_test(
         &code,
         stack,
-        snippet_struct.stack_diff(),
+        snippet_struct.inner().stack_diff(),
         std_in,
         nondeterminism,
         memory,
@@ -555,13 +561,13 @@ fn link_and_run_tasm_for_test<T: BasicSnippet + RustShadow>(
     .unwrap()
 }
 
-fn link_for_isolated_run<T: BasicSnippet + RustShadow>(
+fn link_for_isolated_run<T: RustShadow>(
     snippet_struct: &T,
     words_statically_allocated: usize,
 ) -> Vec<LabelledInstruction> {
     let mut snippet_state = Library::with_preallocated_memory(words_statically_allocated);
-    let entrypoint = snippet_struct.entrypoint();
-    let function_body = snippet_struct.code(&mut snippet_state);
+    let entrypoint = snippet_struct.inner().entrypoint();
+    let function_body = snippet_struct.inner().code(&mut snippet_state);
     let library_code = snippet_state.all_imports();
 
     // The TASM code is always run through a function call, so the 1st instruction

@@ -215,6 +215,7 @@ mod tests {
 
     use rand::thread_rng;
 
+    use crate::algorithm::ShadowedAlgorithm;
     use crate::snippet::RustShadow;
     use crate::test_helpers::test_rust_equivalence_given_input_values;
 
@@ -222,12 +223,12 @@ mod tests {
 
     #[test]
     fn merkle_verify_test() {
-        MerkleVerify.test()
+        ShadowedAlgorithm::new(MerkleVerify).test()
     }
 
     #[test]
     fn merkle_verify_bench() {
-        MerkleVerify.bench()
+        ShadowedAlgorithm::new(MerkleVerify).bench()
     }
 
     #[should_panic]
@@ -241,7 +242,7 @@ mod tests {
         stack[5] = thread_rng().gen();
 
         test_rust_equivalence_given_input_values(
-            &mv,
+            &ShadowedAlgorithm::new(mv),
             &stack,
             &[],
             &mut HashMap::default(),
