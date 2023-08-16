@@ -394,8 +394,8 @@ impl DeprecatedSnippet for Map {
                 list_element(list_pointer, i, memory, input_list_element_type.get_size());
 
             // put on stack
-            while !input_item.is_empty() {
-                stack.push(input_item.pop().unwrap());
+            while let Some(element) = input_item.pop() {
+                stack.push(element);
             }
 
             self.f.rust_shadowing(&std_in, &secret_in, stack, memory);
@@ -560,8 +560,8 @@ impl DeprecatedSnippet for TestHashXFieldElement {
             xfield_element.push(stack.pop().unwrap());
         }
         let mut digest = VmHasher::hash_varlen(&xfield_element).values().to_vec();
-        while !digest.is_empty() {
-            stack.push(digest.pop().unwrap());
+        while let Some(element) = digest.pop() {
+            stack.push(element);
         }
     }
 }

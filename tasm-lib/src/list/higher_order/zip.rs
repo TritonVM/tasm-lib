@@ -552,8 +552,8 @@ mod tests {
                 xfield_element.push(stack.pop().unwrap());
             }
             let mut digest = VmHasher::hash_varlen(&xfield_element).values().to_vec();
-            while !digest.is_empty() {
-                stack.push(digest.pop().unwrap());
+            while let Some(element) = digest.pop() {
+                stack.push(element);
             }
         }
     }

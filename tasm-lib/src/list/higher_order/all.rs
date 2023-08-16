@@ -324,8 +324,8 @@ impl DeprecatedSnippet for All {
             let mut input_item = get_element(list_pointer, i, memory, input_type.get_size());
 
             // put on stack
-            while !input_item.is_empty() {
-                stack.push(input_item.pop().unwrap());
+            while let Some(element) = input_item.pop() {
+                stack.push(element);
             }
 
             self.f

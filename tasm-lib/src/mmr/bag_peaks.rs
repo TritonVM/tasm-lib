@@ -241,8 +241,8 @@ impl DeprecatedSnippet for BagPeaks {
 
         let mut bag_bfe = bag.values().to_vec();
 
-        while !bag_bfe.is_empty() {
-            stack.push(bag_bfe.pop().unwrap());
+        while let Some(element) = bag_bfe.pop() {
+            stack.push(element);
         }
     }
 }
