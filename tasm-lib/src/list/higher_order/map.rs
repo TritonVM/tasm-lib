@@ -21,7 +21,7 @@ use crate::list::unsafe_u32::set_length::UnsafeSetLength;
 use crate::list::{self, ListType};
 use crate::rust_shadowing_helper_functions::safe_list::safe_insert_random_list;
 use crate::rust_shadowing_helper_functions::unsafe_list::unsafe_insert_random_list;
-use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, VmHasher};
+use crate::{arithmetic, get_init_tvm_stack, rust_shadowing_helper_functions, VmHasher};
 use crate::{
     library::Library,
     snippet::{DataType, DeprecatedSnippet},
@@ -466,8 +466,9 @@ impl DeprecatedSnippet for TestHashXFieldElement {
         2
     }
 
-    fn function_code(&self, _library: &mut Library) -> String {
+    fn function_code(&self, library: &mut Library) -> String {
         let entrypoint = self.entrypoint_name();
+        let unused_import = library.import(Box::new(arithmetic::u32::safe_add::SafeAdd));
         format!(
             "
         // BEFORE: _ x2 x1 x0
@@ -480,6 +481,12 @@ impl DeprecatedSnippet for TestHashXFieldElement {
             push 0 swap 7 // _ 0 x1 x0 0 0 0 1 x2
             push 0 swap 7 // _ 0 0 x0 0 0 0 1 x2 x1
             push 0 swap 7 // _ 0 0 0 0 0 0 1 x2 x1 x0
+
+            // Useless additions, to ensure that imports are accepted inside the map generated code
+            push 0
+            push 0
+            call {unused_import}
+            pop
 
             absorb_init
             squeeze // _ d9 d8 d7 d6 d5 d4 d3 d2 d1 d0
