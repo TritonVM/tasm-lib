@@ -130,6 +130,7 @@ pub fn push_encodable<T: BFieldCodec>(stack: &mut Vec<BFieldElement>, value: &T)
     stack.append(&mut value.encode().into_iter().rev().collect());
 }
 
+#[allow(dead_code)] // used in tests
 pub(crate) fn execute_with_execution_state_deprecated<T: DeprecatedSnippet>(
     snippet: T,
     mut init_state: ExecutionState,
@@ -332,7 +333,7 @@ pub fn execute_test(
         prove_and_verify(
             &program,
             &std_in,
-            &nondeterminism,
+            nondeterminism,
             &final_state.public_output,
         );
     }
