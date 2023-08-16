@@ -20,7 +20,7 @@ use crate::list::{self, ListType};
 use crate::memory::memcpy::MemCpy;
 use crate::rust_shadowing_helper_functions::safe_list::safe_insert_random_list;
 use crate::rust_shadowing_helper_functions::unsafe_list::untyped_unsafe_insert_random_list;
-use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, VmHasher};
+use crate::{arithmetic, get_init_tvm_stack, rust_shadowing_helper_functions, VmHasher};
 use crate::{
     library::Library,
     snippet::{DataType, DeprecatedSnippet},
@@ -524,13 +524,20 @@ impl DeprecatedSnippet for TestHashXFieldElementLsb {
         -2
     }
 
-    fn function_code(&self, _library: &mut Library) -> String {
+    fn function_code(&self, library: &mut Library) -> String {
         let entrypoint = self.entrypoint_name();
+        let unused_import = library.import(Box::new(arithmetic::u32::safe_add::SafeAdd));
         format!(
             "
     // BEFORE: _ x2 x1 x0
     // AFTER: _ b
     {entrypoint}:
+        // Useless additions, to ensure that dependencies are accepted inside the filter generated code
+            push 0
+            push 0
+            call {unused_import}
+            pop
+
         push 0
         push 0
         push 0
