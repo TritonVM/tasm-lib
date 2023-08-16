@@ -2,6 +2,7 @@ use itertools::Itertools;
 use num::Zero;
 use rand::{thread_rng, Rng};
 use std::collections::HashMap;
+use triton_vm::parser::tokenize;
 use triton_vm::NonDeterminism;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
@@ -172,7 +173,7 @@ impl DeprecatedSnippet for All {
             InnerFunction::RawCode(rc) => rc.entrypoint(),
             InnerFunction::Snippet(sn) => {
                 let fn_body = sn.function_code(library);
-                let instructions = triton_vm::parser::parse(&fn_body).unwrap();
+                let (_, instructions) = tokenize(&fn_body).unwrap();
                 let labelled_instructions =
                     triton_vm::parser::to_labelled_instructions(&instructions);
                 library.explicit_import(&sn.entrypoint_name(), &labelled_instructions)

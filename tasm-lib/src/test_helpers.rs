@@ -14,7 +14,7 @@ use crate::{
 };
 
 #[allow(dead_code)]
-pub(crate) fn test_rust_equivalence_multiple_deprecated<T: DeprecatedSnippet>(
+pub fn test_rust_equivalence_multiple_deprecated<T: DeprecatedSnippet>(
     snippet_struct: &T,
     export_snippet: bool,
 ) -> Vec<VmOutputState> {
@@ -47,7 +47,7 @@ pub(crate) fn test_rust_equivalence_multiple_deprecated<T: DeprecatedSnippet>(
 }
 
 #[allow(dead_code)]
-pub(crate) fn test_rust_equivalence_given_execution_state_deprecated<T: DeprecatedSnippet>(
+pub fn test_rust_equivalence_given_execution_state_deprecated<T: DeprecatedSnippet>(
     snippet_struct: &T,
     mut execution_state: ExecutionState,
 ) -> VmOutputState {
@@ -64,7 +64,7 @@ pub(crate) fn test_rust_equivalence_given_execution_state_deprecated<T: Deprecat
 }
 
 #[allow(dead_code)]
-pub(crate) fn test_rust_equivalence_given_input_values_deprecated<T: DeprecatedSnippet>(
+pub fn test_rust_equivalence_given_input_values_deprecated<T: DeprecatedSnippet>(
     snippet_struct: &T,
     stack: &[BFieldElement],
     stdin: &[BFieldElement],
@@ -92,7 +92,8 @@ fn link_for_isolated_run_deprecated<T: DeprecatedSnippet>(
 ) -> Vec<LabelledInstruction> {
     let mut snippet_state = Library::with_preallocated_memory(words_statically_allocated);
     let entrypoint = snippet_struct.entrypoint();
-    let function_body = snippet_struct.function_code(&mut snippet_state);
+    let mut function_body = snippet_struct.function_code(&mut snippet_state);
+    function_body.push('\n');
     let library_code = snippet_state.all_imports();
 
     // The TASM code is always run through a function call, so the 1st instruction

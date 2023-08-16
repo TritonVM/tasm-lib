@@ -232,7 +232,8 @@ pub trait DeprecatedSnippet {
     fn link_for_isolated_run(&self, words_statically_allocated: usize) -> Vec<LabelledInstruction> {
         let mut snippet_state = Library::with_preallocated_memory(words_statically_allocated);
         let entrypoint = self.entrypoint_name();
-        let function_body = self.function_code(&mut snippet_state);
+        let mut function_body = self.function_code(&mut snippet_state);
+        function_body.push('\n'); // added bc of limitations in `triton_asm!`
         let library_code = snippet_state.all_imports();
 
         // The TASM code is always run through a function call, so the 1st instruction
