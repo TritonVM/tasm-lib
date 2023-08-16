@@ -1,6 +1,7 @@
 use rand::{rngs::StdRng, thread_rng, Rng, SeedableRng};
 use std::collections::HashMap;
 use triton_vm::{BFieldElement, NonDeterminism};
+use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
 use crate::{
     linker::{execute_bench, link_for_isolated_run},
@@ -9,8 +10,11 @@ use crate::{
     test_helpers::test_rust_equivalence_given_complete_state,
 };
 
-/// An Algorithm can modify memory even at addresses below the
-/// dynamic memory allocator, and can take nondeterministic input.
+/// An Algorithm is a piece of tasm code that can modify memory even at addresses below
+/// the dynamic memory allocator, and can take nondeterministic input. It cannot read from
+/// standard in or write to standard out.
+///
+/// See also: [closure], [function], [procedure]
 pub trait Algorithm: BasicSnippet {
     fn rust_shadow(
         &self,
@@ -18,6 +22,31 @@ pub trait Algorithm: BasicSnippet {
         memory: &mut HashMap<BFieldElement, BFieldElement>,
         nondeterminism: &NonDeterminism<BFieldElement>,
     );
+
+    /// Take a object about which something is being proven in order to extract out the
+    /// right nondeterminism. Update the mutably referenced non-determism argument.
+    ///
+    /// For example:
+    ///  - When proving the correct verification of a proof, you might want to pull all
+    ///    digests out of the authentication structures and put them in the `digests`
+    ///    field of the non-determinism. This way the VM can avoid the processing
+    ///    required by authentication structures and just divine in the right digests
+    ///    as it walks up the Merkle trees.
+    ///  - When proving the correct sorting of a list, the VM ought to avoid running a
+    ///    sorting algorithm; instead it should divine the sorted list and then prove
+    ///    that the two lists are equal. The preprocessing step in this case would take
+    ///    the unsorted list, sort it, and use the sorted list to populate the non-
+    ///    determinism.
+    ///  - When verifying a Falcon signature, at some point the NTT of a vector is needed.
+    ///    The VM should not compute the NTT because expensive; instead it should divine
+    ///    the NTT-transformed vector and verify that it satisfies the right relation. In
+    ///    this case the preprocessor calculates the NTT and populates the non-determinism
+    ///    with the transformed vector.
+    fn preprocess<T: BFieldCodec>(
+        _meta_input: T,
+        _nondeterminism: &mut NonDeterminism<BFieldElement>,
+    ) {
+    }
 
     fn pseudorandom_initial_state(
         &self,

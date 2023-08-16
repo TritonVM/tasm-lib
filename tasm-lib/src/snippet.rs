@@ -3,7 +3,6 @@ use itertools::Itertools;
 use rand::{random, thread_rng, Rng};
 use std::collections::HashMap;
 use std::fmt::Display;
-use std::ops::Deref;
 use triton_vm::instruction::LabelledInstruction;
 use triton_vm::parser::{to_labelled_instructions, tokenize};
 use triton_vm::{triton_asm, NonDeterminism};
@@ -143,30 +142,6 @@ impl DataType {
     }
 }
 
-pub enum SnippetType {
-    // A Snippet can do anything, but is on its way out.
-    DepracatedSnippet,
-
-    // A Closure modifies the top of the stack without reading memory.
-    Closure,
-
-    // A Function can modify the top of the stack, and can read and extend memory.
-    // Specifically: any memory writes have to happen to addresses larger than the
-    // dynamic memory allocator and the dynamic memory allocator value has to be updated
-    // accordingly.
-    Function,
-
-    // An Algorithm can modify memory even at addresses below the dynamic memory
-    // allocator, and can take nondeterministic input.
-    Algorithm,
-
-    // A Procedure can do the above and read from standard in and write to standard out.
-    Procedure,
-
-    // A CompiledProgram can do the above and additionally be proven and verified.
-    CompiledProgram,
-}
-
 pub trait BasicSnippet {
     fn inputs(&self) -> Vec<(DataType, String)>;
     fn outputs(&self) -> Vec<(DataType, String)>;
@@ -182,18 +157,6 @@ pub trait BasicSnippet {
             diff += dt.get_size() as isize;
         }
         diff
-    }
-}
-
-/// ShadowWrapper is a new type that extends a snippet-like type with standardized rust
-/// shadowing and other test-related functions.
-pub struct ShadowWrapper<T>(pub Box<T>);
-
-impl<T: BasicSnippet> Deref for ShadowWrapper<T> {
-    type Target = T;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
     }
 }
 
@@ -457,62 +420,6 @@ impl<S: DeprecatedSnippet> BasicSnippet for S {
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
         self.function_code_as_instructions(library)
-    }
-}
-
-impl DeprecatedSnippet for ShadowWrapper<Box<dyn DeprecatedSnippet>> {
-    fn entrypoint_name(&self) -> String {
-        self.0.entrypoint_name()
-    }
-
-    fn input_field_names(&self) -> Vec<String> {
-        self.0.input_field_names()
-    }
-
-    fn input_types(&self) -> Vec<DataType> {
-        self.0.input_types()
-    }
-
-    fn output_field_names(&self) -> Vec<String> {
-        self.0.output_field_names()
-    }
-
-    fn output_types(&self) -> Vec<DataType> {
-        self.0.output_types()
-    }
-
-    fn stack_diff(&self) -> isize {
-        self.0.stack_diff()
-    }
-
-    fn function_code(&self, library: &mut Library) -> String {
-        self.0.function_code(library)
-    }
-
-    fn crash_conditions(&self) -> Vec<String> {
-        self.0.crash_conditions()
-    }
-
-    fn gen_input_states(&self) -> Vec<ExecutionState> {
-        self.0.gen_input_states()
-    }
-
-    fn common_case_input_state(&self) -> ExecutionState {
-        self.0.common_case_input_state()
-    }
-
-    fn worst_case_input_state(&self) -> ExecutionState {
-        self.0.worst_case_input_state()
-    }
-
-    fn rust_shadowing(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        std_in: Vec<BFieldElement>,
-        secret_in: Vec<BFieldElement>,
-        memory: &mut HashMap<BFieldElement, BFieldElement>,
-    ) {
-        self.0.rust_shadowing(stack, std_in, secret_in, memory)
     }
 }
 

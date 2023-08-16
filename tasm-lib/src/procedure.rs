@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use rand::{rngs::StdRng, thread_rng, Rng, SeedableRng};
 use triton_vm::{BFieldElement, NonDeterminism};
+use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
 use crate::{
     linker::{execute_bench, link_for_isolated_run},
@@ -10,49 +11,64 @@ use crate::{
     test_helpers::test_rust_equivalence_given_complete_state,
 };
 
-/// A Function is a piece of tasm code that can modify the top of the stack, and can read
-/// and even extend memory. Specifically: any memory writes have to happen to addresses
-/// larger than the dynamic memory allocator and the dynamic memory allocator value has to
-/// be updated accordingly.
+/// A Procedure is a piece of tasm code that can do almost anything: modify stack, read
+/// from and write to memory, take in nondeterminism, and read and write from standard
+/// input/output. What it cannot do is stand alone. In other words, it is still wrapped
+/// in a function (lower case f, as in 'labelled scope'); and cannot be proved as
+/// a standalone program.
 ///
-/// See also: [closure], [algorithm], [procedure]
-pub trait Function: BasicSnippet {
+/// See also: [closure], [function], [algorithm]
+pub trait Procedure: BasicSnippet {
     fn rust_shadow(
         &self,
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
-    );
+        nondeterminism: &NonDeterminism<BFieldElement>,
+        public_input: &[BFieldElement],
+    ) -> Vec<BFieldElement>;
+
+    fn preprocess<T: BFieldCodec>(
+        _meta_input: T,
+        _nondeterminism: &mut NonDeterminism<BFieldElement>,
+    ) {
+    }
 
     fn pseudorandom_initial_state(
         &self,
         seed: [u8; 32],
         bench_case: Option<BenchmarkCase>,
-    ) -> (Vec<BFieldElement>, HashMap<BFieldElement, BFieldElement>);
+    ) -> (
+        Vec<BFieldElement>,
+        HashMap<BFieldElement, BFieldElement>,
+        NonDeterminism<BFieldElement>,
+        Vec<BFieldElement>,
+    );
 }
 
-pub struct ShadowedFunction<F: Function + Clone + 'static> {
-    pub function: F,
+pub struct ShadowedProcedure<P: Procedure + Clone + 'static> {
+    procedure: P,
 }
 
-impl<F: Function + Clone + 'static> ShadowedFunction<F> {
-    pub fn new(function: F) -> Self {
-        Self { function }
+impl<P: Procedure + Clone + 'static> ShadowedProcedure<P> {
+    pub fn new(procedure: P) -> Self {
+        Self { procedure }
     }
 }
 
-impl<F> RustShadow for ShadowedFunction<F>
-where
-    F: Function + Clone + 'static,
-{
+impl<P: Procedure + Clone + 'static> RustShadow for ShadowedProcedure<P> {
+    fn inner(&self) -> Box<dyn BasicSnippet> {
+        Box::new(self.procedure.clone())
+    }
+
     fn rust_shadow_wrapper(
         &self,
-        _stdin: &[BFieldElement],
-        _nondeterminism: &triton_vm::NonDeterminism<BFieldElement>,
+        stdin: &[BFieldElement],
+        nondeterminism: &NonDeterminism<BFieldElement>,
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) -> Vec<BFieldElement> {
-        self.function.rust_shadow(stack, memory);
-        vec![]
+        self.procedure
+            .rust_shadow(stack, memory, nondeterminism, stdin)
     }
 
     fn test(&self) {
@@ -63,17 +79,17 @@ where
             let seed: [u8; 32] = rng.gen();
             println!(
                 "testing {} common case with seed: {:x?}",
-                self.function.entrypoint(),
+                self.procedure.entrypoint(),
                 seed
             );
-            let (stack, memory) = self.function.pseudorandom_initial_state(seed, None);
+            let (stack, memory, nondeterminism, public_input) =
+                self.procedure.pseudorandom_initial_state(seed, None);
 
-            let stdin = vec![];
             test_rust_equivalence_given_complete_state(
                 self,
                 &stack,
-                &stdin,
-                &NonDeterminism::new(vec![]),
+                &public_input,
+                &nondeterminism,
                 &memory,
                 1,
                 None,
@@ -91,20 +107,20 @@ where
         let mut benchmarks = Vec::with_capacity(2);
 
         for bench_case in [BenchmarkCase::CommonCase, BenchmarkCase::WorstCase] {
-            let (stack, memory) = self
-                .function
+            let (stack, memory, nondeterminism, public_input) = self
+                .procedure
                 .pseudorandom_initial_state(rng.gen(), Some(bench_case));
-            let program = link_for_isolated_run(&self.function, 1);
+            let program = link_for_isolated_run(&self.procedure, 1);
             let execution_result = execute_bench(
                 &program,
                 &stack,
-                vec![],
-                NonDeterminism::new(vec![]),
+                public_input,
+                nondeterminism,
                 &memory,
                 Some(1),
             );
             let benchmark = BenchmarkResult {
-                name: self.function.entrypoint(),
+                name: self.procedure.entrypoint(),
                 clock_cycle_count: execution_result.cycle_count,
                 hash_table_height: execution_result.hash_table_height,
                 u32_table_height: execution_result.u32_table_height,
@@ -114,9 +130,5 @@ where
         }
 
         write_benchmarks(benchmarks);
-    }
-
-    fn inner(&self) -> Box<dyn BasicSnippet> {
-        Box::new(self.function.clone())
     }
 }

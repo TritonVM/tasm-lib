@@ -26,21 +26,22 @@ use triton_vm::op_stack::NUM_OP_STACK_REGISTERS;
 use triton_vm::vm::VMState;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
+pub mod algorithm;
 pub mod arithmetic;
+pub mod closure;
 pub mod compiled_program;
 pub mod exported_snippets;
+pub mod function;
 pub mod hashing;
 pub mod io;
 pub mod library;
+pub mod linker;
 pub mod list;
 pub mod memory;
 pub mod mmr;
 pub mod neptune;
 pub mod other_snippets;
-
-pub mod algorithm;
-pub mod function;
-pub mod linker;
+pub mod procedure;
 pub mod pseudo;
 pub mod recufier;
 pub mod rust_shadowing_helper_functions;
