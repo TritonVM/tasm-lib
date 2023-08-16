@@ -1,16 +1,16 @@
 [
   {
     "name": "tasm_list_higher_order_safe_u32_map_test_hash_xfield_element",
-    "clock_cycle_count": 1005,
+    "clock_cycle_count": 1125,
     "hash_table_height": 0,
-    "u32_table_height": 70,
+    "u32_table_height": 71,
     "case": "CommonCase"
   },
   {
     "name": "tasm_list_higher_order_safe_u32_map_test_hash_xfield_element",
-    "clock_cycle_count": 37275,
+    "clock_cycle_count": 42075,
     "hash_table_height": 0,
-    "u32_table_height": 4035,
+    "u32_table_height": 4036,
     "case": "WorstCase"
   }
 ]
