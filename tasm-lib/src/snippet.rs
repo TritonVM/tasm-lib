@@ -402,17 +402,47 @@ impl<S: DeprecatedSnippet + Clone + 'static> RustShadow for DeprecatedSnippetWra
 
 impl<S: DeprecatedSnippet> BasicSnippet for S {
     fn inputs(&self) -> Vec<(DataType, String)> {
-        self.input_types()
-            .into_iter()
-            .zip(self.input_field_names())
-            .collect()
+        // Notice that the deprecated snippet trait has its input and output
+        // names listed in terms of words, not values of a given type,
+        // so there is no perfect mapping for this function.
+
+        // This is a bit of a hack, but it should give reasonable input
+        // value names for most snippets.
+        let mut ret = vec![];
+        let mut field_name_index = 0;
+        let field_names = self.input_field_names();
+        for input_type in self.input_types() {
+            ret.push((
+                input_type.clone(),
+                format!("input_{}", field_names[field_name_index]),
+            ));
+
+            field_name_index += input_type.get_size();
+        }
+
+        ret
     }
 
     fn outputs(&self) -> Vec<(DataType, String)> {
-        self.output_types()
-            .into_iter()
-            .zip(self.output_field_names())
-            .collect()
+        // Notice that the deprecated snippet trait has its input and output
+        // names listed in terms of words, not values of a given type,
+        // so there is no perfect mapping for this function.
+
+        // This is a bit of a hack, but it should give reasonable output
+        // value names for most snippets.
+        let mut ret = vec![];
+        let mut field_name_index = 0;
+        let field_names = self.output_field_names();
+        for input_type in self.output_types() {
+            ret.push((
+                input_type.clone(),
+                format!("output_{}", field_names[field_name_index]),
+            ));
+
+            field_name_index += input_type.get_size();
+        }
+
+        ret
     }
 
     fn entrypoint(&self) -> String {
