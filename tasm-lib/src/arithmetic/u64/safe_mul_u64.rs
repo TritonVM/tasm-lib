@@ -134,6 +134,13 @@ impl DeprecatedSnippet for SafeMulU64 {
             ret.push(prepare_state(rng.next_u32() as u64, rng.next_u32() as u64));
         }
 
+        ret.push(prepare_state(u32::MAX as u64, u32::MAX as u64));
+        ret.push(prepare_state(u32::MAX as u64 - 1, u32::MAX as u64));
+        ret.push(prepare_state(u32::MAX as u64, u32::MAX as u64 - 1));
+        ret.push(prepare_state(u32::MAX as u64 - 1, u32::MAX as u64 - 1));
+        ret.push(prepare_state(u32::MAX as u64 - 2, u32::MAX as u64));
+        ret.push(prepare_state(u32::MAX as u64, u32::MAX as u64 - 2));
+
         ret
     }
 
