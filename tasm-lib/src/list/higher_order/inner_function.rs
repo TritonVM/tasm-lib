@@ -1,9 +1,11 @@
 use std::{cell::RefCell, collections::HashMap};
 
+use itertools::Itertools;
 use triton_vm::instruction::AnInstruction;
 use triton_vm::instruction::LabelledInstruction;
 use triton_vm::BFieldElement;
 
+use crate::snippet::BasicSnippet;
 use crate::snippet::{DataType, DeprecatedSnippet};
 
 /// A data structure for describing an inner function predicate to filter with,
@@ -101,6 +103,7 @@ impl RawCode {
 pub enum InnerFunction {
     RawCode(RawCode),
     Snippet(Box<dyn DeprecatedSnippet>),
+    BasicSnippet(Box<dyn BasicSnippet>),
 
     // Used when a snippet is declared somewhere else, and it's not the responsibility of
     // the higher order function to import it.
@@ -120,6 +123,9 @@ impl InnerFunction {
             InnerFunction::RawCode(raw) => raw.input_types.clone(),
             InnerFunction::Snippet(f) => f.input_types(),
             InnerFunction::NoFunctionBody(f) => f.input_types.clone(),
+            InnerFunction::BasicSnippet(bs) => {
+                bs.inputs().into_iter().map(|(dt, _fn)| dt).collect_vec()
+            }
         }
     }
 
@@ -149,6 +155,9 @@ impl InnerFunction {
             InnerFunction::RawCode(rc) => rc.output_types.clone(),
             InnerFunction::Snippet(sn) => sn.output_types(),
             InnerFunction::NoFunctionBody(lnat) => lnat.output_types.clone(),
+            InnerFunction::BasicSnippet(bs) => {
+                bs.outputs().into_iter().map(|(dt, _fn)| dt).collect_vec()
+            }
         }
     }
 
@@ -158,6 +167,7 @@ impl InnerFunction {
             InnerFunction::RawCode(rc) => rc.entrypoint(),
             InnerFunction::Snippet(sn) => sn.entrypoint_name(),
             InnerFunction::NoFunctionBody(sn) => sn.label_name.to_owned(),
+            InnerFunction::BasicSnippet(bs) => bs.entrypoint(),
         }
     }
 
@@ -183,6 +193,9 @@ impl InnerFunction {
             }
             InnerFunction::NoFunctionBody(_lnat) => {
                 panic!("Cannot rust shadow inner function without function body")
+            }
+            InnerFunction::BasicSnippet(_bs) => {
+                panic!("basic snippet should not need rust shadowing")
             }
         };
     }

@@ -295,6 +295,7 @@ pub fn execute_test(
 
     // Run the program, including the stack preparation and memory preparation logic
     let program = Program::new(&executed_code);
+
     let final_state = program
         .debug_terminal_state(
             PublicInput::new(std_in.clone()),

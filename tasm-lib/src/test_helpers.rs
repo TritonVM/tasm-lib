@@ -109,7 +109,7 @@ fn link_for_isolated_run_deprecated<T: DeprecatedSnippet>(
     code
 }
 
-fn link_and_run_tasm_for_test_deprecated<T: DeprecatedSnippet>(
+pub fn link_and_run_tasm_for_test_deprecated<T: DeprecatedSnippet>(
     snippet_struct: &T,
     stack: &mut Vec<BFieldElement>,
     std_in: Vec<BFieldElement>,

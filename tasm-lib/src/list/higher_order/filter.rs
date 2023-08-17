@@ -200,6 +200,10 @@ impl DeprecatedSnippet for Filter {
                 library.explicit_import(&sn.entrypoint_name(), &labelled_instructions)
             }
             InnerFunction::NoFunctionBody(_) => todo!(),
+            InnerFunction::BasicSnippet(bs) => {
+                let labelled_instructions = bs.code(library);
+                library.explicit_import(&bs.entrypoint(), &labelled_instructions)
+            }
         };
 
         let memcpy = library.import(Box::new(MemCpy));
@@ -210,6 +214,7 @@ impl DeprecatedSnippet for Filter {
             InnerFunction::RawCode(rc) => rc.function.iter().map(|x| x.to_string()).join("\n"),
             InnerFunction::Snippet(_) => String::default(),
             InnerFunction::NoFunctionBody(_) => todo!(),
+            InnerFunction::BasicSnippet(_) => String::default(),
         };
         let entrypoint = self.entrypoint_name();
 
