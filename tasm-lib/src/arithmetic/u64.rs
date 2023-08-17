@@ -10,6 +10,7 @@ pub mod index_of_last_nonzero_bit;
 pub mod leading_zeros_u64;
 pub mod log_2_floor_u64;
 pub mod lt_u64;
+pub mod mul_two_u64s_to_u128_u64;
 pub mod or_u64;
 pub mod popcount_u64;
 pub mod pow2_u64;
