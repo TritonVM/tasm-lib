@@ -1,9 +1,10 @@
 use crate::{
     arithmetic::{
         u128::{
-            add_u128::AddU128, shift_left_static_u128::ShiftLeftStaticU128,
-            shift_left_u128::ShiftLeftU128, shift_right_static_u128::ShiftRightStaticU128,
-            shift_right_u128::ShiftRightU128, sub_u128::SubU128,
+            add_u128::AddU128, safe_mul_u128::SafeMulU128,
+            shift_left_static_u128::ShiftLeftStaticU128, shift_left_u128::ShiftLeftU128,
+            shift_right_static_u128::ShiftRightStaticU128, shift_right_u128::ShiftRightU128,
+            sub_u128::SubU128,
         },
         u32::{
             is_odd::U32IsOdd, is_u32::IsU32, leading_zeros_u32::LeadingZerosU32, or::OrU32,
@@ -125,6 +126,7 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
         "tasm_arithmetic_u128_shift_left" => Box::new(ShiftLeftU128),
         "tasm_arithmetic_u128_shift_right" => Box::new(ShiftRightU128),
         "tasm_arithmetic_u128_sub" => Box::new(SubU128),
+        "tasm_arithmetic_u128_safe_mul" => Box::new(SafeMulU128),
 
         "tasm_arithmetic_u128_shift_left_static_1" => Box::new(ShiftLeftStaticU128::<1>),
         "tasm_arithmetic_u128_shift_left_static_2" => Box::new(ShiftLeftStaticU128::<2>),
