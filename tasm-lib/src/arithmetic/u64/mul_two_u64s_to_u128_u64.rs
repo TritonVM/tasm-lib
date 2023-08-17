@@ -153,6 +153,10 @@ impl DeprecatedSnippet for MulTwoU64sToU128 {
         for _ in 0..10 {
             ret.push(prepare_state(
                 thread_rng().next_u32() as u64,
+                thread_rng().next_u32() as u64,
+            ));
+            ret.push(prepare_state(
+                thread_rng().next_u32() as u64,
                 thread_rng().next_u64(),
             ));
             ret.push(prepare_state(
