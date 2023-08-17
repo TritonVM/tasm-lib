@@ -23,6 +23,7 @@ use crate::{
             leading_zeros_u64::LeadingZerosU64,
             log_2_floor_u64::Log2FloorU64,
             lt_u64::{LtStandardU64, LtU64},
+            mul_two_u64s_to_u128_u64::MulTwoU64sToU128,
             or_u64::OrU64,
             popcount_u64::PopCountU64,
             pow2_u64::Pow2U64,
@@ -114,6 +115,7 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
         "tasm_arithmetic_u64_popcount" => Box::new(PopCountU64),
         "tasm_arithmetic_u64_shift_right" => Box::new(ShiftRightU64),
         "tasm_arithmetic_u64_shift_left" => Box::new(ShiftLeftU64),
+        "mul_two_u64s_to_u128_u64" => Box::new(MulTwoU64sToU128),
 
         // u128
         "tasm_arithmetic_u128_add" => Box::new(AddU128),

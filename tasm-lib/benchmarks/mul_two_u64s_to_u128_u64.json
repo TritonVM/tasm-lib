@@ -1,0 +1,16 @@
+[
+  {
+    "name": "mul_two_u64s_to_u128_u64",
+    "clock_cycle_count": 34,
+    "hash_table_height": 0,
+    "u32_table_height": 133,
+    "case": "CommonCase"
+  },
+  {
+    "name": "mul_two_u64s_to_u128_u64",
+    "clock_cycle_count": 34,
+    "hash_table_height": 0,
+    "u32_table_height": 133,
+    "case": "WorstCase"
+  }
+]
