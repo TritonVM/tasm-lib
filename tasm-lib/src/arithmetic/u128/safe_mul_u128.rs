@@ -63,9 +63,9 @@ impl DeprecatedSnippet for SafeMulU128 {
                     // prod_0 = a_lo
                     // b = (lhs_1*rhs_0 + lhs_0*rhs_1 + a_hi)
                     // prod_1 = b_lo
-                    // c = (lhs_2*rhs_0 + lhs_1*rhs_1 + lhs_0*rhs_2 + (lhs_1*rhs_0 + lhs_0*rhs_1 + b_hi)
+                    // c = (lhs_2*rhs_0 + lhs_1*rhs_1 + lhs_0*rhs_2 + b_hi)
                     // prod_2 = c_lo
-                    // d = (lhs_3*rhs_0 + lhs_2*rhs_1 + lhs_1*rhs_2 + lhs_0*rhs_3 + (lhs_2*rhs_0 + lhs_1*rhs_1 + lhs_0*rhs_2 + c_hi)
+                    // d = (lhs_3*rhs_0 + lhs_2*rhs_1 + lhs_1*rhs_2 + lhs_0*rhs_3 +c_hi)
                     // prod_3 = d_lo
 
                     //The checks to be performed are:
@@ -95,7 +95,7 @@ impl DeprecatedSnippet for SafeMulU128 {
                             // _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0 a_lo a_hi (lhs_1 * rhs_0)
                             
                             // lhs_0 * rhs_1 and add successively to produce `b`
-                            dup 3 dup 8 mul add add
+                            dup 3 dup 9 mul add add
                             // _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0 a_lo (a_hi + (lhs_0 * rhs_1) + (lhs_1 * rhs_0))
                             // or, in terms of b, 
                             // _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0 a_lo b
@@ -137,7 +137,7 @@ impl DeprecatedSnippet for SafeMulU128 {
                             // _ rhs_3 rhs_2 rhs_1 0 lhs_3 lhs_2 lhs_1 lhs_0 a_lo b_lo c_lo c_hi (lhs_3 * rhs_0)
 
                             //lhs_0 * rhs_3, mul and add to consume lhs_0
-                            push 0 swap 6 dup 9 mul add 
+                            push 0 swap 6 dup 13 mul add 
                             // _ rhs_3 rhs_2 rhs_1 0 lhs_3 lhs_2 lhs_1 0 a_lo b_lo c_lo c_hi ((lhs_3 * rhs_0)+(lhs_0 * rhs_3))
 
                             //lhs_1 * rhs_2
@@ -262,7 +262,10 @@ impl DeprecatedSnippet for SafeMulU128 {
                             swap 9
                             // _ d_lo c_lo b_lo 0 0 0 0 0 a_lo 0 0 0
                             swap 3
+                            // _ d_lo c_lo b_lo 0 0 0 0 0 0 0 0 a_lo
+                            swap 8
                             // _ d_lo c_lo b_lo a_lo 0 0 0 0 0 0 0 0
+        
                             pop
                             pop
                             pop
