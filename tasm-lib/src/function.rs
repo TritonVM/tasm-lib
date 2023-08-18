@@ -63,11 +63,6 @@ where
 
         for _ in 0..num_states {
             let seed: [u8; 32] = rng.gen();
-            println!(
-                "testing {} common case with seed: {:x?}",
-                self.function.borrow().entrypoint(),
-                seed
-            );
             let (stack, memory) = self
                 .function
                 .borrow()

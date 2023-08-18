@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use itertools::Itertools;
+use num_traits::Zero;
 use triton_vm::instruction::LabelledInstruction;
 use triton_vm::{triton_asm, NonDeterminism};
 use twenty_first::shared_math::b_field_element::BFieldElement;
@@ -387,9 +388,13 @@ pub(crate) fn test_rust_equivalence_given_complete_state<T: RustShadow>(
     let mut rust_stack = stack.to_vec();
     let mut tasm_stack = stack.to_vec();
 
-    if words_statically_allocated > 0 {
+    if words_statically_allocated > 0 && memory.get(&BFieldElement::zero()).is_none() {
         rust_shadowing_helper_functions::dyn_malloc::rust_dyn_malloc_initialize(
             &mut rust_memory,
+            words_statically_allocated,
+        );
+        rust_shadowing_helper_functions::dyn_malloc::rust_dyn_malloc_initialize(
+            &mut tasm_memory,
             words_statically_allocated,
         );
     }
@@ -548,6 +553,12 @@ fn link_and_run_tasm_for_test<T: RustShadow>(
         "Declared stack diff must match type indicators"
     );
 
+    let words_statically_allocated = if let Some(allocator) = memory.get(&BFieldElement::zero()) {
+        allocator.value() as usize
+    } else {
+        words_statically_allocated
+    };
+
     let code = link_for_isolated_run(snippet_struct, words_statically_allocated);
 
     execute_test(
@@ -566,6 +577,7 @@ fn link_for_isolated_run<T: RustShadow>(
     snippet_struct: &T,
     words_statically_allocated: usize,
 ) -> Vec<LabelledInstruction> {
+    println!("linking with preallocated memory ... number of statically allocated words: {words_statically_allocated}");
     let mut snippet_state = Library::with_preallocated_memory(words_statically_allocated);
     let entrypoint = snippet_struct.inner().borrow().entrypoint();
     let function_body = snippet_struct.inner().borrow().code(&mut snippet_state);
