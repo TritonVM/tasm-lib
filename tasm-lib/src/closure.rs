@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use rand::{rngs::StdRng, thread_rng, Rng, SeedableRng};
 use triton_vm::{BFieldElement, NonDeterminism};
@@ -26,19 +26,21 @@ pub trait Closure: BasicSnippet {
     ) -> Vec<BFieldElement>;
 }
 
-pub struct ShadowedClosure<C: Closure + Clone + 'static> {
-    pub closure: C,
+pub struct ShadowedClosure<C: Closure + 'static> {
+    pub closure: Rc<RefCell<C>>,
 }
 
-impl<C: Closure + Clone + 'static> ShadowedClosure<C> {
+impl<C: Closure + 'static> ShadowedClosure<C> {
     pub fn new(closure: C) -> Self {
-        Self { closure }
+        Self {
+            closure: Rc::new(RefCell::new(closure)),
+        }
     }
 }
 
-impl<C: Closure + Clone + 'static> RustShadow for ShadowedClosure<C> {
-    fn inner(&self) -> Box<dyn BasicSnippet> {
-        Box::new(self.closure.clone())
+impl<C: Closure + 'static> RustShadow for ShadowedClosure<C> {
+    fn inner(&self) -> Rc<RefCell<dyn BasicSnippet>> {
+        self.closure.clone()
     }
 
     fn rust_shadow_wrapper(
@@ -48,7 +50,7 @@ impl<C: Closure + Clone + 'static> RustShadow for ShadowedClosure<C> {
         stack: &mut Vec<BFieldElement>,
         _memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
     ) -> Vec<BFieldElement> {
-        self.closure.rust_shadow(stack);
+        self.closure.borrow().rust_shadow(stack);
         vec![]
     }
 
@@ -60,10 +62,10 @@ impl<C: Closure + Clone + 'static> RustShadow for ShadowedClosure<C> {
             let seed: [u8; 32] = rng.gen();
             println!(
                 "testing {} common case with seed: {:x?}",
-                self.closure.entrypoint(),
+                self.closure.borrow().entrypoint(),
                 seed
             );
-            let stack = self.closure.pseudorandom_initial_state(seed, None);
+            let stack = self.closure.borrow().pseudorandom_initial_state(seed, None);
 
             let stdin = vec![];
             let nondeterminism = NonDeterminism::new(vec![]);
@@ -92,8 +94,9 @@ impl<C: Closure + Clone + 'static> RustShadow for ShadowedClosure<C> {
         for bench_case in [BenchmarkCase::CommonCase, BenchmarkCase::WorstCase] {
             let stack = self
                 .closure
+                .borrow()
                 .pseudorandom_initial_state(rng.gen(), Some(bench_case));
-            let program = link_for_isolated_run(&self.closure, 1);
+            let program = link_for_isolated_run(self.closure.clone(), 1);
             let execution_result = execute_bench(
                 &program,
                 &stack,
@@ -103,7 +106,7 @@ impl<C: Closure + Clone + 'static> RustShadow for ShadowedClosure<C> {
                 Some(1),
             );
             let benchmark = BenchmarkResult {
-                name: self.closure.entrypoint(),
+                name: self.closure.borrow().entrypoint(),
                 clock_cycle_count: execution_result.cycle_count,
                 hash_table_height: execution_result.hash_table_height,
                 u32_table_height: execution_result.u32_table_height,

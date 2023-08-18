@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use rand::{rngs::StdRng, thread_rng, Rng, SeedableRng};
 use triton_vm::{BFieldElement, NonDeterminism};
@@ -45,19 +45,21 @@ pub trait Procedure: BasicSnippet {
     );
 }
 
-pub struct ShadowedProcedure<P: Procedure + Clone + 'static> {
-    procedure: P,
+pub struct ShadowedProcedure<P: Procedure + 'static> {
+    procedure: Rc<RefCell<P>>,
 }
 
-impl<P: Procedure + Clone + 'static> ShadowedProcedure<P> {
+impl<P: Procedure + 'static> ShadowedProcedure<P> {
     pub fn new(procedure: P) -> Self {
-        Self { procedure }
+        Self {
+            procedure: Rc::new(RefCell::new(procedure)),
+        }
     }
 }
 
-impl<P: Procedure + Clone + 'static> RustShadow for ShadowedProcedure<P> {
-    fn inner(&self) -> Box<dyn BasicSnippet> {
-        Box::new(self.procedure.clone())
+impl<P: Procedure + 'static> RustShadow for ShadowedProcedure<P> {
+    fn inner(&self) -> Rc<RefCell<dyn BasicSnippet>> {
+        self.procedure.clone()
     }
 
     fn rust_shadow_wrapper(
@@ -68,22 +70,21 @@ impl<P: Procedure + Clone + 'static> RustShadow for ShadowedProcedure<P> {
         memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) -> Vec<BFieldElement> {
         self.procedure
+            .borrow()
             .rust_shadow(stack, memory, nondeterminism, stdin)
     }
 
     fn test(&self) {
         let num_states = 5;
         let mut rng = thread_rng();
+        let procedure = &self.procedure;
+        let entrypoint = procedure.borrow().entrypoint();
 
         for _ in 0..num_states {
             let seed: [u8; 32] = rng.gen();
-            println!(
-                "testing {} common case with seed: {:x?}",
-                self.procedure.entrypoint(),
-                seed
-            );
+            println!("testing {} common case with seed: {:x?}", entrypoint, seed);
             let (stack, memory, nondeterminism, public_input) =
-                self.procedure.pseudorandom_initial_state(seed, None);
+                procedure.borrow().pseudorandom_initial_state(seed, None);
 
             test_rust_equivalence_given_complete_state(
                 self,
@@ -109,8 +110,9 @@ impl<P: Procedure + Clone + 'static> RustShadow for ShadowedProcedure<P> {
         for bench_case in [BenchmarkCase::CommonCase, BenchmarkCase::WorstCase] {
             let (stack, memory, nondeterminism, public_input) = self
                 .procedure
+                .borrow()
                 .pseudorandom_initial_state(rng.gen(), Some(bench_case));
-            let program = link_for_isolated_run(&self.procedure, 1);
+            let program = link_for_isolated_run(self.procedure.clone(), 1);
             let execution_result = execute_bench(
                 &program,
                 &stack,
@@ -120,7 +122,7 @@ impl<P: Procedure + Clone + 'static> RustShadow for ShadowedProcedure<P> {
                 Some(1),
             );
             let benchmark = BenchmarkResult {
-                name: self.procedure.entrypoint(),
+                name: self.procedure.borrow().entrypoint(),
                 clock_cycle_count: execution_result.cycle_count,
                 hash_table_height: execution_result.hash_table_height,
                 u32_table_height: execution_result.u32_table_height,

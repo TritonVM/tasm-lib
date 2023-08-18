@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use triton_vm::{
     instruction::LabelledInstruction, triton_asm, triton_instr, BFieldElement, NonDeterminism,
@@ -11,12 +11,12 @@ use crate::{
 };
 
 pub fn link_for_isolated_run<T: BasicSnippet>(
-    snippet: &T,
+    snippet: Rc<RefCell<T>>,
     words_statically_allocated: usize,
 ) -> Vec<LabelledInstruction> {
     let mut snippet_state = Library::with_preallocated_memory(words_statically_allocated);
-    let entrypoint = snippet.entrypoint();
-    let function_body = snippet.code(&mut snippet_state);
+    let entrypoint = snippet.borrow().entrypoint();
+    let function_body = snippet.borrow().code(&mut snippet_state);
     let library_code = snippet_state.all_imports();
 
     // The TASM code is always run through a function call, so the 1st instruction
