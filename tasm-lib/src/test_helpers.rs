@@ -414,11 +414,13 @@ pub(crate) fn test_rust_equivalence_given_complete_state<T: RustShadow>(
     // assert stacks are equal, up to program hash
     let tasm_stack_skip_program_hash = tasm_stack.iter().cloned().skip(DIGEST_LENGTH).collect_vec();
     let rust_stack_skip_program_hash = rust_stack.iter().cloned().skip(DIGEST_LENGTH).collect_vec();
+    let inner = shadowed_snippet.inner();
+    let entrypoint = inner.borrow().entrypoint();
     assert_eq!(
         tasm_stack_skip_program_hash,
         rust_stack_skip_program_hash,
         "Rust code must match TVM for `{}`\n\nTVM: {}\n\nRust: {}. Code was: {}",
-        shadowed_snippet.inner().entrypoint(),
+        entrypoint,
         tasm_stack_skip_program_hash
             .iter()
             .map(|x| x.to_string())
@@ -429,11 +431,7 @@ pub(crate) fn test_rust_equivalence_given_complete_state<T: RustShadow>(
             .map(|x| x.to_string())
             .collect_vec()
             .join(","),
-        shadowed_snippet
-            .inner()
-            .code(&mut Library::new())
-            .iter()
-            .join("\n")
+        inner.borrow().code(&mut Library::new()).iter().join("\n")
     );
 
     // if expected final stack is given, test against it
@@ -444,7 +442,7 @@ pub(crate) fn test_rust_equivalence_given_complete_state<T: RustShadow>(
             tasm_stack_skip_program_hash,
             expected_final_stack_skip_program_hash,
             "TVM must produce expected stack `{}`. \n\nTVM:\n{}\nExpected:\n{}",
-            shadowed_snippet.inner().entrypoint(),
+            shadowed_snippet.inner().borrow().entrypoint(),
             tasm_stack_skip_program_hash
                 .iter()
                 .map(|x| x.to_string())
@@ -503,14 +501,14 @@ pub(crate) fn test_rust_equivalence_given_complete_state<T: RustShadow>(
             .join(",");
         panic!(
             "Memory for both implementations must match after execution.\n\nTVM: {tasm_mem_str}\n\nRust: {rust_mem_str}\n\nDifference: {diff_str}\n\nCode was:\n\n {}",
-            shadowed_snippet.inner().code(&mut Library::new()).iter().join("\n")
+            shadowed_snippet.inner().borrow().code(&mut Library::new()).iter().join("\n")
         );
     }
 
     // Verify that stack grows with expected number of elements
     let stack_final = tasm_stack.clone();
     let observed_stack_growth: isize = stack_final.len() as isize - init_stack.len() as isize;
-    let expected_stack_growth: isize = shadowed_snippet.inner().stack_diff();
+    let expected_stack_growth: isize = shadowed_snippet.inner().borrow().stack_diff();
     assert_eq!(
         expected_stack_growth,
         observed_stack_growth,
@@ -532,18 +530,20 @@ fn link_and_run_tasm_for_test<T: RustShadow>(
 ) -> VmOutputState {
     let expected_length_prior: usize = snippet_struct
         .inner()
+        .borrow()
         .inputs()
         .iter()
         .map(|(x, _n)| x.get_size())
         .sum();
     let expected_length_after: usize = snippet_struct
         .inner()
+        .borrow()
         .outputs()
         .iter()
         .map(|(x, _n)| x.get_size())
         .sum();
     assert_eq!(
-        snippet_struct.inner().stack_diff(),
+        snippet_struct.inner().borrow().stack_diff(),
         (expected_length_after as isize - expected_length_prior as isize),
         "Declared stack diff must match type indicators"
     );
@@ -553,7 +553,7 @@ fn link_and_run_tasm_for_test<T: RustShadow>(
     execute_test(
         &code,
         stack,
-        snippet_struct.inner().stack_diff(),
+        snippet_struct.inner().borrow().stack_diff(),
         std_in,
         nondeterminism,
         memory,
@@ -567,8 +567,8 @@ fn link_for_isolated_run<T: RustShadow>(
     words_statically_allocated: usize,
 ) -> Vec<LabelledInstruction> {
     let mut snippet_state = Library::with_preallocated_memory(words_statically_allocated);
-    let entrypoint = snippet_struct.inner().entrypoint();
-    let function_body = snippet_struct.inner().code(&mut snippet_state);
+    let entrypoint = snippet_struct.inner().borrow().entrypoint();
+    let function_body = snippet_struct.inner().borrow().code(&mut snippet_state);
     let library_code = snippet_state.all_imports();
 
     // The TASM code is always run through a function call, so the 1st instruction

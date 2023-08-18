@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use rand::{rngs::StdRng, thread_rng, Rng, SeedableRng};
 use triton_vm::{BFieldElement, NonDeterminism};
@@ -30,19 +30,21 @@ pub trait Function: BasicSnippet {
     ) -> (Vec<BFieldElement>, HashMap<BFieldElement, BFieldElement>);
 }
 
-pub struct ShadowedFunction<F: Function + Clone + 'static> {
-    pub function: F,
+pub struct ShadowedFunction<F: Function + 'static> {
+    pub function: Rc<RefCell<F>>,
 }
 
-impl<F: Function + Clone + 'static> ShadowedFunction<F> {
+impl<F: Function + 'static> ShadowedFunction<F> {
     pub fn new(function: F) -> Self {
-        Self { function }
+        Self {
+            function: Rc::new(RefCell::new(function)),
+        }
     }
 }
 
 impl<F> RustShadow for ShadowedFunction<F>
 where
-    F: Function + Clone + 'static,
+    F: Function + 'static,
 {
     fn rust_shadow_wrapper(
         &self,
@@ -51,7 +53,7 @@ where
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) -> Vec<BFieldElement> {
-        self.function.rust_shadow(stack, memory);
+        self.function.borrow().rust_shadow(stack, memory);
         vec![]
     }
 
@@ -63,10 +65,13 @@ where
             let seed: [u8; 32] = rng.gen();
             println!(
                 "testing {} common case with seed: {:x?}",
-                self.function.entrypoint(),
+                self.function.borrow().entrypoint(),
                 seed
             );
-            let (stack, memory) = self.function.pseudorandom_initial_state(seed, None);
+            let (stack, memory) = self
+                .function
+                .borrow()
+                .pseudorandom_initial_state(seed, None);
 
             let stdin = vec![];
             test_rust_equivalence_given_complete_state(
@@ -93,8 +98,9 @@ where
         for bench_case in [BenchmarkCase::CommonCase, BenchmarkCase::WorstCase] {
             let (stack, memory) = self
                 .function
+                .borrow()
                 .pseudorandom_initial_state(rng.gen(), Some(bench_case));
-            let program = link_for_isolated_run(&self.function, 1);
+            let program = link_for_isolated_run(self.function.clone(), 1);
             let execution_result = execute_bench(
                 &program,
                 &stack,
@@ -104,7 +110,7 @@ where
                 Some(1),
             );
             let benchmark = BenchmarkResult {
-                name: self.function.entrypoint(),
+                name: self.function.borrow().entrypoint(),
                 clock_cycle_count: execution_result.cycle_count,
                 hash_table_height: execution_result.hash_table_height,
                 u32_table_height: execution_result.u32_table_height,
@@ -116,7 +122,7 @@ where
         write_benchmarks(benchmarks);
     }
 
-    fn inner(&self) -> Box<dyn BasicSnippet> {
-        Box::new(self.function.clone())
+    fn inner(&self) -> Rc<RefCell<dyn BasicSnippet>> {
+        self.function.clone()
     }
 }

@@ -1,8 +1,11 @@
 use anyhow::Result;
 use itertools::Itertools;
 use rand::{random, thread_rng, Rng};
+use std::cell::RefCell;
 use std::collections::HashMap;
+use std::fmt::Debug;
 use std::fmt::Display;
+use std::rc::Rc;
 use triton_vm::instruction::LabelledInstruction;
 use triton_vm::parser::{to_labelled_instructions, tokenize};
 use triton_vm::{triton_asm, NonDeterminism};
@@ -161,7 +164,7 @@ pub trait BasicSnippet {
 }
 
 pub trait RustShadow {
-    fn inner(&self) -> Box<dyn BasicSnippet>;
+    fn inner(&self) -> Rc<RefCell<dyn BasicSnippet>>;
 
     fn rust_shadow_wrapper(
         &self,
@@ -383,9 +386,11 @@ impl<S: DeprecatedSnippet + Clone + 'static> RustShadow for DeprecatedSnippetWra
     fn test(&self) {
         let mut execution_states = self.deprecated_snippet.gen_input_states();
 
+        let snippet = &self.deprecated_snippet;
+
         for execution_state in execution_states.iter_mut() {
             test_rust_equivalence_given_execution_state_deprecated(
-                &self.deprecated_snippet,
+                snippet,
                 execution_state.clone(),
             );
         }
@@ -395,8 +400,8 @@ impl<S: DeprecatedSnippet + Clone + 'static> RustShadow for DeprecatedSnippetWra
         todo!()
     }
 
-    fn inner(&self) -> Box<dyn BasicSnippet> {
-        Box::new(self.deprecated_snippet.clone())
+    fn inner(&self) -> Rc<RefCell<dyn BasicSnippet>> {
+        Rc::new(RefCell::new(self.deprecated_snippet.clone()))
     }
 }
 
