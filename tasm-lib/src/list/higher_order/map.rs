@@ -326,15 +326,10 @@ impl Function for Map {
 
     fn pseudorandom_initial_state(
         &self,
-        _seed: [u8; 32],
+        seed: [u8; 32],
         _bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
     ) -> (Vec<BFieldElement>, HashMap<BFieldElement, BFieldElement>) {
-        let mut rng: StdRng = SeedableRng::from_seed(
-            hex::decode("48656c6c6f20776f726c64210000000000000000000000000000000000000000")
-                .unwrap()
-                .try_into()
-                .unwrap(),
-        );
+        let mut rng: StdRng = SeedableRng::from_seed(seed);
         let list_pointer = BFieldElement::new(rng.next_u64() % (1 << 25));
         let list_length = (rng.next_u32() % (1 << 10)) as usize;
         let num_additional_function_args = (rng.next_u32() % 3) as usize;
