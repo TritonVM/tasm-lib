@@ -4,7 +4,6 @@ use triton_vm::instruction::AnInstruction;
 use triton_vm::instruction::LabelledInstruction;
 use triton_vm::op_stack::OpStack;
 use triton_vm::triton_asm;
-use triton_vm::triton_instr;
 use triton_vm::vm::VMState;
 use triton_vm::BFieldElement;
 use triton_vm::NonDeterminism;
