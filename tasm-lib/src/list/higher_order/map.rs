@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use triton_vm::parser::tokenize;
 use triton_vm::{triton_asm, NonDeterminism};
 use twenty_first::shared_math::b_field_element::BFieldElement;
+use twenty_first::shared_math::other::random_elements;
 
 use crate::function::Function;
 use crate::list::safe_u32::get::SafeGet;
@@ -199,7 +200,7 @@ impl Function for Map {
         memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
         let input_list_element_type = self.f.domain();
-        let output_type = self.f.domain();
+        let output_type = self.f.range();
 
         let list_pointer = stack.pop().unwrap();
 
@@ -268,6 +269,11 @@ impl Function for Map {
         }
         stack.pop();
 
+        // Push three values that may not be changed by the inner function
+        let canary_count = 3;
+        let canaries: Vec<BFieldElement> = random_elements(canary_count);
+        stack.append(&mut canaries.clone());
+
         // forall elements, read + map + write
         for i in 0..len {
             // read
@@ -291,6 +297,11 @@ impl Function for Map {
             set_element(output_list, i, output_item, memory, output_type.get_size());
         }
 
+        // Ensure canaries are still on the stack, then remove them
+        for i in 0..canary_count {
+            assert_eq!(canaries[canary_count - i - 1], stack.pop().unwrap());
+        }
+
         stack.push(output_list);
     }
 
@@ -301,11 +312,13 @@ impl Function for Map {
     ) -> (Vec<BFieldElement>, HashMap<BFieldElement, BFieldElement>) {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
         let list_pointer = BFieldElement::new(rng.next_u64() % (1 << 25));
-        // let list_length = (rng.next_u32() % (1 << 2)) as usize;
-        let list_length = 1;
-        let num_additional_function_args = (rng.next_u32() % 3) as usize;
+        let list_length = (rng.next_u32() % (1 << 6)) as usize;
+
+        // Autogenerating these extra arguments seems pretty shady to me. Are they
+        // u32s, BFEs, or XFEs? That depends on the inner function!
+        let num_additional_function_args = (rng.next_u32() % 7) as usize;
         let additional_function_args = (0..num_additional_function_args)
-            .map(|_| rng.gen::<BFieldElement>())
+            .map(|_| BFieldElement::new((rng.gen::<u32>() / 2) as u64))
             .collect_vec();
         let execution_state =
             self.generate_input_state(list_pointer, list_length, additional_function_args);
