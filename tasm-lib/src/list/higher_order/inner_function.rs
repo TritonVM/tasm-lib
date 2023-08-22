@@ -1,10 +1,17 @@
-use std::{cell::RefCell, collections::HashMap};
+use std::collections::HashMap;
 
-use itertools::Itertools;
 use triton_vm::instruction::AnInstruction;
 use triton_vm::instruction::LabelledInstruction;
+use triton_vm::op_stack::OpStack;
+use triton_vm::triton_asm;
+use triton_vm::triton_instr;
+use triton_vm::vm::VMState;
 use triton_vm::BFieldElement;
+use triton_vm::NonDeterminism;
+use triton_vm::Program;
+use triton_vm::PublicInput;
 
+use crate::library::Library;
 use crate::snippet::BasicSnippet;
 use crate::snippet::{DataType, DeprecatedSnippet};
 
@@ -12,17 +19,15 @@ use crate::snippet::{DataType, DeprecatedSnippet};
 /// or to map with.
 pub struct RawCode {
     pub function: Vec<LabelledInstruction>,
-    pub input_types: Vec<DataType>,
-    pub output_types: Vec<DataType>,
-    #[allow(clippy::type_complexity)]
-    rust_shadowing: Option<Box<RefCell<dyn FnMut(&mut Vec<BFieldElement>)>>>,
+    pub input_type: DataType,
+    pub output_type: DataType,
 }
 
 impl RawCode {
     pub fn new(
         function: Vec<LabelledInstruction>,
-        input_types: Vec<DataType>,
-        output_types: Vec<DataType>,
+        input_type: DataType,
+        output_type: DataType,
     ) -> Self {
         // Verify that 1st line is a label
         assert!(
@@ -46,44 +51,8 @@ impl RawCode {
 
         Self {
             function,
-            input_types,
-            output_types,
-            rust_shadowing: None,
-        }
-    }
-
-    #[allow(clippy::type_complexity)]
-    pub fn new_with_shadowing(
-        function: Vec<LabelledInstruction>,
-        input_types: Vec<DataType>,
-        output_types: Vec<DataType>,
-        rust_shadowing: Box<RefCell<dyn FnMut(&mut Vec<BFieldElement>)>>,
-    ) -> Self {
-        // Verify that 1st line is a label
-        assert!(
-            function.len() >= 2,
-            "Inner function must have at least two lines: a label and a return or recurse"
-        );
-        assert!(
-            matches!(function[0], LabelledInstruction::Label(_)),
-            "First line of inner function must be label. Got: {}",
-            function[0]
-        );
-        assert!(
-            matches!(
-                function.last().unwrap(),
-                LabelledInstruction::Instruction(AnInstruction::Return)
-                    | LabelledInstruction::Instruction(AnInstruction::Recurse)
-            ),
-            "Last line of inner function must be either return or recurse. Got: {}",
-            function.last().unwrap()
-        );
-
-        Self {
-            function,
-            input_types,
-            output_types,
-            rust_shadowing: Some(rust_shadowing),
+            input_type,
+            output_type,
         }
     }
 }
@@ -102,7 +71,7 @@ impl RawCode {
 
 pub enum InnerFunction {
     RawCode(RawCode),
-    Snippet(Box<dyn DeprecatedSnippet>),
+    DeprecatedSnippet(Box<dyn DeprecatedSnippet>),
     BasicSnippet(Box<dyn BasicSnippet>),
 
     // Used when a snippet is declared somewhere else, and it's not the responsibility of
@@ -112,52 +81,26 @@ pub enum InnerFunction {
 
 pub struct NoFunctionBody {
     pub label_name: String,
-    pub input_types: Vec<DataType>,
-    pub output_types: Vec<DataType>,
+    pub input_type: DataType,
+    pub output_type: DataType,
 }
 
 impl InnerFunction {
-    /// Return the input types this inner function accepts
-    pub fn get_input_types(&self) -> Vec<DataType> {
+    pub fn domain(&self) -> DataType {
         match self {
-            InnerFunction::RawCode(raw) => raw.input_types.clone(),
-            InnerFunction::Snippet(f) => f.input_types(),
-            InnerFunction::NoFunctionBody(f) => f.input_types.clone(),
-            InnerFunction::BasicSnippet(bs) => {
-                bs.inputs().into_iter().map(|(dt, _fn)| dt).collect_vec()
-            }
+            InnerFunction::RawCode(raw) => raw.input_type.clone(),
+            InnerFunction::DeprecatedSnippet(f) => f.input_types()[0].clone(),
+            InnerFunction::NoFunctionBody(f) => f.input_type.clone(),
+            InnerFunction::BasicSnippet(bs) => bs.inputs()[0].0.clone(),
         }
     }
 
-    /// Return the expected type of list element this function accepts
-    pub fn input_list_element_type(&self) -> DataType {
-        self.get_input_types().last().unwrap().to_owned()
-    }
-
-    /// Return all input types apart from the element type of the input list.
-    /// May be the empty list.
-    pub fn additional_inputs(&self) -> Vec<DataType> {
-        let mut input_types = self.get_input_types();
-        input_types.pop().unwrap();
-
-        input_types
-    }
-
-    /// Return the size in words for the additional elements, all elements
-    /// apart from the element from the input list.
-    pub fn size_of_additional_inputs(&self) -> usize {
-        self.additional_inputs().iter().map(|x| x.get_size()).sum()
-    }
-
-    /// Return types this function outputs.
-    pub fn get_output_types(&self) -> Vec<DataType> {
+    pub fn range(&self) -> DataType {
         match self {
-            InnerFunction::RawCode(rc) => rc.output_types.clone(),
-            InnerFunction::Snippet(sn) => sn.output_types(),
-            InnerFunction::NoFunctionBody(lnat) => lnat.output_types.clone(),
-            InnerFunction::BasicSnippet(bs) => {
-                bs.outputs().into_iter().map(|(dt, _fn)| dt).collect_vec()
-            }
+            InnerFunction::RawCode(rc) => rc.output_type.clone(),
+            InnerFunction::DeprecatedSnippet(sn) => sn.output_types()[0].clone(),
+            InnerFunction::NoFunctionBody(lnat) => lnat.output_type.clone(),
+            InnerFunction::BasicSnippet(bs) => bs.outputs()[0].0.clone(),
         }
     }
 
@@ -165,37 +108,78 @@ impl InnerFunction {
     pub fn entrypoint(&self) -> String {
         match self {
             InnerFunction::RawCode(rc) => rc.entrypoint(),
-            InnerFunction::Snippet(sn) => sn.entrypoint_name(),
+            InnerFunction::DeprecatedSnippet(sn) => sn.entrypoint_name(),
             InnerFunction::NoFunctionBody(sn) => sn.label_name.to_owned(),
             InnerFunction::BasicSnippet(bs) => bs.entrypoint(),
         }
     }
 
-    /// For testing purposes, this function can mirror what the TASM code does.
-    pub fn rust_shadowing(
-        &self,
-        std_in: &[BFieldElement],
-        secret_in: &[BFieldElement],
+    /// Run the VM for on a given stack and memory to observe how it manipulates the
+    /// stack. This is a helper function for [`apply`](apply), which in some cases just
+    /// grabs the inner function's code and then needs a VM to apply it.
+    fn run_vm(
+        instructions: &[LabelledInstruction],
         stack: &mut Vec<BFieldElement>,
-        memory: &mut HashMap<BFieldElement, BFieldElement>,
+        memory: &HashMap<BFieldElement, BFieldElement>,
+    ) {
+        let label = if let Some(LabelledInstruction::Label(label)) = instructions.first() {
+            label
+        } else {
+            panic!();
+        };
+        let instructions = triton_asm!(
+            call {label}
+            halt
+            {&instructions}
+        );
+        let program = Program::new(&instructions);
+        let public_input = PublicInput::new(vec![]);
+        let nondeterminism = NonDeterminism::<BFieldElement>::new(vec![]);
+        let mut vmstate = VMState::new(&program, public_input.clone(), nondeterminism.clone());
+        vmstate.op_stack = OpStack {
+            stack: stack.clone(),
+        };
+        vmstate.ram = memory.clone();
+        let terminal_state = program
+            .debug_terminal_state(public_input, nondeterminism, Some(vmstate), None)
+            .expect("VM run during application of inner function did not terminate successfully.");
+        *stack = terminal_state.op_stack.stack;
+    }
+
+    /// Computes the inner function and applies the resulting change to the given stack
+    pub fn apply(
+        &self,
+        stack: &mut Vec<BFieldElement>,
+        memory: &HashMap<BFieldElement, BFieldElement>,
     ) {
         match &self {
             InnerFunction::RawCode(rc) => {
-                if let Some(func) = &rc.rust_shadowing {
-                    let mut func = func.borrow_mut();
-                    (*func)(stack)
-                } else {
-                    panic!("Raw code must have rust shadowing for equivalence testing")
-                }
+                let instructions = rc.function.clone();
+                Self::run_vm(&instructions, stack, memory);
             }
-            InnerFunction::Snippet(sn) => {
-                sn.rust_shadowing(stack, std_in.to_vec(), secret_in.to_vec(), memory)
+            InnerFunction::DeprecatedSnippet(sn) => {
+                sn.rust_shadowing(stack, vec![], vec![], &mut memory.clone());
             }
             InnerFunction::NoFunctionBody(_lnat) => {
-                panic!("Cannot rust shadow inner function without function body")
+                panic!("Cannot apply inner function without function body")
             }
-            InnerFunction::BasicSnippet(_bs) => {
-                panic!("basic snippet should not need rust shadowing")
+            InnerFunction::BasicSnippet(bs) => {
+                let mut snippet_state: Library = Library::with_preallocated_memory(1);
+                let entrypoint = bs.entrypoint();
+                let function_body = bs.code(&mut snippet_state);
+                let library_code = snippet_state.all_imports();
+
+                // The TASM code is always run through a function call, so the 1st instruction
+                // is a call to the function in question.
+                let code = triton_asm!(
+                    call {entrypoint}
+                    halt
+
+                    {&function_body}
+                    {&library_code}
+                );
+
+                Self::run_vm(&code, stack, memory);
             }
         };
     }

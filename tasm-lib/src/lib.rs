@@ -313,18 +313,25 @@ pub fn execute_test(
         bail!("Jump stack must be unchanged after code execution")
     }
 
-    *stack = final_state.op_stack.stack;
-
-    let final_stack_height = stack.len() as isize;
+    let final_stack_height = final_state.op_stack.stack.len() as isize;
     if expected_stack_diff != final_stack_height - init_stack_height as isize {
         bail!(
             "Code must grow/shrink stack with expected number of elements.\n
-        init height: {init_stack_height}\nend height: {final_stack_height}\n
-        expected difference: {expected_stack_diff}\n\n
-        final stack: {}",
-            stack.iter().map(|x| x.to_string()).join(",")
+            init height: {init_stack_height}\nend height: {final_stack_height}\n
+            expected difference: {expected_stack_diff}\n\n
+            initial stack: {}\n
+            final stack: {}",
+            stack.iter().skip(16).map(|x| x.to_string()).join(","),
+            final_state
+                .op_stack
+                .stack
+                .iter()
+                .skip(16)
+                .map(|x| x.to_string())
+                .join(","),
         )
     }
+    *stack = final_state.op_stack.stack;
 
     // If this environment variable is set, all programs, including the code to prepare the state,
     // will be proven and then verified.

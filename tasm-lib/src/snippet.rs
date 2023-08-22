@@ -44,6 +44,7 @@ pub enum DataType {
     Digest,
     List(Box<DataType>),
     Pair(Box<DataType>, Box<DataType>),
+    Tuple(Vec<DataType>),
     VoidPointer,
 }
 
@@ -93,6 +94,10 @@ impl DataType {
                 })
                 .collect_vec(),
             DataType::VoidPointer => vec![vec![random::<BFieldElement>()]],
+            DataType::Tuple(v) => v
+                .iter()
+                .flat_map(|dt| dt.random_elements(rng.gen_range(0..count)))
+                .collect(),
         }
     }
 }
@@ -111,6 +116,7 @@ impl Display for DataType {
             DataType::List(element_type) => format!("list({element_type})"),
             DataType::Pair(left, right) => format!("pair({left},{right})"),
             DataType::VoidPointer => "void-pointer".to_string(),
+            DataType::Tuple(t) => format!("tuple({})", t.iter().join(",")),
         };
         write!(f, "{str}",)
     }
@@ -141,6 +147,7 @@ impl DataType {
             DataType::List(_) => 1,
             DataType::Pair(left, right) => left.get_size() + right.get_size(),
             DataType::VoidPointer => 1,
+            DataType::Tuple(t) => t.iter().map(|dt| dt.get_size()).sum(),
         }
     }
 }

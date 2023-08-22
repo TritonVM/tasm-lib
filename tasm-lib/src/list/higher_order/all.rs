@@ -46,10 +46,7 @@ impl All {
         stack.push(list_pointer);
 
         let mut memory = HashMap::default();
-        let input_type = match self.f.get_input_types().len() {
-            1 => self.f.get_input_types()[0].clone(),
-            _ => panic!("Can only be used with functions taking one argument"),
-        };
+        let input_type = self.f.domain();
         memory.insert(
             BFieldElement::zero(),
             match self.list_type {
@@ -136,14 +133,8 @@ impl BasicSnippet for All {
     }
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
-        let input_type = match self.f.get_input_types().len() {
-            1 => self.f.get_input_types()[0].clone(),
-            _ => panic!("Can only map-reduce 'all' with functions with one input"),
-        };
-        let output_type = match self.f.get_output_types().len() {
-            1 => self.f.get_output_types()[0].clone(),
-            _ => panic!("Can only map-reduce 'all' with functions returning a bool"),
-        };
+        let input_type = self.f.domain();
+        let output_type = self.f.range();
         assert_eq!(output_type, DataType::Bool);
         let get_length = match self.list_type {
             ListType::Safe => library.import(Box::new(SafeLength(input_type.clone()))),
@@ -156,7 +147,7 @@ impl BasicSnippet for All {
 
         let inner_function_name = match &self.f {
             InnerFunction::RawCode(rc) => rc.entrypoint(),
-            InnerFunction::Snippet(sn) => {
+            InnerFunction::DeprecatedSnippet(sn) => {
                 let fn_body = sn.function_code(library);
                 let (_, instructions) = tokenize(&fn_body).unwrap();
                 let labelled_instructions =
@@ -174,7 +165,7 @@ impl BasicSnippet for All {
         // body. Otherwise, `library` handles the imports.
         let maybe_inner_function_body_raw = match &self.f {
             InnerFunction::RawCode(rc) => rc.function.iter().map(|x| x.to_string()).join("\n"),
-            InnerFunction::Snippet(_) => String::default(),
+            InnerFunction::DeprecatedSnippet(_) => String::default(),
             InnerFunction::NoFunctionBody(_) => todo!(),
             InnerFunction::BasicSnippet(_) => Default::default(),
         };
@@ -235,10 +226,7 @@ impl Function for All {
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
-        let input_type = match self.f.get_input_types().len() {
-            1 => self.f.get_input_types()[0].clone(),
-            _ => panic!("Input length must be one when using function in map)"),
-        };
+        let input_type = self.f.domain();
 
         let list_pointer = stack.pop().unwrap();
 
@@ -272,7 +260,7 @@ impl Function for All {
                 stack.push(element);
             }
 
-            self.f.rust_shadowing(&[], &[], stack, memory);
+            self.f.apply(stack, memory);
 
             let single_result = stack.pop().unwrap().value() != 0;
             satisfied = satisfied && single_result;
@@ -439,7 +427,6 @@ impl DeprecatedSnippet for TestHashXFieldElementLsb {
 #[cfg(test)]
 mod tests {
     use num::One;
-    use std::cell::RefCell;
     use triton_vm::triton_asm;
 
     use crate::{
@@ -453,7 +440,7 @@ mod tests {
     fn unsafe_list_prop_test() {
         let snippet = All {
             list_type: ListType::Unsafe,
-            f: InnerFunction::Snippet(Box::new(TestHashXFieldElementLsb)),
+            f: InnerFunction::DeprecatedSnippet(Box::new(TestHashXFieldElementLsb)),
         };
         ShadowedFunction::new(snippet).test();
     }
@@ -462,7 +449,7 @@ mod tests {
     fn with_safe_list_prop_test() {
         let snippet = All {
             list_type: ListType::Safe,
-            f: InnerFunction::Snippet(Box::new(TestHashXFieldElementLsb)),
+            f: InnerFunction::DeprecatedSnippet(Box::new(TestHashXFieldElementLsb)),
         };
         ShadowedFunction::new(snippet).test();
     }
@@ -470,7 +457,7 @@ mod tests {
     #[test]
     fn safe_list_all_lt_test() {
         const TWO_POW_31: u64 = 1u64 << 31;
-        let rawcode = RawCode::new_with_shadowing(
+        let rawcode = RawCode::new(
             triton_asm!(
                 less_than_2_pow_31:
                     push 2147483648 // == 2^31
@@ -478,12 +465,8 @@ mod tests {
                     lt
                     return
             ),
-            vec![DataType::BFE],
-            vec![DataType::Bool],
-            Box::new(RefCell::new(|vec: &mut Vec<BFieldElement>| {
-                let new_value = vec.pop().unwrap().value() < TWO_POW_31;
-                vec.push(BFieldElement::new(new_value as u64));
-            })),
+            DataType::BFE,
+            DataType::Bool,
         );
         let snippet = All {
             list_type: ListType::Safe,
@@ -534,7 +517,7 @@ mod tests {
 
     #[test]
     fn test_with_raw_function_lsb_on_bfe() {
-        let rawcode = RawCode::new_with_shadowing(
+        let rawcode = RawCode::new(
             triton_asm!(
                 lsb_bfe:
                 split    // _ hi lo
@@ -546,12 +529,8 @@ mod tests {
                 pop      // _ r
                 return
             ),
-            vec![DataType::BFE],
-            vec![DataType::Bool],
-            Box::new(RefCell::new(|vec: &mut Vec<BFieldElement>| {
-                let new_value = vec.pop().unwrap().value() % 2;
-                vec.push(BFieldElement::new(new_value));
-            })),
+            DataType::BFE,
+            DataType::Bool,
         );
         let snippet = All {
             list_type: ListType::Unsafe,
@@ -562,7 +541,7 @@ mod tests {
 
     #[test]
     fn test_with_raw_function_lsb_on_xfe() {
-        let rawcode = RawCode::new_with_shadowing(
+        let rawcode = RawCode::new(
             triton_asm!(
                 lsb_xfe:
                 split    // _ x2 x1 hi lo
@@ -576,14 +555,8 @@ mod tests {
                 pop      // _ r
                 return
             ),
-            vec![DataType::XFE],
-            vec![DataType::Bool],
-            Box::new(RefCell::new(|vec: &mut Vec<BFieldElement>| {
-                let new_value = vec.pop().unwrap().value() % 2;
-                vec.pop();
-                vec.pop();
-                vec.push(BFieldElement::new(new_value));
-            })),
+            DataType::XFE,
+            DataType::Bool,
         );
         let snippet = All {
             list_type: ListType::Unsafe,
@@ -602,7 +575,7 @@ mod benches {
     fn unsafe_list_all_benchmark() {
         ShadowedFunction::new(All {
             list_type: ListType::Unsafe,
-            f: InnerFunction::Snippet(Box::new(TestHashXFieldElementLsb)),
+            f: InnerFunction::DeprecatedSnippet(Box::new(TestHashXFieldElementLsb)),
         })
         .bench();
     }

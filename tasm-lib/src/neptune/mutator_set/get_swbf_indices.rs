@@ -1,7 +1,7 @@
 use itertools::Itertools;
 use num_traits::{One, Zero};
 use rand::random;
-use std::{cell::RefCell, collections::HashMap};
+use std::collections::HashMap;
 use triton_vm::{triton_asm, BFieldElement, NonDeterminism};
 use twenty_first::{
     shared_math::{
@@ -111,12 +111,12 @@ impl DeprecatedSnippet for GetSwbfIndices {
     }
 
     fn input_types(&self) -> Vec<crate::snippet::DataType> {
-        vec![
+        vec![DataType::Tuple(vec![
             DataType::U64,
             DataType::Digest,
             DataType::Digest,
             DataType::Digest,
-        ]
+        ])]
     }
 
     fn output_types(&self) -> Vec<crate::snippet::DataType> {
@@ -124,7 +124,7 @@ impl DeprecatedSnippet for GetSwbfIndices {
     }
 
     fn output_field_names(&self) -> Vec<String> {
-        vec!["index_list".to_string()]
+        vec!["*index_list".to_string()]
     }
 
     fn stack_diff(&self) -> isize {
@@ -140,65 +140,52 @@ impl DeprecatedSnippet for GetSwbfIndices {
 
         let entrypoint = self.entrypoint_name();
 
-        let rawcode_for_inner_function_u128_plus_u32 = RawCode::new_with_shadowing(
+        let rawcode_for_inner_function_u128_plus_u32 = RawCode::new(
             triton_asm!(
                 u32_to_u128_add_another_u128:
-                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index input_u32
+                // stack:  _ [x_3, x_2, x_1, x_0] [bu ff er] input_u32
                 dup 4
-                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index input_u32 x_0
+                // stack:  _ [x_3, x_2, x_1, x_0] [bu ff er] input_u32 x_0
                 add
-                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index (input_u32 + x_0)
+                // stack:  _ [x_3, x_2, x_1, x_0] [bu ff er] (input_u32 + x_0)
                 split
-                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index carry_to_1 output_0
+                // stack:  _ [x_3, x_2, x_1, x_0] [bu ff er] carry_to_1 output_0
                 swap 1
-                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 carry_to_1
+                // stack:  _ [x_3, x_2, x_1, x_0] [bu ff er] output_0 carry_to_1
                 dup 6
-                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 carry_to_1 x_1
+                // stack:  _ [x_3, x_2, x_1, x_0] [bu ff er] output_0 carry_to_1 x_1
                 add
                 split
-                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 carry_to_2 output_1
+                // stack:  _ [x_3, x_2, x_1, x_0] [bu ff er] output_0 carry_to_2 output_1
                 swap 1
-                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 output_1 carry_to_2
+                // stack:  _ [x_3, x_2, x_1, x_0] [bu ff er] output_0 output_1 carry_to_2
                 dup 8
                 add
                 split
-                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 output_1 carry_to_3 output_2
+                // stack:  _ [x_3, x_2, x_1, x_0] [bu ff er] output_0 output_1 carry_to_3 output_2
                 swap 1
-                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 output_1 output_2 carry_to_3
+                // stack:  _ [x_3, x_2, x_1, x_0] [bu ff er] output_0 output_1 output_2 carry_to_3
                 dup 10
                 add
                 split
-                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 output_1 output_2 overflow output_3
+                // stack:  _ [x_3, x_2, x_1, x_0] [bu ff er] output_0 output_1 output_2 overflow output_3
                 swap 1
-                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 output_1 output_2 output_3 overflow
+                // stack:  _ [x_3, x_2, x_1, x_0] [bu ff er] output_0 output_1 output_2 output_3 overflow
 
                 // verify no overflow
                 push 0
                 eq
                 assert
-                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 output_1 output_2 output_3
+                // stack:  _ [x_3, x_2, x_1, x_0] [bu ff er] output_0 output_1 output_2 output_3
                 swap 3
                 swap 1
                 swap 2
                 swap 1
-                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_3 output_2 output_1 output_0
+                // stack:  _ [x_3, x_2, x_1, x_0] [bu ff er] output_3 output_2 output_1 output_0
                 return
             ),
-            vec![DataType::U128, DataType::U32],
-            vec![DataType::U128],
-            Box::new(RefCell::new(|vec: &mut Vec<BFieldElement>| {
-                let list_element = vec.pop().unwrap().value();
-                let u128_value = vec[vec.len() - 1].value() as u128
-                    + ((vec[vec.len() - 2].value() as u128) << 32)
-                    + ((vec[vec.len() - 3].value() as u128) << 64)
-                    + ((vec[vec.len() - 4].value() as u128) << 96);
-
-                let new_value = list_element as u128 + u128_value;
-                let encoded = new_value.encode();
-                for elem in encoded.into_iter().rev() {
-                    vec.push(elem);
-                }
-            })),
+            DataType::U32,
+            DataType::U128,
         );
         let map_add_batch_offset = library.import(Box::new(Map {
             list_type: ListType::Unsafe,
@@ -253,8 +240,13 @@ impl DeprecatedSnippet for GetSwbfIndices {
             push {num_trials} // _ [batch_offset_u128] number
             push {window_size} // _ [batch_offset_u128] number upper_bound
             call {sample_indices} // _ [batch_offset_u128] list_of_indices_as_u32s
+
+
             call {map_add_batch_offset}
-            // _ list_of_absolute_indices_as_u128s
+            // _ [batch_offset_u128] list_of_absolute_indices_as_u128s
+
+            swap 4 pop pop pop pop
+            // *list_of_absolute_indices_as_u128s 
 
             return
             "

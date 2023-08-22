@@ -65,14 +65,8 @@ impl BasicSnippet for Filter {
     }
 
     fn code(&self, library: &mut Library) -> Vec<triton_vm::instruction::LabelledInstruction> {
-        let input_type = match self.f.get_input_types().len() {
-            1 => self.f.get_input_types()[0].clone(),
-            _ => panic!("Can only filter with functions with one input"),
-        };
-        let output_type = match self.f.get_output_types().len() {
-            1 => self.f.get_output_types()[0].clone(),
-            _ => panic!("Can only filter with functions returning a bool"),
-        };
+        let input_type = self.f.domain();
+        let output_type = self.f.range();
         assert_eq!(output_type, DataType::Bool);
         let safety_offset = match self.list_type {
             ListType::Safe => 2,
@@ -94,11 +88,11 @@ impl BasicSnippet for Filter {
             ListType::Safe => library.import(Box::new(SafeGet(input_type))),
             ListType::Unsafe => library.import(Box::new(UnsafeGet(input_type))),
         };
-        let element_size = self.f.get_input_types()[0].get_size();
+        let element_size = self.f.domain().get_size();
 
         let inner_function_name = match &self.f {
             InnerFunction::RawCode(rc) => rc.entrypoint(),
-            InnerFunction::Snippet(sn) => {
+            InnerFunction::DeprecatedSnippet(sn) => {
                 let fn_body = sn.function_code(library);
                 let (_, instructions) = tokenize(&fn_body).unwrap();
                 let labelled_instructions =
@@ -118,7 +112,7 @@ impl BasicSnippet for Filter {
         // body. Otherwise, `library` handles the imports.
         let maybe_inner_function_body_raw = match &self.f {
             InnerFunction::RawCode(rc) => rc.function.iter().map(|x| x.to_string()).join("\n"),
-            InnerFunction::Snippet(_) => String::default(),
+            InnerFunction::DeprecatedSnippet(_) => String::default(),
             InnerFunction::NoFunctionBody(_) => todo!(),
             InnerFunction::BasicSnippet(_) => String::default(),
         };
@@ -211,16 +205,10 @@ impl Function for Filter {
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
-        let input_type = match self.f.get_input_types().len() {
-            1 => self.f.get_input_types()[0].clone(),
-            _ => panic!("Input length must be one when using function in map)"),
-        };
-        let output_type = match self.f.get_output_types().len() {
-            1 => self.f.get_output_types()[0].clone(),
-            _ => panic!("Input length must be one when using function in map)"),
-        };
+        let input_type = self.f.domain();
+        let output_type = self.f.range();
 
-        let element_size = self.f.get_input_types()[0].get_size();
+        let element_size = self.f.domain().get_size();
         let memcpy = MemCpy::rust_shadowing;
         let safety_offset = match self.list_type {
             ListType::Safe => 2,
@@ -307,7 +295,8 @@ impl Function for Filter {
                 stack.push(element);
             }
 
-            self.f.rust_shadowing(&[], &[], stack, memory);
+            self.f.apply(stack, memory);
+
             let satisfied = stack.pop().unwrap().value() != 0;
 
             // maybe copy
@@ -364,10 +353,7 @@ impl Function for Filter {
         stack.push(list_pointer);
 
         let mut memory = HashMap::default();
-        let input_type = match self.f.get_input_types().len() {
-            1 => self.f.get_input_types()[0].clone(),
-            _ => panic!("Can only be used with functions taking one argument"),
-        };
+        let input_type = self.f.domain();
         let input_type_size = input_type.get_size();
         println!("generating list of length {list_length} of type size {input_type_size} at address {list_pointer}...");
         memory.insert(
@@ -412,8 +398,6 @@ impl Function for Filter {
 
 #[cfg(test)]
 mod tests {
-
-    use std::cell::RefCell;
 
     use triton_vm::triton_asm;
     use twenty_first::{
@@ -580,7 +564,7 @@ mod tests {
     fn unsafe_list_prop_test() {
         ShadowedFunction::new(Filter {
             list_type: ListType::Unsafe,
-            f: InnerFunction::Snippet(Box::new(TestHashXFieldElementLsb)),
+            f: InnerFunction::DeprecatedSnippet(Box::new(TestHashXFieldElementLsb)),
         })
         .test();
     }
@@ -589,14 +573,14 @@ mod tests {
     fn with_safe_list_prop_test() {
         ShadowedFunction::new(Filter {
             list_type: ListType::Safe,
-            f: InnerFunction::Snippet(Box::new(TestHashXFieldElementLsb)),
+            f: InnerFunction::DeprecatedSnippet(Box::new(TestHashXFieldElementLsb)),
         })
         .test();
     }
 
     #[test]
     fn test_with_raw_function_lsb_on_bfe() {
-        let rawcode = RawCode::new_with_shadowing(
+        let rawcode = RawCode::new(
             triton_asm!(
                 lsb_bfe:
                     split   // _ hi lo
@@ -608,12 +592,8 @@ mod tests {
                     pop     // _ r
                     return
             ),
-            vec![DataType::BFE],
-            vec![DataType::Bool],
-            Box::new(RefCell::new(|vec: &mut Vec<BFieldElement>| {
-                let new_value = vec.pop().unwrap().value() % 2;
-                vec.push(BFieldElement::new(new_value));
-            })),
+            DataType::BFE,
+            DataType::Bool,
         );
         ShadowedFunction::new(Filter {
             list_type: ListType::Unsafe,
@@ -624,7 +604,7 @@ mod tests {
 
     #[test]
     fn test_with_raw_function_lsb_on_xfe() {
-        let rawcode = RawCode::new_with_shadowing(
+        let rawcode = RawCode::new(
             triton_asm!(
                 lsb_xfe:
                     split   // _ x2 x1 hi lo
@@ -638,14 +618,8 @@ mod tests {
                     pop     // _ r
                     return
             ),
-            vec![DataType::XFE],
-            vec![DataType::Bool],
-            Box::new(RefCell::new(|vec: &mut Vec<BFieldElement>| {
-                let new_value = vec.pop().unwrap().value() % 2;
-                vec.pop();
-                vec.pop();
-                vec.push(BFieldElement::new(new_value));
-            })),
+            DataType::XFE,
+            DataType::Bool,
         );
         ShadowedFunction::new(Filter {
             list_type: ListType::Unsafe,
@@ -664,7 +638,7 @@ mod benches {
     fn unsafe_list_filter_benchmark() {
         ShadowedFunction::new(Filter {
             list_type: ListType::Unsafe,
-            f: InnerFunction::Snippet(Box::new(TestHashXFieldElementLsb)),
+            f: InnerFunction::DeprecatedSnippet(Box::new(TestHashXFieldElementLsb)),
         })
         .bench();
     }
@@ -673,7 +647,7 @@ mod benches {
     fn safe_list_filter_benchmark() {
         ShadowedFunction::new(Filter {
             list_type: ListType::Safe,
-            f: InnerFunction::Snippet(Box::new(TestHashXFieldElementLsb)),
+            f: InnerFunction::DeprecatedSnippet(Box::new(TestHashXFieldElementLsb)),
         })
         .bench();
     }
