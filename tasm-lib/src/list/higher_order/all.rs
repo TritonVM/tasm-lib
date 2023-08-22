@@ -1,12 +1,15 @@
 use itertools::Itertools;
 use num::Zero;
-use rand::{thread_rng, Rng};
+use rand::rngs::StdRng;
+use rand::{RngCore, SeedableRng};
 use std::collections::HashMap;
+use triton_vm::instruction::LabelledInstruction;
 use triton_vm::parser::tokenize;
-use triton_vm::NonDeterminism;
+use triton_vm::{triton_asm, NonDeterminism};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
+use crate::function::Function;
 use crate::list::safe_u32::get::SafeGet;
 use crate::list::safe_u32::length::SafeLength;
 use crate::list::unsafe_u32::get::UnsafeGet;
@@ -14,6 +17,7 @@ use crate::list::unsafe_u32::length::UnsafeLength;
 use crate::list::ListType;
 use crate::rust_shadowing_helper_functions::safe_list::safe_insert_random_list;
 use crate::rust_shadowing_helper_functions::unsafe_list::untyped_unsafe_insert_random_list;
+use crate::snippet::BasicSnippet;
 use crate::{arithmetic, get_init_tvm_stack, rust_shadowing_helper_functions, VmHasher};
 use crate::{
     library::Library,
@@ -108,8 +112,22 @@ impl All {
     }
 }
 
-impl DeprecatedSnippet for All {
-    fn entrypoint_name(&self) -> String {
+impl BasicSnippet for All {
+    fn inputs(&self) -> Vec<(DataType, String)> {
+        let input_type = match &self.f {
+            InnerFunction::BasicSnippet(basic_snippet) => {
+                DataType::List(Box::new(basic_snippet.inputs()[0].0.clone()))
+            }
+            _ => DataType::VoidPointer,
+        };
+        vec![(input_type, "*input_list".to_string())]
+    }
+
+    fn outputs(&self) -> Vec<(DataType, String)> {
+        vec![(DataType::Bool, "all_true".to_string())]
+    }
+
+    fn entrypoint(&self) -> String {
         format!(
             "tasm_list_higher_order_{}_u32_all_{}",
             self.list_type,
@@ -117,40 +135,7 @@ impl DeprecatedSnippet for All {
         )
     }
 
-    fn input_field_names(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
-        vec!["input_list".to_string()]
-    }
-
-    fn input_types(&self) -> Vec<crate::snippet::DataType> {
-        vec![DataType::List(Box::new(
-            self.f.get_input_types()[0].clone(),
-        ))]
-    }
-
-    fn output_types(&self) -> Vec<crate::snippet::DataType> {
-        vec![DataType::List(Box::new(
-            self.f.get_input_types()[0].clone(),
-        ))]
-    }
-
-    fn output_field_names(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
-        vec!["result".to_string()]
-    }
-
-    fn stack_diff(&self) -> isize
-    where
-        Self: Sized,
-    {
-        0
-    }
-
-    fn function_code(&self, library: &mut Library) -> String {
+    fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
         let input_type = match self.f.get_input_types().len() {
             1 => self.f.get_input_types()[0].clone(),
             _ => panic!("Can only map-reduce 'all' with functions with one input"),
@@ -193,10 +178,10 @@ impl DeprecatedSnippet for All {
             InnerFunction::NoFunctionBody(_) => todo!(),
             InnerFunction::BasicSnippet(_) => Default::default(),
         };
-        let entrypoint = self.entrypoint_name();
+        let entrypoint = self.entrypoint();
+        let main_loop = format!("{entrypoint}_loop");
 
-        format!(
-            "
+        triton_asm!(
             // BEFORE: _ input_list
             // AFTER: _ result
             {entrypoint}:
@@ -205,14 +190,14 @@ impl DeprecatedSnippet for All {
                 dup 0 // _  res input_list input_list
                 call {get_length} // _ res input_list len
 
-                call {entrypoint}_loop // _ res input_list 0
+                call {main_loop} // _ res input_list 0
 
                 pop // _ res input_list
                 pop // _ res
                 return
 
             // INVARIANT: _ res input_list index
-            {entrypoint}_loop:
+            {main_loop}:
                 // test return condition
                 dup 0 push 0 eq // _ res input_list index index==0
 
@@ -240,62 +225,16 @@ impl DeprecatedSnippet for All {
                 recurse
 
             {maybe_inner_function_body_raw}
-            "
         )
     }
+}
 
-    fn crash_conditions(&self) -> Vec<String>
-    where
-        Self: Sized,
-    {
-        vec![
-            "Map function does not take 1 element.".to_string(),
-            "Map function does not yield 1 element.".to_string(),
-            "Length exceeds u32::MAX".to_string(),
-        ]
-    }
-
-    fn gen_input_states(&self) -> Vec<ExecutionState>
-    where
-        Self: Sized,
-    {
-        // Create random list of input data type
-        let list_pointer = BFieldElement::new(1u64);
-        let mut rng = thread_rng();
-        let list_length: usize = rng.gen_range(1..=100);
-
-        vec![self.generate_input_state(list_pointer, list_length, true)]
-    }
-
-    fn common_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
-        // Create random list of input data type
-        let list_pointer = BFieldElement::new(1u64);
-        let list_length: usize = 10;
-        self.generate_input_state(list_pointer, list_length, false)
-    }
-
-    fn worst_case_input_state(&self) -> ExecutionState
-    where
-        Self: Sized,
-    {
-        // Create random list of input data type
-        let list_pointer = BFieldElement::new(1u64);
-        let list_length: usize = 400;
-        self.generate_input_state(list_pointer, list_length, false)
-    }
-
-    fn rust_shadowing(
+impl Function for All {
+    fn rust_shadow(
         &self,
-        stack: &mut Vec<triton_vm::BFieldElement>,
-        std_in: Vec<triton_vm::BFieldElement>,
-        secret_in: Vec<triton_vm::BFieldElement>,
-        memory: &mut std::collections::HashMap<triton_vm::BFieldElement, triton_vm::BFieldElement>,
-    ) where
-        Self: Sized,
-    {
+        stack: &mut Vec<BFieldElement>,
+        memory: &mut HashMap<BFieldElement, BFieldElement>,
+    ) {
         let input_type = match self.f.get_input_types().len() {
             1 => self.f.get_input_types()[0].clone(),
             _ => panic!("Input length must be one when using function in map)"),
@@ -333,8 +272,7 @@ impl DeprecatedSnippet for All {
                 stack.push(element);
             }
 
-            self.f
-                .rust_shadowing(&std_in.clone(), &secret_in.clone(), stack, memory);
+            self.f.rust_shadowing(&[], &[], stack, memory);
 
             let single_result = stack.pop().unwrap().value() != 0;
             satisfied = satisfied && single_result;
@@ -342,6 +280,18 @@ impl DeprecatedSnippet for All {
 
         // set result
         stack.push(BFieldElement::new(satisfied as u64));
+    }
+
+    fn pseudorandom_initial_state(
+        &self,
+        seed: [u8; 32],
+        _bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
+    ) -> (Vec<BFieldElement>, HashMap<BFieldElement, BFieldElement>) {
+        let mut rng: StdRng = SeedableRng::from_seed(seed);
+        let list_pointer = BFieldElement::new(rng.next_u64() % (1 << 20));
+        let list_length = 1 << (rng.next_u32() as usize % 4);
+        let execution_state = self.generate_input_state(list_pointer, list_length, true);
+        (execution_state.stack, execution_state.memory)
     }
 }
 
@@ -493,35 +443,28 @@ mod tests {
     use triton_vm::triton_asm;
 
     use crate::{
-        list::higher_order::inner_function::RawCode,
-        test_helpers::{
-            test_rust_equivalence_given_input_values_deprecated,
-            test_rust_equivalence_multiple_deprecated,
-        },
+        function::ShadowedFunction, list::higher_order::inner_function::RawCode,
+        snippet::RustShadow, test_helpers::test_rust_equivalence_given_input_values,
     };
 
     use super::*;
 
     #[test]
     fn unsafe_list_prop_test() {
-        test_rust_equivalence_multiple_deprecated(
-            &All {
-                list_type: ListType::Unsafe,
-                f: InnerFunction::Snippet(Box::new(TestHashXFieldElementLsb)),
-            },
-            false,
-        );
+        let snippet = All {
+            list_type: ListType::Unsafe,
+            f: InnerFunction::Snippet(Box::new(TestHashXFieldElementLsb)),
+        };
+        ShadowedFunction::new(snippet).test();
     }
 
     #[test]
     fn with_safe_list_prop_test() {
-        test_rust_equivalence_multiple_deprecated(
-            &All {
-                list_type: ListType::Safe,
-                f: InnerFunction::Snippet(Box::new(TestHashXFieldElementLsb)),
-            },
-            false,
-        );
+        let snippet = All {
+            list_type: ListType::Safe,
+            f: InnerFunction::Snippet(Box::new(TestHashXFieldElementLsb)),
+        };
+        ShadowedFunction::new(snippet).test();
     }
 
     #[test]
@@ -558,8 +501,9 @@ mod tests {
         let input_stack = vec![get_init_tvm_stack(), vec![BFieldElement::new(42)]].concat();
         let expected_end_stack_true =
             vec![get_init_tvm_stack(), vec![BFieldElement::one()]].concat();
-        test_rust_equivalence_given_input_values_deprecated(
-            &snippet,
+        let shadowed_snippet = ShadowedFunction::new(snippet);
+        test_rust_equivalence_given_input_values(
+            &shadowed_snippet,
             &input_stack,
             &[],
             &mut memory,
@@ -578,8 +522,8 @@ mod tests {
         );
         let expected_end_stack_false =
             vec![get_init_tvm_stack(), vec![BFieldElement::zero()]].concat();
-        test_rust_equivalence_given_input_values_deprecated(
-            &snippet,
+        test_rust_equivalence_given_input_values(
+            &shadowed_snippet,
             &input_stack,
             &[],
             &mut memory,
@@ -609,13 +553,11 @@ mod tests {
                 vec.push(BFieldElement::new(new_value));
             })),
         );
-        test_rust_equivalence_multiple_deprecated(
-            &All {
-                list_type: ListType::Unsafe,
-                f: InnerFunction::RawCode(rawcode),
-            },
-            false,
-        );
+        let snippet = All {
+            list_type: ListType::Unsafe,
+            f: InnerFunction::RawCode(rawcode),
+        };
+        ShadowedFunction::new(snippet).test();
     }
 
     #[test]
@@ -643,26 +585,25 @@ mod tests {
                 vec.push(BFieldElement::new(new_value));
             })),
         );
-        test_rust_equivalence_multiple_deprecated(
-            &All {
-                list_type: ListType::Unsafe,
-                f: InnerFunction::RawCode(rawcode),
-            },
-            false,
-        );
+        let snippet = All {
+            list_type: ListType::Unsafe,
+            f: InnerFunction::RawCode(rawcode),
+        };
+        ShadowedFunction::new(snippet).test();
     }
 }
 
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::snippet_bencher::bench_and_write;
+    use crate::{function::ShadowedFunction, snippet::RustShadow};
 
     #[test]
     fn unsafe_list_all_benchmark() {
-        bench_and_write(All {
+        ShadowedFunction::new(All {
             list_type: ListType::Unsafe,
             f: InnerFunction::Snippet(Box::new(TestHashXFieldElementLsb)),
-        });
+        })
+        .bench();
     }
 }
