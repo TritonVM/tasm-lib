@@ -83,15 +83,22 @@ impl Library {
         self.free_pointer
     }
 
+    // Return a list of all external dependencies sorted by name
+    // All snippets are sorted
+    // alphabetically to ensure that generated programs are deterministic.
+    pub fn all_external_dependencies(&self) -> Vec<Vec<LabelledInstruction>> {
+        self.seen_snippets
+            .iter()
+            .sorted_by_key(|(k, _)| *k)
+            .map(|(_, code)| code.clone())
+            .collect()
+    }
+
     #[allow(dead_code)]
     pub fn all_imports(&self) -> Vec<LabelledInstruction> {
         // Collect all imports and return. All snippets are sorted
         // alphabetically to ensure that generated programs are deterministic.
-        self.seen_snippets
-            .iter()
-            .sorted_unstable_by_key(|(k, _)| *k)
-            .flat_map(|(_, s)| s.clone())
-            .collect()
+        self.all_external_dependencies().concat()
     }
 
     pub fn kmalloc(&mut self, num_words: usize) -> usize {
@@ -384,6 +391,13 @@ mod tests {
 
             let mut src = code;
             let mut imports = library.all_imports();
+
+            // Sanity check on `all_external_dependencies`, checking that they are
+            // *also* sorted alphabetically.
+            let all_ext_deps = library.all_external_dependencies();
+            let imports_repeated = all_ext_deps.concat();
+            assert_eq!(imports, imports_repeated);
+
             src.append(&mut imports);
 
             Program::new(&src)
