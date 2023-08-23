@@ -83,7 +83,9 @@ impl DataType {
                 .map(|(a, b, c, d, e)| vec![a, b, c, d, e])
                 .collect_vec(),
             DataType::List(_) => panic!("Random generation of lists is not supported"),
-            DataType::VoidPointer => vec![vec![random::<BFieldElement>()]],
+            DataType::VoidPointer => (0..count)
+                .map(|_| vec![random::<BFieldElement>()])
+                .collect_vec(),
             DataType::Tuple(v) => v
                 .iter()
                 .flat_map(|dt| dt.random_elements(rng.gen_range(0..count)))

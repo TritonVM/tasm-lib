@@ -699,7 +699,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn unsafe_list_prop_test() {
+    fn unsafe_list_prop_test_xfe_digest() {
         ShadowedFunction::new(Zip {
             list_type: ListType::Unsafe,
             left_type: DataType::XFE,
@@ -709,13 +709,61 @@ mod tests {
     }
 
     #[test]
-    fn with_safe_list_prop_test() {
+    fn with_safe_list_prop_test_xfe_digest() {
         ShadowedFunction::new(Zip {
             list_type: ListType::Safe,
             left_type: DataType::XFE,
             right_type: DataType::Digest,
         })
         .test()
+    }
+
+    #[test]
+    fn list_prop_test_more_types() {
+        for list_type in [ListType::Unsafe, ListType::Safe] {
+            ShadowedFunction::new(Zip {
+                list_type: list_type.clone(),
+                left_type: DataType::BFE,
+                right_type: DataType::BFE,
+            })
+            .test();
+            ShadowedFunction::new(Zip {
+                list_type: list_type.clone(),
+                left_type: DataType::U64,
+                right_type: DataType::U32,
+            })
+            .test();
+            ShadowedFunction::new(Zip {
+                list_type: list_type.clone(),
+                left_type: DataType::Bool,
+                right_type: DataType::Digest,
+            })
+            .test();
+            ShadowedFunction::new(Zip {
+                list_type: list_type.clone(),
+                left_type: DataType::U128,
+                right_type: DataType::VoidPointer,
+            })
+            .test();
+            ShadowedFunction::new(Zip {
+                list_type: list_type.clone(),
+                left_type: DataType::U128,
+                right_type: DataType::Digest,
+            })
+            .test();
+            ShadowedFunction::new(Zip {
+                list_type: list_type.clone(),
+                left_type: DataType::U128,
+                right_type: DataType::U128,
+            })
+            .test();
+            ShadowedFunction::new(Zip {
+                list_type: list_type.clone(),
+                left_type: DataType::Digest,
+                right_type: DataType::Digest,
+            })
+            .test();
+        }
     }
 }
 

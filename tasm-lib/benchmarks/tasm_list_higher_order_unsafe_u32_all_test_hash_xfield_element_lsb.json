@@ -10,7 +10,7 @@
     "name": "tasm_list_higher_order_unsafe_u32_all_test_hash_xfield_element_lsb",
     "clock_cycle_count": 641,
     "hash_table_height": 0,
-    "u32_table_height": 521,
+    "u32_table_height": 520,
     "case": "WorstCase"
   }
 ]
