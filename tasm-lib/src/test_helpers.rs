@@ -400,7 +400,12 @@ pub(crate) fn test_rust_equivalence_given_complete_state<T: RustShadow>(
     }
 
     // run rust shadow
-    shadowed_snippet.rust_shadow_wrapper(stdin, nondeterminism, &mut rust_stack, &mut rust_memory);
+    let stdout_rust = shadowed_snippet.rust_shadow_wrapper(
+        stdin,
+        nondeterminism,
+        &mut rust_stack,
+        &mut rust_memory,
+    );
 
     // run tvm
     let vm_output_state = link_and_run_tasm_for_test(
@@ -415,6 +420,12 @@ pub(crate) fn test_rust_equivalence_given_complete_state<T: RustShadow>(
     // Sanity checks
     assert_eq!(vm_output_state.final_ram, tasm_memory);
     assert_eq!(vm_output_state.final_stack, tasm_stack);
+
+    // assert stdouts agree
+    assert_eq!(
+        stdout_rust, vm_output_state.output,
+        "Rust shadowing and VM std out must agree"
+    );
 
     // assert stacks are equal, up to program hash
     let tasm_stack_skip_program_hash = tasm_stack.iter().cloned().skip(DIGEST_LENGTH).collect_vec();
