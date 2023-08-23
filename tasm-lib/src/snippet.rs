@@ -43,7 +43,6 @@ pub enum DataType {
     XFE,
     Digest,
     List(Box<DataType>),
-    Pair(Box<DataType>, Box<DataType>),
     Tuple(Vec<DataType>),
     VoidPointer,
 }
@@ -84,15 +83,6 @@ impl DataType {
                 .map(|(a, b, c, d, e)| vec![a, b, c, d, e])
                 .collect_vec(),
             DataType::List(_) => panic!("Random generation of lists is not supported"),
-            DataType::Pair(left, right) => (0..count)
-                .map(|_| {
-                    vec![
-                        left.random_elements(1)[0].clone(),
-                        right.random_elements(1)[0].clone(),
-                    ]
-                    .concat()
-                })
-                .collect_vec(),
             DataType::VoidPointer => vec![vec![random::<BFieldElement>()]],
             DataType::Tuple(v) => v
                 .iter()
@@ -114,7 +104,6 @@ impl Display for DataType {
             DataType::XFE => "xfe".to_string(),
             DataType::Digest => "digest".to_string(),
             DataType::List(element_type) => format!("list({element_type})"),
-            DataType::Pair(left, right) => format!("pair({left},{right})"),
             DataType::VoidPointer => "void-pointer".to_string(),
             DataType::Tuple(t) => format!("tuple({})", t.iter().join(",")),
         };
@@ -125,13 +114,11 @@ impl Display for DataType {
 impl DataType {
     pub fn label_friendly_name(&self) -> String {
         match self {
-            DataType::Pair(left, right) => format!(
-                "pair_L{}_and_{}R",
-                left.label_friendly_name(),
-                right.label_friendly_name()
-            ),
             DataType::List(inner_type) => format!("list_L{}R", inner_type),
             DataType::VoidPointer => "void_pointer".to_string(),
+            DataType::Tuple(inner_types) => {
+                format!("tuple_ofstart_{}_ofend_", inner_types.iter().join("_"))
+            }
             _ => format!("{}", self),
         }
     }
@@ -145,7 +132,6 @@ impl DataType {
             DataType::XFE => 3,
             DataType::Digest => DIGEST_LENGTH,
             DataType::List(_) => 1,
-            DataType::Pair(left, right) => left.get_size() + right.get_size(),
             DataType::VoidPointer => 1,
             DataType::Tuple(t) => t.iter().map(|dt| dt.get_size()).sum(),
         }

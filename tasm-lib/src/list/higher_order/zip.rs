@@ -44,10 +44,10 @@ impl BasicSnippet for Zip {
 
     fn outputs(&self) -> Vec<(DataType, String)> {
         vec![(
-            DataType::List(Box::new(DataType::Pair(
-                Box::new(self.left_type.clone()),
-                Box::new(self.right_type.clone()),
-            ))),
+            DataType::List(Box::new(DataType::Tuple(vec![
+                self.left_type.clone(),
+                self.right_type.clone(),
+            ]))),
             "*output_list".to_string(),
         )]
     }
@@ -81,19 +81,15 @@ impl BasicSnippet for Zip {
         };
         let right_element_size = self.right_type.get_size();
 
-        // helper functions for list(left,right)
-        let pair_type = DataType::Pair(
-            Box::new(self.left_type.clone()),
-            Box::new(self.right_type.clone()),
-        );
-        let pair_element_size = pair_type.get_size();
-        let new_list_pair = match self.list_type {
-            ListType::Safe => library.import(Box::new(SafeNew(pair_type.clone()))),
-            ListType::Unsafe => library.import(Box::new(UnsafeNew(pair_type.clone()))),
+        let output_type = DataType::Tuple(vec![self.left_type.clone(), self.right_type.clone()]);
+        let output_element_size = output_type.get_size();
+        let new_output_list = match self.list_type {
+            ListType::Safe => library.import(Box::new(SafeNew(output_type.clone()))),
+            ListType::Unsafe => library.import(Box::new(UnsafeNew(output_type.clone()))),
         };
-        let set_length_pair = match self.list_type {
-            ListType::Safe => library.import(Box::new(SafeSetLength(pair_type))),
-            ListType::Unsafe => library.import(Box::new(UnsafeSetLength(pair_type))),
+        let set_output_list_length = match self.list_type {
+            ListType::Safe => library.import(Box::new(SafeSetLength(output_type))),
+            ListType::Unsafe => library.import(Box::new(UnsafeSetLength(output_type))),
         };
 
         // helper function for memory
@@ -119,10 +115,10 @@ impl BasicSnippet for Zip {
 
             // create object for pair list and set length
             dup 0
-            call {new_list_pair} // _ left_list right_list len pair_list
+            call {new_output_list} // _ left_list right_list len pair_list
 
             dup 1  // _ left_list right_list len pair_list len
-            call {set_length_pair} // _ left_list right_list len pair_list
+            call {set_output_list_length} // _ left_list right_list len pair_list
 
             // prepare stack for loop
             swap 1 // _ left_list right_list pair_list len
@@ -152,7 +148,7 @@ impl BasicSnippet for Zip {
                 dup 1 // _ left_list right_list pair_list index pair_list
                 push {safety_offset} add // _ left_list right_list pair_list index pair_list_start
                 dup 1 // _ left_list right_list pair_list index pair_list_start index
-                push {pair_element_size} // _ left_list right_list pair_list index pair_list_start index size
+                push {output_element_size} // _ left_list right_list pair_list index pair_list_start index size
                 mul add // _ left_list right_list pair_list index pair_list_start+index*size
                 // _ left_list right_list pair_list index write_dest
 
@@ -243,40 +239,43 @@ impl Function for Zip {
         };
 
         let len = left_length;
-        let pair_list_capacity = len;
-        let pair_type = DataType::Pair(
-            Box::new(self.left_type.clone()),
-            Box::new(self.right_type.clone()),
-        );
+        let output_list_capacity = len;
+        let output_type = DataType::Tuple(vec![self.left_type.clone(), self.right_type.clone()]);
 
         // Get pointer for pair list through dynamic allocator
-        let pair_list_size = match self.list_type {
-            ListType::Safe => 2 + len * pair_type.get_size(),
-            ListType::Unsafe => 1 + len * pair_type.get_size(),
+        let output_list_size = match self.list_type {
+            ListType::Safe => 2 + len * output_type.get_size(),
+            ListType::Unsafe => 1 + len * output_type.get_size(),
         };
-        let pair_list =
-            rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator(pair_list_size, memory);
+        let output_list = rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator(
+            output_list_size,
+            memory,
+        );
 
         match self.list_type {
             ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_new(
-                pair_list,
-                pair_list_capacity as u32,
+                output_list,
+                output_list_capacity as u32,
                 memory,
             ),
             ListType::Unsafe => {
-                rust_shadowing_helper_functions::unsafe_list::unsafe_list_new(pair_list, memory)
+                rust_shadowing_helper_functions::unsafe_list::unsafe_list_new(output_list, memory)
             }
         };
 
         match self.list_type {
             ListType::Safe => {
                 rust_shadowing_helper_functions::safe_list::safe_list_set_length(
-                    pair_list, len, memory,
+                    output_list,
+                    len,
+                    memory,
                 );
             }
             ListType::Unsafe => {
                 rust_shadowing_helper_functions::unsafe_list::unsafe_list_set_length(
-                    pair_list, len as u32, memory,
+                    output_list,
+                    len as u32,
+                    memory,
                 );
             }
         }
@@ -294,10 +293,10 @@ impl Function for Zip {
                 .collect_vec();
 
             // write
-            set_element(pair_list, i, pair, memory, pair_type.get_size());
+            set_element(output_list, i, pair, memory, output_type.get_size());
         }
 
-        stack.push(pair_list);
+        stack.push(output_list);
     }
 
     fn pseudorandom_initial_state(
