@@ -43,7 +43,10 @@ use crate::{
         load_auth_path_from_std_in_unsafe_list::LoadAuthPathFromStdInUnsafeList,
         reverse_digest::ReverseDigest, sample_indices::SampleIndices, swap_digest::SwapDigest,
     },
-    io::{load_from_input::LoadFromInput, read_secret::ReadSecret, read_stdin::ReadStdIn},
+    io::{
+        load_from_input::LoadFromInput, read_secret::ReadSecret, read_stdin::ReadStdIn,
+        write_to_stdout::WriteToStdout,
+    },
     list::{
         contiguous_list,
         range::Range,
@@ -218,6 +221,13 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
 
         "tasm_io_load_from_input_stdin" => Box::new(LoadFromInput(InputSource::StdIn)),
         "tasm_io_load_from_input_secin" => Box::new(LoadFromInput(InputSource::SecretIn)),
+
+        "tasm_io_write_to_stdout_bool" => Box::new(WriteToStdout(DataType::Bool)),
+        "tasm_io_write_to_stdout_u32" => Box::new(WriteToStdout(DataType::U32)),
+        "tasm_io_write_to_stdout_u64" => Box::new(WriteToStdout(DataType::U64)),
+        "tasm_io_write_to_stdout_bfe" => Box::new(WriteToStdout(DataType::BFE)),
+        "tasm_io_write_to_stdout_xfe" => Box::new(WriteToStdout(DataType::XFE)),
+        "tasm_io_write_to_stdout_digest" => Box::new(WriteToStdout(DataType::Digest)),
 
         // safe lists
         "tasm_list_safe_u32_get_element_bool" => Box::new(SafeGet(DataType::Bool)),

@@ -19,6 +19,7 @@ use crate::{
 ///
 /// See also: [closure], [function], [algorithm]
 pub trait Procedure: BasicSnippet {
+    /// Returns standard output
     fn rust_shadow(
         &self,
         stack: &mut Vec<BFieldElement>,
@@ -33,6 +34,7 @@ pub trait Procedure: BasicSnippet {
     ) {
     }
 
+    /// Returns (stack, memory, nondeterminism, public_input)
     fn pseudorandom_initial_state(
         &self,
         seed: [u8; 32],

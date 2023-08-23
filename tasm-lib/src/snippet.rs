@@ -48,8 +48,51 @@ pub enum DataType {
 }
 
 impl DataType {
-    pub fn random_elements(&self, count: usize) -> Vec<Vec<BFieldElement>> {
-        let mut rng = thread_rng();
+    /// Return a collection of different data types, used for testing
+    #[cfg(test)]
+    pub fn big_random_generatable_type_collection() -> Vec<DataType> {
+        vec![
+            DataType::Bool,
+            DataType::U32,
+            DataType::U64,
+            DataType::U128,
+            DataType::BFE,
+            DataType::XFE,
+            DataType::Digest,
+            DataType::VoidPointer,
+            DataType::Tuple(vec![DataType::Bool]),
+            DataType::Tuple(vec![DataType::XFE, DataType::Bool]),
+            DataType::Tuple(vec![DataType::XFE, DataType::Digest]),
+            DataType::Tuple(vec![DataType::Bool, DataType::Bool]),
+            DataType::Tuple(vec![DataType::Digest, DataType::XFE]),
+            DataType::Tuple(vec![DataType::BFE, DataType::XFE, DataType::Digest]),
+            DataType::Tuple(vec![DataType::XFE, DataType::BFE, DataType::Digest]),
+            DataType::Tuple(vec![
+                DataType::U64,
+                DataType::Digest,
+                DataType::Digest,
+                DataType::Digest,
+            ]),
+            DataType::Tuple(vec![
+                DataType::Digest,
+                DataType::Digest,
+                DataType::Digest,
+                DataType::U64,
+            ]),
+            DataType::Tuple(vec![
+                DataType::Digest,
+                DataType::XFE,
+                DataType::U128,
+                DataType::Bool,
+            ]),
+        ]
+    }
+
+    pub fn seeded_random_elements(
+        &self,
+        count: usize,
+        rng: &mut impl Rng,
+    ) -> Vec<Vec<BFieldElement>> {
         match self {
             DataType::Bool => {
                 let bools: Vec<bool> = (0..count).map(|_| rng.gen_bool(0.5)).collect();
@@ -86,11 +129,15 @@ impl DataType {
             DataType::VoidPointer => (0..count)
                 .map(|_| vec![random::<BFieldElement>()])
                 .collect_vec(),
-            DataType::Tuple(v) => v
-                .iter()
-                .flat_map(|dt| dt.random_elements(rng.gen_range(0..count)))
+            DataType::Tuple(v) => (0..count)
+                .map(|_| v.iter().flat_map(|dt| dt.random_elements(1)).concat())
                 .collect(),
         }
+    }
+
+    pub fn random_elements(&self, count: usize) -> Vec<Vec<BFieldElement>> {
+        let mut rng = thread_rng();
+        self.seeded_random_elements(count, &mut rng)
     }
 }
 
