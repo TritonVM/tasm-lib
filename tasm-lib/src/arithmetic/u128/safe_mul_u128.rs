@@ -93,189 +93,248 @@ impl DeprecatedSnippet for SafeMulU128 {
                             // lhs_1 * rhs_0
                             dup 3 dup 7 mul
                             // _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0 a_lo a_hi (lhs_1 * rhs_0)
+
+                            //split (lhs_1*rhs_0)
+                            split
+                            // _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0 a_lo a_hi (lhs_1 * rhs_0)_hi (lhs_1 * rhs_0)_lo
+
+                            // duplicate a_hi and add
+                            dup 2 add
+                            // _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0 a_lo a_hi (lhs_1 * rhs_0)_hi ((lhs_1 * rhs_0)_lo + a_hi)
+
+                            //swap a_hi and pop
+                            swap 2 pop
+                            // _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0 a_lo  ((lhs_1*rhs_0)_lo+a_hi) (lhs_1 * rhs_0)_hi
+
+                            // (lhs_0*rhs_1)
+                            dup 3 dup 9 mul
+                            // _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0 a_lo ((lhs_1*rhs_0)_lo+a_hi) (lhs_1 * rhs_0)_hi (lhs_0 * rhs_1)
+
+                            // split (lhs_0*rhs_1)
+                            split
+                            // _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0 a_lo ((lhs_1*rhs_0)_lo+a_hi) (lhs_1 * rhs_0)_hi (lhs_0 * rhs_1)_hi (lhs_0 * rhs_1)_lo
+
+                            // duplicate '3' and add 
+                            dup 3 add 
+                            // _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0 a_lo ((lhs_1*rhs_0)_lo+a_hi) (lhs_1 * rhs_0)_hi (lhs_0 * rhs_1)_hi ((lhs_0 * rhs_1)_lo + (lhs_1 * rhs_0)_lo + a_hi)
+
+                            //swap pop and add
+                            swap 3 pop add
+                            // _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0 p_0 p_1 ((lhs_0 * rhs_1)_hi + (lhs_1*rhs_0)_hi)
+
+                            // rename to carry_1
+                            // _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0 p_0 p_1 carry_1
+
+                            // (lhs_2 * rhs_0)
+                            dup 5 dup 8 mul
+                            // _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0 p_0 p_1 carry_1 (lhs_2 * rhs_0)
+
+                            // split (lhs_2 * rhs_0)
+                            split
+                            // _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0 p_0 p_1 carry_1 (lhs_2 * rhs_0)_hi (lhs_2 * rhs_0)_lo
+
+                            // duplicate '2' and add
+                            dup 2 add
+                            // _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0 p_0 p_1 carry_1 (lhs_2 * rhs_0)_hi ((lhs_2 * rhs_0)_lo + carry_1)
+
+                            // swap carry_1 pop
+                            swap 2 pop
+                            // _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0 p_0 p_1 ((lhs_2 * rhs_0)_lo + carry_1) (lhs_2 * rhs_0)_hi
+
+                            // (lhs_1 * rhs_1)
+                            dup 5 dup 10 mul
+                            // _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0 p_0 p_1 ((lhs_2 * rhs_0)_lo + carry_1) (lhs_2 * rhs_0)_hi (lhs_1 * rhs_1)
+
+                            // split (lhs_1 * rhs_1)
+                            split
+                            // _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0 p_0 p_1 ((lhs_2 * rhs_0)_lo + carry_1) (lhs_2 * rhs_0)_hi (lhs_1 * rhs_1)_hi (lhs_1 * rhs_1)_lo
+
+                            // duplicate '3' and add
+                            dup 3 add
+                            // _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0 p_0 p_1 ((lhs_2 * rhs_0)_lo + carry_1) (lhs_2 * rhs_0)_hi (lhs_1 * rhs_1)_hi ((lhs_1 * rhs_1)_lo + (lhs_2 * rhs_0)_lo + carry_1)
                             
-                            // lhs_0 * rhs_1 and add successively to produce `b`
-                            dup 3 dup 9 mul add add
-                            // _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0 a_lo (a_hi + (lhs_0 * rhs_1) + (lhs_1 * rhs_0))
-                            // or, in terms of b, 
-                            // _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0 a_lo b
+                            // swap pop and add
+                            swap 3 pop add
+                            // _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0 p_0 p_1 ((lhs_1 * rhs_1)_lo + (lhs_2 * rhs_0)_lo + carry_1) ((lhs_1 * rhs_1)_hi + (lhs_2 * rhs_0)_hi)
 
-                            // split b 
+                            // (lhs_0 * rhs_2)
+                            dup 4 dup 11 mul
+                            // _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0 p_0 p_1 ((lhs_1 * rhs_1)_lo + (lhs_2 * rhs_0)_lo + carry_1) ((lhs_1 * rhs_1)_hi + (lhs_2 * rhs_0)_hi) (lhs_0 * rhs_2)
+
+                            // split (lhs_0 * rhs_2)
                             split
-                            // _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0 a_lo b_hi b_lo
-                        
-                            // swap b_hi and b_lo
-                            swap 1
-                            // _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0 a_lo b_lo b_hi
+                            // _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0 p_0 p_1 ((lhs_1 * rhs_1)_lo + (lhs_2 * rhs_0)_lo + carry_1) ((lhs_1 * rhs_1)_hi + (lhs_2 * rhs_0)_hi) (lhs_0 * rhs_2)_hi (lhs_0 * rhs_2)_lo
+                            
+                            // duplicate '3' and add
+                            dup 3 add
+                            // _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0 p_0 p_1 ((lhs_1 * rhs_1)_lo + (lhs_2 * rhs_0)_lo + carry_1) ((lhs_1 * rhs_1)_hi + (lhs_2 * rhs_0)_hi) (lhs_0 * rhs_2)_hi ((lhs_0 * rhs_2)_lo + (lhs_1 * rhs_1)_lo + (lhs_2 * rhs_0)_lo + carry_1)
 
-                            // lhs_2 * rhs_0
-                            dup 5 dup 8 mul 
-                            // _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0 a_lo b_lo b_hi (lhs_2 * rhs_0)
+                            // swap pop and add
+                            swap 3 pop add
+                            // _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0 p_0 p_1 p_2 ((lhs_0 * rhs_2)_hi + (lhs_1 * rhs_1)_hi + (lhs_2 * rhs_0)_hi)
 
-                            // lhs_1 * rhs_1 and add
-                            dup 5 dup 10 mul add
-                            // _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0 a_lo b_lo b_hi ((lhs_2 * rhs_0)+(lhs_1 * rhs_1)) 
+                            // rename to carry_2
+                            // _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0 p_0 p_1 p_2 carry_2
 
-                            // lhs_0 * rhs_2 and add successively to give `c`
-                            dup 4 dup 11 mul add add
-                            // _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0 a_lo b_lo (b_hi+(lhs_2 * rhs_0)+(lhs_1 * rhs_1)+(lhs_0 * rhs_2))
-
-                            // split c
-                            split
-                            // _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0 a_lo b_lo c_hi c_lo
-
-                            // swap c_hi and c_lo
-                            swap 1
-                            // _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0 a_lo b_lo c_lo c_hi
-
-                            // push 0 and swap with rhs_0 
+                            // (lhs_3 * rhs_0)
                             push 0 swap 9
-                            // _ rhs_3 rhs_2 rhs_1 0 lhs_3 lhs_2 lhs_1 lhs_0 a_lo b_lo c_lo c_hi rhs_0
-                            
-                            // lhs_3 * rhs_0, consume rhs_0
+                            // _ rhs_3 rhs_2 rhs_1 0 lhs_3 lhs_2 lhs_1 lhs_0 p_0 p_1 p_2 carry_2 rhs_0
+
                             dup 8 mul
-                            // _ rhs_3 rhs_2 rhs_1 0 lhs_3 lhs_2 lhs_1 lhs_0 a_lo b_lo c_lo c_hi (lhs_3 * rhs_0)
-
-                            //lhs_0 * rhs_3, mul and add to consume lhs_0
-                            push 0 swap 6 dup 13 mul add 
-                            // _ rhs_3 rhs_2 rhs_1 0 lhs_3 lhs_2 lhs_1 0 a_lo b_lo c_lo c_hi ((lhs_3 * rhs_0)+(lhs_0 * rhs_3))
-
-                            //lhs_1 * rhs_2
-                            dup 6 dup 12 mul add
-                            // _ rhs_3 rhs_2 rhs_1 0 lhs_3 lhs_2 lhs_1 0 a_lo b_lo c_lo c_hi ((lhs_3 * rhs_0)+(lhs_0 * rhs_3)+(lhs_1 * rhs_2))
-
-                            //lhs_2 * rhs_1 and add successively to give `d`
-                            dup 7 dup 11 mul add add 
-                            //  _ rhs_3 rhs_2 rhs_1 0 lhs_3 lhs_2 lhs_1 0 a_lo b_lo c_lo (c_hi + (lhs_3 * rhs_0)+(lhs_0 * rhs_3)+(lhs_1 * rhs_2)+(lhs_2 * rhs_1))
-
-                            // split d
+                            // _ rhs_3 rhs_2 rhs_1 0 lhs_3 lhs_2 lhs_1 lhs_0 p_0 p_1 p_2 carry_2 (lhs_3 * rhs_0)
+                            
+                            // split (lhs_3 * rhs_0)
                             split
-                            // _ rhs_3 rhs_2 rhs_1 0 lhs_3 lhs_2 lhs_1 0 a_lo b_lo c_lo d_hi d_lo
+                            // _ rhs_3 rhs_2 rhs_1 0 lhs_3 lhs_2 lhs_1 lhs_0 p_0 p_1 p_2 carry_2 (lhs_3 * rhs_0)_hi (lhs_3 * rhs_0)_lo
+
+                            // duplicate '2' and add
+                            dup 2 add
+                            // _ rhs_3 rhs_2 rhs_1 0 lhs_3 lhs_2 lhs_1 lhs_0 p_0 p_1 p_2 carry_2 (lhs_3 * rhs_0)_hi ((lhs_3 * rhs_0)_lo + carry_2)
+
+                            // swap carry_2 pop
+                            swap 2 pop
+                            // _ rhs_3 rhs_2 rhs_1 0 lhs_3 lhs_2 lhs_1 lhs_0 p_0 p_1 p_2 ((lhs_3 * rhs_0)_lo + carry_2) (lhs_3 * rhs_0)_hi
+
+                            // (lhs_2 * rhs_1)
+                            dup 7 dup 11 mul
+                            // _ rhs_3 rhs_2 rhs_1 0 lhs_3 lhs_2 lhs_1 lhs_0 p_0 p_1 p_2 ((lhs_3 * rhs_0)_lo + carry_2) (lhs_3 * rhs_0)_hi (lhs_2 * rhs_1)
                             
-                            // swap d_hi and d_lo
-                            swap 1
-                            // _ rhs_3 rhs_2 rhs_1 0 lhs_3 lhs_2 lhs_1 0 a_lo b_lo c_lo d_lo d_hi
+                            // split (lhs_2 * rhs_1)
+                            split
+                            // _ rhs_3 rhs_2 rhs_1 0 lhs_3 lhs_2 lhs_1 lhs_0 p_0 p_1 p_2 ((lhs_3 * rhs_0)_lo + carry_2) (lhs_3 * rhs_0)_hi (lhs_2 * rhs_1)_hi (lhs_2 * rhs_1)_lo
+
+                            // duplicate '3' and add
+                            dup 3 add
+                            // _ rhs_3 rhs_2 rhs_1 0 lhs_3 lhs_2 lhs_1 lhs_0 p_0 p_1 p_2 ((lhs_3 * rhs_0)_lo + carry_2) (lhs_3 * rhs_0)_hi (lhs_2 * rhs_1)_hi ((lhs_2 * rhs_1)_lo + (lhs_3 * rhs_0)_lo + carry_2)
+
+                            // swap pop and add
+                            swap 3 pop add
+                            // _ rhs_3 rhs_2 rhs_1 0 lhs_3 lhs_2 lhs_1 lhs_0 p_0 p_1 p_2 ((lhs_2 * rhs_1)_lo + (lhs_3 * rhs_0)_lo + carry_2) ((lhs_2 * rhs_1)_hi + (lhs_3 * rhs_0)_hi)
                             
-                            // check if d_hi == 0, crash if d_hi!=0
+                            // (lhs_1 * rhs_2)
+                            dup 6 dup 12 mul
+                            // _ rhs_3 rhs_2 rhs_1 0 lhs_3 lhs_2 lhs_1 lhs_0 p_0 p_1 p_2 ((lhs_2 * rhs_1)_lo + (lhs_3 * rhs_0)_lo + carry_2) ((lhs_2 * rhs_1)_hi + (lhs_3 * rhs_0)_hi) (lhs_1 * rhs_2)
+                            
+                            // split (lhs_1 * rhs_2)
+                            split
+                            // _ rhs_3 rhs_2 rhs_1 0 lhs_3 lhs_2 lhs_1 lhs_0 p_0 p_1 p_2 ((lhs_2 * rhs_1)_lo + (lhs_3 * rhs_0)_lo + carry_2) ((lhs_2 * rhs_1)_hi + (lhs_3 * rhs_0)_hi) (lhs_1 * rhs_2)_hi (lhs_1 * rhs_2)_lo
+
+                            // duplicate '3' and add
+                            dup 3 add
+                            // _ rhs_3 rhs_2 rhs_1 0 lhs_3 lhs_2 lhs_1 lhs_0 p_0 p_1 p_2 ((lhs_2 * rhs_1)_lo + (lhs_3 * rhs_0)_lo + carry_2) ((lhs_2 * rhs_1)_hi + (lhs_3 * rhs_0)_hi) (lhs_1 * rhs_2)_hi ((lhs_1 * rhs_2)_lo + (lhs_2 * rhs_1)_lo + (lhs_3 * rhs_0)_lo + carry_2)
+
+                            // swap pop and add
+                            swap 3 pop add
+                            // _ rhs_3 rhs_2 rhs_1 0 lhs_3 lhs_2 lhs_1 lhs_0 p_0 p_1 p_2 ((lhs_1 * rhs_2)_lo + (lhs_2 * rhs_1)_lo + (lhs_3 * rhs_0)_lo + carry_2) ((lhs_1 * rhs_2)_hi + (lhs_2 * rhs_1)_hi + (lhs_3 * rhs_0)_hi)
+                          
+                            // (lhs_0 * rhs_3) -- have to consume lhs_0
+                            push 0 swap 6 dup 13 mul
+                            // _ rhs_3 rhs_2 rhs_1 0 lhs_3 lhs_2 lhs_1 0 p_0 p_1 p_2 ((lhs_1 * rhs_2)_lo + (lhs_2 * rhs_1)_lo + (lhs_3 * rhs_0)_lo + carry_2) ((lhs_1 * rhs_2)_hi + (lhs_2 * rhs_1)_hi + (lhs_3 * rhs_0)_hi) (lhs_0 * rhs_3)
+                            
+                            // split (lhs_0 * rhs_3)
+                            split
+                            // _ rhs_3 rhs_2 rhs_1 0 lhs_3 lhs_2 lhs_1 0 p_0 p_1 p_2 ((lhs_1 * rhs_2)_lo + (lhs_2 * rhs_1)_lo + (lhs_3 * rhs_0)_lo + carry_2) ((lhs_1 * rhs_2)_hi + (lhs_2 * rhs_1)_hi + (lhs_3 * rhs_0)_hi) (lhs_0 * rhs_3)_hi (lhs_0 * rhs_3)_lo
+                            
+                            // duplicate '3' and add
+                            dup 3 add
+                            // _ rhs_3 rhs_2 rhs_1 0 lhs_3 lhs_2 lhs_1 0 p_0 p_1 p_2 ((lhs_1 * rhs_2)_lo + (lhs_2 * rhs_1)_lo + (lhs_3 * rhs_0)_lo + carry_2) ((lhs_1 * rhs_2)_hi + (lhs_2 * rhs_1)_hi + (lhs_3 * rhs_0)_hi) (lhs_0 * rhs_3)_hi ((lhs_0 * rhs_3)_lo + (lhs_1 * rhs_2)_lo + (lhs_2 * rhs_1)_lo + (lhs_3 * rhs_0)_lo + carry_2)
+
+                            // swap pop and add
+                            swap 3 pop add
+                            // _ rhs_3 rhs_2 rhs_1 0 lhs_3 lhs_2 lhs_1 0 p_0 p_1 p_2 p_3 ((lhs_0 * rhs_3)_hi + (lhs_1 * rhs_2)_hi + (lhs_2 * rhs_1)_hi + (lhs_3 * rhs_0)_hi)
+
+                            // rename to carry_3
+                            // _ rhs_3 rhs_2 rhs_1 0 lhs_3 lhs_2 lhs_1 0 p_0 p_1 p_2 p_3 carry_3
+
+                            // check whether carry_3 == 0, crash if carry_3 != 0, crash
                             push 0
                             eq
                             assert
-                            // _ rhs_3 rhs_2 rhs_1 0 lhs_3 lhs_2 lhs_1 0 a_lo b_lo c_lo d_lo
+                            // _ rhs_3 rhs_2 rhs_1 0 lhs_3 lhs_2 lhs_1 0 p_0 p_1 p_2 p_3
 
-                            // push 0 and swap with lhs_1
-                            push 0 swap 6 
-                            // _ rhs_3 rhs_2 rhs_1 0 lhs_3 lhs_2 0 0 a_lo b_lo c_lo d_lo lhs_1 
-
-                            // lhs_1 * rhs_3, consume lhs_1
-                            dup 12 mul
-                            // _ rhs_3 rhs_2 rhs_1 0 lhs_3 lhs_2 0 0 a_lo b_lo c_lo d_lo (lhs_1 * rhs_3)
-
-                            // check if lhs_1 * rhs_3 == 0, crash if lhs_1 * rhs_3 != 0
+                            // check whether lhs_3 * rhs_1 == 0, crash if lhs_3 * rhs_1 != 0, crash
+                            push 0 swap 10 dup 8 mul
+                            // _ rhs_3 rhs_2 0 0 lhs_3 lhs_2 lhs_1 0 p_0 p_1 p_2 p_3 (lhs_3 * rhs_1)
+                            
                             push 0
                             eq
                             assert
-                            // _ rhs_3 rhs_2 rhs_1 0 lhs_3 lhs_2 0 0 a_lo b_lo c_lo d_lo
+                            // _ rhs_3 rhs_2 0 0 lhs_3 lhs_2 lhs_1 0 p_0 p_1 p_2 p_3
 
-                            // push 0 and swap with lhs_2
-                            push 0 swap 7
-                            // _ rhs_3 rhs_2 rhs_1 0 lhs_3 0 0 0 a_lo b_lo c_lo d_lo lhs_2
+                            // check whether lhs_2 * rhs_2 == 0, crash if lhs_2 * rhs_2 != 0, crash
+                            dup 6 dup 11 mul
+                            // _ rhs_3 rhs_2 0 0 lhs_3 lhs_2 lhs_1 0 p_0 p_1 p_2 p_3 (lhs_2 * rhs_2)
 
-                            // duplicate lhs_2
-                            dup 0
-                            // _ rhs_3 rhs_2 rhs_1 0 lhs_3 0 0 0 a_lo b_lo c_lo d_lo lhs_2 lhs_2
-
-                            // lhs_2 * rhs_2
-                            dup 12 mul
-                            // _ rhs_3 rhs_2 rhs_1 0 lhs_3 0 0 0 a_lo b_lo c_lo d_lo lhs_2 (lhs_2 * rhs_2)
-
-                            //check if lhs_2 * rhs_2 == 0, crash if lhs_2 * rhs_2 != 0
                             push 0
                             eq
                             assert
-                            // _rhs_3 rhs_2 rhs_1 0 lhs_3 0 0 0 a_lo b_lo c_lo d_lo lhs_2
+                            // _ rhs_3 rhs_2 0 0 lhs_3 lhs_2 lhs_1 0 p_0 p_1 p_2 p_3
 
+                            // check whether lhs_1 * rhs_3 == 0, crash if lhs_1 * rhs_3 != 0, crash
+                            push 0 swap 6 dup 12 mul
+                            // _ rhs_3 rhs_2 0 0 lhs_3 lhs_2 0 0 p_0 p_1 p_2 p_3 (lhs_1 * rhs_3)
 
-                            // lhs_2 * rhs_3, consume lhs_2]
-                            dup 12 mul
-                            // _ rhs_3 rhs_2 rhs_1 0 lhs_3 0 0 0 a_lo b_lo c_lo d_lo (lhs_2 * rhs_3)
-
-                            // check if lhs_2 * rhs_3 == 0, crash if lhs_2 * rhs_3 != 0
-                            push 0
-                            eq 
-                            assert
-                            // _ rhs_3 rhs_2 rhs_1 0 lhs_3 0 0 0 a_lo b_lo c_lo d_lo
-
-                            // push 0 and swap with rhs_1
-                            push 0 swap 10
-                            // _ rhs_3 rhs_2 0 0 lhs_3 0 0 0 a_lo b_lo c_lo d_lo rhs_1
-                        
-                            // lhs_3 * rhs_1
-                            dup 8 mul 
-                            // _ rhs_3 rhs_2 0 0 lhs_3 0 0 0 a_lo b_lo c_lo d_lo (lhs_3 * rhs_1)
-
-                            // check if lhs_3 * rhs_1 == 0, crash if lhs_3 * rhs_1 != 0
                             push 0
                             eq
                             assert
-                            // _ rhs_3 rhs_2 0 0 lhs_3 0 0 0 a_lo b_lo c_lo d_lo
+                            // _ rhs_3 rhs_2 0 0 lhs_3 lhs_2 0 0 p_0 p_1 p_2 p_3
 
-                            // push 0 and swap with rhs_2
-                            push 0 swap 11
-                            // _ rhs_3 0 0 0 lhs_3 0 0 0 a_lo b_lo c_lo d_lo rhs_2
+                            // check whether lhs_3 * rhs_2 == 0, crash if lhs_3 * rhs_2 != 0, crash
+                            push 0 swap 11 dup 8 mul
+                            // _ rhs_3 0 0 0 lhs_3 lhs_2 0 0 p_0 p_1 p_2 p_3 (lhs_3 * rhs_2)
 
-                            // lhs_3 * rhs_2
-                            dup 8 mul
-                            // _ rhs_3 0 0 0 lhs_3 0 0 0 a_lo b_lo c_lo d_lo (lhs_3 * rhs_2)
-
-                            // check if lhs_3 * rhs_2 == 0, crash if lhs_3 * rhs_2 != 0
+                            // check whether lhs_3 * rhs_2 == 0, crash if lhs_3 * rhs_2 != 0, crash
                             push 0
                             eq
                             assert
-                            // _ rhs_3 0 0 0 lhs_3 0 0 0 a_lo b_lo c_lo d_lo
+                            // _ rhs_3 0 0 0 lhs_3 lhs_2 0 0 p_0 p_1 p_2 p_3
 
-                            // push 0 and swap with rhs_3
-                            push 0 swap 12
-                            // _ 0 0 0 0 lhs_3 0 0 0 a_lo b_lo c_lo d_lo rhs_3
+                            // check whether lhs_2 * rhs_3 == 0, crash if lhs_2 * rhs_3 != 0, crash
+                            push 0 swap 7 dup 8 mul
+                            // _ rhs_3 0 0 0 lhs_3 0 0 0 p_0 p_1 p_2 p_3 (lhs_2 * rhs_3)
 
-                            // push 0 and swap with lhs_3
-                            push 0 swap 9
-                            // _ 0 0 0 0 0 0 0 0 a_lo b_lo c_lo d_lo rhs_3 lhs_3
-
-                            // lhs_3 * rhs_3, consume both
-                            mul
-
-                            // check if lhs_3 * rhs_3 == 0, crash if lhs_3 * rhs_3 != 0
                             push 0
                             eq
                             assert
-                            // _ 0 0 0 0 0 0 0 0 a_lo b_lo c_lo d_lo
+                            // _ rhs_3 0 0 0 lhs_3 0 0 0 p_0 p_1 p_2 p_3
 
-                            // now swap 0s with the product limbs and pop the 0s
-                            swap 11 
-                            // _ d_lo 0 0 0 0 0 0 0 a_lo b_lo c_lo 0
-                            swap 1
-                            // _ d_lo 0 0 0 0 0 0 0 a_lo b_lo 0 c_lo
-                            swap 10
-                            // _ d_lo c_lo 0 0 0 0 0 0 a_lo b_lo 0 0
-                            swap 2
-                            // _ d_lo c_lo 0 0 0 0 0 0 a_lo 0 0 b_lo
+                            // check whether lhs_3 * rhs_3 == 0, crash if lhs_3 * rhs_3 != 0, crash
+                            push 0 swap 8
+                            // _ rhs_3 0 0 0 0 0 0 0 p_0 p_1 p_2 p_3 lhs_3
+
+                            push 0 swap 13 mul 
+                            // _ 0 0 0 0 0 0 0 0 p_0 p_1 p_2 p_3 (lhs_3 * rhs_3)
+
+                            push 0
+                            eq
+                            assert
+                            // _ 0 0 0 0 0 0 0 0 p_0 p_1 p_2 p_3
+
+                            swap 11
+                            // _ p_3 0 0 0 0 0 0 0 p_0 p_1 p_2 0
+                            pop
+                            // _ p_3 0 0 0 0 0 0 0 p_0 p_1 p_2
+
                             swap 9
-                            // _ d_lo c_lo b_lo 0 0 0 0 0 a_lo 0 0 0
-                            swap 3
-                            // _ d_lo c_lo b_lo 0 0 0 0 0 0 0 0 a_lo
-                            swap 8
-                            // _ d_lo c_lo b_lo a_lo 0 0 0 0 0 0 0 0
-        
+                            // _ p_3 p_2 0 0 0 0 0 0 p_0 p_1 0
                             pop
+                            // _ p_3 p_2 0 0 0 0 0 0 p_0 p_1
+
+                            swap 7
+                            // _ p_3 p_2 p_1 0 0 0 0 0 p_0 0
                             pop
+                            // _ p_3 p_2 p_1 0 0 0 0 0 p_0
+
+                            swap 5
+                            // _ p_3 p_2 p_1 p_0 0 0 0 0 0
                             pop
-                            pop
+                            // _ p_3 p_2 p_1 p_0 0 0 0 0
+
                             pop
                             pop
                             pop
                             pop
 
-                            // _ prod_3 prod_2 prod_1 prod_0
                             return
 
                             "
@@ -411,6 +470,24 @@ mod tests {
         SafeMulU128
             .link_and_run_tasm_from_state_for_test(&mut ExecutionState::with_stack(init_stack));
     }
+
+    #[test]
+    fn max_u64_edge_case_safe_mul_128_test() {
+        // Expect normal behaviour
+        let lhs: U32s<4> = U32s::try_from(u64::MAX as u128).unwrap();
+        let rhs: U32s<4> = U32s::try_from(u64::MAX as u128).unwrap();
+        let mut init_stack = get_init_tvm_stack();
+        for elem in rhs.encode().into_iter().rev() {
+            init_stack.push(elem);
+        }
+        for elem in lhs.encode().into_iter().rev() {
+            init_stack.push(elem);
+        }
+
+        SafeMulU128
+            .link_and_run_tasm_from_state_for_test(&mut ExecutionState::with_stack(init_stack));
+    }
+
 }
 
 #[cfg(test)]
