@@ -18,6 +18,7 @@ use crate::list::ListType;
 use crate::rust_shadowing_helper_functions::safe_list::safe_insert_random_list;
 use crate::rust_shadowing_helper_functions::unsafe_list::untyped_unsafe_insert_random_list;
 use crate::snippet::BasicSnippet;
+use crate::snippet_bencher::BenchmarkCase;
 use crate::{arithmetic, get_init_tvm_stack, rust_shadowing_helper_functions, VmHasher};
 use crate::{
     library::Library,
@@ -273,13 +274,29 @@ impl Function for All {
     fn pseudorandom_initial_state(
         &self,
         seed: [u8; 32],
-        _bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
+        bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
     ) -> (Vec<BFieldElement>, HashMap<BFieldElement, BFieldElement>) {
-        let mut rng: StdRng = SeedableRng::from_seed(seed);
-        let list_pointer = BFieldElement::new(rng.next_u64() % (1 << 20));
-        let list_length = 1 << (rng.next_u32() as usize % 4);
-        let execution_state = self.generate_input_state(list_pointer, list_length, true);
-        (execution_state.stack, execution_state.memory)
+        match bench_case {
+            Some(BenchmarkCase::CommonCase) => {
+                let list_pointer = BFieldElement::new(5);
+                let list_length = 10;
+                let execution_state = self.generate_input_state(list_pointer, list_length, false);
+                (execution_state.stack, execution_state.memory)
+            }
+            Some(BenchmarkCase::WorstCase) => {
+                let list_pointer = BFieldElement::new(5);
+                let list_length = 100;
+                let execution_state = self.generate_input_state(list_pointer, list_length, false);
+                (execution_state.stack, execution_state.memory)
+            }
+            None => {
+                let mut rng: StdRng = SeedableRng::from_seed(seed);
+                let list_pointer = BFieldElement::new(rng.next_u64() % (1 << 20));
+                let list_length = 1 << (rng.next_u32() as usize % 4);
+                let execution_state = self.generate_input_state(list_pointer, list_length, true);
+                (execution_state.stack, execution_state.memory)
+            }
+        }
     }
 }
 
