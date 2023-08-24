@@ -215,7 +215,6 @@ mod tests {
 
     use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
-    #[should_panic]
     #[test]
     fn disallow_too_long_mmr_auth_paths() {
         let mut secret_in = vec![];
@@ -232,13 +231,16 @@ mod tests {
             );
         }
 
-        LoadAuthPathFromSecretInUnsafeList.link_and_run_tasm_for_test(
+        match LoadAuthPathFromSecretInUnsafeList.link_and_run_tasm_for_test(
             &mut get_init_tvm_stack(),
             vec![],
             secret_in.to_vec(),
             &mut HashMap::default(),
             0,
-        );
+        ) {
+            Ok(_) => panic!("Too long MMR AP path must crash the VM"),
+            Err(err) => println!("VM successfully crashed with message: {err}"),
+        }
     }
 
     #[test]
@@ -256,13 +258,17 @@ mod tests {
                 random(),
             );
         }
-        LoadAuthPathFromSecretInUnsafeList.link_and_run_tasm_for_test(
+
+        match LoadAuthPathFromSecretInUnsafeList.link_and_run_tasm_for_test(
             &mut get_init_tvm_stack(),
             vec![],
             secret_in.to_vec(),
             &mut HashMap::default(),
             0,
-        );
+        ) {
+            Ok(_) => println!("VM successfully executed"),
+            Err(err) => panic!("VM must not crash. Got message: {err}"),
+        }
     }
 
     #[test]

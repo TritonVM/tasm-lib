@@ -8,7 +8,7 @@ use std::fmt::Display;
 use std::rc::Rc;
 use triton_vm::instruction::LabelledInstruction;
 use triton_vm::parser::{to_labelled_instructions, tokenize};
-use triton_vm::{triton_asm, NonDeterminism};
+use triton_vm::{triton_asm, NonDeterminism, Program};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
@@ -291,9 +291,14 @@ pub trait DeprecatedSnippet {
             {&library_code}
         );
 
+        // Verify that program compiles, otherwise panics
+        let _program = Program::new(&code);
+
         code
     }
 
+    /// Return Ok(vm_output_state) if execution succeeds, Err(error_message) if VM execution fails,
+    /// panics if anything else goes wrong.
     fn link_and_run_tasm_for_test(
         &self,
         stack: &mut Vec<BFieldElement>,
@@ -301,7 +306,7 @@ pub trait DeprecatedSnippet {
         secret_in: Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
         words_statically_allocated: usize,
-    ) -> VmOutputState {
+    ) -> anyhow::Result<VmOutputState> {
         let expected_length_prior: usize = self.input_types().iter().map(|x| x.get_size()).sum();
         let expected_length_after: usize = self.output_types().iter().map(|x| x.get_size()).sum();
         assert_eq!(
@@ -321,7 +326,6 @@ pub trait DeprecatedSnippet {
             memory,
             Some(words_statically_allocated),
         )
-        .unwrap()
     }
 
     fn link_and_run_tasm_for_bench(
@@ -358,13 +362,15 @@ pub trait DeprecatedSnippet {
         execution_state: &mut ExecutionState,
     ) -> VmOutputState {
         let stack_prior = execution_state.stack.clone();
-        let ret = self.link_and_run_tasm_for_test(
-            &mut execution_state.stack,
-            execution_state.std_in.clone(),
-            execution_state.nondeterminism.individual_tokens.clone(),
-            &mut execution_state.memory,
-            execution_state.words_allocated,
-        );
+        let ret = self
+            .link_and_run_tasm_for_test(
+                &mut execution_state.stack,
+                execution_state.std_in.clone(),
+                execution_state.nondeterminism.individual_tokens.clone(),
+                &mut execution_state.memory,
+                execution_state.words_allocated,
+            )
+            .unwrap();
         let stack_after = execution_state.stack.clone();
 
         // Assert equality of stack elements under input arguments, but don't check program

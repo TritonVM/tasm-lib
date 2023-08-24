@@ -350,10 +350,47 @@ impl DeprecatedSnippet for SafeMulU128 {
         let mut rng = rand::thread_rng();
 
         let mut ret = vec![];
+
+        // u32 * u32
         for _ in 0..10 {
             ret.push(prepare_state(
                 rng.next_u32() as u128,
                 rng.next_u32() as u128,
+            ));
+        }
+
+        // u64 * u64
+        for _ in 0..10 {
+            ret.push(prepare_state(
+                rng.next_u64() as u128,
+                rng.next_u64() as u128,
+            ));
+        }
+
+        // u96 * u32
+        for _ in 0..10 {
+            ret.push(prepare_state(
+                ((rng.next_u64() as u128) << 32) + (rng.next_u32() as u128),
+                rng.next_u32() as u128,
+            ));
+            ret.push(prepare_state(
+                rng.next_u32() as u128,
+                ((rng.next_u64() as u128) << 32) + (rng.next_u32() as u128),
+            ));
+        }
+
+        // Corner cases
+        ret.push(prepare_state(0, 0));
+        ret.push(prepare_state(u64::MAX as u128, u64::MAX as u128));
+        ret.push(prepare_state(u64::MAX as u128, 1u128 << 64));
+        ret.push(prepare_state(1u128 << 64, u64::MAX as u128));
+        ret.push(prepare_state((1u128 << 96) - 1, u32::MAX as u128));
+        ret.push(prepare_state((1u128 << 96) - 1, 1u128 << 32));
+
+        for i in 0..32 {
+            ret.push(prepare_state(
+                (1u128 << (96 + i)) - 1,
+                (1u128 << (32 - i)) - 1,
             ));
         }
 
@@ -421,13 +458,9 @@ fn prepare_state(a: u128, b: u128) -> ExecutionState {
 mod tests {
     use std::collections::HashMap;
 
-    use num::Zero;
     use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
-    use crate::test_helpers::{
-        test_rust_equivalence_given_input_values_deprecated,
-        test_rust_equivalence_multiple_deprecated,
-    };
+    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     use super::*;
 
@@ -453,41 +486,31 @@ mod tests {
             .link_and_run_tasm_from_state_for_test(&mut ExecutionState::with_stack(init_stack));
     }
 
-    #[should_panic]
     #[test]
     fn expected_overflow_safe_mul_128_test() {
-        // Expect normal behaviour
-        let lhs: U32s<4> = U32s::try_from(1u128 << 64).unwrap();
-        let rhs: U32s<4> = U32s::try_from(1u128 << 64).unwrap();
-        let mut init_stack = get_init_tvm_stack();
-        for elem in rhs.encode().into_iter().rev() {
-            init_stack.push(elem);
-        }
-        for elem in lhs.encode().into_iter().rev() {
-            init_stack.push(elem);
-        }
+        for i in 1..128 {
+            let lhs: U32s<4> = U32s::try_from(1u128 << i).unwrap();
+            let rhs: U32s<4> = U32s::try_from(1u128 << (128 - i)).unwrap();
+            let mut init_stack = get_init_tvm_stack();
+            for elem in rhs.encode().into_iter().rev() {
+                init_stack.push(elem);
+            }
+            for elem in lhs.encode().into_iter().rev() {
+                init_stack.push(elem);
+            }
 
-        SafeMulU128
-            .link_and_run_tasm_from_state_for_test(&mut ExecutionState::with_stack(init_stack));
+            match SafeMulU128.link_and_run_tasm_for_test(
+                &mut init_stack,
+                vec![],
+                vec![],
+                &mut HashMap::default(),
+                1,
+            ) {
+                Ok(_) => panic!("Overflow must result in error"),
+                Err(err) => println!("Error: {}", err),
+            }
+        }
     }
-
-    #[test]
-    fn max_u64_edge_case_safe_mul_128_test() {
-        // Expect normal behaviour
-        let lhs: U32s<4> = U32s::try_from(u64::MAX as u128).unwrap();
-        let rhs: U32s<4> = U32s::try_from(u64::MAX as u128).unwrap();
-        let mut init_stack = get_init_tvm_stack();
-        for elem in rhs.encode().into_iter().rev() {
-            init_stack.push(elem);
-        }
-        for elem in lhs.encode().into_iter().rev() {
-            init_stack.push(elem);
-        }
-
-        SafeMulU128
-            .link_and_run_tasm_from_state_for_test(&mut ExecutionState::with_stack(init_stack));
-    }
-
 }
 
 #[cfg(test)]
