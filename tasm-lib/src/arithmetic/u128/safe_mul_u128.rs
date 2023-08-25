@@ -79,7 +79,7 @@ impl DeprecatedSnippet for SafeMulU128 {
 
                     {entrypoint}:
                             // a = lhs_0 * rhs_lo
-                            dup 0 dup 5 mul 
+                            dup 0 dup 5 mul
                             // _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0 a
 
                             // split `a` into `a_hi` and `a_lo`
@@ -114,8 +114,8 @@ impl DeprecatedSnippet for SafeMulU128 {
                             split
                             // _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0 a_lo ((lhs_1*rhs_0)_lo+a_hi) (lhs_1 * rhs_0)_hi (lhs_0 * rhs_1)_hi (lhs_0 * rhs_1)_lo
 
-                            // duplicate '3' and add 
-                            dup 3 add 
+                            // duplicate '3' and add
+                            dup 3 add
                             // _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0 a_lo ((lhs_1*rhs_0)_lo+a_hi) (lhs_1 * rhs_0)_hi (lhs_0 * rhs_1)_hi ((lhs_0 * rhs_1)_lo + (lhs_1 * rhs_0)_lo + a_hi)
 
                             //swap pop and add
@@ -152,7 +152,7 @@ impl DeprecatedSnippet for SafeMulU128 {
                             // duplicate '3' and add
                             dup 3 add
                             // _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0 p_0 p_1 ((lhs_2 * rhs_0)_lo + carry_1) (lhs_2 * rhs_0)_hi (lhs_1 * rhs_1)_hi ((lhs_1 * rhs_1)_lo + (lhs_2 * rhs_0)_lo + carry_1)
-                            
+
                             // swap pop and add
                             swap 3 pop add
                             // _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0 p_0 p_1 ((lhs_1 * rhs_1)_lo + (lhs_2 * rhs_0)_lo + carry_1) ((lhs_1 * rhs_1)_hi + (lhs_2 * rhs_0)_hi)
@@ -164,7 +164,7 @@ impl DeprecatedSnippet for SafeMulU128 {
                             // split (lhs_0 * rhs_2)
                             split
                             // _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0 p_0 p_1 ((lhs_1 * rhs_1)_lo + (lhs_2 * rhs_0)_lo + carry_1) ((lhs_1 * rhs_1)_hi + (lhs_2 * rhs_0)_hi) (lhs_0 * rhs_2)_hi (lhs_0 * rhs_2)_lo
-                            
+
                             // duplicate '3' and add
                             dup 3 add
                             // _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0 p_0 p_1 ((lhs_1 * rhs_1)_lo + (lhs_2 * rhs_0)_lo + carry_1) ((lhs_1 * rhs_1)_hi + (lhs_2 * rhs_0)_hi) (lhs_0 * rhs_2)_hi ((lhs_0 * rhs_2)_lo + (lhs_1 * rhs_1)_lo + (lhs_2 * rhs_0)_lo + carry_1)
@@ -182,7 +182,7 @@ impl DeprecatedSnippet for SafeMulU128 {
 
                             dup 8 mul
                             // _ rhs_3 rhs_2 rhs_1 0 lhs_3 lhs_2 lhs_1 lhs_0 p_0 p_1 p_2 carry_2 (lhs_3 * rhs_0)
-                            
+
                             // split (lhs_3 * rhs_0)
                             split
                             // _ rhs_3 rhs_2 rhs_1 0 lhs_3 lhs_2 lhs_1 lhs_0 p_0 p_1 p_2 carry_2 (lhs_3 * rhs_0)_hi (lhs_3 * rhs_0)_lo
@@ -198,7 +198,7 @@ impl DeprecatedSnippet for SafeMulU128 {
                             // (lhs_2 * rhs_1)
                             dup 7 dup 11 mul
                             // _ rhs_3 rhs_2 rhs_1 0 lhs_3 lhs_2 lhs_1 lhs_0 p_0 p_1 p_2 ((lhs_3 * rhs_0)_lo + carry_2) (lhs_3 * rhs_0)_hi (lhs_2 * rhs_1)
-                            
+
                             // split (lhs_2 * rhs_1)
                             split
                             // _ rhs_3 rhs_2 rhs_1 0 lhs_3 lhs_2 lhs_1 lhs_0 p_0 p_1 p_2 ((lhs_3 * rhs_0)_lo + carry_2) (lhs_3 * rhs_0)_hi (lhs_2 * rhs_1)_hi (lhs_2 * rhs_1)_lo
@@ -210,11 +210,11 @@ impl DeprecatedSnippet for SafeMulU128 {
                             // swap pop and add
                             swap 3 pop add
                             // _ rhs_3 rhs_2 rhs_1 0 lhs_3 lhs_2 lhs_1 lhs_0 p_0 p_1 p_2 ((lhs_2 * rhs_1)_lo + (lhs_3 * rhs_0)_lo + carry_2) ((lhs_2 * rhs_1)_hi + (lhs_3 * rhs_0)_hi)
-                            
+
                             // (lhs_1 * rhs_2)
                             dup 6 dup 12 mul
                             // _ rhs_3 rhs_2 rhs_1 0 lhs_3 lhs_2 lhs_1 lhs_0 p_0 p_1 p_2 ((lhs_2 * rhs_1)_lo + (lhs_3 * rhs_0)_lo + carry_2) ((lhs_2 * rhs_1)_hi + (lhs_3 * rhs_0)_hi) (lhs_1 * rhs_2)
-                            
+
                             // split (lhs_1 * rhs_2)
                             split
                             // _ rhs_3 rhs_2 rhs_1 0 lhs_3 lhs_2 lhs_1 lhs_0 p_0 p_1 p_2 ((lhs_2 * rhs_1)_lo + (lhs_3 * rhs_0)_lo + carry_2) ((lhs_2 * rhs_1)_hi + (lhs_3 * rhs_0)_hi) (lhs_1 * rhs_2)_hi (lhs_1 * rhs_2)_lo
@@ -226,15 +226,15 @@ impl DeprecatedSnippet for SafeMulU128 {
                             // swap pop and add
                             swap 3 pop add
                             // _ rhs_3 rhs_2 rhs_1 0 lhs_3 lhs_2 lhs_1 lhs_0 p_0 p_1 p_2 ((lhs_1 * rhs_2)_lo + (lhs_2 * rhs_1)_lo + (lhs_3 * rhs_0)_lo + carry_2) ((lhs_1 * rhs_2)_hi + (lhs_2 * rhs_1)_hi + (lhs_3 * rhs_0)_hi)
-                          
+
                             // (lhs_0 * rhs_3) -- have to consume lhs_0
                             push 0 swap 6 dup 13 mul
                             // _ rhs_3 rhs_2 rhs_1 0 lhs_3 lhs_2 lhs_1 0 p_0 p_1 p_2 ((lhs_1 * rhs_2)_lo + (lhs_2 * rhs_1)_lo + (lhs_3 * rhs_0)_lo + carry_2) ((lhs_1 * rhs_2)_hi + (lhs_2 * rhs_1)_hi + (lhs_3 * rhs_0)_hi) (lhs_0 * rhs_3)
-                            
+
                             // split (lhs_0 * rhs_3)
                             split
                             // _ rhs_3 rhs_2 rhs_1 0 lhs_3 lhs_2 lhs_1 0 p_0 p_1 p_2 ((lhs_1 * rhs_2)_lo + (lhs_2 * rhs_1)_lo + (lhs_3 * rhs_0)_lo + carry_2) ((lhs_1 * rhs_2)_hi + (lhs_2 * rhs_1)_hi + (lhs_3 * rhs_0)_hi) (lhs_0 * rhs_3)_hi (lhs_0 * rhs_3)_lo
-                            
+
                             // duplicate '3' and add
                             dup 3 add
                             // _ rhs_3 rhs_2 rhs_1 0 lhs_3 lhs_2 lhs_1 0 p_0 p_1 p_2 ((lhs_1 * rhs_2)_lo + (lhs_2 * rhs_1)_lo + (lhs_3 * rhs_0)_lo + carry_2) ((lhs_1 * rhs_2)_hi + (lhs_2 * rhs_1)_hi + (lhs_3 * rhs_0)_hi) (lhs_0 * rhs_3)_hi ((lhs_0 * rhs_3)_lo + (lhs_1 * rhs_2)_lo + (lhs_2 * rhs_1)_lo + (lhs_3 * rhs_0)_lo + carry_2)
@@ -255,7 +255,7 @@ impl DeprecatedSnippet for SafeMulU128 {
                             // check whether lhs_3 * rhs_1 == 0, crash if lhs_3 * rhs_1 != 0, crash
                             push 0 swap 10 dup 8 mul
                             // _ rhs_3 rhs_2 0 0 lhs_3 lhs_2 lhs_1 0 p_0 p_1 p_2 p_3 (lhs_3 * rhs_1)
-                            
+
                             push 0
                             eq
                             assert
@@ -302,7 +302,7 @@ impl DeprecatedSnippet for SafeMulU128 {
                             push 0 swap 8
                             // _ rhs_3 0 0 0 0 0 0 0 p_0 p_1 p_2 p_3 lhs_3
 
-                            push 0 swap 13 mul 
+                            push 0 swap 13 mul
                             // _ 0 0 0 0 0 0 0 0 p_0 p_1 p_2 p_3 (lhs_3 * rhs_3)
 
                             push 0
@@ -511,7 +511,6 @@ mod tests {
             }
         }
     }
-
 }
 
 #[cfg(test)]
