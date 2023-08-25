@@ -240,8 +240,8 @@ impl DeprecatedSnippet for SafeMulU128 {
                             // _ rhs_3 rhs_2 rhs_1 0 lhs_3 lhs_2 lhs_1 0 p_0 p_1 p_2 ((lhs_1 * rhs_2)_lo + (lhs_2 * rhs_1)_lo + (lhs_3 * rhs_0)_lo + carry_2) ((lhs_1 * rhs_2)_hi + (lhs_2 * rhs_1)_hi + (lhs_3 * rhs_0)_hi) (lhs_0 * rhs_3)_hi ((lhs_0 * rhs_3)_lo + (lhs_1 * rhs_2)_lo + (lhs_2 * rhs_1)_lo + (lhs_3 * rhs_0)_lo + carry_2)
 
                             // swap pop and add
-                            swap 3 pop add
-                            // _ rhs_3 rhs_2 rhs_1 0 lhs_3 lhs_2 lhs_1 0 p_0 p_1 p_2 p_3 ((lhs_0 * rhs_3)_hi + (lhs_1 * rhs_2)_hi + (lhs_2 * rhs_1)_hi + (lhs_3 * rhs_0)_hi)
+                            split swap 4 pop add add
+                            // _ rhs_3 rhs_2 rhs_1 0 lhs_3 lhs_2 lhs_1 0 p_0 p_1 p_2 p_3 ((lhs_0 * rhs_3)_hi + (lhs_1 * rhs_2)_hi + (lhs_2 * rhs_1)_hi + (lhs_3 * rhs_0)_hi) + d_hi
 
                             // rename to carry_3
                             // _ rhs_3 rhs_2 rhs_1 0 lhs_3 lhs_2 lhs_1 0 p_0 p_1 p_2 p_3 carry_3
@@ -290,7 +290,7 @@ impl DeprecatedSnippet for SafeMulU128 {
                             // _ rhs_3 0 0 0 lhs_3 lhs_2 0 0 p_0 p_1 p_2 p_3
 
                             // check whether lhs_2 * rhs_3 == 0, crash if lhs_2 * rhs_3 != 0, crash
-                            push 0 swap 7 dup 8 mul
+                            push 0 swap 7 dup 12 mul
                             // _ rhs_3 0 0 0 lhs_3 0 0 0 p_0 p_1 p_2 p_3 (lhs_2 * rhs_3)
 
                             push 0
@@ -458,6 +458,7 @@ fn prepare_state(a: u128, b: u128) -> ExecutionState {
 mod tests {
     use std::collections::HashMap;
 
+    use itertools::Itertools;
     use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
     use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
@@ -494,6 +495,73 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn extra_expected_overflow_safe_mul_128_test() {
+        // Test bigger instances of overflow
+        for (lhs, rhs) in [
+            (1u128 << 64, 1u128 << 90),     // lhs_2 * rhs_2      != 0
+            (1 << 90, 1 << 64),             // lhs_2 * rhs_2      != 0
+            (1 << 127, 1 << 127),           // lhs_3 * rhs_3      != 0
+            (1 << 127, 1 << 90),            // lhs_3 * rhs_2      != 0
+            (1 << 90, 1 << 127),            // lhs_2 * rhs_3      != 0
+            (1 << 60, 1 << 127),            // lhs_1 * rhs_3      != 0
+            (1 << 127, 1 << 60),            // lhs_3 * rhs_1      != 0
+            (1 << 127, 1 << 5),             // (lhs_3 * rhs_0)_hi != 0
+            (1 << 5, 1 << 127),             // (lhs_0 * rhs_3)_hi != 0
+            (1 << 63, 1 << 65),             // (lhs_1 * rhs_2)_hi != 0
+            (1 << 65, 1 << 63),             // (lhs_2 * rhs_1)_hi != 0
+            ((1 << 65) - 1, (1 << 63) + 1), // (lhs_2 * rhs_1)_lo + (lhs[1] * rhs[1])_hi + (lhs[2] * rhs[0])_lo = 2^31 + (2^31 - 1) + 1 = 2^32 => ((lhs_2 * rhs_1)_lo + (lhs[1] * rhs[1])_hi + (lhs[2] * rhs[0])_lo)_hi != 0
+        ] {
+            let (_res, overflow) = lhs.overflowing_mul(rhs);
+            assert!(
+                overflow,
+                "Test cases must overflow. lhs = {}, rhs = {}",
+                lhs, rhs
+            );
+            let lhs: U32s<4> = U32s::try_from(lhs).unwrap();
+            let rhs: U32s<4> = U32s::try_from(rhs).unwrap();
+            let mut init_stack = get_init_tvm_stack();
+            for (i, elem) in rhs.encode().into_iter().enumerate().rev() {
+                println!("rhs[{i}]: {elem}");
+                init_stack.push(elem);
+            }
+            for (i, elem) in lhs.encode().into_iter().enumerate().rev() {
+                println!("lhs[{i}]: {elem}");
+                init_stack.push(elem);
+            }
+
+            let rhs_elements = rhs.encode().iter().map(|x| x.value()).collect_vec();
+            let lhs_elements = lhs.encode().iter().map(|x| x.value()).collect_vec();
+            for rhs_count in 0..4 {
+                for lhs_count in 0..4 {
+                    println!(
+                        "lhs[{lhs_count}] * rhs[{rhs_count}]  = {}",
+                        rhs_elements[rhs_count] * lhs_elements[lhs_count]
+                    );
+                    println!(
+                        "(lhs[{lhs_count}] * rhs[{rhs_count}])_lo = {}",
+                        (rhs_elements[rhs_count] * lhs_elements[lhs_count]) & u32::MAX as u64
+                    );
+                    println!(
+                        "(lhs[{lhs_count}] * rhs[{rhs_count}])_hi = {}",
+                        ((rhs_elements[rhs_count] * lhs_elements[lhs_count]) >> 32) as u64
+                    );
+                }
+            }
+
+            match SafeMulU128.link_and_run_tasm_for_test(
+                &mut init_stack,
+                vec![],
+                vec![],
+                &mut HashMap::default(),
+                1,
+            ) {
+                Ok(_) => panic!("Overflow must result in error. lhs = {lhs} , rhs = {rhs} "),
+                Err(err) => println!("Error: {}", err),
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -502,7 +570,7 @@ mod benches {
     use crate::snippet_bencher::bench_and_write;
 
     #[test]
-    fn safe_u64_benchmark() {
+    fn safe_u128_benchmark() {
         bench_and_write(SafeMulU128);
     }
 }
