@@ -61,11 +61,11 @@ impl DeprecatedSnippet for SafeMulU128 {
                     // The product limbs are defined as follows:
                     // a = lhs_0*rhs_0
                     // prod_0 = a_lo
-                    // b = (lhs_1*rhs_0 + lhs_0*rhs_1 + a_hi)
+                    // b = ((lhs_1*rhs_0)_lo + (lhs_0*rhs_1)_lo + a_hi)
                     // prod_1 = b_lo
-                    // c = (lhs_2*rhs_0 + lhs_1*rhs_1 + lhs_0*rhs_2 + b_hi)
+                    // c = ((lhs_2*rhs_0)_lo + (lhs_1*rhs_1)_lo + (lhs_0*rhs_2)_lo + (lhs_1*rhs_0)_hi + (lhs_0*rhs_1)_hi  + b_hi)
                     // prod_2 = c_lo
-                    // d = (lhs_3*rhs_0 + lhs_2*rhs_1 + lhs_1*rhs_2 + lhs_0*rhs_3 +c_hi)
+                    // d = ((lhs_3*rhs_0)_lo + (lhs_2*rhs_1)_lo + (lhs_1*rhs_2)_lo + (lhs_0*rhs_3)_lo + (lhs_2*rhs_0)_hi + (lhs_1*rhs_1)_hi + (lhs_0*rhs_2)_hi +c_hi)
                     // prod_3 = d_lo
 
                     //The checks to be performed are:
