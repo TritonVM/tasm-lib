@@ -119,7 +119,7 @@ impl DeprecatedSnippet for SafeMulU128 {
                             // _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0 a_lo ((lhs_1*rhs_0)_lo+a_hi) (lhs_1 * rhs_0)_hi (lhs_0 * rhs_1)_hi ((lhs_0 * rhs_1)_lo + (lhs_1 * rhs_0)_lo + a_hi)
 
                             //swap pop and add
-                            swap 3 pop add
+                            split swap 4 pop add add
                             // _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0 p_0 p_1 ((lhs_0 * rhs_1)_hi + (lhs_1*rhs_0)_hi)
 
                             // rename to carry_1
@@ -170,7 +170,7 @@ impl DeprecatedSnippet for SafeMulU128 {
                             // _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0 p_0 p_1 ((lhs_1 * rhs_1)_lo + (lhs_2 * rhs_0)_lo + carry_1) ((lhs_1 * rhs_1)_hi + (lhs_2 * rhs_0)_hi) (lhs_0 * rhs_2)_hi ((lhs_0 * rhs_2)_lo + (lhs_1 * rhs_1)_lo + (lhs_2 * rhs_0)_lo + carry_1)
 
                             // swap pop and add
-                            swap 3 pop add
+                            split swap 4 pop add add
                             // _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0 p_0 p_1 p_2 ((lhs_0 * rhs_2)_hi + (lhs_1 * rhs_1)_hi + (lhs_2 * rhs_0)_hi)
 
                             // rename to carry_2
@@ -511,6 +511,7 @@ mod tests {
             }
         }
     }
+
 }
 
 #[cfg(test)]
