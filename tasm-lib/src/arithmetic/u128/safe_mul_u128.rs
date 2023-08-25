@@ -497,6 +497,40 @@ mod tests {
     }
 
     #[test]
+    fn other_expected_overflow_safe_mul_128_test() {
+        for i in 1..64 {
+            let lhs = (1u128 << (128 - i)) - 1;
+            let rhs = (1u128 << i) + 1;
+            let (_res, overflow) = lhs.overflowing_mul(rhs);
+            assert!(
+                overflow,
+                "Test cases must overflow. lhs = {}, rhs = {}",
+                lhs, rhs
+            );
+            let lhs: U32s<4> = U32s::try_from(lhs).unwrap();
+            let rhs: U32s<4> = U32s::try_from(rhs).unwrap();
+            let mut init_stack = get_init_tvm_stack();
+            for elem in rhs.encode().into_iter().rev() {
+                init_stack.push(elem);
+            }
+            for elem in lhs.encode().into_iter().rev() {
+                init_stack.push(elem);
+            }
+
+            match SafeMulU128.link_and_run_tasm_for_test(
+                &mut init_stack,
+                vec![],
+                vec![],
+                &mut HashMap::default(),
+                1,
+            ) {
+                Ok(_) => panic!("Overflow must result in error"),
+                Err(err) => println!("Error: {}", err),
+            }
+        }
+    }
+
+    #[test]
     fn extra_expected_overflow_safe_mul_128_test() {
         // Test bigger instances of overflow
         for (lhs, rhs) in [
