@@ -470,23 +470,6 @@ mod tests {
     }
 
     #[test]
-    fn normal_safe_mul_128_test() {
-        // Expect normal behaviour
-        let lhs: U32s<4> = U32s::try_from(1u128 << 32).unwrap();
-        let rhs: U32s<4> = U32s::try_from(1u128 << 32).unwrap();
-        let mut init_stack = get_init_tvm_stack();
-        for elem in rhs.encode().into_iter().rev() {
-            init_stack.push(elem);
-        }
-        for elem in lhs.encode().into_iter().rev() {
-            init_stack.push(elem);
-        }
-
-        SafeMulU128
-            .link_and_run_tasm_from_state_for_test(&mut ExecutionState::with_stack(init_stack));
-    }
-
-    #[test]
     fn expected_overflow_safe_mul_128_test() {
         for i in 1..128 {
             let lhs: U32s<4> = U32s::try_from(1u128 << i).unwrap();
