@@ -113,6 +113,7 @@ mod tests {
             test_rust_equivalence_multiple_deprecated(&ReadSecret(DataType::Bool), true);
             test_rust_equivalence_multiple_deprecated(&ReadSecret(DataType::U32), true);
             test_rust_equivalence_multiple_deprecated(&ReadSecret(DataType::U64), true);
+            test_rust_equivalence_multiple_deprecated(&ReadSecret(DataType::U128), true);
             test_rust_equivalence_multiple_deprecated(&ReadSecret(DataType::BFE), true);
             test_rust_equivalence_multiple_deprecated(&ReadSecret(DataType::XFE), true);
             test_rust_equivalence_multiple_deprecated(&ReadSecret(DataType::Digest), true);
