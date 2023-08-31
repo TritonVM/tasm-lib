@@ -596,7 +596,7 @@ mod tests {
                         lhs, rhs_overflow
                     );
 
-                    // Verify overflow
+                    // Verify overflow of `(divisor * (quotient + j))`
                     let mut init_stack = get_init_tvm_stack();
                     for elem in rhs_overflow.encode().into_iter().rev() {
                         init_stack.push(elem);
@@ -607,6 +607,28 @@ mod tests {
 
                     match SafeMulU128.link_and_run_tasm_for_test(
                         &mut init_stack,
+                        vec![],
+                        vec![],
+                        &mut HashMap::default(),
+                        1,
+                    ) {
+                        Ok(_) => {
+                            panic!("Overflow must result in error. lhs = {lhs} , rhs = {rhs_overflow} ")
+                        }
+                        Err(err) => println!("Error: {}", err),
+                    }
+
+                    // Verify overflow of `((quotient + j) * divisor)`
+                    let mut init_stack_mirrored = get_init_tvm_stack();
+                    for elem in lhs.encode().into_iter().rev() {
+                        init_stack_mirrored.push(elem);
+                    }
+                    for elem in rhs_overflow.encode().into_iter().rev() {
+                        init_stack_mirrored.push(elem);
+                    }
+
+                    match SafeMulU128.link_and_run_tasm_for_test(
+                        &mut init_stack_mirrored,
                         vec![],
                         vec![],
                         &mut HashMap::default(),
