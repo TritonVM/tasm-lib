@@ -456,6 +456,7 @@ fn prepare_state(a: u128, b: u128) -> ExecutionState {
 
 #[cfg(test)]
 mod tests {
+    use rand::Rng;
     use std::collections::HashMap;
     use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
@@ -523,6 +524,100 @@ mod tests {
             ) {
                 Ok(_) => panic!("Overflow must result in error"),
                 Err(err) => println!("Error: {}", err),
+            }
+        }
+    }
+
+    #[test]
+    fn pbt_expected_overflow_safe_mul_128() {
+        const MAX: u128 = u128::MAX;
+        // MAX = divisor * quotient + remainder, where remainder < divisor
+        // now it must be such that `divisor * (quotient + 1)` overflows,
+        // `divisor * quotient` does not overflow. In fact
+        // `divisor * (quotient + n)`, where n > 1, overflows.
+
+        const NUM_TEST_PER_OOM: usize = 2;
+        let mut rng = rand::thread_rng();
+        for oom in 2..128 {
+            for _ in 0..NUM_TEST_PER_OOM {
+                let divisor: u128 = rng.gen_range(2..(1 << oom));
+                let quotient = MAX / divisor;
+
+                let mut init_stack_no_overflow = get_init_tvm_stack();
+                let lhs = divisor;
+                let rhs_no_overflow = quotient;
+                for elem in rhs_no_overflow.encode().into_iter().rev() {
+                    init_stack_no_overflow.push(elem);
+                }
+                for elem in lhs.encode().into_iter().rev() {
+                    init_stack_no_overflow.push(elem);
+                }
+
+                // Verify that quotient * divisor does not overflow
+                match SafeMulU128.link_and_run_tasm_for_test(
+                    &mut init_stack_no_overflow,
+                    vec![],
+                    vec![],
+                    &mut HashMap::default(),
+                    1,
+                ) {
+                    Ok(_) => (),
+                    Err(err) => panic!(
+                        "Result should not overflow, lhs = {}, rhs = {}\nerr: {}",
+                        lhs, rhs_no_overflow, err
+                    ),
+                }
+
+                for j in [
+                    1,
+                    1 << 10,
+                    1 << 20,
+                    1 << 30,
+                    1 << 40,
+                    1 << 50,
+                    1 << 60,
+                    1 << 70,
+                    1 << 80,
+                    1 << 90,
+                    1 << 100,
+                    1 << 110,
+                    1 << 120,
+                ] {
+                    // Avoid overflow in calculation of `rhs_overflow` on host machine
+                    if MAX - quotient < j {
+                        break;
+                    }
+                    let rhs_overflow = quotient + j;
+
+                    let (_res, overflow) = lhs.overflowing_mul(rhs_overflow);
+                    assert!(
+                        overflow,
+                        "Test cases must overflow. lhs = {}, rhs = {}",
+                        lhs, rhs_overflow
+                    );
+
+                    // Verify overflow
+                    let mut init_stack = get_init_tvm_stack();
+                    for elem in rhs_overflow.encode().into_iter().rev() {
+                        init_stack.push(elem);
+                    }
+                    for elem in lhs.encode().into_iter().rev() {
+                        init_stack.push(elem);
+                    }
+
+                    match SafeMulU128.link_and_run_tasm_for_test(
+                        &mut init_stack,
+                        vec![],
+                        vec![],
+                        &mut HashMap::default(),
+                        1,
+                    ) {
+                        Ok(_) => {
+                            panic!("Overflow must result in error. lhs = {lhs} , rhs = {rhs_overflow} ")
+                        }
+                        Err(err) => println!("Error: {}", err),
+                    }
+                }
             }
         }
     }
