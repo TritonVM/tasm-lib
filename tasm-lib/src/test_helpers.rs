@@ -117,7 +117,7 @@ pub fn link_and_run_tasm_for_test_deprecated<T: DeprecatedSnippet>(
     secret_in: Vec<BFieldElement>,
     memory: &mut HashMap<BFieldElement, BFieldElement>,
     words_statically_allocated: usize,
-) -> VmOutputState {
+) -> anyhow::Result<VmOutputState> {
     let expected_length_prior: usize = snippet_struct
         .inputs()
         .iter()
@@ -145,7 +145,6 @@ pub fn link_and_run_tasm_for_test_deprecated<T: DeprecatedSnippet>(
         memory,
         Some(words_statically_allocated),
     )
-    .unwrap()
 }
 
 #[allow(dead_code)]
@@ -190,7 +189,8 @@ pub(crate) fn test_rust_equivalence_given_complete_state_deprecated<T: Deprecate
         nondeterminism.individual_tokens.clone(),
         &mut tasm_memory,
         words_statically_allocated,
-    );
+    )
+    .unwrap();
 
     // assert stacks are equal, up to program hash
     let tasm_stack_skip_program_hash = tasm_stack.iter().cloned().skip(DIGEST_LENGTH).collect_vec();

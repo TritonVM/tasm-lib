@@ -272,7 +272,9 @@ pub fn execute_bench_deprecated(
     })
 }
 
-/// Execute a Triton-VM program for test; modify stack and memory
+/// Execute a Triton-VM program for test; modify stack and memory. Returns an error
+/// if the program crashes in the VM, otherwise returns OK(vm_output_state). Panics
+/// if anything else goes wrong.
 pub fn execute_test(
     code: &[LabelledInstruction],
     stack: &mut Vec<BFieldElement>,
@@ -310,12 +312,12 @@ pub fn execute_test(
     *memory = final_state.ram.clone();
 
     if !final_state.jump_stack.is_empty() {
-        bail!("Jump stack must be unchanged after code execution")
+        panic!("Jump stack must be unchanged after code execution");
     }
 
     let final_stack_height = final_state.op_stack.stack.len() as isize;
     if expected_stack_diff != final_stack_height - init_stack_height as isize {
-        bail!(
+        panic!(
             "Code must grow/shrink stack with expected number of elements.\n
             init height: {init_stack_height}\nend height: {final_stack_height}\n
             expected difference: {expected_stack_diff}\n\n
