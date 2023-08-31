@@ -457,13 +457,10 @@ fn prepare_state(a: u128, b: u128) -> ExecutionState {
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
-
-    use itertools::Itertools;
     use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
-    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
-
     use super::*;
+    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     #[test]
     fn safe_mul_u128_test() {
@@ -559,32 +556,11 @@ mod tests {
             let lhs: U32s<4> = U32s::try_from(lhs).unwrap();
             let rhs: U32s<4> = U32s::try_from(rhs).unwrap();
             let mut init_stack = get_init_tvm_stack();
-            for (i, elem) in rhs.encode().into_iter().enumerate().rev() {
-                println!("rhs[{i}]: {elem}");
+            for elem in rhs.encode().into_iter().rev() {
                 init_stack.push(elem);
             }
-            for (i, elem) in lhs.encode().into_iter().enumerate().rev() {
-                println!("lhs[{i}]: {elem}");
+            for elem in lhs.encode().into_iter().rev() {
                 init_stack.push(elem);
-            }
-
-            let rhs_elements = rhs.encode().iter().map(|x| x.value()).collect_vec();
-            let lhs_elements = lhs.encode().iter().map(|x| x.value()).collect_vec();
-            for rhs_count in 0..4 {
-                for lhs_count in 0..4 {
-                    println!(
-                        "lhs[{lhs_count}] * rhs[{rhs_count}]  = {}",
-                        rhs_elements[rhs_count] * lhs_elements[lhs_count]
-                    );
-                    println!(
-                        "(lhs[{lhs_count}] * rhs[{rhs_count}])_lo = {}",
-                        (rhs_elements[rhs_count] * lhs_elements[lhs_count]) & u32::MAX as u64
-                    );
-                    println!(
-                        "(lhs[{lhs_count}] * rhs[{rhs_count}])_hi = {}",
-                        ((rhs_elements[rhs_count] * lhs_elements[lhs_count]) >> 32) as u64
-                    );
-                }
             }
 
             match SafeMulU128.link_and_run_tasm_for_test(
