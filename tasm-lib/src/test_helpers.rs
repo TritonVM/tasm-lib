@@ -372,7 +372,7 @@ pub(crate) fn test_rust_equivalence_given_input_values<T: RustShadow>(
 #[allow(dead_code)]
 #[allow(clippy::ptr_arg)]
 #[allow(clippy::too_many_arguments)]
-pub(crate) fn test_rust_equivalence_given_complete_state<T: RustShadow>(
+pub fn test_rust_equivalence_given_complete_state<T: RustShadow>(
     shadowed_snippet: &T,
     stack: &[BFieldElement],
     stdin: &[BFieldElement],
@@ -536,7 +536,7 @@ pub(crate) fn test_rust_equivalence_given_complete_state<T: RustShadow>(
     vm_output_state
 }
 
-fn link_and_run_tasm_for_test<T: RustShadow>(
+pub fn link_and_run_tasm_for_test<T: RustShadow>(
     snippet_struct: &T,
     stack: &mut Vec<BFieldElement>,
     std_in: Vec<BFieldElement>,
@@ -608,7 +608,7 @@ fn link_for_isolated_run<T: RustShadow>(
 }
 
 #[allow(dead_code)]
-pub(crate) fn test_rust_equivalence_given_execution_state<T: BasicSnippet + RustShadow>(
+pub fn test_rust_equivalence_given_execution_state<T: BasicSnippet + RustShadow>(
     snippet_struct: &T,
     execution_state: ExecutionState,
 ) -> VmOutputState {

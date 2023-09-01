@@ -57,6 +57,7 @@ where
         vec![]
     }
 
+    /// Test rust-tasm equivalence.
     fn test(&self) {
         let num_states = 5;
         let mut rng = thread_rng();
@@ -86,6 +87,8 @@ where
         }
     }
 
+    /// Count number of cycles and other performance indicators and save them in directory
+    /// benchmarks/.
     fn bench(&self) {
         let mut rng: StdRng = SeedableRng::from_seed(
             hex::decode("73a24b6b8b32e4d7d563a4d9a85f476573a24b6b8b32e4d7d563a4d9a85f4765")
