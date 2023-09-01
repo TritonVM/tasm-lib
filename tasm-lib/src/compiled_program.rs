@@ -9,8 +9,8 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 pub trait CompiledProgram {
     fn rust_shadow(
-        public_input: &[BFieldElement],
-        secret_input: &[BFieldElement],
+        public_input: &PublicInput,
+        nondeterminism: &NonDeterminism<BFieldElement>,
     ) -> Result<Vec<BFieldElement>>;
 
     fn program() -> Program {
@@ -22,14 +22,11 @@ pub trait CompiledProgram {
     }
 
     fn run(
-        public_input: &[BFieldElement],
-        secret_input: &[BFieldElement],
+        public_input: &PublicInput,
+        nondeterminism: &NonDeterminism<BFieldElement>,
     ) -> Result<Vec<BFieldElement>> {
         let p = Self::program();
-        p.run(
-            PublicInput::new(public_input.to_vec()),
-            NonDeterminism::new(secret_input.to_vec()),
-        )
+        p.run(public_input.clone(), nondeterminism.clone())
     }
 
     fn code() -> (Vec<LabelledInstruction>, Library);
@@ -40,19 +37,19 @@ pub trait CompiledProgram {
 }
 
 pub fn test_rust_shadow<P: CompiledProgram>(
-    public_input: &[BFieldElement],
-    secret_input: &[BFieldElement],
+    public_input: &PublicInput,
+    nondeterminism: &NonDeterminism<BFieldElement>,
 ) {
-    let rust_output = P::rust_shadow(public_input, secret_input).unwrap();
-    let tasm_output = P::run(public_input, secret_input).unwrap();
+    let rust_output = P::rust_shadow(public_input, nondeterminism).unwrap();
+    let tasm_output = P::run(public_input, nondeterminism).unwrap();
     assert_eq!(rust_output, tasm_output);
 }
 
 pub fn bench_program<P: CompiledProgram>(
     name: String,
     case: crate::snippet_bencher::BenchmarkCase,
-    public_input: &[BFieldElement],
-    secret_input: &[BFieldElement],
+    public_input: &PublicInput,
+    nondeterminism: &NonDeterminism<BFieldElement>,
 ) {
     use std::{
         fs::{create_dir_all, File},
@@ -68,10 +65,7 @@ pub fn bench_program<P: CompiledProgram>(
     let program = Program::new(&all_instructions);
 
     // run in trace mode to get table heights
-    let benchmark = match program.trace_execution(
-        PublicInput::new(public_input.to_vec()),
-        NonDeterminism::new(secret_input.to_vec()),
-    ) {
+    let benchmark = match program.trace_execution(public_input.clone(), nondeterminism.clone()) {
         Ok((aet, _output)) => BenchmarkResult {
             case,
             name: name.clone(),
@@ -87,8 +81,8 @@ pub fn bench_program<P: CompiledProgram>(
     // run in profile mode to get picture of call graph running times
     let (_output, profile) = triton_vm::program::Program::profile(
         &all_instructions,
-        PublicInput::new(public_input.to_vec()),
-        NonDeterminism::new(secret_input.to_vec()),
+        public_input.clone(),
+        nondeterminism.clone(),
     )
     .unwrap();
     let mut str = format!("{name}:\n");
@@ -131,7 +125,7 @@ pub fn bench_program<P: CompiledProgram>(
 
 #[cfg(test)]
 mod test {
-    use triton_vm::{triton_asm, BFieldElement};
+    use triton_vm::{triton_asm, BFieldElement, NonDeterminism, PublicInput};
 
     use crate::{library::Library, snippet_bencher::BenchmarkCase};
 
@@ -140,10 +134,10 @@ mod test {
     struct FiboTest;
     impl CompiledProgram for FiboTest {
         fn rust_shadow(
-            public_input: &[triton_vm::BFieldElement],
-            _secret_input: &[triton_vm::BFieldElement],
+            public_input: &PublicInput,
+            _secret_input: &NonDeterminism<BFieldElement>,
         ) -> anyhow::Result<Vec<triton_vm::BFieldElement>> {
-            let num_iterations = public_input[0].value() as usize;
+            let num_iterations = public_input.individual_tokens[0].value() as usize;
             let mut a = BFieldElement::new(0);
             let mut b = BFieldElement::new(1);
             for _ in 0..num_iterations {
@@ -187,15 +181,15 @@ mod test {
 
     #[test]
     fn test_fibo_shadow() {
-        let public_input = vec![BFieldElement::new(501)];
-        let secret_input = vec![];
-        test_rust_shadow::<FiboTest>(&public_input, &secret_input);
+        let public_input = PublicInput::new(vec![BFieldElement::new(501)]);
+        let nondeterminism = NonDeterminism::new(vec![]);
+        test_rust_shadow::<FiboTest>(&public_input, &nondeterminism);
     }
 
     #[test]
     fn bench_fibo() {
-        let public_input = vec![BFieldElement::new(501)];
-        let secret_input = vec![];
+        let public_input = PublicInput::new(vec![BFieldElement::new(501)]);
+        let secret_input = NonDeterminism::new(vec![]);
         bench_program::<FiboTest>(
             "fibo_test".to_string(),
             BenchmarkCase::CommonCase,
