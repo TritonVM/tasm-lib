@@ -43,6 +43,7 @@ pub mod neptune;
 pub mod other_snippets;
 pub mod procedure;
 pub mod pseudo;
+pub mod ram_builder;
 pub mod recufier;
 pub mod rust_shadowing_helper_functions;
 pub mod snippet;
