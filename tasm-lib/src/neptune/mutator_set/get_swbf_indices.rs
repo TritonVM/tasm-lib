@@ -1,8 +1,8 @@
 use itertools::Itertools;
 use num_traits::{One, Zero};
-use rand::random;
+use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::collections::HashMap;
-use triton_vm::{triton_asm, BFieldElement, NonDeterminism};
+use triton_vm::{triton_asm, BFieldElement};
 use twenty_first::{
     shared_math::{
         bfield_codec::BFieldCodec,
@@ -13,6 +13,7 @@ use twenty_first::{
 
 use crate::{
     arithmetic::u128::{shift_left_static_u128, shift_right_static_u128},
+    function::Function,
     get_init_tvm_stack,
     hashing::sample_indices::SampleIndices,
     list::{
@@ -23,8 +24,8 @@ use crate::{
         ListType,
     },
     rust_shadowing_helper_functions,
-    snippet::{DataType, DeprecatedSnippet},
-    Digest, ExecutionState, VmHasher, DIGEST_LENGTH,
+    snippet::{BasicSnippet, DataType},
+    Digest, VmHasher, DIGEST_LENGTH,
 };
 
 /// Derives the indices that make up the removal record from the item
@@ -35,110 +36,38 @@ pub struct GetSwbfIndices {
     pub num_trials: usize,
 }
 
-impl GetSwbfIndices {
-    fn generate_input_state(stochastic: bool) -> ExecutionState {
-        let mut stack = get_init_tvm_stack();
-        let (item, sender_randomness, receiver_preimage, aocl_leaf_index): (
-            Digest,
-            Digest,
-            Digest,
-            u64,
-        ) = if stochastic {
-            (random(), random(), random(), random())
-        } else {
-            (
-                VmHasher::hash_varlen(&[BFieldElement::new(0)]),
-                VmHasher::hash_varlen(&[BFieldElement::new(1)]),
-                VmHasher::hash_varlen(&[BFieldElement::new(2)]),
-                ((u32::MAX as u64) << 3) + 2,
-            )
-        };
-        stack.push(BFieldElement::new(aocl_leaf_index >> 32));
-        stack.push(BFieldElement::new(aocl_leaf_index & u32::MAX as u64));
-        stack.push(receiver_preimage.values()[4]);
-        stack.push(receiver_preimage.values()[3]);
-        stack.push(receiver_preimage.values()[2]);
-        stack.push(receiver_preimage.values()[1]);
-        stack.push(receiver_preimage.values()[0]);
-        stack.push(sender_randomness.values()[4]);
-        stack.push(sender_randomness.values()[3]);
-        stack.push(sender_randomness.values()[2]);
-        stack.push(sender_randomness.values()[1]);
-        stack.push(sender_randomness.values()[0]);
-        stack.push(item.values()[4]);
-        stack.push(item.values()[3]);
-        stack.push(item.values()[2]);
-        stack.push(item.values()[1]);
-        stack.push(item.values()[0]);
-        ExecutionState {
-            stack,
-            std_in: vec![],
-            nondeterminism: NonDeterminism::new(vec![]),
-            memory: HashMap::new(),
-            words_allocated: 0,
-        }
+impl BasicSnippet for GetSwbfIndices {
+    fn inputs(&self) -> Vec<(DataType, String)> {
+        vec![
+            (DataType::U64, "aocl_leaf".to_string()),
+            (DataType::Digest, "receiver_preimage".to_string()),
+            (DataType::Digest, "sender_randomness".to_string()),
+            (DataType::Digest, "item".to_string()),
+        ]
     }
-}
 
-impl DeprecatedSnippet for GetSwbfIndices {
-    fn entrypoint_name(&self) -> String {
+    fn outputs(&self) -> Vec<(DataType, String)> {
+        vec![(DataType::VoidPointer, "*index_list".to_string())]
+    }
+
+    fn entrypoint(&self) -> String {
         format!(
             "tasm_neptune_mutator_get_swbf_indices_{}_{}",
             self.window_size, self.num_trials
         )
     }
 
-    fn input_field_names(&self) -> Vec<String> {
-        vec![
-            "aocl_leaf_hi".to_string(),
-            "aocl_leaf_lo".to_string(),
-            "receiver_preimage4".to_string(),
-            "receiver_preimage3".to_string(),
-            "receiver_preimage2".to_string(),
-            "receiver_preimage1".to_string(),
-            "receiver_preimage0".to_string(),
-            "sender_randomness4".to_string(),
-            "sender_randomness3".to_string(),
-            "sender_randomness2".to_string(),
-            "sender_randomness1".to_string(),
-            "sender_randomness0".to_string(),
-            "item4".to_string(),
-            "item3".to_string(),
-            "item2".to_string(),
-            "item1".to_string(),
-            "item0".to_string(),
-        ]
-    }
-
-    fn input_types(&self) -> Vec<crate::snippet::DataType> {
-        vec![DataType::Tuple(vec![
-            DataType::U64,
-            DataType::Digest,
-            DataType::Digest,
-            DataType::Digest,
-        ])]
-    }
-
-    fn output_types(&self) -> Vec<crate::snippet::DataType> {
-        vec![DataType::List(Box::new(DataType::U32))]
-    }
-
-    fn output_field_names(&self) -> Vec<String> {
-        vec!["*index_list".to_string()]
-    }
-
-    fn stack_diff(&self) -> isize {
-        -16
-    }
-
-    fn function_code(&self, library: &mut crate::library::Library) -> String {
+    fn code(
+        &self,
+        library: &mut crate::library::Library,
+    ) -> Vec<triton_vm::instruction::LabelledInstruction> {
         let num_trials = self.num_trials;
         let window_size = self.window_size;
         let sample_indices = library.import(Box::new(SampleIndices {
             list_type: ListType::Unsafe,
         }));
 
-        let entrypoint = self.entrypoint_name();
+        let entrypoint = self.entrypoint();
 
         let rawcode_for_inner_function_u128_plus_u32 = RawCode::new(
             triton_asm!(
@@ -200,8 +129,7 @@ impl DeprecatedSnippet for GetSwbfIndices {
             shift_left_static_u128::ShiftLeftStaticU128::<LOG2_CHUNK_SIZE>,
         ));
 
-        format!(
-            "
+        triton_asm!(
         // BEFORE: _ li_hi li_lo r4 r3 r2 r1 r0 s4 s3 s2 s1 s0 i4 i3 i2 i1 i0
         // AFTER: _ index_list
         {entrypoint}:
@@ -246,34 +174,17 @@ impl DeprecatedSnippet for GetSwbfIndices {
             // _ [batch_offset_u128] list_of_absolute_indices_as_u128s
 
             swap 4 pop pop pop pop
-            // *list_of_absolute_indices_as_u128s 
+            // *list_of_absolute_indices_as_u128s
 
             return
-            "
         )
     }
+}
 
-    fn crash_conditions(&self) -> Vec<String> {
-        vec![]
-    }
-
-    fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
-        vec![Self::generate_input_state(true)]
-    }
-
-    fn common_case_input_state(&self) -> crate::ExecutionState {
-        Self::generate_input_state(false)
-    }
-
-    fn worst_case_input_state(&self) -> crate::ExecutionState {
-        Self::generate_input_state(false)
-    }
-
-    fn rust_shadowing(
+impl Function for GetSwbfIndices {
+    fn rust_shadow(
         &self,
         stack: &mut Vec<triton_vm::BFieldElement>,
-        _std_in: Vec<triton_vm::BFieldElement>,
-        _secret_in: Vec<triton_vm::BFieldElement>,
         memory: &mut std::collections::HashMap<triton_vm::BFieldElement, triton_vm::BFieldElement>,
     ) {
         let item = Digest::new([
@@ -393,6 +304,40 @@ impl DeprecatedSnippet for GetSwbfIndices {
 
         stack.push(u128_list_pointer);
     }
+
+    fn pseudorandom_initial_state(
+        &self,
+        seed: [u8; 32],
+        _bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
+    ) -> (Vec<BFieldElement>, HashMap<BFieldElement, BFieldElement>) {
+        let mut rng: StdRng = SeedableRng::from_seed(seed);
+        let mut stack = get_init_tvm_stack();
+        let (item, sender_randomness, receiver_preimage, aocl_leaf_index): (
+            Digest,
+            Digest,
+            Digest,
+            u64,
+        ) = (rng.gen(), rng.gen(), rng.gen(), rng.gen());
+        stack.push(BFieldElement::new(aocl_leaf_index >> 32));
+        stack.push(BFieldElement::new(aocl_leaf_index & u32::MAX as u64));
+        stack.push(receiver_preimage.values()[4]);
+        stack.push(receiver_preimage.values()[3]);
+        stack.push(receiver_preimage.values()[2]);
+        stack.push(receiver_preimage.values()[1]);
+        stack.push(receiver_preimage.values()[0]);
+        stack.push(sender_randomness.values()[4]);
+        stack.push(sender_randomness.values()[3]);
+        stack.push(sender_randomness.values()[2]);
+        stack.push(sender_randomness.values()[1]);
+        stack.push(sender_randomness.values()[0]);
+        stack.push(item.values()[4]);
+        stack.push(item.values()[3]);
+        stack.push(item.values()[2]);
+        stack.push(item.values()[1]);
+        stack.push(item.values()[0]);
+
+        (stack, HashMap::new())
+    }
 }
 
 // Copy-pasted from mutator set implementation
@@ -435,32 +380,31 @@ fn get_swbf_indices<H: AlgebraicHasher>(
 
 #[cfg(test)]
 mod tests {
-    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
+    use crate::{function::ShadowedFunction, snippet::RustShadow};
 
     use super::GetSwbfIndices;
 
     #[test]
-    fn new_prop_test() {
-        test_rust_equivalence_multiple_deprecated(
-            &GetSwbfIndices {
-                window_size: 1048576,
-                num_trials: 45,
-            },
-            true,
-        );
+    fn test() {
+        ShadowedFunction::new(GetSwbfIndices {
+            window_size: 1048576,
+            num_trials: 45,
+        })
+        .test();
     }
 }
 
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::snippet_bencher::bench_and_write;
+    use crate::{function::ShadowedFunction, snippet::RustShadow};
 
     #[test]
-    fn commit_benchmark_unsafe() {
-        bench_and_write(GetSwbfIndices {
+    fn bench() {
+        ShadowedFunction::new(GetSwbfIndices {
             window_size: 1048576,
             num_trials: 45,
-        });
+        })
+        .bench();
     }
 }
