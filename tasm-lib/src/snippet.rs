@@ -163,10 +163,16 @@ impl Display for DataType {
 impl DataType {
     pub fn label_friendly_name(&self) -> String {
         match self {
-            DataType::List(inner_type) => format!("list_L{}R", inner_type),
+            DataType::List(inner_type) => format!("list_L{}R", inner_type.label_friendly_name()),
             DataType::VoidPointer => "void_pointer".to_string(),
             DataType::Tuple(inner_types) => {
-                format!("tuple_ofstart_{}_ofend_", inner_types.iter().join("_"))
+                format!(
+                    "tuple_L{}R",
+                    inner_types
+                        .iter()
+                        .map(|x| x.label_friendly_name())
+                        .join("_")
+                )
             }
             _ => format!("{}", self),
         }
