@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{cmp::max, collections::HashMap};
 
 use anyhow::Result;
 use rand::{rngs::StdRng, Rng, RngCore, SeedableRng};
@@ -12,7 +12,7 @@ use twenty_first::shared_math::{bfield_codec::BFieldCodec, x_field_element::XFie
 
 use crate::{
     algorithm::Algorithm,
-    field, get_init_tvm_stack,
+    field, field_with_size, get_init_tvm_stack,
     library::Library,
     snippet::{BasicSnippet, DataType},
     snippet_bencher::BenchmarkCase,
@@ -42,7 +42,8 @@ impl VmProofStream {
     }
 }
 
-/// Dequeue reads the next object from the `ProofStream`
+/// Dequeue reads the next object from the `ProofStream`.
+#[derive(Clone)]
 pub struct Dequeue {}
 
 impl BasicSnippet for Dequeue {
@@ -64,7 +65,7 @@ impl BasicSnippet for Dequeue {
     fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
         let field_word_index = field!(VmProofStream::word_index);
-        let field_data = field!(VmProofStream::data);
+        let field_data_with_size = field_with_size!(VmProofStream::data);
         triton_asm!(
             // BEFORE: _ *proof_stream
             // AFTER: _ *proof_stream *object
@@ -76,7 +77,12 @@ impl BasicSnippet for Dequeue {
                 dup 0               // _ *proof_stream *word_index word_index word_index
 
                 dup 3               // _ *proof_stream *word_index word_index word_index *proof_stream
-                {&field_data}       // _ *proof_stream *word_index word_index word_index *data_list_length_indicator
+                {&field_data_with_size}
+                                    // _ *proof_stream *word_index word_index word_index *data_list_length_indicator data_field_size
+                dup 2               // _ *proof_stream *word_index word_index word_index *data_list_length_indicator data_field_size word_index
+                push 1 add          // _ *proof_stream *word_index word_index word_index *data_list_length_indicator data_field_size word_index+1
+                lt                  // _ *proof_stream *word_index word_index word_index *data_list_length_indicator word_index+1<data_field_size
+                assert              // _ *proof_stream *word_index word_index word_index *data_list_length_indicator
                 push 1 add          // _ *proof_stream *word_index word_index word_index *data
                 add                 // _ *proof_stream *word_index word_index *object_si
 
@@ -121,6 +127,13 @@ impl Algorithm for Dequeue {
             + BFieldElement::new(proof_stream.word_index as u64) // jump to proof item size indicator
             + BFieldElement::new(1); // skip over size indicator
 
+        // check bounds
+        let first_inaccessible_address =
+            proof_stream_pointer + BFieldElement::new(proof_stream.encode().len() as u64);
+        if proof_item_pointer.value() >= first_inaccessible_address.value() {
+            panic!("Proof stream out of bounds");
+        }
+
         // read size
         let object_size = memory
             .get(
@@ -162,9 +175,9 @@ impl Algorithm for Dequeue {
         let num_iterations = if matches!(bench_case, Some(BenchmarkCase::WorstCase)) {
             1
         } else {
-            rng.next_u32() % 20
+            1 + (rng.next_u32() % 20)
         };
-        for _ in 0..num_iterations {
+        for i in 0..num_iterations {
             if matches!(bench_case, Some(BenchmarkCase::WorstCase)) || rng.next_u32() % 2 == 1 {
                 let authentication_structure: Vec<Digest> = (0..20).map(|_| rng.gen()).collect();
                 proof_items.push(ProofItem::AuthenticationStructure(authentication_structure));
@@ -222,13 +235,19 @@ impl Algorithm for Dequeue {
                     ood_quotient_segments,
                 ));
             }
-            if matches!(bench_case, Some(BenchmarkCase::WorstCase)) || rng.next_u32() % 2 == 1 {
+            if matches!(bench_case, Some(BenchmarkCase::WorstCase))
+                || rng.next_u32() % 2 == 1
+                || (proof_items.is_empty() && i == num_iterations - 1)
+            {
                 let quotient_segment_elements = (0..20).map(|_| rng.gen()).collect();
                 proof_items.push(ProofItem::QuotientSegmentsElements(
                     quotient_segment_elements,
                 ));
             }
+            println!("Done proof items iteration {i} / {num_iterations}");
         }
+
+        assert!(!proof_items.is_empty());
 
         // create proof stream object and populate it with these proof items
         let mut proof_stream = VmProofStream::new(&proof_items);
@@ -237,7 +256,7 @@ impl Algorithm for Dequeue {
         let dequeue_count = if matches!(bench_case, Some(BenchmarkCase::WorstCase)) {
             proof_items.len() - 1
         } else {
-            rng.next_u32() as usize % proof_items.len()
+            rng.next_u32() as usize % max(1, proof_items.len())
         };
 
         for _ in 0..dequeue_count {
@@ -262,7 +281,19 @@ impl Algorithm for Dequeue {
 
 #[cfg(test)]
 mod test {
-    use crate::{algorithm::ShadowedAlgorithm, snippet::RustShadow};
+
+    use itertools::Itertools;
+    use rand::{rngs::StdRng, Rng, SeedableRng};
+    use triton_vm::{proof_item::ProofItem, BFieldElement};
+    use twenty_first::shared_math::bfield_codec::BFieldCodec;
+
+    use crate::{
+        algorithm::{Algorithm, ShadowedAlgorithm},
+        recufier::proof_stream::VmProofStream,
+        snippet::RustShadow,
+        structure::tasm_object::TasmObject,
+        test_helpers::test_rust_equivalence_given_complete_state,
+    };
 
     use super::Dequeue;
 
@@ -270,4 +301,73 @@ mod test {
     fn test() {
         ShadowedAlgorithm::new(Dequeue {}).test();
     }
+
+    #[test]
+    fn test_decode_dequeued_object() {
+        let num_states = 10;
+        let seed = [
+            0x88, 0x58, 0x6b, 0xe, 0xb7, 0x36, 0xed, 0x57, 0x88, 0xcd, 0xf7, 0x57, 0xc0, 0x29,
+            0x02, 0xca, 0xfb, 0x66, 0x41, 0xac, 0x2d, 0xb1, 0xe6, 0x1b, 0x4a, 0x9c, 0x68, 0x29,
+            0xa5, 0x23, 0x2e, 0xa6,
+        ];
+        let mut rng: StdRng = SeedableRng::from_seed(seed);
+
+        let dequeue = Dequeue {};
+        let algorithm = ShadowedAlgorithm::new(dequeue.clone());
+
+        for _ in 0..num_states {
+            let (stack, memory, nondeterminism) =
+                dequeue.pseudorandom_initial_state(rng.gen(), None);
+
+            let stdin = vec![];
+            let vm_output_state = test_rust_equivalence_given_complete_state(
+                &algorithm,
+                &stack,
+                &stdin,
+                &nondeterminism,
+                &memory,
+                1,
+                None,
+            );
+
+            // read out proof stream object
+            // very slow -- why?
+            let proof_stream_pointer = vm_output_state.final_stack.last().unwrap();
+            let mut proof_stream = *VmProofStream::decode_from_memory(
+                &vm_output_state.final_ram,
+                *proof_stream_pointer,
+            )
+            .unwrap();
+
+            // // find location of object
+            // let address = *proof_stream_pointer
+            //     + BFieldElement::new(3)
+            //     + BFieldElement::new(proof_stream.word_index as u64);
+
+            // if memory.contains_key(&address) {
+            //     // read out directly from memory
+            //     let size = memory
+            //         .get(&(address - BFieldElement::new(1)))
+            //         .unwrap()
+            //         .value() as usize;
+            //     let sequence = (0..size)
+            //         .map(|i| {
+            //             memory
+            //                 .get(&(address + BFieldElement::new(i as u64)))
+            //                 .unwrap()
+            //         })
+            //         .copied()
+            //         .collect_vec();
+            //     let direct_object = *ProofItem::decode(&sequence).unwrap();
+
+            //     // read out object via proof stream
+            //     let proof_stream_object = *proof_stream.dequeue().unwrap();
+
+            //     // assert equality
+            //     assert_eq!(proof_stream_object, direct_object);
+            // }
+        }
+    }
+
+    // TODO: test that behavior is the same when the proof stream is empty
 }
