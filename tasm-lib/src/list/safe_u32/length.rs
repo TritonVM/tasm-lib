@@ -175,7 +175,7 @@ mod tests {
 
     #[test]
     fn list_u32_simple() {
-        let expected_end_stack = vec![get_init_tvm_stack(), vec![BFieldElement::new(42)]].concat();
+        let expected_end_stack = [get_init_tvm_stack(), vec![BFieldElement::new(42)]].concat();
         prop_length(
             &DataType::U64,
             BFieldElement::one(),

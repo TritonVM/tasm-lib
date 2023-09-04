@@ -269,7 +269,7 @@ mod tests {
     #[test]
     fn subtraction_involving_zeros() {
         // 0 - 0 = 0
-        let mut expected_end_stack = vec![
+        let mut expected_end_stack = [
             get_init_tvm_stack(),
             vec![
                 BFieldElement::zero(),
@@ -282,7 +282,7 @@ mod tests {
         prop_sub(U32s::from(0), U32s::from(0), Some(&expected_end_stack));
 
         // 1 - 0 = 1
-        expected_end_stack = vec![
+        expected_end_stack = [
             get_init_tvm_stack(),
             vec![
                 BFieldElement::zero(),
@@ -295,7 +295,7 @@ mod tests {
         prop_sub(U32s::from(1), U32s::from(0), Some(&expected_end_stack));
 
         // 1 - 1 = 0
-        expected_end_stack = vec![
+        expected_end_stack = [
             get_init_tvm_stack(),
             vec![
                 BFieldElement::zero(),
@@ -308,7 +308,7 @@ mod tests {
         prop_sub(U32s::from(1), U32s::from(1), Some(&expected_end_stack));
 
         // u64::MAX - u64::MAX = 0
-        expected_end_stack = vec![
+        expected_end_stack = [
             get_init_tvm_stack(),
             vec![
                 BFieldElement::zero(),
@@ -325,7 +325,7 @@ mod tests {
         );
 
         // u128::MAX - u128::MAX = 0
-        expected_end_stack = vec![
+        expected_end_stack = [
             get_init_tvm_stack(),
             vec![
                 BFieldElement::zero(),
@@ -344,7 +344,7 @@ mod tests {
 
     #[test]
     fn sub_u128_cascading_carry() {
-        let expected_end_stack = vec![
+        let expected_end_stack = [
             get_init_tvm_stack(),
             vec![
                 BFieldElement::zero(),

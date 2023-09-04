@@ -498,7 +498,7 @@ mod tests {
             (0..30).map(BFieldElement::new).collect_vec(),
             &mut memory,
         );
-        let input_stack = vec![get_init_tvm_stack(), vec![BFieldElement::new(42)]].concat();
+        let input_stack = [get_init_tvm_stack(), vec![BFieldElement::new(42)]].concat();
         let expected_end_stack_true =
             vec![get_init_tvm_stack(), vec![BFieldElement::one()]].concat();
         let shadowed_snippet = ShadowedFunction::new(snippet);
@@ -520,8 +520,7 @@ mod tests {
                 .collect_vec(),
             &mut memory,
         );
-        let expected_end_stack_false =
-            vec![get_init_tvm_stack(), vec![BFieldElement::zero()]].concat();
+        let expected_end_stack_false = [get_init_tvm_stack(), vec![BFieldElement::zero()]].concat();
         test_rust_equivalence_given_input_values(
             &shadowed_snippet,
             &input_stack,

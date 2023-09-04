@@ -18,7 +18,7 @@ pub trait CompiledProgram {
 
         let library_instructions = library.all_imports();
 
-        Program::new(&vec![program_instructions, library_instructions].concat())
+        Program::new(&[program_instructions, library_instructions].concat())
     }
 
     fn run(
@@ -61,7 +61,7 @@ pub fn bench_program<P: CompiledProgram>(
 
     let (program_instructions, library) = P::code();
     let library_instructions = library.all_imports();
-    let all_instructions = vec![program_instructions, library_instructions].concat();
+    let all_instructions = [program_instructions, library_instructions].concat();
     let program = Program::new(&all_instructions);
 
     // run in trace mode to get table heights

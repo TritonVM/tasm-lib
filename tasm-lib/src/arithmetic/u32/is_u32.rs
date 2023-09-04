@@ -91,7 +91,7 @@ impl DeprecatedSnippet for IsU32 {
 
     fn common_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-            vec![get_init_tvm_stack(), vec![BFieldElement::new(1 << 16)]].concat(),
+            [get_init_tvm_stack(), vec![BFieldElement::new(1 << 16)]].concat(),
         )
     }
 
@@ -127,9 +127,9 @@ mod tests {
     #[test]
     fn is_u32_simple() {
         let stack_true: Vec<BFieldElement> =
-            vec![get_init_tvm_stack(), vec![BFieldElement::one()]].concat();
+            [get_init_tvm_stack(), vec![BFieldElement::one()]].concat();
         let stack_false: Vec<BFieldElement> =
-            vec![get_init_tvm_stack(), vec![BFieldElement::zero()]].concat();
+            [get_init_tvm_stack(), vec![BFieldElement::zero()]].concat();
 
         prop_is_u32(BFieldElement::zero(), Some(&stack_true));
         prop_is_u32(BFieldElement::one(), Some(&stack_true));
@@ -148,9 +148,9 @@ mod tests {
     #[test]
     fn is_u32_pbt() {
         let stack_true: Vec<BFieldElement> =
-            vec![get_init_tvm_stack(), vec![BFieldElement::one()]].concat();
+            [get_init_tvm_stack(), vec![BFieldElement::one()]].concat();
         let stack_false: Vec<BFieldElement> =
-            vec![get_init_tvm_stack(), vec![BFieldElement::zero()]].concat();
+            [get_init_tvm_stack(), vec![BFieldElement::zero()]].concat();
 
         let mut rng = rand::thread_rng();
         for _ in 0..10 {

@@ -71,13 +71,13 @@ impl DeprecatedSnippet for Neg {
 
     fn common_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-            vec![get_init_tvm_stack(), vec![BFieldElement::new(1u64 << 20)]].concat(),
+            [get_init_tvm_stack(), vec![BFieldElement::new(1u64 << 20)]].concat(),
         )
     }
 
     fn worst_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-            vec![get_init_tvm_stack(), vec![BFieldElement::new(1u64 << 31)]].concat(),
+            [get_init_tvm_stack(), vec![BFieldElement::new(1u64 << 31)]].concat(),
         )
     }
 }

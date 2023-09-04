@@ -150,7 +150,7 @@ mod tests {
     #[test]
     fn u32s_2_eq_false() {
         // Should return false
-        let expected_end_stack = vec![get_init_tvm_stack(), vec![BFieldElement::zero()]].concat();
+        let expected_end_stack = [get_init_tvm_stack(), vec![BFieldElement::zero()]].concat();
         prop_eq(
             U32s::new([239, 16]),
             U32s::new([239, 17]),
@@ -206,7 +206,7 @@ mod tests {
     #[test]
     fn u32s_2_eq_true() {
         // Should return true
-        let expected_end_stack = vec![get_init_tvm_stack(), vec![BFieldElement::one()]].concat();
+        let expected_end_stack = [get_init_tvm_stack(), vec![BFieldElement::one()]].concat();
         prop_eq(
             U32s::new([239, 17]),
             U32s::new([239, 17]),
@@ -251,7 +251,7 @@ mod tests {
 
     #[test]
     fn u32s_2_eq_pbt_true() {
-        let expected_end_stack = vec![get_init_tvm_stack(), vec![BFieldElement::one()]].concat();
+        let expected_end_stack = [get_init_tvm_stack(), vec![BFieldElement::one()]].concat();
         let mut rng = rand::thread_rng();
         for _ in 0..10 {
             let lhs = U32s::new([rng.next_u32(), rng.next_u32()]);

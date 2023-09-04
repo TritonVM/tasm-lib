@@ -325,7 +325,7 @@ mod tests {
         index: u32,
         capacity: u32,
     ) {
-        let expected_end_stack = vec![get_init_tvm_stack()].concat();
+        let expected_end_stack = [get_init_tvm_stack()].concat();
         let mut init_stack = get_init_tvm_stack();
 
         for i in 0..data_type.get_size() {

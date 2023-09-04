@@ -249,30 +249,30 @@ mod tests {
     #[test]
     fn right_child_and_height_node_index_equal_leftmost_ancestor() {
         // All should return (false, height) as leftmost ancestors are always left-children.
-        let expected_end_stack = vec![get_init_tvm_stack(), vec![BFieldElement::zero()]].concat();
+        let expected_end_stack = [get_init_tvm_stack(), vec![BFieldElement::zero()]].concat();
         prop_right_child_and_height(
             U32s::new([1, 0]),
-            Some(&vec![expected_end_stack.clone(), vec![BFieldElement::zero()]].concat()),
+            Some(&[expected_end_stack.clone(), vec![BFieldElement::zero()]].concat()),
         );
         prop_right_child_and_height(
             U32s::new([3, 0]),
-            Some(&vec![expected_end_stack.clone(), vec![BFieldElement::one()]].concat()),
+            Some(&[expected_end_stack.clone(), vec![BFieldElement::one()]].concat()),
         );
         prop_right_child_and_height(
             U32s::new([7, 0]),
-            Some(&vec![expected_end_stack.clone(), vec![BFieldElement::new(2)]].concat()),
+            Some(&[expected_end_stack.clone(), vec![BFieldElement::new(2)]].concat()),
         );
         prop_right_child_and_height(
             U32s::new([15, 0]),
-            Some(&vec![expected_end_stack.clone(), vec![BFieldElement::new(3)]].concat()),
+            Some(&[expected_end_stack.clone(), vec![BFieldElement::new(3)]].concat()),
         );
         prop_right_child_and_height(
             U32s::new([31, 0]),
-            Some(&vec![expected_end_stack.clone(), vec![BFieldElement::new(4)]].concat()),
+            Some(&[expected_end_stack.clone(), vec![BFieldElement::new(4)]].concat()),
         );
         prop_right_child_and_height(
             U32s::new([63, 0]),
-            Some(&vec![expected_end_stack, vec![BFieldElement::new(5)]].concat()),
+            Some(&[expected_end_stack, vec![BFieldElement::new(5)]].concat()),
         );
     }
 
@@ -281,7 +281,7 @@ mod tests {
         prop_right_child_and_height(
             U32s::new([1, 0]),
             Some(
-                &vec![
+                &[
                     vec![get_init_tvm_stack(), vec![BFieldElement::zero()]].concat(),
                     vec![BFieldElement::zero()],
                 ]
@@ -291,7 +291,7 @@ mod tests {
         prop_right_child_and_height(
             U32s::new([2, 0]),
             Some(
-                &vec![
+                &[
                     vec![get_init_tvm_stack(), vec![BFieldElement::one()]].concat(),
                     vec![BFieldElement::zero()],
                 ]
@@ -301,7 +301,7 @@ mod tests {
         prop_right_child_and_height(
             U32s::new([3, 0]),
             Some(
-                &vec![
+                &[
                     vec![get_init_tvm_stack(), vec![BFieldElement::zero()]].concat(),
                     vec![BFieldElement::one()],
                 ]
@@ -311,7 +311,7 @@ mod tests {
         prop_right_child_and_height(
             U32s::new([4, 0]),
             Some(
-                &vec![
+                &[
                     vec![get_init_tvm_stack(), vec![BFieldElement::zero()]].concat(),
                     vec![BFieldElement::zero()],
                 ]
@@ -321,7 +321,7 @@ mod tests {
         prop_right_child_and_height(
             U32s::new([5, 0]),
             Some(
-                &vec![
+                &[
                     vec![get_init_tvm_stack(), vec![BFieldElement::one()]].concat(),
                     vec![BFieldElement::zero()],
                 ]
@@ -331,7 +331,7 @@ mod tests {
         prop_right_child_and_height(
             U32s::new([6, 0]),
             Some(
-                &vec![
+                &[
                     vec![get_init_tvm_stack(), vec![BFieldElement::one()]].concat(),
                     vec![BFieldElement::one()],
                 ]
@@ -341,7 +341,7 @@ mod tests {
         prop_right_child_and_height(
             U32s::new([7, 0]),
             Some(
-                &vec![
+                &[
                     vec![get_init_tvm_stack(), vec![BFieldElement::zero()]].concat(),
                     vec![BFieldElement::new(2)],
                 ]
@@ -351,7 +351,7 @@ mod tests {
         prop_right_child_and_height(
             U32s::new([8, 0]),
             Some(
-                &vec![
+                &[
                     vec![get_init_tvm_stack(), vec![BFieldElement::zero()]].concat(),
                     vec![BFieldElement::zero()],
                 ]
@@ -361,7 +361,7 @@ mod tests {
         prop_right_child_and_height(
             U32s::new([14, 0]),
             Some(
-                &vec![
+                &[
                     vec![get_init_tvm_stack(), vec![BFieldElement::one()]].concat(),
                     vec![BFieldElement::new(2)],
                 ]
@@ -371,7 +371,7 @@ mod tests {
         prop_right_child_and_height(
             U32s::new([15, 0]),
             Some(
-                &vec![
+                &[
                     vec![get_init_tvm_stack(), vec![BFieldElement::zero()]].concat(),
                     vec![BFieldElement::new(3)],
                 ]
@@ -381,7 +381,7 @@ mod tests {
         prop_right_child_and_height(
             U32s::new([16, 0]),
             Some(
-                &vec![
+                &[
                     vec![get_init_tvm_stack(), vec![BFieldElement::zero()]].concat(),
                     vec![BFieldElement::zero()],
                 ]
@@ -391,7 +391,7 @@ mod tests {
         prop_right_child_and_height(
             U32s::new([17, 0]),
             Some(
-                &vec![
+                &[
                     vec![get_init_tvm_stack(), vec![BFieldElement::one()]].concat(),
                     vec![BFieldElement::zero()],
                 ]
@@ -402,7 +402,7 @@ mod tests {
         prop_right_child_and_height(
             U32s::new([18, 0]),
             Some(
-                &vec![
+                &[
                     vec![get_init_tvm_stack(), vec![BFieldElement::zero()]].concat(),
                     vec![BFieldElement::one()],
                 ]
@@ -412,7 +412,7 @@ mod tests {
         prop_right_child_and_height(
             U32s::new([u32::MAX - 1, u32::MAX / 2]),
             Some(
-                &vec![
+                &[
                     vec![get_init_tvm_stack(), vec![BFieldElement::one()]].concat(),
                     vec![BFieldElement::new(61)],
                 ]
@@ -422,7 +422,7 @@ mod tests {
         prop_right_child_and_height(
             U32s::new([u32::MAX, u32::MAX / 2]),
             Some(
-                &vec![
+                &[
                     vec![get_init_tvm_stack(), vec![BFieldElement::zero()]].concat(),
                     vec![BFieldElement::new(62)],
                 ]
@@ -434,18 +434,18 @@ mod tests {
     #[test]
     fn right_child_and_height_node_is_left_child() {
         // All should return (false, height) as leftmost ancestors are always left-children.
-        let expected_end_stack = vec![get_init_tvm_stack(), vec![BFieldElement::zero()]].concat();
+        let expected_end_stack = [get_init_tvm_stack(), vec![BFieldElement::zero()]].concat();
         prop_right_child_and_height(
             U32s::new([1, 0]),
-            Some(&vec![expected_end_stack.clone(), vec![BFieldElement::zero()]].concat()),
+            Some(&[expected_end_stack.clone(), vec![BFieldElement::zero()]].concat()),
         );
         prop_right_child_and_height(
             U32s::new([3, 0]),
-            Some(&vec![expected_end_stack.clone(), vec![BFieldElement::one()]].concat()),
+            Some(&[expected_end_stack.clone(), vec![BFieldElement::one()]].concat()),
         );
         prop_right_child_and_height(
             U32s::new([4, 0]),
-            Some(&vec![expected_end_stack, vec![BFieldElement::zero()]].concat()),
+            Some(&[expected_end_stack, vec![BFieldElement::zero()]].concat()),
         );
     }
 

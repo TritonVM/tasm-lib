@@ -265,7 +265,7 @@ mod tests {
         init_stack.push(node_index_lo);
 
         // _ (right_lineage_count:u32)
-        let expected = vec![
+        let expected = [
             get_init_tvm_stack(),
             vec![BFieldElement::new(expected_count as u64)],
         ]

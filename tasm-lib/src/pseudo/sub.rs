@@ -76,7 +76,7 @@ impl DeprecatedSnippet for Sub {
 
     fn common_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-            vec![
+            [
                 get_init_tvm_stack(),
                 vec![
                     BFieldElement::new(1u64 << 20),
@@ -89,7 +89,7 @@ impl DeprecatedSnippet for Sub {
 
     fn worst_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-            vec![
+            [
                 get_init_tvm_stack(),
                 vec![
                     BFieldElement::new(1u64 << 20),

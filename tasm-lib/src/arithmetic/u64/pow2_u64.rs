@@ -89,15 +89,11 @@ impl DeprecatedSnippet for Pow2U64 {
     }
 
     fn common_case_input_state(&self) -> ExecutionState {
-        ExecutionState::with_stack(
-            vec![get_init_tvm_stack(), vec![BFieldElement::new(31)]].concat(),
-        )
+        ExecutionState::with_stack([get_init_tvm_stack(), vec![BFieldElement::new(31)]].concat())
     }
 
     fn worst_case_input_state(&self) -> ExecutionState {
-        ExecutionState::with_stack(
-            vec![get_init_tvm_stack(), vec![BFieldElement::new(63)]].concat(),
-        )
+        ExecutionState::with_stack([get_init_tvm_stack(), vec![BFieldElement::new(63)]].concat())
     }
 }
 

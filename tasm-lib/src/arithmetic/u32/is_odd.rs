@@ -87,7 +87,7 @@ impl DeprecatedSnippet for U32IsOdd {
 
     fn common_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-            vec![get_init_tvm_stack(), vec![BFieldElement::new(1 << 16)]].concat(),
+            [get_init_tvm_stack(), vec![BFieldElement::new(1 << 16)]].concat(),
         )
     }
 

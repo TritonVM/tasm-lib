@@ -12,7 +12,7 @@ pub struct ReverseDigest;
 impl ReverseDigest {
     fn get_input_state() -> ExecutionState {
         let digest: Digest = random();
-        let stack = vec![get_init_tvm_stack(), digest.values().to_vec()].concat();
+        let stack = [get_init_tvm_stack(), digest.values().to_vec()].concat();
         ExecutionState::with_stack(stack)
     }
 }
