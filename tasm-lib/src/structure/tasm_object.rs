@@ -63,6 +63,16 @@ pub trait TasmObject {
 
     /// Given an iterator over `BFieldElement`s, decode it as a Self object.
     fn decode_iter<Itr: Iterator<Item = BFieldElement>>(iterator: &mut Itr) -> Result<Box<Self>>;
+
+    /// Given a memory object (as HashMap of BFE->BFE) and and address (BFE), decode the
+    /// object located there.
+    fn decode_from_memory(
+        memory: &HashMap<BFieldElement, BFieldElement>,
+        address: BFieldElement,
+    ) -> Result<Box<Self>> {
+        let mut iterator = MemoryIter::new(memory, address);
+        Self::decode_iter(&mut iterator)
+    }
 }
 
 impl<H: AlgebraicHasher> TasmObject for MmrMembershipProof<H> {
@@ -256,8 +266,6 @@ mod test {
         test_helpers::test_rust_equivalence_multiple_deprecated,
         ExecutionState,
     };
-
-    use super::MemoryIter;
 
     #[derive(Debug, PartialEq, Eq, BFieldCodec)]
     enum InnerEnum {
@@ -524,8 +532,7 @@ mod test {
         }
 
         // decode from memory
-        let object_again: OuterStruct =
-            *OuterStruct::decode_iter(&mut MemoryIter::new(&memory, address)).unwrap();
+        let object_again: OuterStruct = *OuterStruct::decode_from_memory(&memory, address).unwrap();
 
         // assert equal
         assert_eq!(object, object_again);
