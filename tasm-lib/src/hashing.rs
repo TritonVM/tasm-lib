@@ -1,3 +1,4 @@
+pub mod absorb;
 pub mod eq_digest;
 pub mod hash_varlen;
 pub mod load_auth_path_from_secret_in_safe_list;
