@@ -4,8 +4,8 @@ use itertools::Itertools;
 use rand::{rngs::StdRng, Rng, RngCore, SeedableRng};
 use triton_vm::{triton_asm, BFieldElement, NonDeterminism};
 use twenty_first::{
-    shared_math::tip5::{Tip5State, STATE_SIZE},
-    util_types::algebraic_hasher::SpongeHasher,
+    shared_math::tip5::{Tip5State, RATE, STATE_SIZE},
+    util_types::algebraic_hasher::{Domain, SpongeHasher},
 };
 
 use crate::{
@@ -47,6 +47,11 @@ impl BasicSnippet for Absorb {
             // BEFORE: _ *addr length
             // AFTER: _
             {entrypoint}:
+                // absorb_init to get a deterministic sponge state
+                push 0 push 0 push 0 push 0 push 0 push 0 push 0 push 0 push 0 push 0
+                absorb_init
+                pop pop pop pop pop pop pop pop pop pop
+
                 // absorb all chunks of 10 elements
                 call {main_loop}
                 // _ *new_addr length_remaining
@@ -240,6 +245,8 @@ impl Procedure for Absorb {
         }
 
         // absorb into sponge state
+        *sponge_state = VmHasherState::new(Domain::VariableLength);
+        VmHasher::absorb(sponge_state, &[BFieldElement::new(0); RATE]);
         VmHasher::absorb_repeatedly(sponge_state, sequence.iter());
 
         // output empty
