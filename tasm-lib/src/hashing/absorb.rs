@@ -256,7 +256,7 @@ impl Procedure for Absorb {
     fn pseudorandom_initial_state(
         &self,
         seed: [u8; 32],
-        _bench_case: Option<BenchmarkCase>,
+        bench_case: Option<BenchmarkCase>,
     ) -> (
         Vec<BFieldElement>,
         HashMap<BFieldElement, BFieldElement>,
@@ -270,12 +270,11 @@ impl Procedure for Absorb {
         let address = BFieldElement::new(rng.next_u64() % (1 << 20));
 
         // sample sequence
-        // let length = if matches!(bench_case, Some(BenchmarkCase::WorstCase)) {
-        //     97
-        // } else {
-        //     rng.next_u32() % 20
-        // };
-        let length = 0;
+        let length = if matches!(bench_case, Some(BenchmarkCase::WorstCase)) {
+            97
+        } else {
+            rng.next_u32() % 20
+        };
         let sequence = (0..length)
             .map(|_| rng.gen::<BFieldElement>())
             .collect_vec();
