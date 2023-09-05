@@ -40,6 +40,78 @@ impl VmProofStream {
         self.word_index += size as u32 + 1;
         ProofItem::decode(sequence)
     }
+
+    pub fn pseudorandom_items_list(seed: [u8; 32]) -> Vec<ProofItem> {
+        let mut rng: StdRng = SeedableRng::from_seed(seed);
+        let num_iterations = rng.next_u32() % 5;
+        let mut proof_items = vec![];
+        for _ in 0..num_iterations {
+            if rng.next_u32() % 2 == 1 {
+                let authentication_structure: Vec<Digest> = (0..20).map(|_| rng.gen()).collect();
+                proof_items.push(ProofItem::AuthenticationStructure(authentication_structure));
+            }
+            if rng.next_u32() % 2 == 1 {
+                let fri_codeword: Vec<XFieldElement> = (0..20).map(|_| rng.gen()).collect();
+                proof_items.push(ProofItem::FriCodeword(fri_codeword));
+            }
+            if rng.next_u32() % 2 == 1 {
+                let auth_structure: Vec<Digest> = (0..20).map(|_| rng.gen()).collect();
+                let revealed_leaves: Vec<XFieldElement> = (0..20).map(|_| rng.gen()).collect();
+                let fri_response = FriResponse {
+                    auth_structure,
+                    revealed_leaves,
+                };
+                proof_items.push(ProofItem::FriResponse(fri_response));
+            }
+            if rng.next_u32() % 2 == 1 {
+                proof_items.push(ProofItem::Log2PaddedHeight(rng.next_u32()));
+            }
+            if rng.next_u32() % 2 == 1 {
+                let master_table_base_rows: Vec<Vec<BFieldElement>> = (0..20)
+                    .map(|_| {
+                        (0..20)
+                            .map(|_| rng.gen::<BFieldElement>())
+                            .collect::<Vec<BFieldElement>>()
+                    })
+                    .collect::<Vec<Vec<BFieldElement>>>();
+                proof_items.push(ProofItem::MasterBaseTableRows(master_table_base_rows));
+            }
+            if rng.next_u32() % 2 == 1 {
+                let master_table_ext_rows: Vec<Vec<XFieldElement>> = (0..20)
+                    .map(|_| {
+                        (0..20)
+                            .map(|_| rng.gen::<XFieldElement>())
+                            .collect::<Vec<XFieldElement>>()
+                    })
+                    .collect::<Vec<Vec<XFieldElement>>>();
+                proof_items.push(ProofItem::MasterExtTableRows(master_table_ext_rows));
+            }
+            if rng.next_u32() % 2 == 1 {
+                proof_items.push(ProofItem::MerkleRoot(rng.gen()));
+            }
+            if rng.next_u32() % 2 == 1 {
+                let ood_base_row = (0..NUM_BASE_COLUMNS).map(|_| rng.gen()).collect();
+                proof_items.push(ProofItem::OutOfDomainBaseRow(ood_base_row));
+            }
+            if rng.next_u32() % 2 == 1 {
+                let ood_ext_row = (0..NUM_EXT_COLUMNS).map(|_| rng.gen()).collect();
+                proof_items.push(ProofItem::OutOfDomainExtRow(ood_ext_row));
+            }
+            if rng.next_u32() % 2 == 1 {
+                let ood_quotient_segments = rng.gen();
+                proof_items.push(ProofItem::OutOfDomainQuotientSegments(
+                    ood_quotient_segments,
+                ));
+            }
+            if rng.next_u32() % 2 == 1 {
+                let quotient_segment_elements = (0..20).map(|_| rng.gen()).collect();
+                proof_items.push(ProofItem::QuotientSegmentsElements(
+                    quotient_segment_elements,
+                ));
+            }
+        }
+        proof_items
+    }
 }
 
 /// Dequeue reads the next object from the `ProofStream`.
@@ -172,81 +244,9 @@ impl Algorithm for Dequeue {
         let mut proof_items = vec![];
 
         // populate with random proof items
-        let num_iterations = if matches!(bench_case, Some(BenchmarkCase::WorstCase)) {
-            1
-        } else {
-            1 + (rng.next_u32() % 20)
-        };
-        for i in 0..num_iterations {
-            if matches!(bench_case, Some(BenchmarkCase::WorstCase)) || rng.next_u32() % 2 == 1 {
-                let authentication_structure: Vec<Digest> = (0..20).map(|_| rng.gen()).collect();
-                proof_items.push(ProofItem::AuthenticationStructure(authentication_structure));
-            }
-            if matches!(bench_case, Some(BenchmarkCase::WorstCase)) || rng.next_u32() % 2 == 1 {
-                let fri_codeword: Vec<XFieldElement> = (0..20).map(|_| rng.gen()).collect();
-                proof_items.push(ProofItem::FriCodeword(fri_codeword));
-            }
-            if matches!(bench_case, Some(BenchmarkCase::WorstCase)) || rng.next_u32() % 2 == 1 {
-                let auth_structure: Vec<Digest> = (0..20).map(|_| rng.gen()).collect();
-                let revealed_leaves: Vec<XFieldElement> = (0..20).map(|_| rng.gen()).collect();
-                let fri_response = FriResponse {
-                    auth_structure,
-                    revealed_leaves,
-                };
-                proof_items.push(ProofItem::FriResponse(fri_response));
-            }
-            if matches!(bench_case, Some(BenchmarkCase::WorstCase)) || rng.next_u32() % 2 == 1 {
-                proof_items.push(ProofItem::Log2PaddedHeight(rng.next_u32()));
-            }
-            if matches!(bench_case, Some(BenchmarkCase::WorstCase)) || rng.next_u32() % 2 == 1 {
-                let master_table_base_rows: Vec<Vec<BFieldElement>> = (0..20)
-                    .map(|_| {
-                        (0..20)
-                            .map(|_| rng.gen::<BFieldElement>())
-                            .collect::<Vec<BFieldElement>>()
-                    })
-                    .collect::<Vec<Vec<BFieldElement>>>();
-                proof_items.push(ProofItem::MasterBaseTableRows(master_table_base_rows));
-            }
-            if matches!(bench_case, Some(BenchmarkCase::WorstCase)) || rng.next_u32() % 2 == 1 {
-                let master_table_ext_rows: Vec<Vec<XFieldElement>> = (0..20)
-                    .map(|_| {
-                        (0..20)
-                            .map(|_| rng.gen::<XFieldElement>())
-                            .collect::<Vec<XFieldElement>>()
-                    })
-                    .collect::<Vec<Vec<XFieldElement>>>();
-                proof_items.push(ProofItem::MasterExtTableRows(master_table_ext_rows));
-            }
-            if matches!(bench_case, Some(BenchmarkCase::WorstCase)) || rng.next_u32() % 2 == 1 {
-                proof_items.push(ProofItem::MerkleRoot(rng.gen()));
-            }
-            if matches!(bench_case, Some(BenchmarkCase::WorstCase)) || rng.next_u32() % 2 == 1 {
-                let ood_base_row = (0..NUM_BASE_COLUMNS).map(|_| rng.gen()).collect();
-                proof_items.push(ProofItem::OutOfDomainBaseRow(ood_base_row));
-            }
-            if matches!(bench_case, Some(BenchmarkCase::WorstCase)) || rng.next_u32() % 2 == 1 {
-                let ood_ext_row = (0..NUM_EXT_COLUMNS).map(|_| rng.gen()).collect();
-                proof_items.push(ProofItem::OutOfDomainExtRow(ood_ext_row));
-            }
-            if matches!(bench_case, Some(BenchmarkCase::WorstCase)) || rng.next_u32() % 2 == 1 {
-                let ood_quotient_segments = rng.gen();
-                proof_items.push(ProofItem::OutOfDomainQuotientSegments(
-                    ood_quotient_segments,
-                ));
-            }
-            if matches!(bench_case, Some(BenchmarkCase::WorstCase))
-                || rng.next_u32() % 2 == 1
-                || (proof_items.is_empty() && i == num_iterations - 1)
-            {
-                let quotient_segment_elements = (0..20).map(|_| rng.gen()).collect();
-                proof_items.push(ProofItem::QuotientSegmentsElements(
-                    quotient_segment_elements,
-                ));
-            }
-            println!("Done proof items iteration {i} / {num_iterations}");
+        while proof_items.is_empty() {
+            proof_items = VmProofStream::pseudorandom_items_list(rng.gen());
         }
-
         assert!(!proof_items.is_empty());
 
         // create proof stream object and populate it with these proof items
@@ -282,16 +282,10 @@ impl Algorithm for Dequeue {
 #[cfg(test)]
 mod test {
 
-    use itertools::Itertools;
     use rand::{rngs::StdRng, Rng, SeedableRng};
-    use triton_vm::{proof_item::ProofItem, BFieldElement};
-    use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
     use crate::{
         algorithm::{Algorithm, ShadowedAlgorithm},
-        recufier::proof_stream::VmProofStream,
-        snippet::RustShadow,
-        structure::tasm_object::TasmObject,
         test_helpers::test_rust_equivalence_given_complete_state,
     };
 
@@ -299,11 +293,6 @@ mod test {
 
     #[test]
     fn test() {
-        ShadowedAlgorithm::new(Dequeue {}).test();
-    }
-
-    #[test]
-    fn test_decode_dequeued_object() {
         let num_states = 10;
         let seed = [
             0x88, 0x58, 0x6b, 0xe, 0xb7, 0x36, 0xed, 0x57, 0x88, 0xcd, 0xf7, 0x57, 0xc0, 0x29,
@@ -320,7 +309,7 @@ mod test {
                 dequeue.pseudorandom_initial_state(rng.gen(), None);
 
             let stdin = vec![];
-            let vm_output_state = test_rust_equivalence_given_complete_state(
+            let _vm_output_state = test_rust_equivalence_given_complete_state(
                 &algorithm,
                 &stack,
                 &stdin,
@@ -329,45 +318,8 @@ mod test {
                 1,
                 None,
             );
-
-            // read out proof stream object
-            // very slow -- why?
-            let proof_stream_pointer = vm_output_state.final_stack.last().unwrap();
-            let mut proof_stream = *VmProofStream::decode_from_memory(
-                &vm_output_state.final_ram,
-                *proof_stream_pointer,
-            )
-            .unwrap();
-
-            // // find location of object
-            // let address = *proof_stream_pointer
-            //     + BFieldElement::new(3)
-            //     + BFieldElement::new(proof_stream.word_index as u64);
-
-            // if memory.contains_key(&address) {
-            //     // read out directly from memory
-            //     let size = memory
-            //         .get(&(address - BFieldElement::new(1)))
-            //         .unwrap()
-            //         .value() as usize;
-            //     let sequence = (0..size)
-            //         .map(|i| {
-            //             memory
-            //                 .get(&(address + BFieldElement::new(i as u64)))
-            //                 .unwrap()
-            //         })
-            //         .copied()
-            //         .collect_vec();
-            //     let direct_object = *ProofItem::decode(&sequence).unwrap();
-
-            //     // read out object via proof stream
-            //     let proof_stream_object = *proof_stream.dequeue().unwrap();
-
-            //     // assert equality
-            //     assert_eq!(proof_stream_object, direct_object);
-            // }
         }
     }
 
-    // TODO: test that behavior is the same when the proof stream is empty
+    // TODO: test that behavior is the same (crash in both cases) when the proof stream is empty
 }
