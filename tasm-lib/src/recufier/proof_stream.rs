@@ -282,14 +282,20 @@ impl Algorithm for Dequeue {
 #[cfg(test)]
 mod test {
 
-    use rand::{rngs::StdRng, Rng, SeedableRng};
+    use std::collections::HashMap;
+
+    use rand::{rngs::StdRng, Rng, RngCore, SeedableRng};
+    use triton_vm::{BFieldElement, NonDeterminism};
+    use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
     use crate::{
         algorithm::{Algorithm, ShadowedAlgorithm},
-        test_helpers::test_rust_equivalence_given_complete_state,
+        get_init_tvm_stack,
+        snippet::RustShadow,
+        test_helpers::{link_and_run_tasm_for_test, test_rust_equivalence_given_complete_state},
     };
 
-    use super::Dequeue;
+    use super::{Dequeue, VmProofStream};
 
     #[test]
     fn test() {
@@ -321,5 +327,77 @@ mod test {
         }
     }
 
-    // TODO: test that behavior is the same (crash in both cases) when the proof stream is empty
+    #[test]
+    fn negative_test() {
+        let num_states = 10;
+        let seed = [
+            0x88, 0x58, 0x6b, 0xe, 0xb7, 0x36, 0xed, 0x57, 0x88, 0xcd, 0xf7, 0x57, 0xc0, 0x29,
+            0x02, 0xca, 0xfb, 0x66, 0x41, 0xac, 0x2d, 0xb1, 0xe6, 0x1b, 0x4a, 0x9c, 0x68, 0x29,
+            0xa5, 0x23, 0x2e, 0xa6,
+        ];
+        let mut rng: StdRng = SeedableRng::from_seed(seed);
+
+        let dequeue = Dequeue {};
+
+        for _ in 0..num_states {
+            let proof_items = VmProofStream::pseudorandom_items_list(rng.gen());
+
+            // create proof stream object and populate it with these proof items
+            let mut proof_stream = VmProofStream::new(&proof_items);
+
+            // dequeue all elements
+            let dequeue_count = proof_items.len();
+
+            for _ in 0..dequeue_count {
+                proof_stream.dequeue().unwrap();
+            }
+
+            // write to memory at random address
+            let address = BFieldElement::new((rng.next_u32() % (1 << 20)) as u64);
+            let sequence = proof_stream.encode();
+            let mut memory = HashMap::new();
+            for (i, b) in sequence.into_iter().enumerate() {
+                memory.insert(address + BFieldElement::new(i as u64), b);
+            }
+
+            // drop address on stack
+            let mut stack = get_init_tvm_stack();
+            stack.push(address);
+
+            // test rust/tasm equivalence
+            // in this case: verify that they both fail
+            // (because you can't dequeue from an empty stream)
+
+            let stdin = vec![];
+            let nondeterminism = NonDeterminism::new(vec![]);
+
+            // run rust shadow
+            let rust_result = std::panic::catch_unwind(|| {
+                let mut rust_stack = stack.clone();
+                let mut rust_memory = memory.clone();
+                ShadowedAlgorithm::new(dequeue.clone()).rust_shadow_wrapper(
+                    &stdin,
+                    &nondeterminism,
+                    &mut rust_stack,
+                    &mut rust_memory,
+                )
+            });
+
+            // run tvm
+            let tvm_result = std::panic::catch_unwind(|| {
+                let mut tasm_stack = stack.clone();
+                let mut tasm_memory = memory.clone();
+                link_and_run_tasm_for_test(
+                    &ShadowedAlgorithm::new(dequeue.clone()),
+                    &mut tasm_stack,
+                    stdin.to_vec(),
+                    &nondeterminism,
+                    &mut tasm_memory,
+                    0,
+                )
+            });
+
+            assert!(rust_result.is_err() && tvm_result.is_err());
+        }
+    }
 }
