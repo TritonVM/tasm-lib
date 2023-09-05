@@ -20,6 +20,7 @@ use triton_vm::NonDeterminism;
 use triton_vm::PublicInput;
 use triton_vm::{Claim, StarkParameters};
 use twenty_first::shared_math::bfield_codec::BFieldCodec;
+use twenty_first::shared_math::tip5::Tip5State;
 use twenty_first::shared_math::tip5::{self, Tip5};
 
 use triton_vm::op_stack::NUM_OP_STACK_REGISTERS;
@@ -53,6 +54,7 @@ pub mod test_helpers;
 
 // The hasher type must match whatever algebraic hasher the VM is using
 pub type VmHasher = Tip5;
+pub type VmHasherState = Tip5State;
 pub type Digest = tip5::Digest;
 pub const DIGEST_LENGTH: usize = tip5::DIGEST_LENGTH;
 
@@ -122,6 +124,7 @@ pub struct VmOutputState {
     pub output: Vec<BFieldElement>,
     pub final_stack: Vec<BFieldElement>,
     pub final_ram: HashMap<BFieldElement, BFieldElement>,
+    pub final_sponge_state: VmHasherState,
 }
 
 pub fn get_init_tvm_stack() -> Vec<BFieldElement> {
@@ -273,7 +276,7 @@ pub fn execute_bench_deprecated(
     })
 }
 
-/// Execute a Triton-VM program for test; modify stack and memory. Returns an error
+/// Execute a Triton-VM program for test; modify only stack+memory. Returns an error
 /// if the program crashes in the VM, otherwise returns OK(vm_output_state). Panics
 /// if anything else goes wrong.
 pub fn execute_test(
@@ -354,6 +357,9 @@ pub fn execute_test(
         output: final_state.public_output,
         final_stack: stack.to_owned(),
         final_ram: final_state.ram,
+        final_sponge_state: VmHasherState {
+            state: final_state.sponge_state,
+        },
     })
 }
 

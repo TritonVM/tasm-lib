@@ -13,6 +13,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
 use crate::test_helpers::test_rust_equivalence_given_execution_state_deprecated;
+use crate::VmHasherState;
 use crate::{execute_bench_deprecated, ExecutionResult, VmOutputState, DIGEST_LENGTH};
 use crate::{execute_test, ExecutionState};
 
@@ -214,6 +215,7 @@ pub trait RustShadow {
         nondeterminism: &NonDeterminism<BFieldElement>,
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
+        sponge_state: &mut VmHasherState,
     ) -> Vec<BFieldElement>;
 
     fn test(&self);
@@ -419,6 +421,7 @@ impl<S: DeprecatedSnippet + Clone + 'static> RustShadow for DeprecatedSnippetWra
         nondeterminism: &NonDeterminism<BFieldElement>,
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
+        _sponge_state: &mut VmHasherState,
     ) -> Vec<BFieldElement> {
         let mut stack_copy = stack.to_vec();
         self.deprecated_snippet.rust_shadowing(

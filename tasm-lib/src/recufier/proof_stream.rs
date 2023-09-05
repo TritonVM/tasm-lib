@@ -286,13 +286,16 @@ mod test {
 
     use rand::{rngs::StdRng, Rng, RngCore, SeedableRng};
     use triton_vm::{BFieldElement, NonDeterminism};
-    use twenty_first::shared_math::bfield_codec::BFieldCodec;
+    use twenty_first::{
+        shared_math::bfield_codec::BFieldCodec, util_types::algebraic_hasher::Domain,
+    };
 
     use crate::{
         algorithm::{Algorithm, ShadowedAlgorithm},
         get_init_tvm_stack,
         snippet::RustShadow,
         test_helpers::{link_and_run_tasm_for_test, test_rust_equivalence_given_complete_state},
+        VmHasherState,
     };
 
     use super::{Dequeue, VmProofStream};
@@ -321,6 +324,7 @@ mod test {
                 &stdin,
                 &nondeterminism,
                 &memory,
+                &VmHasherState::new(Domain::VariableLength),
                 1,
                 None,
             );
@@ -380,6 +384,7 @@ mod test {
                     &nondeterminism,
                     &mut rust_stack,
                     &mut rust_memory,
+                    &mut VmHasherState::new(Domain::VariableLength),
                 )
             });
 

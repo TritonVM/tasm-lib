@@ -5,13 +5,14 @@ use num_traits::Zero;
 use triton_vm::instruction::LabelledInstruction;
 use triton_vm::{triton_asm, NonDeterminism};
 use twenty_first::shared_math::b_field_element::BFieldElement;
+use twenty_first::util_types::algebraic_hasher::Domain;
 
 use crate::dyn_malloc::DYN_MALLOC_ADDRESS;
 use crate::library::Library;
 use crate::snippet::{BasicSnippet, DeprecatedSnippet, RustShadow};
 use crate::{
     execute_test, exported_snippets, rust_shadowing_helper_functions, ExecutionState,
-    VmOutputState, DIGEST_LENGTH,
+    VmHasherState, VmOutputState, DIGEST_LENGTH,
 };
 
 #[allow(dead_code)]
@@ -364,6 +365,7 @@ pub(crate) fn test_rust_equivalence_given_input_values<T: RustShadow>(
         stdin,
         &nondeterminism,
         memory,
+        &VmHasherState::new(Domain::VariableLength),
         words_statically_allocated,
         expected_final_stack,
     )
@@ -378,6 +380,7 @@ pub fn test_rust_equivalence_given_complete_state<T: RustShadow>(
     stdin: &[BFieldElement],
     nondeterminism: &NonDeterminism<BFieldElement>,
     memory: &HashMap<BFieldElement, BFieldElement>,
+    sponge_state: &VmHasherState,
     words_statically_allocated: usize,
     expected_final_stack: Option<&[BFieldElement]>,
 ) -> VmOutputState {
@@ -387,6 +390,7 @@ pub fn test_rust_equivalence_given_complete_state<T: RustShadow>(
     let mut tasm_memory = memory.clone();
     let mut rust_stack = stack.to_vec();
     let mut tasm_stack = stack.to_vec();
+    let mut rust_sponge = sponge_state.clone();
 
     if words_statically_allocated > 0 && memory.get(&BFieldElement::zero()).is_none() {
         rust_shadowing_helper_functions::dyn_malloc::rust_dyn_malloc_initialize(
@@ -405,6 +409,7 @@ pub fn test_rust_equivalence_given_complete_state<T: RustShadow>(
         nondeterminism,
         &mut rust_stack,
         &mut rust_memory,
+        &mut rust_sponge,
     );
 
     // run tvm
@@ -420,6 +425,7 @@ pub fn test_rust_equivalence_given_complete_state<T: RustShadow>(
     // Sanity checks
     assert_eq!(vm_output_state.final_ram, tasm_memory);
     assert_eq!(vm_output_state.final_stack, tasm_stack);
+    assert_eq!(vm_output_state.final_sponge_state.state, rust_sponge.state);
 
     // assert stdouts agree
     assert_eq!(
@@ -619,6 +625,7 @@ pub fn test_rust_equivalence_given_execution_state<T: BasicSnippet + RustShadow>
         &execution_state.std_in,
         &nondeterminism,
         &execution_state.memory,
+        &VmHasherState::new(Domain::FixedLength),
         execution_state.words_allocated,
         None,
     )

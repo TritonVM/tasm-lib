@@ -2,12 +2,14 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use rand::{rngs::StdRng, thread_rng, Rng, SeedableRng};
 use triton_vm::{BFieldElement, NonDeterminism};
+use twenty_first::util_types::algebraic_hasher::Domain;
 
 use crate::{
     linker::{execute_bench, link_for_isolated_run},
     snippet::{BasicSnippet, RustShadow},
     snippet_bencher::{write_benchmarks, BenchmarkCase, BenchmarkResult},
     test_helpers::test_rust_equivalence_given_complete_state,
+    VmHasherState,
 };
 
 /// A Function is a piece of tasm code that can modify the top of the stack, and can read
@@ -52,6 +54,7 @@ where
         _nondeterminism: &triton_vm::NonDeterminism<BFieldElement>,
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
+        _sponge_state: &mut VmHasherState,
     ) -> Vec<BFieldElement> {
         self.function.borrow().rust_shadow(stack, memory);
         vec![]
@@ -81,6 +84,7 @@ where
                 &stdin,
                 &NonDeterminism::new(vec![]),
                 &memory,
+                &VmHasherState::new(Domain::VariableLength),
                 1,
                 None,
             );

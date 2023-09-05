@@ -4,10 +4,7 @@ use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::collections::HashMap;
 use triton_vm::{triton_asm, BFieldElement};
 use twenty_first::{
-    shared_math::{
-        bfield_codec::BFieldCodec,
-        tip5::{Tip5, Tip5State},
-    },
+    shared_math::{bfield_codec::BFieldCodec, tip5::Tip5},
     util_types::algebraic_hasher::{AlgebraicHasher, Domain, SpongeHasher},
 };
 
@@ -25,7 +22,7 @@ use crate::{
     },
     rust_shadowing_helper_functions,
     snippet::{BasicSnippet, DataType},
-    Digest, VmHasher, DIGEST_LENGTH,
+    Digest, VmHasher, VmHasherState, DIGEST_LENGTH,
 };
 
 /// Derives the indices that make up the removal record from the item
@@ -229,7 +226,7 @@ impl Function for GetSwbfIndices {
         vector.push(BFieldElement::zero());
         vector.push(BFieldElement::zero());
 
-        let mut sponge = Tip5State::new(Domain::VariableLength);
+        let mut sponge = VmHasherState::new(Domain::VariableLength);
         Tip5::absorb_repeatedly(&mut sponge, vector.iter());
 
         let mut u32_indices = vec![];

@@ -1,13 +1,14 @@
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 use triton_vm::{BFieldElement, NonDeterminism};
-use twenty_first::shared_math::bfield_codec::BFieldCodec;
+use twenty_first::{shared_math::bfield_codec::BFieldCodec, util_types::algebraic_hasher::Domain};
 
 use crate::{
     linker::{execute_bench, link_for_isolated_run},
     snippet::{BasicSnippet, RustShadow},
     snippet_bencher::{write_benchmarks, BenchmarkCase, BenchmarkResult},
     test_helpers::test_rust_equivalence_given_complete_state,
+    VmHasherState,
 };
 
 /// An Algorithm is a piece of tasm code that can modify memory even at addresses below
@@ -81,6 +82,7 @@ where
         nondeterminism: &NonDeterminism<BFieldElement>,
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
+        _sponge_state: &mut VmHasherState,
     ) -> Vec<BFieldElement> {
         self.algorithm
             .borrow()
@@ -116,6 +118,7 @@ where
                 &stdin,
                 &nondeterminism,
                 &memory,
+                &VmHasherState::new(Domain::VariableLength),
                 1,
                 None,
             );

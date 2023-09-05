@@ -9,6 +9,7 @@ use crate::{
     snippet::{BasicSnippet, RustShadow},
     snippet_bencher::{write_benchmarks, BenchmarkCase, BenchmarkResult},
     test_helpers::test_rust_equivalence_given_complete_state,
+    VmHasherState,
 };
 
 /// A Procedure is a piece of tasm code that can do almost anything: modify stack, read
@@ -26,6 +27,7 @@ pub trait Procedure: BasicSnippet {
         memory: &mut HashMap<BFieldElement, BFieldElement>,
         nondeterminism: &NonDeterminism<BFieldElement>,
         public_input: &[BFieldElement],
+        sponge_state: &mut VmHasherState,
     ) -> Vec<BFieldElement>;
 
     fn preprocess<T: BFieldCodec>(
@@ -35,6 +37,7 @@ pub trait Procedure: BasicSnippet {
     }
 
     /// Returns (stack, memory, nondeterminism, public_input)
+    #[allow(clippy::type_complexity)]
     fn pseudorandom_initial_state(
         &self,
         seed: [u8; 32],
@@ -44,6 +47,7 @@ pub trait Procedure: BasicSnippet {
         HashMap<BFieldElement, BFieldElement>,
         NonDeterminism<BFieldElement>,
         Vec<BFieldElement>,
+        VmHasherState,
     );
 }
 
@@ -70,10 +74,11 @@ impl<P: Procedure + 'static> RustShadow for ShadowedProcedure<P> {
         nondeterminism: &NonDeterminism<BFieldElement>,
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
+        sponge_state: &mut VmHasherState,
     ) -> Vec<BFieldElement> {
         self.procedure
             .borrow()
-            .rust_shadow(stack, memory, nondeterminism, stdin)
+            .rust_shadow(stack, memory, nondeterminism, stdin, sponge_state)
     }
 
     fn test(&self) {
@@ -85,7 +90,7 @@ impl<P: Procedure + 'static> RustShadow for ShadowedProcedure<P> {
         for _ in 0..num_states {
             let seed: [u8; 32] = rng.gen();
             println!("testing {} common case with seed: {:x?}", entrypoint, seed);
-            let (stack, memory, nondeterminism, public_input) =
+            let (stack, memory, nondeterminism, public_input, sponge_state) =
                 procedure.borrow().pseudorandom_initial_state(seed, None);
 
             test_rust_equivalence_given_complete_state(
@@ -94,6 +99,7 @@ impl<P: Procedure + 'static> RustShadow for ShadowedProcedure<P> {
                 &public_input,
                 &nondeterminism,
                 &memory,
+                &sponge_state,
                 1,
                 None,
             );
@@ -110,7 +116,7 @@ impl<P: Procedure + 'static> RustShadow for ShadowedProcedure<P> {
         let mut benchmarks = Vec::with_capacity(2);
 
         for bench_case in [BenchmarkCase::CommonCase, BenchmarkCase::WorstCase] {
-            let (stack, memory, nondeterminism, public_input) = self
+            let (stack, memory, nondeterminism, public_input, _sponge_state) = self
                 .procedure
                 .borrow()
                 .pseudorandom_initial_state(rng.gen(), Some(bench_case));
