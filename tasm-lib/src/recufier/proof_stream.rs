@@ -282,7 +282,7 @@ impl Algorithm for Dequeue {
 #[cfg(test)]
 mod test {
 
-    use std::collections::HashMap;
+    use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
     use rand::{rngs::StdRng, Rng, RngCore, SeedableRng};
     use triton_vm::{BFieldElement, NonDeterminism};
@@ -292,9 +292,11 @@ mod test {
 
     use crate::{
         algorithm::{Algorithm, ShadowedAlgorithm},
-        get_init_tvm_stack,
+        execute_with_terminal_state, get_init_tvm_stack,
+        linker::link_for_isolated_run,
+        program_with_state_preparation,
         snippet::RustShadow,
-        test_helpers::{link_and_run_tasm_for_test, test_rust_equivalence_given_complete_state},
+        test_helpers::test_rust_equivalence_given_complete_state,
         VmHasherState,
     };
 
@@ -373,7 +375,7 @@ mod test {
             // (because you can't dequeue from an empty stream)
 
             let stdin = vec![];
-            let nondeterminism = NonDeterminism::new(vec![]);
+            let mut nondeterminism = NonDeterminism::new(vec![]);
 
             // run rust shadow
             let rust_result = std::panic::catch_unwind(|| {
@@ -389,18 +391,10 @@ mod test {
             });
 
             // run tvm
-            let tvm_result = std::panic::catch_unwind(|| {
-                let mut tasm_stack = stack.clone();
-                let mut tasm_memory = memory.clone();
-                link_and_run_tasm_for_test(
-                    &ShadowedAlgorithm::new(dequeue.clone()),
-                    &mut tasm_stack,
-                    stdin.to_vec(),
-                    &nondeterminism,
-                    &mut tasm_memory,
-                    0,
-                )
-            });
+            let code = link_for_isolated_run(Rc::new(RefCell::new(dequeue.clone())), 0);
+            let program = program_with_state_preparation(&code, &stack, &mut nondeterminism, None);
+            let tvm_result = execute_with_terminal_state(&program, &stdin, &mut nondeterminism);
+            println!("tvm_result: {tvm_result:?}");
 
             assert!(rust_result.is_err() && tvm_result.is_err());
         }

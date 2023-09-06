@@ -8,7 +8,10 @@ use crate::{
     linker::{execute_bench, link_for_isolated_run},
     snippet::{BasicSnippet, RustShadow},
     snippet_bencher::{write_benchmarks, BenchmarkCase, BenchmarkResult},
-    test_helpers::test_rust_equivalence_given_complete_state,
+    test_helpers::{
+        rust_final_state, tasm_final_state, verify_memory_equivalence, verify_stack_equivalence,
+        verify_stack_growth,
+    },
     VmHasherState,
 };
 
@@ -90,19 +93,44 @@ impl<P: Procedure + 'static> RustShadow for ShadowedProcedure<P> {
         for _ in 0..num_states {
             let seed: [u8; 32] = rng.gen();
             println!("testing {} common case with seed: {:x?}", entrypoint, seed);
-            let (stack, memory, nondeterminism, public_input, sponge_state) =
+            let (stack, memory, nondeterminism, stdin, sponge_state) =
                 procedure.borrow().pseudorandom_initial_state(seed, None);
 
-            test_rust_equivalence_given_complete_state(
+            let init_stack = stack.to_vec();
+            let words_statically_allocated = 0;
+
+            let rust = rust_final_state(
                 self,
                 &stack,
-                &public_input,
+                &stdin,
                 &nondeterminism,
                 &memory,
                 &sponge_state,
-                1,
-                None,
+                words_statically_allocated,
             );
+
+            // run tvm
+            let tasm = tasm_final_state(
+                self,
+                &stack,
+                &stdin,
+                &nondeterminism,
+                &memory,
+                &sponge_state,
+                words_statically_allocated,
+            );
+
+            // assert_eq!(tasm.final_sponge_state.state, rust.final_sponge_state.state);
+            // can't do this without changing the VM interface, unfortunately ...
+
+            assert_eq!(
+                rust.output, tasm.output,
+                "Rust shadowing and VM std out must agree"
+            );
+
+            verify_stack_equivalence(&rust.final_stack, &tasm.final_stack);
+            verify_memory_equivalence(&rust.final_ram, &tasm.final_ram);
+            verify_stack_growth(self, &init_stack, &tasm.final_stack);
         }
     }
 

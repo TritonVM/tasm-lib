@@ -445,10 +445,12 @@ impl DeprecatedSnippet for TestHashXFieldElementLsb {
 mod tests {
     use num::One;
     use triton_vm::triton_asm;
+    use twenty_first::util_types::algebraic_hasher::Domain;
 
     use crate::{
         function::ShadowedFunction, list::higher_order::inner_function::RawCode,
-        snippet::RustShadow, test_helpers::test_rust_equivalence_given_input_values,
+        snippet::RustShadow, test_helpers::test_rust_equivalence_given_complete_state,
+        VmHasherState,
     };
 
     use super::*;
@@ -502,11 +504,13 @@ mod tests {
         let expected_end_stack_true =
             vec![get_init_tvm_stack(), vec![BFieldElement::one()]].concat();
         let shadowed_snippet = ShadowedFunction::new(snippet);
-        test_rust_equivalence_given_input_values(
+        test_rust_equivalence_given_complete_state(
             &shadowed_snippet,
             &input_stack,
             &[],
-            &mut memory,
+            &NonDeterminism::new(vec![]),
+            &memory,
+            &VmHasherState::new(Domain::VariableLength),
             1,
             Some(&expected_end_stack_true),
         );
@@ -522,11 +526,13 @@ mod tests {
         );
         let expected_end_stack_false =
             vec![get_init_tvm_stack(), vec![BFieldElement::zero()]].concat();
-        test_rust_equivalence_given_input_values(
+        test_rust_equivalence_given_complete_state(
             &shadowed_snippet,
             &input_stack,
             &[],
-            &mut memory,
+            &NonDeterminism::new(vec![]),
+            &memory,
+            &VmHasherState::new(Domain::VariableLength),
             1,
             Some(&expected_end_stack_false),
         );

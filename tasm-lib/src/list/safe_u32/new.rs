@@ -176,7 +176,7 @@ mod tests {
         let mut memory = HashMap::default();
         stack.push(capacity_as_bfe);
         SafeNew(data_type.clone())
-            .link_and_run_tasm_for_test(&mut stack, vec![], vec![], &mut memory, 0)
+            .link_and_run_tasm_for_test(&mut stack, vec![], vec![], &mut memory, None)
             .unwrap();
         let first_list = stack.pop().unwrap();
 
@@ -187,7 +187,7 @@ mod tests {
             stack.push(elem.to_owned());
         }
         SafePush(data_type.clone())
-            .link_and_run_tasm_for_test(&mut stack, vec![], vec![], &mut memory, 0)
+            .link_and_run_tasm_for_test(&mut stack, vec![], vec![], &mut memory, None)
             .unwrap();
         assert_eq!(
             get_init_tvm_stack()[DIGEST_LENGTH..],
@@ -198,7 +198,7 @@ mod tests {
         // Get another list in memory
         stack.push(capacity_as_bfe);
         SafeNew(data_type.clone())
-            .link_and_run_tasm_for_test(&mut stack, vec![], vec![], &mut memory, 0)
+            .link_and_run_tasm_for_test(&mut stack, vec![], vec![], &mut memory, None)
             .unwrap();
         let second_list = stack.pop().unwrap();
 
@@ -217,7 +217,7 @@ mod tests {
             stack.push(elem.to_owned());
         }
         SafePush(data_type)
-            .link_and_run_tasm_for_test(&mut stack, vec![], vec![], &mut memory, 0)
+            .link_and_run_tasm_for_test(&mut stack, vec![], vec![], &mut memory, None)
             .unwrap();
         assert_eq!(
             get_init_tvm_stack()[DIGEST_LENGTH..],

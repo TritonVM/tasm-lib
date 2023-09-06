@@ -214,10 +214,12 @@ mod tests {
     use std::collections::HashMap;
 
     use rand::thread_rng;
+    use twenty_first::util_types::algebraic_hasher::Domain;
 
     use crate::algorithm::ShadowedAlgorithm;
     use crate::snippet::RustShadow;
-    use crate::test_helpers::test_rust_equivalence_given_input_values;
+    use crate::test_helpers::test_rust_equivalence_given_complete_state;
+    use crate::VmHasherState;
 
     use super::MerkleVerify;
 
@@ -241,11 +243,13 @@ mod tests {
         // modify index so as to make it invalid
         stack[5] = thread_rng().gen();
 
-        test_rust_equivalence_given_input_values(
+        test_rust_equivalence_given_complete_state(
             &ShadowedAlgorithm::new(mv),
             &stack,
             &[],
-            &mut HashMap::default(),
+            &NonDeterminism::new(vec![]),
+            &HashMap::default(),
+            &VmHasherState::new(Domain::VariableLength),
             0,
             None,
         );

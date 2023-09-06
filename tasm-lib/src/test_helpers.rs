@@ -118,7 +118,7 @@ pub fn link_and_run_tasm_for_test_deprecated<T: DeprecatedSnippet>(
     secret_in: Vec<BFieldElement>,
     memory: &mut HashMap<BFieldElement, BFieldElement>,
     words_statically_allocated: usize,
-) -> anyhow::Result<VmOutputState> {
+) -> VmOutputState {
     let expected_length_prior: usize = snippet_struct
         .inputs()
         .iter()
@@ -142,7 +142,7 @@ pub fn link_and_run_tasm_for_test_deprecated<T: DeprecatedSnippet>(
         stack,
         snippet_struct.stack_diff(),
         std_in,
-        &NonDeterminism::new(secret_in),
+        &mut NonDeterminism::new(secret_in),
         memory,
         Some(words_statically_allocated),
     )
@@ -190,8 +190,7 @@ pub(crate) fn test_rust_equivalence_given_complete_state_deprecated<T: Deprecate
         nondeterminism.individual_tokens.clone(),
         &mut tasm_memory,
         words_statically_allocated,
-    )
-    .unwrap();
+    );
 
     // assert stacks are equal, up to program hash
     let tasm_stack_skip_program_hash = tasm_stack.iter().cloned().skip(DIGEST_LENGTH).collect_vec();
@@ -347,28 +346,158 @@ mod test {
     }
 }
 
-#[allow(dead_code)]
-pub(crate) fn test_rust_equivalence_given_input_values<T: RustShadow>(
-    snippet_struct: &T,
+pub fn rust_final_state<T: RustShadow>(
+    shadowed_snippet: &T,
     stack: &[BFieldElement],
     stdin: &[BFieldElement],
-    memory: &mut HashMap<BFieldElement, BFieldElement>,
+    nondeterminism: &NonDeterminism<BFieldElement>,
+    memory: &HashMap<BFieldElement, BFieldElement>,
+    sponge_state: &VmHasherState,
     words_statically_allocated: usize,
-    expected_final_stack: Option<&[BFieldElement]>,
 ) -> VmOutputState {
-    let _init_memory = memory.clone();
-    let nondeterminism = NonDeterminism::<BFieldElement>::new(vec![]);
+    let mut rust_memory = memory.clone();
+    let mut rust_stack = stack.to_vec();
+    let mut rust_sponge = sponge_state.clone();
 
-    test_rust_equivalence_given_complete_state(
-        snippet_struct,
-        stack,
+    // allocate memory, if necessary
+    if words_statically_allocated > 0 && memory.get(&BFieldElement::zero()).is_none() {
+        rust_shadowing_helper_functions::dyn_malloc::rust_dyn_malloc_initialize(
+            &mut rust_memory,
+            words_statically_allocated,
+        );
+    }
+
+    // run rust shadow
+    let output = shadowed_snippet.rust_shadow_wrapper(
         stdin,
-        &nondeterminism,
-        memory,
-        &VmHasherState::new(Domain::VariableLength),
+        nondeterminism,
+        &mut rust_stack,
+        &mut rust_memory,
+        &mut rust_sponge,
+    );
+
+    VmOutputState {
+        output,
+        final_stack: rust_stack,
+        final_ram: rust_memory,
+        final_sponge_state: rust_sponge,
+    }
+}
+
+pub fn tasm_final_state<T: RustShadow>(
+    shadowed_snippet: &T,
+    stack: &[BFieldElement],
+    stdin: &[BFieldElement],
+    nondeterminism: &NonDeterminism<BFieldElement>,
+    memory: &HashMap<BFieldElement, BFieldElement>,
+    _sponge_state: &VmHasherState,
+    words_statically_allocated: usize,
+) -> VmOutputState {
+    // allocate memory, if necessary
+    let mut tasm_memory = memory.clone();
+    if words_statically_allocated > 0 && memory.get(&BFieldElement::zero()).is_none() {
+        rust_shadowing_helper_functions::dyn_malloc::rust_dyn_malloc_initialize(
+            &mut tasm_memory,
+            words_statically_allocated,
+        );
+    }
+
+    // run tvm
+    link_and_run_tasm_for_test(
+        shadowed_snippet,
+        &mut stack.to_vec(),
+        stdin.to_vec(),
+        &mut nondeterminism.clone(),
+        &mut tasm_memory,
         words_statically_allocated,
-        expected_final_stack,
     )
+}
+
+pub fn verify_stack_equivalence(a: &[BFieldElement], b: &[BFieldElement]) {
+    // assert stacks are equal, up to program hash
+    let a_skip_program_hash = a.iter().cloned().skip(DIGEST_LENGTH).collect_vec();
+    let b_skip_program_hash = b.iter().cloned().skip(DIGEST_LENGTH).collect_vec();
+    assert_eq!(
+        a_skip_program_hash,
+        b_skip_program_hash,
+        "A stack must match B stack\n\nA: {}\n\nB: {}",
+        a_skip_program_hash
+            .iter()
+            .map(|x| x.to_string())
+            .collect_vec()
+            .join(","),
+        b_skip_program_hash
+            .iter()
+            .map(|x| x.to_string())
+            .collect_vec()
+            .join(","),
+    );
+}
+
+pub fn verify_memory_equivalence(
+    a_memory: &HashMap<BFieldElement, BFieldElement>,
+    b_memory: &HashMap<BFieldElement, BFieldElement>,
+) {
+    // verify equivalence of memory up to the value of dynamic allocator
+    let memory_difference = b_memory
+        .iter()
+        .filter(|(k, v)| match a_memory.get(*k) {
+            Some(b) => *b != **v,
+            None => true,
+        })
+        .chain(a_memory.iter().filter(|(k, v)| match b_memory.get(*k) {
+            Some(b) => *b != **v,
+            None => true,
+        }))
+        .collect_vec();
+    if memory_difference
+        .iter()
+        .any(|(k, _v)| **k != BFieldElement::new(DYN_MALLOC_ADDRESS as u64))
+    {
+        let mut a_memory_ = a_memory.iter().collect_vec();
+        a_memory_.sort_unstable_by(|&a, &b| a.0.value().partial_cmp(&b.0.value()).unwrap());
+        let a_mem_str = a_memory_
+            .iter()
+            .map(|x| format!("({} => {})", x.0, x.1))
+            .collect_vec()
+            .join(",");
+
+        let mut b_memory_ = b_memory.iter().collect_vec();
+        b_memory_.sort_unstable_by(|&a, &b| a.0.value().partial_cmp(&b.0.value()).unwrap());
+        let b_mem_str = b_memory_
+            .iter()
+            .map(|x| format!("({} => {})", x.0, x.1))
+            .collect_vec()
+            .join(",");
+        let diff_str = memory_difference
+            .iter()
+            .map(|x| format!("({} => {})", x.0, x.1))
+            .collect_vec()
+            .join(",");
+        panic!(
+            "Memory for both implementations must match after execution.\n\nA: {a_mem_str}\n\nB: {b_mem_str}\n\nDifference: {diff_str}\n\n",
+        );
+    }
+}
+
+pub fn verify_hasher_state_equivalence(a: VmOutputState, b: VmOutputState) {
+    assert_eq!(a.final_sponge_state.state, b.final_sponge_state.state);
+}
+
+pub fn verify_stack_growth<T: RustShadow>(
+    shadowed_snippet: &T,
+    initial_stack: &[BFieldElement],
+    final_stack: &[BFieldElement],
+) {
+    let observed_stack_growth: isize = final_stack.len() as isize - initial_stack.len() as isize;
+    let expected_stack_growth: isize = shadowed_snippet.inner().borrow().stack_diff();
+    assert_eq!(
+        expected_stack_growth,
+        observed_stack_growth,
+        "Stack must pop and push expected number of elements. Got input: {}\nGot output: {}",
+        initial_stack.iter().map(|x| x.to_string()).join(","),
+        final_stack.iter().map(|x| x.to_string()).join(",")
+    );
 }
 
 #[allow(dead_code)]
@@ -386,190 +515,50 @@ pub fn test_rust_equivalence_given_complete_state<T: RustShadow>(
 ) -> VmOutputState {
     let init_stack = stack.to_vec();
 
-    let mut rust_memory = memory.clone();
-    let mut tasm_memory = memory.clone();
-    let mut rust_stack = stack.to_vec();
-    let mut tasm_stack = stack.to_vec();
-    let mut rust_sponge = sponge_state.clone();
-
-    if words_statically_allocated > 0 && memory.get(&BFieldElement::zero()).is_none() {
-        rust_shadowing_helper_functions::dyn_malloc::rust_dyn_malloc_initialize(
-            &mut rust_memory,
-            words_statically_allocated,
-        );
-        rust_shadowing_helper_functions::dyn_malloc::rust_dyn_malloc_initialize(
-            &mut tasm_memory,
-            words_statically_allocated,
-        );
-    }
-
-    // run rust shadow
-    let stdout_rust = shadowed_snippet.rust_shadow_wrapper(
+    let rust = rust_final_state(
+        shadowed_snippet,
+        stack,
         stdin,
         nondeterminism,
-        &mut rust_stack,
-        &mut rust_memory,
-        &mut rust_sponge,
-    );
-
-    // run tvm
-    let vm_output_state = link_and_run_tasm_for_test(
-        shadowed_snippet,
-        &mut tasm_stack,
-        stdin.to_vec(),
-        nondeterminism,
-        &mut tasm_memory,
+        memory,
+        sponge_state,
         words_statically_allocated,
     );
 
-    // Sanity checks
-    assert_eq!(vm_output_state.final_ram, tasm_memory);
-    assert_eq!(vm_output_state.final_stack, tasm_stack);
-    assert_eq!(vm_output_state.final_sponge_state.state, rust_sponge.state);
+    // run tvm
+    let tasm = tasm_final_state(
+        shadowed_snippet,
+        stack,
+        stdin,
+        nondeterminism,
+        memory,
+        sponge_state,
+        words_statically_allocated,
+    );
 
-    // assert stdouts agree
     assert_eq!(
-        stdout_rust, vm_output_state.output,
+        rust.output, tasm.output,
         "Rust shadowing and VM std out must agree"
     );
 
-    // assert stacks are equal, up to program hash
-    let tasm_stack_skip_program_hash = tasm_stack.iter().cloned().skip(DIGEST_LENGTH).collect_vec();
-    let rust_stack_skip_program_hash = rust_stack.iter().cloned().skip(DIGEST_LENGTH).collect_vec();
-    let inner = shadowed_snippet.inner();
-    let entrypoint = inner.borrow().entrypoint();
-    assert_eq!(
-        tasm_stack_skip_program_hash,
-        rust_stack_skip_program_hash,
-        "Rust code must match TVM for `{}`\n\nTVM: {}\n\nRust: {}. Code was: {}",
-        entrypoint,
-        tasm_stack_skip_program_hash
-            .iter()
-            .map(|x| x.to_string())
-            .collect_vec()
-            .join(","),
-        rust_stack_skip_program_hash
-            .iter()
-            .map(|x| x.to_string())
-            .collect_vec()
-            .join(","),
-        inner.borrow().code(&mut Library::new()).iter().join("\n")
-    );
-
-    // if expected final stack is given, test against it
+    verify_stack_equivalence(&rust.final_stack, &tasm.final_stack);
     if let Some(expected) = expected_final_stack {
-        let expected_final_stack_skip_program_hash =
-            expected.iter().skip(DIGEST_LENGTH).cloned().collect_vec();
-        assert_eq!(
-            tasm_stack_skip_program_hash,
-            expected_final_stack_skip_program_hash,
-            "TVM must produce expected stack `{}`. \n\nTVM:\n{}\nExpected:\n{}",
-            shadowed_snippet.inner().borrow().entrypoint(),
-            tasm_stack_skip_program_hash
-                .iter()
-                .map(|x| x.to_string())
-                .collect_vec()
-                .join(","),
-            expected_final_stack_skip_program_hash
-                .iter()
-                .map(|x| x.to_string())
-                .collect_vec()
-                .join(","),
-        );
+        verify_stack_equivalence(expected, &rust.final_stack);
     }
+    verify_memory_equivalence(&rust.final_ram, &tasm.final_ram);
+    verify_stack_growth(shadowed_snippet, &init_stack, &tasm.final_stack);
 
-    // Verify that memory behaves as expected, except for the dyn malloc initialization address which
-    // is too cumbersome to monitor this way. Its behavior should be tested elsewhere.
-    // Alternatively the rust shadowing trait function must take a `Library` argument as input
-    // and statically allocate memory from there.
-    // TODO: Check if we could perform this check on dyn malloc too
-    rust_memory.remove(&BFieldElement::new(DYN_MALLOC_ADDRESS as u64));
-    tasm_memory.remove(&BFieldElement::new(DYN_MALLOC_ADDRESS as u64));
-    let memory_difference = rust_memory
-        .iter()
-        .filter(|(k, v)| match tasm_memory.get(*k) {
-            Some(b) => *b != **v,
-            None => true,
-        })
-        .chain(
-            tasm_memory
-                .iter()
-                .filter(|(k, v)| match rust_memory.get(*k) {
-                    Some(b) => *b != **v,
-                    None => true,
-                }),
-        )
-        .collect_vec();
-    if rust_memory != tasm_memory {
-        let mut tasm_memory = tasm_memory.iter().collect_vec();
-        tasm_memory.sort_unstable_by(|&a, &b| a.0.value().partial_cmp(&b.0.value()).unwrap());
-        let tasm_mem_str = tasm_memory
-            .iter()
-            .map(|x| format!("({} => {})", x.0, x.1))
-            .collect_vec()
-            .join(",");
-
-        let mut rust_memory = rust_memory.iter().collect_vec();
-        rust_memory.sort_unstable_by(|&a, &b| a.0.value().partial_cmp(&b.0.value()).unwrap());
-        let rust_mem_str = rust_memory
-            .iter()
-            .map(|x| format!("({} => {})", x.0, x.1))
-            .collect_vec()
-            .join(",");
-        let diff_str = memory_difference
-            .iter()
-            .map(|x| format!("({} => {})", x.0, x.1))
-            .collect_vec()
-            .join(",");
-        panic!(
-            "Memory for both implementations must match after execution.\n\nTVM: {tasm_mem_str}\n\nRust: {rust_mem_str}\n\nDifference: {diff_str}\n\nCode was:\n\n {}",
-            shadowed_snippet.inner().borrow().code(&mut Library::new()).iter().join("\n")
-        );
-    }
-
-    // Verify that stack grows with expected number of elements
-    let stack_final = tasm_stack.clone();
-    let observed_stack_growth: isize = stack_final.len() as isize - init_stack.len() as isize;
-    let expected_stack_growth: isize = shadowed_snippet.inner().borrow().stack_diff();
-    assert_eq!(
-        expected_stack_growth,
-        observed_stack_growth,
-        "Stack must pop and push expected number of elements. Got input: {}\nGot output: {}",
-        init_stack.iter().map(|x| x.to_string()).join(","),
-        stack_final.iter().map(|x| x.to_string()).join(",")
-    );
-
-    vm_output_state
+    tasm
 }
 
 pub fn link_and_run_tasm_for_test<T: RustShadow>(
     snippet_struct: &T,
     stack: &mut Vec<BFieldElement>,
     std_in: Vec<BFieldElement>,
-    nondeterminism: &NonDeterminism<BFieldElement>,
+    nondeterminism: &mut NonDeterminism<BFieldElement>,
     memory: &mut HashMap<BFieldElement, BFieldElement>,
     words_statically_allocated: usize,
 ) -> VmOutputState {
-    let expected_length_prior: usize = snippet_struct
-        .inner()
-        .borrow()
-        .inputs()
-        .iter()
-        .map(|(x, _n)| x.get_size())
-        .sum();
-    let expected_length_after: usize = snippet_struct
-        .inner()
-        .borrow()
-        .outputs()
-        .iter()
-        .map(|(x, _n)| x.get_size())
-        .sum();
-    assert_eq!(
-        snippet_struct.inner().borrow().stack_diff(),
-        (expected_length_after as isize - expected_length_prior as isize),
-        "Declared stack diff must match type indicators"
-    );
-
     let words_statically_allocated = if let Some(allocator) = memory.get(&BFieldElement::zero()) {
         allocator.value() as usize
     } else {
@@ -587,7 +576,6 @@ pub fn link_and_run_tasm_for_test<T: RustShadow>(
         memory,
         Some(words_statically_allocated),
     )
-    .unwrap()
 }
 
 fn link_for_isolated_run<T: RustShadow>(

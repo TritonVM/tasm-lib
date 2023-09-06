@@ -486,7 +486,7 @@ mod tests {
                 vec![],
                 vec![],
                 &mut HashMap::default(),
-                1,
+                Some(1),
             ) {
                 Ok(_) => panic!("Overflow must result in error"),
                 Err(err) => println!("Error: {}", err),
@@ -520,7 +520,7 @@ mod tests {
                 vec![],
                 vec![],
                 &mut HashMap::default(),
-                1,
+                Some(1),
             ) {
                 Ok(_) => panic!("Overflow must result in error"),
                 Err(err) => println!("Error: {}", err),
@@ -559,7 +559,7 @@ mod tests {
                     vec![],
                     vec![],
                     &mut HashMap::default(),
-                    1,
+                    Some(1),
                 ) {
                     Ok(_) => (),
                     Err(err) => panic!(
@@ -610,7 +610,7 @@ mod tests {
                         vec![],
                         vec![],
                         &mut HashMap::default(),
-                        1,
+                        Some(1),
                     ) {
                         Ok(_) => {
                             panic!("Overflow must result in error. lhs = {lhs} , rhs = {rhs_overflow} ")
@@ -632,7 +632,7 @@ mod tests {
                         vec![],
                         vec![],
                         &mut HashMap::default(),
-                        1,
+                        Some(1),
                     ) {
                         Ok(_) => {
                             panic!("Overflow must result in error. lhs = {lhs} , rhs = {rhs_overflow} ")
@@ -685,7 +685,7 @@ mod tests {
                 vec![],
                 vec![],
                 &mut HashMap::default(),
-                1,
+                Some(1),
             ) {
                 Ok(_) => panic!("Overflow must result in error. lhs = {lhs} , rhs = {rhs} "),
                 Err(err) => println!("Error: {}", err),

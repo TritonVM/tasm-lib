@@ -11,7 +11,9 @@ use triton_vm::parser::{to_labelled_instructions, tokenize};
 use triton_vm::{triton_asm, NonDeterminism, Program};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
+use crate::execute_with_terminal_state;
 use crate::library::Library;
+use crate::program_with_state_preparation;
 use crate::test_helpers::test_rust_equivalence_given_execution_state_deprecated;
 use crate::VmHasherState;
 use crate::{execute_bench_deprecated, ExecutionResult, VmOutputState, DIGEST_LENGTH};
@@ -276,8 +278,15 @@ pub trait DeprecatedSnippet {
         memory: &mut HashMap<BFieldElement, BFieldElement>,
     );
 
-    fn link_for_isolated_run(&self, words_statically_allocated: usize) -> Vec<LabelledInstruction> {
-        let mut snippet_state = Library::with_preallocated_memory(words_statically_allocated);
+    fn link_for_isolated_run(
+        &self,
+        words_statically_allocated: Option<usize>,
+    ) -> Vec<LabelledInstruction> {
+        let mut snippet_state = if let Some(number_of_words) = words_statically_allocated {
+            Library::with_preallocated_memory(number_of_words)
+        } else {
+            Library::new()
+        };
         let entrypoint = self.entrypoint_name();
         let mut function_body = self.function_code(&mut snippet_state);
         function_body.push('\n'); // added bc of limitations in `triton_asm!`
@@ -307,7 +316,7 @@ pub trait DeprecatedSnippet {
         std_in: Vec<BFieldElement>,
         secret_in: Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
-        words_statically_allocated: usize,
+        words_allocated: Option<usize>,
     ) -> anyhow::Result<VmOutputState> {
         let expected_length_prior: usize = self.input_types().iter().map(|x| x.get_size()).sum();
         let expected_length_after: usize = self.output_types().iter().map(|x| x.get_size()).sum();
@@ -317,17 +326,35 @@ pub trait DeprecatedSnippet {
             "Declared stack diff must match type indicators"
         );
 
-        let code = self.link_for_isolated_run(words_statically_allocated);
+        let mut nondeterminism = NonDeterminism::new(secret_in).with_ram(memory.clone());
 
-        execute_test(
-            &code,
-            stack,
-            Self::stack_diff(self),
-            std_in,
-            &NonDeterminism::new(secret_in),
-            memory,
-            Some(words_statically_allocated),
-        )
+        let code = self.link_for_isolated_run(words_allocated);
+        let program =
+            program_with_state_preparation(&code, stack, &mut nondeterminism, words_allocated);
+        let tvm_result = execute_with_terminal_state(&program, &std_in, &mut nondeterminism);
+
+        let maybe_final_state = tvm_result.map(|st| VmOutputState {
+            final_ram: st.ram,
+            final_sponge_state: VmHasherState {
+                state: st.sponge_state,
+            },
+            final_stack: st.op_stack.stack,
+            output: st.public_output,
+        });
+
+        if maybe_final_state.is_ok() {
+            execute_test(
+                &code,
+                stack,
+                Self::stack_diff(self),
+                std_in,
+                &mut nondeterminism,
+                memory,
+                words_allocated,
+            );
+        }
+
+        maybe_final_state
     }
 
     fn link_and_run_tasm_for_bench(
@@ -336,7 +363,7 @@ pub trait DeprecatedSnippet {
         std_in: Vec<BFieldElement>,
         secret_in: Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
-        words_statically_allocated: usize,
+        words_statically_allocated: Option<usize>,
     ) -> Result<ExecutionResult> {
         let expected_length_prior: usize = self.input_types().iter().map(|x| x.get_size()).sum();
         let expected_length_after: usize = self.output_types().iter().map(|x| x.get_size()).sum();
@@ -355,7 +382,7 @@ pub trait DeprecatedSnippet {
             std_in,
             NonDeterminism::new(secret_in),
             memory,
-            Some(words_statically_allocated),
+            words_statically_allocated,
         )
     }
 
@@ -364,15 +391,13 @@ pub trait DeprecatedSnippet {
         execution_state: &mut ExecutionState,
     ) -> VmOutputState {
         let stack_prior = execution_state.stack.clone();
-        let ret = self
-            .link_and_run_tasm_for_test(
-                &mut execution_state.stack,
-                execution_state.std_in.clone(),
-                execution_state.nondeterminism.individual_tokens.clone(),
-                &mut execution_state.memory,
-                execution_state.words_allocated,
-            )
-            .unwrap();
+        let ret = self.link_and_run_tasm_for_test(
+            &mut execution_state.stack,
+            execution_state.std_in.clone(),
+            execution_state.nondeterminism.individual_tokens.clone(),
+            &mut execution_state.memory,
+            Some(execution_state.words_allocated),
+        );
         let stack_after = execution_state.stack.clone();
 
         // Assert equality of stack elements under input arguments, but don't check program
@@ -382,7 +407,7 @@ pub trait DeprecatedSnippet {
             stack_after[DIGEST_LENGTH..(stack_after.len() - Self::output_field_names(self).len())]
         );
 
-        ret
+        ret.unwrap()
     }
 
     fn link_and_run_tasm_from_state_for_bench(
@@ -395,7 +420,7 @@ pub trait DeprecatedSnippet {
             execution_state.std_in.clone(),
             execution_state.nondeterminism.individual_tokens.clone(),
             &mut execution_state.memory,
-            execution_state.words_allocated,
+            Some(execution_state.words_allocated),
         );
         let stack_after = execution_state.stack.clone();
 
