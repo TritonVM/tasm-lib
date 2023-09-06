@@ -1,13 +1,14 @@
-use rand::{rngs::StdRng, thread_rng, Rng, SeedableRng};
+use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 use triton_vm::{BFieldElement, NonDeterminism};
-use twenty_first::shared_math::bfield_codec::BFieldCodec;
+use twenty_first::{shared_math::bfield_codec::BFieldCodec, util_types::algebraic_hasher::Domain};
 
 use crate::{
     linker::{execute_bench, link_for_isolated_run},
     snippet::{BasicSnippet, RustShadow},
     snippet_bencher::{write_benchmarks, BenchmarkCase, BenchmarkResult},
     test_helpers::test_rust_equivalence_given_complete_state,
+    VmHasherState,
 };
 
 /// An Algorithm is a piece of tasm code that can modify memory even at addresses below
@@ -81,6 +82,7 @@ where
         nondeterminism: &NonDeterminism<BFieldElement>,
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
+        _sponge_state: &mut VmHasherState,
     ) -> Vec<BFieldElement> {
         self.algorithm
             .borrow()
@@ -89,8 +91,13 @@ where
     }
 
     fn test(&self) {
-        let num_states = 5;
-        let mut rng = thread_rng();
+        let num_states = 10;
+        let seed = [
+            0x0b, 0x6f, 0x89, 0x60, 0xe3, 0x41, 0xa4, 0x36, 0x6c, 0xba, 0x34, 0x53, 0x36, 0x2e,
+            0x07, 0xff, 0x18, 0x34, 0x4a, 0xbf, 0x54, 0x10, 0x40, 0x0e, 0x28, 0xff, 0x66, 0xea,
+            0xc3, 0x33, 0x37, 0x9b,
+        ];
+        let mut rng: StdRng = SeedableRng::from_seed(seed);
 
         for _ in 0..num_states {
             let seed: [u8; 32] = rng.gen();
@@ -111,6 +118,7 @@ where
                 &stdin,
                 &nondeterminism,
                 &memory,
+                &VmHasherState::new(Domain::VariableLength),
                 1,
                 None,
             );

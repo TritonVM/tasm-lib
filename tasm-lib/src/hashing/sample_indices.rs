@@ -3,11 +3,7 @@ use std::collections::HashMap;
 use itertools::Itertools;
 use triton_vm::NonDeterminism;
 use twenty_first::{
-    shared_math::{
-        b_field_element::BFieldElement,
-        other::is_power_of_two,
-        tip5::{Tip5, Tip5State},
-    },
+    shared_math::{b_field_element::BFieldElement, other::is_power_of_two, tip5::Tip5},
     util_types::algebraic_hasher::{AlgebraicHasher, Domain, SpongeHasher},
 };
 
@@ -21,7 +17,7 @@ use crate::{
     },
     rust_shadowing_helper_functions,
     snippet::{DataType, DeprecatedSnippet},
-    ExecutionState, VmHasher,
+    ExecutionState, VmHasher, VmHasherState,
 };
 
 #[derive(Clone, Debug)]
@@ -302,7 +298,7 @@ impl DeprecatedSnippet for SampleIndices {
 
         // sample indices
         let mut indices: Vec<u32> = vec![];
-        let mut sponge_state = Tip5State::new(Domain::VariableLength);
+        let mut sponge_state = VmHasherState::new(Domain::VariableLength);
         let mut squeezed = vec![];
         while indices.len() < number {
             if squeezed.is_empty() {
@@ -320,7 +316,7 @@ impl DeprecatedSnippet for SampleIndices {
 
         // double-shadow with twenty-first
         let twenty_first_indices = VmHasher::sample_indices(
-            &mut Tip5State::new(Domain::VariableLength),
+            &mut VmHasherState::new(Domain::VariableLength),
             upper_bound,
             number,
         );

@@ -20,11 +20,14 @@ use triton_vm::NonDeterminism;
 use triton_vm::PublicInput;
 use triton_vm::{Claim, StarkParameters};
 use twenty_first::shared_math::bfield_codec::BFieldCodec;
+use twenty_first::shared_math::tip5::Tip5State;
 use twenty_first::shared_math::tip5::{self, Tip5};
 
 use triton_vm::op_stack::NUM_OP_STACK_REGISTERS;
 use triton_vm::vm::VMState;
 use twenty_first::shared_math::b_field_element::BFieldElement;
+
+use crate::memory::dyn_malloc::DYN_MALLOC_ADDRESS;
 
 pub mod algorithm;
 pub mod arithmetic;
@@ -53,6 +56,7 @@ pub mod test_helpers;
 
 // The hasher type must match whatever algebraic hasher the VM is using
 pub type VmHasher = Tip5;
+pub type VmHasherState = Tip5State;
 pub type Digest = tip5::Digest;
 pub const DIGEST_LENGTH: usize = tip5::DIGEST_LENGTH;
 
@@ -122,6 +126,7 @@ pub struct VmOutputState {
     pub output: Vec<BFieldElement>,
     pub final_stack: Vec<BFieldElement>,
     pub final_ram: HashMap<BFieldElement, BFieldElement>,
+    pub final_sponge_state: VmHasherState,
 }
 
 pub fn get_init_tvm_stack() -> Vec<BFieldElement> {
@@ -273,42 +278,40 @@ pub fn execute_bench_deprecated(
     })
 }
 
-/// Execute a Triton-VM program for test; modify stack and memory. Returns an error
-/// if the program crashes in the VM, otherwise returns OK(vm_output_state). Panics
-/// if anything else goes wrong.
+/// Execute a Triton-VM program and test correct behavior indicators.
+/// Modify stack and memory. Panic if anything goes wrong.
 pub fn execute_test(
     code: &[LabelledInstruction],
     stack: &mut Vec<BFieldElement>,
     expected_stack_diff: isize,
     std_in: Vec<BFieldElement>,
-    nondeterminism: &NonDeterminism<BFieldElement>,
+    nondeterminism: &mut NonDeterminism<BFieldElement>,
     memory: &mut HashMap<BFieldElement, BFieldElement>,
     initilialize_dynamic_allocator_to: Option<usize>,
-) -> anyhow::Result<VmOutputState> {
+) -> VmOutputState {
     let init_stack_height = stack.len();
 
-    // Prepend to program the initial stack values such that stack is in the expected
-    // state when program logic is executed
-    let prep: Vec<LabelledInstruction> =
-        state_preparation_code(stack, memory, initilialize_dynamic_allocator_to);
-    let mut executed_code = prep;
+    // lift initial memory state to nondeterminism
+    for (key, value) in memory.iter() {
+        if let Some(v) = nondeterminism.ram.get(key) {
+            assert_eq!(*value, *v);
+        } else {
+            nondeterminism.ram.insert(*key, *value);
+        }
+    }
 
-    // Construct the whole program (inclusive setup) to be run
-    executed_code.append(&mut code.to_vec());
+    // produce standalone program that starts off arranging
+    // the state as we expect
+    let program = program_with_state_preparation(
+        code,
+        stack,
+        nondeterminism,
+        initilialize_dynamic_allocator_to,
+    );
 
-    // Run the program, including the stack preparation and memory preparation logic
-    let program = Program::new(&executed_code);
-
-    let final_state = program
-        .debug_terminal_state(
-            PublicInput::new(std_in.clone()),
-            nondeterminism.clone(),
-            None,
-            None,
-        )
-        .map_err(|(err, fs)| {
-            anyhow!("VM execution failed with error: {err}.\nLast state before crash:\n{fs}")
-        })?;
+    // run VM
+    let maybe_final_state = execute_with_terminal_state(&program, &std_in, nondeterminism);
+    let final_state = maybe_final_state.unwrap();
 
     *memory = final_state.ram.clone();
 
@@ -350,11 +353,76 @@ pub fn execute_test(
         );
     }
 
-    Ok(VmOutputState {
+    VmOutputState {
         output: final_state.public_output,
         final_stack: stack.to_owned(),
         final_ram: final_state.ram,
-    })
+        final_sponge_state: VmHasherState {
+            state: final_state.sponge_state,
+        },
+    }
+}
+
+/// Given an assembled and linked program (represented as a list of
+/// `LabelledInstruction`s), and given a description of the stack and
+/// initial dynamic allocator value, add to the program code for putting
+/// the stack in the right order. Also: modify the nondeterminism so
+/// that the initial dynamic allocator value is correct.
+pub fn program_with_state_preparation(
+    code: &[LabelledInstruction],
+    stack: &[BFieldElement],
+    nondeterminism: &mut NonDeterminism<BFieldElement>,
+    initilialize_dynamic_allocator_to: Option<usize>,
+) -> Program {
+    // Ensure that the dynamic allocator is initialized such that it does not overwrite
+    // any statically allocated memory, if the caller requests this.
+    if let Some(dyn_malloc_initial_value) = initilialize_dynamic_allocator_to {
+        if let Some(v) = nondeterminism
+            .ram
+            .get(&BFieldElement::new(DYN_MALLOC_ADDRESS as u64))
+        {
+            assert_eq!(v.value() as usize, dyn_malloc_initial_value, "nondeterminism already specifies dynamic allocator value {} =/= {} at address zero", v.value(), dyn_malloc_initial_value);
+        } else {
+            nondeterminism.ram.insert(
+                BFieldElement::new(DYN_MALLOC_ADDRESS as u64),
+                BFieldElement::new(dyn_malloc_initial_value as u64),
+            );
+        }
+    }
+
+    // Prepend to program the initial stack values such that stack is in the expected
+    // state when program logic is executed.
+    // The next function call does something analogous for memory but it
+    // predates the option of setting the initial memory value through
+    // nondeterminism. So we just feed it empty memory.
+    let memory = HashMap::new();
+    let prep: Vec<LabelledInstruction> =
+        state_preparation_code(stack, &memory, initilialize_dynamic_allocator_to);
+    let mut executed_code = prep;
+
+    // Construct the whole program (inclusive setup) to be run
+    executed_code.append(&mut code.to_vec());
+
+    Program::new(&executed_code)
+}
+
+/// Prepare state and run Triton VM
+pub fn execute_with_terminal_state<'a>(
+    program: &'a Program,
+    std_in: &[BFieldElement],
+    nondeterminism: &mut NonDeterminism<BFieldElement>,
+) -> anyhow::Result<VMState<'a>> {
+    // run VM
+    program
+        .debug_terminal_state(
+            PublicInput::new(std_in.to_vec()),
+            nondeterminism.clone(),
+            None,
+            None,
+        )
+        .map_err(|(err, fs)| {
+            anyhow!("VM execution failed with error: {err}.\nLast state before crash:\n{fs}")
+        })
 }
 
 /// Produce the code to set the stack and memory into a certain state

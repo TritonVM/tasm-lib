@@ -152,7 +152,7 @@ mod tests {
         let mut stack = get_init_tvm_stack();
         push_encodable(&mut stack, &U32s::<2>::zero());
         assert!(DecrU64
-            .link_and_run_tasm_for_test(&mut stack, vec![], vec![], &mut HashMap::default(), 0)
+            .link_and_run_tasm_for_test(&mut stack, vec![], vec![], &mut HashMap::default(), None)
             .is_err());
     }
 

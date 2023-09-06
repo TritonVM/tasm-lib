@@ -236,7 +236,7 @@ mod tests {
             vec![],
             secret_in.to_vec(),
             &mut HashMap::default(),
-            0,
+            None,
         ) {
             Ok(_) => panic!("Too long MMR AP path must crash the VM"),
             Err(err) => println!("VM successfully crashed with message: {err}"),
@@ -264,7 +264,7 @@ mod tests {
             vec![],
             secret_in.to_vec(),
             &mut HashMap::default(),
-            0,
+            None,
         ) {
             Ok(_) => println!("VM successfully executed"),
             Err(err) => panic!("VM must not crash. Got message: {err}"),

@@ -2,12 +2,15 @@ use std::collections::HashMap;
 
 use rand::{rngs::StdRng, SeedableRng};
 use triton_vm::{triton_asm, NonDeterminism};
-use twenty_first::shared_math::b_field_element::BFieldElement;
+use twenty_first::{
+    shared_math::b_field_element::BFieldElement, util_types::algebraic_hasher::Domain,
+};
 
 use crate::{
     get_init_tvm_stack,
     procedure::Procedure,
     snippet::{BasicSnippet, DataType},
+    VmHasherState,
 };
 
 pub struct WriteToStdout(pub DataType);
@@ -45,6 +48,7 @@ impl Procedure for WriteToStdout {
         _memory: &mut HashMap<BFieldElement, BFieldElement>,
         _nondeterminism: &NonDeterminism<BFieldElement>,
         _public_input: &[BFieldElement],
+        _sponge_state: &mut VmHasherState,
     ) -> Vec<BFieldElement> {
         let mut ret = vec![];
         for _ in 0..self.0.get_size() {
@@ -63,6 +67,7 @@ impl Procedure for WriteToStdout {
         HashMap<BFieldElement, BFieldElement>,
         NonDeterminism<BFieldElement>,
         Vec<BFieldElement>,
+        VmHasherState,
     ) {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
         let mut stack = get_init_tvm_stack();
@@ -76,6 +81,7 @@ impl Procedure for WriteToStdout {
             HashMap::default(),
             NonDeterminism::new(vec![]),
             vec![],
+            VmHasherState::new(Domain::VariableLength),
         )
     }
 }
