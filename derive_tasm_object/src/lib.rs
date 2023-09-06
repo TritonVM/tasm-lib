@@ -20,8 +20,16 @@ pub fn derive_tasm_object(input: TokenStream) -> TokenStream {
     impl_derive_tasm_object_macro(ast)
 }
 
+struct ParseResult {
+    field_names: Vec<syn::Ident>,
+    field_types: Vec<syn::Type>,
+    getters: Vec<quote::__private::TokenStream>,
+    sizers: Vec<quote::__private::TokenStream>,
+    jumpers: Vec<quote::__private::TokenStream>,
+}
+
 fn impl_derive_tasm_object_macro(ast: syn::DeriveInput) -> TokenStream {
-    let (field_names, getters, sizers, jumpers) = match &ast.data {
+    let parse_result = match &ast.data {
         syn::Data::Struct(syn::DataStruct {
             fields: syn::Fields::Named(fields),
             ..
@@ -39,12 +47,12 @@ fn impl_derive_tasm_object_macro(ast: syn::DeriveInput) -> TokenStream {
     let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
 
     // generate clauses for match statements
-    let get_current_field_start_with_jump = (0..field_names.len()).map(|index| {
-        let jumper = &jumpers[index];
+    let get_current_field_start_with_jump = (0..parse_result.field_names.len()).map(|index| {
+        let jumper = &parse_result.jumpers[index];
         match index {
             0 => jumper.to_owned(),
             not_zero => {
-                let previous_field_name_as_string = &field_names[not_zero - 1].to_string();
+                let previous_field_name_as_string = &parse_result.field_names[not_zero - 1].to_string();
                 quote! {
                     [
                         Self::get_field_start_with_jump_distance(#previous_field_name_as_string),
@@ -59,9 +67,10 @@ fn impl_derive_tasm_object_macro(ast: syn::DeriveInput) -> TokenStream {
         }
     });
 
-    let just_field_clauses = field_names
+    let just_field_clauses = parse_result
+        .field_names
         .iter()
-        .zip(getters.iter())
+        .zip(parse_result.getters.iter())
         .zip(get_current_field_start_with_jump.clone())
         .map(|((name, getter), current)| {
             let name_as_string = name.to_string();
@@ -73,9 +82,10 @@ fn impl_derive_tasm_object_macro(ast: syn::DeriveInput) -> TokenStream {
                 }
             }
         });
-    let field_with_size_clauses = field_names
+    let field_with_size_clauses = parse_result
+        .field_names
         .iter()
-        .zip(sizers.iter())
+        .zip(parse_result.sizers.iter())
         .zip(get_current_field_start_with_jump.clone())
         .map(|((name, getter_sizer), current)| {
             let name_as_string = name.to_string();
@@ -87,9 +97,9 @@ fn impl_derive_tasm_object_macro(ast: syn::DeriveInput) -> TokenStream {
                 }
             }
         });
-    let field_starter_clauses = field_names
+    let field_starter_clauses = parse_result.field_names
         .iter()
-        .zip(jumpers.iter())
+        .zip(parse_result.jumpers.iter())
         .enumerate()
         .map(|(index,(name, jumper))| {
             let name_as_string = name.to_string();
@@ -98,7 +108,7 @@ fn impl_derive_tasm_object_macro(ast: syn::DeriveInput) -> TokenStream {
                     #name_as_string => { #jumper }
                 },
                 not_zero => {
-                    let previous_field_name_as_string = field_names[not_zero-1].to_string();
+                    let previous_field_name_as_string = parse_result.field_names[not_zero-1].to_string();
                     quote! {
                         #name_as_string => {
                             let prev =
@@ -115,6 +125,27 @@ fn impl_derive_tasm_object_macro(ast: syn::DeriveInput) -> TokenStream {
                 }
             }
         });
+
+    let field_decoders = parse_result
+        .field_names
+        .iter()
+        .cloned()
+        .zip(parse_result.field_types.iter().cloned())
+        .map(|(fnm, ftp)| get_field_decoder(fnm, ftp));
+
+    let field_names = parse_result.field_names.clone();
+
+    let self_builder = match &ast.data {
+        syn::Data::Struct(syn::DataStruct {
+            fields: syn::Fields::Named(_),
+            ..
+        }) => quote! { Self { #( #field_names ,)* } },
+        syn::Data::Struct(syn::DataStruct {
+            fields: syn::Fields::Unnamed(_),
+            ..
+        }) => quote! { Self(#( #field_names ,)*) },
+        _ => unreachable!("expected a struct with named fields, or with unnamed fields"),
+    };
 
     let gen = quote! {
         impl #impl_generics ::tasm_lib::structure::tasm_object::TasmObject
@@ -139,20 +170,18 @@ fn impl_derive_tasm_object_macro(ast: syn::DeriveInput) -> TokenStream {
                     unknown_field_name => panic!("Cannot match on field name `{unknown_field_name}`."),
                 }
             }
+
+            fn decode_iter<Itr: Iterator<Item=triton_vm::BFieldElement>>( iterator: &mut Itr ) -> anyhow::Result<Box<Self>> {
+                #( #field_decoders )*
+                anyhow::Result::Ok(Box::new(#self_builder))
+            }
         }
     };
 
     gen.into()
 }
 
-fn generate_tokens_for_struct_with_named_fields(
-    fields: &syn::FieldsNamed,
-) -> (
-    Vec<syn::Ident>,
-    Vec<quote::__private::TokenStream>,
-    Vec<quote::__private::TokenStream>,
-    Vec<quote::__private::TokenStream>,
-) {
+fn generate_tokens_for_struct_with_named_fields(fields: &syn::FieldsNamed) -> ParseResult {
     let named_fields = fields.named.iter();
 
     let field_names = named_fields
@@ -180,7 +209,18 @@ fn generate_tokens_for_struct_with_named_fields(
         .map(|f| generate_tasm_for_extend_field_start_with_jump_amount(&f.ty))
         .collect::<std::vec::Vec<_>>();
 
-    (field_names_list, getters, sizers, jumpers)
+    let field_types = named_fields
+        .clone()
+        .map(|f| f.ty.clone())
+        .collect::<std::vec::Vec<_>>();
+
+    ParseResult {
+        field_names: field_names_list,
+        field_types,
+        getters,
+        sizers,
+        jumpers,
+    }
 }
 
 /// This function generates tasm code that
@@ -249,14 +289,7 @@ fn generate_tasm_for_extend_field_start_with_jump_amount(
     }
 }
 
-fn generate_tokens_for_struct_with_unnamed_fields(
-    fields: &syn::FieldsUnnamed,
-) -> (
-    Vec<syn::Ident>,
-    Vec<quote::__private::TokenStream>,
-    Vec<quote::__private::TokenStream>,
-    Vec<quote::__private::TokenStream>,
-) {
+fn generate_tokens_for_struct_with_unnamed_fields(fields: &syn::FieldsUnnamed) -> ParseResult {
     let field_names = fields
         .unnamed
         .iter()
@@ -289,5 +322,32 @@ fn generate_tokens_for_struct_with_unnamed_fields(
         .map(|(_i, f)| generate_tasm_for_extend_field_start_with_jump_amount(&f.ty))
         .collect::<std::vec::Vec<_>>();
 
-    (field_names_list, getters, sizers, jumpers)
+    let field_types = fields
+        .unnamed
+        .iter()
+        .map(|field| field.ty.clone())
+        .collect::<std::vec::Vec<_>>();
+
+    ParseResult {
+        field_names: field_names_list,
+        field_types,
+        getters,
+        sizers,
+        jumpers,
+    }
+}
+
+fn get_field_decoder(
+    field_name: syn::Ident,
+    field_type: syn::Type,
+) -> quote::__private::TokenStream {
+    quote! {
+        let length : usize = if let Some(static_length) = <#field_type as twenty_first::shared_math::bfield_codec::BFieldCodec>::static_length() {
+            static_length
+        } else {
+            iterator.next().unwrap().value() as usize
+        };
+        let sequence = (0..length).map(|_| iterator.next().unwrap()).collect::<Vec<_>>();
+        let #field_name : #field_type = *twenty_first::shared_math::bfield_codec::BFieldCodec::decode(&sequence)?;
+    }
 }

@@ -1,10 +1,20 @@
+use std::collections::HashMap;
+
+use anyhow::Result;
 pub use derive_tasm_object::TasmObject;
 
-use triton_vm::{instruction::LabelledInstruction, triton_asm};
-use twenty_first::util_types::{
-    algebraic_hasher::AlgebraicHasher,
-    mmr::{mmr_accumulator::MmrAccumulator, mmr_membership_proof::MmrMembershipProof},
+use itertools::Itertools;
+use num_traits::Zero;
+use triton_vm::{instruction::LabelledInstruction, triton_asm, BFieldElement};
+use twenty_first::{
+    shared_math::bfield_codec::BFieldCodec,
+    util_types::{
+        algebraic_hasher::AlgebraicHasher,
+        mmr::{mmr_accumulator::MmrAccumulator, mmr_membership_proof::MmrMembershipProof},
+    },
 };
+
+use crate::Digest;
 
 /// TasmObject
 ///
@@ -50,6 +60,19 @@ pub trait TasmObject {
     /// This function is used internally for the derive macro. You probably want to use
     /// `get_field` or `get_field_with_size` instead.
     fn get_field_start_with_jump_distance(field_name: &str) -> Vec<LabelledInstruction>;
+
+    /// Given an iterator over `BFieldElement`s, decode it as a Self object.
+    fn decode_iter<Itr: Iterator<Item = BFieldElement>>(iterator: &mut Itr) -> Result<Box<Self>>;
+
+    /// Given a memory object (as HashMap of BFE->BFE) and and address (BFE), decode the
+    /// object located there.
+    fn decode_from_memory(
+        memory: &HashMap<BFieldElement, BFieldElement>,
+        address: BFieldElement,
+    ) -> Result<Box<Self>> {
+        let mut iterator = MemoryIter::new(memory, address);
+        Self::decode_iter(&mut iterator)
+    }
 }
 
 impl<H: AlgebraicHasher> TasmObject for MmrMembershipProof<H> {
@@ -76,6 +99,18 @@ impl<H: AlgebraicHasher> TasmObject for MmrMembershipProof<H> {
             unknown => panic!("cannot match on field {unknown}"),
         }
     }
+
+    fn decode_iter<Itr: Iterator<Item = BFieldElement>>(iterator: &mut Itr) -> Result<Box<Self>> {
+        // leaf index is encoded as two `BFieldElement`s
+        let leaf_index: u64 =
+            *BFieldCodec::decode(&[iterator.next().unwrap(), iterator.next().unwrap()])?;
+        // authentication path is length-prepended
+        let length = iterator.next().unwrap().value() as usize;
+        let auth_path_sequence = (0..length).map(|_| iterator.next().unwrap()).collect_vec();
+        let authentication_path: Vec<Digest> = *BFieldCodec::decode(&auth_path_sequence)?;
+        let object = MmrMembershipProof::new(leaf_index, authentication_path);
+        Ok(Box::new(object))
+    }
 }
 
 impl<H: AlgebraicHasher> TasmObject for MmrAccumulator<H> {
@@ -101,6 +136,15 @@ impl<H: AlgebraicHasher> TasmObject for MmrAccumulator<H> {
             "peaks" => triton_asm! { push 2 add read_mem push 1 add },
             unknown => panic!("cannot match on field {unknown}"),
         }
+    }
+
+    fn decode_iter<Itr: Iterator<Item = BFieldElement>>(iterator: &mut Itr) -> Result<Box<Self>> {
+        // the `digests` field is length-prepended
+        let length = iterator.next().unwrap().value() as usize;
+        let digests_sequence = (0..length).map(|_| iterator.next().unwrap()).collect_vec();
+        let digests: Vec<Digest> = *BFieldCodec::decode(&digests_sequence)?;
+        let object = MmrAccumulator::new(digests);
+        Ok(Box::new(object))
     }
 }
 
@@ -131,7 +175,7 @@ impl TasmObjectFieldName for i32 {
 /// let field_f = field!(StructWithNamedFields::f);
 /// let field_0 = field!(StructWithUnnamedFields::0);
 /// ```
-/// and for numbered fields.
+/// .
 ///
 /// **Limitations** The type descriptor cannot have generic type arguments. To get around
 /// this, define a new type via `type Custom = Generic<T>` and use that instead.
@@ -179,12 +223,39 @@ macro_rules! field_with_size {
     };
 }
 
+/// Turns a memory, represented as a `HashMap` from `BFieldElement`s to `BFieldElement`s,
+/// along with a starting address, into an iterator over `BFieldElement`s.
+pub struct MemoryIter<'a> {
+    memory: &'a HashMap<BFieldElement, BFieldElement>,
+    address: BFieldElement,
+}
+
+impl<'a> MemoryIter<'a> {
+    pub fn new(memory: &'a HashMap<BFieldElement, BFieldElement>, address: BFieldElement) -> Self {
+        Self { memory, address }
+    }
+}
+
+impl<'a> Iterator for MemoryIter<'a> {
+    type Item = BFieldElement;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let element = self
+            .memory
+            .get(&self.address)
+            .copied()
+            .unwrap_or(BFieldElement::zero());
+        self.address.increment();
+        Some(element)
+    }
+}
+
 #[cfg(test)]
 mod test {
     use std::collections::HashMap;
 
     use itertools::Itertools;
-    use rand::{rngs::StdRng, Rng, SeedableRng};
+    use rand::{rngs::StdRng, thread_rng, Rng, SeedableRng};
     use triton_vm::{triton_asm, BFieldElement, NonDeterminism};
     use twenty_first::shared_math::{bfield_codec::BFieldCodec, x_field_element::XFieldElement};
 
@@ -196,7 +267,7 @@ mod test {
         ExecutionState,
     };
 
-    #[derive(BFieldCodec)]
+    #[derive(Debug, PartialEq, Eq, BFieldCodec)]
     enum InnerEnum {
         Cow(u32),
         Horse(u128),
@@ -204,10 +275,10 @@ mod test {
         Sheep([BFieldElement; 13]),
     }
 
-    #[derive(BFieldCodec, TasmObject)]
+    #[derive(Debug, PartialEq, Eq, BFieldCodec, TasmObject)]
     struct InnerStruct(XFieldElement, u32);
 
-    #[derive(BFieldCodec, TasmObject)]
+    #[derive(Debug, PartialEq, Eq, BFieldCodec, TasmObject)]
     struct OuterStruct {
         o: InnerEnum,
         a: Vec<Option<bool>>,
@@ -444,5 +515,26 @@ mod test {
     #[test]
     fn test_tasm_object_field_getter() {
         test_rust_equivalence_multiple_deprecated(&TestObjectFieldGetter, false);
+    }
+
+    #[test]
+    fn test_decode_from_memory() {
+        let mut rng = thread_rng();
+        let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
+        let address: BFieldElement = rng.gen();
+
+        // generate random object
+        let object = pseudorandom_object(rng.gen());
+
+        // write encoding to memory
+        for (i, o) in object.encode().into_iter().enumerate() {
+            memory.insert(address + BFieldElement::new(i as u64), o);
+        }
+
+        // decode from memory
+        let object_again: OuterStruct = *OuterStruct::decode_from_memory(&memory, address).unwrap();
+
+        // assert equal
+        assert_eq!(object, object_again);
     }
 }
