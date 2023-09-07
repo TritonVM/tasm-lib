@@ -14,7 +14,7 @@ use crate::{
     Digest, VmHasher,
 };
 
-struct MerkleRoot;
+pub struct MerkleRoot;
 
 impl MerkleRoot {
     pub fn call(leafs: &[Digest], start: usize, stop: usize) -> Digest {
