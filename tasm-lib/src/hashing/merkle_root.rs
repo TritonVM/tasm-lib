@@ -29,7 +29,7 @@ impl MerkleRoot {
             VmHasher::hash_pair(&left, &right)
         };
 
-        return result;
+        result
     }
 }
 
@@ -70,18 +70,18 @@ impl BasicSnippet for MerkleRoot {
                 pop
                 pop);
         #[allow(non_snake_case)]
-        let branch_binop_Eq__LboolR_bool_8_then =
-            format!("{entrypoint}_binop_Eq__LboolR_bool_8_then");
+        let _leafs_start__LDigestR_Digest_10_then =
+            format!("{entrypoint}_leafs_start__LDigestR_Digest_10_then");
         #[allow(non_snake_case)]
-        let branch_binop_Eq__LboolR_bool_8_else =
-            format!("{entrypoint}_binop_Eq__LboolR_bool_8_else");
+        let _fn_call__LDigestR_Digest_30_else =
+            format!("{entrypoint}_fn_call__LDigestR_Digest_30_else");
 
         // kudos to tasm-lang compiler
         triton_asm! {
-        {branch_binop_Eq__LboolR_bool_8_then}:
+        {_leafs_start__LDigestR_Digest_10_then}:
         pop
-        dup 7
-        dup 7
+        dup 2
+        dup 2
         push 5
         mul
         push 1
@@ -108,50 +108,30 @@ impl BasicSnippet for MerkleRoot {
         read_mem
         swap 1
         pop
-        push 1
-        swap 1
-        write_mem
-        push 1
-        add
-        swap 1
-        write_mem
-        push 1
-        add
-        swap 1
-        write_mem
-        push 1
-        add
-        swap 1
-        write_mem
-        push 1
-        add
-        swap 1
-        write_mem
-        pop
         push 0
         return
 
-        {branch_binop_Eq__LboolR_bool_8_else}:
-        dup 5
-        dup 7
+        {_fn_call__LDigestR_Digest_30_else}:
+        dup 0
+        dup 2
         swap 1
         call {tasm_arithmetic_u32_safe_sub_u32}
         push 2
         swap 1
         div
         pop
-        dup 8
-        dup 8
-        dup 8
+        dup 3
+        dup 3
+        dup 3
         dup 3
         swap 1
         call {tasm_arithmetic_u32_safe_sub_u32}
         call {entrypoint}
-        dup 13
-        dup 13
+        dup 8
+        dup 8
         dup 7
         call {tasm_arithmetic_u32_safe_add_u32}
-        dup 13
+        dup 8
         call {entrypoint}
         dup 4
         dup 4
@@ -164,30 +144,15 @@ impl BasicSnippet for MerkleRoot {
         dup 14
         dup 14
         {&hash_pair}
-        push 1
-        swap 1
-        write_mem
-        push 1
-        add
-        swap 1
-        write_mem
-        push 1
-        add
-        swap 1
-        write_mem
-        push 1
-        add
-        swap 1
-        write_mem
-        push 1
-        add
-        swap 1
-        write_mem
+        swap 11
         pop
+        swap 11
         pop
+        swap 11
         pop
+        swap 11
         pop
-        pop
+        swap 11
         pop
         pop
         pop
@@ -198,73 +163,28 @@ impl BasicSnippet for MerkleRoot {
         return
 
         {entrypoint}:
-        push 0
-        push 0
-        push 0
-        push 0
-        push 0
-        push 1
-        dup 1
-        write_mem
-        push 1
-        add
+        dup 0
         dup 2
-        write_mem
         push 1
-        add
-        dup 3
-        write_mem
-        push 1
-        add
-        dup 4
-        write_mem
-        push 1
-        add
-        dup 5
-        write_mem
-        pop
-        dup 5
-        dup 7
-        push 1
-        call tasm_arithmetic_u32_safe_add_u32
+        call {tasm_arithmetic_u32_safe_add_u32}
         eq
         push 1
         swap 1
         skiz
-        call {branch_binop_Eq__LboolR_bool_8_then}
+        call {_leafs_start__LDigestR_Digest_10_then}
         skiz
-        call {branch_binop_Eq__LboolR_bool_8_else}
+        call {_fn_call__LDigestR_Digest_30_else}
+        swap 4
+        swap 7
         pop
+        swap 2
+        swap 5
         pop
+        swap 3
         pop
-        pop
-        pop
-        pop
-        pop
-        pop
-        push 5
-        read_mem
         swap 1
-        push -1
-        add
-        read_mem
-        swap 1
-        push -1
-        add
-        read_mem
-        swap 1
-        push -1
-        add
-        read_mem
-        swap 1
-        push -1
-        add
-        read_mem
-        swap 1
-        pop
         return
-
-                }
+        }
     }
 }
 
