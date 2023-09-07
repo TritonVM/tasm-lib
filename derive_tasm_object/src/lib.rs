@@ -4,6 +4,7 @@ extern crate proc_macro;
 
 use proc_macro::TokenStream;
 use quote::quote;
+use syn::spanned::Spanned;
 
 /// Derives `TasmObject` for structs.
 ///
@@ -26,6 +27,7 @@ struct ParseResult {
     getters: Vec<quote::__private::TokenStream>,
     sizers: Vec<quote::__private::TokenStream>,
     jumpers: Vec<quote::__private::TokenStream>,
+    ignored_fields: Vec<syn::Field>,
 }
 
 fn impl_derive_tasm_object_macro(ast: syn::DeriveInput) -> TokenStream {
@@ -134,22 +136,47 @@ fn impl_derive_tasm_object_macro(ast: syn::DeriveInput) -> TokenStream {
         .map(|(fnm, ftp)| get_field_decoder(fnm, ftp));
 
     let field_names = parse_result.field_names.clone();
+    let ignored_field_names = parse_result
+        .ignored_fields
+        .iter()
+        .map(|f| f.ident.clone())
+        .collect::<Vec<_>>();
 
     let self_builder = match &ast.data {
         syn::Data::Struct(syn::DataStruct {
             fields: syn::Fields::Named(_),
             ..
-        }) => quote! { Self { #( #field_names ,)* } },
+        }) => {
+            quote! { Self { #( #field_names ,)* #( #ignored_field_names : Default::default(), )* } }
+        }
         syn::Data::Struct(syn::DataStruct {
             fields: syn::Fields::Unnamed(_),
             ..
-        }) => quote! { Self(#( #field_names ,)*) },
+        }) => {
+            let mut defaults = quote! {};
+            for _ in 0..ignored_field_names.len() {
+                defaults = quote! {#defaults, Default::default()};
+            }
+            quote! { Self(#( #field_names ,)* #defaults) }
+        }
         _ => unreachable!("expected a struct with named fields, or with unnamed fields"),
+    };
+
+    let ignored_field_types = parse_result.ignored_fields.iter().map(|f| f.ty.clone());
+    let new_where_clause = if let Some(old_where_clause) = where_clause {
+        quote! {
+            #old_where_clause,
+            #(#ignored_field_types : Default ,)*
+        }
+    } else {
+        quote! {
+            where #(#ignored_field_types : Default ,)*
+        }
     };
 
     let gen = quote! {
         impl #impl_generics ::tasm_lib::structure::tasm_object::TasmObject
-        for #name #ty_generics #where_clause {
+        for #name #ty_generics #new_where_clause {
             fn get_field( field_name : &str ) -> Vec<triton_vm::instruction::LabelledInstruction> {
                 match field_name {
                     #( #just_field_clauses ,)*
@@ -181,8 +208,47 @@ fn impl_derive_tasm_object_macro(ast: syn::DeriveInput) -> TokenStream {
     gen.into()
 }
 
+fn field_is_ignored(field: &syn::Field) -> bool {
+    let bfield_codec_ident = syn::Ident::new("tasm_object", field.span());
+    let ignore_ident = syn::Ident::new("ignore", field.span());
+
+    for attribute in field.attrs.iter() {
+        let Ok(meta) = attribute.parse_meta() else {
+            continue;
+        };
+        let Some(ident) = meta.path().get_ident() else {
+            continue;
+        };
+        if ident != &bfield_codec_ident {
+            continue;
+        }
+        let syn::Meta::List(list) = meta else {
+            panic!("Attribute {ident} must be of type `List`.");
+        };
+        for arg in list.nested.iter() {
+            let syn::NestedMeta::Meta(arg_meta) = arg else {
+                continue;
+            };
+            let Some(arg_ident) = arg_meta.path().get_ident() else {
+                panic!("Invalid attribute syntax! (no ident)");
+            };
+            if arg_ident != &ignore_ident {
+                panic!("Invalid attribute syntax! Unknown name {arg_ident}");
+            }
+            return true;
+        }
+    }
+    false
+}
+
 fn generate_tokens_for_struct_with_named_fields(fields: &syn::FieldsNamed) -> ParseResult {
-    let named_fields = fields.named.iter();
+    let ignored_fields = fields
+        .named
+        .iter()
+        .filter(|f| field_is_ignored(f))
+        .cloned()
+        .collect::<Vec<_>>();
+    let named_fields = fields.named.iter().filter(|f| !field_is_ignored(f));
 
     let field_names = named_fields
         .clone()
@@ -220,6 +286,7 @@ fn generate_tokens_for_struct_with_named_fields(fields: &syn::FieldsNamed) -> Pa
         getters,
         sizers,
         jumpers,
+        ignored_fields,
     }
 }
 
@@ -290,9 +357,16 @@ fn generate_tasm_for_extend_field_start_with_jump_amount(
 }
 
 fn generate_tokens_for_struct_with_unnamed_fields(fields: &syn::FieldsUnnamed) -> ParseResult {
+    let ignored_fields = fields
+        .unnamed
+        .iter()
+        .filter(|f| field_is_ignored(f))
+        .cloned()
+        .collect::<Vec<_>>();
     let field_names = fields
         .unnamed
         .iter()
+        .filter(|f| !field_is_ignored(f))
         .enumerate()
         .map(|(i, _f)| quote::format_ident!("field_{i}"));
     let field_names_list = field_names.clone().collect::<std::vec::Vec<_>>();
@@ -334,6 +408,7 @@ fn generate_tokens_for_struct_with_unnamed_fields(fields: &syn::FieldsUnnamed) -
         getters,
         sizers,
         jumpers,
+        ignored_fields,
     }
 }
 

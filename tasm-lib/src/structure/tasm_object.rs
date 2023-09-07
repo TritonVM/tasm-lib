@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use anyhow::Result;
 pub use derive_tasm_object::TasmObject;
 
+use hex::encode;
 use itertools::Itertools;
 use num_traits::Zero;
 use triton_vm::{instruction::LabelledInstruction, triton_asm, BFieldElement};
@@ -14,7 +15,7 @@ use twenty_first::{
     },
 };
 
-use crate::Digest;
+use crate::{memory::dyn_malloc::DYN_MALLOC_ADDRESS, Digest};
 
 /// TasmObject
 ///
@@ -72,6 +73,81 @@ pub trait TasmObject {
     ) -> Result<Box<Self>> {
         let mut iterator = MemoryIter::new(memory, address);
         Self::decode_iter(&mut iterator)
+    }
+}
+
+pub fn decode_from_memory_with_size<T: BFieldCodec>(
+    memory: &HashMap<BFieldElement, BFieldElement>,
+    address: BFieldElement,
+    size: usize,
+) -> Result<Box<T>> {
+    let sequence = (0..size)
+        .map(|i| address + BFieldElement::new(i as u64))
+        .map(|b| memory.get(&b).copied().unwrap_or(BFieldElement::new(0)))
+        .collect_vec();
+    T::decode(&sequence)
+}
+
+/// Stores the encoding of the given object into memory at the given address, and returns
+/// the address of the first untouched memory cell after.
+pub fn encode_to_memory<T: BFieldCodec>(
+    memory: &mut HashMap<BFieldElement, BFieldElement>,
+    address: BFieldElement,
+    object: T,
+) -> BFieldElement {
+    let encoding = object.encode();
+    for (i, e) in encoding.iter().enumerate() {
+        memory.insert(address + BFieldElement::new(i as u64), *e);
+    }
+    address + BFieldElement::new(encoding.len() as u64)
+}
+
+/// Loads the `BFieldCodec`-encodable object into memory at the first free location, and
+/// updates the allocator accordingly. Return the address where the object is stored. This
+/// method can be chained together in order to load multiple objects into memory without
+/// overlaps.
+pub fn load_to_memory<T: BFieldCodec>(
+    memory: &mut HashMap<BFieldElement, BFieldElement>,
+    object: T,
+) -> BFieldElement {
+    let address = memory
+        .get(&BFieldElement::new(DYN_MALLOC_ADDRESS as u64))
+        .copied()
+        .unwrap_or(BFieldElement::new(1));
+    let new_alloc = encode_to_memory(memory, address, object);
+    memory.insert(BFieldElement::new(DYN_MALLOC_ADDRESS as u64), new_alloc);
+    address
+}
+
+impl<T: BFieldCodec> TasmObject for Vec<T> {
+    fn get_field(field_name: &str) -> Vec<LabelledInstruction> {
+        panic!("`Vec` does not have fields; cannot access them")
+    }
+
+    fn get_field_with_size(field_name: &str) -> Vec<LabelledInstruction> {
+        panic!("`Vec` does not have fields; cannot access them")
+    }
+
+    fn get_field_start_with_jump_distance(field_name: &str) -> Vec<LabelledInstruction> {
+        panic!("`Vec` does not have fields; cannot access them")
+    }
+
+    fn decode_iter<Itr: Iterator<Item = BFieldElement>>(iterator: &mut Itr) -> Result<Box<Self>> {
+        let length = iterator.next().unwrap().value() as usize;
+        let mut vector = vec![];
+        for _ in 0..length {
+            let sequence_length = if let Some(static_size) = T::static_length() {
+                static_size
+            } else {
+                iterator.next().unwrap().value() as usize
+            };
+            let sequence = (0..sequence_length)
+                .map(|_| iterator.next().unwrap())
+                .collect_vec();
+            let object = *T::decode(&sequence)?;
+            vector.push(object);
+        }
+        Ok(Box::new(vector))
     }
 }
 
