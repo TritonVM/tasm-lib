@@ -1,5 +1,6 @@
 use std::{cmp::max, collections::HashMap};
 
+use crate::VmHasherState;
 use anyhow::Result;
 use rand::{rngs::StdRng, Rng, RngCore, SeedableRng};
 use triton_vm::{
@@ -8,7 +9,10 @@ use triton_vm::{
     table::master_table::{NUM_BASE_COLUMNS, NUM_EXT_COLUMNS},
     triton_asm, BFieldElement, NonDeterminism,
 };
-use twenty_first::shared_math::{bfield_codec::BFieldCodec, x_field_element::XFieldElement};
+use twenty_first::{
+    shared_math::{bfield_codec::BFieldCodec, x_field_element::XFieldElement},
+    util_types::algebraic_hasher::{AlgebraicHasher, Domain},
+};
 
 use crate::{
     algorithm::Algorithm,
@@ -17,13 +21,16 @@ use crate::{
     snippet::{BasicSnippet, DataType},
     snippet_bencher::BenchmarkCase,
     structure::tasm_object::TasmObject,
-    Digest,
+    Digest, VmHasher,
 };
 
 #[derive(Debug, Clone, BFieldCodec, TasmObject)]
 pub struct VmProofStream {
     word_index: u32,
     data: Vec<BFieldElement>,
+    #[bfield_codec(ignore)]
+    #[tasm_object(ignore)]
+    pub sponge_state: VmHasherState,
 }
 
 impl VmProofStream {
@@ -31,6 +38,7 @@ impl VmProofStream {
         Self {
             word_index: 1,
             data: items.to_vec().encode(),
+            sponge_state: VmHasherState::new(Domain::VariableLength),
         }
     }
     pub fn dequeue(&mut self) -> Result<Box<ProofItem>> {
@@ -39,6 +47,10 @@ impl VmProofStream {
             &self.data[(self.word_index as usize + 1)..(self.word_index as usize + 1 + size)];
         self.word_index += size as u32 + 1;
         ProofItem::decode(sequence)
+    }
+
+    pub fn sample_scalars(&mut self, number: usize) -> Vec<XFieldElement> {
+        VmHasher::sample_scalars(&mut self.sponge_state, number)
     }
 
     pub fn pseudorandom_items_list(seed: [u8; 32]) -> Vec<ProofItem> {
