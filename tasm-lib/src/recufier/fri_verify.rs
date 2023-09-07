@@ -1,20 +1,10 @@
-use crate::{
-    structure::tasm_object::{decode_from_memory_with_size, TasmObject},
-    Digest, VmHasher, DIGEST_LENGTH,
-};
-use itertools::Itertools;
+use crate::{hashing::merkle_root::MerkleRoot, structure::tasm_object::TasmObject, Digest};
 use triton_vm::{
     arithmetic_domain::ArithmeticDomain, instruction::LabelledInstruction, BFieldElement,
 };
-use twenty_first::{
-    shared_math::{
-        ntt::intt,
-        other::log_2_ceil,
-        polynomial::Polynomial,
-        traits::ModPowU32,
-        x_field_element::{XFieldElement, EXTENSION_DEGREE},
-    },
-    util_types::algebraic_hasher::AlgebraicHasher,
+use twenty_first::shared_math::{
+    ntt::intt, other::log_2_ceil, polynomial::Polynomial, traits::ModPowU32,
+    x_field_element::XFieldElement,
 };
 
 use crate::{
@@ -68,19 +58,6 @@ impl FriVerify {
         }
 
         (rounds_count, max_degree_of_last_round)
-    }
-
-    /// Compute the Merkle root from a slice of Digests.
-    /// TODO: write a snippet for me.
-    fn merkle_root(leafs: &[Digest]) -> Digest {
-        if leafs.len() == 1 {
-            leafs[0]
-        } else {
-            let half = leafs.len() / 2;
-            let left = Self::merkle_root(&leafs[..half]);
-            let right = Self::merkle_root(&leafs[half..]);
-            VmHasher::hash_pair(&left, &right)
-        }
     }
 
     /// Compute a new list containing the `XFieldElement`s of the given list, but lifted
@@ -155,8 +132,9 @@ impl Procedure for FriVerify {
         let last_codeword = proof_stream.dequeue().unwrap().as_fri_codeword().unwrap();
 
         // Check if last codeword matches the given root
-        let codeword_digests = Self::map_convert_xfe_to_digest(&last_codeword);
-        let last_codeword_merkle_root = Self::merkle_root(&codeword_digests);
+        let codeword_digests = Self::map_convert_xfe_to_digest(&last_codeword); // <-- snippet me
+        let last_codeword_merkle_root =
+            MerkleRoot::call(&codeword_digests, 0, codeword_digests.len()); // snippet ✔
         let last_root = roots.last().unwrap();
         assert_ne!(*last_root, last_codeword_merkle_root);
 
@@ -166,7 +144,7 @@ impl Procedure for FriVerify {
         // Note that we don't have to scale the polynomial back to the trace subgroup since we
         // only check its degree and don't use it further.
         let log_2_of_n = last_codeword.len().ilog2(); // <-- snippet me
-        let mut last_polynomial = last_codeword.clone();
+        let mut last_polynomial = last_codeword;
 
         let last_fri_domain_generator = self
             .domain
@@ -312,7 +290,7 @@ mod test {
 
         let (num_rounds, last_max_degree) = fri_verify.num_rounds();
         assert_eq!(
-            ((last_max_degree + 1) << num_rounds) * (expansion_factor as u32),
+            ((last_max_degree + 1) << num_rounds) * expansion_factor,
             domain_length
         );
 
