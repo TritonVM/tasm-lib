@@ -1,7 +1,7 @@
 use std::{cmp::max, collections::HashMap};
 
 use crate::VmHasherState;
-use anyhow::Result;
+use anyhow::{bail, Result};
 use rand::{rngs::StdRng, Rng, RngCore, SeedableRng};
 use triton_vm::{
     instruction::LabelledInstruction,
@@ -10,8 +10,12 @@ use triton_vm::{
     triton_asm, BFieldElement, NonDeterminism,
 };
 use twenty_first::{
-    shared_math::{bfield_codec::BFieldCodec, x_field_element::XFieldElement},
-    util_types::algebraic_hasher::{AlgebraicHasher, Domain},
+    shared_math::{
+        b_field_element::{BFIELD_ONE, BFIELD_ZERO},
+        bfield_codec::BFieldCodec,
+        x_field_element::XFieldElement,
+    },
+    util_types::algebraic_hasher::{AlgebraicHasher, Domain, SpongeHasher},
 };
 
 use crate::{
@@ -42,15 +46,50 @@ impl VmProofStream {
         }
     }
     pub fn dequeue(&mut self) -> Result<Box<ProofItem>> {
+        if self.word_index as usize >= self.data.len() {
+            bail!("No more words left in stream.")
+        }
         let size = self.data[self.word_index as usize].value() as usize;
         let sequence =
             &self.data[(self.word_index as usize + 1)..(self.word_index as usize + 1 + size)];
         self.word_index += size as u32 + 1;
-        ProofItem::decode(sequence)
+        let item = *ProofItem::decode(sequence)?;
+
+        if item.include_in_fiat_shamir_heuristic() {
+            self.fiat_shamir(&item);
+        }
+
+        Ok(Box::new(item))
+    }
+
+    fn fiat_shamir<T: BFieldCodec>(&mut self, item: &T) {
+        VmHasher::absorb_repeatedly(
+            &mut self.sponge_state,
+            Self::encode_and_pad_item(item).iter(),
+        )
+    }
+
+    fn encode_and_pad_item<T: BFieldCodec>(item: &T) -> Vec<BFieldElement> {
+        let encoding = item.encode();
+        let last_chunk_len = (encoding.len() + 1) % VmHasher::RATE;
+        let num_padding_zeros = match last_chunk_len {
+            0 => 0,
+            _ => VmHasher::RATE - last_chunk_len,
+        };
+        [
+            encoding,
+            vec![BFIELD_ONE],
+            vec![BFIELD_ZERO; num_padding_zeros],
+        ]
+        .concat()
     }
 
     pub fn sample_scalars(&mut self, number: usize) -> Vec<XFieldElement> {
         VmHasher::sample_scalars(&mut self.sponge_state, number)
+    }
+
+    pub fn sample_indices(&mut self, upper_bound: u32, number: u32) -> Vec<u32> {
+        VmHasher::sample_indices(&mut self.sponge_state, upper_bound, number as usize)
     }
 
     pub fn pseudorandom_items_list(seed: [u8; 32]) -> Vec<ProofItem> {
