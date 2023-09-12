@@ -352,7 +352,7 @@ impl FriVerify {
         Ok(revealed_indices_and_elements)
     }
 
-    /// Generate a proof, embedded i na proof stream.
+    /// Generate a proof, embedded in a proof stream.
     pub fn pseudorandom_fri_proof_stream(&self, seed: [u8; 32]) -> VmProofStream {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
 
@@ -392,10 +392,12 @@ impl BasicSnippet for FriVerify {
         vec![
             (DataType::VoidPointer, "*proof_stream".to_string()),
             (
-                DataType::List(Box::new(DataType::U32)),
-                "indices".to_string(),
+                DataType::List(Box::new(DataType::Tuple(vec![
+                    DataType::U32,
+                    DataType::XFE,
+                ]))),
+                "indices_and_elements".to_string(),
             ),
-            (DataType::List(Box::new(DataType::XFE)), "leafs".to_string()),
         ]
     }
 
