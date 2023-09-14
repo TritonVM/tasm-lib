@@ -333,7 +333,10 @@ mod tests {
             let tvm_result =
                 execute_with_terminal_state(&program, &[], &mut NonDeterminism::new(vec![]));
 
-            assert!(rust_result.is_err() && tvm_result.is_err());
+            assert!(
+                rust_result.is_err() && tvm_result.is_err(),
+                "Test case: {base}**{exp} failed to fail"
+            );
         }
     }
 
