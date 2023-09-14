@@ -9,6 +9,7 @@ use crate::{
 };
 
 /// A u32 `pow` that behaves like Rustc's `pow` method on `u32`, crashing in case of overflow.
+#[derive(Clone)]
 pub struct SafePow;
 
 impl BasicSnippet for SafePow {
@@ -189,16 +190,18 @@ impl Closure for SafePow {
 
 #[cfg(test)]
 mod tests {
+    use std::cell::RefCell;
     use std::collections::HashMap;
-
+    use std::rc::Rc;
     use triton_vm::NonDeterminism;
     use twenty_first::util_types::algebraic_hasher::Domain;
 
     use super::*;
     use crate::closure::ShadowedClosure;
+    use crate::linker::link_for_isolated_run;
     use crate::snippet::RustShadow;
     use crate::test_helpers::test_rust_equivalence_given_complete_state;
-    use crate::VmHasherState;
+    use crate::{execute_with_terminal_state, program_with_state_preparation, VmHasherState};
 
     #[test]
     fn u32_pow_pbt() {
@@ -259,6 +262,78 @@ mod tests {
                 1,
                 Some(&expected_final_stack),
             );
+        }
+    }
+
+    #[test]
+    fn u32_pow_negative_test() {
+        let safe_pow = SafePow;
+
+        let code = link_for_isolated_run(Rc::new(RefCell::new(safe_pow)), 0);
+
+        for (base, exp) in [
+            (2, 32),
+            (3, 21),
+            (4, 16),
+            (5, 14),
+            (6, 13),
+            (7, 12),
+            (8, 11),
+            (9, 11),
+            (10, 10),
+            (11, 10),
+            (12, 10),
+            (u32::MAX, 2),
+            (u32::MAX, 3),
+            (u32::MAX, 4),
+            (u32::MAX, 5),
+            (u32::MAX, 6),
+            (u32::MAX, 7),
+            (u32::MAX, 8),
+            (u32::MAX, 9),
+            (1 << 16, 2),
+            (1 << 16, 3),
+            (1 << 16, 4),
+            (1 << 16, 5),
+            (1 << 16, 6),
+            (1 << 16, 7),
+            (1 << 16, 8),
+            (1 << 8, 4),
+            (1 << 8, 8),
+            (1 << 8, 16),
+            (1 << 8, 32),
+        ] {
+            let init_stack = [
+                get_init_tvm_stack(),
+                vec![
+                    BFieldElement::new(base as u64),
+                    BFieldElement::new(exp as u64),
+                ],
+            ]
+            .concat();
+            // run rust shadow
+            let rust_result = std::panic::catch_unwind(|| {
+                let mut rust_stack = init_stack.clone();
+                ShadowedClosure::new(SafePow).rust_shadow_wrapper(
+                    &vec![],
+                    &NonDeterminism::new(vec![]),
+                    &mut rust_stack,
+                    &mut HashMap::default(),
+                    &mut VmHasherState::new(Domain::VariableLength),
+                )
+            });
+
+            // Run on Triton
+            let program = program_with_state_preparation(
+                &code,
+                &init_stack,
+                &mut NonDeterminism::new(vec![]),
+                None,
+            );
+            let tvm_result =
+                execute_with_terminal_state(&program, &vec![], &mut NonDeterminism::new(vec![]));
+
+            assert!(rust_result.is_err() && tvm_result.is_err());
         }
     }
 
