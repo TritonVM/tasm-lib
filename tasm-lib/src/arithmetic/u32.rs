@@ -4,6 +4,7 @@ pub mod leading_zeros_u32;
 pub mod or;
 pub mod safe_add;
 pub mod safe_mul;
+mod safe_pow;
 pub mod safe_sub;
 pub mod shift_left;
 pub mod shift_right;
