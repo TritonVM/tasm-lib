@@ -201,7 +201,7 @@ impl DeprecatedSnippet for AddU128 {
 
     fn common_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-            vec![
+            [
                 get_init_tvm_stack(),
                 vec![BFieldElement::zero(), BFieldElement::new(1 << 31)],
                 vec![BFieldElement::zero(), BFieldElement::new(1 << 30)],
@@ -214,7 +214,7 @@ impl DeprecatedSnippet for AddU128 {
 
     fn worst_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-            vec![
+            [
                 get_init_tvm_stack(),
                 vec![BFieldElement::zero(), BFieldElement::new(1 << 31)],
                 vec![BFieldElement::zero(), BFieldElement::new(1 << 30)],

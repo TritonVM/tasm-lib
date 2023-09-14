@@ -169,7 +169,7 @@ impl MultisetEquality {
         }
 
         ExecutionState {
-            stack: vec![get_init_tvm_stack(), vec![pointer_a, pointer_b]].concat(),
+            stack: [get_init_tvm_stack(), vec![pointer_a, pointer_b]].concat(),
             std_in: vec![],
             nondeterminism: NonDeterminism::new(vec![]),
             memory,
@@ -221,7 +221,7 @@ impl MultisetEquality {
         }
 
         ExecutionState {
-            stack: vec![get_init_tvm_stack(), vec![pointer_a, pointer_b]].concat(),
+            stack: [get_init_tvm_stack(), vec![pointer_a, pointer_b]].concat(),
             std_in: vec![],
             nondeterminism: NonDeterminism::new(vec![]),
             memory,

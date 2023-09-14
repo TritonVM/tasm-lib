@@ -119,7 +119,7 @@ impl DeprecatedSnippet for LtStandardU64 {
 
     fn common_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-            vec![
+            [
                 get_init_tvm_stack(),
                 vec![BFieldElement::zero(), BFieldElement::new(1 << 31)],
                 vec![BFieldElement::one(), BFieldElement::new(1 << 30)],
@@ -130,7 +130,7 @@ impl DeprecatedSnippet for LtStandardU64 {
 
     fn worst_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-            vec![
+            [
                 get_init_tvm_stack(),
                 vec![BFieldElement::new(8), BFieldElement::new(1 << 31)],
                 vec![BFieldElement::new(8), BFieldElement::new(1 << 30)],
@@ -269,7 +269,7 @@ impl DeprecatedSnippet for LtU64 {
 
     fn common_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-            vec![
+            [
                 get_init_tvm_stack(),
                 vec![BFieldElement::zero(), BFieldElement::new(1 << 31)],
                 vec![BFieldElement::one(), BFieldElement::new(1 << 30)],
@@ -280,7 +280,7 @@ impl DeprecatedSnippet for LtU64 {
 
     fn worst_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-            vec![
+            [
                 get_init_tvm_stack(),
                 vec![BFieldElement::new(8), BFieldElement::new(1 << 31)],
                 vec![BFieldElement::new(8), BFieldElement::new(1 << 30)],

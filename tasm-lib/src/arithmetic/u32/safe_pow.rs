@@ -255,7 +255,7 @@ mod tests {
             let _vm_output_state = test_rust_equivalence_given_complete_state(
                 &closure,
                 &init_stack,
-                &vec![],
+                &[],
                 &NonDeterminism::new(vec![]),
                 &HashMap::default(),
                 &VmHasherState::new(Domain::VariableLength),
@@ -315,7 +315,7 @@ mod tests {
             let rust_result = std::panic::catch_unwind(|| {
                 let mut rust_stack = init_stack.clone();
                 ShadowedClosure::new(SafePow).rust_shadow_wrapper(
-                    &vec![],
+                    &[],
                     &NonDeterminism::new(vec![]),
                     &mut rust_stack,
                     &mut HashMap::default(),
@@ -331,7 +331,7 @@ mod tests {
                 None,
             );
             let tvm_result =
-                execute_with_terminal_state(&program, &vec![], &mut NonDeterminism::new(vec![]));
+                execute_with_terminal_state(&program, &[], &mut NonDeterminism::new(vec![]));
 
             assert!(rust_result.is_err() && tvm_result.is_err());
         }

@@ -103,7 +103,7 @@ impl DeprecatedSnippet for EqU64 {
 
     fn common_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-            vec![
+            [
                 get_init_tvm_stack(),
                 vec![BFieldElement::zero(), BFieldElement::new((1 << 31) - 1)],
                 vec![BFieldElement::zero(), BFieldElement::new((1 << 10) - 1)],
@@ -114,7 +114,7 @@ impl DeprecatedSnippet for EqU64 {
 
     fn worst_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-            vec![
+            [
                 get_init_tvm_stack(),
                 vec![BFieldElement::new(1 << 31), BFieldElement::new(1 << 31)],
                 vec![

@@ -144,7 +144,7 @@ impl DeprecatedSnippet for LoadFromInput {
         let mut thread_rng = rand::thread_rng();
         for _ in 0..10 {
             let length = thread_rng.gen_range(0..(1 << 10)) as u64;
-            let input: Vec<BFieldElement> = vec![
+            let input: Vec<BFieldElement> = [
                 vec![BFieldElement::new(length)],
                 random_elements(length as usize),
             ]
@@ -172,7 +172,7 @@ impl DeprecatedSnippet for LoadFromInput {
 
     fn common_case_input_state(&self) -> crate::ExecutionState {
         let length = 1u64 << 9;
-        let input: Vec<BFieldElement> = vec![
+        let input: Vec<BFieldElement> = [
             vec![BFieldElement::new(length)],
             random_elements(length as usize),
         ]
@@ -197,7 +197,7 @@ impl DeprecatedSnippet for LoadFromInput {
 
     fn worst_case_input_state(&self) -> crate::ExecutionState {
         let length = 1u64 << 13;
-        let input: Vec<BFieldElement> = vec![
+        let input: Vec<BFieldElement> = [
             vec![BFieldElement::new(length)],
             random_elements(length as usize),
         ]

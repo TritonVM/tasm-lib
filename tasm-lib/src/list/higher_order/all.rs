@@ -384,7 +384,7 @@ impl DeprecatedSnippet for TestHashXFieldElementLsb {
         // Function does not output random values, since that would make the benchmark output
         // non-deterministic.
         vec![ExecutionState::with_stack(
-            vec![
+            [
                 vec![BFieldElement::zero(); 16],
                 vec![
                     BFieldElement::new(4888),
@@ -398,7 +398,7 @@ impl DeprecatedSnippet for TestHashXFieldElementLsb {
 
     fn common_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-            vec![
+            [
                 vec![BFieldElement::zero(); 16],
                 vec![
                     BFieldElement::new(4888),
@@ -412,7 +412,7 @@ impl DeprecatedSnippet for TestHashXFieldElementLsb {
 
     fn worst_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-            vec![
+            [
                 vec![BFieldElement::zero(); 16],
                 vec![
                     BFieldElement::new(488800000),

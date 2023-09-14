@@ -24,7 +24,7 @@ impl HashVarlen {
             .collect();
 
         ExecutionState {
-            stack: vec![
+            stack: [
                 get_init_tvm_stack(),
                 vec![memory_start, BFieldElement::new(k)],
             ]

@@ -99,7 +99,7 @@ impl DeprecatedSnippet for DoublePow2U64 {
 
     fn common_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-            vec![
+            [
                 get_init_tvm_stack(),
                 vec![BFieldElement::zero(), BFieldElement::new(1 << 12)],
             ]
@@ -110,7 +110,7 @@ impl DeprecatedSnippet for DoublePow2U64 {
     fn worst_case_input_state(&self) -> ExecutionState {
         // worst-case has carry from lower-bits to higher-bits
         ExecutionState::with_stack(
-            vec![
+            [
                 get_init_tvm_stack(),
                 vec![BFieldElement::zero(), BFieldElement::new(1 << 31)],
             ]

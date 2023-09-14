@@ -32,7 +32,7 @@ pub struct SampleIndices {
 impl SampleIndices {
     fn test_state(number: usize, upper_bound: u32) -> ExecutionState {
         ExecutionState {
-            stack: vec![
+            stack: [
                 get_init_tvm_stack(),
                 vec![
                     BFieldElement::new(number as u64),

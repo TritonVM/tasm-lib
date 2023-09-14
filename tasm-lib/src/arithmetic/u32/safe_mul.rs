@@ -92,7 +92,7 @@ impl DeprecatedSnippet for SafeMul {
 
     fn common_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-            vec![
+            [
                 get_init_tvm_stack(),
                 vec![BFieldElement::new(1 << 8), BFieldElement::new(1 << 9)],
             ]
@@ -102,7 +102,7 @@ impl DeprecatedSnippet for SafeMul {
 
     fn worst_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-            vec![
+            [
                 get_init_tvm_stack(),
                 vec![
                     BFieldElement::new((1 << 15) - 1),

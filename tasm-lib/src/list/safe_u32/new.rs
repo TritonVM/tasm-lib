@@ -132,13 +132,13 @@ impl DeprecatedSnippet for SafeNew {
 
     fn common_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-            vec![get_init_tvm_stack(), vec![BFieldElement::new(1 << 5)]].concat(),
+            [get_init_tvm_stack(), vec![BFieldElement::new(1 << 5)]].concat(),
         )
     }
 
     fn worst_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-            vec![get_init_tvm_stack(), vec![BFieldElement::new(1 << 6)]].concat(),
+            [get_init_tvm_stack(), vec![BFieldElement::new(1 << 6)]].concat(),
         )
     }
 }

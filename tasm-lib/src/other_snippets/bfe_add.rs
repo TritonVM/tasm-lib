@@ -72,7 +72,7 @@ impl DeprecatedSnippet for BfeAdd {
 
     fn common_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-            vec![
+            [
                 get_init_tvm_stack(),
                 vec![BFieldElement::new(10), BFieldElement::new(20)],
             ]
@@ -82,7 +82,7 @@ impl DeprecatedSnippet for BfeAdd {
 
     fn worst_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-            vec![
+            [
                 get_init_tvm_stack(),
                 vec![BFieldElement::new(10), BFieldElement::new(20)],
             ]

@@ -187,7 +187,7 @@ impl DeprecatedSnippet for SubU64 {
     fn common_case_input_state(&self) -> ExecutionState {
         // no carry
         ExecutionState::with_stack(
-            vec![
+            [
                 get_init_tvm_stack(),
                 vec![BFieldElement::zero(), BFieldElement::new((1 << 10) - 1)],
                 vec![BFieldElement::zero(), BFieldElement::new((1 << 31) - 1)],
@@ -199,7 +199,7 @@ impl DeprecatedSnippet for SubU64 {
     fn worst_case_input_state(&self) -> ExecutionState {
         // with carry
         ExecutionState::with_stack(
-            vec![
+            [
                 get_init_tvm_stack(),
                 vec![BFieldElement::one(), BFieldElement::new((1 << 31) - 1)],
                 vec![BFieldElement::new(100), BFieldElement::new((1 << 10) - 1)],
