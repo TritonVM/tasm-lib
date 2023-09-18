@@ -341,6 +341,12 @@ mod tests {
             );
         }
     }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::{closure::ShadowedClosure, snippet::RustShadow};
 
     #[test]
     fn u32_pow_bench() {

@@ -12,6 +12,7 @@ pub mod log_2_floor_u64;
 pub mod lt_u64;
 pub mod mul_two_u64s_to_u128_u64;
 pub mod or_u64;
+pub mod overflowing_add_u64;
 pub mod popcount_u64;
 pub mod pow2_u64;
 pub mod safe_mul_u64;
