@@ -20,4 +20,5 @@ pub mod shift_left_u64;
 pub mod shift_right_u64;
 pub mod sub_u64;
 pub mod wrapping_mul_u64;
+pub mod wrapping_sub_u64;
 pub mod xor_u64;

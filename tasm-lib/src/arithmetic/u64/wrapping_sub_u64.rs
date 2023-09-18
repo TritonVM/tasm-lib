@@ -8,63 +8,87 @@ use crate::{
     snippet::{BasicSnippet, DataType},
 };
 
-pub struct OverflowingAdd;
+pub struct WrappingSub;
 
-impl BasicSnippet for OverflowingAdd {
-    fn inputs(&self) -> Vec<(crate::snippet::DataType, String)> {
+impl BasicSnippet for WrappingSub {
+    fn inputs(&self) -> Vec<(DataType, String)> {
         vec![
-            (DataType::U64, "lhs".to_string()),
+            (DataType::U64, "lhs".to_owned()),
             (DataType::U64, "rhs".to_string()),
         ]
     }
 
-    fn outputs(&self) -> Vec<(crate::snippet::DataType, String)> {
-        vec![
-            (DataType::U64, "wrapped_sum".to_owned()),
-            (DataType::Bool, "overflow".to_owned()),
-        ]
+    fn outputs(&self) -> Vec<(DataType, String)> {
+        vec![(DataType::U64, "wrapped_diff".to_string())]
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_arithmetic_u64_overflowing_add".to_string()
+        "tasm_arithmetic_u64_wrapping_sub".to_string()
     }
 
     fn code(
         &self,
         _library: &mut crate::library::Library,
     ) -> Vec<triton_vm::instruction::LabelledInstruction> {
+        let entrypoint = self.entrypoint();
+        const TWO_POW_32: &str = "4294967296";
+
         triton_asm!(
-        // BEFORE: _ lhs_hi lhs_lo rhs_hi rhs_lo
-        // AFTER: _ sum_hi sum_lo overflow
-        { self.entrypoint() }:
+            {entrypoint}:
+                // _ lhs_hi lhs_lo rhs_hi rhs_lo
 
-            swap 1 swap 2
-            // _ lhs_hi rhs_hi rhs_lo lhs_lo
+                push -1
+                mul
+                // _ lhs_hi lhs_lo rhs_hi (-rhs_lo)
 
-            add
-            split
-            // _ lhs_hi rhs_hi carry sum_lo
+                swap 1 swap 2
+                // _ lhs_hi rhs_hi (-rhs_lo) lhs_lo
 
-            swap 3
-            // _ sum_lo rhs_hi carry rhs_hi
+                add
+                // _ lhs_hi rhs_hi (lhs_lo-rhs_lo)
 
-            add
-            add
-            // _ sum_lo (lhs_hi+rhs_hi+carry)
+                push {TWO_POW_32}
+                add
 
-            split
-            // _ sum_lo overflow sum_hi
+                split
+                // _ lhs_hi rhs_hi !carry diff_lo
 
-            swap 2
-            swap 1
-            // _ sum_hi sum_lo overflow
+                swap 2 swap 1
+                // _ lhs_hi diff_lo rhs_hi !carry
 
-            return
+                push 0
+                eq
+                // _ lhs_hi diff_lo rhs_hi carry
+
+                add
+                // _ lhs_hi diff_lo rhs_hi'
+
+                push -1
+                mul
+                // _ lhs_hi diff_lo (-rhs_hi')
+
+                swap 1 swap 2
+                // _ diff_lo (-rhs_hi') lhs_hi
+
+                add
+                // _ diff_lo (lhs_hi-rhs_hi')
+
+                push {TWO_POW_32}
+                add
+
+                split
+                // _ diff_lo !carry diff_hi
+
+                swap 1
+                pop
+                swap 1
+
+                return
         )
     }
 }
 
-impl Closure for OverflowingAdd {
+impl Closure for WrappingSub {
     fn rust_shadow(&self, stack: &mut Vec<triton_vm::BFieldElement>) {
         let rhs_lo: u32 = stack.pop().unwrap().try_into().unwrap();
         let rhs_hi: u32 = stack.pop().unwrap().try_into().unwrap();
@@ -73,10 +97,9 @@ impl Closure for OverflowingAdd {
         let rhs: u64 = rhs_lo as u64 + ((rhs_hi as u64) << 32);
         let lhs: u64 = lhs_lo as u64 + ((lhs_hi as u64) << 32);
 
-        let (wrapped_sum, overflow) = lhs.overflowing_add(rhs);
-        stack.push(BFieldElement::new(wrapped_sum >> 32));
-        stack.push(BFieldElement::new(wrapped_sum & (u32::MAX as u64)));
-        stack.push(BFieldElement::new(overflow as u64));
+        let wrapped_diff = lhs.wrapping_sub(rhs);
+        stack.push(BFieldElement::new(wrapped_diff >> 32));
+        stack.push(BFieldElement::new(wrapped_diff & (u32::MAX as u64)));
     }
 
     fn pseudorandom_initial_state(
@@ -113,12 +136,12 @@ mod tests {
     use crate::VmHasherState;
 
     #[test]
-    fn u64_overflowing_add_pbt() {
-        ShadowedClosure::new(OverflowingAdd).test()
+    fn u64_wrapping_sub_pbt() {
+        ShadowedClosure::new(WrappingSub).test()
     }
 
     #[test]
-    fn u64_overflowing_add_unit_test() {
+    fn u64_wrapped_sub_unit_test() {
         for (lhs, rhs) in [
             (0u64, 0u64),
             (0, 1),
@@ -126,6 +149,13 @@ mod tests {
             (1, 1),
             (1 << 32, 1 << 32),
             (1 << 63, 1 << 63),
+            (u64::MAX, u64::MAX),
+            (u64::MAX, 0),
+            (0, u64::MAX),
+            (100, 101),
+            (101, 100),
+            (1 << 40, (1 << 40) + 1),
+            ((1 << 40) + 1, 1 << 40),
         ] {
             let init_stack = [
                 get_init_tvm_stack(),
@@ -137,18 +167,14 @@ mod tests {
                 ],
             ]
             .concat();
-            let expected = lhs.overflowing_add(rhs);
+            let expected = lhs.wrapping_sub(rhs);
             let expected_final_stack = [
                 get_init_tvm_stack(),
-                vec![
-                    (expected.0 >> 32).into(),
-                    (expected.0 & u32::MAX as u64).into(),
-                    (expected.1 as u64).into(),
-                ],
+                vec![(expected >> 32).into(), (expected & u32::MAX as u64).into()],
             ]
             .concat();
             let _vm_output_state = test_rust_equivalence_given_complete_state(
-                &ShadowedClosure::new(OverflowingAdd),
+                &ShadowedClosure::new(WrappingSub),
                 &init_stack,
                 &[],
                 &NonDeterminism::new(vec![]),
@@ -167,7 +193,7 @@ mod benches {
     use crate::{closure::ShadowedClosure, snippet::RustShadow};
 
     #[test]
-    fn u64_overflowing_add_bench() {
-        ShadowedClosure::new(OverflowingAdd).bench()
+    fn u64_wrapping_sub_bench() {
+        ShadowedClosure::new(WrappingSub).bench()
     }
 }
