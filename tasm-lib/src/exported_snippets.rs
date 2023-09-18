@@ -26,6 +26,7 @@ use crate::{
             lt_u64::{LtStandardU64, LtU64},
             mul_two_u64s_to_u128_u64::MulTwoU64sToU128,
             or_u64::OrU64,
+            overflowing_sub_u64::OverflowingSub,
             popcount_u64::PopCountU64,
             pow2_u64::Pow2U64,
             safe_mul_u64::SafeMulU64,
@@ -123,6 +124,7 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
         "tasm_arithmetic_u64_shift_left" => Box::new(ShiftLeftU64),
         "tasm_arithmetic_u64_mul_two_u64s_to_u128_u64" => Box::new(MulTwoU64sToU128),
         "tasm_arithmetic_u64_wrapping_sub" => Box::new(WrappingSub),
+        "tasm_arithmetic_u64_overflowing_sub" => Box::new(OverflowingSub),
 
         // u128
         "tasm_arithmetic_u128_add" => Box::new(AddU128),
