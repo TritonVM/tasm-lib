@@ -55,7 +55,7 @@ impl VmProofStream {
         VmHasher::absorb_repeatedly(
             &mut self.sponge_state,
             Self::encode_and_pad_item(item).iter(),
-        )
+        );
     }
 
     fn encode_and_pad_item<T: BFieldCodec>(item: &T) -> Vec<BFieldElement> {

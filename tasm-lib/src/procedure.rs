@@ -1,6 +1,7 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-use rand::{rngs::StdRng, thread_rng, Rng, SeedableRng};
+use itertools::Itertools;
+use rand::{rngs::StdRng, Rng, SeedableRng};
 use triton_vm::{BFieldElement, NonDeterminism};
 use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
@@ -9,7 +10,8 @@ use crate::{
     snippet::{BasicSnippet, RustShadow},
     snippet_bencher::{write_benchmarks, BenchmarkCase, BenchmarkResult},
     test_helpers::{
-        rust_final_state, tasm_final_state, verify_stack_equivalence, verify_stack_growth,
+        rust_final_state, tasm_final_state, verify_sponge_equivalence, verify_stack_equivalence,
+        verify_stack_growth,
     },
     VmHasherState,
 };
@@ -85,13 +87,23 @@ impl<P: Procedure + 'static> RustShadow for ShadowedProcedure<P> {
 
     fn test(&self) {
         let num_states = 5;
-        let mut rng = thread_rng();
+        // let mut rng = thread_rng();
+        let seed = [
+            0xf9, 0x2c, 0x53, 0x92, 0x4b, 0x46, 0x69, 0xee, 0x2a, 0x42, 0x28, 0x3a, 0x1f, 0x9b,
+            0x1f, 0x26, 0xf4, 0x63, 0xc1, 0xe4, 0x71, 0xb6, 0x17, 0x7b, 0x8a, 0xf7, 0x7e, 0x4c,
+            0xb6, 0xb5, 0x64, 0xd1,
+        ];
+        let mut rng: StdRng = SeedableRng::from_seed(seed);
         let procedure = &self.procedure;
         let entrypoint = procedure.borrow().entrypoint();
 
         for _ in 0..num_states {
             let seed: [u8; 32] = rng.gen();
-            println!("testing {} common case with seed: {:x?}", entrypoint, seed);
+            println!(
+                "testing {} common case with seed: [{}]",
+                entrypoint,
+                seed.iter().map(|h| format!("{:#04x}", h)).join(", ")
+            );
             let (stack, memory, nondeterminism, stdin, sponge_state) =
                 procedure.borrow().pseudorandom_initial_state(seed, None);
 
@@ -130,6 +142,7 @@ impl<P: Procedure + 'static> RustShadow for ShadowedProcedure<P> {
             verify_stack_equivalence(&rust.final_stack, &tasm.final_stack);
             // verify_memory_equivalence(&rust.final_ram, &tasm.final_ram);
             verify_stack_growth(self, &init_stack, &tasm.final_stack);
+            verify_sponge_equivalence(&rust.final_sponge_state, &tasm.final_sponge_state);
         }
     }
 
