@@ -502,6 +502,10 @@ pub fn verify_stack_growth<T: RustShadow>(
     );
 }
 
+pub fn verify_sponge_equivalence(a: &VmHasherState, b: &VmHasherState) {
+    assert_eq!(a.state, b.state, "sponge states are different");
+}
+
 #[allow(dead_code)]
 #[allow(clippy::ptr_arg)]
 #[allow(clippy::too_many_arguments)]

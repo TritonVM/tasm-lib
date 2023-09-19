@@ -85,14 +85,15 @@ impl BasicSnippet for Dequeue {
                 add add add
                 return
 
-            // BEFORE: _ *object_si
-            // AFTER: _ *object_si
+            // BEFORE: _ *proof_item_si
+            // AFTER: _ *proof_item_si
             {fiat_shamir}:
-                dup 0           //  _ *object_si *object_si
-                read_mem        //  _ *object_si *object_si size
-                swap 1          //  _ *object_si size *object_si
-                push 1 add      //  _ *object_si size *object
-                swap 1          //  _ *object_si *object size
+                dup 0           // _ *proof_item_si *proof_item_si
+                read_mem        // _ *proof_item_si *proof_item_si proof_item_size
+                swap 1          // _ *proof_item_si proof_item_size *proof_item_si
+                push 1 add      // _ *proof_item_si proof_item_size *proof_item
+
+                swap 1          // _ *proof_item_si *proof_item proof_item_size
                 call {absorb}
                 return
 

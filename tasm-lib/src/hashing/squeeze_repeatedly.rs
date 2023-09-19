@@ -175,7 +175,7 @@ mod test {
         snippet::RustShadow,
         test_helpers::{
             rust_final_state, tasm_final_state, verify_memory_equivalence,
-            verify_stack_equivalence, verify_stack_growth,
+            verify_sponge_equivalence, verify_stack_equivalence, verify_stack_growth,
         },
     };
 
@@ -232,6 +232,7 @@ mod test {
             verify_stack_equivalence(&rust.final_stack, &tasm.final_stack);
             verify_memory_equivalence(&rust.final_ram, &tasm.final_ram);
             verify_stack_growth(&shadow, &init_stack, &tasm.final_stack);
+            verify_sponge_equivalence(&rust.final_sponge_state, &tasm.final_sponge_state);
         }
     }
 }

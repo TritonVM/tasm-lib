@@ -314,6 +314,7 @@ pub fn execute_test(
     // run VM
     let maybe_final_state =
         execute_with_terminal_state(&program, &std_in, nondeterminism, maybe_sponge_state);
+
     let final_state = maybe_final_state.unwrap();
 
     *memory = final_state.ram.clone();
@@ -416,7 +417,7 @@ pub fn execute_with_terminal_state<'a>(
     nondeterminism: &mut NonDeterminism<BFieldElement>,
     maybe_sponge_state: Option<VmHasherState>,
 ) -> anyhow::Result<VMState<'a>> {
-    let initial_state = if let Some(sponge_state) = maybe_sponge_state {
+    let initial_state = if let Some(sponge_state) = &maybe_sponge_state {
         let mut vmstate = VMState::new(
             program,
             PublicInput {
@@ -431,16 +432,21 @@ pub fn execute_with_terminal_state<'a>(
     };
 
     // run VM
-    program
-        .debug_terminal_state(
-            PublicInput::new(std_in.to_vec()),
-            nondeterminism.clone(),
-            initial_state,
-            None,
-        )
-        .map_err(|(err, fs)| {
-            anyhow!("VM execution failed with error: {err}.\nLast state before crash:\n{fs}")
-        })
+    match program.debug_terminal_state(
+        PublicInput::new(std_in.to_vec()),
+        nondeterminism.clone(),
+        initial_state,
+        None,
+    ) {
+        Ok(state) => anyhow::Ok(state),
+        Err((err, state)) => {
+            if maybe_sponge_state.is_some() {
+                println!("tasm final sponge state:");
+                println!("{}", state.sponge_state.iter().join(", "));
+            }
+            bail!("VM execution failed with error: {err}.\nLast state before crash:\n{state}")
+        }
+    }
 }
 
 /// Produce the code to set the stack and memory into a certain state

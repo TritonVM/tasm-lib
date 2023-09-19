@@ -161,6 +161,10 @@ impl FriVerify {
             let root = proof_stream.dequeue().unwrap().as_merkle_root().unwrap();
             roots.push(root);
         }
+        println!("alphas:");
+        for alpha in alphas.iter() {
+            println!("{}", alpha);
+        }
 
         // Extract last codeword
         let last_codeword = proof_stream.dequeue().unwrap().as_fri_codeword().unwrap();
@@ -435,11 +439,12 @@ impl BasicSnippet for FriVerify {
         let new_list_of_digests = library.import(Box::new(UnsafeNew(DataType::Digest)));
         let push_digest_to_list = library.import(Box::new(UnsafePush(DataType::Digest)));
         let read_digest = triton_asm!(
-            read_mem swap 1 push 1 add
-            read_mem swap 1 push 1 add
-            read_mem swap 1 push 1 add
-            read_mem swap 1 push 1 add
-            read_mem swap 1 pop
+                                        // _ *digest
+            read_mem swap 1 push 1 add  // _ d4 *digest+1
+            read_mem swap 1 push 1 add  // _ d4 d3 *digest+2
+            read_mem swap 1 push 1 add  // _ d4 d3 d2 *digest+3
+            read_mem swap 1 push 1 add  // _ d4 d3 d2 d1 *digest+4
+            read_mem swap 1 pop         // _ d4 d3 d2 d1 d0
         );
         let new_list_of_scalars = library.import(Box::new(UnsafeNew(DataType::XFE)));
         let get_scalar = library.import(Box::new(UnsafeGet(DataType::XFE)));
@@ -451,6 +456,7 @@ impl BasicSnippet for FriVerify {
             // BEFORE: _ *proof_stream *fri_verify num_rounds last_round_max_degree | num_rounds *roots *alphas
             // AFTER: _ ... | 0 *roots *alphas
             {dequeue_query_phase}:
+
                 // return if done
                 dup 2       // _ num_rounds *roots *alphas num_rounds
                 push 0 eq   // _ num_rounds *roots *alphas num_rounds==0
@@ -465,9 +471,11 @@ impl BasicSnippet for FriVerify {
                 push 1      // _ num_rounds-1 *roots *alphas 1
                 call {proof_stream_sample_scalars}
                             // _ num_rounds-1 *roots *alphas *scalars
-                push 0      // _ num_rounds-1 *roots *alphas *scalars 0
+                dup 1 swap 1// _ num_rounds-1 *roots *alphas *alphas *scalars
+                push 0      // _ num_rounds-1 *roots *alphas *alphas *scalars 0
                 call {get_scalar}
-                            // _ num_rounds-1 *roots *alphas scalars[0]
+                            // _ num_rounds-1 *roots *alphas *alphas [scalars[0]]
+
                 call {push_scalar}
                             // _ num_rounds-1 *roots *alphas
 
@@ -475,9 +483,11 @@ impl BasicSnippet for FriVerify {
                 swap 1      // _ num_rounds-1 *alphas *roots
                 dup 6       // _ num_rounds-1 *alphas *roots *proof_stream
 
-                call {proof_stream_dequeue} // _ num_rounds-1 *alphas *roots *proof_stream *root
+                call {proof_stream_dequeue} // _ num_rounds-1 *alphas *roots *proof_stream *root_ev
+                push 1 add                  // _ num_rounds-1 *alphas *roots *proof_stream *root
                 swap 1 pop                  // _ num_rounds-1 *alphas *roots *root
-                {&read_digest}              // _ num_rounds-1 *alphas *roots [root]
+                dup 1 swap 1                // _ num_rounds-1 *alphas *roots *roots *root
+                {&read_digest}              // _ num_rounds-1 *alphas *roots *roots [root]
                 call {push_digest_to_list}  // _ num_rounds-1 *alphas *roots
                 swap 1                      // _ num_rounds-1 *roots *alphas
                 recurse
@@ -521,23 +531,33 @@ impl BasicSnippet for FriVerify {
                 push -1 add                 // _ *proof_stream *fri_verify num_rounds last_round_max_degree
 
                 // create lists for roots and alphas
-                dup 1
+                dup 1 push 1 add
                 call {new_list_of_digests}  // _ *proof_stream *fri_verify num_rounds last_round_max_degree *roots
-                dup 2 push -1 add
+                dup 2
                 call {new_list_of_scalars}  // _ *proof_stream *fri_verify num_rounds last_round_max_degree *roots *alphas
 
                 // dequeue first Merkle root
                 swap 1                      // _ *proof_stream *fri_verify num_rounds last_round_max_degree *alphas *roots
                 dup 5                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree *alphas *roots *proof_stream
-                call {proof_stream_dequeue} // _ *proof_stream *fri_verify num_rounds last_round_max_degree *alphas *roots *proof_stream *root
-                swap 1 pop                  // _ *proof_stream *fri_verify num_rounds last_round_max_degree *alphas *roots *root
-                {&read_digest}              // _ *proof_stream *fri_verify num_rounds last_round_max_degree *alphas *roots [root]
+                call {proof_stream_dequeue} // _ *proof_stream *fri_verify num_rounds last_round_max_degree *alphas *roots *proof_stream *root_ev
+                swap 1 pop                  // _ *proof_stream *fri_verify num_rounds last_round_max_degree *alphas *roots *root_ev
+                push 1 add                  // _ *proof_stream *fri_verify num_rounds last_round_max_degree *alphas *roots *root
+                dup 1 swap 1                // _ *proof_stream *fri_verify num_rounds last_round_max_degree *alphas *roots *roots *root
+
+                {&read_digest}              // _ *proof_stream *fri_verify num_rounds last_round_max_degree *alphas *roots *roots [root]
+
                 call {push_digest_to_list}  // _ *proof_stream *fri_verify num_rounds last_round_max_degree *alphas *roots
 
                 // dequeue remaining roots and collect Fiat-Shamir challenges
                 dup 3                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree *alphas *roots num_rounds
                 swap 2                      // _ *proof_stream *fri_verify num_rounds last_round_max_degree num_rounds *roots *alphas
                 call {dequeue_query_phase}  // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas
+
+                // test
+                dup 4 push -1 add
+                // push 0
+                call {get_scalar}
+                push 1337 assert
 
                 return
 
@@ -615,6 +635,8 @@ impl Procedure for FriVerify {
 
 #[cfg(test)]
 mod test {
+    use std::cmp::min;
+
     use itertools::Itertools;
     use rand::{rngs::StdRng, thread_rng, Rng, SeedableRng};
     use triton_vm::{fri::Fri, proof_stream::ProofStream, BFieldElement};
@@ -752,11 +774,17 @@ mod test {
 
     #[test]
     fn test_shadow() {
-        let mut rng = thread_rng();
-        let expansion_factor = 1 << rng.gen_range(0..5);
-        let domain_length = expansion_factor * (1 << rng.gen_range(0..10));
+        // let mut rng = thread_rng();
+        let seed = [
+            0xf7, 0x41, 0x2a, 0x3e, 0x1e, 0xa7, 0x86, 0xf6, 0xf3, 0x55, 0xdb, 0xcc, 0xe0, 0x32,
+            0xf3, 0xec, 0x6f, 0x51, 0x26, 0xcb, 0xb2, 0x7c, 0x4a, 0x34, 0xb4, 0xc9, 0xe9, 0xa8,
+            0x7c, 0x34, 0x11, 0xc5,
+        ];
+        let mut rng: StdRng = SeedableRng::from_seed(seed);
+        let expansion_factor = 1 << rng.gen_range(1..5);
+        let domain_length = expansion_factor * (1 << rng.gen_range(8..15));
         let offset = BFieldElement::new(7);
-        let num_colinearity_checks = rng.gen_range(1..160);
+        let num_colinearity_checks = rng.gen_range(1..min(160, domain_length / 4));
         let procedure = FriVerify::new(
             offset,
             domain_length,

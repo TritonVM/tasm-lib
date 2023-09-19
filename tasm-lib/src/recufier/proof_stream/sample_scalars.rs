@@ -4,7 +4,10 @@ use itertools::Itertools;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use triton_vm::{triton_asm, BFieldElement, NonDeterminism};
 use twenty_first::{
-    shared_math::{tip5::STATE_SIZE, x_field_element::XFieldElement},
+    shared_math::{
+        tip5::{RATE, STATE_SIZE},
+        x_field_element::XFieldElement,
+    },
     util_types::algebraic_hasher::SpongeHasher,
 };
 
@@ -15,9 +18,10 @@ use crate::{
     procedure::Procedure,
     snippet::{BasicSnippet, DataType},
     structure::tasm_object::load_to_memory,
-    VmHasher, VmHasherState, DIGEST_LENGTH,
+    VmHasher, VmHasherState,
 };
 
+/// Squeeze the sponge to sample a given number of `XFieldElement`s.
 pub struct SampleScalars;
 
 impl BasicSnippet for SampleScalars {
@@ -44,6 +48,7 @@ impl BasicSnippet for SampleScalars {
         let new_list_of_xfes = library.import(Box::new(UnsafeNew(DataType::XFE)));
         let safety_offset = 1;
         let squeeze_repeatedly = library.import(Box::new(SqueezeRepeatedly));
+        let rate = RATE;
         triton_asm! {
             // BEFORE: _ num_scalars
             // AFTER: _ *scalars
@@ -58,8 +63,8 @@ impl BasicSnippet for SampleScalars {
                 dup 1           // _ num_scalars *scalars num_scalars
                 push 3 mul      // _ num_scalars *scalars num_bfes
                 push 9 add      // _ num_scalars *scalars (num_bfes+9)
-                push 10 swap 1  // _ num_scalars *scalars 10 (num_bfes+9)
-                div pop         // _ num_scalars *scalars floor((num_bfes+9)/10)
+                push {rate} swap 1  // _ num_scalars *scalars rate (num_bfes+9)
+                div pop         // _ num_scalars *scalars floor((num_bfes+9)/rate)
                                 // _ num_scalars *scalars num_squeezes
 
                 // prepare stack for call to squeeze_repeatedly
@@ -92,7 +97,7 @@ impl Procedure for SampleScalars {
         sponge_state: &mut crate::VmHasherState,
     ) -> Vec<triton_vm::BFieldElement> {
         let num_scalars = stack.pop().unwrap().value() as usize;
-        let num_squeezes = (num_scalars * 3 + 9) / DIGEST_LENGTH;
+        let num_squeezes = (num_scalars * 3 + 9) / RATE;
         let pseudorandomness = (0..num_squeezes)
             .flat_map(|_| VmHasher::squeeze(sponge_state).to_vec())
             .collect_vec();
