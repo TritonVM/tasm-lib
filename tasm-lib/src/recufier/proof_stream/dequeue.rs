@@ -2,12 +2,15 @@ use std::{cmp::max, collections::HashMap};
 
 use rand::Rng;
 use rand::{rngs::StdRng, RngCore, SeedableRng};
+use triton_vm::proof_item::ProofItem;
 use triton_vm::{instruction::LabelledInstruction, triton_asm, BFieldElement, NonDeterminism};
 use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
+use crate::hashing::absorb::Absorb;
+use crate::procedure::Procedure;
 use crate::structure::tasm_object::TasmObject;
+use crate::VmHasherState;
 use crate::{
-    algorithm::Algorithm,
     field, field_with_size, get_init_tvm_stack,
     library::Library,
     snippet::{BasicSnippet, DataType},
@@ -40,7 +43,59 @@ impl BasicSnippet for Dequeue {
         let entrypoint = self.entrypoint();
         let field_word_index = field!(VmProofStream::word_index);
         let field_data_with_size = field_with_size!(VmProofStream::data);
+        let include_in_fiat_shamir_heuristic =
+            format!("{entrypoint}_include_in_fiat_shamir_heuristic");
+        let merkle_root_evi = ProofItem::MerkleRoot(Default::default()).discriminant();
+        let ood_base_row_evi = ProofItem::MerkleRoot(Default::default()).discriminant();
+        let ood_ext_row_evi = ProofItem::MerkleRoot(Default::default()).discriminant();
+        let ood_quotient_segment_evi = ProofItem::MerkleRoot(Default::default()).discriminant();
+        let fiat_shamir = format!("{entrypoint}_fiat_shamir");
+        let absorb = _library.import(Box::new(Absorb {}));
         triton_asm!(
+            // BEFORE: _ *object_si
+            // AFTER: _ *object_si bool
+            {include_in_fiat_shamir_heuristic}:
+                // get enum variant indicator
+                dup 0           // _ *object_si *object_si
+                push 1 add      // _ *object_si *object_evi
+                read_mem        // _ *object_si *object_evi object_evi
+                swap 1 pop      // _ *object_si object_evi
+
+                // is it a Merkle root?
+                push {merkle_root_evi}
+                dup 1 eq        // _ *object object_evi object=merkle_root
+                swap 1          // _ *object object=merkle_root object_evi
+
+                // is it an ood base row?
+                push {ood_base_row_evi}
+                dup 1 eq        // _ *object object=merkle_root object_evi object_evi=ood_base_row
+                swap 1          // _ *object object=merkle_root object_evi=ood_base_row object_evi
+
+                // is it an ood ext row?
+                push {ood_ext_row_evi}
+                dup 1 eq
+                swap 1
+
+                // is it an ood quotient segment?
+                push {ood_quotient_segment_evi}
+                dup 1 eq
+                swap 1 pop
+
+                // compress
+                add add add
+                return
+
+            // BEFORE: _ *object_si
+            // AFTER: _ *object_si
+            {fiat_shamir}:
+                dup 0           //  _ *object_si *object_si
+                read_mem        //  _ *object_si *object_si size
+                swap 1          //  _ *object_si size *object_si
+                push 1 add      //  _ *object_si size *object
+                swap 1          //  _ *object_si *object size
+                call {absorb}
+                return
+
             // BEFORE: _ *proof_stream
             // AFTER: _ *proof_stream *object
             {entrypoint}:
@@ -59,6 +114,13 @@ impl BasicSnippet for Dequeue {
                 assert              // _ *proof_stream *word_index word_index word_index *data_list_length_indicator
                 push 1 add          // _ *proof_stream *word_index word_index word_index *data
                 add                 // _ *proof_stream *word_index word_index *object_si
+
+
+                call {include_in_fiat_shamir_heuristic}
+                                    // _ *proof_stream *word_index word_index *object_si bool
+
+                skiz call {fiat_shamir}
+                                    // _ *proof_stream *word_index word_index *object_si
 
                 read_mem            // _ *proof_stream *word_index word_index *object_si object_size
                 push 1 add          // _ *proof_stream *word_index word_index *object_si object_size+1
@@ -79,19 +141,22 @@ impl BasicSnippet for Dequeue {
     }
 }
 
-impl Algorithm for Dequeue {
+impl Procedure for Dequeue {
     fn rust_shadow(
         &self,
         stack: &mut Vec<BFieldElement>,
         memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
         _nondeterminism: &triton_vm::NonDeterminism<BFieldElement>,
-    ) {
+        _stdin: &[BFieldElement],
+        sponge_state: &mut VmHasherState,
+    ) -> Vec<BFieldElement> {
         // read proof stream pointer from stack
         let proof_stream_pointer = stack.pop().unwrap();
 
         // decode from memory
-        let proof_stream =
+        let mut proof_stream =
             *VmProofStream::decode_from_memory(memory, proof_stream_pointer).unwrap();
+        proof_stream.sponge_state = sponge_state.to_owned();
 
         // calculate proof item address
         let proof_item_pointer = proof_stream_pointer
@@ -108,28 +173,22 @@ impl Algorithm for Dequeue {
             panic!("Proof stream out of bounds");
         }
 
-        // read size
-        let object_size = memory
-            .get(
-                &(proof_stream_pointer
-                    + BFieldElement::new(1) // skip over word_index
-                    + BFieldElement::new(1) // skip over data field length indicator
-                    + BFieldElement::new(1) // skip over data list length indicator
-                    + BFieldElement::new(proof_stream.word_index as u64)),
-            )
-            .unwrap()
-            .value() as u32;
+        // read object
+        let _proof_item = proof_stream.dequeue();
 
-        // jump word index forward
-        let new_word_index = proof_stream.word_index + object_size + 1;
-        memory.insert(
-            proof_stream_pointer,
-            BFieldElement::new(new_word_index as u64),
-        );
+        // percolate sponge changes
+        *sponge_state = proof_stream.sponge_state.clone();
+
+        // write proof stream object back
+        for (i, s) in proof_stream.encode().into_iter().enumerate() {
+            memory.insert(proof_stream_pointer + BFieldElement::new(i as u64), s);
+        }
 
         // add proof item pointer to stack
         stack.push(proof_stream_pointer);
         stack.push(proof_item_pointer);
+
+        vec![]
     }
 
     fn pseudorandom_initial_state(
@@ -140,6 +199,8 @@ impl Algorithm for Dequeue {
         Vec<BFieldElement>,
         HashMap<BFieldElement, BFieldElement>,
         NonDeterminism<BFieldElement>,
+        Vec<BFieldElement>,
+        VmHasherState,
     ) {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
 
@@ -177,7 +238,16 @@ impl Algorithm for Dequeue {
         let mut stack = get_init_tvm_stack();
         stack.push(address);
 
-        (stack, memory, NonDeterminism::new(vec![]))
+        // populate sponge state at random
+        let sponge_state = VmHasherState { state: rng.gen() };
+
+        (
+            stack,
+            memory,
+            NonDeterminism::new(vec![]),
+            vec![],
+            sponge_state,
+        )
     }
 }
 
@@ -193,9 +263,9 @@ mod test {
     };
 
     use crate::{
-        algorithm::{Algorithm, ShadowedAlgorithm},
         execute_with_terminal_state, get_init_tvm_stack,
         linker::link_for_isolated_run,
+        procedure::{Procedure, ShadowedProcedure},
         program_with_state_preparation,
         snippet::RustShadow,
         test_helpers::test_rust_equivalence_given_complete_state,
@@ -215,10 +285,10 @@ mod test {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
 
         let dequeue = Dequeue {};
-        let algorithm = ShadowedAlgorithm::new(dequeue.clone());
+        let algorithm = ShadowedProcedure::new(dequeue.clone());
 
         for _ in 0..num_states {
-            let (stack, memory, nondeterminism) =
+            let (stack, memory, nondeterminism, _stdin, _sponge_state) =
                 dequeue.pseudorandom_initial_state(rng.gen(), None);
 
             let stdin = vec![];
@@ -283,7 +353,7 @@ mod test {
             let rust_result = std::panic::catch_unwind(|| {
                 let mut rust_stack = stack.clone();
                 let mut rust_memory = memory.clone();
-                ShadowedAlgorithm::new(dequeue.clone()).rust_shadow_wrapper(
+                ShadowedProcedure::new(dequeue.clone()).rust_shadow_wrapper(
                     &stdin,
                     &nondeterminism,
                     &mut rust_stack,
