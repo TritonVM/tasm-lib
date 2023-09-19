@@ -14,7 +14,7 @@ use crate::{
 
 /// Squeeze the sponge n times, storing all the produced pseudorandom `BFieldElement`s
 /// contiguously in memory. It is the caller's responsibility to allocate enough memory.
-struct SqueezeRepeatedly;
+pub struct SqueezeRepeatedly;
 
 impl BasicSnippet for SqueezeRepeatedly {
     fn inputs(&self) -> Vec<(crate::snippet::DataType, String)> {
