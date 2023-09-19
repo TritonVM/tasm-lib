@@ -390,7 +390,7 @@ pub trait DeprecatedSnippet {
         let code = self.link_for_isolated_run(words_allocated);
         let program =
             program_with_state_preparation(&code, stack, &mut nondeterminism, words_allocated);
-        let tvm_result = execute_with_terminal_state(&program, &std_in, &mut nondeterminism);
+        let tvm_result = execute_with_terminal_state(&program, &std_in, &mut nondeterminism, None);
 
         let maybe_final_state = tvm_result.map(|st| VmOutputState {
             final_ram: st.ram,
@@ -409,6 +409,7 @@ pub trait DeprecatedSnippet {
                 std_in,
                 &mut nondeterminism,
                 memory,
+                None,
                 words_allocated,
             );
         }

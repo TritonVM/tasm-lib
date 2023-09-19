@@ -280,6 +280,7 @@ pub fn execute_bench_deprecated(
 
 /// Execute a Triton-VM program and test correct behavior indicators.
 /// Modify stack and memory. Panic if anything goes wrong.
+#[allow(clippy::too_many_arguments)]
 pub fn execute_test(
     code: &[LabelledInstruction],
     stack: &mut Vec<BFieldElement>,
@@ -287,6 +288,7 @@ pub fn execute_test(
     std_in: Vec<BFieldElement>,
     nondeterminism: &mut NonDeterminism<BFieldElement>,
     memory: &mut HashMap<BFieldElement, BFieldElement>,
+    maybe_sponge_state: Option<VmHasherState>,
     initilialize_dynamic_allocator_to: Option<usize>,
 ) -> VmOutputState {
     let init_stack_height = stack.len();
@@ -310,7 +312,8 @@ pub fn execute_test(
     );
 
     // run VM
-    let maybe_final_state = execute_with_terminal_state(&program, &std_in, nondeterminism);
+    let maybe_final_state =
+        execute_with_terminal_state(&program, &std_in, nondeterminism, maybe_sponge_state);
     let final_state = maybe_final_state.unwrap();
 
     *memory = final_state.ram.clone();
@@ -411,13 +414,28 @@ pub fn execute_with_terminal_state<'a>(
     program: &'a Program,
     std_in: &[BFieldElement],
     nondeterminism: &mut NonDeterminism<BFieldElement>,
+    maybe_sponge_state: Option<VmHasherState>,
 ) -> anyhow::Result<VMState<'a>> {
+    let initial_state = if let Some(sponge_state) = maybe_sponge_state {
+        let mut vmstate = VMState::new(
+            program,
+            PublicInput {
+                individual_tokens: std_in.to_vec(),
+            },
+            nondeterminism.to_owned(),
+        );
+        vmstate.sponge_state = sponge_state.state;
+        Some(vmstate)
+    } else {
+        None
+    };
+
     // run VM
     program
         .debug_terminal_state(
             PublicInput::new(std_in.to_vec()),
             nondeterminism.clone(),
-            None,
+            initial_state,
             None,
         )
         .map_err(|(err, fs)| {

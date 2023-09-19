@@ -8,4 +8,5 @@ pub mod load_auth_path_from_std_in_unsafe_list;
 pub mod merkle_root;
 pub mod reverse_digest;
 pub mod sample_indices;
+pub mod squeeze_repeatedly;
 pub mod swap_digest;

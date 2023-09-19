@@ -144,6 +144,7 @@ pub fn link_and_run_tasm_for_test_deprecated<T: DeprecatedSnippet>(
         std_in,
         &mut NonDeterminism::new(secret_in),
         memory,
+        None,
         Some(words_statically_allocated),
     )
 }
@@ -390,7 +391,7 @@ pub fn tasm_final_state<T: RustShadow>(
     stdin: &[BFieldElement],
     nondeterminism: &NonDeterminism<BFieldElement>,
     memory: &HashMap<BFieldElement, BFieldElement>,
-    _sponge_state: &VmHasherState,
+    sponge_state: &VmHasherState,
     words_statically_allocated: usize,
 ) -> VmOutputState {
     // allocate memory, if necessary
@@ -409,6 +410,7 @@ pub fn tasm_final_state<T: RustShadow>(
         stdin.to_vec(),
         &mut nondeterminism.clone(),
         &mut tasm_memory,
+        Some(sponge_state.to_owned()),
         words_statically_allocated,
     )
 }
@@ -557,6 +559,7 @@ pub fn link_and_run_tasm_for_test<T: RustShadow>(
     std_in: Vec<BFieldElement>,
     nondeterminism: &mut NonDeterminism<BFieldElement>,
     memory: &mut HashMap<BFieldElement, BFieldElement>,
+    maybe_sponge_state: Option<VmHasherState>,
     words_statically_allocated: usize,
 ) -> VmOutputState {
     let words_statically_allocated = if let Some(allocator) = memory.get(&BFieldElement::zero()) {
@@ -574,6 +577,7 @@ pub fn link_and_run_tasm_for_test<T: RustShadow>(
         std_in,
         nondeterminism,
         memory,
+        maybe_sponge_state,
         Some(words_statically_allocated),
     )
 }
