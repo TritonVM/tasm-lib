@@ -14,6 +14,7 @@ use crate::{
     Digest, VmHasher,
 };
 
+/// Compute the Merkle root of a slice of `Digest`s
 pub struct MerkleRoot;
 
 impl MerkleRoot {

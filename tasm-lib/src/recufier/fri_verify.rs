@@ -3,7 +3,14 @@ use std::collections::HashMap;
 use crate::{
     field, get_init_tvm_stack,
     hashing::merkle_root::MerkleRoot,
-    list::unsafe_u32::{get::UnsafeGet, new::UnsafeNew, push::UnsafePush},
+    list::{
+        higher_order::{
+            inner_function::{InnerFunction, RawCode},
+            map::Map,
+        },
+        unsafe_u32::{get::UnsafeGet, length::UnsafeLength, new::UnsafeNew, push::UnsafePush},
+        ListType,
+    },
     recufier::proof_stream::{dequeue::Dequeue, sample_scalars::SampleScalars},
     snippet_bencher::BenchmarkCase,
     structure::tasm_object::{load_to_memory, TasmObject},
@@ -168,11 +175,16 @@ impl FriVerify {
 
         // Extract last codeword
         let last_codeword = proof_stream.dequeue().unwrap().as_fri_codeword().unwrap();
+        assert_eq!(
+            last_codeword.len(),
+            self.domain_length as usize >> self.num_rounds()
+        );
 
         // Check if last codeword matches the given root
         let codeword_digests = Self::map_convert_xfe_to_digest(&last_codeword); // <-- snippet me
         let last_codeword_merkle_root =
             MerkleRoot::call(&codeword_digests, 0, codeword_digests.len()); // snippet ✔
+
         let last_root = roots.last().unwrap();
         if *last_root != last_codeword_merkle_root {
             bail!(FriValidationError::BadMerkleRootForLastCodeword);
@@ -439,10 +451,11 @@ impl BasicSnippet for FriVerify {
         let push_digest_to_list = library.import(Box::new(UnsafePush(DataType::Digest)));
         let read_digest = triton_asm!(
                                         // _ *digest
-            read_mem swap 1 push 1 add  // _ d4 *digest+1
-            read_mem swap 1 push 1 add  // _ d4 d3 *digest+2
-            read_mem swap 1 push 1 add  // _ d4 d3 d2 *digest+3
-            read_mem swap 1 push 1 add  // _ d4 d3 d2 d1 *digest+4
+            push 4 add                  // _ *digest+4
+            read_mem swap 1 push -1 add // _ d4 *digest+3
+            read_mem swap 1 push -1 add // _ d4 d3 *digest+2
+            read_mem swap 1 push -1 add // _ d4 d3 d2 *digest+1
+            read_mem swap 1 push -1 add // _ d4 d3 d2 d1 *digest
             read_mem swap 1 pop         // _ d4 d3 d2 d1 d0
         );
         let new_list_of_scalars = library.import(Box::new(UnsafeNew(DataType::XFE)));
@@ -451,6 +464,30 @@ impl BasicSnippet for FriVerify {
         let proof_stream_dequeue = library.import(Box::new(Dequeue {}));
         let proof_stream_sample_scalars = library.import(Box::new(SampleScalars {}));
         let dequeue_query_phase = format!("{entrypoint}_dequeue_query_phase_remainder");
+        let convert_xfe_to_digest = format!("{entrypoint}_convert_xfe_to_digest");
+        let map_convert_xfe_to_digest = library.import(Box::new(Map {
+            list_type: ListType::Unsafe,
+            f: InnerFunction::RawCode(RawCode {
+                function: triton_asm!
+                (
+                    {convert_xfe_to_digest}:
+                        // _ xfe2 xfe1 xfe0
+                        push 0 push 0       // _ xfe2 xfe1 xfe0 0 0
+                        swap 4              // _ 0 xfe1 xfe0 0 xfe2
+                        swap 2              // _ 0 xfe1 xfe2 0 xfe0
+                        swap 3              // _ 0 xfe0 xfe2 0 xfe1
+                        swap 1              // _ 0 xfe0 xfe2 xfe1 0
+                        swap 3              // _ 0 0 xfe2 xfe1 xfe0
+                        // _ 0 0 xfe2 xfe1 xfe0
+                        return
+                ),
+                input_type: DataType::XFE,
+                output_type: DataType::Digest,
+            }),
+        }));
+        let length_of_list_of_digests = library.import(Box::new(UnsafeLength(DataType::Digest)));
+        let merkle_root = library.import(Box::new(MerkleRoot));
+        let get_digest = library.import(Box::new(UnsafeGet(DataType::Digest)));
         triton_asm! {
             // BEFORE: _ *proof_stream *fri_verify num_rounds last_round_max_degree | num_rounds *roots *alphas
             // AFTER: _ ... | 0 *roots *alphas
@@ -552,10 +589,43 @@ impl BasicSnippet for FriVerify {
                 swap 2                      // _ *proof_stream *fri_verify num_rounds last_round_max_degree num_rounds *roots *alphas
                 call {dequeue_query_phase}  // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas
 
-                // test
-                dup 4 push -1 add
-                // push 0
-                call {get_scalar}
+                // dequeue last codeword
+                dup 6                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream
+                call {proof_stream_dequeue} // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword_ev
+                push 1 add                  // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword
+
+                // compute Merkle root
+                dup 0                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword *last_codeword
+                call {map_convert_xfe_to_digest}
+                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword *leafs
+                dup 0                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword *leafs *leafs
+                call {length_of_list_of_digests}
+                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword *leafs num_leafs
+                dup 9 dup 9                 // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword *leafs num_leafs *fri_verify num_rounds
+                swap 1                      // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword *leafs num_leafs num_rounds *fri_verify
+                {&domain_length}            // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword *leafs num_leafs num_rounds *domain_length
+                read_mem swap 1 pop         // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword *leafs num_leafs num_rounds domain_length
+                swap 1 push 2               // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword *leafs num_leafs domain_length num_rounds 2
+                pow                         // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword *leafs num_leafs domain_length (1<<num_rounds)
+                swap 1 div pop              // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword *leafs num_leafs (domain_length>>num_rounds)
+                dup 1 eq                    // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword *leafs num_leafs eq
+                assert                      // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword *leafs num_leafs
+                push 0 swap 1               // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword *leafs 0 num_leafs
+                call {merkle_root}          // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword [last_root]
+
+                // check against last root dequeued
+                dup 8                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword [last_root] *roots
+                dup 0                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword [last_root] *roots *roots
+                call {length_of_list_of_digests}
+                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword [last_root] *roots num_roots
+                push -1 add                 // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword [last_root] *roots num_roots-1
+                call {get_digest}           // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword [last_root] [roots[-1]]
+                assert_vector               // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword [last_root] [roots[-1]]
+
+                // clean up top of stack
+                pop pop pop pop pop         // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword [last_root]
+                pop pop pop pop pop         // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword
+
                 push 1337 assert
 
                 return
@@ -771,8 +841,8 @@ mod test {
 
     #[test]
     fn test_shadow() {
-        // let mut rng = thread_rng();
-        let seed = [
+        let seed: [u8; 32] //= thread_rng().gen();
+         = [
             0xf7, 0x41, 0x2a, 0x3e, 0x1e, 0xa7, 0x86, 0xf6, 0xf3, 0x55, 0xdb, 0xcc, 0xe0, 0x32,
             0xf3, 0xec, 0x6f, 0x51, 0x26, 0xcb, 0xb2, 0x7c, 0x4a, 0x34, 0xb4, 0xc9, 0xe9, 0xa8,
             0x7c, 0x34, 0x11, 0xc5,
@@ -782,6 +852,7 @@ mod test {
         let domain_length = expansion_factor * (1 << rng.gen_range(8..15));
         let offset = BFieldElement::new(7);
         let num_colinearity_checks = rng.gen_range(1..min(160, domain_length / 4));
+        println!("number of colinearity checks: {num_colinearity_checks}");
         let procedure = FriVerify::new(
             offset,
             domain_length,
