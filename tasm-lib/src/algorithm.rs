@@ -102,7 +102,7 @@ where
         for _ in 0..num_states {
             let seed: [u8; 32] = rng.gen();
             println!(
-                "testing {} common case with seed: {:x?}",
+                "testing {} common case with seed: {:#4x?}",
                 self.algorithm.borrow().entrypoint(),
                 seed
             );
