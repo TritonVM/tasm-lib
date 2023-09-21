@@ -626,6 +626,8 @@ impl BasicSnippet for FriVerify {
                 pop pop pop pop pop         // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword [last_root]
                 pop pop pop pop pop         // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword
 
+
+
                 push 1337 assert
 
                 return

@@ -1,6 +1,6 @@
 // Recursion limit for macro_rules expansions, used for
 // triton_asm!
-#![recursion_limit = "2048"]
+#![recursion_limit = "4096"]
 
 use anyhow::anyhow;
 use anyhow::bail;
