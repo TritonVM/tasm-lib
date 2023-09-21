@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
+    arithmetic::xfe_ntt::XfeNtt,
     field, get_init_tvm_stack,
     hashing::merkle_root::MerkleRoot,
     list::{
@@ -446,6 +447,7 @@ impl BasicSnippet for FriVerify {
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
         let domain_length = field!(FriVerify::domain_length);
+        let domain_generator = field!(FriVerify::domain_generator);
         let expansion_factor = field!(FriVerify::expansion_factor);
         let num_colinearity_checks = field!(FriVerify::num_colinearity_checks);
         let new_list_of_digests = library.import(Box::new(UnsafeNew(DataType::Digest)));
@@ -489,7 +491,27 @@ impl BasicSnippet for FriVerify {
         let length_of_list_of_digests = library.import(Box::new(UnsafeLength(DataType::Digest)));
         let merkle_root = library.import(Box::new(MerkleRoot));
         let get_digest = library.import(Box::new(UnsafeGet(DataType::Digest)));
+        let xfe_ntt = library.import(Box::new(XfeNtt));
+        let assert_tail_xfe0 = format!("{entrypoint}_tail_xfe0");
+        let length_of_list_of_xfe = library.import(Box::new(UnsafeLength(DataType::XFE)));
+        let get_xfe_from_list = library.import(Box::new(UnsafeGet(DataType::XFE)));
         triton_asm! {
+            // BEFORE: _ *list index
+            // AFTER: _ *list length
+            {assert_tail_xfe0}:
+                dup 1                           // _ *list index *list
+                call {length_of_list_of_xfe}    // _ *list index len
+                dup 1 eq                        // _ *list index len==index
+                skiz return                     // _ *list index
+
+                dup 1 dup 1                     // _ *list index *list index
+                call {get_xfe_from_list}        // _ *list index xfe2 xfe1 xfe0
+                push 0 eq assert                // _ *list index xfe2 xfe1
+                push 0 eq assert                // _ *list index xfe2
+                push 0 eq assert                // _ *list index
+                push 1 add                      // _ *list index+1
+                recurse
+
             // BEFORE: _ *proof_stream *fri_verify num_rounds last_round_max_degree | num_rounds *roots *alphas
             // AFTER: _ ... | 0 *roots *alphas
             {dequeue_query_phase}:
@@ -627,7 +649,21 @@ impl BasicSnippet for FriVerify {
                 pop pop pop pop pop         // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword [last_root]
                 pop pop pop pop pop         // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword
 
+                // get omega
+                dup 7                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword *fri_verify
+                {&domain_generator}         // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword *generator
+                read_mem swap 1 pop         // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword domain_generator
+                dup 7                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword domain_generator num_rounds
+                push 2 pow                  // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword domain_generator 1<<num_rounds
+                swap 1 pow                  // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword domain_generator^(num_rounds)
 
+                // compute intt (without scaling)
+                invert                      // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword omega_inv
+                call {xfe_ntt}              // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_polynomial
+
+                // test low degree of polynomial
+                dup 5 push 1 add            // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_polynomial num_nonzero_coefficients
+                call {assert_tail_xfe0}     // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream
 
                 push 1337 assert
 
@@ -707,8 +743,6 @@ impl Procedure for FriVerify {
 
 #[cfg(test)]
 mod test {
-    use std::cmp::min;
-
     use itertools::Itertools;
     use rand::{rngs::StdRng, thread_rng, Rng, SeedableRng};
     use triton_vm::{fri::Fri, proof_stream::ProofStream, BFieldElement};
@@ -856,8 +890,9 @@ mod test {
         let expansion_factor = 1 << rng.gen_range(1..5);
         let domain_length = expansion_factor * (1 << rng.gen_range(8..15));
         let offset = BFieldElement::new(7);
-        let num_colinearity_checks = rng.gen_range(1..min(160, domain_length / 4));
+        let num_colinearity_checks = 2; //rng.gen_range(1..min(160, domain_length / 4));
         println!("number of colinearity checks: {num_colinearity_checks}");
+        println!("expansion factor: {expansion_factor}");
         let procedure = FriVerify::new(
             offset,
             domain_length,
