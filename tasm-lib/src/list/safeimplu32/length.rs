@@ -10,9 +10,9 @@ use crate::snippet::{DataType, DeprecatedSnippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
-pub struct SafeLength(pub DataType);
+pub struct Length(pub DataType);
 
-impl DeprecatedSnippet for SafeLength {
+impl DeprecatedSnippet for Length {
     fn input_field_names(&self) -> Vec<String> {
         vec!["*list".to_string()]
     }
@@ -168,12 +168,12 @@ mod tests {
 
     #[test]
     fn new_snippet_test_long() {
-        test_rust_equivalence_multiple_deprecated(&SafeLength(DataType::Bool), true);
-        test_rust_equivalence_multiple_deprecated(&SafeLength(DataType::U32), true);
-        test_rust_equivalence_multiple_deprecated(&SafeLength(DataType::U64), true);
-        test_rust_equivalence_multiple_deprecated(&SafeLength(DataType::BFE), true);
-        test_rust_equivalence_multiple_deprecated(&SafeLength(DataType::XFE), true);
-        test_rust_equivalence_multiple_deprecated(&SafeLength(DataType::Digest), true);
+        test_rust_equivalence_multiple_deprecated(&Length(DataType::Bool), true);
+        test_rust_equivalence_multiple_deprecated(&Length(DataType::U32), true);
+        test_rust_equivalence_multiple_deprecated(&Length(DataType::U64), true);
+        test_rust_equivalence_multiple_deprecated(&Length(DataType::BFE), true);
+        test_rust_equivalence_multiple_deprecated(&Length(DataType::XFE), true);
+        test_rust_equivalence_multiple_deprecated(&Length(DataType::Digest), true);
     }
 
     #[test]
@@ -234,7 +234,7 @@ mod tests {
         );
 
         test_rust_equivalence_given_input_values_deprecated(
-            &SafeLength(DataType::BFE),
+            &Length(DataType::BFE),
             &init_stack,
             &[],
             &mut memory,
@@ -251,6 +251,6 @@ mod benches {
 
     #[test]
     fn safe_length_benchmark() {
-        bench_and_write(SafeLength(DataType::Digest));
+        bench_and_write(Length(DataType::Digest));
     }
 }

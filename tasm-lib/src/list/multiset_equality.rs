@@ -11,8 +11,8 @@ use twenty_first::{
 
 use super::ListType;
 use crate::hashing::hash_varlen::HashVarlen;
-use crate::list::safeimplu32::length::SafeLength;
-use crate::list::unsafeimplu32::length::UnsafeLength;
+use crate::list::safeimplu32::length::Length as SafeLength;
+use crate::list::unsafeimplu32::length::Length as UnsafeLength;
 use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, Digest, DIGEST_LENGTH};
 use crate::{
     library::Library,

@@ -7,10 +7,10 @@ use triton_vm::{triton_asm, NonDeterminism};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::function::Function;
-use crate::list::safeimplu32::length::SafeLength;
+use crate::list::safeimplu32::length::Length as SafeLength;
 use crate::list::safeimplu32::new::SafeNew;
 use crate::list::safeimplu32::set_length::SafeSetLength;
-use crate::list::unsafeimplu32::length::UnsafeLength;
+use crate::list::unsafeimplu32::length::Length as UnsafeLength;
 use crate::list::unsafeimplu32::new::UnsafeNew;
 use crate::list::unsafeimplu32::set_length::UnsafeSetLength;
 use crate::list::ListType;

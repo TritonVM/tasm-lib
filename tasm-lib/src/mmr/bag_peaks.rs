@@ -7,7 +7,7 @@ use twenty_first::{shared_math::other::random_elements, util_types::shared::bag_
 
 use crate::{
     get_init_tvm_stack,
-    list::unsafeimplu32::{get::UnsafeGet, length::UnsafeLength},
+    list::unsafeimplu32::{get::UnsafeGet, length::Length},
     rust_shadowing_helper_functions,
     snippet::{DataType, DeprecatedSnippet},
     Digest, ExecutionState, VmHasher, DIGEST_LENGTH,
@@ -75,7 +75,7 @@ impl DeprecatedSnippet for BagPeaks {
         let entrypoint = self.entrypoint_name();
 
         let get_element = library.import(Box::new(UnsafeGet(DataType::Digest)));
-        let get_length = library.import(Box::new(UnsafeLength(DataType::Digest)));
+        let get_length = library.import(Box::new(Length(DataType::Digest)));
 
         format!(
             "

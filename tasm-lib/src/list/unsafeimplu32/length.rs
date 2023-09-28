@@ -11,9 +11,9 @@ use crate::{get_init_tvm_stack, ExecutionState};
 
 // Called "Long" because this logic can be shortened
 #[derive(Clone, Debug)]
-pub struct UnsafeLength(pub DataType);
+pub struct Length(pub DataType);
 
-impl DeprecatedSnippet for UnsafeLength {
+impl DeprecatedSnippet for Length {
     fn input_field_names(&self) -> Vec<String> {
         vec!["*list".to_string()]
     }
@@ -85,7 +85,7 @@ impl DeprecatedSnippet for UnsafeLength {
 
     fn entrypoint_name(&self) -> String {
         format!(
-            "tasm_list_unsafeimplu32_length_long___{}",
+            "tasm_list_unsafeimplu32_length___{}",
             self.0.label_friendly_name()
         )
     }
@@ -156,9 +156,9 @@ mod tests {
 
     #[test]
     fn new_snippet_test_long() {
-        test_rust_equivalence_multiple_deprecated(&UnsafeLength(DataType::BFE), true);
-        test_rust_equivalence_multiple_deprecated(&UnsafeLength(DataType::U64), true);
-        test_rust_equivalence_multiple_deprecated(&UnsafeLength(DataType::Digest), true);
+        test_rust_equivalence_multiple_deprecated(&Length(DataType::BFE), true);
+        test_rust_equivalence_multiple_deprecated(&Length(DataType::U64), true);
+        test_rust_equivalence_multiple_deprecated(&Length(DataType::Digest), true);
     }
 
     #[test]
@@ -195,7 +195,7 @@ mod tests {
         }
 
         test_rust_equivalence_given_input_values_deprecated(
-            &UnsafeLength(DataType::BFE),
+            &Length(DataType::BFE),
             &init_stack,
             &[],
             &mut init_memory,
@@ -212,6 +212,6 @@ mod benches {
 
     #[test]
     fn unsafe_length_long_benchmark() {
-        bench_and_write(UnsafeLength(DataType::Digest));
+        bench_and_write(Length(DataType::Digest));
     }
 }

@@ -178,11 +178,11 @@ impl FromStr for DataType {
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         use DataType::*;
 
-        let res = if s.starts_with("list_L") && s.ends_with("R") {
+        let res = if s.starts_with("list_L") && s.ends_with('R') {
             let inner = &s[6..s.len() - 1];
             let inner = FromStr::from_str(inner)?;
             DataType::List(Box::new(inner))
-        } else if s.starts_with("tuple_L") && s.ends_with("R") {
+        } else if s.starts_with("tuple_L") && s.ends_with('R') {
             let inner = &s[7..s.len() - 1];
             let inners = inner.split("___");
             let mut inners_resolved: Vec<Self> = vec![];
