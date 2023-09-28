@@ -51,6 +51,32 @@ pub enum DataType {
 }
 
 impl DataType {
+    /// Return a string matching how the variant looks in source code
+    pub fn variant_name(&self) -> String {
+        // This function is used to autogenerate snippets in the tasm-lang compiler
+        match self {
+            DataType::Bool => "DataType::Bool".to_owned(),
+            DataType::U32 => "DataType::U32".to_owned(),
+            DataType::U64 => "DataType::U64".to_owned(),
+            DataType::U128 => "DataType::U128".to_owned(),
+            DataType::BFE => "DataType::BFE".to_owned(),
+            DataType::XFE => "DataType::XFE".to_owned(),
+            DataType::Digest => "DataType::Digest".to_owned(),
+            DataType::List(elem_type) => {
+                format!("DataType::List(Box::new({}))", elem_type.variant_name())
+            }
+            DataType::VoidPointer => "DataType::VoidPointer".to_owned(),
+            DataType::Tuple(elements) => {
+                let elements_as_variant_names =
+                    elements.iter().map(|x| x.variant_name()).collect_vec();
+                format!(
+                    "DataType::Tuple(vec![{}])",
+                    elements_as_variant_names.join(", ")
+                )
+            }
+        }
+    }
+
     /// Return a collection of different data types, used for testing
     #[cfg(test)]
     pub fn big_random_generatable_type_collection() -> Vec<DataType> {
@@ -144,30 +170,10 @@ impl DataType {
     }
 }
 
-// Display for list is used to derive seperate entrypoint names for snippet implementations that take a type parameter
-impl Display for DataType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let str = match self {
-            DataType::Bool => "bool".to_string(),
-            DataType::U32 => "u32".to_string(),
-            DataType::U64 => "u64".to_string(),
-            DataType::U128 => "u128".to_string(),
-            DataType::BFE => "bfe".to_string(),
-            DataType::XFE => "xfe".to_string(),
-            DataType::Digest => "digest".to_string(),
-            DataType::List(element_type) => format!("list({element_type})"),
-            DataType::VoidPointer => "void-pointer".to_string(),
-            DataType::Tuple(t) => format!("tuple({})", t.iter().join(",")),
-        };
-        write!(f, "{str}",)
-    }
-}
-
 impl DataType {
     pub fn label_friendly_name(&self) -> String {
         match self {
             DataType::List(inner_type) => format!("list_L{}R", inner_type.label_friendly_name()),
-            DataType::VoidPointer => "void_pointer".to_string(),
             DataType::Tuple(inner_types) => {
                 format!(
                     "tuple_L{}R",
@@ -177,9 +183,17 @@ impl DataType {
                         .join("_")
                 )
             }
-            _ => format!("{}", self),
+            DataType::VoidPointer => "void_pointer".to_string(),
+            DataType::Bool => "bool".to_string(),
+            DataType::U32 => "u32".to_string(),
+            DataType::U64 => "u64".to_string(),
+            DataType::U128 => "u128".to_string(),
+            DataType::BFE => "bfe".to_string(),
+            DataType::XFE => "xfe".to_string(),
+            DataType::Digest => "digest".to_string(),
         }
     }
+
     pub fn get_size(&self) -> usize {
         match self {
             DataType::Bool => 1,
@@ -555,6 +569,19 @@ mod tests {
         println!(
             "{}",
             example_snippet.iter().map(|x| x.to_string()).join("\n")
+        );
+    }
+
+    #[test]
+    fn data_type_string_rep() {
+        assert_eq!("DataType::Digest", DataType::Digest.variant_name());
+        assert_eq!(
+            "DataType::Tuple(vec![DataType::XFE, DataType::BFE, DataType::Digest])",
+            DataType::Tuple(vec![DataType::XFE, DataType::BFE, DataType::Digest]).variant_name()
+        );
+        assert_eq!(
+            "DataType::List(Box::new(DataType::Digest))",
+            DataType::List(Box::new(DataType::Digest)).variant_name()
         );
     }
 }

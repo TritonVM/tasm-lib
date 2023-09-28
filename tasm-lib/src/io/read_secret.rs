@@ -15,7 +15,7 @@ pub struct ReadSecret(pub DataType);
 
 impl DeprecatedSnippet for ReadSecret {
     fn entrypoint_name(&self) -> String {
-        format!("tasm_io_read_secret_{}", self.0)
+        format!("tasm_io_read_secret_{}", self.0.label_friendly_name())
     }
 
     fn input_field_names(&self) -> Vec<String> {
