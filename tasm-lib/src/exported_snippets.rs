@@ -53,11 +53,11 @@ use crate::{
     list::{
         contiguous_list,
         range::Range,
-        safe_u32::{
+        safeimplu32::{
             get::SafeGet, length::SafeLength, new::SafeNew, pop::SafePop, push::SafePush,
             set::SafeSet, set_length::SafeSetLength,
         },
-        unsafe_u32::{
+        unsafeimplu32::{
             get::UnsafeGet, length::UnsafeLength, new::UnsafeNew, pop::UnsafePop, push::UnsafePush,
             set::UnsafeSet, set_length::UnsafeSetLength,
         },

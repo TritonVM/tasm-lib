@@ -16,8 +16,8 @@ use crate::arithmetic::u64::eq_u64::EqU64;
 use crate::hashing::eq_digest::EqDigest;
 use crate::hashing::swap_digest::SwapDigest;
 use crate::library::Library;
-use crate::list::safe_u32::get::SafeGet;
-use crate::list::unsafe_u32::get::UnsafeGet;
+use crate::list::safeimplu32::get::SafeGet;
+use crate::list::unsafeimplu32::get::UnsafeGet;
 use crate::list::ListType;
 use crate::snippet::{DataType, DeprecatedSnippet};
 use crate::{

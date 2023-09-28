@@ -7,7 +7,7 @@ use twenty_first::shared_math::{b_field_element::BFieldElement, other::random_el
 use crate::{
     get_init_tvm_stack,
     library::Library,
-    list::safe_u32::SAFE_LIST_ELEMENT_CAPACITY,
+    list::safeimplu32::SAFE_LIST_ELEMENT_CAPACITY,
     rust_shadowing_helper_functions::safe_list::{safe_insert_random_list, safe_list_push},
     snippet::{DataType, DeprecatedSnippet},
     ExecutionState,

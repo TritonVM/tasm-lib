@@ -150,7 +150,7 @@ mod tests {
     use rand::random;
 
     use crate::{
-        list::safe_u32::push::SafePush, rust_shadowing_helper_functions,
+        list::safeimplu32::push::SafePush, rust_shadowing_helper_functions,
         test_helpers::test_rust_equivalence_multiple_deprecated, Digest, DIGEST_LENGTH,
     };
 

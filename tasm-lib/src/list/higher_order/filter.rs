@@ -8,14 +8,14 @@ use triton_vm::triton_asm;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::function::Function;
-use crate::list::safe_u32::get::SafeGet;
-use crate::list::safe_u32::length::SafeLength;
-use crate::list::safe_u32::new::SafeNew;
-use crate::list::safe_u32::set_length::SafeSetLength;
-use crate::list::unsafe_u32::get::UnsafeGet;
-use crate::list::unsafe_u32::length::UnsafeLength;
-use crate::list::unsafe_u32::new::UnsafeNew;
-use crate::list::unsafe_u32::set_length::UnsafeSetLength;
+use crate::list::safeimplu32::get::SafeGet;
+use crate::list::safeimplu32::length::SafeLength;
+use crate::list::safeimplu32::new::SafeNew;
+use crate::list::safeimplu32::set_length::SafeSetLength;
+use crate::list::unsafeimplu32::get::UnsafeGet;
+use crate::list::unsafeimplu32::length::UnsafeLength;
+use crate::list::unsafeimplu32::new::UnsafeNew;
+use crate::list::unsafeimplu32::set_length::UnsafeSetLength;
 use crate::list::{self, ListType};
 use crate::memory::memcpy::MemCpy;
 use crate::snippet::BasicSnippet;
@@ -241,7 +241,7 @@ impl Function for Filter {
             ListType::Safe => {
                 // Push capacity to stack
                 stack.push(BFieldElement::new(output_list_capacity as u64));
-                list::safe_u32::new::SafeNew(input_type.clone()).rust_shadowing(
+                list::safeimplu32::new::SafeNew(input_type.clone()).rust_shadowing(
                     stack,
                     vec![],
                     vec![],
@@ -251,7 +251,7 @@ impl Function for Filter {
             }
             ListType::Unsafe => {
                 stack.push(BFieldElement::new(output_list_capacity as u64));
-                list::unsafe_u32::new::UnsafeNew(input_type.clone()).rust_shadowing(
+                list::unsafeimplu32::new::UnsafeNew(input_type.clone()).rust_shadowing(
                     stack,
                     vec![],
                     vec![],
@@ -266,7 +266,7 @@ impl Function for Filter {
         stack.push(BFieldElement::new(len as u64));
         match self.list_type {
             ListType::Safe => {
-                list::safe_u32::set_length::SafeSetLength(output_type).rust_shadowing(
+                list::safeimplu32::set_length::SafeSetLength(output_type).rust_shadowing(
                     stack,
                     vec![],
                     vec![],
@@ -274,7 +274,7 @@ impl Function for Filter {
                 );
             }
             ListType::Unsafe => {
-                list::unsafe_u32::set_length::UnsafeSetLength(output_type).rust_shadowing(
+                list::unsafeimplu32::set_length::UnsafeSetLength(output_type).rust_shadowing(
                     stack,
                     vec![],
                     vec![],
@@ -322,7 +322,7 @@ impl Function for Filter {
         stack.push(BFieldElement::new(output_index as u64));
         match self.list_type {
             ListType::Safe => {
-                list::safe_u32::set_length::SafeSetLength(input_type).rust_shadowing(
+                list::safeimplu32::set_length::SafeSetLength(input_type).rust_shadowing(
                     stack,
                     vec![],
                     vec![],
@@ -330,7 +330,7 @@ impl Function for Filter {
                 );
             }
             ListType::Unsafe => {
-                list::unsafe_u32::set_length::UnsafeSetLength(input_type).rust_shadowing(
+                list::unsafeimplu32::set_length::UnsafeSetLength(input_type).rust_shadowing(
                     stack,
                     vec![],
                     vec![],

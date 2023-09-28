@@ -6,8 +6,8 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use crate::{
     get_init_tvm_stack,
     list::{
-        safe_u32::{new::SafeNew, set_length::SafeSetLength},
-        unsafe_u32::{new::UnsafeNew, set_length::UnsafeSetLength},
+        safeimplu32::{new::SafeNew, set_length::SafeSetLength},
+        unsafeimplu32::{new::UnsafeNew, set_length::UnsafeSetLength},
     },
     rust_shadowing_helper_functions::{self},
     snippet::{DataType, DeprecatedSnippet},

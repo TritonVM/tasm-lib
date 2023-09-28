@@ -11,8 +11,8 @@ use crate::{
     get_init_tvm_stack,
     list::{
         self,
-        safe_u32::{new::SafeNew, set_length::SafeSetLength},
-        unsafe_u32::{new::UnsafeNew, set_length::UnsafeSetLength},
+        safeimplu32::{new::SafeNew, set_length::SafeSetLength},
+        unsafeimplu32::{new::UnsafeNew, set_length::UnsafeSetLength},
         ListType,
     },
     rust_shadowing_helper_functions,
@@ -328,7 +328,7 @@ impl DeprecatedSnippet for SampleIndices {
             ListType::Safe => {
                 // Push capacity to stack
                 stack.push(BFieldElement::new(capacity as u64));
-                list::safe_u32::new::SafeNew(DataType::U32).rust_shadowing(
+                list::safeimplu32::new::SafeNew(DataType::U32).rust_shadowing(
                     stack,
                     _std_in.clone(),
                     _secret_in.clone(),
@@ -338,7 +338,7 @@ impl DeprecatedSnippet for SampleIndices {
             }
             ListType::Unsafe => {
                 stack.push(BFieldElement::new(capacity as u64));
-                list::unsafe_u32::new::UnsafeNew(DataType::U32).rust_shadowing(
+                list::unsafeimplu32::new::UnsafeNew(DataType::U32).rust_shadowing(
                     stack,
                     _std_in.clone(),
                     _secret_in.clone(),
@@ -353,11 +353,11 @@ impl DeprecatedSnippet for SampleIndices {
         stack.push(BFieldElement::new(number as u64));
         match self.list_type {
             ListType::Safe => {
-                list::safe_u32::set_length::SafeSetLength(DataType::U32)
+                list::safeimplu32::set_length::SafeSetLength(DataType::U32)
                     .rust_shadowing(stack, _std_in, _secret_in, memory);
             }
             ListType::Unsafe => {
-                list::unsafe_u32::set_length::UnsafeSetLength(DataType::U32)
+                list::unsafeimplu32::set_length::UnsafeSetLength(DataType::U32)
                     .rust_shadowing(stack, _std_in, _secret_in, memory);
             }
         }

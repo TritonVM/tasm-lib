@@ -7,7 +7,7 @@ use twenty_first::{shared_math::other::random_elements, util_types::shared::bag_
 
 use crate::{
     get_init_tvm_stack,
-    list::unsafe_u32::{get::UnsafeGet, length::UnsafeLength},
+    list::unsafeimplu32::{get::UnsafeGet, length::UnsafeLength},
     rust_shadowing_helper_functions,
     snippet::{DataType, DeprecatedSnippet},
     Digest, ExecutionState, VmHasher, DIGEST_LENGTH,
