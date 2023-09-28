@@ -9,11 +9,11 @@ use crate::{
 };
 
 #[derive(Clone, Debug)]
-pub struct SafeSub;
+pub struct Safesub;
 
-impl DeprecatedSnippet for SafeSub {
+impl DeprecatedSnippet for Safesub {
     fn entrypoint_name(&self) -> String {
-        "tasm_arithmetic_u32_safe_sub_u32".to_string()
+        "tasm_arithmetic_u32_safesub".to_string()
     }
 
     fn input_field_names(&self) -> Vec<String> {
@@ -129,7 +129,7 @@ mod tests {
 
     #[test]
     fn snippet_test() {
-        test_rust_equivalence_multiple_deprecated(&SafeSub, true);
+        test_rust_equivalence_multiple_deprecated(&Safesub, true);
     }
 
     #[test]
@@ -175,7 +175,7 @@ mod tests {
         .concat();
 
         test_rust_equivalence_given_input_values_deprecated(
-            &SafeSub,
+            &Safesub,
             &init_stack,
             &[],
             &mut HashMap::default(),
@@ -192,6 +192,6 @@ mod benches {
 
     #[test]
     fn safe_sub_benchmark() {
-        bench_and_write(SafeSub);
+        bench_and_write(Safesub);
     }
 }

@@ -8,11 +8,11 @@ use crate::{
 };
 
 #[derive(Clone, Debug)]
-pub struct OrU32;
+pub struct Or;
 
-impl DeprecatedSnippet for OrU32 {
+impl DeprecatedSnippet for Or {
     fn entrypoint_name(&self) -> String {
-        "tasm_arithmetic_u32_or_u32".to_string()
+        "tasm_arithmetic_u32_or".to_string()
     }
 
     fn input_field_names(&self) -> Vec<String> {
@@ -132,7 +132,7 @@ mod tests {
 
     #[test]
     fn snippet_test() {
-        test_rust_equivalence_multiple_deprecated(&OrU32, true);
+        test_rust_equivalence_multiple_deprecated(&Or, true);
     }
 
     #[test]
@@ -162,7 +162,7 @@ mod tests {
         .concat();
 
         test_rust_equivalence_given_input_values_deprecated(
-            &OrU32,
+            &Or,
             &init_stack,
             &[],
             &mut HashMap::default(),
@@ -179,6 +179,6 @@ mod benches {
 
     #[test]
     fn u32_or_benchmark() {
-        bench_and_write(OrU32);
+        bench_and_write(Or);
     }
 }

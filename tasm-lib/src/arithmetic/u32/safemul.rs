@@ -7,28 +7,30 @@ use crate::{
     ExecutionState,
 };
 
+/// If the inputs, are valid u32s, then the output is guaranteed to be to.
+/// Crashes on overflow.
 #[derive(Clone, Debug)]
-pub struct SafeAdd;
+pub struct Safemul;
 
-impl DeprecatedSnippet for SafeAdd {
+impl DeprecatedSnippet for Safemul {
     fn entrypoint_name(&self) -> String {
-        "tasm_arithmetic_u32_safe_add_u32".to_string()
+        "tasm_arithmetic_u32_safemul".to_string()
     }
 
     fn input_field_names(&self) -> Vec<String> {
-        vec!["rhs".to_string(), "lhs".to_string()]
+        vec!["lhs".to_string(), "rhs".to_string()]
     }
 
-    fn output_field_names(&self) -> Vec<String> {
-        vec!["lhs + rhs".to_string()]
-    }
-
-    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+    fn input_types(&self) -> Vec<DataType> {
         vec![DataType::U32, DataType::U32]
     }
 
-    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+    fn output_types(&self) -> Vec<DataType> {
         vec![DataType::U32]
+    }
+
+    fn output_field_names(&self) -> Vec<String> {
+        vec!["lhs * rhs".to_string()]
     }
 
     fn stack_diff(&self) -> isize {
@@ -39,33 +41,35 @@ impl DeprecatedSnippet for SafeAdd {
         let entrypoint = self.entrypoint_name();
         format!(
             "
+                // BEFORE: _ rhs lhs
+                // AFTER: _ (lhs * rhs)
                 {entrypoint}:
-                    add // _    lhs + rhs
-                    dup 0 // _   (lhs + rhs) (lhs + rhs)
-                    split // _  (lhs + rhs) hi lo
-                    pop   // _  (lhs + rhs) hi
-                    push 0 // _ (lhs + rhs) hi 0
-                    eq     // _ (lhs + rhs) (hi == 0)
-                    assert // _ (lhs + rhs)
+                    mul
+                    dup 0 // _   (lhs * rhs) (lhs * rhs)
+                    split // _  (lhs * rhs) hi lo
+                    pop   // _  (lhs * rhs) hi
+                    push 0 // _ (lhs * rhs) hi 0
+                    eq     // _ (lhs * rhs) (hi == 0)
+                    assert // _ (lhs * rhs)
                     return
                     "
         )
     }
 
     fn crash_conditions(&self) -> Vec<String> {
-        vec!["u32 overflow".to_string()]
+        vec!["result overflows u32".to_string()]
     }
 
-    fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
         let mut ret: Vec<ExecutionState> = vec![];
         for _ in 0..10 {
             let mut stack = get_init_tvm_stack();
-            let lhs = thread_rng().gen_range(0..u32::MAX / 2);
-            let rhs = thread_rng().gen_range(0..u32::MAX / 2);
+            let lhs = thread_rng().gen_range(0..(1 << 16));
+            let rhs = thread_rng().gen_range(0..(1 << 16));
             let lhs = BFieldElement::new(lhs as u64);
             let rhs = BFieldElement::new(rhs as u64);
-            stack.push(rhs);
             stack.push(lhs);
+            stack.push(rhs);
             ret.push(ExecutionState::with_stack(stack));
         }
 
@@ -74,26 +78,23 @@ impl DeprecatedSnippet for SafeAdd {
 
     fn rust_shadowing(
         &self,
-        stack: &mut Vec<twenty_first::shared_math::b_field_element::BFieldElement>,
-        _std_in: Vec<twenty_first::shared_math::b_field_element::BFieldElement>,
-        _secret_in: Vec<twenty_first::shared_math::b_field_element::BFieldElement>,
-        _memory: &mut std::collections::HashMap<
-            twenty_first::shared_math::b_field_element::BFieldElement,
-            twenty_first::shared_math::b_field_element::BFieldElement,
-        >,
+        stack: &mut Vec<BFieldElement>,
+        _std_in: Vec<BFieldElement>,
+        _secret_in: Vec<BFieldElement>,
+        _memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
     ) {
         let lhs: u32 = stack.pop().unwrap().try_into().unwrap();
         let rhs: u32 = stack.pop().unwrap().try_into().unwrap();
 
-        let sum = lhs + rhs;
-        stack.push(BFieldElement::new(sum as u64));
+        let prod = lhs * rhs;
+        stack.push(BFieldElement::new(prod as u64));
     }
 
     fn common_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
             [
                 get_init_tvm_stack(),
-                vec![BFieldElement::new(1 << 16), BFieldElement::new(1 << 15)],
+                vec![BFieldElement::new(1 << 8), BFieldElement::new(1 << 9)],
             ]
             .concat(),
         )
@@ -104,8 +105,8 @@ impl DeprecatedSnippet for SafeAdd {
             [
                 get_init_tvm_stack(),
                 vec![
-                    BFieldElement::new((1 << 30) - 1),
-                    BFieldElement::new((1 << 31) - 1),
+                    BFieldElement::new((1 << 15) - 1),
+                    BFieldElement::new((1 << 16) - 1),
                 ],
             ]
             .concat(),
@@ -128,27 +129,43 @@ mod tests {
 
     #[test]
     fn snippet_test() {
-        test_rust_equivalence_multiple_deprecated(&SafeAdd, true);
+        test_rust_equivalence_multiple_deprecated(&Safemul, true);
     }
 
     #[test]
-    fn safe_add_simple_test() {
-        prop_safe_add(1000, 1, Some(1001));
-        prop_safe_add(10_000, 900, Some(10_900));
+    fn safe_sub_simple_test() {
+        prop_safe_mul(1000, 1, Some(1000));
+        prop_safe_mul(10_000, 900, Some(9_000_000));
+        prop_safe_mul(1, 1, Some(1));
+        prop_safe_mul(10_000, 10_000, Some(100_000_000));
+        prop_safe_mul(u32::MAX, 1, Some(u32::MAX));
+        prop_safe_mul(1, u32::MAX, Some(u32::MAX));
     }
 
     #[should_panic]
     #[test]
     fn overflow_test() {
-        prop_safe_add((1 << 31) + 1000, 1 << 31, None);
+        prop_safe_mul(1 << 16, 1 << 16, None);
     }
 
-    fn prop_safe_add(lhs: u32, rhs: u32, _expected: Option<u32>) {
+    #[should_panic]
+    #[test]
+    fn overflow_test_2() {
+        prop_safe_mul(1 << 31, 2, None);
+    }
+
+    #[should_panic]
+    #[test]
+    fn overflow_test_3() {
+        prop_safe_mul(2, 1 << 31, None);
+    }
+
+    fn prop_safe_mul(lhs: u32, rhs: u32, _expected: Option<u32>) {
         let mut init_stack = get_init_tvm_stack();
         init_stack.push(BFieldElement::new(rhs as u64));
         init_stack.push(BFieldElement::new(lhs as u64));
 
-        let expected = lhs.checked_add(rhs);
+        let expected = lhs.checked_mul(rhs);
         let expected = vec![
             get_init_tvm_stack(),
             vec![expected
@@ -157,8 +174,8 @@ mod tests {
         ]
         .concat();
 
-        test_rust_equivalence_given_input_values_deprecated::<SafeAdd>(
-            &SafeAdd,
+        test_rust_equivalence_given_input_values_deprecated(
+            &Safemul,
             &init_stack,
             &[],
             &mut HashMap::default(),
@@ -174,7 +191,7 @@ mod benches {
     use crate::snippet_bencher::bench_and_write;
 
     #[test]
-    fn safe_add_benchmark() {
-        bench_and_write(SafeAdd);
+    fn safe_mul_benchmark() {
+        bench_and_write(Safemul);
     }
 }

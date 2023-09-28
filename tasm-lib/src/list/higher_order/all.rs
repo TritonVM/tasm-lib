@@ -335,7 +335,7 @@ impl DeprecatedSnippet for TestHashXFieldElementLsb {
 
     fn function_code(&self, library: &mut Library) -> String {
         let entrypoint = self.entrypoint_name();
-        let unused_import = library.import(Box::new(arithmetic::u32::safe_add::SafeAdd));
+        let unused_import = library.import(Box::new(arithmetic::u32::safeadd::Safeadd));
         format!(
             "
         // BEFORE: _ x2 x1 x0

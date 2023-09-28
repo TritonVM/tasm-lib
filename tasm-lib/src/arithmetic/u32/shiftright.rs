@@ -8,11 +8,11 @@ use crate::snippet::{DataType, DeprecatedSnippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
-pub struct ShiftRightU32;
+pub struct Shiftright;
 
-impl DeprecatedSnippet for ShiftRightU32 {
+impl DeprecatedSnippet for Shiftright {
     fn entrypoint_name(&self) -> String {
-        "tasm_arithmetic_u32_shift_right_u32".to_string()
+        "tasm_arithmetic_u32_shiftright".to_string()
     }
 
     fn input_field_names(&self) -> Vec<String> {
@@ -132,7 +132,7 @@ mod tests {
 
     #[test]
     fn shift_right_test() {
-        test_rust_equivalence_multiple_deprecated(&ShiftRightU32, true);
+        test_rust_equivalence_multiple_deprecated(&Shiftright, true);
     }
 
     #[test]
@@ -148,7 +148,7 @@ mod tests {
         let mut init_stack = get_init_tvm_stack();
         init_stack.push(BFieldElement::new(u32::MAX as u64));
         init_stack.push(32u64.into());
-        ShiftRightU32
+        Shiftright
             .link_and_run_tasm_from_state_for_test(&mut ExecutionState::with_stack(init_stack));
     }
 
@@ -163,7 +163,7 @@ mod tests {
         expected_stack.push((expected_u32 as u64).into());
 
         test_rust_equivalence_given_input_values_deprecated(
-            &ShiftRightU32,
+            &Shiftright,
             &init_stack,
             &[],
             &mut HashMap::default(),
@@ -180,6 +180,6 @@ mod benches {
 
     #[test]
     fn shift_right_benchmark() {
-        bench_and_write(ShiftRightU32);
+        bench_and_write(Shiftright);
     }
 }

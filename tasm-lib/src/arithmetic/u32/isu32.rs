@@ -9,9 +9,9 @@ use crate::snippet::{DataType, DeprecatedSnippet};
 use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
 
 #[derive(Clone, Debug)]
-pub struct IsU32;
+pub struct Isu32;
 
-impl DeprecatedSnippet for IsU32 {
+impl DeprecatedSnippet for Isu32 {
     fn input_field_names(&self) -> Vec<String> {
         vec!["value".to_string()]
     }
@@ -52,7 +52,7 @@ impl DeprecatedSnippet for IsU32 {
     }
 
     fn entrypoint_name(&self) -> String {
-        "tasm_arithmetic_u32_is_u32".to_string()
+        "tasm_arithmetic_u32_isu32".to_string()
     }
 
     /// Place 1 on stack iff top element is less than $2^32$. Otherwise
@@ -121,7 +121,7 @@ mod tests {
 
     #[test]
     fn is_u32_test() {
-        test_rust_equivalence_multiple_deprecated(&IsU32, true);
+        test_rust_equivalence_multiple_deprecated(&Isu32, true);
     }
 
     #[test]
@@ -166,8 +166,8 @@ mod tests {
         let mut init_stack = get_init_tvm_stack();
         init_stack.push(some_value);
 
-        test_rust_equivalence_given_input_values_deprecated::<IsU32>(
-            &IsU32,
+        test_rust_equivalence_given_input_values_deprecated::<Isu32>(
+            &Isu32,
             &init_stack,
             &[],
             &mut HashMap::default(),
@@ -184,6 +184,6 @@ mod benches {
 
     #[test]
     fn is_u32_benchmark() {
-        bench_and_write(IsU32);
+        bench_and_write(Isu32);
     }
 }

@@ -10,9 +10,9 @@ use crate::{
 
 /// A u32 `pow` that behaves like Rustc's `pow` method on `u32`, crashing in case of overflow.
 #[derive(Clone)]
-pub struct SafePow;
+pub struct Safepow;
 
-impl BasicSnippet for SafePow {
+impl BasicSnippet for Safepow {
     fn inputs(&self) -> Vec<(crate::snippet::DataType, String)> {
         vec![
             (DataType::U32, "base".to_owned()),
@@ -25,7 +25,7 @@ impl BasicSnippet for SafePow {
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_arithmetic_u32_safe_pow_u32".to_string()
+        "tasm_arithmetic_u32_safepow".to_string()
     }
 
     fn code(
@@ -154,7 +154,7 @@ impl BasicSnippet for SafePow {
     }
 }
 
-impl Closure for SafePow {
+impl Closure for Safepow {
     fn rust_shadow(&self, stack: &mut Vec<triton_vm::BFieldElement>) {
         let exp: u32 = stack.pop().unwrap().try_into().unwrap();
         let base: u32 = stack.pop().unwrap().try_into().unwrap();
@@ -205,12 +205,12 @@ mod tests {
 
     #[test]
     fn u32_pow_pbt() {
-        ShadowedClosure::new(SafePow).test()
+        ShadowedClosure::new(Safepow).test()
     }
 
     #[test]
     fn u32_pow_unit_test() {
-        let safe_pow = SafePow;
+        let safe_pow = Safepow;
         let closure = ShadowedClosure::new(safe_pow);
 
         for (base, exp) in [
@@ -269,7 +269,7 @@ mod tests {
 
     #[test]
     fn u32_pow_negative_test() {
-        let safe_pow = SafePow;
+        let safe_pow = Safepow;
 
         let code = link_for_isolated_run(Rc::new(RefCell::new(safe_pow)), 0);
 
@@ -316,7 +316,7 @@ mod tests {
             // run rust shadow
             let rust_result = std::panic::catch_unwind(|| {
                 let mut rust_stack = init_stack.clone();
-                ShadowedClosure::new(SafePow).rust_shadow_wrapper(
+                ShadowedClosure::new(Safepow).rust_shadow_wrapper(
                     &[],
                     &NonDeterminism::new(vec![]),
                     &mut rust_stack,
@@ -350,6 +350,6 @@ mod benches {
 
     #[test]
     fn u32_pow_bench() {
-        ShadowedClosure::new(SafePow).bench()
+        ShadowedClosure::new(Safepow).bench()
     }
 }

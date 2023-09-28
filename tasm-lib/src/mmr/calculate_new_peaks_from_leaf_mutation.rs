@@ -9,7 +9,7 @@ use twenty_first::util_types::mmr::mmr_trait::Mmr;
 use twenty_first::util_types::mmr::{self, mmr_membership_proof::MmrMembershipProof};
 
 use super::leaf_index_to_mt_index::MmrLeafIndexToMtIndexAndPeakIndex;
-use crate::arithmetic::u32::is_odd::U32IsOdd;
+use crate::arithmetic::u32::isodd::Isodd;
 use crate::arithmetic::u64::div2_u64::Div2U64;
 use crate::arithmetic::u64::eq_u64::EqU64;
 use crate::library::Library;
@@ -202,7 +202,7 @@ impl DeprecatedSnippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
     fn function_code(&self, library: &mut Library) -> String {
         let entrypoint = self.entrypoint_name();
         let leaf_index_to_mt_index = library.import(Box::new(MmrLeafIndexToMtIndexAndPeakIndex));
-        let u32_is_odd = library.import(Box::new(U32IsOdd));
+        let u32_is_odd = library.import(Box::new(Isodd));
         let eq_u64 = library.import(Box::new(EqU64));
         let get = match self.list_type {
             ListType::Safe => library.import(Box::new(SafeGet(DataType::Digest))),

@@ -8,11 +8,11 @@ use crate::snippet::{DataType, DeprecatedSnippet};
 use crate::{get_init_tvm_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
-pub struct ShiftLeftU32;
+pub struct Shiftleft;
 
-impl DeprecatedSnippet for ShiftLeftU32 {
+impl DeprecatedSnippet for Shiftleft {
     fn entrypoint_name(&self) -> String {
-        "tasm_arithmetic_u32_shift_left_u32".to_string()
+        "tasm_arithmetic_u32_shiftleft".to_string()
     }
 
     fn input_field_names(&self) -> Vec<String> {
@@ -128,7 +128,7 @@ mod tests {
 
     #[test]
     fn shift_left_test() {
-        test_rust_equivalence_multiple_deprecated(&ShiftLeftU32, true);
+        test_rust_equivalence_multiple_deprecated(&Shiftleft, true);
     }
 
     #[test]
@@ -144,7 +144,7 @@ mod tests {
         let mut init_stack = get_init_tvm_stack();
         init_stack.push(BFieldElement::new(u32::MAX as u64));
         init_stack.push(32u64.into());
-        ShiftLeftU32
+        Shiftleft
             .link_and_run_tasm_from_state_for_test(&mut ExecutionState::with_stack(init_stack));
     }
 
@@ -159,7 +159,7 @@ mod tests {
         expected_stack.push((expected_u32 as u64).into());
 
         test_rust_equivalence_given_input_values_deprecated(
-            &ShiftLeftU32,
+            &Shiftleft,
             &init_stack,
             &[],
             &mut HashMap::default(),
@@ -176,6 +176,6 @@ mod benches {
 
     #[test]
     fn shift_left_benchmark() {
-        bench_and_write(ShiftLeftU32);
+        bench_and_write(Shiftleft);
     }
 }

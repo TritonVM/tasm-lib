@@ -10,7 +10,7 @@ use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
 use twenty_first::util_types::mmr::mmr_membership_proof::MmrMembershipProof;
 use twenty_first::util_types::mmr::mmr_trait::Mmr;
 
-use crate::arithmetic::u32::is_odd::U32IsOdd;
+use crate::arithmetic::u32::isodd::Isodd;
 use crate::arithmetic::u64::div2_u64::Div2U64;
 use crate::arithmetic::u64::eq_u64::EqU64;
 use crate::hashing::eq_digest::EqDigest;
@@ -213,7 +213,7 @@ impl DeprecatedSnippet for MmrVerifyFromMemory {
             ListType::Safe => library.import(Box::new(SafeGet(DataType::Digest))),
             ListType::Unsafe => library.import(Box::new(UnsafeGet(DataType::Digest))),
         };
-        let u32_is_odd = library.import(Box::new(U32IsOdd));
+        let u32_is_odd = library.import(Box::new(Isodd));
         let entrypoint = self.entrypoint_name();
         let eq_u64 = library.import(Box::new(EqU64));
         let div_2 = library.import(Box::new(Div2U64));

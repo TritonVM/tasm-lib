@@ -7,9 +7,9 @@ use crate::{
             sub_u128::SubU128,
         },
         u32::{
-            is_odd::U32IsOdd, is_u32::IsU32, leading_zeros_u32::LeadingZerosU32, or::OrU32,
-            safe_add::SafeAdd, safe_mul::SafeMul, safe_pow::SafePow, safe_sub::SafeSub,
-            shift_left::ShiftLeftU32, shift_right::ShiftRightU32,
+            isodd::Isodd, isu32::Isu32, leadingzeros::Leadingzeros, or::Or, safeadd::Safeadd,
+            safemul::Safemul, safepow::Safepow, safesub::Safesub, shiftleft::Shiftleft,
+            shiftright::Shiftright,
         },
         u64::{
             add_u64::AddU64,
@@ -88,16 +88,16 @@ use crate::{
 pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
     match fn_name {
         // u32
-        "tasm_arithmetic_u32_is_odd" => Box::new(U32IsOdd),
-        "tasm_arithmetic_u32_is_u32" => Box::new(IsU32),
-        "tasm_arithmetic_u32_safe_add_u32" => Box::new(SafeAdd),
-        "tasm_arithmetic_u32_safe_sub_u32" => Box::new(SafeSub),
-        "tasm_arithmetic_u32_u32_safe_mul" => Box::new(SafeMul),
-        "tasm_arithmetic_u32_shift_right_u32" => Box::new(ShiftRightU32),
-        "tasm_arithmetic_u32_shift_left_u32" => Box::new(ShiftLeftU32),
-        "tasm_arithmetic_u32_or_u32" => Box::new(OrU32),
-        "tasm_arithmetic_u32_leading_zeros_u32" => Box::new(LeadingZerosU32),
-        "tasm_arithmetic_u32_safe_pow_u32" => Box::new(SafePow),
+        "tasm_arithmetic_u32_isodd" => Box::new(Isodd),
+        "tasm_arithmetic_u32_isu32" => Box::new(Isu32),
+        "tasm_arithmetic_u32_safeadd" => Box::new(Safeadd),
+        "tasm_arithmetic_u32_safesub" => Box::new(Safesub),
+        "tasm_arithmetic_u32_safemul" => Box::new(Safemul),
+        "tasm_arithmetic_u32_shiftright" => Box::new(Shiftright),
+        "tasm_arithmetic_u32_shiftleft" => Box::new(Shiftleft),
+        "tasm_arithmetic_u32_or" => Box::new(Or),
+        "tasm_arithmetic_u32_leadingzeros" => Box::new(Leadingzeros),
+        "tasm_arithmetic_u32_safepow" => Box::new(Safepow),
 
         // u64
         "tasm_arithmetic_u64_add" => Box::new(AddU64),

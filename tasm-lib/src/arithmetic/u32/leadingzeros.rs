@@ -8,11 +8,11 @@ use crate::{
 };
 
 #[derive(Clone, Debug)]
-pub struct LeadingZerosU32;
+pub struct Leadingzeros;
 
-impl DeprecatedSnippet for LeadingZerosU32 {
+impl DeprecatedSnippet for Leadingzeros {
     fn entrypoint_name(&self) -> String {
-        "tasm_arithmetic_u32_leading_zeros_u32".to_string()
+        "tasm_arithmetic_u32_leadingzeros".to_string()
     }
 
     fn input_field_names(&self) -> Vec<String> {
@@ -125,7 +125,7 @@ mod tests {
 
     #[test]
     fn snippet_test() {
-        test_rust_equivalence_multiple_deprecated(&LeadingZerosU32, true);
+        test_rust_equivalence_multiple_deprecated(&Leadingzeros, true);
     }
 
     #[test]
@@ -156,7 +156,7 @@ mod tests {
         .concat();
 
         test_rust_equivalence_given_input_values_deprecated(
-            &LeadingZerosU32,
+            &Leadingzeros,
             &init_stack,
             &[],
             &mut HashMap::default(),
@@ -173,6 +173,6 @@ mod benches {
 
     #[test]
     fn u32_leading_zeros_benchmark() {
-        bench_and_write(LeadingZerosU32);
+        bench_and_write(Leadingzeros);
     }
 }
