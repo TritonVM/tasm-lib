@@ -15,7 +15,7 @@ impl DeprecatedSnippet for SafeSet {
     fn input_field_names(&self) -> Vec<String> {
         // See: https://github.com/TritonVM/tasm-snippets/issues/13
         // _ elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}} *list index
-        vec![
+        [
             vec!["element".to_string(); self.0.get_size()],
             vec!["*list".to_string(), "index".to_string()],
         ]
