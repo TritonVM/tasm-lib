@@ -2,7 +2,7 @@ use rand::{thread_rng, RngCore};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::{
-    arithmetic::u32::leading_zeros_u32::LeadingZerosU32,
+    arithmetic::u32::leadingzeros::Leadingzeros,
     get_init_tvm_stack,
     snippet::{DataType, DeprecatedSnippet},
     ExecutionState,
@@ -37,7 +37,7 @@ impl DeprecatedSnippet for LeadingZerosU64 {
     }
 
     fn function_code(&self, library: &mut crate::library::Library) -> String {
-        let leading_zeros_u32 = library.import(Box::new(LeadingZerosU32));
+        let leading_zeros_u32 = library.import(Box::new(Leadingzeros));
         let entrypoint = self.entrypoint_name();
         format!(
             "

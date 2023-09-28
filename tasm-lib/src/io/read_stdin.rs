@@ -15,7 +15,7 @@ pub struct ReadStdIn(pub DataType);
 
 impl DeprecatedSnippet for ReadStdIn {
     fn entrypoint_name(&self) -> String {
-        format!("tasm_io_read_stdin_{}", self.0.label_friendly_name())
+        format!("tasm_io_read_stdin___{}", self.0.label_friendly_name())
     }
 
     fn input_field_names(&self) -> Vec<String> {

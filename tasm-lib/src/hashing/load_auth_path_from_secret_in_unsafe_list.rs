@@ -5,8 +5,8 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::random_elements;
 
 use crate::library::Library;
-use crate::list::unsafe_u32::new::UnsafeNew;
-use crate::list::unsafe_u32::{push::UnsafePush, set_length::UnsafeSetLength};
+use crate::list::unsafeimplu32::new::UnsafeNew;
+use crate::list::unsafeimplu32::{push::UnsafePush, set_length::UnsafeSetLength};
 use crate::mmr::MAX_MMR_HEIGHT;
 use crate::snippet::DataType;
 use crate::snippet::DeprecatedSnippet;

@@ -8,8 +8,8 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::random_elements;
 
 use crate::library::Library;
-use crate::list::safe_u32::new::SafeNew;
-use crate::list::safe_u32::push::SafePush;
+use crate::list::safeimplu32::new::SafeNew;
+use crate::list::safeimplu32::push::SafePush;
 use crate::mmr::MAX_MMR_HEIGHT;
 use crate::snippet::DataType;
 use crate::snippet::DeprecatedSnippet;

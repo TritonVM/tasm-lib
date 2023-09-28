@@ -10,10 +10,10 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
 use crate::function::Function;
-use crate::list::safe_u32::get::SafeGet;
-use crate::list::safe_u32::length::SafeLength;
-use crate::list::unsafe_u32::get::UnsafeGet;
-use crate::list::unsafe_u32::length::UnsafeLength;
+use crate::list::safeimplu32::get::SafeGet;
+use crate::list::safeimplu32::length::Length as SafeLength;
+use crate::list::unsafeimplu32::get::UnsafeGet;
+use crate::list::unsafeimplu32::length::Length as UnsafeLength;
 use crate::list::ListType;
 use crate::rust_shadowing_helper_functions::safe_list::safe_insert_random_list;
 use crate::rust_shadowing_helper_functions::unsafe_list::untyped_unsafe_insert_random_list;
@@ -335,7 +335,7 @@ impl DeprecatedSnippet for TestHashXFieldElementLsb {
 
     fn function_code(&self, library: &mut Library) -> String {
         let entrypoint = self.entrypoint_name();
-        let unused_import = library.import(Box::new(arithmetic::u32::safe_add::SafeAdd));
+        let unused_import = library.import(Box::new(arithmetic::u32::safeadd::Safeadd));
         format!(
             "
         // BEFORE: _ x2 x1 x0

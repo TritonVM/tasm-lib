@@ -53,27 +53,27 @@ impl DeprecatedSnippet for GetPointerList {
         let entrypoint = self.entrypoint_name();
         let get_list_length = library.import(Box::new(contiguous_list::get_length::GetLength));
         let new_list = match self.output_list_type {
-            ListType::Safe => library.import(Box::new(list::safe_u32::new::SafeNew(
+            ListType::Safe => library.import(Box::new(list::safeimplu32::new::SafeNew(
                 DataType::VoidPointer,
             ))),
-            ListType::Unsafe => library.import(Box::new(list::unsafe_u32::new::UnsafeNew(
+            ListType::Unsafe => library.import(Box::new(list::unsafeimplu32::new::UnsafeNew(
                 DataType::VoidPointer,
             ))),
         };
 
         let set_length = match self.output_list_type {
-            ListType::Safe => library.import(Box::new(list::safe_u32::set_length::SafeSetLength(
-                DataType::VoidPointer,
-            ))),
+            ListType::Safe => library.import(Box::new(
+                list::safeimplu32::set_length::SafeSetLength(DataType::VoidPointer),
+            )),
             ListType::Unsafe => library.import(Box::new(
-                list::unsafe_u32::set_length::UnsafeSetLength(DataType::VoidPointer),
+                list::unsafeimplu32::set_length::UnsafeSetLength(DataType::VoidPointer),
             )),
         };
         let set_element = match self.output_list_type {
-            ListType::Safe => library.import(Box::new(list::safe_u32::set::SafeSet(
+            ListType::Safe => library.import(Box::new(list::safeimplu32::set::SafeSet(
                 DataType::VoidPointer,
             ))),
-            ListType::Unsafe => library.import(Box::new(list::unsafe_u32::set::UnsafeSet(
+            ListType::Unsafe => library.import(Box::new(list::unsafeimplu32::set::UnsafeSet(
                 DataType::VoidPointer,
             ))),
         };

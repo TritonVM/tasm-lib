@@ -25,7 +25,7 @@ impl BasicSnippet for WriteToStdout {
     }
 
     fn entrypoint(&self) -> String {
-        format!("tasm_io_write_to_stdout_{}", self.0.label_friendly_name())
+        format!("tasm_io_write_to_stdout___{}", self.0.label_friendly_name())
     }
 
     fn code(

@@ -6,6 +6,7 @@ use std::collections::HashMap;
 use std::fmt::Debug;
 use std::fmt::Display;
 use std::rc::Rc;
+use std::str::FromStr;
 use triton_vm::instruction::LabelledInstruction;
 use triton_vm::parser::{to_labelled_instructions, tokenize};
 use triton_vm::{triton_asm, NonDeterminism, Program};
@@ -170,6 +171,44 @@ impl DataType {
     }
 }
 
+impl FromStr for DataType {
+    type Err = anyhow::Error;
+
+    // This implementation must be the inverse of `label_friendly_name`
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        use DataType::*;
+
+        let res = if s.starts_with("list_L") && s.ends_with('R') {
+            let inner = &s[6..s.len() - 1];
+            let inner = FromStr::from_str(inner)?;
+            DataType::List(Box::new(inner))
+        } else if s.starts_with("tuple_L") && s.ends_with('R') {
+            let inner = &s[7..s.len() - 1];
+            let inners = inner.split("___");
+            let mut inners_resolved: Vec<Self> = vec![];
+            for inner_elem in inners {
+                inners_resolved.push(FromStr::from_str(inner_elem)?);
+            }
+
+            Self::Tuple(inners_resolved)
+        } else {
+            match s {
+                "void_pointer" => VoidPointer,
+                "bool" => Bool,
+                "u32" => U32,
+                "u64" => U64,
+                "u128" => U128,
+                "bfe" => BFE,
+                "xfe" => XFE,
+                "digest" => Digest,
+                _ => anyhow::bail!("Could not parse {s} as a data type"),
+            }
+        };
+
+        Ok(res)
+    }
+}
+
 impl DataType {
     pub fn label_friendly_name(&self) -> String {
         match self {
@@ -180,7 +219,7 @@ impl DataType {
                     inner_types
                         .iter()
                         .map(|x| x.label_friendly_name())
-                        .join("_")
+                        .join("___")
                 )
             }
             DataType::VoidPointer => "void_pointer".to_string(),
@@ -564,7 +603,7 @@ mod tests {
     fn can_return_code() {
         let mut empty_library = Library::new();
         let example_snippet =
-            arithmetic::u32::safe_add::SafeAdd.function_code_as_instructions(&mut empty_library);
+            arithmetic::u32::safeadd::Safeadd.function_code_as_instructions(&mut empty_library);
         assert!(!example_snippet.is_empty());
         println!(
             "{}",
@@ -583,5 +622,20 @@ mod tests {
             "DataType::List(Box::new(DataType::Digest))",
             DataType::List(Box::new(DataType::Digest)).variant_name()
         );
+    }
+
+    #[test]
+    fn parse_and_stringify_datatype_test() {
+        assert_eq!(DataType::Digest, DataType::from_str("digest").unwrap());
+        assert_eq!(
+            DataType::BFE,
+            DataType::from_str(&DataType::BFE.label_friendly_name()).unwrap()
+        );
+        for data_type in DataType::big_random_generatable_type_collection() {
+            assert_eq!(
+                data_type,
+                DataType::from_str(&data_type.label_friendly_name()).unwrap()
+            )
+        }
     }
 }

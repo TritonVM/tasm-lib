@@ -8,16 +8,16 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::random_elements;
 
 use crate::function::Function;
-use crate::list::safe_u32::get::SafeGet;
-use crate::list::safe_u32::length::SafeLength;
-use crate::list::safe_u32::new::SafeNew;
-use crate::list::safe_u32::set::SafeSet;
-use crate::list::safe_u32::set_length::SafeSetLength;
-use crate::list::unsafe_u32::get::UnsafeGet;
-use crate::list::unsafe_u32::length::UnsafeLength;
-use crate::list::unsafe_u32::new::UnsafeNew;
-use crate::list::unsafe_u32::set::UnsafeSet;
-use crate::list::unsafe_u32::set_length::UnsafeSetLength;
+use crate::list::safeimplu32::get::SafeGet;
+use crate::list::safeimplu32::length::Length as SafeLength;
+use crate::list::safeimplu32::new::SafeNew;
+use crate::list::safeimplu32::set::SafeSet;
+use crate::list::safeimplu32::set_length::SafeSetLength;
+use crate::list::unsafeimplu32::get::UnsafeGet;
+use crate::list::unsafeimplu32::length::Length as UnsafeLength;
+use crate::list::unsafeimplu32::new::UnsafeNew;
+use crate::list::unsafeimplu32::set::UnsafeSet;
+use crate::list::unsafeimplu32::set_length::UnsafeSetLength;
 use crate::list::{self, ListType};
 use crate::rust_shadowing_helper_functions::safe_list::safe_insert_random_list;
 use crate::rust_shadowing_helper_functions::unsafe_list::unsafe_insert_random_list;
@@ -238,17 +238,13 @@ impl Function for Map {
                 ListType::Safe => {
                     // Push capacity to stack
                     stack.push(BFieldElement::new(output_list_capacity as u64));
-                    list::safe_u32::new::SafeNew(input_list_element_type.clone()).rust_shadowing(
-                        stack,
-                        std_in.clone(),
-                        secret_in.clone(),
-                        memory,
-                    );
+                    list::safeimplu32::new::SafeNew(input_list_element_type.clone())
+                        .rust_shadowing(stack, std_in.clone(), secret_in.clone(), memory);
                     stack.pop().unwrap()
                 }
                 ListType::Unsafe => {
                     stack.push(BFieldElement::new(output_list_capacity as u64));
-                    list::unsafe_u32::new::UnsafeNew(input_list_element_type.clone())
+                    list::unsafeimplu32::new::UnsafeNew(input_list_element_type.clone())
                         .rust_shadowing(stack, std_in.clone(), secret_in.clone(), memory);
                     stack.pop().unwrap()
                 }
@@ -259,11 +255,11 @@ impl Function for Map {
         stack.push(BFieldElement::new(len as u64));
         match self.list_type {
             ListType::Safe => {
-                list::safe_u32::set_length::SafeSetLength(output_type.clone())
+                list::safeimplu32::set_length::SafeSetLength(output_type.clone())
                     .rust_shadowing(stack, std_in, secret_in, memory);
             }
             ListType::Unsafe => {
-                list::unsafe_u32::set_length::UnsafeSetLength(output_type.clone())
+                list::unsafeimplu32::set_length::UnsafeSetLength(output_type.clone())
                     .rust_shadowing(stack, std_in, secret_in, memory);
             }
         }
@@ -449,7 +445,7 @@ mod tests {
 
         fn function_code(&self, library: &mut Library) -> String {
             let entrypoint = self.entrypoint_name();
-            let unused_import = library.import(Box::new(arithmetic::u32::safe_add::SafeAdd));
+            let unused_import = library.import(Box::new(arithmetic::u32::safeadd::Safeadd));
             format!(
                 "
         // BEFORE: _ x2 x1 x0

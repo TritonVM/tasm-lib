@@ -1,0 +1,16 @@
+[
+  {
+    "name": "tasm_list_safeimplu32_multiset_equality",
+    "clock_cycle_count": 781,
+    "hash_table_height": 6,
+    "u32_table_height": 10,
+    "case": "CommonCase"
+  },
+  {
+    "name": "tasm_list_safeimplu32_multiset_equality",
+    "clock_cycle_count": 17637,
+    "hash_table_height": 6,
+    "u32_table_height": 458,
+    "case": "WorstCase"
+  }
+]

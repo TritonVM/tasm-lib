@@ -6,8 +6,8 @@ use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
-use crate::arithmetic::u32::safe_add::SafeAdd;
-use crate::arithmetic::u32::safe_sub::SafeSub;
+use crate::arithmetic::u32::safeadd::Safeadd;
+use crate::arithmetic::u32::safesub::Safesub;
 use crate::arithmetic::u64::and_u64::AndU64;
 use crate::arithmetic::u64::leading_zeros_u64::LeadingZerosU64;
 use crate::arithmetic::u64::lt_u64::LtStandardU64;
@@ -65,9 +65,9 @@ impl DeprecatedSnippet for DivModU64 {
         let lt_u64 = library.import(Box::new(LtStandardU64));
         let or_u64 = library.import(Box::new(OrU64));
         let sub_u64 = library.import(Box::new(SubU64));
-        let sub_u32 = library.import(Box::new(SafeSub));
+        let sub_u32 = library.import(Box::new(Safesub));
         let leading_zeros_u64 = library.import(Box::new(LeadingZerosU64));
-        let add_u32 = library.import(Box::new(SafeAdd));
+        let add_u32 = library.import(Box::new(Safeadd));
         let mem_address_for_spilled_divisor = library.kmalloc(2);
         let last_mem_address_for_spilled_divisor = mem_address_for_spilled_divisor + 1;
 

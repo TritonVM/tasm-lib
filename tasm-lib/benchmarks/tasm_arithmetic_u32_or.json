@@ -1,0 +1,16 @@
+[
+  {
+    "name": "tasm_arithmetic_u32_or",
+    "clock_cycle_count": 8,
+    "hash_table_height": 0,
+    "u32_table_height": 36,
+    "case": "CommonCase"
+  },
+  {
+    "name": "tasm_arithmetic_u32_or",
+    "clock_cycle_count": 8,
+    "hash_table_height": 0,
+    "u32_table_height": 33,
+    "case": "WorstCase"
+  }
+]

@@ -13,14 +13,14 @@ use twenty_first::util_types::mmr::shared_basic::leaf_index_to_mt_index_and_peak
 
 use super::leaf_index_to_mt_index::MmrLeafIndexToMtIndexAndPeakIndex;
 use super::MAX_MMR_HEIGHT;
-use crate::arithmetic::u32::is_odd::U32IsOdd;
+use crate::arithmetic::u32::isodd::Isodd;
 use crate::arithmetic::u64::div2_u64::Div2U64;
 use crate::arithmetic::u64::eq_u64::EqU64;
 use crate::hashing::eq_digest::EqDigest;
 use crate::hashing::swap_digest::SwapDigest;
 use crate::library::Library;
-use crate::list::safe_u32::get::SafeGet;
-use crate::list::unsafe_u32::get::UnsafeGet;
+use crate::list::safeimplu32::get::SafeGet;
+use crate::list::unsafeimplu32::get::UnsafeGet;
 use crate::list::ListType;
 use crate::snippet::{DataType, DeprecatedSnippet};
 use crate::{
@@ -253,7 +253,7 @@ impl DeprecatedSnippet for MmrVerifyLeafMembershipFromSecretIn {
 
         let leaf_index_to_mt_index = library.import(Box::new(MmrLeafIndexToMtIndexAndPeakIndex));
         let eq_u64 = library.import(Box::new(EqU64));
-        let u32_is_odd = library.import(Box::new(U32IsOdd));
+        let u32_is_odd = library.import(Box::new(Isodd));
         let swap_digests = library.import(Box::new(SwapDigest));
         let compare_digest = library.import(Box::new(EqDigest));
         let div_2 = library.import(Box::new(Div2U64));
