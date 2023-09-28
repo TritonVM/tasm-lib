@@ -18,7 +18,7 @@ use twenty_first::shared_math::{
 pub struct XfeNtt;
 
 // This BasicSnippet implementation was autogenerate by the `tasm-lang` compiler
-// on 2023-09-28 22:49:48.280298856 +02:00.
+// on 2023-09-29 00:39:28.371476538 +02:00
 impl BasicSnippet for XfeNtt {
     fn entrypoint(&self) -> String {
         "xfe_ntt".to_owned()
@@ -50,17 +50,22 @@ impl BasicSnippet for XfeNtt {
             library.import(Box::new(crate::arithmetic::u32::shiftleft::Shiftleft));
         let tasm_arithmetic_u32_shiftright =
             library.import(Box::new(crate::arithmetic::u32::shiftright::Shiftright));
+        #[allow(non_snake_case)]
         let tasm_list_unsafeimplu32_length___xfe = library.import(Box::new(
             crate::list::unsafeimplu32::length::Length(DataType::XFE),
         ));
+        #[allow(non_snake_case)]
+        let _1__Lu32R_u32_59 = library.kmalloc(1);
+        #[allow(non_snake_case)]
+        let _fn_arg_reference_to_LVec_RXField_LR_0 = library.kmalloc(1);
         triton_asm!(
                 {entrypoint}:
 
-                push 1
+                push {_fn_arg_reference_to_LVec_RXField_LR_0}
         dup 2
         write_mem
         pop
-        push 1
+        push {_fn_arg_reference_to_LVec_RXField_LR_0}
         read_mem
         swap 1
         pop
@@ -74,15 +79,15 @@ impl BasicSnippet for XfeNtt {
         swap 1
         call {tasm_arithmetic_u32_safesub}
         push 0
-        call _binop_Neq__LboolR_bool_35_while_loop
+        call _binop_Neq__LboolR_bool_34_while_loop
         pop
         push 1
-        push 2
+        push {_1__Lu32R_u32_59}
         dup 1
         write_mem
         pop
         push 0
-        call _binop_Neq__LboolR_bool_64_while_loop
+        call _binop_Neq__LboolR_bool_63_while_loop
         pop
         pop
         pop
@@ -131,9 +136,9 @@ impl BasicSnippet for XfeNtt {
         pop
         pop
         return
-        _binop_Lt__LboolR_bool_41_then:
+        _binop_Lt__LboolR_bool_40_then:
         pop
-        push 1
+        push {_fn_arg_reference_to_LVec_RXField_LR_0}
         read_mem
         swap 1
         pop
@@ -156,7 +161,7 @@ impl BasicSnippet for XfeNtt {
         read_mem
         swap 1
         pop
-        push 1
+        push {_fn_arg_reference_to_LVec_RXField_LR_0}
         read_mem
         swap 1
         pop
@@ -179,7 +184,7 @@ impl BasicSnippet for XfeNtt {
         read_mem
         swap 1
         pop
-        push 1
+        push {_fn_arg_reference_to_LVec_RXField_LR_0}
         read_mem
         swap 1
         pop
@@ -203,7 +208,7 @@ impl BasicSnippet for XfeNtt {
         dup 2
         dup 2
         dup 2
-        push 1
+        push {_fn_arg_reference_to_LVec_RXField_LR_0}
         read_mem
         swap 1
         pop
@@ -229,9 +234,9 @@ impl BasicSnippet for XfeNtt {
         pop
         push 0
         return
-        _binop_Lt__LboolR_bool_41_else:
+        _binop_Lt__LboolR_bool_40_else:
         return
-        _binop_Neq__LboolR_bool_35_while_loop:
+        _binop_Neq__LboolR_bool_34_while_loop:
         dup 0
         dup 3
         eq
@@ -251,9 +256,9 @@ impl BasicSnippet for XfeNtt {
         push 1
         swap 1
         skiz
-        call _binop_Lt__LboolR_bool_41_then
+        call _binop_Lt__LboolR_bool_40_then
         skiz
-        call _binop_Lt__LboolR_bool_41_else
+        call _binop_Lt__LboolR_bool_40_else
         dup 1
         push 1
         call {tasm_arithmetic_u32_safeadd}
@@ -261,9 +266,9 @@ impl BasicSnippet for XfeNtt {
         pop
         pop
         recurse
-        _binop_Neq__LboolR_bool_80_while_loop:
+        _binop_Neq__LboolR_bool_79_while_loop:
         dup 0
-        push 2
+        push {_1__Lu32R_u32_59}
         read_mem
         swap 1
         pop
@@ -274,7 +279,7 @@ impl BasicSnippet for XfeNtt {
         eq
         skiz
         return
-        push 1
+        push {_fn_arg_reference_to_LVec_RXField_LR_0}
         read_mem
         swap 1
         pop
@@ -299,14 +304,14 @@ impl BasicSnippet for XfeNtt {
         read_mem
         swap 1
         pop
-        push 1
+        push {_fn_arg_reference_to_LVec_RXField_LR_0}
         read_mem
         swap 1
         pop
         dup 6
         dup 5
         call {tasm_arithmetic_u32_safeadd}
-        push 2
+        push {_1__Lu32R_u32_59}
         read_mem
         swap 1
         pop
@@ -353,7 +358,7 @@ impl BasicSnippet for XfeNtt {
         pop
         swap 3
         pop
-        push 1
+        push {_fn_arg_reference_to_LVec_RXField_LR_0}
         read_mem
         swap 1
         pop
@@ -391,14 +396,14 @@ impl BasicSnippet for XfeNtt {
         pop
         swap 3
         pop
-        push 1
+        push {_fn_arg_reference_to_LVec_RXField_LR_0}
         read_mem
         swap 1
         pop
         dup 12
         dup 11
         call {tasm_arithmetic_u32_safeadd}
-        push 2
+        push {_1__Lu32R_u32_59}
         read_mem
         swap 1
         pop
@@ -436,7 +441,7 @@ impl BasicSnippet for XfeNtt {
         pop
         pop
         recurse
-        _binop_Lt__LboolR_bool_75_while_loop:
+        _binop_Lt__LboolR_bool_74_while_loop:
         dup 0
         dup 6
         swap 1
@@ -447,10 +452,10 @@ impl BasicSnippet for XfeNtt {
         return
         push 1
         push 0
-        call _binop_Neq__LboolR_bool_80_while_loop
+        call _binop_Neq__LboolR_bool_79_while_loop
         dup 2
         push 2
-        push 2
+        push {_1__Lu32R_u32_59}
         read_mem
         swap 1
         pop
@@ -461,7 +466,7 @@ impl BasicSnippet for XfeNtt {
         pop
         pop
         recurse
-        _binop_Neq__LboolR_bool_64_while_loop:
+        _binop_Neq__LboolR_bool_63_while_loop:
         dup 0
         dup 3
         eq
@@ -474,7 +479,7 @@ impl BasicSnippet for XfeNtt {
         dup 4
         dup 4
         push 2
-        push 2
+        push {_1__Lu32R_u32_59}
         read_mem
         swap 1
         pop
@@ -485,14 +490,14 @@ impl BasicSnippet for XfeNtt {
         swap 1
         pow
         push 0
-        call _binop_Lt__LboolR_bool_75_while_loop
-        push 2
+        call _binop_Lt__LboolR_bool_74_while_loop
+        push {_1__Lu32R_u32_59}
         read_mem
         swap 1
         pop
         push 2
         call {tasm_arithmetic_u32_safemul}
-        push 2
+        push {_1__Lu32R_u32_59}
         swap 1
         write_mem
         pop
@@ -506,10 +511,9 @@ impl BasicSnippet for XfeNtt {
         recurse
 
                 // Methods, entrypoints:
-                // todo
+
 
                 // Method subroutines
-                // todo
             )
     }
 }
