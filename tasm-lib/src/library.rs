@@ -94,6 +94,14 @@ impl Library {
             .collect()
     }
 
+    /// Return the name of all imported snippets, sorted alphabetically
+    /// to ensure that output is deterministic
+    pub fn get_all_snippet_names(&self) -> Vec<String> {
+        let mut ret = self.seen_snippets.keys().cloned().collect_vec();
+        ret.sort_unstable();
+        ret
+    }
+
     #[allow(dead_code)]
     pub fn all_imports(&self) -> Vec<LabelledInstruction> {
         // Collect all imports and return. All snippets are sorted
@@ -357,6 +365,30 @@ mod tests {
             &mut HashMap::default(),
             0,
             expected,
+        );
+    }
+
+    #[test]
+    fn get_all_snippet_names_test_a() {
+        let mut lib = Library::new();
+        lib.import(Box::new(DummyTestSnippetA));
+        assert_eq!(
+            vec![
+                "tasm_a_dummy_test_value",
+                "tasm_b_dummy_test_value",
+                "tasm_c_dummy_test_value"
+            ],
+            lib.get_all_snippet_names()
+        );
+    }
+
+    #[test]
+    fn get_all_snippet_names_test_b() {
+        let mut lib = Library::new();
+        lib.import(Box::new(DummyTestSnippetB));
+        assert_eq!(
+            vec!["tasm_b_dummy_test_value", "tasm_c_dummy_test_value"],
+            lib.get_all_snippet_names()
         );
     }
 
