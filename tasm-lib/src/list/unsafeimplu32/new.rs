@@ -11,7 +11,10 @@ pub struct UnsafeNew(pub DataType);
 
 impl DeprecatedSnippet for UnsafeNew {
     fn entrypoint_name(&self) -> String {
-        format!("tasm_list_unsafe_u32_new_{}", self.0.label_friendly_name())
+        format!(
+            "tasm_list_unsafeimplu32_new_{}",
+            self.0.label_friendly_name()
+        )
     }
 
     fn input_field_names(&self) -> Vec<String> {
@@ -37,7 +40,7 @@ impl DeprecatedSnippet for UnsafeNew {
     fn function_code(&self, library: &mut Library) -> String {
         let entrypoint = self.entrypoint_name();
 
-        // Data structure for `list::safe_u32` is: [length, element0, element1, ...]
+        // Data structure for `list::safeimplu32` is: [length, element0, element1, ...]
         let element_size = self.0.get_size();
         let dyn_alloc = library.import(Box::new(crate::dyn_malloc::DynMalloc));
 

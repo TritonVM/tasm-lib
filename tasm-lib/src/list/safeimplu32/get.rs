@@ -77,7 +77,7 @@ impl DeprecatedSnippet for SafeGet {
 
     fn entrypoint_name(&self) -> String {
         format!(
-            "tasm_list_safe_u32_get_element_{}",
+            "tasm_list_safeimplu32_get_element_{}",
             self.0.label_friendly_name()
         )
     }

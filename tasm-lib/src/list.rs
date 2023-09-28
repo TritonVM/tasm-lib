@@ -16,8 +16,8 @@ pub enum ListType {
 impl Display for ListType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ListType::Safe => write!(f, "safe"),
-            ListType::Unsafe => write!(f, "unsafe"),
+            ListType::Safe => write!(f, "safeimplu32"),
+            ListType::Unsafe => write!(f, "unsafeimplu32"),
         }
     }
 }

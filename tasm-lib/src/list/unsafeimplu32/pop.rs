@@ -48,7 +48,10 @@ impl DeprecatedSnippet for UnsafePop {
     }
 
     fn entrypoint_name(&self) -> String {
-        format!("tasm_list_unsafe_u32_pop_{}", self.0.label_friendly_name())
+        format!(
+            "tasm_list_unsafeimplu32_pop_{}",
+            self.0.label_friendly_name()
+        )
     }
 
     /// Pop last element from list. Does *not* actually delete the last

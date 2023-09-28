@@ -1,0 +1,16 @@
+[
+  {
+    "name": "tasm_mmr_calculate_new_peaks_from_leaf_mutation_unsafeimplu32",
+    "clock_cycle_count": 2957,
+    "hash_table_height": 186,
+    "u32_table_height": 837,
+    "case": "CommonCase"
+  },
+  {
+    "name": "tasm_mmr_calculate_new_peaks_from_leaf_mutation_unsafeimplu32",
+    "clock_cycle_count": 5661,
+    "hash_table_height": 372,
+    "u32_table_height": 1160,
+    "case": "WorstCase"
+  }
+]

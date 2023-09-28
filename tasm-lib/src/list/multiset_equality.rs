@@ -232,7 +232,7 @@ impl MultisetEquality {
 
 impl DeprecatedSnippet for MultisetEquality {
     fn entrypoint_name(&self) -> String {
-        format!("tasm_list_{}_u32_multiset_equality", self.0)
+        format!("tasm_list_{}_multiset_equality", self.0)
     }
 
     fn input_field_names(&self) -> Vec<String> {

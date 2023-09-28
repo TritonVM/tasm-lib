@@ -13,7 +13,7 @@ pub struct SafeNew(pub DataType);
 
 impl DeprecatedSnippet for SafeNew {
     fn entrypoint_name(&self) -> String {
-        format!("tasm_list_safe_u32_new_{}", self.0.label_friendly_name())
+        format!("tasm_list_safeimplu32_new_{}", self.0.label_friendly_name())
     }
 
     fn input_field_names(&self) -> Vec<String> {
@@ -40,7 +40,7 @@ impl DeprecatedSnippet for SafeNew {
     fn function_code(&self, library: &mut crate::library::Library) -> String {
         let entrypoint = self.entrypoint_name();
 
-        // Data structure for `list::safe_u32` is: [length, capacity, element0, element1, ...]
+        // Data structure for `list::safeimplu32` is: [length, capacity, element0, element1, ...]
         let element_size = self.0.get_size();
         let dyn_alloc = library.import(Box::new(dyn_malloc::DynMalloc));
         // input capacity is given in terms of `element_size`. So `element_size * capacity` words

@@ -73,7 +73,10 @@ impl DeprecatedSnippet for SafePush {
     }
 
     fn entrypoint_name(&self) -> String {
-        format!("tasm_list_safe_u32_push_{}", self.0.label_friendly_name())
+        format!(
+            "tasm_list_safeimplu32_push_{}",
+            self.0.label_friendly_name()
+        )
     }
 
     // Push *one* element of size N to stack

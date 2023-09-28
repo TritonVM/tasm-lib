@@ -83,7 +83,10 @@ impl DeprecatedSnippet for SafeLength {
     }
 
     fn entrypoint_name(&self) -> String {
-        format!("tasm_list_safe_u32_length_{}", self.0.label_friendly_name())
+        format!(
+            "tasm_list_safeimplu32_length_{}",
+            self.0.label_friendly_name()
+        )
     }
 
     fn function_code(&self, _library: &mut Library) -> String {
