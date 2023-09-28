@@ -1,0 +1,16 @@
+[
+  {
+    "name": "tasm_list_unsafeimplu32_length_long___digest",
+    "clock_cycle_count": 5,
+    "hash_table_height": 0,
+    "u32_table_height": 0,
+    "case": "CommonCase"
+  },
+  {
+    "name": "tasm_list_unsafeimplu32_length_long___digest",
+    "clock_cycle_count": 5,
+    "hash_table_height": 0,
+    "u32_table_height": 0,
+    "case": "WorstCase"
+  }
+]

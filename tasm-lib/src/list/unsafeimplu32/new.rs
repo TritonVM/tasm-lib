@@ -12,7 +12,7 @@ pub struct UnsafeNew(pub DataType);
 impl DeprecatedSnippet for UnsafeNew {
     fn entrypoint_name(&self) -> String {
         format!(
-            "tasm_list_unsafeimplu32_new_{}",
+            "tasm_list_unsafeimplu32_new___{}",
             self.0.label_friendly_name()
         )
     }

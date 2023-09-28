@@ -85,7 +85,7 @@ impl DeprecatedSnippet for UnsafeLength {
 
     fn entrypoint_name(&self) -> String {
         format!(
-            "tasm_list_unsafeimplu32_length_long_{}",
+            "tasm_list_unsafeimplu32_length_long___{}",
             self.0.label_friendly_name()
         )
     }

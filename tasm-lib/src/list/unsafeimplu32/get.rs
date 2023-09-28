@@ -53,7 +53,7 @@ impl DeprecatedSnippet for UnsafeGet {
 
     fn entrypoint_name(&self) -> String {
         format!(
-            "tasm_list_unsafeimplu32_get_element_{}",
+            "tasm_list_unsafeimplu32_get_element___{}",
             self.0.label_friendly_name()
         )
     }

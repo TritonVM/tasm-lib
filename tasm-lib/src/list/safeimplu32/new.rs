@@ -13,7 +13,10 @@ pub struct SafeNew(pub DataType);
 
 impl DeprecatedSnippet for SafeNew {
     fn entrypoint_name(&self) -> String {
-        format!("tasm_list_safeimplu32_new_{}", self.0.label_friendly_name())
+        format!(
+            "tasm_list_safeimplu32_new___{}",
+            self.0.label_friendly_name()
+        )
     }
 
     fn input_field_names(&self) -> Vec<String> {

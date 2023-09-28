@@ -49,7 +49,7 @@ impl DeprecatedSnippet for UnsafePop {
 
     fn entrypoint_name(&self) -> String {
         format!(
-            "tasm_list_unsafeimplu32_pop_{}",
+            "tasm_list_unsafeimplu32_pop___{}",
             self.0.label_friendly_name()
         )
     }

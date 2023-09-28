@@ -58,7 +58,7 @@ impl DeprecatedSnippet for UnsafePush {
 
     fn entrypoint_name(&self) -> String {
         format!(
-            "tasm_list_unsafeimplu32_push_{}",
+            "tasm_list_unsafeimplu32_push___{}",
             self.0.label_friendly_name()
         )
     }

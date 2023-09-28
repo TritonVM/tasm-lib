@@ -39,7 +39,7 @@ impl DeprecatedSnippet for PushRamToStack {
             "Cannot move value of size 0 to stack"
         );
         format!(
-            "tasm_memory_push_ram_to_stack_{}",
+            "tasm_memory_push_ram_to_stack___{}",
             self.output_type.label_friendly_name()
         )
     }
