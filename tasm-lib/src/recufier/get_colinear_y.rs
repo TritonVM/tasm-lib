@@ -108,7 +108,7 @@ impl BasicSnippet for ColinearYXfe {
                 // stack: _ dx2 dx1 dx0 c2 c1 c0
                 swap 3 swap 1 swap 4 swap 2 swap 5 swap 2 swap 1
                 // stack: _ c2 c1 c0 dx2 dx1 dx0 
-                invert
+                xinvert
                 mul
                 // p2.y = c/dx
                 // stack: _ p2y2 p2y1 p2y0
