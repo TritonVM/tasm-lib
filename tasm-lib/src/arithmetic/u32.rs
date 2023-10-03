@@ -2,6 +2,7 @@ pub mod isodd;
 pub mod isu32;
 pub mod leadingzeros;
 pub mod or;
+pub mod overflowingadd;
 pub mod safeadd;
 pub mod safemul;
 pub mod safepow;
