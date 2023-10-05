@@ -1,5 +1,6 @@
 [workspace]
-members = ["tasm-lib", "derive_tasm_object"]
+members = ["derive_tasm_object", "tasm-lib"]
+resolver = "2"
 
 [profile.dev]
 opt-level = 0

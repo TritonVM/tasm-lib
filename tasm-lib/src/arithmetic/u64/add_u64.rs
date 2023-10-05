@@ -189,7 +189,7 @@ mod tests {
     #[test]
     fn u32s_2_add_no_overflow() {
         // 127 + 129 = 256
-        let mut expected_end_stack = vec![
+        let mut expected_end_stack = [
             get_init_tvm_stack(),
             vec![BFieldElement::zero(), BFieldElement::new(256)],
         ]
@@ -201,7 +201,7 @@ mod tests {
         );
 
         // 127 + 129 + 45 * 2^32 + 1000 * 2^32 = 256 + 1045*2^32
-        expected_end_stack = vec![
+        expected_end_stack = [
             get_init_tvm_stack(),
             vec![BFieldElement::new(1045), BFieldElement::new(256)],
         ]
@@ -213,7 +213,7 @@ mod tests {
         );
 
         // (2^32 - 1) + 0 + 0 * 2^32 + 2004 * 2^32 = (2^32 - 1) + 2004*2^32
-        expected_end_stack = vec![
+        expected_end_stack = [
             get_init_tvm_stack(),
             vec![
                 BFieldElement::new(2004),
@@ -228,7 +228,7 @@ mod tests {
         );
 
         // (2^31 - 1) + 2^31 + 14 * 2^32 + 10^9 * 2^32 = (2^32 - 1) + (10^9 + 14) * 2^32
-        expected_end_stack = vec![
+        expected_end_stack = [
             get_init_tvm_stack(),
             vec![
                 BFieldElement::new(1_000_000_014),
@@ -246,7 +246,7 @@ mod tests {
     #[test]
     fn u32s_2_add_with_overflow_in_least_significant_u32() {
         // 2 ^ 31 + 2 ^ 31 = 0 + 1 * 2 ^32
-        let expected_end_stack = vec![
+        let expected_end_stack = [
             get_init_tvm_stack(),
             vec![BFieldElement::one(), BFieldElement::zero()],
         ]
@@ -258,7 +258,7 @@ mod tests {
         );
 
         // 2 ^ 32 + 2 ^ 32 - 1 - 2 = (1^32 - 3) + 1 * 2^32
-        let expected_end_stack = vec![
+        let expected_end_stack = [
             get_init_tvm_stack(),
             vec![BFieldElement::one(), BFieldElement::new((1 << 32) - 3)],
         ]
