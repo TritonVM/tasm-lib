@@ -366,7 +366,7 @@ impl DeprecatedSnippet for CalculateNewPeaksFromAppend {
             );
             list_push(
                 peaks_pointer,
-                VmHasher::hash_pair(&previous_peak, &new_hash)
+                VmHasher::hash_pair(previous_peak, new_hash)
                     .values()
                     .to_vec(),
                 memory,
@@ -529,7 +529,7 @@ mod tests {
             let leaf_digests: Vec<Digest> = random_elements(init_size);
             let init_mmra: Mmra = MmrAccumulator::new(leaf_digests.clone());
             let expected_final_mmra: Mmra =
-                MmrAccumulator::new(vec![leaf_digests, vec![inserted_digest]].concat());
+                MmrAccumulator::new([leaf_digests, vec![inserted_digest]].concat());
             prop_calculate_new_peaks_from_append(
                 init_mmra,
                 inserted_digest,
@@ -547,7 +547,7 @@ mod tests {
             let leaf_digests: Vec<Digest> = random_elements(init_size);
             let init_mmra: Mmra = MmrAccumulator::new(leaf_digests.clone());
             let expected_final_mmra: Mmra =
-                MmrAccumulator::new(vec![leaf_digests, vec![inserted_digest]].concat());
+                MmrAccumulator::new([leaf_digests, vec![inserted_digest]].concat());
             prop_calculate_new_peaks_from_append(
                 init_mmra,
                 inserted_digest,
@@ -699,7 +699,7 @@ mod tests {
             produced_mp
                 .verify(
                     &produced_mmr.get_peaks(),
-                    &new_leaf,
+                    new_leaf,
                     produced_mmr.count_leaves(),
                 )
                 .0,

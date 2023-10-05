@@ -155,7 +155,7 @@ mod tests {
         init_stack.push(BFieldElement::new(lhs as u64));
 
         let expected = lhs | rhs;
-        let expected = vec![
+        let expected = [
             get_init_tvm_stack(),
             vec![BFieldElement::new(expected as u64)],
         ]

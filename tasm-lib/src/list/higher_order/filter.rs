@@ -507,7 +507,7 @@ mod tests {
             Self: Sized,
         {
             vec![ExecutionState::with_stack(
-                vec![
+                [
                     vec![BFieldElement::zero(); 16],
                     random_elements::<BFieldElement>(3),
                 ]
@@ -520,7 +520,7 @@ mod tests {
             Self: Sized,
         {
             ExecutionState::with_stack(
-                vec![
+                [
                     vec![BFieldElement::zero(); 16],
                     random_elements::<BFieldElement>(3),
                 ]
@@ -533,7 +533,7 @@ mod tests {
             Self: Sized,
         {
             ExecutionState::with_stack(
-                vec![
+                [
                     vec![BFieldElement::zero(); 16],
                     random_elements::<BFieldElement>(3),
                 ]

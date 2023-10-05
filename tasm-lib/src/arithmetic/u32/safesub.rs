@@ -166,7 +166,7 @@ mod tests {
         init_stack.push(BFieldElement::new(rhs as u64));
         init_stack.push(BFieldElement::new(lhs as u64));
         let expected = lhs.checked_sub(rhs);
-        let expected = vec![
+        let expected = [
             get_init_tvm_stack(),
             vec![expected
                 .map(|x| BFieldElement::new(x as u64))
