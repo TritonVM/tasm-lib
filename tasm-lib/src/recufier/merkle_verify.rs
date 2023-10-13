@@ -211,15 +211,16 @@ impl Algorithm for MerkleVerify {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::HashMap;
+    use std::cell::RefCell;
+    use std::rc::Rc;
 
     use rand::thread_rng;
     use twenty_first::util_types::algebraic_hasher::Domain;
 
     use crate::algorithm::ShadowedAlgorithm;
+    use crate::linker::link_for_isolated_run;
     use crate::snippet::RustShadow;
-    use crate::test_helpers::test_rust_equivalence_given_complete_state;
-    use crate::VmHasherState;
+    use crate::{execute_with_terminal_state, program_with_state_preparation, VmHasherState};
 
     use super::MerkleVerify;
 
@@ -233,25 +234,75 @@ mod tests {
         ShadowedAlgorithm::new(MerkleVerify).bench()
     }
 
-    #[should_panic]
     #[test]
-    fn merkle_tree_ap_verify_negative_test() {
-        let mv = MerkleVerify;
-        let (mut stack, _memory, _nondeterminism) =
-            mv.pseudorandom_initial_state(thread_rng().gen(), None);
+    fn negative_test() {
+        let seed: [u8; 32] = thread_rng().gen();
+        for i in 0..4 {
+            let (mut stack, memory, mut nondeterminism) =
+                MerkleVerify.pseudorandom_initial_state(seed, None);
+            let len = stack.len();
 
-        // modify index so as to make it invalid
-        stack[5] = thread_rng().gen();
+            match i {
+                0 => {
+                    // change height; should fail
+                    stack[len - 1].increment();
+                }
+                1 => {
+                    // change height; should fail
+                    stack[len - 1].decrement();
+                }
+                2 => {
+                    // change leaf; should fail
+                    stack[len - 2].increment();
+                }
+                3 => {
+                    // change index; should fail
+                    stack[len - 6].increment()
+                }
+                4 => {
+                    // change index; should fail
+                    stack[len - 6].decrement()
+                }
+                5 => {
+                    // change root; should fail
+                    stack[len - 7].increment()
+                }
+                _ => {}
+            }
 
-        test_rust_equivalence_given_complete_state(
-            &ShadowedAlgorithm::new(mv),
-            &stack,
-            &[],
-            &NonDeterminism::new(vec![]),
-            &HashMap::default(),
-            &VmHasherState::new(Domain::VariableLength),
-            0,
-            None,
-        );
+            // test rust/tasm equivalence
+            // in this case: verify that they both fail
+
+            let stdin = vec![];
+
+            // run rust shadow
+            let rust_result = std::panic::catch_unwind(|| {
+                let mut rust_stack = stack.clone();
+                let mut rust_memory = memory.clone();
+                ShadowedAlgorithm::new(MerkleVerify.clone()).rust_shadow_wrapper(
+                    &stdin,
+                    &nondeterminism,
+                    &mut rust_stack,
+                    &mut rust_memory,
+                    &mut VmHasherState::new(Domain::VariableLength),
+                )
+            });
+
+            if let Ok(result) = &rust_result {
+                println!("rust result: {:?}\ni: {}", result, i);
+            }
+
+            // run tvm
+            let code = link_for_isolated_run(Rc::new(RefCell::new(MerkleVerify)), 0);
+            let program = program_with_state_preparation(&code, &stack, &mut nondeterminism, None);
+            let tvm_result =
+                execute_with_terminal_state(&program, &stdin, &mut nondeterminism, None);
+            if let Ok(result) = &tvm_result {
+                println!("tasm result: {}\ni: {}", result, i);
+            }
+
+            assert!(rust_result.is_err());
+            assert!(tvm_result.is_err());
+        }
     }
 }

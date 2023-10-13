@@ -279,7 +279,6 @@ mod test {
 
             // test rust/tasm equivalence
             // in this case: verify that they both fail
-            // (because you can't dequeue from an empty stream)
 
             let stdin = vec![];
 
