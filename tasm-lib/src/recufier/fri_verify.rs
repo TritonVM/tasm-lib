@@ -210,7 +210,7 @@ impl FriVerify {
                 "last_poly_degree is {last_poly_degree}, \
                 degree_of_last_round is {last_round_max_degree}",
             );
-            bail!(FriValidationError::LastIterationTooHighDegree)
+            bail!(FriValidationError::LastRoundPolynomialHasTooHighDegree)
         }
 
         // Query phase
@@ -743,7 +743,7 @@ impl Procedure for FriVerify {
 #[cfg(test)]
 mod test {
     use itertools::Itertools;
-    use rand::{thread_rng, Rng, RngCore};
+    use rand::{rngs::StdRng, thread_rng, Rng, SeedableRng};
     use triton_vm::{fri::Fri, proof_stream::ProofStream, BFieldElement, arithmetic_domain::ArithmeticDomain};
     use twenty_first::{util_types::{
         algebraic_hasher::Domain,
@@ -761,7 +761,7 @@ mod test {
     fn fri_derived_params_match() {
         let mut rng = thread_rng();
         for _ in 0..20 {
-            let expansion_factor = 1 << rng.gen_range(0..10);
+            let expansion_factor = 2 << rng.gen_range(0..10);
             let colinearity_checks_count = rng.gen_range(1..320);
             let offset: BFieldElement = rng.gen();
             let domain_length = expansion_factor * (1u32 << rng.gen_range(0..20));

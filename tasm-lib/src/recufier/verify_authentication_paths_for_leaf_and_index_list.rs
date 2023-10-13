@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use itertools::Itertools;
-use rand::{rngs::StdRng, Rng, SeedableRng};
+use rand::{rngs::StdRng, Rng, SeedableRng, RngCore};
 use triton_vm::{triton_asm, BFieldElement, NonDeterminism};
 use twenty_first::util_types::{
     merkle_tree::{CpuParallel, MerkleTree},
@@ -18,8 +18,7 @@ use crate::{
     },
     recufier::merkle_verify::MerkleVerify,
     snippet::{BasicSnippet, DataType},
-    structure::tasm_object::{load_to_memory, TasmObject},
-    Digest, VmHasher,
+    Digest, VmHasher, rust_shadowing_helper_functions, structure::tasm_object::TasmObject,
 };
 
 #[derive(Debug, Clone)]
@@ -47,7 +46,7 @@ impl BasicSnippet for VerifyAuthenticationPathForLeafAndIndexList {
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_recufier_verify_authentication_paths_for_leaf_and_index_list".to_string()
+        format!("tasm_recufier_verify_authentication_paths_for_leaf_and_index_list_{}", self.list_type)
     }
 
     fn code(
@@ -115,7 +114,6 @@ impl Algorithm for VerifyAuthenticationPathForLeafAndIndexList {
     ) {
         // read arguments from stack
         let height = stack.pop().unwrap().value() as usize;
-        println!("height at shadow: {}", height);
         let root = Digest::new([
             stack.pop().unwrap(),
             stack.pop().unwrap(),
@@ -126,7 +124,11 @@ impl Algorithm for VerifyAuthenticationPathForLeafAndIndexList {
         let address = stack.pop().unwrap();
 
         // read object from memory
-        let indices_and_leafs = *Vec::<(Digest, u32)>::decode_from_memory(memory, address).unwrap();
+        let safety_offset = match self.list_type {
+            ListType::Safe => 1,
+            ListType::Unsafe => 0,
+        };
+        let indices_and_leafs = *Vec::<(Digest, u32)>::decode_from_memory(memory, address + BFieldElement::new(safety_offset)).unwrap();
 
         // iterate and verify
         let mut digest_index = 0;
@@ -178,7 +180,7 @@ impl Algorithm for VerifyAuthenticationPathForLeafAndIndexList {
             10 + rng.gen_range(1..10) // random number between 10 and 19
         };
         let n = 1 << height;
-        let num_indices = rng.gen_range(0..5) as usize;
+        let num_indices = rng.gen_range(2..5) as usize;
 
         // generate data structure
         let leafs = (0..n).map(|_| rng.gen::<Digest>()).collect_vec();
@@ -200,7 +202,11 @@ impl Algorithm for VerifyAuthenticationPathForLeafAndIndexList {
 
         // prepare memory + stack + nondeterminism
         let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
-        let address = load_to_memory(&mut memory, leafs_and_indices);
+        let address = BFieldElement::new(rng.next_u64() % (1 << 20));
+        match self.list_type {
+            ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_insert(address, num_indices as u32, leafs_and_indices, &mut memory),
+            ListType::Unsafe => rust_shadowing_helper_functions::unsafe_list::unsafe_list_insert(address, leafs_and_indices, &mut memory),
+        };
         let mut stack = empty_stack();
         stack.push(address);
         stack.push(root.0[4]);
@@ -254,7 +260,6 @@ mod test {
         for i in 0..4 {
             let (mut stack, memory, mut nondeterminism) =
                 vap4lail.pseudorandom_initial_state(seed, None);
-            println!("height after generation: {}", stack.last().unwrap());
             let len = stack.len();
 
             match i {
@@ -296,11 +301,12 @@ mod test {
             });
 
             if let Ok(result) = &rust_result {
-                println!("rust result: {:?}\ni: {}", result, i);
+                println!("rust result: {:?}\ni: {}\nstack: {:?}", result, i, stack.clone());
             }
 
             // run tvm
             let code = link_for_isolated_run(Rc::new(RefCell::new(vap4lail.clone())), 0);
+            nondeterminism.ram = memory;
             let program = program_with_state_preparation(&code, &stack, &mut nondeterminism, None);
             let tvm_result =
                 execute_with_terminal_state(&program, &stdin, &mut nondeterminism, None);

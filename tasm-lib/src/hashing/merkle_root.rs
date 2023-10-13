@@ -27,7 +27,7 @@ impl MerkleRoot {
             let half: usize = (stop - start) / 2;
             let left: Digest = Self::call(leafs, start, stop - half);
             let right: Digest = Self::call(leafs, start + half, stop);
-            VmHasher::hash_pair(&left, &right)
+            VmHasher::hash_pair(left, right)
         };
 
         result

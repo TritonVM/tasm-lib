@@ -438,12 +438,16 @@ pub fn execute_with_terminal_state<'a>(
         initial_state,
         None,
     ) {
-        Ok(state) => anyhow::Ok(state),
+        Ok(state) => 
+        {
+            println!("Triton VM execution successful.");
+            anyhow::Ok(state)},
         Err((err, state)) => {
             if maybe_sponge_state.is_some() {
                 println!("tasm final sponge state:");
                 println!("{}", state.sponge_state.iter().join(", "));
             }
+            println!("Triton VM execution failed. Final state:\n{}", state);
             bail!("VM execution failed with error: {err}.\nLast state before crash:\n{state}")
         }
     }

@@ -237,7 +237,7 @@ mod tests {
     #[test]
     fn negative_test() {
         let seed: [u8; 32] = thread_rng().gen();
-        for i in 0..4 {
+        for i in 0..6 {
             let (mut stack, memory, mut nondeterminism) =
                 MerkleVerify.pseudorandom_initial_state(seed, None);
             let len = stack.len();
