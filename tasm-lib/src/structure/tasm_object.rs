@@ -355,14 +355,14 @@ mod test {
     use twenty_first::shared_math::{bfield_codec::BFieldCodec, x_field_element::XFieldElement};
 
     use crate::{
-        get_init_tvm_stack, io, memory,
+        empty_stack, io, memory,
         snippet::{DataType, DeprecatedSnippet, InputSource},
-        structure::tasm_object::TasmObject,
+        structure::tasm_object::{load_to_memory, TasmObject},
         test_helpers::test_rust_equivalence_multiple_deprecated,
         ExecutionState,
     };
 
-    #[derive(Debug, PartialEq, Eq, BFieldCodec)]
+    #[derive(Debug, Clone, PartialEq, Eq, BFieldCodec)]
     enum InnerEnum {
         Cow(u32),
         Horse(u128),
@@ -370,10 +370,10 @@ mod test {
         Sheep([BFieldElement; 13]),
     }
 
-    #[derive(Debug, PartialEq, Eq, BFieldCodec, TasmObject)]
+    #[derive(Debug, Clone, PartialEq, Eq, BFieldCodec, TasmObject)]
     struct InnerStruct(XFieldElement, u32);
 
-    #[derive(Debug, PartialEq, Eq, BFieldCodec, TasmObject)]
+    #[derive(Debug, Clone, PartialEq, Eq, BFieldCodec, TasmObject)]
     struct OuterStruct {
         o: InnerEnum,
         a: Vec<Option<bool>>,
