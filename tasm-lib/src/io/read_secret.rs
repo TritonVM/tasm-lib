@@ -4,7 +4,7 @@ use triton_vm::NonDeterminism;
 use twenty_first::shared_math::other::random_elements;
 
 use crate::{
-    get_init_tvm_stack,
+    empty_stack,
     snippet::{DataType, DeprecatedSnippet},
     ExecutionState,
 };
@@ -64,7 +64,7 @@ impl DeprecatedSnippet for ReadSecret {
 
     fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
         vec![ExecutionState {
-            stack: get_init_tvm_stack(),
+            stack: empty_stack(),
             std_in: vec![],
             nondeterminism: NonDeterminism::new(random_elements(self.0.get_size())),
             memory: HashMap::default(),
@@ -89,7 +89,7 @@ impl DeprecatedSnippet for ReadSecret {
 
     fn common_case_input_state(&self) -> ExecutionState {
         ExecutionState {
-            stack: get_init_tvm_stack(),
+            stack: empty_stack(),
             std_in: vec![],
             nondeterminism: NonDeterminism::new(random_elements(self.0.get_size())),
             memory: HashMap::default(),

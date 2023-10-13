@@ -5,7 +5,7 @@ use rand::{thread_rng, Rng};
 use twenty_first::shared_math::{b_field_element::BFieldElement, other::random_elements};
 
 use crate::{
-    get_init_tvm_stack,
+    empty_stack,
     library::Library,
     list::safeimplu32::SAFE_LIST_ELEMENT_CAPACITY,
     rust_shadowing_helper_functions::safe_list::{safe_insert_random_list, safe_list_push},
@@ -204,7 +204,7 @@ fn prepare_execution_state(
 ) -> ExecutionState {
     let list_pointer: BFieldElement =
         BFieldElement::new(thread_rng().gen_range(0..u32::MAX as u64));
-    let mut stack = get_init_tvm_stack();
+    let mut stack = empty_stack();
     stack.push(list_pointer);
     let mut push_value: Vec<BFieldElement> = random_elements(data_type.get_size());
     while let Some(element) = push_value.pop() {
@@ -398,8 +398,8 @@ mod tests {
             push_value.len(),
             "Push value length must match data size"
         );
-        let expected_end_stack = get_init_tvm_stack();
-        let mut init_stack = get_init_tvm_stack();
+        let expected_end_stack = empty_stack();
+        let mut init_stack = empty_stack();
         init_stack.push(list_address);
 
         for i in 0..data_type.get_size() {

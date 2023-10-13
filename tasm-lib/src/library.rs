@@ -329,7 +329,7 @@ mod tests {
     use triton_vm::program::Program;
     use triton_vm::triton_asm;
 
-    use crate::get_init_tvm_stack;
+    use crate::empty_stack;
     use crate::list::ListType;
     use crate::memory::memcpy::MemCpy;
     use crate::mmr::calculate_new_peaks_from_leaf_mutation::MmrCalculateNewPeaksFromLeafMutationMtIndices;
@@ -339,7 +339,7 @@ mod tests {
 
     #[test]
     fn library_includes() {
-        let empty_stack = get_init_tvm_stack();
+        let empty_stack = empty_stack();
 
         let expected = None;
         test_rust_equivalence_given_input_values_deprecated(

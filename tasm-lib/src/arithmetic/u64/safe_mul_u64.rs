@@ -4,7 +4,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
 use crate::snippet::{DataType, DeprecatedSnippet};
-use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
+use crate::{empty_stack, push_encodable, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct SafeMulU64;
@@ -180,7 +180,7 @@ impl DeprecatedSnippet for SafeMulU64 {
 fn prepare_state(a: u64, b: u64) -> ExecutionState {
     let a = U32s::<2>::try_from(a).unwrap();
     let b = U32s::<2>::try_from(b).unwrap();
-    let mut init_stack = get_init_tvm_stack();
+    let mut init_stack = empty_stack();
     push_encodable(&mut init_stack, &a);
     push_encodable(&mut init_stack, &b);
     ExecutionState::with_stack(init_stack)
@@ -211,7 +211,7 @@ mod tests {
         // Crash because (rhs_hi * lhs_hi) != 0
         let lhs: U32s<2> = U32s::try_from(1u64 << 32).unwrap();
         let rhs: U32s<2> = U32s::try_from(1u64 << 32).unwrap();
-        let mut init_stack = get_init_tvm_stack();
+        let mut init_stack = empty_stack();
         for elem in rhs.encode().into_iter().rev() {
             init_stack.push(elem);
         }
@@ -229,7 +229,7 @@ mod tests {
         // Crash because (rhs_lo * lhs_hi)_hi != 0
         let lhs: U32s<2> = U32s::try_from(1u64 << 31).unwrap();
         let rhs: U32s<2> = U32s::try_from(1u64 << 33).unwrap();
-        let mut init_stack = get_init_tvm_stack();
+        let mut init_stack = empty_stack();
         for elem in rhs.encode().into_iter().rev() {
             init_stack.push(elem);
         }
@@ -247,7 +247,7 @@ mod tests {
         // Crash because (lhs_lo * rhs_hi)_hi != 0
         let lhs: U32s<2> = U32s::try_from(1u64 << 33).unwrap();
         let rhs: U32s<2> = U32s::try_from(1u64 << 31).unwrap();
-        let mut init_stack = get_init_tvm_stack();
+        let mut init_stack = empty_stack();
         for elem in rhs.encode().into_iter().rev() {
             init_stack.push(elem);
         }
@@ -265,7 +265,7 @@ mod tests {
         // Crash because (c_lo + a_hi + b_lo)_hi != 0
         let lhs: U32s<2> = U32s::try_from((1u64 << 33) + 5).unwrap();
         let rhs: U32s<2> = U32s::try_from((1u64 << 31) - 1).unwrap();
-        let mut init_stack = get_init_tvm_stack();
+        let mut init_stack = empty_stack();
         for elem in rhs.encode().into_iter().rev() {
             init_stack.push(elem);
         }
@@ -279,13 +279,13 @@ mod tests {
 
     #[test]
     fn safe_mul_u64_simple() {
-        let mut init_stack = get_init_tvm_stack();
+        let mut init_stack = empty_stack();
         init_stack.push(BFieldElement::zero());
         init_stack.push(BFieldElement::new(100));
         init_stack.push(BFieldElement::zero());
         init_stack.push(BFieldElement::new(200));
 
-        let mut expected = get_init_tvm_stack();
+        let mut expected = empty_stack();
         expected.push(BFieldElement::zero());
         expected.push(BFieldElement::new(20_000));
         test_rust_equivalence_given_input_values_deprecated(

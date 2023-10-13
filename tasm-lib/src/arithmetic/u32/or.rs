@@ -2,7 +2,7 @@ use rand::{thread_rng, RngCore};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::{
-    get_init_tvm_stack,
+    empty_stack,
     snippet::{DataType, DeprecatedSnippet},
     ExecutionState,
 };
@@ -65,7 +65,7 @@ impl DeprecatedSnippet for Or {
     fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
         let mut ret: Vec<ExecutionState> = vec![];
         for _ in 0..100 {
-            let mut stack = get_init_tvm_stack();
+            let mut stack = empty_stack();
             let lhs = thread_rng().next_u32();
             let rhs = thread_rng().next_u32();
             let lhs = BFieldElement::new(lhs as u64);
@@ -97,8 +97,13 @@ impl DeprecatedSnippet for Or {
 
     fn common_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
+<<<<<<< HEAD
             [
                 get_init_tvm_stack(),
+=======
+            vec![
+                empty_stack(),
+>>>>>>> b19ddfa (rename `get_init_tvm_stack` to `empty_stack`)
                 vec![BFieldElement::new(1 << 15), BFieldElement::new(1 << 16)],
             ]
             .concat(),
@@ -107,8 +112,13 @@ impl DeprecatedSnippet for Or {
 
     fn worst_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
+<<<<<<< HEAD
             [
                 get_init_tvm_stack(),
+=======
+            vec![
+                empty_stack(),
+>>>>>>> b19ddfa (rename `get_init_tvm_stack` to `empty_stack`)
                 vec![
                     BFieldElement::new((1 << 32) - 1),
                     BFieldElement::new((1 << 32) - 1),
@@ -150,16 +160,20 @@ mod tests {
     }
 
     fn prop_safe_or(lhs: u32, rhs: u32, _expected: Option<u32>) {
-        let mut init_stack = get_init_tvm_stack();
+        let mut init_stack = empty_stack();
         init_stack.push(BFieldElement::new(rhs as u64));
         init_stack.push(BFieldElement::new(lhs as u64));
 
         let expected = lhs | rhs;
+<<<<<<< HEAD
         let expected = [
             get_init_tvm_stack(),
             vec![BFieldElement::new(expected as u64)],
         ]
         .concat();
+=======
+        let expected = vec![empty_stack(), vec![BFieldElement::new(expected as u64)]].concat();
+>>>>>>> b19ddfa (rename `get_init_tvm_stack` to `empty_stack`)
 
         test_rust_equivalence_given_input_values_deprecated(
             &Or,

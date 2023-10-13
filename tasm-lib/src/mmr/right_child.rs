@@ -10,7 +10,7 @@ use twenty_first::util_types::mmr;
 use crate::arithmetic::u64::decr_u64::DecrU64;
 use crate::library::Library;
 use crate::snippet::{DataType, DeprecatedSnippet};
-use crate::{get_init_tvm_stack, ExecutionState};
+use crate::{empty_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct MmrRightChild;
@@ -96,7 +96,7 @@ impl DeprecatedSnippet for MmrRightChild {
 }
 
 fn prepare_state(node_index: u64) -> ExecutionState {
-    let mut stack = get_init_tvm_stack();
+    let mut stack = empty_stack();
     let node_index_hi = BFieldElement::new(node_index >> 32);
     let node_index_lo = BFieldElement::new(node_index & u32::MAX as u64);
     stack.push(node_index_hi);
@@ -110,7 +110,7 @@ mod tests {
     use twenty_first::shared_math::b_field_element::BFieldElement;
     use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
-    use crate::get_init_tvm_stack;
+    use crate::empty_stack;
 
     use crate::test_helpers::{
         test_rust_equivalence_given_input_values_deprecated,
@@ -126,24 +126,24 @@ mod tests {
 
     #[test]
     fn u32s_right_child_simple() {
-        let mut expected_stack = get_init_tvm_stack();
+        let mut expected_stack = empty_stack();
         expected_stack.push(BFieldElement::zero());
         expected_stack.push(BFieldElement::new(2));
         prop_right_child(U32s::<2>::from(3), Some(&expected_stack));
 
-        expected_stack = get_init_tvm_stack();
+        expected_stack = empty_stack();
         expected_stack.push(BFieldElement::zero());
         expected_stack.push(BFieldElement::new(9));
         prop_right_child(U32s::<2>::from(10), Some(&expected_stack));
 
-        expected_stack = get_init_tvm_stack();
+        expected_stack = empty_stack();
         expected_stack.push(BFieldElement::zero());
         expected_stack.push(BFieldElement::new(14));
         prop_right_child(U32s::<2>::from(15), Some(&expected_stack));
     }
 
     fn prop_right_child(node_index: U32s<2>, expected: Option<&[BFieldElement]>) {
-        let mut init_stack = get_init_tvm_stack();
+        let mut init_stack = empty_stack();
         for elem in node_index.encode().into_iter().rev() {
             init_stack.push(elem);
         }

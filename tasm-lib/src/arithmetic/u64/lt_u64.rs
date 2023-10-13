@@ -7,7 +7,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
 use crate::snippet::{DataType, DeprecatedSnippet};
-use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
+use crate::{empty_stack, push_encodable, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct LtStandardU64;
@@ -119,8 +119,13 @@ impl DeprecatedSnippet for LtStandardU64 {
 
     fn common_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
+<<<<<<< HEAD
             [
                 get_init_tvm_stack(),
+=======
+            vec![
+                empty_stack(),
+>>>>>>> b19ddfa (rename `get_init_tvm_stack` to `empty_stack`)
                 vec![BFieldElement::zero(), BFieldElement::new(1 << 31)],
                 vec![BFieldElement::one(), BFieldElement::new(1 << 30)],
             ]
@@ -130,8 +135,13 @@ impl DeprecatedSnippet for LtStandardU64 {
 
     fn worst_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
+<<<<<<< HEAD
             [
                 get_init_tvm_stack(),
+=======
+            vec![
+                empty_stack(),
+>>>>>>> b19ddfa (rename `get_init_tvm_stack` to `empty_stack`)
                 vec![BFieldElement::new(8), BFieldElement::new(1 << 31)],
                 vec![BFieldElement::new(8), BFieldElement::new(1 << 30)],
             ]
@@ -186,7 +196,7 @@ impl DeprecatedSnippet for LtU64 {
             let n: U32s<2> = n.try_into().unwrap();
             let m: u64 = rand::thread_rng().next_u64();
             let m: U32s<2> = m.try_into().unwrap();
-            let mut input_stack = get_init_tvm_stack();
+            let mut input_stack = empty_stack();
 
             push_encodable(&mut input_stack, &n);
             push_encodable(&mut input_stack, &m);
@@ -269,8 +279,13 @@ impl DeprecatedSnippet for LtU64 {
 
     fn common_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
+<<<<<<< HEAD
             [
                 get_init_tvm_stack(),
+=======
+            vec![
+                empty_stack(),
+>>>>>>> b19ddfa (rename `get_init_tvm_stack` to `empty_stack`)
                 vec![BFieldElement::zero(), BFieldElement::new(1 << 31)],
                 vec![BFieldElement::one(), BFieldElement::new(1 << 30)],
             ]
@@ -280,8 +295,13 @@ impl DeprecatedSnippet for LtU64 {
 
     fn worst_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
+<<<<<<< HEAD
             [
                 get_init_tvm_stack(),
+=======
+            vec![
+                empty_stack(),
+>>>>>>> b19ddfa (rename `get_init_tvm_stack` to `empty_stack`)
                 vec![BFieldElement::new(8), BFieldElement::new(1 << 31)],
                 vec![BFieldElement::new(8), BFieldElement::new(1 << 30)],
             ]
@@ -296,7 +316,7 @@ mod tests {
     use twenty_first::shared_math::b_field_element::BFieldElement;
     use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
-    use crate::get_init_tvm_stack;
+    use crate::empty_stack;
 
     use crate::test_helpers::{
         test_rust_equivalence_given_input_values_deprecated,
@@ -325,8 +345,13 @@ mod tests {
     #[test]
     fn u32s_lt_true_with_hi() {
         // 15 * 2^32 > 11 * 2^32
+<<<<<<< HEAD
         let expected_end_stack = [
             get_init_tvm_stack(),
+=======
+        let expected_end_stack = vec![
+            empty_stack(),
+>>>>>>> b19ddfa (rename `get_init_tvm_stack` to `empty_stack`)
             vec![BFieldElement::new(15), BFieldElement::new(0)],
             vec![BFieldElement::new(11), BFieldElement::new(0)],
             vec![BFieldElement::one()],
@@ -342,8 +367,13 @@ mod tests {
     #[test]
     fn u32s_lt_false_with_zero() {
         // eval(0 < 0) = false
+<<<<<<< HEAD
         let expected_end_stack = [
             get_init_tvm_stack(),
+=======
+        let expected_end_stack = vec![
+            empty_stack(),
+>>>>>>> b19ddfa (rename `get_init_tvm_stack` to `empty_stack`)
             vec![BFieldElement::new(0), BFieldElement::new(0)],
             vec![BFieldElement::new(0), BFieldElement::new(0)],
             vec![BFieldElement::zero()],
@@ -367,7 +397,7 @@ mod tests {
     #[test]
     fn u32s_lt_true_pbt() {
         let mut rng = rand::thread_rng();
-        let init_stack = get_init_tvm_stack();
+        let init_stack = empty_stack();
         for _ in 0..100 {
             let rhs: u64 = rng.gen();
             let lhs: u64 = rng.gen_range(0..rhs);
@@ -389,7 +419,7 @@ mod tests {
     #[test]
     fn u32s_lt_false_pbt() {
         let mut rng = rand::thread_rng();
-        let init_stack = get_init_tvm_stack();
+        let init_stack = empty_stack();
         for _ in 0..100 {
             let lhs: u64 = rng.gen();
             let rhs: u64 = rng.gen_range(0..=lhs);
@@ -411,7 +441,7 @@ mod tests {
     #[test]
     fn u32s_lt_false_because_equal_pbt() {
         let mut rng = rand::thread_rng();
-        let init_stack = get_init_tvm_stack();
+        let init_stack = empty_stack();
         for _ in 0..100 {
             let lhs: u64 = rng.gen();
             let rhs: u64 = lhs;
@@ -431,7 +461,7 @@ mod tests {
     }
 
     fn prop_lt(lhs: U32s<2>, rhs: U32s<2>, expected: Option<&[BFieldElement]>) {
-        let mut init_stack = get_init_tvm_stack();
+        let mut init_stack = empty_stack();
         init_stack.append(&mut rhs.encode().into_iter().rev().collect());
         init_stack.append(&mut lhs.encode().into_iter().rev().collect());
 
@@ -449,7 +479,7 @@ mod tests {
     }
 
     fn prop_lt_standard(lhs: U32s<2>, rhs: U32s<2>) {
-        let mut init_stack = get_init_tvm_stack();
+        let mut init_stack = empty_stack();
         init_stack.append(&mut rhs.encode().into_iter().rev().collect());
         init_stack.append(&mut lhs.encode().into_iter().rev().collect());
 

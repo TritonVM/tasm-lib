@@ -11,7 +11,7 @@ use crate::arithmetic::u64::pow2_u64::Pow2U64;
 use crate::arithmetic::u64::sub_u64::SubU64;
 use crate::library::Library;
 use crate::snippet::{DataType, DeprecatedSnippet};
-use crate::{get_init_tvm_stack, ExecutionState};
+use crate::{empty_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct MmrLeftChild;
@@ -106,7 +106,7 @@ impl DeprecatedSnippet for MmrLeftChild {
 }
 
 fn prepare_state(node_index: u64) -> ExecutionState {
-    let mut stack = get_init_tvm_stack();
+    let mut stack = empty_stack();
     let node_index_hi = BFieldElement::new(node_index >> 32);
     let node_index_lo = BFieldElement::new(node_index & u32::MAX as u64);
     let (_, height) = mmr::shared_advanced::right_lineage_length_and_own_height(node_index);
@@ -122,7 +122,7 @@ mod tests {
     use num::Zero;
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
-    use crate::get_init_tvm_stack;
+    use crate::empty_stack;
 
     use crate::test_helpers::{
         test_rust_equivalence_given_input_values_deprecated,
@@ -138,29 +138,29 @@ mod tests {
 
     #[test]
     fn u32s_left_child_simple() {
-        let mut expected_stack = get_init_tvm_stack();
+        let mut expected_stack = empty_stack();
         expected_stack.push(BFieldElement::zero());
         expected_stack.push(BFieldElement::new(3));
         prop_left_child(U32s::<2>::from(7), 2, Some(&expected_stack));
 
-        expected_stack = get_init_tvm_stack();
+        expected_stack = empty_stack();
         expected_stack.push(BFieldElement::zero());
         expected_stack.push(BFieldElement::new(10));
         prop_left_child(U32s::<2>::from(14), 2, Some(&expected_stack));
 
-        expected_stack = get_init_tvm_stack();
+        expected_stack = empty_stack();
         expected_stack.push(BFieldElement::zero());
         expected_stack.push(BFieldElement::new(4));
         prop_left_child(U32s::<2>::from(6), 1, Some(&expected_stack));
 
-        expected_stack = get_init_tvm_stack();
+        expected_stack = empty_stack();
         expected_stack.push(BFieldElement::zero());
         expected_stack.push(BFieldElement::new(16));
         prop_left_child(U32s::<2>::from(18), 1, Some(&expected_stack));
     }
 
     fn prop_left_child(node_index: U32s<2>, height: u32, expected: Option<&[BFieldElement]>) {
-        let mut init_stack = get_init_tvm_stack();
+        let mut init_stack = empty_stack();
         for elem in node_index.encode().into_iter().rev() {
             init_stack.push(elem);
         }

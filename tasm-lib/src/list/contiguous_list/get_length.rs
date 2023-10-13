@@ -6,7 +6,7 @@ use triton_vm::BFieldElement;
 use twenty_first::shared_math::{bfield_codec::BFieldCodec, other::random_elements};
 
 use crate::{
-    get_init_tvm_stack,
+    empty_stack,
     snippet::{DataType, DeprecatedSnippet},
     Digest, ExecutionState,
 };
@@ -62,7 +62,7 @@ impl GetLength {
         let encoded = data.encode();
         memory.insert(address, BFieldElement::new(encoded.len() as u64));
         address.increment();
-        let stack = [get_init_tvm_stack(), vec![address]].concat();
+        let stack = vec![empty_stack(), vec![address]].concat();
         for word in encoded {
             memory.insert(address, word);
             address.increment();

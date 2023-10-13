@@ -6,7 +6,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
 use crate::snippet::{DataType, DeprecatedSnippet};
-use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
+use crate::{empty_stack, push_encodable, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct Isu32;
@@ -35,10 +35,10 @@ impl DeprecatedSnippet for Isu32 {
     fn gen_input_states(&self) -> Vec<ExecutionState> {
         let n: u32 = rand::thread_rng().next_u32();
 
-        let mut true_stack = get_init_tvm_stack();
+        let mut true_stack = empty_stack();
         push_encodable(&mut true_stack, &n);
 
-        let mut false_stack = get_init_tvm_stack();
+        let mut false_stack = empty_stack();
         push_encodable(&mut false_stack, &(u32::MAX));
 
         vec![
@@ -90,18 +90,20 @@ impl DeprecatedSnippet for Isu32 {
     }
 
     fn common_case_input_state(&self) -> ExecutionState {
-        ExecutionState::with_stack(
-            [get_init_tvm_stack(), vec![BFieldElement::new(1 << 16)]].concat(),
-        )
+        ExecutionState::with_stack([empty_stack(), vec![BFieldElement::new(1 << 16)]].concat())
     }
 
     fn worst_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
+<<<<<<< HEAD:tasm-lib/src/arithmetic/u32/isu32.rs
             [
                 get_init_tvm_stack(),
                 vec![BFieldElement::new((1 << 32) - 1)],
             ]
             .concat(),
+=======
+            vec![empty_stack(), vec![BFieldElement::new((1 << 32) - 1)]].concat(),
+>>>>>>> b19ddfa (rename `get_init_tvm_stack` to `empty_stack`):tasm-lib/src/arithmetic/u32/is_u32.rs
         )
     }
 }
@@ -110,7 +112,7 @@ impl DeprecatedSnippet for Isu32 {
 mod tests {
     use rand::RngCore;
 
-    use crate::get_init_tvm_stack;
+    use crate::empty_stack;
 
     use crate::test_helpers::{
         test_rust_equivalence_given_input_values_deprecated,
@@ -126,10 +128,8 @@ mod tests {
 
     #[test]
     fn is_u32_simple() {
-        let stack_true: Vec<BFieldElement> =
-            [get_init_tvm_stack(), vec![BFieldElement::one()]].concat();
-        let stack_false: Vec<BFieldElement> =
-            [get_init_tvm_stack(), vec![BFieldElement::zero()]].concat();
+        let stack_true: Vec<BFieldElement> = [empty_stack(), vec![BFieldElement::one()]].concat();
+        let stack_false: Vec<BFieldElement> = [empty_stack(), vec![BFieldElement::zero()]].concat();
 
         prop_is_u32(BFieldElement::zero(), Some(&stack_true));
         prop_is_u32(BFieldElement::one(), Some(&stack_true));
@@ -147,10 +147,8 @@ mod tests {
 
     #[test]
     fn is_u32_pbt() {
-        let stack_true: Vec<BFieldElement> =
-            [get_init_tvm_stack(), vec![BFieldElement::one()]].concat();
-        let stack_false: Vec<BFieldElement> =
-            [get_init_tvm_stack(), vec![BFieldElement::zero()]].concat();
+        let stack_true: Vec<BFieldElement> = [empty_stack(), vec![BFieldElement::one()]].concat();
+        let stack_false: Vec<BFieldElement> = [empty_stack(), vec![BFieldElement::zero()]].concat();
 
         let mut rng = rand::thread_rng();
         for _ in 0..10 {
@@ -163,7 +161,7 @@ mod tests {
     }
 
     fn prop_is_u32(some_value: BFieldElement, expected: Option<&[BFieldElement]>) {
-        let mut init_stack = get_init_tvm_stack();
+        let mut init_stack = empty_stack();
         init_stack.push(some_value);
 
         test_rust_equivalence_given_input_values_deprecated::<Isu32>(

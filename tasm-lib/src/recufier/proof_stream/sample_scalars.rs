@@ -12,7 +12,7 @@ use twenty_first::{
 };
 
 use crate::{
-    get_init_tvm_stack,
+    empty_stack,
     hashing::squeeze_repeatedly::SqueezeRepeatedly,
     list::unsafe_u32::new::UnsafeNew,
     procedure::Procedure,
@@ -124,7 +124,7 @@ impl Procedure for SampleScalars {
     ) {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
         let num_scalars = rng.gen_range(0..40);
-        let mut stack = get_init_tvm_stack();
+        let mut stack = empty_stack();
         stack.push(BFieldElement::new(num_scalars as u64));
         let sponge_state: VmHasherState = twenty_first::shared_math::tip5::Tip5State {
             state: rng.gen::<[BFieldElement; STATE_SIZE]>(),

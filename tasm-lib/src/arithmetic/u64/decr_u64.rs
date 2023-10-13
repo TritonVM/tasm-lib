@@ -7,7 +7,7 @@ use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
 use crate::library::Library;
 use crate::snippet::{DataType, DeprecatedSnippet};
-use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
+use crate::{empty_stack, push_encodable, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct DecrU64;
@@ -42,7 +42,7 @@ impl DeprecatedSnippet for DecrU64 {
         values
             .into_iter()
             .map(|value| {
-                let mut stack = get_init_tvm_stack();
+                let mut stack = empty_stack();
                 push_encodable(&mut stack, &value);
                 ExecutionState::with_stack(stack)
             })
@@ -109,8 +109,13 @@ impl DeprecatedSnippet for DecrU64 {
     fn common_case_input_state(&self) -> ExecutionState {
         // no carry
         ExecutionState::with_stack(
+<<<<<<< HEAD
             [
                 get_init_tvm_stack(),
+=======
+            vec![
+                empty_stack(),
+>>>>>>> b19ddfa (rename `get_init_tvm_stack` to `empty_stack`)
                 vec![BFieldElement::zero(), BFieldElement::new(7)],
             ]
             .concat(),
@@ -120,8 +125,13 @@ impl DeprecatedSnippet for DecrU64 {
     fn worst_case_input_state(&self) -> ExecutionState {
         // with carry
         ExecutionState::with_stack(
+<<<<<<< HEAD
             [
                 get_init_tvm_stack(),
+=======
+            vec![
+                empty_stack(),
+>>>>>>> b19ddfa (rename `get_init_tvm_stack` to `empty_stack`)
                 vec![BFieldElement::new(1000), BFieldElement::new(0)],
             ]
             .concat(),
@@ -138,7 +148,7 @@ mod tests {
         test_rust_equivalence_given_input_values_deprecated,
         test_rust_equivalence_multiple_deprecated,
     };
-    use crate::{get_init_tvm_stack, push_encodable};
+    use crate::{empty_stack, push_encodable};
 
     use super::*;
 
@@ -149,7 +159,7 @@ mod tests {
 
     #[test]
     fn decr_u64_negative_tasm_test() {
-        let mut stack = get_init_tvm_stack();
+        let mut stack = empty_stack();
         push_encodable(&mut stack, &U32s::<2>::zero());
         assert!(DecrU64
             .link_and_run_tasm_for_test(&mut stack, vec![], vec![], &mut HashMap::default(), None)
@@ -159,7 +169,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn decr_u64_negative_rust_test() {
-        let mut stack = get_init_tvm_stack();
+        let mut stack = empty_stack();
         push_encodable(&mut stack, &U32s::<2>::zero());
         DecrU64::rust_shadowing(
             &DecrU64,
@@ -185,7 +195,7 @@ mod tests {
     }
 
     fn prop_decr_u64(value: U32s<2>) {
-        let mut stack = get_init_tvm_stack();
+        let mut stack = empty_stack();
         push_encodable(&mut stack, &value);
         test_rust_equivalence_given_input_values_deprecated(
             &DecrU64,

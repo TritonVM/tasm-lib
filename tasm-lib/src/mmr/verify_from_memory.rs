@@ -21,8 +21,7 @@ use crate::list::unsafeimplu32::get::UnsafeGet;
 use crate::list::ListType;
 use crate::snippet::{DataType, DeprecatedSnippet};
 use crate::{
-    get_init_tvm_stack, rust_shadowing_helper_functions, Digest, ExecutionState, VmHasher,
-    DIGEST_LENGTH,
+    empty_stack, rust_shadowing_helper_functions, Digest, ExecutionState, VmHasher, DIGEST_LENGTH,
 };
 
 use super::leaf_index_to_mt_index::MmrLeafIndexToMtIndexAndPeakIndex;
@@ -44,7 +43,7 @@ impl MmrVerifyFromMemory {
     ) -> (ExecutionState, BFieldElement, BFieldElement) {
         // BEFORE: _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo [digest (leaf_digest)] *auth_path
         // AFTER: _ *auth_path leaf_index_hi leaf_index_lo validation_result
-        let mut stack = get_init_tvm_stack();
+        let mut stack = empty_stack();
 
         let peaks_pointer = BFieldElement::one();
         stack.push(peaks_pointer);
@@ -425,7 +424,7 @@ mod tests {
         test_rust_equivalence_multiple_deprecated,
     };
     use crate::VmHasher;
-    use crate::{get_init_tvm_stack, mmr::MAX_MMR_HEIGHT};
+    use crate::{empty_stack, mmr::MAX_MMR_HEIGHT};
 
     use super::*;
 
@@ -628,7 +627,7 @@ mod tests {
         let mut memory = exec_state.memory;
 
         // AFTER: _ *auth_path leaf_index_hi leaf_index_lo validation_result
-        let mut expected_final_stack = get_init_tvm_stack();
+        let mut expected_final_stack = empty_stack();
         expected_final_stack.push(auth_path_pointer);
         expected_final_stack.push(leaf_index_hi);
         expected_final_stack.push(leaf_index_lo);

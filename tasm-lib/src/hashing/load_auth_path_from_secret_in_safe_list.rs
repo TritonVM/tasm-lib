@@ -15,7 +15,7 @@ use crate::snippet::DataType;
 use crate::snippet::DeprecatedSnippet;
 use crate::Digest;
 use crate::DIGEST_LENGTH;
-use crate::{get_init_tvm_stack, rust_shadowing_helper_functions, ExecutionState};
+use crate::{empty_stack, rust_shadowing_helper_functions, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct LoadAuthPathFromSecretInSafeList;
@@ -53,7 +53,7 @@ impl DeprecatedSnippet for LoadAuthPathFromSecretInSafeList {
                 );
             }
             let init_vm_state = ExecutionState {
-                stack: get_init_tvm_stack(),
+                stack: empty_stack(),
                 std_in: vec![],
                 nondeterminism: NonDeterminism::new(secret_in),
                 memory: HashMap::default(),
@@ -193,7 +193,7 @@ impl DeprecatedSnippet for LoadAuthPathFromSecretInSafeList {
         );
 
         ExecutionState {
-            stack: get_init_tvm_stack(),
+            stack: empty_stack(),
             std_in: vec![],
             nondeterminism: NonDeterminism::new(secret_in),
             memory: HashMap::default(),
@@ -207,7 +207,7 @@ impl DeprecatedSnippet for LoadAuthPathFromSecretInSafeList {
         rust_shadowing_helper_functions::input::write_dummy_ap_path(&mut secret_in, MAX_MMR_HEIGHT);
 
         ExecutionState {
-            stack: get_init_tvm_stack(),
+            stack: empty_stack(),
             std_in: vec![],
             nondeterminism: NonDeterminism::new(secret_in),
             memory: HashMap::default(),
@@ -241,7 +241,7 @@ mod tests {
         }
 
         match LoadAuthPathFromSecretInSafeList.link_and_run_tasm_for_test(
-            &mut get_init_tvm_stack(),
+            &mut empty_stack(),
             vec![],
             secret_in.to_vec(),
             &mut HashMap::default(),
@@ -269,7 +269,7 @@ mod tests {
         }
 
         match LoadAuthPathFromSecretInSafeList.link_and_run_tasm_for_test(
-            &mut get_init_tvm_stack(),
+            &mut empty_stack(),
             vec![],
             secret_in.to_vec(),
             &mut HashMap::default(),

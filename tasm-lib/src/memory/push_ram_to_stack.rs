@@ -5,7 +5,7 @@ use rand::{thread_rng, Rng};
 use triton_vm::BFieldElement;
 
 use crate::{
-    get_init_tvm_stack,
+    empty_stack,
     snippet::{DataType, DeprecatedSnippet},
     ExecutionState,
 };
@@ -16,7 +16,7 @@ pub struct PushRamToStack {
 
 impl PushRamToStack {
     fn get_init_state(&self, mut ram_address: BFieldElement) -> ExecutionState {
-        let mut stack = get_init_tvm_stack();
+        let mut stack = empty_stack();
 
         stack.push(ram_address);
 

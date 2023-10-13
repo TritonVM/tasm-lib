@@ -7,7 +7,7 @@ use crate::arithmetic::u64::log_2_floor_u64::Log2FloorU64;
 use crate::arithmetic::u64::pow2_u64::Pow2U64;
 use crate::arithmetic::u64::sub_u64::SubU64;
 use crate::snippet::{DataType, DeprecatedSnippet};
-use crate::{get_init_tvm_stack, ExecutionState};
+use crate::{empty_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct MmrRightLineageLength;
@@ -173,7 +173,7 @@ impl DeprecatedSnippet for MmrRightLineageLength {
 }
 
 fn prepare_state(node_index: u64) -> ExecutionState {
-    let mut stack = get_init_tvm_stack();
+    let mut stack = empty_stack();
     let node_index_hi = BFieldElement::new(node_index >> 32);
     let node_index_lo = BFieldElement::new(node_index & u32::MAX as u64);
     stack.push(node_index_hi);
@@ -258,7 +258,7 @@ mod tests {
 
     fn prop_right_lineage_count(node_index: u64, expected_count: u32) {
         println!("node_index = {node_index}");
-        let mut init_stack = get_init_tvm_stack();
+        let mut init_stack = empty_stack();
         let node_index_hi = BFieldElement::new(node_index >> 32);
         let node_index_lo = BFieldElement::new(node_index & u32::MAX as u64);
         init_stack.push(node_index_hi);
@@ -266,7 +266,7 @@ mod tests {
 
         // _ (right_lineage_count:u32)
         let expected = [
-            get_init_tvm_stack(),
+            empty_stack(),
             vec![BFieldElement::new(expected_count as u64)],
         ]
         .concat();

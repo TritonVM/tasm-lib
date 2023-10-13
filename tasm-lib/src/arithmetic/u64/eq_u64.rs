@@ -7,7 +7,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
 use crate::snippet::{DataType, DeprecatedSnippet};
-use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
+use crate::{empty_stack, push_encodable, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct EqU64;
@@ -43,7 +43,7 @@ impl DeprecatedSnippet for EqU64 {
         let rhs = U32s::<2>::try_from(rng.next_u64()).unwrap();
         let lhs = U32s::<2>::try_from(rng.next_u64()).unwrap();
 
-        let mut stack = get_init_tvm_stack();
+        let mut stack = empty_stack();
         push_encodable(&mut stack, &rhs);
         push_encodable(&mut stack, &lhs);
 
@@ -103,8 +103,13 @@ impl DeprecatedSnippet for EqU64 {
 
     fn common_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
+<<<<<<< HEAD
             [
                 get_init_tvm_stack(),
+=======
+            vec![
+                empty_stack(),
+>>>>>>> b19ddfa (rename `get_init_tvm_stack` to `empty_stack`)
                 vec![BFieldElement::zero(), BFieldElement::new((1 << 31) - 1)],
                 vec![BFieldElement::zero(), BFieldElement::new((1 << 10) - 1)],
             ]
@@ -114,8 +119,13 @@ impl DeprecatedSnippet for EqU64 {
 
     fn worst_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
+<<<<<<< HEAD
             [
                 get_init_tvm_stack(),
+=======
+            vec![
+                empty_stack(),
+>>>>>>> b19ddfa (rename `get_init_tvm_stack` to `empty_stack`)
                 vec![BFieldElement::new(1 << 31), BFieldElement::new(1 << 31)],
                 vec![
                     BFieldElement::new(1 << 30),
@@ -133,7 +143,7 @@ mod tests {
     use twenty_first::shared_math::b_field_element::BFieldElement;
     use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
-    use crate::get_init_tvm_stack;
+    use crate::empty_stack;
 
     use crate::test_helpers::{
         test_rust_equivalence_given_input_values_deprecated,
@@ -150,7 +160,7 @@ mod tests {
     #[test]
     fn u32s_2_eq_false() {
         // Should return false
-        let expected_end_stack = [get_init_tvm_stack(), vec![BFieldElement::zero()]].concat();
+        let expected_end_stack = [empty_stack(), vec![BFieldElement::zero()]].concat();
         prop_eq(
             U32s::new([239, 16]),
             U32s::new([239, 17]),
@@ -206,7 +216,7 @@ mod tests {
     #[test]
     fn u32s_2_eq_true() {
         // Should return true
-        let expected_end_stack = [get_init_tvm_stack(), vec![BFieldElement::one()]].concat();
+        let expected_end_stack = [empty_stack(), vec![BFieldElement::one()]].concat();
         prop_eq(
             U32s::new([239, 17]),
             U32s::new([239, 17]),
@@ -251,7 +261,7 @@ mod tests {
 
     #[test]
     fn u32s_2_eq_pbt_true() {
-        let expected_end_stack = [get_init_tvm_stack(), vec![BFieldElement::one()]].concat();
+        let expected_end_stack = [empty_stack(), vec![BFieldElement::one()]].concat();
         let mut rng = rand::thread_rng();
         for _ in 0..10 {
             let lhs = U32s::new([rng.next_u32(), rng.next_u32()]);
@@ -261,7 +271,7 @@ mod tests {
     }
 
     fn prop_eq(lhs: U32s<2>, rhs: U32s<2>, expected: Option<&[BFieldElement]>) {
-        let mut init_stack = get_init_tvm_stack();
+        let mut init_stack = empty_stack();
         for elem in rhs.encode().into_iter().rev() {
             init_stack.push(elem);
         }

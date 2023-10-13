@@ -21,8 +21,7 @@ use crate::list::ListType;
 use crate::mmr::MAX_MMR_HEIGHT;
 use crate::snippet::{DataType, DeprecatedSnippet};
 use crate::{
-    get_init_tvm_stack, rust_shadowing_helper_functions, Digest, ExecutionState, VmHasher,
-    DIGEST_LENGTH,
+    empty_stack, rust_shadowing_helper_functions, Digest, ExecutionState, VmHasher, DIGEST_LENGTH,
 };
 
 /// Calculate new MMR peaks from a leaf mutation using Merkle tree indices walk up the tree
@@ -40,7 +39,7 @@ impl MmrCalculateNewPeaksFromLeafMutationMtIndices {
         new_leaf: Digest,
         auth_path: Vec<Digest>,
     ) -> (ExecutionState, BFieldElement, BFieldElement) {
-        let mut stack = get_init_tvm_stack();
+        let mut stack = empty_stack();
 
         // We assume that the auth paths can safely be stored in memory on this address
         let auth_path_pointer = BFieldElement::new((MAX_MMR_HEIGHT * DIGEST_LENGTH + 2) as u64);
@@ -427,7 +426,7 @@ mod tests {
     use twenty_first::util_types::mmr::mmr_membership_proof::MmrMembershipProof;
     use twenty_first::util_types::mmr::mmr_trait::Mmr;
 
-    use crate::get_init_tvm_stack;
+    use crate::empty_stack;
     use crate::mmr::MAX_MMR_HEIGHT;
 
     use crate::test_helpers::{
@@ -645,7 +644,7 @@ mod tests {
         let mut memory = init_exec_state.memory;
 
         // AFTER: _ *auth_path leaf_index_hi leaf_index_lo
-        let mut expected_final_stack = get_init_tvm_stack();
+        let mut expected_final_stack = empty_stack();
         expected_final_stack.push(auth_path_pointer);
         expected_final_stack.push(BFieldElement::new(new_leaf_index >> 32));
         expected_final_stack.push(BFieldElement::new(new_leaf_index & u32::MAX as u64));

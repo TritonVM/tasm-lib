@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::{
     arithmetic::xfe_ntt::XfeNtt,
-    field, get_init_tvm_stack,
+    empty_stack, field,
     hashing::merkle_root::MerkleRoot,
     list::{
         higher_order::{
@@ -724,7 +724,7 @@ impl Procedure for FriVerify {
         self.inner_verify(&mut proof_stream.clone(), &mut digests)
             .unwrap();
 
-        let mut stack = get_init_tvm_stack();
+        let mut stack = empty_stack();
         let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
         let proof_stream_pointer = load_to_memory(&mut memory, proof_stream);
         let fri_verify_pointer = load_to_memory(&mut memory, self.clone());

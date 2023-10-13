@@ -13,7 +13,7 @@ use crate::arithmetic::u64::pow2_u64::Pow2U64;
 use crate::library::Library;
 use crate::rust_shadowing_helper_functions::non_leaf_nodes_left;
 use crate::snippet::{DataType, DeprecatedSnippet};
-use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
+use crate::{empty_stack, push_encodable, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct MmrNonLeafNodesLeftUsingAnd;
@@ -183,7 +183,7 @@ impl DeprecatedSnippet for MmrNonLeafNodesLeftUsingAnd {
 }
 
 fn prepare_state(leaf_index: u64) -> ExecutionState {
-    let mut stack = get_init_tvm_stack();
+    let mut stack = empty_stack();
     let leaf_index_hi = BFieldElement::new(leaf_index >> 32);
     let leaf_index_lo = BFieldElement::new(leaf_index & u32::MAX as u64);
     stack.push(leaf_index_hi);
@@ -198,7 +198,7 @@ mod tests {
     use twenty_first::shared_math::b_field_element::BFieldElement;
     use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
-    use crate::get_init_tvm_stack;
+    use crate::empty_stack;
 
     use crate::test_helpers::{
         test_rust_equivalence_given_input_values_deprecated,
@@ -214,43 +214,43 @@ mod tests {
 
     #[test]
     fn non_leaf_nodes_left_using_and_test() {
-        let mut expected = get_init_tvm_stack();
+        let mut expected = empty_stack();
         expected.push(BFieldElement::new(0));
         expected.push(BFieldElement::new(0));
         prop_non_leaf_nodes_left_using_and(0, Some(&expected));
         prop_non_leaf_nodes_left_using_and(1, Some(&expected));
 
-        expected = get_init_tvm_stack();
+        expected = empty_stack();
         expected.push(BFieldElement::new(0));
         expected.push(BFieldElement::new(1));
         prop_non_leaf_nodes_left_using_and(2, Some(&expected));
         prop_non_leaf_nodes_left_using_and(3, Some(&expected));
 
-        expected = get_init_tvm_stack();
+        expected = empty_stack();
         expected.push(BFieldElement::new(0));
         expected.push(BFieldElement::new(3));
         prop_non_leaf_nodes_left_using_and(4, Some(&expected));
         prop_non_leaf_nodes_left_using_and(5, Some(&expected));
 
-        expected = get_init_tvm_stack();
+        expected = empty_stack();
         expected.push(BFieldElement::new(0));
         expected.push(BFieldElement::new(4));
         prop_non_leaf_nodes_left_using_and(6, Some(&expected));
         prop_non_leaf_nodes_left_using_and(7, Some(&expected));
 
-        expected = get_init_tvm_stack();
+        expected = empty_stack();
         expected.push(BFieldElement::new(0));
         expected.push(BFieldElement::new(7));
         prop_non_leaf_nodes_left_using_and(8, Some(&expected));
         prop_non_leaf_nodes_left_using_and(9, Some(&expected));
 
-        expected = get_init_tvm_stack();
+        expected = empty_stack();
         expected.push(BFieldElement::new(0));
         expected.push(BFieldElement::new(8));
         prop_non_leaf_nodes_left_using_and(10, Some(&expected));
         prop_non_leaf_nodes_left_using_and(11, Some(&expected));
 
-        expected = get_init_tvm_stack();
+        expected = empty_stack();
         expected.push(BFieldElement::new(0));
         expected.push(BFieldElement::new(10));
         prop_non_leaf_nodes_left_using_and(12, Some(&expected));
@@ -270,7 +270,7 @@ mod tests {
 
     fn prop_non_leaf_nodes_left_using_and(leaf_index: u64, expected: Option<&[BFieldElement]>) {
         println!("leaf_index = {leaf_index}");
-        let mut init_stack = get_init_tvm_stack();
+        let mut init_stack = empty_stack();
         let value_as_u32_2 = U32s::new([
             (leaf_index & 0xFFFFFFFFu32 as u64) as u32,
             (leaf_index >> 32) as u32,

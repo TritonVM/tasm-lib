@@ -2,7 +2,7 @@ use num::{One, Zero};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::{
-    dyn_malloc, get_init_tvm_stack,
+    dyn_malloc, empty_stack,
     rust_shadowing_helper_functions::safe_list::safe_list_new,
     snippet::{DataType, DeprecatedSnippet},
     ExecutionState,
@@ -99,7 +99,7 @@ impl DeprecatedSnippet for SafeNew {
     }
 
     fn gen_input_states(&self) -> Vec<ExecutionState> {
-        let mut stack = get_init_tvm_stack();
+        let mut stack = empty_stack();
 
         // push capacity to stack
         stack.push(BFieldElement::new(1000));
@@ -134,15 +134,11 @@ impl DeprecatedSnippet for SafeNew {
     }
 
     fn common_case_input_state(&self) -> ExecutionState {
-        ExecutionState::with_stack(
-            [get_init_tvm_stack(), vec![BFieldElement::new(1 << 5)]].concat(),
-        )
+        ExecutionState::with_stack(vec![empty_stack(), vec![BFieldElement::new(1 << 5)]].concat())
     }
 
     fn worst_case_input_state(&self) -> ExecutionState {
-        ExecutionState::with_stack(
-            [get_init_tvm_stack(), vec![BFieldElement::new(1 << 6)]].concat(),
-        )
+        ExecutionState::with_stack(vec![empty_stack(), vec![BFieldElement::new(1 << 6)]].concat())
     }
 }
 
@@ -175,7 +171,7 @@ mod tests {
 
         // Verify that one list does not overwrite another list in memory
         let capacity_as_bfe = BFieldElement::new(100);
-        let mut stack = get_init_tvm_stack();
+        let mut stack = empty_stack();
         let mut memory = HashMap::default();
         stack.push(capacity_as_bfe);
         SafeNew(data_type.clone())
@@ -193,7 +189,7 @@ mod tests {
             .link_and_run_tasm_for_test(&mut stack, vec![], vec![], &mut memory, None)
             .unwrap();
         assert_eq!(
-            get_init_tvm_stack()[DIGEST_LENGTH..],
+            empty_stack()[DIGEST_LENGTH..],
             stack[DIGEST_LENGTH..],
             "Stack must be empty after call to push, except for program hash"
         );
@@ -223,7 +219,7 @@ mod tests {
             .link_and_run_tasm_for_test(&mut stack, vec![], vec![], &mut memory, None)
             .unwrap();
         assert_eq!(
-            get_init_tvm_stack()[DIGEST_LENGTH..],
+            empty_stack()[DIGEST_LENGTH..],
             stack[DIGEST_LENGTH..],
             "Stack must be empty after call to push, except for program hash"
         );

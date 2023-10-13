@@ -16,7 +16,7 @@ use crate::snippet::DataType;
 use crate::snippet::DeprecatedSnippet;
 use crate::Digest;
 use crate::DIGEST_LENGTH;
-use crate::{get_init_tvm_stack, ExecutionState};
+use crate::{empty_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct LoadAuthPathFromStdInSafeList;
@@ -54,7 +54,7 @@ impl DeprecatedSnippet for LoadAuthPathFromStdInSafeList {
                 );
             }
             let init_vm_state = ExecutionState {
-                stack: get_init_tvm_stack(),
+                stack: empty_stack(),
                 std_in,
                 nondeterminism: NonDeterminism::new(vec![]),
                 memory: HashMap::default(),
@@ -187,7 +187,7 @@ impl DeprecatedSnippet for LoadAuthPathFromStdInSafeList {
         );
 
         ExecutionState {
-            stack: get_init_tvm_stack(),
+            stack: empty_stack(),
             std_in,
             nondeterminism: NonDeterminism::new(vec![]),
             memory: HashMap::default(),
@@ -201,7 +201,7 @@ impl DeprecatedSnippet for LoadAuthPathFromStdInSafeList {
         rust_shadowing_helper_functions::input::write_dummy_ap_path(&mut std_in, MAX_MMR_HEIGHT);
 
         ExecutionState {
-            stack: get_init_tvm_stack(),
+            stack: empty_stack(),
             std_in,
             nondeterminism: NonDeterminism::new(vec![]),
             memory: HashMap::default(),

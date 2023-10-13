@@ -7,7 +7,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
 use crate::snippet::{DataType, DeprecatedSnippet};
-use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
+use crate::{empty_stack, push_encodable, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct Div2U64;
@@ -39,7 +39,7 @@ impl DeprecatedSnippet for Div2U64 {
     fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
         let n: u64 = rand::thread_rng().next_u64();
         let n: U32s<2> = n.try_into().unwrap();
-        let mut input_stack = get_init_tvm_stack();
+        let mut input_stack = empty_stack();
 
         push_encodable(&mut input_stack, &n);
 
@@ -113,8 +113,13 @@ impl DeprecatedSnippet for Div2U64 {
 
     fn common_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
+<<<<<<< HEAD
             [
                 get_init_tvm_stack(),
+=======
+            vec![
+                empty_stack(),
+>>>>>>> b19ddfa (rename `get_init_tvm_stack` to `empty_stack`)
                 vec![BFieldElement::zero(), BFieldElement::new(1 << 31)],
             ]
             .concat(),
@@ -123,8 +128,13 @@ impl DeprecatedSnippet for Div2U64 {
 
     fn worst_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
+<<<<<<< HEAD
             [
                 get_init_tvm_stack(),
+=======
+            vec![
+                empty_stack(),
+>>>>>>> b19ddfa (rename `get_init_tvm_stack` to `empty_stack`)
                 vec![
                     BFieldElement::new((1 << 31) + 1),
                     BFieldElement::new(1 << 31),
@@ -140,7 +150,7 @@ mod tests {
     use rand::{thread_rng, RngCore};
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
-    use crate::get_init_tvm_stack;
+    use crate::empty_stack;
 
     use crate::test_helpers::{
         test_rust_equivalence_given_input_values_deprecated,
@@ -157,7 +167,7 @@ mod tests {
     #[should_panic]
     #[test]
     fn lo_is_not_u32() {
-        let mut init_stack = get_init_tvm_stack();
+        let mut init_stack = empty_stack();
         init_stack.push(BFieldElement::new(16));
         init_stack.push(BFieldElement::new(u32::MAX as u64 + 1));
 
@@ -174,7 +184,7 @@ mod tests {
     #[should_panic]
     #[test]
     fn hi_is_not_u32() {
-        let mut init_stack = get_init_tvm_stack();
+        let mut init_stack = empty_stack();
         init_stack.push(BFieldElement::new(u32::MAX as u64 + 1));
         init_stack.push(BFieldElement::new(16));
 
@@ -217,10 +227,10 @@ mod tests {
     }
 
     fn prop_div_2(value: u64) {
-        let mut init_stack = get_init_tvm_stack();
+        let mut init_stack = empty_stack();
         init_stack.push(BFieldElement::new(value >> 32));
         init_stack.push(BFieldElement::new(value & u32::MAX as u64));
-        let mut expected_stack = get_init_tvm_stack();
+        let mut expected_stack = empty_stack();
         let res = value / 2;
         expected_stack.push(BFieldElement::new(res >> 32));
         expected_stack.push(BFieldElement::new(res & u32::MAX as u64));

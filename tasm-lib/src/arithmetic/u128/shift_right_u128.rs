@@ -3,7 +3,7 @@ use triton_vm::BFieldElement;
 use twenty_first::amount::u32s::U32s;
 
 use crate::{
-    get_init_tvm_stack,
+    empty_stack,
     library::Library,
     push_encodable,
     snippet::{DataType, DeprecatedSnippet},
@@ -207,7 +207,7 @@ impl DeprecatedSnippet for ShiftRightU128 {
 
 fn prepare_state(value: u128, shift_amount: u32) -> ExecutionState {
     let value = U32s::<4>::try_from(value).unwrap();
-    let mut init_stack = get_init_tvm_stack();
+    let mut init_stack = empty_stack();
     push_encodable(&mut init_stack, &value);
     init_stack.push(BFieldElement::new(shift_amount as u64));
     ExecutionState::with_stack(init_stack)
@@ -262,7 +262,7 @@ mod tests {
     }
 
     fn prop_shift_right(value: u128, shift_amount: u32) {
-        let mut init_stack = get_init_tvm_stack();
+        let mut init_stack = empty_stack();
         let value_as_u32s = U32s::<4>::try_from(value).unwrap();
         for limb in value_as_u32s.encode().into_iter().rev() {
             init_stack.push(limb);
@@ -272,7 +272,7 @@ mod tests {
 
         let expected_u128 = value >> shift_amount;
 
-        let mut expected_stack = get_init_tvm_stack();
+        let mut expected_stack = empty_stack();
         let expected_value_as_u32s = U32s::<4>::try_from(expected_u128).unwrap();
         for limb in expected_value_as_u32s.encode().into_iter().rev() {
             expected_stack.push(limb);

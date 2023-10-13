@@ -4,7 +4,7 @@ use triton_vm::NonDeterminism;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::{
-    get_init_tvm_stack,
+    empty_stack,
     list::{
         safeimplu32::{new::SafeNew, set_length::SafeSetLength},
         unsafeimplu32::{new::UnsafeNew, set_length::UnsafeSetLength},
@@ -26,7 +26,7 @@ pub struct Range {
 
 impl Range {
     fn init_state(minimum: u32, supremum: u32) -> ExecutionState {
-        let mut stack = get_init_tvm_stack();
+        let mut stack = empty_stack();
         stack.push(BFieldElement::new(minimum as u64));
         stack.push(BFieldElement::new(supremum as u64));
         ExecutionState {

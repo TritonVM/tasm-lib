@@ -5,7 +5,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
 use crate::snippet::{DataType, DeprecatedSnippet};
-use crate::{get_init_tvm_stack, ExecutionState};
+use crate::{empty_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct Shiftleft;
@@ -108,7 +108,7 @@ impl DeprecatedSnippet for Shiftleft {
 }
 
 fn prepare_state(value: u32, shift: u32) -> ExecutionState {
-    let mut stack = get_init_tvm_stack();
+    let mut stack = empty_stack();
     let value = BFieldElement::new(value as u64);
     let shift = BFieldElement::new(shift as u64);
     stack.push(value);
@@ -141,7 +141,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn shift_beyond_limit() {
-        let mut init_stack = get_init_tvm_stack();
+        let mut init_stack = empty_stack();
         init_stack.push(BFieldElement::new(u32::MAX as u64));
         init_stack.push(32u64.into());
         Shiftleft
@@ -149,13 +149,13 @@ mod tests {
     }
 
     fn prop_shift_left(value: u32, shift_amount: u32) {
-        let mut init_stack = get_init_tvm_stack();
+        let mut init_stack = empty_stack();
         init_stack.push(BFieldElement::new(value as u64));
         init_stack.push(BFieldElement::new(shift_amount as u64));
 
         let expected_u32 = value << shift_amount;
 
-        let mut expected_stack = get_init_tvm_stack();
+        let mut expected_stack = empty_stack();
         expected_stack.push((expected_u32 as u64).into());
 
         test_rust_equivalence_given_input_values_deprecated(

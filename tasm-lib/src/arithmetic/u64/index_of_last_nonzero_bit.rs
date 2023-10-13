@@ -3,7 +3,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::{
     arithmetic::u64::{and_u64::AndU64, log_2_floor_u64::Log2FloorU64},
-    get_init_tvm_stack,
+    empty_stack,
     snippet::{DataType, DeprecatedSnippet},
     ExecutionState,
 };
@@ -134,7 +134,7 @@ impl DeprecatedSnippet for IndexOfLastNonZeroBitU64 {
 fn prepare_state(value: u64) -> ExecutionState {
     let value_hi: u32 = (value >> 32) as u32;
     let value_lo: u32 = (value & u32::MAX as u64) as u32;
-    let mut stack = get_init_tvm_stack();
+    let mut stack = empty_stack();
     stack.push(BFieldElement::new(value_hi as u64));
     stack.push(BFieldElement::new(value_lo as u64));
     ExecutionState::with_stack(stack)
@@ -160,11 +160,11 @@ mod tests {
 
     fn index_of_last_nonzero_bit_prop(value: u64, expected: u32) {
         println!("value: {value}");
-        let mut init_stack = get_init_tvm_stack();
+        let mut init_stack = empty_stack();
         init_stack.push(BFieldElement::new(value >> 32));
         init_stack.push(BFieldElement::new(value & u32::MAX as u64));
 
-        let mut expected_output = get_init_tvm_stack();
+        let mut expected_output = empty_stack();
         expected_output.push(BFieldElement::new(expected as u64));
 
         test_rust_equivalence_given_input_values_deprecated(
@@ -180,7 +180,7 @@ mod tests {
     #[should_panic]
     #[test]
     fn disallow_non_u32_input_hi() {
-        let mut init_stack = get_init_tvm_stack();
+        let mut init_stack = empty_stack();
         init_stack.push(BFieldElement::new(1 << 32));
         init_stack.push(BFieldElement::zero());
 
@@ -197,7 +197,7 @@ mod tests {
     #[should_panic]
     #[test]
     fn disallow_non_u32_input_lo() {
-        let mut init_stack = get_init_tvm_stack();
+        let mut init_stack = empty_stack();
         init_stack.push(BFieldElement::zero());
         init_stack.push(BFieldElement::new(1 << 32));
 
@@ -214,7 +214,7 @@ mod tests {
     #[should_panic]
     #[test]
     fn disallow_zero_input() {
-        let mut init_stack = get_init_tvm_stack();
+        let mut init_stack = empty_stack();
         init_stack.push(BFieldElement::zero());
         init_stack.push(BFieldElement::zero());
 

@@ -17,7 +17,7 @@ use crate::arithmetic::u64::shift_right_u64::ShiftRightU64;
 use crate::arithmetic::u64::sub_u64::SubU64;
 use crate::library::Library;
 use crate::snippet::{DataType, DeprecatedSnippet};
-use crate::{get_init_tvm_stack, ExecutionState};
+use crate::{empty_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct DivModU64;
@@ -557,8 +557,13 @@ impl DeprecatedSnippet for DivModU64 {
 
 fn prepare_state(numerator: u64, divisor: u64) -> ExecutionState {
     ExecutionState::with_stack(
+<<<<<<< HEAD
         [
             get_init_tvm_stack(),
+=======
+        vec![
+            empty_stack(),
+>>>>>>> b19ddfa (rename `get_init_tvm_stack` to `empty_stack`)
             vec![
                 BFieldElement::new(numerator >> 32),
                 BFieldElement::new(numerator & u32::MAX as u64),
@@ -576,7 +581,7 @@ fn prepare_state(numerator: u64, divisor: u64) -> ExecutionState {
 mod tests {
     use num::BigUint;
 
-    use crate::get_init_tvm_stack;
+    use crate::empty_stack;
 
     use crate::test_helpers::{
         test_rust_equivalence_given_input_values_deprecated,
@@ -666,7 +671,7 @@ mod tests {
     }
 
     fn prop_div_mod(numerator: u64, divisor: u64) {
-        let mut init_stack = get_init_tvm_stack();
+        let mut init_stack = empty_stack();
 
         let numerator_lo = (numerator & u32::MAX as u64) as u32;
         let numerator_hi = (numerator >> 32) as u32;
@@ -687,7 +692,7 @@ mod tests {
             ((numerator / divisor).into(), (numerator % divisor).into());
         let expected_u32_2_quotient: U32s<2> = expected_res.0.into();
         let expected_u32_2_remainder: U32s<2> = expected_res.1.into();
-        let mut expected_end_stack = get_init_tvm_stack();
+        let mut expected_end_stack = empty_stack();
         for elem in expected_u32_2_quotient.encode().into_iter().rev() {
             expected_end_stack.push(elem);
         }

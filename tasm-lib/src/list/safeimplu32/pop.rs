@@ -6,7 +6,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use crate::library::Library;
 use crate::rust_shadowing_helper_functions::safe_list::{safe_insert_random_list, safe_list_pop};
 use crate::snippet::{DataType, DeprecatedSnippet};
-use crate::{get_init_tvm_stack, ExecutionState};
+use crate::{empty_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct SafePop(pub DataType);
@@ -158,7 +158,7 @@ impl DeprecatedSnippet for SafePop {
 fn prepare_state(data_type: &DataType, old_length: usize) -> ExecutionState {
     let list_pointer: BFieldElement = random();
     let capacity: usize = 30;
-    let mut stack = get_init_tvm_stack();
+    let mut stack = empty_stack();
     stack.push(list_pointer);
     let mut memory = HashMap::default();
     safe_insert_random_list(
@@ -176,7 +176,7 @@ mod tests {
     use num::One;
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
-    use crate::get_init_tvm_stack;
+    use crate::empty_stack;
     use crate::rust_shadowing_helper_functions::safe_list::safe_list_push;
     use crate::test_helpers::{
         test_rust_equivalence_given_input_values_deprecated,
@@ -243,7 +243,7 @@ mod tests {
         list_capacity: u32,
     ) {
         let element_size = data_type.get_size();
-        let mut init_stack = get_init_tvm_stack();
+        let mut init_stack = empty_stack();
         init_stack.push(list_pointer);
 
         let mut memory = HashMap::default();
@@ -266,7 +266,7 @@ mod tests {
             element_size,
         );
 
-        let mut expected_end_stack = get_init_tvm_stack();
+        let mut expected_end_stack = empty_stack();
 
         for i in 0..element_size {
             expected_end_stack.push(last_element[element_size - 1 - i]);

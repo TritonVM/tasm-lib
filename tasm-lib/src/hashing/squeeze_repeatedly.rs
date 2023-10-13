@@ -6,7 +6,7 @@ use triton_vm::{triton_asm, BFieldElement, NonDeterminism};
 use twenty_first::{shared_math::tip5::RATE, util_types::algebraic_hasher::SpongeHasher};
 
 use crate::{
-    get_init_tvm_stack,
+    empty_stack,
     procedure::Procedure,
     snippet::{BasicSnippet, DataType},
     VmHasher, VmHasherState,
@@ -150,7 +150,7 @@ impl Procedure for SqueezeRepeatedly {
     ) {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
         let sponge_state = VmHasherState { state: rng.gen() };
-        let mut stack = get_init_tvm_stack();
+        let mut stack = empty_stack();
         let address = BFieldElement::new(rng.next_u64() % (1 << 20));
         let num_squeezes = rng.gen_range(0..10);
         stack.push(address);

@@ -4,7 +4,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
 use crate::snippet::{DataType, DeprecatedSnippet};
-use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
+use crate::{empty_stack, push_encodable, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct WrappingMulU64;
@@ -151,7 +151,7 @@ impl DeprecatedSnippet for WrappingMulU64 {
 fn prepare_state(a: u64, b: u64) -> ExecutionState {
     let a = U32s::<2>::try_from(a).unwrap();
     let b = U32s::<2>::try_from(b).unwrap();
-    let mut init_stack = get_init_tvm_stack();
+    let mut init_stack = empty_stack();
     push_encodable(&mut init_stack, &a);
     push_encodable(&mut init_stack, &b);
     ExecutionState::with_stack(init_stack)
@@ -177,13 +177,13 @@ mod tests {
 
     #[test]
     fn wrapping_mul_u64_simple() {
-        let mut init_stack = get_init_tvm_stack();
+        let mut init_stack = empty_stack();
         init_stack.push(BFieldElement::zero());
         init_stack.push(BFieldElement::new(100));
         init_stack.push(BFieldElement::zero());
         init_stack.push(BFieldElement::new(200));
 
-        let mut expected = get_init_tvm_stack();
+        let mut expected = empty_stack();
         expected.push(BFieldElement::zero());
         expected.push(BFieldElement::new(20_000));
         test_rust_equivalence_given_input_values_deprecated(

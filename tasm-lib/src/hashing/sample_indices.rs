@@ -8,7 +8,7 @@ use twenty_first::{
 };
 
 use crate::{
-    get_init_tvm_stack,
+    empty_stack,
     list::{
         self,
         safeimplu32::{new::SafeNew, set_length::SafeSetLength},
@@ -32,8 +32,8 @@ pub struct SampleIndices {
 impl SampleIndices {
     fn test_state(number: usize, upper_bound: u32) -> ExecutionState {
         ExecutionState {
-            stack: [
-                get_init_tvm_stack(),
+            stack: vec![
+                empty_stack(),
                 vec![
                     BFieldElement::new(number as u64),
                     BFieldElement::new(upper_bound as u64),

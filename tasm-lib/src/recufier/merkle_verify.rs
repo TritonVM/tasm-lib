@@ -11,11 +11,11 @@ use crate::algorithm::Algorithm;
 use crate::library::Library;
 use crate::snippet::{BasicSnippet, DataType};
 use crate::snippet_bencher::BenchmarkCase;
-use crate::{get_init_tvm_stack, Digest, VmHasher};
+use crate::{empty_stack, Digest, VmHasher};
 
 /// MerkleVerify -- verify that a leaf lives in a Merkle tree,
 /// given the root, leaf index, and leaf. The authentication path
-/// is non-deterministically divinded. This algorithm asserts
+/// is non-deterministically divined. This algorithm asserts
 /// that the path is valid; phrased differently, it crashes the
 /// VM if it is not.
 ///
@@ -186,7 +186,7 @@ impl Algorithm for MerkleVerify {
             let root = node_digest;
 
             // prepare stack
-            let mut stack = get_init_tvm_stack();
+            let mut stack = empty_stack();
             for r in root.0.into_iter().rev() {
                 stack.push(r);
             }

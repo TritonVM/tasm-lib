@@ -4,7 +4,7 @@ use num_traits::Zero;
 use rand::{random, thread_rng, Rng, RngCore};
 use triton_vm::{BFieldElement, NonDeterminism};
 
-use crate::{get_init_tvm_stack, snippet::DeprecatedSnippet};
+use crate::{empty_stack, snippet::DeprecatedSnippet};
 
 pub struct MemCpy; // TODO: add field `static_length : Option<usize>` to avoid loop
 impl MemCpy {
@@ -14,7 +14,7 @@ impl MemCpy {
         let write_dest = BFieldElement::new(read_source.value() + rng.next_u32() as u64);
 
         // set stack
-        let mut stack = get_init_tvm_stack();
+        let mut stack = empty_stack();
         stack.push(read_source);
         stack.push(write_dest);
         stack.push(BFieldElement::new(len as u64));

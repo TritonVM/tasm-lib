@@ -7,7 +7,7 @@ use twenty_first::{
 };
 
 use crate::{
-    get_init_tvm_stack,
+    empty_stack,
     library::Library,
     snippet::{DataType, DeprecatedSnippet},
     ExecutionState,
@@ -236,7 +236,7 @@ impl DeprecatedSnippet for SubU128 {
 }
 
 fn prepare_state(lhs: u128, rhs: u128) -> ExecutionState {
-    let mut init_stack = get_init_tvm_stack();
+    let mut init_stack = empty_stack();
     for elem in rhs.encode().into_iter().rev() {
         init_stack.push(elem);
     }
@@ -252,7 +252,7 @@ mod tests {
     use num::{One, Zero};
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
-    use crate::get_init_tvm_stack;
+    use crate::empty_stack;
 
     use crate::test_helpers::{
         test_rust_equivalence_given_input_values_deprecated,
@@ -270,7 +270,7 @@ mod tests {
     fn subtraction_involving_zeros() {
         // 0 - 0 = 0
         let mut expected_end_stack = [
-            get_init_tvm_stack(),
+            empty_stack(),
             vec![
                 BFieldElement::zero(),
                 BFieldElement::zero(),
@@ -283,7 +283,7 @@ mod tests {
 
         // 1 - 0 = 1
         expected_end_stack = [
-            get_init_tvm_stack(),
+            empty_stack(),
             vec![
                 BFieldElement::zero(),
                 BFieldElement::zero(),
@@ -296,7 +296,7 @@ mod tests {
 
         // 1 - 1 = 0
         expected_end_stack = [
-            get_init_tvm_stack(),
+            empty_stack(),
             vec![
                 BFieldElement::zero(),
                 BFieldElement::zero(),
@@ -309,7 +309,7 @@ mod tests {
 
         // u64::MAX - u64::MAX = 0
         expected_end_stack = [
-            get_init_tvm_stack(),
+            empty_stack(),
             vec![
                 BFieldElement::zero(),
                 BFieldElement::zero(),
@@ -326,7 +326,7 @@ mod tests {
 
         // u128::MAX - u128::MAX = 0
         expected_end_stack = [
-            get_init_tvm_stack(),
+            empty_stack(),
             vec![
                 BFieldElement::zero(),
                 BFieldElement::zero(),
@@ -345,7 +345,7 @@ mod tests {
     #[test]
     fn sub_u128_cascading_carry() {
         let expected_end_stack = [
-            get_init_tvm_stack(),
+            empty_stack(),
             vec![
                 BFieldElement::zero(),
                 BFieldElement::zero(),
@@ -362,7 +362,7 @@ mod tests {
     }
 
     fn prop_sub(lhs: U32s<4>, rhs: U32s<4>, expected: Option<&[BFieldElement]>) {
-        let mut init_stack = get_init_tvm_stack();
+        let mut init_stack = empty_stack();
         for elem in rhs.encode().into_iter().rev() {
             init_stack.push(elem);
         }

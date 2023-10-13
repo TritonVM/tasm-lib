@@ -2,7 +2,7 @@ use rand::{thread_rng, RngCore};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::{
-    get_init_tvm_stack,
+    empty_stack,
     snippet::{DataType, DeprecatedSnippet},
     ExecutionState,
 };
@@ -69,7 +69,7 @@ impl DeprecatedSnippet for Leadingzeros {
     fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
         let mut ret: Vec<ExecutionState> = vec![];
         for _ in 0..100 {
-            let mut stack = get_init_tvm_stack();
+            let mut stack = empty_stack();
             let value = thread_rng().next_u32();
             let value = BFieldElement::new(value as u64);
             stack.push(value);
@@ -96,18 +96,20 @@ impl DeprecatedSnippet for Leadingzeros {
     }
 
     fn common_case_input_state(&self) -> ExecutionState {
-        ExecutionState::with_stack(
-            [get_init_tvm_stack(), vec![BFieldElement::new(1 << 15)]].concat(),
-        )
+        ExecutionState::with_stack([empty_stack(), vec![BFieldElement::new(1 << 15)]].concat())
     }
 
     fn worst_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
+<<<<<<< HEAD:tasm-lib/src/arithmetic/u32/leadingzeros.rs
             [
                 get_init_tvm_stack(),
                 vec![BFieldElement::new((1 << 32) - 1)],
             ]
             .concat(),
+=======
+            vec![empty_stack(), vec![BFieldElement::new((1 << 32) - 1)]].concat(),
+>>>>>>> b19ddfa (rename `get_init_tvm_stack` to `empty_stack`):tasm-lib/src/arithmetic/u32/leading_zeros_u32.rs
         )
     }
 }
@@ -145,15 +147,19 @@ mod tests {
     }
 
     fn prop_safe_leading_zeros(value: u32, _expected: Option<u32>) {
-        let mut init_stack = get_init_tvm_stack();
+        let mut init_stack = empty_stack();
         init_stack.push(BFieldElement::new(value as u64));
 
         let expected = value.leading_zeros();
+<<<<<<< HEAD:tasm-lib/src/arithmetic/u32/leadingzeros.rs
         let expected = [
             get_init_tvm_stack(),
             vec![BFieldElement::new(expected as u64)],
         ]
         .concat();
+=======
+        let expected = vec![empty_stack(), vec![BFieldElement::new(expected as u64)]].concat();
+>>>>>>> b19ddfa (rename `get_init_tvm_stack` to `empty_stack`):tasm-lib/src/arithmetic/u32/leading_zeros_u32.rs
 
         test_rust_equivalence_given_input_values_deprecated(
             &Leadingzeros,

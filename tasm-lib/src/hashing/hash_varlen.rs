@@ -8,7 +8,7 @@ use twenty_first::{
 };
 
 use crate::{
-    get_init_tvm_stack,
+    empty_stack,
     snippet::{DataType, DeprecatedSnippet},
     ExecutionState, VmHasher,
 };
@@ -24,11 +24,7 @@ impl HashVarlen {
             .collect();
 
         ExecutionState {
-            stack: [
-                get_init_tvm_stack(),
-                vec![memory_start, BFieldElement::new(k)],
-            ]
-            .concat(),
+            stack: vec![empty_stack(), vec![memory_start, BFieldElement::new(k)]].concat(),
             std_in: vec![],
             nondeterminism: NonDeterminism::new(vec![]),
             memory,

@@ -2,7 +2,7 @@ use rand::{thread_rng, Rng};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::{
-    get_init_tvm_stack,
+    empty_stack,
     snippet::{DataType, DeprecatedSnippet},
     ExecutionState,
 };
@@ -59,7 +59,7 @@ impl DeprecatedSnippet for Safeadd {
     fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
         let mut ret: Vec<ExecutionState> = vec![];
         for _ in 0..10 {
-            let mut stack = get_init_tvm_stack();
+            let mut stack = empty_stack();
             let lhs = thread_rng().gen_range(0..u32::MAX / 2);
             let rhs = thread_rng().gen_range(0..u32::MAX / 2);
             let lhs = BFieldElement::new(lhs as u64);
@@ -91,8 +91,13 @@ impl DeprecatedSnippet for Safeadd {
 
     fn common_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
+<<<<<<< HEAD:tasm-lib/src/arithmetic/u32/safeadd.rs
             [
                 get_init_tvm_stack(),
+=======
+            vec![
+                empty_stack(),
+>>>>>>> b19ddfa (rename `get_init_tvm_stack` to `empty_stack`):tasm-lib/src/arithmetic/u32/safe_add.rs
                 vec![BFieldElement::new(1 << 16), BFieldElement::new(1 << 15)],
             ]
             .concat(),
@@ -101,8 +106,13 @@ impl DeprecatedSnippet for Safeadd {
 
     fn worst_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
+<<<<<<< HEAD:tasm-lib/src/arithmetic/u32/safeadd.rs
             [
                 get_init_tvm_stack(),
+=======
+            vec![
+                empty_stack(),
+>>>>>>> b19ddfa (rename `get_init_tvm_stack` to `empty_stack`):tasm-lib/src/arithmetic/u32/safe_add.rs
                 vec![
                     BFieldElement::new((1 << 30) - 1),
                     BFieldElement::new((1 << 31) - 1),
@@ -144,13 +154,18 @@ mod tests {
     }
 
     fn prop_safe_add(lhs: u32, rhs: u32, _expected: Option<u32>) {
-        let mut init_stack = get_init_tvm_stack();
+        let mut init_stack = empty_stack();
         init_stack.push(BFieldElement::new(rhs as u64));
         init_stack.push(BFieldElement::new(lhs as u64));
 
         let expected = lhs.checked_add(rhs);
+<<<<<<< HEAD:tasm-lib/src/arithmetic/u32/safeadd.rs
         let expected = [
             get_init_tvm_stack(),
+=======
+        let expected = vec![
+            empty_stack(),
+>>>>>>> b19ddfa (rename `get_init_tvm_stack` to `empty_stack`):tasm-lib/src/arithmetic/u32/safe_add.rs
             vec![expected
                 .map(|x| BFieldElement::new(x as u64))
                 .unwrap_or_else(BFieldElement::zero)],

@@ -9,7 +9,7 @@ use twenty_first::{
 };
 
 use crate::{
-    get_init_tvm_stack,
+    empty_stack,
     procedure::Procedure,
     snippet::{BasicSnippet, DataType},
     snippet_bencher::BenchmarkCase,
@@ -280,7 +280,7 @@ impl Procedure for Absorb {
         }
 
         // leave address and length on stack
-        let mut stack = get_init_tvm_stack();
+        let mut stack = empty_stack();
         stack.push(address);
         stack.push(BFieldElement::new(length as u64));
 

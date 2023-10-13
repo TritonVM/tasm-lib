@@ -11,7 +11,7 @@ use crate::list::unsafeimplu32::{push::UnsafePush, set_length::UnsafeSetLength};
 use crate::mmr::MAX_MMR_HEIGHT;
 use crate::snippet::DataType;
 use crate::snippet::DeprecatedSnippet;
-use crate::{get_init_tvm_stack, ExecutionState, DIGEST_LENGTH};
+use crate::{empty_stack, ExecutionState, DIGEST_LENGTH};
 use crate::{rust_shadowing_helper_functions, Digest};
 
 #[derive(Clone, Debug)]
@@ -50,7 +50,7 @@ impl DeprecatedSnippet for LoadAuthPathFromStdInUnsafeList {
                 );
             }
             let init_vm_state = ExecutionState {
-                stack: get_init_tvm_stack(),
+                stack: empty_stack(),
                 std_in,
                 nondeterminism: NonDeterminism::new(vec![]),
                 memory: HashMap::default(),
@@ -179,7 +179,7 @@ impl DeprecatedSnippet for LoadAuthPathFromStdInUnsafeList {
         );
 
         ExecutionState {
-            stack: get_init_tvm_stack(),
+            stack: empty_stack(),
             std_in,
             nondeterminism: NonDeterminism::new(vec![]),
             memory: HashMap::default(),
@@ -193,7 +193,7 @@ impl DeprecatedSnippet for LoadAuthPathFromStdInUnsafeList {
         rust_shadowing_helper_functions::input::write_dummy_ap_path(&mut std_in, MAX_MMR_HEIGHT);
 
         ExecutionState {
-            stack: get_init_tvm_stack(),
+            stack: empty_stack(),
             std_in,
             nondeterminism: NonDeterminism::new(vec![]),
             memory: HashMap::default(),

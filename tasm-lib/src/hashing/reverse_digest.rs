@@ -1,7 +1,7 @@
 use rand::random;
 
 use crate::{
-    get_init_tvm_stack,
+    empty_stack,
     snippet::{DataType, DeprecatedSnippet},
     Digest, ExecutionState, DIGEST_LENGTH,
 };
@@ -12,7 +12,7 @@ pub struct ReverseDigest;
 impl ReverseDigest {
     fn get_input_state() -> ExecutionState {
         let digest: Digest = random();
-        let stack = [get_init_tvm_stack(), digest.values().to_vec()].concat();
+        let stack = [empty_stack(), digest.values().to_vec()].concat();
         ExecutionState::with_stack(stack)
     }
 }

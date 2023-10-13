@@ -7,7 +7,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use crate::library::Library;
 use crate::rust_shadowing_helper_functions::unsafe_list::untyped_unsafe_insert_random_list;
 use crate::snippet::{DataType, DeprecatedSnippet};
-use crate::{get_init_tvm_stack, ExecutionState};
+use crate::{empty_stack, ExecutionState};
 
 // Called "Long" because this logic can be shortened
 #[derive(Clone, Debug)]
@@ -37,7 +37,7 @@ impl DeprecatedSnippet for Length {
     fn gen_input_states(&self) -> Vec<ExecutionState> {
         let mut ret: Vec<ExecutionState> = vec![];
         let mut rng = thread_rng();
-        let mut stack = get_init_tvm_stack();
+        let mut stack = empty_stack();
         let list_address: BFieldElement = random();
         let list_length: usize = rng.gen_range(0..100);
         stack.push(list_address);
@@ -119,7 +119,7 @@ impl DeprecatedSnippet for Length {
     }
 
     fn common_case_input_state(&self) -> ExecutionState {
-        let mut stack = get_init_tvm_stack();
+        let mut stack = empty_stack();
         let list_address: u32 = random();
         let list_address = BFieldElement::from(list_address as u64);
         stack.push(list_address);
@@ -129,7 +129,7 @@ impl DeprecatedSnippet for Length {
     }
 
     fn worst_case_input_state(&self) -> ExecutionState {
-        let mut stack = get_init_tvm_stack();
+        let mut stack = empty_stack();
         let list_address: u32 = random();
         let list_address = BFieldElement::from(list_address as u64);
         stack.push(list_address);
@@ -145,7 +145,7 @@ mod tests {
     use rand::{thread_rng, RngCore};
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
-    use crate::get_init_tvm_stack;
+    use crate::empty_stack;
 
     use crate::test_helpers::{
         test_rust_equivalence_given_input_values_deprecated,
@@ -163,10 +163,10 @@ mod tests {
 
     #[test]
     fn list_u32_simple_long() {
-        let expected_end_stack = [get_init_tvm_stack(), vec![BFieldElement::new(42)]].concat();
+        let expected_end_stack = vec![empty_stack(), vec![BFieldElement::new(42)]].concat();
         prop_length_long(BFieldElement::one(), 42, Some(&expected_end_stack));
 
-        let expected_end_stack = [get_init_tvm_stack(), vec![BFieldElement::new(588)]].concat();
+        let expected_end_stack = vec![empty_stack(), vec![BFieldElement::new(588)]].concat();
         prop_length_long(BFieldElement::one(), 588, Some(&expected_end_stack));
     }
 
@@ -177,7 +177,7 @@ mod tests {
         list_length: u32,
         expected: Option<&[BFieldElement]>,
     ) {
-        let mut init_stack = get_init_tvm_stack();
+        let mut init_stack = empty_stack();
         init_stack.push(list_address);
 
         let mut init_memory = HashMap::default();
