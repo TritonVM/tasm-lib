@@ -2,7 +2,7 @@ use rand::{thread_rng, RngCore};
 use twenty_first::{amount::u32s::U32s, shared_math::b_field_element::BFieldElement};
 
 use crate::{
-    get_init_tvm_stack, push_encodable,
+    empty_stack, push_encodable,
     snippet::{DataType, DeprecatedSnippet},
     ExecutionState,
 };
@@ -229,7 +229,7 @@ impl DeprecatedSnippet for MulTwoU64sToU128 {
 fn prepare_state(a: u64, b: u64) -> ExecutionState {
     let a = U32s::<2>::try_from(a).unwrap();
     let b = U32s::<2>::try_from(b).unwrap();
-    let mut init_stack = get_init_tvm_stack();
+    let mut init_stack = empty_stack();
     push_encodable(&mut init_stack, &a);
     push_encodable(&mut init_stack, &b);
     ExecutionState::with_stack(init_stack)

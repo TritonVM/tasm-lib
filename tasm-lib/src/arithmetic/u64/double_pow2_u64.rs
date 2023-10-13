@@ -2,7 +2,7 @@ use num::Zero;
 use twenty_first::{amount::u32s::U32s, shared_math::b_field_element::BFieldElement};
 
 use crate::{
-    get_init_tvm_stack, push_encodable,
+    empty_stack, push_encodable,
     snippet::{DataType, DeprecatedSnippet},
     ExecutionState,
 };
@@ -87,7 +87,7 @@ impl DeprecatedSnippet for DoublePow2U64 {
         let mut ret = vec![];
         for n in 0..63 {
             let n: U32s<2> = (1u64 >> n).try_into().unwrap();
-            let mut input_stack = get_init_tvm_stack();
+            let mut input_stack = empty_stack();
 
             push_encodable(&mut input_stack, &n);
 
@@ -100,7 +100,7 @@ impl DeprecatedSnippet for DoublePow2U64 {
     fn common_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
             vec![
-                get_init_tvm_stack(),
+                empty_stack(),
                 vec![BFieldElement::zero(), BFieldElement::new(1 << 12)],
             ]
             .concat(),
@@ -111,7 +111,7 @@ impl DeprecatedSnippet for DoublePow2U64 {
         // worst-case has carry from lower-bits to higher-bits
         ExecutionState::with_stack(
             vec![
-                get_init_tvm_stack(),
+                empty_stack(),
                 vec![BFieldElement::zero(), BFieldElement::new(1 << 31)],
             ]
             .concat(),

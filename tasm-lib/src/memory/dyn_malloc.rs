@@ -8,7 +8,7 @@ use twenty_first::shared_math::b_field_element::{BFieldElement, BFIELD_ZERO};
 pub const DYN_MALLOC_ADDRESS: u32 = 0;
 
 use crate::{
-    get_init_tvm_stack,
+    empty_stack,
     library::Library,
     snippet::{DataType, DeprecatedSnippet},
     ExecutionState,
@@ -115,7 +115,7 @@ impl DeprecatedSnippet for DynMalloc {
     fn gen_input_states(&self) -> Vec<ExecutionState> {
         let mut rng = rand::thread_rng();
 
-        let mut stack = get_init_tvm_stack();
+        let mut stack = empty_stack();
         stack.push(BFieldElement::new(rng.gen_range(0..10_000)));
 
         let static_allocation_size = rng.gen_range(0..10_000);
@@ -123,7 +123,7 @@ impl DeprecatedSnippet for DynMalloc {
 
         let ret: Vec<ExecutionState> = vec![
             ExecutionState::with_stack_and_memory(stack, memory, static_allocation_size),
-            ExecutionState::with_stack(get_init_tvm_stack()),
+            ExecutionState::with_stack(empty_stack()),
         ];
 
         ret
@@ -160,13 +160,13 @@ impl DeprecatedSnippet for DynMalloc {
     }
 
     fn common_case_input_state(&self) -> ExecutionState {
-        let mut init_stack = get_init_tvm_stack();
+        let mut init_stack = empty_stack();
         init_stack.push(BFieldElement::new(10));
         ExecutionState::with_stack(init_stack)
     }
 
     fn worst_case_input_state(&self) -> ExecutionState {
-        let mut init_stack = get_init_tvm_stack();
+        let mut init_stack = empty_stack();
         init_stack.push(BFieldElement::new(1 << 31));
         ExecutionState::with_stack(init_stack)
     }
@@ -191,7 +191,7 @@ mod tests {
 
     #[test]
     fn unit_test() {
-        let mut init_stack = get_init_tvm_stack();
+        let mut init_stack = empty_stack();
         init_stack.push(BFieldElement::new(10));
         let mut empty_memory_state = ExecutionState::with_stack(init_stack.clone());
         DynMalloc.link_and_run_tasm_from_state_for_test(&mut empty_memory_state);

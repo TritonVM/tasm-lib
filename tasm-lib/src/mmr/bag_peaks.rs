@@ -6,7 +6,7 @@ use triton_vm::{BFieldElement, NonDeterminism};
 use twenty_first::{shared_math::other::random_elements, util_types::shared::bag_peaks};
 
 use crate::{
-    get_init_tvm_stack,
+    empty_stack,
     list::unsafe_u32::{get::UnsafeGet, length::UnsafeLength},
     rust_shadowing_helper_functions,
     snippet::{DataType, DeprecatedSnippet},
@@ -19,7 +19,7 @@ impl BagPeaks {
     fn input_state(num_peaks: usize) -> ExecutionState {
         let peaks: Vec<Digest> = random_elements(num_peaks);
         let address: BFieldElement = random();
-        let mut stack = get_init_tvm_stack();
+        let mut stack = empty_stack();
         stack.push(address);
         let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
 

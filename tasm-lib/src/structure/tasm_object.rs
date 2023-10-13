@@ -486,7 +486,7 @@ mod test {
             seed[0] = 1;
             seed[1] = 2;
             let mut rng: StdRng = SeedableRng::from_seed(seed);
-            let mut stack = get_init_tvm_stack();
+            let mut stack = empty_stack();
             stack.push(BFieldElement::new(1u64));
             let memory = HashMap::<BFieldElement, BFieldElement>::new();
             let mut input_states = vec![];
@@ -513,7 +513,7 @@ mod test {
             seed[0] = 1;
             seed[1] = 2;
             let mut rng: StdRng = SeedableRng::from_seed(seed);
-            let mut stack = get_init_tvm_stack();
+            let mut stack = empty_stack();
             stack.push(BFieldElement::new(1u64));
             let memory = HashMap::<BFieldElement, BFieldElement>::new();
             let object = pseudorandom_object(rng.gen());
@@ -533,7 +533,7 @@ mod test {
             seed[0] = 1;
             seed[1] = 2;
             let mut rng: StdRng = SeedableRng::from_seed(seed);
-            let mut stack = get_init_tvm_stack();
+            let mut stack = empty_stack();
             stack.push(BFieldElement::new(1u64));
             let memory = HashMap::<BFieldElement, BFieldElement>::new();
             let object = pseudorandom_object(rng.gen());
@@ -593,18 +593,15 @@ mod test {
     }
 
     #[test]
-    fn test_decode_from_memory() {
+    fn test_load_and_decode_from_memory() {
         let mut rng = thread_rng();
         let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
-        let address: BFieldElement = rng.gen();
 
         // generate random object
         let object = pseudorandom_object(rng.gen());
 
         // write encoding to memory
-        for (i, o) in object.encode().into_iter().enumerate() {
-            memory.insert(address + BFieldElement::new(i as u64), o);
-        }
+        let address = load_to_memory(&mut memory, object.clone());
 
         // decode from memory
         let object_again: OuterStruct = *OuterStruct::decode_from_memory(&memory, address).unwrap();

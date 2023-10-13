@@ -19,7 +19,7 @@ use crate::rust_shadowing_helper_functions::safe_list::safe_insert_random_list;
 use crate::rust_shadowing_helper_functions::unsafe_list::untyped_unsafe_insert_random_list;
 use crate::snippet::BasicSnippet;
 use crate::snippet_bencher::BenchmarkCase;
-use crate::{arithmetic, get_init_tvm_stack, rust_shadowing_helper_functions, VmHasher};
+use crate::{arithmetic, empty_stack, rust_shadowing_helper_functions, VmHasher};
 use crate::{
     library::Library,
     snippet::{DataType, DeprecatedSnippet},
@@ -43,7 +43,7 @@ impl All {
         random: bool,
     ) -> ExecutionState {
         let capacity = list_length;
-        let mut stack = get_init_tvm_stack();
+        let mut stack = empty_stack();
         stack.push(list_pointer);
 
         let mut memory = HashMap::default();
@@ -500,9 +500,8 @@ mod tests {
             (0..30).map(BFieldElement::new).collect_vec(),
             &mut memory,
         );
-        let input_stack = [get_init_tvm_stack(), vec![BFieldElement::new(42)]].concat();
-        let expected_end_stack_true =
-            vec![get_init_tvm_stack(), vec![BFieldElement::one()]].concat();
+        let input_stack = [empty_stack(), vec![BFieldElement::new(42)]].concat();
+        let expected_end_stack_true = vec![empty_stack(), vec![BFieldElement::one()]].concat();
         let shadowed_snippet = ShadowedFunction::new(snippet);
         test_rust_equivalence_given_complete_state(
             &shadowed_snippet,
@@ -524,8 +523,7 @@ mod tests {
                 .collect_vec(),
             &mut memory,
         );
-        let expected_end_stack_false =
-            vec![get_init_tvm_stack(), vec![BFieldElement::zero()]].concat();
+        let expected_end_stack_false = vec![empty_stack(), vec![BFieldElement::zero()]].concat();
         test_rust_equivalence_given_complete_state(
             &shadowed_snippet,
             &input_stack,

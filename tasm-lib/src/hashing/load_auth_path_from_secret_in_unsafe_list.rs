@@ -10,9 +10,7 @@ use crate::list::unsafe_u32::{push::UnsafePush, set_length::UnsafeSetLength};
 use crate::mmr::MAX_MMR_HEIGHT;
 use crate::snippet::DataType;
 use crate::snippet::DeprecatedSnippet;
-use crate::{
-    get_init_tvm_stack, rust_shadowing_helper_functions, Digest, ExecutionState, DIGEST_LENGTH,
-};
+use crate::{empty_stack, rust_shadowing_helper_functions, Digest, ExecutionState, DIGEST_LENGTH};
 
 #[derive(Clone, Debug)]
 pub struct LoadAuthPathFromSecretInUnsafeList;
@@ -50,7 +48,7 @@ impl DeprecatedSnippet for LoadAuthPathFromSecretInUnsafeList {
                 );
             }
             let init_vm_state = ExecutionState {
-                stack: get_init_tvm_stack(),
+                stack: empty_stack(),
                 std_in: vec![],
                 nondeterminism: NonDeterminism::new(secret_in),
                 memory: HashMap::default(),
@@ -184,7 +182,7 @@ impl DeprecatedSnippet for LoadAuthPathFromSecretInUnsafeList {
         );
 
         ExecutionState {
-            stack: get_init_tvm_stack(),
+            stack: empty_stack(),
             std_in: vec![],
             nondeterminism: NonDeterminism::new(secret_in),
             memory: HashMap::default(),
@@ -198,7 +196,7 @@ impl DeprecatedSnippet for LoadAuthPathFromSecretInUnsafeList {
         rust_shadowing_helper_functions::input::write_dummy_ap_path(&mut secret_in, MAX_MMR_HEIGHT);
 
         ExecutionState {
-            stack: get_init_tvm_stack(),
+            stack: empty_stack(),
             std_in: vec![],
             nondeterminism: NonDeterminism::new(secret_in),
             memory: HashMap::default(),
@@ -232,7 +230,7 @@ mod tests {
         }
 
         match LoadAuthPathFromSecretInUnsafeList.link_and_run_tasm_for_test(
-            &mut get_init_tvm_stack(),
+            &mut empty_stack(),
             vec![],
             secret_in.to_vec(),
             &mut HashMap::default(),
@@ -260,7 +258,7 @@ mod tests {
         }
 
         match LoadAuthPathFromSecretInUnsafeList.link_and_run_tasm_for_test(
-            &mut get_init_tvm_stack(),
+            &mut empty_stack(),
             vec![],
             secret_in.to_vec(),
             &mut HashMap::default(),

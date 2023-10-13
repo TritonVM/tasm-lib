@@ -22,7 +22,7 @@ use crate::list::{self, ListType};
 use crate::rust_shadowing_helper_functions::safe_list::safe_insert_random_list;
 use crate::rust_shadowing_helper_functions::unsafe_list::unsafe_insert_random_list;
 use crate::snippet::BasicSnippet;
-use crate::{get_init_tvm_stack, rust_shadowing_helper_functions};
+use crate::{empty_stack, rust_shadowing_helper_functions};
 use crate::{
     library::Library,
     snippet::{DataType, DeprecatedSnippet},
@@ -334,7 +334,7 @@ impl Map {
         additional_function_args: Vec<BFieldElement>,
     ) -> ExecutionState {
         let capacity = list_length;
-        let mut stack = get_init_tvm_stack();
+        let mut stack = empty_stack();
 
         // Add additional input args to stack, if they exist
         for additional_function_arg in additional_function_args.into_iter().rev() {

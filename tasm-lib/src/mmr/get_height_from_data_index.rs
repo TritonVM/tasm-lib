@@ -8,7 +8,7 @@ use crate::arithmetic::u64::incr_u64::IncrU64;
 use crate::arithmetic::u64::log_2_floor_u64::Log2FloorU64;
 use crate::library::Library;
 use crate::snippet::{DataType, DeprecatedSnippet};
-use crate::{get_init_tvm_stack, ExecutionState};
+use crate::{empty_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct GetHeightFromDataIndex;
@@ -93,7 +93,7 @@ impl DeprecatedSnippet for GetHeightFromDataIndex {
 }
 
 fn prepare_state(leaf_index: u64) -> ExecutionState {
-    let mut stack = get_init_tvm_stack();
+    let mut stack = empty_stack();
     let leaf_index_hi = BFieldElement::new(leaf_index >> 32);
     let leaf_index_lo = BFieldElement::new(leaf_index & u32::MAX as u64);
     stack.push(leaf_index_hi);
@@ -106,7 +106,7 @@ mod tests {
     use twenty_first::amount::u32s::U32s;
     use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
-    use crate::get_init_tvm_stack;
+    use crate::empty_stack;
 
     use crate::test_helpers::{
         test_rust_equivalence_given_input_values_deprecated,
@@ -122,23 +122,23 @@ mod tests {
 
     #[test]
     fn get_height_from_leaf_index_test_simple() {
-        let mut expected = get_init_tvm_stack();
+        let mut expected = empty_stack();
         expected.push(BFieldElement::new(0));
         prop_get_height_from_leaf_index(0, &expected);
 
-        expected = get_init_tvm_stack();
+        expected = empty_stack();
         expected.push(BFieldElement::new(1));
         prop_get_height_from_leaf_index(1, &expected);
         prop_get_height_from_leaf_index(2, &expected);
 
-        expected = get_init_tvm_stack();
+        expected = empty_stack();
         expected.push(BFieldElement::new(2));
         prop_get_height_from_leaf_index(3, &expected);
         prop_get_height_from_leaf_index(4, &expected);
         prop_get_height_from_leaf_index(5, &expected);
         prop_get_height_from_leaf_index(6, &expected);
 
-        expected = get_init_tvm_stack();
+        expected = empty_stack();
         expected.push(BFieldElement::new(3));
         prop_get_height_from_leaf_index(7, &expected);
         prop_get_height_from_leaf_index(8, &expected);
@@ -149,7 +149,7 @@ mod tests {
         prop_get_height_from_leaf_index(13, &expected);
         prop_get_height_from_leaf_index(14, &expected);
 
-        expected = get_init_tvm_stack();
+        expected = empty_stack();
         expected.push(BFieldElement::new(4));
         prop_get_height_from_leaf_index(15, &expected);
         prop_get_height_from_leaf_index(16, &expected);
@@ -160,29 +160,29 @@ mod tests {
         prop_get_height_from_leaf_index(21, &expected);
         prop_get_height_from_leaf_index(22, &expected);
 
-        expected = get_init_tvm_stack();
+        expected = empty_stack();
         expected.push(BFieldElement::new(31));
         prop_get_height_from_leaf_index(u32::MAX as u64 - 2, &expected);
         prop_get_height_from_leaf_index(u32::MAX as u64 - 1, &expected);
 
-        expected = get_init_tvm_stack();
+        expected = empty_stack();
         expected.push(BFieldElement::new(32));
         prop_get_height_from_leaf_index(u32::MAX as u64, &expected);
         prop_get_height_from_leaf_index(u32::MAX as u64 + 1, &expected);
         prop_get_height_from_leaf_index(u32::MAX as u64 + 2, &expected);
 
-        expected = get_init_tvm_stack();
+        expected = empty_stack();
         expected.push(BFieldElement::new(44));
         prop_get_height_from_leaf_index((1u64 << 45) - 2, &expected);
 
-        expected = get_init_tvm_stack();
+        expected = empty_stack();
         expected.push(BFieldElement::new(45));
         prop_get_height_from_leaf_index((1u64 << 45) - 1, &expected);
         prop_get_height_from_leaf_index(1u64 << 45, &expected);
         prop_get_height_from_leaf_index((1u64 << 45) + 1, &expected);
         prop_get_height_from_leaf_index((1u64 << 45) + (1 << 40), &expected);
 
-        expected = get_init_tvm_stack();
+        expected = empty_stack();
         expected.push(BFieldElement::new(63));
         prop_get_height_from_leaf_index((1u64 << 63) - 1, &expected);
         prop_get_height_from_leaf_index(1u64 << 63, &expected);
@@ -191,7 +191,7 @@ mod tests {
     }
 
     fn prop_get_height_from_leaf_index(leaf_index: u64, expected: &[BFieldElement]) {
-        let mut init_stack = get_init_tvm_stack();
+        let mut init_stack = empty_stack();
         let leaf_index_as_u32_2 = U32s::new([
             (leaf_index & 0xFFFFFFFFu32 as u64) as u32,
             (leaf_index >> 32) as u32,

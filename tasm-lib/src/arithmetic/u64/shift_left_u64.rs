@@ -4,7 +4,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
 use crate::snippet::{DataType, DeprecatedSnippet};
-use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
+use crate::{empty_stack, push_encodable, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct ShiftLeftU64;
@@ -169,7 +169,7 @@ impl DeprecatedSnippet for ShiftLeftU64 {
 
 fn prepare_state(value: u64, shift_amount: u32) -> ExecutionState {
     let value = U32s::<2>::try_from(value).unwrap();
-    let mut init_stack = get_init_tvm_stack();
+    let mut init_stack = empty_stack();
     push_encodable(&mut init_stack, &value);
     init_stack.push(BFieldElement::new(shift_amount as u64));
     ExecutionState::with_stack(init_stack)
@@ -206,7 +206,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn shift_beyond_limit() {
-        let mut init_stack = get_init_tvm_stack();
+        let mut init_stack = empty_stack();
         init_stack.push(BFieldElement::new(u32::MAX as u64));
         init_stack.push(BFieldElement::new(u32::MAX as u64));
         init_stack.push(64u64.into());
@@ -215,7 +215,7 @@ mod tests {
     }
 
     fn prop_left_left(value: u64, shift_amount: u32) {
-        let mut init_stack = get_init_tvm_stack();
+        let mut init_stack = empty_stack();
         init_stack.push(BFieldElement::new(value >> 32));
         init_stack.push(BFieldElement::new(value & u32::MAX as u64));
         init_stack.push(BFieldElement::new(shift_amount as u64));
@@ -223,7 +223,7 @@ mod tests {
         let expected_u64 = value << shift_amount;
         println!("{value} << {shift_amount} = {expected_u64}");
 
-        let mut expected_stack = get_init_tvm_stack();
+        let mut expected_stack = empty_stack();
         expected_stack.push((expected_u64 >> 32).into());
         expected_stack.push((expected_u64 & u32::MAX as u64).into());
 

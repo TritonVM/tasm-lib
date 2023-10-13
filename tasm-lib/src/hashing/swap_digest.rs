@@ -8,7 +8,7 @@ use crate::snippet::DataType;
 use crate::snippet::DeprecatedSnippet;
 use crate::Digest;
 use crate::DIGEST_LENGTH;
-use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
+use crate::{empty_stack, push_encodable, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct SwapDigest;
@@ -61,7 +61,7 @@ impl DeprecatedSnippet for SwapDigest {
         let digest_a: Digest = rng.gen();
         let digest_b: Digest = rng.gen();
 
-        let mut stack = get_init_tvm_stack();
+        let mut stack = empty_stack();
         push_encodable(&mut stack, &digest_b);
         push_encodable(&mut stack, &digest_a);
 
@@ -128,7 +128,7 @@ impl DeprecatedSnippet for SwapDigest {
 
     fn common_case_input_state(&self) -> ExecutionState {
         let mut rng = rand::thread_rng();
-        let mut stack = get_init_tvm_stack();
+        let mut stack = empty_stack();
         push_encodable(&mut stack, &rng.gen::<Digest>());
         push_encodable(&mut stack, &rng.gen::<Digest>());
         ExecutionState::with_stack(stack)

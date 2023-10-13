@@ -7,7 +7,7 @@ use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
 use crate::library::Library;
 use crate::snippet::{DataType, DeprecatedSnippet};
-use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
+use crate::{empty_stack, push_encodable, ExecutionState};
 
 /// Consumes top element which is interpreted as exponent. Pushes a
 /// U32<2> to the top of the stack. So grows the stack by 1.
@@ -38,7 +38,7 @@ impl DeprecatedSnippet for Pow2U64 {
     fn gen_input_states(&self) -> Vec<ExecutionState> {
         (0..64)
             .map(|i: u32| {
-                let mut stack = get_init_tvm_stack();
+                let mut stack = empty_stack();
                 push_encodable(&mut stack, &i);
                 ExecutionState::with_stack(stack)
             })
@@ -89,18 +89,18 @@ impl DeprecatedSnippet for Pow2U64 {
     }
 
     fn common_case_input_state(&self) -> ExecutionState {
-        ExecutionState::with_stack([get_init_tvm_stack(), vec![BFieldElement::new(31)]].concat())
+        ExecutionState::with_stack([empty_stack(), vec![BFieldElement::new(31)]].concat())
     }
 
     fn worst_case_input_state(&self) -> ExecutionState {
-        ExecutionState::with_stack([get_init_tvm_stack(), vec![BFieldElement::new(63)]].concat())
+        ExecutionState::with_stack([empty_stack(), vec![BFieldElement::new(63)]].concat())
     }
 }
 
 #[cfg(test)]
 mod tests {
 
-    use crate::get_init_tvm_stack;
+    use crate::empty_stack;
 
     use crate::test_helpers::{
         test_rust_equivalence_given_input_values_deprecated,
@@ -115,11 +115,11 @@ mod tests {
     }
 
     fn prop_exp_static(exponent: u8) {
-        let mut init_stack = get_init_tvm_stack();
+        let mut init_stack = empty_stack();
         init_stack.push(BFieldElement::new(exponent as u64));
 
         // let expected = None;
-        let mut expected = get_init_tvm_stack();
+        let mut expected = empty_stack();
         let res = 2u64.pow(exponent as u32);
         expected.push(BFieldElement::new(res >> 32));
         expected.push(BFieldElement::new(res & u32::MAX as u64));

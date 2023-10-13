@@ -16,8 +16,7 @@ use crate::library::Library;
 use crate::list::ListType;
 use crate::snippet::{DataType, DeprecatedSnippet};
 use crate::{
-    get_init_tvm_stack, rust_shadowing_helper_functions, Digest, ExecutionState, VmHasher,
-    DIGEST_LENGTH,
+    empty_stack, rust_shadowing_helper_functions, Digest, ExecutionState, VmHasher, DIGEST_LENGTH,
 };
 
 use super::verify_from_memory::MmrVerifyFromMemory;
@@ -89,7 +88,7 @@ impl MmrLoadFromSecretInThenVerify {
     /// knowing e.g. the leaf index of the leaf digest that you want to authenticate
     /// so this function does not populate e.g. `secret_in`. The caller has to do that.
     fn mmr_to_init_vm_state(&self, mmra: &mut MmrAccumulator<VmHasher>) -> ExecutionState {
-        let mut stack: Vec<BFieldElement> = get_init_tvm_stack();
+        let mut stack: Vec<BFieldElement> = empty_stack();
         let peaks_pointer = BFieldElement::one();
         stack.push(peaks_pointer);
 

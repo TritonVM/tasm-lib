@@ -312,7 +312,7 @@ mod test {
     use triton_vm::{BFieldElement, NonDeterminism};
     use twenty_first::shared_math::tip5::DIGEST_LENGTH;
 
-    use crate::{get_init_tvm_stack, hashing::sample_indices::SampleIndices, list::ListType};
+    use crate::{empty_stack, hashing::sample_indices::SampleIndices, list::ListType};
 
     use super::test_rust_equivalence_given_complete_state_deprecated;
 
@@ -325,7 +325,7 @@ mod test {
         let snippet_struct = SampleIndices {
             list_type: ListType::Safe,
         };
-        let mut stack = get_init_tvm_stack();
+        let mut stack = empty_stack();
         stack.push(BFieldElement::new(45u64));
         stack.push(BFieldElement::new(1u64 << 12));
 

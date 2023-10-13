@@ -8,7 +8,7 @@ use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
 use crate::library::Library;
 use crate::snippet::{DataType, DeprecatedSnippet};
-use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
+use crate::{empty_stack, push_encodable, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct IncrU64;
@@ -47,7 +47,7 @@ impl DeprecatedSnippet for IncrU64 {
         values
             .into_iter()
             .map(|value| {
-                let mut stack = get_init_tvm_stack();
+                let mut stack = empty_stack();
                 push_encodable(&mut stack, &value);
                 ExecutionState::with_stack(stack)
             })
@@ -116,7 +116,7 @@ impl DeprecatedSnippet for IncrU64 {
         // no carry
         ExecutionState::with_stack(
             vec![
-                get_init_tvm_stack(),
+                empty_stack(),
                 vec![BFieldElement::new(1000), BFieldElement::new(7)],
             ]
             .concat(),
@@ -127,7 +127,7 @@ impl DeprecatedSnippet for IncrU64 {
         // with carry
         ExecutionState::with_stack(
             vec![
-                get_init_tvm_stack(),
+                empty_stack(),
                 vec![BFieldElement::new(1000), BFieldElement::new((1 << 32) - 1)],
             ]
             .concat(),
@@ -139,7 +139,7 @@ impl DeprecatedSnippet for IncrU64 {
 mod tests {
 
     use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
-    use crate::{get_init_tvm_stack, push_encodable};
+    use crate::{empty_stack, push_encodable};
 
     use super::*;
 
@@ -150,7 +150,7 @@ mod tests {
 
     #[test]
     fn incr_u64_negative_tasm_test() {
-        let mut stack = get_init_tvm_stack();
+        let mut stack = empty_stack();
         let u64_max = U32s::<2>::try_from(u64::MAX).unwrap();
         push_encodable(&mut stack, &u64_max);
         assert!(IncrU64
@@ -161,7 +161,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn incr_u64_negative_rust_test() {
-        let mut stack = get_init_tvm_stack();
+        let mut stack = empty_stack();
         let u64_max = U32s::<2>::try_from(u64::MAX).unwrap();
         push_encodable(&mut stack, &u64_max);
         IncrU64::rust_shadowing(

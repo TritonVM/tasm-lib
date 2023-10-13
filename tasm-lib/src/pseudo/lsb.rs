@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use twenty_first::shared_math::b_field_element::{BFieldElement, BFIELD_ONE, BFIELD_ZERO};
 
 use crate::snippet::{DataType, DeprecatedSnippet};
-use crate::{get_init_tvm_stack, ExecutionState};
+use crate::{empty_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct Lsb;
@@ -30,10 +30,10 @@ impl DeprecatedSnippet for Lsb {
     }
 
     fn gen_input_states(&self) -> Vec<ExecutionState> {
-        let mut even_stack = get_init_tvm_stack();
+        let mut even_stack = empty_stack();
         even_stack.push(BFIELD_ZERO);
 
-        let mut odd_stack = get_init_tvm_stack();
+        let mut odd_stack = empty_stack();
         odd_stack.push(BFIELD_ONE);
 
         vec![
@@ -76,15 +76,11 @@ impl DeprecatedSnippet for Lsb {
     }
 
     fn common_case_input_state(&self) -> ExecutionState {
-        ExecutionState::with_stack(
-            [get_init_tvm_stack(), vec![BFieldElement::new(1u64 << 20)]].concat(),
-        )
+        ExecutionState::with_stack([empty_stack(), vec![BFieldElement::new(1u64 << 20)]].concat())
     }
 
     fn worst_case_input_state(&self) -> ExecutionState {
-        ExecutionState::with_stack(
-            [get_init_tvm_stack(), vec![BFieldElement::new(1u64 << 31)]].concat(),
-        )
+        ExecutionState::with_stack([empty_stack(), vec![BFieldElement::new(1u64 << 31)]].concat())
     }
 }
 

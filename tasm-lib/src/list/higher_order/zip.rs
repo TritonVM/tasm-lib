@@ -18,7 +18,7 @@ use crate::memory::memcpy::MemCpy;
 use crate::rust_shadowing_helper_functions::safe_list::safe_insert_random_list;
 use crate::rust_shadowing_helper_functions::unsafe_list::untyped_unsafe_insert_random_list;
 use crate::snippet::BasicSnippet;
-use crate::{get_init_tvm_stack, rust_shadowing_helper_functions};
+use crate::{empty_stack, rust_shadowing_helper_functions};
 use crate::{library::Library, snippet::DataType, ExecutionState};
 
 /// Zips two lists of equal length, returning a new list of pairs of elements.
@@ -373,7 +373,7 @@ impl Zip {
         };
 
         // populate stack
-        let mut stack = get_init_tvm_stack();
+        let mut stack = empty_stack();
         stack.push(left_pointer);
         stack.push(right_pointer);
 

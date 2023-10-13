@@ -8,7 +8,7 @@ use twenty_first::{
 };
 
 use crate::{
-    get_init_tvm_stack,
+    empty_stack,
     library::Library,
     push_encodable,
     snippet::{DataType, DeprecatedSnippet},
@@ -68,7 +68,7 @@ impl DeprecatedSnippet for AddU128 {
 
             // 0. one zero, one large
             states.push({
-                let mut stack = get_init_tvm_stack();
+                let mut stack = empty_stack();
                 push_encodable(&mut stack, &zero);
                 push_encodable(&mut stack, &large_a);
                 ExecutionState::with_stack(stack)
@@ -76,7 +76,7 @@ impl DeprecatedSnippet for AddU128 {
 
             // 1. two small
             states.push({
-                let mut stack = get_init_tvm_stack();
+                let mut stack = empty_stack();
                 push_encodable(&mut stack, &small_a);
                 push_encodable(&mut stack, &small_b);
                 ExecutionState::with_stack(stack)
@@ -202,7 +202,7 @@ impl DeprecatedSnippet for AddU128 {
     fn common_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
             vec![
-                get_init_tvm_stack(),
+                empty_stack(),
                 vec![BFieldElement::zero(), BFieldElement::new(1 << 31)],
                 vec![BFieldElement::zero(), BFieldElement::new(1 << 30)],
                 vec![BFieldElement::zero(), BFieldElement::new(1 << 30)],
@@ -215,7 +215,7 @@ impl DeprecatedSnippet for AddU128 {
     fn worst_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
             vec![
-                get_init_tvm_stack(),
+                empty_stack(),
                 vec![BFieldElement::zero(), BFieldElement::new(1 << 31)],
                 vec![BFieldElement::zero(), BFieldElement::new(1 << 30)],
                 vec![BFieldElement::zero(), BFieldElement::new(1 << 30)],
@@ -244,7 +244,7 @@ mod tests {
 
     #[test]
     fn add_u128_unit_test() {
-        let mut expected = get_init_tvm_stack();
+        let mut expected = empty_stack();
         expected.push(BFieldElement::new(0));
         expected.push(BFieldElement::new(1 << 4));
         expected.push(BFieldElement::new(0));
@@ -253,7 +253,7 @@ mod tests {
     }
 
     fn prop_add(lhs: u128, rhs: u128, expected: Option<&[BFieldElement]>) {
-        let mut init_stack = get_init_tvm_stack();
+        let mut init_stack = empty_stack();
         for elem in rhs.encode().into_iter().rev() {
             init_stack.push(elem);
         }

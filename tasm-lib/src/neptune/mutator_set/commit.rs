@@ -5,7 +5,7 @@ use triton_vm::NonDeterminism;
 use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
 use crate::{
-    get_init_tvm_stack,
+    empty_stack,
     snippet::{DataType, DeprecatedSnippet},
     Digest, ExecutionState, VmHasher,
 };
@@ -37,7 +37,7 @@ impl Commit {
         let item: Digest = random();
         let sender_randomness: Digest = random();
         let receiver_digest: Digest = random();
-        let mut stack = get_init_tvm_stack();
+        let mut stack = empty_stack();
         for d in [
             item.values(),
             sender_randomness.values(),

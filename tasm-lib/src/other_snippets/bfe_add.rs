@@ -5,7 +5,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
 use crate::snippet::{DataType, DeprecatedSnippet};
-use crate::{get_init_tvm_stack, ExecutionState};
+use crate::{empty_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct BfeAdd;
@@ -33,7 +33,7 @@ impl DeprecatedSnippet for BfeAdd {
 
     fn gen_input_states(&self) -> Vec<ExecutionState> {
         let mut rng = rand::thread_rng();
-        let mut stack = get_init_tvm_stack();
+        let mut stack = empty_stack();
         stack.push(rng.gen());
         stack.push(rng.gen());
         vec![ExecutionState::with_stack(stack)]
@@ -73,7 +73,7 @@ impl DeprecatedSnippet for BfeAdd {
     fn common_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
             vec![
-                get_init_tvm_stack(),
+                empty_stack(),
                 vec![BFieldElement::new(10), BFieldElement::new(20)],
             ]
             .concat(),
@@ -83,7 +83,7 @@ impl DeprecatedSnippet for BfeAdd {
     fn worst_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
             vec![
-                get_init_tvm_stack(),
+                empty_stack(),
                 vec![BFieldElement::new(10), BFieldElement::new(20)],
             ]
             .concat(),

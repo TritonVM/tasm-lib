@@ -3,7 +3,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::{
     arithmetic::u32::leading_zeros_u32::LeadingZerosU32,
-    get_init_tvm_stack,
+    empty_stack,
     snippet::{DataType, DeprecatedSnippet},
     ExecutionState,
 };
@@ -118,7 +118,7 @@ impl DeprecatedSnippet for LeadingZerosU64 {
 fn prepare_state(value: u64) -> ExecutionState {
     let value_hi: u32 = (value >> 32) as u32;
     let value_lo: u32 = (value & u32::MAX as u64) as u32;
-    let mut stack = get_init_tvm_stack();
+    let mut stack = empty_stack();
     stack.push(BFieldElement::new(value_hi as u64));
     stack.push(BFieldElement::new(value_lo as u64));
     ExecutionState::with_stack(stack)
@@ -163,7 +163,7 @@ mod tests {
     }
 
     fn prop_leading_zeros(value: u64, expected: Option<u64>) {
-        let mut init_stack = get_init_tvm_stack();
+        let mut init_stack = empty_stack();
         init_stack.push(BFieldElement::new(value >> 32));
         init_stack.push(BFieldElement::new(value & u32::MAX as u64));
 
@@ -172,7 +172,7 @@ mod tests {
             assert_eq!(exp, leading_zeros as u64);
         }
 
-        let mut expected_stack = get_init_tvm_stack();
+        let mut expected_stack = empty_stack();
         expected_stack.push(BFieldElement::new(leading_zeros as u64));
 
         test_rust_equivalence_given_input_values_deprecated(

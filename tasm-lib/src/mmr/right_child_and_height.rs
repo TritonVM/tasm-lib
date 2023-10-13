@@ -9,7 +9,7 @@ use crate::arithmetic::u64::eq_u64::EqU64;
 use crate::arithmetic::u64::lt_u64::LtU64;
 use crate::library::Library;
 use crate::snippet::{DataType, DeprecatedSnippet};
-use crate::{get_init_tvm_stack, ExecutionState};
+use crate::{empty_stack, ExecutionState};
 
 use super::left_child::MmrLeftChild;
 use super::leftmost_ancestor::MmrLeftMostAncestor;
@@ -218,7 +218,7 @@ impl DeprecatedSnippet for MmrRightChildAndHeight {
 }
 
 fn prepare_state(node_index: u64) -> ExecutionState {
-    let mut stack = get_init_tvm_stack();
+    let mut stack = empty_stack();
     let node_index_hi = BFieldElement::new(node_index >> 32);
     let node_index_lo = BFieldElement::new(node_index & u32::MAX as u64);
     stack.push(node_index_hi);
@@ -232,7 +232,7 @@ mod tests {
     use twenty_first::shared_math::b_field_element::BFieldElement;
     use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
-    use crate::get_init_tvm_stack;
+    use crate::empty_stack;
 
     use crate::test_helpers::{
         test_rust_equivalence_given_input_values_deprecated,
@@ -249,7 +249,7 @@ mod tests {
     #[test]
     fn right_child_and_height_node_index_equal_leftmost_ancestor() {
         // All should return (false, height) as leftmost ancestors are always left-children.
-        let expected_end_stack = [get_init_tvm_stack(), vec![BFieldElement::zero()]].concat();
+        let expected_end_stack = [empty_stack(), vec![BFieldElement::zero()]].concat();
         prop_right_child_and_height(
             U32s::new([1, 0]),
             Some(&[expected_end_stack.clone(), vec![BFieldElement::zero()]].concat()),
@@ -282,7 +282,7 @@ mod tests {
             U32s::new([1, 0]),
             Some(
                 &[
-                    vec![get_init_tvm_stack(), vec![BFieldElement::zero()]].concat(),
+                    vec![empty_stack(), vec![BFieldElement::zero()]].concat(),
                     vec![BFieldElement::zero()],
                 ]
                 .concat(),
@@ -292,7 +292,7 @@ mod tests {
             U32s::new([2, 0]),
             Some(
                 &[
-                    vec![get_init_tvm_stack(), vec![BFieldElement::one()]].concat(),
+                    vec![empty_stack(), vec![BFieldElement::one()]].concat(),
                     vec![BFieldElement::zero()],
                 ]
                 .concat(),
@@ -302,7 +302,7 @@ mod tests {
             U32s::new([3, 0]),
             Some(
                 &[
-                    vec![get_init_tvm_stack(), vec![BFieldElement::zero()]].concat(),
+                    vec![empty_stack(), vec![BFieldElement::zero()]].concat(),
                     vec![BFieldElement::one()],
                 ]
                 .concat(),
@@ -312,7 +312,7 @@ mod tests {
             U32s::new([4, 0]),
             Some(
                 &[
-                    vec![get_init_tvm_stack(), vec![BFieldElement::zero()]].concat(),
+                    vec![empty_stack(), vec![BFieldElement::zero()]].concat(),
                     vec![BFieldElement::zero()],
                 ]
                 .concat(),
@@ -322,7 +322,7 @@ mod tests {
             U32s::new([5, 0]),
             Some(
                 &[
-                    vec![get_init_tvm_stack(), vec![BFieldElement::one()]].concat(),
+                    vec![empty_stack(), vec![BFieldElement::one()]].concat(),
                     vec![BFieldElement::zero()],
                 ]
                 .concat(),
@@ -332,7 +332,7 @@ mod tests {
             U32s::new([6, 0]),
             Some(
                 &[
-                    vec![get_init_tvm_stack(), vec![BFieldElement::one()]].concat(),
+                    vec![empty_stack(), vec![BFieldElement::one()]].concat(),
                     vec![BFieldElement::one()],
                 ]
                 .concat(),
@@ -342,7 +342,7 @@ mod tests {
             U32s::new([7, 0]),
             Some(
                 &[
-                    vec![get_init_tvm_stack(), vec![BFieldElement::zero()]].concat(),
+                    vec![empty_stack(), vec![BFieldElement::zero()]].concat(),
                     vec![BFieldElement::new(2)],
                 ]
                 .concat(),
@@ -352,7 +352,7 @@ mod tests {
             U32s::new([8, 0]),
             Some(
                 &[
-                    vec![get_init_tvm_stack(), vec![BFieldElement::zero()]].concat(),
+                    vec![empty_stack(), vec![BFieldElement::zero()]].concat(),
                     vec![BFieldElement::zero()],
                 ]
                 .concat(),
@@ -362,7 +362,7 @@ mod tests {
             U32s::new([14, 0]),
             Some(
                 &[
-                    vec![get_init_tvm_stack(), vec![BFieldElement::one()]].concat(),
+                    vec![empty_stack(), vec![BFieldElement::one()]].concat(),
                     vec![BFieldElement::new(2)],
                 ]
                 .concat(),
@@ -372,7 +372,7 @@ mod tests {
             U32s::new([15, 0]),
             Some(
                 &[
-                    vec![get_init_tvm_stack(), vec![BFieldElement::zero()]].concat(),
+                    vec![empty_stack(), vec![BFieldElement::zero()]].concat(),
                     vec![BFieldElement::new(3)],
                 ]
                 .concat(),
@@ -382,7 +382,7 @@ mod tests {
             U32s::new([16, 0]),
             Some(
                 &[
-                    vec![get_init_tvm_stack(), vec![BFieldElement::zero()]].concat(),
+                    vec![empty_stack(), vec![BFieldElement::zero()]].concat(),
                     vec![BFieldElement::zero()],
                 ]
                 .concat(),
@@ -392,7 +392,7 @@ mod tests {
             U32s::new([17, 0]),
             Some(
                 &[
-                    vec![get_init_tvm_stack(), vec![BFieldElement::one()]].concat(),
+                    vec![empty_stack(), vec![BFieldElement::one()]].concat(),
                     vec![BFieldElement::zero()],
                 ]
                 .concat(),
@@ -403,7 +403,7 @@ mod tests {
             U32s::new([18, 0]),
             Some(
                 &[
-                    vec![get_init_tvm_stack(), vec![BFieldElement::zero()]].concat(),
+                    vec![empty_stack(), vec![BFieldElement::zero()]].concat(),
                     vec![BFieldElement::one()],
                 ]
                 .concat(),
@@ -413,7 +413,7 @@ mod tests {
             U32s::new([u32::MAX - 1, u32::MAX / 2]),
             Some(
                 &[
-                    vec![get_init_tvm_stack(), vec![BFieldElement::one()]].concat(),
+                    vec![empty_stack(), vec![BFieldElement::one()]].concat(),
                     vec![BFieldElement::new(61)],
                 ]
                 .concat(),
@@ -423,7 +423,7 @@ mod tests {
             U32s::new([u32::MAX, u32::MAX / 2]),
             Some(
                 &[
-                    vec![get_init_tvm_stack(), vec![BFieldElement::zero()]].concat(),
+                    vec![empty_stack(), vec![BFieldElement::zero()]].concat(),
                     vec![BFieldElement::new(62)],
                 ]
                 .concat(),
@@ -434,7 +434,7 @@ mod tests {
     #[test]
     fn right_child_and_height_node_is_left_child() {
         // All should return (false, height) as leftmost ancestors are always left-children.
-        let expected_end_stack = [get_init_tvm_stack(), vec![BFieldElement::zero()]].concat();
+        let expected_end_stack = [empty_stack(), vec![BFieldElement::zero()]].concat();
         prop_right_child_and_height(
             U32s::new([1, 0]),
             Some(&[expected_end_stack.clone(), vec![BFieldElement::zero()]].concat()),
@@ -450,7 +450,7 @@ mod tests {
     }
 
     fn prop_right_child_and_height(node_index: U32s<2>, expected: Option<&[BFieldElement]>) {
-        let mut init_stack = get_init_tvm_stack();
+        let mut init_stack = empty_stack();
         for elem in node_index.encode().into_iter().rev() {
             init_stack.push(elem);
         }

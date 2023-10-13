@@ -6,7 +6,7 @@ use twenty_first::shared_math::other::random_elements;
 use crate::library::Library;
 use crate::rust_shadowing_helper_functions::safe_list::{safe_insert_random_list, safe_list_set};
 use crate::snippet::{DataType, DeprecatedSnippet};
-use crate::{get_init_tvm_stack, ExecutionState};
+use crate::{empty_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct SafeSet(pub DataType);
@@ -168,7 +168,7 @@ impl DeprecatedSnippet for SafeSet {
 
 fn prepare_state(data_type: &DataType, capacity: u32, list_length: usize) -> ExecutionState {
     let index: usize = thread_rng().gen_range(0..list_length);
-    let mut stack = get_init_tvm_stack();
+    let mut stack = empty_stack();
     let mut push_value: Vec<BFieldElement> = random_elements(data_type.get_size());
     while let Some(element) = push_value.pop() {
         stack.push(element);
@@ -194,7 +194,7 @@ fn prepare_state(data_type: &DataType, capacity: u32, list_length: usize) -> Exe
 mod tests {
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
-    use crate::get_init_tvm_stack;
+    use crate::empty_stack;
 
     use crate::test_helpers::{
         test_rust_equivalence_given_input_values_deprecated,
@@ -325,8 +325,8 @@ mod tests {
         index: u32,
         capacity: u32,
     ) {
-        let expected_end_stack = [get_init_tvm_stack()].concat();
-        let mut init_stack = get_init_tvm_stack();
+        let expected_end_stack = [empty_stack()].concat();
+        let mut init_stack = empty_stack();
 
         for i in 0..data_type.get_size() {
             init_stack.push(push_value[data_type.get_size() - 1 - i]);

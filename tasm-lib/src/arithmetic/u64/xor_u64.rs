@@ -8,7 +8,7 @@ use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
 use crate::library::Library;
 use crate::snippet::{DataType, DeprecatedSnippet};
-use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
+use crate::{empty_stack, push_encodable, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct XorU64;
@@ -43,7 +43,7 @@ impl DeprecatedSnippet for XorU64 {
         let mut rng = rand::thread_rng();
         let lhs = U32s::<2>::try_from(rng.next_u64()).unwrap();
         let rhs = U32s::<2>::try_from(rng.next_u64()).unwrap();
-        let mut stack = get_init_tvm_stack();
+        let mut stack = empty_stack();
         push_encodable(&mut stack, &lhs);
         push_encodable(&mut stack, &rhs);
         vec![ExecutionState::with_stack(stack)]
@@ -103,7 +103,7 @@ impl DeprecatedSnippet for XorU64 {
     fn common_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
             vec![
-                get_init_tvm_stack(),
+                empty_stack(),
                 vec![BFieldElement::zero(), BFieldElement::new((1 << 31) - 1)],
                 vec![BFieldElement::zero(), BFieldElement::new((1 << 10) - 1)],
             ]
@@ -114,7 +114,7 @@ impl DeprecatedSnippet for XorU64 {
     fn worst_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
             vec![
-                get_init_tvm_stack(),
+                empty_stack(),
                 vec![BFieldElement::new(1 << 31), BFieldElement::new(1 << 31)],
                 vec![
                     BFieldElement::new(1 << 30),
@@ -131,7 +131,7 @@ mod tests {
     use num::BigUint;
     use rand::{thread_rng, RngCore};
 
-    use crate::get_init_tvm_stack;
+    use crate::empty_stack;
 
     use crate::test_helpers::{
         test_rust_equivalence_given_input_values_deprecated,
@@ -165,7 +165,7 @@ mod tests {
     }
 
     fn prop_xor(lhs: u64, rhs: u64) {
-        let mut init_stack = get_init_tvm_stack();
+        let mut init_stack = empty_stack();
 
         let rhs_u32_2 = U32s::<2>::new([(rhs & u32::MAX as u64) as u32, (rhs >> 32) as u32]);
         for elem in rhs_u32_2.encode().into_iter().rev() {
@@ -179,7 +179,7 @@ mod tests {
 
         let expected_res: BigUint = (lhs ^ rhs).into();
         let expected_u32_2: U32s<2> = expected_res.into();
-        let mut expected_end_stack = get_init_tvm_stack();
+        let mut expected_end_stack = empty_stack();
         for elem in expected_u32_2.encode().into_iter().rev() {
             expected_end_stack.push(elem);
         }

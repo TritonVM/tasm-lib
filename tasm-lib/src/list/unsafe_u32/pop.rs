@@ -7,7 +7,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use crate::library::Library;
 use crate::rust_shadowing_helper_functions::unsafe_list::untyped_unsafe_insert_random_list;
 use crate::snippet::{DataType, DeprecatedSnippet};
-use crate::{get_init_tvm_stack, ExecutionState};
+use crate::{empty_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct UnsafePop(pub DataType);
@@ -155,7 +155,7 @@ fn prepare_state(data_type: &DataType) -> ExecutionState {
     let list_pointer: u32 = random();
     let list_pointer = BFieldElement::new(list_pointer as u64);
     let old_length: usize = thread_rng().gen_range(1..30);
-    let mut stack = get_init_tvm_stack();
+    let mut stack = empty_stack();
     stack.push(list_pointer);
     let mut memory = HashMap::default();
     untyped_unsafe_insert_random_list(list_pointer, old_length, &mut memory, data_type.get_size());
@@ -169,7 +169,7 @@ mod tests {
     use rand::{thread_rng, RngCore};
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
-    use crate::get_init_tvm_stack;
+    use crate::empty_stack;
     use crate::test_helpers::{
         test_rust_equivalence_given_input_values_deprecated,
         test_rust_equivalence_multiple_deprecated,
@@ -232,7 +232,7 @@ mod tests {
         list_address: BFieldElement,
         init_list_length: u32,
     ) {
-        let mut init_stack = get_init_tvm_stack();
+        let mut init_stack = empty_stack();
         init_stack.push(list_address);
 
         let mut vm_memory = HashMap::default();
@@ -256,7 +256,7 @@ mod tests {
             }
         }
 
-        let mut expected_end_stack = get_init_tvm_stack();
+        let mut expected_end_stack = empty_stack();
 
         for i in 0..N {
             expected_end_stack.push(last_element[N - 1 - i]);

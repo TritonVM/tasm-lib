@@ -5,7 +5,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
 use crate::snippet::{DataType, DeprecatedSnippet};
-use crate::{get_init_tvm_stack, push_encodable, Digest, ExecutionState};
+use crate::{empty_stack, push_encodable, Digest, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct EqDigest;
@@ -47,7 +47,7 @@ impl DeprecatedSnippet for EqDigest {
         let digest_a: Digest = rng.gen();
         let digest_b: Digest = rng.gen();
 
-        let mut stack = get_init_tvm_stack();
+        let mut stack = empty_stack();
         push_encodable(&mut stack, &digest_b);
         push_encodable(&mut stack, &digest_a);
 
@@ -117,7 +117,7 @@ impl DeprecatedSnippet for EqDigest {
     }
 
     fn common_case_input_state(&self) -> ExecutionState {
-        let mut stack = get_init_tvm_stack();
+        let mut stack = empty_stack();
         push_encodable(&mut stack, &Digest::default());
         push_encodable(&mut stack, &Digest::default());
 
@@ -129,7 +129,7 @@ impl DeprecatedSnippet for EqDigest {
         let digest_a: Digest = rng.gen();
         let digest_b: Digest = rng.gen();
 
-        let mut stack = get_init_tvm_stack();
+        let mut stack = empty_stack();
         push_encodable(&mut stack, &digest_b);
         push_encodable(&mut stack, &digest_a);
 

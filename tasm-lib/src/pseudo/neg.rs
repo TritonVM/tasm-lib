@@ -4,7 +4,7 @@ use rand::Rng;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::snippet::{DataType, DeprecatedSnippet};
-use crate::{get_init_tvm_stack, ExecutionState};
+use crate::{empty_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct Neg;
@@ -32,7 +32,7 @@ impl DeprecatedSnippet for Neg {
 
     fn gen_input_states(&self) -> Vec<ExecutionState> {
         let mut rng = rand::thread_rng();
-        let mut stack = get_init_tvm_stack();
+        let mut stack = empty_stack();
         stack.push(rng.gen());
         vec![ExecutionState::with_stack(stack)]
     }
@@ -70,15 +70,11 @@ impl DeprecatedSnippet for Neg {
     }
 
     fn common_case_input_state(&self) -> ExecutionState {
-        ExecutionState::with_stack(
-            [get_init_tvm_stack(), vec![BFieldElement::new(1u64 << 20)]].concat(),
-        )
+        ExecutionState::with_stack([empty_stack(), vec![BFieldElement::new(1u64 << 20)]].concat())
     }
 
     fn worst_case_input_state(&self) -> ExecutionState {
-        ExecutionState::with_stack(
-            [get_init_tvm_stack(), vec![BFieldElement::new(1u64 << 31)]].concat(),
-        )
+        ExecutionState::with_stack([empty_stack(), vec![BFieldElement::new(1u64 << 31)]].concat())
     }
 }
 

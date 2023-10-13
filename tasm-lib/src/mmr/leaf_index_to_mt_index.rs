@@ -17,7 +17,7 @@ use crate::arithmetic::u64::pow2_u64::Pow2U64;
 use crate::arithmetic::u64::xor_u64::XorU64;
 use crate::library::Library;
 use crate::snippet::{DataType, DeprecatedSnippet};
-use crate::{get_init_tvm_stack, ExecutionState};
+use crate::{empty_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct MmrLeafIndexToMtIndexAndPeakIndex;
@@ -200,7 +200,7 @@ impl DeprecatedSnippet for MmrLeafIndexToMtIndexAndPeakIndex {
 }
 
 fn prepare_state(leaf_count: u64, leaf_index: u64) -> ExecutionState {
-    let mut stack = get_init_tvm_stack();
+    let mut stack = empty_stack();
     let leaf_count_hi = BFieldElement::new(leaf_count >> 32);
     let leaf_count_lo = BFieldElement::new(leaf_count & u32::MAX as u64);
     stack.push(leaf_count_hi);
@@ -216,7 +216,7 @@ fn prepare_state(leaf_count: u64, leaf_index: u64) -> ExecutionState {
 mod tests {
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
-    use crate::get_init_tvm_stack;
+    use crate::empty_stack;
 
     use crate::test_helpers::{
         test_rust_equivalence_given_input_values_deprecated,
@@ -360,7 +360,7 @@ mod tests {
         expected_mt_index: u64,
         expected_peak_index: u32,
     ) {
-        let mut init_stack = get_init_tvm_stack();
+        let mut init_stack = empty_stack();
         let leaf_count_hi = BFieldElement::new(leaf_count >> 32);
         let leaf_count_lo = BFieldElement::new(leaf_count & u32::MAX as u64);
         init_stack.push(leaf_count_hi);
@@ -372,7 +372,7 @@ mod tests {
         init_stack.push(leaf_index_lo);
 
         // _ (right_lineage_count:u32) (height: u32)
-        let mut expected = get_init_tvm_stack();
+        let mut expected = empty_stack();
         expected.push(BFieldElement::new(expected_mt_index >> 32));
         expected.push(BFieldElement::new(expected_mt_index & u32::MAX as u64));
         expected.push(BFieldElement::new(expected_peak_index as u64));

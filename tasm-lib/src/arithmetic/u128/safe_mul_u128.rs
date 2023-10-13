@@ -4,7 +4,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
 use crate::snippet::{DataType, DeprecatedSnippet};
-use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
+use crate::{empty_stack, push_encodable, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct SafeMulU128;
@@ -448,7 +448,7 @@ impl DeprecatedSnippet for SafeMulU128 {
 fn prepare_state(a: u128, b: u128) -> ExecutionState {
     let a = U32s::<4>::try_from(a).unwrap();
     let b = U32s::<4>::try_from(b).unwrap();
-    let mut init_stack = get_init_tvm_stack();
+    let mut init_stack = empty_stack();
     push_encodable(&mut init_stack, &a);
     push_encodable(&mut init_stack, &b);
     ExecutionState::with_stack(init_stack)
@@ -473,7 +473,7 @@ mod tests {
         for i in 1..128 {
             let lhs: U32s<4> = U32s::try_from(1u128 << i).unwrap();
             let rhs: U32s<4> = U32s::try_from(1u128 << (128 - i)).unwrap();
-            let mut init_stack = get_init_tvm_stack();
+            let mut init_stack = empty_stack();
             for elem in rhs.encode().into_iter().rev() {
                 init_stack.push(elem);
             }
@@ -507,7 +507,7 @@ mod tests {
             );
             let lhs: U32s<4> = U32s::try_from(lhs).unwrap();
             let rhs: U32s<4> = U32s::try_from(rhs).unwrap();
-            let mut init_stack = get_init_tvm_stack();
+            let mut init_stack = empty_stack();
             for elem in rhs.encode().into_iter().rev() {
                 init_stack.push(elem);
             }
@@ -543,7 +543,7 @@ mod tests {
                 let divisor: u128 = rng.gen_range(2..(1 << oom));
                 let quotient = MAX / divisor;
 
-                let mut init_stack_no_overflow = get_init_tvm_stack();
+                let mut init_stack_no_overflow = empty_stack();
                 let lhs = divisor;
                 let rhs_no_overflow = quotient;
                 for elem in rhs_no_overflow.encode().into_iter().rev() {
@@ -597,7 +597,7 @@ mod tests {
                     );
 
                     // Verify overflow of `(divisor * (quotient + j))`
-                    let mut init_stack = get_init_tvm_stack();
+                    let mut init_stack = empty_stack();
                     for elem in rhs_overflow.encode().into_iter().rev() {
                         init_stack.push(elem);
                     }
@@ -619,7 +619,7 @@ mod tests {
                     }
 
                     // Verify overflow of `((quotient + j) * divisor)`
-                    let mut init_stack_mirrored = get_init_tvm_stack();
+                    let mut init_stack_mirrored = empty_stack();
                     for elem in lhs.encode().into_iter().rev() {
                         init_stack_mirrored.push(elem);
                     }
@@ -672,7 +672,7 @@ mod tests {
             );
             let lhs: U32s<4> = U32s::try_from(lhs).unwrap();
             let rhs: U32s<4> = U32s::try_from(rhs).unwrap();
-            let mut init_stack = get_init_tvm_stack();
+            let mut init_stack = empty_stack();
             for elem in rhs.encode().into_iter().rev() {
                 init_stack.push(elem);
             }

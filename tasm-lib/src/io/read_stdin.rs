@@ -4,7 +4,7 @@ use triton_vm::NonDeterminism;
 use twenty_first::shared_math::{b_field_element::BFieldElement, other::random_elements};
 
 use crate::{
-    get_init_tvm_stack,
+    empty_stack,
     snippet::{DataType, DeprecatedSnippet},
     ExecutionState,
 };
@@ -65,7 +65,7 @@ impl DeprecatedSnippet for ReadStdIn {
     fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
         let std_in: Vec<BFieldElement> = random_elements(self.0.get_size());
         vec![ExecutionState {
-            stack: get_init_tvm_stack(),
+            stack: empty_stack(),
             std_in,
             nondeterminism: NonDeterminism::new(vec![]),
             memory: HashMap::default(),
@@ -92,7 +92,7 @@ impl DeprecatedSnippet for ReadStdIn {
         let mut std_in = vec![];
         std_in.append(&mut random_elements(self.0.get_size()));
         ExecutionState {
-            stack: get_init_tvm_stack(),
+            stack: empty_stack(),
             std_in,
             nondeterminism: NonDeterminism::new(vec![]),
             memory: HashMap::default(),

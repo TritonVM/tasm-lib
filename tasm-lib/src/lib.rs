@@ -129,7 +129,7 @@ pub struct VmOutputState {
     pub final_sponge_state: VmHasherState,
 }
 
-pub fn get_init_tvm_stack() -> Vec<BFieldElement> {
+pub fn empty_stack() -> Vec<BFieldElement> {
     vec![BFieldElement::zero(); NUM_OP_STACK_REGISTERS]
 }
 
@@ -540,7 +540,7 @@ mod tests {
         let initial_dyn_malloc_value = 14;
         execute_bench_deprecated(
             &triton_asm!(halt),
-            &mut get_init_tvm_stack(),
+            &mut empty_stack(),
             0,
             vec![],
             NonDeterminism::new(vec![]),
@@ -560,7 +560,7 @@ mod tests {
         let mut memory = HashMap::default();
         execute_bench_deprecated(
             &triton_asm!(halt),
-            &mut get_init_tvm_stack(),
+            &mut empty_stack(),
             0,
             vec![],
             NonDeterminism::new(vec![]),

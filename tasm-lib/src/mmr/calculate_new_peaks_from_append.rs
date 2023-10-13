@@ -23,8 +23,7 @@ use crate::list::unsafe_u32::set_length::UnsafeSetLength;
 use crate::list::ListType;
 use crate::snippet::{DataType, DeprecatedSnippet};
 use crate::{
-    get_init_tvm_stack, rust_shadowing_helper_functions, Digest, ExecutionState, VmHasher,
-    DIGEST_LENGTH,
+    empty_stack, rust_shadowing_helper_functions, Digest, ExecutionState, VmHasher, DIGEST_LENGTH,
 };
 
 #[derive(Clone, Debug)]
@@ -41,7 +40,7 @@ impl CalculateNewPeaksFromAppend {
         // We assume that the peaks can safely be stored in memory on address 1
         let peaks_pointer = BFieldElement::one();
 
-        let mut stack = get_init_tvm_stack();
+        let mut stack = empty_stack();
         let old_leaf_count: u64 = start_mmr.count_leaves();
         stack.push(BFieldElement::new(old_leaf_count >> 32));
         stack.push(BFieldElement::new(old_leaf_count & u32::MAX as u64));
@@ -409,7 +408,7 @@ mod tests {
         test_rust_equivalence_given_input_values_deprecated,
         test_rust_equivalence_multiple_deprecated,
     };
-    use crate::{get_init_tvm_stack, VmHasher};
+    use crate::{empty_stack, VmHasher};
 
     use super::*;
 
@@ -601,7 +600,7 @@ mod tests {
 
         // BEFORE: _ old_leaf_count_hi old_leaf_count_lo *peaks [digests (new_leaf)]
         // AFTER: _ *new_peaks *auth_path
-        let mut init_stack = get_init_tvm_stack();
+        let mut init_stack = empty_stack();
         let old_leaf_count: u64 = start_mmr.count_leaves();
         init_stack.push(BFieldElement::new(old_leaf_count >> 32));
         init_stack.push(BFieldElement::new(old_leaf_count & u32::MAX as u64));
@@ -649,7 +648,7 @@ mod tests {
             ListType::Unsafe => 1 + MAX_MMR_HEIGHT * DIGEST_LENGTH + 1,
         };
         let auth_paths_pointer = BFieldElement::new((words_allocated) as u64);
-        let mut expected_final_stack = get_init_tvm_stack();
+        let mut expected_final_stack = empty_stack();
         expected_final_stack.push(peaks_pointer);
         expected_final_stack.push(auth_paths_pointer);
 

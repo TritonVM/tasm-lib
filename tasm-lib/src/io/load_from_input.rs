@@ -3,7 +3,7 @@ use triton_vm::{BFieldElement, NonDeterminism};
 use twenty_first::shared_math::other::random_elements;
 
 use crate::{
-    dyn_malloc, get_init_tvm_stack,
+    dyn_malloc, empty_stack,
     snippet::{DataType, DeprecatedSnippet, InputSource},
     ExecutionState,
 };
@@ -151,14 +151,14 @@ impl DeprecatedSnippet for LoadFromInput {
             .concat();
             ret.push(match self.0 {
                 InputSource::StdIn => ExecutionState {
-                    stack: get_init_tvm_stack(),
+                    stack: empty_stack(),
                     memory: std::collections::HashMap::new(),
                     std_in: input,
                     nondeterminism: NonDeterminism::new(vec![]),
                     words_allocated: 0,
                 },
                 InputSource::SecretIn => ExecutionState {
-                    stack: get_init_tvm_stack(),
+                    stack: empty_stack(),
                     memory: std::collections::HashMap::new(),
                     std_in: vec![],
                     nondeterminism: NonDeterminism::new(input),
@@ -179,14 +179,14 @@ impl DeprecatedSnippet for LoadFromInput {
         .concat();
         match self.0 {
             InputSource::StdIn => ExecutionState {
-                stack: get_init_tvm_stack(),
+                stack: empty_stack(),
                 memory: std::collections::HashMap::new(),
                 std_in: input,
                 nondeterminism: NonDeterminism::new(vec![]),
                 words_allocated: 0,
             },
             InputSource::SecretIn => ExecutionState {
-                stack: get_init_tvm_stack(),
+                stack: empty_stack(),
                 memory: std::collections::HashMap::new(),
                 std_in: vec![],
                 nondeterminism: NonDeterminism::new(input),
@@ -204,14 +204,14 @@ impl DeprecatedSnippet for LoadFromInput {
         .concat();
         match self.0 {
             InputSource::StdIn => ExecutionState {
-                stack: get_init_tvm_stack(),
+                stack: empty_stack(),
                 memory: std::collections::HashMap::new(),
                 std_in: input,
                 nondeterminism: NonDeterminism::new(vec![]),
                 words_allocated: 0,
             },
             InputSource::SecretIn => ExecutionState {
-                stack: get_init_tvm_stack(),
+                stack: empty_stack(),
                 memory: std::collections::HashMap::new(),
                 std_in: vec![],
                 nondeterminism: NonDeterminism::new(input),
@@ -268,7 +268,7 @@ mod tests {
     fn verify_dyn_malloc_shows_correct_next_value() {
         for length in 0..10 {
             let state = ExecutionState {
-                stack: get_init_tvm_stack(),
+                stack: empty_stack(),
                 memory: std::collections::HashMap::new(),
                 std_in: vec![
                     vec![BFieldElement::new(length)],

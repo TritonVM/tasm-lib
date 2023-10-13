@@ -5,7 +5,7 @@ use triton_vm::{BFieldElement, NonDeterminism};
 use twenty_first::shared_math::{bfield_codec::BFieldCodec, other::random_elements};
 
 use crate::{
-    get_init_tvm_stack,
+    empty_stack,
     io::load_from_input::LoadFromInput,
     snippet::{DataType, DeprecatedSnippet, InputSource},
     ExecutionState,
@@ -141,14 +141,14 @@ impl DeprecatedSnippet for LoadStructFromInput {
         };
         let s1_execution_state = match self.input_source {
             InputSource::StdIn => ExecutionState {
-                stack: [get_init_tvm_stack(), vec![BFieldElement::new(1)]].concat(),
+                stack: [empty_stack(), vec![BFieldElement::new(1)]].concat(),
                 std_in: s1.encode(),
                 nondeterminism: NonDeterminism::new(vec![]),
                 memory: HashMap::default(),
                 words_allocated: 1,
             },
             InputSource::SecretIn => ExecutionState {
-                stack: [get_init_tvm_stack(), vec![BFieldElement::new(1)]].concat(),
+                stack: [empty_stack(), vec![BFieldElement::new(1)]].concat(),
                 std_in: vec![],
                 nondeterminism: NonDeterminism::new(s1.encode()),
                 memory: HashMap::default(),
@@ -164,14 +164,14 @@ impl DeprecatedSnippet for LoadStructFromInput {
         };
         let s2_execution_state = match self.input_source {
             InputSource::StdIn => ExecutionState {
-                stack: [get_init_tvm_stack(), vec![BFieldElement::new(2)]].concat(),
+                stack: [empty_stack(), vec![BFieldElement::new(2)]].concat(),
                 std_in: s2.encode(),
                 nondeterminism: NonDeterminism::new(vec![]),
                 memory: HashMap::default(),
                 words_allocated: 1,
             },
             InputSource::SecretIn => ExecutionState {
-                stack: [get_init_tvm_stack(), vec![BFieldElement::new(2)]].concat(),
+                stack: [empty_stack(), vec![BFieldElement::new(2)]].concat(),
                 std_in: vec![],
                 nondeterminism: NonDeterminism::new(s2.encode()),
                 memory: HashMap::default(),
@@ -188,14 +188,14 @@ impl DeprecatedSnippet for LoadStructFromInput {
         };
         let s3_execution_state = match self.input_source {
             InputSource::StdIn => ExecutionState {
-                stack: [get_init_tvm_stack(), vec![BFieldElement::new(3)]].concat(),
+                stack: [empty_stack(), vec![BFieldElement::new(3)]].concat(),
                 std_in: s3.encode(),
                 nondeterminism: NonDeterminism::new(vec![]),
                 memory: HashMap::default(),
                 words_allocated: 1,
             },
             InputSource::SecretIn => ExecutionState {
-                stack: [get_init_tvm_stack(), vec![BFieldElement::new(3)]].concat(),
+                stack: [empty_stack(), vec![BFieldElement::new(3)]].concat(),
                 std_in: vec![],
                 nondeterminism: NonDeterminism::new(s3.encode()),
                 memory: HashMap::default(),
@@ -214,14 +214,14 @@ impl DeprecatedSnippet for LoadStructFromInput {
         };
         let s5_execution_state = match self.input_source {
             InputSource::StdIn => ExecutionState {
-                stack: [get_init_tvm_stack(), vec![BFieldElement::new(5)]].concat(),
+                stack: [empty_stack(), vec![BFieldElement::new(5)]].concat(),
                 std_in: s5.encode(),
                 nondeterminism: NonDeterminism::new(vec![]),
                 memory: HashMap::default(),
                 words_allocated: 1,
             },
             InputSource::SecretIn => ExecutionState {
-                stack: [get_init_tvm_stack(), vec![BFieldElement::new(5)]].concat(),
+                stack: [empty_stack(), vec![BFieldElement::new(5)]].concat(),
                 std_in: vec![],
                 nondeterminism: NonDeterminism::new(s5.encode()),
                 memory: HashMap::default(),
@@ -243,14 +243,14 @@ impl DeprecatedSnippet for LoadStructFromInput {
         };
         match self.input_source {
             InputSource::StdIn => ExecutionState {
-                stack: [get_init_tvm_stack(), vec![BFieldElement::new(5)]].concat(),
+                stack: [empty_stack(), vec![BFieldElement::new(5)]].concat(),
                 std_in: s5.encode(),
                 nondeterminism: NonDeterminism::new(vec![]),
                 memory: HashMap::default(),
                 words_allocated: 1,
             },
             InputSource::SecretIn => ExecutionState {
-                stack: [get_init_tvm_stack(), vec![BFieldElement::new(5)]].concat(),
+                stack: [empty_stack(), vec![BFieldElement::new(5)]].concat(),
                 std_in: vec![],
                 nondeterminism: NonDeterminism::new(s5.encode()),
                 memory: HashMap::default(),
@@ -269,14 +269,14 @@ impl DeprecatedSnippet for LoadStructFromInput {
         };
         match self.input_source {
             InputSource::StdIn => ExecutionState {
-                stack: [get_init_tvm_stack(), vec![BFieldElement::new(5)]].concat(),
+                stack: [empty_stack(), vec![BFieldElement::new(5)]].concat(),
                 std_in: s5.encode(),
                 nondeterminism: NonDeterminism::new(vec![]),
                 memory: HashMap::default(),
                 words_allocated: 1,
             },
             InputSource::SecretIn => ExecutionState {
-                stack: [get_init_tvm_stack(), vec![BFieldElement::new(5)]].concat(),
+                stack: [empty_stack(), vec![BFieldElement::new(5)]].concat(),
                 std_in: vec![],
                 nondeterminism: NonDeterminism::new(s5.encode()),
                 memory: HashMap::default(),

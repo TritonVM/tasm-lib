@@ -7,7 +7,7 @@ use crate::arithmetic::u64::add_u64::AddU64;
 use crate::arithmetic::u64::incr_u64::IncrU64;
 use crate::library::Library;
 use crate::snippet::{DataType, DeprecatedSnippet};
-use crate::{get_init_tvm_stack, ExecutionState};
+use crate::{empty_stack, ExecutionState};
 
 use super::non_leaf_nodes_left::MmrNonLeafNodesLeftUsingAnd;
 
@@ -102,7 +102,7 @@ impl DeprecatedSnippet for DataIndexToNodeIndex {
 }
 
 fn prepare_state(leaf_index: u64) -> ExecutionState {
-    let mut stack = get_init_tvm_stack();
+    let mut stack = empty_stack();
     let leaf_index_hi = BFieldElement::new(leaf_index >> 32);
     let leaf_index_lo = BFieldElement::new(leaf_index & u32::MAX as u64);
     stack.push(leaf_index_hi);
@@ -117,7 +117,7 @@ mod tests {
     use twenty_first::shared_math::b_field_element::BFieldElement;
     use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
-    use crate::get_init_tvm_stack;
+    use crate::empty_stack;
 
     use crate::test_helpers::{
         test_rust_equivalence_given_input_values_deprecated,
@@ -133,107 +133,107 @@ mod tests {
 
     #[test]
     fn data_index_to_node_index_simple_test() {
-        let mut expected = get_init_tvm_stack();
+        let mut expected = empty_stack();
         expected.push(BFieldElement::new(0));
         expected.push(BFieldElement::new(1));
         prop_data_index_to_node_index(0, Some(&expected));
 
-        expected = get_init_tvm_stack();
+        expected = empty_stack();
         expected.push(BFieldElement::new(0));
         expected.push(BFieldElement::new(2));
         prop_data_index_to_node_index(1, Some(&expected));
 
-        expected = get_init_tvm_stack();
+        expected = empty_stack();
         expected.push(BFieldElement::new(0));
         expected.push(BFieldElement::new(4));
         prop_data_index_to_node_index(2, Some(&expected));
 
-        expected = get_init_tvm_stack();
+        expected = empty_stack();
         expected.push(BFieldElement::new(0));
         expected.push(BFieldElement::new(5));
         prop_data_index_to_node_index(3, Some(&expected));
 
-        expected = get_init_tvm_stack();
+        expected = empty_stack();
         expected.push(BFieldElement::new(0));
         expected.push(BFieldElement::new(8));
         prop_data_index_to_node_index(4, Some(&expected));
 
-        expected = get_init_tvm_stack();
+        expected = empty_stack();
         expected.push(BFieldElement::new(0));
         expected.push(BFieldElement::new(9));
         prop_data_index_to_node_index(5, Some(&expected));
 
-        expected = get_init_tvm_stack();
+        expected = empty_stack();
         expected.push(BFieldElement::new(0));
         expected.push(BFieldElement::new(11));
         prop_data_index_to_node_index(6, Some(&expected));
 
-        expected = get_init_tvm_stack();
+        expected = empty_stack();
         expected.push(BFieldElement::new(0));
         expected.push(BFieldElement::new(12));
         prop_data_index_to_node_index(7, Some(&expected));
 
-        expected = get_init_tvm_stack();
+        expected = empty_stack();
         expected.push(BFieldElement::new(0));
         expected.push(BFieldElement::new(16));
         prop_data_index_to_node_index(8, Some(&expected));
 
-        expected = get_init_tvm_stack();
+        expected = empty_stack();
         expected.push(BFieldElement::new(0));
         expected.push(BFieldElement::new(17));
         prop_data_index_to_node_index(9, Some(&expected));
 
-        expected = get_init_tvm_stack();
+        expected = empty_stack();
         expected.push(BFieldElement::new(0));
         expected.push(BFieldElement::new(19));
         prop_data_index_to_node_index(10, Some(&expected));
 
-        expected = get_init_tvm_stack();
+        expected = empty_stack();
         expected.push(BFieldElement::new(0));
         expected.push(BFieldElement::new(20));
         prop_data_index_to_node_index(11, Some(&expected));
 
-        expected = get_init_tvm_stack();
+        expected = empty_stack();
         expected.push(BFieldElement::new(0));
         expected.push(BFieldElement::new(23));
         prop_data_index_to_node_index(12, Some(&expected));
 
-        expected = get_init_tvm_stack();
+        expected = empty_stack();
         expected.push(BFieldElement::new(0));
         expected.push(BFieldElement::new(24));
         prop_data_index_to_node_index(13, Some(&expected));
 
-        expected = get_init_tvm_stack();
+        expected = empty_stack();
         expected.push(BFieldElement::new(0));
         expected.push(BFieldElement::new(199_999_989));
         prop_data_index_to_node_index(100_000_000, Some(&expected));
 
-        expected = get_init_tvm_stack();
+        expected = empty_stack();
         expected.push(BFieldElement::new(1));
         expected.push(BFieldElement::new(4_294_967_263));
         prop_data_index_to_node_index(u32::MAX as u64, Some(&expected));
 
-        expected = get_init_tvm_stack();
+        expected = empty_stack();
         expected.push(BFieldElement::new(16777216));
         expected.push(BFieldElement::new(0));
         prop_data_index_to_node_index(1u64 << 55, Some(&expected));
 
-        expected = get_init_tvm_stack();
+        expected = empty_stack();
         expected.push(BFieldElement::new(2147483648));
         expected.push(BFieldElement::new(0));
         prop_data_index_to_node_index(1u64 << 62, Some(&expected));
 
-        expected = get_init_tvm_stack();
+        expected = empty_stack();
         expected.push(BFieldElement::new(2147483648));
         expected.push(BFieldElement::new(38));
         prop_data_index_to_node_index((1u64 << 62) + 20, Some(&expected));
 
-        expected = get_init_tvm_stack();
+        expected = empty_stack();
         expected.push(BFieldElement::new(2147483648));
         expected.push(BFieldElement::new(797));
         prop_data_index_to_node_index((1u64 << 62) + 400, Some(&expected));
 
-        expected = get_init_tvm_stack();
+        expected = empty_stack();
         expected.push(BFieldElement::new(2147483647));
         expected.push(BFieldElement::new(4294857690));
         prop_data_index_to_node_index((1u64 << 62) - 54778, Some(&expected));
@@ -259,7 +259,7 @@ mod tests {
     }
 
     fn prop_data_index_to_node_index(data_index: u64, expected: Option<&[BFieldElement]>) {
-        let mut init_stack = get_init_tvm_stack();
+        let mut init_stack = empty_stack();
         let value_as_u32_2 = U32s::new([
             (data_index & 0xFFFFFFFFu32 as u64) as u32,
             (data_index >> 32) as u32,

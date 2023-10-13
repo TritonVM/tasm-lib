@@ -3,7 +3,7 @@ use rand::{thread_rng, Rng};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::{
-    get_init_tvm_stack,
+    empty_stack,
     snippet::{DataType, DeprecatedSnippet},
     ExecutionState,
 };
@@ -65,7 +65,7 @@ impl DeprecatedSnippet for SafeSub {
     fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
         let mut ret: Vec<ExecutionState> = vec![];
         for _ in 0..10 {
-            let mut stack = get_init_tvm_stack();
+            let mut stack = empty_stack();
             let lhs = thread_rng().gen_range(0..u32::MAX / 2);
             let rhs = thread_rng().gen_range(0..=lhs);
             let lhs = BFieldElement::new(lhs as u64);
@@ -98,7 +98,7 @@ impl DeprecatedSnippet for SafeSub {
     fn common_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
             vec![
-                get_init_tvm_stack(),
+                empty_stack(),
                 vec![BFieldElement::new(1 << 15), BFieldElement::new(1 << 16)],
             ]
             .concat(),
@@ -108,7 +108,7 @@ impl DeprecatedSnippet for SafeSub {
     fn worst_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
             vec![
-                get_init_tvm_stack(),
+                empty_stack(),
                 vec![BFieldElement::zero(), BFieldElement::new((1 << 32) - 1)],
             ]
             .concat(),
@@ -162,12 +162,12 @@ mod tests {
     }
 
     fn prop_safe_sub(lhs: u32, rhs: u32, _expected: Option<u32>) {
-        let mut init_stack = get_init_tvm_stack();
+        let mut init_stack = empty_stack();
         init_stack.push(BFieldElement::new(rhs as u64));
         init_stack.push(BFieldElement::new(lhs as u64));
         let expected = lhs.checked_sub(rhs);
         let expected = vec![
-            get_init_tvm_stack(),
+            empty_stack(),
             vec![expected
                 .map(|x| BFieldElement::new(x as u64))
                 .unwrap_or_else(BFieldElement::zero)],

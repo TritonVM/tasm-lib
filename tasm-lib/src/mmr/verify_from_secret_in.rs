@@ -24,8 +24,7 @@ use crate::list::unsafe_u32::get::UnsafeGet;
 use crate::list::ListType;
 use crate::snippet::{DataType, DeprecatedSnippet};
 use crate::{
-    get_init_tvm_stack, rust_shadowing_helper_functions, Digest, ExecutionState, VmHasher,
-    DIGEST_LENGTH,
+    empty_stack, rust_shadowing_helper_functions, Digest, ExecutionState, VmHasher, DIGEST_LENGTH,
 };
 
 #[derive(Clone, Debug)]
@@ -124,7 +123,7 @@ impl MmrVerifyLeafMembershipFromSecretIn {
     /// knowing e.g. the leaf index of the leaf digest that you want to authenticate
     /// so this function does not populate e.g. `secret_in`. The caller has to do that.
     fn mmr_to_init_vm_state(&self, mmra: &MmrAccumulator<VmHasher>) -> ExecutionState {
-        let mut stack: Vec<BFieldElement> = get_init_tvm_stack();
+        let mut stack: Vec<BFieldElement> = empty_stack();
         let peaks_pointer = BFieldElement::one();
         stack.push(peaks_pointer);
 
@@ -634,7 +633,7 @@ mod tests {
         auth_path: Vec<Digest>,
         expect_validation_success: bool,
     ) {
-        let mut init_stack = get_init_tvm_stack();
+        let mut init_stack = empty_stack();
 
         let peaks_pointer = BFieldElement::one();
         init_stack.push(peaks_pointer);
@@ -667,7 +666,7 @@ mod tests {
 
         let leaf_index_hi = BFieldElement::new(leaf_index >> 32);
         let leaf_index_lo = BFieldElement::new(leaf_index & u32::MAX as u64);
-        let mut expected_final_stack = get_init_tvm_stack();
+        let mut expected_final_stack = empty_stack();
         expected_final_stack.push(leaf_index_hi);
         expected_final_stack.push(leaf_index_lo);
         expected_final_stack.push(BFieldElement::new(expect_validation_success as u64));

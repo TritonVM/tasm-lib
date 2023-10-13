@@ -10,8 +10,8 @@ use twenty_first::shared_math::{
 
 use crate::{
     arithmetic::u32::safe_add::SafeAdd,
+    empty_stack,
     function::Function,
-    get_init_tvm_stack,
     list::unsafe_u32::{length::UnsafeLength, new::UnsafeNew, push::UnsafePush},
     snippet::{BasicSnippet, DataType},
     structure::tasm_object::{load_to_memory, TasmObject},
@@ -712,7 +712,7 @@ impl Function for XfeNtt {
         vector[0] = XFieldElement::one();
         vector[1] = XFieldElement::one();
 
-        let mut stack = get_init_tvm_stack();
+        let mut stack = empty_stack();
         let mut memory = HashMap::new();
         let vector_pointer = load_to_memory(&mut memory, vector);
         println!("{}", memory.get(&vector_pointer).unwrap());

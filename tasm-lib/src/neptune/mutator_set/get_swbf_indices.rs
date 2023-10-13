@@ -10,8 +10,8 @@ use twenty_first::{
 
 use crate::{
     arithmetic::u128::{shift_left_static_u128, shift_right_static_u128},
+    empty_stack,
     function::Function,
-    get_init_tvm_stack,
     hashing::sample_indices::SampleIndices,
     list::{
         higher_order::{
@@ -308,7 +308,7 @@ impl Function for GetSwbfIndices {
         _bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
     ) -> (Vec<BFieldElement>, HashMap<BFieldElement, BFieldElement>) {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
-        let mut stack = get_init_tvm_stack();
+        let mut stack = empty_stack();
         let (item, sender_randomness, receiver_preimage, aocl_leaf_index): (
             Digest,
             Digest,

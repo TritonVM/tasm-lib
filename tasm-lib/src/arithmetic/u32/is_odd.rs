@@ -6,7 +6,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use crate::library::Library;
 use crate::pseudo::lsb::Lsb;
 use crate::snippet::{DataType, DeprecatedSnippet};
-use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
+use crate::{empty_stack, push_encodable, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct U32IsOdd;
@@ -35,11 +35,11 @@ impl DeprecatedSnippet for U32IsOdd {
     fn gen_input_states(&self) -> Vec<ExecutionState> {
         let n: u32 = rand::thread_rng().next_u32();
 
-        let mut even_stack = get_init_tvm_stack();
+        let mut even_stack = empty_stack();
         let even_value = n - (n & 1);
         push_encodable(&mut even_stack, &even_value);
 
-        let mut odd_stack = get_init_tvm_stack();
+        let mut odd_stack = empty_stack();
         let odd_value = n | 1;
         push_encodable(&mut odd_stack, &odd_value);
 
@@ -86,18 +86,12 @@ impl DeprecatedSnippet for U32IsOdd {
     }
 
     fn common_case_input_state(&self) -> ExecutionState {
-        ExecutionState::with_stack(
-            [get_init_tvm_stack(), vec![BFieldElement::new(1 << 16)]].concat(),
-        )
+        ExecutionState::with_stack([empty_stack(), vec![BFieldElement::new(1 << 16)]].concat())
     }
 
     fn worst_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-            vec![
-                get_init_tvm_stack(),
-                vec![BFieldElement::new((1 << 32) - 1)],
-            ]
-            .concat(),
+            vec![empty_stack(), vec![BFieldElement::new((1 << 32) - 1)]].concat(),
         )
     }
 }
@@ -106,7 +100,7 @@ impl DeprecatedSnippet for U32IsOdd {
 mod tests {
     use rand::{thread_rng, RngCore};
 
-    use crate::get_init_tvm_stack;
+    use crate::empty_stack;
 
     use crate::test_helpers::{
         test_rust_equivalence_given_input_values_deprecated,
@@ -141,9 +135,9 @@ mod tests {
     }
 
     fn prop_is_odd(value: u32) {
-        let mut init_stack = get_init_tvm_stack();
+        let mut init_stack = empty_stack();
         init_stack.push(BFieldElement::new(value as u64));
-        let mut expected_stack = get_init_tvm_stack();
+        let mut expected_stack = empty_stack();
         expected_stack.push(BFieldElement::new((value % 2) as u64));
 
         test_rust_equivalence_given_input_values_deprecated(

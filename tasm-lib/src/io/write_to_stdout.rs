@@ -7,7 +7,7 @@ use twenty_first::{
 };
 
 use crate::{
-    get_init_tvm_stack,
+    empty_stack,
     procedure::Procedure,
     snippet::{BasicSnippet, DataType},
     VmHasherState,
@@ -70,7 +70,7 @@ impl Procedure for WriteToStdout {
         VmHasherState,
     ) {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
-        let mut stack = get_init_tvm_stack();
+        let mut stack = empty_stack();
         let random_value = self.0.seeded_random_elements(1, &mut rng);
         for elem in random_value[0].clone().into_iter().rev() {
             stack.push(elem);

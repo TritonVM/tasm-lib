@@ -9,7 +9,7 @@ use crate::rust_shadowing_helper_functions::unsafe_list::{
     unsafe_list_get, untyped_unsafe_insert_random_list,
 };
 use crate::snippet::{DataType, DeprecatedSnippet};
-use crate::{get_init_tvm_stack, ExecutionState};
+use crate::{empty_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct UnsafeGet(pub DataType);
@@ -138,7 +138,7 @@ fn input_state(list_length: usize) -> ExecutionState {
     let list_pointer: u32 = random();
     let list_pointer = BFieldElement::new(list_pointer as u64);
     let index: usize = rng.gen_range(0..list_length);
-    let mut stack = get_init_tvm_stack();
+    let mut stack = empty_stack();
     stack.push(list_pointer);
     stack.push(BFieldElement::new(index as u64));
 
@@ -161,7 +161,7 @@ mod tests {
     use rand::{thread_rng, RngCore};
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
-    use crate::get_init_tvm_stack;
+    use crate::empty_stack;
 
     use crate::test_helpers::{
         test_rust_equivalence_given_input_values_deprecated,
@@ -208,7 +208,7 @@ mod tests {
     }
 
     fn prop_get(data_type: DataType, list_pointer: BFieldElement, index: u32, list_length: u32) {
-        let mut init_stack = get_init_tvm_stack();
+        let mut init_stack = empty_stack();
         init_stack.push(list_pointer);
         init_stack.push(BFieldElement::new(index as u64));
 
@@ -233,7 +233,7 @@ mod tests {
         let targeted_element: Vec<BFieldElement> =
             unsafe_list_get(list_pointer, index as usize, &memory, element_size);
 
-        let mut expected_end_stack = get_init_tvm_stack();
+        let mut expected_end_stack = empty_stack();
 
         for i in 0..element_size {
             expected_end_stack.push(targeted_element[element_size - 1 - i]);

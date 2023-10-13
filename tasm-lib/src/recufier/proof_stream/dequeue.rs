@@ -11,7 +11,7 @@ use crate::procedure::Procedure;
 use crate::structure::tasm_object::TasmObject;
 use crate::VmHasherState;
 use crate::{
-    field, field_with_size, get_init_tvm_stack,
+    empty_stack, field, field_with_size,
     library::Library,
     snippet::{BasicSnippet, DataType},
     snippet_bencher::BenchmarkCase,
@@ -236,7 +236,7 @@ impl Procedure for Dequeue {
         }
 
         // drop address on stack
-        let mut stack = get_init_tvm_stack();
+        let mut stack = empty_stack();
         stack.push(address);
 
         // populate sponge state at random
@@ -264,7 +264,7 @@ mod test {
     };
 
     use crate::{
-        execute_with_terminal_state, get_init_tvm_stack,
+        empty_stack, execute_with_terminal_state,
         linker::link_for_isolated_run,
         procedure::{Procedure, ShadowedProcedure},
         program_with_state_preparation,
@@ -340,7 +340,7 @@ mod test {
             }
 
             // drop address on stack
-            let mut stack = get_init_tvm_stack();
+            let mut stack = empty_stack();
             stack.push(address);
 
             // test rust/tasm equivalence

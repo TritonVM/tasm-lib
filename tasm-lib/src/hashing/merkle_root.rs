@@ -6,8 +6,8 @@ use triton_vm::{triton_asm, BFieldElement};
 use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
 use crate::{
+    empty_stack,
     function::Function,
-    get_init_tvm_stack,
     snippet::{BasicSnippet, DataType},
     snippet_bencher::BenchmarkCase,
     structure::tasm_object::{load_to_memory, TasmObject},
@@ -220,7 +220,7 @@ impl Function for MerkleRoot {
 
         let mut memory = HashMap::<BFieldElement, BFieldElement>::new();
         let pointer = load_to_memory(&mut memory, leafs);
-        let mut stack = get_init_tvm_stack();
+        let mut stack = empty_stack();
         stack.push(pointer);
         stack.push(BFieldElement::new(0)); // start
         stack.push(BFieldElement::new(num_leafs)); // stop

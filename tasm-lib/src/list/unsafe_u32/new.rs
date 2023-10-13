@@ -4,7 +4,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use crate::library::Library;
 use crate::rust_shadowing_helper_functions::unsafe_list::unsafe_list_new;
 use crate::snippet::{DataType, DeprecatedSnippet};
-use crate::{get_init_tvm_stack, ExecutionState};
+use crate::{empty_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct UnsafeNew(pub DataType);
@@ -119,7 +119,7 @@ impl DeprecatedSnippet for UnsafeNew {
 }
 
 fn prepare_state(capacity: u32) -> ExecutionState {
-    let mut stack = get_init_tvm_stack();
+    let mut stack = empty_stack();
     stack.push(BFieldElement::new(capacity as u64));
     ExecutionState::with_stack(stack)
 }

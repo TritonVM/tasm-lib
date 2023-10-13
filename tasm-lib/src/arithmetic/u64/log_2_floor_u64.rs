@@ -7,7 +7,7 @@ use twenty_first::shared_math::other::log_2_floor;
 
 use crate::library::Library;
 use crate::snippet::{DataType, DeprecatedSnippet};
-use crate::{get_init_tvm_stack, push_encodable, ExecutionState};
+use crate::{empty_stack, push_encodable, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct Log2FloorU64;
@@ -39,7 +39,7 @@ impl DeprecatedSnippet for Log2FloorU64 {
     fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
         let n: u64 = rand::thread_rng().next_u64();
         let n: U32s<2> = n.try_into().unwrap();
-        let mut input_stack = get_init_tvm_stack();
+        let mut input_stack = empty_stack();
 
         push_encodable(&mut input_stack, &n);
 
@@ -123,7 +123,7 @@ impl DeprecatedSnippet for Log2FloorU64 {
     fn common_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
             vec![
-                get_init_tvm_stack(),
+                empty_stack(),
                 vec![BFieldElement::zero(), BFieldElement::new(1 << 31)],
             ]
             .concat(),
@@ -133,7 +133,7 @@ impl DeprecatedSnippet for Log2FloorU64 {
     fn worst_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
             vec![
-                get_init_tvm_stack(),
+                empty_stack(),
                 vec![
                     BFieldElement::new((1 << 31) + 1),
                     BFieldElement::new(1 << 31),
@@ -149,7 +149,7 @@ mod tests {
     use twenty_first::amount::u32s::U32s;
     use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
-    use crate::get_init_tvm_stack;
+    use crate::empty_stack;
 
     use crate::test_helpers::{
         test_rust_equivalence_given_input_values_deprecated,
@@ -166,7 +166,7 @@ mod tests {
     #[should_panic]
     #[test]
     fn lo_is_not_u32() {
-        let mut init_stack = get_init_tvm_stack();
+        let mut init_stack = empty_stack();
         init_stack.push(BFieldElement::new(16));
         init_stack.push(BFieldElement::new(u32::MAX as u64 + 1));
 
@@ -183,7 +183,7 @@ mod tests {
     #[should_panic]
     #[test]
     fn hi_is_not_u32() {
-        let mut init_stack = get_init_tvm_stack();
+        let mut init_stack = empty_stack();
         init_stack.push(BFieldElement::new(u32::MAX as u64 + 1));
         init_stack.push(BFieldElement::new(16));
 
@@ -201,7 +201,7 @@ mod tests {
     #[test]
     fn hi_is_not_u32_alt() {
         let n: u64 = rand::thread_rng().next_u32() as u64;
-        let mut init_stack = get_init_tvm_stack();
+        let mut init_stack = empty_stack();
         init_stack.push(BFieldElement::new(u32::MAX as u64 + 1 + n));
         init_stack.push(BFieldElement::new(16));
 
@@ -217,29 +217,29 @@ mod tests {
 
     #[test]
     fn u32s_2_log2_floor() {
-        let mut expected = get_init_tvm_stack();
+        let mut expected = empty_stack();
         expected.push(BFieldElement::new(0));
         prop_log2_floor_u32s_2(1, &expected);
 
-        expected = get_init_tvm_stack();
+        expected = empty_stack();
         expected.push(BFieldElement::new(1));
         prop_log2_floor_u32s_2(2, &expected);
         prop_log2_floor_u32s_2(3, &expected);
 
-        expected = get_init_tvm_stack();
+        expected = empty_stack();
         expected.push(BFieldElement::new(2));
         prop_log2_floor_u32s_2(4, &expected);
         prop_log2_floor_u32s_2(5, &expected);
         prop_log2_floor_u32s_2(6, &expected);
         prop_log2_floor_u32s_2(7, &expected);
 
-        expected = get_init_tvm_stack();
+        expected = empty_stack();
         expected.push(BFieldElement::new(31));
         prop_log2_floor_u32s_2(u32::MAX as u64 - 20000, &expected);
         prop_log2_floor_u32s_2(u32::MAX as u64 - 1, &expected);
         prop_log2_floor_u32s_2(u32::MAX as u64, &expected);
 
-        expected = get_init_tvm_stack();
+        expected = empty_stack();
         expected.push(BFieldElement::new(32));
         prop_log2_floor_u32s_2(u32::MAX as u64 + 1, &expected);
         prop_log2_floor_u32s_2(u32::MAX as u64 + 2, &expected);
@@ -248,7 +248,7 @@ mod tests {
         prop_log2_floor_u32s_2(u32::MAX as u64 + u32::MAX as u64 + 1, &expected);
 
         for i in 0..64 {
-            expected = get_init_tvm_stack();
+            expected = empty_stack();
             expected.push(BFieldElement::new(i));
             prop_log2_floor_u32s_2(1 << i, &expected);
             if i > 0 {
@@ -258,7 +258,7 @@ mod tests {
                 prop_log2_floor_u32s_2((1 << i) + 2, &expected);
                 prop_log2_floor_u32s_2((1 << i) + 3, &expected);
 
-                expected = get_init_tvm_stack();
+                expected = empty_stack();
                 expected.push(BFieldElement::new(i - 1));
                 prop_log2_floor_u32s_2((1 << i) - 1, &expected);
             }
@@ -266,7 +266,7 @@ mod tests {
     }
 
     fn prop_log2_floor_u32s_2(value: u64, expected: &[BFieldElement]) {
-        let mut init_stack = get_init_tvm_stack();
+        let mut init_stack = empty_stack();
         let value_as_u32_2 =
             U32s::new([(value & 0xFFFFFFFFu32 as u64) as u32, (value >> 32) as u32]);
         for elem in value_as_u32_2.encode().into_iter().rev() {

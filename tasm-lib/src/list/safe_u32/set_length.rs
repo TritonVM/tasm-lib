@@ -7,7 +7,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use crate::library::Library;
 use crate::rust_shadowing_helper_functions::safe_list::safe_insert_random_list;
 use crate::snippet::{DataType, DeprecatedSnippet};
-use crate::{get_init_tvm_stack, ExecutionState};
+use crate::{empty_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct SafeSetLength(pub DataType);
@@ -147,7 +147,7 @@ fn prepare_state(
     new_length: usize,
 ) -> ExecutionState {
     let list_pointer: BFieldElement = random();
-    let mut stack = get_init_tvm_stack();
+    let mut stack = empty_stack();
     stack.push(list_pointer);
     stack.push(BFieldElement::new(new_length as u64));
     let mut memory = HashMap::default();
@@ -159,7 +159,7 @@ fn prepare_state(
 mod tests {
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
-    use crate::get_init_tvm_stack;
+    use crate::empty_stack;
 
     use crate::test_helpers::{
         test_rust_equivalence_given_input_values_deprecated,
@@ -298,8 +298,8 @@ mod tests {
         new_list_length: u32,
         capacity: u32,
     ) {
-        let expected_end_stack = vec![get_init_tvm_stack(), vec![list_pointer]].concat();
-        let mut init_stack = get_init_tvm_stack();
+        let expected_end_stack = vec![empty_stack(), vec![list_pointer]].concat();
+        let mut init_stack = empty_stack();
         init_stack.push(list_pointer);
         init_stack.push(BFieldElement::new(new_list_length as u64));
 

@@ -19,7 +19,7 @@ use crate::list::unsafe_u32::set_length::UnsafeSetLength;
 use crate::list::{self, ListType};
 use crate::memory::memcpy::MemCpy;
 use crate::snippet::BasicSnippet;
-use crate::{get_init_tvm_stack, rust_shadowing_helper_functions};
+use crate::{empty_stack, rust_shadowing_helper_functions};
 use crate::{
     library::Library,
     snippet::{DataType, DeprecatedSnippet},
@@ -349,7 +349,7 @@ impl Function for Filter {
         let list_pointer = BFieldElement::new(rng.next_u64() % (1 << 20));
         let list_length = 1 << (rng.gen::<usize>() % 4);
         let capacity = list_length;
-        let mut stack = get_init_tvm_stack();
+        let mut stack = empty_stack();
         stack.push(list_pointer);
 
         let mut memory = HashMap::default();
