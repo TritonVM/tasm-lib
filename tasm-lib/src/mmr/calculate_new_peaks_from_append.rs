@@ -365,7 +365,7 @@ impl DeprecatedSnippet for CalculateNewPeaksFromAppend {
             );
             list_push(
                 peaks_pointer,
-                VmHasher::hash_pair(&previous_peak, &new_hash)
+                VmHasher::hash_pair(previous_peak, new_hash)
                     .values()
                     .to_vec(),
                 memory,
@@ -698,7 +698,7 @@ mod tests {
             produced_mp
                 .verify(
                     &produced_mmr.get_peaks(),
-                    &new_leaf,
+                    new_leaf,
                     produced_mmr.count_leaves(),
                 )
                 .0,

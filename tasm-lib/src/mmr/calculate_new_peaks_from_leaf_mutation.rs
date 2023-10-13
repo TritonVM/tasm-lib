@@ -358,7 +358,7 @@ impl DeprecatedSnippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
 
         let mmr_mp = MmrMembershipProof::new(leaf_index, auth_path);
         let new_peaks = mmr::shared_basic::calculate_new_peaks_from_leaf_mutation::<VmHasher>(
-            &peaks, &new_leaf, leaf_count, &mmr_mp,
+            &peaks, new_leaf, leaf_count, &mmr_mp,
         );
 
         // Write mutated peak back to memory
@@ -615,7 +615,7 @@ mod tests {
             let mp = init_mmr.append(thread_rng().gen());
 
             let mut final_mmr = init_mmr.clone();
-            final_mmr.mutate_leaf(&mp, &new_leaf);
+            final_mmr.mutate_leaf(&mp, new_leaf);
 
             // Mutate the last element for which we just acquired an authentication path
             prop_calculate_new_peaks_from_leaf_mutation(
@@ -709,7 +709,7 @@ mod tests {
             mmr_mp
                 .verify(
                     &produced_mmr.get_peaks(),
-                    &new_leaf,
+                    new_leaf,
                     produced_mmr.count_leaves(),
                 )
                 .0,
@@ -718,13 +718,13 @@ mod tests {
 
         // Extra checks because paranoia
         let mut expected_final_mmra_double_check = start_mmr.to_accumulator();
-        expected_final_mmra_double_check.mutate_leaf(&mmr_mp, &new_leaf);
+        expected_final_mmra_double_check.mutate_leaf(&mmr_mp, new_leaf);
         assert_eq!(expected_final_mmra_double_check, produced_mmr);
         assert!(
             mmr_mp
                 .verify(
                     &expected_final_mmra_double_check.get_peaks(),
-                    &new_leaf,
+                    new_leaf,
                     expected_final_mmra_double_check.count_leaves()
                 )
                 .0

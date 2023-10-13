@@ -515,7 +515,7 @@ impl DeprecatedSnippet for MultisetEquality {
         // hash to get Fiat-Shamir challenge
         let list_a_hash = VmHasher::hash_varlen(&list_a_bfes);
         let list_b_hash = VmHasher::hash_varlen(&list_b_bfes);
-        let digest = VmHasher::hash_pair(&list_a_hash, &list_b_hash);
+        let digest = VmHasher::hash_pair(list_a_hash, list_b_hash);
         let indeterminate =
             XFieldElement::new([digest.values()[0], digest.values()[1], digest.values()[2]]);
 

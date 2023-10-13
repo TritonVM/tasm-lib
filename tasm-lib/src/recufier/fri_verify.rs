@@ -210,7 +210,7 @@ impl FriVerify {
                 "last_poly_degree is {last_poly_degree}, \
                 degree_of_last_round is {last_round_max_degree}",
             );
-            bail!(FriValidationError::LastIterationTooHighDegree)
+            bail!(FriValidationError::LastRoundPolynomialHasTooHighDegree)
         }
 
         // Query phase
@@ -408,8 +408,7 @@ impl FriVerify {
         let mut proof_stream = ProofStream::<VmHasher>::new();
 
         let fri = Fri::new(
-            self.domain_offset,
-            self.domain_length as usize,
+            ArithmeticDomain { offset: self.domain_offset, generator: self.domain_generator, length: self.domain_length as usize },
             self.expansion_factor as usize,
             self.num_colinearity_checks as usize,
         );
@@ -745,12 +744,12 @@ impl Procedure for FriVerify {
 mod test {
     use itertools::Itertools;
     use rand::{rngs::StdRng, thread_rng, Rng, SeedableRng};
-    use triton_vm::{fri::Fri, proof_stream::ProofStream, BFieldElement};
-    use twenty_first::util_types::{
+    use triton_vm::{fri::Fri, proof_stream::ProofStream, BFieldElement, arithmetic_domain::ArithmeticDomain};
+    use twenty_first::{util_types::{
         algebraic_hasher::Domain,
         merkle_tree::{CpuParallel, MerkleTree},
         merkle_tree_maker::MerkleTreeMaker,
-    };
+    }, shared_math::traits::PrimitiveRootOfUnity};
 
     use crate::{
         procedure::ShadowedProcedure, snippet::RustShadow, Digest, VmHasher, VmHasherState,
@@ -762,7 +761,7 @@ mod test {
     fn fri_derived_params_match() {
         let mut rng = thread_rng();
         for _ in 0..20 {
-            let expansion_factor = 1 << rng.gen_range(0..10);
+            let expansion_factor = 2 << rng.gen_range(0..10);
             let colinearity_checks_count = rng.gen_range(1..320);
             let offset: BFieldElement = rng.gen();
             let domain_length = expansion_factor * (1u32 << rng.gen_range(0..20));
@@ -775,8 +774,7 @@ mod test {
             );
 
             let fri = Fri::<VmHasher>::new(
-                offset,
-                domain_length as usize,
+                triton_vm::arithmetic_domain::ArithmeticDomain { offset, generator: BFieldElement::primitive_root_of_unity(domain_length.into()).unwrap(), length: domain_length as usize},
                 expansion_factor as usize,
                 colinearity_checks_count as usize,
             );
@@ -820,8 +818,7 @@ mod test {
             sponge_state: VmHasherState::new(Domain::VariableLength),
         };
         let fri = Fri::new(
-            offset,
-            domain_length as usize,
+            ArithmeticDomain{offset, generator: BFieldElement::primitive_root_of_unity(domain_length.into()).unwrap(), length: domain_length as usize},
             expansion_factor as usize,
             colinearity_checks_count as usize,
         );

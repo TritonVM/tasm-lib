@@ -192,8 +192,8 @@ impl DeprecatedSnippet for Commit {
             stack.pop().unwrap(),
         ]);
         let commitment = VmHasher::hash_pair(
-            &VmHasher::hash_pair(&item, &sender_randomness),
-            &receiver_digest,
+            VmHasher::hash_pair(item, sender_randomness),
+            receiver_digest,
         );
         stack.push(commitment.values()[4]);
         stack.push(commitment.values()[3]);
