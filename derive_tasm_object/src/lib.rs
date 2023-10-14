@@ -4,7 +4,6 @@ extern crate proc_macro;
 
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::spanned::Spanned;
 
 /// Derives `TasmObject` for structs.
 ///
@@ -209,37 +208,22 @@ fn impl_derive_tasm_object_macro(ast: syn::DeriveInput) -> TokenStream {
 }
 
 fn field_is_ignored(field: &syn::Field) -> bool {
-    let bfield_codec_ident = syn::Ident::new("tasm_object", field.span());
-    let ignore_ident = syn::Ident::new("ignore", field.span());
-
     for attribute in field.attrs.iter() {
-        let Ok(meta) = attribute.parse_meta() else {
-            continue;
-        };
-        let Some(ident) = meta.path().get_ident() else {
-            continue;
-        };
-        if ident != &bfield_codec_ident {
+        if !attribute.path().is_ident("tasm_object") {
             continue;
         }
-        let syn::Meta::List(list) = meta else {
-            panic!("Attribute {ident} must be of type `List`.");
-        };
-        for arg in list.nested.iter() {
-            let syn::NestedMeta::Meta(arg_meta) = arg else {
-                continue;
-            };
-            let Some(arg_ident) = arg_meta.path().get_ident() else {
-                panic!("Invalid attribute syntax! (no ident)");
-            };
-            if arg_ident != &ignore_ident {
-                panic!("Invalid attribute syntax! Unknown name {arg_ident}");
-            }
-            return true;
-        }
+        attribute
+            .parse_nested_meta(|meta| match meta.path.get_ident() {
+                Some(ident) if ident == "ignore" => Ok(()),
+                Some(ident) => Err(meta.error(format!("Unknown identifier \"{ident}\"."))),
+                _ => Err(meta.error("Expected an identifier.")),
+            })
+            .unwrap();
+        return true;
     }
     false
 }
+
 
 fn generate_tokens_for_struct_with_named_fields(fields: &syn::FieldsNamed) -> ParseResult {
     let ignored_fields = fields
