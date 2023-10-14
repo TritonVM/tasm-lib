@@ -91,15 +91,7 @@ impl DeprecatedSnippet for Isodd {
 
     fn worst_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-<<<<<<< HEAD:tasm-lib/src/arithmetic/u32/isodd.rs
-            [
-                get_init_tvm_stack(),
-                vec![BFieldElement::new((1 << 32) - 1)],
-            ]
-            .concat(),
-=======
             vec![empty_stack(), vec![BFieldElement::new((1 << 32) - 1)]].concat(),
->>>>>>> b19ddfa (rename `get_init_tvm_stack` to `empty_stack`):tasm-lib/src/arithmetic/u32/is_odd.rs
         )
     }
 }

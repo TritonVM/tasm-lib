@@ -101,15 +101,7 @@ impl DeprecatedSnippet for Leadingzeros {
 
     fn worst_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-<<<<<<< HEAD:tasm-lib/src/arithmetic/u32/leadingzeros.rs
-            [
-                get_init_tvm_stack(),
-                vec![BFieldElement::new((1 << 32) - 1)],
-            ]
-            .concat(),
-=======
             vec![empty_stack(), vec![BFieldElement::new((1 << 32) - 1)]].concat(),
->>>>>>> b19ddfa (rename `get_init_tvm_stack` to `empty_stack`):tasm-lib/src/arithmetic/u32/leading_zeros_u32.rs
         )
     }
 }
@@ -151,15 +143,7 @@ mod tests {
         init_stack.push(BFieldElement::new(value as u64));
 
         let expected = value.leading_zeros();
-<<<<<<< HEAD:tasm-lib/src/arithmetic/u32/leadingzeros.rs
-        let expected = [
-            get_init_tvm_stack(),
-            vec![BFieldElement::new(expected as u64)],
-        ]
-        .concat();
-=======
         let expected = vec![empty_stack(), vec![BFieldElement::new(expected as u64)]].concat();
->>>>>>> b19ddfa (rename `get_init_tvm_stack` to `empty_stack`):tasm-lib/src/arithmetic/u32/leading_zeros_u32.rs
 
         test_rust_equivalence_given_input_values_deprecated(
             &Leadingzeros,
