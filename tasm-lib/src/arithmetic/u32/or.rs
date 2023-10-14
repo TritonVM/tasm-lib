@@ -97,23 +97,19 @@ impl DeprecatedSnippet for Or {
 
     fn common_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-            vec![
-                empty_stack(),
-                vec![BFieldElement::new(1 << 15), BFieldElement::new(1 << 16)],
-            ]
+            [empty_stack(),
+                vec![BFieldElement::new(1 << 15), BFieldElement::new(1 << 16)]]
             .concat(),
         )
     }
 
     fn worst_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-            vec![
-                empty_stack(),
+            [empty_stack(),
                 vec![
                     BFieldElement::new((1 << 32) - 1),
                     BFieldElement::new((1 << 32) - 1),
-                ],
-            ]
+                ]]
             .concat(),
         )
     }
@@ -155,7 +151,7 @@ mod tests {
         init_stack.push(BFieldElement::new(lhs as u64));
 
         let expected = lhs | rhs;
-        let expected = vec![empty_stack(), vec![BFieldElement::new(expected as u64)]].concat();
+        let expected = [empty_stack(), vec![BFieldElement::new(expected as u64)]].concat();
 
         test_rust_equivalence_given_input_values_deprecated(
             &Or,

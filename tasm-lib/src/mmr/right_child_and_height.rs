@@ -282,7 +282,7 @@ mod tests {
             U32s::new([1, 0]),
             Some(
                 &[
-                    vec![empty_stack(), vec![BFieldElement::zero()]].concat(),
+                    [empty_stack(), vec![BFieldElement::zero()]].concat(),
                     vec![BFieldElement::zero()],
                 ]
                 .concat(),
@@ -292,7 +292,7 @@ mod tests {
             U32s::new([2, 0]),
             Some(
                 &[
-                    vec![empty_stack(), vec![BFieldElement::one()]].concat(),
+                    [empty_stack(), vec![BFieldElement::one()]].concat(),
                     vec![BFieldElement::zero()],
                 ]
                 .concat(),
@@ -302,7 +302,7 @@ mod tests {
             U32s::new([3, 0]),
             Some(
                 &[
-                    vec![empty_stack(), vec![BFieldElement::zero()]].concat(),
+                    [empty_stack(), vec![BFieldElement::zero()]].concat(),
                     vec![BFieldElement::one()],
                 ]
                 .concat(),
@@ -312,7 +312,7 @@ mod tests {
             U32s::new([4, 0]),
             Some(
                 &[
-                    vec![empty_stack(), vec![BFieldElement::zero()]].concat(),
+                    [empty_stack(), vec![BFieldElement::zero()]].concat(),
                     vec![BFieldElement::zero()],
                 ]
                 .concat(),
@@ -322,7 +322,7 @@ mod tests {
             U32s::new([5, 0]),
             Some(
                 &[
-                    vec![empty_stack(), vec![BFieldElement::one()]].concat(),
+                    [empty_stack(), vec![BFieldElement::one()]].concat(),
                     vec![BFieldElement::zero()],
                 ]
                 .concat(),
@@ -332,7 +332,7 @@ mod tests {
             U32s::new([6, 0]),
             Some(
                 &[
-                    vec![empty_stack(), vec![BFieldElement::one()]].concat(),
+                    [empty_stack(), vec![BFieldElement::one()]].concat(),
                     vec![BFieldElement::one()],
                 ]
                 .concat(),
@@ -342,7 +342,7 @@ mod tests {
             U32s::new([7, 0]),
             Some(
                 &[
-                    vec![empty_stack(), vec![BFieldElement::zero()]].concat(),
+                    [empty_stack(), vec![BFieldElement::zero()]].concat(),
                     vec![BFieldElement::new(2)],
                 ]
                 .concat(),
@@ -352,7 +352,7 @@ mod tests {
             U32s::new([8, 0]),
             Some(
                 &[
-                    vec![empty_stack(), vec![BFieldElement::zero()]].concat(),
+                    [empty_stack(), vec![BFieldElement::zero()]].concat(),
                     vec![BFieldElement::zero()],
                 ]
                 .concat(),
@@ -362,7 +362,7 @@ mod tests {
             U32s::new([14, 0]),
             Some(
                 &[
-                    vec![empty_stack(), vec![BFieldElement::one()]].concat(),
+                    [empty_stack(), vec![BFieldElement::one()]].concat(),
                     vec![BFieldElement::new(2)],
                 ]
                 .concat(),
@@ -372,7 +372,7 @@ mod tests {
             U32s::new([15, 0]),
             Some(
                 &[
-                    vec![empty_stack(), vec![BFieldElement::zero()]].concat(),
+                    [empty_stack(), vec![BFieldElement::zero()]].concat(),
                     vec![BFieldElement::new(3)],
                 ]
                 .concat(),
@@ -382,7 +382,7 @@ mod tests {
             U32s::new([16, 0]),
             Some(
                 &[
-                    vec![empty_stack(), vec![BFieldElement::zero()]].concat(),
+                    [empty_stack(), vec![BFieldElement::zero()]].concat(),
                     vec![BFieldElement::zero()],
                 ]
                 .concat(),
@@ -392,7 +392,7 @@ mod tests {
             U32s::new([17, 0]),
             Some(
                 &[
-                    vec![empty_stack(), vec![BFieldElement::one()]].concat(),
+                    [empty_stack(), vec![BFieldElement::one()]].concat(),
                     vec![BFieldElement::zero()],
                 ]
                 .concat(),
@@ -403,7 +403,7 @@ mod tests {
             U32s::new([18, 0]),
             Some(
                 &[
-                    vec![empty_stack(), vec![BFieldElement::zero()]].concat(),
+                    [empty_stack(), vec![BFieldElement::zero()]].concat(),
                     vec![BFieldElement::one()],
                 ]
                 .concat(),
@@ -413,7 +413,7 @@ mod tests {
             U32s::new([u32::MAX - 1, u32::MAX / 2]),
             Some(
                 &[
-                    vec![empty_stack(), vec![BFieldElement::one()]].concat(),
+                    [empty_stack(), vec![BFieldElement::one()]].concat(),
                     vec![BFieldElement::new(61)],
                 ]
                 .concat(),
@@ -423,7 +423,7 @@ mod tests {
             U32s::new([u32::MAX, u32::MAX / 2]),
             Some(
                 &[
-                    vec![empty_stack(), vec![BFieldElement::zero()]].concat(),
+                    [empty_stack(), vec![BFieldElement::zero()]].concat(),
                     vec![BFieldElement::new(62)],
                 ]
                 .concat(),

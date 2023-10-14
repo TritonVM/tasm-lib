@@ -187,11 +187,9 @@ impl DeprecatedSnippet for SubU64 {
     fn common_case_input_state(&self) -> ExecutionState {
         // no carry
         ExecutionState::with_stack(
-            vec![
-                empty_stack(),
+            [empty_stack(),
                 vec![BFieldElement::zero(), BFieldElement::new((1 << 10) - 1)],
-                vec![BFieldElement::zero(), BFieldElement::new((1 << 31) - 1)],
-            ]
+                vec![BFieldElement::zero(), BFieldElement::new((1 << 31) - 1)]]
             .concat(),
         )
     }
@@ -199,11 +197,9 @@ impl DeprecatedSnippet for SubU64 {
     fn worst_case_input_state(&self) -> ExecutionState {
         // with carry
         ExecutionState::with_stack(
-            vec![
-                empty_stack(),
+            [empty_stack(),
                 vec![BFieldElement::one(), BFieldElement::new((1 << 31) - 1)],
-                vec![BFieldElement::new(100), BFieldElement::new((1 << 10) - 1)],
-            ]
+                vec![BFieldElement::new(100), BFieldElement::new((1 << 10) - 1)]]
             .concat(),
         )
     }
@@ -232,34 +228,26 @@ mod tests {
     #[test]
     fn subtraction_involving_zeros() {
         // 0 - 0 = 0
-        let mut expected_end_stack = vec![
-            empty_stack(),
-            vec![BFieldElement::zero(), BFieldElement::zero()],
-        ]
+        let mut expected_end_stack = [empty_stack(),
+            vec![BFieldElement::zero(), BFieldElement::zero()]]
         .concat();
         prop_sub(U32s::from(0), U32s::from(0), Some(&expected_end_stack));
 
         // 1 - 0 = 1
-        expected_end_stack = vec![
-            empty_stack(),
-            vec![BFieldElement::zero(), BFieldElement::one()],
-        ]
+        expected_end_stack = [empty_stack(),
+            vec![BFieldElement::zero(), BFieldElement::one()]]
         .concat();
         prop_sub(U32s::from(1), U32s::from(0), Some(&expected_end_stack));
 
         // 1 - 1 = 0
-        expected_end_stack = vec![
-            empty_stack(),
-            vec![BFieldElement::zero(), BFieldElement::zero()],
-        ]
+        expected_end_stack = [empty_stack(),
+            vec![BFieldElement::zero(), BFieldElement::zero()]]
         .concat();
         prop_sub(U32s::from(1), U32s::from(1), Some(&expected_end_stack));
 
         // u64::MAX - u64::MAX = 0
-        expected_end_stack = vec![
-            empty_stack(),
-            vec![BFieldElement::new(0), BFieldElement::new(0)],
-        ]
+        expected_end_stack = [empty_stack(),
+            vec![BFieldElement::new(0), BFieldElement::new(0)]]
         .concat();
         prop_sub(
             U32s::try_from(u64::MAX).unwrap(),
@@ -271,10 +259,8 @@ mod tests {
     #[test]
     fn u32s_2_sub_no_overflow() {
         // 256 - 129 = 127
-        let expected_end_stack = vec![
-            empty_stack(),
-            vec![BFieldElement::zero(), BFieldElement::new(127)],
-        ]
+        let expected_end_stack = [empty_stack(),
+            vec![BFieldElement::zero(), BFieldElement::new(127)]]
         .concat();
         prop_sub(U32s::from(256), U32s::from(129), Some(&expected_end_stack));
     }
@@ -282,10 +268,8 @@ mod tests {
     #[test]
     fn u32s_2_sub_carry() {
         // 2^32 - 1 = ...
-        let expected_end_stack = vec![
-            empty_stack(),
-            vec![BFieldElement::zero(), BFieldElement::new(u32::MAX as u64)],
-        ]
+        let expected_end_stack = [empty_stack(),
+            vec![BFieldElement::zero(), BFieldElement::new(u32::MAX as u64)]]
         .concat();
         prop_sub(
             U32s::from(BigUint::from(1u64 << 32)),

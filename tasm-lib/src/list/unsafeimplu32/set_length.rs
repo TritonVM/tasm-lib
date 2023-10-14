@@ -142,7 +142,7 @@ mod tests {
         init_list_length: u32,
         new_list_length: u32,
     ) {
-        let expected_end_stack = vec![empty_stack(), vec![list_address]].concat();
+        let expected_end_stack = [empty_stack(), vec![list_address]].concat();
         let mut init_stack = empty_stack();
         init_stack.push(list_address);
         init_stack.push(BFieldElement::new(new_list_length as u64));

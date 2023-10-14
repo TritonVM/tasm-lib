@@ -24,7 +24,7 @@ impl HashVarlen {
             .collect();
 
         ExecutionState {
-            stack: vec![empty_stack(), vec![memory_start, BFieldElement::new(k)]].concat(),
+            stack: [empty_stack(), vec![memory_start, BFieldElement::new(k)]].concat(),
             std_in: vec![],
             nondeterminism: NonDeterminism::new(vec![]),
             memory,

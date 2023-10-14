@@ -62,7 +62,7 @@ impl GetLength {
         let encoded = data.encode();
         memory.insert(address, BFieldElement::new(encoded.len() as u64));
         address.increment();
-        let stack = vec![empty_stack(), vec![address]].concat();
+        let stack = [empty_stack(), vec![address]].concat();
         for word in encoded {
             memory.insert(address, word);
             address.increment();

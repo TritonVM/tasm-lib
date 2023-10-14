@@ -119,22 +119,18 @@ impl DeprecatedSnippet for LtStandardU64 {
 
     fn common_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-            vec![
-                empty_stack(),
+            [empty_stack(),
                 vec![BFieldElement::zero(), BFieldElement::new(1 << 31)],
-                vec![BFieldElement::one(), BFieldElement::new(1 << 30)],
-            ]
+                vec![BFieldElement::one(), BFieldElement::new(1 << 30)]]
             .concat(),
         )
     }
 
     fn worst_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-            vec![
-                empty_stack(),
+            [empty_stack(),
                 vec![BFieldElement::new(8), BFieldElement::new(1 << 31)],
-                vec![BFieldElement::new(8), BFieldElement::new(1 << 30)],
-            ]
+                vec![BFieldElement::new(8), BFieldElement::new(1 << 30)]]
             .concat(),
         )
     }
@@ -269,22 +265,18 @@ impl DeprecatedSnippet for LtU64 {
 
     fn common_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-            vec![
-                empty_stack(),
+            [empty_stack(),
                 vec![BFieldElement::zero(), BFieldElement::new(1 << 31)],
-                vec![BFieldElement::one(), BFieldElement::new(1 << 30)],
-            ]
+                vec![BFieldElement::one(), BFieldElement::new(1 << 30)]]
             .concat(),
         )
     }
 
     fn worst_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-            vec![
-                empty_stack(),
+            [empty_stack(),
                 vec![BFieldElement::new(8), BFieldElement::new(1 << 31)],
-                vec![BFieldElement::new(8), BFieldElement::new(1 << 30)],
-            ]
+                vec![BFieldElement::new(8), BFieldElement::new(1 << 30)]]
             .concat(),
         )
     }
@@ -325,12 +317,10 @@ mod tests {
     #[test]
     fn u32s_lt_true_with_hi() {
         // 15 * 2^32 > 11 * 2^32
-        let expected_end_stack = vec![
-            empty_stack(),
+        let expected_end_stack = [empty_stack(),
             vec![BFieldElement::new(15), BFieldElement::new(0)],
             vec![BFieldElement::new(11), BFieldElement::new(0)],
-            vec![BFieldElement::one()],
-        ]
+            vec![BFieldElement::one()]]
         .concat();
 
         let lhs = U32s::try_from(11 * (1u64 << 32)).unwrap();
@@ -342,12 +332,10 @@ mod tests {
     #[test]
     fn u32s_lt_false_with_zero() {
         // eval(0 < 0) = false
-        let expected_end_stack = vec![
-            empty_stack(),
+        let expected_end_stack = [empty_stack(),
             vec![BFieldElement::new(0), BFieldElement::new(0)],
             vec![BFieldElement::new(0), BFieldElement::new(0)],
-            vec![BFieldElement::zero()],
-        ]
+            vec![BFieldElement::zero()]]
         .concat();
         let zero = U32s::zero();
         prop_lt(zero, zero, Some(&expected_end_stack));

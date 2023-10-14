@@ -122,23 +122,19 @@ impl DeprecatedSnippet for Log2FloorU64 {
 
     fn common_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-            vec![
-                empty_stack(),
-                vec![BFieldElement::zero(), BFieldElement::new(1 << 31)],
-            ]
+            [empty_stack(),
+                vec![BFieldElement::zero(), BFieldElement::new(1 << 31)]]
             .concat(),
         )
     }
 
     fn worst_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-            vec![
-                empty_stack(),
+            [empty_stack(),
                 vec![
                     BFieldElement::new((1 << 31) + 1),
                     BFieldElement::new(1 << 31),
-                ],
-            ]
+                ]]
             .concat(),
         )
     }

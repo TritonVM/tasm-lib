@@ -382,7 +382,7 @@ impl FriVerify {
         // compile return object and store to memory
         let revealed_indices_and_elements = revealed_indices_and_elements_first_half
             .into_iter()
-            .chain(revealed_indices_and_elements_second_half.into_iter())
+            .chain(revealed_indices_and_elements_second_half)
             .collect_vec();
 
         Ok(revealed_indices_and_elements)

@@ -557,8 +557,7 @@ impl DeprecatedSnippet for DivModU64 {
 
 fn prepare_state(numerator: u64, divisor: u64) -> ExecutionState {
     ExecutionState::with_stack(
-        vec![
-            empty_stack(),
+        [empty_stack(),
             vec![
                 BFieldElement::new(numerator >> 32),
                 BFieldElement::new(numerator & u32::MAX as u64),
@@ -566,8 +565,7 @@ fn prepare_state(numerator: u64, divisor: u64) -> ExecutionState {
             vec![
                 BFieldElement::new(divisor >> 32),
                 BFieldElement::new(divisor & u32::MAX as u64),
-            ],
-        ]
+            ]]
         .concat(),
     )
 }

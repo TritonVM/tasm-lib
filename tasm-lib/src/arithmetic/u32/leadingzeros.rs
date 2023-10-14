@@ -101,7 +101,7 @@ impl DeprecatedSnippet for Leadingzeros {
 
     fn worst_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-            vec![empty_stack(), vec![BFieldElement::new((1 << 32) - 1)]].concat(),
+            [empty_stack(), vec![BFieldElement::new((1 << 32) - 1)]].concat(),
         )
     }
 }
@@ -143,7 +143,7 @@ mod tests {
         init_stack.push(BFieldElement::new(value as u64));
 
         let expected = value.leading_zeros();
-        let expected = vec![empty_stack(), vec![BFieldElement::new(expected as u64)]].concat();
+        let expected = [empty_stack(), vec![BFieldElement::new(expected as u64)]].concat();
 
         test_rust_equivalence_given_input_values_deprecated(
             &Leadingzeros,

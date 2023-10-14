@@ -32,13 +32,11 @@ pub struct SampleIndices {
 impl SampleIndices {
     fn test_state(number: usize, upper_bound: u32) -> ExecutionState {
         ExecutionState {
-            stack: vec![
-                empty_stack(),
+            stack: [empty_stack(),
                 vec![
                     BFieldElement::new(number as u64),
                     BFieldElement::new(upper_bound as u64),
-                ],
-            ]
+                ]]
             .concat(),
             std_in: vec![],
             nondeterminism: NonDeterminism::new(vec![]),

@@ -163,10 +163,10 @@ mod tests {
 
     #[test]
     fn list_u32_simple_long() {
-        let expected_end_stack = vec![empty_stack(), vec![BFieldElement::new(42)]].concat();
+        let expected_end_stack = [empty_stack(), vec![BFieldElement::new(42)]].concat();
         prop_length_long(BFieldElement::one(), 42, Some(&expected_end_stack));
 
-        let expected_end_stack = vec![empty_stack(), vec![BFieldElement::new(588)]].concat();
+        let expected_end_stack = [empty_stack(), vec![BFieldElement::new(588)]].concat();
         prop_length_long(BFieldElement::one(), 588, Some(&expected_end_stack));
     }
 

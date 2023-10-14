@@ -91,23 +91,19 @@ impl DeprecatedSnippet for Safeadd {
 
     fn common_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-            vec![
-                empty_stack(),
-                vec![BFieldElement::new(1 << 16), BFieldElement::new(1 << 15)],
-            ]
+            [empty_stack(),
+                vec![BFieldElement::new(1 << 16), BFieldElement::new(1 << 15)]]
             .concat(),
         )
     }
 
     fn worst_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-            vec![
-                empty_stack(),
+            [empty_stack(),
                 vec![
                     BFieldElement::new((1 << 30) - 1),
                     BFieldElement::new((1 << 31) - 1),
-                ],
-            ]
+                ]]
             .concat(),
         )
     }
@@ -149,12 +145,10 @@ mod tests {
         init_stack.push(BFieldElement::new(lhs as u64));
 
         let expected = lhs.checked_add(rhs);
-        let expected = vec![
-            empty_stack(),
+        let expected = [empty_stack(),
             vec![expected
                 .map(|x| BFieldElement::new(x as u64))
-                .unwrap_or_else(BFieldElement::zero)],
-        ]
+                .unwrap_or_else(BFieldElement::zero)]]
         .concat();
 
         test_rust_equivalence_given_input_values_deprecated::<Safeadd>(

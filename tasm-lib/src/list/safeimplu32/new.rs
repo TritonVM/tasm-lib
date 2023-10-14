@@ -134,11 +134,11 @@ impl DeprecatedSnippet for SafeNew {
     }
 
     fn common_case_input_state(&self) -> ExecutionState {
-        ExecutionState::with_stack(vec![empty_stack(), vec![BFieldElement::new(1 << 5)]].concat())
+        ExecutionState::with_stack([empty_stack(), vec![BFieldElement::new(1 << 5)]].concat())
     }
 
     fn worst_case_input_state(&self) -> ExecutionState {
-        ExecutionState::with_stack(vec![empty_stack(), vec![BFieldElement::new(1 << 6)]].concat())
+        ExecutionState::with_stack([empty_stack(), vec![BFieldElement::new(1 << 6)]].concat())
     }
 }
 
