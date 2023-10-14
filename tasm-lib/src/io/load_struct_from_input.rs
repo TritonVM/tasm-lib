@@ -334,7 +334,7 @@ mod tests {
     // fn verify_dyn_malloc_shows_correct_next_value() {
     //     for length in 0..10 {
     //         let state = ExecutionState {
-    //             stack: get_init_tvm_stack(),
+    //             stack: empty_stack(),
     //             memory: std::collections::HashMap::new(),
     //             std_in: vec![
     //                 vec![BFieldElement::new(length)],

@@ -4,7 +4,7 @@ use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
 use crate::{
     closure::Closure,
-    get_init_tvm_stack,
+    empty_stack,
     snippet::{BasicSnippet, DataType},
 };
 
@@ -118,7 +118,7 @@ impl Closure for WrappingSub {
             }
         };
 
-        [get_init_tvm_stack(), lhs.encode(), rhs.encode()].concat()
+        [empty_stack(), lhs.encode(), rhs.encode()].concat()
     }
 }
 
@@ -158,7 +158,7 @@ mod tests {
             ((1 << 40) + 1, 1 << 40),
         ] {
             let init_stack = [
-                get_init_tvm_stack(),
+                empty_stack(),
                 vec![
                     BFieldElement::new(lhs >> 32),
                     BFieldElement::new(lhs & u32::MAX as u64),
@@ -169,7 +169,7 @@ mod tests {
             .concat();
             let expected = lhs.wrapping_sub(rhs);
             let expected_final_stack = [
-                get_init_tvm_stack(),
+                empty_stack(),
                 vec![(expected >> 32).into(), (expected & u32::MAX as u64).into()],
             ]
             .concat();

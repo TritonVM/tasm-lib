@@ -557,13 +557,8 @@ impl DeprecatedSnippet for DivModU64 {
 
 fn prepare_state(numerator: u64, divisor: u64) -> ExecutionState {
     ExecutionState::with_stack(
-<<<<<<< HEAD
-        [
-            get_init_tvm_stack(),
-=======
         vec![
             empty_stack(),
->>>>>>> b19ddfa (rename `get_init_tvm_stack` to `empty_stack`)
             vec![
                 BFieldElement::new(numerator >> 32),
                 BFieldElement::new(numerator & u32::MAX as u64),

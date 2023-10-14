@@ -122,13 +122,8 @@ impl DeprecatedSnippet for Log2FloorU64 {
 
     fn common_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-<<<<<<< HEAD
-            [
-                get_init_tvm_stack(),
-=======
             vec![
                 empty_stack(),
->>>>>>> b19ddfa (rename `get_init_tvm_stack` to `empty_stack`)
                 vec![BFieldElement::zero(), BFieldElement::new(1 << 31)],
             ]
             .concat(),
@@ -137,13 +132,8 @@ impl DeprecatedSnippet for Log2FloorU64 {
 
     fn worst_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-<<<<<<< HEAD
-            [
-                get_init_tvm_stack(),
-=======
             vec![
                 empty_stack(),
->>>>>>> b19ddfa (rename `get_init_tvm_stack` to `empty_stack`)
                 vec![
                     BFieldElement::new((1 << 31) + 1),
                     BFieldElement::new(1 << 31),

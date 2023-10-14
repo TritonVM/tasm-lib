@@ -14,7 +14,7 @@ use twenty_first::{
 use crate::{
     empty_stack,
     hashing::squeeze_repeatedly::SqueezeRepeatedly,
-    list::unsafe_u32::new::UnsafeNew,
+    list::unsafeimplu32::new::UnsafeNew,
     procedure::Procedure,
     snippet::{BasicSnippet, DataType},
     structure::tasm_object::load_to_memory,

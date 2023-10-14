@@ -60,9 +60,9 @@ impl BasicSnippet for MerkleRoot {
     ) -> Vec<triton_vm::instruction::LabelledInstruction> {
         let entrypoint = self.entrypoint();
         let tasm_arithmetic_u32_safe_add_u32 =
-            library.import(Box::new(crate::arithmetic::u32::safe_add::SafeAdd));
+            library.import(Box::new(crate::arithmetic::u32::safeadd::Safeadd));
         let tasm_arithmetic_u32_safe_sub_u32 =
-            library.import(Box::new(crate::arithmetic::u32::safe_sub::SafeSub));
+            library.import(Box::new(crate::arithmetic::u32::safesub::Safesub));
         let hash_pair = triton_asm!(
                 hash
                 pop

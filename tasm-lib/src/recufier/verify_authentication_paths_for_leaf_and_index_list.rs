@@ -12,8 +12,8 @@ use crate::{
     algorithm::Algorithm,
     empty_stack,
     list::{
-        safe_u32::{get::SafeGet, length::SafeLength},
-        unsafe_u32::{get::UnsafeGet, length::UnsafeLength},
+        safeimplu32::{get::SafeGet, length::Length as SafeLength},
+        unsafeimplu32::{get::UnsafeGet, length::Length as UnsafeLength },
         ListType,
     },
     recufier::merkle_verify::MerkleVerify,

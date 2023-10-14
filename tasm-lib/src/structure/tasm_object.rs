@@ -119,8 +119,7 @@ pub fn load_to_memory<T: BFieldCodec>(
 }
 
 impl<T: BFieldCodec> TasmObject for Vec<T> {
-<<<<<<< HEAD
-<<<<<<< HEAD
+
     fn get_field(_field_name: &str) -> Vec<LabelledInstruction> {
         panic!("`Vec` does not have fields; cannot access them")
     }
@@ -130,24 +129,6 @@ impl<T: BFieldCodec> TasmObject for Vec<T> {
     }
 
     fn get_field_start_with_jump_distance(_field_name: &str) -> Vec<LabelledInstruction> {
-=======
-    fn get_field(field_name: &str) -> Vec<LabelledInstruction> {
-=======
-    fn get_field(_field_name: &str) -> Vec<LabelledInstruction> {
->>>>>>> 90e580d (integrate merkle root snippet into fri stub)
-        panic!("`Vec` does not have fields; cannot access them")
-    }
-
-    fn get_field_with_size(_field_name: &str) -> Vec<LabelledInstruction> {
-        panic!("`Vec` does not have fields; cannot access them")
-    }
-
-<<<<<<< HEAD
-    fn get_field_start_with_jump_distance(field_name: &str) -> Vec<LabelledInstruction> {
->>>>>>> c02a808 (start fri verifier (wip))
-=======
-    fn get_field_start_with_jump_distance(_field_name: &str) -> Vec<LabelledInstruction> {
->>>>>>> 90e580d (integrate merkle root snippet into fri stub)
         panic!("`Vec` does not have fields; cannot access them")
     }
 

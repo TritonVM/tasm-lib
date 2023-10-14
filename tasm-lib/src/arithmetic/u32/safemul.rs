@@ -92,13 +92,8 @@ impl DeprecatedSnippet for Safemul {
 
     fn common_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-<<<<<<< HEAD:tasm-lib/src/arithmetic/u32/safemul.rs
-            [
-                get_init_tvm_stack(),
-=======
             vec![
                 empty_stack(),
->>>>>>> b19ddfa (rename `get_init_tvm_stack` to `empty_stack`):tasm-lib/src/arithmetic/u32/safe_mul.rs
                 vec![BFieldElement::new(1 << 8), BFieldElement::new(1 << 9)],
             ]
             .concat(),
@@ -107,13 +102,8 @@ impl DeprecatedSnippet for Safemul {
 
     fn worst_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-<<<<<<< HEAD:tasm-lib/src/arithmetic/u32/safemul.rs
-            [
-                get_init_tvm_stack(),
-=======
             vec![
                 empty_stack(),
->>>>>>> b19ddfa (rename `get_init_tvm_stack` to `empty_stack`):tasm-lib/src/arithmetic/u32/safe_mul.rs
                 vec![
                     BFieldElement::new((1 << 15) - 1),
                     BFieldElement::new((1 << 16) - 1),
@@ -176,13 +166,8 @@ mod tests {
         init_stack.push(BFieldElement::new(lhs as u64));
 
         let expected = lhs.checked_mul(rhs);
-<<<<<<< HEAD:tasm-lib/src/arithmetic/u32/safemul.rs
-        let expected = [
-            get_init_tvm_stack(),
-=======
         let expected = vec![
             empty_stack(),
->>>>>>> b19ddfa (rename `get_init_tvm_stack` to `empty_stack`):tasm-lib/src/arithmetic/u32/safe_mul.rs
             vec![expected
                 .map(|x| BFieldElement::new(x as u64))
                 .unwrap_or_else(BFieldElement::zero)],

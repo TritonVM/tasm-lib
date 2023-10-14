@@ -143,13 +143,8 @@ impl DeprecatedSnippet for AddU64 {
 
     fn common_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-<<<<<<< HEAD
-            [
-                get_init_tvm_stack(),
-=======
             vec![
                 empty_stack(),
->>>>>>> b19ddfa (rename `get_init_tvm_stack` to `empty_stack`)
                 vec![BFieldElement::zero(), BFieldElement::new(1 << 31)],
                 vec![BFieldElement::zero(), BFieldElement::new(1 << 30)],
             ]
@@ -159,13 +154,8 @@ impl DeprecatedSnippet for AddU64 {
 
     fn worst_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-<<<<<<< HEAD
-            [
-                get_init_tvm_stack(),
-=======
             vec![
                 empty_stack(),
->>>>>>> b19ddfa (rename `get_init_tvm_stack` to `empty_stack`)
                 vec![BFieldElement::new(1 << 31), BFieldElement::new(1 << 31)],
                 vec![
                     BFieldElement::new(1 << 30),
@@ -199,13 +189,8 @@ mod tests {
     #[test]
     fn u32s_2_add_no_overflow() {
         // 127 + 129 = 256
-<<<<<<< HEAD
-        let mut expected_end_stack = [
-            get_init_tvm_stack(),
-=======
         let mut expected_end_stack = vec![
             empty_stack(),
->>>>>>> b19ddfa (rename `get_init_tvm_stack` to `empty_stack`)
             vec![BFieldElement::zero(), BFieldElement::new(256)],
         ]
         .concat();
@@ -216,13 +201,8 @@ mod tests {
         );
 
         // 127 + 129 + 45 * 2^32 + 1000 * 2^32 = 256 + 1045*2^32
-<<<<<<< HEAD
-        expected_end_stack = [
-            get_init_tvm_stack(),
-=======
         expected_end_stack = vec![
             empty_stack(),
->>>>>>> b19ddfa (rename `get_init_tvm_stack` to `empty_stack`)
             vec![BFieldElement::new(1045), BFieldElement::new(256)],
         ]
         .concat();
@@ -233,13 +213,8 @@ mod tests {
         );
 
         // (2^32 - 1) + 0 + 0 * 2^32 + 2004 * 2^32 = (2^32 - 1) + 2004*2^32
-<<<<<<< HEAD
-        expected_end_stack = [
-            get_init_tvm_stack(),
-=======
         expected_end_stack = vec![
             empty_stack(),
->>>>>>> b19ddfa (rename `get_init_tvm_stack` to `empty_stack`)
             vec![
                 BFieldElement::new(2004),
                 BFieldElement::new(u32::MAX as u64),
@@ -253,13 +228,8 @@ mod tests {
         );
 
         // (2^31 - 1) + 2^31 + 14 * 2^32 + 10^9 * 2^32 = (2^32 - 1) + (10^9 + 14) * 2^32
-<<<<<<< HEAD
-        expected_end_stack = [
-            get_init_tvm_stack(),
-=======
         expected_end_stack = vec![
             empty_stack(),
->>>>>>> b19ddfa (rename `get_init_tvm_stack` to `empty_stack`)
             vec![
                 BFieldElement::new(1_000_000_014),
                 BFieldElement::new(u32::MAX as u64),
@@ -276,13 +246,8 @@ mod tests {
     #[test]
     fn u32s_2_add_with_overflow_in_least_significant_u32() {
         // 2 ^ 31 + 2 ^ 31 = 0 + 1 * 2 ^32
-<<<<<<< HEAD
-        let expected_end_stack = [
-            get_init_tvm_stack(),
-=======
         let expected_end_stack = vec![
             empty_stack(),
->>>>>>> b19ddfa (rename `get_init_tvm_stack` to `empty_stack`)
             vec![BFieldElement::one(), BFieldElement::zero()],
         ]
         .concat();
@@ -293,13 +258,8 @@ mod tests {
         );
 
         // 2 ^ 32 + 2 ^ 32 - 1 - 2 = (1^32 - 3) + 1 * 2^32
-<<<<<<< HEAD
-        let expected_end_stack = [
-            get_init_tvm_stack(),
-=======
         let expected_end_stack = vec![
             empty_stack(),
->>>>>>> b19ddfa (rename `get_init_tvm_stack` to `empty_stack`)
             vec![BFieldElement::one(), BFieldElement::new((1 << 32) - 3)],
         ]
         .concat();

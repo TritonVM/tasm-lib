@@ -119,13 +119,8 @@ impl DeprecatedSnippet for LtStandardU64 {
 
     fn common_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-<<<<<<< HEAD
-            [
-                get_init_tvm_stack(),
-=======
             vec![
                 empty_stack(),
->>>>>>> b19ddfa (rename `get_init_tvm_stack` to `empty_stack`)
                 vec![BFieldElement::zero(), BFieldElement::new(1 << 31)],
                 vec![BFieldElement::one(), BFieldElement::new(1 << 30)],
             ]
@@ -135,13 +130,8 @@ impl DeprecatedSnippet for LtStandardU64 {
 
     fn worst_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-<<<<<<< HEAD
-            [
-                get_init_tvm_stack(),
-=======
             vec![
                 empty_stack(),
->>>>>>> b19ddfa (rename `get_init_tvm_stack` to `empty_stack`)
                 vec![BFieldElement::new(8), BFieldElement::new(1 << 31)],
                 vec![BFieldElement::new(8), BFieldElement::new(1 << 30)],
             ]
@@ -279,13 +269,8 @@ impl DeprecatedSnippet for LtU64 {
 
     fn common_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-<<<<<<< HEAD
-            [
-                get_init_tvm_stack(),
-=======
             vec![
                 empty_stack(),
->>>>>>> b19ddfa (rename `get_init_tvm_stack` to `empty_stack`)
                 vec![BFieldElement::zero(), BFieldElement::new(1 << 31)],
                 vec![BFieldElement::one(), BFieldElement::new(1 << 30)],
             ]
@@ -295,13 +280,8 @@ impl DeprecatedSnippet for LtU64 {
 
     fn worst_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-<<<<<<< HEAD
-            [
-                get_init_tvm_stack(),
-=======
             vec![
                 empty_stack(),
->>>>>>> b19ddfa (rename `get_init_tvm_stack` to `empty_stack`)
                 vec![BFieldElement::new(8), BFieldElement::new(1 << 31)],
                 vec![BFieldElement::new(8), BFieldElement::new(1 << 30)],
             ]
@@ -345,13 +325,8 @@ mod tests {
     #[test]
     fn u32s_lt_true_with_hi() {
         // 15 * 2^32 > 11 * 2^32
-<<<<<<< HEAD
-        let expected_end_stack = [
-            get_init_tvm_stack(),
-=======
         let expected_end_stack = vec![
             empty_stack(),
->>>>>>> b19ddfa (rename `get_init_tvm_stack` to `empty_stack`)
             vec![BFieldElement::new(15), BFieldElement::new(0)],
             vec![BFieldElement::new(11), BFieldElement::new(0)],
             vec![BFieldElement::one()],
@@ -367,13 +342,8 @@ mod tests {
     #[test]
     fn u32s_lt_false_with_zero() {
         // eval(0 < 0) = false
-<<<<<<< HEAD
-        let expected_end_stack = [
-            get_init_tvm_stack(),
-=======
         let expected_end_stack = vec![
             empty_stack(),
->>>>>>> b19ddfa (rename `get_init_tvm_stack` to `empty_stack`)
             vec![BFieldElement::new(0), BFieldElement::new(0)],
             vec![BFieldElement::new(0), BFieldElement::new(0)],
             vec![BFieldElement::zero()],

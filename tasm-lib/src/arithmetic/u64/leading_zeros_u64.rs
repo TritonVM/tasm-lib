@@ -2,13 +2,8 @@ use rand::{thread_rng, RngCore};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::{
-<<<<<<< HEAD
     arithmetic::u32::leadingzeros::Leadingzeros,
-    get_init_tvm_stack,
-=======
-    arithmetic::u32::leading_zeros_u32::LeadingZerosU32,
     empty_stack,
->>>>>>> b19ddfa (rename `get_init_tvm_stack` to `empty_stack`)
     snippet::{DataType, DeprecatedSnippet},
     ExecutionState,
 };

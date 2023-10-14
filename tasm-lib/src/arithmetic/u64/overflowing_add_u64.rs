@@ -4,7 +4,7 @@ use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
 use crate::{
     closure::Closure,
-    get_init_tvm_stack,
+    empty_stack,
     snippet::{BasicSnippet, DataType},
 };
 
@@ -95,7 +95,7 @@ impl Closure for OverflowingAdd {
             }
         };
 
-        [get_init_tvm_stack(), lhs.encode(), rhs.encode()].concat()
+        [empty_stack(), lhs.encode(), rhs.encode()].concat()
     }
 }
 
@@ -128,7 +128,7 @@ mod tests {
             (1 << 63, 1 << 63),
         ] {
             let init_stack = [
-                get_init_tvm_stack(),
+                empty_stack(),
                 vec![
                     BFieldElement::new(lhs >> 32),
                     BFieldElement::new(lhs & u32::MAX as u64),
@@ -139,7 +139,7 @@ mod tests {
             .concat();
             let expected = lhs.overflowing_add(rhs);
             let expected_final_stack = [
-                get_init_tvm_stack(),
+                empty_stack(),
                 vec![
                     (expected.0 >> 32).into(),
                     (expected.0 & u32::MAX as u64).into(),

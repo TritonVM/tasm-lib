@@ -9,7 +9,7 @@ use crate::{
             inner_function::{InnerFunction, RawCode},
             map::Map,
         },
-        unsafe_u32::{get::UnsafeGet, length::UnsafeLength, new::UnsafeNew, push::UnsafePush},
+        unsafeimplu32::{get::UnsafeGet, length::Length as UnsafeLength, new::UnsafeNew, push::UnsafePush},
         ListType,
     },
     recufier::proof_stream::{dequeue::Dequeue, sample_scalars::SampleScalars},
@@ -408,7 +408,7 @@ impl FriVerify {
         let mut proof_stream = ProofStream::<VmHasher>::new();
 
         let fri = Fri::new(
-            ArithmeticDomain {offset, generator: BFieldElement::primitive_root_of_unity(domain_length), length: domain_length},
+            ArithmeticDomain {offset: BFieldElement::new(7), generator: BFieldElement::primitive_root_of_unity(self.domain_length as u64).unwrap(), length: self.domain_length as usize},
             self.expansion_factor as usize,
             self.num_colinearity_checks as usize,
         );
@@ -774,7 +774,7 @@ mod test {
             );
 
         let fri = Fri::<VmHasher>::new(
-            ArithmeticDomain {offset, generator: BFieldElement::primitive_root_of_unity(domain_length), length: domain_length},
+            ArithmeticDomain {offset, generator: BFieldElement::primitive_root_of_unity(domain_length as u64).unwrap(), length: domain_length as usize},
             expansion_factor as usize,
             colinearity_checks_count as usize,
         );
@@ -818,7 +818,7 @@ mod test {
             sponge_state: VmHasherState::new(Domain::VariableLength),
         };
         let fri = Fri::new(
-            ArithmeticDomain {offset, generator: BFieldElement::primitive_root_of_unity(domain_length), length: domain_length},
+            ArithmeticDomain {offset, generator: BFieldElement::primitive_root_of_unity(domain_length as u64).unwrap(), length: domain_length as usize},
             expansion_factor as usize,
             colinearity_checks_count as usize,
         );

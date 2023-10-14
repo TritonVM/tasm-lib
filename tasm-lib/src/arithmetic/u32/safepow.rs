@@ -3,7 +3,7 @@ use triton_vm::{triton_asm, BFieldElement};
 
 use crate::{
     closure::Closure,
-    get_init_tvm_stack,
+    empty_stack,
     snippet::{BasicSnippet, DataType},
     snippet_bencher::BenchmarkCase,
 };
@@ -178,7 +178,7 @@ impl Closure for Safepow {
         };
 
         [
-            get_init_tvm_stack(),
+            empty_stack(),
             vec![
                 BFieldElement::new(base as u64),
                 BFieldElement::new(exponent as u64),
@@ -242,7 +242,7 @@ mod tests {
             (0, u32::MAX - 3),
         ] {
             let init_stack = [
-                get_init_tvm_stack(),
+                empty_stack(),
                 vec![
                     BFieldElement::new(base as u64),
                     BFieldElement::new(exp as u64),
@@ -250,7 +250,7 @@ mod tests {
             ]
             .concat();
             let expected_final_stack = [
-                get_init_tvm_stack(),
+                empty_stack(),
                 vec![BFieldElement::new(base.pow(exp) as u64)],
             ]
             .concat();
@@ -306,7 +306,7 @@ mod tests {
             (1 << 8, 32),
         ] {
             let init_stack = [
-                get_init_tvm_stack(),
+                empty_stack(),
                 vec![
                     BFieldElement::new(base as u64),
                     BFieldElement::new(exp as u64),
@@ -333,7 +333,7 @@ mod tests {
                 None,
             );
             let tvm_result =
-                execute_with_terminal_state(&program, &[], &mut NonDeterminism::new(vec![]));
+                execute_with_terminal_state(&program, &[], &mut NonDeterminism::new(vec![]), None);
 
             assert!(
                 rust_result.is_err() && tvm_result.is_err(),

@@ -235,7 +235,7 @@ mod tests {
         );
 
         // This test fails but maybe it should succeed?
-        // let mut expected_stack = get_init_tvm_stack();
+        // let mut expected_stack = empty_stack();
         // expected_stack.push(BFieldElement::new((1u64 << 32) - 1));
         // expected_stack.push(BFieldElement::from(u32::MAX));
         // expected_stack.push(BFieldElement::new(63));
