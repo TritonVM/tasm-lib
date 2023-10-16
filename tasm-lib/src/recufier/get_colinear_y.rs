@@ -1,9 +1,11 @@
+use rand::{rngs::StdRng, Rng, SeedableRng};
 use triton_vm::triton_asm;
 use twenty_first::shared_math::x_field_element::XFieldElement;
 
 use crate::{
     closure::Closure,
-    snippet::{self, BasicSnippet, DataType},
+    get_init_tvm_stack,
+    snippet::{BasicSnippet, DataType},
 };
 
 pub struct ColinearYXfe;
@@ -11,16 +13,16 @@ pub struct ColinearYXfe;
 impl BasicSnippet for ColinearYXfe {
     fn inputs(&self) -> Vec<(crate::snippet::DataType, String)> {
         vec![
-            (DataType::XFE, "p_0_x".to_owned()),
-            (DataType::XFE, "p_0_y".to_owned()),
-            (DataType::XFE, "p_1_x".to_owned()),
-            (DataType::XFE, "p_1_y".to_owned()),
             (DataType::XFE, "p_2_x".to_owned()),
+            (DataType::XFE, "p_1_y".to_owned()),
+            (DataType::XFE, "p_1_x".to_owned()),
+            (DataType::XFE, "p_0_y".to_owned()),
+            (DataType::XFE, "p_0_x".to_owned()),
         ]
     }
 
     fn outputs(&self) -> Vec<(crate::snippet::DataType, String)> {
-        vec![(DataType::XFE, "p2_y".to_owned())]
+        vec![(DataType::XFE, "p_2_y".to_owned())]
     }
 
     fn entrypoint(&self) -> String {
@@ -29,7 +31,7 @@ impl BasicSnippet for ColinearYXfe {
 
     fn code(
         &self,
-        library: &mut crate::library::Library,
+        _library: &mut crate::library::Library,
     ) -> Vec<triton_vm::instruction::LabelledInstruction> {
         triton_asm!(
             {self.entrypoint()}:
@@ -48,7 +50,7 @@ impl BasicSnippet for ColinearYXfe {
                 // stack: _ p2x2 p2x1 p2x0 p0x2 p0x1 p0x0 p1x2 p1x1 p1x0 p0y2 p0y1 p0y0 p1y2 p1y0 p1y1
                 swap 1
                 // stack: _ p2x2 p2x1 p2x0 p0x2 p0x1 p0x0 p1x2 p1x1 p1x0 p0y2 p0y1 p0y0 p1y2 p1y1 p1y0
-                dup 5 dup 5 dup 5 
+                dup 5 dup 5 dup 5
                 // stack: _ p2x2 p2x1 p2x0 p0x2 p0x1 p0x0 p1x2 p1x1 p1x0 p0y2 p0y1 p0y0 p1y2 p1y1 p1y0 p0y2 p0y1 p0y0
                 push -1
                 xbmul
@@ -81,7 +83,7 @@ impl BasicSnippet for ColinearYXfe {
                 swap 12 swap 1 swap 13 swap 2 swap 14 swap 2 swap 1
                 // stack: _ dx2 dx1 dx0 p0x2 p0x1 p0x0 dy2 dy1 dy0 p0y2 p0y1 p0y0 p2x2 p2x1 p2x0
                 swap 3 swap 1 swap 4 swap 2 swap 5 swap 2 swap 1
-                // stack: _ dx2 dx1 dx0 p0x2 p0x1 p0x0 dy2 dy1 dy0 p2x2 p2x1 p2x0 p0y2 p0y1 p0y0 
+                // stack: _ dx2 dx1 dx0 p0x2 p0x1 p0x0 dy2 dy1 dy0 p2x2 p2x1 p2x0 p0y2 p0y1 p0y0
                 swap 12 swap 1 swap 13 swap 2 swap 14 swap 2 swap 1
                 // stack: _ p0y2 p0y1 p0y0 p0x2 p0x1 p0x0 dy2 dy1 dy0 p2x2 p2x1 p2x0 dx2 dx1 dx0
                 swap 9 swap 1 swap 10 swap 2 swap 11 swap 2 swap 1
@@ -107,7 +109,7 @@ impl BasicSnippet for ColinearYXfe {
                 // c = a+b
                 // stack: _ dx2 dx1 dx0 c2 c1 c0
                 swap 3 swap 1 swap 4 swap 2 swap 5 swap 2 swap 1
-                // stack: _ c2 c1 c0 dx2 dx1 dx0 
+                // stack: _ c2 c1 c0 dx2 dx1 dx0
                 xinvert
                 mul
                 // p2.y = c/dx
@@ -119,18 +121,96 @@ impl BasicSnippet for ColinearYXfe {
 
 impl Closure for ColinearYXfe {
     fn rust_shadow(&self, stack: &mut Vec<triton_vm::BFieldElement>) {
+        // read points and x-coordinate off stack
+        let p0x = XFieldElement::new([
+            stack.pop().unwrap(),
+            stack.pop().unwrap(),
+            stack.pop().unwrap(),
+        ]);
+        let p0y = XFieldElement::new([
+            stack.pop().unwrap(),
+            stack.pop().unwrap(),
+            stack.pop().unwrap(),
+        ]);
+        let p1x = XFieldElement::new([
+            stack.pop().unwrap(),
+            stack.pop().unwrap(),
+            stack.pop().unwrap(),
+        ]);
+        let p1y = XFieldElement::new([
+            stack.pop().unwrap(),
+            stack.pop().unwrap(),
+            stack.pop().unwrap(),
+        ]);
         let p2x = XFieldElement::new([
             stack.pop().unwrap(),
             stack.pop().unwrap(),
             stack.pop().unwrap(),
         ]);
+
+        // use Lagrange interpolation to find colinear y
+        // sum_{i} y_i prod_{j=/=i} (x-xj)/(xi-xj)
+        let lagrange = |x| p0y * (x - p1x) / (p0x - p1x) + p1y * (x - p0x) / (p1x - p0x);
+
+        // sanity checks
+        assert_eq!(lagrange(p1x), p1y);
+        assert_eq!(lagrange(p0x), p0y);
+
+        // compute colinear y
+        let colinear_y = lagrange(p2x);
+
+        // push result to stack and quit
+        stack.push(colinear_y.coefficients[2]);
+        stack.push(colinear_y.coefficients[1]);
+        stack.push(colinear_y.coefficients[0]);
     }
 
     fn pseudorandom_initial_state(
         &self,
         seed: [u8; 32],
-        bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
+        _bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
     ) -> Vec<triton_vm::BFieldElement> {
-        todo!()
+        let mut rng: StdRng = SeedableRng::from_seed(seed);
+
+        let mut stack = get_init_tvm_stack();
+
+        // push p2x
+        stack.push(rng.gen());
+        stack.push(rng.gen());
+        stack.push(rng.gen());
+
+        // push p1y
+        stack.push(rng.gen());
+        stack.push(rng.gen());
+        stack.push(rng.gen());
+
+        // push p1x
+        stack.push(rng.gen());
+        stack.push(rng.gen());
+        stack.push(rng.gen());
+
+        // push p0y
+        stack.push(rng.gen());
+        stack.push(rng.gen());
+        stack.push(rng.gen());
+
+        // push p0x
+        stack.push(rng.gen());
+        stack.push(rng.gen());
+        stack.push(rng.gen());
+
+        stack
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::{closure::ShadowedClosure, snippet::RustShadow};
+
+    use super::ColinearYXfe;
+
+    #[test]
+    fn test() {
+        ShadowedClosure::new(ColinearYXfe).test()
     }
 }
