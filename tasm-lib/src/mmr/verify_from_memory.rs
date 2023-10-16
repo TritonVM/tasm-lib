@@ -369,7 +369,7 @@ impl DeprecatedSnippet for MmrVerifyFromMemory {
         }
 
         let valid_mp = MmrMembershipProof::<VmHasher>::new(leaf_index, auth_path)
-            .verify(&peaks, &leaf_digest, leaf_count)
+            .verify(&peaks, leaf_digest, leaf_count)
             .0;
 
         stack.push(auth_path_pointer);
@@ -567,7 +567,7 @@ mod tests {
             MmrMembershipProof::update_from_append(
                 &mut real_membership_proof_second_to_last,
                 init_leaf_count + 1,
-                &last_leaf,
+                last_leaf,
                 &mmr.get_peaks(),
             );
             let real_membership_proof_last = mmr.append(last_leaf);
@@ -647,7 +647,7 @@ mod tests {
         assert_eq!(
             expect_validation_success,
             MmrMembershipProof::<H>::new(leaf_index, auth_path)
-                .verify(&mmr.get_peaks(), &leaf, mmr.count_leaves())
+                .verify(&mmr.get_peaks(), leaf, mmr.count_leaves())
                 .0
         );
     }

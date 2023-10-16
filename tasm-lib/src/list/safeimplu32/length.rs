@@ -186,7 +186,7 @@ mod tests {
             Some(&expected_end_stack),
         );
 
-        let expected_end_stack = vec![get_init_tvm_stack(), vec![BFieldElement::new(588)]].concat();
+        let expected_end_stack = [get_init_tvm_stack(), vec![BFieldElement::new(588)]].concat();
         prop_length(
             &DataType::XFE,
             BFieldElement::one(),
@@ -194,7 +194,7 @@ mod tests {
             Some(&expected_end_stack),
         );
 
-        let expected_end_stack = vec![get_init_tvm_stack(), vec![BFieldElement::new(4)]].concat();
+        let expected_end_stack = [get_init_tvm_stack(), vec![BFieldElement::new(4)]].concat();
         prop_length(
             &DataType::Digest,
             BFieldElement::one(),
@@ -202,7 +202,7 @@ mod tests {
             Some(&expected_end_stack),
         );
 
-        let expected_end_stack = vec![get_init_tvm_stack(), vec![BFieldElement::new(7)]].concat();
+        let expected_end_stack = [get_init_tvm_stack(), vec![BFieldElement::new(7)]].concat();
         prop_length(
             &DataType::U32,
             BFieldElement::one(),

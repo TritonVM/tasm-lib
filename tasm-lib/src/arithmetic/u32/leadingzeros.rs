@@ -149,7 +149,7 @@ mod tests {
         init_stack.push(BFieldElement::new(value as u64));
 
         let expected = value.leading_zeros();
-        let expected = vec![
+        let expected = [
             get_init_tvm_stack(),
             vec![BFieldElement::new(expected as u64)],
         ]

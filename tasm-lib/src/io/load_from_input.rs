@@ -270,7 +270,7 @@ mod tests {
             let state = ExecutionState {
                 stack: get_init_tvm_stack(),
                 memory: std::collections::HashMap::new(),
-                std_in: vec![
+                std_in: [
                     vec![BFieldElement::new(length)],
                     random_elements(length as usize),
                 ]

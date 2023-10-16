@@ -298,7 +298,7 @@ mod tests {
         new_list_length: u32,
         capacity: u32,
     ) {
-        let expected_end_stack = vec![get_init_tvm_stack(), vec![list_pointer]].concat();
+        let expected_end_stack = [get_init_tvm_stack(), vec![list_pointer]].concat();
         let mut init_stack = get_init_tvm_stack();
         init_stack.push(list_pointer);
         init_stack.push(BFieldElement::new(new_list_length as u64));

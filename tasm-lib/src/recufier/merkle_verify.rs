@@ -132,9 +132,9 @@ impl Algorithm for MerkleVerify {
         while node_index != 1 {
             let sibling = nondeterminism.digests[sibling_height];
             if node_index & 1 == 0 {
-                node_digest = VmHasher::hash_pair(&node_digest, &sibling);
+                node_digest = VmHasher::hash_pair(node_digest, sibling);
             } else {
-                node_digest = VmHasher::hash_pair(&sibling, &node_digest);
+                node_digest = VmHasher::hash_pair(sibling, node_digest);
             }
             sibling_height += 1;
             node_index /= 2;
@@ -175,10 +175,10 @@ impl Algorithm for MerkleVerify {
                 let sibling = path[sibling_height];
                 if node_index & 1 == 0 {
                     // Node is a left child
-                    node_digest = VmHasher::hash_pair(&node_digest, &sibling);
+                    node_digest = VmHasher::hash_pair(node_digest, sibling);
                 } else {
                     // Node is a right child
-                    node_digest = VmHasher::hash_pair(&sibling, &node_digest);
+                    node_digest = VmHasher::hash_pair(sibling, node_digest);
                 }
                 sibling_height += 1;
                 node_index /= 2;

@@ -333,7 +333,7 @@ impl DeprecatedSnippet for MmrLoadFromSecretInThenVerify {
         }
 
         let valid_mp = MmrMembershipProof::<VmHasher>::new(leaf_index, auth_path)
-            .verify(&peaks, &leaf_digest, leaf_count)
+            .verify(&peaks, leaf_digest, leaf_count)
             .0;
 
         stack.push(auth_path_pointer);

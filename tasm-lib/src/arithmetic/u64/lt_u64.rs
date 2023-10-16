@@ -325,7 +325,7 @@ mod tests {
     #[test]
     fn u32s_lt_true_with_hi() {
         // 15 * 2^32 > 11 * 2^32
-        let expected_end_stack = vec![
+        let expected_end_stack = [
             get_init_tvm_stack(),
             vec![BFieldElement::new(15), BFieldElement::new(0)],
             vec![BFieldElement::new(11), BFieldElement::new(0)],
@@ -342,7 +342,7 @@ mod tests {
     #[test]
     fn u32s_lt_false_with_zero() {
         // eval(0 < 0) = false
-        let expected_end_stack = vec![
+        let expected_end_stack = [
             get_init_tvm_stack(),
             vec![BFieldElement::new(0), BFieldElement::new(0)],
             vec![BFieldElement::new(0), BFieldElement::new(0)],
@@ -373,7 +373,7 @@ mod tests {
             let lhs: u64 = rng.gen_range(0..rhs);
             let rhs: U32s<2> = U32s::try_from(rhs).unwrap();
             let lhs: U32s<2> = U32s::try_from(lhs).unwrap();
-            let expected = vec![
+            let expected = [
                 init_stack.clone(),
                 rhs.encode().into_iter().rev().collect(),
                 lhs.encode().into_iter().rev().collect(),
@@ -395,7 +395,7 @@ mod tests {
             let rhs: u64 = rng.gen_range(0..=lhs);
             let rhs: U32s<2> = U32s::try_from(rhs).unwrap();
             let lhs: U32s<2> = U32s::try_from(lhs).unwrap();
-            let expected = vec![
+            let expected = [
                 init_stack.clone(),
                 rhs.encode().into_iter().rev().collect(),
                 lhs.encode().into_iter().rev().collect(),
@@ -417,7 +417,7 @@ mod tests {
             let rhs: u64 = lhs;
             let rhs: U32s<2> = U32s::try_from(rhs).unwrap();
             let lhs: U32s<2> = U32s::try_from(lhs).unwrap();
-            let expected = vec![
+            let expected = [
                 init_stack.clone(),
                 rhs.encode().into_iter().rev().collect(),
                 lhs.encode().into_iter().rev().collect(),

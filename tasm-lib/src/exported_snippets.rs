@@ -7,9 +7,9 @@ use crate::{
             sub_u128::SubU128,
         },
         u32::{
-            isodd::Isodd, isu32::Isu32, leadingzeros::Leadingzeros, or::Or, safeadd::Safeadd,
-            safemul::Safemul, safepow::Safepow, safesub::Safesub, shiftleft::Shiftleft,
-            shiftright::Shiftright,
+            isodd::Isodd, isu32::Isu32, leadingzeros::Leadingzeros, or::Or,
+            overflowingadd::Overflowingadd, safeadd::Safeadd, safemul::Safemul, safepow::Safepow,
+            safesub::Safesub, shiftleft::Shiftleft, shiftright::Shiftright,
         },
         u64::{
             add_u64::AddU64,
@@ -98,6 +98,7 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
         "tasm_arithmetic_u32_or" => Box::new(Or),
         "tasm_arithmetic_u32_leadingzeros" => Box::new(Leadingzeros),
         "tasm_arithmetic_u32_safepow" => Box::new(Safepow),
+        "tasm_arithmetic_u32_overflowingadd" => Box::new(Overflowingadd),
 
         // u64
         "tasm_arithmetic_u64_add" => Box::new(AddU64),
