@@ -4,7 +4,7 @@ use twenty_first::shared_math::x_field_element::XFieldElement;
 
 use crate::{
     closure::Closure,
-    get_init_tvm_stack,
+    empty_stack,
     snippet::{BasicSnippet, DataType},
 };
 
@@ -195,7 +195,7 @@ impl Closure for ColinearYXfe {
     ) -> Vec<triton_vm::BFieldElement> {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
 
-        let mut stack = get_init_tvm_stack();
+        let mut stack = empty_stack();
 
         // push p2x
         stack.push(rng.gen());

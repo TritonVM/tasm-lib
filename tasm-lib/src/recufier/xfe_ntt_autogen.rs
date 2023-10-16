@@ -1,5 +1,5 @@
-use crate::function::Function;
 use crate::empty_stack;
+use crate::function::Function;
 use crate::snippet::BasicSnippet;
 use crate::snippet::DataType;
 use crate::structure::tasm_object::encode_to_memory;

@@ -109,8 +109,10 @@ impl DeprecatedSnippet for DecrU64 {
     fn common_case_input_state(&self) -> ExecutionState {
         // no carry
         ExecutionState::with_stack(
-            [empty_stack(),
-                vec![BFieldElement::zero(), BFieldElement::new(7)]]
+            [
+                empty_stack(),
+                vec![BFieldElement::zero(), BFieldElement::new(7)],
+            ]
             .concat(),
         )
     }
@@ -118,8 +120,10 @@ impl DeprecatedSnippet for DecrU64 {
     fn worst_case_input_state(&self) -> ExecutionState {
         // with carry
         ExecutionState::with_stack(
-            [empty_stack(),
-                vec![BFieldElement::new(1000), BFieldElement::new(0)]]
+            [
+                empty_stack(),
+                vec![BFieldElement::new(1000), BFieldElement::new(0)],
+            ]
             .concat(),
         )
     }

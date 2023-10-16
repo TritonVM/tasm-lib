@@ -9,7 +9,9 @@ use crate::{
             inner_function::{InnerFunction, RawCode},
             map::Map,
         },
-        unsafeimplu32::{get::UnsafeGet, length::Length as UnsafeLength, new::UnsafeNew, push::UnsafePush},
+        unsafeimplu32::{
+            get::UnsafeGet, length::Length as UnsafeLength, new::UnsafeNew, push::UnsafePush,
+        },
         ListType,
     },
     recufier::proof_stream::{dequeue::Dequeue, sample_scalars::SampleScalars},
@@ -408,7 +410,12 @@ impl FriVerify {
         let mut proof_stream = ProofStream::<VmHasher>::new();
 
         let fri = Fri::new(
-            ArithmeticDomain {offset: BFieldElement::new(7), generator: BFieldElement::primitive_root_of_unity(self.domain_length as u64).unwrap(), length: self.domain_length as usize},
+            ArithmeticDomain {
+                offset: BFieldElement::new(7),
+                generator: BFieldElement::primitive_root_of_unity(self.domain_length as u64)
+                    .unwrap(),
+                length: self.domain_length as usize,
+            },
             self.expansion_factor as usize,
             self.num_colinearity_checks as usize,
         );
@@ -744,12 +751,17 @@ impl Procedure for FriVerify {
 mod test {
     use itertools::Itertools;
     use rand::{rngs::StdRng, thread_rng, Rng, SeedableRng};
-    use triton_vm::{fri::Fri, proof_stream::ProofStream, BFieldElement, arithmetic_domain::ArithmeticDomain};
-    use twenty_first::{util_types::{
-        algebraic_hasher::Domain,
-        merkle_tree::{CpuParallel, MerkleTree},
-        merkle_tree_maker::MerkleTreeMaker,
-    }, shared_math::traits::PrimitiveRootOfUnity};
+    use triton_vm::{
+        arithmetic_domain::ArithmeticDomain, fri::Fri, proof_stream::ProofStream, BFieldElement,
+    };
+    use twenty_first::{
+        shared_math::traits::PrimitiveRootOfUnity,
+        util_types::{
+            algebraic_hasher::Domain,
+            merkle_tree::{CpuParallel, MerkleTree},
+            merkle_tree_maker::MerkleTreeMaker,
+        },
+    };
 
     use crate::{
         procedure::ShadowedProcedure, snippet::RustShadow, Digest, VmHasher, VmHasherState,
@@ -773,11 +785,16 @@ mod test {
                 colinearity_checks_count,
             );
 
-        let fri = Fri::<VmHasher>::new(
-            ArithmeticDomain {offset, generator: BFieldElement::primitive_root_of_unity(domain_length as u64).unwrap(), length: domain_length as usize},
-            expansion_factor as usize,
-            colinearity_checks_count as usize,
-        );
+            let fri = Fri::<VmHasher>::new(
+                ArithmeticDomain {
+                    offset,
+                    generator: BFieldElement::primitive_root_of_unity(domain_length as u64)
+                        .unwrap(),
+                    length: domain_length as usize,
+                },
+                expansion_factor as usize,
+                colinearity_checks_count as usize,
+            );
 
             assert_eq!(fri_verify.num_rounds(), fri.num_rounds());
             assert_eq!(
@@ -818,7 +835,11 @@ mod test {
             sponge_state: VmHasherState::new(Domain::VariableLength),
         };
         let fri = Fri::new(
-            ArithmeticDomain {offset, generator: BFieldElement::primitive_root_of_unity(domain_length as u64).unwrap(), length: domain_length as usize},
+            ArithmeticDomain {
+                offset,
+                generator: BFieldElement::primitive_root_of_unity(domain_length as u64).unwrap(),
+                length: domain_length as usize,
+            },
             expansion_factor as usize,
             colinearity_checks_count as usize,
         );

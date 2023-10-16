@@ -143,21 +143,25 @@ impl DeprecatedSnippet for AddU64 {
 
     fn common_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-            [empty_stack(),
+            [
+                empty_stack(),
                 vec![BFieldElement::zero(), BFieldElement::new(1 << 31)],
-                vec![BFieldElement::zero(), BFieldElement::new(1 << 30)]]
+                vec![BFieldElement::zero(), BFieldElement::new(1 << 30)],
+            ]
             .concat(),
         )
     }
 
     fn worst_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-            [empty_stack(),
+            [
+                empty_stack(),
                 vec![BFieldElement::new(1 << 31), BFieldElement::new(1 << 31)],
                 vec![
                     BFieldElement::new(1 << 30),
                     BFieldElement::new((1 << 31) + 10),
-                ]]
+                ],
+            ]
             .concat(),
         )
     }
@@ -185,8 +189,10 @@ mod tests {
     #[test]
     fn u32s_2_add_no_overflow() {
         // 127 + 129 = 256
-        let mut expected_end_stack = [empty_stack(),
-            vec![BFieldElement::zero(), BFieldElement::new(256)]]
+        let mut expected_end_stack = [
+            empty_stack(),
+            vec![BFieldElement::zero(), BFieldElement::new(256)],
+        ]
         .concat();
         prop_add(
             U32s::new([127, 0]),
@@ -195,8 +201,10 @@ mod tests {
         );
 
         // 127 + 129 + 45 * 2^32 + 1000 * 2^32 = 256 + 1045*2^32
-        expected_end_stack = [empty_stack(),
-            vec![BFieldElement::new(1045), BFieldElement::new(256)]]
+        expected_end_stack = [
+            empty_stack(),
+            vec![BFieldElement::new(1045), BFieldElement::new(256)],
+        ]
         .concat();
         prop_add(
             U32s::new([127, 45]),
@@ -205,11 +213,13 @@ mod tests {
         );
 
         // (2^32 - 1) + 0 + 0 * 2^32 + 2004 * 2^32 = (2^32 - 1) + 2004*2^32
-        expected_end_stack = [empty_stack(),
+        expected_end_stack = [
+            empty_stack(),
             vec![
                 BFieldElement::new(2004),
                 BFieldElement::new(u32::MAX as u64),
-            ]]
+            ],
+        ]
         .concat();
         prop_add(
             U32s::new([u32::MAX, 0]),
@@ -218,11 +228,13 @@ mod tests {
         );
 
         // (2^31 - 1) + 2^31 + 14 * 2^32 + 10^9 * 2^32 = (2^32 - 1) + (10^9 + 14) * 2^32
-        expected_end_stack = [empty_stack(),
+        expected_end_stack = [
+            empty_stack(),
             vec![
                 BFieldElement::new(1_000_000_014),
                 BFieldElement::new(u32::MAX as u64),
-            ]]
+            ],
+        ]
         .concat();
         prop_add(
             U32s::new([(1 << 31) - 1, 14]),
@@ -234,8 +246,10 @@ mod tests {
     #[test]
     fn u32s_2_add_with_overflow_in_least_significant_u32() {
         // 2 ^ 31 + 2 ^ 31 = 0 + 1 * 2 ^32
-        let expected_end_stack = [empty_stack(),
-            vec![BFieldElement::one(), BFieldElement::zero()]]
+        let expected_end_stack = [
+            empty_stack(),
+            vec![BFieldElement::one(), BFieldElement::zero()],
+        ]
         .concat();
         prop_add(
             U32s::new([1 << 31, 0]),
@@ -244,8 +258,10 @@ mod tests {
         );
 
         // 2 ^ 32 + 2 ^ 32 - 1 - 2 = (1^32 - 3) + 1 * 2^32
-        let expected_end_stack = [empty_stack(),
-            vec![BFieldElement::one(), BFieldElement::new((1 << 32) - 3)]]
+        let expected_end_stack = [
+            empty_stack(),
+            vec![BFieldElement::one(), BFieldElement::new((1 << 32) - 3)],
+        ]
         .concat();
         prop_add(
             U32s::new([((1u64 << 32) - 1) as u32, 0]),

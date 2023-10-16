@@ -102,21 +102,25 @@ impl DeprecatedSnippet for XorU64 {
 
     fn common_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-            [empty_stack(),
+            [
+                empty_stack(),
                 vec![BFieldElement::zero(), BFieldElement::new((1 << 31) - 1)],
-                vec![BFieldElement::zero(), BFieldElement::new((1 << 10) - 1)]]
+                vec![BFieldElement::zero(), BFieldElement::new((1 << 10) - 1)],
+            ]
             .concat(),
         )
     }
 
     fn worst_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-            [empty_stack(),
+            [
+                empty_stack(),
                 vec![BFieldElement::new(1 << 31), BFieldElement::new(1 << 31)],
                 vec![
                     BFieldElement::new(1 << 30),
                     BFieldElement::new((1 << 31) + 10),
-                ]]
+                ],
+            ]
             .concat(),
         )
     }

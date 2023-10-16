@@ -72,16 +72,20 @@ impl DeprecatedSnippet for BfeAdd {
 
     fn common_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-            [empty_stack(),
-                vec![BFieldElement::new(10), BFieldElement::new(20)]]
+            [
+                empty_stack(),
+                vec![BFieldElement::new(10), BFieldElement::new(20)],
+            ]
             .concat(),
         )
     }
 
     fn worst_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-            [empty_stack(),
-                vec![BFieldElement::new(10), BFieldElement::new(20)]]
+            [
+                empty_stack(),
+                vec![BFieldElement::new(10), BFieldElement::new(20)],
+            ]
             .concat(),
         )
     }

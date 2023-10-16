@@ -224,7 +224,6 @@ fn field_is_ignored(field: &syn::Field) -> bool {
     false
 }
 
-
 fn generate_tokens_for_struct_with_named_fields(fields: &syn::FieldsNamed) -> ParseResult {
     let ignored_fields = fields
         .named

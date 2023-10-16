@@ -97,19 +97,23 @@ impl DeprecatedSnippet for Or {
 
     fn common_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-            [empty_stack(),
-                vec![BFieldElement::new(1 << 15), BFieldElement::new(1 << 16)]]
+            [
+                empty_stack(),
+                vec![BFieldElement::new(1 << 15), BFieldElement::new(1 << 16)],
+            ]
             .concat(),
         )
     }
 
     fn worst_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-            [empty_stack(),
+            [
+                empty_stack(),
                 vec![
                     BFieldElement::new((1 << 32) - 1),
                     BFieldElement::new((1 << 32) - 1),
-                ]]
+                ],
+            ]
             .concat(),
         )
     }

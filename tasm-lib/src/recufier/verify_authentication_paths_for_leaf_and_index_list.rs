@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use itertools::Itertools;
-use rand::{rngs::StdRng, Rng, SeedableRng, RngCore};
+use rand::{rngs::StdRng, Rng, RngCore, SeedableRng};
 use triton_vm::{triton_asm, BFieldElement, NonDeterminism};
 use twenty_first::util_types::{
     merkle_tree::{CpuParallel, MerkleTree},
@@ -13,12 +13,14 @@ use crate::{
     empty_stack,
     list::{
         safeimplu32::{get::SafeGet, length::Length as SafeLength},
-        unsafeimplu32::{get::UnsafeGet, length::Length as UnsafeLength },
+        unsafeimplu32::{get::UnsafeGet, length::Length as UnsafeLength},
         ListType,
     },
     recufier::merkle_verify::MerkleVerify,
+    rust_shadowing_helper_functions,
     snippet::{BasicSnippet, DataType},
-    Digest, VmHasher, rust_shadowing_helper_functions, structure::tasm_object::TasmObject,
+    structure::tasm_object::TasmObject,
+    Digest, VmHasher,
 };
 
 #[derive(Debug, Clone)]
@@ -46,7 +48,10 @@ impl BasicSnippet for VerifyAuthenticationPathForLeafAndIndexList {
     }
 
     fn entrypoint(&self) -> String {
-        format!("tasm_recufier_verify_authentication_paths_for_leaf_and_index_list_{}", self.list_type)
+        format!(
+            "tasm_recufier_verify_authentication_paths_for_leaf_and_index_list_{}",
+            self.list_type
+        )
     }
 
     fn code(
@@ -128,7 +133,11 @@ impl Algorithm for VerifyAuthenticationPathForLeafAndIndexList {
             ListType::Safe => 1,
             ListType::Unsafe => 0,
         };
-        let indices_and_leafs = *Vec::<(Digest, u32)>::decode_from_memory(memory, address + BFieldElement::new(safety_offset)).unwrap();
+        let indices_and_leafs = *Vec::<(Digest, u32)>::decode_from_memory(
+            memory,
+            address + BFieldElement::new(safety_offset),
+        )
+        .unwrap();
 
         // iterate and verify
         let mut digest_index = 0;
@@ -204,8 +213,17 @@ impl Algorithm for VerifyAuthenticationPathForLeafAndIndexList {
         let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
         let address = BFieldElement::new(rng.next_u64() % (1 << 20));
         match self.list_type {
-            ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_insert(address, num_indices as u32, leafs_and_indices, &mut memory),
-            ListType::Unsafe => rust_shadowing_helper_functions::unsafe_list::unsafe_list_insert(address, leafs_and_indices, &mut memory),
+            ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_insert(
+                address,
+                num_indices as u32,
+                leafs_and_indices,
+                &mut memory,
+            ),
+            ListType::Unsafe => rust_shadowing_helper_functions::unsafe_list::unsafe_list_insert(
+                address,
+                leafs_and_indices,
+                &mut memory,
+            ),
         };
         let mut stack = empty_stack();
         stack.push(address);
@@ -301,7 +319,12 @@ mod test {
             });
 
             if let Ok(result) = &rust_result {
-                println!("rust result: {:?}\ni: {}\nstack: {:?}", result, i, stack.clone());
+                println!(
+                    "rust result: {:?}\ni: {}\nstack: {:?}",
+                    result,
+                    i,
+                    stack.clone()
+                );
             }
 
             // run tvm

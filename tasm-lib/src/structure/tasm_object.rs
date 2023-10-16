@@ -119,7 +119,6 @@ pub fn load_to_memory<T: BFieldCodec>(
 }
 
 impl<T: BFieldCodec> TasmObject for Vec<T> {
-
     fn get_field(_field_name: &str) -> Vec<LabelledInstruction> {
         panic!("`Vec` does not have fields; cannot access them")
     }

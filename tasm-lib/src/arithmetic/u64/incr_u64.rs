@@ -115,8 +115,10 @@ impl DeprecatedSnippet for IncrU64 {
     fn common_case_input_state(&self) -> ExecutionState {
         // no carry
         ExecutionState::with_stack(
-            [empty_stack(),
-                vec![BFieldElement::new(1000), BFieldElement::new(7)]]
+            [
+                empty_stack(),
+                vec![BFieldElement::new(1000), BFieldElement::new(7)],
+            ]
             .concat(),
         )
     }
@@ -124,8 +126,10 @@ impl DeprecatedSnippet for IncrU64 {
     fn worst_case_input_state(&self) -> ExecutionState {
         // with carry
         ExecutionState::with_stack(
-            [empty_stack(),
-                vec![BFieldElement::new(1000), BFieldElement::new((1 << 32) - 1)]]
+            [
+                empty_stack(),
+                vec![BFieldElement::new(1000), BFieldElement::new((1 << 32) - 1)],
+            ]
             .concat(),
         )
     }

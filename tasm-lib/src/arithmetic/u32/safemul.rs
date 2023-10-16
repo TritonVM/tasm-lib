@@ -92,19 +92,23 @@ impl DeprecatedSnippet for Safemul {
 
     fn common_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-            [empty_stack(),
-                vec![BFieldElement::new(1 << 8), BFieldElement::new(1 << 9)]]
+            [
+                empty_stack(),
+                vec![BFieldElement::new(1 << 8), BFieldElement::new(1 << 9)],
+            ]
             .concat(),
         )
     }
 
     fn worst_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
-            [empty_stack(),
+            [
+                empty_stack(),
                 vec![
                     BFieldElement::new((1 << 15) - 1),
                     BFieldElement::new((1 << 16) - 1),
-                ]]
+                ],
+            ]
             .concat(),
         )
     }
@@ -162,10 +166,12 @@ mod tests {
         init_stack.push(BFieldElement::new(lhs as u64));
 
         let expected = lhs.checked_mul(rhs);
-        let expected = [empty_stack(),
+        let expected = [
+            empty_stack(),
             vec![expected
                 .map(|x| BFieldElement::new(x as u64))
-                .unwrap_or_else(BFieldElement::zero)]]
+                .unwrap_or_else(BFieldElement::zero)],
+        ]
         .concat();
 
         test_rust_equivalence_given_input_values_deprecated(
