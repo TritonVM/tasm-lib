@@ -102,8 +102,9 @@ impl DeprecatedSnippet for BagPeaks {
             push 0 push 0 push 0 push 0 push 0
             push 1 push 0 push 0 push 0 push 0
             // 0 0 0 0 0 1 0 0 0 0
-            absorb_init
-            squeeze
+            sponge_init
+            sponge_absorb
+            sponge_squeeze
             swap 5 pop
             swap 5 pop
             swap 5 pop

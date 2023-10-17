@@ -509,7 +509,7 @@ fn prove_and_verify(
     // println!("Execution suceeded. Now proving {code_header}");
     let tick = SystemTime::now();
     let proof = triton_vm::prove(
-        &StarkParameters::default(),
+        StarkParameters::default(),
         &claim,
         program,
         nondeterminism.clone(),
@@ -527,7 +527,7 @@ fn prove_and_verify(
     );
 
     assert!(
-        triton_vm::verify(&StarkParameters::default(), &claim, &proof),
+        triton_vm::verify(StarkParameters::default(), &claim, &proof),
         "Generated proof must verify for program:\n {}",
         program,
     );

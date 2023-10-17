@@ -79,12 +79,9 @@ pub fn bench_program<P: CompiledProgram>(
     crate::snippet_bencher::write_benchmarks(vec![benchmark]);
 
     // run in profile mode to get picture of call graph running times
-    let (_output, profile) = triton_vm::program::Program::profile(
-        &all_instructions,
-        public_input.clone(),
-        nondeterminism.clone(),
-    )
-    .unwrap();
+    let (_output, profile) = program
+        .profile(public_input.clone(), nondeterminism.clone())
+        .unwrap();
     let mut str = format!("{name}:\n");
     str = format!("{str}\n# call graph\n");
     for line in profile.iter() {

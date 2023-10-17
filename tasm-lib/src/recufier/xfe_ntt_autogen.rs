@@ -485,7 +485,7 @@ impl BasicSnippet for XfeNtt {
         pop
         call {tasm_arithmetic_u32_safemul}
         swap 1
-        div
+        div_mod
         pop
         swap 1
         pow

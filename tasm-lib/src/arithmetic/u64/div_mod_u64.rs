@@ -172,14 +172,14 @@ impl DeprecatedSnippet for DivModU64 {
                 dup 8
                 dup 7
                 swap 1
-                div
+                div_mod
                 pop
                 push 0
                 swap 1
                 dup 10
                 dup 9
                 swap 1
-                div
+                div_mod
                 swap 1
                 pop
                 push 0

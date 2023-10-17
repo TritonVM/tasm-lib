@@ -568,7 +568,7 @@ impl BasicSnippet for FriVerify {
                 dup 1 {&expansion_factor}   // _ *proof_stream *fri_verify domain_length *expansion_factor
                 read_mem swap 1 pop         // _ *proof_stream *fri_verify domain_length expansion_factor
 
-                swap 1 div pop              // _ *proof_stream *fri_verify first_round_code_dimension
+                swap 1 div_mod pop          // _ *proof_stream *fri_verify first_round_code_dimension
                 log_2_floor                 // _ *proof_stream *fri_verify max_num_rounds
 
                 dup 1 {&num_colinearity_checks}
@@ -588,11 +588,11 @@ impl BasicSnippet for FriVerify {
                 dup 2 {&expansion_factor}   // _ *proof_stream *fri_verify num_rounds domain_length *expansion_factor
                 read_mem swap 1 pop         // _ *proof_stream *fri_verify num_rounds domain_length expansion_factor
 
-                swap 1 div pop              // _ *proof_stream *fri_verify num_rounds first_round_code_dimension
+                swap 1 div_mod pop          // _ *proof_stream *fri_verify num_rounds first_round_code_dimension
 
                 push 2 dup 2 swap 1 pow     // _ *proof_stream *fri_verify num_rounds first_round_code_dimension (1<<num_rounds)
 
-                swap 1 div pop              // _ *proof_stream *fri_verify num_rounds first_round_code_dimension>>num_rounds
+                swap 1 div_mod pop          // _ *proof_stream *fri_verify num_rounds first_round_code_dimension>>num_rounds
                 push -1 add                 // _ *proof_stream *fri_verify num_rounds last_round_max_degree
 
                 // create lists for roots and alphas
@@ -636,7 +636,7 @@ impl BasicSnippet for FriVerify {
                 read_mem swap 1 pop         // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword *leafs num_leafs num_rounds domain_length
                 swap 1 push 2               // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword *leafs num_leafs domain_length num_rounds 2
                 pow                         // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword *leafs num_leafs domain_length (1<<num_rounds)
-                swap 1 div pop              // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword *leafs num_leafs (domain_length>>num_rounds)
+                swap 1 div_mod pop          // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword *leafs num_leafs (domain_length>>num_rounds)
                 dup 1 eq                    // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword *leafs num_leafs eq
                 assert                      // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword *leafs num_leafs
                 push 0 swap 1               // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword *leafs 0 num_leafs

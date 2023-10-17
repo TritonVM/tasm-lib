@@ -131,7 +131,8 @@ impl BasicSnippet for GetSwbfIndices {
         // AFTER: _ index_list
         {entrypoint}:
 
-            absorb_init
+            sponge_init
+            sponge_absorb
             pop pop pop pop pop
             pop pop pop pop pop
             // _ li_hi li_lo r4 r3 r2 r1 r0
@@ -151,7 +152,7 @@ impl BasicSnippet for GetSwbfIndices {
             swap 4 // _ 0 0 1 li_hi li_lo r4 r3 r2 r0 r1
             swap 1 // _ 0 0 1 li_hi li_lo r4 r3 r2 r1 r0
 
-            absorb
+            sponge_absorb
             pop pop pop pop pop
             // _ 0 0 1 li_hi li_lo
 

@@ -236,7 +236,7 @@ impl BasicSnippet for XfeNtt {
         dup 0
         push 2
         swap 1
-        div
+        div_mod
         swap 1
         pop
         push 0
@@ -281,7 +281,7 @@ impl BasicSnippet for XfeNtt {
         dup 10
         push 2
         swap 1
-        div
+        div_mod
         pop
         eq
         push 0
@@ -341,7 +341,7 @@ impl BasicSnippet for XfeNtt {
         dup 11
         push 2
         swap 1
-        div
+        div_mod
         pop
         eq
         push 0
@@ -421,7 +421,7 @@ impl BasicSnippet for XfeNtt {
         dup 11
         push 2
         swap 1
-        div
+        div_mod
         pop
         eq
         push 0
@@ -507,13 +507,13 @@ impl BasicSnippet for XfeNtt {
         dup 0
         push 2
         swap 1
-        div
+        div_mod
         pop
         call {tasm_list_unsafeimplu32_new_xfe}
         dup 1
         push 2
         swap 1
-        div
+        div_mod
         pop
         call {tasm_list_unsafeimplu32_new_xfe}
         push 0
@@ -538,13 +538,13 @@ impl BasicSnippet for XfeNtt {
         dup 6
         push 2
         swap 1
-        div
+        div_mod
         pop
         call {tasm_list_unsafeimplu32_new_bfe}
         dup 7
         push 2
         swap 1
-        div
+        div_mod
         pop
         call {tasm_list_unsafeimplu32_new_bfe}
         push 0

@@ -58,7 +58,7 @@ impl BasicSnippet for SqueezeRepeatedly {
                 push 0 push 0 push 0 push 0 push 0
 
                 // squeeze
-                squeeze     // _ address num_squeezes-1 r9 r8 r7 r6 r5 r4 r3 r2 r1 r0
+                sponge_squeeze // _ address num_squeezes-1 r9 r8 r7 r6 r5 r4 r3 r2 r1 r0
 
                 // store to memory
                 dup 11      // _ address num_squeezes-1 r9 r8 r7 r6 r5 r4 r3 r2 r1 r0 address

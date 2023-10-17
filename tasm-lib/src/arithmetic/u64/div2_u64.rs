@@ -66,7 +66,7 @@ impl DeprecatedSnippet for Div2U64 {
                     // Divide the lower number
                     push 2
                     swap 1
-                    div
+                    div_mod
                     pop
                     // stack: _ value_hi (value_lo / 2)
 
@@ -76,7 +76,7 @@ impl DeprecatedSnippet for Div2U64 {
 
                     push 2
                     swap 1
-                    div
+                    div_mod
                     // stack: _ (value_lo / 2) (value_hi / 2) (value_hi % 2)
 
                     push {two_pow_31}

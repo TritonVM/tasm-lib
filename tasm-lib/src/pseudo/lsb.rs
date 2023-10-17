@@ -56,8 +56,8 @@ impl DeprecatedSnippet for Lsb {
             "
             {entrypoint}:
                 push 2  // _ a 2
-                swap 1   // _ 2 a
-                div     // _ a/2 a%2
+                swap 1  // _ 2 a
+                div_mod // _ a/2 a%2
                 return
             "
         )

@@ -355,10 +355,11 @@ impl DeprecatedSnippet for TestHashXFieldElementLsb {
             push 0 swap 7 // _ 0 0 x0 0 0 0 1 x2 x1
             push 0 swap 7 // _ 0 0 0 0 0 0 1 x2 x1 x0
 
-            absorb_init
-            squeeze // _ d9 d8 d7 d6 d5 d4 d3 d2 d1 d0
-            swap 5 pop // _ d9 d8 d7 d6 d0 d4 d3 d2 d1
-            swap 5 pop // _ d9 d8 d7 d1 d0 d4 d3 d2
+            sponge_init
+            sponge_absorb
+            sponge_squeeze // _ d9 d8 d7 d6 d5 d4 d3 d2 d1 d0
+            swap 5 pop     // _ d9 d8 d7 d6 d0 d4 d3 d2 d1
+            swap 5 pop     // _ d9 d8 d7 d1 d0 d4 d3 d2
             swap 5 pop
             swap 5 pop
             swap 5 pop
@@ -368,7 +369,7 @@ impl DeprecatedSnippet for TestHashXFieldElementLsb {
             split // _ d4 d3 d2 d1 hi lo
             push 2 // _ d4 d3 d2 d1 hi lo 2
             swap 1
-            div // _ d4 d3 d2 d1 hi q r
+            div_mod // _ d4 d3 d2 d1 hi q r
             swap 6
             pop pop pop pop pop pop
             return
@@ -544,7 +545,7 @@ mod tests {
                 split    // _ hi lo
                 push 2   // _ hi lo 2
                 swap 1   // _ hi 2 lo
-                div      // _ hi q r
+                div_mod  // _ hi q r
                 swap 2   // _ r q hi
                 pop      // _ r q
                 pop      // _ r
@@ -568,7 +569,7 @@ mod tests {
                 split    // _ x2 x1 hi lo
                 push 2   // _ x2 x1 hi lo 2
                 swap 1   // _ x2 x1 hi 2 lo
-                div      // _ x2 x1 hi q r
+                div_mod  // _ x2 x1 hi q r
                 swap 4   // _ r x1 q hi x2
                 pop      // _ r x1 q hi
                 pop      // _ r x1 q

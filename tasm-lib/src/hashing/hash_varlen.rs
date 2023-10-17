@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use num::Zero;
 use rand::random;
 use triton_vm::NonDeterminism;
 use twenty_first::{
@@ -69,206 +68,149 @@ impl DeprecatedSnippet for HashVarlen {
 
         format!(
             "
-            // BEFORE: _ *addr length
-            // AFTER: _ digest_element_4 digest_element_3 digest_element_2 digest_element_1 digest_element_0
+            // BEFORE:      _ addr len
+            // INVARIANT:   <none>
+            // AFTER:       _ digest[4] digest[3] digest[2] digest[1] digest[0]
             {entrypoint}:
-                // absorb all chunks of 10 elements
-                push 1
-                call {entrypoint}_loop
-                // _ *new_addr length_remaining first_time
+                sponge_init
+                call {entrypoint}_absorb_all_full_chunks
+                                // _ new_addr len_remaining
 
-                // pad
-                dup 1 // _ *addr length first_time length
-                push -9 // _ *addr length first_time length -9
-                add // _ *addr length first_time length-9
-                push -1 // _ *addr length first_time length-9 -1
-                mul // _ *addr length first_time 9-length
-                dup 3 // _ *addr length first_time 9-length *addr
-                dup 3 // _ *addr length first_time 9-length *addr length
+                // determine number of padding zeros
+                dup 0           // _ addr len len
+                push -9         // _ addr len len -9
+                add             // _ addr len len-9
+                push -1         // _ addr len len-9 -1
+                mul             // _ addr len 9-len
+                dup 2           // _ addr len 9-len addr
+                dup 2           // _ addr len 9-len addr len
 
-                call {entrypoint}_pad_varnum_zeros
-                // _ addr length first_time 0^(9-length) 0 *addr length
-                swap 2 // _ *addr length first_time 0^(9-length) length *addr 0
-                push 1 add // _ *addr length first_time 0^(9-length) length *addr 1
-                swap 2 // _ *addr length first_time 0^(9-length) 1 *addr length
+                call {entrypoint}_pad_with_nine_minus_remaining_length_zeros
+                                // _ addr len (0)^(9-len) 0 addr len
+                swap 2          // _ addr len (0)^(9-len) len addr 0
+                push 1 add      // _ addr len (0)^(9-len) len addr 1
+                swap 2          // _ addr len (0)^(9-len) 1 addr len
 
-                // read remaining elements from memory
-                call {entrypoint}_read_remaining_elements
-                // _ *addr length first_time 0^(9-length) 1 re^length *addr 0
-
-                pop pop // _ *addr length first_time 0^(9-length) 1 re^length
-
-                // absorb_init if first_time is 1; otherwise absorb
-                dup 10 // _ *addr length first_time 0^(9-length) 1 re^length first_time
-                push 1 // _ *addr length first_time 0^(9-length) 1 re^length first_time 1
-                swap 1 // _ *addr length first_time 0^(9-length) 1 re^length 1 first_time
-                skiz call {entrypoint}_if_first_time_absob_init
-                skiz absorb
-
-                // _ *addr length first_time 0^(9-length) 1 re^length
-
-                pop pop pop // _ *addr length first_time  * * * * * * *
-
-                // squeeze 5 elements
-                squeeze // _ d9 d8 d7 d6 d5 d4 d3 d2 d1 d0
-                swap 5 pop swap 5 pop swap 5 pop swap 5 pop swap 5 pop  // _ d4 d3 d2 d1 d0
-
+                call {entrypoint}_read_remaining_elements_from_memory
+                                // _ addr len (0)^(9-len) 1 (element)^len addr 0
+                pop pop         // _ addr len (0)^(9-len) 1 (element)^len
+                sponge_absorb
+                pop pop         // _ addr len * * * * * * * *
+                sponge_squeeze  // _ d[9] d[8] d[7] d[6] d[5] d[4] d[3] d[2] d[1] d[0]
+                swap 5 pop      // _ d[9] d[8] d[7] d[6] d[0] d[4] d[3] d[2] d[1]
+                swap 5 pop      // _ d[9] d[8] d[7] d[1] d[0] d[4] d[3] d[2]
+                swap 5 pop      // _ d[9] d[8] d[2] d[1] d[0] d[4] d[3]
+                swap 5 pop      // _ d[9] d[3] d[2] d[1] d[0] d[4]
+                swap 5 pop      // _ d[4] d[3] d[2] d[1] d[0]
                 return
 
-            // BEFORE: _ *addr length first_time 9-length *addr length
-            // INVARIANT: _ *addr length first_time 0^(9-len) len *addr length
-            // AFTER: _ addr length first_time 0^(9-length) 0 *addr length
-            {entrypoint}_pad_varnum_zeros:
+            // BEFORE:      _ addr len 9-len addr len
+            // INVARIANT:   _ addr len (0)^i 9-len-i addr len
+            // AFTER:       _ addr len (0)^(9-len) 0 addr len
+            {entrypoint}_pad_with_nine_minus_remaining_length_zeros:
+                // return condition: (9-len) many 0s have been collected
+                dup 2           // _ addr len (0)^i 9-len-i addr len 9-len-i
+                push 0 eq       // _ addr len (0)^i 9-len-i addr len 9-len-i==0
+                skiz return     // _ addr len (0)^(9-len) 0 addr len
 
-                // evaluate return condition
-                dup 2 // _ *addr length first_time 0^(9-len) len *addr length len
-                push 0 eq  // _ *addr length first_time 0^(9-len) len *addr length len==0
-                skiz return
-
-                // _ *addr length first_time 0^(9-len) len *addr length
-                push 0 // _ *addr length first_time 0^(9-len) len *addr length 0
-                swap 3 // _ *addr length first_time 0^(9-len) 0 *addr length len
-                push -1 // _ *addr length first_time 0^(9-len) 0 *addr length len -1
-                add // _ *addr length first_time 0^(9-len) 0 *addr length len-1
-                swap 2 // _ *addr length first_time 0^(9-len) 0 len-1 length *addr
-                swap 1 // _ *addr length first_time 0^(9-len) 0 len-1 *addr length
-                // _ *addr length first_time 0^(9-len+1) len-1 *addr length
-
+                                // _ addr len (0)^i 9-len-i addr len
+                push 0          // _ addr len (0)^i 9-len-i addr len 0
+                swap 3          // _ addr len (0)^(i+1) addr len 9-len-i
+                push -1         // _ addr len (0)^(i+1) addr len 9-len-i -1
+                add             // _ addr len (0)^(i+1) addr len 9-len-i-1
+                swap 2          // _ addr len (0)^(i+1) 9-len-i-1 len addr
+                swap 1          // _ addr len (0)^(i+1) 9-len-i-1 addr len
                 recurse
 
-            // BEFORE: _ *addr length first_time 0^(9-length) 1 *addr length
-            // AFTER: _ *addr length first_time 0^(9-length) 1 re^length *addr 0
-            {entrypoint}_read_remaining_elements:
-                // evaluate return condition
-                dup 0 // _ *addr length first_time 0^(9-length) 1 re^* *addr length length
-                push 0 eq // _ *adr length first_time 0^(9-length) 1 re^* addr length length==0
-                
-                skiz return
+            // BEFORE:      _ addr len (0)^(9-len) 1 addr len
+            // INVARIANT:   _ addr len (0)^(9-len) 1 (element)^i addr len-i
+            // AFTER:       _ addr len (0)^(9-len) 1 (element)^len addr 0
+            {entrypoint}_read_remaining_elements_from_memory:
+                // return condition: no elements remaining
+                dup 0           // _ addr len (0)^(9-len) 1 (element)^i addr len len
+                push 0 eq       // _ addr len (0)^(9-len) 1 (element)^i addr len len==0
+                skiz return     // _ addr len (0)^(9-len) 1 (element)^len addr 0
 
-                // _ *addr length first_time 0^(9-length) 1 re^* *addr length
-
-                dup 1 // _ *addr length first_time 0^(9-length) 1 re^* *addr length *addr
-                dup 1 // _ *addr length first_time 0^(9-length) 1 re^* *addr length *addr length
-                add // _ *addr length first_time 0^(9-length) 1 re^* *addr length *addr+length
-                push -1 add // _ *addr length first_time 0^(9-length) 1 re^* *addr length *addr+length-1
-                read_mem // _ *addr length first_time 0^(9-length) 1 re^* *addr length *addr+length-1 re
-                swap 3
-                swap 2
-                swap 1
-                // _ *addr length first_time 0^(9-length) 1 re^* re *addr length *addr+length-1
-                pop // _ *addr length first_time 0^(9-length) 1 re^* re *addr length
-                push -1 add // _ *addr length first_time 0^(9-length) 1 re^* re *addr length-1
-                // _ *addr length first_time 0^(9-length) 1 re^* *addr length-1
-
+                                // _ addr len (0)^(9-len) 1 (element)^i addr len-i
+                dup 1           // _ addr len (0)^(9-len) 1 (element)^i addr len-i addr
+                dup 1           // _ addr len (0)^(9-len) 1 (element)^i addr len-i addr len-i
+                add             // _ addr len (0)^(9-len) 1 (element)^i addr len-i addr+len-i
+                push -1         // _ addr len (0)^(9-len) 1 (element)^i addr len-i addr+len-i -1
+                add             // _ addr len (0)^(9-len) 1 (element)^i addr len-i addr+len-i-1
+                read_mem        // _ addr len (0)^(9-len) 1 (element)^i addr len-i addr+len-i-1 element
+                swap 3          // _ addr len (0)^(9-len) 1 (element)^(i+1) len-i addr+len-i-1 addr
+                swap 2          // _ addr len (0)^(9-len) 1 (element)^(i+1) addr addr+len-i-1 len-i
+                swap 1          // _ addr len (0)^(9-len) 1 (element)^(i+1) addr len-i addr+len-i-1
+                pop             // _ addr len (0)^(9-len) 1 (element)^(i+1) addr len-i
+                push -1         // _ addr len (0)^(9-len) 1 (element)^(i+1) addr len-i -1
+                add             // _ addr len (0)^(9-len) 1 (element)^(i+1) addr len-i-1
                 recurse
 
-            // BEFORE: _ *addr length first_time 0^(9-length) 1 re^length 1
-            // AFTER: _ *addr length first_time 0^(9-length) 1 re^length 0
-            {entrypoint}_if_first_time_absob_init:
-                pop // _ *addr length first_time 0^(9-length) 1 re^length
+            // BEFORE:      _ addr len
+            // INVARIANT:   _ some_addr some_len
+            // AFTER:       _ new_addr len_remaining
+            {entrypoint}_absorb_all_full_chunks:
+                // return condition: less than 10 elements remaining
+                push 10         // _ addr len 10
+                dup 1           // _ addr len 10 len
+                lt              // _ addr len (len < 10)
+                skiz return     // _ addr len
 
-                absorb_init // _ *addr length first_time 0^(9-length) 1 re^length
-                push 0 // _ *addr length first_time 0^(9-length) 1 re^length 0
-                return
-
-            // BEFORE: _ *addr length first_time=1
-            // AFTER: _ *addr length first_time=0
-            {entrypoint}_loop:
-                // termination condition: 10 or more elements remaining?
-                swap 1 // _ *addr first_time length
-                push 10 // _ *addr first_time length 10
-                dup 1 // _ *addr first_time length 10 length
-                lt // _ *addr first_time length (length < 10)
-                swap 2 // _ *addr (length < 10) length first_time
-                swap 1 // _ *addr (length < 10) first_time length
-                swap 2 // _ *addr length first_time (length < 10)
-
-                // check condition
-                skiz
-                    return
-                // _ *addr length first_time
-                swap 1 // _ *addr first_time length
-
-                // body
                 // read 10 elements to stack
-                swap 2   // _ length first_time *addr
-                dup 0    // _ length first_time *addr *addr
-                push 9   // _ length first_time *addr *addr 9
-                add      // _ length first_time *addr (*addr+9)
-                read_mem // _ length first_time *addr (*addr+9) element_9
-                swap 1   // _ length first_time *addr element_9 (*addr+9)
-                push -1  // _ length first_time *addr element_9 (*addr+9) -1
-                add      // _ length first_time *addr element_9 (*addr+8)
-                read_mem // _ length first_time *addr element_9 (*add+8) element_8
-                swap 1   // _ length first_time *addr element_9 element_8 (*addr+8)
-                push -1  // _ length first_time *addr element_9 element_8 (*addr+8) -1
-                add      // _ length first_time *addr element_9 element_8 (*addr+7)
-                read_mem // _ length first_time *addr element_9 element_8 (*addr+7) element_7
-                swap 1   // _ length first_time *addr element_9 element_8 element_7 (*addr+7)
-                push -1  // _ length first_time *addr element_9 element_8 element_7 (*addr+7) -1
-                add      // _ length first_time *addr element_9 element_8 element_7 (*addr+6)
-                read_mem // _ length first_time *addr element_9 element_8 element_7 (*addr+6) element_6
-                swap 1   // _ length first_time *addr element_9 element_8 element_7 element_6 (*addr+6)
-                push -1  // _ length first_time *addr element_9 element_8 element_7 element_6 (*addr+6) -1
-                add      // _ length first_time *addr element_9 element_8 element_7 element_6 (*addr+5)
-                read_mem // _ length first_time *addr element_9 element_8 element_7 element_6 (*addr+5) element_5
-                swap 1   // _ length first_time *addr element_9 element_8 element_7 element_6 element_5 (*addr+5)
-                push -1  // _ length first_time *addr element_9 element_8 element_7 element_6 element_5 (*addr+5) -1
-                add      // _ length first_time *addr element_9 element_8 element_7 element_6 element_5 (*addr+4)
-                read_mem // _ length first_time *addr element_9 element_8 element_7 element_6 element_5 (*addr+4) element_4
-                swap 1   // _ length first_time *addr element_9 element_8 element_7 element_6 element_5 element_4 (*addr+4)
-                push -1  // _ length first_time *addr element_9 element_8 element_7 element_6 element_5 element_4 (*addr+4) -1
-                add      // _ length first_time *addr element_9 element_8 element_7 element_6 element_5 element_4 (*addr+3)
-                read_mem // _ length first_time *addr element_9 element_8 element_7 element_6 element_5 element_4 (*addr+3) element_3
-                swap 1   // _ length first_time *addr element_9 element_8 element_7 element_6 element_5 element_4 element_3 (*addr+3)
-                push -1  // _ length first_time *addr element_9 element_8 element_7 element_6 element_5 element_4 element_3 (*addr+3) -1
-                add      // _ length first_time *addr element_9 element_8 element_7 element_6 element_5 element_4 element_3 (*addr+2)
-                read_mem // _ length first_time *addr element_9 element_8 element_7 element_6 element_5 element_4 element_3 (*addr+2) element_2
-                swap 1   // _ length first_time *addr element_9 element_8 element_7 element_6 element_5 element_4 element_3 element_2 (*addr+2)
-                push -1  // _ length first_time *addr element_9 element_8 element_7 element_6 element_5 element_4 element_3 element_2 (*addr+2) -1
-                add      // _ length first_time *addr element_9 element_8 element_7 element_6 element_5 element_4 element_3 element_2 (*addr+1)
-                read_mem // _ length first_time *addr element_9 element_8 element_7 element_6 element_5 element_4 element_3 element_2 (*addr+1) element_1
-                swap 1   // _ length first_time *addr element_9 element_8 element_7 element_6 element_5 element_4 element_3 element_2 element_1 (*addr+1)
-                push -1  // _ length first_time *addr element_9 element_8 element_7 element_6 element_5 element_4 element_3 element_2 element_1 (*addr+1) -1
-                add      // _ length first_time *addr element_9 element_8 element_7 element_6 element_5 element_4 element_3 element_2 element_1 *addr
-                read_mem // _ length first_time *addr element_9 element_8 element_7 element_6 element_5 element_4 element_3 element_2 element_1 *addr element_0
-                swap 1   // _ length first_time *addr element_9 element_8 element_7 element_6 element_5 element_4 element_3 element_2 element_1 element_0 *addr
-                pop      // _ length first_time *addr element_9 element_8 element_7 element_6 element_5 element_4 element_3 element_2 element_1 element_0
+                swap 1          // _ len addr
+                dup 0           // _ len addr addr
+                push 9          // _ len addr addr 9
+                add             // _ len addr addr+9
+                read_mem        // _ len addr addr+9 element
+                swap 1          // _ len addr element addr+9
+                push -1         // _ len addr element addr+9 -1
+                add             // _ len addr element addr+8
+                read_mem        // _ len addr element addr+8 element
+                swap 1          // _ len addr (element)^2 addr+8
+                push -1         // _ len addr (element)^2 addr+8 -1
+                add             // _ len addr (element)^2 addr+7
+                read_mem        // _ len addr (element)^2 addr+7 element
+                swap 1          // _ len addr (element)^3 addr+7
+                push -1         // _ len addr (element)^3 addr+7 -1
+                add             // _ len addr (element)^3 addr+6
+                read_mem        // _ len addr (element)^3 addr+6 element
+                swap 1          // _ len addr (element)^4 addr+6
+                push -1         // _ len addr (element)^4 addr+6 -1
+                add             // _ len addr (element)^4 addr+5
+                read_mem        // _ len addr (element)^4 addr+5 element
+                swap 1          // _ len addr (element)^5 addr+5
+                push -1         // _ len addr (element)^5 addr+5 -1
+                add             // _ len addr (element)^5 addr+4
+                read_mem        // _ len addr (element)^5 addr+4 element
+                swap 1          // _ len addr (element)^6 addr+4
+                push -1         // _ len addr (element)^6 addr+4 -1
+                add             // _ len addr (element)^6 addr+3
+                read_mem        // _ len addr (element)^6 addr+3 element
+                swap 1          // _ len addr (element)^7 addr+3
+                push -1         // _ len addr (element)^7 addr+3 -1
+                add             // _ len addr (element)^7 addr+2
+                read_mem        // _ len addr (element)^7 addr+2 element
+                swap 1          // _ len addr (element)^8 addr+2
+                push -1         // _ len addr (element)^8 addr+2 -1
+                add             // _ len addr (element)^8 addr+1
+                read_mem        // _ len addr (element)^8 addr+1 element
+                swap 1          // _ len addr (element)^9 addr+1
+                push -1         // _ len addr (element)^9 addr+1 -1
+                add             // _ len addr (element)^9 addr
+                read_mem        // _ len addr (element)^9 addr element
+                swap 1          // _ len addr (element)^10 addr
+                pop             // _ len addr (element)^10
 
-                dup 0    // _ length first_time *addr element_9 element_8 element_7 element_6 element_5 element_4 element_3 element_2 element_1 element_0 element_0
-                swap 12  // _ length element_0 *addr element_9 element_8 element_7 element_6 element_5 element_4 element_3 element_2 element_1 element_0 first_time
-                push 1   // _ length element_0 *addr element_9 element_8 element_7 element_6 element_5 element_4 element_3 element_2 element_1 element_0 first_time 1
-                swap 1   // _ length element_0 *addr element_9 element_8 element_7 element_6 element_5 element_4 element_3 element_2 element_1 element_0 1 first_time
-
-                skiz
-                    call {entrypoint}_if_branch
-                skiz
-                    absorb
-
-                // _ length element_0 *addr element_9 element_8 element_7 element_6 element_5 element_4 element_3 element_2 element_1 element_0
-
-                pop pop pop pop pop pop pop pop pop pop
-                // _ length element_0 *addr
-
-                swap 1   // _ length *addr element_0
-                pop      // _ length *addr
-
-                push 10  // _ length *addr 10
-                add      // _ length (*addr+10)
-                swap 1   // _ (*addr+10) length
-                push -10 // _ (*addr+10) length -10
-                add      // _ (*addr+10) (length-10)
-                push 0   // _ (*addr+10) (length-10) 0
-
+                sponge_absorb
+                pop pop pop pop pop
+                pop pop pop pop pop
+                                // _ len addr
+                push 10         // _ len addr 10
+                add             // _ len (addr+10)
+                swap 1          // _ (addr+10) len
+                push -10        // _ (addr+10) len -10
+                add             // _ (addr+10) (len-10)
                 recurse
-
-                // BEFORE: // _ length element_0 *addr element_9 element_8 element_7 element_6 element_5 element_4 element_3 element_2 element_1 element_0 1
-                // AFTER:  // _ length element_0 *addr element_9 element_8 element_7 element_6 element_5 element_4 element_3 element_2 element_1 element_0 0
-                {entrypoint}_if_branch:
-                    pop         // _ length element_0 *addr element_9 element_8 element_7 element_6 element_5 element_4 element_3 element_2 element_1 element_0
-                    absorb_init // _ length element_0 *addr element_9 element_8 element_7 element_6 element_5 element_4 element_3 element_2 element_1 element_0
-                    push 0
-                    return
                 "
         )
     }
@@ -311,16 +253,14 @@ impl DeprecatedSnippet for HashVarlen {
 
         let mut preimage = vec![];
         for i in 0..length as u64 {
-            preimage.push(
-                memory
-                    .get(&(memory_pointer + BFieldElement::new(i)))
-                    .unwrap_or(&BFieldElement::zero())
-                    .to_owned(),
-            );
+            let address = memory_pointer + BFieldElement::new(i);
+            let maybe_memory_value = memory.get(&address).copied();
+            let memory_value = maybe_memory_value.unwrap_or_default();
+            preimage.push(memory_value);
         }
 
         let digest = VmHasher::hash_varlen(&preimage);
-        stack.append(&mut digest.reversed().values().to_vec());
+        stack.extend(digest.reversed().values().to_vec());
     }
 }
 

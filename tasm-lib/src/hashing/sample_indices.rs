@@ -149,7 +149,7 @@ impl DeprecatedSnippet for SampleIndices {
                 push 0 push 0 push 0 push 0 push 0 push 0 push 0 push 0 push 0 push 0
                 // _ number upper_bound-1 address list_index 0 0 0 0 0 0 0 0 0 0
 
-                squeeze // overwrite top 10 elements with fresh randomness
+                sponge_squeeze // overwrite top 10 elements with fresh randomness
                 call {entrypoint}_loop // _ number upper_bound-1 address number prn9 prn8 prn7 prn6 prn5 prn4 prn3 prn2 prn1 prn0
 
                 // clean up stack
@@ -208,7 +208,7 @@ impl DeprecatedSnippet for SampleIndices {
                 push 0 eq
                 assert // crash if list_index == 0
 
-                squeeze // overwrite top 10 elements with fresh randomness
+                sponge_squeeze // overwrite top 10 elements with fresh randomness
 
                 recurse
             

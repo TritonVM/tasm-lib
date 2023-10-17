@@ -72,9 +72,7 @@ impl BasicSnippet for Absorb {
                 // _ *addr length 0^(9-length) 1 re^length *addr 0
 
                 pop pop // _ *addr length 0^(9-length) 1 re^length
-
-                // absorb
-                absorb
+                sponge_absorb
 
                 // _ *addr length 0^(9-length) 1 re^length
 
@@ -191,7 +189,7 @@ impl BasicSnippet for Absorb {
                 swap 1   // _ length *addr element_9 element_8 element_7 element_6 element_5 element_4 element_3 element_2 element_1 element_0 *addr
                 pop      // _ length *addr element_9 element_8 element_7 element_6 element_5 element_4 element_3 element_2 element_1 element_0
 
-                absorb
+                sponge_absorb
 
                 // _ length *addr element_9 element_8 element_7 element_6 element_5 element_4 element_3 element_2 element_1 element_0
 

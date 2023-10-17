@@ -64,7 +64,7 @@ impl BasicSnippet for SampleScalars {
                 push 3 mul      // _ num_scalars *scalars num_bfes
                 push 9 add      // _ num_scalars *scalars (num_bfes+9)
                 push {rate} swap 1  // _ num_scalars *scalars rate (num_bfes+9)
-                div pop         // _ num_scalars *scalars floor((num_bfes+9)/rate)
+                div_mod pop     // _ num_scalars *scalars floor((num_bfes+9)/rate)
                                 // _ num_scalars *scalars num_squeezes
 
                 // prepare stack for call to squeeze_repeatedly

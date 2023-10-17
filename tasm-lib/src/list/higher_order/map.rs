@@ -465,10 +465,11 @@ mod tests {
             call {unused_import}
             pop
 
-            absorb_init
-            squeeze // _ d9 d8 d7 d6 d5 d4 d3 d2 d1 d0
-            swap 5 pop // _ d9 d8 d7 d6 d0 d4 d3 d2 d1
-            swap 5 pop // _ d9 d8 d7 d1 d0 d4 d3 d2
+            sponge_init
+            sponge_absorb
+            sponge_squeeze // _ d9 d8 d7 d6 d5 d4 d3 d2 d1 d0
+            swap 5 pop     // _ d9 d8 d7 d6 d0 d4 d3 d2 d1
+            swap 5 pop     // _ d9 d8 d7 d1 d0 d4 d3 d2
             swap 5 pop
             swap 5 pop
             swap 5 pop

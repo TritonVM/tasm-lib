@@ -119,7 +119,7 @@ impl BasicSnippet for MerkleRoot {
         call {tasm_arithmetic_u32_safe_sub_u32}
         push 2
         swap 1
-        div
+        div_mod
         pop
         dup 3
         dup 3

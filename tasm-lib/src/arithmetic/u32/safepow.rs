@@ -127,7 +127,7 @@ impl BasicSnippet for Safepow {
                 dup 2
                 // _ [bpow2_next_u64] i acc 2 i
 
-                div
+                div_mod
                 // _ [bpow2_u64] i acc (i >> 2) (i % 2)
 
                 pop swap 2 pop
