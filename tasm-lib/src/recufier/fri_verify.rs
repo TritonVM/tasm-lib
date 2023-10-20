@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use crate::{
-    arithmetic::xfe_ntt::XfeNtt,
     empty_stack, field,
     hashing::merkle_root::MerkleRoot,
     list::{
@@ -14,7 +13,10 @@ use crate::{
         },
         ListType,
     },
-    recufier::proof_stream::{dequeue::Dequeue, sample_scalars::SampleScalars},
+    recufier::{
+        proof_stream::{dequeue::Dequeue, sample_scalars::SampleScalars},
+        xfe_ntt::XfeNtt,
+    },
     snippet_bencher::BenchmarkCase,
     structure::tasm_object::{load_to_memory, TasmObject},
     Digest, VmHasher, VmHasherState,
