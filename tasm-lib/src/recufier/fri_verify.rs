@@ -910,7 +910,7 @@ mod test {
         let expansion_factor = 1 << rng.gen_range(1..5);
         let domain_length = expansion_factor * (1 << rng.gen_range(8..15));
         let offset = BFieldElement::new(7);
-        let num_colinearity_checks = 2; //rng.gen_range(1..min(160, domain_length / 4));
+        let num_colinearity_checks = 40; //rng.gen_range(1..min(160, domain_length / 4));
         println!("number of colinearity checks: {num_colinearity_checks}");
         println!("expansion factor: {expansion_factor}");
         let procedure = FriVerify::new(
