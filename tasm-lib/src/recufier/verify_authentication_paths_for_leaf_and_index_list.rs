@@ -342,3 +342,17 @@ mod test {
         }
     }
 }
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::{algorithm::ShadowedAlgorithm, snippet::RustShadow};
+
+    #[test]
+    fn vap4lail_benchmark() {
+        ShadowedAlgorithm::new(VerifyAuthenticationPathForLeafAndIndexList {
+            list_type: ListType::Unsafe,
+        })
+        .bench();
+    }
+}

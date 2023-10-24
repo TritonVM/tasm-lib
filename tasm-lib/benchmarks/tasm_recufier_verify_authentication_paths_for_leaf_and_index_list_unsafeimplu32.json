@@ -1,0 +1,16 @@
+[
+  {
+    "name": "tasm_recufier_verify_authentication_paths_for_leaf_and_index_list_unsafeimplu32",
+    "clock_cycle_count": 788,
+    "hash_table_height": 360,
+    "u32_table_height": 5,
+    "case": "CommonCase"
+  },
+  {
+    "name": "tasm_recufier_verify_authentication_paths_for_leaf_and_index_list_unsafeimplu32",
+    "clock_cycle_count": 805,
+    "hash_table_height": 450,
+    "u32_table_height": 6,
+    "case": "WorstCase"
+  }
+]

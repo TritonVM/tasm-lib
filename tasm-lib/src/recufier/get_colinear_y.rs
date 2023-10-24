@@ -237,3 +237,15 @@ mod test {
         ShadowedClosure::new(ColinearYXfe).test()
     }
 }
+
+#[cfg(test)]
+mod bench {
+    use crate::{closure::ShadowedClosure, snippet::RustShadow};
+
+    use super::ColinearYXfe;
+
+    #[test]
+    fn bench_colinear_y() {
+        ShadowedClosure::new(ColinearYXfe).bench();
+    }
+}

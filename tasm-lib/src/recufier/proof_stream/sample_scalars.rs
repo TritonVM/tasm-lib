@@ -147,3 +147,15 @@ mod test {
         ShadowedProcedure::new(SampleScalars).test();
     }
 }
+
+#[cfg(test)]
+mod bench {
+    use crate::{procedure::ShadowedProcedure, snippet::RustShadow};
+
+    use super::SampleScalars;
+
+    #[test]
+    fn test() {
+        ShadowedProcedure::new(SampleScalars).bench();
+    }
+}

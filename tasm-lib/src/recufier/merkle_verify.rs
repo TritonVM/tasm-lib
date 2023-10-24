@@ -230,11 +230,6 @@ mod tests {
     }
 
     #[test]
-    fn merkle_verify_bench() {
-        ShadowedAlgorithm::new(MerkleVerify).bench()
-    }
-
-    #[test]
     fn negative_test() {
         let seed: [u8; 32] = thread_rng().gen();
         for i in 0..6 {
@@ -304,5 +299,17 @@ mod tests {
             assert!(rust_result.is_err());
             assert!(tvm_result.is_err());
         }
+    }
+}
+
+#[cfg(test)]
+mod bench {
+    use crate::{algorithm::ShadowedAlgorithm, snippet::RustShadow};
+
+    use super::MerkleVerify;
+
+    #[test]
+    fn merkle_verify_bench() {
+        ShadowedAlgorithm::new(MerkleVerify).bench()
     }
 }
