@@ -81,7 +81,7 @@ use crate::{
     neptune::mutator_set::{commit::Commit, get_swbf_indices::GetSwbfIndices},
     other_snippets::bfe_add::BfeAdd,
     pseudo::{lsb::Lsb, neg::Neg, sub::Sub},
-    recufier::merkle_verify::MerkleVerify,
+    recufier::{merkle_verify::MerkleVerify, proof_stream::dequeue::Dequeue},
     snippet::{BasicSnippet, DataType, InputSource},
 };
 
@@ -389,6 +389,7 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
 
         // recufy
         "tasm_recufier_mt_ap_verify" => Box::new(MerkleVerify),
+        "tasm_recufier_proof_stream_dequeue" => Box::new(Dequeue),
 
         // memory
         "tasm_memory_dyn_malloc" => Box::new(DynMalloc),

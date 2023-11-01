@@ -21,7 +21,7 @@ use super::vm_proof_stream::VmProofStream;
 
 /// Dequeue reads the next object from the `ProofStream`.
 #[derive(Clone)]
-pub struct Dequeue {}
+pub struct Dequeue;
 
 impl BasicSnippet for Dequeue {
     fn inputs(&self) -> Vec<(DataType, String)> {
