@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{hash_map::Entry, HashMap};
 
 use itertools::Itertools;
 use num::One;
@@ -58,14 +58,17 @@ impl Library {
     pub fn import(&mut self, snippet: Box<dyn BasicSnippet>) -> String {
         let dep_entrypoint = snippet.entrypoint();
 
-        // The linter's suggestion doesn't work. This suppression is fine imo.
-        #[allow(clippy::map_entry)]
-        if !self.seen_snippets.contains_key(&dep_entrypoint) {
-            let dep_body = snippet.code(self);
-            self.seen_snippets.insert(dep_entrypoint, dep_body);
+        let dep_body = snippet.code(self);
+        if let Entry::Vacant(e) = self.seen_snippets.entry(dep_entrypoint.clone()) {
+            e.insert(dep_body);
+        } else {
+            assert_eq!(
+                self.seen_snippets[&dep_entrypoint], dep_body,
+                "Repeated snippets must agree. Got two different versions of \"{dep_entrypoint}\""
+            );
         }
 
-        snippet.entrypoint()
+        dep_entrypoint
     }
 
     pub fn explicit_import(&mut self, name: &str, body: &[LabelledInstruction]) -> String {
