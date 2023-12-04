@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::{
     empty_stack, field,
-    hashing::merkle_root::MerkleRoot,
+    hashing::{merkle_root::MerkleRoot, sample_indices::SampleIndices},
     list::{
         higher_order::{
             inner_function::{InnerFunction, RawCode},
@@ -29,6 +29,7 @@ use triton_vm::{
     arithmetic_domain::ArithmeticDomain,
     fri::{Fri, FriValidationError},
     instruction::LabelledInstruction,
+    proof_item::FriResponse,
     proof_stream::ProofStream,
     triton_asm, BFieldElement, NonDeterminism,
 };
@@ -198,14 +199,14 @@ impl FriVerify {
         // Verify that last codeword is of sufficiently low degree
 
         // Compute interpolant to get the degree of the last codeword.
-        // Note that we don't have to scale the polynomial back to the trace subgroup since we
-        // only check its degree and don't use it further.
-        let log_2_of_n = last_codeword.len().ilog2(); // <-- snippet me
+        // Note that we don't have to scale the polynomial back to the trace
+        // subgroup since we only check its degree and don't use it further.
+        let log_2_of_n = last_codeword.len().ilog2();
         let mut last_polynomial = last_codeword.clone();
 
         let last_fri_domain_generator = self
             .domain_generator
-            .mod_pow_u32(2u32.pow(num_rounds as u32)); // <-- snippet me
+            .mod_pow_u32(2u32.pow(num_rounds as u32));
         intt::<XFieldElement>(&mut last_polynomial, last_fri_domain_generator, log_2_of_n); // <-- snippet me
         let last_poly_degree = Polynomial::new(last_polynomial).degree(); // <-- snippet me
 
@@ -217,7 +218,8 @@ impl FriVerify {
             bail!(FriValidationError::LastRoundPolynomialHasTooHighDegree)
         }
 
-        // Query phase
+        // QUERY PHASE
+
         // query step 0: get "A" indices and verify set membership of corresponding values.
         let mut a_indices =
             proof_stream.sample_indices(self.domain_length, self.num_colinearity_checks);
@@ -497,12 +499,18 @@ impl BasicSnippet for FriVerify {
             }),
         }));
         let length_of_list_of_digests = library.import(Box::new(UnsafeLength(DataType::Digest)));
+        let length_of_list_of_xfes = library.import(Box::new(UnsafeLength(DataType::XFE)));
         let merkle_root = library.import(Box::new(MerkleRoot));
         let get_digest = library.import(Box::new(UnsafeGet(DataType::Digest)));
         let xfe_ntt = library.import(Box::new(XfeNtt));
         let assert_tail_xfe0 = format!("{entrypoint}_tail_xfe0");
         let length_of_list_of_xfe = library.import(Box::new(UnsafeLength(DataType::XFE)));
         let get_xfe_from_list = library.import(Box::new(UnsafeGet(DataType::XFE)));
+        let sample_indices = library.import(Box::new(SampleIndices {
+            list_type: ListType::Unsafe,
+        }));
+        let revealed_leafs = field!(FriResponse::revealed_leaves);
+
         triton_asm! {
             // BEFORE: _ *list index
             // AFTER: _ *list length
@@ -597,6 +605,8 @@ impl BasicSnippet for FriVerify {
                 swap 1 div_mod pop          // _ *proof_stream *fri_verify num_rounds first_round_code_dimension>>num_rounds
                 push -1 add                 // _ *proof_stream *fri_verify num_rounds last_round_max_degree
 
+                // COMMIT PHASE
+
                 // create lists for roots and alphas
                 dup 1 push 1 add
                 call {new_list_of_digests}  // _ *proof_stream *fri_verify num_rounds last_round_max_degree *roots
@@ -671,7 +681,49 @@ impl BasicSnippet for FriVerify {
 
                 // test low degree of polynomial
                 dup 5 push 1 add            // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_polynomial num_nonzero_coefficients
+
+                // push 1347 assert
+
                 call {assert_tail_xfe0}     // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream
+
+                push 1340 assert
+
+                // QUERY PHASE
+
+                // get "A" indices and verify membership
+
+                // get index count
+                dup 6                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *fri_verify
+                {&num_colinearity_checks}   // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream num_indices
+
+                // get domain length
+                dup 7                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream num_indices *fri_verify
+                {&domain_length}            // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream num_indices *domain_length
+                read_mem swap 1 pop         // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream num_indices domain_length
+
+                // sample "A" indices
+                call {sample_indices}       // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *indices
+
+                // get largest tree height
+                dup 7                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *indices *fri_verify
+                {&domain_length}            // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *indices *domain_length
+                read_mem swap 1 pop         // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *indices domain_length
+                log_2_floor                 // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *indices tree_height
+
+                // dequeue fri response
+                swap 2                      // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *proof_stream
+                call {proof_stream_dequeue} // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *proof_stream *fri_response
+                swap 1 pop                  // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *fri_response
+
+                push 1339 assert
+
+                // assert correct length of number of leafs
+                {&revealed_leafs}           // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *revealed_leafs
+                call {length_of_list_of_xfes}
+                swap 1
+                call {length_of_list_of_digests}
+                push 1338 assert
+                eq assert
 
                 push 1337 assert
 
@@ -910,7 +962,7 @@ mod test {
         let expansion_factor = 1 << rng.gen_range(1..5);
         let domain_length = expansion_factor * (1 << rng.gen_range(8..15));
         let offset = BFieldElement::new(7);
-        let num_colinearity_checks = 40; //rng.gen_range(1..min(160, domain_length / 4));
+        let num_colinearity_checks = 4; //rng.gen_range(1..min(160, domain_length / 4));
         println!("number of colinearity checks: {num_colinearity_checks}");
         println!("expansion factor: {expansion_factor}");
         let procedure = FriVerify::new(

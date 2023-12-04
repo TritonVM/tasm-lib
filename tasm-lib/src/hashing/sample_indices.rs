@@ -25,7 +25,7 @@ pub struct SampleIndices {
     pub list_type: ListType,
 }
 
-/// SampleIndices is a snippet that samples n pseudorandom integers
+/// SampleIndices samples n pseudorandom integers
 /// between 0 and k. It does this by squeezing the sponge. It is the
 /// caller's responsibility to ensure that the sponge is initialized
 /// to the right state.
