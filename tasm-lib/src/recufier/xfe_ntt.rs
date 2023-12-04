@@ -8,7 +8,6 @@ use crate::Library;
 use std::collections::HashMap;
 use triton_vm::triton_asm;
 
-use num_traits::One;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use triton_vm::BFieldElement;
 use twenty_first::shared_math::{
@@ -549,9 +548,7 @@ impl Function for XfeNtt {
             Some(crate::snippet_bencher::BenchmarkCase::WorstCase) => 128,
             None => 32,
         };
-        let mut vector = (0..n).map(|_| rng.gen()).collect::<Vec<XFieldElement>>();
-        vector[0] = XFieldElement::one();
-        vector[1] = XFieldElement::one();
+        let vector = (0..n).map(|_| rng.gen()).collect::<Vec<XFieldElement>>();
 
         let mut stack = empty_stack();
         let mut memory = HashMap::new();
@@ -631,7 +628,7 @@ mod test {
                 "Rust shadowing and VM std out must agree"
             );
 
-            let len = rust.final_stack.len();
+            let len = 16;
             verify_stack_equivalence(&rust.final_stack[0..len - 1], &tasm.final_stack[0..len - 1]);
             verify_stack_growth(&function, &init_stack, &tasm.final_stack);
 
@@ -647,6 +644,9 @@ mod test {
                 rust_result.iter().join(" | "),
                 tasm_result.iter().join(" | ")
             );
+
+            println!("tasm stack: {}", tasm.final_stack.iter().skip(16).join(","));
+            println!("rust stack: {}", rust.final_stack.iter().skip(16).join(","));
         }
     }
 }

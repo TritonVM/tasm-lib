@@ -677,18 +677,17 @@ impl BasicSnippet for FriVerify {
 
                 // compute intt (without scaling)
                 invert                      // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword omega_inv
+                dup 1 swap 1                // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword *last_codeword omega_inv
                 call {xfe_ntt}              // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_polynomial
 
                 // test low degree of polynomial
                 dup 5 push 1 add            // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_polynomial num_nonzero_coefficients
 
-                // push 1347 assert
-
                 call {assert_tail_xfe0}     // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream
 
-                push 1340 assert
-
                 // QUERY PHASE
+
+                push 1340 assert
 
                 // get "A" indices and verify membership
 
