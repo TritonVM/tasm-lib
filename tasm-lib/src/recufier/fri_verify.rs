@@ -187,9 +187,9 @@ impl FriVerify {
         );
 
         // Check if last codeword matches the given root
-        let codeword_digests = Self::map_convert_xfe_to_digest(&last_codeword); // <-- snippet me
+        let codeword_digests = Self::map_convert_xfe_to_digest(&last_codeword);
         let last_codeword_merkle_root =
-            MerkleRoot::call(&codeword_digests, 0, codeword_digests.len()); // snippet ✔
+            MerkleRoot::call(&codeword_digests, 0, codeword_digests.len());
 
         let last_root = roots.last().unwrap();
         if *last_root != last_codeword_merkle_root {
@@ -207,8 +207,8 @@ impl FriVerify {
         let last_fri_domain_generator = self
             .domain_generator
             .mod_pow_u32(2u32.pow(num_rounds as u32));
-        intt::<XFieldElement>(&mut last_polynomial, last_fri_domain_generator, log_2_of_n); // <-- snippet me
-        let last_poly_degree = Polynomial::new(last_polynomial).degree(); // <-- snippet me
+        intt::<XFieldElement>(&mut last_polynomial, last_fri_domain_generator, log_2_of_n);
+        let last_poly_degree = Polynomial::new(last_polynomial).degree();
 
         if last_poly_degree > last_round_max_degree as isize {
             println!(
@@ -499,6 +499,7 @@ impl BasicSnippet for FriVerify {
             }),
         }));
         let length_of_list_of_digests = library.import(Box::new(UnsafeLength(DataType::Digest)));
+        let length_of_list_of_u32s = library.import(Box::new(UnsafeLength(DataType::U32)));
         let length_of_list_of_xfes = library.import(Box::new(UnsafeLength(DataType::XFE)));
         let merkle_root = library.import(Box::new(MerkleRoot));
         let get_digest = library.import(Box::new(UnsafeGet(DataType::Digest)));
@@ -683,17 +684,17 @@ impl BasicSnippet for FriVerify {
                 // test low degree of polynomial
                 dup 5 push 1 add            // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_polynomial num_nonzero_coefficients
 
-                call {assert_tail_xfe0}     // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream
+                call {assert_tail_xfe0}     // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_polynomial *total_num_coefficients
+                pop pop                     // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream
 
                 // QUERY PHASE
-
-                push 1340 assert
 
                 // get "A" indices and verify membership
 
                 // get index count
                 dup 6                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *fri_verify
-                {&num_colinearity_checks}   // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream num_indices
+                {&num_colinearity_checks}   // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *num_indices
+                read_mem swap 1 pop         // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream num_indices
 
                 // get domain length
                 dup 7                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream num_indices *fri_verify
@@ -709,20 +710,20 @@ impl BasicSnippet for FriVerify {
                 read_mem swap 1 pop         // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *indices domain_length
                 log_2_floor                 // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *indices tree_height
 
-                // dequeue fri response
+                // dequeue proof item as fri response
                 swap 2                      // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *proof_stream
-                call {proof_stream_dequeue} // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *proof_stream *fri_response
-                swap 1 pop                  // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *fri_response
-
-                push 1339 assert
+                call {proof_stream_dequeue} // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *proof_stream *proof_item
+                swap 1 pop                  // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *proof_item
+                push 1 add                  // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *fri_response
 
                 // assert correct length of number of leafs
                 {&revealed_leafs}           // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *revealed_leafs
                 call {length_of_list_of_xfes}
-                swap 1
-                call {length_of_list_of_digests}
-                push 1338 assert
-                eq assert
+                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices num_leafs
+                swap 1                      // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height num_leafs *indices
+                call {length_of_list_of_u32s}
+                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height num_leafs num_indices
+                eq assert                   // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height
 
                 push 1337 assert
 
