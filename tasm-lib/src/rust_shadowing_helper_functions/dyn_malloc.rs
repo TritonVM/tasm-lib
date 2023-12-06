@@ -5,6 +5,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::memory::dyn_malloc;
 
+// Syntactic sugar for setting memory[DYN_MALLOC_ADDRESS]
 pub fn rust_dyn_malloc_initialize(
     memory: &mut HashMap<BFieldElement, BFieldElement>,
     initial_value: usize,

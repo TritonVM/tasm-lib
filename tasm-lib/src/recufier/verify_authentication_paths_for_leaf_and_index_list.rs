@@ -23,9 +23,19 @@ use crate::{
     Digest, VmHasher,
 };
 
+/// Verify a batch of Merkle membership claims.
+///
+/// Arguments:
+///
+///   - leafs_and_index_list : [(Digest,U32)]
+///   - root : Digest
+///   - height : U32
+///
+/// Behavior: crashes the VM if even one of the authentication paths
+/// is invalid.
 #[derive(Debug, Clone)]
 pub struct VerifyAuthenticationPathForLeafAndIndexList {
-    list_type: ListType,
+    pub list_type: ListType,
 }
 
 impl BasicSnippet for VerifyAuthenticationPathForLeafAndIndexList {

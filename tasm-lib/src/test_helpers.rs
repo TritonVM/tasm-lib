@@ -392,26 +392,17 @@ pub fn tasm_final_state<T: RustShadow>(
     nondeterminism: &NonDeterminism<BFieldElement>,
     memory: &HashMap<BFieldElement, BFieldElement>,
     sponge_state: &VmHasherState,
-    words_statically_allocated: usize,
+    _words_statically_allocated: usize,
 ) -> VmOutputState {
-    // allocate memory, if necessary
-    let mut tasm_memory = memory.clone();
-    if words_statically_allocated > 0 && memory.get(&BFieldElement::zero()).is_none() {
-        rust_shadowing_helper_functions::dyn_malloc::rust_dyn_malloc_initialize(
-            &mut tasm_memory,
-            words_statically_allocated,
-        );
-    }
-
     // run tvm
     link_and_run_tasm_for_test(
         shadowed_snippet,
         &mut stack.to_vec(),
         stdin.to_vec(),
         &mut nondeterminism.clone(),
-        &mut tasm_memory,
+        &mut memory.clone(),
         Some(sponge_state.to_owned()),
-        words_statically_allocated,
+        0,
     )
 }
 
@@ -564,15 +555,9 @@ pub fn link_and_run_tasm_for_test<T: RustShadow>(
     nondeterminism: &mut NonDeterminism<BFieldElement>,
     memory: &mut HashMap<BFieldElement, BFieldElement>,
     maybe_sponge_state: Option<VmHasherState>,
-    words_statically_allocated: usize,
+    _words_statically_allocated: usize,
 ) -> VmOutputState {
-    let words_statically_allocated = if let Some(allocator) = memory.get(&BFieldElement::zero()) {
-        allocator.value() as usize
-    } else {
-        words_statically_allocated
-    };
-
-    let code = link_for_isolated_run(snippet_struct, words_statically_allocated);
+    let code = link_for_isolated_run(snippet_struct, 0);
 
     execute_test(
         &code,
@@ -582,7 +567,7 @@ pub fn link_and_run_tasm_for_test<T: RustShadow>(
         nondeterminism,
         memory,
         maybe_sponge_state,
-        Some(words_statically_allocated),
+        None,
     )
 }
 

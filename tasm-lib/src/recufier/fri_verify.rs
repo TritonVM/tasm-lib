@@ -7,14 +7,17 @@ use crate::{
         higher_order::{
             inner_function::{InnerFunction, RawCode},
             map::Map,
+            zip::Zip,
         },
         unsafeimplu32::{
             get::UnsafeGet, length::Length as UnsafeLength, new::UnsafeNew, push::UnsafePush,
         },
         ListType,
     },
+    memory::dyn_malloc::DYN_MALLOC_ADDRESS,
     recufier::{
         proof_stream::{dequeue::Dequeue, sample_scalars::SampleScalars},
+        verify_authentication_paths_for_leaf_and_index_list::VerifyAuthenticationPathForLeafAndIndexList,
         xfe_ntt::XfeNtt,
     },
     snippet_bencher::BenchmarkCase,
@@ -511,6 +514,15 @@ impl BasicSnippet for FriVerify {
             list_type: ListType::Unsafe,
         }));
         let revealed_leafs = field!(FriResponse::revealed_leaves);
+        let zip_digests_indices = library.import(Box::new(Zip {
+            list_type: ListType::Unsafe,
+            left_type: DataType::Digest,
+            right_type: DataType::U32,
+        }));
+        let verify_authentication_paths_for_leaf_and_index_list =
+            library.import(Box::new(VerifyAuthenticationPathForLeafAndIndexList {
+                list_type: ListType::Unsafe,
+            }));
 
         triton_asm! {
             // BEFORE: _ *list index
@@ -681,6 +693,11 @@ impl BasicSnippet for FriVerify {
                 dup 1 swap 1                // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword *last_codeword omega_inv
                 call {xfe_ntt}              // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_polynomial
 
+                // // If the static allocator is not managed correctly, then the above call
+                // // to xfe_ntt modifies the first element of *roots. Let's try and see!
+                // dup 3 push 0 call {get_digest}
+                // push 8888 assert
+
                 // test low degree of polynomial
                 dup 5 push 1 add            // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_polynomial num_nonzero_coefficients
 
@@ -718,12 +735,27 @@ impl BasicSnippet for FriVerify {
 
                 // assert correct length of number of leafs
                 {&revealed_leafs}           // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *revealed_leafs
+                dup 1 dup 1                 // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *revealed_leafs *indices *revealed_leafs
                 call {length_of_list_of_xfes}
-                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices num_leafs
-                swap 1                      // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height num_leafs *indices
+                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *revealed_leafs *indices num_leafs
+                swap 1                      // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *revealed_leafs num_leafs *indices
                 call {length_of_list_of_u32s}
-                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height num_leafs num_indices
-                eq assert                   // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height
+                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *revealed_leafs num_leafs num_indices
+                eq assert                   // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *revealed_leafs
+                dup 1 dup 1                 // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *revealed_leafs *indices *revealed_leafs
+
+                // check batch merkle membership
+                call {map_convert_xfe_to_digest}
+                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *revealed_leafs *indices *revealed_leafs_as_digests
+                swap 1                      // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *revealed_leafs *revealed_leafs_as_digest *indicess
+                call {zip_digests_indices}  // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *revealed_leafs *leafs_indices
+                dup 5 push 0                // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *revealed_leafs *leafs_indices *roots 0
+                call {get_digest}           // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *revealed_leafs *leafs_indices [root[0]]
+                dup 8                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *revealed_leafs *leafs_indices [root[0]] tree_height
+
+                call {verify_authentication_paths_for_leaf_and_index_list}
+                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *revealed_leafs *leafs_indices [root[0]] tree_height
+                pop pop pop pop pop pop pop // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *revealed_leafs
 
                 push 1337 assert
 
@@ -787,6 +819,18 @@ impl Procedure for FriVerify {
 
         let mut stack = empty_stack();
         let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
+        let static_memory_offset = 2; // xfe_ntt spills two words
+        memory.insert(
+            BFieldElement::new(DYN_MALLOC_ADDRESS as u64),
+            BFieldElement::new(static_memory_offset + 1),
+        );
+        println!(
+            "In fri_verify::pseudorandom_initial_state, setting allocator to: {}",
+            memory
+                .get(&BFieldElement::new(DYN_MALLOC_ADDRESS as u64))
+                .unwrap()
+                .value()
+        );
         let proof_stream_pointer = load_to_memory(&mut memory, proof_stream);
         let fri_verify_pointer = load_to_memory(&mut memory, self.clone());
         let nondeterminism = NonDeterminism::new(vec![])
