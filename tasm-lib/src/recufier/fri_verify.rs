@@ -727,14 +727,6 @@ impl BasicSnippet for FriVerify {
                 // sample "A" indices
                 call {sample_indices}       // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *indices
 
-                read_mem swap 1 push 1 add
-                read_mem swap 1 push 1 add
-                read_mem swap 1 push 1 add
-                read_mem swap 1 push 1 add
-                read_mem swap 1 push 1 add
-                read_mem swap 1 push 1 add
-
-                push 1337 assert
                 // get largest tree height
                 dup 7                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *indices *fri_verify
                 {&domain_length}            // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *indices *domain_length
@@ -1122,6 +1114,8 @@ mod test {
         rust_object
             .iter()
             .zip(tasm_object.iter())
-            .for_each(|(r, t)| assert_eq!(r, t));
+            .for_each(|(r, t)| {
+                assert_eq!(r, t, "returned lists of indices and leafs do not match")
+            });
     }
 }
