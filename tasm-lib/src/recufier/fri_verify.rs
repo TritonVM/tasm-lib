@@ -529,6 +529,22 @@ impl BasicSnippet for FriVerify {
             right_type: DataType::XFE,
         }));
         let query_phase_main_loop = format!("{entrypoint}_query_phase_main_loop");
+        let add_half_label = format!("{entrypoint}_add_half_domain");
+        let map_add_half_domain_length = library.import(Box::new(Map {
+            list_type: ListType::Unsafe,
+            f: InnerFunction::RawCode(RawCode {
+                function: triton_asm! {
+                    {add_half_label}:
+                                            // _ current_domain_length r half_domain_length [bu ff er] index
+                        dup 4 add           // _ current_domain_length r half_domain_length [bu ff er] index+half_domain_length
+                        dup 6 swap 1 div_mod// _ current_domain_length r half_domain_length [bu ff er] (index+half_domain_length)/domain_length
+                        swap 1 pop          // _ current_domain_length r half_domain_length [bu ff er] (index+half_domain_length)%domain_length
+                        return
+                },
+                input_type: DataType::U32,
+                output_type: DataType::U32,
+            }),
+        }));
 
         triton_asm! {
             // BEFORE: _ *list index
@@ -793,9 +809,18 @@ impl BasicSnippet for FriVerify {
             // AFTER:      _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *indices *revealed_leafs *revealed_indices_and_leafs current_domain_length num_rounds
             // INVARIANT:  _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *indices *revealed_leafs *revealed_indices_and_leafs current_domain_length r
             {query_phase_main_loop}:
-                // test termination condition
+                // test termination condition:
+                // if r == num_rounds then return
                 dup 10 dup 1 eq             // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *indices *revealed_leafs *revealed_indices_and_leafs current_domain_length r num_rounds==r
-                skiz return
+                skiz return                 // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *indices *revealed_leafs *revealed_indices_and_leafs current_domain_length r
+
+                // get "B" indices
+                push 2 dup 2
+                div_mod pop dup 5           // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *indices *revealed_leafs *revealed_indices_and_leafs current_domain_length r half_domain_length *indices
+                call {map_add_half_domain_length}
+                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *indices *revealed_leafs *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices
+
+
 
                 // increment counter for next iteration
                 push 1 add                  // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *indices *revealed_leafs *revealed_indices_and_leafs current_domain_length r+1
