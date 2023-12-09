@@ -201,7 +201,7 @@ mod tests {
     use crate::linker::link_for_isolated_run;
     use crate::snippet::RustShadow;
     use crate::test_helpers::test_rust_equivalence_given_complete_state;
-    use crate::{execute_with_terminal_state, program_with_state_preparation, VmHasherState};
+    use crate::{execute_with_terminal_state, prepend_state_preparation, VmHasherState};
 
     #[test]
     fn u32_pow_pbt() {
@@ -326,12 +326,7 @@ mod tests {
             });
 
             // Run on Triton
-            let program = program_with_state_preparation(
-                &code,
-                &init_stack,
-                &mut NonDeterminism::new(vec![]),
-                None,
-            );
+            let program = prepend_state_preparation(&code, &init_stack);
             let tvm_result =
                 execute_with_terminal_state(&program, &[], &mut NonDeterminism::new(vec![]), None);
 

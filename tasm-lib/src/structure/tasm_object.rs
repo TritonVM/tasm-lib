@@ -805,7 +805,7 @@ mod test {
         empty_stack, execute_with_terminal_state, io,
         library::Library,
         list::unsafeimplu32::length::Length,
-        memory, program_with_state_preparation,
+        memory, prepend_state_preparation,
         snippet::{DataType, DeprecatedSnippet, InputSource},
         structure::tasm_object::{load_to_memory, TasmObject},
         test_helpers::test_rust_equivalence_multiple_deprecated,
@@ -1143,12 +1143,7 @@ mod test {
 
             {&library_code}
         );
-        let program = program_with_state_preparation(
-            &instructions,
-            &stack,
-            &mut nondeterminism,
-            Some(words_statically_allocated),
-        );
+        let program = prepend_state_preparation(&instructions, &stack);
 
         // run VM; get stack at end
         let final_state =

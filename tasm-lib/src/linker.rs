@@ -6,7 +6,7 @@ use triton_vm::{
 };
 
 use crate::{
-    library::Library, prove_and_verify, snippet::BasicSnippet, state_preparation_code,
+    library::Library, prove_and_verify, snippet::BasicSnippet, stack_preparation_code,
     ExecutionResult,
 };
 
@@ -43,8 +43,7 @@ pub fn execute_bench(
 ) -> ExecutionResult {
     // Prepend to program the initial stack values and initial memory values
     // such that stack is in the expected state when program logic is executed
-    let prep: Vec<LabelledInstruction> =
-        state_preparation_code(stack, memory, initilialize_dynamic_allocator_to);
+    let prep: Vec<LabelledInstruction> = stack_preparation_code(stack);
 
     // Add the program after the stack initialization has been performed
     // Find the length of code used for setup. This length does not count towards

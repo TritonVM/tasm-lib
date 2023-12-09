@@ -266,8 +266,8 @@ mod test {
     use crate::{
         empty_stack, execute_with_terminal_state,
         linker::link_for_isolated_run,
+        prepend_state_preparation,
         procedure::{Procedure, ShadowedProcedure},
-        program_with_state_preparation,
         snippet::RustShadow,
         test_helpers::test_rust_equivalence_given_complete_state,
         VmHasherState,
@@ -365,7 +365,7 @@ mod test {
 
             // run tvm
             let code = link_for_isolated_run(Rc::new(RefCell::new(dequeue.clone())), 0);
-            let program = program_with_state_preparation(&code, &stack, &mut nondeterminism, None);
+            let program = prepend_state_preparation(&code, &stack);
             let tvm_result =
                 execute_with_terminal_state(&program, &stdin, &mut nondeterminism, None);
             println!("tvm_result: {tvm_result:?}");
