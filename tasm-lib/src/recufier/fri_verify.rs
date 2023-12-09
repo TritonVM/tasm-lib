@@ -523,6 +523,12 @@ impl BasicSnippet for FriVerify {
             library.import(Box::new(VerifyAuthenticationPathForLeafAndIndexList {
                 list_type: ListType::Unsafe,
             }));
+        let zip_index_xfe = library.import(Box::new(Zip {
+            list_type: ListType::Unsafe,
+            left_type: DataType::U32,
+            right_type: DataType::XFE,
+        }));
+        let query_phase_main_loop = format!("{entrypoint}_query_phase_main_loop");
 
         triton_asm! {
             // BEFORE: _ *list index
@@ -721,6 +727,14 @@ impl BasicSnippet for FriVerify {
                 // sample "A" indices
                 call {sample_indices}       // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *indices
 
+                read_mem swap 1 push 1 add
+                read_mem swap 1 push 1 add
+                read_mem swap 1 push 1 add
+                read_mem swap 1 push 1 add
+                read_mem swap 1 push 1 add
+                read_mem swap 1 push 1 add
+
+                push 1337 assert
                 // get largest tree height
                 dup 7                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *indices *fri_verify
                 {&domain_length}            // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *indices *domain_length
@@ -757,10 +771,43 @@ impl BasicSnippet for FriVerify {
                                             // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *revealed_leafs *leafs_indices [root[0]] tree_height
                 pop pop pop pop pop pop pop // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *revealed_leafs
 
-                push 1337 assert
+                // prepare the return value:
+                // the list of opened indices and elements
+                dup 1 dup 1                 // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *revealed_leafs *indices *revealed_leafs
+                call {zip_index_xfe}        // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *revealed_leafs *revealed_indices_and_leafs
+                // zip allocates a new unsafe list, which we want to be twice as long
+                // (the second half will be populated in the first iteration of the main loop below)
+                read_mem                    // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *revealed_leafs *revealed_indices_and_leafs length
+                push 2 mul                  // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *revealed_leafs *revealed_indices_and_leafs 2*length
+                write_mem                   // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *revealed_leafs *revealed_indices_and_leafs
 
+                // prepare for query phase main loop
+                dup 9                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *revealed_leafs *revealed_indices_and_leafs *fri_verify
+                {&domain_length}            // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *revealed_leafs *revealed_indices_and_leafs *domain_length
+                read_mem swap 1 pop         // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *revealed_leafs *revealed_indices_and_leafs domain_length
+                // rename stack elements    // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *indices *revealed_leafs *revealed_indices_and_leafs current_domain_length
+                push 0 // (=r)              // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *indices *revealed_leafs *revealed_indices_and_leafs current_domain_length r
+
+                call {query_phase_main_loop}// _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *indices *revealed_leafs *revealed_indices_and_leafs current_domain_length num_rounds
+
+                // clean up stack and return
+                pop pop                     // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *indices *revealed_leafs *revealed_indices_and_leafs
+                swap 9                      // _ *proof_stream *revealed_indices_and_leafs num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *indices *revealed_leafs *fri_verify
+                pop pop pop pop pop         // _ *proof_stream *revealed_indices_and_leafs *fri_verify num_rounds last_round_max_degree 0 *roots
+                pop pop pop pop             // _ *proof_stream *revealed_indices_and_leafs
                 return
 
+            // BEFORE:     _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *indices *revealed_leafs *revealed_indices_and_leafs current_domain_length 0
+            // AFTER:      _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *indices *revealed_leafs *revealed_indices_and_leafs current_domain_length num_rounds
+            // INVARIANT:  _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *indices *revealed_leafs *revealed_indices_and_leafs current_domain_length r
+            {query_phase_main_loop}:
+                // test termination condition
+                dup 10 dup 1 eq             // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *indices *revealed_leafs *revealed_indices_and_leafs current_domain_length r num_rounds==r
+                skiz return
+
+                // increment counter for next iteration
+                push 1 add                  // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *indices *revealed_leafs *revealed_indices_and_leafs current_domain_length r+1
+                recurse
         }
     }
 }
@@ -853,7 +900,7 @@ mod test {
         arithmetic_domain::ArithmeticDomain, fri::Fri, proof_stream::ProofStream, BFieldElement,
     };
     use twenty_first::{
-        shared_math::traits::PrimitiveRootOfUnity,
+        shared_math::{traits::PrimitiveRootOfUnity, x_field_element::XFieldElement},
         util_types::{
             algebraic_hasher::Domain,
             merkle_tree::{CpuParallel, MerkleTree},
@@ -862,7 +909,12 @@ mod test {
     };
 
     use crate::{
-        procedure::ShadowedProcedure, snippet::RustShadow, Digest, VmHasher, VmHasherState,
+        procedure::{Procedure, ShadowedProcedure},
+        structure::tasm_object::TasmObject,
+        test_helpers::{
+            rust_final_state, tasm_final_state, verify_sponge_equivalence, verify_stack_growth,
+        },
+        Digest, VmHasher, VmHasherState,
     };
 
     use super::FriVerify;
@@ -1015,6 +1067,61 @@ mod test {
             expansion_factor,
             num_colinearity_checks,
         );
-        ShadowedProcedure::new(procedure).test();
+
+        // ShadowedProcedure::new(procedure).test();
+        // Unfortunately, we cannot call the built-in test that comes with anything that
+        // impements Procedure because that test checks that the rust and tasm stacks are
+        // left in identical states. They both contain a pointer to the same object, but
+        // this object lives in a different (and difficult to predict) location in memory.
+        // So we check that instead.
+
+        let (stack, memory, nondeterminism, stdin, sponge_state) =
+            procedure.pseudorandom_initial_state(seed, None);
+
+        let init_stack = stack.to_vec();
+        let words_statically_allocated = 0;
+        let shadowed_procedure = ShadowedProcedure::new(procedure);
+
+        let rust = rust_final_state(
+            &shadowed_procedure,
+            &stack,
+            &stdin,
+            &nondeterminism,
+            &memory,
+            &sponge_state,
+            words_statically_allocated,
+        );
+
+        // run tvm
+        let tasm = tasm_final_state(
+            &shadowed_procedure,
+            &stack,
+            &stdin,
+            &nondeterminism,
+            &memory,
+            &sponge_state,
+            words_statically_allocated,
+        );
+
+        assert_eq!(
+            rust.output, tasm.output,
+            "Rust shadowing and VM std out must agree"
+        );
+
+        verify_stack_growth(&shadowed_procedure, &init_stack, &tasm.final_stack);
+        verify_sponge_equivalence(&rust.final_sponge_state, &tasm.final_sponge_state);
+
+        // load the "revealed_indices_and_elements" object from rust and tasm memory and
+        // test their equivalence
+        let rust_address = rust.final_stack.last().unwrap();
+        let rust_object =
+            Vec::<(u32, XFieldElement)>::decode_from_memory(&rust.final_ram, *rust_address);
+        let tasm_address = tasm.final_stack.last().unwrap();
+        let tasm_object =
+            Vec::<(u32, XFieldElement)>::decode_from_memory(&tasm.final_ram, *tasm_address);
+        rust_object
+            .iter()
+            .zip(tasm_object.iter())
+            .for_each(|(r, t)| assert_eq!(r, t));
     }
 }
