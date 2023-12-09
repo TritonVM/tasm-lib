@@ -545,6 +545,17 @@ impl BasicSnippet for FriVerify {
                 output_type: DataType::U32,
             }),
         }));
+        let populate_return_vector_second_half =
+            format!("{entrypoint}_populate_return_vector_second_half");
+        let populate_loop = format!("{entrypoint}_populate_return_vector_loop");
+        let get_u32_and_xfe = library.import(Box::new(UnsafeGet(DataType::Tuple(vec![
+            DataType::U32,
+            DataType::XFE,
+        ]))));
+        let push_u32_and_xfe = library.import(Box::new(UnsafePush(DataType::Tuple(vec![
+            DataType::U32,
+            DataType::XFE,
+        ]))));
 
         triton_asm! {
             // BEFORE: _ *list index
@@ -786,8 +797,10 @@ impl BasicSnippet for FriVerify {
                 // zip allocates a new unsafe list, which we want to be twice as long
                 // (the second half will be populated in the first iteration of the main loop below)
                 read_mem                    // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *revealed_leafs *revealed_indices_and_leafs length
-                push 2 mul                  // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *revealed_leafs *revealed_indices_and_leafs 2*length
-                write_mem                   // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *revealed_leafs *revealed_indices_and_leafs
+                push 4 mul                  // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *revealed_leafs *revealed_indices_and_leafs size
+                push 0 read_mem             // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *revealed_leafs *revealed_indices_and_leafs size *alloc alloc
+                swap 1 swap 2 add           // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *revealed_leafs *revealed_indices_and_leafs *alloc size+alloc
+                write_mem pop               // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *revealed_leafs *revealed_indices_and_leafs
 
                 // prepare for query phase main loop
                 dup 9                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *revealed_leafs *revealed_indices_and_leafs *fri_verify
@@ -811,7 +824,8 @@ impl BasicSnippet for FriVerify {
             {query_phase_main_loop}:
                 // test termination condition:
                 // if r == num_rounds then return
-                dup 10 dup 1 eq             // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *indices *revealed_leafs *revealed_indices_and_leafs current_domain_length r num_rounds==r
+                dup 10 dup 1
+                eq                          // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *indices *revealed_leafs *revealed_indices_and_leafs current_domain_length r num_rounds==r
                 skiz return                 // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *indices *revealed_leafs *revealed_indices_and_leafs current_domain_length r
 
                 // get "B" indices
@@ -820,10 +834,59 @@ impl BasicSnippet for FriVerify {
                 call {map_add_half_domain_length}
                                             // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *indices *revealed_leafs *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices
 
+                // dequeue fri response and get "B" elements
+                dup 14 call {proof_stream_dequeue}
+                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *indices *revealed_leafs *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *proof_stream *fri_response_ev
+                swap 1 pop push 1 add       // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *indices *revealed_leafs *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *fri_response
+                {&revealed_leafs}           // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *indices *revealed_leafs *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements
 
+                // if in first round (r==0), populate second half of return vector
+                dup 3 push 0 eq
+                skiz call {populate_return_vector_second_half}
+                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *indices *revealed_leafs *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements
 
-                // increment counter for next iteration
+                // return stack to invariant
+                pop pop pop                 // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *indices *revealed_leafs *revealed_indices_and_leafs current_domain_length r
+
+                // bookkeeping for next iteration
                 push 1 add                  // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *indices *revealed_leafs *revealed_indices_and_leafs current_domain_length r+1
+                push 2 dup 2 div_mod pop    // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *indices *revealed_leafs *revealed_indices_and_leafs current_domain_length r+1 current_domain_length/2
+                swap 2 pop                  // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *indices *revealed_leafs *revealed_indices_and_leafs current_domain_length/2 r+1
+                push -1 dup 6 add           // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *indices *revealed_leafs *revealed_indices_and_leafs current_domain_length/2 r+1 current_tree_height-1
+                swap 6 pop                  // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height-1 *indices *revealed_leafs *revealed_indices_and_leafs current_domain_length/2 r+1
+                recurse
+
+            // BEFORE: _  *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements
+            // AFTER:  _  *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements
+            {populate_return_vector_second_half}:
+                dup 1 dup 1 call {zip_index_xfe}
+                                            // _ *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *indices_and_elements
+                push 0 call {populate_loop} // _ *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *indices_and_elements length
+                pop pop                     // _ *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements
+                return
+
+            // INVARIANT:  _ *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *indices_and_elements index
+            {populate_loop}:
+                // evaluate termination condition:
+                // if index == list length, then return
+                dup 0                       // _ *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *indices_and_elements index index
+                dup 4 call {length_of_list_of_u32s} eq
+                                            // _ *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *indices_and_elements index index==length
+                skiz return
+
+                // prepare push
+                dup 7                       // _ *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *indices_and_elements index *revealed_indices_and_leafs
+
+                // read element
+                dup 2 dup 2                 // _ *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *indices_and_elements index *revealed_indices_and_leafs *indices_and_elements index
+                call {get_u32_and_xfe}      // _ *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *indices_and_elements index *revealed_indices_and_leafs [index-and-element]
+
+                // push
+                call {push_u32_and_xfe}     // _ *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *indices_and_elements index
+
+                // prepare for next iteration
+                push 1 add              // _ *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *indices_and_elements index+1
+
                 recurse
         }
     }
