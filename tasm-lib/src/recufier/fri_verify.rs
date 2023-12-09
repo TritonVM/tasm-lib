@@ -780,7 +780,7 @@ impl BasicSnippet for FriVerify {
                 // check batch merkle membership
                 call {map_convert_xfe_to_digest}
                                             // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *revealed_leafs *indices *revealed_leafs_as_digests
-                swap 1                      // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *revealed_leafs *revealed_leafs_as_digest *indicess
+                swap 1                      // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *revealed_leafs *revealed_leafs_as_digests *indices
                 call {zip_digests_indices}  // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *revealed_leafs *leafs_indices
                 dup 5 push 0                // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *revealed_leafs *leafs_indices *roots 0
                 call {get_digest}           // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *revealed_leafs *leafs_indices [root[0]]
@@ -844,6 +844,18 @@ impl BasicSnippet for FriVerify {
                 dup 3 push 0 eq
                 skiz call {populate_return_vector_second_half}
                                             // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *indices *revealed_leafs *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements
+
+                // check batch merkle membership
+                dup 0 call {map_convert_xfe_to_digest}
+                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *indices *revealed_leafs *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *b_leafs
+                dup 2 call {zip_digests_indices}
+                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *indices *revealed_leafs *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *b_leaf_and_indices
+                dup 11 dup 5                // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *indices *revealed_leafs *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *b_leaf_and_indices *roots r
+                call {get_digest}           // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *indices *revealed_leafs *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *b_leaf_and_indices [roots[r]]
+                dup 14                      // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *indices *revealed_leafs *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *b_leaf_and_indices [roots[r]] current_tree_height
+                call {verify_authentication_paths_for_leaf_and_index_list}
+                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *indices *revealed_leafs *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *b_leaf_and_indices [roots[r]] current_tree_height
+                pop pop pop pop pop pop pop // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *indices *revealed_leafs *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements
 
                 // return stack to invariant
                 pop pop pop                 // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *indices *revealed_leafs *revealed_indices_and_leafs current_domain_length r
