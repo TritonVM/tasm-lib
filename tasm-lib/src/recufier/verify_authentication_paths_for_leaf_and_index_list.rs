@@ -263,7 +263,7 @@ mod test {
         execute_with_terminal_state,
         linker::link_for_isolated_run,
         list::ListType,
-        program_with_state_preparation,
+        prepend_state_preparation,
         snippet::RustShadow,
         VmHasherState,
     };
@@ -340,7 +340,7 @@ mod test {
             // run tvm
             let code = link_for_isolated_run(Rc::new(RefCell::new(vap4lail.clone())), 0);
             nondeterminism.ram = memory;
-            let program = program_with_state_preparation(&code, &stack, &mut nondeterminism, None);
+            let program = prepend_state_preparation(&code, &stack);
             let tvm_result =
                 execute_with_terminal_state(&program, &stdin, &mut nondeterminism, None);
             if let Ok(result) = &tvm_result {

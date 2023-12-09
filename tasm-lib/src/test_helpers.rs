@@ -163,17 +163,29 @@ pub(crate) fn test_rust_equivalence_given_complete_state_deprecated<T: Deprecate
 ) -> VmOutputState {
     let init_stack = stack.to_vec();
 
-    let mut rust_memory = memory.clone();
-    let mut tasm_memory = memory.clone();
-    let mut rust_stack = stack.to_vec();
-    let mut tasm_stack = stack.to_vec();
+    // lift memory to nondeterminism and set allocator if not set yet
+    let mut nondeterminism = nondeterminism.clone();
+    for (k, v) in memory.iter() {
+        nondeterminism.ram.insert(*k, *v);
+    }
 
-    if words_statically_allocated > 0 {
-        rust_shadowing_helper_functions::dyn_malloc::rust_dyn_malloc_initialize(
-            &mut rust_memory,
-            words_statically_allocated,
+    if words_statically_allocated
+        > nondeterminism
+            .ram
+            .get(&BFieldElement::new(DYN_MALLOC_ADDRESS as u64))
+            .unwrap_or(&BFieldElement::new(0))
+            .value() as usize
+    {
+        nondeterminism.ram.insert(
+            BFieldElement::new(DYN_MALLOC_ADDRESS as u64),
+            BFieldElement::new(words_statically_allocated as u64),
         );
     }
+
+    let mut rust_memory = nondeterminism.ram.clone();
+    let mut tasm_memory = nondeterminism.ram.clone();
+    let mut rust_stack = stack.to_vec();
+    let mut tasm_stack = stack.to_vec();
 
     // run rust shadow
     snippet_struct.rust_shadowing(
@@ -312,7 +324,7 @@ mod test {
     use triton_vm::{BFieldElement, NonDeterminism};
     use twenty_first::shared_math::tip5::DIGEST_LENGTH;
 
-    use crate::{empty_stack, hashing::sample_indices::SampleIndices, list::ListType};
+    use crate::{empty_stack, hashing::hash_varlen::HashVarlen};
 
     use super::test_rust_equivalence_given_complete_state_deprecated;
 
@@ -322,9 +334,8 @@ mod test {
     /// to these first five elements. This unit test tests this.
     #[test]
     fn test_program_hash_ignored() {
-        let snippet_struct = SampleIndices {
-            list_type: ListType::Safe,
-        };
+        // arbitrary snippet that does something related to hashing
+        let snippet_struct = HashVarlen;
         let mut stack = empty_stack();
         stack.push(BFieldElement::new(45u64));
         stack.push(BFieldElement::new(1u64 << 12));
@@ -392,7 +403,7 @@ pub fn tasm_final_state<T: RustShadow>(
     nondeterminism: &NonDeterminism<BFieldElement>,
     memory: &HashMap<BFieldElement, BFieldElement>,
     sponge_state: &VmHasherState,
-    _words_statically_allocated: usize,
+    words_statically_allocated: usize,
 ) -> VmOutputState {
     // run tvm
     link_and_run_tasm_for_test(
@@ -402,7 +413,7 @@ pub fn tasm_final_state<T: RustShadow>(
         &mut nondeterminism.clone(),
         &mut memory.clone(),
         Some(sponge_state.to_owned()),
-        0,
+        words_statically_allocated,
     )
 }
 
@@ -494,7 +505,13 @@ pub fn verify_stack_growth<T: RustShadow>(
 }
 
 pub fn verify_sponge_equivalence(a: &VmHasherState, b: &VmHasherState) {
-    assert_eq!(a.state, b.state, "sponge states are different");
+    assert_eq!(
+        a.state,
+        b.state,
+        "sponge states are different:\nleft: {}\n:right: {}",
+        a.state.iter().map(|b| b.value()).join(","),
+        b.state.iter().map(|b| b.value()).join(",")
+    );
 }
 
 #[allow(dead_code)]
@@ -555,9 +572,25 @@ pub fn link_and_run_tasm_for_test<T: RustShadow>(
     nondeterminism: &mut NonDeterminism<BFieldElement>,
     memory: &mut HashMap<BFieldElement, BFieldElement>,
     maybe_sponge_state: Option<VmHasherState>,
-    _words_statically_allocated: usize,
+    words_statically_allocated: usize,
 ) -> VmOutputState {
-    let code = link_for_isolated_run(snippet_struct, 0);
+    let code = link_for_isolated_run(snippet_struct, words_statically_allocated);
+
+    let maybe_highest_address = nondeterminism
+        .ram
+        .keys()
+        .chain(memory.keys())
+        .map(|b| b.value())
+        .max();
+    let allocator_initial_value = if let Some(highest_address) = maybe_highest_address {
+        if highest_address > words_statically_allocated as u64 {
+            highest_address + 1
+        } else {
+            words_statically_allocated as u64
+        }
+    } else {
+        words_statically_allocated as u64
+    };
 
     execute_test(
         &code,
@@ -567,7 +600,7 @@ pub fn link_and_run_tasm_for_test<T: RustShadow>(
         nondeterminism,
         memory,
         maybe_sponge_state,
-        None,
+        Some(allocator_initial_value as usize),
     )
 }
 

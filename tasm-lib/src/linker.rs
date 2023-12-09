@@ -6,8 +6,8 @@ use triton_vm::{
 };
 
 use crate::{
-    library::Library, prove_and_verify, snippet::BasicSnippet, state_preparation_code,
-    ExecutionResult,
+    library::Library, memory::dyn_malloc::DYN_MALLOC_ADDRESS, prove_and_verify,
+    snippet::BasicSnippet, stack_preparation_code, ExecutionResult,
 };
 
 pub fn link_for_isolated_run<T: BasicSnippet>(
@@ -41,10 +41,41 @@ pub fn execute_bench(
     memory: &HashMap<BFieldElement, BFieldElement>,
     initilialize_dynamic_allocator_to: Option<usize>,
 ) -> ExecutionResult {
+    // lift initial memory state to nondeterminism
+    let mut nondeterminism = nondeterminism.clone();
+    for (key, value) in memory.iter() {
+        if let Some(v) = nondeterminism.ram.get(key) {
+            assert_eq!(*value, *v);
+        } else {
+            nondeterminism.ram.insert(*key, *value);
+        }
+    }
+
+    let maybe_highest_address = nondeterminism.ram.keys().map(|b| b.value()).max();
+    if let Some(initial_value) = initilialize_dynamic_allocator_to {
+        if let Some(highest_address) = maybe_highest_address {
+            if initial_value as u64 > highest_address {
+                nondeterminism.ram.insert(
+                    BFieldElement::new(DYN_MALLOC_ADDRESS as u64),
+                    BFieldElement::new(initial_value as u64),
+                );
+            } else {
+                nondeterminism.ram.insert(
+                    BFieldElement::new(DYN_MALLOC_ADDRESS as u64),
+                    BFieldElement::new(highest_address + 1),
+                );
+            }
+        } else {
+            nondeterminism.ram.insert(
+                BFieldElement::new(DYN_MALLOC_ADDRESS as u64),
+                BFieldElement::new(initial_value as u64),
+            );
+        }
+    };
+
     // Prepend to program the initial stack values and initial memory values
     // such that stack is in the expected state when program logic is executed
-    let prep: Vec<LabelledInstruction> =
-        state_preparation_code(stack, memory, initilialize_dynamic_allocator_to);
+    let prep: Vec<LabelledInstruction> = stack_preparation_code(stack);
 
     // Add the program after the stack initialization has been performed
     // Find the length of code used for setup. This length does not count towards
@@ -63,7 +94,7 @@ pub fn execute_bench(
     executed_code.extend_from_slice(code);
     let extended_program = Program::new(&executed_code);
 
-    // // Run the program, including the stack preparation and memory preparation logic
+    // // Run the program, including the stack preparation
     // let (execution_trace, err) = extended_program.debug(
     //     PublicInput::new(std_in.clone()),
     //     nondeterminism.clone(),

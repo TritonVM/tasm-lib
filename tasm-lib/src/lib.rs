@@ -7,6 +7,7 @@ use anyhow::bail;
 use itertools::Itertools;
 use library::Library;
 use memory::dyn_malloc;
+use memory::dyn_malloc::DYN_MALLOC_ADDRESS;
 use num_traits::Zero;
 use snippet::BasicSnippet;
 use snippet::DeprecatedSnippet;
@@ -26,8 +27,6 @@ use twenty_first::shared_math::tip5::{self, Tip5};
 use triton_vm::op_stack::NUM_OP_STACK_REGISTERS;
 use triton_vm::vm::VMState;
 use twenty_first::shared_math::b_field_element::BFieldElement;
-
-use crate::memory::dyn_malloc::DYN_MALLOC_ADDRESS;
 
 pub mod algorithm;
 pub mod arithmetic;
@@ -178,19 +177,22 @@ pub fn execute_bench_deprecated(
 
     // Prepend to program the initial stack values such that stack is in the expected
     // state when program logic is executed
-    let prep: Vec<LabelledInstruction> =
-        state_preparation_code(stack, memory, initilialize_dynamic_allocator_to);
+    let prep: Vec<LabelledInstruction> = stack_preparation_code(stack);
+
+    // set the allocator, if necessary
+    if let Some(allocator) = initilialize_dynamic_allocator_to {
+        memory.insert(
+            BFieldElement::new(DYN_MALLOC_ADDRESS as u64),
+            BFieldElement::new(allocator as u64),
+        );
+    }
 
     // Add the program after the stack initialization has been performed
     // Find the length of code used for setup. This length does not count towards execution length
     // of snippet so it must be subtracted at the end.
     let program = Program::new(&prep);
-    let (all_states, _) = program.debug(
-        PublicInput::new(vec![]),
-        NonDeterminism::new(vec![]),
-        None,
-        None,
-    );
+    let (all_states, _) =
+        program.debug(PublicInput::new(vec![]), nondeterminism.clone(), None, None);
     let initialization_clock_cycle_count = all_states.len() - 1;
 
     // Construct the whole program (inclusive setup) to be run
@@ -198,7 +200,13 @@ pub fn execute_bench_deprecated(
     executed_code.extend_from_slice(code);
     let program = Program::new(&executed_code);
 
-    // Run the program, including the stack preparation and memory preparation logic
+    // lift memory to nondeterminism
+    let mut nondeterminism = nondeterminism.clone();
+    for (k, v) in memory.iter() {
+        nondeterminism.ram.insert(*k, *v);
+    }
+
+    // Run the program, including the stack preparation
     let (execution_trace, err) = program.debug(
         PublicInput::new(std_in.clone()),
         nondeterminism.clone(),
@@ -302,14 +310,31 @@ pub fn execute_test(
         }
     }
 
+    let maybe_highest_address = nondeterminism.ram.keys().map(|b| b.value()).max();
+    if let Some(initial_value) = initilialize_dynamic_allocator_to {
+        if let Some(highest_address) = maybe_highest_address {
+            if initial_value as u64 > highest_address {
+                nondeterminism.ram.insert(
+                    BFieldElement::new(DYN_MALLOC_ADDRESS as u64),
+                    BFieldElement::new(initial_value as u64),
+                );
+            } else {
+                nondeterminism.ram.insert(
+                    BFieldElement::new(DYN_MALLOC_ADDRESS as u64),
+                    BFieldElement::new(highest_address + 1),
+                );
+            }
+        } else {
+            nondeterminism.ram.insert(
+                BFieldElement::new(DYN_MALLOC_ADDRESS as u64),
+                BFieldElement::new(initial_value as u64),
+            );
+        }
+    };
+
     // produce standalone program that starts off arranging
     // the state as we expect
-    let program = program_with_state_preparation(
-        code,
-        stack,
-        nondeterminism,
-        initilialize_dynamic_allocator_to,
-    );
+    let program = prepend_state_preparation(code, stack);
 
     // run VM
     let maybe_final_state =
@@ -368,40 +393,16 @@ pub fn execute_test(
 }
 
 /// Given an assembled and linked program (represented as a list of
-/// `LabelledInstruction`s), and given a description of the stack and
-/// initial dynamic allocator value, add to the program code for putting
-/// the stack in the right order. Also: modify the nondeterminism so
-/// that the initial dynamic allocator value is correct.
-pub fn program_with_state_preparation(
-    code: &[LabelledInstruction],
-    stack: &[BFieldElement],
-    nondeterminism: &mut NonDeterminism<BFieldElement>,
-    initilialize_dynamic_allocator_to: Option<usize>,
-) -> Program {
-    // Ensure that the dynamic allocator is initialized such that it does not overwrite
-    // any statically allocated memory, if the caller requests this.
-    if let Some(dyn_malloc_initial_value) = initilialize_dynamic_allocator_to {
-        if let Some(v) = nondeterminism
-            .ram
-            .get(&BFieldElement::new(DYN_MALLOC_ADDRESS as u64))
-        {
-            assert_eq!(v.value() as usize, dyn_malloc_initial_value, "nondeterminism already specifies dynamic allocator value {} =/= {} at address zero", v.value(), dyn_malloc_initial_value);
-        } else {
-            nondeterminism.ram.insert(
-                BFieldElement::new(DYN_MALLOC_ADDRESS as u64),
-                BFieldElement::new(dyn_malloc_initial_value as u64),
-            );
-        }
-    }
-
+/// `LabelledInstruction`s), and given a description of the stack,
+/// add to the program code for putting
+/// the stack in the right order.
+pub fn prepend_state_preparation(code: &[LabelledInstruction], stack: &[BFieldElement]) -> Program {
     // Prepend to program the initial stack values such that stack is in the expected
     // state when program logic is executed.
     // The next function call does something analogous for memory but it
     // predates the option of setting the initial memory value through
     // nondeterminism. So we just feed it empty memory.
-    let memory = HashMap::new();
-    let prep: Vec<LabelledInstruction> =
-        state_preparation_code(stack, &memory, initilialize_dynamic_allocator_to);
+    let prep: Vec<LabelledInstruction> = stack_preparation_code(stack);
     let mut executed_code = prep;
 
     // Construct the whole program (inclusive setup) to be run
@@ -454,35 +455,10 @@ pub fn execute_with_terminal_state<'a>(
 }
 
 /// Produce the code to set the stack and memory into a certain state
-fn state_preparation_code(
-    stack: &[BFieldElement],
-    memory: &HashMap<BFieldElement, BFieldElement>,
-    initilialize_dynamic_allocator_to: Option<usize>,
-) -> Vec<LabelledInstruction> {
+fn stack_preparation_code(stack: &[BFieldElement]) -> Vec<LabelledInstruction> {
     let mut state_preparation_code = Vec::default();
     for element in stack.iter().skip(NUM_OP_STACK_REGISTERS) {
         state_preparation_code.push(triton_instr!(push element.value()));
-    }
-
-    // Add all the initial memory to the VM
-    for (address, value) in memory.iter() {
-        // Prepare stack for writing
-        state_preparation_code.push(triton_instr!(push address.value()));
-        state_preparation_code.push(triton_instr!(push value.value()));
-
-        // Write value to memory
-        state_preparation_code.push(triton_instr!(write_mem));
-
-        // Clean stack after writing to memory
-        state_preparation_code.push(triton_instr!(pop));
-    }
-
-    // Ensure that the dynamic allocator is initialized such that it does not overwrite
-    // any statically allocated memory, if the caller requests this.
-    if let Some(dyn_malloc_initial_value) = initilialize_dynamic_allocator_to {
-        state_preparation_code.append(&mut dyn_malloc::DynMalloc::get_initialization_code(
-            dyn_malloc_initial_value.try_into().unwrap(),
-        ));
     }
 
     state_preparation_code
@@ -554,7 +530,10 @@ mod tests {
         .unwrap();
         assert_eq!(
             initial_dyn_malloc_value,
-            memory[&BFieldElement::new(DYN_MALLOC_ADDRESS as u64)].value() as usize
+            memory
+                .get(&BFieldElement::new(DYN_MALLOC_ADDRESS as u64))
+                .unwrap_or(&BFieldElement::new(0))
+                .value() as usize
         );
     }
 

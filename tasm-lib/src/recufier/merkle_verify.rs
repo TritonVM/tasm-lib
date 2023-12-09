@@ -220,7 +220,7 @@ mod tests {
     use crate::algorithm::ShadowedAlgorithm;
     use crate::linker::link_for_isolated_run;
     use crate::snippet::RustShadow;
-    use crate::{execute_with_terminal_state, program_with_state_preparation, VmHasherState};
+    use crate::{execute_with_terminal_state, prepend_state_preparation, VmHasherState};
 
     use super::MerkleVerify;
 
@@ -289,7 +289,7 @@ mod tests {
 
             // run tvm
             let code = link_for_isolated_run(Rc::new(RefCell::new(MerkleVerify)), 0);
-            let program = program_with_state_preparation(&code, &stack, &mut nondeterminism, None);
+            let program = prepend_state_preparation(&code, &stack);
             let tvm_result =
                 execute_with_terminal_state(&program, &stdin, &mut nondeterminism, None);
             if let Ok(result) = &tvm_result {

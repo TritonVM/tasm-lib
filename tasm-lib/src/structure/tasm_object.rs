@@ -796,7 +796,6 @@ mod test {
     use std::collections::HashMap;
 
     use itertools::Itertools;
-    use num_traits::Zero;
     use rand::{rngs::StdRng, thread_rng, Rng, SeedableRng};
     use triton_vm::{proof_item::FriResponse, triton_asm, BFieldElement, NonDeterminism};
     use twenty_first::shared_math::{bfield_codec::BFieldCodec, x_field_element::XFieldElement};
@@ -805,7 +804,8 @@ mod test {
         empty_stack, execute_with_terminal_state, io,
         library::Library,
         list::unsafeimplu32::length::Length,
-        memory, program_with_state_preparation,
+        memory::{self},
+        prepend_state_preparation,
         snippet::{DataType, DeprecatedSnippet, InputSource},
         structure::tasm_object::{load_to_memory, TasmObject},
         test_helpers::test_rust_equivalence_multiple_deprecated,
@@ -1120,12 +1120,6 @@ mod test {
         // initialize memory and stack
         let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
         let address = load_to_memory(&mut memory, fri_response);
-        let words_statically_allocated = if let Some(allocator) = memory.get(&BFieldElement::zero())
-        {
-            allocator.value() as usize
-        } else {
-            1
-        };
         let mut stack = empty_stack();
         stack.push(address);
         let mut nondeterminism = NonDeterminism::new(vec![]).with_ram(memory);
@@ -1143,12 +1137,7 @@ mod test {
 
             {&library_code}
         );
-        let program = program_with_state_preparation(
-            &instructions,
-            &stack,
-            &mut nondeterminism,
-            Some(words_statically_allocated),
-        );
+        let program = prepend_state_preparation(&instructions, &stack);
 
         // run VM; get stack at end
         let final_state =

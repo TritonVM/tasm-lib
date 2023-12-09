@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use num::{One, Zero};
 use rand::Rng;
 use triton_vm::{instruction::LabelledInstruction, triton_instr};
-use twenty_first::shared_math::b_field_element::{BFieldElement, BFIELD_ZERO};
+use twenty_first::shared_math::b_field_element::BFieldElement;
 
 pub const DYN_MALLOC_ADDRESS: u32 = 0;
 
@@ -69,7 +69,7 @@ impl DeprecatedSnippet for DynMalloc {
                 push {DYN_MALLOC_ADDRESS}  // _ size *free_pointer
                 read_mem                   // _ size *free_pointer *next_addr'
 
-                // add 1 iff `next_addr` was 0, i.e. uninitialized.
+                // add 1 iff `*next_addr` was 0, i.e. uninitialized.
                 dup 0                      // _ size *free_pointer *next_addr' *next_addr'
                 push 0                     // _ size *free_pointer *next_addr' *next_addr' 0
                 eq                         // _ size *free_pointer *next_addr' (*next_addr' == 0)
@@ -136,7 +136,10 @@ impl DeprecatedSnippet for DynMalloc {
         _secret_in: Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
-        let allocator_addr = BFIELD_ZERO;
+        let size = stack.pop().unwrap();
+        assert!(size.value() < (1u64 << 32));
+        let allocator_addr = BFieldElement::new(DYN_MALLOC_ADDRESS as u64);
+
         let used_memory = memory
             .entry(allocator_addr)
             .and_modify(|e| {
@@ -147,9 +150,6 @@ impl DeprecatedSnippet for DynMalloc {
                 }
             })
             .or_insert_with(BFieldElement::one);
-
-        let size = stack.pop().unwrap();
-        assert!(size.value() < (1u64 << 32));
 
         let next_addr = *used_memory;
 

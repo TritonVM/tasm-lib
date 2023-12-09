@@ -14,7 +14,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::execute_with_terminal_state;
 use crate::library::Library;
-use crate::program_with_state_preparation;
+use crate::prepend_state_preparation;
 use crate::test_helpers::test_rust_equivalence_given_execution_state_deprecated;
 use crate::VmHasherState;
 use crate::{execute_bench_deprecated, ExecutionResult, VmOutputState, DIGEST_LENGTH};
@@ -388,8 +388,7 @@ pub trait DeprecatedSnippet {
         let mut nondeterminism = NonDeterminism::new(secret_in).with_ram(memory.clone());
 
         let code = self.link_for_isolated_run(words_allocated);
-        let program =
-            program_with_state_preparation(&code, stack, &mut nondeterminism, words_allocated);
+        let program = prepend_state_preparation(&code, stack);
         let tvm_result = execute_with_terminal_state(&program, &std_in, &mut nondeterminism, None);
 
         let maybe_final_state = tvm_result.map(|st| VmOutputState {
