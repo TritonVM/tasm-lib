@@ -179,16 +179,20 @@ pub fn execute_bench_deprecated(
     // state when program logic is executed
     let prep: Vec<LabelledInstruction> = stack_preparation_code(stack);
 
+    // set the allocator, if necessary
+    if let Some(allocator) = initilialize_dynamic_allocator_to {
+        memory.insert(
+            BFieldElement::new(DYN_MALLOC_ADDRESS as u64),
+            BFieldElement::new(allocator as u64),
+        );
+    }
+
     // Add the program after the stack initialization has been performed
     // Find the length of code used for setup. This length does not count towards execution length
     // of snippet so it must be subtracted at the end.
     let program = Program::new(&prep);
-    let (all_states, _) = program.debug(
-        PublicInput::new(vec![]),
-        NonDeterminism::new(vec![]),
-        None,
-        None,
-    );
+    let (all_states, _) =
+        program.debug(PublicInput::new(vec![]), nondeterminism.clone(), None, None);
     let initialization_clock_cycle_count = all_states.len() - 1;
 
     // Construct the whole program (inclusive setup) to be run
@@ -196,7 +200,13 @@ pub fn execute_bench_deprecated(
     executed_code.extend_from_slice(code);
     let program = Program::new(&executed_code);
 
-    // Run the program, including the stack preparation and memory preparation logic
+    // lift memory to nondeterminism
+    let mut nondeterminism = nondeterminism.clone();
+    for (k, v) in memory.iter() {
+        nondeterminism.ram.insert(*k, *v);
+    }
+
+    // Run the program, including the stack preparation
     let (execution_trace, err) = program.debug(
         PublicInput::new(std_in.clone()),
         nondeterminism.clone(),
@@ -520,7 +530,10 @@ mod tests {
         .unwrap();
         assert_eq!(
             initial_dyn_malloc_value,
-            memory[&BFieldElement::new(DYN_MALLOC_ADDRESS as u64)].value() as usize
+            memory
+                .get(&BFieldElement::new(DYN_MALLOC_ADDRESS as u64))
+                .unwrap_or(&BFieldElement::new(0))
+                .value() as usize
         );
     }
 

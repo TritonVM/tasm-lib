@@ -7,6 +7,7 @@ use twenty_first::shared_math::{bfield_codec::BFieldCodec, other::random_element
 
 use crate::{
     empty_stack,
+    memory::dyn_malloc::DYN_MALLOC_ADDRESS,
     snippet::{DataType, DeprecatedSnippet},
     Digest, ExecutionState,
 };
@@ -67,6 +68,7 @@ impl GetLength {
             memory.insert(address, word);
             address.increment();
         }
+        memory.insert(BFieldElement::new(DYN_MALLOC_ADDRESS as u64), address);
 
         ExecutionState::with_stack_and_memory(stack, memory, 1)
     }

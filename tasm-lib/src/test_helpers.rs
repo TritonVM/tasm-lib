@@ -163,17 +163,29 @@ pub(crate) fn test_rust_equivalence_given_complete_state_deprecated<T: Deprecate
 ) -> VmOutputState {
     let init_stack = stack.to_vec();
 
-    let mut rust_memory = memory.clone();
-    let mut tasm_memory = memory.clone();
-    let mut rust_stack = stack.to_vec();
-    let mut tasm_stack = stack.to_vec();
+    // lift memory to nondeterminism and set allocator if not set yet
+    let mut nondeterminism = nondeterminism.clone();
+    for (k, v) in memory.iter() {
+        nondeterminism.ram.insert(*k, *v);
+    }
 
-    if words_statically_allocated > 0 {
-        rust_shadowing_helper_functions::dyn_malloc::rust_dyn_malloc_initialize(
-            &mut rust_memory,
-            words_statically_allocated,
+    if words_statically_allocated
+        > nondeterminism
+            .ram
+            .get(&BFieldElement::new(DYN_MALLOC_ADDRESS as u64))
+            .unwrap_or(&BFieldElement::new(0))
+            .value() as usize
+    {
+        nondeterminism.ram.insert(
+            BFieldElement::new(DYN_MALLOC_ADDRESS as u64),
+            BFieldElement::new(words_statically_allocated as u64),
         );
     }
+
+    let mut rust_memory = nondeterminism.ram.clone();
+    let mut tasm_memory = nondeterminism.ram.clone();
+    let mut rust_stack = stack.to_vec();
+    let mut tasm_stack = stack.to_vec();
 
     // run rust shadow
     snippet_struct.rust_shadowing(
