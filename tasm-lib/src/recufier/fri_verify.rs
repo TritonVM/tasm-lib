@@ -134,7 +134,7 @@ impl FriVerify {
     /// index and the round number in which the check takes place. In Triton VM, this
     /// method is called `get_evaluation_argument`.
     /// TODO: write snippet for me
-    fn get_colinearity_check_x(&self, idx: u32, round: usize) -> XFieldElement {
+    pub fn get_colinearity_check_x(&self, idx: u32, round: usize) -> XFieldElement {
         let domain_value = self.domain_offset * self.domain_generator.mod_pow_u32(idx);
         let round_exponent = 2u32.pow(round as u32);
         let evaluation_argument = domain_value.mod_pow_u32(round_exponent);
