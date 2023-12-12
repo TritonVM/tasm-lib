@@ -16,7 +16,7 @@ use crate::{
 };
 
 /// Compute domain[index]^(1<<round)
-struct GetColinearityCheckX;
+pub struct GetColinearityCheckX;
 
 impl BasicSnippet for GetColinearityCheckX {
     fn inputs(&self) -> Vec<(crate::snippet::DataType, String)> {
