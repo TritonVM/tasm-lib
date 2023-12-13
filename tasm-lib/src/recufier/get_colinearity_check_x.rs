@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
+    data_type::DataType,
     empty_stack,
     snippet_bencher::BenchmarkCase,
     structure::tasm_object::{load_to_memory, TasmObject},
@@ -8,18 +9,13 @@ use crate::{
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use triton_vm::{triton_asm, BFieldElement};
 
-use crate::{
-    field,
-    function::Function,
-    recufier::fri_verify::FriVerify,
-    snippet::{BasicSnippet, DataType},
-};
+use crate::{field, function::Function, recufier::fri_verify::FriVerify, snippet::BasicSnippet};
 
 /// Compute domain[index]^(1<<round)
 pub struct GetColinearityCheckX;
 
 impl BasicSnippet for GetColinearityCheckX {
-    fn inputs(&self) -> Vec<(crate::snippet::DataType, String)> {
+    fn inputs(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::VoidPointer, "*fri_verify".to_string()),
             (DataType::U32, "index".to_string()),
@@ -27,8 +23,8 @@ impl BasicSnippet for GetColinearityCheckX {
         ]
     }
 
-    fn outputs(&self) -> Vec<(crate::snippet::DataType, String)> {
-        vec![(DataType::XFE, "evaluation_argument".to_string())]
+    fn outputs(&self) -> Vec<(DataType, String)> {
+        vec![(DataType::Xfe, "evaluation_argument".to_string())]
     }
 
     fn entrypoint(&self) -> String {

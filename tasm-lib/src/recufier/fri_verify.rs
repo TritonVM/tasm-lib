@@ -471,7 +471,7 @@ impl BasicSnippet for FriVerify {
             read_mem swap 1 push -1 add // _ d4 d3 d2 d1 *digest
             read_mem swap 1 pop         // _ d4 d3 d2 d1 d0
         );
-        let new_list_of_scalars = library.import(Box::new(UnsafeNew {
+        let new_list_xfe = library.import(Box::new(UnsafeNew {
             data_type: DataType::Xfe,
         }));
         let get_scalar = library.import(Box::new(UnsafeGet {
