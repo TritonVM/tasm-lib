@@ -2,13 +2,12 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use triton_vm::vm::VMState;
 use triton_vm::{
-    instruction::LabelledInstruction, triton_asm, triton_instr, BFieldElement, NonDeterminism,
-    Program, PublicInput,
+    instruction::LabelledInstruction, triton_asm, BFieldElement, NonDeterminism, Program,
+    PublicInput,
 };
 
 use crate::{
-    library::Library, memory::dyn_malloc::DYN_MALLOC_ADDRESS, prove_and_verify,
-    snippet::BasicSnippet, ExecutionResult, VmHasherState,
+    library::Library, prove_and_verify, snippet::BasicSnippet, ExecutionResult, VmHasherState,
 };
 
 pub fn link_for_isolated_run<T: BasicSnippet>(
