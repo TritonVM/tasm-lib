@@ -44,7 +44,7 @@ use crate::{
         eq_digest::EqDigest, hash_varlen::HashVarlen, reverse_digest::ReverseDigest,
         sample_indices::SampleIndices, swap_digest::SwapDigest,
     },
-    io::{load_from_input::LoadFromInput, read_input::ReadInput, write_to_stdout::WriteToStdout},
+    io::{read_input::ReadInput, write_to_stdout::WriteToStdout},
     list::{
         contiguous_list,
         range::Range,
@@ -253,9 +253,6 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
             data_type: DataType::Digest,
             input_source: InputSource::StdIn,
         }),
-
-        "tasm_io_load_from_input_stdin" => Box::new(LoadFromInput(InputSource::StdIn)),
-        "tasm_io_load_from_input_secin" => Box::new(LoadFromInput(InputSource::SecretIn)),
 
         "tasm_io_write_to_stdout___bool" => Box::new(WriteToStdout{ data_type: DataType::Bool}),
         "tasm_io_write_to_stdout___u32" => Box::new(WriteToStdout{ data_type: DataType::U32}),
