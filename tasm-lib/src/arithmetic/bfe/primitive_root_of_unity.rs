@@ -395,10 +395,10 @@ mod tests {
 
     use super::*;
     use crate::closure::ShadowedClosure;
+    use crate::execute_with_terminal_state;
     use crate::linker::link_for_isolated_run;
     use crate::snippet::RustShadow;
     use crate::test_helpers::test_rust_equivalence_given_complete_state;
-    use crate::{execute_with_terminal_state, VmHasherState};
 
     #[test]
     fn primitive_root_of_unity_pbt() {
