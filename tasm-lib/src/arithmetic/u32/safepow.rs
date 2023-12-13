@@ -320,8 +320,13 @@ mod tests {
 
             // Run on Triton
             let program = Program::new(&code);
-            let tvm_result =
-                execute_with_terminal_state(&program, &[], &NonDeterminism::new(vec![]), None);
+            let tvm_result = execute_with_terminal_state(
+                &program,
+                &[],
+                &init_stack,
+                &NonDeterminism::new(vec![]),
+                None,
+            );
 
             assert!(
                 rust_result.is_err() && tvm_result.is_err(),

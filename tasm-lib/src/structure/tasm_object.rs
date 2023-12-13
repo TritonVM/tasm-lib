@@ -541,7 +541,7 @@ mod test {
             let program = Program::new(&instructions);
             let nondeterminism = NonDeterminism::new(vec![]).with_ram(memory);
             let final_state =
-                execute_with_terminal_state(&program, &[], &nondeterminism, None).unwrap();
+                execute_with_terminal_state(&program, &[], &stack, &nondeterminism, None).unwrap();
             final_state.op_stack.stack
         }
     }

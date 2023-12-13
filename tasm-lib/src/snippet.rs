@@ -192,7 +192,8 @@ pub trait DeprecatedSnippet {
 
         let code = self.link_for_isolated_run(words_allocated);
         let program = Program::new(&code);
-        let tvm_result = execute_with_terminal_state(&program, &std_in, &nondeterminism, None);
+        let tvm_result =
+            execute_with_terminal_state(&program, &std_in, stack, &nondeterminism, None);
 
         let final_state = tvm_result.map(|st| VmOutputState {
             final_ram: st.ram,

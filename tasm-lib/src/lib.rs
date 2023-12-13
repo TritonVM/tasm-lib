@@ -304,14 +304,15 @@ pub fn execute_test(
 pub fn execute_with_terminal_state(
     program: &Program,
     std_in: &[BFieldElement],
+    stack: &[BFieldElement],
     nondeterminism: &NonDeterminism<BFieldElement>,
     maybe_sponge_state: Option<VmHasherState>,
 ) -> anyhow::Result<VMState> {
     let public_input = PublicInput::new(std_in.into());
     let mut vm_state = VMState::new(program, public_input, nondeterminism.to_owned());
-    if let Some(sponge_state) = &maybe_sponge_state {
-        vm_state.sponge_state = Some(sponge_state.state);
-    }
+    vm_state.op_stack.stack = stack.to_owned();
+    vm_state.sponge_state = maybe_sponge_state.map(|state| state.state);
+
     match vm_state.run() {
         Ok(()) => {
             println!("Triton VM execution successful.");

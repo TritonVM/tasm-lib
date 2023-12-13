@@ -363,7 +363,8 @@ mod test {
             // run tvm
             let code = link_for_isolated_run(Rc::new(RefCell::new(dequeue.clone())), 0);
             let program = Program::new(&code);
-            let tvm_result = execute_with_terminal_state(&program, &stdin, &nondeterminism, None);
+            let tvm_result =
+                execute_with_terminal_state(&program, &stdin, &stack, &nondeterminism, None);
             println!("tvm_result: {tvm_result:?}");
 
             assert!(rust_result.is_err() && tvm_result.is_err());

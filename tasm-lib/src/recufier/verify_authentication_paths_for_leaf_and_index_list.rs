@@ -344,7 +344,8 @@ mod test {
             let code = link_for_isolated_run(Rc::new(RefCell::new(vap4lail.clone())), 0);
             nondeterminism.ram = memory;
             let program = Program::new(&code);
-            let tvm_result = execute_with_terminal_state(&program, &stdin, &nondeterminism, None);
+            let tvm_result =
+                execute_with_terminal_state(&program, &stdin, &stack, &nondeterminism, None);
             if let Ok(result) = &tvm_result {
                 println!("tasm result: {}\ni: {}", result, i);
             }
