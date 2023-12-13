@@ -166,7 +166,7 @@ mod tests {
             &Div2U64,
             &init_stack,
             &[],
-            &mut HashMap::default(),
+            HashMap::default(),
             0,
             None,
         );
@@ -183,7 +183,7 @@ mod tests {
             &Div2U64,
             &init_stack,
             &[],
-            &mut HashMap::default(),
+            HashMap::default(),
             0,
             None,
         );
@@ -230,7 +230,7 @@ mod tests {
             &Div2U64,
             &init_stack,
             &[],
-            &mut HashMap::default(),
+            HashMap::default(),
             0,
             Some(&expected_stack),
         );

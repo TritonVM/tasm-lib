@@ -293,7 +293,7 @@ mod tests {
             &SafeMulU64,
             &init_stack,
             &[],
-            &mut HashMap::default(),
+            HashMap::default(),
             1,
             Some(&expected),
         );

@@ -192,7 +192,7 @@ mod tests {
             &DecrU64,
             &stack,
             &[],
-            &mut HashMap::default(),
+            HashMap::default(),
             0,
             None,
         );

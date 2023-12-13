@@ -329,14 +329,15 @@ mod tests {
             &mut memory,
         );
 
-        test_rust_equivalence_given_input_values_deprecated::<SafeSetLength>(
+        let memory = test_rust_equivalence_given_input_values_deprecated::<SafeSetLength>(
             &SafeSetLength { data_type },
             &init_stack,
             &[],
-            &mut memory,
+            memory,
             0,
             Some(&expected_end_stack),
-        );
+        )
+        .final_ram;
 
         // Verify that length indicator has been updated
         assert_eq!(

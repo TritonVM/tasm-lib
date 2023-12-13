@@ -207,7 +207,7 @@ mod tests {
             &Length { data_type },
             &init_stack,
             &[],
-            &mut init_memory,
+            init_memory,
             0,
             expected,
         );

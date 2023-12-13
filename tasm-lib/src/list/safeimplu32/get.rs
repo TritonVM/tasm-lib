@@ -413,7 +413,7 @@ mod tests {
             },
             &init_stack,
             &[],
-            &mut memory,
+            memory,
             0,
             Some(&expected_end_stack),
         );

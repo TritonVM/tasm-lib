@@ -370,7 +370,7 @@ mod tests {
             &SubU128,
             &init_stack,
             &[],
-            &mut HashMap::default(),
+            HashMap::default(),
             0,
             expected,
         );

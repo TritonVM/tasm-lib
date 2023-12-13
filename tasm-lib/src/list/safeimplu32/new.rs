@@ -128,7 +128,6 @@ mod tests {
     use std::collections::HashMap;
 
     use rand::random;
-    use tasm_lib::VmOutputState;
 
     use crate::{
         list::safeimplu32::push::SafePush, rust_shadowing_helper_functions,

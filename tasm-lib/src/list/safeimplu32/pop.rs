@@ -308,14 +308,15 @@ mod tests {
             expected_end_stack.push(last_element[element_size - 1 - i]);
         }
 
-        test_rust_equivalence_given_input_values_deprecated(
+        let memory = test_rust_equivalence_given_input_values_deprecated(
             &SafePop { data_type },
             &init_stack,
             &[],
-            &mut memory,
+            memory,
             0,
             Some(&expected_end_stack),
-        );
+        )
+        .final_ram;
 
         // Verify that length is now indicated to be `init_list_length - 1`
         assert_eq!(

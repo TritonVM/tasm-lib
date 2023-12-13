@@ -384,28 +384,29 @@ mod tests {
             &mut vm_memory,
         );
 
-        test_rust_equivalence_given_input_values_deprecated::<SafeSet>(
+        let memory = test_rust_equivalence_given_input_values_deprecated::<SafeSet>(
             &SafeSet {
                 data_type: data_type.clone(),
             },
             &init_stack,
             &[],
-            &mut vm_memory,
+            vm_memory,
             0,
             Some(&expected_end_stack),
-        );
+        )
+        .final_ram;
 
         // Verify that length indicator is unchanged
         assert_eq!(
             BFieldElement::new((init_list_length) as u64),
-            vm_memory[&list_address]
+            memory[&list_address]
         );
 
         // verify that value was inserted at expected place
         for i in 0..data_type.stack_size() {
             assert_eq!(
                 push_value[i],
-                vm_memory[&BFieldElement::new(
+                memory[&BFieldElement::new(
                     list_address.value()
                         + 2
                         + data_type.stack_size() as u64 * index as u64

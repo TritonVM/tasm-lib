@@ -667,21 +667,22 @@ mod tests {
         expected_final_stack.push(peaks_pointer);
         expected_final_stack.push(auth_paths_pointer);
 
-        test_rust_equivalence_given_input_values_deprecated(
+        let vm_output = test_rust_equivalence_given_input_values_deprecated(
             &CalculateNewPeaksFromAppend { list_type },
             &init_stack,
             &[],
-            &mut memory,
+            memory,
             words_allocated,
             Some(&expected_final_stack),
         );
 
         // Find produced MMR
-        let peaks_count = memory[&peaks_pointer].value();
+        let final_memory = vm_output.final_ram;
+        let peaks_count = final_memory[&peaks_pointer].value();
         let mut produced_peaks = vec![];
         for i in 0..peaks_count {
             let peak = Digest::new(
-                list_get(peaks_pointer, i as usize, &memory, DIGEST_LENGTH)
+                list_get(peaks_pointer, i as usize, &final_memory, DIGEST_LENGTH)
                     .try_into()
                     .unwrap(),
             );
@@ -694,11 +695,11 @@ mod tests {
         assert_eq!(expected_mmr, produced_mmr);
 
         // Verify that produced auth paths are valid
-        let auth_path_element_count = memory[&auth_paths_pointer].value();
+        let auth_path_element_count = final_memory[&auth_paths_pointer].value();
         let mut produced_auth_path = vec![];
         for i in 0..auth_path_element_count {
             produced_auth_path.push(Digest::new(
-                list_get(auth_paths_pointer, i as usize, &memory, DIGEST_LENGTH)
+                list_get(auth_paths_pointer, i as usize, &final_memory, DIGEST_LENGTH)
                     .try_into()
                     .unwrap(),
             ));

@@ -641,7 +641,7 @@ mod tests {
             &snippet_for_unsafe_lists,
             &init_stack,
             &[],
-            &mut memory,
+            memory,
             MAX_MMR_HEIGHT * DIGEST_LENGTH + 1, // assume that 64 digests are allocated in memory when code starts to run
             Some(&expected_final_stack),
         );

@@ -269,10 +269,10 @@ mod tests {
         let mut init_stack = empty_stack();
         init_stack.push(list_address);
 
-        let mut vm_memory = HashMap::default();
+        let mut memory = HashMap::default();
 
         // Insert length indicator of list, lives on offset = 0 from `list_address`
-        vm_memory.insert(list_address, BFieldElement::new(init_list_length as u64));
+        memory.insert(list_address, BFieldElement::new(init_list_length as u64));
 
         // Insert random values for the elements in the list
         let mut rng = thread_rng();
@@ -285,7 +285,7 @@ mod tests {
                 .try_into()
                 .unwrap();
             for elem in last_element.iter() {
-                vm_memory.insert(list_address + BFieldElement::new(j), *elem);
+                memory.insert(list_address + BFieldElement::new(j), *elem);
                 j += 1;
             }
         }
@@ -296,19 +296,20 @@ mod tests {
             expected_end_stack.push(last_element[N - 1 - i]);
         }
 
-        test_rust_equivalence_given_input_values_deprecated(
+        let memory = test_rust_equivalence_given_input_values_deprecated(
             &UnsafePop { data_type },
             &init_stack,
             &[],
-            &mut vm_memory,
+            memory,
             0,
             Some(&expected_end_stack),
-        );
+        )
+        .final_ram;
 
         // Verify that length is now indicated to be `init_list_length - 1`
         assert_eq!(
             BFieldElement::new(init_list_length as u64) - BFieldElement::one(),
-            vm_memory[&list_address]
+            memory[&list_address]
         );
     }
 }

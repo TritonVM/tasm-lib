@@ -172,7 +172,7 @@ mod tests {
             &Log2FloorU64,
             &init_stack,
             &[],
-            &mut HashMap::default(),
+            HashMap::default(),
             0,
             None,
         );
@@ -189,7 +189,7 @@ mod tests {
             &Log2FloorU64,
             &init_stack,
             &[],
-            &mut HashMap::default(),
+            HashMap::default(),
             0,
             None,
         );
@@ -207,7 +207,7 @@ mod tests {
             &Log2FloorU64,
             &init_stack,
             &[],
-            &mut HashMap::default(),
+            HashMap::default(),
             0,
             None,
         );
@@ -275,7 +275,7 @@ mod tests {
             &Log2FloorU64,
             &init_stack,
             &[],
-            &mut HashMap::default(),
+            HashMap::default(),
             0,
             Some(expected),
         );

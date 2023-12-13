@@ -352,7 +352,7 @@ mod tests {
             &DummyTestSnippetA,
             &empty_stack,
             &[],
-            &mut HashMap::default(),
+            HashMap::default(),
             0,
             expected,
         );
@@ -360,7 +360,7 @@ mod tests {
             &DummyTestSnippetB,
             &empty_stack,
             &[],
-            &mut HashMap::default(),
+            HashMap::default(),
             0,
             expected,
         );
@@ -368,7 +368,7 @@ mod tests {
             &DummyTestSnippetC,
             &empty_stack,
             &[],
-            &mut HashMap::default(),
+            HashMap::default(),
             0,
             expected,
         );

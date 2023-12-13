@@ -163,7 +163,7 @@ mod tests {
             &Shiftleft,
             &init_stack,
             &[],
-            &mut HashMap::default(),
+            HashMap::default(),
             0,
             Some(&expected_stack),
         );

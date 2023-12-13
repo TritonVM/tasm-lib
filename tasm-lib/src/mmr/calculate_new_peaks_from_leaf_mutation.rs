@@ -657,26 +657,27 @@ mod tests {
         expected_final_stack.push(BFieldElement::new(new_leaf_index >> 32));
         expected_final_stack.push(BFieldElement::new(new_leaf_index & u32::MAX as u64));
 
-        test_rust_equivalence_given_input_values_deprecated(
+        let vm_output = test_rust_equivalence_given_input_values_deprecated(
             &MmrCalculateNewPeaksFromLeafMutationMtIndices {
                 list_type: ListType::Unsafe,
             },
             &init_stack,
             &[],
-            &mut memory,
+            memory,
             MAX_MMR_HEIGHT * DIGEST_LENGTH + 1, // assume that 64 digests are allocated in memory when code starts to run
             Some(&expected_final_stack),
         );
 
         // Find produced MMR
-        let peaks_count = memory[&peaks_pointer].value();
+        let final_memory = vm_output.final_ram;
+        let peaks_count = final_memory[&peaks_pointer].value();
         let mut produced_peaks = vec![];
         for i in 0..peaks_count {
             let peak: Digest = Digest::new(
                 rust_shadowing_helper_functions::unsafe_list::unsafe_list_get(
                     peaks_pointer,
                     i as usize,
-                    &memory,
+                    &final_memory,
                     DIGEST_LENGTH,
                 )
                 .try_into()
@@ -692,14 +693,14 @@ mod tests {
         assert_eq!(expected_mmr, produced_mmr);
 
         // Verify that auth paths is still value
-        let auth_path_element_count = memory[&auth_path_pointer].value();
+        let auth_path_element_count = final_memory[&auth_path_pointer].value();
         let mut auth_path = vec![];
         for i in 0..auth_path_element_count {
             let auth_path_element: Digest = Digest::new(
                 rust_shadowing_helper_functions::unsafe_list::unsafe_list_get(
                     auth_path_pointer,
                     i as usize,
-                    &memory,
+                    &final_memory,
                     DIGEST_LENGTH,
                 )
                 .try_into()

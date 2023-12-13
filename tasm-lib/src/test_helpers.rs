@@ -74,7 +74,7 @@ pub fn test_rust_equivalence_given_input_values_deprecated<T: DeprecatedSnippet>
     snippet_struct: &T,
     stack: &[BFieldElement],
     stdin: &[BFieldElement],
-    memory: &mut HashMap<BFieldElement, BFieldElement>,
+    memory: HashMap<BFieldElement, BFieldElement>,
     words_statically_allocated: usize,
     expected_final_stack: Option<&[BFieldElement]>,
 ) -> VmOutputState {

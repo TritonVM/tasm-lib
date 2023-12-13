@@ -172,7 +172,7 @@ mod tests {
             &IndexOfLastNonZeroBitU64,
             &init_stack,
             &[],
-            &mut HashMap::default(),
+            HashMap::default(),
             0,
             Some(&expected_output),
         );
@@ -189,7 +189,7 @@ mod tests {
             &IndexOfLastNonZeroBitU64,
             &init_stack,
             &[],
-            &mut HashMap::default(),
+            HashMap::default(),
             0,
             None,
         );
@@ -206,7 +206,7 @@ mod tests {
             &IndexOfLastNonZeroBitU64,
             &init_stack,
             &[],
-            &mut HashMap::default(),
+            HashMap::default(),
             0,
             None,
         );
@@ -223,7 +223,7 @@ mod tests {
             &IndexOfLastNonZeroBitU64,
             &init_stack,
             &[],
-            &mut HashMap::default(),
+            HashMap::default(),
             0,
             None,
         );

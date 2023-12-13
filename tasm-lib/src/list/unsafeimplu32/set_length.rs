@@ -179,19 +179,20 @@ mod tests {
         // Insert length indicator of list, lives on offset = 0 from `list_address`
         vm_memory.insert(list_address, BFieldElement::new(init_list_length as u64));
 
-        test_rust_equivalence_given_input_values_deprecated(
+        let memory = test_rust_equivalence_given_input_values_deprecated(
             &UnsafeSetLength { data_type },
             &init_stack,
             &[],
-            &mut vm_memory,
+            vm_memory,
             0,
             Some(&expected_end_stack),
-        );
+        )
+        .final_ram;
 
         // Verify that length indicator has been updated
         assert_eq!(
             BFieldElement::new(new_list_length as u64),
-            vm_memory[&list_address]
+            memory[&list_address]
         );
     }
 }

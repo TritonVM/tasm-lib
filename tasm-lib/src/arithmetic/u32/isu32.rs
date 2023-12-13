@@ -161,7 +161,7 @@ mod tests {
             &Isu32,
             &init_stack,
             &[],
-            &mut HashMap::default(),
+            HashMap::default(),
             0,
             expected,
         );

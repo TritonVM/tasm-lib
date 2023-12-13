@@ -267,16 +267,17 @@ mod tests {
             data_type.stack_size(),
         );
 
-        test_rust_equivalence_given_input_values_deprecated(
+        let memory = test_rust_equivalence_given_input_values_deprecated(
             &UnsafePush {
                 data_type: data_type.clone(),
             },
             &init_stack,
             &[],
-            &mut memory,
+            memory,
             0,
             Some(&expected_end_stack),
-        );
+        )
+        .final_ram;
 
         // Verify that length indicator has increased by one
         assert_eq!(
