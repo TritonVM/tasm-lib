@@ -239,7 +239,6 @@ pub trait DeprecatedSnippet {
             std_in,
             NonDeterminism::new(secret_in),
             memory,
-            words_statically_allocated,
         )
     }
 

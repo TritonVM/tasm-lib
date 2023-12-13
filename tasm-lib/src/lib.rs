@@ -160,7 +160,6 @@ pub(crate) fn execute_with_execution_state_deprecated<T: DeprecatedSnippet>(
         init_state.std_in,
         init_state.nondeterminism,
         &mut init_state.memory,
-        None,
     )
 }
 
@@ -172,7 +171,6 @@ pub fn execute_bench_deprecated(
     std_in: Vec<BFieldElement>,
     nondeterminism: NonDeterminism<BFieldElement>,
     memory: &mut HashMap<BFieldElement, BFieldElement>,
-    initialize_dynamic_allocator_to: Option<usize>,
 ) -> anyhow::Result<ExecutionResult> {
     let initial_stack_height = stack.len() as isize;
     let public_input = PublicInput::new(std_in.clone());
