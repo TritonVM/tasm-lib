@@ -174,8 +174,7 @@ mod test {
                 &shadow,
                 &stack,
                 &stdin,
-                &nondeterminism,
-                &memory,
+                nondeterminism,
                 &sponge_state,
                 words_statically_allocated,
             );

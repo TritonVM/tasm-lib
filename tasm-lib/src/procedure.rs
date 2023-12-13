@@ -106,6 +106,10 @@ impl<P: Procedure + 'static> RustShadow for ShadowedProcedure<P> {
             );
             let (stack, memory, nondeterminism, stdin, sponge_state) =
                 procedure.borrow().pseudorandom_initial_state(seed, None);
+            assert!(
+                memory.is_empty() || nondeterminism.ram.is_empty(),
+                "temporary assert until the testing framework has been reworked"
+            );
 
             let init_stack = stack.to_vec();
             let words_statically_allocated = 1;
@@ -125,8 +129,7 @@ impl<P: Procedure + 'static> RustShadow for ShadowedProcedure<P> {
                 self,
                 &stack,
                 &stdin,
-                &nondeterminism,
-                &memory,
+                nondeterminism,
                 &sponge_state,
                 words_statically_allocated,
             );

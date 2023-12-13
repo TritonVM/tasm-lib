@@ -177,7 +177,7 @@ pub trait DeprecatedSnippet {
         stack: &mut Vec<BFieldElement>,
         std_in: Vec<BFieldElement>,
         secret_in: Vec<BFieldElement>,
-        memory: &mut HashMap<BFieldElement, BFieldElement>,
+        memory: HashMap<BFieldElement, BFieldElement>,
         words_allocated: Option<usize>,
     ) -> Result<VmOutputState> {
         let expected_length_prior: usize = self.input_types().iter().map(|x| x.stack_size()).sum();
@@ -188,7 +188,7 @@ pub trait DeprecatedSnippet {
             "Declared stack diff must match type indicators"
         );
 
-        let mut nondeterminism = NonDeterminism::new(secret_in).with_ram(memory.clone());
+        let nondeterminism = NonDeterminism::new(secret_in).with_ram(memory);
 
         let code = self.link_for_isolated_run(words_allocated);
         let program = Program::new(&code);
@@ -207,8 +207,7 @@ pub trait DeprecatedSnippet {
             stack,
             Self::stack_diff(self),
             std_in,
-            &mut nondeterminism,
-            memory,
+            nondeterminism,
             None,
             words_allocated,
         );
@@ -252,7 +251,7 @@ pub trait DeprecatedSnippet {
             &mut execution_state.stack,
             execution_state.std_in.clone(),
             execution_state.nondeterminism.individual_tokens.clone(),
-            &mut execution_state.memory,
+            execution_state.memory.clone(),
             Some(execution_state.words_allocated),
         );
         let stack_after = execution_state.stack.clone();

@@ -240,8 +240,7 @@ pub fn execute_test(
     stack: &mut Vec<BFieldElement>,
     expected_stack_diff: isize,
     std_in: Vec<BFieldElement>,
-    nondeterminism: &mut NonDeterminism<BFieldElement>,
-    memory: &mut HashMap<BFieldElement, BFieldElement>,
+    nondeterminism: NonDeterminism<BFieldElement>,
     maybe_sponge_state: Option<VmHasherState>,
     initialize_dynamic_allocator_to: Option<usize>,
 ) -> VmOutputState {
@@ -254,8 +253,6 @@ pub fn execute_test(
     vm_state.sponge_state = maybe_sponge_state.map(|state| state.state);
     vm_state.run().unwrap();
     let terminal_state = vm_state;
-
-    *memory = terminal_state.ram.clone();
 
     if !terminal_state.jump_stack.is_empty() {
         panic!("Jump stack must be unchanged after code execution");
@@ -285,7 +282,7 @@ pub fn execute_test(
         prove_and_verify(
             &program,
             &std_in,
-            nondeterminism,
+            &nondeterminism,
             &terminal_state.public_output,
         );
     }
@@ -382,21 +379,19 @@ mod tests {
 
     #[test]
     fn initialize_dyn_malloc() {
-        let mut memory = HashMap::default();
         let initial_dyn_malloc_value = 14;
-        execute_test(
+        let VmOutputState { final_ram, .. } = execute_test(
             &triton_asm!(halt),
             &mut empty_stack(),
             0,
             vec![],
-            &mut NonDeterminism::new(vec![]),
-            &mut memory,
+            NonDeterminism::default(),
             None,
             Some(initial_dyn_malloc_value),
         );
         assert_eq!(
             initial_dyn_malloc_value,
-            memory
+            final_ram
                 .get(&BFieldElement::new(DYN_MALLOC_ADDRESS as u64))
                 .unwrap_or(&BFieldElement::new(0))
                 .value() as usize
@@ -406,18 +401,16 @@ mod tests {
     #[test]
     fn do_not_initialize_dyn_malloc() {
         // Ensure that dyn malloc is not initialized if no such initialization is requested
-        let mut memory = HashMap::default();
-        execute_test(
+        let VmOutputState { final_ram, .. } = execute_test(
             &triton_asm!(halt),
             &mut empty_stack(),
             0,
             vec![],
-            &mut NonDeterminism::new(vec![]),
-            &mut memory,
+            NonDeterminism::default(),
             None,
             None,
         );
-        assert!(memory
+        assert!(final_ram
             .get(&BFieldElement::new(DYN_MALLOC_ADDRESS as u64))
             .unwrap_or(&BFieldElement::zero())
             .is_zero());

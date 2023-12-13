@@ -51,13 +51,11 @@ pub fn test_rust_equivalence_given_execution_state_deprecated<T: DeprecatedSnipp
     snippet_struct: &T,
     mut execution_state: ExecutionState,
 ) -> VmOutputState {
-    let nondeterminism = execution_state.nondeterminism;
     test_rust_equivalence_given_complete_state_deprecated::<T>(
         snippet_struct,
         &execution_state.stack,
         &execution_state.std_in,
-        &nondeterminism,
-        &mut execution_state.memory,
+        &execution_state.nondeterminism,
         execution_state.words_allocated,
         None,
     )
@@ -72,15 +70,13 @@ pub fn test_rust_equivalence_given_input_values_deprecated<T: DeprecatedSnippet>
     words_statically_allocated: usize,
     expected_final_stack: Option<&[BFieldElement]>,
 ) -> VmOutputState {
-    let _init_memory = memory.clone();
-    let nondeterminism = NonDeterminism::<BFieldElement>::new(vec![]);
+    let nondeterminism = NonDeterminism::<BFieldElement>::new(vec![]).with_ram(memory.clone());
 
     test_rust_equivalence_given_complete_state_deprecated(
         snippet_struct,
         stack,
         stdin,
         &nondeterminism,
-        memory,
         words_statically_allocated,
         expected_final_stack,
     )
@@ -114,7 +110,7 @@ pub fn link_and_run_tasm_for_test_deprecated<T: DeprecatedSnippet>(
     stack: &mut Vec<BFieldElement>,
     std_in: Vec<BFieldElement>,
     secret_in: Vec<BFieldElement>,
-    memory: &mut HashMap<BFieldElement, BFieldElement>,
+    memory: HashMap<BFieldElement, BFieldElement>,
     words_statically_allocated: usize,
 ) -> VmOutputState {
     let expected_length_prior: usize = snippet_struct
@@ -129,19 +125,19 @@ pub fn link_and_run_tasm_for_test_deprecated<T: DeprecatedSnippet>(
         .sum();
     assert_eq!(
         snippet_struct.stack_diff(),
-        (expected_length_after as isize - expected_length_prior as isize),
+        expected_length_after as isize - expected_length_prior as isize,
         "Declared stack diff must match type indicators"
     );
 
     let code = link_for_isolated_run_deprecated(snippet_struct, words_statically_allocated);
+    let nondeterminism = NonDeterminism::<BFieldElement>::new(secret_in).with_ram(memory.clone());
 
     execute_test(
         &code,
         stack,
         snippet_struct.stack_diff(),
         std_in,
-        &mut NonDeterminism::new(secret_in),
-        memory,
+        nondeterminism,
         None,
         Some(words_statically_allocated),
     )
@@ -155,33 +151,13 @@ pub(crate) fn test_rust_equivalence_given_complete_state_deprecated<T: Deprecate
     stack: &[BFieldElement],
     stdin: &[BFieldElement],
     nondeterminism: &NonDeterminism<BFieldElement>,
-    memory: &mut HashMap<BFieldElement, BFieldElement>,
     words_statically_allocated: usize,
     expected_final_stack: Option<&[BFieldElement]>,
 ) -> VmOutputState {
     let init_stack = stack.to_vec();
 
-    // lift memory to nondeterminism and set allocator if not set yet
-    let mut nondeterminism = nondeterminism.clone();
-    for (k, v) in memory.iter() {
-        nondeterminism.ram.insert(*k, *v);
-    }
-
-    if words_statically_allocated
-        > nondeterminism
-            .ram
-            .get(&BFieldElement::new(DYN_MALLOC_ADDRESS as u64))
-            .unwrap_or(&BFieldElement::new(0))
-            .value() as usize
-    {
-        nondeterminism.ram.insert(
-            BFieldElement::new(DYN_MALLOC_ADDRESS as u64),
-            BFieldElement::new(words_statically_allocated as u64),
-        );
-    }
-
     let mut rust_memory = nondeterminism.ram.clone();
-    let mut tasm_memory = nondeterminism.ram.clone();
+    let tasm_memory = nondeterminism.ram.clone();
     let mut rust_stack = stack.to_vec();
     let mut tasm_stack = stack.to_vec();
 
@@ -199,9 +175,10 @@ pub(crate) fn test_rust_equivalence_given_complete_state_deprecated<T: Deprecate
         &mut tasm_stack,
         stdin.to_vec(),
         nondeterminism.individual_tokens.clone(),
-        &mut tasm_memory,
+        tasm_memory,
         words_statically_allocated,
     );
+    let mut tasm_memory = vm_output_state.final_ram.clone();
 
     // assert stacks are equal, up to program hash
     let tasm_stack_skip_program_hash = tasm_stack.iter().cloned().skip(DIGEST_LENGTH).collect_vec();
@@ -285,9 +262,6 @@ pub(crate) fn test_rust_equivalence_given_complete_state_deprecated<T: Deprecate
         );
     }
 
-    // Write back memory to be able to probe it in individual tests
-    *memory = tasm_memory.clone();
-
     // Verify that stack grows with expected number of elements
     let stack_final = tasm_stack.clone();
     let observed_stack_growth: isize = stack_final.len() as isize - init_stack.len() as isize;
@@ -306,7 +280,6 @@ pub(crate) fn test_rust_equivalence_given_complete_state_deprecated<T: Deprecate
 
 #[cfg(test)]
 mod test {
-    use std::collections::HashMap;
 
     use rand::random;
     use triton_vm::{BFieldElement, NonDeterminism};
@@ -328,7 +301,6 @@ mod test {
         stack.push(BFieldElement::new(45u64));
         stack.push(BFieldElement::new(1u64 << 12));
 
-        let mut init_memory = HashMap::new();
         let mut tasm_stack = stack.to_vec();
         for item in tasm_stack.iter_mut().take(DIGEST_LENGTH) {
             *item = random();
@@ -338,8 +310,7 @@ mod test {
             &snippet_struct,
             &stack,
             &[],
-            &NonDeterminism::new(vec![]),
-            &mut init_memory,
+            &NonDeterminism::default(),
             1,
             None,
         );
@@ -388,8 +359,7 @@ pub fn tasm_final_state<T: RustShadow>(
     shadowed_snippet: &T,
     stack: &[BFieldElement],
     stdin: &[BFieldElement],
-    nondeterminism: &NonDeterminism<BFieldElement>,
-    memory: &HashMap<BFieldElement, BFieldElement>,
+    nondeterminism: NonDeterminism<BFieldElement>,
     sponge_state: &Option<VmHasherState>,
     words_statically_allocated: usize,
 ) -> VmOutputState {
@@ -398,8 +368,7 @@ pub fn tasm_final_state<T: RustShadow>(
         shadowed_snippet,
         &mut stack.to_vec(),
         stdin.to_vec(),
-        &mut nondeterminism.clone(),
-        &mut memory.clone(),
+        nondeterminism,
         sponge_state.to_owned(),
         words_statically_allocated,
     )
@@ -526,8 +495,7 @@ pub fn test_rust_equivalence_given_complete_state<T: RustShadow>(
         shadowed_snippet,
         stack,
         stdin,
-        nondeterminism,
-        memory,
+        nondeterminism.clone(),
         sponge_state,
         words_statically_allocated,
     );
@@ -551,28 +519,11 @@ pub fn link_and_run_tasm_for_test<T: RustShadow>(
     snippet_struct: &T,
     stack: &mut Vec<BFieldElement>,
     std_in: Vec<BFieldElement>,
-    nondeterminism: &mut NonDeterminism<BFieldElement>,
-    memory: &mut HashMap<BFieldElement, BFieldElement>,
+    nondeterminism: NonDeterminism<BFieldElement>,
     maybe_sponge_state: Option<VmHasherState>,
     words_statically_allocated: usize,
 ) -> VmOutputState {
     let code = link_for_isolated_run(snippet_struct, words_statically_allocated);
-
-    let maybe_highest_address = nondeterminism
-        .ram
-        .keys()
-        .chain(memory.keys())
-        .map(|b| b.value())
-        .max();
-    let allocator_initial_value = if let Some(highest_address) = maybe_highest_address {
-        if highest_address > words_statically_allocated as u64 {
-            highest_address + 1
-        } else {
-            words_statically_allocated as u64
-        }
-    } else {
-        words_statically_allocated as u64
-    };
 
     execute_test(
         &code,
@@ -580,9 +531,8 @@ pub fn link_and_run_tasm_for_test<T: RustShadow>(
         snippet_struct.inner().borrow().stack_diff(),
         std_in,
         nondeterminism,
-        memory,
         maybe_sponge_state,
-        Some(allocator_initial_value as usize),
+        None,
     )
 }
 
@@ -590,14 +540,17 @@ fn link_for_isolated_run<T: RustShadow>(
     snippet_struct: &T,
     words_statically_allocated: usize,
 ) -> Vec<LabelledInstruction> {
-    println!("linking with preallocated memory ... number of statically allocated words: {words_statically_allocated}");
-    let mut snippet_state = Library::with_preallocated_memory(words_statically_allocated);
+    println!(
+        "linking with preallocated memory ... \
+        number of statically allocated words: {words_statically_allocated}"
+    );
+    let mut library = Library::with_preallocated_memory(words_statically_allocated);
     let entrypoint = snippet_struct.inner().borrow().entrypoint();
-    let function_body = snippet_struct.inner().borrow().code(&mut snippet_state);
-    let library_code = snippet_state.all_imports();
+    let function_body = snippet_struct.inner().borrow().code(&mut library);
+    let library_code = library.all_imports();
 
-    // The TASM code is always run through a function call, so the 1st instruction
-    // is a call to the function in question.
+    // The TASM code is always run through a function call, so the 1st instruction is a call to the
+    // function in question.
     let code = triton_asm!(
         call {entrypoint}
         halt

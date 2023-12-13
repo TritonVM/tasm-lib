@@ -128,6 +128,7 @@ mod tests {
     use std::collections::HashMap;
 
     use rand::random;
+    use tasm_lib::VmOutputState;
 
     use crate::{
         list::safeimplu32::push::SafePush, rust_shadowing_helper_functions,
@@ -157,13 +158,14 @@ mod tests {
         // Verify that one list does not overwrite another list in memory
         let capacity_as_bfe = BFieldElement::new(100);
         let mut stack = empty_stack();
-        let mut memory = HashMap::default();
+        let memory = HashMap::default();
         stack.push(capacity_as_bfe);
-        SafeNew {
+        let memory = SafeNew {
             data_type: data_type.clone(),
         }
-        .link_and_run_tasm_for_test(&mut stack, vec![], vec![], &mut memory, None)
-        .unwrap();
+        .link_and_run_tasm_for_test(&mut stack, vec![], vec![], memory, None)
+        .unwrap()
+        .final_ram;
         let first_list = stack.pop().unwrap();
 
         // Prepare stack for push to 1st list
@@ -172,11 +174,12 @@ mod tests {
         for elem in digest1.values().iter().rev() {
             stack.push(elem.to_owned());
         }
-        SafePush {
+        let memory = SafePush {
             data_type: data_type.clone(),
         }
-        .link_and_run_tasm_for_test(&mut stack, vec![], vec![], &mut memory, None)
-        .unwrap();
+        .link_and_run_tasm_for_test(&mut stack, vec![], vec![], memory, None)
+        .unwrap()
+        .final_ram;
         assert_eq!(
             empty_stack()[DIGEST_LENGTH..],
             stack[DIGEST_LENGTH..],
@@ -185,11 +188,12 @@ mod tests {
 
         // Get another list in memory
         stack.push(capacity_as_bfe);
-        SafeNew {
+        let memory = SafeNew {
             data_type: data_type.clone(),
         }
-        .link_and_run_tasm_for_test(&mut stack, vec![], vec![], &mut memory, None)
-        .unwrap();
+        .link_and_run_tasm_for_test(&mut stack, vec![], vec![], memory, None)
+        .unwrap()
+        .final_ram;
         let second_list = stack.pop().unwrap();
 
         // Verify that expected number of VM words were allocated for the first list
@@ -206,9 +210,10 @@ mod tests {
         for elem in digest2.values().iter().rev() {
             stack.push(elem.to_owned());
         }
-        SafePush { data_type }
-            .link_and_run_tasm_for_test(&mut stack, vec![], vec![], &mut memory, None)
-            .unwrap();
+        let memory = SafePush { data_type }
+            .link_and_run_tasm_for_test(&mut stack, vec![], vec![], memory, None)
+            .unwrap()
+            .final_ram;
         assert_eq!(
             empty_stack()[DIGEST_LENGTH..],
             stack[DIGEST_LENGTH..],

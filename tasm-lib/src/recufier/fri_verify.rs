@@ -1342,6 +1342,10 @@ mod test {
 
         let (stack, memory, nondeterminism, stdin, sponge_state) =
             procedure.pseudorandom_initial_state(seed, None);
+        assert!(
+            memory.is_empty() || nondeterminism.ram.is_empty(),
+            "temporary assert until the testing framework has been reworked"
+        );
 
         let init_stack = stack.to_vec();
         let words_statically_allocated = 0;
@@ -1362,8 +1366,7 @@ mod test {
             &shadowed_procedure,
             &stack,
             &stdin,
-            &nondeterminism,
-            &memory,
+            nondeterminism,
             &sponge_state,
             words_statically_allocated,
         );

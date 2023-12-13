@@ -492,7 +492,7 @@ mod test {
             let stdin = vec![];
 
             let init_stack = stack.to_vec();
-            let nondeterminism = NonDeterminism::new(vec![]);
+            let nondeterminism = NonDeterminism::default().with_ram(memory.clone());
             let words_statically_allocated = 3;
 
             let rust = rust_final_state(
@@ -510,8 +510,7 @@ mod test {
                 &function,
                 &stack,
                 &stdin,
-                &nondeterminism,
-                &memory,
+                nondeterminism,
                 &None,
                 words_statically_allocated,
             );

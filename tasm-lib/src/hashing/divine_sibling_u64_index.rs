@@ -189,8 +189,7 @@ mod tests {
                 &shadowed_procedure,
                 &init_stack,
                 &[],
-                &non_determinism,
-                &HashMap::default(),
+                non_determinism,
                 &None,
                 0,
             );

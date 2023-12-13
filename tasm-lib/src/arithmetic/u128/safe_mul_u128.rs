@@ -32,10 +32,6 @@ impl DeprecatedSnippet for SafeMulU128 {
         vec![DataType::U128, DataType::U128]
     }
 
-    fn output_types(&self) -> Vec<DataType> {
-        vec![DataType::U128]
-    }
-
     fn output_field_names(&self) -> Vec<String> {
         vec![
             "prod_0".to_string(),
@@ -43,6 +39,10 @@ impl DeprecatedSnippet for SafeMulU128 {
             "prod_2".to_string(),
             "prod_3".to_string(),
         ]
+    }
+
+    fn output_types(&self) -> Vec<DataType> {
+        vec![DataType::U128]
     }
 
     fn stack_diff(&self) -> isize {
@@ -481,7 +481,7 @@ mod tests {
                 &mut init_stack,
                 vec![],
                 vec![],
-                &mut HashMap::default(),
+                HashMap::default(),
                 Some(1),
             ) {
                 Ok(_) => panic!("Overflow must result in error"),
@@ -515,7 +515,7 @@ mod tests {
                 &mut init_stack,
                 vec![],
                 vec![],
-                &mut HashMap::default(),
+                HashMap::default(),
                 Some(1),
             ) {
                 Ok(_) => panic!("Overflow must result in error"),
@@ -554,7 +554,7 @@ mod tests {
                     &mut init_stack_no_overflow,
                     vec![],
                     vec![],
-                    &mut HashMap::default(),
+                    HashMap::default(),
                     Some(1),
                 ) {
                     Ok(_) => (),
@@ -605,7 +605,7 @@ mod tests {
                         &mut init_stack,
                         vec![],
                         vec![],
-                        &mut HashMap::default(),
+                        HashMap::default(),
                         Some(1),
                     ) {
                         Ok(_) => {
@@ -627,7 +627,7 @@ mod tests {
                         &mut init_stack_mirrored,
                         vec![],
                         vec![],
-                        &mut HashMap::default(),
+                        HashMap::default(),
                         Some(1),
                     ) {
                         Ok(_) => {
@@ -680,7 +680,7 @@ mod tests {
                 &mut init_stack,
                 vec![],
                 vec![],
-                &mut HashMap::default(),
+                HashMap::default(),
                 Some(1),
             ) {
                 Ok(_) => panic!("Overflow must result in error. lhs = {lhs} , rhs = {rhs} "),

@@ -198,6 +198,7 @@ mod tests {
 
     #[test]
     fn get_simple_1() {
+        color_eyre::install().unwrap();
         let list_address = BFieldElement::new(48);
         for i in 0..10 {
             prop_get(DataType::Bfe, list_address, i, 10);
@@ -243,9 +244,7 @@ mod tests {
         let mut rng = thread_rng();
         let mut j = 1;
         for _ in 0..list_length {
-            let element = (0..element_size)
-                .map(|_| BFieldElement::new(rng.next_u64()))
-                .collect_vec();
+            let element = (0..element_size).map(|_| rng.gen()).collect_vec();
             for elem in element.iter() {
                 memory.insert(list_pointer + BFieldElement::new(j), *elem);
                 j += 1;
@@ -255,7 +254,6 @@ mod tests {
             unsafe_list_get(list_pointer, index as usize, &memory, element_size);
 
         let mut expected_end_stack = empty_stack();
-
         for i in 0..element_size {
             expected_end_stack.push(targeted_element[element_size - 1 - i]);
         }
