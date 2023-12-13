@@ -500,7 +500,6 @@ mod test {
                 &stack,
                 &stdin,
                 &nondeterminism,
-                &memory,
                 &None,
                 words_statically_allocated,
             );

@@ -209,7 +209,6 @@ pub trait DeprecatedSnippet {
             std_in,
             nondeterminism,
             None,
-            words_allocated,
         );
         Ok(final_state)
     }

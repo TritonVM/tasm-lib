@@ -78,12 +78,17 @@ where
                 .pseudorandom_initial_state(seed, None);
 
             let stdin = vec![];
+            let non_determinism = NonDeterminism {
+                individual_tokens: vec![],
+                digests: vec![],
+                ram: memory,
+            };
             test_rust_equivalence_given_complete_state(
                 self,
                 &stack,
                 &stdin,
-                &NonDeterminism::new(vec![]),
-                &memory,
+                &non_determinism,
+                &HashMap::default(),
                 &None,
                 1,
                 None,

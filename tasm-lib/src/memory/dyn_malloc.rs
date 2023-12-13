@@ -187,7 +187,7 @@ mod tests {
         let mut non_empty_memory_state =
             ExecutionState::with_stack_and_memory(init_stack, HashMap::default(), 100);
         DynMalloc.link_and_run_tasm_from_state_for_test(&mut non_empty_memory_state);
-        assert_eq!(100, non_empty_memory_state.stack.pop().unwrap().value());
+        assert_eq!(101, non_empty_memory_state.stack.pop().unwrap().value());
     }
 }
 

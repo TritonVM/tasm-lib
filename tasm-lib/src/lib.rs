@@ -242,7 +242,6 @@ pub fn execute_test(
     std_in: Vec<BFieldElement>,
     nondeterminism: NonDeterminism<BFieldElement>,
     maybe_sponge_state: Option<VmHasherState>,
-    initialize_dynamic_allocator_to: Option<usize>,
 ) -> VmOutputState {
     let initial_stack_height = stack.len();
     let public_input = PublicInput::new(std_in.clone());
@@ -369,50 +368,4 @@ fn prove_and_verify(
         "Generated proof must verify for program:\n {}",
         program,
     );
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::dyn_malloc::DYN_MALLOC_ADDRESS;
-
-    use super::*;
-
-    #[test]
-    fn initialize_dyn_malloc() {
-        let initial_dyn_malloc_value = 14;
-        let VmOutputState { final_ram, .. } = execute_test(
-            &triton_asm!(halt),
-            &mut empty_stack(),
-            0,
-            vec![],
-            NonDeterminism::default(),
-            None,
-            Some(initial_dyn_malloc_value),
-        );
-        assert_eq!(
-            initial_dyn_malloc_value,
-            final_ram
-                .get(&BFieldElement::new(DYN_MALLOC_ADDRESS as u64))
-                .unwrap_or(&BFieldElement::new(0))
-                .value() as usize
-        );
-    }
-
-    #[test]
-    fn do_not_initialize_dyn_malloc() {
-        // Ensure that dyn malloc is not initialized if no such initialization is requested
-        let VmOutputState { final_ram, .. } = execute_test(
-            &triton_asm!(halt),
-            &mut empty_stack(),
-            0,
-            vec![],
-            NonDeterminism::default(),
-            None,
-            None,
-        );
-        assert!(final_ram
-            .get(&BFieldElement::new(DYN_MALLOC_ADDRESS as u64))
-            .unwrap_or(&BFieldElement::zero())
-            .is_zero());
-    }
 }

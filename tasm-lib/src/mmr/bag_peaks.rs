@@ -76,7 +76,6 @@ impl BasicSnippet for BagPeaks {
         // BEFORE: _ *peaks
         // AFTER: _ d4 d3 d2 d1 d0
         {entrypoint}:
-
             dup 0  // _ *peaks *peaks
             call {get_length} // _ *peaks length
 

@@ -147,7 +147,6 @@ pub fn link_and_run_tasm_for_test_deprecated<T: DeprecatedSnippet>(
         std_in,
         nondeterminism,
         None,
-        Some(words_statically_allocated),
     )
 }
 
@@ -330,16 +329,15 @@ pub fn rust_final_state<T: RustShadow>(
     stack: &[BFieldElement],
     stdin: &[BFieldElement],
     nondeterminism: &NonDeterminism<BFieldElement>,
-    memory: &HashMap<BFieldElement, BFieldElement>,
     sponge_state: &Option<VmHasherState>,
     words_statically_allocated: usize,
 ) -> VmOutputState {
-    let mut rust_memory = memory.clone();
+    let mut rust_memory = nondeterminism.ram.clone();
     let mut rust_stack = stack.to_vec();
     let mut rust_sponge = sponge_state.clone();
 
-    // allocate memory, if necessary
-    if words_statically_allocated > 0 && memory.get(&BFieldElement::zero()).is_none() {
+    // Initialiaze allocator, if necessary
+    if words_statically_allocated > 0 && rust_memory.get(&BFieldElement::zero()).is_none() {
         rust_shadowing_helper_functions::dyn_malloc::rust_dyn_malloc_initialize(
             &mut rust_memory,
             words_statically_allocated,
@@ -486,14 +484,19 @@ pub fn test_rust_equivalence_given_complete_state<T: RustShadow>(
     words_statically_allocated: usize,
     expected_final_stack: Option<&[BFieldElement]>,
 ) -> VmOutputState {
+    assert!(
+        nondeterminism.ram.is_empty() || memory.is_empty(),
+        "Cannot initiate state with both nondeterministic RAM and `memory`. Please pick one."
+    );
     let init_stack = stack.to_vec();
+    let mut nondeterminism = nondeterminism.to_owned();
+    nondeterminism.ram.extend(memory.iter());
 
     let rust = rust_final_state(
         shadowed_snippet,
         stack,
         stdin,
-        nondeterminism,
-        memory,
+        &nondeterminism,
         sponge_state,
         words_statically_allocated,
     );
@@ -540,7 +543,6 @@ pub fn link_and_run_tasm_for_test<T: RustShadow>(
         std_in,
         nondeterminism,
         maybe_sponge_state,
-        None,
     )
 }
 

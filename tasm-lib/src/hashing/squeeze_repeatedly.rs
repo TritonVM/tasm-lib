@@ -153,8 +153,13 @@ mod test {
         for _ in 0..num_states {
             let seed: [u8; 32] = rng.gen();
             println!("testing {} common case with seed: {:x?}", entrypoint, seed);
-            let (stack, memory, nondeterminism, stdin, sponge_state) =
+            let (stack, memory, mut nondeterminism, stdin, sponge_state) =
                 SqueezeRepeatedly.pseudorandom_initial_state(seed, None);
+            assert!(
+                memory.is_empty() || nondeterminism.ram.is_empty(),
+                "temporary assert until the testing framework has been reworked"
+            );
+            nondeterminism.ram.extend(memory.iter());
 
             let init_stack = stack.to_vec();
             let words_statically_allocated = 0;
@@ -164,7 +169,6 @@ mod test {
                 &stack,
                 &stdin,
                 &nondeterminism,
-                &memory,
                 &sponge_state,
                 words_statically_allocated,
             );
