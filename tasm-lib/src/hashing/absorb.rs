@@ -8,26 +8,24 @@ use twenty_first::{
     util_types::algebraic_hasher::SpongeHasher,
 };
 
+use crate::data_type::DataType;
 use crate::{
-    empty_stack,
-    procedure::Procedure,
-    snippet::{BasicSnippet, DataType},
-    snippet_bencher::BenchmarkCase,
+    empty_stack, procedure::Procedure, snippet::BasicSnippet, snippet_bencher::BenchmarkCase,
     VmHasher, VmHasherState,
 };
 
 /// Absorb a sequence of field elements stored in memory, into the sponge state.
-pub struct Absorb {}
+pub struct Absorb;
 
 impl BasicSnippet for Absorb {
-    fn inputs(&self) -> Vec<(crate::snippet::DataType, String)> {
+    fn inputs(&self) -> Vec<(crate::data_type::DataType, String)> {
         vec![
             (DataType::VoidPointer, "*sequence".to_string()),
             (DataType::U32, "len".to_string()),
         ]
     }
 
-    fn outputs(&self) -> Vec<(crate::snippet::DataType, String)> {
+    fn outputs(&self) -> Vec<(crate::data_type::DataType, String)> {
         vec![]
     }
 
@@ -37,173 +35,165 @@ impl BasicSnippet for Absorb {
 
     fn code(
         &self,
-        _library: &mut crate::library::Library,
+        library: &mut crate::library::Library,
     ) -> Vec<triton_vm::instruction::LabelledInstruction> {
+        let address_pointer = library.kmalloc(1);
+        let length_pointer = library.kmalloc(1);
+        let pre_first_chunk_pointer_pointer = library.kmalloc(1);
+        let num_remaining_absorbs_pointer = library.kmalloc(1);
+
         let entrypoint = self.entrypoint();
-        let main_loop = format!("{entrypoint}_loop");
         let pad_varnum_zeros = format!("{entrypoint}_pad_varnum_zeros");
-        let read_remaining_elements = format!("{entrypoint}_read_remaining_elements");
+        let read_remainder = format!("{entrypoint}_read_remainder");
+        let read_remainder_loop = format!("{read_remainder}_loop");
+        let read_full_chunks = format!("{entrypoint}_read_full_chunks");
+        let absorb_all_chunks = format!("{entrypoint}_absorb_all_chunks");
+
         triton_asm! {
             // BEFORE: _ *addr length
-            // AFTER: _
+            // AFTER:  _
             {entrypoint}:
+                dup 0       // *addr length length
+                push {length_pointer}
+                write_mem 1
+                pop 1       // _ *addr length
+                swap 1      // _ length *addr
 
-                // absorb all chunks of 10 elements
-                call {main_loop}
-                // _ *new_addr length_remaining
+                dup 0
+                push -1
+                add
+                push {pre_first_chunk_pointer_pointer}
+                write_mem 1
+                pop 1       // _ length *addr
 
-                // pad
-                dup 0   // _ *addr length length
-                push -9 // _ *addr length length -9
-                add     // _ *addr length length-9
-                push -1 // _ *addr length length-9 -1
-                mul     // _ *addr length 9-length
-                dup 2   // _ *addr length 9-length *addr
-                dup 2   // _ *addr length 9-length *addr length
+                push {address_pointer}
+                write_mem 1
+                pop 1       // _ length
 
+                push 10
+                swap 1
+                div_mod     // _ length/10 length%10
+                swap 1      // _ length%10 length/10
+
+                push 1
+                add
+                push {num_remaining_absorbs_pointer}
+                write_mem 1
+                pop 1       // _ length%10
+
+                push -1
+                mul
+                push 9
+                add         // _ 9-length%10
                 call {pad_varnum_zeros}
-                // _ addr length 0^(9-length) 0 *addr length
-                swap 2      // _ *addr length 0^(9-length) length *addr 0
-                push 1 add  // _ *addr length 0^(9-length) length *addr 1
-                swap 2      // _ *addr length 0^(9-length) 1 *addr length
+                pop 1       // _ [0; num_pad_zeros]
+                push 1      // _ [padding]
 
-                // read remaining elements from memory
-                call {read_remaining_elements}
-                // _ *addr length 0^(9-length) 1 re^length *addr 0
+                call {read_remainder}
+                // _ [padding] [remainder] *last_chunk_end
 
-                pop pop // _ *addr length 0^(9-length) 1 re^length
-                sponge_absorb
+                call {read_full_chunks}
+                pop 1       // _ [padding] [remainder] [[chunk]]
 
-                // _ *addr length 0^(9-length) 1 re^length
-
-                pop pop pop
-                pop pop pop
-                pop pop pop
-                pop pop pop
-
+                call {absorb_all_chunks}
+                pop 1
                 return
 
-            // BEFORE: _ *addr length 9-length *addr length
-            // INVARIANT: _ *addr length 0^(9-len) len *addr length
-            // AFTER: _ addr length 0^(9-length) 0 *addr length
+            // BEFORE:    _ len
+            // INVARIANT: _ [0; 9-len'] len'
+            // AFTER:     _ [0; 9-len] 0
             {pad_varnum_zeros}:
-
-                // evaluate return condition
-                dup 2       // _ *addr length 0^(9-len) len *addr length len
-                push 0 eq   // _ *addr length 0^(9-len) len *addr length len==0
+                dup 0       // _ [0; 9-len] len len
+                push 0 eq   // _ [0; 9-len] len len==0
                 skiz return
+                // _ [0; 9-len] len
 
-                // _ *addr length 0^(9-len) len *addr length
-                push 0  // _ *addr length 0^(9-len) len *addr length 0
-                swap 3  // _ *addr length 0^(9-len) 0 *addr length len
-                push -1 // _ *addr length 0^(9-len) 0 *addr length len -1
-                add     // _ *addr length 0^(9-len) 0 *addr length len-1
-                swap 2  // _ *addr length 0^(9-len) 0 len-1 length *addr
-                swap 1  // _ *addr length 0^(9-len) 0 len-1 *addr length
-                // _ *addr length 0^(9-len) len-1 *addr length
-
-                recurse
-
-            // BEFORE: _ *addr length 0^(9-length) 1 *addr length
-            // AFTER: _ *addr length 0^(9-length) 1 re^length *addr 0
-            {read_remaining_elements}:
-                // evaluate return condition
-                dup 0       // _ *addr length 0^(9-length) 1 re^* *addr length length
-                push 0 eq   // _ *addr length 0^(9-length) 1 re^* *addr length length==0
-
-                skiz return
-
-                // _ *addr length 0^(9-length) 1 re^* *addr length
-
-                dup 1       // _ *addr length 0^(9-length) 1 re^* *addr length *addr
-                dup 1       // _ *addr length 0^(9-length) 1 re^* *addr length *addr length
-                add         // _ *addr length 0^(9-length) 1 re^* *addr length *addr+length
-                push -1 add // _ *addr length 0^(9-length) 1 re^* *addr length *addr+length-1
-                read_mem    // _ *addr length 0^(9-length) 1 re^* *addr length *addr+length-1 re
-                swap 3
-                swap 2
+                push 0
                 swap 1
-                            // _ *addr length 0^(9-length) 1 re^* re *addr length *addr+length-1
-                pop         // _ *addr length 0^(9-length) 1 re^* re *addr length
-                push -1 add // _ *addr length 0^(9-length) 1 re^* re *addr length-1
-                // _ *addr length 0^(9-length) 1 re^* *addr length-1
-
+                push -1
+                add
                 recurse
 
-            // BEFORE: _ *addr length
-            // AFTER: _ *addr length
-            {main_loop}:
-                // termination condition: 10 or more elements remaining?
-                push 10 // _ *addr length 10
-                dup 1 // _ *addr length 10 length
-                lt // _ *addr length (length < 10)
+            // BEFORE: _
+            // AFTER:  _ [elements; remainder_length] *last_chunk_end
+            {read_remainder}:
+                push {address_pointer}
+                read_mem 1
+                pop 1       // _ *addr
+                push {length_pointer}
+                read_mem 1
+                pop 1       // _ *addr length
 
-                // check condition
-                skiz
-                    return
-                // _ *addr length
+                swap 1      // _ length *addr
+                dup 1       // _ length *addr length
+                add         // _ length *(addr + length)
+                push -1     // _ length *(addr + length) -1
+                add         // _ length *last_addr
+                swap 1      // _ *last_addr length
 
-                // body
-                // read 10 elements to stack
-                swap 1   // _ length *addr
-                dup 0    // _ length *addr *addr
-                push 9   // _ length *addr *addr 9
-                add      // _ length *addr (*addr+9)
-                read_mem // _ length *addr (*addr+9) element_9
-                swap 1   // _ length *addr element_9 (*addr+9)
-                push -1  // _ length *addr element_9 (*addr+9) -1
-                add      // _ length *addr element_9 (*addr+8)
-                read_mem // _ length *addr element_9 (*addr+8) element_8
-                swap 1   // _ length *addr element_9 element_8 (*addr+8)
-                push -1  // _ length *addr element_9 element_8 (*addr+8) -1
-                add      // _ length *addr element_9 element_8 (*addr+7)
-                read_mem // _ length *addr element_9 element_8 (*addr+7) element_7
-                swap 1   // _ length *addr element_9 element_8 element_7 (*addr+7)
-                push -1  // _ length *addr element_9 element_8 element_7 (*addr+7) -1
-                add      // _ length *addr element_9 element_8 element_7 (*addr+6)
-                read_mem // _ length *addr element_9 element_8 element_7 (*addr+6) element_6
-                swap 1   // _ length *addr element_9 element_8 element_7 element_6 (*addr+6)
-                push -1  // _ length *addr element_9 element_8 element_7 element_6 (*addr+6) -1
-                add      // _ length *addr element_9 element_8 element_7 element_6 (*addr+5)
-                read_mem // _ length *addr element_9 element_8 element_7 element_6 (*addr+5) element_5
-                swap 1   // _ length *addr element_9 element_8 element_7 element_6 element_5 (*addr+5)
-                push -1  // _ length *addr element_9 element_8 element_7 element_6 element_5 (*addr+5) -1
-                add      // _ length *addr element_9 element_8 element_7 element_6 element_5 (*addr+4)
-                read_mem // _ length *addr element_9 element_8 element_7 element_6 element_5 (*addr+4) element_4
-                swap 1   // _ length *addr element_9 element_8 element_7 element_6 element_5 element_4 (*addr+4)
-                push -1  // _ length *addr element_9 element_8 element_7 element_6 element_5 element_4 (*addr+4) -1
-                add      // _ length *addr element_9 element_8 element_7 element_6 element_5 element_4 (*addr+3)
-                read_mem // _ length *addr element_9 element_8 element_7 element_6 element_5 element_4 (*addr+3) element_3
-                swap 1   // _ length *addr element_9 element_8 element_7 element_6 element_5 element_4 element_3 (*addr+3)
-                push -1  // _ length *addr element_9 element_8 element_7 element_6 element_5 element_4 element_3 (*addr+3) -1
-                add      // _ length *addr element_9 element_8 element_7 element_6 element_5 element_4 element_3 (*addr+2)
-                read_mem // _ length *addr element_9 element_8 element_7 element_6 element_5 element_4 element_3 (*addr+2) element_2
-                swap 1   // _ length *addr element_9 element_8 element_7 element_6 element_5 element_4 element_3 element_2 (*addr+2)
-                push -1  // _ length *addr element_9 element_8 element_7 element_6 element_5 element_4 element_3 element_2 (*addr+2) -1
-                add      // _ length *addr element_9 element_8 element_7 element_6 element_5 element_4 element_3 element_2 (*addr+1)
-                read_mem // _ length *addr element_9 element_8 element_7 element_6 element_5 element_4 element_3 element_2 (*addr+1) element_1
-                swap 1   // _ length *addr element_9 element_8 element_7 element_6 element_5 element_4 element_3 element_2 element_1 (*addr+1)
-                push -1  // _ length *addr element_9 element_8 element_7 element_6 element_5 element_4 element_3 element_2 element_1 (*addr+1) -1
-                add      // _ length *addr element_9 element_8 element_7 element_6 element_5 element_4 element_3 element_2 element_1 *addr
-                read_mem // _ length *addr element_9 element_8 element_7 element_6 element_5 element_4 element_3 element_2 element_1 *addr element_0
-                swap 1   // _ length *addr element_9 element_8 element_7 element_6 element_5 element_4 element_3 element_2 element_1 element_0 *addr
-                pop      // _ length *addr element_9 element_8 element_7 element_6 element_5 element_4 element_3 element_2 element_1 element_0
+                push 10
+                swap 1
+                div_mod
+                swap 1
+                pop 1       // _ *last_addr length%10
+                swap 1      // _ length%10 *last_addr
+
+                call {read_remainder_loop}
+                // _ [elements; remainder_length] 0 *last_chunk_end
+                swap 1
+                pop 1       // _ [elements; remainder_length] *last_chunk_end
+                return
+
+            // BEFORE:    _ remainder_length *addr
+            // INVARIANT: _ [elements; num_elements_read] num_elements_to_read *some_addr
+            // AFTER:     _ [elements; remainder_length] 0 *last_chunk_end
+            {read_remainder_loop}:
+                dup 1
+                push 0
+                eq
+                skiz return
+                // _ [elements; num_elements_read] num_elements_to_read *addr
+                read_mem 1  // _ [elements; num_elements_read] num_elements_to_read element *(addr-1)
+                swap 1      // _ [elements; num_elements_read] num_elements_to_read *(addr-1) element
+                swap 2      // _ [elements; num_elements_read+1] *(addr-1) num_elements_to_read
+                push -1
+                add
+                swap 1
+                recurse     // _ [elements; num_elements_read+1] (num_elements_to_read-1) *(addr-1)
+
+
+            // BEFORE:    _ *last_chunk_addr
+            // INVARIANT: _ [[chunk]] *some_addr
+            // AFTER:     _ [[chunk]; length/10] *pre_first_chunk_pointer
+            {read_full_chunks}:
+                dup 0
+                push {pre_first_chunk_pointer_pointer}
+                read_mem 1
+                pop 1       // _ *some_addr *some_addr *pre_first_chunk_pointer
+                eq
+                skiz return
+                read_mem 5
+                read_mem 5
+                recurse
+
+            // BEFORE: _ [[chunks]]
+            // AFTER:  _ 0
+            {absorb_all_chunks}:
+                push {num_remaining_absorbs_pointer}
+                read_mem 1
+                pop 1       // _ [[chunks]] num_remaining_absorbs
+                dup 0       // _ [[chunks]] num_remaining_absorbs num_remaining_absorbs
+                push 0
+                eq          // _ [[chunks]] num_remaining_absorbs (num_remaining_absorbs == 0)
+                skiz return
+                push -1
+                add         // _ [[chunks]] (num_remaining_absorbs-1)
+                push {num_remaining_absorbs_pointer}
+                write_mem 1
+                pop 1
 
                 sponge_absorb
-
-                // _ length *addr element_9 element_8 element_7 element_6 element_5 element_4 element_3 element_2 element_1 element_0
-
-                pop pop pop pop pop pop pop pop pop pop
-                // _ length *addr
-
-                push 10  // _ length *addr 10
-                add      // _ length (*addr+10)
-                swap 1   // _ (*addr+10) length
-                push -10 // _ (*addr+10) length -10
-                add      // _ (*addr+10) (length-10)
-
                 recurse
-
         }
     }
 }
@@ -215,7 +205,7 @@ impl Procedure for Absorb {
         memory: &mut HashMap<BFieldElement, BFieldElement>,
         _nondeterminism: &NonDeterminism<BFieldElement>,
         _public_input: &[BFieldElement],
-        sponge_state: &mut VmHasherState,
+        sponge_state: &mut Option<VmHasherState>,
     ) -> Vec<BFieldElement> {
         // read arguments
         let length = stack.pop().unwrap().value() as usize;
@@ -239,6 +229,9 @@ impl Procedure for Absorb {
         }
 
         // absorb into sponge state
+        let Some(sponge_state) = sponge_state else {
+            panic!("sponge must be initialized")
+        };
         VmHasher::absorb_repeatedly(sponge_state, sequence.iter());
 
         // output empty
@@ -254,7 +247,7 @@ impl Procedure for Absorb {
         HashMap<BFieldElement, BFieldElement>,
         NonDeterminism<BFieldElement>,
         Vec<BFieldElement>,
-        VmHasherState,
+        Option<VmHasherState>,
     ) {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
 
@@ -293,7 +286,7 @@ impl Procedure for Absorb {
             memory,
             NonDeterminism::new(vec![]),
             vec![],
-            vm_hasher_state,
+            Some(vm_hasher_state),
         )
     }
 }
@@ -306,6 +299,6 @@ mod test {
 
     #[test]
     fn test() {
-        ShadowedProcedure::new(Absorb {}).test();
+        ShadowedProcedure::new(Absorb).test();
     }
 }

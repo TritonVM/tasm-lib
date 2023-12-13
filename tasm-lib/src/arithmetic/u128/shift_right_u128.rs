@@ -2,12 +2,9 @@ use rand::random;
 use triton_vm::BFieldElement;
 use twenty_first::amount::u32s::U32s;
 
+use crate::data_type::DataType;
 use crate::{
-    empty_stack,
-    library::Library,
-    push_encodable,
-    snippet::{DataType, DeprecatedSnippet},
-    ExecutionState,
+    empty_stack, library::Library, push_encodable, snippet::DeprecatedSnippet, ExecutionState,
 };
 
 pub struct ShiftRightU128;
@@ -27,11 +24,11 @@ impl DeprecatedSnippet for ShiftRightU128 {
         ]
     }
 
-    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+    fn input_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::U128, DataType::U32]
     }
 
-    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+    fn output_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::U128]
     }
 
@@ -53,7 +50,7 @@ impl DeprecatedSnippet for ShiftRightU128 {
         format!(
             "
             // BEFORE: _ v_3 v_2 v_1 v_0 shift
-            // AFTER: _ (v >> shift)_3 (v >> shift)_2 (v >> shift)_1 (v >> shift)_0
+            // AFTER:  _ (v >> shift)_3 (v >> shift)_2 (v >> shift)_1 (v >> shift)_0
             {entrypoint}:
                 // Bounds check: Verify that shift amount is less than 128.
                 push 128
@@ -90,7 +87,7 @@ impl DeprecatedSnippet for ShiftRightU128 {
 
                 mul
                 split
-                pop
+                pop 1
                 // _ (2 ^ (32 - shift)) v_3 v_2 v_1 (v_0 >> shift)
 
                 swap 1
@@ -124,7 +121,7 @@ impl DeprecatedSnippet for ShiftRightU128 {
 
                 // _ (2 ^ (32 - shift)) (v >> shift)_1 (v >> shift)_0 (v >> shift)_3 (v >> shift)_2
 
-                swap 1 swap 4 pop
+                swap 1 swap 4 pop 1
                 // _ (v >> shift)_3 (v >> shift)_1 (v >> shift)_0 (v >> shift)_2
 
                 swap 2 swap 1

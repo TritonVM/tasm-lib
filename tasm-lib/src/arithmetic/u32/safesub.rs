@@ -2,11 +2,8 @@ use num::Zero;
 use rand::{thread_rng, Rng};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
-use crate::{
-    empty_stack,
-    snippet::{DataType, DeprecatedSnippet},
-    ExecutionState,
-};
+use crate::data_type::DataType;
+use crate::{empty_stack, snippet::DeprecatedSnippet, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct Safesub;
@@ -24,11 +21,11 @@ impl DeprecatedSnippet for Safesub {
         vec!["lhs - rhs".to_string()]
     }
 
-    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+    fn input_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::U32, DataType::U32]
     }
 
-    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+    fn output_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::U32]
     }
 
@@ -41,15 +38,15 @@ impl DeprecatedSnippet for Safesub {
         format!(
             "
                 // BEFORE: _ rhs lhs
-                // AFTER: _ (lhs - rhs)
+                // AFTER:  _ (lhs - rhs)
                 {entrypoint}:
                     swap 1
                     push -1
                     mul
                     add
-                    dup 0 // _   (lhs - rhs) (lhs - rhs)
-                    split // _  (lhs - rhs) hi lo
-                    pop   // _  (lhs - rhs) hi
+                    dup 0  // _ (lhs - rhs) (lhs - rhs)
+                    split  // _ (lhs - rhs) hi lo
+                    pop 1  // _ (lhs - rhs) hi
                     push 0 // _ (lhs - rhs) hi 0
                     eq     // _ (lhs - rhs) (hi == 0)
                     assert // _ (lhs - rhs)

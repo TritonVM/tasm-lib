@@ -31,7 +31,7 @@ pub trait Procedure: BasicSnippet {
         memory: &mut HashMap<BFieldElement, BFieldElement>,
         nondeterminism: &NonDeterminism<BFieldElement>,
         public_input: &[BFieldElement],
-        sponge_state: &mut VmHasherState,
+        sponge_state: &mut Option<VmHasherState>,
     ) -> Vec<BFieldElement>;
 
     fn preprocess<T: BFieldCodec>(
@@ -40,7 +40,7 @@ pub trait Procedure: BasicSnippet {
     ) {
     }
 
-    /// Returns (stack, memory, nondeterminism, public_input)
+    /// Returns (stack, memory, nondeterminism, public_input, maybe_vm_hasher_state)
     #[allow(clippy::type_complexity)]
     fn pseudorandom_initial_state(
         &self,
@@ -51,7 +51,7 @@ pub trait Procedure: BasicSnippet {
         HashMap<BFieldElement, BFieldElement>,
         NonDeterminism<BFieldElement>,
         Vec<BFieldElement>,
-        VmHasherState,
+        Option<VmHasherState>,
     );
 }
 
@@ -78,7 +78,7 @@ impl<P: Procedure + 'static> RustShadow for ShadowedProcedure<P> {
         nondeterminism: &NonDeterminism<BFieldElement>,
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
-        sponge_state: &mut VmHasherState,
+        sponge_state: &mut Option<VmHasherState>,
     ) -> Vec<BFieldElement> {
         self.procedure
             .borrow()
@@ -156,7 +156,7 @@ impl<P: Procedure + 'static> RustShadow for ShadowedProcedure<P> {
         let mut benchmarks = Vec::with_capacity(2);
 
         for bench_case in [BenchmarkCase::CommonCase, BenchmarkCase::WorstCase] {
-            let (stack, memory, nondeterminism, public_input, _sponge_state) = self
+            let (stack, memory, nondeterminism, public_input, sponge_state) = self
                 .procedure
                 .borrow()
                 .pseudorandom_initial_state(rng.gen(), Some(bench_case));
@@ -169,6 +169,7 @@ impl<P: Procedure + 'static> RustShadow for ShadowedProcedure<P> {
                 nondeterminism,
                 &memory,
                 Some(1),
+                sponge_state,
             );
             let benchmark = BenchmarkResult {
                 name: self.procedure.borrow().entrypoint(),

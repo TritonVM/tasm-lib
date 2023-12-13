@@ -50,15 +50,15 @@ impl DeprecatedSnippet for MemCpy {
         ]
     }
 
-    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+    fn input_types(&self) -> Vec<crate::data_type::DataType> {
         vec![
-            crate::snippet::DataType::VoidPointer,
-            crate::snippet::DataType::VoidPointer,
-            crate::snippet::DataType::U32,
+            crate::data_type::DataType::VoidPointer,
+            crate::data_type::DataType::VoidPointer,
+            crate::data_type::DataType::U32,
         ]
     }
 
-    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+    fn output_types(&self) -> Vec<crate::data_type::DataType> {
         vec![]
     }
 
@@ -78,36 +78,183 @@ impl DeprecatedSnippet for MemCpy {
         // AFTER: _
         {entrypoint}:
 
-            call {entrypoint}_loop // read_source write_dest 0
+            swap 2
+            push 4
+            add
+            swap 2
+            // _ (read_source + 4) write_dest num_words
+
+            call {entrypoint}_loop_cpy5_words
+            // _ read_source write_dest remaining_words
+
+            dup 0
+            push 4
+            eq
+            // _ read_source write_dest remaining_words (remaining_words == 4)
+            skiz
+                call {entrypoint}_cpy4_words
+            // _ read_source write_dest remaining_words
+
+            dup 0
+            push 3
+            eq
+            skiz
+                call {entrypoint}_cpy3_words
+            // _ read_source write_dest remaining_words
+
+            dup 0
+            push 2
+            eq
+            skiz
+                call {entrypoint}_cpy2_words
+            // _ read_source write_dest remaining_words
+
+            dup 0
+            push 1
+            eq
+            skiz
+                call {entrypoint}_cpy1_word
+            // read_source write_dest 0
 
             // clean up stack
-            pop pop pop
+            pop 3
+
             return
 
-        // INVARIANT:  _ read_source write_dest remaining_words
-        {entrypoint}_loop:
+        // INVARIANT:  _ (read_source + 4) write_dest remaining_words
+        {entrypoint}_loop_cpy5_words:
             // termination condition
-            dup 0 push 0 eq // _ read_source write_dest remaining_words remaining_words==0
+            push 5
+            dup 1
+            lt
+            // _ (read_source + 4) write_dest remaining_words (5 > remaining_words)
+
             skiz return
+            // _ (read_source + 4) write_dest remaining_words
 
             // read
-            swap 2 // _ remaining_words write_dest read_source
-            read_mem // _ remaining_words write_dest read_source value
+            swap 2     // _ remaining_words write_dest (read_source + 4)
+            read_mem 5 // _ remaining_words write_dest [val4 val3 val2 val1 val0] (read_source - 1)
+            push 10 add // _ remaining_words write_dest [val4 val3 val2 val1 val0] (read_source + 9)
 
             // write
-            swap 1 // _ remaining_words write_dest value read_source
-            push 1 add // _ remaining_words write_dest value read_source+1
-            swap 3 // _ read_source+1 write_dest value remaining_words
-            swap 2 // _ read_source+1 remaining_words value write_dest
-            swap 1 //  _ read_source+1 remaining_words write_dest value
-            write_mem //  _ read_source+1 remaining_words write_dest
+            swap 7 // _ (read_source + 9) write_dest [val4 val3 val2 val1 val0] remaining_words
+            swap 6 // _ (read_source + 9) remaining_words [val4 val3 val2 val1 val0] write_dest
+            write_mem 5 //  _ (read_source + 9) remaining_words (write_dest + 5)
 
-            push 1 add // _ read_source+1 remaining_words write_dest+1
-            swap 1 // _ read_source+1 write_dest+1 remaining_words
+            swap 1 // _ (read_source + 9) (write_dest + 5) remaining_words
 
-            push -1 add // _ read_source+1 write_dest+1 remaining_words-1
+            push -5 add // _ (read_source + 9) (write_dest + 5) (remaining_words-5)
 
             recurse
+
+        {entrypoint}_cpy4_words:
+            // (read_source + 4) write_dest remaining_words
+
+            pop 1
+            // (read_source + 4) write_dest
+
+            // read
+            swap 1
+            // write_dest (read_source + 4)
+
+            push -1 add
+            // write_dest (read_source + 3)
+
+            read_mem 4
+            // write_dest [values] (read_source - 1)
+
+            swap 5
+            // (read_source - 1) [values] write_dest
+
+            write_mem 4
+            // (read_source - 1) (write_dest + 4)
+
+            push 0
+            // read_source' write_dest' remaining_words
+
+            return
+
+        {entrypoint}_cpy3_words:
+            // (read_source + 4) write_dest remaining_words
+
+            pop 1
+            // (read_source + 4) write_dest
+
+            // read
+            swap 1
+            // write_dest (read_source + 4)
+
+            push -2 add
+            // write_dest (read_source + 2)
+
+            read_mem 3
+            // write_dest [values] (read_source - 1)
+
+            swap 4
+            // (read_source - 1) [values] write_dest
+
+            write_mem 3
+            // (read_source - 1) (write_dest + 3)
+
+            push 0
+            // read_source' write_dest' remaining_words
+
+            return
+
+        {entrypoint}_cpy2_words:
+            // (read_source + 4) write_dest remaining_words
+
+            pop 1
+            // (read_source + 4) write_dest
+
+            // read
+            swap 1
+            // write_dest (read_source + 4)
+
+            push -3 add
+            // write_dest (read_source + 1)
+
+            read_mem 2
+            // write_dest [values] (read_source - 1)
+
+            swap 3
+            // (read_source - 1) [values] write_dest
+
+            write_mem 2
+            // (read_source - 1) (write_dest + 4)
+
+            push 0
+            // read_source' write_dest' remaining_words
+
+            return
+
+        {entrypoint}_cpy1_word:
+            // (read_source + 4) write_dest remaining_words
+
+            pop 1
+            // (read_source + 4) write_dest
+
+            // read
+            swap 1
+            // write_dest (read_source + 4)
+
+            push -4 add
+            // write_dest (read_source)
+
+            read_mem 1
+            // write_dest value (read_source - 1)
+
+            swap 2
+            // (read_source - 1) value write_dest
+
+            write_mem 1
+            // (read_source - 1) (write_dest + 4)
+
+            push 0
+            // read_source' write_dest' remaining_words
+
+            return
         "
         )
     }
@@ -121,7 +268,18 @@ impl DeprecatedSnippet for MemCpy {
         vec![
             Self::random_input_state(1),
             Self::random_input_state(0),
-            Self::random_input_state(rng.gen_range(2..20)),
+            Self::random_input_state(4),
+            Self::random_input_state(2),
+            Self::random_input_state(3),
+            Self::random_input_state(5),
+            Self::random_input_state(6),
+            Self::random_input_state(7),
+            Self::random_input_state(8),
+            Self::random_input_state(9),
+            Self::random_input_state(10),
+            Self::random_input_state(104),
+            Self::random_input_state(rng.gen_range(11..200)),
+            Self::random_input_state(rng.gen_range(11..200)),
         ]
     }
 

@@ -8,10 +8,11 @@ use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
 use twenty_first::util_types::mmr::mmr_trait::Mmr;
 use twenty_first::util_types::mmr::{self, mmr_membership_proof::MmrMembershipProof};
 
-use super::leaf_index_to_mt_index::MmrLeafIndexToMtIndexAndPeakIndex;
+use super::leaf_index_to_mt_index_and_peak_index::MmrLeafIndexToMtIndexAndPeakIndex;
 use crate::arithmetic::u32::isodd::Isodd;
 use crate::arithmetic::u64::div2_u64::Div2U64;
 use crate::arithmetic::u64::eq_u64::EqU64;
+use crate::data_type::DataType;
 use crate::library::Library;
 use crate::list::safeimplu32::get::SafeGet;
 use crate::list::safeimplu32::set::SafeSet;
@@ -19,7 +20,7 @@ use crate::list::unsafeimplu32::get::UnsafeGet;
 use crate::list::unsafeimplu32::set::UnsafeSet;
 use crate::list::ListType;
 use crate::mmr::MAX_MMR_HEIGHT;
-use crate::snippet::{DataType, DeprecatedSnippet};
+use crate::snippet::DeprecatedSnippet;
 use crate::{
     empty_stack, rust_shadowing_helper_functions, Digest, ExecutionState, VmHasher, DIGEST_LENGTH,
 };
@@ -151,7 +152,7 @@ impl DeprecatedSnippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
         ]
     }
 
-    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+    fn input_types(&self) -> Vec<crate::data_type::DataType> {
         vec![
             DataType::List(Box::new(DataType::Digest)),
             DataType::U64,
@@ -161,7 +162,7 @@ impl DeprecatedSnippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
         ]
     }
 
-    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+    fn output_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::List(Box::new(DataType::Digest)), DataType::U64]
     }
 
@@ -204,12 +205,20 @@ impl DeprecatedSnippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
         let u32_is_odd = library.import(Box::new(Isodd));
         let eq_u64 = library.import(Box::new(EqU64));
         let get = match self.list_type {
-            ListType::Safe => library.import(Box::new(SafeGet(DataType::Digest))),
-            ListType::Unsafe => library.import(Box::new(UnsafeGet(DataType::Digest))),
+            ListType::Safe => library.import(Box::new(SafeGet {
+                data_type: DataType::Digest,
+            })),
+            ListType::Unsafe => library.import(Box::new(UnsafeGet {
+                data_type: DataType::Digest,
+            })),
         };
         let set = match self.list_type {
-            ListType::Safe => library.import(Box::new(SafeSet(DataType::Digest))),
-            ListType::Unsafe => library.import(Box::new(UnsafeSet(DataType::Digest))),
+            ListType::Safe => library.import(Box::new(SafeSet {
+                data_type: DataType::Digest,
+            })),
+            ListType::Unsafe => library.import(Box::new(UnsafeSet {
+                data_type: DataType::Digest,
+            })),
         };
         let div_2 = library.import(Box::new(Div2U64));
 
@@ -238,7 +247,7 @@ impl DeprecatedSnippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
                 call {set}
                 // _ *auth_path leaf_index_hi leaf_index_lo *peaks i peak_index mt_index_hi mt_index_lo
 
-                pop pop pop pop pop
+                pop 5
 
                 return
 
@@ -262,7 +271,6 @@ impl DeprecatedSnippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
                     // _ *auth_path leaf_index_hi leaf_index_lo *peaks i peak_index mt_index_hi mt_index_lo [digest (right_node)] [digest (left_node)]
 
                     hash
-                    pop pop pop pop pop
                     // _ *auth_path leaf_index_hi leaf_index_lo *peaks i peak_index mt_index_hi mt_index_lo [digest (new_acc_hash)]
 
                     // i -> i + 1

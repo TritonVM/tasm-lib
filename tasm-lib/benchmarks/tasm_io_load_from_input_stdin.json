@@ -1,16 +1,16 @@
 [
   {
     "name": "tasm_io_load_from_input_stdin",
-    "clock_cycle_count": 6704,
-    "hash_table_height": 0,
-    "u32_table_height": 22,
+    "clock_cycle_count": 318,
+    "hash_table_height": 114,
+    "u32_table_height": 158,
     "case": "CommonCase"
   },
   {
     "name": "tasm_io_load_from_input_stdin",
-    "clock_cycle_count": 106544,
-    "hash_table_height": 0,
-    "u32_table_height": 30,
+    "clock_cycle_count": 13058,
+    "hash_table_height": 114,
+    "u32_table_height": 12400,
     "case": "WorstCase"
   }
 ]

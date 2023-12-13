@@ -1,11 +1,12 @@
 use std::collections::{hash_map::Entry, HashMap};
 
+use crate::data_type::DataType;
 use itertools::Itertools;
 use num::One;
 use triton_vm::instruction::LabelledInstruction;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
-use crate::snippet::{BasicSnippet, DataType, DeprecatedSnippet};
+use crate::snippet::{BasicSnippet, DeprecatedSnippet};
 
 // Ensure that static allocator does not overwrite the address
 // dedicated to the dynamic allocator. Dynamic allocator is,
@@ -86,9 +87,9 @@ impl Library {
         self.free_pointer
     }
 
-    // Return a list of all external dependencies sorted by name
-    // All snippets are sorted
-    // alphabetically to ensure that generated programs are deterministic.
+    /// Return a list of all external dependencies sorted by name
+    /// All snippets are sorted
+    /// alphabetically to ensure that generated programs are deterministic.
     pub fn all_external_dependencies(&self) -> Vec<Vec<LabelledInstruction>> {
         self.seen_snippets
             .iter()
@@ -105,6 +106,7 @@ impl Library {
         ret
     }
 
+    /// Return a list of instructions containing all imported snippets
     #[allow(dead_code)]
     pub fn all_imports(&self) -> Vec<LabelledInstruction> {
         // Collect all imports and return. All snippets are sorted
@@ -112,6 +114,7 @@ impl Library {
         self.all_external_dependencies().concat()
     }
 
+    /// Statically allocate `num_words` words of memory.
     pub fn kmalloc(&mut self, num_words: usize) -> usize {
         let address = self.free_pointer;
         self.free_pointer += num_words;
@@ -178,12 +181,12 @@ impl DeprecatedSnippet for DummyTestSnippetA {
         vec![]
     }
 
-    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+    fn input_types(&self) -> Vec<crate::data_type::DataType> {
         vec![]
     }
 
-    fn output_types(&self) -> Vec<crate::snippet::DataType> {
-        vec![DataType::BFE, DataType::BFE, DataType::BFE]
+    fn output_types(&self) -> Vec<crate::data_type::DataType> {
+        vec![DataType::Bfe, DataType::Bfe, DataType::Bfe]
     }
 
     fn common_case_input_state(&self) -> crate::ExecutionState {
@@ -237,12 +240,12 @@ impl DeprecatedSnippet for DummyTestSnippetB {
         vec!["1".to_string(), "1".to_string()]
     }
 
-    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+    fn input_types(&self) -> Vec<crate::data_type::DataType> {
         vec![]
     }
 
-    fn output_types(&self) -> Vec<crate::snippet::DataType> {
-        vec![DataType::BFE, DataType::BFE]
+    fn output_types(&self) -> Vec<crate::data_type::DataType> {
+        vec![DataType::Bfe, DataType::Bfe]
     }
 
     fn crash_conditions(&self) -> Vec<String> {
@@ -301,12 +304,12 @@ impl DeprecatedSnippet for DummyTestSnippetC {
         vec!["1".to_string()]
     }
 
-    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+    fn input_types(&self) -> Vec<crate::data_type::DataType> {
         vec![]
     }
 
-    fn output_types(&self) -> Vec<crate::snippet::DataType> {
-        vec![DataType::BFE]
+    fn output_types(&self) -> Vec<crate::data_type::DataType> {
+        vec![DataType::Bfe]
     }
 
     fn crash_conditions(&self) -> Vec<String> {

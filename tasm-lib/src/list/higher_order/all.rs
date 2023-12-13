@@ -9,6 +9,7 @@ use triton_vm::{triton_asm, NonDeterminism};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
+use crate::data_type::DataType;
 use crate::function::Function;
 use crate::list::safeimplu32::get::SafeGet;
 use crate::list::safeimplu32::length::Length as SafeLength;
@@ -20,11 +21,7 @@ use crate::rust_shadowing_helper_functions::unsafe_list::untyped_unsafe_insert_r
 use crate::snippet::BasicSnippet;
 use crate::snippet_bencher::BenchmarkCase;
 use crate::{arithmetic, empty_stack, rust_shadowing_helper_functions, VmHasher};
-use crate::{
-    library::Library,
-    snippet::{DataType, DeprecatedSnippet},
-    ExecutionState,
-};
+use crate::{library::Library, snippet::DeprecatedSnippet, ExecutionState};
 
 use super::inner_function::InnerFunction;
 
@@ -53,11 +50,11 @@ impl All {
             match self.list_type {
                 ListType::Safe => {
                     list_pointer
-                        + BFieldElement::new((2 + list_length * input_type.get_size()) as u64)
+                        + BFieldElement::new((2 + list_length * input_type.stack_size()) as u64)
                 }
                 ListType::Unsafe => {
                     list_pointer
-                        + BFieldElement::new((1 + list_length * input_type.get_size()) as u64)
+                        + BFieldElement::new((1 + list_length * input_type.stack_size()) as u64)
                 }
             },
         );
@@ -75,7 +72,7 @@ impl All {
                     list_pointer,
                     list_length,
                     &mut memory,
-                    input_type.get_size(),
+                    input_type.stack_size(),
                 ),
             };
         } else {
@@ -138,12 +135,20 @@ impl BasicSnippet for All {
         let output_type = self.f.range();
         assert_eq!(output_type, DataType::Bool);
         let get_length = match self.list_type {
-            ListType::Safe => library.import(Box::new(SafeLength(input_type.clone()))),
-            ListType::Unsafe => library.import(Box::new(UnsafeLength(input_type.clone()))),
+            ListType::Safe => library.import(Box::new(SafeLength {
+                data_type: input_type.clone(),
+            })),
+            ListType::Unsafe => library.import(Box::new(UnsafeLength {
+                data_type: input_type.clone(),
+            })),
         };
         let list_get = match self.list_type {
-            ListType::Safe => library.import(Box::new(SafeGet(input_type))),
-            ListType::Unsafe => library.import(Box::new(UnsafeGet(input_type))),
+            ListType::Safe => library.import(Box::new(SafeGet {
+                data_type: input_type,
+            })),
+            ListType::Unsafe => library.import(Box::new(UnsafeGet {
+                data_type: input_type,
+            })),
         };
 
         let inner_function_name = match &self.f {
@@ -166,7 +171,7 @@ impl BasicSnippet for All {
         // body. Otherwise, `library` handles the imports.
         let maybe_inner_function_body_raw = match &self.f {
             InnerFunction::RawCode(rc) => rc.function.iter().map(|x| x.to_string()).join("\n"),
-            InnerFunction::DeprecatedSnippet(_) => String::default(),
+            InnerFunction::DeprecatedSnippet(_) => Default::default(),
             InnerFunction::NoFunctionBody(_) => todo!(),
             InnerFunction::BasicSnippet(_) => Default::default(),
         };
@@ -184,8 +189,7 @@ impl BasicSnippet for All {
 
                 call {main_loop} // _ res input_list 0
 
-                pop // _ res input_list
-                pop // _ res
+                pop 2 // _ res
                 return
 
             // INVARIANT: _ res input_list index
@@ -212,7 +216,7 @@ impl BasicSnippet for All {
                 dup 3 // _ res input_list index b res
                 mul //    _ res input_list index (b && res)
                 swap 3 // _ (b && res) input_list index res
-                pop
+                pop 1
 
                 recurse
 
@@ -254,7 +258,7 @@ impl Function for All {
         let mut satisfied = true;
         for i in 0..len {
             // read
-            let mut input_item = get_element(list_pointer, i, memory, input_type.get_size());
+            let mut input_item = get_element(list_pointer, i, memory, input_type.stack_size());
 
             // put on stack
             while let Some(element) = input_item.pop() {
@@ -318,7 +322,7 @@ impl DeprecatedSnippet for TestHashXFieldElementLsb {
     }
 
     fn input_types(&self) -> Vec<DataType> {
-        vec![DataType::XFE]
+        vec![DataType::Xfe]
     }
 
     fn output_types(&self) -> Vec<DataType> {
@@ -345,7 +349,7 @@ impl DeprecatedSnippet for TestHashXFieldElementLsb {
                 push 0
                 push 0
                 call {unused_import}
-                pop
+                pop 1
 
             push 0
             push 0
@@ -358,11 +362,11 @@ impl DeprecatedSnippet for TestHashXFieldElementLsb {
             sponge_init
             sponge_absorb
             sponge_squeeze // _ d9 d8 d7 d6 d5 d4 d3 d2 d1 d0
-            swap 5 pop     // _ d9 d8 d7 d6 d0 d4 d3 d2 d1
-            swap 5 pop     // _ d9 d8 d7 d1 d0 d4 d3 d2
-            swap 5 pop
-            swap 5 pop
-            swap 5 pop
+            swap 5 pop 1   // _ d9 d8 d7 d6 d0 d4 d3 d2 d1
+            swap 5 pop 1   // _ d9 d8 d7 d1 d0 d4 d3 d2
+            swap 5 pop 1
+            swap 5 pop 1
+            swap 5 pop 1
 
             // _ d4 d3 d2 d1 d0
 
@@ -371,7 +375,7 @@ impl DeprecatedSnippet for TestHashXFieldElementLsb {
             swap 1
             div_mod // _ d4 d3 d2 d1 hi q r
             swap 6
-            pop pop pop pop pop pop
+            pop 5 pop 1
             return
         "
         )
@@ -446,12 +450,10 @@ impl DeprecatedSnippet for TestHashXFieldElementLsb {
 mod tests {
     use num::One;
     use triton_vm::triton_asm;
-    use twenty_first::util_types::algebraic_hasher::Domain;
 
     use crate::{
         function::ShadowedFunction, list::higher_order::inner_function::RawCode,
         snippet::RustShadow, test_helpers::test_rust_equivalence_given_complete_state,
-        VmHasherState,
     };
 
     use super::*;
@@ -485,7 +487,7 @@ mod tests {
                     lt
                     return
             ),
-            DataType::BFE,
+            DataType::Bfe,
             DataType::Bool,
         );
         let snippet = All {
@@ -510,7 +512,7 @@ mod tests {
             &[],
             &NonDeterminism::new(vec![]),
             &memory,
-            &VmHasherState::new(Domain::VariableLength),
+            &None,
             1,
             Some(&expected_end_stack_true),
         );
@@ -531,7 +533,7 @@ mod tests {
             &[],
             &NonDeterminism::new(vec![]),
             &memory,
-            &VmHasherState::new(Domain::VariableLength),
+            &None,
             1,
             Some(&expected_end_stack_false),
         );
@@ -547,11 +549,10 @@ mod tests {
                 swap 1   // _ hi 2 lo
                 div_mod  // _ hi q r
                 swap 2   // _ r q hi
-                pop      // _ r q
-                pop      // _ r
+                pop 2    // _ r
                 return
             ),
-            DataType::BFE,
+            DataType::Bfe,
             DataType::Bool,
         );
         let snippet = All {
@@ -571,13 +572,10 @@ mod tests {
                 swap 1   // _ x2 x1 hi 2 lo
                 div_mod  // _ x2 x1 hi q r
                 swap 4   // _ r x1 q hi x2
-                pop      // _ r x1 q hi
-                pop      // _ r x1 q
-                pop      // _ r q
-                pop      // _ r
+                pop 4    // _ r x1 q hi
                 return
             ),
-            DataType::XFE,
+            DataType::Xfe,
             DataType::Bool,
         );
         let snippet = All {

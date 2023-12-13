@@ -2,8 +2,9 @@ use rand::{thread_rng, RngCore};
 use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
+use crate::data_type::DataType;
 use crate::library::Library;
-use crate::snippet::{DataType, DeprecatedSnippet};
+use crate::snippet::DeprecatedSnippet;
 use crate::{empty_stack, push_encodable, ExecutionState};
 
 #[derive(Clone, Debug)]
@@ -77,7 +78,7 @@ impl DeprecatedSnippet for ShiftLeftU64 {
 
                 split
                 swap 1
-                pop
+                pop 1
                 // _ (2 ^ shift) value_lo (value_hi << shift)
 
                 swap 2

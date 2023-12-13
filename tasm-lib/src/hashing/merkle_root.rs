@@ -5,10 +5,11 @@ use rand::{rngs::StdRng, Rng, SeedableRng};
 use triton_vm::{triton_asm, BFieldElement};
 use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
+use crate::data_type::DataType;
 use crate::{
     empty_stack,
     function::Function,
-    snippet::{BasicSnippet, DataType},
+    snippet::BasicSnippet,
     snippet_bencher::BenchmarkCase,
     structure::tasm_object::{load_to_memory, TasmObject},
     Digest, VmHasher,
@@ -35,7 +36,7 @@ impl MerkleRoot {
 }
 
 impl BasicSnippet for MerkleRoot {
-    fn inputs(&self) -> Vec<(crate::snippet::DataType, String)> {
+    fn inputs(&self) -> Vec<(crate::data_type::DataType, String)> {
         vec![
             (
                 DataType::List(Box::new(DataType::Digest)),
@@ -46,7 +47,7 @@ impl BasicSnippet for MerkleRoot {
         ]
     }
 
-    fn outputs(&self) -> Vec<(crate::snippet::DataType, String)> {
+    fn outputs(&self) -> Vec<(crate::data_type::DataType, String)> {
         vec![(DataType::Digest, "root".to_string())]
     }
 
@@ -63,13 +64,6 @@ impl BasicSnippet for MerkleRoot {
             library.import(Box::new(crate::arithmetic::u32::safeadd::Safeadd));
         let tasm_arithmetic_u32_safe_sub_u32 =
             library.import(Box::new(crate::arithmetic::u32::safesub::Safesub));
-        let hash_pair = triton_asm!(
-                hash
-                pop
-                pop
-                pop
-                pop
-                pop);
         #[allow(non_snake_case)]
         let _leafs_start__LDigestR_Digest_10_then =
             format!("{entrypoint}_leafs_start__LDigestR_Digest_10_then");
@@ -80,35 +74,16 @@ impl BasicSnippet for MerkleRoot {
         // kudos to tasm-lang compiler
         triton_asm! {
         {_leafs_start__LDigestR_Digest_10_then}:
-        pop
+        pop 1
         dup 2
         dup 2
         push 5
         mul
-        push 1
+        push 5
         add
         add
-        push 4
-        add
-        read_mem
-        swap 1
-        push -1
-        add
-        read_mem
-        swap 1
-        push -1
-        add
-        read_mem
-        swap 1
-        push -1
-        add
-        read_mem
-        swap 1
-        push -1
-        add
-        read_mem
-        swap 1
-        pop
+        read_mem 5
+        pop 1
         push 0
         return
 
@@ -120,7 +95,7 @@ impl BasicSnippet for MerkleRoot {
         push 2
         swap 1
         div_mod
-        pop
+        pop 1
         dup 3
         dup 3
         dup 3
@@ -144,23 +119,18 @@ impl BasicSnippet for MerkleRoot {
         dup 14
         dup 14
         dup 14
-        {&hash_pair}
+        hash
         swap 11
-        pop
+        pop 1
         swap 11
-        pop
+        pop 1
         swap 11
-        pop
+        pop 1
         swap 11
-        pop
+        pop 1
         swap 11
-        pop
-        pop
-        pop
-        pop
-        pop
-        pop
-        pop
+        pop 5
+        pop 2
         return
 
         {entrypoint}:
@@ -177,12 +147,12 @@ impl BasicSnippet for MerkleRoot {
         call {_fn_call__LDigestR_Digest_30_else}
         swap 4
         swap 7
-        pop
+        pop 1
         swap 2
         swap 5
-        pop
+        pop 1
         swap 3
-        pop
+        pop 1
         swap 1
         return
         }
@@ -212,10 +182,14 @@ impl Function for MerkleRoot {
     fn pseudorandom_initial_state(
         &self,
         seed: [u8; 32],
-        _bench_case: Option<BenchmarkCase>,
+        bench_case: Option<BenchmarkCase>,
     ) -> (Vec<BFieldElement>, HashMap<BFieldElement, BFieldElement>) {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
-        let num_leafs = 64;
+        let num_leafs = match bench_case {
+            Some(BenchmarkCase::CommonCase) => 32,
+            Some(BenchmarkCase::WorstCase) => 128,
+            None => 64,
+        };
         let leafs = (0..num_leafs).map(|_| rng.gen::<Digest>()).collect_vec();
 
         let mut memory = HashMap::<BFieldElement, BFieldElement>::new();
@@ -238,5 +212,16 @@ mod test {
     #[test]
     fn test() {
         ShadowedFunction::new(MerkleRoot).test()
+    }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::{function::ShadowedFunction, snippet::RustShadow};
+
+    #[test]
+    fn merkle_root_bench() {
+        ShadowedFunction::new(MerkleRoot).bench()
     }
 }

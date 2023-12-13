@@ -1,16 +1,16 @@
 [
   {
     "name": "tasm_recufier_merkle_verify",
-    "clock_cycle_count": 84,
-    "hash_table_height": 36,
-    "u32_table_height": 4,
+    "clock_cycle_count": 67,
+    "hash_table_height": 84,
+    "u32_table_height": 12,
     "case": "CommonCase"
   },
   {
     "name": "tasm_recufier_merkle_verify",
-    "clock_cycle_count": 182,
-    "hash_table_height": 120,
-    "u32_table_height": 6,
+    "clock_cycle_count": 165,
+    "hash_table_height": 168,
+    "u32_table_height": 28,
     "case": "WorstCase"
   }
 ]

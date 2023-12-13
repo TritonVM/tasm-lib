@@ -1,10 +1,11 @@
 use rand::{thread_rng, RngCore};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
+use crate::data_type::DataType;
 use crate::{
     arithmetic::u64::{and_u64::AndU64, log_2_floor_u64::Log2FloorU64},
     empty_stack,
-    snippet::{DataType, DeprecatedSnippet},
+    snippet::DeprecatedSnippet,
     ExecutionState,
 };
 
@@ -22,11 +23,11 @@ impl DeprecatedSnippet for IndexOfLastNonZeroBitU64 {
         vec!["value_hi".to_string(), "value_lo".to_string()]
     }
 
-    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+    fn input_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::U64]
     }
 
-    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+    fn output_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::U32]
     }
 
@@ -45,7 +46,7 @@ impl DeprecatedSnippet for IndexOfLastNonZeroBitU64 {
         let and = library.import(Box::new(AndU64));
         let log_2_floor_u64 = library.import(Box::new(Log2FloorU64));
 
-        const U32MAX: &str = "4294967295";
+        const U32MAX: u32 = u32::MAX;
         // Finds the least significant set bit using `x & ~(x - 1)` where
         // ~ denotes bit-inversion. Bit-inversion is achieved using
         // `x ^ (0xFFFFFFFF)`.

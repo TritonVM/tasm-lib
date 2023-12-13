@@ -1,33 +1,64 @@
+use itertools::Itertools;
 use std::collections::HashMap;
 
 use num::One;
 use rand::{random, thread_rng, Rng};
+use triton_vm::triton_asm;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
+use crate::data_type::DataType;
 use crate::library::Library;
 use crate::rust_shadowing_helper_functions::unsafe_list::untyped_unsafe_insert_random_list;
-use crate::snippet::{DataType, DeprecatedSnippet};
+use crate::snippet::DeprecatedSnippet;
 use crate::{empty_stack, ExecutionState};
 
 // Called "Long" because this logic can be shortened
 #[derive(Clone, Debug)]
-pub struct Length(pub DataType);
+pub struct Length {
+    pub data_type: DataType,
+}
 
 impl DeprecatedSnippet for Length {
+    fn entrypoint_name(&self) -> String {
+        format!(
+            "tasm_list_unsafeimplu32_length___{}",
+            self.data_type.label_friendly_name()
+        )
+    }
+
     fn input_field_names(&self) -> Vec<String> {
         vec!["*list".to_string()]
+    }
+
+    fn input_types(&self) -> Vec<DataType> {
+        vec![DataType::List(Box::new(self.data_type.clone()))]
     }
 
     fn output_field_names(&self) -> Vec<String> {
         vec!["list_length".to_string()]
     }
 
-    fn input_types(&self) -> Vec<crate::snippet::DataType> {
-        vec![DataType::List(Box::new(self.0.clone()))]
+    fn output_types(&self) -> Vec<DataType> {
+        vec![DataType::U32]
     }
 
-    fn output_types(&self) -> Vec<crate::snippet::DataType> {
-        vec![DataType::U32]
+    fn stack_diff(&self) -> isize {
+        // Consumes a memory address and returns a length in the form of a u32
+        0
+    }
+
+    fn function_code(&self, _library: &mut Library) -> String {
+        let entry_point = self.entrypoint_name();
+        // BEFORE: _ *list
+        // AFTER:  _ list_length_u32
+        triton_asm!(
+            {entry_point}:
+                read_mem 1
+                pop 1
+                return
+        )
+        .iter()
+        .join("\n")
     }
 
     fn crash_conditions(&self) -> Vec<String> {
@@ -78,46 +109,6 @@ impl DeprecatedSnippet for Length {
         ret
     }
 
-    fn stack_diff(&self) -> isize {
-        // Consumes a memory address and returns a length in the form of a u32
-        0
-    }
-
-    fn entrypoint_name(&self) -> String {
-        format!(
-            "tasm_list_unsafeimplu32_length___{}",
-            self.0.label_friendly_name()
-        )
-    }
-
-    fn function_code(&self, _library: &mut Library) -> String {
-        let entry_point = self.entrypoint_name();
-        // Before: _ *list
-        // After: _ list_length_u32
-        format!(
-            "
-            {entry_point}:
-                read_mem
-                swap 1
-                pop
-                return
-                "
-        )
-    }
-
-    fn rust_shadowing(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        _std_in: Vec<BFieldElement>,
-        _secret_in: Vec<BFieldElement>,
-        memory: &mut HashMap<BFieldElement, BFieldElement>,
-    ) {
-        // Find the list in memory and push its length to the top of the stack
-        let list_address = stack.pop().unwrap();
-        let list_length = memory[&list_address];
-        stack.push(list_length);
-    }
-
     fn common_case_input_state(&self) -> ExecutionState {
         let mut stack = empty_stack();
         let list_address: u32 = random();
@@ -136,6 +127,19 @@ impl DeprecatedSnippet for Length {
         let mut memory = HashMap::default();
         untyped_unsafe_insert_random_list(BFieldElement::one(), 1 << 6, &mut memory, 1);
         ExecutionState::with_stack_and_memory(stack.clone(), memory, 0)
+    }
+
+    fn rust_shadowing(
+        &self,
+        stack: &mut Vec<BFieldElement>,
+        _std_in: Vec<BFieldElement>,
+        _secret_in: Vec<BFieldElement>,
+        memory: &mut HashMap<BFieldElement, BFieldElement>,
+    ) {
+        // Find the list in memory and push its length to the top of the stack
+        let list_address = stack.pop().unwrap();
+        let list_length = memory[&list_address];
+        stack.push(list_length);
     }
 }
 
@@ -156,9 +160,13 @@ mod tests {
 
     #[test]
     fn new_snippet_test_long() {
-        test_rust_equivalence_multiple_deprecated(&Length(DataType::BFE), true);
-        test_rust_equivalence_multiple_deprecated(&Length(DataType::U64), true);
-        test_rust_equivalence_multiple_deprecated(&Length(DataType::Digest), true);
+        fn test_rust_equivalence_and_export(data_type: DataType) {
+            test_rust_equivalence_multiple_deprecated(&Length { data_type }, true);
+        }
+
+        test_rust_equivalence_and_export(DataType::Bfe);
+        test_rust_equivalence_and_export(DataType::U64);
+        test_rust_equivalence_and_export(DataType::Digest);
     }
 
     #[test]
@@ -194,8 +202,9 @@ mod tests {
             );
         }
 
+        let data_type = DataType::Bfe;
         test_rust_equivalence_given_input_values_deprecated(
-            &Length(DataType::BFE),
+            &Length { data_type },
             &init_stack,
             &[],
             &mut init_memory,
@@ -212,6 +221,7 @@ mod benches {
 
     #[test]
     fn unsafe_length_long_benchmark() {
-        bench_and_write(Length(DataType::Digest));
+        let data_type = DataType::Digest;
+        bench_and_write(Length { data_type });
     }
 }

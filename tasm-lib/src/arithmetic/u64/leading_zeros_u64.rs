@@ -1,10 +1,9 @@
 use rand::{thread_rng, RngCore};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
+use crate::data_type::DataType;
 use crate::{
-    arithmetic::u32::leadingzeros::Leadingzeros,
-    empty_stack,
-    snippet::{DataType, DeprecatedSnippet},
+    arithmetic::u32::leadingzeros::Leadingzeros, empty_stack, snippet::DeprecatedSnippet,
     ExecutionState,
 };
 
@@ -24,11 +23,11 @@ impl DeprecatedSnippet for LeadingZerosU64 {
         vec!["leading zeros in value".to_string()]
     }
 
-    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+    fn input_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::U64]
     }
 
-    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+    fn output_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::U32]
     }
 
@@ -42,6 +41,7 @@ impl DeprecatedSnippet for LeadingZerosU64 {
         format!(
             "
                 // BEFORE: _ value_hi value_lo
+                // AFTER:  _ (leading_zeros as u32)
                 {entrypoint}:
                     swap 1
                     call {leading_zeros_u32}
@@ -56,7 +56,7 @@ impl DeprecatedSnippet for LeadingZerosU64 {
                     // _ temp leading_zeros
 
                     swap 1
-                    pop
+                    pop 1
                     return
 
                     {entrypoint}_hi_was_zero:

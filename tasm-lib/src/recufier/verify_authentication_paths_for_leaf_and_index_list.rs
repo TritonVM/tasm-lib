@@ -8,6 +8,7 @@ use twenty_first::util_types::{
     merkle_tree_maker::MerkleTreeMaker,
 };
 
+use crate::data_type::DataType;
 use crate::{
     algorithm::Algorithm,
     empty_stack,
@@ -18,7 +19,7 @@ use crate::{
     },
     recufier::merkle_verify::MerkleVerify,
     rust_shadowing_helper_functions,
-    snippet::{BasicSnippet, DataType},
+    snippet::BasicSnippet,
     structure::tasm_object::TasmObject,
     Digest, VmHasher,
 };
@@ -39,12 +40,12 @@ pub struct VerifyAuthenticationPathForLeafAndIndexList {
 }
 
 impl BasicSnippet for VerifyAuthenticationPathForLeafAndIndexList {
-    fn inputs(&self) -> Vec<(crate::snippet::DataType, String)> {
+    fn inputs(&self) -> Vec<(DataType, String)> {
         vec![
             (
                 DataType::List(Box::new(DataType::Tuple(vec![
-                    DataType::Digest,
                     DataType::U32,
+                    DataType::Digest,
                 ]))),
                 "leaf_and_index_list".to_string(),
             ),
@@ -53,7 +54,7 @@ impl BasicSnippet for VerifyAuthenticationPathForLeafAndIndexList {
         ]
     }
 
-    fn outputs(&self) -> Vec<(crate::snippet::DataType, String)> {
+    fn outputs(&self) -> Vec<(DataType, String)> {
         self.inputs()
     }
 
@@ -70,14 +71,18 @@ impl BasicSnippet for VerifyAuthenticationPathForLeafAndIndexList {
     ) -> Vec<triton_vm::instruction::LabelledInstruction> {
         let entrypoint = self.entrypoint();
         let main_loop = format!("{entrypoint}_main_loop");
-        let data_type = DataType::Tuple(vec![DataType::Digest, DataType::U32]);
+        let data_type = DataType::Tuple(vec![DataType::U32, DataType::Digest]);
         let lai_length = match self.list_type {
-            ListType::Safe => library.import(Box::new(SafeLength(data_type.clone()))),
-            ListType::Unsafe => library.import(Box::new(UnsafeLength(data_type.clone()))),
+            ListType::Safe => library.import(Box::new(SafeLength {
+                data_type: data_type.clone(),
+            })),
+            ListType::Unsafe => library.import(Box::new(UnsafeLength {
+                data_type: data_type.clone(),
+            })),
         };
         let lai_get = match self.list_type {
-            ListType::Safe => library.import(Box::new(SafeGet(data_type))),
-            ListType::Unsafe => library.import(Box::new(UnsafeGet(data_type))),
+            ListType::Safe => library.import(Box::new(SafeGet { data_type })),
+            ListType::Unsafe => library.import(Box::new(UnsafeGet { data_type })),
         };
         let merkle_verify = library.import(Box::new(MerkleVerify));
         triton_asm! {
@@ -90,7 +95,7 @@ impl BasicSnippet for VerifyAuthenticationPathForLeafAndIndexList {
 
                 call {main_loop}    // _ leaf_and_index_list root4 root3 root2 root1 root0 height length length
 
-                pop pop
+                pop 2
                 return
 
             // INVARIANT: _ leaf_and_index_list root4 root3 root2 root1 root0 height length iteration
@@ -101,7 +106,7 @@ impl BasicSnippet for VerifyAuthenticationPathForLeafAndIndexList {
                 skiz return     // _ leaf_and_index_list root4 root3 root2 root1 root0 height length iteration
 
                 // duplicate root
-                dup 7  dup 7 dup 7 dup 7 dup 7
+                dup 7 dup 7 dup 7 dup 7 dup 7
                 // _ leaf_and_index_list root4 root3 root2 root1 root0 height length iteration root4 root3 root2 root1 root0
 
                 // read leaf and index
@@ -143,7 +148,7 @@ impl Algorithm for VerifyAuthenticationPathForLeafAndIndexList {
             ListType::Safe => 1,
             ListType::Unsafe => 0,
         };
-        let indices_and_leafs = *Vec::<(Digest, u32)>::decode_from_memory(
+        let indices_and_leafs = *Vec::<(u32, Digest)>::decode_from_memory(
             memory,
             address + BFieldElement::new(safety_offset),
         )
@@ -151,7 +156,7 @@ impl Algorithm for VerifyAuthenticationPathForLeafAndIndexList {
 
         // iterate and verify
         let mut digest_index = 0;
-        for (leaf, index) in indices_and_leafs {
+        for (index, leaf) in indices_and_leafs {
             let authentication_path = (0..height)
                 .map(|_| {
                     let node = nondeterminism.digests[digest_index];
@@ -210,9 +215,10 @@ impl Algorithm for VerifyAuthenticationPathForLeafAndIndexList {
             .map(|_| rng.gen_range(0..n) as usize)
             .collect_vec();
         let indicated_leafs = indices.iter().map(|i| leafs[*i]).collect_vec();
-        let leafs_and_indices = indicated_leafs
-            .into_iter()
-            .zip(indices.iter().map(|i| *i as u32))
+        let leafs_and_indices = indices
+            .iter()
+            .map(|i| *i as u32)
+            .zip(indicated_leafs.into_iter())
             .collect_vec();
         let authentication_paths = indices
             .iter()
@@ -255,17 +261,14 @@ mod test {
     use std::{cell::RefCell, rc::Rc};
 
     use rand::{thread_rng, Rng};
-    use triton_vm::BFieldElement;
-    use twenty_first::util_types::algebraic_hasher::Domain;
+    use triton_vm::{BFieldElement, Program};
 
     use crate::{
         algorithm::{Algorithm, ShadowedAlgorithm},
         execute_with_terminal_state,
         linker::link_for_isolated_run,
         list::ListType,
-        prepend_state_preparation,
         snippet::RustShadow,
-        VmHasherState,
     };
 
     use super::VerifyAuthenticationPathForLeafAndIndexList;
@@ -324,7 +327,7 @@ mod test {
                     &nondeterminism,
                     &mut rust_stack,
                     &mut rust_memory,
-                    &mut VmHasherState::new(Domain::VariableLength),
+                    &mut None,
                 )
             });
 
@@ -340,9 +343,8 @@ mod test {
             // run tvm
             let code = link_for_isolated_run(Rc::new(RefCell::new(vap4lail.clone())), 0);
             nondeterminism.ram = memory;
-            let program = prepend_state_preparation(&code, &stack);
-            let tvm_result =
-                execute_with_terminal_state(&program, &stdin, &mut nondeterminism, None);
+            let program = Program::new(&code);
+            let tvm_result = execute_with_terminal_state(&program, &stdin, &nondeterminism, None);
             if let Ok(result) = &tvm_result {
                 println!("tasm result: {}\ni: {}", result, i);
             }

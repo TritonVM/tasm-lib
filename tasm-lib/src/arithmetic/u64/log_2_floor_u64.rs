@@ -5,8 +5,9 @@ use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::log_2_floor;
 
+use crate::data_type::DataType;
 use crate::library::Library;
-use crate::snippet::{DataType, DeprecatedSnippet};
+use crate::snippet::DeprecatedSnippet;
 use crate::{empty_stack, push_encodable, ExecutionState};
 
 #[derive(Clone, Debug)]
@@ -21,11 +22,11 @@ impl DeprecatedSnippet for Log2FloorU64 {
         vec!["log2_floor(value)".to_string()]
     }
 
-    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+    fn input_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::U64]
     }
 
-    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+    fn output_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::U32]
     }
 
@@ -58,12 +59,10 @@ impl DeprecatedSnippet for Log2FloorU64 {
         let entrypoint = self.entrypoint_name();
 
         // assumes that top of stack is a valid u32s<2>
-        // BEFORE: _ value_hi value_lo
-        // AFTER: _ log2_floor(value)
         format!(
             "
                 // BEFORE: _ value_hi value_lo
-                // AFTER: _ log2_floor(value)
+                // AFTER:  _ log2_floor(value)
                 {entrypoint}:
                     swap 1
                     push 1
@@ -79,10 +78,9 @@ impl DeprecatedSnippet for Log2FloorU64 {
                 {entrypoint}_then:
                     // value_hi != 0
                     // stack: // stack: _ value_lo value_hi 1
-                    pop
+                    pop 1
                     swap 1
-                    pop
-                    // stack: _ value_hi
+                    pop 1     // stack: _ value_hi
 
                     log_2_floor
                     push 32
@@ -97,7 +95,7 @@ impl DeprecatedSnippet for Log2FloorU64 {
                 {entrypoint}_else:
                     // value_hi == 0
                     // stack: _ value_lo value_hi
-                    pop
+                    pop 1
                     log_2_floor
                     return
                 "

@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use rand::Rng;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
+use crate::data_type::DataType;
 use crate::library::Library;
-use crate::snippet::DataType;
 use crate::snippet::DeprecatedSnippet;
 use crate::Digest;
 use crate::DIGEST_LENGTH;
@@ -44,11 +44,11 @@ impl DeprecatedSnippet for SwapDigest {
         ]
     }
 
-    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+    fn input_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::Digest, DataType::Digest]
     }
 
-    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+    fn output_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::Digest, DataType::Digest]
     }
 

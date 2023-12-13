@@ -1,11 +1,11 @@
 use std::collections::HashMap;
+use std::fmt::Display;
 
 use itertools::Itertools;
 use num_traits::Zero;
 use triton_vm::instruction::LabelledInstruction;
 use triton_vm::{triton_asm, NonDeterminism};
 use twenty_first::shared_math::b_field_element::BFieldElement;
-use twenty_first::util_types::algebraic_hasher::Domain;
 
 use crate::dyn_malloc::DYN_MALLOC_ADDRESS;
 use crate::library::Library;
@@ -34,13 +34,11 @@ pub fn test_rust_equivalence_multiple_deprecated<T: DeprecatedSnippet>(
         );
     }
 
-    let mut execution_states = snippet_struct.gen_input_states();
-
     let mut vm_output_states = vec![];
-    for execution_state in execution_states.iter_mut() {
+    for execution_state in snippet_struct.gen_input_states() {
         let vm_output_state = test_rust_equivalence_given_execution_state_deprecated::<T>(
             snippet_struct,
-            execution_state.clone(),
+            execution_state,
         );
         vm_output_states.push(vm_output_state);
     }
@@ -122,12 +120,12 @@ pub fn link_and_run_tasm_for_test_deprecated<T: DeprecatedSnippet>(
     let expected_length_prior: usize = snippet_struct
         .inputs()
         .iter()
-        .map(|(x, _n)| x.get_size())
+        .map(|(x, _n)| x.stack_size())
         .sum();
     let expected_length_after: usize = snippet_struct
         .outputs()
         .iter()
-        .map(|(x, _n)| x.get_size())
+        .map(|(x, _n)| x.stack_size())
         .sum();
     assert_eq!(
         snippet_struct.stack_diff(),
@@ -235,16 +233,8 @@ pub(crate) fn test_rust_equivalence_given_complete_state_deprecated<T: Deprecate
             expected_final_stack_skip_program_hash,
             "TVM must produce expected stack `{}`. \n\nTVM:\n{}\nExpected:\n{}",
             snippet_struct.entrypoint(),
-            tasm_stack_skip_program_hash
-                .iter()
-                .map(|x| x.to_string())
-                .collect_vec()
-                .join(","),
-            expected_final_stack_skip_program_hash
-                .iter()
-                .map(|x| x.to_string())
-                .collect_vec()
-                .join(","),
+            tasm_stack_skip_program_hash.iter().join(","),
+            expected_final_stack_skip_program_hash.iter().join(","),
         );
     }
 
@@ -255,44 +245,42 @@ pub(crate) fn test_rust_equivalence_given_complete_state_deprecated<T: Deprecate
     // TODO: Check if we could perform this check on dyn malloc too
     rust_memory.remove(&BFieldElement::new(DYN_MALLOC_ADDRESS as u64));
     tasm_memory.remove(&BFieldElement::new(DYN_MALLOC_ADDRESS as u64));
-    let memory_difference = rust_memory
-        .iter()
-        .filter(|(k, v)| match tasm_memory.get(*k) {
-            Some(b) => *b != **v,
-            None => true,
-        })
-        .chain(
-            tasm_memory
-                .iter()
-                .filter(|(k, v)| match rust_memory.get(*k) {
-                    Some(b) => *b != **v,
-                    None => true,
-                }),
-        )
-        .collect_vec();
-    if rust_memory != tasm_memory {
-        let mut tasm_memory = tasm_memory.iter().collect_vec();
-        tasm_memory.sort_unstable_by(|&a, &b| a.0.value().partial_cmp(&b.0.value()).unwrap());
-        let tasm_mem_str = tasm_memory
-            .iter()
-            .map(|x| format!("({} => {})", x.0, x.1))
-            .collect_vec()
-            .join(",");
 
-        let mut rust_memory = rust_memory.iter().collect_vec();
-        rust_memory.sort_unstable_by(|&a, &b| a.0.value().partial_cmp(&b.0.value()).unwrap());
-        let rust_mem_str = rust_memory
+    if rust_memory != tasm_memory {
+        fn format_hash_map_iterator<K, V>(map: impl Iterator<Item = (K, V)>) -> String
+        where
+            u64: From<K>,
+            K: Copy + Display,
+            V: Display,
+        {
+            map.sorted_by_key(|(k, _)| u64::from(*k))
+                .map(|(k, v)| format!("({k} => {v})"))
+                .join(",")
+        }
+
+        let in_rust_memory_and_different_in_tasm_memory = rust_memory
             .iter()
-            .map(|x| format!("({} => {})", x.0, x.1))
-            .collect_vec()
-            .join(",");
-        let diff_str = memory_difference
+            .filter(|(k, &v)| tasm_memory.get(k).map(|&b| b != v).unwrap_or(true));
+        let in_tasm_memory_and_different_in_rust_memory = tasm_memory
             .iter()
-            .map(|x| format!("({} => {})", x.0, x.1))
-            .collect_vec()
-            .join(",");
+            .filter(|(k, &v)| rust_memory.get(k).map(|&b| b != v).unwrap_or(true));
+
+        let in_rust_memory_and_different_in_tasm_memory =
+            format_hash_map_iterator(in_rust_memory_and_different_in_tasm_memory);
+        let in_tasm_memory_and_different_in_rust_memory =
+            format_hash_map_iterator(in_tasm_memory_and_different_in_rust_memory);
+
+        let tasm_mem = format_hash_map_iterator(tasm_memory.into_iter());
+        let rust_mem = format_hash_map_iterator(rust_memory.into_iter());
+
         panic!(
-            "Memory for both implementations must match after execution.\n\nTVM: {tasm_mem_str}\n\nRust: {rust_mem_str}\n\nDifference: {diff_str}\n\nCode was:\n\n {}",
+            "Memory for both implementations must match after execution.\n\n\
+            TVM:  {tasm_mem}\n\n\
+            Rust: {rust_mem}\n\n\
+            In TVM, different in rust: {in_tasm_memory_and_different_in_rust_memory}\n\n\
+            In rust, different in TVM: {in_rust_memory_and_different_in_tasm_memory}\n\n\
+            Code was:\n\n\
+            {}",
             snippet_struct.code(&mut Library::new()).iter().join("\n")
         );
     }
@@ -364,7 +352,7 @@ pub fn rust_final_state<T: RustShadow>(
     stdin: &[BFieldElement],
     nondeterminism: &NonDeterminism<BFieldElement>,
     memory: &HashMap<BFieldElement, BFieldElement>,
-    sponge_state: &VmHasherState,
+    sponge_state: &Option<VmHasherState>,
     words_statically_allocated: usize,
 ) -> VmOutputState {
     let mut rust_memory = memory.clone();
@@ -402,7 +390,7 @@ pub fn tasm_final_state<T: RustShadow>(
     stdin: &[BFieldElement],
     nondeterminism: &NonDeterminism<BFieldElement>,
     memory: &HashMap<BFieldElement, BFieldElement>,
-    sponge_state: &VmHasherState,
+    sponge_state: &Option<VmHasherState>,
     words_statically_allocated: usize,
 ) -> VmOutputState {
     // run tvm
@@ -412,7 +400,7 @@ pub fn tasm_final_state<T: RustShadow>(
         stdin.to_vec(),
         &mut nondeterminism.clone(),
         &mut memory.clone(),
-        Some(sponge_state.to_owned()),
+        sponge_state.to_owned(),
         words_statically_allocated,
     )
 }
@@ -484,10 +472,6 @@ pub fn verify_memory_equivalence(
     }
 }
 
-pub fn verify_hasher_state_equivalence(a: VmOutputState, b: VmOutputState) {
-    assert_eq!(a.final_sponge_state.state, b.final_sponge_state.state);
-}
-
 pub fn verify_stack_growth<T: RustShadow>(
     shadowed_snippet: &T,
     initial_stack: &[BFieldElement],
@@ -504,14 +488,12 @@ pub fn verify_stack_growth<T: RustShadow>(
     );
 }
 
-pub fn verify_sponge_equivalence(a: &VmHasherState, b: &VmHasherState) {
-    assert_eq!(
-        a.state,
-        b.state,
-        "sponge states are different:\nleft: {}\n:right: {}",
-        a.state.iter().map(|b| b.value()).join(","),
-        b.state.iter().map(|b| b.value()).join(",")
-    );
+pub fn verify_sponge_equivalence(a: &Option<VmHasherState>, b: &Option<VmHasherState>) {
+    match (a, b) {
+        (Some(state_a), Some(state_b)) => assert_eq!(state_a.state, state_b.state),
+        (None, None) => (),
+        _ => panic!("{a:?} != {b:?}"),
+    };
 }
 
 #[allow(dead_code)]
@@ -523,7 +505,7 @@ pub fn test_rust_equivalence_given_complete_state<T: RustShadow>(
     stdin: &[BFieldElement],
     nondeterminism: &NonDeterminism<BFieldElement>,
     memory: &HashMap<BFieldElement, BFieldElement>,
-    sponge_state: &VmHasherState,
+    sponge_state: &Option<VmHasherState>,
     words_statically_allocated: usize,
     expected_final_stack: Option<&[BFieldElement]>,
 ) -> VmOutputState {
@@ -639,7 +621,7 @@ pub fn test_rust_equivalence_given_execution_state<T: BasicSnippet + RustShadow>
         &execution_state.std_in,
         &nondeterminism,
         &execution_state.memory,
-        &VmHasherState::new(Domain::FixedLength),
+        &None,
         execution_state.words_allocated,
         None,
     )

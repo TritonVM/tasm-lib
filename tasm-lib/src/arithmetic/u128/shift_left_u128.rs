@@ -2,8 +2,9 @@ use rand::random;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
+use crate::data_type::DataType;
 use crate::library::Library;
-use crate::snippet::{DataType, DeprecatedSnippet};
+use crate::snippet::DeprecatedSnippet;
 use crate::{empty_stack, push_encodable, ExecutionState};
 
 #[derive(Clone, Debug)]
@@ -59,7 +60,7 @@ impl DeprecatedSnippet for ShiftLeftU128 {
         format!(
             "
             // BEFORE: _ limb3 limb2 limb1 limb0 shamt
-            // AFTER: _ (value << shift)_3 (value << shift)_2 (value << shift)_1 (value << shift)_0
+            // AFTER:  _ (value << shift)_3 (value << shift)_2 (value << shift)_1 (value << shift)_0
             {entrypoint}:
                 // Bounds check: Verify that shift amount is less than 128.
                 push 128
@@ -82,10 +83,10 @@ impl DeprecatedSnippet for ShiftLeftU128 {
                 pow
                 // _ v3 v2 v1 v0 (2 ^ shift)
 
-                dup 0 // _ v3 v2 v1 v0 (2 ^ shift) (2 ^ shift)
+                dup 0  // _ v3 v2 v1 v0 (2 ^ shift) (2 ^ shift)
                 swap 5 // _ (2 ^ shift) v2 v1 v0 (2 ^ shift) v3
 
-                mul // _ (2 ^ shift) v2 v1 v0 v3<<shift
+                mul    // _ (2 ^ shift) v2 v1 v0 v3<<shift
                 swap 4 // _ v3<<shift v2 v1 v0 (2^shift)
                 xbmul  // _ v3<<shift v2<<shift v1<<shift v0<<shift
 
@@ -99,7 +100,7 @@ impl DeprecatedSnippet for ShiftLeftU128 {
 
 
                 swap 1 // _ v2s_lo v1s_lo v0s_lo v0s_hi v1s_hi v2s_hi v3s_lo v3s_hi
-                pop    // _ v2s_lo v1s_lo v0s_lo v0s_hi v1s_hi v2s_hi v3s_lo
+                pop 1  // _ v2s_lo v1s_lo v0s_lo v0s_hi v1s_hi v2s_hi v3s_lo
                 add    // _ v2s_lo v1s_lo v0s_lo v0s_hi v1s_hi w3
                 swap 5 // _ w3 v1s_lo v0s_lo v0s_hi v1s_hi v2s_lo
                 add    // _ w3 v1s_lo v0s_lo v0s_hi w2

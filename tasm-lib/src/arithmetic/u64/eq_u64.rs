@@ -1,12 +1,15 @@
 use std::collections::HashMap;
 
-use num::{One, Zero};
+use itertools::Itertools;
+use num::Zero;
 use rand::RngCore;
+use triton_vm::triton_asm;
 use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
+use crate::data_type::DataType;
 use crate::library::Library;
-use crate::snippet::{DataType, DeprecatedSnippet};
+use crate::snippet::DeprecatedSnippet;
 use crate::{empty_stack, push_encodable, ExecutionState};
 
 #[derive(Clone, Debug)]
@@ -26,11 +29,11 @@ impl DeprecatedSnippet for EqU64 {
         vec!["rhs_hi == lhs_hi && rhs_lo == rhs_lo".to_string()]
     }
 
-    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+    fn input_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::U64, DataType::U64]
     }
 
-    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+    fn output_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::Bool]
     }
 
@@ -60,23 +63,29 @@ impl DeprecatedSnippet for EqU64 {
 
     fn function_code(&self, _library: &mut Library) -> String {
         let entrypoint = self.entrypoint_name();
-        format!(
-            "
+        triton_asm!(
             // Before: _ hi_r lo_r hi_l lo_l
             // After: _ (r == l)
             {entrypoint}:
                 swap 3
-                eq
-                swap 2
-                eq
-                add
+                // _ lo_l lo_r hi_l hi_r
 
-                // The sum of the two equality operations must be 2
-                push 2
                 eq
+                // _ lo_l lo_r (hi_l == hi_r)
+
+                swap 2
+                // _ (hi_l == hi_r) lo_r lo_l
+
+                eq
+                // _ (hi_l == hi_r) (lo_r == lo_l)
+
+                mul
+                // _ ((hi_l == hi_r) && (lo_r == lo_l))
+
                 return
-            "
         )
+        .iter()
+        .join("\n")
     }
 
     fn rust_shadowing(
@@ -94,11 +103,7 @@ impl DeprecatedSnippet for EqU64 {
         let b_hi: u32 = stack.pop().unwrap().try_into().unwrap();
         let b = U32s::<2>::new([b_lo, b_hi]);
 
-        stack.push(if a == b {
-            BFieldElement::one()
-        } else {
-            BFieldElement::zero()
-        })
+        stack.push(BFieldElement::new((a == b) as u64));
     }
 
     fn common_case_input_state(&self) -> ExecutionState {
@@ -129,6 +134,7 @@ impl DeprecatedSnippet for EqU64 {
 
 #[cfg(test)]
 mod tests {
+    use num_traits::One;
     use rand::RngCore;
     use twenty_first::shared_math::b_field_element::BFieldElement;
     use twenty_first::shared_math::bfield_codec::BFieldCodec;

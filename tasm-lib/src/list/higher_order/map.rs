@@ -7,6 +7,7 @@ use triton_vm::{triton_asm, NonDeterminism};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::random_elements;
 
+use crate::data_type::DataType;
 use crate::function::Function;
 use crate::list::safeimplu32::get::SafeGet;
 use crate::list::safeimplu32::length::Length as SafeLength;
@@ -23,11 +24,7 @@ use crate::rust_shadowing_helper_functions::safe_list::safe_insert_random_list;
 use crate::rust_shadowing_helper_functions::unsafe_list::unsafe_insert_random_list;
 use crate::snippet::BasicSnippet;
 use crate::{empty_stack, rust_shadowing_helper_functions};
-use crate::{
-    library::Library,
-    snippet::{DataType, DeprecatedSnippet},
-    ExecutionState,
-};
+use crate::{library::Library, snippet::DeprecatedSnippet, ExecutionState};
 
 use super::inner_function::InnerFunction;
 
@@ -82,33 +79,47 @@ impl BasicSnippet for Map {
     fn code(&self, library: &mut Library) -> Vec<triton_vm::instruction::LabelledInstruction> {
         let input_list_element_type = self.f.domain();
         let output_type = self.f.range();
-        let output_size_plus_one = 1 + output_type.get_size();
+        let output_size_plus_one = 1 + output_type.stack_size();
 
         let get_length = match self.list_type {
-            ListType::Safe => library.import(Box::new(SafeLength(input_list_element_type.clone()))),
-            ListType::Unsafe => {
-                library.import(Box::new(UnsafeLength(input_list_element_type.clone())))
-            }
+            ListType::Safe => library.import(Box::new(SafeLength {
+                data_type: input_list_element_type.clone(),
+            })),
+            ListType::Unsafe => library.import(Box::new(UnsafeLength {
+                data_type: input_list_element_type.clone(),
+            })),
         };
         let set_length = match self.list_type {
-            ListType::Safe => {
-                library.import(Box::new(SafeSetLength(input_list_element_type.clone())))
-            }
-            ListType::Unsafe => {
-                library.import(Box::new(UnsafeSetLength(input_list_element_type.clone())))
-            }
+            ListType::Safe => library.import(Box::new(SafeSetLength {
+                data_type: input_list_element_type.clone(),
+            })),
+            ListType::Unsafe => library.import(Box::new(UnsafeSetLength {
+                data_type: input_list_element_type.clone(),
+            })),
         };
         let new_list = match self.list_type {
-            ListType::Safe => library.import(Box::new(SafeNew(output_type.clone()))),
-            ListType::Unsafe => library.import(Box::new(UnsafeNew(output_type.clone()))),
+            ListType::Safe => library.import(Box::new(SafeNew {
+                data_type: output_type.clone(),
+            })),
+            ListType::Unsafe => library.import(Box::new(UnsafeNew {
+                data_type: output_type.clone(),
+            })),
         };
         let list_get = match self.list_type {
-            ListType::Safe => library.import(Box::new(SafeGet(input_list_element_type))),
-            ListType::Unsafe => library.import(Box::new(UnsafeGet(input_list_element_type))),
+            ListType::Safe => library.import(Box::new(SafeGet {
+                data_type: input_list_element_type,
+            })),
+            ListType::Unsafe => library.import(Box::new(UnsafeGet {
+                data_type: input_list_element_type,
+            })),
         };
         let list_set = match self.list_type {
-            ListType::Safe => library.import(Box::new(SafeSet(output_type))),
-            ListType::Unsafe => library.import(Box::new(UnsafeSet(output_type))),
+            ListType::Safe => library.import(Box::new(SafeSet {
+                data_type: output_type,
+            })),
+            ListType::Unsafe => library.import(Box::new(UnsafeSet {
+                data_type: output_type,
+            })),
         };
 
         // Declare the inner function entrypoint name and import inner function in case it's a snippet
@@ -154,9 +165,9 @@ impl BasicSnippet for Map {
 
                 call {main_loop}        // _ <aia>  input_list output_list 0
 
-                pop                     // _ <aia>  input_list output_list
+                pop 1                   // _ <aia>  input_list output_list
                 swap 1                  // _ <aia>  output_list input_list
-                pop                     // _ <aia>  output_list
+                pop 1                   // _ <aia>  output_list
 
                 return
 
@@ -233,34 +244,41 @@ impl Function for Map {
         let secret_in = vec![];
 
         let output_list_capacity = len;
-        let output_list =
-            match self.list_type {
-                ListType::Safe => {
-                    // Push capacity to stack
-                    stack.push(BFieldElement::new(output_list_capacity as u64));
-                    list::safeimplu32::new::SafeNew(input_list_element_type.clone())
-                        .rust_shadowing(stack, std_in.clone(), secret_in.clone(), memory);
-                    stack.pop().unwrap()
+        let output_list = match self.list_type {
+            ListType::Safe => {
+                // Push capacity to stack
+                stack.push(BFieldElement::new(output_list_capacity as u64));
+                list::safeimplu32::new::SafeNew {
+                    data_type: input_list_element_type.clone(),
                 }
-                ListType::Unsafe => {
-                    stack.push(BFieldElement::new(output_list_capacity as u64));
-                    list::unsafeimplu32::new::UnsafeNew(input_list_element_type.clone())
-                        .rust_shadowing(stack, std_in.clone(), secret_in.clone(), memory);
-                    stack.pop().unwrap()
+                .rust_shadowing(stack, std_in.clone(), secret_in.clone(), memory);
+                stack.pop().unwrap()
+            }
+            ListType::Unsafe => {
+                stack.push(BFieldElement::new(output_list_capacity as u64));
+                list::unsafeimplu32::new::UnsafeNew {
+                    data_type: input_list_element_type.clone(),
                 }
-            };
+                .rust_shadowing(stack, std_in.clone(), secret_in.clone(), memory);
+                stack.pop().unwrap()
+            }
+        };
 
         // set length
         stack.push(output_list);
         stack.push(BFieldElement::new(len as u64));
         match self.list_type {
             ListType::Safe => {
-                list::safeimplu32::set_length::SafeSetLength(output_type.clone())
-                    .rust_shadowing(stack, std_in, secret_in, memory);
+                list::safeimplu32::set_length::SafeSetLength {
+                    data_type: output_type.clone(),
+                }
+                .rust_shadowing(stack, std_in, secret_in, memory);
             }
             ListType::Unsafe => {
-                list::unsafeimplu32::set_length::UnsafeSetLength(output_type.clone())
-                    .rust_shadowing(stack, std_in, secret_in, memory);
+                list::unsafeimplu32::set_length::UnsafeSetLength {
+                    data_type: output_type.clone(),
+                }
+                .rust_shadowing(stack, std_in, secret_in, memory);
             }
         }
         stack.pop();
@@ -273,8 +291,12 @@ impl Function for Map {
         // forall elements, read + map + write
         for i in 0..len {
             // read
-            let mut input_item =
-                list_element(list_pointer, i, memory, input_list_element_type.get_size());
+            let mut input_item = list_element(
+                list_pointer,
+                i,
+                memory,
+                input_list_element_type.stack_size(),
+            );
 
             // put on stack
             while let Some(element) = input_item.pop() {
@@ -285,12 +307,18 @@ impl Function for Map {
 
             // pull from stack
             let mut output_item = vec![];
-            for _ in 0..output_type.get_size() {
+            for _ in 0..output_type.stack_size() {
                 output_item.push(stack.pop().unwrap());
             }
 
             // write
-            set_element(output_list, i, output_item, memory, output_type.get_size());
+            set_element(
+                output_list,
+                i,
+                output_item,
+                memory,
+                output_type.stack_size(),
+            );
         }
 
         // Ensure canaries are still on the stack, then remove them
@@ -343,10 +371,10 @@ impl Map {
         let input_element_type = self.f.domain();
         let input_list_size = match self.list_type {
             ListType::Safe => {
-                BFieldElement::new((2 + list_length * input_element_type.get_size()) as u64)
+                BFieldElement::new((2 + list_length * input_element_type.stack_size()) as u64)
             }
             ListType::Unsafe => {
-                BFieldElement::new((1 + list_length * input_element_type.get_size()) as u64)
+                BFieldElement::new((1 + list_length * input_element_type.stack_size()) as u64)
             }
         };
         rust_shadowing_helper_functions::dyn_malloc::rust_dyn_malloc_initialize(
@@ -416,7 +444,7 @@ mod tests {
         }
 
         fn input_types(&self) -> Vec<DataType> {
-            vec![DataType::XFE]
+            vec![DataType::Xfe]
         }
 
         fn output_types(&self) -> Vec<DataType> {
@@ -463,16 +491,16 @@ mod tests {
             push 0
             push 0
             call {unused_import}
-            pop
+            pop 1
 
             sponge_init
             sponge_absorb
             sponge_squeeze // _ d9 d8 d7 d6 d5 d4 d3 d2 d1 d0
-            swap 5 pop     // _ d9 d8 d7 d6 d0 d4 d3 d2 d1
-            swap 5 pop     // _ d9 d8 d7 d1 d0 d4 d3 d2
-            swap 5 pop
-            swap 5 pop
-            swap 5 pop
+            swap 5 pop 1   // _ d9 d8 d7 d6 d0 d4 d3 d2 d1
+            swap 5 pop 1   // _ d9 d8 d7 d1 d0 d4 d3 d2
+            swap 5 pop 1
+            swap 5 pop 1
+            swap 5 pop 1
             return
         "
             )
@@ -566,8 +594,8 @@ mod tests {
     fn test_with_raw_function_identity_on_bfe() {
         let rawcode = RawCode::new(
             triton_asm!(identity_bfe: return),
-            DataType::BFE,
-            DataType::BFE,
+            DataType::Bfe,
+            DataType::Bfe,
         );
         let snippet = Map {
             list_type: ListType::Unsafe,
@@ -580,8 +608,8 @@ mod tests {
     fn test_with_raw_function_square_on_bfe() {
         let rawcode = RawCode::new(
             triton_asm!(square_bfe: dup 0 mul return),
-            DataType::BFE,
-            DataType::BFE,
+            DataType::Bfe,
+            DataType::Bfe,
         );
         let snippet = Map {
             list_type: ListType::Unsafe,
@@ -596,8 +624,8 @@ mod tests {
         // element, and `n` is the same value for all elements.
         let rawcode = RawCode::new(
             triton_asm!(square_plus_n_bfe: dup 0 mul dup 4 add return),
-            DataType::BFE,
-            DataType::BFE,
+            DataType::Bfe,
+            DataType::Bfe,
         );
         let snippet = Map {
             list_type: ListType::Unsafe,
@@ -610,10 +638,10 @@ mod tests {
     fn test_with_raw_function_square_on_xfe() {
         let rawcode = RawCode::new(
             triton_asm!(
-                square_xfe: dup 2 dup 2 dup 2 xxmul swap 3 pop swap 3 pop swap 3 pop return
+                square_xfe: dup 2 dup 2 dup 2 xxmul return
             ),
-            DataType::XFE,
-            DataType::XFE,
+            DataType::Xfe,
+            DataType::Xfe,
         );
         let snippet = Map {
             list_type: ListType::Unsafe,
@@ -628,13 +656,11 @@ mod tests {
             triton_asm!(
                 square_xfe_plus_another_xfe:
                     dup 2 dup 2 dup 2 xxmul
-                    swap 3 pop swap 3 pop swap 3 pop
                     dup 8 dup 8 dup 8 xxadd
-                    swap 3 pop swap 3 pop swap 3 pop
                     return
             ),
-            DataType::XFE,
-            DataType::XFE,
+            DataType::Xfe,
+            DataType::Xfe,
         );
         let snippet = Map {
             list_type: ListType::Unsafe,

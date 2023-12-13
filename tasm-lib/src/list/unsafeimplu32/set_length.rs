@@ -1,15 +1,20 @@
 use std::collections::HashMap;
 
+use itertools::Itertools;
 use rand::{random, thread_rng, Rng};
+use triton_vm::triton_asm;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
+use crate::data_type::DataType;
 use crate::library::Library;
 use crate::rust_shadowing_helper_functions::unsafe_list::untyped_unsafe_insert_random_list;
-use crate::snippet::{DataType, DeprecatedSnippet};
+use crate::snippet::DeprecatedSnippet;
 use crate::{empty_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
-pub struct UnsafeSetLength(pub DataType);
+pub struct UnsafeSetLength {
+    pub data_type: DataType,
+}
 
 impl DeprecatedSnippet for UnsafeSetLength {
     fn input_field_names(&self) -> Vec<String> {
@@ -20,12 +25,15 @@ impl DeprecatedSnippet for UnsafeSetLength {
         vec!["*list".to_string()]
     }
 
-    fn input_types(&self) -> Vec<crate::snippet::DataType> {
-        vec![DataType::List(Box::new(self.0.clone())), DataType::U32]
+    fn input_types(&self) -> Vec<crate::data_type::DataType> {
+        vec![
+            DataType::List(Box::new(self.data_type.clone())),
+            DataType::U32,
+        ]
     }
 
-    fn output_types(&self) -> Vec<crate::snippet::DataType> {
-        vec![DataType::List(Box::new(self.0.clone()))]
+    fn output_types(&self) -> Vec<crate::data_type::DataType> {
+        vec![DataType::List(Box::new(self.data_type.clone()))]
     }
 
     fn crash_conditions(&self) -> Vec<String> {
@@ -34,9 +42,9 @@ impl DeprecatedSnippet for UnsafeSetLength {
 
     fn gen_input_states(&self) -> Vec<ExecutionState> {
         vec![
-            prepare_state(&self.0),
-            prepare_state(&self.0),
-            prepare_state(&self.0),
+            prepare_state(&self.data_type),
+            prepare_state(&self.data_type),
+            prepare_state(&self.data_type),
         ]
     }
 
@@ -48,24 +56,33 @@ impl DeprecatedSnippet for UnsafeSetLength {
     fn entrypoint_name(&self) -> String {
         format!(
             "tasm_list_unsafeimplu32_set_length___{}",
-            self.0.label_friendly_name()
+            self.data_type.label_friendly_name()
         )
     }
 
     fn function_code(&self, _library: &mut Library) -> String {
         let entry_point = self.entrypoint_name();
         // It is assumed that the new length is a valid u32 value
-        format!(
-            "
+        triton_asm!(
                 // BEFORE: _ *list list_length
                 // AFTER: _ *list
                 {entry_point}:
-                    write_mem
-                    // Stack: *list list_length
+                    // _ *list list_length
+                    swap 1
+
+                    // _ list_length *list
+
+                    write_mem 1
+                    // _ (*list + 1)
+
+                    push -1
+                    add
+                    // _ *list
 
                     return
-                "
         )
+        .iter()
+        .join("\n")
     }
 
     fn rust_shadowing(
@@ -84,11 +101,11 @@ impl DeprecatedSnippet for UnsafeSetLength {
     }
 
     fn common_case_input_state(&self) -> ExecutionState {
-        prepare_state(&self.0)
+        prepare_state(&self.data_type)
     }
 
     fn worst_case_input_state(&self) -> ExecutionState {
-        prepare_state(&self.0)
+        prepare_state(&self.data_type)
     }
 }
 
@@ -100,7 +117,12 @@ fn prepare_state(data_type: &DataType) -> ExecutionState {
     stack.push(list_pointer);
     stack.push(BFieldElement::new(new_length as u64));
     let mut memory = HashMap::default();
-    untyped_unsafe_insert_random_list(list_pointer, old_length, &mut memory, data_type.get_size());
+    untyped_unsafe_insert_random_list(
+        list_pointer,
+        old_length,
+        &mut memory,
+        data_type.stack_size(),
+    );
     ExecutionState::with_stack_and_memory(stack, memory, 0)
 }
 
@@ -119,13 +141,18 @@ mod tests {
 
     #[test]
     fn new_snippet_test() {
-        test_rust_equivalence_multiple_deprecated(&UnsafeSetLength(DataType::XFE), true);
+        test_rust_equivalence_multiple_deprecated(
+            &UnsafeSetLength {
+                data_type: DataType::Xfe,
+            },
+            true,
+        );
     }
 
     #[test]
     fn list_u32_n_is_one_push() {
         let list_address = BFieldElement::new(58);
-        prop_set_length(DataType::BFE, list_address, 22, 14);
+        prop_set_length(DataType::Bfe, list_address, 22, 14);
     }
 
     #[test]
@@ -153,7 +180,7 @@ mod tests {
         vm_memory.insert(list_address, BFieldElement::new(init_list_length as u64));
 
         test_rust_equivalence_given_input_values_deprecated(
-            &UnsafeSetLength(data_type),
+            &UnsafeSetLength { data_type },
             &init_stack,
             &[],
             &mut vm_memory,
@@ -176,6 +203,8 @@ mod benches {
 
     #[test]
     fn unsafe_set_length_benchmark() {
-        bench_and_write(UnsafeSetLength(DataType::Digest));
+        bench_and_write(UnsafeSetLength {
+            data_type: DataType::Digest,
+        });
     }
 }

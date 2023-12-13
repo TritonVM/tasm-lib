@@ -5,12 +5,10 @@ use rand::{random, rngs::StdRng, thread_rng, Rng, SeedableRng};
 use triton_vm::BFieldElement;
 use twenty_first::shared_math::{bfield_codec::BFieldCodec, other::random_elements};
 
-use crate::{
-    empty_stack,
-    memory::dyn_malloc::DYN_MALLOC_ADDRESS,
-    snippet::{DataType, DeprecatedSnippet},
-    Digest, ExecutionState,
-};
+use crate::data_type::DataType;
+use crate::snippet::DataType;
+use crate::{empty_stack, snippet::DeprecatedSnippet, Digest, ExecutionState};
+use crate::{memory::dyn_malloc::DYN_MALLOC_ADDRESS, snippet::DataType};
 
 /// Returns the number of elements of a contiguous list.
 pub struct GetLength;
@@ -83,11 +81,11 @@ impl DeprecatedSnippet for GetLength {
         vec!["*contiguous_list".to_string()]
     }
 
-    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+    fn input_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::VoidPointer]
     }
 
-    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+    fn output_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::U32]
     }
 
@@ -107,8 +105,8 @@ impl DeprecatedSnippet for GetLength {
         // BEFORE: _ *contiguous_list
         // AFTER: _ length
         {entrypoint}:
-            read_mem
-            swap 1 pop
+            read_mem 1
+            pop 1
             return
         "
         )

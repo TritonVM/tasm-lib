@@ -3,6 +3,7 @@ use rand::{thread_rng, Rng};
 use triton_vm::BFieldElement;
 use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
+use crate::data_type::DataType;
 use crate::{
     list::{
         self,
@@ -13,7 +14,7 @@ use crate::{
         ListType,
     },
     rust_shadowing_helper_functions,
-    snippet::{DataType, DeprecatedSnippet},
+    snippet::DeprecatedSnippet,
 };
 
 // All of `contiguous_list` assumes that each element has its length prepended
@@ -33,11 +34,11 @@ impl DeprecatedSnippet for GetPointerList {
         vec!["*contiguous_list".to_owned()]
     }
 
-    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+    fn input_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::VoidPointer]
     }
 
-    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+    fn output_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::List(Box::new(DataType::VoidPointer))]
     }
 
@@ -53,29 +54,33 @@ impl DeprecatedSnippet for GetPointerList {
         let entrypoint = self.entrypoint_name();
         let get_list_length = library.import(Box::new(contiguous_list::get_length::GetLength));
         let new_list = match self.output_list_type {
-            ListType::Safe => library.import(Box::new(list::safeimplu32::new::SafeNew(
-                DataType::VoidPointer,
-            ))),
-            ListType::Unsafe => library.import(Box::new(list::unsafeimplu32::new::UnsafeNew(
-                DataType::VoidPointer,
-            ))),
+            ListType::Safe => library.import(Box::new(list::safeimplu32::new::SafeNew {
+                data_type: DataType::VoidPointer,
+            })),
+            ListType::Unsafe => library.import(Box::new(list::unsafeimplu32::new::UnsafeNew {
+                data_type: DataType::VoidPointer,
+            })),
         };
 
         let set_length = match self.output_list_type {
-            ListType::Safe => library.import(Box::new(
-                list::safeimplu32::set_length::SafeSetLength(DataType::VoidPointer),
-            )),
-            ListType::Unsafe => library.import(Box::new(
-                list::unsafeimplu32::set_length::UnsafeSetLength(DataType::VoidPointer),
-            )),
+            ListType::Safe => {
+                library.import(Box::new(list::safeimplu32::set_length::SafeSetLength {
+                    data_type: DataType::VoidPointer,
+                }))
+            }
+            ListType::Unsafe => {
+                library.import(Box::new(list::unsafeimplu32::set_length::UnsafeSetLength {
+                    data_type: DataType::VoidPointer,
+                }))
+            }
         };
         let set_element = match self.output_list_type {
-            ListType::Safe => library.import(Box::new(list::safeimplu32::set::SafeSet(
-                DataType::VoidPointer,
-            ))),
-            ListType::Unsafe => library.import(Box::new(list::unsafeimplu32::set::UnsafeSet(
-                DataType::VoidPointer,
-            ))),
+            ListType::Safe => library.import(Box::new(list::safeimplu32::set::SafeSet {
+                data_type: DataType::VoidPointer,
+            })),
+            ListType::Unsafe => library.import(Box::new(list::unsafeimplu32::set::UnsafeSet {
+                data_type: DataType::VoidPointer,
+            })),
         };
 
         format!(
@@ -111,10 +116,9 @@ impl DeprecatedSnippet for GetPointerList {
                 call {entrypoint}_loop
                 // _ *element_size list_length *list_of_pointers index
 
-                pop
+                pop 1
                 swap 2
-                pop
-                pop
+                pop 2
                 // _ *list_of_pointers
 
                 return
@@ -139,10 +143,10 @@ impl DeprecatedSnippet for GetPointerList {
                 call {set_element}
                 // _ index list_length *list_of_pointers *element_size
 
-                read_mem
-                // _ index list_length *list_of_pointers *element_size element_size
+                read_mem 1
+                // _ index list_length *list_of_pointers (*element_size - 1) element_size
 
-                push 1 add
+                push 2 add
 
                 add
                 // _ index list_length *list_of_pointers *next_element_size

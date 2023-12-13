@@ -2,7 +2,6 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use rand::{rngs::StdRng, thread_rng, Rng, SeedableRng};
 use triton_vm::{BFieldElement, NonDeterminism};
-use twenty_first::util_types::algebraic_hasher::Domain;
 
 use crate::{
     linker::{execute_bench, link_for_isolated_run},
@@ -51,7 +50,7 @@ impl<C: Closure + 'static> RustShadow for ShadowedClosure<C> {
         _nondeterminism: &triton_vm::NonDeterminism<BFieldElement>,
         stack: &mut Vec<BFieldElement>,
         _memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
-        _sponge_state: &mut VmHasherState,
+        _sponge_state: &mut Option<VmHasherState>,
     ) -> Vec<BFieldElement> {
         self.closure.borrow().rust_shadow(stack);
         vec![]
@@ -79,7 +78,7 @@ impl<C: Closure + 'static> RustShadow for ShadowedClosure<C> {
                 &stdin,
                 &nondeterminism,
                 &memory,
-                &VmHasherState::new(Domain::VariableLength),
+                &None,
                 1,
                 None,
             );
@@ -108,6 +107,7 @@ impl<C: Closure + 'static> RustShadow for ShadowedClosure<C> {
                 NonDeterminism::new(vec![]),
                 &HashMap::new(),
                 Some(1),
+                None,
             );
             let benchmark = BenchmarkResult {
                 name: self.closure.borrow().entrypoint(),

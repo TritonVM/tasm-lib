@@ -1,7 +1,7 @@
+use crate::data_type::DataType;
 use crate::empty_stack;
 use crate::function::Function;
 use crate::snippet::BasicSnippet;
-use crate::snippet::DataType;
 use crate::structure::tasm_object::encode_to_memory;
 use crate::structure::tasm_object::TasmObject;
 use crate::Library;
@@ -27,10 +27,10 @@ impl BasicSnippet for XfeNtt {
         vec![(DataType::Tuple(vec![]), "result".to_owned())]
     }
 
-    fn inputs(&self) -> Vec<(crate::snippet::DataType, String)> {
+    fn inputs(&self) -> Vec<(crate::data_type::DataType, String)> {
         vec![
-            (DataType::List(Box::new(DataType::XFE)), "x".to_owned()),
-            (DataType::BFE, "omega".to_owned()),
+            (DataType::List(Box::new(DataType::Xfe)), "x".to_owned()),
+            (DataType::Bfe, "omega".to_owned()),
         ]
     }
 
@@ -50,25 +50,41 @@ impl BasicSnippet for XfeNtt {
         let tasm_arithmetic_u32_shiftright =
             library.import(Box::new(crate::arithmetic::u32::shiftright::Shiftright));
         #[allow(non_snake_case)]
-        let tasm_list_unsafeimplu32_length___xfe = library.import(Box::new(
-            crate::list::unsafeimplu32::length::Length(DataType::XFE),
-        ));
+        let tasm_list_unsafeimplu32_length___xfe =
+            library.import(Box::new(crate::list::unsafeimplu32::length::Length {
+                data_type: DataType::Xfe,
+            }));
         #[allow(non_snake_case)]
         let _1__Lu32R_u32_59 = library.kmalloc(1);
         #[allow(non_snake_case)]
         let _fn_arg_reference_to_LVec_RXField_LR_0 = library.kmalloc(1);
         triton_asm!(
                 {entrypoint}:
+                // _ *list omega
 
-                push {_fn_arg_reference_to_LVec_RXField_LR_0}
-        dup 2
-        write_mem
-        pop
+        dup 1
+        // _ *list omega *list
         push {_fn_arg_reference_to_LVec_RXField_LR_0}
-        read_mem
-        swap 1
-        pop
+        // _ *list omega *list **list
+
+        write_mem 1
+        // _ *list omega (**list + 1)
+
+        pop 1
+        // _ *list omega
+
+        push {_fn_arg_reference_to_LVec_RXField_LR_0}
+        // _ *list omega **list
+
+        read_mem 1
+        // _ *list omega *list (**list - 1)
+
+        pop 1
+        // _ *list omega *list
+
         call {tasm_list_unsafeimplu32_length___xfe}
+        // _ *list omega size
+
         push 32
         dup 1
         call {tasm_arithmetic_u32_leadingzeros}
@@ -78,21 +94,19 @@ impl BasicSnippet for XfeNtt {
         swap 1
         call {tasm_arithmetic_u32_safesub}
         push 0
+        // _ *list omega size log_2_size k
+
         call _binop_Neq__LboolR_bool_34_while_loop
-        pop
+        pop 1
         push 1
+        dup 0
         push {_1__Lu32R_u32_59}
-        dup 1
-        write_mem
-        pop
+        write_mem 1
+        pop 1
         push 0
         call _binop_Neq__LboolR_bool_63_while_loop
-        pop
-        pop
-        pop
-        pop
-        pop
-        pop
+        pop 5
+        pop 1
 
                 return
 
@@ -114,33 +128,31 @@ impl BasicSnippet for XfeNtt {
         and
         call {tasm_arithmetic_u32_or}
         swap 2
-        pop
+        pop 1
         dup 3
         push 1
         call {tasm_arithmetic_u32_shiftright}
         swap 4
-        pop
+        pop 1
         dup 0
         push 1
         call {tasm_arithmetic_u32_safeadd}
         swap 1
-        pop
+        pop 1
         recurse
         bitreverse:
         push 0
         push 0
         call _binop_Lt__LboolR_bool_8_while_loop
-        pop
+        pop 1
         swap 2
-        pop
-        pop
+        pop 2
         return
         _binop_Lt__LboolR_bool_40_then:
-        pop
+        pop 1
         push {_fn_arg_reference_to_LVec_RXField_LR_0}
-        read_mem
-        swap 1
-        pop
+        read_mem 1
+        pop 1
         dup 1
         push 3
         mul
@@ -149,21 +161,11 @@ impl BasicSnippet for XfeNtt {
         add
         push 2
         add
-        read_mem
-        swap 1
-        push -1
-        add
-        read_mem
-        swap 1
-        push -1
-        add
-        read_mem
-        swap 1
-        pop
+        read_mem 3
+        pop 1
         push {_fn_arg_reference_to_LVec_RXField_LR_0}
-        read_mem
-        swap 1
-        pop
+        read_mem 1
+        pop 1
         dup 5
         push 3
         mul
@@ -172,76 +174,42 @@ impl BasicSnippet for XfeNtt {
         add
         push 2
         add
-        read_mem
-        swap 1
-        push -1
-        add
-        read_mem
-        swap 1
-        push -1
-        add
-        read_mem
-        swap 1
-        pop
+        read_mem 3
+        pop 1
         push {_fn_arg_reference_to_LVec_RXField_LR_0}
-        read_mem
-        swap 1
-        pop
+        read_mem 1
+        pop 1
         dup 7
         push 3
         mul
         push 1
         add
         add
-        swap 1
-        write_mem
-        push 1
-        add
-        swap 1
-        write_mem
-        push 1
-        add
-        swap 1
-        write_mem
-        pop
+        write_mem 3
+        pop 1
         dup 2
         dup 2
         dup 2
         push {_fn_arg_reference_to_LVec_RXField_LR_0}
-        read_mem
-        swap 1
-        pop
+        read_mem 1
+        pop 1
         dup 8
         push 3
         mul
         push 1
         add
         add
-        swap 1
-        write_mem
-        push 1
-        add
-        swap 1
-        write_mem
-        push 1
-        add
-        swap 1
-        write_mem
-        pop
-        pop
-        pop
-        pop
+        write_mem 3
+        pop 4
         push 0
         return
         _binop_Lt__LboolR_bool_40_else:
         return
+
         _binop_Neq__LboolR_bool_34_while_loop:
+        // _ k
         dup 0
         dup 3
-        eq
-        push 0
-        eq
-        push 0
         eq
         skiz
         return
@@ -262,15 +230,14 @@ impl BasicSnippet for XfeNtt {
         push 1
         call {tasm_arithmetic_u32_safeadd}
         swap 2
-        pop
-        pop
+        pop 2
         recurse
+
         _binop_Neq__LboolR_bool_79_while_loop:
         dup 0
         push {_1__Lu32R_u32_59}
-        read_mem
-        swap 1
-        pop
+        read_mem 1
+        pop 1
         eq
         push 0
         eq
@@ -279,9 +246,8 @@ impl BasicSnippet for XfeNtt {
         skiz
         return
         push {_fn_arg_reference_to_LVec_RXField_LR_0}
-        read_mem
-        swap 1
-        pop
+        read_mem 1
+        pop 1
         dup 3
         dup 2
         call {tasm_arithmetic_u32_safeadd}
@@ -292,28 +258,17 @@ impl BasicSnippet for XfeNtt {
         add
         push 2
         add
-        read_mem
-        swap 1
-        push -1
-        add
-        read_mem
-        swap 1
-        push -1
-        add
-        read_mem
-        swap 1
-        pop
+        read_mem 3
+        pop 1
         push {_fn_arg_reference_to_LVec_RXField_LR_0}
-        read_mem
-        swap 1
-        pop
+        read_mem 1
+        pop 1
         dup 6
         dup 5
         call {tasm_arithmetic_u32_safeadd}
         push {_1__Lu32R_u32_59}
-        read_mem
-        swap 1
-        pop
+        read_mem 1
+        pop 1
         call {tasm_arithmetic_u32_safeadd}
         push 3
         mul
@@ -322,28 +277,19 @@ impl BasicSnippet for XfeNtt {
         add
         push 2
         add
-        read_mem
-        swap 1
-        push -1
-        add
-        read_mem
-        swap 1
-        push -1
-        add
-        read_mem
-        swap 1
-        pop
+        read_mem 3
+        pop 1
         dup 2
         dup 2
         dup 2
         dup 10
         xbmul
         swap 3
-        pop
+        pop 1
         swap 3
-        pop
+        pop 1
         swap 3
-        pop
+        pop 1
         dup 5
         dup 5
         dup 5
@@ -351,16 +297,9 @@ impl BasicSnippet for XfeNtt {
         dup 5
         dup 5
         xxadd
-        swap 3
-        pop
-        swap 3
-        pop
-        swap 3
-        pop
         push {_fn_arg_reference_to_LVec_RXField_LR_0}
-        read_mem
-        swap 1
-        pop
+        read_mem 1
+        pop 1
         dup 12
         dup 11
         call {tasm_arithmetic_u32_safeadd}
@@ -369,17 +308,8 @@ impl BasicSnippet for XfeNtt {
         push 1
         add
         add
-        swap 1
-        write_mem
-        push 1
-        add
-        swap 1
-        write_mem
-        push 1
-        add
-        swap 1
-        write_mem
-        pop
+        write_mem 3
+        pop 1
         dup 5
         dup 5
         dup 5
@@ -389,56 +319,34 @@ impl BasicSnippet for XfeNtt {
         push -1
         xbmul
         xxadd
-        swap 3
-        pop
-        swap 3
-        pop
-        swap 3
-        pop
         push {_fn_arg_reference_to_LVec_RXField_LR_0}
-        read_mem
-        swap 1
-        pop
+        read_mem 1
+        pop 1
         dup 12
         dup 11
         call {tasm_arithmetic_u32_safeadd}
         push {_1__Lu32R_u32_59}
-        read_mem
-        swap 1
-        pop
+        read_mem 1
+        pop 1
         call {tasm_arithmetic_u32_safeadd}
         push 3
         mul
         push 1
         add
         add
-        swap 1
-        write_mem
-        push 1
-        add
-        swap 1
-        write_mem
-        push 1
-        add
-        swap 1
-        write_mem
-        pop
+        write_mem 3
+        pop 1
         dup 7
         dup 10
         mul
         swap 8
-        pop
+        pop 1
         dup 6
         push 1
         call {tasm_arithmetic_u32_safeadd}
         swap 7
-        pop
-        pop
-        pop
-        pop
-        pop
-        pop
-        pop
+        pop 5
+        pop 2
         recurse
         _binop_Lt__LboolR_bool_74_while_loop:
         dup 0
@@ -455,15 +363,12 @@ impl BasicSnippet for XfeNtt {
         dup 2
         push 2
         push {_1__Lu32R_u32_59}
-        read_mem
-        swap 1
-        pop
+        read_mem 1
+        pop 1
         call {tasm_arithmetic_u32_safemul}
         call {tasm_arithmetic_u32_safeadd}
         swap 3
-        pop
-        pop
-        pop
+        pop 3
         recurse
         _binop_Neq__LboolR_bool_63_while_loop:
         dup 0
@@ -479,34 +384,29 @@ impl BasicSnippet for XfeNtt {
         dup 4
         push 2
         push {_1__Lu32R_u32_59}
-        read_mem
-        swap 1
-        pop
+        read_mem 1
+        pop 1
         call {tasm_arithmetic_u32_safemul}
         swap 1
         div_mod
-        pop
+        pop 1
         swap 1
         pow
         push 0
         call _binop_Lt__LboolR_bool_74_while_loop
         push {_1__Lu32R_u32_59}
-        read_mem
-        swap 1
-        pop
+        read_mem 1
+        pop 1
         push 2
         call {tasm_arithmetic_u32_safemul}
         push {_1__Lu32R_u32_59}
-        swap 1
-        write_mem
-        pop
+        write_mem 1
+        pop 1
         dup 2
         push 1
         call {tasm_arithmetic_u32_safeadd}
         swap 3
-        pop
-        pop
-        pop
+        pop 3
         recurse
 
                 // Methods, entrypoints:
@@ -520,8 +420,8 @@ impl BasicSnippet for XfeNtt {
 impl Function for XfeNtt {
     fn rust_shadow(
         &self,
-        stack: &mut Vec<triton_vm::BFieldElement>,
-        memory: &mut std::collections::HashMap<triton_vm::BFieldElement, triton_vm::BFieldElement>,
+        stack: &mut Vec<BFieldElement>,
+        memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
         let omega = stack.pop().unwrap();
         let input_pointer = stack.pop().unwrap();
@@ -538,10 +438,7 @@ impl Function for XfeNtt {
         &self,
         seed: [u8; 32],
         bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
-    ) -> (
-        Vec<triton_vm::BFieldElement>,
-        std::collections::HashMap<triton_vm::BFieldElement, triton_vm::BFieldElement>,
-    ) {
+    ) -> (Vec<BFieldElement>, HashMap<BFieldElement, BFieldElement>) {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
         let n = match bench_case {
             Some(crate::snippet_bencher::BenchmarkCase::CommonCase) => 32,
@@ -569,9 +466,7 @@ mod test {
     use itertools::Itertools;
     use rand::{thread_rng, Rng};
     use triton_vm::NonDeterminism;
-    use twenty_first::{
-        shared_math::x_field_element::XFieldElement, util_types::algebraic_hasher::Domain,
-    };
+    use twenty_first::shared_math::x_field_element::XFieldElement;
 
     use crate::{
         function::{Function, ShadowedFunction},
@@ -579,7 +474,6 @@ mod test {
         test_helpers::{
             rust_final_state, tasm_final_state, verify_stack_equivalence, verify_stack_growth,
         },
-        VmHasherState,
     };
 
     use super::XfeNtt;
@@ -599,8 +493,7 @@ mod test {
 
             let init_stack = stack.to_vec();
             let nondeterminism = NonDeterminism::new(vec![]);
-            let sponge_state = VmHasherState::new(Domain::VariableLength);
-            let words_statically_allocated = 1;
+            let words_statically_allocated = 3;
 
             let rust = rust_final_state(
                 &function,
@@ -608,7 +501,7 @@ mod test {
                 &stdin,
                 &nondeterminism,
                 &memory,
-                &sponge_state,
+                &None,
                 words_statically_allocated,
             );
 
@@ -619,7 +512,7 @@ mod test {
                 &stdin,
                 &nondeterminism,
                 &memory,
-                &sponge_state,
+                &None,
                 words_statically_allocated,
             );
 

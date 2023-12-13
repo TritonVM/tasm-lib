@@ -1,3 +1,4 @@
+use num_traits::Zero;
 use std::{cmp::max, collections::HashMap};
 
 use rand::Rng;
@@ -5,15 +6,15 @@ use rand::{rngs::StdRng, RngCore, SeedableRng};
 use triton_vm::proof_item::ProofItem;
 use triton_vm::{instruction::LabelledInstruction, triton_asm, BFieldElement, NonDeterminism};
 use twenty_first::shared_math::bfield_codec::BFieldCodec;
+use twenty_first::shared_math::x_field_element::XFieldElement;
 
+use crate::data_type::DataType;
 use crate::hashing::absorb::Absorb;
 use crate::procedure::Procedure;
 use crate::structure::tasm_object::TasmObject;
 use crate::VmHasherState;
 use crate::{
-    empty_stack, field, field_with_size,
-    library::Library,
-    snippet::{BasicSnippet, DataType},
+    empty_stack, field, field_with_size, library::Library, snippet::BasicSnippet,
     snippet_bencher::BenchmarkCase,
 };
 
@@ -45,10 +46,6 @@ impl BasicSnippet for Dequeue {
         let field_data_with_size = field_with_size!(VmProofStream::data);
         let include_in_fiat_shamir_heuristic =
             format!("{entrypoint}_include_in_fiat_shamir_heuristic");
-        let merkle_root_evi = ProofItem::MerkleRoot(Default::default()).discriminant();
-        let ood_base_row_evi = ProofItem::MerkleRoot(Default::default()).discriminant();
-        let ood_ext_row_evi = ProofItem::MerkleRoot(Default::default()).discriminant();
-        let ood_quotient_segment_evi = ProofItem::MerkleRoot(Default::default()).discriminant();
         let fiat_shamir = format!("{entrypoint}_fiat_shamir");
         let absorb = _library.import(Box::new(Absorb {}));
         triton_asm!(
@@ -62,22 +59,23 @@ impl BasicSnippet for Dequeue {
                 swap 1 pop      // _ *object_si object_evi
 
                 // is it a Merkle root?
-                push {merkle_root_evi}
+                push {ProofItem::MerkleRoot(Default::default()).bfield_codec_discriminant()}
                 dup 1 eq        // _ *object object_evi object=merkle_root
                 swap 1          // _ *object object=merkle_root object_evi
 
                 // is it an ood base row?
-                push {ood_base_row_evi}
+                push {ProofItem::OutOfDomainBaseRow(vec![]).bfield_codec_discriminant()}
                 dup 1 eq        // _ *object object=merkle_root object_evi object_evi=ood_base_row
                 swap 1          // _ *object object=merkle_root object_evi=ood_base_row object_evi
 
                 // is it an ood ext row?
-                push {ood_ext_row_evi}
+                push {ProofItem::OutOfDomainExtRow(vec![]).bfield_codec_discriminant()}
                 dup 1 eq
                 swap 1
 
                 // is it an ood quotient segment?
-                push {ood_quotient_segment_evi}
+                push {ProofItem::OutOfDomainQuotientSegments([XFieldElement::zero(); 4])
+                    .bfield_codec_discriminant()}
                 dup 1 eq
                 swap 1 pop
 
@@ -149,7 +147,7 @@ impl Procedure for Dequeue {
         memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
         _nondeterminism: &triton_vm::NonDeterminism<BFieldElement>,
         _stdin: &[BFieldElement],
-        sponge_state: &mut VmHasherState,
+        sponge_state: &mut Option<VmHasherState>,
     ) -> Vec<BFieldElement> {
         // read proof stream pointer from stack
         let proof_stream_pointer = stack.pop().unwrap();
@@ -157,7 +155,10 @@ impl Procedure for Dequeue {
         // decode from memory
         let mut proof_stream =
             *VmProofStream::decode_from_memory(memory, proof_stream_pointer).unwrap();
-        proof_stream.sponge_state = sponge_state.to_owned();
+        proof_stream.sponge_state = sponge_state
+            .as_ref()
+            .expect("Sponge state must be initialized")
+            .to_owned();
 
         // calculate proof item address
         let proof_item_pointer = proof_stream_pointer
@@ -178,7 +179,7 @@ impl Procedure for Dequeue {
         let _proof_item = proof_stream.dequeue();
 
         // percolate sponge changes
-        *sponge_state = proof_stream.sponge_state.clone();
+        *sponge_state = Some(proof_stream.sponge_state.clone());
 
         // write proof stream object back
         for (i, s) in proof_stream.encode().into_iter().enumerate() {
@@ -201,7 +202,7 @@ impl Procedure for Dequeue {
         HashMap<BFieldElement, BFieldElement>,
         NonDeterminism<BFieldElement>,
         Vec<BFieldElement>,
-        VmHasherState,
+        Option<VmHasherState>,
     ) {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
 
@@ -247,7 +248,7 @@ impl Procedure for Dequeue {
             memory,
             NonDeterminism::new(vec![]),
             vec![],
-            sponge_state,
+            Some(sponge_state),
         )
     }
 }
@@ -258,19 +259,15 @@ mod test {
     use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
     use rand::{rngs::StdRng, Rng, RngCore, SeedableRng};
-    use triton_vm::{BFieldElement, NonDeterminism};
-    use twenty_first::{
-        shared_math::bfield_codec::BFieldCodec, util_types::algebraic_hasher::Domain,
-    };
+    use triton_vm::{BFieldElement, NonDeterminism, Program};
+    use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
     use crate::{
         empty_stack, execute_with_terminal_state,
         linker::link_for_isolated_run,
-        prepend_state_preparation,
         procedure::{Procedure, ShadowedProcedure},
         snippet::RustShadow,
         test_helpers::test_rust_equivalence_given_complete_state,
-        VmHasherState,
     };
 
     use super::{Dequeue, VmProofStream};
@@ -299,7 +296,7 @@ mod test {
                 &stdin,
                 &nondeterminism,
                 &memory,
-                &VmHasherState::new(Domain::VariableLength),
+                &None,
                 1,
                 None,
             );
@@ -359,15 +356,14 @@ mod test {
                     &nondeterminism,
                     &mut rust_stack,
                     &mut rust_memory,
-                    &mut VmHasherState::new(Domain::VariableLength),
+                    &mut None,
                 )
             });
 
             // run tvm
             let code = link_for_isolated_run(Rc::new(RefCell::new(dequeue.clone())), 0);
-            let program = prepend_state_preparation(&code, &stack);
-            let tvm_result =
-                execute_with_terminal_state(&program, &stdin, &mut nondeterminism, None);
+            let program = Program::new(&code);
+            let tvm_result = execute_with_terminal_state(&program, &stdin, &nondeterminism, None);
             println!("tvm_result: {tvm_result:?}");
 
             assert!(rust_result.is_err() && tvm_result.is_err());

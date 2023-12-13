@@ -2,36 +2,47 @@
 // triton_asm!
 #![recursion_limit = "4096"]
 
-use anyhow::anyhow;
-use anyhow::bail;
-use itertools::Itertools;
-use library::Library;
-use memory::dyn_malloc;
-use memory::dyn_malloc::DYN_MALLOC_ADDRESS;
-use num_traits::Zero;
-use snippet::BasicSnippet;
-use snippet::DeprecatedSnippet;
+// This is needed for `#[derive(TasmObject)]` macro to work consistently across crates.
+// Specifically:
+// From inside the `tasm-lib` crate, we need to refer to `tasm-lib` by `crate`.
+// However, from outside the `tasm-lib` crate, we need to refer to it by `tasm_lib`.
+// The re-export below allows using identifier `tasm_lib` even from inside `tasm-lib`.
+//
+// See also:
+// https://github.com/bkchr/proc-macro-crate/issues/2#issuecomment-572914520
+extern crate self as tasm_lib;
+
 use std::collections::HashMap;
 use std::time::SystemTime;
+
+use anyhow::bail;
+use itertools::Itertools;
+use num_traits::Zero;
+use triton_vm::error::InstructionError;
 use triton_vm::instruction::LabelledInstruction;
+use triton_vm::op_stack::NUM_OP_STACK_REGISTERS;
 use triton_vm::program::Program;
 use triton_vm::triton_asm;
-use triton_vm::triton_instr;
+use triton_vm::vm::VMState;
 use triton_vm::NonDeterminism;
 use triton_vm::PublicInput;
 use triton_vm::{Claim, StarkParameters};
+use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::bfield_codec::BFieldCodec;
 use twenty_first::shared_math::tip5::Tip5State;
 use twenty_first::shared_math::tip5::{self, Tip5};
 
-use triton_vm::op_stack::NUM_OP_STACK_REGISTERS;
-use triton_vm::vm::VMState;
-use twenty_first::shared_math::b_field_element::BFieldElement;
+use library::Library;
+use memory::dyn_malloc;
+use memory::dyn_malloc::DYN_MALLOC_ADDRESS;
+use snippet::BasicSnippet;
+use snippet::DeprecatedSnippet;
 
 pub mod algorithm;
 pub mod arithmetic;
 pub mod closure;
 pub mod compiled_program;
+mod data_type;
 pub mod exported_snippets;
 pub mod function;
 pub mod hashing;
@@ -58,16 +69,6 @@ pub type VmHasher = Tip5;
 pub type VmHasherState = Tip5State;
 pub type Digest = tip5::Digest;
 pub const DIGEST_LENGTH: usize = tip5::DIGEST_LENGTH;
-
-// This is needed for `#[derive(TasmObject)]` macro to work consistently across crates.
-// Specifically:
-// From inside the `tasm-lib` crate, we need to refer to `tasm-lib` by `crate`.
-// However, from outside the `tasm-lib` crate, we need to refer to it by `tasm_lib`.
-// The re-export below allows using identifier `tasm_lib` even from inside `tasm-lib`.
-//
-// See also:
-// https://github.com/bkchr/proc-macro-crate/issues/2#issuecomment-572914520
-extern crate self as tasm_lib;
 
 #[derive(Clone, Debug)]
 pub struct ExecutionState {
@@ -125,7 +126,7 @@ pub struct VmOutputState {
     pub output: Vec<BFieldElement>,
     pub final_stack: Vec<BFieldElement>,
     pub final_ram: HashMap<BFieldElement, BFieldElement>,
-    pub final_sponge_state: VmHasherState,
+    pub final_sponge_state: Option<VmHasherState>,
 }
 
 pub fn empty_stack() -> Vec<BFieldElement> {
@@ -171,88 +172,37 @@ pub fn execute_bench_deprecated(
     std_in: Vec<BFieldElement>,
     nondeterminism: NonDeterminism<BFieldElement>,
     memory: &mut HashMap<BFieldElement, BFieldElement>,
-    initilialize_dynamic_allocator_to: Option<usize>,
+    initialize_dynamic_allocator_to: Option<usize>,
 ) -> anyhow::Result<ExecutionResult> {
-    let init_stack_height = stack.len();
+    let initial_stack_height = stack.len();
+    let public_input = PublicInput::new(std_in.clone());
+    let program = Program::new(code);
 
-    // Prepend to program the initial stack values such that stack is in the expected
-    // state when program logic is executed
-    let prep: Vec<LabelledInstruction> = stack_preparation_code(stack);
+    let mut vm_state = VMState::new(&program, public_input.clone(), nondeterminism.clone());
+    vm_state.op_stack.stack = stack.to_owned();
+    vm_state.run()?;
+    let terminal_state = vm_state;
 
-    // set the allocator, if necessary
-    if let Some(allocator) = initilialize_dynamic_allocator_to {
-        memory.insert(
-            BFieldElement::new(DYN_MALLOC_ADDRESS as u64),
-            BFieldElement::new(allocator as u64),
-        );
+    let jump_stack = terminal_state.jump_stack;
+    if !jump_stack.is_empty() {
+        bail!("Jump stack must be unchanged after code execution but was {jump_stack:?}")
     }
 
-    // Add the program after the stack initialization has been performed
-    // Find the length of code used for setup. This length does not count towards execution length
-    // of snippet so it must be subtracted at the end.
-    let program = Program::new(&prep);
-    let (all_states, _) =
-        program.debug(PublicInput::new(vec![]), nondeterminism.clone(), None, None);
-    let initialization_clock_cycle_count = all_states.len() - 1;
+    let (simulation_trace, output) =
+        program.trace_execution(public_input, nondeterminism.clone())?;
 
-    // Construct the whole program (inclusive setup) to be run
-    let mut executed_code = prep;
-    executed_code.extend_from_slice(code);
-    let program = Program::new(&executed_code);
+    *memory = terminal_state.ram.clone();
+    *stack = terminal_state.op_stack.stack;
 
-    // lift memory to nondeterminism
-    let mut nondeterminism = nondeterminism.clone();
-    for (k, v) in memory.iter() {
-        nondeterminism.ram.insert(*k, *v);
-    }
-
-    // Run the program, including the stack preparation
-    let (execution_trace, err) = program.debug(
-        PublicInput::new(std_in.clone()),
-        nondeterminism.clone(),
-        None,
-        None,
-    );
-    if let Some(e) = err {
-        bail!(
-            "`debug` failed with error: {e}\nLast state before crash:\n{}",
-            execution_trace.last().unwrap()
-        )
-    }
-
-    // Simulate the program, since this gives us hash table output
-    let (simulation_trace, output) = program
-        .trace_execution(PublicInput::new(std_in.clone()), nondeterminism.clone())
-        .map_err(|error| anyhow!("`simulate` failed with error: {error}"))?;
-
-    let start_state: VMState = execution_trace
-        .first()
-        .expect("VM state list must have initial element")
-        .to_owned();
-
-    let end_state: VMState = execution_trace
-        .last()
-        .expect("VM state list cannot be empty")
-        .to_owned();
-
-    *memory = end_state.ram.clone();
-
-    let jump_stack_start = start_state.jump_stack;
-    let jump_stack_end = end_state.jump_stack;
-    if jump_stack_start != jump_stack_end {
-        bail!("Jump stack must be unchanged after code execution")
-    }
-
-    *stack = end_state.op_stack.stack;
-
-    let final_stack_height = stack.len() as isize;
-    if expected_stack_diff != final_stack_height - init_stack_height as isize {
+    let final_stack_height = stack.len();
+    if expected_stack_diff != final_stack_height - initial_stack_height as isize {
         bail!(
             "Code must grow/shrink stack with expected number of elements.\n
-        init height: {init_stack_height}\nend height: {final_stack_height}\n
-        expected difference: {expected_stack_diff}\n\n
-        final stack: {}",
-            stack.iter().map(|x| x.to_string()).join(",")
+            init height: {init_stack_height}\n
+            end height: {final_stack_height}\n
+            expected difference: {expected_stack_diff}\n\n
+            final stack: {}",
+            stack.iter().join(",")
         )
     }
 
@@ -267,23 +217,21 @@ pub fn execute_bench_deprecated(
 
     Ok(ExecutionResult {
         output,
-
         final_stack: stack.clone(),
-
-        final_ram: end_state.ram,
-
-        // Cycle count is cycles it took to run program excluding the cycles that were
-        // spent on preparing the stack
-        cycle_count: simulation_trace.processor_trace.nrows()
-            - initialization_clock_cycle_count
-            - 1,
-
-        // Number of rows generated in the hash table after simulating program
-        hash_table_height: simulation_trace.hash_trace.nrows(),
-
-        // Number of rows generated in the u32 table after simulating program
+        final_ram: terminal_state.ram,
+        cycle_count: terminal_state.cycle_count as usize,
+        hash_table_height: simulation_trace.hash_table_length(),
         u32_table_height: simulation_trace.u32_table_length(),
     })
+}
+
+fn determine_cycle_count_of_preparation_program(prep: &[LabelledInstruction]) -> usize {
+    let program = Program::new(prep);
+    let mut vm_state = VMState::new(&program, PublicInput::default(), NonDeterminism::default());
+    let Err(InstructionError::InstructionPointerOverflow) = vm_state.run() else {
+        panic!("preparation program must not halt");
+    };
+    vm_state.cycle_count as usize
 }
 
 /// Execute a Triton-VM program and test correct behavior indicators.
@@ -297,76 +245,38 @@ pub fn execute_test(
     nondeterminism: &mut NonDeterminism<BFieldElement>,
     memory: &mut HashMap<BFieldElement, BFieldElement>,
     maybe_sponge_state: Option<VmHasherState>,
-    initilialize_dynamic_allocator_to: Option<usize>,
+    initialize_dynamic_allocator_to: Option<usize>,
 ) -> VmOutputState {
-    let init_stack_height = stack.len();
+    let initial_stack_height = stack.len();
+    let public_input = PublicInput::new(std_in.clone());
+    let program = Program::new(code);
 
-    // lift initial memory state to nondeterminism
-    for (key, value) in memory.iter() {
-        if let Some(v) = nondeterminism.ram.get(key) {
-            assert_eq!(*value, *v);
-        } else {
-            nondeterminism.ram.insert(*key, *value);
-        }
-    }
+    let mut vm_state = VMState::new(&program, public_input.clone(), nondeterminism.clone());
+    vm_state.op_stack.stack = stack.to_owned();
+    vm_state.sponge_state = maybe_sponge_state.map(|state| state.state);
+    vm_state.run().unwrap();
+    let terminal_state = vm_state;
 
-    let maybe_highest_address = nondeterminism.ram.keys().map(|b| b.value()).max();
-    if let Some(initial_value) = initilialize_dynamic_allocator_to {
-        if let Some(highest_address) = maybe_highest_address {
-            if initial_value as u64 > highest_address {
-                nondeterminism.ram.insert(
-                    BFieldElement::new(DYN_MALLOC_ADDRESS as u64),
-                    BFieldElement::new(initial_value as u64),
-                );
-            } else {
-                nondeterminism.ram.insert(
-                    BFieldElement::new(DYN_MALLOC_ADDRESS as u64),
-                    BFieldElement::new(highest_address + 1),
-                );
-            }
-        } else {
-            nondeterminism.ram.insert(
-                BFieldElement::new(DYN_MALLOC_ADDRESS as u64),
-                BFieldElement::new(initial_value as u64),
-            );
-        }
-    };
+    *memory = terminal_state.ram.clone();
 
-    // produce standalone program that starts off arranging
-    // the state as we expect
-    let program = prepend_state_preparation(code, stack);
-
-    // run VM
-    let maybe_final_state =
-        execute_with_terminal_state(&program, &std_in, nondeterminism, maybe_sponge_state);
-
-    let final_state = maybe_final_state.unwrap();
-
-    *memory = final_state.ram.clone();
-
-    if !final_state.jump_stack.is_empty() {
+    if !terminal_state.jump_stack.is_empty() {
         panic!("Jump stack must be unchanged after code execution");
     }
 
-    let final_stack_height = final_state.op_stack.stack.len() as isize;
-    if expected_stack_diff != final_stack_height - init_stack_height as isize {
-        panic!(
-            "Code must grow/shrink stack with expected number of elements.\n
-            init height: {init_stack_height}\nend height: {final_stack_height}\n
-            expected difference: {expected_stack_diff}\n\n
-            initial stack: {}\n
-            final stack: {}",
-            stack.iter().skip(16).map(|x| x.to_string()).join(","),
-            final_state
-                .op_stack
-                .stack
-                .iter()
-                .skip(16)
-                .map(|x| x.to_string())
-                .join(","),
-        )
-    }
-    *stack = final_state.op_stack.stack;
+    let final_stack_height = terminal_state.op_stack.stack.len() as isize;
+    assert_eq!(
+        expected_stack_diff,
+        final_stack_height - initial_stack_height as isize,
+        "Code must grow/shrink stack with expected number of elements.\n
+        init height: {init_stack_height}\n
+        end height:  {final_stack_height}\n
+        expected difference: {expected_stack_diff}\n\n
+        initial stack: {}\n
+        final stack:   {}",
+        stack.iter().skip(16).join(","),
+        terminal_state.op_stack.stack.iter().skip(16).join(","),
+    );
+    *stack = terminal_state.op_stack.stack;
 
     // If this environment variable is set, all programs, including the code to prepare the state,
     // will be proven and then verified.
@@ -378,90 +288,46 @@ pub fn execute_test(
             &program,
             &std_in,
             nondeterminism,
-            &final_state.public_output,
+            &terminal_state.public_output,
         );
     }
 
     VmOutputState {
-        output: final_state.public_output,
+        output: terminal_state.public_output,
         final_stack: stack.to_owned(),
-        final_ram: final_state.ram,
-        final_sponge_state: VmHasherState {
-            state: final_state.sponge_state,
-        },
+        final_ram: terminal_state.ram,
+        final_sponge_state: terminal_state
+            .sponge_state
+            .map(|state| VmHasherState { state }),
     }
-}
-
-/// Given an assembled and linked program (represented as a list of
-/// `LabelledInstruction`s), and given a description of the stack,
-/// add to the program code for putting
-/// the stack in the right order.
-pub fn prepend_state_preparation(code: &[LabelledInstruction], stack: &[BFieldElement]) -> Program {
-    // Prepend to program the initial stack values such that stack is in the expected
-    // state when program logic is executed.
-    // The next function call does something analogous for memory but it
-    // predates the option of setting the initial memory value through
-    // nondeterminism. So we just feed it empty memory.
-    let prep: Vec<LabelledInstruction> = stack_preparation_code(stack);
-    let mut executed_code = prep;
-
-    // Construct the whole program (inclusive setup) to be run
-    executed_code.append(&mut code.to_vec());
-
-    Program::new(&executed_code)
 }
 
 /// Prepare state and run Triton VM
-pub fn execute_with_terminal_state<'a>(
-    program: &'a Program,
+pub fn execute_with_terminal_state(
+    program: &Program,
     std_in: &[BFieldElement],
-    nondeterminism: &mut NonDeterminism<BFieldElement>,
+    nondeterminism: &NonDeterminism<BFieldElement>,
     maybe_sponge_state: Option<VmHasherState>,
-) -> anyhow::Result<VMState<'a>> {
-    let initial_state = if let Some(sponge_state) = &maybe_sponge_state {
-        let mut vmstate = VMState::new(
-            program,
-            PublicInput {
-                individual_tokens: std_in.to_vec(),
-            },
-            nondeterminism.to_owned(),
-        );
-        vmstate.sponge_state = sponge_state.state;
-        Some(vmstate)
-    } else {
-        None
-    };
-
-    // run VM
-    match program.debug_terminal_state(
-        PublicInput::new(std_in.to_vec()),
-        nondeterminism.clone(),
-        initial_state,
-        None,
-    ) {
-        Ok(state) => {
+) -> anyhow::Result<VMState> {
+    let public_input = PublicInput::new(std_in.into());
+    let mut vm_state = VMState::new(program, public_input, nondeterminism.to_owned());
+    if let Some(sponge_state) = &maybe_sponge_state {
+        vm_state.sponge_state = Some(sponge_state.state);
+    }
+    match vm_state.run() {
+        Ok(()) => {
             println!("Triton VM execution successful.");
-            anyhow::Ok(state)
+            anyhow::Ok(vm_state)
         }
-        Err((err, state)) => {
-            if maybe_sponge_state.is_some() {
+        Err(err) => {
+            if let Some(sponge_state) = vm_state.sponge_state {
                 println!("tasm final sponge state:");
-                println!("{}", state.sponge_state.iter().join(", "));
+                println!("{}", sponge_state.iter().join(", "));
             }
-            println!("Triton VM execution failed. Final state:\n{}", state);
-            bail!("VM execution failed with error: {err}.\nLast state before crash:\n{state}")
+            println!("Triton VM execution failed. Final state:\n{vm_state}");
+            bail!("VM execution failed with error: {err}")
         }
     }
-}
-
-/// Produce the code to set the stack and memory into a certain state
-fn stack_preparation_code(stack: &[BFieldElement]) -> Vec<LabelledInstruction> {
-    let mut state_preparation_code = Vec::default();
-    for element in stack.iter().skip(NUM_OP_STACK_REGISTERS) {
-        state_preparation_code.push(triton_instr!(push element.value()));
-    }
-
-    state_preparation_code
 }
 
 // If you run this, make sure `opt-level` is set to 3.
@@ -482,7 +348,7 @@ fn prove_and_verify(
         .unwrap();
 
     // let code_header = &code[0..std::cmp::min(code.len(), 100)];
-    // println!("Execution suceeded. Now proving {code_header}");
+    // println!("Execution succeeded. Now proving {code_header}");
     let tick = SystemTime::now();
     let proof = triton_vm::prove(
         StarkParameters::default(),
@@ -511,23 +377,24 @@ fn prove_and_verify(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::dyn_malloc::DYN_MALLOC_ADDRESS;
+
+    use super::*;
 
     #[test]
     fn initialize_dyn_malloc() {
         let mut memory = HashMap::default();
         let initial_dyn_malloc_value = 14;
-        execute_bench_deprecated(
+        execute_test(
             &triton_asm!(halt),
             &mut empty_stack(),
             0,
             vec![],
-            NonDeterminism::new(vec![]),
+            &mut NonDeterminism::new(vec![]),
             &mut memory,
+            None,
             Some(initial_dyn_malloc_value),
-        )
-        .unwrap();
+        );
         assert_eq!(
             initial_dyn_malloc_value,
             memory
@@ -541,16 +408,16 @@ mod tests {
     fn do_not_initialize_dyn_malloc() {
         // Ensure that dyn malloc is not initialized if no such initialization is requested
         let mut memory = HashMap::default();
-        execute_bench_deprecated(
+        execute_test(
             &triton_asm!(halt),
             &mut empty_stack(),
             0,
             vec![],
-            NonDeterminism::new(vec![]),
+            &mut NonDeterminism::new(vec![]),
             &mut memory,
             None,
-        )
-        .unwrap();
+            None,
+        );
         assert!(memory
             .get(&BFieldElement::new(DYN_MALLOC_ADDRESS as u64))
             .unwrap_or(&BFieldElement::zero())

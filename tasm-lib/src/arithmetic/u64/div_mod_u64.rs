@@ -15,8 +15,9 @@ use crate::arithmetic::u64::or_u64::OrU64;
 use crate::arithmetic::u64::shift_left_u64::ShiftLeftU64;
 use crate::arithmetic::u64::shift_right_u64::ShiftRightU64;
 use crate::arithmetic::u64::sub_u64::SubU64;
+use crate::data_type::DataType;
 use crate::library::Library;
-use crate::snippet::{DataType, DeprecatedSnippet};
+use crate::snippet::DeprecatedSnippet;
 use crate::{empty_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
@@ -36,11 +37,11 @@ impl DeprecatedSnippet for DivModU64 {
         ]
     }
 
-    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+    fn input_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::U64, DataType::U64]
     }
 
-    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+    fn output_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::U64, DataType::U64]
     }
 
@@ -79,7 +80,7 @@ impl DeprecatedSnippet for DivModU64 {
         format!(
             "
             // BEFORE: _ numerator_hi numerator_lo divisor_hi divisor_lo
-            // AFTER: _ quotient_hi quotient_lo remainder_hi remainder_lo
+            // AFTER:  _ quotient_hi quotient_lo remainder_hi remainder_lo
             {entrypoint}:
                 push {mem_address_for_spilled_divisor}
                 dup 1

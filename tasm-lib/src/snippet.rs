@@ -1,26 +1,24 @@
-use anyhow::Result;
-use itertools::Itertools;
-use rand::{random, thread_rng, Rng};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::fmt::Display;
 use std::rc::Rc;
-use std::str::FromStr;
+
+use anyhow::Result;
 use triton_vm::instruction::LabelledInstruction;
 use triton_vm::parser::{to_labelled_instructions, tokenize};
 use triton_vm::{triton_asm, NonDeterminism, Program};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
+use crate::data_type::DataType;
 use crate::execute_with_terminal_state;
 use crate::library::Library;
-use crate::prepend_state_preparation;
 use crate::test_helpers::test_rust_equivalence_given_execution_state_deprecated;
 use crate::VmHasherState;
 use crate::{execute_bench_deprecated, ExecutionResult, VmOutputState, DIGEST_LENGTH};
 use crate::{execute_test, ExecutionState};
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 pub enum InputSource {
     StdIn,
     SecretIn,
@@ -37,214 +35,19 @@ impl Display for InputSource {
     }
 }
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
-pub enum DataType {
-    Bool,
-    U32,
-    U64,
-    U128,
-    BFE,
-    XFE,
-    Digest,
-    List(Box<DataType>),
-    Tuple(Vec<DataType>),
-    VoidPointer,
-}
-
-impl DataType {
-    /// Return a string matching how the variant looks in source code
-    pub fn variant_name(&self) -> String {
-        // This function is used to autogenerate snippets in the tasm-lang compiler
+impl InputSource {
+    pub fn label_friendly_name(&self) -> &str {
         match self {
-            DataType::Bool => "DataType::Bool".to_owned(),
-            DataType::U32 => "DataType::U32".to_owned(),
-            DataType::U64 => "DataType::U64".to_owned(),
-            DataType::U128 => "DataType::U128".to_owned(),
-            DataType::BFE => "DataType::BFE".to_owned(),
-            DataType::XFE => "DataType::XFE".to_owned(),
-            DataType::Digest => "DataType::Digest".to_owned(),
-            DataType::List(elem_type) => {
-                format!("DataType::List(Box::new({}))", elem_type.variant_name())
-            }
-            DataType::VoidPointer => "DataType::VoidPointer".to_owned(),
-            DataType::Tuple(elements) => {
-                let elements_as_variant_names =
-                    elements.iter().map(|x| x.variant_name()).collect_vec();
-                format!(
-                    "DataType::Tuple(vec![{}])",
-                    elements_as_variant_names.join(", ")
-                )
-            }
+            InputSource::StdIn => "stdin",
+            InputSource::SecretIn => "secin",
         }
     }
 
-    /// Return a collection of different data types, used for testing
-    #[cfg(test)]
-    pub fn big_random_generatable_type_collection() -> Vec<DataType> {
-        vec![
-            DataType::Bool,
-            DataType::U32,
-            DataType::U64,
-            DataType::U128,
-            DataType::BFE,
-            DataType::XFE,
-            DataType::Digest,
-            DataType::VoidPointer,
-            DataType::Tuple(vec![DataType::Bool]),
-            DataType::Tuple(vec![DataType::XFE, DataType::Bool]),
-            DataType::Tuple(vec![DataType::XFE, DataType::Digest]),
-            DataType::Tuple(vec![DataType::Bool, DataType::Bool]),
-            DataType::Tuple(vec![DataType::Digest, DataType::XFE]),
-            DataType::Tuple(vec![DataType::BFE, DataType::XFE, DataType::Digest]),
-            DataType::Tuple(vec![DataType::XFE, DataType::BFE, DataType::Digest]),
-            DataType::Tuple(vec![
-                DataType::U64,
-                DataType::Digest,
-                DataType::Digest,
-                DataType::Digest,
-            ]),
-            DataType::Tuple(vec![
-                DataType::Digest,
-                DataType::Digest,
-                DataType::Digest,
-                DataType::U64,
-            ]),
-            DataType::Tuple(vec![
-                DataType::Digest,
-                DataType::XFE,
-                DataType::U128,
-                DataType::Bool,
-            ]),
-        ]
-    }
-
-    pub fn seeded_random_elements(
-        &self,
-        count: usize,
-        rng: &mut impl Rng,
-    ) -> Vec<Vec<BFieldElement>> {
+    /// The name of the instruction that reads from this input source
+    pub const fn instruction_name(&self) -> &str {
         match self {
-            DataType::Bool => {
-                let bools: Vec<bool> = (0..count).map(|_| rng.gen_bool(0.5)).collect();
-                bools
-                    .iter()
-                    .map(|x| vec![BFieldElement::new(*x as u64)])
-                    .collect_vec()
-            }
-            DataType::U32 => (0..count)
-                .map(|_| vec![BFieldElement::new(rng.gen_range(0..=u32::MAX as u64))])
-                .collect_vec(),
-            DataType::U64 => (0..2 * count)
-                .map(|_| BFieldElement::new(rng.gen_range(0..=u32::MAX as u64)))
-                .tuples()
-                .map(|(a, b)| vec![a, b])
-                .collect_vec(),
-            DataType::U128 => (0..4 * count)
-                .map(|_| BFieldElement::new(rng.gen_range(0..=u32::MAX as u64)))
-                .tuples()
-                .map(|(a, b, c, d)| vec![a, b, c, d])
-                .collect_vec(),
-            DataType::BFE => (0..count)
-                .map(|_| vec![BFieldElement::new(rng.gen_range(0..=BFieldElement::MAX))])
-                .collect_vec(),
-            DataType::XFE => (0..count)
-                .map(|_| vec![random(), random(), random()])
-                .collect_vec(),
-            DataType::Digest => (0..DIGEST_LENGTH * count)
-                .map(|_| BFieldElement::new(rng.gen_range(0..=BFieldElement::MAX)))
-                .tuples()
-                .map(|(a, b, c, d, e)| vec![a, b, c, d, e])
-                .collect_vec(),
-            DataType::List(_) => panic!("Random generation of lists is not supported"),
-            DataType::VoidPointer => (0..count)
-                .map(|_| vec![random::<BFieldElement>()])
-                .collect_vec(),
-            DataType::Tuple(v) => (0..count)
-                .map(|_| v.iter().flat_map(|dt| dt.random_elements(1)).concat())
-                .collect(),
-        }
-    }
-
-    pub fn random_elements(&self, count: usize) -> Vec<Vec<BFieldElement>> {
-        let mut rng = thread_rng();
-        self.seeded_random_elements(count, &mut rng)
-    }
-}
-
-impl FromStr for DataType {
-    type Err = anyhow::Error;
-
-    // This implementation must be the inverse of `label_friendly_name`
-    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        use DataType::*;
-
-        let res = if s.starts_with("list_L") && s.ends_with('R') {
-            let inner = &s[6..s.len() - 1];
-            let inner = FromStr::from_str(inner)?;
-            DataType::List(Box::new(inner))
-        } else if s.starts_with("tuple_L") && s.ends_with('R') {
-            let inner = &s[7..s.len() - 1];
-            let inners = inner.split("___");
-            let mut inners_resolved: Vec<Self> = vec![];
-            for inner_elem in inners {
-                inners_resolved.push(FromStr::from_str(inner_elem)?);
-            }
-
-            Self::Tuple(inners_resolved)
-        } else {
-            match s {
-                "void_pointer" => VoidPointer,
-                "bool" => Bool,
-                "u32" => U32,
-                "u64" => U64,
-                "u128" => U128,
-                "bfe" => BFE,
-                "xfe" => XFE,
-                "digest" => Digest,
-                _ => anyhow::bail!("Could not parse {s} as a data type"),
-            }
-        };
-
-        Ok(res)
-    }
-}
-
-impl DataType {
-    pub fn label_friendly_name(&self) -> String {
-        match self {
-            DataType::List(inner_type) => format!("list_L{}R", inner_type.label_friendly_name()),
-            DataType::Tuple(inner_types) => {
-                format!(
-                    "tuple_L{}R",
-                    inner_types
-                        .iter()
-                        .map(|x| x.label_friendly_name())
-                        .join("___")
-                )
-            }
-            DataType::VoidPointer => "void_pointer".to_string(),
-            DataType::Bool => "bool".to_string(),
-            DataType::U32 => "u32".to_string(),
-            DataType::U64 => "u64".to_string(),
-            DataType::U128 => "u128".to_string(),
-            DataType::BFE => "bfe".to_string(),
-            DataType::XFE => "xfe".to_string(),
-            DataType::Digest => "digest".to_string(),
-        }
-    }
-
-    pub fn get_size(&self) -> usize {
-        match self {
-            DataType::Bool => 1,
-            DataType::U32 => 1,
-            DataType::U64 => 2,
-            DataType::U128 => 4,
-            DataType::BFE => 1,
-            DataType::XFE => 3,
-            DataType::Digest => DIGEST_LENGTH,
-            DataType::List(_) => 1,
-            DataType::VoidPointer => 1,
-            DataType::Tuple(t) => t.iter().map(|dt| dt.get_size()).sum(),
+            InputSource::StdIn => "read_io",
+            InputSource::SecretIn => "divine",
         }
     }
 }
@@ -258,10 +61,10 @@ pub trait BasicSnippet {
     fn stack_diff(&self) -> isize {
         let mut diff = 0isize;
         for (dt, _name) in self.inputs() {
-            diff -= dt.get_size() as isize;
+            diff -= dt.stack_size() as isize;
         }
         for (dt, _name) in self.outputs() {
-            diff += dt.get_size() as isize;
+            diff += dt.stack_size() as isize;
         }
         diff
     }
@@ -276,7 +79,7 @@ pub trait RustShadow {
         nondeterminism: &NonDeterminism<BFieldElement>,
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
-        sponge_state: &mut VmHasherState,
+        sponge_state: &mut Option<VmHasherState>,
     ) -> Vec<BFieldElement>;
 
     fn test(&self);
@@ -376,44 +179,39 @@ pub trait DeprecatedSnippet {
         secret_in: Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
         words_allocated: Option<usize>,
-    ) -> anyhow::Result<VmOutputState> {
-        let expected_length_prior: usize = self.input_types().iter().map(|x| x.get_size()).sum();
-        let expected_length_after: usize = self.output_types().iter().map(|x| x.get_size()).sum();
+    ) -> Result<VmOutputState> {
+        let expected_length_prior: usize = self.input_types().iter().map(|x| x.stack_size()).sum();
+        let expected_length_after: usize = self.output_types().iter().map(|x| x.stack_size()).sum();
         assert_eq!(
             Self::stack_diff(self),
-            (expected_length_after as isize - expected_length_prior as isize),
+            expected_length_after as isize - expected_length_prior as isize,
             "Declared stack diff must match type indicators"
         );
 
         let mut nondeterminism = NonDeterminism::new(secret_in).with_ram(memory.clone());
 
         let code = self.link_for_isolated_run(words_allocated);
-        let program = prepend_state_preparation(&code, stack);
-        let tvm_result = execute_with_terminal_state(&program, &std_in, &mut nondeterminism, None);
+        let program = Program::new(&code);
+        let tvm_result = execute_with_terminal_state(&program, &std_in, &nondeterminism, None);
 
-        let maybe_final_state = tvm_result.map(|st| VmOutputState {
+        let final_state = tvm_result.map(|st| VmOutputState {
             final_ram: st.ram,
-            final_sponge_state: VmHasherState {
-                state: st.sponge_state,
-            },
+            final_sponge_state: st.sponge_state.map(|state| VmHasherState { state }),
             final_stack: st.op_stack.stack,
             output: st.public_output,
-        });
+        })?;
 
-        if maybe_final_state.is_ok() {
-            execute_test(
-                &code,
-                stack,
-                Self::stack_diff(self),
-                std_in,
-                &mut nondeterminism,
-                memory,
-                None,
-                words_allocated,
-            );
-        }
-
-        maybe_final_state
+        execute_test(
+            &code,
+            stack,
+            Self::stack_diff(self),
+            std_in,
+            &mut nondeterminism,
+            memory,
+            None,
+            words_allocated,
+        );
+        Ok(final_state)
     }
 
     fn link_and_run_tasm_for_bench(
@@ -424,11 +222,11 @@ pub trait DeprecatedSnippet {
         memory: &mut HashMap<BFieldElement, BFieldElement>,
         words_statically_allocated: Option<usize>,
     ) -> Result<ExecutionResult> {
-        let expected_length_prior: usize = self.input_types().iter().map(|x| x.get_size()).sum();
-        let expected_length_after: usize = self.output_types().iter().map(|x| x.get_size()).sum();
+        let expected_length_prior: usize = self.input_types().iter().map(|x| x.stack_size()).sum();
+        let expected_length_after: usize = self.output_types().iter().map(|x| x.stack_size()).sum();
         assert_eq!(
             Self::stack_diff(self),
-            (expected_length_after as isize - expected_length_prior as isize),
+            expected_length_after as isize - expected_length_prior as isize,
             "Declared stack diff must match type indicators"
         );
 
@@ -505,7 +303,7 @@ impl<S: DeprecatedSnippet + Clone + 'static> RustShadow for DeprecatedSnippetWra
         nondeterminism: &NonDeterminism<BFieldElement>,
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
-        _sponge_state: &mut VmHasherState,
+        _sponge_state: &mut Option<VmHasherState>,
     ) -> Vec<BFieldElement> {
         let mut stack_copy = stack.to_vec();
         self.deprecated_snippet.rust_shadowing(
@@ -557,7 +355,7 @@ impl<S: DeprecatedSnippet> BasicSnippet for S {
                 format!("input_{}", field_names[field_name_index]),
             ));
 
-            field_name_index += input_type.get_size();
+            field_name_index += input_type.stack_size();
         }
 
         ret
@@ -579,7 +377,7 @@ impl<S: DeprecatedSnippet> BasicSnippet for S {
                 format!("output_{}", field_names[field_name_index]),
             ));
 
-            field_name_index += input_type.get_size();
+            field_name_index += input_type.stack_size();
         }
 
         ret
@@ -596,8 +394,12 @@ impl<S: DeprecatedSnippet> BasicSnippet for S {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use itertools::Itertools;
+    use std::str::FromStr;
+
     use crate::arithmetic;
+
+    use super::*;
 
     #[test]
     fn can_return_code() {
@@ -616,7 +418,7 @@ mod tests {
         assert_eq!("DataType::Digest", DataType::Digest.variant_name());
         assert_eq!(
             "DataType::Tuple(vec![DataType::XFE, DataType::BFE, DataType::Digest])",
-            DataType::Tuple(vec![DataType::XFE, DataType::BFE, DataType::Digest]).variant_name()
+            DataType::Tuple(vec![DataType::Xfe, DataType::Bfe, DataType::Digest]).variant_name()
         );
         assert_eq!(
             "DataType::List(Box::new(DataType::Digest))",
@@ -628,8 +430,8 @@ mod tests {
     fn parse_and_stringify_datatype_test() {
         assert_eq!(DataType::Digest, DataType::from_str("digest").unwrap());
         assert_eq!(
-            DataType::BFE,
-            DataType::from_str(&DataType::BFE.label_friendly_name()).unwrap()
+            DataType::Bfe,
+            DataType::from_str(&DataType::Bfe.label_friendly_name()).unwrap()
         );
         for data_type in DataType::big_random_generatable_type_collection() {
             assert_eq!(

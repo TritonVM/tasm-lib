@@ -1,6 +1,8 @@
+use itertools::Itertools;
 use num::One;
 use rand::random;
 use std::collections::HashMap;
+use triton_vm::triton_asm;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::random_elements;
 use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
@@ -11,6 +13,7 @@ use twenty_first::util_types::mmr::mmr_trait::Mmr;
 use super::MAX_MMR_HEIGHT;
 use crate::arithmetic::u64::incr_u64::IncrU64;
 use crate::arithmetic::u64::index_of_last_nonzero_bit::IndexOfLastNonZeroBitU64;
+use crate::data_type::DataType;
 use crate::library::Library;
 use crate::list::safeimplu32::new::SafeNew;
 use crate::list::safeimplu32::pop::SafePop;
@@ -21,7 +24,7 @@ use crate::list::unsafeimplu32::pop::UnsafePop;
 use crate::list::unsafeimplu32::push::UnsafePush;
 use crate::list::unsafeimplu32::set_length::UnsafeSetLength;
 use crate::list::ListType;
-use crate::snippet::{DataType, DeprecatedSnippet};
+use crate::snippet::DeprecatedSnippet;
 use crate::{
     empty_stack, rust_shadowing_helper_functions, Digest, ExecutionState, VmHasher, DIGEST_LENGTH,
 };
@@ -116,7 +119,7 @@ impl DeprecatedSnippet for CalculateNewPeaksFromAppend {
         vec!["*new_peaks".to_string(), "*auth_path".to_string()]
     }
 
-    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+    fn input_types(&self) -> Vec<crate::data_type::DataType> {
         vec![
             DataType::U64,
             DataType::List(Box::new(DataType::Digest)),
@@ -124,7 +127,7 @@ impl DeprecatedSnippet for CalculateNewPeaksFromAppend {
         ]
     }
 
-    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+    fn output_types(&self) -> Vec<crate::data_type::DataType> {
         vec![
             DataType::List(Box::new(DataType::Digest)),
             DataType::List(Box::new(DataType::Digest)),
@@ -164,36 +167,50 @@ impl DeprecatedSnippet for CalculateNewPeaksFromAppend {
 
     fn function_code(&self, library: &mut Library) -> String {
         let entrypoint = self.entrypoint_name();
+        let while_loop_label = format!("{entrypoint}_while");
+
         let new_list = match self.list_type {
-            ListType::Safe => library.import(Box::new(SafeNew(DataType::Digest))),
-            ListType::Unsafe => library.import(Box::new(UnsafeNew(DataType::Digest))),
+            ListType::Safe => library.import(Box::new(SafeNew {
+                data_type: DataType::Digest,
+            })),
+            ListType::Unsafe => library.import(Box::new(UnsafeNew {
+                data_type: DataType::Digest,
+            })),
         };
         let push = match self.list_type {
-            ListType::Safe => library.import(Box::new(SafePush(DataType::Digest))),
-            ListType::Unsafe => library.import(Box::new(UnsafePush(DataType::Digest))),
+            ListType::Safe => library.import(Box::new(SafePush {
+                data_type: DataType::Digest,
+            })),
+            ListType::Unsafe => library.import(Box::new(UnsafePush {
+                data_type: DataType::Digest,
+            })),
         };
         let pop = match self.list_type {
-            ListType::Safe => library.import(Box::new(SafePop(DataType::Digest))),
-            ListType::Unsafe => library.import(Box::new(UnsafePop(DataType::Digest))),
+            ListType::Safe => library.import(Box::new(SafePop {
+                data_type: DataType::Digest,
+            })),
+            ListType::Unsafe => library.import(Box::new(UnsafePop {
+                data_type: DataType::Digest,
+            })),
         };
         let set_length = match self.list_type {
-            ListType::Safe => library.import(Box::new(SafeSetLength(DataType::Digest))),
-            ListType::Unsafe => library.import(Box::new(UnsafeSetLength(DataType::Digest))),
+            ListType::Safe => library.import(Box::new(SafeSetLength {
+                data_type: DataType::Digest,
+            })),
+            ListType::Unsafe => library.import(Box::new(UnsafeSetLength {
+                data_type: DataType::Digest,
+            })),
         };
         let u64incr = library.import(Box::new(IncrU64));
         let right_lineage_count = library.import(Box::new(IndexOfLastNonZeroBitU64));
 
-        // Allocate memory for the returned auth path for the newly inserted element
-        // Warning: This auth path is only allocated *once* even though the code is called multiple times.
-        // So if this function is called multiple times, the auth_paths will be overwritten.
-        format!(
-            "
+        triton_asm!(
                 // BEFORE: _ old_leaf_count_hi old_leaf_count_lo *peaks [digests (new_leaf)]
                 // AFTER: _ *new_peaks *auth_path
                 {entrypoint}:
                     dup 5 dup 5 dup 5 dup 5 dup 5 dup 5
                     call {push}
-                    pop pop pop pop pop
+                    pop 5
                     // stack: _ old_leaf_count_hi old_leaf_count_lo *peaks
 
                     // Create auth_path return value (vector living in RAM)
@@ -212,17 +229,17 @@ impl DeprecatedSnippet for CalculateNewPeaksFromAppend {
                     call {u64incr}
                     call {right_lineage_count}
 
-                    call {entrypoint}_while
-                    // stack: _ old_leaf_count_hi old_leaf_count_lo *auth_path *peaks (rll = 0)
+                    call {while_loop_label}
+                    // stack: _ old_leaf_count_hi old_leaf_count_lo *auth_path *peaks 0
 
-                    pop
-                    swap 3 pop swap 1 pop
+                    pop 1
+                    swap 3 pop 1 swap 1 pop 1
                     // stack: _ *peaks *auth_path
 
                     return
 
-                // Stack start and end: _ old_leaf_count_hi old_leaf_count_lo *auth_path *peaks rll
-                {entrypoint}_while:
+                // INVARIANT: _ old_leaf_count_hi old_leaf_count_lo *auth_path *peaks rll
+                {while_loop_label}:
                     dup 0
                     push 0
                     eq
@@ -253,7 +270,6 @@ impl DeprecatedSnippet for CalculateNewPeaksFromAppend {
                     // Stack: _ old_leaf_count_hi old_leaf_count_lo rll *auth_path *peaks *peaks [digest (new_hash)] [digests (previous_peak)]
 
                     hash
-                    pop pop pop pop pop
                     // Stack: _ old_leaf_count_hi old_leaf_count_lo rll *auth_path *peaks *peaks [digests (new_peak)]
 
                     call {push}
@@ -267,8 +283,9 @@ impl DeprecatedSnippet for CalculateNewPeaksFromAppend {
                     // Stack: _ old_leaf_count_hi old_leaf_count_lo *auth_path *peaks (rll - 1)
 
                     recurse
-                "
         )
+        .iter()
+        .join("\n")
     }
 
     fn rust_shadowing(
@@ -288,7 +305,6 @@ impl DeprecatedSnippet for CalculateNewPeaksFromAppend {
             stack.pop().unwrap(),
         ]);
         let peaks_pointer = stack.pop().unwrap();
-        println!("peaks_pointer = {peaks_pointer}");
         let old_leaf_count_lo = stack.pop().unwrap().value();
         let old_leaf_count_hi = stack.pop().unwrap().value();
         let old_leaf_count = (old_leaf_count_hi << 32) | old_leaf_count_lo;
@@ -542,7 +558,6 @@ mod tests {
     fn mmra_append_pbt_safe_lists() {
         let inserted_digest: Digest = VmHasher::hash(&BFieldElement::new(1337));
         for init_size in 0..40 {
-            println!("init_size = {init_size}");
             let leaf_digests: Vec<Digest> = random_elements(init_size);
             let init_mmra: Mmra = MmrAccumulator::new(leaf_digests.clone());
             let expected_final_mmra: Mmra =

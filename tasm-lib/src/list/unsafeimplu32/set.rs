@@ -1,25 +1,29 @@
 use std::collections::HashMap;
 
+use itertools::Itertools;
 use rand::{random, thread_rng, Rng};
+use triton_vm::triton_asm;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::random_elements;
 
+use crate::data_type::DataType;
 use crate::library::Library;
 use crate::rust_shadowing_helper_functions::unsafe_list::{
     unsafe_list_set, untyped_unsafe_insert_random_list,
 };
-use crate::snippet::{DataType, DeprecatedSnippet};
+use crate::snippet::DeprecatedSnippet;
 use crate::{empty_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
-pub struct UnsafeSet(pub DataType);
+pub struct UnsafeSet {
+    pub data_type: DataType,
+}
 
 impl DeprecatedSnippet for UnsafeSet {
     fn input_field_names(&self) -> Vec<String> {
-        // See: https://github.com/TritonVM/tasm-snippets/issues/13
         // _ elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}} *list index
         [
-            vec!["element".to_string(); self.0.get_size()],
+            vec!["element".to_string(); self.data_type.stack_size()],
             vec!["*list".to_string(), "index".to_string()],
         ]
         .concat()
@@ -29,15 +33,15 @@ impl DeprecatedSnippet for UnsafeSet {
         vec![]
     }
 
-    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+    fn input_types(&self) -> Vec<crate::data_type::DataType> {
         vec![
-            self.0.clone(),
-            DataType::List(Box::new(self.0.clone())),
+            self.data_type.clone(),
+            DataType::List(Box::new(self.data_type.clone())),
             DataType::U32,
         ]
     }
 
-    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+    fn output_types(&self) -> Vec<crate::data_type::DataType> {
         vec![]
     }
 
@@ -47,62 +51,57 @@ impl DeprecatedSnippet for UnsafeSet {
 
     fn gen_input_states(&self) -> Vec<ExecutionState> {
         vec![
-            prepare_state(&self.0),
-            prepare_state(&self.0),
-            prepare_state(&self.0),
+            prepare_state(&self.data_type),
+            prepare_state(&self.data_type),
+            prepare_state(&self.data_type),
         ]
     }
 
     fn stack_diff(&self) -> isize {
-        -2 - self.0.get_size() as isize
+        -2 - self.data_type.stack_size() as isize
     }
 
     fn entrypoint_name(&self) -> String {
         format!(
             "tasm_list_unsafeimplu32_set_element___{}",
-            self.0.label_friendly_name()
+            self.data_type.label_friendly_name()
         )
     }
 
     fn function_code(&self, _library: &mut Library) -> String {
         let entrypoint = self.entrypoint_name();
-        let element_size = self.0.get_size();
+        let element_size = self.data_type.stack_size();
 
-        let mut write_elements_to_memory_code = String::default();
-        for i in 0..element_size {
-            write_elements_to_memory_code.push_str("swap 1\n");
-            write_elements_to_memory_code.push_str("write_mem\n");
-            if i != element_size - 1 {
-                // Prepare for next write. Not needed for last iteration.
-                write_elements_to_memory_code.push_str("push 1\n");
-                write_elements_to_memory_code.push_str("add\n");
-            }
-        }
+        let write_elements_to_memory_code = self.data_type.write_value_to_memory();
 
         let mul_with_size = if element_size != 1 {
-            format!("push {element_size}\n mul\n")
+            triton_asm!(push {element_size} mul)
         } else {
-            String::default()
+            triton_asm!()
         };
-        format!(
-            "
+        triton_asm!(
                 // BEFORE: _ elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}} *list index
                 // AFTER: _
                 {entrypoint}:
-                    {mul_with_size}
-                    push 1 // safety offset
-                    add
-                    add
+                    {&mul_with_size}
+                    // _ [value] *list offset_for_previous_elements
 
-                    // stack: _ elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}} *addr
+                    push 1
+                    add
+                    // _ [value] *list offset_including_length_indicator
 
-                    {write_elements_to_memory_code}
-                    // stack: _ *addr
-                    pop
+                    add
+                    // _ [value] *element
+
+                    {&write_elements_to_memory_code}
+
+                    // stack: _ *next_element
+                    pop 1
 
                     return
-                    "
         )
+        .iter()
+        .join("\n")
     }
 
     fn rust_shadowing(
@@ -114,7 +113,8 @@ impl DeprecatedSnippet for UnsafeSet {
     ) {
         let index: u32 = stack.pop().unwrap().try_into().unwrap();
         let list_pointer = stack.pop().unwrap();
-        let mut element: Vec<BFieldElement> = vec![BFieldElement::new(0); self.0.get_size()];
+        let mut element: Vec<BFieldElement> =
+            vec![BFieldElement::new(0); self.data_type.stack_size()];
         for ee in element.iter_mut() {
             *ee = stack.pop().unwrap();
         }
@@ -123,16 +123,16 @@ impl DeprecatedSnippet for UnsafeSet {
             index as usize,
             element,
             memory,
-            self.0.get_size(),
+            self.data_type.stack_size(),
         );
     }
 
     fn common_case_input_state(&self) -> ExecutionState {
-        prepare_state(&self.0)
+        prepare_state(&self.data_type)
     }
 
     fn worst_case_input_state(&self) -> ExecutionState {
-        prepare_state(&self.0)
+        prepare_state(&self.data_type)
     }
 }
 
@@ -140,7 +140,7 @@ fn prepare_state(data_type: &DataType) -> ExecutionState {
     let list_length: usize = thread_rng().gen_range(1..100);
     let index: usize = thread_rng().gen_range(0..list_length);
     let mut stack = empty_stack();
-    let mut push_value: Vec<BFieldElement> = random_elements(data_type.get_size());
+    let mut push_value: Vec<BFieldElement> = random_elements(data_type.stack_size());
     while let Some(element) = push_value.pop() {
         stack.push(element);
     }
@@ -150,7 +150,12 @@ fn prepare_state(data_type: &DataType) -> ExecutionState {
     stack.push(BFieldElement::new(index as u64));
 
     let mut memory = HashMap::default();
-    untyped_unsafe_insert_random_list(list_pointer, list_length, &mut memory, data_type.get_size());
+    untyped_unsafe_insert_random_list(
+        list_pointer,
+        list_length,
+        &mut memory,
+        data_type.stack_size(),
+    );
     ExecutionState::with_stack_and_memory(stack, memory, 0)
 }
 
@@ -169,19 +174,49 @@ mod tests {
 
     #[test]
     fn new_snippet_test() {
-        test_rust_equivalence_multiple_deprecated(&UnsafeSet(DataType::Bool), true);
-        test_rust_equivalence_multiple_deprecated(&UnsafeSet(DataType::BFE), true);
-        test_rust_equivalence_multiple_deprecated(&UnsafeSet(DataType::U32), true);
-        test_rust_equivalence_multiple_deprecated(&UnsafeSet(DataType::U64), true);
-        test_rust_equivalence_multiple_deprecated(&UnsafeSet(DataType::XFE), true);
-        test_rust_equivalence_multiple_deprecated(&UnsafeSet(DataType::Digest), true);
+        test_rust_equivalence_multiple_deprecated(
+            &UnsafeSet {
+                data_type: DataType::Bool,
+            },
+            true,
+        );
+        test_rust_equivalence_multiple_deprecated(
+            &UnsafeSet {
+                data_type: DataType::Bfe,
+            },
+            true,
+        );
+        test_rust_equivalence_multiple_deprecated(
+            &UnsafeSet {
+                data_type: DataType::U32,
+            },
+            true,
+        );
+        test_rust_equivalence_multiple_deprecated(
+            &UnsafeSet {
+                data_type: DataType::U64,
+            },
+            true,
+        );
+        test_rust_equivalence_multiple_deprecated(
+            &UnsafeSet {
+                data_type: DataType::Xfe,
+            },
+            true,
+        );
+        test_rust_equivalence_multiple_deprecated(
+            &UnsafeSet {
+                data_type: DataType::Digest,
+            },
+            true,
+        );
     }
 
     #[test]
     fn list_u32_n_is_one_set() {
         let list_address = BFieldElement::new(48);
         let insert_value = vec![BFieldElement::new(1337)];
-        prop_set(DataType::BFE, list_address, 20, insert_value, 2);
+        prop_set(DataType::Bfe, list_address, 20, insert_value, 2);
     }
 
     #[test]
@@ -192,7 +227,7 @@ mod tests {
             BFieldElement::new(1337),
             BFieldElement::new(1337),
         ];
-        prop_set(DataType::XFE, list_address, 20, insert_value, 2);
+        prop_set(DataType::Xfe, list_address, 20, insert_value, 2);
     }
 
     #[test]
@@ -225,8 +260,8 @@ mod tests {
         let expected_end_stack = [empty_stack()].concat();
         let mut init_stack = empty_stack();
 
-        for i in 0..data_type.get_size() {
-            init_stack.push(push_value[data_type.get_size() - 1 - i]);
+        for i in 0..data_type.stack_size() {
+            init_stack.push(push_value[data_type.stack_size() - 1 - i]);
         }
         init_stack.push(list_address);
         init_stack.push(BFieldElement::new(index as u64));
@@ -238,11 +273,13 @@ mod tests {
             list_address,
             init_list_length as usize,
             &mut vm_memory,
-            data_type.get_size(),
+            data_type.stack_size(),
         );
 
         test_rust_equivalence_given_input_values_deprecated(
-            &UnsafeSet(data_type.clone()),
+            &UnsafeSet {
+                data_type: data_type.clone(),
+            },
             &init_stack,
             &[],
             &mut vm_memory,
@@ -257,13 +294,13 @@ mod tests {
         );
 
         // verify that value was inserted at expected place
-        for i in 0..data_type.get_size() {
+        for i in 0..data_type.stack_size() {
             assert_eq!(
                 push_value[i],
                 vm_memory[&BFieldElement::new(
                     list_address.value()
                         + 1
-                        + data_type.get_size() as u64 * index as u64
+                        + data_type.stack_size() as u64 * index as u64
                         + i as u64
                 )]
             );
@@ -278,6 +315,8 @@ mod benches {
 
     #[test]
     fn unsafe_set_benchmark() {
-        bench_and_write(UnsafeSet(DataType::Digest));
+        bench_and_write(UnsafeSet {
+            data_type: DataType::Digest,
+        });
     }
 }

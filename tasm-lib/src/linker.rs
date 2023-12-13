@@ -1,5 +1,6 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
+use triton_vm::vm::VMState;
 use triton_vm::{
     instruction::LabelledInstruction, triton_asm, triton_instr, BFieldElement, NonDeterminism,
     Program, PublicInput,
@@ -7,7 +8,7 @@ use triton_vm::{
 
 use crate::{
     library::Library, memory::dyn_malloc::DYN_MALLOC_ADDRESS, prove_and_verify,
-    snippet::BasicSnippet, stack_preparation_code, ExecutionResult,
+    snippet::BasicSnippet, ExecutionResult, VmHasherState,
 };
 
 pub fn link_for_isolated_run<T: BasicSnippet>(
@@ -40,85 +41,19 @@ pub fn execute_bench(
     nondeterminism: NonDeterminism<BFieldElement>,
     memory: &HashMap<BFieldElement, BFieldElement>,
     initilialize_dynamic_allocator_to: Option<usize>,
+    sponge_state: Option<VmHasherState>,
 ) -> ExecutionResult {
-    // lift initial memory state to nondeterminism
-    let mut nondeterminism = nondeterminism.clone();
-    for (key, value) in memory.iter() {
-        if let Some(v) = nondeterminism.ram.get(key) {
-            assert_eq!(*value, *v);
-        } else {
-            nondeterminism.ram.insert(*key, *value);
-        }
-    }
+    let program = Program::new(code);
+    let public_input = PublicInput::new(std_in.clone());
 
-    let maybe_highest_address = nondeterminism.ram.keys().map(|b| b.value()).max();
-    if let Some(initial_value) = initilialize_dynamic_allocator_to {
-        if let Some(highest_address) = maybe_highest_address {
-            if initial_value as u64 > highest_address {
-                nondeterminism.ram.insert(
-                    BFieldElement::new(DYN_MALLOC_ADDRESS as u64),
-                    BFieldElement::new(initial_value as u64),
-                );
-            } else {
-                nondeterminism.ram.insert(
-                    BFieldElement::new(DYN_MALLOC_ADDRESS as u64),
-                    BFieldElement::new(highest_address + 1),
-                );
-            }
-        } else {
-            nondeterminism.ram.insert(
-                BFieldElement::new(DYN_MALLOC_ADDRESS as u64),
-                BFieldElement::new(initial_value as u64),
-            );
-        }
-    };
+    let mut vm_state = VMState::new(&program, public_input.clone(), nondeterminism.clone());
+    vm_state.op_stack.stack = stack.to_vec();
+    vm_state.sponge_state = sponge_state.map(|state| state.state);
+    vm_state.run().unwrap();
+    let end_state = vm_state;
 
-    // Prepend to program the initial stack values and initial memory values
-    // such that stack is in the expected state when program logic is executed
-    let prep: Vec<LabelledInstruction> = stack_preparation_code(stack);
-
-    // Add the program after the stack initialization has been performed
-    // Find the length of code used for setup. This length does not count towards
-    // execution length of snippet so it must be subtracted at the end.
-    let initialization_program = Program::new(&[prep.clone(), vec![triton_instr!(halt)]].concat());
-    let terminal_state = initialization_program.debug_terminal_state(
-        PublicInput::new(vec![]),
-        NonDeterminism::new(vec![]),
-        None,
-        None,
-    );
-    let initialization_clock_cycle_count = terminal_state.unwrap().cycle_count as usize;
-
-    // Construct the whole program (inclusive setup) to be run
-    let mut executed_code = prep;
-    executed_code.append(&mut code.to_vec());
-    let extended_program = Program::new(&executed_code);
-
-    let (execution_trace, err) = extended_program.debug(
-        PublicInput::new(std_in.clone()),
-        nondeterminism.clone(),
-        None,
-        None,
-    );
-    if let Some(e) = err {
-        panic!(
-            "`debug` failed with error: {e}\nLast state before crash:\n{}",
-            execution_trace.last().unwrap()
-        )
-    }
-
-    // Simulate the program, since this gives us hash table output
-    let (simulation_trace, _) = extended_program
-        .trace_execution(PublicInput::new(std_in.clone()), nondeterminism.clone())
-        .unwrap();
-
-    let end_state = extended_program
-        .debug_terminal_state(
-            PublicInput::new(std_in.clone()),
-            nondeterminism.clone(),
-            None,
-            None,
-        )
+    let (simulation_trace, _) = program
+        .trace_execution(public_input.clone(), nondeterminism.clone())
         .unwrap();
 
     // If this environment variable is set, all programs, including the code to prepare the state,
@@ -127,31 +62,15 @@ pub fn execute_bench(
     // produced proofs here should be valid.
     // If you run this, make sure `opt-level` is set to 3.
     if std::env::var("DYING_TO_PROVE").is_ok() {
-        prove_and_verify(
-            &extended_program,
-            &std_in,
-            &nondeterminism,
-            &end_state.public_output,
-        );
+        prove_and_verify(&program, &std_in, &nondeterminism, &end_state.public_output);
     }
 
     ExecutionResult {
         output: end_state.public_output,
-
         final_stack: end_state.op_stack.stack,
-
         final_ram: end_state.ram,
-
-        // Cycle count is cycles it took to run program excluding the cycles that were
-        // spent on preparing the stack
-        cycle_count: simulation_trace.processor_trace.nrows()
-            - initialization_clock_cycle_count
-            - 1,
-
-        // Number of rows generated in the hash table after simulating program
-        hash_table_height: simulation_trace.hash_trace.nrows(),
-
-        // Number of rows generated in the u32 table after simulating program
+        cycle_count: end_state.cycle_count as usize,
+        hash_table_height: simulation_trace.hash_table_length(),
         u32_table_height: simulation_trace.u32_table_length(),
     }
 }

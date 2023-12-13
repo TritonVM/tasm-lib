@@ -2,23 +2,20 @@ use rand::{rngs::StdRng, RngCore, SeedableRng};
 use triton_vm::{triton_asm, BFieldElement};
 use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
-use crate::{
-    closure::Closure,
-    empty_stack,
-    snippet::{BasicSnippet, DataType},
-};
+use crate::data_type::DataType;
+use crate::{closure::Closure, empty_stack, snippet::BasicSnippet};
 
 pub struct OverflowingAdd;
 
 impl BasicSnippet for OverflowingAdd {
-    fn inputs(&self) -> Vec<(crate::snippet::DataType, String)> {
+    fn inputs(&self) -> Vec<(crate::data_type::DataType, String)> {
         vec![
             (DataType::U64, "lhs".to_string()),
             (DataType::U64, "rhs".to_string()),
         ]
     }
 
-    fn outputs(&self) -> Vec<(crate::snippet::DataType, String)> {
+    fn outputs(&self) -> Vec<(crate::data_type::DataType, String)> {
         vec![
             (DataType::U64, "wrapped_sum".to_owned()),
             (DataType::Bool, "overflow".to_owned()),
@@ -104,13 +101,11 @@ mod tests {
     use std::collections::HashMap;
 
     use triton_vm::NonDeterminism;
-    use twenty_first::util_types::algebraic_hasher::Domain;
 
     use super::*;
     use crate::closure::ShadowedClosure;
     use crate::snippet::RustShadow;
     use crate::test_helpers::test_rust_equivalence_given_complete_state;
-    use crate::VmHasherState;
 
     #[test]
     fn u64_overflowing_add_pbt() {
@@ -153,7 +148,7 @@ mod tests {
                 &[],
                 &NonDeterminism::new(vec![]),
                 &HashMap::default(),
-                &VmHasherState::new(Domain::VariableLength),
+                &None,
                 1,
                 Some(&expected_final_stack),
             );

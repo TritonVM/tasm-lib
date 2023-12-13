@@ -11,13 +11,14 @@ use twenty_first::{
     util_types::algebraic_hasher::SpongeHasher,
 };
 
+use crate::data_type::DataType;
 use crate::{
     empty_stack,
     hashing::squeeze_repeatedly::SqueezeRepeatedly,
     list::unsafeimplu32::{new::UnsafeNew, set_length::UnsafeSetLength},
     memory::dyn_malloc::DYN_MALLOC_ADDRESS,
     procedure::Procedure,
-    snippet::{BasicSnippet, DataType},
+    snippet::BasicSnippet,
     structure::tasm_object::load_to_memory,
     VmHasher, VmHasherState,
 };
@@ -26,13 +27,13 @@ use crate::{
 pub struct SampleScalars;
 
 impl BasicSnippet for SampleScalars {
-    fn inputs(&self) -> Vec<(crate::snippet::DataType, String)> {
+    fn inputs(&self) -> Vec<(DataType, String)> {
         vec![(DataType::U32, "num_scalars".to_string())]
     }
 
-    fn outputs(&self) -> Vec<(crate::snippet::DataType, String)> {
+    fn outputs(&self) -> Vec<(DataType, String)> {
         vec![(
-            DataType::List(Box::new(DataType::XFE)),
+            DataType::List(Box::new(DataType::Xfe)),
             "*scalars".to_string(),
         )]
     }
@@ -46,8 +47,12 @@ impl BasicSnippet for SampleScalars {
         library: &mut crate::library::Library,
     ) -> Vec<triton_vm::instruction::LabelledInstruction> {
         let entrypoint = self.entrypoint();
-        let new_list_of_xfes = library.import(Box::new(UnsafeNew(DataType::XFE)));
-        let set_length = library.import(Box::new(UnsafeSetLength(DataType::XFE)));
+        let set_length = library.import(Box::new(UnsafeSetLength {
+            data_type: DataType::Xfe,
+        }));
+        let new_list_of_xfes = library.import(Box::new(UnsafeNew {
+            data_type: DataType::Xfe,
+        }));
         let safety_offset = 1;
         let squeeze_repeatedly = library.import(Box::new(SqueezeRepeatedly));
         let rate = RATE;
@@ -96,12 +101,15 @@ impl BasicSnippet for SampleScalars {
 impl Procedure for SampleScalars {
     fn rust_shadow(
         &self,
-        stack: &mut Vec<triton_vm::BFieldElement>,
-        memory: &mut std::collections::HashMap<triton_vm::BFieldElement, triton_vm::BFieldElement>,
-        _nondeterminism: &triton_vm::NonDeterminism<triton_vm::BFieldElement>,
-        _public_input: &[triton_vm::BFieldElement],
-        sponge_state: &mut crate::VmHasherState,
-    ) -> Vec<triton_vm::BFieldElement> {
+        stack: &mut Vec<BFieldElement>,
+        memory: &mut HashMap<BFieldElement, BFieldElement>,
+        _nondeterminism: &NonDeterminism<BFieldElement>,
+        _public_input: &[BFieldElement],
+        sponge_state: &mut Option<VmHasherState>,
+    ) -> Vec<BFieldElement> {
+        let Some(sponge_state) = sponge_state else {
+            panic!("sponge state must be initialized");
+        };
         let num_scalars = stack.pop().unwrap().value() as usize;
         let num_squeezes = (num_scalars * 3 + 9) / RATE;
         let pseudorandomness = (0..num_squeezes)
@@ -139,11 +147,11 @@ impl Procedure for SampleScalars {
         seed: [u8; 32],
         _bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
     ) -> (
-        Vec<triton_vm::BFieldElement>,
-        std::collections::HashMap<triton_vm::BFieldElement, triton_vm::BFieldElement>,
-        triton_vm::NonDeterminism<triton_vm::BFieldElement>,
-        Vec<triton_vm::BFieldElement>,
-        crate::VmHasherState,
+        Vec<BFieldElement>,
+        HashMap<BFieldElement, BFieldElement>,
+        NonDeterminism<BFieldElement>,
+        Vec<BFieldElement>,
+        Option<VmHasherState>,
     ) {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
         let num_scalars = rng.gen_range(0..40);
@@ -155,7 +163,7 @@ impl Procedure for SampleScalars {
         let memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
         let nondeterminism = NonDeterminism::new(vec![]);
         let stdin = vec![];
-        (stack, memory, nondeterminism, stdin, sponge_state)
+        (stack, memory, nondeterminism, stdin, Some(sponge_state))
     }
 }
 

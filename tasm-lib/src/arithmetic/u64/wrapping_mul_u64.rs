@@ -2,8 +2,9 @@ use rand::RngCore;
 use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
+use crate::data_type::DataType;
 use crate::library::Library;
-use crate::snippet::{DataType, DeprecatedSnippet};
+use crate::snippet::DeprecatedSnippet;
 use crate::{empty_stack, push_encodable, ExecutionState};
 
 #[derive(Clone, Debug)]
@@ -67,13 +68,13 @@ impl DeprecatedSnippet for WrappingMulU64 {
                     // Calculate `prod_hi = a_hi + b_lo + c_lo`:
                     split
                     swap 1
-                    pop
+                    pop 1
                     // _ a b c_lo
 
                     swap 1
                     split
                     swap 1
-                    pop
+                    pop 1
                     // _ a c_lo b_lo
 
                     swap 2
@@ -89,7 +90,7 @@ impl DeprecatedSnippet for WrappingMulU64 {
 
                     split
                     swap 1
-                    pop
+                    pop 1
                     // _ a_lo (c_lo + a_hi + b_lo)_lo
 
                     swap 1

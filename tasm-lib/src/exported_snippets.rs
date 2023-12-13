@@ -1,3 +1,5 @@
+use crate::data_type::DataType;
+use crate::mmr::verify_from_memory::MmrVerifyFromMemory;
 use crate::{
     arithmetic::{
         u128::{
@@ -39,17 +41,10 @@ use crate::{
         },
     },
     hashing::{
-        eq_digest::EqDigest, hash_varlen::HashVarlen,
-        load_auth_path_from_secret_in_safe_list::LoadAuthPathFromSecretInSafeList,
-        load_auth_path_from_secret_in_unsafe_list::LoadAuthPathFromSecretInUnsafeList,
-        load_auth_path_from_std_in_safe_list::LoadAuthPathFromStdInSafeList,
-        load_auth_path_from_std_in_unsafe_list::LoadAuthPathFromStdInUnsafeList,
-        reverse_digest::ReverseDigest, sample_indices::SampleIndices, swap_digest::SwapDigest,
+        eq_digest::EqDigest, hash_varlen::HashVarlen, reverse_digest::ReverseDigest,
+        sample_indices::SampleIndices, swap_digest::SwapDigest,
     },
-    io::{
-        load_from_input::LoadFromInput, read_secret::ReadSecret, read_stdin::ReadStdIn,
-        write_to_stdout::WriteToStdout,
-    },
+    io::{load_from_input::LoadFromInput, read_input::ReadInput, write_to_stdout::WriteToStdout},
     list::{
         contiguous_list,
         range::Range,
@@ -63,26 +58,18 @@ use crate::{
         },
         ListType,
     },
-    memory::{dyn_malloc::DynMalloc, memcpy::MemCpy, push_ram_to_stack::PushRamToStack},
+    memory::{dyn_malloc::DynMalloc, memcpy::MemCpy},
     mmr::{
         bag_peaks::BagPeaks, calculate_new_peaks_from_append::CalculateNewPeaksFromAppend,
         calculate_new_peaks_from_leaf_mutation::MmrCalculateNewPeaksFromLeafMutationMtIndices,
-        data_index_to_node_index::DataIndexToNodeIndex,
-        get_height_from_data_index::GetHeightFromDataIndex,
-        leaf_index_to_mt_index::MmrLeafIndexToMtIndexAndPeakIndex, left_child::MmrLeftChild,
-        leftmost_ancestor::MmrLeftMostAncestor,
-        load_from_secret_in_then_verify::MmrLoadFromSecretInThenVerify,
-        non_leaf_nodes_left::MmrNonLeafNodesLeftUsingAnd, right_child::MmrRightChild,
-        right_child_and_height::MmrRightChildAndHeight,
-        right_lineage_count_and_own_height::MmrRightLineageCountAndHeight,
-        right_lineage_length::MmrRightLineageLength, verify_from_memory::MmrVerifyFromMemory,
+        leaf_index_to_mt_index_and_peak_index::MmrLeafIndexToMtIndexAndPeakIndex,
         verify_from_secret_in::MmrVerifyLeafMembershipFromSecretIn,
     },
     neptune::mutator_set::{commit::Commit, get_swbf_indices::GetSwbfIndices},
     other_snippets::bfe_add::BfeAdd,
     pseudo::{lsb::Lsb, neg::Neg, sub::Sub},
     recufier::{merkle_verify::MerkleVerify, proof_stream::dequeue::Dequeue},
-    snippet::{BasicSnippet, DataType, InputSource},
+    snippet::{BasicSnippet, InputSource},
 };
 
 pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
@@ -202,10 +189,6 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
 
         // Hashing
         "tasm_hashing_eq_digest" => Box::new(EqDigest),
-        "tasm_hashing_load_auth_path_from_secret_in_unsafe_list" => Box::new(LoadAuthPathFromSecretInUnsafeList),
-        "tasm_hashing_load_auth_path_from_std_in_unsafe_list" => Box::new(LoadAuthPathFromStdInUnsafeList),
-        "tasm_hashing_load_auth_path_from_secret_in_safe_list" => Box::new(LoadAuthPathFromSecretInSafeList),
-        "tasm_hashing_load_auth_path_from_std_in_safe_list" => Box::new(LoadAuthPathFromStdInSafeList),
         "tasm_hashing_swap_digest" => Box::new(SwapDigest),
         "tasm_hashing_hash_varlen" => Box::new(HashVarlen),
         "tasm_hashing_sample_indices_to_safeimplu32_list" => Box::new(SampleIndices{list_type: ListType::Safe}),
@@ -213,136 +196,202 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
         "tasm_hashing_reverse_digest" => Box::new(ReverseDigest),
 
         // io
-        "tasm_io_read_secret___bool" => Box::new(ReadSecret(DataType::Bool)),
-        "tasm_io_read_secret___u32" => Box::new(ReadSecret(DataType::U32)),
-        "tasm_io_read_secret___u64" => Box::new(ReadSecret(DataType::U64)),
-        "tasm_io_read_secret___u128" => Box::new(ReadSecret(DataType::U128)),
-        "tasm_io_read_secret___bfe" => Box::new(ReadSecret(DataType::BFE)),
-        "tasm_io_read_secret___xfe" => Box::new(ReadSecret(DataType::XFE)),
-        "tasm_io_read_secret___digest" => Box::new(ReadSecret(DataType::Digest)),
+        "tasm_io_read_secin___bool" => Box::new(ReadInput {
+            data_type: DataType::Bool,
+            input_source: InputSource::SecretIn,
+        }),
+        "tasm_io_read_secin___u32" => Box::new(ReadInput {
+            data_type: DataType::U32,
+            input_source: InputSource::SecretIn,
+        }),
+        "tasm_io_read_secin___u64" => Box::new(ReadInput {
+            data_type: DataType::U64,
+            input_source: InputSource::SecretIn,
+        }),
+        "tasm_io_read_secin___u128" => Box::new(ReadInput {
+            data_type: DataType::U128,
+            input_source: InputSource::SecretIn,
+        }),
+        "tasm_io_read_secin___bfe" => Box::new(ReadInput {
+            data_type: DataType::Bfe,
+            input_source: InputSource::SecretIn,
+        }),
+        "tasm_io_read_secin___xfe" => Box::new(ReadInput {
+            data_type: DataType::Xfe,
+            input_source: InputSource::SecretIn,
+        }),
+        "tasm_io_read_secin___digest" => Box::new(ReadInput {
+            data_type: DataType::Digest,
+            input_source: InputSource::SecretIn,
+        }),
 
-        "tasm_io_read_stdin___bool" => Box::new(ReadStdIn(DataType::Bool)),
-        "tasm_io_read_stdin___u32" => Box::new(ReadStdIn(DataType::U32)),
-        "tasm_io_read_stdin___u64" => Box::new(ReadStdIn(DataType::U64)),
-        "tasm_io_read_stdin___u128" => Box::new(ReadStdIn(DataType::U128)),
-        "tasm_io_read_stdin___bfe" => Box::new(ReadStdIn(DataType::BFE)),
-        "tasm_io_read_stdin___xfe" => Box::new(ReadStdIn(DataType::XFE)),
-        "tasm_io_read_stdin___digest" => Box::new(ReadStdIn(DataType::Digest)),
+        "tasm_io_read_stdin___bool" => Box::new(ReadInput {
+            data_type: DataType::Bool,
+            input_source: InputSource::StdIn,
+        }),
+        "tasm_io_read_stdin___u32" => Box::new(ReadInput {
+            data_type: DataType::U32,
+            input_source: InputSource::StdIn,
+        }),
+        "tasm_io_read_stdin___u64" => Box::new(ReadInput {
+            data_type: DataType::U64,
+            input_source: InputSource::StdIn,
+        }),
+        "tasm_io_read_stdin___u128" => Box::new(ReadInput {
+            data_type: DataType::U128,
+            input_source: InputSource::StdIn,
+        }),
+        "tasm_io_read_stdin___bfe" => Box::new(ReadInput {
+            data_type: DataType::Bfe,
+            input_source: InputSource::StdIn,
+        }),
+        "tasm_io_read_stdin___xfe" => Box::new(ReadInput {
+            data_type: DataType::Xfe,
+            input_source: InputSource::StdIn,
+        }),
+        "tasm_io_read_stdin___digest" => Box::new(ReadInput {
+            data_type: DataType::Digest,
+            input_source: InputSource::StdIn,
+        }),
 
         "tasm_io_load_from_input_stdin" => Box::new(LoadFromInput(InputSource::StdIn)),
         "tasm_io_load_from_input_secin" => Box::new(LoadFromInput(InputSource::SecretIn)),
 
-        "tasm_io_write_to_stdout___bool" => Box::new(WriteToStdout(DataType::Bool)),
-        "tasm_io_write_to_stdout___u32" => Box::new(WriteToStdout(DataType::U32)),
-        "tasm_io_write_to_stdout___u64" => Box::new(WriteToStdout(DataType::U64)),
-        "tasm_io_write_to_stdout___u128" => Box::new(WriteToStdout(DataType::U128)),
-        "tasm_io_write_to_stdout___bfe" => Box::new(WriteToStdout(DataType::BFE)),
-        "tasm_io_write_to_stdout___xfe" => Box::new(WriteToStdout(DataType::XFE)),
-        "tasm_io_write_to_stdout___digest" => Box::new(WriteToStdout(DataType::Digest)),
+        "tasm_io_write_to_stdout___bool" => Box::new(WriteToStdout{ data_type: DataType::Bool}),
+        "tasm_io_write_to_stdout___u32" => Box::new(WriteToStdout{ data_type: DataType::U32}),
+        "tasm_io_write_to_stdout___u64" => Box::new(WriteToStdout{ data_type: DataType::U64}),
+        "tasm_io_write_to_stdout___u128" => Box::new(WriteToStdout{ data_type: DataType::U128}),
+        "tasm_io_write_to_stdout___bfe" => Box::new(WriteToStdout{ data_type: DataType::Bfe }),
+        "tasm_io_write_to_stdout___xfe" => Box::new(WriteToStdout{ data_type: DataType::Xfe }),
+        "tasm_io_write_to_stdout___digest" => Box::new(WriteToStdout{ data_type: DataType::Digest}),
 
         // safe lists
-        "tasm_list_safeimplu32_get_element___bool" => Box::new(SafeGet(DataType::Bool)),
-        "tasm_list_safeimplu32_get_element___u32" => Box::new(SafeGet(DataType::U32)),
-        "tasm_list_safeimplu32_get_element___u64" => Box::new(SafeGet(DataType::U64)),
-        "tasm_list_safeimplu32_get_element___bfe" => Box::new(SafeGet(DataType::BFE)),
-        "tasm_list_safeimplu32_get_element___xfe" => Box::new(SafeGet(DataType::XFE)),
-        "tasm_list_safeimplu32_get_element___digest" => Box::new(SafeGet(DataType::Digest)),
+        "tasm_list_safeimplu32_get_element___bool" => Box::new(SafeGet { data_type: DataType::Bool }),
+        "tasm_list_safeimplu32_get_element___u32" => Box::new(SafeGet { data_type: DataType::U32 }),
+        "tasm_list_safeimplu32_get_element___u64" => Box::new(SafeGet { data_type: DataType::U64 }),
+        "tasm_list_safeimplu32_get_element___bfe" => Box::new(SafeGet { data_type: DataType::Bfe }),
+        "tasm_list_safeimplu32_get_element___xfe" => Box::new(SafeGet { data_type: DataType::Xfe }),
+        "tasm_list_safeimplu32_get_element___digest" => Box::new(SafeGet { data_type: DataType::Digest }),
 
-        "tasm_list_safeimplu32_pop___bool" => Box::new(SafePop(DataType::Bool)),
-        "tasm_list_safeimplu32_pop___u32" => Box::new(SafePop(DataType::U32)),
-        "tasm_list_safeimplu32_pop___u64" => Box::new(SafePop(DataType::U64)),
-        "tasm_list_safeimplu32_pop___bfe" => Box::new(SafePop(DataType::BFE)),
-        "tasm_list_safeimplu32_pop___xfe" => Box::new(SafePop(DataType::XFE)),
-        "tasm_list_safeimplu32_pop___digest" => Box::new(SafePop(DataType::Digest)),
+        "tasm_list_safeimplu32_pop___bool" => Box::new(SafePop { data_type: DataType::Bool } ),
+        "tasm_list_safeimplu32_pop___u32" => Box::new(SafePop { data_type: DataType::U32 } ),
+        "tasm_list_safeimplu32_pop___u64" => Box::new(SafePop { data_type: DataType::U64 } ),
+        "tasm_list_safeimplu32_pop___bfe" => Box::new(SafePop { data_type: DataType::Bfe } ),
+        "tasm_list_safeimplu32_pop___xfe" => Box::new(SafePop { data_type: DataType::Xfe } ),
+        "tasm_list_safeimplu32_pop___digest" => Box::new(SafePop { data_type: DataType::Digest } ),
 
-        "tasm_list_safeimplu32_push___bool" => Box::new(SafePush(DataType::Bool)),
-        "tasm_list_safeimplu32_push___u32" => Box::new(SafePush(DataType::U32)),
-        "tasm_list_safeimplu32_push___u64" => Box::new(SafePush(DataType::U64)),
-        "tasm_list_safeimplu32_push___bfe" => Box::new(SafePush(DataType::BFE)),
-        "tasm_list_safeimplu32_push___xfe" => Box::new(SafePush(DataType::XFE)),
-        "tasm_list_safeimplu32_push___digest" => Box::new(SafePush(DataType::Digest)),
+        "tasm_list_safeimplu32_push___bool" => Box::new(SafePush { data_type: DataType::Bool }),
+        "tasm_list_safeimplu32_push___u32" => Box::new(SafePush { data_type: DataType::U32 }),
+        "tasm_list_safeimplu32_push___u64" => Box::new(SafePush { data_type: DataType::U64 }),
+        "tasm_list_safeimplu32_push___bfe" => Box::new(SafePush { data_type: DataType::Bfe }),
+        "tasm_list_safeimplu32_push___xfe" => Box::new(SafePush { data_type: DataType::Xfe }),
+        "tasm_list_safeimplu32_push___digest" => Box::new(SafePush { data_type: DataType::Digest }),
 
-        "tasm_list_safeimplu32_set_element___bool" => Box::new(SafeSet(DataType::Bool)),
-        "tasm_list_safeimplu32_set_element___u32" => Box::new(SafeSet(DataType::U32)),
-        "tasm_list_safeimplu32_set_element___u64" => Box::new(SafeSet(DataType::U64)),
-        "tasm_list_safeimplu32_set_element___bfe" => Box::new(SafeSet(DataType::BFE)),
-        "tasm_list_safeimplu32_set_element___xfe" => Box::new(SafeSet(DataType::XFE)),
-        "tasm_list_safeimplu32_set_element___digest" => Box::new(SafeSet(DataType::Digest)),
+        "tasm_list_safeimplu32_set_element___bool" => Box::new(SafeSet{ data_type: DataType::Bool}),
+        "tasm_list_safeimplu32_set_element___u32" => Box::new(SafeSet{ data_type: DataType::U32}),
+        "tasm_list_safeimplu32_set_element___u64" => Box::new(SafeSet{ data_type: DataType::U64}),
+        "tasm_list_safeimplu32_set_element___bfe" => Box::new(SafeSet{ data_type: DataType::Bfe}),
+        "tasm_list_safeimplu32_set_element___xfe" => Box::new(SafeSet{ data_type: DataType::Xfe}),
+        "tasm_list_safeimplu32_set_element___digest" => Box::new(SafeSet{ data_type: DataType::Digest}),
 
-        "tasm_list_safeimplu32_new___bool" => Box::new(SafeNew(DataType::Bool)),
-        "tasm_list_safeimplu32_new___u32" => Box::new(SafeNew(DataType::U32)),
-        "tasm_list_safeimplu32_new___u64" => Box::new(SafeNew(DataType::U64)),
-        "tasm_list_safeimplu32_new___bfe" => Box::new(SafeNew(DataType::BFE)),
-        "tasm_list_safeimplu32_new___xfe" => Box::new(SafeNew(DataType::XFE)),
-        "tasm_list_safeimplu32_new___digest" => Box::new(SafeNew(DataType::Digest)),
+        "tasm_list_safeimplu32_new___bool" => Box::new(SafeNew { data_type: DataType::Bool }),
+        "tasm_list_safeimplu32_new___u32" => Box::new(SafeNew { data_type: DataType::U32 }),
+        "tasm_list_safeimplu32_new___u64" => Box::new(SafeNew { data_type: DataType::U64 }),
+        "tasm_list_safeimplu32_new___bfe" => Box::new(SafeNew { data_type: DataType::Bfe }),
+        "tasm_list_safeimplu32_new___xfe" => Box::new(SafeNew { data_type: DataType::Xfe }),
+        "tasm_list_safeimplu32_new___digest" => Box::new(SafeNew { data_type: DataType::Digest }),
 
-        "tasm_list_safeimplu32_length___bool" => Box::new(SafeLength(DataType::Bool)),
-        "tasm_list_safeimplu32_length___u32" => Box::new(SafeLength(DataType::U32)),
-        "tasm_list_safeimplu32_length___u64" => Box::new(SafeLength(DataType::U64)),
-        "tasm_list_safeimplu32_length___bfe" => Box::new(SafeLength(DataType::BFE)),
-        "tasm_list_safeimplu32_length___xfe" => Box::new(SafeLength(DataType::XFE)),
-        "tasm_list_safeimplu32_length___digest" => Box::new(SafeLength(DataType::Digest)),
+        "tasm_list_safeimplu32_length___bool" => Box::new(SafeLength{ data_type: DataType::Bool }),
+        "tasm_list_safeimplu32_length___u32" => Box::new(SafeLength{ data_type: DataType::U32 }),
+        "tasm_list_safeimplu32_length___u64" => Box::new(SafeLength{ data_type: DataType::U64 }),
+        "tasm_list_safeimplu32_length___bfe" => Box::new(SafeLength{ data_type: DataType::Bfe }),
+        "tasm_list_safeimplu32_length___xfe" => Box::new(SafeLength{ data_type: DataType::Xfe }),
+        "tasm_list_safeimplu32_length___digest" => Box::new(SafeLength{ data_type: DataType::Digest }),
 
-        "tasm_list_safeimplu32_set_length___bool" => Box::new(SafeSetLength(DataType::Bool)),
-        "tasm_list_safeimplu32_set_length___u32" => Box::new(SafeSetLength(DataType::U32)),
-        "tasm_list_safeimplu32_set_length___u64" => Box::new(SafeSetLength(DataType::U64)),
-        "tasm_list_safeimplu32_set_length___bfe" => Box::new(SafeSetLength(DataType::BFE)),
-        "tasm_list_safeimplu32_set_length___xfe" => Box::new(SafeSetLength(DataType::XFE)),
-        "tasm_list_safeimplu32_set_length___digest" => Box::new(SafeSetLength(DataType::Digest)),
+        "tasm_list_safeimplu32_set_length___bool" => Box::new(SafeSetLength { data_type: DataType::Bool }),
+        "tasm_list_safeimplu32_set_length___u32" => Box::new(SafeSetLength { data_type: DataType::U32 }),
+        "tasm_list_safeimplu32_set_length___u64" => Box::new(SafeSetLength { data_type: DataType::U64 }),
+        "tasm_list_safeimplu32_set_length___bfe" => Box::new(SafeSetLength { data_type: DataType::Bfe }),
+        "tasm_list_safeimplu32_set_length___xfe" => Box::new(SafeSetLength { data_type: DataType::Xfe }),
+        "tasm_list_safeimplu32_set_length___digest" => Box::new(SafeSetLength { data_type: DataType::Digest }),
 
         "tasm_list_safeimplu32_multiset_equality" => Box::new(crate::list::multiset_equality::MultisetEquality(ListType::Safe)),
 
         "tasm_list_safeimplu32_range" => Box::new(Range{list_type: ListType::Safe}),
 
         // unsafe lists
-        "tasm_list_unsafeimplu32_get_element___bool" => Box::new(UnsafeGet(DataType::Bool)),
-        "tasm_list_unsafeimplu32_get_element___u32" => Box::new(UnsafeGet(DataType::U32)),
-        "tasm_list_unsafeimplu32_get_element___u64" => Box::new(UnsafeGet(DataType::U64)),
-        "tasm_list_unsafeimplu32_get_element___bfe" => Box::new(UnsafeGet(DataType::BFE)),
-        "tasm_list_unsafeimplu32_get_element___xfe" => Box::new(UnsafeGet(DataType::XFE)),
-        "tasm_list_unsafeimplu32_get_element___digest" => Box::new(UnsafeGet(DataType::Digest)),
+        "tasm_list_unsafeimplu32_get_element___bool" => Box::new(UnsafeGet{data_type: DataType::Bool}),
+        "tasm_list_unsafeimplu32_get_element___u32" => Box::new(UnsafeGet{data_type: DataType::U32}),
+        "tasm_list_unsafeimplu32_get_element___u64" => Box::new(UnsafeGet{data_type: DataType::U64}),
+        "tasm_list_unsafeimplu32_get_element___bfe" => Box::new(UnsafeGet{data_type: DataType::Bfe }),
+        "tasm_list_unsafeimplu32_get_element___xfe" => Box::new(UnsafeGet{data_type: DataType::Xfe }),
+        "tasm_list_unsafeimplu32_get_element___digest" => Box::new(UnsafeGet{data_type: DataType::Digest}),
 
-        "tasm_list_unsafeimplu32_pop___bool" => Box::new(UnsafePop(DataType::Bool)),
-        "tasm_list_unsafeimplu32_pop___u32" => Box::new(UnsafePop(DataType::U32)),
-        "tasm_list_unsafeimplu32_pop___u64" => Box::new(UnsafePop(DataType::U64)),
-        "tasm_list_unsafeimplu32_pop___bfe" => Box::new(UnsafePop(DataType::BFE)),
-        "tasm_list_unsafeimplu32_pop___xfe" => Box::new(UnsafePop(DataType::XFE)),
-        "tasm_list_unsafeimplu32_pop___digest" => Box::new(UnsafePop(DataType::Digest)),
+        "tasm_list_unsafeimplu32_pop___bool" => Box::new(UnsafePop{ data_type: DataType::Bool }),
+        "tasm_list_unsafeimplu32_pop___u32" => Box::new(UnsafePop{ data_type: DataType::U32 }),
+        "tasm_list_unsafeimplu32_pop___u64" => Box::new(UnsafePop{ data_type: DataType::U64 }),
+        "tasm_list_unsafeimplu32_pop___bfe" => Box::new(UnsafePop{ data_type: DataType::Bfe }),
+        "tasm_list_unsafeimplu32_pop___xfe" => Box::new(UnsafePop{ data_type: DataType::Xfe }),
+        "tasm_list_unsafeimplu32_pop___digest" => Box::new(UnsafePop{ data_type: DataType::Digest }),
 
-        "tasm_list_unsafeimplu32_push___bool" => Box::new(UnsafePush(DataType::Bool)),
-        "tasm_list_unsafeimplu32_push___u32" => Box::new(UnsafePush(DataType::U32)),
-        "tasm_list_unsafeimplu32_push___u64" => Box::new(UnsafePush(DataType::U64)),
-        "tasm_list_unsafeimplu32_push___bfe" => Box::new(UnsafePush(DataType::BFE)),
-        "tasm_list_unsafeimplu32_push___xfe" => Box::new(UnsafePush(DataType::XFE)),
-        "tasm_list_unsafeimplu32_push___digest" => Box::new(UnsafePush(DataType::Digest)),
+        "tasm_list_unsafeimplu32_push___bool" => Box::new(UnsafePush { data_type: DataType::Bool }),
+        "tasm_list_unsafeimplu32_push___u32" => Box::new(UnsafePush { data_type: DataType::U32 }),
+        "tasm_list_unsafeimplu32_push___u64" => Box::new(UnsafePush { data_type: DataType::U64 }),
+        "tasm_list_unsafeimplu32_push___bfe" => Box::new(UnsafePush { data_type: DataType::Bfe }),
+        "tasm_list_unsafeimplu32_push___xfe" => Box::new(UnsafePush { data_type: DataType::Xfe }),
+        "tasm_list_unsafeimplu32_push___digest" => Box::new(UnsafePush { data_type: DataType::Digest }),
 
-        "tasm_list_unsafeimplu32_set_element___bool" => Box::new(UnsafeSet(DataType::Bool)),
-        "tasm_list_unsafeimplu32_set_element___u32" => Box::new(UnsafeSet(DataType::U32)),
-        "tasm_list_unsafeimplu32_set_element___u64" => Box::new(UnsafeSet(DataType::U64)),
-        "tasm_list_unsafeimplu32_set_element___bfe" => Box::new(UnsafeSet(DataType::BFE)),
-        "tasm_list_unsafeimplu32_set_element___xfe" => Box::new(UnsafeSet(DataType::XFE)),
-        "tasm_list_unsafeimplu32_set_element___digest" => Box::new(UnsafeSet(DataType::Digest)),
+        "tasm_list_unsafeimplu32_set_element___bool" => Box::new(UnsafeSet {
+            data_type: DataType::Bool
+        }),
+        "tasm_list_unsafeimplu32_set_element___u32" => Box::new(UnsafeSet {
+            data_type: DataType::U32
+        }),
+        "tasm_list_unsafeimplu32_set_element___u64" => Box::new(UnsafeSet {
+            data_type: DataType::U64
+        }),
+        "tasm_list_unsafeimplu32_set_element___bfe" => Box::new(UnsafeSet {
+            data_type: DataType::Bfe
+        }),
+        "tasm_list_unsafeimplu32_set_element___xfe" => Box::new(UnsafeSet {
+            data_type: DataType::Xfe
+        }),
+        "tasm_list_unsafeimplu32_set_element___digest" => Box::new(UnsafeSet {
+            data_type: DataType::Digest
+        }),
 
-        "tasm_list_unsafeimplu32_new___bool" => Box::new(UnsafeNew(DataType::Bool)),
-        "tasm_list_unsafeimplu32_new___u32" => Box::new(UnsafeNew(DataType::U32)),
-        "tasm_list_unsafeimplu32_new___u64" => Box::new(UnsafeNew(DataType::U64)),
-        "tasm_list_unsafeimplu32_new___bfe" => Box::new(UnsafeNew(DataType::BFE)),
-        "tasm_list_unsafeimplu32_new___xfe" => Box::new(UnsafeNew(DataType::XFE)),
-        "tasm_list_unsafeimplu32_new___digest" => Box::new(UnsafeNew(DataType::Digest)),
+        "tasm_list_unsafeimplu32_new___bool" => Box::new(UnsafeNew { data_type: DataType::Bool }),
+        "tasm_list_unsafeimplu32_new___u32" => Box::new(UnsafeNew { data_type: DataType::U32 }),
+        "tasm_list_unsafeimplu32_new___u64" => Box::new(UnsafeNew { data_type: DataType::U64 }),
+        "tasm_list_unsafeimplu32_new___bfe" => Box::new(UnsafeNew { data_type: DataType::Bfe }),
+        "tasm_list_unsafeimplu32_new___xfe" => Box::new(UnsafeNew { data_type: DataType::Xfe }),
+        "tasm_list_unsafeimplu32_new___digest" => Box::new(UnsafeNew { data_type: DataType::Digest }),
 
-        "tasm_list_unsafeimplu32_length___bool" => Box::new(UnsafeLength(DataType::Bool)),
-        "tasm_list_unsafeimplu32_length___u32" => Box::new(UnsafeLength(DataType::U32)),
-        "tasm_list_unsafeimplu32_length___u64" => Box::new(UnsafeLength(DataType::U64)),
-        "tasm_list_unsafeimplu32_length___bfe" => Box::new(UnsafeLength(DataType::BFE)),
-        "tasm_list_unsafeimplu32_length___xfe" => Box::new(UnsafeLength(DataType::XFE)),
-        "tasm_list_unsafeimplu32_length___digest" => Box::new(UnsafeLength(DataType::Digest)),
+        "tasm_list_unsafeimplu32_length___bool" => Box::new(UnsafeLength{ data_type: DataType::Bool }),
+        "tasm_list_unsafeimplu32_length___u32" => Box::new(UnsafeLength{ data_type: DataType::U32 }),
+        "tasm_list_unsafeimplu32_length___u64" => Box::new(UnsafeLength{ data_type: DataType::U64 }),
+        "tasm_list_unsafeimplu32_length___bfe" => Box::new(UnsafeLength{ data_type: DataType::Bfe }),
+        "tasm_list_unsafeimplu32_length___xfe" => Box::new(UnsafeLength{ data_type: DataType::Xfe }),
+        "tasm_list_unsafeimplu32_length___digest" => Box::new(UnsafeLength{ data_type: DataType::Digest }),
 
-        "tasm_list_unsafeimplu32_set_length___bool" => Box::new(UnsafeSetLength(DataType::Bool)),
-        "tasm_list_unsafeimplu32_set_length___u32" => Box::new(UnsafeSetLength(DataType::U32)),
-        "tasm_list_unsafeimplu32_set_length___u64" => Box::new(UnsafeSetLength(DataType::U64)),
-        "tasm_list_unsafeimplu32_set_length___bfe" => Box::new(UnsafeSetLength(DataType::BFE)),
-        "tasm_list_unsafeimplu32_set_length___xfe" => Box::new(UnsafeSetLength(DataType::XFE)),
-        "tasm_list_unsafeimplu32_set_length___digest" => Box::new(UnsafeSetLength(DataType::Digest)),
+        "tasm_list_unsafeimplu32_set_length___bool" => Box::new(UnsafeSetLength {
+data_type: DataType::Bool
+}),
+        "tasm_list_unsafeimplu32_set_length___u32" => Box::new(UnsafeSetLength {
+data_type: DataType::U32
+}),
+        "tasm_list_unsafeimplu32_set_length___u64" => Box::new(UnsafeSetLength {
+data_type: DataType::U64
+}),
+        "tasm_list_unsafeimplu32_set_length___bfe" => Box::new(UnsafeSetLength {
+data_type: DataType::Bfe
+}),
+        "tasm_list_unsafeimplu32_set_length___xfe" => Box::new(UnsafeSetLength {
+data_type: DataType::Xfe
+}),
+        "tasm_list_unsafeimplu32_set_length___digest" => Box::new(UnsafeSetLength {
+data_type: DataType::Digest
+}),
 
         "tasm_list_unsafeimplu32_multiset_equality" => Box::new(crate::list::multiset_equality::MultisetEquality(ListType::Unsafe)),
         "tasm_list_unsafeimplu32_range" => Box::new(Range{list_type: ListType::Unsafe}),
@@ -361,23 +410,12 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
         "tasm_mmr_calculate_new_peaks_from_leaf_mutation_safeimplu32" => {
             Box::new(MmrCalculateNewPeaksFromLeafMutationMtIndices{ list_type: ListType::Safe} )
         }
-        "tasm_mmr_data_index_to_node_index" => Box::new(DataIndexToNodeIndex),
-        "tasm_mmr_get_height_from_leaf_index" => Box::new(GetHeightFromDataIndex),
         "tasm_mmr_leaf_index_to_mt_index_and_peak_index" => Box::new(MmrLeafIndexToMtIndexAndPeakIndex),
-        "tasm_mmr_left_child" => Box::new(MmrLeftChild),
-        "tasm_mmr_leftmost_ancestor" => Box::new(MmrLeftMostAncestor),
-        "tasm_mmr_verify_load_from_secret_in_unsafeimplu32" => Box::new(MmrLoadFromSecretInThenVerify { list_type: ListType::Unsafe }),
-        "tasm_mmr_verify_load_from_secret_in_safeimplu32" => Box::new(MmrLoadFromSecretInThenVerify { list_type: ListType::Safe }),
-        "tasm_mmr_non_leaf_nodes_left" => Box::new(MmrNonLeafNodesLeftUsingAnd),
-        "tasm_mmr_right_child_and_height" => Box::new(MmrRightChildAndHeight),
-        "tasm_mmr_right_child" => Box::new(MmrRightChild),
-        "tasm_mmr_right_lineage_count_and_own_height" => Box::new(MmrRightLineageCountAndHeight),
-        "tasm_mmr_right_lineage_length" => Box::new(MmrRightLineageLength),
-        "tasm_mmr_verify_from_memory_unsafeimplu32" => Box::new(MmrVerifyFromMemory { list_type: ListType::Unsafe} ),
-        "tasm_mmr_verify_from_memory_safeimplu32" => Box::new(MmrVerifyFromMemory { list_type: ListType::Safe} ),
         "tasm_mmr_verify_from_secret_in_unsafeimplu32" => Box::new(MmrVerifyLeafMembershipFromSecretIn { list_type: ListType::Unsafe }),
         "tasm_mmr_verify_from_secret_in_safeimplu32" => Box::new(MmrVerifyLeafMembershipFromSecretIn { list_type: ListType::Safe }),
         "tasm_mmr_bag_peaks" => Box::new(BagPeaks),
+        "tasm_mmr_verify_from_memory_unsafeimplu32" => Box::new(MmrVerifyFromMemory { list_type: ListType::Unsafe} ),
+        "tasm_mmr_verify_from_memory_safeimplu32" => Box::new(MmrVerifyFromMemory { list_type: ListType::Safe} ),
 
         // other
         "tasm_other_bfe_add" => Box::new(BfeAdd),
@@ -394,31 +432,6 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
         // memory
         "tasm_memory_dyn_malloc" => Box::new(DynMalloc),
         "tasm_memory_memcpy" => Box::new(MemCpy),
-
-        "tasm_memory_push_ram_to_stack___digest" => Box::new(PushRamToStack {
-            output_type: DataType::Digest,
-        }),
-        "tasm_memory_push_ram_to_stack___bool" => Box::new(PushRamToStack {
-            output_type: DataType::Bool,
-        }),
-        "tasm_memory_push_ram_to_stack___u32" => Box::new(PushRamToStack {
-            output_type: DataType::U32,
-        }),
-        "tasm_memory_push_ram_to_stack___u64" => Box::new(PushRamToStack {
-            output_type: DataType::U64,
-        }),
-        "tasm_memory_push_ram_to_stack___u128" => Box::new(PushRamToStack {
-            output_type: DataType::U128,
-        }),
-        "tasm_memory_push_ram_to_stack___void_pointer" => Box::new(PushRamToStack {
-            output_type: DataType::VoidPointer,
-        }),
-        "tasm_memory_push_ram_to_stack___bfe" => Box::new(PushRamToStack {
-            output_type: DataType::BFE,
-        }),
-        "tasm_memory_push_ram_to_stack___xfe" => Box::new(PushRamToStack {
-            output_type: DataType::XFE,
-        }),
 
         // structure
 

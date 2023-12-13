@@ -2,8 +2,9 @@ use rand::random;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
+use crate::data_type::DataType;
 use crate::library::Library;
-use crate::snippet::{DataType, DeprecatedSnippet};
+use crate::snippet::DeprecatedSnippet;
 use crate::{empty_stack, push_encodable, ExecutionState};
 
 #[derive(Clone, Debug)]
@@ -67,7 +68,7 @@ impl<const N: u8> DeprecatedSnippet for ShiftRightStaticU128<N> {
         format!(
             "
             // BEFORE: _ limb3 limb2 limb1 limb0
-            // AFTER: _ (value >> shift)_3 (value >> shift)_2 (value >> shift)_1 (value >> shift)_0
+            // AFTER:  _ (value >> shift)_3 (value >> shift)_2 (value >> shift)_1 (value >> shift)_0
             {entrypoint}:
                 push {pow_2_alt}
                 // _ v3 v2 v1 v0 pow2
@@ -81,7 +82,7 @@ impl<const N: u8> DeprecatedSnippet for ShiftRightStaticU128<N> {
                 // add: v1_lo + v0s_hi etc.
 
                 split  // _ v3s v2s v1s v0s_hi v0s_lo
-                pop    // _ v3s v2s v1s v0s_hi
+                pop 1  // _ v3s v2s v1s v0s_hi
                 swap 1 // _ v3s v2s v0s_hi v1s
                 split  // _ v3s v2s v0s_hi v1s_hi v1s_lo
                 swap 3 // _ v3s v1s_lo v0s_hi v1s_hi v2s

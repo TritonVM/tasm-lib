@@ -8,6 +8,7 @@ use twenty_first::{
     util_types::algebraic_hasher::{AlgebraicHasher, Domain, SpongeHasher},
 };
 
+use crate::data_type::DataType;
 use crate::{
     arithmetic::u128::{shift_left_static_u128, shift_right_static_u128},
     empty_stack,
@@ -21,7 +22,7 @@ use crate::{
         ListType,
     },
     rust_shadowing_helper_functions,
-    snippet::{BasicSnippet, DataType},
+    snippet::BasicSnippet,
     Digest, VmHasher, VmHasherState, DIGEST_LENGTH,
 };
 
@@ -133,45 +134,44 @@ impl BasicSnippet for GetSwbfIndices {
 
             sponge_init
             sponge_absorb
-            pop pop pop pop pop
-            pop pop pop pop pop
             // _ li_hi li_lo r4 r3 r2 r1 r0
 
-            push 1 push 0 push 0
-            // _ li_hi li_lo r4 r3 r2 r1 r0 1 0 0
+            push 0
+            push 0
+            // _ li_hi li_lo r4 r3 r2 r1 r0 0 0
 
-            swap 9 // _ 0 li_lo r4 r3 r2 r1 r0 1 0 li_hi
-            swap 6 // _ 0 li_lo r4 li_hi r2 r1 r0 1 0 r3
-            swap 3 // _ 0 li_lo r4 li_hi r2 r1 r3 1 0 r0
+            dup 8 dup 8
+            // _ li_hi li_lo r4 r3 r2 r1 r0 0 0 li_hi li_lo
 
-            swap 1 // _ 0 li_lo r4 li_hi r2 r1 r3 1 r0 0
-            swap 8 // _ 0 0 r4 li_hi r2 r1 r3 1 r0 li_lo
-            swap 5 // _ 0 0 r4 li_hi li_lo r1 r3 1 r0 r2
-            swap 2 // _ 0 0 r4 li_hi li_lo r1 r3 r2 r0 1
-            swap 7 // _ 0 0 1 li_hi li_lo r1 r3 r2 r0 r4
-            swap 4 // _ 0 0 1 li_hi li_lo r4 r3 r2 r0 r1
-            swap 1 // _ 0 0 1 li_hi li_lo r4 r3 r2 r1 r0
+            push 0
+            push 0
+            push 1
+            // _ li_hi li_lo r4 r3 r2 r1 r0 0 0 li_hi li_lo {0 0 1
+
+            dup 4 dup 4
+            // _ li_hi li_lo r4 r3 r2 r1 r0 0 0 li_hi li_lo {0 0 1 li_hi li_lo
+
+            dup 13 dup 13 dup 13 dup 13 dup 13
+            // _ li_hi li_lo r4 r3 r2 r1 r0 0 0 li_hi li_lo {0 0 1 li_hi li_lo r4 r3 r2 r1 r0}
 
             sponge_absorb
-            pop pop pop pop pop
-            // _ 0 0 1 li_hi li_lo
+            // _ li_hi li_lo r4 r3 r2 r1 r0 0 0 li_hi li_lo
 
-            swap 2 // _ 0 0 li_lo li_hi 1
-            pop    // _ 0 0 li_lo li_hi
-            swap 1
             call {divide_by_batch_size}
-            call {mul_by_chunk_size}
-            // _ batch_offset_3 batch_offset_2 batch_offset_1 batch_offset_0
+            // _ li_hi li_lo r4 r3 r2 r1 r0 (li / bs)_0 (li / bs)_1 (li / bs)_2 (li / bs)_3
 
-            push {num_trials} // _ [batch_offset_u128] number
-            push {window_size} // _ [batch_offset_u128] number upper_bound
-            call {sample_indices} // _ [batch_offset_u128] list_of_indices_as_u32s
+            call {mul_by_chunk_size}
+            // _ li_hi li_lo r4 r3 r2 r1 r0 [batch_offset_u128]
+
+            push {num_trials} // _ li_hi li_lo r4 r3 r2 r1 r0 [batch_offset_u128] number
+            push {window_size} // _ li_hi li_lo r4 r3 r2 r1 r0 [batch_offset_u128] number upper_bound
+            call {sample_indices} // _ li_hi li_lo r4 r3 r2 r1 r0 [batch_offset_u128] *list_of_indices_as_u32s
 
 
             call {map_add_batch_offset}
-            // _ [batch_offset_u128] list_of_absolute_indices_as_u128s
+            // _ li_hi li_lo r4 r3 r2 r1 r0 [batch_offset_u128] *list_of_absolute_indices_as_u128s
 
-            swap 4 pop pop pop pop
+            swap 11 pop 5 pop 5 pop 1
             // *list_of_absolute_indices_as_u128s
 
             return

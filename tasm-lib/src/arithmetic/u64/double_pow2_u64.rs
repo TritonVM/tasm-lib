@@ -1,11 +1,8 @@
 use num::Zero;
 use twenty_first::{amount::u32s::U32s, shared_math::b_field_element::BFieldElement};
 
-use crate::{
-    empty_stack, push_encodable,
-    snippet::{DataType, DeprecatedSnippet},
-    ExecutionState,
-};
+use crate::data_type::DataType;
+use crate::{empty_stack, push_encodable, snippet::DeprecatedSnippet, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct DoublePow2U64;
@@ -19,11 +16,11 @@ impl DeprecatedSnippet for DoublePow2U64 {
         vec!["value_hi".to_string(), "value_lo".to_string()]
     }
 
-    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+    fn input_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::U64]
     }
 
-    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+    fn output_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::U64]
     }
 
@@ -37,14 +34,14 @@ impl DeprecatedSnippet for DoublePow2U64 {
 
     fn function_code(&self, _library: &mut crate::library::Library) -> String {
         let entrypoint = self.entrypoint_name();
-        const TWO_POW_31: &str = "2147483648";
-        const ONE_HALF: &str = "9223372034707292161";
+        const TWO_POW_31: u32 = 1 << 31;
+        let one_half = BFieldElement::new(1) / BFieldElement::new(2);
 
         // Double the value of a power of 2. Does *not* check if input is valid.
         format!(
             "
             // BEFORE: _ value_hi value_lo
-            // AFTER: _ (value * 2)_hi (value * 2)_lo
+            // AFTER:  _ (value * 2)_hi (value * 2)_lo
             {entrypoint}:
                 dup 0
                 push {TWO_POW_31}
@@ -69,9 +66,8 @@ impl DeprecatedSnippet for DoublePow2U64 {
                 {entrypoint}_carry:
                     // _ value_hi (value_lo = `2 ** 31`)
 
-                    pop
-                    pop
-                    push {ONE_HALF} // sue me
+                    pop 2
+                    push {one_half} // sue me
                     push 0
 
                     return

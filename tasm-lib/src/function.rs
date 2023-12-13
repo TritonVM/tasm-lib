@@ -2,7 +2,6 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use rand::{rngs::StdRng, thread_rng, Rng, SeedableRng};
 use triton_vm::{BFieldElement, NonDeterminism};
-use twenty_first::util_types::algebraic_hasher::Domain;
 
 use crate::{
     linker::{execute_bench, link_for_isolated_run},
@@ -25,6 +24,7 @@ pub trait Function: BasicSnippet {
         memory: &mut HashMap<BFieldElement, BFieldElement>,
     );
 
+    /// Return (init_stack, init_memory)
     fn pseudorandom_initial_state(
         &self,
         seed: [u8; 32],
@@ -54,7 +54,7 @@ where
         _nondeterminism: &triton_vm::NonDeterminism<BFieldElement>,
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
-        _sponge_state: &mut VmHasherState,
+        _sponge_state: &mut Option<VmHasherState>,
     ) -> Vec<BFieldElement> {
         self.function.borrow().rust_shadow(stack, memory);
         vec![]
@@ -84,7 +84,7 @@ where
                 &stdin,
                 &NonDeterminism::new(vec![]),
                 &memory,
-                &VmHasherState::new(Domain::VariableLength),
+                &None,
                 1,
                 None,
             );
@@ -115,6 +115,7 @@ where
                 NonDeterminism::new(vec![]),
                 &memory,
                 Some(1),
+                None,
             );
             let benchmark = BenchmarkResult {
                 name: self.function.borrow().entrypoint(),

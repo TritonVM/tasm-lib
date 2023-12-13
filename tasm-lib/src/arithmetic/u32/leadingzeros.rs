@@ -1,11 +1,8 @@
 use rand::{thread_rng, RngCore};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
-use crate::{
-    empty_stack,
-    snippet::{DataType, DeprecatedSnippet},
-    ExecutionState,
-};
+use crate::data_type::DataType;
+use crate::{empty_stack, snippet::DeprecatedSnippet, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct Leadingzeros;
@@ -23,11 +20,11 @@ impl DeprecatedSnippet for Leadingzeros {
         vec!["leading zeros in value".to_string()]
     }
 
-    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+    fn input_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::U32]
     }
 
-    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+    fn output_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::U32]
     }
 

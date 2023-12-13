@@ -1,0 +1,137 @@
+use std::collections::HashMap;
+use triton_vm::{instruction::LabelledInstruction, triton_asm, NonDeterminism};
+use twenty_first::shared_math::{b_field_element::BFieldElement, bfield_codec::BFieldCodec};
+
+use crate::data_type::DataType;
+use crate::{
+    empty_stack,
+    procedure::Procedure,
+    snippet::{BasicSnippet, InputSource},
+};
+
+/// Move an element of type `DataType` from standard-in or secret-in's token stream to the stack
+#[derive(Clone, Debug)]
+pub struct ReadInput {
+    pub data_type: DataType,
+    pub input_source: InputSource,
+}
+
+impl BasicSnippet for ReadInput {
+    fn inputs(&self) -> Vec<(DataType, String)> {
+        vec![]
+    }
+
+    fn outputs(&self) -> Vec<(DataType, String)> {
+        vec![(self.data_type.clone(), "read_value".to_string())]
+    }
+
+    fn entrypoint(&self) -> String {
+        format!(
+            "tasm_io_read_{}___{}",
+            self.input_source.label_friendly_name(),
+            self.data_type.label_friendly_name()
+        )
+    }
+
+    fn code(&self, _library: &mut crate::library::Library) -> Vec<LabelledInstruction> {
+        let entrypoint = self.entrypoint();
+        let read_an_element = self.data_type.read_value_from_input(self.input_source);
+        triton_asm!(
+            {entrypoint}:
+                {&read_an_element}
+                return
+        )
+    }
+}
+
+impl Procedure for ReadInput {
+    fn rust_shadow(
+        &self,
+        stack: &mut Vec<BFieldElement>,
+        _memory: &mut HashMap<BFieldElement, BFieldElement>,
+        nondeterminism: &NonDeterminism<BFieldElement>,
+        public_input: &[BFieldElement],
+        _sponge_state: &mut Option<crate::VmHasherState>,
+    ) -> Vec<BFieldElement> {
+        let input_source = match self.input_source {
+            InputSource::StdIn => public_input,
+            InputSource::SecretIn => &nondeterminism.individual_tokens,
+        };
+        for elem in input_source.iter().take(self.data_type.stack_size()) {
+            stack.push(*elem);
+        }
+
+        // Output nothing
+        vec![]
+    }
+
+    fn pseudorandom_initial_state(
+        &self,
+        _seed: [u8; 32],
+        _bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
+    ) -> (
+        Vec<BFieldElement>,
+        HashMap<BFieldElement, BFieldElement>,
+        NonDeterminism<BFieldElement>,
+        Vec<BFieldElement>,
+        Option<crate::VmHasherState>,
+    ) {
+        let input_stream: Vec<BFieldElement> = self.data_type.random_elements(1)[0].encode();
+
+        let (std_in, secret_in) = match self.input_source {
+            InputSource::StdIn => (input_stream, vec![]),
+            InputSource::SecretIn => (vec![], input_stream),
+        };
+
+        (
+            empty_stack(),
+            HashMap::default(),
+            NonDeterminism {
+                individual_tokens: secret_in,
+                digests: vec![],
+                ram: HashMap::default(),
+            },
+            std_in,
+            None,
+        )
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::{procedure::ShadowedProcedure, snippet::RustShadow};
+
+    use super::*;
+
+    #[test]
+    fn test() {
+        for data_type in DataType::big_random_generatable_type_collection() {
+            ShadowedProcedure::new(ReadInput {
+                data_type: data_type.clone(),
+                input_source: InputSource::StdIn,
+            })
+            .test();
+            ShadowedProcedure::new(ReadInput {
+                data_type,
+                input_source: InputSource::SecretIn,
+            })
+            .test();
+        }
+    }
+}
+
+#[cfg(test)]
+mod benches {
+    use crate::{procedure::ShadowedProcedure, snippet::RustShadow};
+
+    use super::*;
+
+    #[test]
+    fn bench_for_digest_reading() {
+        ShadowedProcedure::new(ReadInput {
+            data_type: DataType::Digest,
+            input_source: InputSource::StdIn,
+        })
+        .bench();
+    }
+}

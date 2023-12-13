@@ -7,12 +7,9 @@ use twenty_first::{
     shared_math::{b_field_element::BFieldElement, bfield_codec::BFieldCodec},
 };
 
+use crate::data_type::DataType;
 use crate::{
-    empty_stack,
-    library::Library,
-    push_encodable,
-    snippet::{DataType, DeprecatedSnippet},
-    ExecutionState,
+    empty_stack, library::Library, push_encodable, snippet::DeprecatedSnippet, ExecutionState,
 };
 
 #[derive(Clone, Debug)]
@@ -41,11 +38,11 @@ impl DeprecatedSnippet for AddU128 {
         ]
     }
 
-    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+    fn input_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::U128, DataType::U128]
     }
 
-    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+    fn output_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::U128]
     }
 
@@ -101,7 +98,7 @@ impl DeprecatedSnippet for AddU128 {
         format!(
             "
             // BEFORE: _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0
-            // AFTER: _ sum_3 sum_2 sum_1 sum_0
+            // AFTER:  _ sum_3 sum_2 sum_1 sum_0
             {entrypoint}:
                 swap 1 swap 4
                 add
@@ -159,7 +156,7 @@ impl DeprecatedSnippet for AddU128 {
                 // _ rhs_3 sum_2 sum_1 sum_0 overflow sum_3
 
                 swap 5
-                pop
+                pop 1
                 // _ sum_3 sum_2 sum_1 sum_0 overflow
 
                 push 0

@@ -1,23 +1,19 @@
 use std::collections::HashMap;
 
 use rand::{rngs::StdRng, SeedableRng};
-use triton_vm::{triton_asm, NonDeterminism};
-use twenty_first::{
-    shared_math::b_field_element::BFieldElement, util_types::algebraic_hasher::Domain,
-};
+use triton_vm::{instruction::LabelledInstruction, triton_asm, NonDeterminism};
+use twenty_first::shared_math::b_field_element::BFieldElement;
 
-use crate::{
-    empty_stack,
-    procedure::Procedure,
-    snippet::{BasicSnippet, DataType},
-    VmHasherState,
-};
+use crate::data_type::DataType;
+use crate::{empty_stack, procedure::Procedure, snippet::BasicSnippet, VmHasherState};
 
-pub struct WriteToStdout(pub DataType);
+pub struct WriteToStdout {
+    pub data_type: DataType,
+}
 
 impl BasicSnippet for WriteToStdout {
     fn inputs(&self) -> Vec<(DataType, String)> {
-        vec![(self.0.clone(), "value".to_string())]
+        vec![(self.data_type.clone(), "value".to_string())]
     }
 
     fn outputs(&self) -> Vec<(DataType, String)> {
@@ -25,17 +21,16 @@ impl BasicSnippet for WriteToStdout {
     }
 
     fn entrypoint(&self) -> String {
-        format!("tasm_io_write_to_stdout___{}", self.0.label_friendly_name())
+        format!(
+            "tasm_io_write_to_stdout___{}",
+            self.data_type.label_friendly_name()
+        )
     }
 
-    fn code(
-        &self,
-        _library: &mut crate::library::Library,
-    ) -> Vec<triton_vm::instruction::LabelledInstruction> {
-        let write_whole_datatype = "write_io\n".repeat(self.0.get_size());
+    fn code(&self, _library: &mut crate::library::Library) -> Vec<LabelledInstruction> {
         triton_asm!(
             {self.entrypoint()}:
-                {write_whole_datatype}
+                {&self.data_type.write_value_to_stdout()}
                 return
         )
     }
@@ -48,10 +43,10 @@ impl Procedure for WriteToStdout {
         _memory: &mut HashMap<BFieldElement, BFieldElement>,
         _nondeterminism: &NonDeterminism<BFieldElement>,
         _public_input: &[BFieldElement],
-        _sponge_state: &mut VmHasherState,
+        _sponge_state: &mut Option<VmHasherState>,
     ) -> Vec<BFieldElement> {
         let mut ret = vec![];
-        for _ in 0..self.0.get_size() {
+        for _ in 0..self.data_type.stack_size() {
             let value = stack.pop().unwrap();
             ret.push(value);
         }
@@ -67,11 +62,11 @@ impl Procedure for WriteToStdout {
         HashMap<BFieldElement, BFieldElement>,
         NonDeterminism<BFieldElement>,
         Vec<BFieldElement>,
-        VmHasherState,
+        Option<VmHasherState>,
     ) {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
         let mut stack = empty_stack();
-        let random_value = self.0.seeded_random_elements(1, &mut rng);
+        let random_value = self.data_type.seeded_random_elements(1, &mut rng);
         for elem in random_value[0].clone().into_iter().rev() {
             stack.push(elem);
         }
@@ -79,9 +74,9 @@ impl Procedure for WriteToStdout {
         (
             stack,
             HashMap::default(),
-            NonDeterminism::new(vec![]),
+            NonDeterminism::default(),
             vec![],
-            VmHasherState::new(Domain::VariableLength),
+            None,
         )
     }
 }
@@ -95,7 +90,22 @@ mod tests {
     #[test]
     fn write_to_stdout_auto_test() {
         for data_type in DataType::big_random_generatable_type_collection() {
-            ShadowedProcedure::new(WriteToStdout(data_type.clone())).test();
+            ShadowedProcedure::new(WriteToStdout { data_type }).test();
         }
+    }
+}
+
+#[cfg(test)]
+mod benches {
+    use crate::{procedure::ShadowedProcedure, snippet::RustShadow};
+
+    use super::*;
+
+    #[test]
+    fn bench_for_digest_writing() {
+        ShadowedProcedure::new(WriteToStdout {
+            data_type: DataType::Digest,
+        })
+        .bench();
     }
 }

@@ -1,9 +1,9 @@
 use std::cmp::min;
 
 use crate::library::Library;
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use triton_vm::instruction::LabelledInstruction;
-use triton_vm::program::{ProfileLine, Program};
+use triton_vm::program::Program;
 use triton_vm::{NonDeterminism, PublicInput};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
@@ -27,6 +27,7 @@ pub trait CompiledProgram {
     ) -> Result<Vec<BFieldElement>> {
         let p = Self::program();
         p.run(public_input.clone(), nondeterminism.clone())
+            .map_err(|err| anyhow!(err))
     }
 
     fn code() -> (Vec<LabelledInstruction>, Library);
@@ -59,6 +60,12 @@ pub fn bench_program<P: CompiledProgram>(
     use crate::snippet_bencher::BenchmarkResult;
     use std::io::Write;
 
+    struct AggregateProfileLine {
+        label: String,
+        call_depth: usize,
+        cycle_count: u32,
+    }
+
     let (program_instructions, library) = P::code();
     let library_instructions = library.all_imports();
     let all_instructions = [program_instructions, library_instructions].concat();
@@ -85,25 +92,29 @@ pub fn bench_program<P: CompiledProgram>(
     let mut str = format!("{name}:\n");
     str = format!("{str}\n# call graph\n");
     for line in profile.iter() {
-        let indentation = vec!["  "; line.call_stack_depth].join("");
+        let indentation = vec!["  "; line.call_depth].join("");
         let label = &line.label;
-        let cycle_count = line.cycle_count;
+        let cycle_count = line.cycle_count();
         str = format!("{str}{indentation} {label}: {cycle_count}\n");
     }
     str = format!("{str}\n# aggregated\n");
-    let mut aggregated: Vec<ProfileLine> = vec![];
+    let mut aggregated: Vec<AggregateProfileLine> = vec![];
     for line in profile {
         if let Some(agg) = aggregated.iter_mut().find(|a| a.label == line.label) {
-            agg.cycle_count += line.cycle_count;
-            agg.call_stack_depth = min(agg.call_stack_depth, line.call_stack_depth);
+            agg.cycle_count += line.cycle_count();
+            agg.call_depth = min(agg.call_depth, line.call_depth);
         } else {
-            aggregated.push(line);
+            aggregated.push(AggregateProfileLine {
+                label: line.label.to_owned(),
+                call_depth: line.call_depth,
+                cycle_count: line.cycle_count(),
+            });
         }
     }
-    for line in aggregated {
-        let indentation = vec!["  "; line.call_stack_depth].join("");
-        let label = line.label;
-        let cycle_count = line.cycle_count;
+    for aggregate_line in aggregated {
+        let indentation = vec!["  "; aggregate_line.call_depth].join("");
+        let label = aggregate_line.label;
+        let cycle_count = aggregate_line.cycle_count;
         str = format!("{str}{indentation} {label}: {cycle_count}\n");
     }
 
@@ -142,7 +153,7 @@ mod test {
                 a = b;
                 b = c;
             }
-            anyhow::Result::Ok(vec![b])
+            Ok(vec![b])
         }
 
         fn code() -> (
@@ -152,10 +163,10 @@ mod test {
             let code = triton_asm!(
                 push 0
                 push 1
-                read_io
+                read_io 1
                 call fibo_test_loop
-                pop
-                write_io
+                pop 1
+                write_io 1
                 halt
 
                 // INVARIANT: _ a b itr

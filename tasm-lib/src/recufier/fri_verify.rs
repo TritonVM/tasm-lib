@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use crate::list::unsafeimplu32::get::UnsafeGet;
 use crate::{
     empty_stack, field,
     hashing::{merkle_root::MerkleRoot, sample_indices::SampleIndices},
@@ -9,9 +10,7 @@ use crate::{
             map::Map,
             zip::Zip,
         },
-        unsafeimplu32::{
-            get::UnsafeGet, length::Length as UnsafeLength, new::UnsafeNew, push::UnsafePush,
-        },
+        unsafeimplu32::{length::Length as UnsafeLength, new::UnsafeNew, push::UnsafePush},
         ListType,
     },
     memory::dyn_malloc::DYN_MALLOC_ADDRESS,
@@ -31,11 +30,8 @@ use itertools::Itertools;
 use num_traits::Zero;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use triton_vm::{
-    arithmetic_domain::ArithmeticDomain,
-    fri::{Fri, FriValidationError},
-    instruction::LabelledInstruction,
-    proof_item::FriResponse,
-    proof_stream::ProofStream,
+    arithmetic_domain::ArithmeticDomain, error::FriValidationError, fri::Fri,
+    instruction::LabelledInstruction, proof_item::FriResponse, proof_stream::ProofStream,
     triton_asm, BFieldElement, NonDeterminism,
 };
 use twenty_first::{
@@ -50,11 +46,8 @@ use twenty_first::{
     util_types::{algebraic_hasher::Domain, merkle_tree::MerkleTree},
 };
 
-use crate::{
-    library::Library,
-    procedure::Procedure,
-    snippet::{BasicSnippet, DataType},
-};
+use crate::data_type::DataType;
+use crate::{library::Library, procedure::Procedure, snippet::BasicSnippet};
 
 use super::proof_stream::vm_proof_stream::VmProofStream;
 
@@ -385,7 +378,7 @@ impl FriVerify {
         if !(0..self.num_colinearity_checks as usize)
             .all(|i| last_codeword[a_indices[i] as usize] == a_values[i])
         {
-            bail!(FriValidationError::MismatchingLastCodeword);
+            bail!(FriValidationError::LastCodewordMismatch);
         }
 
         // compile return object and store to memory
@@ -446,7 +439,7 @@ impl BasicSnippet for FriVerify {
             (
                 DataType::List(Box::new(DataType::Tuple(vec![
                     DataType::U32,
-                    DataType::XFE,
+                    DataType::Xfe,
                 ]))),
                 "indices_and_elements".to_string(),
             ),
@@ -463,8 +456,12 @@ impl BasicSnippet for FriVerify {
         let domain_generator = field!(FriVerify::domain_generator);
         let expansion_factor = field!(FriVerify::expansion_factor);
         let num_colinearity_checks = field!(FriVerify::num_colinearity_checks);
-        let new_list_of_digests = library.import(Box::new(UnsafeNew(DataType::Digest)));
-        let push_digest_to_list = library.import(Box::new(UnsafePush(DataType::Digest)));
+        let new_list_of_digests = library.import(Box::new(UnsafeNew {
+            data_type: DataType::Digest,
+        }));
+        let push_digest_to_list = library.import(Box::new(UnsafePush {
+            data_type: DataType::Digest,
+        }));
         let read_digest = triton_asm!(
                                         // _ *digest
             push 4 add                  // _ *digest+4
@@ -474,9 +471,15 @@ impl BasicSnippet for FriVerify {
             read_mem swap 1 push -1 add // _ d4 d3 d2 d1 *digest
             read_mem swap 1 pop         // _ d4 d3 d2 d1 d0
         );
-        let new_list_xfe = library.import(Box::new(UnsafeNew(DataType::XFE)));
-        let get_scalar = library.import(Box::new(UnsafeGet(DataType::XFE)));
-        let push_scalar = library.import(Box::new(UnsafePush(DataType::XFE)));
+        let new_list_of_scalars = library.import(Box::new(UnsafeNew {
+            data_type: DataType::Xfe,
+        }));
+        let get_scalar = library.import(Box::new(UnsafeGet {
+            data_type: DataType::Xfe,
+        }));
+        let push_scalar = library.import(Box::new(UnsafePush {
+            data_type: DataType::Xfe,
+        }));
         let proof_stream_dequeue = library.import(Box::new(Dequeue {}));
         let proof_stream_sample_scalars = library.import(Box::new(SampleScalars {}));
         let dequeue_query_phase = format!("{entrypoint}_dequeue_query_phase_remainder");
@@ -497,20 +500,34 @@ impl BasicSnippet for FriVerify {
                         // _ 0 0 xfe2 xfe1 xfe0
                         return
                 ),
-                input_type: DataType::XFE,
+                input_type: DataType::Xfe,
                 output_type: DataType::Digest,
             }),
         }));
-        let length_of_list_of_digests = library.import(Box::new(UnsafeLength(DataType::Digest)));
-        let length_of_list_of_u32s = library.import(Box::new(UnsafeLength(DataType::U32)));
-        let length_of_list_of_xfes = library.import(Box::new(UnsafeLength(DataType::XFE)));
+        let length_of_list_of_digests = library.import(Box::new(UnsafeLength {
+            data_type: DataType::Digest,
+        }));
+        let length_of_list_of_u32s = library.import(Box::new(UnsafeLength {
+            data_type: DataType::U32,
+        }));
+        let length_of_list_of_xfes = library.import(Box::new(UnsafeLength {
+            data_type: DataType::Xfe,
+        }));
         let merkle_root = library.import(Box::new(MerkleRoot));
-        let get_digest = library.import(Box::new(UnsafeGet(DataType::Digest)));
+        let get_digest = library.import(Box::new(UnsafeGet {
+            data_type: DataType::Digest,
+        }));
         let xfe_ntt = library.import(Box::new(XfeNtt));
         let assert_tail_xfe0 = format!("{entrypoint}_tail_xfe0");
-        let length_of_list_of_xfe = library.import(Box::new(UnsafeLength(DataType::XFE)));
-        let get_xfe_from_list = library.import(Box::new(UnsafeGet(DataType::XFE)));
-        let get_u32_from_list = library.import(Box::new(UnsafeGet(DataType::U32)));
+        let length_of_list_of_xfe = library.import(Box::new(UnsafeLength {
+            data_type: DataType::Xfe,
+        }));
+        let get_xfe_from_list = library.import(Box::new(UnsafeGet {
+            data_type: DataType::Xfe,
+        }));
+        let get_u32_from_list = library.import(Box::new(UnsafeGet {
+            data_type: DataType::U32,
+        }));
         let sample_indices = library.import(Box::new(SampleIndices {
             list_type: ListType::Unsafe,
         }));
@@ -527,7 +544,7 @@ impl BasicSnippet for FriVerify {
         let zip_index_xfe = library.import(Box::new(Zip {
             list_type: ListType::Unsafe,
             left_type: DataType::U32,
-            right_type: DataType::XFE,
+            right_type: DataType::Xfe,
         }));
         let query_phase_main_loop = format!("{entrypoint}_query_phase_main_loop");
         let add_half_label = format!("{entrypoint}_add_half_domain");
@@ -549,15 +566,15 @@ impl BasicSnippet for FriVerify {
         let populate_return_vector_second_half =
             format!("{entrypoint}_populate_return_vector_second_half");
         let populate_loop = format!("{entrypoint}_populate_return_vector_loop");
-        let get_u32_and_xfe = library.import(Box::new(UnsafeGet(DataType::Tuple(vec![
-            DataType::U32,
-            DataType::XFE,
-        ]))));
-        let push_u32_and_xfe = library.import(Box::new(UnsafePush(DataType::Tuple(vec![
-            DataType::U32,
-            DataType::XFE,
-        ]))));
-        let push_xfe_to_list = library.import(Box::new(UnsafePush(DataType::XFE)));
+        let get_u32_and_xfe = library.import(Box::new(UnsafeGet {
+            data_type: DataType::Tuple(vec![DataType::U32, DataType::Xfe]),
+        }));
+        let push_u32_and_xfe = library.import(Box::new(UnsafePush {
+            data_type: DataType::Tuple(vec![DataType::U32, DataType::Xfe]),
+        }));
+        let push_xfe_to_list = library.import(Box::new(UnsafePush {
+            data_type: DataType::Xfe,
+        }));
         let reduce_indices_label = format!("{entrypoint}_reduce_indices");
         let map_reduce_indices = library.import(Box::new(Map {
             list_type: ListType::Unsafe,
@@ -581,8 +598,8 @@ impl BasicSnippet for FriVerify {
         let duplicate_list_xfe = library.import(Box::new(Map {
             list_type: ListType::Unsafe,
             f: InnerFunction::RawCode(RawCode {
-                input_type: DataType::XFE,
-                output_type: DataType::XFE,
+                input_type: DataType::Xfe,
+                output_type: DataType::Xfe,
                 function: triton_asm! {
                     {identity_label}:
                         return
@@ -593,8 +610,8 @@ impl BasicSnippet for FriVerify {
         let map_assert_membership = library.import(Box::new(Map {
             list_type: ListType::Unsafe,
             f: InnerFunction::RawCode(RawCode {
-                input_type: DataType::Tuple(vec![DataType::U32, DataType::XFE]),
-                output_type: DataType::Tuple(vec![DataType::U32, DataType::XFE]),
+                input_type: DataType::Tuple(vec![DataType::U32, DataType::Xfe]),
+                output_type: DataType::Tuple(vec![DataType::U32, DataType::Xfe]),
                 function: triton_asm! {
                     // BEFORE: _ *codeword [bu ff er] xfe2 xfe1 xfe0 index
                     // AFTER: _ *codeword [bu ff er] xfe2 xfe1 xfe0 index
@@ -1067,12 +1084,12 @@ impl BasicSnippet for FriVerify {
 impl Procedure for FriVerify {
     fn rust_shadow(
         &self,
-        stack: &mut Vec<triton_vm::BFieldElement>,
-        memory: &mut std::collections::HashMap<triton_vm::BFieldElement, triton_vm::BFieldElement>,
-        nondeterminism: &triton_vm::NonDeterminism<triton_vm::BFieldElement>,
-        _public_input: &[triton_vm::BFieldElement],
-        sponge_state: &mut crate::VmHasherState,
-    ) -> Vec<triton_vm::BFieldElement> {
+        stack: &mut Vec<BFieldElement>,
+        memory: &mut HashMap<BFieldElement, BFieldElement>,
+        nondeterminism: &NonDeterminism<BFieldElement>,
+        _public_input: &[BFieldElement],
+        sponge_state: &mut Option<VmHasherState>,
+    ) -> Vec<BFieldElement> {
         // read fri object
         let fri_pointer = stack.pop().unwrap();
         let fri_verify = *FriVerify::decode_from_memory(memory, fri_pointer).unwrap();
@@ -1083,7 +1100,10 @@ impl Procedure for FriVerify {
         let mut proof_stream: VmProofStream =
             *VmProofStream::decode_from_memory(memory, proof_stream_pointer).unwrap();
 
-        proof_stream.sponge_state = sponge_state.clone();
+        proof_stream.sponge_state = sponge_state
+            .as_ref()
+            .expect("Sponge state must be initialized")
+            .to_owned();
 
         let revealed_indices_and_elements = self.call(&mut proof_stream, nondeterminism);
 
@@ -1093,7 +1113,7 @@ impl Procedure for FriVerify {
         stack.push(proof_stream_pointer);
         stack.push(indices_and_leafs_pointer);
         // set sponge state to correct value
-        *sponge_state = proof_stream.sponge_state;
+        *sponge_state = Some(proof_stream.sponge_state);
 
         // no standard output
         vec![]
@@ -1108,7 +1128,7 @@ impl Procedure for FriVerify {
         HashMap<BFieldElement, BFieldElement>,
         NonDeterminism<BFieldElement>,
         Vec<BFieldElement>,
-        VmHasherState,
+        Option<VmHasherState>,
     ) {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
         let proof_stream = self.pseudorandom_fri_proof_stream(rng.gen());
@@ -1133,7 +1153,7 @@ impl Procedure for FriVerify {
         let stdin = vec![];
         let sponge_state = VmHasherState::new(Domain::VariableLength);
 
-        (stack, memory, nondeterminism, stdin, sponge_state)
+        (stack, memory, nondeterminism, stdin, Some(sponge_state))
     }
 }
 
