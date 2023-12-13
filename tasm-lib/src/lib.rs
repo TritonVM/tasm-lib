@@ -174,7 +174,7 @@ pub fn execute_bench_deprecated(
     memory: &mut HashMap<BFieldElement, BFieldElement>,
     initialize_dynamic_allocator_to: Option<usize>,
 ) -> anyhow::Result<ExecutionResult> {
-    let initial_stack_height = stack.len();
+    let initial_stack_height = stack.len() as isize;
     let public_input = PublicInput::new(std_in.clone());
     let program = Program::new(code);
 
@@ -194,12 +194,12 @@ pub fn execute_bench_deprecated(
     *memory = terminal_state.ram.clone();
     *stack = terminal_state.op_stack.stack;
 
-    let final_stack_height = stack.len();
-    if expected_stack_diff != final_stack_height - initial_stack_height as isize {
+    let final_stack_height = stack.len() as isize;
+    if expected_stack_diff != final_stack_height - initial_stack_height {
         bail!(
             "Code must grow/shrink stack with expected number of elements.\n
-            init height: {init_stack_height}\n
-            end height: {final_stack_height}\n
+            init height: {initial_stack_height}\n
+            end height:  {final_stack_height}\n
             expected difference: {expected_stack_diff}\n\n
             final stack: {}",
             stack.iter().join(",")
@@ -268,7 +268,7 @@ pub fn execute_test(
         expected_stack_diff,
         final_stack_height - initial_stack_height as isize,
         "Code must grow/shrink stack with expected number of elements.\n
-        init height: {init_stack_height}\n
+        init height: {initial_stack_height}\n
         end height:  {final_stack_height}\n
         expected difference: {expected_stack_diff}\n\n
         initial stack: {}\n
