@@ -180,6 +180,10 @@ impl Procedure for SampleIndices {
         _public_input: &[BFieldElement],
         sponge_state: &mut Option<VmHasherState>,
     ) -> Vec<BFieldElement> {
+        let Some(sponge_state) = sponge_state else {
+            panic!("sponge state must be initialized");
+        };
+
         // collect upper bound and number from stack
         let upper_bound = stack.pop().unwrap().value() as u32;
         let number = stack.pop().unwrap().value() as usize;
@@ -187,7 +191,7 @@ impl Procedure for SampleIndices {
         println!("sampling {number} indices between 0 and {upper_bound}");
         println!(
             "sponge state before: {}",
-            sponge_state.state.iter().map(|b| b.value()).join(","),
+            sponge_state.state.iter().join(","),
         );
 
         // sample indices
@@ -227,7 +231,7 @@ impl Procedure for SampleIndices {
         HashMap<BFieldElement, BFieldElement>,
         NonDeterminism<BFieldElement>,
         Vec<BFieldElement>,
-        VmHasherState,
+        Option<VmHasherState>,
     ) {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
         let number = if let Some(case) = bench_case {
@@ -259,7 +263,7 @@ impl Procedure for SampleIndices {
             state: rng.gen::<[BFieldElement; STATE_SIZE]>(),
         };
 
-        (stack, memory, nondeterminism, public_input, state)
+        (stack, memory, nondeterminism, public_input, Some(state))
     }
 }
 
