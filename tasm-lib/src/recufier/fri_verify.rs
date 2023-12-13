@@ -1139,8 +1139,6 @@ impl Procedure for FriVerify {
 
 #[cfg(test)]
 mod test {
-    use std::cmp::min;
-
     use itertools::Itertools;
     use rand::{rngs::StdRng, thread_rng, Rng, SeedableRng};
     use triton_vm::{
@@ -1372,5 +1370,30 @@ mod test {
             .for_each(|(r, t)| {
                 assert_eq!(r, t, "returned lists of indices and leafs do not match")
             });
+    }
+}
+
+#[cfg(test)]
+mod bench {
+    use triton_vm::BFieldElement;
+
+    use crate::{procedure::ShadowedProcedure, snippet::RustShadow};
+
+    use super::FriVerify;
+
+    #[test]
+    fn bench() {
+        let expansion_factor = 2;
+        let domain_length = expansion_factor * 2;
+        let offset = BFieldElement::new(7);
+        let num_colinearity_checks = 2;
+        // tiny parameters for FRI yes, but the bench framework is awful atm
+        let procedure = FriVerify::new(
+            offset,
+            domain_length,
+            expansion_factor,
+            num_colinearity_checks,
+        );
+        ShadowedProcedure::new(procedure).bench();
     }
 }

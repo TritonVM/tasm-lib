@@ -91,22 +91,21 @@ pub fn execute_bench(
 
     // Construct the whole program (inclusive setup) to be run
     let mut executed_code = prep;
-    executed_code.extend_from_slice(code);
+    executed_code.append(&mut code.to_vec());
     let extended_program = Program::new(&executed_code);
 
-    // // Run the program, including the stack preparation
-    // let (execution_trace, err) = extended_program.debug(
-    //     PublicInput::new(std_in.clone()),
-    //     nondeterminism.clone(),
-    //     None,
-    //     None,
-    // );
-    // if let Some(e) = err {
-    //     bail!(
-    //         "`debug` failed with error: {e}\nLast state before crash:\n{}",
-    //         execution_trace.last().unwrap()
-    //     )
-    // }
+    let (execution_trace, err) = extended_program.debug(
+        PublicInput::new(std_in.clone()),
+        nondeterminism.clone(),
+        None,
+        None,
+    );
+    if let Some(e) = err {
+        panic!(
+            "`debug` failed with error: {e}\nLast state before crash:\n{}",
+            execution_trace.last().unwrap()
+        )
+    }
 
     // Simulate the program, since this gives us hash table output
     let (simulation_trace, _) = extended_program
