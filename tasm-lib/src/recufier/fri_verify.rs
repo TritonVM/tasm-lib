@@ -577,6 +577,38 @@ impl BasicSnippet for FriVerify {
         let compute_c_values_loop = format!("{entrypoint}_compute_c_values_loop");
         let get_colinearity_check_x = library.import(Box::new(GetColinearityCheckX));
         let get_colinear_y = library.import(Box::new(ColinearYXfe));
+        let identity_label = format!("{entrypoint}_identity");
+        let duplicate_list_xfe = library.import(Box::new(Map {
+            list_type: ListType::Unsafe,
+            f: InnerFunction::RawCode(RawCode {
+                input_type: DataType::XFE,
+                output_type: DataType::XFE,
+                function: triton_asm! {
+                    {identity_label}:
+                        return
+                },
+            }),
+        }));
+        let assert_membership_label = format!("{entrypoint}_assert_codeword_membership");
+        let map_assert_membership = library.import(Box::new(Map {
+            list_type: ListType::Unsafe,
+            f: InnerFunction::RawCode(RawCode {
+                input_type: DataType::Tuple(vec![DataType::U32, DataType::XFE]),
+                output_type: DataType::Tuple(vec![DataType::U32, DataType::XFE]),
+                function: triton_asm! {
+                    // BEFORE: _ *codeword [bu ff er] xfe2 xfe1 xfe0 index
+                    // AFTER: _ *codeword [bu ff er] xfe2 xfe1 xfe0 index
+                    {assert_membership_label}:
+                        push 0                  // _ *codeword [bu ff er] xfe2 xfe1 xfe0 index 0
+                        dup 8 dup 2             // _ *codeword [bu ff er] xfe2 xfe1 xfe0 index 0 *codeword index
+                        call {get_xfe_from_list}// _ *codeword [bu ff er] xfe2 xfe1 xfe0 index 0 xfe2' xfe1' xfe0'
+                        dup 4 push 0            // _ *codeword [bu ff er] xfe2 xfe1 xfe0 index 0 xfe2' xfe1' xfe0' index 0
+                        assert_vector           // _ *codeword [bu ff er] xfe2 xfe1 xfe0 index 0 xfe2' xfe1' xfe0' index 0
+                        pop pop pop pop pop pop // _ *codeword [bu ff er] xfe2 xfe1 xfe0 index
+                        return
+                },
+            }),
+        }));
 
         triton_asm! {
             // INVARIANT:          _ *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_values i
@@ -638,6 +670,10 @@ impl BasicSnippet for FriVerify {
                 push 0  // _ alpha2 alpha1 alpha0 ay2 ay1 ay0 0 ax0 bx0 by1 by0 by2 0
                 swap 5  // _ alpha2 alpha1 alpha0 ay2 ay1 ay0 0 0 bx0 by1 by0 by2 ax0
                 swap 4  // _ alpha2 alpha1 alpha0 ay2 ay1 ay0 0 0 ax0 by1 by0 by2 bx0
+                swap 2  // _ alpha2 alpha1 alpha0 ay2 ay1 ay0 0 0 ax0 by1 bx0 by2 by0
+                swap 1  // _ alpha2 alpha1 alpha0 ay2 ay1 ay0 0 0 ax0 by1 bx0 by0 by2
+                swap 3  // _ alpha2 alpha1 alpha0 ay2 ay1 ay0 0 0 ax0 by2 bx0 by0 by1
+                swap 2  // _ alpha2 alpha1 alpha0 ay2 ay1 ay0 0 0 ax0 by2 by1 by0 bx0
                 push 0
                 push 0
                 swap 2
@@ -773,50 +809,55 @@ impl BasicSnippet for FriVerify {
                 call {proof_stream_dequeue} // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword_ev
                 push 1 add                  // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword
 
-                // compute Merkle root
+                // clone last codeword for later use
                 dup 0                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword *last_codeword
+                call {duplicate_list_xfe}   // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword *last_codeword'
+                swap 5 pop                  // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *last_codeword
+
+                // compute Merkle root
+                dup 0                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *last_codeword *last_codeword
                 call {map_convert_xfe_to_digest}
-                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword *leafs
-                dup 0                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword *leafs *leafs
+                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *last_codeword *leafs
+                dup 0                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *last_codeword *leafs *leafs
                 call {length_of_list_of_digests}
-                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword *leafs num_leafs
-                dup 9 dup 9                 // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword *leafs num_leafs *fri_verify num_rounds
-                swap 1                      // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword *leafs num_leafs num_rounds *fri_verify
-                {&domain_length}            // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword *leafs num_leafs num_rounds *domain_length
-                read_mem swap 1 pop         // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword *leafs num_leafs num_rounds domain_length
-                swap 1 push 2               // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword *leafs num_leafs domain_length num_rounds 2
-                pow                         // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword *leafs num_leafs domain_length (1<<num_rounds)
-                swap 1 div_mod pop          // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword *leafs num_leafs (domain_length>>num_rounds)
-                dup 1 eq                    // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword *leafs num_leafs eq
-                assert                      // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword *leafs num_leafs
-                push 0 swap 1               // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword *leafs 0 num_leafs
-                call {merkle_root}          // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword [last_root]
+                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *last_codeword *leafs num_leafs
+                dup 9 dup 9                 // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *last_codeword *leafs num_leafs *fri_verify num_rounds
+                swap 1                      // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *last_codeword *leafs num_leafs num_rounds *fri_verify
+                {&domain_length}            // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *last_codeword *leafs num_leafs num_rounds *domain_length
+                read_mem swap 1 pop         // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *last_codeword *leafs num_leafs num_rounds domain_length
+                swap 1 push 2               // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *last_codeword *leafs num_leafs domain_length num_rounds 2
+                pow                         // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *last_codeword *leafs num_leafs domain_length (1<<num_rounds)
+                swap 1 div_mod pop          // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *last_codeword *leafs num_leafs (domain_length>>num_rounds)
+                dup 1 eq                    // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *last_codeword *leafs num_leafs eq
+                assert                      // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *last_codeword *leafs num_leafs
+                push 0 swap 1               // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *last_codeword *leafs 0 num_leafs
+                call {merkle_root}          // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *last_codeword [last_root]
 
                 // check against last root dequeued
-                dup 8                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword [last_root] *roots
-                dup 0                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword [last_root] *roots *roots
+                dup 8                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *last_codeword [last_root] *roots
+                dup 0                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *last_codeword [last_root] *roots *roots
                 call {length_of_list_of_digests}
-                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword [last_root] *roots num_roots
-                push -1 add                 // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword [last_root] *roots num_roots-1
-                call {get_digest}           // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword [last_root] [roots[-1]]
-                assert_vector               // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword [last_root] [roots[-1]]
+                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *last_codeword [last_root] *roots num_roots
+                push -1 add                 // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *last_codeword [last_root] *roots num_roots-1
+                call {get_digest}           // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *last_codeword [last_root] [roots[-1]]
+                assert_vector               // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *last_codeword [last_root] [roots[-1]]
 
                 // clean up top of stack
-                pop pop pop pop pop         // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword [last_root]
-                pop pop pop pop pop         // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword
+                pop pop pop pop pop         // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *last_codeword [last_root]
+                pop pop pop pop pop         // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *last_codeword
 
                 // get omega
-                dup 7                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword *fri_verify
-                {&domain_generator}         // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword *generator
-                read_mem swap 1 pop         // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword domain_generator
-                dup 7                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword domain_generator num_rounds
-                push 2 pow                  // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword domain_generator 1<<num_rounds
-                swap 1 pow                  // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword domain_generator^(num_rounds)
+                dup 7                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *last_codeword *fri_verify
+                {&domain_generator}         // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *last_codeword *generator
+                read_mem swap 1 pop         // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *last_codeword domain_generator
+                dup 7                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *last_codeword domain_generator num_rounds
+                push 2 pow                  // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *last_codeword domain_generator 1<<num_rounds
+                swap 1 pow                  // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *last_codeword domain_generator^(num_rounds)
 
                 // compute intt (without scaling)
-                invert                      // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword omega_inv
-                dup 1 swap 1                // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword *last_codeword omega_inv
-                call {xfe_ntt}              // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_polynomial
+                invert                      // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *last_codeword omega_inv
+                dup 1 swap 1                // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *last_codeword *last_codeword omega_inv
+                call {xfe_ntt}              // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *last_polynomial
 
                 // // If the static allocator is not managed correctly, then the above call
                 // // to xfe_ntt modifies the first element of *roots. Let's try and see!
@@ -824,163 +865,167 @@ impl BasicSnippet for FriVerify {
                 // push 8888 assert
 
                 // test low degree of polynomial
-                dup 5 push 1 add            // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_polynomial num_nonzero_coefficients
+                dup 5 push 1 add            // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *last_polynomial num_nonzero_coefficients
 
-                call {assert_tail_xfe0}     // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_polynomial *total_num_coefficients
-                pop pop                     // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream
+                call {assert_tail_xfe0}     // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *last_polynomial *total_num_coefficients
+                pop pop                     // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream
 
                 // QUERY PHASE
 
                 // get "A" indices and verify membership
 
                 // get index count
-                dup 6                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *fri_verify
-                {&num_colinearity_checks}   // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *num_indices
-                read_mem swap 1 pop         // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream num_indices
+                dup 6                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *fri_verify
+                {&num_colinearity_checks}   // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *num_indices
+                read_mem swap 1 pop         // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream num_indices
 
                 // get domain length
-                dup 7                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream num_indices *fri_verify
-                {&domain_length}            // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream num_indices *domain_length
-                read_mem swap 1 pop         // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream num_indices domain_length
+                dup 7                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream num_indices *fri_verify
+                {&domain_length}            // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream num_indices *domain_length
+                read_mem swap 1 pop         // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream num_indices domain_length
 
                 // sample "A" indices
-                call {sample_indices}       // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *indices
+                call {sample_indices}       // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *indices
 
                 // get largest tree height
-                dup 7                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *indices *fri_verify
-                {&domain_length}            // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *indices *domain_length
-                read_mem swap 1 pop         // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *indices domain_length
-                log_2_floor                 // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *indices tree_height
+                dup 7                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *indices *fri_verify
+                {&domain_length}            // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *indices *domain_length
+                read_mem swap 1 pop         // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *indices domain_length
+                log_2_floor                 // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *indices tree_height
 
                 // dequeue proof item as fri response
-                swap 2                      // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *proof_stream
-                call {proof_stream_dequeue} // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *proof_stream *proof_item
-                swap 1 pop                  // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *proof_item
-                push 1 add                  // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *fri_response
+                swap 2                      // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *proof_stream
+                call {proof_stream_dequeue} // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *proof_stream *proof_item
+                swap 1 pop                  // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *proof_item
+                push 1 add                  // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *fri_response
 
                 // assert correct length of number of leafs
-                {&revealed_leafs}           // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *a_elements
-                dup 1 dup 1                 // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *a_elements *indices *a_elements
+                {&revealed_leafs}           // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements
+                dup 1 dup 1                 // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements *indices *a_elements
                 call {length_of_list_of_xfes}
-                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *a_elements *indices num_leafs
-                swap 1                      // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *a_elements num_leafs *indices
+                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements *indices num_leafs
+                swap 1                      // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements num_leafs *indices
                 call {length_of_list_of_u32s}
-                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *a_elements num_leafs num_indices
-                eq assert                   // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *a_elements
-                dup 1 dup 1                 // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *a_elements *indices *a_elements
+                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements num_leafs num_indices
+                eq assert                   // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements
+                dup 1 dup 1                 // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements *indices *a_elements
 
                 // check batch merkle membership
                 call {map_convert_xfe_to_digest}
-                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *a_elements *indices *revealed_leafs_as_digests
-                swap 1                      // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *a_elements *revealed_leafs_as_digests *indices
-                call {zip_digests_indices}  // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *a_elements *leafs_indices
-                dup 5 push 0                // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *a_elements *leafs_indices *roots 0
-                call {get_digest}           // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *a_elements *leafs_indices [root[0]]
-                dup 8                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *a_elements *leafs_indices [root[0]] tree_height
+                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements *indices *revealed_leafs_as_digests
+                swap 1                      // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements *revealed_leafs_as_digests *indices
+                call {zip_digests_indices}  // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements *leafs_indices
+                dup 5 push 0                // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements *leafs_indices *roots 0
+                call {get_digest}           // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements *leafs_indices [root[0]]
+                dup 8                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements *leafs_indices [root[0]] tree_height
 
                 call {verify_authentication_paths_for_leaf_and_index_list}
-                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *a_elements *leafs_indices [root[0]] tree_height
-                pop pop pop pop pop pop pop // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *a_elements
+                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements *leafs_indices [root[0]] tree_height
+                pop pop pop pop pop pop pop // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements
 
                 // prepare the return value:
                 // the list of opened indices and elements
-                dup 1 dup 1                 // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *a_elements *indices *a_elements
-                call {zip_index_xfe}        // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *a_elements *revealed_indices_and_leafs
+                dup 1 dup 1                 // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements *indices *a_elements
+                call {zip_index_xfe}        // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements *revealed_indices_and_leafs
                 // zip allocates a new unsafe list, which we want to be twice as long
                 // (the second half will be populated in the first iteration of the main loop below)
-                read_mem                    // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *a_elements *revealed_indices_and_leafs length
-                push 4 mul                  // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *a_elements *revealed_indices_and_leafs size
-                push 0 read_mem             // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *a_elements *revealed_indices_and_leafs size *alloc alloc
-                swap 1 swap 2 add           // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *a_elements *revealed_indices_and_leafs *alloc size+alloc
-                write_mem pop               // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *a_elements *revealed_indices_and_leafs
+                read_mem                    // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements *revealed_indices_and_leafs length
+                push 4 mul                  // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements *revealed_indices_and_leafs size
+                push 0 read_mem             // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements *revealed_indices_and_leafs size *alloc alloc
+                swap 1 swap 2 add           // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements *revealed_indices_and_leafs *alloc size+alloc
+                write_mem pop               // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements *revealed_indices_and_leafs
 
                 // prepare for query phase main loop
-                dup 9                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *a_elements *revealed_indices_and_leafs *fri_verify
-                {&domain_length}            // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *a_elements *revealed_indices_and_leafs *domain_length
-                read_mem swap 1 pop         // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas tree_height *indices *a_elements *revealed_indices_and_leafs domain_length
-                // rename stack elements    // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *indices *a_elements *revealed_indices_and_leafs current_domain_length
-                push 0 // (=r)              // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *indices *a_elements *revealed_indices_and_leafs current_domain_length r
+                dup 9                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements *revealed_indices_and_leafs *fri_verify
+                {&domain_length}            // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements *revealed_indices_and_leafs *domain_length
+                read_mem swap 1 pop         // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements *revealed_indices_and_leafs domain_length
+                // rename stack elements    // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *indices *a_elements *revealed_indices_and_leafs current_domain_length
+                push 0 // (=r)              // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *indices *a_elements *revealed_indices_and_leafs current_domain_length r
 
-                call {query_phase_main_loop}// _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *indices *a_elements *revealed_indices_and_leafs current_domain_length num_rounds
+                call {query_phase_main_loop}// _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *indices *a_elements *revealed_indices_and_leafs current_domain_length num_rounds
 
-                // verify membership of c elements (here calles a elements) in last merkle tree
-                // todo
+                // verify membership of C elements (here called A elements) in last codeword
+                dup 8 dup 5 dup 5           // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *indices *a_elements *revealed_indices_and_leafs current_domain_length num_rounds *last_codeword' *c_indices *c_elements
+                call {zip_index_xfe}        // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *indices *a_elements *revealed_indices_and_leafs current_domain_length num_rounds *last_codeword' *c_indices_and_elements
+                call {map_assert_membership}// _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *indices *a_elements *revealed_indices_and_leafs current_domain_length num_rounds *last_codeword' *c_indices_and_elements
+                pop pop                     // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *indices *a_elements *revealed_indices_and_leafs current_domain_length num_rounds *last_codeword' *c_indices_and_elements
 
                 // clean up stack and return
-                pop pop                     // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *indices *a_elements *revealed_indices_and_leafs
-                swap 9                      // _ *proof_stream *revealed_indices_and_leafs num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *indices *a_elements *fri_verify
+                pop pop                     // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *indices *a_elements *revealed_indices_and_leafs
+                swap 9                      // _ *proof_stream *revealed_indices_and_leafs num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *indices *a_elements *fri_verify
                 pop pop pop pop pop         // _ *proof_stream *revealed_indices_and_leafs *fri_verify num_rounds last_round_max_degree 0 *roots
                 pop pop pop pop             // _ *proof_stream *revealed_indices_and_leafs
+
                 return
 
-            // BEFORE:     _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length 0
-            // AFTER:      _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length num_rounds
-            // INVARIANT:  _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r
+            // BEFORE:     _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length 0
+            // AFTER:      _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length num_rounds
+            // INVARIANT:  _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r
             {query_phase_main_loop}:
                 // test termination condition:
                 // if r == num_rounds then return
                 dup 10 dup 1
-                eq                          // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r num_rounds==r
-                skiz return                 // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r
+                eq                          // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r num_rounds==r
+                skiz return                 // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r
 
                 // get "B" indices
                 push 2 dup 2
-                div_mod pop dup 5           // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *a_indices
+                div_mod pop dup 5           // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *a_indices
                 call {map_add_half_domain_length}
-                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices
+                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices
 
                 // dequeue fri response and get "B" elements
                 dup 14 call {proof_stream_dequeue}
-                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *proof_stream *fri_response_ev
-                swap 1 pop push 1 add       // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *fri_response
-                {&revealed_leafs}           // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements
+                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *proof_stream *fri_response_ev
+                swap 1 pop push 1 add       // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *fri_response
+                {&revealed_leafs}           // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements
 
                 // if in first round (r==0), populate second half of return vector
                 dup 3 push 0 eq
                 skiz call {populate_return_vector_second_half}
-                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements
+                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements
 
                 // check batch merkle membership
                 dup 0 call {map_convert_xfe_to_digest}
-                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *b_leafs
+                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *b_leafs
                 dup 2 call {zip_digests_indices}
-                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *b_leaf_and_indices
-                dup 11 dup 5                // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *b_leaf_and_indices *roots r
-                call {get_digest}           // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *b_leaf_and_indices [roots[r]]
-                dup 14                      // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *b_leaf_and_indices [roots[r]] current_tree_height
+                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *b_leaf_and_indices
+                dup 11 dup 5                // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *b_leaf_and_indices *roots r
+                call {get_digest}           // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *b_leaf_and_indices [roots[r]]
+                dup 14                      // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *b_leaf_and_indices [roots[r]] current_tree_height
                 call {verify_authentication_paths_for_leaf_and_index_list}
-                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *b_leaf_and_indices [roots[r]] current_tree_height
-                pop pop pop pop pop pop pop // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements
+                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *b_leaf_and_indices [roots[r]] current_tree_height
+                pop pop pop pop pop pop pop // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements
 
                 // pull *fri_verify to top because needed
-                dup 14                      // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify
+                dup 14                      // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify
                 // update tree height
-                dup 9 push -1 add           // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1
+                dup 9 push -1 add           // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1
 
                 // reduce modulo N/2 to get C indices
-                dup 4 dup 4                 // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *b_indices
-                call {map_reduce_indices}   // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices
+                dup 4 dup 4                 // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *b_indices
+                call {map_reduce_indices}   // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices
 
                 // compute C elements
-                dup 0                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_indices
+                dup 0                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_indices
                 call {length_of_list_of_u32s}
-                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices length
-                call {new_list_xfe}         // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_elements
-                push 0                      // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_elements 0
-                call {compute_c_values_loop}// _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_elements length
+                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices length
+                call {new_list_xfe}         // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_elements
+                push 0                      // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_elements 0
+                call {compute_c_values_loop}// _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_elements length
 
                 // return stack to invariant and keep books for next iteration
-                pop                         // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_elements
-                swap 11                     // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *a_indices *c_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *a_elements
-                pop                         // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *a_indices *c_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices
-                swap 11                     // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *c_indices *c_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *a_indices
-                pop                         // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *c_indices *c_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length
-                swap 7                      // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *c_indices *c_elements *revealed_indices_and_leafs half_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 current_domain_length
-                pop                         // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height *c_indices *c_elements *revealed_indices_and_leafs half_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1
-                swap 10                     // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height-1 *c_indices *c_elements *revealed_indices_and_leafs half_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height
-                pop                         // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height-1 *c_indices *c_elements *revealed_indices_and_leafs half_domain_length r half_domain_length *b_indices *b_elements *fri_verify
-                pop pop pop pop             // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height-1 *c_indices *c_elements *revealed_indices_and_leafs half_domain_length r
-                push 1 add                  // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas current_tree_height-1 *c_indices *c_elements *revealed_indices_and_leafs half_domain_length r+1
+                pop                         // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_elements
+                swap 11                     // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *c_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *a_elements
+                pop                         // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *c_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices
+                swap 11                     // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *c_indices *c_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *a_indices
+                pop                         // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *c_indices *c_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length
+                swap 7                      // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *c_indices *c_elements *revealed_indices_and_leafs half_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 current_domain_length
+                pop                         // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *c_indices *c_elements *revealed_indices_and_leafs half_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1
+                swap 10                     // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height-1 *c_indices *c_elements *revealed_indices_and_leafs half_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height
+                pop                         // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height-1 *c_indices *c_elements *revealed_indices_and_leafs half_domain_length r half_domain_length *b_indices *b_elements *fri_verify
+                pop pop pop pop             // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height-1 *c_indices *c_elements *revealed_indices_and_leafs half_domain_length r
+                push 1 add                  // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height-1 *c_indices *c_elements *revealed_indices_and_leafs half_domain_length r+1
                 recurse
 
             // BEFORE: _  *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements
@@ -1077,13 +1122,6 @@ impl Procedure for FriVerify {
         memory.insert(
             BFieldElement::new(DYN_MALLOC_ADDRESS as u64),
             BFieldElement::new(static_memory_offset + 1),
-        );
-        println!(
-            "In fri_verify::pseudorandom_initial_state, setting allocator to: {}",
-            memory
-                .get(&BFieldElement::new(DYN_MALLOC_ADDRESS as u64))
-                .unwrap()
-                .value()
         );
         let proof_stream_pointer = load_to_memory(&mut memory, proof_stream);
         let fri_verify_pointer = load_to_memory(&mut memory, self.clone());
