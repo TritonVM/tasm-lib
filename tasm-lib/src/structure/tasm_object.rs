@@ -254,7 +254,6 @@ mod test {
 
     use arbitrary::{Arbitrary, Unstructured};
     use itertools::Itertools;
-    use num_traits::Zero;
     use rand::RngCore;
     use rand::{rngs::StdRng, thread_rng, Rng, SeedableRng};
     use triton_vm::instruction::LabelledInstruction;
@@ -266,8 +265,6 @@ mod test {
         empty_stack, execute_with_terminal_state,
         library::Library,
         list::unsafeimplu32::length::Length,
-        memory,
-        snippet::{DeprecatedSnippet, InputSource},
         structure::tasm_object::{load_to_memory, TasmObject},
         Digest,
     };
