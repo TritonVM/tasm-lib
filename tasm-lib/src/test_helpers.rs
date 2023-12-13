@@ -51,6 +51,14 @@ pub fn test_rust_equivalence_given_execution_state_deprecated<T: DeprecatedSnipp
     snippet_struct: &T,
     mut execution_state: ExecutionState,
 ) -> VmOutputState {
+    assert!(
+        execution_state.memory.is_empty() || execution_state.nondeterminism.ram.is_empty(),
+        "Cannot initialize RAM with both `memory` and non-determinism. Please pick one."
+    );
+    execution_state
+        .nondeterminism
+        .ram
+        .extend(execution_state.memory.iter());
     test_rust_equivalence_given_complete_state_deprecated::<T>(
         snippet_struct,
         &execution_state.stack,
