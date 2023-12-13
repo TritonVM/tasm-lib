@@ -6,9 +6,9 @@ use triton_vm::BFieldElement;
 use twenty_first::shared_math::{bfield_codec::BFieldCodec, other::random_elements};
 
 use crate::data_type::DataType;
-use crate::snippet::DataType;
-use crate::{empty_stack, snippet::DeprecatedSnippet, Digest, ExecutionState};
-use crate::{memory::dyn_malloc::DYN_MALLOC_ADDRESS, snippet::DataType};
+use crate::memory::dyn_malloc::DYN_MALLOC_ADDRESS;
+use crate::snippet::DeprecatedSnippet;
+use crate::{empty_stack, Digest, ExecutionState};
 
 /// Returns the number of elements of a contiguous list.
 pub struct GetLength;
