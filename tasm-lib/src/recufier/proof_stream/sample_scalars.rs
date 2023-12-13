@@ -14,7 +14,8 @@ use twenty_first::{
 use crate::{
     empty_stack,
     hashing::squeeze_repeatedly::SqueezeRepeatedly,
-    list::unsafeimplu32::new::UnsafeNew,
+    list::unsafeimplu32::{new::UnsafeNew, set_length::UnsafeSetLength},
+    memory::dyn_malloc::DYN_MALLOC_ADDRESS,
     procedure::Procedure,
     snippet::{BasicSnippet, DataType},
     structure::tasm_object::load_to_memory,
@@ -46,6 +47,7 @@ impl BasicSnippet for SampleScalars {
     ) -> Vec<triton_vm::instruction::LabelledInstruction> {
         let entrypoint = self.entrypoint();
         let new_list_of_xfes = library.import(Box::new(UnsafeNew(DataType::XFE)));
+        let set_length = library.import(Box::new(UnsafeSetLength(DataType::XFE)));
         let safety_offset = 1;
         let squeeze_repeatedly = library.import(Box::new(SqueezeRepeatedly));
         let rate = RATE;
@@ -58,6 +60,10 @@ impl BasicSnippet for SampleScalars {
                 dup 0 // _ num_scalars num_scalars
                 call {new_list_of_xfes}
                 // _ num_scalars *scalars
+
+                // set length
+                dup 1 // _ num_scalars *scalars num_scalars
+                call {set_length} // _ num_scalars *scalars
 
                 // calculate number of squeezes
                 dup 1           // _ num_scalars *scalars num_scalars
@@ -107,6 +113,23 @@ impl Procedure for SampleScalars {
             .map(|ch| XFieldElement::new(ch.try_into().unwrap()))
             .collect_vec();
         let scalars_pointer = load_to_memory(memory, scalars);
+
+        // store all pseudorandomness (not just sampled scalars) to memory
+        let safety_offset = BFieldElement::new(1);
+        for (i, pr) in pseudorandomness.iter().enumerate() {
+            memory.insert(
+                BFieldElement::new(i as u64) + scalars_pointer + safety_offset,
+                *pr,
+            );
+        }
+
+        // the list of scalars was allocated properly; reflect that fact
+        memory.insert(
+            BFieldElement::new(DYN_MALLOC_ADDRESS as u64),
+            BFieldElement::new(1) + safety_offset + BFieldElement::new(num_scalars as u64 * 3),
+        );
+        memory.insert(scalars_pointer, BFieldElement::new(num_scalars as u64));
+
         stack.push(scalars_pointer);
         vec![]
     }

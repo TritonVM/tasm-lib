@@ -1139,6 +1139,8 @@ impl Procedure for FriVerify {
 
 #[cfg(test)]
 mod test {
+    use std::cmp::min;
+
     use itertools::Itertools;
     use rand::{rngs::StdRng, thread_rng, Rng, SeedableRng};
     use triton_vm::{
@@ -1293,17 +1295,17 @@ mod test {
 
     #[test]
     fn test_shadow() {
-        let seed: [u8; 32] //= thread_rng().gen();
-         = [
-            0xf7, 0x41, 0x2a, 0x3e, 0x1e, 0xa7, 0x86, 0xf6, 0xf3, 0x55, 0xdb, 0xcc, 0xe0, 0x32,
-            0xf3, 0xec, 0x6f, 0x51, 0x26, 0xcb, 0xb2, 0x7c, 0x4a, 0x34, 0xb4, 0xc9, 0xe9, 0xa8,
-            0x7c, 0x34, 0x11, 0xc5,
-        ];
+        let seed: [u8; 32] = thread_rng().gen();
+        //  = [
+        //     0xf7, 0x41, 0x2a, 0x3e, 0x1e, 0xa7, 0x86, 0xf6, 0xf3, 0x55, 0xdb, 0xcc, 0xe0, 0x32,
+        //     0xf3, 0xec, 0x6f, 0x51, 0x26, 0xcb, 0xb2, 0x7c, 0x4a, 0x34, 0xb4, 0xc9, 0xe9, 0xa8,
+        //     0x7c, 0x34, 0x11, 0xc5,
+        // ];
         let mut rng: StdRng = SeedableRng::from_seed(seed);
         let expansion_factor = 1 << rng.gen_range(1..5);
         let domain_length = expansion_factor * (1 << rng.gen_range(8..15));
         let offset = BFieldElement::new(7);
-        let num_colinearity_checks = 4; //rng.gen_range(1..min(160, domain_length / 4));
+        let num_colinearity_checks = 20; //rng.gen_range(1..min(160, domain_length / 4));
         println!("number of colinearity checks: {num_colinearity_checks}");
         println!("expansion factor: {expansion_factor}");
         let procedure = FriVerify::new(
