@@ -1,11 +1,14 @@
 use std::collections::HashMap;
 
-use num_traits::{One, Zero};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
-use crate::memory::dyn_malloc::DYN_MALLOC_ADDRESS;
+use crate::{
+    empty_stack,
+    memory::dyn_malloc::{DynMalloc, DYN_MALLOC_ADDRESS},
+    snippet::DeprecatedSnippet,
+};
 
-// Syntactic sugar for setting memory[DYN_MALLOC_ADDRESS]
+// TODO: DELETE ME, OR FIX ME
 pub fn rust_dyn_malloc_initialize(
     memory: &mut HashMap<BFieldElement, BFieldElement>,
     initial_value: u32,
@@ -17,23 +20,11 @@ pub fn dynamic_allocator(
     size_in_words: usize,
     memory: &mut HashMap<BFieldElement, BFieldElement>,
 ) -> BFieldElement {
-    let size = BFieldElement::new(size_in_words as u64);
-    let used_memory = memory
-        .entry(DYN_MALLOC_ADDRESS)
-        .and_modify(|e| {
-            *e = if e.is_zero() {
-                BFieldElement::one()
-            } else {
-                *e
-            }
-        })
-        .or_insert_with(BFieldElement::one);
-
-    assert!(size.value() < (1u64 << 32));
-
-    let next_addr = *used_memory;
-
-    *used_memory += size;
-
-    next_addr
+    let mut init_stack = [
+        empty_stack(),
+        vec![BFieldElement::new(size_in_words as u64)],
+    ]
+    .concat();
+    DynMalloc.rust_shadowing(&mut init_stack, vec![], vec![], memory);
+    init_stack.pop().unwrap()
 }

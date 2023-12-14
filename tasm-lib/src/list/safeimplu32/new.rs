@@ -1,5 +1,4 @@
 use itertools::Itertools;
-use num::{One, Zero};
 use triton_vm::triton_asm;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
@@ -36,7 +35,6 @@ impl DeprecatedSnippet for SafeNew {
     }
 
     fn output_types(&self) -> Vec<DataType> {
-        // List pointers are considered u32
         vec![DataType::List(Box::new(self.data_type.clone()))]
     }
 
