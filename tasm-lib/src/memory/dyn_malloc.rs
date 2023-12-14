@@ -159,12 +159,8 @@ impl DeprecatedSnippet for DynMalloc {
         *used_memory += size;
 
         assert!(
-            used_memory.value() > (1u64 << 32),
-            "New dyn malloc state is {used_memory}"
-        );
-        assert!(
-            used_memory.value() < (1u64 << 33),
-            "New dyn malloc state is {used_memory}"
+            used_memory.value() > (1u64 << 32) && used_memory.value() < (1u64 << 33),
+            "New dyn malloc state is {used_memory} which is outside of the legal region"
         );
     }
 }

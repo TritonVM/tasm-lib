@@ -239,7 +239,9 @@ pub fn execute_test(
     let mut vm_state = VMState::new(&program, public_input.clone(), nondeterminism.clone());
     vm_state.op_stack.stack = stack.to_owned();
     vm_state.sponge_state = maybe_sponge_state.map(|state| state.state);
-    vm_state.run().unwrap();
+    if let Err(err) = vm_state.run() {
+        panic!("{err}\n\nFinal state was: {vm_state}")
+    }
     let terminal_state = vm_state;
 
     if !terminal_state.jump_stack.is_empty() {

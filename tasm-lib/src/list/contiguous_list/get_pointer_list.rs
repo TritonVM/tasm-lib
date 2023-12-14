@@ -4,6 +4,7 @@ use triton_vm::BFieldElement;
 use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
 use crate::data_type::DataType;
+use crate::memory::dyn_malloc;
 use crate::{
     list::{
         self,
@@ -201,6 +202,10 @@ impl DeprecatedSnippet for GetPointerList {
     ) {
         // read address
         let mut address = stack.last().unwrap().to_owned();
+        assert!(
+            address.value() < (1u64 << 32),
+            "Sanity check: Address was outside of expected memory range. Got: {address}"
+        );
         let size = memory
             .get(&(address - BFieldElement::new(1)))
             .unwrap()
@@ -227,8 +232,7 @@ impl DeprecatedSnippet for GetPointerList {
         assert_eq!(dummy_list.len(), length);
 
         // create list
-        let output_list_pointer =
-            rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator(length, memory);
+        let output_list_pointer = dyn_malloc::FIRST_DYNAMICALLY_ALLOCATED_ADDRESS;
         match self.output_list_type {
             ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_new(
                 output_list_pointer,
