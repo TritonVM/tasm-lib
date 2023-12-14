@@ -113,7 +113,7 @@ impl<P: Procedure + 'static> RustShadow for ShadowedProcedure<P> {
             nondeterminism.ram.extend(memory.iter());
 
             let init_stack = stack.to_vec();
-            let words_statically_allocated = 1;
+            let words_statically_allocated = 0;
 
             let rust = rust_final_state(
                 self,

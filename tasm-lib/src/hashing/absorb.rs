@@ -234,6 +234,12 @@ impl Procedure for Absorb {
         };
         VmHasher::absorb_repeatedly(sponge_state, sequence.iter());
 
+        // make memory agree with static allocator
+        memory.insert(-BFieldElement::new(1), address);
+        memory.insert(-BFieldElement::new(2), BFieldElement::new(length as u64));
+        memory.insert(-BFieldElement::new(3), address - BFieldElement::new(1));
+        memory.insert(-BFieldElement::new(4), BFieldElement::new(0));
+
         // output empty
         vec![]
     }
