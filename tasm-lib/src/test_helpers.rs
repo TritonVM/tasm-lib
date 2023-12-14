@@ -315,7 +315,7 @@ mod test {
             &stack,
             &[],
             &NonDeterminism::default(),
-            1,
+            0,
             None,
         );
     }

@@ -120,11 +120,10 @@ impl DeprecatedSnippet for HashVarlen {
         let length: u32 = stack.pop().unwrap().try_into().unwrap();
         let memory_pointer: BFieldElement = stack.pop().unwrap();
 
-        // mimic the behavior of statically allocated memory
-        memory.insert(2_u64.into(), memory_pointer);
-        memory.insert(3_u64.into(), length.into());
-        memory.insert(4_u64.into(), memory_pointer - BFieldElement::new(1));
-        memory.insert(5_u64.into(), 0_u64.into());
+        memory.extend(Absorb::statically_allocated_memory(
+            memory_pointer,
+            length.into(),
+        ));
 
         let mut preimage = vec![];
         for i in 0..length as u64 {
