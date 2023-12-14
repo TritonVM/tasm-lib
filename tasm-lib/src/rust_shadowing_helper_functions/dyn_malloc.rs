@@ -3,27 +3,23 @@ use std::collections::HashMap;
 use num_traits::{One, Zero};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
-use crate::memory::dyn_malloc;
+use crate::memory::dyn_malloc::DYN_MALLOC_ADDRESS;
 
 // Syntactic sugar for setting memory[DYN_MALLOC_ADDRESS]
 pub fn rust_dyn_malloc_initialize(
     memory: &mut HashMap<BFieldElement, BFieldElement>,
-    initial_value: usize,
+    initial_value: u32,
 ) {
-    memory.insert(
-        BFieldElement::new(dyn_malloc::DYN_MALLOC_ADDRESS as u64),
-        BFieldElement::new(initial_value as u64),
-    );
+    memory.insert(DYN_MALLOC_ADDRESS, BFieldElement::new(initial_value as u64));
 }
 
 pub fn dynamic_allocator(
     size_in_words: usize,
     memory: &mut HashMap<BFieldElement, BFieldElement>,
 ) -> BFieldElement {
-    let allocator_addr = BFieldElement::new(dyn_malloc::DYN_MALLOC_ADDRESS as u64);
     let size = BFieldElement::new(size_in_words as u64);
     let used_memory = memory
-        .entry(allocator_addr)
+        .entry(DYN_MALLOC_ADDRESS)
         .and_modify(|e| {
             *e = if e.is_zero() {
                 BFieldElement::one()

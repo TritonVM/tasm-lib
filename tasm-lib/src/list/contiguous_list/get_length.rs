@@ -66,7 +66,7 @@ impl GetLength {
             memory.insert(address, word);
             address.increment();
         }
-        memory.insert(BFieldElement::new(DYN_MALLOC_ADDRESS as u64), address);
+        memory.insert(DYN_MALLOC_ADDRESS, address);
 
         ExecutionState::with_stack_and_memory(stack, memory, 1)
     }

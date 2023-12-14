@@ -75,7 +75,7 @@ pub fn test_rust_equivalence_given_input_values_deprecated<T: DeprecatedSnippet>
     stack: &[BFieldElement],
     stdin: &[BFieldElement],
     memory: HashMap<BFieldElement, BFieldElement>,
-    words_statically_allocated: usize,
+    words_statically_allocated: u32,
     expected_final_stack: Option<&[BFieldElement]>,
 ) -> VmOutputState {
     let nondeterminism = NonDeterminism::<BFieldElement>::new(vec![]).with_ram(memory.clone());
@@ -92,7 +92,7 @@ pub fn test_rust_equivalence_given_input_values_deprecated<T: DeprecatedSnippet>
 
 fn link_for_isolated_run_deprecated<T: DeprecatedSnippet>(
     snippet_struct: &T,
-    words_statically_allocated: usize,
+    words_statically_allocated: u32,
 ) -> Vec<LabelledInstruction> {
     let mut snippet_state = Library::with_preallocated_memory(words_statically_allocated);
     let entrypoint = snippet_struct.entrypoint();
@@ -119,7 +119,7 @@ pub fn link_and_run_tasm_for_test_deprecated<T: DeprecatedSnippet>(
     std_in: Vec<BFieldElement>,
     secret_in: Vec<BFieldElement>,
     memory: HashMap<BFieldElement, BFieldElement>,
-    words_statically_allocated: usize,
+    words_statically_allocated: u32,
 ) -> VmOutputState {
     let expected_length_prior: usize = snippet_struct
         .inputs()
@@ -158,7 +158,7 @@ pub(crate) fn test_rust_equivalence_given_complete_state_deprecated<T: Deprecate
     stack: &[BFieldElement],
     stdin: &[BFieldElement],
     nondeterminism: &NonDeterminism<BFieldElement>,
-    words_statically_allocated: usize,
+    words_statically_allocated: u32,
     expected_final_stack: Option<&[BFieldElement]>,
 ) -> VmOutputState {
     let init_stack = stack.to_vec();
@@ -227,8 +227,8 @@ pub(crate) fn test_rust_equivalence_given_complete_state_deprecated<T: Deprecate
     // Alternatively the rust shadowing trait function must take a `Library` argument as input
     // and statically allocate memory from there.
     // TODO: Check if we could perform this check on dyn malloc too
-    rust_memory.remove(&BFieldElement::new(DYN_MALLOC_ADDRESS as u64));
-    tasm_memory.remove(&BFieldElement::new(DYN_MALLOC_ADDRESS as u64));
+    rust_memory.remove(&DYN_MALLOC_ADDRESS);
+    tasm_memory.remove(&DYN_MALLOC_ADDRESS);
 
     if rust_memory != tasm_memory {
         fn format_hash_map_iterator<K, V>(map: impl Iterator<Item = (K, V)>) -> String
@@ -330,7 +330,7 @@ pub fn rust_final_state<T: RustShadow>(
     stdin: &[BFieldElement],
     nondeterminism: &NonDeterminism<BFieldElement>,
     sponge_state: &Option<VmHasherState>,
-    words_statically_allocated: usize,
+    words_statically_allocated: u32,
 ) -> VmOutputState {
     let mut rust_memory = nondeterminism.ram.clone();
     let mut rust_stack = stack.to_vec();
@@ -367,7 +367,7 @@ pub fn tasm_final_state<T: RustShadow>(
     stdin: &[BFieldElement],
     nondeterminism: NonDeterminism<BFieldElement>,
     sponge_state: &Option<VmHasherState>,
-    words_statically_allocated: usize,
+    words_statically_allocated: u32,
 ) -> VmOutputState {
     // run tvm
     link_and_run_tasm_for_test(
@@ -419,7 +419,7 @@ pub fn verify_memory_equivalence(
         .collect_vec();
     if memory_difference
         .iter()
-        .any(|(k, _v)| **k != BFieldElement::new(DYN_MALLOC_ADDRESS as u64))
+        .any(|(k, _v)| **k != DYN_MALLOC_ADDRESS)
     {
         let mut a_memory_ = a_memory.iter().collect_vec();
         a_memory_.sort_unstable_by(|&a, &b| a.0.value().partial_cmp(&b.0.value()).unwrap());
@@ -481,7 +481,7 @@ pub fn test_rust_equivalence_given_complete_state<T: RustShadow>(
     nondeterminism: &NonDeterminism<BFieldElement>,
     memory: &HashMap<BFieldElement, BFieldElement>,
     sponge_state: &Option<VmHasherState>,
-    words_statically_allocated: usize,
+    words_statically_allocated: u32,
     expected_final_stack: Option<&[BFieldElement]>,
 ) -> VmOutputState {
     assert!(
@@ -532,7 +532,7 @@ pub fn link_and_run_tasm_for_test<T: RustShadow>(
     std_in: Vec<BFieldElement>,
     nondeterminism: NonDeterminism<BFieldElement>,
     maybe_sponge_state: Option<VmHasherState>,
-    words_statically_allocated: usize,
+    words_statically_allocated: u32,
 ) -> VmOutputState {
     let code = link_for_isolated_run(snippet_struct, words_statically_allocated);
 
@@ -548,7 +548,7 @@ pub fn link_and_run_tasm_for_test<T: RustShadow>(
 
 fn link_for_isolated_run<T: RustShadow>(
     snippet_struct: &T,
-    words_statically_allocated: usize,
+    words_statically_allocated: u32,
 ) -> Vec<LabelledInstruction> {
     println!(
         "linking with preallocated memory ... \

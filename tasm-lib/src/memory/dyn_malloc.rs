@@ -7,7 +7,7 @@ use triton_vm::instruction::LabelledInstruction;
 use triton_vm::triton_asm;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
-pub const DYN_MALLOC_ADDRESS: u32 = 0;
+pub const DYN_MALLOC_ADDRESS: BFieldElement = BFieldElement::new(1 << 32);
 
 use crate::data_type::DataType;
 use crate::{empty_stack, library::Library, snippet::DeprecatedSnippet, ExecutionState};
@@ -48,23 +48,27 @@ impl DeprecatedSnippet for DynMalloc {
 
     fn function_code(&self, _library: &mut Library) -> String {
         let entrypoint = self.entrypoint_name();
+        let first_dynamically_allocated_address: BFieldElement =
+            DYN_MALLOC_ADDRESS + BFieldElement::new(1);
         triton_asm!(
         // Return a pointer to a free address and allocate `size` words for this pointer
 
         // BEFORE: _ size
         // AFTER:  _ *next_addr
         {entrypoint}:
-            push {DYN_MALLOC_ADDRESS}   // _ size *free_pointer
-            read_mem 1                  // _ size *next_addr' *free_pointer-1
-            pop 1                       // _ size *next_addr'
+            push {DYN_MALLOC_ADDRESS}                  // _ size *dyn_malloc_state
+            read_mem 1                                 // _ size *next_addr' *dyn_malloc_state-1
+            pop 1                                      // _ size *next_addr'
 
-            dup 0                       // _ size *next_addr' *next_addr'
-            push 0                      // _ size *next_addr' *next_addr' 0
-            eq                          // _ size *next_addr' (*next_addr' == 0)
-            add                         // _ size *next_addr
+            dup 0                                      // _ size *next_addr' *next_addr'
+            push 0                                     // _ size *next_addr' *next_addr' 0
+            eq                                         // _ size *next_addr' (*next_addr' == 0)
+            push {first_dynamically_allocated_address}
+            mul                                        // _ size *next_addr' (*next_addr' == 0) * (2^{32} + 1)
+            add                                        // _ size *next_addr
 
-            dup 0                       // _ size *next_addr *next_addr
-            swap 2                      // _ *next_addr *next_addr size
+            dup 0                                      // _ size *next_addr *next_addr
+            swap 2                                     // _ *next_addr *next_addr size
 
             // Ensure that `size` does not exceed 2^32
             split
@@ -74,17 +78,16 @@ impl DeprecatedSnippet for DynMalloc {
             assert
             add                         // _ *next_addr *(next_addr + size)
 
-            // ensure that no more than 2^32 words are allocated, because I don't want a
-            // wrap-around in the address space
+            // ensure that all dynamic allocations take place in the $(2^{32}, 2^{33})$ range.
+            dup 0
             split
-            swap 1
-            push 0
-            eq
+            pop 1
             assert
+            // _ *next_addr *(next_addr + size)
 
             // write the address of unallocated memory back to memory
-            push {DYN_MALLOC_ADDRESS}   // _ *next_addr *(next_addr + size) *free_pointer
-            write_mem 1                 // _ *next_addr *free_pointer+1
+            push {DYN_MALLOC_ADDRESS}   // _ *next_addr *(next_addr + size) *dyn_malloc_state
+            write_mem 1                 // _ *next_addr (*dyn_malloc_state+1)
             pop 1                       // _ *next_addr
             return
         )
@@ -137,25 +140,31 @@ impl DeprecatedSnippet for DynMalloc {
     ) {
         let size = stack.pop().unwrap();
         assert!(size.value() < (1u64 << 32));
-        let allocator_addr = BFieldElement::new(DYN_MALLOC_ADDRESS as u64);
 
         let used_memory = memory
-            .entry(allocator_addr)
+            .entry(DYN_MALLOC_ADDRESS)
             .and_modify(|e| {
                 *e = if e.is_zero() {
-                    BFieldElement::one()
+                    DYN_MALLOC_ADDRESS + BFieldElement::one()
                 } else {
                     *e
                 }
             })
-            .or_insert_with(BFieldElement::one);
+            .or_insert_with(|| DYN_MALLOC_ADDRESS + BFieldElement::one());
 
         let next_addr = *used_memory;
 
         stack.push(next_addr);
         *used_memory += size;
 
-        assert!(used_memory.value() < (1u64 << 32));
+        assert!(
+            used_memory.value() > (1u64 << 32),
+            "New dyn malloc state is {used_memory}"
+        );
+        assert!(
+            used_memory.value() < (1u64 << 33),
+            "New dyn malloc state is {used_memory}"
+        );
     }
 }
 
@@ -166,9 +175,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn sane_address_chosen_for_dyn_malloc() {
-        // It's probably a really bad idea to use any other value than 0.
-        assert_eq!(0, DYN_MALLOC_ADDRESS);
+    fn expected_address_chosen_for_dyn_malloc() {
+        assert_eq!(1 << 32, DYN_MALLOC_ADDRESS.value());
     }
 
     #[test]
@@ -181,13 +189,21 @@ mod tests {
         let mut init_stack = empty_stack();
         init_stack.push(BFieldElement::new(10));
         let mut empty_memory_state = ExecutionState::with_stack(init_stack.clone());
-        DynMalloc.link_and_run_tasm_from_state_for_test(&mut empty_memory_state);
-        assert!(empty_memory_state.stack.pop().unwrap().is_one());
+        let mut final_state_1 =
+            DynMalloc.link_and_run_tasm_from_state_for_test(&mut empty_memory_state);
+        assert_eq!(
+            DYN_MALLOC_ADDRESS + BFieldElement::one(),
+            final_state_1.final_stack.pop().unwrap()
+        );
 
         let mut non_empty_memory_state =
-            ExecutionState::with_stack_and_memory(init_stack, HashMap::default(), 100);
-        DynMalloc.link_and_run_tasm_from_state_for_test(&mut non_empty_memory_state);
-        assert_eq!(101, non_empty_memory_state.stack.pop().unwrap().value());
+            ExecutionState::with_stack_and_memory(init_stack, final_state_1.final_ram, 0);
+        let mut final_state_2 =
+            DynMalloc.link_and_run_tasm_from_state_for_test(&mut non_empty_memory_state);
+        assert_eq!(
+            DYN_MALLOC_ADDRESS + BFieldElement::new(11),
+            final_state_2.final_stack.pop().unwrap()
+        );
     }
 }
 

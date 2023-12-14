@@ -379,7 +379,7 @@ impl Map {
         };
         rust_shadowing_helper_functions::dyn_malloc::rust_dyn_malloc_initialize(
             &mut memory,
-            (input_list_size + list_pointer).value() as usize,
+            (input_list_size + list_pointer).value() as u32,
         );
 
         match self.list_type {
