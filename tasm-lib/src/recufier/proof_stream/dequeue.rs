@@ -50,13 +50,13 @@ impl BasicSnippet for Dequeue {
         let absorb = _library.import(Box::new(Absorb {}));
         triton_asm!(
             // BEFORE: _ *object_si
-            // AFTER: _ *object_si bool
+            // AFTER:  _ *object_si bool
             {include_in_fiat_shamir_heuristic}:
                 // get enum variant indicator
                 dup 0           // _ *object_si *object_si
                 push 1 add      // _ *object_si *object_evi
-                read_mem        // _ *object_si *object_evi object_evi
-                swap 1 pop      // _ *object_si object_evi
+                read_mem 1
+                pop 1           // _ *object_si object_evi
 
                 // is it a Merkle root?
                 push {ProofItem::MerkleRoot(Default::default()).bfield_codec_discriminant()}
@@ -77,31 +77,32 @@ impl BasicSnippet for Dequeue {
                 push {ProofItem::OutOfDomainQuotientSegments([XFieldElement::zero(); 4])
                     .bfield_codec_discriminant()}
                 dup 1 eq
-                swap 1 pop
+                swap 1 pop 1
 
                 // compress
                 add add add
                 return
 
             // BEFORE: _ *proof_item_si
-            // AFTER: _ *proof_item_si
+            // AFTER:  _ *proof_item_si
             {fiat_shamir}:
                 dup 0           // _ *proof_item_si *proof_item_si
-                read_mem        // _ *proof_item_si *proof_item_si proof_item_size
-                swap 1          // _ *proof_item_si proof_item_size *proof_item_si
-                push 1 add      // _ *proof_item_si proof_item_size *proof_item
+                read_mem 1
+                push 2 add      // _ *proof_item_si proof_item_size *proof_item
 
                 swap 1          // _ *proof_item_si *proof_item proof_item_size
                 call {absorb}
                 return
 
             // BEFORE: _ *proof_stream
-            // AFTER: _ *proof_stream *object
+            // AFTER:  _ *proof_stream *object
             {entrypoint}:
 
                 dup 0               // _ *proof_stream *proof_stream
                 {&field_word_index} // _ *proof_stream *word_index
-                read_mem            // _ *proof_stream *word_index word_index
+                read_mem 1          // _ *proof_stream word_index (*word_index - 1)
+                push 1 add          // _ *proof_stream word_index *word_index
+                swap 1              // _ *proof_stream *word_index word_index
                 dup 0               // _ *proof_stream *word_index word_index word_index
 
                 dup 3               // _ *proof_stream *word_index word_index word_index *proof_stream
@@ -121,18 +122,18 @@ impl BasicSnippet for Dequeue {
                 skiz call {fiat_shamir}
                                     // _ *proof_stream *word_index word_index *object_si
 
-                read_mem            // _ *proof_stream *word_index word_index *object_si object_size
-                push 1 add          // _ *proof_stream *word_index word_index *object_si object_size+1
-                dup 2               // _ *proof_stream *word_index word_index *object_si object_size+1 word_index
-                add                 // _ *proof_stream *word_index  word_index *object_si word_index'
+                read_mem 1          // _ *proof_stream *word_index word_index object_size (*object_si - 1)
+                push 2 add          // _ *proof_stream *word_index word_index object_size *object
+                swap 1              // _ *proof_stream *word_index word_index *object object_size
+                push 1 add          // _ *proof_stream *word_index word_index *object object_size+1
+                dup 2               // _ *proof_stream *word_index word_index *object object_size+1 word_index
+                add                 // _ *proof_stream *word_index word_index *object word_index'
 
-                swap 1              // _ *proof_stream *word_index word_index word_index' *object_si
-                push 1 add          // _ *proof_stream *word_index word_index word_index' *object
+                swap 1              // _ *proof_stream *word_index word_index word_index' *object
                 swap 3              // _ *proof_stream *object word_index word_index' *word_index
-                swap 1              // _ *proof_stream *object word_index *word_index word_index'
-                write_mem           // _ *proof_stream *object word_index *word_index
+                write_mem 1         // _ *proof_stream *object word_index (*word_index + 1)
 
-                pop pop             // _ *proof_stream *object
+                pop 2               // _ *proof_stream *object
 
                 return
 
