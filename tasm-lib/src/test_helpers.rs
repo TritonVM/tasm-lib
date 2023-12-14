@@ -8,7 +8,7 @@ use triton_vm::{triton_asm, NonDeterminism};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::dyn_malloc::DYN_MALLOC_ADDRESS;
-use crate::library::Library;
+use crate::library::{Library, STATIC_MEMORY_START_ADDRESS};
 use crate::snippet::{BasicSnippet, DeprecatedSnippet, RustShadow};
 use crate::{
     execute_test, exported_snippets, rust_shadowing_helper_functions, ExecutionState,
@@ -337,10 +337,10 @@ pub fn rust_final_state<T: RustShadow>(
     let mut rust_sponge = sponge_state.clone();
 
     // Initialiaze allocator, if necessary
-    if words_statically_allocated > 0 && rust_memory.get(&BFieldElement::zero()).is_none() {
+    if rust_memory.get(&BFieldElement::zero()).is_none() {
         rust_shadowing_helper_functions::dyn_malloc::rust_dyn_malloc_initialize(
             &mut rust_memory,
-            words_statically_allocated,
+            words_statically_allocated + STATIC_MEMORY_START_ADDRESS,
         );
     }
 
@@ -401,50 +401,48 @@ pub fn verify_stack_equivalence(a: &[BFieldElement], b: &[BFieldElement]) {
     );
 }
 
-pub fn verify_memory_equivalence(
+/// Verify equivalence of memory up to the value of dynamic allocator.
+pub(crate) fn verify_memory_equivalence(
     a_memory: &HashMap<BFieldElement, BFieldElement>,
     b_memory: &HashMap<BFieldElement, BFieldElement>,
 ) {
-    // verify equivalence of memory up to the value of dynamic allocator
-    let memory_difference = b_memory
-        .iter()
-        .filter(|(k, v)| match a_memory.get(*k) {
-            Some(b) => *b != **v,
-            None => true,
-        })
-        .chain(a_memory.iter().filter(|(k, v)| match b_memory.get(*k) {
-            Some(b) => *b != **v,
-            None => true,
-        }))
-        .collect_vec();
-    if memory_difference
-        .iter()
-        .any(|(k, _v)| **k != BFieldElement::new(DYN_MALLOC_ADDRESS as u64))
-    {
-        let mut a_memory_ = a_memory.iter().collect_vec();
-        a_memory_.sort_unstable_by(|&a, &b| a.0.value().partial_cmp(&b.0.value()).unwrap());
-        let a_mem_str = a_memory_
-            .iter()
-            .map(|x| format!("({} => {})", x.0, x.1))
-            .collect_vec()
-            .join(",");
-
-        let mut b_memory_ = b_memory.iter().collect_vec();
-        b_memory_.sort_unstable_by(|&a, &b| a.0.value().partial_cmp(&b.0.value()).unwrap());
-        let b_mem_str = b_memory_
-            .iter()
-            .map(|x| format!("({} => {})", x.0, x.1))
-            .collect_vec()
-            .join(",");
-        let diff_str = memory_difference
-            .iter()
-            .map(|x| format!("({} => {})", x.0, x.1))
-            .collect_vec()
-            .join(",");
-        panic!(
-            "Memory for both implementations must match after execution.\n\nA: {a_mem_str}\n\nB: {b_mem_str}\n\nDifference: {diff_str}\n\n",
-        );
+    let memory_without_dyn_malloc = |mem: HashMap<_, _>| -> HashMap<_, _> {
+        mem.into_iter()
+            .filter(|&(k, _)| k != BFieldElement::from(DYN_MALLOC_ADDRESS))
+            .collect()
+    };
+    let a_memory = memory_without_dyn_malloc(a_memory.clone());
+    let b_memory = memory_without_dyn_malloc(b_memory.clone());
+    if a_memory == b_memory {
+        return;
     }
+
+    fn format_hash_map_iterator<K, V>(map: impl Iterator<Item = (K, V)>) -> String
+    where
+        u64: From<K>,
+        K: Copy + Display,
+        V: Display,
+    {
+        map.sorted_by_key(|(k, _)| u64::from(*k))
+            .map(|(k, v)| format!("({k} => {v})"))
+            .join(", ")
+    }
+
+    let in_a_and_different_in_b = a_memory
+        .iter()
+        .filter(|(k, &v)| b_memory.get(k).map(|&b| b != v).unwrap_or(true));
+    let in_b_and_different_in_a = b_memory
+        .iter()
+        .filter(|(k, &v)| a_memory.get(k).map(|&b| b != v).unwrap_or(true));
+
+    let in_a_and_different_in_b = format_hash_map_iterator(in_a_and_different_in_b);
+    let in_b_and_different_in_a = format_hash_map_iterator(in_b_and_different_in_a);
+
+    panic!(
+        "Memory for both implementations must match after execution.\n\n\
+        In B, different in A: {in_b_and_different_in_a}\n\n\
+        In A, different in B: {in_a_and_different_in_b}"
+    );
 }
 
 pub fn verify_stack_growth<T: RustShadow>(

@@ -1,6 +1,6 @@
-use num_traits::Zero;
 use std::{cmp::max, collections::HashMap};
 
+use num_traits::Zero;
 use rand::Rng;
 use rand::{rngs::StdRng, RngCore, SeedableRng};
 use triton_vm::proof_item::ProofItem;
@@ -40,14 +40,14 @@ impl BasicSnippet for Dequeue {
         "tasm_recufier_proof_stream_dequeue".to_string()
     }
 
-    fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {
+    fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
         let field_word_index = field!(VmProofStream::word_index);
         let field_data_with_size = field_with_size!(VmProofStream::data);
         let include_in_fiat_shamir_heuristic =
             format!("{entrypoint}_include_in_fiat_shamir_heuristic");
         let fiat_shamir = format!("{entrypoint}_fiat_shamir");
-        let absorb = _library.import(Box::new(Absorb {}));
+        let absorb = library.import(Box::new(Absorb {}));
         triton_asm!(
             // BEFORE: _ *object_si
             // AFTER:  _ *object_si bool
@@ -83,15 +83,15 @@ impl BasicSnippet for Dequeue {
                 add add add
                 return
 
-            // BEFORE: _ *proof_item_si
-            // AFTER:  _ *proof_item_si
+            // BEFORE: _ *proof_item_size
+            // AFTER:  _ *proof_item_size
             {fiat_shamir}:
-                dup 0           // _ *proof_item_si *proof_item_si
+                dup 0           // _ *proof_item_size *proof_item_size
                 read_mem 1
-                push 2 add      // _ *proof_item_si proof_item_size *proof_item
+                push 2 add      // _ *proof_item_size proof_item_size *proof_item
 
-                swap 1          // _ *proof_item_si *proof_item proof_item_size
-                call {absorb}
+                swap 1          // _ *proof_item_size *proof_item proof_item_size
+                call {absorb}   // _ *proof_item_size
                 return
 
             // BEFORE: _ *proof_stream
@@ -145,8 +145,8 @@ impl Procedure for Dequeue {
     fn rust_shadow(
         &self,
         stack: &mut Vec<BFieldElement>,
-        memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
-        _nondeterminism: &triton_vm::NonDeterminism<BFieldElement>,
+        memory: &mut HashMap<BFieldElement, BFieldElement>,
+        _nondeterminism: &NonDeterminism<BFieldElement>,
         _stdin: &[BFieldElement],
         sponge_state: &mut Option<VmHasherState>,
     ) -> Vec<BFieldElement> {
@@ -163,11 +163,10 @@ impl Procedure for Dequeue {
 
         // calculate proof item address
         let proof_item_pointer = proof_stream_pointer
-            + BFieldElement::new(1) // skip over word_index
-            + BFieldElement::new(1) // skip over data field length indicator
-            + BFieldElement::new(1) // skip over data list length indicator
-            + BFieldElement::new(proof_stream.word_index as u64) // jump to proof item size indicator
-            + BFieldElement::new(1); // skip over size indicator
+            + BFieldElement::new(1) // skip over total encoding length indicator
+            + BFieldElement::new(1) // skip over data's encoding length indicator
+            + BFieldElement::new(1) // skip over data's number of items indicator
+            + BFieldElement::from(proof_stream.word_index); // jump to proof item size indicator
 
         // check bounds
         let first_inaccessible_address =
@@ -205,11 +204,9 @@ impl Procedure for Dequeue {
         Vec<BFieldElement>,
         Option<VmHasherState>,
     ) {
-        let mut rng: StdRng = SeedableRng::from_seed(seed);
-
-        let mut proof_items = vec![];
-
         // populate with random proof items
+        let mut rng: StdRng = SeedableRng::from_seed(seed);
+        let mut proof_items = vec![];
         while proof_items.is_empty() {
             proof_items = VmProofStream::pseudorandom_items_list(rng.gen());
         }
@@ -230,24 +227,22 @@ impl Procedure for Dequeue {
         }
 
         // write to memory at random address
-        let address = BFieldElement::new((rng.next_u32() % (1 << 20)) as u64);
+        let address: u64 = rng.gen_range(0..(1 << 20));
+        let address = BFieldElement::new(address);
         let sequence = proof_stream.encode();
         let mut memory = HashMap::new();
         for (i, b) in sequence.into_iter().enumerate() {
             memory.insert(address + BFieldElement::new(i as u64), b);
         }
 
-        // drop address on stack
-        let mut stack = empty_stack();
-        stack.push(address);
-
-        // populate sponge state at random
+        let stack = [empty_stack(), vec![address]].concat();
+        let non_determinism = NonDeterminism::default().with_ram(memory);
         let sponge_state = VmHasherState { state: rng.gen() };
 
         (
             stack,
-            memory,
-            NonDeterminism::new(vec![]),
+            HashMap::default(),
+            non_determinism,
             vec![],
             Some(sponge_state),
         )
@@ -256,12 +251,15 @@ impl Procedure for Dequeue {
 
 #[cfg(test)]
 mod test {
-
+    use itertools::Itertools;
     use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
     use rand::{rngs::StdRng, Rng, RngCore, SeedableRng};
+    use triton_vm::proof_item::ProofItem;
     use triton_vm::{BFieldElement, NonDeterminism, Program};
     use twenty_first::shared_math::bfield_codec::BFieldCodec;
+    use twenty_first::shared_math::x_field_element::XFieldElement;
+    use twenty_first::util_types::algebraic_hasher::Domain;
 
     use crate::{
         empty_stack, execute_with_terminal_state,
@@ -269,9 +267,69 @@ mod test {
         procedure::{Procedure, ShadowedProcedure},
         snippet::RustShadow,
         test_helpers::test_rust_equivalence_given_complete_state,
+        VmHasherState,
     };
 
     use super::{Dequeue, VmProofStream};
+
+    #[test]
+    fn dequeue_from_proof_stream_with_1_item() {
+        dequeue_from_proof_stream_with_given_number_of_items(1);
+    }
+
+    #[test]
+    fn dequeue_from_proof_stream_with_2_items() {
+        dequeue_from_proof_stream_with_given_number_of_items(2);
+    }
+
+    #[test]
+    fn dequeue_from_proof_stream_with_3_items() {
+        dequeue_from_proof_stream_with_given_number_of_items(3);
+    }
+
+    fn dequeue_from_proof_stream_with_given_number_of_items(num_items: usize) {
+        let dequeue = ShadowedProcedure::new(Dequeue {});
+        let (stack, non_determinism) = very_small_initial_state(num_items);
+        let memory = HashMap::default();
+        let sponge_state = VmHasherState::new(Domain::VariableLength);
+
+        test_rust_equivalence_given_complete_state(
+            &dequeue,
+            &stack,
+            &[],
+            &non_determinism,
+            &memory,
+            &Some(sponge_state),
+            0,
+            None,
+        );
+    }
+
+    fn very_small_initial_state(
+        num_items: usize,
+    ) -> (Vec<BFieldElement>, NonDeterminism<BFieldElement>) {
+        let address = 0_u64.into();
+        let proof_stream = proof_stream_with_num_items(num_items);
+
+        let mut memory = HashMap::default();
+        for (i, b) in proof_stream.encode().into_iter().enumerate() {
+            memory.insert(address + BFieldElement::new(i as u64), b);
+        }
+
+        let stack = [empty_stack(), vec![address]].concat();
+        let non_determinism = NonDeterminism::default().with_ram(memory);
+
+        (stack, non_determinism)
+    }
+
+    fn proof_stream_with_num_items(num_items: usize) -> VmProofStream {
+        let proof_item_0 = ProofItem::Log2PaddedHeight(0);
+        let proof_item_1 = ProofItem::MerkleRoot(Default::default());
+        let proof_item_2 = ProofItem::OutOfDomainExtRow(vec![XFieldElement::from(0); 3]);
+        let proof_items = [proof_item_0, proof_item_1, proof_item_2];
+        let proof_stream = VmProofStream::new(&proof_items[..num_items]);
+        proof_stream
+    }
 
     #[test]
     fn test() {
@@ -287,7 +345,7 @@ mod test {
         let algorithm = ShadowedProcedure::new(dequeue.clone());
 
         for _ in 0..num_states {
-            let (stack, memory, nondeterminism, _stdin, _sponge_state) =
+            let (stack, memory, nondeterminism, _stdin, sponge_state) =
                 dequeue.pseudorandom_initial_state(rng.gen(), None);
 
             let stdin = vec![];
@@ -297,8 +355,8 @@ mod test {
                 &stdin,
                 &nondeterminism,
                 &memory,
-                &None,
-                1,
+                &sponge_state,
+                0,
                 None,
             );
         }
