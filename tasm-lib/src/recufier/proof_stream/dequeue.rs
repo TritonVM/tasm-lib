@@ -176,7 +176,8 @@ impl Procedure for Dequeue {
         }
 
         // read object
-        let _proof_item = proof_stream.dequeue();
+        let proof_item = proof_stream.dequeue();
+        let sponge_absorb_has_been_called = proof_item.unwrap().include_in_fiat_shamir_heuristic();
 
         // percolate sponge changes
         *sponge_state = Some(proof_stream.sponge_state.clone());
@@ -189,6 +190,16 @@ impl Procedure for Dequeue {
         // add proof item pointer to stack
         stack.push(proof_stream_pointer);
         stack.push(proof_item_pointer);
+
+        if sponge_absorb_has_been_called {
+            // this is a highly specific implementation detail of BFieldCodec
+            let proof_item_length_pointer = proof_item_pointer - BFieldElement::new(1);
+            let &proof_item_length = memory.get(&proof_item_length_pointer).unwrap();
+            memory.extend(Absorb::statically_allocated_memory(
+                proof_item_pointer,
+                proof_item_length,
+            ));
+        }
 
         vec![]
     }

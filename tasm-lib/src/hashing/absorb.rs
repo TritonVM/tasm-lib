@@ -234,11 +234,8 @@ impl Procedure for Absorb {
         };
         VmHasher::absorb_repeatedly(sponge_state, sequence.iter());
 
-        // make memory agree with static allocator
-        memory.insert(-BFieldElement::new(1), address);
-        memory.insert(-BFieldElement::new(2), BFieldElement::new(length as u64));
-        memory.insert(-BFieldElement::new(3), address - BFieldElement::new(1));
-        memory.insert(-BFieldElement::new(4), BFieldElement::new(0));
+        let length = (length as u64).into();
+        memory.extend(Self::statically_allocated_memory(address, length));
 
         // output empty
         vec![]
@@ -294,6 +291,20 @@ impl Procedure for Absorb {
             vec![],
             Some(vm_hasher_state),
         )
+    }
+}
+
+impl Absorb {
+    pub(crate) fn statically_allocated_memory(
+        address: BFieldElement,
+        length: BFieldElement,
+    ) -> HashMap<BFieldElement, BFieldElement> {
+        let mut memory = HashMap::default();
+        memory.insert(-BFieldElement::new(1), address);
+        memory.insert(-BFieldElement::new(2), length);
+        memory.insert(-BFieldElement::new(3), address - BFieldElement::new(1));
+        memory.insert(-BFieldElement::new(4), BFieldElement::new(0));
+        memory
     }
 }
 
