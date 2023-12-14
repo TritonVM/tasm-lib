@@ -41,26 +41,26 @@ impl BasicSnippet for GetColinearityCheckX {
 
         triton_asm! {
             // BEFORE: _ *fri_verify index round
-            // AFTER: _ x2 x1 x0
+            // AFTER:  _ x2 x1 x0
             {entrypoint}:
                 dup 2               // _ *fri_verify index round *fri_verify
                 {&domain_generator} // _ *fri_verify index round *domain_generator
-                read_mem swap 1 pop // _ *fri_verify index round domain_generator
+                read_mem 1 pop 1    // _ *fri_verify index round domain_generator
                 dup 2               // _ *fri_verify index round domain_generator index
                 swap 1 pow          // _ *fri_verify index round domain_generator^index
 
                 dup 3               // _ *fri_verify index round domain_generator^index *fri_verify
                 {&domain_offset}    // _ *fri_verify index round domain_generator^index *domain_offset
-                read_mem swap 1 pop // _ *fri_verify index round domain_generator^index domain_offset
+                read_mem 1 pop 1    // _ *fri_verify index round domain_generator^index domain_offset
                 mul                 // _ *fri_verify index round domain_generator^index*domain_offset
 
                 dup 1 push 2 pow    // _ *fri_verify index round domain_generator^index*domain_offset 2^round
 
                 swap 1 pow          // _ *fri_verify index round (domain_generator^index*domain_offset)^(1<<round)
 
-                swap 3 pop pop pop  // _ (g^i*o)^(1<<r)
-                push 0 push 0 swap 2// _ 0 0 (g^i*o)^(1<<r)
-
+                swap 3 pop 3        // _ (g^i*o)^(1<<r)
+                push 0 push 0 swap 2
+                                    // _ 0 0 (g^i*o)^(1<<r)
                 return
         }
     }
@@ -69,8 +69,8 @@ impl BasicSnippet for GetColinearityCheckX {
 impl Function for GetColinearityCheckX {
     fn rust_shadow(
         &self,
-        stack: &mut Vec<triton_vm::BFieldElement>,
-        memory: &mut std::collections::HashMap<triton_vm::BFieldElement, triton_vm::BFieldElement>,
+        stack: &mut Vec<BFieldElement>,
+        memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
         // read stack arguments
         let round = stack.pop().unwrap().value() as usize;
@@ -92,11 +92,8 @@ impl Function for GetColinearityCheckX {
     fn pseudorandom_initial_state(
         &self,
         seed: [u8; 32],
-        bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
-    ) -> (
-        Vec<triton_vm::BFieldElement>,
-        std::collections::HashMap<triton_vm::BFieldElement, triton_vm::BFieldElement>,
-    ) {
+        bench_case: Option<BenchmarkCase>,
+    ) -> (Vec<BFieldElement>, HashMap<BFieldElement, BFieldElement>) {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
         let round = if let Some(case) = bench_case {
             match case {
