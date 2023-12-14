@@ -1,7 +1,8 @@
+use itertools::Itertools;
 use std::collections::HashMap;
 
 use rand::random;
-use triton_vm::NonDeterminism;
+use triton_vm::{triton_asm, NonDeterminism};
 use twenty_first::{
     shared_math::b_field_element::BFieldElement, util_types::algebraic_hasher::AlgebraicHasher,
 };
@@ -25,7 +26,7 @@ impl HashVarlen {
             std_in: vec![],
             nondeterminism: NonDeterminism::new(vec![]),
             memory,
-            words_allocated: 1,
+            words_allocated: 0,
         }
     }
 }
@@ -39,12 +40,8 @@ impl DeprecatedSnippet for HashVarlen {
         vec!["*addr".to_string(), "length".to_string()]
     }
 
-    fn input_types(&self) -> Vec<crate::data_type::DataType> {
+    fn input_types(&self) -> Vec<DataType> {
         vec![DataType::Bfe, DataType::U32]
-    }
-
-    fn output_types(&self) -> Vec<crate::data_type::DataType> {
-        vec![DataType::Digest]
     }
 
     fn output_field_names(&self) -> Vec<String> {
@@ -57,6 +54,10 @@ impl DeprecatedSnippet for HashVarlen {
         ]
     }
 
+    fn output_types(&self) -> Vec<DataType> {
+        vec![DataType::Digest]
+    }
+
     fn stack_diff(&self) -> isize {
         3
     }
@@ -65,10 +66,8 @@ impl DeprecatedSnippet for HashVarlen {
         let entrypoint = self.entrypoint_name();
         let absorb_subroutine = library.import(Box::new(Absorb));
 
-        format!(
-            "
+        triton_asm!(
             // BEFORE:      _ addr len
-            // INVARIANT:   <none>
             // AFTER:       _ digest[4] digest[3] digest[2] digest[1] digest[0]
             {entrypoint}:
                 sponge_init
@@ -80,15 +79,16 @@ impl DeprecatedSnippet for HashVarlen {
                 swap 5 pop 1    // _ d[9] d[3] d[2] d[1] d[0] d[4]
                 swap 5 pop 1    // _ d[4] d[3] d[2] d[1] d[0]
                 return
-                "
         )
+        .iter()
+        .join(" ")
     }
 
     fn crash_conditions(&self) -> Vec<String> {
         vec!["Length exceeds u32::MAX".to_string()]
     }
 
-    fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
         vec![
             Self::random_memory_state_read_k(0),
             Self::random_memory_state_read_k(1),
@@ -102,11 +102,11 @@ impl DeprecatedSnippet for HashVarlen {
         ]
     }
 
-    fn common_case_input_state(&self) -> crate::ExecutionState {
+    fn common_case_input_state(&self) -> ExecutionState {
         Self::random_memory_state_read_k(25)
     }
 
-    fn worst_case_input_state(&self) -> crate::ExecutionState {
+    fn worst_case_input_state(&self) -> ExecutionState {
         Self::random_memory_state_read_k(1000)
     }
 
