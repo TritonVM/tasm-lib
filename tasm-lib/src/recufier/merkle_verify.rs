@@ -128,11 +128,7 @@ impl Algorithm for MerkleVerify {
         &self,
         seed: [u8; 32],
         maybe_bench_case: Option<BenchmarkCase>,
-    ) -> (
-        Vec<BFieldElement>,
-        HashMap<BFieldElement, BFieldElement>,
-        NonDeterminism<BFieldElement>,
-    ) {
+    ) -> (Vec<BFieldElement>, NonDeterminism<BFieldElement>) {
         {
             let mut rng: StdRng = SeedableRng::from_seed(seed);
             let tree_height = match maybe_bench_case {
@@ -171,9 +167,8 @@ impl Algorithm for MerkleVerify {
             }
             stack.push(BFieldElement::new(tree_height));
 
-            let nondeterminism = NonDeterminism::new(vec![]).with_digests(path);
-            let memory = HashMap::<BFieldElement, BFieldElement>::new();
-            (stack, memory, nondeterminism)
+            let nondeterminism = NonDeterminism::default().with_digests(path);
+            (stack, nondeterminism)
         }
     }
 }
@@ -203,8 +198,7 @@ mod tests {
     fn negative_test() {
         let seed: [u8; 32] = thread_rng().gen();
         for i in 0..6 {
-            let (mut stack, memory, mut nondeterminism) =
-                MerkleVerify.pseudorandom_initial_state(seed, None);
+            let (mut stack, nondeterminism) = MerkleVerify.pseudorandom_initial_state(seed, None);
             let len = stack.len();
 
             match i {
@@ -225,7 +219,7 @@ mod tests {
             // run rust shadow
             let rust_result = std::panic::catch_unwind(|| {
                 let mut rust_stack = stack.clone();
-                let mut rust_memory = memory.clone();
+                let mut rust_memory = nondeterminism.ram.clone();
                 ShadowedAlgorithm::new(MerkleVerify.clone()).rust_shadow_wrapper(
                     &stdin,
                     &nondeterminism,

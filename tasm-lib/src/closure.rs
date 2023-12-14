@@ -100,15 +100,8 @@ impl<C: Closure + 'static> RustShadow for ShadowedClosure<C> {
                 .borrow()
                 .pseudorandom_initial_state(rng.gen(), Some(bench_case));
             let program = link_for_isolated_run(self.closure.clone(), 1);
-            let execution_result = execute_bench(
-                &program,
-                &stack,
-                vec![],
-                NonDeterminism::new(vec![]),
-                &HashMap::new(),
-                Some(1),
-                None,
-            );
+            let execution_result =
+                execute_bench(&program, &stack, vec![], NonDeterminism::new(vec![]), None);
             let benchmark = BenchmarkResult {
                 name: self.closure.borrow().entrypoint(),
                 clock_cycle_count: execution_result.cycle_count,

@@ -345,7 +345,7 @@ mod test {
             // (because you can't dequeue from an empty stream)
 
             let stdin = vec![];
-            let mut nondeterminism = NonDeterminism::new(vec![]);
+            let nondeterminism = NonDeterminism::new(vec![]);
 
             // run rust shadow
             let rust_result = std::panic::catch_unwind(|| {

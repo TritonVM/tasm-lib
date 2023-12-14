@@ -1,4 +1,4 @@
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 
 use triton_vm::vm::VMState;
 use triton_vm::{
@@ -38,8 +38,6 @@ pub fn execute_bench(
     stack: &[BFieldElement],
     std_in: Vec<BFieldElement>,
     nondeterminism: NonDeterminism<BFieldElement>,
-    memory: &HashMap<BFieldElement, BFieldElement>,
-    initilialize_dynamic_allocator_to: Option<usize>,
     sponge_state: Option<VmHasherState>,
 ) -> ExecutionResult {
     let program = Program::new(code);

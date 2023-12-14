@@ -187,11 +187,7 @@ impl Algorithm for VerifyAuthenticationPathForLeafAndIndexList {
         &self,
         seed: [u8; 32],
         bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
-    ) -> (
-        Vec<triton_vm::BFieldElement>,
-        std::collections::HashMap<triton_vm::BFieldElement, triton_vm::BFieldElement>,
-        triton_vm::NonDeterminism<triton_vm::BFieldElement>,
-    ) {
+    ) -> (Vec<BFieldElement>, NonDeterminism<BFieldElement>) {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
 
         // determine sizes
@@ -218,7 +214,7 @@ impl Algorithm for VerifyAuthenticationPathForLeafAndIndexList {
         let leafs_and_indices = indices
             .iter()
             .map(|i| *i as u32)
-            .zip(indicated_leafs.into_iter())
+            .zip(indicated_leafs)
             .collect_vec();
         let authentication_paths = indices
             .iter()
@@ -249,10 +245,11 @@ impl Algorithm for VerifyAuthenticationPathForLeafAndIndexList {
         stack.push(root.0[1]);
         stack.push(root.0[0]);
         stack.push(BFieldElement::new(height as u64));
-        let nondeterminism = NonDeterminism::<BFieldElement>::new(vec![])
-            .with_digests(authentication_paths.into_iter().flatten().collect_vec());
+        let nondeterminism = NonDeterminism::<BFieldElement>::default()
+            .with_digests(authentication_paths.into_iter().flatten().collect_vec())
+            .with_ram(memory);
 
-        (stack, memory, nondeterminism)
+        (stack, nondeterminism)
     }
 }
 
@@ -289,8 +286,7 @@ mod test {
             list_type: ListType::Unsafe,
         };
         for i in 0..4 {
-            let (mut stack, memory, mut nondeterminism) =
-                vap4lail.pseudorandom_initial_state(seed, None);
+            let (mut stack, mut nondeterminism) = vap4lail.pseudorandom_initial_state(seed, None);
             let len = stack.len();
 
             match i {
@@ -321,7 +317,7 @@ mod test {
             // run rust shadow
             let rust_result = std::panic::catch_unwind(|| {
                 let mut rust_stack = stack.clone();
-                let mut rust_memory = memory.clone();
+                let mut rust_memory = nondeterminism.ram.clone();
                 ShadowedAlgorithm::new(vap4lail.clone()).rust_shadow_wrapper(
                     &stdin,
                     &nondeterminism,
@@ -342,7 +338,6 @@ mod test {
 
             // run tvm
             let code = link_for_isolated_run(Rc::new(RefCell::new(vap4lail.clone())), 0);
-            nondeterminism.ram = memory;
             let program = Program::new(&code);
             let tvm_result =
                 execute_with_terminal_state(&program, &stdin, &stack, &nondeterminism, None);

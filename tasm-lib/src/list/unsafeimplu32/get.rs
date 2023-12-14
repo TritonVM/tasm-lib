@@ -174,7 +174,7 @@ fn input_state(list_length: usize) -> ExecutionState {
 #[cfg(test)]
 mod tests {
     use itertools::Itertools;
-    use rand::{thread_rng, RngCore};
+    use rand::thread_rng;
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
     use crate::empty_stack;

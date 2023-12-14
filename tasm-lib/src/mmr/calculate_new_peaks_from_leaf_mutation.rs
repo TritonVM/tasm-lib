@@ -152,7 +152,7 @@ impl DeprecatedSnippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
         ]
     }
 
-    fn input_types(&self) -> Vec<crate::data_type::DataType> {
+    fn input_types(&self) -> Vec<DataType> {
         vec![
             DataType::List(Box::new(DataType::Digest)),
             DataType::U64,
@@ -162,7 +162,7 @@ impl DeprecatedSnippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
         ]
     }
 
-    fn output_types(&self) -> Vec<crate::data_type::DataType> {
+    fn output_types(&self) -> Vec<DataType> {
         vec![DataType::List(Box::new(DataType::Digest)), DataType::U64]
     }
 
@@ -649,7 +649,7 @@ mod tests {
         let (init_exec_state, auth_path_pointer, peaks_pointer) = implementation_with_unsafe_lists
             .prepare_state_with_mmra(start_mmr, new_leaf_index, new_leaf, auth_path);
         let init_stack = init_exec_state.stack;
-        let mut memory = init_exec_state.memory;
+        let memory = init_exec_state.memory;
 
         // AFTER: _ *auth_path leaf_index_hi leaf_index_lo
         let mut expected_final_stack = empty_stack();

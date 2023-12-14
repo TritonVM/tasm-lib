@@ -159,21 +159,14 @@ impl<P: Procedure + 'static> RustShadow for ShadowedProcedure<P> {
         let mut benchmarks = Vec::with_capacity(2);
 
         for bench_case in [BenchmarkCase::CommonCase, BenchmarkCase::WorstCase] {
-            let (stack, memory, nondeterminism, public_input, sponge_state) = self
+            let (stack, _, nondeterminism, public_input, sponge_state) = self
                 .procedure
                 .borrow()
                 .pseudorandom_initial_state(rng.gen(), Some(bench_case));
             let words_statically_allocated = 10; // okay buffer
             let program = link_for_isolated_run(self.procedure.clone(), words_statically_allocated);
-            let execution_result = execute_bench(
-                &program,
-                &stack,
-                public_input,
-                nondeterminism,
-                &memory,
-                Some(1),
-                sponge_state,
-            );
+            let execution_result =
+                execute_bench(&program, &stack, public_input, nondeterminism, sponge_state);
             let benchmark = BenchmarkResult {
                 name: self.procedure.borrow().entrypoint(),
                 clock_cycle_count: execution_result.cycle_count,

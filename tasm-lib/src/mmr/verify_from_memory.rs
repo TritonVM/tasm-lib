@@ -628,7 +628,7 @@ mod tests {
         let leaf_index_hi = BFieldElement::new(leaf_index >> 32);
         let leaf_index_lo = BFieldElement::new(leaf_index & u32::MAX as u64);
         let init_stack = exec_state.stack;
-        let mut memory = exec_state.memory;
+        let memory = exec_state.memory;
 
         // AFTER: _ *auth_path leaf_index_hi leaf_index_lo validation_result
         let mut expected_final_stack = empty_stack();

@@ -53,11 +53,7 @@ pub trait Algorithm: BasicSnippet {
         &self,
         seed: [u8; 32],
         bench_case: Option<BenchmarkCase>,
-    ) -> (
-        Vec<BFieldElement>,
-        HashMap<BFieldElement, BFieldElement>,
-        NonDeterminism<BFieldElement>,
-    );
+    ) -> (Vec<BFieldElement>, NonDeterminism<BFieldElement>);
 }
 
 pub struct ShadowedAlgorithm<T: Algorithm + 'static> {
@@ -106,7 +102,7 @@ where
                 self.algorithm.borrow().entrypoint(),
                 seed
             );
-            let (stack, memory, nondeterminism) = self
+            let (stack, nondeterminism) = self
                 .algorithm
                 .borrow()
                 .pseudorandom_initial_state(seed, None);
@@ -117,7 +113,7 @@ where
                 &stack,
                 &stdin,
                 &nondeterminism,
-                &memory,
+                &HashMap::default(),
                 &None,
                 1,
                 None,
@@ -135,20 +131,12 @@ where
         let mut benchmarks = Vec::with_capacity(2);
 
         for bench_case in [BenchmarkCase::CommonCase, BenchmarkCase::WorstCase] {
-            let (stack, memory, nondeterminism) = self
+            let (stack, nondeterminism) = self
                 .algorithm
                 .borrow()
                 .pseudorandom_initial_state(rng.gen(), Some(bench_case));
             let program = link_for_isolated_run(self.algorithm.clone(), 1);
-            let execution_result = execute_bench(
-                &program,
-                &stack,
-                vec![],
-                nondeterminism,
-                &memory,
-                Some(1),
-                None,
-            );
+            let execution_result = execute_bench(&program, &stack, vec![], nondeterminism, None);
             let benchmark = BenchmarkResult {
                 name: self.algorithm.borrow().entrypoint(),
                 clock_cycle_count: execution_result.cycle_count,

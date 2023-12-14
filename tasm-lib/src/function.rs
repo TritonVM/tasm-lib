@@ -113,15 +113,8 @@ where
                 .borrow()
                 .pseudorandom_initial_state(rng.gen(), Some(bench_case));
             let program = link_for_isolated_run(self.function.clone(), 1);
-            let execution_result = execute_bench(
-                &program,
-                &stack,
-                vec![],
-                NonDeterminism::new(vec![]),
-                &memory,
-                Some(1),
-                None,
-            );
+            let non_determinism = NonDeterminism::default().with_ram(memory);
+            let execution_result = execute_bench(&program, &stack, vec![], non_determinism, None);
             let benchmark = BenchmarkResult {
                 name: self.function.borrow().entrypoint(),
                 clock_cycle_count: execution_result.cycle_count,

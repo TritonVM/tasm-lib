@@ -18,7 +18,6 @@ use std::time::SystemTime;
 use anyhow::bail;
 use itertools::Itertools;
 use num_traits::Zero;
-use triton_vm::error::InstructionError;
 use triton_vm::instruction::LabelledInstruction;
 use triton_vm::op_stack::NUM_OP_STACK_REGISTERS;
 use triton_vm::program::Program;
@@ -34,7 +33,6 @@ use twenty_first::shared_math::tip5::{self, Tip5};
 
 use library::Library;
 use memory::dyn_malloc;
-use memory::dyn_malloc::DYN_MALLOC_ADDRESS;
 use snippet::BasicSnippet;
 use snippet::DeprecatedSnippet;
 
@@ -221,15 +219,6 @@ pub fn execute_bench_deprecated(
         hash_table_height: simulation_trace.hash_table_length(),
         u32_table_height: simulation_trace.u32_table_length(),
     })
-}
-
-fn determine_cycle_count_of_preparation_program(prep: &[LabelledInstruction]) -> usize {
-    let program = Program::new(prep);
-    let mut vm_state = VMState::new(&program, PublicInput::default(), NonDeterminism::default());
-    let Err(InstructionError::InstructionPointerOverflow) = vm_state.run() else {
-        panic!("preparation program must not halt");
-    };
-    vm_state.cycle_count as usize
 }
 
 /// Execute a Triton-VM program and test correct behavior indicators.
