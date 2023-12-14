@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use itertools::Itertools;
+use num_traits::Zero;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use triton_vm::{triton_asm, BFieldElement};
 use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
@@ -11,7 +12,7 @@ use crate::{
     function::Function,
     snippet::BasicSnippet,
     snippet_bencher::BenchmarkCase,
-    structure::tasm_object::{load_to_memory, TasmObject},
+    structure::tasm_object::{encode_to_memory, TasmObject},
     Digest, VmHasher,
 };
 
@@ -193,9 +194,10 @@ impl Function for MerkleRoot {
         let leafs = (0..num_leafs).map(|_| rng.gen::<Digest>()).collect_vec();
 
         let mut memory = HashMap::<BFieldElement, BFieldElement>::new();
-        let pointer = load_to_memory(&mut memory, leafs);
+        let address = BFieldElement::zero();
+        encode_to_memory(&mut memory, address, leafs);
         let mut stack = empty_stack();
-        stack.push(pointer);
+        stack.push(address);
         stack.push(BFieldElement::new(0)); // start
         stack.push(BFieldElement::new(num_leafs)); // stop
 
@@ -217,8 +219,9 @@ mod test {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::{function::ShadowedFunction, snippet::RustShadow};
+
+    use super::*;
 
     #[test]
     fn merkle_root_bench() {

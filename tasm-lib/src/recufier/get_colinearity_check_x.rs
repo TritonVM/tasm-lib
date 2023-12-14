@@ -1,10 +1,11 @@
+use num_traits::Zero;
 use std::collections::HashMap;
 
 use crate::{
     data_type::DataType,
     empty_stack,
     snippet_bencher::BenchmarkCase,
-    structure::tasm_object::{load_to_memory, TasmObject},
+    structure::tasm_object::{encode_to_memory, TasmObject},
 };
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use triton_vm::{triton_asm, BFieldElement};
@@ -116,7 +117,8 @@ impl Function for GetColinearityCheckX {
         let fri_verify = FriVerify::new(rng.gen(), fri_domain_length, 4, 40);
 
         let mut memory = HashMap::<BFieldElement, BFieldElement>::new();
-        let fri_verify_address = load_to_memory(&mut memory, fri_verify);
+        let fri_verify_address = BFieldElement::zero();
+        encode_to_memory(&mut memory, fri_verify_address, fri_verify);
 
         let mut stack = empty_stack();
         stack.push(fri_verify_address);

@@ -1,16 +1,14 @@
 use std::collections::HashMap;
 use std::error::Error;
 
-pub use derive_tasm_object::TasmObject;
-
 use itertools::Itertools;
 use num_traits::Zero;
 use triton_vm::{instruction::LabelledInstruction, BFieldElement};
 use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
-type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
+pub use derive_tasm_object::TasmObject;
 
-use crate::memory::dyn_malloc::DYN_MALLOC_ADDRESS;
+type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 
 /// TasmObject
 ///
@@ -23,7 +21,7 @@ pub trait TasmObject {
     /// Returns tasm code that returns a pointer the field of the object, assuming:
     ///  - that a pointer to the said object lives on top of the stack;
     ///  - said object has a type that implements the TasmObject trait;
-    ///  - said object lives in memory endoded as BFieldCodec specifies.
+    ///  - said object lives in memory encoded as BFieldCodec specifies.
     ///
     /// BEFORE: _ *object
     ///
@@ -34,7 +32,7 @@ pub trait TasmObject {
     /// the size of that field in number of BFieldElements, assuming:
     ///  - that a pointer to the said object lives on top of the stack;
     ///  - said object has a type that implements the TasmObject trait;
-    ///  - said object lives in memory endoded as BFieldCodec specifies.
+    ///  - said object lives in memory encoded as BFieldCodec specifies.
     ///
     /// BEFORE: _ *object
     ///
@@ -95,23 +93,6 @@ pub fn encode_to_memory<T: BFieldCodec>(
         memory.insert(address + BFieldElement::new(i as u64), *e);
     }
     address + BFieldElement::new(encoding.len() as u64)
-}
-
-/// Loads the `BFieldCodec`-encodable object into memory at the first free location, and
-/// updates the allocator accordingly. Return the address where the object is stored. This
-/// method can be chained together in order to load multiple objects into memory without
-/// overlaps.
-pub fn load_to_memory<T: BFieldCodec>(
-    memory: &mut HashMap<BFieldElement, BFieldElement>,
-    object: T,
-) -> BFieldElement {
-    let address = memory
-        .get(&DYN_MALLOC_ADDRESS)
-        .copied()
-        .unwrap_or(BFieldElement::new(1));
-    let new_alloc = encode_to_memory(memory, address, object);
-    memory.insert(DYN_MALLOC_ADDRESS, new_alloc);
-    address
 }
 
 impl<T: BFieldCodec> TasmObject for Vec<T> {
@@ -265,75 +246,67 @@ mod test {
         empty_stack, execute_with_terminal_state,
         library::Library,
         list::unsafeimplu32::length::Length,
-        structure::tasm_object::{load_to_memory, TasmObject},
+        structure::tasm_object::{encode_to_memory, TasmObject},
         Digest,
     };
 
-    #[derive(Debug, Clone, PartialEq, Eq, BFieldCodec)]
-    enum InnerEnum {
-        Cow(u32),
-        Horse(u128, u128),
-        Pig(XFieldElement),
-        Sheep([BFieldElement; 13]),
-    }
-
-    #[derive(Debug, Clone, PartialEq, Eq, BFieldCodec, TasmObject)]
-    struct InnerStruct(XFieldElement, u32);
-
-    #[derive(Debug, Clone, PartialEq, Eq, BFieldCodec, TasmObject)]
-    struct OuterStruct {
-        o: InnerEnum,
-        a: Vec<Option<bool>>,
-        b: InnerStruct,
-        p: InnerEnum,
-        c: BFieldElement,
-        l: InnerEnum,
-    }
-
-    fn pseudorandom_object(seed: [u8; 32]) -> OuterStruct {
-        let mut rng: StdRng = SeedableRng::from_seed(seed);
-        let a = (0..19)
-            .map(|_| {
-                if rng.gen() {
-                    if rng.gen() {
-                        Some(true)
-                    } else {
-                        Some(false)
-                    }
-                } else {
-                    None
-                }
-            })
-            .collect_vec();
-        let b0: XFieldElement = rng.gen();
-        let b1: u32 = rng.gen();
-        let c: BFieldElement = rng.gen();
-
-        OuterStruct {
-            o: InnerEnum::Pig(XFieldElement::new_const(443u64.into())),
-            a,
-            b: InnerStruct(b0, b1),
-            p: InnerEnum::Cow(999),
-            c,
-            l: InnerEnum::Horse(1 << 99, 1 << 108),
-        }
-    }
-
     #[test]
     fn test_load_and_decode_from_memory() {
+        #[derive(Debug, Clone, PartialEq, Eq, BFieldCodec)]
+        enum InnerEnum {
+            Cow(u32),
+            Horse(u128, u128),
+            Pig(XFieldElement),
+            Sheep([BFieldElement; 13]),
+        }
+
+        #[derive(Debug, Clone, PartialEq, Eq, BFieldCodec, TasmObject)]
+        struct InnerStruct(XFieldElement, u32);
+
+        #[derive(Debug, Clone, PartialEq, Eq, BFieldCodec, TasmObject)]
+        struct OuterStruct {
+            o: InnerEnum,
+            a: Vec<Option<bool>>,
+            b: InnerStruct,
+            p: InnerEnum,
+            c: BFieldElement,
+            l: InnerEnum,
+        }
+
+        fn pseudorandom_object(seed: [u8; 32]) -> OuterStruct {
+            let mut rng: StdRng = SeedableRng::from_seed(seed);
+            let a = (0..19)
+                .map(|_| if rng.gen() { Some(rng.gen()) } else { None })
+                .collect_vec();
+            let b0: XFieldElement = rng.gen();
+            let b1: u32 = rng.gen();
+            let c: BFieldElement = rng.gen();
+
+            OuterStruct {
+                o: InnerEnum::Pig(XFieldElement::new_const(443u64.into())),
+                a,
+                b: InnerStruct(b0, b1),
+                p: InnerEnum::Cow(999),
+                c,
+                l: InnerEnum::Horse(1 << 99, 1 << 108),
+            }
+        }
+
         let mut rng = thread_rng();
         let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
 
         let object = pseudorandom_object(rng.gen());
-        let address = load_to_memory(&mut memory, object.clone());
+        let address = rng.gen();
+        encode_to_memory(&mut memory, address, object.clone());
         let object_again: OuterStruct = *OuterStruct::decode_from_memory(&memory, address).unwrap();
         assert_eq!(object, object_again);
     }
 
     /// Test derivation of field getters and manual derivations of the `field!` macro
     mod derive_tests {
-        use super::*;
         use triton_vm::Program;
+
+        use super::*;
 
         #[test]
         fn load_and_decode_struct_with_named_fields_from_memory() {
@@ -351,8 +324,11 @@ mod test {
             thread_rng().fill_bytes(&mut randomness);
             let mut unstructured = Unstructured::new(&randomness);
             let random_object = NamedFields::arbitrary(&mut unstructured).unwrap();
+            let random_address: u64 = thread_rng().gen_range(0..(1 << 30));
+            let address = random_address.into();
             let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
-            let address = load_to_memory(&mut memory, random_object.clone());
+
+            encode_to_memory(&mut memory, address, random_object.clone());
             let object_again: NamedFields =
                 *NamedFields::decode_from_memory(&memory, address).unwrap();
             assert_eq!(random_object, object_again);
@@ -414,7 +390,10 @@ mod test {
             let mut unstructured = Unstructured::new(&randomness);
             let random_object = TupleStruct::arbitrary(&mut unstructured).unwrap();
             let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
-            let address = load_to_memory(&mut memory, random_object.clone());
+            let random_address: u64 = thread_rng().gen_range(0..(1 << 30));
+            let address = random_address.into();
+
+            encode_to_memory(&mut memory, address, random_object.clone());
             let object_again: TupleStruct =
                 *TupleStruct::decode_from_memory(&memory, address).unwrap();
             assert_eq!(random_object, object_again);
@@ -521,7 +500,10 @@ mod test {
         ) -> Vec<BFieldElement> {
             // initialize memory and stack
             let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
-            let address = load_to_memory(&mut memory, obj.to_owned());
+            let random_address: u64 = thread_rng().gen_range(0..(1 << 30));
+            let address = random_address.into();
+
+            encode_to_memory(&mut memory, address, obj.to_owned());
             let stack = [empty_stack(), vec![address]].concat();
 
             // link by hand

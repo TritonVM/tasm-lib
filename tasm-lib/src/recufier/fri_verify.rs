@@ -22,7 +22,7 @@ use crate::{
         xfe_ntt::XfeNtt,
     },
     snippet_bencher::BenchmarkCase,
-    structure::tasm_object::{load_to_memory, TasmObject},
+    structure::tasm_object::{encode_to_memory, TasmObject},
     Digest, VmHasher, VmHasherState,
 };
 use anyhow::bail;
@@ -47,6 +47,7 @@ use twenty_first::{
 };
 
 use crate::data_type::DataType;
+use crate::memory::dyn_malloc::FIRST_DYNAMICALLY_ALLOCATED_ADDRESS;
 use crate::{library::Library, procedure::Procedure, snippet::BasicSnippet};
 
 use super::proof_stream::vm_proof_stream::VmProofStream;
@@ -1107,7 +1108,12 @@ impl Procedure for FriVerify {
 
         let revealed_indices_and_elements = self.call(&mut proof_stream, nondeterminism);
 
-        let indices_and_leafs_pointer = load_to_memory(memory, revealed_indices_and_elements);
+        let indices_and_leafs_pointer = FIRST_DYNAMICALLY_ALLOCATED_ADDRESS;
+        encode_to_memory(
+            memory,
+            indices_and_leafs_pointer,
+            revealed_indices_and_elements,
+        );
 
         // put stack in order
         stack.push(proof_stream_pointer);
@@ -1143,8 +1149,9 @@ impl Procedure for FriVerify {
             DYN_MALLOC_ADDRESS,
             BFieldElement::new(static_memory_offset + 1),
         );
-        let proof_stream_pointer = load_to_memory(&mut memory, proof_stream);
-        let fri_verify_pointer = load_to_memory(&mut memory, self.clone());
+        let proof_stream_pointer = BFieldElement::zero();
+        let fri_verify_pointer = encode_to_memory(&mut memory, proof_stream_pointer, proof_stream);
+        encode_to_memory(&mut memory, fri_verify_pointer, self.clone());
         let nondeterminism = NonDeterminism::new(vec![])
             .with_ram(memory.clone())
             .with_digests(digests);

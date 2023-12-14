@@ -12,14 +12,14 @@ use twenty_first::{
 };
 
 use crate::data_type::DataType;
+use crate::memory::dyn_malloc::FIRST_DYNAMICALLY_ALLOCATED_ADDRESS;
 use crate::{
     empty_stack,
     hashing::squeeze_repeatedly::SqueezeRepeatedly,
     list::unsafeimplu32::{new::UnsafeNew, set_length::UnsafeSetLength},
-    memory::dyn_malloc::DYN_MALLOC_ADDRESS,
     procedure::Procedure,
     snippet::BasicSnippet,
-    structure::tasm_object::load_to_memory,
+    structure::tasm_object::encode_to_memory,
     VmHasher, VmHasherState,
 };
 
@@ -122,7 +122,8 @@ impl Procedure for SampleScalars {
             .take(num_scalars)
             .map(|ch| XFieldElement::new(ch.try_into().unwrap()))
             .collect_vec();
-        let scalars_pointer = load_to_memory(memory, scalars);
+        let scalars_pointer = FIRST_DYNAMICALLY_ALLOCATED_ADDRESS;
+        encode_to_memory(memory, scalars_pointer, scalars);
 
         // store all pseudorandomness (not just sampled scalars) to memory
         let safety_offset = BFieldElement::new(1);
@@ -134,10 +135,6 @@ impl Procedure for SampleScalars {
         }
 
         // the list of scalars was allocated properly; reflect that fact
-        memory.insert(
-            DYN_MALLOC_ADDRESS,
-            BFieldElement::new(1) + safety_offset + BFieldElement::new(num_scalars as u64 * 3),
-        );
         memory.insert(scalars_pointer, BFieldElement::new(num_scalars as u64));
 
         stack.push(scalars_pointer);
@@ -188,7 +185,7 @@ mod bench {
     use super::SampleScalars;
 
     #[test]
-    fn test() {
+    fn bench() {
         ShadowedProcedure::new(SampleScalars).bench();
     }
 }
