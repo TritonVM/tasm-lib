@@ -83,11 +83,6 @@ impl Library {
         name.to_string()
     }
 
-    /// Return the next free address without allocating anything
-    pub fn get_next_free_address(&self) -> BFieldElement {
-        self.free_pointer
-    }
-
     /// Return a list of all external dependencies sorted by name
     /// All snippets are sorted
     /// alphabetically to ensure that generated programs are deterministic.
@@ -117,7 +112,7 @@ impl Library {
 
     /// Statically allocate `num_words` words of memory.
     pub fn kmalloc(&mut self, num_words: u32) -> BFieldElement {
-        let address = self.free_pointer;
+        let address = self.free_pointer - BFieldElement::new(num_words as u64 - 1);
         self.free_pointer -= BFieldElement::new(num_words as u64);
         address
     }
@@ -453,37 +448,17 @@ mod tests {
     fn kmalloc_test() {
         const B_FIELD_ELEMENT_LAST: BFieldElement = BFieldElement::new(BFieldElement::MAX);
         let mut lib = Library::new();
-        assert_eq!(B_FIELD_ELEMENT_LAST, lib.get_next_free_address());
 
-        // allocate 1 word and verify that 1 is returned, and that the next free address is 2
+        // allocate 1 word and verify that -1 is returned
         let first_free_address = lib.kmalloc(1);
         assert_eq!(B_FIELD_ELEMENT_LAST, first_free_address);
-        assert_eq!(
-            B_FIELD_ELEMENT_LAST - BFieldElement::one(),
-            lib.get_next_free_address()
-        );
 
-        // allocate 7 words and verify that 2 is returned, and that the next free address
-        // is 9.
+        // allocate 7 words and verify that -8 is returned
         let second_free_address = lib.kmalloc(7);
-        assert_eq!(
-            B_FIELD_ELEMENT_LAST - BFieldElement::one(),
-            second_free_address,
-        );
-        assert_eq!(
-            B_FIELD_ELEMENT_LAST - BFieldElement::new(8),
-            lib.get_next_free_address()
-        );
+        assert_eq!(-BFieldElement::new(8), second_free_address,);
 
         // Allocate 1000 words.
         let third_free_address = lib.kmalloc(1000);
-        assert_eq!(
-            B_FIELD_ELEMENT_LAST - BFieldElement::new(8),
-            third_free_address
-        );
-        assert_eq!(
-            B_FIELD_ELEMENT_LAST - BFieldElement::new(1008),
-            lib.get_next_free_address()
-        );
+        assert_eq!(-BFieldElement::new(1008), third_free_address);
     }
 }
