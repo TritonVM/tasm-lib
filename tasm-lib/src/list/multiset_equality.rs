@@ -1,7 +1,8 @@
+use std::collections::HashMap;
+
 use num::Zero;
 use num_traits::One;
 use rand::random;
-use std::collections::HashMap;
 use triton_vm::{Digest, NonDeterminism};
 use twenty_first::shared_math::other::random_elements;
 use twenty_first::shared_math::x_field_element::{XFieldElement, EXTENSION_DEGREE};
@@ -9,13 +10,14 @@ use twenty_first::{
     shared_math::b_field_element::BFieldElement, util_types::algebraic_hasher::AlgebraicHasher,
 };
 
-use super::ListType;
 use crate::data_type::DataType;
 use crate::hashing::hash_varlen::HashVarlen;
 use crate::list::safeimplu32::length::Length as SafeLength;
 use crate::list::unsafeimplu32::length::Length as UnsafeLength;
 use crate::{empty_stack, rust_shadowing_helper_functions, DIGEST_LENGTH};
 use crate::{library::Library, snippet::DeprecatedSnippet, ExecutionState, VmHasher};
+
+use super::ListType;
 
 #[derive(Clone, Debug)]
 pub struct MultisetEquality(pub ListType);
@@ -76,7 +78,7 @@ impl MultisetEquality {
             std_in: vec![],
             nondeterminism: NonDeterminism::new(vec![]),
             memory,
-            words_allocated: 1,
+            words_allocated: 0,
         }
     }
 
@@ -123,7 +125,7 @@ impl MultisetEquality {
             std_in: vec![],
             nondeterminism: NonDeterminism::new(vec![]),
             memory,
-            words_allocated: 1,
+            words_allocated: 0,
         }
     }
 
@@ -170,7 +172,7 @@ impl MultisetEquality {
             std_in: vec![],
             nondeterminism: NonDeterminism::new(vec![]),
             memory,
-            words_allocated: 1,
+            words_allocated: 0,
         }
     }
 
@@ -222,7 +224,7 @@ impl MultisetEquality {
             std_in: vec![],
             nondeterminism: NonDeterminism::new(vec![]),
             memory,
-            words_allocated: 1,
+            words_allocated: 0,
         }
     }
 }
@@ -593,8 +595,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::snippet_bencher::bench_and_write;
+
+    use super::*;
 
     #[test]
     fn unsafe_list_multiset_eq_benchmark() {
