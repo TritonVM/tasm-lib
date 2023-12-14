@@ -1,11 +1,12 @@
 use std::cmp::min;
 
-use crate::library::Library;
 use anyhow::{anyhow, Result};
 use triton_vm::instruction::LabelledInstruction;
 use triton_vm::program::Program;
 use triton_vm::{NonDeterminism, PublicInput};
 use twenty_first::shared_math::b_field_element::BFieldElement;
+
+use crate::library::Library;
 
 pub trait CompiledProgram {
     fn rust_shadow(
@@ -135,11 +136,12 @@ pub fn bench_program<P: CompiledProgram>(
 mod test {
     use triton_vm::{triton_asm, BFieldElement, NonDeterminism, PublicInput};
 
-    use crate::{library::Library, snippet_bencher::BenchmarkCase};
+    use crate::library::Library;
 
-    use super::{bench_program, test_rust_shadow, CompiledProgram};
+    use super::{test_rust_shadow, CompiledProgram};
 
-    struct FiboTest;
+    pub(super) struct FiboTest;
+
     impl CompiledProgram for FiboTest {
         fn rust_shadow(
             public_input: &PublicInput,
@@ -193,6 +195,14 @@ mod test {
         let nondeterminism = NonDeterminism::new(vec![]);
         test_rust_shadow::<FiboTest>(&public_input, &nondeterminism);
     }
+}
+
+#[cfg(test)]
+mod benches {
+    use crate::compiled_program::test::FiboTest;
+    use crate::snippet_bencher::BenchmarkCase;
+
+    use super::*;
 
     #[test]
     fn bench_fibo() {
