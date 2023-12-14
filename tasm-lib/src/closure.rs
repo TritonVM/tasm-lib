@@ -79,7 +79,7 @@ impl<C: Closure + 'static> RustShadow for ShadowedClosure<C> {
                 &nondeterminism,
                 &memory,
                 &None,
-                1,
+                0,
                 None,
             );
         }

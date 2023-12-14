@@ -115,7 +115,7 @@ where
                 &nondeterminism,
                 &HashMap::default(),
                 &None,
-                1,
+                0,
                 None,
             );
         }
