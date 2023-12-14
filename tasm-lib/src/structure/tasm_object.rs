@@ -106,11 +106,11 @@ pub fn load_to_memory<T: BFieldCodec>(
     object: T,
 ) -> BFieldElement {
     let address = memory
-        .get(&BFieldElement::new(DYN_MALLOC_ADDRESS as u64))
+        .get(&DYN_MALLOC_ADDRESS)
         .copied()
         .unwrap_or(BFieldElement::new(1));
     let new_alloc = encode_to_memory(memory, address, object);
-    memory.insert(BFieldElement::new(DYN_MALLOC_ADDRESS as u64), new_alloc);
+    memory.insert(DYN_MALLOC_ADDRESS, new_alloc);
     address
 }
 

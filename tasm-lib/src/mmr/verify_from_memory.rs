@@ -122,7 +122,7 @@ impl MmrVerifyFromMemory {
             ExecutionState::with_stack_and_memory(
                 stack,
                 memory,
-                2 * (MAX_MMR_HEIGHT * DIGEST_LENGTH),
+                (2 * (MAX_MMR_HEIGHT * DIGEST_LENGTH)).try_into().unwrap(),
             ),
             auth_path_pointer,
             peaks_pointer,
@@ -642,7 +642,7 @@ mod tests {
             &init_stack,
             &[],
             memory,
-            MAX_MMR_HEIGHT * DIGEST_LENGTH + 1, // assume that 64 digests are allocated in memory when code starts to run
+            (MAX_MMR_HEIGHT * DIGEST_LENGTH + 1).try_into().unwrap(), // assume that 64 digests are allocated in memory when code starts to run
             Some(&expected_final_stack),
         );
 

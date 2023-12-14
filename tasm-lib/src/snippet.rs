@@ -142,7 +142,7 @@ pub trait DeprecatedSnippet {
 
     fn link_for_isolated_run(
         &self,
-        words_statically_allocated: Option<usize>,
+        words_statically_allocated: Option<u32>,
     ) -> Vec<LabelledInstruction> {
         let mut snippet_state = if let Some(number_of_words) = words_statically_allocated {
             Library::with_preallocated_memory(number_of_words)
@@ -178,7 +178,7 @@ pub trait DeprecatedSnippet {
         std_in: Vec<BFieldElement>,
         secret_in: Vec<BFieldElement>,
         memory: HashMap<BFieldElement, BFieldElement>,
-        words_allocated: Option<usize>,
+        words_allocated: Option<u32>,
     ) -> Result<VmOutputState> {
         let expected_length_prior: usize = self.input_types().iter().map(|x| x.stack_size()).sum();
         let expected_length_after: usize = self.output_types().iter().map(|x| x.stack_size()).sum();
@@ -219,7 +219,7 @@ pub trait DeprecatedSnippet {
         std_in: Vec<BFieldElement>,
         secret_in: Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
-        words_statically_allocated: Option<usize>,
+        words_statically_allocated: Option<u32>,
     ) -> Result<ExecutionResult> {
         let expected_length_prior: usize = self.input_types().iter().map(|x| x.stack_size()).sum();
         let expected_length_after: usize = self.output_types().iter().map(|x| x.stack_size()).sum();
@@ -392,8 +392,9 @@ impl<S: DeprecatedSnippet> BasicSnippet for S {
 
 #[cfg(test)]
 mod tests {
-    use itertools::Itertools;
     use std::str::FromStr;
+
+    use itertools::Itertools;
 
     use crate::arithmetic;
 

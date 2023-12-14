@@ -159,7 +159,9 @@ impl MmrVerifyLeafMembershipFromSecretIn {
             std_in: vec![],
             nondeterminism: NonDeterminism::new(vec![]),
             memory,
-            words_allocated: DIGEST_LENGTH * MAX_MMR_HEIGHT + 1 + list_metadata_size,
+            words_allocated: (DIGEST_LENGTH * MAX_MMR_HEIGHT + 1 + list_metadata_size)
+                .try_into()
+                .unwrap(),
         }
     }
 }
@@ -617,7 +619,7 @@ mod tests {
             &non_determinism,
             &memory,
             &None,
-            MAX_MMR_HEIGHT * DIGEST_LENGTH + 1,
+            (MAX_MMR_HEIGHT * DIGEST_LENGTH + 1).try_into().unwrap(),
             Some(&expected_final_stack),
         );
 

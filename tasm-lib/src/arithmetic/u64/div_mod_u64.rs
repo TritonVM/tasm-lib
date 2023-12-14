@@ -70,7 +70,8 @@ impl DeprecatedSnippet for DivModU64 {
         let leading_zeros_u64 = library.import(Box::new(LeadingZerosU64));
         let add_u32 = library.import(Box::new(Safeadd));
         let mem_address_for_spilled_divisor = library.kmalloc(2);
-        let last_mem_address_for_spilled_divisor = mem_address_for_spilled_divisor + 1;
+        let last_mem_address_for_spilled_divisor =
+            mem_address_for_spilled_divisor + BFieldElement::one();
 
         // The below code has been compiled from a Rust implementation of an LLVM function
         // called `divmoddi4` that can do u64 divmod with only access to u32 bit divmod and

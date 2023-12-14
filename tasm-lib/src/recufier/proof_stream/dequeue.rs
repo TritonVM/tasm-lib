@@ -251,7 +251,6 @@ impl Procedure for Dequeue {
 
 #[cfg(test)]
 mod test {
-    use itertools::Itertools;
     use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
     use rand::{rngs::StdRng, Rng, RngCore, SeedableRng};
@@ -327,8 +326,7 @@ mod test {
         let proof_item_1 = ProofItem::MerkleRoot(Default::default());
         let proof_item_2 = ProofItem::OutOfDomainExtRow(vec![XFieldElement::from(0); 3]);
         let proof_items = [proof_item_0, proof_item_1, proof_item_2];
-        let proof_stream = VmProofStream::new(&proof_items[..num_items]);
-        proof_stream
+        VmProofStream::new(&proof_items[..num_items])
     }
 
     #[test]

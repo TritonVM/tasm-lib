@@ -1140,7 +1140,7 @@ impl Procedure for FriVerify {
         let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
         let static_memory_offset = 2; // xfe_ntt spills two words
         memory.insert(
-            BFieldElement::new(DYN_MALLOC_ADDRESS as u64),
+            DYN_MALLOC_ADDRESS,
             BFieldElement::new(static_memory_offset + 1),
         );
         let proof_stream_pointer = load_to_memory(&mut memory, proof_stream);

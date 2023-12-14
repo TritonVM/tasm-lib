@@ -80,7 +80,7 @@ pub struct ExecutionState {
     // When you're writing a program you need to know how many words
     // are statically allocated and then you need to feed that value
     // to the dynamic allocator otherwise you are *** [redacted].
-    pub words_allocated: usize,
+    pub words_allocated: u32,
 }
 
 impl ExecutionState {
@@ -97,14 +97,14 @@ impl ExecutionState {
     pub fn with_stack_and_memory(
         stack: Vec<BFieldElement>,
         memory: HashMap<BFieldElement, BFieldElement>,
-        words_allocated: usize,
+        words_statically_allocated: u32,
     ) -> Self {
         ExecutionState {
             stack,
             std_in: vec![],
             nondeterminism: NonDeterminism::new(vec![]),
             memory,
-            words_allocated,
+            words_allocated: words_statically_allocated,
         }
     }
 }
@@ -239,7 +239,9 @@ pub fn execute_test(
     let mut vm_state = VMState::new(&program, public_input.clone(), nondeterminism.clone());
     vm_state.op_stack.stack = stack.to_owned();
     vm_state.sponge_state = maybe_sponge_state.map(|state| state.state);
-    vm_state.run().unwrap();
+    if let Err(err) = vm_state.run() {
+        panic!("{err}\n\nFinal state was: {vm_state}")
+    }
     let terminal_state = vm_state;
 
     if !terminal_state.jump_stack.is_empty() {

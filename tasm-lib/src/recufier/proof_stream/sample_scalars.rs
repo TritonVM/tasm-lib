@@ -135,7 +135,7 @@ impl Procedure for SampleScalars {
 
         // the list of scalars was allocated properly; reflect that fact
         memory.insert(
-            BFieldElement::new(DYN_MALLOC_ADDRESS as u64),
+            DYN_MALLOC_ADDRESS,
             BFieldElement::new(1) + safety_offset + BFieldElement::new(num_scalars as u64 * 3),
         );
         memory.insert(scalars_pointer, BFieldElement::new(num_scalars as u64));

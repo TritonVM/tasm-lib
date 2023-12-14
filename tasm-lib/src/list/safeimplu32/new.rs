@@ -1,9 +1,9 @@
 use itertools::Itertools;
-use num::{One, Zero};
 use triton_vm::triton_asm;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::data_type::DataType;
+use crate::memory::dyn_malloc::DynMalloc;
 use crate::{
     dyn_malloc, empty_stack, rust_shadowing_helper_functions::safe_list::safe_list_new,
     snippet::DeprecatedSnippet, ExecutionState,
@@ -35,7 +35,6 @@ impl DeprecatedSnippet for SafeNew {
     }
 
     fn output_types(&self) -> Vec<DataType> {
-        // List pointers are considered u32
         vec![DataType::List(Box::new(self.data_type.clone()))]
     }
 
@@ -102,22 +101,9 @@ impl DeprecatedSnippet for SafeNew {
         _secret_in: Vec<BFieldElement>,
         memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
     ) {
-        let capacity: usize = stack.pop().unwrap().value().try_into().unwrap();
-        let allocator_addr = BFieldElement::zero();
-        let used_memory = memory
-            .entry(allocator_addr)
-            .and_modify(|e| {
-                *e = if e.is_zero() {
-                    BFieldElement::one()
-                } else {
-                    *e
-                }
-            })
-            .or_insert_with(BFieldElement::one);
-        let list_pointer = *used_memory;
-        *used_memory += BFieldElement::new(capacity as u64)
-            * BFieldElement::new(self.data_type.stack_size() as u64)
-            + BFieldElement::new(2);
+        let capacity: usize = stack.last().unwrap().value().try_into().unwrap();
+        DynMalloc.rust_shadowing(stack, _std_in, _secret_in, memory);
+        let list_pointer = stack.pop().unwrap();
         safe_list_new(list_pointer, capacity as u32, memory);
         stack.push(list_pointer);
     }

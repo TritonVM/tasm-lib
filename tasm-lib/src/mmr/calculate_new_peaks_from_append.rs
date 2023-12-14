@@ -24,6 +24,7 @@ use crate::list::unsafeimplu32::pop::UnsafePop;
 use crate::list::unsafeimplu32::push::UnsafePush;
 use crate::list::unsafeimplu32::set_length::UnsafeSetLength;
 use crate::list::ListType;
+use crate::memory::dyn_malloc;
 use crate::snippet::DeprecatedSnippet;
 use crate::{
     empty_stack, rust_shadowing_helper_functions, Digest, ExecutionState, VmHasher, DIGEST_LENGTH,
@@ -96,7 +97,9 @@ impl CalculateNewPeaksFromAppend {
         ExecutionState::with_stack_and_memory(
             stack,
             memory,
-            MAX_MMR_HEIGHT * DIGEST_LENGTH + list_meta_data_size + 1,
+            (MAX_MMR_HEIGHT * DIGEST_LENGTH + list_meta_data_size + 1)
+                .try_into()
+                .unwrap(),
         )
     }
 }
@@ -333,15 +336,7 @@ impl DeprecatedSnippet for CalculateNewPeaksFromAppend {
             ));
         }
 
-        // Run the actual `calculate_new_peaks_from_append` algorithm. This function
-        // is inlined here to make it manipulate memory the same way that the TASM code
-        // does.
-        let list_meta_data_size = match self.list_type {
-            ListType::Safe => 2,
-            ListType::Unsafe => 1,
-        };
-        let auth_path_pointer =
-            BFieldElement::new((MAX_MMR_HEIGHT * DIGEST_LENGTH + 1 + list_meta_data_size) as u64);
+        let auth_path_pointer = dyn_malloc::FIRST_DYNAMICALLY_ALLOCATED_ADDRESS;
         match self.list_type {
             ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_new(
                 auth_path_pointer,
@@ -662,7 +657,8 @@ mod tests {
             ListType::Safe => 1 + MAX_MMR_HEIGHT * DIGEST_LENGTH + 2,
             ListType::Unsafe => 1 + MAX_MMR_HEIGHT * DIGEST_LENGTH + 1,
         };
-        let auth_paths_pointer = BFieldElement::new((words_allocated) as u64);
+        let words_allocated: u32 = words_allocated.try_into().unwrap();
+        let auth_paths_pointer = dyn_malloc::FIRST_DYNAMICALLY_ALLOCATED_ADDRESS;
         let mut expected_final_stack = empty_stack();
         expected_final_stack.push(peaks_pointer);
         expected_final_stack.push(auth_paths_pointer);
