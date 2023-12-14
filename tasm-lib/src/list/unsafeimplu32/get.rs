@@ -198,7 +198,6 @@ mod tests {
 
     #[test]
     fn get_simple_1() {
-        color_eyre::install().unwrap();
         let list_address = BFieldElement::new(48);
         for i in 0..10 {
             prop_get(DataType::Bfe, list_address, i, 10);
