@@ -58,24 +58,26 @@ impl BasicSnippet for SampleScalars {
         let rate = RATE;
         triton_asm! {
             // BEFORE: _ num_scalars
-            // AFTER: _ *scalars
+            // AFTER:  _ *scalars
             {entrypoint}:
 
                 // create list of enough elements
-                dup 0 // _ num_scalars num_scalars
+                dup 0           // _ num_scalars num_scalars
                 call {new_list_of_xfes}
-                // _ num_scalars *scalars
+                                // _ num_scalars *scalars
 
                 // set length
-                dup 1 // _ num_scalars *scalars num_scalars
-                call {set_length} // _ num_scalars *scalars
+                dup 1           // _ num_scalars *scalars num_scalars
+                call {set_length}
+                                // _ num_scalars *scalars
 
                 // calculate number of squeezes
                 dup 1           // _ num_scalars *scalars num_scalars
                 push 3 mul      // _ num_scalars *scalars num_bfes
                 push 9 add      // _ num_scalars *scalars (num_bfes+9)
-                push {rate} swap 1  // _ num_scalars *scalars rate (num_bfes+9)
-                div_mod pop     // _ num_scalars *scalars floor((num_bfes+9)/rate)
+                push {rate} swap 1
+                                // _ num_scalars *scalars rate (num_bfes+9)
+                div_mod pop 1   // _ num_scalars *scalars floor((num_bfes+9)/rate)
                                 // _ num_scalars *scalars num_squeezes
 
                 // prepare stack for call to squeeze_repeatedly
@@ -89,9 +91,9 @@ impl BasicSnippet for SampleScalars {
                                 // _ num_scalars *scalars *scalars' 0
 
                 // clean up stack
-                pop pop
+                pop 2
                 swap 1
-                pop  // _ *scalars
+                pop 1           // _ *scalars
                 return
 
         }
