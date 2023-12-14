@@ -81,7 +81,7 @@ impl BasicSnippet for SampleIndices {
                 call {main_loop}        // _ number upper_bound-1 *indices
 
                 // clean up and return
-                swap 2 pop pop
+                swap 2 pop 2
                 return
 
             // INVARIANT: _ number upper_bound-1 *indices
@@ -92,66 +92,35 @@ impl BasicSnippet for SampleIndices {
                 skiz return             // _ number upper_bound-1 *indices
 
                 // we need to squeeze so squeeze
-                push 0 push 0 push 0 push 0 push 0
-                push 0 push 0 push 0 push 0 push 0
                 sponge_squeeze          // _ number upper_bound-1 *indices [prn]
 
                 // reject or reduce-and-store
                 dup 12 dup 12 dup 12    // _ number upper_bound-1 *indices [prn] number upper_bound-1 *indices
 
-                {&if_can_sample}
-                skiz call {then_reduce_and_save}
-                skiz call {else_drop_tip}
-
-                {&if_can_sample}
-                skiz call {then_reduce_and_save}
-                skiz call {else_drop_tip}
-
-                {&if_can_sample}
-                skiz call {then_reduce_and_save}
-                skiz call {else_drop_tip}
-
-                {&if_can_sample}
-                skiz call {then_reduce_and_save}
-                skiz call {else_drop_tip}
-
-                {&if_can_sample}
-                skiz call {then_reduce_and_save}
-                skiz call {else_drop_tip}
-
-
-                {&if_can_sample}
-                skiz call {then_reduce_and_save}
-                skiz call {else_drop_tip}
-
-                {&if_can_sample}
-                skiz call {then_reduce_and_save}
-                skiz call {else_drop_tip}
-
-                {&if_can_sample}
-                skiz call {then_reduce_and_save}
-                skiz call {else_drop_tip}
-
-                {&if_can_sample}
-                skiz call {then_reduce_and_save}
-                skiz call {else_drop_tip}
-
-                {&if_can_sample}
-                skiz call {then_reduce_and_save}
-                skiz call {else_drop_tip}         // _ number upper_bound-1 *indices number upper_bound-1 *indices
+                {&if_can_sample} skiz call {then_reduce_and_save} skiz call {else_drop_tip}
+                {&if_can_sample} skiz call {then_reduce_and_save} skiz call {else_drop_tip}
+                {&if_can_sample} skiz call {then_reduce_and_save} skiz call {else_drop_tip}
+                {&if_can_sample} skiz call {then_reduce_and_save} skiz call {else_drop_tip}
+                {&if_can_sample} skiz call {then_reduce_and_save} skiz call {else_drop_tip}
+                {&if_can_sample} skiz call {then_reduce_and_save} skiz call {else_drop_tip}
+                {&if_can_sample} skiz call {then_reduce_and_save} skiz call {else_drop_tip}
+                {&if_can_sample} skiz call {then_reduce_and_save} skiz call {else_drop_tip}
+                {&if_can_sample} skiz call {then_reduce_and_save} skiz call {else_drop_tip}
+                {&if_can_sample} skiz call {then_reduce_and_save} skiz call {else_drop_tip}
+                                        // _ number upper_bound-1 *indices number upper_bound-1 *indices
 
                 // return to invariant and repeat
-                pop pop pop                       // _ number upper_bound-1 *indices
+                pop 3                   // _ number upper_bound-1 *indices
                 recurse
 
             // BEFORE: _ prn number upper_bound-1 *indices 0
             // AFTER:  _ number upper_bound-1 *indices 0
             {then_reduce_and_save}:
-                pop                     // _ prn number upper_bound-1 *indices
+                pop 1                   // _ prn number upper_bound-1 *indices
                 swap 2 swap 3           // _ number *indices upper_bound-1 prn
                 split                   // _ number *indices upper_bound-1 hi lo
                 dup 2 and               // _ number *indices upper_bound-1 hi index
-                swap 1 pop              // _ number *indices upper_bound-1 index
+                swap 1 pop 1            // _ number *indices upper_bound-1 index
 
                 swap 1 swap 2 swap 1    // _ number upper_bound-1 *indices index
                 dup 1 swap 1            // _ number upper_bound-1 *indices *indices index
@@ -164,7 +133,7 @@ impl BasicSnippet for SampleIndices {
             // AFTER:  _ number upper_bound-1 *indices
             {else_drop_tip}:
                 swap 2 swap 3           // _ number *indices upper_bound-1 prn
-                pop swap 1              // _ number upper_bound-1 *indices
+                pop 1 swap 1            // _ number upper_bound-1 *indices
                 return
 
         )
