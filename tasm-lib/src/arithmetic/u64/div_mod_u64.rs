@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 
+use itertools::Itertools;
 use num::One;
 use rand::RngCore;
+use triton_vm::triton_asm;
 use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::bfield_codec::BFieldCodec;
@@ -78,25 +80,21 @@ impl DeprecatedSnippet for DivModU64 {
         // some u64 arithmetic instructions or functions. The compiler used for this was the
         // `tasm-lang` compiler: https://github.com/TritonVM/tasm-lang
         // You could probably get a smaller cycle count if you hand-compiled the function.
-        format!(
-            "
+        triton_asm!(
             // BEFORE: _ numerator_hi numerator_lo divisor_hi divisor_lo
             // AFTER:  _ quotient_hi quotient_lo remainder_hi remainder_lo
             {entrypoint}:
-                push {mem_address_for_spilled_divisor}
                 dup 1
-                write_mem
-                push 1
-                add
-                dup 2
-                write_mem
-                pop
+                dup 1
+                push {mem_address_for_spilled_divisor}
+                write_mem 2
+                pop 1
                 dup 3
                 dup 3
                 push 32
                 call {shift_right_u64}
                 swap 1
-                pop
+                pop 1
                 dup 4
                 dup 4
                 push 00000000004294967295
@@ -104,33 +102,23 @@ impl DeprecatedSnippet for DivModU64 {
                 swap 1
                 call {and_u64}
                 swap 1
-                pop
+                pop 1
                 push {last_mem_address_for_spilled_divisor}
-                read_mem
-                swap 1
-                push -1
-                add
-                read_mem
-                swap 1
-                pop
+                read_mem 2
+                pop 1
                 push 32
                 call {shift_right_u64}
                 swap 1
-                pop
+                pop 1
                 push {last_mem_address_for_spilled_divisor}
-                read_mem
-                swap 1
-                push -1
-                add
-                read_mem
-                swap 1
-                pop
+                read_mem 2
+                pop 1
                 push 00000000004294967295
                 push 0
                 swap 1
                 call {and_u64}
                 swap 1
-                pop
+                pop 1
                 push 0
                 push 0
                 push 0
@@ -138,13 +126,8 @@ impl DeprecatedSnippet for DivModU64 {
                 dup 11
                 dup 11
                 push {last_mem_address_for_spilled_divisor}
-                read_mem
-                swap 1
-                push -1
-                add
-                read_mem
-                swap 1
-                pop
+                read_mem 2
+                pop 1
                 dup 3
                 dup 3
                 call {lt_u64}
@@ -154,28 +137,23 @@ impl DeprecatedSnippet for DivModU64 {
                 call _binop_Gt_bool_bool_26_then
                 skiz
                 call _binop_Gt_bool_bool_26_else
-                pop
-                pop
+                pop 2
                 swap 8
-                pop
+                pop 1
                 swap 8
-                pop
+                pop 1
                 swap 8
-                pop
+                pop 1
                 swap 8
-                pop
-                pop
-                pop
-                pop
-                pop
+                pop 5
                 return
                 _binop_Eq_bool_bool_53_then:
-                pop
+                pop 1
                 dup 8
                 dup 7
                 swap 1
                 div_mod
-                pop
+                pop 1
                 push 0
                 swap 1
                 dup 10
@@ -183,35 +161,35 @@ impl DeprecatedSnippet for DivModU64 {
                 swap 1
                 div_mod
                 swap 1
-                pop
+                pop 1
                 push 0
                 swap 1
                 swap 6
-                pop
+                pop 1
                 swap 6
-                pop
+                pop 1
                 swap 6
-                pop
+                pop 1
                 swap 6
-                pop
+                pop 1
                 push 0
                 return
                 _binop_Eq_bool_bool_53_else:
                 return
                 _binop_Eq_bool_bool_47_then:
-                pop
+                pop 1
                 dup 1
                 dup 1
                 push 0
                 push 0
                 swap 6
-                pop
+                pop 1
                 swap 6
-                pop
+                pop 1
                 swap 6
-                pop
+                pop 1
                 swap 6
-                pop
+                pop 1
                 push 0
                 return
                 _binop_Eq_bool_bool_47_else:
@@ -226,7 +204,7 @@ impl DeprecatedSnippet for DivModU64 {
                 call _binop_Eq_bool_bool_53_else
                 return
                 _lit_u64_u64_99_then:
-                pop
+                pop 1
                 push 0
                 push 0
                 push 0
@@ -253,9 +231,9 @@ impl DeprecatedSnippet for DivModU64 {
                 call {shift_right_u64}
                 call {or_u64}
                 swap 4
-                pop
+                pop 1
                 swap 4
-                pop
+                pop 1
                 dup 6
                 dup 6
                 push 1
@@ -267,17 +245,12 @@ impl DeprecatedSnippet for DivModU64 {
                 call {and_u64}
                 call {or_u64}
                 swap 7
-                pop
+                pop 1
                 swap 7
-                pop
+                pop 1
                 push {last_mem_address_for_spilled_divisor}
-                read_mem
-                swap 1
-                push -1
-                add
-                read_mem
-                swap 1
-                pop
+                read_mem 2
+                pop 1
                 dup 5
                 dup 5
                 call {lt_u64}
@@ -288,19 +261,14 @@ impl DeprecatedSnippet for DivModU64 {
                 skiz
                 call _lit_u64_u64_99_else
                 swap 2
-                pop
+                pop 1
                 swap 2
-                pop
+                pop 1
                 dup 3
                 dup 3
                 push {last_mem_address_for_spilled_divisor}
-                read_mem
-                swap 1
-                push -1
-                add
-                read_mem
-                swap 1
-                pop
+                read_mem 2
+                pop 1
                 dup 5
                 dup 5
                 call {and_u64}
@@ -310,26 +278,21 @@ impl DeprecatedSnippet for DivModU64 {
                 swap 2
                 call {sub_u64}
                 swap 4
-                pop
+                pop 1
                 swap 4
-                pop
+                pop 1
                 dup 4
                 push 1
                 swap 1
                 call {sub_u32}
                 swap 5
-                pop
+                pop 1
                 recurse
                 _binop_Or_bool_bool_44_then:
-                pop
+                pop 1
                 push {last_mem_address_for_spilled_divisor}
-                read_mem
-                swap 1
-                push -1
-                add
-                read_mem
-                swap 1
-                pop
+                read_mem 2
+                pop 1
                 push 0
                 push 1
                 swap 3
@@ -349,13 +312,8 @@ impl DeprecatedSnippet for DivModU64 {
                 push 0
                 push 0
                 push {last_mem_address_for_spilled_divisor}
-                read_mem
-                swap 1
-                push -1
-                add
-                read_mem
-                swap 1
-                pop
+                read_mem 2
+                pop 1
                 swap 3
                 eq
                 swap 2
@@ -365,13 +323,8 @@ impl DeprecatedSnippet for DivModU64 {
                 eq
                 assert
                 push {last_mem_address_for_spilled_divisor}
-                read_mem
-                swap 1
-                push -1
-                add
-                read_mem
-                swap 1
-                pop
+                read_mem 2
+                pop 1
                 call {leading_zeros_u64}
                 dup 2
                 dup 2
@@ -392,9 +345,9 @@ impl DeprecatedSnippet for DivModU64 {
                 call {sub_u32}
                 call {shift_left_u64}
                 swap 5
-                pop
+                pop 1
                 swap 5
-                pop
+                pop 1
                 push 0
                 push 0
                 call _binop_Gt_bool_bool_81_while_loop
@@ -411,33 +364,29 @@ impl DeprecatedSnippet for DivModU64 {
                 dup 5
                 dup 5
                 swap 11
-                pop
+                pop 1
                 swap 11
-                pop
+                pop 1
                 swap 11
-                pop
+                pop 1
                 swap 11
-                pop
-                pop
-                pop
-                pop
-                pop
-                pop
+                pop 5
+                pop 1
                 return
                 _binop_Gt_bool_bool_26_then:
-                pop
+                pop 1
                 push 0
                 push 0
                 dup 3
                 dup 3
                 swap 6
-                pop
+                pop 1
                 swap 6
-                pop
+                pop 1
                 swap 6
-                pop
+                pop 1
                 swap 6
-                pop
+                pop 1
                 push 0
                 return
                 _binop_Gt_bool_bool_26_else:
@@ -445,13 +394,8 @@ impl DeprecatedSnippet for DivModU64 {
                 push 0
                 eq
                 push {last_mem_address_for_spilled_divisor}
-                read_mem
-                swap 1
-                push -1
-                add
-                read_mem
-                swap 1
-                pop
+                read_mem 2
+                pop 1
                 push 0
                 push 1
                 swap 3
@@ -483,8 +427,9 @@ impl DeprecatedSnippet for DivModU64 {
                 skiz
                 call _binop_Or_bool_bool_44_else
                 return
-            "
         )
+        .iter()
+        .join("\n")
     }
 
     fn crash_conditions(&self) -> Vec<String> {
@@ -552,8 +497,14 @@ impl DeprecatedSnippet for DivModU64 {
         // Because of spilling, the divisor is stored in memory.
         // This spilling could probably be avoided if the code didn't
         // go through the tasm-lang compiler but was handcompiled instead.
-        memory.insert(BFieldElement::one(), BFieldElement::new(divisor_lo as u64));
-        memory.insert(BFieldElement::new(2), BFieldElement::new(divisor_hi as u64));
+        memory.insert(
+            -BFieldElement::new(2),
+            BFieldElement::new(divisor_lo as u64),
+        );
+        memory.insert(
+            -BFieldElement::new(1),
+            BFieldElement::new(divisor_hi as u64),
+        );
     }
 }
 
