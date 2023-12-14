@@ -1,30 +1,5 @@
 use std::collections::HashMap;
 
-use crate::list::unsafeimplu32::get::UnsafeGet;
-use crate::{
-    empty_stack, field,
-    hashing::{merkle_root::MerkleRoot, sample_indices::SampleIndices},
-    list::{
-        higher_order::{
-            inner_function::{InnerFunction, RawCode},
-            map::Map,
-            zip::Zip,
-        },
-        unsafeimplu32::{length::Length as UnsafeLength, new::UnsafeNew, push::UnsafePush},
-        ListType,
-    },
-    memory::dyn_malloc::DYN_MALLOC_ADDRESS,
-    recufier::{
-        get_colinear_y::ColinearYXfe,
-        get_colinearity_check_x::GetColinearityCheckX,
-        proof_stream::{dequeue::Dequeue, sample_scalars::SampleScalars},
-        verify_authentication_paths_for_leaf_and_index_list::VerifyAuthenticationPathForLeafAndIndexList,
-        xfe_ntt::XfeNtt,
-    },
-    snippet_bencher::BenchmarkCase,
-    structure::tasm_object::{encode_to_memory, TasmObject},
-    Digest, VmHasher, VmHasherState,
-};
 use anyhow::bail;
 use itertools::Itertools;
 use num_traits::Zero;
@@ -47,7 +22,31 @@ use twenty_first::{
 };
 
 use crate::data_type::DataType;
+use crate::list::unsafeimplu32::get::UnsafeGet;
 use crate::memory::dyn_malloc::FIRST_DYNAMICALLY_ALLOCATED_ADDRESS;
+use crate::{
+    empty_stack, field,
+    hashing::{merkle_root::MerkleRoot, sample_indices::SampleIndices},
+    list::{
+        higher_order::{
+            inner_function::{InnerFunction, RawCode},
+            map::Map,
+            zip::Zip,
+        },
+        unsafeimplu32::{length::Length as UnsafeLength, new::UnsafeNew, push::UnsafePush},
+        ListType,
+    },
+    recufier::{
+        get_colinear_y::ColinearYXfe,
+        get_colinearity_check_x::GetColinearityCheckX,
+        proof_stream::{dequeue::Dequeue, sample_scalars::SampleScalars},
+        verify_authentication_paths_for_leaf_and_index_list::VerifyAuthenticationPathForLeafAndIndexList,
+        xfe_ntt::XfeNtt,
+    },
+    snippet_bencher::BenchmarkCase,
+    structure::tasm_object::{encode_to_memory, TasmObject},
+    Digest, VmHasher, VmHasherState,
+};
 use crate::{library::Library, procedure::Procedure, snippet::BasicSnippet};
 
 use super::proof_stream::vm_proof_stream::VmProofStream;
@@ -1144,23 +1143,24 @@ impl Procedure for FriVerify {
 
         let mut stack = empty_stack();
         let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
-        let static_memory_offset = 2; // xfe_ntt spills two words
-        memory.insert(
-            DYN_MALLOC_ADDRESS,
-            BFieldElement::new(static_memory_offset + 1),
-        );
         let proof_stream_pointer = BFieldElement::zero();
         let fri_verify_pointer = encode_to_memory(&mut memory, proof_stream_pointer, proof_stream);
         encode_to_memory(&mut memory, fri_verify_pointer, self.clone());
-        let nondeterminism = NonDeterminism::new(vec![])
-            .with_ram(memory.clone())
+        let nondeterminism = NonDeterminism::default()
+            .with_ram(memory)
             .with_digests(digests);
         stack.push(proof_stream_pointer);
         stack.push(fri_verify_pointer);
         let stdin = vec![];
         let sponge_state = VmHasherState::new(Domain::VariableLength);
 
-        (stack, memory, nondeterminism, stdin, Some(sponge_state))
+        (
+            stack,
+            HashMap::default(),
+            nondeterminism,
+            stdin,
+            Some(sponge_state),
+        )
     }
 }
 
