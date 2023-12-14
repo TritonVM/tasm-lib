@@ -20,6 +20,7 @@ use crate::list::unsafeimplu32::new::UnsafeNew;
 use crate::list::unsafeimplu32::set::UnsafeSet;
 use crate::list::unsafeimplu32::set_length::UnsafeSetLength;
 use crate::list::{self, ListType};
+use crate::memory::dyn_malloc::DYN_MALLOC_ADDRESS;
 use crate::rust_shadowing_helper_functions::safe_list::safe_insert_random_list;
 use crate::rust_shadowing_helper_functions::unsafe_list::unsafe_insert_random_list;
 use crate::snippet::BasicSnippet;
@@ -379,7 +380,7 @@ impl Map {
         };
         rust_shadowing_helper_functions::dyn_malloc::rust_dyn_malloc_initialize(
             &mut memory,
-            (input_list_size + list_pointer).value() as u32,
+            (input_list_size + list_pointer) + DYN_MALLOC_ADDRESS,
         );
 
         match self.list_type {

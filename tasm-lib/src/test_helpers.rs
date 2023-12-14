@@ -336,14 +336,6 @@ pub fn rust_final_state<T: RustShadow>(
     let mut rust_stack = stack.to_vec();
     let mut rust_sponge = sponge_state.clone();
 
-    // Initialiaze allocator, if necessary
-    if words_statically_allocated > 0 && rust_memory.get(&BFieldElement::zero()).is_none() {
-        rust_shadowing_helper_functions::dyn_malloc::rust_dyn_malloc_initialize(
-            &mut rust_memory,
-            words_statically_allocated,
-        );
-    }
-
     // run rust shadow
     let output = shadowed_snippet.rust_shadow_wrapper(
         stdin,
