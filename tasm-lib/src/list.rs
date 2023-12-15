@@ -1,13 +1,19 @@
 use std::fmt::Display;
 
 use crate::data_type::DataType;
+use crate::list::safeimplu32::get::SafeGet;
 use crate::list::safeimplu32::length::Length as SafeLength;
 use crate::list::safeimplu32::new::SafeNew;
+use crate::list::safeimplu32::pop::SafePop;
 use crate::list::safeimplu32::push::SafePush;
+use crate::list::safeimplu32::set::SafeSet;
 use crate::list::safeimplu32::set_length::SafeSetLength;
+use crate::list::unsafeimplu32::get::UnsafeGet;
 use crate::list::unsafeimplu32::length::Length as UnsafeLength;
 use crate::list::unsafeimplu32::new::UnsafeNew;
+use crate::list::unsafeimplu32::pop::UnsafePop;
 use crate::list::unsafeimplu32::push::UnsafePush;
+use crate::list::unsafeimplu32::set::UnsafeSet;
 use crate::list::unsafeimplu32::set_length::UnsafeSetLength;
 use crate::snippet::BasicSnippet;
 
@@ -44,6 +50,27 @@ impl ListType {
         match self {
             ListType::Safe => Box::new(SafePush { data_type }),
             ListType::Unsafe => Box::new(UnsafePush { data_type }),
+        }
+    }
+
+    pub fn pop(&self, data_type: DataType) -> Box<dyn BasicSnippet> {
+        match self {
+            ListType::Safe => Box::new(SafePop { data_type }),
+            ListType::Unsafe => Box::new(UnsafePop { data_type }),
+        }
+    }
+
+    pub fn get(&self, data_type: DataType) -> Box<dyn BasicSnippet> {
+        match self {
+            ListType::Safe => Box::new(SafeGet { data_type }),
+            ListType::Unsafe => Box::new(UnsafeGet { data_type }),
+        }
+    }
+
+    pub fn set(&self, data_type: DataType) -> Box<dyn BasicSnippet> {
+        match self {
+            ListType::Safe => Box::new(SafeSet { data_type }),
+            ListType::Unsafe => Box::new(UnsafeSet { data_type }),
         }
     }
 

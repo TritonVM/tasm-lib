@@ -10,17 +10,8 @@ use twenty_first::util_types::{
 
 use crate::data_type::DataType;
 use crate::{
-    algorithm::Algorithm,
-    empty_stack,
-    list::{
-        safeimplu32::{get::SafeGet, length::Length as SafeLength},
-        unsafeimplu32::{get::UnsafeGet, length::Length as UnsafeLength},
-        ListType,
-    },
-    recufier::merkle_verify::MerkleVerify,
-    rust_shadowing_helper_functions,
-    snippet::BasicSnippet,
-    structure::tasm_object::TasmObject,
+    algorithm::Algorithm, empty_stack, list::ListType, recufier::merkle_verify::MerkleVerify,
+    rust_shadowing_helper_functions, snippet::BasicSnippet, structure::tasm_object::TasmObject,
     Digest, VmHasher,
 };
 
@@ -72,22 +63,12 @@ impl BasicSnippet for VerifyAuthenticationPathForLeafAndIndexList {
         let entrypoint = self.entrypoint();
         let main_loop = format!("{entrypoint}_main_loop");
         let data_type = DataType::Tuple(vec![DataType::U32, DataType::Digest]);
-        let lai_length = match self.list_type {
-            ListType::Safe => library.import(Box::new(SafeLength {
-                data_type: data_type.clone(),
-            })),
-            ListType::Unsafe => library.import(Box::new(UnsafeLength {
-                data_type: data_type.clone(),
-            })),
-        };
-        let lai_get = match self.list_type {
-            ListType::Safe => library.import(Box::new(SafeGet { data_type })),
-            ListType::Unsafe => library.import(Box::new(UnsafeGet { data_type })),
-        };
+        let lai_length = library.import(self.list_type.length(data_type.clone()));
+        let lai_get = library.import(self.list_type.get(data_type.clone()));
         let merkle_verify = library.import(Box::new(MerkleVerify));
         triton_asm! {
             // BEFORE: _ leaf_and_index_list root4 root3 root2 root1 root0 height
-            // AFTER: _ leaf_and_index_list root4 root3 root2 root1 root0 height
+            // AFTER:  _ leaf_and_index_list root4 root3 root2 root1 root0 height
             {entrypoint}:
                 dup 6               // _ leaf_and_index_list root4 root3 root2 root1 root0 height leaf_and_index_list
                 call {lai_length}   // _ leaf_and_index_list root4 root3 root2 root1 root0 height length
@@ -353,8 +334,9 @@ mod test {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::{algorithm::ShadowedAlgorithm, snippet::RustShadow};
+
+    use super::*;
 
     #[test]
     fn vap4lail_benchmark() {
