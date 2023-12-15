@@ -1,8 +1,9 @@
+use std::collections::HashMap;
+
 use itertools::Itertools;
 use num::Zero;
 use rand::rngs::StdRng;
-use rand::{Rng, RngCore, SeedableRng};
-use std::collections::HashMap;
+use rand::{Rng, SeedableRng};
 use triton_vm::parser::tokenize;
 use triton_vm::triton_asm;
 use twenty_first::shared_math::b_field_element::BFieldElement;
@@ -348,51 +349,41 @@ impl Function for Filter {
         _bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
     ) -> (Vec<BFieldElement>, HashMap<BFieldElement, BFieldElement>) {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
-        let list_pointer = BFieldElement::new(rng.next_u64() % (1 << 20));
-        let list_length = 1 << (rng.gen::<usize>() % 4);
-        let capacity = list_length;
-        let mut stack = empty_stack();
-        stack.push(list_pointer);
+        let list_pointer: u64 = rng.gen_range(0..(1 << 20));
+        let list_pointer = BFieldElement::new(list_pointer);
 
-        let mut memory = HashMap::default();
+        let log_2_list_length: usize = rng.gen_range(0..4);
+        let list_length = 1 << log_2_list_length;
+
         let input_type = self.f.domain();
         let input_type_size = input_type.stack_size();
-        println!("generating list of length {list_length} of type size {input_type_size} at address {list_pointer}...");
-        memory.insert(
-            BFieldElement::zero(),
-            match self.list_type {
-                ListType::Safe => {
-                    list_pointer
-                        + BFieldElement::new((2 + list_length * input_type.stack_size()) as u64)
-                }
-                ListType::Unsafe => {
-                    list_pointer
-                        + BFieldElement::new((1 + list_length * input_type.stack_size()) as u64)
-                }
-            },
+        println!(
+            "generating list; length: {list_length}, \
+            type size: {input_type_size}, \
+            address: {list_pointer}"
         );
+        let safety_offset = self.list_type.safety_offset();
+        let last_element_index = safety_offset + list_length * input_type_size;
+        let last_element_index = list_pointer + BFieldElement::new(last_element_index as u64);
 
-        let safety_offset = match self.list_type {
-            ListType::Safe => 2,
-            ListType::Unsafe => 1,
-        };
+        let mut memory = HashMap::default();
+        memory.insert(BFieldElement::zero(), last_element_index);
 
+        let capacity = list_length;
         memory.insert(list_pointer, BFieldElement::new(capacity as u64));
         if matches!(self.list_type, ListType::Safe) {
-            memory.insert(
-                list_pointer + BFieldElement::new(1),
-                BFieldElement::new(list_length as u64),
-            );
+            let length_pointer = list_pointer + BFieldElement::new(1);
+            memory.insert(length_pointer, BFieldElement::new(list_length as u64));
         }
-        for i in 0..list_length as u64 {
-            for j in 0..input_type_size as u64 {
-                memory.insert(
-                    list_pointer
-                        + BFieldElement::new(safety_offset + i * (input_type_size as u64) + j),
-                    rng.gen(),
-                );
+
+        for i in 0..list_length {
+            for j in 0..input_type_size {
+                let element_offset = (safety_offset + i * input_type_size + j) as u64;
+                memory.insert(list_pointer + BFieldElement::new(element_offset), rng.gen());
             }
         }
+
+        let stack = [empty_stack(), vec![list_pointer]].concat();
 
         (stack, memory)
     }
@@ -400,7 +391,6 @@ impl Function for Filter {
 
 #[cfg(test)]
 mod tests {
-
     use triton_vm::triton_asm;
     use twenty_first::{
         shared_math::other::random_elements, util_types::algebraic_hasher::AlgebraicHasher,
@@ -630,8 +620,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::{tests::TestHashXFieldElementLsb, *};
     use crate::{function::ShadowedFunction, snippet::RustShadow};
+
+    use super::{tests::TestHashXFieldElementLsb, *};
 
     #[test]
     fn unsafe_list_filter_benchmark() {

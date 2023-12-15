@@ -45,19 +45,10 @@ impl All {
 
         let mut memory = HashMap::default();
         let input_type = self.f.domain();
-        memory.insert(
-            BFieldElement::zero(),
-            match self.list_type {
-                ListType::Safe => {
-                    list_pointer
-                        + BFieldElement::new((2 + list_length * input_type.stack_size()) as u64)
-                }
-                ListType::Unsafe => {
-                    list_pointer
-                        + BFieldElement::new((1 + list_length * input_type.stack_size()) as u64)
-                }
-            },
-        );
+        let list_bookkeeping_offset = self.list_type.safety_offset();
+        let element_index_in_list = list_bookkeeping_offset + list_length * input_type.stack_size();
+        let element_index = list_pointer + BFieldElement::new(element_index_in_list as u64);
+        memory.insert(BFieldElement::zero(), element_index);
 
         if random {
             match self.list_type {

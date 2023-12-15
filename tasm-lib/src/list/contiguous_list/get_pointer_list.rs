@@ -7,7 +7,6 @@ use crate::data_type::DataType;
 use crate::memory::dyn_malloc;
 use crate::{
     list::{
-        self,
         contiguous_list::{
             self,
             get_length::{DummyOuterDataStructure, GetLength},
@@ -53,36 +52,12 @@ impl DeprecatedSnippet for GetPointerList {
 
     fn function_code(&self, library: &mut crate::library::Library) -> String {
         let entrypoint = self.entrypoint_name();
-        let get_list_length = library.import(Box::new(contiguous_list::get_length::GetLength));
-        let new_list = match self.output_list_type {
-            ListType::Safe => library.import(Box::new(list::safeimplu32::new::SafeNew {
-                data_type: DataType::VoidPointer,
-            })),
-            ListType::Unsafe => library.import(Box::new(list::unsafeimplu32::new::UnsafeNew {
-                data_type: DataType::VoidPointer,
-            })),
-        };
 
-        let set_length = match self.output_list_type {
-            ListType::Safe => {
-                library.import(Box::new(list::safeimplu32::set_length::SafeSetLength {
-                    data_type: DataType::VoidPointer,
-                }))
-            }
-            ListType::Unsafe => {
-                library.import(Box::new(list::unsafeimplu32::set_length::UnsafeSetLength {
-                    data_type: DataType::VoidPointer,
-                }))
-            }
-        };
-        let set_element = match self.output_list_type {
-            ListType::Safe => library.import(Box::new(list::safeimplu32::set::SafeSet {
-                data_type: DataType::VoidPointer,
-            })),
-            ListType::Unsafe => library.import(Box::new(list::unsafeimplu32::set::UnsafeSet {
-                data_type: DataType::VoidPointer,
-            })),
-        };
+        let data_type = DataType::VoidPointer;
+        let get_list_length = library.import(Box::new(GetLength));
+        let new_list = library.import(self.output_list_type.new_list(data_type.clone()));
+        let set_length = library.import(self.output_list_type.set_length(data_type.clone()));
+        let set_element = library.import(self.output_list_type.set(data_type));
 
         format!(
             "
@@ -270,7 +245,6 @@ impl DeprecatedSnippet for GetPointerList {
 
 #[cfg(test)]
 mod tests {
-
     use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     use super::*;

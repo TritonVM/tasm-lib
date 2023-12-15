@@ -1,6 +1,7 @@
+use std::collections::HashMap;
+
 use num::One;
 use rand::{random, thread_rng, Rng};
-use std::collections::HashMap;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::random_elements;
 use twenty_first::test_shared::mmr::get_rustyleveldb_ammr_from_digests;
@@ -17,8 +18,6 @@ use crate::data_type::DataType;
 use crate::hashing::eq_digest::EqDigest;
 use crate::hashing::swap_digest::SwapDigest;
 use crate::library::Library;
-use crate::list::safeimplu32::get::SafeGet;
-use crate::list::unsafeimplu32::get::UnsafeGet;
 use crate::list::ListType;
 use crate::snippet::DeprecatedSnippet;
 use crate::{
@@ -209,14 +208,7 @@ impl DeprecatedSnippet for MmrVerifyFromMemory {
 
     fn function_code(&self, library: &mut Library) -> String {
         let leaf_index_to_mt_index = library.import(Box::new(MmrLeafIndexToMtIndexAndPeakIndex));
-        let get_list_element = match self.list_type {
-            ListType::Safe => library.import(Box::new(SafeGet {
-                data_type: DataType::Digest,
-            })),
-            ListType::Unsafe => library.import(Box::new(UnsafeGet {
-                data_type: DataType::Digest,
-            })),
-        };
+        let get_list_element = library.import(self.list_type.get(DataType::Digest));
         let u32_is_odd = library.import(Box::new(Isodd));
         let entrypoint = self.entrypoint_name();
         let eq_u64 = library.import(Box::new(EqU64));
@@ -415,7 +407,6 @@ impl DeprecatedSnippet for MmrVerifyFromMemory {
 #[cfg(test)]
 mod tests {
     use rand::{thread_rng, Rng};
-
     use twenty_first::shared_math::{b_field_element::BFieldElement, other::random_elements};
     use twenty_first::test_shared::mmr::get_empty_rustyleveldb_ammr;
     use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
@@ -658,8 +649,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::snippet_bencher::bench_and_write;
+
+    use super::*;
 
     #[test]
     fn verify_from_memory_benchmark_unsafe_lists() {
