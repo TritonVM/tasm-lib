@@ -174,18 +174,15 @@ pub fn execute_bench_deprecated(
     let public_input = PublicInput::new(std_in.clone());
     let program = Program::new(code);
 
-    let mut vm_state = VMState::new(&program, public_input.clone(), nondeterminism.clone());
+    let mut vm_state = VMState::new(&program, public_input, nondeterminism.clone());
     vm_state.op_stack.stack = stack.to_owned();
-    vm_state.run()?;
-    let terminal_state = vm_state;
+
+    let (simulation_trace, terminal_state) = program.trace_execution_of_state(vm_state)?;
 
     let jump_stack = terminal_state.jump_stack;
     if !jump_stack.is_empty() {
         bail!("Jump stack must be unchanged after code execution but was {jump_stack:?}")
     }
-
-    let (simulation_trace, output) =
-        program.trace_execution(public_input, nondeterminism.clone())?;
 
     *memory = terminal_state.ram.clone();
     *stack = terminal_state.op_stack.stack;
@@ -207,6 +204,7 @@ pub fn execute_bench_deprecated(
     // Notice that this is only done after the successful execution of the program above, so all
     // produced proofs here should be valid.
     // If you run this, make sure `opt-level` is set to 3.
+    let output = terminal_state.public_output;
     if std::env::var("DYING_TO_PROVE").is_ok() {
         prove_and_verify(&program, &std_in, &nondeterminism, &output);
     }

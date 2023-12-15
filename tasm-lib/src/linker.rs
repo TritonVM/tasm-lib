@@ -46,12 +46,7 @@ pub fn execute_bench(
     let mut vm_state = VMState::new(&program, public_input.clone(), nondeterminism.clone());
     vm_state.op_stack.stack = stack.to_vec();
     vm_state.sponge_state = sponge_state.map(|state| state.state);
-    vm_state.run().unwrap();
-    let end_state = vm_state;
-
-    let (simulation_trace, _) = program
-        .trace_execution(public_input.clone(), nondeterminism.clone())
-        .unwrap();
+    let (simulation_trace, end_state) = program.trace_execution_of_state(vm_state).unwrap();
 
     // If this environment variable is set, all programs, including the code to prepare the state,
     // will be proven and then verified.
