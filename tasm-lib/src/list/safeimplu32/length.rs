@@ -177,11 +177,11 @@ fn get_benchmark_input_state(list_length: usize, data_type: &DataType) -> Execut
     let mut stack = empty_stack();
     stack.push(list_pointer);
 
+    let nondeterminism = NonDeterminism::default().with_ram(memory);
     ExecutionState {
         stack,
         std_in: vec![],
-        nondeterminism: NonDeterminism::new(vec![]),
-        memory,
+        nondeterminism,
         words_allocated: 1,
     }
 }

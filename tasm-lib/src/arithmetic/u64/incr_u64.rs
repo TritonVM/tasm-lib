@@ -139,6 +139,8 @@ impl DeprecatedSnippet for IncrU64 {
 #[cfg(test)]
 mod tests {
 
+    use triton_vm::NonDeterminism;
+
     use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
     use crate::{empty_stack, push_encodable};
 
@@ -155,7 +157,7 @@ mod tests {
         let u64_max = U32s::<2>::try_from(u64::MAX).unwrap();
         push_encodable(&mut stack, &u64_max);
         assert!(IncrU64
-            .link_and_run_tasm_for_test(&mut stack, vec![], vec![], HashMap::default(), None)
+            .link_and_run_tasm_for_test(&mut stack, vec![], NonDeterminism::default(), None)
             .is_err());
     }
 

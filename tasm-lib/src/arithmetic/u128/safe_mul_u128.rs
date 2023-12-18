@@ -453,7 +453,7 @@ fn prepare_state(a: u128, b: u128) -> ExecutionState {
 #[cfg(test)]
 mod tests {
     use rand::Rng;
-    use std::collections::HashMap;
+    use triton_vm::NonDeterminism;
     use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
     use super::*;
@@ -480,8 +480,7 @@ mod tests {
             match SafeMulU128.link_and_run_tasm_for_test(
                 &mut init_stack,
                 vec![],
-                vec![],
-                HashMap::default(),
+                NonDeterminism::default(),
                 Some(1),
             ) {
                 Ok(_) => panic!("Overflow must result in error"),
@@ -514,8 +513,7 @@ mod tests {
             match SafeMulU128.link_and_run_tasm_for_test(
                 &mut init_stack,
                 vec![],
-                vec![],
-                HashMap::default(),
+                NonDeterminism::default(),
                 Some(1),
             ) {
                 Ok(_) => panic!("Overflow must result in error"),
@@ -553,8 +551,7 @@ mod tests {
                 match SafeMulU128.link_and_run_tasm_for_test(
                     &mut init_stack_no_overflow,
                     vec![],
-                    vec![],
-                    HashMap::default(),
+                    NonDeterminism::default(),
                     Some(1),
                 ) {
                     Ok(_) => (),
@@ -604,8 +601,7 @@ mod tests {
                     match SafeMulU128.link_and_run_tasm_for_test(
                         &mut init_stack,
                         vec![],
-                        vec![],
-                        HashMap::default(),
+                        NonDeterminism::default(),
                         Some(1),
                     ) {
                         Ok(_) => {
@@ -626,8 +622,7 @@ mod tests {
                     match SafeMulU128.link_and_run_tasm_for_test(
                         &mut init_stack_mirrored,
                         vec![],
-                        vec![],
-                        HashMap::default(),
+                        NonDeterminism::default(),
                         Some(1),
                     ) {
                         Ok(_) => {
@@ -679,8 +674,7 @@ mod tests {
             match SafeMulU128.link_and_run_tasm_for_test(
                 &mut init_stack,
                 vec![],
-                vec![],
-                HashMap::default(),
+                NonDeterminism::default(),
                 Some(1),
             ) {
                 Ok(_) => panic!("Overflow must result in error. lhs = {lhs} , rhs = {rhs} "),

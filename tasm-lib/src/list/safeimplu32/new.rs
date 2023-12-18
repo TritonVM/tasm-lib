@@ -111,9 +111,8 @@ impl DeprecatedSnippet for SafeNew {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
     use rand::random;
+    use triton_vm::NonDeterminism;
 
     use crate::{
         list::safeimplu32::push::SafePush, rust_shadowing_helper_functions,
@@ -143,12 +142,11 @@ mod tests {
         // Verify that one list does not overwrite another list in memory
         let capacity_as_bfe = BFieldElement::new(100);
         let mut stack = empty_stack();
-        let memory = HashMap::default();
         stack.push(capacity_as_bfe);
         let memory = SafeNew {
             data_type: data_type.clone(),
         }
-        .link_and_run_tasm_for_test(&mut stack, vec![], vec![], memory, None)
+        .link_and_run_tasm_for_test(&mut stack, vec![], NonDeterminism::default(), None)
         .unwrap()
         .final_ram;
         let first_list = stack.pop().unwrap();
@@ -162,7 +160,12 @@ mod tests {
         let memory = SafePush {
             data_type: data_type.clone(),
         }
-        .link_and_run_tasm_for_test(&mut stack, vec![], vec![], memory, None)
+        .link_and_run_tasm_for_test(
+            &mut stack,
+            vec![],
+            NonDeterminism::default().with_ram(memory),
+            None,
+        )
         .unwrap()
         .final_ram;
         assert_eq!(
@@ -176,7 +179,12 @@ mod tests {
         let memory = SafeNew {
             data_type: data_type.clone(),
         }
-        .link_and_run_tasm_for_test(&mut stack, vec![], vec![], memory, None)
+        .link_and_run_tasm_for_test(
+            &mut stack,
+            vec![],
+            NonDeterminism::default().with_ram(memory),
+            None,
+        )
         .unwrap()
         .final_ram;
         let second_list = stack.pop().unwrap();
@@ -196,7 +204,12 @@ mod tests {
             stack.push(elem.to_owned());
         }
         let memory = SafePush { data_type }
-            .link_and_run_tasm_for_test(&mut stack, vec![], vec![], memory, None)
+            .link_and_run_tasm_for_test(
+                &mut stack,
+                vec![],
+                NonDeterminism::default().with_ram(memory),
+                None,
+            )
             .unwrap()
             .final_ram;
         assert_eq!(

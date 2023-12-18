@@ -113,7 +113,6 @@ where
                 &stack,
                 &stdin,
                 &nondeterminism,
-                &HashMap::default(),
                 &None,
                 0,
                 None,

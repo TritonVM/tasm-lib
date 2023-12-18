@@ -118,11 +118,11 @@ impl DeprecatedSnippet for SafeGet {
             &mut memory,
         );
 
+        let nondeterminism = NonDeterminism::default().with_ram(memory);
         vec![ExecutionState {
             stack,
             std_in: vec![],
-            nondeterminism: NonDeterminism::new(vec![]),
-            memory,
+            nondeterminism,
             words_allocated: 0,
         }]
     }
@@ -177,11 +177,11 @@ fn get_benchmark_input_state(list_length: usize, data_type: &DataType) -> Execut
     stack.push(list_pointer);
     stack.push(BFieldElement::new((list_length - 1) as u64));
 
+    let nondeterminism = NonDeterminism::default().with_ram(memory);
     ExecutionState {
         stack,
         std_in: vec![],
-        nondeterminism: NonDeterminism::new(vec![]),
-        memory,
+        nondeterminism,
         words_allocated: 1,
     }
 }

@@ -1,4 +1,4 @@
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 
 use rand::{rngs::StdRng, thread_rng, Rng, SeedableRng};
 use triton_vm::{BFieldElement, NonDeterminism};
@@ -70,14 +70,11 @@ impl<C: Closure + 'static> RustShadow for ShadowedClosure<C> {
             let stack = self.closure.borrow().pseudorandom_initial_state(seed, None);
 
             let stdin = vec![];
-            let nondeterminism = NonDeterminism::new(vec![]);
-            let memory = HashMap::new();
             test_rust_equivalence_given_complete_state(
                 self,
                 &stack,
                 &stdin,
-                &nondeterminism,
-                &memory,
+                &NonDeterminism::default(),
                 &None,
                 0,
                 None,

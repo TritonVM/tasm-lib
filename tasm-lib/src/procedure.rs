@@ -48,7 +48,6 @@ pub trait Procedure: BasicSnippet {
         bench_case: Option<BenchmarkCase>,
     ) -> (
         Vec<BFieldElement>,
-        HashMap<BFieldElement, BFieldElement>,
         NonDeterminism<BFieldElement>,
         Vec<BFieldElement>,
         Option<VmHasherState>,
@@ -104,13 +103,8 @@ impl<P: Procedure + 'static> RustShadow for ShadowedProcedure<P> {
                 entrypoint,
                 seed.iter().map(|h| format!("{:#04x}", h)).join(", ")
             );
-            let (stack, memory, mut nondeterminism, stdin, sponge_state) =
+            let (stack, nondeterminism, stdin, sponge_state) =
                 procedure.borrow().pseudorandom_initial_state(seed, None);
-            assert!(
-                memory.is_empty() || nondeterminism.ram.is_empty(),
-                "temporary assert until the testing framework has been reworked"
-            );
-            nondeterminism.ram.extend(memory.iter());
 
             let init_stack = stack.to_vec();
             let words_statically_allocated = 0;
@@ -159,7 +153,7 @@ impl<P: Procedure + 'static> RustShadow for ShadowedProcedure<P> {
         let mut benchmarks = Vec::with_capacity(2);
 
         for bench_case in [BenchmarkCase::CommonCase, BenchmarkCase::WorstCase] {
-            let (stack, _, nondeterminism, public_input, sponge_state) = self
+            let (stack, nondeterminism, public_input, sponge_state) = self
                 .procedure
                 .borrow()
                 .pseudorandom_initial_state(rng.gen(), Some(bench_case));

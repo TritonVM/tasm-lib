@@ -147,7 +147,6 @@ impl Procedure for SampleScalars {
         _bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
     ) -> (
         Vec<BFieldElement>,
-        HashMap<BFieldElement, BFieldElement>,
         NonDeterminism<BFieldElement>,
         Vec<BFieldElement>,
         Option<VmHasherState>,
@@ -159,10 +158,9 @@ impl Procedure for SampleScalars {
         let sponge_state: VmHasherState = twenty_first::shared_math::tip5::Tip5State {
             state: rng.gen::<[BFieldElement; STATE_SIZE]>(),
         };
-        let memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
         let nondeterminism = NonDeterminism::new(vec![]);
         let stdin = vec![];
-        (stack, memory, nondeterminism, stdin, Some(sponge_state))
+        (stack, nondeterminism, stdin, Some(sponge_state))
     }
 }
 

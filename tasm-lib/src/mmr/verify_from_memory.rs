@@ -619,7 +619,6 @@ mod tests {
         let leaf_index_hi = BFieldElement::new(leaf_index >> 32);
         let leaf_index_lo = BFieldElement::new(leaf_index & u32::MAX as u64);
         let init_stack = exec_state.stack;
-        let memory = exec_state.memory;
 
         // AFTER: _ *auth_path leaf_index_hi leaf_index_lo validation_result
         let mut expected_final_stack = empty_stack();
@@ -632,7 +631,7 @@ mod tests {
             &snippet_for_unsafe_lists,
             &init_stack,
             &[],
-            memory,
+            exec_state.nondeterminism.ram,
             (MAX_MMR_HEIGHT * DIGEST_LENGTH + 1).try_into().unwrap(), // assume that 64 digests are allocated in memory when code starts to run
             Some(&expected_final_stack),
         );

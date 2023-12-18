@@ -131,8 +131,6 @@ impl Closure for OverflowingSub {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
     use triton_vm::NonDeterminism;
 
     use super::*;
@@ -196,8 +194,7 @@ mod tests {
                 &ShadowedClosure::new(OverflowingSub),
                 &init_stack,
                 &[],
-                &NonDeterminism::new(vec![]),
-                &HashMap::default(),
+                &NonDeterminism::default(),
                 &None,
                 1,
                 Some(&expected_final_stack),

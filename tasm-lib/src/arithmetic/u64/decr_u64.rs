@@ -134,6 +134,7 @@ impl DeprecatedSnippet for DecrU64 {
 mod tests {
     use num::Zero;
     use rand::Rng;
+    use triton_vm::NonDeterminism;
 
     use crate::test_helpers::{
         test_rust_equivalence_given_input_values_deprecated,
@@ -153,7 +154,7 @@ mod tests {
         let mut stack = empty_stack();
         push_encodable(&mut stack, &U32s::<2>::zero());
         assert!(DecrU64
-            .link_and_run_tasm_for_test(&mut stack, vec![], vec![], HashMap::default(), None)
+            .link_and_run_tasm_for_test(&mut stack, vec![], NonDeterminism::default(), None)
             .is_err());
     }
 

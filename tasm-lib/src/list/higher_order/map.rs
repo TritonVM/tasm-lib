@@ -347,7 +347,7 @@ impl Function for Map {
             .collect_vec();
         let execution_state =
             self.generate_input_state(list_pointer, list_length, additional_function_args);
-        (execution_state.stack, execution_state.memory)
+        (execution_state.stack, execution_state.nondeterminism.ram)
     }
 }
 
@@ -399,11 +399,11 @@ impl Map {
             ),
         };
 
+        let nondeterminism = NonDeterminism::default().with_ram(memory);
         ExecutionState {
             stack,
             std_in: vec![],
-            nondeterminism: NonDeterminism::new(vec![]),
-            memory,
+            nondeterminism,
             words_allocated: 0,
         }
     }

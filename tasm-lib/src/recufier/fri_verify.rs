@@ -1126,7 +1126,6 @@ impl Procedure for FriVerify {
         _bench_case: Option<BenchmarkCase>,
     ) -> (
         Vec<BFieldElement>,
-        HashMap<BFieldElement, BFieldElement>,
         NonDeterminism<BFieldElement>,
         Vec<BFieldElement>,
         Option<VmHasherState>,
@@ -1150,13 +1149,7 @@ impl Procedure for FriVerify {
         let stdin = vec![];
         let sponge_state = VmHasherState::new(Domain::VariableLength);
 
-        (
-            stack,
-            HashMap::default(),
-            nondeterminism,
-            stdin,
-            Some(sponge_state),
-        )
+        (stack, nondeterminism, stdin, Some(sponge_state))
     }
 }
 
@@ -1343,13 +1336,8 @@ mod test {
         // this object lives in a different (and difficult to predict) location in memory.
         // So we check that instead.
 
-        let (stack, memory, mut nondeterminism, stdin, sponge_state) =
+        let (stack, nondeterminism, stdin, sponge_state) =
             procedure.pseudorandom_initial_state(seed, None);
-        assert!(
-            memory.is_empty() || nondeterminism.ram.is_empty(),
-            "temporary assert until the testing framework has been reworked"
-        );
-        nondeterminism.ram.extend(memory.iter());
 
         let init_stack = stack.to_vec();
         let words_statically_allocated = 0;

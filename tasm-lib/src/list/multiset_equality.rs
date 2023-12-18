@@ -73,11 +73,11 @@ impl MultisetEquality {
             }
         }
 
+        let nondeterminism = NonDeterminism::default().with_ram(memory);
         ExecutionState {
             stack: [empty_stack(), vec![pointer_a, pointer_b]].concat(),
             std_in: vec![],
-            nondeterminism: NonDeterminism::new(vec![]),
-            memory,
+            nondeterminism,
             words_allocated: 0,
         }
     }
@@ -120,11 +120,11 @@ impl MultisetEquality {
             }
         }
 
+        let nondeterminism = NonDeterminism::default().with_ram(memory);
         ExecutionState {
             stack: [empty_stack(), vec![pointer_a, pointer_b]].concat(),
             std_in: vec![],
-            nondeterminism: NonDeterminism::new(vec![]),
-            memory,
+            nondeterminism,
             words_allocated: 0,
         }
     }
@@ -167,11 +167,11 @@ impl MultisetEquality {
             }
         }
 
+        let nondeterminism = NonDeterminism::default().with_ram(memory);
         ExecutionState {
             stack: [empty_stack(), vec![pointer_a, pointer_b]].concat(),
             std_in: vec![],
-            nondeterminism: NonDeterminism::new(vec![]),
-            memory,
+            nondeterminism,
             words_allocated: 0,
         }
     }
@@ -219,11 +219,11 @@ impl MultisetEquality {
             }
         }
 
+        let nondeterminism = NonDeterminism::default().with_ram(memory);
         ExecutionState {
             stack: [empty_stack(), vec![pointer_a, pointer_b]].concat(),
             std_in: vec![],
-            nondeterminism: NonDeterminism::new(vec![]),
-            memory,
+            nondeterminism,
             words_allocated: 0,
         }
     }

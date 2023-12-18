@@ -21,11 +21,11 @@ impl HashVarlen {
             .map(|i| (memory_start + BFieldElement::new(i), random()))
             .collect();
 
+        let nondeterminism = NonDeterminism::default().with_ram(memory);
         ExecutionState {
             stack: [empty_stack(), vec![memory_start, BFieldElement::new(k)]].concat(),
             std_in: vec![],
-            nondeterminism: NonDeterminism::new(vec![]),
-            memory,
+            nondeterminism,
             words_allocated: 0,
         }
     }

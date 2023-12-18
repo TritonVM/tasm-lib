@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use rand::random;
 use triton_vm::NonDeterminism;
 use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
@@ -50,8 +48,7 @@ impl Commit {
         ExecutionState {
             stack,
             std_in: vec![],
-            nondeterminism: NonDeterminism::new(vec![]),
-            memory: HashMap::new(),
+            nondeterminism: NonDeterminism::default(),
             words_allocated: 1,
         }
     }

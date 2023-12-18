@@ -73,7 +73,6 @@ pub struct ExecutionState {
     pub stack: Vec<BFieldElement>,
     pub std_in: Vec<BFieldElement>,
     pub nondeterminism: NonDeterminism<BFieldElement>,
-    pub memory: HashMap<BFieldElement, BFieldElement>,
 
     // Ensures that you're not overwriting statically allocated memory
     // when using the dynamic allocator.
@@ -88,8 +87,7 @@ impl ExecutionState {
         ExecutionState {
             stack,
             std_in: vec![],
-            nondeterminism: NonDeterminism::new(vec![]),
-            memory: HashMap::default(),
+            nondeterminism: NonDeterminism::default(),
             words_allocated: 0,
         }
     }
@@ -102,8 +100,7 @@ impl ExecutionState {
         ExecutionState {
             stack,
             std_in: vec![],
-            nondeterminism: NonDeterminism::new(vec![]),
-            memory,
+            nondeterminism: NonDeterminism::default().with_ram(memory),
             words_allocated: words_statically_allocated,
         }
     }
@@ -166,7 +163,7 @@ pub fn execute_bench_deprecated(
     stack: &mut Vec<BFieldElement>,
     expected_stack_diff: isize,
     std_in: Vec<BFieldElement>,
-    mut nondeterminism: NonDeterminism<BFieldElement>,
+    nondeterminism: NonDeterminism<BFieldElement>,
 ) -> anyhow::Result<ExecutionResult> {
     let initial_stack_height = stack.len() as isize;
     let public_input = PublicInput::new(std_in.clone());

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use num_traits::Zero;
 use rand::{random, thread_rng, Rng, RngCore};
-use triton_vm::{BFieldElement, NonDeterminism};
+use triton_vm::BFieldElement;
 
 use crate::{empty_stack, snippet::DeprecatedSnippet};
 
@@ -27,13 +27,7 @@ impl MemCpy {
                 random::<BFieldElement>(),
             );
         }
-        crate::ExecutionState {
-            stack,
-            std_in: vec![],
-            nondeterminism: NonDeterminism::new(vec![]),
-            memory,
-            words_allocated: 0,
-        }
+        crate::ExecutionState::with_stack_and_memory(stack, memory, 0)
     }
 }
 

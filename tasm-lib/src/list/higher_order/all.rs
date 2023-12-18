@@ -88,11 +88,11 @@ impl All {
             };
         }
 
+        let nondeterminism = NonDeterminism::default().with_ram(memory);
         ExecutionState {
             stack,
             std_in: vec![],
-            nondeterminism: NonDeterminism::new(vec![]),
-            memory,
+            nondeterminism,
             words_allocated: 0,
         }
     }
@@ -276,20 +276,20 @@ impl Function for All {
                 let list_pointer = BFieldElement::new(5);
                 let list_length = 10;
                 let execution_state = self.generate_input_state(list_pointer, list_length, false);
-                (execution_state.stack, execution_state.memory)
+                (execution_state.stack, execution_state.nondeterminism.ram)
             }
             Some(BenchmarkCase::WorstCase) => {
                 let list_pointer = BFieldElement::new(5);
                 let list_length = 100;
                 let execution_state = self.generate_input_state(list_pointer, list_length, false);
-                (execution_state.stack, execution_state.memory)
+                (execution_state.stack, execution_state.nondeterminism.ram)
             }
             None => {
                 let mut rng: StdRng = SeedableRng::from_seed(seed);
                 let list_pointer = BFieldElement::new(rng.next_u64() % (1 << 20));
                 let list_length = 1 << (rng.next_u32() as usize % 4);
                 let execution_state = self.generate_input_state(list_pointer, list_length, true);
-                (execution_state.stack, execution_state.memory)
+                (execution_state.stack, execution_state.nondeterminism.ram)
             }
         }
     }
@@ -497,12 +497,12 @@ mod tests {
         let input_stack = [empty_stack(), vec![BFieldElement::new(42)]].concat();
         let expected_end_stack_true = [empty_stack(), vec![BFieldElement::one()]].concat();
         let shadowed_snippet = ShadowedFunction::new(snippet);
+        let mut nondeterminism = NonDeterminism::default().with_ram(memory);
         test_rust_equivalence_given_complete_state(
             &shadowed_snippet,
             &input_stack,
             &[],
-            &NonDeterminism::new(vec![]),
-            &memory,
+            &nondeterminism,
             &None,
             1,
             Some(&expected_end_stack_true),
@@ -515,15 +515,14 @@ mod tests {
             (0..30)
                 .map(|x| BFieldElement::new(x + TWO_POW_31 - 20))
                 .collect_vec(),
-            &mut memory,
+            &mut nondeterminism.ram,
         );
         let expected_end_stack_false = [empty_stack(), vec![BFieldElement::zero()]].concat();
         test_rust_equivalence_given_complete_state(
             &shadowed_snippet,
             &input_stack,
             &[],
-            &NonDeterminism::new(vec![]),
-            &memory,
+            &nondeterminism,
             &None,
             1,
             Some(&expected_end_stack_false),

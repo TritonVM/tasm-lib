@@ -162,11 +162,11 @@ fn input_state(list_length: usize) -> ExecutionState {
 
     untyped_unsafe_insert_random_list(list_pointer, list_length, &mut memory, 4);
 
+    let nondeterminism = NonDeterminism::default().with_ram(memory);
     ExecutionState {
         stack,
         std_in: vec![],
-        nondeterminism: NonDeterminism::new(vec![]),
-        memory,
+        nondeterminism,
         words_allocated: 0,
     }
 }

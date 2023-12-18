@@ -651,7 +651,7 @@ mod tests {
         let (init_exec_state, auth_path_pointer, peaks_pointer) = implementation_with_unsafe_lists
             .prepare_state_with_mmra(start_mmr, new_leaf_index, new_leaf, auth_path);
         let init_stack = init_exec_state.stack;
-        let memory = init_exec_state.memory;
+        let memory = init_exec_state.nondeterminism.ram;
 
         // AFTER: _ *auth_path leaf_index_hi leaf_index_lo
         let mut expected_final_stack = empty_stack();

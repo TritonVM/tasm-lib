@@ -30,7 +30,6 @@ impl Range {
             stack,
             std_in: vec![],
             nondeterminism: NonDeterminism::new(vec![]),
-            memory: HashMap::new(),
             words_allocated: 1,
         }
     }

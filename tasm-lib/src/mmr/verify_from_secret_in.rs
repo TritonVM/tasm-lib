@@ -154,11 +154,11 @@ impl MmrVerifyLeafMembershipFromSecretIn {
             ListType::Safe => 2,
             ListType::Unsafe => 1,
         };
+        let nondeterminism = NonDeterminism::default().with_ram(memory);
         ExecutionState {
             stack,
             std_in: vec![],
-            nondeterminism: NonDeterminism::new(vec![]),
-            memory,
+            nondeterminism,
             words_allocated: (DIGEST_LENGTH * MAX_MMR_HEIGHT + 1 + list_metadata_size)
                 .try_into()
                 .unwrap(),
@@ -344,7 +344,6 @@ impl Procedure for MmrVerifyLeafMembershipFromSecretIn {
         bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
     ) -> (
         Vec<BFieldElement>,
-        HashMap<BFieldElement, BFieldElement>,
         NonDeterminism<BFieldElement>,
         Vec<BFieldElement>,
         Option<crate::VmHasherState>,
@@ -361,7 +360,6 @@ impl Procedure for MmrVerifyLeafMembershipFromSecretIn {
 
         (
             init_state.stack,
-            init_state.memory,
             init_state.nondeterminism,
             init_state.std_in,
             None,
@@ -605,7 +603,7 @@ mod tests {
         let non_determinism = NonDeterminism {
             individual_tokens: vec![leaf_index_hi, leaf_index_lo],
             digests: auth_path.clone(),
-            ram: HashMap::default(),
+            ram: memory,
         };
 
         let snippet_with_unsafe_lists = MmrVerifyLeafMembershipFromSecretIn {
@@ -617,7 +615,6 @@ mod tests {
             &init_stack,
             &[],
             &non_determinism,
-            &memory,
             &None,
             (MAX_MMR_HEIGHT * DIGEST_LENGTH + 1).try_into().unwrap(),
             Some(&expected_final_stack),

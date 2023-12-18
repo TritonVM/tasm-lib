@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use rand::{random, rngs::StdRng, Rng, SeedableRng};
 use triton_vm::{triton_asm, BFieldElement, Digest, NonDeterminism};
 
@@ -116,7 +114,6 @@ impl Procedure for DivineSiblingU64Index {
         bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
     ) -> (
         Vec<triton_vm::BFieldElement>,
-        std::collections::HashMap<triton_vm::BFieldElement, triton_vm::BFieldElement>,
         triton_vm::NonDeterminism<triton_vm::BFieldElement>,
         Vec<triton_vm::BFieldElement>,
         Option<crate::VmHasherState>,
@@ -129,13 +126,7 @@ impl Procedure for DivineSiblingU64Index {
             None => self.prepare_stack_and_non_determinism(rng.gen()),
         };
 
-        (
-            init_stack,
-            HashMap::default(),
-            non_determinism,
-            Vec::default(),
-            None,
-        )
+        (init_stack, non_determinism, Vec::default(), None)
     }
 }
 

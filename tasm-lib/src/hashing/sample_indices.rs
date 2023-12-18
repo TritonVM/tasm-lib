@@ -197,7 +197,6 @@ impl Procedure for SampleIndices {
         bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
     ) -> (
         Vec<BFieldElement>,
-        HashMap<BFieldElement, BFieldElement>,
         NonDeterminism<BFieldElement>,
         Vec<BFieldElement>,
         Option<VmHasherState>,
@@ -224,15 +223,12 @@ impl Procedure for SampleIndices {
         stack.push(BFieldElement::new(number as u64));
         stack.push(BFieldElement::new(upper_bound as u64));
 
-        let memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
-
-        let nondeterminism = NonDeterminism::new(vec![]);
         let public_input: Vec<BFieldElement> = vec![];
         let state = VmHasherState {
             state: rng.gen::<[BFieldElement; STATE_SIZE]>(),
         };
 
-        (stack, memory, nondeterminism, public_input, Some(state))
+        (stack, NonDeterminism::default(), public_input, Some(state))
     }
 }
 

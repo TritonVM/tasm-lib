@@ -247,7 +247,6 @@ impl Procedure for Absorb {
         bench_case: Option<BenchmarkCase>,
     ) -> (
         Vec<BFieldElement>,
-        HashMap<BFieldElement, BFieldElement>,
         NonDeterminism<BFieldElement>,
         Vec<BFieldElement>,
         Option<VmHasherState>,
@@ -284,13 +283,8 @@ impl Procedure for Absorb {
             state: sponge_state,
         };
 
-        (
-            stack,
-            memory,
-            NonDeterminism::new(vec![]),
-            vec![],
-            Some(vm_hasher_state),
-        )
+        let nondeterminism = NonDeterminism::default().with_ram(memory);
+        (stack, nondeterminism, vec![], Some(vm_hasher_state))
     }
 }
 

@@ -59,7 +59,6 @@ impl Procedure for WriteToStdout {
         _bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
     ) -> (
         Vec<BFieldElement>,
-        HashMap<BFieldElement, BFieldElement>,
         NonDeterminism<BFieldElement>,
         Vec<BFieldElement>,
         Option<VmHasherState>,
@@ -71,13 +70,7 @@ impl Procedure for WriteToStdout {
             stack.push(elem);
         }
 
-        (
-            stack,
-            HashMap::default(),
-            NonDeterminism::default(),
-            vec![],
-            None,
-        )
+        (stack, NonDeterminism::default(), vec![], None)
     }
 }
 

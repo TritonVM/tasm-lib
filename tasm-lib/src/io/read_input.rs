@@ -71,7 +71,6 @@ impl Procedure for ReadInput {
         _bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
     ) -> (
         Vec<BFieldElement>,
-        HashMap<BFieldElement, BFieldElement>,
         NonDeterminism<BFieldElement>,
         Vec<BFieldElement>,
         Option<crate::VmHasherState>,
@@ -85,7 +84,6 @@ impl Procedure for ReadInput {
 
         (
             empty_stack(),
-            HashMap::default(),
             NonDeterminism {
                 individual_tokens: secret_in,
                 digests: vec![],

@@ -176,8 +176,7 @@ pub trait DeprecatedSnippet {
         &self,
         stack: &mut Vec<BFieldElement>,
         std_in: Vec<BFieldElement>,
-        secret_in: Vec<BFieldElement>,
-        memory: HashMap<BFieldElement, BFieldElement>,
+        nondeterminism: NonDeterminism<BFieldElement>,
         words_allocated: Option<u32>,
     ) -> Result<VmOutputState> {
         let expected_length_prior: usize = self.input_types().iter().map(|x| x.stack_size()).sum();
@@ -187,8 +186,6 @@ pub trait DeprecatedSnippet {
             expected_length_after as isize - expected_length_prior as isize,
             "Declared stack diff must match type indicators"
         );
-
-        let nondeterminism = NonDeterminism::new(secret_in).with_ram(memory);
 
         let code = self.link_for_isolated_run(words_allocated);
         let program = Program::new(&code);
@@ -241,8 +238,7 @@ pub trait DeprecatedSnippet {
         let ret = self.link_and_run_tasm_for_test(
             &mut execution_state.stack,
             execution_state.std_in.clone(),
-            execution_state.nondeterminism.individual_tokens.clone(),
-            execution_state.memory.clone(),
+            execution_state.nondeterminism.to_owned(),
             Some(execution_state.words_allocated),
         );
         let stack_after = execution_state.stack.clone();
@@ -261,18 +257,11 @@ pub trait DeprecatedSnippet {
         &self,
         execution_state: &mut ExecutionState,
     ) -> Result<ExecutionResult> {
-        assert!(
-            execution_state.memory.is_empty() || execution_state.nondeterminism.ram.is_empty(),
-            "Cannot initiate RAM with both `memory` and `nondeterminism`"
-        );
-        let mut nondeterminsm = execution_state.nondeterminism.clone();
-        nondeterminsm.ram.extend(execution_state.memory.clone());
-
         let stack_prior = execution_state.stack.clone();
         let ret = self.link_and_run_tasm_for_bench(
             &mut execution_state.stack,
             execution_state.std_in.clone(),
-            nondeterminsm,
+            execution_state.nondeterminism.to_owned(),
             Some(execution_state.words_allocated),
         );
         let stack_after = execution_state.stack.clone();

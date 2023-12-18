@@ -324,7 +324,7 @@ impl Function for Zip {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
         let left_length = rng.gen_range(0..20);
         let execution_state = self.generate_input_state(left_length, left_length);
-        (execution_state.stack, execution_state.memory)
+        (execution_state.stack, execution_state.nondeterminism.ram)
     }
 }
 
@@ -394,14 +394,11 @@ impl Zip {
         stack.push(left_pointer);
         stack.push(right_pointer);
 
-        let mut memory_vec = memory.clone().into_iter().collect_vec();
-        memory_vec.sort_unstable_by(|&a, &b| a.0.value().partial_cmp(&b.0.value()).unwrap());
-
+        let nondeterminism = NonDeterminism::default().with_ram(memory);
         ExecutionState {
             stack,
             std_in: vec![],
-            nondeterminism: NonDeterminism::new(vec![]),
-            memory,
+            nondeterminism,
             words_allocated: 0,
         }
     }

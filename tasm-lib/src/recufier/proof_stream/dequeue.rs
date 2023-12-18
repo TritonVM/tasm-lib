@@ -210,7 +210,6 @@ impl Procedure for Dequeue {
         bench_case: Option<BenchmarkCase>,
     ) -> (
         Vec<BFieldElement>,
-        HashMap<BFieldElement, BFieldElement>,
         NonDeterminism<BFieldElement>,
         Vec<BFieldElement>,
         Option<VmHasherState>,
@@ -250,13 +249,7 @@ impl Procedure for Dequeue {
         let non_determinism = NonDeterminism::default().with_ram(memory);
         let sponge_state = VmHasherState { state: rng.gen() };
 
-        (
-            stack,
-            HashMap::default(),
-            non_determinism,
-            vec![],
-            Some(sponge_state),
-        )
+        (stack, non_determinism, vec![], Some(sponge_state))
     }
 }
 
@@ -300,7 +293,6 @@ mod test {
     fn dequeue_from_proof_stream_with_given_number_of_items(num_items: usize) {
         let dequeue = ShadowedProcedure::new(Dequeue {});
         let (stack, non_determinism) = very_small_initial_state(num_items);
-        let memory = HashMap::default();
         let sponge_state = VmHasherState::new(Domain::VariableLength);
 
         test_rust_equivalence_given_complete_state(
@@ -308,7 +300,6 @@ mod test {
             &stack,
             &[],
             &non_determinism,
-            &memory,
             &Some(sponge_state),
             0,
             None,
@@ -354,7 +345,7 @@ mod test {
         let algorithm = ShadowedProcedure::new(dequeue.clone());
 
         for _ in 0..num_states {
-            let (stack, memory, nondeterminism, _stdin, sponge_state) =
+            let (stack, nondeterminism, _stdin, sponge_state) =
                 dequeue.pseudorandom_initial_state(rng.gen(), None);
 
             let stdin = vec![];
@@ -363,7 +354,6 @@ mod test {
                 &stack,
                 &stdin,
                 &nondeterminism,
-                &memory,
                 &sponge_state,
                 0,
                 None,

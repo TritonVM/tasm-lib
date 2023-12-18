@@ -88,7 +88,6 @@ where
                 &stack,
                 &stdin,
                 &non_determinism,
-                &HashMap::default(),
                 &None,
                 0,
                 None,

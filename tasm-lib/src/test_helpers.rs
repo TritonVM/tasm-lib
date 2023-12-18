@@ -47,16 +47,8 @@ pub fn test_rust_equivalence_multiple_deprecated<T: DeprecatedSnippet>(
 #[allow(dead_code)]
 pub fn test_rust_equivalence_given_execution_state_deprecated<T: DeprecatedSnippet>(
     snippet_struct: &T,
-    mut execution_state: ExecutionState,
+    execution_state: ExecutionState,
 ) -> VmOutputState {
-    assert!(
-        execution_state.memory.is_empty() || execution_state.nondeterminism.ram.is_empty(),
-        "Cannot initialize RAM with both `memory` and non-determinism. Please pick one."
-    );
-    execution_state
-        .nondeterminism
-        .ram
-        .extend(execution_state.memory.iter());
     test_rust_equivalence_given_complete_state_deprecated::<T>(
         snippet_struct,
         &execution_state.stack,
@@ -466,24 +458,17 @@ pub fn test_rust_equivalence_given_complete_state<T: RustShadow>(
     stack: &[BFieldElement],
     stdin: &[BFieldElement],
     nondeterminism: &NonDeterminism<BFieldElement>,
-    memory: &HashMap<BFieldElement, BFieldElement>,
     sponge_state: &Option<VmHasherState>,
     words_statically_allocated: u32,
     expected_final_stack: Option<&[BFieldElement]>,
 ) -> VmOutputState {
-    assert!(
-        nondeterminism.ram.is_empty() || memory.is_empty(),
-        "Cannot initiate state with both nondeterministic RAM and `memory`. Please pick one."
-    );
     let init_stack = stack.to_vec();
-    let mut nondeterminism = nondeterminism.to_owned();
-    nondeterminism.ram.extend(memory.iter());
 
     let rust = rust_final_state(
         shadowed_snippet,
         stack,
         stdin,
-        &nondeterminism,
+        nondeterminism,
         sponge_state,
         words_statically_allocated,
     );
@@ -570,7 +555,6 @@ pub fn test_rust_equivalence_given_execution_state<T: BasicSnippet + RustShadow>
         &execution_state.stack,
         &execution_state.std_in,
         &nondeterminism,
-        &execution_state.memory,
         &None,
         execution_state.words_allocated,
         None,
