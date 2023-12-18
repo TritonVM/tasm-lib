@@ -157,7 +157,6 @@ pub(crate) fn execute_with_execution_state_deprecated<T: DeprecatedSnippet>(
         expected_stack_diff,
         init_state.std_in,
         init_state.nondeterminism,
-        &mut init_state.memory,
     )
 }
 
@@ -167,8 +166,7 @@ pub fn execute_bench_deprecated(
     stack: &mut Vec<BFieldElement>,
     expected_stack_diff: isize,
     std_in: Vec<BFieldElement>,
-    nondeterminism: NonDeterminism<BFieldElement>,
-    memory: &mut HashMap<BFieldElement, BFieldElement>,
+    mut nondeterminism: NonDeterminism<BFieldElement>,
 ) -> anyhow::Result<ExecutionResult> {
     let initial_stack_height = stack.len() as isize;
     let public_input = PublicInput::new(std_in.clone());
@@ -184,7 +182,6 @@ pub fn execute_bench_deprecated(
         bail!("Jump stack must be unchanged after code execution but was {jump_stack:?}")
     }
 
-    *memory = terminal_state.ram.clone();
     *stack = terminal_state.op_stack.stack;
 
     let final_stack_height = stack.len() as isize;

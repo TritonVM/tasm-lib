@@ -217,8 +217,7 @@ pub trait DeprecatedSnippet {
         &self,
         stack: &mut Vec<BFieldElement>,
         std_in: Vec<BFieldElement>,
-        secret_in: Vec<BFieldElement>,
-        memory: &mut HashMap<BFieldElement, BFieldElement>,
+        nondeterminism: NonDeterminism<BFieldElement>,
         words_statically_allocated: Option<u32>,
     ) -> Result<ExecutionResult> {
         let expected_length_prior: usize = self.input_types().iter().map(|x| x.stack_size()).sum();
@@ -231,14 +230,7 @@ pub trait DeprecatedSnippet {
 
         let code = self.link_for_isolated_run(words_statically_allocated);
 
-        execute_bench_deprecated(
-            &code,
-            stack,
-            Self::stack_diff(self),
-            std_in,
-            NonDeterminism::new(secret_in),
-            memory,
-        )
+        execute_bench_deprecated(&code, stack, Self::stack_diff(self), std_in, nondeterminism)
     }
 
     fn link_and_run_tasm_from_state_for_test(
@@ -269,12 +261,18 @@ pub trait DeprecatedSnippet {
         &self,
         execution_state: &mut ExecutionState,
     ) -> Result<ExecutionResult> {
+        assert!(
+            execution_state.memory.is_empty() || execution_state.nondeterminism.ram.is_empty(),
+            "Cannot initiate RAM with both `memory` and `nondeterminism`"
+        );
+        let mut nondeterminsm = execution_state.nondeterminism.clone();
+        nondeterminsm.ram.extend(execution_state.memory.clone());
+
         let stack_prior = execution_state.stack.clone();
         let ret = self.link_and_run_tasm_for_bench(
             &mut execution_state.stack,
             execution_state.std_in.clone(),
-            execution_state.nondeterminism.individual_tokens.clone(),
-            &mut execution_state.memory,
+            nondeterminsm,
             Some(execution_state.words_allocated),
         );
         let stack_after = execution_state.stack.clone();
