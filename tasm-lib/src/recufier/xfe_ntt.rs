@@ -43,36 +43,16 @@ impl BasicSnippet for XfeNtt {
             library.import(Box::new(crate::list::unsafeimplu32::length::Length {
                 data_type: DataType::Xfe,
             }));
-        #[allow(non_snake_case)]
-        let _1__Lu32R_u32_59 = library.kmalloc(1);
-        #[allow(non_snake_case)]
-        let _fn_arg_reference_to_LVec_RXField_LR_0 = library.kmalloc(1);
+
         triton_asm!(
                 {entrypoint}:
-                // _ *list omega
+                // _ *x omega
 
         dup 1
-        // _ *list omega *list
-        push {_fn_arg_reference_to_LVec_RXField_LR_0}
-        // _ *list omega *list **list
-
-        write_mem 1
-        // _ *list omega (**list + 1)
-
-        pop 1
-        // _ *list omega
-
-        push {_fn_arg_reference_to_LVec_RXField_LR_0}
-        // _ *list omega **list
-
-        read_mem 1
-        // _ *list omega *list (**list - 1)
-
-        pop 1
-        // _ *list omega *list
+        // _ *x omega *x
 
         call {tasm_list_unsafeimplu32_length___xfe}
-        // _ *list omega size
+        // _ *x omega size
 
         push 32
         dup 1
@@ -83,16 +63,20 @@ impl BasicSnippet for XfeNtt {
         push -1
         add
         push 0
-        // _ *list omega size log_2_size k
+        // _ *x omega size log_2_size k
 
         call _binop_Neq__LboolR_bool_34_while_loop
+        // _ *x omega size log_2_size k
+
         pop 1
+        // _ *x omega size log_2_size
+
         push 1
-        dup 0
-        push {_1__Lu32R_u32_59}
-        write_mem 1
-        pop 1
+        // _ *x omega size log_2_size m
+
         push 0
+        // _ *x omega size log_2_size m outer_count
+
         call _binop_Neq__LboolR_bool_63_while_loop
         pop 5
         pop 1
@@ -137,94 +121,115 @@ impl BasicSnippet for XfeNtt {
         swap 2
         pop 2
         return
+
+        // _ *x omega size log_2_size k rk
         _binop_Lt__LboolR_bool_40_then:
-        push {_fn_arg_reference_to_LVec_RXField_LR_0}
-        read_mem 1
-        pop 1
-        // _ k rk *x
+
+        dup 5
+        // _ *x omega size log_2_size k rk *x
+
         dup 0
-        // _ k rk *x *x
+        // _ *x omega size log_2_size k rk *x *x
 
         swap 2
-        // _ k *x *x rk
+        // _ *x omega size log_2_size k *x *x rk
 
         push 3
         mul
         push 3
         add
         add
-        // _ k *x *(x[rk] + 2)
+        // _ *x omega size log_2_size k *x *(x[rk] + 2)
 
         read_mem 3
-        // _ k *x [x[rk]] *(x[rk] - 1)
-
-        dup 5
-        // _ k *x [x[rk]] *(x[rk] - 1) k
-
-        push 3
-        mul
-        push 3
-        add
-        // _ k *x [x[rk]] *(x[rk] - 1) k_offset
-        dup 5
-        add
-        // _ k *x [x[rk]] *(x[rk] - 1) *(x[k] + 2)
-
-        read_mem 3
-        // _ k *x [x[rk]] *(x[rk] - 1) x[k] *(x[k] - 1)
-
-        swap 4
-        // _ k *x [x[rk]] *(x[k] - 1) x[k] *(x[rk] - 1)
+        // _ *x omega size log_2_size k *x [x[rk]] *(x[rk] - 1)
 
         push 1
         add
-        // _ k *x [x[rk]] *(x[k] - 1) x[k] *x[rk]
+        // _ *x omega size log_2_size k *x [x[rk]] *x[rk]
+
+        dup 5
+        // _ *x omega size log_2_size k *x [x[rk]] *x[rk] k
+
+        push 3
+        mul
+        push 3
+        add
+        // _ *x omega size log_2_size k *x [x[rk]] *(x[rk] - 1) k_offset
+
+        dup 5
+        add
+        // _ *x omega size log_2_size k *x [x[rk]] *(x[rk] - 1) *(x[k] + 2)
+
+        read_mem 3
+        // _ *x omega size log_2_size k *x [x[rk]] *(x[rk] - 1) x[k] *(x[k] - 1)
+
+        push 1
+        add
+        // _ *x omega size log_2_size k *x [x[rk]] *(x[rk] - 1) x[k] *x[k]
+
+        swap 4
+        // _ *x omega size log_2_size k *x [x[rk]] *(x[k] - 1) x[k] *x[rk]
 
         write_mem 3
         pop 1
-        // _ k *x [x[rk]] *(x[k] - 1)
+        // _ *x omega size log_2_size k *x [x[rk]] *x[k]
 
-        push 1 add
         write_mem 3
-        // _ k *x *(x[k] +3)
+        // _ *x omega size log_2_size k *x *(x[k] +3)
 
         pop 1
-        // _ k *x
+        // _ *x omega size log_2_size k *x
+
         return
 
+        // 1st loop, where `bitreverse` is called
         _binop_Neq__LboolR_bool_34_while_loop:
-        // _ k
+        // _ *x omega size log_2_size k
         dup 0
         dup 3
         eq
         skiz
         return
+        // _ *x omega size log_2_size k
+
         dup 0
         dup 2
         call bitreverse
-        dup 1
-        dup 1
-        swap 1
+         // _ *x omega size log_2_size k rk
+
+        dup 0
+        dup 2
+        // _ *x omega size log_2_size k rk rk k
+
         lt
+        // _ *x omega size log_2_size k rk (k < rk)
+
         skiz
         call _binop_Lt__LboolR_bool_40_then
+        // _ *x omega size log_2_size k (rk|*x)
+
         pop 1
+        // _ *x omega size log_2_size k
+
         push 1
         add
+        // _ *x omega size log_2_size (k+1)
+
         recurse
 
         // Last while-loop, *inner*, `j != m` <-- The busy-loop!
         _binop_Neq__LboolR_bool_79_while_loop:
+        // _ outer_count omega size log_2_size m *x w_m k w j
+
         dup 0
-        push {_1__Lu32R_u32_59}
-        read_mem 1
-        pop 1
+        dup 6
         eq
         skiz
         return
-        push {_fn_arg_reference_to_LVec_RXField_LR_0}
-        read_mem 1
-        pop 1
+        // _ outer_count omega size log_2_size m *x w_m k w j
+
+        dup 4
         dup 3
         dup 2
         add
@@ -233,29 +238,35 @@ impl BasicSnippet for XfeNtt {
         push 3
         add
         add
-        read_mem 3
-        // _ x[k + j] (*x[k + j] - 1)
+        // _ outer_count omega size log_2_size m *x w_m k w j (*x + ((k + j) * 3 + 3))
+        // _ outer_count omega size log_2_size m *x w_m k w j *x[k + j]_last_word
 
-        push {_1__Lu32R_u32_59}
-        read_mem 1
-        pop 1
-        // _ x[k + j] (*x[k + j] - 1) m
+        read_mem 3
+        // _ outer_count omega size log_2_size m *x w_m k w j [x[k + j]] *x[k + j - 1]_last_word
+
+        dup 9
 
         push 3
         mul
-        // _ x[k + j] (*x[k + j] - 1) 3* m
+        // _ outer_count omega size log_2_size m *x w_m k w j [x[k + j]] *x[k + j - 1]_last_word (3*m)
 
         push 3
         add
         add
-        // _ x[k + j] (*x[k + j + m + 1] - 1)
+        // _ outer_count omega size log_2_size m *x w_m k w j [x[k + j]] *x[k + j + m]_last_word
 
         read_mem 3
-        // _ x[k + j] x[k + j + m] (*x[k + j + m] - 1)
+        // _ outer_count omega size log_2_size m *x w_m k w j [x[k + j]] [x+j+m] *x[k + j + m - 1]_last_word
 
         pop 1
+        // _ outer_count omega size log_2_size m *x w_m k w j [x[k+j]] [x[k+j+m]]
+        // _ outer_count omega size log_2_size m *x w_m k w j [u] [v]
+
         dup 7
         xbmul
+        // _ outer_count omega size log_2_size m *x w_m k w j [x[k+j]] (v * w)
+        // _ outer_count omega size log_2_size m *x w_m k w j [u] [v']
+
         dup 5
         dup 5
         dup 5
@@ -263,31 +274,37 @@ impl BasicSnippet for XfeNtt {
         dup 5
         dup 5
         xxadd
-        push {_fn_arg_reference_to_LVec_RXField_LR_0}
-        read_mem 1
-        pop 1
+        // _ outer_count omega size log_2_size m *x w_m k w j [u] [v'] [u + v']
+
+        dup 13
         dup 12
         dup 11
         add
+        // _ outer_count omega size log_2_size m *x w_m k w j [u] [v'] [u + v'] *x (k + j)
+
         push 3
         mul
         push 1
         add
         add
+        // _ outer_count omega size log_2_size m *x w_m k w j [u] [v'] [u + v'] *x[k + j]
+
         write_mem 3
         pop 1
+        // _ outer_count omega size log_2_size m *x w_m k w j [u] [v']
+
         push -1
         xbmul
         xxadd
-        push {_fn_arg_reference_to_LVec_RXField_LR_0}
-        read_mem 1
-        pop 1
+        // _ outer_count omega size log_2_size m *x w_m k w j [u - v']
+
+        dup 7
         dup 6
         dup 5
         add
-        push {_1__Lu32R_u32_59}
-        read_mem 1
-        pop 1
+        // _ outer_count omega size log_2_size m *x w_m k w j [u - v'] *x (k + j)
+
+        dup 10
         add
         push 3
         mul
@@ -306,62 +323,106 @@ impl BasicSnippet for XfeNtt {
 
         // Last while-loop middle, k < size
         _binop_Lt__LboolR_bool_74_while_loop:
-        dup 0
-        dup 6
-        swap 1
+        // _ *x omega size log_2_size m outer_count w_m k
+
+        dup 5
+        dup 1
         lt
         push 0
         eq
         skiz
         return
+        // _ *x omega size log_2_size m outer_count w_m k
+
         push 1
         push 0
+
+        // _ *x omega size log_2_size m outer_count w_m k w j
+
+        swap 9
+        swap 4
+        swap 9
+        // _ outer_count omega size log_2_size m *x w_m k w j
+
         call _binop_Neq__LboolR_bool_79_while_loop
-        dup 2
+
+        // _ outer_count omega size log_2_size m *x w_m k w j
+
+        swap 9
+        swap 4
+        swap 9
+        // _ *x omega size log_2_size m outer_count w_m k w j
+
+        pop 2
+        // _ *x omega size log_2_size m outer_count w_m k
+
+        dup 3
+        // _ *x omega size log_2_size m outer_count w_m k m
+
         push 2
-        push {_1__Lu32R_u32_59}
-        read_mem 1
-        pop 1
         mul
+        // _ *x omega size log_2_size m outer_count w_m k (m * 2)
+
         add
-        swap 3
-        pop 3
+        // _ *x omega size log_2_size m outer_count w_m (k + (m * 2))
+
         recurse
 
         // Last while-loop outer
         _binop_Neq__LboolR_bool_63_while_loop:
+        // _ *x omega size log_2_size m outer_count
+
         dup 0
         dup 3
         eq
         skiz
         return
+        // _ *x omega size log_2_size m outer_count
+
         dup 4
+        // _ *x omega size log_2_size m outer_count omega
+
         dup 4
+        // _ *x omega size log_2_size m outer_count omega size
+
         push 2
-        push {_1__Lu32R_u32_59}
-        read_mem 1
-        pop 1
+        // _ *x omega size log_2_size m outer_count omega size 2
+
+        dup 4
         mul
+        // _ *x omega size log_2_size m outer_count omega size (2 * m)
+
         swap 1
         div_mod
         pop 1
+        // _ *x omega size log_2_size m outer_count omega (size / (2 * m))
+
         swap 1
         pow
+        // _ *x omega size log_2_size m outer_count (omega ** (size / (2 * m)))
+        // _ *x omega size log_2_size m outer_count w_m
+
         push 0
+        // _ *x omega size log_2_size m outer_count w_m k
+
         call _binop_Lt__LboolR_bool_74_while_loop
-        push {_1__Lu32R_u32_59}
-        read_mem 1
-        pop 1
+        // _ *x omega size log_2_size m outer_count w_m k
+
+        swap 3
+        // _ *x omega size log_2_size k outer_count w_m m
+
         push 2
         mul
-        push {_1__Lu32R_u32_59}
-        write_mem 1
-        pop 1
-        dup 2
-        push 1
-        add
+        // _ *x omega size log_2_size k outer_count w_m (m * 2)
+
         swap 3
-        pop 3
+        // _ *x omega size log_2_size (m * 2) outer_count w_m k
+
+        pop 2
+        // _ *x omega size log_2_size (m * 2) outer_count
+
+        push 1 add
+
         recurse
 
                 // Methods, entrypoints:
