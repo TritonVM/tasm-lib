@@ -40,7 +40,7 @@ pub mod algorithm;
 pub mod arithmetic;
 pub mod closure;
 pub mod compiled_program;
-mod data_type;
+pub mod data_type;
 pub mod exported_snippets;
 pub mod function;
 pub mod hashing;
