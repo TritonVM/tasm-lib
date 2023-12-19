@@ -45,7 +45,7 @@ impl All {
 
         let mut memory = HashMap::default();
         let input_type = self.f.domain();
-        let list_bookkeeping_offset = self.list_type.safety_offset();
+        let list_bookkeeping_offset = self.list_type.metadata_size();
         let element_index_in_list = list_bookkeeping_offset + list_length * input_type.stack_size();
         let element_index = list_pointer + BFieldElement::new(element_index_in_list as u64);
         memory.insert(BFieldElement::zero(), element_index);

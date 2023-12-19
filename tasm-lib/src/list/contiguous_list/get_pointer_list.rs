@@ -55,9 +55,9 @@ impl DeprecatedSnippet for GetPointerList {
 
         let data_type = DataType::VoidPointer;
         let get_list_length = library.import(Box::new(GetLength));
-        let new_list = library.import(self.output_list_type.new_list(data_type.clone()));
+        let new_list = library.import(self.output_list_type.new_list_snippet(data_type.clone()));
         let set_length = library.import(self.output_list_type.set_length(data_type.clone()));
-        let set_element = library.import(self.output_list_type.set(data_type));
+        let set_element = library.import(self.output_list_type.set_snippet(data_type));
 
         format!(
             "

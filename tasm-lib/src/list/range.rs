@@ -71,7 +71,7 @@ impl DeprecatedSnippet for Range {
 
     fn function_code(&self, library: &mut crate::library::Library) -> String {
         let data_type = DataType::U32;
-        let new_list = library.import(self.list_type.new_list(data_type.clone()));
+        let new_list = library.import(self.list_type.new_list_snippet(data_type.clone()));
         let set_length = library.import(self.list_type.set_length(data_type));
 
         let entrypoint = self.entrypoint_name();
@@ -117,7 +117,7 @@ impl DeprecatedSnippet for Range {
 
                 // address to write to
                 dup 2                   // _ minimum supremum *list (index - 1) (minimum + index - 1) *list
-                push {self.list_type.safety_offset()}
+                push {self.list_type.metadata_size()}
                 add                     // _ minimum supremum *list (index - 1) (minimum + index - 1) *list_start
                 dup 2 add               // _ minimum supremum *list (index - 1) (minimum + index - 1) *element
 
@@ -179,7 +179,7 @@ impl DeprecatedSnippet for Range {
         let minimum: u32 = stack.pop().unwrap().value().try_into().unwrap();
         let num_elements: usize = (supremum - minimum).try_into().unwrap();
 
-        let safety_offset = self.list_type.safety_offset();
+        let safety_offset = self.list_type.metadata_size();
         let length = num_elements;
         let capacity = num_elements;
         let memory_footprint = num_elements + safety_offset;

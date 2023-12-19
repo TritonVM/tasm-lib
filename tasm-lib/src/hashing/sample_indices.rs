@@ -48,9 +48,9 @@ impl BasicSnippet for SampleIndices {
         let then_reduce_and_save = format!("{entrypoint}_then_reduce_and_save");
         let else_drop_tip = format!("{entrypoint}_else_drop_tip");
 
-        let new_list = library.import(self.list_type.new_list(DataType::U32));
-        let length = library.import(self.list_type.length(DataType::U32));
-        let push_element = library.import(self.list_type.push(DataType::U32));
+        let new_list = library.import(self.list_type.new_list_snippet(DataType::U32));
+        let length = library.import(self.list_type.length_snippet(DataType::U32));
+        let push_element = library.import(self.list_type.push_snippet(DataType::U32));
 
         let if_can_sample = triton_asm! (
             // BEFORE: _ prn number upper_bound *indices

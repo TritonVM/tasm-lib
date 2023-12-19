@@ -208,7 +208,7 @@ impl DeprecatedSnippet for MmrVerifyFromMemory {
 
     fn function_code(&self, library: &mut Library) -> String {
         let leaf_index_to_mt_index = library.import(Box::new(MmrLeafIndexToMtIndexAndPeakIndex));
-        let get_list_element = library.import(self.list_type.get(DataType::Digest));
+        let get_list_element = library.import(self.list_type.get_snippet(DataType::Digest));
         let u32_is_odd = library.import(Box::new(Isodd));
         let entrypoint = self.entrypoint_name();
         let eq_u64 = library.import(Box::new(EqU64));

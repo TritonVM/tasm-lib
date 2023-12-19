@@ -31,50 +31,51 @@ pub enum ListType {
 }
 
 impl ListType {
-    /// the number of words this list type uses for bookkeeping
-    pub fn safety_offset(&self) -> usize {
+    /// Return the number of words this list type uses for bookkeeping
+    pub fn metadata_size(&self) -> usize {
         match self {
             ListType::Safe => 2,
             ListType::Unsafe => 1,
         }
     }
 
-    pub fn new_list(&self, data_type: DataType) -> Box<dyn BasicSnippet> {
+    /* Get snippets */
+    pub fn new_list_snippet(&self, data_type: DataType) -> Box<dyn BasicSnippet> {
         match self {
             ListType::Safe => Box::new(SafeNew { data_type }),
             ListType::Unsafe => Box::new(UnsafeNew { data_type }),
         }
     }
 
-    pub fn push(&self, data_type: DataType) -> Box<dyn BasicSnippet> {
+    pub fn push_snippet(&self, data_type: DataType) -> Box<dyn BasicSnippet> {
         match self {
             ListType::Safe => Box::new(SafePush { data_type }),
             ListType::Unsafe => Box::new(UnsafePush { data_type }),
         }
     }
 
-    pub fn pop(&self, data_type: DataType) -> Box<dyn BasicSnippet> {
+    pub fn pop_snippet(&self, data_type: DataType) -> Box<dyn BasicSnippet> {
         match self {
             ListType::Safe => Box::new(SafePop { data_type }),
             ListType::Unsafe => Box::new(UnsafePop { data_type }),
         }
     }
 
-    pub fn get(&self, data_type: DataType) -> Box<dyn BasicSnippet> {
+    pub fn get_snippet(&self, data_type: DataType) -> Box<dyn BasicSnippet> {
         match self {
             ListType::Safe => Box::new(SafeGet { data_type }),
             ListType::Unsafe => Box::new(UnsafeGet { data_type }),
         }
     }
 
-    pub fn set(&self, data_type: DataType) -> Box<dyn BasicSnippet> {
+    pub fn set_snippet(&self, data_type: DataType) -> Box<dyn BasicSnippet> {
         match self {
             ListType::Safe => Box::new(SafeSet { data_type }),
             ListType::Unsafe => Box::new(UnsafeSet { data_type }),
         }
     }
 
-    pub fn length(&self, data_type: DataType) -> Box<dyn BasicSnippet> {
+    pub fn length_snippet(&self, data_type: DataType) -> Box<dyn BasicSnippet> {
         match self {
             ListType::Safe => Box::new(SafeLength { data_type }),
             ListType::Unsafe => Box::new(UnsafeLength { data_type }),

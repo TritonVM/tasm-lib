@@ -63,8 +63,8 @@ impl BasicSnippet for VerifyAuthenticationPathForLeafAndIndexList {
         let entrypoint = self.entrypoint();
         let main_loop = format!("{entrypoint}_main_loop");
         let data_type = DataType::Tuple(vec![DataType::U32, DataType::Digest]);
-        let lai_length = library.import(self.list_type.length(data_type.clone()));
-        let lai_get = library.import(self.list_type.get(data_type.clone()));
+        let lai_length = library.import(self.list_type.length_snippet(data_type.clone()));
+        let lai_get = library.import(self.list_type.get_snippet(data_type.clone()));
         let merkle_verify = library.import(Box::new(MerkleVerify));
         triton_asm! {
             // BEFORE: _ leaf_and_index_list root4 root3 root2 root1 root0 height

@@ -362,7 +362,7 @@ impl Function for Filter {
             type size: {input_type_size}, \
             address: {list_pointer}"
         );
-        let safety_offset = self.list_type.safety_offset();
+        let safety_offset = self.list_type.metadata_size();
         let last_element_index = safety_offset + list_length * input_type_size;
         let last_element_index = list_pointer + BFieldElement::new(last_element_index as u64);
 
