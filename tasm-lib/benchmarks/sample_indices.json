@@ -1,0 +1,16 @@
+[
+  {
+    "name": "sample_indices",
+    "clock_cycle_count": 2780,
+    "hash_table_height": 324,
+    "u32_table_height": 2931,
+    "case": "CommonCase"
+  },
+  {
+    "name": "sample_indices",
+    "clock_cycle_count": 9239,
+    "hash_table_height": 390,
+    "u32_table_height": 10396,
+    "case": "WorstCase"
+  }
+]

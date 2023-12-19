@@ -1,0 +1,16 @@
+[
+  {
+    "name": "tasm_hashing_merkle_root",
+    "clock_cycle_count": 4444,
+    "hash_table_height": 294,
+    "u32_table_height": 195,
+    "case": "CommonCase"
+  },
+  {
+    "name": "tasm_hashing_merkle_root",
+    "clock_cycle_count": 18076,
+    "hash_table_height": 870,
+    "u32_table_height": 950,
+    "case": "WorstCase"
+  }
+]

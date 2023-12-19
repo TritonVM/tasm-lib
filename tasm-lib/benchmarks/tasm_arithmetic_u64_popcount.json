@@ -1,15 +1,15 @@
 [
   {
     "name": "tasm_arithmetic_u64_popcount",
-    "clock_cycle_count": 6,
-    "hash_table_height": 0,
+    "clock_cycle_count": 7,
+    "hash_table_height": 6,
     "u32_table_height": 31,
     "case": "CommonCase"
   },
   {
     "name": "tasm_arithmetic_u64_popcount",
-    "clock_cycle_count": 6,
-    "hash_table_height": 0,
+    "clock_cycle_count": 7,
+    "hash_table_height": 6,
     "u32_table_height": 31,
     "case": "WorstCase"
   }

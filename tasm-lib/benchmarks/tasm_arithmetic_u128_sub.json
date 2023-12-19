@@ -1,15 +1,15 @@
 [
   {
     "name": "tasm_arithmetic_u128_sub",
-    "clock_cycle_count": 52,
-    "hash_table_height": 0,
+    "clock_cycle_count": 53,
+    "hash_table_height": 54,
     "u32_table_height": 34,
     "case": "CommonCase"
   },
   {
     "name": "tasm_arithmetic_u128_sub",
-    "clock_cycle_count": 52,
-    "hash_table_height": 0,
+    "clock_cycle_count": 53,
+    "hash_table_height": 54,
     "u32_table_height": 67,
     "case": "WorstCase"
   }

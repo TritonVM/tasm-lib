@@ -1,15 +1,15 @@
 [
   {
     "name": "tasm_recufier_proof_stream_sample_scalars",
-    "clock_cycle_count": 734,
-    "hash_table_height": 0,
+    "clock_cycle_count": 213,
+    "hash_table_height": 150,
     "u32_table_height": 29,
     "case": "CommonCase"
   },
   {
     "name": "tasm_recufier_proof_stream_sample_scalars",
-    "clock_cycle_count": 307,
-    "hash_table_height": 0,
+    "clock_cycle_count": 122,
+    "hash_table_height": 108,
     "u32_table_height": 26,
     "case": "WorstCase"
   }

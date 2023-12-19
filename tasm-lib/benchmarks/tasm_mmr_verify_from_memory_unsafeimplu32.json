@@ -1,15 +1,15 @@
 [
   {
     "name": "tasm_mmr_verify_from_memory_unsafeimplu32",
-    "clock_cycle_count": 2906,
-    "hash_table_height": 186,
+    "clock_cycle_count": 2136,
+    "hash_table_height": 438,
     "u32_table_height": 837,
     "case": "CommonCase"
   },
   {
     "name": "tasm_mmr_verify_from_memory_unsafeimplu32",
-    "clock_cycle_count": 5610,
-    "hash_table_height": 372,
+    "clock_cycle_count": 4096,
+    "hash_table_height": 624,
     "u32_table_height": 962,
     "case": "WorstCase"
   }

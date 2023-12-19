@@ -1,15 +1,15 @@
 [
   {
     "name": "tasm_list_safeimplu32_pop___digest",
-    "clock_cycle_count": 39,
-    "hash_table_height": 0,
+    "clock_cycle_count": 26,
+    "hash_table_height": 30,
     "u32_table_height": 0,
     "case": "CommonCase"
   },
   {
     "name": "tasm_list_safeimplu32_pop___digest",
-    "clock_cycle_count": 39,
-    "hash_table_height": 0,
+    "clock_cycle_count": 26,
+    "hash_table_height": 30,
     "u32_table_height": 0,
     "case": "WorstCase"
   }

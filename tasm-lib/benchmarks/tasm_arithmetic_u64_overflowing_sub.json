@@ -1,15 +1,15 @@
 [
   {
     "name": "tasm_arithmetic_u64_overflowing_sub",
-    "clock_cycle_count": 28,
-    "hash_table_height": 0,
+    "clock_cycle_count": 30,
+    "hash_table_height": 30,
     "u32_table_height": 4,
     "case": "CommonCase"
   },
   {
     "name": "tasm_arithmetic_u64_overflowing_sub",
-    "clock_cycle_count": 28,
-    "hash_table_height": 0,
+    "clock_cycle_count": 30,
+    "hash_table_height": 30,
     "u32_table_height": 34,
     "case": "WorstCase"
   }

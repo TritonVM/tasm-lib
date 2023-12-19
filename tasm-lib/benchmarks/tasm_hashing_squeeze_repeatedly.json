@@ -1,15 +1,15 @@
 [
   {
     "name": "tasm_hashing_squeeze_repeatedly",
-    "clock_cycle_count": 135,
-    "hash_table_height": 85,
+    "clock_cycle_count": 137,
+    "hash_table_height": 78,
     "u32_table_height": 0,
     "case": "CommonCase"
   },
   {
     "name": "tasm_hashing_squeeze_repeatedly",
-    "clock_cycle_count": 2605,
-    "hash_table_height": 1225,
+    "clock_cycle_count": 2607,
+    "hash_table_height": 1218,
     "u32_table_height": 0,
     "case": "WorstCase"
   }

@@ -1,15 +1,15 @@
 [
   {
     "name": "tasm_list_safeimplu32_range",
-    "clock_cycle_count": 933,
-    "hash_table_height": 0,
+    "clock_cycle_count": 927,
+    "hash_table_height": 90,
     "u32_table_height": 28,
     "case": "CommonCase"
   },
   {
     "name": "tasm_list_safeimplu32_range",
-    "clock_cycle_count": 4828,
-    "hash_table_height": 0,
+    "clock_cycle_count": 4822,
+    "hash_table_height": 90,
     "u32_table_height": 36,
     "case": "WorstCase"
   }

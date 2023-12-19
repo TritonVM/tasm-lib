@@ -1,15 +1,15 @@
 [
   {
     "name": "tasm_recufier_get_colinearity_check_x",
-    "clock_cycle_count": 43,
-    "hash_table_height": 0,
+    "clock_cycle_count": 29,
+    "hash_table_height": 36,
     "u32_table_height": 38,
     "case": "CommonCase"
   },
   {
     "name": "tasm_recufier_get_colinearity_check_x",
-    "clock_cycle_count": 43,
-    "hash_table_height": 0,
+    "clock_cycle_count": 29,
+    "hash_table_height": 36,
     "u32_table_height": 54,
     "case": "WorstCase"
   }

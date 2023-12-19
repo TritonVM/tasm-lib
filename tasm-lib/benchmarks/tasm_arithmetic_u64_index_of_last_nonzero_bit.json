@@ -1,15 +1,15 @@
 [
   {
     "name": "tasm_arithmetic_u64_index_of_last_nonzero_bit",
-    "clock_cycle_count": 37,
-    "hash_table_height": 0,
+    "clock_cycle_count": 38,
+    "hash_table_height": 60,
     "u32_table_height": 132,
     "case": "CommonCase"
   },
   {
     "name": "tasm_arithmetic_u64_index_of_last_nonzero_bit",
-    "clock_cycle_count": 54,
-    "hash_table_height": 0,
+    "clock_cycle_count": 55,
+    "hash_table_height": 60,
     "u32_table_height": 132,
     "case": "WorstCase"
   }
