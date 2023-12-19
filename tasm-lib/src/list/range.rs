@@ -233,7 +233,7 @@ mod tests {
         execute_with_execution_state_deprecated,
         test_helpers::test_rust_equivalence_multiple_deprecated,
     };
-    use triton_vm::error::InstructionError;
+    use triton_vm::error::{InstructionError, VMError};
 
     use super::*;
 
@@ -258,8 +258,8 @@ mod tests {
         let execution_result =
             execute_with_execution_state_deprecated(snippet, init_state, stack_diff);
         let err = execution_result.unwrap_err();
-        let err = err.downcast::<InstructionError>().unwrap();
-        assert_eq!(InstructionError::AssertionFailed, err);
+        let err = err.downcast::<VMError>().unwrap();
+        assert_eq!(InstructionError::AssertionFailed, err.source);
     }
 
     #[test]
@@ -271,8 +271,8 @@ mod tests {
         let execution_result =
             execute_with_execution_state_deprecated(snippet, init_state, stack_diff);
         let err = execution_result.unwrap_err();
-        let err = err.downcast::<InstructionError>().unwrap();
-        assert_eq!(InstructionError::AssertionFailed, err);
+        let err = err.downcast::<VMError>().unwrap();
+        assert_eq!(InstructionError::AssertionFailed, err.source);
     }
 }
 
