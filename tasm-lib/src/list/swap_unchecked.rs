@@ -47,8 +47,8 @@ impl BasicSnippet for SwapUnchecked {
         let metadata_size = self.list_type.metadata_size();
         let element_size = self.element_type.stack_size();
         assert!(
-            element_size * 2 + 1 < NUM_OP_STACK_REGISTERS,
-            "This implementation can only handle swap up to element size 7"
+            element_size + 2 < NUM_OP_STACK_REGISTERS,
+            "This implementation can only handle swap up to element size 13"
         );
 
         let mul_with_size = if element_size == 1 {
@@ -100,46 +100,43 @@ impl BasicSnippet for SwapUnchecked {
                     add
                     // _ *list a *list[b]_last_word
 
-                    swap 2
-                    swap 1
-                    // _ *list[b]_last_word *list a
+                    {&self.element_type.read_value_from_memory()}
+                    // _ *list a [list[b]] (*list[b] - 1)
+
+                    push 1
+                    add
+                    // _ *list a [list[b]] *list[b]
+
+                    dup {element_size + 2}
+                    dup {element_size + 2}
+                    // _ *list a [list[b]] *list[b] *list a
 
                     {&get_offset_for_last_word_in_element}
-                    // _ *list[b]_last_word *list a_offset_last_word
+                    // _ *list a [list[b]] *list[b] *list a_offset_last_word
 
                     add
-                    // _ *list[b]_last_word *list[a]_last_word
+                    // _ *list a [list[b]] *list[b] *list[a]_last_word
 
                     {&self.element_type.read_value_from_memory()}
-                    // _ *list[b]_last_word [list[a]] (*list[a] - 1)
-
-                    swap {element_size + 1}
-                    // _ (*list[a] - 1) [list[a]] *list[b]_last_word
-
-                    {&self.element_type.read_value_from_memory()}
-                    // _ (*list[a] - 1) [list[a]] [list[b]] (*list[b] - 1)
-
-                    swap {element_size * 2 + 1}
-                    // _ (*list[b] - 1) [list[a]] [list[b]] (*list[a] - 1)
+                    // _ *list a [list[b]] *list[b] [list[a]] (*list[a] - 1)
 
                     push 1
                     add
-                    // _ (*list[b] - 1) [list[a]] [list[b]] *list[a]
-
-                    {&self.element_type.write_value_to_memory()}
-                    // _ (*list[b] - 1) [list[a]] *list[a+1]
+                    // _ *list a [list[b]] *list[b] [list[a]] *list[a]
 
                     swap {element_size + 1}
-                    // _ *list[a+1] [list[a]] (*list[b] - 1)
-
-                    push 1
-                    add
-                    // _ *list[a+1] [list[a]] *list[b]
+                    // _ *list a [list[b]] *list[a] [list[a]] *list[b]
 
                     {&self.element_type.write_value_to_memory()}
-                    // _ *list[a+1] *list[b+1]
+                    // _ *list a [list[b]] *list[a] *list[b+1]
 
-                    pop 2
+                    pop 1
+                    // _ *list a [list[b]] *list[a]
+
+                    {&self.element_type.write_value_to_memory()}
+                    // _ *list a (*list[a+1])
+
+                    pop 3
 
                     return
         )
@@ -222,14 +219,17 @@ mod test {
             DataType::Digest,
             DataType::Tuple(vec![DataType::Xfe, DataType::Xfe]),
             DataType::Tuple(vec![DataType::Digest, DataType::U64]),
-            DataType::Tuple(vec![DataType::U64, DataType::Digest]),
-            DataType::Tuple(vec![DataType::U64, DataType::U64, DataType::U32]),
+            DataType::Tuple(vec![DataType::Xfe, DataType::Digest]),
+            DataType::Tuple(vec![DataType::Xfe, DataType::Xfe, DataType::Xfe]),
+            DataType::Tuple(vec![DataType::Digest, DataType::Digest]),
+            DataType::Tuple(vec![DataType::Xfe, DataType::Xfe, DataType::Digest]),
             DataType::Tuple(vec![
-                DataType::U64,
-                DataType::U64,
-                DataType::U32,
-                DataType::U64,
+                DataType::Xfe,
+                DataType::Xfe,
+                DataType::Xfe,
+                DataType::Xfe,
             ]),
+            DataType::Tuple(vec![DataType::Digest, DataType::Digest, DataType::Xfe]),
         ] {
             ShadowedAlgorithm::new(SwapUnchecked {
                 list_type: ListType::Unsafe,
