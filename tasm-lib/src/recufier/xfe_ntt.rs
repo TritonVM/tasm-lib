@@ -213,7 +213,7 @@ impl BasicSnippet for XfeNtt {
         add
         recurse
 
-        // Last while-loop inner, `j != m`
+        // Last while-loop, *inner*, `j != m` <-- The busy-loop!
         _binop_Neq__LboolR_bool_79_while_loop:
         dup 0
         push {_1__Lu32R_u32_59}
@@ -234,35 +234,28 @@ impl BasicSnippet for XfeNtt {
         add
         add
         read_mem 3
-        pop 1
-        push {_fn_arg_reference_to_LVec_RXField_LR_0}
-        read_mem 1
-        pop 1
-        dup 6
-        dup 5
-        add
+        // _ x[k + j] (*x[k + j] - 1)
+
         push {_1__Lu32R_u32_59}
         read_mem 1
         pop 1
-        add
+        // _ x[k + j] (*x[k + j] - 1) m
+
         push 3
         mul
+        // _ x[k + j] (*x[k + j] - 1) 3* m
+
         push 3
         add
         add
+        // _ x[k + j] (*x[k + j + m + 1] - 1)
+
         read_mem 3
+        // _ x[k + j] x[k + j + m] (*x[k + j + m] - 1)
+
         pop 1
-        dup 2
-        dup 2
-        dup 2
-        dup 10
+        dup 7
         xbmul
-        swap 3
-        pop 1
-        swap 3
-        pop 1
-        swap 3
-        pop 1
         dup 5
         dup 5
         dup 5
@@ -303,16 +296,12 @@ impl BasicSnippet for XfeNtt {
         add
         write_mem 3
         pop 1
-        dup 1
-        dup 4
+        swap 1
+        dup 3
         mul
-        swap 2
-        pop 1
-        dup 0
+        swap 1
         push 1
         add
-        swap 1
-        pop 1
         recurse
 
         // Last while-loop middle, k < size
