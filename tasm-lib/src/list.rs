@@ -1,4 +1,7 @@
+use std::collections::HashMap;
 use std::fmt::Display;
+
+use triton_vm::BFieldElement;
 
 use crate::data_type::DataType;
 use crate::list::safeimplu32::get::SafeGet;
@@ -15,6 +18,7 @@ use crate::list::unsafeimplu32::pop::UnsafePop;
 use crate::list::unsafeimplu32::push::UnsafePush;
 use crate::list::unsafeimplu32::set::UnsafeSet;
 use crate::list::unsafeimplu32::set_length::UnsafeSetLength;
+use crate::rust_shadowing_helper_functions;
 use crate::snippet::BasicSnippet;
 
 pub mod contiguous_list;
@@ -22,6 +26,7 @@ pub mod higher_order;
 pub mod multiset_equality;
 pub mod range;
 pub mod safeimplu32;
+pub mod swap_unchecked;
 pub mod unsafeimplu32;
 
 #[derive(Clone, Debug)]
