@@ -1,8 +1,7 @@
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 
 use rand::{rngs::StdRng, thread_rng, Rng, SeedableRng};
 use triton_vm::{BFieldElement, NonDeterminism};
-use twenty_first::util_types::algebraic_hasher::Domain;
 
 use crate::{
     linker::{execute_bench, link_for_isolated_run},
@@ -51,7 +50,7 @@ impl<C: Closure + 'static> RustShadow for ShadowedClosure<C> {
         _nondeterminism: &triton_vm::NonDeterminism<BFieldElement>,
         stack: &mut Vec<BFieldElement>,
         _memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
-        _sponge_state: &mut VmHasherState,
+        _sponge_state: &mut Option<VmHasherState>,
     ) -> Vec<BFieldElement> {
         self.closure.borrow().rust_shadow(stack);
         vec![]
@@ -71,16 +70,13 @@ impl<C: Closure + 'static> RustShadow for ShadowedClosure<C> {
             let stack = self.closure.borrow().pseudorandom_initial_state(seed, None);
 
             let stdin = vec![];
-            let nondeterminism = NonDeterminism::new(vec![]);
-            let memory = HashMap::new();
             test_rust_equivalence_given_complete_state(
                 self,
                 &stack,
                 &stdin,
-                &nondeterminism,
-                &memory,
-                &VmHasherState::new(Domain::VariableLength),
-                1,
+                &NonDeterminism::default(),
+                &None,
+                0,
                 None,
             );
         }
@@ -101,14 +97,8 @@ impl<C: Closure + 'static> RustShadow for ShadowedClosure<C> {
                 .borrow()
                 .pseudorandom_initial_state(rng.gen(), Some(bench_case));
             let program = link_for_isolated_run(self.closure.clone(), 1);
-            let execution_result = execute_bench(
-                &program,
-                &stack,
-                vec![],
-                NonDeterminism::new(vec![]),
-                &HashMap::new(),
-                Some(1),
-            );
+            let execution_result =
+                execute_bench(&program, &stack, vec![], NonDeterminism::new(vec![]), None);
             let benchmark = BenchmarkResult {
                 name: self.closure.borrow().entrypoint(),
                 clock_cycle_count: execution_result.cycle_count,

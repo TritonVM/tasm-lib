@@ -2,7 +2,8 @@ use std::collections::HashMap;
 
 use triton_vm::instruction::AnInstruction;
 use triton_vm::instruction::LabelledInstruction;
-use triton_vm::op_stack::OpStack;
+
+use crate::data_type::DataType;
 use triton_vm::triton_asm;
 use triton_vm::vm::VMState;
 use triton_vm::BFieldElement;
@@ -12,7 +13,7 @@ use triton_vm::PublicInput;
 
 use crate::library::Library;
 use crate::snippet::BasicSnippet;
-use crate::snippet::{DataType, DeprecatedSnippet};
+use crate::snippet::DeprecatedSnippet;
 
 /// A data structure for describing an inner function predicate to filter with,
 /// or to map with.
@@ -127,9 +128,7 @@ impl InnerFunction {
         stack: &mut Vec<BFieldElement>,
         memory: &HashMap<BFieldElement, BFieldElement>,
     ) {
-        let label = if let Some(LabelledInstruction::Label(label)) = instructions.first() {
-            label
-        } else {
+        let Some(LabelledInstruction::Label(label)) = instructions.first() else {
             panic!();
         };
         let instructions = triton_asm!(
@@ -138,17 +137,11 @@ impl InnerFunction {
             {&instructions}
         );
         let program = Program::new(&instructions);
-        let public_input = PublicInput::new(vec![]);
-        let nondeterminism = NonDeterminism::<BFieldElement>::new(vec![]);
-        let mut vmstate = VMState::new(&program, public_input.clone(), nondeterminism.clone());
-        vmstate.op_stack = OpStack {
-            stack: stack.clone(),
-        };
+        let mut vmstate = VMState::new(&program, PublicInput::default(), NonDeterminism::default());
+        vmstate.op_stack.stack = stack.clone();
         vmstate.ram = memory.clone();
-        let terminal_state = program
-            .debug_terminal_state(public_input, nondeterminism, Some(vmstate), None)
-            .expect("VM run during application of inner function did not terminate successfully.");
-        *stack = terminal_state.op_stack.stack;
+        vmstate.run().unwrap();
+        *stack = vmstate.op_stack.stack;
     }
 
     /// Computes the inner function and applies the resulting change to the given stack

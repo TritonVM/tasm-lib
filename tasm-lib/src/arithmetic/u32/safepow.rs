@@ -1,26 +1,22 @@
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use triton_vm::{triton_asm, BFieldElement};
 
-use crate::{
-    closure::Closure,
-    empty_stack,
-    snippet::{BasicSnippet, DataType},
-    snippet_bencher::BenchmarkCase,
-};
+use crate::data_type::DataType;
+use crate::{closure::Closure, empty_stack, snippet::BasicSnippet, snippet_bencher::BenchmarkCase};
 
 /// A u32 `pow` that behaves like Rustc's `pow` method on `u32`, crashing in case of overflow.
 #[derive(Clone)]
 pub struct Safepow;
 
 impl BasicSnippet for Safepow {
-    fn inputs(&self) -> Vec<(crate::snippet::DataType, String)> {
+    fn inputs(&self) -> Vec<(crate::data_type::DataType, String)> {
         vec![
             (DataType::U32, "base".to_owned()),
             (DataType::U32, "exponent".to_owned()),
         ]
     }
 
-    fn outputs(&self) -> Vec<(crate::snippet::DataType, String)> {
+    fn outputs(&self) -> Vec<(crate::data_type::DataType, String)> {
         vec![(DataType::U32, "result".to_owned())]
     }
 
@@ -76,9 +72,7 @@ impl BasicSnippet for Safepow {
                 // _ [bpow2_u64] 0 acc
 
                 swap 3
-                pop
-                pop
-                pop
+                pop 3
                 return
 
             // INVARIANT: _ [bpow2_u64] i acc
@@ -116,7 +110,7 @@ impl BasicSnippet for Safepow {
                 swap 1
                 // _ 0 bpow2_next_lo i acc bpow2_next_hi
 
-                swap 4 pop
+                swap 4 pop 1
                 // _ bpow2_next_hi bpow2_next_lo i acc
 
                 // _ [bpow2_next_u64] i acc
@@ -130,7 +124,7 @@ impl BasicSnippet for Safepow {
                 div_mod
                 // _ [bpow2_u64] i acc (i >> 2) (i % 2)
 
-                pop swap 2 pop
+                pop 1 swap 2 pop 1
                 // _ [bpow2_u64] (i >> 2) acc
 
 
@@ -193,15 +187,14 @@ mod tests {
     use std::cell::RefCell;
     use std::collections::HashMap;
     use std::rc::Rc;
-    use triton_vm::NonDeterminism;
-    use twenty_first::util_types::algebraic_hasher::Domain;
+    use triton_vm::{NonDeterminism, Program};
 
     use super::*;
     use crate::closure::ShadowedClosure;
+    use crate::execute_with_terminal_state;
     use crate::linker::link_for_isolated_run;
     use crate::snippet::RustShadow;
     use crate::test_helpers::test_rust_equivalence_given_complete_state;
-    use crate::{execute_with_terminal_state, prepend_state_preparation, VmHasherState};
 
     #[test]
     fn u32_pow_pbt() {
@@ -258,9 +251,8 @@ mod tests {
                 &closure,
                 &init_stack,
                 &[],
-                &NonDeterminism::new(vec![]),
-                &HashMap::default(),
-                &VmHasherState::new(Domain::VariableLength),
+                &NonDeterminism::default(),
+                &None,
                 1,
                 Some(&expected_final_stack),
             );
@@ -321,14 +313,19 @@ mod tests {
                     &NonDeterminism::new(vec![]),
                     &mut rust_stack,
                     &mut HashMap::default(),
-                    &mut VmHasherState::new(Domain::VariableLength),
+                    &mut None,
                 )
             });
 
             // Run on Triton
-            let program = prepend_state_preparation(&code, &init_stack);
-            let tvm_result =
-                execute_with_terminal_state(&program, &[], &mut NonDeterminism::new(vec![]), None);
+            let program = Program::new(&code);
+            let tvm_result = execute_with_terminal_state(
+                &program,
+                &[],
+                &init_stack,
+                &NonDeterminism::new(vec![]),
+                None,
+            );
 
             assert!(
                 rust_result.is_err() && tvm_result.is_err(),

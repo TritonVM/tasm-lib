@@ -3,13 +3,15 @@ use std::collections::HashMap;
 use itertools::Itertools;
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
+use triton_vm::instruction::LabelledInstruction;
 use triton_vm::{triton_asm, NonDeterminism};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
 use crate::algorithm::Algorithm;
+use crate::data_type::DataType;
 use crate::library::Library;
-use crate::snippet::{BasicSnippet, DataType};
+use crate::snippet::BasicSnippet;
 use crate::snippet_bencher::BenchmarkCase;
 use crate::{empty_stack, Digest, VmHasher};
 
@@ -33,11 +35,7 @@ use crate::{empty_stack, Digest, VmHasher};
 pub struct MerkleVerify;
 
 impl BasicSnippet for MerkleVerify {
-    fn entrypoint(&self) -> String {
-        "tasm_recufier_merkle_verify".to_string()
-    }
-
-    fn inputs(&self) -> Vec<(crate::snippet::DataType, String)> {
+    fn inputs(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::Digest, "root".to_string()),
             (DataType::U32, "leaf_index".to_string()),
@@ -46,52 +44,41 @@ impl BasicSnippet for MerkleVerify {
         ]
     }
 
-    fn outputs(&self) -> Vec<(crate::snippet::DataType, String)> {
+    fn outputs(&self) -> Vec<(DataType, String)> {
         vec![]
     }
 
-    fn code(&self, _library: &mut Library) -> Vec<triton_vm::instruction::LabelledInstruction> {
+    fn entrypoint(&self) -> String {
+        "tasm_recufier_merkle_verify".to_string()
+    }
+
+    fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
         let traverse_tree = format!("{entrypoint}_traverse_tree");
-        let assert_tree_top = format!("{entrypoint}_assert_tree_top");
         triton_asm!(
-            // BEFORE: _ r4 r3 r2 r1 r0 leaf_index l4 l3 l2 l1 l0 tree_height
-            // AFTER: _
+            // BEFORE: _ [root; 5] leaf_index [leaf; 5] tree_height
+            // AFTER:  _
             {entrypoint}:
                 // calculate node index from tree height and leaf index:
-                push 2 pow                               // stack: [* r4 r3 r2 r1 r0 leaf_index l4 l3 l2 l1 l0 2^tree_height]
-                dup 6 add                                // stack: [* r4 r3 r2 r1 r0 leaf_index l4 l3 l2 l1 l0 (2^tree_height + leaf_index)]
-                swap 6 pop                               // stack: [* r4 r3 r2 r1 r0 node_index l4 l3 l2 l1 l0]
-
-                // walt up tree, to the root
-                push 0 push 0 push 0 push 0 push 0       // stack: [* r4 r3 r2 r1 f0 node_index l4 l3 l2 l1 l0 0 0 0 0 0]
-                call {traverse_tree}                     //
-                                                         // stack: [* r4 r3 r2 r1 r0 idx>>1 - - - - - - - - - -]
-                call {assert_tree_top}                   //
-                                                         // stack: [* r4 r3 r2 r1 r0]
-                pop pop pop pop pop                      // _
+                push 2 pow              // _ [root; 5] leaf_index [leaf; 5] num_leaves
+                dup 0 dup 7 lt          // _ [root; 5] leaf_index [leaf; 5] num_leaves (leaf_index < num_leaves)
+                assert                  // _ [root; 5] leaf_index [leaf; 5] num_leaves
+                dup 6 add               // _ [root; 5] leaf_index [leaf; 5] node_index
+                swap 6 pop 1            // _ [root; 5] node_index [leaf; 5]
+                call {traverse_tree}    // _ [root; 5] 1 [root'; 5]
+                swap 1 swap 2 swap 3
+                swap 4 swap 5           // _ [root; 5] [root'; 5] 1
+                pop 1                   // _ [root; 5] [root'; 5]
+                assert_vector           // _ [root; 5]
+                pop 5                   // _
                 return
 
-            // subroutine: go up tree
-            // stack before: [* node_index - - - - - - - - - -]
-            // stack after: [* node_index>>1 - - - - - - - - - -]
-            {traverse_tree}:                             // start function description:
-                dup 10 push 1 eq skiz return             // break loop if node leaf_index is 1
-                divine_sibling hash recurse              // move up one level in the Merkle tree
-
-            // subroutine: compare digests
-            // stack before: [* r4 r3 r2 r1 r0 idx a b c d e - - - - -]
-            // stack after: [* r4 r3 r2 r1 r0]
-            {assert_tree_top}:                           // start function description:
-                pop pop pop pop pop                      // remove unnecessary “0”s from hashing
-                                                         // stack: [* r4 r3 r2 r1 r0 idx a b c d e]
-                swap 1 swap 2 swap 3 swap 4 swap 5
-                                                         // stack: [* r4 r3 r2 r1 r0 a b c d e idx]
-                assert                                   // idx=1 for iff current node is root
-                                                         // stack: [* r4 r3 r2 r1 r0 a b c d e]
-                assert_vector                            // actually compare to root of tree
-                pop pop pop pop pop                      // clean up stack, leave only one root
-                return
+            // BEFORE:    _ node_index [leaf; 5]
+            // INVARIANT: _ (node_index >> i) [some_digest; 5]
+            // AFTER:     _ 1 [root'; 5]
+            {traverse_tree}:
+                dup 5 push 1 eq skiz return         // break loop if node_index is 1
+                divine_sibling hash recurse         // move up one level in the Merkle tree
         )
     }
 }
@@ -103,39 +90,34 @@ impl Algorithm for MerkleVerify {
         _memory: &mut HashMap<BFieldElement, BFieldElement>,
         nondeterminism: &NonDeterminism<BFieldElement>,
     ) {
-        // read inputs:
-        //
-        //  - root : Digest
-        //  - leaf index: u32
-        //  - leaf : Digest
-        //  - tree height: u32
-        let tree_height: u32 = stack.pop().unwrap().value().try_into().unwrap();
-        let leaf = Digest::new([
-            stack.pop().unwrap(),
-            stack.pop().unwrap(),
-            stack.pop().unwrap(),
-            stack.pop().unwrap(),
-            stack.pop().unwrap(),
-        ]);
-        let leaf_index: u32 = stack.pop().unwrap().value().try_into().unwrap();
-        let root = Digest::new([
-            stack.pop().unwrap(),
-            stack.pop().unwrap(),
-            stack.pop().unwrap(),
-            stack.pop().unwrap(),
-            stack.pop().unwrap(),
-        ]);
+        let pop_digest_from = |stack: &mut Vec<BFieldElement>| {
+            Digest::new([
+                stack.pop().unwrap(),
+                stack.pop().unwrap(),
+                stack.pop().unwrap(),
+                stack.pop().unwrap(),
+                stack.pop().unwrap(),
+            ])
+        };
+
+        let tree_height: u32 = stack.pop().unwrap().try_into().unwrap();
+        let leaf = pop_digest_from(stack);
+        let leaf_index: u32 = stack.pop().unwrap().try_into().unwrap();
+        let root = pop_digest_from(stack);
+
+        let num_leaves = 1 << tree_height;
+        assert!(leaf_index < num_leaves);
 
         let mut node_digest = leaf;
         let mut sibling_height = 0;
-        let mut node_index = leaf_index + (1 << tree_height);
+        let mut node_index = leaf_index + num_leaves;
         while node_index != 1 {
             let sibling = nondeterminism.digests[sibling_height];
-            if node_index & 1 == 0 {
-                node_digest = VmHasher::hash_pair(node_digest, sibling);
-            } else {
-                node_digest = VmHasher::hash_pair(sibling, node_digest);
-            }
+            let node_is_left_sibling = node_index % 2 == 0;
+            node_digest = match node_is_left_sibling {
+                true => VmHasher::hash_pair(node_digest, sibling),
+                false => VmHasher::hash_pair(sibling, node_digest),
+            };
             sibling_height += 1;
             node_index /= 2;
         }
@@ -146,83 +128,66 @@ impl Algorithm for MerkleVerify {
         &self,
         seed: [u8; 32],
         maybe_bench_case: Option<BenchmarkCase>,
-    ) -> (
-        Vec<BFieldElement>,
-        HashMap<BFieldElement, BFieldElement>,
-        NonDeterminism<BFieldElement>,
-    ) {
+    ) -> (Vec<BFieldElement>, NonDeterminism<BFieldElement>) {
         {
             let mut rng: StdRng = SeedableRng::from_seed(seed);
-            let tree_height = if let Some(bench_case) = maybe_bench_case {
-                match bench_case {
-                    BenchmarkCase::CommonCase => 6,
-                    BenchmarkCase::WorstCase => 20,
-                }
-            } else {
-                rng.gen_range(0..20)
+            let tree_height = match maybe_bench_case {
+                Some(BenchmarkCase::CommonCase) => 6,
+                Some(BenchmarkCase::WorstCase) => 20,
+                None => rng.gen_range(0..20),
             };
 
             // sample unconstrained inputs directly
-            let leaf_index = rng.gen_range(0..(1 << tree_height));
+            let num_leaves = 1 << tree_height;
+            let leaf_index = rng.gen_range(0..num_leaves);
             let path: Vec<Digest> = (0..tree_height).map(|_| rng.gen()).collect_vec();
             let leaf: Digest = rng.gen();
 
             // walk up tree to calculate root
             let mut node_digest = leaf;
-            let mut node_index = leaf_index + (1 << tree_height);
-            let mut sibling_height = 0;
-            while node_index != 1 {
-                let sibling = path[sibling_height];
-                if node_index & 1 == 0 {
-                    // Node is a left child
-                    node_digest = VmHasher::hash_pair(node_digest, sibling);
-                } else {
-                    // Node is a right child
-                    node_digest = VmHasher::hash_pair(sibling, node_digest);
-                }
-                sibling_height += 1;
+            let mut node_index = leaf_index + num_leaves;
+            for &sibling in path.iter() {
+                let node_is_left_sibling = node_index % 2 == 0;
+                node_digest = match node_is_left_sibling {
+                    true => VmHasher::hash_pair(node_digest, sibling),
+                    false => VmHasher::hash_pair(sibling, node_digest),
+                };
                 node_index /= 2;
             }
             let root = node_digest;
 
             // prepare stack
             let mut stack = empty_stack();
-            for r in root.0.into_iter().rev() {
+            for r in root.reversed().values().into_iter() {
                 stack.push(r);
             }
-            stack.push(BFieldElement::new(leaf_index as u64));
-            for l in leaf.0.into_iter().rev() {
+            stack.push(BFieldElement::new(leaf_index));
+            for l in leaf.reversed().values().into_iter() {
                 stack.push(l);
             }
+            stack.push(BFieldElement::new(tree_height));
 
-            stack.push(BFieldElement::new(tree_height as u64));
-
-            // prepare non-determinism
-            let nondeterminism = NonDeterminism::new(vec![]).with_digests(path);
-
-            // prepare memory
-            let memory = HashMap::<BFieldElement, BFieldElement>::new();
-
-            (stack, memory, nondeterminism)
+            let nondeterminism = NonDeterminism::default().with_digests(path);
+            (stack, nondeterminism)
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::cell::RefCell;
     use std::rc::Rc;
 
     use rand::thread_rng;
-    use twenty_first::util_types::algebraic_hasher::Domain;
+    use triton_vm::Program;
 
     use crate::algorithm::ShadowedAlgorithm;
+    use crate::execute_with_terminal_state;
     use crate::linker::link_for_isolated_run;
     use crate::snippet::RustShadow;
-    use crate::{execute_with_terminal_state, prepend_state_preparation, VmHasherState};
 
     use super::MerkleVerify;
+    use super::*;
 
     #[test]
     fn merkle_verify_test() {
@@ -233,36 +198,17 @@ mod tests {
     fn negative_test() {
         let seed: [u8; 32] = thread_rng().gen();
         for i in 0..6 {
-            let (mut stack, memory, mut nondeterminism) =
-                MerkleVerify.pseudorandom_initial_state(seed, None);
+            let (mut stack, nondeterminism) = MerkleVerify.pseudorandom_initial_state(seed, None);
             let len = stack.len();
 
             match i {
-                0 => {
-                    // change height; should fail
-                    stack[len - 1].increment();
-                }
-                1 => {
-                    // change height; should fail
-                    stack[len - 1].decrement();
-                }
-                2 => {
-                    // change leaf; should fail
-                    stack[len - 2].increment();
-                }
-                3 => {
-                    // change index; should fail
-                    stack[len - 6].increment()
-                }
-                4 => {
-                    // change index; should fail
-                    stack[len - 6].decrement()
-                }
-                5 => {
-                    // change root; should fail
-                    stack[len - 7].increment()
-                }
-                _ => {}
+                0 => stack[len - 1].increment(), // height
+                1 => stack[len - 1].decrement(),
+                2 => stack[len - 2].increment(), // leaf
+                3 => stack[len - 6].increment(), // leaf index
+                4 => stack[len - 6].decrement(),
+                5 => stack[len - 7].increment(), // root
+                _ => unreachable!(),
             }
 
             // test rust/tasm equivalence
@@ -273,13 +219,13 @@ mod tests {
             // run rust shadow
             let rust_result = std::panic::catch_unwind(|| {
                 let mut rust_stack = stack.clone();
-                let mut rust_memory = memory.clone();
+                let mut rust_memory = nondeterminism.ram.clone();
                 ShadowedAlgorithm::new(MerkleVerify.clone()).rust_shadow_wrapper(
                     &stdin,
                     &nondeterminism,
                     &mut rust_stack,
                     &mut rust_memory,
-                    &mut VmHasherState::new(Domain::VariableLength),
+                    &mut None,
                 )
             });
 
@@ -289,11 +235,11 @@ mod tests {
 
             // run tvm
             let code = link_for_isolated_run(Rc::new(RefCell::new(MerkleVerify)), 0);
-            let program = prepend_state_preparation(&code, &stack);
+            let program = Program::new(&code);
             let tvm_result =
-                execute_with_terminal_state(&program, &stdin, &mut nondeterminism, None);
+                execute_with_terminal_state(&program, &stdin, &stack, &nondeterminism, None);
             if let Ok(result) = &tvm_result {
-                println!("tasm result: {}\ni: {}", result, i);
+                println!("tasm result: {result}\ni: {i}");
             }
 
             assert!(rust_result.is_err());

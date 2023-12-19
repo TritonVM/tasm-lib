@@ -1,15 +1,19 @@
-use std::collections::HashMap;
-
+use itertools::Itertools;
 use rand::random;
+use std::collections::HashMap;
+use triton_vm::triton_asm;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
+use crate::data_type::DataType;
 use crate::library::Library;
 use crate::rust_shadowing_helper_functions::safe_list::{safe_insert_random_list, safe_list_pop};
-use crate::snippet::{DataType, DeprecatedSnippet};
+use crate::snippet::DeprecatedSnippet;
 use crate::{empty_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
-pub struct SafePop(pub DataType);
+pub struct SafePop {
+    pub data_type: DataType,
+}
 
 impl DeprecatedSnippet for SafePop {
     fn input_field_names(&self) -> Vec<String> {
@@ -18,7 +22,7 @@ impl DeprecatedSnippet for SafePop {
 
     fn output_field_names(&self) -> Vec<String> {
         let mut ret: Vec<String> = vec![];
-        let element_size = self.0.get_size();
+        let element_size = self.data_type.stack_size();
         for i in 0..element_size {
             ret.push(format!("element_{}", element_size - 1 - i));
         }
@@ -26,12 +30,12 @@ impl DeprecatedSnippet for SafePop {
         ret
     }
 
-    fn input_types(&self) -> Vec<crate::snippet::DataType> {
-        vec![DataType::List(Box::new(self.0.clone()))]
+    fn input_types(&self) -> Vec<crate::data_type::DataType> {
+        vec![DataType::List(Box::new(self.data_type.clone()))]
     }
 
-    fn output_types(&self) -> Vec<crate::snippet::DataType> {
-        vec![self.0.clone()]
+    fn output_types(&self) -> Vec<crate::data_type::DataType> {
+        vec![self.data_type.clone()]
     }
 
     fn crash_conditions(&self) -> Vec<String> {
@@ -41,20 +45,20 @@ impl DeprecatedSnippet for SafePop {
     fn gen_input_states(&self) -> Vec<ExecutionState> {
         let mut ret = vec![];
         for i in 1..=10 {
-            ret.push(prepare_state(&self.0, i))
+            ret.push(prepare_state(&self.data_type, i))
         }
 
         ret
     }
 
     fn stack_diff(&self) -> isize {
-        self.0.get_size() as isize - 1
+        self.data_type.stack_size() as isize - 1
     }
 
     fn entrypoint_name(&self) -> String {
         format!(
             "tasm_list_safeimplu32_pop___{}",
-            self.0.label_friendly_name()
+            self.data_type.label_friendly_name()
         )
     }
 
@@ -63,56 +67,51 @@ impl DeprecatedSnippet for SafePop {
     fn function_code(&self, _library: &mut Library) -> String {
         let entry_point = self.entrypoint_name();
 
-        let mut code_to_read_elements = String::default();
         // Start and end of loop: Stack: _  [elems], address_for_last_unread_element
-        for i in 0..self.0.get_size() {
-            code_to_read_elements.push_str("read_mem\n");
-            // stack: _  address_for_last_unread_element, elem_{{N - 1 - i}}
+        let code_to_read_elements = self.data_type.read_value_from_memory();
 
-            code_to_read_elements.push_str("swap 1\n");
-            // stack: _  [..., elem_{{N - 1 - i}}], address_for_last_unread_element
-            if i != self.0.get_size() - 1 {
-                // Update offset for last unread element
-                code_to_read_elements.push_str("push -1\n");
-                code_to_read_elements.push_str("add\n");
-            }
-        }
+        let element_size = self.data_type.stack_size();
 
-        let element_size = self.0.get_size();
-
-        // Code to multiply with size. If size is 1, do nothing to save two clock cycles.
         let mul_with_size = if element_size != 1 {
-            format!("push {element_size}\n mul\n")
+            triton_asm!(push {element_size} mul)
         } else {
-            String::default()
+            triton_asm!()
         };
-        format!(
-            "
+        triton_asm!(
             // Before: _ *list
-            // After: _ elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}
+            // After:  _ [value]
             {entry_point}:
-                read_mem
-                // stack : _  *list, length
+                read_mem 1
+                // _  length (*list - 1)
 
                 // Assert that length is not 0
-                dup 0
+                dup 1
                 push 0
                 eq
                 push 0
                 eq
                 assert
-                // stack : _  *list, length
+                // _  length (*list - 1)
+
+                push 1
+                add
+                // _  length *list
 
                 // Decrease length value by one and write back to memory
-                swap 1
                 dup 1
                 push -1
                 add
-                write_mem
+                // _  length *list (length - 1)
+
+                dup 1
+                write_mem 1
+                pop 1
+                // _  length *list
+
                 swap 1
                 // stack : _ *list initial_length
 
-                {mul_with_size}
+                {&mul_with_size}
                 // stack : _  *list, (offset_for_last_element = (N * initial_length))
 
                 add
@@ -120,15 +119,16 @@ impl DeprecatedSnippet for SafePop {
                 add
                 // stack : _  address_for_last_element
 
-                {code_to_read_elements}
+                {&code_to_read_elements}
                 // Stack: _  [elements], address_for_last_unread_element
 
-                pop
+                pop 1
                 // Stack: _  [elements]
 
                 return
-            "
         )
+        .iter()
+        .join("\n")
     }
 
     fn rust_shadowing(
@@ -139,19 +139,19 @@ impl DeprecatedSnippet for SafePop {
         memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
         let list_pointer = stack.pop().unwrap();
-        let mut popped = safe_list_pop(list_pointer, memory, self.0.get_size());
+        let mut popped = safe_list_pop(list_pointer, memory, self.data_type.stack_size());
 
-        for _ in 0..self.0.get_size() {
+        for _ in 0..self.data_type.stack_size() {
             stack.push(popped.pop().unwrap());
         }
     }
 
     fn common_case_input_state(&self) -> ExecutionState {
-        prepare_state(&self.0, 30)
+        prepare_state(&self.data_type, 30)
     }
 
     fn worst_case_input_state(&self) -> ExecutionState {
-        prepare_state(&self.0, 30)
+        prepare_state(&self.data_type, 30)
     }
 }
 
@@ -187,19 +187,55 @@ mod tests {
 
     #[test]
     fn new_snippet_test() {
-        test_rust_equivalence_multiple_deprecated(&SafePop(DataType::Bool), true);
-        test_rust_equivalence_multiple_deprecated(&SafePop(DataType::U32), true);
-        test_rust_equivalence_multiple_deprecated(&SafePop(DataType::U64), true);
-        test_rust_equivalence_multiple_deprecated(&SafePop(DataType::BFE), true);
-        test_rust_equivalence_multiple_deprecated(&SafePop(DataType::XFE), true);
-        test_rust_equivalence_multiple_deprecated(&SafePop(DataType::Digest), true);
+        test_rust_equivalence_multiple_deprecated(
+            &SafePop {
+                data_type: DataType::Bool,
+            },
+            true,
+        );
+        test_rust_equivalence_multiple_deprecated(
+            &SafePop {
+                data_type: DataType::U32,
+            },
+            true,
+        );
+        test_rust_equivalence_multiple_deprecated(
+            &SafePop {
+                data_type: DataType::U64,
+            },
+            true,
+        );
+        test_rust_equivalence_multiple_deprecated(
+            &SafePop {
+                data_type: DataType::Bfe,
+            },
+            true,
+        );
+        test_rust_equivalence_multiple_deprecated(
+            &SafePop {
+                data_type: DataType::Xfe,
+            },
+            true,
+        );
+        test_rust_equivalence_multiple_deprecated(
+            &SafePop {
+                data_type: DataType::Digest,
+            },
+            true,
+        );
+        test_rust_equivalence_multiple_deprecated(
+            &SafePop {
+                data_type: DataType::Tuple(vec![DataType::Digest, DataType::Xfe, DataType::Digest]),
+            },
+            false,
+        );
     }
 
     #[test]
     #[should_panic]
     fn panic_if_pop_on_empty_list_1() {
         let list_address = BFieldElement::new(48);
-        prop_pop(DataType::BFE, list_address, 0, 107);
+        prop_pop(DataType::Bfe, list_address, 0, 107);
     }
 
     #[test]
@@ -213,7 +249,7 @@ mod tests {
     #[should_panic]
     fn panic_if_pop_on_empty_list_3() {
         let list_address = BFieldElement::new(48);
-        prop_pop(DataType::XFE, list_address, 0, 107);
+        prop_pop(DataType::Xfe, list_address, 0, 107);
     }
 
     #[test]
@@ -228,11 +264,11 @@ mod tests {
         prop_pop(DataType::Digest, BFieldElement::new(2), 2, 3);
 
         let list_address = BFieldElement::new(48);
-        prop_pop(DataType::BFE, list_address, 24, 107);
+        prop_pop(DataType::Bfe, list_address, 24, 107);
         prop_pop(DataType::Bool, list_address, 24, 107);
         prop_pop(DataType::U32, list_address, 24, 107);
         prop_pop(DataType::U64, list_address, 48, 107);
-        prop_pop(DataType::XFE, list_address, 3, 107);
+        prop_pop(DataType::Xfe, list_address, 3, 107);
         prop_pop(DataType::Digest, list_address, 20, 107);
     }
 
@@ -242,7 +278,7 @@ mod tests {
         init_list_length: usize,
         list_capacity: u32,
     ) {
-        let element_size = data_type.get_size();
+        let element_size = data_type.stack_size();
         let mut init_stack = empty_stack();
         init_stack.push(list_pointer);
 
@@ -272,14 +308,15 @@ mod tests {
             expected_end_stack.push(last_element[element_size - 1 - i]);
         }
 
-        test_rust_equivalence_given_input_values_deprecated(
-            &SafePop(data_type),
+        let memory = test_rust_equivalence_given_input_values_deprecated(
+            &SafePop { data_type },
             &init_stack,
             &[],
-            &mut memory,
+            memory,
             0,
             Some(&expected_end_stack),
-        );
+        )
+        .final_ram;
 
         // Verify that length is now indicated to be `init_list_length - 1`
         assert_eq!(
@@ -302,6 +339,8 @@ mod benches {
 
     #[test]
     fn safe_pop_benchmark() {
-        bench_and_write(SafePop(DataType::Digest));
+        bench_and_write(SafePop {
+            data_type: DataType::Digest,
+        });
     }
 }

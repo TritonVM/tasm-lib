@@ -1,18 +1,16 @@
 use std::collections::HashMap;
+use std::fmt::Display;
 
 use itertools::Itertools;
-use num_traits::Zero;
 use triton_vm::instruction::LabelledInstruction;
 use triton_vm::{triton_asm, NonDeterminism};
 use twenty_first::shared_math::b_field_element::BFieldElement;
-use twenty_first::util_types::algebraic_hasher::Domain;
 
 use crate::dyn_malloc::DYN_MALLOC_ADDRESS;
 use crate::library::Library;
 use crate::snippet::{BasicSnippet, DeprecatedSnippet, RustShadow};
 use crate::{
-    execute_test, exported_snippets, rust_shadowing_helper_functions, ExecutionState,
-    VmHasherState, VmOutputState, DIGEST_LENGTH,
+    execute_test, exported_snippets, ExecutionState, VmHasherState, VmOutputState, DIGEST_LENGTH,
 };
 
 #[allow(dead_code)]
@@ -34,13 +32,11 @@ pub fn test_rust_equivalence_multiple_deprecated<T: DeprecatedSnippet>(
         );
     }
 
-    let mut execution_states = snippet_struct.gen_input_states();
-
     let mut vm_output_states = vec![];
-    for execution_state in execution_states.iter_mut() {
+    for execution_state in snippet_struct.gen_input_states() {
         let vm_output_state = test_rust_equivalence_given_execution_state_deprecated::<T>(
             snippet_struct,
-            execution_state.clone(),
+            execution_state,
         );
         vm_output_states.push(vm_output_state);
     }
@@ -51,15 +47,13 @@ pub fn test_rust_equivalence_multiple_deprecated<T: DeprecatedSnippet>(
 #[allow(dead_code)]
 pub fn test_rust_equivalence_given_execution_state_deprecated<T: DeprecatedSnippet>(
     snippet_struct: &T,
-    mut execution_state: ExecutionState,
+    execution_state: ExecutionState,
 ) -> VmOutputState {
-    let nondeterminism = execution_state.nondeterminism;
     test_rust_equivalence_given_complete_state_deprecated::<T>(
         snippet_struct,
         &execution_state.stack,
         &execution_state.std_in,
-        &nondeterminism,
-        &mut execution_state.memory,
+        &execution_state.nondeterminism,
         execution_state.words_allocated,
         None,
     )
@@ -70,19 +64,17 @@ pub fn test_rust_equivalence_given_input_values_deprecated<T: DeprecatedSnippet>
     snippet_struct: &T,
     stack: &[BFieldElement],
     stdin: &[BFieldElement],
-    memory: &mut HashMap<BFieldElement, BFieldElement>,
-    words_statically_allocated: usize,
+    memory: HashMap<BFieldElement, BFieldElement>,
+    words_statically_allocated: u32,
     expected_final_stack: Option<&[BFieldElement]>,
 ) -> VmOutputState {
-    let _init_memory = memory.clone();
-    let nondeterminism = NonDeterminism::<BFieldElement>::new(vec![]);
+    let nondeterminism = NonDeterminism::<BFieldElement>::new(vec![]).with_ram(memory.clone());
 
     test_rust_equivalence_given_complete_state_deprecated(
         snippet_struct,
         stack,
         stdin,
         &nondeterminism,
-        memory,
         words_statically_allocated,
         expected_final_stack,
     )
@@ -90,7 +82,7 @@ pub fn test_rust_equivalence_given_input_values_deprecated<T: DeprecatedSnippet>
 
 fn link_for_isolated_run_deprecated<T: DeprecatedSnippet>(
     snippet_struct: &T,
-    words_statically_allocated: usize,
+    words_statically_allocated: u32,
 ) -> Vec<LabelledInstruction> {
     let mut snippet_state = Library::with_preallocated_memory(words_statically_allocated);
     let entrypoint = snippet_struct.entrypoint();
@@ -116,36 +108,35 @@ pub fn link_and_run_tasm_for_test_deprecated<T: DeprecatedSnippet>(
     stack: &mut Vec<BFieldElement>,
     std_in: Vec<BFieldElement>,
     secret_in: Vec<BFieldElement>,
-    memory: &mut HashMap<BFieldElement, BFieldElement>,
-    words_statically_allocated: usize,
+    memory: HashMap<BFieldElement, BFieldElement>,
+    words_statically_allocated: u32,
 ) -> VmOutputState {
     let expected_length_prior: usize = snippet_struct
         .inputs()
         .iter()
-        .map(|(x, _n)| x.get_size())
+        .map(|(x, _n)| x.stack_size())
         .sum();
     let expected_length_after: usize = snippet_struct
         .outputs()
         .iter()
-        .map(|(x, _n)| x.get_size())
+        .map(|(x, _n)| x.stack_size())
         .sum();
     assert_eq!(
         snippet_struct.stack_diff(),
-        (expected_length_after as isize - expected_length_prior as isize),
+        expected_length_after as isize - expected_length_prior as isize,
         "Declared stack diff must match type indicators"
     );
 
     let code = link_for_isolated_run_deprecated(snippet_struct, words_statically_allocated);
+    let nondeterminism = NonDeterminism::<BFieldElement>::new(secret_in).with_ram(memory.clone());
 
     execute_test(
         &code,
         stack,
         snippet_struct.stack_diff(),
         std_in,
-        &mut NonDeterminism::new(secret_in),
-        memory,
+        nondeterminism,
         None,
-        Some(words_statically_allocated),
     )
 }
 
@@ -157,33 +148,13 @@ pub(crate) fn test_rust_equivalence_given_complete_state_deprecated<T: Deprecate
     stack: &[BFieldElement],
     stdin: &[BFieldElement],
     nondeterminism: &NonDeterminism<BFieldElement>,
-    memory: &mut HashMap<BFieldElement, BFieldElement>,
-    words_statically_allocated: usize,
+    words_statically_allocated: u32,
     expected_final_stack: Option<&[BFieldElement]>,
 ) -> VmOutputState {
     let init_stack = stack.to_vec();
 
-    // lift memory to nondeterminism and set allocator if not set yet
-    let mut nondeterminism = nondeterminism.clone();
-    for (k, v) in memory.iter() {
-        nondeterminism.ram.insert(*k, *v);
-    }
-
-    if words_statically_allocated
-        > nondeterminism
-            .ram
-            .get(&BFieldElement::new(DYN_MALLOC_ADDRESS as u64))
-            .unwrap_or(&BFieldElement::new(0))
-            .value() as usize
-    {
-        nondeterminism.ram.insert(
-            BFieldElement::new(DYN_MALLOC_ADDRESS as u64),
-            BFieldElement::new(words_statically_allocated as u64),
-        );
-    }
-
     let mut rust_memory = nondeterminism.ram.clone();
-    let mut tasm_memory = nondeterminism.ram.clone();
+    let tasm_memory = nondeterminism.ram.clone();
     let mut rust_stack = stack.to_vec();
     let mut tasm_stack = stack.to_vec();
 
@@ -201,9 +172,10 @@ pub(crate) fn test_rust_equivalence_given_complete_state_deprecated<T: Deprecate
         &mut tasm_stack,
         stdin.to_vec(),
         nondeterminism.individual_tokens.clone(),
-        &mut tasm_memory,
+        tasm_memory,
         words_statically_allocated,
     );
+    let mut tasm_memory = vm_output_state.final_ram.clone();
 
     // assert stacks are equal, up to program hash
     let tasm_stack_skip_program_hash = tasm_stack.iter().cloned().skip(DIGEST_LENGTH).collect_vec();
@@ -235,16 +207,8 @@ pub(crate) fn test_rust_equivalence_given_complete_state_deprecated<T: Deprecate
             expected_final_stack_skip_program_hash,
             "TVM must produce expected stack `{}`. \n\nTVM:\n{}\nExpected:\n{}",
             snippet_struct.entrypoint(),
-            tasm_stack_skip_program_hash
-                .iter()
-                .map(|x| x.to_string())
-                .collect_vec()
-                .join(","),
-            expected_final_stack_skip_program_hash
-                .iter()
-                .map(|x| x.to_string())
-                .collect_vec()
-                .join(","),
+            tasm_stack_skip_program_hash.iter().join(","),
+            expected_final_stack_skip_program_hash.iter().join(","),
         );
     }
 
@@ -253,52 +217,47 @@ pub(crate) fn test_rust_equivalence_given_complete_state_deprecated<T: Deprecate
     // Alternatively the rust shadowing trait function must take a `Library` argument as input
     // and statically allocate memory from there.
     // TODO: Check if we could perform this check on dyn malloc too
-    rust_memory.remove(&BFieldElement::new(DYN_MALLOC_ADDRESS as u64));
-    tasm_memory.remove(&BFieldElement::new(DYN_MALLOC_ADDRESS as u64));
-    let memory_difference = rust_memory
-        .iter()
-        .filter(|(k, v)| match tasm_memory.get(*k) {
-            Some(b) => *b != **v,
-            None => true,
-        })
-        .chain(
-            tasm_memory
-                .iter()
-                .filter(|(k, v)| match rust_memory.get(*k) {
-                    Some(b) => *b != **v,
-                    None => true,
-                }),
-        )
-        .collect_vec();
-    if rust_memory != tasm_memory {
-        let mut tasm_memory = tasm_memory.iter().collect_vec();
-        tasm_memory.sort_unstable_by(|&a, &b| a.0.value().partial_cmp(&b.0.value()).unwrap());
-        let tasm_mem_str = tasm_memory
-            .iter()
-            .map(|x| format!("({} => {})", x.0, x.1))
-            .collect_vec()
-            .join(",");
+    rust_memory.remove(&DYN_MALLOC_ADDRESS);
+    tasm_memory.remove(&DYN_MALLOC_ADDRESS);
 
-        let mut rust_memory = rust_memory.iter().collect_vec();
-        rust_memory.sort_unstable_by(|&a, &b| a.0.value().partial_cmp(&b.0.value()).unwrap());
-        let rust_mem_str = rust_memory
+    if rust_memory != tasm_memory {
+        fn format_hash_map_iterator<K, V>(map: impl Iterator<Item = (K, V)>) -> String
+        where
+            u64: From<K>,
+            K: Copy + Display,
+            V: Display,
+        {
+            map.sorted_by_key(|(k, _)| u64::from(*k))
+                .map(|(k, v)| format!("({k} => {v})"))
+                .join(",")
+        }
+
+        let in_rust_memory_and_different_in_tasm_memory = rust_memory
             .iter()
-            .map(|x| format!("({} => {})", x.0, x.1))
-            .collect_vec()
-            .join(",");
-        let diff_str = memory_difference
+            .filter(|(k, &v)| tasm_memory.get(k).map(|&b| b != v).unwrap_or(true));
+        let in_tasm_memory_and_different_in_rust_memory = tasm_memory
             .iter()
-            .map(|x| format!("({} => {})", x.0, x.1))
-            .collect_vec()
-            .join(",");
+            .filter(|(k, &v)| rust_memory.get(k).map(|&b| b != v).unwrap_or(true));
+
+        let in_rust_memory_and_different_in_tasm_memory =
+            format_hash_map_iterator(in_rust_memory_and_different_in_tasm_memory);
+        let in_tasm_memory_and_different_in_rust_memory =
+            format_hash_map_iterator(in_tasm_memory_and_different_in_rust_memory);
+
+        let tasm_mem = format_hash_map_iterator(tasm_memory.into_iter());
+        let rust_mem = format_hash_map_iterator(rust_memory.into_iter());
+
         panic!(
-            "Memory for both implementations must match after execution.\n\nTVM: {tasm_mem_str}\n\nRust: {rust_mem_str}\n\nDifference: {diff_str}\n\nCode was:\n\n {}",
+            "Memory for both implementations must match after execution.\n\n\
+            TVM:  {tasm_mem}\n\n\
+            Rust: {rust_mem}\n\n\
+            In TVM, different in rust: {in_tasm_memory_and_different_in_rust_memory}\n\n\
+            In rust, different in TVM: {in_rust_memory_and_different_in_tasm_memory}\n\n\
+            Code was:\n\n\
+            {}",
             snippet_struct.code(&mut Library::new()).iter().join("\n")
         );
     }
-
-    // Write back memory to be able to probe it in individual tests
-    *memory = tasm_memory.clone();
 
     // Verify that stack grows with expected number of elements
     let stack_final = tasm_stack.clone();
@@ -318,8 +277,6 @@ pub(crate) fn test_rust_equivalence_given_complete_state_deprecated<T: Deprecate
 
 #[cfg(test)]
 mod test {
-    use std::collections::HashMap;
-
     use rand::random;
     use triton_vm::{BFieldElement, NonDeterminism};
     use twenty_first::shared_math::tip5::DIGEST_LENGTH;
@@ -340,7 +297,6 @@ mod test {
         stack.push(BFieldElement::new(45u64));
         stack.push(BFieldElement::new(1u64 << 12));
 
-        let mut init_memory = HashMap::new();
         let mut tasm_stack = stack.to_vec();
         for item in tasm_stack.iter_mut().take(DIGEST_LENGTH) {
             *item = random();
@@ -350,9 +306,8 @@ mod test {
             &snippet_struct,
             &stack,
             &[],
-            &NonDeterminism::new(vec![]),
-            &mut init_memory,
-            1,
+            &NonDeterminism::default(),
+            0,
             None,
         );
     }
@@ -363,21 +318,11 @@ pub fn rust_final_state<T: RustShadow>(
     stack: &[BFieldElement],
     stdin: &[BFieldElement],
     nondeterminism: &NonDeterminism<BFieldElement>,
-    memory: &HashMap<BFieldElement, BFieldElement>,
-    sponge_state: &VmHasherState,
-    words_statically_allocated: usize,
+    sponge_state: &Option<VmHasherState>,
 ) -> VmOutputState {
-    let mut rust_memory = memory.clone();
+    let mut rust_memory = nondeterminism.ram.clone();
     let mut rust_stack = stack.to_vec();
     let mut rust_sponge = sponge_state.clone();
-
-    // allocate memory, if necessary
-    if words_statically_allocated > 0 && memory.get(&BFieldElement::zero()).is_none() {
-        rust_shadowing_helper_functions::dyn_malloc::rust_dyn_malloc_initialize(
-            &mut rust_memory,
-            words_statically_allocated,
-        );
-    }
 
     // run rust shadow
     let output = shadowed_snippet.rust_shadow_wrapper(
@@ -400,19 +345,17 @@ pub fn tasm_final_state<T: RustShadow>(
     shadowed_snippet: &T,
     stack: &[BFieldElement],
     stdin: &[BFieldElement],
-    nondeterminism: &NonDeterminism<BFieldElement>,
-    memory: &HashMap<BFieldElement, BFieldElement>,
-    sponge_state: &VmHasherState,
-    words_statically_allocated: usize,
+    nondeterminism: NonDeterminism<BFieldElement>,
+    sponge_state: &Option<VmHasherState>,
+    words_statically_allocated: u32,
 ) -> VmOutputState {
     // run tvm
     link_and_run_tasm_for_test(
         shadowed_snippet,
         &mut stack.to_vec(),
         stdin.to_vec(),
-        &mut nondeterminism.clone(),
-        &mut memory.clone(),
-        Some(sponge_state.to_owned()),
+        nondeterminism,
+        sponge_state.to_owned(),
         words_statically_allocated,
     )
 }
@@ -438,54 +381,48 @@ pub fn verify_stack_equivalence(a: &[BFieldElement], b: &[BFieldElement]) {
     );
 }
 
-pub fn verify_memory_equivalence(
+/// Verify equivalence of memory up to the value of dynamic allocator.
+pub(crate) fn verify_memory_equivalence(
     a_memory: &HashMap<BFieldElement, BFieldElement>,
     b_memory: &HashMap<BFieldElement, BFieldElement>,
 ) {
-    // verify equivalence of memory up to the value of dynamic allocator
-    let memory_difference = b_memory
-        .iter()
-        .filter(|(k, v)| match a_memory.get(*k) {
-            Some(b) => *b != **v,
-            None => true,
-        })
-        .chain(a_memory.iter().filter(|(k, v)| match b_memory.get(*k) {
-            Some(b) => *b != **v,
-            None => true,
-        }))
-        .collect_vec();
-    if memory_difference
-        .iter()
-        .any(|(k, _v)| **k != BFieldElement::new(DYN_MALLOC_ADDRESS as u64))
-    {
-        let mut a_memory_ = a_memory.iter().collect_vec();
-        a_memory_.sort_unstable_by(|&a, &b| a.0.value().partial_cmp(&b.0.value()).unwrap());
-        let a_mem_str = a_memory_
-            .iter()
-            .map(|x| format!("({} => {})", x.0, x.1))
-            .collect_vec()
-            .join(",");
-
-        let mut b_memory_ = b_memory.iter().collect_vec();
-        b_memory_.sort_unstable_by(|&a, &b| a.0.value().partial_cmp(&b.0.value()).unwrap());
-        let b_mem_str = b_memory_
-            .iter()
-            .map(|x| format!("({} => {})", x.0, x.1))
-            .collect_vec()
-            .join(",");
-        let diff_str = memory_difference
-            .iter()
-            .map(|x| format!("({} => {})", x.0, x.1))
-            .collect_vec()
-            .join(",");
-        panic!(
-            "Memory for both implementations must match after execution.\n\nA: {a_mem_str}\n\nB: {b_mem_str}\n\nDifference: {diff_str}\n\n",
-        );
+    let memory_without_dyn_malloc = |mem: HashMap<_, _>| -> HashMap<_, _> {
+        mem.into_iter()
+            .filter(|&(k, _)| k != DYN_MALLOC_ADDRESS)
+            .collect()
+    };
+    let a_memory = memory_without_dyn_malloc(a_memory.clone());
+    let b_memory = memory_without_dyn_malloc(b_memory.clone());
+    if a_memory == b_memory {
+        return;
     }
-}
 
-pub fn verify_hasher_state_equivalence(a: VmOutputState, b: VmOutputState) {
-    assert_eq!(a.final_sponge_state.state, b.final_sponge_state.state);
+    fn format_hash_map_iterator<K, V>(map: impl Iterator<Item = (K, V)>) -> String
+    where
+        u64: From<K>,
+        K: Copy + Display,
+        V: Display,
+    {
+        map.sorted_by_key(|(k, _)| u64::from(*k))
+            .map(|(k, v)| format!("({k} => {v})"))
+            .join(", ")
+    }
+
+    let in_a_and_different_in_b = a_memory
+        .iter()
+        .filter(|(k, &v)| b_memory.get(k).map(|&b| b != v).unwrap_or(true));
+    let in_b_and_different_in_a = b_memory
+        .iter()
+        .filter(|(k, &v)| a_memory.get(k).map(|&b| b != v).unwrap_or(true));
+
+    let in_a_and_different_in_b = format_hash_map_iterator(in_a_and_different_in_b);
+    let in_b_and_different_in_a = format_hash_map_iterator(in_b_and_different_in_a);
+
+    panic!(
+        "Memory for both implementations must match after execution.\n\n\
+        In B, different in A: {in_b_and_different_in_a}\n\n\
+        In A, different in B: {in_a_and_different_in_b}"
+    );
 }
 
 pub fn verify_stack_growth<T: RustShadow>(
@@ -504,14 +441,12 @@ pub fn verify_stack_growth<T: RustShadow>(
     );
 }
 
-pub fn verify_sponge_equivalence(a: &VmHasherState, b: &VmHasherState) {
-    assert_eq!(
-        a.state,
-        b.state,
-        "sponge states are different:\nleft: {}\n:right: {}",
-        a.state.iter().map(|b| b.value()).join(","),
-        b.state.iter().map(|b| b.value()).join(",")
-    );
+pub fn verify_sponge_equivalence(a: &Option<VmHasherState>, b: &Option<VmHasherState>) {
+    match (a, b) {
+        (Some(state_a), Some(state_b)) => assert_eq!(state_a.state, state_b.state),
+        (None, None) => (),
+        _ => panic!("{a:?} != {b:?}"),
+    };
 }
 
 #[allow(dead_code)]
@@ -522,30 +457,20 @@ pub fn test_rust_equivalence_given_complete_state<T: RustShadow>(
     stack: &[BFieldElement],
     stdin: &[BFieldElement],
     nondeterminism: &NonDeterminism<BFieldElement>,
-    memory: &HashMap<BFieldElement, BFieldElement>,
-    sponge_state: &VmHasherState,
-    words_statically_allocated: usize,
+    sponge_state: &Option<VmHasherState>,
+    words_statically_allocated: u32,
     expected_final_stack: Option<&[BFieldElement]>,
 ) -> VmOutputState {
     let init_stack = stack.to_vec();
 
-    let rust = rust_final_state(
-        shadowed_snippet,
-        stack,
-        stdin,
-        nondeterminism,
-        memory,
-        sponge_state,
-        words_statically_allocated,
-    );
+    let rust = rust_final_state(shadowed_snippet, stack, stdin, nondeterminism, sponge_state);
 
     // run tvm
     let tasm = tasm_final_state(
         shadowed_snippet,
         stack,
         stdin,
-        nondeterminism,
-        memory,
+        nondeterminism.clone(),
         sponge_state,
         words_statically_allocated,
     );
@@ -569,28 +494,11 @@ pub fn link_and_run_tasm_for_test<T: RustShadow>(
     snippet_struct: &T,
     stack: &mut Vec<BFieldElement>,
     std_in: Vec<BFieldElement>,
-    nondeterminism: &mut NonDeterminism<BFieldElement>,
-    memory: &mut HashMap<BFieldElement, BFieldElement>,
+    nondeterminism: NonDeterminism<BFieldElement>,
     maybe_sponge_state: Option<VmHasherState>,
-    words_statically_allocated: usize,
+    words_statically_allocated: u32,
 ) -> VmOutputState {
     let code = link_for_isolated_run(snippet_struct, words_statically_allocated);
-
-    let maybe_highest_address = nondeterminism
-        .ram
-        .keys()
-        .chain(memory.keys())
-        .map(|b| b.value())
-        .max();
-    let allocator_initial_value = if let Some(highest_address) = maybe_highest_address {
-        if highest_address > words_statically_allocated as u64 {
-            highest_address + 1
-        } else {
-            words_statically_allocated as u64
-        }
-    } else {
-        words_statically_allocated as u64
-    };
 
     execute_test(
         &code,
@@ -598,24 +506,25 @@ pub fn link_and_run_tasm_for_test<T: RustShadow>(
         snippet_struct.inner().borrow().stack_diff(),
         std_in,
         nondeterminism,
-        memory,
         maybe_sponge_state,
-        Some(allocator_initial_value as usize),
     )
 }
 
 fn link_for_isolated_run<T: RustShadow>(
     snippet_struct: &T,
-    words_statically_allocated: usize,
+    words_statically_allocated: u32,
 ) -> Vec<LabelledInstruction> {
-    println!("linking with preallocated memory ... number of statically allocated words: {words_statically_allocated}");
-    let mut snippet_state = Library::with_preallocated_memory(words_statically_allocated);
+    println!(
+        "linking with preallocated memory ... \
+        number of statically allocated words: {words_statically_allocated}"
+    );
+    let mut library = Library::with_preallocated_memory(words_statically_allocated);
     let entrypoint = snippet_struct.inner().borrow().entrypoint();
-    let function_body = snippet_struct.inner().borrow().code(&mut snippet_state);
-    let library_code = snippet_state.all_imports();
+    let function_body = snippet_struct.inner().borrow().code(&mut library);
+    let library_code = library.all_imports();
 
-    // The TASM code is always run through a function call, so the 1st instruction
-    // is a call to the function in question.
+    // The TASM code is always run through a function call, so the 1st instruction is a call to the
+    // function in question.
     let code = triton_asm!(
         call {entrypoint}
         halt
@@ -638,8 +547,7 @@ pub fn test_rust_equivalence_given_execution_state<T: BasicSnippet + RustShadow>
         &execution_state.stack,
         &execution_state.std_in,
         &nondeterminism,
-        &execution_state.memory,
-        &VmHasherState::new(Domain::FixedLength),
+        &None,
         execution_state.words_allocated,
         None,
     )

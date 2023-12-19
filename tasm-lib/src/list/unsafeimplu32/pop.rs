@@ -1,25 +1,41 @@
 use std::collections::HashMap;
 
+use itertools::Itertools;
 use num::One;
 use rand::{random, thread_rng, Rng};
+use triton_vm::triton_asm;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
+use crate::data_type::DataType;
 use crate::library::Library;
 use crate::rust_shadowing_helper_functions::unsafe_list::untyped_unsafe_insert_random_list;
-use crate::snippet::{DataType, DeprecatedSnippet};
+use crate::snippet::DeprecatedSnippet;
 use crate::{empty_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
-pub struct UnsafePop(pub DataType);
+pub struct UnsafePop {
+    pub data_type: DataType,
+}
 
 impl DeprecatedSnippet for UnsafePop {
+    fn entrypoint_name(&self) -> String {
+        format!(
+            "tasm_list_unsafeimplu32_pop___{}",
+            self.data_type.label_friendly_name()
+        )
+    }
+
     fn input_field_names(&self) -> Vec<String> {
         vec!["*list".to_string()]
     }
 
+    fn input_types(&self) -> Vec<DataType> {
+        vec![DataType::List(Box::new(self.data_type.clone()))]
+    }
+
     fn output_field_names(&self) -> Vec<String> {
         let mut ret: Vec<String> = vec![];
-        let element_size = self.0.get_size();
+        let element_size = self.data_type.stack_size();
         for i in 0..element_size {
             ret.push(format!("element_{}", element_size - 1 - i));
         }
@@ -27,31 +43,12 @@ impl DeprecatedSnippet for UnsafePop {
         ret
     }
 
-    fn input_types(&self) -> Vec<crate::snippet::DataType> {
-        vec![DataType::List(Box::new(self.0.clone()))]
-    }
-
-    fn output_types(&self) -> Vec<crate::snippet::DataType> {
-        vec![self.0.clone()]
-    }
-
-    fn crash_conditions(&self) -> Vec<String> {
-        vec!["stack underflow".to_string()]
-    }
-
-    fn gen_input_states(&self) -> Vec<ExecutionState> {
-        vec![prepare_state(&self.0)]
+    fn output_types(&self) -> Vec<DataType> {
+        vec![self.data_type.clone()]
     }
 
     fn stack_diff(&self) -> isize {
-        self.0.get_size() as isize - 1
-    }
-
-    fn entrypoint_name(&self) -> String {
-        format!(
-            "tasm_list_unsafeimplu32_pop___{}",
-            self.0.label_friendly_name()
-        )
+        self.data_type.stack_size() as isize - 1
     }
 
     /// Pop last element from list. Does *not* actually delete the last
@@ -59,67 +56,84 @@ impl DeprecatedSnippet for UnsafePop {
     fn function_code(&self, _library: &mut Library) -> String {
         let entry_point = self.entrypoint_name();
 
-        let mut code_to_read_elements = String::default();
-        // Start and end at loop: Stack: _  [elems], address_for_last_unread_element
-        for i in 0..self.0.get_size() {
-            code_to_read_elements.push_str("read_mem\n");
-            // stack: _  address_for_last_unread_element, elem_{{N - 1 - i}}
-
-            code_to_read_elements.push_str("swap 1\n");
-            // stack: _  [..., elem_{{N - 1 - i}}], address_for_last_unread_element
-            if i != self.0.get_size() - 1 {
-                // Update offset for last unread element
-                code_to_read_elements.push_str("push -1\n");
-                code_to_read_elements.push_str("add\n");
-            }
-        }
-
-        let element_size = self.0.get_size();
-        let mul_with_size = if element_size != 1 {
-            format!("push {element_size}\n mul\n")
-        } else {
+        let element_size = self.data_type.stack_size();
+        let mul_with_size = if element_size.is_one() {
             String::default()
+        } else {
+            format!("push {element_size}\n mul\n")
         };
-        format!(
+        triton_asm!(
             // Before: _ *list
             // After: _ elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}
-            "{entry_point}:
-                read_mem
-                // stack : _  *list, length
+            {entry_point}:
+                read_mem 1
+                push 1
+                add
+                // stack : _  length *list
 
-                // Assert that length is over 0
-                dup 0
+                // Assert that length is not 0
+                dup 1
                 push 0
                 eq
                 push 0
                 eq
                 assert
-                // stack : _  *list, length
+                // stack : _  length *list
 
                 // Decrease length value by one and write back to memory
-                swap 1
                 dup 1
+                // _  length *list length
+
                 push -1
                 add
-                write_mem
+                // _  length *list (length - 1)
+
                 swap 1
-                // stack : _  *list, initial_length
+                // _  length (length - 1) *list
+
+                write_mem 1
+                // _  length *first_element
+
+                swap 1
+                // _  *first_element, initial_length
 
                 {mul_with_size}
-                // stack : _  *list, offset_for_last_element = (N * initial_length)
+                // stack : _  *first_element, offset_for_last_element = (N * initial_length)
 
                 add
-                // stack : _  address_for_last_element
+                // stack : _  address_for_next_element
 
-                {code_to_read_elements}
-                // Stack: _  [elements], address_for_last_unread_element
+                push -1
+                add
+                // stack : _  address_for_current_element_last_word
 
-                pop
+                {&self.data_type.read_value_from_memory()}
+                // Stack: _  [elements], address_of_last_word_in_previous_element
+
+                pop 1
                 // Stack: _  [elements]
 
                 return
-            "
+
         )
+        .iter()
+        .join("\n")
+    }
+
+    fn crash_conditions(&self) -> Vec<String> {
+        vec!["list stack underflow".to_string()]
+    }
+
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
+        vec![prepare_state(&self.data_type)]
+    }
+
+    fn common_case_input_state(&self) -> ExecutionState {
+        prepare_state(&self.data_type)
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState {
+        prepare_state(&self.data_type)
     }
 
     fn rust_shadowing(
@@ -135,22 +149,14 @@ impl DeprecatedSnippet for UnsafePop {
         // Update length indicator
         memory.insert(list_address, initial_list_length - BFieldElement::one());
 
-        let mut last_used_address =
-            list_address + initial_list_length * BFieldElement::new(self.0.get_size() as u64);
+        let mut last_used_address = list_address
+            + initial_list_length * BFieldElement::new(self.data_type.stack_size() as u64);
 
-        for _ in 0..self.0.get_size() {
+        for _ in 0..self.data_type.stack_size() {
             let elem = memory[&last_used_address];
             stack.push(elem);
             last_used_address -= BFieldElement::one();
         }
-    }
-
-    fn common_case_input_state(&self) -> ExecutionState {
-        prepare_state(&self.0)
-    }
-
-    fn worst_case_input_state(&self) -> ExecutionState {
-        prepare_state(&self.0)
     }
 }
 
@@ -161,7 +167,12 @@ fn prepare_state(data_type: &DataType) -> ExecutionState {
     let mut stack = empty_stack();
     stack.push(list_pointer);
     let mut memory = HashMap::default();
-    untyped_unsafe_insert_random_list(list_pointer, old_length, &mut memory, data_type.get_size());
+    untyped_unsafe_insert_random_list(
+        list_pointer,
+        old_length,
+        &mut memory,
+        data_type.stack_size(),
+    );
     ExecutionState::with_stack_and_memory(stack, memory, 0)
 }
 
@@ -182,17 +193,37 @@ mod tests {
 
     #[test]
     fn new_snippet_test() {
-        test_rust_equivalence_multiple_deprecated(&UnsafePop(DataType::U32), true);
-        test_rust_equivalence_multiple_deprecated(&UnsafePop(DataType::U64), true);
-        test_rust_equivalence_multiple_deprecated(&UnsafePop(DataType::XFE), true);
-        test_rust_equivalence_multiple_deprecated(&UnsafePop(DataType::Digest), true);
+        test_rust_equivalence_multiple_deprecated(
+            &UnsafePop {
+                data_type: DataType::U32,
+            },
+            true,
+        );
+        test_rust_equivalence_multiple_deprecated(
+            &UnsafePop {
+                data_type: DataType::U64,
+            },
+            true,
+        );
+        test_rust_equivalence_multiple_deprecated(
+            &UnsafePop {
+                data_type: DataType::Xfe,
+            },
+            true,
+        );
+        test_rust_equivalence_multiple_deprecated(
+            &UnsafePop {
+                data_type: DataType::Digest,
+            },
+            true,
+        );
     }
 
     #[test]
     #[should_panic]
     fn panic_if_pop_on_empty_list_1() {
         let list_address = BFieldElement::new(48);
-        prop_pop::<1>(DataType::BFE, list_address, 0);
+        prop_pop::<1>(DataType::Bfe, list_address, 0);
     }
 
     #[test]
@@ -206,15 +237,15 @@ mod tests {
     #[should_panic]
     fn panic_if_pop_on_empty_list_3() {
         let list_address = BFieldElement::new(48);
-        prop_pop::<3>(DataType::XFE, list_address, 0);
+        prop_pop::<3>(DataType::Xfe, list_address, 0);
     }
 
     #[test]
     fn list_u32_n_is_n_pop() {
         let list_address = BFieldElement::new(48);
-        prop_pop::<1>(DataType::BFE, list_address, 24);
+        prop_pop::<1>(DataType::Bfe, list_address, 24);
         prop_pop::<2>(DataType::U64, list_address, 48);
-        prop_pop::<3>(DataType::XFE, list_address, 3);
+        prop_pop::<3>(DataType::Xfe, list_address, 3);
         // prop_pop::<4>(list_address, 4);
         prop_pop::<5>(DataType::Digest, list_address, 20);
         // prop_pop::<6>(list_address, 20);
@@ -238,10 +269,10 @@ mod tests {
         let mut init_stack = empty_stack();
         init_stack.push(list_address);
 
-        let mut vm_memory = HashMap::default();
+        let mut memory = HashMap::default();
 
         // Insert length indicator of list, lives on offset = 0 from `list_address`
-        vm_memory.insert(list_address, BFieldElement::new(init_list_length as u64));
+        memory.insert(list_address, BFieldElement::new(init_list_length as u64));
 
         // Insert random values for the elements in the list
         let mut rng = thread_rng();
@@ -254,7 +285,7 @@ mod tests {
                 .try_into()
                 .unwrap();
             for elem in last_element.iter() {
-                vm_memory.insert(list_address + BFieldElement::new(j), *elem);
+                memory.insert(list_address + BFieldElement::new(j), *elem);
                 j += 1;
             }
         }
@@ -265,19 +296,20 @@ mod tests {
             expected_end_stack.push(last_element[N - 1 - i]);
         }
 
-        test_rust_equivalence_given_input_values_deprecated(
-            &UnsafePop(data_type),
+        let memory = test_rust_equivalence_given_input_values_deprecated(
+            &UnsafePop { data_type },
             &init_stack,
             &[],
-            &mut vm_memory,
+            memory,
             0,
             Some(&expected_end_stack),
-        );
+        )
+        .final_ram;
 
         // Verify that length is now indicated to be `init_list_length - 1`
         assert_eq!(
             BFieldElement::new(init_list_length as u64) - BFieldElement::one(),
-            vm_memory[&list_address]
+            memory[&list_address]
         );
     }
 }
@@ -289,6 +321,8 @@ mod benches {
 
     #[test]
     fn unsafe_pop_benchmark() {
-        bench_and_write(UnsafePop(DataType::Digest));
+        bench_and_write(UnsafePop {
+            data_type: DataType::Digest,
+        });
     }
 }

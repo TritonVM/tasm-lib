@@ -3,9 +3,10 @@ use rand::{thread_rng, Rng};
 use triton_vm::BFieldElement;
 use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
+use crate::data_type::DataType;
+use crate::memory::dyn_malloc;
 use crate::{
     list::{
-        self,
         contiguous_list::{
             self,
             get_length::{DummyOuterDataStructure, GetLength},
@@ -13,7 +14,7 @@ use crate::{
         ListType,
     },
     rust_shadowing_helper_functions,
-    snippet::{DataType, DeprecatedSnippet},
+    snippet::DeprecatedSnippet,
 };
 
 // All of `contiguous_list` assumes that each element has its length prepended
@@ -33,11 +34,11 @@ impl DeprecatedSnippet for GetPointerList {
         vec!["*contiguous_list".to_owned()]
     }
 
-    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+    fn input_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::VoidPointer]
     }
 
-    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+    fn output_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::List(Box::new(DataType::VoidPointer))]
     }
 
@@ -51,32 +52,12 @@ impl DeprecatedSnippet for GetPointerList {
 
     fn function_code(&self, library: &mut crate::library::Library) -> String {
         let entrypoint = self.entrypoint_name();
-        let get_list_length = library.import(Box::new(contiguous_list::get_length::GetLength));
-        let new_list = match self.output_list_type {
-            ListType::Safe => library.import(Box::new(list::safeimplu32::new::SafeNew(
-                DataType::VoidPointer,
-            ))),
-            ListType::Unsafe => library.import(Box::new(list::unsafeimplu32::new::UnsafeNew(
-                DataType::VoidPointer,
-            ))),
-        };
 
-        let set_length = match self.output_list_type {
-            ListType::Safe => library.import(Box::new(
-                list::safeimplu32::set_length::SafeSetLength(DataType::VoidPointer),
-            )),
-            ListType::Unsafe => library.import(Box::new(
-                list::unsafeimplu32::set_length::UnsafeSetLength(DataType::VoidPointer),
-            )),
-        };
-        let set_element = match self.output_list_type {
-            ListType::Safe => library.import(Box::new(list::safeimplu32::set::SafeSet(
-                DataType::VoidPointer,
-            ))),
-            ListType::Unsafe => library.import(Box::new(list::unsafeimplu32::set::UnsafeSet(
-                DataType::VoidPointer,
-            ))),
-        };
+        let data_type = DataType::VoidPointer;
+        let get_list_length = library.import(Box::new(GetLength));
+        let new_list = library.import(self.output_list_type.new_list(data_type.clone()));
+        let set_length = library.import(self.output_list_type.set_length(data_type.clone()));
+        let set_element = library.import(self.output_list_type.set(data_type));
 
         format!(
             "
@@ -111,10 +92,9 @@ impl DeprecatedSnippet for GetPointerList {
                 call {entrypoint}_loop
                 // _ *element_size list_length *list_of_pointers index
 
-                pop
+                pop 1
                 swap 2
-                pop
-                pop
+                pop 2
                 // _ *list_of_pointers
 
                 return
@@ -139,10 +119,10 @@ impl DeprecatedSnippet for GetPointerList {
                 call {set_element}
                 // _ index list_length *list_of_pointers *element_size
 
-                read_mem
-                // _ index list_length *list_of_pointers *element_size element_size
+                read_mem 1
+                // _ index list_length *list_of_pointers (*element_size - 1) element_size
 
-                push 1 add
+                push 2 add
 
                 add
                 // _ index list_length *list_of_pointers *next_element_size
@@ -197,6 +177,10 @@ impl DeprecatedSnippet for GetPointerList {
     ) {
         // read address
         let mut address = stack.last().unwrap().to_owned();
+        assert!(
+            address.value() < (1u64 << 32),
+            "Sanity check: Address was outside of expected memory range. Got: {address}"
+        );
         let size = memory
             .get(&(address - BFieldElement::new(1)))
             .unwrap()
@@ -223,8 +207,7 @@ impl DeprecatedSnippet for GetPointerList {
         assert_eq!(dummy_list.len(), length);
 
         // create list
-        let output_list_pointer =
-            rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator(length, memory);
+        let output_list_pointer = dyn_malloc::FIRST_DYNAMICALLY_ALLOCATED_ADDRESS;
         match self.output_list_type {
             ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_new(
                 output_list_pointer,
@@ -262,7 +245,6 @@ impl DeprecatedSnippet for GetPointerList {
 
 #[cfg(test)]
 mod tests {
-
     use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     use super::*;

@@ -1,14 +1,9 @@
-use std::collections::HashMap;
-
 use rand::random;
 use triton_vm::NonDeterminism;
 use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
-use crate::{
-    empty_stack,
-    snippet::{DataType, DeprecatedSnippet},
-    Digest, ExecutionState, VmHasher,
-};
+use crate::data_type::DataType;
+use crate::{empty_stack, snippet::DeprecatedSnippet, Digest, ExecutionState, VmHasher};
 
 #[derive(Clone, Debug)]
 pub struct Commit;
@@ -53,8 +48,7 @@ impl Commit {
         ExecutionState {
             stack,
             std_in: vec![],
-            nondeterminism: NonDeterminism::new(vec![]),
-            memory: HashMap::new(),
+            nondeterminism: NonDeterminism::default(),
             words_allocated: 1,
         }
     }
@@ -88,11 +82,11 @@ impl DeprecatedSnippet for Commit {
         ]
     }
 
-    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+    fn input_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::Digest, DataType::Digest, DataType::Digest]
     }
 
-    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+    fn output_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::Digest]
     }
 
@@ -125,9 +119,7 @@ impl DeprecatedSnippet for Commit {
             // AFTER: _ c4 c3 c2 c1 c0
             {entrypoint}:
                 hash
-                pop pop pop pop pop
                 hash
-                pop pop pop pop pop
                 return
             "
         )

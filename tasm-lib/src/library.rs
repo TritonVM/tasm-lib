@@ -1,23 +1,24 @@
 use std::collections::{hash_map::Entry, HashMap};
 
+use crate::data_type::DataType;
 use itertools::Itertools;
 use num::One;
 use triton_vm::instruction::LabelledInstruction;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
-use crate::snippet::{BasicSnippet, DataType, DeprecatedSnippet};
+use crate::snippet::{BasicSnippet, DeprecatedSnippet};
 
 // Ensure that static allocator does not overwrite the address
 // dedicated to the dynamic allocator. Dynamic allocator is,
 // by convention, always on address 0.
-pub const STATIC_MEMORY_START_ADDRESS: usize = 1;
+pub const STATIC_MEMORY_START_ADDRESS: BFieldElement = BFieldElement::new(BFieldElement::MAX);
 
 /// A Library represents a set of imports for a single Program or Snippet, and moreover
 /// tracks some data used for initializing the memory allocator.
 #[derive(Clone, Debug)]
 pub struct Library {
     seen_snippets: HashMap<String, Vec<LabelledInstruction>>,
-    free_pointer: usize,
+    free_pointer: BFieldElement,
 }
 
 impl Default for Library {
@@ -40,9 +41,10 @@ impl Library {
         Self::new()
     }
 
-    pub fn with_preallocated_memory(words_allocated: usize) -> Self {
+    pub fn with_preallocated_memory(words_statically_allocated: u32) -> Self {
         Library {
-            free_pointer: words_allocated + STATIC_MEMORY_START_ADDRESS,
+            free_pointer: STATIC_MEMORY_START_ADDRESS
+                - BFieldElement::new(words_statically_allocated as u64),
             ..Self::new()
         }
     }
@@ -81,14 +83,9 @@ impl Library {
         name.to_string()
     }
 
-    /// Return the next free address without allocating anything
-    pub fn get_next_free_address(&self) -> usize {
-        self.free_pointer
-    }
-
-    // Return a list of all external dependencies sorted by name
-    // All snippets are sorted
-    // alphabetically to ensure that generated programs are deterministic.
+    /// Return a list of all external dependencies sorted by name
+    /// All snippets are sorted
+    /// alphabetically to ensure that generated programs are deterministic.
     pub fn all_external_dependencies(&self) -> Vec<Vec<LabelledInstruction>> {
         self.seen_snippets
             .iter()
@@ -105,6 +102,7 @@ impl Library {
         ret
     }
 
+    /// Return a list of instructions containing all imported snippets
     #[allow(dead_code)]
     pub fn all_imports(&self) -> Vec<LabelledInstruction> {
         // Collect all imports and return. All snippets are sorted
@@ -112,9 +110,10 @@ impl Library {
         self.all_external_dependencies().concat()
     }
 
-    pub fn kmalloc(&mut self, num_words: usize) -> usize {
-        let address = self.free_pointer;
-        self.free_pointer += num_words;
+    /// Statically allocate `num_words` words of memory.
+    pub fn kmalloc(&mut self, num_words: u32) -> BFieldElement {
+        let address = self.free_pointer - BFieldElement::new(num_words as u64 - 1);
+        self.free_pointer -= BFieldElement::new(num_words as u64);
         address
     }
 }
@@ -178,12 +177,12 @@ impl DeprecatedSnippet for DummyTestSnippetA {
         vec![]
     }
 
-    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+    fn input_types(&self) -> Vec<crate::data_type::DataType> {
         vec![]
     }
 
-    fn output_types(&self) -> Vec<crate::snippet::DataType> {
-        vec![DataType::BFE, DataType::BFE, DataType::BFE]
+    fn output_types(&self) -> Vec<crate::data_type::DataType> {
+        vec![DataType::Bfe, DataType::Bfe, DataType::Bfe]
     }
 
     fn common_case_input_state(&self) -> crate::ExecutionState {
@@ -237,12 +236,12 @@ impl DeprecatedSnippet for DummyTestSnippetB {
         vec!["1".to_string(), "1".to_string()]
     }
 
-    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+    fn input_types(&self) -> Vec<crate::data_type::DataType> {
         vec![]
     }
 
-    fn output_types(&self) -> Vec<crate::snippet::DataType> {
-        vec![DataType::BFE, DataType::BFE]
+    fn output_types(&self) -> Vec<crate::data_type::DataType> {
+        vec![DataType::Bfe, DataType::Bfe]
     }
 
     fn crash_conditions(&self) -> Vec<String> {
@@ -301,12 +300,12 @@ impl DeprecatedSnippet for DummyTestSnippetC {
         vec!["1".to_string()]
     }
 
-    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+    fn input_types(&self) -> Vec<crate::data_type::DataType> {
         vec![]
     }
 
-    fn output_types(&self) -> Vec<crate::snippet::DataType> {
-        vec![DataType::BFE]
+    fn output_types(&self) -> Vec<crate::data_type::DataType> {
+        vec![DataType::Bfe]
     }
 
     fn crash_conditions(&self) -> Vec<String> {
@@ -349,7 +348,7 @@ mod tests {
             &DummyTestSnippetA,
             &empty_stack,
             &[],
-            &mut HashMap::default(),
+            HashMap::default(),
             0,
             expected,
         );
@@ -357,7 +356,7 @@ mod tests {
             &DummyTestSnippetB,
             &empty_stack,
             &[],
-            &mut HashMap::default(),
+            HashMap::default(),
             0,
             expected,
         );
@@ -365,7 +364,7 @@ mod tests {
             &DummyTestSnippetC,
             &empty_stack,
             &[],
-            &mut HashMap::default(),
+            HashMap::default(),
             0,
             expected,
         );
@@ -447,23 +446,19 @@ mod tests {
 
     #[test]
     fn kmalloc_test() {
+        const B_FIELD_ELEMENT_LAST: BFieldElement = BFieldElement::new(BFieldElement::MAX);
         let mut lib = Library::new();
-        assert_eq!(1, lib.get_next_free_address());
 
-        // allocate 1 word and verify that 1 is returned, and that the next free address is 2
+        // allocate 1 word and verify that -1 is returned
         let first_free_address = lib.kmalloc(1);
-        assert_eq!(1, first_free_address);
-        assert_eq!(2, lib.get_next_free_address());
+        assert_eq!(B_FIELD_ELEMENT_LAST, first_free_address);
 
-        // allocate 7 words and verify that 2 is returned, and that the next free address
-        // is 9.
+        // allocate 7 words and verify that -8 is returned
         let second_free_address = lib.kmalloc(7);
-        assert_eq!(2, second_free_address);
-        assert_eq!(9, lib.get_next_free_address());
+        assert_eq!(-BFieldElement::new(8), second_free_address,);
 
         // Allocate 1000 words.
         let third_free_address = lib.kmalloc(1000);
-        assert_eq!(9, third_free_address);
-        assert_eq!(1009, lib.get_next_free_address());
+        assert_eq!(-BFieldElement::new(1008), third_free_address);
     }
 }

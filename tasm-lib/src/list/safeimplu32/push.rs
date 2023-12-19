@@ -1,26 +1,38 @@
 use std::collections::HashMap;
 
+use itertools::Itertools;
 use num::One;
 use rand::{thread_rng, Rng};
+use triton_vm::triton_asm;
 use twenty_first::shared_math::{b_field_element::BFieldElement, other::random_elements};
 
+use crate::data_type::DataType;
 use crate::{
     empty_stack,
     library::Library,
     list::safeimplu32::SAFE_LIST_ELEMENT_CAPACITY,
     rust_shadowing_helper_functions::safe_list::{safe_insert_random_list, safe_list_push},
-    snippet::{DataType, DeprecatedSnippet},
+    snippet::DeprecatedSnippet,
     ExecutionState,
 };
 
 #[derive(Clone, Debug)]
-pub struct SafePush(pub DataType);
+pub struct SafePush {
+    pub data_type: DataType,
+}
 
 impl DeprecatedSnippet for SafePush {
-    fn input_field_names(&self) -> Vec<String> {
-        let element_size = self.0.get_size();
+    fn entrypoint_name(&self) -> String {
+        format!(
+            "tasm_list_safeimplu32_push___{}",
+            self.data_type.label_friendly_name()
+        )
+    }
 
-        // _ *list, elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}
+    fn input_field_names(&self) -> Vec<String> {
+        let element_size = self.data_type.stack_size();
+
+        // _ *list elem{N - 1} elem{N - 2} … elem{0}
         let mut ret = vec!["*list".to_string()];
         for i in 0..element_size {
             ret.push(format!("element_{}", element_size - 1 - i));
@@ -29,16 +41,66 @@ impl DeprecatedSnippet for SafePush {
         ret
     }
 
+    fn input_types(&self) -> Vec<DataType> {
+        vec![
+            DataType::List(Box::new(self.data_type.clone())),
+            self.data_type.clone(),
+        ]
+    }
+
     fn output_field_names(&self) -> Vec<String> {
         vec![]
     }
 
-    fn input_types(&self) -> Vec<crate::snippet::DataType> {
-        vec![DataType::List(Box::new(self.0.clone())), self.0.clone()]
+    fn output_types(&self) -> Vec<DataType> {
+        vec![]
     }
 
-    fn output_types(&self) -> Vec<crate::snippet::DataType> {
-        vec![]
+    fn stack_diff(&self) -> isize {
+        -(self.data_type.stack_size() as isize) - 1
+    }
+
+    fn function_code(&self, _library: &mut Library) -> String {
+        let element_size = self.data_type.stack_size();
+        let mul_with_size = match element_size {
+            1 => vec![],
+            _ => triton_asm!(push {element_size} mul),
+        };
+
+        triton_asm!(
+            // BEFORE: _ *list [word; N]
+            // AFTER:  _
+            {self.entrypoint_name()}:
+                dup {element_size}  // _ *list [word; N] *list
+                push 1
+                add                 // _ *list [word; N] (*list + 1)
+                read_mem 2          // _ *list [word; N] capacity length (*list - 1)
+                swap 2              // _ *list [word; N] (*list - 1) length capacity
+                dup 1               // _ *list [word; N] (*list - 1) length capacity length
+                lt                  // _ *list [word; N] (*list - 1) length (length < capacity)
+                assert              // _ *list [word; N] (*list - 1) length
+                {&mul_with_size}    // _ *list [word; N] (*list - 1) (length * elem_size)
+                add
+                push 3
+                add                 // _ *list [word; N] (*list + length * elem_size + 2)
+                {&self.data_type.write_value_to_memory()}
+                                    // _ *list some_address
+                pop 1               // _ *list
+
+                // increment length indicator
+                read_mem 1          // _ length (*list - 1)
+                push 1
+                add                 // _ length *list
+                swap 1
+                push 1
+                add
+                swap 1              // _ (length + 1) *list
+                write_mem 1         // _ (*list + 1)
+                pop 1               // _
+                return
+        )
+        .iter()
+        .join("\n")
     }
 
     fn crash_conditions(&self) -> Vec<String> {
@@ -47,153 +109,53 @@ impl DeprecatedSnippet for SafePush {
 
     fn gen_input_states(&self) -> Vec<ExecutionState> {
         vec![
-            prepare_execution_state(&self.0, 1, 0),
-            prepare_execution_state(&self.0, 2, 0),
-            prepare_execution_state(&self.0, SAFE_LIST_ELEMENT_CAPACITY, 0),
+            prepare_execution_state(&self.data_type, 1, 0),
+            prepare_execution_state(&self.data_type, 2, 0),
+            prepare_execution_state(&self.data_type, SAFE_LIST_ELEMENT_CAPACITY, 0),
             prepare_execution_state(
-                &self.0,
+                &self.data_type,
                 SAFE_LIST_ELEMENT_CAPACITY,
                 thread_rng().gen_range(0..100),
             ),
             prepare_execution_state(
-                &self.0,
+                &self.data_type,
                 SAFE_LIST_ELEMENT_CAPACITY,
                 thread_rng().gen_range(0..100),
             ),
             prepare_execution_state(
-                &self.0,
+                &self.data_type,
                 SAFE_LIST_ELEMENT_CAPACITY,
                 thread_rng().gen_range(0..100),
             ),
         ]
     }
 
-    fn stack_diff(&self) -> isize {
-        -(self.0.get_size() as isize) - 1
+    fn common_case_input_state(&self) -> ExecutionState {
+        prepare_execution_state(&self.data_type, SAFE_LIST_ELEMENT_CAPACITY, 1 << 5)
     }
 
-    fn entrypoint_name(&self) -> String {
-        format!(
-            "tasm_list_safeimplu32_push___{}",
-            self.0.label_friendly_name()
-        )
-    }
-
-    // Push *one* element of size N to stack
-    fn function_code(&self, _library: &mut Library) -> String {
-        let element_size = self.0.get_size();
-        // write the elements to memory
-
-        // Start and end of this loop: _  *list, [elements..], address_of_next_element
-        let mut write_elements_to_memory_code = String::default();
-        for i in 0..element_size {
-            write_elements_to_memory_code.push_str("swap 1\n");
-            write_elements_to_memory_code.push_str("write_mem\n");
-            if i != element_size - 1 {
-                // Prepare for next write. Not needed for last iteration.
-                write_elements_to_memory_code.push_str("push 1\n");
-                write_elements_to_memory_code.push_str("add\n");
-            }
-        }
-
-        // Code to multiply with size. If size is 1, do nothing to save two clock cycles.
-        let mul_with_size = if element_size != 1 {
-            format!("push {element_size}\n mul\n")
-        } else {
-            String::default()
-        };
-
-        let entry_point = self.entrypoint_name();
-        format!(
-            "
-            // Before: _ *list, elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}
-            // After: _
-            {entry_point}:
-                dup {element_size}
-                // stack : _  *list, elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}, *list
-
-                read_mem
-                // stack : _  *list, elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}, *list, length
-
-                // Verify that length < capacity (before increasing length by 1)
-                    swap 1
-                    push 1
-                    add
-                    // stack : _  *list, elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}, length, (*list + 1)
-
-                    read_mem
-                    // stack : _  *list, elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}, length, (*list + 1), capacity
-
-                    dup 2 lt
-                    // stack : _  *list, elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}, length, (*list + 1), capacity > length
-
-                    assert
-                    // stack : _  *list, elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}, length, (*list + 1)
-
-                    swap 1
-
-                {mul_with_size}
-                // stack : _  *list, elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}, (*list + 1), length * elem_size
-
-                add
-                push 1
-                add
-                // stack : _  *list, elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}, (*list + length * elem_size + 2) -- top of stack is where we will store elements
-
-                {write_elements_to_memory_code}
-                // stack : _  *list, address
-
-                pop
-                // stack : _  *list
-
-                // Increase length indicator by one
-                read_mem
-                // stack : _  *list, length
-
-                push 1
-                add
-                // stack : _  *list, length + 1
-
-                write_mem
-                // stack : _  *list
-
-                pop
-                // stack : _
-
-                return
-                "
-        )
+    fn worst_case_input_state(&self) -> ExecutionState {
+        prepare_execution_state(&self.data_type, SAFE_LIST_ELEMENT_CAPACITY, 1 << 6)
     }
 
     fn rust_shadowing(
         &self,
-        stack: &mut Vec<twenty_first::shared_math::b_field_element::BFieldElement>,
-        _std_in: Vec<twenty_first::shared_math::b_field_element::BFieldElement>,
-        _secret_in: Vec<twenty_first::shared_math::b_field_element::BFieldElement>,
-        memory: &mut std::collections::HashMap<
-            twenty_first::shared_math::b_field_element::BFieldElement,
-            twenty_first::shared_math::b_field_element::BFieldElement,
-        >,
+        stack: &mut Vec<BFieldElement>,
+        _std_in: Vec<BFieldElement>,
+        _secret_in: Vec<BFieldElement>,
+        memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
         let mut elements: Vec<BFieldElement> = vec![];
-        for _ in 0..self.0.get_size() {
+        for _ in 0..self.data_type.stack_size() {
             elements.push(stack.pop().unwrap());
         }
 
         let list_pointer = stack.pop().unwrap();
         let initial_list_length = memory[&list_pointer];
-        safe_list_push(list_pointer, elements, memory, self.0.get_size());
+        safe_list_push(list_pointer, elements, memory, self.data_type.stack_size());
 
         // Update length indicator
         memory.insert(list_pointer, initial_list_length + BFieldElement::one());
-    }
-
-    fn common_case_input_state(&self) -> ExecutionState {
-        prepare_execution_state(&self.0, SAFE_LIST_ELEMENT_CAPACITY, 1 << 5)
-    }
-
-    fn worst_case_input_state(&self) -> ExecutionState {
-        prepare_execution_state(&self.0, SAFE_LIST_ELEMENT_CAPACITY, 1 << 6)
     }
 }
 
@@ -206,7 +168,7 @@ fn prepare_execution_state(
         BFieldElement::new(thread_rng().gen_range(0..u32::MAX as u64));
     let mut stack = empty_stack();
     stack.push(list_pointer);
-    let mut push_value: Vec<BFieldElement> = random_elements(data_type.get_size());
+    let mut push_value: Vec<BFieldElement> = random_elements(data_type.stack_size());
     while let Some(element) = push_value.pop() {
         stack.push(element);
     }
@@ -230,12 +192,16 @@ mod tests {
 
     #[test]
     fn new_snippet_test() {
-        test_rust_equivalence_multiple_deprecated(&SafePush(DataType::Bool), true);
-        test_rust_equivalence_multiple_deprecated(&SafePush(DataType::U32), true);
-        test_rust_equivalence_multiple_deprecated(&SafePush(DataType::U64), true);
-        test_rust_equivalence_multiple_deprecated(&SafePush(DataType::BFE), true);
-        test_rust_equivalence_multiple_deprecated(&SafePush(DataType::XFE), true);
-        test_rust_equivalence_multiple_deprecated(&SafePush(DataType::Digest), true);
+        fn test_rust_equivalence_and_export(data_type: DataType) {
+            test_rust_equivalence_multiple_deprecated(&SafePush { data_type }, true);
+        }
+
+        test_rust_equivalence_and_export(DataType::Bool);
+        test_rust_equivalence_and_export(DataType::U32);
+        test_rust_equivalence_and_export(DataType::U64);
+        test_rust_equivalence_and_export(DataType::Bfe);
+        test_rust_equivalence_and_export(DataType::Xfe);
+        test_rust_equivalence_and_export(DataType::Digest);
     }
 
     #[test]
@@ -280,7 +246,7 @@ mod tests {
         let init_length = 19;
         let capacity = 20;
         prop_push(
-            DataType::XFE,
+            DataType::Xfe,
             list_address,
             init_length,
             capacity,
@@ -300,7 +266,7 @@ mod tests {
         let init_length = 20;
         let capacity = 20;
         prop_push(
-            DataType::XFE,
+            DataType::Xfe,
             list_address,
             init_length,
             capacity,
@@ -393,8 +359,9 @@ mod tests {
         list_capacity: u32,
         push_value: Vec<BFieldElement>,
     ) {
+        let data_type_stack_size = data_type.stack_size();
         assert_eq!(
-            data_type.get_size(),
+            data_type_stack_size,
             push_value.len(),
             "Push value length must match data size"
         );
@@ -402,8 +369,8 @@ mod tests {
         let mut init_stack = empty_stack();
         init_stack.push(list_address);
 
-        for i in 0..data_type.get_size() {
-            init_stack.push(push_value[data_type.get_size() - 1 - i]);
+        for i in 0..data_type_stack_size {
+            init_stack.push(push_value[data_type_stack_size - 1 - i]);
         }
         let mut memory = HashMap::default();
 
@@ -415,14 +382,15 @@ mod tests {
             &mut memory,
         );
 
-        test_rust_equivalence_given_input_values_deprecated(
-            &SafePush(data_type.clone()),
+        let memory = test_rust_equivalence_given_input_values_deprecated(
+            &SafePush { data_type },
             &init_stack,
             &[],
-            &mut memory,
+            memory,
             1,
             Some(&expected_end_stack),
-        );
+        )
+        .final_ram;
 
         // Verify that length indicator has increased by one
         assert_eq!(
@@ -431,27 +399,24 @@ mod tests {
         );
 
         // verify that value was inserted at expected place
-        for i in 0..data_type.get_size() {
-            assert_eq!(
-                push_value[i],
-                memory[&BFieldElement::new(
-                    list_address.value()
-                        + 2
-                        + data_type.get_size() as u64 * init_list_length as u64
-                        + i as u64
-                )]
-            );
+        let initial_list_offset = data_type_stack_size as u64 * init_list_length as u64 + 2;
+        for (i, pushed_element) in push_value.into_iter().enumerate() {
+            let offset = initial_list_offset + i as u64;
+            let address = list_address + BFieldElement::new(offset);
+            assert_eq!(pushed_element, memory[&address]);
         }
     }
 }
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::snippet_bencher::bench_and_write;
+
+    use super::*;
 
     #[test]
     fn safe_push_benchmark() {
-        bench_and_write(SafePush(DataType::Digest));
+        let data_type = DataType::Digest;
+        bench_and_write(SafePush { data_type });
     }
 }

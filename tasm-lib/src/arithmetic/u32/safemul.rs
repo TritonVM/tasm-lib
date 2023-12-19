@@ -1,11 +1,8 @@
 use rand::{thread_rng, Rng};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
-use crate::{
-    empty_stack,
-    snippet::{DataType, DeprecatedSnippet},
-    ExecutionState,
-};
+use crate::data_type::DataType;
+use crate::{empty_stack, snippet::DeprecatedSnippet, ExecutionState};
 
 /// If the inputs, are valid u32s, then the output is guaranteed to be to.
 /// Crashes on overflow.
@@ -42,12 +39,12 @@ impl DeprecatedSnippet for Safemul {
         format!(
             "
                 // BEFORE: _ rhs lhs
-                // AFTER: _ (lhs * rhs)
+                // AFTER:  _ (lhs * rhs)
                 {entrypoint}:
                     mul
-                    dup 0 // _   (lhs * rhs) (lhs * rhs)
-                    split // _  (lhs * rhs) hi lo
-                    pop   // _  (lhs * rhs) hi
+                    dup 0  // _ (lhs * rhs) (lhs * rhs)
+                    split  // _ (lhs * rhs) hi lo
+                    pop 1  // _ (lhs * rhs) hi
                     push 0 // _ (lhs * rhs) hi 0
                     eq     // _ (lhs * rhs) (hi == 0)
                     assert // _ (lhs * rhs)
@@ -178,7 +175,7 @@ mod tests {
             &Safemul,
             &init_stack,
             &[],
-            &mut HashMap::default(),
+            HashMap::default(),
             0,
             Some(&expected),
         );

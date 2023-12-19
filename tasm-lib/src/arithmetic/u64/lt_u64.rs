@@ -5,8 +5,9 @@ use rand::RngCore;
 use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
+use crate::data_type::DataType;
 use crate::library::Library;
-use crate::snippet::{DataType, DeprecatedSnippet};
+use crate::snippet::DeprecatedSnippet;
 use crate::{empty_stack, push_encodable, ExecutionState};
 
 #[derive(Clone, Debug)]
@@ -31,11 +32,11 @@ impl DeprecatedSnippet for LtStandardU64 {
         vec!["(lhs < rhs)".to_string()]
     }
 
-    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+    fn input_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::U64, DataType::U64]
     }
 
-    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+    fn output_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::Bool]
     }
 
@@ -62,10 +63,10 @@ impl DeprecatedSnippet for LtStandardU64 {
         format!(
             "
             // Before: _ rhs_hi rhs_lo lhs_hi lhs_lo
-            // After: _ (lhs < rhs)
+            // After:  _ (lhs < rhs)
             {entrypoint}:
                 call {entrypoint}_aux // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs)
-                swap 4 pop pop pop pop // _ (lhs < rhs)
+                swap 4 pop 4           // _ (lhs < rhs)
                 return
 
             // Before: _ rhs_hi rhs_lo lhs_hi lhs_lo
@@ -81,19 +82,19 @@ impl DeprecatedSnippet for LtStandardU64 {
 
                 dup 4 // _ rhs_hi rhs_lo lhs_hi lhs_lo 0 rhs_hi
                 dup 3 // _ rhs_hi rhs_lo lhs_hi lhs_lo 0 rhs_hi lhs_hi
-                eq   // _ rhs_hi rhs_lo lhs_hi lhs_lo 0 (lhs_hi == rhs_hi)
+                eq    // _ rhs_hi rhs_lo lhs_hi lhs_lo 0 (lhs_hi == rhs_hi)
                 skiz call {entrypoint}_lo
-                     // true: _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs, aka lhs_lo < rhs_lo)
-                     // false: _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs, aka 0)
+                      // true: _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs, aka lhs_lo < rhs_lo)
+                      // false: _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs, aka 0)
                 return
 
             // Before: _ rhs_hi rhs_lo lhs_hi lhs_lo 0
             // After: _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_lo < rhs_lo)
             {entrypoint}_lo:
-                pop  // _ rhs_hi rhs_lo lhs_hi lhs_lo
+                pop 1 // _ rhs_hi rhs_lo lhs_hi lhs_lo
                 dup 2 // _ rhs_hi rhs_lo lhs_hi lhs_lo rhs_lo
                 dup 1 // _ rhs_hi rhs_lo lhs_hi lhs_lo rhs_lo lhs_lo
-                lt   // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs)
+                lt    // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs)
                 return
             "
         )
@@ -166,11 +167,11 @@ impl DeprecatedSnippet for LtU64 {
         ]
     }
 
-    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+    fn input_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::U64, DataType::U64]
     }
 
-    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+    fn output_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::U64, DataType::U64, DataType::Bool]
     }
 
@@ -212,7 +213,7 @@ impl DeprecatedSnippet for LtU64 {
         format!(
             "
             // Before: _ rhs_hi rhs_lo lhs_hi lhs_lo
-            // After: _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs)
+            // After:  _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs)
             {entrypoint}:
                 dup 3
                 dup 2
@@ -234,7 +235,7 @@ impl DeprecatedSnippet for LtU64 {
             // Before: _ rhs_hi rhs_lo lhs_hi lhs_lo 0
             // After: _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_lo < rhs_lo)
             {entrypoint}_lo:
-                pop        // _ rhs_hi rhs_lo lhs_hi lhs_lo
+                pop 1      // _ rhs_hi rhs_lo lhs_hi lhs_lo
                 dup 2      // _ rhs_hi rhs_lo lhs_hi lhs_lo rhs_lo
                 dup 1      // _ rhs_hi rhs_lo lhs_hi lhs_lo rhs_lo lhs_lo
                 lt         // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_lo < rhs_lo)
@@ -436,13 +437,12 @@ mod tests {
         init_stack.append(&mut lhs.encode().into_iter().rev().collect());
 
         let stdin = &[];
-        let mut memory = HashMap::default();
         let words_allocated = 0;
         test_rust_equivalence_given_input_values_deprecated(
             &LtU64,
             &init_stack,
             stdin,
-            &mut memory,
+            HashMap::default(),
             words_allocated,
             expected,
         );
@@ -454,14 +454,13 @@ mod tests {
         init_stack.append(&mut lhs.encode().into_iter().rev().collect());
 
         let stdin = &[];
-        let mut memory = HashMap::default();
         let words_allocated = 0;
         let expected = None;
         test_rust_equivalence_given_input_values_deprecated(
             &LtU64,
             &init_stack,
             stdin,
-            &mut memory,
+            HashMap::default(),
             words_allocated,
             expected,
         );

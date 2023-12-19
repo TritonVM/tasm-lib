@@ -1,24 +1,23 @@
+use std::collections::HashMap;
+
 use num::Zero;
 use num_traits::One;
 use rand::random;
-use std::collections::HashMap;
-use triton_vm::NonDeterminism;
+use triton_vm::{Digest, NonDeterminism};
 use twenty_first::shared_math::other::random_elements;
 use twenty_first::shared_math::x_field_element::{XFieldElement, EXTENSION_DEGREE};
 use twenty_first::{
     shared_math::b_field_element::BFieldElement, util_types::algebraic_hasher::AlgebraicHasher,
 };
 
-use super::ListType;
+use crate::data_type::DataType;
 use crate::hashing::hash_varlen::HashVarlen;
 use crate::list::safeimplu32::length::Length as SafeLength;
 use crate::list::unsafeimplu32::length::Length as UnsafeLength;
-use crate::{empty_stack, rust_shadowing_helper_functions, Digest, DIGEST_LENGTH};
-use crate::{
-    library::Library,
-    snippet::{DataType, DeprecatedSnippet},
-    ExecutionState, VmHasher,
-};
+use crate::{empty_stack, rust_shadowing_helper_functions, DIGEST_LENGTH};
+use crate::{library::Library, snippet::DeprecatedSnippet, ExecutionState, VmHasher};
+
+use super::ListType;
 
 #[derive(Clone, Debug)]
 pub struct MultisetEquality(pub ListType);
@@ -74,12 +73,12 @@ impl MultisetEquality {
             }
         }
 
+        let nondeterminism = NonDeterminism::default().with_ram(memory);
         ExecutionState {
             stack: [empty_stack(), vec![pointer_a, pointer_b]].concat(),
             std_in: vec![],
-            nondeterminism: NonDeterminism::new(vec![]),
-            memory,
-            words_allocated: 1,
+            nondeterminism,
+            words_allocated: 0,
         }
     }
 
@@ -121,12 +120,12 @@ impl MultisetEquality {
             }
         }
 
+        let nondeterminism = NonDeterminism::default().with_ram(memory);
         ExecutionState {
             stack: [empty_stack(), vec![pointer_a, pointer_b]].concat(),
             std_in: vec![],
-            nondeterminism: NonDeterminism::new(vec![]),
-            memory,
-            words_allocated: 1,
+            nondeterminism,
+            words_allocated: 0,
         }
     }
 
@@ -168,12 +167,12 @@ impl MultisetEquality {
             }
         }
 
+        let nondeterminism = NonDeterminism::default().with_ram(memory);
         ExecutionState {
             stack: [empty_stack(), vec![pointer_a, pointer_b]].concat(),
             std_in: vec![],
-            nondeterminism: NonDeterminism::new(vec![]),
-            memory,
-            words_allocated: 1,
+            nondeterminism,
+            words_allocated: 0,
         }
     }
 
@@ -220,12 +219,12 @@ impl MultisetEquality {
             }
         }
 
+        let nondeterminism = NonDeterminism::default().with_ram(memory);
         ExecutionState {
             stack: [empty_stack(), vec![pointer_a, pointer_b]].concat(),
             std_in: vec![],
-            nondeterminism: NonDeterminism::new(vec![]),
-            memory,
-            words_allocated: 1,
+            nondeterminism,
+            words_allocated: 0,
         }
     }
 }
@@ -239,14 +238,14 @@ impl DeprecatedSnippet for MultisetEquality {
         vec!["list_a".to_string(), "list_b".to_string()]
     }
 
-    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+    fn input_types(&self) -> Vec<crate::data_type::DataType> {
         vec![
             DataType::List(Box::new(DataType::Digest)),
             DataType::List(Box::new(DataType::Digest)),
         ]
     }
 
-    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+    fn output_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::Bool]
     }
 
@@ -260,8 +259,12 @@ impl DeprecatedSnippet for MultisetEquality {
 
     fn function_code(&self, library: &mut Library) -> String {
         let length_snippet = match self.0 {
-            ListType::Safe => library.import(Box::new(SafeLength(DataType::Digest))),
-            ListType::Unsafe => library.import(Box::new(UnsafeLength(DataType::Digest))),
+            ListType::Safe => library.import(Box::new(SafeLength {
+                data_type: DataType::Digest,
+            })),
+            ListType::Unsafe => library.import(Box::new(UnsafeLength {
+                data_type: DataType::Digest,
+            })),
         };
         let first_element_offset = match self.0 {
             ListType::Safe => 2,
@@ -269,27 +272,28 @@ impl DeprecatedSnippet for MultisetEquality {
         };
         let hash_varlen = library.import(Box::new(HashVarlen));
         let entrypoint = self.entrypoint_name();
+        const DIGEST_LENGTH_PLUS_ONE: usize = DIGEST_LENGTH + 1;
 
         format!(
             "
             // BEFORE: _ list_a list_b
-            // AFTER: _ list_a==list_b (as multisets, or up to permutation)
+            // AFTER:  _ list_a==list_b (as multisets, or up to permutation)
             {entrypoint}:
 
                 // read lengths of lists
-                dup 1 dup 1 // _ list_a list_b list_a list_b
-                call {length_snippet} // _ list_a list_b list_a len_b
-                swap 1 // _ list_a list_b len_b list_a
-                call {length_snippet} // _ list_a list_b len_b len_a
+                dup 1 dup 1             // _ list_a list_b list_a list_b
+                call {length_snippet}   // _ list_a list_b list_a len_b
+                swap 1                  // _ list_a list_b len_b list_a
+                call {length_snippet}   // _ list_a list_b len_b len_a
 
                 // equate lengths and return early if possible
-                dup 1 // _ list_a list_b len_b len_a len_b
-                eq // _ list_a list_b len_b len_a==len_b
-                push 0 eq // _ list_a list_b len_b len_a!=len_b
+                dup 1                   // _ list_a list_b len_b len_a len_b
+                eq                      // _ list_a list_b len_b (len_a==len_b)
+                push 0 eq               // _ list_a list_b len_b (len_a!=len_b)
 
                 // early return if lengths mismatch
                 // otherwise continue
-                push 1 swap 1 // _ list_a list_b len_b 1 len_a!=len_b
+                push 1 swap 1           // _ list_a list_b len_b 1 (len_a!=len_b)
                 skiz call {entrypoint}_early_abort
                 skiz call {entrypoint}_continue
 
@@ -297,8 +301,8 @@ impl DeprecatedSnippet for MultisetEquality {
                 return
 
             {entrypoint}_early_abort:
-                pop // _ list_a list_b len_b
-                pop pop pop
+                // _ list_a list_b len_b 1
+                pop 4
 
                 // push return value (false)
                 push 0 // _ 0
@@ -313,9 +317,9 @@ impl DeprecatedSnippet for MultisetEquality {
                 // hash list_a
                 dup 2 // _ list_a list_b len list_a
                 push {first_element_offset} add // _ list_a list_b len (list_a+n)
-                dup 1 // _ list_a list_b len list_a len
+                dup 1                    // _ list_a list_b len list_a len
                 push {DIGEST_LENGTH} mul // _ list_a list_b len list_a) (len*{DIGEST_LENGTH})
-                call {hash_varlen} // _ list_a list_b len da4 da3 da2 da1 da0
+                call {hash_varlen}       // _ list_a list_b len da4 da3 da2 da1 da0
 
                 // hash list_b
                 dup 6 // _ list_a list_b len da4 da3 da2 da1 da0 list_b
@@ -325,9 +329,8 @@ impl DeprecatedSnippet for MultisetEquality {
                 call {hash_varlen} // _ list_a list_b len da4 da3 da2 da1 da0 db4 db3 db2 db1 db0
 
                 // hash together
-                hash // _ list_a list_b len d4 d3 d2 d1 d0 0 0 0 0 0
-                pop pop pop pop pop
-                pop pop // _ list_a list_b len d4 d3 d2
+                hash  // _ list_a list_b len d4 d3 d2 d1 d0
+                pop 2 // _ list_a list_b len d4 d3 d2
 
                 call {entrypoint}_running_product // _ list_a list_b len d4 d3 d2 rpb2 rpb1 rpb0
                 dup 8 // _ list_a list_b len d4 d3 d2 rpb2 rpb1 rpb0 list_a
@@ -347,8 +350,8 @@ impl DeprecatedSnippet for MultisetEquality {
 
                 // clean up and return
                 swap 14 // _ rpa0==rpb0&&rpa1==rpb1 rpa2 rpb2 list_b len d4 d3 d2 rpb2 rpb1 rpb0 list_a len d4 d3 d2 list_a
-                pop pop pop pop pop pop pop pop pop pop pop pop pop pop
-                // _ rpa0==rpb0&&rpa1==rpb1
+                pop 5 pop 5 pop 4
+                // _ (rpa0==rpb0&&rpa1==rpb1)
 
                 return
 
@@ -367,48 +370,40 @@ impl DeprecatedSnippet for MultisetEquality {
                 // clean up and return
                 swap 2 // _ list len d2 d1 d0 addr* 0 rp0 rp1 rp2
                 swap 4 // _ list len d2 d1 d0 rp2 0 rp0 rp1 addr*
-                pop // _ list len d2 d1 d0 rp2 0 rp0 rp1
+                pop 1  // _ list len d2 d1 d0 rp2 0 rp0 rp1
                 swap 2 // _ list len d2 d1 d0 rp2 rp1 rp0 0
-                pop // _ list len d2 d1 d0 rp2 rp1 rp0
+                pop 1  // _ list len d2 d1 d0 rp2 rp1 rp0
 
                 return
 
             // INVARIANT: _ list len d2 d1 d0 addr itrs_left rp2 rp1 rp0
             {entrypoint}_running_product_loop:
                 // test termination condition
-                dup 3 // _ list len d2 d1 d0 addr itrs_left rp2 rp1 rp0 itrs_left
-                push 0 eq // _ list len d2 d1 d0 addr itrs_left rp2 rp1 rp0 itrs_left==0
+                dup 3       // _ list len d2 d1 d0 addr itrs_left rp2 rp1 rp0 itrs_left
+                push 0 eq   // _ list len d2 d1 d0 addr itrs_left rp2 rp1 rp0 itrs_left==0
                 skiz return // _ list len d2 d1 d0 addr itrs_left rp2 rp1 rp0
 
                 // read addr+2, addr+1, addr+0
-                dup 4 push 2 add read_mem // _ list len d2 d1 d0 addr itrs_left rp2 rp1 rp0 addr+2 m2
-                swap 1 push -1 add read_mem // _ list len d2 d1 d0 addr itrs_left rp2 rp1 rp0 m2 addr+1 m1
-                swap 1 push -1 add read_mem // _ list len d2 d1 d0 addr itrs_left rp2 rp1 rp0 m2 m1 addr m0
-                swap 1 // _ list len d2 d1 d0 addr itrs_left rp2 rp1 rp0 m2 m1 m0 addr
+                dup 4 push 2 add read_mem 3
+                // _ list len d2 d1 d0 addr itrs_left rp2 rp1 rp0 m2 m1 m0 (addr - 1)
 
-                // addr += {DIGEST_LENGTH}
-                push {DIGEST_LENGTH} add // _ list len d2 d1 d0 addr itrs_left rp2 rp1 rp0 m2 m1 m0 addr+{DIGEST_LENGTH}
+                // addr += DIGEST_LENGTH + 1
+                push {DIGEST_LENGTH_PLUS_ONE} add // _ list len d2 d1 d0 addr itrs_left rp2 rp1 rp0 m2 m1 m0 addr+{DIGEST_LENGTH}
                 swap 8 // _ list len d2 d1 d0 addr+{DIGEST_LENGTH} itrs_left rp2 rp1 rp0 m2 m1 m0 addr
-                pop // _ list len d2 d1 d0 addr+{DIGEST_LENGTH} itrs_left rp2 rp1 rp0 m2 m1 m0
+                pop 1  // _ list len d2 d1 d0 addr+{DIGEST_LENGTH} itrs_left rp2 rp1 rp0 m2 m1 m0
 
                 // itrs_left -= 1
-                swap 6 // _ list len d2 d1 d0 addr+{DIGEST_LENGTH} m0 rp2 rp1 rp0 m2 m1 itrs_left
-                push -1 add swap 6 // _ list len d2 d1 d0 addr+{DIGEST_LENGTH} itrs_left-1 rp2 rp1 rp0 m2 m1 m0
+                swap 6              // _ list len d2 d1 d0 addr+{DIGEST_LENGTH} m0 rp2 rp1 rp0 m2 m1 itrs_left
+                push -1 add swap 6  // _ list len d2 d1 d0 addr+{DIGEST_LENGTH} (itrs_left-1) rp2 rp1 rp0 m2 m1 m0
 
                 // subtract indeterminate
-                dup 10 dup 10 dup 10 // _ list len d2 d1 d0 addr+{DIGEST_LENGTH} itrs_left-1 rp2 rp1 rp0 m2 m1 m0 d2 d1 d0
-                push -1 xbmul // _ list len d2 d1 d0 addr+{DIGEST_LENGTH} itrs_left-1 rp2 rp1 rp0 m2 m1 m0 -d2 -d1 -d0
-                xxadd // _ list len d2 d1 d0 addr+{DIGEST_LENGTH} itrs_left-1 rp2 rp1 rp0 m2 m1 m0 m2-d2 m1-d1 m0-d0
-                push -1 xbmul // _ list len d2 d1 d0 addr+{DIGEST_LENGTH} itrs_left-1 rp2 rp1 rp0 m2 m1 m0 d2-m2 d1-m1 d0-m0
-                swap 3 pop // _ list len d2 d1 d0 addr+{DIGEST_LENGTH} itrs_left-1 rp2 rp1 rp0 m2 m1 d0-m0 d2-m2 d1-m1
-                swap 3 pop // _ list len d2 d1 d0 addr+{DIGEST_LENGTH} itrs_left-1 rp2 rp1 rp0 m2 d1-m1 d0-m0 d2-m2
-                swap 3 pop // _ list len d2 d1 d0 addr+{DIGEST_LENGTH} itrs_left-1 rp2 rp1 rp0 d2-m2 d1-m1 d0-m0
+                dup 10 dup 10 dup 10 // _ list len d2 d1 d0 addr+{DIGEST_LENGTH} (itrs_left-1) rp2 rp1 rp0 m2 m1 m0 d2 d1 d0
+                push -1 xbmul        // _ list len d2 d1 d0 addr+{DIGEST_LENGTH} (itrs_left-1) rp2 rp1 rp0 m2 m1 m0 -d2 -d1 -d0
+                xxadd                // _ list len d2 d1 d0 addr+{DIGEST_LENGTH} (itrs_left-1) rp2 rp1 rp0 (m2-d2) (m1-d1) (m0-d0)
+                push -1 xbmul        // _ list len d2 d1 d0 addr+{DIGEST_LENGTH} (itrs_left-1) rp2 rp1 rp0 (d2-m2) (d1-m1) (d0-m0)
 
                 // multiply into running product
-                xxmul // _ list len d2 d1 d0 addr+{DIGEST_LENGTH} itrs_left-1 rp2 rp1 rp0 rp2* rp1* rp0*
-                swap 3 pop // _ list len d2 d1 d0 addr+{DIGEST_LENGTH} itrs_left-1 rp2 rp1 rp0* rp2* rp1*
-                swap 3 pop // _ list len d2 d1 d0 addr+{DIGEST_LENGTH} itrs_left-1 rp2 rp1* rp0* rp2*
-                swap 3 pop // _ list len d2 d1 d0 addr+{DIGEST_LENGTH} itrs_left-1 rp2* rp1* rp0* rp2*
+                xxmul                // _ list len d2 d1 d0 addr+{DIGEST_LENGTH} (itrs_left-1) rp2' rp1' rp0'
 
                 recurse
             "
@@ -474,12 +469,22 @@ impl DeprecatedSnippet for MultisetEquality {
         _secret_in: Vec<triton_vm::BFieldElement>,
         memory: &mut std::collections::HashMap<triton_vm::BFieldElement, triton_vm::BFieldElement>,
     ) {
-        let list_b = stack.pop().unwrap();
-        let list_a = stack.pop().unwrap();
+        let list_b_pointer = stack.pop().unwrap();
+        let list_a_pointer = stack.pop().unwrap();
 
         // compare lengths and return early if unequal
-        let len_a: u32 = memory.get(&list_a).unwrap().value().try_into().unwrap();
-        let len_b: u32 = memory.get(&list_b).unwrap().value().try_into().unwrap();
+        let len_a: u32 = memory
+            .get(&list_a_pointer)
+            .unwrap()
+            .value()
+            .try_into()
+            .unwrap();
+        let len_b: u32 = memory
+            .get(&list_b_pointer)
+            .unwrap()
+            .value()
+            .try_into()
+            .unwrap();
 
         if len_a != len_b {
             stack.push(BFieldElement::zero());
@@ -499,13 +504,13 @@ impl DeprecatedSnippet for MultisetEquality {
 
         for i in 0..len as usize {
             list_a_bfes.append(&mut rust_shadowing_helper_list_read(
-                list_a,
+                list_a_pointer,
                 i,
                 memory,
                 DIGEST_LENGTH,
             ));
             list_b_bfes.append(&mut rust_shadowing_helper_list_read(
-                list_b,
+                list_b_pointer,
                 i,
                 memory,
                 DIGEST_LENGTH,
@@ -513,8 +518,35 @@ impl DeprecatedSnippet for MultisetEquality {
         }
 
         // hash to get Fiat-Shamir challenge
-        let list_a_hash = VmHasher::hash_varlen(&list_a_bfes);
-        let list_b_hash = VmHasher::hash_varlen(&list_b_bfes);
+        let first_element_offset = match self.0 {
+            ListType::Safe => BFieldElement::new(2),
+            ListType::Unsafe => BFieldElement::new(1),
+        };
+        let list_a_hash = {
+            stack.push(list_a_pointer + first_element_offset);
+            stack.push(BFieldElement::new(len as u64 * DIGEST_LENGTH as u64));
+            HashVarlen.rust_shadowing(stack, vec![], vec![], memory);
+            Digest::new([
+                stack.pop().unwrap(),
+                stack.pop().unwrap(),
+                stack.pop().unwrap(),
+                stack.pop().unwrap(),
+                stack.pop().unwrap(),
+            ])
+        };
+        let list_b_hash = {
+            stack.push(list_b_pointer + first_element_offset);
+            stack.push(BFieldElement::new(len as u64 * DIGEST_LENGTH as u64));
+            HashVarlen.rust_shadowing(stack, vec![], vec![], memory);
+            Digest::new([
+                stack.pop().unwrap(),
+                stack.pop().unwrap(),
+                stack.pop().unwrap(),
+                stack.pop().unwrap(),
+                stack.pop().unwrap(),
+            ])
+        };
+
         let digest = VmHasher::hash_pair(list_a_hash, list_b_hash);
         let indeterminate =
             XFieldElement::new([digest.values()[0], digest.values()[1], digest.values()[2]]);
@@ -523,7 +555,7 @@ impl DeprecatedSnippet for MultisetEquality {
         let mut running_product_a = XFieldElement::one();
         for i in 0..len as u64 {
             let digest_elems =
-                rust_shadowing_helper_list_read(list_a, i as usize, memory, DIGEST_LENGTH);
+                rust_shadowing_helper_list_read(list_a_pointer, i as usize, memory, DIGEST_LENGTH);
             let m = XFieldElement::new([digest_elems[0], digest_elems[1], digest_elems[2]]);
             let factor = indeterminate - m;
             running_product_a *= factor;
@@ -531,7 +563,7 @@ impl DeprecatedSnippet for MultisetEquality {
         let mut running_product_b = XFieldElement::one();
         for i in 0..len as u64 {
             let digest_elems =
-                rust_shadowing_helper_list_read(list_b, i as usize, memory, DIGEST_LENGTH);
+                rust_shadowing_helper_list_read(list_b_pointer, i as usize, memory, DIGEST_LENGTH);
             let m = XFieldElement::new([digest_elems[0], digest_elems[1], digest_elems[2]]);
             let factor = indeterminate - m;
             running_product_b *= factor;
@@ -540,7 +572,7 @@ impl DeprecatedSnippet for MultisetEquality {
         // equate and push result to stack
         let result = running_product_a == running_product_b;
         // println!("result: {}", result);
-        stack.push(BFieldElement::new(result as u64))
+        stack.push(BFieldElement::new(result as u64));
     }
 }
 
@@ -563,8 +595,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::snippet_bencher::bench_and_write;
+
+    use super::*;
 
     #[test]
     fn unsafe_list_multiset_eq_benchmark() {

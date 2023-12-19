@@ -3,9 +3,10 @@ use std::collections::HashMap;
 use rand::RngCore;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
+use crate::data_type::DataType;
 use crate::library::Library;
 use crate::pseudo::lsb::Lsb;
-use crate::snippet::{DataType, DeprecatedSnippet};
+use crate::snippet::DeprecatedSnippet;
 use crate::{empty_stack, push_encodable, ExecutionState};
 
 #[derive(Clone, Debug)]
@@ -20,11 +21,11 @@ impl DeprecatedSnippet for Isodd {
         vec!["value % 2".to_string()]
     }
 
-    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+    fn input_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::U32]
     }
 
-    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+    fn output_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::Bool]
     }
 
@@ -68,7 +69,7 @@ impl DeprecatedSnippet for Isodd {
                 {entrypoint}:
                     call {lsb}
                     swap 1
-                    pop
+                    pop 1
                     return
                 "
         )
@@ -144,7 +145,7 @@ mod tests {
             &Isodd,
             &init_stack,
             &[],
-            &mut HashMap::default(),
+            HashMap::default(),
             0,
             Some(&expected_stack),
         );

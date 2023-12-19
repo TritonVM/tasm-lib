@@ -3,7 +3,8 @@ use std::collections::HashMap;
 use rand::Rng;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
-use crate::snippet::{DataType, DeprecatedSnippet};
+use crate::data_type::DataType;
+use crate::snippet::DeprecatedSnippet;
 use crate::{empty_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
@@ -18,12 +19,12 @@ impl DeprecatedSnippet for Neg {
         vec!["-value".to_string()]
     }
 
-    fn input_types(&self) -> Vec<crate::snippet::DataType> {
-        vec![DataType::BFE]
+    fn input_types(&self) -> Vec<crate::data_type::DataType> {
+        vec![DataType::Bfe]
     }
 
-    fn output_types(&self) -> Vec<crate::snippet::DataType> {
-        vec![DataType::BFE]
+    fn output_types(&self) -> Vec<crate::data_type::DataType> {
+        vec![DataType::Bfe]
     }
 
     fn crash_conditions(&self) -> Vec<String> {

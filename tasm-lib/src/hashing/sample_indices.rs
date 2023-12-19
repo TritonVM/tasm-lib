@@ -9,23 +9,12 @@ use twenty_first::{
 };
 
 use crate::{
-    empty_stack,
-    list::{
-        self,
-        safeimplu32::{new::SafeNew, push::SafePush},
-        unsafeimplu32::{new::UnsafeNew, push::UnsafePush},
-        ListType,
-    },
-    procedure::Procedure,
-    rust_shadowing_helper_functions,
-    snippet::{BasicSnippet, DataType},
-    VmHasher, VmHasherState,
+    data_type::DataType, empty_stack, list::ListType, procedure::Procedure,
+    rust_shadowing_helper_functions, snippet::BasicSnippet, VmHasher, VmHasherState,
 };
 
-/// Sample n pseudorandom integers
-/// between 0 and k. It does this by squeezing the sponge. It is the
-/// caller's responsibility to ensure that the sponge is initialized
-/// to the right state.
+/// Sample n pseudorandom integers between 0 and k. It does this by squeezing the sponge. It is the
+/// caller's responsibility to ensure that the sponge is initialized to the right state.
 #[derive(Clone, Debug)]
 pub struct SampleIndices {
     pub list_type: ListType,
@@ -58,26 +47,14 @@ impl BasicSnippet for SampleIndices {
         let main_loop = format!("{entrypoint}_main_loop");
         let then_reduce_and_save = format!("{entrypoint}_then_reduce_and_save");
         let else_drop_tip = format!("{entrypoint}_else_drop_tip");
-        let new_list = match self.list_type {
-            ListType::Safe => library.import(Box::new(SafeNew(DataType::U32))),
-            ListType::Unsafe => library.import(Box::new(UnsafeNew(DataType::U32))),
-        };
-        let length = match self.list_type {
-            ListType::Safe => {
-                library.import(Box::new(list::safeimplu32::length::Length(DataType::U32)))
-            }
-            ListType::Unsafe => {
-                library.import(Box::new(list::unsafeimplu32::length::Length(DataType::U32)))
-            }
-        };
-        let push_element = match self.list_type {
-            ListType::Safe => library.import(Box::new(SafePush(DataType::U32))),
-            ListType::Unsafe => library.import(Box::new(UnsafePush(DataType::U32))),
-        };
+
+        let new_list = library.import(self.list_type.new_list(DataType::U32));
+        let length = library.import(self.list_type.length(DataType::U32));
+        let push_element = library.import(self.list_type.push(DataType::U32));
 
         let if_can_sample = triton_asm! (
             // BEFORE: _ prn number upper_bound *indices
-            // AFTER: _ prn number upper_bound *indices ~can_use can_use
+            // AFTER:  _ prn number upper_bound *indices ~can_use can_use
             dup 0 call {length}         // _ prn number upper_bound *indices length
             dup 3 eq                    // _ prn number upper_bound *indices length==number
             push 0 eq                   // _ prn number upper_bound *indices length!=number
@@ -91,7 +68,7 @@ impl BasicSnippet for SampleIndices {
 
         triton_asm! (
             // BEFORE: _ number upper_bound
-            // AFTER: _ *indices
+            // AFTER:  _ *indices
             {entrypoint}:
                 // allocate a large enough list
                 dup 1                   // _ number upper_bound length
@@ -104,7 +81,7 @@ impl BasicSnippet for SampleIndices {
                 call {main_loop}        // _ number upper_bound-1 *indices
 
                 // clean up and return
-                swap 2 pop pop
+                swap 2 pop 2
                 return
 
             // INVARIANT: _ number upper_bound-1 *indices
@@ -115,66 +92,35 @@ impl BasicSnippet for SampleIndices {
                 skiz return             // _ number upper_bound-1 *indices
 
                 // we need to squeeze so squeeze
-                push 0 push 0 push 0 push 0 push 0
-                push 0 push 0 push 0 push 0 push 0
                 sponge_squeeze          // _ number upper_bound-1 *indices [prn]
 
                 // reject or reduce-and-store
                 dup 12 dup 12 dup 12    // _ number upper_bound-1 *indices [prn] number upper_bound-1 *indices
 
-                {&if_can_sample}
-                skiz call {then_reduce_and_save}
-                skiz call {else_drop_tip}
-
-                {&if_can_sample}
-                skiz call {then_reduce_and_save}
-                skiz call {else_drop_tip}
-
-                {&if_can_sample}
-                skiz call {then_reduce_and_save}
-                skiz call {else_drop_tip}
-
-                {&if_can_sample}
-                skiz call {then_reduce_and_save}
-                skiz call {else_drop_tip}
-
-                {&if_can_sample}
-                skiz call {then_reduce_and_save}
-                skiz call {else_drop_tip}
-
-
-                {&if_can_sample}
-                skiz call {then_reduce_and_save}
-                skiz call {else_drop_tip}
-
-                {&if_can_sample}
-                skiz call {then_reduce_and_save}
-                skiz call {else_drop_tip}
-
-                {&if_can_sample}
-                skiz call {then_reduce_and_save}
-                skiz call {else_drop_tip}
-
-                {&if_can_sample}
-                skiz call {then_reduce_and_save}
-                skiz call {else_drop_tip}
-
-                {&if_can_sample}
-                skiz call {then_reduce_and_save}
-                skiz call {else_drop_tip}         // _ number upper_bound-1 *indices number upper_bound-1 *indices
+                {&if_can_sample} skiz call {then_reduce_and_save} skiz call {else_drop_tip}
+                {&if_can_sample} skiz call {then_reduce_and_save} skiz call {else_drop_tip}
+                {&if_can_sample} skiz call {then_reduce_and_save} skiz call {else_drop_tip}
+                {&if_can_sample} skiz call {then_reduce_and_save} skiz call {else_drop_tip}
+                {&if_can_sample} skiz call {then_reduce_and_save} skiz call {else_drop_tip}
+                {&if_can_sample} skiz call {then_reduce_and_save} skiz call {else_drop_tip}
+                {&if_can_sample} skiz call {then_reduce_and_save} skiz call {else_drop_tip}
+                {&if_can_sample} skiz call {then_reduce_and_save} skiz call {else_drop_tip}
+                {&if_can_sample} skiz call {then_reduce_and_save} skiz call {else_drop_tip}
+                {&if_can_sample} skiz call {then_reduce_and_save} skiz call {else_drop_tip}
+                                        // _ number upper_bound-1 *indices number upper_bound-1 *indices
 
                 // return to invariant and repeat
-                pop pop pop                         // _ number upper_bound-1 *indices
+                pop 3                   // _ number upper_bound-1 *indices
                 recurse
 
             // BEFORE: _ prn number upper_bound-1 *indices 0
-            // AFTER: _ number upper_bound-1 *indices 0
+            // AFTER:  _ number upper_bound-1 *indices 0
             {then_reduce_and_save}:
-                pop                     // _ prn number upper_bound-1 *indices
+                pop 1                   // _ prn number upper_bound-1 *indices
                 swap 2 swap 3           // _ number *indices upper_bound-1 prn
                 split                   // _ number *indices upper_bound-1 hi lo
                 dup 2 and               // _ number *indices upper_bound-1 hi index
-                swap 1 pop              // _ number *indices upper_bound-1 index
+                swap 1 pop 1            // _ number *indices upper_bound-1 index
 
                 swap 1 swap 2 swap 1    // _ number upper_bound-1 *indices index
                 dup 1 swap 1            // _ number upper_bound-1 *indices *indices index
@@ -184,10 +130,10 @@ impl BasicSnippet for SampleIndices {
                 return
 
             // BEFORE: _ prn number upper_bound-1 *indices
-            // AFTER: _ number upper_bound-1 *indices
+            // AFTER:  _ number upper_bound-1 *indices
             {else_drop_tip}:
                 swap 2 swap 3           // _ number *indices upper_bound-1 prn
-                pop swap 1              // _ number upper_bound-1 *indices
+                pop 1 swap 1            // _ number upper_bound-1 *indices
                 return
 
         )
@@ -201,8 +147,12 @@ impl Procedure for SampleIndices {
         memory: &mut HashMap<BFieldElement, BFieldElement>,
         _nondeterminism: &NonDeterminism<BFieldElement>,
         _public_input: &[BFieldElement],
-        sponge_state: &mut VmHasherState,
+        sponge_state: &mut Option<VmHasherState>,
     ) -> Vec<BFieldElement> {
+        let Some(sponge_state) = sponge_state else {
+            panic!("sponge state must be initialized");
+        };
+
         // collect upper bound and number from stack
         let upper_bound = stack.pop().unwrap().value() as u32;
         let number = stack.pop().unwrap().value() as usize;
@@ -210,7 +160,7 @@ impl Procedure for SampleIndices {
         println!("sampling {number} indices between 0 and {upper_bound}");
         println!(
             "sponge state before: {}",
-            sponge_state.state.iter().map(|b| b.value()).join(",")
+            sponge_state.state.iter().join(","),
         );
 
         // sample indices
@@ -247,10 +197,9 @@ impl Procedure for SampleIndices {
         bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
     ) -> (
         Vec<BFieldElement>,
-        HashMap<BFieldElement, BFieldElement>,
         NonDeterminism<BFieldElement>,
         Vec<BFieldElement>,
-        VmHasherState,
+        Option<VmHasherState>,
     ) {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
         let number = if let Some(case) = bench_case {
@@ -274,15 +223,12 @@ impl Procedure for SampleIndices {
         stack.push(BFieldElement::new(number as u64));
         stack.push(BFieldElement::new(upper_bound as u64));
 
-        let memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
-
-        let nondeterminism = NonDeterminism::new(vec![]);
         let public_input: Vec<BFieldElement> = vec![];
         let state = VmHasherState {
             state: rng.gen::<[BFieldElement; STATE_SIZE]>(),
         };
 
-        (stack, memory, nondeterminism, public_input, state)
+        (stack, NonDeterminism::default(), public_input, Some(state))
     }
 }
 

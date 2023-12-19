@@ -5,26 +5,23 @@ use rand::{rngs::StdRng, Rng, RngCore, SeedableRng};
 use triton_vm::{triton_asm, BFieldElement, NonDeterminism};
 use twenty_first::{shared_math::tip5::RATE, util_types::algebraic_hasher::SpongeHasher};
 
-use crate::{
-    empty_stack,
-    procedure::Procedure,
-    snippet::{BasicSnippet, DataType},
-    VmHasher, VmHasherState,
-};
+use crate::data_type::DataType;
+use crate::snippet_bencher::BenchmarkCase;
+use crate::{empty_stack, procedure::Procedure, snippet::BasicSnippet, VmHasher, VmHasherState};
 
 /// Squeeze the sponge n times, storing all the produced pseudorandom `BFieldElement`s
 /// contiguously in memory. It is the caller's responsibility to allocate enough memory.
 pub struct SqueezeRepeatedly;
 
 impl BasicSnippet for SqueezeRepeatedly {
-    fn inputs(&self) -> Vec<(crate::snippet::DataType, String)> {
+    fn inputs(&self) -> Vec<(crate::data_type::DataType, String)> {
         vec![
             (DataType::VoidPointer, "address".to_string()),
             (DataType::U32, "num_squeezes".to_string()),
         ]
     }
 
-    fn outputs(&self) -> Vec<(crate::snippet::DataType, String)> {
+    fn outputs(&self) -> Vec<(crate::data_type::DataType, String)> {
         vec![
             (DataType::VoidPointer, "address".to_string()),
             (DataType::U32, "num_squeezes".to_string()),
@@ -42,68 +39,22 @@ impl BasicSnippet for SqueezeRepeatedly {
         let entrypoint = self.entrypoint();
         triton_asm! {
             // BEFORE: _ address num_squeezes
-            // AFTER: _ address' 0
+            // AFTER:  _ address' 0
             {entrypoint}:
 
                 // test termination condition
                 dup 0
-                push 0 eq   // _ address num_squeezes num_squeezes==0
+                push 0 eq       // _ address num_squeezes num_squeezes==0
                 skiz return
 
-                // decrement squeeze number
                 push -1 add
 
-                // add padding
-                push 0 push 0 push 0 push 0 push 0
-                push 0 push 0 push 0 push 0 push 0
+                sponge_squeeze  // _ address num_squeezes-1 r9 r8 r7 r6 r5 r4 r3 r2 r1 r0
 
-                // squeeze
-                sponge_squeeze // _ address num_squeezes-1 r9 r8 r7 r6 r5 r4 r3 r2 r1 r0
-
-                // store to memory
-                dup 11      // _ address num_squeezes-1 r9 r8 r7 r6 r5 r4 r3 r2 r1 r0 address
-
-                swap 1      // _ address num_squeezes-1 r9 r8 r7 r6 r5 r4 r3 r2 r1 address r0
-                write_mem   // _ address num_squeezes-1 r9 r8 r7 r6 r5 r4 r3 r2 r1 address
-                push 1 add  // _ address num_squeezes-1 r9 r8 r7 r6 r5 r4 r3 r2 r1 address+1
-
-                swap 1      // _ address num_squeezes-1 r9 r8 r7 r6 r5 r4 r3 r2 address+1 r1
-                write_mem   // _ address num_squeezes-1 r9 r8 r7 r6 r5 r4 r3 r2 address+1
-                push 1 add  // _ address num_squeezes-1 r9 r8 r7 r6 r5 r4 r3 r2 address+2
-
-                swap 1      // _ address num_squeezes-1 r9 r8 r7 r6 r5 r4 r3 address+2 r2
-                write_mem   // _ address num_squeezes-1 r9 r8 r7 r6 r5 r4 r3 address+2
-                push 1 add  // _ address num_squeezes-1 r9 r8 r7 r6 r5 r4 r3 address+3
-
-                swap 1      // _ address num_squeezes-1 r9 r8 r7 r6 r5 r4 address+3 r3
-                write_mem   // _ address num_squeezes-1 r9 r8 r7 r6 r5 r4 address+3
-                push 1 add  // _ address num_squeezes-1 r9 r8 r7 r6 r5 r4 address+4
-
-                swap 1      // _ address num_squeezes-1 r9 r8 r7 r6 r5 address+4 r4
-                write_mem   // _ address num_squeezes-1 r9 r8 r7 r6 r5 address+4
-                push 1 add  // _ address num_squeezes-1 r9 r8 r7 r6 r5 address+5
-
-                swap 1      // _ address num_squeezes-1 r9 r8 r7 r6 address+5 r5
-                write_mem   // _ address num_squeezes-1 r9 r8 r7 r6 address+5
-                push 1 add  // _ address num_squeezes-1 r9 r8 r7 r6 address+6
-
-                swap 1      // _ address num_squeezes-1 r9 r8 r7 address+6 r6
-                write_mem   // _ address num_squeezes-1 r9 r8 r7 address+6
-                push 1 add  // _ address num_squeezes-1 r9 r8 r7 address+7
-
-                swap 1      // _ address num_squeezes-1 r9 r8 address+7 r7
-                write_mem   // _ address num_squeezes-1 r9 r8 address+7
-                push 1 add  // _ address num_squeezes-1 r9 r8 address+8
-
-                swap 1      // _ address num_squeezes-1 r9 address+8 r8
-                write_mem   // _ address num_squeezes-1 r9 address+8
-                push 1 add  // _ address num_squeezes-1 r9 address+9
-
-                swap 1      // _ address num_squeezes-1 address+9 r9
-                write_mem   // _ address num_squeezes-1 address+9
-                push 1 add  // _ address num_squeezes-1 address+10
-
-                swap 2 pop  // _ address+10 num_squeezes-1
+                dup 11          // _ address num_squeezes-1 r9 r8 r7 r6 r5 r4 r3 r2 r1 r0 address
+                write_mem 5
+                write_mem 5
+                swap 2 pop 1    // _ address+10 num_squeezes-1
 
                 recurse
         }
@@ -113,15 +64,18 @@ impl BasicSnippet for SqueezeRepeatedly {
 impl Procedure for SqueezeRepeatedly {
     fn rust_shadow(
         &self,
-        stack: &mut Vec<triton_vm::BFieldElement>,
-        memory: &mut std::collections::HashMap<triton_vm::BFieldElement, triton_vm::BFieldElement>,
-        _nondeterminism: &triton_vm::NonDeterminism<triton_vm::BFieldElement>,
-        _public_input: &[triton_vm::BFieldElement],
-        sponge_state: &mut crate::VmHasherState,
-    ) -> Vec<triton_vm::BFieldElement> {
+        stack: &mut Vec<BFieldElement>,
+        memory: &mut HashMap<BFieldElement, BFieldElement>,
+        _nondeterminism: &NonDeterminism<BFieldElement>,
+        _public_input: &[BFieldElement],
+        sponge_state: &mut Option<VmHasherState>,
+    ) -> Vec<BFieldElement> {
         let num_squeezes = stack.pop().unwrap().value() as usize;
         let address = stack.pop().unwrap();
 
+        let Some(sponge_state) = sponge_state else {
+            panic!("sponge state must be initialized");
+        };
         let sequence = (0..num_squeezes)
             .flat_map(|_| VmHasher::squeeze(sponge_state).to_vec())
             .collect_vec();
@@ -140,29 +94,27 @@ impl Procedure for SqueezeRepeatedly {
     fn pseudorandom_initial_state(
         &self,
         seed: [u8; 32],
-        _bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
+        bench_case: Option<BenchmarkCase>,
     ) -> (
-        Vec<triton_vm::BFieldElement>,
-        std::collections::HashMap<triton_vm::BFieldElement, triton_vm::BFieldElement>,
-        triton_vm::NonDeterminism<triton_vm::BFieldElement>,
-        Vec<triton_vm::BFieldElement>,
-        crate::VmHasherState,
+        Vec<BFieldElement>,
+        NonDeterminism<BFieldElement>,
+        Vec<BFieldElement>,
+        Option<VmHasherState>,
     ) {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
+        let num_squeezes = match bench_case {
+            Some(BenchmarkCase::CommonCase) => 10,
+            Some(BenchmarkCase::WorstCase) => 200,
+            None => rng.gen_range(0..10),
+        };
+
         let sponge_state = VmHasherState { state: rng.gen() };
         let mut stack = empty_stack();
         let address = BFieldElement::new(rng.next_u64() % (1 << 20));
-        let num_squeezes = rng.gen_range(0..10);
         stack.push(address);
         stack.push(BFieldElement::new(num_squeezes as u64));
 
-        (
-            stack,
-            HashMap::new(),
-            NonDeterminism::new(vec![]),
-            vec![],
-            sponge_state,
-        )
+        (stack, NonDeterminism::default(), vec![], Some(sponge_state))
     }
 }
 
@@ -194,29 +146,20 @@ mod test {
         for _ in 0..num_states {
             let seed: [u8; 32] = rng.gen();
             println!("testing {} common case with seed: {:x?}", entrypoint, seed);
-            let (stack, memory, nondeterminism, stdin, sponge_state) =
+            let (stack, nondeterminism, stdin, sponge_state) =
                 SqueezeRepeatedly.pseudorandom_initial_state(seed, None);
 
             let init_stack = stack.to_vec();
-            let words_statically_allocated = 0;
 
-            let rust = rust_final_state(
-                &shadow,
-                &stack,
-                &stdin,
-                &nondeterminism,
-                &memory,
-                &sponge_state,
-                words_statically_allocated,
-            );
+            let rust = rust_final_state(&shadow, &stack, &stdin, &nondeterminism, &sponge_state);
 
             // run tvm
+            let words_statically_allocated = 0;
             let tasm = tasm_final_state(
                 &shadow,
                 &stack,
                 &stdin,
-                &nondeterminism,
-                &memory,
+                nondeterminism,
                 &sponge_state,
                 words_statically_allocated,
             );
@@ -234,5 +177,16 @@ mod test {
             verify_stack_growth(&shadow, &init_stack, &tasm.final_stack);
             verify_sponge_equivalence(&rust.final_sponge_state, &tasm.final_sponge_state);
         }
+    }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::*;
+    use crate::{procedure::ShadowedProcedure, snippet::RustShadow};
+
+    #[test]
+    fn squeeze_repeatedly_bench() {
+        ShadowedProcedure::new(SqueezeRepeatedly).bench();
     }
 }

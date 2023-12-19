@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 
+use itertools::Itertools;
 use num::BigUint;
 use rand::{thread_rng, Rng};
+use triton_vm::triton_asm;
 use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::bfield_codec::BFieldCodec;
@@ -15,8 +17,9 @@ use crate::arithmetic::u64::lt_u64::LtU64;
 use crate::arithmetic::u64::popcount_u64::PopCountU64;
 use crate::arithmetic::u64::pow2_u64::Pow2U64;
 use crate::arithmetic::u64::xor_u64::XorU64;
+use crate::data_type::DataType;
 use crate::library::Library;
-use crate::snippet::{DataType, DeprecatedSnippet};
+use crate::snippet::DeprecatedSnippet;
 use crate::{empty_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
@@ -40,11 +43,11 @@ impl DeprecatedSnippet for MmrLeafIndexToMtIndexAndPeakIndex {
         ]
     }
 
-    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+    fn input_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::U64, DataType::U64]
     }
 
-    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+    fn output_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::U64, DataType::U32]
     }
 
@@ -83,8 +86,7 @@ impl DeprecatedSnippet for MmrLeafIndexToMtIndexAndPeakIndex {
         let decr_u64 = library.import(Box::new(DecrU64));
         let popcount_u64 = library.import(Box::new(PopCountU64));
 
-        format!(
-            "
+        triton_asm!(
         // Before: _ leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo
         // After: _ mt_index_hi mt_index_lo peak_index
         {entrypoint}:
@@ -142,7 +144,7 @@ impl DeprecatedSnippet for MmrLeafIndexToMtIndexAndPeakIndex {
             call {popcount_u64}
             // stack: _ mti_hi mti_lo leaf_index_hi leaf_index_lo local_mt_leaf_count_hi local_mt_leaf_count_lo local_mt_leaf_count_hi local_mt_leaf_count_lo remainder_bitmask_hi remainder_bitmask_lo lc_hi lc_lo all_the_ones
 
-            swap 5 pop
+            swap 5 pop 1
             // stack: _ mti_hi mti_lo leaf_index_hi leaf_index_lo local_mt_leaf_count_hi local_mt_leaf_count_lo local_mt_leaf_count_hi all_the_ones remainder_bitmask_hi remainder_bitmask_lo lc_hi lc_lo
 
             call {and_u64}
@@ -156,12 +158,13 @@ impl DeprecatedSnippet for MmrLeafIndexToMtIndexAndPeakIndex {
             add
             // stack: _ mti_hi mti_lo leaf_index_hi leaf_index_lo local_mt_leaf_count_hi local_mt_leaf_count_lo local_mt_leaf_count_hi peak_index
 
-            swap 5 pop pop pop pop pop
+            swap 5 pop 5
             // stack: _ mti_hi mti_lo peak_index
 
             return
-            "
         )
+        .iter()
+        .join("\n")
     }
 
     fn rust_shadowing(
@@ -381,7 +384,7 @@ mod tests {
             &MmrLeafIndexToMtIndexAndPeakIndex,
             &init_stack,
             &[],
-            &mut HashMap::default(),
+            HashMap::default(),
             0,
             Some(&expected),
         );

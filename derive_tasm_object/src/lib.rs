@@ -4,6 +4,7 @@ extern crate proc_macro;
 
 use proc_macro::TokenStream;
 use quote::quote;
+use syn::DeriveInput;
 
 /// Derives `TasmObject` for structs.
 ///
@@ -29,23 +30,8 @@ struct ParseResult {
     ignored_fields: Vec<syn::Field>,
 }
 
-fn impl_derive_tasm_object_macro(ast: syn::DeriveInput) -> TokenStream {
-    let parse_result = match &ast.data {
-        syn::Data::Struct(syn::DataStruct {
-            fields: syn::Fields::Named(fields),
-            ..
-        }) => generate_tokens_for_struct_with_named_fields(fields),
-        syn::Data::Struct(syn::DataStruct {
-            fields: syn::Fields::Unnamed(fields),
-            ..
-        }) => generate_tokens_for_struct_with_unnamed_fields(fields),
-        _ => panic!("expected a struct with named fields, or with unnamed fields"),
-    };
-
-    let name = &ast.ident;
-
-    // Extract the generics of the struct/enum.
-    let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
+fn impl_derive_tasm_object_macro(ast: DeriveInput) -> TokenStream {
+    let parse_result = generate_parse_result(&ast);
 
     // generate clauses for match statements
     let get_current_field_start_with_jump = (0..parse_result.field_names.len()).map(|index| {
@@ -152,15 +138,14 @@ fn impl_derive_tasm_object_macro(ast: syn::DeriveInput) -> TokenStream {
             fields: syn::Fields::Unnamed(_),
             ..
         }) => {
-            let mut defaults = quote! {};
-            for _ in 0..ignored_field_names.len() {
-                defaults = quote! {#defaults, Default::default()};
-            }
-            quote! { Self(#( #field_names ,)* #defaults) }
+            let reversed_field_names = parse_result.field_names.iter().rev();
+            let defaults = vec![quote! { Default::default() }; ignored_field_names.len()];
+            quote! { Self( #( #reversed_field_names ,)* #( #defaults , )* ) }
         }
         _ => unreachable!("expected a struct with named fields, or with unnamed fields"),
     };
 
+    let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
     let ignored_field_types = parse_result.ignored_fields.iter().map(|f| f.ty.clone());
     let new_where_clause = if let Some(old_where_clause) = where_clause {
         quote! {
@@ -173,6 +158,7 @@ fn impl_derive_tasm_object_macro(ast: syn::DeriveInput) -> TokenStream {
         }
     };
 
+    let name = &ast.ident;
     let gen = quote! {
         impl #impl_generics ::tasm_lib::structure::tasm_object::TasmObject
         for #name #ty_generics #new_where_clause {
@@ -197,14 +183,35 @@ fn impl_derive_tasm_object_macro(ast: syn::DeriveInput) -> TokenStream {
                 }
             }
 
-            fn decode_iter<Itr: Iterator<Item=triton_vm::BFieldElement>>( iterator: &mut Itr ) -> anyhow::Result<Box<Self>> {
+            fn decode_iter<Itr: Iterator<Item=triton_vm::BFieldElement>>(
+                iterator: &mut Itr
+            ) -> ::std::result::Result<
+                    ::std::boxed::Box<Self>,
+                    ::std::boxed::Box<dyn std::error::Error
+                        + ::core::marker::Send
+                        + ::core::marker::Sync>
+            > {
                 #( #field_decoders )*
-                anyhow::Result::Ok(Box::new(#self_builder))
+                ::std::result::Result::Ok(::std::boxed::Box::new(#self_builder))
             }
         }
     };
 
     gen.into()
+}
+
+fn generate_parse_result(ast: &DeriveInput) -> ParseResult {
+    match &ast.data {
+        syn::Data::Struct(syn::DataStruct {
+            fields: syn::Fields::Named(fields),
+            ..
+        }) => generate_tokens_for_struct_with_named_fields(fields),
+        syn::Data::Struct(syn::DataStruct {
+            fields: syn::Fields::Unnamed(fields),
+            ..
+        }) => generate_tokens_for_struct_with_unnamed_fields(fields),
+        _ => panic!("expected a struct with named fields, or with unnamed fields"),
+    }
 }
 
 fn field_is_ignored(field: &syn::Field) -> bool {
@@ -228,10 +235,11 @@ fn generate_tokens_for_struct_with_named_fields(fields: &syn::FieldsNamed) -> Pa
     let ignored_fields = fields
         .named
         .iter()
+        .rev()
         .filter(|f| field_is_ignored(f))
         .cloned()
         .collect::<Vec<_>>();
-    let named_fields = fields.named.iter().filter(|f| !field_is_ignored(f));
+    let named_fields = fields.named.iter().rev().filter(|f| !field_is_ignored(f));
 
     let field_names = named_fields
         .clone()
@@ -283,11 +291,11 @@ fn generate_tasm_for_getter_postprocess(field_type: &syn::Type) -> quote::__priv
     quote! {
         if <#field_type as twenty_first::shared_math::bfield_codec::BFieldCodec>::static_length().is_some() {
             [
-                triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Pop),
+                triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Pop(::triton_vm::op_stack::NumberOfWords::N1)),
             ].to_vec()
         } else {
             [
-                triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Pop),
+                triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Pop(::triton_vm::op_stack::NumberOfWords::N1)),
                 triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(twenty_first::shared_math::b_field_element::BFieldElement::new(1u64))),
                 triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),
             ].to_vec()
@@ -307,7 +315,7 @@ fn generate_tasm_for_sizer_postprocess(field_type: &syn::Type) -> quote::__priva
             std::vec::Vec::<triton_vm::instruction::LabelledInstruction>::new()
         } else {
             [
-                triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(twenty_first::shared_math::b_field_element::BFieldElement::new(18446744069414584320u64))),
+                triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(-twenty_first::shared_math::b_field_element::BFieldElement::new(1u64))),
                 triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),
                 triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Swap(triton_vm::op_stack::OpStackElement::ST1)),
                 triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(twenty_first::shared_math::b_field_element::BFieldElement::new(1u64))),
@@ -331,7 +339,10 @@ fn generate_tasm_for_extend_field_start_with_jump_amount(
             ].to_vec()
         } else {
             [
-                triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::ReadMem),
+                triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::ReadMem(::triton_vm::op_stack::NumberOfWords::N1)),
+                triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(twenty_first::shared_math::b_field_element::BFieldElement::new(1u64))),
+                triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),
+                triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Swap(::triton_vm::op_stack::OpStackElement::ST1)),
                 triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(twenty_first::shared_math::b_field_element::BFieldElement::new(1u64))),
                 triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),
             ].to_vec()
@@ -340,53 +351,50 @@ fn generate_tasm_for_extend_field_start_with_jump_amount(
 }
 
 fn generate_tokens_for_struct_with_unnamed_fields(fields: &syn::FieldsUnnamed) -> ParseResult {
-    let ignored_fields = fields
-        .unnamed
-        .iter()
+    let fields_iterator = fields.unnamed.iter().rev();
+    let ignored_fields = fields_iterator
+        .clone()
         .filter(|f| field_is_ignored(f))
         .cloned()
         .collect::<Vec<_>>();
-    let field_names = fields
-        .unnamed
-        .iter()
+
+    let field_count = fields_iterator.clone().count();
+    let field_names = fields_iterator
+        .clone()
         .filter(|f| !field_is_ignored(f))
         .enumerate()
-        .map(|(i, _f)| quote::format_ident!("field_{i}"));
-    let field_names_list = field_names.clone().collect::<std::vec::Vec<_>>();
+        .map(|(i, _f)| quote::format_ident!("field_{}", field_count - 1 - i))
+        .collect::<Vec<_>>();
 
-    let getters = fields
-        .unnamed
-        .iter()
+    let getters = fields_iterator
+        .clone()
         .enumerate()
         .map(|(i, _f)| {
             generate_tasm_for_getter_postprocess(
-                &fields.unnamed.iter().cloned().collect::<Vec<_>>()[i].ty,
+                &fields_iterator.clone().nth(i).cloned().unwrap().ty,
             )
         })
-        .collect::<std::vec::Vec<_>>();
+        .collect::<Vec<_>>();
 
-    let sizers = fields
-        .unnamed
-        .iter()
+    let sizers = fields_iterator
+        .clone()
         .enumerate()
         .map(|(_i, f)| generate_tasm_for_sizer_postprocess(&f.ty))
-        .collect::<std::vec::Vec<_>>();
+        .collect::<Vec<_>>();
 
-    let jumpers = fields
-        .unnamed
-        .iter()
+    let jumpers = fields_iterator
+        .clone()
         .enumerate()
         .map(|(_i, f)| generate_tasm_for_extend_field_start_with_jump_amount(&f.ty))
-        .collect::<std::vec::Vec<_>>();
+        .collect::<Vec<_>>();
 
-    let field_types = fields
-        .unnamed
-        .iter()
+    let field_types = fields_iterator
+        .clone()
         .map(|field| field.ty.clone())
-        .collect::<std::vec::Vec<_>>();
+        .collect::<Vec<_>>();
 
     ParseResult {
-        field_names: field_names_list,
+        field_names,
         field_types,
         getters,
         sizers,

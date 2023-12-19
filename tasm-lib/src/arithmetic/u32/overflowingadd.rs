@@ -2,11 +2,8 @@ use rand::{rngs::StdRng, RngCore, SeedableRng};
 use triton_vm::triton_asm;
 use twenty_first::shared_math::{b_field_element::BFieldElement, bfield_codec::BFieldCodec};
 
-use crate::{
-    closure::Closure,
-    empty_stack,
-    snippet::{BasicSnippet, DataType},
-};
+use crate::data_type::DataType;
+use crate::{closure::Closure, empty_stack, snippet::BasicSnippet};
 
 #[derive(Clone, Debug)]
 pub struct Overflowingadd;
@@ -76,16 +73,12 @@ impl Closure for Overflowingadd {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
     use triton_vm::NonDeterminism;
-    use twenty_first::util_types::algebraic_hasher::Domain;
 
     use super::*;
     use crate::closure::ShadowedClosure;
     use crate::snippet::RustShadow;
     use crate::test_helpers::test_rust_equivalence_given_complete_state;
-    use crate::VmHasherState;
 
     #[test]
     fn u32_overflowing_add_pbt() {
@@ -124,9 +117,8 @@ mod tests {
                 &ShadowedClosure::new(Overflowingadd),
                 &init_stack,
                 &[],
-                &NonDeterminism::new(vec![]),
-                &HashMap::default(),
-                &VmHasherState::new(Domain::VariableLength),
+                &NonDeterminism::default(),
+                &None,
                 1,
                 Some(&expected_final_stack),
             );

@@ -6,28 +6,70 @@ use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
+use crate::data_type::DataType;
 use crate::library::Library;
-use crate::snippet::{DataType, DeprecatedSnippet};
+use crate::snippet::DeprecatedSnippet;
 use crate::{empty_stack, push_encodable, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct IncrU64;
 
 impl DeprecatedSnippet for IncrU64 {
+    fn entrypoint_name(&self) -> String {
+        "tasm_arithmetic_u64_incr".to_string()
+    }
+
     fn input_field_names(&self) -> Vec<String> {
         vec!["value_hi".to_string(), "value_lo".to_string()]
+    }
+
+    fn input_types(&self) -> Vec<crate::data_type::DataType> {
+        vec![DataType::U64]
     }
 
     fn output_field_names(&self) -> Vec<String> {
         vec!["(value + 1)_hi".to_string(), "(value + 1)_lo".to_string()]
     }
 
-    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+    fn output_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::U64]
     }
 
-    fn output_types(&self) -> Vec<crate::snippet::DataType> {
-        vec![DataType::U64]
+    fn stack_diff(&self) -> isize {
+        0
+    }
+
+    fn function_code(&self, _library: &mut Library) -> String {
+        let entrypoint = self.entrypoint_name();
+        const TWO_POW_32: u64 = 1 << 32;
+        format!(
+            "
+            // Before: _ value_hi value_lo
+            // After:  _ (value + 1)_hi (value + 1)_lo
+            {entrypoint}_carry:
+                pop 1
+                push 1
+                add
+                dup 0
+                push {TWO_POW_32}
+                eq
+                push 0
+                eq
+                assert
+                push 0
+                return
+
+            {entrypoint}:
+                push 1
+                add
+                dup 0
+                push {TWO_POW_32}
+                eq
+                skiz
+                    call {entrypoint}_carry
+                return
+            ",
+        )
     }
 
     fn crash_conditions(&self) -> Vec<String> {
@@ -54,64 +96,6 @@ impl DeprecatedSnippet for IncrU64 {
             .collect()
     }
 
-    fn stack_diff(&self) -> isize {
-        0
-    }
-
-    fn entrypoint_name(&self) -> String {
-        "tasm_arithmetic_u64_incr".to_string()
-    }
-
-    fn function_code(&self, _library: &mut Library) -> String {
-        let entrypoint = self.entrypoint_name();
-        const TWO_POW_32: &str = "4294967296";
-        format!(
-            "
-            // Before: _ value_hi value_lo
-            // After: _ (value + 1)_hi (value + 1)_lo
-            {entrypoint}_carry:
-                pop
-                push 1
-                add
-                dup 0
-                push {TWO_POW_32}
-                eq
-                push 0
-                eq
-                assert
-                push 0
-                return
-
-            {entrypoint}:
-                push 1
-                add
-                dup 0
-                push {TWO_POW_32}
-                eq
-                skiz
-                    call {entrypoint}_carry
-                return
-            ",
-        )
-    }
-
-    fn rust_shadowing(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        _std_in: Vec<BFieldElement>,
-        _secret_in: Vec<BFieldElement>,
-        _memory: &mut HashMap<BFieldElement, BFieldElement>,
-    ) {
-        let a: u32 = stack.pop().unwrap().try_into().unwrap();
-        let b: u32 = stack.pop().unwrap().try_into().unwrap();
-        let ab = U32s::<2>::new([a, b]);
-        let ab_incr = ab + U32s::one();
-        let mut res = ab_incr.encode();
-        for _ in 0..res.len() {
-            stack.push(res.pop().unwrap());
-        }
-    }
-
     fn common_case_input_state(&self) -> ExecutionState {
         // no carry
         ExecutionState::with_stack(
@@ -133,10 +117,29 @@ impl DeprecatedSnippet for IncrU64 {
             .concat(),
         )
     }
+
+    fn rust_shadowing(
+        &self,
+        stack: &mut Vec<BFieldElement>,
+        _std_in: Vec<BFieldElement>,
+        _secret_in: Vec<BFieldElement>,
+        _memory: &mut HashMap<BFieldElement, BFieldElement>,
+    ) {
+        let a: u32 = stack.pop().unwrap().try_into().unwrap();
+        let b: u32 = stack.pop().unwrap().try_into().unwrap();
+        let ab = U32s::<2>::new([a, b]);
+        let ab_incr = ab + U32s::one();
+        let mut res = ab_incr.encode();
+        for _ in 0..res.len() {
+            stack.push(res.pop().unwrap());
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
+
+    use triton_vm::NonDeterminism;
 
     use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
     use crate::{empty_stack, push_encodable};
@@ -154,7 +157,7 @@ mod tests {
         let u64_max = U32s::<2>::try_from(u64::MAX).unwrap();
         push_encodable(&mut stack, &u64_max);
         assert!(IncrU64
-            .link_and_run_tasm_for_test(&mut stack, vec![], vec![], &mut HashMap::default(), None)
+            .link_and_run_tasm_for_test(&mut stack, vec![], NonDeterminism::default(), None)
             .is_err());
     }
 

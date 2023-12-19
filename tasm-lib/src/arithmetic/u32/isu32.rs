@@ -4,8 +4,9 @@ use num::{One, Zero};
 use rand::RngCore;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
+use crate::data_type::DataType;
 use crate::library::Library;
-use crate::snippet::{DataType, DeprecatedSnippet};
+use crate::snippet::DeprecatedSnippet;
 use crate::{empty_stack, push_encodable, ExecutionState};
 
 #[derive(Clone, Debug)]
@@ -20,11 +21,11 @@ impl DeprecatedSnippet for Isu32 {
         vec!["value < 2^32".to_string()]
     }
 
-    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+    fn input_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::U32]
     }
 
-    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+    fn output_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::Bool]
     }
 
@@ -66,7 +67,7 @@ impl DeprecatedSnippet for Isu32 {
             {entrypoint}:
                         // _ a
                 split   // _ hi lo
-                pop     // _ hi
+                pop 1   // _ hi
                 push 0  // _ hi 0
                 eq      // _ (hi == 0)
                 return
@@ -160,7 +161,7 @@ mod tests {
             &Isu32,
             &init_stack,
             &[],
-            &mut HashMap::default(),
+            HashMap::default(),
             0,
             expected,
         );

@@ -6,12 +6,8 @@ use twenty_first::{
     shared_math::{b_field_element::BFieldElement, bfield_codec::BFieldCodec},
 };
 
-use crate::{
-    empty_stack,
-    library::Library,
-    snippet::{DataType, DeprecatedSnippet},
-    ExecutionState,
-};
+use crate::data_type::DataType;
+use crate::{empty_stack, library::Library, snippet::DeprecatedSnippet, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct SubU128;
@@ -39,11 +35,11 @@ impl DeprecatedSnippet for SubU128 {
         ]
     }
 
-    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+    fn input_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::U128, DataType::U128]
     }
 
-    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+    fn output_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::U128]
     }
 
@@ -374,7 +370,7 @@ mod tests {
             &SubU128,
             &init_stack,
             &[],
-            &mut HashMap::default(),
+            HashMap::default(),
             0,
             expected,
         );

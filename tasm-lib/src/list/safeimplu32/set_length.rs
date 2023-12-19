@@ -1,32 +1,91 @@
 use std::collections::HashMap;
 
+use itertools::Itertools;
 use num::One;
 use rand::{random, thread_rng, Rng};
+use triton_vm::triton_asm;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
+use crate::data_type::DataType;
 use crate::library::Library;
 use crate::rust_shadowing_helper_functions::safe_list::safe_insert_random_list;
-use crate::snippet::{DataType, DeprecatedSnippet};
+use crate::snippet::DeprecatedSnippet;
 use crate::{empty_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
-pub struct SafeSetLength(pub DataType);
+pub struct SafeSetLength {
+    pub data_type: DataType,
+}
 
 impl DeprecatedSnippet for SafeSetLength {
+    fn entrypoint_name(&self) -> String {
+        format!(
+            "tasm_list_safeimplu32_set_length___{}",
+            self.data_type.label_friendly_name()
+        )
+    }
+
     fn input_field_names(&self) -> Vec<String> {
         vec!["*list".to_string(), "list_length".to_string()]
+    }
+
+    fn input_types(&self) -> Vec<DataType> {
+        vec![
+            DataType::List(Box::new(self.data_type.clone())),
+            DataType::U32,
+        ]
     }
 
     fn output_field_names(&self) -> Vec<String> {
         vec!["*list".to_string()]
     }
 
-    fn input_types(&self) -> Vec<crate::snippet::DataType> {
-        vec![DataType::List(Box::new(self.0.clone())), DataType::U32]
+    fn output_types(&self) -> Vec<DataType> {
+        vec![DataType::List(Box::new(self.data_type.clone()))]
     }
 
-    fn output_types(&self) -> Vec<crate::snippet::DataType> {
-        vec![DataType::List(Box::new(self.0.clone()))]
+    fn stack_diff(&self) -> isize {
+        // pops list_length but leaves list_pointer on stack
+        -1
+    }
+
+    fn function_code(&self, _library: &mut Library) -> String {
+        let entry_point = self.entrypoint_name();
+        // It is assumed that the new length is a valid u32 value
+        triton_asm!(
+                // BEFORE: _ *list list_length
+                // AFTER: _ *list
+                {entry_point}:
+                    dup 0
+                    swap 2
+                    // _ list_length list_length *list
+
+                    write_mem 1
+                    // _ list_length (*list + 1)
+
+                    read_mem 1
+                    // _ list_length capacity *list
+
+                    swap 2
+                    // _ *list capacity list_length
+
+                    swap 1
+                    // _ *list list_length capacity
+
+                    lt
+                    // _ *list (list_length > capacity)
+
+                    push 0
+                    eq
+                    // _ *list (list_length <= capacity)
+
+                    assert
+                    // _ *list
+
+                    return
+        )
+        .iter()
+        .join("\n")
     }
 
     fn crash_conditions(&self) -> Vec<String> {
@@ -37,19 +96,19 @@ impl DeprecatedSnippet for SafeSetLength {
         let capacity = 100;
         vec![
             prepare_state(
-                &self.0,
+                &self.data_type,
                 capacity,
                 thread_rng().gen_range(0..capacity) as usize,
                 thread_rng().gen_range(0..capacity) as usize,
             ),
             prepare_state(
-                &self.0,
+                &self.data_type,
                 capacity,
                 thread_rng().gen_range(0..capacity) as usize,
                 thread_rng().gen_range(0..capacity) as usize,
             ),
             prepare_state(
-                &self.0,
+                &self.data_type,
                 capacity,
                 thread_rng().gen_range(0..capacity) as usize,
                 thread_rng().gen_range(0..capacity) as usize,
@@ -57,53 +116,12 @@ impl DeprecatedSnippet for SafeSetLength {
         ]
     }
 
-    fn stack_diff(&self) -> isize {
-        // TODO: It should probably clear the stack
-        // pops list_length but leaves list_pointer on stack
-        -1
+    fn common_case_input_state(&self) -> ExecutionState {
+        prepare_state(&self.data_type, 1000, 1 << 5, 1 << 4)
     }
 
-    fn entrypoint_name(&self) -> String {
-        format!(
-            "tasm_list_safeimplu32_set_length___{}",
-            self.0.label_friendly_name()
-        )
-    }
-
-    fn function_code(&self, _library: &mut Library) -> String {
-        let entry_point = self.entrypoint_name();
-        // It is assumed that the new length is a valid u32 value
-        format!(
-            "
-                // BEFORE: _ *list list_length
-                // AFTER: _ *list
-                {entry_point}:
-                    // Verify that new length does not exceed capacity
-                    dup 0
-                    dup 2
-                    push 1
-                    add
-                    read_mem
-                    // Stack: *list list_length list_length (*list + 1) capacity
-
-                    swap 1
-                    pop
-                    // Stack: *list list_length list_length capacity
-
-                    lt
-                    push 0
-                    eq
-                    // Stack: *list list_length list_length <= capacity
-
-                    assert
-                    // Stack: *list list_length
-
-                    write_mem
-                    // Stack: *list
-
-                    return
-                "
-        )
+    fn worst_case_input_state(&self) -> ExecutionState {
+        prepare_state(&self.data_type, 1000, 1 << 6, 1 << 5)
     }
 
     fn rust_shadowing(
@@ -130,14 +148,6 @@ impl DeprecatedSnippet for SafeSetLength {
 
         stack.push(list_address);
     }
-
-    fn common_case_input_state(&self) -> ExecutionState {
-        prepare_state(&self.0, 1000, 1 << 5, 1 << 4)
-    }
-
-    fn worst_case_input_state(&self) -> ExecutionState {
-        prepare_state(&self.0, 1000, 1 << 6, 1 << 5)
-    }
 }
 
 fn prepare_state(
@@ -160,7 +170,6 @@ mod tests {
     use twenty_first::shared_math::b_field_element::BFieldElement;
 
     use crate::empty_stack;
-
     use crate::test_helpers::{
         test_rust_equivalence_given_input_values_deprecated,
         test_rust_equivalence_multiple_deprecated,
@@ -170,12 +179,16 @@ mod tests {
 
     #[test]
     fn new_snippet_test() {
-        test_rust_equivalence_multiple_deprecated(&SafeSetLength(DataType::Bool), true);
-        test_rust_equivalence_multiple_deprecated(&SafeSetLength(DataType::U32), true);
-        test_rust_equivalence_multiple_deprecated(&SafeSetLength(DataType::U64), true);
-        test_rust_equivalence_multiple_deprecated(&SafeSetLength(DataType::BFE), true);
-        test_rust_equivalence_multiple_deprecated(&SafeSetLength(DataType::XFE), true);
-        test_rust_equivalence_multiple_deprecated(&SafeSetLength(DataType::Digest), true);
+        fn test_rust_equivalence_and_export(data_type: DataType) {
+            test_rust_equivalence_multiple_deprecated(&SafeSetLength { data_type }, true);
+        }
+
+        test_rust_equivalence_and_export(DataType::Bool);
+        test_rust_equivalence_and_export(DataType::U32);
+        test_rust_equivalence_and_export(DataType::U64);
+        test_rust_equivalence_and_export(DataType::Bfe);
+        test_rust_equivalence_and_export(DataType::Xfe);
+        test_rust_equivalence_and_export(DataType::Digest);
     }
 
     #[test]
@@ -185,7 +198,7 @@ mod tests {
         let new_list_length = 14;
         let capacity = 22;
         prop_set_length(
-            DataType::BFE,
+            DataType::Bfe,
             list_address,
             init_length,
             new_list_length,
@@ -200,7 +213,7 @@ mod tests {
         let new_list_length = 22;
         let capacity = 22;
         prop_set_length(
-            DataType::BFE,
+            DataType::Bfe,
             list_address,
             init_length,
             new_list_length,
@@ -248,7 +261,7 @@ mod tests {
         let new_list_length = 21;
         let capacity = 20;
         prop_set_length(
-            DataType::XFE,
+            DataType::Xfe,
             list_pointer,
             init_length,
             new_list_length,
@@ -269,6 +282,7 @@ mod tests {
             new_list_length,
             capacity,
         );
+
         let init_length = 14;
         let new_list_length = 0;
         let capacity = 300;
@@ -279,6 +293,7 @@ mod tests {
             new_list_length,
             capacity,
         );
+
         let init_length = 0;
         let new_list_length = 0;
         let capacity = 300;
@@ -314,14 +329,15 @@ mod tests {
             &mut memory,
         );
 
-        test_rust_equivalence_given_input_values_deprecated::<SafeSetLength>(
-            &SafeSetLength(data_type),
+        let memory = test_rust_equivalence_given_input_values_deprecated::<SafeSetLength>(
+            &SafeSetLength { data_type },
             &init_stack,
             &[],
-            &mut memory,
+            memory,
             0,
             Some(&expected_end_stack),
-        );
+        )
+        .final_ram;
 
         // Verify that length indicator has been updated
         assert_eq!(
@@ -333,11 +349,14 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::snippet_bencher::bench_and_write;
+
+    use super::*;
 
     #[test]
     fn safe_set_length_benchmark() {
-        bench_and_write(SafeSetLength(DataType::Digest));
+        bench_and_write(SafeSetLength {
+            data_type: DataType::Digest,
+        });
     }
 }

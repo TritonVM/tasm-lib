@@ -3,8 +3,9 @@ use std::collections::HashMap;
 use rand::{thread_rng, Rng, RngCore};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
+use crate::data_type::DataType;
 use crate::library::Library;
-use crate::snippet::{DataType, DeprecatedSnippet};
+use crate::snippet::DeprecatedSnippet;
 use crate::{empty_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
@@ -42,7 +43,7 @@ impl DeprecatedSnippet for Shiftleft {
         format!(
             "
             // BEFORE: _ value shift
-            // AFTER: _ (value << shift)
+            // AFTER:  _ (value << shift)
             {entrypoint}:
                 // Bounds check. May be superfluous but this mimics Rust's behavior.
                 push 32
@@ -55,7 +56,7 @@ impl DeprecatedSnippet for Shiftleft {
                 mul
                 split
                 swap 1
-                pop
+                pop 1
 
                 return
                 "
@@ -162,7 +163,7 @@ mod tests {
             &Shiftleft,
             &init_stack,
             &[],
-            &mut HashMap::default(),
+            HashMap::default(),
             0,
             Some(&expected_stack),
         );

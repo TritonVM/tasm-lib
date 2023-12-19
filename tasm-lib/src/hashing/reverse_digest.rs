@@ -1,10 +1,7 @@
 use rand::random;
 
-use crate::{
-    empty_stack,
-    snippet::{DataType, DeprecatedSnippet},
-    Digest, ExecutionState, DIGEST_LENGTH,
-};
+use crate::data_type::DataType;
+use crate::{empty_stack, snippet::DeprecatedSnippet, Digest, ExecutionState, DIGEST_LENGTH};
 
 /// Reverse the order of elements in a digest: [d4, d3, d2, d1, d0] -> [d0, d1, d2, d3, d4]
 pub struct ReverseDigest;
@@ -32,11 +29,11 @@ impl DeprecatedSnippet for ReverseDigest {
         ]
     }
 
-    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+    fn input_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::Digest]
     }
 
-    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+    fn output_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::Digest]
     }
 

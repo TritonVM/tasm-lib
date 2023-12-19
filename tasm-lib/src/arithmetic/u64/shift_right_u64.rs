@@ -2,8 +2,9 @@ use rand::{thread_rng, RngCore};
 use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
+use crate::data_type::DataType;
 use crate::library::Library;
-use crate::snippet::{DataType, DeprecatedSnippet};
+use crate::snippet::DeprecatedSnippet;
 use crate::{empty_stack, push_encodable, ExecutionState};
 
 #[derive(Clone, Debug)]
@@ -81,7 +82,7 @@ impl DeprecatedSnippet for ShiftRightU64 {
 
                 mul
                 split
-                pop
+                pop 1
                 // _ value_hi (2 ^ (32 - shift)) (value_lo >> shift)
 
                 swap 2
@@ -226,7 +227,7 @@ mod tests {
             &ShiftRightU64,
             &init_stack,
             &[],
-            &mut HashMap::default(),
+            HashMap::default(),
             0,
             Some(&expected_stack),
         );

@@ -5,28 +5,69 @@ use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
+use crate::data_type::DataType;
 use crate::library::Library;
-use crate::snippet::{DataType, DeprecatedSnippet};
+use crate::snippet::DeprecatedSnippet;
 use crate::{empty_stack, push_encodable, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct DecrU64;
 
 impl DeprecatedSnippet for DecrU64 {
+    fn entrypoint_name(&self) -> String {
+        "tasm_arithmetic_u64_decr".to_string()
+    }
+
     fn input_field_names(&self) -> Vec<String> {
         vec!["value_hi".to_string(), "value_lo".to_string()]
+    }
+
+    fn input_types(&self) -> Vec<crate::data_type::DataType> {
+        vec![DataType::U64]
     }
 
     fn output_field_names(&self) -> Vec<String> {
         vec!["(value - 1)_hi".to_string(), "(value - 1)_lo".to_string()]
     }
 
-    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+    fn output_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::U64]
     }
 
-    fn output_types(&self) -> Vec<crate::snippet::DataType> {
-        vec![DataType::U64]
+    fn stack_diff(&self) -> isize {
+        0
+    }
+
+    fn function_code(&self, _library: &mut Library) -> String {
+        let entrypoint = self.entrypoint_name();
+        const U32_MAX: u32 = u32::MAX;
+
+        format!(
+            "
+            {entrypoint}:
+                push -1
+                add
+                dup 0
+                push -1
+                eq
+                skiz
+                    call {entrypoint}_carry
+                return
+
+            {entrypoint}_carry:
+                pop 1
+                push -1
+                add
+                dup 0
+                push -1
+                eq
+                push 0
+                eq
+                assert
+                push {U32_MAX}
+                return
+            "
+        )
     }
 
     fn crash_conditions(&self) -> Vec<String> {
@@ -47,63 +88,6 @@ impl DeprecatedSnippet for DecrU64 {
                 ExecutionState::with_stack(stack)
             })
             .collect()
-    }
-
-    fn stack_diff(&self) -> isize {
-        0
-    }
-
-    fn entrypoint_name(&self) -> String {
-        "tasm_arithmetic_u64_decr".to_string()
-    }
-
-    fn function_code(&self, _library: &mut Library) -> String {
-        let entrypoint = self.entrypoint_name();
-        const U32_MAX: &str = "4294967295";
-
-        format!(
-            "
-            {entrypoint}:
-                push -1
-                add
-                dup 0
-                push -1
-                eq
-                skiz
-                    call {entrypoint}_carry
-                return
-
-            {entrypoint}_carry:
-                pop
-                push -1
-                add
-                dup 0
-                push -1
-                eq
-                push 0
-                eq
-                assert
-                push {U32_MAX}
-                return
-            "
-        )
-    }
-
-    fn rust_shadowing(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        _std_in: Vec<BFieldElement>,
-        _secret_in: Vec<BFieldElement>,
-        _memory: &mut HashMap<BFieldElement, BFieldElement>,
-    ) {
-        let a: u32 = stack.pop().unwrap().try_into().unwrap();
-        let b: u32 = stack.pop().unwrap().try_into().unwrap();
-        let ab = U32s::<2>::new([a, b]);
-        let ab_incr = ab - U32s::one();
-        let mut res = ab_incr.encode();
-        for _ in 0..res.len() {
-            stack.push(res.pop().unwrap());
-        }
     }
 
     fn common_case_input_state(&self) -> ExecutionState {
@@ -127,12 +111,30 @@ impl DeprecatedSnippet for DecrU64 {
             .concat(),
         )
     }
+
+    fn rust_shadowing(
+        &self,
+        stack: &mut Vec<BFieldElement>,
+        _std_in: Vec<BFieldElement>,
+        _secret_in: Vec<BFieldElement>,
+        _memory: &mut HashMap<BFieldElement, BFieldElement>,
+    ) {
+        let a: u32 = stack.pop().unwrap().try_into().unwrap();
+        let b: u32 = stack.pop().unwrap().try_into().unwrap();
+        let ab = U32s::<2>::new([a, b]);
+        let ab_incr = ab - U32s::one();
+        let mut res = ab_incr.encode();
+        for _ in 0..res.len() {
+            stack.push(res.pop().unwrap());
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use num::Zero;
     use rand::Rng;
+    use triton_vm::NonDeterminism;
 
     use crate::test_helpers::{
         test_rust_equivalence_given_input_values_deprecated,
@@ -152,7 +154,7 @@ mod tests {
         let mut stack = empty_stack();
         push_encodable(&mut stack, &U32s::<2>::zero());
         assert!(DecrU64
-            .link_and_run_tasm_for_test(&mut stack, vec![], vec![], &mut HashMap::default(), None)
+            .link_and_run_tasm_for_test(&mut stack, vec![], NonDeterminism::default(), None)
             .is_err());
     }
 
@@ -191,7 +193,7 @@ mod tests {
             &DecrU64,
             &stack,
             &[],
-            &mut HashMap::default(),
+            HashMap::default(),
             0,
             None,
         );

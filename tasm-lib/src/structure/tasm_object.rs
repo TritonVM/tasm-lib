@@ -1,22 +1,14 @@
 use std::collections::HashMap;
-
-use anyhow::Result;
-pub use derive_tasm_object::TasmObject;
+use std::error::Error;
 
 use itertools::Itertools;
 use num_traits::Zero;
-use triton_vm::{
-    instruction::LabelledInstruction, proof_item::FriResponse, triton_asm, BFieldElement,
-};
-use twenty_first::{
-    shared_math::{bfield_codec::BFieldCodec, x_field_element::XFieldElement},
-    util_types::{
-        algebraic_hasher::AlgebraicHasher,
-        mmr::{mmr_accumulator::MmrAccumulator, mmr_membership_proof::MmrMembershipProof},
-    },
-};
+use triton_vm::{instruction::LabelledInstruction, BFieldElement};
+use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
-use crate::{memory::dyn_malloc::DYN_MALLOC_ADDRESS, Digest};
+pub use derive_tasm_object::TasmObject;
+
+type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 
 /// TasmObject
 ///
@@ -29,7 +21,7 @@ pub trait TasmObject {
     /// Returns tasm code that returns a pointer the field of the object, assuming:
     ///  - that a pointer to the said object lives on top of the stack;
     ///  - said object has a type that implements the TasmObject trait;
-    ///  - said object lives in memory endoded as BFieldCodec specifies.
+    ///  - said object lives in memory encoded as BFieldCodec specifies.
     ///
     /// BEFORE: _ *object
     ///
@@ -40,7 +32,7 @@ pub trait TasmObject {
     /// the size of that field in number of BFieldElements, assuming:
     ///  - that a pointer to the said object lives on top of the stack;
     ///  - said object has a type that implements the TasmObject trait;
-    ///  - said object lives in memory endoded as BFieldCodec specifies.
+    ///  - said object lives in memory encoded as BFieldCodec specifies.
     ///
     /// BEFORE: _ *object
     ///
@@ -86,7 +78,7 @@ pub fn decode_from_memory_with_size<T: BFieldCodec>(
         .map(|i| address + BFieldElement::new(i as u64))
         .map(|b| memory.get(&b).copied().unwrap_or(BFieldElement::new(0)))
         .collect_vec();
-    T::decode(&sequence)
+    T::decode(&sequence).map_err(|e| e.into())
 }
 
 /// Stores the encoding of the given object into memory at the given address, and returns
@@ -101,23 +93,6 @@ pub fn encode_to_memory<T: BFieldCodec>(
         memory.insert(address + BFieldElement::new(i as u64), *e);
     }
     address + BFieldElement::new(encoding.len() as u64)
-}
-
-/// Loads the `BFieldCodec`-encodable object into memory at the first free location, and
-/// updates the allocator accordingly. Return the address where the object is stored. This
-/// method can be chained together in order to load multiple objects into memory without
-/// overlaps.
-pub fn load_to_memory<T: BFieldCodec>(
-    memory: &mut HashMap<BFieldElement, BFieldElement>,
-    object: T,
-) -> BFieldElement {
-    let address = memory
-        .get(&BFieldElement::new(DYN_MALLOC_ADDRESS as u64))
-        .copied()
-        .unwrap_or(BFieldElement::new(1));
-    let new_alloc = encode_to_memory(memory, address, object);
-    memory.insert(BFieldElement::new(DYN_MALLOC_ADDRESS as u64), new_alloc);
-    address
 }
 
 impl<T: BFieldCodec> TasmObject for Vec<T> {
@@ -145,547 +120,10 @@ impl<T: BFieldCodec> TasmObject for Vec<T> {
             let sequence = (0..sequence_length)
                 .map(|_| iterator.next().unwrap())
                 .collect_vec();
-            let object = *T::decode(&sequence)?;
+            let object = *T::decode(&sequence).map_err(|e| e.into())?;
             vector.push(object);
         }
         Ok(Box::new(vector))
-    }
-}
-
-impl<H: AlgebraicHasher> TasmObject for MmrMembershipProof<H> {
-    fn get_field(field_name: &str) -> Vec<LabelledInstruction> {
-        match field_name {
-            "leaf_index" => triton_asm! {},
-            "authentication_path" => triton_asm! { push 3 add },
-            unknown => panic!("cannot match on field {unknown}"),
-        }
-    }
-
-    fn get_field_with_size(field_name: &str) -> Vec<LabelledInstruction> {
-        match field_name {
-            "leaf_index" => triton_asm! { push 2 },
-            "authentication_path" => triton_asm! { push 2 add read_mem swap 1 push 1 add swap 1 },
-            unknown => panic!("cannot match on field {unknown}"),
-        }
-    }
-
-    fn get_field_start_with_jump_distance(field_name: &str) -> Vec<LabelledInstruction> {
-        match field_name {
-            "leaf_index" => triton_asm! { push 2 },
-            "authentication_path" => triton_asm! { push 2 add read_mem push 1 add },
-            unknown => panic!("cannot match on field {unknown}"),
-        }
-    }
-
-    fn decode_iter<Itr: Iterator<Item = BFieldElement>>(iterator: &mut Itr) -> Result<Box<Self>> {
-        // leaf index is encoded as two `BFieldElement`s
-        let leaf_index: u64 =
-            *BFieldCodec::decode(&[iterator.next().unwrap(), iterator.next().unwrap()])?;
-        // authentication path is length-prepended
-        let length = iterator.next().unwrap().value() as usize;
-        let auth_path_sequence = (0..length).map(|_| iterator.next().unwrap()).collect_vec();
-        let authentication_path: Vec<Digest> = *BFieldCodec::decode(&auth_path_sequence)?;
-        let object = MmrMembershipProof::new(leaf_index, authentication_path);
-        Ok(Box::new(object))
-    }
-}
-
-impl<H: AlgebraicHasher> TasmObject for MmrAccumulator<H> {
-    fn get_field(field_name: &str) -> Vec<LabelledInstruction> {
-        match field_name {
-            "leaf_count" => triton_asm! {},
-            "peaks" => triton_asm! { push 3 add },
-            unknown => panic!("cannot match on field {unknown}"),
-        }
-    }
-
-    fn get_field_with_size(field_name: &str) -> Vec<LabelledInstruction> {
-        match field_name {
-            "leaf_count" => triton_asm! { push 2 },
-            "peaks" => triton_asm! { push 2 add read_mem swap 1 push 1 add swap 1 },
-            unknown => panic!("cannot match on field {unknown}"),
-        }
-    }
-
-    fn get_field_start_with_jump_distance(field_name: &str) -> Vec<LabelledInstruction> {
-        match field_name {
-            "leaf_count" => triton_asm! { push 2 },
-            "peaks" => triton_asm! { push 2 add read_mem push 1 add },
-            unknown => panic!("cannot match on field {unknown}"),
-        }
-    }
-
-    fn decode_iter<Itr: Iterator<Item = BFieldElement>>(iterator: &mut Itr) -> Result<Box<Self>> {
-        // the `digests` field is length-prepended
-        let length = iterator.next().unwrap().value() as usize;
-        let digests_sequence = (0..length).map(|_| iterator.next().unwrap()).collect_vec();
-        let digests: Vec<Digest> = *BFieldCodec::decode(&digests_sequence)?;
-        let object = MmrAccumulator::new(digests);
-        Ok(Box::new(object))
-    }
-}
-
-// Implementation of TasmObject for FriResponse automatically generated by cargo expand.
-// (Generated on master 2023-12-04 e2b579f9f817737b9d5fc9ea83dcdbd1fcd873ef)
-impl TasmObject for FriResponse {
-    fn get_field(field_name: &str) -> Vec<triton_vm::instruction::LabelledInstruction> {
-        match field_name {
-            "auth_structure" => {
-                let current = {
-                    if let Some(size)
-                    = <Vec<
-                        Digest,
-                    > as twenty_first::shared_math::bfield_codec::BFieldCodec>::static_length() {
-                    [
-                        triton_vm::instruction::LabelledInstruction::Instruction(
-                            triton_vm::instruction::AnInstruction::Push(
-                                twenty_first::shared_math::b_field_element::BFieldElement::new(
-                                    size as u64,
-                                ),
-                            ),
-                        ),
-                    ]
-                        .to_vec()
-                } else {
-                    [
-                        triton_vm::instruction::LabelledInstruction::Instruction(
-                            triton_vm::instruction::AnInstruction::ReadMem,
-                        ),
-                        triton_vm::instruction::LabelledInstruction::Instruction(
-                            triton_vm::instruction::AnInstruction::Push(
-                                twenty_first::shared_math::b_field_element::BFieldElement::new(
-                                    1u64,
-                                ),
-                            ),
-                        ),
-                        triton_vm::instruction::LabelledInstruction::Instruction(
-                            triton_vm::instruction::AnInstruction::Add,
-                        ),
-                    ]
-                        .to_vec()
-                }
-                };
-                let getter = {
-                    if <Vec<
-                    Digest,
-                > as twenty_first::shared_math::bfield_codec::BFieldCodec>::static_length()
-                    .is_some()
-                {
-                    [
-                        triton_vm::instruction::LabelledInstruction::Instruction(
-                            triton_vm::instruction::AnInstruction::Pop,
-                        ),
-                    ]
-                        .to_vec()
-                } else {
-                    [
-                        triton_vm::instruction::LabelledInstruction::Instruction(
-                            triton_vm::instruction::AnInstruction::Pop,
-                        ),
-                        triton_vm::instruction::LabelledInstruction::Instruction(
-                            triton_vm::instruction::AnInstruction::Push(
-                                twenty_first::shared_math::b_field_element::BFieldElement::new(
-                                    1u64,
-                                ),
-                            ),
-                        ),
-                        triton_vm::instruction::LabelledInstruction::Instruction(
-                            triton_vm::instruction::AnInstruction::Add,
-                        ),
-                    ]
-                        .to_vec()
-                }
-                };
-                [current, getter].concat()
-            }
-            "revealed_leaves" => {
-                let current = {
-                    [
-                    Self::get_field_start_with_jump_distance("auth_structure"),
-                    [
-                        triton_vm::instruction::LabelledInstruction::Instruction(
-                            triton_vm::instruction::AnInstruction::Add,
-                        ),
-                    ]
-                        .to_vec(),
-                    {
-                        if let Some(size)
-                            = <Vec<
-                                XFieldElement,
-                            > as twenty_first::shared_math::bfield_codec::BFieldCodec>::static_length() {
-                            [
-                                triton_vm::instruction::LabelledInstruction::Instruction(
-                                    triton_vm::instruction::AnInstruction::Push(
-                                        twenty_first::shared_math::b_field_element::BFieldElement::new(
-                                            size as u64,
-                                        ),
-                                    ),
-                                ),
-                            ]
-                                .to_vec()
-                        } else {
-                            [
-                                triton_vm::instruction::LabelledInstruction::Instruction(
-                                    triton_vm::instruction::AnInstruction::ReadMem,
-                                ),
-                                triton_vm::instruction::LabelledInstruction::Instruction(
-                                    triton_vm::instruction::AnInstruction::Push(
-                                        twenty_first::shared_math::b_field_element::BFieldElement::new(
-                                            1u64,
-                                        ),
-                                    ),
-                                ),
-                                triton_vm::instruction::LabelledInstruction::Instruction(
-                                    triton_vm::instruction::AnInstruction::Add,
-                                ),
-                            ]
-                                .to_vec()
-                        }
-                    },
-                ]
-                    .concat()
-                };
-                let getter = {
-                    if <Vec<
-                    XFieldElement,
-                > as twenty_first::shared_math::bfield_codec::BFieldCodec>::static_length()
-                    .is_some()
-                {
-                    [
-                        triton_vm::instruction::LabelledInstruction::Instruction(
-                            triton_vm::instruction::AnInstruction::Pop,
-                        ),
-                    ]
-                        .to_vec()
-                } else {
-                    [
-                        triton_vm::instruction::LabelledInstruction::Instruction(
-                            triton_vm::instruction::AnInstruction::Pop,
-                        ),
-                        triton_vm::instruction::LabelledInstruction::Instruction(
-                            triton_vm::instruction::AnInstruction::Push(
-                                twenty_first::shared_math::b_field_element::BFieldElement::new(
-                                    1u64,
-                                ),
-                            ),
-                        ),
-                        triton_vm::instruction::LabelledInstruction::Instruction(
-                            triton_vm::instruction::AnInstruction::Add,
-                        ),
-                    ]
-                        .to_vec()
-                }
-                };
-                [current, getter].concat()
-            }
-            unknown_field_name => {
-                panic!("Cannot match on field name `{0}`.", unknown_field_name);
-            }
-        }
-    }
-    fn get_field_with_size(field_name: &str) -> Vec<triton_vm::instruction::LabelledInstruction> {
-        match field_name {
-            "auth_structure" => {
-                let current = {
-                    if let Some(size)
-                    = <Vec<
-                        Digest,
-                    > as twenty_first::shared_math::bfield_codec::BFieldCodec>::static_length() {
-                    [
-                        triton_vm::instruction::LabelledInstruction::Instruction(
-                            triton_vm::instruction::AnInstruction::Push(
-                                twenty_first::shared_math::b_field_element::BFieldElement::new(
-                                    size as u64,
-                                ),
-                            ),
-                        ),
-                    ]
-                        .to_vec()
-                } else {
-                    [
-                        triton_vm::instruction::LabelledInstruction::Instruction(
-                            triton_vm::instruction::AnInstruction::ReadMem,
-                        ),
-                        triton_vm::instruction::LabelledInstruction::Instruction(
-                            triton_vm::instruction::AnInstruction::Push(
-                                twenty_first::shared_math::b_field_element::BFieldElement::new(
-                                    1u64,
-                                ),
-                            ),
-                        ),
-                        triton_vm::instruction::LabelledInstruction::Instruction(
-                            triton_vm::instruction::AnInstruction::Add,
-                        ),
-                    ]
-                        .to_vec()
-                }
-                };
-                let getter_sizer = {
-                    if <Vec<
-                    Digest,
-                > as twenty_first::shared_math::bfield_codec::BFieldCodec>::static_length()
-                    .is_some()
-                {
-                    std::vec::Vec::<
-                        triton_vm::instruction::LabelledInstruction,
-                    >::new()
-                } else {
-                    [
-                        triton_vm::instruction::LabelledInstruction::Instruction(
-                            triton_vm::instruction::AnInstruction::Push(
-                                twenty_first::shared_math::b_field_element::BFieldElement::new(
-                                    18446744069414584320u64,
-                                ),
-                            ),
-                        ),
-                        triton_vm::instruction::LabelledInstruction::Instruction(
-                            triton_vm::instruction::AnInstruction::Add,
-                        ),
-                        triton_vm::instruction::LabelledInstruction::Instruction(
-                            triton_vm::instruction::AnInstruction::Swap(
-                                triton_vm::op_stack::OpStackElement::ST1,
-                            ),
-                        ),
-                        triton_vm::instruction::LabelledInstruction::Instruction(
-                            triton_vm::instruction::AnInstruction::Push(
-                                twenty_first::shared_math::b_field_element::BFieldElement::new(
-                                    1u64,
-                                ),
-                            ),
-                        ),
-                        triton_vm::instruction::LabelledInstruction::Instruction(
-                            triton_vm::instruction::AnInstruction::Add,
-                        ),
-                        triton_vm::instruction::LabelledInstruction::Instruction(
-                            triton_vm::instruction::AnInstruction::Swap(
-                                triton_vm::op_stack::OpStackElement::ST1,
-                            ),
-                        ),
-                    ]
-                        .to_vec()
-                }
-                };
-                [current, getter_sizer].concat()
-            }
-            "revealed_leaves" => {
-                let current = {
-                    [
-                    Self::get_field_start_with_jump_distance("auth_structure"),
-                    [
-                        triton_vm::instruction::LabelledInstruction::Instruction(
-                            triton_vm::instruction::AnInstruction::Add,
-                        ),
-                    ]
-                        .to_vec(),
-                    {
-                        if let Some(size)
-                            = <Vec<
-                                XFieldElement,
-                            > as twenty_first::shared_math::bfield_codec::BFieldCodec>::static_length() {
-                            [
-                                triton_vm::instruction::LabelledInstruction::Instruction(
-                                    triton_vm::instruction::AnInstruction::Push(
-                                        twenty_first::shared_math::b_field_element::BFieldElement::new(
-                                            size as u64,
-                                        ),
-                                    ),
-                                ),
-                            ]
-                                .to_vec()
-                        } else {
-                            [
-                                triton_vm::instruction::LabelledInstruction::Instruction(
-                                    triton_vm::instruction::AnInstruction::ReadMem,
-                                ),
-                                triton_vm::instruction::LabelledInstruction::Instruction(
-                                    triton_vm::instruction::AnInstruction::Push(
-                                        twenty_first::shared_math::b_field_element::BFieldElement::new(
-                                            1u64,
-                                        ),
-                                    ),
-                                ),
-                                triton_vm::instruction::LabelledInstruction::Instruction(
-                                    triton_vm::instruction::AnInstruction::Add,
-                                ),
-                            ]
-                                .to_vec()
-                        }
-                    },
-                ]
-                    .concat()
-                };
-                let getter_sizer = {
-                    if <Vec<
-                    XFieldElement,
-                > as twenty_first::shared_math::bfield_codec::BFieldCodec>::static_length()
-                    .is_some()
-                {
-                    std::vec::Vec::<
-                        triton_vm::instruction::LabelledInstruction,
-                    >::new()
-                } else {
-                    [
-                        triton_vm::instruction::LabelledInstruction::Instruction(
-                            triton_vm::instruction::AnInstruction::Push(
-                                twenty_first::shared_math::b_field_element::BFieldElement::new(
-                                    18446744069414584320u64,
-                                ),
-                            ),
-                        ),
-                        triton_vm::instruction::LabelledInstruction::Instruction(
-                            triton_vm::instruction::AnInstruction::Add,
-                        ),
-                        triton_vm::instruction::LabelledInstruction::Instruction(
-                            triton_vm::instruction::AnInstruction::Swap(
-                                triton_vm::op_stack::OpStackElement::ST1,
-                            ),
-                        ),
-                        triton_vm::instruction::LabelledInstruction::Instruction(
-                            triton_vm::instruction::AnInstruction::Push(
-                                twenty_first::shared_math::b_field_element::BFieldElement::new(
-                                    1u64,
-                                ),
-                            ),
-                        ),
-                        triton_vm::instruction::LabelledInstruction::Instruction(
-                            triton_vm::instruction::AnInstruction::Add,
-                        ),
-                        triton_vm::instruction::LabelledInstruction::Instruction(
-                            triton_vm::instruction::AnInstruction::Swap(
-                                triton_vm::op_stack::OpStackElement::ST1,
-                            ),
-                        ),
-                    ]
-                        .to_vec()
-                }
-                };
-                [current, getter_sizer].concat()
-            }
-            unknown_field_name => {
-                panic!("Cannot match on field name `{0}`.", unknown_field_name);
-            }
-        }
-    }
-    fn get_field_start_with_jump_distance(
-        field_name: &str,
-    ) -> Vec<triton_vm::instruction::LabelledInstruction> {
-        match field_name {
-            "auth_structure" => {
-                if let Some(size)
-                = <Vec<
-                    Digest,
-                > as twenty_first::shared_math::bfield_codec::BFieldCodec>::static_length() {
-                [
-                    triton_vm::instruction::LabelledInstruction::Instruction(
-                        triton_vm::instruction::AnInstruction::Push(
-                            twenty_first::shared_math::b_field_element::BFieldElement::new(
-                                size as u64,
-                            ),
-                        ),
-                    ),
-                ]
-                    .to_vec()
-            } else {
-                [
-                    triton_vm::instruction::LabelledInstruction::Instruction(
-                        triton_vm::instruction::AnInstruction::ReadMem,
-                    ),
-                    triton_vm::instruction::LabelledInstruction::Instruction(
-                        triton_vm::instruction::AnInstruction::Push(
-                            twenty_first::shared_math::b_field_element::BFieldElement::new(
-                                1u64,
-                            ),
-                        ),
-                    ),
-                    triton_vm::instruction::LabelledInstruction::Instruction(
-                        triton_vm::instruction::AnInstruction::Add,
-                    ),
-                ]
-                    .to_vec()
-            }
-            }
-            "revealed_leaves" => {
-                let prev = [
-                    Self::get_field_start_with_jump_distance("auth_structure"),
-                    [triton_vm::instruction::LabelledInstruction::Instruction(
-                        triton_vm::instruction::AnInstruction::Add,
-                    )]
-                    .to_vec(),
-                ]
-                .concat();
-                let jumper = {
-                    if let Some(size)
-                    = <Vec<
-                        XFieldElement,
-                    > as twenty_first::shared_math::bfield_codec::BFieldCodec>::static_length() {
-                    [
-                        triton_vm::instruction::LabelledInstruction::Instruction(
-                            triton_vm::instruction::AnInstruction::Push(
-                                twenty_first::shared_math::b_field_element::BFieldElement::new(
-                                    size as u64,
-                                ),
-                            ),
-                        ),
-                    ]
-                        .to_vec()
-                } else {
-                    [
-                        triton_vm::instruction::LabelledInstruction::Instruction(
-                            triton_vm::instruction::AnInstruction::ReadMem,
-                        ),
-                        triton_vm::instruction::LabelledInstruction::Instruction(
-                            triton_vm::instruction::AnInstruction::Push(
-                                twenty_first::shared_math::b_field_element::BFieldElement::new(
-                                    1u64,
-                                ),
-                            ),
-                        ),
-                        triton_vm::instruction::LabelledInstruction::Instruction(
-                            triton_vm::instruction::AnInstruction::Add,
-                        ),
-                    ]
-                        .to_vec()
-                }
-                };
-                [prev, jumper].concat()
-            }
-            unknown_field_name => {
-                panic!("Cannot match on field name `{0}`.", unknown_field_name);
-            }
-        }
-    }
-    fn decode_iter<Itr: Iterator<Item = triton_vm::BFieldElement>>(
-        iterator: &mut Itr,
-    ) -> anyhow::Result<Box<Self>> {
-        let length: usize = if let Some(static_length) =
-            <Vec<Digest> as twenty_first::shared_math::bfield_codec::BFieldCodec>::static_length()
-        {
-            static_length
-        } else {
-            iterator.next().unwrap().value() as usize
-        };
-        let sequence = (0..length)
-            .map(|_| iterator.next().unwrap())
-            .collect::<Vec<_>>();
-        let auth_structure: Vec<Digest> =
-            *twenty_first::shared_math::bfield_codec::BFieldCodec::decode(&sequence)?;
-        let length: usize = if let Some(static_length)
-        = <Vec<
-            XFieldElement,
-        > as twenty_first::shared_math::bfield_codec::BFieldCodec>::static_length() {
-        static_length
-    } else {
-        iterator.next().unwrap().value() as usize
-    };
-        let sequence = (0..length)
-            .map(|_| iterator.next().unwrap())
-            .collect::<Vec<_>>();
-        let revealed_leaves: Vec<XFieldElement> =
-            *twenty_first::shared_math::bfield_codec::BFieldCodec::decode(&sequence)?;
-        anyhow::Result::Ok(Box::new(Self {
-            auth_structure,
-            revealed_leaves,
-        }))
     }
 }
 
@@ -795,361 +233,298 @@ impl<'a> Iterator for MemoryIter<'a> {
 mod test {
     use std::collections::HashMap;
 
+    use arbitrary::{Arbitrary, Unstructured};
     use itertools::Itertools;
+    use rand::RngCore;
     use rand::{rngs::StdRng, thread_rng, Rng, SeedableRng};
+    use triton_vm::instruction::LabelledInstruction;
     use triton_vm::{proof_item::FriResponse, triton_asm, BFieldElement, NonDeterminism};
     use twenty_first::shared_math::{bfield_codec::BFieldCodec, x_field_element::XFieldElement};
 
+    use crate::data_type::DataType;
     use crate::{
-        empty_stack, execute_with_terminal_state, io,
+        empty_stack, execute_with_terminal_state,
         library::Library,
         list::unsafeimplu32::length::Length,
-        memory::{self},
-        prepend_state_preparation,
-        snippet::{DataType, DeprecatedSnippet, InputSource},
-        structure::tasm_object::{load_to_memory, TasmObject},
-        test_helpers::test_rust_equivalence_multiple_deprecated,
-        Digest, ExecutionState,
+        structure::tasm_object::{encode_to_memory, TasmObject},
+        Digest,
     };
-
-    #[derive(Debug, Clone, PartialEq, Eq, BFieldCodec)]
-    enum InnerEnum {
-        Cow(u32),
-        Horse(u128),
-        Pig(XFieldElement),
-        Sheep([BFieldElement; 13]),
-    }
-
-    #[derive(Debug, Clone, PartialEq, Eq, BFieldCodec, TasmObject)]
-    struct InnerStruct(XFieldElement, u32);
-
-    #[derive(Debug, Clone, PartialEq, Eq, BFieldCodec, TasmObject)]
-    struct OuterStruct {
-        o: InnerEnum,
-        a: Vec<Option<bool>>,
-        b: InnerStruct,
-        p: InnerEnum,
-        c: BFieldElement,
-    }
-
-    fn pseudorandom_object(seed: [u8; 32]) -> OuterStruct {
-        let mut rng: StdRng = SeedableRng::from_seed(seed);
-        let a = (0..19)
-            .map(|_| {
-                if rng.gen() {
-                    if rng.gen() {
-                        Some(true)
-                    } else {
-                        Some(false)
-                    }
-                } else {
-                    None
-                }
-            })
-            .collect_vec();
-        let b0: XFieldElement = rng.gen();
-        let b1: u32 = rng.gen();
-        let c: BFieldElement = rng.gen();
-
-        OuterStruct {
-            o: InnerEnum::Pig(XFieldElement::new_const(443u64.into())),
-            a,
-            b: InnerStruct(b0, b1),
-            p: InnerEnum::Cow(999),
-            c,
-        }
-    }
-
-    struct TestObjectFieldGetter;
-
-    impl DeprecatedSnippet for TestObjectFieldGetter {
-        fn entrypoint_name(&self) -> String {
-            "tasm_test_object_field_getter".to_string()
-        }
-
-        fn input_field_names(&self) -> Vec<String> {
-            vec!["object".to_string()]
-        }
-
-        fn input_types(&self) -> Vec<crate::snippet::DataType> {
-            vec![DataType::VoidPointer]
-        }
-
-        fn output_types(&self) -> Vec<crate::snippet::DataType> {
-            vec![]
-        }
-
-        fn output_field_names(&self) -> Vec<String> {
-            vec![]
-        }
-
-        fn stack_diff(&self) -> isize {
-            -1
-        }
-
-        fn function_code(&self, library: &mut crate::library::Library) -> String {
-            let entrypoint = self.entrypoint_name();
-            let object_to_a_with_size = field_with_size!(OuterStruct::a);
-            let object_to_b = field!(OuterStruct::b);
-            let object_to_c_with_size = field_with_size!(OuterStruct::c);
-            let object_to_p_with_size = field_with_size!(OuterStruct::p);
-            let b_to_0_with_size = field_with_size!(InnerStruct::0);
-            let b_to_1_with_size = field_with_size!(InnerStruct::1);
-            let memcpy = library.import(Box::new(memory::memcpy::MemCpy));
-            let load_object_from_stdin =
-                library.import(Box::new(io::load_struct_from_input::LoadStructFromInput {
-                    input_source: InputSource::StdIn,
-                }));
-
-            let code = triton_asm! {
-                // BEFORE: 1
-                // AFTER:
-                {entrypoint}:
-                    call {load_object_from_stdin} // *object_length
-                    push 1 add // *object
-
-                    dup 0 // *object *object
-                    {&object_to_a_with_size} // *object *a a_size
-                    push 1337
-                    swap 1 // *object *a 1337 a_size
-                    call {memcpy} // *object
-
-                    dup 0 // *object *object
-                    {&object_to_b}
-                    {&b_to_0_with_size}
-                    push 2337
-                    swap 1 // *object *b.0 2337 *b.0_size
-                    call {memcpy}
-
-                    dup 0
-                    {&object_to_b}
-                    {&b_to_1_with_size}
-                    push 3337
-                    swap 1 // *object *b.1 3337 *b.1_size
-                    call {memcpy}
-
-                    dup 0
-                    {&object_to_c_with_size} // *object *c c_size
-                    push 4337
-                    swap 1 // *object *c 4337 c_size
-                    call {memcpy} // *object
-
-                    dup 0
-                    {&object_to_p_with_size} // *object *p p_size
-                    push 6337
-                    swap 1 // *object *p 6337 p_size
-                    call {memcpy} // *object
-
-                    pop
-                    return
-            };
-
-            format!("{}\n", code.iter().join("\n"))
-        }
-
-        fn crash_conditions(&self) -> Vec<String> {
-            vec![]
-        }
-
-        fn gen_input_states(&self) -> Vec<ExecutionState> {
-            let mut seed = [0u8; 32];
-            seed[0] = 1;
-            seed[1] = 2;
-            let mut rng: StdRng = SeedableRng::from_seed(seed);
-            let mut stack = empty_stack();
-            stack.push(BFieldElement::new(1u64));
-            let memory = HashMap::<BFieldElement, BFieldElement>::new();
-            let mut input_states = vec![];
-            for _ in 0..1 {
-                let object = pseudorandom_object(rng.gen());
-                let std_in = object.encode().encode();
-                println!("object, encoded twice: {}", std_in.iter().join(","));
-                println!("length of object encoding: {}", object.encode().len());
-                let input_state = ExecutionState {
-                    stack: stack.clone(),
-                    std_in,
-                    nondeterminism: NonDeterminism::new(vec![]),
-                    memory: memory.clone(),
-                    words_allocated: 1,
-                };
-                input_states.push(input_state);
-            }
-
-            input_states
-        }
-
-        fn common_case_input_state(&self) -> ExecutionState {
-            let mut seed = [0u8; 32];
-            seed[0] = 1;
-            seed[1] = 2;
-            let mut rng: StdRng = SeedableRng::from_seed(seed);
-            let mut stack = empty_stack();
-            stack.push(BFieldElement::new(1u64));
-            let memory = HashMap::<BFieldElement, BFieldElement>::new();
-            let object = pseudorandom_object(rng.gen());
-            let std_in = object.encode().encode();
-
-            ExecutionState {
-                stack,
-                std_in,
-                nondeterminism: NonDeterminism::new(vec![]),
-                memory,
-                words_allocated: 1,
-            }
-        }
-
-        fn worst_case_input_state(&self) -> ExecutionState {
-            let mut seed = [0u8; 32];
-            seed[0] = 1;
-            seed[1] = 2;
-            let mut rng: StdRng = SeedableRng::from_seed(seed);
-            let mut stack = empty_stack();
-            stack.push(BFieldElement::new(1u64));
-            let memory = HashMap::<BFieldElement, BFieldElement>::new();
-            let object = pseudorandom_object(rng.gen());
-            let std_in = object.encode().encode();
-
-            ExecutionState {
-                stack,
-                std_in,
-                nondeterminism: NonDeterminism::new(vec![]),
-                memory,
-                words_allocated: 1,
-            }
-        }
-
-        fn rust_shadowing(
-            &self,
-            stack: &mut Vec<BFieldElement>,
-            std_in: Vec<BFieldElement>,
-            _secret_in: Vec<BFieldElement>,
-            memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
-        ) {
-            println!("standard in: {}", std_in.iter().join(","));
-            let _num_fields = stack.pop().unwrap().value() as usize;
-            for (i, o) in std_in.iter().enumerate() {
-                memory.insert(BFieldElement::new(1u64 + i as u64), *o);
-            }
-
-            let object = *OuterStruct::decode(&std_in[1..]).unwrap();
-
-            println!("object a encoding length: {}", object.a.encode().len());
-
-            for (i, o) in object.a.encode().iter().enumerate() {
-                memory.insert(BFieldElement::new(1337u64 + i as u64), *o);
-            }
-
-            for (i, o) in object.b.0.encode().iter().enumerate() {
-                memory.insert(BFieldElement::new(2337u64 + i as u64), *o);
-            }
-
-            for (i, o) in object.b.1.encode().iter().enumerate() {
-                memory.insert(BFieldElement::new(3337u64 + i as u64), *o);
-            }
-
-            for (i, o) in object.c.encode().iter().enumerate() {
-                memory.insert(BFieldElement::new(4337u64 + i as u64), *o);
-            }
-
-            for (i, p) in object.p.encode().iter().enumerate() {
-                memory.insert(BFieldElement::new(6337u64 + i as u64), *p);
-            }
-        }
-    }
-
-    #[test]
-    fn test_tasm_object_field_getter() {
-        test_rust_equivalence_multiple_deprecated(&TestObjectFieldGetter, false);
-    }
 
     #[test]
     fn test_load_and_decode_from_memory() {
+        #[derive(Debug, Clone, PartialEq, Eq, BFieldCodec)]
+        enum InnerEnum {
+            Cow(u32),
+            Horse(u128, u128),
+            Pig(XFieldElement),
+            Sheep([BFieldElement; 13]),
+        }
+
+        #[derive(Debug, Clone, PartialEq, Eq, BFieldCodec, TasmObject)]
+        struct InnerStruct(XFieldElement, u32);
+
+        #[derive(Debug, Clone, PartialEq, Eq, BFieldCodec, TasmObject)]
+        struct OuterStruct {
+            o: InnerEnum,
+            a: Vec<Option<bool>>,
+            b: InnerStruct,
+            p: InnerEnum,
+            c: BFieldElement,
+            l: InnerEnum,
+        }
+
+        fn pseudorandom_object(seed: [u8; 32]) -> OuterStruct {
+            let mut rng: StdRng = SeedableRng::from_seed(seed);
+            let a = (0..19)
+                .map(|_| if rng.gen() { Some(rng.gen()) } else { None })
+                .collect_vec();
+            let b0: XFieldElement = rng.gen();
+            let b1: u32 = rng.gen();
+            let c: BFieldElement = rng.gen();
+
+            OuterStruct {
+                o: InnerEnum::Pig(XFieldElement::new_const(443u64.into())),
+                a,
+                b: InnerStruct(b0, b1),
+                p: InnerEnum::Cow(999),
+                c,
+                l: InnerEnum::Horse(1 << 99, 1 << 108),
+            }
+        }
+
         let mut rng = thread_rng();
         let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
 
-        // generate random object
         let object = pseudorandom_object(rng.gen());
-
-        // write encoding to memory
-        let address = load_to_memory(&mut memory, object.clone());
-
-        // decode from memory
+        let address = rng.gen();
+        encode_to_memory(&mut memory, address, object.clone());
         let object_again: OuterStruct = *OuterStruct::decode_from_memory(&memory, address).unwrap();
-
-        // assert equal
         assert_eq!(object, object_again);
     }
 
-    #[test]
-    fn test_fri_response() {
-        let mut rng = thread_rng();
-        let num_digests = 50;
-        let num_leafs = 20;
+    /// Test derivation of field getters and manual derivations of the `field!` macro
+    mod derive_tests {
+        use triton_vm::Program;
 
-        // generate object
-        let authentication_structure = (0..num_digests).map(|_| rng.gen::<Digest>()).collect_vec();
-        let revealed_leafs = (0..num_leafs)
-            .map(|_| rng.gen::<XFieldElement>())
-            .collect_vec();
-        let fri_response = FriResponse {
-            auth_structure: authentication_structure,
-            revealed_leaves: revealed_leafs,
-        };
+        use super::*;
 
-        // code snippet to access object's fields
-        let mut library = Library::new();
-        let get_authentication_structure = field!(FriResponse::auth_structure);
-        let length_digests = library.import(Box::new(Length(DataType::Digest)));
-        let get_revealed_leafs = field!(FriResponse::revealed_leaves);
-        let length_xfes = library.import(Box::new(Length(DataType::XFE)));
-        let code = triton_asm! {
-            // _ *fri_response
-            dup 0 // _ *fri_response *fri_response
+        #[test]
+        fn load_and_decode_struct_with_named_fields_from_memory() {
+            #[derive(BFieldCodec, TasmObject, PartialEq, Eq, Clone, Debug, Arbitrary)]
+            struct NamedFields {
+                a: Digest,
+                b: BFieldElement,
+                c: u128,
+                d: Vec<Digest>,
+                e: XFieldElement,
+                f: Vec<u32>,
+            }
 
-            {&get_authentication_structure} // _ *fri_response *authentication_structure
-            swap 1                          // _ *authentication_structure *fri_response
-            {&get_revealed_leafs}           // _ *authentication_structure *revealed_leafs
+            let mut randomness = [0u8; 100000];
+            thread_rng().fill_bytes(&mut randomness);
+            let mut unstructured = Unstructured::new(&randomness);
+            let random_object = NamedFields::arbitrary(&mut unstructured).unwrap();
+            let random_address: u64 = thread_rng().gen_range(0..(1 << 30));
+            let address = random_address.into();
+            let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
 
-            swap 1                          // _ *revealed_leafs *authentication_structure
-            call {length_digests}           // _ *revealed_leafs num_digests
-            swap 1                          // _ num_digests *revealed_leafs
-            call {length_xfes}              // _ num_digests num_leafs
+            encode_to_memory(&mut memory, address, random_object.clone());
+            let object_again: NamedFields =
+                *NamedFields::decode_from_memory(&memory, address).unwrap();
+            assert_eq!(random_object, object_again);
 
-        };
+            let mut library = Library::new();
+            let length_d = library.import(Box::new(Length {
+                data_type: DataType::Digest,
+            }));
+            let length_f = library.import(Box::new(Length {
+                data_type: DataType::U32,
+            }));
+            let code = triton_asm! {
+                    // _ *obj
+                    dup 0 {&field!(NamedFields::d)}
 
-        // initialize memory and stack
-        let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
-        let address = load_to_memory(&mut memory, fri_response);
-        let mut stack = empty_stack();
-        stack.push(address);
-        let mut nondeterminism = NonDeterminism::new(vec![]).with_ram(memory);
+                    // _ *obj *d
+                    swap 1
+                   {&field!(NamedFields::f)}
+                    // _ *d *f
 
-        // link by hand
-        let entrypoint = "entrypoint";
-        let library_code = library.all_imports();
-        let instructions = triton_asm!(
-            call {entrypoint}
-            halt
+                    call {length_f}
+                    // _ *d f_length
 
-            {entrypoint}:
-            {&code}
-            return
+                    swap 1
+                    call {length_d}
+                    // _ f_length d_length
+            };
 
-            {&library_code}
-        );
-        let program = prepend_state_preparation(&instructions, &stack);
+            let mut stack = get_final_stack(&random_object, library, code);
+            let extracted_d_length = stack.pop().unwrap().value() as usize;
+            let extracted_f_length = stack.pop().unwrap().value() as usize;
 
-        // run VM; get stack at end
-        let final_state =
-            execute_with_terminal_state(&program, &[], &mut nondeterminism, None).unwrap();
+            assert_eq!(random_object.d.len(), extracted_d_length);
+            assert_eq!(random_object.f.len(), extracted_f_length);
+        }
 
-        // extract list lengths
-        let mut stack = final_state.op_stack.stack;
-        let extracted_xfes_length = stack.pop().unwrap().value() as usize;
-        let extracted_digests_length = stack.pop().unwrap().value() as usize;
+        #[test]
+        fn load_and_decode_tuple_struct_containing_enums_from_memory() {
+            #[derive(BFieldCodec, PartialEq, Eq, Clone, Debug, Arbitrary)]
+            enum MyEnum {
+                A(u64, Digest),
+                B,
+                C,
+            }
 
-        // assert correct lengths
-        assert_eq!(num_digests, extracted_digests_length);
-        assert_eq!(num_leafs, extracted_xfes_length);
+            #[derive(BFieldCodec, TasmObject, PartialEq, Eq, Clone, Debug, Arbitrary)]
+            struct TupleStruct(
+                Vec<XFieldElement>,
+                MyEnum,
+                u32,
+                Vec<Digest>,
+                Digest,
+                Vec<BFieldElement>,
+                Digest,
+            );
+
+            let mut randomness = [0u8; 100000];
+            thread_rng().fill_bytes(&mut randomness);
+            let mut unstructured = Unstructured::new(&randomness);
+            let random_object = TupleStruct::arbitrary(&mut unstructured).unwrap();
+            let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
+            let random_address: u64 = thread_rng().gen_range(0..(1 << 30));
+            let address = random_address.into();
+
+            encode_to_memory(&mut memory, address, random_object.clone());
+            let object_again: TupleStruct =
+                *TupleStruct::decode_from_memory(&memory, address).unwrap();
+            assert_eq!(random_object, object_again);
+
+            // code snippet to access object's fields
+            let mut library = Library::new();
+            let length_digests = library.import(Box::new(Length {
+                data_type: DataType::Digest,
+            }));
+            let length_bfes = library.import(Box::new(Length {
+                data_type: DataType::Bfe,
+            }));
+            let length_xfes = library.import(Box::new(Length {
+                data_type: DataType::Xfe,
+            }));
+            let code = triton_asm! {
+                // _ *obj
+
+                dup 0
+                {&field!(TupleStruct::3)} // _ *obj *digests
+                swap 1                    // _ *digests *obj
+
+                dup 0
+                {&field!(TupleStruct::5)} // _ *digests *obj *bfes
+                swap 1                    // _ *digests *bfes *obj
+
+                {&field!(TupleStruct::0)} // _ *digests *bfes *xfes
+                call {length_xfes}     // _ *digests *bfes xfe_count
+                swap 2                 // _ xfe_count *bfes *digests
+                call {length_digests}  // _ xfe_count *bfes digest_count
+                swap 1
+                call {length_bfes}     // _ xfe_count digest_count bfe_count
+            };
+
+            // extract list lengths
+            let mut stack = get_final_stack(&random_object, library, code);
+            let extracted_bfe_count = stack.pop().unwrap().value() as usize;
+            let extracted_digest_count = stack.pop().unwrap().value() as usize;
+            let extracted_xfe_count = stack.pop().unwrap().value() as usize;
+
+            // assert correct lengths
+            assert_eq!(random_object.3.len(), extracted_digest_count);
+            assert_eq!(random_object.5.len(), extracted_bfe_count);
+            assert_eq!(random_object.0.len(), extracted_xfe_count);
+        }
+
+        #[test]
+        fn test_fri_response() {
+            let mut rng = thread_rng();
+            let num_digests = 50;
+            let num_leafs = 20;
+
+            // generate object
+            let authentication_structure =
+                (0..num_digests).map(|_| rng.gen::<Digest>()).collect_vec();
+            let revealed_leafs = (0..num_leafs)
+                .map(|_| rng.gen::<XFieldElement>())
+                .collect_vec();
+            let fri_response = FriResponse {
+                auth_structure: authentication_structure,
+                revealed_leaves: revealed_leafs,
+            };
+
+            // code snippet to access object's fields
+            let mut library = Library::new();
+            let get_authentication_structure = field!(FriResponse::auth_structure);
+            let length_digests = library.import(Box::new(Length {
+                data_type: DataType::Digest,
+            }));
+            let get_revealed_leafs = field!(FriResponse::revealed_leaves);
+            let length_xfes = library.import(Box::new(Length {
+                data_type: DataType::Xfe,
+            }));
+            let code = triton_asm! {
+                // _ *fri_response
+                dup 0 // _ *fri_response *fri_response
+
+                {&get_authentication_structure} // _ *fri_response *authentication_structure
+                swap 1                          // _ *authentication_structure *fri_response
+                {&get_revealed_leafs}           // _ *authentication_structure *revealed_leafs
+
+                swap 1                          // _ *revealed_leafs *authentication_structure
+                call {length_digests}           // _ *revealed_leafs num_digests
+                swap 1                          // _ num_digests *revealed_leafs
+                call {length_xfes}              // _ num_digests num_leafs
+
+            };
+
+            // extract list lengths
+            let mut stack = get_final_stack(&fri_response, library, code);
+            let extracted_xfes_length = stack.pop().unwrap().value() as usize;
+            let extracted_digests_length = stack.pop().unwrap().value() as usize;
+
+            // assert correct lengths
+            assert_eq!(num_digests, extracted_digests_length);
+            assert_eq!(num_leafs, extracted_xfes_length);
+        }
+
+        /// Helper function for testing field getters. Only returns the final stack.
+        fn get_final_stack<T: BFieldCodec + Clone>(
+            obj: &T,
+            library: Library,
+            code: Vec<LabelledInstruction>,
+        ) -> Vec<BFieldElement> {
+            // initialize memory and stack
+            let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
+            let random_address: u64 = thread_rng().gen_range(0..(1 << 30));
+            let address = random_address.into();
+
+            encode_to_memory(&mut memory, address, obj.to_owned());
+            let stack = [empty_stack(), vec![address]].concat();
+
+            // link by hand
+            let entrypoint = "entrypoint";
+            let library_code = library.all_imports();
+            let instructions = triton_asm!(
+                call {entrypoint}
+                halt
+
+                {entrypoint}:
+                    {&code}
+                    return
+
+                {&library_code}
+            );
+
+            let program = Program::new(&instructions);
+            let nondeterminism = NonDeterminism::new(vec![]).with_ram(memory);
+            let final_state =
+                execute_with_terminal_state(&program, &[], &stack, &nondeterminism, None).unwrap();
+            final_state.op_stack.stack
+        }
     }
 }

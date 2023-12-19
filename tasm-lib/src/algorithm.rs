@@ -1,7 +1,7 @@
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 use triton_vm::{BFieldElement, NonDeterminism};
-use twenty_first::{shared_math::bfield_codec::BFieldCodec, util_types::algebraic_hasher::Domain};
+use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
 use crate::{
     linker::{execute_bench, link_for_isolated_run},
@@ -53,11 +53,7 @@ pub trait Algorithm: BasicSnippet {
         &self,
         seed: [u8; 32],
         bench_case: Option<BenchmarkCase>,
-    ) -> (
-        Vec<BFieldElement>,
-        HashMap<BFieldElement, BFieldElement>,
-        NonDeterminism<BFieldElement>,
-    );
+    ) -> (Vec<BFieldElement>, NonDeterminism<BFieldElement>);
 }
 
 pub struct ShadowedAlgorithm<T: Algorithm + 'static> {
@@ -82,7 +78,7 @@ where
         nondeterminism: &NonDeterminism<BFieldElement>,
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
-        _sponge_state: &mut VmHasherState,
+        _sponge_state: &mut Option<VmHasherState>,
     ) -> Vec<BFieldElement> {
         self.algorithm
             .borrow()
@@ -106,7 +102,7 @@ where
                 self.algorithm.borrow().entrypoint(),
                 seed
             );
-            let (stack, memory, nondeterminism) = self
+            let (stack, nondeterminism) = self
                 .algorithm
                 .borrow()
                 .pseudorandom_initial_state(seed, None);
@@ -117,9 +113,8 @@ where
                 &stack,
                 &stdin,
                 &nondeterminism,
-                &memory,
-                &VmHasherState::new(Domain::VariableLength),
-                1,
+                &None,
+                0,
                 None,
             );
         }
@@ -135,13 +130,12 @@ where
         let mut benchmarks = Vec::with_capacity(2);
 
         for bench_case in [BenchmarkCase::CommonCase, BenchmarkCase::WorstCase] {
-            let (stack, memory, nondeterminism) = self
+            let (stack, nondeterminism) = self
                 .algorithm
                 .borrow()
                 .pseudorandom_initial_state(rng.gen(), Some(bench_case));
             let program = link_for_isolated_run(self.algorithm.clone(), 1);
-            let execution_result =
-                execute_bench(&program, &stack, vec![], nondeterminism, &memory, Some(1));
+            let execution_result = execute_bench(&program, &stack, vec![], nondeterminism, None);
             let benchmark = BenchmarkResult {
                 name: self.algorithm.borrow().entrypoint(),
                 clock_cycle_count: execution_result.cycle_count,

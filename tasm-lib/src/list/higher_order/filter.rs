@@ -1,12 +1,14 @@
+use std::collections::HashMap;
+
 use itertools::Itertools;
 use num::Zero;
 use rand::rngs::StdRng;
-use rand::{Rng, RngCore, SeedableRng};
-use std::collections::HashMap;
+use rand::{Rng, SeedableRng};
 use triton_vm::parser::tokenize;
 use triton_vm::triton_asm;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
+use crate::data_type::DataType;
 use crate::function::Function;
 use crate::list::safeimplu32::get::SafeGet;
 use crate::list::safeimplu32::length::Length as SafeLength;
@@ -20,10 +22,7 @@ use crate::list::{self, ListType};
 use crate::memory::memcpy::MemCpy;
 use crate::snippet::BasicSnippet;
 use crate::{empty_stack, rust_shadowing_helper_functions};
-use crate::{
-    library::Library,
-    snippet::{DataType, DeprecatedSnippet},
-};
+use crate::{library::Library, snippet::DeprecatedSnippet};
 
 use super::inner_function::InnerFunction;
 
@@ -73,22 +72,38 @@ impl BasicSnippet for Filter {
             ListType::Unsafe => 1,
         };
         let get_length = match self.list_type {
-            ListType::Safe => library.import(Box::new(SafeLength(input_type.clone()))),
-            ListType::Unsafe => library.import(Box::new(UnsafeLength(input_type.clone()))),
+            ListType::Safe => library.import(Box::new(SafeLength {
+                data_type: input_type.clone(),
+            })),
+            ListType::Unsafe => library.import(Box::new(UnsafeLength {
+                data_type: input_type.clone(),
+            })),
         };
         let set_length = match self.list_type {
-            ListType::Safe => library.import(Box::new(SafeSetLength(input_type.clone()))),
-            ListType::Unsafe => library.import(Box::new(UnsafeSetLength(input_type.clone()))),
+            ListType::Safe => library.import(Box::new(SafeSetLength {
+                data_type: input_type.clone(),
+            })),
+            ListType::Unsafe => library.import(Box::new(UnsafeSetLength {
+                data_type: input_type.clone(),
+            })),
         };
         let new_list = match self.list_type {
-            ListType::Safe => library.import(Box::new(SafeNew(output_type))),
-            ListType::Unsafe => library.import(Box::new(UnsafeNew(output_type))),
+            ListType::Safe => library.import(Box::new(SafeNew {
+                data_type: output_type,
+            })),
+            ListType::Unsafe => library.import(Box::new(UnsafeNew {
+                data_type: output_type,
+            })),
         };
         let list_get = match self.list_type {
-            ListType::Safe => library.import(Box::new(SafeGet(input_type))),
-            ListType::Unsafe => library.import(Box::new(UnsafeGet(input_type))),
+            ListType::Safe => library.import(Box::new(SafeGet {
+                data_type: input_type,
+            })),
+            ListType::Unsafe => library.import(Box::new(UnsafeGet {
+                data_type: input_type,
+            })),
         };
-        let element_size = self.f.domain().get_size();
+        let element_size = self.f.domain().stack_size();
 
         let inner_function_name = match &self.f {
             InnerFunction::RawCode(rc) => rc.entrypoint(),
@@ -135,11 +150,11 @@ impl BasicSnippet for Filter {
                 push 0 push 0       // _ *input_list *output_list input_len 0 0
                 call {main_loop}    // _ *input_list *output_list input_len input_len output_len
 
-                swap 2 pop pop      // _ *input_list *output_list output_len
+                swap 2 pop 2        // _ *input_list *output_list output_len
                 call {set_length}   // _input_list *output_list
 
                 swap 1              // _ *output_list *input_list
-                pop                 // _ *output_list
+                pop 1               // _ *output_list
                 return
 
             // INVARIANT:  _ *input_list *output_list input_len input_index output_index
@@ -172,25 +187,25 @@ impl BasicSnippet for Filter {
             // AFTER: _ *input_list *output_list input_len input_index output_index+1
             {main_write}:
                 // calculate read address
-                dup 4 // _ *input_list *output_list input_len input_index output_index *input_list
-                push {safety_offset} add // _ *input_list *output_list input_len input_index output_index address
-                dup 2 // _ *input_list *output_list input_len input_index output_index address input_index
-                push {element_size} mul add // _ *input_list *output_list input_len input_index output_index read_source
+                dup 4                        // _ *input_list *output_list input_len input_index output_index *input_list
+                push {safety_offset} add     // _ *input_list *output_list input_len input_index output_index address
+                dup 2                        // _ *input_list *output_list input_len input_index output_index address input_index
+                push {element_size} mul add  // _ *input_list *output_list input_len input_index output_index read_source
 
                 // calculate write address
-                dup 4 // _ *input_list *output_list input_len input_index output_index read_source *output_list
-                push {safety_offset} add // _ *input_list *output_list input_len input_index output_index read_source address
-                dup 2 //  _ *input_list *output_list input_len input_index output_index read_source address output_index
-                push {element_size} mul add // _ *input_list *output_list input_len input_index output_index read_source write_dest
+                dup 4                        // _ *input_list *output_list input_len input_index output_index read_source *output_list
+                push {safety_offset} add     // _ *input_list *output_list input_len input_index output_index read_source address
+                dup 2                        // _ *input_list *output_list input_len input_index output_index read_source address output_index
+                push {element_size} mul add  // _ *input_list *output_list input_len input_index output_index read_source write_dest
 
                 // calculate number of words
-                push {element_size} // _ *input_list *output_list input_len input_index output_index read_source write_dest num_words
+                push {element_size}          // _ *input_list *output_list input_len input_index output_index read_source write_dest num_words
 
                 // copy memory
-                call {memcpy} // _ *input_list *output_list input_len input_index output_index
+                call {memcpy}                // _ *input_list *output_list input_len input_index output_index
 
                 // bookkeeping
-                push 1 add // _ *input_list *output_list input_len input_index output_index+1
+                push 1 add                   // _ *input_list *output_list input_len input_index output_index+1
 
                 return
 
@@ -208,7 +223,7 @@ impl Function for Filter {
         let input_type = self.f.domain();
         let output_type = self.f.range();
 
-        let element_size = self.f.domain().get_size();
+        let element_size = self.f.domain().stack_size();
         let memcpy = MemCpy::rust_shadowing;
         let safety_offset = match self.list_type {
             ListType::Safe => 2,
@@ -241,22 +256,18 @@ impl Function for Filter {
             ListType::Safe => {
                 // Push capacity to stack
                 stack.push(BFieldElement::new(output_list_capacity as u64));
-                list::safeimplu32::new::SafeNew(input_type.clone()).rust_shadowing(
-                    stack,
-                    vec![],
-                    vec![],
-                    memory,
-                );
+                list::safeimplu32::new::SafeNew {
+                    data_type: input_type.clone(),
+                }
+                .rust_shadowing(stack, vec![], vec![], memory);
                 stack.pop().unwrap()
             }
             ListType::Unsafe => {
                 stack.push(BFieldElement::new(output_list_capacity as u64));
-                list::unsafeimplu32::new::UnsafeNew(input_type.clone()).rust_shadowing(
-                    stack,
-                    vec![],
-                    vec![],
-                    memory,
-                );
+                list::unsafeimplu32::new::UnsafeNew {
+                    data_type: input_type.clone(),
+                }
+                .rust_shadowing(stack, vec![], vec![], memory);
                 stack.pop().unwrap()
             }
         };
@@ -266,20 +277,16 @@ impl Function for Filter {
         stack.push(BFieldElement::new(len as u64));
         match self.list_type {
             ListType::Safe => {
-                list::safeimplu32::set_length::SafeSetLength(output_type).rust_shadowing(
-                    stack,
-                    vec![],
-                    vec![],
-                    memory,
-                );
+                list::safeimplu32::set_length::SafeSetLength {
+                    data_type: output_type,
+                }
+                .rust_shadowing(stack, vec![], vec![], memory);
             }
             ListType::Unsafe => {
-                list::unsafeimplu32::set_length::UnsafeSetLength(output_type).rust_shadowing(
-                    stack,
-                    vec![],
-                    vec![],
-                    memory,
-                );
+                list::unsafeimplu32::set_length::UnsafeSetLength {
+                    data_type: output_type,
+                }
+                .rust_shadowing(stack, vec![], vec![], memory);
             }
         }
         stack.pop();
@@ -288,7 +295,7 @@ impl Function for Filter {
         let mut output_index = 0;
         for i in 0..len {
             // read
-            let mut input_item = get_element(list_pointer, i, memory, input_type.get_size());
+            let mut input_item = get_element(list_pointer, i, memory, input_type.stack_size());
 
             // put on stack
             while let Some(element) = input_item.pop() {
@@ -322,20 +329,16 @@ impl Function for Filter {
         stack.push(BFieldElement::new(output_index as u64));
         match self.list_type {
             ListType::Safe => {
-                list::safeimplu32::set_length::SafeSetLength(input_type).rust_shadowing(
-                    stack,
-                    vec![],
-                    vec![],
-                    memory,
-                );
+                list::safeimplu32::set_length::SafeSetLength {
+                    data_type: input_type,
+                }
+                .rust_shadowing(stack, vec![], vec![], memory);
             }
             ListType::Unsafe => {
-                list::unsafeimplu32::set_length::UnsafeSetLength(input_type).rust_shadowing(
-                    stack,
-                    vec![],
-                    vec![],
-                    memory,
-                );
+                list::unsafeimplu32::set_length::UnsafeSetLength {
+                    data_type: input_type,
+                }
+                .rust_shadowing(stack, vec![], vec![], memory);
             }
         }
     }
@@ -346,51 +349,41 @@ impl Function for Filter {
         _bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
     ) -> (Vec<BFieldElement>, HashMap<BFieldElement, BFieldElement>) {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
-        let list_pointer = BFieldElement::new(rng.next_u64() % (1 << 20));
-        let list_length = 1 << (rng.gen::<usize>() % 4);
-        let capacity = list_length;
-        let mut stack = empty_stack();
-        stack.push(list_pointer);
+        let list_pointer: u64 = rng.gen_range(0..(1 << 20));
+        let list_pointer = BFieldElement::new(list_pointer);
+
+        let log_2_list_length: usize = rng.gen_range(0..4);
+        let list_length = 1 << log_2_list_length;
+
+        let input_type = self.f.domain();
+        let input_type_size = input_type.stack_size();
+        println!(
+            "generating list; length: {list_length}, \
+            type size: {input_type_size}, \
+            address: {list_pointer}"
+        );
+        let safety_offset = self.list_type.safety_offset();
+        let last_element_index = safety_offset + list_length * input_type_size;
+        let last_element_index = list_pointer + BFieldElement::new(last_element_index as u64);
 
         let mut memory = HashMap::default();
-        let input_type = self.f.domain();
-        let input_type_size = input_type.get_size();
-        println!("generating list of length {list_length} of type size {input_type_size} at address {list_pointer}...");
-        memory.insert(
-            BFieldElement::zero(),
-            match self.list_type {
-                ListType::Safe => {
-                    list_pointer
-                        + BFieldElement::new((2 + list_length * input_type.get_size()) as u64)
-                }
-                ListType::Unsafe => {
-                    list_pointer
-                        + BFieldElement::new((1 + list_length * input_type.get_size()) as u64)
-                }
-            },
-        );
+        memory.insert(BFieldElement::zero(), last_element_index);
 
-        let safety_offset = match self.list_type {
-            ListType::Safe => 2,
-            ListType::Unsafe => 1,
-        };
-
+        let capacity = list_length;
         memory.insert(list_pointer, BFieldElement::new(capacity as u64));
         if matches!(self.list_type, ListType::Safe) {
-            memory.insert(
-                list_pointer + BFieldElement::new(1),
-                BFieldElement::new(list_length as u64),
-            );
+            let length_pointer = list_pointer + BFieldElement::new(1);
+            memory.insert(length_pointer, BFieldElement::new(list_length as u64));
         }
-        for i in 0..list_length as u64 {
-            for j in 0..input_type_size as u64 {
-                memory.insert(
-                    list_pointer
-                        + BFieldElement::new(safety_offset + i * (input_type_size as u64) + j),
-                    rng.gen(),
-                );
+
+        for i in 0..list_length {
+            for j in 0..input_type_size {
+                let element_offset = (safety_offset + i * input_type_size + j) as u64;
+                memory.insert(list_pointer + BFieldElement::new(element_offset), rng.gen());
             }
         }
+
+        let stack = [empty_stack(), vec![list_pointer]].concat();
 
         (stack, memory)
     }
@@ -398,7 +391,6 @@ impl Function for Filter {
 
 #[cfg(test)]
 mod tests {
-
     use triton_vm::triton_asm;
     use twenty_first::{
         shared_math::other::random_elements, util_types::algebraic_hasher::AlgebraicHasher,
@@ -431,7 +423,7 @@ mod tests {
         }
 
         fn input_types(&self) -> Vec<DataType> {
-            vec![DataType::XFE]
+            vec![DataType::Xfe]
         }
 
         fn output_types(&self) -> Vec<DataType> {
@@ -464,7 +456,7 @@ mod tests {
             push 0
             push 0
             call {unused_import}
-            pop
+            pop 1
 
         push 0
         push 0
@@ -476,12 +468,12 @@ mod tests {
 
         sponge_init
         sponge_absorb
-        sponge_squeeze // _ d9 d8 d7 d6 d5 d4 d3 d2 d1 d0
-        swap 5 pop     // _ d9 d8 d7 d6 d0 d4 d3 d2 d1
-        swap 5 pop     // _ d9 d8 d7 d1 d0 d4 d3 d2
-        swap 5 pop
-        swap 5 pop
-        swap 5 pop
+        sponge_squeeze  // _ d9 d8 d7 d6 d5 d4 d3 d2 d1 d0
+        swap 5 pop 1    // _ d9 d8 d7 d6 d0 d4 d3 d2 d1
+        swap 5 pop 1    // _ d9 d8 d7 d1 d0 d4 d3 d2
+        swap 5 pop 1
+        swap 5 pop 1
+        swap 5 pop 1
 
         // _ d4 d3 d2 d1 d0
 
@@ -490,7 +482,7 @@ mod tests {
         swap 1
         div_mod // _ d4 d3 d2 d1 hi q r
         swap 6
-        pop pop pop pop pop pop
+        pop 5 pop 1
         return
     "
         )
@@ -589,11 +581,10 @@ mod tests {
                     swap 1  // _ hi 2 lo
                     div_mod // _ hi q r
                     swap 2  // _ r q hi
-                    pop     // _ r q
-                    pop     // _ r
+                    pop 2   // _ r
                     return
             ),
-            DataType::BFE,
+            DataType::Bfe,
             DataType::Bool,
         );
         ShadowedFunction::new(Filter {
@@ -613,13 +604,10 @@ mod tests {
                     swap 1  // _ x2 x1 hi 2 lo
                     div_mod // _ x2 x1 hi q r
                     swap 4  // _ r x1 q hi x2
-                    pop     // _ r x1 q hi
-                    pop     // _ r x1 q
-                    pop     // _ r q
-                    pop     // _ r
+                    pop 4   // _ r
                     return
             ),
-            DataType::XFE,
+            DataType::Xfe,
             DataType::Bool,
         );
         ShadowedFunction::new(Filter {
@@ -632,8 +620,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::{tests::TestHashXFieldElementLsb, *};
     use crate::{function::ShadowedFunction, snippet::RustShadow};
+
+    use super::{tests::TestHashXFieldElementLsb, *};
 
     #[test]
     fn unsafe_list_filter_benchmark() {

@@ -3,12 +3,8 @@ use rand::{rngs::StdRng, Rng, SeedableRng};
 use triton_vm::{triton_asm, BFieldElement};
 use twenty_first::shared_math::traits::PrimitiveRootOfUnity as PRU;
 
-use crate::{
-    closure::Closure,
-    empty_stack,
-    snippet::{BasicSnippet, DataType},
-    snippet_bencher::BenchmarkCase,
-};
+use crate::data_type::DataType;
+use crate::{closure::Closure, empty_stack, snippet::BasicSnippet, snippet_bencher::BenchmarkCase};
 
 pub struct PrimitiveRootOfUnity;
 
@@ -18,7 +14,7 @@ impl BasicSnippet for PrimitiveRootOfUnity {
     }
 
     fn outputs(&self) -> Vec<(DataType, String)> {
-        vec![(DataType::BFE, "root_of_unity".to_string())]
+        vec![(DataType::Bfe, "root_of_unity".to_string())]
     }
 
     fn entrypoint(&self) -> String {
@@ -318,7 +314,7 @@ impl BasicSnippet for PrimitiveRootOfUnity {
             // Result found:     _ order_hi order_lo root (root == 1) root_hi root_lo
             // Result not found: _ order_hi order_lo (order_lo == 1) 0 order_lo
 
-            pop
+            pop 1
             // Result found:     _ order_hi order_lo root (root == 1) root_hi
             // Result not found: _  order_hi order_lo (order_lo == 1) 0
 
@@ -342,8 +338,7 @@ impl BasicSnippet for PrimitiveRootOfUnity {
             // Result not found: VM crashed
 
             swap 2
-            pop
-            pop
+            pop 2
 
             return
 
@@ -395,16 +390,15 @@ mod tests {
     use std::collections::HashMap;
     use std::rc::Rc;
 
-    use triton_vm::NonDeterminism;
+    use triton_vm::{NonDeterminism, Program};
     use twenty_first::shared_math::bfield_codec::BFieldCodec;
-    use twenty_first::util_types::algebraic_hasher::Domain;
 
     use super::*;
     use crate::closure::ShadowedClosure;
+    use crate::execute_with_terminal_state;
     use crate::linker::link_for_isolated_run;
     use crate::snippet::RustShadow;
     use crate::test_helpers::test_rust_equivalence_given_complete_state;
-    use crate::{execute_with_terminal_state, prepend_state_preparation, VmHasherState};
 
     #[test]
     fn primitive_root_of_unity_pbt() {
@@ -426,9 +420,8 @@ mod tests {
                 &ShadowedClosure::new(PrimitiveRootOfUnity),
                 &init_stack,
                 &[],
-                &NonDeterminism::new(vec![]),
-                &HashMap::default(),
-                &VmHasherState::new(Domain::VariableLength),
+                &NonDeterminism::default(),
+                &None,
                 1,
                 Some(&expected_final_stack),
             );
@@ -460,9 +453,9 @@ mod tests {
             (1 << 32) - 1,
             (1 << 32) + 1,
             (1 << 32) + 2,
-            (1 << 33),
-            (1 << 34),
-            (1 << 63),
+            1 << 33,
+            1 << 34,
+            1 << 63,
         ] {
             let mut init_stack = empty_stack();
             for elem in order.encode().iter().rev() {
@@ -477,14 +470,19 @@ mod tests {
                     &NonDeterminism::new(vec![]),
                     &mut rust_stack,
                     &mut HashMap::default(),
-                    &mut VmHasherState::new(Domain::VariableLength),
+                    &mut None,
                 )
             });
 
             // Run on Triton
-            let program = prepend_state_preparation(&code, &init_stack);
-            let tvm_result =
-                execute_with_terminal_state(&program, &[], &mut NonDeterminism::new(vec![]), None);
+            let program = Program::new(&code);
+            let tvm_result = execute_with_terminal_state(
+                &program,
+                &[],
+                &init_stack,
+                &NonDeterminism::new(vec![]),
+                None,
+            );
 
             assert!(
                 rust_result.is_err() && tvm_result.is_err(),

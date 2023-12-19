@@ -4,7 +4,7 @@ use twenty_first::shared_math::{
     b_field_element::BFieldElement, bfield_codec::BFieldCodec, other::random_elements,
 };
 
-use crate::snippet::DataType;
+use crate::data_type::DataType;
 
 pub fn unsafe_list_insert<T: BFieldCodec>(
     list_pointer: BFieldElement,
@@ -34,7 +34,7 @@ pub fn unsafe_insert_random_list(
     let random_values = data_type.random_elements(list_length);
 
     for element in random_values {
-        unsafe_list_push(list_pointer, element, memory, data_type.get_size());
+        unsafe_list_push(list_pointer, element, memory, data_type.stack_size());
     }
 }
 

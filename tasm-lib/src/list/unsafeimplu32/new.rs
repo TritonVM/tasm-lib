@@ -1,19 +1,24 @@
+use itertools::Itertools;
 use std::collections::HashMap;
+use triton_vm::triton_asm;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
+use crate::data_type::DataType;
 use crate::library::Library;
 use crate::rust_shadowing_helper_functions::unsafe_list::unsafe_list_new;
-use crate::snippet::{DataType, DeprecatedSnippet};
+use crate::snippet::DeprecatedSnippet;
 use crate::{empty_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
-pub struct UnsafeNew(pub DataType);
+pub struct UnsafeNew {
+    pub data_type: DataType,
+}
 
 impl DeprecatedSnippet for UnsafeNew {
     fn entrypoint_name(&self) -> String {
         format!(
             "tasm_list_unsafeimplu32_new___{}",
-            self.0.label_friendly_name()
+            self.data_type.label_friendly_name()
         )
     }
 
@@ -25,12 +30,12 @@ impl DeprecatedSnippet for UnsafeNew {
         vec![DataType::U32]
     }
 
-    fn output_types(&self) -> Vec<DataType> {
-        vec![DataType::List(Box::new(self.0.clone()))]
-    }
-
     fn output_field_names(&self) -> Vec<String> {
         vec!["list_pointer".to_string()]
+    }
+
+    fn output_types(&self) -> Vec<DataType> {
+        vec![DataType::List(Box::new(self.data_type.clone()))]
     }
 
     fn stack_diff(&self) -> isize {
@@ -41,24 +46,22 @@ impl DeprecatedSnippet for UnsafeNew {
         let entrypoint = self.entrypoint_name();
 
         // Data structure for `list::safeimplu32` is: [length, element0, element1, ...]
-        let element_size = self.0.get_size();
+        let element_size = self.data_type.stack_size();
         let dyn_alloc = library.import(Box::new(crate::dyn_malloc::DynMalloc));
 
-        let mul_with_size = if element_size != 1 {
-            format!("push {element_size}\n mul\n")
-        } else {
-            String::default()
+        let mul_with_size = match element_size {
+            1 => vec![],
+            _ => triton_asm!(push {element_size} mul),
         };
 
-        format!(
-            "
+        triton_asm!(
             // BEFORE: _ capacity
-            // AFTER: _ *list
+            // AFTER:  _ *list
             {entrypoint}:
                 // _ capacity
 
-                // Convert capacity in number of elements to number of VM words required for that list
-                {mul_with_size}
+                // convert capacity in number of elements to required number of VM words
+                {&mul_with_size}
                 // _ (capacity_in_bfes)
 
                 push 1
@@ -70,12 +73,16 @@ impl DeprecatedSnippet for UnsafeNew {
 
                 // Write initial length = 0 to `*list`
                 push 0
-                write_mem
+                swap 1
+                write_mem 1
+                push -1
+                add
                 // _ *list
 
                 return
-            "
         )
+        .iter()
+        .join("\n")
     }
 
     fn crash_conditions(&self) -> Vec<String> {
@@ -93,6 +100,14 @@ impl DeprecatedSnippet for UnsafeNew {
         ]
     }
 
+    fn common_case_input_state(&self) -> ExecutionState {
+        prepare_state(2)
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState {
+        prepare_state(1000000)
+    }
+
     fn rust_shadowing(
         &self,
         stack: &mut Vec<BFieldElement>,
@@ -100,9 +115,8 @@ impl DeprecatedSnippet for UnsafeNew {
         secret_in: Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
-        // let list_pointer = BFieldElement::one();
         let capacity_in_elements = stack.pop().unwrap().value() as usize;
-        let capacity_in_bfes = capacity_in_elements * self.0.get_size();
+        let capacity_in_bfes = capacity_in_elements * self.data_type.stack_size();
         stack.push(BFieldElement::new(capacity_in_bfes as u64));
         crate::dyn_malloc::DynMalloc.rust_shadowing(stack, std_in, secret_in, memory);
 
@@ -110,14 +124,6 @@ impl DeprecatedSnippet for UnsafeNew {
         unsafe_list_new(list_pointer, memory);
 
         stack.push(list_pointer);
-    }
-
-    fn common_case_input_state(&self) -> ExecutionState {
-        prepare_state(2)
-    }
-
-    fn worst_case_input_state(&self) -> ExecutionState {
-        prepare_state(1000000)
     }
 }
 
@@ -134,29 +140,16 @@ mod tests {
 
     #[test]
     fn new_snippet_test() {
-        test_rust_equivalence_multiple_deprecated(&UnsafeNew(DataType::Bool), true);
-        test_rust_equivalence_multiple_deprecated(&UnsafeNew(DataType::BFE), true);
-        test_rust_equivalence_multiple_deprecated(&UnsafeNew(DataType::U32), true);
-        test_rust_equivalence_multiple_deprecated(&UnsafeNew(DataType::XFE), true);
-        test_rust_equivalence_multiple_deprecated(&UnsafeNew(DataType::Digest), true);
+        fn test_rust_equivalence_and_export(data_type: DataType) {
+            test_rust_equivalence_multiple_deprecated(&UnsafeNew { data_type }, true);
+        }
 
-        test_rust_equivalence_multiple_deprecated(&UnsafeNew(DataType::U64), true);
-        // let _execution_states = rust_tasm_equivalence_prop_new(&UnsafeNew(DataType::U64), true);
-        // let dyn_malloc_address = BFieldElement::new(DYN_MALLOC_ADDRESS as u64);
-        // for execution_state in execution_states {
-        //     assert_eq!(execution_state.final_stack.len(), NUM_OP_STACK_REGISTERS + 1);
-        //     assert!(execution_state.final_stack[0..NUM_OP_STACK_REGISTERS]
-        //         .iter()
-        //         .all(|x| x.value() == 0));
-        //     assert!(!execution_state.final_ram.is_empty());
-        //     assert!(execution_state.final_ram.contains_key(&dyn_malloc_address));
-        //     let final_dyn_malloc_value =
-        //         execution_state.final_ram[&dyn_malloc_address].value() as usize;
-        //     assert!(
-        //         final_dyn_malloc_value % DataType::U64.get_size() == 2 % DataType::U64.get_size(),
-        //         "One word for dyn malloc, one word for length, rest for elements. Final dyn malloc value was: {final_dyn_malloc_value}",
-        //     );
-        // }
+        test_rust_equivalence_and_export(DataType::Bool);
+        test_rust_equivalence_and_export(DataType::Bfe);
+        test_rust_equivalence_and_export(DataType::U32);
+        test_rust_equivalence_and_export(DataType::U64);
+        test_rust_equivalence_and_export(DataType::Xfe);
+        test_rust_equivalence_and_export(DataType::Digest);
     }
 }
 
@@ -167,6 +160,7 @@ mod benches {
 
     #[test]
     fn unsafe_new_benchmark() {
-        bench_and_write(UnsafeNew(DataType::Digest));
+        let data_type = DataType::Digest;
+        bench_and_write(UnsafeNew { data_type });
     }
 }

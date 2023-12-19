@@ -1,28 +1,46 @@
+use itertools::Itertools;
 use std::cmp;
 use std::collections::HashMap;
 
 use num::One;
 use rand::{random, thread_rng, Rng};
-use triton_vm::NonDeterminism;
+use triton_vm::{triton_asm, NonDeterminism};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
+use crate::data_type::DataType;
 use crate::library::Library;
 use crate::rust_shadowing_helper_functions::safe_list::{safe_insert_random_list, safe_list_get};
-use crate::snippet::{DataType, DeprecatedSnippet};
+use crate::snippet::DeprecatedSnippet;
 use crate::{empty_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
-pub struct SafeGet(pub DataType);
+pub struct SafeGet {
+    pub data_type: DataType,
+}
 
 impl DeprecatedSnippet for SafeGet {
+    fn entrypoint_name(&self) -> String {
+        format!(
+            "tasm_list_safeimplu32_get_element___{}",
+            self.data_type.label_friendly_name()
+        )
+    }
+
     fn input_field_names(&self) -> Vec<String> {
         vec!["*list".to_string(), "index".to_string()]
+    }
+
+    fn input_types(&self) -> Vec<DataType> {
+        vec![
+            DataType::List(Box::new(self.data_type.clone())),
+            DataType::U32,
+        ]
     }
 
     fn output_field_names(&self) -> Vec<String> {
         // This function returns element_0 on the top of the stack and the other elements below it. E.g.: _ elem_2 elem_1 elem_0
         let mut ret: Vec<String> = vec![];
-        let size = self.0.get_size();
+        let size = self.data_type.stack_size();
         for i in 0..size {
             ret.push(format!("element_{}", size - 1 - i));
         }
@@ -30,19 +48,57 @@ impl DeprecatedSnippet for SafeGet {
         ret
     }
 
-    fn input_types(&self) -> Vec<crate::snippet::DataType> {
-        vec![DataType::List(Box::new(self.0.clone())), DataType::U32]
+    fn output_types(&self) -> Vec<DataType> {
+        vec![DataType::Bfe; self.data_type.stack_size()]
     }
 
-    fn output_types(&self) -> Vec<crate::snippet::DataType> {
-        vec![DataType::BFE; self.0.get_size()]
+    fn stack_diff(&self) -> isize {
+        self.data_type.stack_size() as isize - 2
+    }
+
+    fn function_code(&self, _library: &mut Library) -> String {
+        let entrypoint = self.entrypoint_name();
+
+        let element_size = self.data_type.stack_size();
+        let mul_with_size = match element_size {
+            1 => vec![],
+            _ => triton_asm!(push {element_size} mul),
+        };
+
+        triton_asm!(
+            // BEFORE: _ *list index
+            // AFTER:  _ elem{N - 1} elem{N - 2} … elem{0}
+            {entrypoint}:
+                dup 1               // _ *list index *list
+                read_mem 1          // _ *list index length *(list - 1)
+                swap 1              // _ *list index *(list - 1) length
+                dup 2               // _ *list index *(list - 1) length index
+                lt                  // _ *list index *(list - 1) (length < index)
+                assert              // _ *list index *(list - 1)
+                pop 1               // _ *list index
+
+                push 1              // _ *list index 1
+                add                 // _ *list (index + 1)
+                {&mul_with_size}    // _ *list (N * (index + 1))
+                add                 // _ *(list + N * (index + 1))
+
+                push 1              // _ *(list + N * (index + 1)) 1
+                add                 // _ *(list + N * (index + 1) + 1)
+
+                {&self.data_type.read_value_from_memory()}
+                                    // _ elem{N - 1} elem{N - 2} … elem{0} address
+                pop 1
+                return
+        )
+        .iter()
+        .join("\n")
     }
 
     fn crash_conditions(&self) -> Vec<String> {
         vec!["Index out of bounds".to_string()]
     }
 
-    fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
         let mut rng = thread_rng();
         let list_pointer: BFieldElement = random();
         let capacity = rng.gen_range(1..1000);
@@ -55,97 +111,30 @@ impl DeprecatedSnippet for SafeGet {
         let mut memory = HashMap::default();
 
         safe_insert_random_list(
-            &self.0,
+            &self.data_type,
             list_pointer,
             capacity as u32,
             list_length,
             &mut memory,
         );
 
+        let nondeterminism = NonDeterminism::default().with_ram(memory);
         vec![ExecutionState {
             stack,
             std_in: vec![],
-            nondeterminism: NonDeterminism::new(vec![]),
-            memory,
+            nondeterminism,
             words_allocated: 0,
         }]
     }
 
-    fn stack_diff(&self) -> isize {
-        self.0.get_size() as isize - 2
+    fn common_case_input_state(&self) -> ExecutionState {
+        const COMMON_LENGTH: usize = 1 << 5;
+        get_benchmark_input_state(COMMON_LENGTH, &self.data_type)
     }
 
-    fn entrypoint_name(&self) -> String {
-        format!(
-            "tasm_list_safeimplu32_get_element___{}",
-            self.0.label_friendly_name()
-        )
-    }
-
-    fn function_code(&self, _library: &mut Library) -> String {
-        let entrypoint = self.entrypoint_name();
-        // Code to read an element from a list. With bounds check.
-
-        let mut code_to_read_elements = String::default();
-
-        // Start and end at loop: Stack: _  [elems], address_of_next_element
-        for i in 0..self.0.get_size() {
-            code_to_read_elements.push_str("read_mem\n");
-            // stack: _  address_for_last_unread_element, elem_{{N - 1 - i}}
-
-            code_to_read_elements.push_str("swap 1\n");
-            // stack: _  [..., elem_{{N - 1 - i}}], address_for_last_unread_element
-            if i != self.0.get_size() - 1 {
-                code_to_read_elements.push_str("push -1\n");
-                code_to_read_elements.push_str("add\n");
-            }
-        }
-        let element_size = self.0.get_size();
-
-        // Code to multiply with size. If size is 1, do nothing to save two clock cycles.
-        let mul_with_size = if element_size != 1 {
-            format!("push {element_size}\n mul\n")
-        } else {
-            String::default()
-        };
-        format!(
-            "
-            // BEFORE: _ *list index
-            // After: _ elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}
-            {entrypoint}:
-                dup 1
-                read_mem
-                // stack: _ *list index *list length
-
-                dup 2
-                lt
-                // stack: _ *list index *list length < index
-
-                assert
-                // stack: _ *list index *list
-
-                pop
-                // stack: _ *list index
-
-                push 1
-                add
-                {mul_with_size}
-                // stack: _ *list (N * (index + 1))
-
-                add
-                // stack: _ (*list + N * (index + 1))
-
-                push 1
-                add
-                // stack: _ (*list + N * (index + 1) + 1)
-
-                {code_to_read_elements}
-                // stack: _ elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}} address
-
-                pop
-                return
-                "
-        )
+    fn worst_case_input_state(&self) -> ExecutionState {
+        const COMMON_LENGTH: usize = 1 << 6;
+        get_benchmark_input_state(COMMON_LENGTH, &self.data_type)
     }
 
     fn rust_shadowing(
@@ -157,23 +146,17 @@ impl DeprecatedSnippet for SafeGet {
     ) {
         let index: u32 = stack.pop().unwrap().try_into().unwrap();
         let list_pointer = stack.pop().unwrap();
-        let element: Vec<BFieldElement> =
-            safe_list_get(list_pointer, index as usize, memory, self.0.get_size());
+        let element: Vec<BFieldElement> = safe_list_get(
+            list_pointer,
+            index as usize,
+            memory,
+            self.data_type.stack_size(),
+        );
 
         // elements are placed on stack as: `elem[N - 1] elem[N - 2] .. elem[0]`
-        for i in (0..self.0.get_size()).rev() {
+        for i in (0..self.data_type.stack_size()).rev() {
             stack.push(element[i]);
         }
-    }
-
-    fn common_case_input_state(&self) -> ExecutionState {
-        const COMMON_LENGTH: usize = 1 << 5;
-        get_benchmark_input_state(COMMON_LENGTH, &self.0)
-    }
-
-    fn worst_case_input_state(&self) -> ExecutionState {
-        const COMMON_LENGTH: usize = 1 << 6;
-        get_benchmark_input_state(COMMON_LENGTH, &self.0)
     }
 }
 
@@ -194,11 +177,11 @@ fn get_benchmark_input_state(list_length: usize, data_type: &DataType) -> Execut
     stack.push(list_pointer);
     stack.push(BFieldElement::new((list_length - 1) as u64));
 
+    let nondeterminism = NonDeterminism::default().with_ram(memory);
     ExecutionState {
         stack,
         std_in: vec![],
-        nondeterminism: NonDeterminism::new(vec![]),
-        memory,
+        nondeterminism,
         words_allocated: 1,
     }
 }
@@ -217,12 +200,42 @@ mod tests {
     #[test]
     fn new_snippet_test() {
         for _ in 0..10 {
-            test_rust_equivalence_multiple_deprecated(&SafeGet(DataType::Bool), true);
-            test_rust_equivalence_multiple_deprecated(&SafeGet(DataType::U32), true);
-            test_rust_equivalence_multiple_deprecated(&SafeGet(DataType::U64), true);
-            test_rust_equivalence_multiple_deprecated(&SafeGet(DataType::BFE), true);
-            test_rust_equivalence_multiple_deprecated(&SafeGet(DataType::XFE), true);
-            test_rust_equivalence_multiple_deprecated(&SafeGet(DataType::Digest), true);
+            test_rust_equivalence_multiple_deprecated(
+                &SafeGet {
+                    data_type: DataType::Bool,
+                },
+                true,
+            );
+            test_rust_equivalence_multiple_deprecated(
+                &SafeGet {
+                    data_type: DataType::U32,
+                },
+                true,
+            );
+            test_rust_equivalence_multiple_deprecated(
+                &SafeGet {
+                    data_type: DataType::U64,
+                },
+                true,
+            );
+            test_rust_equivalence_multiple_deprecated(
+                &SafeGet {
+                    data_type: DataType::Bfe,
+                },
+                true,
+            );
+            test_rust_equivalence_multiple_deprecated(
+                &SafeGet {
+                    data_type: DataType::Xfe,
+                },
+                true,
+            );
+            test_rust_equivalence_multiple_deprecated(
+                &SafeGet {
+                    data_type: DataType::Digest,
+                },
+                true,
+            );
         }
     }
 
@@ -230,15 +243,15 @@ mod tests {
     fn get_simple_1() {
         let list_address = BFieldElement::new(48);
         for i in 0..10 {
-            prop_get(&DataType::BFE, list_address, i, 10);
+            prop_get(&DataType::Bfe, list_address, i, 10);
         }
     }
 
     #[test]
     fn read_at_edge_1() {
         let list_address = BFieldElement::new(48);
-        prop_get(&DataType::BFE, list_address, 8, 10);
-        prop_get(&DataType::BFE, list_address, 9, 10);
+        prop_get(&DataType::Bfe, list_address, 8, 10);
+        prop_get(&DataType::Bfe, list_address, 9, 10);
     }
 
     #[should_panic]
@@ -247,7 +260,7 @@ mod tests {
         let list_address = BFieldElement::new(48);
         let length = 10;
         let index = 10;
-        prop_get(&DataType::BFE, list_address, index, length);
+        prop_get(&DataType::Bfe, list_address, index, length);
     }
 
     #[should_panic]
@@ -256,7 +269,7 @@ mod tests {
         let list_address = BFieldElement::new(48);
         let length = 10;
         let index = 11;
-        prop_get(&DataType::BFE, list_address, index, length);
+        prop_get(&DataType::Bfe, list_address, index, length);
     }
 
     #[should_panic]
@@ -265,7 +278,7 @@ mod tests {
         let list_address = BFieldElement::new(48);
         let length = 10;
         let index = 12;
-        prop_get(&DataType::BFE, list_address, index, length);
+        prop_get(&DataType::Bfe, list_address, index, length);
     }
 
     #[test]
@@ -316,7 +329,7 @@ mod tests {
     fn get_simple_3() {
         let list_address = BFieldElement::new(48);
         for i in 0..10 {
-            prop_get(&DataType::XFE, list_address, i, 10);
+            prop_get(&DataType::Xfe, list_address, i, 10);
         }
     }
 
@@ -365,7 +378,7 @@ mod tests {
     }
 
     fn prop_get(data_type: &DataType, list_pointer: BFieldElement, index: u32, list_length: u32) {
-        let element_size = data_type.get_size();
+        let element_size = data_type.stack_size();
 
         let mut init_stack = empty_stack();
         init_stack.push(list_pointer);
@@ -395,10 +408,12 @@ mod tests {
         }
 
         test_rust_equivalence_given_input_values_deprecated(
-            &SafeGet(data_type.to_owned()),
+            &SafeGet {
+                data_type: data_type.to_owned(),
+            },
             &init_stack,
             &[],
-            &mut memory,
+            memory,
             0,
             Some(&expected_end_stack),
         );
@@ -412,6 +427,8 @@ mod benches {
 
     #[test]
     fn safe_get_benchmark() {
-        bench_and_write(SafeGet(DataType::Digest));
+        bench_and_write(SafeGet {
+            data_type: DataType::Digest,
+        });
     }
 }

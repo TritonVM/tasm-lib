@@ -31,7 +31,7 @@ pub trait Procedure: BasicSnippet {
         memory: &mut HashMap<BFieldElement, BFieldElement>,
         nondeterminism: &NonDeterminism<BFieldElement>,
         public_input: &[BFieldElement],
-        sponge_state: &mut VmHasherState,
+        sponge_state: &mut Option<VmHasherState>,
     ) -> Vec<BFieldElement>;
 
     fn preprocess<T: BFieldCodec>(
@@ -40,7 +40,7 @@ pub trait Procedure: BasicSnippet {
     ) {
     }
 
-    /// Returns (stack, memory, nondeterminism, public_input)
+    /// Returns (stack, memory, nondeterminism, public_input, maybe_vm_hasher_state)
     #[allow(clippy::type_complexity)]
     fn pseudorandom_initial_state(
         &self,
@@ -48,10 +48,9 @@ pub trait Procedure: BasicSnippet {
         bench_case: Option<BenchmarkCase>,
     ) -> (
         Vec<BFieldElement>,
-        HashMap<BFieldElement, BFieldElement>,
         NonDeterminism<BFieldElement>,
         Vec<BFieldElement>,
-        VmHasherState,
+        Option<VmHasherState>,
     );
 }
 
@@ -78,7 +77,7 @@ impl<P: Procedure + 'static> RustShadow for ShadowedProcedure<P> {
         nondeterminism: &NonDeterminism<BFieldElement>,
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
-        sponge_state: &mut VmHasherState,
+        sponge_state: &mut Option<VmHasherState>,
     ) -> Vec<BFieldElement> {
         self.procedure
             .borrow()
@@ -104,29 +103,20 @@ impl<P: Procedure + 'static> RustShadow for ShadowedProcedure<P> {
                 entrypoint,
                 seed.iter().map(|h| format!("{:#04x}", h)).join(", ")
             );
-            let (stack, memory, nondeterminism, stdin, sponge_state) =
+            let (stack, nondeterminism, stdin, sponge_state) =
                 procedure.borrow().pseudorandom_initial_state(seed, None);
 
             let init_stack = stack.to_vec();
-            let words_statically_allocated = 1;
 
-            let rust = rust_final_state(
-                self,
-                &stack,
-                &stdin,
-                &nondeterminism,
-                &memory,
-                &sponge_state,
-                words_statically_allocated,
-            );
+            let rust = rust_final_state(self, &stack, &stdin, &nondeterminism, &sponge_state);
 
             // run tvm
+            let words_statically_allocated = 0;
             let tasm = tasm_final_state(
                 self,
                 &stack,
                 &stdin,
-                &nondeterminism,
-                &memory,
+                nondeterminism,
                 &sponge_state,
                 words_statically_allocated,
             );
@@ -156,20 +146,14 @@ impl<P: Procedure + 'static> RustShadow for ShadowedProcedure<P> {
         let mut benchmarks = Vec::with_capacity(2);
 
         for bench_case in [BenchmarkCase::CommonCase, BenchmarkCase::WorstCase] {
-            let (stack, memory, nondeterminism, public_input, _sponge_state) = self
+            let (stack, nondeterminism, public_input, sponge_state) = self
                 .procedure
                 .borrow()
                 .pseudorandom_initial_state(rng.gen(), Some(bench_case));
             let words_statically_allocated = 10; // okay buffer
             let program = link_for_isolated_run(self.procedure.clone(), words_statically_allocated);
-            let execution_result = execute_bench(
-                &program,
-                &stack,
-                public_input,
-                nondeterminism,
-                &memory,
-                Some(1),
-            );
+            let execution_result =
+                execute_bench(&program, &stack, public_input, nondeterminism, sponge_state);
             let benchmark = BenchmarkResult {
                 name: self.procedure.borrow().entrypoint(),
                 clock_cycle_count: execution_result.cycle_count,

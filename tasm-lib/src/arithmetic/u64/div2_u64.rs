@@ -5,8 +5,9 @@ use rand::RngCore;
 use twenty_first::amount::u32s::U32s;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
+use crate::data_type::DataType;
 use crate::library::Library;
-use crate::snippet::{DataType, DeprecatedSnippet};
+use crate::snippet::DeprecatedSnippet;
 use crate::{empty_stack, push_encodable, ExecutionState};
 
 #[derive(Clone, Debug)]
@@ -21,11 +22,11 @@ impl DeprecatedSnippet for Div2U64 {
         vec!["(value / 2)_hi".to_string(), "(value / 2)_lo".to_string()]
     }
 
-    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+    fn input_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::U64]
     }
 
-    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+    fn output_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::U64]
     }
 
@@ -56,18 +57,18 @@ impl DeprecatedSnippet for Div2U64 {
 
     fn function_code(&self, _library: &mut Library) -> String {
         let entrypoint = self.entrypoint_name();
-        let two_pow_31 = (1u64 << 31).to_string();
+        let two_pow_31 = 1u64 << 31;
 
         format!(
             "
                 // BEFORE: _ value_hi value_lo
-                // AFTER: _ (value / 2)_hi (value / 2)_lo
+                // AFTER:  _ (value / 2)_hi (value / 2)_lo
                 {entrypoint}:
                     // Divide the lower number
                     push 2
                     swap 1
                     div_mod
-                    pop
+                    pop 1
                     // stack: _ value_hi (value_lo / 2)
 
                     // Divide the upper number and carry its least significant bit into the lower number
@@ -85,10 +86,10 @@ impl DeprecatedSnippet for Div2U64 {
 
                     swap 1
                     swap 2
-                    // stack: _ (value_hi / 2) (value_lo / 2) carry
+                    // stack: _ (value_hi / 2) carry (value_lo / 2)
 
                     add
-                    // stack: _ (value / 2)_hi (value / 2)_lo carry
+                    // stack: _ (value / 2)_hi (value / 2)_lo
 
                     return
                 "
@@ -165,7 +166,7 @@ mod tests {
             &Div2U64,
             &init_stack,
             &[],
-            &mut HashMap::default(),
+            HashMap::default(),
             0,
             None,
         );
@@ -182,7 +183,7 @@ mod tests {
             &Div2U64,
             &init_stack,
             &[],
-            &mut HashMap::default(),
+            HashMap::default(),
             0,
             None,
         );
@@ -229,7 +230,7 @@ mod tests {
             &Div2U64,
             &init_stack,
             &[],
-            &mut HashMap::default(),
+            HashMap::default(),
             0,
             Some(&expected_stack),
         );

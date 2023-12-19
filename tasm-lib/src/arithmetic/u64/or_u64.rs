@@ -1,11 +1,8 @@
 use rand::{thread_rng, RngCore};
 use twenty_first::{amount::u32s::U32s, shared_math::b_field_element::BFieldElement};
 
-use crate::{
-    empty_stack, push_encodable,
-    snippet::{DataType, DeprecatedSnippet},
-    ExecutionState,
-};
+use crate::data_type::DataType;
+use crate::{empty_stack, push_encodable, snippet::DeprecatedSnippet, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct OrU64;
@@ -28,11 +25,11 @@ impl DeprecatedSnippet for OrU64 {
         vec!["(lhs | rhs)_hi".to_string(), "(lhs | rhs)_lo".to_string()]
     }
 
-    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+    fn input_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::U64, DataType::U64]
     }
 
-    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+    fn output_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::U64]
     }
 
@@ -191,7 +188,7 @@ mod tests {
             &OrU64,
             &init_stack,
             &[],
-            &mut HashMap::default(),
+            HashMap::default(),
             0,
             Some(&expected),
         );

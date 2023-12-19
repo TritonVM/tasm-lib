@@ -1,22 +1,28 @@
 use std::collections::HashMap;
 
 use itertools::Itertools;
-use rand::random;
-use triton_vm::{BFieldElement, NonDeterminism};
+use rand::rngs::StdRng;
+use rand::{random, Rng, SeedableRng};
+use triton_vm::instruction::LabelledInstruction;
+use triton_vm::{triton_asm, BFieldElement};
 use twenty_first::{shared_math::other::random_elements, util_types::shared::bag_peaks};
 
+use crate::data_type::DataType;
+use crate::function::Function;
+use crate::snippet::BasicSnippet;
+use crate::snippet_bencher::BenchmarkCase;
 use crate::{
     empty_stack,
     list::unsafeimplu32::{get::UnsafeGet, length::Length as UnsafeLength},
-    rust_shadowing_helper_functions,
-    snippet::{DataType, DeprecatedSnippet},
-    Digest, ExecutionState, VmHasher, DIGEST_LENGTH,
+    rust_shadowing_helper_functions, Digest, VmHasher, DIGEST_LENGTH,
 };
 
 pub struct BagPeaks;
 
 impl BagPeaks {
-    fn input_state(num_peaks: usize) -> ExecutionState {
+    fn input_state(
+        num_peaks: usize,
+    ) -> (Vec<BFieldElement>, HashMap<BFieldElement, BFieldElement>) {
         let peaks: Vec<Digest> = random_elements(num_peaks);
         let address: BFieldElement = random();
         let mut stack = empty_stack();
@@ -30,192 +36,163 @@ impl BagPeaks {
             &mut memory,
         );
 
-        ExecutionState {
-            stack,
-            std_in: vec![],
-            nondeterminism: NonDeterminism::new(vec![]),
-            memory,
-            words_allocated: 0,
-        }
+        (stack, memory)
     }
 }
 
-impl DeprecatedSnippet for BagPeaks {
-    fn entrypoint_name(&self) -> String {
+impl BasicSnippet for BagPeaks {
+    fn entrypoint(&self) -> String {
         "tasm_mmr_bag_peaks".to_string()
     }
 
-    fn input_field_names(&self) -> Vec<String> {
-        vec!["*peaks".to_string()]
+    fn inputs(&self) -> Vec<(DataType, String)> {
+        vec![(
+            DataType::List(Box::new(DataType::Digest)),
+            "*peaks".to_string(),
+        )]
     }
 
-    fn input_types(&self) -> Vec<crate::snippet::DataType> {
-        vec![DataType::List(Box::new(DataType::Digest))]
+    fn outputs(&self) -> Vec<(DataType, String)> {
+        vec![(DataType::Digest, "digest".to_owned())]
     }
 
-    fn output_types(&self) -> Vec<crate::snippet::DataType> {
-        vec![DataType::Digest]
-    }
+    fn code(&self, library: &mut crate::library::Library) -> Vec<LabelledInstruction> {
+        let entrypoint = self.entrypoint();
 
-    fn output_field_names(&self) -> Vec<String> {
-        vec![
-            "d4".to_string(),
-            "d3".to_string(),
-            "d2".to_string(),
-            "d1".to_string(),
-            "d0".to_string(),
-        ]
-    }
+        let get_element = library.import(Box::new(UnsafeGet {
+            data_type: DataType::Digest,
+        }));
+        let get_length = library.import(Box::new(UnsafeLength {
+            data_type: DataType::Digest,
+        }));
 
-    fn stack_diff(&self) -> isize {
-        4
-    }
+        let length_is_zero_label = format!("{entrypoint}_length_is_zero");
+        let length_is_not_zero_label = format!("{entrypoint}_length_is_not_zero");
+        let length_is_one_label = format!("{entrypoint}_length_is_one");
+        let length_is_not_zero_or_one = format!("{entrypoint}_length_is_not_zero_or_one");
+        let loop_label = format!("{entrypoint}_loop");
 
-    fn function_code(&self, library: &mut crate::library::Library) -> String {
-        let entrypoint = self.entrypoint_name();
-
-        let get_element = library.import(Box::new(UnsafeGet(DataType::Digest)));
-        let get_length = library.import(Box::new(UnsafeLength(DataType::Digest)));
-
-        format!(
-            "
+        triton_asm!(
         // BEFORE: _ *peaks
         // AFTER: _ d4 d3 d2 d1 d0
         {entrypoint}:
-
             dup 0  // _ *peaks *peaks
             call {get_length} // _ *peaks length
 
             // special case 0
             push 1 dup 1 push 0 eq // _ *peaks length 1 (length==0)
-            skiz call {entrypoint}_length_is_zero
-            skiz call {entrypoint}_length_is_not_zero
+            skiz call {length_is_zero_label}
+            skiz call {length_is_not_zero_label}
 
             // _ [digest_elements]
             return
 
         // BEFORE: _ *peaks length 1
         // AFTER: _ d4 d3 d2 d1 d0 0
-        {entrypoint}_length_is_zero:
-            pop
-            pop pop
+        {length_is_zero_label}:
+            pop 3
             push 0 push 0 push 0 push 0 push 0
             push 1 push 0 push 0 push 0 push 0
             // 0 0 0 0 0 1 0 0 0 0
             sponge_init
             sponge_absorb
             sponge_squeeze
-            swap 5 pop
-            swap 5 pop
-            swap 5 pop
-            swap 5 pop
-            swap 5 pop
+            swap 5 pop 1
+            swap 5 pop 1
+            swap 5 pop 1
+            swap 5 pop 1
+            swap 5 pop 1
             push 0
             return
 
         // BEFORE: _ *peaks length
         // AFTER: _ d4 d3 d2 d1 d0
-        {entrypoint}_length_is_not_zero:
+        {length_is_not_zero_label}:
             // special case 1
             push 1 dup 1 push 1 eq // _ *peaks length 1 length==1
-            skiz call {entrypoint}_length_is_one
-            skiz call {entrypoint}_length_is_not_one
+            skiz call {length_is_one_label}
+            skiz call {length_is_not_zero_or_one}
             return
 
         // BEFORE: _ *peaks length 1
         // AFTER: _ d4 d3 d2 d1 d0 0
-        {entrypoint}_length_is_one:
-            pop
-            push -1 add // _ *peaks 0
+        {length_is_one_label}:
+            pop 2
+            push 0
+            // _ *peaks 0
             call {get_element} // _ d4 d3 d2 d1 d0
             push 0
             return
 
         // BEFORE: _ *peaks length
         // AFTER: _ d4 d3 d2 d1 d0
-        {entrypoint}_length_is_not_one:
+        {length_is_not_zero_or_one}:
             // base case
-            push -1 add // _ *peaks length-1
-            dup 1 dup 1 // _ *peaks length-1 *peaks length-1
-            call {get_element} // _ *peaks length-1 l4 l3 l2 l1 l0
-            dup 6 dup 6 // _*peaks length-1 l4 l3 l2 l1 l0 *peaks length-1
-            push -1 add // _*peaks length-1 l4 l3 l2 l1 l0 *peaks length-2
-            call {get_element} // _ *peaks length-1 l4 l3 l2 l1 l0 p4 p3 p2 p1 p0
+            push -1 add             // _ *peaks length-1
+            dup 1 dup 1             // _ *peaks length-1 *peaks length-1
+            call {get_element}      // _ *peaks length-1 l4 l3 l2 l1 l0
+            dup 6 dup 6             // _*peaks length-1 l4 l3 l2 l1 l0 *peaks length-1
+            push -1 add             // _*peaks length-1 l4 l3 l2 l1 l0 *peaks length-2
+            call {get_element}      // _ *peaks length-1 l4 l3 l2 l1 l0 p4 p3 p2 p1 p0
             hash
+            // _ *peaks length-1 [acc]
 
-            swap 10
+            swap 5
             push -1 add
-            swap 10
-            // _ *peaks length-2 d4 d3 d2 d1 d0 g4 g3 g2 g1 g0
+            swap 5
+            // _ *peaks length-2 [acc]
 
-            call {entrypoint}_loop // *peaks 0 d4 d3 d2 d1 d0 g4 g3 g2 g1 g0
-            pop pop pop pop pop // *peaks 0 d4 d3 d2 d1 d0
+            call {loop_label}
+            // *peaks 0 [acc]
+            // *peaks 0 d4 d3 d2 d1 d0
 
             swap 2 // *peaks 0 d4 d3 d0 d1 d2
             swap 4 // *peaks 0 d2 d3 d0 d1 d4
             swap 6 // d4 0 d2 d3 d0 d1 *peaks
-            pop // d4 0 d2 d3 d0 d1
+            pop 1  // d4 0 d2 d3 d0 d1
             swap 2 // d4 0 d2 d1 d0 d3
             swap 4 // d4 d3 d2 d1 d0 0
-            pop // d4 d3 d2 d1 d0
+            pop 1  // d4 d3 d2 d1 d0
 
             return
 
-        // INVARIANT: _ *peaks elements_left d9 d8 d7 d6 d5 d4 d3 d2 d1 d0
-        {entrypoint}_loop:
+        // INVARIANT: _ *peaks elements_left [acc]
+        {loop_label}:
             // evaluate termination condition
-            dup 10 // _ *peaks elements_left d9 d8 d7 d6 d5 d4 d3 d2 d1 d0 elements_left
-            push 0 eq // _ *peaks elements_left d9 d8 d7 d6 d5 d4 d3 d2 d1 d0 elements_left==0
+            dup 5     // _ *peaks elements_left [acc] elements_left
+            push 0 eq // _ *peaks elements_left [acc] elements_left==0
             skiz return
-            // _ *peak elements_left d9 d8 d7 d6 d5 d4 d3 d2 d1 d0
+            // _ *peaks elements_left [acc]
 
             // body
-            swap 10
+            swap 5
             push -1
             add
-            swap 10
-            // _ *peaks elements_left-1 d9 d8 d7 d6 d5 d4 d3 d2 d1 d0
+            swap 5
+            // _ *peaks elements_left' [acc]
 
-            pop pop pop pop pop
             dup 6
             dup 6
-            // _ *peaks elements_left-1 d9 d8 d7 d6 d5 *peaks elements_left
+            // _ *peaks elements_left' [acc] *peaks elements_left'
 
             call {get_element}
-            // _*peaks elements_left-1 d9 d8 d7 d6 d5 d4 d3 d2 d1 d0
+            // _*peaks elements_left' [acc] [peaks[elements_left - 1]]
 
             hash
+            // _*peaks elements_left' [acc']
 
             recurse
-            "
         )
     }
+}
 
-    fn crash_conditions(&self) -> Vec<String> {
-        vec![]
-    }
-
-    fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
-        (0..30).map(Self::input_state).collect()
-    }
-
-    fn common_case_input_state(&self) -> crate::ExecutionState {
-        Self::input_state(30)
-    }
-
-    fn worst_case_input_state(&self) -> crate::ExecutionState {
-        Self::input_state(60)
-    }
-
-    fn rust_shadowing(
+impl Function for BagPeaks {
+    fn rust_shadow(
         &self,
-        stack: &mut Vec<triton_vm::BFieldElement>,
-        _std_in: Vec<triton_vm::BFieldElement>,
-        _secret_in: Vec<triton_vm::BFieldElement>,
-        memory: &mut std::collections::HashMap<triton_vm::BFieldElement, triton_vm::BFieldElement>,
+        stack: &mut Vec<BFieldElement>,
+        memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
         let address = stack.pop().unwrap();
-
         let length = memory.get(&address).unwrap().value() as usize;
         let safety_offset = 1; // unsafe lists
 
@@ -240,33 +217,49 @@ impl DeprecatedSnippet for BagPeaks {
 
         let bag = bag_peaks::<VmHasher>(&peaks);
 
-        let mut bag_bfe = bag.values().to_vec();
+        let mut bag_bfes = bag.values().to_vec();
 
-        while let Some(element) = bag_bfe.pop() {
+        while let Some(element) = bag_bfes.pop() {
             stack.push(element);
+        }
+    }
+
+    fn pseudorandom_initial_state(
+        &self,
+        seed: [u8; 32],
+        bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
+    ) -> (Vec<BFieldElement>, HashMap<BFieldElement, BFieldElement>) {
+        match bench_case {
+            Some(BenchmarkCase::CommonCase) => Self::input_state(30),
+            Some(BenchmarkCase::WorstCase) => Self::input_state(60),
+            None => {
+                let mut rng: StdRng = SeedableRng::from_seed(seed);
+                Self::input_state(rng.gen_range(0..=63))
+            }
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
-
     use super::BagPeaks;
+    use crate::{function::ShadowedFunction, snippet::RustShadow};
 
     #[test]
-    fn new_prop_test() {
-        test_rust_equivalence_multiple_deprecated(&BagPeaks, true);
+    fn prop() {
+        for _ in 0..10 {
+            ShadowedFunction::new(BagPeaks).test()
+        }
     }
 }
 
 #[cfg(test)]
 mod benches {
-    use super::*;
-    use crate::snippet_bencher::bench_and_write;
+    use super::BagPeaks;
+    use crate::{function::ShadowedFunction, snippet::RustShadow};
 
     #[test]
     fn bag_peaks_benchmark() {
-        bench_and_write(BagPeaks);
+        ShadowedFunction::new(BagPeaks).bench();
     }
 }

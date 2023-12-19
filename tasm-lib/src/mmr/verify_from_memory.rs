@@ -1,6 +1,7 @@
+use std::collections::HashMap;
+
 use num::One;
 use rand::{random, thread_rng, Rng};
-use std::collections::HashMap;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::random_elements;
 use twenty_first::test_shared::mmr::get_rustyleveldb_ammr_from_digests;
@@ -13,18 +14,17 @@ use twenty_first::util_types::mmr::mmr_trait::Mmr;
 use crate::arithmetic::u32::isodd::Isodd;
 use crate::arithmetic::u64::div2_u64::Div2U64;
 use crate::arithmetic::u64::eq_u64::EqU64;
+use crate::data_type::DataType;
 use crate::hashing::eq_digest::EqDigest;
 use crate::hashing::swap_digest::SwapDigest;
 use crate::library::Library;
-use crate::list::safeimplu32::get::SafeGet;
-use crate::list::unsafeimplu32::get::UnsafeGet;
 use crate::list::ListType;
-use crate::snippet::{DataType, DeprecatedSnippet};
+use crate::snippet::DeprecatedSnippet;
 use crate::{
     empty_stack, rust_shadowing_helper_functions, Digest, ExecutionState, VmHasher, DIGEST_LENGTH,
 };
 
-use super::leaf_index_to_mt_index::MmrLeafIndexToMtIndexAndPeakIndex;
+use super::leaf_index_to_mt_index_and_peak_index::MmrLeafIndexToMtIndexAndPeakIndex;
 use super::MAX_MMR_HEIGHT;
 
 #[derive(Clone, Debug)]
@@ -121,7 +121,7 @@ impl MmrVerifyFromMemory {
             ExecutionState::with_stack_and_memory(
                 stack,
                 memory,
-                2 * (MAX_MMR_HEIGHT * DIGEST_LENGTH),
+                (2 * (MAX_MMR_HEIGHT * DIGEST_LENGTH)).try_into().unwrap(),
             ),
             auth_path_pointer,
             peaks_pointer,
@@ -155,7 +155,7 @@ impl DeprecatedSnippet for MmrVerifyFromMemory {
         ]
     }
 
-    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+    fn input_types(&self) -> Vec<crate::data_type::DataType> {
         vec![
             DataType::List(Box::new(DataType::Digest)),
             DataType::U64,
@@ -165,7 +165,7 @@ impl DeprecatedSnippet for MmrVerifyFromMemory {
         ]
     }
 
-    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+    fn output_types(&self) -> Vec<crate::data_type::DataType> {
         vec![
             DataType::List(Box::new(DataType::Digest)),
             DataType::U64,
@@ -208,10 +208,7 @@ impl DeprecatedSnippet for MmrVerifyFromMemory {
 
     fn function_code(&self, library: &mut Library) -> String {
         let leaf_index_to_mt_index = library.import(Box::new(MmrLeafIndexToMtIndexAndPeakIndex));
-        let get_list_element = match self.list_type {
-            ListType::Safe => library.import(Box::new(SafeGet(DataType::Digest))),
-            ListType::Unsafe => library.import(Box::new(UnsafeGet(DataType::Digest))),
-        };
+        let get_list_element = library.import(self.list_type.get(DataType::Digest));
         let u32_is_odd = library.import(Box::new(Isodd));
         let entrypoint = self.entrypoint_name();
         let eq_u64 = library.import(Box::new(EqU64));
@@ -259,13 +256,13 @@ impl DeprecatedSnippet for MmrVerifyFromMemory {
                     swap 7
                     // _ *peaks leaf_count_hi leaf_count_lo validation_result leaf_index_lo i *auth_path peak_index mt_index_hi mt_index_lo leaf_index_hi
 
-                    swap 9 pop pop pop pop
+                    swap 9 pop 4
                     // _ *peaks leaf_index_hi leaf_count_lo validation_result leaf_index_lo i *auth_path
 
-                    swap 6 pop pop
+                    swap 6 pop 2
                     // _ *auth_path leaf_index_hi leaf_count_lo validation_result leaf_index_lo
 
-                    swap 2 pop
+                    swap 2 pop 1
                     // _ *auth_path leaf_index_hi leaf_index_lo validation_result
 
                     return
@@ -293,7 +290,6 @@ impl DeprecatedSnippet for MmrVerifyFromMemory {
                     // _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo i *auth_path peak_index mt_index_hi mt_index_lo [digest (right_node)] [digest (left_node)]
 
                     hash
-                    pop pop pop pop pop
                     // _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo i *auth_path peak_index mt_index_hi mt_index_lo [digest (acc_hash)]
 
                     // i -> i + 1
@@ -411,7 +407,6 @@ impl DeprecatedSnippet for MmrVerifyFromMemory {
 #[cfg(test)]
 mod tests {
     use rand::{thread_rng, Rng};
-
     use twenty_first::shared_math::{b_field_element::BFieldElement, other::random_elements};
     use twenty_first::test_shared::mmr::get_empty_rustyleveldb_ammr;
     use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
@@ -624,7 +619,6 @@ mod tests {
         let leaf_index_hi = BFieldElement::new(leaf_index >> 32);
         let leaf_index_lo = BFieldElement::new(leaf_index & u32::MAX as u64);
         let init_stack = exec_state.stack;
-        let mut memory = exec_state.memory;
 
         // AFTER: _ *auth_path leaf_index_hi leaf_index_lo validation_result
         let mut expected_final_stack = empty_stack();
@@ -637,8 +631,8 @@ mod tests {
             &snippet_for_unsafe_lists,
             &init_stack,
             &[],
-            &mut memory,
-            MAX_MMR_HEIGHT * DIGEST_LENGTH + 1, // assume that 64 digests are allocated in memory when code starts to run
+            exec_state.nondeterminism.ram,
+            (MAX_MMR_HEIGHT * DIGEST_LENGTH + 1).try_into().unwrap(), // assume that 64 digests are allocated in memory when code starts to run
             Some(&expected_final_stack),
         );
 
@@ -654,8 +648,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::snippet_bencher::bench_and_write;
+
+    use super::*;
 
     #[test]
     fn verify_from_memory_benchmark_unsafe_lists() {

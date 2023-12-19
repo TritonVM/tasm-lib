@@ -2,7 +2,6 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use rand::{rngs::StdRng, thread_rng, Rng, SeedableRng};
 use triton_vm::{BFieldElement, NonDeterminism};
-use twenty_first::util_types::algebraic_hasher::Domain;
 
 use crate::{
     linker::{execute_bench, link_for_isolated_run},
@@ -25,6 +24,7 @@ pub trait Function: BasicSnippet {
         memory: &mut HashMap<BFieldElement, BFieldElement>,
     );
 
+    /// Return (init_stack, init_memory)
     fn pseudorandom_initial_state(
         &self,
         seed: [u8; 32],
@@ -54,7 +54,7 @@ where
         _nondeterminism: &triton_vm::NonDeterminism<BFieldElement>,
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
-        _sponge_state: &mut VmHasherState,
+        _sponge_state: &mut Option<VmHasherState>,
     ) -> Vec<BFieldElement> {
         self.function.borrow().rust_shadow(stack, memory);
         vec![]
@@ -78,14 +78,18 @@ where
                 .pseudorandom_initial_state(seed, None);
 
             let stdin = vec![];
+            let non_determinism = NonDeterminism {
+                individual_tokens: vec![],
+                digests: vec![],
+                ram: memory,
+            };
             test_rust_equivalence_given_complete_state(
                 self,
                 &stack,
                 &stdin,
-                &NonDeterminism::new(vec![]),
-                &memory,
-                &VmHasherState::new(Domain::VariableLength),
-                1,
+                &non_determinism,
+                &None,
+                0,
                 None,
             );
         }
@@ -108,14 +112,8 @@ where
                 .borrow()
                 .pseudorandom_initial_state(rng.gen(), Some(bench_case));
             let program = link_for_isolated_run(self.function.clone(), 1);
-            let execution_result = execute_bench(
-                &program,
-                &stack,
-                vec![],
-                NonDeterminism::new(vec![]),
-                &memory,
-                Some(1),
-            );
+            let non_determinism = NonDeterminism::default().with_ram(memory);
+            let execution_result = execute_bench(&program, &stack, vec![], non_determinism, None);
             let benchmark = BenchmarkResult {
                 name: self.function.borrow().entrypoint(),
                 clock_cycle_count: execution_result.cycle_count,

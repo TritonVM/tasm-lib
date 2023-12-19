@@ -2,7 +2,8 @@ use std::collections::HashMap;
 
 use twenty_first::shared_math::b_field_element::{BFieldElement, BFIELD_ONE, BFIELD_ZERO};
 
-use crate::snippet::{DataType, DeprecatedSnippet};
+use crate::data_type::DataType;
+use crate::snippet::DeprecatedSnippet;
 use crate::{empty_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
@@ -17,12 +18,12 @@ impl DeprecatedSnippet for Lsb {
         vec!["a % 2".to_string(), "a / 2".to_string()]
     }
 
-    fn input_types(&self) -> Vec<crate::snippet::DataType> {
-        vec![DataType::BFE]
+    fn input_types(&self) -> Vec<crate::data_type::DataType> {
+        vec![DataType::Bfe]
     }
 
-    fn output_types(&self) -> Vec<crate::snippet::DataType> {
-        vec![DataType::BFE, DataType::BFE]
+    fn output_types(&self) -> Vec<crate::data_type::DataType> {
+        vec![DataType::Bfe, DataType::Bfe]
     }
 
     fn crash_conditions(&self) -> Vec<String> {

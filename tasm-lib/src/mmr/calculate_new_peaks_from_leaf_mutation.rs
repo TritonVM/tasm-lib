@@ -8,10 +8,11 @@ use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
 use twenty_first::util_types::mmr::mmr_trait::Mmr;
 use twenty_first::util_types::mmr::{self, mmr_membership_proof::MmrMembershipProof};
 
-use super::leaf_index_to_mt_index::MmrLeafIndexToMtIndexAndPeakIndex;
+use super::leaf_index_to_mt_index_and_peak_index::MmrLeafIndexToMtIndexAndPeakIndex;
 use crate::arithmetic::u32::isodd::Isodd;
 use crate::arithmetic::u64::div2_u64::Div2U64;
 use crate::arithmetic::u64::eq_u64::EqU64;
+use crate::data_type::DataType;
 use crate::library::Library;
 use crate::list::safeimplu32::get::SafeGet;
 use crate::list::safeimplu32::set::SafeSet;
@@ -19,7 +20,7 @@ use crate::list::unsafeimplu32::get::UnsafeGet;
 use crate::list::unsafeimplu32::set::UnsafeSet;
 use crate::list::ListType;
 use crate::mmr::MAX_MMR_HEIGHT;
-use crate::snippet::{DataType, DeprecatedSnippet};
+use crate::snippet::DeprecatedSnippet;
 use crate::{
     empty_stack, rust_shadowing_helper_functions, Digest, ExecutionState, VmHasher, DIGEST_LENGTH,
 };
@@ -118,7 +119,9 @@ impl MmrCalculateNewPeaksFromLeafMutationMtIndices {
             ExecutionState::with_stack_and_memory(
                 stack,
                 memory,
-                2 * (MAX_MMR_HEIGHT * DIGEST_LENGTH + 1),
+                (2 * (MAX_MMR_HEIGHT * DIGEST_LENGTH + 1))
+                    .try_into()
+                    .unwrap(),
             ),
             auth_path_pointer,
             peaks_pointer,
@@ -151,7 +154,7 @@ impl DeprecatedSnippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
         ]
     }
 
-    fn input_types(&self) -> Vec<crate::snippet::DataType> {
+    fn input_types(&self) -> Vec<DataType> {
         vec![
             DataType::List(Box::new(DataType::Digest)),
             DataType::U64,
@@ -161,7 +164,7 @@ impl DeprecatedSnippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
         ]
     }
 
-    fn output_types(&self) -> Vec<crate::snippet::DataType> {
+    fn output_types(&self) -> Vec<DataType> {
         vec![DataType::List(Box::new(DataType::Digest)), DataType::U64]
     }
 
@@ -204,12 +207,20 @@ impl DeprecatedSnippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
         let u32_is_odd = library.import(Box::new(Isodd));
         let eq_u64 = library.import(Box::new(EqU64));
         let get = match self.list_type {
-            ListType::Safe => library.import(Box::new(SafeGet(DataType::Digest))),
-            ListType::Unsafe => library.import(Box::new(UnsafeGet(DataType::Digest))),
+            ListType::Safe => library.import(Box::new(SafeGet {
+                data_type: DataType::Digest,
+            })),
+            ListType::Unsafe => library.import(Box::new(UnsafeGet {
+                data_type: DataType::Digest,
+            })),
         };
         let set = match self.list_type {
-            ListType::Safe => library.import(Box::new(SafeSet(DataType::Digest))),
-            ListType::Unsafe => library.import(Box::new(UnsafeSet(DataType::Digest))),
+            ListType::Safe => library.import(Box::new(SafeSet {
+                data_type: DataType::Digest,
+            })),
+            ListType::Unsafe => library.import(Box::new(UnsafeSet {
+                data_type: DataType::Digest,
+            })),
         };
         let div_2 = library.import(Box::new(Div2U64));
 
@@ -238,7 +249,7 @@ impl DeprecatedSnippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
                 call {set}
                 // _ *auth_path leaf_index_hi leaf_index_lo *peaks i peak_index mt_index_hi mt_index_lo
 
-                pop pop pop pop pop
+                pop 5
 
                 return
 
@@ -262,7 +273,6 @@ impl DeprecatedSnippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
                     // _ *auth_path leaf_index_hi leaf_index_lo *peaks i peak_index mt_index_hi mt_index_lo [digest (right_node)] [digest (left_node)]
 
                     hash
-                    pop pop pop pop pop
                     // _ *auth_path leaf_index_hi leaf_index_lo *peaks i peak_index mt_index_hi mt_index_lo [digest (new_acc_hash)]
 
                     // i -> i + 1
@@ -641,7 +651,7 @@ mod tests {
         let (init_exec_state, auth_path_pointer, peaks_pointer) = implementation_with_unsafe_lists
             .prepare_state_with_mmra(start_mmr, new_leaf_index, new_leaf, auth_path);
         let init_stack = init_exec_state.stack;
-        let mut memory = init_exec_state.memory;
+        let memory = init_exec_state.nondeterminism.ram;
 
         // AFTER: _ *auth_path leaf_index_hi leaf_index_lo
         let mut expected_final_stack = empty_stack();
@@ -649,26 +659,27 @@ mod tests {
         expected_final_stack.push(BFieldElement::new(new_leaf_index >> 32));
         expected_final_stack.push(BFieldElement::new(new_leaf_index & u32::MAX as u64));
 
-        test_rust_equivalence_given_input_values_deprecated(
+        let vm_output = test_rust_equivalence_given_input_values_deprecated(
             &MmrCalculateNewPeaksFromLeafMutationMtIndices {
                 list_type: ListType::Unsafe,
             },
             &init_stack,
             &[],
-            &mut memory,
-            MAX_MMR_HEIGHT * DIGEST_LENGTH + 1, // assume that 64 digests are allocated in memory when code starts to run
+            memory,
+            (MAX_MMR_HEIGHT * DIGEST_LENGTH + 1).try_into().unwrap(), // assume that 64 digests are allocated in memory when code starts to run
             Some(&expected_final_stack),
         );
 
         // Find produced MMR
-        let peaks_count = memory[&peaks_pointer].value();
+        let final_memory = vm_output.final_ram;
+        let peaks_count = final_memory[&peaks_pointer].value();
         let mut produced_peaks = vec![];
         for i in 0..peaks_count {
             let peak: Digest = Digest::new(
                 rust_shadowing_helper_functions::unsafe_list::unsafe_list_get(
                     peaks_pointer,
                     i as usize,
-                    &memory,
+                    &final_memory,
                     DIGEST_LENGTH,
                 )
                 .try_into()
@@ -684,14 +695,14 @@ mod tests {
         assert_eq!(expected_mmr, produced_mmr);
 
         // Verify that auth paths is still value
-        let auth_path_element_count = memory[&auth_path_pointer].value();
+        let auth_path_element_count = final_memory[&auth_path_pointer].value();
         let mut auth_path = vec![];
         for i in 0..auth_path_element_count {
             let auth_path_element: Digest = Digest::new(
                 rust_shadowing_helper_functions::unsafe_list::unsafe_list_get(
                     auth_path_pointer,
                     i as usize,
-                    &memory,
+                    &final_memory,
                     DIGEST_LENGTH,
                 )
                 .try_into()
