@@ -150,18 +150,11 @@ mod test {
                 SqueezeRepeatedly.pseudorandom_initial_state(seed, None);
 
             let init_stack = stack.to_vec();
-            let words_statically_allocated = 0;
 
-            let rust = rust_final_state(
-                &shadow,
-                &stack,
-                &stdin,
-                &nondeterminism,
-                &sponge_state,
-                words_statically_allocated,
-            );
+            let rust = rust_final_state(&shadow, &stack, &stdin, &nondeterminism, &sponge_state);
 
             // run tvm
+            let words_statically_allocated = 0;
             let tasm = tasm_final_state(
                 &shadow,
                 &stack,

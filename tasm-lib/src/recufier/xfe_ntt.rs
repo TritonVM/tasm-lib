@@ -493,18 +493,11 @@ mod test {
 
             let init_stack = stack.to_vec();
             let nondeterminism = NonDeterminism::default().with_ram(memory.clone());
-            let words_statically_allocated = 3;
 
-            let rust = rust_final_state(
-                &function,
-                &stack,
-                &stdin,
-                &nondeterminism,
-                &None,
-                words_statically_allocated,
-            );
+            let rust = rust_final_state(&function, &stack, &stdin, &nondeterminism, &None);
 
             // run tvm
+            let words_statically_allocated = 3;
             let tasm = tasm_final_state(
                 &function,
                 &stack,

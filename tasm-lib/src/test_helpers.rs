@@ -319,7 +319,6 @@ pub fn rust_final_state<T: RustShadow>(
     stdin: &[BFieldElement],
     nondeterminism: &NonDeterminism<BFieldElement>,
     sponge_state: &Option<VmHasherState>,
-    words_statically_allocated: u32,
 ) -> VmOutputState {
     let mut rust_memory = nondeterminism.ram.clone();
     let mut rust_stack = stack.to_vec();
@@ -464,14 +463,7 @@ pub fn test_rust_equivalence_given_complete_state<T: RustShadow>(
 ) -> VmOutputState {
     let init_stack = stack.to_vec();
 
-    let rust = rust_final_state(
-        shadowed_snippet,
-        stack,
-        stdin,
-        nondeterminism,
-        sponge_state,
-        words_statically_allocated,
-    );
+    let rust = rust_final_state(shadowed_snippet, stack, stdin, nondeterminism, sponge_state);
 
     // run tvm
     let tasm = tasm_final_state(

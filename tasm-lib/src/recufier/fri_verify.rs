@@ -1340,7 +1340,6 @@ mod test {
             procedure.pseudorandom_initial_state(seed, None);
 
         let init_stack = stack.to_vec();
-        let words_statically_allocated = 0;
         let shadowed_procedure = ShadowedProcedure::new(procedure);
 
         let rust = rust_final_state(
@@ -1349,10 +1348,10 @@ mod test {
             &stdin,
             &nondeterminism,
             &sponge_state,
-            words_statically_allocated,
         );
 
         // run tvm
+        let words_statically_allocated = 0;
         let tasm = tasm_final_state(
             &shadowed_procedure,
             &stack,
