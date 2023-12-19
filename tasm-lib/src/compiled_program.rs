@@ -1,5 +1,3 @@
-use std::cmp::min;
-
 use anyhow::{anyhow, Result};
 use triton_vm::instruction::LabelledInstruction;
 use triton_vm::program::Program;
@@ -47,7 +45,7 @@ pub fn test_rust_shadow<P: CompiledProgram>(
     assert_eq!(rust_output, tasm_output);
 }
 
-pub fn bench_program<P: CompiledProgram>(
+pub fn bench_and_profile_program<P: CompiledProgram>(
     name: String,
     case: crate::snippet_bencher::BenchmarkCase,
     public_input: &PublicInput,
@@ -60,12 +58,6 @@ pub fn bench_program<P: CompiledProgram>(
 
     use crate::snippet_bencher::BenchmarkResult;
     use std::io::Write;
-
-    struct AggregateProfileLine {
-        label: String,
-        call_depth: usize,
-        cycle_count: u32,
-    }
 
     let (program_instructions, library) = P::code();
     let library_instructions = library.all_imports();
@@ -86,40 +78,8 @@ pub fn bench_program<P: CompiledProgram>(
 
     crate::snippet_bencher::write_benchmarks(vec![benchmark]);
 
-    // run in profile mode to get picture of call graph running times
-    let (_output, profile) = program
-        .profile(public_input.clone(), nondeterminism.clone())
-        .unwrap();
-    let mut str = format!("{name}:\n");
-    str = format!("{str}\n# call graph\n");
-    for line in profile.iter() {
-        let indentation = vec!["  "; line.call_depth].join("");
-        let label = &line.label;
-        let cycle_count = line.cycle_count();
-        str = format!("{str}{indentation} {label}: {cycle_count}\n");
-    }
-    str = format!("{str}\n# aggregated\n");
-    let mut aggregated: Vec<AggregateProfileLine> = vec![];
-    for line in profile {
-        if let Some(agg) = aggregated.iter_mut().find(|a| a.label == line.label) {
-            agg.cycle_count += line.cycle_count();
-            agg.call_depth = min(agg.call_depth, line.call_depth);
-        } else {
-            aggregated.push(AggregateProfileLine {
-                label: line.label.to_owned(),
-                call_depth: line.call_depth,
-                cycle_count: line.cycle_count(),
-            });
-        }
-    }
-    for aggregate_line in aggregated {
-        let indentation = vec!["  "; aggregate_line.call_depth].join("");
-        let label = aggregate_line.label;
-        let cycle_count = aggregate_line.cycle_count;
-        str = format!("{str}{indentation} {label}: {cycle_count}\n");
-    }
-
     // write profile to standard output in case someone is watching
+    let str = crate::generate_full_profile(&name, program, public_input, nondeterminism);
     println!("{str}");
 
     // write profile to profile file
@@ -208,7 +168,7 @@ mod benches {
     fn bench_fibo() {
         let public_input = PublicInput::new(vec![BFieldElement::new(501)]);
         let secret_input = NonDeterminism::new(vec![]);
-        bench_program::<FiboTest>(
+        bench_and_profile_program::<FiboTest>(
             "fibo_test".to_string(),
             BenchmarkCase::CommonCase,
             &public_input,

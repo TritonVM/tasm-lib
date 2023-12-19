@@ -35,6 +35,7 @@ use library::Library;
 use memory::dyn_malloc;
 use snippet::BasicSnippet;
 use snippet::DeprecatedSnippet;
+use std::cmp::min;
 
 pub mod algorithm;
 pub mod arithmetic;
@@ -351,4 +352,50 @@ fn prove_and_verify(
         "Generated proof must verify for program:\n {}",
         program,
     );
+}
+
+pub fn generate_full_profile(
+    name: &String,
+    program: Program,
+    public_input: &PublicInput,
+    nondeterminism: &NonDeterminism<BFieldElement>,
+) -> String {
+    struct AggregateProfileLine {
+        label: String,
+        call_depth: usize,
+        cycle_count: u32,
+    }
+
+    let (_output, profile) = program
+        .profile(public_input.clone(), nondeterminism.clone())
+        .unwrap();
+    let mut printed_profile = format!("{name}:\n");
+    printed_profile = format!("{printed_profile}\n# call graph\n");
+    for line in profile.iter() {
+        let indentation = vec!["  "; line.call_depth].join("");
+        let label = &line.label;
+        let cycle_count = line.cycle_count();
+        printed_profile = format!("{printed_profile}{indentation} {label}: {cycle_count}\n");
+    }
+    printed_profile = format!("{printed_profile}\n# aggregated\n");
+    let mut aggregated: Vec<AggregateProfileLine> = vec![];
+    for line in profile {
+        if let Some(agg) = aggregated.iter_mut().find(|a| a.label == line.label) {
+            agg.cycle_count += line.cycle_count();
+            agg.call_depth = min(agg.call_depth, line.call_depth);
+        } else {
+            aggregated.push(AggregateProfileLine {
+                label: line.label.to_owned(),
+                call_depth: line.call_depth,
+                cycle_count: line.cycle_count(),
+            });
+        }
+    }
+    for aggregate_line in aggregated {
+        let indentation = vec!["  "; aggregate_line.call_depth].join("");
+        let label = aggregate_line.label;
+        let cycle_count = aggregate_line.cycle_count;
+        printed_profile = format!("{printed_profile}{indentation} {label}: {cycle_count}\n");
+    }
+    printed_profile
 }
