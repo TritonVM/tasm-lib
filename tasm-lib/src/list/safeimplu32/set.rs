@@ -156,13 +156,7 @@ impl DeprecatedSnippet for SafeSet {
             *ee = stack.pop().unwrap();
         }
 
-        safe_list_set(
-            list_pointer,
-            index as usize,
-            element,
-            memory,
-            self.data_type.stack_size(),
-        );
+        safe_list_set(list_pointer, index as usize, element, memory);
     }
 
     fn common_case_input_state(&self) -> ExecutionState {

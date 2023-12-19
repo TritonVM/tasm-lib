@@ -379,7 +379,6 @@ impl DeprecatedSnippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
                 i as usize,
                 new_peaks[i as usize].values().to_vec(),
                 memory,
-                DIGEST_LENGTH,
             );
         }
 

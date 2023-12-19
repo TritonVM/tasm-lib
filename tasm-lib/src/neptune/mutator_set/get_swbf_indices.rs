@@ -261,7 +261,6 @@ impl Function for GetSwbfIndices {
                 i,
                 vec![BFieldElement::new(*index as u64)],
                 memory,
-                1,
             );
         }
 

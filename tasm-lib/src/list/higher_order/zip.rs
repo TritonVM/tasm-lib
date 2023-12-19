@@ -310,7 +310,7 @@ impl Function for Zip {
                 .collect_vec();
 
             // write
-            set_element(output_list, i, pair, memory, output_type.stack_size());
+            set_element(output_list, i, pair, memory);
         }
 
         stack.push(output_list);

@@ -313,13 +313,7 @@ impl Function for Map {
             }
 
             // write
-            set_element(
-                output_list,
-                i,
-                output_item,
-                memory,
-                output_type.stack_size(),
-            );
+            set_element(output_list, i, output_item, memory);
         }
 
         // Ensure canaries are still on the stack, then remove them

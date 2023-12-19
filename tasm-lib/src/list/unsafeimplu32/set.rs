@@ -118,13 +118,7 @@ impl DeprecatedSnippet for UnsafeSet {
         for ee in element.iter_mut() {
             *ee = stack.pop().unwrap();
         }
-        unsafe_list_set(
-            list_pointer,
-            index as usize,
-            element,
-            memory,
-            self.data_type.stack_size(),
-        );
+        unsafe_list_set(list_pointer, index as usize, element, memory);
     }
 
     fn common_case_input_state(&self) -> ExecutionState {

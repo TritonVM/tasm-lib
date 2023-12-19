@@ -87,6 +87,53 @@ impl ListType {
             ListType::Unsafe => Box::new(UnsafeSetLength { data_type }),
         }
     }
+
+    /* Rust-shadowing helper functions */
+    pub fn rust_shadowing_get(
+        &self,
+        list_pointer: BFieldElement,
+        index: usize,
+        memory: &HashMap<BFieldElement, BFieldElement>,
+        element_size: usize,
+    ) -> Vec<BFieldElement> {
+        match self {
+            ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_get(
+                list_pointer,
+                index,
+                memory,
+                element_size,
+            ),
+            ListType::Unsafe => rust_shadowing_helper_functions::unsafe_list::unsafe_list_get(
+                list_pointer,
+                index,
+                memory,
+                element_size,
+            ),
+        }
+    }
+
+    pub fn rust_shadowing_set(
+        &self,
+        list_pointer: BFieldElement,
+        index: usize,
+        value: Vec<BFieldElement>,
+        memory: &mut HashMap<BFieldElement, BFieldElement>,
+    ) {
+        match self {
+            ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_set(
+                list_pointer,
+                index,
+                value,
+                memory,
+            ),
+            ListType::Unsafe => rust_shadowing_helper_functions::unsafe_list::unsafe_list_set(
+                list_pointer,
+                index,
+                value,
+                memory,
+            ),
+        }
+    }
 }
 
 impl Display for ListType {

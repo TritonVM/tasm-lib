@@ -138,16 +138,11 @@ pub fn safe_list_set(
     index: usize,
     value: Vec<BFieldElement>,
     memory: &mut HashMap<BFieldElement, BFieldElement>,
-    element_length: usize,
 ) {
-    assert_eq!(
-        element_length,
-        value.len(),
-        "Element length must match indicated length"
-    );
+    let element_size = value.len();
     for (i, v) in value.into_iter().enumerate() {
         memory.insert(
-            list_pointer + BFieldElement::new((element_length * index + 2 + i) as u64),
+            list_pointer + BFieldElement::new((element_size * index + 2 + i) as u64),
             v,
         );
     }
