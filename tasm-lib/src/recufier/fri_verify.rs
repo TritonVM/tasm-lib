@@ -482,7 +482,7 @@ impl BasicSnippet for FriVerify {
         }));
         let proof_stream_dequeue = library.import(Box::new(Dequeue {}));
         let proof_stream_sample_scalars = library.import(Box::new(SampleScalars {}));
-        let dequeue_query_phase = format!("{entrypoint}_dequeue_query_phase_remainder");
+        let dequeue_commit_phase = format!("{entrypoint}_dequeue_commit_phase_remainder");
         let convert_xfe_to_digest = format!("{entrypoint}_convert_xfe_to_digest");
         let map_convert_xfe_to_digest = library.import(Box::new(Map {
             list_type: ListType::Unsafe,
@@ -626,6 +626,7 @@ impl BasicSnippet for FriVerify {
                 },
             }),
         }));
+        let proof_item_as_merkle_root = VmProofStream::proof_item_as_merkle_root_code();
         let proof_item_as_fri_codeword = VmProofStream::proof_item_as_fri_codeword_code();
         let proof_item_as_fri_response = VmProofStream::proof_item_as_fri_response_code();
         let fri_response_discriminant = ProofItem::FriResponse(FriResponse {
@@ -636,12 +637,11 @@ impl BasicSnippet for FriVerify {
         let special_proof_item_as_fri_response = triton_asm! {
                                 // _ *fri_response_ev
             read_mem 1          // _ fri_response_ev *fri_response_ev-1
-            push 2 add          // _ fri_response_ev *fri_response_si
+            push 3 add          // _ fri_response_ev *fri_response
             swap 1 push {fri_response_discriminant}
-                                // _ *fri_response_si fri_response_ev fri_response_discriminant
+                                // _ *fri_response fri_response_ev fri_response_discriminant
             push 1340 assert
-            eq assert           // _ *fri_response_si
-            push 1 add          // _ *fri_response
+            eq assert           // _ *fri_response
         };
 
         triton_asm! {
@@ -721,7 +721,7 @@ impl BasicSnippet for FriVerify {
                 recurse
 
             // BEFORE: _ *list index
-            // AFTER: _ *list length
+            // AFTER:  _ *list length
             {assert_tail_xfe0}:
                 dup 1                           // _ *list index *list
                 call {length_of_list_of_xfe}    // _ *list index len
@@ -737,8 +737,8 @@ impl BasicSnippet for FriVerify {
                 recurse
 
             // BEFORE: _ *proof_stream *fri_verify num_rounds last_round_max_degree | num_rounds *roots *alphas
-            // AFTER: _ ... | 0 *roots *alphas
-            {dequeue_query_phase}:
+            // AFTER:  _ ... | 0 *roots *alphas
+            {dequeue_commit_phase}:
 
                 // return if done
                 dup 2       // _ num_rounds *roots *alphas num_rounds
@@ -767,7 +767,8 @@ impl BasicSnippet for FriVerify {
                 dup 6       // _ num_rounds-1 *alphas *roots *proof_stream
 
                 call {proof_stream_dequeue} // _ num_rounds-1 *alphas *roots *proof_stream *root_ev
-                push 1 add                  // _ num_rounds-1 *alphas *roots *proof_stream *root
+                {&proof_item_as_merkle_root}
+                                            // _ num_rounds-1 *alphas *roots *proof_stream *root
                 swap 1 pop 1                // _ num_rounds-1 *alphas *roots *root
                 dup 1 swap 1                // _ num_rounds-1 *alphas *roots *roots *root
                 {&read_digest}              // _ num_rounds-1 *alphas *roots *roots [root]
@@ -776,7 +777,7 @@ impl BasicSnippet for FriVerify {
                 recurse
 
             // BEFORE: _ *proof_stream *fri_verify
-            // AFTER: _ *proof_stream *indices_and_leafs
+            // AFTER:  _ *proof_stream *indices_and_leafs
             {entrypoint}:
 
                 // calculate number of rounds
@@ -825,8 +826,9 @@ impl BasicSnippet for FriVerify {
                 swap 1                      // _ *proof_stream *fri_verify num_rounds last_round_max_degree *alphas *roots
                 dup 5                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree *alphas *roots *proof_stream
                 call {proof_stream_dequeue} // _ *proof_stream *fri_verify num_rounds last_round_max_degree *alphas *roots *proof_stream *root_ev
-                swap 1 pop 1                // _ *proof_stream *fri_verify num_rounds last_round_max_degree *alphas *roots *root_ev
-                push 1 add                  // _ *proof_stream *fri_verify num_rounds last_round_max_degree *alphas *roots *root
+                {&proof_item_as_merkle_root}
+                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree *alphas *roots *proof_stream *root
+                swap 1 pop 1                // _ *proof_stream *fri_verify num_rounds last_round_max_degree *alphas *roots *root
                 dup 1 swap 1                // _ *proof_stream *fri_verify num_rounds last_round_max_degree *alphas *roots *roots *root
 
                 {&read_digest}              // _ *proof_stream *fri_verify num_rounds last_round_max_degree *alphas *roots *roots [root]
@@ -836,7 +838,7 @@ impl BasicSnippet for FriVerify {
                 // dequeue remaining roots and collect Fiat-Shamir challenges
                 dup 3                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree *alphas *roots num_rounds
                 swap 2                      // _ *proof_stream *fri_verify num_rounds last_round_max_degree num_rounds *roots *alphas
-                call {dequeue_query_phase}  // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas
+                call {dequeue_commit_phase}  // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas
 
                 // dequeue last codeword and check length
                 dup 6                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream
@@ -1015,7 +1017,9 @@ impl BasicSnippet for FriVerify {
                 // dequeue fri response and get "B" elements
                 dup 14 call {proof_stream_dequeue}
                                             // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *proof_stream *fri_response_ev
-                swap 1 pop 1 push 1 add     // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *fri_response
+                {&special_proof_item_as_fri_response}
+                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *proof_stream *fri_response
+                swap 1 pop 1                // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *fri_response
                 {&revealed_leafs}           // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements
 
                 // if in first round (r==0), populate second half of return vector
@@ -1182,16 +1186,10 @@ mod test {
     use itertools::Itertools;
     use rand::{rngs::StdRng, thread_rng, Rng, SeedableRng};
     use triton_vm::{
-        arithmetic_domain::ArithmeticDomain,
-        fri::Fri,
-        proof_item::{FriResponse, ProofItem},
-        proof_stream::ProofStream,
-        BFieldElement,
+        arithmetic_domain::ArithmeticDomain, fri::Fri, proof_stream::ProofStream, BFieldElement,
     };
     use twenty_first::{
-        shared_math::{
-            bfield_codec::BFieldCodec, traits::PrimitiveRootOfUnity, x_field_element::XFieldElement,
-        },
+        shared_math::{traits::PrimitiveRootOfUnity, x_field_element::XFieldElement},
         util_types::{
             algebraic_hasher::Domain,
             merkle_tree::{CpuParallel, MerkleTree},

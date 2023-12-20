@@ -259,7 +259,6 @@ mod test {
     use rand::thread_rng;
     use rand::{rngs::StdRng, Rng, RngCore, SeedableRng};
     use triton_vm::proof_item::{FriResponse, ProofItem};
-    use triton_vm::proof_stream::ProofStream;
     use triton_vm::vm::VMState;
     use triton_vm::{triton_asm, BFieldElement, NonDeterminism, Program, PublicInput};
     use twenty_first::shared_math::bfield_codec::BFieldCodec;
@@ -276,7 +275,7 @@ mod test {
         test_helpers::test_rust_equivalence_given_complete_state,
         VmHasherState,
     };
-    use crate::{Digest, VmHasher, DIGEST_LENGTH};
+    use crate::{Digest, DIGEST_LENGTH};
 
     use super::{Dequeue, VmProofStream};
 
