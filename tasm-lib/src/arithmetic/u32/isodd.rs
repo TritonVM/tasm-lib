@@ -5,7 +5,6 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::data_type::DataType;
 use crate::library::Library;
-use crate::pseudo::lsb::Lsb;
 use crate::snippet::DeprecatedSnippet;
 use crate::{empty_stack, push_encodable, ExecutionState};
 
@@ -59,15 +58,16 @@ impl DeprecatedSnippet for Isodd {
         "tasm_arithmetic_u32_isodd".to_string()
     }
 
-    fn function_code(&self, library: &mut Library) -> String {
+    fn function_code(&self, _library: &mut Library) -> String {
         let entrypoint = self.entrypoint_name();
-        let lsb = library.import(Box::new(Lsb));
         format!(
             "
                 // BEFORE: _ value
                 // AFTER: _ (value % 2)
                 {entrypoint}:
-                    call {lsb}
+                    push 2
+                    swap 1
+                    div_mod
                     swap 1
                     pop 1
                     return

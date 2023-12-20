@@ -67,7 +67,6 @@ use crate::{
     },
     neptune::mutator_set::{commit::Commit, get_swbf_indices::GetSwbfIndices},
     other_snippets::bfe_add::BfeAdd,
-    pseudo::{lsb::Lsb, neg::Neg, sub::Sub},
     recufier::{merkle_verify::MerkleVerify, proof_stream::dequeue::Dequeue},
     snippet::{BasicSnippet, InputSource},
 };
@@ -416,11 +415,6 @@ data_type: DataType::Digest
 
         // other
         "tasm_other_bfe_add" => Box::new(BfeAdd),
-
-        // pseudo
-        "tasm_pseudo_lsb" => Box::new(Lsb),
-        "tasm_pseudo_neg" => Box::new(Neg),
-        "tasm_pseudo_sub" => Box::new(Sub),
 
         // recufy
         "tasm_recufier_mt_ap_verify" => Box::new(MerkleVerify),
