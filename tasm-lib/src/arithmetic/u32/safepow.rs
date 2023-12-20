@@ -179,6 +179,16 @@ impl Closure for Safepow {
         ]
         .concat()
     }
+
+    fn corner_case_initial_states(&self) -> Vec<Vec<BFieldElement>> {
+        let zero_pow_zero = [
+            empty_stack(),
+            vec![BFieldElement::new(0), BFieldElement::new(0)],
+        ]
+        .concat();
+
+        vec![zero_pow_zero]
+    }
 }
 
 #[cfg(test)]
