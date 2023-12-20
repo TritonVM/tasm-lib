@@ -16,11 +16,9 @@ use twenty_first::shared_math::{
 
 pub struct XfeNtt;
 
-// This BasicSnippet implementation was autogenerate by the `tasm-lang` compiler
-// on 2023-09-29 00:39:28.371476538 +02:00
 impl BasicSnippet for XfeNtt {
     fn entrypoint(&self) -> String {
-        "xfe_ntt".to_owned()
+        "tasm_recufier_xfe_ntt".to_owned()
     }
 
     fn outputs(&self) -> Vec<(DataType, String)> {
@@ -45,395 +43,402 @@ impl BasicSnippet for XfeNtt {
             }));
         const THREE_INV: BFieldElement = BFieldElement::new(12297829379609722881);
 
+        let while_loop_with_bitreverse = format!("{entrypoint}_while_with_bitreverse");
+        let outer_loop = format!("{entrypoint}_while_outer");
+        let middle_loop = format!("{entrypoint}_while_middle");
+        let inner_loop = format!("{entrypoint}_while_inner");
+        let bitreverse_function = format!("{entrypoint}_bitreverse_function");
+        let bitreverse_loop = format!("{entrypoint}_bitreverse_while");
+        let k_lt_r_then_branch = format!("{entrypoint}_k_lt_r_then_branch");
+        // _binop_Lt__LboolR_bool_74_while_loop
+
         triton_asm!(
-                {entrypoint}:
-                // _ *x omega
 
-        dup 1
-        // _ *x omega *x
+        {entrypoint}:
+        // _ *x omega
 
-        call {tasm_list_unsafeimplu32_length___xfe}
-        // _ *x omega size
+            dup 1
+            // _ *x omega *x
 
-        push 32
-        dup 1
-        call {tasm_arithmetic_u32_leadingzeros}
-        push -1
-        mul
-        add
-        push -1
-        add
-        push 0
-        // _ *x omega size log_2_size k
+            call {tasm_list_unsafeimplu32_length___xfe}
+            // _ *x omega size
 
-        call _binop_Neq__LboolR_bool_34_while_loop
-        // _ *x omega size log_2_size k
+            push 32
+            dup 1
+            call {tasm_arithmetic_u32_leadingzeros}
+            push -1
+            mul
+            add
+            push -1
+            add
+            push 0
+            // _ *x omega size log_2_size k
 
-        pop 1
-        // _ *x omega size log_2_size
+            call {while_loop_with_bitreverse}
+            // _ *x omega size log_2_size k
 
-        push 1
-        // _ *x omega size log_2_size m
+            pop 1
+            // _ *x omega size log_2_size
 
-        push 0
-        // _ *x omega size log_2_size m outer_count
+            push 1
+            // _ *x omega size log_2_size m
 
-        call _binop_Neq__LboolR_bool_63_while_loop
-        pop 5
-        pop 1
+            push 0
+            // _ *x omega size log_2_size m outer_count
 
-                return
+            call {outer_loop}
+            pop 5
+            pop 1
+
+            return
 
                 // Subroutines:
-                _binop_Lt__LboolR_bool_8_while_loop:
-        dup 0
-        dup 3
-        eq
-        skiz
-        return
-        dup 1
-        push 2
-        mul
-        dup 4
-        push 1
-        and
-                    dup 1
-                    dup 1
-                    xor
-                    swap 2
-                    and
-                    add
-        swap 2
-        pop 1
-        push 2
-        dup 4
-        div_mod
-        pop 1
-        swap 4
-        pop 1
-        push 1
-        add
-        recurse
-        bitreverse:
-        push 0
-        push 0
-        call _binop_Lt__LboolR_bool_8_while_loop
-        pop 1
-        swap 2
-        pop 2
-        return
+        {bitreverse_loop}:
+            dup 0
+            dup 3
+            eq
+            skiz
+            return
+            dup 1
+            push 2
+            mul
+            dup 4
+            push 1
+            and
+                dup 1
+                dup 1
+                xor
+                swap 2
+                and
+                add
+            swap 2
+            pop 1
+            push 2
+            dup 4
+            div_mod
+            pop 1
+            swap 4
+            pop 1
+            push 1
+            add
+            recurse
 
-        // _ *x omega size log_2_size k rk
-        _binop_Lt__LboolR_bool_40_then:
+        {bitreverse_function}:
+            push 0
+            push 0
+            call {bitreverse_loop}
+            pop 1
+            swap 2
+            pop 2
+            return
 
-        dup 5
-        // _ *x omega size log_2_size k rk *x
+            // _ *x omega size log_2_size k rk
+        {k_lt_r_then_branch}:
 
-        dup 0
-        // _ *x omega size log_2_size k rk *x *x
+            dup 5
+            // _ *x omega size log_2_size k rk *x
 
-        swap 2
-        // _ *x omega size log_2_size k *x *x rk
+            dup 0
+            // _ *x omega size log_2_size k rk *x *x
 
-        push 3
-        mul
-        push 3
-        add
-        add
-        // _ *x omega size log_2_size k *x *(x[rk] + 2)
+            swap 2
+            // _ *x omega size log_2_size k *x *x rk
 
-        read_mem 3
-        // _ *x omega size log_2_size k *x [x[rk]] *(x[rk] - 1)
+            push 3
+            mul
+            push 3
+            add
+            add
+            // _ *x omega size log_2_size k *x *(x[rk] + 2)
 
-        push 1
-        add
-        // _ *x omega size log_2_size k *x [x[rk]] *x[rk]
+            read_mem 3
+            // _ *x omega size log_2_size k *x [x[rk]] *(x[rk] - 1)
 
-        dup 5
-        // _ *x omega size log_2_size k *x [x[rk]] *x[rk] k
+            push 1
+            add
+            // _ *x omega size log_2_size k *x [x[rk]] *x[rk]
 
-        push 3
-        mul
-        push 3
-        add
-        // _ *x omega size log_2_size k *x [x[rk]] *(x[rk] - 1) k_offset
+            dup 5
+            // _ *x omega size log_2_size k *x [x[rk]] *x[rk] k
 
-        dup 5
-        add
-        // _ *x omega size log_2_size k *x [x[rk]] *(x[rk] - 1) *(x[k] + 2)
+            push 3
+            mul
+            push 3
+            add
+            // _ *x omega size log_2_size k *x [x[rk]] *(x[rk] - 1) k_offset
 
-        read_mem 3
-        // _ *x omega size log_2_size k *x [x[rk]] *(x[rk] - 1) x[k] *(x[k] - 1)
+            dup 5
+            add
+            // _ *x omega size log_2_size k *x [x[rk]] *(x[rk] - 1) *(x[k] + 2)
 
-        push 1
-        add
-        // _ *x omega size log_2_size k *x [x[rk]] *(x[rk] - 1) x[k] *x[k]
+            read_mem 3
+            // _ *x omega size log_2_size k *x [x[rk]] *(x[rk] - 1) x[k] *(x[k] - 1)
 
-        swap 4
-        // _ *x omega size log_2_size k *x [x[rk]] *(x[k] - 1) x[k] *x[rk]
+            push 1
+            add
+            // _ *x omega size log_2_size k *x [x[rk]] *(x[rk] - 1) x[k] *x[k]
 
-        write_mem 3
-        pop 1
-        // _ *x omega size log_2_size k *x [x[rk]] *x[k]
+            swap 4
+            // _ *x omega size log_2_size k *x [x[rk]] *(x[k] - 1) x[k] *x[rk]
 
-        write_mem 3
-        // _ *x omega size log_2_size k *x *(x[k] +3)
+            write_mem 3
+            pop 1
+            // _ *x omega size log_2_size k *x [x[rk]] *x[k]
 
-        pop 1
-        // _ *x omega size log_2_size k *x
+            write_mem 3
+            // _ *x omega size log_2_size k *x *(x[k] +3)
+
+            pop 1
+            // _ *x omega size log_2_size k *x
 
         return
 
         // 1st loop, where `bitreverse` is called
-        _binop_Neq__LboolR_bool_34_while_loop:
-        // _ *x omega size log_2_size k
-        dup 0
-        dup 3
-        eq
-        skiz
-        return
+        {while_loop_with_bitreverse}:
         // _ *x omega size log_2_size k
 
-        dup 0
-        dup 2
-        call bitreverse
-         // _ *x omega size log_2_size k rk
+            dup 0
+            dup 3
+            eq
+            skiz
+            return
+            // _ *x omega size log_2_size k
 
-        dup 0
-        dup 2
-        // _ *x omega size log_2_size k rk rk k
+            dup 0
+            dup 2
+            call {bitreverse_function}
+            // _ *x omega size log_2_size k rk
 
-        lt
-        // _ *x omega size log_2_size k rk (k < rk)
+            dup 0
+            dup 2
+            // _ *x omega size log_2_size k rk rk k
 
-        skiz
-        call _binop_Lt__LboolR_bool_40_then
-        // _ *x omega size log_2_size k (rk|*x)
+            lt
+            // _ *x omega size log_2_size k rk (k < rk)
 
-        pop 1
-        // _ *x omega size log_2_size k
+            skiz
+            call {k_lt_r_then_branch}
+            // _ *x omega size log_2_size k (rk|*x)
 
-        push 1
-        add
-        // _ *x omega size log_2_size (k+1)
+            pop 1
+            // _ *x omega size log_2_size k
 
-        recurse
+            push 1
+            add
+            // _ *x omega size log_2_size (k+1)
+
+            recurse
 
         // Last while-loop, *inner*, `j != m` <-- The busy-loop!
-        _binop_Neq__LboolR_bool_79_while_loop:
-        // _ *x omega size log_2_size (3*m) outer_count w_m k w *x[k+m] *x[k+j]
+        {inner_loop}:
+            // _ *x omega size log_2_size (3*m) outer_count w_m k w *x[k+m] *x[k+j]
 
-        dup 1
-        dup 1
-        eq
-        // _ *x omega size log_2_size (3*m) outer_count w_m k w *x[k+m] *x[k + j] (j == m)
-        skiz
-        return
-        // _ *x omega size log_2_size (3*m) outer_count w_m k w *x[k+m] *x[k + j]
-        // _ *x omega size log_2_size (3*m) outer_count w_m k w *x[k+m] *xx
+            dup 1
+            dup 1
+            eq
+            // _ *x omega size log_2_size (3*m) outer_count w_m k w *x[k+m] *x[k + j] (j == m)
+            skiz
+            return
+            // _ *x omega size log_2_size (3*m) outer_count w_m k w *x[k+m] *x[k + j]
+            // _ *x omega size log_2_size (3*m) outer_count w_m k w *x[k+m] *xx
 
-        dup 0
-        push 2
-        add
-        // _ *x omega size log_2_size (3*m) outer_count w_m k w *x[k+m] *xx *x[k + j]_last_word
+            dup 0
+            push 2
+            add
+            // _ *x omega size log_2_size (3*m) outer_count w_m k w *x[k+m] *xx *x[k + j]_last_word
 
-        read_mem 3
-        // _ *x omega size log_2_size (3*m) outer_count w_m k w *x[k+m] *xx [x[k + j]] *x[k + j - 1]_last_word
+            read_mem 3
+            // _ *x omega size log_2_size (3*m) outer_count w_m k w *x[k+m] *xx [x[k + j]] *x[k + j - 1]_last_word
 
-        dup 10
-        // _ *x omega size log_2_size (3*m) outer_count w_m k w *x[k+m] *xx [x[k + j]] *x[k + j - 1]_last_word (3*m)
+            dup 10
+            // _ *x omega size log_2_size (3*m) outer_count w_m k w *x[k+m] *xx [x[k + j]] *x[k + j - 1]_last_word (3*m)
 
-        push 3
-        add
-        add
-        // _ *x omega size log_2_size (3*m) outer_count w_m k w *x[k+m] *xx [x[k + j]] *x[k + j + m]_last_word
+            push 3
+            add
+            add
+            // _ *x omega size log_2_size (3*m) outer_count w_m k w *x[k+m] *xx [x[k + j]] *x[k + j + m]_last_word
 
-        read_mem 3
-        // _ *x omega size log_2_size (3*m) outer_count w_m k w *x[k+m] *xx [x[k+j]] [x[k+j+m]] *x[k+j+m-1]_last_word
+            read_mem 3
+            // _ *x omega size log_2_size (3*m) outer_count w_m k w *x[k+m] *xx [x[k+j]] [x[k+j+m]] *x[k+j+m-1]_last_word
 
-        pop 1
-        // _ *x omega size log_2_size (3*m) outer_count w_m k w *x[k+m] *xx [x[k+j]] [x[k+j+m]]
-        // _ *x omega size log_2_size (3*m) outer_count w_m k w *x[k+m] *xx [u]      [v]
+            pop 1
+            // _ *x omega size log_2_size (3*m) outer_count w_m k w *x[k+m] *xx [x[k+j]] [x[k+j+m]]
+            // _ *x omega size log_2_size (3*m) outer_count w_m k w *x[k+m] *xx [u]      [v]
 
-        dup 8
-        xbmul
-        // _ *x omega size log_2_size (3*m) outer_count w_m k w *x[k+m] *xx [u] (v * w)
-        // _ *x omega size log_2_size (3*m) outer_count w_m k w *x[k+m] *xx [u] [v']
+            dup 8
+            xbmul
+            // _ *x omega size log_2_size (3*m) outer_count w_m k w *x[k+m] *xx [u] (v * w)
+            // _ *x omega size log_2_size (3*m) outer_count w_m k w *x[k+m] *xx [u] [v']
 
-        dup 5
-        dup 5
-        dup 5
-        dup 5
-        dup 5
-        dup 5
-        xxadd
-        // _ *x omega size log_2_size (3*m) outer_count w_m k w *x[k+m] *xx [u] [v'] [u + v']
+            dup 5
+            dup 5
+            dup 5
+            dup 5
+            dup 5
+            dup 5
+            xxadd
+            // _ *x omega size log_2_size (3*m) outer_count w_m k w *x[k+m] *xx [u] [v'] [u + v']
 
-        dup 9
-        // _ *x omega size log_2_size (3*m) outer_count w_m k w *x[k+m] *xx [u] [v'] [u + v'] *x[k + j]
+            dup 9
+            // _ *x omega size log_2_size (3*m) outer_count w_m k w *x[k+m] *xx [u] [v'] [u + v'] *x[k + j]
 
-        write_mem 3
-        pop 1
-        // _ *x omega size log_2_size (3*m) outer_count w_m k w *x[k+m] *xx [u] [v']
+            write_mem 3
+            pop 1
+            // _ *x omega size log_2_size (3*m) outer_count w_m k w *x[k+m] *xx [u] [v']
 
-        push -1
-        xbmul
-        xxadd
-        // _ *x omega size log_2_size (3*m) outer_count w_m k w *x[k+m] *xx [u - v']
+            push -1
+            xbmul
+            xxadd
+            // _ *x omega size log_2_size (3*m) outer_count w_m k w *x[k+m] *xx [u - v']
 
-        dup 3
-        dup 10
-        add
-        // _ *x omega size log_2_size (3*m) outer_count w_m k w *x[k+m] *xx [u - v'] *x[k + j + m]
+            dup 3
+            dup 10
+            add
+            // _ *x omega size log_2_size (3*m) outer_count w_m k w *x[k+m] *xx [u - v'] *x[k + j + m]
 
-        write_mem 3
-        pop 1
-        // _ *x omega size log_2_size (3*m) outer_count w_m k w *x[k+m] *xx
+            write_mem 3
+            pop 1
+            // _ *x omega size log_2_size (3*m) outer_count w_m k w *x[k+m] *xx
 
-        push 3 add
-        // _ *x omega size log_2_size (3*m) outer_count w_m k w *x[k+m] *x[k + j + 1]
+            push 3 add
+            // _ *x omega size log_2_size (3*m) outer_count w_m k w *x[k+m] *x[k + j + 1]
 
-        swap 2
-        dup 4
-        mul
-        swap 2
-        // _ *x omega size log_2_size (3*m) outer_count w_m k (w * w_m) *x[k+m] *x[k + j + 1]
+            swap 2
+            dup 4
+            mul
+            swap 2
+            // _ *x omega size log_2_size (3*m) outer_count w_m k (w * w_m) *x[k+m] *x[k + j + 1]
 
-        recurse
+            recurse
 
         // Last while-loop middle, k < size
-        _binop_Lt__LboolR_bool_74_while_loop:
-        // _ *x omega size log_2_size m outer_count w_m k
+        {middle_loop}:
+            // _ *x omega size log_2_size m outer_count w_m k
 
-        dup 5
-        dup 1
-        lt
-        push 0
-        eq
-        skiz
-        return
-        // _ *x omega size log_2_size m outer_count w_m k
+            dup 5
+            dup 1
+            lt
+            push 0
+            eq
+            skiz
+            return
+            // _ *x omega size log_2_size m outer_count w_m k
 
-        push 1
-        // _ *x omega size log_2_size m outer_count w_m k w
+            push 1
+            // _ *x omega size log_2_size m outer_count w_m k w
 
-        dup 8
-        // _ *x omega size log_2_size m outer_count w_m k w *x
+            dup 8
+            // _ *x omega size log_2_size m outer_count w_m k w *x
 
-        dup 2
-        dup 6
-        add
-        // _ *x omega size log_2_size m outer_count w_m k w *x (k + m)
+            dup 2
+            dup 6
+            add
+            // _ *x omega size log_2_size m outer_count w_m k w *x (k + m)
 
-        push 3
-        mul
-        add
-        push 1
-        add
-        // _ *x omega size log_2_size m outer_count w_m k w *x[k+m]
+            push 3
+            mul
+            add
+            push 1
+            add
+            // _ *x omega size log_2_size m outer_count w_m k w *x[k+m]
 
-        dup 9
-        dup 3
-        push 3
-        mul
-        add
-        push 1
-        add
-        // _ *x omega size log_2_size m outer_count w_m k w *x[k+m] *x[k+j]
+            dup 9
+            dup 3
+            push 3
+            mul
+            add
+            push 1
+            add
+            // _ *x omega size log_2_size m outer_count w_m k w *x[k+m] *x[k+j]
 
-        // `m` -> `3 * m` for fewer clock cycles in busy-loop
-        swap 6
-        push 3
-        mul
-        swap 6
-        // _ *x omega size log_2_size (3*m) outer_count w_m k w *x[k+m] *x[k+j]
+            // `m` -> `3 * m` for fewer clock cycles in busy-loop
+            swap 6
+            push 3
+            mul
+            swap 6
+            // _ *x omega size log_2_size (3*m) outer_count w_m k w *x[k+m] *x[k+j]
 
-        call _binop_Neq__LboolR_bool_79_while_loop
-        // _ *x omega size log_2_size (3*m) outer_count w_m k w *x[k+m] *x[k+j]
+            call {inner_loop}
+            // _ *x omega size log_2_size (3*m) outer_count w_m k w *x[k+m] *x[k+j]
 
-        // Undo `3*` transformation
-        // `3 * m` -> `m`
-        swap 6
-        push {THREE_INV}
-        mul
-        swap 6
+            // Undo `3*` transformation
+            // `3 * m` -> `m`
+            swap 6
+            push {THREE_INV}
+            mul
+            swap 6
 
-        pop 3
-        // _ *x omega size log_2_size m outer_count w_m k
+            pop 3
+            // _ *x omega size log_2_size m outer_count w_m k
 
-        dup 3
-        // _ *x omega size log_2_size m outer_count w_m k m
+            dup 3
+            // _ *x omega size log_2_size m outer_count w_m k m
 
-        push 2
-        mul
-        // _ *x omega size log_2_size m outer_count w_m k (m * 2)
+            push 2
+            mul
+            // _ *x omega size log_2_size m outer_count w_m k (m * 2)
 
-        add
-        // _ *x omega size log_2_size m outer_count w_m (k + (m * 2))
+            add
+            // _ *x omega size log_2_size m outer_count w_m (k + (m * 2))
 
-        recurse
+            recurse
 
         // Last while-loop outer
-        _binop_Neq__LboolR_bool_63_while_loop:
-        // _ *x omega size log_2_size m outer_count
+        {outer_loop}:
+            // _ *x omega size log_2_size m outer_count
 
-        dup 0
-        dup 3
-        eq
-        skiz
-        return
-        // _ *x omega size log_2_size m outer_count
+            dup 0
+            dup 3
+            eq
+            skiz
+            return
+            // _ *x omega size log_2_size m outer_count
 
-        dup 4
-        // _ *x omega size log_2_size m outer_count omega
+            dup 4
+            // _ *x omega size log_2_size m outer_count omega
 
-        dup 4
-        // _ *x omega size log_2_size m outer_count omega size
+            dup 4
+            // _ *x omega size log_2_size m outer_count omega size
 
-        push 2
-        // _ *x omega size log_2_size m outer_count omega size 2
+            push 2
+            // _ *x omega size log_2_size m outer_count omega size 2
 
-        dup 4
-        mul
-        // _ *x omega size log_2_size m outer_count omega size (2 * m)
+            dup 4
+            mul
+            // _ *x omega size log_2_size m outer_count omega size (2 * m)
 
-        swap 1
-        div_mod
-        pop 1
-        // _ *x omega size log_2_size m outer_count omega (size / (2 * m))
+            swap 1
+            div_mod
+            pop 1
+            // _ *x omega size log_2_size m outer_count omega (size / (2 * m))
 
-        swap 1
-        pow
-        // _ *x omega size log_2_size m outer_count (omega ** (size / (2 * m)))
-        // _ *x omega size log_2_size m outer_count w_m
+            swap 1
+            pow
+            // _ *x omega size log_2_size m outer_count (omega ** (size / (2 * m)))
+            // _ *x omega size log_2_size m outer_count w_m
 
-        push 0
-        // _ *x omega size log_2_size m outer_count w_m k
+            push 0
+            // _ *x omega size log_2_size m outer_count w_m k
 
-        call _binop_Lt__LboolR_bool_74_while_loop
-        // _ *x omega size log_2_size m outer_count w_m k
+            call {middle_loop}
+            // _ *x omega size log_2_size m outer_count w_m k
 
-        swap 3
-        // _ *x omega size log_2_size k outer_count w_m m
+            swap 3
+            // _ *x omega size log_2_size k outer_count w_m m
 
-        push 2
-        mul
-        // _ *x omega size log_2_size k outer_count w_m (m * 2)
+            push 2
+            mul
+            // _ *x omega size log_2_size k outer_count w_m (m * 2)
 
-        swap 3
-        // _ *x omega size log_2_size (m * 2) outer_count w_m k
+            swap 3
+            // _ *x omega size log_2_size (m * 2) outer_count w_m k
 
-        pop 2
-        // _ *x omega size log_2_size (m * 2) outer_count
+            pop 2
+            // _ *x omega size log_2_size (m * 2) outer_count
 
-        push 1 add
+            push 1 add
 
-        recurse
-
-                // Methods, entrypoints:
-
-
-                // Method subroutines
+            recurse
             )
     }
 }
