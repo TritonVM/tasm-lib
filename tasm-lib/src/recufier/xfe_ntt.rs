@@ -220,16 +220,16 @@ impl BasicSnippet for XfeNtt {
 
         // Last while-loop, *inner*, `j != m` <-- The busy-loop!
         _binop_Neq__LboolR_bool_79_while_loop:
-        // _ outer_count omega size log_2_size m *x w_m k w j
+        // _ *x omega size log_2_size m outer_count w_m k w j
 
         dup 0
         dup 6
         eq
         skiz
         return
-        // _ outer_count omega size log_2_size m *x w_m k w j
+        // _ *x omega size log_2_size m outer_count w_m k w j
 
-        dup 4
+        dup 9
         dup 3
         dup 2
         add
@@ -238,41 +238,41 @@ impl BasicSnippet for XfeNtt {
         push 3
         add
         add
-        // _ outer_count omega size log_2_size m *x w_m k w j (*x + ((k + j) * 3 + 3))
-        // _ outer_count omega size log_2_size m *x w_m k w j *x[k + j]_last_word
+        // _ *x omega size log_2_size m outer_count w_m k w j (*x + ((k + j) * 3 + 3))
+        // _ *x omega size log_2_size m outer_count w_m k w j *x[k + j]_last_word
 
         read_mem 3
-        // _ outer_count omega size log_2_size m *x w_m k w j [x[k + j]] *x[k + j - 1]_last_word
+        // _ *x omega size log_2_size m outer_count w_m k w j [x[k + j]] *x[k + j - 1]_last_word
 
         push 1
         add
-        // _ outer_count omega size log_2_size m *x w_m k w j [x[k + j]] *x[k + j]
-        // _ outer_count omega size log_2_size m *x w_m k w j [x[k + j]] *xx
+        // _ *x omega size log_2_size m outer_count w_m k w j [x[k + j]] *x[k + j]
+        // _ *x omega size log_2_size m outer_count w_m k w j [x[k + j]] *xx
 
         dup 0
         dup 10
-        // _ outer_count omega size log_2_size m *x w_m k w j [x[k + j]] *xx *xx m
+        // _ *x omega size log_2_size m outer_count w_m k w j [x[k + j]] *xx *xx m
 
         push 3
         mul
-        // _ outer_count omega size log_2_size m *x w_m k w j [x[k + j]] *xx *xx (3*m)
+        // _ *x omega size log_2_size m outer_count w_m k w j [x[k + j]] *xx *xx (3*m)
 
         push 2
         add
         add
-        // _ outer_count omega size log_2_size m *x w_m k w j [x[k + j]] *xx *x[k + j + m]_last_word
+        // _ *x omega size log_2_size m outer_count w_m k w j [x[k + j]] *xx *x[k + j + m]_last_word
 
         read_mem 3
-        // _ outer_count omega size log_2_size m *x w_m k w j [x[k + j]] [x+j+m] *x[k + j + m - 1]_last_word
+        // _ *x omega size log_2_size m outer_count w_m k w j [x[k + j]] [x+j+m] *x[k + j + m - 1]_last_word
 
         pop 1
-        // _ outer_count omega size log_2_size m *x w_m k w j [x[k+j]] *xx [x[k+j+m]]
-        // _ outer_count omega size log_2_size m *x w_m k w j [u] *xx [v]
+        // _ *x omega size log_2_size m outer_count w_m k w j [x[k+j]] *xx [x[k+j+m]]
+        // _ *x omega size log_2_size m outer_count w_m k w j [u]      *xx [v]
 
         dup 8
         xbmul
-        // _ outer_count omega size log_2_size m *x w_m k w j [u] *xx (v * w)
-        // _ outer_count omega size log_2_size m *x w_m k w j [u] *xx [v']
+        // _ *x omega size log_2_size m outer_count w_m k w j [u] *xx (v * w)
+        // _ *x omega size log_2_size m outer_count w_m k w j [u] *xx [v']
 
         dup 6
         dup 6
@@ -281,14 +281,14 @@ impl BasicSnippet for XfeNtt {
         dup 5
         dup 5
         xxadd
-        // _ outer_count omega size log_2_size m *x w_m k w j [u] *xx [v'] [u + v']
+        // _ *x omega size log_2_size m outer_count w_m k w j [u] *xx [v'] [u + v']
 
         dup 6
-        // _ outer_count omega size log_2_size m *x w_m k w j [u] *xx [v'] [u + v'] *x[k + j]
+        // _ *x omega size log_2_size m outer_count w_m k w j [u] *xx [v'] [u + v'] *x[k + j]
 
         write_mem 3
         pop 1
-        // _ outer_count omega size log_2_size m *x w_m k w j [u] *xx [v']
+        // _ *x omega size log_2_size m outer_count w_m k w j [u] *xx [v']
 
         push -1
         xbmul
@@ -296,18 +296,18 @@ impl BasicSnippet for XfeNtt {
         dup 6
         dup 6
         xxadd
-        // _ outer_count omega size log_2_size m *x w_m k w j [u] *xx [u - v']
+        // _ *x omega size log_2_size m outer_count w_m k w j [u] *xx [u - v']
 
         dup 3
         dup 13
         push 3
         mul
         add
-        // _ outer_count omega size log_2_size m *x w_m k w j [u] *xx [u - v'] *x[k + j + m]
+        // _ *x omega size log_2_size m outer_count w_m k w j [u] *xx [u - v'] *x[k + j + m]
 
         write_mem 3
         pop 5
-        // _ outer_count omega size log_2_size m *x w_m k w j
+        // _ *x omega size log_2_size m outer_count w_m k w j
 
         swap 1
         dup 3
@@ -335,18 +335,7 @@ impl BasicSnippet for XfeNtt {
 
         // _ *x omega size log_2_size m outer_count w_m k w j
 
-        swap 9
-        swap 4
-        swap 9
-        // _ outer_count omega size log_2_size m *x w_m k w j
-
         call _binop_Neq__LboolR_bool_79_while_loop
-
-        // _ outer_count omega size log_2_size m *x w_m k w j
-
-        swap 9
-        swap 4
-        swap 9
         // _ *x omega size log_2_size m outer_count w_m k w j
 
         pop 2
