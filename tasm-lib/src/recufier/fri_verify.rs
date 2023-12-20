@@ -622,6 +622,30 @@ impl BasicSnippet for FriVerify {
                 },
             }),
         }));
+        let proof_item_as_fri_codeword = triton_asm! {
+            // _ *fri_codeword_ev
+            read_mem 1          // _ fri_codeword_ev *fri_codeword_ev-1
+            push 2 add          // _ fri_codeword_ev *fri_codeword_encoding
+            swap 1              // _ *fri_codeword_encoding fri_codeword_ev
+            push 9              // _ *fri_codeword_encoding fri_codeword_ev 9 (<-- discriminant for enum variant FriCodeword)
+            eq assert           // _ *fri_codeword_encoding
+            read_mem 1          // _ encoding_length *fri_codeword_encoding-1
+            push 2 add          // _ encoding_length *fri_codeword
+            read_mem 1          // _ encoding_length vector_length *fri_codeword-1
+            push 1 add          // _ encoding_length vector_length *fri_codeword
+            swap 2 swap 1       // _ *fri_codeword encoding_length vector_length
+            push 3 mul          // _ *fri_codeword encoding_length vector_length*3 (<-- 3 BFEs per XFE)
+            push 1 add          // _ *fri_codeword encoding_length vector_length*3+1 (<-- +1 for length indicator)
+            eq assert           // _ *fri_codeword
+        };
+        let proof_item_as_fri_response = triton_asm! {
+            // _ *fri_response_ev
+            read_mem 1          // _ fri_response_ev *fri_response_ev-1
+            push 2 add          // _ fri_response_ev *fri_response_si
+            swap 1 push 10      // _ *fri_response_si fri_response_ev 10 (<-- discriminant for enum variant FriResponse)
+            eq assert           // _ *fri_response_si
+            push 1 add          // _ *fri_response
+        };
 
         triton_asm! {
             // INVARIANT:          _ *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_values i
@@ -817,10 +841,12 @@ impl BasicSnippet for FriVerify {
                 swap 2                      // _ *proof_stream *fri_verify num_rounds last_round_max_degree num_rounds *roots *alphas
                 call {dequeue_query_phase}  // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas
 
-                // dequeue last codeword
+                // dequeue last codeword and check length
                 dup 6                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream
                 call {proof_stream_dequeue} // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword_ev
-                push 1 add                  // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword
+
+                {&proof_item_as_fri_codeword}
+                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword
 
                 // clone last codeword for later use
                 dup 0                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword *last_codeword
@@ -908,8 +934,11 @@ impl BasicSnippet for FriVerify {
                 // dequeue proof item as fri response
                 swap 2                      // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *proof_stream
                 call {proof_stream_dequeue} // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *proof_stream *proof_item
-                swap 1 pop 1                // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *proof_item
-                push 1 add                  // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *fri_response
+                {&proof_item_as_fri_response}
+                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *fri_response
+
+                push 4 read_mem 5
+                push 1337 assert
 
                 // assert correct length of number of leafs
                 {&revealed_leafs}           // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements
