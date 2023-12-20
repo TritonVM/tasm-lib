@@ -220,7 +220,6 @@ impl Procedure for Dequeue {
         while proof_items.is_empty() {
             proof_items = VmProofStream::pseudorandom_items_list(rng.gen());
         }
-        assert!(!proof_items.is_empty());
 
         // create proof stream object and populate it with these proof items
         let mut proof_stream = VmProofStream::new(&proof_items);
@@ -257,13 +256,18 @@ impl Procedure for Dequeue {
 mod test {
     use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
+    use rand::thread_rng;
     use rand::{rngs::StdRng, Rng, RngCore, SeedableRng};
-    use triton_vm::proof_item::ProofItem;
-    use triton_vm::{BFieldElement, NonDeterminism, Program};
+    use triton_vm::proof_item::{FriResponse, ProofItem};
+    use triton_vm::proof_stream::ProofStream;
+    use triton_vm::vm::VMState;
+    use triton_vm::{triton_asm, BFieldElement, NonDeterminism, Program, PublicInput};
     use twenty_first::shared_math::bfield_codec::BFieldCodec;
     use twenty_first::shared_math::x_field_element::XFieldElement;
     use twenty_first::util_types::algebraic_hasher::Domain;
 
+    use crate::library::Library;
+    use crate::structure::tasm_object::{decode_from_memory_with_size, encode_to_memory};
     use crate::{
         empty_stack, execute_with_terminal_state,
         linker::link_for_isolated_run,
@@ -272,22 +276,15 @@ mod test {
         test_helpers::test_rust_equivalence_given_complete_state,
         VmHasherState,
     };
+    use crate::{Digest, VmHasher, DIGEST_LENGTH};
 
     use super::{Dequeue, VmProofStream};
 
     #[test]
-    fn dequeue_from_proof_stream_with_1_item() {
-        dequeue_from_proof_stream_with_given_number_of_items(1);
-    }
-
-    #[test]
-    fn dequeue_from_proof_stream_with_2_items() {
-        dequeue_from_proof_stream_with_given_number_of_items(2);
-    }
-
-    #[test]
-    fn dequeue_from_proof_stream_with_3_items() {
-        dequeue_from_proof_stream_with_given_number_of_items(3);
+    fn dequeue_from_proof_stream_with_up_to_3_items() {
+        for n in 1..=3 {
+            dequeue_from_proof_stream_with_given_number_of_items(n);
+        }
     }
 
     fn dequeue_from_proof_stream_with_given_number_of_items(num_items: usize) {
@@ -427,5 +424,111 @@ mod test {
 
             assert!(rust_result.is_err() && tvm_result.is_err());
         }
+    }
+
+    #[test]
+    fn test_can_dequeue_three_items_of_distinct_type() {
+        let mut rng = thread_rng();
+
+        // create proof stream with at least 3 items of various types
+        let merkle_root = rng.gen::<Digest>();
+        let fri_response = FriResponse {
+            auth_structure: rng.gen::<[Digest; 10]>().to_vec(),
+            revealed_leaves: rng.gen::<[XFieldElement; 16]>().to_vec(),
+        };
+        let fri_response_length = fri_response.encode().len();
+        let fri_codeword = rng.gen::<[XFieldElement; 32]>().to_vec();
+        let fri_codeword_length = fri_codeword.encode().len();
+        let proof_items = vec![
+            ProofItem::MerkleRoot(merkle_root),
+            ProofItem::FriCodeword(fri_codeword.clone()),
+            ProofItem::FriResponse(fri_response.clone()),
+        ];
+        let proof_stream = VmProofStream::new(&proof_items);
+
+        // populate stack and memory
+        let mut stack = empty_stack();
+        let mut memory = HashMap::<BFieldElement, BFieldElement>::new();
+        let address = BFieldElement::new(rng.next_u64() & 0xffffff);
+        stack.push(address);
+        encode_to_memory(&mut memory, address, proof_stream);
+
+        // make program
+        let mut library = Library::empty();
+        let dequeue = library.import(Box::new(Dequeue));
+        let proof_item_as_merkle_root = VmProofStream::proof_item_as_merkle_root_code();
+        let proof_item_as_fri_codeword = VmProofStream::proof_item_as_fri_codeword_code();
+        let proof_item_as_fri_response = VmProofStream::proof_item_as_fri_response_code();
+        let entrypoint = "tasm_recufier_proof_stream_dequeue_test_simple_program".to_string();
+        let simple_program = triton_asm! {
+            {entrypoint}:
+                // _ *proof_stream
+                call {dequeue}                  // _ *proof_stream *merkle_root_ev
+                {&proof_item_as_merkle_root}    // _ *proof_stream *merkle_root
+                swap 1                          // _ *merkle_root *proof_stream
+
+                call {dequeue}                  // _ *merkle_root *proof_stream *fri_codeword_ev
+                {&proof_item_as_fri_codeword}   // _ *merkle_root *proof_stream *fri_codeword
+                swap 1                          // _ *merkle_root *fri_codeword *proof_stream
+
+                call {dequeue}                  // _ *merkle_root *fri_codeword *proof_stream *fri_response_ev
+                {&proof_item_as_fri_response}   // _ *merkle_root *fri_codeword *proof_stream *fri_response
+                swap 1 pop 1
+                return
+
+                // _ *merkle_root *fri_codeword *fri_response
+        };
+
+        // compile
+        let library_code = library.all_imports();
+        let code = triton_asm!(
+            call {entrypoint}
+            halt
+
+            {&simple_program}
+            {&library_code}
+        );
+
+        println!("Compiled program.");
+
+        // run vm
+        let program = Program::new(&code);
+        let mut state = VMState::new(
+            &program,
+            PublicInput::default(),
+            NonDeterminism::new(vec![]).with_ram(memory),
+        );
+        state.op_stack.stack = stack;
+        state.sponge_state = Some(rng.gen());
+        state.run().unwrap();
+
+        println!("Ran VM.");
+
+        // read addresses
+        let response_address = state.op_stack.stack.pop().unwrap();
+        let codeword_address = state.op_stack.stack.pop().unwrap();
+        let root_address = state.op_stack.stack.pop().unwrap();
+
+        // read objects from memory
+        let read_merkle_root =
+            *decode_from_memory_with_size::<Digest>(&state.ram, root_address, DIGEST_LENGTH)
+                .unwrap();
+        let read_fri_codeword = *decode_from_memory_with_size::<Vec<XFieldElement>>(
+            &state.ram,
+            codeword_address,
+            fri_codeword_length,
+        )
+        .unwrap();
+        let read_fri_response = *decode_from_memory_with_size::<FriResponse>(
+            &state.ram,
+            response_address,
+            fri_response_length,
+        )
+        .unwrap();
+
+        // assert equalities
+        assert_eq!(merkle_root, read_merkle_root);
+        assert_eq!(fri_codeword, read_fri_codeword);
+        assert_eq!(fri_response, read_fri_response);
     }
 }

@@ -626,38 +626,20 @@ impl BasicSnippet for FriVerify {
                 },
             }),
         }));
-        let fri_codeword_discriminant = ProofItem::FriCodeword(vec![]).bfield_codec_discriminant();
-        let proof_item_as_fri_codeword = triton_asm! {
-                                // _ *fri_codeword_ev
-            read_mem 1          // _ fri_codeword_ev *fri_codeword_ev-1
-            push 2 add          // _ fri_codeword_ev *fri_codeword_encoding
-            swap 1              // _ *fri_codeword_encoding fri_codeword_ev
-            push {fri_codeword_discriminant}
-                                // _ *fri_codeword_encoding fri_codeword_ev 9 (<-- discriminant for enum variant FriCodeword)
-            eq assert           // _ *fri_codeword_encoding
-            read_mem 1          // _ encoding_length *fri_codeword_encoding-1
-            push 2 add          // _ encoding_length *fri_codeword
-            read_mem 1          // _ encoding_length vector_length *fri_codeword-1
-            push 1 add          // _ encoding_length vector_length *fri_codeword
-            swap 2 swap 1       // _ *fri_codeword encoding_length vector_length
-            push 3 mul          // _ *fri_codeword encoding_length vector_length*3 (<-- 3 BFEs per XFE)
-            push 1 add          // _ *fri_codeword encoding_length vector_length*3+1 (<-- +1 for length indicator)
-            eq assert           // _ *fri_codeword
-        };
-        // fri_response is encoded as:
-        // enum-discriminant, size-of-assoc-data, size-of-second-field, [encoding of second field], size-of-first-field, [encoding of first field]
-        // we want to land here:                    ^
+        let proof_item_as_fri_codeword = VmProofStream::proof_item_as_fri_codeword_code();
+        let proof_item_as_fri_response = VmProofStream::proof_item_as_fri_response_code();
         let fri_response_discriminant = ProofItem::FriResponse(FriResponse {
             revealed_leaves: vec![],
             auth_structure: vec![],
         })
         .bfield_codec_discriminant();
-        let proof_item_as_fri_response = triton_asm! {
+        let special_proof_item_as_fri_response = triton_asm! {
                                 // _ *fri_response_ev
             read_mem 1          // _ fri_response_ev *fri_response_ev-1
             push 2 add          // _ fri_response_ev *fri_response_si
             swap 1 push {fri_response_discriminant}
                                 // _ *fri_response_si fri_response_ev fri_response_discriminant
+            push 1340 assert
             eq assert           // _ *fri_response_si
             push 1 add          // _ *fri_response
         };
@@ -1200,10 +1182,16 @@ mod test {
     use itertools::Itertools;
     use rand::{rngs::StdRng, thread_rng, Rng, SeedableRng};
     use triton_vm::{
-        arithmetic_domain::ArithmeticDomain, fri::Fri, proof_stream::ProofStream, BFieldElement,
+        arithmetic_domain::ArithmeticDomain,
+        fri::Fri,
+        proof_item::{FriResponse, ProofItem},
+        proof_stream::ProofStream,
+        BFieldElement,
     };
     use twenty_first::{
-        shared_math::{traits::PrimitiveRootOfUnity, x_field_element::XFieldElement},
+        shared_math::{
+            bfield_codec::BFieldCodec, traits::PrimitiveRootOfUnity, x_field_element::XFieldElement,
+        },
         util_types::{
             algebraic_hasher::Domain,
             merkle_tree::{CpuParallel, MerkleTree},

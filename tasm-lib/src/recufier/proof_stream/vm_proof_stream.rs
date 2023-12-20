@@ -1,9 +1,10 @@
 use anyhow::{bail, Result};
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use triton_vm::{
+    instruction::LabelledInstruction,
     proof_item::{FriResponse, ProofItem},
     table::master_table::{NUM_BASE_COLUMNS, NUM_EXT_COLUMNS},
-    BFieldElement,
+    triton_asm, BFieldElement,
 };
 use twenty_first::{
     shared_math::{
@@ -14,8 +15,8 @@ use twenty_first::{
     util_types::algebraic_hasher::{AlgebraicHasher, Domain, SpongeHasher},
 };
 
-use crate::VmHasherState;
 use crate::{structure::tasm_object::TasmObject, VmHasher};
+use crate::{Digest, VmHasherState};
 
 #[derive(Debug, Clone, BFieldCodec, TasmObject)]
 pub struct VmProofStream {
@@ -142,5 +143,60 @@ impl VmProofStream {
             }
         }
         proof_items
+    }
+
+    pub fn proof_item_as_merkle_root_code() -> Vec<LabelledInstruction> {
+        let merkle_root_discriminant =
+            ProofItem::MerkleRoot(Digest::default()).bfield_codec_discriminant();
+        triton_asm! {
+            // *proof_item
+            read_mem 1
+            push 2 add
+            swap 1
+            push {merkle_root_discriminant}
+            eq assert
+        }
+    }
+
+    pub fn proof_item_as_fri_codeword_code() -> Vec<LabelledInstruction> {
+        let fri_codeword_discriminant = ProofItem::FriCodeword(vec![]).bfield_codec_discriminant();
+        triton_asm! {
+                                // _ *fri_codeword_ev
+            read_mem 1          // _ fri_codeword_ev *fri_codeword_ev-1
+            push 2 add          // _ fri_codeword_ev *fri_codeword_encoding
+            swap 1              // _ *fri_codeword_encoding fri_codeword_ev
+            push {fri_codeword_discriminant}
+                                // _ *fri_codeword_encoding fri_codeword_ev 9 (<-- discriminant for enum variant FriCodeword)
+            eq assert           // _ *fri_codeword_encoding
+            read_mem 1          // _ encoding_length *fri_codeword_encoding-1
+            push 2 add          // _ encoding_length *fri_codeword
+            read_mem 1          // _ encoding_length vector_length *fri_codeword-1
+            push 1 add          // _ encoding_length vector_length *fri_codeword
+            swap 2 swap 1       // _ *fri_codeword encoding_length vector_length
+            push 3 mul          // _ *fri_codeword encoding_length vector_length*3 (<-- 3 BFEs per XFE)
+            push 1 add          // _ *fri_codeword encoding_length vector_length*3+1 (<-- +1 for length indicator)
+            eq assert           // _ *fri_codeword
+        }
+    }
+
+    pub fn proof_item_as_fri_response_code() -> Vec<LabelledInstruction> {
+        // fri_response is encoded as:
+        // enum-discriminant, size-of-assoc-data, size-of-second-field, [encoding of second field], size-of-first-field, [encoding of first field]
+        // we want to land here:                   ^
+
+        let fri_response_discriminant = ProofItem::FriResponse(FriResponse {
+            revealed_leaves: vec![],
+            auth_structure: vec![],
+        })
+        .bfield_codec_discriminant();
+        triton_asm! {
+                                // _ *fri_response_ev
+            read_mem 1          // _ fri_response_ev *fri_response_ev-1
+            push 2 add          // _ fri_response_ev *fri_response_si
+            swap 1 push {fri_response_discriminant}
+                                // _ *fri_response_si fri_response_ev fri_response_discriminant
+            eq assert           // _ *fri_response_si
+            push 1 add          // _ *fri_response
+        }
     }
 }
