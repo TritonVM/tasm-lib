@@ -3,52 +3,60 @@ use std::collections::HashMap;
 use anyhow::bail;
 use itertools::Itertools;
 use num_traits::Zero;
-use rand::{rngs::StdRng, Rng, SeedableRng};
-use triton_vm::{
-    arithmetic_domain::ArithmeticDomain, error::FriValidationError, fri::Fri,
-    instruction::LabelledInstruction, proof_item::FriResponse, proof_stream::ProofStream,
-    triton_asm, BFieldElement, NonDeterminism,
-};
-use twenty_first::{
-    shared_math::{
-        bfield_codec::BFieldCodec,
-        ntt::{intt, ntt},
-        other::log_2_ceil,
-        polynomial::Polynomial,
-        traits::{ModPowU32, PrimitiveRootOfUnity},
-        x_field_element::XFieldElement,
-    },
-    util_types::{algebraic_hasher::Domain, merkle_tree::MerkleTree},
-};
+use rand::rngs::StdRng;
+use rand::Rng;
+use rand::SeedableRng;
+use triton_vm::arithmetic_domain::ArithmeticDomain;
+use triton_vm::error::FriValidationError;
+use triton_vm::fri::Fri;
+use triton_vm::instruction::LabelledInstruction;
+use triton_vm::proof_item::FriResponse;
+use triton_vm::proof_stream::ProofStream;
+use triton_vm::triton_asm;
+use triton_vm::BFieldElement;
+use triton_vm::NonDeterminism;
+use twenty_first::shared_math::bfield_codec::BFieldCodec;
+use twenty_first::shared_math::ntt::intt;
+use twenty_first::shared_math::ntt::ntt;
+use twenty_first::shared_math::other::log_2_ceil;
+use twenty_first::shared_math::polynomial::Polynomial;
+use twenty_first::shared_math::traits::ModPowU32;
+use twenty_first::shared_math::traits::PrimitiveRootOfUnity;
+use twenty_first::shared_math::x_field_element::XFieldElement;
+use twenty_first::util_types::algebraic_hasher::Domain;
+use twenty_first::util_types::merkle_tree::MerkleTree;
 
-use crate::{data_type::DataType, traits::basic_snippet::BasicSnippet};
-use crate::{
-    empty_stack, field,
-    hashing::{merkle_root::MerkleRoot, sample_indices::SampleIndices},
-    list::{
-        higher_order::{
-            inner_function::{InnerFunction, RawCode},
-            map::Map,
-            zip::Zip,
-        },
-        unsafeimplu32::{length::Length as UnsafeLength, new::UnsafeNew, push::UnsafePush},
-        ListType,
-    },
-    recufier::{
-        get_colinear_y::ColinearYXfe,
-        get_colinearity_check_x::GetColinearityCheckX,
-        proof_stream::{dequeue::Dequeue, sample_scalars::SampleScalars},
-        verify_authentication_paths_for_leaf_and_index_list::VerifyAuthenticationPathForLeafAndIndexList,
-        xfe_ntt::XfeNtt,
-    },
-    snippet_bencher::BenchmarkCase,
-    structure::tasm_object::{encode_to_memory, TasmObject},
-    Digest, VmHasher, VmHasherState,
-};
-use crate::{library::Library, list::unsafeimplu32::get::UnsafeGet};
-use crate::{
-    memory::dyn_malloc::FIRST_DYNAMICALLY_ALLOCATED_ADDRESS, traits::procedure::Procedure,
-};
+use crate::data_type::DataType;
+use crate::empty_stack;
+use crate::field;
+use crate::hashing::merkle_root::MerkleRoot;
+use crate::hashing::sample_indices::SampleIndices;
+use crate::library::Library;
+use crate::list::higher_order::inner_function::InnerFunction;
+use crate::list::higher_order::inner_function::RawCode;
+use crate::list::higher_order::map::Map;
+use crate::list::higher_order::zip::Zip;
+use crate::list::unsafeimplu32::get::UnsafeGet;
+use crate::list::unsafeimplu32::length::Length as UnsafeLength;
+use crate::list::unsafeimplu32::new::UnsafeNew;
+use crate::list::unsafeimplu32::push::UnsafePush;
+use crate::list::ListType;
+use crate::memory::dyn_malloc::DYN_MALLOC_ADDRESS;
+use crate::memory::dyn_malloc::FIRST_DYNAMICALLY_ALLOCATED_ADDRESS;
+use crate::recufier::get_colinear_y::ColinearYXfe;
+use crate::recufier::get_colinearity_check_x::GetColinearityCheckX;
+use crate::recufier::proof_stream::dequeue::Dequeue;
+use crate::recufier::proof_stream::sample_scalars::SampleScalars;
+use crate::recufier::verify_authentication_paths_for_leaf_and_index_list::VerifyAuthenticationPathForLeafAndIndexList;
+use crate::recufier::xfe_ntt::XfeNtt;
+use crate::snippet_bencher::BenchmarkCase;
+use crate::structure::tasm_object::encode_to_memory;
+use crate::structure::tasm_object::TasmObject;
+use crate::traits::basic_snippet::BasicSnippet;
+use crate::traits::procedure::Procedure;
+use crate::Digest;
+use crate::VmHasher;
+use crate::VmHasherState;
 
 use super::proof_stream::vm_proof_stream::VmProofStream;
 
@@ -479,7 +487,7 @@ impl BasicSnippet for FriVerify {
         }));
         let proof_stream_dequeue = library.import(Box::new(Dequeue {}));
         let proof_stream_sample_scalars = library.import(Box::new(SampleScalars {}));
-        let dequeue_query_phase = format!("{entrypoint}_dequeue_query_phase_remainder");
+        let dequeue_commit_phase = format!("{entrypoint}_dequeue_commit_phase_remainder");
         let convert_xfe_to_digest = format!("{entrypoint}_convert_xfe_to_digest");
         let map_convert_xfe_to_digest = library.import(Box::new(Map {
             list_type: ListType::Unsafe,
@@ -623,6 +631,9 @@ impl BasicSnippet for FriVerify {
                 },
             }),
         }));
+        let proof_item_as_merkle_root = VmProofStream::proof_item_as_merkle_root_code();
+        let proof_item_as_fri_codeword = VmProofStream::proof_item_as_fri_codeword_code();
+        let proof_item_as_fri_response = VmProofStream::proof_item_as_fri_response_code();
 
         triton_asm! {
             // INVARIANT:          _ *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_values i
@@ -701,7 +712,7 @@ impl BasicSnippet for FriVerify {
                 recurse
 
             // BEFORE: _ *list index
-            // AFTER: _ *list length
+            // AFTER:  _ *list length
             {assert_tail_xfe0}:
                 dup 1                           // _ *list index *list
                 call {length_of_list_of_xfe}    // _ *list index len
@@ -717,8 +728,8 @@ impl BasicSnippet for FriVerify {
                 recurse
 
             // BEFORE: _ *proof_stream *fri_verify num_rounds last_round_max_degree | num_rounds *roots *alphas
-            // AFTER: _ ... | 0 *roots *alphas
-            {dequeue_query_phase}:
+            // AFTER:  _ ... | 0 *roots *alphas
+            {dequeue_commit_phase}:
 
                 // return if done
                 dup 2       // _ num_rounds *roots *alphas num_rounds
@@ -747,7 +758,8 @@ impl BasicSnippet for FriVerify {
                 dup 6       // _ num_rounds-1 *alphas *roots *proof_stream
 
                 call {proof_stream_dequeue} // _ num_rounds-1 *alphas *roots *proof_stream *root_ev
-                push 1 add                  // _ num_rounds-1 *alphas *roots *proof_stream *root
+                {&proof_item_as_merkle_root}
+                                            // _ num_rounds-1 *alphas *roots *proof_stream *root
                 swap 1 pop 1                // _ num_rounds-1 *alphas *roots *root
                 dup 1 swap 1                // _ num_rounds-1 *alphas *roots *roots *root
                 {&read_digest}              // _ num_rounds-1 *alphas *roots *roots [root]
@@ -756,7 +768,7 @@ impl BasicSnippet for FriVerify {
                 recurse
 
             // BEFORE: _ *proof_stream *fri_verify
-            // AFTER: _ *proof_stream *indices_and_leafs
+            // AFTER:  _ *proof_stream *indices_and_leafs
             {entrypoint}:
 
                 // calculate number of rounds
@@ -805,8 +817,9 @@ impl BasicSnippet for FriVerify {
                 swap 1                      // _ *proof_stream *fri_verify num_rounds last_round_max_degree *alphas *roots
                 dup 5                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree *alphas *roots *proof_stream
                 call {proof_stream_dequeue} // _ *proof_stream *fri_verify num_rounds last_round_max_degree *alphas *roots *proof_stream *root_ev
-                swap 1 pop 1                // _ *proof_stream *fri_verify num_rounds last_round_max_degree *alphas *roots *root_ev
-                push 1 add                  // _ *proof_stream *fri_verify num_rounds last_round_max_degree *alphas *roots *root
+                {&proof_item_as_merkle_root}
+                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree *alphas *roots *proof_stream *root
+                swap 1 pop 1                // _ *proof_stream *fri_verify num_rounds last_round_max_degree *alphas *roots *root
                 dup 1 swap 1                // _ *proof_stream *fri_verify num_rounds last_round_max_degree *alphas *roots *roots *root
 
                 {&read_digest}              // _ *proof_stream *fri_verify num_rounds last_round_max_degree *alphas *roots *roots [root]
@@ -816,12 +829,14 @@ impl BasicSnippet for FriVerify {
                 // dequeue remaining roots and collect Fiat-Shamir challenges
                 dup 3                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree *alphas *roots num_rounds
                 swap 2                      // _ *proof_stream *fri_verify num_rounds last_round_max_degree num_rounds *roots *alphas
-                call {dequeue_query_phase}  // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas
+                call {dequeue_commit_phase}  // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas
 
-                // dequeue last codeword
+                // dequeue last codeword and check length
                 dup 6                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream
                 call {proof_stream_dequeue} // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword_ev
-                push 1 add                  // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword
+
+                {&proof_item_as_fri_codeword}
+                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword
 
                 // clone last codeword for later use
                 dup 0                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_stream *last_codeword *last_codeword
@@ -909,8 +924,9 @@ impl BasicSnippet for FriVerify {
                 // dequeue proof item as fri response
                 swap 2                      // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *proof_stream
                 call {proof_stream_dequeue} // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *proof_stream *proof_item
-                swap 1 pop 1                // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *proof_item
-                push 1 add                  // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *fri_response
+                {&proof_item_as_fri_response}
+                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *proof_stream *fri_response
+                swap 1 pop 1                // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *fri_response
 
                 // assert correct length of number of leafs
                 {&revealed_leafs}           // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements
@@ -945,7 +961,8 @@ impl BasicSnippet for FriVerify {
                 read_mem 1                  // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements length (*revealed_indices_and_leafs - 1)
                 push 1 add swap 1           // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements *revealed_indices_and_leafs length
                 push 4 mul                  // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements *revealed_indices_and_leafs size
-                push 0 read_mem 1           // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements *revealed_indices_and_leafs size alloc (*alloc - 1)
+                push {DYN_MALLOC_ADDRESS} read_mem 1
+                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements *revealed_indices_and_leafs size alloc (*alloc - 1)
                 push 1 add swap 1           // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements *revealed_indices_and_leafs size *alloc alloc
                 swap 1 swap 2 add           // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements *revealed_indices_and_leafs *alloc size+alloc
                 swap 1                      // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements *revealed_indices_and_leafs size+alloc *alloc
@@ -990,9 +1007,12 @@ impl BasicSnippet for FriVerify {
                                             // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices
 
                 // dequeue fri response and get "B" elements
-                dup 14 call {proof_stream_dequeue}
+                dup 14                      // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *proof_stream
+                call {proof_stream_dequeue}
                                             // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *proof_stream *fri_response_ev
-                swap 1 pop 1 push 1 add     // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *fri_response
+                {&proof_item_as_fri_response}
+                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *proof_stream *fri_response
+                swap 1 pop 1                // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *fri_response
                 {&revealed_leafs}           // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements
 
                 // if in first round (r==0), populate second half of return vector
@@ -1389,10 +1409,12 @@ mod test {
 
 #[cfg(test)]
 mod bench {
-    use super::FriVerify;
+    use triton_vm::BFieldElement;
+
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
-    use triton_vm::BFieldElement;
+
+    use super::FriVerify;
 
     #[test]
     fn bench() {
