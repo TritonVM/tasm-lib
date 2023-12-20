@@ -30,8 +30,6 @@ impl BasicSnippet for Safepow {
         &self,
         _library: &mut crate::library::Library,
     ) -> Vec<triton_vm::instruction::LabelledInstruction> {
-        let entrypoint = self.entrypoint();
-
         // This algorithm is implemented below. `bpow2` has type
         // `u64` because it would otherwise erroneously overflow
         // in the last iteration of the loop when e.g. calculating
@@ -54,8 +52,10 @@ impl BasicSnippet for Safepow {
         //     acc
         // }
 
-        let code = format!(
-            "
+        let entrypoint = self.entrypoint();
+        let while_acc_label = format!("{entrypoint}_while_acc");
+        let mul_acc_with_bpow2_label = format!("{entrypoint}_mul_acc_with_bpow2");
+        triton_asm!(
             {entrypoint}:
                 // _ base exponent
 
@@ -70,7 +70,7 @@ impl BasicSnippet for Safepow {
                 // rename: `exponent` -> `i`, `base_u64` -> `bpow2_u64`
 
                 // _ [bpow2_u64] i acc
-                call {entrypoint}_while_acc
+                call {while_acc_label}
                 // _ [bpow2_u64] 0 acc
 
                 swap 3
@@ -78,7 +78,7 @@ impl BasicSnippet for Safepow {
                 return
 
             // INVARIANT: _ [bpow2_u64] i acc
-            {entrypoint}_while_acc:
+            {while_acc_label}:
                 // check condition
                 dup 1 push 0 eq
                 skiz
@@ -94,7 +94,7 @@ impl BasicSnippet for Safepow {
                 and
                 // _ 0 bpow2 i acc (i & 1)
                 skiz
-                    call {entrypoint}_mul_acc_with_bpow2
+                    call {mul_acc_with_bpow2_label}
 
                 // _ 0 bpow2 i acc
 
@@ -132,7 +132,7 @@ impl BasicSnippet for Safepow {
 
                 recurse
 
-            {entrypoint}_mul_acc_with_bpow2:
+            {mul_acc_with_bpow2_label}:
                 // _ 0 bpow2 i acc
 
                 dup 2
@@ -143,10 +143,7 @@ impl BasicSnippet for Safepow {
                 // _ 0 bpow2 i new_acc
 
                 return
-                "
-        );
-
-        triton_asm!({ code })
+        )
     }
 }
 
