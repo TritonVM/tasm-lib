@@ -13,11 +13,13 @@
 extern crate self as tasm_lib;
 
 use std::collections::HashMap;
+use std::fmt::Display;
 use std::time::SystemTime;
 
 use anyhow::bail;
 use itertools::Itertools;
 use num_traits::Zero;
+use traits::basic_snippet::BasicSnippet;
 use triton_vm::instruction::LabelledInstruction;
 use triton_vm::op_stack::NUM_OP_STACK_REGISTERS;
 use triton_vm::program::Program;
@@ -33,17 +35,12 @@ use twenty_first::shared_math::tip5::{self, Tip5};
 
 use library::Library;
 use memory::dyn_malloc;
-use snippet::BasicSnippet;
-use snippet::DeprecatedSnippet;
 use std::cmp::min;
+use traits::deprecated_snippet::DeprecatedSnippet;
 
-pub mod algorithm;
 pub mod arithmetic;
-pub mod closure;
-pub mod compiled_program;
 pub mod data_type;
 pub mod exported_snippets;
-pub mod function;
 pub mod hashing;
 pub mod io;
 pub mod library;
@@ -53,20 +50,53 @@ pub mod memory;
 pub mod mmr;
 pub mod neptune;
 pub mod other_snippets;
-pub mod procedure;
 pub mod ram_builder;
 pub mod recufier;
 pub mod rust_shadowing_helper_functions;
-pub mod snippet;
 pub mod snippet_bencher;
 pub mod structure;
 pub mod test_helpers;
+pub mod traits;
 
 // The hasher type must match whatever algebraic hasher the VM is using
 pub type VmHasher = Tip5;
 pub type VmHasherState = Tip5State;
 pub type Digest = tip5::Digest;
 pub const DIGEST_LENGTH: usize = tip5::DIGEST_LENGTH;
+
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+pub enum InputSource {
+    StdIn,
+    SecretIn,
+}
+
+impl Display for InputSource {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let str = match self {
+            InputSource::StdIn => "stdin",
+            InputSource::SecretIn => "secin",
+        };
+
+        write!(f, "{}", str)
+    }
+}
+
+impl InputSource {
+    pub fn label_friendly_name(&self) -> &str {
+        match self {
+            InputSource::StdIn => "stdin",
+            InputSource::SecretIn => "secin",
+        }
+    }
+
+    /// The name of the instruction that reads from this input source
+    pub const fn instruction_name(&self) -> &str {
+        match self {
+            InputSource::StdIn => "read_io",
+            InputSource::SecretIn => "divine",
+        }
+    }
+}
 
 #[derive(Clone, Debug)]
 pub struct ExecutionState {

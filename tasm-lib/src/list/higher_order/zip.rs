@@ -7,7 +7,6 @@ use triton_vm::{triton_asm, NonDeterminism};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::data_type::DataType;
-use crate::function::Function;
 use crate::list::safeimplu32::length::Length as SafeLength;
 use crate::list::safeimplu32::new::SafeNew;
 use crate::list::safeimplu32::set_length::SafeSetLength;
@@ -18,7 +17,8 @@ use crate::list::ListType;
 use crate::memory::memcpy::MemCpy;
 use crate::rust_shadowing_helper_functions::safe_list::safe_insert_random_list;
 use crate::rust_shadowing_helper_functions::unsafe_list::untyped_unsafe_insert_random_list;
-use crate::snippet::BasicSnippet;
+use crate::traits::basic_snippet::BasicSnippet;
+use crate::traits::function::Function;
 use crate::{empty_stack, rust_shadowing_helper_functions};
 use crate::{library::Library, ExecutionState};
 
@@ -406,9 +406,9 @@ impl Zip {
 
 #[cfg(test)]
 mod tests {
-    use crate::{function::ShadowedFunction, snippet::RustShadow};
-
     use super::*;
+    use crate::traits::function::ShadowedFunction;
+    use crate::traits::rust_shadow::RustShadow;
 
     #[test]
     fn unsafe_list_prop_test_xfe_digest() {
@@ -482,7 +482,8 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::{function::ShadowedFunction, snippet::RustShadow};
+    use crate::traits::function::ShadowedFunction;
+    use crate::traits::rust_shadow::RustShadow;
 
     #[test]
     fn unsafe_list_map_benchmark() {

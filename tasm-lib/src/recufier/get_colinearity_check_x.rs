@@ -10,7 +10,10 @@ use crate::{
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use triton_vm::{triton_asm, BFieldElement};
 
-use crate::{field, function::Function, recufier::fri_verify::FriVerify, snippet::BasicSnippet};
+use crate::{
+    field, recufier::fri_verify::FriVerify, traits::basic_snippet::BasicSnippet,
+    traits::function::Function,
+};
 
 /// Compute domain[index]^(1<<round)
 pub struct GetColinearityCheckX;
@@ -131,9 +134,9 @@ impl Function for GetColinearityCheckX {
 
 #[cfg(test)]
 mod test {
-    use crate::{function::ShadowedFunction, snippet::RustShadow};
-
     use super::GetColinearityCheckX;
+    use crate::traits::function::ShadowedFunction;
+    use crate::traits::rust_shadow::RustShadow;
 
     #[test]
     fn test() {
@@ -143,9 +146,10 @@ mod test {
 
 #[cfg(test)]
 mod bench {
-    use crate::{function::ShadowedFunction, snippet::RustShadow};
-
     use super::GetColinearityCheckX;
+    use crate::traits::function::ShadowedFunction;
+    use crate::traits::rust_shadow::RustShadow;
+
     #[test]
     fn bench() {
         ShadowedFunction::new(GetColinearityCheckX).bench();

@@ -19,7 +19,7 @@ use crate::list::unsafeimplu32::push::UnsafePush;
 use crate::list::unsafeimplu32::set::UnsafeSet;
 use crate::list::unsafeimplu32::set_length::UnsafeSetLength;
 use crate::rust_shadowing_helper_functions;
-use crate::snippet::BasicSnippet;
+use crate::traits::basic_snippet::BasicSnippet;
 
 pub mod contiguous_list;
 pub mod higher_order;

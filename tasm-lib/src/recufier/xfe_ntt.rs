@@ -1,9 +1,9 @@
 use crate::data_type::DataType;
 use crate::empty_stack;
-use crate::function::Function;
-use crate::snippet::BasicSnippet;
 use crate::structure::tasm_object::encode_to_memory;
 use crate::structure::tasm_object::TasmObject;
+use crate::traits::basic_snippet::BasicSnippet;
+use crate::traits::function::Function;
 use crate::Library;
 use std::collections::HashMap;
 use triton_vm::triton_asm;
@@ -488,11 +488,11 @@ mod test {
     use twenty_first::shared_math::x_field_element::XFieldElement;
 
     use crate::{
-        function::{Function, ShadowedFunction},
         structure::tasm_object::TasmObject,
         test_helpers::{
             rust_final_state, tasm_final_state, verify_stack_equivalence, verify_stack_growth,
         },
+        traits::function::{Function, ShadowedFunction},
     };
 
     use super::XfeNtt;
@@ -557,7 +557,8 @@ mod test {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::{function::ShadowedFunction, snippet::RustShadow};
+    use crate::traits::function::ShadowedFunction;
+    use crate::traits::rust_shadow::RustShadow;
 
     #[test]
     fn xfe_ntt_benchmark() {

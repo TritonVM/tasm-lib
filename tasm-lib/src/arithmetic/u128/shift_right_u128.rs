@@ -3,9 +3,8 @@ use triton_vm::BFieldElement;
 use twenty_first::amount::u32s::U32s;
 
 use crate::data_type::DataType;
-use crate::{
-    empty_stack, library::Library, push_encodable, snippet::DeprecatedSnippet, ExecutionState,
-};
+use crate::traits::deprecated_snippet::DeprecatedSnippet;
+use crate::{empty_stack, library::Library, push_encodable, ExecutionState};
 
 pub struct ShiftRightU128;
 

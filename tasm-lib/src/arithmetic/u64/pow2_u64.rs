@@ -7,7 +7,7 @@ use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
 use crate::data_type::DataType;
 use crate::library::Library;
-use crate::snippet::DeprecatedSnippet;
+use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::{empty_stack, push_encodable, ExecutionState};
 
 /// Consumes top element which is interpreted as exponent. Pushes a

@@ -1,4 +1,4 @@
-use crate::snippet::InputSource;
+use crate::InputSource;
 use crate::DIGEST_LENGTH;
 use itertools::Itertools;
 use rand::{random, thread_rng, Rng};

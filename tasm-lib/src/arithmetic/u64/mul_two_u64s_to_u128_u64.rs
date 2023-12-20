@@ -2,7 +2,8 @@ use rand::{thread_rng, RngCore};
 use twenty_first::{amount::u32s::U32s, shared_math::b_field_element::BFieldElement};
 
 use crate::data_type::DataType;
-use crate::{empty_stack, push_encodable, snippet::DeprecatedSnippet, ExecutionState};
+use crate::traits::deprecated_snippet::DeprecatedSnippet;
+use crate::{empty_stack, push_encodable, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct MulTwoU64sToU128;

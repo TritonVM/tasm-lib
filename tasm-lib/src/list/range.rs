@@ -4,15 +4,14 @@ use itertools::Itertools;
 use triton_vm::{triton_asm, NonDeterminism};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
+use super::ListType;
 use crate::data_type::DataType;
+use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::{
     empty_stack,
     rust_shadowing_helper_functions::{self},
-    snippet::DeprecatedSnippet,
     ExecutionState,
 };
-
-use super::ListType;
 
 /// Generates a (safe or unsafe) list containing all integers between the minimum (inclusive lower
 /// bound) and the supremum (exclusive upper bound).

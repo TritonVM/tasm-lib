@@ -1,16 +1,16 @@
-use std::collections::HashMap;
-
 use itertools::Itertools;
 use rand::{rngs::StdRng, Rng, SeedableRng};
+use std::collections::HashMap;
 use triton_vm::{triton_asm, NonDeterminism};
 use twenty_first::{
     shared_math::{b_field_element::BFieldElement, tip5::STATE_SIZE},
     util_types::algebraic_hasher::AlgebraicHasher,
 };
 
+use crate::traits::{basic_snippet::BasicSnippet, procedure::Procedure};
 use crate::{
-    data_type::DataType, empty_stack, list::ListType, procedure::Procedure,
-    rust_shadowing_helper_functions, snippet::BasicSnippet, VmHasher, VmHasherState,
+    data_type::DataType, empty_stack, list::ListType, rust_shadowing_helper_functions, VmHasher,
+    VmHasherState,
 };
 
 /// Sample n pseudorandom integers between 0 and k. It does this by squeezing the sponge. It is the
@@ -234,9 +234,9 @@ impl Procedure for SampleIndices {
 
 #[cfg(test)]
 mod test {
-    use crate::{list::ListType, procedure::ShadowedProcedure, snippet::RustShadow};
-
     use super::SampleIndices;
+    use crate::traits::rust_shadow::RustShadow;
+    use crate::{list::ListType, traits::procedure::ShadowedProcedure};
 
     #[test]
     fn test() {
@@ -249,9 +249,9 @@ mod test {
 
 #[cfg(test)]
 mod bench {
-    use crate::{list::ListType, procedure::ShadowedProcedure, snippet::RustShadow};
-
     use super::SampleIndices;
+    use crate::traits::rust_shadow::RustShadow;
+    use crate::{list::ListType, traits::procedure::ShadowedProcedure};
 
     #[test]
     fn bench() {

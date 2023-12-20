@@ -3,7 +3,9 @@ use triton_vm::{triton_asm, BFieldElement};
 use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
 use crate::data_type::DataType;
-use crate::{closure::Closure, empty_stack, snippet::BasicSnippet};
+use crate::empty_stack;
+use crate::traits::basic_snippet::BasicSnippet;
+use crate::traits::closure::Closure;
 
 pub struct OverflowingSub;
 
@@ -131,12 +133,12 @@ impl Closure for OverflowingSub {
 
 #[cfg(test)]
 mod tests {
-    use triton_vm::NonDeterminism;
-
     use super::*;
-    use crate::closure::ShadowedClosure;
-    use crate::snippet::RustShadow;
-    use crate::test_helpers::test_rust_equivalence_given_complete_state;
+    use crate::traits::rust_shadow::RustShadow;
+    use crate::{
+        test_helpers::test_rust_equivalence_given_complete_state, traits::closure::ShadowedClosure,
+    };
+    use triton_vm::NonDeterminism;
 
     #[test]
     fn u64_wrapping_sub_pbt() {
@@ -206,7 +208,8 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::{closure::ShadowedClosure, snippet::RustShadow};
+    use crate::traits::closure::ShadowedClosure;
+    use crate::traits::rust_shadow::RustShadow;
 
     #[test]
     fn u64_wrapping_sub_bench() {

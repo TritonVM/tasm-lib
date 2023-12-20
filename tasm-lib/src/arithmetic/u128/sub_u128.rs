@@ -6,8 +6,8 @@ use twenty_first::{
     shared_math::{b_field_element::BFieldElement, bfield_codec::BFieldCodec},
 };
 
-use crate::data_type::DataType;
-use crate::{empty_stack, library::Library, snippet::DeprecatedSnippet, ExecutionState};
+use crate::{data_type::DataType, traits::deprecated_snippet::DeprecatedSnippet};
+use crate::{empty_stack, library::Library, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct SubU128;

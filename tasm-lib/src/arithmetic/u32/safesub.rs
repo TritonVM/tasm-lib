@@ -3,7 +3,8 @@ use rand::{thread_rng, Rng};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::data_type::DataType;
-use crate::{empty_stack, snippet::DeprecatedSnippet, ExecutionState};
+use crate::traits::deprecated_snippet::DeprecatedSnippet;
+use crate::{empty_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct Safesub;

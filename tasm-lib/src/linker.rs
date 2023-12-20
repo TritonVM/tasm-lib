@@ -6,9 +6,8 @@ use triton_vm::{
     PublicInput,
 };
 
-use crate::{
-    library::Library, prove_and_verify, snippet::BasicSnippet, ExecutionResult, VmHasherState,
-};
+use crate::traits::basic_snippet::BasicSnippet;
+use crate::{library::Library, prove_and_verify, ExecutionResult, VmHasherState};
 
 pub fn link_for_isolated_run<T: BasicSnippet>(
     snippet: Rc<RefCell<T>>,

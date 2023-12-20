@@ -8,11 +8,9 @@ use twenty_first::{
     util_types::algebraic_hasher::{AlgebraicHasher, Domain, SpongeHasher},
 };
 
-use crate::data_type::DataType;
 use crate::{
     arithmetic::u128::{shift_left_static_u128, shift_right_static_u128},
     empty_stack,
-    function::Function,
     hashing::sample_indices::SampleIndices,
     list::{
         higher_order::{
@@ -22,9 +20,10 @@ use crate::{
         ListType,
     },
     rust_shadowing_helper_functions,
-    snippet::BasicSnippet,
+    traits::function::Function,
     Digest, VmHasher, VmHasherState, DIGEST_LENGTH,
 };
+use crate::{data_type::DataType, traits::basic_snippet::BasicSnippet};
 
 /// Derives the indices that make up the removal record from the item
 /// (a digest), the sender randomness (also a digest), receiver
@@ -377,9 +376,9 @@ fn get_swbf_indices<H: AlgebraicHasher>(
 
 #[cfg(test)]
 mod tests {
-    use crate::{function::ShadowedFunction, snippet::RustShadow};
-
-    use super::GetSwbfIndices;
+    use super::*;
+    use crate::traits::function::ShadowedFunction;
+    use crate::traits::rust_shadow::RustShadow;
 
     #[test]
     fn test() {
@@ -394,7 +393,8 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::{function::ShadowedFunction, snippet::RustShadow};
+    use crate::traits::function::ShadowedFunction;
+    use crate::traits::rust_shadow::RustShadow;
 
     #[test]
     fn bench() {

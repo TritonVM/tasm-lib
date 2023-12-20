@@ -25,7 +25,7 @@ use crate::list::unsafeimplu32::push::UnsafePush;
 use crate::list::unsafeimplu32::set_length::UnsafeSetLength;
 use crate::list::ListType;
 use crate::memory::dyn_malloc;
-use crate::snippet::DeprecatedSnippet;
+use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::{
     empty_stack, rust_shadowing_helper_functions, Digest, ExecutionState, VmHasher, DIGEST_LENGTH,
 };

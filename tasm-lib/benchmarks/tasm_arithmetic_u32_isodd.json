@@ -1,14 +1,14 @@
 [
   {
     "name": "tasm_arithmetic_u32_isodd",
-    "clock_cycle_count": 10,
+    "clock_cycle_count": 8,
     "hash_table_height": 12,
     "u32_table_height": 21,
     "case": "CommonCase"
   },
   {
     "name": "tasm_arithmetic_u32_isodd",
-    "clock_cycle_count": 10,
+    "clock_cycle_count": 8,
     "hash_table_height": 12,
     "u32_table_height": 36,
     "case": "WorstCase"

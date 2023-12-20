@@ -5,7 +5,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use crate::{
     empty_stack,
     memory::dyn_malloc::{DynMalloc, DYN_MALLOC_ADDRESS},
-    snippet::DeprecatedSnippet,
+    traits::deprecated_snippet::DeprecatedSnippet,
 };
 
 // TODO: DELETE ME, OR FIX ME

@@ -10,7 +10,6 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
 use crate::data_type::DataType;
-use crate::function::Function;
 use crate::list::safeimplu32::get::SafeGet;
 use crate::list::safeimplu32::length::Length as SafeLength;
 use crate::list::unsafeimplu32::get::UnsafeGet;
@@ -18,10 +17,12 @@ use crate::list::unsafeimplu32::length::Length as UnsafeLength;
 use crate::list::ListType;
 use crate::rust_shadowing_helper_functions::safe_list::safe_insert_random_list;
 use crate::rust_shadowing_helper_functions::unsafe_list::untyped_unsafe_insert_random_list;
-use crate::snippet::BasicSnippet;
 use crate::snippet_bencher::BenchmarkCase;
+use crate::traits::basic_snippet::BasicSnippet;
+use crate::traits::deprecated_snippet::DeprecatedSnippet;
+use crate::traits::function::Function;
 use crate::{arithmetic, empty_stack, rust_shadowing_helper_functions, VmHasher};
-use crate::{library::Library, snippet::DeprecatedSnippet, ExecutionState};
+use crate::{library::Library, ExecutionState};
 
 use super::inner_function::InnerFunction;
 
@@ -442,12 +443,13 @@ mod tests {
     use num::One;
     use triton_vm::triton_asm;
 
-    use crate::{
-        function::ShadowedFunction, list::higher_order::inner_function::RawCode,
-        snippet::RustShadow, test_helpers::test_rust_equivalence_given_complete_state,
-    };
-
     use super::*;
+    use crate::traits::rust_shadow::RustShadow;
+    use crate::{
+        list::higher_order::inner_function::RawCode,
+        test_helpers::test_rust_equivalence_given_complete_state,
+        traits::function::ShadowedFunction,
+    };
 
     #[test]
     fn unsafe_list_prop_test() {
@@ -579,7 +581,8 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::{function::ShadowedFunction, snippet::RustShadow};
+    use crate::traits::function::ShadowedFunction;
+    use crate::traits::rust_shadow::RustShadow;
 
     #[test]
     fn unsafe_list_all_benchmark() {

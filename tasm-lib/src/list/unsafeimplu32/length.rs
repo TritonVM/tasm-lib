@@ -9,7 +9,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 use crate::data_type::DataType;
 use crate::library::Library;
 use crate::rust_shadowing_helper_functions::unsafe_list::untyped_unsafe_insert_random_list;
-use crate::snippet::DeprecatedSnippet;
+use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::{empty_stack, ExecutionState};
 
 // Called "Long" because this logic can be shortened

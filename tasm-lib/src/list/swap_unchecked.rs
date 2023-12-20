@@ -6,12 +6,10 @@ use triton_vm::{
     NonDeterminism,
 };
 
-use crate::{
-    algorithm::Algorithm, data_type::DataType, empty_stack, library::Library,
-    rust_shadowing_helper_functions, snippet::BasicSnippet,
-};
-
 use super::ListType;
+use crate::traits::algorithm::Algorithm;
+use crate::traits::basic_snippet::BasicSnippet;
+use crate::{data_type::DataType, empty_stack, library::Library, rust_shadowing_helper_functions};
 
 pub struct SwapUnchecked {
     list_type: ListType,
@@ -206,7 +204,8 @@ impl Algorithm for SwapUnchecked {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{algorithm::ShadowedAlgorithm, snippet::RustShadow};
+    use crate::traits::algorithm::ShadowedAlgorithm;
+    use crate::traits::rust_shadow::RustShadow;
 
     #[test]
     fn test() {
@@ -248,7 +247,8 @@ mod test {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::{algorithm::ShadowedAlgorithm, snippet::RustShadow};
+    use crate::traits::algorithm::ShadowedAlgorithm;
+    use crate::traits::rust_shadow::RustShadow;
 
     #[test]
     fn bench() {

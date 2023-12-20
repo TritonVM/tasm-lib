@@ -19,7 +19,7 @@ use crate::hashing::eq_digest::EqDigest;
 use crate::hashing::swap_digest::SwapDigest;
 use crate::library::Library;
 use crate::list::ListType;
-use crate::snippet::DeprecatedSnippet;
+use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::{
     empty_stack, rust_shadowing_helper_functions, Digest, ExecutionState, VmHasher, DIGEST_LENGTH,
 };

@@ -19,7 +19,7 @@ use crate::arithmetic::u64::shift_right_u64::ShiftRightU64;
 use crate::arithmetic::u64::sub_u64::SubU64;
 use crate::data_type::DataType;
 use crate::library::Library;
-use crate::snippet::DeprecatedSnippet;
+use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::{empty_stack, ExecutionState};
 
 #[derive(Clone, Debug)]

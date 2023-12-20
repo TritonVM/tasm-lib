@@ -1,12 +1,12 @@
 use std::collections::{hash_map::Entry, HashMap};
 
-use crate::data_type::DataType;
+use crate::{data_type::DataType, traits::basic_snippet::BasicSnippet};
 use itertools::Itertools;
 use num::One;
 use triton_vm::instruction::LabelledInstruction;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
-use crate::snippet::{BasicSnippet, DeprecatedSnippet};
+use crate::traits::deprecated_snippet::DeprecatedSnippet;
 
 // Ensure that static allocator does not overwrite the address
 // dedicated to the dynamic allocator. Dynamic allocator is,

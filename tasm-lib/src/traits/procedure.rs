@@ -7,12 +7,12 @@ use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
 use crate::{
     linker::{execute_bench, link_for_isolated_run},
-    snippet::{BasicSnippet, RustShadow},
     snippet_bencher::{write_benchmarks, BenchmarkCase, BenchmarkResult},
     test_helpers::{
         rust_final_state, tasm_final_state, verify_memory_equivalence, verify_sponge_equivalence,
         verify_stack_equivalence, verify_stack_growth,
     },
+    traits::{basic_snippet::BasicSnippet, rust_shadow::RustShadow},
     VmHasherState,
 };
 

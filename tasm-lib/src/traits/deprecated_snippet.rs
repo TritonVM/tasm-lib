@@ -1,7 +1,5 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::fmt::Debug;
-use std::fmt::Display;
 use std::rc::Rc;
 
 use anyhow::Result;
@@ -18,74 +16,8 @@ use crate::VmHasherState;
 use crate::{execute_bench_deprecated, ExecutionResult, VmOutputState, DIGEST_LENGTH};
 use crate::{execute_test, ExecutionState};
 
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
-pub enum InputSource {
-    StdIn,
-    SecretIn,
-}
-
-impl Display for InputSource {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let str = match self {
-            InputSource::StdIn => "stdin",
-            InputSource::SecretIn => "secin",
-        };
-
-        write!(f, "{}", str)
-    }
-}
-
-impl InputSource {
-    pub fn label_friendly_name(&self) -> &str {
-        match self {
-            InputSource::StdIn => "stdin",
-            InputSource::SecretIn => "secin",
-        }
-    }
-
-    /// The name of the instruction that reads from this input source
-    pub const fn instruction_name(&self) -> &str {
-        match self {
-            InputSource::StdIn => "read_io",
-            InputSource::SecretIn => "divine",
-        }
-    }
-}
-
-pub trait BasicSnippet {
-    fn inputs(&self) -> Vec<(DataType, String)>;
-    fn outputs(&self) -> Vec<(DataType, String)>;
-    fn entrypoint(&self) -> String;
-    fn code(&self, library: &mut Library) -> Vec<LabelledInstruction>;
-
-    fn stack_diff(&self) -> isize {
-        let mut diff = 0isize;
-        for (dt, _name) in self.inputs() {
-            diff -= dt.stack_size() as isize;
-        }
-        for (dt, _name) in self.outputs() {
-            diff += dt.stack_size() as isize;
-        }
-        diff
-    }
-}
-
-pub trait RustShadow {
-    fn inner(&self) -> Rc<RefCell<dyn BasicSnippet>>;
-
-    fn rust_shadow_wrapper(
-        &self,
-        stdin: &[BFieldElement],
-        nondeterminism: &NonDeterminism<BFieldElement>,
-        stack: &mut Vec<BFieldElement>,
-        memory: &mut HashMap<BFieldElement, BFieldElement>,
-        sponge_state: &mut Option<VmHasherState>,
-    ) -> Vec<BFieldElement>;
-
-    fn test(&self);
-
-    fn bench(&self);
-}
+use super::basic_snippet::BasicSnippet;
+use super::rust_shadow::RustShadow;
 
 pub trait DeprecatedSnippet {
     /// The name of a Snippet

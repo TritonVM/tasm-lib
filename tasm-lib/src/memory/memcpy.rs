@@ -4,7 +4,8 @@ use num_traits::Zero;
 use rand::{random, thread_rng, Rng, RngCore};
 use triton_vm::BFieldElement;
 
-use crate::{empty_stack, snippet::DeprecatedSnippet};
+use crate::empty_stack;
+use crate::traits::deprecated_snippet::DeprecatedSnippet;
 
 pub struct MemCpy; // TODO: add field `static_length : Option<usize>` to avoid loop
 impl MemCpy {

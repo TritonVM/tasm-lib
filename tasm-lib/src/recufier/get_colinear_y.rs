@@ -6,9 +6,11 @@ use twenty_first::shared_math::polynomial::Polynomial;
 use twenty_first::shared_math::x_field_element::{XFieldElement, EXTENSION_DEGREE};
 
 use crate::data_type::DataType;
+use crate::empty_stack;
 use crate::library::Library;
 use crate::snippet_bencher::BenchmarkCase;
-use crate::{closure::Closure, empty_stack, snippet::BasicSnippet};
+use crate::traits::basic_snippet::BasicSnippet;
+use crate::traits::closure::Closure;
 
 pub struct ColinearYXfe;
 
@@ -144,9 +146,9 @@ impl Closure for ColinearYXfe {
 
 #[cfg(test)]
 mod test {
-    use crate::{closure::ShadowedClosure, snippet::RustShadow};
-
     use super::ColinearYXfe;
+    use crate::traits::closure::ShadowedClosure;
+    use crate::traits::rust_shadow::RustShadow;
 
     #[test]
     fn test() {
@@ -156,9 +158,9 @@ mod test {
 
 #[cfg(test)]
 mod bench {
-    use crate::{closure::ShadowedClosure, snippet::RustShadow};
-
     use super::ColinearYXfe;
+    use crate::traits::closure::ShadowedClosure;
+    use crate::traits::rust_shadow::RustShadow;
 
     #[test]
     fn bench_colinear_y() {

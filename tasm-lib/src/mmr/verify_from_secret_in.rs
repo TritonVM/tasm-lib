@@ -23,9 +23,9 @@ use crate::library::Library;
 use crate::list::safeimplu32::get::SafeGet;
 use crate::list::unsafeimplu32::get::UnsafeGet;
 use crate::list::ListType;
-use crate::procedure::Procedure;
-use crate::snippet::BasicSnippet;
 use crate::snippet_bencher::BenchmarkCase;
+use crate::traits::basic_snippet::BasicSnippet;
+use crate::traits::procedure::Procedure;
 use crate::{
     empty_stack, rust_shadowing_helper_functions, Digest, ExecutionState, VmHasher, DIGEST_LENGTH,
 };
@@ -370,7 +370,8 @@ impl Procedure for MmrVerifyLeafMembershipFromSecretIn {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::{procedure::ShadowedProcedure, snippet::RustShadow};
+    use crate::traits::procedure::ShadowedProcedure;
+    use crate::traits::rust_shadow::RustShadow;
 
     #[test]
     fn verify_from_secret_in_benchmark_unsafe_lists() {
@@ -391,16 +392,16 @@ mod benches {
 
 #[cfg(test)]
 mod tests {
+    use crate::traits::rust_shadow::RustShadow;
+    use crate::{
+        mmr::MAX_MMR_HEIGHT, test_helpers::test_rust_equivalence_given_complete_state,
+        traits::procedure::ShadowedProcedure, VmHasher,
+    };
     use rand::thread_rng;
     use triton_vm::NonDeterminism;
     use twenty_first::{
         test_shared::mmr::get_empty_rustyleveldb_ammr,
         util_types::algebraic_hasher::AlgebraicHasher,
-    };
-
-    use crate::{
-        mmr::MAX_MMR_HEIGHT, procedure::ShadowedProcedure, snippet::RustShadow,
-        test_helpers::test_rust_equivalence_given_complete_state, VmHasher,
     };
 
     use super::*;

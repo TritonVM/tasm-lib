@@ -19,7 +19,7 @@ use crate::arithmetic::u64::pow2_u64::Pow2U64;
 use crate::arithmetic::u64::xor_u64::XorU64;
 use crate::data_type::DataType;
 use crate::library::Library;
-use crate::snippet::DeprecatedSnippet;
+use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::{empty_stack, ExecutionState};
 
 #[derive(Clone, Debug)]

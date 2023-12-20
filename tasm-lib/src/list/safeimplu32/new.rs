@@ -4,9 +4,10 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::data_type::DataType;
 use crate::memory::dyn_malloc::DynMalloc;
+use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::{
     dyn_malloc, empty_stack, rust_shadowing_helper_functions::safe_list::safe_list_new,
-    snippet::DeprecatedSnippet, ExecutionState,
+    ExecutionState,
 };
 
 #[derive(Clone, Debug)]

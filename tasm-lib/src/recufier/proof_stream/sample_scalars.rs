@@ -11,16 +11,16 @@ use twenty_first::{
     util_types::algebraic_hasher::SpongeHasher,
 };
 
-use crate::data_type::DataType;
-use crate::memory::dyn_malloc::FIRST_DYNAMICALLY_ALLOCATED_ADDRESS;
+use crate::{data_type::DataType, traits::basic_snippet::BasicSnippet};
 use crate::{
     empty_stack,
     hashing::squeeze_repeatedly::SqueezeRepeatedly,
     list::unsafeimplu32::{new::UnsafeNew, set_length::UnsafeSetLength},
-    procedure::Procedure,
-    snippet::BasicSnippet,
     structure::tasm_object::encode_to_memory,
     VmHasher, VmHasherState,
+};
+use crate::{
+    memory::dyn_malloc::FIRST_DYNAMICALLY_ALLOCATED_ADDRESS, traits::procedure::Procedure,
 };
 
 /// Squeeze the sponge to sample a given number of `XFieldElement`s.
@@ -166,9 +166,9 @@ impl Procedure for SampleScalars {
 
 #[cfg(test)]
 mod test {
-    use crate::{procedure::ShadowedProcedure, snippet::RustShadow};
-
     use super::SampleScalars;
+    use crate::traits::procedure::ShadowedProcedure;
+    use crate::traits::rust_shadow::RustShadow;
 
     #[test]
     fn test() {
@@ -178,9 +178,9 @@ mod test {
 
 #[cfg(test)]
 mod bench {
-    use crate::{procedure::ShadowedProcedure, snippet::RustShadow};
-
     use super::SampleScalars;
+    use crate::traits::procedure::ShadowedProcedure;
+    use crate::traits::rust_shadow::RustShadow;
 
     #[test]
     fn bench() {

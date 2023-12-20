@@ -8,11 +8,13 @@ use twenty_first::util_types::{
     merkle_tree_maker::MerkleTreeMaker,
 };
 
-use crate::data_type::DataType;
 use crate::{
-    algorithm::Algorithm, empty_stack, list::ListType, recufier::merkle_verify::MerkleVerify,
-    rust_shadowing_helper_functions, snippet::BasicSnippet, structure::tasm_object::TasmObject,
-    Digest, VmHasher,
+    data_type::DataType,
+    traits::{algorithm::Algorithm, basic_snippet::BasicSnippet},
+};
+use crate::{
+    empty_stack, list::ListType, recufier::merkle_verify::MerkleVerify,
+    rust_shadowing_helper_functions, structure::tasm_object::TasmObject, Digest, VmHasher,
 };
 
 /// Verify a batch of Merkle membership claims.
@@ -236,20 +238,16 @@ impl Algorithm for VerifyAuthenticationPathForLeafAndIndexList {
 
 #[cfg(test)]
 mod test {
-    use std::{cell::RefCell, rc::Rc};
-
-    use rand::{thread_rng, Rng};
-    use triton_vm::{BFieldElement, Program};
-
-    use crate::{
-        algorithm::{Algorithm, ShadowedAlgorithm},
-        execute_with_terminal_state,
-        linker::link_for_isolated_run,
-        list::ListType,
-        snippet::RustShadow,
-    };
-
     use super::VerifyAuthenticationPathForLeafAndIndexList;
+    use crate::traits::algorithm::Algorithm;
+    use crate::traits::rust_shadow::RustShadow;
+    use crate::{
+        execute_with_terminal_state, linker::link_for_isolated_run, list::ListType,
+        traits::algorithm::ShadowedAlgorithm,
+    };
+    use rand::{thread_rng, Rng};
+    use std::{cell::RefCell, rc::Rc};
+    use triton_vm::{BFieldElement, Program};
 
     #[test]
     fn test() {
@@ -334,9 +332,9 @@ mod test {
 
 #[cfg(test)]
 mod benches {
-    use crate::{algorithm::ShadowedAlgorithm, snippet::RustShadow};
-
     use super::*;
+    use crate::traits::algorithm::ShadowedAlgorithm;
+    use crate::traits::rust_shadow::RustShadow;
 
     #[test]
     fn vap4lail_benchmark() {

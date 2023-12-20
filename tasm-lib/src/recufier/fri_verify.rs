@@ -21,9 +21,7 @@ use twenty_first::{
     util_types::{algebraic_hasher::Domain, merkle_tree::MerkleTree},
 };
 
-use crate::data_type::DataType;
-use crate::list::unsafeimplu32::get::UnsafeGet;
-use crate::memory::dyn_malloc::FIRST_DYNAMICALLY_ALLOCATED_ADDRESS;
+use crate::{data_type::DataType, traits::basic_snippet::BasicSnippet};
 use crate::{
     empty_stack, field,
     hashing::{merkle_root::MerkleRoot, sample_indices::SampleIndices},
@@ -47,7 +45,10 @@ use crate::{
     structure::tasm_object::{encode_to_memory, TasmObject},
     Digest, VmHasher, VmHasherState,
 };
-use crate::{library::Library, procedure::Procedure, snippet::BasicSnippet};
+use crate::{library::Library, list::unsafeimplu32::get::UnsafeGet};
+use crate::{
+    memory::dyn_malloc::FIRST_DYNAMICALLY_ALLOCATED_ADDRESS, traits::procedure::Procedure,
+};
 
 use super::proof_stream::vm_proof_stream::VmProofStream;
 
@@ -1170,11 +1171,11 @@ mod test {
     };
 
     use crate::{
-        procedure::{Procedure, ShadowedProcedure},
         structure::tasm_object::TasmObject,
         test_helpers::{
             rust_final_state, tasm_final_state, verify_sponge_equivalence, verify_stack_growth,
         },
+        traits::procedure::{Procedure, ShadowedProcedure},
         Digest, VmHasher, VmHasherState,
     };
 
@@ -1388,11 +1389,10 @@ mod test {
 
 #[cfg(test)]
 mod bench {
-    use triton_vm::BFieldElement;
-
-    use crate::{procedure::ShadowedProcedure, snippet::RustShadow};
-
     use super::FriVerify;
+    use crate::traits::procedure::ShadowedProcedure;
+    use crate::traits::rust_shadow::RustShadow;
+    use triton_vm::BFieldElement;
 
     #[test]
     fn bench() {

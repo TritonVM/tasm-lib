@@ -10,12 +10,12 @@ use twenty_first::shared_math::x_field_element::XFieldElement;
 
 use crate::data_type::DataType;
 use crate::hashing::absorb::Absorb;
-use crate::procedure::Procedure;
 use crate::structure::tasm_object::TasmObject;
+use crate::traits::basic_snippet::BasicSnippet;
+use crate::traits::procedure::Procedure;
 use crate::VmHasherState;
 use crate::{
-    empty_stack, field, field_with_size, library::Library, snippet::BasicSnippet,
-    snippet_bencher::BenchmarkCase,
+    empty_stack, field, field_with_size, library::Library, snippet_bencher::BenchmarkCase,
 };
 
 use super::vm_proof_stream::VmProofStream;
@@ -257,21 +257,18 @@ impl Procedure for Dequeue {
 mod test {
     use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
+    use crate::traits::procedure::{Procedure, ShadowedProcedure};
+    use crate::traits::rust_shadow::RustShadow;
+    use crate::{
+        empty_stack, execute_with_terminal_state, linker::link_for_isolated_run,
+        test_helpers::test_rust_equivalence_given_complete_state, VmHasherState,
+    };
     use rand::{rngs::StdRng, Rng, RngCore, SeedableRng};
     use triton_vm::proof_item::ProofItem;
     use triton_vm::{BFieldElement, NonDeterminism, Program};
     use twenty_first::shared_math::bfield_codec::BFieldCodec;
     use twenty_first::shared_math::x_field_element::XFieldElement;
     use twenty_first::util_types::algebraic_hasher::Domain;
-
-    use crate::{
-        empty_stack, execute_with_terminal_state,
-        linker::link_for_isolated_run,
-        procedure::{Procedure, ShadowedProcedure},
-        snippet::RustShadow,
-        test_helpers::test_rust_equivalence_given_complete_state,
-        VmHasherState,
-    };
 
     use super::{Dequeue, VmProofStream};
 

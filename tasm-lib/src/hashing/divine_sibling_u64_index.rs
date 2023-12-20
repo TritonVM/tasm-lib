@@ -2,8 +2,12 @@ use rand::{random, rngs::StdRng, Rng, SeedableRng};
 use triton_vm::{triton_asm, BFieldElement, Digest, NonDeterminism};
 
 use crate::{
-    data_type::DataType, empty_stack, library::Library, procedure::Procedure, push_encodable,
-    snippet::BasicSnippet, snippet_bencher::BenchmarkCase,
+    data_type::DataType,
+    empty_stack,
+    library::Library,
+    push_encodable,
+    snippet_bencher::BenchmarkCase,
+    traits::{basic_snippet::BasicSnippet, procedure::Procedure},
 };
 
 /// `divine_sibling` but for index of type `u64`
@@ -154,7 +158,8 @@ impl DivineSiblingU64Index {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{procedure::ShadowedProcedure, snippet::RustShadow, DIGEST_LENGTH};
+    use crate::traits::rust_shadow::RustShadow;
+    use crate::{traits::procedure::ShadowedProcedure, DIGEST_LENGTH};
     use itertools::Itertools;
 
     #[test]

@@ -3,7 +3,7 @@ use serde_json::to_writer_pretty;
 use std::fs::{create_dir_all, File};
 use std::path::{Path, PathBuf};
 
-use crate::snippet::DeprecatedSnippet;
+use crate::traits::deprecated_snippet::DeprecatedSnippet;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct BenchmarkResult {

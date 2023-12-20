@@ -6,7 +6,7 @@ use triton_vm::BFieldElement;
 use twenty_first::shared_math::{bfield_codec::BFieldCodec, other::random_elements};
 
 use crate::data_type::DataType;
-use crate::snippet::DeprecatedSnippet;
+use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::{empty_stack, Digest, ExecutionState};
 
 /// Returns the number of elements of a contiguous list.

@@ -3,11 +3,10 @@ use triton_vm::{instruction::LabelledInstruction, triton_asm, NonDeterminism};
 use twenty_first::shared_math::{b_field_element::BFieldElement, bfield_codec::BFieldCodec};
 
 use crate::data_type::DataType;
-use crate::{
-    empty_stack,
-    procedure::Procedure,
-    snippet::{BasicSnippet, InputSource},
-};
+use crate::empty_stack;
+use crate::traits::basic_snippet::BasicSnippet;
+use crate::traits::procedure::Procedure;
+use crate::InputSource;
 
 /// Move an element of type `DataType` from standard-in or secret-in's token stream to the stack
 #[derive(Clone, Debug)]
@@ -97,9 +96,9 @@ impl Procedure for ReadInput {
 
 #[cfg(test)]
 mod test {
-    use crate::{procedure::ShadowedProcedure, snippet::RustShadow};
-
     use super::*;
+    use crate::traits::procedure::ShadowedProcedure;
+    use crate::traits::rust_shadow::RustShadow;
 
     #[test]
     fn test() {
@@ -120,9 +119,9 @@ mod test {
 
 #[cfg(test)]
 mod benches {
-    use crate::{procedure::ShadowedProcedure, snippet::RustShadow};
-
     use super::*;
+    use crate::traits::procedure::ShadowedProcedure;
+    use crate::traits::rust_shadow::RustShadow;
 
     #[test]
     fn bench_for_digest_reading() {

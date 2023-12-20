@@ -7,7 +7,9 @@ use twenty_first::{shared_math::tip5::RATE, util_types::algebraic_hasher::Sponge
 
 use crate::data_type::DataType;
 use crate::snippet_bencher::BenchmarkCase;
-use crate::{empty_stack, procedure::Procedure, snippet::BasicSnippet, VmHasher, VmHasherState};
+use crate::traits::basic_snippet::BasicSnippet;
+use crate::traits::procedure::Procedure;
+use crate::{empty_stack, VmHasher, VmHasherState};
 
 /// Squeeze the sponge n times, storing all the produced pseudorandom `BFieldElement`s
 /// contiguously in memory. It is the caller's responsibility to allocate enough memory.
@@ -122,14 +124,13 @@ impl Procedure for SqueezeRepeatedly {
 mod test {
     use rand::{thread_rng, Rng};
 
-    use crate::{
-        procedure::{Procedure, ShadowedProcedure},
-        snippet::RustShadow,
-        test_helpers::{
-            rust_final_state, tasm_final_state, verify_memory_equivalence,
-            verify_sponge_equivalence, verify_stack_equivalence, verify_stack_growth,
-        },
+    use crate::test_helpers::{
+        rust_final_state, tasm_final_state, verify_memory_equivalence, verify_sponge_equivalence,
+        verify_stack_equivalence, verify_stack_growth,
     };
+    use crate::traits::procedure::Procedure;
+    use crate::traits::procedure::ShadowedProcedure;
+    use crate::traits::rust_shadow::RustShadow;
 
     use super::SqueezeRepeatedly;
 
@@ -183,7 +184,8 @@ mod test {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::{procedure::ShadowedProcedure, snippet::RustShadow};
+    use crate::traits::procedure::ShadowedProcedure;
+    use crate::traits::rust_shadow::RustShadow;
 
     #[test]
     fn squeeze_repeatedly_bench() {

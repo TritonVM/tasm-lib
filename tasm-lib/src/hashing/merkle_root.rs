@@ -7,10 +7,10 @@ use triton_vm::{triton_asm, BFieldElement};
 use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
 use crate::data_type::DataType;
+use crate::traits::basic_snippet::BasicSnippet;
+use crate::traits::function::Function;
 use crate::{
     empty_stack,
-    function::Function,
-    snippet::BasicSnippet,
     snippet_bencher::BenchmarkCase,
     structure::tasm_object::{encode_to_memory, TasmObject},
     Digest, VmHasher,
@@ -207,9 +207,9 @@ impl Function for MerkleRoot {
 
 #[cfg(test)]
 mod test {
-    use crate::{function::ShadowedFunction, snippet::RustShadow};
-
     use super::MerkleRoot;
+    use crate::traits::function::ShadowedFunction;
+    use crate::traits::rust_shadow::RustShadow;
 
     #[test]
     fn test() {
@@ -219,9 +219,9 @@ mod test {
 
 #[cfg(test)]
 mod benches {
-    use crate::{function::ShadowedFunction, snippet::RustShadow};
-
-    use super::*;
+    use super::MerkleRoot;
+    use crate::traits::function::ShadowedFunction;
+    use crate::traits::rust_shadow::RustShadow;
 
     #[test]
     fn merkle_root_bench() {

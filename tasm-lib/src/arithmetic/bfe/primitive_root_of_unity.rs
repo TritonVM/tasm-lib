@@ -4,7 +4,9 @@ use triton_vm::{triton_asm, BFieldElement};
 use twenty_first::shared_math::traits::PrimitiveRootOfUnity as PRU;
 
 use crate::data_type::DataType;
-use crate::{closure::Closure, empty_stack, snippet::BasicSnippet, snippet_bencher::BenchmarkCase};
+use crate::traits::basic_snippet::BasicSnippet;
+use crate::traits::closure::Closure;
+use crate::{empty_stack, snippet_bencher::BenchmarkCase};
 
 pub struct PrimitiveRootOfUnity;
 
@@ -394,11 +396,11 @@ mod tests {
     use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
     use super::*;
-    use crate::closure::ShadowedClosure;
     use crate::execute_with_terminal_state;
     use crate::linker::link_for_isolated_run;
-    use crate::snippet::RustShadow;
     use crate::test_helpers::test_rust_equivalence_given_complete_state;
+    use crate::traits::closure::ShadowedClosure;
+    use crate::traits::rust_shadow::RustShadow;
 
     #[test]
     fn primitive_root_of_unity_pbt() {
@@ -495,7 +497,8 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::{closure::ShadowedClosure, snippet::RustShadow};
+    use crate::traits::closure::ShadowedClosure;
+    use crate::traits::rust_shadow::RustShadow;
 
     #[test]
     fn bfe_primitive_root_of_unity_bench() {

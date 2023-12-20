@@ -5,6 +5,7 @@ use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
 use crate::data_type::DataType;
 use crate::memory::dyn_malloc;
+use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::{
     list::{
         contiguous_list::{
@@ -14,7 +15,6 @@ use crate::{
         ListType,
     },
     rust_shadowing_helper_functions,
-    snippet::DeprecatedSnippet,
 };
 
 // All of `contiguous_list` assumes that each element has its length prepended

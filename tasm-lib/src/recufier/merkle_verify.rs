@@ -8,11 +8,11 @@ use triton_vm::{triton_asm, NonDeterminism};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
-use crate::algorithm::Algorithm;
 use crate::data_type::DataType;
 use crate::library::Library;
-use crate::snippet::BasicSnippet;
 use crate::snippet_bencher::BenchmarkCase;
+use crate::traits::algorithm::Algorithm;
+use crate::traits::basic_snippet::BasicSnippet;
 use crate::{empty_stack, Digest, VmHasher};
 
 /// MerkleVerify -- verify that a leaf lives in a Merkle tree,
@@ -181,10 +181,10 @@ mod tests {
     use rand::thread_rng;
     use triton_vm::Program;
 
-    use crate::algorithm::ShadowedAlgorithm;
     use crate::execute_with_terminal_state;
     use crate::linker::link_for_isolated_run;
-    use crate::snippet::RustShadow;
+    use crate::traits::algorithm::ShadowedAlgorithm;
+    use crate::traits::rust_shadow::RustShadow;
 
     use super::MerkleVerify;
     use super::*;
@@ -250,9 +250,9 @@ mod tests {
 
 #[cfg(test)]
 mod bench {
-    use crate::{algorithm::ShadowedAlgorithm, snippet::RustShadow};
-
     use super::MerkleVerify;
+    use crate::traits::algorithm::ShadowedAlgorithm;
+    use crate::traits::rust_shadow::RustShadow;
 
     #[test]
     fn merkle_verify_bench() {

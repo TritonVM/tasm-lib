@@ -8,9 +8,9 @@ use triton_vm::{triton_asm, BFieldElement};
 use twenty_first::{shared_math::other::random_elements, util_types::shared::bag_peaks};
 
 use crate::data_type::DataType;
-use crate::function::Function;
-use crate::snippet::BasicSnippet;
 use crate::snippet_bencher::BenchmarkCase;
+use crate::traits::basic_snippet::BasicSnippet;
+use crate::traits::function::Function;
 use crate::{
     empty_stack,
     list::unsafeimplu32::{get::UnsafeGet, length::Length as UnsafeLength},
@@ -243,7 +243,8 @@ impl Function for BagPeaks {
 #[cfg(test)]
 mod tests {
     use super::BagPeaks;
-    use crate::{function::ShadowedFunction, snippet::RustShadow};
+    use crate::traits::function::ShadowedFunction;
+    use crate::traits::rust_shadow::RustShadow;
 
     #[test]
     fn prop() {
@@ -256,7 +257,8 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::BagPeaks;
-    use crate::{function::ShadowedFunction, snippet::RustShadow};
+    use crate::traits::function::ShadowedFunction;
+    use crate::traits::rust_shadow::RustShadow;
 
     #[test]
     fn bag_peaks_benchmark() {

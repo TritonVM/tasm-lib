@@ -159,10 +159,9 @@ mod test {
 
 #[cfg(test)]
 mod benches {
-    use crate::compiled_program::test::FiboTest;
     use crate::snippet_bencher::BenchmarkCase;
 
-    use super::*;
+    use super::{test::FiboTest, *};
 
     #[test]
     fn bench_fibo() {

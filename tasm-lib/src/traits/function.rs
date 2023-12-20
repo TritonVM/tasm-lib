@@ -5,11 +5,12 @@ use triton_vm::{BFieldElement, NonDeterminism};
 
 use crate::{
     linker::{execute_bench, link_for_isolated_run},
-    snippet::{BasicSnippet, RustShadow},
     snippet_bencher::{write_benchmarks, BenchmarkCase, BenchmarkResult},
     test_helpers::test_rust_equivalence_given_complete_state,
     VmHasherState,
 };
+
+use super::{basic_snippet::BasicSnippet, rust_shadow::RustShadow};
 
 /// A Function is a piece of tasm code that can modify the top of the stack, and can read
 /// and even extend memory. Specifically: any memory writes have to happen to addresses

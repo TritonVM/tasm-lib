@@ -14,8 +14,9 @@ use crate::data_type::DataType;
 use crate::hashing::hash_varlen::HashVarlen;
 use crate::list::safeimplu32::length::Length as SafeLength;
 use crate::list::unsafeimplu32::length::Length as UnsafeLength;
+use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::{empty_stack, rust_shadowing_helper_functions, DIGEST_LENGTH};
-use crate::{library::Library, snippet::DeprecatedSnippet, ExecutionState, VmHasher};
+use crate::{library::Library, ExecutionState, VmHasher};
 
 use super::ListType;
 

@@ -8,7 +8,9 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::dyn_malloc::DYN_MALLOC_ADDRESS;
 use crate::library::Library;
-use crate::snippet::{BasicSnippet, DeprecatedSnippet, RustShadow};
+use crate::traits::basic_snippet::BasicSnippet;
+use crate::traits::deprecated_snippet::DeprecatedSnippet;
+use crate::traits::rust_shadow::RustShadow;
 use crate::{
     execute_test, exported_snippets, ExecutionState, VmHasherState, VmOutputState, DIGEST_LENGTH,
 };

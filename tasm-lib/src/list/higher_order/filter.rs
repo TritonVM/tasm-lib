@@ -9,7 +9,7 @@ use triton_vm::triton_asm;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::data_type::DataType;
-use crate::function::Function;
+use crate::library::Library;
 use crate::list::safeimplu32::get::SafeGet;
 use crate::list::safeimplu32::length::Length as SafeLength;
 use crate::list::safeimplu32::new::SafeNew;
@@ -20,9 +20,10 @@ use crate::list::unsafeimplu32::new::UnsafeNew;
 use crate::list::unsafeimplu32::set_length::UnsafeSetLength;
 use crate::list::{self, ListType};
 use crate::memory::memcpy::MemCpy;
-use crate::snippet::BasicSnippet;
+use crate::traits::basic_snippet::BasicSnippet;
+use crate::traits::deprecated_snippet::DeprecatedSnippet;
+use crate::traits::function::Function;
 use crate::{empty_stack, rust_shadowing_helper_functions};
-use crate::{library::Library, snippet::DeprecatedSnippet};
 
 use super::inner_function::InnerFunction;
 
@@ -391,14 +392,16 @@ impl Function for Filter {
 
 #[cfg(test)]
 mod tests {
+    use crate::traits::rust_shadow::RustShadow;
+    use crate::{
+        arithmetic,
+        list::higher_order::inner_function::RawCode,
+        traits::{deprecated_snippet::DeprecatedSnippet, function::ShadowedFunction},
+        ExecutionState, VmHasher,
+    };
     use triton_vm::triton_asm;
     use twenty_first::{
         shared_math::other::random_elements, util_types::algebraic_hasher::AlgebraicHasher,
-    };
-
-    use crate::{
-        arithmetic, function::ShadowedFunction, list::higher_order::inner_function::RawCode,
-        snippet::RustShadow, ExecutionState, VmHasher,
     };
 
     use super::*;
@@ -620,9 +623,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use crate::{function::ShadowedFunction, snippet::RustShadow};
-
     use super::{tests::TestHashXFieldElementLsb, *};
+    use crate::traits::function::ShadowedFunction;
+    use crate::traits::rust_shadow::RustShadow;
 
     #[test]
     fn unsafe_list_filter_benchmark() {

@@ -1,5 +1,7 @@
 use crate::data_type::DataType;
 use crate::mmr::verify_from_memory::MmrVerifyFromMemory;
+use crate::traits::basic_snippet::BasicSnippet;
+use crate::InputSource;
 use crate::{
     arithmetic::{
         u128::{
@@ -68,7 +70,6 @@ use crate::{
     neptune::mutator_set::{commit::Commit, get_swbf_indices::GetSwbfIndices},
     other_snippets::bfe_add::BfeAdd,
     recufier::{merkle_verify::MerkleVerify, proof_stream::dequeue::Dequeue},
-    snippet::{BasicSnippet, InputSource},
 };
 
 pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {

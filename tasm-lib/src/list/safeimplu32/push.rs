@@ -7,12 +7,12 @@ use triton_vm::triton_asm;
 use twenty_first::shared_math::{b_field_element::BFieldElement, other::random_elements};
 
 use crate::data_type::DataType;
+use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::{
     empty_stack,
     library::Library,
     list::safeimplu32::SAFE_LIST_ELEMENT_CAPACITY,
     rust_shadowing_helper_functions::safe_list::{safe_insert_random_list, safe_list_push},
-    snippet::DeprecatedSnippet,
     ExecutionState,
 };
 

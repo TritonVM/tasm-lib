@@ -1,11 +1,12 @@
-use std::collections::HashMap;
-
 use rand::{rngs::StdRng, SeedableRng};
+use std::collections::HashMap;
 use triton_vm::{instruction::LabelledInstruction, triton_asm, NonDeterminism};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::data_type::DataType;
-use crate::{empty_stack, procedure::Procedure, snippet::BasicSnippet, VmHasherState};
+use crate::traits::basic_snippet::BasicSnippet;
+use crate::traits::procedure::Procedure;
+use crate::{empty_stack, VmHasherState};
 
 pub struct WriteToStdout {
     pub data_type: DataType,
@@ -76,9 +77,9 @@ impl Procedure for WriteToStdout {
 
 #[cfg(test)]
 mod tests {
-    use crate::{procedure::ShadowedProcedure, snippet::RustShadow};
-
     use super::*;
+    use crate::traits::procedure::ShadowedProcedure;
+    use crate::traits::rust_shadow::RustShadow;
 
     #[test]
     fn write_to_stdout_auto_test() {
@@ -90,9 +91,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use crate::{procedure::ShadowedProcedure, snippet::RustShadow};
-
     use super::*;
+    use crate::traits::procedure::ShadowedProcedure;
+    use crate::traits::rust_shadow::RustShadow;
 
     #[test]
     fn bench_for_digest_writing() {

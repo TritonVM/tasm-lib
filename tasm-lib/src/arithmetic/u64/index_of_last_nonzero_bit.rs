@@ -2,11 +2,10 @@ use rand::{thread_rng, RngCore};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::data_type::DataType;
+use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::{
     arithmetic::u64::{and_u64::AndU64, log_2_floor_u64::Log2FloorU64},
-    empty_stack,
-    snippet::DeprecatedSnippet,
-    ExecutionState,
+    empty_stack, ExecutionState,
 };
 
 use super::{decr_u64::DecrU64, xor_u64::XorU64};

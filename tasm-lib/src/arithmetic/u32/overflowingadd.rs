@@ -3,7 +3,9 @@ use triton_vm::triton_asm;
 use twenty_first::shared_math::{b_field_element::BFieldElement, bfield_codec::BFieldCodec};
 
 use crate::data_type::DataType;
-use crate::{closure::Closure, empty_stack, snippet::BasicSnippet};
+use crate::empty_stack;
+use crate::traits::basic_snippet::BasicSnippet;
+use crate::traits::closure::Closure;
 
 #[derive(Clone, Debug)]
 pub struct Overflowingadd;
@@ -73,12 +75,12 @@ impl Closure for Overflowingadd {
 
 #[cfg(test)]
 mod tests {
-    use triton_vm::NonDeterminism;
-
     use super::*;
-    use crate::closure::ShadowedClosure;
-    use crate::snippet::RustShadow;
-    use crate::test_helpers::test_rust_equivalence_given_complete_state;
+    use crate::traits::rust_shadow::RustShadow;
+    use crate::{
+        test_helpers::test_rust_equivalence_given_complete_state, traits::closure::ShadowedClosure,
+    };
+    use triton_vm::NonDeterminism;
 
     #[test]
     fn u32_overflowing_add_pbt() {
@@ -129,7 +131,8 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::{closure::ShadowedClosure, snippet::RustShadow};
+    use crate::traits::closure::ShadowedClosure;
+    use crate::traits::rust_shadow::RustShadow;
 
     #[test]
     fn u32_overflowing_add_bench() {

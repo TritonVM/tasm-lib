@@ -20,7 +20,7 @@ use crate::list::unsafeimplu32::get::UnsafeGet;
 use crate::list::unsafeimplu32::set::UnsafeSet;
 use crate::list::ListType;
 use crate::mmr::MAX_MMR_HEIGHT;
-use crate::snippet::DeprecatedSnippet;
+use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::{
     empty_stack, rust_shadowing_helper_functions, Digest, ExecutionState, VmHasher, DIGEST_LENGTH,
 };

@@ -11,7 +11,8 @@ pub const DYN_MALLOC_ADDRESS: BFieldElement = BFieldElement::new(1 << 32);
 pub const FIRST_DYNAMICALLY_ALLOCATED_ADDRESS: BFieldElement = BFieldElement::new((1 << 32) + 1);
 
 use crate::data_type::DataType;
-use crate::{empty_stack, library::Library, snippet::DeprecatedSnippet, ExecutionState};
+use crate::traits::deprecated_snippet::DeprecatedSnippet;
+use crate::{empty_stack, library::Library, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct DynMalloc;

@@ -2,10 +2,8 @@ use rand::{thread_rng, RngCore};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::data_type::DataType;
-use crate::{
-    arithmetic::u32::leadingzeros::Leadingzeros, empty_stack, snippet::DeprecatedSnippet,
-    ExecutionState,
-};
+use crate::traits::deprecated_snippet::DeprecatedSnippet;
+use crate::{arithmetic::u32::leadingzeros::Leadingzeros, empty_stack, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct LeadingZerosU64;

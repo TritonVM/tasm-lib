@@ -8,11 +8,11 @@ use twenty_first::{
     util_types::algebraic_hasher::SpongeHasher,
 };
 
-use crate::data_type::DataType;
 use crate::{
-    empty_stack, procedure::Procedure, snippet::BasicSnippet, snippet_bencher::BenchmarkCase,
-    VmHasher, VmHasherState,
+    data_type::DataType,
+    traits::{basic_snippet::BasicSnippet, procedure::Procedure},
 };
+use crate::{empty_stack, snippet_bencher::BenchmarkCase, VmHasher, VmHasherState};
 
 /// Absorb a sequence of field elements stored in memory, into the sponge state.
 pub struct Absorb;
@@ -304,9 +304,9 @@ impl Absorb {
 
 #[cfg(test)]
 mod test {
-    use crate::{procedure::ShadowedProcedure, snippet::RustShadow};
-
     use super::Absorb;
+    use crate::traits::procedure::ShadowedProcedure;
+    use crate::traits::rust_shadow::RustShadow;
 
     #[test]
     fn test() {

@@ -7,8 +7,8 @@ use triton_vm::{triton_asm, NonDeterminism};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 use twenty_first::shared_math::other::random_elements;
 
+use super::inner_function::InnerFunction;
 use crate::data_type::DataType;
-use crate::function::Function;
 use crate::list::safeimplu32::get::SafeGet;
 use crate::list::safeimplu32::length::Length as SafeLength;
 use crate::list::safeimplu32::new::SafeNew;
@@ -23,11 +23,11 @@ use crate::list::{self, ListType};
 use crate::memory::dyn_malloc::DYN_MALLOC_ADDRESS;
 use crate::rust_shadowing_helper_functions::safe_list::safe_insert_random_list;
 use crate::rust_shadowing_helper_functions::unsafe_list::unsafe_insert_random_list;
-use crate::snippet::BasicSnippet;
+use crate::traits::basic_snippet::BasicSnippet;
+use crate::traits::deprecated_snippet::DeprecatedSnippet;
+use crate::traits::function::Function;
 use crate::{empty_stack, rust_shadowing_helper_functions};
-use crate::{library::Library, snippet::DeprecatedSnippet, ExecutionState};
-
-use super::inner_function::InnerFunction;
+use crate::{library::Library, ExecutionState};
 
 /// Applies a given function to every element of a list, and collects the new elements
 /// into a new list.
@@ -406,6 +406,7 @@ impl Map {
 #[cfg(test)]
 mod tests {
 
+    use crate::traits::rust_shadow::RustShadow;
     use num_traits::Zero;
     use triton_vm::triton_asm;
     use twenty_first::{
@@ -413,8 +414,10 @@ mod tests {
     };
 
     use crate::{
-        arithmetic, function::ShadowedFunction, list::higher_order::inner_function::RawCode,
-        snippet::RustShadow, VmHasher,
+        arithmetic,
+        list::higher_order::inner_function::RawCode,
+        traits::{deprecated_snippet::DeprecatedSnippet, function::ShadowedFunction},
+        VmHasher,
     };
 
     use super::*;
@@ -724,7 +727,8 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::{tests::TestHashXFieldElement, *};
-    use crate::{function::ShadowedFunction, snippet::RustShadow};
+    use crate::traits::function::ShadowedFunction;
+    use crate::traits::rust_shadow::RustShadow;
 
     #[test]
     fn unsafe_list_map_benchmark() {

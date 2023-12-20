@@ -9,7 +9,8 @@ use twenty_first::{
 
 use crate::data_type::DataType;
 use crate::hashing::absorb::Absorb;
-use crate::{empty_stack, snippet::DeprecatedSnippet, ExecutionState, VmHasher};
+use crate::traits::deprecated_snippet::DeprecatedSnippet;
+use crate::{empty_stack, ExecutionState, VmHasher};
 
 #[derive(Clone, Debug)]
 pub struct HashVarlen;

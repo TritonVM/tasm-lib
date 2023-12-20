@@ -2,7 +2,8 @@ use rand::{thread_rng, Rng};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::data_type::DataType;
-use crate::{empty_stack, snippet::DeprecatedSnippet, ExecutionState};
+use crate::traits::deprecated_snippet::DeprecatedSnippet;
+use crate::{empty_stack, ExecutionState};
 
 /// If the inputs, are valid u32s, then the output is guaranteed to be to.
 /// Crashes on overflow.

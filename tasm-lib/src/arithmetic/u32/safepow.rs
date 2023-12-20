@@ -2,7 +2,9 @@ use rand::{rngs::StdRng, Rng, SeedableRng};
 use triton_vm::{triton_asm, BFieldElement};
 
 use crate::data_type::DataType;
-use crate::{closure::Closure, empty_stack, snippet::BasicSnippet, snippet_bencher::BenchmarkCase};
+use crate::traits::basic_snippet::BasicSnippet;
+use crate::traits::closure::Closure;
+use crate::{empty_stack, snippet_bencher::BenchmarkCase};
 
 /// A u32 `pow` that behaves like Rustc's `pow` method on `u32`, crashing in case of overflow.
 #[derive(Clone)]
@@ -190,11 +192,11 @@ mod tests {
     use triton_vm::{NonDeterminism, Program};
 
     use super::*;
-    use crate::closure::ShadowedClosure;
     use crate::execute_with_terminal_state;
     use crate::linker::link_for_isolated_run;
-    use crate::snippet::RustShadow;
     use crate::test_helpers::test_rust_equivalence_given_complete_state;
+    use crate::traits::closure::ShadowedClosure;
+    use crate::traits::rust_shadow::RustShadow;
 
     #[test]
     fn u32_pow_pbt() {
@@ -338,7 +340,8 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use super::*;
-    use crate::{closure::ShadowedClosure, snippet::RustShadow};
+    use crate::traits::closure::ShadowedClosure;
+    use crate::traits::rust_shadow::RustShadow;
 
     #[test]
     fn u32_pow_bench() {

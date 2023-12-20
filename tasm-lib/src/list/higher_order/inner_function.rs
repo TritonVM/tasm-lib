@@ -1,9 +1,6 @@
 use std::collections::HashMap;
-
 use triton_vm::instruction::AnInstruction;
 use triton_vm::instruction::LabelledInstruction;
-
-use crate::data_type::DataType;
 use triton_vm::triton_asm;
 use triton_vm::vm::VMState;
 use triton_vm::BFieldElement;
@@ -11,9 +8,10 @@ use triton_vm::NonDeterminism;
 use triton_vm::Program;
 use triton_vm::PublicInput;
 
+use crate::data_type::DataType;
 use crate::library::Library;
-use crate::snippet::BasicSnippet;
-use crate::snippet::DeprecatedSnippet;
+use crate::traits::basic_snippet::BasicSnippet;
+use crate::traits::deprecated_snippet::DeprecatedSnippet;
 
 /// A data structure for describing an inner function predicate to filter with,
 /// or to map with.
