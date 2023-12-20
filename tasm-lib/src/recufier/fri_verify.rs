@@ -5,8 +5,12 @@ use itertools::Itertools;
 use num_traits::Zero;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use triton_vm::{
-    arithmetic_domain::ArithmeticDomain, error::FriValidationError, fri::Fri,
-    instruction::LabelledInstruction, proof_item::FriResponse, proof_stream::ProofStream,
+    arithmetic_domain::ArithmeticDomain,
+    error::FriValidationError,
+    fri::Fri,
+    instruction::LabelledInstruction,
+    proof_item::{FriResponse, ProofItem},
+    proof_stream::ProofStream,
     triton_asm, BFieldElement, NonDeterminism,
 };
 use twenty_first::{
@@ -622,12 +626,14 @@ impl BasicSnippet for FriVerify {
                 },
             }),
         }));
+        let fri_codeword_discriminant = ProofItem::FriCodeword(vec![]).bfield_codec_discriminant();
         let proof_item_as_fri_codeword = triton_asm! {
-            // _ *fri_codeword_ev
+                                // _ *fri_codeword_ev
             read_mem 1          // _ fri_codeword_ev *fri_codeword_ev-1
             push 2 add          // _ fri_codeword_ev *fri_codeword_encoding
             swap 1              // _ *fri_codeword_encoding fri_codeword_ev
-            push 9              // _ *fri_codeword_encoding fri_codeword_ev 9 (<-- discriminant for enum variant FriCodeword)
+            push {fri_codeword_discriminant}
+                                // _ *fri_codeword_encoding fri_codeword_ev 9 (<-- discriminant for enum variant FriCodeword)
             eq assert           // _ *fri_codeword_encoding
             read_mem 1          // _ encoding_length *fri_codeword_encoding-1
             push 2 add          // _ encoding_length *fri_codeword
@@ -638,11 +644,20 @@ impl BasicSnippet for FriVerify {
             push 1 add          // _ *fri_codeword encoding_length vector_length*3+1 (<-- +1 for length indicator)
             eq assert           // _ *fri_codeword
         };
+        // fri_response is encoded as:
+        // enum-discriminant, size-of-assoc-data, size-of-second-field, [encoding of second field], size-of-first-field, [encoding of first field]
+        // we want to land here:                    ^
+        let fri_response_discriminant = ProofItem::FriResponse(FriResponse {
+            revealed_leaves: vec![],
+            auth_structure: vec![],
+        })
+        .bfield_codec_discriminant();
         let proof_item_as_fri_response = triton_asm! {
-            // _ *fri_response_ev
+                                // _ *fri_response_ev
             read_mem 1          // _ fri_response_ev *fri_response_ev-1
             push 2 add          // _ fri_response_ev *fri_response_si
-            swap 1 push 10      // _ *fri_response_si fri_response_ev 10 (<-- discriminant for enum variant FriResponse)
+            swap 1 push {fri_response_discriminant}
+                                // _ *fri_response_si fri_response_ev fri_response_discriminant
             eq assert           // _ *fri_response_si
             push 1 add          // _ *fri_response
         };
@@ -935,10 +950,8 @@ impl BasicSnippet for FriVerify {
                 swap 2                      // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *proof_stream
                 call {proof_stream_dequeue} // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *proof_stream *proof_item
                 {&proof_item_as_fri_response}
-                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *fri_response
-
-                push 4 read_mem 5
-                push 1337 assert
+                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *proof_stream *fri_response
+                swap 1 pop 1                // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *fri_response
 
                 // assert correct length of number of leafs
                 {&revealed_leafs}           // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements
