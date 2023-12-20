@@ -5,12 +5,8 @@ use itertools::Itertools;
 use num_traits::Zero;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use triton_vm::{
-    arithmetic_domain::ArithmeticDomain,
-    error::FriValidationError,
-    fri::Fri,
-    instruction::LabelledInstruction,
-    proof_item::{FriResponse, ProofItem},
-    proof_stream::ProofStream,
+    arithmetic_domain::ArithmeticDomain, error::FriValidationError, fri::Fri,
+    instruction::LabelledInstruction, proof_item::FriResponse, proof_stream::ProofStream,
     triton_asm, BFieldElement, NonDeterminism,
 };
 use twenty_first::{
@@ -27,7 +23,7 @@ use twenty_first::{
 
 use crate::data_type::DataType;
 use crate::list::unsafeimplu32::get::UnsafeGet;
-use crate::memory::dyn_malloc::FIRST_DYNAMICALLY_ALLOCATED_ADDRESS;
+use crate::memory::dyn_malloc::{DYN_MALLOC_ADDRESS, FIRST_DYNAMICALLY_ALLOCATED_ADDRESS};
 use crate::{
     empty_stack, field,
     hashing::{merkle_root::MerkleRoot, sample_indices::SampleIndices},
@@ -629,20 +625,6 @@ impl BasicSnippet for FriVerify {
         let proof_item_as_merkle_root = VmProofStream::proof_item_as_merkle_root_code();
         let proof_item_as_fri_codeword = VmProofStream::proof_item_as_fri_codeword_code();
         let proof_item_as_fri_response = VmProofStream::proof_item_as_fri_response_code();
-        let fri_response_discriminant = ProofItem::FriResponse(FriResponse {
-            revealed_leaves: vec![],
-            auth_structure: vec![],
-        })
-        .bfield_codec_discriminant();
-        let special_proof_item_as_fri_response = triton_asm! {
-                                // _ *fri_response_ev
-            read_mem 1          // _ fri_response_ev *fri_response_ev-1
-            push 3 add          // _ fri_response_ev *fri_response
-            swap 1 push {fri_response_discriminant}
-                                // _ *fri_response fri_response_ev fri_response_discriminant
-            push 1340 assert
-            eq assert           // _ *fri_response
-        };
 
         triton_asm! {
             // INVARIANT:          _ *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_values i
@@ -970,7 +952,8 @@ impl BasicSnippet for FriVerify {
                 read_mem 1                  // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements length (*revealed_indices_and_leafs - 1)
                 push 1 add swap 1           // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements *revealed_indices_and_leafs length
                 push 4 mul                  // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements *revealed_indices_and_leafs size
-                push 0 read_mem 1           // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements *revealed_indices_and_leafs size alloc (*alloc - 1)
+                push {DYN_MALLOC_ADDRESS} read_mem 1
+                                            // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements *revealed_indices_and_leafs size alloc (*alloc - 1)
                 push 1 add swap 1           // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements *revealed_indices_and_leafs size *alloc alloc
                 swap 1 swap 2 add           // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements *revealed_indices_and_leafs *alloc size+alloc
                 swap 1                      // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements *revealed_indices_and_leafs size+alloc *alloc
@@ -1015,9 +998,10 @@ impl BasicSnippet for FriVerify {
                                             // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices
 
                 // dequeue fri response and get "B" elements
-                dup 14 call {proof_stream_dequeue}
+                dup 14                      // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *proof_stream
+                call {proof_stream_dequeue}
                                             // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *proof_stream *fri_response_ev
-                {&special_proof_item_as_fri_response}
+                {&proof_item_as_fri_response}
                                             // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *proof_stream *fri_response
                 swap 1 pop 1                // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *fri_response
                 {&revealed_leafs}           // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements
