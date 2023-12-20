@@ -1,15 +1,15 @@
 [
   {
     "name": "xfe_ntt",
-    "clock_cycle_count": 10566,
-    "hash_table_height": 216,
+    "clock_cycle_count": 10334,
+    "hash_table_height": 222,
     "u32_table_height": 944,
     "case": "CommonCase"
   },
   {
     "name": "xfe_ntt",
-    "clock_cycle_count": 54980,
-    "hash_table_height": 216,
+    "clock_cycle_count": 53308,
+    "hash_table_height": 222,
     "u32_table_height": 4845,
     "case": "WorstCase"
   }
