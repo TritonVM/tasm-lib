@@ -297,6 +297,8 @@ impl BasicSnippet for XfeNtt {
         dup 4
         mul
         swap 2
+        // _ *x omega size log_2_size (3*m) outer_count w_m k (w * w_m) *x[k+m] *x[k + j + 1]
+
         recurse
 
         // Last while-loop middle, k < size
