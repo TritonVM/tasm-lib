@@ -43,6 +43,7 @@ impl BasicSnippet for XfeNtt {
             library.import(Box::new(crate::list::unsafeimplu32::length::Length {
                 data_type: DataType::Xfe,
             }));
+        const THREE_INV: BFieldElement = BFieldElement::new(12297829379609722881);
 
         triton_asm!(
                 {entrypoint}:
@@ -351,7 +352,7 @@ impl BasicSnippet for XfeNtt {
         // Undo `3*` transformation
         // `3 * m` -> `m`
         swap 6
-        push 12297829379609722881
+        push {THREE_INV}
         mul
         swap 6
 
