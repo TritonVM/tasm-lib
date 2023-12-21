@@ -1,12 +1,12 @@
-use std::collections::{hash_map::Entry, HashMap};
+use std::collections::HashMap;
 
-use crate::{data_type::DataType, traits::basic_snippet::BasicSnippet};
 use itertools::Itertools;
 use num::One;
 use triton_vm::instruction::LabelledInstruction;
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
+use crate::{data_type::DataType, traits::basic_snippet::BasicSnippet};
 
 // Ensure that static allocator does not overwrite the address
 // dedicated to the dynamic allocator. Dynamic allocator is,
@@ -60,14 +60,10 @@ impl Library {
     pub fn import(&mut self, snippet: Box<dyn BasicSnippet>) -> String {
         let dep_entrypoint = snippet.entrypoint();
 
-        let dep_body = snippet.code(self);
-        if let Entry::Vacant(e) = self.seen_snippets.entry(dep_entrypoint.clone()) {
-            e.insert(dep_body);
-        } else {
-            assert_eq!(
-                self.seen_snippets[&dep_entrypoint], dep_body,
-                "Repeated snippets must agree. Got two different versions of \"{dep_entrypoint}\""
-            );
+        let is_new_dependency = !self.seen_snippets.contains_key(&dep_entrypoint);
+        if is_new_dependency {
+            let dep_body = snippet.code(self);
+            self.seen_snippets.insert(dep_entrypoint.clone(), dep_body);
         }
 
         dep_entrypoint
@@ -328,6 +324,7 @@ impl DeprecatedSnippet for DummyTestSnippetC {
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
+
     use triton_vm::program::Program;
     use triton_vm::triton_asm;
 
