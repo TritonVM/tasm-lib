@@ -53,7 +53,17 @@ pub trait Algorithm: BasicSnippet {
         &self,
         seed: [u8; 32],
         bench_case: Option<BenchmarkCase>,
-    ) -> (Vec<BFieldElement>, NonDeterminism<BFieldElement>);
+    ) -> AlgorithmInitialState;
+
+    fn corner_case_initial_states(&self) -> Vec<AlgorithmInitialState> {
+        vec![]
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct AlgorithmInitialState {
+    pub stack: Vec<BFieldElement>,
+    pub nondeterminism: NonDeterminism<BFieldElement>,
 }
 
 pub struct ShadowedAlgorithm<T: Algorithm + 'static> {
@@ -87,6 +97,30 @@ where
     }
 
     fn test(&self) {
+        for (i, corner_case) in self
+            .algorithm
+            .borrow()
+            .corner_case_initial_states()
+            .into_iter()
+            .enumerate()
+        {
+            println!(
+                "testing {} corner case number {i}",
+                self.algorithm.borrow().entrypoint(),
+            );
+
+            let stdin = vec![];
+            test_rust_equivalence_given_complete_state(
+                self,
+                &corner_case.stack,
+                &stdin,
+                &corner_case.nondeterminism,
+                &None,
+                0,
+                None,
+            );
+        }
+
         let num_states = 10;
         let seed = [
             0x0b, 0x6f, 0x89, 0x60, 0xe3, 0x41, 0xa4, 0x36, 0x6c, 0xba, 0x34, 0x53, 0x36, 0x2e,
@@ -94,7 +128,6 @@ where
             0xc3, 0x33, 0x37, 0x9b,
         ];
         let mut rng: StdRng = SeedableRng::from_seed(seed);
-
         for _ in 0..num_states {
             let seed: [u8; 32] = rng.gen();
             println!(
@@ -102,7 +135,10 @@ where
                 self.algorithm.borrow().entrypoint(),
                 seed
             );
-            let (stack, nondeterminism) = self
+            let AlgorithmInitialState {
+                stack,
+                nondeterminism,
+            } = self
                 .algorithm
                 .borrow()
                 .pseudorandom_initial_state(seed, None);
@@ -130,7 +166,10 @@ where
         let mut benchmarks = Vec::with_capacity(2);
 
         for bench_case in [BenchmarkCase::CommonCase, BenchmarkCase::WorstCase] {
-            let (stack, nondeterminism) = self
+            let AlgorithmInitialState {
+                stack,
+                nondeterminism,
+            } = self
                 .algorithm
                 .borrow()
                 .pseudorandom_initial_state(rng.gen(), Some(bench_case));

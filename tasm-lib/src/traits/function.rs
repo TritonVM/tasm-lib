@@ -31,6 +31,10 @@ pub trait Function: BasicSnippet {
         seed: [u8; 32],
         bench_case: Option<BenchmarkCase>,
     ) -> (Vec<BFieldElement>, HashMap<BFieldElement, BFieldElement>);
+
+    fn corner_case_initial_states(&self) -> Vec<Vec<BFieldElement>> {
+        vec![]
+    }
 }
 
 pub struct ShadowedFunction<F: Function + 'static> {

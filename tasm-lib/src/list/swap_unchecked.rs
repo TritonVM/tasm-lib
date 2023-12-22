@@ -7,7 +7,7 @@ use triton_vm::{
 };
 
 use super::ListType;
-use crate::traits::algorithm::Algorithm;
+use crate::traits::algorithm::{Algorithm, AlgorithmInitialState};
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::{data_type::DataType, empty_stack, library::Library, rust_shadowing_helper_functions};
 
@@ -169,10 +169,7 @@ impl Algorithm for SwapUnchecked {
         &self,
         seed: [u8; 32],
         _bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
-    ) -> (
-        Vec<triton_vm::BFieldElement>,
-        triton_vm::NonDeterminism<triton_vm::BFieldElement>,
-    ) {
+    ) -> AlgorithmInitialState {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
         let list_pointer = BFieldElement::new(rng.gen());
         let list_length = rng.gen_range(0..200);
@@ -186,8 +183,8 @@ impl Algorithm for SwapUnchecked {
             &mut init_memory,
         );
 
-        (
-            [
+        AlgorithmInitialState {
+            stack: [
                 empty_stack(),
                 vec![
                     list_pointer,
@@ -196,8 +193,8 @@ impl Algorithm for SwapUnchecked {
                 ],
             ]
             .concat(),
-            NonDeterminism::default().with_ram(init_memory),
-        )
+            nondeterminism: NonDeterminism::default().with_ram(init_memory),
+        }
     }
 }
 

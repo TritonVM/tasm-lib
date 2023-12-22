@@ -11,7 +11,7 @@ use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 use crate::data_type::DataType;
 use crate::library::Library;
 use crate::snippet_bencher::BenchmarkCase;
-use crate::traits::algorithm::Algorithm;
+use crate::traits::algorithm::{Algorithm, AlgorithmInitialState};
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::{empty_stack, Digest, VmHasher};
 
@@ -128,7 +128,7 @@ impl Algorithm for MerkleVerify {
         &self,
         seed: [u8; 32],
         maybe_bench_case: Option<BenchmarkCase>,
-    ) -> (Vec<BFieldElement>, NonDeterminism<BFieldElement>) {
+    ) -> AlgorithmInitialState {
         {
             let mut rng: StdRng = SeedableRng::from_seed(seed);
             let tree_height = match maybe_bench_case {
@@ -168,7 +168,10 @@ impl Algorithm for MerkleVerify {
             stack.push(BFieldElement::new(tree_height));
 
             let nondeterminism = NonDeterminism::default().with_digests(path);
-            (stack, nondeterminism)
+            AlgorithmInitialState {
+                stack,
+                nondeterminism,
+            }
         }
     }
 }
@@ -198,7 +201,10 @@ mod tests {
     fn negative_test() {
         let seed: [u8; 32] = thread_rng().gen();
         for i in 0..6 {
-            let (mut stack, nondeterminism) = MerkleVerify.pseudorandom_initial_state(seed, None);
+            let AlgorithmInitialState {
+                mut stack,
+                nondeterminism,
+            } = MerkleVerify.pseudorandom_initial_state(seed, None);
             let len = stack.len();
 
             match i {
