@@ -1,0 +1,16 @@
+[
+  {
+    "name": "tasm_hashing_absorb",
+    "clock_cycle_count": 268,
+    "hash_table_height": 138,
+    "u32_table_height": 13,
+    "case": "CommonCase"
+  },
+  {
+    "name": "tasm_hashing_absorb",
+    "clock_cycle_count": 2548,
+    "hash_table_height": 1278,
+    "u32_table_height": 17,
+    "case": "WorstCase"
+  }
+]

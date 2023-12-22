@@ -185,11 +185,12 @@ impl Procedure for Absorb {
         let address = BFieldElement::new(rng.next_u64() % (1 << 20));
 
         // sample sequence
-        let length = if matches!(bench_case, Some(BenchmarkCase::WorstCase)) {
-            97
-        } else {
-            rng.next_u32() % 20
+        let length = match bench_case {
+            Some(BenchmarkCase::CommonCase) => 102,
+            Some(BenchmarkCase::WorstCase) => 2002,
+            None => rng.next_u32() % 30,
         };
+
         let sequence = (0..length)
             .map(|_| rng.gen::<BFieldElement>())
             .collect_vec();
@@ -254,13 +255,24 @@ impl Absorb {
 
 #[cfg(test)]
 mod test {
+    use super::Absorb;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::Absorb;
 
     #[test]
     fn test() {
         ShadowedProcedure::new(Absorb).test();
+    }
+}
+
+#[cfg(test)]
+mod benches {
+    use super::Absorb;
+    use crate::traits::procedure::ShadowedProcedure;
+    use crate::traits::rust_shadow::RustShadow;
+
+    #[test]
+    fn benchmark() {
+        ShadowedProcedure::new(Absorb).bench();
     }
 }
