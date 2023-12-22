@@ -58,10 +58,14 @@ impl RawCode {
 impl RawCode {
     /// Return the entrypoint, label, of the inner function. Used to make a call to this function.
     pub fn entrypoint(&self) -> String {
-        let is_breakpoint = |x: &_| matches!(x, LabelledInstruction::Breakpoint);
-        let first_non_breakpoint = self.function.iter().find(|&x| !is_breakpoint(x));
-        let Some(labelled_instruction) = first_non_breakpoint else {
-            panic!("Inner function must start with a label. Got only breakpoints.")
+        let is_label = |x: &_| matches!(x, LabelledInstruction::Label(_));
+        let is_instruction = |x: &_| matches!(x, LabelledInstruction::Instruction(_));
+        let first_label_or_instruction = self
+            .function
+            .iter()
+            .find(|&x| is_label(x) || is_instruction(x));
+        let Some(labelled_instruction) = first_label_or_instruction else {
+            panic!("Inner function must start with a label. Got neither labels nor instructions.")
         };
         match labelled_instruction {
             LabelledInstruction::Instruction(instruction) => {
@@ -69,6 +73,7 @@ impl RawCode {
             }
             LabelledInstruction::Label(label) => label.to_owned(),
             LabelledInstruction::Breakpoint => unreachable!(),
+            LabelledInstruction::TypeHint(_) => unreachable!(),
         }
     }
 }
