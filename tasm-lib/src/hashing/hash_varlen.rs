@@ -12,6 +12,7 @@ use crate::hashing::absorb::Absorb;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::{empty_stack, ExecutionState, VmHasher};
 
+/// Calculate hash of a raw sequence of a `BFieldElement`.
 #[derive(Clone, Debug)]
 pub struct HashVarlen;
 
@@ -82,7 +83,7 @@ impl DeprecatedSnippet for HashVarlen {
                 return
         )
         .iter()
-        .join(" ")
+        .join("\n")
     }
 
     fn crash_conditions(&self) -> Vec<String> {
