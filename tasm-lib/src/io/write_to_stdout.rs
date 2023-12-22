@@ -5,7 +5,7 @@ use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::data_type::DataType;
 use crate::traits::basic_snippet::BasicSnippet;
-use crate::traits::procedure::Procedure;
+use crate::traits::procedure::{Procedure, ProcedureInitialState};
 use crate::{empty_stack, VmHasherState};
 
 pub struct WriteToStdout {
@@ -58,12 +58,7 @@ impl Procedure for WriteToStdout {
         &self,
         seed: [u8; 32],
         _bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
-    ) -> (
-        Vec<BFieldElement>,
-        NonDeterminism<BFieldElement>,
-        Vec<BFieldElement>,
-        Option<VmHasherState>,
-    ) {
+    ) -> ProcedureInitialState {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
         let mut stack = empty_stack();
         let random_value = self.data_type.seeded_random_elements(1, &mut rng);
@@ -71,7 +66,10 @@ impl Procedure for WriteToStdout {
             stack.push(elem);
         }
 
-        (stack, NonDeterminism::default(), vec![], None)
+        ProcedureInitialState {
+            stack,
+            ..Default::default()
+        }
     }
 }
 

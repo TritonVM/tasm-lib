@@ -4,13 +4,11 @@ use itertools::Itertools;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use triton_vm::{triton_asm, BFieldElement, NonDeterminism};
 use twenty_first::{
-    shared_math::{
-        tip5::{RATE, STATE_SIZE},
-        x_field_element::XFieldElement,
-    },
+    shared_math::{tip5::RATE, x_field_element::XFieldElement},
     util_types::algebraic_hasher::SpongeHasher,
 };
 
+use crate::traits::procedure::ProcedureInitialState;
 use crate::{data_type::DataType, traits::basic_snippet::BasicSnippet};
 use crate::{
     empty_stack,
@@ -145,30 +143,28 @@ impl Procedure for SampleScalars {
         &self,
         seed: [u8; 32],
         _bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
-    ) -> (
-        Vec<BFieldElement>,
-        NonDeterminism<BFieldElement>,
-        Vec<BFieldElement>,
-        Option<VmHasherState>,
-    ) {
+    ) -> ProcedureInitialState {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
         let num_scalars = rng.gen_range(0..40);
         let mut stack = empty_stack();
         stack.push(BFieldElement::new(num_scalars as u64));
-        let sponge_state: VmHasherState = twenty_first::shared_math::tip5::Tip5State {
-            state: rng.gen::<[BFieldElement; STATE_SIZE]>(),
-        };
-        let nondeterminism = NonDeterminism::new(vec![]);
-        let stdin = vec![];
-        (stack, nondeterminism, stdin, Some(sponge_state))
+        let sponge_state: VmHasherState =
+            twenty_first::shared_math::tip5::Tip5State { state: rng.gen() };
+
+        ProcedureInitialState {
+            stack,
+            sponge_state: Some(sponge_state),
+            ..Default::default()
+        }
     }
 }
 
 #[cfg(test)]
 mod test {
-    use super::SampleScalars;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
+
+    use super::SampleScalars;
 
     #[test]
     fn test() {
@@ -178,9 +174,10 @@ mod test {
 
 #[cfg(test)]
 mod bench {
-    use super::SampleScalars;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
+
+    use super::SampleScalars;
 
     #[test]
     fn bench() {

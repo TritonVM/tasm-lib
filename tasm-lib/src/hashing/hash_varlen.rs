@@ -121,11 +121,6 @@ impl DeprecatedSnippet for HashVarlen {
         let length: u32 = stack.pop().unwrap().try_into().unwrap();
         let memory_pointer: BFieldElement = stack.pop().unwrap();
 
-        memory.extend(Absorb::statically_allocated_memory(
-            memory_pointer,
-            length.into(),
-        ));
-
         let mut preimage = vec![];
         for i in 0..length as u64 {
             let address = memory_pointer + BFieldElement::new(i);

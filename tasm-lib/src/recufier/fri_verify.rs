@@ -53,7 +53,7 @@ use crate::snippet_bencher::BenchmarkCase;
 use crate::structure::tasm_object::encode_to_memory;
 use crate::structure::tasm_object::TasmObject;
 use crate::traits::basic_snippet::BasicSnippet;
-use crate::traits::procedure::Procedure;
+use crate::traits::procedure::{Procedure, ProcedureInitialState};
 use crate::Digest;
 use crate::VmHasher;
 use crate::VmHasherState;
@@ -1145,12 +1145,7 @@ impl Procedure for FriVerify {
         &self,
         seed: [u8; 32],
         _bench_case: Option<BenchmarkCase>,
-    ) -> (
-        Vec<BFieldElement>,
-        NonDeterminism<BFieldElement>,
-        Vec<BFieldElement>,
-        Option<VmHasherState>,
-    ) {
+    ) -> ProcedureInitialState {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
         let proof_stream = self.pseudorandom_fri_proof_stream(rng.gen());
         let mut digests = vec![];
@@ -1170,7 +1165,12 @@ impl Procedure for FriVerify {
         let stdin = vec![];
         let sponge_state = VmHasherState::new(Domain::VariableLength);
 
-        (stack, nondeterminism, stdin, Some(sponge_state))
+        ProcedureInitialState {
+            stack,
+            nondeterminism,
+            public_input: stdin,
+            sponge_state: Some(sponge_state),
+        }
     }
 }
 
@@ -1190,6 +1190,7 @@ mod test {
         },
     };
 
+    use crate::traits::procedure::ProcedureInitialState;
     use crate::{
         structure::tasm_object::TasmObject,
         test_helpers::{
@@ -1352,13 +1353,17 @@ mod test {
 
         // ShadowedProcedure::new(procedure).test();
         // Unfortunately, we cannot call the built-in test that comes with anything that
-        // impements Procedure because that test checks that the rust and tasm stacks are
+        // implements Procedure because that test checks that the rust and tasm stacks are
         // left in identical states. They both contain a pointer to the same object, but
         // this object lives in a different (and difficult to predict) location in memory.
         // So we check that instead.
 
-        let (stack, nondeterminism, stdin, sponge_state) =
-            procedure.pseudorandom_initial_state(seed, None);
+        let ProcedureInitialState {
+            stack,
+            nondeterminism,
+            public_input: stdin,
+            sponge_state,
+        } = procedure.pseudorandom_initial_state(seed, None);
 
         let init_stack = stack.to_vec();
         let shadowed_procedure = ShadowedProcedure::new(procedure);

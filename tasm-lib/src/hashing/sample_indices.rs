@@ -1,12 +1,13 @@
+use std::collections::HashMap;
+
 use itertools::Itertools;
 use rand::{rngs::StdRng, Rng, SeedableRng};
-use std::collections::HashMap;
 use triton_vm::{triton_asm, NonDeterminism};
 use twenty_first::{
-    shared_math::{b_field_element::BFieldElement, tip5::STATE_SIZE},
-    util_types::algebraic_hasher::AlgebraicHasher,
+    shared_math::b_field_element::BFieldElement, util_types::algebraic_hasher::AlgebraicHasher,
 };
 
+use crate::traits::procedure::ProcedureInitialState;
 use crate::traits::{basic_snippet::BasicSnippet, procedure::Procedure};
 use crate::{
     data_type::DataType, empty_stack, list::ListType, rust_shadowing_helper_functions, VmHasher,
@@ -195,12 +196,7 @@ impl Procedure for SampleIndices {
         &self,
         seed: [u8; 32],
         bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
-    ) -> (
-        Vec<BFieldElement>,
-        NonDeterminism<BFieldElement>,
-        Vec<BFieldElement>,
-        Option<VmHasherState>,
-    ) {
+    ) -> ProcedureInitialState {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
         let number = if let Some(case) = bench_case {
             match case {
@@ -224,19 +220,23 @@ impl Procedure for SampleIndices {
         stack.push(BFieldElement::new(upper_bound as u64));
 
         let public_input: Vec<BFieldElement> = vec![];
-        let state = VmHasherState {
-            state: rng.gen::<[BFieldElement; STATE_SIZE]>(),
-        };
+        let state = VmHasherState { state: rng.gen() };
 
-        (stack, NonDeterminism::default(), public_input, Some(state))
+        ProcedureInitialState {
+            stack,
+            nondeterminism: NonDeterminism::default(),
+            public_input,
+            sponge_state: Some(state),
+        }
     }
 }
 
 #[cfg(test)]
 mod test {
-    use super::SampleIndices;
     use crate::traits::rust_shadow::RustShadow;
     use crate::{list::ListType, traits::procedure::ShadowedProcedure};
+
+    use super::SampleIndices;
 
     #[test]
     fn test() {
@@ -249,9 +249,10 @@ mod test {
 
 #[cfg(test)]
 mod bench {
-    use super::SampleIndices;
     use crate::traits::rust_shadow::RustShadow;
     use crate::{list::ListType, traits::procedure::ShadowedProcedure};
+
+    use super::SampleIndices;
 
     #[test]
     fn bench() {

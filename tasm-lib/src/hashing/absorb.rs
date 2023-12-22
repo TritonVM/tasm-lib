@@ -3,11 +3,9 @@ use std::collections::HashMap;
 use itertools::Itertools;
 use rand::{rngs::StdRng, Rng, RngCore, SeedableRng};
 use triton_vm::{triton_asm, BFieldElement, NonDeterminism};
-use twenty_first::{
-    shared_math::tip5::{Tip5State, STATE_SIZE},
-    util_types::algebraic_hasher::SpongeHasher,
-};
+use twenty_first::{shared_math::tip5::Tip5State, util_types::algebraic_hasher::SpongeHasher};
 
+use crate::traits::procedure::ProcedureInitialState;
 use crate::{
     data_type::DataType,
     traits::{basic_snippet::BasicSnippet, procedure::Procedure},
@@ -18,14 +16,14 @@ use crate::{empty_stack, snippet_bencher::BenchmarkCase, VmHasher, VmHasherState
 pub struct Absorb;
 
 impl BasicSnippet for Absorb {
-    fn inputs(&self) -> Vec<(crate::data_type::DataType, String)> {
+    fn inputs(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::VoidPointer, "*sequence".to_string()),
             (DataType::U32, "len".to_string()),
         ]
     }
 
-    fn outputs(&self) -> Vec<(crate::data_type::DataType, String)> {
+    fn outputs(&self) -> Vec<(DataType, String)> {
         vec![]
     }
 
@@ -35,164 +33,102 @@ impl BasicSnippet for Absorb {
 
     fn code(
         &self,
-        library: &mut crate::library::Library,
+        _library: &mut crate::library::Library,
     ) -> Vec<triton_vm::instruction::LabelledInstruction> {
-        let address_pointer = library.kmalloc(1);
-        let length_pointer = library.kmalloc(1);
-        let pre_first_chunk_pointer_pointer = library.kmalloc(1);
-        let num_remaining_absorbs_pointer = library.kmalloc(1);
-
         let entrypoint = self.entrypoint();
+        let hash_all_full_chunks = format!("{entrypoint}_hash_all_full_chunks");
         let pad_varnum_zeros = format!("{entrypoint}_pad_varnum_zeros");
         let read_remainder = format!("{entrypoint}_read_remainder");
-        let read_remainder_loop = format!("{read_remainder}_loop");
-        let read_full_chunks = format!("{entrypoint}_read_full_chunks");
-        let absorb_all_chunks = format!("{entrypoint}_absorb_all_chunks");
 
         triton_asm! {
-            // BEFORE: _ *addr length
+            // BEFORE: _ *bfe_sequence length
             // AFTER:  _
             {entrypoint}:
-                dup 0       // *addr length length
-                push {length_pointer}
-                write_mem 1
-                pop 1       // _ *addr length
-                swap 1      // _ length *addr
-
                 dup 0
-                push -1
-                add
-                push {pre_first_chunk_pointer_pointer}
-                write_mem 1
-                pop 1       // _ length *addr
-
-                push {address_pointer}
-                write_mem 1
-                pop 1       // _ length
-
                 push 10
                 swap 1
-                div_mod     // _ length/10 length%10
-                swap 1      // _ length%10 length/10
+                div_mod     // _ *bfe_sequence length length/10 length%10
+                swap 1
+                pop 1       // _ *bfe_sequence length length%10
 
-                push 1
-                add
-                push {num_remaining_absorbs_pointer}
-                write_mem 1
-                pop 1       // _ length%10
+                swap 1      // _ *bfe_sequence length%10 length
+                dup 1       // _ *bfe_sequence length%10 length length%10
+                push -1 mul // _ *bfe_sequence length%10 length -length%10
+                dup 3
+                add add     // _ *bfe_sequence length%10 (*bfe_sequence + length - length%10)
+                            // _ *bfe_sequence length%10 *remainder
 
                 push -1
-                mul
-                push 9
-                add         // _ 9-length%10
+                add         // _ *bfe_sequence length%10 (*remainder - 1)
+
+                swap 1
+                swap 2      // _ length%10 (*remainder - 1) *bfe_sequence
+                push -1
+                add         // _ length%10 (*remainder - 1) (*bfe_sequence - 1)
+
+                call {hash_all_full_chunks}
+                            // _ length%10 (*remainder - 1) (*remainder - 1)
+                pop 1       // _ length%10 (*remainder - 1)
+
+                push 9      // _ length%10 (*remainder - 1) 9
+                dup 2       // _ length%10 (*remainder - 1) 9 length%10
+                push -1     // _ length%10 (*remainder - 1) 9 length%10 -1
+                mul add     // _ length%10 (*remainder - 1) 9-length%10
                 call {pad_varnum_zeros}
-                pop 1       // _ [0; num_pad_zeros]
-                push 1      // _ [padding]
-
+                            // _ [0; 9-length%10] length%10 (*remainder - 1) 0
+                pop 1
+                push 1      // _ [0; 9-length%10] length%10 (*remainder - 1) 1
+                swap 2      // _ [0; 9-length%10] 1 (*remainder - 1) length%10
+                dup 1 add   // _ [0; 9-length%10] 1 (*remainder - 1) *last_word
                 call {read_remainder}
-                // _ [padding] [remainder] *last_chunk_end
-
-                call {read_full_chunks}
-                pop 1       // _ [padding] [remainder] [[chunk]]
-
-                call {absorb_all_chunks}
-                pop 1
-                return
-
-            // BEFORE:    _ len
-            // INVARIANT: _ [0; 9-len'] len'
-            // AFTER:     _ [0; 9-len] 0
-            {pad_varnum_zeros}:
-                dup 0       // _ [0; 9-len] len len
-                push 0 eq   // _ [0; 9-len] len len==0
-                skiz return
-                // _ [0; 9-len] len
-
-                push 0
-                swap 1
-                push -1
-                add
-                recurse
-
-            // BEFORE: _
-            // AFTER:  _ [elements; remainder_length] *last_chunk_end
-            {read_remainder}:
-                push {address_pointer}
-                read_mem 1
-                pop 1       // _ *addr
-                push {length_pointer}
-                read_mem 1
-                pop 1       // _ *addr length
-
-                swap 1      // _ length *addr
-                dup 1       // _ length *addr length
-                add         // _ length *(addr + length)
-                push -1     // _ length *(addr + length) -1
-                add         // _ length *last_addr
-                swap 1      // _ *last_addr length
-
-                push 10
-                swap 1
-                div_mod
-                swap 1
-                pop 1       // _ *last_addr length%10
-                swap 1      // _ length%10 *last_addr
-
-                call {read_remainder_loop}
-                // _ [elements; remainder_length] 0 *last_chunk_end
-                swap 1
-                pop 1       // _ [elements; remainder_length] *last_chunk_end
-                return
-
-            // BEFORE:    _ remainder_length *addr
-            // INVARIANT: _ [elements; num_elements_read] num_elements_to_read *some_addr
-            // AFTER:     _ [elements; remainder_length] 0 *last_chunk_end
-            {read_remainder_loop}:
-                dup 1
-                push 0
-                eq
-                skiz return
-                // _ [elements; num_elements_read] num_elements_to_read *addr
-                read_mem 1  // _ [elements; num_elements_read] num_elements_to_read element *(addr-1)
-                swap 1      // _ [elements; num_elements_read] num_elements_to_read *(addr-1) element
-                swap 2      // _ [elements; num_elements_read+1] *(addr-1) num_elements_to_read
-                push -1
-                add
-                swap 1
-                recurse     // _ [elements; num_elements_read+1] (num_elements_to_read-1) *(addr-1)
-
-
-            // BEFORE:    _ *last_chunk_addr
-            // INVARIANT: _ [[chunk]] *some_addr
-            // AFTER:     _ [[chunk]; length/10] *pre_first_chunk_pointer
-            {read_full_chunks}:
-                dup 0
-                push {pre_first_chunk_pointer_pointer}
-                read_mem 1
-                pop 1       // _ *some_addr *some_addr *pre_first_chunk_pointer
-                eq
-                skiz return
-                read_mem 5
-                read_mem 5
-                recurse
-
-            // BEFORE: _ [[chunks]]
-            // AFTER:  _ 0
-            {absorb_all_chunks}:
-                push {num_remaining_absorbs_pointer}
-                read_mem 1
-                pop 1       // _ [[chunks]] num_remaining_absorbs
-                dup 0       // _ [[chunks]] num_remaining_absorbs num_remaining_absorbs
-                push 0
-                eq          // _ [[chunks]] num_remaining_absorbs (num_remaining_absorbs == 0)
-                skiz return
-                push -1
-                add         // _ [[chunks]] (num_remaining_absorbs-1)
-                push {num_remaining_absorbs_pointer}
-                write_mem 1
-                pop 1
-
+                            // _ [last_chunk_padded; 10] (*remainder - 1) (*remainder - 1)
+                pop 2
                 sponge_absorb
+                return
+
+            // BEFORE:    _ (*remainder - 1) (*bfe_sequence - 1)
+            // INVARIANT: _ (*remainder - 1) (*bfe_sequence' - 1)
+            // AFTER:     _ (*remainder - 1) (*remainder - 1)
+            {hash_all_full_chunks}:
+                dup 1 dup 1 eq
+                skiz return
+                push 10 add // _ (*remainder - 1) (*bfe_sequence + 9)
+                dup 0       // _ (*remainder - 1) (*bfe_sequence + 9) (*bfe_sequence + 9)
+                read_mem 5 read_mem 5
+                            // _ (*remainder - 1) (*bfe_sequence + 9) [chunk] (*bfe_sequence - 1)
+                pop 1       // _ (*remainder - 1) (*bfe_sequence + 9) [chunk]
+                sponge_absorb
+                            // _ *remainder (*bfe_sequence + 9)
+                recurse
+
+            // BEFORE:    _ length%10 (*remainder - 1) num_zeros
+            // INVARIANT: _ [0; i] length%10 (*remainder - 1) (num_zeros - i)
+            // AFTER:     _ [0; num_zeros] length%10 (*remainder - 1) 0
+            {pad_varnum_zeros}:
+                dup 0       // _ [0; i] length%10 (*remainder - 1) (num_zeros - i)
+                push 0 eq   // _ [0; i] length%10 (*remainder - 1) (num_zeros - i == 0)
+                skiz return
+                            // _ [0; i] length%10 (*remainder - 1) (num_zeros - i)
+
+                push 0      // _ [0; i] length%10 (*remainder - 1) (num_zeros - i) 0
+                swap 3
+                swap 2
+                swap 1      // _ [0; i+1] length%10 (*remainder - 1) (num_zeros - i)
+                push -1
+                add
+                recurse
+
+            // BEFORE:    _ (*remainder - 1) *last_word
+            // INVARIANT: _ [elements; num_elements_read] (*remainder - 1) *some_addr
+            // AFTER:     _ [elements; remainder_length] (*remainder - 1) (*remainder - 1)
+            {read_remainder}:
+                dup 1 dup 1 eq
+                skiz return
+                            // _ [elements; num_elements_read] (*remainder - 1) *some_addr
+                read_mem 1  // _ [elements; num_elements_read] (*remainder - 1) element (*addr-1)
+                swap 1      // _ [elements; num_elements_read] (*remainder - 1) (*addr-1) element
+                swap 2      // _ [elements; num_elements_read+1] (*addr-1) (*remainder - 1)
+                swap 1      // _ [elements; num_elements_read+1] (*remainder - 1) (*addr-1)
                 recurse
         }
     }
@@ -234,9 +170,6 @@ impl Procedure for Absorb {
         };
         VmHasher::absorb_repeatedly(sponge_state, sequence.iter());
 
-        let length = (length as u64).into();
-        memory.extend(Self::statically_allocated_memory(address, length));
-
         // output empty
         vec![]
     }
@@ -245,12 +178,7 @@ impl Procedure for Absorb {
         &self,
         seed: [u8; 32],
         bench_case: Option<BenchmarkCase>,
-    ) -> (
-        Vec<BFieldElement>,
-        NonDeterminism<BFieldElement>,
-        Vec<BFieldElement>,
-        Option<VmHasherState>,
-    ) {
+    ) -> ProcedureInitialState {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
 
         // sample address
@@ -271,42 +199,65 @@ impl Procedure for Absorb {
         for (i, s) in sequence.into_iter().enumerate() {
             memory.insert(address + BFieldElement::new(i as u64), s);
         }
+        let nondeterminism = NonDeterminism::default().with_ram(memory);
 
         // leave address and length on stack
         let mut stack = empty_stack();
         stack.push(address);
         stack.push(BFieldElement::new(length as u64));
 
-        // sample sponge state
-        let sponge_state: [BFieldElement; STATE_SIZE] = rng.gen();
-        let vm_hasher_state = Tip5State {
-            state: sponge_state,
-        };
+        let vm_hasher_state = Tip5State { state: rng.gen() };
 
-        let nondeterminism = NonDeterminism::default().with_ram(memory);
-        (stack, nondeterminism, vec![], Some(vm_hasher_state))
+        ProcedureInitialState {
+            stack,
+            nondeterminism,
+            public_input: vec![],
+            sponge_state: Some(vm_hasher_state),
+        }
+    }
+
+    fn corner_case_initial_states(&self) -> Vec<ProcedureInitialState> {
+        vec![
+            Self::corner_case_initial_state_for_num_words(0),
+            Self::corner_case_initial_state_for_num_words(1),
+            Self::corner_case_initial_state_for_num_words(2),
+            Self::corner_case_initial_state_for_num_words(5),
+            Self::corner_case_initial_state_for_num_words(9),
+            Self::corner_case_initial_state_for_num_words(10),
+            Self::corner_case_initial_state_for_num_words(11),
+        ]
     }
 }
 
 impl Absorb {
-    pub(crate) fn statically_allocated_memory(
-        address: BFieldElement,
-        length: BFieldElement,
-    ) -> HashMap<BFieldElement, BFieldElement> {
-        let mut memory = HashMap::default();
-        memory.insert(-BFieldElement::new(1), address);
-        memory.insert(-BFieldElement::new(2), length);
-        memory.insert(-BFieldElement::new(3), address - BFieldElement::new(1));
-        memory.insert(-BFieldElement::new(4), BFieldElement::new(0));
-        memory
+    fn corner_case_initial_state_for_num_words(num_words: u32) -> ProcedureInitialState {
+        let list_address = BFieldElement::new(0);
+        let list_length = BFieldElement::from(num_words);
+        let sequence = vec![BFieldElement::new(2); num_words as usize];
+
+        let stack = [empty_stack(), vec![list_address, list_length]].concat();
+        let ram = sequence
+            .into_iter()
+            .enumerate()
+            .map(|(i, bfe)| (BFieldElement::from(i as u32), bfe))
+            .collect();
+        let nondeterminism = NonDeterminism::default().with_ram(ram);
+
+        ProcedureInitialState {
+            stack,
+            nondeterminism,
+            public_input: vec![],
+            sponge_state: Some(Tip5State::default()),
+        }
     }
 }
 
 #[cfg(test)]
 mod test {
-    use super::Absorb;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
+
+    use super::Absorb;
 
     #[test]
     fn test() {
