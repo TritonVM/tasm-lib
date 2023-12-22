@@ -208,6 +208,41 @@ impl Procedure for Absorb {
             sponge_state: Some(vm_hasher_state),
         }
     }
+
+    fn corner_case_initial_states(&self) -> Vec<ProcedureInitialState> {
+        vec![
+            Self::corner_case_initial_state_for_num_words(0),
+            Self::corner_case_initial_state_for_num_words(1),
+            Self::corner_case_initial_state_for_num_words(2),
+            Self::corner_case_initial_state_for_num_words(5),
+            Self::corner_case_initial_state_for_num_words(9),
+            Self::corner_case_initial_state_for_num_words(10),
+            Self::corner_case_initial_state_for_num_words(11),
+        ]
+    }
+}
+
+impl Absorb {
+    fn corner_case_initial_state_for_num_words(num_words: u32) -> ProcedureInitialState {
+        let list_address = BFieldElement::new(0);
+        let list_length = BFieldElement::from(num_words);
+        let sequence = vec![BFieldElement::new(2); num_words as usize];
+
+        let stack = [empty_stack(), vec![list_address, list_length]].concat();
+        let ram = sequence
+            .into_iter()
+            .enumerate()
+            .map(|(i, bfe)| (BFieldElement::from(i as u32), bfe))
+            .collect();
+        let nondeterminism = NonDeterminism::default().with_ram(ram);
+
+        ProcedureInitialState {
+            stack,
+            nondeterminism,
+            public_input: vec![],
+            sponge_state: Some(Tip5State::default()),
+        }
+    }
 }
 
 #[cfg(test)]
