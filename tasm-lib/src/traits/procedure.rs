@@ -98,51 +98,27 @@ impl<P: Procedure + 'static> RustShadow for ShadowedProcedure<P> {
         // 0xb6, 0xb5, 0x64, 0xd1,
         // ];
         let mut rng: StdRng = SeedableRng::from_seed(seed);
-        let procedure = &self.procedure;
-        let entrypoint = procedure.borrow().entrypoint();
+        let procedure = &self.procedure.borrow();
+        let entrypoint = procedure.entrypoint();
+
+        for (i, corner_case) in procedure
+            .corner_case_initial_states()
+            .into_iter()
+            .enumerate()
+        {
+            println!("testing {entrypoint} corner case number {i}");
+            self.test_initial_state(corner_case);
+        }
 
         for _ in 0..num_states {
             let seed: [u8; 32] = rng.gen();
             println!(
-                "testing {} common case with seed: [{}]",
-                entrypoint,
+                "testing {entrypoint} common case with seed: [{}]",
                 seed.iter().map(|h| format!("{:#04x}", h)).join(", ")
             );
-            let ProcedureInitialState {
-                stack,
-                nondeterminism,
-                public_input,
-                sponge_state,
-            } = procedure.borrow().pseudorandom_initial_state(seed, None);
+            let state = procedure.pseudorandom_initial_state(seed, None);
 
-            let init_stack = stack.to_vec();
-
-            let rust =
-                rust_final_state(self, &stack, &public_input, &nondeterminism, &sponge_state);
-
-            // run tvm
-            let words_statically_allocated = 0;
-            let tasm = tasm_final_state(
-                self,
-                &stack,
-                &public_input,
-                nondeterminism,
-                &sponge_state,
-                words_statically_allocated,
-            );
-
-            // assert_eq!(tasm.final_sponge_state.state, rust.final_sponge_state.state);
-            // can't do this without changing the VM interface, unfortunately ...
-
-            assert_eq!(
-                rust.output, tasm.output,
-                "Rust shadowing and VM std out must agree"
-            );
-
-            verify_stack_equivalence(&rust.final_stack, &tasm.final_stack);
-            verify_memory_equivalence(&rust.final_ram, &tasm.final_ram);
-            verify_stack_growth(self, &init_stack, &tasm.final_stack);
-            verify_sponge_equivalence(&rust.final_sponge_state, &tasm.final_sponge_state);
+            self.test_initial_state(state);
         }
     }
 
@@ -180,5 +156,43 @@ impl<P: Procedure + 'static> RustShadow for ShadowedProcedure<P> {
         }
 
         write_benchmarks(benchmarks);
+    }
+}
+
+impl<P: Procedure + 'static> ShadowedProcedure<P> {
+    fn test_initial_state(&self, state: ProcedureInitialState) {
+        let ProcedureInitialState {
+            stack,
+            nondeterminism,
+            public_input,
+            sponge_state,
+        } = state;
+
+        let rust = rust_final_state(self, &stack, &public_input, &nondeterminism, &sponge_state);
+
+        // run tvm
+        let words_statically_allocated = 0;
+        let tasm = tasm_final_state(
+            self,
+            &stack,
+            &public_input,
+            nondeterminism,
+            &sponge_state,
+            words_statically_allocated,
+        );
+
+        // assert_eq!(tasm.final_sponge_state.state, rust.final_sponge_state.state);
+        // can't do this without changing the VM interface, unfortunately ...
+
+        assert_eq!(
+            rust.output, tasm.output,
+            "Rust shadowing and VM std out must agree"
+        );
+
+        verify_stack_growth(self, &stack, &tasm.final_stack);
+
+        verify_stack_equivalence(&rust.final_stack, &tasm.final_stack);
+        verify_memory_equivalence(&rust.final_ram, &tasm.final_ram);
+        verify_sponge_equivalence(&rust.final_sponge_state, &tasm.final_sponge_state);
     }
 }
