@@ -1,6 +1,7 @@
 use rand::{random, rngs::StdRng, Rng, SeedableRng};
 use triton_vm::{triton_asm, BFieldElement, Digest, NonDeterminism};
 
+use crate::traits::procedure::ProcedureInitialState;
 use crate::{
     data_type::DataType,
     empty_stack,
@@ -78,12 +79,12 @@ impl BasicSnippet for DivineSiblingU64Index {
 impl Procedure for DivineSiblingU64Index {
     fn rust_shadow(
         &self,
-        stack: &mut Vec<triton_vm::BFieldElement>,
-        _memory: &mut std::collections::HashMap<triton_vm::BFieldElement, triton_vm::BFieldElement>,
-        nondeterminism: &triton_vm::NonDeterminism<triton_vm::BFieldElement>,
-        _public_input: &[triton_vm::BFieldElement],
+        stack: &mut Vec<BFieldElement>,
+        _memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
+        nondeterminism: &NonDeterminism<BFieldElement>,
+        _public_input: &[BFieldElement],
         _sponge_state: &mut Option<crate::VmHasherState>,
-    ) -> Vec<triton_vm::BFieldElement> {
+    ) -> Vec<BFieldElement> {
         let stack_digest: Digest = Digest::new([
             stack.pop().unwrap(),
             stack.pop().unwrap(),
@@ -115,22 +116,22 @@ impl Procedure for DivineSiblingU64Index {
     fn pseudorandom_initial_state(
         &self,
         seed: [u8; 32],
-        bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
-    ) -> (
-        Vec<triton_vm::BFieldElement>,
-        triton_vm::NonDeterminism<triton_vm::BFieldElement>,
-        Vec<triton_vm::BFieldElement>,
-        Option<crate::VmHasherState>,
-    ) {
+        bench_case: Option<BenchmarkCase>,
+    ) -> ProcedureInitialState {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
 
-        let (init_stack, non_determinism) = match bench_case {
+        let (stack, nondeterminism) = match bench_case {
             Some(BenchmarkCase::CommonCase) => self.prepare_stack_and_non_determinism(1 << 33),
             Some(BenchmarkCase::WorstCase) => self.prepare_stack_and_non_determinism(1 << 63),
             None => self.prepare_stack_and_non_determinism(rng.gen()),
         };
 
-        (init_stack, non_determinism, Vec::default(), None)
+        ProcedureInitialState {
+            stack,
+            nondeterminism,
+            public_input: vec![],
+            sponge_state: None,
+        }
     }
 }
 

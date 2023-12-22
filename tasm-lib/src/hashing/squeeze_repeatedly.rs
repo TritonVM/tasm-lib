@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use itertools::Itertools;
 use rand::{rngs::StdRng, Rng, RngCore, SeedableRng};
+use tasm_lib::traits::procedure::ProcedureInitialState;
 use triton_vm::{triton_asm, BFieldElement, NonDeterminism};
 use twenty_first::{shared_math::tip5::RATE, util_types::algebraic_hasher::SpongeHasher};
 
@@ -97,12 +98,7 @@ impl Procedure for SqueezeRepeatedly {
         &self,
         seed: [u8; 32],
         bench_case: Option<BenchmarkCase>,
-    ) -> (
-        Vec<BFieldElement>,
-        NonDeterminism<BFieldElement>,
-        Vec<BFieldElement>,
-        Option<VmHasherState>,
-    ) {
+    ) -> ProcedureInitialState {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
         let num_squeezes = match bench_case {
             Some(BenchmarkCase::CommonCase) => 10,
@@ -116,13 +112,19 @@ impl Procedure for SqueezeRepeatedly {
         stack.push(address);
         stack.push(BFieldElement::new(num_squeezes as u64));
 
-        (stack, NonDeterminism::default(), vec![], Some(sponge_state))
+        ProcedureInitialState {
+            stack,
+            nondeterminism: NonDeterminism::default(),
+            public_input: vec![],
+            sponge_state: Some(sponge_state),
+        }
     }
 }
 
 #[cfg(test)]
 mod test {
     use rand::{thread_rng, Rng};
+    use tasm_lib::traits::procedure::ProcedureInitialState;
 
     use crate::test_helpers::{
         rust_final_state, tasm_final_state, verify_memory_equivalence, verify_sponge_equivalence,
@@ -147,8 +149,12 @@ mod test {
         for _ in 0..num_states {
             let seed: [u8; 32] = rng.gen();
             println!("testing {} common case with seed: {:x?}", entrypoint, seed);
-            let (stack, nondeterminism, stdin, sponge_state) =
-                SqueezeRepeatedly.pseudorandom_initial_state(seed, None);
+            let ProcedureInitialState {
+                stack,
+                nondeterminism,
+                public_input: stdin,
+                sponge_state,
+            } = SqueezeRepeatedly.pseudorandom_initial_state(seed, None);
 
             let init_stack = stack.to_vec();
 

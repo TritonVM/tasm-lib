@@ -12,7 +12,7 @@ use crate::data_type::DataType;
 use crate::hashing::absorb::Absorb;
 use crate::structure::tasm_object::TasmObject;
 use crate::traits::basic_snippet::BasicSnippet;
-use crate::traits::procedure::Procedure;
+use crate::traits::procedure::{Procedure, ProcedureInitialState};
 use crate::VmHasherState;
 use crate::{
     empty_stack, field, field_with_size, library::Library, snippet_bencher::BenchmarkCase,
@@ -197,12 +197,7 @@ impl Procedure for Dequeue {
         &self,
         seed: [u8; 32],
         bench_case: Option<BenchmarkCase>,
-    ) -> (
-        Vec<BFieldElement>,
-        NonDeterminism<BFieldElement>,
-        Vec<BFieldElement>,
-        Option<VmHasherState>,
-    ) {
+    ) -> ProcedureInitialState {
         // populate with random proof items
         let mut rng: StdRng = SeedableRng::from_seed(seed);
         let mut proof_items = vec![];
@@ -237,7 +232,12 @@ impl Procedure for Dequeue {
         let non_determinism = NonDeterminism::default().with_ram(memory);
         let sponge_state = VmHasherState { state: rng.gen() };
 
-        (stack, non_determinism, vec![], Some(sponge_state))
+        ProcedureInitialState {
+            stack,
+            nondeterminism: non_determinism,
+            public_input: vec![],
+            sponge_state: Some(sponge_state),
+        }
     }
 }
 
@@ -256,7 +256,7 @@ mod test {
 
     use crate::library::Library;
     use crate::structure::tasm_object::{decode_from_memory_with_size, encode_to_memory};
-    use crate::traits::procedure::{Procedure, ShadowedProcedure};
+    use crate::traits::procedure::{Procedure, ProcedureInitialState, ShadowedProcedure};
     use crate::traits::rust_shadow::RustShadow;
     use crate::{
         empty_stack, execute_with_terminal_state, linker::link_for_isolated_run,
@@ -328,8 +328,12 @@ mod test {
         let algorithm = ShadowedProcedure::new(dequeue.clone());
 
         for _ in 0..num_states {
-            let (stack, nondeterminism, _stdin, sponge_state) =
-                dequeue.pseudorandom_initial_state(rng.gen(), None);
+            let ProcedureInitialState {
+                stack,
+                nondeterminism,
+                sponge_state,
+                ..
+            } = dequeue.pseudorandom_initial_state(rng.gen(), None);
 
             let stdin = vec![];
             let _vm_output_state = test_rust_equivalence_given_complete_state(

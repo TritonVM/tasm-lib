@@ -3,11 +3,9 @@ use std::collections::HashMap;
 use itertools::Itertools;
 use rand::{rngs::StdRng, Rng, RngCore, SeedableRng};
 use triton_vm::{triton_asm, BFieldElement, NonDeterminism};
-use twenty_first::{
-    shared_math::tip5::{Tip5State, STATE_SIZE},
-    util_types::algebraic_hasher::SpongeHasher,
-};
+use twenty_first::{shared_math::tip5::Tip5State, util_types::algebraic_hasher::SpongeHasher};
 
+use crate::traits::procedure::ProcedureInitialState;
 use crate::{
     data_type::DataType,
     traits::{basic_snippet::BasicSnippet, procedure::Procedure},
@@ -173,12 +171,7 @@ impl Procedure for Absorb {
         &self,
         seed: [u8; 32],
         bench_case: Option<BenchmarkCase>,
-    ) -> (
-        Vec<BFieldElement>,
-        NonDeterminism<BFieldElement>,
-        Vec<BFieldElement>,
-        Option<VmHasherState>,
-    ) {
+    ) -> ProcedureInitialState {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
 
         // sample address
@@ -199,28 +192,30 @@ impl Procedure for Absorb {
         for (i, s) in sequence.into_iter().enumerate() {
             memory.insert(address + BFieldElement::new(i as u64), s);
         }
+        let nondeterminism = NonDeterminism::default().with_ram(memory);
 
         // leave address and length on stack
         let mut stack = empty_stack();
         stack.push(address);
         stack.push(BFieldElement::new(length as u64));
 
-        // sample sponge state
-        let sponge_state: [BFieldElement; STATE_SIZE] = rng.gen();
-        let vm_hasher_state = Tip5State {
-            state: sponge_state,
-        };
+        let vm_hasher_state = Tip5State { state: rng.gen() };
 
-        let nondeterminism = NonDeterminism::default().with_ram(memory);
-        (stack, nondeterminism, vec![], Some(vm_hasher_state))
+        ProcedureInitialState {
+            stack,
+            nondeterminism,
+            public_input: vec![],
+            sponge_state: Some(vm_hasher_state),
+        }
     }
 }
 
 #[cfg(test)]
 mod test {
-    use super::Absorb;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
+
+    use super::Absorb;
 
     #[test]
     fn test() {

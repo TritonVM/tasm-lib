@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use tasm_lib::traits::procedure::ProcedureInitialState;
 use triton_vm::{instruction::LabelledInstruction, triton_asm, NonDeterminism};
 use twenty_first::shared_math::{b_field_element::BFieldElement, bfield_codec::BFieldCodec};
 
@@ -68,12 +69,7 @@ impl Procedure for ReadInput {
         &self,
         _seed: [u8; 32],
         _bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
-    ) -> (
-        Vec<BFieldElement>,
-        NonDeterminism<BFieldElement>,
-        Vec<BFieldElement>,
-        Option<crate::VmHasherState>,
-    ) {
+    ) -> ProcedureInitialState {
         let input_stream: Vec<BFieldElement> = self.data_type.random_elements(1)[0].encode();
 
         let (std_in, secret_in) = match self.input_source {
@@ -81,16 +77,12 @@ impl Procedure for ReadInput {
             InputSource::SecretIn => (vec![], input_stream),
         };
 
-        (
-            empty_stack(),
-            NonDeterminism {
-                individual_tokens: secret_in,
-                digests: vec![],
-                ram: HashMap::default(),
-            },
-            std_in,
-            None,
-        )
+        ProcedureInitialState {
+            stack: empty_stack(),
+            nondeterminism: NonDeterminism::new(secret_in),
+            public_input: std_in,
+            sponge_state: None,
+        }
     }
 }
 

@@ -40,18 +40,23 @@ pub trait Procedure: BasicSnippet {
     ) {
     }
 
-    /// Returns (stack, memory, nondeterminism, public_input, maybe_vm_hasher_state)
-    #[allow(clippy::type_complexity)]
     fn pseudorandom_initial_state(
         &self,
         seed: [u8; 32],
         bench_case: Option<BenchmarkCase>,
-    ) -> (
-        Vec<BFieldElement>,
-        NonDeterminism<BFieldElement>,
-        Vec<BFieldElement>,
-        Option<VmHasherState>,
-    );
+    ) -> ProcedureInitialState;
+
+    fn corner_case_initial_states(&self) -> Vec<ProcedureInitialState> {
+        vec![]
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct ProcedureInitialState {
+    pub stack: Vec<BFieldElement>,
+    pub nondeterminism: NonDeterminism<BFieldElement>,
+    pub public_input: Vec<BFieldElement>,
+    pub sponge_state: Option<VmHasherState>,
 }
 
 pub struct ShadowedProcedure<P: Procedure + 'static> {
@@ -103,19 +108,24 @@ impl<P: Procedure + 'static> RustShadow for ShadowedProcedure<P> {
                 entrypoint,
                 seed.iter().map(|h| format!("{:#04x}", h)).join(", ")
             );
-            let (stack, nondeterminism, stdin, sponge_state) =
-                procedure.borrow().pseudorandom_initial_state(seed, None);
+            let ProcedureInitialState {
+                stack,
+                nondeterminism,
+                public_input,
+                sponge_state,
+            } = procedure.borrow().pseudorandom_initial_state(seed, None);
 
             let init_stack = stack.to_vec();
 
-            let rust = rust_final_state(self, &stack, &stdin, &nondeterminism, &sponge_state);
+            let rust =
+                rust_final_state(self, &stack, &public_input, &nondeterminism, &sponge_state);
 
             // run tvm
             let words_statically_allocated = 0;
             let tasm = tasm_final_state(
                 self,
                 &stack,
-                &stdin,
+                &public_input,
                 nondeterminism,
                 &sponge_state,
                 words_statically_allocated,
@@ -146,7 +156,12 @@ impl<P: Procedure + 'static> RustShadow for ShadowedProcedure<P> {
         let mut benchmarks = Vec::with_capacity(2);
 
         for bench_case in [BenchmarkCase::CommonCase, BenchmarkCase::WorstCase] {
-            let (stack, nondeterminism, public_input, sponge_state) = self
+            let ProcedureInitialState {
+                stack,
+                nondeterminism,
+                public_input,
+                sponge_state,
+            } = self
                 .procedure
                 .borrow()
                 .pseudorandom_initial_state(rng.gen(), Some(bench_case));

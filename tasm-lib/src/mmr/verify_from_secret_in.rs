@@ -25,7 +25,7 @@ use crate::list::unsafeimplu32::get::UnsafeGet;
 use crate::list::ListType;
 use crate::snippet_bencher::BenchmarkCase;
 use crate::traits::basic_snippet::BasicSnippet;
-use crate::traits::procedure::Procedure;
+use crate::traits::procedure::{Procedure, ProcedureInitialState};
 use crate::{
     empty_stack, rust_shadowing_helper_functions, Digest, ExecutionState, VmHasher, DIGEST_LENGTH,
 };
@@ -341,13 +341,8 @@ impl Procedure for MmrVerifyLeafMembershipFromSecretIn {
     fn pseudorandom_initial_state(
         &self,
         seed: [u8; 32],
-        bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
-    ) -> (
-        Vec<BFieldElement>,
-        NonDeterminism<BFieldElement>,
-        Vec<BFieldElement>,
-        Option<crate::VmHasherState>,
-    ) {
+        bench_case: Option<BenchmarkCase>,
+    ) -> ProcedureInitialState {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
         let leaf_count = rng.gen_range(0..10000);
         let leaf_index = rng.gen_range(0..leaf_count);
@@ -358,12 +353,12 @@ impl Procedure for MmrVerifyLeafMembershipFromSecretIn {
             None => self.prepare_state_for_tests(leaf_count, leaf_index as u64, true),
         };
 
-        (
-            init_state.stack,
-            init_state.nondeterminism,
-            init_state.std_in,
-            None,
-        )
+        ProcedureInitialState {
+            stack: init_state.stack,
+            nondeterminism: init_state.nondeterminism,
+            public_input: init_state.std_in,
+            sponge_state: None,
+        }
     }
 }
 
