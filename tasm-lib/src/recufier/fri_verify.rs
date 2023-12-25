@@ -1176,13 +1176,19 @@ impl Procedure for FriVerify {
 
 #[cfg(test)]
 mod test {
+    use std::{collections::HashMap, panic::catch_unwind};
+
     use itertools::Itertools;
+    use num_traits::Zero;
     use rand::{rngs::StdRng, thread_rng, Rng, SeedableRng};
     use triton_vm::{
-        arithmetic_domain::ArithmeticDomain, fri::Fri, proof_stream::ProofStream, BFieldElement,
+        arithmetic_domain::ArithmeticDomain, fri::Fri, proof_item::ProofItem,
+        proof_stream::ProofStream, BFieldElement, NonDeterminism,
     };
     use twenty_first::{
-        shared_math::{traits::PrimitiveRootOfUnity, x_field_element::XFieldElement},
+        shared_math::{
+            bfield_codec::BFieldCodec, traits::PrimitiveRootOfUnity, x_field_element::XFieldElement,
+        },
         util_types::{
             algebraic_hasher::Domain,
             merkle_tree::{CpuParallel, MerkleTree},
@@ -1190,7 +1196,10 @@ mod test {
         },
     };
 
-    use crate::traits::procedure::ProcedureInitialState;
+    use crate::{
+        empty_stack, recufier::proof_stream::vm_proof_stream::VmProofStream,
+        structure::tasm_object::encode_to_memory, traits::procedure::ProcedureInitialState,
+    };
     use crate::{
         structure::tasm_object::TasmObject,
         test_helpers::{
@@ -1199,6 +1208,7 @@ mod test {
         traits::procedure::{Procedure, ShadowedProcedure},
         Digest, VmHasher, VmHasherState,
     };
+    use twenty_first::shared_math::ntt::ntt;
 
     use super::FriVerify;
 
@@ -1409,6 +1419,114 @@ mod test {
             .for_each(|(r, t)| {
                 assert_eq!(r, t, "returned lists of indices and leafs do not match")
             });
+    }
+
+    #[test]
+    fn negative_test() {
+        // Every single element of the proof should be capable of causing the verifier to
+        // fail. Verify this fact.
+
+        let seed: [u8; 32] = thread_rng().gen();
+        //  = [
+        //     0xf7, 0x41, 0x2a, 0x3e, 0x1e, 0xa7, 0x86, 0xf6, 0xf3, 0x55, 0xdb, 0xcc, 0xe0, 0x32,
+        //     0xf3, 0xec, 0x6f, 0x51, 0x26, 0xcb, 0xb2, 0x7c, 0x4a, 0x34, 0xb4, 0xc9, 0xe9, 0xa8,
+        //     0x7c, 0x34, 0x11, 0xc5,
+        // ];
+        let mut rng: StdRng = SeedableRng::from_seed(seed);
+        let expansion_factor = 1 << rng.gen_range(1..5);
+        let domain_length = expansion_factor * (1 << rng.gen_range(8..15));
+        let offset = BFieldElement::new(7);
+        let num_colinearity_checks = 20; //rng.gen_range(1..min(160, domain_length / 4));
+        let fri_verify = FriVerify::new(
+            offset,
+            domain_length,
+            expansion_factor,
+            num_colinearity_checks,
+        );
+
+        // generate proof
+        let max_degree =
+            fri_verify.domain_length as usize / fri_verify.expansion_factor as usize - 1;
+        let coefficients: Vec<XFieldElement> = (0..=max_degree).map(|_| rng.gen()).collect();
+        let mut codeword = [
+            coefficients,
+            vec![XFieldElement::zero(); fri_verify.domain_length as usize - max_degree - 1],
+        ]
+        .concat();
+        let n = codeword.len();
+        ntt::<XFieldElement>(
+            &mut codeword,
+            BFieldElement::primitive_root_of_unity(n as u64).unwrap(),
+            n.ilog2(),
+        );
+        let mut proof_stream = ProofStream::<VmHasher>::new();
+
+        let fri = Fri::new(
+            ArithmeticDomain {
+                offset: BFieldElement::new(7),
+                generator: BFieldElement::primitive_root_of_unity(fri_verify.domain_length as u64)
+                    .unwrap(),
+                length: fri_verify.domain_length as usize,
+            },
+            fri_verify.expansion_factor as usize,
+            fri_verify.num_colinearity_checks as usize,
+        );
+        fri.prove(&codeword, &mut proof_stream);
+        let mut proof = proof_stream.items.encode();
+
+        // change each element one by one, and verify that verification fails
+        for i in 0..proof.len() {
+            proof[i].increment();
+
+            let result = catch_unwind(|| {
+                // convert to proof stream
+                let proof_stream = VmProofStream::new(&Vec::<ProofItem>::decode(&proof).unwrap());
+
+                // read out digests
+                let mut digests = vec![];
+                fri_verify
+                    .inner_verify(&mut proof_stream.clone(), &mut digests)
+                    .unwrap();
+
+                // prepare initial state
+                let mut stack = empty_stack();
+                let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
+                let proof_stream_pointer = BFieldElement::zero();
+                let fri_verify_pointer =
+                    encode_to_memory(&mut memory, proof_stream_pointer, proof_stream);
+                encode_to_memory(&mut memory, fri_verify_pointer, fri_verify.clone());
+                let nondeterminism = NonDeterminism::default()
+                    .with_ram(memory)
+                    .with_digests(digests);
+                stack.push(proof_stream_pointer);
+                stack.push(fri_verify_pointer);
+                let stdin: Vec<BFieldElement> = vec![];
+                let sponge_state = VmHasherState::new(Domain::VariableLength);
+
+                // run tvm
+                let shadowed_snippet = ShadowedProcedure::new(fri_verify.clone());
+                let words_statically_allocated = 0;
+                let _tasm = tasm_final_state(
+                    &shadowed_snippet,
+                    &stack,
+                    &stdin,
+                    nondeterminism,
+                    &Some(sponge_state),
+                    words_statically_allocated,
+                );
+            });
+
+            // If we caught a panic (which is expected) then the result is Err.
+            // Otherwise it is Ok, and in this case we must crash the test.
+
+            assert!(
+                result.is_err(),
+                "Error! Verification succeeded with wrong value at element {i}/{}",
+                proof.len()
+            );
+
+            proof[i].decrement();
+        }
     }
 }
 
