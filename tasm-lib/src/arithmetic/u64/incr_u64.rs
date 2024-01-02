@@ -83,7 +83,7 @@ impl DeprecatedSnippet for IncrU64 {
             U32s::new([0, u32::MAX]),
             U32s::new([u32::MAX, u32::MAX - 1]),
             // U32s::new([u32::MAX, u32::MAX])
-            U32s::<2>::try_from(rng.next_u32()).unwrap(),
+            rng.next_u32().into(),
             U32s::<2>::try_from(rng.next_u64()).unwrap(),
         ];
         values

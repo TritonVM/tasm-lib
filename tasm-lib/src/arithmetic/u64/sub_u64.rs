@@ -47,13 +47,13 @@ impl DeprecatedSnippet for SubU64 {
         for _ in 0..30 {
             // no overflow, no carry: small_a - smaller_b
             // small_a is 0..2^32, smaller_b < small_a
-            let (small_a, smaller_b) = {
+            let (small_a, smaller_b): (U32s<2>, U32s<2>) = {
                 let a: u32 = rng.gen();
                 let b: u32 = rng.gen_range(0..=a);
 
                 (
-                    U32s::<2>::try_from(a).unwrap(),
-                    U32s::<2>::try_from(b).unwrap(),
+                    a.into(),
+                    b.into(),
                 )
             };
 
@@ -110,7 +110,7 @@ impl DeprecatedSnippet for SubU64 {
     /// a value that's less than 2^32.
     fn function_code(&self, _library: &mut Library) -> String {
         let entrypoint = self.entrypoint_name();
-        const TWO_POW_32: &str = "4294967296";
+        const TWO_POW_32: u64 = 1 << 32;
 
         format!(
             "

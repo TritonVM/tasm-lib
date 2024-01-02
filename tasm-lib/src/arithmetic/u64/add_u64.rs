@@ -44,8 +44,8 @@ impl DeprecatedSnippet for AddU64 {
         let mut rng = rand::thread_rng();
 
         let zero = U32s::<2>::zero();
-        let small_a = U32s::<2>::try_from(rng.gen::<u32>()).unwrap();
-        let small_b = U32s::<2>::try_from(rng.gen::<u32>()).unwrap();
+        let small_a: U32s<2> = rng.gen::<u32>().into();
+        let small_b: U32s<2> = rng.gen::<u32>().into();
         let large_a = U32s::<2>::try_from(rng.gen::<u64>()).unwrap();
         // let large_b = U32s::<2>::try_from(rng.gen::<u64>()).unwrap();
 
