@@ -51,10 +51,7 @@ impl DeprecatedSnippet for SubU64 {
                 let a: u32 = rng.gen();
                 let b: u32 = rng.gen_range(0..=a);
 
-                (
-                    a.into(),
-                    b.into(),
-                )
+                (a.into(), b.into())
             };
 
             let mut stack_1 = empty_stack();
