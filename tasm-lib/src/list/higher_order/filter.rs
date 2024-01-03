@@ -22,7 +22,7 @@ use crate::list::{self, ListType};
 use crate::memory::memcpy::MemCpy;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::traits::function::Function;
+use crate::traits::function::{Function, FunctionInitialState};
 use crate::{empty_stack, rust_shadowing_helper_functions};
 
 use super::inner_function::InnerFunction;
@@ -348,7 +348,7 @@ impl Function for Filter {
         &self,
         seed: [u8; 32],
         _bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
-    ) -> (Vec<BFieldElement>, HashMap<BFieldElement, BFieldElement>) {
+    ) -> FunctionInitialState {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
         let list_pointer: u64 = rng.gen_range(0..(1 << 20));
         let list_pointer = BFieldElement::new(list_pointer);
@@ -386,7 +386,7 @@ impl Function for Filter {
 
         let stack = [empty_stack(), vec![list_pointer]].concat();
 
-        (stack, memory)
+        FunctionInitialState { stack, memory }
     }
 }
 

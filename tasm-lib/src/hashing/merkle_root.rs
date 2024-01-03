@@ -8,7 +8,7 @@ use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
 use crate::data_type::DataType;
 use crate::traits::basic_snippet::BasicSnippet;
-use crate::traits::function::Function;
+use crate::traits::function::{Function, FunctionInitialState};
 use crate::{
     empty_stack,
     snippet_bencher::BenchmarkCase,
@@ -184,7 +184,7 @@ impl Function for MerkleRoot {
         &self,
         seed: [u8; 32],
         bench_case: Option<BenchmarkCase>,
-    ) -> (Vec<BFieldElement>, HashMap<BFieldElement, BFieldElement>) {
+    ) -> FunctionInitialState {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
         let num_leafs = match bench_case {
             Some(BenchmarkCase::CommonCase) => 32,
@@ -201,7 +201,7 @@ impl Function for MerkleRoot {
         stack.push(BFieldElement::new(0)); // start
         stack.push(BFieldElement::new(num_leafs)); // stop
 
-        (stack, memory)
+        FunctionInitialState { stack, memory }
     }
 }
 

@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use num_traits::One;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use triton_vm::{
     instruction::LabelledInstruction, op_stack::NUM_OP_STACK_REGISTERS, triton_asm, BFieldElement,
@@ -7,9 +8,9 @@ use triton_vm::{
 };
 
 use super::ListType;
-use crate::traits::algorithm::Algorithm;
+use crate::traits::algorithm::{Algorithm, AlgorithmInitialState};
 use crate::traits::basic_snippet::BasicSnippet;
-use crate::{data_type::DataType, empty_stack, library::Library, rust_shadowing_helper_functions};
+use crate::{data_type::DataType, empty_stack, library::Library};
 
 pub struct SwapUnchecked {
     list_type: ListType,
@@ -169,35 +170,52 @@ impl Algorithm for SwapUnchecked {
         &self,
         seed: [u8; 32],
         _bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
-    ) -> (
-        Vec<triton_vm::BFieldElement>,
-        triton_vm::NonDeterminism<triton_vm::BFieldElement>,
-    ) {
+    ) -> AlgorithmInitialState {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
         let list_pointer = BFieldElement::new(rng.gen());
         let list_length = rng.gen_range(0..200);
-        let a_index = rng.gen_range(0..list_length);
-        let b_index = rng.gen_range(0..list_length);
+        let a = rng.gen_range(0..list_length);
+        let b = rng.gen_range(0..list_length);
+        self.initial_state(list_pointer, list_length, a, b)
+    }
+
+    fn corner_case_initial_states(&self) -> Vec<AlgorithmInitialState> {
+        vec![
+            self.initial_state(BFieldElement::one(), 5, 0, 0),
+            self.initial_state(BFieldElement::one(), 1, 0, 0),
+            self.initial_state(BFieldElement::one(), 2, 1, 1),
+        ]
+    }
+}
+
+impl SwapUnchecked {
+    fn initial_state(
+        &self,
+        list_pointer: BFieldElement,
+        list_length: usize,
+        a: usize,
+        b: usize,
+    ) -> AlgorithmInitialState {
         let mut init_memory = HashMap::default();
-        rust_shadowing_helper_functions::unsafe_list::unsafe_insert_random_list(
+        self.list_type.rust_shadowing_insert_random_list(
             &self.element_type,
             list_pointer,
             list_length,
             &mut init_memory,
         );
 
-        (
-            [
+        AlgorithmInitialState {
+            stack: [
                 empty_stack(),
                 vec![
                     list_pointer,
-                    BFieldElement::new(a_index as u64),
-                    BFieldElement::new(b_index as u64),
+                    BFieldElement::new(a as u64),
+                    BFieldElement::new(b as u64),
                 ],
             ]
             .concat(),
-            NonDeterminism::default().with_ram(init_memory),
-        )
+            nondeterminism: NonDeterminism::default().with_ram(init_memory),
+        }
     }
 }
 

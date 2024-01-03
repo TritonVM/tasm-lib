@@ -140,6 +140,32 @@ impl ListType {
             ),
         }
     }
+
+    pub fn rust_shadowing_insert_random_list(
+        &self,
+        element_type: &DataType,
+        list_pointer: BFieldElement,
+        list_length: usize,
+        memory: &mut HashMap<BFieldElement, BFieldElement>,
+    ) {
+        match self {
+            ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_insert_random_list(
+                element_type,
+                list_pointer,
+                list_length as u32,
+                list_length,
+                memory,
+            ),
+            ListType::Unsafe => {
+                rust_shadowing_helper_functions::unsafe_list::unsafe_insert_random_list(
+                    element_type,
+                    list_pointer,
+                    list_length,
+                    memory,
+                )
+            }
+        }
+    }
 }
 
 impl Display for ListType {

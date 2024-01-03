@@ -26,6 +26,10 @@ pub trait Closure: BasicSnippet {
         seed: [u8; 32],
         bench_case: Option<BenchmarkCase>,
     ) -> Vec<BFieldElement>;
+
+    fn corner_case_initial_states(&self) -> Vec<Vec<BFieldElement>> {
+        vec![]
+    }
 }
 
 pub struct ShadowedClosure<C: Closure + 'static> {
@@ -60,6 +64,20 @@ impl<C: Closure + 'static> RustShadow for ShadowedClosure<C> {
     fn test(&self) {
         let num_states = 5;
         let mut rng = thread_rng();
+
+        // First test corner-cases as they're easier to debug on failure
+        for init_stack_corner_case in self.closure.borrow().corner_case_initial_states() {
+            let stdin = vec![];
+            test_rust_equivalence_given_complete_state(
+                self,
+                &init_stack_corner_case,
+                &stdin,
+                &NonDeterminism::default(),
+                &None,
+                0,
+                None,
+            );
+        }
 
         for _ in 0..num_states {
             let seed: [u8; 32] = rng.gen();

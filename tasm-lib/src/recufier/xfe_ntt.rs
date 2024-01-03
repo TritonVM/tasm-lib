@@ -4,6 +4,7 @@ use crate::structure::tasm_object::encode_to_memory;
 use crate::structure::tasm_object::TasmObject;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::function::Function;
+use crate::traits::function::FunctionInitialState;
 use crate::Library;
 use std::collections::HashMap;
 use triton_vm::triton_asm;
@@ -464,7 +465,7 @@ impl Function for XfeNtt {
         &self,
         seed: [u8; 32],
         bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
-    ) -> (Vec<BFieldElement>, HashMap<BFieldElement, BFieldElement>) {
+    ) -> FunctionInitialState {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
         let n = match bench_case {
             Some(crate::snippet_bencher::BenchmarkCase::CommonCase) => 32,
@@ -481,7 +482,7 @@ impl Function for XfeNtt {
         stack.push(vector_pointer);
         stack.push(BFieldElement::primitive_root_of_unity(n as u64).unwrap());
 
-        (stack, memory)
+        FunctionInitialState { stack, memory }
     }
 }
 
@@ -492,6 +493,7 @@ mod test {
     use triton_vm::NonDeterminism;
     use twenty_first::shared_math::x_field_element::XFieldElement;
 
+    use super::*;
     use crate::{
         structure::tasm_object::TasmObject,
         test_helpers::{
@@ -499,8 +501,6 @@ mod test {
         },
         traits::function::{Function, ShadowedFunction},
     };
-
-    use super::XfeNtt;
 
     #[test]
     fn test() {
@@ -510,7 +510,8 @@ mod test {
 
         for _ in 0..num_states {
             let seed: [u8; 32] = rng.gen();
-            let (stack, memory) = XfeNtt.pseudorandom_initial_state(seed, None);
+            let FunctionInitialState { stack, memory } =
+                XfeNtt.pseudorandom_initial_state(seed, None);
             let vector_address = stack[stack.len() - 2];
 
             let stdin = vec![];

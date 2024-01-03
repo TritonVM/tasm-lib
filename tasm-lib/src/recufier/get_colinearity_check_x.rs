@@ -6,6 +6,7 @@ use crate::{
     empty_stack,
     snippet_bencher::BenchmarkCase,
     structure::tasm_object::{encode_to_memory, TasmObject},
+    traits::function::FunctionInitialState,
 };
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use triton_vm::{triton_asm, BFieldElement};
@@ -97,7 +98,7 @@ impl Function for GetColinearityCheckX {
         &self,
         seed: [u8; 32],
         bench_case: Option<BenchmarkCase>,
-    ) -> (Vec<BFieldElement>, HashMap<BFieldElement, BFieldElement>) {
+    ) -> FunctionInitialState {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
         let round = if let Some(case) = bench_case {
             match case {
@@ -128,7 +129,7 @@ impl Function for GetColinearityCheckX {
         stack.push(BFieldElement::new(index as u64));
         stack.push(BFieldElement::new(round as u64));
 
-        (stack, memory)
+        FunctionInitialState { stack, memory }
     }
 }
 

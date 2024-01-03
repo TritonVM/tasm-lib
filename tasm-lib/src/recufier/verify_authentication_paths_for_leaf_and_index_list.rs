@@ -10,7 +10,10 @@ use twenty_first::util_types::{
 
 use crate::{
     data_type::DataType,
-    traits::{algorithm::Algorithm, basic_snippet::BasicSnippet},
+    traits::{
+        algorithm::{Algorithm, AlgorithmInitialState},
+        basic_snippet::BasicSnippet,
+    },
 };
 use crate::{
     empty_stack, list::ListType, recufier::merkle_verify::MerkleVerify,
@@ -170,7 +173,7 @@ impl Algorithm for VerifyAuthenticationPathForLeafAndIndexList {
         &self,
         seed: [u8; 32],
         bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
-    ) -> (Vec<BFieldElement>, NonDeterminism<BFieldElement>) {
+    ) -> AlgorithmInitialState {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
 
         // determine sizes
@@ -232,14 +235,17 @@ impl Algorithm for VerifyAuthenticationPathForLeafAndIndexList {
             .with_digests(authentication_paths.into_iter().flatten().collect_vec())
             .with_ram(memory);
 
-        (stack, nondeterminism)
+        AlgorithmInitialState {
+            stack,
+            nondeterminism,
+        }
     }
 }
 
 #[cfg(test)]
 mod test {
     use super::VerifyAuthenticationPathForLeafAndIndexList;
-    use crate::traits::algorithm::Algorithm;
+    use crate::traits::algorithm::{Algorithm, AlgorithmInitialState};
     use crate::traits::rust_shadow::RustShadow;
     use crate::{
         execute_with_terminal_state, linker::link_for_isolated_run, list::ListType,
@@ -265,7 +271,10 @@ mod test {
             list_type: ListType::Unsafe,
         };
         for i in 0..4 {
-            let (mut stack, mut nondeterminism) = vap4lail.pseudorandom_initial_state(seed, None);
+            let AlgorithmInitialState {
+                mut stack,
+                mut nondeterminism,
+            } = vap4lail.pseudorandom_initial_state(seed, None);
             let len = stack.len();
 
             match i {
