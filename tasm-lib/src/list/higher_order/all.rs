@@ -20,7 +20,7 @@ use crate::rust_shadowing_helper_functions::unsafe_list::untyped_unsafe_insert_r
 use crate::snippet_bencher::BenchmarkCase;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::traits::function::Function;
+use crate::traits::function::{Function, FunctionInitialState};
 use crate::{arithmetic, empty_stack, rust_shadowing_helper_functions, VmHasher};
 use crate::{library::Library, ExecutionState};
 
@@ -271,8 +271,8 @@ impl Function for All {
         &self,
         seed: [u8; 32],
         bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
-    ) -> (Vec<BFieldElement>, HashMap<BFieldElement, BFieldElement>) {
-        match bench_case {
+    ) -> FunctionInitialState {
+        let (stack, memory) = match bench_case {
             Some(BenchmarkCase::CommonCase) => {
                 let list_pointer = BFieldElement::new(5);
                 let list_length = 10;
@@ -292,7 +292,9 @@ impl Function for All {
                 let execution_state = self.generate_input_state(list_pointer, list_length, true);
                 (execution_state.stack, execution_state.nondeterminism.ram)
             }
-        }
+        };
+
+        FunctionInitialState { stack, memory }
     }
 }
 

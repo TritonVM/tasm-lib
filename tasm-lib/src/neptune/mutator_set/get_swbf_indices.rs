@@ -20,7 +20,7 @@ use crate::{
         ListType,
     },
     rust_shadowing_helper_functions,
-    traits::function::Function,
+    traits::function::{Function, FunctionInitialState},
     Digest, VmHasher, VmHasherState, DIGEST_LENGTH,
 };
 use crate::{data_type::DataType, traits::basic_snippet::BasicSnippet};
@@ -305,7 +305,7 @@ impl Function for GetSwbfIndices {
         &self,
         seed: [u8; 32],
         _bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
-    ) -> (Vec<BFieldElement>, HashMap<BFieldElement, BFieldElement>) {
+    ) -> FunctionInitialState {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
         let mut stack = empty_stack();
         let (item, sender_randomness, receiver_preimage, aocl_leaf_index): (
@@ -332,7 +332,10 @@ impl Function for GetSwbfIndices {
         stack.push(item.values()[1]);
         stack.push(item.values()[0]);
 
-        (stack, HashMap::new())
+        FunctionInitialState {
+            memory: HashMap::new(),
+            stack,
+        }
     }
 }
 

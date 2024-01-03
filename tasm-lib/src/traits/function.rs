@@ -30,11 +30,17 @@ pub trait Function: BasicSnippet {
         &self,
         seed: [u8; 32],
         bench_case: Option<BenchmarkCase>,
-    ) -> (Vec<BFieldElement>, HashMap<BFieldElement, BFieldElement>);
+    ) -> FunctionInitialState;
 
-    fn corner_case_initial_states(&self) -> Vec<Vec<BFieldElement>> {
+    fn corner_case_initial_states(&self) -> Vec<FunctionInitialState> {
         vec![]
     }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct FunctionInitialState {
+    pub stack: Vec<BFieldElement>,
+    pub memory: HashMap<BFieldElement, BFieldElement>,
 }
 
 pub struct ShadowedFunction<F: Function + 'static> {
@@ -46,6 +52,28 @@ impl<F: Function + 'static> ShadowedFunction<F> {
         Self {
             function: Rc::new(RefCell::new(function)),
         }
+    }
+}
+
+impl<P: Function + 'static> ShadowedFunction<P> {
+    fn test_initial_state(&self, state: FunctionInitialState) {
+        let FunctionInitialState { stack, memory } = state;
+
+        let stdin = vec![];
+        let non_determinism = NonDeterminism {
+            individual_tokens: vec![],
+            digests: vec![],
+            ram: memory,
+        };
+        test_rust_equivalence_given_complete_state(
+            self,
+            &stack,
+            &stdin,
+            &non_determinism,
+            &None,
+            0,
+            None,
+        );
     }
 }
 
@@ -67,36 +95,29 @@ where
 
     /// Test rust-tasm equivalence.
     fn test(&self) {
-        let num_states = 5;
+        let entrypoint = self.function.borrow().entrypoint();
+        for (i, cornercase_test) in self
+            .function
+            .borrow()
+            .corner_case_initial_states()
+            .into_iter()
+            .enumerate()
+        {
+            println!("testing {entrypoint} corner case number {i}");
+            self.test_initial_state(cornercase_test);
+        }
+
+        let num_rng_states = 5;
         let mut rng = thread_rng();
 
-        for _ in 0..num_states {
+        for _ in 0..num_rng_states {
             let seed: [u8; 32] = rng.gen();
-            println!(
-                "testing {} with seed: {:x?}",
-                self.function.borrow().entrypoint(),
-                seed
-            );
-            let (stack, memory) = self
-                .function
-                .borrow()
-                .pseudorandom_initial_state(seed, None);
-
-            let stdin = vec![];
-            let non_determinism = NonDeterminism {
-                individual_tokens: vec![],
-                digests: vec![],
-                ram: memory,
-            };
-            test_rust_equivalence_given_complete_state(
-                self,
-                &stack,
-                &stdin,
-                &non_determinism,
-                &None,
-                0,
-                None,
-            );
+            println!("testing {entrypoint} with seed: {:x?}", seed);
+            self.test_initial_state(
+                self.function
+                    .borrow()
+                    .pseudorandom_initial_state(seed, None),
+            )
         }
     }
 
@@ -112,7 +133,7 @@ where
         let mut benchmarks = Vec::with_capacity(2);
 
         for bench_case in [BenchmarkCase::CommonCase, BenchmarkCase::WorstCase] {
-            let (stack, memory) = self
+            let FunctionInitialState { stack, memory } = self
                 .function
                 .borrow()
                 .pseudorandom_initial_state(rng.gen(), Some(bench_case));

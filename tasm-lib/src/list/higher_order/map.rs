@@ -25,7 +25,7 @@ use crate::rust_shadowing_helper_functions::safe_list::safe_insert_random_list;
 use crate::rust_shadowing_helper_functions::unsafe_list::unsafe_insert_random_list;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::traits::function::Function;
+use crate::traits::function::{Function, FunctionInitialState};
 use crate::{empty_stack, rust_shadowing_helper_functions};
 use crate::{library::Library, ExecutionState};
 
@@ -328,7 +328,7 @@ impl Function for Map {
         &self,
         seed: [u8; 32],
         _bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
-    ) -> (Vec<BFieldElement>, HashMap<BFieldElement, BFieldElement>) {
+    ) -> FunctionInitialState {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
         let list_pointer = BFieldElement::new(rng.next_u64() % (1 << 25));
         let list_length = (rng.next_u32() % (1 << 6)) as usize;
@@ -341,7 +341,10 @@ impl Function for Map {
             .collect_vec();
         let execution_state =
             self.generate_input_state(list_pointer, list_length, additional_function_args);
-        (execution_state.stack, execution_state.nondeterminism.ram)
+        FunctionInitialState {
+            stack: execution_state.stack,
+            memory: execution_state.nondeterminism.ram,
+        }
     }
 }
 

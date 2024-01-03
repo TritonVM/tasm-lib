@@ -10,7 +10,7 @@ use twenty_first::{shared_math::other::random_elements, util_types::shared::bag_
 use crate::data_type::DataType;
 use crate::snippet_bencher::BenchmarkCase;
 use crate::traits::basic_snippet::BasicSnippet;
-use crate::traits::function::Function;
+use crate::traits::function::{Function, FunctionInitialState};
 use crate::{
     empty_stack,
     list::unsafeimplu32::{get::UnsafeGet, length::Length as UnsafeLength},
@@ -20,9 +20,7 @@ use crate::{
 pub struct BagPeaks;
 
 impl BagPeaks {
-    fn input_state(
-        num_peaks: usize,
-    ) -> (Vec<BFieldElement>, HashMap<BFieldElement, BFieldElement>) {
+    fn input_state(num_peaks: usize) -> FunctionInitialState {
         let peaks: Vec<Digest> = random_elements(num_peaks);
         let address: BFieldElement = random();
         let mut stack = empty_stack();
@@ -36,7 +34,7 @@ impl BagPeaks {
             &mut memory,
         );
 
-        (stack, memory)
+        FunctionInitialState { stack, memory }
     }
 }
 
@@ -228,7 +226,7 @@ impl Function for BagPeaks {
         &self,
         seed: [u8; 32],
         bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
-    ) -> (Vec<BFieldElement>, HashMap<BFieldElement, BFieldElement>) {
+    ) -> FunctionInitialState {
         match bench_case {
             Some(BenchmarkCase::CommonCase) => Self::input_state(30),
             Some(BenchmarkCase::WorstCase) => Self::input_state(60),
@@ -237,6 +235,16 @@ impl Function for BagPeaks {
                 Self::input_state(rng.gen_range(0..=63))
             }
         }
+    }
+
+    fn corner_case_initial_states(&self) -> Vec<FunctionInitialState> {
+        vec![
+            Self::input_state(0),
+            Self::input_state(1),
+            Self::input_state(2),
+            Self::input_state(3),
+            Self::input_state(63),
+        ]
     }
 }
 
@@ -248,9 +256,7 @@ mod tests {
 
     #[test]
     fn prop() {
-        for _ in 0..10 {
-            ShadowedFunction::new(BagPeaks).test()
-        }
+        ShadowedFunction::new(BagPeaks).test()
     }
 }
 
