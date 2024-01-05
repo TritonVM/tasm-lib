@@ -1,15 +1,15 @@
 [
   {
     "name": "tasm_memory_push_ram_to_stack___digest",
-    "clock_cycle_count": 23,
-    "hash_table_height": 0,
+    "clock_cycle_count": 7,
+    "hash_table_height": 12,
     "u32_table_height": 0,
     "case": "CommonCase"
   },
   {
     "name": "tasm_memory_push_ram_to_stack___digest",
-    "clock_cycle_count": 23,
-    "hash_table_height": 0,
+    "clock_cycle_count": 7,
+    "hash_table_height": 12,
     "u32_table_height": 0,
     "case": "WorstCase"
   }
