@@ -1,10 +1,10 @@
 use crate::io::InputSource;
+use crate::memory::{load_words_from_memory_leave_pointer, write_words_to_memory_leave_pointer};
 use crate::DIGEST_LENGTH;
 use itertools::Itertools;
 use rand::{random, thread_rng, Rng};
 use std::str::FromStr;
 use triton_vm::instruction::LabelledInstruction;
-use triton_vm::{triton_asm, triton_instr};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
@@ -62,23 +62,15 @@ impl DataType {
         }
     }
 
-    /// Return the code to read a value of this type from memory
+    /// Return the code to read a value of this type from memory.
+    /// Leaves mutated point on top of stack.
     ///
     /// ```text
     /// BEFORE: _ (*address + self.stack_size() - 1)
     /// AFTER:  _ [value] (*address - 1)
     /// ```
     pub fn read_value_from_memory(&self) -> Vec<LabelledInstruction> {
-        let data_size = self.stack_size();
-        let num_full_chunk_reads = data_size / 5;
-        let num_remaining_words = data_size % 5;
-        let mut instructions = vec![triton_instr!(read_mem 5); num_full_chunk_reads];
-        if num_remaining_words > 0 {
-            instructions.extend(triton_asm!(read_mem {
-                num_remaining_words
-            }));
-        }
-        instructions
+        load_words_from_memory_leave_pointer(self.stack_size())
     }
 
     /// Return the code to write a value of this type to memory
@@ -88,17 +80,7 @@ impl DataType {
     /// AFTER:  _ (*address + self.stack_size())
     /// ```
     pub fn write_value_to_memory(&self) -> Vec<LabelledInstruction> {
-        let stack_size = self.stack_size();
-        let num_full_chunk_reads = stack_size / 5;
-        let num_remaining_words = stack_size % 5;
-        let mut instructions = vec![triton_instr!(write_mem 5); num_full_chunk_reads];
-        if num_remaining_words > 0 {
-            instructions.extend(triton_asm!(write_mem {
-                num_remaining_words
-            }));
-        }
-
-        instructions
+        write_words_to_memory_leave_pointer(self.stack_size())
     }
 
     /// Return the code to read a value of this type from the specified input source

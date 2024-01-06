@@ -23,8 +23,10 @@ impl Display for InputSource {
 }
 
 /// Return the code to write `n` words to output
+/// ```text
 /// BEFORE: _ [words; n]
 /// AFTER: _
+/// ```
 pub fn write_words(n: usize) -> Vec<LabelledInstruction> {
     let num_full_chunk_writes = n / 5;
     let num_remaining_words = n % 5;
@@ -56,8 +58,10 @@ impl InputSource {
     }
 
     /// Return the code used to read `n` words from the input source.
+    /// ```text
     /// BEFORE: _
     /// AFTER: _ [read_words; n]
+    /// ```
     pub fn read_words(&self, n: usize) -> Vec<LabelledInstruction> {
         let input_instruction = self.instruction_name();
 

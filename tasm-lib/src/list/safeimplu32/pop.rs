@@ -67,9 +67,6 @@ impl DeprecatedSnippet for SafePop {
     fn function_code(&self, _library: &mut Library) -> String {
         let entry_point = self.entrypoint_name();
 
-        // Start and end of loop: Stack: _  [elems], address_for_last_unread_element
-        let code_to_read_elements = self.data_type.read_value_from_memory();
-
         let element_size = self.data_type.stack_size();
 
         let mul_with_size = if element_size != 1 {
@@ -119,7 +116,7 @@ impl DeprecatedSnippet for SafePop {
                 add
                 // stack : _  address_for_last_element
 
-                {&code_to_read_elements}
+                {&self.data_type.read_value_from_memory()}
                 // Stack: _  [elements], address_for_last_unread_element
 
                 pop 1
