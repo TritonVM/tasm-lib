@@ -3,11 +3,11 @@ use tasm_lib::traits::procedure::ProcedureInitialState;
 use triton_vm::{instruction::LabelledInstruction, triton_asm, NonDeterminism};
 use twenty_first::shared_math::{b_field_element::BFieldElement, bfield_codec::BFieldCodec};
 
+use super::InputSource;
 use crate::data_type::DataType;
 use crate::empty_stack;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::procedure::Procedure;
-use crate::InputSource;
 
 /// Move an element of type `DataType` from standard-in or secret-in's token stream to the stack
 #[derive(Clone, Debug)]

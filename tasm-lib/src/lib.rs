@@ -12,13 +12,11 @@
 // https://github.com/bkchr/proc-macro-crate/issues/2#issuecomment-572914520
 extern crate self as tasm_lib;
 
-use std::collections::HashMap;
-use std::fmt::Display;
-use std::time::SystemTime;
-
 use anyhow::bail;
 use itertools::Itertools;
 use num_traits::Zero;
+use std::collections::HashMap;
+use std::time::SystemTime;
 use traits::basic_snippet::BasicSnippet;
 use triton_vm::instruction::LabelledInstruction;
 use triton_vm::op_stack::NUM_OP_STACK_REGISTERS;
@@ -63,40 +61,6 @@ pub type VmHasher = Tip5;
 pub type VmHasherState = Tip5State;
 pub type Digest = tip5::Digest;
 pub const DIGEST_LENGTH: usize = tip5::DIGEST_LENGTH;
-
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
-pub enum InputSource {
-    StdIn,
-    SecretIn,
-}
-
-impl Display for InputSource {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let str = match self {
-            InputSource::StdIn => "stdin",
-            InputSource::SecretIn => "secin",
-        };
-
-        write!(f, "{}", str)
-    }
-}
-
-impl InputSource {
-    pub fn label_friendly_name(&self) -> &str {
-        match self {
-            InputSource::StdIn => "stdin",
-            InputSource::SecretIn => "secin",
-        }
-    }
-
-    /// The name of the instruction that reads from this input source
-    pub const fn instruction_name(&self) -> &str {
-        match self {
-            InputSource::StdIn => "read_io",
-            InputSource::SecretIn => "divine",
-        }
-    }
-}
 
 #[derive(Clone, Debug)]
 pub struct ExecutionState {

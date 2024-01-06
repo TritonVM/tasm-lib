@@ -1,4 +1,4 @@
-use crate::InputSource;
+use crate::io::InputSource;
 use crate::DIGEST_LENGTH;
 use itertools::Itertools;
 use rand::{random, thread_rng, Rng};
@@ -108,17 +108,7 @@ impl DataType {
     /// AFTER:  _ [value]
     /// ```
     pub fn read_value_from_input(&self, input_source: InputSource) -> Vec<LabelledInstruction> {
-        let input_instruction = input_source.instruction_name();
-
-        let data_size = self.stack_size();
-        let num_full_chunk_reads = data_size / 5;
-        let num_remaining_words = data_size % 5;
-        let mut instructions =
-            vec![triton_asm!({input_instruction} 5); num_full_chunk_reads].concat();
-        if num_remaining_words > 0 {
-            instructions.extend(triton_asm!({input_instruction} {num_remaining_words}));
-        }
-        instructions
+        input_source.read_words(self.stack_size())
     }
 
     /// Return the code to write a value of this type to standard output
@@ -128,16 +118,7 @@ impl DataType {
     /// AFTER:  _
     /// ```
     pub fn write_value_to_stdout(&self) -> Vec<LabelledInstruction> {
-        let data_size = self.stack_size();
-        let num_full_chunk_writes = data_size / 5;
-        let num_remaining_words = data_size % 5;
-        let mut instructions = vec![triton_instr!(write_io 5); num_full_chunk_writes];
-        if num_remaining_words > 0 {
-            instructions.extend(triton_asm!(write_io {
-                num_remaining_words
-            }));
-        }
-        instructions
+        crate::io::write_words(self.stack_size())
     }
 
     /// Return a string matching how the variant looks in source code
