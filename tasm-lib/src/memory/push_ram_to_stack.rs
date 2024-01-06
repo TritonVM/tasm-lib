@@ -50,7 +50,7 @@ impl BasicSnippet for PushRamToStack {
             )
         };
 
-        let read_all_words = self.data_type.read_value_from_memory();
+        let read_all_words = self.data_type.read_value_from_memory_leave_pointer();
 
         triton_asm!(
             {entrypoint}:

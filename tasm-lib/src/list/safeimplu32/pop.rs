@@ -116,10 +116,7 @@ impl DeprecatedSnippet for SafePop {
                 add
                 // stack : _  address_for_last_element
 
-                {&self.data_type.read_value_from_memory()}
-                // Stack: _  [elements], address_for_last_unread_element
-
-                pop 1
+                {&self.data_type.read_value_from_memory_pop_pointer()}
                 // Stack: _  [elements]
 
                 return

@@ -2,8 +2,7 @@ use itertools::Itertools;
 use std::collections::HashMap;
 
 use rand::{random, thread_rng, Rng};
-use triton_vm::instruction::LabelledInstruction;
-use triton_vm::{triton_asm, triton_instr, NonDeterminism};
+use triton_vm::{triton_asm, NonDeterminism};
 use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::data_type::DataType;
@@ -17,21 +16,6 @@ use crate::{empty_stack, ExecutionState};
 #[derive(Clone, Debug)]
 pub struct UnsafeGet {
     pub data_type: DataType,
-}
-
-impl UnsafeGet {
-    fn read_type_from_mem(&self) -> Vec<LabelledInstruction> {
-        let data_size = self.data_type.stack_size();
-        let num_full_chunk_reads = data_size / 5;
-        let num_remaining_words = data_size % 5;
-        let mut instructions = vec![triton_instr!(read_mem 5); num_full_chunk_reads];
-        if num_remaining_words > 0 {
-            instructions.extend(triton_asm!(read_mem {
-                num_remaining_words
-            }));
-        }
-        instructions
-    }
 }
 
 impl DeprecatedSnippet for UnsafeGet {
@@ -77,7 +61,6 @@ impl DeprecatedSnippet for UnsafeGet {
         let entrypoint = self.entrypoint_name();
         // Code to read an element from a list. No bounds-check.
 
-        let code_to_read_elements = self.read_type_from_mem();
         let element_size = self.data_type.stack_size();
 
         // Code to multiply with size. If size is 1, do nothing to save two clock cycles.
@@ -99,10 +82,9 @@ impl DeprecatedSnippet for UnsafeGet {
                 add
                 // stack: _ (*list + N * index + 1)
 
-                {&code_to_read_elements}
-                // stack: _ elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}} address
+                {&self.data_type.read_value_from_memory_pop_pointer()}
+                // stack: _ elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}
 
-                pop 1
                 return
         )
         .iter()

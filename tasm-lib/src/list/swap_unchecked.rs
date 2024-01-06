@@ -99,7 +99,7 @@ impl BasicSnippet for SwapUnchecked {
                     add
                     // _ *list a *list[b]_last_word
 
-                    {&self.element_type.read_value_from_memory()}
+                    {&self.element_type.read_value_from_memory_leave_pointer()}
                     // _ *list a [list[b]] (*list[b] - 1)
 
                     push 1
@@ -116,7 +116,7 @@ impl BasicSnippet for SwapUnchecked {
                     add
                     // _ *list a [list[b]] *list[b] *list[a]_last_word
 
-                    {&self.element_type.read_value_from_memory()}
+                    {&self.element_type.read_value_from_memory_leave_pointer()}
                     // _ *list a [list[b]] *list[b] [list[a]] (*list[a] - 1)
 
                     push 1
@@ -126,14 +126,13 @@ impl BasicSnippet for SwapUnchecked {
                     swap {element_size + 1}
                     // _ *list a [list[b]] *list[a] [list[a]] *list[b]
 
-                    {&self.element_type.write_value_to_memory()}
-                    // _ *list a [list[b]] *list[a] *list[b+1]
-
-                    pop 1
+                    {&self.element_type.write_value_to_memory_pop_pointer()}
                     // _ *list a [list[b]] *list[a]
 
-                    {&self.element_type.write_value_to_memory()}
-                    // _ *list a (*list[a+1])
+                    // We leave pointer here, since it's more efficient to just
+                    // pop all garbage in one fell swoop at the end.
+                    {&self.element_type.write_value_to_memory_leave_pointer()}
+                    // _ *list a *some_pointer
 
                     pop 3
 

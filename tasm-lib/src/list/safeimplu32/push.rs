@@ -83,11 +83,10 @@ impl DeprecatedSnippet for SafePush {
                 add
                 push 3
                 add                 // _ *list [word; N] (*list + length * elem_size + 2)
-                {&self.data_type.write_value_to_memory()}
-                                    // _ *list some_address
-                pop 1               // _ *list
+                {&self.data_type.write_value_to_memory_pop_pointer()}
+                                    // _ *list
 
-                // increment length indicator
+                                    // increment length indicator
                 read_mem 1          // _ length (*list - 1)
                 push 1
                 add                 // _ length *list

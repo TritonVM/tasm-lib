@@ -85,9 +85,9 @@ impl DeprecatedSnippet for SafeGet {
                 push 1              // _ *(list + N * (index + 1)) 1
                 add                 // _ *(list + N * (index + 1) + 1)
 
-                {&self.data_type.read_value_from_memory()}
-                                    // _ elem{N - 1} elem{N - 2} … elem{0} address
-                pop 1
+                {&self.data_type.read_value_from_memory_pop_pointer()}
+                // _ elem{N - 1} elem{N - 2} … elem{0}
+
                 return
         )
         .iter()

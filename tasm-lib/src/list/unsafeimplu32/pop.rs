@@ -107,10 +107,7 @@ impl DeprecatedSnippet for UnsafePop {
                 add
                 // stack : _  address_for_current_element_last_word
 
-                {&self.data_type.read_value_from_memory()}
-                // Stack: _  [elements], address_of_last_word_in_previous_element
-
-                pop 1
+                {&self.data_type.read_value_from_memory_pop_pointer()}
                 // Stack: _  [elements]
 
                 return

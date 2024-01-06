@@ -1,5 +1,8 @@
 use crate::io::InputSource;
-use crate::memory::{load_words_from_memory_leave_pointer, write_words_to_memory_leave_pointer};
+use crate::memory::{
+    load_words_from_memory_leave_pointer, load_words_from_memory_pop_pointer,
+    write_words_to_memory_leave_pointer, write_words_to_memory_pop_pointer,
+};
 use crate::DIGEST_LENGTH;
 use itertools::Itertools;
 use rand::{random, thread_rng, Rng};
@@ -69,8 +72,19 @@ impl DataType {
     /// BEFORE: _ (*address + self.stack_size() - 1)
     /// AFTER:  _ [value] (*address - 1)
     /// ```
-    pub fn read_value_from_memory(&self) -> Vec<LabelledInstruction> {
+    pub fn read_value_from_memory_leave_pointer(&self) -> Vec<LabelledInstruction> {
         load_words_from_memory_leave_pointer(self.stack_size())
+    }
+
+    /// Return the code to read a value of this type from memory.
+    /// Pops pointer from stack.
+    ///
+    /// ```text
+    /// BEFORE: _ (*address + self.stack_size() - 1)
+    /// AFTER:  _ [value]
+    /// ```
+    pub fn read_value_from_memory_pop_pointer(&self) -> Vec<LabelledInstruction> {
+        load_words_from_memory_pop_pointer(self.stack_size())
     }
 
     /// Return the code to write a value of this type to memory
@@ -79,8 +93,18 @@ impl DataType {
     /// BEFORE: _ [value] *address
     /// AFTER:  _ (*address + self.stack_size())
     /// ```
-    pub fn write_value_to_memory(&self) -> Vec<LabelledInstruction> {
+    pub fn write_value_to_memory_leave_pointer(&self) -> Vec<LabelledInstruction> {
         write_words_to_memory_leave_pointer(self.stack_size())
+    }
+
+    /// Return the code to write a value of this type to memory
+    ///
+    /// ```text
+    /// BEFORE: _ [value] *address
+    /// AFTER:  _
+    /// ```
+    pub fn write_value_to_memory_pop_pointer(&self) -> Vec<LabelledInstruction> {
+        write_words_to_memory_pop_pointer(self.stack_size())
     }
 
     /// Return the code to read a value of this type from the specified input source

@@ -83,7 +83,7 @@ impl DeprecatedSnippet for SafeSet {
         let entrypoint = self.entrypoint_name();
         let element_size = self.data_type.stack_size();
 
-        let write_elements_to_memory_code = self.data_type.write_value_to_memory();
+        let write_elements_to_memory_code = self.data_type.write_value_to_memory_leave_pointer();
 
         let mul_with_size = if element_size != 1 {
             format!("push {element_size}\n mul\n")
