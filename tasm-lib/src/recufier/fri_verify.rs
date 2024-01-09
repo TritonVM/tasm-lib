@@ -48,17 +48,16 @@ use crate::recufier::get_colinear_y::ColinearYXfe;
 use crate::recufier::get_colinearity_check_x::GetColinearityCheckX;
 use crate::recufier::proof_stream::dequeue::Dequeue;
 use crate::recufier::proof_stream::sample_scalars::SampleScalars;
+use crate::recufier::proof_stream::vm_proof_stream::VmProofStream;
 use crate::recufier::verify_authentication_paths_for_leaf_and_index_list::VerifyAuthenticationPathForLeafAndIndexList;
 use crate::recufier::xfe_ntt::XfeNtt;
 use crate::snippet_bencher::BenchmarkCase;
 use crate::structure::tasm_object::TasmObject;
 use crate::traits::basic_snippet::BasicSnippet;
-use crate::traits::procedure::{Procedure, ProcedureInitialState};
+use crate::traits::procedure::*;
 use crate::Digest;
 use crate::VmHasher;
 use crate::VmHasherState;
-
-use super::proof_stream::vm_proof_stream::VmProofStream;
 
 /// `FriVerify` checks that a Reed-Solomon codeword, provided as an oracle, has a low
 /// degree interpolant. Specifically, the algorithm takes a `ProofStream` object, runs the
@@ -403,31 +402,25 @@ impl FriVerify {
     pub fn pseudorandom_fri_proof_stream(&self, seed: [u8; 32]) -> VmProofStream {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
 
-        let max_degree = self.domain_length as usize / self.expansion_factor as usize - 1;
-        let coefficients: Vec<XFieldElement> = (0..=max_degree).map(|_| rng.gen()).collect();
-        let mut codeword = [
-            coefficients,
-            vec![XFieldElement::zero(); self.domain_length as usize - max_degree - 1],
-        ]
-        .concat();
-        let n = codeword.len();
-        ntt::<XFieldElement>(
-            &mut codeword,
-            BFieldElement::primitive_root_of_unity(n as u64).unwrap(),
-            n.ilog2(),
-        );
-        let mut proof_stream = ProofStream::<VmHasher>::new();
+        let max_degree = self.first_round_max_degree();
+        let polynomial_coefficients = (0..=max_degree).map(|_| rng.gen()).collect_vec();
 
+        let fri_domain = ArithmeticDomain::of_length(self.domain_length as usize)
+            .with_offset(self.domain_offset);
         let fri = Fri::new(
-            ArithmeticDomain {
-                offset: BFieldElement::new(7),
-                generator: BFieldElement::primitive_root_of_unity(self.domain_length as u64)
-                    .unwrap(),
-                length: self.domain_length as usize,
-            },
+            fri_domain,
             self.expansion_factor as usize,
             self.num_colinearity_checks as usize,
         );
+
+        let mut codeword = polynomial_coefficients;
+        codeword.resize(self.domain_length as usize, XFieldElement::zero());
+        let primitive_root =
+            BFieldElement::primitive_root_of_unity(self.domain_length as u64).unwrap();
+        let log_2_of_n = self.domain_length.ilog2();
+        ntt::<XFieldElement>(&mut codeword, primitive_root, log_2_of_n);
+
+        let mut proof_stream = ProofStream::<VmHasher>::new();
         fri.prove(&codeword, &mut proof_stream);
 
         VmProofStream::new(&proof_stream.items)
@@ -1176,96 +1169,104 @@ impl Procedure for FriVerify {
 
 #[cfg(test)]
 mod test {
-    use std::{collections::HashMap, panic::catch_unwind};
+    use std::collections::HashMap;
+    use std::panic::catch_unwind;
 
-    use itertools::Itertools;
-    use num_traits::Zero;
-    use rand::{rngs::StdRng, thread_rng, Rng, SeedableRng};
-    use triton_vm::{
-        arithmetic_domain::ArithmeticDomain, fri::Fri, proof_item::ProofItem,
-        proof_stream::ProofStream, BFieldElement, NonDeterminism,
-    };
-    use twenty_first::{
-        shared_math::{
-            bfield_codec::BFieldCodec, traits::PrimitiveRootOfUnity, x_field_element::XFieldElement,
-        },
-        util_types::{
-            algebraic_hasher::Domain,
-            merkle_tree::{CpuParallel, MerkleTree},
-            merkle_tree_maker::MerkleTreeMaker,
-        },
-    };
-
-    use crate::memory::encode_to_memory;
-    use crate::{
-        empty_stack, recufier::proof_stream::vm_proof_stream::VmProofStream,
-        traits::procedure::ProcedureInitialState,
-    };
-    use crate::{
-        structure::tasm_object::TasmObject,
-        test_helpers::{
-            rust_final_state, tasm_final_state, verify_sponge_equivalence, verify_stack_growth,
-        },
-        traits::procedure::{Procedure, ShadowedProcedure},
-        Digest, VmHasher, VmHasherState,
-    };
+    use proptest::collection::vec;
+    use proptest::prelude::*;
+    use proptest_arbitrary_interop::arb;
+    use rand::rngs::StdRng;
+    use rand::*;
+    use test_strategy::proptest;
+    use triton_vm::arithmetic_domain::ArithmeticDomain;
+    use triton_vm::fri::Fri;
+    use triton_vm::proof_item::ProofItem;
+    use triton_vm::proof_stream::ProofStream;
+    use triton_vm::*;
+    use twenty_first::shared_math::bfield_codec::BFieldCodec;
     use twenty_first::shared_math::ntt::ntt;
+    use twenty_first::util_types::algebraic_hasher::*;
+    use twenty_first::util_types::merkle_tree::*;
+    use twenty_first::util_types::merkle_tree_maker::MerkleTreeMaker;
 
-    use super::FriVerify;
+    use crate::empty_stack;
+    use crate::recufier::proof_stream::vm_proof_stream::VmProofStream;
+    use crate::structure::tasm_object::*;
+    use crate::tasm_lib::recufier::fri_verify::FriVerify;
+    use crate::test_helpers::*;
+    use crate::traits::procedure::*;
+    use crate::Digest;
 
-    #[test]
-    fn fri_derived_params_match() {
-        let mut rng = thread_rng();
-        for _ in 0..20 {
-            let expansion_factor = 2 << rng.gen_range(0..10);
-            let colinearity_checks_count = rng.gen_range(1..320);
-            let offset: BFieldElement = rng.gen();
-            let domain_length = expansion_factor * (1u32 << rng.gen_range(0..20));
+    use super::*;
 
-            let fri_verify = FriVerify::new(
-                offset,
-                domain_length,
-                expansion_factor,
-                colinearity_checks_count,
-            );
+    #[derive(Debug, Clone, test_strategy::Arbitrary)]
+    struct TestCase {
+        #[strategy(arb())]
+        #[filter(!#offset.is_zero())]
+        offset: BFieldElement,
 
-            let fri = Fri::<VmHasher>::new(
-                ArithmeticDomain {
-                    offset,
-                    generator: BFieldElement::primitive_root_of_unity(domain_length as u64)
-                        .unwrap(),
-                    length: domain_length as usize,
-                },
-                expansion_factor as usize,
-                colinearity_checks_count as usize,
-            );
+        #[strategy(0_u32..20)]
+        domain_length_exponent: u32,
 
-            assert_eq!(fri_verify.num_rounds(), fri.num_rounds());
-            assert_eq!(
-                fri_verify.last_round_max_degree(),
-                fri.last_round_max_degree()
-            );
-            assert_eq!(
-                fri_verify.first_round_max_degree(),
-                fri.first_round_max_degree()
-            );
+        #[strategy(0_u32..10)]
+        expansion_factor_exponent: u32,
+
+        #[strategy(1_u32..320)]
+        num_collinearity_checks: u32,
+    }
+
+    impl TestCase {
+        fn expansion_factor(&self) -> u32 {
+            2 << self.expansion_factor_exponent
+        }
+
+        fn domain_length(&self) -> u32 {
+            self.expansion_factor() * (1 << self.domain_length_exponent)
+        }
+
+        fn tasm_procedure(&self) -> FriVerify {
+            FriVerify::new(
+                self.offset,
+                self.domain_length(),
+                self.expansion_factor(),
+                self.num_collinearity_checks,
+            )
+        }
+
+        fn tvm_fri(&self) -> Fri<VmHasher> {
+            let offset = self.offset;
+            let domain_length = self.domain_length();
+            let domain = ArithmeticDomain::of_length(domain_length as usize).with_offset(offset);
+
+            let expansion_factor = self.expansion_factor() as usize;
+            let num_collinearity_checks = self.num_collinearity_checks as usize;
+
+            Fri::new(domain, expansion_factor, num_collinearity_checks)
         }
     }
 
-    #[test]
-    fn test_inner_verify() {
-        let mut rng = thread_rng();
-        let offset = BFieldElement::new(7);
-        let domain_length = 1 << 12;
-        let expansion_factor = 16;
-        let colinearity_checks_count = 20;
-        let fri_verify = FriVerify::new(
-            offset,
-            domain_length,
-            expansion_factor,
-            colinearity_checks_count,
+    #[proptest]
+    fn fri_derived_params_match(test_case: TestCase) {
+        let fri_verify = test_case.tasm_procedure();
+        let fri = test_case.tvm_fri();
+
+        prop_assert_eq!(fri_verify.num_rounds(), fri.num_rounds());
+        prop_assert_eq!(
+            fri_verify.last_round_max_degree(),
+            fri.last_round_max_degree()
         );
-        let mut vm_proof_stream = fri_verify.pseudorandom_fri_proof_stream(rng.gen());
+        prop_assert_eq!(
+            fri_verify.first_round_max_degree(),
+            fri.first_round_max_degree()
+        );
+    }
+
+    #[proptest(cases = 10)]
+    fn test_inner_verify(test_case: TestCase) {
+        let fri_verify = test_case.tasm_procedure();
+        let fri = test_case.tvm_fri();
+
+        let mut vm_proof_stream = fri_verify.pseudorandom_fri_proof_stream([0; 32]);
 
         // try verify the embedded proof using Triton-VM's verify
         let mut vm_proof_stream_copy = vm_proof_stream.clone();
@@ -1276,38 +1277,19 @@ mod test {
         let mut verify_proof_stream = ProofStream::<VmHasher> {
             items: proof_items,
             items_index: 0,
-            sponge_state: VmHasherState::new(Domain::VariableLength),
+            sponge_state: VmHasher::init(),
         };
-        let fri = Fri::new(
-            ArithmeticDomain {
-                offset,
-                generator: BFieldElement::primitive_root_of_unity(domain_length as u64).unwrap(),
-                length: domain_length as usize,
-            },
-            expansion_factor as usize,
-            colinearity_checks_count as usize,
-        );
-        let verify_result = fri.verify(&mut verify_proof_stream, &mut None);
-        assert!(
-            verify_result.is_ok(),
-            "FRI verify error: {:?}",
-            verify_result,
-        );
-        println!("verified FRI proof with Triton-VM.");
 
-        // try verifying the embedded proof using our own inner_verify
+        let verify_result = fri.verify(&mut verify_proof_stream, &mut None);
+        prop_assert!(verify_result.is_ok(), "FRI verify error: {verify_result:?}");
+
         let verify_result = fri_verify.inner_verify(&mut vm_proof_stream, &mut vec![]);
-        assert!(
-            verify_result.is_ok(),
-            "FRI verify error: {:?}",
-            verify_result
-        );
-        println!("verified FRI proof with inner verify.");
+        prop_assert!(verify_result.is_ok(), "FRI verify error: {verify_result:?}");
     }
 
     #[test]
     fn test_merkle_authentication_structure() {
-        let mut rng = thread_rng();
+        let mut rng: StdRng = SeedableRng::from_seed([0x00; 32]);
         let height = 10;
         let n = 1 << height;
         let m = rng.gen_range(0..n);
@@ -1340,27 +1322,9 @@ mod test {
         }
     }
 
-    #[test]
-    fn test_shadow() {
-        let seed: [u8; 32] = thread_rng().gen();
-        //  = [
-        //     0xf7, 0x41, 0x2a, 0x3e, 0x1e, 0xa7, 0x86, 0xf6, 0xf3, 0x55, 0xdb, 0xcc, 0xe0, 0x32,
-        //     0xf3, 0xec, 0x6f, 0x51, 0x26, 0xcb, 0xb2, 0x7c, 0x4a, 0x34, 0xb4, 0xc9, 0xe9, 0xa8,
-        //     0x7c, 0x34, 0x11, 0xc5,
-        // ];
-        let mut rng: StdRng = SeedableRng::from_seed(seed);
-        let expansion_factor = 1 << rng.gen_range(1..5);
-        let domain_length = expansion_factor * (1 << rng.gen_range(8..15));
-        let offset = BFieldElement::new(7);
-        let num_colinearity_checks = 20; //rng.gen_range(1..min(160, domain_length / 4));
-        println!("number of colinearity checks: {num_colinearity_checks}");
-        println!("expansion factor: {expansion_factor}");
-        let procedure = FriVerify::new(
-            offset,
-            domain_length,
-            expansion_factor,
-            num_colinearity_checks,
-        );
+    #[proptest(cases = 3)]
+    fn test_shadow(test_case: TestCase) {
+        let fri_verify = test_case.tasm_procedure();
 
         // ShadowedProcedure::new(procedure).test();
         // Unfortunately, we cannot call the built-in test that comes with anything that
@@ -1370,18 +1334,17 @@ mod test {
         // So we check that instead.
 
         let ProcedureInitialState {
-            stack,
+            stack: initial_stack,
             nondeterminism,
             public_input: stdin,
             sponge_state,
-        } = procedure.pseudorandom_initial_state(seed, None);
+        } = fri_verify.pseudorandom_initial_state([0x00; 32], None);
 
-        let init_stack = stack.to_vec();
-        let shadowed_procedure = ShadowedProcedure::new(procedure);
+        let shadowed_procedure = ShadowedProcedure::new(fri_verify);
 
         let rust = rust_final_state(
             &shadowed_procedure,
-            &stack,
+            &initial_stack,
             &stdin,
             &nondeterminism,
             &sponge_state,
@@ -1391,87 +1354,50 @@ mod test {
         let words_statically_allocated = 0;
         let tasm = tasm_final_state(
             &shadowed_procedure,
-            &stack,
+            &initial_stack,
             &stdin,
             nondeterminism,
             &sponge_state,
             words_statically_allocated,
         );
 
-        assert_eq!(
-            rust.output, tasm.output,
-            "Rust shadowing and VM std out must agree"
-        );
+        assert_eq!(rust.output, tasm.output);
 
-        verify_stack_growth(&shadowed_procedure, &init_stack, &tasm.final_stack);
+        verify_stack_growth(&shadowed_procedure, &initial_stack, &tasm.final_stack);
         verify_sponge_equivalence(&rust.final_sponge_state, &tasm.final_sponge_state);
 
         // load the "revealed_indices_and_elements" object from rust and tasm memory and
         // test their equivalence
         let rust_address = rust.final_stack.last().unwrap();
         let rust_object =
-            Vec::<(u32, XFieldElement)>::decode_from_memory(&rust.final_ram, *rust_address);
+            Vec::<(u32, XFieldElement)>::decode_from_memory(&rust.final_ram, *rust_address)
+                .unwrap();
         let tasm_address = tasm.final_stack.last().unwrap();
         let tasm_object =
-            Vec::<(u32, XFieldElement)>::decode_from_memory(&tasm.final_ram, *tasm_address);
-        rust_object
-            .iter()
-            .zip(tasm_object.iter())
-            .for_each(|(r, t)| {
-                assert_eq!(r, t, "returned lists of indices and leafs do not match")
-            });
+            Vec::<(u32, XFieldElement)>::decode_from_memory(&tasm.final_ram, *tasm_address)
+                .unwrap();
+        assert_eq!(rust_object, tasm_object);
     }
 
-    #[test]
-    fn negative_test() {
-        // Every single element of the proof should be capable of causing the verifier to
-        // fail. Verify this fact.
-
-        let seed: [u8; 32] = thread_rng().gen();
-        //  = [
-        //     0xf7, 0x41, 0x2a, 0x3e, 0x1e, 0xa7, 0x86, 0xf6, 0xf3, 0x55, 0xdb, 0xcc, 0xe0, 0x32,
-        //     0xf3, 0xec, 0x6f, 0x51, 0x26, 0xcb, 0xb2, 0x7c, 0x4a, 0x34, 0xb4, 0xc9, 0xe9, 0xa8,
-        //     0x7c, 0x34, 0x11, 0xc5,
-        // ];
-        let mut rng: StdRng = SeedableRng::from_seed(seed);
-        let expansion_factor = 1 << rng.gen_range(1..5);
-        let domain_length = expansion_factor * (1 << rng.gen_range(8..15));
-        let offset = BFieldElement::new(7);
-        let num_colinearity_checks = 20; //rng.gen_range(1..min(160, domain_length / 4));
-        let fri_verify = FriVerify::new(
-            offset,
-            domain_length,
-            expansion_factor,
-            num_colinearity_checks,
-        );
-
+    #[proptest(cases = 1)]
+    fn modifying_any_element_in_proof_stream_causes_verification_failure(
+        test_case: TestCase,
+        #[strategy(vec(arb(), #test_case.tvm_fri().first_round_max_degree()))]
+        polynomial_coefficients: Vec<XFieldElement>,
+    ) {
         // generate proof
-        let max_degree =
-            fri_verify.domain_length as usize / fri_verify.expansion_factor as usize - 1;
-        let coefficients: Vec<XFieldElement> = (0..=max_degree).map(|_| rng.gen()).collect();
-        let mut codeword = [
-            coefficients,
-            vec![XFieldElement::zero(); fri_verify.domain_length as usize - max_degree - 1],
-        ]
-        .concat();
-        let n = codeword.len();
+        let domain_length = test_case.domain_length();
+        let mut codeword = polynomial_coefficients;
+        codeword.resize(domain_length as usize, XFieldElement::zero());
         ntt::<XFieldElement>(
             &mut codeword,
-            BFieldElement::primitive_root_of_unity(n as u64).unwrap(),
-            n.ilog2(),
+            BFieldElement::primitive_root_of_unity(domain_length as u64).unwrap(),
+            domain_length.ilog2(),
         );
         let mut proof_stream = ProofStream::<VmHasher>::new();
 
-        let fri = Fri::new(
-            ArithmeticDomain {
-                offset: BFieldElement::new(7),
-                generator: BFieldElement::primitive_root_of_unity(fri_verify.domain_length as u64)
-                    .unwrap(),
-                length: fri_verify.domain_length as usize,
-            },
-            fri_verify.expansion_factor as usize,
-            fri_verify.num_colinearity_checks as usize,
-        );
+        let fri_verify = test_case.tasm_procedure();
+        let fri = test_case.tvm_fri();
         fri.prove(&codeword, &mut proof_stream);
         let mut proof = proof_stream.items.encode();
 
