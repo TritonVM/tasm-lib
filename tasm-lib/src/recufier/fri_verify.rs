@@ -1260,6 +1260,34 @@ mod test {
                 sponge_state: VmHasher::init(),
             }
         }
+
+        fn initial_state(&self) -> ProcedureInitialState {
+            let proof_stream = self.vm_proof_stream();
+            let mut digests = vec![];
+            self.fri_verify
+                .inner_verify(&mut proof_stream.clone(), &mut digests)
+                .unwrap();
+
+            let mut memory = HashMap::new();
+            let proof_stream_pointer = BFieldElement::zero();
+            let fri_verify_pointer =
+                encode_to_memory(&mut memory, proof_stream_pointer, proof_stream);
+            encode_to_memory(&mut memory, fri_verify_pointer, self.fri_verify);
+            let nondeterminism = NonDeterminism::default()
+                .with_ram(memory)
+                .with_digests(digests);
+
+            let mut stack = empty_stack();
+            stack.push(proof_stream_pointer);
+            stack.push(fri_verify_pointer);
+
+            ProcedureInitialState {
+                stack,
+                nondeterminism,
+                public_input: vec![],
+                sponge_state: Some(VmHasher::init()),
+            }
+        }
     }
 
     #[proptest]
@@ -1291,26 +1319,21 @@ mod test {
         prop_assert!(verify_result.is_ok(), "FRI verify error: {verify_result:?}");
     }
 
+    /// Unfortunately, we cannot call the built-in test, _i.e._, `ShadowedProcedure::new(procedure).test()`:
+    /// that test checks that the rust and tasm stacks are left in identical states. While they both contain a
+    /// pointer to the same object, this object lives in a different (and difficult to predict) location in memory.
+    /// This means the pointers are different. In the end, we don't care about the pointers. Therefore, instead of
+    /// complete stack equivalence, we check equivalence of the pointed-to objects.
     #[proptest(cases = 3)]
     fn test_shadow(test_case: TestCase) {
-        let fri_verify = test_case.fri_verify;
-
-        // ShadowedProcedure::new(procedure).test();
-        // Unfortunately, we cannot call the built-in test that comes with anything that
-        // implements Procedure because that test checks that the rust and tasm stacks are
-        // left in identical states. They both contain a pointer to the same object, but
-        // this object lives in a different (and difficult to predict) location in memory.
-        // So we check that instead.
-
         let ProcedureInitialState {
             stack: initial_stack,
             nondeterminism,
             public_input: stdin,
             sponge_state,
-        } = fri_verify.pseudorandom_initial_state([0x00; 32], None);
+        } = test_case.initial_state();
 
-        let shadowed_procedure = ShadowedProcedure::new(fri_verify);
-
+        let shadowed_procedure = ShadowedProcedure::new(test_case.fri_verify);
         let rust = rust_final_state(
             &shadowed_procedure,
             &initial_stack,
@@ -1319,7 +1342,6 @@ mod test {
             &sponge_state,
         );
 
-        // run tvm
         let words_statically_allocated = 0;
         let tasm = tasm_final_state(
             &shadowed_procedure,
@@ -1331,33 +1353,27 @@ mod test {
         );
 
         assert_eq!(rust.output, tasm.output);
-
         verify_stack_growth(&shadowed_procedure, &initial_stack, &tasm.final_stack);
         verify_sponge_equivalence(&rust.final_sponge_state, &tasm.final_sponge_state);
 
-        // load the "revealed_indices_and_elements" object from rust and tasm memory and
-        // test their equivalence
-        let rust_address = rust.final_stack.last().unwrap();
-        let rust_object =
-            Vec::<(u32, XFieldElement)>::decode_from_memory(&rust.final_ram, *rust_address)
-                .unwrap();
-        let tasm_address = tasm.final_stack.last().unwrap();
-        let tasm_object =
-            Vec::<(u32, XFieldElement)>::decode_from_memory(&tasm.final_ram, *tasm_address)
-                .unwrap();
+        type IndexedLeaves = Vec<(u32, XFieldElement)>;
+        let &rust_address = rust.final_stack.last().unwrap();
+        let &tasm_address = tasm.final_stack.last().unwrap();
+        let rust_object = IndexedLeaves::decode_from_memory(&rust.final_ram, rust_address).unwrap();
+        let tasm_object = IndexedLeaves::decode_from_memory(&tasm.final_ram, tasm_address).unwrap();
         assert_eq!(rust_object, tasm_object);
     }
 
     #[proptest(cases = 1)]
     fn modifying_any_element_in_proof_stream_causes_verification_failure(test_case: TestCase) {
         let fri_verify = test_case.fri_verify;
-        let mut proof = test_case.proof_items().encode();
+        let proof = test_case.proof_items().encode();
 
         for i in 0..proof.len() {
+            let mut proof = proof.clone();
             proof[i].increment();
 
             let result = catch_unwind(|| {
-                // convert to proof stream
                 let proof_stream = VmProofStream::new(&Vec::<ProofItem>::decode(&proof).unwrap());
 
                 // read out digests
@@ -1378,8 +1394,8 @@ mod test {
                     .with_digests(digests);
                 stack.push(proof_stream_pointer);
                 stack.push(fri_verify_pointer);
-                let stdin: Vec<BFieldElement> = vec![];
-                let sponge_state = VmHasherState::new(Domain::VariableLength);
+                let stdin = [];
+                let sponge_state = Some(VmHasher::init());
 
                 // run tvm
                 let shadowed_snippet = ShadowedProcedure::new(fri_verify);
@@ -1389,21 +1405,16 @@ mod test {
                     &stack,
                     &stdin,
                     nondeterminism,
-                    &Some(sponge_state),
+                    &sponge_state,
                     words_statically_allocated,
                 );
             });
 
-            // If we caught a panic (which is expected) then the result is Err.
-            // Otherwise it is Ok, and in this case we must crash the test.
-
             assert!(
                 result.is_err(),
-                "Error! Verification succeeded with wrong value at element {i}/{}",
+                "Error! Verification must fail, but succeeded at element {i}/{}",
                 proof.len()
             );
-
-            proof[i].decrement();
         }
     }
 }
