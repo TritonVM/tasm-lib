@@ -16,7 +16,7 @@ use crate::{
     traits::function::Function,
 };
 
-/// Compute domain[index]^(1<<round)
+/// Compute domain\[index\]^(1<<round)
 pub struct GetColinearityCheckX;
 
 impl BasicSnippet for GetColinearityCheckX {

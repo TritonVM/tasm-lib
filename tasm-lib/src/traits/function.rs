@@ -18,6 +18,10 @@ use super::{basic_snippet::BasicSnippet, rust_shadow::RustShadow};
 /// be updated accordingly.
 ///
 /// See also: [closure], [algorithm], [procedure]
+///
+/// [closure]: crate::traits::closure::Closure
+/// [algorithm]: crate::traits::algorithm::Algorithm
+/// [procedure]: crate::traits::procedure::Procedure
 pub trait Function: BasicSnippet {
     fn rust_shadow(
         &self,

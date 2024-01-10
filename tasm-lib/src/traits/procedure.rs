@@ -23,6 +23,10 @@ use crate::{
 /// a standalone program.
 ///
 /// See also: [closure], [function], [algorithm]
+///
+/// [closure]: crate::traits::closure::Closure
+/// [function]: crate::traits::function::Function
+/// [algorithm]: crate::traits::algorithm::Algorithm
 pub trait Procedure: BasicSnippet {
     /// Returns standard output
     fn rust_shadow(

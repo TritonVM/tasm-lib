@@ -1,4 +1,4 @@
-//! This crate provides a derive macro for the `BFieldCodec` trait.
+//! This crate provides a derive macro for the `TasmObject` trait.
 
 extern crate proc_macro;
 
@@ -7,9 +7,6 @@ use quote::quote;
 use syn::DeriveInput;
 
 /// Derives `TasmObject` for structs.
-///
-/// ### Known limitations
-/// ```
 #[proc_macro_derive(TasmObject, attributes(tasm_object))]
 pub fn derive_tasm_object(input: TokenStream) -> TokenStream {
     // ...

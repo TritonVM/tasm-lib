@@ -16,6 +16,10 @@ use super::{basic_snippet::BasicSnippet, rust_shadow::RustShadow};
 /// memory or nondeterminism or standard input/output.
 ///
 /// See also: [function], [algorithm], [procedure]
+///
+/// [function]: crate::traits::function::Function
+/// [algorithm]: crate::traits::algorithm::Algorithm
+/// [procedure]: crate::traits::procedure::Procedure
 pub trait Closure: BasicSnippet {
     fn rust_shadow(&self, stack: &mut Vec<BFieldElement>);
 

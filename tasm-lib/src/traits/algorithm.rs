@@ -16,6 +16,10 @@ use crate::{
 /// standard in or write to standard out.
 ///
 /// See also: [closure], [function], [procedure]
+///
+/// [closure]: crate::traits::closure::Closure
+/// [function]: crate::traits::function::Function
+/// [procedure]: crate::traits::procedure::Procedure
 pub trait Algorithm: BasicSnippet {
     fn rust_shadow(
         &self,
