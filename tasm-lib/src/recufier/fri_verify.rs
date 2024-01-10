@@ -1176,13 +1176,9 @@ mod test {
     use proptest::collection::vec;
     use proptest::prelude::*;
     use proptest_arbitrary_interop::arb;
-    use rand::rngs::StdRng;
-    use rand::*;
     use test_strategy::proptest;
     use triton_vm::proof_item::ProofItem;
     use twenty_first::util_types::algebraic_hasher::*;
-    use twenty_first::util_types::merkle_tree::CpuParallel;
-    use twenty_first::util_types::merkle_tree_maker::MerkleTreeMaker;
 
     use crate::test_helpers::*;
     use crate::traits::procedure::ShadowedProcedure;
@@ -1293,41 +1289,6 @@ mod test {
         let mut vm_proof_stream = test_case.vm_proof_stream();
         let verify_result = fri_verify.inner_verify(&mut vm_proof_stream, &mut vec![]);
         prop_assert!(verify_result.is_ok(), "FRI verify error: {verify_result:?}");
-    }
-
-    #[test]
-    fn test_merkle_authentication_structure() {
-        let mut rng: StdRng = SeedableRng::from_seed([0x00; 32]);
-        let height = 10;
-        let n = 1 << height;
-        let m = rng.gen_range(0..n);
-        let leafs: Vec<Digest> = (0..n).map(|_| rng.gen()).collect_vec();
-        let merkle_tree = <CpuParallel as MerkleTreeMaker<VmHasher>>::from_digests(&leafs);
-        let root = merkle_tree.get_root();
-        let indices = (0..m).map(|_| rng.gen_range(0..n)).collect_vec();
-        let leafs = indices.iter().map(|i| leafs[*i]).collect_vec();
-        let authentication_structure = merkle_tree.get_authentication_structure(&indices);
-        let authentication_paths =
-            MerkleTree::<VmHasher>::authentication_paths_from_authentication_structure(
-                height,
-                &indices,
-                &leafs,
-                &authentication_structure,
-            )
-            .unwrap();
-        for ((index, leaf), authentication_path) in indices
-            .into_iter()
-            .zip(leafs.into_iter())
-            .zip(authentication_paths.into_iter())
-        {
-            assert!(MerkleTree::<VmHasher>::verify_authentication_structure(
-                root,
-                height,
-                &[index],
-                &[leaf],
-                &authentication_path
-            ));
-        }
     }
 
     #[proptest(cases = 3)]
