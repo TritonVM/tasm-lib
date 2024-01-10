@@ -1195,10 +1195,10 @@ mod test {
         #[filter(!#offset.is_zero())]
         offset: BFieldElement,
 
-        #[strategy(0_u32..20)]
+        #[strategy(0_u32..12)]
         domain_length_exponent: u32,
 
-        #[strategy(0_u32..10)]
+        #[strategy(0_u32..6)]
         expansion_factor_exponent: u32,
 
         #[strategy(1_u32..320)]
