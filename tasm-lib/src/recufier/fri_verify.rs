@@ -66,7 +66,7 @@ use crate::VmHasherState;
 /// The test succeeds with probability 1 if the codeword is of low degree; and with
 /// probability *soundness error* if the codeword is far from low-degree. If the test is
 /// not successful, the VM crashes.
-#[derive(Debug, Clone, PartialEq, Eq, BFieldCodec, TasmObject)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, BFieldCodec, TasmObject)]
 pub struct FriVerify {
     // expansion factor = 1 / rate
     pub expansion_factor: u32,
@@ -400,18 +400,9 @@ impl FriVerify {
 
     /// Generate a proof, embedded in a proof stream.
     pub fn pseudorandom_fri_proof_stream(&self, seed: [u8; 32]) -> VmProofStream {
-        let mut rng: StdRng = SeedableRng::from_seed(seed);
-
         let max_degree = self.first_round_max_degree();
+        let mut rng: StdRng = SeedableRng::from_seed(seed);
         let polynomial_coefficients = (0..=max_degree).map(|_| rng.gen()).collect_vec();
-
-        let fri_domain = ArithmeticDomain::of_length(self.domain_length as usize)
-            .with_offset(self.domain_offset);
-        let fri = Fri::new(
-            fri_domain,
-            self.expansion_factor as usize,
-            self.num_colinearity_checks as usize,
-        );
 
         let mut codeword = polynomial_coefficients;
         codeword.resize(self.domain_length as usize, XFieldElement::zero());
@@ -421,9 +412,20 @@ impl FriVerify {
         ntt::<XFieldElement>(&mut codeword, primitive_root, log_2_of_n);
 
         let mut proof_stream = ProofStream::<VmHasher>::new();
+        let fri = self.to_fri();
         fri.prove(&codeword, &mut proof_stream);
 
         VmProofStream::new(&proof_stream.items)
+    }
+
+    pub fn to_fri(&self) -> Fri<VmHasher> {
+        let fri_domain = ArithmeticDomain::of_length(self.domain_length as usize)
+            .with_offset(self.domain_offset);
+        Fri::new(
+            fri_domain,
+            self.expansion_factor as usize,
+            self.num_colinearity_checks as usize,
+        )
     }
 }
 
@@ -1149,7 +1151,7 @@ impl Procedure for FriVerify {
         let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
         let proof_stream_pointer = BFieldElement::zero();
         let fri_verify_pointer = encode_to_memory(&mut memory, proof_stream_pointer, proof_stream);
-        encode_to_memory(&mut memory, fri_verify_pointer, self.clone());
+        encode_to_memory(&mut memory, fri_verify_pointer, *self);
         let nondeterminism = NonDeterminism::default()
             .with_ram(memory)
             .with_digests(digests);
@@ -1169,7 +1171,6 @@ impl Procedure for FriVerify {
 
 #[cfg(test)]
 mod test {
-    use std::collections::HashMap;
     use std::panic::catch_unwind;
 
     use proptest::collection::vec;
@@ -1178,29 +1179,18 @@ mod test {
     use rand::rngs::StdRng;
     use rand::*;
     use test_strategy::proptest;
-    use triton_vm::arithmetic_domain::ArithmeticDomain;
-    use triton_vm::fri::Fri;
     use triton_vm::proof_item::ProofItem;
-    use triton_vm::proof_stream::ProofStream;
-    use triton_vm::*;
-    use twenty_first::shared_math::bfield_codec::BFieldCodec;
-    use twenty_first::shared_math::ntt::ntt;
     use twenty_first::util_types::algebraic_hasher::*;
-    use twenty_first::util_types::merkle_tree::*;
+    use twenty_first::util_types::merkle_tree::CpuParallel;
     use twenty_first::util_types::merkle_tree_maker::MerkleTreeMaker;
 
-    use crate::empty_stack;
-    use crate::recufier::proof_stream::vm_proof_stream::VmProofStream;
-    use crate::structure::tasm_object::*;
-    use crate::tasm_lib::recufier::fri_verify::FriVerify;
     use crate::test_helpers::*;
-    use crate::traits::procedure::*;
-    use crate::Digest;
+    use crate::traits::procedure::ShadowedProcedure;
 
     use super::*;
 
     #[derive(Debug, Clone, test_strategy::Arbitrary)]
-    struct TestCase {
+    struct ArbitraryFriVerify {
         #[strategy(arb())]
         #[filter(!#offset.is_zero())]
         offset: BFieldElement,
@@ -1215,40 +1205,71 @@ mod test {
         num_collinearity_checks: u32,
     }
 
-    impl TestCase {
-        fn expansion_factor(&self) -> u32 {
-            2 << self.expansion_factor_exponent
-        }
-
-        fn domain_length(&self) -> u32 {
-            self.expansion_factor() * (1 << self.domain_length_exponent)
-        }
-
-        fn tasm_procedure(&self) -> FriVerify {
+    impl ArbitraryFriVerify {
+        fn fri_verify(&self) -> FriVerify {
+            let expansion_factor = 2 << self.expansion_factor_exponent;
+            let domain_length = expansion_factor * (1 << self.domain_length_exponent);
             FriVerify::new(
                 self.offset,
-                self.domain_length(),
-                self.expansion_factor(),
+                domain_length,
+                expansion_factor,
                 self.num_collinearity_checks,
             )
         }
+    }
 
-        fn tvm_fri(&self) -> Fri<VmHasher> {
-            let offset = self.offset;
-            let domain_length = self.domain_length();
-            let domain = ArithmeticDomain::of_length(domain_length as usize).with_offset(offset);
+    #[derive(Debug, Clone, test_strategy::Arbitrary)]
+    struct TestCase {
+        #[strategy(any::<ArbitraryFriVerify>().prop_map(|x| x.fri_verify()))]
+        fri_verify: FriVerify,
 
-            let expansion_factor = self.expansion_factor() as usize;
-            let num_collinearity_checks = self.num_collinearity_checks as usize;
+        #[strategy(vec(arb(), #fri_verify.first_round_max_degree()))]
+        polynomial_coefficients: Vec<XFieldElement>,
+    }
 
-            Fri::new(domain, expansion_factor, num_collinearity_checks)
+    impl TestCase {
+        fn fri(&self) -> Fri<VmHasher> {
+            self.fri_verify.to_fri()
+        }
+
+        fn codeword(&self) -> Vec<XFieldElement> {
+            let domain_length = self.fri_verify.domain_length;
+            let mut codeword = self.polynomial_coefficients.clone();
+            codeword.resize(domain_length as usize, XFieldElement::zero());
+
+            let root_of_unity =
+                BFieldElement::primitive_root_of_unity(domain_length as u64).unwrap();
+            let log_2_of_n = domain_length.ilog2();
+            ntt::<XFieldElement>(&mut codeword, root_of_unity, log_2_of_n);
+            codeword
+        }
+
+        fn proof_items(&self) -> Vec<ProofItem> {
+            let fri = self.fri();
+            let codeword = self.codeword();
+            let mut proof_stream = ProofStream::new();
+            fri.prove(&codeword, &mut proof_stream);
+
+            proof_stream.items
+        }
+
+        fn vm_proof_stream(&self) -> VmProofStream {
+            VmProofStream::new(&self.proof_items())
+        }
+
+        fn proof_stream(&self) -> ProofStream<VmHasher> {
+            ProofStream {
+                items: self.proof_items(),
+                items_index: 0,
+                sponge_state: VmHasher::init(),
+            }
         }
     }
 
     #[proptest]
-    fn fri_derived_params_match(test_case: TestCase) {
-        let fri_verify = test_case.tasm_procedure();
-        let fri = test_case.tvm_fri();
+    fn fri_derived_params_match(test_case: ArbitraryFriVerify) {
+        let fri_verify = test_case.fri_verify();
+        let fri = fri_verify.to_fri();
 
         prop_assert_eq!(fri_verify.num_rounds(), fri.num_rounds());
         prop_assert_eq!(
@@ -1263,26 +1284,13 @@ mod test {
 
     #[proptest(cases = 10)]
     fn test_inner_verify(test_case: TestCase) {
-        let fri_verify = test_case.tasm_procedure();
-        let fri = test_case.tvm_fri();
-
-        let mut vm_proof_stream = fri_verify.pseudorandom_fri_proof_stream([0; 32]);
-
-        // try verify the embedded proof using Triton-VM's verify
-        let mut vm_proof_stream_copy = vm_proof_stream.clone();
-        let mut proof_items = vec![];
-        while let Ok(item) = vm_proof_stream_copy.dequeue() {
-            proof_items.push(*item);
-        }
-        let mut verify_proof_stream = ProofStream::<VmHasher> {
-            items: proof_items,
-            items_index: 0,
-            sponge_state: VmHasher::init(),
-        };
-
-        let verify_result = fri.verify(&mut verify_proof_stream, &mut None);
+        let fri = test_case.fri();
+        let mut proof_stream = test_case.proof_stream();
+        let verify_result = fri.verify(&mut proof_stream, &mut None);
         prop_assert!(verify_result.is_ok(), "FRI verify error: {verify_result:?}");
 
+        let fri_verify = test_case.fri_verify;
+        let mut vm_proof_stream = test_case.vm_proof_stream();
         let verify_result = fri_verify.inner_verify(&mut vm_proof_stream, &mut vec![]);
         prop_assert!(verify_result.is_ok(), "FRI verify error: {verify_result:?}");
     }
@@ -1324,7 +1332,7 @@ mod test {
 
     #[proptest(cases = 3)]
     fn test_shadow(test_case: TestCase) {
-        let fri_verify = test_case.tasm_procedure();
+        let fri_verify = test_case.fri_verify;
 
         // ShadowedProcedure::new(procedure).test();
         // Unfortunately, we cannot call the built-in test that comes with anything that
@@ -1380,28 +1388,10 @@ mod test {
     }
 
     #[proptest(cases = 1)]
-    fn modifying_any_element_in_proof_stream_causes_verification_failure(
-        test_case: TestCase,
-        #[strategy(vec(arb(), #test_case.tvm_fri().first_round_max_degree()))]
-        polynomial_coefficients: Vec<XFieldElement>,
-    ) {
-        // generate proof
-        let domain_length = test_case.domain_length();
-        let mut codeword = polynomial_coefficients;
-        codeword.resize(domain_length as usize, XFieldElement::zero());
-        ntt::<XFieldElement>(
-            &mut codeword,
-            BFieldElement::primitive_root_of_unity(domain_length as u64).unwrap(),
-            domain_length.ilog2(),
-        );
-        let mut proof_stream = ProofStream::<VmHasher>::new();
+    fn modifying_any_element_in_proof_stream_causes_verification_failure(test_case: TestCase) {
+        let fri_verify = test_case.fri_verify;
+        let mut proof = test_case.proof_items().encode();
 
-        let fri_verify = test_case.tasm_procedure();
-        let fri = test_case.tvm_fri();
-        fri.prove(&codeword, &mut proof_stream);
-        let mut proof = proof_stream.items.encode();
-
-        // change each element one by one, and verify that verification fails
         for i in 0..proof.len() {
             proof[i].increment();
 
@@ -1421,7 +1411,7 @@ mod test {
                 let proof_stream_pointer = BFieldElement::zero();
                 let fri_verify_pointer =
                     encode_to_memory(&mut memory, proof_stream_pointer, proof_stream);
-                encode_to_memory(&mut memory, fri_verify_pointer, fri_verify.clone());
+                encode_to_memory(&mut memory, fri_verify_pointer, fri_verify);
                 let nondeterminism = NonDeterminism::default()
                     .with_ram(memory)
                     .with_digests(digests);
@@ -1431,7 +1421,7 @@ mod test {
                 let sponge_state = VmHasherState::new(Domain::VariableLength);
 
                 // run tvm
-                let shadowed_snippet = ShadowedProcedure::new(fri_verify.clone());
+                let shadowed_snippet = ShadowedProcedure::new(fri_verify);
                 let words_statically_allocated = 0;
                 let _tasm = tasm_final_state(
                     &shadowed_snippet,
