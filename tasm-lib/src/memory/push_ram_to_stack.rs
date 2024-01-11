@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 
+use num_traits::Zero;
 use rand::random;
 use triton_vm::{triton_asm, BFieldElement};
+use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
 use crate::{
     data_type::DataType,
@@ -92,9 +94,24 @@ impl Function for PushRamToStack {
         _seed: [u8; 32],
         _bench_case: Option<BenchmarkCase>,
     ) -> FunctionInitialState {
-        let mut memory = HashMap::<BFieldElement, BFieldElement>::new();
         let address: BFieldElement = random();
         let value = self.data_type.random_elements(1)[0].clone();
+
+        Self::init_state(address, value)
+    }
+
+    fn corner_case_initial_states(&self) -> Vec<FunctionInitialState> {
+        let address = BFieldElement::zero();
+        let value = self.data_type.random_elements(1)[0].clone();
+        let pointer_is_zero = Self::init_state(address, value);
+
+        vec![pointer_is_zero]
+    }
+}
+
+impl PushRamToStack {
+    fn init_state<T: BFieldCodec>(address: BFieldElement, value: T) -> FunctionInitialState {
+        let mut memory = HashMap::<BFieldElement, BFieldElement>::new();
         encode_to_memory(&mut memory, address, value);
         let mut stack = empty_stack();
         stack.push(address);
@@ -104,8 +121,12 @@ impl Function for PushRamToStack {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
+    use num_traits::One;
+    use triton_vm::NonDeterminism;
+
     use super::*;
+    use crate::test_helpers::tasm_final_state;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
 
@@ -114,6 +135,28 @@ mod test {
         for data_type in DataType::big_random_generatable_type_collection() {
             ShadowedFunction::new(PushRamToStack { data_type }).test();
         }
+    }
+
+    #[test]
+    fn u64_test() {
+        let u64_snippet = PushRamToStack {
+            data_type: DataType::U64,
+        };
+        let value_stored_to_memory: u64 = (1u64 << 46) + 3;
+        let init_state = PushRamToStack::init_state(BFieldElement::one(), value_stored_to_memory);
+        let mut final_state = tasm_final_state(
+            &ShadowedFunction::new(u64_snippet),
+            &init_state.stack,
+            &[],
+            NonDeterminism::default().with_ram(init_state.memory),
+            &None,
+            0,
+        );
+
+        let u64_lo = final_state.final_stack.pop().unwrap().value();
+        let u64_hi = final_state.final_stack.pop().unwrap().value();
+
+        assert_eq!((1u64 << 46) + 3, (u64_hi << 32) + u64_lo);
     }
 }
 
