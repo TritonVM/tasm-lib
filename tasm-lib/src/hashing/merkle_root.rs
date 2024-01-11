@@ -7,13 +7,12 @@ use triton_vm::{triton_asm, BFieldElement};
 use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
 use crate::data_type::DataType;
+use crate::memory::encode_to_memory;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::function::{Function, FunctionInitialState};
 use crate::{
-    empty_stack,
-    snippet_bencher::BenchmarkCase,
-    structure::tasm_object::{encode_to_memory, TasmObject},
-    Digest, VmHasher,
+    empty_stack, snippet_bencher::BenchmarkCase, structure::tasm_object::TasmObject, Digest,
+    VmHasher,
 };
 
 /// Compute the Merkle root of a slice of `Digest`s

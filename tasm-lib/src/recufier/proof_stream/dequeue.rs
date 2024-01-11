@@ -255,7 +255,8 @@ mod test {
     use twenty_first::util_types::algebraic_hasher::Domain;
 
     use crate::library::Library;
-    use crate::structure::tasm_object::{decode_from_memory_with_size, encode_to_memory};
+    use crate::memory::encode_to_memory;
+    use crate::structure::tasm_object::decode_from_memory_with_size;
     use crate::traits::procedure::{Procedure, ProcedureInitialState, ShadowedProcedure};
     use crate::traits::rust_shadow::RustShadow;
     use crate::{

@@ -43,6 +43,7 @@ use crate::list::unsafeimplu32::push::UnsafePush;
 use crate::list::ListType;
 use crate::memory::dyn_malloc::DYN_MALLOC_ADDRESS;
 use crate::memory::dyn_malloc::FIRST_DYNAMICALLY_ALLOCATED_ADDRESS;
+use crate::memory::encode_to_memory;
 use crate::recufier::get_colinear_y::ColinearYXfe;
 use crate::recufier::get_colinearity_check_x::GetColinearityCheckX;
 use crate::recufier::proof_stream::dequeue::Dequeue;
@@ -50,7 +51,6 @@ use crate::recufier::proof_stream::sample_scalars::SampleScalars;
 use crate::recufier::verify_authentication_paths_for_leaf_and_index_list::VerifyAuthenticationPathForLeafAndIndexList;
 use crate::recufier::xfe_ntt::XfeNtt;
 use crate::snippet_bencher::BenchmarkCase;
-use crate::structure::tasm_object::encode_to_memory;
 use crate::structure::tasm_object::TasmObject;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::procedure::{Procedure, ProcedureInitialState};
@@ -1196,9 +1196,10 @@ mod test {
         },
     };
 
+    use crate::memory::encode_to_memory;
     use crate::{
         empty_stack, recufier::proof_stream::vm_proof_stream::VmProofStream,
-        structure::tasm_object::encode_to_memory, traits::procedure::ProcedureInitialState,
+        traits::procedure::ProcedureInitialState,
     };
     use crate::{
         structure::tasm_object::TasmObject,

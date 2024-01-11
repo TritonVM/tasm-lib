@@ -1,12 +1,10 @@
 use num_traits::Zero;
 use std::collections::HashMap;
 
+use crate::memory::encode_to_memory;
 use crate::{
-    data_type::DataType,
-    empty_stack,
-    snippet_bencher::BenchmarkCase,
-    structure::tasm_object::{encode_to_memory, TasmObject},
-    traits::function::FunctionInitialState,
+    data_type::DataType, empty_stack, snippet_bencher::BenchmarkCase,
+    structure::tasm_object::TasmObject, traits::function::FunctionInitialState,
 };
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use triton_vm::{triton_asm, BFieldElement};

@@ -5,11 +5,11 @@ use rand::random;
 use triton_vm::{triton_asm, BFieldElement};
 use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
+use crate::memory::encode_to_memory;
 use crate::{
     data_type::DataType,
     empty_stack,
     snippet_bencher::BenchmarkCase,
-    structure::tasm_object::encode_to_memory,
     traits::{
         basic_snippet::BasicSnippet,
         function::{Function, FunctionInitialState},

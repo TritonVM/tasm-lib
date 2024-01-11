@@ -1,6 +1,6 @@
 use crate::data_type::DataType;
 use crate::empty_stack;
-use crate::structure::tasm_object::encode_to_memory;
+use crate::memory::encode_to_memory;
 use crate::structure::tasm_object::TasmObject;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::function::Function;

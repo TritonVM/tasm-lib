@@ -8,13 +8,13 @@ use twenty_first::{
     util_types::algebraic_hasher::SpongeHasher,
 };
 
+use crate::memory::encode_to_memory;
 use crate::traits::procedure::ProcedureInitialState;
 use crate::{data_type::DataType, traits::basic_snippet::BasicSnippet};
 use crate::{
     empty_stack,
     hashing::squeeze_repeatedly::SqueezeRepeatedly,
     list::unsafeimplu32::{new::UnsafeNew, set_length::UnsafeSetLength},
-    structure::tasm_object::encode_to_memory,
     VmHasher, VmHasherState,
 };
 use crate::{

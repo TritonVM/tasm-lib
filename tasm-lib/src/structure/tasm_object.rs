@@ -81,20 +81,6 @@ pub fn decode_from_memory_with_size<T: BFieldCodec>(
     T::decode(&sequence).map_err(|e| e.into())
 }
 
-/// Stores the encoding of the given object into memory at the given address, and returns
-/// the address of the first untouched memory cell after.
-pub fn encode_to_memory<T: BFieldCodec>(
-    memory: &mut HashMap<BFieldElement, BFieldElement>,
-    address: BFieldElement,
-    object: T,
-) -> BFieldElement {
-    let encoding = object.encode();
-    for (i, e) in encoding.iter().enumerate() {
-        memory.insert(address + BFieldElement::new(i as u64), *e);
-    }
-    address + BFieldElement::new(encoding.len() as u64)
-}
-
 impl<T: BFieldCodec> TasmObject for Vec<T> {
     fn get_field(_field_name: &str) -> Vec<LabelledInstruction> {
         panic!("`Vec` does not have fields; cannot access them")
@@ -242,12 +228,10 @@ mod test {
     use twenty_first::shared_math::{bfield_codec::BFieldCodec, x_field_element::XFieldElement};
 
     use crate::data_type::DataType;
+    use crate::memory::encode_to_memory;
     use crate::{
-        empty_stack, execute_with_terminal_state,
-        library::Library,
-        list::unsafeimplu32::length::Length,
-        structure::tasm_object::{encode_to_memory, TasmObject},
-        Digest,
+        empty_stack, execute_with_terminal_state, library::Library,
+        list::unsafeimplu32::length::Length, structure::tasm_object::TasmObject, Digest,
     };
 
     #[test]

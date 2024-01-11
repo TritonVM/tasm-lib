@@ -1,8 +1,25 @@
-use triton_vm::{instruction::LabelledInstruction, triton_asm, triton_instr};
+use std::collections::HashMap;
+
+use triton_vm::{instruction::LabelledInstruction, triton_asm, triton_instr, BFieldElement};
+use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
 pub mod dyn_malloc;
 pub mod memcpy;
 pub mod push_ram_to_stack;
+
+/// Stores the encoding of the given object into memory at the given address, and returns
+/// the address of the first untouched memory cell after.
+pub fn encode_to_memory<T: BFieldCodec>(
+    memory: &mut HashMap<BFieldElement, BFieldElement>,
+    address: BFieldElement,
+    object: T,
+) -> BFieldElement {
+    let encoding = object.encode();
+    for (i, e) in encoding.iter().enumerate() {
+        memory.insert(address + BFieldElement::new(i as u64), *e);
+    }
+    address + BFieldElement::new(encoding.len() as u64)
+}
 
 /// Return the code to read a `n` words from memory. Top of stack must point
 /// to last word of words to read. Leaves mutated pointer on top of stack.
