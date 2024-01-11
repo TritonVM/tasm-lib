@@ -250,7 +250,7 @@ impl Function for GetSwbfIndices {
 
         rust_shadowing_helper_functions::unsafe_list::unsafe_list_set_length(
             u32_list_pointer,
-            self.num_trials as u32,
+            self.num_trials,
             memory,
         );
 

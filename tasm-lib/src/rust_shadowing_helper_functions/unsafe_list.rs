@@ -150,7 +150,7 @@ pub fn unsafe_list_get_length(
 
 pub fn unsafe_list_set_length(
     list_pointer: BFieldElement,
-    new_length: u32,
+    new_length: usize,
     memory: &mut HashMap<BFieldElement, BFieldElement>,
 ) {
     memory.insert(list_pointer, BFieldElement::new(new_length as u64));
@@ -168,9 +168,6 @@ mod tests {
         assert!(unsafe_list_get_length(list_pointer, &memory).is_zero());
         let new_length = 51;
         unsafe_list_set_length(list_pointer, new_length, &mut memory);
-        assert_eq!(
-            new_length as usize,
-            unsafe_list_get_length(list_pointer, &memory)
-        );
+        assert_eq!(new_length, unsafe_list_get_length(list_pointer, &memory));
     }
 }

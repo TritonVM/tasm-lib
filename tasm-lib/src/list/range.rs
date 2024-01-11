@@ -207,7 +207,7 @@ impl DeprecatedSnippet for Range {
                 rust_shadowing_helper_functions::unsafe_list::unsafe_list_new(list_pointer, memory);
                 rust_shadowing_helper_functions::unsafe_list::unsafe_list_set_length(
                     list_pointer,
-                    length.try_into().unwrap(),
+                    length,
                     memory,
                 );
             }
