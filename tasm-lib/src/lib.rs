@@ -48,7 +48,6 @@ pub mod memory;
 pub mod mmr;
 pub mod neptune;
 pub mod other_snippets;
-pub mod ram_builder;
 pub mod recufier;
 pub mod rust_shadowing_helper_functions;
 pub mod snippet_bencher;
