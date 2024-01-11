@@ -7,6 +7,10 @@ pub mod dyn_malloc;
 pub mod memcpy;
 pub mod push_ram_to_stack;
 
+/// Non-deterministially initialized memory lives in the range $[0: 2^{32})$
+pub const FIRST_NON_DETERMINISTICALLY_INITIALIZED_MEMORY_ADDRESS: BFieldElement =
+    BFieldElement::new(0);
+
 /// Stores the encoding of the given object into memory at the given address, and returns
 /// the address of the first untouched memory cell after.
 pub fn encode_to_memory<T: BFieldCodec>(
