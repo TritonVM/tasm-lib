@@ -12,12 +12,14 @@
 // https://github.com/bkchr/proc-macro-crate/issues/2#issuecomment-572914520
 extern crate self as tasm_lib;
 
+use std::cmp::min;
+use std::collections::HashMap;
+use std::io::Write;
+use std::time::SystemTime;
+
 use anyhow::bail;
 use itertools::Itertools;
 use num_traits::Zero;
-use std::collections::HashMap;
-use std::time::SystemTime;
-use traits::basic_snippet::BasicSnippet;
 use triton_vm::instruction::LabelledInstruction;
 use triton_vm::op_stack::NUM_OP_STACK_REGISTERS;
 use triton_vm::program::Program;
@@ -33,7 +35,7 @@ use twenty_first::shared_math::tip5::{self, Tip5};
 
 use library::Library;
 use memory::dyn_malloc;
-use std::cmp::min;
+use traits::basic_snippet::BasicSnippet;
 use traits::deprecated_snippet::DeprecatedSnippet;
 
 pub mod arithmetic;
@@ -60,6 +62,8 @@ pub type VmHasher = Tip5;
 pub type VmHasherState = Tip5State;
 pub type Digest = tip5::Digest;
 pub const DIGEST_LENGTH: usize = tip5::DIGEST_LENGTH;
+
+const ENV_VARIABLE_WRITE_PROGRAM_AND_STATE_TO_DISK: &str = "TRITON_TUI";
 
 #[derive(Clone, Debug)]
 pub struct ExecutionState {
@@ -224,6 +228,9 @@ pub fn execute_test(
     let mut vm_state = VMState::new(&program, public_input.clone(), nondeterminism.clone());
     vm_state.op_stack.stack = stack.to_owned();
     vm_state.sponge_state = maybe_sponge_state.map(|state| state.state);
+
+    maybe_write_debuggable_program_to_disk(&program, &vm_state);
+
     if let Err(err) = vm_state.run() {
         panic!("{err}\n\nFinal state was: {vm_state}")
     }
@@ -270,6 +277,29 @@ pub fn execute_test(
             .sponge_state
             .map(|state| VmHasherState { state }),
     }
+}
+
+/// If the environment variable [`ENV_VARIABLE_WRITE_PROGRAM_AND_STATE_TO_DISK`] is set, write
+/// 1. the program to file `program.tasm`, and
+/// 2. the VM state to file `vm_state.json`.
+///
+/// These files can be used to debug the program using the [Triton TUI]:
+/// ```sh
+/// triton-tui program.tasm --initial-state vm_state.json
+/// ```
+///
+/// [Triton TUI]: https://crates.io/crates/triton-tui
+fn maybe_write_debuggable_program_to_disk(program: &Program, vm_state: &VMState) {
+    let Ok(_) = std::env::var(ENV_VARIABLE_WRITE_PROGRAM_AND_STATE_TO_DISK) else {
+        return;
+    };
+
+    let mut state_file = std::fs::File::create("vm_state.json").unwrap();
+    let state = serde_json::to_string(&vm_state).unwrap();
+    write!(state_file, "{state}").unwrap();
+
+    let mut program_file = std::fs::File::create("program.tasm").unwrap();
+    write!(program_file, "{program}").unwrap();
 }
 
 /// Prepare state and run Triton VM
