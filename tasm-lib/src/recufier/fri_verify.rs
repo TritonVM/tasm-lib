@@ -765,19 +765,25 @@ impl BasicSnippet for FriVerify {
             // BEFORE: _ *proof_stream *fri_verify
             // AFTER:  _ *proof_stream *indices_and_leafs
             {entrypoint}:
+                hint fri_verify_pointer = stack[0]
+                hint proof_stream_pointer = stack[1]
 
                 // calculate number of rounds
                 dup 0 {&domain_length}      // _ *proof_stream *fri_verify *domain_length
                 read_mem 1 pop 1            // _ *proof_stream *fri_verify domain_length
+                hint domain_length = stack[0]
 
                 dup 1 {&expansion_factor}   // _ *proof_stream *fri_verify domain_length *expansion_factor
                 read_mem 1 pop 1            // _ *proof_stream *fri_verify domain_length expansion_factor
+                hint expansion_factor = stack[0]
 
                 swap 1 div_mod pop 1        // _ *proof_stream *fri_verify first_round_code_dimension
                 log_2_floor                 // _ *proof_stream *fri_verify max_num_rounds
+                hint max_num_rounds = stack[0]
 
                 dup 1 {&num_colinearity_checks}
                 read_mem 1 pop 1            // _ *proof_stream *fri_verify max_num_rounds num_colinearity_checks
+                hint num_colinearity_checks = stack[0]
 
                 log_2_floor push 1 add      // _ *proof_stream *fri_verify max_num_rounds num_rounds_checking_most_locations
 
@@ -785,13 +791,16 @@ impl BasicSnippet for FriVerify {
                 swap 2 push -1 mul add      // _ *proof_stream *fri_verify num_rounds_checking_most_locations<max_num_rounds num_rounds_checking_most_locations-max_num_rounds
                 mul push -1 mul             // _ *proof_stream *fri_verify if(num_rounds_checking_most_locations<max_num_rounds){max_num_rounds-num_rounds_checking_most_locations}else{0}
                                             // _ *proof_stream *fri_verify num_rounds
+                hint num_rounds = stack[0]
 
                 // calculate max degree of last round
                 dup 1 {&domain_length}      // _ *proof_stream *fri_verify num_rounds *domain_length
                 read_mem 1 pop 1            // _ *proof_stream *fri_verify num_rounds domain_length
+                hint domain_length = stack[0]
 
                 dup 2 {&expansion_factor}   // _ *proof_stream *fri_verify num_rounds domain_length *expansion_factor
                 read_mem 1 pop 1            // _ *proof_stream *fri_verify num_rounds domain_length expansion_factor
+                hint expansion_factor = stack[0]
 
                 swap 1 div_mod pop 1        // _ *proof_stream *fri_verify num_rounds first_round_code_dimension
 
@@ -799,6 +808,7 @@ impl BasicSnippet for FriVerify {
 
                 swap 1 div_mod pop 1        // _ *proof_stream *fri_verify num_rounds first_round_code_dimension>>num_rounds
                 push -1 add                 // _ *proof_stream *fri_verify num_rounds last_round_max_degree
+                hint last_round_max_degree = stack[0]
 
                 // COMMIT PHASE
 
@@ -818,7 +828,6 @@ impl BasicSnippet for FriVerify {
                 dup 1 swap 1                // _ *proof_stream *fri_verify num_rounds last_round_max_degree *alphas *roots *roots *root
 
                 {&read_digest}              // _ *proof_stream *fri_verify num_rounds last_round_max_degree *alphas *roots *roots [root]
-
                 call {push_digest_to_list}  // _ *proof_stream *fri_verify num_rounds last_round_max_degree *alphas *roots
 
                 // dequeue remaining roots and collect Fiat-Shamir challenges
@@ -856,6 +865,7 @@ impl BasicSnippet for FriVerify {
                 assert                      // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *last_codeword *leafs num_leafs
                 push 0 swap 1               // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *last_codeword *leafs 0 num_leafs
                 call {merkle_root}          // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *last_codeword [last_root]
+                hint merkle_root: Digest = stack[0..5]
 
                 // check against last root dequeued
                 dup 8                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *last_codeword [last_root] *roots
@@ -881,11 +891,6 @@ impl BasicSnippet for FriVerify {
                 invert                      // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *last_codeword omega_inv
                 dup 1 swap 1                // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *last_codeword *last_codeword omega_inv
                 call {xfe_ntt}              // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *last_polynomial
-
-                // // If the static allocator is not managed correctly, then the above call
-                // // to xfe_ntt modifies the first element of *roots. Let's try and see!
-                // dup 3 push 0 call {get_digest}
-                // push 8888 assert
 
                 // test low degree of polynomial
                 dup 5 push 1 add            // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *last_polynomial num_nonzero_coefficients
@@ -951,6 +956,7 @@ impl BasicSnippet for FriVerify {
                 // the list of opened indices and elements
                 dup 1 dup 1                 // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements *indices *a_elements
                 call {zip_index_xfe}        // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements *revealed_indices_and_leafs
+                hint indices_and_leafs = stack[0]
                 // zip allocates a new unsafe list, which we want to be twice as long
                 // (the second half will be populated in the first iteration of the main loop below)
                 read_mem 1                  // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements length (*revealed_indices_and_leafs - 1)
