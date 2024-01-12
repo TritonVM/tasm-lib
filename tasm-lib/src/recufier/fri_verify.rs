@@ -422,10 +422,22 @@ impl FriVerify {
         &self,
         proof_stream: VmProofStream,
     ) -> (Vec<BFieldElement>, NonDeterminism<BFieldElement>) {
+        let digests = self.extract_digests_required_for_proving(&proof_stream);
+        self.set_up_stack_and_non_determinism_using_digests(proof_stream, digests)
+    }
+
+    fn extract_digests_required_for_proving(&self, proof_stream: &VmProofStream) -> Vec<Digest> {
         let mut digests = vec![];
         self.inner_verify(&mut proof_stream.clone(), &mut digests)
             .unwrap();
+        digests
+    }
 
+    fn set_up_stack_and_non_determinism_using_digests(
+        &self,
+        proof_stream: VmProofStream,
+        digests: Vec<Digest>,
+    ) -> (Vec<BFieldElement>, NonDeterminism<BFieldElement>) {
         let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
         let proof_stream_pointer = BFieldElement::zero();
         let fri_verify_pointer = encode_to_memory(&mut memory, proof_stream_pointer, proof_stream);
@@ -1210,6 +1222,7 @@ mod test {
     use proptest::collection::vec;
     use proptest::prelude::*;
     use proptest_arbitrary_interop::arb;
+    use rayon::prelude::*;
     use test_strategy::proptest;
     use triton_vm::proof_item::ProofItem;
 
@@ -1220,9 +1233,10 @@ mod test {
 
     impl FriVerify {
         /// Test helper – panics if verification fails.
-        fn verify_from_proof(&self, proof: Vec<BFieldElement>) {
+        fn verify_from_proof_with_digests(&self, proof: Vec<BFieldElement>, digests: Vec<Digest>) {
             let proof_stream = VmProofStream::new(&Vec::<ProofItem>::decode(&proof).unwrap());
-            let (stack, nondeterminism) = self.set_up_stack_and_non_determinism(proof_stream);
+            let (stack, nondeterminism) =
+                self.set_up_stack_and_non_determinism_using_digests(proof_stream, digests);
 
             let shadowed_snippet = ShadowedProcedure::new(*self);
             let _tasm = tasm_final_state(
@@ -1402,16 +1416,23 @@ mod test {
 
     #[proptest(cases = 1)]
     fn modifying_any_element_in_proof_stream_causes_verification_failure(test_case: TestCase) {
-        let proof = test_case.proof_items().encode();
-        let proof_len = proof.len();
+        let fri_verify = test_case.fri_verify;
+        let proof_stream = test_case.vm_proof_stream();
+        let digests = fri_verify.extract_digests_required_for_proving(&proof_stream);
 
-        for i in 0..proof.len() {
+        // sanity check
+        let proof = test_case.proof_items().encode();
+        fri_verify.verify_from_proof_with_digests(proof.clone(), digests.clone());
+
+        let proof_len = proof.len();
+        (0..proof_len).into_par_iter().for_each(|i| {
             let mut proof = proof.clone();
             proof[i].increment();
-            catch_unwind(|| test_case.fri_verify.verify_from_proof(proof)).expect_err(&format!(
-                "Verification must fail, but succeeded at element {i}/{proof_len}"
-            ));
-        }
+            catch_unwind(|| fri_verify.verify_from_proof_with_digests(proof, digests.clone()))
+                .expect_err(&format!(
+                    "Verification must fail, but succeeded at element {i}/{proof_len}"
+                ));
+        });
     }
 }
 
