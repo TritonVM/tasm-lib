@@ -534,8 +534,8 @@ impl BasicSnippet for FriVerify {
         let revealed_leafs = field!(FriResponse::revealed_leaves);
         let zip_digests_indices = library.import(Box::new(Zip {
             list_type: ListType::Unsafe,
-            left_type: DataType::Digest,
-            right_type: DataType::U32,
+            left_type: DataType::U32,
+            right_type: DataType::Digest,
         }));
         let verify_authentication_paths_for_leaf_and_index_list =
             library.import(Box::new(VerifyAuthenticationPathForLeafAndIndexList {
@@ -613,15 +613,18 @@ impl BasicSnippet for FriVerify {
                 input_type: DataType::Tuple(vec![DataType::U32, DataType::Xfe]),
                 output_type: DataType::Tuple(vec![DataType::U32, DataType::Xfe]),
                 function: triton_asm! {
-                    // BEFORE: _ *codeword [bu ff er] xfe2 xfe1 xfe0 index
-                    // AFTER: _ *codeword [bu ff er] xfe2 xfe1 xfe0 index
+                    // BEFORE: _ *codeword [bu ff er] index xfe2 xfe1 xfe0
+                    // AFTER:  _ *codeword [bu ff er] index xfe2 xfe1 xfe0
                     {assert_membership_label}:
-                        push 0                  // _ *codeword [bu ff er] xfe2 xfe1 xfe0 index 0
-                        dup 8 dup 2             // _ *codeword [bu ff er] xfe2 xfe1 xfe0 index 0 *codeword index
-                        call {get_xfe_from_list}// _ *codeword [bu ff er] xfe2 xfe1 xfe0 index 0 xfe2' xfe1' xfe0'
-                        dup 4 push 0            // _ *codeword [bu ff er] xfe2 xfe1 xfe0 index 0 xfe2' xfe1' xfe0' index 0
-                        assert_vector           // _ *codeword [bu ff er] xfe2 xfe1 xfe0 index 0
-                        pop 1                   // _ *codeword [bu ff er] xfe2 xfe1 xfe0 index
+                        hint element_to_check: Xfe = stack[0..3]
+                        hint codeword_index = stack[3]
+                        hint codeword: Pointer = stack[7]
+                        push 0                  // _ *codeword [bu ff er] index xfe2 xfe1 xfe0 0
+                        dup 4 dup 9 dup 1       // _ *codeword [bu ff er] index xfe2 xfe1 xfe0 0 index *codeword index
+                        call {get_xfe_from_list}// _ *codeword [bu ff er] index xfe2 xfe1 xfe0 0 index xfe2' xfe1' xfe0'
+                        push 0                  // _ *codeword [bu ff er] index xfe2 xfe1 xfe0 0 index xfe2' xfe1' xfe0' 0
+                        assert_vector           // _ *codeword [bu ff er] index xfe2 xfe1 xfe0 0
+                        pop 1                   // _ *codeword [bu ff er] index xfe2 xfe1 xfe0
                         return
                 },
             }),
@@ -942,7 +945,6 @@ impl BasicSnippet for FriVerify {
                 // check batch merkle membership
                 call {map_convert_xfe_to_digest}
                                             // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements *indices *revealed_leafs_as_digests
-                swap 1                      // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements *revealed_leafs_as_digests *indices
                 call {zip_digests_indices}  // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements *leafs_indices
                 dup 5 push 0                // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements *leafs_indices *roots 0
                 call {get_digest}           // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements *leafs_indices [root[0]]
@@ -995,6 +997,17 @@ impl BasicSnippet for FriVerify {
             // AFTER:      _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length num_rounds
             // INVARIANT:  _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r
             {query_phase_main_loop}:
+                hint current_round: u32 = stack[0]
+                hint current_domain_len = stack[1]
+                hint revealed_indices_and_leafs: Pointer = stack[2]
+                hint a_elements: Pointer = stack[3]
+                hint a_indices: Pointer = stack[4]
+                hint current_tree_height = stack[5]
+                hint alphas: Pointer = stack[6]
+                hint roots: Pointer = stack[7]
+                hint last_codeword: Pointer = stack[8]
+                hint last_round_max_degree = stack[9]
+                hint num_rounds = stack[10]
                 // test termination condition:
                 // if r == num_rounds then return
                 dup 10 dup 1
@@ -1003,8 +1016,11 @@ impl BasicSnippet for FriVerify {
 
                 // get "B" indices
                 push 2 dup 2
-                div_mod pop 1 dup 5         // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *a_indices
+                div_mod pop 1               // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length
+                hint half_domain_len = stack[0]
+                dup 5                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *a_indices
                 call {map_add_half_domain_length}
+                hint b_indices: Pointer = stack[0]
                                             // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices
 
                 // dequeue fri response and get "B" elements
@@ -1012,9 +1028,11 @@ impl BasicSnippet for FriVerify {
                 call {proof_stream_dequeue}
                                             // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *proof_stream *fri_response_ev
                 {&proof_item_as_fri_response}
+                hint fri_response: Pointer = stack[0]
                                             // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *proof_stream *fri_response
                 swap 1 pop 1                // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *fri_response
                 {&revealed_leafs}           // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements
+                hint b_elements: Pointer = stack[0]
 
                 // if in first round (r==0), populate second half of return vector
                 dup 3 push 0 eq
@@ -1023,8 +1041,11 @@ impl BasicSnippet for FriVerify {
 
                 // check batch merkle membership
                 dup 0 call {map_convert_xfe_to_digest}
+                hint b_leaves: Pointer = stack[0]
                                             // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *b_leafs
-                dup 2 call {zip_digests_indices}
+                dup 2 swap 1                // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *b_indices *b_leafs
+                call {zip_digests_indices}
+                hint b_indices_and_leaves: Pointer = stack[0]
                                             // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *b_leaf_and_indices
                 dup 11 dup 5                // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *b_leaf_and_indices *roots r
                 call {get_digest}           // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *b_leaf_and_indices [roots[r]]
