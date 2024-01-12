@@ -67,45 +67,51 @@ impl BasicSnippet for VerifyAuthenticationPathForLeafAndIndexList {
     ) -> Vec<triton_vm::instruction::LabelledInstruction> {
         let entrypoint = self.entrypoint();
         let main_loop = format!("{entrypoint}_main_loop");
-        let data_type = DataType::Tuple(vec![DataType::U32, DataType::Digest]);
-        let lai_length = library.import(self.list_type.length_snippet(data_type.clone()));
-        let lai_get = library.import(self.list_type.get_snippet(data_type.clone()));
-        let merkle_verify = library.import(Box::new(MerkleVerify));
-        triton_asm! {
-            // BEFORE: _ leaf_and_index_list root4 root3 root2 root1 root0 height
-            // AFTER:  _ leaf_and_index_list root4 root3 root2 root1 root0 height
-            {entrypoint}:
-                dup 6               // _ leaf_and_index_list root4 root3 root2 root1 root0 height leaf_and_index_list
-                call {lai_length}   // _ leaf_and_index_list root4 root3 root2 root1 root0 height length
-                push 0              // _ leaf_and_index_list root4 root3 root2 root1 root0 height length 0
+        let indices_and_leaves = DataType::Tuple(vec![DataType::U32, DataType::Digest]);
 
-                call {main_loop}    // _ leaf_and_index_list root4 root3 root2 root1 root0 height length length
+        let len_subroutine_label =
+            library.import(self.list_type.length_snippet(indices_and_leaves.clone()));
+        let get_element_subroutine_label =
+            library.import(self.list_type.get_snippet(indices_and_leaves.clone()));
+        let merkle_verify_subroutine_label = library.import(Box::new(MerkleVerify));
+
+        triton_asm! {
+            // BEFORE: _ *leaf_and_index_list root4 root3 root2 root1 root0 height
+            // AFTER:  _ *leaf_and_index_list root4 root3 root2 root1 root0 height
+            {entrypoint}:
+                dup 6               // _ *leaf_and_index_list root4 root3 root2 root1 root0 height *leaf_and_index_list
+                call {len_subroutine_label}
+                                    // _ *leaf_and_index_list root4 root3 root2 root1 root0 height length
+                push 0              // _ *leaf_and_index_list root4 root3 root2 root1 root0 height length 0
+
+                call {main_loop}    // _ *leaf_and_index_list root4 root3 root2 root1 root0 height length length
 
                 pop 2
                 return
 
-            // INVARIANT: _ leaf_and_index_list root4 root3 root2 root1 root0 height length iteration
+            // INVARIANT: _ *leaf_and_index_list root4 root3 root2 root1 root0 height length iteration
             {main_loop}:
                 // evaluate termination criterion
-                dup 1 dup 1     // _ leaf_and_index_list root4 root3 root2 root1 root0 height length iteration length iteration
-                eq              // _ leaf_and_index_list root4 root3 root2 root1 root0 height length iteration length==iteration
-                skiz return     // _ leaf_and_index_list root4 root3 root2 root1 root0 height length iteration
+                dup 1 dup 1     // _ *leaf_and_index_list root4 root3 root2 root1 root0 height length iteration length iteration
+                eq              // _ *leaf_and_index_list root4 root3 root2 root1 root0 height length iteration length==iteration
+                skiz return     // _ *leaf_and_index_list root4 root3 root2 root1 root0 height length iteration
 
                 // duplicate root
                 dup 7 dup 7 dup 7 dup 7 dup 7
-                // _ leaf_and_index_list root4 root3 root2 root1 root0 height length iteration root4 root3 root2 root1 root0
+                                // _ *leaf_and_index_list root4 root3 root2 root1 root0 height length iteration root4 root3 root2 root1 root0
 
                 // read leaf and index
-                dup 13          // _ leaf_and_index_list root4 root3 root2 root1 root0 height length iteration root4 root3 root2 root1 root0 lai_list
-                dup 6           // _ leaf_and_index_list root4 root3 root2 root1 root0 height length iteration root4 root3 root2 root1 root0 lai_list iteration
-                call {lai_get}  // _ leaf_and_index_list root4 root3 root2 root1 root0 height length iteration root4 root3 root2 root1 root0 index leaf4 leaf3 leaf2 leaf1 leaf0
+                dup 13          // _ *leaf_and_index_list root4 root3 root2 root1 root0 height length iteration root4 root3 root2 root1 root0 lai_list
+                dup 6           // _ *leaf_and_index_list root4 root3 root2 root1 root0 height length iteration root4 root3 root2 root1 root0 lai_list iteration
+                call {get_element_subroutine_label}
+                                // _ *leaf_and_index_list root4 root3 root2 root1 root0 height length iteration root4 root3 root2 root1 root0 index leaf4 leaf3 leaf2 leaf1 leaf0
 
                 // format and call merkle_verify
-                dup 13          // _ leaf_and_index_list root4 root3 root2 root1 root0 height length iteration root4 root3 root2 root1 root0 index leaf4 leaf3 leaf2 leaf1 leaf0 height
-                call {merkle_verify}
+                dup 13          // _ *leaf_and_index_list root4 root3 root2 root1 root0 height length iteration root4 root3 root2 root1 root0 index leaf4 leaf3 leaf2 leaf1 leaf0 height
+                call {merkle_verify_subroutine_label}
 
                 // prepare for next iteration
-                push 1 add      // _ leaf_and_index_list root4 root3 root2 root1 root0 height length iteration+1
+                push 1 add      // _ *leaf_and_index_list root4 root3 root2 root1 root0 height length iteration+1
                 recurse
         }
     }
@@ -114,9 +120,9 @@ impl BasicSnippet for VerifyAuthenticationPathForLeafAndIndexList {
 impl Algorithm for VerifyAuthenticationPathForLeafAndIndexList {
     fn rust_shadow(
         &self,
-        stack: &mut Vec<triton_vm::BFieldElement>,
-        memory: &mut std::collections::HashMap<triton_vm::BFieldElement, triton_vm::BFieldElement>,
-        nondeterminism: &triton_vm::NonDeterminism<triton_vm::BFieldElement>,
+        stack: &mut Vec<BFieldElement>,
+        memory: &mut HashMap<BFieldElement, BFieldElement>,
+        nondeterminism: &NonDeterminism<BFieldElement>,
     ) {
         // read arguments from stack
         let height = stack.pop().unwrap().value() as usize;
