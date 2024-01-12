@@ -23,7 +23,7 @@ use twenty_first::shared_math::polynomial::Polynomial;
 use twenty_first::shared_math::traits::ModPowU32;
 use twenty_first::shared_math::traits::PrimitiveRootOfUnity;
 use twenty_first::shared_math::x_field_element::XFieldElement;
-use twenty_first::util_types::algebraic_hasher::Domain;
+use twenty_first::util_types::algebraic_hasher::SpongeHasher;
 use twenty_first::util_types::merkle_tree::MerkleTree;
 
 use crate::data_type::DataType;
@@ -48,17 +48,16 @@ use crate::recufier::get_colinear_y::ColinearYXfe;
 use crate::recufier::get_colinearity_check_x::GetColinearityCheckX;
 use crate::recufier::proof_stream::dequeue::Dequeue;
 use crate::recufier::proof_stream::sample_scalars::SampleScalars;
+use crate::recufier::proof_stream::vm_proof_stream::VmProofStream;
 use crate::recufier::verify_authentication_paths_for_leaf_and_index_list::VerifyAuthenticationPathForLeafAndIndexList;
 use crate::recufier::xfe_ntt::XfeNtt;
 use crate::snippet_bencher::BenchmarkCase;
 use crate::structure::tasm_object::TasmObject;
 use crate::traits::basic_snippet::BasicSnippet;
-use crate::traits::procedure::{Procedure, ProcedureInitialState};
+use crate::traits::procedure::*;
 use crate::Digest;
 use crate::VmHasher;
 use crate::VmHasherState;
-
-use super::proof_stream::vm_proof_stream::VmProofStream;
 
 /// `FriVerify` checks that a Reed-Solomon codeword, provided as an oracle, has a low
 /// degree interpolant. Specifically, the algorithm takes a `ProofStream` object, runs the
@@ -67,7 +66,7 @@ use super::proof_stream::vm_proof_stream::VmProofStream;
 /// The test succeeds with probability 1 if the codeword is of low degree; and with
 /// probability *soundness error* if the codeword is far from low-degree. If the test is
 /// not successful, the VM crashes.
-#[derive(Debug, Clone, PartialEq, Eq, BFieldCodec, TasmObject)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, BFieldCodec, TasmObject)]
 pub struct FriVerify {
     // expansion factor = 1 / rate
     pub expansion_factor: u32,
@@ -401,36 +400,67 @@ impl FriVerify {
 
     /// Generate a proof, embedded in a proof stream.
     pub fn pseudorandom_fri_proof_stream(&self, seed: [u8; 32]) -> VmProofStream {
+        let max_degree = self.first_round_max_degree();
         let mut rng: StdRng = SeedableRng::from_seed(seed);
+        let polynomial_coefficients = (0..=max_degree).map(|_| rng.gen()).collect_vec();
 
-        let max_degree = self.domain_length as usize / self.expansion_factor as usize - 1;
-        let coefficients: Vec<XFieldElement> = (0..=max_degree).map(|_| rng.gen()).collect();
-        let mut codeword = [
-            coefficients,
-            vec![XFieldElement::zero(); self.domain_length as usize - max_degree - 1],
-        ]
-        .concat();
-        let n = codeword.len();
-        ntt::<XFieldElement>(
-            &mut codeword,
-            BFieldElement::primitive_root_of_unity(n as u64).unwrap(),
-            n.ilog2(),
-        );
+        let mut codeword = polynomial_coefficients;
+        codeword.resize(self.domain_length as usize, XFieldElement::zero());
+        let primitive_root =
+            BFieldElement::primitive_root_of_unity(self.domain_length as u64).unwrap();
+        let log_2_of_n = self.domain_length.ilog2();
+        ntt::<XFieldElement>(&mut codeword, primitive_root, log_2_of_n);
+
         let mut proof_stream = ProofStream::<VmHasher>::new();
-
-        let fri = Fri::new(
-            ArithmeticDomain {
-                offset: BFieldElement::new(7),
-                generator: BFieldElement::primitive_root_of_unity(self.domain_length as u64)
-                    .unwrap(),
-                length: self.domain_length as usize,
-            },
-            self.expansion_factor as usize,
-            self.num_colinearity_checks as usize,
-        );
+        let fri = self.to_fri();
         fri.prove(&codeword, &mut proof_stream);
 
         VmProofStream::new(&proof_stream.items)
+    }
+
+    fn set_up_stack_and_non_determinism(
+        &self,
+        proof_stream: VmProofStream,
+    ) -> (Vec<BFieldElement>, NonDeterminism<BFieldElement>) {
+        let digests = self.extract_digests_required_for_proving(&proof_stream);
+        self.set_up_stack_and_non_determinism_using_digests(proof_stream, digests)
+    }
+
+    fn extract_digests_required_for_proving(&self, proof_stream: &VmProofStream) -> Vec<Digest> {
+        let mut digests = vec![];
+        self.inner_verify(&mut proof_stream.clone(), &mut digests)
+            .unwrap();
+        digests
+    }
+
+    fn set_up_stack_and_non_determinism_using_digests(
+        &self,
+        proof_stream: VmProofStream,
+        digests: Vec<Digest>,
+    ) -> (Vec<BFieldElement>, NonDeterminism<BFieldElement>) {
+        let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
+        let proof_stream_pointer = BFieldElement::zero();
+        let fri_verify_pointer = encode_to_memory(&mut memory, proof_stream_pointer, proof_stream);
+        encode_to_memory(&mut memory, fri_verify_pointer, *self);
+        let nondeterminism = NonDeterminism::default()
+            .with_ram(memory)
+            .with_digests(digests);
+
+        let mut stack = empty_stack();
+        stack.push(proof_stream_pointer);
+        stack.push(fri_verify_pointer);
+
+        (stack, nondeterminism)
+    }
+
+    pub fn to_fri(&self) -> Fri<VmHasher> {
+        let fri_domain = ArithmeticDomain::of_length(self.domain_length as usize)
+            .with_offset(self.domain_offset);
+        Fri::new(
+            fri_domain,
+            self.expansion_factor as usize,
+            self.num_colinearity_checks as usize,
+        )
     }
 }
 
@@ -539,8 +569,8 @@ impl BasicSnippet for FriVerify {
         let revealed_leafs = field!(FriResponse::revealed_leaves);
         let zip_digests_indices = library.import(Box::new(Zip {
             list_type: ListType::Unsafe,
-            left_type: DataType::Digest,
-            right_type: DataType::U32,
+            left_type: DataType::U32,
+            right_type: DataType::Digest,
         }));
         let verify_authentication_paths_for_leaf_and_index_list =
             library.import(Box::new(VerifyAuthenticationPathForLeafAndIndexList {
@@ -618,15 +648,18 @@ impl BasicSnippet for FriVerify {
                 input_type: DataType::Tuple(vec![DataType::U32, DataType::Xfe]),
                 output_type: DataType::Tuple(vec![DataType::U32, DataType::Xfe]),
                 function: triton_asm! {
-                    // BEFORE: _ *codeword [bu ff er] xfe2 xfe1 xfe0 index
-                    // AFTER: _ *codeword [bu ff er] xfe2 xfe1 xfe0 index
+                    // BEFORE: _ *codeword [bu ff er] index xfe2 xfe1 xfe0
+                    // AFTER:  _ *codeword [bu ff er] index xfe2 xfe1 xfe0
                     {assert_membership_label}:
-                        push 0                  // _ *codeword [bu ff er] xfe2 xfe1 xfe0 index 0
-                        dup 8 dup 2             // _ *codeword [bu ff er] xfe2 xfe1 xfe0 index 0 *codeword index
-                        call {get_xfe_from_list}// _ *codeword [bu ff er] xfe2 xfe1 xfe0 index 0 xfe2' xfe1' xfe0'
-                        dup 4 push 0            // _ *codeword [bu ff er] xfe2 xfe1 xfe0 index 0 xfe2' xfe1' xfe0' index 0
-                        assert_vector           // _ *codeword [bu ff er] xfe2 xfe1 xfe0 index 0
-                        pop 1                   // _ *codeword [bu ff er] xfe2 xfe1 xfe0 index
+                        hint element_to_check: Xfe = stack[0..3]
+                        hint codeword_index = stack[3]
+                        hint codeword: Pointer = stack[7]
+                        push 0                  // _ *codeword [bu ff er] index xfe2 xfe1 xfe0 0
+                        dup 4 dup 9 dup 1       // _ *codeword [bu ff er] index xfe2 xfe1 xfe0 0 index *codeword index
+                        call {get_xfe_from_list}// _ *codeword [bu ff er] index xfe2 xfe1 xfe0 0 index xfe2' xfe1' xfe0'
+                        push 0                  // _ *codeword [bu ff er] index xfe2 xfe1 xfe0 0 index xfe2' xfe1' xfe0' 0
+                        assert_vector           // _ *codeword [bu ff er] index xfe2 xfe1 xfe0 0
+                        pop 1                   // _ *codeword [bu ff er] index xfe2 xfe1 xfe0
                         return
                 },
             }),
@@ -770,19 +803,25 @@ impl BasicSnippet for FriVerify {
             // BEFORE: _ *proof_stream *fri_verify
             // AFTER:  _ *proof_stream *indices_and_leafs
             {entrypoint}:
+                hint fri_verify_pointer = stack[0]
+                hint proof_stream_pointer = stack[1]
 
                 // calculate number of rounds
                 dup 0 {&domain_length}      // _ *proof_stream *fri_verify *domain_length
                 read_mem 1 pop 1            // _ *proof_stream *fri_verify domain_length
+                hint domain_length = stack[0]
 
                 dup 1 {&expansion_factor}   // _ *proof_stream *fri_verify domain_length *expansion_factor
                 read_mem 1 pop 1            // _ *proof_stream *fri_verify domain_length expansion_factor
+                hint expansion_factor = stack[0]
 
                 swap 1 div_mod pop 1        // _ *proof_stream *fri_verify first_round_code_dimension
                 log_2_floor                 // _ *proof_stream *fri_verify max_num_rounds
+                hint max_num_rounds = stack[0]
 
                 dup 1 {&num_colinearity_checks}
                 read_mem 1 pop 1            // _ *proof_stream *fri_verify max_num_rounds num_colinearity_checks
+                hint num_colinearity_checks = stack[0]
 
                 log_2_floor push 1 add      // _ *proof_stream *fri_verify max_num_rounds num_rounds_checking_most_locations
 
@@ -790,13 +829,16 @@ impl BasicSnippet for FriVerify {
                 swap 2 push -1 mul add      // _ *proof_stream *fri_verify num_rounds_checking_most_locations<max_num_rounds num_rounds_checking_most_locations-max_num_rounds
                 mul push -1 mul             // _ *proof_stream *fri_verify if(num_rounds_checking_most_locations<max_num_rounds){max_num_rounds-num_rounds_checking_most_locations}else{0}
                                             // _ *proof_stream *fri_verify num_rounds
+                hint num_rounds = stack[0]
 
                 // calculate max degree of last round
                 dup 1 {&domain_length}      // _ *proof_stream *fri_verify num_rounds *domain_length
                 read_mem 1 pop 1            // _ *proof_stream *fri_verify num_rounds domain_length
+                hint domain_length = stack[0]
 
                 dup 2 {&expansion_factor}   // _ *proof_stream *fri_verify num_rounds domain_length *expansion_factor
                 read_mem 1 pop 1            // _ *proof_stream *fri_verify num_rounds domain_length expansion_factor
+                hint expansion_factor = stack[0]
 
                 swap 1 div_mod pop 1        // _ *proof_stream *fri_verify num_rounds first_round_code_dimension
 
@@ -804,6 +846,7 @@ impl BasicSnippet for FriVerify {
 
                 swap 1 div_mod pop 1        // _ *proof_stream *fri_verify num_rounds first_round_code_dimension>>num_rounds
                 push -1 add                 // _ *proof_stream *fri_verify num_rounds last_round_max_degree
+                hint last_round_max_degree = stack[0]
 
                 // COMMIT PHASE
 
@@ -823,7 +866,6 @@ impl BasicSnippet for FriVerify {
                 dup 1 swap 1                // _ *proof_stream *fri_verify num_rounds last_round_max_degree *alphas *roots *roots *root
 
                 {&read_digest}              // _ *proof_stream *fri_verify num_rounds last_round_max_degree *alphas *roots *roots [root]
-
                 call {push_digest_to_list}  // _ *proof_stream *fri_verify num_rounds last_round_max_degree *alphas *roots
 
                 // dequeue remaining roots and collect Fiat-Shamir challenges
@@ -861,6 +903,7 @@ impl BasicSnippet for FriVerify {
                 assert                      // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *last_codeword *leafs num_leafs
                 push 0 swap 1               // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *last_codeword *leafs 0 num_leafs
                 call {merkle_root}          // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *last_codeword [last_root]
+                hint merkle_root: Digest = stack[0..5]
 
                 // check against last root dequeued
                 dup 8                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *last_codeword [last_root] *roots
@@ -886,11 +929,6 @@ impl BasicSnippet for FriVerify {
                 invert                      // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *last_codeword omega_inv
                 dup 1 swap 1                // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *last_codeword *last_codeword omega_inv
                 call {xfe_ntt}              // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *last_polynomial
-
-                // // If the static allocator is not managed correctly, then the above call
-                // // to xfe_ntt modifies the first element of *roots. Let's try and see!
-                // dup 3 push 0 call {get_digest}
-                // push 8888 assert
 
                 // test low degree of polynomial
                 dup 5 push 1 add            // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *proof_stream *last_polynomial num_nonzero_coefficients
@@ -942,7 +980,6 @@ impl BasicSnippet for FriVerify {
                 // check batch merkle membership
                 call {map_convert_xfe_to_digest}
                                             // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements *indices *revealed_leafs_as_digests
-                swap 1                      // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements *revealed_leafs_as_digests *indices
                 call {zip_digests_indices}  // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements *leafs_indices
                 dup 5 push 0                // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements *leafs_indices *roots 0
                 call {get_digest}           // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements *leafs_indices [root[0]]
@@ -956,6 +993,7 @@ impl BasicSnippet for FriVerify {
                 // the list of opened indices and elements
                 dup 1 dup 1                 // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements *indices *a_elements
                 call {zip_index_xfe}        // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements *revealed_indices_and_leafs
+                hint indices_and_leafs = stack[0]
                 // zip allocates a new unsafe list, which we want to be twice as long
                 // (the second half will be populated in the first iteration of the main loop below)
                 read_mem 1                  // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements length (*revealed_indices_and_leafs - 1)
@@ -994,6 +1032,17 @@ impl BasicSnippet for FriVerify {
             // AFTER:      _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length num_rounds
             // INVARIANT:  _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r
             {query_phase_main_loop}:
+                hint current_round: u32 = stack[0]
+                hint current_domain_len = stack[1]
+                hint revealed_indices_and_leafs: Pointer = stack[2]
+                hint a_elements: Pointer = stack[3]
+                hint a_indices: Pointer = stack[4]
+                hint current_tree_height = stack[5]
+                hint alphas: Pointer = stack[6]
+                hint roots: Pointer = stack[7]
+                hint last_codeword: Pointer = stack[8]
+                hint last_round_max_degree = stack[9]
+                hint num_rounds = stack[10]
                 // test termination condition:
                 // if r == num_rounds then return
                 dup 10 dup 1
@@ -1002,8 +1051,11 @@ impl BasicSnippet for FriVerify {
 
                 // get "B" indices
                 push 2 dup 2
-                div_mod pop 1 dup 5         // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *a_indices
+                div_mod pop 1               // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length
+                hint half_domain_len = stack[0]
+                dup 5                       // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *a_indices
                 call {map_add_half_domain_length}
+                hint b_indices: Pointer = stack[0]
                                             // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices
 
                 // dequeue fri response and get "B" elements
@@ -1011,9 +1063,11 @@ impl BasicSnippet for FriVerify {
                 call {proof_stream_dequeue}
                                             // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *proof_stream *fri_response_ev
                 {&proof_item_as_fri_response}
+                hint fri_response: Pointer = stack[0]
                                             // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *proof_stream *fri_response
                 swap 1 pop 1                // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *fri_response
                 {&revealed_leafs}           // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements
+                hint b_elements: Pointer = stack[0]
 
                 // if in first round (r==0), populate second half of return vector
                 dup 3 push 0 eq
@@ -1022,8 +1076,11 @@ impl BasicSnippet for FriVerify {
 
                 // check batch merkle membership
                 dup 0 call {map_convert_xfe_to_digest}
+                hint b_leaves: Pointer = stack[0]
                                             // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *b_leafs
-                dup 2 call {zip_digests_indices}
+                dup 2 swap 1                // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *b_indices *b_leafs
+                call {zip_digests_indices}
+                hint b_indices_and_leaves: Pointer = stack[0]
                                             // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *b_leaf_and_indices
                 dup 11 dup 5                // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *b_leaf_and_indices *roots r
                 call {get_digest}           // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *b_leaf_and_indices [roots[r]]
@@ -1146,388 +1203,248 @@ impl Procedure for FriVerify {
         seed: [u8; 32],
         _bench_case: Option<BenchmarkCase>,
     ) -> ProcedureInitialState {
-        let mut rng: StdRng = SeedableRng::from_seed(seed);
-        let proof_stream = self.pseudorandom_fri_proof_stream(rng.gen());
-        let mut digests = vec![];
-        self.inner_verify(&mut proof_stream.clone(), &mut digests)
-            .unwrap();
-
-        let mut stack = empty_stack();
-        let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
-        let proof_stream_pointer = BFieldElement::zero();
-        let fri_verify_pointer = encode_to_memory(&mut memory, proof_stream_pointer, proof_stream);
-        encode_to_memory(&mut memory, fri_verify_pointer, self.clone());
-        let nondeterminism = NonDeterminism::default()
-            .with_ram(memory)
-            .with_digests(digests);
-        stack.push(proof_stream_pointer);
-        stack.push(fri_verify_pointer);
-        let stdin = vec![];
-        let sponge_state = VmHasherState::new(Domain::VariableLength);
+        let proof_stream = self.pseudorandom_fri_proof_stream(seed);
+        let (stack, nondeterminism) = self.set_up_stack_and_non_determinism(proof_stream);
 
         ProcedureInitialState {
             stack,
             nondeterminism,
-            public_input: stdin,
-            sponge_state: Some(sponge_state),
+            public_input: vec![],
+            sponge_state: Some(VmHasher::init()),
         }
     }
 }
 
 #[cfg(test)]
 mod test {
-    use std::{collections::HashMap, panic::catch_unwind};
+    use std::collections::HashSet;
+    use std::panic::catch_unwind;
 
-    use itertools::Itertools;
-    use num_traits::Zero;
-    use rand::{rngs::StdRng, thread_rng, Rng, SeedableRng};
-    use triton_vm::{
-        arithmetic_domain::ArithmeticDomain, fri::Fri, proof_item::ProofItem,
-        proof_stream::ProofStream, BFieldElement, NonDeterminism,
-    };
-    use twenty_first::{
-        shared_math::{
-            bfield_codec::BFieldCodec, traits::PrimitiveRootOfUnity, x_field_element::XFieldElement,
-        },
-        util_types::{
-            algebraic_hasher::Domain,
-            merkle_tree::{CpuParallel, MerkleTree},
-            merkle_tree_maker::MerkleTreeMaker,
-        },
-    };
+    use proptest::collection::vec;
+    use proptest::prelude::*;
+    use proptest_arbitrary_interop::arb;
+    use rayon::prelude::*;
+    use test_strategy::proptest;
+    use triton_vm::proof_item::ProofItem;
 
-    use crate::memory::encode_to_memory;
-    use crate::{
-        empty_stack, recufier::proof_stream::vm_proof_stream::VmProofStream,
-        traits::procedure::ProcedureInitialState,
-    };
-    use crate::{
-        structure::tasm_object::TasmObject,
-        test_helpers::{
-            rust_final_state, tasm_final_state, verify_sponge_equivalence, verify_stack_growth,
-        },
-        traits::procedure::{Procedure, ShadowedProcedure},
-        Digest, VmHasher, VmHasherState,
-    };
-    use twenty_first::shared_math::ntt::ntt;
+    use crate::test_helpers::*;
+    use crate::traits::procedure::ShadowedProcedure;
 
-    use super::FriVerify;
+    use super::*;
 
-    #[test]
-    fn fri_derived_params_match() {
-        let mut rng = thread_rng();
-        for _ in 0..20 {
-            let expansion_factor = 2 << rng.gen_range(0..10);
-            let colinearity_checks_count = rng.gen_range(1..320);
-            let offset: BFieldElement = rng.gen();
-            let domain_length = expansion_factor * (1u32 << rng.gen_range(0..20));
+    impl FriVerify {
+        /// Test helper – panics if verification fails.
+        fn verify_from_proof_with_digests(&self, proof: Vec<BFieldElement>, digests: Vec<Digest>) {
+            let proof_stream = VmProofStream::new(&Vec::<ProofItem>::decode(&proof).unwrap());
+            let (stack, nondeterminism) =
+                self.set_up_stack_and_non_determinism_using_digests(proof_stream, digests);
 
-            let fri_verify = FriVerify::new(
-                offset,
+            let shadowed_snippet = ShadowedProcedure::new(*self);
+            let _tasm = tasm_final_state(
+                &shadowed_snippet,
+                &stack,
+                &[],
+                nondeterminism,
+                &Some(VmHasher::init()),
+                0,
+            );
+        }
+    }
+
+    #[derive(Debug, Clone, test_strategy::Arbitrary)]
+    struct ArbitraryFriVerify {
+        #[strategy(arb())]
+        #[filter(!#offset.is_zero())]
+        offset: BFieldElement,
+
+        #[strategy(0_u32..12)]
+        domain_length_exponent: u32,
+
+        #[strategy(0_u32..6)]
+        expansion_factor_exponent: u32,
+
+        #[strategy(1_u32..320)]
+        num_collinearity_checks: u32,
+    }
+
+    impl ArbitraryFriVerify {
+        fn fri_verify(&self) -> FriVerify {
+            let expansion_factor = 2 << self.expansion_factor_exponent;
+            let domain_length = expansion_factor * (1 << self.domain_length_exponent);
+            FriVerify::new(
+                self.offset,
                 domain_length,
                 expansion_factor,
-                colinearity_checks_count,
-            );
-
-            let fri = Fri::<VmHasher>::new(
-                ArithmeticDomain {
-                    offset,
-                    generator: BFieldElement::primitive_root_of_unity(domain_length as u64)
-                        .unwrap(),
-                    length: domain_length as usize,
-                },
-                expansion_factor as usize,
-                colinearity_checks_count as usize,
-            );
-
-            assert_eq!(fri_verify.num_rounds(), fri.num_rounds());
-            assert_eq!(
-                fri_verify.last_round_max_degree(),
-                fri.last_round_max_degree()
-            );
-            assert_eq!(
-                fri_verify.first_round_max_degree(),
-                fri.first_round_max_degree()
-            );
-        }
-    }
-
-    #[test]
-    fn test_inner_verify() {
-        let mut rng = thread_rng();
-        let offset = BFieldElement::new(7);
-        let domain_length = 1 << 12;
-        let expansion_factor = 16;
-        let colinearity_checks_count = 20;
-        let fri_verify = FriVerify::new(
-            offset,
-            domain_length,
-            expansion_factor,
-            colinearity_checks_count,
-        );
-        let mut vm_proof_stream = fri_verify.pseudorandom_fri_proof_stream(rng.gen());
-
-        // try verify the embedded proof using Triton-VM's verify
-        let mut vm_proof_stream_copy = vm_proof_stream.clone();
-        let mut proof_items = vec![];
-        while let Ok(item) = vm_proof_stream_copy.dequeue() {
-            proof_items.push(*item);
-        }
-        let mut verify_proof_stream = ProofStream::<VmHasher> {
-            items: proof_items,
-            items_index: 0,
-            sponge_state: VmHasherState::new(Domain::VariableLength),
-        };
-        let fri = Fri::new(
-            ArithmeticDomain {
-                offset,
-                generator: BFieldElement::primitive_root_of_unity(domain_length as u64).unwrap(),
-                length: domain_length as usize,
-            },
-            expansion_factor as usize,
-            colinearity_checks_count as usize,
-        );
-        let verify_result = fri.verify(&mut verify_proof_stream, &mut None);
-        assert!(
-            verify_result.is_ok(),
-            "FRI verify error: {:?}",
-            verify_result,
-        );
-        println!("verified FRI proof with Triton-VM.");
-
-        // try verifying the embedded proof using our own inner_verify
-        let verify_result = fri_verify.inner_verify(&mut vm_proof_stream, &mut vec![]);
-        assert!(
-            verify_result.is_ok(),
-            "FRI verify error: {:?}",
-            verify_result
-        );
-        println!("verified FRI proof with inner verify.");
-    }
-
-    #[test]
-    fn test_merkle_authentication_structure() {
-        let mut rng = thread_rng();
-        let height = 10;
-        let n = 1 << height;
-        let m = rng.gen_range(0..n);
-        let leafs: Vec<Digest> = (0..n).map(|_| rng.gen()).collect_vec();
-        let merkle_tree = <CpuParallel as MerkleTreeMaker<VmHasher>>::from_digests(&leafs);
-        let root = merkle_tree.get_root();
-        let indices = (0..m).map(|_| rng.gen_range(0..n)).collect_vec();
-        let leafs = indices.iter().map(|i| leafs[*i]).collect_vec();
-        let authentication_structure = merkle_tree.get_authentication_structure(&indices);
-        let authentication_paths =
-            MerkleTree::<VmHasher>::authentication_paths_from_authentication_structure(
-                height,
-                &indices,
-                &leafs,
-                &authentication_structure,
+                self.num_collinearity_checks,
             )
-            .unwrap();
-        for ((index, leaf), authentication_path) in indices
-            .into_iter()
-            .zip(leafs.into_iter())
-            .zip(authentication_paths.into_iter())
-        {
-            assert!(MerkleTree::<VmHasher>::verify_authentication_structure(
-                root,
-                height,
-                &[index],
-                &[leaf],
-                &authentication_path
-            ));
         }
     }
 
-    #[test]
-    fn test_shadow() {
-        let seed: [u8; 32] = thread_rng().gen();
-        //  = [
-        //     0xf7, 0x41, 0x2a, 0x3e, 0x1e, 0xa7, 0x86, 0xf6, 0xf3, 0x55, 0xdb, 0xcc, 0xe0, 0x32,
-        //     0xf3, 0xec, 0x6f, 0x51, 0x26, 0xcb, 0xb2, 0x7c, 0x4a, 0x34, 0xb4, 0xc9, 0xe9, 0xa8,
-        //     0x7c, 0x34, 0x11, 0xc5,
-        // ];
-        let mut rng: StdRng = SeedableRng::from_seed(seed);
-        let expansion_factor = 1 << rng.gen_range(1..5);
-        let domain_length = expansion_factor * (1 << rng.gen_range(8..15));
-        let offset = BFieldElement::new(7);
-        let num_colinearity_checks = 20; //rng.gen_range(1..min(160, domain_length / 4));
-        println!("number of colinearity checks: {num_colinearity_checks}");
-        println!("expansion factor: {expansion_factor}");
-        let procedure = FriVerify::new(
-            offset,
-            domain_length,
-            expansion_factor,
-            num_colinearity_checks,
+    #[derive(Debug, Clone, test_strategy::Arbitrary)]
+    struct TestCase {
+        #[strategy(any::<ArbitraryFriVerify>().prop_map(|x| x.fri_verify()))]
+        fri_verify: FriVerify,
+
+        #[strategy(vec(arb(), #fri_verify.first_round_max_degree()))]
+        polynomial_coefficients: Vec<XFieldElement>,
+    }
+
+    impl TestCase {
+        fn fri(&self) -> Fri<VmHasher> {
+            self.fri_verify.to_fri()
+        }
+
+        fn codeword(&self) -> Vec<XFieldElement> {
+            let domain_length = self.fri_verify.domain_length;
+            let mut codeword = self.polynomial_coefficients.clone();
+            codeword.resize(domain_length as usize, XFieldElement::zero());
+
+            let root_of_unity =
+                BFieldElement::primitive_root_of_unity(domain_length as u64).unwrap();
+            let log_2_of_n = domain_length.ilog2();
+            ntt::<XFieldElement>(&mut codeword, root_of_unity, log_2_of_n);
+            codeword
+        }
+
+        fn proof_items(&self) -> Vec<ProofItem> {
+            let fri = self.fri();
+            let codeword = self.codeword();
+            let mut proof_stream = ProofStream::new();
+            fri.prove(&codeword, &mut proof_stream);
+
+            proof_stream.items
+        }
+
+        fn vm_proof_stream(&self) -> VmProofStream {
+            VmProofStream::new(&self.proof_items())
+        }
+
+        fn proof_stream(&self) -> ProofStream<VmHasher> {
+            ProofStream {
+                items: self.proof_items(),
+                items_index: 0,
+                sponge_state: VmHasher::init(),
+            }
+        }
+
+        fn initial_state(&self) -> ProcedureInitialState {
+            let fri_verify = self.fri_verify;
+            let proof_stream = self.vm_proof_stream();
+            let (stack, nondeterminism) = fri_verify.set_up_stack_and_non_determinism(proof_stream);
+
+            ProcedureInitialState {
+                stack,
+                nondeterminism,
+                public_input: vec![],
+                sponge_state: Some(VmHasher::init()),
+            }
+        }
+    }
+
+    #[proptest]
+    fn fri_derived_params_match(test_case: ArbitraryFriVerify) {
+        let fri_verify = test_case.fri_verify();
+        let fri = fri_verify.to_fri();
+
+        prop_assert_eq!(fri_verify.num_rounds(), fri.num_rounds());
+        prop_assert_eq!(
+            fri_verify.last_round_max_degree(),
+            fri.last_round_max_degree()
         );
+        prop_assert_eq!(
+            fri_verify.first_round_max_degree(),
+            fri.first_round_max_degree()
+        );
+    }
 
-        // ShadowedProcedure::new(procedure).test();
-        // Unfortunately, we cannot call the built-in test that comes with anything that
-        // implements Procedure because that test checks that the rust and tasm stacks are
-        // left in identical states. They both contain a pointer to the same object, but
-        // this object lives in a different (and difficult to predict) location in memory.
-        // So we check that instead.
+    #[proptest(cases = 10)]
+    fn test_inner_verify(test_case: TestCase) {
+        let fri = test_case.fri();
+        let mut proof_stream = test_case.proof_stream();
+        let verify_result = fri.verify(&mut proof_stream, &mut None);
+        prop_assert!(verify_result.is_ok(), "FRI verify error: {verify_result:?}");
 
+        let fri_verify = test_case.fri_verify;
+        let mut vm_proof_stream = test_case.vm_proof_stream();
+        let verify_result = fri_verify.inner_verify(&mut vm_proof_stream, &mut vec![]);
+        prop_assert!(verify_result.is_ok(), "FRI verify error: {verify_result:?}");
+    }
+
+    /// Unfortunately, we cannot call the built-in test, _i.e._, `ShadowedProcedure::new(procedure).test()`:
+    /// that test checks that the rust and tasm stacks are left in identical states. While they both contain a
+    /// pointer to the same object, this object lives in a different (and difficult to predict) location in memory.
+    /// This means the pointers are different. In the end, we don't care about the pointers. Therefore, instead of
+    /// complete stack equivalence, we check equivalence of the pointed-to objects.
+    #[proptest(cases = 3)]
+    fn test_shadow(test_case: TestCase) {
         let ProcedureInitialState {
-            stack,
+            stack: initial_stack,
             nondeterminism,
             public_input: stdin,
             sponge_state,
-        } = procedure.pseudorandom_initial_state(seed, None);
+        } = test_case.initial_state();
 
-        let init_stack = stack.to_vec();
-        let shadowed_procedure = ShadowedProcedure::new(procedure);
-
+        let shadowed_procedure = ShadowedProcedure::new(test_case.fri_verify);
         let rust = rust_final_state(
             &shadowed_procedure,
-            &stack,
+            &initial_stack,
             &stdin,
             &nondeterminism,
             &sponge_state,
         );
 
-        // run tvm
         let words_statically_allocated = 0;
         let tasm = tasm_final_state(
             &shadowed_procedure,
-            &stack,
+            &initial_stack,
             &stdin,
             nondeterminism,
             &sponge_state,
             words_statically_allocated,
         );
 
-        assert_eq!(
-            rust.output, tasm.output,
-            "Rust shadowing and VM std out must agree"
-        );
-
-        verify_stack_growth(&shadowed_procedure, &init_stack, &tasm.final_stack);
+        assert_eq!(rust.output, tasm.output);
+        verify_stack_growth(&shadowed_procedure, &initial_stack, &tasm.final_stack);
         verify_sponge_equivalence(&rust.final_sponge_state, &tasm.final_sponge_state);
 
-        // load the "revealed_indices_and_elements" object from rust and tasm memory and
-        // test their equivalence
-        let rust_address = rust.final_stack.last().unwrap();
-        let rust_object =
-            Vec::<(u32, XFieldElement)>::decode_from_memory(&rust.final_ram, *rust_address);
-        let tasm_address = tasm.final_stack.last().unwrap();
-        let tasm_object =
-            Vec::<(u32, XFieldElement)>::decode_from_memory(&tasm.final_ram, *tasm_address);
-        rust_object
-            .iter()
-            .zip(tasm_object.iter())
-            .for_each(|(r, t)| {
-                assert_eq!(r, t, "returned lists of indices and leafs do not match")
-            });
+        type IndexedLeaves = Vec<(u32, XFieldElement)>;
+        let &rust_address = rust.final_stack.last().unwrap();
+        let &tasm_address = tasm.final_stack.last().unwrap();
+        let rust_object = IndexedLeaves::decode_from_memory(&rust.final_ram, rust_address).unwrap();
+        let tasm_object = IndexedLeaves::decode_from_memory(&tasm.final_ram, tasm_address).unwrap();
+        assert_eq!(rust_object, tasm_object);
     }
 
-    #[test]
-    fn negative_test() {
-        // Every single element of the proof should be capable of causing the verifier to
-        // fail. Verify this fact.
+    #[proptest(cases = 1)]
+    fn modifying_any_element_in_proof_stream_causes_verification_failure(test_case: TestCase) {
+        let fri_verify = test_case.fri_verify;
+        let proof_stream = test_case.vm_proof_stream();
+        let digests = fri_verify.extract_digests_required_for_proving(&proof_stream);
 
-        let seed: [u8; 32] = thread_rng().gen();
-        //  = [
-        //     0xf7, 0x41, 0x2a, 0x3e, 0x1e, 0xa7, 0x86, 0xf6, 0xf3, 0x55, 0xdb, 0xcc, 0xe0, 0x32,
-        //     0xf3, 0xec, 0x6f, 0x51, 0x26, 0xcb, 0xb2, 0x7c, 0x4a, 0x34, 0xb4, 0xc9, 0xe9, 0xa8,
-        //     0x7c, 0x34, 0x11, 0xc5,
-        // ];
-        let mut rng: StdRng = SeedableRng::from_seed(seed);
-        let expansion_factor = 1 << rng.gen_range(1..5);
-        let domain_length = expansion_factor * (1 << rng.gen_range(8..15));
-        let offset = BFieldElement::new(7);
-        let num_colinearity_checks = 20; //rng.gen_range(1..min(160, domain_length / 4));
-        let fri_verify = FriVerify::new(
-            offset,
-            domain_length,
-            expansion_factor,
-            num_colinearity_checks,
-        );
+        // The digests required for verification are extracted and given to the verifier via non-determinism.
+        // The corresponding digests in the proof are subsequently ignored by the verifier. As a result, modifying
+        // one such digest will not cause a verification failure. Therefore, any word occuring in any digest is
+        // ignored when looking for verification failures. While this is a heuristic, the probability of a false
+        // negative is negligible.
+        let words_occurring_in_some_digest: HashSet<_> =
+            digests.iter().flat_map(|digest| digest.values()).collect();
 
-        // generate proof
-        let max_degree =
-            fri_verify.domain_length as usize / fri_verify.expansion_factor as usize - 1;
-        let coefficients: Vec<XFieldElement> = (0..=max_degree).map(|_| rng.gen()).collect();
-        let mut codeword = [
-            coefficients,
-            vec![XFieldElement::zero(); fri_verify.domain_length as usize - max_degree - 1],
-        ]
-        .concat();
-        let n = codeword.len();
-        ntt::<XFieldElement>(
-            &mut codeword,
-            BFieldElement::primitive_root_of_unity(n as u64).unwrap(),
-            n.ilog2(),
-        );
-        let mut proof_stream = ProofStream::<VmHasher>::new();
+        // sanity check
+        let proof = test_case.proof_items().encode();
+        fri_verify.verify_from_proof_with_digests(proof.clone(), digests.clone());
 
-        let fri = Fri::new(
-            ArithmeticDomain {
-                offset: BFieldElement::new(7),
-                generator: BFieldElement::primitive_root_of_unity(fri_verify.domain_length as u64)
-                    .unwrap(),
-                length: fri_verify.domain_length as usize,
-            },
-            fri_verify.expansion_factor as usize,
-            fri_verify.num_colinearity_checks as usize,
-        );
-        fri.prove(&codeword, &mut proof_stream);
-        let mut proof = proof_stream.items.encode();
-
-        // change each element one by one, and verify that verification fails
-        for i in 0..proof.len() {
+        let proof_len = proof.len();
+        (0..proof_len).into_par_iter().for_each(|i| {
+            if words_occurring_in_some_digest.contains(&proof[i]) {
+                return;
+            }
+            let mut proof = proof.clone();
             proof[i].increment();
-
-            let result = catch_unwind(|| {
-                // convert to proof stream
-                let proof_stream = VmProofStream::new(&Vec::<ProofItem>::decode(&proof).unwrap());
-
-                // read out digests
-                let mut digests = vec![];
-                fri_verify
-                    .inner_verify(&mut proof_stream.clone(), &mut digests)
-                    .unwrap();
-
-                // prepare initial state
-                let mut stack = empty_stack();
-                let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
-                let proof_stream_pointer = BFieldElement::zero();
-                let fri_verify_pointer =
-                    encode_to_memory(&mut memory, proof_stream_pointer, proof_stream);
-                encode_to_memory(&mut memory, fri_verify_pointer, fri_verify.clone());
-                let nondeterminism = NonDeterminism::default()
-                    .with_ram(memory)
-                    .with_digests(digests);
-                stack.push(proof_stream_pointer);
-                stack.push(fri_verify_pointer);
-                let stdin: Vec<BFieldElement> = vec![];
-                let sponge_state = VmHasherState::new(Domain::VariableLength);
-
-                // run tvm
-                let shadowed_snippet = ShadowedProcedure::new(fri_verify.clone());
-                let words_statically_allocated = 0;
-                let _tasm = tasm_final_state(
-                    &shadowed_snippet,
-                    &stack,
-                    &stdin,
-                    nondeterminism,
-                    &Some(sponge_state),
-                    words_statically_allocated,
-                );
-            });
-
-            // If we caught a panic (which is expected) then the result is Err.
-            // Otherwise it is Ok, and in this case we must crash the test.
-
-            assert!(
-                result.is_err(),
-                "Error! Verification succeeded with wrong value at element {i}/{}",
-                proof.len()
-            );
-
-            proof[i].decrement();
-        }
+            catch_unwind(|| fri_verify.verify_from_proof_with_digests(proof, digests.clone()))
+                .expect_err(&format!(
+                    "Verification must fail, but succeeded at element {i}/{proof_len}"
+                ));
+        });
     }
 }
 

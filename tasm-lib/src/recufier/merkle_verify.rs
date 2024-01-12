@@ -59,11 +59,17 @@ impl BasicSnippet for MerkleVerify {
             // BEFORE: _ [root; 5] leaf_index [leaf; 5] tree_height
             // AFTER:  _
             {entrypoint}:
+                hint tree_height: u32 = stack[0]
+                hint leaf: Digest = stack[1..6]
+                hint leaf_index: u32 = stack[6]
+                hint root: Digest = stack[7..12]
                 // calculate node index from tree height and leaf index:
                 push 2 pow              // _ [root; 5] leaf_index [leaf; 5] num_leaves
+                hint num_leaves: u32 = stack[0]
                 dup 0 dup 7 lt          // _ [root; 5] leaf_index [leaf; 5] num_leaves (leaf_index < num_leaves)
                 assert                  // _ [root; 5] leaf_index [leaf; 5] num_leaves
                 dup 6 add               // _ [root; 5] leaf_index [leaf; 5] node_index
+                hint node_index: u32 = stack[0]
                 swap 6 pop 1            // _ [root; 5] node_index [leaf; 5]
                 call {traverse_tree}    // _ [root; 5] 1 [root'; 5]
                 swap 1 swap 2 swap 3
