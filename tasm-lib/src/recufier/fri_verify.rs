@@ -23,7 +23,7 @@ use twenty_first::shared_math::polynomial::Polynomial;
 use twenty_first::shared_math::traits::ModPowU32;
 use twenty_first::shared_math::traits::PrimitiveRootOfUnity;
 use twenty_first::shared_math::x_field_element::XFieldElement;
-use twenty_first::util_types::algebraic_hasher::Domain;
+use twenty_first::util_types::algebraic_hasher::SpongeHasher;
 use twenty_first::util_types::merkle_tree::MerkleTree;
 
 use crate::data_type::DataType;
@@ -416,6 +416,29 @@ impl FriVerify {
         fri.prove(&codeword, &mut proof_stream);
 
         VmProofStream::new(&proof_stream.items)
+    }
+
+    fn set_up_stack_and_non_determinism(
+        &self,
+        proof_stream: VmProofStream,
+    ) -> (Vec<BFieldElement>, NonDeterminism<BFieldElement>) {
+        let mut digests = vec![];
+        self.inner_verify(&mut proof_stream.clone(), &mut digests)
+            .unwrap();
+
+        let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
+        let proof_stream_pointer = BFieldElement::zero();
+        let fri_verify_pointer = encode_to_memory(&mut memory, proof_stream_pointer, proof_stream);
+        encode_to_memory(&mut memory, fri_verify_pointer, *self);
+        let nondeterminism = NonDeterminism::default()
+            .with_ram(memory)
+            .with_digests(digests);
+
+        let mut stack = empty_stack();
+        stack.push(proof_stream_pointer);
+        stack.push(fri_verify_pointer);
+
+        (stack, nondeterminism)
     }
 
     pub fn to_fri(&self) -> Fri<VmHasher> {
@@ -1168,30 +1191,14 @@ impl Procedure for FriVerify {
         seed: [u8; 32],
         _bench_case: Option<BenchmarkCase>,
     ) -> ProcedureInitialState {
-        let mut rng: StdRng = SeedableRng::from_seed(seed);
-        let proof_stream = self.pseudorandom_fri_proof_stream(rng.gen());
-        let mut digests = vec![];
-        self.inner_verify(&mut proof_stream.clone(), &mut digests)
-            .unwrap();
-
-        let mut stack = empty_stack();
-        let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
-        let proof_stream_pointer = BFieldElement::zero();
-        let fri_verify_pointer = encode_to_memory(&mut memory, proof_stream_pointer, proof_stream);
-        encode_to_memory(&mut memory, fri_verify_pointer, *self);
-        let nondeterminism = NonDeterminism::default()
-            .with_ram(memory)
-            .with_digests(digests);
-        stack.push(proof_stream_pointer);
-        stack.push(fri_verify_pointer);
-        let stdin = vec![];
-        let sponge_state = VmHasherState::new(Domain::VariableLength);
+        let proof_stream = self.pseudorandom_fri_proof_stream(seed);
+        let (stack, nondeterminism) = self.set_up_stack_and_non_determinism(proof_stream);
 
         ProcedureInitialState {
             stack,
             nondeterminism,
-            public_input: stdin,
-            sponge_state: Some(sponge_state),
+            public_input: vec![],
+            sponge_state: Some(VmHasher::init()),
         }
     }
 }
@@ -1205,12 +1212,29 @@ mod test {
     use proptest_arbitrary_interop::arb;
     use test_strategy::proptest;
     use triton_vm::proof_item::ProofItem;
-    use twenty_first::util_types::algebraic_hasher::*;
 
     use crate::test_helpers::*;
     use crate::traits::procedure::ShadowedProcedure;
 
     use super::*;
+
+    impl FriVerify {
+        /// Test helper – panics if verification fails.
+        fn verify_from_proof(&self, proof: Vec<BFieldElement>) {
+            let proof_stream = VmProofStream::new(&Vec::<ProofItem>::decode(&proof).unwrap());
+            let (stack, nondeterminism) = self.set_up_stack_and_non_determinism(proof_stream);
+
+            let shadowed_snippet = ShadowedProcedure::new(*self);
+            let _tasm = tasm_final_state(
+                &shadowed_snippet,
+                &stack,
+                &[],
+                nondeterminism,
+                &Some(VmHasher::init()),
+                0,
+            );
+        }
+    }
 
     #[derive(Debug, Clone, test_strategy::Arbitrary)]
     struct ArbitraryFriVerify {
@@ -1289,24 +1313,9 @@ mod test {
         }
 
         fn initial_state(&self) -> ProcedureInitialState {
+            let fri_verify = self.fri_verify;
             let proof_stream = self.vm_proof_stream();
-            let mut digests = vec![];
-            self.fri_verify
-                .inner_verify(&mut proof_stream.clone(), &mut digests)
-                .unwrap();
-
-            let mut memory = HashMap::new();
-            let proof_stream_pointer = BFieldElement::zero();
-            let fri_verify_pointer =
-                encode_to_memory(&mut memory, proof_stream_pointer, proof_stream);
-            encode_to_memory(&mut memory, fri_verify_pointer, self.fri_verify);
-            let nondeterminism = NonDeterminism::default()
-                .with_ram(memory)
-                .with_digests(digests);
-
-            let mut stack = empty_stack();
-            stack.push(proof_stream_pointer);
-            stack.push(fri_verify_pointer);
+            let (stack, nondeterminism) = fri_verify.set_up_stack_and_non_determinism(proof_stream);
 
             ProcedureInitialState {
                 stack,
@@ -1393,55 +1402,15 @@ mod test {
 
     #[proptest(cases = 1)]
     fn modifying_any_element_in_proof_stream_causes_verification_failure(test_case: TestCase) {
-        let fri_verify = test_case.fri_verify;
         let proof = test_case.proof_items().encode();
+        let proof_len = proof.len();
 
         for i in 0..proof.len() {
             let mut proof = proof.clone();
             proof[i].increment();
-
-            let result = catch_unwind(|| {
-                let proof_stream = VmProofStream::new(&Vec::<ProofItem>::decode(&proof).unwrap());
-
-                // read out digests
-                let mut digests = vec![];
-                fri_verify
-                    .inner_verify(&mut proof_stream.clone(), &mut digests)
-                    .unwrap();
-
-                // prepare initial state
-                let mut stack = empty_stack();
-                let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
-                let proof_stream_pointer = BFieldElement::zero();
-                let fri_verify_pointer =
-                    encode_to_memory(&mut memory, proof_stream_pointer, proof_stream);
-                encode_to_memory(&mut memory, fri_verify_pointer, fri_verify);
-                let nondeterminism = NonDeterminism::default()
-                    .with_ram(memory)
-                    .with_digests(digests);
-                stack.push(proof_stream_pointer);
-                stack.push(fri_verify_pointer);
-                let stdin = [];
-                let sponge_state = Some(VmHasher::init());
-
-                // run tvm
-                let shadowed_snippet = ShadowedProcedure::new(fri_verify);
-                let words_statically_allocated = 0;
-                let _tasm = tasm_final_state(
-                    &shadowed_snippet,
-                    &stack,
-                    &stdin,
-                    nondeterminism,
-                    &sponge_state,
-                    words_statically_allocated,
-                );
-            });
-
-            assert!(
-                result.is_err(),
-                "Error! Verification must fail, but succeeded at element {i}/{}",
-                proof.len()
-            );
+            catch_unwind(|| test_case.fri_verify.verify_from_proof(proof)).expect_err(&format!(
+                "Verification must fail, but succeeded at element {i}/{proof_len}"
+            ));
         }
     }
 }
