@@ -1217,6 +1217,7 @@ impl Procedure for FriVerify {
 
 #[cfg(test)]
 mod test {
+    use std::collections::HashSet;
     use std::panic::catch_unwind;
 
     use proptest::collection::vec;
@@ -1420,12 +1421,23 @@ mod test {
         let proof_stream = test_case.vm_proof_stream();
         let digests = fri_verify.extract_digests_required_for_proving(&proof_stream);
 
+        // The digests required for verification are extracted and given to the verifier via non-determinism.
+        // The corresponding digests in the proof are subsequently ignored by the verifier. As a result, modifying
+        // one such digest will not cause a verification failure. Therefore, any word occuring in any digest is
+        // ignored when looking for verification failures. While this is a heuristic, the probability of a false
+        // negative is negligible.
+        let words_occurring_in_some_digest: HashSet<_> =
+            digests.iter().flat_map(|digest| digest.values()).collect();
+
         // sanity check
         let proof = test_case.proof_items().encode();
         fri_verify.verify_from_proof_with_digests(proof.clone(), digests.clone());
 
         let proof_len = proof.len();
         (0..proof_len).into_par_iter().for_each(|i| {
+            if words_occurring_in_some_digest.contains(&proof[i]) {
+                return;
+            }
             let mut proof = proof.clone();
             proof[i].increment();
             catch_unwind(|| fri_verify.verify_from_proof_with_digests(proof, digests.clone()))
