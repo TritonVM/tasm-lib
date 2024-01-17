@@ -4,6 +4,7 @@ use triton_vm::{instruction::LabelledInstruction, triton_asm, triton_instr, BFie
 use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
 pub mod dyn_malloc;
+pub mod dyn_malloc_const_size;
 pub mod memcpy;
 pub mod push_ram_to_stack;
 
