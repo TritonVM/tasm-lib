@@ -150,6 +150,7 @@ mod tests {
     use super::*;
     use crate::execute_with_terminal_state;
     use crate::linker::link_for_isolated_run;
+    use crate::test_helpers::tasm_final_state;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
 
@@ -164,6 +165,25 @@ mod tests {
             1 << 33,
             CONST_SIZE_MALLOCS_FIRST_DYNAMICALLY_ALLOCATED_ADDRESS.value()
         );
+    }
+
+    #[test]
+    fn first_free_address() {
+        let mut final_state = tasm_final_state(
+            &ShadowedFunction::new(DynMallocConstSize),
+            &empty_stack(),
+            &[],
+            NonDeterminism::default(),
+            &None,
+            0,
+        );
+
+        let allocated_address = final_state.final_stack.pop().unwrap();
+        assert_eq!(
+            CONST_SIZE_MALLOCS_FIRST_DYNAMICALLY_ALLOCATED_ADDRESS,
+            allocated_address
+        );
+        assert_eq!(1u64 << 33, allocated_address.value());
     }
 
     #[test]
