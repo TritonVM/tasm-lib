@@ -41,7 +41,7 @@ impl DeprecatedSnippet for DynMalloc {
     }
 
     fn output_types(&self) -> Vec<DataType> {
-        vec![DataType::U32]
+        vec![DataType::Bfe]
     }
 
     fn stack_diff(&self) -> isize {
@@ -78,12 +78,17 @@ impl DeprecatedSnippet for DynMalloc {
             push 0
             eq
             assert
-            add                         // _ *next_addr *(next_addr + size)
+            add                                        // _ *next_addr *(next_addr + size)
 
-            // ensure that all dynamic allocations take place in the $(2^{32}, 2^{33})$ range.
+            // ensure that the dynamic allocator never touches the $[0, 2^{32})$ range.
             dup 0
-            split
+            split                                      // _ *next_addr *next_next_addr next_next_addr_hi next_next_addr_lo
+
             pop 1
+            push 0
+            eq
+            push 0
+            eq
             assert
             // _ *next_addr *(next_addr + size)
 
@@ -100,7 +105,7 @@ impl DeprecatedSnippet for DynMalloc {
     fn crash_conditions(&self) -> Vec<String> {
         vec![
             "Caller attempts to allocate more than 2^32 words".to_owned(),
-            "More than 2^32 words allocated to memory".to_owned(),
+            "Allocator wraps around and attempts to overwrite the first 2^32 words".to_owned(),
         ]
     }
 
@@ -160,7 +165,7 @@ impl DeprecatedSnippet for DynMalloc {
         *used_memory += size;
 
         assert!(
-            used_memory.value() > (1u64 << 32) && used_memory.value() < (1u64 << 33),
+            used_memory.value() > (1u64 << 32),
             "New dyn malloc state is {used_memory} which is outside of the legal region"
         );
     }
