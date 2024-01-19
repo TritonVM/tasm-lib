@@ -20,7 +20,6 @@ use anyhow::bail;
 use itertools::Itertools;
 use num_traits::Zero;
 use triton_vm::op_stack::NUM_OP_STACK_REGISTERS;
-use triton_vm::prelude::twenty_first;
 use triton_vm::prelude::*;
 use twenty_first::shared_math::tip5;
 use twenty_first::shared_math::tip5::Tip5State;
@@ -49,6 +48,10 @@ pub mod snippet_bencher;
 pub mod structure;
 pub mod test_helpers;
 pub mod traits;
+
+// re-exports for types exposed in our public API.
+pub use triton_vm;
+pub use triton_vm::prelude::twenty_first;
 
 // The hasher type must match whatever algebraic hasher the VM is using
 pub type VmHasher = Tip5;
