@@ -57,6 +57,10 @@ pub mod structure;
 pub mod test_helpers;
 pub mod traits;
 
+// re-exports for types exposed in our public API.
+pub use triton_vm;
+pub use triton_vm::twenty_first; // less verbosity
+
 // The hasher type must match whatever algebraic hasher the VM is using
 pub type VmHasher = Tip5;
 pub type VmHasherState = Tip5State;
