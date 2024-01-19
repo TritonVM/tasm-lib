@@ -45,6 +45,8 @@ pub fn test_rust_shadow<P: CompiledProgram>(
     assert_eq!(rust_output, tasm_output);
 }
 
+/// Run the program, collect benchmarkable performance statistics (including a profile),
+/// and write them to disk.
 pub fn bench_and_profile_program<P: CompiledProgram>(
     name: String,
     case: crate::snippet_bencher::BenchmarkCase,
@@ -73,7 +75,7 @@ pub fn bench_and_profile_program<P: CompiledProgram>(
             hash_table_height: aet.hash_table_length(),
             u32_table_height: aet.u32_table_length(),
         },
-        Err(_) => panic!(),
+        Err(e) => panic!("{}", e),
     };
 
     crate::snippet_bencher::write_benchmarks(vec![benchmark]);

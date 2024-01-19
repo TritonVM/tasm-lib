@@ -1,0 +1,119 @@
+use std::collections::HashMap;
+
+use triton_vm::{
+    instruction::LabelledInstruction, triton_asm, triton_instr, BFieldElement, NonDeterminism,
+};
+
+use crate::{
+    library::Library,
+    memory::{encode_to_memory, FIRST_NON_DETERMINISTICALLY_INITIALIZED_MEMORY_ADDRESS},
+    traits::compiled_program::CompiledProgram,
+};
+
+use super::fri_verify::FriVerify;
+
+struct StandaloneFriVerify {
+    seed: [u8; 32],
+}
+
+impl StandaloneFriVerify {
+    fn instance() -> FriVerify {
+        let offset = BFieldElement::new(7);
+        let computation_size = 1 << 21;
+        let expansion_factor = 1 << 4;
+        let num_colinearity_checks = 40;
+        let domain_length = computation_size * expansion_factor;
+        FriVerify::new(
+            offset,
+            domain_length,
+            expansion_factor,
+            num_colinearity_checks,
+        )
+    }
+
+    fn singleton() -> StandaloneFriVerify {
+        let mut seed = [0u8; 32];
+        seed[0] = 0xba;
+        seed[1] = 0xda;
+        seed[2] = 0x55;
+        seed[3] = 0xa5;
+        seed[4] = 0xfc;
+        Self { seed }
+    }
+
+    fn pseudorandom_intermediate_state(
+        &self,
+    ) -> (Vec<BFieldElement>, NonDeterminism<BFieldElement>) {
+        let fri_verify = StandaloneFriVerify::instance();
+        let proof_stream = fri_verify.pseudorandom_fri_proof_stream(self.seed);
+        let digests = fri_verify.extract_digests_required_for_proving(&proof_stream);
+        let mut memory = HashMap::<BFieldElement, BFieldElement>::new();
+        let proof_stream_pointer = FIRST_NON_DETERMINISTICALLY_INITIALIZED_MEMORY_ADDRESS;
+        let fri_verify_pointer = encode_to_memory(&mut memory, proof_stream_pointer, proof_stream);
+        encode_to_memory(&mut memory, fri_verify_pointer, fri_verify);
+        let nondeterminism = NonDeterminism::new(vec![])
+            .with_digests(digests)
+            .with_ram(memory);
+        let stack_excess = vec![proof_stream_pointer, fri_verify_pointer];
+        (stack_excess, nondeterminism)
+    }
+}
+
+impl CompiledProgram for StandaloneFriVerify {
+    fn rust_shadow(
+        _public_input: &triton_vm::PublicInput,
+        _nondeterminism: &NonDeterminism<BFieldElement>,
+    ) -> anyhow::Result<Vec<BFieldElement>> {
+        todo!()
+    }
+
+    fn code() -> (Vec<LabelledInstruction>, Library) {
+        let fri_verify = StandaloneFriVerify::instance();
+        let (stack_excess, _) = Self::singleton().pseudorandom_intermediate_state();
+
+        let mut library = Library::new();
+        let fri_verify_entrypoint = library.import(Box::new(fri_verify));
+
+        let mut invocation_code = vec![];
+        invocation_code.push(triton_instr!(sponge_init));
+        for sti in stack_excess {
+            invocation_code.push(triton_instr!(push sti.value()));
+        }
+        #[allow(unused_variables)] // used in macro
+        invocation_code.append(&mut triton_asm!(call {
+            fri_verify_entrypoint
+        }));
+        invocation_code.push(triton_instr!(halt));
+
+        (invocation_code, library)
+    }
+}
+
+#[cfg(test)]
+mod bench {
+    use triton_vm::PublicInput;
+
+    use crate::{
+        snippet_bencher::BenchmarkCase, traits::compiled_program::bench_and_profile_program,
+    };
+
+    use super::StandaloneFriVerify;
+
+    #[test]
+    fn benchmark() {
+        let mut seed = [0u8; 32];
+        seed[0] = 0xa7;
+        seed[1] = 0xf7;
+
+        let public_input = PublicInput::new(vec![]);
+        let (_, nondeterminism) =
+            StandaloneFriVerify::singleton().pseudorandom_intermediate_state();
+
+        bench_and_profile_program::<StandaloneFriVerify>(
+            "tasm_recufier_standalone_fri_verify".to_string(),
+            BenchmarkCase::WorstCase,
+            &public_input,
+            &nondeterminism,
+        );
+    }
+}

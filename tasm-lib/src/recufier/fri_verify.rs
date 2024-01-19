@@ -426,7 +426,10 @@ impl FriVerify {
         self.set_up_stack_and_non_determinism_using_digests(proof_stream, digests)
     }
 
-    fn extract_digests_required_for_proving(&self, proof_stream: &VmProofStream) -> Vec<Digest> {
+    pub fn extract_digests_required_for_proving(
+        &self,
+        proof_stream: &VmProofStream,
+    ) -> Vec<Digest> {
         let mut digests = vec![];
         self.inner_verify(&mut proof_stream.clone(), &mut digests)
             .unwrap();

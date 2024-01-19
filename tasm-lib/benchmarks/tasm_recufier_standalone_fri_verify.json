@@ -1,0 +1,9 @@
+[
+  {
+    "name": "tasm_recufier_standalone_fri_verify",
+    "clock_cycle_count": 1271676,
+    "hash_table_height": 79261,
+    "u32_table_height": 137492,
+    "case": "WorstCase"
+  }
+]
