@@ -1,12 +1,12 @@
 use std::collections::HashMap;
 
+use crate::twenty_first::shared_math::b_field_element::BFieldElement;
+use crate::twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 use itertools::Itertools;
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 use triton_vm::instruction::LabelledInstruction;
 use triton_vm::{triton_asm, NonDeterminism};
-use twenty_first::shared_math::b_field_element::BFieldElement;
-use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
 use crate::data_type::DataType;
 use crate::library::Library;

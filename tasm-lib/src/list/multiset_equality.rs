@@ -1,14 +1,14 @@
 use std::collections::HashMap;
 
+use crate::twenty_first::shared_math::other::random_elements;
+use crate::twenty_first::shared_math::x_field_element::{XFieldElement, EXTENSION_DEGREE};
+use crate::twenty_first::{
+    shared_math::b_field_element::BFieldElement, util_types::algebraic_hasher::AlgebraicHasher,
+};
 use num::Zero;
 use num_traits::One;
 use rand::random;
 use triton_vm::{Digest, NonDeterminism};
-use twenty_first::shared_math::other::random_elements;
-use twenty_first::shared_math::x_field_element::{XFieldElement, EXTENSION_DEGREE};
-use twenty_first::{
-    shared_math::b_field_element::BFieldElement, util_types::algebraic_hasher::AlgebraicHasher,
-};
 
 use crate::data_type::DataType;
 use crate::hashing::hash_varlen::HashVarlen;

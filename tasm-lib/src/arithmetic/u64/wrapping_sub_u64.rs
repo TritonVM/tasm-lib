@@ -1,6 +1,6 @@
+use crate::twenty_first::shared_math::bfield_codec::BFieldCodec;
 use rand::{rngs::StdRng, RngCore, SeedableRng};
 use triton_vm::{triton_asm, BFieldElement};
-use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
 use crate::data_type::DataType;
 use crate::empty_stack;

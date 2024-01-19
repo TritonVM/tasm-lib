@@ -1,12 +1,12 @@
 use std::{cmp::max, collections::HashMap};
 
+use crate::twenty_first::shared_math::bfield_codec::BFieldCodec;
+use crate::twenty_first::shared_math::x_field_element::XFieldElement;
 use num_traits::Zero;
 use rand::Rng;
 use rand::{rngs::StdRng, RngCore, SeedableRng};
 use triton_vm::proof_item::ProofItem;
 use triton_vm::{instruction::LabelledInstruction, triton_asm, BFieldElement, NonDeterminism};
-use twenty_first::shared_math::bfield_codec::BFieldCodec;
-use twenty_first::shared_math::x_field_element::XFieldElement;
 
 use crate::data_type::DataType;
 use crate::hashing::absorb::Absorb;
@@ -245,14 +245,14 @@ impl Procedure for Dequeue {
 mod test {
     use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
+    use crate::twenty_first::shared_math::bfield_codec::BFieldCodec;
+    use crate::twenty_first::shared_math::x_field_element::XFieldElement;
+    use crate::twenty_first::util_types::algebraic_hasher::Domain;
     use rand::thread_rng;
     use rand::{rngs::StdRng, Rng, RngCore, SeedableRng};
     use triton_vm::proof_item::{FriResponse, ProofItem};
     use triton_vm::vm::VMState;
     use triton_vm::{triton_asm, BFieldElement, NonDeterminism, Program, PublicInput};
-    use twenty_first::shared_math::bfield_codec::BFieldCodec;
-    use twenty_first::shared_math::x_field_element::XFieldElement;
-    use twenty_first::util_types::algebraic_hasher::Domain;
 
     use crate::library::Library;
     use crate::memory::encode_to_memory;

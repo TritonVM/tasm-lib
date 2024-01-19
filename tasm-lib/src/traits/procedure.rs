@@ -1,9 +1,9 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
+use crate::twenty_first::shared_math::bfield_codec::BFieldCodec;
 use itertools::Itertools;
 use rand::{rngs::StdRng, thread_rng, Rng, SeedableRng};
 use triton_vm::{BFieldElement, NonDeterminism};
-use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
 use crate::{
     linker::{execute_bench, link_for_isolated_run},

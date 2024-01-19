@@ -17,6 +17,10 @@ use std::collections::HashMap;
 use std::io::Write;
 use std::time::SystemTime;
 
+use crate::twenty_first::shared_math::b_field_element::BFieldElement;
+use crate::twenty_first::shared_math::bfield_codec::BFieldCodec;
+use crate::twenty_first::shared_math::tip5::Tip5State;
+use crate::twenty_first::shared_math::tip5::{self, Tip5};
 use anyhow::bail;
 use itertools::Itertools;
 use num_traits::Zero;
@@ -28,10 +32,6 @@ use triton_vm::vm::VMState;
 use triton_vm::NonDeterminism;
 use triton_vm::PublicInput;
 use triton_vm::{Claim, StarkParameters};
-use twenty_first::shared_math::b_field_element::BFieldElement;
-use twenty_first::shared_math::bfield_codec::BFieldCodec;
-use twenty_first::shared_math::tip5::Tip5State;
-use twenty_first::shared_math::tip5::{self, Tip5};
 
 use library::Library;
 use memory::dyn_malloc;

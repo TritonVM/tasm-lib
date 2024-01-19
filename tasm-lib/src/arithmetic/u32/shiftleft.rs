@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
+use crate::twenty_first::shared_math::b_field_element::BFieldElement;
 use rand::{thread_rng, Rng, RngCore};
-use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::data_type::DataType;
 use crate::library::Library;

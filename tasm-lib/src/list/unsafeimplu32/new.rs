@@ -1,7 +1,7 @@
+use crate::twenty_first::shared_math::b_field_element::BFieldElement;
 use itertools::Itertools;
 use std::collections::HashMap;
 use triton_vm::triton_asm;
-use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::data_type::DataType;
 use crate::library::Library;

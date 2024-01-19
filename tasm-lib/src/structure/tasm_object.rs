@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 use std::error::Error;
 
+use crate::twenty_first::shared_math::bfield_codec::BFieldCodec;
 use itertools::Itertools;
 use num_traits::Zero;
 use triton_vm::{instruction::LabelledInstruction, BFieldElement};
-use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
 pub use derive_tasm_object::TasmObject;
 
@@ -219,13 +219,15 @@ impl<'a> Iterator for MemoryIter<'a> {
 mod test {
     use std::collections::HashMap;
 
+    use crate::twenty_first::shared_math::{
+        bfield_codec::BFieldCodec, x_field_element::XFieldElement,
+    };
     use arbitrary::{Arbitrary, Unstructured};
     use itertools::Itertools;
     use rand::RngCore;
     use rand::{rngs::StdRng, thread_rng, Rng, SeedableRng};
     use triton_vm::instruction::LabelledInstruction;
     use triton_vm::{proof_item::FriResponse, triton_asm, BFieldElement, NonDeterminism};
-    use twenty_first::shared_math::{bfield_codec::BFieldCodec, x_field_element::XFieldElement};
 
     use crate::data_type::DataType;
     use crate::memory::encode_to_memory;

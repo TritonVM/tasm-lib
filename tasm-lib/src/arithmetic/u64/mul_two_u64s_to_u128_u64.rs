@@ -1,5 +1,5 @@
+use crate::twenty_first::{amount::u32s::U32s, shared_math::b_field_element::BFieldElement};
 use rand::{thread_rng, RngCore};
-use twenty_first::{amount::u32s::U32s, shared_math::b_field_element::BFieldElement};
 
 use crate::data_type::DataType;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;

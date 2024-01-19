@@ -1,5 +1,15 @@
 use std::collections::HashMap;
 
+use crate::twenty_first::shared_math::bfield_codec::BFieldCodec;
+use crate::twenty_first::shared_math::ntt::intt;
+use crate::twenty_first::shared_math::ntt::ntt;
+use crate::twenty_first::shared_math::other::log_2_ceil;
+use crate::twenty_first::shared_math::polynomial::Polynomial;
+use crate::twenty_first::shared_math::traits::ModPowU32;
+use crate::twenty_first::shared_math::traits::PrimitiveRootOfUnity;
+use crate::twenty_first::shared_math::x_field_element::XFieldElement;
+use crate::twenty_first::util_types::algebraic_hasher::SpongeHasher;
+use crate::twenty_first::util_types::merkle_tree::MerkleTree;
 use anyhow::bail;
 use itertools::Itertools;
 use num_traits::Zero;
@@ -15,16 +25,6 @@ use triton_vm::proof_stream::ProofStream;
 use triton_vm::triton_asm;
 use triton_vm::BFieldElement;
 use triton_vm::NonDeterminism;
-use twenty_first::shared_math::bfield_codec::BFieldCodec;
-use twenty_first::shared_math::ntt::intt;
-use twenty_first::shared_math::ntt::ntt;
-use twenty_first::shared_math::other::log_2_ceil;
-use twenty_first::shared_math::polynomial::Polynomial;
-use twenty_first::shared_math::traits::ModPowU32;
-use twenty_first::shared_math::traits::PrimitiveRootOfUnity;
-use twenty_first::shared_math::x_field_element::XFieldElement;
-use twenty_first::util_types::algebraic_hasher::SpongeHasher;
-use twenty_first::util_types::merkle_tree::MerkleTree;
 
 use crate::data_type::DataType;
 use crate::empty_stack;

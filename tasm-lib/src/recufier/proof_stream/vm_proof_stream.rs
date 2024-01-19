@@ -1,3 +1,11 @@
+use crate::twenty_first::{
+    shared_math::{
+        b_field_element::{BFIELD_ONE, BFIELD_ZERO},
+        bfield_codec::BFieldCodec,
+        x_field_element::XFieldElement,
+    },
+    util_types::algebraic_hasher::{AlgebraicHasher, Domain, SpongeHasher},
+};
 use anyhow::{bail, Result};
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use triton_vm::{
@@ -5,14 +13,6 @@ use triton_vm::{
     proof_item::{FriResponse, ProofItem},
     table::master_table::{NUM_BASE_COLUMNS, NUM_EXT_COLUMNS},
     triton_asm, BFieldElement,
-};
-use twenty_first::{
-    shared_math::{
-        b_field_element::{BFIELD_ONE, BFIELD_ZERO},
-        bfield_codec::BFieldCodec,
-        x_field_element::XFieldElement,
-    },
-    util_types::algebraic_hasher::{AlgebraicHasher, Domain, SpongeHasher},
 };
 
 use crate::{structure::tasm_object::TasmObject, VmHasher};

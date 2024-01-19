@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
+use crate::twenty_first::{
+    shared_math::b_field_element::BFieldElement, util_types::algebraic_hasher::AlgebraicHasher,
+};
 use itertools::Itertools;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use triton_vm::{triton_asm, NonDeterminism};
-use twenty_first::{
-    shared_math::b_field_element::BFieldElement, util_types::algebraic_hasher::AlgebraicHasher,
-};
 
 use crate::traits::procedure::ProcedureInitialState;
 use crate::traits::{basic_snippet::BasicSnippet, procedure::Procedure};

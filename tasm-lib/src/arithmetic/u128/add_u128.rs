@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
-use num::Zero;
-use rand::Rng;
-use twenty_first::{
+use crate::twenty_first::{
     amount::u32s::U32s,
     shared_math::{b_field_element::BFieldElement, bfield_codec::BFieldCodec},
 };
+use num::Zero;
+use rand::Rng;
 
 use crate::{data_type::DataType, traits::deprecated_snippet::DeprecatedSnippet};
 use crate::{empty_stack, library::Library, push_encodable, ExecutionState};
@@ -223,7 +223,7 @@ impl DeprecatedSnippet for AddU128 {
 
 #[cfg(test)]
 mod tests {
-    use twenty_first::shared_math::bfield_codec::BFieldCodec;
+    use crate::twenty_first::shared_math::bfield_codec::BFieldCodec;
 
     use crate::test_helpers::{
         test_rust_equivalence_given_input_values_deprecated,

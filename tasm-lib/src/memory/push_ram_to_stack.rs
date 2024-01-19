@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
+use crate::twenty_first::shared_math::bfield_codec::BFieldCodec;
 use num_traits::Zero;
 use rand::random;
 use triton_vm::{triton_asm, BFieldElement};
-use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
 use crate::memory::encode_to_memory;
 use crate::{

@@ -1,11 +1,11 @@
 use itertools::Itertools;
 use std::collections::HashMap;
 
+use crate::twenty_first::shared_math::b_field_element::BFieldElement;
 use num::{One, Zero};
 use rand::Rng;
 use triton_vm::instruction::LabelledInstruction;
 use triton_vm::triton_asm;
-use twenty_first::shared_math::b_field_element::BFieldElement;
 
 pub const DYN_MALLOC_ADDRESS: BFieldElement = BFieldElement::new(1 << 32);
 pub const FIRST_DYNAMICALLY_ALLOCATED_ADDRESS: BFieldElement = BFieldElement::new((1 << 32) + 1);

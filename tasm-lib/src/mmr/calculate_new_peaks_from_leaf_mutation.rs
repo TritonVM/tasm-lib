@@ -1,12 +1,12 @@
+use crate::twenty_first::shared_math::b_field_element::BFieldElement;
+use crate::twenty_first::shared_math::other::random_elements;
+use crate::twenty_first::test_shared::mmr::get_rustyleveldb_ammr_from_digests;
+use crate::twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
+use crate::twenty_first::util_types::mmr::mmr_trait::Mmr;
+use crate::twenty_first::util_types::mmr::{self, mmr_membership_proof::MmrMembershipProof};
 use num::One;
 use rand::{random, thread_rng, Rng};
 use std::collections::HashMap;
-use twenty_first::shared_math::b_field_element::BFieldElement;
-use twenty_first::shared_math::other::random_elements;
-use twenty_first::test_shared::mmr::get_rustyleveldb_ammr_from_digests;
-use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
-use twenty_first::util_types::mmr::mmr_trait::Mmr;
-use twenty_first::util_types::mmr::{self, mmr_membership_proof::MmrMembershipProof};
 
 use super::leaf_index_to_mt_index_and_peak_index::MmrLeafIndexToMtIndexAndPeakIndex;
 use crate::arithmetic::u32::isodd::Isodd;
@@ -425,15 +425,15 @@ impl DeprecatedSnippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
 
 #[cfg(test)]
 mod tests {
+    use crate::twenty_first::shared_math::b_field_element::BFieldElement;
+    use crate::twenty_first::shared_math::other::random_elements;
+    use crate::twenty_first::test_shared::mmr::get_empty_rustyleveldb_ammr;
+    use crate::twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
+    use crate::twenty_first::util_types::mmr::archival_mmr::ArchivalMmr;
+    use crate::twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
+    use crate::twenty_first::util_types::mmr::mmr_membership_proof::MmrMembershipProof;
+    use crate::twenty_first::util_types::mmr::mmr_trait::Mmr;
     use rand::{thread_rng, Rng};
-    use twenty_first::shared_math::b_field_element::BFieldElement;
-    use twenty_first::shared_math::other::random_elements;
-    use twenty_first::test_shared::mmr::get_empty_rustyleveldb_ammr;
-    use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
-    use twenty_first::util_types::mmr::archival_mmr::ArchivalMmr;
-    use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
-    use twenty_first::util_types::mmr::mmr_membership_proof::MmrMembershipProof;
-    use twenty_first::util_types::mmr::mmr_trait::Mmr;
 
     use crate::empty_stack;
     use crate::mmr::MAX_MMR_HEIGHT;

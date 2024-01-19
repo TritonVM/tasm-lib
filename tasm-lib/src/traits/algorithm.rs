@@ -1,7 +1,7 @@
+use crate::twenty_first::shared_math::bfield_codec::BFieldCodec;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 use triton_vm::{BFieldElement, NonDeterminism};
-use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
 use super::{basic_snippet::BasicSnippet, rust_shadow::RustShadow};
 use crate::{

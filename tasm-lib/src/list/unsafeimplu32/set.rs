@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 
+use crate::twenty_first::shared_math::b_field_element::BFieldElement;
+use crate::twenty_first::shared_math::other::random_elements;
 use itertools::Itertools;
 use rand::{random, thread_rng, Rng};
 use triton_vm::triton_asm;
-use twenty_first::shared_math::b_field_element::BFieldElement;
-use twenty_first::shared_math::other::random_elements;
 
 use crate::data_type::DataType;
 use crate::library::Library;
@@ -155,7 +155,7 @@ fn prepare_state(data_type: &DataType) -> ExecutionState {
 
 #[cfg(test)]
 mod tests {
-    use twenty_first::shared_math::b_field_element::BFieldElement;
+    use crate::twenty_first::shared_math::b_field_element::BFieldElement;
 
     use crate::empty_stack;
 

@@ -1,14 +1,14 @@
+use crate::twenty_first::shared_math::b_field_element::BFieldElement;
+use crate::twenty_first::shared_math::other::random_elements;
+use crate::twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
+use crate::twenty_first::util_types::mmr;
+use crate::twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
+use crate::twenty_first::util_types::mmr::mmr_trait::Mmr;
 use itertools::Itertools;
 use num::One;
 use rand::random;
 use std::collections::HashMap;
 use triton_vm::triton_asm;
-use twenty_first::shared_math::b_field_element::BFieldElement;
-use twenty_first::shared_math::other::random_elements;
-use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
-use twenty_first::util_types::mmr;
-use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
-use twenty_first::util_types::mmr::mmr_trait::Mmr;
 
 use super::MAX_MMR_HEIGHT;
 use crate::arithmetic::u64::incr_u64::IncrU64;
@@ -407,13 +407,13 @@ impl DeprecatedSnippet for CalculateNewPeaksFromAppend {
 
 #[cfg(test)]
 mod tests {
+    use crate::twenty_first::shared_math::b_field_element::BFieldElement;
+    use crate::twenty_first::shared_math::other::random_elements;
+    use crate::twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
+    use crate::twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
+    use crate::twenty_first::util_types::mmr::mmr_membership_proof::MmrMembershipProof;
+    use crate::twenty_first::util_types::mmr::mmr_trait::Mmr;
     use num::Zero;
-    use twenty_first::shared_math::b_field_element::BFieldElement;
-    use twenty_first::shared_math::other::random_elements;
-    use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
-    use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
-    use twenty_first::util_types::mmr::mmr_membership_proof::MmrMembershipProof;
-    use twenty_first::util_types::mmr::mmr_trait::Mmr;
 
     use crate::test_helpers::{
         test_rust_equivalence_given_input_values_deprecated,

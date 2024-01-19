@@ -1,12 +1,12 @@
 use std::collections::HashMap;
 
+use crate::twenty_first::amount::u32s::U32s;
+use crate::twenty_first::shared_math::b_field_element::BFieldElement;
+use crate::twenty_first::shared_math::bfield_codec::BFieldCodec;
 use itertools::Itertools;
 use num::One;
 use rand::RngCore;
 use triton_vm::triton_asm;
-use twenty_first::amount::u32s::U32s;
-use twenty_first::shared_math::b_field_element::BFieldElement;
-use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
 use crate::arithmetic::u32::safeadd::Safeadd;
 use crate::arithmetic::u32::safesub::Safesub;

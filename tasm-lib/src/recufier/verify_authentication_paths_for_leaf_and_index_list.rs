@@ -1,12 +1,12 @@
 use std::collections::HashMap;
 
-use itertools::Itertools;
-use rand::{rngs::StdRng, Rng, RngCore, SeedableRng};
-use triton_vm::{triton_asm, BFieldElement, NonDeterminism};
-use twenty_first::util_types::{
+use crate::twenty_first::util_types::{
     merkle_tree::{CpuParallel, MerkleTree},
     merkle_tree_maker::MerkleTreeMaker,
 };
+use itertools::Itertools;
+use rand::{rngs::StdRng, Rng, RngCore, SeedableRng};
+use triton_vm::{triton_asm, BFieldElement, NonDeterminism};
 
 use crate::{
     data_type::DataType,

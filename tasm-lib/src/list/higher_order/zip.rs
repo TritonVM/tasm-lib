@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 
+use crate::twenty_first::shared_math::b_field_element::BFieldElement;
 use itertools::Itertools;
 use rand::rngs::StdRng;
 use rand::*;
 use triton_vm::*;
-use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::data_type::DataType;
 use crate::list::ListType;
@@ -288,11 +288,11 @@ impl Zip {
 
 #[cfg(test)]
 mod tests {
+    use crate::twenty_first::shared_math::x_field_element::XFieldElement;
     use proptest::collection::vec;
     use proptest::prelude::*;
     use proptest_arbitrary_interop::arb;
     use test_strategy::proptest;
-    use twenty_first::shared_math::x_field_element::XFieldElement;
 
     use crate::rust_shadowing_helper_functions::unsafe_list::*;
     use crate::structure::tasm_object::MemoryIter;

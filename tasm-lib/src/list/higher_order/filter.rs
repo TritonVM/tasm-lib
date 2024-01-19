@@ -1,12 +1,12 @@
 use std::collections::HashMap;
 
+use crate::twenty_first::shared_math::b_field_element::BFieldElement;
 use itertools::Itertools;
 use num::Zero;
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 use triton_vm::parser::tokenize;
 use triton_vm::triton_asm;
-use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::data_type::DataType;
 use crate::library::Library;
@@ -393,6 +393,9 @@ impl Function for Filter {
 #[cfg(test)]
 mod tests {
     use crate::traits::rust_shadow::RustShadow;
+    use crate::twenty_first::{
+        shared_math::other::random_elements, util_types::algebraic_hasher::AlgebraicHasher,
+    };
     use crate::{
         arithmetic,
         list::higher_order::inner_function::RawCode,
@@ -400,9 +403,6 @@ mod tests {
         ExecutionState, VmHasher,
     };
     use triton_vm::triton_asm;
-    use twenty_first::{
-        shared_math::other::random_elements, util_types::algebraic_hasher::AlgebraicHasher,
-    };
 
     use super::*;
 

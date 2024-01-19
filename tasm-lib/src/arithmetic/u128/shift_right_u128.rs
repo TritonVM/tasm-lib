@@ -1,6 +1,6 @@
+use crate::twenty_first::amount::u32s::U32s;
 use rand::random;
 use triton_vm::BFieldElement;
-use twenty_first::amount::u32s::U32s;
 
 use crate::data_type::DataType;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
@@ -213,7 +213,7 @@ fn prepare_state(value: u128, shift_amount: u32) -> ExecutionState {
 mod tests {
     use std::collections::HashMap;
 
-    use twenty_first::shared_math::bfield_codec::BFieldCodec;
+    use crate::twenty_first::shared_math::bfield_codec::BFieldCodec;
 
     use crate::test_helpers::{
         test_rust_equivalence_given_input_values_deprecated,

@@ -1,12 +1,12 @@
+use crate::twenty_first::{
+    shared_math::{bfield_codec::BFieldCodec, tip5::Tip5},
+    util_types::algebraic_hasher::{AlgebraicHasher, Domain, SpongeHasher},
+};
 use itertools::Itertools;
 use num_traits::{One, Zero};
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::collections::HashMap;
 use triton_vm::{triton_asm, BFieldElement};
-use twenty_first::{
-    shared_math::{bfield_codec::BFieldCodec, tip5::Tip5},
-    util_types::algebraic_hasher::{AlgebraicHasher, Domain, SpongeHasher},
-};
 
 use crate::{
     arithmetic::u128::{shift_left_static_u128, shift_right_static_u128},

@@ -1,15 +1,15 @@
 use std::collections::HashMap;
 
+use crate::twenty_first::shared_math::b_field_element::BFieldElement;
+use crate::twenty_first::shared_math::other::random_elements;
+use crate::twenty_first::test_shared::mmr::get_rustyleveldb_ammr_from_digests;
+use crate::twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
+use crate::twenty_first::util_types::mmr::archival_mmr::ArchivalMmr;
+use crate::twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
+use crate::twenty_first::util_types::mmr::mmr_membership_proof::MmrMembershipProof;
+use crate::twenty_first::util_types::mmr::mmr_trait::Mmr;
 use num::One;
 use rand::{random, thread_rng, Rng};
-use twenty_first::shared_math::b_field_element::BFieldElement;
-use twenty_first::shared_math::other::random_elements;
-use twenty_first::test_shared::mmr::get_rustyleveldb_ammr_from_digests;
-use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
-use twenty_first::util_types::mmr::archival_mmr::ArchivalMmr;
-use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
-use twenty_first::util_types::mmr::mmr_membership_proof::MmrMembershipProof;
-use twenty_first::util_types::mmr::mmr_trait::Mmr;
 
 use crate::arithmetic::u32::isodd::Isodd;
 use crate::arithmetic::u64::div2_u64::Div2U64;
@@ -406,13 +406,17 @@ impl DeprecatedSnippet for MmrVerifyFromMemory {
 
 #[cfg(test)]
 mod tests {
+    use crate::twenty_first::shared_math::{
+        b_field_element::BFieldElement, other::random_elements,
+    };
+    use crate::twenty_first::test_shared::mmr::get_empty_rustyleveldb_ammr;
+    use crate::twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
+    use crate::twenty_first::util_types::mmr::archival_mmr::ArchivalMmr;
+    use crate::twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
+    use crate::twenty_first::util_types::mmr::{
+        mmr_membership_proof::MmrMembershipProof, mmr_trait::Mmr,
+    };
     use rand::{thread_rng, Rng};
-    use twenty_first::shared_math::{b_field_element::BFieldElement, other::random_elements};
-    use twenty_first::test_shared::mmr::get_empty_rustyleveldb_ammr;
-    use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
-    use twenty_first::util_types::mmr::archival_mmr::ArchivalMmr;
-    use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
-    use twenty_first::util_types::mmr::{mmr_membership_proof::MmrMembershipProof, mmr_trait::Mmr};
 
     use crate::test_helpers::{
         test_rust_equivalence_given_input_values_deprecated,

@@ -1,8 +1,8 @@
-use num::{One, Zero};
-use std::collections::HashMap;
-use twenty_first::shared_math::{
+use crate::twenty_first::shared_math::{
     b_field_element::BFieldElement, bfield_codec::BFieldCodec, other::random_elements,
 };
+use num::{One, Zero};
+use std::collections::HashMap;
 
 use crate::data_type::DataType;
 

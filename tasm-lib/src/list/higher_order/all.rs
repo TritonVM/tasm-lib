@@ -1,3 +1,5 @@
+use crate::twenty_first::shared_math::b_field_element::BFieldElement;
+use crate::twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 use itertools::Itertools;
 use num::Zero;
 use rand::rngs::StdRng;
@@ -6,8 +8,6 @@ use std::collections::HashMap;
 use triton_vm::instruction::LabelledInstruction;
 use triton_vm::parser::tokenize;
 use triton_vm::{triton_asm, NonDeterminism};
-use twenty_first::shared_math::b_field_element::BFieldElement;
-use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
 use crate::data_type::DataType;
 use crate::list::safeimplu32::get::SafeGet;

@@ -286,14 +286,14 @@ fn generate_tokens_for_struct_with_named_fields(fields: &syn::FieldsNamed) -> Pa
 /// known, but otherwise *field_start+1 == *field.
 fn generate_tasm_for_getter_postprocess(field_type: &syn::Type) -> quote::__private::TokenStream {
     quote! {
-        if <#field_type as twenty_first::shared_math::bfield_codec::BFieldCodec>::static_length().is_some() {
+        if <#field_type as crate::twenty_first::shared_math::bfield_codec::BFieldCodec>::static_length().is_some() {
             [
                 triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Pop(::triton_vm::op_stack::NumberOfWords::N1)),
             ].to_vec()
         } else {
             [
                 triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Pop(::triton_vm::op_stack::NumberOfWords::N1)),
-                triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(twenty_first::shared_math::b_field_element::BFieldElement::new(1u64))),
+                triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(crate::twenty_first::shared_math::b_field_element::BFieldElement::new(1u64))),
                 triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),
             ].to_vec()
         }
@@ -308,14 +308,14 @@ fn generate_tasm_for_getter_postprocess(field_type: &syn::Type) -> quote::__priv
 /// known, but otherwise *field_start+1 == *field.
 fn generate_tasm_for_sizer_postprocess(field_type: &syn::Type) -> quote::__private::TokenStream {
     quote! {
-        if <#field_type as twenty_first::shared_math::bfield_codec::BFieldCodec>::static_length().is_some() {
+        if <#field_type as crate::twenty_first::shared_math::bfield_codec::BFieldCodec>::static_length().is_some() {
             std::vec::Vec::<triton_vm::instruction::LabelledInstruction>::new()
         } else {
             [
-                triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(-twenty_first::shared_math::b_field_element::BFieldElement::new(1u64))),
+                triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(-crate::twenty_first::shared_math::b_field_element::BFieldElement::new(1u64))),
                 triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),
                 triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Swap(triton_vm::op_stack::OpStackElement::ST1)),
-                triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(twenty_first::shared_math::b_field_element::BFieldElement::new(1u64))),
+                triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(crate::twenty_first::shared_math::b_field_element::BFieldElement::new(1u64))),
                 triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),
                 triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Swap(triton_vm::op_stack::OpStackElement::ST1)),
             ].to_vec()
@@ -330,17 +330,17 @@ fn generate_tasm_for_extend_field_start_with_jump_amount(
     field_type: &syn::Type,
 ) -> quote::__private::TokenStream {
     quote! {
-        if let Some(size) = <#field_type as twenty_first::shared_math::bfield_codec::BFieldCodec>::static_length() {
+        if let Some(size) = <#field_type as crate::twenty_first::shared_math::bfield_codec::BFieldCodec>::static_length() {
             [
-                triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(twenty_first::shared_math::b_field_element::BFieldElement::new(size as u64)))
+                triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(crate::twenty_first::shared_math::b_field_element::BFieldElement::new(size as u64)))
             ].to_vec()
         } else {
             [
                 triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::ReadMem(::triton_vm::op_stack::NumberOfWords::N1)),
-                triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(twenty_first::shared_math::b_field_element::BFieldElement::new(1u64))),
+                triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(crate::twenty_first::shared_math::b_field_element::BFieldElement::new(1u64))),
                 triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),
                 triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Swap(::triton_vm::op_stack::OpStackElement::ST1)),
-                triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(twenty_first::shared_math::b_field_element::BFieldElement::new(1u64))),
+                triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(crate::twenty_first::shared_math::b_field_element::BFieldElement::new(1u64))),
                 triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),
             ].to_vec()
         }
@@ -405,12 +405,12 @@ fn get_field_decoder(
     field_type: syn::Type,
 ) -> quote::__private::TokenStream {
     quote! {
-        let length : usize = if let Some(static_length) = <#field_type as twenty_first::shared_math::bfield_codec::BFieldCodec>::static_length() {
+        let length : usize = if let Some(static_length) = <#field_type as crate::twenty_first::shared_math::bfield_codec::BFieldCodec>::static_length() {
             static_length
         } else {
             iterator.next().unwrap().value() as usize
         };
         let sequence = (0..length).map(|_| iterator.next().unwrap()).collect::<Vec<_>>();
-        let #field_name : #field_type = *twenty_first::shared_math::bfield_codec::BFieldCodec::decode(&sequence)?;
+        let #field_name : #field_type = *crate::twenty_first::shared_math::bfield_codec::BFieldCodec::decode(&sequence)?;
     }
 }

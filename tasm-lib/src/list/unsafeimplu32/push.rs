@@ -1,12 +1,12 @@
 use itertools::Itertools;
 use std::collections::HashMap;
 
+use crate::twenty_first::shared_math::b_field_element::BFieldElement;
+use crate::twenty_first::shared_math::other::random_elements;
 use num::One;
 use rand::{random, thread_rng, Rng};
 use triton_vm::instruction::LabelledInstruction;
 use triton_vm::{triton_asm, triton_instr};
-use twenty_first::shared_math::b_field_element::BFieldElement;
-use twenty_first::shared_math::other::random_elements;
 
 use crate::data_type::DataType;
 use crate::library::Library;
@@ -190,7 +190,7 @@ fn prepare_state(data_type: &DataType) -> ExecutionState {
 
 #[cfg(test)]
 mod tests {
-    use twenty_first::shared_math::b_field_element::BFieldElement;
+    use crate::twenty_first::shared_math::b_field_element::BFieldElement;
 
     use crate::empty_stack;
 

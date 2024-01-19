@@ -1,5 +1,5 @@
+use crate::twenty_first::shared_math::{b_field_element::BFieldElement, other::random_elements};
 use num::Zero;
-use twenty_first::shared_math::{b_field_element::BFieldElement, other::random_elements};
 
 use crate::{Digest, DIGEST_LENGTH};
 

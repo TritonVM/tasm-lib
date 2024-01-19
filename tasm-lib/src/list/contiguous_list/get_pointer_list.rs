@@ -1,7 +1,7 @@
+use crate::twenty_first::shared_math::bfield_codec::BFieldCodec;
 use num_traits::One;
 use rand::{thread_rng, Rng};
 use triton_vm::BFieldElement;
-use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
 use crate::data_type::DataType;
 use crate::memory::dyn_malloc;

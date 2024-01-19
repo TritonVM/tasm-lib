@@ -1,6 +1,6 @@
+use crate::twenty_first::amount::u32s::U32s;
+use crate::twenty_first::shared_math::b_field_element::BFieldElement;
 use rand::RngCore;
-use twenty_first::amount::u32s::U32s;
-use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::data_type::DataType;
 use crate::library::Library;
@@ -452,9 +452,9 @@ fn prepare_state(a: u128, b: u128) -> ExecutionState {
 
 #[cfg(test)]
 mod tests {
+    use crate::twenty_first::shared_math::bfield_codec::BFieldCodec;
     use rand::Rng;
     use triton_vm::NonDeterminism;
-    use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
     use super::*;
     use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
