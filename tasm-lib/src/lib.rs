@@ -12,7 +12,6 @@
 // https://github.com/bkchr/proc-macro-crate/issues/2#issuecomment-572914520
 extern crate self as tasm_lib;
 
-use std::cmp::min;
 use std::collections::HashMap;
 use std::io::Write;
 use std::time::SystemTime;
@@ -402,9 +401,11 @@ pub fn generate_full_profile(
     printed_profile = format!("{printed_profile}\n# aggregated\n");
     let mut aggregated: Vec<AggregateProfileLine> = vec![];
     for line in profile {
-        if let Some(agg) = aggregated.iter_mut().find(|a| a.label == line.label) {
+        if let Some(agg) = aggregated
+            .iter_mut()
+            .find(|a| a.label == line.label && a.call_depth == line.call_depth)
+        {
             agg.cycle_count += line.cycle_count();
-            agg.call_depth = min(agg.call_depth, line.call_depth);
         } else {
             aggregated.push(AggregateProfileLine {
                 label: line.label.to_owned(),
@@ -413,11 +414,15 @@ pub fn generate_full_profile(
             });
         }
     }
+    let total_cycle_count = aggregated[0].cycle_count as f32;
     for aggregate_line in aggregated {
         let indentation = vec!["  "; aggregate_line.call_depth].join("");
         let label = aggregate_line.label;
         let cycle_count = aggregate_line.cycle_count;
-        printed_profile = format!("{printed_profile}{indentation} {label}: {cycle_count}\n");
+        printed_profile = format!(
+            "{printed_profile}{indentation} {label}: {cycle_count} ({})\n",
+            (aggregate_line.cycle_count as f32) / total_cycle_count
+        );
     }
     printed_profile
 }
