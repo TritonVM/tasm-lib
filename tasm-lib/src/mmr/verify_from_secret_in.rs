@@ -1,17 +1,17 @@
+use crate::twenty_first::shared_math::b_field_element::BFieldElement;
+use crate::twenty_first::shared_math::other::random_elements;
+use crate::twenty_first::test_shared::mmr::get_rustyleveldb_ammr_from_digests;
+use crate::twenty_first::util_types::mmr::archival_mmr::ArchivalMmr;
+use crate::twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
+use crate::twenty_first::util_types::mmr::mmr_membership_proof::MmrMembershipProof;
+use crate::twenty_first::util_types::mmr::mmr_trait::Mmr;
+use crate::twenty_first::util_types::mmr::shared_basic::leaf_index_to_mt_index_and_peak_index;
 use num::One;
 use rand::rngs::StdRng;
 use rand::{random, Rng, SeedableRng};
 use std::collections::HashMap;
 use triton_vm::instruction::LabelledInstruction;
 use triton_vm::{triton_asm, NonDeterminism};
-use twenty_first::shared_math::b_field_element::BFieldElement;
-use twenty_first::shared_math::other::random_elements;
-use twenty_first::test_shared::mmr::get_rustyleveldb_ammr_from_digests;
-use twenty_first::util_types::mmr::archival_mmr::ArchivalMmr;
-use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
-use twenty_first::util_types::mmr::mmr_membership_proof::MmrMembershipProof;
-use twenty_first::util_types::mmr::mmr_trait::Mmr;
-use twenty_first::util_types::mmr::shared_basic::leaf_index_to_mt_index_and_peak_index;
 
 use super::leaf_index_to_mt_index_and_peak_index::MmrLeafIndexToMtIndexAndPeakIndex;
 use super::MAX_MMR_HEIGHT;
@@ -388,16 +388,16 @@ mod benches {
 #[cfg(test)]
 mod tests {
     use crate::traits::rust_shadow::RustShadow;
+    use crate::twenty_first::{
+        test_shared::mmr::get_empty_rustyleveldb_ammr,
+        util_types::algebraic_hasher::AlgebraicHasher,
+    };
     use crate::{
         mmr::MAX_MMR_HEIGHT, test_helpers::test_rust_equivalence_given_complete_state,
         traits::procedure::ShadowedProcedure, VmHasher,
     };
     use rand::thread_rng;
     use triton_vm::NonDeterminism;
-    use twenty_first::{
-        test_shared::mmr::get_empty_rustyleveldb_ammr,
-        util_types::algebraic_hasher::AlgebraicHasher,
-    };
 
     use super::*;
 

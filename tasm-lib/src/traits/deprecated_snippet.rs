@@ -2,11 +2,11 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
+use crate::twenty_first::shared_math::b_field_element::BFieldElement;
 use anyhow::Result;
 use triton_vm::instruction::LabelledInstruction;
 use triton_vm::parser::{to_labelled_instructions, tokenize};
 use triton_vm::{triton_asm, NonDeterminism, Program};
-use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::data_type::DataType;
 use crate::execute_with_terminal_state;

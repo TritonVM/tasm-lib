@@ -1,9 +1,9 @@
+use crate::twenty_first::shared_math::polynomial::Polynomial;
+use crate::twenty_first::shared_math::x_field_element::{XFieldElement, EXTENSION_DEGREE};
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use triton_vm::instruction::LabelledInstruction;
 use triton_vm::triton_asm;
 use triton_vm::BFieldElement;
-use twenty_first::shared_math::polynomial::Polynomial;
-use twenty_first::shared_math::x_field_element::{XFieldElement, EXTENSION_DEGREE};
 
 use crate::data_type::DataType;
 use crate::empty_stack;

@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
+use crate::twenty_first::{shared_math::other::random_elements, util_types::shared::bag_peaks};
 use itertools::Itertools;
 use rand::rngs::StdRng;
 use rand::{random, Rng, SeedableRng};
 use triton_vm::instruction::LabelledInstruction;
 use triton_vm::{triton_asm, BFieldElement};
-use twenty_first::{shared_math::other::random_elements, util_types::shared::bag_peaks};
 
 use crate::data_type::DataType;
 use crate::snippet_bencher::BenchmarkCase;

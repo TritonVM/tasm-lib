@@ -1,11 +1,11 @@
+use crate::twenty_first::shared_math::b_field_element::BFieldElement;
+use crate::twenty_first::shared_math::other::random_elements;
 use itertools::Itertools;
 use rand::rngs::StdRng;
 use rand::{Rng, RngCore, SeedableRng};
 use std::collections::HashMap;
 use triton_vm::parser::tokenize;
 use triton_vm::{triton_asm, NonDeterminism};
-use twenty_first::shared_math::b_field_element::BFieldElement;
-use twenty_first::shared_math::other::random_elements;
 
 use super::inner_function::InnerFunction;
 use crate::data_type::DataType;
@@ -410,11 +410,11 @@ impl Map {
 mod tests {
 
     use crate::traits::rust_shadow::RustShadow;
-    use num_traits::Zero;
-    use triton_vm::triton_asm;
-    use twenty_first::{
+    use crate::twenty_first::{
         shared_math::other::random_elements, util_types::algebraic_hasher::AlgebraicHasher,
     };
+    use num_traits::Zero;
+    use triton_vm::triton_asm;
 
     use crate::{
         arithmetic,

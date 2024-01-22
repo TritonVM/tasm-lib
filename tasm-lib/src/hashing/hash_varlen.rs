@@ -1,11 +1,11 @@
 use itertools::Itertools;
 use std::collections::HashMap;
 
-use rand::random;
-use triton_vm::{triton_asm, NonDeterminism};
-use twenty_first::{
+use crate::twenty_first::{
     shared_math::b_field_element::BFieldElement, util_types::algebraic_hasher::AlgebraicHasher,
 };
+use rand::random;
+use triton_vm::{triton_asm, NonDeterminism};
 
 use crate::data_type::DataType;
 use crate::hashing::absorb::Absorb;

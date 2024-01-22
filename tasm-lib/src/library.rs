@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
+use crate::twenty_first::shared_math::b_field_element::BFieldElement;
 use itertools::Itertools;
 use num::One;
 use triton_vm::instruction::LabelledInstruction;
-use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::{data_type::DataType, traits::basic_snippet::BasicSnippet};

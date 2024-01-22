@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 
+use crate::twenty_first::amount::u32s::U32s;
+use crate::twenty_first::shared_math::b_field_element::BFieldElement;
+use crate::twenty_first::shared_math::bfield_codec::BFieldCodec;
 use num::Zero;
 use rand::RngCore;
-use twenty_first::amount::u32s::U32s;
-use twenty_first::shared_math::b_field_element::BFieldElement;
-use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
 use crate::data_type::DataType;
 use crate::library::Library;

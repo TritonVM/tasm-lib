@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 
+use crate::twenty_first::{shared_math::tip5::RATE, util_types::algebraic_hasher::SpongeHasher};
 use itertools::Itertools;
 use rand::{rngs::StdRng, Rng, RngCore, SeedableRng};
 use tasm_lib::traits::procedure::ProcedureInitialState;
 use triton_vm::{triton_asm, BFieldElement, NonDeterminism};
-use twenty_first::{shared_math::tip5::RATE, util_types::algebraic_hasher::SpongeHasher};
 
 use crate::data_type::DataType;
 use crate::snippet_bencher::BenchmarkCase;

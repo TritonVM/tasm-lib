@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 
+use crate::twenty_first::amount::u32s::U32s;
+use crate::twenty_first::shared_math::b_field_element::BFieldElement;
+use crate::twenty_first::shared_math::bfield_codec::BFieldCodec;
+use crate::twenty_first::util_types::mmr;
 use itertools::Itertools;
 use num::BigUint;
 use rand::{thread_rng, Rng};
 use triton_vm::triton_asm;
-use twenty_first::amount::u32s::U32s;
-use twenty_first::shared_math::b_field_element::BFieldElement;
-use twenty_first::shared_math::bfield_codec::BFieldCodec;
-use twenty_first::util_types::mmr;
 
 use crate::arithmetic::u64::add_u64::AddU64;
 use crate::arithmetic::u64::and_u64::AndU64;
@@ -217,7 +217,7 @@ fn prepare_state(leaf_count: u64, leaf_index: u64) -> ExecutionState {
 
 #[cfg(test)]
 mod tests {
-    use twenty_first::shared_math::b_field_element::BFieldElement;
+    use crate::twenty_first::shared_math::b_field_element::BFieldElement;
 
     use crate::empty_stack;
 

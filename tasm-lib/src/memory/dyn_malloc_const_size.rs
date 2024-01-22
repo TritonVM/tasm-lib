@@ -1,10 +1,10 @@
+use crate::twenty_first::shared_math::b_field_element::BFieldElement;
 use num_traits::Zero;
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 use std::collections::HashMap;
 use triton_vm::instruction::LabelledInstruction;
 use triton_vm::triton_asm;
-use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::data_type::DataType;
 use crate::empty_stack;

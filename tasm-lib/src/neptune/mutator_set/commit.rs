@@ -1,6 +1,6 @@
+use crate::twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 use rand::random;
 use triton_vm::NonDeterminism;
-use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
 use crate::data_type::DataType;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;

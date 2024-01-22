@@ -16,6 +16,10 @@ use std::collections::HashMap;
 use std::io::Write;
 use std::time::SystemTime;
 
+use crate::twenty_first::shared_math::b_field_element::BFieldElement;
+use crate::twenty_first::shared_math::bfield_codec::BFieldCodec;
+use crate::twenty_first::shared_math::tip5::Tip5State;
+use crate::twenty_first::shared_math::tip5::{self, Tip5};
 use anyhow::bail;
 use itertools::Itertools;
 use num_traits::Zero;
@@ -27,10 +31,6 @@ use triton_vm::vm::VMState;
 use triton_vm::NonDeterminism;
 use triton_vm::PublicInput;
 use triton_vm::{Claim, StarkParameters};
-use twenty_first::shared_math::b_field_element::BFieldElement;
-use twenty_first::shared_math::bfield_codec::BFieldCodec;
-use twenty_first::shared_math::tip5::Tip5State;
-use twenty_first::shared_math::tip5::{self, Tip5};
 
 use library::Library;
 use memory::dyn_malloc;
@@ -55,6 +55,10 @@ pub mod snippet_bencher;
 pub mod structure;
 pub mod test_helpers;
 pub mod traits;
+
+// re-exports for types exposed in our public API.
+pub use triton_vm;
+pub use triton_vm::twenty_first; // less verbosity
 
 // The hasher type must match whatever algebraic hasher the VM is using
 pub type VmHasher = Tip5;

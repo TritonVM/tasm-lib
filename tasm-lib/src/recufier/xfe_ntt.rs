@@ -9,11 +9,11 @@ use crate::Library;
 use std::collections::HashMap;
 use triton_vm::triton_asm;
 
-use rand::{rngs::StdRng, Rng, SeedableRng};
-use triton_vm::BFieldElement;
-use twenty_first::shared_math::{
+use crate::twenty_first::shared_math::{
     ntt::ntt, traits::PrimitiveRootOfUnity, x_field_element::XFieldElement,
 };
+use rand::{rngs::StdRng, Rng, SeedableRng};
+use triton_vm::BFieldElement;
 
 pub struct XfeNtt;
 
@@ -488,10 +488,10 @@ impl Function for XfeNtt {
 
 #[cfg(test)]
 mod test {
+    use crate::twenty_first::shared_math::x_field_element::XFieldElement;
     use itertools::Itertools;
     use rand::{thread_rng, Rng};
     use triton_vm::NonDeterminism;
-    use twenty_first::shared_math::x_field_element::XFieldElement;
 
     use super::*;
     use crate::{

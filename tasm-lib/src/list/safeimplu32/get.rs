@@ -2,10 +2,10 @@ use itertools::Itertools;
 use std::cmp;
 use std::collections::HashMap;
 
+use crate::twenty_first::shared_math::b_field_element::BFieldElement;
 use num::One;
 use rand::{random, thread_rng, Rng};
 use triton_vm::{triton_asm, NonDeterminism};
-use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::data_type::DataType;
 use crate::library::Library;
@@ -188,7 +188,7 @@ fn get_benchmark_input_state(list_length: usize, data_type: &DataType) -> Execut
 
 #[cfg(test)]
 mod tests {
-    use twenty_first::shared_math::b_field_element::BFieldElement;
+    use crate::twenty_first::shared_math::b_field_element::BFieldElement;
 
     use super::*;
     use crate::empty_stack;

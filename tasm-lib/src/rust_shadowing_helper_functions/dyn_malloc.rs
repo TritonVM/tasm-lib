@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use twenty_first::shared_math::b_field_element::BFieldElement;
+use crate::twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::{
     empty_stack,

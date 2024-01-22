@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 
+use crate::twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 use itertools::Itertools;
 use num_traits::Zero;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use triton_vm::{triton_asm, BFieldElement};
-use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
 use crate::data_type::DataType;
 use crate::memory::encode_to_memory;

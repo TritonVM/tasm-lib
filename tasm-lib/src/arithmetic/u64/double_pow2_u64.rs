@@ -1,5 +1,5 @@
+use crate::twenty_first::{amount::u32s::U32s, shared_math::b_field_element::BFieldElement};
 use num::Zero;
-use twenty_first::{amount::u32s::U32s, shared_math::b_field_element::BFieldElement};
 
 use crate::data_type::DataType;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
@@ -117,12 +117,12 @@ impl DeprecatedSnippet for DoublePow2U64 {
 
     fn rust_shadowing(
         &self,
-        stack: &mut Vec<twenty_first::shared_math::b_field_element::BFieldElement>,
-        _std_in: Vec<twenty_first::shared_math::b_field_element::BFieldElement>,
-        _secret_in: Vec<twenty_first::shared_math::b_field_element::BFieldElement>,
+        stack: &mut Vec<crate::twenty_first::shared_math::b_field_element::BFieldElement>,
+        _std_in: Vec<crate::twenty_first::shared_math::b_field_element::BFieldElement>,
+        _secret_in: Vec<crate::twenty_first::shared_math::b_field_element::BFieldElement>,
         _memory: &mut std::collections::HashMap<
-            twenty_first::shared_math::b_field_element::BFieldElement,
-            twenty_first::shared_math::b_field_element::BFieldElement,
+            crate::twenty_first::shared_math::b_field_element::BFieldElement,
+            crate::twenty_first::shared_math::b_field_element::BFieldElement,
         >,
     ) {
         let value_lo: u32 = stack.pop().unwrap().try_into().unwrap();

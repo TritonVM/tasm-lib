@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 
-use rand::Rng;
-use twenty_first::{
+use crate::twenty_first::{
     amount::u32s::U32s,
     shared_math::{b_field_element::BFieldElement, bfield_codec::BFieldCodec},
 };
+use rand::Rng;
 
 use crate::{data_type::DataType, traits::deprecated_snippet::DeprecatedSnippet};
 use crate::{empty_stack, library::Library, ExecutionState};
@@ -245,8 +245,8 @@ fn prepare_state(lhs: u128, rhs: u128) -> ExecutionState {
 
 #[cfg(test)]
 mod tests {
+    use crate::twenty_first::shared_math::b_field_element::BFieldElement;
     use num::{One, Zero};
-    use twenty_first::shared_math::b_field_element::BFieldElement;
 
     use crate::empty_stack;
 

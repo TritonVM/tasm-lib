@@ -1,7 +1,7 @@
+use crate::twenty_first::shared_math::traits::PrimitiveRootOfUnity as PRU;
 use num_traits::Zero;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use triton_vm::{triton_asm, BFieldElement};
-use twenty_first::shared_math::traits::PrimitiveRootOfUnity as PRU;
 
 use crate::data_type::DataType;
 use crate::traits::basic_snippet::BasicSnippet;
@@ -392,8 +392,8 @@ mod tests {
     use std::collections::HashMap;
     use std::rc::Rc;
 
+    use crate::twenty_first::shared_math::bfield_codec::BFieldCodec;
     use triton_vm::{NonDeterminism, Program};
-    use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
     use super::*;
     use crate::execute_with_terminal_state;

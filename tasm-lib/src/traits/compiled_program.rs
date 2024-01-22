@@ -1,8 +1,8 @@
+use crate::twenty_first::shared_math::b_field_element::BFieldElement;
 use anyhow::{anyhow, Result};
 use triton_vm::instruction::LabelledInstruction;
 use triton_vm::program::Program;
 use triton_vm::{NonDeterminism, PublicInput};
-use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::library::Library;
 

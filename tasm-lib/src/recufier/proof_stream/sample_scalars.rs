@@ -1,12 +1,12 @@
 use std::collections::HashMap;
 
-use itertools::Itertools;
-use rand::{rngs::StdRng, Rng, SeedableRng};
-use triton_vm::{triton_asm, BFieldElement, NonDeterminism};
-use twenty_first::{
+use crate::twenty_first::{
     shared_math::{tip5::RATE, x_field_element::XFieldElement},
     util_types::algebraic_hasher::SpongeHasher,
 };
+use itertools::Itertools;
+use rand::{rngs::StdRng, Rng, SeedableRng};
+use triton_vm::{triton_asm, BFieldElement, NonDeterminism};
 
 use crate::memory::encode_to_memory;
 use crate::traits::procedure::ProcedureInitialState;
@@ -149,7 +149,7 @@ impl Procedure for SampleScalars {
         let mut stack = empty_stack();
         stack.push(BFieldElement::new(num_scalars as u64));
         let sponge_state: VmHasherState =
-            twenty_first::shared_math::tip5::Tip5State { state: rng.gen() };
+            crate::twenty_first::shared_math::tip5::Tip5State { state: rng.gen() };
 
         ProcedureInitialState {
             stack,

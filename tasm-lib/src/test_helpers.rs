@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 use std::fmt::Display;
 
+use crate::twenty_first::shared_math::b_field_element::BFieldElement;
 use itertools::Itertools;
 use triton_vm::instruction::LabelledInstruction;
 use triton_vm::{triton_asm, NonDeterminism};
-use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::dyn_malloc::DYN_MALLOC_ADDRESS;
 use crate::library::Library;
@@ -519,9 +519,9 @@ pub fn test_rust_equivalence_given_execution_state<T: BasicSnippet + RustShadow>
 
 #[cfg(test)]
 mod test {
+    use crate::twenty_first::shared_math::tip5::DIGEST_LENGTH;
     use rand::random;
     use triton_vm::{BFieldElement, NonDeterminism};
-    use twenty_first::shared_math::tip5::DIGEST_LENGTH;
 
     use crate::{empty_stack, hashing::hash_varlen::HashVarlen};
 

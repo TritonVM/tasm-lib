@@ -1,7 +1,7 @@
+use crate::twenty_first::shared_math::{b_field_element::BFieldElement, bfield_codec::BFieldCodec};
 use std::collections::HashMap;
 use tasm_lib::traits::procedure::ProcedureInitialState;
 use triton_vm::{instruction::LabelledInstruction, triton_asm, NonDeterminism};
-use twenty_first::shared_math::{b_field_element::BFieldElement, bfield_codec::BFieldCodec};
 
 use super::InputSource;
 use crate::data_type::DataType;

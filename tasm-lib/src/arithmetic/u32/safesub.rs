@@ -1,6 +1,6 @@
+use crate::twenty_first::shared_math::b_field_element::BFieldElement;
 use num::Zero;
 use rand::{thread_rng, Rng};
-use twenty_first::shared_math::b_field_element::BFieldElement;
 
 use crate::data_type::DataType;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
@@ -78,12 +78,12 @@ impl DeprecatedSnippet for Safesub {
 
     fn rust_shadowing(
         &self,
-        stack: &mut Vec<twenty_first::shared_math::b_field_element::BFieldElement>,
-        _std_in: Vec<twenty_first::shared_math::b_field_element::BFieldElement>,
-        _secret_in: Vec<twenty_first::shared_math::b_field_element::BFieldElement>,
+        stack: &mut Vec<crate::twenty_first::shared_math::b_field_element::BFieldElement>,
+        _std_in: Vec<crate::twenty_first::shared_math::b_field_element::BFieldElement>,
+        _secret_in: Vec<crate::twenty_first::shared_math::b_field_element::BFieldElement>,
         _memory: &mut std::collections::HashMap<
-            twenty_first::shared_math::b_field_element::BFieldElement,
-            twenty_first::shared_math::b_field_element::BFieldElement,
+            crate::twenty_first::shared_math::b_field_element::BFieldElement,
+            crate::twenty_first::shared_math::b_field_element::BFieldElement,
         >,
     ) {
         let lhs: u32 = stack.pop().unwrap().try_into().unwrap();

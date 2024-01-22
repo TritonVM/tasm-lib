@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
+use crate::twenty_first::shared_math::{bfield_codec::BFieldCodec, other::random_elements};
 use itertools::Itertools;
 use rand::{random, rngs::StdRng, thread_rng, Rng, SeedableRng};
 use triton_vm::BFieldElement;
-use twenty_first::shared_math::{bfield_codec::BFieldCodec, other::random_elements};
 
 use crate::data_type::DataType;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;

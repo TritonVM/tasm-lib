@@ -3,12 +3,12 @@ use crate::memory::{
     load_words_from_memory_leave_pointer, load_words_from_memory_pop_pointer,
     write_words_to_memory_leave_pointer, write_words_to_memory_pop_pointer,
 };
+use crate::twenty_first::shared_math::b_field_element::BFieldElement;
 use crate::DIGEST_LENGTH;
 use itertools::Itertools;
 use rand::{random, thread_rng, Rng};
 use std::str::FromStr;
 use triton_vm::instruction::LabelledInstruction;
-use twenty_first::shared_math::b_field_element::BFieldElement;
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub enum DataType {
