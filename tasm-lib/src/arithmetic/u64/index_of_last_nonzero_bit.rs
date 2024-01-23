@@ -1,14 +1,16 @@
-use crate::twenty_first::shared_math::b_field_element::BFieldElement;
-use rand::{thread_rng, RngCore};
+use rand::thread_rng;
+use rand::RngCore;
+use triton_vm::prelude::*;
 
+use crate::arithmetic::u64::and_u64::AndU64;
+use crate::arithmetic::u64::log_2_floor_u64::Log2FloorU64;
 use crate::data_type::DataType;
+use crate::empty_stack;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::{
-    arithmetic::u64::{and_u64::AndU64, log_2_floor_u64::Log2FloorU64},
-    empty_stack, ExecutionState,
-};
+use crate::ExecutionState;
 
-use super::{decr_u64::DecrU64, xor_u64::XorU64};
+use super::decr_u64::DecrU64;
+use super::xor_u64::XorU64;
 
 #[derive(Clone, Debug)]
 pub struct IndexOfLastNonZeroBitU64;
@@ -22,16 +24,16 @@ impl DeprecatedSnippet for IndexOfLastNonZeroBitU64 {
         vec!["value_hi".to_string(), "value_lo".to_string()]
     }
 
-    fn input_types(&self) -> Vec<crate::data_type::DataType> {
+    fn input_types(&self) -> Vec<DataType> {
         vec![DataType::U64]
-    }
-
-    fn output_types(&self) -> Vec<crate::data_type::DataType> {
-        vec![DataType::U32]
     }
 
     fn output_field_names(&self) -> Vec<String> {
         vec!["index_of_last_nonzero_bit(value)".to_string()]
+    }
+
+    fn output_types(&self) -> Vec<DataType> {
+        vec![DataType::U32]
     }
 
     fn stack_diff(&self) -> isize {
@@ -52,7 +54,7 @@ impl DeprecatedSnippet for IndexOfLastNonZeroBitU64 {
         format!(
             "
             // BEFORE: _ value_hi value_lo
-            // AFTER: _ index_of_last_non-zero_bit
+            // AFTER:  _ index_of_last_non-zero_bit
             {entrypoint}:
                 dup 1
                 dup 1
@@ -88,7 +90,7 @@ impl DeprecatedSnippet for IndexOfLastNonZeroBitU64 {
         ]
     }
 
-    fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
         let mut rng = thread_rng();
         let mut ret = vec![];
         for _ in 0..10 {
@@ -98,23 +100,20 @@ impl DeprecatedSnippet for IndexOfLastNonZeroBitU64 {
         ret
     }
 
-    fn common_case_input_state(&self) -> crate::ExecutionState {
+    fn common_case_input_state(&self) -> ExecutionState {
         prepare_state(1 << 31)
     }
 
-    fn worst_case_input_state(&self) -> crate::ExecutionState {
+    fn worst_case_input_state(&self) -> ExecutionState {
         prepare_state(1 << 62)
     }
 
     fn rust_shadowing(
         &self,
-        stack: &mut Vec<crate::twenty_first::shared_math::b_field_element::BFieldElement>,
-        _std_in: Vec<crate::twenty_first::shared_math::b_field_element::BFieldElement>,
-        _secret_in: Vec<crate::twenty_first::shared_math::b_field_element::BFieldElement>,
-        _memory: &mut std::collections::HashMap<
-            crate::twenty_first::shared_math::b_field_element::BFieldElement,
-            crate::twenty_first::shared_math::b_field_element::BFieldElement,
-        >,
+        stack: &mut Vec<BFieldElement>,
+        _std_in: Vec<BFieldElement>,
+        _secret_in: Vec<BFieldElement>,
+        _memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
     ) {
         let value_lo: u32 = stack.pop().unwrap().try_into().unwrap();
         let value_hi: u32 = stack.pop().unwrap().try_into().unwrap();
@@ -254,8 +253,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::snippet_bencher::bench_and_write;
+
+    use super::*;
 
     #[test]
     fn index_of_last_nonzero_bit_benchmark() {

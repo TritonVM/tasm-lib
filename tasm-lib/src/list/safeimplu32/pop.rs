@@ -1,14 +1,16 @@
-use crate::twenty_first::shared_math::b_field_element::BFieldElement;
+use std::collections::HashMap;
+
 use itertools::Itertools;
 use rand::random;
-use std::collections::HashMap;
-use triton_vm::triton_asm;
+use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
+use crate::empty_stack;
 use crate::library::Library;
-use crate::rust_shadowing_helper_functions::safe_list::{safe_insert_random_list, safe_list_pop};
+use crate::rust_shadowing_helper_functions::safe_list::safe_insert_random_list;
+use crate::rust_shadowing_helper_functions::safe_list::safe_list_pop;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::{empty_stack, ExecutionState};
+use crate::ExecutionState;
 
 #[derive(Clone, Debug)]
 pub struct SafePop {
@@ -16,8 +18,19 @@ pub struct SafePop {
 }
 
 impl DeprecatedSnippet for SafePop {
+    fn entrypoint_name(&self) -> String {
+        format!(
+            "tasm_list_safeimplu32_pop___{}",
+            self.data_type.label_friendly_name()
+        )
+    }
+
     fn input_field_names(&self) -> Vec<String> {
         vec!["*list".to_string()]
+    }
+
+    fn input_types(&self) -> Vec<DataType> {
+        vec![DataType::List(Box::new(self.data_type.clone()))]
     }
 
     fn output_field_names(&self) -> Vec<String> {
@@ -30,36 +43,12 @@ impl DeprecatedSnippet for SafePop {
         ret
     }
 
-    fn input_types(&self) -> Vec<crate::data_type::DataType> {
-        vec![DataType::List(Box::new(self.data_type.clone()))]
-    }
-
-    fn output_types(&self) -> Vec<crate::data_type::DataType> {
+    fn output_types(&self) -> Vec<DataType> {
         vec![self.data_type.clone()]
-    }
-
-    fn crash_conditions(&self) -> Vec<String> {
-        vec!["stack underflow".to_string()]
-    }
-
-    fn gen_input_states(&self) -> Vec<ExecutionState> {
-        let mut ret = vec![];
-        for i in 1..=10 {
-            ret.push(prepare_state(&self.data_type, i))
-        }
-
-        ret
     }
 
     fn stack_diff(&self) -> isize {
         self.data_type.stack_size() as isize - 1
-    }
-
-    fn entrypoint_name(&self) -> String {
-        format!(
-            "tasm_list_safeimplu32_pop___{}",
-            self.data_type.label_friendly_name()
-        )
     }
 
     /// Pop last element from list. Does *not* actually delete the last
@@ -125,6 +114,27 @@ impl DeprecatedSnippet for SafePop {
         .join("\n")
     }
 
+    fn crash_conditions(&self) -> Vec<String> {
+        vec!["stack underflow".to_string()]
+    }
+
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
+        let mut ret = vec![];
+        for i in 1..=10 {
+            ret.push(prepare_state(&self.data_type, i))
+        }
+
+        ret
+    }
+
+    fn common_case_input_state(&self) -> ExecutionState {
+        prepare_state(&self.data_type, 30)
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState {
+        prepare_state(&self.data_type, 30)
+    }
+
     fn rust_shadowing(
         &self,
         stack: &mut Vec<BFieldElement>,
@@ -138,14 +148,6 @@ impl DeprecatedSnippet for SafePop {
         for _ in 0..self.data_type.stack_size() {
             stack.push(popped.pop().unwrap());
         }
-    }
-
-    fn common_case_input_state(&self) -> ExecutionState {
-        prepare_state(&self.data_type, 30)
-    }
-
-    fn worst_case_input_state(&self) -> ExecutionState {
-        prepare_state(&self.data_type, 30)
     }
 }
 
@@ -167,15 +169,12 @@ fn prepare_state(data_type: &DataType, old_length: usize) -> ExecutionState {
 
 #[cfg(test)]
 mod tests {
-    use crate::twenty_first::shared_math::b_field_element::BFieldElement;
     use num::One;
 
     use crate::empty_stack;
     use crate::rust_shadowing_helper_functions::safe_list::safe_list_push;
-    use crate::test_helpers::{
-        test_rust_equivalence_given_input_values_deprecated,
-        test_rust_equivalence_multiple_deprecated,
-    };
+    use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
+    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     use super::*;
 
@@ -328,8 +327,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::snippet_bencher::bench_and_write;
+
+    use super::*;
 
     #[test]
     fn safe_pop_benchmark() {

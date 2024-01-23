@@ -1,24 +1,26 @@
 use std::collections::HashMap;
 
-use crate::twenty_first::util_types::{
-    merkle_tree::{CpuParallel, MerkleTree},
-    merkle_tree_maker::MerkleTreeMaker,
-};
 use itertools::Itertools;
-use rand::{rngs::StdRng, Rng, RngCore, SeedableRng};
-use triton_vm::{triton_asm, BFieldElement, NonDeterminism};
+use rand::rngs::StdRng;
+use rand::Rng;
+use rand::RngCore;
+use rand::SeedableRng;
+use triton_vm::prelude::twenty_first::util_types::merkle_tree::MerkleTreeInclusionProof;
+use triton_vm::prelude::*;
+use twenty_first::util_types::merkle_tree::CpuParallel;
+use twenty_first::util_types::merkle_tree_maker::MerkleTreeMaker;
 
-use crate::{
-    data_type::DataType,
-    traits::{
-        algorithm::{Algorithm, AlgorithmInitialState},
-        basic_snippet::BasicSnippet,
-    },
-};
-use crate::{
-    empty_stack, list::ListType, recufier::merkle_verify::MerkleVerify,
-    rust_shadowing_helper_functions, structure::tasm_object::TasmObject, Digest, VmHasher,
-};
+use crate::data_type::DataType;
+use crate::empty_stack;
+use crate::list::ListType;
+use crate::recufier::merkle_verify::MerkleVerify;
+use crate::rust_shadowing_helper_functions;
+use crate::structure::tasm_object::TasmObject;
+use crate::traits::algorithm::Algorithm;
+use crate::traits::algorithm::AlgorithmInitialState;
+use crate::traits::basic_snippet::BasicSnippet;
+use crate::Digest;
+use crate::VmHasher;
 
 /// Verify a batch of Merkle membership claims.
 ///
@@ -61,10 +63,7 @@ impl BasicSnippet for VerifyAuthenticationPathForLeafAndIndexList {
         )
     }
 
-    fn code(
-        &self,
-        library: &mut crate::library::Library,
-    ) -> Vec<triton_vm::instruction::LabelledInstruction> {
+    fn code(&self, library: &mut crate::library::Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
         let main_loop = format!("{entrypoint}_main_loop");
         let indices_and_leaves = DataType::Tuple(vec![DataType::U32, DataType::Digest]);
@@ -147,22 +146,15 @@ impl Algorithm for VerifyAuthenticationPathForLeafAndIndexList {
         .unwrap();
 
         // iterate and verify
-        let mut digest_index = 0;
-        for (index, leaf) in indices_and_leafs {
-            let authentication_path = (0..height)
-                .map(|_| {
-                    let node = nondeterminism.digests[digest_index];
-                    digest_index += 1;
-                    node
-                })
-                .collect_vec();
-            assert!(MerkleTree::<VmHasher>::verify_authentication_structure(
-                root,
-                height,
-                &[index as usize],
-                &[leaf],
-                &authentication_path
-            ));
+        for (i, (leaf_index, leaf_digest)) in indices_and_leafs.into_iter().enumerate() {
+            let authentication_path = nondeterminism.digests[i * height..(i + 1) * height].to_vec();
+            let inclusion_proof = MerkleTreeInclusionProof::<Tip5> {
+                tree_height: height,
+                indexed_leaves: vec![(leaf_index as usize, leaf_digest)],
+                authentication_structure: authentication_path,
+                ..Default::default()
+            };
+            assert!(inclusion_proof.verify(root));
         }
 
         // restore stack
@@ -189,15 +181,15 @@ impl Algorithm for VerifyAuthenticationPathForLeafAndIndexList {
                 crate::snippet_bencher::BenchmarkCase::WorstCase => 25,
             }
         } else {
-            10 + rng.gen_range(1..10) // random number between 10 and 19
+            rng.gen_range(10..=19)
         };
         let n = 1 << height;
         let num_indices = rng.gen_range(2..5) as usize;
 
         // generate data structure
         let leafs = (0..n).map(|_| rng.gen::<Digest>()).collect_vec();
-        let tree = <CpuParallel as MerkleTreeMaker<VmHasher>>::from_digests(&leafs);
-        let root = tree.get_root();
+        let tree = <CpuParallel as MerkleTreeMaker<VmHasher>>::from_digests(&leafs).unwrap();
+        let root = tree.root();
 
         let indices = (0..num_indices)
             .map(|_| rng.gen_range(0..n) as usize)
@@ -210,7 +202,7 @@ impl Algorithm for VerifyAuthenticationPathForLeafAndIndexList {
             .collect_vec();
         let authentication_paths = indices
             .iter()
-            .map(|i| tree.get_authentication_structure(&[*i]))
+            .map(|i| tree.authentication_structure(&[*i]).unwrap())
             .collect_vec();
 
         // prepare memory + stack + nondeterminism
@@ -250,16 +242,21 @@ impl Algorithm for VerifyAuthenticationPathForLeafAndIndexList {
 
 #[cfg(test)]
 mod test {
-    use super::VerifyAuthenticationPathForLeafAndIndexList;
-    use crate::traits::algorithm::{Algorithm, AlgorithmInitialState};
+    use std::cell::RefCell;
+    use std::rc::Rc;
+
+    use rand::thread_rng;
+    use rand::Rng;
+
+    use crate::execute_with_terminal_state;
+    use crate::linker::link_for_isolated_run;
+    use crate::list::ListType;
+    use crate::traits::algorithm::Algorithm;
+    use crate::traits::algorithm::AlgorithmInitialState;
+    use crate::traits::algorithm::ShadowedAlgorithm;
     use crate::traits::rust_shadow::RustShadow;
-    use crate::{
-        execute_with_terminal_state, linker::link_for_isolated_run, list::ListType,
-        traits::algorithm::ShadowedAlgorithm,
-    };
-    use rand::{thread_rng, Rng};
-    use std::{cell::RefCell, rc::Rc};
-    use triton_vm::{BFieldElement, Program};
+
+    use super::*;
 
     #[test]
     fn test() {
@@ -347,9 +344,10 @@ mod test {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::traits::algorithm::ShadowedAlgorithm;
     use crate::traits::rust_shadow::RustShadow;
+
+    use super::*;
 
     #[test]
     fn vap4lail_benchmark() {

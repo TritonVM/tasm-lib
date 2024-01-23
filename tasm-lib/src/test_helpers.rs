@@ -1,19 +1,20 @@
 use std::collections::HashMap;
 use std::fmt::Display;
 
-use crate::twenty_first::shared_math::b_field_element::BFieldElement;
 use itertools::Itertools;
-use triton_vm::instruction::LabelledInstruction;
-use triton_vm::{triton_asm, NonDeterminism};
+use triton_vm::prelude::*;
 
 use crate::dyn_malloc::DYN_MALLOC_ADDRESS;
+use crate::execute_test;
+use crate::exported_snippets;
 use crate::library::Library;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::traits::rust_shadow::RustShadow;
-use crate::{
-    execute_test, exported_snippets, ExecutionState, VmHasherState, VmOutputState, DIGEST_LENGTH,
-};
+use crate::ExecutionState;
+use crate::VmHasherState;
+use crate::VmOutputState;
+use crate::DIGEST_LENGTH;
 
 #[allow(dead_code)]
 pub fn test_rust_equivalence_multiple_deprecated<T: DeprecatedSnippet>(
@@ -519,13 +520,12 @@ pub fn test_rust_equivalence_given_execution_state<T: BasicSnippet + RustShadow>
 
 #[cfg(test)]
 mod test {
-    use crate::twenty_first::shared_math::tip5::DIGEST_LENGTH;
     use rand::random;
-    use triton_vm::{BFieldElement, NonDeterminism};
 
-    use crate::{empty_stack, hashing::hash_varlen::HashVarlen};
+    use crate::empty_stack;
+    use crate::hashing::hash_varlen::HashVarlen;
 
-    use super::test_rust_equivalence_given_complete_state_deprecated;
+    use super::*;
 
     /// TIP6 sets the bottom of the stack to the program hash. While testing Snippets,
     /// which are not standalone programs and therefore do not come with a well defined

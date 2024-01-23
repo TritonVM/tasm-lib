@@ -1,16 +1,18 @@
 use std::collections::HashMap;
 
-use crate::twenty_first::shared_math::b_field_element::BFieldElement;
 use itertools::Itertools;
 use num::One;
-use rand::{random, thread_rng, Rng};
-use triton_vm::triton_asm;
+use rand::random;
+use rand::thread_rng;
+use rand::Rng;
+use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
+use crate::empty_stack;
 use crate::library::Library;
 use crate::rust_shadowing_helper_functions::safe_list::safe_insert_random_list;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::{empty_stack, ExecutionState};
+use crate::ExecutionState;
 
 #[derive(Clone, Debug)]
 pub struct SafeSetLength {
@@ -54,7 +56,7 @@ impl DeprecatedSnippet for SafeSetLength {
         // It is assumed that the new length is a valid u32 value
         triton_asm!(
                 // BEFORE: _ *list list_length
-                // AFTER: _ *list
+                // AFTER:  _ *list
                 {entry_point}:
                     dup 0
                     swap 2
@@ -167,7 +169,7 @@ fn prepare_state(
 
 #[cfg(test)]
 mod tests {
-    use crate::twenty_first::shared_math::b_field_element::BFieldElement;
+    use BFieldElement;
 
     use crate::empty_stack;
     use crate::test_helpers::{

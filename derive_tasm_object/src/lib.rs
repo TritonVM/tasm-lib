@@ -180,11 +180,11 @@ fn impl_derive_tasm_object_macro(ast: DeriveInput) -> TokenStream {
                 }
             }
 
-            fn decode_iter<Itr: Iterator<Item=triton_vm::BFieldElement>>(
+            fn decode_iter<Itr: Iterator<Item=crate::BFieldElement>>(
                 iterator: &mut Itr
             ) -> ::std::result::Result<
                     ::std::boxed::Box<Self>,
-                    ::std::boxed::Box<dyn std::error::Error
+                    ::std::boxed::Box<dyn ::std::error::Error
                         + ::core::marker::Send
                         + ::core::marker::Sync>
             > {
@@ -241,7 +241,7 @@ fn generate_tokens_for_struct_with_named_fields(fields: &syn::FieldsNamed) -> Pa
     let field_names = named_fields
         .clone()
         .map(|field| field.ident.as_ref().unwrap().to_owned());
-    let field_names_list = field_names.clone().collect::<std::vec::Vec<_>>();
+    let field_names_list = field_names.clone().collect::<::std::vec::Vec<_>>();
 
     let getters = named_fields
         .clone()
@@ -251,22 +251,22 @@ fn generate_tokens_for_struct_with_named_fields(fields: &syn::FieldsNamed) -> Pa
                 &named_fields.clone().cloned().collect::<Vec<_>>()[i].ty,
             )
         })
-        .collect::<std::vec::Vec<_>>();
+        .collect::<::std::vec::Vec<_>>();
 
     let sizers = named_fields
         .clone()
         .map(|f| generate_tasm_for_sizer_postprocess(&f.ty))
-        .collect::<std::vec::Vec<_>>();
+        .collect::<::std::vec::Vec<_>>();
 
     let jumpers = named_fields
         .clone()
         .map(|f| generate_tasm_for_extend_field_start_with_jump_amount(&f.ty))
-        .collect::<std::vec::Vec<_>>();
+        .collect::<::std::vec::Vec<_>>();
 
     let field_types = named_fields
         .clone()
         .map(|f| f.ty.clone())
-        .collect::<std::vec::Vec<_>>();
+        .collect::<::std::vec::Vec<_>>();
 
     ParseResult {
         field_names: field_names_list,
@@ -293,7 +293,7 @@ fn generate_tasm_for_getter_postprocess(field_type: &syn::Type) -> quote::__priv
         } else {
             [
                 triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Pop(::triton_vm::op_stack::NumberOfWords::N1)),
-                triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(crate::twenty_first::shared_math::b_field_element::BFieldElement::new(1u64))),
+                triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(crate::BFieldElement::new(1u64))),
                 triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),
             ].to_vec()
         }
@@ -309,13 +309,13 @@ fn generate_tasm_for_getter_postprocess(field_type: &syn::Type) -> quote::__priv
 fn generate_tasm_for_sizer_postprocess(field_type: &syn::Type) -> quote::__private::TokenStream {
     quote! {
         if <#field_type as crate::twenty_first::shared_math::bfield_codec::BFieldCodec>::static_length().is_some() {
-            std::vec::Vec::<triton_vm::instruction::LabelledInstruction>::new()
+            ::std::vec::Vec::<triton_vm::instruction::LabelledInstruction>::new()
         } else {
             [
-                triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(-crate::twenty_first::shared_math::b_field_element::BFieldElement::new(1u64))),
+                triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(-crate::BFieldElement::new(1u64))),
                 triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),
                 triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Swap(triton_vm::op_stack::OpStackElement::ST1)),
-                triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(crate::twenty_first::shared_math::b_field_element::BFieldElement::new(1u64))),
+                triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(crate::BFieldElement::new(1u64))),
                 triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),
                 triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Swap(triton_vm::op_stack::OpStackElement::ST1)),
             ].to_vec()
@@ -332,15 +332,15 @@ fn generate_tasm_for_extend_field_start_with_jump_amount(
     quote! {
         if let Some(size) = <#field_type as crate::twenty_first::shared_math::bfield_codec::BFieldCodec>::static_length() {
             [
-                triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(crate::twenty_first::shared_math::b_field_element::BFieldElement::new(size as u64)))
+                triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(crate::BFieldElement::new(size as u64)))
             ].to_vec()
         } else {
             [
                 triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::ReadMem(::triton_vm::op_stack::NumberOfWords::N1)),
-                triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(crate::twenty_first::shared_math::b_field_element::BFieldElement::new(1u64))),
+                triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(crate::BFieldElement::new(1u64))),
                 triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),
                 triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Swap(::triton_vm::op_stack::OpStackElement::ST1)),
-                triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(crate::twenty_first::shared_math::b_field_element::BFieldElement::new(1u64))),
+                triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(crate::BFieldElement::new(1u64))),
                 triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),
             ].to_vec()
         }

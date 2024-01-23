@@ -1,12 +1,13 @@
 use std::collections::HashMap;
 
-use crate::twenty_first::shared_math::b_field_element::BFieldElement;
 use rand::Rng;
+use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
+use crate::empty_stack;
 use crate::library::Library;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::{empty_stack, ExecutionState};
+use crate::ExecutionState;
 
 #[derive(Clone, Debug)]
 pub struct BfeAdd;
@@ -94,7 +95,6 @@ impl DeprecatedSnippet for BfeAdd {
 
 #[cfg(test)]
 mod tests {
-
     use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     use super::*;
@@ -107,8 +107,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::snippet_bencher::bench_and_write;
+
+    use super::*;
 
     #[test]
     fn bfe_add_benchmark() {

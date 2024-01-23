@@ -1,17 +1,20 @@
-use itertools::Itertools;
 use std::cmp;
 use std::collections::HashMap;
 
-use crate::twenty_first::shared_math::b_field_element::BFieldElement;
+use itertools::Itertools;
 use num::One;
-use rand::{random, thread_rng, Rng};
-use triton_vm::{triton_asm, NonDeterminism};
+use rand::random;
+use rand::thread_rng;
+use rand::Rng;
+use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
+use crate::empty_stack;
 use crate::library::Library;
-use crate::rust_shadowing_helper_functions::safe_list::{safe_insert_random_list, safe_list_get};
+use crate::rust_shadowing_helper_functions::safe_list::safe_insert_random_list;
+use crate::rust_shadowing_helper_functions::safe_list::safe_list_get;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::{empty_stack, ExecutionState};
+use crate::ExecutionState;
 
 #[derive(Clone, Debug)]
 pub struct SafeGet {
@@ -38,7 +41,8 @@ impl DeprecatedSnippet for SafeGet {
     }
 
     fn output_field_names(&self) -> Vec<String> {
-        // This function returns element_0 on the top of the stack and the other elements below it. E.g.: _ elem_2 elem_1 elem_0
+        // This function returns element_0 on the top of the stack and the other elements below it.
+        // E.g.: _ elem_2 elem_1 elem_0
         let mut ret: Vec<String> = vec![];
         let size = self.data_type.stack_size();
         for i in 0..size {
@@ -188,14 +192,15 @@ fn get_benchmark_input_state(list_length: usize, data_type: &DataType) -> Execut
 
 #[cfg(test)]
 mod tests {
-    use crate::twenty_first::shared_math::b_field_element::BFieldElement;
+    use BFieldElement;
 
-    use super::*;
     use crate::empty_stack;
     use crate::test_helpers::{
         test_rust_equivalence_given_input_values_deprecated,
         test_rust_equivalence_multiple_deprecated,
     };
+
+    use super::*;
 
     #[test]
     fn new_snippet_test() {
@@ -422,8 +427,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::snippet_bencher::bench_and_write;
+
+    use super::*;
 
     #[test]
     fn safe_get_benchmark() {

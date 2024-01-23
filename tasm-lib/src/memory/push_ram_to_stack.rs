@@ -1,20 +1,16 @@
 use std::collections::HashMap;
 
-use crate::twenty_first::shared_math::bfield_codec::BFieldCodec;
 use num_traits::Zero;
 use rand::random;
-use triton_vm::{triton_asm, BFieldElement};
+use triton_vm::prelude::*;
 
+use crate::data_type::DataType;
+use crate::empty_stack;
 use crate::memory::encode_to_memory;
-use crate::{
-    data_type::DataType,
-    empty_stack,
-    snippet_bencher::BenchmarkCase,
-    traits::{
-        basic_snippet::BasicSnippet,
-        function::{Function, FunctionInitialState},
-    },
-};
+use crate::snippet_bencher::BenchmarkCase;
+use crate::traits::basic_snippet::BasicSnippet;
+use crate::traits::function::Function;
+use crate::traits::function::FunctionInitialState;
 
 #[derive(Clone, Debug)]
 pub struct PushRamToStack {
@@ -37,10 +33,7 @@ impl BasicSnippet for PushRamToStack {
         )
     }
 
-    fn code(
-        &self,
-        _library: &mut crate::library::Library,
-    ) -> Vec<triton_vm::instruction::LabelledInstruction> {
+    fn code(&self, _library: &mut crate::library::Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
         let stack_size = self.data_type.stack_size();
         let increment_pointer_to_last_word = if stack_size == 0 {
@@ -75,8 +68,8 @@ impl BasicSnippet for PushRamToStack {
 impl Function for PushRamToStack {
     fn rust_shadow(
         &self,
-        stack: &mut Vec<triton_vm::BFieldElement>,
-        memory: &mut std::collections::HashMap<triton_vm::BFieldElement, triton_vm::BFieldElement>,
+        stack: &mut Vec<BFieldElement>,
+        memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
         let first_word = stack.pop().unwrap();
         let stack_size = self.data_type.stack_size();
@@ -123,12 +116,12 @@ impl PushRamToStack {
 #[cfg(test)]
 mod tests {
     use num_traits::One;
-    use triton_vm::NonDeterminism;
 
-    use super::*;
     use crate::test_helpers::tasm_final_state;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
+
+    use super::*;
 
     #[test]
     fn push_ram_to_stack_test() {
@@ -162,9 +155,10 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
+
+    use super::*;
 
     #[test]
     fn push_ram_to_stack_bench() {

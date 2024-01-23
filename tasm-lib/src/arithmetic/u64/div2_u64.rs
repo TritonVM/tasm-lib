@@ -1,58 +1,43 @@
 use std::collections::HashMap;
 
-use crate::twenty_first::amount::u32s::U32s;
-use crate::twenty_first::shared_math::b_field_element::BFieldElement;
 use num::Zero;
 use rand::RngCore;
+use triton_vm::prelude::*;
+use twenty_first::amount::u32s::U32s;
 
 use crate::data_type::DataType;
+use crate::empty_stack;
 use crate::library::Library;
+use crate::push_encodable;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::{empty_stack, push_encodable, ExecutionState};
+use crate::ExecutionState;
 
 #[derive(Clone, Debug)]
 pub struct Div2U64;
 
 impl DeprecatedSnippet for Div2U64 {
+    fn entrypoint_name(&self) -> String {
+        "tasm_arithmetic_u64_div2".to_string()
+    }
+
     fn input_field_names(&self) -> Vec<String> {
         vec!["value_hi".to_string(), "value_lo".to_string()]
+    }
+
+    fn input_types(&self) -> Vec<DataType> {
+        vec![DataType::U64]
     }
 
     fn output_field_names(&self) -> Vec<String> {
         vec!["(value / 2)_hi".to_string(), "(value / 2)_lo".to_string()]
     }
 
-    fn input_types(&self) -> Vec<crate::data_type::DataType> {
+    fn output_types(&self) -> Vec<DataType> {
         vec![DataType::U64]
-    }
-
-    fn output_types(&self) -> Vec<crate::data_type::DataType> {
-        vec![DataType::U64]
-    }
-
-    fn crash_conditions(&self) -> Vec<String> {
-        vec![
-            "If value_hi is not a u32".to_string(),
-            "If value_lo is not a u32".to_string(),
-        ]
-    }
-
-    fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
-        let n: u64 = rand::thread_rng().next_u64();
-        let n: U32s<2> = n.try_into().unwrap();
-        let mut input_stack = empty_stack();
-
-        push_encodable(&mut input_stack, &n);
-
-        vec![ExecutionState::with_stack(input_stack)]
     }
 
     fn stack_diff(&self) -> isize {
         0
-    }
-
-    fn entrypoint_name(&self) -> String {
-        "tasm_arithmetic_u64_div2".to_string()
     }
 
     fn function_code(&self, _library: &mut Library) -> String {
@@ -96,6 +81,41 @@ impl DeprecatedSnippet for Div2U64 {
         )
     }
 
+    fn crash_conditions(&self) -> Vec<String> {
+        vec![
+            "If value_hi is not a u32".to_string(),
+            "If value_lo is not a u32".to_string(),
+        ]
+    }
+
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
+        let n: u64 = rand::thread_rng().next_u64();
+        let n: U32s<2> = n.try_into().unwrap();
+        let mut input_stack = empty_stack();
+
+        push_encodable(&mut input_stack, &n);
+
+        vec![ExecutionState::with_stack(input_stack)]
+    }
+
+    fn common_case_input_state(&self) -> ExecutionState {
+        ExecutionState::with_stack(
+            [
+                empty_stack(),
+                vec![BFieldElement::zero(), BFieldElement::new(1 << 31)],
+            ]
+            .concat(),
+        )
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState {
+        let big_number = 1 << 31;
+        let worst_case_input = [big_number + 1, big_number].map(BFieldElement::new);
+        let worst_case_stack = [empty_stack(), worst_case_input.to_vec()].concat();
+
+        ExecutionState::with_stack(worst_case_stack)
+    }
+
     fn rust_shadowing(
         &self,
         stack: &mut Vec<BFieldElement>,
@@ -111,35 +131,12 @@ impl DeprecatedSnippet for Div2U64 {
         stack.push(BFieldElement::new(result >> 32));
         stack.push(BFieldElement::new(result & u32::MAX as u64));
     }
-
-    fn common_case_input_state(&self) -> ExecutionState {
-        ExecutionState::with_stack(
-            [
-                empty_stack(),
-                vec![BFieldElement::zero(), BFieldElement::new(1 << 31)],
-            ]
-            .concat(),
-        )
-    }
-
-    fn worst_case_input_state(&self) -> ExecutionState {
-        ExecutionState::with_stack(
-            [
-                empty_stack(),
-                vec![
-                    BFieldElement::new((1 << 31) + 1),
-                    BFieldElement::new(1 << 31),
-                ],
-            ]
-            .concat(),
-        )
-    }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::twenty_first::shared_math::b_field_element::BFieldElement;
     use rand::{thread_rng, RngCore};
+    use BFieldElement;
 
     use crate::empty_stack;
 

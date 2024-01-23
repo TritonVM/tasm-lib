@@ -1,8 +1,6 @@
-use crate::twenty_first::shared_math::b_field_element::BFieldElement;
-use anyhow::{anyhow, Result};
-use triton_vm::instruction::LabelledInstruction;
-use triton_vm::program::Program;
-use triton_vm::{NonDeterminism, PublicInput};
+use anyhow::anyhow;
+use anyhow::Result;
+use triton_vm::prelude::*;
 
 use crate::library::Library;
 
@@ -96,11 +94,7 @@ pub fn bench_and_profile_program<P: CompiledProgram>(
 
 #[cfg(test)]
 mod test {
-    use triton_vm::{triton_asm, BFieldElement, NonDeterminism, PublicInput};
-
-    use crate::library::Library;
-
-    use super::{test_rust_shadow, CompiledProgram};
+    use super::*;
 
     pub(super) struct FiboTest;
 
@@ -108,7 +102,7 @@ mod test {
         fn rust_shadow(
             public_input: &PublicInput,
             _secret_input: &NonDeterminism<BFieldElement>,
-        ) -> anyhow::Result<Vec<triton_vm::BFieldElement>> {
+        ) -> Result<Vec<BFieldElement>> {
             let num_iterations = public_input.individual_tokens[0].value() as usize;
             let mut a = BFieldElement::new(0);
             let mut b = BFieldElement::new(1);
@@ -120,10 +114,7 @@ mod test {
             Ok(vec![b])
         }
 
-        fn code() -> (
-            Vec<triton_vm::instruction::LabelledInstruction>,
-            crate::library::Library,
-        ) {
+        fn code() -> (Vec<LabelledInstruction>, Library) {
             let code = triton_asm!(
                 push 0
                 push 1
@@ -163,7 +154,8 @@ mod test {
 mod benches {
     use crate::snippet_bencher::BenchmarkCase;
 
-    use super::{test::FiboTest, *};
+    use super::test::FiboTest;
+    use super::*;
 
     #[test]
     fn bench_fibo() {

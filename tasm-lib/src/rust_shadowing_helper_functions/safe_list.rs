@@ -1,6 +1,8 @@
-use crate::twenty_first::shared_math::{b_field_element::BFieldElement, bfield_codec::BFieldCodec};
-use num::{One, Zero};
 use std::collections::HashMap;
+
+use num::One;
+use num::Zero;
+use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
 
@@ -167,7 +169,7 @@ pub fn safe_list_set_length(
 
 #[cfg(test)]
 mod tests {
-    use crate::twenty_first::shared_math::{other::random_elements, tip5::Digest};
+    use twenty_first::shared_math::{other::random_elements, tip5::Digest};
 
     use super::*;
 

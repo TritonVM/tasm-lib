@@ -1,11 +1,12 @@
-use crate::twenty_first::shared_math::b_field_element::BFieldElement;
-use crate::twenty_first::shared_math::bfield_codec::BFieldCodec;
 use rand::random;
+use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
+use crate::empty_stack;
 use crate::library::Library;
+use crate::push_encodable;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::{empty_stack, push_encodable, ExecutionState};
+use crate::ExecutionState;
 
 #[derive(Clone, Debug)]
 pub struct ShiftLeftStaticU128<const N: u8>;
@@ -35,10 +36,6 @@ impl<const N: u8> DeprecatedSnippet for ShiftLeftStaticU128<N> {
         vec![DataType::U128]
     }
 
-    fn output_types(&self) -> Vec<DataType> {
-        vec![DataType::U128]
-    }
-
     fn output_field_names(&self) -> Vec<String>
     where
         Self: Sized,
@@ -49,6 +46,10 @@ impl<const N: u8> DeprecatedSnippet for ShiftLeftStaticU128<N> {
             "shifted_value_limb1".to_string(),
             "shifted_value_limb0".to_string(),
         ]
+    }
+
+    fn output_types(&self) -> Vec<DataType> {
+        vec![DataType::U128]
     }
 
     fn stack_diff(&self) -> isize
@@ -167,10 +168,8 @@ fn prepare_state(value: u128) -> ExecutionState {
 mod tests {
     use std::collections::HashMap;
 
-    use crate::test_helpers::{
-        test_rust_equivalence_given_input_values_deprecated,
-        test_rust_equivalence_multiple_deprecated,
-    };
+    use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
+    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     use super::*;
 
@@ -280,8 +279,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::snippet_bencher::bench_and_write;
+
+    use super::*;
 
     #[test]
     fn shift_left_u128_benchmark() {

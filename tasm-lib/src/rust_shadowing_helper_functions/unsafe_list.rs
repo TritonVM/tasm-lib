@@ -1,8 +1,9 @@
-use crate::twenty_first::shared_math::{
-    b_field_element::BFieldElement, bfield_codec::BFieldCodec, other::random_elements,
-};
-use num::{One, Zero};
 use std::collections::HashMap;
+
+use num::One;
+use num::Zero;
+use triton_vm::prelude::*;
+use twenty_first::shared_math::other::random_elements;
 
 use crate::data_type::DataType;
 

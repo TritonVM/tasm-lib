@@ -1,33 +1,30 @@
-use crate::twenty_first::shared_math::b_field_element::BFieldElement;
-use crate::twenty_first::shared_math::other::random_elements;
+use std::collections::HashMap;
+
 use itertools::Itertools;
 use rand::rngs::StdRng;
-use rand::{Rng, RngCore, SeedableRng};
-use std::collections::HashMap;
+use rand::Rng;
+use rand::RngCore;
+use rand::SeedableRng;
 use triton_vm::parser::tokenize;
-use triton_vm::{triton_asm, NonDeterminism};
+use triton_vm::prelude::*;
+use twenty_first::shared_math::other::random_elements;
 
-use super::inner_function::InnerFunction;
 use crate::data_type::DataType;
-use crate::list::safeimplu32::get::SafeGet;
-use crate::list::safeimplu32::length::Length as SafeLength;
-use crate::list::safeimplu32::new::SafeNew;
-use crate::list::safeimplu32::set::SafeSet;
-use crate::list::safeimplu32::set_length::SafeSetLength;
-use crate::list::unsafeimplu32::get::UnsafeGet;
-use crate::list::unsafeimplu32::length::Length as UnsafeLength;
-use crate::list::unsafeimplu32::new::UnsafeNew;
-use crate::list::unsafeimplu32::set::UnsafeSet;
-use crate::list::unsafeimplu32::set_length::UnsafeSetLength;
-use crate::list::{self, ListType};
+use crate::empty_stack;
+use crate::library::Library;
+use crate::list;
+use crate::list::ListType;
 use crate::memory::dyn_malloc::DYN_MALLOC_ADDRESS;
+use crate::rust_shadowing_helper_functions;
 use crate::rust_shadowing_helper_functions::safe_list::safe_insert_random_list;
 use crate::rust_shadowing_helper_functions::unsafe_list::unsafe_insert_random_list;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::traits::function::{Function, FunctionInitialState};
-use crate::{empty_stack, rust_shadowing_helper_functions};
-use crate::{library::Library, ExecutionState};
+use crate::traits::function::Function;
+use crate::traits::function::FunctionInitialState;
+use crate::ExecutionState;
+
+use super::inner_function::InnerFunction;
 
 /// Applies a given function to every element of a list, and collects the new elements
 /// into a new list.
@@ -77,51 +74,16 @@ impl BasicSnippet for Map {
         )
     }
 
-    fn code(&self, library: &mut Library) -> Vec<triton_vm::instruction::LabelledInstruction> {
-        let input_list_element_type = self.f.domain();
+    fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
+        let input_type = self.f.domain();
         let output_type = self.f.range();
         let output_size_plus_one = 1 + output_type.stack_size();
 
-        let get_length = match self.list_type {
-            ListType::Safe => library.import(Box::new(SafeLength {
-                data_type: input_list_element_type.clone(),
-            })),
-            ListType::Unsafe => library.import(Box::new(UnsafeLength {
-                data_type: input_list_element_type.clone(),
-            })),
-        };
-        let set_length = match self.list_type {
-            ListType::Safe => library.import(Box::new(SafeSetLength {
-                data_type: input_list_element_type.clone(),
-            })),
-            ListType::Unsafe => library.import(Box::new(UnsafeSetLength {
-                data_type: input_list_element_type.clone(),
-            })),
-        };
-        let new_list = match self.list_type {
-            ListType::Safe => library.import(Box::new(SafeNew {
-                data_type: output_type.clone(),
-            })),
-            ListType::Unsafe => library.import(Box::new(UnsafeNew {
-                data_type: output_type.clone(),
-            })),
-        };
-        let list_get = match self.list_type {
-            ListType::Safe => library.import(Box::new(SafeGet {
-                data_type: input_list_element_type,
-            })),
-            ListType::Unsafe => library.import(Box::new(UnsafeGet {
-                data_type: input_list_element_type,
-            })),
-        };
-        let list_set = match self.list_type {
-            ListType::Safe => library.import(Box::new(SafeSet {
-                data_type: output_type,
-            })),
-            ListType::Unsafe => library.import(Box::new(UnsafeSet {
-                data_type: output_type,
-            })),
-        };
+        let get_length = library.import(self.list_type.length_snippet(input_type.clone()));
+        let set_length = library.import(self.list_type.set_length(input_type.clone()));
+        let new_list = library.import(self.list_type.new_list_snippet(output_type.clone()));
+        let list_get = library.import(self.list_type.get_snippet(input_type.clone()));
+        let list_set = library.import(self.list_type.set_snippet(output_type));
 
         // Declare the inner function entrypoint name and import inner function in case it's a snippet
         let inner_function_name = match &self.f {
@@ -153,7 +115,7 @@ impl BasicSnippet for Map {
 
         triton_asm!(
             // BEFORE: _ <[additional_input_args]>  input_list
-            // AFTER: _ <[additional_input_args]>  output_list
+            // AFTER:  _ <[additional_input_args]>  output_list
             {entrypoint}:
 
                 dup 0                   // _ <aia>  input_list input_list
@@ -408,14 +370,13 @@ impl Map {
 
 #[cfg(test)]
 mod tests {
-
-    use crate::traits::rust_shadow::RustShadow;
-    use crate::twenty_first::{
-        shared_math::other::random_elements, util_types::algebraic_hasher::AlgebraicHasher,
-    };
     use num_traits::Zero;
     use triton_vm::triton_asm;
+    use twenty_first::{
+        shared_math::other::random_elements, util_types::algebraic_hasher::AlgebraicHasher,
+    };
 
+    use crate::traits::rust_shadow::RustShadow;
     use crate::{
         arithmetic,
         list::higher_order::inner_function::RawCode,
@@ -448,10 +409,6 @@ mod tests {
             vec![DataType::Xfe]
         }
 
-        fn output_types(&self) -> Vec<DataType> {
-            vec![DataType::Digest]
-        }
-
         fn output_field_names(&self) -> Vec<String>
         where
             Self: Sized,
@@ -463,6 +420,10 @@ mod tests {
                 "digelem1".to_string(),
                 "digelem0".to_string(),
             ]
+        }
+
+        fn output_types(&self) -> Vec<DataType> {
+            vec![DataType::Digest]
         }
 
         fn stack_diff(&self) -> isize
@@ -478,7 +439,7 @@ mod tests {
             format!(
                 "
         // BEFORE: _ x2 x1 x0
-        // AFTER: _ d4 d3 d2 d1 d0
+        // AFTER:  _ d4 d3 d2 d1 d0
         {entrypoint}:
             push 0
             push 0
@@ -729,9 +690,10 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::{tests::TestHashXFieldElement, *};
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
+
+    use super::{tests::TestHashXFieldElement, *};
 
     #[test]
     fn unsafe_list_map_benchmark() {

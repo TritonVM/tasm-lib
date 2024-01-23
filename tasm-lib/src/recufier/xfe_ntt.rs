@@ -1,3 +1,12 @@
+use std::collections::HashMap;
+
+use rand::rngs::StdRng;
+use rand::Rng;
+use rand::SeedableRng;
+use triton_vm::prelude::*;
+use twenty_first::shared_math::ntt::ntt;
+use twenty_first::shared_math::traits::PrimitiveRootOfUnity;
+
 use crate::data_type::DataType;
 use crate::empty_stack;
 use crate::memory::encode_to_memory;
@@ -6,14 +15,6 @@ use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::function::Function;
 use crate::traits::function::FunctionInitialState;
 use crate::Library;
-use std::collections::HashMap;
-use triton_vm::triton_asm;
-
-use crate::twenty_first::shared_math::{
-    ntt::ntt, traits::PrimitiveRootOfUnity, x_field_element::XFieldElement,
-};
-use rand::{rngs::StdRng, Rng, SeedableRng};
-use triton_vm::BFieldElement;
 
 pub struct XfeNtt;
 
@@ -26,14 +27,14 @@ impl BasicSnippet for XfeNtt {
         vec![(DataType::Tuple(vec![]), "result".to_owned())]
     }
 
-    fn inputs(&self) -> Vec<(crate::data_type::DataType, String)> {
+    fn inputs(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::List(Box::new(DataType::Xfe)), "x".to_owned()),
             (DataType::Bfe, "omega".to_owned()),
         ]
     }
 
-    fn code(&self, library: &mut Library) -> Vec<triton_vm::instruction::LabelledInstruction> {
+    fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
         let tasm_arithmetic_u32_leadingzeros =
             library.import(Box::new(crate::arithmetic::u32::leadingzeros::Leadingzeros));
@@ -488,19 +489,19 @@ impl Function for XfeNtt {
 
 #[cfg(test)]
 mod test {
-    use crate::twenty_first::shared_math::x_field_element::XFieldElement;
     use itertools::Itertools;
-    use rand::{thread_rng, Rng};
-    use triton_vm::NonDeterminism;
+    use rand::thread_rng;
+    use rand::Rng;
+
+    use crate::structure::tasm_object::TasmObject;
+    use crate::test_helpers::rust_final_state;
+    use crate::test_helpers::tasm_final_state;
+    use crate::test_helpers::verify_stack_equivalence;
+    use crate::test_helpers::verify_stack_growth;
+    use crate::traits::function::Function;
+    use crate::traits::function::ShadowedFunction;
 
     use super::*;
-    use crate::{
-        structure::tasm_object::TasmObject,
-        test_helpers::{
-            rust_final_state, tasm_final_state, verify_stack_equivalence, verify_stack_growth,
-        },
-        traits::function::{Function, ShadowedFunction},
-    };
 
     #[test]
     fn test() {
@@ -562,9 +563,10 @@ mod test {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
+
+    use super::*;
 
     #[test]
     fn xfe_ntt_benchmark() {

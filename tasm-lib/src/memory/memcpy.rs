@@ -1,8 +1,11 @@
 use std::collections::HashMap;
 
 use num_traits::Zero;
-use rand::{random, thread_rng, Rng, RngCore};
-use triton_vm::BFieldElement;
+use rand::random;
+use rand::thread_rng;
+use rand::Rng;
+use rand::RngCore;
+use triton_vm::prelude::BFieldElement;
 
 use crate::empty_stack;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
@@ -53,11 +56,11 @@ impl DeprecatedSnippet for MemCpy {
         ]
     }
 
-    fn output_types(&self) -> Vec<crate::data_type::DataType> {
+    fn output_field_names(&self) -> Vec<String> {
         vec![]
     }
 
-    fn output_field_names(&self) -> Vec<String> {
+    fn output_types(&self) -> Vec<crate::data_type::DataType> {
         vec![]
     }
 
@@ -70,7 +73,7 @@ impl DeprecatedSnippet for MemCpy {
         format!(
             "
         // BEFORE: _ read_source write_dest num_words
-        // AFTER: _
+        // AFTER:  _
         {entrypoint}:
 
             swap 2
@@ -288,10 +291,10 @@ impl DeprecatedSnippet for MemCpy {
 
     fn rust_shadowing(
         &self,
-        stack: &mut Vec<triton_vm::BFieldElement>,
-        _std_in: Vec<triton_vm::BFieldElement>,
-        _secret_in: Vec<triton_vm::BFieldElement>,
-        memory: &mut std::collections::HashMap<triton_vm::BFieldElement, triton_vm::BFieldElement>,
+        stack: &mut Vec<BFieldElement>,
+        _std_in: Vec<BFieldElement>,
+        _secret_in: Vec<BFieldElement>,
+        memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
         let len = stack.pop().unwrap().value() as usize;
         let write_dest = stack.pop().unwrap();
@@ -321,8 +324,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::snippet_bencher::bench_and_write;
+
+    use super::*;
 
     #[test]
     fn memcpy_benchmark() {

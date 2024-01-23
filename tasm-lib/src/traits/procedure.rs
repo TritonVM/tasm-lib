@@ -1,20 +1,28 @@
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::cell::RefCell;
+use std::collections::HashMap;
+use std::rc::Rc;
 
-use crate::twenty_first::shared_math::bfield_codec::BFieldCodec;
 use itertools::Itertools;
-use rand::{rngs::StdRng, thread_rng, Rng, SeedableRng};
-use triton_vm::{BFieldElement, NonDeterminism};
+use rand::rngs::StdRng;
+use rand::thread_rng;
+use rand::Rng;
+use rand::SeedableRng;
+use triton_vm::prelude::*;
 
-use crate::{
-    linker::{execute_bench, link_for_isolated_run},
-    snippet_bencher::{write_benchmarks, BenchmarkCase, BenchmarkResult},
-    test_helpers::{
-        rust_final_state, tasm_final_state, verify_memory_equivalence, verify_sponge_equivalence,
-        verify_stack_equivalence, verify_stack_growth,
-    },
-    traits::{basic_snippet::BasicSnippet, rust_shadow::RustShadow},
-    VmHasherState,
-};
+use crate::linker::execute_bench;
+use crate::linker::link_for_isolated_run;
+use crate::snippet_bencher::write_benchmarks;
+use crate::snippet_bencher::BenchmarkCase;
+use crate::snippet_bencher::BenchmarkResult;
+use crate::test_helpers::rust_final_state;
+use crate::test_helpers::tasm_final_state;
+use crate::test_helpers::verify_memory_equivalence;
+use crate::test_helpers::verify_sponge_equivalence;
+use crate::test_helpers::verify_stack_equivalence;
+use crate::test_helpers::verify_stack_growth;
+use crate::traits::basic_snippet::BasicSnippet;
+use crate::traits::rust_shadow::RustShadow;
+use crate::VmHasherState;
 
 /// A Procedure is a piece of tasm code that can do almost anything: modify stack, read
 /// from and write to memory, take in nondeterminism, and read and write from standard

@@ -1,21 +1,24 @@
 use std::collections::HashMap;
 
-use crate::twenty_first::{shared_math::other::random_elements, util_types::shared::bag_peaks};
 use itertools::Itertools;
+use rand::random;
 use rand::rngs::StdRng;
-use rand::{random, Rng, SeedableRng};
-use triton_vm::instruction::LabelledInstruction;
-use triton_vm::{triton_asm, BFieldElement};
+use rand::Rng;
+use rand::SeedableRng;
+use triton_vm::prelude::*;
+use twenty_first::shared_math::other::random_elements;
+use twenty_first::util_types::shared::bag_peaks;
 
 use crate::data_type::DataType;
+use crate::empty_stack;
+use crate::list::unsafeimplu32::get::UnsafeGet;
+use crate::list::unsafeimplu32::length::Length as UnsafeLength;
+use crate::rust_shadowing_helper_functions;
 use crate::snippet_bencher::BenchmarkCase;
 use crate::traits::basic_snippet::BasicSnippet;
-use crate::traits::function::{Function, FunctionInitialState};
-use crate::{
-    empty_stack,
-    list::unsafeimplu32::{get::UnsafeGet, length::Length as UnsafeLength},
-    rust_shadowing_helper_functions, Digest, VmHasher, DIGEST_LENGTH,
-};
+use crate::traits::function::Function;
+use crate::traits::function::FunctionInitialState;
+use crate::VmHasher;
 
 pub struct BagPeaks;
 
@@ -39,10 +42,6 @@ impl BagPeaks {
 }
 
 impl BasicSnippet for BagPeaks {
-    fn entrypoint(&self) -> String {
-        "tasm_mmr_bag_peaks".to_string()
-    }
-
     fn inputs(&self) -> Vec<(DataType, String)> {
         vec![(
             DataType::List(Box::new(DataType::Digest)),
@@ -52,6 +51,10 @@ impl BasicSnippet for BagPeaks {
 
     fn outputs(&self) -> Vec<(DataType, String)> {
         vec![(DataType::Digest, "digest".to_owned())]
+    }
+
+    fn entrypoint(&self) -> String {
+        "tasm_mmr_bag_peaks".to_string()
     }
 
     fn code(&self, library: &mut crate::library::Library) -> Vec<LabelledInstruction> {
@@ -72,7 +75,7 @@ impl BasicSnippet for BagPeaks {
 
         triton_asm!(
         // BEFORE: _ *peaks
-        // AFTER: _ d4 d3 d2 d1 d0
+        // AFTER:  _ d4 d3 d2 d1 d0
         {entrypoint}:
             dup 0  // _ *peaks *peaks
             call {get_length} // _ *peaks length
@@ -86,7 +89,7 @@ impl BasicSnippet for BagPeaks {
             return
 
         // BEFORE: _ *peaks length 1
-        // AFTER: _ d4 d3 d2 d1 d0 0
+        // AFTER:  _ d4 d3 d2 d1 d0 0
         {length_is_zero_label}:
             pop 3
             push 0 push 0 push 0 push 0 push 0
@@ -104,7 +107,7 @@ impl BasicSnippet for BagPeaks {
             return
 
         // BEFORE: _ *peaks length
-        // AFTER: _ d4 d3 d2 d1 d0
+        // AFTER:  _ d4 d3 d2 d1 d0
         {length_is_not_zero_label}:
             // special case 1
             push 1 dup 1 push 1 eq // _ *peaks length 1 length==1
@@ -113,7 +116,7 @@ impl BasicSnippet for BagPeaks {
             return
 
         // BEFORE: _ *peaks length 1
-        // AFTER: _ d4 d3 d2 d1 d0 0
+        // AFTER:  _ d4 d3 d2 d1 d0 0
         {length_is_one_label}:
             pop 2
             push 0
@@ -123,7 +126,7 @@ impl BasicSnippet for BagPeaks {
             return
 
         // BEFORE: _ *peaks length
-        // AFTER: _ d4 d3 d2 d1 d0
+        // AFTER:  _ d4 d3 d2 d1 d0
         {length_is_not_zero_or_one}:
             // base case
             push -1 add             // _ *peaks length-1
@@ -192,20 +195,13 @@ impl Function for BagPeaks {
     ) {
         let address = stack.pop().unwrap();
         let length = memory.get(&address).unwrap().value() as usize;
-        let safety_offset = 1; // unsafe lists
+        let safety_offset = BFieldElement::new(1); // unsafe lists
 
-        let mut bfes: Vec<BFieldElement> = Vec::with_capacity(length * DIGEST_LENGTH);
+        let mut bfes: Vec<BFieldElement> = Vec::with_capacity(length * tip5::DIGEST_LENGTH);
 
-        for i in 0..length * DIGEST_LENGTH {
-            bfes.push(
-                *memory
-                    .get(
-                        &(address
-                            + BFieldElement::new(safety_offset)
-                            + BFieldElement::new(i as u64)),
-                    )
-                    .unwrap(),
-            );
+        for i in 0..length * tip5::DIGEST_LENGTH {
+            let element_index = address + safety_offset + BFieldElement::new(i as u64);
+            bfes.push(*memory.get(&(element_index)).unwrap());
         }
 
         let peaks = bfes
@@ -250,9 +246,10 @@ impl Function for BagPeaks {
 
 #[cfg(test)]
 mod tests {
-    use super::BagPeaks;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
+
+    use super::BagPeaks;
 
     #[test]
     fn prop() {
@@ -262,9 +259,10 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::BagPeaks;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
+
+    use super::BagPeaks;
 
     #[test]
     fn bag_peaks_benchmark() {

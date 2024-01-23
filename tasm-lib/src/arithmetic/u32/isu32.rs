@@ -1,59 +1,43 @@
 use std::collections::HashMap;
 
-use crate::twenty_first::shared_math::b_field_element::BFieldElement;
-use num::{One, Zero};
+use num::One;
+use num::Zero;
 use rand::RngCore;
+use triton_vm::prelude::BFieldElement;
 
 use crate::data_type::DataType;
+use crate::empty_stack;
 use crate::library::Library;
+use crate::push_encodable;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::{empty_stack, push_encodable, ExecutionState};
+use crate::ExecutionState;
 
 #[derive(Clone, Debug)]
 pub struct Isu32;
 
 impl DeprecatedSnippet for Isu32 {
+    fn entrypoint_name(&self) -> String {
+        "tasm_arithmetic_u32_isu32".to_string()
+    }
+
     fn input_field_names(&self) -> Vec<String> {
         vec!["value".to_string()]
+    }
+
+    fn input_types(&self) -> Vec<DataType> {
+        vec![DataType::U32]
     }
 
     fn output_field_names(&self) -> Vec<String> {
         vec!["value < 2^32".to_string()]
     }
 
-    fn input_types(&self) -> Vec<crate::data_type::DataType> {
-        vec![DataType::U32]
-    }
-
-    fn output_types(&self) -> Vec<crate::data_type::DataType> {
+    fn output_types(&self) -> Vec<DataType> {
         vec![DataType::Bool]
-    }
-
-    fn crash_conditions(&self) -> Vec<String> {
-        vec![]
-    }
-
-    fn gen_input_states(&self) -> Vec<ExecutionState> {
-        let n: u32 = rand::thread_rng().next_u32();
-
-        let mut true_stack = empty_stack();
-        push_encodable(&mut true_stack, &n);
-
-        let mut false_stack = empty_stack();
-        push_encodable(&mut false_stack, &(u32::MAX));
-
-        vec![
-            ExecutionState::with_stack(true_stack),
-            ExecutionState::with_stack(false_stack),
-        ]
     }
 
     fn stack_diff(&self) -> isize {
         0
-    }
-
-    fn entrypoint_name(&self) -> String {
-        "tasm_arithmetic_u32_isu32".to_string()
     }
 
     /// Place 1 on stack iff top element is less than $2^32$. Otherwise
@@ -75,6 +59,35 @@ impl DeprecatedSnippet for Isu32 {
         )
     }
 
+    fn crash_conditions(&self) -> Vec<String> {
+        vec![]
+    }
+
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
+        let n: u32 = rand::thread_rng().next_u32();
+
+        let mut true_stack = empty_stack();
+        push_encodable(&mut true_stack, &n);
+
+        let mut false_stack = empty_stack();
+        push_encodable(&mut false_stack, &(u32::MAX));
+
+        vec![
+            ExecutionState::with_stack(true_stack),
+            ExecutionState::with_stack(false_stack),
+        ]
+    }
+
+    fn common_case_input_state(&self) -> ExecutionState {
+        ExecutionState::with_stack([empty_stack(), vec![BFieldElement::new(1 << 16)]].concat())
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState {
+        ExecutionState::with_stack(
+            [empty_stack(), vec![BFieldElement::new((1 << 32) - 1)]].concat(),
+        )
+    }
+
     fn rust_shadowing(
         &self,
         stack: &mut Vec<BFieldElement>,
@@ -88,16 +101,6 @@ impl DeprecatedSnippet for Isu32 {
         } else {
             BFieldElement::zero()
         });
-    }
-
-    fn common_case_input_state(&self) -> ExecutionState {
-        ExecutionState::with_stack([empty_stack(), vec![BFieldElement::new(1 << 16)]].concat())
-    }
-
-    fn worst_case_input_state(&self) -> ExecutionState {
-        ExecutionState::with_stack(
-            [empty_stack(), vec![BFieldElement::new((1 << 32) - 1)]].concat(),
-        )
     }
 }
 

@@ -1,14 +1,13 @@
-use crate::twenty_first::shared_math::b_field_element::BFieldElement;
 use itertools::Itertools;
-use triton_vm::triton_asm;
+use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
+use crate::dyn_malloc;
+use crate::empty_stack;
 use crate::memory::dyn_malloc::DynMalloc;
+use crate::rust_shadowing_helper_functions::safe_list::safe_list_new;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::{
-    dyn_malloc, empty_stack, rust_shadowing_helper_functions::safe_list::safe_list_new,
-    ExecutionState,
-};
+use crate::ExecutionState;
 
 #[derive(Clone, Debug)]
 pub struct SafeNew {
@@ -80,10 +79,10 @@ impl DeprecatedSnippet for SafeNew {
     }
 
     fn gen_input_states(&self) -> Vec<ExecutionState> {
+        let capacity = BFieldElement::new(1000);
         let mut stack = empty_stack();
+        stack.push(capacity);
 
-        // push capacity to stack
-        stack.push(BFieldElement::new(1000));
         vec![ExecutionState::with_stack(stack)]
     }
 
@@ -113,12 +112,12 @@ impl DeprecatedSnippet for SafeNew {
 #[cfg(test)]
 mod tests {
     use rand::random;
-    use triton_vm::NonDeterminism;
 
-    use crate::{
-        list::safeimplu32::push::SafePush, rust_shadowing_helper_functions,
-        test_helpers::test_rust_equivalence_multiple_deprecated, Digest, DIGEST_LENGTH,
-    };
+    use crate::list::safeimplu32::push::SafePush;
+    use crate::rust_shadowing_helper_functions;
+    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
+    use crate::Digest;
+    use crate::DIGEST_LENGTH;
 
     use super::*;
 
@@ -254,8 +253,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::snippet_bencher::bench_and_write;
+
+    use super::*;
 
     #[test]
     fn safe_new_benchmark() {

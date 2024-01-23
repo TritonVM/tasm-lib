@@ -1,14 +1,11 @@
 use std::collections::HashMap;
 
-use triton_vm::{
-    instruction::LabelledInstruction, triton_asm, triton_instr, BFieldElement, NonDeterminism,
-};
+use triton_vm::prelude::*;
 
-use crate::{
-    library::Library,
-    memory::{encode_to_memory, FIRST_NON_DETERMINISTICALLY_INITIALIZED_MEMORY_ADDRESS},
-    traits::compiled_program::CompiledProgram,
-};
+use crate::library::Library;
+use crate::memory::encode_to_memory;
+use crate::memory::FIRST_NON_DETERMINISTICALLY_INITIALIZED_MEMORY_ADDRESS;
+use crate::traits::compiled_program::CompiledProgram;
 
 use super::fri_verify::FriVerify;
 
@@ -61,7 +58,7 @@ impl StandaloneFriVerify {
 
 impl CompiledProgram for StandaloneFriVerify {
     fn rust_shadow(
-        _public_input: &triton_vm::PublicInput,
+        _public_input: &PublicInput,
         _nondeterminism: &NonDeterminism<BFieldElement>,
     ) -> anyhow::Result<Vec<BFieldElement>> {
         todo!()
@@ -91,13 +88,10 @@ impl CompiledProgram for StandaloneFriVerify {
 
 #[cfg(test)]
 mod bench {
-    use triton_vm::PublicInput;
+    use crate::snippet_bencher::BenchmarkCase;
+    use crate::traits::compiled_program::bench_and_profile_program;
 
-    use crate::{
-        snippet_bencher::BenchmarkCase, traits::compiled_program::bench_and_profile_program,
-    };
-
-    use super::StandaloneFriVerify;
+    use super::*;
 
     #[test]
     fn benchmark() {
@@ -105,7 +99,7 @@ mod bench {
         seed[0] = 0xa7;
         seed[1] = 0xf7;
 
-        let public_input = PublicInput::new(vec![]);
+        let public_input = PublicInput::default();
         let (_, nondeterminism) =
             StandaloneFriVerify::singleton().pseudorandom_intermediate_state();
 

@@ -1,7 +1,9 @@
-use crate::twenty_first::shared_math::{b_field_element::BFieldElement, other::random_elements};
 use num::Zero;
+use triton_vm::prelude::*;
+use twenty_first::shared_math::other::random_elements;
 
-use crate::{Digest, DIGEST_LENGTH};
+use crate::Digest;
+use crate::DIGEST_LENGTH;
 
 pub fn write_digest_to_std_in(std_in: &mut Vec<BFieldElement>, digest: Digest) {
     let digest_elements = digest.values();

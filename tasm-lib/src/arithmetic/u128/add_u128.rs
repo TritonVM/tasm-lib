@@ -1,19 +1,25 @@
 use std::collections::HashMap;
 
-use crate::twenty_first::{
-    amount::u32s::U32s,
-    shared_math::{b_field_element::BFieldElement, bfield_codec::BFieldCodec},
-};
 use num::Zero;
 use rand::Rng;
+use triton_vm::prelude::*;
+use twenty_first::amount::u32s::U32s;
 
-use crate::{data_type::DataType, traits::deprecated_snippet::DeprecatedSnippet};
-use crate::{empty_stack, library::Library, push_encodable, ExecutionState};
+use crate::data_type::DataType;
+use crate::empty_stack;
+use crate::library::Library;
+use crate::push_encodable;
+use crate::traits::deprecated_snippet::DeprecatedSnippet;
+use crate::ExecutionState;
 
 #[derive(Clone, Debug)]
 pub struct AddU128;
 
 impl DeprecatedSnippet for AddU128 {
+    fn entrypoint_name(&self) -> String {
+        "tasm_arithmetic_u128_add".to_string()
+    }
+
     fn input_field_names(&self) -> Vec<String> {
         vec![
             "rhs_3".to_string(),
@@ -27,6 +33,10 @@ impl DeprecatedSnippet for AddU128 {
         ]
     }
 
+    fn input_types(&self) -> Vec<DataType> {
+        vec![DataType::U128, DataType::U128]
+    }
+
     fn output_field_names(&self) -> Vec<String> {
         vec![
             "(lhs + rhs)_3".to_string(),
@@ -36,57 +46,12 @@ impl DeprecatedSnippet for AddU128 {
         ]
     }
 
-    fn input_types(&self) -> Vec<crate::data_type::DataType> {
-        vec![DataType::U128, DataType::U128]
-    }
-
-    fn output_types(&self) -> Vec<crate::data_type::DataType> {
+    fn output_types(&self) -> Vec<DataType> {
         vec![DataType::U128]
-    }
-
-    fn crash_conditions(&self) -> Vec<String> {
-        vec!["if (lhs + rhs) overflows u128".to_string()]
-    }
-
-    fn gen_input_states(&self) -> Vec<ExecutionState> {
-        let mut rng = rand::thread_rng();
-
-        let mut states = vec![];
-        let zero = U32s::<4>::zero();
-
-        for _ in 0..20 {
-            let small_a = U32s::<4>::try_from(rng.gen::<u64>()).unwrap();
-            let small_b = U32s::<4>::try_from(rng.gen::<u64>()).unwrap();
-            let mut random_bytes: [u32; 4] = [0, 0, 0, 0];
-            rng.fill(&mut random_bytes);
-            let large_a = U32s::<4>::new(random_bytes);
-
-            // 0. one zero, one large
-            states.push({
-                let mut stack = empty_stack();
-                push_encodable(&mut stack, &zero);
-                push_encodable(&mut stack, &large_a);
-                ExecutionState::with_stack(stack)
-            });
-
-            // 1. two small
-            states.push({
-                let mut stack = empty_stack();
-                push_encodable(&mut stack, &small_a);
-                push_encodable(&mut stack, &small_b);
-                ExecutionState::with_stack(stack)
-            });
-        }
-
-        states
     }
 
     fn stack_diff(&self) -> isize {
         -4
-    }
-
-    fn entrypoint_name(&self) -> String {
-        "tasm_arithmetic_u128_add".to_string()
     }
 
     /// Four top elements of stack are assumed to be valid u32s. So to have
@@ -167,31 +132,41 @@ impl DeprecatedSnippet for AddU128 {
         )
     }
 
-    fn rust_shadowing(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        _std_in: Vec<BFieldElement>,
-        _secret_in: Vec<BFieldElement>,
-        _memory: &mut HashMap<BFieldElement, BFieldElement>,
-    ) {
-        // top element on stack
-        let a0: u32 = stack.pop().unwrap().try_into().unwrap();
-        let b0: u32 = stack.pop().unwrap().try_into().unwrap();
-        let c0: u32 = stack.pop().unwrap().try_into().unwrap();
-        let d0: u32 = stack.pop().unwrap().try_into().unwrap();
-        let ab0 = U32s::<4>::new([a0, b0, c0, d0]);
+    fn crash_conditions(&self) -> Vec<String> {
+        vec!["if (lhs + rhs) overflows u128".to_string()]
+    }
 
-        // second element on stack
-        let a1: u32 = stack.pop().unwrap().try_into().unwrap();
-        let b1: u32 = stack.pop().unwrap().try_into().unwrap();
-        let c1: u32 = stack.pop().unwrap().try_into().unwrap();
-        let d1: u32 = stack.pop().unwrap().try_into().unwrap();
-        let ab1 = U32s::<4>::new([a1, b1, c1, d1]);
-        let ab0_plus_ab1 = ab0 + ab1;
-        let mut res = ab0_plus_ab1.encode();
-        for _ in 0..res.len() {
-            stack.push(res.pop().unwrap());
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
+        let mut rng = rand::thread_rng();
+
+        let mut states = vec![];
+        let zero = U32s::<4>::zero();
+
+        for _ in 0..20 {
+            let small_a = U32s::<4>::try_from(rng.gen::<u64>()).unwrap();
+            let small_b = U32s::<4>::try_from(rng.gen::<u64>()).unwrap();
+            let mut random_bytes: [u32; 4] = [0, 0, 0, 0];
+            rng.fill(&mut random_bytes);
+            let large_a = U32s::<4>::new(random_bytes);
+
+            // 0. one zero, one large
+            states.push({
+                let mut stack = empty_stack();
+                push_encodable(&mut stack, &zero);
+                push_encodable(&mut stack, &large_a);
+                ExecutionState::with_stack(stack)
+            });
+
+            // 1. two small
+            states.push({
+                let mut stack = empty_stack();
+                push_encodable(&mut stack, &small_a);
+                push_encodable(&mut stack, &small_b);
+                ExecutionState::with_stack(stack)
+            });
         }
+
+        states
     }
 
     fn common_case_input_state(&self) -> ExecutionState {
@@ -219,11 +194,38 @@ impl DeprecatedSnippet for AddU128 {
             .concat(),
         )
     }
+
+    fn rust_shadowing(
+        &self,
+        stack: &mut Vec<BFieldElement>,
+        _std_in: Vec<BFieldElement>,
+        _secret_in: Vec<BFieldElement>,
+        _memory: &mut HashMap<BFieldElement, BFieldElement>,
+    ) {
+        // top element on stack
+        let a0: u32 = stack.pop().unwrap().try_into().unwrap();
+        let b0: u32 = stack.pop().unwrap().try_into().unwrap();
+        let c0: u32 = stack.pop().unwrap().try_into().unwrap();
+        let d0: u32 = stack.pop().unwrap().try_into().unwrap();
+        let ab0 = U32s::<4>::new([a0, b0, c0, d0]);
+
+        // second element on stack
+        let a1: u32 = stack.pop().unwrap().try_into().unwrap();
+        let b1: u32 = stack.pop().unwrap().try_into().unwrap();
+        let c1: u32 = stack.pop().unwrap().try_into().unwrap();
+        let d1: u32 = stack.pop().unwrap().try_into().unwrap();
+        let ab1 = U32s::<4>::new([a1, b1, c1, d1]);
+        let ab0_plus_ab1 = ab0 + ab1;
+        let mut res = ab0_plus_ab1.encode();
+        for _ in 0..res.len() {
+            stack.push(res.pop().unwrap());
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::twenty_first::shared_math::bfield_codec::BFieldCodec;
+    use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
     use crate::test_helpers::{
         test_rust_equivalence_given_input_values_deprecated,

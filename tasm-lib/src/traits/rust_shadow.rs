@@ -1,6 +1,8 @@
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::cell::RefCell;
+use std::collections::HashMap;
+use std::rc::Rc;
 
-use triton_vm::{BFieldElement, NonDeterminism};
+use triton_vm::prelude::*;
 
 use crate::VmHasherState;
 

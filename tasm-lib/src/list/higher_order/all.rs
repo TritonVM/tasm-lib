@@ -1,33 +1,38 @@
-use crate::twenty_first::shared_math::b_field_element::BFieldElement;
-use crate::twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
+use std::collections::HashMap;
+
 use itertools::Itertools;
 use num::Zero;
 use rand::rngs::StdRng;
-use rand::{RngCore, SeedableRng};
-use std::collections::HashMap;
+use rand::RngCore;
+use rand::SeedableRng;
 use triton_vm::instruction::LabelledInstruction;
 use triton_vm::parser::tokenize;
-use triton_vm::{triton_asm, NonDeterminism};
+use triton_vm::prelude::*;
+use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
+use crate::arithmetic;
 use crate::data_type::DataType;
+use crate::empty_stack;
+use crate::library::Library;
 use crate::list::safeimplu32::get::SafeGet;
 use crate::list::safeimplu32::length::Length as SafeLength;
 use crate::list::unsafeimplu32::get::UnsafeGet;
 use crate::list::unsafeimplu32::length::Length as UnsafeLength;
 use crate::list::ListType;
+use crate::rust_shadowing_helper_functions;
 use crate::rust_shadowing_helper_functions::safe_list::safe_insert_random_list;
 use crate::rust_shadowing_helper_functions::unsafe_list::untyped_unsafe_insert_random_list;
 use crate::snippet_bencher::BenchmarkCase;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::traits::function::{Function, FunctionInitialState};
-use crate::{arithmetic, empty_stack, rust_shadowing_helper_functions, VmHasher};
-use crate::{library::Library, ExecutionState};
+use crate::traits::function::Function;
+use crate::traits::function::FunctionInitialState;
+use crate::ExecutionState;
+use crate::VmHasher;
 
 use super::inner_function::InnerFunction;
 
-/// Runs a predicate over all elements of a list and returns true
-/// only if all elements satisfy the predicate.
+/// Runs a predicate over all elements of a list and returns true only if all elements satisfy the predicate.
 pub struct All {
     pub list_type: ListType,
     pub f: InnerFunction,
@@ -172,7 +177,7 @@ impl BasicSnippet for All {
 
         triton_asm!(
             // BEFORE: _ input_list
-            // AFTER: _ result
+            // AFTER:  _ result
             {entrypoint}:
                 push 1 // _ input_list res
                 swap 1 // _ res input_list
@@ -319,12 +324,12 @@ impl DeprecatedSnippet for TestHashXFieldElementLsb {
         vec![DataType::Xfe]
     }
 
-    fn output_types(&self) -> Vec<DataType> {
-        vec![DataType::Bool]
-    }
-
     fn output_field_names(&self) -> Vec<String> {
         vec!["bool".to_string()]
+    }
+
+    fn output_types(&self) -> Vec<DataType> {
+        vec![DataType::Bool]
     }
 
     fn stack_diff(&self) -> isize {
@@ -337,7 +342,7 @@ impl DeprecatedSnippet for TestHashXFieldElementLsb {
         format!(
             "
         // BEFORE: _ x2 x1 x0
-        // AFTER: _ b
+        // AFTER:  _ b
         {entrypoint}:
             // Useless additions, to ensure that dependencies are accepted inside the `all` generated code
                 push 0
@@ -445,13 +450,14 @@ mod tests {
     use num::One;
     use triton_vm::triton_asm;
 
-    use super::*;
     use crate::traits::rust_shadow::RustShadow;
     use crate::{
         list::higher_order::inner_function::RawCode,
         test_helpers::test_rust_equivalence_given_complete_state,
         traits::function::ShadowedFunction,
     };
+
+    use super::*;
 
     #[test]
     fn unsafe_list_prop_test() {
@@ -582,9 +588,10 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
+
+    use super::*;
 
     #[test]
     fn unsafe_list_all_benchmark() {

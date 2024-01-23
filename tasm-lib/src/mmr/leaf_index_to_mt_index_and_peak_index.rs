@@ -1,13 +1,12 @@
 use std::collections::HashMap;
 
-use crate::twenty_first::amount::u32s::U32s;
-use crate::twenty_first::shared_math::b_field_element::BFieldElement;
-use crate::twenty_first::shared_math::bfield_codec::BFieldCodec;
-use crate::twenty_first::util_types::mmr;
 use itertools::Itertools;
 use num::BigUint;
-use rand::{thread_rng, Rng};
-use triton_vm::triton_asm;
+use rand::thread_rng;
+use rand::Rng;
+use triton_vm::prelude::*;
+use twenty_first::amount::u32s::U32s;
+use twenty_first::util_types::mmr;
 
 use crate::arithmetic::u64::add_u64::AddU64;
 use crate::arithmetic::u64::and_u64::AndU64;
@@ -18,14 +17,19 @@ use crate::arithmetic::u64::popcount_u64::PopCountU64;
 use crate::arithmetic::u64::pow2_u64::Pow2U64;
 use crate::arithmetic::u64::xor_u64::XorU64;
 use crate::data_type::DataType;
+use crate::empty_stack;
 use crate::library::Library;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::{empty_stack, ExecutionState};
+use crate::ExecutionState;
 
 #[derive(Clone, Debug)]
 pub struct MmrLeafIndexToMtIndexAndPeakIndex;
 
 impl DeprecatedSnippet for MmrLeafIndexToMtIndexAndPeakIndex {
+    fn entrypoint_name(&self) -> String {
+        "tasm_mmr_leaf_index_to_mt_index_and_peak_index".to_string()
+    }
+
     fn input_field_names(&self) -> Vec<String> {
         vec![
             "leaf_count_hi".to_string(),
@@ -33,6 +37,10 @@ impl DeprecatedSnippet for MmrLeafIndexToMtIndexAndPeakIndex {
             "leaf_index_hi".to_string(),
             "leaf_index_lo".to_string(),
         ]
+    }
+
+    fn input_types(&self) -> Vec<DataType> {
+        vec![DataType::U64, DataType::U64]
     }
 
     fn output_field_names(&self) -> Vec<String> {
@@ -43,36 +51,13 @@ impl DeprecatedSnippet for MmrLeafIndexToMtIndexAndPeakIndex {
         ]
     }
 
-    fn input_types(&self) -> Vec<crate::data_type::DataType> {
-        vec![DataType::U64, DataType::U64]
-    }
-
-    fn output_types(&self) -> Vec<crate::data_type::DataType> {
+    fn output_types(&self) -> Vec<DataType> {
         vec![DataType::U64, DataType::U32]
-    }
-
-    fn crash_conditions(&self) -> Vec<String> {
-        vec!["Input values are not valid u32s".to_string()]
-    }
-
-    fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
-        let mut ret: Vec<ExecutionState> = vec![];
-        for _ in 0..10 {
-            let leaf_count = thread_rng().gen_range(0..u64::MAX / 2);
-            let leaf_index = thread_rng().gen_range(0..leaf_count);
-            ret.push(prepare_state(leaf_count, leaf_index))
-        }
-
-        ret
     }
 
     fn stack_diff(&self) -> isize {
         // Consumes leaf_index: u64 and leaf_count: u64. Pushes MT index: u64 and peak index: u32
         -1
-    }
-
-    fn entrypoint_name(&self) -> String {
-        "tasm_mmr_leaf_index_to_mt_index_and_peak_index".to_string()
     }
 
     fn function_code(&self, library: &mut Library) -> String {
@@ -87,8 +72,8 @@ impl DeprecatedSnippet for MmrLeafIndexToMtIndexAndPeakIndex {
         let popcount_u64 = library.import(Box::new(PopCountU64));
 
         triton_asm!(
-        // Before: _ leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo
-        // After: _ mt_index_hi mt_index_lo peak_index
+        // BEFORE: _ leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo
+        // AFTER:  _ mt_index_hi mt_index_lo peak_index
         {entrypoint}:
             // assert that leaf_index < leaf_count
             call {lt_u64}
@@ -167,6 +152,32 @@ impl DeprecatedSnippet for MmrLeafIndexToMtIndexAndPeakIndex {
         .join("\n")
     }
 
+    fn crash_conditions(&self) -> Vec<String> {
+        vec!["Input values are not valid u32s".to_string()]
+    }
+
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
+        let mut ret: Vec<ExecutionState> = vec![];
+        for _ in 0..10 {
+            let leaf_count = thread_rng().gen_range(0..u64::MAX / 2);
+            let leaf_index = thread_rng().gen_range(0..leaf_count);
+            ret.push(prepare_state(leaf_count, leaf_index))
+        }
+
+        ret
+    }
+
+    fn common_case_input_state(&self) -> ExecutionState {
+        prepare_state((1 << 32) - 1, (1 << 31) + (1 << 30) + 100000)
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState {
+        // This function has some pretty bad worst-case behavior. Common-case is orders of magnitudes
+        // better, it seems.
+        // The below input is the worst-case input I could find.
+        prepare_state((1 << 63) - 1, (1 << 63) - 63)
+    }
+
     fn rust_shadowing(
         &self,
         stack: &mut Vec<BFieldElement>,
@@ -189,17 +200,6 @@ impl DeprecatedSnippet for MmrLeafIndexToMtIndexAndPeakIndex {
         stack.append(&mut mt_index.encode().into_iter().rev().collect());
         stack.push(BFieldElement::new(peak_index as u64));
     }
-
-    fn common_case_input_state(&self) -> ExecutionState {
-        prepare_state((1 << 32) - 1, (1 << 31) + (1 << 30) + 100000)
-    }
-
-    fn worst_case_input_state(&self) -> ExecutionState {
-        // This function has some pretty bad worst-case behavior. Common-case is orders of magnitudes
-        // better, it seems.
-        // The below input is the worst-case input I could find.
-        prepare_state((1 << 63) - 1, (1 << 63) - 63)
-    }
 }
 
 fn prepare_state(leaf_count: u64, leaf_index: u64) -> ExecutionState {
@@ -217,10 +217,9 @@ fn prepare_state(leaf_count: u64, leaf_index: u64) -> ExecutionState {
 
 #[cfg(test)]
 mod tests {
-    use crate::twenty_first::shared_math::b_field_element::BFieldElement;
+    use BFieldElement;
 
     use crate::empty_stack;
-
     use crate::test_helpers::{
         test_rust_equivalence_given_input_values_deprecated,
         test_rust_equivalence_multiple_deprecated,
@@ -393,8 +392,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::snippet_bencher::bench_and_write;
+
+    use super::*;
 
     #[test]
     fn leaf_index_to_mt_index_benchmark() {

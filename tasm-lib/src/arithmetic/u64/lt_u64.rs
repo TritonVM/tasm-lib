@@ -1,14 +1,17 @@
 use std::collections::HashMap;
 
-use crate::twenty_first::amount::u32s::U32s;
-use crate::twenty_first::shared_math::b_field_element::BFieldElement;
-use num::{One, Zero};
+use num::One;
+use num::Zero;
 use rand::RngCore;
+use triton_vm::prelude::*;
+use twenty_first::amount::u32s::U32s;
 
 use crate::data_type::DataType;
+use crate::empty_stack;
 use crate::library::Library;
+use crate::push_encodable;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::{empty_stack, push_encodable, ExecutionState};
+use crate::ExecutionState;
 
 #[derive(Clone, Debug)]
 pub struct LtStandardU64;
@@ -19,6 +22,10 @@ pub struct LtStandardU64;
 /// This is because there are three branches, so sharing cleanup unconditionally means
 /// less branching (fewer cycles) and less local cleanup (smaller program).
 impl DeprecatedSnippet for LtStandardU64 {
+    fn entrypoint_name(&self) -> String {
+        "tasm_arithmetic_u64_lt_standard".to_string()
+    }
+
     fn input_field_names(&self) -> Vec<String> {
         vec![
             "rhs_hi".to_string(),
@@ -28,34 +35,20 @@ impl DeprecatedSnippet for LtStandardU64 {
         ]
     }
 
+    fn input_types(&self) -> Vec<DataType> {
+        vec![DataType::U64, DataType::U64]
+    }
+
     fn output_field_names(&self) -> Vec<String> {
         vec!["(lhs < rhs)".to_string()]
     }
 
-    fn input_types(&self) -> Vec<crate::data_type::DataType> {
-        vec![DataType::U64, DataType::U64]
-    }
-
-    fn output_types(&self) -> Vec<crate::data_type::DataType> {
+    fn output_types(&self) -> Vec<DataType> {
         vec![DataType::Bool]
-    }
-
-    fn crash_conditions(&self) -> Vec<String> {
-        vec!["Either input is not u32".to_string()]
-    }
-
-    fn gen_input_states(&self) -> Vec<ExecutionState> {
-        // The input states for the two u64::lt operators can be reused. But the
-        // rust shadowin cannot.
-        LtU64::gen_input_states(&LtU64)
     }
 
     fn stack_diff(&self) -> isize {
         -3
-    }
-
-    fn entrypoint_name(&self) -> String {
-        "tasm_arithmetic_u64_lt_standard".to_string()
     }
 
     fn function_code(&self, _library: &mut Library) -> String {
@@ -69,8 +62,8 @@ impl DeprecatedSnippet for LtStandardU64 {
                 swap 4 pop 4           // _ (lhs < rhs)
                 return
 
-            // Before: _ rhs_hi rhs_lo lhs_hi lhs_lo
-            // After: _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs)
+            // BEFORE: _ rhs_hi rhs_lo lhs_hi lhs_lo
+            // AFTER:  _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs)
             {entrypoint}_aux:
                 dup 3 // _ rhs_hi rhs_lo lhs_hi lhs_lo rhs_hi
                 dup 2 // _ rhs_hi rhs_lo lhs_hi lhs_lo rhs_hi lhs_hi
@@ -88,8 +81,8 @@ impl DeprecatedSnippet for LtStandardU64 {
                       // false: _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs, aka 0)
                 return
 
-            // Before: _ rhs_hi rhs_lo lhs_hi lhs_lo 0
-            // After: _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_lo < rhs_lo)
+            // BEFORE: _ rhs_hi rhs_lo lhs_hi lhs_lo 0
+            // AFTER:  _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_lo < rhs_lo)
             {entrypoint}_lo:
                 pop 1 // _ rhs_hi rhs_lo lhs_hi lhs_lo
                 dup 2 // _ rhs_hi rhs_lo lhs_hi lhs_lo rhs_lo
@@ -100,22 +93,14 @@ impl DeprecatedSnippet for LtStandardU64 {
         )
     }
 
-    fn rust_shadowing(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        _std_in: Vec<BFieldElement>,
-        _secret_in: Vec<BFieldElement>,
-        _memory: &mut HashMap<BFieldElement, BFieldElement>,
-    ) {
-        let lhs_lo: u32 = stack.pop().unwrap().try_into().unwrap();
-        let lhs_hi: u32 = stack.pop().unwrap().try_into().unwrap();
-        let lhs = U32s::new([lhs_lo, lhs_hi]);
+    fn crash_conditions(&self) -> Vec<String> {
+        vec!["Either input is not u32".to_string()]
+    }
 
-        let rhs_lo: u32 = stack.pop().unwrap().try_into().unwrap();
-        let rhs_hi: u32 = stack.pop().unwrap().try_into().unwrap();
-        let rhs = U32s::new([rhs_lo, rhs_hi]);
-
-        stack.push(BFieldElement::new((lhs < rhs) as u64));
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
+        // The input states for the two u64::lt operators can be reused. But the
+        // rust shadowin cannot.
+        LtU64::gen_input_states(&LtU64)
     }
 
     fn common_case_input_state(&self) -> ExecutionState {
@@ -139,6 +124,24 @@ impl DeprecatedSnippet for LtStandardU64 {
             .concat(),
         )
     }
+
+    fn rust_shadowing(
+        &self,
+        stack: &mut Vec<BFieldElement>,
+        _std_in: Vec<BFieldElement>,
+        _secret_in: Vec<BFieldElement>,
+        _memory: &mut HashMap<BFieldElement, BFieldElement>,
+    ) {
+        let lhs_lo: u32 = stack.pop().unwrap().try_into().unwrap();
+        let lhs_hi: u32 = stack.pop().unwrap().try_into().unwrap();
+        let lhs = U32s::new([lhs_lo, lhs_hi]);
+
+        let rhs_lo: u32 = stack.pop().unwrap().try_into().unwrap();
+        let rhs_hi: u32 = stack.pop().unwrap().try_into().unwrap();
+        let rhs = U32s::new([rhs_lo, rhs_hi]);
+
+        stack.push(BFieldElement::new((lhs < rhs) as u64));
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -148,6 +151,10 @@ pub struct LtU64;
 ///
 /// See `LtStandardU64` for a variant that does.
 impl DeprecatedSnippet for LtU64 {
+    fn entrypoint_name(&self) -> String {
+        "tasm_arithmetic_u64_lt".to_string()
+    }
+
     fn input_field_names(&self) -> Vec<String> {
         vec![
             "rhs_hi".to_string(),
@@ -155,6 +162,10 @@ impl DeprecatedSnippet for LtU64 {
             "lhs_hi".to_string(),
             "lhs_lo".to_string(),
         ]
+    }
+
+    fn input_types(&self) -> Vec<DataType> {
+        vec![DataType::U64, DataType::U64]
     }
 
     fn output_field_names(&self) -> Vec<String> {
@@ -167,12 +178,50 @@ impl DeprecatedSnippet for LtU64 {
         ]
     }
 
-    fn input_types(&self) -> Vec<crate::data_type::DataType> {
-        vec![DataType::U64, DataType::U64]
+    fn output_types(&self) -> Vec<DataType> {
+        vec![DataType::U64, DataType::U64, DataType::Bool]
     }
 
-    fn output_types(&self) -> Vec<crate::data_type::DataType> {
-        vec![DataType::U64, DataType::U64, DataType::Bool]
+    fn stack_diff(&self) -> isize {
+        1
+    }
+
+    /// BEFORE: _ rhs_hi rhs_lo lhs_hi lhs_lo
+    /// AFTER:  _ rhs_hi rhs_lo lhs_hi lhs_lo  (lhs < rhs)
+    fn function_code(&self, _library: &mut Library) -> String {
+        let entrypoint = self.entrypoint_name();
+        format!(
+            "
+            // Before: _ rhs_hi rhs_lo lhs_hi lhs_lo
+            // After:  _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs)
+            {entrypoint}:
+                dup 3
+                dup 2
+                lt          // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_hi < rhs_hi)
+                dup 0
+                skiz
+                    return  // => _ rhs_hi rhs_lo lhs_hi lhs_lo 1
+
+                // => _ rhs_hi rhs_lo lhs_hi lhs_lo 0
+                dup 4      // => _ rhs_hi rhs_lo lhs_hi lhs_lo 0 rhs_hi
+                dup 3      // => _ rhs_hi rhs_lo lhs_hi lhs_lo 0 rhs_hi lhs_hi
+                eq         // => _ rhs_hi rhs_lo lhs_hi lhs_lo 0 (rhs_hi == lhs_hi)
+                skiz
+                    call {entrypoint}_lo // => _ rhs_hi rhs_lo lhs_hi lhs_lo 0
+
+                           // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_lo < rhs_lo)|0
+                return
+
+            // BEFORE: _ rhs_hi rhs_lo lhs_hi lhs_lo 0
+            // AFTER:  _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_lo < rhs_lo)
+            {entrypoint}_lo:
+                pop 1      // _ rhs_hi rhs_lo lhs_hi lhs_lo
+                dup 2      // _ rhs_hi rhs_lo lhs_hi lhs_lo rhs_lo
+                dup 1      // _ rhs_hi rhs_lo lhs_hi lhs_lo rhs_lo lhs_lo
+                lt         // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_lo < rhs_lo)
+                return
+            "
+        )
     }
 
     fn crash_conditions(&self) -> Vec<String> {
@@ -198,49 +247,25 @@ impl DeprecatedSnippet for LtU64 {
         ret
     }
 
-    fn stack_diff(&self) -> isize {
-        1
+    fn common_case_input_state(&self) -> ExecutionState {
+        ExecutionState::with_stack(
+            [
+                empty_stack(),
+                vec![BFieldElement::zero(), BFieldElement::new(1 << 31)],
+                vec![BFieldElement::one(), BFieldElement::new(1 << 30)],
+            ]
+            .concat(),
+        )
     }
 
-    fn entrypoint_name(&self) -> String {
-        "tasm_arithmetic_u64_lt".to_string()
-    }
-
-    /// Before: _ rhs_hi rhs_lo lhs_hi lhs_lo
-    /// After: _ rhs_hi rhs_lo lhs_hi lhs_lo  (lhs < rhs)
-    fn function_code(&self, _library: &mut Library) -> String {
-        let entrypoint = self.entrypoint_name();
-        format!(
-            "
-            // Before: _ rhs_hi rhs_lo lhs_hi lhs_lo
-            // After:  _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs)
-            {entrypoint}:
-                dup 3
-                dup 2
-                lt          // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_hi < rhs_hi)
-                dup 0
-                skiz
-                    return  // => _ rhs_hi rhs_lo lhs_hi lhs_lo 1
-
-                // => _ rhs_hi rhs_lo lhs_hi lhs_lo 0
-                dup 4      // => _ rhs_hi rhs_lo lhs_hi lhs_lo 0 rhs_hi
-                dup 3      // => _ rhs_hi rhs_lo lhs_hi lhs_lo 0 rhs_hi lhs_hi
-                eq         // => _ rhs_hi rhs_lo lhs_hi lhs_lo 0 (rhs_hi == lhs_hi)
-                skiz
-                    call {entrypoint}_lo // => _ rhs_hi rhs_lo lhs_hi lhs_lo 0
-
-                           // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_lo < rhs_lo)|0
-                return
-
-            // Before: _ rhs_hi rhs_lo lhs_hi lhs_lo 0
-            // After: _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_lo < rhs_lo)
-            {entrypoint}_lo:
-                pop 1      // _ rhs_hi rhs_lo lhs_hi lhs_lo
-                dup 2      // _ rhs_hi rhs_lo lhs_hi lhs_lo rhs_lo
-                dup 1      // _ rhs_hi rhs_lo lhs_hi lhs_lo rhs_lo lhs_lo
-                lt         // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_lo < rhs_lo)
-                return
-            "
+    fn worst_case_input_state(&self) -> ExecutionState {
+        ExecutionState::with_stack(
+            [
+                empty_stack(),
+                vec![BFieldElement::new(8), BFieldElement::new(1 << 31)],
+                vec![BFieldElement::new(8), BFieldElement::new(1 << 30)],
+            ]
+            .concat(),
         )
     }
 
@@ -267,38 +292,15 @@ impl DeprecatedSnippet for LtU64 {
             BFieldElement::zero()
         });
     }
-
-    fn common_case_input_state(&self) -> ExecutionState {
-        ExecutionState::with_stack(
-            [
-                empty_stack(),
-                vec![BFieldElement::zero(), BFieldElement::new(1 << 31)],
-                vec![BFieldElement::one(), BFieldElement::new(1 << 30)],
-            ]
-            .concat(),
-        )
-    }
-
-    fn worst_case_input_state(&self) -> ExecutionState {
-        ExecutionState::with_stack(
-            [
-                empty_stack(),
-                vec![BFieldElement::new(8), BFieldElement::new(1 << 31)],
-                vec![BFieldElement::new(8), BFieldElement::new(1 << 30)],
-            ]
-            .concat(),
-        )
-    }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::twenty_first::shared_math::b_field_element::BFieldElement;
-    use crate::twenty_first::shared_math::bfield_codec::BFieldCodec;
     use rand::Rng;
+    use twenty_first::shared_math::bfield_codec::BFieldCodec;
+    use BFieldElement;
 
     use crate::empty_stack;
-
     use crate::test_helpers::{
         test_rust_equivalence_given_input_values_deprecated,
         test_rust_equivalence_multiple_deprecated,
@@ -469,8 +471,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::snippet_bencher::bench_and_write;
+
+    use super::*;
 
     #[test]
     fn lt_u64_benchmark() {

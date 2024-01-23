@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::fmt::Display;
 
-use triton_vm::BFieldElement;
+use triton_vm::prelude::BFieldElement;
 
 use crate::data_type::DataType;
 use crate::list::safeimplu32::get::SafeGet;

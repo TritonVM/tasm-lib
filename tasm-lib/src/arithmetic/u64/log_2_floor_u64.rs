@@ -1,58 +1,43 @@
-use crate::twenty_first::amount::u32s::U32s;
-use crate::twenty_first::shared_math::b_field_element::BFieldElement;
-use crate::twenty_first::shared_math::other::log_2_floor;
-use num::Zero;
-use rand::RngCore;
 use std::collections::HashMap;
 
+use num::Zero;
+use rand::RngCore;
+use triton_vm::prelude::*;
+use twenty_first::amount::u32s::U32s;
+
 use crate::data_type::DataType;
+use crate::empty_stack;
 use crate::library::Library;
+use crate::push_encodable;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::{empty_stack, push_encodable, ExecutionState};
+use crate::ExecutionState;
 
 #[derive(Clone, Debug)]
 pub struct Log2FloorU64;
 
 impl DeprecatedSnippet for Log2FloorU64 {
+    fn entrypoint_name(&self) -> String {
+        "tasm_arithmetic_u64_log_2_floor".to_string()
+    }
+
     fn input_field_names(&self) -> Vec<String> {
         vec!["value_hi".to_string(), "value_lo".to_string()]
+    }
+
+    fn input_types(&self) -> Vec<DataType> {
+        vec![DataType::U64]
     }
 
     fn output_field_names(&self) -> Vec<String> {
         vec!["log2_floor(value)".to_string()]
     }
 
-    fn input_types(&self) -> Vec<crate::data_type::DataType> {
-        vec![DataType::U64]
-    }
-
-    fn output_types(&self) -> Vec<crate::data_type::DataType> {
+    fn output_types(&self) -> Vec<DataType> {
         vec![DataType::U32]
-    }
-
-    fn crash_conditions(&self) -> Vec<String> {
-        vec![
-            "if value_hi is not a u32".to_string(),
-            "if value_lo is not a u32".to_string(),
-        ]
-    }
-
-    fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
-        let n: u64 = rand::thread_rng().next_u64();
-        let n: U32s<2> = n.try_into().unwrap();
-        let mut input_stack = empty_stack();
-
-        push_encodable(&mut input_stack, &n);
-
-        vec![ExecutionState::with_stack(input_stack)]
     }
 
     fn stack_diff(&self) -> isize {
         -1
-    }
-
-    fn entrypoint_name(&self) -> String {
-        "tasm_arithmetic_u64_log_2_floor".to_string()
     }
 
     fn function_code(&self, _library: &mut Library) -> String {
@@ -102,20 +87,21 @@ impl DeprecatedSnippet for Log2FloorU64 {
         )
     }
 
-    fn rust_shadowing(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        _std_in: Vec<BFieldElement>,
-        _secret_in: Vec<BFieldElement>,
-        _memory: &mut HashMap<BFieldElement, BFieldElement>,
-    ) {
-        // Get input value as a u64
-        let lo: u32 = stack.pop().unwrap().try_into().unwrap();
-        let hi: u32 = stack.pop().unwrap().try_into().unwrap();
-        let value_u64: u64 = lo as u64 + (1 << 32) * (hi as u64);
+    fn crash_conditions(&self) -> Vec<String> {
+        vec![
+            "if value_hi is not a u32".to_string(),
+            "if value_lo is not a u32".to_string(),
+        ]
+    }
 
-        let log_2_floor = log_2_floor(value_u64 as u128);
-        stack.push(BFieldElement::new(log_2_floor));
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
+        let n: u64 = rand::thread_rng().next_u64();
+        let n: U32s<2> = n.try_into().unwrap();
+        let mut input_stack = empty_stack();
+
+        push_encodable(&mut input_stack, &n);
+
+        vec![ExecutionState::with_stack(input_stack)]
     }
 
     fn common_case_input_state(&self) -> ExecutionState {
@@ -140,15 +126,30 @@ impl DeprecatedSnippet for Log2FloorU64 {
             .concat(),
         )
     }
+
+    fn rust_shadowing(
+        &self,
+        stack: &mut Vec<BFieldElement>,
+        _std_in: Vec<BFieldElement>,
+        _secret_in: Vec<BFieldElement>,
+        _memory: &mut HashMap<BFieldElement, BFieldElement>,
+    ) {
+        // Get input value as a u64
+        let lo: u32 = stack.pop().unwrap().try_into().unwrap();
+        let hi: u32 = stack.pop().unwrap().try_into().unwrap();
+        let value_u64: u64 = lo as u64 + (1 << 32) * (hi as u64);
+
+        let log_2_floor = value_u64.ilog2() as u64;
+        stack.push(BFieldElement::new(log_2_floor));
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::twenty_first::amount::u32s::U32s;
-    use crate::twenty_first::shared_math::bfield_codec::BFieldCodec;
+    use twenty_first::amount::u32s::U32s;
+    use twenty_first::shared_math::bfield_codec::BFieldCodec;
 
     use crate::empty_stack;
-
     use crate::test_helpers::{
         test_rust_equivalence_given_input_values_deprecated,
         test_rust_equivalence_multiple_deprecated,
@@ -284,8 +285,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::snippet_bencher::bench_and_write;
+
+    use super::*;
 
     #[test]
     fn log_2_floor_u64_benchmark() {

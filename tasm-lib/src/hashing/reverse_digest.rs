@@ -1,8 +1,12 @@
 use rand::random;
+use triton_vm::prelude::BFieldElement;
 
 use crate::data_type::DataType;
+use crate::empty_stack;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::{empty_stack, Digest, ExecutionState, DIGEST_LENGTH};
+use crate::Digest;
+use crate::ExecutionState;
+use crate::DIGEST_LENGTH;
 
 /// Reverse the order of elements in a digest: [d4, d3, d2, d1, d0] -> [d0, d1, d2, d3, d4]
 pub struct ReverseDigest;
@@ -30,11 +34,7 @@ impl DeprecatedSnippet for ReverseDigest {
         ]
     }
 
-    fn input_types(&self) -> Vec<crate::data_type::DataType> {
-        vec![DataType::Digest]
-    }
-
-    fn output_types(&self) -> Vec<crate::data_type::DataType> {
+    fn input_types(&self) -> Vec<DataType> {
         vec![DataType::Digest]
     }
 
@@ -48,6 +48,10 @@ impl DeprecatedSnippet for ReverseDigest {
         ]
     }
 
+    fn output_types(&self) -> Vec<DataType> {
+        vec![DataType::Digest]
+    }
+
     fn stack_diff(&self) -> isize {
         0
     }
@@ -58,7 +62,7 @@ impl DeprecatedSnippet for ReverseDigest {
         format!(
             "
             // BEFORE: _ d4 d3 d2 d1 d0
-            // AFTER: _ d0 d1 d2 d3 d4
+            // AFTER:  _ d0 d1 d2 d3 d4
             {entrypoint}:
                 swap 4
                 // _ d0 d3 d2 d1 d4
@@ -81,24 +85,24 @@ impl DeprecatedSnippet for ReverseDigest {
         vec![]
     }
 
-    fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
         vec![Self::get_input_state()]
     }
 
-    fn common_case_input_state(&self) -> crate::ExecutionState {
+    fn common_case_input_state(&self) -> ExecutionState {
         Self::get_input_state()
     }
 
-    fn worst_case_input_state(&self) -> crate::ExecutionState {
+    fn worst_case_input_state(&self) -> ExecutionState {
         Self::get_input_state()
     }
 
     fn rust_shadowing(
         &self,
-        stack: &mut Vec<triton_vm::BFieldElement>,
-        _std_in: Vec<triton_vm::BFieldElement>,
-        _secret_in: Vec<triton_vm::BFieldElement>,
-        _memory: &mut std::collections::HashMap<triton_vm::BFieldElement, triton_vm::BFieldElement>,
+        stack: &mut Vec<BFieldElement>,
+        _std_in: Vec<BFieldElement>,
+        _secret_in: Vec<BFieldElement>,
+        _memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
     ) {
         let mut elems = vec![];
         for _ in 0..DIGEST_LENGTH {
@@ -113,8 +117,9 @@ impl DeprecatedSnippet for ReverseDigest {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
+
+    use super::*;
 
     #[test]
     fn reverse_digest_test() {
@@ -124,8 +129,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::snippet_bencher::bench_and_write;
+
+    use super::*;
 
     #[test]
     fn reverse_digest_benchmark() {

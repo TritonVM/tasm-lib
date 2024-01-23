@@ -1,19 +1,23 @@
 use std::collections::HashMap;
 
-use crate::twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 use itertools::Itertools;
 use num_traits::Zero;
-use rand::{rngs::StdRng, Rng, SeedableRng};
-use triton_vm::{triton_asm, BFieldElement};
+use rand::rngs::StdRng;
+use rand::Rng;
+use rand::SeedableRng;
+use triton_vm::prelude::*;
+use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
 use crate::data_type::DataType;
+use crate::empty_stack;
 use crate::memory::encode_to_memory;
+use crate::snippet_bencher::BenchmarkCase;
+use crate::structure::tasm_object::TasmObject;
 use crate::traits::basic_snippet::BasicSnippet;
-use crate::traits::function::{Function, FunctionInitialState};
-use crate::{
-    empty_stack, snippet_bencher::BenchmarkCase, structure::tasm_object::TasmObject, Digest,
-    VmHasher,
-};
+use crate::traits::function::Function;
+use crate::traits::function::FunctionInitialState;
+use crate::Digest;
+use crate::VmHasher;
 
 /// Compute the Merkle root of a slice of `Digest`s
 pub struct MerkleRoot;
@@ -206,9 +210,10 @@ impl Function for MerkleRoot {
 
 #[cfg(test)]
 mod test {
-    use super::MerkleRoot;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
+
+    use super::MerkleRoot;
 
     #[test]
     fn test() {
@@ -218,9 +223,10 @@ mod test {
 
 #[cfg(test)]
 mod benches {
-    use super::MerkleRoot;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
+
+    use super::MerkleRoot;
 
     #[test]
     fn merkle_root_bench() {

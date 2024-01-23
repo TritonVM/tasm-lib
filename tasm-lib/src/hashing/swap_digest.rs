@@ -1,19 +1,25 @@
 use std::collections::HashMap;
 
-use crate::twenty_first::shared_math::b_field_element::BFieldElement;
 use rand::Rng;
+use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
+use crate::empty_stack;
 use crate::library::Library;
+use crate::push_encodable;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::Digest;
+use crate::ExecutionState;
 use crate::DIGEST_LENGTH;
-use crate::{empty_stack, push_encodable, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct SwapDigest;
 
 impl DeprecatedSnippet for SwapDigest {
+    fn entrypoint_name(&self) -> String {
+        "tasm_hashing_swap_digest".to_string()
+    }
+
     fn input_field_names(&self) -> Vec<String> {
         vec![
             "b4".to_string(),
@@ -27,6 +33,10 @@ impl DeprecatedSnippet for SwapDigest {
             "a1".to_string(),
             "a0".to_string(),
         ]
+    }
+
+    fn input_types(&self) -> Vec<DataType> {
+        vec![DataType::Digest, DataType::Digest]
     }
 
     fn output_field_names(&self) -> Vec<String> {
@@ -44,36 +54,12 @@ impl DeprecatedSnippet for SwapDigest {
         ]
     }
 
-    fn input_types(&self) -> Vec<crate::data_type::DataType> {
+    fn output_types(&self) -> Vec<DataType> {
         vec![DataType::Digest, DataType::Digest]
-    }
-
-    fn output_types(&self) -> Vec<crate::data_type::DataType> {
-        vec![DataType::Digest, DataType::Digest]
-    }
-
-    fn crash_conditions(&self) -> Vec<String> {
-        vec![]
-    }
-
-    fn gen_input_states(&self) -> Vec<ExecutionState> {
-        let mut rng = rand::thread_rng();
-        let digest_a: Digest = rng.gen();
-        let digest_b: Digest = rng.gen();
-
-        let mut stack = empty_stack();
-        push_encodable(&mut stack, &digest_b);
-        push_encodable(&mut stack, &digest_a);
-
-        vec![ExecutionState::with_stack(stack)]
     }
 
     fn stack_diff(&self) -> isize {
         0
-    }
-
-    fn entrypoint_name(&self) -> String {
-        "tasm_hashing_swap_digest".to_string()
     }
 
     fn function_code(&self, _library: &mut Library) -> String {
@@ -111,6 +97,34 @@ impl DeprecatedSnippet for SwapDigest {
         )
     }
 
+    fn crash_conditions(&self) -> Vec<String> {
+        vec![]
+    }
+
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
+        let mut rng = rand::thread_rng();
+        let digest_a: Digest = rng.gen();
+        let digest_b: Digest = rng.gen();
+
+        let mut stack = empty_stack();
+        push_encodable(&mut stack, &digest_b);
+        push_encodable(&mut stack, &digest_a);
+
+        vec![ExecutionState::with_stack(stack)]
+    }
+
+    fn common_case_input_state(&self) -> ExecutionState {
+        let mut rng = rand::thread_rng();
+        let mut stack = empty_stack();
+        push_encodable(&mut stack, &rng.gen::<Digest>());
+        push_encodable(&mut stack, &rng.gen::<Digest>());
+        ExecutionState::with_stack(stack)
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState {
+        self.common_case_input_state()
+    }
+
     fn rust_shadowing(
         &self,
         stack: &mut Vec<BFieldElement>,
@@ -125,23 +139,10 @@ impl DeprecatedSnippet for SwapDigest {
             stack.swap(ai_pos, bi_pos);
         }
     }
-
-    fn common_case_input_state(&self) -> ExecutionState {
-        let mut rng = rand::thread_rng();
-        let mut stack = empty_stack();
-        push_encodable(&mut stack, &rng.gen::<Digest>());
-        push_encodable(&mut stack, &rng.gen::<Digest>());
-        ExecutionState::with_stack(stack)
-    }
-
-    fn worst_case_input_state(&self) -> ExecutionState {
-        self.common_case_input_state()
-    }
 }
 
 #[cfg(test)]
 mod tests {
-
     use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     use super::*;
@@ -154,8 +155,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::snippet_bencher::bench_and_write;
+
+    use super::*;
 
     #[test]
     fn swap_digest_benchmark() {

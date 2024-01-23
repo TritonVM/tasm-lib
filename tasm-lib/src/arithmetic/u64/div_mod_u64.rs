@@ -1,12 +1,10 @@
 use std::collections::HashMap;
 
-use crate::twenty_first::amount::u32s::U32s;
-use crate::twenty_first::shared_math::b_field_element::BFieldElement;
-use crate::twenty_first::shared_math::bfield_codec::BFieldCodec;
 use itertools::Itertools;
 use num::One;
 use rand::RngCore;
-use triton_vm::triton_asm;
+use triton_vm::prelude::*;
+use twenty_first::amount::u32s::U32s;
 
 use crate::arithmetic::u32::safeadd::Safeadd;
 use crate::arithmetic::u32::safesub::Safesub;
@@ -18,9 +16,10 @@ use crate::arithmetic::u64::shift_left_u64::ShiftLeftU64;
 use crate::arithmetic::u64::shift_right_u64::ShiftRightU64;
 use crate::arithmetic::u64::sub_u64::SubU64;
 use crate::data_type::DataType;
+use crate::empty_stack;
 use crate::library::Library;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::{empty_stack, ExecutionState};
+use crate::ExecutionState;
 
 #[derive(Clone, Debug)]
 pub struct DivModU64;
@@ -39,11 +38,11 @@ impl DeprecatedSnippet for DivModU64 {
         ]
     }
 
-    fn input_types(&self) -> Vec<crate::data_type::DataType> {
+    fn input_types(&self) -> Vec<DataType> {
         vec![DataType::U64, DataType::U64]
     }
 
-    fn output_types(&self) -> Vec<crate::data_type::DataType> {
+    fn output_types(&self) -> Vec<DataType> {
         vec![DataType::U64, DataType::U64]
     }
 
@@ -530,7 +529,6 @@ mod tests {
     use num::BigUint;
 
     use crate::empty_stack;
-
     use crate::test_helpers::{
         test_rust_equivalence_given_input_values_deprecated,
         test_rust_equivalence_multiple_deprecated,
@@ -661,8 +659,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::snippet_bencher::bench_and_write;
+
+    use super::*;
 
     #[test]
     fn div_mod_u64_benchmark() {

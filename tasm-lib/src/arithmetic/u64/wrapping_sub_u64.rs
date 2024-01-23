@@ -1,6 +1,7 @@
-use crate::twenty_first::shared_math::bfield_codec::BFieldCodec;
-use rand::{rngs::StdRng, RngCore, SeedableRng};
-use triton_vm::{triton_asm, BFieldElement};
+use rand::rngs::StdRng;
+use rand::RngCore;
+use rand::SeedableRng;
+use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
 use crate::empty_stack;
@@ -25,10 +26,7 @@ impl BasicSnippet for WrappingSub {
         "tasm_arithmetic_u64_wrapping_sub".to_string()
     }
 
-    fn code(
-        &self,
-        _library: &mut crate::library::Library,
-    ) -> Vec<triton_vm::instruction::LabelledInstruction> {
+    fn code(&self, _library: &mut crate::library::Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
         const TWO_POW_32: u64 = 1 << 32;
 
@@ -88,7 +86,7 @@ impl BasicSnippet for WrappingSub {
 }
 
 impl Closure for WrappingSub {
-    fn rust_shadow(&self, stack: &mut Vec<triton_vm::BFieldElement>) {
+    fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
         let rhs_lo: u32 = stack.pop().unwrap().try_into().unwrap();
         let rhs_hi: u32 = stack.pop().unwrap().try_into().unwrap();
         let lhs_lo: u32 = stack.pop().unwrap().try_into().unwrap();
@@ -105,7 +103,7 @@ impl Closure for WrappingSub {
         &self,
         seed: [u8; 32],
         bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
-    ) -> Vec<triton_vm::BFieldElement> {
+    ) -> Vec<BFieldElement> {
         let (lhs, rhs) = match bench_case {
             Some(crate::snippet_bencher::BenchmarkCase::CommonCase) => {
                 (1u64 << 63, (1u64 << 63) - 1)
@@ -123,13 +121,11 @@ impl Closure for WrappingSub {
 
 #[cfg(test)]
 mod tests {
-    use triton_vm::NonDeterminism;
+    use crate::test_helpers::test_rust_equivalence_given_complete_state;
+    use crate::traits::closure::ShadowedClosure;
+    use crate::traits::rust_shadow::RustShadow;
 
     use super::*;
-    use crate::traits::rust_shadow::RustShadow;
-    use crate::{
-        test_helpers::test_rust_equivalence_given_complete_state, traits::closure::ShadowedClosure,
-    };
 
     #[test]
     fn u64_wrapping_sub_pbt() {
@@ -184,9 +180,10 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
+
+    use super::*;
 
     #[test]
     fn u64_wrapping_sub_bench() {

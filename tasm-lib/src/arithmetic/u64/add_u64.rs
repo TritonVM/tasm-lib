@@ -1,20 +1,25 @@
 use std::collections::HashMap;
 
-use crate::twenty_first::amount::u32s::U32s;
-use crate::twenty_first::shared_math::b_field_element::BFieldElement;
-use crate::twenty_first::shared_math::bfield_codec::BFieldCodec;
 use num::Zero;
 use rand::Rng;
+use triton_vm::prelude::*;
+use twenty_first::amount::u32s::U32s;
 
 use crate::data_type::DataType;
+use crate::empty_stack;
 use crate::library::Library;
+use crate::push_encodable;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::{empty_stack, push_encodable, ExecutionState};
+use crate::ExecutionState;
 
 #[derive(Clone, Debug)]
 pub struct AddU64;
 
 impl DeprecatedSnippet for AddU64 {
+    fn entrypoint_name(&self) -> String {
+        "tasm_arithmetic_u64_add".to_string()
+    }
+
     fn input_field_names(&self) -> Vec<String> {
         vec![
             "rhs_hi".to_string(),
@@ -24,16 +29,61 @@ impl DeprecatedSnippet for AddU64 {
         ]
     }
 
-    fn output_field_names(&self) -> Vec<String> {
-        vec!["(lhs + rhs)_hi".to_string(), "(lhs + rhs)_lo".to_string()]
-    }
-
     fn input_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::U64, DataType::U64]
     }
 
+    fn output_field_names(&self) -> Vec<String> {
+        vec!["(lhs + rhs)_hi".to_string(), "(lhs + rhs)_lo".to_string()]
+    }
+
     fn output_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::U64]
+    }
+
+    fn stack_diff(&self) -> isize {
+        -2
+    }
+
+    /// Four top elements of stack are assumed to be valid u32s. So to have
+    /// a value that's less than 2^32.
+    fn function_code(&self, _library: &mut Library) -> String {
+        let entrypoint = self.entrypoint_name();
+
+        format!(
+            "
+            // BEFORE: _ rhs_hi rhs_lo lhs_hi lhs_lo
+            // AFTER:  _ sum_hi sum_lo
+            {entrypoint}:
+                swap 1 swap 2
+                // _ rhs_hi lhs_hi lhs_lo rhs_lo
+
+                add
+                split
+                // _ rhs_hi lhs_hi carry sum_lo
+
+                swap 3
+                // _ sum_lo lhs_hi carry rhs_hi
+
+                add
+                add
+                // _ sum_lo (lhs_hi+rhs_hi+carry)
+
+                split
+                // _ sum_lo overflow sum_hi
+
+                swap 1
+                push 0
+                eq
+                assert
+                // _ sum_lo sum_hi
+
+                swap 1
+                // _ sum_hi sum_lo
+
+                return
+            "
+        )
     }
 
     fn crash_conditions(&self) -> Vec<String> {
@@ -70,52 +120,28 @@ impl DeprecatedSnippet for AddU64 {
         states
     }
 
-    fn stack_diff(&self) -> isize {
-        -2
+    fn common_case_input_state(&self) -> ExecutionState {
+        ExecutionState::with_stack(
+            [
+                empty_stack(),
+                vec![BFieldElement::zero(), BFieldElement::new(1 << 31)],
+                vec![BFieldElement::zero(), BFieldElement::new(1 << 30)],
+            ]
+            .concat(),
+        )
     }
 
-    fn entrypoint_name(&self) -> String {
-        "tasm_arithmetic_u64_add".to_string()
-    }
-
-    /// Four top elements of stack are assumed to be valid u32s. So to have
-    /// a value that's less than 2^32.
-    fn function_code(&self, _library: &mut Library) -> String {
-        let entrypoint = self.entrypoint_name();
-
-        format!(
-            "
-            // BEFORE: _ rhs_hi rhs_lo lhs_hi lhs_lo
-            // AFTER: _ sum_hi sum_lo
-            {entrypoint}:
-                swap 1 swap 2
-                // _ rhs_hi lhs_hi lhs_lo rhs_lo
-
-                add
-                split
-                // _ rhs_hi lhs_hi carry sum_lo
-
-                swap 3
-                // _ sum_lo lhs_hi carry rhs_hi
-
-                add
-                add
-                // _ sum_lo (lhs_hi+rhs_hi+carry)
-
-                split
-                // _ sum_lo overflow sum_hi
-
-                swap 1
-                push 0
-                eq
-                assert
-                // _ sum_lo sum_hi
-
-                swap 1
-                // _ sum_hi sum_lo
-
-                return
-            "
+    fn worst_case_input_state(&self) -> ExecutionState {
+        ExecutionState::with_stack(
+            [
+                empty_stack(),
+                vec![BFieldElement::new(1 << 31), BFieldElement::new(1 << 31)],
+                vec![
+                    BFieldElement::new(1 << 30),
+                    BFieldElement::new((1 << 31) + 10),
+                ],
+            ]
+            .concat(),
         )
     }
 
@@ -140,31 +166,6 @@ impl DeprecatedSnippet for AddU64 {
         for _ in 0..res.len() {
             stack.push(res.pop().unwrap());
         }
-    }
-
-    fn common_case_input_state(&self) -> ExecutionState {
-        ExecutionState::with_stack(
-            [
-                empty_stack(),
-                vec![BFieldElement::zero(), BFieldElement::new(1 << 31)],
-                vec![BFieldElement::zero(), BFieldElement::new(1 << 30)],
-            ]
-            .concat(),
-        )
-    }
-
-    fn worst_case_input_state(&self) -> ExecutionState {
-        ExecutionState::with_stack(
-            [
-                empty_stack(),
-                vec![BFieldElement::new(1 << 31), BFieldElement::new(1 << 31)],
-                vec![
-                    BFieldElement::new(1 << 30),
-                    BFieldElement::new((1 << 31) + 10),
-                ],
-            ]
-            .concat(),
-        )
     }
 }
 

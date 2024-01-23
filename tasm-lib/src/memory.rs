@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
-use crate::twenty_first::shared_math::bfield_codec::BFieldCodec;
-use triton_vm::{instruction::LabelledInstruction, triton_asm, triton_instr, BFieldElement};
+use triton_vm::prelude::*;
 
 pub mod dyn_malloc;
 pub mod dyn_malloc_const_size;

@@ -1,16 +1,18 @@
 use std::collections::HashMap;
 
-use crate::twenty_first::shared_math::b_field_element::BFieldElement;
 use itertools::Itertools;
 use num::One;
-use rand::{random, thread_rng, Rng};
-use triton_vm::triton_asm;
+use rand::random;
+use rand::thread_rng;
+use rand::Rng;
+use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
+use crate::empty_stack;
 use crate::library::Library;
 use crate::rust_shadowing_helper_functions::unsafe_list::untyped_unsafe_insert_random_list;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::{empty_stack, ExecutionState};
+use crate::ExecutionState;
 
 #[derive(Clone, Debug)]
 pub struct UnsafePop {
@@ -63,8 +65,8 @@ impl DeprecatedSnippet for UnsafePop {
             format!("push {element_size}\n mul\n")
         };
         triton_asm!(
-            // Before: _ *list
-            // After: _ elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}
+            // BEFORE: _ *list
+            // AFTER:  _ elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}
             {entry_point}:
                 read_mem 1
                 push 1
@@ -175,10 +177,10 @@ fn prepare_state(data_type: &DataType) -> ExecutionState {
 
 #[cfg(test)]
 mod tests {
-    use crate::twenty_first::shared_math::b_field_element::BFieldElement;
     use itertools::Itertools;
     use num::Zero;
     use rand::{thread_rng, RngCore};
+    use BFieldElement;
 
     use crate::empty_stack;
     use crate::test_helpers::{
@@ -313,8 +315,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::snippet_bencher::bench_and_write;
+
+    use super::*;
 
     #[test]
     fn unsafe_pop_benchmark() {

@@ -1,17 +1,15 @@
 use std::collections::HashMap;
 
-use crate::twenty_first::shared_math::b_field_element::BFieldElement;
 use itertools::Itertools;
-use triton_vm::{triton_asm, NonDeterminism};
+use triton_vm::prelude::*;
+
+use crate::data_type::DataType;
+use crate::empty_stack;
+use crate::rust_shadowing_helper_functions;
+use crate::traits::deprecated_snippet::DeprecatedSnippet;
+use crate::ExecutionState;
 
 use super::ListType;
-use crate::data_type::DataType;
-use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::{
-    empty_stack,
-    rust_shadowing_helper_functions::{self},
-    ExecutionState,
-};
 
 /// Generates a (safe or unsafe) list containing all integers between the minimum (inclusive lower
 /// bound) and the supremum (exclusive upper bound).
@@ -228,11 +226,12 @@ impl DeprecatedSnippet for Range {
 
 #[cfg(test)]
 mod tests {
+    use triton_vm::error::{InstructionError, VMError};
+
     use crate::{
         execute_with_execution_state_deprecated,
         test_helpers::test_rust_equivalence_multiple_deprecated,
     };
-    use triton_vm::error::{InstructionError, VMError};
 
     use super::*;
 

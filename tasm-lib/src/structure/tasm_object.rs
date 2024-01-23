@@ -1,10 +1,9 @@
 use std::collections::HashMap;
 use std::error::Error;
 
-use crate::twenty_first::shared_math::bfield_codec::BFieldCodec;
 use itertools::Itertools;
 use num_traits::Zero;
-use triton_vm::{instruction::LabelledInstruction, BFieldElement};
+use triton_vm::prelude::*;
 
 pub use derive_tasm_object::TasmObject;
 
@@ -217,24 +216,25 @@ impl<'a> Iterator for MemoryIter<'a> {
 
 #[cfg(test)]
 mod test {
-    use std::collections::HashMap;
-
-    use crate::twenty_first::shared_math::{
-        bfield_codec::BFieldCodec, x_field_element::XFieldElement,
-    };
-    use arbitrary::{Arbitrary, Unstructured};
-    use itertools::Itertools;
+    use arbitrary::Arbitrary;
+    use arbitrary::Unstructured;
+    use rand::rngs::StdRng;
+    use rand::thread_rng;
+    use rand::Rng;
     use rand::RngCore;
-    use rand::{rngs::StdRng, thread_rng, Rng, SeedableRng};
-    use triton_vm::instruction::LabelledInstruction;
-    use triton_vm::{proof_item::FriResponse, triton_asm, BFieldElement, NonDeterminism};
+    use rand::SeedableRng;
+    use triton_vm::proof_item::FriResponse;
 
     use crate::data_type::DataType;
+    use crate::empty_stack;
+    use crate::execute_with_terminal_state;
+    use crate::library::Library;
+    use crate::list::unsafeimplu32::length::Length;
     use crate::memory::encode_to_memory;
-    use crate::{
-        empty_stack, execute_with_terminal_state, library::Library,
-        list::unsafeimplu32::length::Length, structure::tasm_object::TasmObject, Digest,
-    };
+    use crate::structure::tasm_object::TasmObject;
+    use crate::Digest;
+
+    use super::*;
 
     #[test]
     fn test_load_and_decode_from_memory() {
@@ -290,8 +290,6 @@ mod test {
 
     /// Test derivation of field getters and manual derivations of the `field!` macro
     mod derive_tests {
-        use triton_vm::Program;
-
         use super::*;
 
         #[test]

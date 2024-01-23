@@ -1,21 +1,26 @@
 use std::collections::HashMap;
 
-use crate::twenty_first::amount::u32s::U32s;
-use crate::twenty_first::shared_math::b_field_element::BFieldElement;
 use itertools::Itertools;
 use num::Zero;
 use rand::RngCore;
-use triton_vm::triton_asm;
+use triton_vm::prelude::*;
+use twenty_first::amount::u32s::U32s;
 
 use crate::data_type::DataType;
+use crate::empty_stack;
 use crate::library::Library;
+use crate::push_encodable;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::{empty_stack, push_encodable, ExecutionState};
+use crate::ExecutionState;
 
 #[derive(Clone, Debug)]
 pub struct EqU64;
 
 impl DeprecatedSnippet for EqU64 {
+    fn entrypoint_name(&self) -> String {
+        "tasm_arithmetic_u64_eq".to_string()
+    }
+
     fn input_field_names(&self) -> Vec<String> {
         vec![
             "rhs_hi".to_string(),
@@ -25,47 +30,27 @@ impl DeprecatedSnippet for EqU64 {
         ]
     }
 
+    fn input_types(&self) -> Vec<DataType> {
+        vec![DataType::U64, DataType::U64]
+    }
+
     fn output_field_names(&self) -> Vec<String> {
         vec!["rhs_hi == lhs_hi && rhs_lo == rhs_lo".to_string()]
     }
 
-    fn input_types(&self) -> Vec<crate::data_type::DataType> {
-        vec![DataType::U64, DataType::U64]
-    }
-
-    fn output_types(&self) -> Vec<crate::data_type::DataType> {
+    fn output_types(&self) -> Vec<DataType> {
         vec![DataType::Bool]
-    }
-
-    fn crash_conditions(&self) -> Vec<String> {
-        vec![]
-    }
-
-    fn gen_input_states(&self) -> Vec<ExecutionState> {
-        let mut rng = rand::thread_rng();
-        let rhs = U32s::<2>::try_from(rng.next_u64()).unwrap();
-        let lhs = U32s::<2>::try_from(rng.next_u64()).unwrap();
-
-        let mut stack = empty_stack();
-        push_encodable(&mut stack, &rhs);
-        push_encodable(&mut stack, &lhs);
-
-        vec![ExecutionState::with_stack(stack)]
     }
 
     fn stack_diff(&self) -> isize {
         -3
     }
 
-    fn entrypoint_name(&self) -> String {
-        "tasm_arithmetic_u64_eq".to_string()
-    }
-
     fn function_code(&self, _library: &mut Library) -> String {
         let entrypoint = self.entrypoint_name();
         triton_asm!(
-            // Before: _ hi_r lo_r hi_l lo_l
-            // After: _ (r == l)
+            // BEFORE: _ hi_r lo_r hi_l lo_l
+            // AFTER:  _ (r == l)
             {entrypoint}:
                 swap 3
                 // _ lo_l lo_r hi_l hi_r
@@ -88,22 +73,20 @@ impl DeprecatedSnippet for EqU64 {
         .join("\n")
     }
 
-    fn rust_shadowing(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        _std_in: Vec<BFieldElement>,
-        _secret_in: Vec<BFieldElement>,
-        _memory: &mut HashMap<BFieldElement, BFieldElement>,
-    ) {
-        let a_lo: u32 = stack.pop().unwrap().try_into().unwrap();
-        let a_hi: u32 = stack.pop().unwrap().try_into().unwrap();
-        let a = U32s::<2>::new([a_lo, a_hi]);
+    fn crash_conditions(&self) -> Vec<String> {
+        vec![]
+    }
 
-        let b_lo: u32 = stack.pop().unwrap().try_into().unwrap();
-        let b_hi: u32 = stack.pop().unwrap().try_into().unwrap();
-        let b = U32s::<2>::new([b_lo, b_hi]);
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
+        let mut rng = rand::thread_rng();
+        let rhs = U32s::<2>::try_from(rng.next_u64()).unwrap();
+        let lhs = U32s::<2>::try_from(rng.next_u64()).unwrap();
 
-        stack.push(BFieldElement::new((a == b) as u64));
+        let mut stack = empty_stack();
+        push_encodable(&mut stack, &rhs);
+        push_encodable(&mut stack, &lhs);
+
+        vec![ExecutionState::with_stack(stack)]
     }
 
     fn common_case_input_state(&self) -> ExecutionState {
@@ -130,17 +113,34 @@ impl DeprecatedSnippet for EqU64 {
             .concat(),
         )
     }
+
+    fn rust_shadowing(
+        &self,
+        stack: &mut Vec<BFieldElement>,
+        _std_in: Vec<BFieldElement>,
+        _secret_in: Vec<BFieldElement>,
+        _memory: &mut HashMap<BFieldElement, BFieldElement>,
+    ) {
+        let a_lo: u32 = stack.pop().unwrap().try_into().unwrap();
+        let a_hi: u32 = stack.pop().unwrap().try_into().unwrap();
+        let a = U32s::<2>::new([a_lo, a_hi]);
+
+        let b_lo: u32 = stack.pop().unwrap().try_into().unwrap();
+        let b_hi: u32 = stack.pop().unwrap().try_into().unwrap();
+        let b = U32s::<2>::new([b_lo, b_hi]);
+
+        stack.push(BFieldElement::new((a == b) as u64));
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::twenty_first::shared_math::b_field_element::BFieldElement;
-    use crate::twenty_first::shared_math::bfield_codec::BFieldCodec;
     use num_traits::One;
     use rand::RngCore;
+    use twenty_first::shared_math::bfield_codec::BFieldCodec;
+    use BFieldElement;
 
     use crate::empty_stack;
-
     use crate::test_helpers::{
         test_rust_equivalence_given_input_values_deprecated,
         test_rust_equivalence_multiple_deprecated,
@@ -288,8 +288,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::snippet_bencher::bench_and_write;
+
+    use super::*;
 
     #[test]
     fn eq_u64_benchmark() {

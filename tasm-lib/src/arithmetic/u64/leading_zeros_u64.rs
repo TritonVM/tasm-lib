@@ -1,9 +1,12 @@
-use crate::twenty_first::shared_math::b_field_element::BFieldElement;
-use rand::{thread_rng, RngCore};
+use rand::thread_rng;
+use rand::RngCore;
+use triton_vm::prelude::BFieldElement;
 
+use crate::arithmetic::u32::leadingzeros::Leadingzeros;
 use crate::data_type::DataType;
+use crate::empty_stack;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::{arithmetic::u32::leadingzeros::Leadingzeros, empty_stack, ExecutionState};
+use crate::ExecutionState;
 
 #[derive(Clone, Debug)]
 pub struct LeadingZerosU64;
@@ -17,15 +20,15 @@ impl DeprecatedSnippet for LeadingZerosU64 {
         vec!["value_hi".to_string(), "value_lo".to_string()]
     }
 
+    fn input_types(&self) -> Vec<DataType> {
+        vec![DataType::U64]
+    }
+
     fn output_field_names(&self) -> Vec<String> {
         vec!["leading zeros in value".to_string()]
     }
 
-    fn input_types(&self) -> Vec<crate::data_type::DataType> {
-        vec![DataType::U64]
-    }
-
-    fn output_types(&self) -> Vec<crate::data_type::DataType> {
+    fn output_types(&self) -> Vec<DataType> {
         vec![DataType::U32]
     }
 
@@ -76,7 +79,7 @@ impl DeprecatedSnippet for LeadingZerosU64 {
         vec!["Inputs are not u32".to_owned()]
     }
 
-    fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
         let mut rng = thread_rng();
         let mut ret = vec![];
         for _ in 0..10 {
@@ -86,15 +89,20 @@ impl DeprecatedSnippet for LeadingZerosU64 {
         ret
     }
 
+    fn common_case_input_state(&self) -> ExecutionState {
+        prepare_state(1 << 31)
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState {
+        prepare_state(1 << 62)
+    }
+
     fn rust_shadowing(
         &self,
-        stack: &mut Vec<crate::twenty_first::shared_math::b_field_element::BFieldElement>,
-        _std_in: Vec<crate::twenty_first::shared_math::b_field_element::BFieldElement>,
-        _secret_in: Vec<crate::twenty_first::shared_math::b_field_element::BFieldElement>,
-        _memory: &mut std::collections::HashMap<
-            crate::twenty_first::shared_math::b_field_element::BFieldElement,
-            crate::twenty_first::shared_math::b_field_element::BFieldElement,
-        >,
+        stack: &mut Vec<BFieldElement>,
+        _std_in: Vec<BFieldElement>,
+        _secret_in: Vec<BFieldElement>,
+        _memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
     ) {
         let value_lo: u32 = stack.pop().unwrap().try_into().unwrap();
         let value_hi: u32 = stack.pop().unwrap().try_into().unwrap();
@@ -102,14 +110,6 @@ impl DeprecatedSnippet for LeadingZerosU64 {
 
         let value = value.leading_zeros();
         stack.push(BFieldElement::new(value as u64));
-    }
-
-    fn common_case_input_state(&self) -> crate::ExecutionState {
-        prepare_state(1 << 31)
-    }
-
-    fn worst_case_input_state(&self) -> crate::ExecutionState {
-        prepare_state(1 << 62)
     }
 }
 
@@ -186,8 +186,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::snippet_bencher::bench_and_write;
+
+    use super::*;
 
     #[test]
     fn u32_leading_zeros_benchmark() {

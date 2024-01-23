@@ -1,22 +1,24 @@
 use std::collections::HashMap;
 
-use crate::twenty_first::shared_math::other::random_elements;
-use crate::twenty_first::shared_math::x_field_element::{XFieldElement, EXTENSION_DEGREE};
-use crate::twenty_first::{
-    shared_math::b_field_element::BFieldElement, util_types::algebraic_hasher::AlgebraicHasher,
-};
 use num::Zero;
 use num_traits::One;
 use rand::random;
-use triton_vm::{Digest, NonDeterminism};
+use triton_vm::prelude::*;
+use twenty_first::shared_math::other::random_elements;
+use twenty_first::shared_math::x_field_element::EXTENSION_DEGREE;
+use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
 use crate::data_type::DataType;
+use crate::empty_stack;
 use crate::hashing::hash_varlen::HashVarlen;
+use crate::library::Library;
 use crate::list::safeimplu32::length::Length as SafeLength;
 use crate::list::unsafeimplu32::length::Length as UnsafeLength;
+use crate::rust_shadowing_helper_functions;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::{empty_stack, rust_shadowing_helper_functions, DIGEST_LENGTH};
-use crate::{library::Library, ExecutionState, VmHasher};
+use crate::ExecutionState;
+use crate::VmHasher;
+use crate::DIGEST_LENGTH;
 
 use super::ListType;
 
@@ -239,19 +241,19 @@ impl DeprecatedSnippet for MultisetEquality {
         vec!["list_a".to_string(), "list_b".to_string()]
     }
 
-    fn input_types(&self) -> Vec<crate::data_type::DataType> {
+    fn input_types(&self) -> Vec<DataType> {
         vec![
             DataType::List(Box::new(DataType::Digest)),
             DataType::List(Box::new(DataType::Digest)),
         ]
     }
 
-    fn output_types(&self) -> Vec<crate::data_type::DataType> {
-        vec![DataType::Bool]
-    }
-
     fn output_field_names(&self) -> Vec<String> {
         vec!["multisets_are_equal".to_string()]
+    }
+
+    fn output_types(&self) -> Vec<DataType> {
+        vec![DataType::Bool]
     }
 
     fn stack_diff(&self) -> isize {
@@ -357,7 +359,7 @@ impl DeprecatedSnippet for MultisetEquality {
                 return
 
             // BEFORE: _ list len d2 d1 d0
-            // AFTER: _ list len d2 d1 d0 rp2 rp1 rp0
+            // AFTER:  _ list len d2 d1 d0 rp2 rp1 rp0
             {entrypoint}_running_product:
                 // initialize loop
                 dup 4 // _ list len d2 d1 d0 list
@@ -465,10 +467,10 @@ impl DeprecatedSnippet for MultisetEquality {
 
     fn rust_shadowing(
         &self,
-        stack: &mut Vec<triton_vm::BFieldElement>,
-        _std_in: Vec<triton_vm::BFieldElement>,
-        _secret_in: Vec<triton_vm::BFieldElement>,
-        memory: &mut std::collections::HashMap<triton_vm::BFieldElement, triton_vm::BFieldElement>,
+        stack: &mut Vec<BFieldElement>,
+        _std_in: Vec<BFieldElement>,
+        _secret_in: Vec<BFieldElement>,
+        memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
         let list_b_pointer = stack.pop().unwrap();
         let list_a_pointer = stack.pop().unwrap();

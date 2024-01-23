@@ -1,15 +1,17 @@
-use rand::{random, rngs::StdRng, Rng, SeedableRng};
-use triton_vm::{triton_asm, BFieldElement, Digest, NonDeterminism};
+use rand::random;
+use rand::rngs::StdRng;
+use rand::Rng;
+use rand::SeedableRng;
+use triton_vm::prelude::*;
 
+use crate::data_type::DataType;
+use crate::empty_stack;
+use crate::library::Library;
+use crate::push_encodable;
+use crate::snippet_bencher::BenchmarkCase;
+use crate::traits::basic_snippet::BasicSnippet;
+use crate::traits::procedure::Procedure;
 use crate::traits::procedure::ProcedureInitialState;
-use crate::{
-    data_type::DataType,
-    empty_stack,
-    library::Library,
-    push_encodable,
-    snippet_bencher::BenchmarkCase,
-    traits::{basic_snippet::BasicSnippet, procedure::Procedure},
-};
 
 /// `divine_sibling` but for index of type `u64`
 #[derive(Clone, Debug)]
@@ -35,7 +37,7 @@ impl BasicSnippet for DivineSiblingU64Index {
         "tasm_hashing_divine_sibling_u64_index".to_owned()
     }
 
-    fn code(&self, _library: &mut Library) -> Vec<triton_vm::instruction::LabelledInstruction> {
+    fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {
         const TWO_POW_31: u32 = 1u32 << 31;
         let entrypoint = self.entrypoint();
 
@@ -158,10 +160,13 @@ impl DivineSiblingU64Index {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::traits::rust_shadow::RustShadow;
-    use crate::{traits::procedure::ShadowedProcedure, DIGEST_LENGTH};
     use itertools::Itertools;
+
+    use crate::traits::procedure::ShadowedProcedure;
+    use crate::traits::rust_shadow::RustShadow;
+    use crate::DIGEST_LENGTH;
+
+    use super::*;
 
     #[test]
     fn prop() {

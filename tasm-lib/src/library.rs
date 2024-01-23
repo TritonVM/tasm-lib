@@ -1,12 +1,12 @@
 use std::collections::HashMap;
 
-use crate::twenty_first::shared_math::b_field_element::BFieldElement;
 use itertools::Itertools;
 use num::One;
-use triton_vm::instruction::LabelledInstruction;
+use triton_vm::prelude::*;
 
+use crate::data_type::DataType;
+use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::{data_type::DataType, traits::basic_snippet::BasicSnippet};
 
 // Ensure that static allocator does not overwrite the address
 // dedicated to the dynamic allocator. Dynamic allocator is,
@@ -116,18 +116,35 @@ impl Library {
 
 #[derive(Debug)]
 pub struct DummyTestSnippetA;
+
 #[derive(Debug)]
 pub struct DummyTestSnippetB;
 #[derive(Debug)]
 pub struct DummyTestSnippetC;
 
 impl DeprecatedSnippet for DummyTestSnippetA {
-    fn stack_diff(&self) -> isize {
-        3
-    }
-
     fn entrypoint_name(&self) -> String {
         "tasm_a_dummy_test_value".to_string()
+    }
+
+    fn input_field_names(&self) -> Vec<String> {
+        vec![]
+    }
+
+    fn input_types(&self) -> Vec<DataType> {
+        vec![]
+    }
+
+    fn output_field_names(&self) -> Vec<String> {
+        vec!["1".to_string(), "1".to_string(), "1".to_string()]
+    }
+
+    fn output_types(&self) -> Vec<DataType> {
+        vec![DataType::Bfe, DataType::Bfe, DataType::Bfe]
+    }
+
+    fn stack_diff(&self) -> isize {
+        3
     }
 
     fn function_code(&self, library: &mut Library) -> String {
@@ -145,6 +162,22 @@ impl DeprecatedSnippet for DummyTestSnippetA {
         )
     }
 
+    fn crash_conditions(&self) -> Vec<String> {
+        vec![]
+    }
+
+    fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
+        vec![]
+    }
+
+    fn common_case_input_state(&self) -> crate::ExecutionState {
+        todo!()
+    }
+
+    fn worst_case_input_state(&self) -> crate::ExecutionState {
+        todo!()
+    }
+
     fn rust_shadowing(
         &self,
         stack: &mut Vec<BFieldElement>,
@@ -156,47 +189,31 @@ impl DeprecatedSnippet for DummyTestSnippetA {
         stack.push(BFieldElement::one());
         stack.push(BFieldElement::one());
     }
+}
+
+impl DeprecatedSnippet for DummyTestSnippetB {
+    fn entrypoint_name(&self) -> String {
+        "tasm_b_dummy_test_value".to_string()
+    }
 
     fn input_field_names(&self) -> Vec<String> {
         vec![]
     }
 
+    fn input_types(&self) -> Vec<DataType> {
+        vec![]
+    }
+
     fn output_field_names(&self) -> Vec<String> {
-        vec!["1".to_string(), "1".to_string(), "1".to_string()]
+        vec!["1".to_string(), "1".to_string()]
     }
 
-    fn crash_conditions(&self) -> Vec<String> {
-        vec![]
+    fn output_types(&self) -> Vec<DataType> {
+        vec![DataType::Bfe, DataType::Bfe]
     }
 
-    fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
-        vec![]
-    }
-
-    fn input_types(&self) -> Vec<crate::data_type::DataType> {
-        vec![]
-    }
-
-    fn output_types(&self) -> Vec<crate::data_type::DataType> {
-        vec![DataType::Bfe, DataType::Bfe, DataType::Bfe]
-    }
-
-    fn common_case_input_state(&self) -> crate::ExecutionState {
-        todo!()
-    }
-
-    fn worst_case_input_state(&self) -> crate::ExecutionState {
-        todo!()
-    }
-}
-
-impl DeprecatedSnippet for DummyTestSnippetB {
     fn stack_diff(&self) -> isize {
         2
-    }
-
-    fn entrypoint_name(&self) -> String {
-        "tasm_b_dummy_test_value".to_string()
     }
 
     fn function_code(&self, library: &mut Library) -> String {
@@ -213,33 +230,6 @@ impl DeprecatedSnippet for DummyTestSnippetB {
         )
     }
 
-    fn rust_shadowing(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        _std_in: Vec<BFieldElement>,
-        _secret_in: Vec<BFieldElement>,
-        _memory: &mut HashMap<BFieldElement, BFieldElement>,
-    ) {
-        stack.push(BFieldElement::one());
-        stack.push(BFieldElement::one());
-    }
-
-    fn input_field_names(&self) -> Vec<String> {
-        vec![]
-    }
-
-    fn output_field_names(&self) -> Vec<String> {
-        vec!["1".to_string(), "1".to_string()]
-    }
-
-    fn input_types(&self) -> Vec<crate::data_type::DataType> {
-        vec![]
-    }
-
-    fn output_types(&self) -> Vec<crate::data_type::DataType> {
-        vec![DataType::Bfe, DataType::Bfe]
-    }
-
     fn crash_conditions(&self) -> Vec<String> {
         vec![]
     }
@@ -255,15 +245,42 @@ impl DeprecatedSnippet for DummyTestSnippetB {
     fn worst_case_input_state(&self) -> crate::ExecutionState {
         todo!()
     }
+
+    fn rust_shadowing(
+        &self,
+        stack: &mut Vec<BFieldElement>,
+        _std_in: Vec<BFieldElement>,
+        _secret_in: Vec<BFieldElement>,
+        _memory: &mut HashMap<BFieldElement, BFieldElement>,
+    ) {
+        stack.push(BFieldElement::one());
+        stack.push(BFieldElement::one());
+    }
 }
 
 impl DeprecatedSnippet for DummyTestSnippetC {
-    fn stack_diff(&self) -> isize {
-        1
-    }
-
     fn entrypoint_name(&self) -> String {
         "tasm_c_dummy_test_value".to_string()
+    }
+
+    fn input_field_names(&self) -> Vec<String> {
+        vec![]
+    }
+
+    fn input_types(&self) -> Vec<DataType> {
+        vec![]
+    }
+
+    fn output_field_names(&self) -> Vec<String> {
+        vec!["1".to_string()]
+    }
+
+    fn output_types(&self) -> Vec<DataType> {
+        vec![DataType::Bfe]
+    }
+
+    fn stack_diff(&self) -> isize {
+        1
     }
 
     fn function_code(&self, _library: &mut Library) -> String {
@@ -278,32 +295,6 @@ impl DeprecatedSnippet for DummyTestSnippetC {
         )
     }
 
-    fn rust_shadowing(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        _std_in: Vec<BFieldElement>,
-        _secret_in: Vec<BFieldElement>,
-        _memory: &mut HashMap<BFieldElement, BFieldElement>,
-    ) {
-        stack.push(BFieldElement::one())
-    }
-
-    fn input_field_names(&self) -> Vec<String> {
-        vec![]
-    }
-
-    fn output_field_names(&self) -> Vec<String> {
-        vec!["1".to_string()]
-    }
-
-    fn input_types(&self) -> Vec<crate::data_type::DataType> {
-        vec![]
-    }
-
-    fn output_types(&self) -> Vec<crate::data_type::DataType> {
-        vec![DataType::Bfe]
-    }
-
     fn crash_conditions(&self) -> Vec<String> {
         vec![]
     }
@@ -318,6 +309,16 @@ impl DeprecatedSnippet for DummyTestSnippetC {
 
     fn worst_case_input_state(&self) -> crate::ExecutionState {
         todo!()
+    }
+
+    fn rust_shadowing(
+        &self,
+        stack: &mut Vec<BFieldElement>,
+        _std_in: Vec<BFieldElement>,
+        _secret_in: Vec<BFieldElement>,
+        _memory: &mut HashMap<BFieldElement, BFieldElement>,
+    ) {
+        stack.push(BFieldElement::one())
     }
 }
 

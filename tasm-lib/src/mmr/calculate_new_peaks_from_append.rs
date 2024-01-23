@@ -1,19 +1,19 @@
-use crate::twenty_first::shared_math::b_field_element::BFieldElement;
-use crate::twenty_first::shared_math::other::random_elements;
-use crate::twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
-use crate::twenty_first::util_types::mmr;
-use crate::twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
-use crate::twenty_first::util_types::mmr::mmr_trait::Mmr;
+use std::collections::HashMap;
+
 use itertools::Itertools;
 use num::One;
 use rand::random;
-use std::collections::HashMap;
-use triton_vm::triton_asm;
+use triton_vm::prelude::*;
+use twenty_first::shared_math::other::random_elements;
+use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
+use twenty_first::util_types::mmr;
+use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
+use twenty_first::util_types::mmr::mmr_trait::Mmr;
 
-use super::MAX_MMR_HEIGHT;
 use crate::arithmetic::u64::incr_u64::IncrU64;
 use crate::arithmetic::u64::index_of_last_nonzero_bit::IndexOfLastNonZeroBitU64;
 use crate::data_type::DataType;
+use crate::empty_stack;
 use crate::library::Library;
 use crate::list::safeimplu32::new::SafeNew;
 use crate::list::safeimplu32::pop::SafePop;
@@ -25,10 +25,13 @@ use crate::list::unsafeimplu32::push::UnsafePush;
 use crate::list::unsafeimplu32::set_length::UnsafeSetLength;
 use crate::list::ListType;
 use crate::memory::dyn_malloc;
+use crate::rust_shadowing_helper_functions;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::{
-    empty_stack, rust_shadowing_helper_functions, Digest, ExecutionState, VmHasher, DIGEST_LENGTH,
-};
+use crate::ExecutionState;
+use crate::VmHasher;
+use crate::DIGEST_LENGTH;
+
+use super::MAX_MMR_HEIGHT;
 
 #[derive(Clone, Debug)]
 pub struct CalculateNewPeaksFromAppend {
@@ -105,6 +108,13 @@ impl CalculateNewPeaksFromAppend {
 }
 
 impl DeprecatedSnippet for CalculateNewPeaksFromAppend {
+    fn entrypoint_name(&self) -> String {
+        format!(
+            "tasm_mmr_calculate_new_peaks_from_append_{}",
+            self.list_type
+        )
+    }
+
     fn input_field_names(&self) -> Vec<String> {
         vec![
             "old_leaf_count_hi".to_string(),
@@ -118,11 +128,7 @@ impl DeprecatedSnippet for CalculateNewPeaksFromAppend {
         ]
     }
 
-    fn output_field_names(&self) -> Vec<String> {
-        vec!["*new_peaks".to_string(), "*auth_path".to_string()]
-    }
-
-    fn input_types(&self) -> Vec<crate::data_type::DataType> {
+    fn input_types(&self) -> Vec<DataType> {
         vec![
             DataType::U64,
             DataType::List(Box::new(DataType::Digest)),
@@ -130,42 +136,21 @@ impl DeprecatedSnippet for CalculateNewPeaksFromAppend {
         ]
     }
 
-    fn output_types(&self) -> Vec<crate::data_type::DataType> {
+    fn output_field_names(&self) -> Vec<String> {
+        vec!["*new_peaks".to_string(), "*auth_path".to_string()]
+    }
+
+    fn output_types(&self) -> Vec<DataType> {
         vec![
             DataType::List(Box::new(DataType::Digest)),
             DataType::List(Box::new(DataType::Digest)),
         ]
     }
 
-    fn crash_conditions(&self) -> Vec<String> {
-        vec!["Snippet arguments are not a valid MMR accumulator".to_string()]
-    }
-
-    fn gen_input_states(&self) -> Vec<ExecutionState> {
-        let mut ret = vec![];
-        for mmr_size in [
-            0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 100, 1000,
-        ] {
-            let digests: Vec<Digest> = random_elements(mmr_size);
-            let new_leaf: Digest = random();
-            let mmra = MmrAccumulator::new(digests);
-            ret.push(self.prepare_state_with_mmra(mmra, new_leaf));
-        }
-
-        ret
-    }
-
     fn stack_diff(&self) -> isize {
         // pops: `old_leaf_count` (u32s<2>); old_peaks (*list); [digests (new_leaf)]
         // pushes: *list (new peaks); *auth_path_of_newly_added_leaf
         -6
-    }
-
-    fn entrypoint_name(&self) -> String {
-        format!(
-            "tasm_mmr_calculate_new_peaks_from_append_{}",
-            self.list_type
-        )
     }
 
     fn function_code(&self, library: &mut Library) -> String {
@@ -209,7 +194,7 @@ impl DeprecatedSnippet for CalculateNewPeaksFromAppend {
 
         triton_asm!(
                 // BEFORE: _ old_leaf_count_hi old_leaf_count_lo *peaks [digests (new_leaf)]
-                // AFTER: _ *new_peaks *auth_path
+                // AFTER:  _ *new_peaks *auth_path
                 {entrypoint}:
                     dup 5 dup 5 dup 5 dup 5 dup 5 dup 5
                     call {push}
@@ -291,6 +276,38 @@ impl DeprecatedSnippet for CalculateNewPeaksFromAppend {
         .join("\n")
     }
 
+    fn crash_conditions(&self) -> Vec<String> {
+        vec!["Snippet arguments are not a valid MMR accumulator".to_string()]
+    }
+
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
+        let mut ret = vec![];
+        for mmr_size in [
+            0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 100, 1000,
+        ] {
+            let digests: Vec<Digest> = random_elements(mmr_size);
+            let new_leaf: Digest = random();
+            let mmra = MmrAccumulator::new(digests);
+            ret.push(self.prepare_state_with_mmra(mmra, new_leaf));
+        }
+
+        ret
+    }
+
+    fn common_case_input_state(&self) -> ExecutionState {
+        let peaks: Vec<Digest> = random_elements(31);
+        let new_leaf: Digest = random();
+        let mmra = MmrAccumulator::init(peaks, (1 << 31) - 1);
+        self.prepare_state_with_mmra(mmra, new_leaf)
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState {
+        let peaks: Vec<Digest> = random_elements(62);
+        let new_leaf: Digest = random();
+        let mmra = MmrAccumulator::init(peaks, (1 << 62) - 1);
+        self.prepare_state_with_mmra(mmra, new_leaf)
+    }
+
     fn rust_shadowing(
         &self,
         stack: &mut Vec<BFieldElement>,
@@ -299,7 +316,7 @@ impl DeprecatedSnippet for CalculateNewPeaksFromAppend {
         memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
         // BEFORE: _ old_leaf_count_hi old_leaf_count_lo *peaks [digests (new_leaf)]
-        // AFTER: _ *new_peaks *auth_path
+        // AFTER:  _ *new_peaks *auth_path
         let new_leaf: Digest = Digest::new([
             stack.pop().unwrap(),
             stack.pop().unwrap(),
@@ -389,31 +406,17 @@ impl DeprecatedSnippet for CalculateNewPeaksFromAppend {
         stack.push(peaks_pointer);
         stack.push(auth_path_pointer); // Can this be done in a more dynamic way?
     }
-
-    fn common_case_input_state(&self) -> ExecutionState {
-        let peaks: Vec<Digest> = random_elements(31);
-        let new_leaf: Digest = random();
-        let mmra = MmrAccumulator::init(peaks, (1 << 31) - 1);
-        self.prepare_state_with_mmra(mmra, new_leaf)
-    }
-
-    fn worst_case_input_state(&self) -> ExecutionState {
-        let peaks: Vec<Digest> = random_elements(62);
-        let new_leaf: Digest = random();
-        let mmra = MmrAccumulator::init(peaks, (1 << 62) - 1);
-        self.prepare_state_with_mmra(mmra, new_leaf)
-    }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::twenty_first::shared_math::b_field_element::BFieldElement;
-    use crate::twenty_first::shared_math::other::random_elements;
-    use crate::twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
-    use crate::twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
-    use crate::twenty_first::util_types::mmr::mmr_membership_proof::MmrMembershipProof;
-    use crate::twenty_first::util_types::mmr::mmr_trait::Mmr;
     use num::Zero;
+    use twenty_first::shared_math::other::random_elements;
+    use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
+    use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
+    use twenty_first::util_types::mmr::mmr_membership_proof::MmrMembershipProof;
+    use twenty_first::util_types::mmr::mmr_trait::Mmr;
+    use BFieldElement;
 
     use crate::test_helpers::{
         test_rust_equivalence_given_input_values_deprecated,
@@ -609,7 +612,7 @@ mod tests {
         let peaks_pointer = BFieldElement::one();
 
         // BEFORE: _ old_leaf_count_hi old_leaf_count_lo *peaks [digests (new_leaf)]
-        // AFTER: _ *new_peaks *auth_path
+        // AFTER:  _ *new_peaks *auth_path
         let mut init_stack = empty_stack();
         let old_leaf_count: u64 = start_mmr.count_leaves();
         init_stack.push(BFieldElement::new(old_leaf_count >> 32));
@@ -721,8 +724,10 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::snippet_bencher::bench_and_write;
+
+    use super::*;
+
     #[test]
     fn calculate_new_peaks_from_append_unsafe_lists_benchmark() {
         bench_and_write(CalculateNewPeaksFromAppend {

@@ -1,9 +1,12 @@
-use crate::twenty_first::{amount::u32s::U32s, shared_math::b_field_element::BFieldElement};
 use num::Zero;
+use triton_vm::prelude::*;
+use twenty_first::amount::u32s::U32s;
 
 use crate::data_type::DataType;
+use crate::empty_stack;
+use crate::push_encodable;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::{empty_stack, push_encodable, ExecutionState};
+use crate::ExecutionState;
 
 #[derive(Clone, Debug)]
 pub struct DoublePow2U64;
@@ -17,16 +20,16 @@ impl DeprecatedSnippet for DoublePow2U64 {
         vec!["value_hi".to_string(), "value_lo".to_string()]
     }
 
-    fn input_types(&self) -> Vec<crate::data_type::DataType> {
-        vec![DataType::U64]
-    }
-
-    fn output_types(&self) -> Vec<crate::data_type::DataType> {
+    fn input_types(&self) -> Vec<DataType> {
         vec![DataType::U64]
     }
 
     fn output_field_names(&self) -> Vec<String> {
         vec!["(value * 2)_hi".to_string(), "(value * 2)_lo".to_string()]
+    }
+
+    fn output_types(&self) -> Vec<DataType> {
+        vec![DataType::U64]
     }
 
     fn stack_diff(&self) -> isize {
@@ -80,7 +83,7 @@ impl DeprecatedSnippet for DoublePow2U64 {
         vec![]
     }
 
-    fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
         let mut ret = vec![];
         for n in 0..63 {
             let n: U32s<2> = (1u64 >> n).try_into().unwrap();
@@ -117,13 +120,10 @@ impl DeprecatedSnippet for DoublePow2U64 {
 
     fn rust_shadowing(
         &self,
-        stack: &mut Vec<crate::twenty_first::shared_math::b_field_element::BFieldElement>,
-        _std_in: Vec<crate::twenty_first::shared_math::b_field_element::BFieldElement>,
-        _secret_in: Vec<crate::twenty_first::shared_math::b_field_element::BFieldElement>,
-        _memory: &mut std::collections::HashMap<
-            crate::twenty_first::shared_math::b_field_element::BFieldElement,
-            crate::twenty_first::shared_math::b_field_element::BFieldElement,
-        >,
+        stack: &mut Vec<BFieldElement>,
+        _std_in: Vec<BFieldElement>,
+        _secret_in: Vec<BFieldElement>,
+        _memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
     ) {
         let value_lo: u32 = stack.pop().unwrap().try_into().unwrap();
         let value_hi: u32 = stack.pop().unwrap().try_into().unwrap();
@@ -137,7 +137,6 @@ impl DeprecatedSnippet for DoublePow2U64 {
 
 #[cfg(test)]
 mod tests {
-
     use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     use super::*;
@@ -150,8 +149,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::snippet_bencher::bench_and_write;
+
+    use super::*;
 
     #[test]
     fn double_pow2_u64_benchmark() {

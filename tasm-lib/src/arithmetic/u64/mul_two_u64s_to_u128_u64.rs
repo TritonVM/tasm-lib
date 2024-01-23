@@ -1,9 +1,13 @@
-use crate::twenty_first::{amount::u32s::U32s, shared_math::b_field_element::BFieldElement};
-use rand::{thread_rng, RngCore};
+use rand::thread_rng;
+use rand::RngCore;
+use triton_vm::prelude::*;
+use twenty_first::amount::u32s::U32s;
 
 use crate::data_type::DataType;
+use crate::empty_stack;
+use crate::push_encodable;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::{empty_stack, push_encodable, ExecutionState};
+use crate::ExecutionState;
 
 #[derive(Clone, Debug)]
 pub struct MulTwoU64sToU128;
@@ -48,7 +52,7 @@ impl DeprecatedSnippet for MulTwoU64sToU128 {
         format!(
             "
                 // BEFORE: _ rhs_hi rhs_lo lhs_hi lhs_lo
-                // AFTER: _ prod_3 prod_2 prod_1 prod_0
+                // AFTER:  _ prod_3 prod_2 prod_1 prod_0
                 {entrypoint}:
                     // 0.
                     // let a = lhs_lo * rhs_lo
@@ -141,7 +145,7 @@ impl DeprecatedSnippet for MulTwoU64sToU128 {
         vec![]
     }
 
-    fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
         let mut ret: Vec<ExecutionState> = vec![
             prepare_state(1, 1),
             prepare_state(1, 2),
@@ -247,8 +251,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::snippet_bencher::bench_and_write;
+
+    use super::*;
 
     #[test]
     fn safe_u64_benchmark() {

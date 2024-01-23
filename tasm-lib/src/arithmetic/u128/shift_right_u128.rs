@@ -1,10 +1,13 @@
-use crate::twenty_first::amount::u32s::U32s;
 use rand::random;
-use triton_vm::BFieldElement;
+use triton_vm::prelude::*;
+use twenty_first::amount::u32s::U32s;
 
 use crate::data_type::DataType;
+use crate::empty_stack;
+use crate::library::Library;
+use crate::push_encodable;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::{empty_stack, library::Library, push_encodable, ExecutionState};
+use crate::ExecutionState;
 
 pub struct ShiftRightU128;
 
@@ -23,12 +26,8 @@ impl DeprecatedSnippet for ShiftRightU128 {
         ]
     }
 
-    fn input_types(&self) -> Vec<crate::data_type::DataType> {
+    fn input_types(&self) -> Vec<DataType> {
         vec![DataType::U128, DataType::U32]
-    }
-
-    fn output_types(&self) -> Vec<crate::data_type::DataType> {
-        vec![DataType::U128]
     }
 
     fn output_field_names(&self) -> Vec<String> {
@@ -38,6 +37,10 @@ impl DeprecatedSnippet for ShiftRightU128 {
             "shifted_value_1".to_string(),
             "shifted_value_0".to_string(),
         ]
+    }
+
+    fn output_types(&self) -> Vec<DataType> {
+        vec![DataType::U128]
     }
 
     fn stack_diff(&self) -> isize {
@@ -161,7 +164,7 @@ impl DeprecatedSnippet for ShiftRightU128 {
         vec!["Shift amount is greater than 128".to_string()]
     }
 
-    fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
         let mut ret = vec![];
         for i in 0..128 {
             ret.push(prepare_state(random::<u128>(), i));
@@ -213,12 +216,8 @@ fn prepare_state(value: u128, shift_amount: u32) -> ExecutionState {
 mod tests {
     use std::collections::HashMap;
 
-    use crate::twenty_first::shared_math::bfield_codec::BFieldCodec;
-
-    use crate::test_helpers::{
-        test_rust_equivalence_given_input_values_deprecated,
-        test_rust_equivalence_multiple_deprecated,
-    };
+    use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
+    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     use super::*;
 
@@ -287,8 +286,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::snippet_bencher::bench_and_write;
+
+    use super::*;
 
     #[test]
     fn benchmark() {

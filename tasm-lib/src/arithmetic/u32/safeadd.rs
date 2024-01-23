@@ -1,9 +1,11 @@
-use crate::twenty_first::shared_math::b_field_element::BFieldElement;
-use rand::{thread_rng, Rng};
+use rand::thread_rng;
+use rand::Rng;
+use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
+use crate::empty_stack;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::{empty_stack, ExecutionState};
+use crate::ExecutionState;
 
 #[derive(Clone, Debug)]
 pub struct Safeadd;
@@ -17,15 +19,15 @@ impl DeprecatedSnippet for Safeadd {
         vec!["rhs".to_string(), "lhs".to_string()]
     }
 
+    fn input_types(&self) -> Vec<DataType> {
+        vec![DataType::U32, DataType::U32]
+    }
+
     fn output_field_names(&self) -> Vec<String> {
         vec!["lhs + rhs".to_string()]
     }
 
-    fn input_types(&self) -> Vec<crate::data_type::DataType> {
-        vec![DataType::U32, DataType::U32]
-    }
-
-    fn output_types(&self) -> Vec<crate::data_type::DataType> {
+    fn output_types(&self) -> Vec<DataType> {
         vec![DataType::U32]
     }
 
@@ -54,7 +56,7 @@ impl DeprecatedSnippet for Safeadd {
         vec!["u32 overflow".to_string()]
     }
 
-    fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
         let mut ret: Vec<ExecutionState> = vec![];
         for _ in 0..10 {
             let mut stack = empty_stack();
@@ -68,23 +70,6 @@ impl DeprecatedSnippet for Safeadd {
         }
 
         ret
-    }
-
-    fn rust_shadowing(
-        &self,
-        stack: &mut Vec<crate::twenty_first::shared_math::b_field_element::BFieldElement>,
-        _std_in: Vec<crate::twenty_first::shared_math::b_field_element::BFieldElement>,
-        _secret_in: Vec<crate::twenty_first::shared_math::b_field_element::BFieldElement>,
-        _memory: &mut std::collections::HashMap<
-            crate::twenty_first::shared_math::b_field_element::BFieldElement,
-            crate::twenty_first::shared_math::b_field_element::BFieldElement,
-        >,
-    ) {
-        let lhs: u32 = stack.pop().unwrap().try_into().unwrap();
-        let rhs: u32 = stack.pop().unwrap().try_into().unwrap();
-
-        let sum = lhs + rhs;
-        stack.push(BFieldElement::new(sum as u64));
     }
 
     fn common_case_input_state(&self) -> ExecutionState {
@@ -108,6 +93,20 @@ impl DeprecatedSnippet for Safeadd {
             ]
             .concat(),
         )
+    }
+
+    fn rust_shadowing(
+        &self,
+        stack: &mut Vec<BFieldElement>,
+        _std_in: Vec<BFieldElement>,
+        _secret_in: Vec<BFieldElement>,
+        _memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
+    ) {
+        let lhs: u32 = stack.pop().unwrap().try_into().unwrap();
+        let rhs: u32 = stack.pop().unwrap().try_into().unwrap();
+
+        let sum = lhs + rhs;
+        stack.push(BFieldElement::new(sum as u64));
     }
 }
 
@@ -168,8 +167,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::snippet_bencher::bench_and_write;
+
+    use super::*;
 
     #[test]
     fn safe_add_benchmark() {

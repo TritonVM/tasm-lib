@@ -1,34 +1,40 @@
-use crate::twenty_first::shared_math::b_field_element::BFieldElement;
-use crate::twenty_first::shared_math::other::random_elements;
-use crate::twenty_first::test_shared::mmr::get_rustyleveldb_ammr_from_digests;
-use crate::twenty_first::util_types::mmr::archival_mmr::ArchivalMmr;
-use crate::twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
-use crate::twenty_first::util_types::mmr::mmr_membership_proof::MmrMembershipProof;
-use crate::twenty_first::util_types::mmr::mmr_trait::Mmr;
-use crate::twenty_first::util_types::mmr::shared_basic::leaf_index_to_mt_index_and_peak_index;
-use num::One;
-use rand::rngs::StdRng;
-use rand::{random, Rng, SeedableRng};
 use std::collections::HashMap;
-use triton_vm::instruction::LabelledInstruction;
-use triton_vm::{triton_asm, NonDeterminism};
 
-use super::leaf_index_to_mt_index_and_peak_index::MmrLeafIndexToMtIndexAndPeakIndex;
-use super::MAX_MMR_HEIGHT;
+use num::One;
+use rand::random;
+use rand::rngs::StdRng;
+use rand::Rng;
+use rand::SeedableRng;
+use triton_vm::prelude::*;
+use twenty_first::shared_math::other::random_elements;
+use twenty_first::test_shared::mmr::get_rustyleveldb_ammr_from_digests;
+use twenty_first::util_types::mmr::archival_mmr::ArchivalMmr;
+use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
+use twenty_first::util_types::mmr::mmr_membership_proof::MmrMembershipProof;
+use twenty_first::util_types::mmr::mmr_trait::Mmr;
+use twenty_first::util_types::mmr::shared_basic::leaf_index_to_mt_index_and_peak_index;
+
 use crate::arithmetic::u64::eq_u64::EqU64;
 use crate::data_type::DataType;
+use crate::empty_stack;
 use crate::hashing::divine_sibling_u64_index::DivineSiblingU64Index;
 use crate::hashing::eq_digest::EqDigest;
 use crate::library::Library;
 use crate::list::safeimplu32::get::SafeGet;
 use crate::list::unsafeimplu32::get::UnsafeGet;
 use crate::list::ListType;
+use crate::rust_shadowing_helper_functions;
 use crate::snippet_bencher::BenchmarkCase;
 use crate::traits::basic_snippet::BasicSnippet;
-use crate::traits::procedure::{Procedure, ProcedureInitialState};
-use crate::{
-    empty_stack, rust_shadowing_helper_functions, Digest, ExecutionState, VmHasher, DIGEST_LENGTH,
-};
+use crate::traits::procedure::Procedure;
+use crate::traits::procedure::ProcedureInitialState;
+use crate::Digest;
+use crate::ExecutionState;
+use crate::VmHasher;
+use crate::DIGEST_LENGTH;
+
+use super::leaf_index_to_mt_index_and_peak_index::MmrLeafIndexToMtIndexAndPeakIndex;
+use super::MAX_MMR_HEIGHT;
 
 #[derive(Clone, Debug)]
 pub struct MmrVerifyLeafMembershipFromSecretIn {
@@ -37,7 +43,7 @@ pub struct MmrVerifyLeafMembershipFromSecretIn {
 
 impl MmrVerifyLeafMembershipFromSecretIn {
     // BEFORE: _ *peaks [digest (leaf_digest)] leaf_count_hi leaf_count_lo
-    // AFTER: _ *auth_path leaf_index_hi leaf_index_lo
+    // AFTER:  _ *auth_path leaf_index_hi leaf_index_lo
     fn prepare_state_for_tests(
         &self,
         size: usize,
@@ -167,10 +173,6 @@ impl MmrVerifyLeafMembershipFromSecretIn {
 }
 
 impl BasicSnippet for MmrVerifyLeafMembershipFromSecretIn {
-    fn entrypoint(&self) -> String {
-        format!("tasm_mmr_verify_from_secret_in_{}", self.list_type)
-    }
-
     fn inputs(&self) -> Vec<(DataType, String)> {
         vec![
             (
@@ -187,6 +189,10 @@ impl BasicSnippet for MmrVerifyLeafMembershipFromSecretIn {
             (DataType::U64, "leaf_index".to_owned()),
             (DataType::Bool, "validation_result".to_owned()),
         ]
+    }
+
+    fn entrypoint(&self) -> String {
+        format!("tasm_mmr_verify_from_secret_in_{}", self.list_type)
     }
 
     // Already on stack (can be secret of public input): _ *peaks leaf_count_hi leaf_count_lo [digest (leaf)]
@@ -364,9 +370,10 @@ impl Procedure for MmrVerifyLeafMembershipFromSecretIn {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
+
+    use super::*;
 
     #[test]
     fn verify_from_secret_in_benchmark_unsafe_lists() {
@@ -387,17 +394,14 @@ mod benches {
 
 #[cfg(test)]
 mod tests {
-    use crate::traits::rust_shadow::RustShadow;
-    use crate::twenty_first::{
-        test_shared::mmr::get_empty_rustyleveldb_ammr,
-        util_types::algebraic_hasher::AlgebraicHasher,
-    };
-    use crate::{
-        mmr::MAX_MMR_HEIGHT, test_helpers::test_rust_equivalence_given_complete_state,
-        traits::procedure::ShadowedProcedure, VmHasher,
-    };
     use rand::thread_rng;
-    use triton_vm::NonDeterminism;
+    use twenty_first::test_shared::mmr::get_empty_rustyleveldb_ammr;
+    use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
+
+    use crate::mmr::MAX_MMR_HEIGHT;
+    use crate::test_helpers::test_rust_equivalence_given_complete_state;
+    use crate::traits::procedure::ShadowedProcedure;
+    use crate::traits::rust_shadow::RustShadow;
 
     use super::*;
 

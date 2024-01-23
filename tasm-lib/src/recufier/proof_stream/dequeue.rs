@@ -1,22 +1,26 @@
-use std::{cmp::max, collections::HashMap};
+use std::cmp::max;
+use std::collections::HashMap;
 
-use crate::twenty_first::shared_math::bfield_codec::BFieldCodec;
-use crate::twenty_first::shared_math::x_field_element::XFieldElement;
 use num_traits::Zero;
+use rand::rngs::StdRng;
 use rand::Rng;
-use rand::{rngs::StdRng, RngCore, SeedableRng};
+use rand::RngCore;
+use rand::SeedableRng;
+use triton_vm::prelude::*;
 use triton_vm::proof_item::ProofItem;
-use triton_vm::{instruction::LabelledInstruction, triton_asm, BFieldElement, NonDeterminism};
 
 use crate::data_type::DataType;
+use crate::empty_stack;
+use crate::field;
+use crate::field_with_size;
 use crate::hashing::absorb::Absorb;
+use crate::library::Library;
+use crate::snippet_bencher::BenchmarkCase;
 use crate::structure::tasm_object::TasmObject;
 use crate::traits::basic_snippet::BasicSnippet;
-use crate::traits::procedure::{Procedure, ProcedureInitialState};
+use crate::traits::procedure::Procedure;
+use crate::traits::procedure::ProcedureInitialState;
 use crate::VmHasherState;
-use crate::{
-    empty_stack, field, field_with_size, library::Library, snippet_bencher::BenchmarkCase,
-};
 
 use super::vm_proof_stream::VmProofStream;
 
@@ -243,29 +247,36 @@ impl Procedure for Dequeue {
 
 #[cfg(test)]
 mod test {
-    use std::{cell::RefCell, collections::HashMap, rc::Rc};
+    use std::cell::RefCell;
+    use std::collections::HashMap;
+    use std::rc::Rc;
 
-    use crate::twenty_first::shared_math::bfield_codec::BFieldCodec;
-    use crate::twenty_first::shared_math::x_field_element::XFieldElement;
-    use crate::twenty_first::util_types::algebraic_hasher::Domain;
+    use rand::rngs::StdRng;
     use rand::thread_rng;
-    use rand::{rngs::StdRng, Rng, RngCore, SeedableRng};
-    use triton_vm::proof_item::{FriResponse, ProofItem};
+    use rand::Rng;
+    use rand::RngCore;
+    use rand::SeedableRng;
+    use triton_vm::proof_item::FriResponse;
+    use triton_vm::proof_item::ProofItem;
     use triton_vm::vm::VMState;
-    use triton_vm::{triton_asm, BFieldElement, NonDeterminism, Program, PublicInput};
+    use twenty_first::util_types::algebraic_hasher::Domain;
 
+    use crate::empty_stack;
+    use crate::execute_with_terminal_state;
     use crate::library::Library;
+    use crate::linker::link_for_isolated_run;
     use crate::memory::encode_to_memory;
     use crate::structure::tasm_object::decode_from_memory_with_size;
-    use crate::traits::procedure::{Procedure, ProcedureInitialState, ShadowedProcedure};
+    use crate::test_helpers::test_rust_equivalence_given_complete_state;
+    use crate::traits::procedure::Procedure;
+    use crate::traits::procedure::ProcedureInitialState;
+    use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
-    use crate::{
-        empty_stack, execute_with_terminal_state, linker::link_for_isolated_run,
-        test_helpers::test_rust_equivalence_given_complete_state, VmHasherState,
-    };
-    use crate::{Digest, DIGEST_LENGTH};
+    use crate::Digest;
+    use crate::VmHasherState;
+    use crate::DIGEST_LENGTH;
 
-    use super::{Dequeue, VmProofStream};
+    use super::*;
 
     #[test]
     fn dequeue_from_proof_stream_with_up_to_3_items() {

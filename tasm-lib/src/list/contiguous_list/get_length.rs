@@ -1,13 +1,19 @@
 use std::collections::HashMap;
 
-use crate::twenty_first::shared_math::{bfield_codec::BFieldCodec, other::random_elements};
 use itertools::Itertools;
-use rand::{random, rngs::StdRng, thread_rng, Rng, SeedableRng};
-use triton_vm::BFieldElement;
+use rand::random;
+use rand::rngs::StdRng;
+use rand::thread_rng;
+use rand::Rng;
+use rand::SeedableRng;
+use triton_vm::prelude::*;
+use twenty_first::shared_math::other::random_elements;
 
 use crate::data_type::DataType;
+use crate::empty_stack;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::{empty_stack, Digest, ExecutionState};
+use crate::Digest;
+use crate::ExecutionState;
 
 /// Returns the number of elements of a contiguous list.
 pub struct GetLength;
@@ -79,16 +85,16 @@ impl DeprecatedSnippet for GetLength {
         vec!["*contiguous_list".to_string()]
     }
 
-    fn input_types(&self) -> Vec<crate::data_type::DataType> {
+    fn input_types(&self) -> Vec<DataType> {
         vec![DataType::VoidPointer]
-    }
-
-    fn output_types(&self) -> Vec<crate::data_type::DataType> {
-        vec![DataType::U32]
     }
 
     fn output_field_names(&self) -> Vec<String> {
         vec!["length".to_string()]
+    }
+
+    fn output_types(&self) -> Vec<DataType> {
+        vec![DataType::U32]
     }
 
     fn stack_diff(&self) -> isize {
@@ -101,7 +107,7 @@ impl DeprecatedSnippet for GetLength {
         format!(
             "
         // BEFORE: _ *contiguous_list
-        // AFTER: _ length
+        // AFTER:  _ length
         {entrypoint}:
             read_mem 1
             pop 1
@@ -114,21 +120,21 @@ impl DeprecatedSnippet for GetLength {
         vec!["memory blob lives outside of first 2^32 words".to_string()]
     }
 
-    fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
         let mut rng = thread_rng();
         (0..25)
             .map(|_| Self::pseudorandom_input_state(rng.gen(), rng.gen_range(0..4)))
             .collect_vec()
     }
 
-    fn common_case_input_state(&self) -> crate::ExecutionState {
+    fn common_case_input_state(&self) -> ExecutionState {
         let mut seed = [0u8; 32];
         seed[0] = 0x01;
         seed[1] = 0xfd;
         Self::pseudorandom_input_state(seed, 2)
     }
 
-    fn worst_case_input_state(&self) -> crate::ExecutionState {
+    fn worst_case_input_state(&self) -> ExecutionState {
         let mut seed = [0u8; 32];
         seed[0] = 0x01;
         seed[1] = 0xfd;
@@ -137,10 +143,10 @@ impl DeprecatedSnippet for GetLength {
 
     fn rust_shadowing(
         &self,
-        stack: &mut Vec<triton_vm::BFieldElement>,
-        _std_in: Vec<triton_vm::BFieldElement>,
-        _secret_in: Vec<triton_vm::BFieldElement>,
-        memory: &mut std::collections::HashMap<triton_vm::BFieldElement, triton_vm::BFieldElement>,
+        stack: &mut Vec<BFieldElement>,
+        _std_in: Vec<BFieldElement>,
+        _secret_in: Vec<BFieldElement>,
+        memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
         let address = stack.pop().unwrap();
         let size = memory

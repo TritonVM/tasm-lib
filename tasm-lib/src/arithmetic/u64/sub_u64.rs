@@ -1,20 +1,26 @@
-use crate::twenty_first::shared_math::bfield_codec::BFieldCodec;
-use num::{One, Zero};
-use rand::Rng;
 use std::collections::HashMap;
 
-use crate::twenty_first::amount::u32s::U32s;
-use crate::twenty_first::shared_math::b_field_element::BFieldElement;
+use num::One;
+use num::Zero;
+use rand::Rng;
+use triton_vm::prelude::*;
+use twenty_first::amount::u32s::U32s;
 
 use crate::data_type::DataType;
+use crate::empty_stack;
 use crate::library::Library;
+use crate::push_encodable;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::{empty_stack, push_encodable, ExecutionState};
+use crate::ExecutionState;
 
 #[derive(Clone, Debug)]
 pub struct SubU64;
 
 impl DeprecatedSnippet for SubU64 {
+    fn entrypoint_name(&self) -> String {
+        "tasm_arithmetic_u64_sub".to_string()
+    }
+
     fn input_field_names(&self) -> Vec<String> {
         vec![
             "rhs_hi".to_string(),
@@ -24,16 +30,76 @@ impl DeprecatedSnippet for SubU64 {
         ]
     }
 
+    fn input_types(&self) -> Vec<DataType> {
+        vec![DataType::U64, DataType::U64]
+    }
+
     fn output_field_names(&self) -> Vec<String> {
         vec!["(lhs - rhs)_hi".to_string(), "(lhs - rhs)_lo".to_string()]
     }
 
-    fn input_types(&self) -> Vec<crate::data_type::DataType> {
-        vec![DataType::U64, DataType::U64]
+    fn output_types(&self) -> Vec<DataType> {
+        vec![DataType::U64]
     }
 
-    fn output_types(&self) -> Vec<crate::data_type::DataType> {
-        vec![DataType::U64]
+    fn stack_diff(&self) -> isize {
+        -2
+    }
+
+    /// Four top elements of stack are assumed to be valid u32s. So to have
+    /// a value that's less than 2^32.
+    fn function_code(&self, _library: &mut Library) -> String {
+        let entrypoint = self.entrypoint_name();
+        const TWO_POW_32: u64 = 1 << 32;
+
+        format!(
+            "
+            // BEFORE: _ rhs_hi rhs_lo lhs_hi lhs_lo
+            // AFTER:  _ hi_diff lo_diff
+            {entrypoint}:
+                swap 1 swap 2
+                // _ rhs_hi lhs_hi lhs_lo rhs_lo
+
+                push -1
+                mul
+                add
+                // _ rhs_hi lhs_hi (lhs_lo - rhs_lo)
+
+                push {TWO_POW_32}
+                add
+
+                split
+                // _ rhs_hi lhs_hi !carry diff_lo
+
+                swap 3 swap 1
+                // _ diff_lo lhs_hi rhs_hi !carry
+
+                push 0
+                eq
+                // _ diff_lo lhs_hi rhs_hi carry
+
+                add
+                // _ diff_lo lhs_hi rhs_hi'
+
+                push -1
+                mul
+                add
+                // _ diff_lo (lhs_hi - rhs_hi')
+
+                split
+                // _ diff_lo overflow diff_hi
+
+                swap 1
+                push 0
+                eq
+                assert
+                // _ diff_lo diff_hi
+
+                swap 1
+
+                return
+            "
+        )
     }
 
     fn crash_conditions(&self) -> Vec<String> {
@@ -95,67 +161,27 @@ impl DeprecatedSnippet for SubU64 {
         ret
     }
 
-    fn stack_diff(&self) -> isize {
-        -2
+    fn common_case_input_state(&self) -> ExecutionState {
+        // no carry
+        ExecutionState::with_stack(
+            [
+                empty_stack(),
+                vec![BFieldElement::zero(), BFieldElement::new((1 << 10) - 1)],
+                vec![BFieldElement::zero(), BFieldElement::new((1 << 31) - 1)],
+            ]
+            .concat(),
+        )
     }
 
-    fn entrypoint_name(&self) -> String {
-        "tasm_arithmetic_u64_sub".to_string()
-    }
-
-    /// Four top elements of stack are assumed to be valid u32s. So to have
-    /// a value that's less than 2^32.
-    fn function_code(&self, _library: &mut Library) -> String {
-        let entrypoint = self.entrypoint_name();
-        const TWO_POW_32: u64 = 1 << 32;
-
-        format!(
-            "
-            // Before: _ rhs_hi rhs_lo lhs_hi lhs_lo
-            // After: _ hi_diff lo_diff
-            {entrypoint}:
-                swap 1 swap 2
-                // _ rhs_hi lhs_hi lhs_lo rhs_lo
-
-                push -1
-                mul
-                add
-                // _ rhs_hi lhs_hi (lhs_lo - rhs_lo)
-
-                push {TWO_POW_32}
-                add
-
-                split
-                // _ rhs_hi lhs_hi !carry diff_lo
-
-                swap 3 swap 1
-                // _ diff_lo lhs_hi rhs_hi !carry
-
-                push 0
-                eq
-                // _ diff_lo lhs_hi rhs_hi carry
-
-                add
-                // _ diff_lo lhs_hi rhs_hi'
-
-                push -1
-                mul
-                add
-                // _ diff_lo (lhs_hi - rhs_hi')
-
-                split
-                // _ diff_lo overflow diff_hi
-
-                swap 1
-                push 0
-                eq
-                assert
-                // _ diff_lo diff_hi
-
-                swap 1
-
-                return
-            "
+    fn worst_case_input_state(&self) -> ExecutionState {
+        // with carry
+        ExecutionState::with_stack(
+            [
+                empty_stack(),
+                vec![BFieldElement::one(), BFieldElement::new((1 << 31) - 1)],
+                vec![BFieldElement::new(100), BFieldElement::new((1 << 10) - 1)],
+            ]
+            .concat(),
         )
     }
 
@@ -181,40 +207,15 @@ impl DeprecatedSnippet for SubU64 {
             stack.push(res.pop().unwrap());
         }
     }
-
-    fn common_case_input_state(&self) -> ExecutionState {
-        // no carry
-        ExecutionState::with_stack(
-            [
-                empty_stack(),
-                vec![BFieldElement::zero(), BFieldElement::new((1 << 10) - 1)],
-                vec![BFieldElement::zero(), BFieldElement::new((1 << 31) - 1)],
-            ]
-            .concat(),
-        )
-    }
-
-    fn worst_case_input_state(&self) -> ExecutionState {
-        // with carry
-        ExecutionState::with_stack(
-            [
-                empty_stack(),
-                vec![BFieldElement::one(), BFieldElement::new((1 << 31) - 1)],
-                vec![BFieldElement::new(100), BFieldElement::new((1 << 10) - 1)],
-            ]
-            .concat(),
-        )
-    }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::twenty_first::shared_math::b_field_element::BFieldElement;
     use num::{BigUint, Zero};
     use rand::Rng;
+    use BFieldElement;
 
     use crate::empty_stack;
-
     use crate::test_helpers::{
         test_rust_equivalence_given_input_values_deprecated,
         test_rust_equivalence_multiple_deprecated,
@@ -345,8 +346,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::snippet_bencher::bench_and_write;
+
+    use super::*;
 
     #[test]
     fn sub_u64_benchmark() {

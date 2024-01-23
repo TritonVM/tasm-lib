@@ -1,31 +1,59 @@
 use std::collections::HashMap;
 
-use crate::twenty_first::shared_math::b_field_element::BFieldElement;
 use rand::RngCore;
+use triton_vm::prelude::BFieldElement;
 
 use crate::data_type::DataType;
+use crate::empty_stack;
 use crate::library::Library;
+use crate::push_encodable;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::{empty_stack, push_encodable, ExecutionState};
+use crate::ExecutionState;
 
 #[derive(Clone, Debug)]
 pub struct Isodd;
 
 impl DeprecatedSnippet for Isodd {
+    fn entrypoint_name(&self) -> String {
+        "tasm_arithmetic_u32_isodd".to_string()
+    }
+
     fn input_field_names(&self) -> Vec<String> {
         vec!["value".to_string()]
+    }
+
+    fn input_types(&self) -> Vec<DataType> {
+        vec![DataType::U32]
     }
 
     fn output_field_names(&self) -> Vec<String> {
         vec!["value % 2".to_string()]
     }
 
-    fn input_types(&self) -> Vec<crate::data_type::DataType> {
-        vec![DataType::U32]
+    fn output_types(&self) -> Vec<DataType> {
+        vec![DataType::Bool]
     }
 
-    fn output_types(&self) -> Vec<crate::data_type::DataType> {
-        vec![DataType::Bool]
+    fn stack_diff(&self) -> isize {
+        // pops a u32 from the stack and pushes a bool
+        0
+    }
+
+    fn function_code(&self, _library: &mut Library) -> String {
+        let entrypoint = self.entrypoint_name();
+        format!(
+            "
+                // BEFORE: _ value
+                // AFTER:  _ (value % 2)
+                {entrypoint}:
+                    push 2
+                    swap 1
+                    div_mod
+                    swap 1
+                    pop 1
+                    return
+                "
+        )
     }
 
     fn crash_conditions(&self) -> Vec<String> {
@@ -49,29 +77,13 @@ impl DeprecatedSnippet for Isodd {
         ]
     }
 
-    fn stack_diff(&self) -> isize {
-        // pops a u32 from the stack and pushes a bool
-        0
+    fn common_case_input_state(&self) -> ExecutionState {
+        ExecutionState::with_stack([empty_stack(), vec![BFieldElement::new(1 << 16)]].concat())
     }
 
-    fn entrypoint_name(&self) -> String {
-        "tasm_arithmetic_u32_isodd".to_string()
-    }
-
-    fn function_code(&self, _library: &mut Library) -> String {
-        let entrypoint = self.entrypoint_name();
-        format!(
-            "
-                // BEFORE: _ value
-                // AFTER: _ (value % 2)
-                {entrypoint}:
-                    push 2
-                    swap 1
-                    div_mod
-                    swap 1
-                    pop 1
-                    return
-                "
+    fn worst_case_input_state(&self) -> ExecutionState {
+        ExecutionState::with_stack(
+            [empty_stack(), vec![BFieldElement::new((1 << 32) - 1)]].concat(),
         )
     }
 
@@ -84,16 +96,6 @@ impl DeprecatedSnippet for Isodd {
     ) {
         let value: u64 = stack.pop().unwrap().value();
         stack.push(BFieldElement::new(value % 2));
-    }
-
-    fn common_case_input_state(&self) -> ExecutionState {
-        ExecutionState::with_stack([empty_stack(), vec![BFieldElement::new(1 << 16)]].concat())
-    }
-
-    fn worst_case_input_state(&self) -> ExecutionState {
-        ExecutionState::with_stack(
-            [empty_stack(), vec![BFieldElement::new((1 << 32) - 1)]].concat(),
-        )
     }
 }
 
