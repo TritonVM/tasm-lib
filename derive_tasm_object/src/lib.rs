@@ -41,7 +41,7 @@ fn impl_derive_tasm_object_macro(ast: DeriveInput) -> TokenStream {
                     [
                         Self::get_field_start_with_jump_distance(#previous_field_name_as_string),
                             // _ *prev_field_start prev_jump_amount
-                        [triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add)].to_vec(),
+                        [crate::triton_vm::instruction::LabelledInstruction::Instruction(crate::triton_vm::instruction::AnInstruction::Add)].to_vec(),
                             // _ *current_field_start
                         { #jumper },
                             // _ *current_field_start current_field_jump_amount
@@ -99,7 +99,7 @@ fn impl_derive_tasm_object_macro(ast: DeriveInput) -> TokenStream {
                             [
                                 Self::get_field_start_with_jump_distance(#previous_field_name_as_string),
                                     // _ *prev_field_start prev_field_size
-                                [triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add)].to_vec(),
+                                [crate::triton_vm::instruction::LabelledInstruction::Instruction(crate::triton_vm::instruction::AnInstruction::Add)].to_vec(),
                                     // _ *current_field_start
                             ].concat();
                             let jumper = { #jumper }; // _ *current_field current_field_jump_amount
@@ -157,23 +157,23 @@ fn impl_derive_tasm_object_macro(ast: DeriveInput) -> TokenStream {
 
     let name = &ast.ident;
     let gen = quote! {
-        impl #impl_generics ::tasm_lib::structure::tasm_object::TasmObject
+        impl #impl_generics crate::tasm_lib::structure::tasm_object::TasmObject
         for #name #ty_generics #new_where_clause {
-            fn get_field( field_name : &str ) -> Vec<triton_vm::instruction::LabelledInstruction> {
+            fn get_field( field_name : &str ) -> Vec<crate::triton_vm::instruction::LabelledInstruction> {
                 match field_name {
                     #( #just_field_clauses ,)*
                     unknown_field_name => panic!("Cannot match on field name `{unknown_field_name}`."),
                 }
             }
 
-            fn get_field_with_size( field_name : &str ) -> Vec<triton_vm::instruction::LabelledInstruction> {
+            fn get_field_with_size( field_name : &str ) -> Vec<crate::triton_vm::instruction::LabelledInstruction> {
                 match field_name {
                     #( #field_with_size_clauses ,)*
                     unknown_field_name => panic!("Cannot match on field name `{unknown_field_name}`."),
                 }
             }
 
-            fn get_field_start_with_jump_distance( field_name : &str ) -> Vec<triton_vm::instruction::LabelledInstruction> {
+            fn get_field_start_with_jump_distance( field_name : &str ) -> Vec<crate::triton_vm::instruction::LabelledInstruction> {
                 match field_name {
                     #( #field_starter_clauses ,)*
                     unknown_field_name => panic!("Cannot match on field name `{unknown_field_name}`."),
@@ -288,13 +288,13 @@ fn generate_tasm_for_getter_postprocess(field_type: &syn::Type) -> quote::__priv
     quote! {
         if <#field_type as crate::twenty_first::shared_math::bfield_codec::BFieldCodec>::static_length().is_some() {
             [
-                triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Pop(::triton_vm::op_stack::NumberOfWords::N1)),
+                crate::triton_vm::instruction::LabelledInstruction::Instruction(crate::triton_vm::instruction::AnInstruction::Pop(crate::triton_vm::op_stack::NumberOfWords::N1)),
             ].to_vec()
         } else {
             [
-                triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Pop(::triton_vm::op_stack::NumberOfWords::N1)),
-                triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(crate::BFieldElement::new(1u64))),
-                triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),
+                crate::triton_vm::instruction::LabelledInstruction::Instruction(crate::triton_vm::instruction::AnInstruction::Pop(crate::triton_vm::op_stack::NumberOfWords::N1)),
+                crate::triton_vm::instruction::LabelledInstruction::Instruction(crate::triton_vm::instruction::AnInstruction::Push(crate::BFieldElement::new(1u64))),
+                crate::triton_vm::instruction::LabelledInstruction::Instruction(crate::triton_vm::instruction::AnInstruction::Add),
             ].to_vec()
         }
     }
@@ -309,15 +309,15 @@ fn generate_tasm_for_getter_postprocess(field_type: &syn::Type) -> quote::__priv
 fn generate_tasm_for_sizer_postprocess(field_type: &syn::Type) -> quote::__private::TokenStream {
     quote! {
         if <#field_type as crate::twenty_first::shared_math::bfield_codec::BFieldCodec>::static_length().is_some() {
-            ::std::vec::Vec::<triton_vm::instruction::LabelledInstruction>::new()
+            ::std::vec::Vec::<crate::triton_vm::instruction::LabelledInstruction>::new()
         } else {
             [
-                triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(-crate::BFieldElement::new(1u64))),
-                triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),
-                triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Swap(triton_vm::op_stack::OpStackElement::ST1)),
-                triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(crate::BFieldElement::new(1u64))),
-                triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),
-                triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Swap(triton_vm::op_stack::OpStackElement::ST1)),
+                crate::triton_vm::instruction::LabelledInstruction::Instruction(crate::triton_vm::instruction::AnInstruction::Push(-crate::BFieldElement::new(1u64))),
+                crate::triton_vm::instruction::LabelledInstruction::Instruction(crate::triton_vm::instruction::AnInstruction::Add),
+                crate::triton_vm::instruction::LabelledInstruction::Instruction(crate::triton_vm::instruction::AnInstruction::Swap(crate::triton_vm::op_stack::OpStackElement::ST1)),
+                crate::triton_vm::instruction::LabelledInstruction::Instruction(crate::triton_vm::instruction::AnInstruction::Push(crate::BFieldElement::new(1u64))),
+                crate::triton_vm::instruction::LabelledInstruction::Instruction(crate::triton_vm::instruction::AnInstruction::Add),
+                crate::triton_vm::instruction::LabelledInstruction::Instruction(crate::triton_vm::instruction::AnInstruction::Swap(crate::triton_vm::op_stack::OpStackElement::ST1)),
             ].to_vec()
         }
     }
@@ -332,16 +332,16 @@ fn generate_tasm_for_extend_field_start_with_jump_amount(
     quote! {
         if let Some(size) = <#field_type as crate::twenty_first::shared_math::bfield_codec::BFieldCodec>::static_length() {
             [
-                triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(crate::BFieldElement::new(size as u64)))
+                crate::triton_vm::instruction::LabelledInstruction::Instruction(crate::triton_vm::instruction::AnInstruction::Push(crate::BFieldElement::new(size as u64)))
             ].to_vec()
         } else {
             [
-                triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::ReadMem(::triton_vm::op_stack::NumberOfWords::N1)),
-                triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(crate::BFieldElement::new(1u64))),
-                triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),
-                triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Swap(::triton_vm::op_stack::OpStackElement::ST1)),
-                triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(crate::BFieldElement::new(1u64))),
-                triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),
+                crate::triton_vm::instruction::LabelledInstruction::Instruction(crate::triton_vm::instruction::AnInstruction::ReadMem(crate::triton_vm::op_stack::NumberOfWords::N1)),
+                crate::triton_vm::instruction::LabelledInstruction::Instruction(crate::triton_vm::instruction::AnInstruction::Push(crate::BFieldElement::new(1u64))),
+                crate::triton_vm::instruction::LabelledInstruction::Instruction(crate::triton_vm::instruction::AnInstruction::Add),
+                crate::triton_vm::instruction::LabelledInstruction::Instruction(crate::triton_vm::instruction::AnInstruction::Swap(crate::triton_vm::op_stack::OpStackElement::ST1)),
+                crate::triton_vm::instruction::LabelledInstruction::Instruction(crate::triton_vm::instruction::AnInstruction::Push(crate::BFieldElement::new(1u64))),
+                crate::triton_vm::instruction::LabelledInstruction::Instruction(crate::triton_vm::instruction::AnInstruction::Add),
             ].to_vec()
         }
     }
