@@ -1,20 +1,25 @@
 use std::collections::HashMap;
 
-use crate::twenty_first::amount::u32s::U32s;
-use crate::twenty_first::shared_math::b_field_element::BFieldElement;
-use crate::twenty_first::shared_math::bfield_codec::BFieldCodec;
 use num::Zero;
 use rand::RngCore;
+use triton_vm::prelude::*;
+use twenty_first::amount::u32s::U32s;
 
 use crate::data_type::DataType;
+use crate::empty_stack;
 use crate::library::Library;
+use crate::push_encodable;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::{empty_stack, push_encodable, ExecutionState};
+use crate::ExecutionState;
 
 #[derive(Clone, Debug)]
 pub struct AndU64;
 
 impl DeprecatedSnippet for AndU64 {
+    fn entrypoint_name(&self) -> String {
+        "tasm_arithmetic_u64_and".to_string()
+    }
+
     fn input_field_names(&self) -> Vec<String> {
         vec![
             "rhs_hi".to_string(),
@@ -24,38 +29,20 @@ impl DeprecatedSnippet for AndU64 {
         ]
     }
 
-    fn output_field_names(&self) -> Vec<String> {
-        vec!["(lhs & rhs)_hi".to_string(), "(lhs & rhs)_lo".to_string()]
-    }
-
     fn input_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::U64, DataType::U64]
+    }
+
+    fn output_field_names(&self) -> Vec<String> {
+        vec!["(lhs & rhs)_hi".to_string(), "(lhs & rhs)_lo".to_string()]
     }
 
     fn output_types(&self) -> Vec<crate::data_type::DataType> {
         vec![DataType::U64]
     }
 
-    fn crash_conditions(&self) -> Vec<String> {
-        vec![]
-    }
-
-    fn gen_input_states(&self) -> Vec<ExecutionState> {
-        let mut rng = rand::thread_rng();
-        let lhs = U32s::<2>::try_from(rng.next_u64()).unwrap();
-        let rhs = U32s::<2>::try_from(rng.next_u64()).unwrap();
-        let mut stack = empty_stack();
-        push_encodable(&mut stack, &lhs);
-        push_encodable(&mut stack, &rhs);
-        vec![ExecutionState::with_stack(stack)]
-    }
-
     fn stack_diff(&self) -> isize {
         -2
-    }
-
-    fn entrypoint_name(&self) -> String {
-        "tasm_arithmetic_u64_and".to_string()
     }
 
     fn function_code(&self, _library: &mut Library) -> String {
@@ -78,27 +65,18 @@ impl DeprecatedSnippet for AndU64 {
         )
     }
 
-    fn rust_shadowing(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        _std_in: Vec<BFieldElement>,
-        _secret_in: Vec<BFieldElement>,
-        _memory: &mut HashMap<BFieldElement, BFieldElement>,
-    ) {
-        // top element on stack
-        let a_lo: u32 = stack.pop().unwrap().try_into().unwrap();
-        let a_hi: u32 = stack.pop().unwrap().try_into().unwrap();
+    fn crash_conditions(&self) -> Vec<String> {
+        vec![]
+    }
 
-        // second element on stack
-        let b_lo: u32 = stack.pop().unwrap().try_into().unwrap();
-        let b_hi: u32 = stack.pop().unwrap().try_into().unwrap();
-
-        // Perform calculation and write the result back to the stack
-        let and_res = U32s::<2>::new([a_lo & b_lo, a_hi & b_hi]);
-        let mut res = and_res.encode();
-        for _ in 0..res.len() {
-            stack.push(res.pop().unwrap());
-        }
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
+        let mut rng = rand::thread_rng();
+        let lhs = U32s::<2>::try_from(rng.next_u64()).unwrap();
+        let rhs = U32s::<2>::try_from(rng.next_u64()).unwrap();
+        let mut stack = empty_stack();
+        push_encodable(&mut stack, &lhs);
+        push_encodable(&mut stack, &rhs);
+        vec![ExecutionState::with_stack(stack)]
     }
 
     fn common_case_input_state(&self) -> ExecutionState {
@@ -124,6 +102,29 @@ impl DeprecatedSnippet for AndU64 {
             ]
             .concat(),
         )
+    }
+
+    fn rust_shadowing(
+        &self,
+        stack: &mut Vec<BFieldElement>,
+        _std_in: Vec<BFieldElement>,
+        _secret_in: Vec<BFieldElement>,
+        _memory: &mut HashMap<BFieldElement, BFieldElement>,
+    ) {
+        // top element on stack
+        let a_lo: u32 = stack.pop().unwrap().try_into().unwrap();
+        let a_hi: u32 = stack.pop().unwrap().try_into().unwrap();
+
+        // second element on stack
+        let b_lo: u32 = stack.pop().unwrap().try_into().unwrap();
+        let b_hi: u32 = stack.pop().unwrap().try_into().unwrap();
+
+        // Perform calculation and write the result back to the stack
+        let and_res = U32s::<2>::new([a_lo & b_lo, a_hi & b_hi]);
+        let mut res = and_res.encode();
+        for _ in 0..res.len() {
+            stack.push(res.pop().unwrap());
+        }
     }
 }
 

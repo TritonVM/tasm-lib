@@ -1,11 +1,13 @@
-use crate::twenty_first::amount::u32s::U32s;
-use crate::twenty_first::shared_math::b_field_element::BFieldElement;
 use rand::RngCore;
+use triton_vm::prelude::*;
+use twenty_first::amount::u32s::U32s;
 
 use crate::data_type::DataType;
+use crate::empty_stack;
 use crate::library::Library;
+use crate::push_encodable;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::{empty_stack, push_encodable, ExecutionState};
+use crate::ExecutionState;
 
 #[derive(Clone, Debug)]
 pub struct SafeMulU128;
@@ -452,12 +454,11 @@ fn prepare_state(a: u128, b: u128) -> ExecutionState {
 
 #[cfg(test)]
 mod tests {
-    use crate::twenty_first::shared_math::bfield_codec::BFieldCodec;
     use rand::Rng;
-    use triton_vm::NonDeterminism;
+
+    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     use super::*;
-    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     #[test]
     fn safe_mul_u128_test() {
@@ -686,8 +687,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::snippet_bencher::bench_and_write;
+
+    use super::*;
 
     #[test]
     fn safe_u128_benchmark() {

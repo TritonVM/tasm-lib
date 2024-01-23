@@ -1,18 +1,22 @@
-use crate::twenty_first::shared_math::b_field_element::BFieldElement;
-use crate::twenty_first::shared_math::other::random_elements;
-use crate::twenty_first::test_shared::mmr::get_rustyleveldb_ammr_from_digests;
-use crate::twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
-use crate::twenty_first::util_types::mmr::mmr_trait::Mmr;
-use crate::twenty_first::util_types::mmr::{self, mmr_membership_proof::MmrMembershipProof};
-use num::One;
-use rand::{random, thread_rng, Rng};
 use std::collections::HashMap;
 
-use super::leaf_index_to_mt_index_and_peak_index::MmrLeafIndexToMtIndexAndPeakIndex;
+use num::One;
+use rand::random;
+use rand::thread_rng;
+use rand::Rng;
+use triton_vm::prelude::*;
+use twenty_first::shared_math::other::random_elements;
+use twenty_first::test_shared::mmr::get_rustyleveldb_ammr_from_digests;
+use twenty_first::util_types::mmr;
+use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
+use twenty_first::util_types::mmr::mmr_membership_proof::MmrMembershipProof;
+use twenty_first::util_types::mmr::mmr_trait::Mmr;
+
 use crate::arithmetic::u32::isodd::Isodd;
 use crate::arithmetic::u64::div2_u64::Div2U64;
 use crate::arithmetic::u64::eq_u64::EqU64;
 use crate::data_type::DataType;
+use crate::empty_stack;
 use crate::library::Library;
 use crate::list::safeimplu32::get::SafeGet;
 use crate::list::safeimplu32::set::SafeSet;
@@ -20,10 +24,13 @@ use crate::list::unsafeimplu32::get::UnsafeGet;
 use crate::list::unsafeimplu32::set::UnsafeSet;
 use crate::list::ListType;
 use crate::mmr::MAX_MMR_HEIGHT;
+use crate::rust_shadowing_helper_functions;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::{
-    empty_stack, rust_shadowing_helper_functions, Digest, ExecutionState, VmHasher, DIGEST_LENGTH,
-};
+use crate::ExecutionState;
+use crate::VmHasher;
+use crate::DIGEST_LENGTH;
+
+use super::leaf_index_to_mt_index_and_peak_index::MmrLeafIndexToMtIndexAndPeakIndex;
 
 /// Calculate new MMR peaks from a leaf mutation using Merkle tree indices walk up the tree
 #[derive(Clone, Debug)]
@@ -130,6 +137,13 @@ impl MmrCalculateNewPeaksFromLeafMutationMtIndices {
 }
 
 impl DeprecatedSnippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
+    fn entrypoint_name(&self) -> String {
+        format!(
+            "tasm_mmr_calculate_new_peaks_from_leaf_mutation_{}",
+            self.list_type
+        )
+    }
+
     fn input_field_names(&self) -> Vec<String> {
         vec![
             "*auth_path".to_string(),
@@ -146,14 +160,6 @@ impl DeprecatedSnippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
         ]
     }
 
-    fn output_field_names(&self) -> Vec<String> {
-        vec![
-            "*auth_path".to_string(),
-            "leaf_index_hi".to_string(),
-            "leaf_index_lo".to_string(),
-        ]
-    }
-
     fn input_types(&self) -> Vec<DataType> {
         vec![
             DataType::List(Box::new(DataType::Digest)),
@@ -164,41 +170,20 @@ impl DeprecatedSnippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
         ]
     }
 
+    fn output_field_names(&self) -> Vec<String> {
+        vec![
+            "*auth_path".to_string(),
+            "leaf_index_hi".to_string(),
+            "leaf_index_lo".to_string(),
+        ]
+    }
+
     fn output_types(&self) -> Vec<DataType> {
         vec![DataType::List(Box::new(DataType::Digest)), DataType::U64]
     }
 
-    fn crash_conditions(&self) -> Vec<String> {
-        vec![]
-    }
-
-    fn gen_input_states(&self) -> Vec<ExecutionState> {
-        let mmr_size: usize = 10;
-        let digests: Vec<Digest> = random_elements(mmr_size);
-        let leaf_index: usize = thread_rng().gen_range(0..mmr_size);
-        let new_leaf: Digest = random();
-        let ammr = get_rustyleveldb_ammr_from_digests::<VmHasher>(digests);
-        let mut mmra = ammr.to_accumulator();
-        let auth_path = ammr.prove_membership(leaf_index as u64);
-        let ret0 = self.prepare_state_with_mmra(
-            &mut mmra,
-            leaf_index as u64,
-            new_leaf,
-            auth_path.0.authentication_path,
-        );
-
-        vec![ret0.0]
-    }
-
     fn stack_diff(&self) -> isize {
         -8
-    }
-
-    fn entrypoint_name(&self) -> String {
-        format!(
-            "tasm_mmr_calculate_new_peaks_from_leaf_mutation_{}",
-            self.list_type
-        )
     }
 
     fn function_code(&self, library: &mut Library) -> String {
@@ -227,7 +212,7 @@ impl DeprecatedSnippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
         format!(
             "
             // BEFORE: _ *auth_path leaf_index_hi leaf_index_lo *peaks [digest (leaf_digest)] leaf_count_hi leaf_count_lo
-            // AFTER: _ *auth_path leaf_index_hi leaf_index_lo
+            // AFTER:  _ *auth_path leaf_index_hi leaf_index_lo
             {entrypoint}:
                 dup 9 dup 9
                 call {leaf_index_to_mt_index}
@@ -307,6 +292,62 @@ impl DeprecatedSnippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
         )
     }
 
+    fn crash_conditions(&self) -> Vec<String> {
+        vec![]
+    }
+
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
+        let mmr_size: usize = 10;
+        let digests: Vec<Digest> = random_elements(mmr_size);
+        let leaf_index: usize = thread_rng().gen_range(0..mmr_size);
+        let new_leaf: Digest = random();
+        let ammr = get_rustyleveldb_ammr_from_digests::<VmHasher>(digests);
+        let mut mmra = ammr.to_accumulator();
+        let auth_path = ammr.prove_membership(leaf_index as u64);
+        let ret0 = self.prepare_state_with_mmra(
+            &mut mmra,
+            leaf_index as u64,
+            new_leaf,
+            auth_path.0.authentication_path,
+        );
+
+        vec![ret0.0]
+    }
+
+    fn common_case_input_state(&self) -> ExecutionState {
+        let mmr_leaf_count_log2 = 31u64;
+        let mmr_size = 1 << mmr_leaf_count_log2;
+        let peaks: Vec<Digest> = random_elements(mmr_leaf_count_log2 as usize);
+        let mut mmra = MmrAccumulator::<VmHasher>::init(peaks, mmr_size - 1);
+        let inserted_leaf: Digest = random();
+        let leaf_after_mutation: Digest = random();
+        let auth_path = mmra.append(inserted_leaf).authentication_path;
+        self.prepare_state_with_mmra(
+            &mut mmra,
+            mmr_size - mmr_leaf_count_log2 - 1,
+            leaf_after_mutation,
+            auth_path,
+        )
+        .0
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState {
+        let mmr_leaf_count_log2 = 62u64;
+        let mmr_size = 1 << mmr_leaf_count_log2;
+        let peaks: Vec<Digest> = random_elements(mmr_leaf_count_log2 as usize);
+        let mut mmra = MmrAccumulator::<VmHasher>::init(peaks, mmr_size - 1);
+        let inserted_leaf: Digest = random();
+        let leaf_after_mutation: Digest = random();
+        let auth_path = mmra.append(inserted_leaf).authentication_path;
+        self.prepare_state_with_mmra(
+            &mut mmra,
+            mmr_size - mmr_leaf_count_log2 - 1,
+            leaf_after_mutation,
+            auth_path,
+        )
+        .0
+    }
+
     fn rust_shadowing(
         &self,
         stack: &mut Vec<BFieldElement>,
@@ -315,7 +356,7 @@ impl DeprecatedSnippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
         memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
         // BEFORE: _ *auth_path leaf_index_hi leaf_index_lo *peaks [digest (leaf_digest)] leaf_count_hi leaf_count_lo
-        // AFTER: _ *auth_path leaf_index_hi leaf_index_lo
+        // AFTER:  _ *auth_path leaf_index_hi leaf_index_lo
         let leaf_count_lo: u32 = stack.pop().unwrap().try_into().unwrap();
         let leaf_count_hi: u32 = stack.pop().unwrap().try_into().unwrap();
         let leaf_count: u64 = ((leaf_count_hi as u64) << 32) + leaf_count_lo as u64;
@@ -387,57 +428,22 @@ impl DeprecatedSnippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
         stack.push(BFieldElement::new(leaf_index_hi as u64));
         stack.push(BFieldElement::new(leaf_index_lo as u64));
     }
-
-    fn common_case_input_state(&self) -> ExecutionState {
-        let mmr_leaf_count_log2 = 31u64;
-        let mmr_size = 1 << mmr_leaf_count_log2;
-        let peaks: Vec<Digest> = random_elements(mmr_leaf_count_log2 as usize);
-        let mut mmra = MmrAccumulator::<VmHasher>::init(peaks, mmr_size - 1);
-        let inserted_leaf: Digest = random();
-        let leaf_after_mutation: Digest = random();
-        let auth_path = mmra.append(inserted_leaf).authentication_path;
-        self.prepare_state_with_mmra(
-            &mut mmra,
-            mmr_size - mmr_leaf_count_log2 - 1,
-            leaf_after_mutation,
-            auth_path,
-        )
-        .0
-    }
-
-    fn worst_case_input_state(&self) -> ExecutionState {
-        let mmr_leaf_count_log2 = 62u64;
-        let mmr_size = 1 << mmr_leaf_count_log2;
-        let peaks: Vec<Digest> = random_elements(mmr_leaf_count_log2 as usize);
-        let mut mmra = MmrAccumulator::<VmHasher>::init(peaks, mmr_size - 1);
-        let inserted_leaf: Digest = random();
-        let leaf_after_mutation: Digest = random();
-        let auth_path = mmra.append(inserted_leaf).authentication_path;
-        self.prepare_state_with_mmra(
-            &mut mmra,
-            mmr_size - mmr_leaf_count_log2 - 1,
-            leaf_after_mutation,
-            auth_path,
-        )
-        .0
-    }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::twenty_first::shared_math::b_field_element::BFieldElement;
-    use crate::twenty_first::shared_math::other::random_elements;
-    use crate::twenty_first::test_shared::mmr::get_empty_rustyleveldb_ammr;
-    use crate::twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
-    use crate::twenty_first::util_types::mmr::archival_mmr::ArchivalMmr;
-    use crate::twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
-    use crate::twenty_first::util_types::mmr::mmr_membership_proof::MmrMembershipProof;
-    use crate::twenty_first::util_types::mmr::mmr_trait::Mmr;
     use rand::{thread_rng, Rng};
+    use twenty_first::shared_math::other::random_elements;
+    use twenty_first::test_shared::mmr::get_empty_rustyleveldb_ammr;
+    use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
+    use twenty_first::util_types::mmr::archival_mmr::ArchivalMmr;
+    use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
+    use twenty_first::util_types::mmr::mmr_membership_proof::MmrMembershipProof;
+    use twenty_first::util_types::mmr::mmr_trait::Mmr;
+    use BFieldElement;
 
     use crate::empty_stack;
     use crate::mmr::MAX_MMR_HEIGHT;
-
     use crate::test_helpers::{
         test_rust_equivalence_given_input_values_deprecated,
         test_rust_equivalence_multiple_deprecated,
@@ -744,8 +750,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::snippet_bencher::bench_and_write;
+
+    use super::*;
 
     #[test]
     fn calculate_new_peaks_from_leaf_mutation_benchmark_unsafe_lists() {

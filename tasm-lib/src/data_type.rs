@@ -1,14 +1,17 @@
-use crate::io::InputSource;
-use crate::memory::{
-    load_words_from_memory_leave_pointer, load_words_from_memory_pop_pointer,
-    write_words_to_memory_leave_pointer, write_words_to_memory_pop_pointer,
-};
-use crate::twenty_first::shared_math::b_field_element::BFieldElement;
-use crate::DIGEST_LENGTH;
-use itertools::Itertools;
-use rand::{random, thread_rng, Rng};
 use std::str::FromStr;
-use triton_vm::instruction::LabelledInstruction;
+
+use itertools::Itertools;
+use rand::random;
+use rand::thread_rng;
+use rand::Rng;
+use triton_vm::prelude::*;
+
+use crate::io::InputSource;
+use crate::memory::load_words_from_memory_leave_pointer;
+use crate::memory::load_words_from_memory_pop_pointer;
+use crate::memory::write_words_to_memory_leave_pointer;
+use crate::memory::write_words_to_memory_pop_pointer;
+use crate::DIGEST_LENGTH;
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub enum DataType {

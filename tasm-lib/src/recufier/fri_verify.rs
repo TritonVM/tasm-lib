@@ -1,15 +1,5 @@
 use std::collections::HashMap;
 
-use crate::twenty_first::shared_math::bfield_codec::BFieldCodec;
-use crate::twenty_first::shared_math::ntt::intt;
-use crate::twenty_first::shared_math::ntt::ntt;
-use crate::twenty_first::shared_math::other::log_2_ceil;
-use crate::twenty_first::shared_math::polynomial::Polynomial;
-use crate::twenty_first::shared_math::traits::ModPowU32;
-use crate::twenty_first::shared_math::traits::PrimitiveRootOfUnity;
-use crate::twenty_first::shared_math::x_field_element::XFieldElement;
-use crate::twenty_first::util_types::algebraic_hasher::SpongeHasher;
-use crate::twenty_first::util_types::merkle_tree::MerkleTree;
 use anyhow::bail;
 use itertools::Itertools;
 use num_traits::Zero;
@@ -19,12 +9,17 @@ use rand::SeedableRng;
 use triton_vm::arithmetic_domain::ArithmeticDomain;
 use triton_vm::error::FriValidationError;
 use triton_vm::fri::Fri;
-use triton_vm::instruction::LabelledInstruction;
+use triton_vm::prelude::*;
 use triton_vm::proof_item::FriResponse;
 use triton_vm::proof_stream::ProofStream;
-use triton_vm::triton_asm;
-use triton_vm::BFieldElement;
-use triton_vm::NonDeterminism;
+use twenty_first::shared_math::ntt::intt;
+use twenty_first::shared_math::ntt::ntt;
+use twenty_first::shared_math::other::log_2_ceil;
+use twenty_first::shared_math::polynomial::Polynomial;
+use twenty_first::shared_math::traits::ModPowU32;
+use twenty_first::shared_math::traits::PrimitiveRootOfUnity;
+use twenty_first::util_types::algebraic_hasher::SpongeHasher;
+use twenty_first::util_types::merkle_tree::MerkleTreeInclusionProof;
 
 use crate::data_type::DataType;
 use crate::empty_stack;
@@ -234,46 +229,37 @@ impl FriVerify {
         let mut a_values = fri_response.revealed_leaves;
 
         let leaf_digests = Self::map_convert_xfe_to_digest(&a_values);
-        let leafs_and_indices = leaf_digests.iter().copied().zip(a_indices.iter());
+        let a_leaf_indices = a_indices.iter().map(|&i| i as usize);
+        let indexed_a_leaves = a_leaf_indices.zip_eq(leaf_digests).collect_vec();
 
         // reduplicate authentication structures if necessary
         if num_nondeterministic_digests_read >= nondeterministic_digests.len() {
-            // sanity check: the authentication structure was valid, right?
-            assert!(MerkleTree::<VmHasher>::verify_authentication_structure(
-                roots[0],
+            let inclusion_proof = MerkleTreeInclusionProof::<Tip5> {
                 tree_height,
-                &a_indices.iter().map(|i| *i as usize).collect_vec(),
-                &leaf_digests,
-                &fri_response.auth_structure,
-            ));
+                indexed_leaves: indexed_a_leaves.clone(),
+                authentication_structure: fri_response.auth_structure,
+                ..Default::default()
+            };
 
-            let reduplicated_authentication_paths =
-                MerkleTree::<VmHasher>::authentication_paths_from_authentication_structure(
-                    tree_height,
-                    &a_indices.iter().map(|i| *i as usize).collect_vec(),
-                    &leaf_digests,
-                    &fri_response.auth_structure,
-                )?;
-            nondeterministic_digests.append(
-                &mut reduplicated_authentication_paths
-                    .into_iter()
-                    .flatten()
-                    .collect_vec(),
-            );
+            // sanity check: the authentication structure was valid, right?
+            assert!(inclusion_proof.clone().verify(roots[0]));
+            let reduplicated_authentication_paths = inclusion_proof.into_authentication_paths()?;
+            nondeterministic_digests
+                .extend(reduplicated_authentication_paths.into_iter().flatten());
         }
 
         // verify authentication paths for A leafs
-        for (leaf_digest, leaf_index) in leafs_and_indices {
+        for indexed_leaf in indexed_a_leaves {
             let authentication_path = &nondeterministic_digests[num_nondeterministic_digests_read
                 ..(num_nondeterministic_digests_read + tree_height)];
             num_nondeterministic_digests_read += tree_height;
-            assert!(MerkleTree::<VmHasher>::verify_authentication_structure(
-                roots[0],
+            let inclusion_proof = MerkleTreeInclusionProof::<Tip5> {
                 tree_height,
-                &[*leaf_index as usize],
-                &[leaf_digest],
-                authentication_path
-            ));
+                indexed_leaves: vec![indexed_leaf],
+                authentication_structure: authentication_path.to_vec(),
+                ..Default::default()
+            };
+            assert!(inclusion_proof.verify(roots[0]));
         }
 
         // save indices and revealed leafs of first round's codeword for returning
@@ -285,11 +271,11 @@ impl FriVerify {
         // these indices and values will be computed in the first iteration of the main loop below
         let mut revealed_indices_and_elements_second_half = vec![];
 
-        // set up "B" for offsetting inside loop.  Note that "B" and "A" indices can be calcuated
+        // set up "B" for offsetting inside loop.  Note that "B" and "A" indices can be calculated
         // from each other.
         let mut b_indices = a_indices.clone();
         let mut current_domain_len = self.domain_length;
-        let mut current_tree_height = tree_height as u32;
+        let mut current_tree_height = tree_height;
 
         // query step 1:  loop over FRI rounds, verify "B"s, compute values for "C"s
         for r in 0..num_rounds {
@@ -302,47 +288,39 @@ impl FriVerify {
             let b_values = fri_response.revealed_leaves;
 
             let leaf_digests = Self::map_convert_xfe_to_digest(&b_values);
-            let leafs_and_indices = leaf_digests.iter().copied().zip(b_indices.iter().copied());
+            let b_leaf_indices = b_indices.iter().map(|&i| i as usize);
+            let indexed_b_leaves = b_leaf_indices.zip_eq(leaf_digests).collect_vec();
 
             // reduplicate authentication structures if necessary
             if num_nondeterministic_digests_read >= nondeterministic_digests.len() {
-                let reduplicated_authentication_paths =
-                    MerkleTree::<VmHasher>::authentication_paths_from_authentication_structure(
-                        current_tree_height as usize,
-                        &b_indices.iter().map(|i| *i as usize).collect_vec(),
-                        &leaf_digests,
-                        &fri_response.auth_structure,
-                    )?;
-                nondeterministic_digests.append(
-                    &mut reduplicated_authentication_paths
-                        .into_iter()
-                        .flatten()
-                        .collect_vec(),
-                );
+                let inclusion_proof = MerkleTreeInclusionProof::<Tip5> {
+                    tree_height: current_tree_height,
+                    indexed_leaves: indexed_b_leaves.clone(),
+                    authentication_structure: fri_response.auth_structure,
+                    ..Default::default()
+                };
 
                 // sanity check: the auth structure was valid, right?
-                assert!(MerkleTree::<VmHasher>::verify_authentication_structure(
-                    roots[r],
-                    current_tree_height as usize,
-                    &b_indices.iter().map(|i| *i as usize).collect_vec(),
-                    &leaf_digests,
-                    &fri_response.auth_structure,
-                ));
+                assert!(inclusion_proof.clone().verify(roots[r]));
+                let reduplicated_authentication_paths =
+                    inclusion_proof.into_authentication_paths()?;
+                nondeterministic_digests
+                    .extend(reduplicated_authentication_paths.into_iter().flatten());
             }
 
             // verify authentication paths for B leafs
-            for (leaf, index) in leafs_and_indices {
+            for indexed_leaf in indexed_b_leaves {
                 let authentication_path = &nondeterministic_digests
                     [num_nondeterministic_digests_read
-                        ..(num_nondeterministic_digests_read + current_tree_height as usize)];
-                num_nondeterministic_digests_read += current_tree_height as usize;
-                if !MerkleTree::<VmHasher>::verify_authentication_structure(
-                    roots[r],
-                    current_tree_height as usize,
-                    &[index as usize],
-                    &[leaf],
-                    authentication_path,
-                ) {
+                        ..(num_nondeterministic_digests_read + current_tree_height)];
+                num_nondeterministic_digests_read += current_tree_height;
+                let inclusion_proof = MerkleTreeInclusionProof::<Tip5> {
+                    tree_height: current_tree_height,
+                    indexed_leaves: vec![indexed_leaf],
+                    authentication_structure: authentication_path.to_vec(),
+                    ..Default::default()
+                };
+                if !inclusion_proof.verify(roots[r]) {
                     bail!(FriValidationError::BadMerkleAuthenticationPath);
                 }
             }
@@ -413,7 +391,7 @@ impl FriVerify {
 
         let mut proof_stream = ProofStream::<VmHasher>::new();
         let fri = self.to_fri();
-        fri.prove(&codeword, &mut proof_stream);
+        fri.prove(&codeword, &mut proof_stream).unwrap();
 
         VmProofStream::new(&proof_stream.items)
     }
@@ -1313,7 +1291,7 @@ mod test {
             let fri = self.fri();
             let codeword = self.codeword();
             let mut proof_stream = ProofStream::new();
-            fri.prove(&codeword, &mut proof_stream);
+            fri.prove(&codeword, &mut proof_stream).unwrap();
 
             proof_stream.items
         }
@@ -1453,12 +1431,10 @@ mod test {
 
 #[cfg(test)]
 mod bench {
-    use triton_vm::BFieldElement;
-
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
 
-    use super::FriVerify;
+    use super::*;
 
     #[test]
     fn bench() {

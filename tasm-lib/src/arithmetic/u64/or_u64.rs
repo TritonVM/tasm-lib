@@ -1,9 +1,13 @@
-use crate::twenty_first::{amount::u32s::U32s, shared_math::b_field_element::BFieldElement};
-use rand::{thread_rng, RngCore};
+use rand::thread_rng;
+use rand::RngCore;
+use triton_vm::prelude::*;
+use twenty_first::amount::u32s::U32s;
 
 use crate::data_type::DataType;
+use crate::empty_stack;
+use crate::push_encodable;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::{empty_stack, push_encodable, ExecutionState};
+use crate::ExecutionState;
 
 #[derive(Clone, Debug)]
 pub struct OrU64;
@@ -22,15 +26,15 @@ impl DeprecatedSnippet for OrU64 {
         ]
     }
 
+    fn input_types(&self) -> Vec<DataType> {
+        vec![DataType::U64, DataType::U64]
+    }
+
     fn output_field_names(&self) -> Vec<String> {
         vec!["(lhs | rhs)_hi".to_string(), "(lhs | rhs)_lo".to_string()]
     }
 
-    fn input_types(&self) -> Vec<crate::data_type::DataType> {
-        vec![DataType::U64, DataType::U64]
-    }
-
-    fn output_types(&self) -> Vec<crate::data_type::DataType> {
+    fn output_types(&self) -> Vec<DataType> {
         vec![DataType::U64]
     }
 
@@ -43,7 +47,7 @@ impl DeprecatedSnippet for OrU64 {
         format!(
             "
                 // BEFORE: _ rhs_hi rhs_lo lhs_hi lhs_lo
-                // AFTER: _ (lhs | rhs)_hi (lhs | rhs)_lo
+                // AFTER:  _ (lhs | rhs)_hi (lhs | rhs)_lo
                 {entrypoint}:
                     dup 2
                     dup 1
@@ -82,7 +86,7 @@ impl DeprecatedSnippet for OrU64 {
         vec!["Inputs are not u32".to_owned()]
     }
 
-    fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
         let mut ret: Vec<ExecutionState> = vec![];
         for _ in 0..100 {
             ret.push(prepare_state(
@@ -94,15 +98,20 @@ impl DeprecatedSnippet for OrU64 {
         ret
     }
 
+    fn common_case_input_state(&self) -> ExecutionState {
+        prepare_state(u32::MAX as u64, u32::MAX as u64)
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState {
+        prepare_state(u64::MAX, u64::MAX)
+    }
+
     fn rust_shadowing(
         &self,
-        stack: &mut Vec<crate::twenty_first::shared_math::b_field_element::BFieldElement>,
-        _std_in: Vec<crate::twenty_first::shared_math::b_field_element::BFieldElement>,
-        _secret_in: Vec<crate::twenty_first::shared_math::b_field_element::BFieldElement>,
-        _memory: &mut std::collections::HashMap<
-            crate::twenty_first::shared_math::b_field_element::BFieldElement,
-            crate::twenty_first::shared_math::b_field_element::BFieldElement,
-        >,
+        stack: &mut Vec<BFieldElement>,
+        _std_in: Vec<BFieldElement>,
+        _secret_in: Vec<BFieldElement>,
+        _memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
     ) {
         let lhs_lo: u32 = stack.pop().unwrap().try_into().unwrap();
         let lhs_hi: u32 = stack.pop().unwrap().try_into().unwrap();
@@ -115,14 +124,6 @@ impl DeprecatedSnippet for OrU64 {
         let or = lhs | rhs;
         stack.push(BFieldElement::new(or >> 32));
         stack.push(BFieldElement::new(or & u32::MAX as u64));
-    }
-
-    fn common_case_input_state(&self) -> ExecutionState {
-        prepare_state(u32::MAX as u64, u32::MAX as u64)
-    }
-
-    fn worst_case_input_state(&self) -> ExecutionState {
-        prepare_state(u64::MAX, u64::MAX)
     }
 }
 
@@ -198,8 +199,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::snippet_bencher::bench_and_write;
+
+    use super::*;
 
     #[test]
     fn u64_or_benchmark() {

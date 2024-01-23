@@ -1,9 +1,11 @@
-use crate::twenty_first::shared_math::b_field_element::BFieldElement;
-use rand::{thread_rng, Rng};
+use rand::thread_rng;
+use rand::Rng;
+use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
+use crate::empty_stack;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::{empty_stack, ExecutionState};
+use crate::ExecutionState;
 
 /// If the inputs, are valid u32s, then the output is guaranteed to be to.
 /// Crashes on overflow.
@@ -23,12 +25,12 @@ impl DeprecatedSnippet for Safemul {
         vec![DataType::U32, DataType::U32]
     }
 
-    fn output_types(&self) -> Vec<DataType> {
-        vec![DataType::U32]
-    }
-
     fn output_field_names(&self) -> Vec<String> {
         vec!["lhs * rhs".to_string()]
+    }
+
+    fn output_types(&self) -> Vec<DataType> {
+        vec![DataType::U32]
     }
 
     fn stack_diff(&self) -> isize {
@@ -74,20 +76,6 @@ impl DeprecatedSnippet for Safemul {
         ret
     }
 
-    fn rust_shadowing(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        _std_in: Vec<BFieldElement>,
-        _secret_in: Vec<BFieldElement>,
-        _memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
-    ) {
-        let lhs: u32 = stack.pop().unwrap().try_into().unwrap();
-        let rhs: u32 = stack.pop().unwrap().try_into().unwrap();
-
-        let prod = lhs * rhs;
-        stack.push(BFieldElement::new(prod as u64));
-    }
-
     fn common_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack(
             [
@@ -110,6 +98,20 @@ impl DeprecatedSnippet for Safemul {
             .concat(),
         )
     }
+
+    fn rust_shadowing(
+        &self,
+        stack: &mut Vec<BFieldElement>,
+        _std_in: Vec<BFieldElement>,
+        _secret_in: Vec<BFieldElement>,
+        _memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
+    ) {
+        let lhs: u32 = stack.pop().unwrap().try_into().unwrap();
+        let rhs: u32 = stack.pop().unwrap().try_into().unwrap();
+
+        let prod = lhs * rhs;
+        stack.push(BFieldElement::new(prod as u64));
+    }
 }
 
 #[cfg(test)]
@@ -118,10 +120,8 @@ mod tests {
 
     use num::Zero;
 
-    use crate::test_helpers::{
-        test_rust_equivalence_given_input_values_deprecated,
-        test_rust_equivalence_multiple_deprecated,
-    };
+    use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
+    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     use super::*;
 
@@ -185,8 +185,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::snippet_bencher::bench_and_write;
+
+    use super::*;
 
     #[test]
     fn safe_mul_benchmark() {

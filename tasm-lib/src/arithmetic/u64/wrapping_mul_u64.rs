@@ -1,11 +1,13 @@
-use crate::twenty_first::amount::u32s::U32s;
-use crate::twenty_first::shared_math::b_field_element::BFieldElement;
 use rand::RngCore;
+use triton_vm::prelude::*;
+use twenty_first::amount::u32s::U32s;
 
 use crate::data_type::DataType;
+use crate::empty_stack;
 use crate::library::Library;
+use crate::push_encodable;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::{empty_stack, push_encodable, ExecutionState};
+use crate::ExecutionState;
 
 #[derive(Clone, Debug)]
 pub struct WrappingMulU64;
@@ -28,12 +30,12 @@ impl DeprecatedSnippet for WrappingMulU64 {
         vec![DataType::U64, DataType::U64]
     }
 
-    fn output_types(&self) -> Vec<DataType> {
-        vec![DataType::U64]
-    }
-
     fn output_field_names(&self) -> Vec<String> {
         vec!["prod_hi".to_string(), "prod_lo".to_string()]
+    }
+
+    fn output_types(&self) -> Vec<DataType> {
+        vec![DataType::U64]
     }
 
     fn stack_diff(&self) -> isize {
@@ -46,7 +48,7 @@ impl DeprecatedSnippet for WrappingMulU64 {
         format!(
             "
                 // BEFORE: _ rhs_hi rhs_lo lhs_hi lhs_lo
-                // AFTER: _ prod_hi prod_lo
+                // AFTER:  _ prod_hi prod_lo
                 {entrypoint}:
                     // `lhs_lo * rhs_lo`:
                     dup 0 dup 3 mul
@@ -164,10 +166,8 @@ mod tests {
 
     use num::Zero;
 
-    use crate::test_helpers::{
-        test_rust_equivalence_given_input_values_deprecated,
-        test_rust_equivalence_multiple_deprecated,
-    };
+    use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
+    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     use super::*;
 
@@ -200,8 +200,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::snippet_bencher::bench_and_write;
+
+    use super::*;
 
     #[test]
     fn wrappingmul_u64_benchmark() {

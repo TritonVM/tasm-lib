@@ -1,24 +1,27 @@
-use rand::{rngs::StdRng, Rng, SeedableRng};
-use triton_vm::{triton_asm, BFieldElement};
+use rand::rngs::StdRng;
+use rand::Rng;
+use rand::SeedableRng;
+use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
+use crate::empty_stack;
+use crate::snippet_bencher::BenchmarkCase;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::closure::Closure;
-use crate::{empty_stack, snippet_bencher::BenchmarkCase};
 
 /// A u32 `pow` that behaves like Rustc's `pow` method on `u32`, crashing in case of overflow.
 #[derive(Clone)]
 pub struct Safepow;
 
 impl BasicSnippet for Safepow {
-    fn inputs(&self) -> Vec<(crate::data_type::DataType, String)> {
+    fn inputs(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::U32, "base".to_owned()),
             (DataType::U32, "exponent".to_owned()),
         ]
     }
 
-    fn outputs(&self) -> Vec<(crate::data_type::DataType, String)> {
+    fn outputs(&self) -> Vec<(DataType, String)> {
         vec![(DataType::U32, "result".to_owned())]
     }
 
@@ -26,10 +29,7 @@ impl BasicSnippet for Safepow {
         "tasm_arithmetic_u32_safepow".to_string()
     }
 
-    fn code(
-        &self,
-        _library: &mut crate::library::Library,
-    ) -> Vec<triton_vm::instruction::LabelledInstruction> {
+    fn code(&self, _library: &mut crate::library::Library) -> Vec<LabelledInstruction> {
         // This algorithm is implemented below. `bpow2` has type
         // `u64` because it would otherwise erroneously overflow
         // in the last iteration of the loop when e.g. calculating
@@ -148,7 +148,7 @@ impl BasicSnippet for Safepow {
 }
 
 impl Closure for Safepow {
-    fn rust_shadow(&self, stack: &mut Vec<triton_vm::BFieldElement>) {
+    fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
         let exp: u32 = stack.pop().unwrap().try_into().unwrap();
         let base: u32 = stack.pop().unwrap().try_into().unwrap();
         stack.push(BFieldElement::new(base.pow(exp) as u64));
@@ -158,7 +158,7 @@ impl Closure for Safepow {
         &self,
         seed: [u8; 32],
         bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
-    ) -> Vec<triton_vm::BFieldElement> {
+    ) -> Vec<BFieldElement> {
         let (base, exponent): (u32, u32) = match bench_case {
             Some(BenchmarkCase::CommonCase) => (10, 5),
             Some(BenchmarkCase::WorstCase) => (2, 31),
@@ -196,14 +196,14 @@ mod tests {
     use std::cell::RefCell;
     use std::collections::HashMap;
     use std::rc::Rc;
-    use triton_vm::{NonDeterminism, Program};
 
-    use super::*;
     use crate::execute_with_terminal_state;
     use crate::linker::link_for_isolated_run;
     use crate::test_helpers::test_rust_equivalence_given_complete_state;
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
+
+    use super::*;
 
     #[test]
     fn u32_pow_pbt() {
@@ -346,9 +346,10 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
+
+    use super::*;
 
     #[test]
     fn u32_pow_bench() {

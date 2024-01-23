@@ -1,17 +1,18 @@
 use itertools::Itertools;
 use std::collections::HashMap;
 
-use crate::twenty_first::shared_math::b_field_element::BFieldElement;
-use rand::{random, thread_rng, Rng};
-use triton_vm::{triton_asm, NonDeterminism};
+use rand::random;
+use rand::thread_rng;
+use rand::Rng;
+use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
+use crate::empty_stack;
 use crate::library::Library;
-use crate::rust_shadowing_helper_functions::unsafe_list::{
-    unsafe_list_get, untyped_unsafe_insert_random_list,
-};
+use crate::rust_shadowing_helper_functions::unsafe_list::unsafe_list_get;
+use crate::rust_shadowing_helper_functions::unsafe_list::untyped_unsafe_insert_random_list;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::{empty_stack, ExecutionState};
+use crate::ExecutionState;
 
 #[derive(Clone, Debug)]
 pub struct UnsafeGet {
@@ -30,7 +31,7 @@ impl DeprecatedSnippet for UnsafeGet {
         vec!["*list".to_string(), "index".to_string()]
     }
 
-    fn input_types(&self) -> Vec<crate::data_type::DataType> {
+    fn input_types(&self) -> Vec<DataType> {
         vec![
             DataType::List(Box::new(self.data_type.clone())),
             DataType::U32,
@@ -49,7 +50,7 @@ impl DeprecatedSnippet for UnsafeGet {
         ret
     }
 
-    fn output_types(&self) -> Vec<crate::data_type::DataType> {
+    fn output_types(&self) -> Vec<DataType> {
         vec![DataType::Bfe; self.data_type.stack_size()]
     }
 
@@ -95,7 +96,7 @@ impl DeprecatedSnippet for UnsafeGet {
         vec![]
     }
 
-    fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
         let mut rng = thread_rng();
         vec![input_state(rng.gen_range(1..100))]
     }
@@ -155,9 +156,9 @@ fn input_state(list_length: usize) -> ExecutionState {
 
 #[cfg(test)]
 mod tests {
-    use crate::twenty_first::shared_math::b_field_element::BFieldElement;
     use itertools::Itertools;
     use rand::thread_rng;
+    use BFieldElement;
 
     use crate::empty_stack;
 

@@ -1,20 +1,20 @@
 use std::collections::HashMap;
 
-use crate::twenty_first::shared_math::{b_field_element::BFieldElement, other::random_elements};
 use itertools::Itertools;
 use num::One;
-use rand::{thread_rng, Rng};
-use triton_vm::triton_asm;
+use rand::thread_rng;
+use rand::Rng;
+use triton_vm::prelude::*;
+use twenty_first::shared_math::other::random_elements;
 
 use crate::data_type::DataType;
+use crate::empty_stack;
+use crate::library::Library;
+use crate::list::safeimplu32::SAFE_LIST_ELEMENT_CAPACITY;
+use crate::rust_shadowing_helper_functions::safe_list::safe_insert_random_list;
+use crate::rust_shadowing_helper_functions::safe_list::safe_list_push;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::{
-    empty_stack,
-    library::Library,
-    list::safeimplu32::SAFE_LIST_ELEMENT_CAPACITY,
-    rust_shadowing_helper_functions::safe_list::{safe_insert_random_list, safe_list_push},
-    ExecutionState,
-};
+use crate::ExecutionState;
 
 #[derive(Clone, Debug)]
 pub struct SafePush {

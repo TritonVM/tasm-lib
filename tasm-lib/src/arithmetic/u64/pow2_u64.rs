@@ -1,14 +1,15 @@
 use std::collections::HashMap;
 
-use crate::twenty_first::amount::u32s::U32s;
-use crate::twenty_first::shared_math::b_field_element::BFieldElement;
-use crate::twenty_first::shared_math::bfield_codec::BFieldCodec;
 use num::One;
+use triton_vm::prelude::*;
+use twenty_first::amount::u32s::U32s;
 
 use crate::data_type::DataType;
+use crate::empty_stack;
 use crate::library::Library;
+use crate::push_encodable;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::{empty_stack, push_encodable, ExecutionState};
+use crate::ExecutionState;
 
 /// Consumes top element which is interpreted as exponent. Pushes a
 /// U32<2> to the top of the stack. So grows the stack by 1.
@@ -16,20 +17,41 @@ use crate::{empty_stack, push_encodable, ExecutionState};
 pub struct Pow2U64;
 
 impl DeprecatedSnippet for Pow2U64 {
+    fn entrypoint_name(&self) -> String {
+        "tasm_arithmetic_u64_pow2".to_string()
+    }
+
     fn input_field_names(&self) -> Vec<String> {
         vec!["i".to_string()]
+    }
+
+    fn input_types(&self) -> Vec<DataType> {
+        vec![DataType::U32]
     }
 
     fn output_field_names(&self) -> Vec<String> {
         vec!["(2^i)_hi".to_string(), "(2^i)_lo".to_string()]
     }
 
-    fn input_types(&self) -> Vec<crate::data_type::DataType> {
-        vec![DataType::U32]
+    fn output_types(&self) -> Vec<DataType> {
+        vec![DataType::U64]
     }
 
-    fn output_types(&self) -> Vec<crate::data_type::DataType> {
-        vec![DataType::U64]
+    fn stack_diff(&self) -> isize {
+        1
+    }
+
+    fn function_code(&self, _library: &mut Library) -> String {
+        let entrypoint = self.entrypoint_name();
+
+        format!(
+            "{entrypoint}:
+                push 2
+                pow
+                split
+                return
+            "
+        )
     }
 
     fn crash_conditions(&self) -> Vec<String> {
@@ -46,25 +68,12 @@ impl DeprecatedSnippet for Pow2U64 {
             .collect()
     }
 
-    fn stack_diff(&self) -> isize {
-        1
+    fn common_case_input_state(&self) -> ExecutionState {
+        ExecutionState::with_stack([empty_stack(), vec![BFieldElement::new(31)]].concat())
     }
 
-    fn entrypoint_name(&self) -> String {
-        "tasm_arithmetic_u64_pow2".to_string()
-    }
-
-    fn function_code(&self, _library: &mut Library) -> String {
-        let entrypoint = self.entrypoint_name();
-
-        format!(
-            "{entrypoint}:
-                push 2
-                pow
-                split
-                return
-            "
-        )
+    fn worst_case_input_state(&self) -> ExecutionState {
+        ExecutionState::with_stack([empty_stack(), vec![BFieldElement::new(63)]].concat())
     }
 
     fn rust_shadowing(
@@ -88,25 +97,13 @@ impl DeprecatedSnippet for Pow2U64 {
             stack.push(res.pop().unwrap());
         }
     }
-
-    fn common_case_input_state(&self) -> ExecutionState {
-        ExecutionState::with_stack([empty_stack(), vec![BFieldElement::new(31)]].concat())
-    }
-
-    fn worst_case_input_state(&self) -> ExecutionState {
-        ExecutionState::with_stack([empty_stack(), vec![BFieldElement::new(63)]].concat())
-    }
 }
 
 #[cfg(test)]
 mod tests {
-
     use crate::empty_stack;
-
-    use crate::test_helpers::{
-        test_rust_equivalence_given_input_values_deprecated,
-        test_rust_equivalence_multiple_deprecated,
-    };
+    use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
+    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     use super::*;
 
@@ -144,8 +141,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::snippet_bencher::bench_and_write;
+
+    use super::*;
 
     #[test]
     fn pow2_static_benchmark() {

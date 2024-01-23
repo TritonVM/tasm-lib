@@ -1,18 +1,21 @@
-use num_traits::Zero;
 use std::collections::HashMap;
 
-use crate::memory::encode_to_memory;
-use crate::{
-    data_type::DataType, empty_stack, snippet_bencher::BenchmarkCase,
-    structure::tasm_object::TasmObject, traits::function::FunctionInitialState,
-};
-use rand::{rngs::StdRng, Rng, SeedableRng};
-use triton_vm::{triton_asm, BFieldElement};
+use num_traits::Zero;
+use rand::rngs::StdRng;
+use rand::Rng;
+use rand::SeedableRng;
+use triton_vm::prelude::*;
 
-use crate::{
-    field, recufier::fri_verify::FriVerify, traits::basic_snippet::BasicSnippet,
-    traits::function::Function,
-};
+use crate::data_type::DataType;
+use crate::empty_stack;
+use crate::field;
+use crate::memory::encode_to_memory;
+use crate::recufier::fri_verify::FriVerify;
+use crate::snippet_bencher::BenchmarkCase;
+use crate::structure::tasm_object::TasmObject;
+use crate::traits::basic_snippet::BasicSnippet;
+use crate::traits::function::Function;
+use crate::traits::function::FunctionInitialState;
 
 /// Compute domain\[index\]^(1<<round)
 pub struct GetColinearityCheckX;
@@ -34,10 +37,7 @@ impl BasicSnippet for GetColinearityCheckX {
         "tasm_recufier_get_colinearity_check_x".to_string()
     }
 
-    fn code(
-        &self,
-        _library: &mut crate::library::Library,
-    ) -> Vec<triton_vm::instruction::LabelledInstruction> {
+    fn code(&self, _library: &mut crate::library::Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
         let domain_offset = field!(FriVerify::domain_offset);
         let domain_generator = field!(FriVerify::domain_generator);
@@ -133,9 +133,10 @@ impl Function for GetColinearityCheckX {
 
 #[cfg(test)]
 mod test {
-    use super::GetColinearityCheckX;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
+
+    use super::GetColinearityCheckX;
 
     #[test]
     fn test() {
@@ -145,9 +146,10 @@ mod test {
 
 #[cfg(test)]
 mod bench {
-    use super::GetColinearityCheckX;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
+
+    use super::GetColinearityCheckX;
 
     #[test]
     fn bench() {

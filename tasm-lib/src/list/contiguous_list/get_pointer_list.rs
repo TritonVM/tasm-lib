@@ -1,21 +1,15 @@
-use crate::twenty_first::shared_math::bfield_codec::BFieldCodec;
 use num_traits::One;
-use rand::{thread_rng, Rng};
-use triton_vm::BFieldElement;
+use rand::thread_rng;
+use rand::Rng;
+use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
+use crate::list::contiguous_list::get_length::DummyOuterDataStructure;
+use crate::list::contiguous_list::get_length::GetLength;
+use crate::list::ListType;
 use crate::memory::dyn_malloc;
+use crate::rust_shadowing_helper_functions;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::{
-    list::{
-        contiguous_list::{
-            self,
-            get_length::{DummyOuterDataStructure, GetLength},
-        },
-        ListType,
-    },
-    rust_shadowing_helper_functions,
-};
 
 // All of `contiguous_list` assumes that each element has its length prepended
 pub struct GetPointerList {
@@ -34,16 +28,16 @@ impl DeprecatedSnippet for GetPointerList {
         vec!["*contiguous_list".to_owned()]
     }
 
-    fn input_types(&self) -> Vec<crate::data_type::DataType> {
+    fn input_types(&self) -> Vec<DataType> {
         vec![DataType::VoidPointer]
-    }
-
-    fn output_types(&self) -> Vec<crate::data_type::DataType> {
-        vec![DataType::List(Box::new(DataType::VoidPointer))]
     }
 
     fn output_field_names(&self) -> Vec<String> {
         vec!["*list_of_pointers".to_owned()]
+    }
+
+    fn output_types(&self) -> Vec<DataType> {
+        vec![DataType::List(Box::new(DataType::VoidPointer))]
     }
 
     fn stack_diff(&self) -> isize {
@@ -62,7 +56,7 @@ impl DeprecatedSnippet for GetPointerList {
         format!(
             "
             // BEFORE: _ *contiguous_list
-            // AFTER: _ *list_of_pointers
+            // AFTER:  _ *list_of_pointers
             {entrypoint}:
                 dup 0
                 // _ *cl *cl
@@ -170,10 +164,10 @@ impl DeprecatedSnippet for GetPointerList {
 
     fn rust_shadowing(
         &self,
-        stack: &mut Vec<triton_vm::BFieldElement>,
-        std_in: Vec<triton_vm::BFieldElement>,
-        secret_in: Vec<triton_vm::BFieldElement>,
-        memory: &mut std::collections::HashMap<triton_vm::BFieldElement, triton_vm::BFieldElement>,
+        stack: &mut Vec<BFieldElement>,
+        std_in: Vec<BFieldElement>,
+        secret_in: Vec<BFieldElement>,
+        memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
     ) {
         // read address
         let mut address = stack.last().unwrap().to_owned();
@@ -187,7 +181,7 @@ impl DeprecatedSnippet for GetPointerList {
             .value();
 
         // read length
-        contiguous_list::get_length::GetLength.rust_shadowing(stack, std_in, secret_in, memory);
+        GetLength.rust_shadowing(stack, std_in, secret_in, memory);
         let length = stack.pop().unwrap().value() as usize;
 
         // read object

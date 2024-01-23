@@ -1,18 +1,23 @@
 use std::collections::HashMap;
 
-use crate::twenty_first::{
-    amount::u32s::U32s,
-    shared_math::{b_field_element::BFieldElement, bfield_codec::BFieldCodec},
-};
 use rand::Rng;
+use triton_vm::prelude::*;
+use twenty_first::amount::u32s::U32s;
 
-use crate::{data_type::DataType, traits::deprecated_snippet::DeprecatedSnippet};
-use crate::{empty_stack, library::Library, ExecutionState};
+use crate::data_type::DataType;
+use crate::empty_stack;
+use crate::library::Library;
+use crate::traits::deprecated_snippet::DeprecatedSnippet;
+use crate::ExecutionState;
 
 #[derive(Clone, Debug)]
 pub struct SubU128;
 
 impl DeprecatedSnippet for SubU128 {
+    fn entrypoint_name(&self) -> String {
+        "tasm_arithmetic_u128_sub".to_string()
+    }
+
     fn input_field_names(&self) -> Vec<String> {
         vec![
             "rhs_3".to_string(),
@@ -26,6 +31,10 @@ impl DeprecatedSnippet for SubU128 {
         ]
     }
 
+    fn input_types(&self) -> Vec<DataType> {
+        vec![DataType::U128, DataType::U128]
+    }
+
     fn output_field_names(&self) -> Vec<String> {
         vec![
             "(lhs - rhs)_3".to_string(),
@@ -35,20 +44,8 @@ impl DeprecatedSnippet for SubU128 {
         ]
     }
 
-    fn input_types(&self) -> Vec<crate::data_type::DataType> {
-        vec![DataType::U128, DataType::U128]
-    }
-
-    fn output_types(&self) -> Vec<crate::data_type::DataType> {
+    fn output_types(&self) -> Vec<DataType> {
         vec![DataType::U128]
-    }
-
-    fn crash_conditions(&self) -> Vec<String> {
-        vec!["(lhs - rhs) overflows u128".to_string()]
-    }
-
-    fn entrypoint_name(&self) -> String {
-        "tasm_arithmetic_u128_sub".to_string()
     }
 
     fn stack_diff(&self) -> isize {
@@ -62,7 +59,7 @@ impl DeprecatedSnippet for SubU128 {
         format!(
             "
             // BEFORE: _ rhs_3 rhs_2 rhs_1 rhs_0 lhs_3 lhs_2 lhs_1 lhs_0
-            // AFTER: _ sum_3 sum_2 sum_1 sum_0
+            // AFTER:  _ sum_3 sum_2 sum_1 sum_0
             {entrypoint}:
                 swap 1 swap 4
                 push -1
@@ -159,6 +156,10 @@ impl DeprecatedSnippet for SubU128 {
         )
     }
 
+    fn crash_conditions(&self) -> Vec<String> {
+        vec!["(lhs - rhs) overflows u128".to_string()]
+    }
+
     fn gen_input_states(&self) -> Vec<ExecutionState> {
         let mut rng = rand::thread_rng();
 
@@ -245,11 +246,10 @@ fn prepare_state(lhs: u128, rhs: u128) -> ExecutionState {
 
 #[cfg(test)]
 mod tests {
-    use crate::twenty_first::shared_math::b_field_element::BFieldElement;
     use num::{One, Zero};
+    use BFieldElement;
 
     use crate::empty_stack;
-
     use crate::test_helpers::{
         test_rust_equivalence_given_input_values_deprecated,
         test_rust_equivalence_multiple_deprecated,
@@ -379,8 +379,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::snippet_bencher::bench_and_write;
+
+    use super::*;
 
     #[test]
     fn sub_u128_benchmark() {

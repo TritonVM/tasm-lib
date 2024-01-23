@@ -1,11 +1,14 @@
-use crate::twenty_first::amount::u32s::U32s;
-use crate::twenty_first::shared_math::b_field_element::BFieldElement;
-use rand::{thread_rng, RngCore};
+use rand::thread_rng;
+use rand::RngCore;
+use triton_vm::prelude::*;
+use twenty_first::amount::u32s::U32s;
 
 use crate::data_type::DataType;
+use crate::empty_stack;
 use crate::library::Library;
+use crate::push_encodable;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::{empty_stack, push_encodable, ExecutionState};
+use crate::ExecutionState;
 
 #[derive(Clone, Debug)]
 pub struct ShiftLeftU64;
@@ -27,15 +30,15 @@ impl DeprecatedSnippet for ShiftLeftU64 {
         vec![DataType::U64, DataType::U32]
     }
 
-    fn output_types(&self) -> Vec<DataType> {
-        vec![DataType::U64]
-    }
-
     fn output_field_names(&self) -> Vec<String> {
         vec![
             "shifted_value_hi".to_string(),
             "shifted_value_lo".to_string(),
         ]
+    }
+
+    fn output_types(&self) -> Vec<DataType> {
+        vec![DataType::U64]
     }
 
     fn stack_diff(&self) -> isize {
@@ -47,7 +50,7 @@ impl DeprecatedSnippet for ShiftLeftU64 {
         format!(
             "
             // BEFORE: _ value_hi value_lo shift
-            // AFTER: _ (value << shift)_hi (value << shift)_lo
+            // AFTER:  _ (value << shift)_hi (value << shift)_lo
             {entrypoint}:
                 // Bounds check: Verify that shift amount is less than 64.
                 push 64
@@ -180,10 +183,8 @@ fn prepare_state(value: u64, shift_amount: u32) -> ExecutionState {
 mod tests {
     use std::collections::HashMap;
 
-    use crate::test_helpers::{
-        test_rust_equivalence_given_input_values_deprecated,
-        test_rust_equivalence_multiple_deprecated,
-    };
+    use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
+    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     use super::*;
 
@@ -241,8 +242,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::snippet_bencher::bench_and_write;
+
+    use super::*;
 
     #[test]
     fn shift_left_u64_benchmark() {

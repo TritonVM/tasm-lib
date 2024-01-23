@@ -1,18 +1,22 @@
 use std::collections::HashMap;
 
-use crate::twenty_first::{
-    shared_math::b_field_element::BFieldElement, util_types::algebraic_hasher::AlgebraicHasher,
-};
 use itertools::Itertools;
-use rand::{rngs::StdRng, Rng, SeedableRng};
-use triton_vm::{triton_asm, NonDeterminism};
+use rand::rngs::StdRng;
+use rand::Rng;
+use rand::SeedableRng;
+use triton_vm::prelude::*;
+use twenty_first::shared_math::b_field_element::BFieldElement;
+use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
+use crate::data_type::DataType;
+use crate::empty_stack;
+use crate::list::ListType;
+use crate::rust_shadowing_helper_functions;
+use crate::traits::basic_snippet::BasicSnippet;
+use crate::traits::procedure::Procedure;
 use crate::traits::procedure::ProcedureInitialState;
-use crate::traits::{basic_snippet::BasicSnippet, procedure::Procedure};
-use crate::{
-    data_type::DataType, empty_stack, list::ListType, rust_shadowing_helper_functions, VmHasher,
-    VmHasherState,
-};
+use crate::VmHasher;
+use crate::VmHasherState;
 
 /// Sample n pseudorandom integers between 0 and k. It does this by squeezing the sponge. It is the
 /// caller's responsibility to ensure that the sponge is initialized to the right state.
@@ -40,10 +44,7 @@ impl BasicSnippet for SampleIndices {
         "sample_indices".to_string()
     }
 
-    fn code(
-        &self,
-        library: &mut crate::library::Library,
-    ) -> Vec<triton_vm::instruction::LabelledInstruction> {
+    fn code(&self, library: &mut crate::library::Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
         let main_loop = format!("{entrypoint}_main_loop");
         let then_reduce_and_save = format!("{entrypoint}_then_reduce_and_save");
@@ -233,10 +234,10 @@ impl Procedure for SampleIndices {
 
 #[cfg(test)]
 mod test {
+    use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
-    use crate::{list::ListType, traits::procedure::ShadowedProcedure};
 
-    use super::SampleIndices;
+    use super::*;
 
     #[test]
     fn test() {
@@ -249,10 +250,10 @@ mod test {
 
 #[cfg(test)]
 mod bench {
+    use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
-    use crate::{list::ListType, traits::procedure::ShadowedProcedure};
 
-    use super::SampleIndices;
+    use super::*;
 
     #[test]
     fn bench() {

@@ -1,6 +1,7 @@
-use crate::twenty_first::shared_math::bfield_codec::BFieldCodec;
-use rand::{rngs::StdRng, RngCore, SeedableRng};
-use triton_vm::{triton_asm, BFieldElement};
+use rand::rngs::StdRng;
+use rand::RngCore;
+use rand::SeedableRng;
+use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
 use crate::empty_stack;
@@ -10,14 +11,14 @@ use crate::traits::closure::Closure;
 pub struct OverflowingAdd;
 
 impl BasicSnippet for OverflowingAdd {
-    fn inputs(&self) -> Vec<(crate::data_type::DataType, String)> {
+    fn inputs(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::U64, "lhs".to_string()),
             (DataType::U64, "rhs".to_string()),
         ]
     }
 
-    fn outputs(&self) -> Vec<(crate::data_type::DataType, String)> {
+    fn outputs(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::U64, "wrapped_sum".to_owned()),
             (DataType::Bool, "overflow".to_owned()),
@@ -28,13 +29,10 @@ impl BasicSnippet for OverflowingAdd {
         "tasm_arithmetic_u64_overflowing_add".to_string()
     }
 
-    fn code(
-        &self,
-        _library: &mut crate::library::Library,
-    ) -> Vec<triton_vm::instruction::LabelledInstruction> {
+    fn code(&self, _library: &mut crate::library::Library) -> Vec<LabelledInstruction> {
         triton_asm!(
         // BEFORE: _ lhs_hi lhs_lo rhs_hi rhs_lo
-        // AFTER: _ sum_hi sum_lo overflow
+        // AFTER:  _ sum_hi sum_lo overflow
         { self.entrypoint() }:
 
             swap 1 swap 2
@@ -64,7 +62,7 @@ impl BasicSnippet for OverflowingAdd {
 }
 
 impl Closure for OverflowingAdd {
-    fn rust_shadow(&self, stack: &mut Vec<triton_vm::BFieldElement>) {
+    fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
         let rhs_lo: u32 = stack.pop().unwrap().try_into().unwrap();
         let rhs_hi: u32 = stack.pop().unwrap().try_into().unwrap();
         let lhs_lo: u32 = stack.pop().unwrap().try_into().unwrap();
@@ -82,7 +80,7 @@ impl Closure for OverflowingAdd {
         &self,
         seed: [u8; 32],
         bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
-    ) -> Vec<triton_vm::BFieldElement> {
+    ) -> Vec<BFieldElement> {
         let (lhs, rhs) = match bench_case {
             Some(crate::snippet_bencher::BenchmarkCase::CommonCase) => {
                 (1u64 << 63, (1u64 << 63) - 1)
@@ -100,13 +98,11 @@ impl Closure for OverflowingAdd {
 
 #[cfg(test)]
 mod tests {
-    use triton_vm::NonDeterminism;
+    use crate::test_helpers::test_rust_equivalence_given_complete_state;
+    use crate::traits::closure::ShadowedClosure;
+    use crate::traits::rust_shadow::RustShadow;
 
     use super::*;
-    use crate::traits::rust_shadow::RustShadow;
-    use crate::{
-        test_helpers::test_rust_equivalence_given_complete_state, traits::closure::ShadowedClosure,
-    };
 
     #[test]
     fn u64_overflowing_add_pbt() {
@@ -158,9 +154,10 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
+
+    use super::*;
 
     #[test]
     fn u64_overflowing_add_bench() {

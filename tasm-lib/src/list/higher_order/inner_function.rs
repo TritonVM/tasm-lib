@@ -2,12 +2,9 @@ use num_traits::One;
 use std::collections::HashMap;
 use triton_vm::instruction::AnInstruction;
 use triton_vm::instruction::LabelledInstruction;
+use triton_vm::prelude::*;
 use triton_vm::triton_asm;
 use triton_vm::vm::VMState;
-use triton_vm::BFieldElement;
-use triton_vm::NonDeterminism;
-use triton_vm::Program;
-use triton_vm::PublicInput;
 
 use crate::data_type::DataType;
 use crate::library::Library;

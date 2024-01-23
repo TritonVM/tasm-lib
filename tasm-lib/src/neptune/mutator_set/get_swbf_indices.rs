@@ -1,29 +1,33 @@
-use crate::twenty_first::{
-    shared_math::{bfield_codec::BFieldCodec, tip5::Tip5},
-    util_types::algebraic_hasher::{AlgebraicHasher, Domain, SpongeHasher},
-};
-use itertools::Itertools;
-use num_traits::{One, Zero};
-use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::collections::HashMap;
-use triton_vm::{triton_asm, BFieldElement};
 
-use crate::{
-    arithmetic::u128::{shift_left_static_u128, shift_right_static_u128},
-    empty_stack,
-    hashing::sample_indices::SampleIndices,
-    list::{
-        higher_order::{
-            inner_function::{InnerFunction, RawCode},
-            map::Map,
-        },
-        ListType,
-    },
-    rust_shadowing_helper_functions,
-    traits::function::{Function, FunctionInitialState},
-    Digest, VmHasher, VmHasherState, DIGEST_LENGTH,
-};
-use crate::{data_type::DataType, traits::basic_snippet::BasicSnippet};
+use itertools::Itertools;
+use num_traits::One;
+use num_traits::Zero;
+use rand::rngs::StdRng;
+use rand::Rng;
+use rand::SeedableRng;
+use triton_vm::prelude::*;
+use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
+use twenty_first::util_types::algebraic_hasher::Domain;
+use twenty_first::util_types::algebraic_hasher::SpongeHasher;
+
+use crate::arithmetic::u128::shift_left_static_u128;
+use crate::arithmetic::u128::shift_right_static_u128;
+use crate::data_type::DataType;
+use crate::empty_stack;
+use crate::hashing::sample_indices::SampleIndices;
+use crate::list::higher_order::inner_function::InnerFunction;
+use crate::list::higher_order::inner_function::RawCode;
+use crate::list::higher_order::map::Map;
+use crate::list::ListType;
+use crate::rust_shadowing_helper_functions;
+use crate::traits::basic_snippet::BasicSnippet;
+use crate::traits::function::Function;
+use crate::traits::function::FunctionInitialState;
+use crate::Digest;
+use crate::VmHasher;
+use crate::VmHasherState;
+use crate::DIGEST_LENGTH;
 
 /// Derives the indices that make up the removal record from the item
 /// (a digest), the sender randomness (also a digest), receiver
@@ -54,10 +58,7 @@ impl BasicSnippet for GetSwbfIndices {
         )
     }
 
-    fn code(
-        &self,
-        library: &mut crate::library::Library,
-    ) -> Vec<triton_vm::instruction::LabelledInstruction> {
+    fn code(&self, library: &mut crate::library::Library) -> Vec<LabelledInstruction> {
         let num_trials = self.num_trials;
         let window_size = self.window_size;
         let sample_indices = library.import(Box::new(SampleIndices {
@@ -128,7 +129,7 @@ impl BasicSnippet for GetSwbfIndices {
 
         triton_asm!(
         // BEFORE: _ li_hi li_lo r4 r3 r2 r1 r0 s4 s3 s2 s1 s0 i4 i3 i2 i1 i0
-        // AFTER: _ index_list
+        // AFTER:  _ index_list
         {entrypoint}:
 
             sponge_init
@@ -181,8 +182,8 @@ impl BasicSnippet for GetSwbfIndices {
 impl Function for GetSwbfIndices {
     fn rust_shadow(
         &self,
-        stack: &mut Vec<triton_vm::BFieldElement>,
-        memory: &mut std::collections::HashMap<triton_vm::BFieldElement, triton_vm::BFieldElement>,
+        stack: &mut Vec<BFieldElement>,
+        memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
         let item = Digest::new([
             stack.pop().unwrap(),
@@ -379,9 +380,10 @@ fn get_swbf_indices<H: AlgebraicHasher>(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
+
+    use super::*;
 
     #[test]
     fn test() {
@@ -395,9 +397,10 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
+
+    use super::*;
 
     #[test]
     fn bench() {

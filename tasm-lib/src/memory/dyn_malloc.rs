@@ -1,18 +1,19 @@
-use itertools::Itertools;
 use std::collections::HashMap;
 
-use crate::twenty_first::shared_math::b_field_element::BFieldElement;
-use num::{One, Zero};
+use itertools::Itertools;
+use num::One;
+use num::Zero;
 use rand::Rng;
-use triton_vm::instruction::LabelledInstruction;
-use triton_vm::triton_asm;
+use triton_vm::prelude::*;
+
+use crate::data_type::DataType;
+use crate::empty_stack;
+use crate::library::Library;
+use crate::traits::deprecated_snippet::DeprecatedSnippet;
+use crate::ExecutionState;
 
 pub const DYN_MALLOC_ADDRESS: BFieldElement = BFieldElement::new(1 << 32);
 pub const FIRST_DYNAMICALLY_ALLOCATED_ADDRESS: BFieldElement = BFieldElement::new((1 << 32) + 1);
-
-use crate::data_type::DataType;
-use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::{empty_stack, library::Library, ExecutionState};
 
 #[derive(Clone, Debug)]
 pub struct DynMalloc;
@@ -212,8 +213,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::snippet_bencher::bench_and_write;
+
+    use super::*;
 
     #[test]
     fn dyn_malloc_benchmark() {

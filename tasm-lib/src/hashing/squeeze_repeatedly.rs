@@ -1,30 +1,35 @@
 use std::collections::HashMap;
 
-use crate::twenty_first::{shared_math::tip5::RATE, util_types::algebraic_hasher::SpongeHasher};
 use itertools::Itertools;
-use rand::{rngs::StdRng, Rng, RngCore, SeedableRng};
-use tasm_lib::traits::procedure::ProcedureInitialState;
-use triton_vm::{triton_asm, BFieldElement, NonDeterminism};
+use rand::rngs::StdRng;
+use rand::Rng;
+use rand::RngCore;
+use rand::SeedableRng;
+use triton_vm::prelude::*;
+use twenty_first::util_types::algebraic_hasher::SpongeHasher;
 
 use crate::data_type::DataType;
+use crate::empty_stack;
 use crate::snippet_bencher::BenchmarkCase;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::procedure::Procedure;
-use crate::{empty_stack, VmHasher, VmHasherState};
+use crate::traits::procedure::ProcedureInitialState;
+use crate::VmHasher;
+use crate::VmHasherState;
 
 /// Squeeze the sponge n times, storing all the produced pseudorandom `BFieldElement`s
 /// contiguously in memory. It is the caller's responsibility to allocate enough memory.
 pub struct SqueezeRepeatedly;
 
 impl BasicSnippet for SqueezeRepeatedly {
-    fn inputs(&self) -> Vec<(crate::data_type::DataType, String)> {
+    fn inputs(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::VoidPointer, "address".to_string()),
             (DataType::U32, "num_squeezes".to_string()),
         ]
     }
 
-    fn outputs(&self) -> Vec<(crate::data_type::DataType, String)> {
+    fn outputs(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::VoidPointer, "address".to_string()),
             (DataType::U32, "num_squeezes".to_string()),
@@ -35,10 +40,7 @@ impl BasicSnippet for SqueezeRepeatedly {
         "tasm_hashing_squeeze_repeatedly".to_string()
     }
 
-    fn code(
-        &self,
-        _library: &mut crate::library::Library,
-    ) -> Vec<triton_vm::instruction::LabelledInstruction> {
+    fn code(&self, _library: &mut crate::library::Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
         triton_asm! {
             // BEFORE: _ address num_squeezes
@@ -87,7 +89,7 @@ impl Procedure for SqueezeRepeatedly {
             memory.insert(address + BFieldElement::new(i as u64), s);
         }
 
-        let new_address = address + BFieldElement::new(RATE as u64 * num_squeezes as u64);
+        let new_address = address + BFieldElement::new(tip5::RATE as u64 * num_squeezes as u64);
         stack.push(new_address);
         stack.push(BFieldElement::new(0));
 
@@ -123,18 +125,21 @@ impl Procedure for SqueezeRepeatedly {
 
 #[cfg(test)]
 mod test {
-    use rand::{thread_rng, Rng};
-    use tasm_lib::traits::procedure::ProcedureInitialState;
+    use rand::thread_rng;
+    use rand::Rng;
 
-    use crate::test_helpers::{
-        rust_final_state, tasm_final_state, verify_memory_equivalence, verify_sponge_equivalence,
-        verify_stack_equivalence, verify_stack_growth,
-    };
+    use crate::test_helpers::rust_final_state;
+    use crate::test_helpers::tasm_final_state;
+    use crate::test_helpers::verify_memory_equivalence;
+    use crate::test_helpers::verify_sponge_equivalence;
+    use crate::test_helpers::verify_stack_equivalence;
+    use crate::test_helpers::verify_stack_growth;
     use crate::traits::procedure::Procedure;
+    use crate::traits::procedure::ProcedureInitialState;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
 
-    use super::SqueezeRepeatedly;
+    use super::*;
 
     #[test]
     fn test() {
@@ -189,9 +194,10 @@ mod test {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
+
+    use super::*;
 
     #[test]
     fn squeeze_repeatedly_bench() {

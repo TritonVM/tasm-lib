@@ -1,17 +1,24 @@
 use std::collections::HashMap;
 
-use crate::twenty_first::shared_math::b_field_element::BFieldElement;
 use rand::Rng;
+use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
+use crate::empty_stack;
 use crate::library::Library;
+use crate::push_encodable;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::{empty_stack, push_encodable, Digest, ExecutionState};
+use crate::Digest;
+use crate::ExecutionState;
 
 #[derive(Clone, Debug)]
 pub struct EqDigest;
 
 impl DeprecatedSnippet for EqDigest {
+    fn entrypoint_name(&self) -> String {
+        "tasm_hashing_eq_digest".to_string()
+    }
+
     fn input_field_names(&self) -> Vec<String> {
         vec![
             "b4".to_string(),
@@ -27,16 +34,48 @@ impl DeprecatedSnippet for EqDigest {
         ]
     }
 
+    fn input_types(&self) -> Vec<DataType> {
+        vec![DataType::Digest, DataType::Digest]
+    }
+
     fn output_field_names(&self) -> Vec<String> {
         vec!["(a3 = b3)·(a2 = b2)·(a1 = b1)·(a4 = b4)·(b0 = a0)".to_string()]
     }
 
-    fn input_types(&self) -> Vec<crate::data_type::DataType> {
-        vec![DataType::Digest, DataType::Digest]
+    fn output_types(&self) -> Vec<DataType> {
+        vec![DataType::Bool]
     }
 
-    fn output_types(&self) -> Vec<crate::data_type::DataType> {
-        vec![DataType::Bool]
+    fn stack_diff(&self) -> isize {
+        -9
+    }
+
+    fn function_code(&self, _library: &mut Library) -> String {
+        let entrypoint = self.entrypoint_name();
+        format!(
+            "
+            // BEFORE: _ b4 b3 b2 b1 b0 a4 a3 a2 a1 a0
+            // AFTER:  _ (a3 = b3)·(a2 = b2)·(a1 = b1)·(a4 = b4)·(b0 = a0)
+            {entrypoint}:
+                swap 6  // _ b4 b3 b2 a0 b0 a4 a3 a2 a1 b1
+                eq      // _ b4 b3 b2 a0 b0 a4 a3 a2 (a1 = b1)
+                swap 6  // _ b4 b3 (a1 = b1) a0 b0 a4 a3 a2 b2
+                eq      // _ b4 b3 (a1 = b1) a0 b0 a4 a3 (a2 = b2)
+                swap 6  // _ b4 (a2 = b2) (a1 = b1) a0 b0 a4 a3 b3
+                eq      // _ b4 (a2 = b2) (a1 = b1) a0 b0 a4 (a3 = b3)
+                swap 6  // _ (a3 = b3) (a2 = b2) (a1 = b1) a0 b0 a4 b4
+                eq      // _ (a3 = b3) (a2 = b2) (a1 = b1) a0 b0 (a4 = b4)
+                swap 2  // _ (a3 = b3) (a2 = b2) (a1 = b1) (a4 = b4) b0 a0
+                eq      // _ (a3 = b3) (a2 = b2) (a1 = b1) (a4 = b4) (b0 = a0)
+
+                mul
+                mul
+                mul
+                mul     // (a3 = b3)·(a2 = b2)·(a1 = b1)·(a4 = b4)·(b0 = a0)
+
+                return
+            "
+        )
     }
 
     fn crash_conditions(&self) -> Vec<String> {
@@ -55,40 +94,24 @@ impl DeprecatedSnippet for EqDigest {
         vec![ExecutionState::with_stack(stack)]
     }
 
-    fn stack_diff(&self) -> isize {
-        -9
+    fn common_case_input_state(&self) -> ExecutionState {
+        let mut stack = empty_stack();
+        push_encodable(&mut stack, &Digest::default());
+        push_encodable(&mut stack, &Digest::default());
+
+        ExecutionState::with_stack(stack)
     }
 
-    fn entrypoint_name(&self) -> String {
-        "tasm_hashing_eq_digest".to_string()
-    }
+    fn worst_case_input_state(&self) -> ExecutionState {
+        let mut rng = rand::thread_rng();
+        let digest_a: Digest = rng.gen();
+        let digest_b: Digest = rng.gen();
 
-    fn function_code(&self, _library: &mut Library) -> String {
-        let entrypoint = self.entrypoint_name();
-        format!(
-            "
-            // Before: _ b4 b3 b2 b1 b0 a4 a3 a2 a1 a0
-            // After: _ (a3 = b3)·(a2 = b2)·(a1 = b1)·(a4 = b4)·(b0 = a0)
-            {entrypoint}:
-                swap 6  // _ b4 b3 b2 a0 b0 a4 a3 a2 a1 b1
-                eq     // _ b4 b3 b2 a0 b0 a4 a3 a2 (a1 = b1)
-                swap 6  // _ b4 b3 (a1 = b1) a0 b0 a4 a3 a2 b2
-                eq     // _ b4 b3 (a1 = b1) a0 b0 a4 a3 (a2 = b2)
-                swap 6  // _ b4 (a2 = b2) (a1 = b1) a0 b0 a4 a3 b3
-                eq     // _ b4 (a2 = b2) (a1 = b1) a0 b0 a4 (a3 = b3)
-                swap 6  // _ (a3 = b3) (a2 = b2) (a1 = b1) a0 b0 a4 b4
-                eq     // _ (a3 = b3) (a2 = b2) (a1 = b1) a0 b0 (a4 = b4)
-                swap 2  // _ (a3 = b3) (a2 = b2) (a1 = b1) (a4 = b4) b0 a0
-                eq     // _ (a3 = b3) (a2 = b2) (a1 = b1) (a4 = b4) (b0 = a0)
+        let mut stack = empty_stack();
+        push_encodable(&mut stack, &digest_b);
+        push_encodable(&mut stack, &digest_a);
 
-                mul
-                mul
-                mul
-                mul    // (a3 = b3)·(a2 = b2)·(a1 = b1)·(a4 = b4)·(b0 = a0)
-
-                return
-            "
-        )
+        ExecutionState::with_stack(stack)
     }
 
     fn rust_shadowing(
@@ -116,26 +139,6 @@ impl DeprecatedSnippet for EqDigest {
 
         stack.push(BFieldElement::new((digest_a == digest_b) as u64));
     }
-
-    fn common_case_input_state(&self) -> ExecutionState {
-        let mut stack = empty_stack();
-        push_encodable(&mut stack, &Digest::default());
-        push_encodable(&mut stack, &Digest::default());
-
-        ExecutionState::with_stack(stack)
-    }
-
-    fn worst_case_input_state(&self) -> ExecutionState {
-        let mut rng = rand::thread_rng();
-        let digest_a: Digest = rng.gen();
-        let digest_b: Digest = rng.gen();
-
-        let mut stack = empty_stack();
-        push_encodable(&mut stack, &digest_b);
-        push_encodable(&mut stack, &digest_a);
-
-        ExecutionState::with_stack(stack)
-    }
 }
 
 #[cfg(test)]
@@ -152,8 +155,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::snippet_bencher::bench_and_write;
+
+    use super::*;
 
     #[test]
     fn eq_digest_benchmark() {

@@ -1,17 +1,18 @@
-use crate::twenty_first::shared_math::b_field_element::BFieldElement;
+use std::collections::HashMap;
+
 use num_traits::Zero;
 use rand::rngs::StdRng;
-use rand::{Rng, SeedableRng};
-use std::collections::HashMap;
-use triton_vm::instruction::LabelledInstruction;
-use triton_vm::triton_asm;
+use rand::Rng;
+use rand::SeedableRng;
+use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
 use crate::empty_stack;
 use crate::library::Library;
 use crate::memory::dyn_malloc::DYN_MALLOC_ADDRESS;
 use crate::traits::basic_snippet::BasicSnippet;
-use crate::traits::function::{Function, FunctionInitialState};
+use crate::traits::function::Function;
+use crate::traits::function::FunctionInitialState;
 
 const CONST_SIZE_MALLOCS_FIRST_DYNAMICALLY_ALLOCATED_ADDRESS: BFieldElement =
     BFieldElement::new(1 << 33);
@@ -145,14 +146,13 @@ mod tests {
     use std::cell::RefCell;
     use std::rc::Rc;
 
-    use triton_vm::{NonDeterminism, Program};
-
-    use super::*;
     use crate::execute_with_terminal_state;
     use crate::linker::link_for_isolated_run;
     use crate::test_helpers::tasm_final_state;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
+
+    use super::*;
 
     #[test]
     fn expected_address_chosen_for_dyn_malloc() {
@@ -233,9 +233,10 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
+
+    use super::*;
 
     #[test]
     fn push_ram_to_stack_bench() {

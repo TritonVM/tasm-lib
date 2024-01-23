@@ -1,15 +1,16 @@
 use std::collections::HashMap;
 
-use crate::twenty_first::amount::u32s::U32s;
-use crate::twenty_first::shared_math::b_field_element::BFieldElement;
-use crate::twenty_first::shared_math::bfield_codec::BFieldCodec;
 use num::One;
 use rand::RngCore;
+use triton_vm::prelude::*;
+use twenty_first::amount::u32s::U32s;
 
 use crate::data_type::DataType;
+use crate::empty_stack;
 use crate::library::Library;
+use crate::push_encodable;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::{empty_stack, push_encodable, ExecutionState};
+use crate::ExecutionState;
 
 #[derive(Clone, Debug)]
 pub struct IncrU64;
@@ -23,7 +24,7 @@ impl DeprecatedSnippet for IncrU64 {
         vec!["value_hi".to_string(), "value_lo".to_string()]
     }
 
-    fn input_types(&self) -> Vec<crate::data_type::DataType> {
+    fn input_types(&self) -> Vec<DataType> {
         vec![DataType::U64]
     }
 
@@ -31,7 +32,7 @@ impl DeprecatedSnippet for IncrU64 {
         vec!["(value + 1)_hi".to_string(), "(value + 1)_lo".to_string()]
     }
 
-    fn output_types(&self) -> Vec<crate::data_type::DataType> {
+    fn output_types(&self) -> Vec<DataType> {
         vec![DataType::U64]
     }
 
@@ -138,11 +139,9 @@ impl DeprecatedSnippet for IncrU64 {
 
 #[cfg(test)]
 mod tests {
-
-    use triton_vm::NonDeterminism;
-
+    use crate::empty_stack;
+    use crate::push_encodable;
     use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
-    use crate::{empty_stack, push_encodable};
 
     use super::*;
 
@@ -179,8 +178,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::snippet_bencher::bench_and_write;
+
+    use super::*;
 
     #[test]
     fn incr_u64_benchmark() {

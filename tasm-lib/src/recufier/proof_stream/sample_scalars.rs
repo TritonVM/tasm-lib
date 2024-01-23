@@ -1,25 +1,24 @@
 use std::collections::HashMap;
 
-use crate::twenty_first::{
-    shared_math::{tip5::RATE, x_field_element::XFieldElement},
-    util_types::algebraic_hasher::SpongeHasher,
-};
 use itertools::Itertools;
-use rand::{rngs::StdRng, Rng, SeedableRng};
-use triton_vm::{triton_asm, BFieldElement, NonDeterminism};
+use rand::rngs::StdRng;
+use rand::Rng;
+use rand::SeedableRng;
+use triton_vm::prelude::*;
+use twenty_first::util_types::algebraic_hasher::SpongeHasher;
 
+use crate::data_type::DataType;
+use crate::empty_stack;
+use crate::hashing::squeeze_repeatedly::SqueezeRepeatedly;
+use crate::list::unsafeimplu32::new::UnsafeNew;
+use crate::list::unsafeimplu32::set_length::UnsafeSetLength;
+use crate::memory::dyn_malloc::FIRST_DYNAMICALLY_ALLOCATED_ADDRESS;
 use crate::memory::encode_to_memory;
+use crate::traits::basic_snippet::BasicSnippet;
+use crate::traits::procedure::Procedure;
 use crate::traits::procedure::ProcedureInitialState;
-use crate::{data_type::DataType, traits::basic_snippet::BasicSnippet};
-use crate::{
-    empty_stack,
-    hashing::squeeze_repeatedly::SqueezeRepeatedly,
-    list::unsafeimplu32::{new::UnsafeNew, set_length::UnsafeSetLength},
-    VmHasher, VmHasherState,
-};
-use crate::{
-    memory::dyn_malloc::FIRST_DYNAMICALLY_ALLOCATED_ADDRESS, traits::procedure::Procedure,
-};
+use crate::VmHasher;
+use crate::VmHasherState;
 
 /// Squeeze the sponge to sample a given number of `XFieldElement`s.
 pub struct SampleScalars;
@@ -40,10 +39,7 @@ impl BasicSnippet for SampleScalars {
         "tasm_recufier_proof_stream_sample_scalars".to_string()
     }
 
-    fn code(
-        &self,
-        library: &mut crate::library::Library,
-    ) -> Vec<triton_vm::instruction::LabelledInstruction> {
+    fn code(&self, library: &mut crate::library::Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
         let set_length = library.import(Box::new(UnsafeSetLength {
             data_type: DataType::Xfe,
@@ -53,7 +49,7 @@ impl BasicSnippet for SampleScalars {
         }));
         let safety_offset = 1;
         let squeeze_repeatedly = library.import(Box::new(SqueezeRepeatedly));
-        let rate = RATE;
+        let rate = tip5::RATE;
         triton_asm! {
             // BEFORE: _ num_scalars
             // AFTER:  _ *scalars
@@ -111,7 +107,7 @@ impl Procedure for SampleScalars {
             panic!("sponge state must be initialized");
         };
         let num_scalars = stack.pop().unwrap().value() as usize;
-        let num_squeezes = (num_scalars * 3 + 9) / RATE;
+        let num_squeezes = (num_scalars * 3 + 9) / tip5::RATE;
         let pseudorandomness = (0..num_squeezes)
             .flat_map(|_| VmHasher::squeeze(sponge_state).to_vec())
             .collect_vec();
@@ -148,8 +144,7 @@ impl Procedure for SampleScalars {
         let num_scalars = rng.gen_range(0..40);
         let mut stack = empty_stack();
         stack.push(BFieldElement::new(num_scalars as u64));
-        let sponge_state: VmHasherState =
-            crate::twenty_first::shared_math::tip5::Tip5State { state: rng.gen() };
+        let sponge_state: VmHasherState = tip5::Tip5State { state: rng.gen() };
 
         ProcedureInitialState {
             stack,

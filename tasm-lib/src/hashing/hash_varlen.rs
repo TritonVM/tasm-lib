@@ -1,16 +1,16 @@
-use itertools::Itertools;
 use std::collections::HashMap;
 
-use crate::twenty_first::{
-    shared_math::b_field_element::BFieldElement, util_types::algebraic_hasher::AlgebraicHasher,
-};
+use itertools::Itertools;
 use rand::random;
-use triton_vm::{triton_asm, NonDeterminism};
+use triton_vm::prelude::*;
+use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
 use crate::data_type::DataType;
+use crate::empty_stack;
 use crate::hashing::absorb::Absorb;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::{empty_stack, ExecutionState, VmHasher};
+use crate::ExecutionState;
+use crate::VmHasher;
 
 /// Calculate hash of a raw sequence of a `BFieldElement`.
 #[derive(Clone, Debug)]
@@ -149,8 +149,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::snippet_bencher::bench_and_write;
+
+    use super::*;
 
     #[test]
     fn benchmark() {

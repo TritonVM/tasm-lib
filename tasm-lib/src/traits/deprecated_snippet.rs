@@ -2,19 +2,23 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::twenty_first::shared_math::b_field_element::BFieldElement;
 use anyhow::Result;
 use triton_vm::instruction::LabelledInstruction;
-use triton_vm::parser::{to_labelled_instructions, tokenize};
-use triton_vm::{triton_asm, NonDeterminism, Program};
+use triton_vm::parser::to_labelled_instructions;
+use triton_vm::parser::tokenize;
+use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
+use crate::execute_bench_deprecated;
+use crate::execute_test;
 use crate::execute_with_terminal_state;
 use crate::library::Library;
 use crate::test_helpers::test_rust_equivalence_given_execution_state_deprecated;
+use crate::ExecutionResult;
+use crate::ExecutionState;
 use crate::VmHasherState;
-use crate::{execute_bench_deprecated, ExecutionResult, VmOutputState, DIGEST_LENGTH};
-use crate::{execute_test, ExecutionState};
+use crate::VmOutputState;
+use crate::DIGEST_LENGTH;
 
 use super::basic_snippet::BasicSnippet;
 use super::rust_shadow::RustShadow;
@@ -214,6 +218,10 @@ struct DeprecatedSnippetWrapper<S: DeprecatedSnippet> {
 }
 
 impl<S: DeprecatedSnippet + Clone + 'static> RustShadow for DeprecatedSnippetWrapper<S> {
+    fn inner(&self) -> Rc<RefCell<dyn BasicSnippet>> {
+        Rc::new(RefCell::new(self.deprecated_snippet.clone()))
+    }
+
     fn rust_shadow_wrapper(
         &self,
         stdin: &[BFieldElement],
@@ -248,10 +256,6 @@ impl<S: DeprecatedSnippet + Clone + 'static> RustShadow for DeprecatedSnippetWra
 
     fn bench(&self) {
         todo!()
-    }
-
-    fn inner(&self) -> Rc<RefCell<dyn BasicSnippet>> {
-        Rc::new(RefCell::new(self.deprecated_snippet.clone()))
     }
 }
 

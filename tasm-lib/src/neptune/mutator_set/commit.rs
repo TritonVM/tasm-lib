@@ -1,10 +1,13 @@
-use crate::twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 use rand::random;
-use triton_vm::NonDeterminism;
+use triton_vm::prelude::*;
+use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
 use crate::data_type::DataType;
+use crate::empty_stack;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::{empty_stack, Digest, ExecutionState, VmHasher};
+use crate::Digest;
+use crate::ExecutionState;
+use crate::VmHasher;
 
 #[derive(Clone, Debug)]
 pub struct Commit;
@@ -87,10 +90,6 @@ impl DeprecatedSnippet for Commit {
         vec![DataType::Digest, DataType::Digest, DataType::Digest]
     }
 
-    fn output_types(&self) -> Vec<crate::data_type::DataType> {
-        vec![DataType::Digest]
-    }
-
     fn output_field_names(&self) -> Vec<String>
     where
         Self: Sized,
@@ -102,6 +101,10 @@ impl DeprecatedSnippet for Commit {
             "commitment1".to_string(),
             "commitment0".to_string(),
         ]
+    }
+
+    fn output_types(&self) -> Vec<crate::data_type::DataType> {
+        vec![DataType::Digest]
     }
 
     fn stack_diff(&self) -> isize
@@ -117,7 +120,7 @@ impl DeprecatedSnippet for Commit {
         format!(
             "
             // BEFORE: _ r4 r3 r2 r1 r0 s4 s3 s2 s1 s0 i4 i3 i2 i1 i0
-            // AFTER: _ c4 c3 c2 c1 c0
+            // AFTER:  _ c4 c3 c2 c1 c0
             {entrypoint}:
                 hash
                 hash
@@ -156,10 +159,10 @@ impl DeprecatedSnippet for Commit {
 
     fn rust_shadowing(
         &self,
-        stack: &mut Vec<triton_vm::BFieldElement>,
-        _std_in: Vec<triton_vm::BFieldElement>,
-        _secret_in: Vec<triton_vm::BFieldElement>,
-        _memory: &mut std::collections::HashMap<triton_vm::BFieldElement, triton_vm::BFieldElement>,
+        stack: &mut Vec<BFieldElement>,
+        _std_in: Vec<BFieldElement>,
+        _secret_in: Vec<BFieldElement>,
+        _memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
     ) where
         Self: Sized,
     {
@@ -210,8 +213,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::snippet_bencher::bench_and_write;
+
+    use super::*;
 
     #[test]
     fn commit_benchmark_unsafe() {

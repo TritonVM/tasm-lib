@@ -1,22 +1,23 @@
-use crate::twenty_first::{
-    shared_math::{
-        b_field_element::{BFIELD_ONE, BFIELD_ZERO},
-        bfield_codec::BFieldCodec,
-        x_field_element::XFieldElement,
-    },
-    util_types::algebraic_hasher::{AlgebraicHasher, Domain, SpongeHasher},
-};
-use anyhow::{bail, Result};
-use rand::{rngs::StdRng, Rng, SeedableRng};
-use triton_vm::{
-    instruction::LabelledInstruction,
-    proof_item::{FriResponse, ProofItem},
-    table::master_table::{NUM_BASE_COLUMNS, NUM_EXT_COLUMNS},
-    triton_asm, BFieldElement,
-};
+use anyhow::bail;
+use anyhow::Result;
+use rand::rngs::StdRng;
+use rand::Rng;
+use rand::SeedableRng;
+use triton_vm::instruction::LabelledInstruction;
+use triton_vm::prelude::*;
+use triton_vm::proof_item::FriResponse;
+use triton_vm::proof_item::ProofItem;
+use triton_vm::table::master_table::NUM_BASE_COLUMNS;
+use triton_vm::table::master_table::NUM_EXT_COLUMNS;
+use twenty_first::shared_math::b_field_element::BFIELD_ONE;
+use twenty_first::shared_math::b_field_element::BFIELD_ZERO;
+use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
+use twenty_first::util_types::algebraic_hasher::Domain;
+use twenty_first::util_types::algebraic_hasher::SpongeHasher;
 
-use crate::{structure::tasm_object::TasmObject, VmHasher};
-use crate::{Digest, VmHasherState};
+use crate::structure::tasm_object::TasmObject;
+use crate::VmHasher;
+use crate::VmHasherState;
 
 #[derive(Debug, Clone, BFieldCodec, TasmObject)]
 pub struct VmProofStream {

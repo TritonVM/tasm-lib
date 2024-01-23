@@ -1,28 +1,33 @@
 use std::collections::HashMap;
 
-use crate::twenty_first::shared_math::b_field_element::BFieldElement;
-use crate::twenty_first::shared_math::other::random_elements;
-use crate::twenty_first::test_shared::mmr::get_rustyleveldb_ammr_from_digests;
-use crate::twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
-use crate::twenty_first::util_types::mmr::archival_mmr::ArchivalMmr;
-use crate::twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
-use crate::twenty_first::util_types::mmr::mmr_membership_proof::MmrMembershipProof;
-use crate::twenty_first::util_types::mmr::mmr_trait::Mmr;
 use num::One;
-use rand::{random, thread_rng, Rng};
+use rand::random;
+use rand::thread_rng;
+use rand::Rng;
+use triton_vm::prelude::*;
+use twenty_first::shared_math::other::random_elements;
+use twenty_first::test_shared::mmr::get_rustyleveldb_ammr_from_digests;
+use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
+use twenty_first::util_types::mmr::archival_mmr::ArchivalMmr;
+use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
+use twenty_first::util_types::mmr::mmr_membership_proof::MmrMembershipProof;
+use twenty_first::util_types::mmr::mmr_trait::Mmr;
 
 use crate::arithmetic::u32::isodd::Isodd;
 use crate::arithmetic::u64::div2_u64::Div2U64;
 use crate::arithmetic::u64::eq_u64::EqU64;
 use crate::data_type::DataType;
+use crate::empty_stack;
 use crate::hashing::eq_digest::EqDigest;
 use crate::hashing::swap_digest::SwapDigest;
 use crate::library::Library;
 use crate::list::ListType;
+use crate::rust_shadowing_helper_functions;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::{
-    empty_stack, rust_shadowing_helper_functions, Digest, ExecutionState, VmHasher, DIGEST_LENGTH,
-};
+use crate::Digest;
+use crate::ExecutionState;
+use crate::VmHasher;
+use crate::DIGEST_LENGTH;
 
 use super::leaf_index_to_mt_index_and_peak_index::MmrLeafIndexToMtIndexAndPeakIndex;
 use super::MAX_MMR_HEIGHT;
@@ -42,7 +47,7 @@ impl MmrVerifyFromMemory {
         auth_path: Vec<Digest>,
     ) -> (ExecutionState, BFieldElement, BFieldElement) {
         // BEFORE: _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo [digest (leaf_digest)] *auth_path
-        // AFTER: _ *auth_path leaf_index_hi leaf_index_lo validation_result
+        // AFTER:  _ *auth_path leaf_index_hi leaf_index_lo validation_result
         let mut stack = empty_stack();
 
         let peaks_pointer = BFieldElement::one();
@@ -130,6 +135,10 @@ impl MmrVerifyFromMemory {
 }
 
 impl DeprecatedSnippet for MmrVerifyFromMemory {
+    fn entrypoint_name(&self) -> String {
+        format!("tasm_mmr_verify_from_memory_{}", self.list_type)
+    }
+
     fn input_field_names(&self) -> Vec<String> {
         vec![
             "*peaks".to_string(),
@@ -146,22 +155,22 @@ impl DeprecatedSnippet for MmrVerifyFromMemory {
         ]
     }
 
-    fn output_field_names(&self) -> Vec<String> {
-        vec![
-            "*auth_path".to_string(),
-            "leaf_index_hi".to_string(),
-            "leaf_index_lo".to_string(),
-            "validation_result".to_string(),
-        ]
-    }
-
-    fn input_types(&self) -> Vec<crate::data_type::DataType> {
+    fn input_types(&self) -> Vec<DataType> {
         vec![
             DataType::List(Box::new(DataType::Digest)),
             DataType::U64,
             DataType::U64,
             DataType::Digest,
             DataType::List(Box::new(DataType::Digest)),
+        ]
+    }
+
+    fn output_field_names(&self) -> Vec<String> {
+        vec![
+            "*auth_path".to_string(),
+            "leaf_index_hi".to_string(),
+            "leaf_index_lo".to_string(),
+            "validation_result".to_string(),
         ]
     }
 
@@ -173,37 +182,8 @@ impl DeprecatedSnippet for MmrVerifyFromMemory {
         ]
     }
 
-    fn crash_conditions(&self) -> Vec<String> {
-        vec![
-            "leaf_index >= leaf_count".to_string(),
-            "leaf_index values not u32s".to_string(),
-        ]
-    }
-
-    fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
-        let mut rng = thread_rng();
-        let max_size = 100;
-        let size = rng.gen_range(1..max_size);
-        let digests: Vec<Digest> = random_elements(size);
-        let leaf_index = rng.gen_range(0..size);
-        let leaf = digests[leaf_index];
-        let ammr: ArchivalMmr<VmHasher, _> = get_rustyleveldb_ammr_from_digests(digests);
-        let auth_path = ammr
-            .prove_membership(leaf_index as u64)
-            .0
-            .authentication_path;
-        let (ret0, _, _) =
-            self.prepare_vm_state(&ammr.to_accumulator(), leaf, leaf_index as u64, auth_path);
-
-        vec![ret0]
-    }
-
     fn stack_diff(&self) -> isize {
         -7
-    }
-
-    fn entrypoint_name(&self) -> String {
-        format!("tasm_mmr_verify_from_memory_{}", self.list_type)
     }
 
     fn function_code(&self, library: &mut Library) -> String {
@@ -218,7 +198,7 @@ impl DeprecatedSnippet for MmrVerifyFromMemory {
         format!(
             "
                 // BEFORE: _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo [digest (leaf_digest)] *auth_path
-                // AFTER: _ *auth_path leaf_index_hi leaf_index_lo validation_result
+                // AFTER:  _ *auth_path leaf_index_hi leaf_index_lo validation_result
                 // Will crash if `leaf_index >= leaf_count`
                 {entrypoint}:
                     dup 9 dup 9 dup 9 dup 9
@@ -310,6 +290,61 @@ impl DeprecatedSnippet for MmrVerifyFromMemory {
         )
     }
 
+    fn crash_conditions(&self) -> Vec<String> {
+        vec![
+            "leaf_index >= leaf_count".to_string(),
+            "leaf_index values not u32s".to_string(),
+        ]
+    }
+
+    fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
+        let mut rng = thread_rng();
+        let max_size = 100;
+        let size = rng.gen_range(1..max_size);
+        let digests: Vec<Digest> = random_elements(size);
+        let leaf_index = rng.gen_range(0..size);
+        let leaf = digests[leaf_index];
+        let ammr: ArchivalMmr<VmHasher, _> = get_rustyleveldb_ammr_from_digests(digests);
+        let auth_path = ammr
+            .prove_membership(leaf_index as u64)
+            .0
+            .authentication_path;
+        let (ret0, _, _) =
+            self.prepare_vm_state(&ammr.to_accumulator(), leaf, leaf_index as u64, auth_path);
+
+        vec![ret0]
+    }
+
+    fn common_case_input_state(&self) -> ExecutionState {
+        let log2_size = 31;
+        let leaf_count_after_add = 1u64 << log2_size;
+        let peaks: Vec<Digest> = random_elements(log2_size as usize);
+        let mut mmra = MmrAccumulator::<VmHasher>::init(peaks, leaf_count_after_add - 1);
+        let new_leaf: Digest = random();
+        let mp = mmra.append(new_leaf);
+        let auth_path = mp.authentication_path;
+
+        // Sanity check of length of auth path
+        assert_eq!(log2_size, auth_path.len() as u64);
+        self.prepare_vm_state(&mmra, new_leaf, leaf_count_after_add - 1, auth_path)
+            .0
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState {
+        let log2_size = 62;
+        let leaf_count_after_add = 1u64 << log2_size;
+        let peaks: Vec<Digest> = random_elements(log2_size as usize);
+        let mut mmra = MmrAccumulator::<VmHasher>::init(peaks, leaf_count_after_add - 1);
+        let new_leaf: Digest = random();
+        let mp = mmra.append(new_leaf);
+        let auth_path = mp.authentication_path;
+
+        // Sanity check of length of auth path
+        assert_eq!(log2_size, auth_path.len() as u64);
+        self.prepare_vm_state(&mmra, new_leaf, leaf_count_after_add - 1, auth_path)
+            .0
+    }
+
     fn rust_shadowing(
         &self,
         stack: &mut Vec<BFieldElement>,
@@ -318,7 +353,7 @@ impl DeprecatedSnippet for MmrVerifyFromMemory {
         memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
         // BEFORE: _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo [digest (leaf_digest)] *auth_path
-        // AFTER: _ *auth_path leaf_index_hi leaf_index_lo validation_result
+        // AFTER:  _ *auth_path leaf_index_hi leaf_index_lo validation_result
         let auth_path_pointer = stack.pop().unwrap();
 
         let list_get = match self.list_type {
@@ -372,58 +407,15 @@ impl DeprecatedSnippet for MmrVerifyFromMemory {
         stack.push(BFieldElement::new(leaf_index_lo as u64));
         stack.push(BFieldElement::new(valid_mp as u64));
     }
-
-    fn common_case_input_state(&self) -> ExecutionState {
-        let log2_size = 31;
-        let leaf_count_after_add = 1u64 << log2_size;
-        let peaks: Vec<Digest> = random_elements(log2_size as usize);
-        let mut mmra = MmrAccumulator::<VmHasher>::init(peaks, leaf_count_after_add - 1);
-        let new_leaf: Digest = random();
-        let mp = mmra.append(new_leaf);
-        let auth_path = mp.authentication_path;
-
-        // Sanity check of length of auth path
-        assert_eq!(log2_size, auth_path.len() as u64);
-        self.prepare_vm_state(&mmra, new_leaf, leaf_count_after_add - 1, auth_path)
-            .0
-    }
-
-    fn worst_case_input_state(&self) -> ExecutionState {
-        let log2_size = 62;
-        let leaf_count_after_add = 1u64 << log2_size;
-        let peaks: Vec<Digest> = random_elements(log2_size as usize);
-        let mut mmra = MmrAccumulator::<VmHasher>::init(peaks, leaf_count_after_add - 1);
-        let new_leaf: Digest = random();
-        let mp = mmra.append(new_leaf);
-        let auth_path = mp.authentication_path;
-
-        // Sanity check of length of auth path
-        assert_eq!(log2_size, auth_path.len() as u64);
-        self.prepare_vm_state(&mmra, new_leaf, leaf_count_after_add - 1, auth_path)
-            .0
-    }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::twenty_first::shared_math::{
-        b_field_element::BFieldElement, other::random_elements,
-    };
-    use crate::twenty_first::test_shared::mmr::get_empty_rustyleveldb_ammr;
-    use crate::twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
-    use crate::twenty_first::util_types::mmr::archival_mmr::ArchivalMmr;
-    use crate::twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
-    use crate::twenty_first::util_types::mmr::{
-        mmr_membership_proof::MmrMembershipProof, mmr_trait::Mmr,
-    };
-    use rand::{thread_rng, Rng};
+    use twenty_first::test_shared::mmr::get_empty_rustyleveldb_ammr;
 
-    use crate::test_helpers::{
-        test_rust_equivalence_given_input_values_deprecated,
-        test_rust_equivalence_multiple_deprecated,
-    };
-    use crate::VmHasher;
-    use crate::{empty_stack, mmr::MAX_MMR_HEIGHT};
+    use crate::empty_stack;
+    use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
+    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     use super::*;
 
@@ -607,7 +599,7 @@ mod tests {
         }
     }
 
-    fn prop_verify_from_memory<H: AlgebraicHasher + std::cmp::PartialEq + std::fmt::Debug>(
+    fn prop_verify_from_memory<H: AlgebraicHasher + PartialEq + std::fmt::Debug>(
         mmr: &mut MmrAccumulator<H>,
         leaf: Digest,
         leaf_index: u64,

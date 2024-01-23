@@ -1,9 +1,11 @@
-use crate::twenty_first::shared_math::b_field_element::BFieldElement;
-use rand::{thread_rng, RngCore};
+use rand::thread_rng;
+use rand::RngCore;
+use triton_vm::prelude::BFieldElement;
 
 use crate::data_type::DataType;
+use crate::empty_stack;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::{empty_stack, ExecutionState};
+use crate::ExecutionState;
 
 #[derive(Clone, Debug)]
 pub struct Leadingzeros;
@@ -17,15 +19,15 @@ impl DeprecatedSnippet for Leadingzeros {
         vec!["value".to_string()]
     }
 
+    fn input_types(&self) -> Vec<DataType> {
+        vec![DataType::U32]
+    }
+
     fn output_field_names(&self) -> Vec<String> {
         vec!["leading zeros in value".to_string()]
     }
 
-    fn input_types(&self) -> Vec<crate::data_type::DataType> {
-        vec![DataType::U32]
-    }
-
-    fn output_types(&self) -> Vec<crate::data_type::DataType> {
+    fn output_types(&self) -> Vec<DataType> {
         vec![DataType::U32]
     }
 
@@ -38,7 +40,7 @@ impl DeprecatedSnippet for Leadingzeros {
         format!(
             "
                 // BEFORE: _ value
-                // AFTER: _ (leading zeros in value)
+                // AFTER:  _ (leading zeros in value)
                 {entrypoint}:
                     dup 0
                     skiz
@@ -64,7 +66,7 @@ impl DeprecatedSnippet for Leadingzeros {
         vec!["Input is not u32".to_owned()]
     }
 
-    fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
         let mut ret: Vec<ExecutionState> = vec![];
         for _ in 0..100 {
             let mut stack = empty_stack();
@@ -77,22 +79,6 @@ impl DeprecatedSnippet for Leadingzeros {
         ret
     }
 
-    fn rust_shadowing(
-        &self,
-        stack: &mut Vec<crate::twenty_first::shared_math::b_field_element::BFieldElement>,
-        _std_in: Vec<crate::twenty_first::shared_math::b_field_element::BFieldElement>,
-        _secret_in: Vec<crate::twenty_first::shared_math::b_field_element::BFieldElement>,
-        _memory: &mut std::collections::HashMap<
-            crate::twenty_first::shared_math::b_field_element::BFieldElement,
-            crate::twenty_first::shared_math::b_field_element::BFieldElement,
-        >,
-    ) {
-        let value: u32 = stack.pop().unwrap().try_into().unwrap();
-
-        let value = value.leading_zeros();
-        stack.push(BFieldElement::new(value as u64));
-    }
-
     fn common_case_input_state(&self) -> ExecutionState {
         ExecutionState::with_stack([empty_stack(), vec![BFieldElement::new(1 << 15)]].concat())
     }
@@ -101,6 +87,19 @@ impl DeprecatedSnippet for Leadingzeros {
         ExecutionState::with_stack(
             [empty_stack(), vec![BFieldElement::new((1 << 32) - 1)]].concat(),
         )
+    }
+
+    fn rust_shadowing(
+        &self,
+        stack: &mut Vec<BFieldElement>,
+        _std_in: Vec<BFieldElement>,
+        _secret_in: Vec<BFieldElement>,
+        _memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
+    ) {
+        let value: u32 = stack.pop().unwrap().try_into().unwrap();
+
+        let value = value.leading_zeros();
+        stack.push(BFieldElement::new(value as u64));
     }
 }
 

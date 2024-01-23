@@ -1,16 +1,20 @@
 use std::collections::HashMap;
 
 use num_traits::One;
-use rand::{rngs::StdRng, Rng, SeedableRng};
-use triton_vm::{
-    instruction::LabelledInstruction, op_stack::NUM_OP_STACK_REGISTERS, triton_asm, BFieldElement,
-    NonDeterminism,
-};
+use rand::rngs::StdRng;
+use rand::Rng;
+use rand::SeedableRng;
+use triton_vm::op_stack::NUM_OP_STACK_REGISTERS;
+use triton_vm::prelude::*;
+
+use crate::data_type::DataType;
+use crate::empty_stack;
+use crate::library::Library;
+use crate::traits::algorithm::Algorithm;
+use crate::traits::algorithm::AlgorithmInitialState;
+use crate::traits::basic_snippet::BasicSnippet;
 
 use super::ListType;
-use crate::traits::algorithm::{Algorithm, AlgorithmInitialState};
-use crate::traits::basic_snippet::BasicSnippet;
-use crate::{data_type::DataType, empty_stack, library::Library};
 
 pub struct SwapUnchecked {
     list_type: ListType,
@@ -19,11 +23,10 @@ pub struct SwapUnchecked {
 
 impl BasicSnippet for SwapUnchecked {
     fn inputs(&self) -> Vec<(DataType, String)> {
+        let self_type = DataType::List(Box::new(self.element_type.to_owned()));
+
         vec![
-            (
-                DataType::List(Box::new(self.element_type.to_owned())),
-                "self".to_owned(),
-            ),
+            (self_type, "self".to_owned()),
             (DataType::U32, "a".to_owned()),
             (DataType::U32, "b".to_owned()),
         ]
@@ -86,7 +89,7 @@ impl BasicSnippet for SwapUnchecked {
 
         triton_asm!(
                 // BEFORE: _ *list a b
-                // AFTER: _
+                // AFTER:  _
                 {entrypoint}:
 
                     // calculate *list[b]
@@ -144,9 +147,9 @@ impl BasicSnippet for SwapUnchecked {
 impl Algorithm for SwapUnchecked {
     fn rust_shadow(
         &self,
-        stack: &mut Vec<triton_vm::BFieldElement>,
-        memory: &mut std::collections::HashMap<triton_vm::BFieldElement, triton_vm::BFieldElement>,
-        _nondeterminism: &triton_vm::NonDeterminism<triton_vm::BFieldElement>,
+        stack: &mut Vec<BFieldElement>,
+        memory: &mut HashMap<BFieldElement, BFieldElement>,
+        _nondeterminism: &NonDeterminism<BFieldElement>,
     ) {
         let b_index = stack.pop().unwrap().value() as usize;
         let a_index = stack.pop().unwrap().value() as usize;
@@ -220,9 +223,10 @@ impl SwapUnchecked {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use crate::traits::algorithm::ShadowedAlgorithm;
     use crate::traits::rust_shadow::RustShadow;
+
+    use super::*;
 
     #[test]
     fn test() {
@@ -263,9 +267,10 @@ mod test {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::traits::algorithm::ShadowedAlgorithm;
     use crate::traits::rust_shadow::RustShadow;
+
+    use super::*;
 
     #[test]
     fn bench() {

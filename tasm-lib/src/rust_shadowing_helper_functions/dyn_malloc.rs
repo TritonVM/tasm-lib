@@ -1,12 +1,11 @@
 use std::collections::HashMap;
 
-use crate::twenty_first::shared_math::b_field_element::BFieldElement;
+use triton_vm::prelude::*;
 
-use crate::{
-    empty_stack,
-    memory::dyn_malloc::{DynMalloc, DYN_MALLOC_ADDRESS},
-    traits::deprecated_snippet::DeprecatedSnippet,
-};
+use crate::empty_stack;
+use crate::memory::dyn_malloc::DynMalloc;
+use crate::memory::dyn_malloc::DYN_MALLOC_ADDRESS;
+use crate::traits::deprecated_snippet::DeprecatedSnippet;
 
 // TODO: DELETE ME, OR FIX ME
 pub fn rust_dyn_malloc_initialize(

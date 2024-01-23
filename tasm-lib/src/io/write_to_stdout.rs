@@ -1,12 +1,15 @@
-use crate::twenty_first::shared_math::b_field_element::BFieldElement;
-use rand::{rngs::StdRng, SeedableRng};
 use std::collections::HashMap;
-use triton_vm::{instruction::LabelledInstruction, triton_asm, NonDeterminism};
+
+use rand::rngs::StdRng;
+use rand::SeedableRng;
+use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
+use crate::empty_stack;
 use crate::traits::basic_snippet::BasicSnippet;
-use crate::traits::procedure::{Procedure, ProcedureInitialState};
-use crate::{empty_stack, VmHasherState};
+use crate::traits::procedure::Procedure;
+use crate::traits::procedure::ProcedureInitialState;
+use crate::VmHasherState;
 
 pub struct WriteToStdout {
     pub data_type: DataType,
@@ -75,9 +78,10 @@ impl Procedure for WriteToStdout {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
+
+    use super::*;
 
     #[test]
     fn write_to_stdout_auto_test() {
@@ -89,9 +93,10 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
+
+    use super::*;
 
     #[test]
     fn bench_for_digest_writing() {

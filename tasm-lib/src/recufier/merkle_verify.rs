@@ -1,19 +1,21 @@
 use std::collections::HashMap;
 
-use crate::twenty_first::shared_math::b_field_element::BFieldElement;
-use crate::twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 use itertools::Itertools;
 use rand::rngs::StdRng;
-use rand::{Rng, SeedableRng};
-use triton_vm::instruction::LabelledInstruction;
-use triton_vm::{triton_asm, NonDeterminism};
+use rand::Rng;
+use rand::SeedableRng;
+use triton_vm::prelude::*;
+use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
 use crate::data_type::DataType;
+use crate::empty_stack;
 use crate::library::Library;
 use crate::snippet_bencher::BenchmarkCase;
-use crate::traits::algorithm::{Algorithm, AlgorithmInitialState};
+use crate::traits::algorithm::Algorithm;
+use crate::traits::algorithm::AlgorithmInitialState;
 use crate::traits::basic_snippet::BasicSnippet;
-use crate::{empty_stack, Digest, VmHasher};
+use crate::Digest;
+use crate::VmHasher;
 
 /// MerkleVerify -- verify that a leaf lives in a Merkle tree,
 /// given the root, leaf index, and leaf. The authentication path
@@ -188,14 +190,12 @@ mod tests {
     use std::rc::Rc;
 
     use rand::thread_rng;
-    use triton_vm::Program;
 
     use crate::execute_with_terminal_state;
     use crate::linker::link_for_isolated_run;
     use crate::traits::algorithm::ShadowedAlgorithm;
     use crate::traits::rust_shadow::RustShadow;
 
-    use super::MerkleVerify;
     use super::*;
 
     #[test]
@@ -262,9 +262,10 @@ mod tests {
 
 #[cfg(test)]
 mod bench {
-    use super::MerkleVerify;
     use crate::traits::algorithm::ShadowedAlgorithm;
     use crate::traits::rust_shadow::RustShadow;
+
+    use super::MerkleVerify;
 
     #[test]
     fn merkle_verify_bench() {

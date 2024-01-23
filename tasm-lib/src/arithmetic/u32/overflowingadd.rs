@@ -1,6 +1,7 @@
-use crate::twenty_first::shared_math::{b_field_element::BFieldElement, bfield_codec::BFieldCodec};
-use rand::{rngs::StdRng, RngCore, SeedableRng};
-use triton_vm::triton_asm;
+use rand::rngs::StdRng;
+use rand::RngCore;
+use rand::SeedableRng;
+use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
 use crate::empty_stack;
@@ -29,10 +30,7 @@ impl BasicSnippet for Overflowingadd {
         "tasm_arithmetic_u32_overflowingadd".to_string()
     }
 
-    fn code(
-        &self,
-        _library: &mut crate::library::Library,
-    ) -> Vec<triton_vm::instruction::LabelledInstruction> {
+    fn code(&self, _library: &mut crate::library::Library) -> Vec<LabelledInstruction> {
         triton_asm!(
             {self.entrypoint()}:
                 add
@@ -44,7 +42,7 @@ impl BasicSnippet for Overflowingadd {
 }
 
 impl Closure for Overflowingadd {
-    fn rust_shadow(&self, stack: &mut Vec<triton_vm::BFieldElement>) {
+    fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
         let rhs: u32 = stack.pop().unwrap().try_into().unwrap();
         let lhs: u32 = stack.pop().unwrap().try_into().unwrap();
 
@@ -57,7 +55,7 @@ impl Closure for Overflowingadd {
         &self,
         seed: [u8; 32],
         bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
-    ) -> Vec<triton_vm::BFieldElement> {
+    ) -> Vec<BFieldElement> {
         let (lhs, rhs) = match bench_case {
             Some(crate::snippet_bencher::BenchmarkCase::CommonCase) => {
                 (1u32 << 31, (1u32 << 31) - 1)
@@ -75,12 +73,11 @@ impl Closure for Overflowingadd {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::test_helpers::test_rust_equivalence_given_complete_state;
+    use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
-    use crate::{
-        test_helpers::test_rust_equivalence_given_complete_state, traits::closure::ShadowedClosure,
-    };
-    use triton_vm::NonDeterminism;
+
+    use super::*;
 
     #[test]
     fn u32_overflowing_add_pbt() {
@@ -130,9 +127,10 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
+
+    use super::*;
 
     #[test]
     fn u32_overflowing_add_bench() {

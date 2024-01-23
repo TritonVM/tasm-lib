@@ -1,16 +1,23 @@
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::cell::RefCell;
+use std::collections::HashMap;
+use std::rc::Rc;
 
-use rand::{rngs::StdRng, thread_rng, Rng, SeedableRng};
-use triton_vm::{BFieldElement, NonDeterminism};
+use rand::rngs::StdRng;
+use rand::thread_rng;
+use rand::Rng;
+use rand::SeedableRng;
+use triton_vm::prelude::*;
 
-use crate::{
-    linker::{execute_bench, link_for_isolated_run},
-    snippet_bencher::{write_benchmarks, BenchmarkCase, BenchmarkResult},
-    test_helpers::test_rust_equivalence_given_complete_state,
-    VmHasherState,
-};
+use crate::linker::execute_bench;
+use crate::linker::link_for_isolated_run;
+use crate::snippet_bencher::write_benchmarks;
+use crate::snippet_bencher::BenchmarkCase;
+use crate::snippet_bencher::BenchmarkResult;
+use crate::test_helpers::test_rust_equivalence_given_complete_state;
+use crate::VmHasherState;
 
-use super::{basic_snippet::BasicSnippet, rust_shadow::RustShadow};
+use super::basic_snippet::BasicSnippet;
+use super::rust_shadow::RustShadow;
 
 /// A Function is a piece of tasm code that can modify the top of the stack, and can read
 /// and even extend memory. Specifically: any memory writes have to happen to addresses
@@ -85,10 +92,14 @@ impl<F> RustShadow for ShadowedFunction<F>
 where
     F: Function + 'static,
 {
+    fn inner(&self) -> Rc<RefCell<dyn BasicSnippet>> {
+        self.function.clone()
+    }
+
     fn rust_shadow_wrapper(
         &self,
         _stdin: &[BFieldElement],
-        _nondeterminism: &triton_vm::NonDeterminism<BFieldElement>,
+        _nondeterminism: &NonDeterminism<BFieldElement>,
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
         _sponge_state: &mut Option<VmHasherState>,
@@ -155,9 +166,5 @@ where
         }
 
         write_benchmarks(benchmarks);
-    }
-
-    fn inner(&self) -> Rc<RefCell<dyn BasicSnippet>> {
-        self.function.clone()
     }
 }

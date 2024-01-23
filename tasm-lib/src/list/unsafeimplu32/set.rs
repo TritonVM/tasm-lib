@@ -1,18 +1,19 @@
 use std::collections::HashMap;
 
-use crate::twenty_first::shared_math::b_field_element::BFieldElement;
-use crate::twenty_first::shared_math::other::random_elements;
 use itertools::Itertools;
-use rand::{random, thread_rng, Rng};
-use triton_vm::triton_asm;
+use rand::random;
+use rand::thread_rng;
+use rand::Rng;
+use triton_vm::prelude::*;
+use twenty_first::shared_math::other::random_elements;
 
 use crate::data_type::DataType;
+use crate::empty_stack;
 use crate::library::Library;
-use crate::rust_shadowing_helper_functions::unsafe_list::{
-    unsafe_list_set, untyped_unsafe_insert_random_list,
-};
+use crate::rust_shadowing_helper_functions::unsafe_list::unsafe_list_set;
+use crate::rust_shadowing_helper_functions::unsafe_list::untyped_unsafe_insert_random_list;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::{empty_stack, ExecutionState};
+use crate::ExecutionState;
 
 #[derive(Clone, Debug)]
 pub struct UnsafeSet {
@@ -20,6 +21,13 @@ pub struct UnsafeSet {
 }
 
 impl DeprecatedSnippet for UnsafeSet {
+    fn entrypoint_name(&self) -> String {
+        format!(
+            "tasm_list_unsafeimplu32_set_element___{}",
+            self.data_type.label_friendly_name()
+        )
+    }
+
     fn input_field_names(&self) -> Vec<String> {
         // _ elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}} *list index
         [
@@ -29,11 +37,7 @@ impl DeprecatedSnippet for UnsafeSet {
         .concat()
     }
 
-    fn output_field_names(&self) -> Vec<String> {
-        vec![]
-    }
-
-    fn input_types(&self) -> Vec<crate::data_type::DataType> {
+    fn input_types(&self) -> Vec<DataType> {
         vec![
             self.data_type.clone(),
             DataType::List(Box::new(self.data_type.clone())),
@@ -41,31 +45,16 @@ impl DeprecatedSnippet for UnsafeSet {
         ]
     }
 
-    fn output_types(&self) -> Vec<crate::data_type::DataType> {
+    fn output_field_names(&self) -> Vec<String> {
         vec![]
     }
 
-    fn crash_conditions(&self) -> Vec<String> {
+    fn output_types(&self) -> Vec<DataType> {
         vec![]
-    }
-
-    fn gen_input_states(&self) -> Vec<ExecutionState> {
-        vec![
-            prepare_state(&self.data_type),
-            prepare_state(&self.data_type),
-            prepare_state(&self.data_type),
-        ]
     }
 
     fn stack_diff(&self) -> isize {
         -2 - self.data_type.stack_size() as isize
-    }
-
-    fn entrypoint_name(&self) -> String {
-        format!(
-            "tasm_list_unsafeimplu32_set_element___{}",
-            self.data_type.label_friendly_name()
-        )
     }
 
     fn function_code(&self, _library: &mut Library) -> String {
@@ -81,7 +70,7 @@ impl DeprecatedSnippet for UnsafeSet {
         };
         triton_asm!(
                 // BEFORE: _ elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}} *list index
-                // AFTER: _
+                // AFTER:  _
                 {entrypoint}:
                     {&mul_with_size}
                     // _ [value] *list offset_for_previous_elements
@@ -104,6 +93,26 @@ impl DeprecatedSnippet for UnsafeSet {
         .join("\n")
     }
 
+    fn crash_conditions(&self) -> Vec<String> {
+        vec![]
+    }
+
+    fn gen_input_states(&self) -> Vec<ExecutionState> {
+        vec![
+            prepare_state(&self.data_type),
+            prepare_state(&self.data_type),
+            prepare_state(&self.data_type),
+        ]
+    }
+
+    fn common_case_input_state(&self) -> ExecutionState {
+        prepare_state(&self.data_type)
+    }
+
+    fn worst_case_input_state(&self) -> ExecutionState {
+        prepare_state(&self.data_type)
+    }
+
     fn rust_shadowing(
         &self,
         stack: &mut Vec<BFieldElement>,
@@ -119,14 +128,6 @@ impl DeprecatedSnippet for UnsafeSet {
             *ee = stack.pop().unwrap();
         }
         unsafe_list_set(list_pointer, index as usize, element, memory);
-    }
-
-    fn common_case_input_state(&self) -> ExecutionState {
-        prepare_state(&self.data_type)
-    }
-
-    fn worst_case_input_state(&self) -> ExecutionState {
-        prepare_state(&self.data_type)
     }
 }
 
@@ -155,10 +156,9 @@ fn prepare_state(data_type: &DataType) -> ExecutionState {
 
 #[cfg(test)]
 mod tests {
-    use crate::twenty_first::shared_math::b_field_element::BFieldElement;
+    use BFieldElement;
 
     use crate::empty_stack;
-
     use crate::test_helpers::{
         test_rust_equivalence_given_input_values_deprecated,
         test_rust_equivalence_multiple_deprecated,
@@ -284,7 +284,7 @@ mod tests {
 
         // Verify that length indicator is unchanged
         assert_eq!(
-            BFieldElement::new((init_list_length) as u64),
+            BFieldElement::new(init_list_length as u64),
             memory[&list_address]
         );
 
@@ -305,8 +305,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::snippet_bencher::bench_and_write;
+
+    use super::*;
 
     #[test]
     fn unsafe_set_benchmark() {

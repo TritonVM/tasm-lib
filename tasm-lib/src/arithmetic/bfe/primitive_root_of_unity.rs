@@ -1,12 +1,15 @@
-use crate::twenty_first::shared_math::traits::PrimitiveRootOfUnity as PRU;
 use num_traits::Zero;
-use rand::{rngs::StdRng, Rng, SeedableRng};
-use triton_vm::{triton_asm, BFieldElement};
+use rand::rngs::StdRng;
+use rand::Rng;
+use rand::SeedableRng;
+use triton_vm::prelude::*;
+use twenty_first::shared_math::traits::PrimitiveRootOfUnity as PRU;
 
 use crate::data_type::DataType;
+use crate::empty_stack;
+use crate::snippet_bencher::BenchmarkCase;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::closure::Closure;
-use crate::{empty_stack, snippet_bencher::BenchmarkCase};
 
 pub struct PrimitiveRootOfUnity;
 
@@ -23,10 +26,7 @@ impl BasicSnippet for PrimitiveRootOfUnity {
         "tasm_arithmetic_bfe_primitive_root_of_unity".to_string()
     }
 
-    fn code(
-        &self,
-        _library: &mut crate::library::Library,
-    ) -> Vec<triton_vm::instruction::LabelledInstruction> {
+    fn code(&self, _library: &mut crate::library::Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
 
         triton_asm!(
@@ -349,7 +349,7 @@ impl BasicSnippet for PrimitiveRootOfUnity {
 }
 
 impl Closure for PrimitiveRootOfUnity {
-    fn rust_shadow(&self, stack: &mut Vec<triton_vm::BFieldElement>) {
+    fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
         let order_lo: u32 = stack.pop().unwrap().try_into().unwrap();
         let order_hi: u32 = stack.pop().unwrap().try_into().unwrap();
         let order: u64 = order_lo as u64 + ((order_hi as u64) << 32);
@@ -363,8 +363,8 @@ impl Closure for PrimitiveRootOfUnity {
     fn pseudorandom_initial_state(
         &self,
         seed: [u8; 32],
-        bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
-    ) -> Vec<triton_vm::BFieldElement> {
+        bench_case: Option<BenchmarkCase>,
+    ) -> Vec<BFieldElement> {
         let order = match bench_case {
             Some(BenchmarkCase::CommonCase) => 1024,
             Some(BenchmarkCase::WorstCase) => 1u64 << 32,
@@ -392,15 +392,15 @@ mod tests {
     use std::collections::HashMap;
     use std::rc::Rc;
 
-    use crate::twenty_first::shared_math::bfield_codec::BFieldCodec;
-    use triton_vm::{NonDeterminism, Program};
+    use triton_vm::prelude::*;
 
-    use super::*;
     use crate::execute_with_terminal_state;
     use crate::linker::link_for_isolated_run;
     use crate::test_helpers::test_rust_equivalence_given_complete_state;
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
+
+    use super::*;
 
     #[test]
     fn primitive_root_of_unity_pbt() {
@@ -496,9 +496,10 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
+
+    use super::*;
 
     #[test]
     fn bfe_primitive_root_of_unity_bench() {

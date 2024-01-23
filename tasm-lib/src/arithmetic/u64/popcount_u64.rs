@@ -1,12 +1,14 @@
-use crate::twenty_first::amount::u32s::U32s;
-use crate::twenty_first::shared_math::b_field_element::BFieldElement;
 use num::Zero;
 use rand::RngCore;
+use triton_vm::prelude::*;
+use twenty_first::amount::u32s::U32s;
 
 use crate::data_type::DataType;
+use crate::empty_stack;
 use crate::library::Library;
+use crate::push_encodable;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::{empty_stack, push_encodable, ExecutionState};
+use crate::ExecutionState;
 
 #[derive(Clone, Debug)]
 pub struct PopCountU64;
@@ -24,12 +26,12 @@ impl DeprecatedSnippet for PopCountU64 {
         vec![DataType::U64]
     }
 
-    fn output_types(&self) -> Vec<DataType> {
-        vec![DataType::U32]
-    }
-
     fn output_field_names(&self) -> Vec<String> {
         vec!["popcount".to_string()]
+    }
+
+    fn output_types(&self) -> Vec<DataType> {
+        vec![DataType::U32]
     }
 
     fn stack_diff(&self) -> isize {
@@ -40,8 +42,8 @@ impl DeprecatedSnippet for PopCountU64 {
         let entrypoint = self.entrypoint_name();
         format!(
             "
-            // Before: _ x_hi x_lo
-            // After: _ popcount
+            // BEFORE: _ x_hi x_lo
+            // AFTER:  _ popcount
             {entrypoint}:
                 pop_count
                 swap 1
@@ -125,7 +127,6 @@ fn prepare_state(a: u64) -> ExecutionState {
 
 #[cfg(test)]
 mod tests {
-
     use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     use super::*;
@@ -138,8 +139,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::snippet_bencher::bench_and_write;
+
+    use super::*;
 
     #[test]
     fn popcount_u64_benchmark() {

@@ -1,18 +1,22 @@
 use std::collections::HashMap;
 
-use crate::twenty_first::{
-    shared_math::tip5::Tip5State, util_types::algebraic_hasher::SpongeHasher,
-};
 use itertools::Itertools;
-use rand::{rngs::StdRng, Rng, RngCore, SeedableRng};
-use triton_vm::{triton_asm, BFieldElement, NonDeterminism};
+use rand::rngs::StdRng;
+use rand::Rng;
+use rand::RngCore;
+use rand::SeedableRng;
+use triton_vm::prelude::*;
+use twenty_first::shared_math::tip5::Tip5State;
+use twenty_first::util_types::algebraic_hasher::SpongeHasher;
 
+use crate::data_type::DataType;
+use crate::empty_stack;
+use crate::snippet_bencher::BenchmarkCase;
+use crate::traits::basic_snippet::BasicSnippet;
+use crate::traits::procedure::Procedure;
 use crate::traits::procedure::ProcedureInitialState;
-use crate::{
-    data_type::DataType,
-    traits::{basic_snippet::BasicSnippet, procedure::Procedure},
-};
-use crate::{empty_stack, snippet_bencher::BenchmarkCase, VmHasher, VmHasherState};
+use crate::VmHasher;
+use crate::VmHasherState;
 
 /// Absorb a sequence of field elements stored in memory, into the sponge state.
 pub struct Absorb;
@@ -257,9 +261,10 @@ impl Absorb {
 
 #[cfg(test)]
 mod test {
-    use super::Absorb;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
+
+    use super::Absorb;
 
     #[test]
     fn test() {
@@ -269,9 +274,10 @@ mod test {
 
 #[cfg(test)]
 mod benches {
-    use super::Absorb;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
+
+    use super::Absorb;
 
     #[test]
     fn benchmark() {

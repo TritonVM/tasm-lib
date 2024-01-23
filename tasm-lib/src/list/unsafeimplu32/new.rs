@@ -1,13 +1,13 @@
-use crate::twenty_first::shared_math::b_field_element::BFieldElement;
 use itertools::Itertools;
 use std::collections::HashMap;
-use triton_vm::triton_asm;
+use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
+use crate::empty_stack;
 use crate::library::Library;
 use crate::rust_shadowing_helper_functions::unsafe_list::unsafe_list_new;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::{empty_stack, ExecutionState};
+use crate::ExecutionState;
 
 #[derive(Clone, Debug)]
 pub struct UnsafeNew {

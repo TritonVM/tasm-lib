@@ -1,9 +1,9 @@
-use crate::twenty_first::shared_math::polynomial::Polynomial;
-use crate::twenty_first::shared_math::x_field_element::{XFieldElement, EXTENSION_DEGREE};
-use rand::{rngs::StdRng, Rng, SeedableRng};
-use triton_vm::instruction::LabelledInstruction;
-use triton_vm::triton_asm;
-use triton_vm::BFieldElement;
+use rand::rngs::StdRng;
+use rand::Rng;
+use rand::SeedableRng;
+use triton_vm::prelude::*;
+use twenty_first::shared_math::polynomial::Polynomial;
+use twenty_first::shared_math::x_field_element::EXTENSION_DEGREE;
 
 use crate::data_type::DataType;
 use crate::empty_stack;
@@ -146,9 +146,10 @@ impl Closure for ColinearYXfe {
 
 #[cfg(test)]
 mod test {
-    use super::ColinearYXfe;
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
+
+    use super::ColinearYXfe;
 
     #[test]
     fn test() {
@@ -158,9 +159,10 @@ mod test {
 
 #[cfg(test)]
 mod bench {
-    use super::ColinearYXfe;
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
+
+    use super::ColinearYXfe;
 
     #[test]
     fn bench_colinear_y() {

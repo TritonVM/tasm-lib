@@ -1,34 +1,29 @@
 use std::collections::HashMap;
 
-use crate::twenty_first::shared_math::b_field_element::BFieldElement;
 use itertools::Itertools;
 use num::Zero;
-use num_traits::One;
 use rand::rngs::StdRng;
-use rand::{Rng, SeedableRng};
+use rand::Rng;
+use rand::SeedableRng;
 use triton_vm::parser::tokenize;
-use triton_vm::triton_asm;
+use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
+use crate::empty_stack;
 use crate::library::Library;
-use crate::list::safeimplu32::get::SafeGet;
-use crate::list::safeimplu32::length::Length as SafeLength;
 use crate::list::safeimplu32::new::SafeNew;
 use crate::list::safeimplu32::set_length::SafeSetLength;
-use crate::list::unsafeimplu32::get::UnsafeGet;
-use crate::list::unsafeimplu32::length::Length as UnsafeLength;
 use crate::list::unsafeimplu32::new::UnsafeNew;
 use crate::list::unsafeimplu32::set_length::UnsafeSetLength;
-use crate::list::{self, ListType};
+use crate::list::ListType;
 use crate::memory::memcpy::MemCpy;
+use crate::rust_shadowing_helper_functions;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::traits::function::{Function, FunctionInitialState};
-use crate::{empty_stack, rust_shadowing_helper_functions};
+use crate::traits::function::Function;
+use crate::traits::function::FunctionInitialState;
 
 use super::inner_function::InnerFunction;
-
-const MORE_THAN_ONE_INPUT_OR_OUTPUT_TYPE_IN_INNER_FUNCTION: &str = "inner function in `filter` currently only works with *one* input element. Use a tuple data type to circumvent this.";
 
 /// Filters a given list for elements that satisfy a predicate. A new
 /// list is created, containing only those elements that satisfy the
@@ -42,11 +37,6 @@ impl BasicSnippet for Filter {
     fn inputs(&self) -> Vec<(DataType, String)> {
         let list_type = match &self.f {
             InnerFunction::BasicSnippet(basic_snippet) => {
-                assert!(
-                    basic_snippet.inputs().len().is_one(),
-                    "{MORE_THAN_ONE_INPUT_OR_OUTPUT_TYPE_IN_INNER_FUNCTION}"
-                );
-
                 DataType::List(Box::new(basic_snippet.inputs()[0].0.clone()))
             }
             _ => DataType::VoidPointer,
@@ -57,10 +47,6 @@ impl BasicSnippet for Filter {
     fn outputs(&self) -> Vec<(DataType, String)> {
         let list_type = match &self.f {
             InnerFunction::BasicSnippet(basic_snippet) => {
-                assert!(
-                    basic_snippet.inputs().len().is_one(),
-                    "{MORE_THAN_ONE_INPUT_OR_OUTPUT_TYPE_IN_INNER_FUNCTION}"
-                );
                 DataType::List(Box::new(basic_snippet.inputs()[0].0.clone()))
             }
             _ => DataType::VoidPointer,
@@ -76,50 +62,15 @@ impl BasicSnippet for Filter {
         )
     }
 
-    fn code(&self, library: &mut Library) -> Vec<triton_vm::instruction::LabelledInstruction> {
+    fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
         let input_type = self.f.domain();
         let output_type = self.f.range();
-        assert_eq!(
-            output_type,
-            DataType::Bool,
-            "Output type of inner function used in `filter` must be bool"
-        );
-        let safety_offset = match self.list_type {
-            ListType::Safe => 2,
-            ListType::Unsafe => 1,
-        };
-        let get_length = match self.list_type {
-            ListType::Safe => library.import(Box::new(SafeLength {
-                data_type: input_type.clone(),
-            })),
-            ListType::Unsafe => library.import(Box::new(UnsafeLength {
-                data_type: input_type.clone(),
-            })),
-        };
-        let set_length = match self.list_type {
-            ListType::Safe => library.import(Box::new(SafeSetLength {
-                data_type: input_type.clone(),
-            })),
-            ListType::Unsafe => library.import(Box::new(UnsafeSetLength {
-                data_type: input_type.clone(),
-            })),
-        };
-        let new_list = match self.list_type {
-            ListType::Safe => library.import(Box::new(SafeNew {
-                data_type: output_type,
-            })),
-            ListType::Unsafe => library.import(Box::new(UnsafeNew {
-                data_type: output_type,
-            })),
-        };
-        let list_get = match self.list_type {
-            ListType::Safe => library.import(Box::new(SafeGet {
-                data_type: input_type,
-            })),
-            ListType::Unsafe => library.import(Box::new(UnsafeGet {
-                data_type: input_type,
-            })),
-        };
+        assert_eq!(output_type, DataType::Bool);
+        let safety_offset = self.list_type.metadata_size();
+        let get_length = library.import(self.list_type.length_snippet(input_type.clone()));
+        let set_length = library.import(self.list_type.set_length(input_type.clone()));
+        let new_list = library.import(self.list_type.new_list_snippet(output_type));
+        let list_get = library.import(self.list_type.get_snippet(input_type));
         let element_size = self.f.domain().stack_size();
 
         let inner_function_name = match &self.f {
@@ -154,7 +105,7 @@ impl BasicSnippet for Filter {
 
         triton_asm!(
             // BEFORE: _ *input_list
-            // AFTER: _ *output_list
+            // AFTER:  _ *output_list
             {entrypoint}:
                 dup 0               // _ *input_list *input_list
                 call {get_length}   // _ *input_list len
@@ -201,7 +152,7 @@ impl BasicSnippet for Filter {
                 recurse
 
             // BEFORE: _ *input_list *output_list input_len input_index output_index
-            // AFTER: _ *input_list *output_list input_len input_index output_index+1
+            // AFTER:  _ *input_list *output_list input_len input_index output_index+1
             {main_write}:
                 // calculate read address
                 dup 4                        // _ *input_list *output_list input_len input_index output_index *input_list
@@ -273,7 +224,7 @@ impl Function for Filter {
             ListType::Safe => {
                 // Push capacity to stack
                 stack.push(BFieldElement::new(output_list_capacity as u64));
-                list::safeimplu32::new::SafeNew {
+                SafeNew {
                     data_type: input_type.clone(),
                 }
                 .rust_shadowing(stack, vec![], vec![], memory);
@@ -281,7 +232,7 @@ impl Function for Filter {
             }
             ListType::Unsafe => {
                 stack.push(BFieldElement::new(output_list_capacity as u64));
-                list::unsafeimplu32::new::UnsafeNew {
+                UnsafeNew {
                     data_type: input_type.clone(),
                 }
                 .rust_shadowing(stack, vec![], vec![], memory);
@@ -294,13 +245,13 @@ impl Function for Filter {
         stack.push(BFieldElement::new(len as u64));
         match self.list_type {
             ListType::Safe => {
-                list::safeimplu32::set_length::SafeSetLength {
+                SafeSetLength {
                     data_type: output_type,
                 }
                 .rust_shadowing(stack, vec![], vec![], memory);
             }
             ListType::Unsafe => {
-                list::unsafeimplu32::set_length::UnsafeSetLength {
+                UnsafeSetLength {
                     data_type: output_type,
                 }
                 .rust_shadowing(stack, vec![], vec![], memory);
@@ -346,13 +297,13 @@ impl Function for Filter {
         stack.push(BFieldElement::new(output_index as u64));
         match self.list_type {
             ListType::Safe => {
-                list::safeimplu32::set_length::SafeSetLength {
+                SafeSetLength {
                     data_type: input_type,
                 }
                 .rust_shadowing(stack, vec![], vec![], memory);
             }
             ListType::Unsafe => {
-                list::unsafeimplu32::set_length::UnsafeSetLength {
+                UnsafeSetLength {
                     data_type: input_type,
                 }
                 .rust_shadowing(stack, vec![], vec![], memory);
@@ -409,9 +360,6 @@ impl Function for Filter {
 #[cfg(test)]
 mod tests {
     use crate::traits::rust_shadow::RustShadow;
-    use crate::twenty_first::{
-        shared_math::other::random_elements, util_types::algebraic_hasher::AlgebraicHasher,
-    };
     use crate::{
         arithmetic,
         list::higher_order::inner_function::RawCode,
@@ -419,6 +367,9 @@ mod tests {
         ExecutionState, VmHasher,
     };
     use triton_vm::triton_asm;
+    use twenty_first::{
+        shared_math::other::random_elements, util_types::algebraic_hasher::AlgebraicHasher,
+    };
 
     use super::*;
 
@@ -445,15 +396,15 @@ mod tests {
             vec![DataType::Xfe]
         }
 
-        fn output_types(&self) -> Vec<DataType> {
-            vec![DataType::Bool]
-        }
-
         fn output_field_names(&self) -> Vec<String>
         where
             Self: Sized,
         {
             vec!["bool".to_string()]
+        }
+
+        fn output_types(&self) -> Vec<DataType> {
+            vec![DataType::Bool]
         }
 
         fn stack_diff(&self) -> isize
@@ -469,7 +420,7 @@ mod tests {
             format!(
             "
     // BEFORE: _ x2 x1 x0
-    // AFTER: _ b
+    // AFTER:  _ b
     {entrypoint}:
         // Useless additions, to ensure that dependencies are accepted inside the filter generated code
             push 0

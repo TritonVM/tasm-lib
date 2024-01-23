@@ -1,13 +1,13 @@
-use std::{cell::RefCell, rc::Rc};
+use std::cell::RefCell;
+use std::rc::Rc;
 
-use triton_vm::vm::VMState;
-use triton_vm::{
-    instruction::LabelledInstruction, triton_asm, BFieldElement, NonDeterminism, Program,
-    PublicInput,
-};
+use triton_vm::prelude::*;
 
+use crate::library::Library;
+use crate::prove_and_verify;
 use crate::traits::basic_snippet::BasicSnippet;
-use crate::{library::Library, prove_and_verify, ExecutionResult, VmHasherState};
+use crate::ExecutionResult;
+use crate::VmHasherState;
 
 pub fn link_for_isolated_run<T: BasicSnippet>(
     snippet: Rc<RefCell<T>>,
