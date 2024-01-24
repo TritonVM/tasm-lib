@@ -211,15 +211,14 @@ impl DeprecatedSnippet for SubU64 {
 
 #[cfg(test)]
 mod tests {
-    use num::{BigUint, Zero};
+    use num::BigUint;
+    use num::Zero;
     use rand::Rng;
     use BFieldElement;
 
     use crate::empty_stack;
-    use crate::test_helpers::{
-        test_rust_equivalence_given_input_values_deprecated,
-        test_rust_equivalence_multiple_deprecated,
-    };
+    use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
+    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     use super::*;
 

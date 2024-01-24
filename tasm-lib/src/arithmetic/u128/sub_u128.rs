@@ -246,14 +246,13 @@ fn prepare_state(lhs: u128, rhs: u128) -> ExecutionState {
 
 #[cfg(test)]
 mod tests {
-    use num::{One, Zero};
+    use num::One;
+    use num::Zero;
     use BFieldElement;
 
     use crate::empty_stack;
-    use crate::test_helpers::{
-        test_rust_equivalence_given_input_values_deprecated,
-        test_rust_equivalence_multiple_deprecated,
-    };
+    use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
+    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     use super::*;
 

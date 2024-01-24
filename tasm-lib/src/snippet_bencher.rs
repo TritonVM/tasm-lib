@@ -1,7 +1,11 @@
-use serde::{Deserialize, Serialize};
+use std::fs::create_dir_all;
+use std::fs::File;
+use std::path::Path;
+use std::path::PathBuf;
+
+use serde::Deserialize;
+use serde::Serialize;
 use serde_json::to_writer_pretty;
-use std::fs::{create_dir_all, File};
-use std::path::{Path, PathBuf};
 
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 

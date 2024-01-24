@@ -412,17 +412,11 @@ impl DeprecatedSnippet for CalculateNewPeaksFromAppend {
 mod tests {
     use num::Zero;
     use twenty_first::shared_math::other::random_elements;
-    use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
     use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
     use twenty_first::util_types::mmr::mmr_membership_proof::MmrMembershipProof;
-    use twenty_first::util_types::mmr::mmr_trait::Mmr;
-    use BFieldElement;
 
-    use crate::test_helpers::{
-        test_rust_equivalence_given_input_values_deprecated,
-        test_rust_equivalence_multiple_deprecated,
-    };
-    use crate::{empty_stack, VmHasher};
+    use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
+    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     use super::*;
 

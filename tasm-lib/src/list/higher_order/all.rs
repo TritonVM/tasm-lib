@@ -448,14 +448,11 @@ impl DeprecatedSnippet for TestHashXFieldElementLsb {
 #[cfg(test)]
 mod tests {
     use num::One;
-    use triton_vm::triton_asm;
 
+    use crate::list::higher_order::inner_function::RawCode;
+    use crate::test_helpers::test_rust_equivalence_given_complete_state;
+    use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-    use crate::{
-        list::higher_order::inner_function::RawCode,
-        test_helpers::test_rust_equivalence_given_complete_state,
-        traits::function::ShadowedFunction,
-    };
 
     use super::*;
 

@@ -51,10 +51,10 @@ pub fn bench_and_profile_program<P: CompiledProgram>(
     public_input: &PublicInput,
     nondeterminism: &NonDeterminism<BFieldElement>,
 ) {
-    use std::{
-        fs::{create_dir_all, File},
-        path::{Path, PathBuf},
-    };
+    use std::fs::create_dir_all;
+    use std::fs::File;
+    use std::path::Path;
+    use std::path::PathBuf;
 
     use crate::snippet_bencher::BenchmarkResult;
     use std::io::Write;

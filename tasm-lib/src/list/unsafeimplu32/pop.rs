@@ -177,16 +177,11 @@ fn prepare_state(data_type: &DataType) -> ExecutionState {
 
 #[cfg(test)]
 mod tests {
-    use itertools::Itertools;
     use num::Zero;
-    use rand::{thread_rng, RngCore};
-    use BFieldElement;
+    use rand::RngCore;
 
-    use crate::empty_stack;
-    use crate::test_helpers::{
-        test_rust_equivalence_given_input_values_deprecated,
-        test_rust_equivalence_multiple_deprecated,
-    };
+    use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
+    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     use super::*;
 

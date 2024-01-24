@@ -217,13 +217,8 @@ fn prepare_state(leaf_count: u64, leaf_index: u64) -> ExecutionState {
 
 #[cfg(test)]
 mod tests {
-    use BFieldElement;
-
-    use crate::empty_stack;
-    use crate::test_helpers::{
-        test_rust_equivalence_given_input_values_deprecated,
-        test_rust_equivalence_multiple_deprecated,
-    };
+    use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
+    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     use super::*;
 

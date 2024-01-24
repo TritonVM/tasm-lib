@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use triton_vm::{instruction::LabelledInstruction, triton_asm, triton_instr};
+use triton_vm::prelude::*;
 
 pub mod read_input;
 pub mod write_to_stdout;

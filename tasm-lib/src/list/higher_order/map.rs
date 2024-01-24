@@ -390,18 +390,14 @@ impl Map {
 #[cfg(test)]
 mod tests {
     use num_traits::Zero;
-    use triton_vm::triton_asm;
-    use twenty_first::{
-        shared_math::other::random_elements, util_types::algebraic_hasher::AlgebraicHasher,
-    };
+    use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
+    use crate::arithmetic;
+    use crate::list::higher_order::inner_function::RawCode;
+    use crate::traits::deprecated_snippet::DeprecatedSnippet;
+    use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-    use crate::{
-        arithmetic,
-        list::higher_order::inner_function::RawCode,
-        traits::{deprecated_snippet::DeprecatedSnippet, function::ShadowedFunction},
-        VmHasher,
-    };
+    use crate::VmHasher;
 
     use super::*;
 
@@ -712,7 +708,8 @@ mod benches {
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
 
-    use super::{tests::TestHashXFieldElement, *};
+    use super::tests::TestHashXFieldElement;
+    use super::*;
 
     #[test]
     fn unsafe_list_map_benchmark() {

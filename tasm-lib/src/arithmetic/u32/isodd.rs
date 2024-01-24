@@ -101,14 +101,12 @@ impl DeprecatedSnippet for Isodd {
 
 #[cfg(test)]
 mod tests {
-    use rand::{thread_rng, RngCore};
+    use rand::thread_rng;
+    use rand::RngCore;
 
     use crate::empty_stack;
-
-    use crate::test_helpers::{
-        test_rust_equivalence_given_input_values_deprecated,
-        test_rust_equivalence_multiple_deprecated,
-    };
+    use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
+    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     use super::*;
 
@@ -156,8 +154,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::snippet_bencher::bench_and_write;
+
+    use super::*;
 
     #[test]
     fn is_odd_u32_benchmark() {

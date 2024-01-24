@@ -1,76 +1,86 @@
+use crate::arithmetic::u128::add_u128::AddU128;
+use crate::arithmetic::u128::safe_mul_u128::SafeMulU128;
+use crate::arithmetic::u128::shift_left_static_u128::ShiftLeftStaticU128;
+use crate::arithmetic::u128::shift_left_u128::ShiftLeftU128;
+use crate::arithmetic::u128::shift_right_static_u128::ShiftRightStaticU128;
+use crate::arithmetic::u128::shift_right_u128::ShiftRightU128;
+use crate::arithmetic::u128::sub_u128::SubU128;
+use crate::arithmetic::u32::isodd::Isodd;
+use crate::arithmetic::u32::isu32::Isu32;
+use crate::arithmetic::u32::leadingzeros::Leadingzeros;
+use crate::arithmetic::u32::or::Or;
+use crate::arithmetic::u32::overflowingadd::Overflowingadd;
+use crate::arithmetic::u32::safeadd::Safeadd;
+use crate::arithmetic::u32::safemul::Safemul;
+use crate::arithmetic::u32::safepow::Safepow;
+use crate::arithmetic::u32::safesub::Safesub;
+use crate::arithmetic::u32::shiftleft::Shiftleft;
+use crate::arithmetic::u32::shiftright::Shiftright;
+use crate::arithmetic::u64::add_u64::AddU64;
+use crate::arithmetic::u64::and_u64::AndU64;
+use crate::arithmetic::u64::decr_u64::DecrU64;
+use crate::arithmetic::u64::div2_u64::Div2U64;
+use crate::arithmetic::u64::div_mod_u64::DivModU64;
+use crate::arithmetic::u64::double_pow2_u64::DoublePow2U64;
+use crate::arithmetic::u64::eq_u64::EqU64;
+use crate::arithmetic::u64::incr_u64::IncrU64;
+use crate::arithmetic::u64::index_of_last_nonzero_bit::IndexOfLastNonZeroBitU64;
+use crate::arithmetic::u64::leading_zeros_u64::LeadingZerosU64;
+use crate::arithmetic::u64::log_2_floor_u64::Log2FloorU64;
+use crate::arithmetic::u64::lt_u64::LtStandardU64;
+use crate::arithmetic::u64::lt_u64::LtU64;
+use crate::arithmetic::u64::mul_two_u64s_to_u128_u64::MulTwoU64sToU128;
+use crate::arithmetic::u64::or_u64::OrU64;
+use crate::arithmetic::u64::overflowing_sub_u64::OverflowingSub;
+use crate::arithmetic::u64::popcount_u64::PopCountU64;
+use crate::arithmetic::u64::pow2_u64::Pow2U64;
+use crate::arithmetic::u64::safe_mul_u64::SafeMulU64;
+use crate::arithmetic::u64::shift_left_u64::ShiftLeftU64;
+use crate::arithmetic::u64::shift_right_u64::ShiftRightU64;
+use crate::arithmetic::u64::sub_u64::SubU64;
+use crate::arithmetic::u64::wrapping_mul_u64::WrappingMulU64;
+use crate::arithmetic::u64::wrapping_sub_u64::WrappingSub;
+use crate::arithmetic::u64::xor_u64::XorU64;
 use crate::data_type::DataType;
+use crate::hashing::eq_digest::EqDigest;
+use crate::hashing::hash_varlen::HashVarlen;
+use crate::hashing::reverse_digest::ReverseDigest;
+use crate::hashing::sample_indices::SampleIndices;
+use crate::hashing::swap_digest::SwapDigest;
+use crate::io::read_input::ReadInput;
+use crate::io::write_to_stdout::WriteToStdout;
 use crate::io::InputSource;
+use crate::list::contiguous_list;
+use crate::list::range::Range;
+use crate::list::safeimplu32::get::SafeGet;
+use crate::list::safeimplu32::length::Length as SafeLength;
+use crate::list::safeimplu32::new::SafeNew;
+use crate::list::safeimplu32::pop::SafePop;
+use crate::list::safeimplu32::push::SafePush;
+use crate::list::safeimplu32::set::SafeSet;
+use crate::list::safeimplu32::set_length::SafeSetLength;
+use crate::list::unsafeimplu32::get::UnsafeGet;
+use crate::list::unsafeimplu32::length::Length as UnsafeLength;
+use crate::list::unsafeimplu32::new::UnsafeNew;
+use crate::list::unsafeimplu32::pop::UnsafePop;
+use crate::list::unsafeimplu32::push::UnsafePush;
+use crate::list::unsafeimplu32::set::UnsafeSet;
+use crate::list::unsafeimplu32::set_length::UnsafeSetLength;
+use crate::list::ListType;
+use crate::memory::dyn_malloc::DynMalloc;
+use crate::memory::memcpy::MemCpy;
+use crate::mmr::bag_peaks::BagPeaks;
+use crate::mmr::calculate_new_peaks_from_append::CalculateNewPeaksFromAppend;
+use crate::mmr::calculate_new_peaks_from_leaf_mutation::MmrCalculateNewPeaksFromLeafMutationMtIndices;
+use crate::mmr::leaf_index_to_mt_index_and_peak_index::MmrLeafIndexToMtIndexAndPeakIndex;
 use crate::mmr::verify_from_memory::MmrVerifyFromMemory;
+use crate::mmr::verify_from_secret_in::MmrVerifyLeafMembershipFromSecretIn;
+use crate::neptune::mutator_set::commit::Commit;
+use crate::neptune::mutator_set::get_swbf_indices::GetSwbfIndices;
+use crate::other_snippets::bfe_add::BfeAdd;
+use crate::recufier::merkle_verify::MerkleVerify;
+use crate::recufier::proof_stream::dequeue::Dequeue;
 use crate::traits::basic_snippet::BasicSnippet;
-use crate::{
-    arithmetic::{
-        u128::{
-            add_u128::AddU128, safe_mul_u128::SafeMulU128,
-            shift_left_static_u128::ShiftLeftStaticU128, shift_left_u128::ShiftLeftU128,
-            shift_right_static_u128::ShiftRightStaticU128, shift_right_u128::ShiftRightU128,
-            sub_u128::SubU128,
-        },
-        u32::{
-            isodd::Isodd, isu32::Isu32, leadingzeros::Leadingzeros, or::Or,
-            overflowingadd::Overflowingadd, safeadd::Safeadd, safemul::Safemul, safepow::Safepow,
-            safesub::Safesub, shiftleft::Shiftleft, shiftright::Shiftright,
-        },
-        u64::{
-            add_u64::AddU64,
-            and_u64::AndU64,
-            decr_u64::DecrU64,
-            div2_u64::Div2U64,
-            div_mod_u64::DivModU64,
-            double_pow2_u64::DoublePow2U64,
-            eq_u64::EqU64,
-            incr_u64::IncrU64,
-            index_of_last_nonzero_bit::IndexOfLastNonZeroBitU64,
-            leading_zeros_u64::LeadingZerosU64,
-            log_2_floor_u64::Log2FloorU64,
-            lt_u64::{LtStandardU64, LtU64},
-            mul_two_u64s_to_u128_u64::MulTwoU64sToU128,
-            or_u64::OrU64,
-            overflowing_sub_u64::OverflowingSub,
-            popcount_u64::PopCountU64,
-            pow2_u64::Pow2U64,
-            safe_mul_u64::SafeMulU64,
-            shift_left_u64::ShiftLeftU64,
-            shift_right_u64::ShiftRightU64,
-            sub_u64::SubU64,
-            wrapping_mul_u64::WrappingMulU64,
-            wrapping_sub_u64::WrappingSub,
-            xor_u64::XorU64,
-        },
-    },
-    hashing::{
-        eq_digest::EqDigest, hash_varlen::HashVarlen, reverse_digest::ReverseDigest,
-        sample_indices::SampleIndices, swap_digest::SwapDigest,
-    },
-    io::{read_input::ReadInput, write_to_stdout::WriteToStdout},
-    list::{
-        contiguous_list,
-        range::Range,
-        safeimplu32::{
-            get::SafeGet, length::Length as SafeLength, new::SafeNew, pop::SafePop, push::SafePush,
-            set::SafeSet, set_length::SafeSetLength,
-        },
-        unsafeimplu32::{
-            get::UnsafeGet, length::Length as UnsafeLength, new::UnsafeNew, pop::UnsafePop,
-            push::UnsafePush, set::UnsafeSet, set_length::UnsafeSetLength,
-        },
-        ListType,
-    },
-    memory::{dyn_malloc::DynMalloc, memcpy::MemCpy},
-    mmr::{
-        bag_peaks::BagPeaks, calculate_new_peaks_from_append::CalculateNewPeaksFromAppend,
-        calculate_new_peaks_from_leaf_mutation::MmrCalculateNewPeaksFromLeafMutationMtIndices,
-        leaf_index_to_mt_index_and_peak_index::MmrLeafIndexToMtIndexAndPeakIndex,
-        verify_from_secret_in::MmrVerifyLeafMembershipFromSecretIn,
-    },
-    neptune::mutator_set::{commit::Commit, get_swbf_indices::GetSwbfIndices},
-    other_snippets::bfe_add::BfeAdd,
-    recufier::{merkle_verify::MerkleVerify, proof_stream::dequeue::Dequeue},
-};
 
 pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
     match fn_name {

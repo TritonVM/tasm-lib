@@ -1,6 +1,7 @@
 use triton_vm::instruction::LabelledInstruction;
 
-use crate::{data_type::DataType, library::Library};
+use crate::data_type::DataType;
+use crate::library::Library;
 
 pub trait BasicSnippet {
     fn inputs(&self) -> Vec<(DataType, String)>;

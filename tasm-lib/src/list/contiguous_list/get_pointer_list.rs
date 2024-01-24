@@ -304,7 +304,8 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use crate::{list::ListType, snippet_bencher::bench_and_write};
+    use crate::list::ListType;
+    use crate::snippet_bencher::bench_and_write;
 
     use super::GetPointerList;
 

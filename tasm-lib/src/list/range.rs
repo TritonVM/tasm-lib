@@ -226,12 +226,11 @@ impl DeprecatedSnippet for Range {
 
 #[cfg(test)]
 mod tests {
-    use triton_vm::error::{InstructionError, VMError};
+    use triton_vm::error::InstructionError;
+    use triton_vm::error::VMError;
 
-    use crate::{
-        execute_with_execution_state_deprecated,
-        test_helpers::test_rust_equivalence_multiple_deprecated,
-    };
+    use crate::execute_with_execution_state_deprecated;
+    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     use super::*;
 

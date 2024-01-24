@@ -146,15 +146,10 @@ impl DeprecatedSnippet for Length {
 
 #[cfg(test)]
 mod tests {
-    use num::One;
-    use rand::{thread_rng, RngCore};
-    use BFieldElement;
+    use rand::RngCore;
 
-    use crate::empty_stack;
-    use crate::test_helpers::{
-        test_rust_equivalence_given_input_values_deprecated,
-        test_rust_equivalence_multiple_deprecated,
-    };
+    use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
+    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     use super::*;
 

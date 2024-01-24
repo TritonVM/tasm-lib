@@ -169,7 +169,8 @@ pub fn safe_list_set_length(
 
 #[cfg(test)]
 mod tests {
-    use twenty_first::shared_math::{other::random_elements, tip5::Digest};
+    use twenty_first::shared_math::other::random_elements;
+    use twenty_first::shared_math::tip5::Digest;
 
     use super::*;
 

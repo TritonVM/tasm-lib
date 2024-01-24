@@ -359,17 +359,16 @@ impl Function for Filter {
 
 #[cfg(test)]
 mod tests {
+    use twenty_first::shared_math::other::random_elements;
+    use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
+
+    use crate::arithmetic;
+    use crate::list::higher_order::inner_function::RawCode;
+    use crate::traits::deprecated_snippet::DeprecatedSnippet;
+    use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-    use crate::{
-        arithmetic,
-        list::higher_order::inner_function::RawCode,
-        traits::{deprecated_snippet::DeprecatedSnippet, function::ShadowedFunction},
-        ExecutionState, VmHasher,
-    };
-    use triton_vm::triton_asm;
-    use twenty_first::{
-        shared_math::other::random_elements, util_types::algebraic_hasher::AlgebraicHasher,
-    };
+    use crate::ExecutionState;
+    use crate::VmHasher;
 
     use super::*;
 
@@ -590,9 +589,11 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::{tests::TestHashXFieldElementLsb, *};
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
+
+    use super::tests::TestHashXFieldElementLsb;
+    use super::*;
 
     #[test]
     fn unsafe_list_filter_benchmark() {
