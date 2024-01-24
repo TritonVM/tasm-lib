@@ -292,7 +292,7 @@ pub fn execute_test(
 /// ```
 ///
 /// [Triton TUI]: https://crates.io/crates/triton-tui
-fn maybe_write_debuggable_program_to_disk(program: &Program, vm_state: &VMState) {
+pub fn maybe_write_debuggable_program_to_disk(program: &Program, vm_state: &VMState) {
     let Ok(_) = std::env::var(ENV_VARIABLE_WRITE_PROGRAM_AND_STATE_TO_DISK) else {
         return;
     };
