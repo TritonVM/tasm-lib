@@ -1,3 +1,4 @@
+use num_traits::One;
 use std::collections::HashMap;
 use triton_vm::instruction::AnInstruction;
 use triton_vm::instruction::LabelledInstruction;
@@ -12,6 +13,8 @@ use crate::data_type::DataType;
 use crate::library::Library;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
+
+const MORE_THAN_ONE_INPUT_OR_OUTPUT_TYPE_IN_INNER_FUNCTION: &str = "higher-order functions currently only work with *one* input element in inner function. Use a tuple data type to circumvent this.";
 
 /// A data structure for describing an inner function predicate to filter with,
 /// or to map with.
@@ -98,18 +101,46 @@ impl InnerFunction {
     pub fn domain(&self) -> DataType {
         match self {
             InnerFunction::RawCode(raw) => raw.input_type.clone(),
-            InnerFunction::DeprecatedSnippet(f) => f.input_types()[0].clone(),
+            InnerFunction::DeprecatedSnippet(f) => {
+                let input_types = f.input_types();
+                assert!(
+                    input_types.len().is_one(),
+                    "{MORE_THAN_ONE_INPUT_OR_OUTPUT_TYPE_IN_INNER_FUNCTION}"
+                );
+                input_types[0].clone()
+            }
             InnerFunction::NoFunctionBody(f) => f.input_type.clone(),
-            InnerFunction::BasicSnippet(bs) => bs.inputs()[0].0.clone(),
+            InnerFunction::BasicSnippet(bs) => {
+                let inputs = bs.inputs();
+                assert!(
+                    inputs.len().is_one(),
+                    "{MORE_THAN_ONE_INPUT_OR_OUTPUT_TYPE_IN_INNER_FUNCTION}"
+                );
+                inputs[0].0.clone()
+            }
         }
     }
 
     pub fn range(&self) -> DataType {
         match self {
             InnerFunction::RawCode(rc) => rc.output_type.clone(),
-            InnerFunction::DeprecatedSnippet(sn) => sn.output_types()[0].clone(),
+            InnerFunction::DeprecatedSnippet(sn) => {
+                let outputs = sn.output_types();
+                assert!(
+                    outputs.len().is_one(),
+                    "{MORE_THAN_ONE_INPUT_OR_OUTPUT_TYPE_IN_INNER_FUNCTION}"
+                );
+                outputs[0].clone()
+            }
             InnerFunction::NoFunctionBody(lnat) => lnat.output_type.clone(),
-            InnerFunction::BasicSnippet(bs) => bs.outputs()[0].0.clone(),
+            InnerFunction::BasicSnippet(bs) => {
+                let outputs = bs.outputs();
+                assert!(
+                    outputs.len().is_one(),
+                    "{MORE_THAN_ONE_INPUT_OR_OUTPUT_TYPE_IN_INNER_FUNCTION}"
+                );
+                outputs[0].0.clone()
+            }
         }
     }
 

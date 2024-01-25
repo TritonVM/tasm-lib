@@ -2,6 +2,7 @@ use crate::twenty_first::shared_math::b_field_element::BFieldElement;
 use crate::twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 use itertools::Itertools;
 use num::Zero;
+use num_traits::One;
 use rand::rngs::StdRng;
 use rand::{RngCore, SeedableRng};
 use std::collections::HashMap;
@@ -25,6 +26,8 @@ use crate::{arithmetic, empty_stack, rust_shadowing_helper_functions, VmHasher};
 use crate::{library::Library, ExecutionState};
 
 use super::inner_function::InnerFunction;
+
+const MORE_THAN_ONE_INPUT_OR_OUTPUT_TYPE_IN_INNER_FUNCTION: &str = "inner function in `all` currently only works with *one* input element. Use a tuple data type to circumvent this.";
 
 /// Runs a predicate over all elements of a list and returns true
 /// only if all elements satisfy the predicate.
@@ -103,7 +106,12 @@ impl BasicSnippet for All {
     fn inputs(&self) -> Vec<(DataType, String)> {
         let input_type = match &self.f {
             InnerFunction::BasicSnippet(basic_snippet) => {
-                DataType::List(Box::new(basic_snippet.inputs()[0].0.clone()))
+                let inputs = basic_snippet.inputs();
+                assert!(
+                    inputs.len().is_one(),
+                    "{MORE_THAN_ONE_INPUT_OR_OUTPUT_TYPE_IN_INNER_FUNCTION}"
+                );
+                DataType::List(Box::new(inputs[0].0.clone()))
             }
             _ => DataType::VoidPointer,
         };
@@ -125,7 +133,11 @@ impl BasicSnippet for All {
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
         let input_type = self.f.domain();
         let output_type = self.f.range();
-        assert_eq!(output_type, DataType::Bool);
+        assert_eq!(
+            output_type,
+            DataType::Bool,
+            "Output type of inner function used in `all` must be bool"
+        );
         let get_length = match self.list_type {
             ListType::Safe => library.import(Box::new(SafeLength {
                 data_type: input_type.clone(),

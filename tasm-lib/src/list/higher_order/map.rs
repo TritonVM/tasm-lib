@@ -1,6 +1,7 @@
 use crate::twenty_first::shared_math::b_field_element::BFieldElement;
 use crate::twenty_first::shared_math::other::random_elements;
 use itertools::Itertools;
+use num_traits::One;
 use rand::rngs::StdRng;
 use rand::{Rng, RngCore, SeedableRng};
 use std::collections::HashMap;
@@ -29,6 +30,8 @@ use crate::traits::function::{Function, FunctionInitialState};
 use crate::{empty_stack, rust_shadowing_helper_functions};
 use crate::{library::Library, ExecutionState};
 
+const MORE_THAN_ONE_INPUT_OR_OUTPUT_TYPE_IN_INNER_FUNCTION: &str = "inner function in `map` currently only works with *one* input element. Use a tuple data type to circumvent this.";
+
 /// Applies a given function to every element of a list, and collects the new elements
 /// into a new list.
 pub struct Map {
@@ -40,6 +43,10 @@ impl BasicSnippet for Map {
     fn inputs(&self) -> Vec<(DataType, String)> {
         match &self.f {
             InnerFunction::BasicSnippet(bs) => {
+                assert!(
+                    bs.inputs().len().is_one(),
+                    "{MORE_THAN_ONE_INPUT_OR_OUTPUT_TYPE_IN_INNER_FUNCTION}"
+                );
                 let inner_type = &bs.inputs()[0].0;
                 vec![(
                     DataType::List(Box::new(inner_type.clone())),
@@ -56,6 +63,10 @@ impl BasicSnippet for Map {
     fn outputs(&self) -> Vec<(DataType, String)> {
         match &self.f {
             InnerFunction::BasicSnippet(bs) => {
+                assert!(
+                    bs.inputs().len().is_one(),
+                    "{MORE_THAN_ONE_INPUT_OR_OUTPUT_TYPE_IN_INNER_FUNCTION}"
+                );
                 let inner_type = &bs.outputs()[0].0;
                 vec![(
                     DataType::List(Box::new(inner_type.clone())),
@@ -127,6 +138,10 @@ impl BasicSnippet for Map {
         let inner_function_name = match &self.f {
             InnerFunction::RawCode(rc) => rc.entrypoint(),
             InnerFunction::DeprecatedSnippet(sn) => {
+                assert!(
+                    sn.input_types().len().is_one(),
+                    "{MORE_THAN_ONE_INPUT_OR_OUTPUT_TYPE_IN_INNER_FUNCTION}"
+                );
                 let fn_body = sn.function_code(library);
                 let (_, instructions) = tokenize(&fn_body).unwrap();
                 let labelled_instructions =
@@ -135,6 +150,10 @@ impl BasicSnippet for Map {
             }
             InnerFunction::NoFunctionBody(lnat) => lnat.label_name.to_owned(),
             InnerFunction::BasicSnippet(bs) => {
+                assert!(
+                    bs.inputs().len().is_one(),
+                    "{MORE_THAN_ONE_INPUT_OR_OUTPUT_TYPE_IN_INNER_FUNCTION}"
+                );
                 let labelled_instructions = bs.code(library);
                 library.explicit_import(&bs.entrypoint(), &labelled_instructions)
             }

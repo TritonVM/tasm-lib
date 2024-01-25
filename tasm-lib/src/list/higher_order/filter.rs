@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use crate::twenty_first::shared_math::b_field_element::BFieldElement;
 use itertools::Itertools;
 use num::Zero;
+use num_traits::One;
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 use triton_vm::parser::tokenize;
@@ -27,6 +28,8 @@ use crate::{empty_stack, rust_shadowing_helper_functions};
 
 use super::inner_function::InnerFunction;
 
+const MORE_THAN_ONE_INPUT_OR_OUTPUT_TYPE_IN_INNER_FUNCTION: &str = "inner function in `filter` currently only works with *one* input element. Use a tuple data type to circumvent this.";
+
 /// Filters a given list for elements that satisfy a predicate. A new
 /// list is created, containing only those elements that satisfy the
 /// predicate. The predicate must be given as an InnerFunction.
@@ -39,6 +42,11 @@ impl BasicSnippet for Filter {
     fn inputs(&self) -> Vec<(DataType, String)> {
         let list_type = match &self.f {
             InnerFunction::BasicSnippet(basic_snippet) => {
+                assert!(
+                    basic_snippet.inputs().len().is_one(),
+                    "{MORE_THAN_ONE_INPUT_OR_OUTPUT_TYPE_IN_INNER_FUNCTION}"
+                );
+
                 DataType::List(Box::new(basic_snippet.inputs()[0].0.clone()))
             }
             _ => DataType::VoidPointer,
@@ -49,6 +57,10 @@ impl BasicSnippet for Filter {
     fn outputs(&self) -> Vec<(DataType, String)> {
         let list_type = match &self.f {
             InnerFunction::BasicSnippet(basic_snippet) => {
+                assert!(
+                    basic_snippet.inputs().len().is_one(),
+                    "{MORE_THAN_ONE_INPUT_OR_OUTPUT_TYPE_IN_INNER_FUNCTION}"
+                );
                 DataType::List(Box::new(basic_snippet.inputs()[0].0.clone()))
             }
             _ => DataType::VoidPointer,
@@ -67,7 +79,11 @@ impl BasicSnippet for Filter {
     fn code(&self, library: &mut Library) -> Vec<triton_vm::instruction::LabelledInstruction> {
         let input_type = self.f.domain();
         let output_type = self.f.range();
-        assert_eq!(output_type, DataType::Bool);
+        assert_eq!(
+            output_type,
+            DataType::Bool,
+            "Output type of inner function used in `filter` must be bool"
+        );
         let safety_offset = match self.list_type {
             ListType::Safe => 2,
             ListType::Unsafe => 1,
