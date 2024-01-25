@@ -1,15 +1,15 @@
 [
   {
     "name": "tasm_neptune_mutator_get_swbf_indices_1048576_45",
-    "clock_cycle_count": 5255,
-    "hash_table_height": 493,
+    "clock_cycle_count": 5263,
+    "hash_table_height": 499,
     "u32_table_height": 4601,
     "case": "CommonCase"
   },
   {
     "name": "tasm_neptune_mutator_get_swbf_indices_1048576_45",
-    "clock_cycle_count": 5255,
-    "hash_table_height": 493,
+    "clock_cycle_count": 5263,
+    "hash_table_height": 499,
     "u32_table_height": 4475,
     "case": "WorstCase"
   }

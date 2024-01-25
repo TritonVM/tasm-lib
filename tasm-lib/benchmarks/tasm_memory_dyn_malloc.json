@@ -1,14 +1,14 @@
 [
   {
     "name": "tasm_memory_dyn_malloc",
-    "clock_cycle_count": 27,
+    "clock_cycle_count": 31,
     "hash_table_height": 30,
     "u32_table_height": 10,
     "case": "CommonCase"
   },
   {
     "name": "tasm_memory_dyn_malloc",
-    "clock_cycle_count": 27,
+    "clock_cycle_count": 31,
     "hash_table_height": 30,
     "u32_table_height": 66,
     "case": "WorstCase"

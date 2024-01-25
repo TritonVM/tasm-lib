@@ -1,15 +1,15 @@
 [
   {
     "name": "tasm_list_higher_order_unsafeimplu32_u32_filter_test_hash_xfield_element_lsb",
-    "clock_cycle_count": 822,
-    "hash_table_height": 332,
+    "clock_cycle_count": 826,
+    "hash_table_height": 338,
     "u32_table_height": 535,
     "case": "CommonCase"
   },
   {
     "name": "tasm_list_higher_order_unsafeimplu32_u32_filter_test_hash_xfield_element_lsb",
-    "clock_cycle_count": 504,
-    "hash_table_height": 280,
+    "clock_cycle_count": 508,
+    "hash_table_height": 286,
     "u32_table_height": 276,
     "case": "WorstCase"
   }
