@@ -21,8 +21,6 @@ use itertools::Itertools;
 use num_traits::Zero;
 use triton_vm::op_stack::NUM_OP_STACK_REGISTERS;
 use triton_vm::prelude::*;
-use twenty_first::shared_math::tip5;
-use twenty_first::shared_math::tip5::Tip5State;
 
 use library::Library;
 use memory::dyn_malloc;
@@ -51,11 +49,11 @@ pub mod traits;
 
 // re-exports for types exposed in our public API.
 pub use triton_vm;
-pub use triton_vm::prelude::twenty_first;
+pub use triton_vm::twenty_first;
 
 // The hasher type must match whatever algebraic hasher the VM is using
 pub type VmHasher = Tip5;
-pub type VmHasherState = Tip5State;
+pub type VmHasherState = tip5::Tip5State;
 pub type Digest = tip5::Digest;
 pub const DIGEST_LENGTH: usize = tip5::DIGEST_LENGTH;
 

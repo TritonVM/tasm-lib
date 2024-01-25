@@ -5,12 +5,12 @@ use rand::random;
 use rand::thread_rng;
 use rand::Rng;
 use triton_vm::prelude::*;
+use triton_vm::twenty_first::prelude::AlgebraicHasher;
+use triton_vm::twenty_first::prelude::MmrMembershipProof;
 use twenty_first::shared_math::other::random_elements;
 use twenty_first::test_shared::mmr::get_rustyleveldb_ammr_from_digests;
-use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 use twenty_first::util_types::mmr::archival_mmr::ArchivalMmr;
 use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
-use twenty_first::util_types::mmr::mmr_membership_proof::MmrMembershipProof;
 use twenty_first::util_types::mmr::mmr_trait::Mmr;
 
 use crate::arithmetic::u32::isodd::Isodd;

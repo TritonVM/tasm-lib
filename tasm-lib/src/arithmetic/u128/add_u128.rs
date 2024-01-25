@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use num::Zero;
 use rand::Rng;
 use triton_vm::prelude::*;
-use twenty_first::amount::u32s::U32s;
+use triton_vm::twenty_first::prelude::U32s;
 
 use crate::data_type::DataType;
 use crate::empty_stack;
@@ -225,7 +225,7 @@ impl DeprecatedSnippet for AddU128 {
 
 #[cfg(test)]
 mod tests {
-    use twenty_first::shared_math::bfield_codec::BFieldCodec;
+    use triton_vm::prelude::BFieldCodec;
 
     use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
     use crate::test_helpers::test_rust_equivalence_multiple_deprecated;

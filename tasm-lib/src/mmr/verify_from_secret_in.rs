@@ -6,11 +6,11 @@ use rand::rngs::StdRng;
 use rand::Rng;
 use rand::SeedableRng;
 use triton_vm::prelude::*;
+use triton_vm::twenty_first::prelude::MmrMembershipProof;
 use twenty_first::shared_math::other::random_elements;
 use twenty_first::test_shared::mmr::get_rustyleveldb_ammr_from_digests;
 use twenty_first::util_types::mmr::archival_mmr::ArchivalMmr;
 use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
-use twenty_first::util_types::mmr::mmr_membership_proof::MmrMembershipProof;
 use twenty_first::util_types::mmr::mmr_trait::Mmr;
 use twenty_first::util_types::mmr::shared_basic::leaf_index_to_mt_index_and_peak_index;
 
@@ -395,8 +395,8 @@ mod benches {
 #[cfg(test)]
 mod tests {
     use rand::thread_rng;
+    use triton_vm::twenty_first::prelude::AlgebraicHasher;
     use twenty_first::test_shared::mmr::get_empty_rustyleveldb_ammr;
-    use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
     use crate::mmr::MAX_MMR_HEIGHT;
     use crate::test_helpers::test_rust_equivalence_given_complete_state;

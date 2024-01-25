@@ -5,7 +5,7 @@
 //! `use tasm_lib::triton_vm::prelude::*;`.
 
 pub use triton_vm;
-pub use triton_vm::prelude::twenty_first;
+pub use triton_vm::twenty_first;
 
 pub use crate::library::Library;
 pub use crate::memory::dyn_malloc::DynMalloc;

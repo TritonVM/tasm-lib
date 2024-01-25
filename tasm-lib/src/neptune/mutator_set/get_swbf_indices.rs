@@ -7,9 +7,9 @@ use rand::rngs::StdRng;
 use rand::Rng;
 use rand::SeedableRng;
 use triton_vm::prelude::*;
-use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
+use triton_vm::twenty_first::prelude::AlgebraicHasher;
+use triton_vm::twenty_first::prelude::SpongeHasher;
 use twenty_first::util_types::algebraic_hasher::Domain;
-use twenty_first::util_types::algebraic_hasher::SpongeHasher;
 
 use crate::arithmetic::u128::shift_left_static_u128;
 use crate::arithmetic::u128::shift_right_static_u128;

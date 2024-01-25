@@ -4,7 +4,7 @@ use itertools::Itertools;
 use num::One;
 use rand::RngCore;
 use triton_vm::prelude::*;
-use twenty_first::amount::u32s::U32s;
+use triton_vm::twenty_first::prelude::U32s;
 
 use crate::arithmetic::u32::safeadd::Safeadd;
 use crate::arithmetic::u32::safesub::Safesub;

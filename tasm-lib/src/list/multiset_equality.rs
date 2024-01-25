@@ -4,9 +4,9 @@ use num::Zero;
 use num_traits::One;
 use rand::random;
 use triton_vm::prelude::*;
+use triton_vm::twenty_first::prelude::x_field_element;
+use triton_vm::twenty_first::prelude::AlgebraicHasher;
 use twenty_first::shared_math::other::random_elements;
-use twenty_first::shared_math::x_field_element::EXTENSION_DEGREE;
-use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
 use crate::data_type::DataType;
 use crate::empty_stack;
@@ -184,7 +184,7 @@ impl MultisetEquality {
         let mut list_b = list_a.clone();
         list_b.sort();
         let manipulated_index = random::<usize>() % length;
-        let manipulated_digest_elem_index = random::<usize>() % EXTENSION_DEGREE;
+        let manipulated_digest_elem_index = random::<usize>() % x_field_element::EXTENSION_DEGREE;
         list_b[manipulated_index].0[manipulated_digest_elem_index] += BFieldElement::one();
         let pointer_a: BFieldElement = random();
         let pointer_b: BFieldElement =

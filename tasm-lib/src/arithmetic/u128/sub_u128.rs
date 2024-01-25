@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use rand::Rng;
 use triton_vm::prelude::*;
-use twenty_first::amount::u32s::U32s;
+use triton_vm::twenty_first::prelude::U32s;
 
 use crate::data_type::DataType;
 use crate::empty_stack;

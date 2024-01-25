@@ -12,14 +12,11 @@ use triton_vm::fri::Fri;
 use triton_vm::prelude::*;
 use triton_vm::proof_item::FriResponse;
 use triton_vm::proof_stream::ProofStream;
+use triton_vm::twenty_first::prelude::*;
 use twenty_first::shared_math::ntt::intt;
 use twenty_first::shared_math::ntt::ntt;
 use twenty_first::shared_math::other::log_2_ceil;
-use twenty_first::shared_math::polynomial::Polynomial;
-use twenty_first::shared_math::traits::ModPowU32;
 use twenty_first::shared_math::traits::PrimitiveRootOfUnity;
-use twenty_first::util_types::algebraic_hasher::SpongeHasher;
-use twenty_first::util_types::merkle_tree::MerkleTreeInclusionProof;
 
 use crate::data_type::DataType;
 use crate::empty_stack;
@@ -437,11 +434,13 @@ impl FriVerify {
     pub fn to_fri(&self) -> Fri<VmHasher> {
         let fri_domain = ArithmeticDomain::of_length(self.domain_length as usize)
             .with_offset(self.domain_offset);
-        Fri::new(
+        let maybe_fri = Fri::new(
             fri_domain,
             self.expansion_factor as usize,
             self.num_colinearity_checks as usize,
-        )
+        );
+
+        maybe_fri.unwrap()
     }
 }
 

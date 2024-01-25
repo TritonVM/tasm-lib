@@ -359,8 +359,8 @@ impl Function for Filter {
 
 #[cfg(test)]
 mod tests {
+    use triton_vm::twenty_first::prelude::AlgebraicHasher;
     use twenty_first::shared_math::other::random_elements;
-    use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
     use crate::arithmetic;
     use crate::list::higher_order::inner_function::RawCode;

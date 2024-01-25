@@ -4,11 +4,11 @@ use itertools::Itertools;
 use num::One;
 use rand::random;
 use triton_vm::prelude::*;
+use triton_vm::twenty_first::prelude::AlgebraicHasher;
+use triton_vm::twenty_first::prelude::Mmr;
 use twenty_first::shared_math::other::random_elements;
-use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 use twenty_first::util_types::mmr;
 use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
-use twenty_first::util_types::mmr::mmr_trait::Mmr;
 
 use crate::arithmetic::u64::incr_u64::IncrU64;
 use crate::arithmetic::u64::index_of_last_nonzero_bit::IndexOfLastNonZeroBitU64;
@@ -411,9 +411,9 @@ impl DeprecatedSnippet for CalculateNewPeaksFromAppend {
 #[cfg(test)]
 mod tests {
     use num::Zero;
+    use triton_vm::twenty_first::prelude::MmrMembershipProof;
     use twenty_first::shared_math::other::random_elements;
     use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
-    use twenty_first::util_types::mmr::mmr_membership_proof::MmrMembershipProof;
 
     use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
     use crate::test_helpers::test_rust_equivalence_multiple_deprecated;

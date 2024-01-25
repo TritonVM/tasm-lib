@@ -1,6 +1,6 @@
 use rand::random;
 use triton_vm::prelude::*;
-use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
+use triton_vm::twenty_first::prelude::AlgebraicHasher;
 
 use crate::data_type::DataType;
 use crate::empty_stack;

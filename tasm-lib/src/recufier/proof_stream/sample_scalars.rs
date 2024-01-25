@@ -5,7 +5,7 @@ use rand::rngs::StdRng;
 use rand::Rng;
 use rand::SeedableRng;
 use triton_vm::prelude::*;
-use twenty_first::util_types::algebraic_hasher::SpongeHasher;
+use triton_vm::twenty_first::prelude::SpongeHasher;
 
 use crate::data_type::DataType;
 use crate::empty_stack;

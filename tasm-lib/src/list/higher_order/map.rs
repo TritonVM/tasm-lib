@@ -390,7 +390,7 @@ impl Map {
 #[cfg(test)]
 mod tests {
     use num_traits::Zero;
-    use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
+    use triton_vm::twenty_first::prelude::AlgebraicHasher;
 
     use crate::arithmetic;
     use crate::list::higher_order::inner_function::RawCode;

@@ -5,10 +5,8 @@ use rand::rngs::StdRng;
 use rand::Rng;
 use rand::RngCore;
 use rand::SeedableRng;
-use triton_vm::prelude::twenty_first::util_types::merkle_tree::MerkleTreeInclusionProof;
 use triton_vm::prelude::*;
-use twenty_first::util_types::merkle_tree::CpuParallel;
-use twenty_first::util_types::merkle_tree_maker::MerkleTreeMaker;
+use triton_vm::twenty_first::prelude::*;
 
 use crate::data_type::DataType;
 use crate::empty_stack;

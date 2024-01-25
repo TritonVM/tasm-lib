@@ -5,7 +5,7 @@ use num::BigUint;
 use rand::thread_rng;
 use rand::Rng;
 use triton_vm::prelude::*;
-use twenty_first::amount::u32s::U32s;
+use triton_vm::twenty_first::prelude::U32s;
 use twenty_first::util_types::mmr;
 
 use crate::arithmetic::u64::add_u64::AddU64;

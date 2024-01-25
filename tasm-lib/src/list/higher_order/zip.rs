@@ -291,7 +291,6 @@ mod tests {
     use proptest::prelude::*;
     use proptest_arbitrary_interop::arb;
     use test_strategy::proptest;
-    use twenty_first::shared_math::x_field_element::XFieldElement;
 
     use crate::rust_shadowing_helper_functions::unsafe_list::*;
     use crate::structure::tasm_object::MemoryIter;

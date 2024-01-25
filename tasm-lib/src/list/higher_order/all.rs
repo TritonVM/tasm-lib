@@ -8,7 +8,7 @@ use rand::SeedableRng;
 use triton_vm::instruction::LabelledInstruction;
 use triton_vm::parser::tokenize;
 use triton_vm::prelude::*;
-use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
+use triton_vm::twenty_first::prelude::AlgebraicHasher;
 
 use crate::arithmetic;
 use crate::data_type::DataType;

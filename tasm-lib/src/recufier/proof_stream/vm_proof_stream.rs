@@ -9,11 +9,8 @@ use triton_vm::proof_item::FriResponse;
 use triton_vm::proof_item::ProofItem;
 use triton_vm::table::master_table::NUM_BASE_COLUMNS;
 use triton_vm::table::master_table::NUM_EXT_COLUMNS;
-use twenty_first::shared_math::b_field_element::BFIELD_ONE;
-use twenty_first::shared_math::b_field_element::BFIELD_ZERO;
-use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
+use triton_vm::twenty_first::prelude::*;
 use twenty_first::util_types::algebraic_hasher::Domain;
-use twenty_first::util_types::algebraic_hasher::SpongeHasher;
 
 use crate::structure::tasm_object::TasmObject;
 use crate::VmHasher;
@@ -70,8 +67,8 @@ impl VmProofStream {
         };
         [
             encoding,
-            vec![BFIELD_ONE],
-            vec![BFIELD_ZERO; num_padding_zeros],
+            vec![b_field_element::BFIELD_ONE],
+            vec![b_field_element::BFIELD_ZERO; num_padding_zeros],
         ]
         .concat()
     }
