@@ -53,6 +53,49 @@ impl BasicSnippet for Dequeue {
         let fiat_shamir = format!("{entrypoint}_fiat_shamir");
         let absorb = library.import(Box::new(Absorb {}));
         triton_asm!(
+             // BEFORE: _ *proof_stream
+            // AFTER:  _ *proof_stream *object
+            {entrypoint}:
+
+                dup 0               // _ *proof_stream *proof_stream
+                {&field_word_index} // _ *proof_stream *word_index
+                read_mem 1          // _ *proof_stream word_index (*word_index - 1)
+                push 1 add          // _ *proof_stream word_index *word_index
+                swap 1              // _ *proof_stream *word_index word_index
+                dup 0               // _ *proof_stream *word_index word_index word_index
+
+                dup 3               // _ *proof_stream *word_index word_index word_index *proof_stream
+                {&field_data_with_size}
+                                    // _ *proof_stream *word_index word_index word_index *data_list_length_indicator data_field_size
+                dup 2               // _ *proof_stream *word_index word_index word_index *data_list_length_indicator data_field_size word_index
+                push 1 add          // _ *proof_stream *word_index word_index word_index *data_list_length_indicator data_field_size word_index+1
+                lt                  // _ *proof_stream *word_index word_index word_index *data_list_length_indicator word_index+1<data_field_size
+                assert              // _ *proof_stream *word_index word_index word_index *data_list_length_indicator
+                push 1 add          // _ *proof_stream *word_index word_index word_index *data
+                add                 // _ *proof_stream *word_index word_index *object_si
+
+
+                call {include_in_fiat_shamir_heuristic}
+                                    // _ *proof_stream *word_index word_index *object_si bool
+
+                skiz call {fiat_shamir}
+                                    // _ *proof_stream *word_index word_index *object_si
+
+                read_mem 1          // _ *proof_stream *word_index word_index object_size (*object_si - 1)
+                push 2 add          // _ *proof_stream *word_index word_index object_size *object
+                swap 1              // _ *proof_stream *word_index word_index *object object_size
+                push 1 add          // _ *proof_stream *word_index word_index *object object_size+1
+                dup 2               // _ *proof_stream *word_index word_index *object object_size+1 word_index
+                add                 // _ *proof_stream *word_index word_index *object word_index'
+
+                swap 1              // _ *proof_stream *word_index word_index word_index' *object
+                swap 3              // _ *proof_stream *object word_index word_index' *word_index
+                write_mem 1         // _ *proof_stream *object word_index (*word_index + 1)
+
+                pop 2               // _ *proof_stream *object
+
+                return
+
             // BEFORE: _ *object_si
             // AFTER:  _ *object_si bool
             {include_in_fiat_shamir_heuristic}:
@@ -97,50 +140,6 @@ impl BasicSnippet for Dequeue {
                 swap 1          // _ *proof_item_size *proof_item proof_item_size
                 call {absorb}   // _ *proof_item_size
                 return
-
-            // BEFORE: _ *proof_stream
-            // AFTER:  _ *proof_stream *object
-            {entrypoint}:
-
-                dup 0               // _ *proof_stream *proof_stream
-                {&field_word_index} // _ *proof_stream *word_index
-                read_mem 1          // _ *proof_stream word_index (*word_index - 1)
-                push 1 add          // _ *proof_stream word_index *word_index
-                swap 1              // _ *proof_stream *word_index word_index
-                dup 0               // _ *proof_stream *word_index word_index word_index
-
-                dup 3               // _ *proof_stream *word_index word_index word_index *proof_stream
-                {&field_data_with_size}
-                                    // _ *proof_stream *word_index word_index word_index *data_list_length_indicator data_field_size
-                dup 2               // _ *proof_stream *word_index word_index word_index *data_list_length_indicator data_field_size word_index
-                push 1 add          // _ *proof_stream *word_index word_index word_index *data_list_length_indicator data_field_size word_index+1
-                lt                  // _ *proof_stream *word_index word_index word_index *data_list_length_indicator word_index+1<data_field_size
-                assert              // _ *proof_stream *word_index word_index word_index *data_list_length_indicator
-                push 1 add          // _ *proof_stream *word_index word_index word_index *data
-                add                 // _ *proof_stream *word_index word_index *object_si
-
-
-                call {include_in_fiat_shamir_heuristic}
-                                    // _ *proof_stream *word_index word_index *object_si bool
-
-                skiz call {fiat_shamir}
-                                    // _ *proof_stream *word_index word_index *object_si
-
-                read_mem 1          // _ *proof_stream *word_index word_index object_size (*object_si - 1)
-                push 2 add          // _ *proof_stream *word_index word_index object_size *object
-                swap 1              // _ *proof_stream *word_index word_index *object object_size
-                push 1 add          // _ *proof_stream *word_index word_index *object object_size+1
-                dup 2               // _ *proof_stream *word_index word_index *object object_size+1 word_index
-                add                 // _ *proof_stream *word_index word_index *object word_index'
-
-                swap 1              // _ *proof_stream *word_index word_index word_index' *object
-                swap 3              // _ *proof_stream *object word_index word_index' *word_index
-                write_mem 1         // _ *proof_stream *object word_index (*word_index + 1)
-
-                pop 2               // _ *proof_stream *object
-
-                return
-
         )
     }
 }
