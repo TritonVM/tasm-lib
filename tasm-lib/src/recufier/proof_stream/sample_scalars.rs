@@ -109,7 +109,7 @@ impl Procedure for SampleScalars {
         let num_scalars = stack.pop().unwrap().value() as usize;
         let num_squeezes = (num_scalars * 3 + 9) / tip5::RATE;
         let pseudorandomness = (0..num_squeezes)
-            .flat_map(|_| VmHasher::squeeze(sponge_state).to_vec())
+            .flat_map(|_| VmHasher::squeeze_once(sponge_state).to_vec())
             .collect_vec();
         let scalars = pseudorandomness
             .chunks(3)

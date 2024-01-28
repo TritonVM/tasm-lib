@@ -164,17 +164,11 @@ impl Procedure for Absorb {
             )
         }
 
-        // pad sequence with 1 and then so many zeros such that 10 divides length
-        sequence.push(BFieldElement::new(1));
-        while sequence.len() % 10 != 0 {
-            sequence.push(BFieldElement::new(0));
-        }
-
         // absorb into sponge state
         let Some(sponge_state) = sponge_state else {
             panic!("sponge must be initialized")
         };
-        VmHasher::absorb_repeatedly(sponge_state, sequence.iter());
+        VmHasher::pad_and_absorb_all(sponge_state, &sequence);
 
         // output empty
         vec![]

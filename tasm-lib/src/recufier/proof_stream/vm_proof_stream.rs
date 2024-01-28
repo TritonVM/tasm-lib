@@ -52,25 +52,7 @@ impl VmProofStream {
     }
 
     fn fiat_shamir<T: BFieldCodec>(&mut self, item: &T) {
-        VmHasher::absorb_repeatedly(
-            &mut self.sponge_state,
-            Self::encode_and_pad_item(item).iter(),
-        );
-    }
-
-    fn encode_and_pad_item<T: BFieldCodec>(item: &T) -> Vec<BFieldElement> {
-        let encoding = item.encode();
-        let last_chunk_len = (encoding.len() + 1) % VmHasher::RATE;
-        let num_padding_zeros = match last_chunk_len {
-            0 => 0,
-            _ => VmHasher::RATE - last_chunk_len,
-        };
-        [
-            encoding,
-            vec![b_field_element::BFIELD_ONE],
-            vec![b_field_element::BFIELD_ZERO; num_padding_zeros],
-        ]
-        .concat()
+        VmHasher::pad_and_absorb_all(&mut self.sponge_state, &item.encode());
     }
 
     pub fn sample_scalars(&mut self, number: usize) -> Vec<XFieldElement> {

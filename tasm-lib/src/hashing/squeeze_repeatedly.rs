@@ -82,7 +82,7 @@ impl Procedure for SqueezeRepeatedly {
             panic!("sponge state must be initialized");
         };
         let sequence = (0..num_squeezes)
-            .flat_map(|_| VmHasher::squeeze(sponge_state).to_vec())
+            .flat_map(|_| VmHasher::squeeze_once(sponge_state).to_vec())
             .collect_vec();
 
         for (i, s) in sequence.into_iter().enumerate() {
