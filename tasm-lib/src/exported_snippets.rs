@@ -202,8 +202,8 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
         "tasm_hashing_eq_digest" => Box::new(EqDigest),
         "tasm_hashing_swap_digest" => Box::new(SwapDigest),
         "tasm_hashing_hash_varlen" => Box::new(HashVarlen),
-        "tasm_hashing_sample_indices_to_safeimplu32_list" => Box::new(SampleIndices{list_type: ListType::Safe}),
-        "tasm_hashing_sample_indices_to_unsafeimplu32_list" => Box::new(SampleIndices{list_type: ListType::Unsafe}),
+        "tasm_hashing_sample_indices_safeimplu32" => Box::new(SampleIndices{list_type: ListType::Safe}),
+        "tasm_hashing_sample_indices_unsafeimplu32" => Box::new(SampleIndices{list_type: ListType::Unsafe}),
         "tasm_hashing_reverse_digest" => Box::new(ReverseDigest),
 
         // Hashing -> Sponge hasher
