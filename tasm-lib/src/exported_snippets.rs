@@ -208,6 +208,7 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
 
         // Hashing -> Sponge hasher
         "tasm_hashing_sponge_hasher_init" => Box::new(sponge_hasher::init::Init),
+        "tasm_hashing_sponge_hasher_absorb_once" => Box::new(sponge_hasher::absorb_once::AbsorbOnce),
 
         // io
         "tasm_io_read_secin___bool" => Box::new(ReadInput {
