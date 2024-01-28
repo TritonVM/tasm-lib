@@ -210,6 +210,12 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
         "tasm_hashing_sponge_hasher_init" => Box::new(sponge_hasher::init::Init),
         "tasm_hashing_sponge_hasher_absorb_once" => Box::new(sponge_hasher::absorb_once::AbsorbOnce),
         "tasm_hashing_sponge_hasher_squeeze_once" => Box::new(sponge_hasher::squeeze_once::SqueezeOnce),
+        "tasm_hashing_sponge_hasher_pad_and_absorb_all_safeimplu32" => Box::new(sponge_hasher::pad_and_absorb_all::PadAndAbsorbAll {
+            list_type: ListType::Safe,
+        }),
+        "tasm_hashing_sponge_hasher_pad_and_absorb_all_unsafeimplu32" => Box::new(sponge_hasher::pad_and_absorb_all::PadAndAbsorbAll {
+            list_type: ListType::Unsafe,
+        }),
 
         // io
         "tasm_io_read_secin___bool" => Box::new(ReadInput {

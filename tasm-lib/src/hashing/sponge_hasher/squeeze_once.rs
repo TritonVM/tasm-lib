@@ -101,12 +101,13 @@ mod test {
             seed: [u8; 32],
             _bench_case: Option<BenchmarkCase>,
         ) -> ProcedureInitialState {
+            let mut init_memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
+            init_memory.insert(DYN_MALLOC_ADDRESS, random());
+
             let mut rng: StdRng = SeedableRng::from_seed(seed);
             let mut bytes = [0u8; 400];
             rng.fill_bytes(&mut bytes);
             let mut unstructured = Unstructured::new(&bytes);
-            let mut init_memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
-            init_memory.insert(DYN_MALLOC_ADDRESS, random());
 
             ProcedureInitialState {
                 stack: empty_stack(),
