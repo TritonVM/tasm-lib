@@ -5,6 +5,6 @@ pub mod hash_varlen;
 pub mod merkle_root;
 pub mod reverse_digest;
 pub mod sample_indices;
-mod sponge_hasher;
+pub mod sponge_hasher;
 pub mod squeeze_repeatedly;
 pub mod swap_digest;
