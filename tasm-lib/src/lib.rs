@@ -303,7 +303,7 @@ pub fn execute_with_terminal_state(
     stack: &[BFieldElement],
     nondeterminism: &NonDeterminism<BFieldElement>,
     maybe_sponge_state: Option<VmHasherState>,
-) -> anyhow::Result<VMState> {
+) -> std::result::Result<VMState, InstructionError> {
     let public_input = PublicInput::new(std_in.into());
     let mut vm_state = VMState::new(program, public_input, nondeterminism.to_owned());
     vm_state.op_stack.stack = stack.to_owned();
@@ -312,7 +312,7 @@ pub fn execute_with_terminal_state(
     match vm_state.run() {
         Ok(()) => {
             println!("Triton VM execution successful.");
-            anyhow::Ok(vm_state)
+            Ok(vm_state)
         }
         Err(err) => {
             if let Some(sponge_state) = vm_state.sponge_state {
@@ -320,7 +320,7 @@ pub fn execute_with_terminal_state(
                 println!("{}", sponge_state.iter().join(", "));
             }
             println!("Triton VM execution failed. Final state:\n{vm_state}");
-            bail!("VM execution failed with error: {err}")
+            Err(err)
         }
     }
 }

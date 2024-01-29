@@ -1,3 +1,4 @@
+pub mod assert_stdin_starts_with_own_program_digest;
 pub mod fri_verify;
 pub mod get_colinear_y;
 pub mod get_colinearity_check_x;
