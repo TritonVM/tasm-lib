@@ -227,10 +227,7 @@ impl Function for GetSwbfIndices {
         let mut squeezed_elements = vec![];
         while u32_indices.len() != self.num_trials {
             if squeezed_elements.is_empty() {
-                squeezed_elements = Tip5::squeeze_once(&mut sponge)
-                    .into_iter()
-                    .rev()
-                    .collect_vec();
+                squeezed_elements = Tip5::squeeze(&mut sponge).into_iter().rev().collect_vec();
             }
             let element = squeezed_elements.pop().unwrap();
             if element != BFieldElement::new(BFieldElement::MAX) {

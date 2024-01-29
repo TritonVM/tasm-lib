@@ -208,8 +208,8 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
 
         // Hashing -> Sponge hasher
         "tasm_hashing_sponge_hasher_init" => Box::new(sponge_hasher::init::Init),
-        "tasm_hashing_sponge_hasher_absorb_once" => Box::new(sponge_hasher::absorb_once::AbsorbOnce),
-        "tasm_hashing_sponge_hasher_squeeze_once" => Box::new(sponge_hasher::squeeze_once::SqueezeOnce),
+        "tasm_hashing_sponge_hasher_absorb" => Box::new(sponge_hasher::absorb::Absorb),
+        "tasm_hashing_sponge_hasher_squeeze" => Box::new(sponge_hasher::squeeze::Squeeze),
         "tasm_hashing_sponge_hasher_pad_and_absorb_all_safeimplu32" => Box::new(sponge_hasher::pad_and_absorb_all::PadAndAbsorbAll {
             list_type: ListType::Safe,
         }),

@@ -55,20 +55,23 @@ impl BasicSnippet for PadAndAbsorbAll {
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use std::collections::HashMap;
+
+    use arbitrary::*;
+    use itertools::Itertools;
+    use rand::rngs::StdRng;
+    use rand::*;
+    use triton_vm::prelude::*;
+    use triton_vm::twenty_first::shared_math::tip5::Tip5State;
+    use triton_vm::twenty_first::util_types::algebraic_hasher::SpongeHasher;
+
     use crate::empty_stack;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::traits::procedure::*;
     use crate::traits::rust_shadow::RustShadow;
     use crate::VmHasherState;
-    use arbitrary::*;
-    use itertools::Itertools;
-    use rand::rngs::StdRng;
-    use rand::*;
-    use std::collections::HashMap;
-    use triton_vm::prelude::*;
-    use triton_vm::twenty_first::shared_math::tip5::Tip5State;
-    use triton_vm::twenty_first::util_types::algebraic_hasher::SpongeHasher;
+
+    use super::*;
 
     impl PadAndAbsorbAll {
         fn init_memory_and_stack(

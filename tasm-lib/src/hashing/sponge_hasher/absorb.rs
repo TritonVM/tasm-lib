@@ -2,13 +2,14 @@ use triton_vm::instruction::LabelledInstruction;
 use triton_vm::prelude::*;
 use triton_vm::twenty_first::shared_math::tip5::RATE;
 
-use crate::data_type::{ArrayType, DataType};
+use crate::data_type::ArrayType;
+use crate::data_type::DataType;
 use crate::library::Library;
 use crate::traits::basic_snippet::BasicSnippet;
 
-pub struct AbsorbOnce;
+pub struct Absorb;
 
-impl BasicSnippet for AbsorbOnce {
+impl BasicSnippet for Absorb {
     fn inputs(&self) -> Vec<(DataType, String)> {
         vec![(
             DataType::Array(Box::new(ArrayType {
@@ -24,7 +25,7 @@ impl BasicSnippet for AbsorbOnce {
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_hashing_sponge_hasher_absorb_once".to_string()
+        "tasm_hashing_sponge_hasher_absorb".to_string()
     }
 
     fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {
@@ -54,20 +55,23 @@ impl BasicSnippet for AbsorbOnce {
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use std::collections::HashMap;
+
+    use arbitrary::*;
+    use itertools::Itertools;
+    use rand::rngs::StdRng;
+    use rand::*;
+    use triton_vm::twenty_first::shared_math::other::random_elements;
+    use triton_vm::twenty_first::shared_math::tip5::Tip5State;
+    use triton_vm::twenty_first::util_types::algebraic_hasher::SpongeHasher;
+
     use crate::empty_stack;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::traits::procedure::*;
     use crate::traits::rust_shadow::RustShadow;
     use crate::VmHasherState;
-    use arbitrary::*;
-    use itertools::Itertools;
-    use rand::rngs::StdRng;
-    use rand::*;
-    use std::collections::HashMap;
-    use triton_vm::twenty_first::shared_math::other::random_elements;
-    use triton_vm::twenty_first::shared_math::tip5::Tip5State;
-    use triton_vm::twenty_first::util_types::algebraic_hasher::SpongeHasher;
+
+    use super::*;
 
     fn init_memory_and_stack() -> (HashMap<BFieldElement, BFieldElement>, Vec<BFieldElement>) {
         let array_pointer: BFieldElement = random();
@@ -80,7 +84,7 @@ mod test {
         (init_memory, init_stack)
     }
 
-    impl Procedure for AbsorbOnce {
+    impl Procedure for Absorb {
         fn rust_shadow(
             &self,
             stack: &mut Vec<BFieldElement>,
@@ -95,7 +99,7 @@ mod test {
                 .collect_vec()
                 .try_into()
                 .unwrap();
-            Tip5::absorb_once(sponge_state.as_mut().unwrap(), &input);
+            Tip5::absorb(sponge_state.as_mut().unwrap(), input);
             Vec::default()
         }
 
@@ -134,19 +138,20 @@ mod test {
     }
 
     #[test]
-    fn absorb_once_test() {
-        ShadowedProcedure::new(AbsorbOnce).test();
+    fn absorb_test() {
+        ShadowedProcedure::new(Absorb).test();
     }
 }
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
 
+    use super::*;
+
     #[test]
     fn bench() {
-        ShadowedProcedure::new(AbsorbOnce {}).bench();
+        ShadowedProcedure::new(Absorb {}).bench();
     }
 }

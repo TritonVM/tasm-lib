@@ -3,14 +3,15 @@ use triton_vm::prelude::*;
 use triton_vm::twenty_first::shared_math::tip5::RATE;
 use triton_vm::twenty_first::util_types::algebraic_hasher::SpongeHasher;
 
-use crate::data_type::{ArrayType, DataType};
+use crate::data_type::ArrayType;
+use crate::data_type::DataType;
 use crate::library::Library;
 use crate::memory::dyn_malloc::DynMalloc;
 use crate::traits::basic_snippet::BasicSnippet;
 
-pub struct SqueezeOnce;
+pub struct Squeeze;
 
-impl BasicSnippet for SqueezeOnce {
+impl BasicSnippet for Squeeze {
     fn inputs(&self) -> Vec<(DataType, String)> {
         vec![]
     }
@@ -26,7 +27,7 @@ impl BasicSnippet for SqueezeOnce {
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_hashing_sponge_hasher_squeeze_once".to_string()
+        "tasm_hashing_sponge_hasher_squeeze".to_string()
     }
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
@@ -62,20 +63,24 @@ impl BasicSnippet for SqueezeOnce {
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use std::collections::HashMap;
+
+    use arbitrary::*;
+    use rand::rngs::StdRng;
+    use rand::*;
+    use triton_vm::twenty_first::shared_math::tip5::Tip5State;
+
+    use crate::empty_stack;
     use crate::memory::dyn_malloc::DYN_MALLOC_ADDRESS;
+    use crate::rust_shadowing_helper_functions;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::traits::procedure::*;
     use crate::traits::rust_shadow::RustShadow;
     use crate::VmHasherState;
-    use crate::{empty_stack, rust_shadowing_helper_functions};
-    use arbitrary::*;
-    use rand::rngs::StdRng;
-    use rand::*;
-    use std::collections::HashMap;
-    use triton_vm::twenty_first::shared_math::tip5::Tip5State;
 
-    impl Procedure for SqueezeOnce {
+    use super::*;
+
+    impl Procedure for Squeeze {
         fn rust_shadow(
             &self,
             stack: &mut Vec<BFieldElement>,
@@ -87,7 +92,7 @@ mod test {
             let mut array_pointer =
                 rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator(RATE, memory);
             stack.push(array_pointer);
-            let produce = Tip5::squeeze_once(sponge_state.as_mut().unwrap());
+            let produce = Tip5::squeeze(sponge_state.as_mut().unwrap());
             for elem in produce.into_iter() {
                 memory.insert(array_pointer, elem);
                 array_pointer.increment();
@@ -119,19 +124,20 @@ mod test {
     }
 
     #[test]
-    fn squeeze_once_test() {
-        ShadowedProcedure::new(SqueezeOnce).test();
+    fn squeeze_test() {
+        ShadowedProcedure::new(Squeeze).test();
     }
 }
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
 
+    use super::*;
+
     #[test]
     fn bench() {
-        ShadowedProcedure::new(SqueezeOnce).bench();
+        ShadowedProcedure::new(Squeeze).bench();
     }
 }

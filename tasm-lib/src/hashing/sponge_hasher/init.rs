@@ -32,18 +32,21 @@ impl BasicSnippet for Init {
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use std::collections::HashMap;
+
+    use arbitrary::*;
+    use rand::rngs::StdRng;
+    use rand::*;
+    use triton_vm::twenty_first::shared_math::tip5::Tip5State;
+    use triton_vm::twenty_first::util_types::algebraic_hasher::SpongeHasher;
+
     use crate::empty_stack;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::traits::procedure::*;
     use crate::traits::rust_shadow::RustShadow;
     use crate::VmHasherState;
-    use arbitrary::*;
-    use rand::rngs::StdRng;
-    use rand::*;
-    use std::collections::HashMap;
-    use triton_vm::twenty_first::shared_math::tip5::Tip5State;
-    use triton_vm::twenty_first::util_types::algebraic_hasher::SpongeHasher;
+
+    use super::*;
 
     impl Procedure for Init {
         fn rust_shadow(
@@ -84,9 +87,10 @@ mod test {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
+
+    use super::*;
 
     #[test]
     fn bench() {
