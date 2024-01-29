@@ -1,9 +1,8 @@
-use std::str::FromStr;
-
 use itertools::Itertools;
 use rand::random;
 use rand::thread_rng;
 use rand::Rng;
+use std::str::FromStr;
 use triton_vm::prelude::*;
 
 use crate::io::InputSource;
@@ -23,8 +22,15 @@ pub enum DataType {
     Xfe,
     Digest,
     List(Box<DataType>),
+    Array(Box<ArrayType>),
     Tuple(Vec<DataType>),
     VoidPointer,
+}
+
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+pub struct ArrayType {
+    pub element_type: DataType,
+    pub length: usize,
 }
 
 impl DataType {
@@ -49,6 +55,11 @@ impl DataType {
             DataType::Bfe => "bfe".to_string(),
             DataType::Xfe => "xfe".to_string(),
             DataType::Digest => "digest".to_string(),
+            DataType::Array(array_type) => format!(
+                "array{}___{}",
+                array_type.length,
+                array_type.element_type.label_friendly_name()
+            ),
         }
     }
 
@@ -63,6 +74,7 @@ impl DataType {
             DataType::Xfe => 3,
             DataType::Digest => DIGEST_LENGTH,
             DataType::List(_) => 1,
+            DataType::Array(_) => 1,
             DataType::VoidPointer => 1,
             DataType::Tuple(t) => t.iter().map(|dt| dt.stack_size()).sum(),
         }
@@ -153,6 +165,11 @@ impl DataType {
                     elements_as_variant_names.join(", ")
                 )
             }
+            DataType::Array(array_type) => format!(
+                "[{}; {}]",
+                array_type.element_type.variant_name(),
+                array_type.length
+            ),
         }
     }
 
@@ -234,6 +251,7 @@ impl DataType {
                 .map(|(a, b, c, d, e)| vec![a, b, c, d, e])
                 .collect_vec(),
             DataType::List(_) => panic!("Random generation of lists is not supported"),
+            DataType::Array(_) => panic!("Random generation of arrays is not supported"),
             DataType::VoidPointer => (0..count)
                 .map(|_| vec![random::<BFieldElement>()])
                 .collect_vec(),

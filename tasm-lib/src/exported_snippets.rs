@@ -46,6 +46,7 @@ use crate::hashing::eq_digest::EqDigest;
 use crate::hashing::hash_varlen::HashVarlen;
 use crate::hashing::reverse_digest::ReverseDigest;
 use crate::hashing::sample_indices::SampleIndices;
+use crate::hashing::sponge_hasher;
 use crate::hashing::swap_digest::SwapDigest;
 use crate::io::read_input::ReadInput;
 use crate::io::write_to_stdout::WriteToStdout;
@@ -201,9 +202,20 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
         "tasm_hashing_eq_digest" => Box::new(EqDigest),
         "tasm_hashing_swap_digest" => Box::new(SwapDigest),
         "tasm_hashing_hash_varlen" => Box::new(HashVarlen),
-        "tasm_hashing_sample_indices_to_safeimplu32_list" => Box::new(SampleIndices{list_type: ListType::Safe}),
-        "tasm_hashing_sample_indices_to_unsafeimplu32_list" => Box::new(SampleIndices{list_type: ListType::Unsafe}),
+        "tasm_hashing_sample_indices_safeimplu32" => Box::new(SampleIndices{list_type: ListType::Safe}),
+        "tasm_hashing_sample_indices_unsafeimplu32" => Box::new(SampleIndices{list_type: ListType::Unsafe}),
         "tasm_hashing_reverse_digest" => Box::new(ReverseDigest),
+
+        // Hashing -> Sponge hasher
+        "tasm_hashing_sponge_hasher_init" => Box::new(sponge_hasher::init::Init),
+        "tasm_hashing_sponge_hasher_absorb" => Box::new(sponge_hasher::absorb::Absorb),
+        "tasm_hashing_sponge_hasher_squeeze" => Box::new(sponge_hasher::squeeze::Squeeze),
+        "tasm_hashing_sponge_hasher_pad_and_absorb_all_safeimplu32" => Box::new(sponge_hasher::pad_and_absorb_all::PadAndAbsorbAll {
+            list_type: ListType::Safe,
+        }),
+        "tasm_hashing_sponge_hasher_pad_and_absorb_all_unsafeimplu32" => Box::new(sponge_hasher::pad_and_absorb_all::PadAndAbsorbAll {
+            list_type: ListType::Unsafe,
+        }),
 
         // io
         "tasm_io_read_secin___bool" => Box::new(ReadInput {

@@ -158,7 +158,11 @@ impl FriVerify {
         let mut roots = Vec::with_capacity(num_rounds);
         let mut alphas = Vec::with_capacity(num_rounds);
 
-        let first_root = proof_stream.dequeue().unwrap().as_merkle_root().unwrap();
+        let first_root = proof_stream
+            .dequeue()
+            .unwrap()
+            .try_into_merkle_root()
+            .unwrap();
         roots.push(first_root);
 
         for _round in 0..num_rounds {
@@ -167,7 +171,11 @@ impl FriVerify {
             alphas.push(alpha);
 
             // get a commitment from the prover
-            let root = proof_stream.dequeue().unwrap().as_merkle_root().unwrap();
+            let root = proof_stream
+                .dequeue()
+                .unwrap()
+                .try_into_merkle_root()
+                .unwrap();
             roots.push(root);
         }
         println!("alphas:");
@@ -176,7 +184,11 @@ impl FriVerify {
         }
 
         // Extract last codeword
-        let last_codeword = proof_stream.dequeue().unwrap().as_fri_codeword().unwrap();
+        let last_codeword = proof_stream
+            .dequeue()
+            .unwrap()
+            .try_into_fri_codeword()
+            .unwrap();
         assert_eq!(
             last_codeword.len(),
             self.domain_length as usize >> self.num_rounds()
@@ -221,7 +233,11 @@ impl FriVerify {
             proof_stream.sample_indices(self.domain_length, self.num_colinearity_checks);
 
         let tree_height = self.domain_length.ilog2() as usize;
-        let fri_response = proof_stream.dequeue().unwrap().as_fri_response().unwrap();
+        let fri_response = proof_stream
+            .dequeue()
+            .unwrap()
+            .try_into_fri_response()
+            .unwrap();
         assert_eq!(a_indices.len(), fri_response.revealed_leaves.len());
         let mut a_values = fri_response.revealed_leaves;
 
@@ -281,7 +297,11 @@ impl FriVerify {
                 .iter()
                 .map(|x| (x + current_domain_len / 2) % current_domain_len)
                 .collect();
-            let fri_response = proof_stream.dequeue().unwrap().as_fri_response().unwrap();
+            let fri_response = proof_stream
+                .dequeue()
+                .unwrap()
+                .try_into_fri_response()
+                .unwrap();
             let b_values = fri_response.revealed_leaves;
 
             let leaf_digests = Self::map_convert_xfe_to_digest(&b_values);
