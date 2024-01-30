@@ -10,7 +10,7 @@
     "name": "tasm_recufier_fri_verify",
     "clock_cycle_count": 4260,
     "hash_table_height": 2160,
-    "u32_table_height": 367,
+    "u32_table_height": 370,
     "case": "WorstCase"
   }
 ]
