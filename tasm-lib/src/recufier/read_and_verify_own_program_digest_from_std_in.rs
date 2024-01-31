@@ -1,30 +1,29 @@
 use triton_vm::prelude::*;
 
+use crate::data_type::DataType;
+use crate::library::Library;
 use crate::traits::basic_snippet::BasicSnippet;
 
 /// Crash the VM if std in does not agree with own digest
 /// Must be called as the first function in the program, as
 /// it assumes that the bottom of the stack (stack[15..=11])
 /// contains the digest of the running program
-pub struct AssertStdInStartsWithOwnProgramDigest;
+pub struct ReadAndVerifyOwnProgramDigestFromStdIn;
 
-impl BasicSnippet for AssertStdInStartsWithOwnProgramDigest {
-    fn inputs(&self) -> Vec<(crate::data_type::DataType, String)> {
+impl BasicSnippet for ReadAndVerifyOwnProgramDigestFromStdIn {
+    fn inputs(&self) -> Vec<(DataType, String)> {
         vec![]
     }
 
-    fn outputs(&self) -> Vec<(crate::data_type::DataType, String)> {
-        vec![]
+    fn outputs(&self) -> Vec<(DataType, String)> {
+        vec![(DataType::Digest, "own_program_digest".to_string())]
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_recufier_assert_stdin_starts_with_own_program_digest".to_string()
+        "tasm_recufier_read_and_verify_own_program_digest_from_std_in".to_string()
     }
 
-    fn code(
-        &self,
-        _library: &mut crate::library::Library,
-    ) -> Vec<triton_vm::prelude::LabelledInstruction> {
+    fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
 
         triton_asm!(
@@ -36,7 +35,6 @@ impl BasicSnippet for AssertStdInStartsWithOwnProgramDigest {
                 dup 15
                 read_io 5
                 assert_vector
-                pop 5
                 return
         )
     }
@@ -44,10 +42,11 @@ impl BasicSnippet for AssertStdInStartsWithOwnProgramDigest {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::execute_with_terminal_state;
-    use crate::library::Library;
     use crate::VmHasher;
+    use crate::DIGEST_LENGTH;
+
+    use super::*;
 
     struct ProgramSetup {
         program: Program,
@@ -56,8 +55,8 @@ mod tests {
     }
 
     fn test_program() -> ProgramSetup {
-        let snippet = AssertStdInStartsWithOwnProgramDigest;
-        let snippet_code = snippet.code(&mut Library::empty());
+        let snippet = ReadAndVerifyOwnProgramDigestFromStdIn;
+        let snippet_code = snippet.annotated_code(&mut Library::empty());
         let code_for_test = triton_asm!(
             call {snippet.entrypoint()}
             halt
@@ -79,7 +78,7 @@ mod tests {
     fn positive_test() {
         let test_setup = test_program();
 
-        let std_in = test_setup.program_digest.reversed().encode();
+        let std_in = test_setup.program_digest.reversed().values();
         let vm_end_state = execute_with_terminal_state(
             &test_setup.program,
             &std_in,
@@ -89,7 +88,12 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(test_setup.init_stack, vm_end_state.op_stack.stack);
+        let expected_stack = [
+            test_setup.init_stack.clone(),
+            test_setup.init_stack[..DIGEST_LENGTH].to_vec(),
+        ]
+        .concat();
+        assert_eq!(expected_stack, vm_end_state.op_stack.stack);
         assert!(vm_end_state.jump_stack.is_empty());
     }
 
