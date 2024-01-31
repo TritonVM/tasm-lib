@@ -15,7 +15,7 @@ pub fn link_for_isolated_run<T: BasicSnippet>(
 ) -> Vec<LabelledInstruction> {
     let mut snippet_state = Library::with_preallocated_memory(words_statically_allocated as u32);
     let entrypoint = snippet.borrow().entrypoint();
-    let function_body = snippet.borrow().code(&mut snippet_state);
+    let function_body = snippet.borrow().annotated_code(&mut snippet_state);
     let library_code = snippet_state.all_imports();
 
     // The TASM code is always run through a function call, so the 1st instruction

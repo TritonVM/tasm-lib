@@ -62,7 +62,7 @@ impl Library {
 
         let is_new_dependency = !self.seen_snippets.contains_key(&dep_entrypoint);
         if is_new_dependency {
-            let dep_body = snippet.code(self);
+            let dep_body = snippet.annotated_code(self);
             self.seen_snippets.insert(dep_entrypoint.clone(), dep_body);
         }
 

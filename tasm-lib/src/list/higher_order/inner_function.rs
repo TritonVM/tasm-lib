@@ -195,7 +195,7 @@ impl InnerFunction {
             InnerFunction::BasicSnippet(bs) => {
                 let mut snippet_state: Library = Library::with_preallocated_memory(1);
                 let entrypoint = bs.entrypoint();
-                let function_body = bs.code(&mut snippet_state);
+                let function_body = bs.annotated_code(&mut snippet_state);
                 let library_code = snippet_state.all_imports();
 
                 // The TASM code is always run through a function call, so the 1st instruction

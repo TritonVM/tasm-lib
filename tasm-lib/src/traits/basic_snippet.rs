@@ -12,10 +12,38 @@ pub trait BasicSnippet {
     fn entrypoint(&self) -> String;
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction>;
 
+    fn annotated_code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
+        let code = self.code(library);
+        let Some((entrypoint, snippet_body)) = code.split_first() else {
+            return code;
+        };
+        if entrypoint.to_string() != self.entrypoint() {
+            return code;
+        }
+
+        let mut input_hints = vec![];
+        let mut stack_depth = 0;
+        for (data_type, name) in self.inputs().into_iter().rev() {
+            let stack_size = data_type.stack_size();
+            let data_name = data_type.label_friendly_name();
+            input_hints.push(format!(
+                "hint {name}: {data_name} = stack[{stack_depth}..{}]",
+                stack_depth + stack_size
+            ));
+            stack_depth += stack_size;
+        }
+
+        triton_asm! {
+            {entrypoint}:
+                {&input_hints}
+                {&snippet_body}
+        }
+    }
+
     fn link_for_isolated_run(&self) -> Vec<LabelledInstruction> {
         let mut library = Library::empty();
         let entrypoint = self.entrypoint();
-        let function_body = self.code(&mut library);
+        let function_body = self.annotated_code(&mut library);
         let library_code = library.all_imports();
 
         // The TASM code is always run through a function call, so the 1st instruction is a call to the

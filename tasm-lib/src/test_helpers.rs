@@ -188,17 +188,12 @@ pub(crate) fn test_rust_equivalence_given_complete_state_deprecated<T: Deprecate
         rust_stack_skip_program_hash,
         "Rust code must match TVM for `{}`\n\nTVM: {}\n\nRust: {}. Code was: {}",
         snippet_struct.entrypoint(),
-        tasm_stack_skip_program_hash
+        tasm_stack_skip_program_hash.iter().join(","),
+        rust_stack_skip_program_hash.iter().join(","),
+        snippet_struct
+            .annotated_code(&mut Library::new())
             .iter()
-            .map(|x| x.to_string())
-            .collect_vec()
-            .join(","),
-        rust_stack_skip_program_hash
-            .iter()
-            .map(|x| x.to_string())
-            .collect_vec()
-            .join(","),
-        snippet_struct.code(&mut Library::new()).iter().join("\n")
+            .join("\n")
     );
 
     // if expected final stack is given, test against it
@@ -258,7 +253,10 @@ pub(crate) fn test_rust_equivalence_given_complete_state_deprecated<T: Deprecate
             In rust, different in TVM: {in_rust_memory_and_different_in_tasm_memory}\n\n\
             Code was:\n\n\
             {}",
-            snippet_struct.code(&mut Library::new()).iter().join("\n")
+            snippet_struct
+                .annotated_code(&mut Library::new())
+                .iter()
+                .join("\n")
         );
     }
 
@@ -485,7 +483,7 @@ fn link_for_isolated_run<T: RustShadow>(
     );
     let mut library = Library::with_preallocated_memory(words_statically_allocated);
     let entrypoint = snippet_struct.inner().borrow().entrypoint();
-    let function_body = snippet_struct.inner().borrow().code(&mut library);
+    let function_body = snippet_struct.inner().borrow().annotated_code(&mut library);
     let library_code = library.all_imports();
 
     // The TASM code is always run through a function call, so the 1st instruction is a call to the

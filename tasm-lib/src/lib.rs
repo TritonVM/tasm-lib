@@ -131,7 +131,7 @@ pub(crate) fn execute_with_execution_state_deprecated<T: DeprecatedSnippet>(
 ) -> anyhow::Result<ExecutionResult> {
     let mut library = Library::new();
     let entrypoint = snippet.entrypoint();
-    let insert_me = snippet.code(&mut library);
+    let insert_me = snippet.annotated_code(&mut library);
     let insert_library = library.all_imports();
     let code = triton_asm!(
         call {entrypoint}

@@ -116,7 +116,7 @@ impl BasicSnippet for Map {
                     bs.inputs().len().is_one(),
                     "{MORE_THAN_ONE_INPUT_OR_OUTPUT_TYPE_IN_INNER_FUNCTION}"
                 );
-                let labelled_instructions = bs.code(library);
+                let labelled_instructions = bs.annotated_code(library);
                 library.explicit_import(&bs.entrypoint(), &labelled_instructions)
             }
         };

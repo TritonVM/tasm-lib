@@ -159,7 +159,7 @@ impl BasicSnippet for All {
             }
             InnerFunction::NoFunctionBody(_) => todo!(),
             InnerFunction::BasicSnippet(bs) => {
-                let labelled_instructions = bs.code(library);
+                let labelled_instructions = bs.annotated_code(library);
                 library.explicit_import(&bs.entrypoint(), &labelled_instructions)
             }
         };
