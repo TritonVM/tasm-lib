@@ -40,7 +40,10 @@ impl BasicSnippet for SampleIndices {
     }
 
     fn entrypoint(&self) -> String {
-        format!("tasm_hashing_sample_indices_{}", self.list_type)
+        format!(
+            "tasm_hashing_algebraic_hasher_sample_indices_{}",
+            self.list_type
+        )
     }
 
     fn code(&self, library: &mut crate::library::Library) -> Vec<LabelledInstruction> {

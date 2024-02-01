@@ -42,10 +42,9 @@ use crate::arithmetic::u64::wrapping_mul_u64::WrappingMulU64;
 use crate::arithmetic::u64::wrapping_sub_u64::WrappingSub;
 use crate::arithmetic::u64::xor_u64::XorU64;
 use crate::data_type::DataType;
+use crate::hashing::algebraic_hasher;
 use crate::hashing::eq_digest::EqDigest;
-use crate::hashing::hash_varlen::HashVarlen;
 use crate::hashing::reverse_digest::ReverseDigest;
-use crate::hashing::sample_indices::SampleIndices;
 use crate::hashing::sponge_hasher;
 use crate::hashing::swap_digest::SwapDigest;
 use crate::io::read_input::ReadInput;
@@ -202,12 +201,15 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
         // Hashing
         "tasm_hashing_eq_digest" => Box::new(EqDigest),
         "tasm_hashing_swap_digest" => Box::new(SwapDigest),
-        "tasm_hashing_hash_varlen" => Box::new(HashVarlen),
-        "tasm_hashing_sample_indices_safeimplu32" => Box::new(SampleIndices{list_type: ListType::Safe}),
-        "tasm_hashing_sample_indices_unsafeimplu32" => Box::new(SampleIndices{list_type: ListType::Unsafe}),
         "tasm_hashing_reverse_digest" => Box::new(ReverseDigest),
 
-        // Hashing -> Sponge hasher
+        // Hashing -> algebraic hasher trait
+        "tasm_hashing_algebraic_hasher_hash_varlen" => Box::new(algebraic_hasher::hash_varlen::HashVarlen),
+        "tasm_hashing_algebraic_hasher_sample_indices_safeimplu32" => Box::new(algebraic_hasher::sample_indices::SampleIndices{list_type: ListType::Safe}),
+        "tasm_hashing_algebraic_hasher_sample_indices_unsafeimplu32" => Box::new(algebraic_hasher::sample_indices::SampleIndices{list_type: ListType::Unsafe}),
+        "tasm_hashing_algebraic_hasher_sample_scalars" => Box::new(algebraic_hasher::sample_scalars::SampleScalars),
+
+        // Hashing -> Sponge hasher trait
         "tasm_hashing_sponge_hasher_init" => Box::new(sponge_hasher::init::Init),
         "tasm_hashing_sponge_hasher_absorb" => Box::new(sponge_hasher::absorb::Absorb),
         "tasm_hashing_sponge_hasher_squeeze" => Box::new(sponge_hasher::squeeze::Squeeze),

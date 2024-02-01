@@ -521,7 +521,7 @@ mod test {
     use rand::random;
 
     use crate::empty_stack;
-    use crate::hashing::hash_varlen::HashVarlen;
+    use crate::hashing::algebraic_hasher::hash_varlen::HashVarlen;
 
     use super::*;
 

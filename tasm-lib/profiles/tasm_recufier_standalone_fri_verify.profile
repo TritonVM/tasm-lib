@@ -9,13 +9,13 @@ tasm_recufier_standalone_fri_verify:
    tasm_recufier_proof_stream_dequeue: 223
      tasm_recufier_proof_stream_dequeue_include_in_fiat_shamir_heuristic: 26
      tasm_recufier_proof_stream_dequeue_fiat_shamir: 145
-       tasm_hashing_absorb: 138
-         tasm_hashing_absorb_hash_all_full_chunks: 5
-         tasm_hashing_absorb_pad_varnum_zeros: 38
-         tasm_hashing_absorb_read_remainder: 59
+       tasm_hashing_absorb_multiple: 138
+         tasm_hashing_absorb_multiple_hash_all_full_chunks: 5
+         tasm_hashing_absorb_multiple_pad_varnum_zeros: 38
+         tasm_hashing_absorb_multiple_read_remainder: 59
    tasm_list_unsafeimplu32_push___digest: 20
    tasm_recufier_fri_verify_dequeue_commit_phase_remainder: 5885
-     tasm_recufier_proof_stream_sample_scalars: 85
+     tasm_hashing_algebraic_hasher_sample_scalars: 85
        tasm_list_unsafeimplu32_new___xfe: 40
          tasm_memory_dyn_malloc: 29
        tasm_list_unsafeimplu32_set_length___xfe: 5
@@ -25,12 +25,12 @@ tasm_recufier_standalone_fri_verify:
      tasm_recufier_proof_stream_dequeue: 223
        tasm_recufier_proof_stream_dequeue_include_in_fiat_shamir_heuristic: 26
        tasm_recufier_proof_stream_dequeue_fiat_shamir: 145
-         tasm_hashing_absorb: 138
-           tasm_hashing_absorb_hash_all_full_chunks: 5
-           tasm_hashing_absorb_pad_varnum_zeros: 38
-           tasm_hashing_absorb_read_remainder: 59
+         tasm_hashing_absorb_multiple: 138
+           tasm_hashing_absorb_multiple_hash_all_full_chunks: 5
+           tasm_hashing_absorb_multiple_pad_varnum_zeros: 38
+           tasm_hashing_absorb_multiple_read_remainder: 59
      tasm_list_unsafeimplu32_push___digest: 20
-     tasm_recufier_proof_stream_sample_scalars: 85
+     tasm_hashing_algebraic_hasher_sample_scalars: 85
        tasm_list_unsafeimplu32_new___xfe: 40
          tasm_memory_dyn_malloc: 29
        tasm_list_unsafeimplu32_set_length___xfe: 5
@@ -40,12 +40,12 @@ tasm_recufier_standalone_fri_verify:
      tasm_recufier_proof_stream_dequeue: 223
        tasm_recufier_proof_stream_dequeue_include_in_fiat_shamir_heuristic: 26
        tasm_recufier_proof_stream_dequeue_fiat_shamir: 145
-         tasm_hashing_absorb: 138
-           tasm_hashing_absorb_hash_all_full_chunks: 5
-           tasm_hashing_absorb_pad_varnum_zeros: 38
-           tasm_hashing_absorb_read_remainder: 59
+         tasm_hashing_absorb_multiple: 138
+           tasm_hashing_absorb_multiple_hash_all_full_chunks: 5
+           tasm_hashing_absorb_multiple_pad_varnum_zeros: 38
+           tasm_hashing_absorb_multiple_read_remainder: 59
      tasm_list_unsafeimplu32_push___digest: 20
-     tasm_recufier_proof_stream_sample_scalars: 85
+     tasm_hashing_algebraic_hasher_sample_scalars: 85
        tasm_list_unsafeimplu32_new___xfe: 40
          tasm_memory_dyn_malloc: 29
        tasm_list_unsafeimplu32_set_length___xfe: 5
@@ -55,12 +55,12 @@ tasm_recufier_standalone_fri_verify:
      tasm_recufier_proof_stream_dequeue: 223
        tasm_recufier_proof_stream_dequeue_include_in_fiat_shamir_heuristic: 26
        tasm_recufier_proof_stream_dequeue_fiat_shamir: 145
-         tasm_hashing_absorb: 138
-           tasm_hashing_absorb_hash_all_full_chunks: 5
-           tasm_hashing_absorb_pad_varnum_zeros: 38
-           tasm_hashing_absorb_read_remainder: 59
+         tasm_hashing_absorb_multiple: 138
+           tasm_hashing_absorb_multiple_hash_all_full_chunks: 5
+           tasm_hashing_absorb_multiple_pad_varnum_zeros: 38
+           tasm_hashing_absorb_multiple_read_remainder: 59
      tasm_list_unsafeimplu32_push___digest: 20
-     tasm_recufier_proof_stream_sample_scalars: 85
+     tasm_hashing_algebraic_hasher_sample_scalars: 85
        tasm_list_unsafeimplu32_new___xfe: 40
          tasm_memory_dyn_malloc: 29
        tasm_list_unsafeimplu32_set_length___xfe: 5
@@ -70,12 +70,12 @@ tasm_recufier_standalone_fri_verify:
      tasm_recufier_proof_stream_dequeue: 223
        tasm_recufier_proof_stream_dequeue_include_in_fiat_shamir_heuristic: 26
        tasm_recufier_proof_stream_dequeue_fiat_shamir: 145
-         tasm_hashing_absorb: 138
-           tasm_hashing_absorb_hash_all_full_chunks: 5
-           tasm_hashing_absorb_pad_varnum_zeros: 38
-           tasm_hashing_absorb_read_remainder: 59
+         tasm_hashing_absorb_multiple: 138
+           tasm_hashing_absorb_multiple_hash_all_full_chunks: 5
+           tasm_hashing_absorb_multiple_pad_varnum_zeros: 38
+           tasm_hashing_absorb_multiple_read_remainder: 59
      tasm_list_unsafeimplu32_push___digest: 20
-     tasm_recufier_proof_stream_sample_scalars: 85
+     tasm_hashing_algebraic_hasher_sample_scalars: 85
        tasm_list_unsafeimplu32_new___xfe: 40
          tasm_memory_dyn_malloc: 29
        tasm_list_unsafeimplu32_set_length___xfe: 5
@@ -85,12 +85,12 @@ tasm_recufier_standalone_fri_verify:
      tasm_recufier_proof_stream_dequeue: 223
        tasm_recufier_proof_stream_dequeue_include_in_fiat_shamir_heuristic: 26
        tasm_recufier_proof_stream_dequeue_fiat_shamir: 145
-         tasm_hashing_absorb: 138
-           tasm_hashing_absorb_hash_all_full_chunks: 5
-           tasm_hashing_absorb_pad_varnum_zeros: 38
-           tasm_hashing_absorb_read_remainder: 59
+         tasm_hashing_absorb_multiple: 138
+           tasm_hashing_absorb_multiple_hash_all_full_chunks: 5
+           tasm_hashing_absorb_multiple_pad_varnum_zeros: 38
+           tasm_hashing_absorb_multiple_read_remainder: 59
      tasm_list_unsafeimplu32_push___digest: 20
-     tasm_recufier_proof_stream_sample_scalars: 85
+     tasm_hashing_algebraic_hasher_sample_scalars: 85
        tasm_list_unsafeimplu32_new___xfe: 40
          tasm_memory_dyn_malloc: 29
        tasm_list_unsafeimplu32_set_length___xfe: 5
@@ -100,12 +100,12 @@ tasm_recufier_standalone_fri_verify:
      tasm_recufier_proof_stream_dequeue: 223
        tasm_recufier_proof_stream_dequeue_include_in_fiat_shamir_heuristic: 26
        tasm_recufier_proof_stream_dequeue_fiat_shamir: 145
-         tasm_hashing_absorb: 138
-           tasm_hashing_absorb_hash_all_full_chunks: 5
-           tasm_hashing_absorb_pad_varnum_zeros: 38
-           tasm_hashing_absorb_read_remainder: 59
+         tasm_hashing_absorb_multiple: 138
+           tasm_hashing_absorb_multiple_hash_all_full_chunks: 5
+           tasm_hashing_absorb_multiple_pad_varnum_zeros: 38
+           tasm_hashing_absorb_multiple_read_remainder: 59
      tasm_list_unsafeimplu32_push___digest: 20
-     tasm_recufier_proof_stream_sample_scalars: 85
+     tasm_hashing_algebraic_hasher_sample_scalars: 85
        tasm_list_unsafeimplu32_new___xfe: 40
          tasm_memory_dyn_malloc: 29
        tasm_list_unsafeimplu32_set_length___xfe: 5
@@ -115,12 +115,12 @@ tasm_recufier_standalone_fri_verify:
      tasm_recufier_proof_stream_dequeue: 223
        tasm_recufier_proof_stream_dequeue_include_in_fiat_shamir_heuristic: 26
        tasm_recufier_proof_stream_dequeue_fiat_shamir: 145
-         tasm_hashing_absorb: 138
-           tasm_hashing_absorb_hash_all_full_chunks: 5
-           tasm_hashing_absorb_pad_varnum_zeros: 38
-           tasm_hashing_absorb_read_remainder: 59
+         tasm_hashing_absorb_multiple: 138
+           tasm_hashing_absorb_multiple_hash_all_full_chunks: 5
+           tasm_hashing_absorb_multiple_pad_varnum_zeros: 38
+           tasm_hashing_absorb_multiple_read_remainder: 59
      tasm_list_unsafeimplu32_push___digest: 20
-     tasm_recufier_proof_stream_sample_scalars: 85
+     tasm_hashing_algebraic_hasher_sample_scalars: 85
        tasm_list_unsafeimplu32_new___xfe: 40
          tasm_memory_dyn_malloc: 29
        tasm_list_unsafeimplu32_set_length___xfe: 5
@@ -130,12 +130,12 @@ tasm_recufier_standalone_fri_verify:
      tasm_recufier_proof_stream_dequeue: 223
        tasm_recufier_proof_stream_dequeue_include_in_fiat_shamir_heuristic: 26
        tasm_recufier_proof_stream_dequeue_fiat_shamir: 145
-         tasm_hashing_absorb: 138
-           tasm_hashing_absorb_hash_all_full_chunks: 5
-           tasm_hashing_absorb_pad_varnum_zeros: 38
-           tasm_hashing_absorb_read_remainder: 59
+         tasm_hashing_absorb_multiple: 138
+           tasm_hashing_absorb_multiple_hash_all_full_chunks: 5
+           tasm_hashing_absorb_multiple_pad_varnum_zeros: 38
+           tasm_hashing_absorb_multiple_read_remainder: 59
      tasm_list_unsafeimplu32_push___digest: 20
-     tasm_recufier_proof_stream_sample_scalars: 85
+     tasm_hashing_algebraic_hasher_sample_scalars: 85
        tasm_list_unsafeimplu32_new___xfe: 40
          tasm_memory_dyn_malloc: 29
        tasm_list_unsafeimplu32_set_length___xfe: 5
@@ -145,12 +145,12 @@ tasm_recufier_standalone_fri_verify:
      tasm_recufier_proof_stream_dequeue: 223
        tasm_recufier_proof_stream_dequeue_include_in_fiat_shamir_heuristic: 26
        tasm_recufier_proof_stream_dequeue_fiat_shamir: 145
-         tasm_hashing_absorb: 138
-           tasm_hashing_absorb_hash_all_full_chunks: 5
-           tasm_hashing_absorb_pad_varnum_zeros: 38
-           tasm_hashing_absorb_read_remainder: 59
+         tasm_hashing_absorb_multiple: 138
+           tasm_hashing_absorb_multiple_hash_all_full_chunks: 5
+           tasm_hashing_absorb_multiple_pad_varnum_zeros: 38
+           tasm_hashing_absorb_multiple_read_remainder: 59
      tasm_list_unsafeimplu32_push___digest: 20
-     tasm_recufier_proof_stream_sample_scalars: 85
+     tasm_hashing_algebraic_hasher_sample_scalars: 85
        tasm_list_unsafeimplu32_new___xfe: 40
          tasm_memory_dyn_malloc: 29
        tasm_list_unsafeimplu32_set_length___xfe: 5
@@ -160,12 +160,12 @@ tasm_recufier_standalone_fri_verify:
      tasm_recufier_proof_stream_dequeue: 223
        tasm_recufier_proof_stream_dequeue_include_in_fiat_shamir_heuristic: 26
        tasm_recufier_proof_stream_dequeue_fiat_shamir: 145
-         tasm_hashing_absorb: 138
-           tasm_hashing_absorb_hash_all_full_chunks: 5
-           tasm_hashing_absorb_pad_varnum_zeros: 38
-           tasm_hashing_absorb_read_remainder: 59
+         tasm_hashing_absorb_multiple: 138
+           tasm_hashing_absorb_multiple_hash_all_full_chunks: 5
+           tasm_hashing_absorb_multiple_pad_varnum_zeros: 38
+           tasm_hashing_absorb_multiple_read_remainder: 59
      tasm_list_unsafeimplu32_push___digest: 20
-     tasm_recufier_proof_stream_sample_scalars: 85
+     tasm_hashing_algebraic_hasher_sample_scalars: 85
        tasm_list_unsafeimplu32_new___xfe: 40
          tasm_memory_dyn_malloc: 29
        tasm_list_unsafeimplu32_set_length___xfe: 5
@@ -175,12 +175,12 @@ tasm_recufier_standalone_fri_verify:
      tasm_recufier_proof_stream_dequeue: 223
        tasm_recufier_proof_stream_dequeue_include_in_fiat_shamir_heuristic: 26
        tasm_recufier_proof_stream_dequeue_fiat_shamir: 145
-         tasm_hashing_absorb: 138
-           tasm_hashing_absorb_hash_all_full_chunks: 5
-           tasm_hashing_absorb_pad_varnum_zeros: 38
-           tasm_hashing_absorb_read_remainder: 59
+         tasm_hashing_absorb_multiple: 138
+           tasm_hashing_absorb_multiple_hash_all_full_chunks: 5
+           tasm_hashing_absorb_multiple_pad_varnum_zeros: 38
+           tasm_hashing_absorb_multiple_read_remainder: 59
      tasm_list_unsafeimplu32_push___digest: 20
-     tasm_recufier_proof_stream_sample_scalars: 85
+     tasm_hashing_algebraic_hasher_sample_scalars: 85
        tasm_list_unsafeimplu32_new___xfe: 40
          tasm_memory_dyn_malloc: 29
        tasm_list_unsafeimplu32_set_length___xfe: 5
@@ -190,12 +190,12 @@ tasm_recufier_standalone_fri_verify:
      tasm_recufier_proof_stream_dequeue: 223
        tasm_recufier_proof_stream_dequeue_include_in_fiat_shamir_heuristic: 26
        tasm_recufier_proof_stream_dequeue_fiat_shamir: 145
-         tasm_hashing_absorb: 138
-           tasm_hashing_absorb_hash_all_full_chunks: 5
-           tasm_hashing_absorb_pad_varnum_zeros: 38
-           tasm_hashing_absorb_read_remainder: 59
+         tasm_hashing_absorb_multiple: 138
+           tasm_hashing_absorb_multiple_hash_all_full_chunks: 5
+           tasm_hashing_absorb_multiple_pad_varnum_zeros: 38
+           tasm_hashing_absorb_multiple_read_remainder: 59
      tasm_list_unsafeimplu32_push___digest: 20
-     tasm_recufier_proof_stream_sample_scalars: 85
+     tasm_hashing_algebraic_hasher_sample_scalars: 85
        tasm_list_unsafeimplu32_new___xfe: 40
          tasm_memory_dyn_malloc: 29
        tasm_list_unsafeimplu32_set_length___xfe: 5
@@ -205,12 +205,12 @@ tasm_recufier_standalone_fri_verify:
      tasm_recufier_proof_stream_dequeue: 223
        tasm_recufier_proof_stream_dequeue_include_in_fiat_shamir_heuristic: 26
        tasm_recufier_proof_stream_dequeue_fiat_shamir: 145
-         tasm_hashing_absorb: 138
-           tasm_hashing_absorb_hash_all_full_chunks: 5
-           tasm_hashing_absorb_pad_varnum_zeros: 38
-           tasm_hashing_absorb_read_remainder: 59
+         tasm_hashing_absorb_multiple: 138
+           tasm_hashing_absorb_multiple_hash_all_full_chunks: 5
+           tasm_hashing_absorb_multiple_pad_varnum_zeros: 38
+           tasm_hashing_absorb_multiple_read_remainder: 59
      tasm_list_unsafeimplu32_push___digest: 20
-     tasm_recufier_proof_stream_sample_scalars: 85
+     tasm_hashing_algebraic_hasher_sample_scalars: 85
        tasm_list_unsafeimplu32_new___xfe: 40
          tasm_memory_dyn_malloc: 29
        tasm_list_unsafeimplu32_set_length___xfe: 5
@@ -220,12 +220,12 @@ tasm_recufier_standalone_fri_verify:
      tasm_recufier_proof_stream_dequeue: 223
        tasm_recufier_proof_stream_dequeue_include_in_fiat_shamir_heuristic: 26
        tasm_recufier_proof_stream_dequeue_fiat_shamir: 145
-         tasm_hashing_absorb: 138
-           tasm_hashing_absorb_hash_all_full_chunks: 5
-           tasm_hashing_absorb_pad_varnum_zeros: 38
-           tasm_hashing_absorb_read_remainder: 59
+         tasm_hashing_absorb_multiple: 138
+           tasm_hashing_absorb_multiple_hash_all_full_chunks: 5
+           tasm_hashing_absorb_multiple_pad_varnum_zeros: 38
+           tasm_hashing_absorb_multiple_read_remainder: 59
      tasm_list_unsafeimplu32_push___digest: 20
-     tasm_recufier_proof_stream_sample_scalars: 85
+     tasm_hashing_algebraic_hasher_sample_scalars: 85
        tasm_list_unsafeimplu32_new___xfe: 40
          tasm_memory_dyn_malloc: 29
        tasm_list_unsafeimplu32_set_length___xfe: 5
@@ -235,10 +235,10 @@ tasm_recufier_standalone_fri_verify:
      tasm_recufier_proof_stream_dequeue: 223
        tasm_recufier_proof_stream_dequeue_include_in_fiat_shamir_heuristic: 26
        tasm_recufier_proof_stream_dequeue_fiat_shamir: 145
-         tasm_hashing_absorb: 138
-           tasm_hashing_absorb_hash_all_full_chunks: 5
-           tasm_hashing_absorb_pad_varnum_zeros: 38
-           tasm_hashing_absorb_read_remainder: 59
+         tasm_hashing_absorb_multiple: 138
+           tasm_hashing_absorb_multiple_hash_all_full_chunks: 5
+           tasm_hashing_absorb_multiple_pad_varnum_zeros: 38
+           tasm_hashing_absorb_multiple_read_remainder: 59
      tasm_list_unsafeimplu32_push___digest: 20
    tasm_recufier_proof_stream_dequeue: 77
      tasm_recufier_proof_stream_dequeue_include_in_fiat_shamir_heuristic: 26
@@ -21116,133 +21116,133 @@ tasm_recufier_standalone_fri_verify:
      tasm_list_unsafeimplu32_length___xfe: 3
      tasm_list_unsafeimplu32_get_element___xfe: 8
      tasm_list_unsafeimplu32_length___xfe: 3
-   tasm_hashing_sample_indices_unsafeimplu32: 2353
+   tasm_hashing_algebraic_hasher_sample_indices_unsafeimplu32: 2353
      tasm_list_unsafeimplu32_new___u32: 38
        tasm_memory_dyn_malloc: 29
-     tasm_hashing_sample_indices_unsafeimplu32_main_loop: 2305
+     tasm_hashing_algebraic_hasher_sample_indices_unsafeimplu32_main_loop: 2305
        tasm_list_unsafeimplu32_length___u32: 3
        tasm_list_unsafeimplu32_length___u32: 3
-       tasm_hashing_sample_indices_unsafeimplu32_then_reduce_and_save: 34
+       tasm_hashing_algebraic_hasher_sample_indices_unsafeimplu32_then_reduce_and_save: 34
          tasm_list_unsafeimplu32_push___u32: 18
        tasm_list_unsafeimplu32_length___u32: 3
-       tasm_hashing_sample_indices_unsafeimplu32_then_reduce_and_save: 34
+       tasm_hashing_algebraic_hasher_sample_indices_unsafeimplu32_then_reduce_and_save: 34
          tasm_list_unsafeimplu32_push___u32: 18
        tasm_list_unsafeimplu32_length___u32: 3
-       tasm_hashing_sample_indices_unsafeimplu32_then_reduce_and_save: 34
+       tasm_hashing_algebraic_hasher_sample_indices_unsafeimplu32_then_reduce_and_save: 34
          tasm_list_unsafeimplu32_push___u32: 18
        tasm_list_unsafeimplu32_length___u32: 3
-       tasm_hashing_sample_indices_unsafeimplu32_then_reduce_and_save: 34
+       tasm_hashing_algebraic_hasher_sample_indices_unsafeimplu32_then_reduce_and_save: 34
          tasm_list_unsafeimplu32_push___u32: 18
        tasm_list_unsafeimplu32_length___u32: 3
-       tasm_hashing_sample_indices_unsafeimplu32_then_reduce_and_save: 34
+       tasm_hashing_algebraic_hasher_sample_indices_unsafeimplu32_then_reduce_and_save: 34
          tasm_list_unsafeimplu32_push___u32: 18
        tasm_list_unsafeimplu32_length___u32: 3
-       tasm_hashing_sample_indices_unsafeimplu32_then_reduce_and_save: 34
+       tasm_hashing_algebraic_hasher_sample_indices_unsafeimplu32_then_reduce_and_save: 34
          tasm_list_unsafeimplu32_push___u32: 18
        tasm_list_unsafeimplu32_length___u32: 3
-       tasm_hashing_sample_indices_unsafeimplu32_then_reduce_and_save: 34
+       tasm_hashing_algebraic_hasher_sample_indices_unsafeimplu32_then_reduce_and_save: 34
          tasm_list_unsafeimplu32_push___u32: 18
        tasm_list_unsafeimplu32_length___u32: 3
-       tasm_hashing_sample_indices_unsafeimplu32_then_reduce_and_save: 34
+       tasm_hashing_algebraic_hasher_sample_indices_unsafeimplu32_then_reduce_and_save: 34
          tasm_list_unsafeimplu32_push___u32: 18
        tasm_list_unsafeimplu32_length___u32: 3
-       tasm_hashing_sample_indices_unsafeimplu32_then_reduce_and_save: 34
+       tasm_hashing_algebraic_hasher_sample_indices_unsafeimplu32_then_reduce_and_save: 34
          tasm_list_unsafeimplu32_push___u32: 18
        tasm_list_unsafeimplu32_length___u32: 3
-       tasm_hashing_sample_indices_unsafeimplu32_then_reduce_and_save: 34
-         tasm_list_unsafeimplu32_push___u32: 18
-       tasm_list_unsafeimplu32_length___u32: 3
-       tasm_list_unsafeimplu32_length___u32: 3
-       tasm_hashing_sample_indices_unsafeimplu32_then_reduce_and_save: 34
-         tasm_list_unsafeimplu32_push___u32: 18
-       tasm_list_unsafeimplu32_length___u32: 3
-       tasm_hashing_sample_indices_unsafeimplu32_then_reduce_and_save: 34
-         tasm_list_unsafeimplu32_push___u32: 18
-       tasm_list_unsafeimplu32_length___u32: 3
-       tasm_hashing_sample_indices_unsafeimplu32_then_reduce_and_save: 34
-         tasm_list_unsafeimplu32_push___u32: 18
-       tasm_list_unsafeimplu32_length___u32: 3
-       tasm_hashing_sample_indices_unsafeimplu32_then_reduce_and_save: 34
-         tasm_list_unsafeimplu32_push___u32: 18
-       tasm_list_unsafeimplu32_length___u32: 3
-       tasm_hashing_sample_indices_unsafeimplu32_then_reduce_and_save: 34
-         tasm_list_unsafeimplu32_push___u32: 18
-       tasm_list_unsafeimplu32_length___u32: 3
-       tasm_hashing_sample_indices_unsafeimplu32_then_reduce_and_save: 34
-         tasm_list_unsafeimplu32_push___u32: 18
-       tasm_list_unsafeimplu32_length___u32: 3
-       tasm_hashing_sample_indices_unsafeimplu32_then_reduce_and_save: 34
-         tasm_list_unsafeimplu32_push___u32: 18
-       tasm_list_unsafeimplu32_length___u32: 3
-       tasm_hashing_sample_indices_unsafeimplu32_then_reduce_and_save: 34
-         tasm_list_unsafeimplu32_push___u32: 18
-       tasm_list_unsafeimplu32_length___u32: 3
-       tasm_hashing_sample_indices_unsafeimplu32_then_reduce_and_save: 34
-         tasm_list_unsafeimplu32_push___u32: 18
-       tasm_list_unsafeimplu32_length___u32: 3
-       tasm_hashing_sample_indices_unsafeimplu32_then_reduce_and_save: 34
+       tasm_hashing_algebraic_hasher_sample_indices_unsafeimplu32_then_reduce_and_save: 34
          tasm_list_unsafeimplu32_push___u32: 18
        tasm_list_unsafeimplu32_length___u32: 3
        tasm_list_unsafeimplu32_length___u32: 3
-       tasm_hashing_sample_indices_unsafeimplu32_then_reduce_and_save: 34
+       tasm_hashing_algebraic_hasher_sample_indices_unsafeimplu32_then_reduce_and_save: 34
          tasm_list_unsafeimplu32_push___u32: 18
        tasm_list_unsafeimplu32_length___u32: 3
-       tasm_hashing_sample_indices_unsafeimplu32_then_reduce_and_save: 34
+       tasm_hashing_algebraic_hasher_sample_indices_unsafeimplu32_then_reduce_and_save: 34
          tasm_list_unsafeimplu32_push___u32: 18
        tasm_list_unsafeimplu32_length___u32: 3
-       tasm_hashing_sample_indices_unsafeimplu32_then_reduce_and_save: 34
+       tasm_hashing_algebraic_hasher_sample_indices_unsafeimplu32_then_reduce_and_save: 34
          tasm_list_unsafeimplu32_push___u32: 18
        tasm_list_unsafeimplu32_length___u32: 3
-       tasm_hashing_sample_indices_unsafeimplu32_then_reduce_and_save: 34
+       tasm_hashing_algebraic_hasher_sample_indices_unsafeimplu32_then_reduce_and_save: 34
          tasm_list_unsafeimplu32_push___u32: 18
        tasm_list_unsafeimplu32_length___u32: 3
-       tasm_hashing_sample_indices_unsafeimplu32_then_reduce_and_save: 34
+       tasm_hashing_algebraic_hasher_sample_indices_unsafeimplu32_then_reduce_and_save: 34
          tasm_list_unsafeimplu32_push___u32: 18
        tasm_list_unsafeimplu32_length___u32: 3
-       tasm_hashing_sample_indices_unsafeimplu32_then_reduce_and_save: 34
+       tasm_hashing_algebraic_hasher_sample_indices_unsafeimplu32_then_reduce_and_save: 34
          tasm_list_unsafeimplu32_push___u32: 18
        tasm_list_unsafeimplu32_length___u32: 3
-       tasm_hashing_sample_indices_unsafeimplu32_then_reduce_and_save: 34
+       tasm_hashing_algebraic_hasher_sample_indices_unsafeimplu32_then_reduce_and_save: 34
          tasm_list_unsafeimplu32_push___u32: 18
        tasm_list_unsafeimplu32_length___u32: 3
-       tasm_hashing_sample_indices_unsafeimplu32_then_reduce_and_save: 34
+       tasm_hashing_algebraic_hasher_sample_indices_unsafeimplu32_then_reduce_and_save: 34
          tasm_list_unsafeimplu32_push___u32: 18
        tasm_list_unsafeimplu32_length___u32: 3
-       tasm_hashing_sample_indices_unsafeimplu32_then_reduce_and_save: 34
+       tasm_hashing_algebraic_hasher_sample_indices_unsafeimplu32_then_reduce_and_save: 34
          tasm_list_unsafeimplu32_push___u32: 18
        tasm_list_unsafeimplu32_length___u32: 3
-       tasm_hashing_sample_indices_unsafeimplu32_then_reduce_and_save: 34
+       tasm_hashing_algebraic_hasher_sample_indices_unsafeimplu32_then_reduce_and_save: 34
          tasm_list_unsafeimplu32_push___u32: 18
        tasm_list_unsafeimplu32_length___u32: 3
        tasm_list_unsafeimplu32_length___u32: 3
-       tasm_hashing_sample_indices_unsafeimplu32_then_reduce_and_save: 34
+       tasm_hashing_algebraic_hasher_sample_indices_unsafeimplu32_then_reduce_and_save: 34
          tasm_list_unsafeimplu32_push___u32: 18
        tasm_list_unsafeimplu32_length___u32: 3
-       tasm_hashing_sample_indices_unsafeimplu32_then_reduce_and_save: 34
+       tasm_hashing_algebraic_hasher_sample_indices_unsafeimplu32_then_reduce_and_save: 34
          tasm_list_unsafeimplu32_push___u32: 18
        tasm_list_unsafeimplu32_length___u32: 3
-       tasm_hashing_sample_indices_unsafeimplu32_then_reduce_and_save: 34
+       tasm_hashing_algebraic_hasher_sample_indices_unsafeimplu32_then_reduce_and_save: 34
          tasm_list_unsafeimplu32_push___u32: 18
        tasm_list_unsafeimplu32_length___u32: 3
-       tasm_hashing_sample_indices_unsafeimplu32_then_reduce_and_save: 34
+       tasm_hashing_algebraic_hasher_sample_indices_unsafeimplu32_then_reduce_and_save: 34
          tasm_list_unsafeimplu32_push___u32: 18
        tasm_list_unsafeimplu32_length___u32: 3
-       tasm_hashing_sample_indices_unsafeimplu32_then_reduce_and_save: 34
+       tasm_hashing_algebraic_hasher_sample_indices_unsafeimplu32_then_reduce_and_save: 34
          tasm_list_unsafeimplu32_push___u32: 18
        tasm_list_unsafeimplu32_length___u32: 3
-       tasm_hashing_sample_indices_unsafeimplu32_then_reduce_and_save: 34
+       tasm_hashing_algebraic_hasher_sample_indices_unsafeimplu32_then_reduce_and_save: 34
          tasm_list_unsafeimplu32_push___u32: 18
        tasm_list_unsafeimplu32_length___u32: 3
-       tasm_hashing_sample_indices_unsafeimplu32_then_reduce_and_save: 34
+       tasm_hashing_algebraic_hasher_sample_indices_unsafeimplu32_then_reduce_and_save: 34
          tasm_list_unsafeimplu32_push___u32: 18
        tasm_list_unsafeimplu32_length___u32: 3
-       tasm_hashing_sample_indices_unsafeimplu32_then_reduce_and_save: 34
+       tasm_hashing_algebraic_hasher_sample_indices_unsafeimplu32_then_reduce_and_save: 34
          tasm_list_unsafeimplu32_push___u32: 18
        tasm_list_unsafeimplu32_length___u32: 3
-       tasm_hashing_sample_indices_unsafeimplu32_then_reduce_and_save: 34
+       tasm_hashing_algebraic_hasher_sample_indices_unsafeimplu32_then_reduce_and_save: 34
          tasm_list_unsafeimplu32_push___u32: 18
        tasm_list_unsafeimplu32_length___u32: 3
-       tasm_hashing_sample_indices_unsafeimplu32_then_reduce_and_save: 34
+       tasm_hashing_algebraic_hasher_sample_indices_unsafeimplu32_then_reduce_and_save: 34
+         tasm_list_unsafeimplu32_push___u32: 18
+       tasm_list_unsafeimplu32_length___u32: 3
+       tasm_list_unsafeimplu32_length___u32: 3
+       tasm_hashing_algebraic_hasher_sample_indices_unsafeimplu32_then_reduce_and_save: 34
+         tasm_list_unsafeimplu32_push___u32: 18
+       tasm_list_unsafeimplu32_length___u32: 3
+       tasm_hashing_algebraic_hasher_sample_indices_unsafeimplu32_then_reduce_and_save: 34
+         tasm_list_unsafeimplu32_push___u32: 18
+       tasm_list_unsafeimplu32_length___u32: 3
+       tasm_hashing_algebraic_hasher_sample_indices_unsafeimplu32_then_reduce_and_save: 34
+         tasm_list_unsafeimplu32_push___u32: 18
+       tasm_list_unsafeimplu32_length___u32: 3
+       tasm_hashing_algebraic_hasher_sample_indices_unsafeimplu32_then_reduce_and_save: 34
+         tasm_list_unsafeimplu32_push___u32: 18
+       tasm_list_unsafeimplu32_length___u32: 3
+       tasm_hashing_algebraic_hasher_sample_indices_unsafeimplu32_then_reduce_and_save: 34
+         tasm_list_unsafeimplu32_push___u32: 18
+       tasm_list_unsafeimplu32_length___u32: 3
+       tasm_hashing_algebraic_hasher_sample_indices_unsafeimplu32_then_reduce_and_save: 34
+         tasm_list_unsafeimplu32_push___u32: 18
+       tasm_list_unsafeimplu32_length___u32: 3
+       tasm_hashing_algebraic_hasher_sample_indices_unsafeimplu32_then_reduce_and_save: 34
+         tasm_list_unsafeimplu32_push___u32: 18
+       tasm_list_unsafeimplu32_length___u32: 3
+       tasm_hashing_algebraic_hasher_sample_indices_unsafeimplu32_then_reduce_and_save: 34
+         tasm_list_unsafeimplu32_push___u32: 18
+       tasm_list_unsafeimplu32_length___u32: 3
+       tasm_hashing_algebraic_hasher_sample_indices_unsafeimplu32_then_reduce_and_save: 34
+         tasm_list_unsafeimplu32_push___u32: 18
+       tasm_list_unsafeimplu32_length___u32: 3
+       tasm_hashing_algebraic_hasher_sample_indices_unsafeimplu32_then_reduce_and_save: 34
          tasm_list_unsafeimplu32_push___u32: 18
        tasm_list_unsafeimplu32_length___u32: 3
    tasm_recufier_proof_stream_dequeue: 77
@@ -40087,13 +40087,13 @@ tasm_recufier_standalone_fri_verify:
    tasm_recufier_proof_stream_dequeue: 377 (0.00029646032)
      tasm_recufier_proof_stream_dequeue_include_in_fiat_shamir_heuristic: 78 (0.00006133662)
      tasm_recufier_proof_stream_dequeue_fiat_shamir: 145 (0.000114023205)
-       tasm_hashing_absorb: 138 (0.00010851864)
-         tasm_hashing_absorb_hash_all_full_chunks: 5 (0.0000039318347)
-         tasm_hashing_absorb_pad_varnum_zeros: 38 (0.000029881943)
-         tasm_hashing_absorb_read_remainder: 59 (0.00004639565)
+       tasm_hashing_absorb_multiple: 138 (0.00010851864)
+         tasm_hashing_absorb_multiple_hash_all_full_chunks: 5 (0.0000039318347)
+         tasm_hashing_absorb_multiple_pad_varnum_zeros: 38 (0.000029881943)
+         tasm_hashing_absorb_multiple_read_remainder: 59 (0.00004639565)
    tasm_list_unsafeimplu32_push___digest: 20 (0.000015727339)
    tasm_recufier_fri_verify_dequeue_commit_phase_remainder: 5885 (0.0046277693)
-     tasm_recufier_proof_stream_sample_scalars: 1275 (0.0010026178)
+     tasm_hashing_algebraic_hasher_sample_scalars: 1275 (0.0010026178)
        tasm_list_unsafeimplu32_new___xfe: 600 (0.00047182015)
          tasm_memory_dyn_malloc: 2175 (0.0017103481)
        tasm_list_unsafeimplu32_set_length___xfe: 150 (0.00011795504)
@@ -40103,10 +40103,10 @@ tasm_recufier_standalone_fri_verify:
      tasm_recufier_proof_stream_dequeue: 4500 (0.0035386512)
        tasm_recufier_proof_stream_dequeue_include_in_fiat_shamir_heuristic: 780 (0.0006133662)
        tasm_recufier_proof_stream_dequeue_fiat_shamir: 2175 (0.0017103481)
-         tasm_hashing_absorb: 2070 (0.0016277796)
-           tasm_hashing_absorb_hash_all_full_chunks: 75 (0.00005897752)
-           tasm_hashing_absorb_pad_varnum_zeros: 570 (0.00044822914)
-           tasm_hashing_absorb_read_remainder: 885 (0.0006959347)
+         tasm_hashing_absorb_multiple: 2070 (0.0016277796)
+           tasm_hashing_absorb_multiple_hash_all_full_chunks: 75 (0.00005897752)
+           tasm_hashing_absorb_multiple_pad_varnum_zeros: 570 (0.00044822914)
+           tasm_hashing_absorb_multiple_read_remainder: 885 (0.0006959347)
      tasm_list_unsafeimplu32_push___digest: 300 (0.00023591008)
    tasm_list_higher_order_unsafeimplu32_u32_map_tasm_recufier_fri_verify_identity: 31809 (0.025013546)
      tasm_list_unsafeimplu32_length___xfe: 2901 (0.0022812504)
@@ -40188,11 +40188,11 @@ tasm_recufier_standalone_fri_verify:
        tasm_recufier_xfe_ntt_while_middle: 253979 (0.19972068)
          tasm_recufier_xfe_ntt_while_inner: 215035 (0.16909641)
    tasm_recufier_fri_verify_tail_xfe0: 29769 (0.023409357)
-   tasm_hashing_sample_indices_unsafeimplu32: 2353 (0.0018503213)
+   tasm_hashing_algebraic_hasher_sample_indices_unsafeimplu32: 2353 (0.0018503213)
      tasm_list_unsafeimplu32_new___u32: 38 (0.000029881943)
-     tasm_hashing_sample_indices_unsafeimplu32_main_loop: 2305 (0.0018125757)
+     tasm_hashing_algebraic_hasher_sample_indices_unsafeimplu32_main_loop: 2305 (0.0018125757)
        tasm_list_unsafeimplu32_length___u32: 270 (0.00021231906)
-       tasm_hashing_sample_indices_unsafeimplu32_then_reduce_and_save: 1360 (0.001069459)
+       tasm_hashing_algebraic_hasher_sample_indices_unsafeimplu32_then_reduce_and_save: 1360 (0.001069459)
          tasm_list_unsafeimplu32_push___u32: 720 (0.0005661842)
    tasm_list_unsafeimplu32_length___xfe: 3 (0.0000023591008)
    tasm_list_unsafeimplu32_length___u32: 3 (0.0000023591008)

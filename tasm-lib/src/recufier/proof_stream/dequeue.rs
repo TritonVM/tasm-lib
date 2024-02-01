@@ -13,7 +13,7 @@ use crate::data_type::DataType;
 use crate::empty_stack;
 use crate::field;
 use crate::field_with_size;
-use crate::hashing::absorb::Absorb;
+use crate::hashing::absorb_multiple::AbsorbMultiple;
 use crate::library::Library;
 use crate::snippet_bencher::BenchmarkCase;
 use crate::structure::tasm_object::TasmObject;
@@ -51,7 +51,7 @@ impl BasicSnippet for Dequeue {
         let include_in_fiat_shamir_heuristic =
             format!("{entrypoint}_include_in_fiat_shamir_heuristic");
         let fiat_shamir = format!("{entrypoint}_fiat_shamir");
-        let absorb = library.import(Box::new(Absorb {}));
+        let absorb = library.import(Box::new(AbsorbMultiple {}));
         triton_asm!(
              // BEFORE: _ *proof_stream
             // AFTER:  _ *proof_stream *object

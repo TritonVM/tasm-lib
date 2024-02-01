@@ -7,7 +7,7 @@ use triton_vm::twenty_first::prelude::AlgebraicHasher;
 
 use crate::data_type::DataType;
 use crate::empty_stack;
-use crate::hashing::absorb::Absorb;
+use crate::hashing::absorb_multiple::AbsorbMultiple;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::ExecutionState;
 use crate::VmHasher;
@@ -35,7 +35,7 @@ impl HashVarlen {
 
 impl DeprecatedSnippet for HashVarlen {
     fn entrypoint_name(&self) -> String {
-        "tasm_hashing_hash_varlen".to_string()
+        "tasm_hashing_algebraic_hasher_hash_varlen".to_string()
     }
 
     fn input_field_names(&self) -> Vec<String> {
@@ -66,7 +66,7 @@ impl DeprecatedSnippet for HashVarlen {
 
     fn function_code(&self, library: &mut crate::library::Library) -> String {
         let entrypoint = self.entrypoint_name();
-        let absorb_subroutine = library.import(Box::new(Absorb));
+        let absorb_subroutine = library.import(Box::new(AbsorbMultiple));
 
         triton_asm!(
             // BEFORE:      _ addr len

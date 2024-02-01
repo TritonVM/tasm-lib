@@ -36,7 +36,7 @@ impl BasicSnippet for SampleScalars {
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_recufier_proof_stream_sample_scalars".to_string()
+        "tasm_hashing_algebraic_hasher_sample_scalars".to_string()
     }
 
     fn code(&self, library: &mut crate::library::Library) -> Vec<LabelledInstruction> {

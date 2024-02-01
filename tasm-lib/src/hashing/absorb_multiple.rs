@@ -19,9 +19,9 @@ use crate::VmHasher;
 use crate::VmHasherState;
 
 /// Absorb a sequence of field elements stored in memory, into the sponge state.
-pub struct Absorb;
+pub struct AbsorbMultiple;
 
-impl BasicSnippet for Absorb {
+impl BasicSnippet for AbsorbMultiple {
     fn inputs(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::VoidPointer, "*sequence".to_string()),
@@ -34,7 +34,7 @@ impl BasicSnippet for Absorb {
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_hashing_absorb".to_string()
+        "tasm_hashing_absorb_multiple".to_string()
     }
 
     fn code(
@@ -140,7 +140,7 @@ impl BasicSnippet for Absorb {
     }
 }
 
-impl Procedure for Absorb {
+impl Procedure for AbsorbMultiple {
     fn rust_shadow(
         &self,
         stack: &mut Vec<BFieldElement>,
@@ -230,7 +230,7 @@ impl Procedure for Absorb {
     }
 }
 
-impl Absorb {
+impl AbsorbMultiple {
     fn corner_case_initial_state_for_num_words(num_words: u32) -> ProcedureInitialState {
         let list_address = BFieldElement::new(0);
         let list_length = BFieldElement::from(num_words);
@@ -258,11 +258,11 @@ mod test {
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
 
-    use super::Absorb;
+    use super::AbsorbMultiple;
 
     #[test]
     fn test() {
-        ShadowedProcedure::new(Absorb).test();
+        ShadowedProcedure::new(AbsorbMultiple).test();
     }
 }
 
@@ -271,10 +271,10 @@ mod benches {
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
 
-    use super::Absorb;
+    use super::AbsorbMultiple;
 
     #[test]
     fn benchmark() {
-        ShadowedProcedure::new(Absorb).bench();
+        ShadowedProcedure::new(AbsorbMultiple).bench();
     }
 }

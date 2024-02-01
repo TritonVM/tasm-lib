@@ -1,13 +1,13 @@
 [
   {
-    "name": "tasm_recufier_proof_stream_sample_scalars",
+    "name": "tasm_hashing_algebraic_hasher_sample_scalars",
     "clock_cycle_count": 217,
     "hash_table_height": 150,
     "u32_table_height": 29,
     "case": "CommonCase"
   },
   {
-    "name": "tasm_recufier_proof_stream_sample_scalars",
+    "name": "tasm_hashing_algebraic_hasher_sample_scalars",
     "clock_cycle_count": 126,
     "hash_table_height": 108,
     "u32_table_height": 26,

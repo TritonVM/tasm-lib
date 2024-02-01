@@ -10,7 +10,7 @@
     "name": "tasm_hashing_sponge_hasher_squeeze",
     "clock_cycle_count": 39,
     "hash_table_height": 48,
-    "u32_table_height": 37,
+    "u32_table_height": 38,
     "case": "WorstCase"
   }
 ]

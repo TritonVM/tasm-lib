@@ -29,7 +29,7 @@ impl BasicSnippet for PadAndAbsorbAll {
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
         let hash_absorb_snippet_subroutine =
-            library.import(Box::new(crate::hashing::absorb::Absorb));
+            library.import(Box::new(crate::hashing::absorb_multiple::AbsorbMultiple));
         let list_metadata_size = self.list_type.metadata_size();
         triton_asm!(
             {entrypoint}:

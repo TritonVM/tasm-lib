@@ -12,7 +12,7 @@ use crate::arithmetic::u128::shift_left_static_u128;
 use crate::arithmetic::u128::shift_right_static_u128;
 use crate::data_type::DataType;
 use crate::empty_stack;
-use crate::hashing::sample_indices::SampleIndices;
+use crate::hashing::algebraic_hasher::sample_indices::SampleIndices;
 use crate::list::higher_order::inner_function::InnerFunction;
 use crate::list::higher_order::inner_function::RawCode;
 use crate::list::higher_order::map::Map;

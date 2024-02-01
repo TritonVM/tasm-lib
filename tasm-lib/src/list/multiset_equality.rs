@@ -10,7 +10,7 @@ use twenty_first::shared_math::other::random_elements;
 
 use crate::data_type::DataType;
 use crate::empty_stack;
-use crate::hashing::hash_varlen::HashVarlen;
+use crate::hashing::algebraic_hasher::hash_varlen::HashVarlen;
 use crate::library::Library;
 use crate::list::safeimplu32::length::Length as SafeLength;
 use crate::list::unsafeimplu32::length::Length as UnsafeLength;
