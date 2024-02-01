@@ -1,3 +1,4 @@
+pub mod eval_arg;
 pub mod fri_verify;
 pub mod get_colinear_y;
 pub mod get_colinearity_check_x;
