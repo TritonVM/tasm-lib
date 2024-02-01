@@ -347,6 +347,7 @@ mod benches {
 
     use super::*;
 
+    #[ignore = "Very slow, about 280s on my powerful laptop"]
     #[test]
     fn vap4lail_benchmark() {
         ShadowedAlgorithm::new(VerifyAuthenticationPathForLeafAndIndexList {

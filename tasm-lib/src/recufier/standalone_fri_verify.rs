@@ -93,6 +93,7 @@ mod bench {
 
     use super::*;
 
+    #[ignore = "Very slow, about 340s on my powerful laptop"]
     #[test]
     fn benchmark() {
         let mut seed = [0u8; 32];
