@@ -54,12 +54,14 @@ impl BasicSnippet for SqueezeRepeatedly {
 
                 push -1 add
 
-                sponge_squeeze  // _ address num_squeezes-1 r9 r8 r7 r6 r5 r4 r3 r2 r1 r0
+                sponge_squeeze  // _ address (num_squeezes-1) r9 r8 r7 r6 r5 r4 r3 r2 r1 r0
 
-                dup 11          // _ address num_squeezes-1 r9 r8 r7 r6 r5 r4 r3 r2 r1 r0 address
+                dup 11          // _ address (num_squeezes-1) r9 r8 r7 r6 r5 r4 r3 r2 r1 r0 address
                 write_mem 5
                 write_mem 5
-                swap 2 pop 1    // _ address+10 num_squeezes-1
+                                // _ address (num_squeezes-1) (address + 10)
+
+                swap 2 pop 1    // _ (address + 10) (num_squeezes-1)
 
                 recurse
         }
