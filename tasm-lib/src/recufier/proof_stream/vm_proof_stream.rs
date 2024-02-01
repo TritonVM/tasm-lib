@@ -64,14 +64,13 @@ impl VmProofStream {
     }
 
     pub fn pseudorandom_items_list(seed: [u8; 32]) -> Vec<ProofItem> {
-        let mut rng: StdRng = SeedableRng::from_seed(seed);
-        let num_iterations = rng.gen_range(0..5);
+        let mut rng = StdRng::from_seed(seed);
+        let num_iterations = rng.gen_range(1..5);
         let mut proof_items = vec![];
         for _ in 0..num_iterations {
             if rng.gen() {
-                proof_items.push(ProofItem::AuthenticationStructure(
-                    (0..20).map(|_| rng.gen()).collect(),
-                ));
+                let auth_structure = (0..20).map(|_| rng.gen()).collect();
+                proof_items.push(ProofItem::AuthenticationStructure(auth_structure));
             }
             if rng.gen() {
                 proof_items.push(ProofItem::FriCodeword((0..20).map(|_| rng.gen()).collect()));
@@ -87,39 +86,32 @@ impl VmProofStream {
                 proof_items.push(ProofItem::Log2PaddedHeight(rng.gen()));
             }
             if rng.gen() {
-                proof_items.push(ProofItem::MasterBaseTableRows(
-                    (0..20)
-                        .map(|_| (0..20).map(|_| rng.gen()).collect())
-                        .collect(),
-                ));
+                let row = |_| (0..20).map(|_| rng.gen()).collect();
+                let rows = (0..20).map(row).collect();
+                proof_items.push(ProofItem::MasterBaseTableRows(rows));
             }
             if rng.gen() {
-                proof_items.push(ProofItem::MasterExtTableRows(
-                    (0..20)
-                        .map(|_| (0..20).map(|_| rng.gen()).collect())
-                        .collect(),
-                ));
+                let row = |_| (0..20).map(|_| rng.gen()).collect();
+                let rows = (0..20).map(row).collect();
+                proof_items.push(ProofItem::MasterExtTableRows(rows));
             }
             if rng.gen() {
                 proof_items.push(ProofItem::MerkleRoot(rng.gen()));
             }
             if rng.gen() {
-                proof_items.push(ProofItem::OutOfDomainBaseRow(
-                    (0..NUM_BASE_COLUMNS).map(|_| rng.gen()).collect(),
-                ));
+                let row = (0..NUM_BASE_COLUMNS).map(|_| rng.gen()).collect();
+                proof_items.push(ProofItem::OutOfDomainBaseRow(row));
             }
             if rng.gen() {
-                proof_items.push(ProofItem::OutOfDomainExtRow(
-                    (0..NUM_EXT_COLUMNS).map(|_| rng.gen()).collect(),
-                ));
+                let row = (0..NUM_EXT_COLUMNS).map(|_| rng.gen()).collect();
+                proof_items.push(ProofItem::OutOfDomainExtRow(row));
             }
             if rng.gen() {
                 proof_items.push(ProofItem::OutOfDomainQuotientSegments(rng.gen()));
             }
             if rng.gen() {
-                proof_items.push(ProofItem::QuotientSegmentsElements(
-                    (0..20).map(|_| rng.gen()).collect(),
-                ));
+                let elements = (0..20).map(|_| rng.gen()).collect();
+                proof_items.push(ProofItem::QuotientSegmentsElements(elements));
             }
         }
         proof_items

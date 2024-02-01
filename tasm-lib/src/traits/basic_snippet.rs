@@ -84,7 +84,8 @@ pub trait BasicSnippet {
 
 #[cfg(test)]
 mod tests {
-    use triton_vm::{program::Program, triton_asm};
+    use triton_vm::program::Program;
+    use triton_vm::triton_asm;
 
     use crate::traits::basic_snippet::BasicSnippet;
 

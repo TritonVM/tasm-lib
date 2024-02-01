@@ -8,12 +8,13 @@ use rand::RngCore;
 use rand::SeedableRng;
 use triton_vm::prelude::*;
 use triton_vm::proof_item::ProofItem;
+use triton_vm::proof_item::ProofItemVariant;
 
 use crate::data_type::DataType;
 use crate::empty_stack;
 use crate::field;
 use crate::field_with_size;
-use crate::hashing::absorb_multiple::AbsorbMultiple;
+use crate::hashing::sponge_hasher::absorb::Absorb;
 use crate::library::Library;
 use crate::snippet_bencher::BenchmarkCase;
 use crate::structure::tasm_object::TasmObject;
@@ -23,6 +24,67 @@ use crate::traits::procedure::ProcedureInitialState;
 use crate::VmHasherState;
 
 use super::vm_proof_stream::VmProofStream;
+
+/// Reads a proof item of the supplied type from the [`ProofStream`].
+/// Crashes Triton VM if the proof item is not of the expected type.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct DequeueAs {
+    pub proof_item: ProofItemVariant,
+}
+
+impl DequeueAs {
+    fn item_name(&self) -> String {
+        self.proof_item.to_string().to_lowercase()
+    }
+}
+
+impl BasicSnippet for DequeueAs {
+    fn inputs(&self) -> Vec<(DataType, String)> {
+        let input_name = "*current_proof_item_list_element_size".to_string();
+
+        vec![(DataType::VoidPointer, input_name)]
+    }
+
+    fn outputs(&self) -> Vec<(DataType, String)> {
+        let payload_pointer_str = format!("*{}_payload", self.item_name());
+        let payload_pointer = (DataType::VoidPointer, payload_pointer_str);
+
+        let next_element_pointer_str = "*next_proof_item_list_element_size".to_string();
+        let next_proof_item_pointer = (DataType::VoidPointer, next_element_pointer_str);
+
+        vec![payload_pointer, next_proof_item_pointer]
+    }
+
+    fn entrypoint(&self) -> String {
+        let proof_item_name = self.item_name();
+        format!("tasm_recufier_proof_stream_dequeue_as_{}", proof_item_name)
+    }
+
+    /// BEFORE: _ *current_proof_item_list_element_size
+    /// AFTER:  _ *proof_item_payload *next_proof_item_list_element_size
+    fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
+        triton_asm! {
+            {self.entrypoint()}:
+            push 1 add
+            read_mem 1          // _ discriminant *current_proof_item_list_element_size
+                hint proof_item_discriminant = stack[1]
+            swap 1
+            push {self.proof_item.bfield_codec_discriminant()}
+                hint expected_proof_item_discriminant = stack[0]
+            eq assert           // _ *current_proof_item_list_element_size
+
+            dup 0 push 2 add    // _ *current_proof_item_list_element_size *proof_item_payload
+                hint proof_item_payload_pointer = stack[0]
+
+            swap 1
+            read_mem 1 push 1
+            add add             // _ *proof_item_payload *next_proof_item_list_element_size
+                hint next_proof_item_list_element_size_pointer = stack[0]
+
+            return
+        }
+    }
+}
 
 /// Dequeue reads the next object from the `ProofStream`.
 #[derive(Clone)]
@@ -51,9 +113,9 @@ impl BasicSnippet for Dequeue {
         let include_in_fiat_shamir_heuristic =
             format!("{entrypoint}_include_in_fiat_shamir_heuristic");
         let fiat_shamir = format!("{entrypoint}_fiat_shamir");
-        let absorb = library.import(Box::new(AbsorbMultiple {}));
+        let absorb = library.import(Box::new(Absorb));
         triton_asm!(
-             // BEFORE: _ *proof_stream
+            // BEFORE: _ *proof_stream
             // AFTER:  _ *proof_stream *object
             {entrypoint}:
 
@@ -202,7 +264,7 @@ impl Procedure for Dequeue {
         bench_case: Option<BenchmarkCase>,
     ) -> ProcedureInitialState {
         // populate with random proof items
-        let mut rng: StdRng = SeedableRng::from_seed(seed);
+        let mut rng = StdRng::from_seed(seed);
         let mut proof_items = vec![];
         while proof_items.is_empty() {
             proof_items = VmProofStream::pseudorandom_items_list(rng.gen());
@@ -223,8 +285,7 @@ impl Procedure for Dequeue {
         }
 
         // write to memory at random address
-        let address: u64 = rng.gen_range(0..(1 << 20));
-        let address = BFieldElement::new(address);
+        let address = rng.gen();
         let sequence = proof_stream.encode();
         let mut memory = HashMap::new();
         for (i, b) in sequence.into_iter().enumerate() {
@@ -247,35 +308,182 @@ impl Procedure for Dequeue {
 #[cfg(test)]
 mod test {
     use std::cell::RefCell;
-    use std::collections::HashMap;
     use std::rc::Rc;
 
-    use rand::rngs::StdRng;
+    use arbitrary::Arbitrary;
+    use arbitrary::Unstructured;
+    use num_traits::One;
     use rand::thread_rng;
-    use rand::Rng;
-    use rand::RngCore;
-    use rand::SeedableRng;
+    use test_strategy::proptest;
     use triton_vm::proof_item::FriResponse;
-    use triton_vm::proof_item::ProofItem;
-    use triton_vm::vm::VMState;
+    use triton_vm::proof_stream::ProofStream;
     use twenty_first::util_types::algebraic_hasher::Domain;
 
-    use crate::empty_stack;
     use crate::execute_with_terminal_state;
-    use crate::library::Library;
     use crate::linker::link_for_isolated_run;
     use crate::memory::encode_to_memory;
     use crate::structure::tasm_object::decode_from_memory_with_size;
     use crate::test_helpers::test_rust_equivalence_given_complete_state;
-    use crate::traits::procedure::Procedure;
-    use crate::traits::procedure::ProcedureInitialState;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
-    use crate::Digest;
-    use crate::VmHasherState;
     use crate::DIGEST_LENGTH;
 
     use super::*;
+
+    impl Procedure for DequeueAs {
+        fn rust_shadow(
+            &self,
+            stack: &mut Vec<BFieldElement>,
+            memory: &mut HashMap<BFieldElement, BFieldElement>,
+            _: &NonDeterminism<BFieldElement>,
+            _: &[BFieldElement],
+            _: &mut Option<VmHasherState>,
+        ) -> Vec<BFieldElement> {
+            let current_proof_item_list_element_size_pointer = stack.pop().unwrap();
+            let &current_proof_item_list_element_size = memory
+                .get(&current_proof_item_list_element_size_pointer)
+                .unwrap();
+            let next_proof_item_list_element_size_pointer =
+                current_proof_item_list_element_size_pointer + current_proof_item_list_element_size;
+
+            let discriminant_pointer =
+                current_proof_item_list_element_size_pointer + BFieldElement::one();
+            let discriminant = memory.get(&discriminant_pointer).unwrap().value() as usize;
+            let expected_discriminant = self.proof_item.bfield_codec_discriminant();
+            assert_eq!(expected_discriminant, discriminant);
+
+            let proof_item_payload_pointer = discriminant_pointer + BFieldElement::one();
+
+            stack.push(proof_item_payload_pointer);
+            stack.push(next_proof_item_list_element_size_pointer);
+
+            vec![]
+        }
+
+        fn pseudorandom_initial_state(
+            &self,
+            seed: [u8; 32],
+            _: Option<BenchmarkCase>,
+        ) -> ProcedureInitialState {
+            let mut rng = StdRng::from_seed(seed);
+            let mut proof_stream = ProofStream::<Tip5>::new();
+            proof_stream.enqueue(self.pseudorandom_proof_item_for_self(rng.gen()));
+            proof_stream.enqueue(self.pseudorandom_proof_item_for_self(rng.gen()));
+
+            Self::initial_state_from_proof_stream_and_address(proof_stream, rng.gen())
+        }
+    }
+
+    impl DequeueAs {
+        fn initial_state_from_proof_stream_and_address(
+            proof_stream: ProofStream<Tip5>,
+            address: BFieldElement,
+        ) -> ProcedureInitialState {
+            let ram = proof_stream
+                .encode()
+                .into_iter()
+                .enumerate()
+                .map(|(idx, elt)| (address + BFieldElement::new(idx as u64), elt))
+                .collect();
+
+            // uses highly specific knowledge of `BFieldCodec`
+            let address_of_first_element = address + BFieldElement::new(2);
+            ProcedureInitialState {
+                stack: [empty_stack(), vec![address_of_first_element]].concat(),
+                nondeterminism: NonDeterminism::default().with_ram(ram),
+                public_input: vec![],
+                sponge_state: None,
+            }
+        }
+
+        fn pseudorandom_proof_item_variant(seed: [u8; 32]) -> ProofItemVariant {
+            let mut unstructured = Unstructured::new(&seed);
+            let item: ProofItem = Arbitrary::arbitrary(&mut unstructured).unwrap();
+            item.into()
+        }
+
+        fn pseudorandom_proof_item_for_self(&self, seed: [u8; 32]) -> ProofItem {
+            let mut rng = StdRng::from_seed(seed);
+            let proof_stream_seed: [u8; 100] = rng.gen();
+            let mut unstructured = Unstructured::new(&proof_stream_seed);
+
+            match &self.proof_item {
+                ProofItemVariant::MerkleRoot => {
+                    ProofItem::MerkleRoot(Arbitrary::arbitrary(&mut unstructured).unwrap())
+                }
+                ProofItemVariant::OutOfDomainBaseRow => {
+                    ProofItem::OutOfDomainBaseRow(Arbitrary::arbitrary(&mut unstructured).unwrap())
+                }
+                ProofItemVariant::OutOfDomainExtRow => {
+                    ProofItem::OutOfDomainExtRow(Arbitrary::arbitrary(&mut unstructured).unwrap())
+                }
+                ProofItemVariant::OutOfDomainQuotientSegments => {
+                    ProofItem::OutOfDomainQuotientSegments(
+                        Arbitrary::arbitrary(&mut unstructured).unwrap(),
+                    )
+                }
+                ProofItemVariant::AuthenticationStructure => ProofItem::AuthenticationStructure(
+                    Arbitrary::arbitrary(&mut unstructured).unwrap(),
+                ),
+                ProofItemVariant::MasterBaseTableRows => {
+                    ProofItem::MasterBaseTableRows(Arbitrary::arbitrary(&mut unstructured).unwrap())
+                }
+                ProofItemVariant::MasterExtTableRows => {
+                    ProofItem::MasterExtTableRows(Arbitrary::arbitrary(&mut unstructured).unwrap())
+                }
+                ProofItemVariant::Log2PaddedHeight => {
+                    ProofItem::Log2PaddedHeight(Arbitrary::arbitrary(&mut unstructured).unwrap())
+                }
+                ProofItemVariant::QuotientSegmentsElements => ProofItem::QuotientSegmentsElements(
+                    Arbitrary::arbitrary(&mut unstructured).unwrap(),
+                ),
+                ProofItemVariant::FriCodeword => {
+                    ProofItem::FriCodeword(Arbitrary::arbitrary(&mut unstructured).unwrap())
+                }
+                ProofItemVariant::FriResponse => {
+                    ProofItem::FriResponse(Arbitrary::arbitrary(&mut unstructured).unwrap())
+                }
+            }
+        }
+
+        fn test_rust_equivalence(self, initial_state: ProcedureInitialState) {
+            let dequeue_as = ShadowedProcedure::new(self);
+            test_rust_equivalence_given_complete_state(
+                &dequeue_as,
+                &initial_state.stack,
+                &initial_state.public_input,
+                &initial_state.nondeterminism,
+                &initial_state.sponge_state,
+                0,
+                None,
+            );
+        }
+    }
+
+    #[test]
+    fn dequeueing_a_merkle_root_is_equivalent_in_rust_and_tasm() {
+        let proof_item = ProofItemVariant::MerkleRoot;
+        let dequeue_as = DequeueAs { proof_item };
+        dequeue_as.test_rust_equivalence(small_merkle_root_initial_state());
+    }
+
+    fn small_merkle_root_initial_state() -> ProcedureInitialState {
+        let dummy_digest = Digest::new([42, 43, 44, 45, 46].map(BFieldElement::new));
+        let proof_item = ProofItem::MerkleRoot(dummy_digest);
+        let mut proof_stream = ProofStream::<Tip5>::new();
+        proof_stream.enqueue(proof_item.clone());
+        proof_stream.enqueue(proof_item);
+
+        DequeueAs::initial_state_from_proof_stream_and_address(proof_stream, BFieldElement::zero())
+    }
+
+    #[proptest]
+    fn dequeuing_as_suggested_element_is_equivalent_in_rust_and_tasm(seed: [u8; 32]) {
+        let proof_item = DequeueAs::pseudorandom_proof_item_variant(seed);
+        let dequeue_as = DequeueAs { proof_item };
+        let initial_state = dequeue_as.pseudorandom_initial_state(seed, None);
+        dequeue_as.test_rust_equivalence(initial_state);
+    }
 
     #[test]
     fn dequeue_from_proof_stream_with_up_to_3_items() {
@@ -285,7 +493,7 @@ mod test {
     }
 
     fn dequeue_from_proof_stream_with_given_number_of_items(num_items: usize) {
-        let dequeue = ShadowedProcedure::new(Dequeue {});
+        let dequeue = ShadowedProcedure::new(Dequeue);
         let (stack, non_determinism) = very_small_initial_state(num_items);
         let sponge_state = VmHasherState::new(Domain::VariableLength);
 
@@ -335,7 +543,7 @@ mod test {
         ];
         let mut rng: StdRng = SeedableRng::from_seed(seed);
 
-        let dequeue = Dequeue {};
+        let dequeue = Dequeue;
         let algorithm = ShadowedProcedure::new(dequeue.clone());
 
         for _ in 0..num_states {
@@ -369,7 +577,7 @@ mod test {
         ];
         let mut rng: StdRng = SeedableRng::from_seed(seed);
 
-        let dequeue = Dequeue {};
+        let dequeue = Dequeue;
 
         for _ in 0..num_states {
             let proof_items = VmProofStream::pseudorandom_items_list(rng.gen());

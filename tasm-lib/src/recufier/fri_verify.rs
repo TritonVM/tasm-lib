@@ -112,7 +112,7 @@ impl FriVerify {
         self.first_round_max_degree() >> self.num_rounds()
     }
 
-    // Computes the max degree of the very first codeword interpolant
+    /// Computes the max degree of the very first codeword interpolant
     pub fn first_round_max_degree(&self) -> usize {
         assert!(self.domain_length >= self.expansion_factor);
         (self.domain_length / self.expansion_factor) as usize - 1
@@ -473,13 +473,11 @@ impl BasicSnippet for FriVerify {
     }
 
     fn outputs(&self) -> Vec<(DataType, String)> {
+        let indexed_leaf_type = DataType::Tuple(vec![DataType::U32, DataType::Xfe]);
         vec![
             (DataType::VoidPointer, "*proof_stream".to_string()),
             (
-                DataType::List(Box::new(DataType::Tuple(vec![
-                    DataType::U32,
-                    DataType::Xfe,
-                ]))),
+                DataType::List(Box::new(indexed_leaf_type)),
                 "indices_and_elements".to_string(),
             ),
         ]
@@ -515,7 +513,7 @@ impl BasicSnippet for FriVerify {
         let push_scalar = library.import(Box::new(UnsafePush {
             data_type: DataType::Xfe,
         }));
-        let proof_stream_dequeue = library.import(Box::new(Dequeue {}));
+        let proof_stream_dequeue = library.import(Box::new(Dequeue));
         let proof_stream_sample_scalars = library.import(Box::new(SampleScalars {}));
         let dequeue_commit_phase = format!("{entrypoint}_dequeue_commit_phase_remainder");
         let convert_xfe_to_digest = format!("{entrypoint}_convert_xfe_to_digest");
