@@ -40,6 +40,8 @@ impl BasicSnippet for SampleScalars {
     }
 
     fn code(&self, library: &mut crate::library::Library) -> Vec<LabelledInstruction> {
+        assert_eq!(10, tip5::RATE, "Code assumes Tip5's RATE is 10");
+
         let entrypoint = self.entrypoint();
         let set_length = library.import(Box::new(UnsafeSetLength {
             data_type: DataType::Xfe,
@@ -49,7 +51,6 @@ impl BasicSnippet for SampleScalars {
         }));
         let safety_offset = 1;
         let squeeze_repeatedly = library.import(Box::new(SqueezeRepeatedly));
-        let rate = tip5::RATE;
         triton_asm! {
             // BEFORE: _ num_scalars
             // AFTER:  _ *scalars
@@ -69,7 +70,7 @@ impl BasicSnippet for SampleScalars {
                 dup 1           // _ num_scalars *scalars num_scalars
                 push 3 mul      // _ num_scalars *scalars num_bfes
                 push 9 add      // _ num_scalars *scalars (num_bfes+9)
-                push {rate} swap 1
+                push {tip5::RATE} swap 1
                                 // _ num_scalars *scalars rate (num_bfes+9)
                 div_mod pop 1   // _ num_scalars *scalars floor((num_bfes+9)/rate)
                                 // _ num_scalars *scalars num_squeezes
@@ -78,7 +79,7 @@ impl BasicSnippet for SampleScalars {
                 dup 1
                 push {safety_offset}
                 add
-                swap 1          // _ num_scalars *scalars *scalars+so num_squeezes
+                swap 1          // _ num_scalars *scalars (*scalars+so) num_squeezes
 
                 // squeeze
                 call {squeeze_repeatedly}
@@ -117,6 +118,7 @@ impl Procedure for SampleScalars {
             .map(|ch| XFieldElement::new(ch.try_into().unwrap()))
             .collect_vec();
         let scalars_pointer = FIRST_DYNAMICALLY_ALLOCATED_ADDRESS;
+
         encode_to_memory(memory, scalars_pointer, scalars);
 
         // store all pseudorandomness (not just sampled scalars) to memory
@@ -152,10 +154,55 @@ impl Procedure for SampleScalars {
             ..Default::default()
         }
     }
+
+    fn corner_case_initial_states(&self) -> Vec<ProcedureInitialState> {
+        let zero_to_twenty_scalars_empty_sponge = (0..20)
+            .map(|num_scalars| {
+                let mut stack = empty_stack();
+                stack.push(BFieldElement::new(num_scalars as u64));
+                let sponge_state: VmHasherState = Tip5::init();
+
+                ProcedureInitialState {
+                    stack,
+                    sponge_state: Some(sponge_state),
+                    ..Default::default()
+                }
+            })
+            .collect_vec();
+        let zero_to_twenty_scalars_non_empty_sponge = (0..20)
+            .map(|num_scalars| {
+                let mut stack = empty_stack();
+                stack.push(BFieldElement::new(num_scalars as u64));
+                let mut sponge_state: VmHasherState = Tip5::init();
+                Tip5::absorb(&mut sponge_state, [BFieldElement::new(42); Tip5::RATE]);
+
+                ProcedureInitialState {
+                    stack,
+                    sponge_state: Some(sponge_state),
+                    ..Default::default()
+                }
+            })
+            .collect_vec();
+
+        [
+            zero_to_twenty_scalars_empty_sponge,
+            zero_to_twenty_scalars_non_empty_sponge,
+        ]
+        .concat()
+    }
 }
 
 #[cfg(test)]
 mod test {
+    use triton_vm::program::NonDeterminism;
+    use triton_vm::twenty_first::shared_math::b_field_element::BFieldElement;
+    use triton_vm::twenty_first::shared_math::tip5::Tip5;
+    use triton_vm::twenty_first::shared_math::x_field_element::EXTENSION_DEGREE;
+    use triton_vm::twenty_first::util_types::algebraic_hasher::{AlgebraicHasher, SpongeHasher};
+
+    use crate::rust_shadowing_helper_functions;
+    use crate::test_helpers::tasm_final_state;
+    use crate::traits::basic_snippet::BasicSnippet;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
 
@@ -164,6 +211,54 @@ mod test {
     #[test]
     fn test() {
         ShadowedProcedure::new(SampleScalars).test();
+    }
+
+    #[test]
+    fn verify_agreement_with_tip5_sample_scalars() {
+        // This is a regression test that verifies that this implementation of `sample_scalars`
+        // agrees with Tip5's version from twenty-first. For the bugfix, see:
+        // <https://github.com/Neptune-Crypto/twenty-first/commit/e708b305>
+        let empty_sponge_state = Tip5::init();
+        let mut non_empty_sponge_state = Tip5::init();
+        Tip5::absorb(
+            &mut non_empty_sponge_state,
+            [BFieldElement::new(100); Tip5::RATE],
+        );
+        for init_sponge_state in [empty_sponge_state, non_empty_sponge_state] {
+            for num_scalars in 0..30 {
+                let init_stack = [
+                    SampleScalars.init_stack_for_isolated_run(),
+                    vec![BFieldElement::new(num_scalars as u64)],
+                ]
+                .concat();
+                let tasm = tasm_final_state(
+                    &ShadowedProcedure::new(SampleScalars),
+                    &init_stack,
+                    &[],
+                    NonDeterminism::default(),
+                    &Some(init_sponge_state.clone()),
+                    0,
+                );
+
+                let final_ram = tasm.final_ram;
+                let snippet_output_scalar_pointer = tasm.final_stack[tasm.final_stack.len() - 1];
+
+                let scalars_from_tip5 =
+                    Tip5::sample_scalars(&mut init_sponge_state.clone(), num_scalars);
+
+                for (i, expected_scalar) in scalars_from_tip5.into_iter().enumerate() {
+                    assert_eq!(
+                        expected_scalar.coefficients.to_vec(),
+                        rust_shadowing_helper_functions::unsafe_list::unsafe_list_get(
+                            snippet_output_scalar_pointer,
+                            i,
+                            &final_ram,
+                            EXTENSION_DEGREE
+                        )
+                    );
+                }
+            }
+        }
     }
 }
 
