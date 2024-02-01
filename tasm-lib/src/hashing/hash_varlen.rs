@@ -109,7 +109,7 @@ impl DeprecatedSnippet for HashVarlen {
     }
 
     fn worst_case_input_state(&self) -> ExecutionState {
-        Self::random_memory_state_read_k(1000)
+        Self::random_memory_state_read_k(92160)
     }
 
     fn rust_shadowing(

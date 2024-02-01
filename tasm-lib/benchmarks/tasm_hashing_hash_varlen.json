@@ -8,9 +8,9 @@
   },
   {
     "name": "tasm_hashing_hash_varlen",
-    "clock_cycle_count": 1366,
-    "hash_table_height": 703,
-    "u32_table_height": 16,
+    "clock_cycle_count": 110758,
+    "hash_table_height": 55399,
+    "u32_table_height": 23,
     "case": "WorstCase"
   }
 ]
