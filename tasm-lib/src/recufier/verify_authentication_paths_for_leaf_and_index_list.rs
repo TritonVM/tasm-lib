@@ -165,6 +165,32 @@ impl Algorithm for VerifyAuthenticationPathForLeafAndIndexList {
         stack.push(BFieldElement::new(height as u64));
     }
 
+    fn corner_case_initial_states(&self) -> Vec<AlgorithmInitialState> {
+        let mut rng: StdRng = SeedableRng::from_seed([42u8; 32]);
+        let one_leaf_reveal_0 = self.prepare_state(&mut rng, 0, 0);
+        let one_leaf_reveal_1 = self.prepare_state(&mut rng, 0, 1);
+        let two_leaves_reveal_0 = self.prepare_state(&mut rng, 1, 1);
+        let two_leaves_reveal_1 = self.prepare_state(&mut rng, 1, 1);
+        let two_leaves_reveal_2 = self.prepare_state(&mut rng, 1, 2);
+        let four_leaves_reveal_0 = self.prepare_state(&mut rng, 2, 0);
+        let four_leaves_reveal_1 = self.prepare_state(&mut rng, 2, 1);
+        let four_leaves_reveal_2 = self.prepare_state(&mut rng, 2, 2);
+        let four_leaves_reveal_3 = self.prepare_state(&mut rng, 2, 3);
+        let four_leaves_reveal_4 = self.prepare_state(&mut rng, 2, 4);
+        vec![
+            one_leaf_reveal_0,
+            one_leaf_reveal_1,
+            two_leaves_reveal_0,
+            two_leaves_reveal_1,
+            two_leaves_reveal_2,
+            four_leaves_reveal_0,
+            four_leaves_reveal_1,
+            four_leaves_reveal_2,
+            four_leaves_reveal_3,
+            four_leaves_reveal_4,
+        ]
+    }
+
     fn pseudorandom_initial_state(
         &self,
         seed: [u8; 32],
@@ -179,12 +205,23 @@ impl Algorithm for VerifyAuthenticationPathForLeafAndIndexList {
                 crate::snippet_bencher::BenchmarkCase::WorstCase => 25,
             }
         } else {
-            rng.gen_range(10..=19)
+            rng.gen_range(6..=15)
         };
-        let n = 1 << height;
         let num_indices = rng.gen_range(2..5) as usize;
+        self.prepare_state(&mut rng, height, num_indices)
+    }
+}
 
+impl VerifyAuthenticationPathForLeafAndIndexList {
+    fn prepare_state(
+        &self,
+        rng: &mut StdRng,
+        height: u32,
+        num_indices: usize,
+    ) -> AlgorithmInitialState {
         // generate data structure
+        let n = 1 << height;
+
         let leafs = (0..n).map(|_| rng.gen::<Digest>()).collect_vec();
         let tree = <CpuParallel as MerkleTreeMaker<VmHasher>>::from_digests(&leafs).unwrap();
         let root = tree.root();
