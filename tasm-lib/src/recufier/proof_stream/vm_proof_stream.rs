@@ -7,6 +7,7 @@ use triton_vm::instruction::LabelledInstruction;
 use triton_vm::prelude::*;
 use triton_vm::proof_item::FriResponse;
 use triton_vm::proof_item::ProofItem;
+use triton_vm::proof_item::ProofItemVariant;
 use triton_vm::table::master_table::NUM_BASE_COLUMNS;
 use triton_vm::table::master_table::NUM_EXT_COLUMNS;
 use triton_vm::twenty_first::prelude::*;
@@ -118,8 +119,7 @@ impl VmProofStream {
     }
 
     pub fn proof_item_as_merkle_root_code() -> Vec<LabelledInstruction> {
-        let merkle_root_discriminant =
-            ProofItem::MerkleRoot(Digest::default()).bfield_codec_discriminant();
+        let merkle_root_discriminant = ProofItemVariant::MerkleRoot.bfield_codec_discriminant();
         triton_asm! {
             // *proof_item
             read_mem 1
@@ -131,7 +131,7 @@ impl VmProofStream {
     }
 
     pub fn proof_item_as_fri_codeword_code() -> Vec<LabelledInstruction> {
-        let fri_codeword_discriminant = ProofItem::FriCodeword(vec![]).bfield_codec_discriminant();
+        let fri_codeword_discriminant = ProofItemVariant::FriCodeword.bfield_codec_discriminant();
         triton_asm! {
                                 // _ *fri_codeword_ev
             read_mem 1          // _ fri_codeword_ev *fri_codeword_ev-1
@@ -156,11 +156,7 @@ impl VmProofStream {
         // enum-discriminant, size-of-assoc-data, size-of-second-field, [encoding of second field], size-of-first-field, [encoding of first field]
         // we want to land here:                   ^
 
-        let fri_response_discriminant = ProofItem::FriResponse(FriResponse {
-            revealed_leaves: vec![],
-            auth_structure: vec![],
-        })
-        .bfield_codec_discriminant();
+        let fri_response_discriminant = ProofItemVariant::FriResponse.bfield_codec_discriminant();
         triton_asm! {
                                 // _ *fri_response_ev
             read_mem 1          // _ fri_response_ev *fri_response_ev-1
