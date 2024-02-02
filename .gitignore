@@ -27,3 +27,6 @@ Cargo.lock
 # Debug output for running the Triton-VM debugger
 tasm-lib/program.tasm
 tasm-lib/vm_state.json
+
+# IDEs
+/.idea
