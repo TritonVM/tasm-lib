@@ -78,14 +78,17 @@ mod test {
 
     use arbitrary::Arbitrary;
     use arbitrary::Unstructured;
+    use itertools::Itertools;
     use num_traits::One;
     use num_traits::Zero;
+    use proptest_arbitrary_interop::arb;
     use rand::prelude::*;
     use test_strategy::proptest;
     use triton_vm::proof_item::ProofItem;
     use triton_vm::proof_stream::ProofStream;
 
     use crate::empty_stack;
+    use crate::memory::encode_to_memory;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::test_helpers::test_rust_equivalence_given_complete_state;
     use crate::traits::procedure::Procedure;
@@ -106,11 +109,6 @@ mod test {
             let proof_iter_pointer = stack.pop().unwrap();
             let &current_proof_item_list_element_size_pointer =
                 memory.get(&proof_iter_pointer).unwrap();
-            let &current_proof_item_list_element_size = memory
-                .get(&current_proof_item_list_element_size_pointer)
-                .unwrap();
-            let next_proof_item_list_element_size_pointer =
-                current_proof_item_list_element_size_pointer + current_proof_item_list_element_size;
 
             let discriminant_pointer =
                 current_proof_item_list_element_size_pointer + BFieldElement::one();
@@ -118,12 +116,19 @@ mod test {
             let expected_discriminant = self.proof_item.bfield_codec_discriminant();
             assert_eq!(expected_discriminant, discriminant);
 
-            let proof_item_payload_pointer = discriminant_pointer + BFieldElement::one();
-
+            let &current_proof_item_list_element_size = memory
+                .get(&current_proof_item_list_element_size_pointer)
+                .unwrap();
+            let next_proof_item_list_element_size_pointer =
+                current_proof_item_list_element_size_pointer
+                    + current_proof_item_list_element_size
+                    + BFieldElement::one();
             memory.insert(
                 proof_iter_pointer,
                 next_proof_item_list_element_size_pointer,
             );
+
+            let proof_item_payload_pointer = discriminant_pointer + BFieldElement::one();
             stack.push(proof_item_payload_pointer);
 
             vec![]
@@ -148,12 +153,8 @@ mod test {
             proof_stream: ProofStream<Tip5>,
             address: BFieldElement,
         ) -> ProcedureInitialState {
-            let mut ram = proof_stream
-                .encode()
-                .into_iter()
-                .enumerate()
-                .map(|(idx, elt)| (address + BFieldElement::new(idx as u64), elt))
-                .collect::<HashMap<_, _>>();
+            let mut ram = HashMap::new();
+            encode_to_memory(&mut ram, address, proof_stream);
 
             // uses highly specific knowledge of `BFieldCodec`
             let address_of_first_element = address + BFieldElement::new(2);
@@ -221,9 +222,8 @@ mod test {
         }
 
         fn test_rust_equivalence(self, initial_state: ProcedureInitialState) {
-            let dequeue_next_as = ShadowedProcedure::new(self);
             test_rust_equivalence_given_complete_state(
-                &dequeue_next_as,
+                &ShadowedProcedure::new(self),
                 &initial_state.stack,
                 &initial_state.public_input,
                 &initial_state.nondeterminism,
@@ -257,5 +257,104 @@ mod test {
         let dequeue_next_as = DequeueNextAs::pseudorandom_new(seed);
         let initial_state = dequeue_next_as.pseudorandom_initial_state(seed, None);
         dequeue_next_as.test_rust_equivalence(initial_state);
+    }
+
+    /// Helps testing dequeuing multiple items.
+    struct TestHelperDequeueMultipleAs {
+        proof_items: Vec<ProofItemVariant>,
+    }
+
+    impl BasicSnippet for TestHelperDequeueMultipleAs {
+        fn inputs(&self) -> Vec<(DataType, String)> {
+            vec![(DataType::VoidPointer, "*proof_item_iter".to_string())]
+        }
+
+        fn outputs(&self) -> Vec<(DataType, String)> {
+            vec![(DataType::VoidPointer, "*proof_item_iter".to_string())]
+        }
+
+        fn entrypoint(&self) -> String {
+            "test_helper_dequeue_multiple_as".to_string()
+        }
+
+        fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
+            let dequeue_next_as_entrypoints = self
+                .proof_items
+                .iter()
+                .map(|&proof_item| library.import(Box::new(DequeueNextAs { proof_item })))
+                .collect::<Vec<_>>();
+
+            let code_body = dequeue_next_as_entrypoints
+                .into_iter()
+                .flat_map(|snippet| triton_asm!(dup 0 call {snippet} pop 1))
+                .collect_vec();
+
+            triton_asm!({self.entrypoint()}: {&code_body} return)
+        }
+    }
+
+    impl Procedure for TestHelperDequeueMultipleAs {
+        fn rust_shadow(
+            &self,
+            stack: &mut Vec<BFieldElement>,
+            memory: &mut HashMap<BFieldElement, BFieldElement>,
+            non_determinism: &NonDeterminism<BFieldElement>,
+            std_in: &[BFieldElement],
+            sponge_state: &mut Option<tip5::Tip5State>,
+        ) -> Vec<BFieldElement> {
+            let &proof_iter_pointer = stack.last().unwrap();
+            for &proof_item in &self.proof_items {
+                let dequeue_next_as = DequeueNextAs { proof_item };
+                stack.push(proof_iter_pointer);
+                dequeue_next_as.rust_shadow(stack, memory, non_determinism, std_in, sponge_state);
+                stack.pop().unwrap();
+            }
+            vec![]
+        }
+
+        fn pseudorandom_initial_state(
+            &self,
+            seed: [u8; 32],
+            _: Option<BenchmarkCase>,
+        ) -> ProcedureInitialState {
+            let mut rng = StdRng::from_seed(seed);
+            let mut proof_stream = ProofStream::<Tip5>::new();
+            for &proof_item in &self.proof_items {
+                let dequeue_next_as = DequeueNextAs { proof_item };
+                let item = dequeue_next_as.pseudorandom_proof_item_for_self(rng.gen());
+                proof_stream.enqueue(item);
+            }
+            DequeueNextAs::initial_state_from_proof_stream_and_address(proof_stream, rng.gen())
+        }
+    }
+
+    impl TestHelperDequeueMultipleAs {
+        fn test_rust_equivalence(self, initial_state: ProcedureInitialState) {
+            test_rust_equivalence_given_complete_state(
+                &ShadowedProcedure::new(self),
+                &initial_state.stack,
+                &initial_state.public_input,
+                &initial_state.nondeterminism,
+                &initial_state.sponge_state,
+                0,
+                None,
+            );
+        }
+    }
+
+    #[test]
+    fn dequeue_two() {
+        let proof_items = vec![ProofItemVariant::MerkleRoot, ProofItemVariant::MerkleRoot];
+        let dequeue_multiple = TestHelperDequeueMultipleAs { proof_items };
+        let initial_state = dequeue_multiple.pseudorandom_initial_state([0; 32], None);
+        dequeue_multiple.test_rust_equivalence(initial_state);
+    }
+
+    #[proptest]
+    fn dequeue_multiple(#[strategy(arb())] proof_items: Vec<ProofItem>, seed: [u8; 32]) {
+        let proof_items = proof_items.into_iter().map(|i| i.into()).collect_vec();
+        let dequeue_multiple = TestHelperDequeueMultipleAs { proof_items };
+        let initial_state = dequeue_multiple.pseudorandom_initial_state(seed, None);
+        dequeue_multiple.test_rust_equivalence(initial_state);
     }
 }
