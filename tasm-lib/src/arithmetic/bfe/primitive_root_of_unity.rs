@@ -432,9 +432,9 @@ mod tests {
 
     #[test]
     fn primitive_root_negative_test() {
-        let safe_pow = PrimitiveRootOfUnity;
+        let primitive_root = PrimitiveRootOfUnity;
 
-        let code = link_for_isolated_run(Rc::new(RefCell::new(safe_pow)), 0);
+        let code = link_for_isolated_run(Rc::new(RefCell::new(primitive_root)), 0);
 
         for order in [
             0u64,

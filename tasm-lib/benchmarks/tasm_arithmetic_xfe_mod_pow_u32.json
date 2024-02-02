@@ -1,0 +1,16 @@
+[
+  {
+    "name": "tasm_arithmetic_xfe_mod_pow_u32",
+    "clock_cycle_count": 188,
+    "hash_table_height": 54,
+    "u32_table_height": 43,
+    "case": "CommonCase"
+  },
+  {
+    "name": "tasm_arithmetic_xfe_mod_pow_u32",
+    "clock_cycle_count": 1106,
+    "hash_table_height": 54,
+    "u32_table_height": 1123,
+    "case": "WorstCase"
+  }
+]
