@@ -445,37 +445,37 @@ data_type: DataType::Digest
 
         // recufy
         "tasm_recufier_mt_ap_verify" => Box::new(MerkleVerify),
-        "tasm_recufier_proof_stream_dequeue_next_as___merkle_root" => {
+        "tasm_recufier_proof_stream_dequeue_next_as_merkle_root" => {
             Box::new(DequeueNextAs{proof_item: ProofItemVariant::MerkleRoot})
         }
-        "tasm_recufier_proof_stream_dequeue_next_as___ood_base_row" => {
+        "tasm_recufier_proof_stream_dequeue_next_as_ood_base_row" => {
             Box::new(DequeueNextAs{proof_item: ProofItemVariant::OutOfDomainBaseRow})
         }
-        "tasm_recufier_proof_stream_dequeue_next_as___ood_ext_row" => {
+        "tasm_recufier_proof_stream_dequeue_next_as_ood_ext_row" => {
             Box::new(DequeueNextAs{proof_item: ProofItemVariant::OutOfDomainExtRow})
         }
-        "tasm_recufier_proof_stream_dequeue_next_as___ood_quot_segments" => {
+        "tasm_recufier_proof_stream_dequeue_next_as_ood_quot_segments" => {
             Box::new(DequeueNextAs{proof_item: ProofItemVariant::OutOfDomainQuotientSegments})
         }
-        "tasm_recufier_proof_stream_dequeue_next_as___auth_structute" => {
+        "tasm_recufier_proof_stream_dequeue_next_as_auth_structute" => {
             Box::new(DequeueNextAs{proof_item: ProofItemVariant::AuthenticationStructure})
         }
-        "tasm_recufier_proof_stream_dequeue_next_as___master_base_table_rows" => {
+        "tasm_recufier_proof_stream_dequeue_next_as_master_base_table_rows" => {
             Box::new(DequeueNextAs{proof_item: ProofItemVariant::MasterBaseTableRows})
         }
-        "tasm_recufier_proof_stream_dequeue_next_as___master_ext_table_rows" => {
+        "tasm_recufier_proof_stream_dequeue_next_as_master_ext_table_rows" => {
             Box::new(DequeueNextAs{proof_item: ProofItemVariant::MasterExtTableRows})
         }
-        "tasm_recufier_proof_stream_dequeue_next_as___log_2_padded_height" => {
+        "tasm_recufier_proof_stream_dequeue_next_as_log_2_padded_height" => {
             Box::new(DequeueNextAs{proof_item: ProofItemVariant::Log2PaddedHeight})
         }
-        "tasm_recufier_proof_stream_dequeue_next_as___quot_segments_elements" => {
+        "tasm_recufier_proof_stream_dequeue_next_as_quot_segments_elements" => {
             Box::new(DequeueNextAs{proof_item: ProofItemVariant::QuotientSegmentsElements})
         }
-        "tasm_recufier_proof_stream_dequeue_next_as___fri_codeword" => {
+        "tasm_recufier_proof_stream_dequeue_next_as_fri_codeword" => {
             Box::new(DequeueNextAs{proof_item: ProofItemVariant::FriCodeword})
         }
-        "tasm_recufier_proof_stream_dequeue_next_as___fri_response" => {
+        "tasm_recufier_proof_stream_dequeue_next_as_fri_response" => {
             Box::new(DequeueNextAs{proof_item: ProofItemVariant::FriResponse})
         }
         "tasm_recufier_read_and_verify_own_program_digest_from_std_in" => Box::new(ReadAndVerifyOwnProgramDigestFromStdIn),
