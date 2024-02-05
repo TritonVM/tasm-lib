@@ -9,6 +9,7 @@ use crate::ExecutionState;
 use crate::DIGEST_LENGTH;
 
 /// Reverse the order of elements in a digest: [d4, d3, d2, d1, d0] -> [d0, d1, d2, d3, d4]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct ReverseDigest;
 
 impl ReverseDigest {

@@ -18,6 +18,7 @@ pub fn derive_tasm_object(input: TokenStream) -> TokenStream {
     impl_derive_tasm_object_macro(ast)
 }
 
+#[derive(Clone)]
 struct ParseResult {
     field_names: Vec<syn::Ident>,
     field_types: Vec<syn::Type>,

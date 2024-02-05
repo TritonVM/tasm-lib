@@ -27,7 +27,8 @@ use crate::ExecutionState;
 
 use super::inner_function::InnerFunction;
 
-const MORE_THAN_ONE_INPUT_OR_OUTPUT_TYPE_IN_INNER_FUNCTION: &str = "inner function in `map` currently only works with *one* input element. Use a tuple data type to circumvent this.";
+const MORE_THAN_ONE_INPUT_OR_OUTPUT_TYPE_IN_INNER_FUNCTION: &str = "inner function in `map` \
+currently only works with *one* input element. Use a tuple data type to circumvent this.";
 
 /// Applies a given function to every element of a list, and collects the new elements
 /// into a new list.

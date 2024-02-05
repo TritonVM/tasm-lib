@@ -14,7 +14,7 @@ use crate::traits::procedure::Procedure;
 use crate::traits::procedure::ProcedureInitialState;
 
 /// `divine_sibling` but for index of type `u64`
-#[derive(Clone, Debug)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct DivineSiblingU64Index;
 
 impl BasicSnippet for DivineSiblingU64Index {

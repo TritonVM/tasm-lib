@@ -12,6 +12,7 @@ use crate::rust_shadowing_helper_functions;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 
 // All of `contiguous_list` assumes that each element has its length prepended
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct GetPointerList {
     pub output_list_type: ListType,
 }

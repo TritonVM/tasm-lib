@@ -10,7 +10,7 @@ use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::closure::Closure;
 
 /// A u32 `pow` that behaves like Rustc's `pow` method on `u32`, crashing in case of overflow.
-#[derive(Clone)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct Safepow;
 
 impl BasicSnippet for Safepow {

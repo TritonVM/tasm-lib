@@ -16,6 +16,7 @@ use crate::traits::basic_snippet::BasicSnippet;
 
 use super::ListType;
 
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct SwapUnchecked {
     list_type: ListType,
     element_type: DataType,

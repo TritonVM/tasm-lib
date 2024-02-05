@@ -9,6 +9,7 @@ use crate::traits::compiled_program::CompiledProgram;
 
 use super::fri_verify::FriVerify;
 
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 struct StandaloneFriVerify {
     seed: [u8; 32],
 }

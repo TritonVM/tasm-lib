@@ -8,7 +8,7 @@ use crate::empty_stack;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::closure::Closure;
 
-#[derive(Clone, Debug)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct Overflowingadd;
 
 impl BasicSnippet for Overflowingadd {

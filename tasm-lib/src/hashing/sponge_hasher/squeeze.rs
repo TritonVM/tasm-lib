@@ -9,6 +9,7 @@ use crate::library::Library;
 use crate::memory::dyn_malloc::DynMalloc;
 use crate::traits::basic_snippet::BasicSnippet;
 
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct Squeeze;
 
 impl BasicSnippet for Squeeze {

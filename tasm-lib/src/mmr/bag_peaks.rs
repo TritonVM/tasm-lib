@@ -20,6 +20,7 @@ use crate::traits::function::Function;
 use crate::traits::function::FunctionInitialState;
 use crate::VmHasher;
 
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct BagPeaks;
 
 impl BagPeaks {

@@ -19,6 +19,7 @@ use crate::VmHasherState;
 
 /// Squeeze the sponge n times, storing all the produced pseudorandom `BFieldElement`s
 /// contiguously in memory. It is the caller's responsibility to allocate enough memory.
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct SqueezeRepeatedly;
 
 impl BasicSnippet for SqueezeRepeatedly {

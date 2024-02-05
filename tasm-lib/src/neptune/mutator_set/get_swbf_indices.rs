@@ -28,6 +28,7 @@ use crate::VmHasherState;
 /// Derives the indices that make up the removal record from the item
 /// (a digest), the sender randomness (also a digest), receiver
 /// preimage (ditto), and the item's aocl leaf index.
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct GetSwbfIndices {
     pub window_size: u32,
     pub num_trials: usize,

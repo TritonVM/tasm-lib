@@ -376,6 +376,7 @@ pub fn generate_full_profile(
     public_input: &PublicInput,
     nondeterminism: &NonDeterminism<BFieldElement>,
 ) -> String {
+    #[derive(Debug, Clone, Eq, PartialEq, Hash)]
     struct AggregateProfileLine {
         label: String,
         call_depth: usize,

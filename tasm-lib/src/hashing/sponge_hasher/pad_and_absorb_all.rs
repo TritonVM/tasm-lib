@@ -6,6 +6,7 @@ use crate::library::Library;
 use crate::list::ListType;
 use crate::traits::basic_snippet::BasicSnippet;
 
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct PadAndAbsorbAll {
     pub list_type: ListType,
 }

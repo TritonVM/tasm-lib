@@ -21,6 +21,7 @@ use crate::VmHasher;
 use crate::VmHasherState;
 
 /// Squeeze the sponge to sample a given number of `XFieldElement`s.
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct SampleScalars;
 
 impl BasicSnippet for SampleScalars {

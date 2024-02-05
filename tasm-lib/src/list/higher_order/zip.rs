@@ -323,43 +323,43 @@ mod tests {
     fn list_prop_test_more_types() {
         for list_type in [ListType::Unsafe, ListType::Safe] {
             ShadowedFunction::new(Zip {
-                list_type: list_type.clone(),
+                list_type,
                 left_type: DataType::Bfe,
                 right_type: DataType::Bfe,
             })
             .test();
             ShadowedFunction::new(Zip {
-                list_type: list_type.clone(),
+                list_type,
                 left_type: DataType::U64,
                 right_type: DataType::U32,
             })
             .test();
             ShadowedFunction::new(Zip {
-                list_type: list_type.clone(),
+                list_type,
                 left_type: DataType::Bool,
                 right_type: DataType::Digest,
             })
             .test();
             ShadowedFunction::new(Zip {
-                list_type: list_type.clone(),
+                list_type,
                 left_type: DataType::U128,
                 right_type: DataType::VoidPointer,
             })
             .test();
             ShadowedFunction::new(Zip {
-                list_type: list_type.clone(),
+                list_type,
                 left_type: DataType::U128,
                 right_type: DataType::Digest,
             })
             .test();
             ShadowedFunction::new(Zip {
-                list_type: list_type.clone(),
+                list_type,
                 left_type: DataType::U128,
                 right_type: DataType::U128,
             })
             .test();
             ShadowedFunction::new(Zip {
-                list_type: list_type.clone(),
+                list_type,
                 left_type: DataType::Digest,
                 right_type: DataType::Digest,
             })

@@ -4,7 +4,8 @@ use crate::list::ListType;
 use crate::traits::basic_snippet::BasicSnippet;
 use triton_vm::prelude::*;
 
-struct ComputeTerminal {
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+pub struct ComputeTerminal {
     list_type: ListType,
 }
 

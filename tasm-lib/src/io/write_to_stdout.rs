@@ -11,6 +11,7 @@ use crate::traits::procedure::Procedure;
 use crate::traits::procedure::ProcedureInitialState;
 use crate::VmHasherState;
 
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct WriteToStdout {
     pub data_type: DataType,
 }

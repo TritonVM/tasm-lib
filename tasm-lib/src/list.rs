@@ -29,7 +29,7 @@ pub mod safeimplu32;
 pub mod swap_unchecked;
 pub mod unsafeimplu32;
 
-#[derive(Clone, Debug)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub enum ListType {
     Safe,
     Unsafe,

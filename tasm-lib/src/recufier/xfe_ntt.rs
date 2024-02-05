@@ -16,6 +16,7 @@ use crate::traits::function::Function;
 use crate::traits::function::FunctionInitialState;
 use crate::Library;
 
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct XfeNtt;
 
 impl BasicSnippet for XfeNtt {

@@ -5,7 +5,7 @@ use triton_vm::prelude::*;
 pub mod read_input;
 pub mod write_to_stdout;
 
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub enum InputSource {
     StdIn,
     SecretIn,

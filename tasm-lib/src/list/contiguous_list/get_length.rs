@@ -16,6 +16,7 @@ use crate::Digest;
 use crate::ExecutionState;
 
 /// Returns the number of elements of a contiguous list.
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct GetLength;
 
 #[derive(Clone, Debug, BFieldCodec)]

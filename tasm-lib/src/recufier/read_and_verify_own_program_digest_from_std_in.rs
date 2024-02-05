@@ -8,6 +8,7 @@ use crate::traits::basic_snippet::BasicSnippet;
 /// Must be called as the first function in the program, as
 /// it assumes that the bottom of the stack (stack[15..=11])
 /// contains the digest of the running program
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct ReadAndVerifyOwnProgramDigestFromStdIn;
 
 impl BasicSnippet for ReadAndVerifyOwnProgramDigestFromStdIn {
@@ -48,6 +49,7 @@ mod tests {
 
     use super::*;
 
+    #[derive(Debug, Clone, Eq, PartialEq)]
     struct ProgramSetup {
         program: Program,
         program_digest: Digest,

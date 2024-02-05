@@ -11,7 +11,7 @@ use crate::traits::procedure::ProcedureInitialState;
 use super::InputSource;
 
 /// Move an element of type `DataType` from standard-in or secret-in's token stream to the stack
-#[derive(Clone, Debug)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct ReadInput {
     pub data_type: DataType,
     pub input_source: InputSource,

@@ -15,6 +15,7 @@ const MORE_THAN_ONE_INPUT_OR_OUTPUT_TYPE_IN_INNER_FUNCTION: &str = "higher-order
 
 /// A data structure for describing an inner function predicate to filter with,
 /// or to map with.
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct RawCode {
     pub function: Vec<LabelledInstruction>,
     pub input_type: DataType,
@@ -88,6 +89,7 @@ pub enum InnerFunction {
     NoFunctionBody(NoFunctionBody),
 }
 
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct NoFunctionBody {
     pub label_name: String,
     pub input_type: DataType,

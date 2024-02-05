@@ -9,6 +9,7 @@ use crate::push_encodable;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::ExecutionState;
 
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct ShiftRightU128;
 
 impl DeprecatedSnippet for ShiftRightU128 {

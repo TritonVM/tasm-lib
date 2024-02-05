@@ -10,7 +10,9 @@ use triton_vm::prelude::BFieldElement;
 use crate::empty_stack;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct MemCpy; // TODO: add field `static_length : Option<usize>` to avoid loop
+
 impl MemCpy {
     fn random_input_state(len: usize) -> crate::ExecutionState {
         let mut rng = thread_rng();

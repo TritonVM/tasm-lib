@@ -5,6 +5,7 @@ use crate::data_type::DataType;
 use crate::library::Library;
 use crate::traits::basic_snippet::BasicSnippet;
 
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct Init;
 
 impl BasicSnippet for Init {

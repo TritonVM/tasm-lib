@@ -19,6 +19,7 @@ use crate::VmHasher;
 use crate::VmHasherState;
 
 /// Absorb a sequence of field elements stored in memory, into the sponge state.
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct AbsorbMultiple;
 
 impl BasicSnippet for AbsorbMultiple {

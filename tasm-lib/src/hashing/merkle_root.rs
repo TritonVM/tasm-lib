@@ -20,6 +20,7 @@ use crate::Digest;
 use crate::VmHasher;
 
 /// Compute the Merkle root of a slice of `Digest`s
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct MerkleRoot;
 
 impl MerkleRoot {

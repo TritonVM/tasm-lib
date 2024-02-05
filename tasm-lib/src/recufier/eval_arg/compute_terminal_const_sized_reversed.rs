@@ -8,7 +8,8 @@ use crate::Library;
 /// A snippet for calculating terminal value by traversing the symbols
 /// list in reverse order and where symbols list length is statically
 /// known. Produces verbose code but minimizes clock cycle count.
-struct ComputeTerminalConstSizedReversed<const N: usize>;
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+pub struct ComputeTerminalConstSizedReversed<const N: usize>;
 
 impl<const N: usize> BasicSnippet for ComputeTerminalConstSizedReversed<N> {
     fn inputs(&self) -> Vec<(DataType, String)> {

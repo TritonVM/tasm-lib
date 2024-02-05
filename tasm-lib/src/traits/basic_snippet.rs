@@ -46,8 +46,8 @@ pub trait BasicSnippet {
         let function_body = self.annotated_code(&mut library);
         let library_code = library.all_imports();
 
-        // The TASM code is always run through a function call, so the 1st instruction is a call to the
-        // function in question.
+        // The TASM code is always run through a function call, so the 1st instruction is a call to
+        // the function in question.
         let code = triton_asm!(
             call {entrypoint}
             halt
@@ -89,6 +89,7 @@ mod tests {
 
     use crate::traits::basic_snippet::BasicSnippet;
 
+    #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
     struct DummySnippet;
 
     impl BasicSnippet for DummySnippet {
