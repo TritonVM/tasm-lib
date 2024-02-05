@@ -79,9 +79,10 @@ use crate::neptune::mutator_set::commit::Commit;
 use crate::neptune::mutator_set::get_swbf_indices::GetSwbfIndices;
 use crate::other_snippets::bfe_add::BfeAdd;
 use crate::recufier::merkle_verify::MerkleVerify;
-use crate::recufier::proof_stream::dequeue::Dequeue;
+use crate::recufier::proof_stream::dequeue_next_as::DequeueNextAs;
 use crate::recufier::read_and_verify_own_program_digest_from_std_in::ReadAndVerifyOwnProgramDigestFromStdIn;
 use crate::traits::basic_snippet::BasicSnippet;
+use triton_vm::proof_item::ProofItemVariant;
 
 pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
     match fn_name {
@@ -444,7 +445,39 @@ data_type: DataType::Digest
 
         // recufy
         "tasm_recufier_mt_ap_verify" => Box::new(MerkleVerify),
-        "tasm_recufier_proof_stream_dequeue" => Box::new(Dequeue),
+        "tasm_recufier_proof_stream_dequeue_next_as___merkle_root" => {
+            Box::new(DequeueNextAs{proof_item: ProofItemVariant::MerkleRoot})
+        }
+        "tasm_recufier_proof_stream_dequeue_next_as___ood_base_row" => {
+            Box::new(DequeueNextAs{proof_item: ProofItemVariant::OutOfDomainBaseRow})
+        }
+        "tasm_recufier_proof_stream_dequeue_next_as___ood_ext_row" => {
+            Box::new(DequeueNextAs{proof_item: ProofItemVariant::OutOfDomainExtRow})
+        }
+        "tasm_recufier_proof_stream_dequeue_next_as___ood_quot_segments" => {
+            Box::new(DequeueNextAs{proof_item: ProofItemVariant::OutOfDomainQuotientSegments})
+        }
+        "tasm_recufier_proof_stream_dequeue_next_as___auth_structute" => {
+            Box::new(DequeueNextAs{proof_item: ProofItemVariant::AuthenticationStructure})
+        }
+        "tasm_recufier_proof_stream_dequeue_next_as___master_base_table_rows" => {
+            Box::new(DequeueNextAs{proof_item: ProofItemVariant::MasterBaseTableRows})
+        }
+        "tasm_recufier_proof_stream_dequeue_next_as___master_ext_table_rows" => {
+            Box::new(DequeueNextAs{proof_item: ProofItemVariant::MasterExtTableRows})
+        }
+        "tasm_recufier_proof_stream_dequeue_next_as___log_2_padded_height" => {
+            Box::new(DequeueNextAs{proof_item: ProofItemVariant::Log2PaddedHeight})
+        }
+        "tasm_recufier_proof_stream_dequeue_next_as___quot_segments_elements" => {
+            Box::new(DequeueNextAs{proof_item: ProofItemVariant::QuotientSegmentsElements})
+        }
+        "tasm_recufier_proof_stream_dequeue_next_as___fri_codeword" => {
+            Box::new(DequeueNextAs{proof_item: ProofItemVariant::FriCodeword})
+        }
+        "tasm_recufier_proof_stream_dequeue_next_as___fri_response" => {
+            Box::new(DequeueNextAs{proof_item: ProofItemVariant::FriResponse})
+        }
         "tasm_recufier_read_and_verify_own_program_digest_from_std_in" => Box::new(ReadAndVerifyOwnProgramDigestFromStdIn),
 
         // memory

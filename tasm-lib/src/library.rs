@@ -8,9 +8,8 @@ use crate::data_type::DataType;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 
-// Ensure that static allocator does not overwrite the address
-// dedicated to the dynamic allocator. Dynamic allocator is,
-// by convention, always on address 0.
+/// Ensure that static allocator does not overwrite the address dedicated to the dynamic allocator.
+/// Dynamic allocator is, by convention, on address 1 << 32.
 pub const STATIC_MEMORY_START_ADDRESS: BFieldElement = BFieldElement::new(BFieldElement::MAX);
 
 /// A Library represents a set of imports for a single Program or Snippet, and moreover
@@ -36,27 +35,27 @@ impl Library {
     }
 
     /// Create an empty library.
-    #[allow(dead_code)]
     pub fn empty() -> Self {
         Self::new()
     }
 
     pub fn with_preallocated_memory(words_statically_allocated: u32) -> Self {
+        let free_pointer =
+            STATIC_MEMORY_START_ADDRESS - BFieldElement::new(words_statically_allocated as u64);
         Library {
-            free_pointer: STATIC_MEMORY_START_ADDRESS
-                - BFieldElement::new(words_statically_allocated as u64),
+            free_pointer,
             ..Self::new()
         }
     }
 
     /// Import `T: Snippet` into the library.
     ///
-    /// This recursively imports `T`'s dependencies.
-    ///
+    /// Recursively imports `T`'s dependencies.
     /// Does not import the snippets with the same entrypoint twice.
     ///
     /// Avoid cyclic dependencies by only calling `T::function_code()` which
     /// may call `.import()` if `.import::<T>()` wasn't already called once.
+    // todo: Above comment is not overly clear. Improve it.
     pub fn import(&mut self, snippet: Box<dyn BasicSnippet>) -> String {
         let dep_entrypoint = snippet.entrypoint();
 
@@ -70,8 +69,6 @@ impl Library {
     }
 
     pub fn explicit_import(&mut self, name: &str, body: &[LabelledInstruction]) -> String {
-        // The linter's suggestion doesn't work. This suppression is fine imo.
-        #[allow(clippy::map_entry)]
         if !self.seen_snippets.contains_key(name) {
             self.seen_snippets.insert(name.to_owned(), body.to_vec());
         }
@@ -79,8 +76,7 @@ impl Library {
         name.to_string()
     }
 
-    /// Return a list of all external dependencies sorted by name
-    /// All snippets are sorted
+    /// Return a list of all external dependencies sorted by name. All snippets are sorted
     /// alphabetically to ensure that generated programs are deterministic.
     pub fn all_external_dependencies(&self) -> Vec<Vec<LabelledInstruction>> {
         self.seen_snippets
@@ -90,19 +86,16 @@ impl Library {
             .collect()
     }
 
-    /// Return the name of all imported snippets, sorted alphabetically
-    /// to ensure that output is deterministic
+    /// Return the name of all imported snippets, sorted alphabetically to ensure that output is
+    /// deterministic.
     pub fn get_all_snippet_names(&self) -> Vec<String> {
         let mut ret = self.seen_snippets.keys().cloned().collect_vec();
         ret.sort_unstable();
         ret
     }
 
-    /// Return a list of instructions containing all imported snippets
-    #[allow(dead_code)]
+    /// Return a list of instructions containing all imported snippets.
     pub fn all_imports(&self) -> Vec<LabelledInstruction> {
-        // Collect all imports and return. All snippets are sorted
-        // alphabetically to ensure that generated programs are deterministic.
         self.all_external_dependencies().concat()
     }
 
@@ -119,6 +112,7 @@ pub struct DummyTestSnippetA;
 
 #[derive(Debug)]
 pub struct DummyTestSnippetB;
+
 #[derive(Debug)]
 pub struct DummyTestSnippetC;
 

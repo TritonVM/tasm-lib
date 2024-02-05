@@ -198,7 +198,8 @@ mod test {
     use triton_vm::twenty_first::shared_math::b_field_element::BFieldElement;
     use triton_vm::twenty_first::shared_math::tip5::Tip5;
     use triton_vm::twenty_first::shared_math::x_field_element::EXTENSION_DEGREE;
-    use triton_vm::twenty_first::util_types::algebraic_hasher::{AlgebraicHasher, SpongeHasher};
+    use triton_vm::twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
+    use triton_vm::twenty_first::util_types::algebraic_hasher::SpongeHasher;
 
     use crate::rust_shadowing_helper_functions;
     use crate::test_helpers::tasm_final_state;

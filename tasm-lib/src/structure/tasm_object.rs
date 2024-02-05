@@ -9,10 +9,8 @@ pub use derive_tasm_object::TasmObject;
 
 type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 
-/// TasmObject
-///
 /// This trait defines methods for dealing with custom-defined objects from within the VM,
-/// assuming those methods live in memory as they are encoded with BFieldCodec.
+/// assuming those methods live in memory as they are encoded with [`BFieldCodec`].
 ///
 /// The arguments referring to fields are strings. For structs with unnamed fields, the
 /// nth field name is implicitly `field_n`.
@@ -22,20 +20,22 @@ pub trait TasmObject {
     ///  - said object has a type that implements the TasmObject trait;
     ///  - said object lives in memory encoded as BFieldCodec specifies.
     ///
+    /// ```text
     /// BEFORE: _ *object
-    ///
-    /// AFTER: _ *field
+    /// AFTER:  _ *field
+    /// ```
     fn get_field(field_name: &str) -> Vec<LabelledInstruction>;
 
     /// Returns tasm code that returns a pointer the field of the object, along with
     /// the size of that field in number of BFieldElements, assuming:
     ///  - that a pointer to the said object lives on top of the stack;
     ///  - said object has a type that implements the TasmObject trait;
-    ///  - said object lives in memory encoded as BFieldCodec specifies.
+    ///  - said object lives in memory encoded as [`BFieldCodec`] specifies.
     ///
+    /// ```text
     /// BEFORE: _ *object
-    ///
-    /// AFTER: _ *field field_size
+    /// AFTER:  _ *field field_size
+    ///```
     ///
     /// See also: `get_field` if you just want the field without the size.
     fn get_field_with_size(field_name: &str) -> Vec<LabelledInstruction>;
@@ -46,19 +46,19 @@ pub trait TasmObject {
     ///  -  *field_start == *field      if the size is statically known, but
     ///  -  *field_start == *field-1    if the size is not statically known.
     ///
+    /// ```text
     /// BEFORE: _ *object
-    ///
-    /// AFTER: _ *field_start field_jump_distance
+    /// AFTER:  _ *field_start field_jump_distance
+    /// ```
     ///
     /// This function is used internally for the derive macro. You probably want to use
-    /// `get_field` or `get_field_with_size` instead.
+    /// [`get_field`](TasmObject::get_field) or
+    /// [`get_field_with_size`](TasmObject::get_field_with_size) instead.
     fn get_field_start_with_jump_distance(field_name: &str) -> Vec<LabelledInstruction>;
 
-    /// Given an iterator over `BFieldElement`s, decode it as a Self object.
+    /// Decode as [`Self`].
     fn decode_iter<Itr: Iterator<Item = BFieldElement>>(iterator: &mut Itr) -> Result<Box<Self>>;
 
-    /// Given a memory object (as HashMap of BFE->BFE) and and address (BFE), decode the
-    /// object located there.
     fn decode_from_memory(
         memory: &HashMap<BFieldElement, BFieldElement>,
         address: BFieldElement,
