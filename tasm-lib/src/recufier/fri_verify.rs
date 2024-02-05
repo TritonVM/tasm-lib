@@ -1052,6 +1052,7 @@ impl BasicSnippet for FriVerify {
                 call {proof_stream_dequeue_next_as_fri_response}
                                             // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *fri_response
                 {&revealed_leafs}           // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements
+                {&verifiably_access_x_field_elements_lists}
                 hint b_elements: Pointer = stack[0]
 
                 // if in first round (r==0), populate second half of return vector
