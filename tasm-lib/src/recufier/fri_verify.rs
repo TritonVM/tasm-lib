@@ -482,15 +482,14 @@ impl BasicSnippet for FriVerify {
         let push_scalar = library.import(Box::new(UnsafePush {
             data_type: DataType::Xfe,
         }));
-        let proof_stream_dequeue_next_as_merkle_root = library.import(Box::new(DequeueNextAs {
-            proof_item: ProofItemVariant::MerkleRoot,
-        }));
-        let proof_stream_dequeue_next_as_fri_codeword = library.import(Box::new(DequeueNextAs {
-            proof_item: ProofItemVariant::FriCodeword,
-        }));
-        let proof_stream_dequeue_next_as_fri_response = library.import(Box::new(DequeueNextAs {
-            proof_item: ProofItemVariant::FriResponse,
-        }));
+
+        let proof_stream_dequeue_next_as_merkle_root =
+            library.import(Box::new(DequeueNextAs::new(ProofItemVariant::MerkleRoot)));
+        let proof_stream_dequeue_next_as_fri_codeword =
+            library.import(Box::new(DequeueNextAs::new(ProofItemVariant::FriCodeword)));
+        let proof_stream_dequeue_next_as_fri_response =
+            library.import(Box::new(DequeueNextAs::new(ProofItemVariant::FriResponse)));
+
         let proof_stream_sample_scalars = library.import(Box::new(SampleScalars));
         let dequeue_commit_phase = format!("{entrypoint}_dequeue_commit_phase_remainder");
         let convert_xfe_to_digest = format!("{entrypoint}_convert_xfe_to_digest");

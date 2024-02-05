@@ -2,20 +2,67 @@ use triton_vm::prelude::*;
 use triton_vm::proof_item::ProofItemVariant;
 
 use crate::data_type::DataType;
+use crate::hashing::sponge_hasher::pad_and_absorb_all::PadAndAbsorbAll;
 use crate::library::Library;
+use crate::list::ListType;
 use crate::traits::basic_snippet::BasicSnippet;
 
 /// Reads a proof item of the supplied type from the [`ProofStream`].
 /// Crashes Triton VM if the proof item is not of the expected type.
 /// Updates an internal pointer to the next proof item.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct DequeueNextAs {
     pub proof_item: ProofItemVariant,
 }
 
 impl DequeueNextAs {
+    pub fn new(proof_item: ProofItemVariant) -> Self {
+        Self { proof_item }
+    }
+
     fn item_name(&self) -> String {
         self.proof_item.to_string().to_lowercase()
+    }
+
+    /// ```text
+    /// BEFORE: _ *proof_item_size
+    /// AFTER:  _ *proof_item_size
+    /// ```
+    fn fiat_shamir_absorb_snippet(&self, library: &mut Library) -> Vec<LabelledInstruction> {
+        if !self.proof_item.include_in_fiat_shamir_heuristic() {
+            return vec![];
+        }
+
+        let list_type = ListType::Unsafe;
+        let pad_and_absorb_all = PadAndAbsorbAll { list_type };
+        let pad_and_absorb_all_entrypoint = library.import(Box::new(pad_and_absorb_all));
+
+        triton_asm! {
+            dup 0           // _ *proof_item_size *proof_item_size
+            call {pad_and_absorb_all_entrypoint}
+                            // _ *proof_item_size
+        }
+    }
+
+    /// ```text
+    /// BEFORE: _ *proof_item_iter *proof_item_size
+    /// AFTER:  _ *proof_item_size
+    /// ```
+    fn update_proof_item_iter_to_next_proof_item(&self) -> Vec<LabelledInstruction> {
+        triton_asm! {
+            // local rename: “proof_item” -> “pi”
+            dup 0 read_mem 1    // _ *pi_iter *pi_size pi_size (*pi_size - 1)
+            hint proof_item_length = stack[1]
+
+            push 2
+            hint length_indicator_and_read_mem_offset = stack[0]
+
+            add add             // _ *pi_iter *pi_size *next_pi_size
+            hint next_proof_item_list_element_size_pointer = stack[0]
+
+            swap 1 swap 2       // _ *pi_size *next_pi_size *pi_iter
+            write_mem 1 pop 1   // _ *pi_size
+        }
     }
 }
 
@@ -34,38 +81,41 @@ impl BasicSnippet for DequeueNextAs {
         format!("tasm_recufier_proof_stream_dequeue_next_as_{proof_item_name}")
     }
 
+    /// ```text
     /// BEFORE: _ *proof_item_iter
     /// AFTER:  _ *proof_item_payload
-    fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
+    /// ```
+    fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
+        let final_hint = format!("hint {}_pointer: Pointer = stack[0]", self.item_name());
         triton_asm! {
             {self.entrypoint()}:
             read_mem 1
-                hint proof_item_list_element_size_pointer = stack[1]
-            push 1 add
-            swap 1              // _ *proof_item_iter *proof_item_list_element_size
+            hint proof_item_list_element_size_pointer = stack[1]
 
             push 1 add
-                hint proof_item_discriminant_pointer = stack[0]
-            read_mem 1          // _ *proof_item_iter discriminant *proof_item_list_element_size
-                hint proof_item_list_element_size_pointer = stack[0]
-                hint proof_item_discriminant = stack[1]
+            swap 1              // _ *proof_item_iter *proof_item_size
+
+            push 1 add
+            hint proof_item_discriminant_pointer = stack[0]
+
+            read_mem 1          // _ *proof_item_iter discriminant *proof_item_size
+            hint proof_item_list_element_size_pointer = stack[0]
+            hint proof_item_discriminant = stack[1]
+
             swap 1
             push {self.proof_item.bfield_codec_discriminant()}
-                hint expected_proof_item_discriminant = stack[0]
-            eq assert           // _ *proof_item_iter *proof_item_list_element_size
+            hint expected_proof_item_discriminant = stack[0]
 
-            dup 0 read_mem 1    // _ *proof_item_iter *p_i_l_e_s p_i_l_e_s (*p_i_l_e_s - 1)
-                hint proof_item_length = stack[1]
-            push 2
-                hint length_indicator_and_read_mem_offset = stack[0]
-            add add             // _ *proof_item_iter *p_i_l_e_s *next_proof_item_list_element_size
-                hint next_proof_item_list_element_size_pointer = stack[0]
+            eq assert           // _ *proof_item_iter *proof_item_size
 
-            swap 1 swap 2       // _ *p_i_l_e_s *next_proof_item_list_element_size *proof_item_iter
-            write_mem 1 pop 1   // _ *proof_item_list_element_size
+            {&self.fiat_shamir_absorb_snippet(library)}
+                                // _ *proof_item_iter *proof_item_size
+
+            {&self.update_proof_item_iter_to_next_proof_item()}
+                                // _ *proof_item_size
 
             push 2 add          // _ *proof_item_payload
-                hint proof_item_payload_pointer = stack[0]
+            {final_hint}
 
             return
         }
@@ -83,6 +133,7 @@ mod test {
     use num_traits::Zero;
     use proptest_arbitrary_interop::arb;
     use rand::prelude::*;
+    use strum::IntoEnumIterator;
     use test_strategy::proptest;
     use triton_vm::proof_item::ProofItem;
     use triton_vm::proof_stream::ProofStream;
@@ -90,12 +141,101 @@ mod test {
     use crate::empty_stack;
     use crate::memory::encode_to_memory;
     use crate::snippet_bencher::BenchmarkCase;
+    use crate::structure::tasm_object::decode_from_memory_with_size;
     use crate::test_helpers::test_rust_equivalence_given_complete_state;
     use crate::traits::procedure::Procedure;
     use crate::traits::procedure::ProcedureInitialState;
     use crate::traits::procedure::ShadowedProcedure;
+    use crate::twenty_first::prelude::tip5::Tip5State;
+    use crate::twenty_first::prelude::SpongeHasher;
 
     use super::*;
+
+    #[derive(Debug)]
+    struct RustShadowForDequeueNextAs<'a> {
+        dequeue_next_as: DequeueNextAs,
+
+        proof_iter_pointer: BFieldElement,
+
+        stack: &'a mut Vec<BFieldElement>,
+        memory: &'a mut HashMap<BFieldElement, BFieldElement>,
+        sponge: &'a mut Tip5State,
+    }
+
+    impl<'a> RustShadowForDequeueNextAs<'a> {
+        fn execute(&mut self) -> Vec<BFieldElement> {
+            self.assert_correct_discriminant();
+            self.maybe_alter_fiat_shamir_heuristic_with_proof_item();
+            self.update_stack_using_current_proof_item();
+            self.update_proof_item_iter();
+            self.public_output()
+        }
+
+        fn current_proof_item_list_element_size_pointer(&self) -> BFieldElement {
+            let maybe_pointer = self.memory.get(&self.proof_iter_pointer);
+            maybe_pointer.unwrap().to_owned()
+        }
+
+        fn current_proof_item_list_element_size(&self) -> BFieldElement {
+            let size_pointer = self.current_proof_item_list_element_size_pointer();
+            let &element_size = self.memory.get(&size_pointer).unwrap();
+            element_size
+        }
+
+        fn next_proof_item_list_element_size_pointer(&self) -> BFieldElement {
+            self.current_proof_item_list_element_size_pointer()
+                + self.current_proof_item_list_element_size()
+                + BFieldElement::one()
+        }
+
+        fn discriminant_pointer(&self) -> BFieldElement {
+            self.current_proof_item_list_element_size_pointer() + BFieldElement::one()
+        }
+
+        fn discriminant(&self) -> BFieldElement {
+            let &discriminant = self.memory.get(&self.discriminant_pointer()).unwrap();
+            discriminant
+        }
+
+        fn proof_item_payload_pointer(&self) -> BFieldElement {
+            self.discriminant_pointer() + BFieldElement::one()
+        }
+
+        fn assert_correct_discriminant(&self) {
+            let expected_discriminant = self.dequeue_next_as.proof_item.bfield_codec_discriminant();
+            assert_eq!(expected_discriminant, self.discriminant().value() as usize);
+        }
+
+        fn proof_item(&self) -> ProofItem {
+            let maybe_item = decode_from_memory_with_size::<ProofItem>(
+                self.memory,
+                self.discriminant_pointer(),
+                self.current_proof_item_list_element_size().value() as usize,
+            );
+            *maybe_item.unwrap()
+        }
+
+        fn maybe_alter_fiat_shamir_heuristic_with_proof_item(&mut self) {
+            let proof_item = self.proof_item();
+            if proof_item.include_in_fiat_shamir_heuristic() {
+                Tip5::pad_and_absorb_all(self.sponge, &proof_item.encode());
+            }
+        }
+
+        fn update_stack_using_current_proof_item(&mut self) {
+            self.stack.push(self.proof_item_payload_pointer());
+        }
+
+        fn update_proof_item_iter(&mut self) {
+            let next_item_pointer = self.next_proof_item_list_element_size_pointer();
+            self.memory
+                .insert(self.proof_iter_pointer, next_item_pointer);
+        }
+
+        fn public_output(&self) -> Vec<BFieldElement> {
+            vec![]
+        }
+    }
 
     impl Procedure for DequeueNextAs {
         fn rust_shadow(
@@ -104,34 +244,16 @@ mod test {
             memory: &mut HashMap<BFieldElement, BFieldElement>,
             _: &NonDeterminism<BFieldElement>,
             _: &[BFieldElement],
-            _: &mut Option<tip5::Tip5State>,
+            sponge: &mut Option<Tip5State>,
         ) -> Vec<BFieldElement> {
-            let proof_iter_pointer = stack.pop().unwrap();
-            let &current_proof_item_list_element_size_pointer =
-                memory.get(&proof_iter_pointer).unwrap();
-
-            let discriminant_pointer =
-                current_proof_item_list_element_size_pointer + BFieldElement::one();
-            let discriminant = memory.get(&discriminant_pointer).unwrap().value() as usize;
-            let expected_discriminant = self.proof_item.bfield_codec_discriminant();
-            assert_eq!(expected_discriminant, discriminant);
-
-            let &current_proof_item_list_element_size = memory
-                .get(&current_proof_item_list_element_size_pointer)
-                .unwrap();
-            let next_proof_item_list_element_size_pointer =
-                current_proof_item_list_element_size_pointer
-                    + current_proof_item_list_element_size
-                    + BFieldElement::one();
-            memory.insert(
-                proof_iter_pointer,
-                next_proof_item_list_element_size_pointer,
-            );
-
-            let proof_item_payload_pointer = discriminant_pointer + BFieldElement::one();
-            stack.push(proof_item_payload_pointer);
-
-            vec![]
+            RustShadowForDequeueNextAs {
+                dequeue_next_as: *self,
+                proof_iter_pointer: stack.pop().unwrap(),
+                stack,
+                memory,
+                sponge: sponge.as_mut().unwrap(),
+            }
+            .execute()
         }
 
         fn pseudorandom_initial_state(
@@ -141,8 +263,11 @@ mod test {
         ) -> ProcedureInitialState {
             let mut rng = StdRng::from_seed(seed);
             let mut proof_stream = ProofStream::<Tip5>::new();
-            proof_stream.enqueue(self.pseudorandom_proof_item_for_self(rng.gen()));
-            proof_stream.enqueue(self.pseudorandom_proof_item_for_self(rng.gen()));
+            proof_stream.enqueue(self.pseudorandom_proof_item(rng.gen()));
+
+            let other_item_type = ProofItemVariant::iter().choose(&mut rng).unwrap();
+            let other_dequeue_next_as = DequeueNextAs::new(other_item_type);
+            proof_stream.enqueue(other_dequeue_next_as.pseudorandom_proof_item(rng.gen()));
 
             Self::initial_state_from_proof_stream_and_address(proof_stream, rng.gen())
         }
@@ -165,7 +290,7 @@ mod test {
                 stack: [empty_stack(), vec![proof_iter_address]].concat(),
                 nondeterminism: NonDeterminism::default().with_ram(ram),
                 public_input: vec![],
-                sponge_state: None,
+                sponge_state: Some(Tip5::init()),
             }
         }
 
@@ -176,8 +301,8 @@ mod test {
             Self { proof_item }
         }
 
-        /// The item that is to be `Dequeued` must match the variant stored in `self`.
-        fn pseudorandom_proof_item_for_self(&self, seed: [u8; 32]) -> ProofItem {
+        /// An item to be `Dequeued`, matching the variant in `self`.
+        fn pseudorandom_proof_item(&self, seed: [u8; 32]) -> ProofItem {
             let mut rng = StdRng::from_seed(seed);
             let proof_stream_seed: [u8; 100] = rng.gen();
             let mut unstructured = Unstructured::new(&proof_stream_seed);
@@ -236,8 +361,7 @@ mod test {
 
     #[test]
     fn dequeueing_a_merkle_root_is_equivalent_in_rust_and_tasm() {
-        let proof_item = ProofItemVariant::MerkleRoot;
-        let dequeue_next_as = DequeueNextAs { proof_item };
+        let dequeue_next_as = DequeueNextAs::new(ProofItemVariant::MerkleRoot);
         dequeue_next_as.test_rust_equivalence(small_merkle_root_initial_state());
     }
 
@@ -281,7 +405,7 @@ mod test {
             let dequeue_next_as_entrypoints = self
                 .proof_items
                 .iter()
-                .map(|&proof_item| library.import(Box::new(DequeueNextAs { proof_item })))
+                .map(|&item| library.import(Box::new(DequeueNextAs::new(item))))
                 .collect::<Vec<_>>();
 
             let code_body = dequeue_next_as_entrypoints
@@ -300,7 +424,7 @@ mod test {
             memory: &mut HashMap<BFieldElement, BFieldElement>,
             non_determinism: &NonDeterminism<BFieldElement>,
             std_in: &[BFieldElement],
-            sponge_state: &mut Option<tip5::Tip5State>,
+            sponge_state: &mut Option<Tip5State>,
         ) -> Vec<BFieldElement> {
             let &proof_iter_pointer = stack.last().unwrap();
             for &proof_item in &self.proof_items {
@@ -321,7 +445,7 @@ mod test {
             let mut proof_stream = ProofStream::<Tip5>::new();
             for &proof_item in &self.proof_items {
                 let dequeue_next_as = DequeueNextAs { proof_item };
-                let item = dequeue_next_as.pseudorandom_proof_item_for_self(rng.gen());
+                let item = dequeue_next_as.pseudorandom_proof_item(rng.gen());
                 proof_stream.enqueue(item);
             }
             DequeueNextAs::initial_state_from_proof_stream_and_address(proof_stream, rng.gen())
