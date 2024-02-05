@@ -445,40 +445,40 @@ data_type: DataType::Digest
 
         // recufy
         "tasm_recufier_mt_ap_verify" => Box::new(MerkleVerify),
-        "tasm_recufier_proof_stream_dequeue_next_as_merkle_root" => {
+        "tasm_recufier_proof_stream_dequeue_next_as_merkleroot" => {
             Box::new(DequeueNextAs{proof_item: ProofItemVariant::MerkleRoot})
         }
-        "tasm_recufier_proof_stream_dequeue_next_as_ood_base_row" => {
+        "tasm_recufier_proof_stream_dequeue_next_as_outofdomainbaserow" => {
             Box::new(DequeueNextAs{proof_item: ProofItemVariant::OutOfDomainBaseRow})
         }
-        "tasm_recufier_proof_stream_dequeue_next_as_ood_ext_row" => {
+        "tasm_recufier_proof_stream_dequeue_next_as_outofdomainextrow" => {
             Box::new(DequeueNextAs{proof_item: ProofItemVariant::OutOfDomainExtRow})
         }
-        "tasm_recufier_proof_stream_dequeue_next_as_ood_quot_segments" => {
+        "tasm_recufier_proof_stream_dequeue_next_as_outofdomainquotientsegments" => {
             Box::new(DequeueNextAs{proof_item: ProofItemVariant::OutOfDomainQuotientSegments})
         }
-        "tasm_recufier_proof_stream_dequeue_next_as_auth_structute" => {
+        "tasm_recufier_proof_stream_dequeue_next_as_authenticationstructure" => {
             Box::new(DequeueNextAs{proof_item: ProofItemVariant::AuthenticationStructure})
         }
-        "tasm_recufier_proof_stream_dequeue_next_as_master_base_table_rows" => {
+        "tasm_recufier_proof_stream_dequeue_next_as_masterbasetablerows" => {
             Box::new(DequeueNextAs{proof_item: ProofItemVariant::MasterBaseTableRows})
         }
-        "tasm_recufier_proof_stream_dequeue_next_as_master_ext_table_rows" => {
+        "tasm_recufier_proof_stream_dequeue_next_as_masterexttablerows" => {
             Box::new(DequeueNextAs{proof_item: ProofItemVariant::MasterExtTableRows})
         }
-        "tasm_recufier_proof_stream_dequeue_next_as_log_2_padded_height" => {
+        "tasm_recufier_proof_stream_dequeue_next_as_log2paddedheight" => {
             Box::new(DequeueNextAs{proof_item: ProofItemVariant::Log2PaddedHeight})
         }
-        "tasm_recufier_proof_stream_dequeue_next_as_quot_segments_elements" => {
+        "tasm_recufier_proof_stream_dequeue_next_as_quotientsegmentselements" => {
             Box::new(DequeueNextAs{proof_item: ProofItemVariant::QuotientSegmentsElements})
         }
-        "tasm_recufier_proof_stream_dequeue_next_as_fri_codeword" => {
+        "tasm_recufier_proof_stream_dequeue_next_as_fricodeword" => {
             Box::new(DequeueNextAs{proof_item: ProofItemVariant::FriCodeword})
         }
-        "tasm_recufier_proof_stream_dequeue_next_as_fri_response" => {
+        "tasm_recufier_proof_stream_dequeue_next_as_friresponse" => {
             Box::new(DequeueNextAs{proof_item: ProofItemVariant::FriResponse})
         }
-        "tasm_recufier_read_and_verify_own_program_digest_from_std_in" => Box::new(ReadAndVerifyOwnProgramDigestFromStdIn),
+        "tasm_recufier_read_and_verify_own_pigest_from_std_in" => Box::new(ReadAndVerifyOwnProgramDigestFromStdIn),
 
         // memory
         "tasm_memory_dyn_malloc" => Box::new(DynMalloc),
