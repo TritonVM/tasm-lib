@@ -86,6 +86,12 @@ impl BasicSnippet for DequeueNextAs {
     /// AFTER:  _ *proof_item_payload
     /// ```
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
+        let payload_has_dynamic_size = self.proof_item.payload_static_length().is_none();
+        let point_to_payload = if payload_has_dynamic_size {
+            triton_asm!(push 3 add)
+        } else {
+            triton_asm!(push 2 add)
+        };
         let final_hint = format!("hint {}_pointer: Pointer = stack[0]", self.item_name());
         triton_asm! {
             {self.entrypoint()}:
@@ -114,7 +120,7 @@ impl BasicSnippet for DequeueNextAs {
             {&self.update_proof_item_iter_to_next_proof_item()}
                                 // _ *proof_item_size
 
-            push 2 add          // _ *proof_item_payload
+            {&point_to_payload} // _ *proof_item_payload
             {final_hint}
 
             return
