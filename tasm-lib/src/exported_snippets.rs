@@ -478,7 +478,7 @@ data_type: DataType::Digest
         "tasm_recufier_proof_stream_dequeue_next_as_friresponse" => {
             Box::new(DequeueNextAs{proof_item: ProofItemVariant::FriResponse})
         }
-        "tasm_recufier_read_and_verify_own_pigest_from_std_in" => Box::new(ReadAndVerifyOwnProgramDigestFromStdIn),
+        "tasm_recufier_read_and_verify_own_program_digest_from_std_in" => Box::new(ReadAndVerifyOwnProgramDigestFromStdIn),
 
         // memory
         "tasm_memory_dyn_malloc" => Box::new(DynMalloc),
