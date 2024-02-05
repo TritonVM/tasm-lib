@@ -1,6 +1,9 @@
-use triton_vm::{instruction::LabelledInstruction, triton_asm};
+use triton_vm::instruction::LabelledInstruction;
+use triton_vm::triton_asm;
 
-use crate::{data_type::DataType, library::Library, traits::basic_snippet::BasicSnippet};
+use crate::data_type::DataType;
+use crate::library::Library;
+use crate::traits::basic_snippet::BasicSnippet;
 
 pub struct XfeModPowU32Generic;
 
@@ -141,7 +144,16 @@ impl BasicSnippet for XfeModPowU32Generic {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use std::cell::RefCell;
+    use std::rc::Rc;
+
+    use itertools::Itertools;
+    use rand::rngs::StdRng;
+    use rand::Rng;
+    use rand::SeedableRng;
+    use triton_vm::prelude::*;
+    use triton_vm::twenty_first::shared_math::traits::ModPowU32;
+
     use crate::empty_stack;
     use crate::execute_with_terminal_state;
     use crate::linker::link_for_isolated_run;
@@ -149,14 +161,8 @@ mod tests {
     use crate::traits::closure::Closure;
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
-    use itertools::Itertools;
-    use rand::rngs::StdRng;
-    use rand::Rng;
-    use rand::SeedableRng;
-    use std::cell::RefCell;
-    use std::rc::Rc;
-    use triton_vm::prelude::*;
-    use triton_vm::twenty_first::shared_math::traits::ModPowU32;
+
+    use super::*;
 
     impl Closure for XfeModPowU32Generic {
         fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
@@ -253,9 +259,10 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
+
+    use super::*;
 
     #[test]
     fn xfe_ntt_benchmark() {

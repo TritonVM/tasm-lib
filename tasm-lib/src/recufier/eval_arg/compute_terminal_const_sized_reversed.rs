@@ -1,7 +1,9 @@
-use crate::data_type::{ArrayType, DataType};
+use triton_vm::prelude::*;
+
+use crate::data_type::ArrayType;
+use crate::data_type::DataType;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::Library;
-use triton_vm::prelude::*;
 
 /// A snippet for calculating terminal value by traversing the symbols
 /// list in reverse order and where symbols list length is statically
@@ -97,21 +99,24 @@ impl<const N: usize> BasicSnippet for ComputeTerminalConstSizedReversed<N> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::traits::function::Function;
-    use crate::traits::function::FunctionInitialState;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use std::collections::HashMap;
+
     use itertools::Itertools;
     use num_traits::One;
     use num_traits::Zero;
     use rand::rngs::StdRng;
     use rand::Rng;
     use rand::SeedableRng;
-    use std::collections::HashMap;
     use triton_vm::table::cross_table_argument::CrossTableArg;
     use triton_vm::table::cross_table_argument::EvalArg;
+
+    use crate::snippet_bencher::BenchmarkCase;
+    use crate::traits::function::Function;
+    use crate::traits::function::FunctionInitialState;
+    use crate::traits::function::ShadowedFunction;
+    use crate::traits::rust_shadow::RustShadow;
+
+    use super::*;
 
     impl<const N: usize> Function for ComputeTerminalConstSizedReversed<N> {
         fn rust_shadow(
@@ -236,9 +241,10 @@ mod tests {
 
 #[cfg(test)]
 mod bench {
-    use super::*;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
+
+    use super::*;
 
     #[test]
     fn bench_const_sized_terminal_calc_rev_30() {
