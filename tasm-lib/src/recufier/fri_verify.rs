@@ -1315,10 +1315,33 @@ mod test {
     }
 
     impl TestCase {
-        fn small_case() -> Self {
+        /// A test case with no FRI rounds.
+        fn tiny_case() -> Self {
+            let fri_verify = FriVerify::new(BFieldElement::one(), 2, 2, 1);
+            assert_eq!(0, fri_verify.num_rounds());
+
             Self {
-                fri_verify: FriVerify::new(BFieldElement::one(), 2, 2, 1),
+                fri_verify,
                 polynomial_coefficients: vec![XFieldElement::new_u64([42; 3])],
+            }
+        }
+
+        /// A test case with 2 FRI rounds.
+        fn small_case() -> Self {
+            let fri_verify = FriVerify::new(BFieldElement::one(), 64, 2, 7);
+            assert_eq!(2, fri_verify.num_rounds(), "test case must be meaningful");
+
+            let coefficients = [
+                92, 42, 91, 59, 86, 64, 5, 64, 74, 53, 54, 68, 54, 23, 24, 58, 15, 44, 33, 31, 38,
+                97, 25, 69, 11, 67, 66, 33, 37, 58, 43, 14,
+            ];
+            assert_eq!(fri_verify.first_round_max_degree() + 1, coefficients.len());
+
+            Self {
+                fri_verify,
+                polynomial_coefficients: coefficients
+                    .map(|n| XFieldElement::new_u64([n; 3]))
+                    .to_vec(),
             }
         }
 
@@ -1378,8 +1401,8 @@ mod test {
     }
 
     #[test]
-    fn assert_behavioral_equivalence_of_small_fri_instance() {
-        assert_behavioral_equivalence_of_fris(TestCase::small_case());
+    fn assert_behavioral_equivalence_of_tiny_fri_instance() {
+        assert_behavioral_equivalence_of_fris(TestCase::tiny_case());
     }
 
     /// Unfortunately, we cannot call the built-in test, _i.e._,
@@ -1461,8 +1484,9 @@ mod test {
         assert_behavioral_equivalence_of_fris(test_case);
     }
 
-    #[proptest(cases = 1)]
-    fn modifying_any_element_in_proof_stream_causes_verification_failure(test_case: TestCase) {
+    #[test]
+    fn modifying_any_element_in_proof_stream_of_small_test_case_causes_verification_failure() {
+        let test_case = TestCase::small_case();
         let fri_verify = test_case.fri_verify;
         let proof_stream = test_case.vm_proof_stream();
         let digests = fri_verify.extract_digests_required_for_proving(&proof_stream);
