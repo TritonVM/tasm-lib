@@ -100,6 +100,23 @@ impl DequeueNextAs {
             push 2 add add      // _ *next_proof_item_size
         }
     }
+
+    /// ```text
+    /// BEFORE: _ *proof_item_size
+    /// AFTER:  _ *proof_item_payload
+    /// ```
+    fn advance_list_element_pointer_to_proof_item_payload(&self) -> Vec<LabelledInstruction> {
+        let payload_length_indicator_size = match self.proof_item.payload_static_length() {
+            Some(_) => 0,
+            None => 1,
+        };
+        let list_item_length_indicator_size = 1;
+        let discriminant_size = 1;
+        let bookkeeping_offset =
+            payload_length_indicator_size + list_item_length_indicator_size + discriminant_size;
+
+        triton_asm! { push {bookkeeping_offset} hint bookkeeping_offset = stack[0] add }
+    }
 }
 
 impl BasicSnippet for DequeueNextAs {
@@ -150,9 +167,8 @@ impl BasicSnippet for DequeueNextAs {
             {&self.update_proof_item_iter_to_next_proof_item()}
                                 // _ *proof_item_size
 
-            push 2 add          // _ *proof_item_payload
-            {final_hint}
-
+            {&self.advance_list_element_pointer_to_proof_item_payload()}
+            {final_hint}        // _ *proof_item_payload
             return
         }
     }
@@ -243,7 +259,16 @@ mod test {
         }
 
         fn proof_item_payload_pointer(&self) -> BFieldElement {
-            self.discriminant_pointer() + BFieldElement::one()
+            self.discriminant_pointer()
+                + BFieldElement::one()
+                + self.proof_item_payload_size_indicator_length()
+        }
+
+        fn proof_item_payload_size_indicator_length(&self) -> BFieldElement {
+            match self.dequeue_next_as.proof_item.payload_static_length() {
+                Some(_) => BFieldElement::zero(),
+                None => BFieldElement::one(),
+            }
         }
 
         fn assert_correct_discriminant(&self) {

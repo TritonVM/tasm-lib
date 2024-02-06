@@ -639,19 +639,6 @@ impl BasicSnippet for FriVerify {
             }),
         }));
 
-        // BEFORE: _ *xfe_list_size
-        // AFTER:  _ *xfe_list
-        let verifiably_access_x_field_elements_lists = triton_asm! {
-           read_mem 1          // _ size *xfe_list_size-1
-           push 2 add          // _ size *num_xfes
-           read_mem 1          // _ size num_elements *xfe_list_size
-           push 1 add          // _ size num_elements *new_list
-           swap 2 swap 1       // _ *new_list size num_elements
-           push 3 mul          // _ *new_list size num_elements*3 (<-- 3 BFEs per XFE)
-           push 1 add          // _ *new_list size num_elements*3+1 (<-- +1 for length indicator)
-           eq assert           // _ *new_list
-        };
-
         triton_asm! {
             // INVARIANT:          _ *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_values i
             {compute_c_values_loop}:
@@ -861,7 +848,6 @@ impl BasicSnippet for FriVerify {
                 call {proof_stream_dequeue_next_as_fri_codeword}
                     hint last_fri_codeword: ListPointer = stack[0]
                                             // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *last_codeword
-                {&verifiably_access_x_field_elements_lists}
                 dup 7 swap 1                // _ *proof_stream *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_iter *last_codeword
 
                 // clone last codeword for later use
@@ -956,7 +942,6 @@ impl BasicSnippet for FriVerify {
 
                 // assert correct length of number of leafs
                 {&revealed_leafs}           // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements
-                {&verifiably_access_x_field_elements_lists}
                 dup 1 dup 1                 // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements *indices *a_elements
                 call {length_of_list_of_xfes}
                                             // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements *indices num_leafs
@@ -1052,7 +1037,6 @@ impl BasicSnippet for FriVerify {
                 call {proof_stream_dequeue_next_as_fri_response}
                                             // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *fri_response
                 {&revealed_leafs}           // _ *proof_stream *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements
-                {&verifiably_access_x_field_elements_lists}
                 hint b_elements: Pointer = stack[0]
 
                 // if in first round (r==0), populate second half of return vector
