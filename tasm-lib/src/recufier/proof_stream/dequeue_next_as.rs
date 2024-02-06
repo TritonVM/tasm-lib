@@ -50,18 +50,54 @@ impl DequeueNextAs {
     /// ```
     fn update_proof_item_iter_to_next_proof_item(&self) -> Vec<LabelledInstruction> {
         triton_asm! {
-            // local rename: “proof_item” -> “pi”
-            dup 0 read_mem 1    // _ *pi_iter *pi_size pi_size (*pi_size - 1)
-            hint proof_item_length = stack[1]
-
-            push 2
-            hint length_indicator_and_read_mem_offset = stack[0]
-
-            add add             // _ *pi_iter *pi_size *next_pi_size
+            dup 0               // _ *proof_item_iter *proof_item_size *proof_item_iter
+            {&self.advance_proof_item_pointer_to_next_item()}
             hint next_proof_item_list_element_size_pointer = stack[0]
+                                // _ *proof_item_iter *proof_item_size *next_proof_item_size
 
             swap 1 swap 2       // _ *pi_size *next_pi_size *pi_iter
             write_mem 1 pop 1   // _ *pi_size
+        }
+    }
+
+    /// ```text
+    /// BEFORE: _ *proof_item_size
+    /// AFTER:  _ *next_proof_item_size
+    /// ```
+    fn advance_proof_item_pointer_to_next_item(&self) -> Vec<LabelledInstruction> {
+        let Some(static_length) = self.proof_item.payload_static_length() else {
+            return self.advance_proof_item_pointer_to_next_item_reading_length_from_memory();
+        };
+        Self::advance_proof_item_pointer_to_next_item_using_length(static_length)
+    }
+
+    /// ```text
+    /// BEFORE: _ *proof_item_size
+    /// AFTER:  _ *next_proof_item_size
+    /// ```
+    fn advance_proof_item_pointer_to_next_item_using_length(
+        length: usize,
+    ) -> Vec<LabelledInstruction> {
+        let length_plus_bookkeeping_offset = length + 2;
+        triton_asm! {
+            push {length_plus_bookkeeping_offset}
+            hint proof_item_length_plus_bookkeeping_offset = stack[0]
+            add
+        }
+    }
+
+    /// ```text
+    /// BEFORE: _ *proof_item_size
+    /// AFTER:  _ *next_proof_item_size
+    /// ```
+    fn advance_proof_item_pointer_to_next_item_reading_length_from_memory(
+        &self,
+    ) -> Vec<LabelledInstruction> {
+        triton_asm! {
+            read_mem 1          // _ proof_item_size (*proof_item_size - 1)
+            hint proof_item_length = stack[1]
+
+            push 2 add add      // _ *next_proof_item_size
         }
     }
 }
@@ -172,11 +208,20 @@ mod test {
         }
 
         fn current_proof_item_list_element_size_pointer(&self) -> BFieldElement {
-            let maybe_pointer = self.memory.get(&self.proof_iter_pointer);
-            maybe_pointer.unwrap().to_owned()
+            let &maybe_pointer = self.memory.get(&self.proof_iter_pointer).unwrap();
+            maybe_pointer
         }
 
         fn current_proof_item_list_element_size(&self) -> BFieldElement {
+            let Some(item_length) = self.dequeue_next_as.proof_item.payload_static_length() else {
+                return self.fetch_current_proof_item_list_element_size_from_memory();
+            };
+            let discriminant_length = 1;
+            BFieldElement::new((item_length + discriminant_length) as u64)
+        }
+
+        /// Accounts for the item's discriminant.
+        fn fetch_current_proof_item_list_element_size_from_memory(&self) -> BFieldElement {
             let size_pointer = self.current_proof_item_list_element_size_pointer();
             let &element_size = self.memory.get(&size_pointer).unwrap();
             element_size
