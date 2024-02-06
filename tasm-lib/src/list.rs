@@ -27,6 +27,7 @@ pub mod multiset_equality;
 pub mod range;
 pub mod safeimplu32;
 pub mod sum_bfes;
+pub mod sum_xfes;
 pub mod swap_unchecked;
 pub mod unsafeimplu32;
 
