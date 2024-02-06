@@ -6,6 +6,29 @@ use triton_vm::prelude::*;
 use twenty_first::shared_math::other::random_elements;
 
 use crate::data_type::DataType;
+use crate::list::ListType;
+
+/// Load a list from memory. Elements must be of `Copy` type.
+pub fn load_unsafe_list_with_copy_elements<const ELEMENT_SIZE: usize>(
+    list_pointer: BFieldElement,
+    memory: &HashMap<BFieldElement, BFieldElement>,
+) -> Vec<[BFieldElement; ELEMENT_SIZE]> {
+    let list_length: usize = memory[&list_pointer].value().try_into().unwrap();
+
+    let mut element_pointer =
+        list_pointer + BFieldElement::new(ListType::Unsafe.metadata_size() as u64);
+
+    let mut ret = Vec::with_capacity(list_length);
+    for i in 0..list_length {
+        ret.push([BFieldElement::zero(); ELEMENT_SIZE]);
+        for j in 0..ELEMENT_SIZE {
+            ret[i][j] = memory[&element_pointer];
+            element_pointer.increment();
+        }
+    }
+
+    ret
+}
 
 pub fn unsafe_list_insert<T: BFieldCodec>(
     list_pointer: BFieldElement,

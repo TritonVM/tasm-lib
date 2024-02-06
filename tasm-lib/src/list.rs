@@ -18,7 +18,7 @@ use crate::list::unsafeimplu32::pop::UnsafePop;
 use crate::list::unsafeimplu32::push::UnsafePush;
 use crate::list::unsafeimplu32::set::UnsafeSet;
 use crate::list::unsafeimplu32::set_length::UnsafeSetLength;
-use crate::rust_shadowing_helper_functions;
+use crate::rust_shadowing_helper_functions::{self, safe_list, unsafe_list};
 use crate::traits::basic_snippet::BasicSnippet;
 
 pub mod contiguous_list;
@@ -26,6 +26,7 @@ pub mod higher_order;
 pub mod multiset_equality;
 pub mod range;
 pub mod safeimplu32;
+pub mod sum_bfes;
 pub mod swap_unchecked;
 pub mod unsafeimplu32;
 
@@ -91,6 +92,19 @@ impl ListType {
         match self {
             ListType::Safe => Box::new(SafeSetLength { data_type }),
             ListType::Unsafe => Box::new(UnsafeSetLength { data_type }),
+        }
+    }
+
+    pub fn rust_shadowing_load_list_with_copy_element<const ELEMENT_SIZE: usize>(
+        &self,
+        list_pointer: BFieldElement,
+        memory: &HashMap<BFieldElement, BFieldElement>,
+    ) -> Vec<[BFieldElement; ELEMENT_SIZE]> {
+        match self {
+            ListType::Safe => safe_list::load_safe_list_with_copy_elements(list_pointer, memory),
+            ListType::Unsafe => {
+                unsafe_list::load_unsafe_list_with_copy_elements(list_pointer, memory)
+            }
         }
     }
 
