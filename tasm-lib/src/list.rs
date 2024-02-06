@@ -22,6 +22,7 @@ use crate::rust_shadowing_helper_functions::{self, safe_list, unsafe_list};
 use crate::traits::basic_snippet::BasicSnippet;
 
 pub mod contiguous_list;
+pub mod dot_product_xfes;
 pub mod higher_order;
 pub mod multiset_equality;
 pub mod range;
