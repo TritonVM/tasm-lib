@@ -78,6 +78,7 @@ use crate::mmr::verify_from_secret_in::MmrVerifyLeafMembershipFromSecretIn;
 use crate::neptune::mutator_set::commit::Commit;
 use crate::neptune::mutator_set::get_swbf_indices::GetSwbfIndices;
 use crate::other_snippets::bfe_add::BfeAdd;
+use crate::recufier::fri_verify::FriSnippet;
 use crate::recufier::merkle_verify::MerkleVerify;
 use crate::recufier::proof_stream::dequeue_next_as::DequeueNextAs;
 use crate::recufier::read_and_verify_own_program_digest_from_std_in::ReadAndVerifyOwnProgramDigestFromStdIn;
@@ -483,6 +484,9 @@ data_type: DataType::Digest
         // memory
         "tasm_memory_dyn_malloc" => Box::new(DynMalloc),
         "tasm_memory_memcpy" => Box::new(MemCpy),
+
+        // FRI
+        "tasm_recufier_fri_verify" => Box::new(FriSnippet { test_instance: None } ),
 
         // structure
 
