@@ -4,8 +4,8 @@ use triton_vm::prelude::*;
 /// Returns the smallest power of two greater than or equal to self.
 /// Behaves like the `rustc` method for all inputs of type `u32`.
 
-#[derive(Clone, Copy)]
-struct NextPowerOfTwo;
+#[derive(Debug, Clone, Copy)]
+pub struct NextPowerOfTwo;
 
 impl BasicSnippet for NextPowerOfTwo {
     fn inputs(&self) -> Vec<(DataType, String)> {
