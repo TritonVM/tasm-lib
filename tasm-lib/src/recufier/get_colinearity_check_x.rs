@@ -1,21 +1,9 @@
-use std::collections::HashMap;
-
-use num_traits::Zero;
-use rand::rngs::StdRng;
-use rand::Rng;
-use rand::SeedableRng;
 use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
-use crate::empty_stack;
 use crate::field;
-use crate::memory::encode_to_memory;
 use crate::recufier::fri_verify::FriVerify;
-use crate::snippet_bencher::BenchmarkCase;
-use crate::structure::tasm_object::TasmObject;
 use crate::traits::basic_snippet::BasicSnippet;
-use crate::traits::function::Function;
-use crate::traits::function::FunctionInitialState;
 
 /// Compute domain\[index\]^(1<<round)
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
@@ -70,74 +58,89 @@ impl BasicSnippet for GetColinearityCheckX {
     }
 }
 
-impl Function for GetColinearityCheckX {
-    fn rust_shadow(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        memory: &mut HashMap<BFieldElement, BFieldElement>,
-    ) {
-        // read stack arguments
-        let round = stack.pop().unwrap().value() as usize;
-        let index = stack.pop().unwrap().value() as u32;
-        let fri_verify_address = stack.pop().unwrap();
-
-        // read fri_verify object from memory
-        let fri_verify = FriVerify::decode_from_memory(memory, fri_verify_address).unwrap();
-
-        // invoke actual function
-        let x = fri_verify.get_colinearity_check_x(index, round);
-
-        // push to stack
-        stack.push(x.coefficients[2]);
-        stack.push(x.coefficients[1]);
-        stack.push(x.coefficients[0]);
-    }
-
-    fn pseudorandom_initial_state(
-        &self,
-        seed: [u8; 32],
-        bench_case: Option<BenchmarkCase>,
-    ) -> FunctionInitialState {
-        let mut rng: StdRng = SeedableRng::from_seed(seed);
-        let round = if let Some(case) = bench_case {
-            match case {
-                BenchmarkCase::CommonCase => 10,
-                BenchmarkCase::WorstCase => 20,
-            }
-        } else {
-            rng.gen_range(0..10)
-        };
-        let fri_domain_length = if let Some(case) = bench_case {
-            match case {
-                BenchmarkCase::CommonCase => 1 << 20,
-                BenchmarkCase::WorstCase => 1 << 25,
-            }
-        } else {
-            1 << (rng.gen_range(0..5) + round)
-        };
-        let index = rng.gen_range(0..fri_domain_length);
-
-        let fri_verify = FriVerify::new(rng.gen(), fri_domain_length, 4, 40);
-
-        let mut memory = HashMap::<BFieldElement, BFieldElement>::new();
-        let fri_verify_address = BFieldElement::zero();
-        encode_to_memory(&mut memory, fri_verify_address, fri_verify);
-
-        let mut stack = empty_stack();
-        stack.push(fri_verify_address);
-        stack.push(BFieldElement::new(index as u64));
-        stack.push(BFieldElement::new(round as u64));
-
-        FunctionInitialState { stack, memory }
-    }
-}
-
 #[cfg(test)]
 mod test {
+    use std::collections::HashMap;
+
+    use num_traits::Zero;
+    use rand::prelude::StdRng;
+    use rand::Rng;
+    use rand::SeedableRng;
+
+    use crate::empty_stack;
+    use crate::memory::encode_to_memory;
+    use crate::recufier::fri_verify::FriVerify;
+    use crate::snippet_bencher::BenchmarkCase;
+    use crate::structure::tasm_object::TasmObject;
+    use crate::traits::function::Function;
+    use crate::traits::function::FunctionInitialState;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
+    use crate::twenty_first::prelude::BFieldElement;
 
-    use super::GetColinearityCheckX;
+    use super::*;
+
+    impl Function for GetColinearityCheckX {
+        fn rust_shadow(
+            &self,
+            stack: &mut Vec<BFieldElement>,
+            memory: &mut HashMap<BFieldElement, BFieldElement>,
+        ) {
+            // read stack arguments
+            let round = stack.pop().unwrap().value() as usize;
+            let index = stack.pop().unwrap().value() as u32;
+            let fri_verify_address = stack.pop().unwrap();
+
+            // read fri_verify object from memory
+            let fri_verify = FriVerify::decode_from_memory(memory, fri_verify_address).unwrap();
+
+            // invoke actual function
+            let x = fri_verify.get_colinearity_check_x(index, round);
+
+            // push to stack
+            stack.push(x.coefficients[2]);
+            stack.push(x.coefficients[1]);
+            stack.push(x.coefficients[0]);
+        }
+
+        fn pseudorandom_initial_state(
+            &self,
+            seed: [u8; 32],
+            bench_case: Option<BenchmarkCase>,
+        ) -> FunctionInitialState {
+            let mut rng: StdRng = SeedableRng::from_seed(seed);
+            let round = if let Some(case) = bench_case {
+                match case {
+                    BenchmarkCase::CommonCase => 10,
+                    BenchmarkCase::WorstCase => 20,
+                }
+            } else {
+                rng.gen_range(0..10)
+            };
+            let fri_domain_length = if let Some(case) = bench_case {
+                match case {
+                    BenchmarkCase::CommonCase => 1 << 20,
+                    BenchmarkCase::WorstCase => 1 << 25,
+                }
+            } else {
+                1 << (rng.gen_range(0..5) + round)
+            };
+            let index = rng.gen_range(0..fri_domain_length);
+
+            let fri_verify = FriVerify::new(rng.gen(), fri_domain_length, 4, 40);
+
+            let mut memory = HashMap::<BFieldElement, BFieldElement>::new();
+            let fri_verify_address = BFieldElement::zero();
+            encode_to_memory(&mut memory, fri_verify_address, fri_verify);
+
+            let mut stack = empty_stack();
+            stack.push(fri_verify_address);
+            stack.push(BFieldElement::new(index as u64));
+            stack.push(BFieldElement::new(round as u64));
+
+            FunctionInitialState { stack, memory }
+        }
+    }
 
     #[test]
     fn test() {

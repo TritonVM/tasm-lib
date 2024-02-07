@@ -7,6 +7,7 @@ use crate::memory::encode_to_memory;
 use crate::memory::FIRST_NON_DETERMINISTICALLY_INITIALIZED_MEMORY_ADDRESS;
 use crate::traits::compiled_program::CompiledProgram;
 
+use super::fri_verify::FriSnippet;
 use super::fri_verify::FriVerify;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
@@ -39,9 +40,7 @@ impl StandaloneFriVerify {
         Self { seed }
     }
 
-    fn pseudorandom_intermediate_state(
-        &self,
-    ) -> (Vec<BFieldElement>, NonDeterminism<BFieldElement>) {
+    fn pseudorandom_intermediate_state(&self) -> IntermediateState {
         let fri_verify = StandaloneFriVerify::instance();
         let proof_stream = fri_verify.pseudorandom_fri_proof_stream(self.seed);
         let digests = fri_verify.extract_digests_required_for_proving(&proof_stream);
@@ -53,8 +52,19 @@ impl StandaloneFriVerify {
             .with_digests(digests)
             .with_ram(memory);
         let stack_excess = vec![proof_stream_pointer, fri_verify_pointer];
-        (stack_excess, nondeterminism)
+
+        IntermediateState {
+            fri_verify,
+            stack_excess,
+            nondeterminism,
+        }
     }
+}
+
+struct IntermediateState {
+    fri_verify: FriVerify,
+    stack_excess: Vec<BFieldElement>,
+    nondeterminism: NonDeterminism<BFieldElement>,
 }
 
 impl CompiledProgram for StandaloneFriVerify {
@@ -66,15 +76,17 @@ impl CompiledProgram for StandaloneFriVerify {
     }
 
     fn code() -> (Vec<LabelledInstruction>, Library) {
-        let fri_verify = StandaloneFriVerify::instance();
-        let (stack_excess, _) = Self::singleton().pseudorandom_intermediate_state();
+        let intermediate_state = Self::singleton().pseudorandom_intermediate_state();
 
         let mut library = Library::new();
-        let fri_verify_entrypoint = library.import(Box::new(fri_verify));
+        let snippet = FriSnippet {
+            test_instance: intermediate_state.fri_verify,
+        };
+        let fri_verify_entrypoint = library.import(Box::new(snippet));
 
         let mut invocation_code = vec![];
         invocation_code.push(triton_instr!(sponge_init));
-        for sti in stack_excess {
+        for sti in intermediate_state.stack_excess {
             invocation_code.push(triton_instr!(push sti.value()));
         }
         #[allow(unused_variables)] // used in macro
@@ -102,14 +114,13 @@ mod bench {
         seed[1] = 0xf7;
 
         let public_input = PublicInput::default();
-        let (_, nondeterminism) =
-            StandaloneFriVerify::singleton().pseudorandom_intermediate_state();
+        let intermediate_state = StandaloneFriVerify::singleton().pseudorandom_intermediate_state();
 
         bench_and_profile_program::<StandaloneFriVerify>(
             "tasm_recufier_standalone_fri_verify".to_string(),
             BenchmarkCase::WorstCase,
             &public_input,
-            &nondeterminism,
+            &intermediate_state.nondeterminism,
         );
     }
 }
