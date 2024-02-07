@@ -60,6 +60,11 @@ pub struct FriVerify {
     domain_generator: BFieldElement,
 }
 
+#[derive(Debug, Clone)]
+pub struct FriSnippet {
+    pub test_instance: Option<FriVerify>,
+}
+
 impl FriVerify {
     pub fn new(
         offset: BFieldElement,
@@ -433,7 +438,7 @@ impl FriVerify {
     }
 }
 
-impl BasicSnippet for FriVerify {
+impl BasicSnippet for FriSnippet {
     fn inputs(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::VoidPointer, "*proof_stream".to_string()),
@@ -1152,7 +1157,7 @@ mod test {
 
     use super::*;
 
-    impl FriVerify {
+    impl FriSnippet {
         /// Test helper – panics if verification fails.
         fn verify_from_proof_with_digests(&self, proof: Vec<BFieldElement>, digests: Vec<Digest>) {
             let items = *Vec::<ProofItem>::decode(&proof).unwrap();
@@ -1164,7 +1169,7 @@ mod test {
             let (stack, nondeterminism) =
                 self.set_up_stack_and_non_determinism_using_digests(proof_stream, digests);
 
-            let shadowed_snippet = ShadowedProcedure::new(*self);
+            let shadowed_snippet = ShadowedProcedure::new(self.to_owned());
             let _tasm = tasm_final_state(
                 &shadowed_snippet,
                 &stack,
@@ -1179,7 +1184,11 @@ mod test {
             &self,
             proof_stream: ProofStream<Tip5>,
         ) -> (Vec<BFieldElement>, NonDeterminism<BFieldElement>) {
-            let digests = self.extract_digests_required_for_proving(&proof_stream);
+            let digests = self
+                .test_instance
+                .as_ref()
+                .unwrap()
+                .extract_digests_required_for_proving(&proof_stream);
             self.set_up_stack_and_non_determinism_using_digests(proof_stream, digests)
         }
 
@@ -1195,7 +1204,11 @@ mod test {
 
             let fri_verify_pointer =
                 encode_to_memory(&mut memory, proof_stream_pointer, proof_stream);
-            let proof_iter_pointer = encode_to_memory(&mut memory, fri_verify_pointer, *self);
+            let proof_iter_pointer = encode_to_memory(
+                &mut memory,
+                fri_verify_pointer,
+                *self.test_instance.as_ref().unwrap(),
+            );
             encode_to_memory(
                 &mut memory,
                 proof_iter_pointer,
@@ -1213,7 +1226,7 @@ mod test {
         }
     }
 
-    impl Procedure for FriVerify {
+    impl Procedure for FriSnippet {
         fn rust_shadow(
             &self,
             stack: &mut Vec<BFieldElement>,
@@ -1224,7 +1237,7 @@ mod test {
         ) -> Vec<BFieldElement> {
             let fri_pointer = stack.pop().unwrap();
             let fri_verify = *FriVerify::decode_from_memory(memory, fri_pointer).unwrap();
-            assert_eq!(fri_verify, *self);
+            assert_eq!(fri_verify, *self.test_instance.as_ref().unwrap());
 
             let proof_iter_pointer = stack.pop().unwrap();
 
@@ -1241,7 +1254,7 @@ mod test {
             )
             .unwrap();
 
-            let revealed_indices_and_elements = self.call(&mut proof_stream, nondeterminism);
+            let revealed_indices_and_elements = fri_verify.call(&mut proof_stream, nondeterminism);
 
             let indices_and_leafs_pointer = FIRST_DYNAMICALLY_ALLOCATED_ADDRESS;
             encode_to_memory(
@@ -1264,7 +1277,11 @@ mod test {
             seed: [u8; 32],
             _bench_case: Option<BenchmarkCase>,
         ) -> ProcedureInitialState {
-            let proof_stream = self.pseudorandom_fri_proof_stream(seed);
+            let proof_stream = self
+                .test_instance
+                .as_ref()
+                .unwrap()
+                .pseudorandom_fri_proof_stream(seed);
             let (stack, nondeterminism) = self.set_up_stack_and_non_determinism(proof_stream);
 
             ProcedureInitialState {
@@ -1389,7 +1406,10 @@ mod test {
         fn initial_state(&self) -> ProcedureInitialState {
             let fri_verify = self.fri_verify;
             let proof_stream = self.vm_proof_stream();
-            let (stack, nondeterminism) = fri_verify.set_up_stack_and_non_determinism(proof_stream);
+            let snippet = FriSnippet {
+                test_instance: Some(fri_verify),
+            };
+            let (stack, nondeterminism) = snippet.set_up_stack_and_non_determinism(proof_stream);
 
             ProcedureInitialState {
                 stack,
@@ -1419,7 +1439,10 @@ mod test {
             sponge_state,
         } = test_case.initial_state();
 
-        let shadowed_procedure = ShadowedProcedure::new(test_case.fri_verify);
+        let snippet = FriSnippet {
+            test_instance: Some(test_case.fri_verify),
+        };
+        let shadowed_procedure = ShadowedProcedure::new(snippet);
         let rust = rust_final_state(
             &shadowed_procedure,
             &initial_stack,
@@ -1501,7 +1524,10 @@ mod test {
 
         // sanity check
         let proof = test_case.proof_items().encode();
-        fri_verify.verify_from_proof_with_digests(proof.clone(), digests.clone());
+        let snippet = FriSnippet {
+            test_instance: Some(test_case.fri_verify),
+        };
+        snippet.verify_from_proof_with_digests(proof.clone(), digests.clone());
 
         let proof_len = proof.len();
         (0..proof_len).into_par_iter().for_each(|i| {
@@ -1510,7 +1536,7 @@ mod test {
             }
             let mut proof = proof.clone();
             proof[i].increment();
-            catch_unwind(|| fri_verify.verify_from_proof_with_digests(proof, digests.clone()))
+            catch_unwind(|| snippet.verify_from_proof_with_digests(proof, digests.clone()))
                 .expect_err(&format!(
                     "Verification must fail, but succeeded at element {i}/{proof_len}"
                 ));
@@ -1532,12 +1558,15 @@ mod bench {
         let offset = BFieldElement::new(7);
         let num_colinearity_checks = 2;
         // tiny parameters for FRI yes, but the bench framework is awful atm
-        let procedure = FriVerify::new(
+        let fri_verify = FriVerify::new(
             offset,
             domain_length,
             expansion_factor,
             num_colinearity_checks,
         );
-        ShadowedProcedure::new(procedure).bench();
+        let snippet = FriSnippet {
+            test_instance: Some(fri_verify),
+        };
+        ShadowedProcedure::new(snippet).bench();
     }
 }

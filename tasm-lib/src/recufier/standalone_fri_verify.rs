@@ -7,6 +7,7 @@ use crate::memory::encode_to_memory;
 use crate::memory::FIRST_NON_DETERMINISTICALLY_INITIALIZED_MEMORY_ADDRESS;
 use crate::traits::compiled_program::CompiledProgram;
 
+use super::fri_verify::FriSnippet;
 use super::fri_verify::FriVerify;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
@@ -66,11 +67,13 @@ impl CompiledProgram for StandaloneFriVerify {
     }
 
     fn code() -> (Vec<LabelledInstruction>, Library) {
-        let fri_verify = StandaloneFriVerify::instance();
         let (stack_excess, _) = Self::singleton().pseudorandom_intermediate_state();
 
         let mut library = Library::new();
-        let fri_verify_entrypoint = library.import(Box::new(fri_verify));
+        let snippet = FriSnippet {
+            test_instance: None,
+        };
+        let fri_verify_entrypoint = library.import(Box::new(snippet));
 
         let mut invocation_code = vec![];
         invocation_code.push(triton_instr!(sponge_init));
