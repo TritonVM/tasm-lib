@@ -78,7 +78,6 @@ use crate::mmr::verify_from_secret_in::MmrVerifyLeafMembershipFromSecretIn;
 use crate::neptune::mutator_set::commit::Commit;
 use crate::neptune::mutator_set::get_swbf_indices::GetSwbfIndices;
 use crate::other_snippets::bfe_add::BfeAdd;
-use crate::recufier::fri_verify::FriSnippet;
 use crate::recufier::merkle_verify::MerkleVerify;
 use crate::recufier::proof_stream::dequeue_next_as::DequeueNextAs;
 use crate::recufier::read_and_verify_own_program_digest_from_std_in::ReadAndVerifyOwnProgramDigestFromStdIn;
@@ -207,8 +206,8 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
 
         // Hashing -> algebraic hasher trait
         "tasm_hashing_algebraic_hasher_hash_varlen" => Box::new(algebraic_hasher::hash_varlen::HashVarlen),
-        "tasm_hashing_algebraic_hasher_sample_indices_safeimplu32" => Box::new(algebraic_hasher::sample_indices::SampleIndices{list_type: ListType::Safe}),
-        "tasm_hashing_algebraic_hasher_sample_indices_unsafeimplu32" => Box::new(algebraic_hasher::sample_indices::SampleIndices{list_type: ListType::Unsafe}),
+        "tasm_hashing_algebraic_hasher_sample_indices_safeimplu32" => Box::new(algebraic_hasher::sample_indices::SampleIndices { list_type: ListType::Safe }),
+        "tasm_hashing_algebraic_hasher_sample_indices_unsafeimplu32" => Box::new(algebraic_hasher::sample_indices::SampleIndices { list_type: ListType::Unsafe }),
         "tasm_hashing_algebraic_hasher_sample_scalars" => Box::new(algebraic_hasher::sample_scalars::SampleScalars),
 
         // Hashing -> Sponge hasher trait
@@ -281,13 +280,13 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
             input_source: InputSource::StdIn,
         }),
 
-        "tasm_io_write_to_stdout___bool" => Box::new(WriteToStdout{ data_type: DataType::Bool}),
-        "tasm_io_write_to_stdout___u32" => Box::new(WriteToStdout{ data_type: DataType::U32}),
-        "tasm_io_write_to_stdout___u64" => Box::new(WriteToStdout{ data_type: DataType::U64}),
-        "tasm_io_write_to_stdout___u128" => Box::new(WriteToStdout{ data_type: DataType::U128}),
-        "tasm_io_write_to_stdout___bfe" => Box::new(WriteToStdout{ data_type: DataType::Bfe }),
-        "tasm_io_write_to_stdout___xfe" => Box::new(WriteToStdout{ data_type: DataType::Xfe }),
-        "tasm_io_write_to_stdout___digest" => Box::new(WriteToStdout{ data_type: DataType::Digest}),
+        "tasm_io_write_to_stdout___bool" => Box::new(WriteToStdout { data_type: DataType::Bool }),
+        "tasm_io_write_to_stdout___u32" => Box::new(WriteToStdout { data_type: DataType::U32 }),
+        "tasm_io_write_to_stdout___u64" => Box::new(WriteToStdout { data_type: DataType::U64 }),
+        "tasm_io_write_to_stdout___u128" => Box::new(WriteToStdout { data_type: DataType::U128 }),
+        "tasm_io_write_to_stdout___bfe" => Box::new(WriteToStdout { data_type: DataType::Bfe }),
+        "tasm_io_write_to_stdout___xfe" => Box::new(WriteToStdout { data_type: DataType::Xfe }),
+        "tasm_io_write_to_stdout___digest" => Box::new(WriteToStdout { data_type: DataType::Digest }),
 
         // safe lists
         "tasm_list_safeimplu32_get_element___bool" => Box::new(SafeGet { data_type: DataType::Bool }),
@@ -297,12 +296,12 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
         "tasm_list_safeimplu32_get_element___xfe" => Box::new(SafeGet { data_type: DataType::Xfe }),
         "tasm_list_safeimplu32_get_element___digest" => Box::new(SafeGet { data_type: DataType::Digest }),
 
-        "tasm_list_safeimplu32_pop___bool" => Box::new(SafePop { data_type: DataType::Bool } ),
-        "tasm_list_safeimplu32_pop___u32" => Box::new(SafePop { data_type: DataType::U32 } ),
-        "tasm_list_safeimplu32_pop___u64" => Box::new(SafePop { data_type: DataType::U64 } ),
-        "tasm_list_safeimplu32_pop___bfe" => Box::new(SafePop { data_type: DataType::Bfe } ),
-        "tasm_list_safeimplu32_pop___xfe" => Box::new(SafePop { data_type: DataType::Xfe } ),
-        "tasm_list_safeimplu32_pop___digest" => Box::new(SafePop { data_type: DataType::Digest } ),
+        "tasm_list_safeimplu32_pop___bool" => Box::new(SafePop { data_type: DataType::Bool }),
+        "tasm_list_safeimplu32_pop___u32" => Box::new(SafePop { data_type: DataType::U32 }),
+        "tasm_list_safeimplu32_pop___u64" => Box::new(SafePop { data_type: DataType::U64 }),
+        "tasm_list_safeimplu32_pop___bfe" => Box::new(SafePop { data_type: DataType::Bfe }),
+        "tasm_list_safeimplu32_pop___xfe" => Box::new(SafePop { data_type: DataType::Xfe }),
+        "tasm_list_safeimplu32_pop___digest" => Box::new(SafePop { data_type: DataType::Digest }),
 
         "tasm_list_safeimplu32_push___bool" => Box::new(SafePush { data_type: DataType::Bool }),
         "tasm_list_safeimplu32_push___u32" => Box::new(SafePush { data_type: DataType::U32 }),
@@ -311,12 +310,12 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
         "tasm_list_safeimplu32_push___xfe" => Box::new(SafePush { data_type: DataType::Xfe }),
         "tasm_list_safeimplu32_push___digest" => Box::new(SafePush { data_type: DataType::Digest }),
 
-        "tasm_list_safeimplu32_set_element___bool" => Box::new(SafeSet{ data_type: DataType::Bool}),
-        "tasm_list_safeimplu32_set_element___u32" => Box::new(SafeSet{ data_type: DataType::U32}),
-        "tasm_list_safeimplu32_set_element___u64" => Box::new(SafeSet{ data_type: DataType::U64}),
-        "tasm_list_safeimplu32_set_element___bfe" => Box::new(SafeSet{ data_type: DataType::Bfe}),
-        "tasm_list_safeimplu32_set_element___xfe" => Box::new(SafeSet{ data_type: DataType::Xfe}),
-        "tasm_list_safeimplu32_set_element___digest" => Box::new(SafeSet{ data_type: DataType::Digest}),
+        "tasm_list_safeimplu32_set_element___bool" => Box::new(SafeSet { data_type: DataType::Bool }),
+        "tasm_list_safeimplu32_set_element___u32" => Box::new(SafeSet { data_type: DataType::U32 }),
+        "tasm_list_safeimplu32_set_element___u64" => Box::new(SafeSet { data_type: DataType::U64 }),
+        "tasm_list_safeimplu32_set_element___bfe" => Box::new(SafeSet { data_type: DataType::Bfe }),
+        "tasm_list_safeimplu32_set_element___xfe" => Box::new(SafeSet { data_type: DataType::Xfe }),
+        "tasm_list_safeimplu32_set_element___digest" => Box::new(SafeSet { data_type: DataType::Digest }),
 
         "tasm_list_safeimplu32_new___bool" => Box::new(SafeNew { data_type: DataType::Bool }),
         "tasm_list_safeimplu32_new___u32" => Box::new(SafeNew { data_type: DataType::U32 }),
@@ -325,12 +324,12 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
         "tasm_list_safeimplu32_new___xfe" => Box::new(SafeNew { data_type: DataType::Xfe }),
         "tasm_list_safeimplu32_new___digest" => Box::new(SafeNew { data_type: DataType::Digest }),
 
-        "tasm_list_safeimplu32_length___bool" => Box::new(SafeLength{ data_type: DataType::Bool }),
-        "tasm_list_safeimplu32_length___u32" => Box::new(SafeLength{ data_type: DataType::U32 }),
-        "tasm_list_safeimplu32_length___u64" => Box::new(SafeLength{ data_type: DataType::U64 }),
-        "tasm_list_safeimplu32_length___bfe" => Box::new(SafeLength{ data_type: DataType::Bfe }),
-        "tasm_list_safeimplu32_length___xfe" => Box::new(SafeLength{ data_type: DataType::Xfe }),
-        "tasm_list_safeimplu32_length___digest" => Box::new(SafeLength{ data_type: DataType::Digest }),
+        "tasm_list_safeimplu32_length___bool" => Box::new(SafeLength { data_type: DataType::Bool }),
+        "tasm_list_safeimplu32_length___u32" => Box::new(SafeLength { data_type: DataType::U32 }),
+        "tasm_list_safeimplu32_length___u64" => Box::new(SafeLength { data_type: DataType::U64 }),
+        "tasm_list_safeimplu32_length___bfe" => Box::new(SafeLength { data_type: DataType::Bfe }),
+        "tasm_list_safeimplu32_length___xfe" => Box::new(SafeLength { data_type: DataType::Xfe }),
+        "tasm_list_safeimplu32_length___digest" => Box::new(SafeLength { data_type: DataType::Digest }),
 
         "tasm_list_safeimplu32_set_length___bool" => Box::new(SafeSetLength { data_type: DataType::Bool }),
         "tasm_list_safeimplu32_set_length___u32" => Box::new(SafeSetLength { data_type: DataType::U32 }),
@@ -341,22 +340,22 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
 
         "tasm_list_safeimplu32_multiset_equality" => Box::new(crate::list::multiset_equality::MultisetEquality(ListType::Safe)),
 
-        "tasm_list_safeimplu32_range" => Box::new(Range{list_type: ListType::Safe}),
+        "tasm_list_safeimplu32_range" => Box::new(Range { list_type: ListType::Safe }),
 
         // unsafe lists
-        "tasm_list_unsafeimplu32_get_element___bool" => Box::new(UnsafeGet{data_type: DataType::Bool}),
-        "tasm_list_unsafeimplu32_get_element___u32" => Box::new(UnsafeGet{data_type: DataType::U32}),
-        "tasm_list_unsafeimplu32_get_element___u64" => Box::new(UnsafeGet{data_type: DataType::U64}),
-        "tasm_list_unsafeimplu32_get_element___bfe" => Box::new(UnsafeGet{data_type: DataType::Bfe }),
-        "tasm_list_unsafeimplu32_get_element___xfe" => Box::new(UnsafeGet{data_type: DataType::Xfe }),
-        "tasm_list_unsafeimplu32_get_element___digest" => Box::new(UnsafeGet{data_type: DataType::Digest}),
+        "tasm_list_unsafeimplu32_get_element___bool" => Box::new(UnsafeGet { data_type: DataType::Bool }),
+        "tasm_list_unsafeimplu32_get_element___u32" => Box::new(UnsafeGet { data_type: DataType::U32 }),
+        "tasm_list_unsafeimplu32_get_element___u64" => Box::new(UnsafeGet { data_type: DataType::U64 }),
+        "tasm_list_unsafeimplu32_get_element___bfe" => Box::new(UnsafeGet { data_type: DataType::Bfe }),
+        "tasm_list_unsafeimplu32_get_element___xfe" => Box::new(UnsafeGet { data_type: DataType::Xfe }),
+        "tasm_list_unsafeimplu32_get_element___digest" => Box::new(UnsafeGet { data_type: DataType::Digest }),
 
-        "tasm_list_unsafeimplu32_pop___bool" => Box::new(UnsafePop{ data_type: DataType::Bool }),
-        "tasm_list_unsafeimplu32_pop___u32" => Box::new(UnsafePop{ data_type: DataType::U32 }),
-        "tasm_list_unsafeimplu32_pop___u64" => Box::new(UnsafePop{ data_type: DataType::U64 }),
-        "tasm_list_unsafeimplu32_pop___bfe" => Box::new(UnsafePop{ data_type: DataType::Bfe }),
-        "tasm_list_unsafeimplu32_pop___xfe" => Box::new(UnsafePop{ data_type: DataType::Xfe }),
-        "tasm_list_unsafeimplu32_pop___digest" => Box::new(UnsafePop{ data_type: DataType::Digest }),
+        "tasm_list_unsafeimplu32_pop___bool" => Box::new(UnsafePop { data_type: DataType::Bool }),
+        "tasm_list_unsafeimplu32_pop___u32" => Box::new(UnsafePop { data_type: DataType::U32 }),
+        "tasm_list_unsafeimplu32_pop___u64" => Box::new(UnsafePop { data_type: DataType::U64 }),
+        "tasm_list_unsafeimplu32_pop___bfe" => Box::new(UnsafePop { data_type: DataType::Bfe }),
+        "tasm_list_unsafeimplu32_pop___xfe" => Box::new(UnsafePop { data_type: DataType::Xfe }),
+        "tasm_list_unsafeimplu32_pop___digest" => Box::new(UnsafePop { data_type: DataType::Digest }),
 
         "tasm_list_unsafeimplu32_push___bool" => Box::new(UnsafePush { data_type: DataType::Bool }),
         "tasm_list_unsafeimplu32_push___u32" => Box::new(UnsafePush { data_type: DataType::U32 }),
@@ -391,55 +390,55 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
         "tasm_list_unsafeimplu32_new___xfe" => Box::new(UnsafeNew { data_type: DataType::Xfe }),
         "tasm_list_unsafeimplu32_new___digest" => Box::new(UnsafeNew { data_type: DataType::Digest }),
 
-        "tasm_list_unsafeimplu32_length___bool" => Box::new(UnsafeLength{ data_type: DataType::Bool }),
-        "tasm_list_unsafeimplu32_length___u32" => Box::new(UnsafeLength{ data_type: DataType::U32 }),
-        "tasm_list_unsafeimplu32_length___u64" => Box::new(UnsafeLength{ data_type: DataType::U64 }),
-        "tasm_list_unsafeimplu32_length___bfe" => Box::new(UnsafeLength{ data_type: DataType::Bfe }),
-        "tasm_list_unsafeimplu32_length___xfe" => Box::new(UnsafeLength{ data_type: DataType::Xfe }),
-        "tasm_list_unsafeimplu32_length___digest" => Box::new(UnsafeLength{ data_type: DataType::Digest }),
+        "tasm_list_unsafeimplu32_length___bool" => Box::new(UnsafeLength { data_type: DataType::Bool }),
+        "tasm_list_unsafeimplu32_length___u32" => Box::new(UnsafeLength { data_type: DataType::U32 }),
+        "tasm_list_unsafeimplu32_length___u64" => Box::new(UnsafeLength { data_type: DataType::U64 }),
+        "tasm_list_unsafeimplu32_length___bfe" => Box::new(UnsafeLength { data_type: DataType::Bfe }),
+        "tasm_list_unsafeimplu32_length___xfe" => Box::new(UnsafeLength { data_type: DataType::Xfe }),
+        "tasm_list_unsafeimplu32_length___digest" => Box::new(UnsafeLength { data_type: DataType::Digest }),
 
         "tasm_list_unsafeimplu32_set_length___bool" => Box::new(UnsafeSetLength {
-data_type: DataType::Bool
-}),
+            data_type: DataType::Bool
+        }),
         "tasm_list_unsafeimplu32_set_length___u32" => Box::new(UnsafeSetLength {
-data_type: DataType::U32
-}),
+            data_type: DataType::U32
+        }),
         "tasm_list_unsafeimplu32_set_length___u64" => Box::new(UnsafeSetLength {
-data_type: DataType::U64
-}),
+            data_type: DataType::U64
+        }),
         "tasm_list_unsafeimplu32_set_length___bfe" => Box::new(UnsafeSetLength {
-data_type: DataType::Bfe
-}),
+            data_type: DataType::Bfe
+        }),
         "tasm_list_unsafeimplu32_set_length___xfe" => Box::new(UnsafeSetLength {
-data_type: DataType::Xfe
-}),
+            data_type: DataType::Xfe
+        }),
         "tasm_list_unsafeimplu32_set_length___digest" => Box::new(UnsafeSetLength {
-data_type: DataType::Digest
-}),
+            data_type: DataType::Digest
+        }),
 
         "tasm_list_unsafeimplu32_multiset_equality" => Box::new(crate::list::multiset_equality::MultisetEquality(ListType::Unsafe)),
-        "tasm_list_unsafeimplu32_range" => Box::new(Range{list_type: ListType::Unsafe}),
+        "tasm_list_unsafeimplu32_range" => Box::new(Range { list_type: ListType::Unsafe }),
 
         // Contiguous lists
         "tasm_list_contiguous_list_get_length" => Box::new(contiguous_list::get_length::GetLength),
-        "tasm_list_contiguous_list_get_pointer_list_unsafeimplu32" => Box::new(contiguous_list::get_pointer_list::GetPointerList{output_list_type:ListType::Unsafe}),
-        "tasm_list_contiguous_list_get_pointer_list_safeimplu32" => Box::new(contiguous_list::get_pointer_list::GetPointerList{output_list_type:ListType::Safe}),
+        "tasm_list_contiguous_list_get_pointer_list_unsafeimplu32" => Box::new(contiguous_list::get_pointer_list::GetPointerList { output_list_type: ListType::Unsafe }),
+        "tasm_list_contiguous_list_get_pointer_list_safeimplu32" => Box::new(contiguous_list::get_pointer_list::GetPointerList { output_list_type: ListType::Safe }),
 
         // MMR
         "tasm_mmr_calculate_new_peaks_from_append_unsafeimplu32" => Box::new(CalculateNewPeaksFromAppend { list_type: ListType::Unsafe }),
         "tasm_mmr_calculate_new_peaks_from_append_safeimplu32" => Box::new(CalculateNewPeaksFromAppend { list_type: ListType::Safe }),
         "tasm_mmr_calculate_new_peaks_from_leaf_mutation_unsafeimplu32" => {
-            Box::new(MmrCalculateNewPeaksFromLeafMutationMtIndices{ list_type: ListType::Unsafe} )
+            Box::new(MmrCalculateNewPeaksFromLeafMutationMtIndices { list_type: ListType::Unsafe })
         }
         "tasm_mmr_calculate_new_peaks_from_leaf_mutation_safeimplu32" => {
-            Box::new(MmrCalculateNewPeaksFromLeafMutationMtIndices{ list_type: ListType::Safe} )
+            Box::new(MmrCalculateNewPeaksFromLeafMutationMtIndices { list_type: ListType::Safe })
         }
         "tasm_mmr_leaf_index_to_mt_index_and_peak_index" => Box::new(MmrLeafIndexToMtIndexAndPeakIndex),
         "tasm_mmr_verify_from_secret_in_unsafeimplu32" => Box::new(MmrVerifyLeafMembershipFromSecretIn { list_type: ListType::Unsafe }),
         "tasm_mmr_verify_from_secret_in_safeimplu32" => Box::new(MmrVerifyLeafMembershipFromSecretIn { list_type: ListType::Safe }),
         "tasm_mmr_bag_peaks" => Box::new(BagPeaks),
-        "tasm_mmr_verify_from_memory_unsafeimplu32" => Box::new(MmrVerifyFromMemory { list_type: ListType::Unsafe} ),
-        "tasm_mmr_verify_from_memory_safeimplu32" => Box::new(MmrVerifyFromMemory { list_type: ListType::Safe} ),
+        "tasm_mmr_verify_from_memory_unsafeimplu32" => Box::new(MmrVerifyFromMemory { list_type: ListType::Unsafe }),
+        "tasm_mmr_verify_from_memory_safeimplu32" => Box::new(MmrVerifyFromMemory { list_type: ListType::Safe }),
 
         // other
         "tasm_other_bfe_add" => Box::new(BfeAdd),
@@ -447,37 +446,37 @@ data_type: DataType::Digest
         // recufy
         "tasm_recufier_mt_ap_verify" => Box::new(MerkleVerify),
         "tasm_recufier_proof_stream_dequeue_next_as_merkleroot" => {
-            Box::new(DequeueNextAs{proof_item: ProofItemVariant::MerkleRoot})
+            Box::new(DequeueNextAs { proof_item: ProofItemVariant::MerkleRoot })
         }
         "tasm_recufier_proof_stream_dequeue_next_as_outofdomainbaserow" => {
-            Box::new(DequeueNextAs{proof_item: ProofItemVariant::OutOfDomainBaseRow})
+            Box::new(DequeueNextAs { proof_item: ProofItemVariant::OutOfDomainBaseRow })
         }
         "tasm_recufier_proof_stream_dequeue_next_as_outofdomainextrow" => {
-            Box::new(DequeueNextAs{proof_item: ProofItemVariant::OutOfDomainExtRow})
+            Box::new(DequeueNextAs { proof_item: ProofItemVariant::OutOfDomainExtRow })
         }
         "tasm_recufier_proof_stream_dequeue_next_as_outofdomainquotientsegments" => {
-            Box::new(DequeueNextAs{proof_item: ProofItemVariant::OutOfDomainQuotientSegments})
+            Box::new(DequeueNextAs { proof_item: ProofItemVariant::OutOfDomainQuotientSegments })
         }
         "tasm_recufier_proof_stream_dequeue_next_as_authenticationstructure" => {
-            Box::new(DequeueNextAs{proof_item: ProofItemVariant::AuthenticationStructure})
+            Box::new(DequeueNextAs { proof_item: ProofItemVariant::AuthenticationStructure })
         }
         "tasm_recufier_proof_stream_dequeue_next_as_masterbasetablerows" => {
-            Box::new(DequeueNextAs{proof_item: ProofItemVariant::MasterBaseTableRows})
+            Box::new(DequeueNextAs { proof_item: ProofItemVariant::MasterBaseTableRows })
         }
         "tasm_recufier_proof_stream_dequeue_next_as_masterexttablerows" => {
-            Box::new(DequeueNextAs{proof_item: ProofItemVariant::MasterExtTableRows})
+            Box::new(DequeueNextAs { proof_item: ProofItemVariant::MasterExtTableRows })
         }
         "tasm_recufier_proof_stream_dequeue_next_as_log2paddedheight" => {
-            Box::new(DequeueNextAs{proof_item: ProofItemVariant::Log2PaddedHeight})
+            Box::new(DequeueNextAs { proof_item: ProofItemVariant::Log2PaddedHeight })
         }
         "tasm_recufier_proof_stream_dequeue_next_as_quotientsegmentselements" => {
-            Box::new(DequeueNextAs{proof_item: ProofItemVariant::QuotientSegmentsElements})
+            Box::new(DequeueNextAs { proof_item: ProofItemVariant::QuotientSegmentsElements })
         }
         "tasm_recufier_proof_stream_dequeue_next_as_fricodeword" => {
-            Box::new(DequeueNextAs{proof_item: ProofItemVariant::FriCodeword})
+            Box::new(DequeueNextAs { proof_item: ProofItemVariant::FriCodeword })
         }
         "tasm_recufier_proof_stream_dequeue_next_as_friresponse" => {
-            Box::new(DequeueNextAs{proof_item: ProofItemVariant::FriResponse})
+            Box::new(DequeueNextAs { proof_item: ProofItemVariant::FriResponse })
         }
         "tasm_recufier_read_and_verify_own_program_digest_from_std_in" => Box::new(ReadAndVerifyOwnProgramDigestFromStdIn),
 
@@ -486,13 +485,14 @@ data_type: DataType::Digest
         "tasm_memory_memcpy" => Box::new(MemCpy),
 
         // FRI
-        "tasm_recufier_fri_verify" => Box::new(FriSnippet { test_instance: None } ),
+        #[cfg(not(test))]
+        "tasm_recufier_fri_verify" => Box::new(crate::recufier::fri_verify::FriSnippet {}),
 
         // structure
 
         // mutator sets
         "tasm_neptune_mutator_set_commit" => Box::new(Commit),
-        "tasm_neptune_mutator_get_swbf_indices_1048576_45" => Box::new(GetSwbfIndices{ window_size: 1048576, num_trials: 45 }),
+        "tasm_neptune_mutator_get_swbf_indices_1048576_45" => Box::new(GetSwbfIndices { window_size: 1048576, num_trials: 45 }),
 
         _ => panic!("Could not find \"{fn_name}\" in the function `exported_snippets`. Did you include it there?"),
     }
