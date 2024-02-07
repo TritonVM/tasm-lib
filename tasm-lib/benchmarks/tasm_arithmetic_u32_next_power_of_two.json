@@ -1,0 +1,16 @@
+[
+  {
+    "name": "tasm_arithmetic_u32_next_power_of_two",
+    "clock_cycle_count": 24,
+    "hash_table_height": 30,
+    "u32_table_height": 62,
+    "case": "CommonCase"
+  },
+  {
+    "name": "tasm_arithmetic_u32_next_power_of_two",
+    "clock_cycle_count": 24,
+    "hash_table_height": 30,
+    "u32_table_height": 70,
+    "case": "WorstCase"
+  }
+]

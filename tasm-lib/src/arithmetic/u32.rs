@@ -1,6 +1,7 @@
 pub mod isodd;
 pub mod isu32;
 pub mod leadingzeros;
+pub mod next_power_of_two;
 pub mod or;
 pub mod overflowingadd;
 pub mod safeadd;
