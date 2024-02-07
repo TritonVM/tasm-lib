@@ -1,8 +1,11 @@
+use std::fmt::Display;
+use std::fmt::Formatter;
+use std::str::FromStr;
+
 use itertools::Itertools;
 use rand::random;
 use rand::thread_rng;
 use rand::Rng;
-use std::str::FromStr;
 use triton_vm::prelude::*;
 
 use crate::io::InputSource;
@@ -25,12 +28,25 @@ pub enum DataType {
     Array(Box<ArrayType>),
     Tuple(Vec<DataType>),
     VoidPointer,
+    StructRef(StructType),
 }
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct ArrayType {
     pub element_type: DataType,
     pub length: usize,
+}
+
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+pub struct StructType {
+    pub name: String,
+    pub fields: Vec<(String, DataType)>,
+}
+
+impl Display for StructType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.name)
+    }
 }
 
 impl DataType {
@@ -60,6 +76,7 @@ impl DataType {
                 array_type.length,
                 array_type.element_type.label_friendly_name()
             ),
+            DataType::StructRef(struct_type) => format!("{struct_type}"),
         }
     }
 
@@ -77,6 +94,7 @@ impl DataType {
             DataType::Array(_) => 1,
             DataType::VoidPointer => 1,
             DataType::Tuple(t) => t.iter().map(|dt| dt.stack_size()).sum(),
+            DataType::StructRef(_) => 1,
         }
     }
 
@@ -170,6 +188,7 @@ impl DataType {
                 array_type.element_type.variant_name(),
                 array_type.length
             ),
+            DataType::StructRef(struct_type) => format!("Box<{struct_type}>"),
         }
     }
 
@@ -258,6 +277,7 @@ impl DataType {
             DataType::Tuple(v) => (0..count)
                 .map(|_| v.iter().flat_map(|dt| dt.random_elements(1)).concat())
                 .collect(),
+            DataType::StructRef(_) => panic!("Random generation of structs is not supported"),
         }
     }
 
@@ -271,7 +291,7 @@ impl FromStr for DataType {
     type Err = anyhow::Error;
 
     // This implementation must be the inverse of `label_friendly_name`
-    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         use DataType::*;
 
         let res = if s.starts_with("list_L") && s.ends_with('R') {
