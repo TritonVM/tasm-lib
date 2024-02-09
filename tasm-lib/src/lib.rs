@@ -345,13 +345,8 @@ fn prove_and_verify(
     // let code_header = &code[0..std::cmp::min(code.len(), 100)];
     // println!("Execution succeeded. Now proving {code_header}");
     let tick = SystemTime::now();
-    let proof = triton_vm::prove(
-        StarkParameters::default(),
-        &claim,
-        program,
-        nondeterminism.clone(),
-    )
-    .unwrap();
+    let proof =
+        triton_vm::prove(Stark::default(), &claim, program, nondeterminism.clone()).unwrap();
     println!(
         "Done proving. Elapsed time: {:?}",
         tick.elapsed().expect("Don't mess with time")
@@ -364,7 +359,7 @@ fn prove_and_verify(
     );
 
     assert!(
-        triton_vm::verify(StarkParameters::default(), &claim, &proof),
+        triton_vm::verify(Stark::default(), &claim, &proof),
         "Generated proof must verify for program:\n {}",
         program,
     );
