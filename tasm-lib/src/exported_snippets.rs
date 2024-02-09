@@ -44,6 +44,7 @@ use crate::arithmetic::u64::xor_u64::XorU64;
 use crate::data_type::DataType;
 use crate::hashing::algebraic_hasher;
 use crate::hashing::eq_digest::EqDigest;
+use crate::hashing::merkle_verify::MerkleVerify;
 use crate::hashing::reverse_digest::ReverseDigest;
 use crate::hashing::sponge_hasher;
 use crate::hashing::swap_digest::SwapDigest;
@@ -78,7 +79,6 @@ use crate::mmr::verify_from_secret_in::MmrVerifyLeafMembershipFromSecretIn;
 use crate::neptune::mutator_set::commit::Commit;
 use crate::neptune::mutator_set::get_swbf_indices::GetSwbfIndices;
 use crate::other_snippets::bfe_add::BfeAdd;
-use crate::recufier::merkle_verify::MerkleVerify;
 use crate::recufier::proof_stream::dequeue_next_as::DequeueNextAs;
 use crate::recufier::read_and_verify_own_program_digest_from_std_in::ReadAndVerifyOwnProgramDigestFromStdIn;
 use crate::traits::basic_snippet::BasicSnippet;
@@ -203,6 +203,7 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
         "tasm_hashing_eq_digest" => Box::new(EqDigest),
         "tasm_hashing_swap_digest" => Box::new(SwapDigest),
         "tasm_hashing_reverse_digest" => Box::new(ReverseDigest),
+        "tasm_hashing_merkle_verify" => Box::new(MerkleVerify),
 
         // Hashing -> algebraic hasher trait
         "tasm_hashing_algebraic_hasher_hash_varlen" => Box::new(algebraic_hasher::hash_varlen::HashVarlen),
@@ -444,7 +445,6 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
         "tasm_other_bfe_add" => Box::new(BfeAdd),
 
         // recufy
-        "tasm_recufier_mt_ap_verify" => Box::new(MerkleVerify),
         "tasm_recufier_proof_stream_dequeue_next_as_merkleroot" => {
             Box::new(DequeueNextAs { proof_item: ProofItemVariant::MerkleRoot })
         }

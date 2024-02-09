@@ -51,7 +51,7 @@ impl BasicSnippet for MerkleVerify {
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_recufier_merkle_verify".to_string()
+        "tasm_hashing_merkle_verify".to_string()
     }
 
     fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {

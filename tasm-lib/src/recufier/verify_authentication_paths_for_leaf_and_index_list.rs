@@ -10,8 +10,8 @@ use triton_vm::twenty_first::prelude::*;
 
 use crate::data_type::DataType;
 use crate::empty_stack;
+use crate::hashing::merkle_verify::MerkleVerify;
 use crate::list::ListType;
-use crate::recufier::merkle_verify::MerkleVerify;
 use crate::rust_shadowing_helper_functions;
 use crate::structure::tasm_object::TasmObject;
 use crate::traits::algorithm::Algorithm;
