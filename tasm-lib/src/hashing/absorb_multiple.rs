@@ -5,9 +5,8 @@ use rand::rngs::StdRng;
 use rand::Rng;
 use rand::RngCore;
 use rand::SeedableRng;
-use triton_vm::prelude::tip5::Tip5State;
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::prelude::SpongeHasher;
+use triton_vm::twenty_first::prelude::Sponge;
 
 use crate::data_type::DataType;
 use crate::empty_stack;
@@ -16,9 +15,8 @@ use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::procedure::Procedure;
 use crate::traits::procedure::ProcedureInitialState;
 use crate::VmHasher;
-use crate::VmHasherState;
 
-/// Absorb a sequence of field elements stored in memory, into the sponge state.
+/// Absorb a sequence of field elements stored in memory, into the Sponge.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct AbsorbMultiple;
 
@@ -38,10 +36,7 @@ impl BasicSnippet for AbsorbMultiple {
         "tasm_hashing_absorb_multiple".to_string()
     }
 
-    fn code(
-        &self,
-        _library: &mut crate::library::Library,
-    ) -> Vec<triton_vm::instruction::LabelledInstruction> {
+    fn code(&self, _library: &mut crate::library::Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
         let hash_all_full_chunks = format!("{entrypoint}_hash_all_full_chunks");
         let pad_varnum_zeros = format!("{entrypoint}_pad_varnum_zeros");
@@ -148,7 +143,7 @@ impl Procedure for AbsorbMultiple {
         memory: &mut HashMap<BFieldElement, BFieldElement>,
         _nondeterminism: &NonDeterminism<BFieldElement>,
         _public_input: &[BFieldElement],
-        sponge_state: &mut Option<VmHasherState>,
+        sponge: &mut Option<VmHasher>,
     ) -> Vec<BFieldElement> {
         // read arguments
         let length = stack.pop().unwrap().value() as usize;
@@ -165,11 +160,8 @@ impl Procedure for AbsorbMultiple {
             )
         }
 
-        // absorb into sponge state
-        let Some(sponge_state) = sponge_state else {
-            panic!("sponge must be initialized")
-        };
-        VmHasher::pad_and_absorb_all(sponge_state, &sequence);
+        let sponge = sponge.as_mut().expect("sponge must be initialized");
+        sponge.pad_and_absorb_all(&sequence);
 
         // output empty
         vec![]
@@ -208,13 +200,13 @@ impl Procedure for AbsorbMultiple {
         stack.push(address);
         stack.push(BFieldElement::new(length as u64));
 
-        let vm_hasher_state = Tip5State { state: rng.gen() };
+        let vm_hasher_state = Tip5 { state: rng.gen() };
 
         ProcedureInitialState {
             stack,
             nondeterminism,
             public_input: vec![],
-            sponge_state: Some(vm_hasher_state),
+            sponge: Some(vm_hasher_state),
         }
     }
 
@@ -249,7 +241,7 @@ impl AbsorbMultiple {
             stack,
             nondeterminism,
             public_input: vec![],
-            sponge_state: Some(Tip5State::default()),
+            sponge: Some(Tip5::default()),
         }
     }
 }

@@ -198,8 +198,7 @@ mod test {
     use crate::traits::procedure::Procedure;
     use crate::traits::procedure::ProcedureInitialState;
     use crate::traits::procedure::ShadowedProcedure;
-    use crate::twenty_first::prelude::tip5::Tip5State;
-    use crate::twenty_first::prelude::SpongeHasher;
+    use crate::twenty_first::prelude::Sponge;
 
     use super::*;
 
@@ -211,7 +210,7 @@ mod test {
 
         stack: &'a mut Vec<BFieldElement>,
         memory: &'a mut HashMap<BFieldElement, BFieldElement>,
-        sponge: &'a mut Tip5State,
+        sponge: &'a mut Tip5,
     }
 
     impl<'a> RustShadowForDequeueNextAs<'a> {
@@ -314,7 +313,7 @@ mod test {
             memory: &mut HashMap<BFieldElement, BFieldElement>,
             _: &NonDeterminism<BFieldElement>,
             _: &[BFieldElement],
-            sponge: &mut Option<Tip5State>,
+            sponge: &mut Option<Tip5>,
         ) -> Vec<BFieldElement> {
             RustShadowForDequeueNextAs {
                 dequeue_next_as: *self,
@@ -360,7 +359,7 @@ mod test {
                 stack: [empty_stack(), vec![proof_iter_address]].concat(),
                 nondeterminism: NonDeterminism::default().with_ram(ram),
                 public_input: vec![],
-                sponge_state: Some(Tip5::init()),
+                sponge: Some(Tip5::init()),
             }
         }
 
@@ -422,7 +421,7 @@ mod test {
                 &initial_state.stack,
                 &initial_state.public_input,
                 &initial_state.nondeterminism,
-                &initial_state.sponge_state,
+                &initial_state.sponge,
                 0,
                 None,
             );
@@ -494,13 +493,13 @@ mod test {
             memory: &mut HashMap<BFieldElement, BFieldElement>,
             non_determinism: &NonDeterminism<BFieldElement>,
             std_in: &[BFieldElement],
-            sponge_state: &mut Option<Tip5State>,
+            sponge: &mut Option<Tip5>,
         ) -> Vec<BFieldElement> {
             let &proof_iter_pointer = stack.last().unwrap();
             for &proof_item in &self.proof_items {
                 let dequeue_next_as = DequeueNextAs { proof_item };
                 stack.push(proof_iter_pointer);
-                dequeue_next_as.rust_shadow(stack, memory, non_determinism, std_in, sponge_state);
+                dequeue_next_as.rust_shadow(stack, memory, non_determinism, std_in, sponge);
                 stack.pop().unwrap();
             }
             vec![]
@@ -529,7 +528,7 @@ mod test {
                 &initial_state.stack,
                 &initial_state.public_input,
                 &initial_state.nondeterminism,
-                &initial_state.sponge_state,
+                &initial_state.sponge,
                 0,
                 None,
             );

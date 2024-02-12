@@ -285,7 +285,7 @@ impl Procedure for MmrVerifyLeafMembershipFromSecretIn {
         memory: &mut HashMap<BFieldElement, BFieldElement>,
         nondeterminism: &NonDeterminism<BFieldElement>,
         _public_input: &[BFieldElement],
-        _sponge_state: &mut Option<crate::VmHasherState>,
+        _sponge: &mut Option<VmHasher>,
     ) -> Vec<BFieldElement> {
         let mut leaf_digest = [BFieldElement::new(0); DIGEST_LENGTH];
         for elem in leaf_digest.iter_mut() {
@@ -363,7 +363,7 @@ impl Procedure for MmrVerifyLeafMembershipFromSecretIn {
             stack: init_state.stack,
             nondeterminism: init_state.nondeterminism,
             public_input: init_state.std_in,
-            sponge_state: None,
+            sponge: None,
         }
     }
 }
@@ -609,7 +609,7 @@ mod tests {
         let snippet_with_unsafe_lists = MmrVerifyLeafMembershipFromSecretIn {
             list_type: ListType::Unsafe,
         };
-        // test_rust_equivalence_given_complete_state(shadowed_snippet, stack, stdin, nondeterminism, memory, sponge_state, words_statically_allocated, expected_final_stack)
+
         test_rust_equivalence_given_complete_state(
             &ShadowedProcedure::new(snippet_with_unsafe_lists),
             &init_stack,

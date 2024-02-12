@@ -15,7 +15,6 @@ use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::procedure::Procedure;
 use crate::traits::procedure::ProcedureInitialState;
 use crate::VmHasher;
-use crate::VmHasherState;
 
 /// Sample n pseudorandom integers between 0 and k. It does this by squeezing the sponge. It is the
 /// caller's responsibility to ensure that the sponge is initialized to the right state.
@@ -151,24 +150,18 @@ impl Procedure for SampleIndices {
         memory: &mut HashMap<BFieldElement, BFieldElement>,
         _nondeterminism: &NonDeterminism<BFieldElement>,
         _public_input: &[BFieldElement],
-        sponge_state: &mut Option<VmHasherState>,
+        sponge: &mut Option<VmHasher>,
     ) -> Vec<BFieldElement> {
-        let Some(sponge_state) = sponge_state else {
-            panic!("sponge state must be initialized");
-        };
+        let sponge = sponge.as_mut().expect("sponge must be initialized");
 
         // collect upper bound and number from stack
         let upper_bound = stack.pop().unwrap().value() as u32;
         let number = stack.pop().unwrap().value() as usize;
 
         println!("sampling {number} indices between 0 and {upper_bound}");
-        println!(
-            "sponge state before: {}",
-            sponge_state.state.iter().join(","),
-        );
+        println!("sponge before: {}", sponge.state.iter().join(","));
 
-        // sample indices
-        let indices = VmHasher::sample_indices(sponge_state, upper_bound, number);
+        let indices = sponge.sample_indices(upper_bound, number);
 
         // allocate memory for (unsafe) list
         let list_pointer =
@@ -184,12 +177,8 @@ impl Procedure for SampleIndices {
                 1,
             );
         }
-        println!(
-            "sponge state after: {}",
-            sponge_state.state.iter().map(|b| b.value()).join(",")
-        );
+        println!("sponge after: {}", sponge.state.iter().join(","));
 
-        // populate the stack with the list pointer
         stack.push(list_pointer);
 
         vec![]
@@ -223,13 +212,13 @@ impl Procedure for SampleIndices {
         stack.push(BFieldElement::new(upper_bound as u64));
 
         let public_input: Vec<BFieldElement> = vec![];
-        let state = VmHasherState { state: rng.gen() };
+        let state = VmHasher { state: rng.gen() };
 
         ProcedureInitialState {
             stack,
             nondeterminism: NonDeterminism::default(),
             public_input,
-            sponge_state: Some(state),
+            sponge: Some(state),
         }
     }
 }

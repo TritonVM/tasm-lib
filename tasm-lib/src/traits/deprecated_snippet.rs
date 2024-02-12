@@ -16,7 +16,7 @@ use crate::library::Library;
 use crate::test_helpers::test_rust_equivalence_given_execution_state_deprecated;
 use crate::ExecutionResult;
 use crate::ExecutionState;
-use crate::VmHasherState;
+use crate::VmHasher;
 use crate::VmOutputState;
 use crate::DIGEST_LENGTH;
 
@@ -130,7 +130,7 @@ pub trait DeprecatedSnippet {
 
         let final_state = tvm_result.map(|st| VmOutputState {
             final_ram: st.ram,
-            final_sponge_state: st.sponge_state.map(|state| VmHasherState { state }),
+            final_sponge: st.sponge,
             final_stack: st.op_stack.stack,
             output: st.public_output,
         })?;
@@ -228,7 +228,7 @@ impl<S: DeprecatedSnippet + Clone + 'static> RustShadow for DeprecatedSnippetWra
         nondeterminism: &NonDeterminism<BFieldElement>,
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
-        _sponge_state: &mut Option<VmHasherState>,
+        _sponge: &mut Option<VmHasher>,
     ) -> Vec<BFieldElement> {
         let mut stack_copy = stack.to_vec();
         self.deprecated_snippet.rust_shadowing(

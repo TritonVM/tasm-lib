@@ -1,13 +1,13 @@
 use triton_vm::instruction::LabelledInstruction;
 use triton_vm::prelude::*;
 use triton_vm::twenty_first::shared_math::tip5::RATE;
-use triton_vm::twenty_first::util_types::algebraic_hasher::SpongeHasher;
 
 use crate::data_type::ArrayType;
 use crate::data_type::DataType;
 use crate::library::Library;
 use crate::memory::dyn_malloc::DynMalloc;
 use crate::traits::basic_snippet::BasicSnippet;
+use crate::twenty_first::prelude::Sponge;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct Squeeze;
@@ -69,7 +69,6 @@ mod test {
     use arbitrary::*;
     use rand::rngs::StdRng;
     use rand::*;
-    use triton_vm::twenty_first::shared_math::tip5::Tip5State;
 
     use crate::empty_stack;
     use crate::memory::dyn_malloc::DYN_MALLOC_ADDRESS;
@@ -77,7 +76,7 @@ mod test {
     use crate::snippet_bencher::BenchmarkCase;
     use crate::traits::procedure::*;
     use crate::traits::rust_shadow::RustShadow;
-    use crate::VmHasherState;
+    use crate::VmHasher;
 
     use super::*;
 
@@ -88,12 +87,13 @@ mod test {
             memory: &mut HashMap<BFieldElement, BFieldElement>,
             _nondeterminism: &NonDeterminism<BFieldElement>,
             _public_input: &[BFieldElement],
-            sponge_state: &mut Option<VmHasherState>,
+            sponge: &mut Option<VmHasher>,
         ) -> Vec<BFieldElement> {
+            let sponge = sponge.as_mut().expect("sponge must be initialized");
             let mut array_pointer =
                 rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator(RATE, memory);
             stack.push(array_pointer);
-            let produce = Tip5::squeeze(sponge_state.as_mut().unwrap());
+            let produce = sponge.squeeze();
             for elem in produce.into_iter() {
                 memory.insert(array_pointer, elem);
                 array_pointer.increment();
@@ -119,7 +119,7 @@ mod test {
                 stack: empty_stack(),
                 nondeterminism: NonDeterminism::default().with_ram(init_memory),
                 public_input: Vec::default(),
-                sponge_state: Some(Tip5State::arbitrary(&mut unstructured).unwrap()),
+                sponge: Some(Tip5::arbitrary(&mut unstructured).unwrap()),
             }
         }
     }

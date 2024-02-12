@@ -792,7 +792,6 @@ mod test {
     use triton_vm::proof_item::ProofItem;
     use triton_vm::proof_stream::ProofStream;
     use triton_vm::twenty_first::prelude::*;
-    use twenty_first::prelude::tip5::Tip5State;
     use twenty_first::shared_math::ntt::intt;
     use twenty_first::shared_math::ntt::ntt;
     use twenty_first::shared_math::other::log_2_ceil;
@@ -817,7 +816,9 @@ mod test {
             expansion_factor: u32,
             num_colinearity_checks: u32,
         ) -> Self {
-            let domain = ArithmeticDomain::of_length(domain_length as usize).with_offset(offset);
+            let domain = ArithmeticDomain::of_length(domain_length as usize)
+                .unwrap()
+                .with_offset(offset);
             Self {
                 expansion_factor,
                 num_colinearity_checks,
@@ -1158,7 +1159,7 @@ mod test {
             ProofStream {
                 items: proof_stream.items,
                 items_index: 0,
-                sponge_state: Tip5::init(),
+                sponge: Tip5::init(),
             }
         }
 
@@ -1174,6 +1175,7 @@ mod test {
 
         pub fn to_fri(self) -> Fri<Tip5> {
             let fri_domain = ArithmeticDomain::of_length(self.domain_length as usize)
+                .unwrap()
                 .with_offset(self.domain_offset);
             let maybe_fri = Fri::new(
                 fri_domain,
@@ -1192,7 +1194,7 @@ mod test {
             let proof_stream = ProofStream {
                 items,
                 items_index: 0,
-                sponge_state: Tip5::init(),
+                sponge: Tip5::init(),
             };
             let (stack, nondeterminism) =
                 self.set_up_stack_and_non_determinism_using_digests(proof_stream, digests);
@@ -1256,7 +1258,7 @@ mod test {
             memory: &mut HashMap<BFieldElement, BFieldElement>,
             nondeterminism: &NonDeterminism<BFieldElement>,
             _public_input: &[BFieldElement],
-            sponge_state: &mut Option<Tip5State>,
+            sponge: &mut Option<Tip5>,
         ) -> Vec<BFieldElement> {
             let fri_pointer = stack.pop().unwrap();
             let fri_verify = *FriVerify::decode_from_memory(memory, fri_pointer).unwrap();
@@ -1288,7 +1290,7 @@ mod test {
 
             stack.push(indices_and_leafs_pointer);
 
-            *sponge_state = Some(proof_stream.sponge_state);
+            *sponge = Some(proof_stream.sponge);
 
             // no standard output
             vec![]
@@ -1306,7 +1308,7 @@ mod test {
                 stack,
                 nondeterminism,
                 public_input: vec![],
-                sponge_state: Some(Tip5::init()),
+                sponge: Some(Tip5::init()),
             }
         }
     }
@@ -1409,7 +1411,7 @@ mod test {
             ProofStream {
                 items: self.proof_items(),
                 items_index: 0,
-                sponge_state: Tip5::init(),
+                sponge: Tip5::init(),
             }
         }
 
@@ -1425,7 +1427,7 @@ mod test {
                 stack,
                 nondeterminism,
                 public_input: vec![],
-                sponge_state: Some(Tip5::init()),
+                sponge: Some(Tip5::init()),
             }
         }
     }
@@ -1446,7 +1448,7 @@ mod test {
             stack: initial_stack,
             nondeterminism,
             public_input: stdin,
-            sponge_state,
+            sponge,
         } = test_case.initial_state();
 
         let snippet = FriSnippet {
@@ -1458,7 +1460,7 @@ mod test {
             &initial_stack,
             &stdin,
             &nondeterminism,
-            &sponge_state,
+            &sponge,
         );
 
         let words_statically_allocated = 0;
@@ -1467,13 +1469,13 @@ mod test {
             &initial_stack,
             &stdin,
             nondeterminism,
-            &sponge_state,
+            &sponge,
             words_statically_allocated,
         );
 
         assert_eq!(rust.output, tasm.output);
         verify_stack_growth(&shadowed_procedure, &initial_stack, &tasm.final_stack);
-        verify_sponge_equivalence(&rust.final_sponge_state, &tasm.final_sponge_state);
+        verify_sponge_equivalence(&rust.final_sponge, &tasm.final_sponge);
 
         type IndexedLeaves = Vec<(u32, XFieldElement)>;
         let &rust_address = rust.final_stack.last().unwrap();

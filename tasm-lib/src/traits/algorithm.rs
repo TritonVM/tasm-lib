@@ -13,7 +13,7 @@ use crate::snippet_bencher::write_benchmarks;
 use crate::snippet_bencher::BenchmarkCase;
 use crate::snippet_bencher::BenchmarkResult;
 use crate::test_helpers::test_rust_equivalence_given_complete_state;
-use crate::VmHasherState;
+use crate::VmHasher;
 
 use super::basic_snippet::BasicSnippet;
 use super::rust_shadow::RustShadow;
@@ -103,7 +103,7 @@ where
         nondeterminism: &NonDeterminism<BFieldElement>,
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
-        _sponge_state: &mut Option<VmHasherState>,
+        _sponge: &mut Option<VmHasher>,
     ) -> Vec<BFieldElement> {
         self.algorithm
             .borrow()

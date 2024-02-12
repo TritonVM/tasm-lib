@@ -53,7 +53,6 @@ pub use triton_vm::twenty_first;
 
 // The hasher type must match whatever algebraic hasher the VM is using
 pub type VmHasher = Tip5;
-pub type VmHasherState = tip5::Tip5State;
 pub type Digest = tip5::Digest;
 pub const DIGEST_LENGTH: usize = tip5::DIGEST_LENGTH;
 
@@ -65,11 +64,10 @@ pub struct ExecutionState {
     pub std_in: Vec<BFieldElement>,
     pub nondeterminism: NonDeterminism<BFieldElement>,
 
-    // Ensures that you're not overwriting statically allocated memory
-    // when using the dynamic allocator.
-    // When you're writing a program you need to know how many words
-    // are statically allocated and then you need to feed that value
-    // to the dynamic allocator otherwise you are *** [redacted].
+    /// Ensures that you're not overwriting statically allocated memory when using the dynamic
+    /// allocator.
+    /// When you're writing a program you need to know how many words are statically allocated, and
+    /// then you need to feed that value to the dynamic allocator otherwise you are *** [redacted].
     pub words_allocated: u32,
 }
 
@@ -112,7 +110,7 @@ pub struct VmOutputState {
     pub output: Vec<BFieldElement>,
     pub final_stack: Vec<BFieldElement>,
     pub final_ram: HashMap<BFieldElement, BFieldElement>,
-    pub final_sponge_state: Option<VmHasherState>,
+    pub final_sponge: Option<VmHasher>,
 }
 
 pub fn empty_stack() -> Vec<BFieldElement> {
@@ -213,7 +211,7 @@ pub fn execute_test(
     expected_stack_diff: isize,
     std_in: Vec<BFieldElement>,
     nondeterminism: NonDeterminism<BFieldElement>,
-    maybe_sponge_state: Option<VmHasherState>,
+    maybe_sponge: Option<VmHasher>,
 ) -> VmOutputState {
     let initial_stack_height = stack.len();
     let public_input = PublicInput::new(std_in.clone());
@@ -221,7 +219,7 @@ pub fn execute_test(
 
     let mut vm_state = VMState::new(&program, public_input.clone(), nondeterminism.clone());
     vm_state.op_stack.stack = stack.to_owned();
-    vm_state.sponge_state = maybe_sponge_state.map(|state| state.state);
+    vm_state.sponge = maybe_sponge;
 
     maybe_write_debuggable_program_to_disk(&program, &vm_state);
 
@@ -267,9 +265,7 @@ pub fn execute_test(
         output: terminal_state.public_output,
         final_stack: stack.to_owned(),
         final_ram: terminal_state.ram,
-        final_sponge_state: terminal_state
-            .sponge_state
-            .map(|state| VmHasherState { state }),
+        final_sponge: terminal_state.sponge,
     }
 }
 
@@ -302,12 +298,12 @@ pub fn execute_with_terminal_state(
     std_in: &[BFieldElement],
     stack: &[BFieldElement],
     nondeterminism: &NonDeterminism<BFieldElement>,
-    maybe_sponge_state: Option<VmHasherState>,
-) -> std::result::Result<VMState, InstructionError> {
+    maybe_sponge: Option<VmHasher>,
+) -> Result<VMState, InstructionError> {
     let public_input = PublicInput::new(std_in.into());
     let mut vm_state = VMState::new(program, public_input, nondeterminism.to_owned());
     vm_state.op_stack.stack = stack.to_owned();
-    vm_state.sponge_state = maybe_sponge_state.map(|state| state.state);
+    vm_state.sponge = maybe_sponge;
 
     match vm_state.run() {
         Ok(()) => {
@@ -315,9 +311,9 @@ pub fn execute_with_terminal_state(
             Ok(vm_state)
         }
         Err(err) => {
-            if let Some(sponge_state) = vm_state.sponge_state {
-                println!("tasm final sponge state:");
-                println!("{}", sponge_state.iter().join(", "));
+            if let Some(ref sponge) = vm_state.sponge {
+                println!("tasm final sponge:");
+                println!("{}", sponge.state.iter().join(", "));
             }
             println!("Triton VM execution failed. Final state:\n{vm_state}");
             Err(err)

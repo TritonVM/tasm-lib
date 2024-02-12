@@ -1,9 +1,11 @@
-use crate::{data_type::DataType, library::Library, traits::basic_snippet::BasicSnippet};
 use triton_vm::prelude::*;
+
+use crate::data_type::DataType;
+use crate::library::Library;
+use crate::traits::basic_snippet::BasicSnippet;
 
 /// Returns the smallest power of two greater than or equal to self.
 /// Behaves like the `rustc` method for all inputs of type `u32`.
-
 #[derive(Debug, Clone, Copy)]
 pub struct NextPowerOfTwo;
 
@@ -90,16 +92,18 @@ mod tests {
     use std::collections::HashMap;
     use std::rc::Rc;
 
-    use super::*;
+    use itertools::Itertools;
+    use rand::rngs::StdRng;
+    use rand::RngCore;
+    use rand::SeedableRng;
+
     use crate::execute_with_terminal_state;
     use crate::linker::link_for_isolated_run;
     use crate::traits::closure::Closure;
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
-    use itertools::Itertools;
-    use rand::rngs::StdRng;
-    use rand::RngCore;
-    use rand::SeedableRng;
+
+    use super::*;
 
     impl Closure for NextPowerOfTwo {
         fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {

@@ -58,19 +58,18 @@ impl BasicSnippet for PadAndAbsorbAll {
 mod test {
     use std::collections::HashMap;
 
+    use crate::twenty_first::prelude::Sponge;
     use arbitrary::*;
     use itertools::Itertools;
     use rand::rngs::StdRng;
     use rand::*;
     use triton_vm::prelude::*;
-    use triton_vm::twenty_first::shared_math::tip5::Tip5State;
-    use triton_vm::twenty_first::util_types::algebraic_hasher::SpongeHasher;
 
     use crate::empty_stack;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::traits::procedure::*;
     use crate::traits::rust_shadow::RustShadow;
-    use crate::VmHasherState;
+    use crate::VmHasher;
 
     use super::*;
 
@@ -100,8 +99,9 @@ mod test {
             memory: &mut HashMap<BFieldElement, BFieldElement>,
             _nondeterminism: &NonDeterminism<BFieldElement>,
             _public_input: &[BFieldElement],
-            sponge_state: &mut Option<VmHasherState>,
+            sponge: &mut Option<VmHasher>,
         ) -> Vec<BFieldElement> {
+            let sponge = sponge.as_mut().expect("sponge must be initialized");
             let input_pointer: BFieldElement = stack.pop().unwrap();
             let first_word =
                 input_pointer + BFieldElement::new(self.list_type.metadata_size() as u64);
@@ -109,7 +109,7 @@ mod test {
             let input = (0..input_length)
                 .map(|i| memory[&(BFieldElement::new(i) + first_word)])
                 .collect_vec();
-            Tip5::pad_and_absorb_all(sponge_state.as_mut().unwrap(), &input);
+            sponge.pad_and_absorb_all(&input);
 
             Vec::default()
         }
@@ -134,21 +134,21 @@ mod test {
                 stack,
                 nondeterminism: NonDeterminism::default().with_ram(memory),
                 public_input: Vec::default(),
-                sponge_state: Some(Tip5State::arbitrary(&mut unstructured).unwrap()),
+                sponge: Some(Tip5::arbitrary(&mut unstructured).unwrap()),
             }
         }
 
         fn corner_case_initial_states(&self) -> Vec<ProcedureInitialState> {
-            let empty_input_empty_sponge_state = {
+            let empty_input_empty_sponge = {
                 let (memory, stack) = self.init_memory_and_stack(0);
                 ProcedureInitialState {
                     stack,
                     nondeterminism: NonDeterminism::default().with_ram(memory),
                     public_input: Vec::default(),
-                    sponge_state: Some(Tip5::init()),
+                    sponge: Some(Tip5::init()),
                 }
             };
-            let empty_input_random_sponge_state = {
+            let empty_input_random_sponge = {
                 let (memory, stack) = self.init_memory_and_stack(0);
                 let mut rng: StdRng = SeedableRng::from_seed([12u8; 32]);
                 let mut bytes = [0u8; 400];
@@ -158,22 +158,22 @@ mod test {
                     stack,
                     nondeterminism: NonDeterminism::default().with_ram(memory),
                     public_input: Vec::default(),
-                    sponge_state: Some(Tip5State::arbitrary(&mut unstructured).unwrap()),
+                    sponge: Some(Tip5::arbitrary(&mut unstructured).unwrap()),
                 }
             };
-            let length_one_input_empty_sponge_state = {
+            let length_one_input_empty_sponge = {
                 let (memory, stack) = self.init_memory_and_stack(1);
                 ProcedureInitialState {
                     stack,
                     nondeterminism: NonDeterminism::default().with_ram(memory),
                     public_input: Vec::default(),
-                    sponge_state: Some(Tip5::init()),
+                    sponge: Some(Tip5::init()),
                 }
             };
             vec![
-                empty_input_empty_sponge_state,
-                empty_input_random_sponge_state,
-                length_one_input_empty_sponge_state,
+                empty_input_empty_sponge,
+                empty_input_random_sponge,
+                length_one_input_empty_sponge,
             ]
         }
     }

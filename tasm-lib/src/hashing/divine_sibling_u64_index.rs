@@ -85,7 +85,7 @@ impl Procedure for DivineSiblingU64Index {
         _memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
         nondeterminism: &NonDeterminism<BFieldElement>,
         _public_input: &[BFieldElement],
-        _sponge_state: &mut Option<crate::VmHasherState>,
+        _sponge: &mut Option<Tip5>,
     ) -> Vec<BFieldElement> {
         let stack_digest: Digest = Digest::new([
             stack.pop().unwrap(),
@@ -132,7 +132,7 @@ impl Procedure for DivineSiblingU64Index {
             stack,
             nondeterminism,
             public_input: vec![],
-            sponge_state: None,
+            sponge: None,
         }
     }
 }

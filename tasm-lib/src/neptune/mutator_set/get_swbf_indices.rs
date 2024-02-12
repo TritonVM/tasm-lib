@@ -1,12 +1,12 @@
+use std::collections::HashMap;
+
 use itertools::Itertools;
 use rand::rngs::StdRng;
 use rand::Rng;
 use rand::SeedableRng;
-use std::collections::HashMap;
 use triton_vm::prelude::*;
 use triton_vm::twenty_first::prelude::AlgebraicHasher;
-use triton_vm::twenty_first::prelude::SpongeHasher;
-use twenty_first::util_types::algebraic_hasher::Domain;
+use triton_vm::twenty_first::prelude::Sponge;
 
 use crate::arithmetic::u128::shift_left_static_u128;
 use crate::arithmetic::u128::shift_right_static_u128;
@@ -23,7 +23,6 @@ use crate::traits::function::Function;
 use crate::traits::function::FunctionInitialState;
 use crate::Digest;
 use crate::VmHasher;
-use crate::VmHasherState;
 
 /// Derives the indices that make up the removal record from the item
 /// (a digest), the sender randomness (also a digest), receiver
@@ -221,14 +220,14 @@ impl Function for GetSwbfIndices {
         vector.push(BFieldElement::new(aocl_leaf_index_lo as u64));
         vector.push(BFieldElement::new(aocl_leaf_index_hi as u64));
 
-        let mut sponge = VmHasherState::new(Domain::VariableLength);
-        Tip5::pad_and_absorb_all(&mut sponge, &vector);
+        let mut sponge = Tip5::init();
+        sponge.pad_and_absorb_all(&vector);
 
         let mut u32_indices = vec![];
         let mut squeezed_elements = vec![];
         while u32_indices.len() != self.num_trials {
             if squeezed_elements.is_empty() {
-                squeezed_elements = Tip5::squeeze(&mut sponge).into_iter().rev().collect_vec();
+                squeezed_elements = sponge.squeeze().into_iter().rev().collect_vec();
             }
             let element = squeezed_elements.pop().unwrap();
             if element != BFieldElement::new(BFieldElement::MAX) {
@@ -355,9 +354,10 @@ fn get_swbf_indices<H: AlgebraicHasher>(
         leaf_index_bfes,
     ]
     .concat();
-    let mut sponge = <H as SpongeHasher>::init();
-    H::pad_and_absorb_all(&mut sponge, &input);
-    H::sample_indices(&mut sponge, 1 << LOG2_WINDOW_SIZE, NUM_TRIALS)
+    let mut sponge = H::init();
+    sponge.pad_and_absorb_all(&input);
+    sponge
+        .sample_indices(1 << LOG2_WINDOW_SIZE, NUM_TRIALS)
         .into_iter()
         .map(|sample_index| sample_index as u128 + batch_offset)
         .collect_vec()

@@ -22,7 +22,7 @@ use crate::test_helpers::verify_stack_equivalence;
 use crate::test_helpers::verify_stack_growth;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::rust_shadow::RustShadow;
-use crate::VmHasherState;
+use crate::VmHasher;
 
 /// A Procedure is a piece of tasm code that can do almost anything: modify stack, read
 /// from and write to memory, take in nondeterminism, and read and write from standard
@@ -43,7 +43,7 @@ pub trait Procedure: BasicSnippet {
         memory: &mut HashMap<BFieldElement, BFieldElement>,
         nondeterminism: &NonDeterminism<BFieldElement>,
         public_input: &[BFieldElement],
-        sponge_state: &mut Option<VmHasherState>,
+        sponge: &mut Option<VmHasher>,
     ) -> Vec<BFieldElement>;
 
     fn preprocess<T: BFieldCodec>(
@@ -68,7 +68,7 @@ pub struct ProcedureInitialState {
     pub stack: Vec<BFieldElement>,
     pub nondeterminism: NonDeterminism<BFieldElement>,
     pub public_input: Vec<BFieldElement>,
-    pub sponge_state: Option<VmHasherState>,
+    pub sponge: Option<VmHasher>,
 }
 
 pub struct ShadowedProcedure<P: Procedure + 'static> {
@@ -94,11 +94,11 @@ impl<P: Procedure + 'static> RustShadow for ShadowedProcedure<P> {
         nondeterminism: &NonDeterminism<BFieldElement>,
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
-        sponge_state: &mut Option<VmHasherState>,
+        sponge: &mut Option<VmHasher>,
     ) -> Vec<BFieldElement> {
         self.procedure
             .borrow()
-            .rust_shadow(stack, memory, nondeterminism, stdin, sponge_state)
+            .rust_shadow(stack, memory, nondeterminism, stdin, sponge)
     }
 
     fn test(&self) {
@@ -148,7 +148,7 @@ impl<P: Procedure + 'static> RustShadow for ShadowedProcedure<P> {
                 stack,
                 nondeterminism,
                 public_input,
-                sponge_state,
+                sponge,
             } = self
                 .procedure
                 .borrow()
@@ -156,7 +156,7 @@ impl<P: Procedure + 'static> RustShadow for ShadowedProcedure<P> {
             let words_statically_allocated = 10; // okay buffer
             let program = link_for_isolated_run(self.procedure.clone(), words_statically_allocated);
             let execution_result =
-                execute_bench(&program, &stack, public_input, nondeterminism, sponge_state);
+                execute_bench(&program, &stack, public_input, nondeterminism, sponge);
             let benchmark = BenchmarkResult {
                 name: self.procedure.borrow().entrypoint(),
                 clock_cycle_count: execution_result.cycle_count,
@@ -177,10 +177,10 @@ impl<P: Procedure + 'static> ShadowedProcedure<P> {
             stack,
             nondeterminism,
             public_input,
-            sponge_state,
+            sponge,
         } = state;
 
-        let rust = rust_final_state(self, &stack, &public_input, &nondeterminism, &sponge_state);
+        let rust = rust_final_state(self, &stack, &public_input, &nondeterminism, &sponge);
 
         // run tvm
         let words_statically_allocated = 0;
@@ -189,12 +189,9 @@ impl<P: Procedure + 'static> ShadowedProcedure<P> {
             &stack,
             &public_input,
             nondeterminism,
-            &sponge_state,
+            &sponge,
             words_statically_allocated,
         );
-
-        // assert_eq!(tasm.final_sponge_state.state, rust.final_sponge_state.state);
-        // can't do this without changing the VM interface, unfortunately ...
 
         assert_eq!(
             rust.output, tasm.output,
@@ -205,6 +202,6 @@ impl<P: Procedure + 'static> ShadowedProcedure<P> {
 
         verify_stack_equivalence(&rust.final_stack, &tasm.final_stack);
         verify_memory_equivalence(&rust.final_ram, &tasm.final_ram);
-        verify_sponge_equivalence(&rust.final_sponge_state, &tasm.final_sponge_state);
+        verify_sponge_equivalence(&rust.final_sponge, &tasm.final_sponge);
     }
 }

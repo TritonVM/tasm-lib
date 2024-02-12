@@ -52,7 +52,7 @@ impl Procedure for ReadInput {
         _memory: &mut HashMap<BFieldElement, BFieldElement>,
         nondeterminism: &NonDeterminism<BFieldElement>,
         public_input: &[BFieldElement],
-        _sponge_state: &mut Option<crate::VmHasherState>,
+        _sponge: &mut Option<crate::VmHasher>,
     ) -> Vec<BFieldElement> {
         let input_source = match self.input_source {
             InputSource::StdIn => public_input,
@@ -82,7 +82,7 @@ impl Procedure for ReadInput {
             stack: empty_stack(),
             nondeterminism: NonDeterminism::new(secret_in),
             public_input: std_in,
-            sponge_state: None,
+            sponge: None,
         }
     }
 }

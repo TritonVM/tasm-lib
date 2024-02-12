@@ -9,7 +9,7 @@ use crate::empty_stack;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::procedure::Procedure;
 use crate::traits::procedure::ProcedureInitialState;
-use crate::VmHasherState;
+use crate::VmHasher;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct WriteToStdout {
@@ -48,7 +48,7 @@ impl Procedure for WriteToStdout {
         _memory: &mut HashMap<BFieldElement, BFieldElement>,
         _nondeterminism: &NonDeterminism<BFieldElement>,
         _public_input: &[BFieldElement],
-        _sponge_state: &mut Option<VmHasherState>,
+        _sponge: &mut Option<VmHasher>,
     ) -> Vec<BFieldElement> {
         let mut ret = vec![];
         for _ in 0..self.data_type.stack_size() {

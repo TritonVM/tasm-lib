@@ -35,17 +35,16 @@ impl BasicSnippet for Init {
 mod test {
     use std::collections::HashMap;
 
+    use crate::twenty_first::prelude::Sponge;
     use arbitrary::*;
     use rand::rngs::StdRng;
     use rand::*;
-    use triton_vm::twenty_first::shared_math::tip5::Tip5State;
-    use triton_vm::twenty_first::util_types::algebraic_hasher::SpongeHasher;
 
     use crate::empty_stack;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::traits::procedure::*;
     use crate::traits::rust_shadow::RustShadow;
-    use crate::VmHasherState;
+    use crate::VmHasher;
 
     use super::*;
 
@@ -56,9 +55,9 @@ mod test {
             _memory: &mut HashMap<BFieldElement, BFieldElement>,
             _nondeterminism: &NonDeterminism<BFieldElement>,
             _public_input: &[BFieldElement],
-            sponge_state: &mut Option<VmHasherState>,
+            sponge: &mut Option<VmHasher>,
         ) -> Vec<BFieldElement> {
-            *sponge_state = Some(Tip5::init());
+            *sponge = Some(Tip5::init());
             Vec::default()
         }
 
@@ -75,7 +74,7 @@ mod test {
                 stack: empty_stack(),
                 nondeterminism: NonDeterminism::default(),
                 public_input: Vec::default(),
-                sponge_state: Some(Tip5State::arbitrary(&mut unstructured).unwrap()),
+                sponge: Some(Tip5::arbitrary(&mut unstructured).unwrap()),
             }
         }
     }

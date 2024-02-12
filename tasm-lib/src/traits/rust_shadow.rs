@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use triton_vm::prelude::*;
 
-use crate::VmHasherState;
+use crate::VmHasher;
 
 use super::basic_snippet::BasicSnippet;
 
@@ -17,7 +17,7 @@ pub trait RustShadow {
         nondeterminism: &NonDeterminism<BFieldElement>,
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
-        sponge_state: &mut Option<VmHasherState>,
+        sponge: &mut Option<VmHasher>,
     ) -> Vec<BFieldElement>;
 
     fn test(&self);

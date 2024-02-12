@@ -58,19 +58,18 @@ impl BasicSnippet for Absorb {
 mod test {
     use std::collections::HashMap;
 
+    use crate::twenty_first::prelude::Sponge;
     use arbitrary::*;
     use itertools::Itertools;
     use rand::rngs::StdRng;
     use rand::*;
     use triton_vm::twenty_first::shared_math::other::random_elements;
-    use triton_vm::twenty_first::shared_math::tip5::Tip5State;
-    use triton_vm::twenty_first::util_types::algebraic_hasher::SpongeHasher;
 
     use crate::empty_stack;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::traits::procedure::*;
     use crate::traits::rust_shadow::RustShadow;
-    use crate::VmHasherState;
+    use crate::VmHasher;
 
     use super::*;
 
@@ -92,15 +91,16 @@ mod test {
             memory: &mut HashMap<BFieldElement, BFieldElement>,
             _nondeterminism: &NonDeterminism<BFieldElement>,
             _public_input: &[BFieldElement],
-            sponge_state: &mut Option<VmHasherState>,
+            sponge: &mut Option<VmHasher>,
         ) -> Vec<BFieldElement> {
+            let sponge = sponge.as_mut().expect("sponge must be initialized");
             let input_pointer: BFieldElement = stack.pop().unwrap();
             let input: [BFieldElement; 10] = (0..10)
                 .map(|i| memory[&(BFieldElement::new(i) + input_pointer)])
                 .collect_vec()
                 .try_into()
                 .unwrap();
-            Tip5::absorb(sponge_state.as_mut().unwrap(), input);
+            sponge.absorb(input);
             Vec::default()
         }
 
@@ -119,22 +119,22 @@ mod test {
                 stack,
                 nondeterminism: NonDeterminism::default().with_ram(memory),
                 public_input: Vec::default(),
-                sponge_state: Some(Tip5State::arbitrary(&mut unstructured).unwrap()),
+                sponge: Some(Tip5::arbitrary(&mut unstructured).unwrap()),
             }
         }
 
         fn corner_case_initial_states(&self) -> Vec<ProcedureInitialState> {
-            let empty_sponge_state = {
+            let empty_sponge = {
                 let (memory, stack) = init_memory_and_stack();
                 ProcedureInitialState {
                     stack,
                     nondeterminism: NonDeterminism::default().with_ram(memory),
                     public_input: Vec::default(),
-                    sponge_state: Some(Tip5::init()),
+                    sponge: Some(Tip5::init()),
                 }
             };
 
-            vec![empty_sponge_state]
+            vec![empty_sponge]
         }
     }
 

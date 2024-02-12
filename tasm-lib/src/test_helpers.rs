@@ -12,7 +12,7 @@ use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::traits::rust_shadow::RustShadow;
 use crate::ExecutionState;
-use crate::VmHasherState;
+use crate::VmHasher;
 use crate::VmOutputState;
 use crate::DIGEST_LENGTH;
 
@@ -281,11 +281,11 @@ pub fn rust_final_state<T: RustShadow>(
     stack: &[BFieldElement],
     stdin: &[BFieldElement],
     nondeterminism: &NonDeterminism<BFieldElement>,
-    sponge_state: &Option<VmHasherState>,
+    sponge: &Option<VmHasher>,
 ) -> VmOutputState {
     let mut rust_memory = nondeterminism.ram.clone();
     let mut rust_stack = stack.to_vec();
-    let mut rust_sponge = sponge_state.clone();
+    let mut rust_sponge = sponge.clone();
 
     // run rust shadow
     let output = shadowed_snippet.rust_shadow_wrapper(
@@ -300,7 +300,7 @@ pub fn rust_final_state<T: RustShadow>(
         output,
         final_stack: rust_stack,
         final_ram: rust_memory,
-        final_sponge_state: rust_sponge,
+        final_sponge: rust_sponge,
     }
 }
 
@@ -309,7 +309,7 @@ pub fn tasm_final_state<T: RustShadow>(
     stack: &[BFieldElement],
     stdin: &[BFieldElement],
     nondeterminism: NonDeterminism<BFieldElement>,
-    sponge_state: &Option<VmHasherState>,
+    sponge: &Option<VmHasher>,
     words_statically_allocated: u32,
 ) -> VmOutputState {
     // run tvm
@@ -318,7 +318,7 @@ pub fn tasm_final_state<T: RustShadow>(
         &mut stack.to_vec(),
         stdin.to_vec(),
         nondeterminism,
-        sponge_state.to_owned(),
+        sponge.to_owned(),
         words_statically_allocated,
     )
 }
@@ -404,7 +404,7 @@ pub fn verify_stack_growth<T: RustShadow>(
     );
 }
 
-pub fn verify_sponge_equivalence(a: &Option<VmHasherState>, b: &Option<VmHasherState>) {
+pub fn verify_sponge_equivalence(a: &Option<VmHasher>, b: &Option<VmHasher>) {
     match (a, b) {
         (Some(state_a), Some(state_b)) => assert_eq!(state_a.state, state_b.state),
         (None, None) => (),
@@ -420,13 +420,13 @@ pub fn test_rust_equivalence_given_complete_state<T: RustShadow>(
     stack: &[BFieldElement],
     stdin: &[BFieldElement],
     nondeterminism: &NonDeterminism<BFieldElement>,
-    sponge_state: &Option<VmHasherState>,
+    sponge: &Option<VmHasher>,
     words_statically_allocated: u32,
     expected_final_stack: Option<&[BFieldElement]>,
 ) -> VmOutputState {
     let init_stack = stack.to_vec();
 
-    let rust = rust_final_state(shadowed_snippet, stack, stdin, nondeterminism, sponge_state);
+    let rust = rust_final_state(shadowed_snippet, stack, stdin, nondeterminism, sponge);
 
     // run tvm
     let tasm = tasm_final_state(
@@ -434,7 +434,7 @@ pub fn test_rust_equivalence_given_complete_state<T: RustShadow>(
         stack,
         stdin,
         nondeterminism.clone(),
-        sponge_state,
+        sponge,
         words_statically_allocated,
     );
 
@@ -458,7 +458,7 @@ pub fn link_and_run_tasm_for_test<T: RustShadow>(
     stack: &mut Vec<BFieldElement>,
     std_in: Vec<BFieldElement>,
     nondeterminism: NonDeterminism<BFieldElement>,
-    maybe_sponge_state: Option<VmHasherState>,
+    maybe_sponge: Option<VmHasher>,
     words_statically_allocated: u32,
 ) -> VmOutputState {
     let code = link_for_isolated_run(snippet_struct, words_statically_allocated);
@@ -469,7 +469,7 @@ pub fn link_and_run_tasm_for_test<T: RustShadow>(
         snippet_struct.inner().borrow().stack_diff(),
         std_in,
         nondeterminism,
-        maybe_sponge_state,
+        maybe_sponge,
     )
 }
 

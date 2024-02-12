@@ -6,7 +6,7 @@ use rand::Rng;
 use rand::RngCore;
 use rand::SeedableRng;
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::prelude::SpongeHasher;
+use triton_vm::twenty_first::prelude::Sponge;
 
 use crate::data_type::DataType;
 use crate::empty_stack;
@@ -15,7 +15,6 @@ use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::procedure::Procedure;
 use crate::traits::procedure::ProcedureInitialState;
 use crate::VmHasher;
-use crate::VmHasherState;
 
 /// Squeeze the sponge n times, storing all the produced pseudorandom `BFieldElement`s
 /// contiguously in memory. It is the caller's responsibility to allocate enough memory.
@@ -76,16 +75,14 @@ impl Procedure for SqueezeRepeatedly {
         memory: &mut HashMap<BFieldElement, BFieldElement>,
         _nondeterminism: &NonDeterminism<BFieldElement>,
         _public_input: &[BFieldElement],
-        sponge_state: &mut Option<VmHasherState>,
+        sponge: &mut Option<VmHasher>,
     ) -> Vec<BFieldElement> {
         let num_squeezes = stack.pop().unwrap().value() as usize;
         let address = stack.pop().unwrap();
 
-        let Some(sponge_state) = sponge_state else {
-            panic!("sponge state must be initialized");
-        };
+        let sponge = sponge.as_mut().expect("sponge must be initialized");
         let sequence = (0..num_squeezes)
-            .flat_map(|_| VmHasher::squeeze(sponge_state).to_vec())
+            .flat_map(|_| sponge.squeeze().to_vec())
             .collect_vec();
 
         for (i, s) in sequence.into_iter().enumerate() {
@@ -111,7 +108,7 @@ impl Procedure for SqueezeRepeatedly {
             None => rng.gen_range(0..10),
         };
 
-        let sponge_state = VmHasherState { state: rng.gen() };
+        let sponge = VmHasher { state: rng.gen() };
         let mut stack = empty_stack();
         let address = BFieldElement::new(rng.next_u64() % (1 << 20));
         stack.push(address);
@@ -121,7 +118,7 @@ impl Procedure for SqueezeRepeatedly {
             stack,
             nondeterminism: NonDeterminism::default(),
             public_input: vec![],
-            sponge_state: Some(sponge_state),
+            sponge: Some(sponge),
         }
     }
 }
@@ -161,12 +158,12 @@ mod test {
                 stack,
                 nondeterminism,
                 public_input: stdin,
-                sponge_state,
+                sponge,
             } = SqueezeRepeatedly.pseudorandom_initial_state(seed, None);
 
             let init_stack = stack.to_vec();
 
-            let rust = rust_final_state(&shadow, &stack, &stdin, &nondeterminism, &sponge_state);
+            let rust = rust_final_state(&shadow, &stack, &stdin, &nondeterminism, &sponge);
 
             // run tvm
             let words_statically_allocated = 0;
@@ -175,12 +172,9 @@ mod test {
                 &stack,
                 &stdin,
                 nondeterminism,
-                &sponge_state,
+                &sponge,
                 words_statically_allocated,
             );
-
-            // assert_eq!(tasm.final_sponge_state.state, rust.final_sponge_state.state);
-            // can't do this without changing the VM interface, unfortunately ...
 
             assert_eq!(
                 rust.output, tasm.output,
@@ -190,7 +184,7 @@ mod test {
             verify_stack_equivalence(&rust.final_stack, &tasm.final_stack);
             verify_memory_equivalence(&rust.final_ram, &tasm.final_ram);
             verify_stack_growth(&shadow, &init_stack, &tasm.final_stack);
-            verify_sponge_equivalence(&rust.final_sponge_state, &tasm.final_sponge_state);
+            verify_sponge_equivalence(&rust.final_sponge, &tasm.final_sponge);
         }
     }
 }

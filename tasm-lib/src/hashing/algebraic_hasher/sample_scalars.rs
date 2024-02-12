@@ -5,7 +5,7 @@ use rand::rngs::StdRng;
 use rand::Rng;
 use rand::SeedableRng;
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::prelude::SpongeHasher;
+use triton_vm::twenty_first::prelude::Sponge;
 
 use crate::data_type::DataType;
 use crate::empty_stack;
@@ -18,7 +18,6 @@ use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::procedure::Procedure;
 use crate::traits::procedure::ProcedureInitialState;
 use crate::VmHasher;
-use crate::VmHasherState;
 
 /// Squeeze the sponge to sample a given number of `XFieldElement`s.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
@@ -103,15 +102,13 @@ impl Procedure for SampleScalars {
         memory: &mut HashMap<BFieldElement, BFieldElement>,
         _nondeterminism: &NonDeterminism<BFieldElement>,
         _public_input: &[BFieldElement],
-        sponge_state: &mut Option<VmHasherState>,
+        sponge: &mut Option<VmHasher>,
     ) -> Vec<BFieldElement> {
-        let Some(sponge_state) = sponge_state else {
-            panic!("sponge state must be initialized");
-        };
+        let sponge = sponge.as_mut().expect("sponge must be initialized");
         let num_scalars = stack.pop().unwrap().value() as usize;
         let num_squeezes = (num_scalars * 3 + 9) / tip5::RATE;
         let pseudorandomness = (0..num_squeezes)
-            .flat_map(|_| VmHasher::squeeze(sponge_state).to_vec())
+            .flat_map(|_| sponge.squeeze().to_vec())
             .collect_vec();
         let scalars = pseudorandomness
             .chunks(3)
@@ -147,11 +144,11 @@ impl Procedure for SampleScalars {
         let num_scalars = rng.gen_range(0..40);
         let mut stack = empty_stack();
         stack.push(BFieldElement::new(num_scalars as u64));
-        let sponge_state: VmHasherState = tip5::Tip5State { state: rng.gen() };
+        let sponge = Tip5 { state: rng.gen() };
 
         ProcedureInitialState {
             stack,
-            sponge_state: Some(sponge_state),
+            sponge: Some(sponge),
             ..Default::default()
         }
     }
@@ -161,11 +158,11 @@ impl Procedure for SampleScalars {
             .map(|num_scalars| {
                 let mut stack = empty_stack();
                 stack.push(BFieldElement::new(num_scalars as u64));
-                let sponge_state: VmHasherState = Tip5::init();
+                let sponge = Tip5::init();
 
                 ProcedureInitialState {
                     stack,
-                    sponge_state: Some(sponge_state),
+                    sponge: Some(sponge),
                     ..Default::default()
                 }
             })
@@ -174,12 +171,12 @@ impl Procedure for SampleScalars {
             .map(|num_scalars| {
                 let mut stack = empty_stack();
                 stack.push(BFieldElement::new(num_scalars as u64));
-                let mut sponge_state: VmHasherState = Tip5::init();
-                Tip5::absorb(&mut sponge_state, [BFieldElement::new(42); Tip5::RATE]);
+                let mut sponge = Tip5::init();
+                sponge.absorb([BFieldElement::new(42); Tip5::RATE]);
 
                 ProcedureInitialState {
                     stack,
-                    sponge_state: Some(sponge_state),
+                    sponge: Some(sponge),
                     ..Default::default()
                 }
             })
@@ -200,13 +197,13 @@ mod test {
     use triton_vm::twenty_first::shared_math::tip5::Tip5;
     use triton_vm::twenty_first::shared_math::x_field_element::EXTENSION_DEGREE;
     use triton_vm::twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
-    use triton_vm::twenty_first::util_types::algebraic_hasher::SpongeHasher;
 
     use crate::rust_shadowing_helper_functions;
     use crate::test_helpers::tasm_final_state;
     use crate::traits::basic_snippet::BasicSnippet;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
+    use crate::twenty_first::prelude::Sponge;
 
     use super::SampleScalars;
 
@@ -215,18 +212,16 @@ mod test {
         ShadowedProcedure::new(SampleScalars).test();
     }
 
+    /// This is a regression test that verifies that this implementation of `sample_scalars`
+    /// agrees with Tip5's version from twenty-first. For the bugfix, see:
+    /// <https://github.com/Neptune-Crypto/twenty-first/commit/e708b305>
     #[test]
     fn verify_agreement_with_tip5_sample_scalars() {
-        // This is a regression test that verifies that this implementation of `sample_scalars`
-        // agrees with Tip5's version from twenty-first. For the bugfix, see:
-        // <https://github.com/Neptune-Crypto/twenty-first/commit/e708b305>
-        let empty_sponge_state = Tip5::init();
-        let mut non_empty_sponge_state = Tip5::init();
-        Tip5::absorb(
-            &mut non_empty_sponge_state,
-            [BFieldElement::new(100); Tip5::RATE],
-        );
-        for init_sponge_state in [empty_sponge_state, non_empty_sponge_state] {
+        let empty_sponge = Tip5::init();
+        let mut non_empty_sponge = Tip5::init();
+        non_empty_sponge.absorb([BFieldElement::new(100); Tip5::RATE]);
+
+        for init_sponge in [empty_sponge, non_empty_sponge] {
             for num_scalars in 0..30 {
                 let init_stack = [
                     SampleScalars.init_stack_for_isolated_run(),
@@ -238,15 +233,14 @@ mod test {
                     &init_stack,
                     &[],
                     NonDeterminism::default(),
-                    &Some(init_sponge_state.clone()),
+                    &Some(init_sponge.clone()),
                     0,
                 );
 
                 let final_ram = tasm.final_ram;
                 let snippet_output_scalar_pointer = tasm.final_stack[tasm.final_stack.len() - 1];
 
-                let scalars_from_tip5 =
-                    Tip5::sample_scalars(&mut init_sponge_state.clone(), num_scalars);
+                let scalars_from_tip5 = Tip5::sample_scalars(&mut init_sponge.clone(), num_scalars);
 
                 for (i, expected_scalar) in scalars_from_tip5.into_iter().enumerate() {
                     assert_eq!(
