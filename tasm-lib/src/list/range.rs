@@ -182,13 +182,9 @@ impl DeprecatedSnippet for Range {
 
         let safety_offset = LIST_METADATA_SIZE;
         let length = num_elements;
-        let memory_footprint = num_elements + safety_offset;
 
         // allocate space
-        let list_pointer = rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator(
-            memory_footprint,
-            memory,
-        );
+        let list_pointer = rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator(memory);
 
         // initialize list
         rust_shadowing_helper_functions::list::list_new(list_pointer, memory);

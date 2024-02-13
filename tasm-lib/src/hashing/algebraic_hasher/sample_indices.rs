@@ -12,7 +12,6 @@ use crate::empty_stack;
 use crate::list::length::Length;
 use crate::list::new::New;
 use crate::list::push::Push;
-use crate::list::LIST_METADATA_SIZE;
 use crate::rust_shadowing_helper_functions;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::procedure::Procedure;
@@ -162,10 +161,7 @@ impl Procedure for SampleIndices {
         let indices = sponge.sample_indices(upper_bound, number);
 
         // allocate memory for list
-        let list_pointer = rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator(
-            LIST_METADATA_SIZE + number,
-            memory,
-        );
+        let list_pointer = rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator(memory);
         rust_shadowing_helper_functions::list::list_new(list_pointer, memory);
 
         // store all indices

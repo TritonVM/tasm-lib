@@ -231,11 +231,8 @@ impl Function for GetSwbfIndices {
             }
         }
 
-        let u32_list_size_in_words = self.num_trials + 1;
-        let u32_list_pointer = rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator(
-            u32_list_size_in_words,
-            memory,
-        );
+        let u32_list_pointer =
+            rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator(memory);
         rust_shadowing_helper_functions::list::list_new(u32_list_pointer, memory);
 
         rust_shadowing_helper_functions::list::list_set_length(
@@ -277,11 +274,8 @@ impl Function for GetSwbfIndices {
             "VM-calculated indices must match that from mutator set module"
         );
 
-        let u128_list_size_in_words = self.num_trials * 4 + 1;
-        let u128_list_pointer = rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator(
-            u128_list_size_in_words,
-            memory,
-        );
+        let u128_list_pointer =
+            rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator(memory);
         rust_shadowing_helper_functions::list::list_insert(u128_list_pointer, u128_indices, memory);
 
         stack.push(u128_list_pointer);

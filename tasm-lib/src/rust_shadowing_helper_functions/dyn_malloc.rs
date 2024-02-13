@@ -19,15 +19,8 @@ pub fn rust_dyn_malloc_initialize(
     memory.insert(DYN_MALLOC_ADDRESS, initial_value);
 }
 
-pub fn dynamic_allocator(
-    size_in_words: usize,
-    memory: &mut HashMap<BFieldElement, BFieldElement>,
-) -> BFieldElement {
-    let mut init_stack = [
-        empty_stack(),
-        vec![BFieldElement::new(size_in_words as u64)],
-    ]
-    .concat();
+pub fn dynamic_allocator(memory: &mut HashMap<BFieldElement, BFieldElement>) -> BFieldElement {
+    let mut init_stack = empty_stack();
     DynMalloc.rust_shadow(&mut init_stack, memory);
     init_stack.pop().unwrap()
 }

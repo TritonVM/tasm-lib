@@ -91,7 +91,7 @@ mod test {
         ) -> Vec<BFieldElement> {
             let sponge = sponge.as_mut().expect("sponge must be initialized");
             let mut array_pointer =
-                rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator(RATE, memory);
+                rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator(memory);
             stack.push(array_pointer);
             let produce = sponge.squeeze();
             for elem in produce.into_iter() {

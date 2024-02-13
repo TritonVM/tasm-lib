@@ -197,11 +197,7 @@ impl Function for Zip {
         assert_eq!(left_length, right_length);
         let len = left_length;
 
-        // Get pointer for pair list through dynamic allocator
-        let (output_type, _) = &self.outputs()[0];
-        let output_list_size = LIST_METADATA_SIZE + len * output_type.stack_size();
-        let output_pointer = dyn_malloc::dynamic_allocator(output_list_size, memory);
-
+        let output_pointer = dyn_malloc::dynamic_allocator(memory);
         list::list_new(output_pointer, memory);
         list::list_set_length(output_pointer, len, memory);
 
