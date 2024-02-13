@@ -140,7 +140,6 @@ impl DeprecatedSnippet for CalculateNewPeaksFromAppend {
                     // stack: _ old_leaf_count_hi old_leaf_count_lo *peaks
 
                     // Create auth_path return value (vector living in RAM)
-                    push {MAX_MMR_HEIGHT} // All MMR auth paths have capacity for 64 digests
                     call {new_list}
                     push 0
                     call {set_length}

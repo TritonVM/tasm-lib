@@ -7,9 +7,8 @@ use crate::data_type::DataType;
 use crate::library::Library;
 use crate::memory::dyn_malloc::DynMalloc;
 use crate::traits::basic_snippet::BasicSnippet;
-use crate::twenty_first::prelude::Sponge;
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct Squeeze;
 
 impl BasicSnippet for Squeeze {
@@ -18,13 +17,12 @@ impl BasicSnippet for Squeeze {
     }
 
     fn outputs(&self) -> Vec<(DataType, String)> {
-        vec![(
-            DataType::Array(Box::new(ArrayType {
-                element_type: DataType::Bfe,
-                length: RATE,
-            })),
-            "produce".to_string(),
-        )]
+        let produce_type = DataType::Array(Box::new(ArrayType {
+            element_type: DataType::Bfe,
+            length: RATE,
+        }));
+
+        vec![(produce_type, "produce".to_string())]
     }
 
     fn entrypoint(&self) -> String {
@@ -44,7 +42,6 @@ impl BasicSnippet for Squeeze {
 
 
                 // Allocate memory for the returned array
-                push {Tip5::RATE}
                 call {dyn_malloc_label}
                 // _ [word_9..word_0] *array
 
@@ -76,6 +73,7 @@ mod test {
     use crate::snippet_bencher::BenchmarkCase;
     use crate::traits::procedure::*;
     use crate::traits::rust_shadow::RustShadow;
+    use crate::twenty_first::prelude::Sponge;
     use crate::VmHasher;
 
     use super::*;

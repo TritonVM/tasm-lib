@@ -91,7 +91,6 @@ impl DeprecatedSnippet for Range {
                                         // _ minimum supremum length
 
                 // create list object
-                dup 0                   // _ minimum supremum length length
                 call {new_list}         // _ minimum supremum length *list
                 dup 1                   // _ minimum supremum length *list length
                 call {set_length}       // _ minimum supremum length *list

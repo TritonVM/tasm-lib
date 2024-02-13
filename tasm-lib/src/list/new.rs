@@ -29,11 +29,11 @@ impl DeprecatedSnippet for New {
     }
 
     fn input_field_names(&self) -> Vec<String> {
-        vec!["capacity".to_string()]
+        vec![]
     }
 
     fn input_types(&self) -> Vec<DataType> {
-        vec![DataType::U32]
+        vec![]
     }
 
     fn output_field_names(&self) -> Vec<String> {
@@ -45,36 +45,19 @@ impl DeprecatedSnippet for New {
     }
 
     fn stack_diff(&self) -> isize {
-        0
+        1
     }
 
     fn function_code(&self, library: &mut Library) -> String {
         let entrypoint = self.entrypoint_name();
-
-        let element_size = self.data_type.stack_size();
-        let dyn_alloc = library.import(Box::new(crate::dyn_malloc::DynMalloc));
-
-        let mul_with_size = match element_size {
-            1 => vec![],
-            _ => triton_asm!(push {element_size} mul),
-        };
+        let dyn_malloc = library.import(Box::new(crate::dyn_malloc::DynMalloc));
 
         triton_asm!(
-            // BEFORE: _ capacity
+            // BEFORE: _
             // AFTER:  _ *list
             {entrypoint}:
-                // _ capacity
-
-                // convert capacity in number of elements to required number of VM words
-                {&mul_with_size}
-                // _ (capacity_in_bfes)
-
-                push 1
-                add
-                // _ (words to allocate)
-
-                call {dyn_alloc}
-                // _ *list
+                call {dyn_malloc}
+                            // _ *list
 
                 // Write initial length = 0 to `*list`
                 push 0
@@ -82,7 +65,7 @@ impl DeprecatedSnippet for New {
                 write_mem 1
                 push -1
                 add
-                // _ *list
+                            // _ *list
 
                 return
         )
@@ -91,7 +74,7 @@ impl DeprecatedSnippet for New {
     }
 
     fn crash_conditions(&self) -> Vec<String> {
-        vec!["Requested list size exceeds u32::MAX bfe words".to_string()]
+        vec![]
     }
 
     fn gen_input_states(&self) -> Vec<ExecutionState> {
@@ -120,9 +103,6 @@ impl DeprecatedSnippet for New {
         _secret_in: Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
-        let capacity_in_elements = stack.pop().unwrap().value() as usize;
-        let capacity_in_bfes = capacity_in_elements * self.data_type.stack_size();
-        stack.push(BFieldElement::new(capacity_in_bfes as u64));
         crate::dyn_malloc::DynMalloc.rust_shadow(stack, memory);
 
         let list_pointer = stack.pop().unwrap();
@@ -147,7 +127,7 @@ mod tests {
     #[test]
     fn new_snippet_test() {
         fn test_rust_equivalence_and_export(data_type: DataType) {
-            test_rust_equivalence_multiple_deprecated(&New { data_type }, true);
+            test_rust_equivalence_multiple_deprecated(&New::new(data_type), true);
         }
 
         test_rust_equivalence_and_export(DataType::Bool);

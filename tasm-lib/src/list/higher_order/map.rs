@@ -13,7 +13,6 @@ use twenty_first::shared_math::other::random_elements;
 use crate::data_type::DataType;
 use crate::empty_stack;
 use crate::library::Library;
-use crate::list;
 use crate::list::get::Get;
 use crate::list::length::Length;
 use crate::list::new::New;
@@ -146,7 +145,6 @@ impl BasicSnippet for Map {
 
                 dup 0                   // _ <aia>  input_list input_list
                 call {get_length}       // _ <aia>  input_list len
-                dup 0                   // _ <aia>  input_list len len
                 call {new_list}         // _ <aia>  input_list len output_list
                 dup 1                   // _ <aia>  input_list len output_list len
                 call {set_length}       // _ <aia>  input_list len output_list
@@ -213,20 +211,19 @@ impl Function for Map {
         let output_list_capacity = len;
         let output_list = {
             stack.push(BFieldElement::new(output_list_capacity as u64));
-            list::new::New {
-                data_type: input_list_element_type.clone(),
-            }
-            .rust_shadowing(stack, std_in.clone(), secret_in.clone(), memory);
+            New::new(input_list_element_type.clone()).rust_shadowing(
+                stack,
+                std_in.clone(),
+                secret_in.clone(),
+                memory,
+            );
             stack.pop().unwrap()
         };
 
         // set length
         stack.push(output_list);
         stack.push(BFieldElement::new(len as u64));
-        list::set_length::SetLength {
-            data_type: output_type.clone(),
-        }
-        .rust_shadowing(stack, std_in, secret_in, memory);
+        SetLength::new(output_type.clone()).rust_shadowing(stack, std_in, secret_in, memory);
         stack.pop();
 
         // Push three values that may not be changed by the inner function

@@ -43,21 +43,14 @@ impl BasicSnippet for SampleScalars {
         assert_eq!(10, tip5::RATE, "Code assumes Tip5's RATE is 10");
 
         let entrypoint = self.entrypoint();
-        let set_length = library.import(Box::new(SetLength {
-            data_type: DataType::Xfe,
-        }));
-        let new_list_of_xfes = library.import(Box::new(New {
-            data_type: DataType::Xfe,
-        }));
+        let set_length = library.import(Box::new(SetLength::new(DataType::Xfe)));
+        let new_list_of_xfes = library.import(Box::new(New::new(DataType::Xfe)));
         let safety_offset = 1;
         let squeeze_repeatedly = library.import(Box::new(SqueezeRepeatedly));
         triton_asm! {
             // BEFORE: _ num_scalars
             // AFTER:  _ *scalars
             {entrypoint}:
-
-                // create list of enough elements
-                dup 0           // _ num_scalars num_scalars
                 call {new_list_of_xfes}
                                 // _ num_scalars *scalars
 

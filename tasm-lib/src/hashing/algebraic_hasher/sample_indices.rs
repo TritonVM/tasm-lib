@@ -70,8 +70,6 @@ impl BasicSnippet for SampleIndices {
             // BEFORE: _ number upper_bound
             // AFTER:  _ *indices
             {entrypoint}:
-                // allocate a large enough list
-                dup 1                   // _ number upper_bound length
                 call {new_list}         // _ number upper_bound *indices
 
                 // prepare and call main while lop

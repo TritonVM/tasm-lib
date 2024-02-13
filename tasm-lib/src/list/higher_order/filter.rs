@@ -106,7 +106,6 @@ impl BasicSnippet for Filter {
             {entrypoint}:
                 dup 0               // _ *input_list *input_list
                 call {get_length}   // _ *input_list len
-                dup 0               // _ *input_list len len
                 call {new_list}     // _ *input_list len *output_list
                 dup 1               // _ *input_list len *output_list len
                 call {set_length}   // _ *input_list len *output_list

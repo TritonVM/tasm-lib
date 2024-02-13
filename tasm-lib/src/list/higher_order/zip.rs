@@ -93,7 +93,6 @@ impl BasicSnippet for Zip {
             eq assert               // _ *left_list *right_list len
 
             // create object for pair list and set length
-            dup 0
             call {new_output_list}  // _ *left_list *right_list len *pair_list
 
             dup 1                   // _ *left_list *right_list len *pair_list len

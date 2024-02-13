@@ -104,26 +104,16 @@ impl BasicSnippet for FriSnippet {
         let domain_generator = field!(FriVerify::domain_generator);
         let expansion_factor = field!(FriVerify::expansion_factor);
         let num_colinearity_checks = field!(FriVerify::num_colinearity_checks);
-        let new_list_of_digests = library.import(Box::new(New {
-            data_type: DataType::Digest,
-        }));
-        let push_digest_to_list = library.import(Box::new(Push {
-            data_type: DataType::Digest,
-        }));
+        let new_list_of_digests = library.import(Box::new(New::new(DataType::Digest)));
+        let push_digest_to_list = library.import(Box::new(Push::new(DataType::Digest)));
         let read_digest = triton_asm!(
-                                        // _ *digest
-            push 4 add                  // _ *digest+4
-            read_mem 5 pop 1            // _ [digest; 5]
+                                // _ *digest
+            push 4 add          // _ *digest+4
+            read_mem 5 pop 1    // _ [digest; 5]
         );
-        let new_list_xfe = library.import(Box::new(New {
-            data_type: DataType::Xfe,
-        }));
-        let get_scalar = library.import(Box::new(Get {
-            data_type: DataType::Xfe,
-        }));
-        let push_scalar = library.import(Box::new(Push {
-            data_type: DataType::Xfe,
-        }));
+        let new_list_xfe = library.import(Box::new(New::new(DataType::Xfe)));
+        let get_scalar = library.import(Box::new(Get::new(DataType::Xfe)));
+        let push_scalar = library.import(Box::new(Push::new(DataType::Xfe)));
 
         let vm_proof_iter_dequeue_next_as_merkle_root =
             library.import(Box::new(DequeueNextAs::new(ProofItemVariant::MerkleRoot)));
@@ -424,10 +414,8 @@ impl BasicSnippet for FriSnippet {
                 // COMMIT PHASE
 
                 // create lists for roots and alphas
-                dup 1 push 1 add
                 call {new_list_of_digests}  // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *roots
                     hint roots: ListPointer = stack[0]
-                dup 2
                 call {new_list_xfe}         // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *roots *alphas
                     hint folding_challenges: ListPointer = stack[0]
 
@@ -673,9 +661,6 @@ impl BasicSnippet for FriSnippet {
                 call {map_reduce_indices}   // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices
 
                 // compute C elements
-                dup 0                       // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_indices
-                call {length_of_list_of_u32s}
-                                            // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices length
                 call {new_list_xfe}         // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_elements
                 push 0                      // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_elements 0
                 call {compute_c_values_loop}// _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_elements length

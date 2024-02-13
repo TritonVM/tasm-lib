@@ -62,7 +62,6 @@ impl DeprecatedSnippet for GetPointerList {
                 call {get_list_length}
                 // _ *cl (list_length = capacity)
 
-                dup 0
                 call {new_list}
                 // _ *cl list_length *list_of_pointers
 
