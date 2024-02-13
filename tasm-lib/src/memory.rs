@@ -19,7 +19,6 @@ use std::collections::HashMap;
 use triton_vm::prelude::*;
 
 pub mod dyn_malloc;
-pub mod dyn_malloc_const_size;
 pub mod memcpy;
 pub mod push_ram_to_stack;
 
