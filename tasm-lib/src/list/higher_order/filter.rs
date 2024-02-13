@@ -65,9 +65,9 @@ impl BasicSnippet for Filter {
 
         let safety_offset = LIST_METADATA_SIZE;
         let get_length = library.import(Box::new(Length::new(input_type.clone())));
-        let set_length = library.import(Box::new(SetLength::new(input_type.clone())));
-        let new_list = library.import(Box::new(New::new(input_type.clone())));
-        let list_get = library.import(Box::new(Get::new(output_type.clone())));
+        let list_get = library.import(Box::new(Get::new(input_type)));
+        let new_list = library.import(Box::new(New::new(output_type.clone())));
+        let set_length = library.import(Box::new(SetLength::new(output_type)));
         let element_size = self.f.domain().stack_size();
 
         let inner_function_name = match &self.f {
@@ -198,12 +198,8 @@ impl Function for Filter {
 
         let get_element = rust_shadowing_helper_functions::list::list_get;
 
-        let output_list_capacity = len;
-        let output_list = {
-            stack.push(BFieldElement::new(output_list_capacity as u64));
-            New::new(input_type.clone()).rust_shadowing(stack, vec![], vec![], memory);
-            stack.pop().unwrap()
-        };
+        New::new(input_type.clone()).rust_shadowing(stack, vec![], vec![], memory);
+        let output_list = stack.pop().unwrap();
 
         // set length
         stack.push(output_list);

@@ -112,7 +112,7 @@ impl BasicSnippet for All {
         assert_eq!(output_type, DataType::Bool);
 
         let get_length = library.import(Box::new(Length::new(input_type.clone())));
-        let list_get = library.import(Box::new(Get::new(output_type.clone())));
+        let list_get = library.import(Box::new(Get::new(input_type)));
 
         let inner_function_name = match &self.f {
             InnerFunction::RawCode(rc) => rc.entrypoint(),
@@ -141,27 +141,35 @@ impl BasicSnippet for All {
         let entrypoint = self.entrypoint();
         let main_loop = format!("{entrypoint}_loop");
 
+        let result_type_hint = format!("hint all_{}: Boolean = stack[0]", self.f.entrypoint());
+
         triton_asm!(
             // BEFORE: _ input_list
             // AFTER:  _ result
             {entrypoint}:
-                push 1 // _ input_list res
-                swap 1 // _ res input_list
-                dup 0 // _  res input_list input_list
-                call {get_length} // _ res input_list len
+                hint input_list = stack[0]
+                push 1  // _ input_list res
+                {result_type_hint}
+                swap 1  // _ res input_list
+                dup 0   // _ res input_list input_list
+                call {get_length}
+                hint list_item: Index = stack[0]
+                        // _ res input_list len
 
-                call {main_loop} // _ res input_list 0
+                call {main_loop}
+                        // _ res input_list 0
 
-                pop 2 // _ res
+                pop 2   // _ res
                 return
 
             // INVARIANT: _ res input_list index
             {main_loop}:
                 // test return condition
-                dup 0 push 0 eq // _ res input_list index index==0
+                dup 0 push 0 eq
+                        // _ res input_list index index==0
 
                 skiz return
-                // _ res input_list index
+                        // _ res input_list index
 
                 // decrement index
                 push -1 add
@@ -169,17 +177,20 @@ impl BasicSnippet for All {
                 // body
 
                 // read
-                dup 1 dup 1 // _ res input_list index input_list index
-                call {list_get} // _ res input_list index [input_elements]
+                dup 1 dup 1
+                        // _ res input_list index input_list index
+                call {list_get}
+                        // _ res input_list index [input_elements]
 
                 // compute predicate
-                call {inner_function_name} // _ res input_list index b
+                call {inner_function_name}
+                        // _ res input_list index b
 
                 // accumulate
-                dup 3 // _ res input_list index b res
-                mul //    _ res input_list index (b && res)
-                swap 3 // _ (b && res) input_list index res
-                pop 1
+                dup 3   // _ res input_list index b res
+                mul     // _ res input_list index (b && res)
+                swap 3  // _ (b && res) input_list index res
+                pop 1   // _ (b && res) input_list index
 
                 recurse
 
@@ -195,18 +206,16 @@ impl Function for All {
         memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
         let input_type = self.f.domain();
-
         let list_pointer = stack.pop().unwrap();
 
         // forall elements, read + map + maybe copy
+        let list_length =
+            rust_shadowing_helper_functions::list::list_get_length(list_pointer, memory);
         let mut satisfied = true;
-        for i in 0..rust_shadowing_helper_functions::list::list_get_length(list_pointer, memory) {
-            // read
-            let mut input_item = list_get(list_pointer, i, memory, input_type.stack_size());
-
-            // put on stack
-            while let Some(element) = input_item.pop() {
-                stack.push(element);
+        for i in 0..list_length {
+            let input_item = list_get(list_pointer, i, memory, input_type.stack_size());
+            for bfe in input_item.into_iter().rev() {
+                stack.push(bfe);
             }
 
             self.f.apply(stack, memory);
@@ -215,14 +224,13 @@ impl Function for All {
             satisfied = satisfied && single_result;
         }
 
-        // set result
         stack.push(BFieldElement::new(satisfied as u64));
     }
 
     fn pseudorandom_initial_state(
         &self,
         seed: [u8; 32],
-        bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
+        bench_case: Option<BenchmarkCase>,
     ) -> FunctionInitialState {
         let (stack, memory) = match bench_case {
             Some(BenchmarkCase::CommonCase) => {
@@ -485,6 +493,22 @@ mod tests {
             DataType::Bool,
         );
         let snippet = All::new(InnerFunction::RawCode(rawcode));
+        ShadowedFunction::new(snippet).test();
+    }
+
+    #[test]
+    fn test_with_raw_function_eq_42() {
+        let raw_code = RawCode::new(
+            triton_asm!(
+                eq_42:
+                push 42
+                eq
+                return
+            ),
+            DataType::U32,
+            DataType::Bool,
+        );
+        let snippet = All::new(InnerFunction::RawCode(raw_code));
         ShadowedFunction::new(snippet).test();
     }
 

@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use num::One;
 use num::Zero;
 use triton_vm::prelude::*;
 use twenty_first::shared_math::other::random_elements;
@@ -90,17 +89,13 @@ pub fn list_push(
         value.len(),
         "Length must match indicated length"
     );
-    let init_list_length = memory[&list_pointer];
+    let list_length: usize = memory[&list_pointer].value().try_into().unwrap();
     memory.get_mut(&list_pointer).unwrap().increment();
 
-    for (i, elem) in value.iter().enumerate() {
-        memory.insert(
-            list_pointer
-                + BFieldElement::one()
-                + BFieldElement::new(element_length as u64) * init_list_length
-                + BFieldElement::new(i as u64),
-            *elem,
-        );
+    for (i, &word) in value.iter().enumerate() {
+        let word_offset = (LIST_METADATA_SIZE + element_length * list_length + i) as u64;
+        let word_index = list_pointer + BFieldElement::new(word_offset);
+        memory.insert(word_index, word);
     }
 }
 
@@ -110,20 +105,17 @@ pub fn list_pop(
     element_length: usize,
 ) -> Vec<BFieldElement> {
     let init_list_length = memory[&list_pointer];
-    assert!(!init_list_length.is_zero(), "Stack underflow");
+    assert!(!init_list_length.is_zero(), "List is empty");
     memory.get_mut(&list_pointer).unwrap().decrement();
+    let last_item_index: usize = memory[&list_pointer].value().try_into().unwrap();
 
-    // let mut ret = [BFieldElement::zero(); N];
-    let mut ret = vec![BFieldElement::zero(); element_length];
-    for (i, elem) in ret.iter_mut().enumerate() {
-        let key = list_pointer
-            + BFieldElement::one()
-            + BFieldElement::new(element_length as u64) * (init_list_length - BFieldElement::one())
-            + BFieldElement::new(i as u64);
-        *elem = memory[&key];
-    }
+    let read_word = |i| {
+        let word_offset = (LIST_METADATA_SIZE + element_length * last_item_index + i) as u64;
+        let word_index = list_pointer + BFieldElement::new(word_offset);
+        memory[&word_index]
+    };
 
-    ret
+    (0..element_length).map(read_word).collect()
 }
 
 /// Read an element from a list.
@@ -133,14 +125,13 @@ pub fn list_get(
     memory: &HashMap<BFieldElement, BFieldElement>,
     element_length: usize,
 ) -> Vec<BFieldElement> {
-    let mut ret: Vec<BFieldElement> = vec![BFieldElement::zero(); element_length];
+    let read_word = |i| {
+        let word_offset = (LIST_METADATA_SIZE + element_length * index + i) as u64;
+        let word_index = list_pointer + BFieldElement::new(word_offset);
+        memory[&word_index]
+    };
 
-    for i in 0..element_length {
-        ret[i] =
-            memory[&(list_pointer + BFieldElement::new((element_length * index + 1 + i) as u64))];
-    }
-
-    ret
+    (0..element_length).map(read_word).collect()
 }
 
 /// Write an element to a list.
@@ -151,11 +142,10 @@ pub fn list_set(
     memory: &mut HashMap<BFieldElement, BFieldElement>,
 ) {
     let element_size = value.len();
-    for (i, v) in value.into_iter().enumerate() {
-        memory.insert(
-            list_pointer + BFieldElement::new((element_size * index + 1 + i) as u64),
-            v,
-        );
+    for (i, word) in value.into_iter().enumerate() {
+        let word_offset = (LIST_METADATA_SIZE + element_size * index + i) as u64;
+        let word_index = list_pointer + BFieldElement::new(word_offset);
+        memory.insert(word_index, word);
     }
 }
 

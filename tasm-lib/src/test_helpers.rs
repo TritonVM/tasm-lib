@@ -323,24 +323,17 @@ pub fn tasm_final_state<T: RustShadow>(
     )
 }
 
-pub fn verify_stack_equivalence(a: &[BFieldElement], b: &[BFieldElement]) {
-    // assert stacks are equal, up to program hash
-    let a_skip_program_hash = a.iter().cloned().skip(DIGEST_LENGTH).collect_vec();
-    let b_skip_program_hash = b.iter().cloned().skip(DIGEST_LENGTH).collect_vec();
+/// assert stacks are equal, up to program hash
+pub fn verify_stack_equivalence(stack_a: &[BFieldElement], stack_b: &[BFieldElement]) {
+    let stack_a = &stack_a[DIGEST_LENGTH..];
+    let stack_b = &stack_b[DIGEST_LENGTH..];
+    let display = |stack: &[BFieldElement]| stack.iter().map(|&x| x.to_string()).join(",");
     assert_eq!(
-        a_skip_program_hash,
-        b_skip_program_hash,
+        stack_a,
+        stack_b,
         "A stack must match B stack\n\nA: {}\n\nB: {}",
-        a_skip_program_hash
-            .iter()
-            .map(|x| x.to_string())
-            .collect_vec()
-            .join(","),
-        b_skip_program_hash
-            .iter()
-            .map(|x| x.to_string())
-            .collect_vec()
-            .join(","),
+        display(stack_a),
+        display(stack_b),
     );
 }
 

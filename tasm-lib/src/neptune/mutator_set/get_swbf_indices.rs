@@ -60,55 +60,8 @@ impl BasicSnippet for GetSwbfIndices {
 
         let entrypoint = self.entrypoint();
 
-        let rawcode_for_inner_function_u128_plus_u32 = RawCode::new(
-            triton_asm!(
-                u32_to_u128_add_another_u128:
-                // stack:  _ [x_3, x_2, x_1, x_0] [bu ff er] input_u32
-                dup 4
-                // stack:  _ [x_3, x_2, x_1, x_0] [bu ff er] input_u32 x_0
-                add
-                // stack:  _ [x_3, x_2, x_1, x_0] [bu ff er] (input_u32 + x_0)
-                split
-                // stack:  _ [x_3, x_2, x_1, x_0] [bu ff er] carry_to_1 output_0
-                swap 1
-                // stack:  _ [x_3, x_2, x_1, x_0] [bu ff er] output_0 carry_to_1
-                dup 6
-                // stack:  _ [x_3, x_2, x_1, x_0] [bu ff er] output_0 carry_to_1 x_1
-                add
-                split
-                // stack:  _ [x_3, x_2, x_1, x_0] [bu ff er] output_0 carry_to_2 output_1
-                swap 1
-                // stack:  _ [x_3, x_2, x_1, x_0] [bu ff er] output_0 output_1 carry_to_2
-                dup 8
-                add
-                split
-                // stack:  _ [x_3, x_2, x_1, x_0] [bu ff er] output_0 output_1 carry_to_3 output_2
-                swap 1
-                // stack:  _ [x_3, x_2, x_1, x_0] [bu ff er] output_0 output_1 output_2 carry_to_3
-                dup 10
-                add
-                split
-                // stack:  _ [x_3, x_2, x_1, x_0] [bu ff er] output_0 output_1 output_2 overflow output_3
-                swap 1
-                // stack:  _ [x_3, x_2, x_1, x_0] [bu ff er] output_0 output_1 output_2 output_3 overflow
-
-                // verify no overflow
-                push 0
-                eq
-                assert
-                // stack:  _ [x_3, x_2, x_1, x_0] [bu ff er] output_0 output_1 output_2 output_3
-                swap 3
-                swap 1
-                swap 2
-                swap 1
-                // stack:  _ [x_3, x_2, x_1, x_0] [bu ff er] output_3 output_2 output_1 output_0
-                return
-            ),
-            DataType::U32,
-            DataType::U128,
-        );
         let map_add_batch_offset = library.import(Box::new(Map::new(InnerFunction::RawCode(
-            rawcode_for_inner_function_u128_plus_u32,
+            u32_to_u128_add_another_u128(),
         ))));
 
         // TODO: This can be replaced by a bit-mask to save some clock cycles
@@ -317,6 +270,43 @@ impl Function for GetSwbfIndices {
             stack,
         }
     }
+}
+
+/// ```text
+/// BEFORE: _ [x_3, x_2, x_1, x_0] input_list output_list index input_u32
+/// AFTER:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_3 output_2 output_1 output_0
+/// ```
+pub(crate) fn u32_to_u128_add_another_u128() -> RawCode {
+    let assembly = triton_asm!(
+        u32_to_u128_add_another_u128:
+        dup 4   // _ [x_3, x_2, x_1, x_0] input_list output_list index input_u32 x_0
+        add     // _ [x_3, x_2, x_1, x_0] input_list output_list index (input_u32 + x_0)
+        split   // _ [x_3, x_2, x_1, x_0] input_list output_list index carry_to_1 output_0
+        swap 1  // _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 carry_to_1
+        dup 6   // _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 carry_to_1 x_1
+        add
+        split   // _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 carry_to_2 output_1
+        swap 1  // _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 output_1 carry_to_2
+        dup 8
+        add
+        split   // _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 output_1 carry_to_3 output_2
+        swap 1  // _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 output_1 output_2 carry_to_3
+        dup 10
+        add
+        split   // _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 output_1 output_2 overflow output_3
+        swap 1  // _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 output_1 output_2 output_3 overflow
+
+        // verify no overflow
+        push 0
+        eq
+        assert  // _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 output_1 output_2 output_3
+        swap 3
+        swap 1
+        swap 2
+        swap 1  // _ [x_3, x_2, x_1, x_0] input_list output_list index output_3 output_2 output_1 output_0
+        return
+    );
+    RawCode::new(assembly, DataType::U32, DataType::U128)
 }
 
 // Copy-pasted from mutator set implementation
