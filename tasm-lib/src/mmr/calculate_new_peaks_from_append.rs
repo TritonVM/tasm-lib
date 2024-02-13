@@ -353,7 +353,7 @@ impl DeprecatedSnippet for CalculateNewPeaksFromAppend {
             ));
         }
 
-        let auth_path_pointer = dyn_malloc::FIRST_DYNAMICALLY_ALLOCATED_ADDRESS;
+        let auth_path_pointer = dyn_malloc::DYN_MALLOC_FIRST_ADDRESS;
         match self.list_type {
             ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_new(
                 auth_path_pointer,
@@ -655,7 +655,7 @@ mod tests {
             ListType::Unsafe => 1 + MAX_MMR_HEIGHT * DIGEST_LENGTH + 1,
         };
         let words_allocated: u32 = words_allocated.try_into().unwrap();
-        let auth_paths_pointer = dyn_malloc::FIRST_DYNAMICALLY_ALLOCATED_ADDRESS;
+        let auth_paths_pointer = dyn_malloc::DYN_MALLOC_FIRST_ADDRESS;
         let mut expected_final_stack = empty_stack();
         expected_final_stack.push(peaks_pointer);
         expected_final_stack.push(auth_paths_pointer);

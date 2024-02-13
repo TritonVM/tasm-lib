@@ -202,7 +202,7 @@ impl DeprecatedSnippet for GetPointerList {
         assert_eq!(dummy_list.len(), length);
 
         // create list
-        let output_list_pointer = dyn_malloc::FIRST_DYNAMICALLY_ALLOCATED_ADDRESS;
+        let output_list_pointer = dyn_malloc::DYN_MALLOC_FIRST_ADDRESS;
         match self.output_list_type {
             ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_new(
                 output_list_pointer,

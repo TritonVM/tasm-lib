@@ -7,6 +7,7 @@ use crate::empty_stack;
 use crate::library::Library;
 use crate::rust_shadowing_helper_functions::unsafe_list::unsafe_list_new;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
+use crate::traits::function::Function;
 use crate::ExecutionState;
 
 #[derive(Clone, Debug)]
@@ -111,14 +112,14 @@ impl DeprecatedSnippet for UnsafeNew {
     fn rust_shadowing(
         &self,
         stack: &mut Vec<BFieldElement>,
-        std_in: Vec<BFieldElement>,
-        secret_in: Vec<BFieldElement>,
+        _std_in: Vec<BFieldElement>,
+        _secret_in: Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
         let capacity_in_elements = stack.pop().unwrap().value() as usize;
         let capacity_in_bfes = capacity_in_elements * self.data_type.stack_size();
         stack.push(BFieldElement::new(capacity_in_bfes as u64));
-        crate::dyn_malloc::DynMalloc.rust_shadowing(stack, std_in, secret_in, memory);
+        crate::dyn_malloc::DynMalloc.rust_shadow(stack, memory);
 
         let list_pointer = stack.pop().unwrap();
         unsafe_list_new(list_pointer, memory);

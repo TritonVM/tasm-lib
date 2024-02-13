@@ -349,14 +349,9 @@ impl Map {
 
         let mut memory = HashMap::default();
         let input_element_type = self.f.domain();
-        let input_list_size = match self.list_type {
-            ListType::Safe => {
-                BFieldElement::new((2 + list_length * input_element_type.stack_size()) as u64)
-            }
-            ListType::Unsafe => {
-                BFieldElement::new((1 + list_length * input_element_type.stack_size()) as u64)
-            }
-        };
+        let list_metadata_size = self.list_type.metadata_size();
+        let input_list_size = list_metadata_size + list_length * input_element_type.stack_size();
+        let input_list_size = BFieldElement::new(input_list_size as u64);
         rust_shadowing_helper_functions::dyn_malloc::rust_dyn_malloc_initialize(
             &mut memory,
             (input_list_size + list_pointer) + DYN_MALLOC_ADDRESS,

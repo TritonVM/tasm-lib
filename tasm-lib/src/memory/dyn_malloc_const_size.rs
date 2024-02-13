@@ -88,13 +88,11 @@ impl Function for DynMallocConstSize {
         let used_memory = memory
             .entry(DYN_MALLOC_ADDRESS)
             .and_modify(|e| {
-                *e = if e.is_zero() {
-                    CONST_SIZE_MALLOCS_FIRST_DYNAMICALLY_ALLOCATED_ADDRESS
-                } else {
-                    *e
+                if e.is_zero() {
+                    *e = CONST_SIZE_MALLOCS_FIRST_DYNAMICALLY_ALLOCATED_ADDRESS;
                 }
             })
-            .or_insert_with(|| CONST_SIZE_MALLOCS_FIRST_DYNAMICALLY_ALLOCATED_ADDRESS);
+            .or_insert(CONST_SIZE_MALLOCS_FIRST_DYNAMICALLY_ALLOCATED_ADDRESS);
 
         let next_addr = *used_memory;
 
@@ -108,7 +106,7 @@ impl Function for DynMallocConstSize {
         &self,
         seed: [u8; 32],
         _bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
-    ) -> crate::traits::function::FunctionInitialState {
+    ) -> FunctionInitialState {
         let mut rng: StdRng = StdRng::from_seed(seed);
         let uses = rng.gen_range(0..(1u64 << 31));
         let memory: HashMap<BFieldElement, BFieldElement> =

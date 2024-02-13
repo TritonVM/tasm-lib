@@ -12,7 +12,7 @@ use crate::empty_stack;
 use crate::hashing::squeeze_repeatedly::SqueezeRepeatedly;
 use crate::list::unsafeimplu32::new::UnsafeNew;
 use crate::list::unsafeimplu32::set_length::UnsafeSetLength;
-use crate::memory::dyn_malloc::FIRST_DYNAMICALLY_ALLOCATED_ADDRESS;
+use crate::memory::dyn_malloc::DYN_MALLOC_FIRST_ADDRESS;
 use crate::memory::encode_to_memory;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::procedure::Procedure;
@@ -115,7 +115,7 @@ impl Procedure for SampleScalars {
             .take(num_scalars)
             .map(|ch| XFieldElement::new(ch.try_into().unwrap()))
             .collect_vec();
-        let scalars_pointer = FIRST_DYNAMICALLY_ALLOCATED_ADDRESS;
+        let scalars_pointer = DYN_MALLOC_FIRST_ADDRESS;
 
         encode_to_memory(memory, scalars_pointer, scalars);
 

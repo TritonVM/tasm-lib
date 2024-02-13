@@ -2,11 +2,11 @@ use itertools::Itertools;
 use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
-use crate::dyn_malloc;
 use crate::empty_stack;
-use crate::memory::dyn_malloc::DynMalloc;
+use crate::prelude::DynMalloc;
 use crate::rust_shadowing_helper_functions::safe_list::safe_list_new;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
+use crate::traits::function::Function;
 use crate::ExecutionState;
 
 #[derive(Clone, Debug)]
@@ -43,7 +43,7 @@ impl DeprecatedSnippet for SafeNew {
     }
 
     fn function_code(&self, library: &mut crate::library::Library) -> String {
-        let dyn_alloc = library.import(Box::new(dyn_malloc::DynMalloc));
+        let dyn_alloc = library.import(Box::new(DynMalloc));
 
         let element_size = self.data_type.stack_size();
         let mul_with_size = match element_size {
@@ -102,7 +102,7 @@ impl DeprecatedSnippet for SafeNew {
         memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
     ) {
         let capacity: usize = stack.last().unwrap().value().try_into().unwrap();
-        DynMalloc.rust_shadowing(stack, _std_in, _secret_in, memory);
+        DynMalloc.rust_shadow(stack, memory);
         let list_pointer = stack.pop().unwrap();
         safe_list_new(list_pointer, capacity as u32, memory);
         stack.push(list_pointer);

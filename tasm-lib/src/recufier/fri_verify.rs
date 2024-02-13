@@ -798,7 +798,7 @@ mod test {
     use twenty_first::shared_math::traits::PrimitiveRootOfUnity;
 
     use crate::empty_stack;
-    use crate::memory::dyn_malloc::FIRST_DYNAMICALLY_ALLOCATED_ADDRESS;
+    use crate::memory::dyn_malloc::DYN_MALLOC_FIRST_ADDRESS;
     use crate::memory::encode_to_memory;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::structure::tasm_object::decode_from_memory_with_size;
@@ -1281,7 +1281,7 @@ mod test {
 
             let revealed_indices_and_elements = fri_verify.call(&mut proof_stream, nondeterminism);
 
-            let indices_and_leafs_pointer = FIRST_DYNAMICALLY_ALLOCATED_ADDRESS;
+            let indices_and_leafs_pointer = DYN_MALLOC_FIRST_ADDRESS;
             encode_to_memory(
                 memory,
                 indices_and_leafs_pointer,

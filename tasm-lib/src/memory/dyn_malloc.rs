@@ -1,224 +1,219 @@
 use std::collections::HashMap;
 
-use itertools::Itertools;
 use num::One;
 use num::Zero;
+use rand::prelude::StdRng;
 use rand::Rng;
+use rand::SeedableRng;
 use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
 use crate::empty_stack;
 use crate::library::Library;
-use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::ExecutionState;
+use crate::prelude::BasicSnippet;
+use crate::snippet_bencher::BenchmarkCase;
+use crate::traits::function::Function;
+use crate::traits::function::FunctionInitialState;
 
-pub const DYN_MALLOC_ADDRESS: BFieldElement = BFieldElement::new(1 << 32);
-pub const FIRST_DYNAMICALLY_ALLOCATED_ADDRESS: BFieldElement = BFieldElement::new((1 << 32) + 1);
+/// The location of the dynamic allocator state in memory.
+///
+/// See the [memory convention][super] for details.
+pub const DYN_MALLOC_ADDRESS: BFieldElement = BFieldElement::new(BFieldElement::MAX);
 
-#[derive(Clone, Debug)]
+/// The address of the first page that can be dynamically allocated.
+pub const DYN_MALLOC_FIRST_PAGE: u64 = 1;
+
+/// The size of one dynamically allocated page.
+pub const DYN_MALLOC_PAGE_SIZE: u64 = 1 << 32;
+
+pub const DYN_MALLOC_FIRST_ADDRESS: BFieldElement =
+    BFieldElement::new(DYN_MALLOC_FIRST_PAGE * DYN_MALLOC_PAGE_SIZE);
+
+/// Return a pointer to the next free page of memory.
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
 pub struct DynMalloc;
 
-impl DynMalloc {
-    pub fn get_initialization_code(malloc_init_value: u32) -> Vec<LabelledInstruction> {
-        triton_asm!(push {malloc_init_value} push {DYN_MALLOC_ADDRESS} write_mem 1 pop 1)
+impl BasicSnippet for DynMalloc {
+    fn inputs(&self) -> Vec<(DataType, String)> {
+        vec![]
     }
-}
 
-impl DeprecatedSnippet for DynMalloc {
-    fn entrypoint_name(&self) -> String {
+    fn outputs(&self) -> Vec<(DataType, String)> {
+        vec![(DataType::Bfe, "*addr".to_string())]
+    }
+
+    fn entrypoint(&self) -> String {
         "tasm_memory_dyn_malloc".to_string()
     }
 
-    fn input_field_names(&self) -> Vec<String> {
-        vec!["size".to_string()]
-    }
+    fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
+        let entrypoint = self.entrypoint();
+        let dyn_malloc_init = format!("{entrypoint}_initialize");
 
-    fn input_types(&self) -> Vec<DataType> {
-        vec![DataType::U32]
-    }
-
-    fn output_field_names(&self) -> Vec<String> {
-        vec!["*addr".to_string()]
-    }
-
-    fn output_types(&self) -> Vec<DataType> {
-        vec![DataType::Bfe]
-    }
-
-    fn stack_diff(&self) -> isize {
-        0
-    }
-
-    fn function_code(&self, _library: &mut Library) -> String {
-        let entrypoint = self.entrypoint_name();
-        let first_dynamically_allocated_address: BFieldElement =
-            DYN_MALLOC_ADDRESS + BFieldElement::new(1);
-        triton_asm!(
-        // Return a pointer to a free address and allocate `size` words for this pointer
-
-        // BEFORE: _ size
-        // AFTER:  _ *next_addr
+        triton_asm! {
+        // BEFORE: _
+        // AFTER:  _ *addr
         {entrypoint}:
-            push {DYN_MALLOC_ADDRESS}                  // _ size *dyn_malloc_state
-            read_mem 1                                 // _ size *next_addr' *dyn_malloc_state-1
-            pop 1                                      // _ size *next_addr'
+            push {DYN_MALLOC_ADDRESS}       // _ *dyn_malloc_state
+            hint dyn_malloc_state: Pointer = stack[0]
+            read_mem 1 pop 1                // _ page_idx
 
-            dup 0                                      // _ size *next_addr' *next_addr'
-            push 0                                     // _ size *next_addr' *next_addr' 0
-            eq                                         // _ size *next_addr' (*next_addr' == 0)
-            push {first_dynamically_allocated_address}
-            mul                                        // _ size *next_addr' (*next_addr' == 0) * (2^{32} + 1)
-            add                                        // _ size *next_addr
+            dup 0 push 0 eq                 // _ page_idx (page_idx == 0)
+            skiz call {dyn_malloc_init}     // _ page_idx
 
-            dup 0                                      // _ size *next_addr *next_addr
-            swap 2                                     // _ *next_addr *next_addr size
+            // update dynamic allocator state
+            dup 0                           // _ page_idx page_idx
+            push 1                          // _ page_idx page_idx 1
+            add                             // _ page_idx next_page_idx
+            hint dyn_malloc_state: MemoryPageIdx = stack[0]
+            push {DYN_MALLOC_ADDRESS}       // _ page_idx next_page_idx *dyn_malloc_state
+            write_mem 1 pop 1               // _ page_idx
 
-            // Ensure that `size` does not exceed 2^32
-            split
-            swap 1
-            push 0
-            eq
-            assert
-            add                                        // _ *next_addr *(next_addr + size)
-
-            // ensure that the dynamic allocator never touches the $[0, 2^{32})$ range.
-            dup 0
-            split                                      // _ *next_addr *next_next_addr next_next_addr_hi next_next_addr_lo
-
-            pop 1
-            push 0
-            eq
-            push 0
-            eq
-            assert
-            // _ *next_addr *(next_addr + size)
-
-            // write the address of unallocated memory back to memory
-            push {DYN_MALLOC_ADDRESS}   // _ *next_addr *(next_addr + size) *dyn_malloc_state
-            write_mem 1                 // _ *next_addr (*dyn_malloc_state+1)
-            pop 1                       // _ *next_addr
+            // translate page number to address
+            push {DYN_MALLOC_PAGE_SIZE}     // _ page_idx page_size
+            hint page_size = stack[0]
+            mul                             // _ *free_page
+            hint free_page_address: Pointer = stack[0]
             return
-        )
-        .iter()
-        .join("\n")
+
+        // BEFORE: _ 0
+        // AFTER:  _ DYN_MALLOC_FIRST_PAGE
+        {dyn_malloc_init}:
+            pop 1
+            push {DYN_MALLOC_FIRST_PAGE}
+            return
+        }
     }
+}
 
-    fn crash_conditions(&self) -> Vec<String> {
-        vec![
-            "Caller attempts to allocate more than 2^32 words".to_owned(),
-            "Allocator wraps around and attempts to overwrite the first 2^32 words".to_owned(),
-        ]
-    }
-
-    fn gen_input_states(&self) -> Vec<ExecutionState> {
-        let mut rng = rand::thread_rng();
-
-        let mut stack = empty_stack();
-        stack.push(BFieldElement::new(rng.gen_range(0..10_000)));
-
-        let static_allocation_size = rng.gen_range(0..10_000);
-        let memory = HashMap::<BFieldElement, BFieldElement>::new();
-
-        let ret: Vec<ExecutionState> = vec![
-            ExecutionState::with_stack_and_memory(stack, memory, static_allocation_size),
-            ExecutionState::with_stack(empty_stack()),
-        ];
-
-        ret
-    }
-
-    fn common_case_input_state(&self) -> ExecutionState {
-        let mut init_stack = empty_stack();
-        init_stack.push(BFieldElement::new(10));
-        ExecutionState::with_stack(init_stack)
-    }
-
-    fn worst_case_input_state(&self) -> ExecutionState {
-        let mut init_stack = empty_stack();
-        init_stack.push(BFieldElement::new(1 << 31));
-        ExecutionState::with_stack(init_stack)
-    }
-
-    fn rust_shadowing(
+impl Function for DynMalloc {
+    fn rust_shadow(
         &self,
         stack: &mut Vec<BFieldElement>,
-        _std_in: Vec<BFieldElement>,
-        _secret_in: Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
-        let size = stack.pop().unwrap();
-        assert!(size.value() < (1u64 << 32));
+        let mut page_idx = memory.get(&DYN_MALLOC_ADDRESS).copied().unwrap_or_default();
+        if page_idx.is_zero() {
+            page_idx = DYN_MALLOC_FIRST_PAGE.into();
+        }
+        let page_idx = page_idx;
 
-        let used_memory = memory
-            .entry(DYN_MALLOC_ADDRESS)
-            .and_modify(|e| {
-                *e = if e.is_zero() {
-                    DYN_MALLOC_ADDRESS + BFieldElement::one()
-                } else {
-                    *e
-                }
-            })
-            .or_insert_with(|| DYN_MALLOC_ADDRESS + BFieldElement::one());
+        let next_page_idx = page_idx + BFieldElement::one();
+        memory.insert(DYN_MALLOC_ADDRESS, next_page_idx);
 
-        let next_addr = *used_memory;
+        let page_address = page_idx * BFieldElement::new(DYN_MALLOC_PAGE_SIZE);
+        stack.push(page_address);
+    }
 
-        stack.push(next_addr);
-        *used_memory += size;
+    fn pseudorandom_initial_state(
+        &self,
+        seed: [u8; 32],
+        _: Option<BenchmarkCase>,
+    ) -> FunctionInitialState {
+        let mut rng = StdRng::from_seed(seed);
 
-        assert!(
-            used_memory.value() > (1u64 << 32),
-            "New dyn malloc state is {used_memory} which is outside of the legal region"
-        );
+        let stack = empty_stack();
+
+        let mut memory = HashMap::new();
+        let page_number = rng.gen_range(0..(1u64 << 32));
+        memory.insert(DYN_MALLOC_ADDRESS, page_number.into());
+
+        FunctionInitialState { stack, memory }
+    }
+
+    fn corner_case_initial_states(&self) -> Vec<FunctionInitialState> {
+        let stack = empty_stack();
+        let memory = HashMap::new();
+        vec![FunctionInitialState { stack, memory }]
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
+    use test_strategy::proptest;
+
+    use crate::traits::function::ShadowedFunction;
+    use crate::traits::rust_shadow::RustShadow;
 
     use super::*;
 
     #[test]
     fn expected_address_chosen_for_dyn_malloc() {
-        assert_eq!(1 << 32, DYN_MALLOC_ADDRESS.value());
+        let negative_one = -BFieldElement::one();
+        assert_eq!(negative_one, DYN_MALLOC_ADDRESS);
     }
 
     #[test]
-    fn dyn_malloc_test() {
-        test_rust_equivalence_multiple_deprecated(&DynMalloc, true);
+    fn dynamic_allocator_behaves_like_rust_shadowing() {
+        ShadowedFunction::new(DynMalloc).test();
     }
 
-    #[test]
-    fn unit_test() {
-        let mut init_stack = empty_stack();
-        init_stack.push(BFieldElement::new(10));
-        let mut empty_memory_state = ExecutionState::with_stack(init_stack.clone());
-        let mut final_state_1 =
-            DynMalloc.link_and_run_tasm_from_state_for_test(&mut empty_memory_state);
-        assert_eq!(
-            DYN_MALLOC_ADDRESS + BFieldElement::one(),
-            final_state_1.final_stack.pop().unwrap()
-        );
+    #[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
+    struct MultipleDynMallocCalls {
+        num_calls: usize,
+    }
 
-        let mut non_empty_memory_state =
-            ExecutionState::with_stack_and_memory(init_stack, final_state_1.final_ram, 0);
-        let mut final_state_2 =
-            DynMalloc.link_and_run_tasm_from_state_for_test(&mut non_empty_memory_state);
-        assert_eq!(
-            DYN_MALLOC_ADDRESS + BFieldElement::new(11),
-            final_state_2.final_stack.pop().unwrap()
-        );
+    impl BasicSnippet for MultipleDynMallocCalls {
+        fn inputs(&self) -> Vec<(DataType, String)> {
+            vec![]
+        }
+
+        fn outputs(&self) -> Vec<(DataType, String)> {
+            vec![(DataType::Bfe, "*addr".to_string()); self.num_calls]
+        }
+
+        fn entrypoint(&self) -> String {
+            "tasm_memory_dyn_malloc_multiple_calls".to_string()
+        }
+
+        fn code(&self, lib: &mut Library) -> Vec<LabelledInstruction> {
+            let dyn_malloc = lib.import(Box::new(DynMalloc));
+
+            let single_call = triton_asm!(call { dyn_malloc });
+            let multiple_calls = vec![single_call; self.num_calls].concat();
+
+            triton_asm!( {self.entrypoint()}: {&multiple_calls} return )
+        }
+    }
+
+    impl Function for MultipleDynMallocCalls {
+        fn rust_shadow(
+            &self,
+            stack: &mut Vec<BFieldElement>,
+            memory: &mut HashMap<BFieldElement, BFieldElement>,
+        ) {
+            for _ in 0..self.num_calls {
+                DynMalloc.rust_shadow(stack, memory);
+            }
+        }
+
+        fn pseudorandom_initial_state(
+            &self,
+            seed: [u8; 32],
+            _: Option<BenchmarkCase>,
+        ) -> FunctionInitialState {
+            DynMalloc.pseudorandom_initial_state(seed, None)
+        }
+    }
+
+    #[proptest(cases = 20)]
+    fn dynamic_allocator_can_be_called_multiple_times(
+        #[strategy(0_usize..1_000)] num_calls: usize,
+    ) {
+        let multiple_calls = MultipleDynMallocCalls { num_calls };
+        ShadowedFunction::new(multiple_calls).test();
     }
 }
 
 #[cfg(test)]
 mod benches {
-    use crate::snippet_bencher::bench_and_write;
+    use crate::traits::function::ShadowedFunction;
+    use crate::traits::rust_shadow::RustShadow;
 
     use super::*;
 
     #[test]
     fn dyn_malloc_benchmark() {
-        bench_and_write(DynMalloc);
+        ShadowedFunction::new(DynMalloc).bench();
     }
 }

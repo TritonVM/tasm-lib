@@ -5,7 +5,7 @@ use triton_vm::prelude::*;
 use crate::empty_stack;
 use crate::memory::dyn_malloc::DynMalloc;
 use crate::memory::dyn_malloc::DYN_MALLOC_ADDRESS;
-use crate::traits::deprecated_snippet::DeprecatedSnippet;
+use crate::traits::function::Function;
 
 // TODO: DELETE ME, OR FIX ME
 pub fn rust_dyn_malloc_initialize(
@@ -28,6 +28,6 @@ pub fn dynamic_allocator(
         vec![BFieldElement::new(size_in_words as u64)],
     ]
     .concat();
-    DynMalloc.rust_shadowing(&mut init_stack, vec![], vec![], memory);
+    DynMalloc.rust_shadow(&mut init_stack, memory);
     init_stack.pop().unwrap()
 }
