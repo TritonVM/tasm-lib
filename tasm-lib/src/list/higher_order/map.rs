@@ -14,11 +14,15 @@ use crate::data_type::DataType;
 use crate::empty_stack;
 use crate::library::Library;
 use crate::list;
-use crate::list::ListType;
+use crate::list::get::Get;
+use crate::list::length::Length;
+use crate::list::new::New;
+use crate::list::set::Set;
+use crate::list::set_length::SetLength;
+use crate::list::LIST_METADATA_SIZE;
 use crate::memory::dyn_malloc::DYN_MALLOC_ADDRESS;
 use crate::rust_shadowing_helper_functions;
-use crate::rust_shadowing_helper_functions::safe_list::safe_insert_random_list;
-use crate::rust_shadowing_helper_functions::unsafe_list::unsafe_insert_random_list;
+use crate::rust_shadowing_helper_functions::list::insert_random_list;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::traits::function::Function;
@@ -32,9 +36,15 @@ currently only works with *one* input element. Use a tuple data type to circumve
 
 /// Applies a given function to every element of a list, and collects the new elements
 /// into a new list.
+#[derive(Debug)]
 pub struct Map {
-    pub list_type: ListType,
     pub f: InnerFunction,
+}
+
+impl Map {
+    pub fn new(f: InnerFunction) -> Self {
+        Self { f }
+    }
 }
 
 impl BasicSnippet for Map {
@@ -79,11 +89,7 @@ impl BasicSnippet for Map {
     }
 
     fn entrypoint(&self) -> String {
-        format!(
-            "tasm_list_higher_order_{}_u32_map_{}",
-            self.list_type,
-            self.f.entrypoint()
-        )
+        format!("tasm_list_higher_order_u32_map_{}", self.f.entrypoint())
     }
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
@@ -91,11 +97,11 @@ impl BasicSnippet for Map {
         let output_type = self.f.range();
         let output_size_plus_one = 1 + output_type.stack_size();
 
-        let get_length = library.import(self.list_type.length_snippet(input_type.clone()));
-        let set_length = library.import(self.list_type.set_length(input_type.clone()));
-        let new_list = library.import(self.list_type.new_list_snippet(output_type.clone()));
-        let list_get = library.import(self.list_type.get_snippet(input_type.clone()));
-        let list_set = library.import(self.list_type.set_snippet(output_type));
+        let get_length = library.import(Box::new(Length::new(input_type.clone())));
+        let set_length = library.import(Box::new(SetLength::new(input_type.clone())));
+        let new_list = library.import(Box::new(New::new(input_type.clone())));
+        let list_get = library.import(Box::new(Get::new(output_type.clone())));
+        let list_set = library.import(Box::new(Set::new(output_type)));
 
         // Declare the inner function entrypoint name and import inner function in case it's a snippet
         let inner_function_name = match &self.f {
@@ -198,72 +204,29 @@ impl Function for Map {
 
         let list_pointer = stack.pop().unwrap();
 
-        // get list length
-        let len = match self.list_type {
-            ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_get_length(
-                list_pointer,
-                memory,
-            ),
-            ListType::Unsafe => {
-                rust_shadowing_helper_functions::unsafe_list::unsafe_list_get_length(
-                    list_pointer,
-                    memory,
-                )
-            }
-        };
-
-        let list_element = match self.list_type {
-            ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_get,
-            ListType::Unsafe => rust_shadowing_helper_functions::unsafe_list::unsafe_list_get,
-        };
-
-        let set_element = match self.list_type {
-            ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_set,
-            ListType::Unsafe => rust_shadowing_helper_functions::unsafe_list::unsafe_list_set,
-        };
+        let len = rust_shadowing_helper_functions::list::list_get_length(list_pointer, memory);
 
         // used for deprecated rust shadowers
         let std_in = vec![];
         let secret_in = vec![];
 
         let output_list_capacity = len;
-        let output_list = match self.list_type {
-            ListType::Safe => {
-                // Push capacity to stack
-                stack.push(BFieldElement::new(output_list_capacity as u64));
-                list::safeimplu32::new::SafeNew {
-                    data_type: input_list_element_type.clone(),
-                }
-                .rust_shadowing(stack, std_in.clone(), secret_in.clone(), memory);
-                stack.pop().unwrap()
+        let output_list = {
+            stack.push(BFieldElement::new(output_list_capacity as u64));
+            list::new::New {
+                data_type: input_list_element_type.clone(),
             }
-            ListType::Unsafe => {
-                stack.push(BFieldElement::new(output_list_capacity as u64));
-                list::unsafeimplu32::new::UnsafeNew {
-                    data_type: input_list_element_type.clone(),
-                }
-                .rust_shadowing(stack, std_in.clone(), secret_in.clone(), memory);
-                stack.pop().unwrap()
-            }
+            .rust_shadowing(stack, std_in.clone(), secret_in.clone(), memory);
+            stack.pop().unwrap()
         };
 
         // set length
         stack.push(output_list);
         stack.push(BFieldElement::new(len as u64));
-        match self.list_type {
-            ListType::Safe => {
-                list::safeimplu32::set_length::SafeSetLength {
-                    data_type: output_type.clone(),
-                }
-                .rust_shadowing(stack, std_in, secret_in, memory);
-            }
-            ListType::Unsafe => {
-                list::unsafeimplu32::set_length::UnsafeSetLength {
-                    data_type: output_type.clone(),
-                }
-                .rust_shadowing(stack, std_in, secret_in, memory);
-            }
+        list::set_length::SetLength {
+            data_type: output_type.clone(),
         }
+        .rust_shadowing(stack, std_in, secret_in, memory);
         stack.pop();
 
         // Push three values that may not be changed by the inner function
@@ -274,7 +237,7 @@ impl Function for Map {
         // forall elements, read + map + write
         for i in 0..len {
             // read
-            let mut input_item = list_element(
+            let mut input_item = rust_shadowing_helper_functions::list::list_get(
                 list_pointer,
                 i,
                 memory,
@@ -295,7 +258,7 @@ impl Function for Map {
             }
 
             // write
-            set_element(output_list, i, output_item, memory);
+            rust_shadowing_helper_functions::list::list_set(output_list, i, output_item, memory);
         }
 
         // Ensure canaries are still on the stack, then remove them
@@ -337,7 +300,6 @@ impl Map {
         list_length: usize,
         additional_function_args: Vec<BFieldElement>,
     ) -> ExecutionState {
-        let capacity = list_length;
         let mut stack = empty_stack();
 
         // Add additional input args to stack, if they exist
@@ -349,29 +311,14 @@ impl Map {
 
         let mut memory = HashMap::default();
         let input_element_type = self.f.domain();
-        let list_metadata_size = self.list_type.metadata_size();
-        let input_list_size = list_metadata_size + list_length * input_element_type.stack_size();
+        let input_list_size = LIST_METADATA_SIZE + list_length * input_element_type.stack_size();
         let input_list_size = BFieldElement::new(input_list_size as u64);
         rust_shadowing_helper_functions::dyn_malloc::rust_dyn_malloc_initialize(
             &mut memory,
             (input_list_size + list_pointer) + DYN_MALLOC_ADDRESS,
         );
 
-        match self.list_type {
-            ListType::Safe => safe_insert_random_list(
-                &input_element_type,
-                list_pointer,
-                capacity as u32,
-                list_length,
-                &mut memory,
-            ),
-            ListType::Unsafe => unsafe_insert_random_list(
-                &input_element_type,
-                list_pointer,
-                list_length,
-                &mut memory,
-            ),
-        };
+        insert_random_list(&input_element_type, list_pointer, list_length, &mut memory);
 
         let nondeterminism = NonDeterminism::default().with_ram(memory);
         ExecutionState {
@@ -546,18 +493,8 @@ mod tests {
     }
 
     #[test]
-    fn unsafe_list_prop_test() {
+    fn prop_test() {
         let snippet = Map {
-            list_type: ListType::Unsafe,
-            f: InnerFunction::DeprecatedSnippet(Box::new(TestHashXFieldElement)),
-        };
-        ShadowedFunction::new(snippet).test();
-    }
-
-    #[test]
-    fn with_safe_list_prop_test() {
-        let snippet = Map {
-            list_type: ListType::Safe,
             f: InnerFunction::DeprecatedSnippet(Box::new(TestHashXFieldElement)),
         };
         ShadowedFunction::new(snippet).test();
@@ -571,7 +508,6 @@ mod tests {
             DataType::Bfe,
         );
         let snippet = Map {
-            list_type: ListType::Unsafe,
             f: InnerFunction::RawCode(rawcode),
         };
         ShadowedFunction::new(snippet).test();
@@ -585,7 +521,6 @@ mod tests {
             DataType::Bfe,
         );
         let snippet = Map {
-            list_type: ListType::Unsafe,
             f: InnerFunction::RawCode(rawcode),
         };
         ShadowedFunction::new(snippet).test();
@@ -601,7 +536,6 @@ mod tests {
             DataType::Bfe,
         );
         let snippet = Map {
-            list_type: ListType::Unsafe,
             f: InnerFunction::RawCode(rawcode),
         };
         ShadowedFunction::new(snippet).test();
@@ -617,7 +551,6 @@ mod tests {
             DataType::Xfe,
         );
         let snippet = Map {
-            list_type: ListType::Unsafe,
             f: InnerFunction::RawCode(rawcode),
         };
         ShadowedFunction::new(snippet).test();
@@ -636,7 +569,6 @@ mod tests {
             DataType::Xfe,
         );
         let snippet = Map {
-            list_type: ListType::Unsafe,
             f: InnerFunction::RawCode(rawcode),
         };
         ShadowedFunction::new(snippet).test()
@@ -692,7 +624,6 @@ mod tests {
             DataType::U128,
         );
         ShadowedFunction::new(Map {
-            list_type: ListType::Unsafe,
             f: InnerFunction::RawCode(rawcode),
         })
         .test();
@@ -708,18 +639,8 @@ mod benches {
     use super::*;
 
     #[test]
-    fn unsafe_list_map_benchmark() {
+    fn map_benchmark() {
         ShadowedFunction::new(Map {
-            list_type: ListType::Unsafe,
-            f: InnerFunction::DeprecatedSnippet(Box::new(TestHashXFieldElement)),
-        })
-        .bench();
-    }
-
-    #[test]
-    fn safe_list_map_benchmark() {
-        ShadowedFunction::new(Map {
-            list_type: ListType::Safe,
             f: InnerFunction::DeprecatedSnippet(Box::new(TestHashXFieldElement)),
         })
         .bench();

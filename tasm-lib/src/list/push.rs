@@ -11,16 +11,20 @@ use twenty_first::shared_math::other::random_elements;
 use crate::data_type::DataType;
 use crate::empty_stack;
 use crate::library::Library;
-use crate::rust_shadowing_helper_functions::unsafe_list::untyped_unsafe_insert_random_list;
+use crate::rust_shadowing_helper_functions::list::untyped_insert_random_list;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::ExecutionState;
 
-#[derive(Clone, Debug)]
-pub struct UnsafePush {
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub struct Push {
     pub data_type: DataType,
 }
 
-impl UnsafePush {
+impl Push {
+    pub fn new(data_type: DataType) -> Self {
+        Self { data_type }
+    }
+
     fn write_type_to_mem(&self) -> Vec<LabelledInstruction> {
         let data_size = self.data_type.stack_size();
         let num_full_chunk_writes = data_size / 5;
@@ -35,12 +39,9 @@ impl UnsafePush {
     }
 }
 
-impl DeprecatedSnippet for UnsafePush {
+impl DeprecatedSnippet for Push {
     fn entrypoint_name(&self) -> String {
-        format!(
-            "tasm_list_unsafeimplu32_push___{}",
-            self.data_type.label_friendly_name()
-        )
+        format!("tasm_list_push___{}", self.data_type.label_friendly_name())
     }
 
     fn input_field_names(&self) -> Vec<String> {
@@ -180,7 +181,7 @@ fn prepare_state(data_type: &DataType) -> ExecutionState {
     }
 
     let mut memory = HashMap::default();
-    untyped_unsafe_insert_random_list(
+    untyped_insert_random_list(
         list_pointer,
         init_length,
         &mut memory,
@@ -200,7 +201,7 @@ mod tests {
     #[test]
     fn new_snippet_test() {
         fn test_rust_equivalence_and_export(data_type: DataType) {
-            test_rust_equivalence_multiple_deprecated(&UnsafePush { data_type }, true);
+            test_rust_equivalence_multiple_deprecated(&Push { data_type }, true);
         }
 
         test_rust_equivalence_and_export(DataType::Bool);
@@ -256,7 +257,7 @@ mod tests {
         }
         let mut memory = HashMap::default();
 
-        untyped_unsafe_insert_random_list(
+        untyped_insert_random_list(
             list_address,
             init_list_length as usize,
             &mut memory,
@@ -264,7 +265,7 @@ mod tests {
         );
 
         let memory = test_rust_equivalence_given_input_values_deprecated(
-            &UnsafePush {
+            &Push {
                 data_type: data_type.clone(),
             },
             &init_stack,
@@ -303,8 +304,7 @@ mod benches {
     use super::*;
 
     #[test]
-    fn unsafe_push_benchmark() {
-        let data_type = DataType::Digest;
-        bench_and_write(UnsafePush { data_type });
+    fn push_benchmark() {
+        bench_and_write(Push::new(DataType::Digest));
     }
 }

@@ -16,7 +16,6 @@ use crate::hashing::algebraic_hasher::sample_indices::SampleIndices;
 use crate::list::higher_order::inner_function::InnerFunction;
 use crate::list::higher_order::inner_function::RawCode;
 use crate::list::higher_order::map::Map;
-use crate::list::ListType;
 use crate::rust_shadowing_helper_functions;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::function::Function;
@@ -57,9 +56,7 @@ impl BasicSnippet for GetSwbfIndices {
     fn code(&self, library: &mut crate::library::Library) -> Vec<LabelledInstruction> {
         let num_trials = self.num_trials;
         let window_size = self.window_size;
-        let sample_indices = library.import(Box::new(SampleIndices {
-            list_type: ListType::Unsafe,
-        }));
+        let sample_indices = library.import(Box::new(SampleIndices));
 
         let entrypoint = self.entrypoint();
 
@@ -110,10 +107,9 @@ impl BasicSnippet for GetSwbfIndices {
             DataType::U32,
             DataType::U128,
         );
-        let map_add_batch_offset = library.import(Box::new(Map {
-            list_type: ListType::Unsafe,
-            f: InnerFunction::RawCode(rawcode_for_inner_function_u128_plus_u32),
-        }));
+        let map_add_batch_offset = library.import(Box::new(Map::new(InnerFunction::RawCode(
+            rawcode_for_inner_function_u128_plus_u32,
+        ))));
 
         // TODO: This can be replaced by a bit-mask to save some clock cycles
         let divide_by_batch_size = library.import(Box::new(
@@ -240,16 +236,16 @@ impl Function for GetSwbfIndices {
             u32_list_size_in_words,
             memory,
         );
-        rust_shadowing_helper_functions::unsafe_list::unsafe_list_new(u32_list_pointer, memory);
+        rust_shadowing_helper_functions::list::list_new(u32_list_pointer, memory);
 
-        rust_shadowing_helper_functions::unsafe_list::unsafe_list_set_length(
+        rust_shadowing_helper_functions::list::list_set_length(
             u32_list_pointer,
             self.num_trials,
             memory,
         );
 
         for (i, index) in u32_indices.iter().enumerate() {
-            rust_shadowing_helper_functions::unsafe_list::unsafe_list_set(
+            rust_shadowing_helper_functions::list::list_set(
                 u32_list_pointer,
                 i,
                 vec![BFieldElement::new(*index as u64)],
@@ -286,11 +282,7 @@ impl Function for GetSwbfIndices {
             u128_list_size_in_words,
             memory,
         );
-        rust_shadowing_helper_functions::unsafe_list::unsafe_list_insert(
-            u128_list_pointer,
-            u128_indices,
-            memory,
-        );
+        rust_shadowing_helper_functions::list::list_insert(u128_list_pointer, u128_indices, memory);
 
         stack.push(u128_list_pointer);
     }

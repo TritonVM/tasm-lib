@@ -79,6 +79,7 @@ impl RawCode {
     }
 }
 
+#[derive(Debug)]
 pub enum InnerFunction {
     RawCode(RawCode),
     DeprecatedSnippet(Box<dyn DeprecatedSnippet>),

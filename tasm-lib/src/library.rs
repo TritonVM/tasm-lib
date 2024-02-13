@@ -324,7 +324,6 @@ mod tests {
     use triton_vm::triton_asm;
 
     use crate::empty_stack;
-    use crate::list::ListType;
     use crate::memory::memcpy::MemCpy;
     use crate::mmr::calculate_new_peaks_from_leaf_mutation::MmrCalculateNewPeaksFromLeafMutationMtIndices;
     use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
@@ -403,9 +402,7 @@ mod tests {
             let mut library = Library::new();
             let memcpy = library.import(Box::new(MemCpy));
             let calculate_new_peaks_from_leaf_mutation =
-                library.import(Box::new(MmrCalculateNewPeaksFromLeafMutationMtIndices {
-                    list_type: ListType::Safe,
-                }));
+                library.import(Box::new(MmrCalculateNewPeaksFromLeafMutationMtIndices));
 
             let code = triton_asm!(
                 lala_entrypoint:

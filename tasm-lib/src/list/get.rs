@@ -9,20 +9,26 @@ use triton_vm::prelude::*;
 use crate::data_type::DataType;
 use crate::empty_stack;
 use crate::library::Library;
-use crate::rust_shadowing_helper_functions::unsafe_list::unsafe_list_get;
-use crate::rust_shadowing_helper_functions::unsafe_list::untyped_unsafe_insert_random_list;
+use crate::rust_shadowing_helper_functions::list::list_get;
+use crate::rust_shadowing_helper_functions::list::untyped_insert_random_list;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::ExecutionState;
 
-#[derive(Clone, Debug)]
-pub struct UnsafeGet {
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub struct Get {
     pub data_type: DataType,
 }
 
-impl DeprecatedSnippet for UnsafeGet {
+impl Get {
+    pub fn new(data_type: DataType) -> Self {
+        Self { data_type }
+    }
+}
+
+impl DeprecatedSnippet for Get {
     fn entrypoint_name(&self) -> String {
         format!(
-            "tasm_list_unsafeimplu32_get_element___{}",
+            "tasm_list_get_element___{}",
             self.data_type.label_friendly_name()
         )
     }
@@ -118,7 +124,7 @@ impl DeprecatedSnippet for UnsafeGet {
     ) {
         let index: u32 = stack.pop().unwrap().try_into().unwrap();
         let list_pointer = stack.pop().unwrap();
-        let element: Vec<BFieldElement> = unsafe_list_get(
+        let element: Vec<BFieldElement> = list_get(
             list_pointer,
             index as usize,
             memory,
@@ -143,7 +149,7 @@ fn input_state(list_length: usize) -> ExecutionState {
 
     let mut memory = HashMap::default();
 
-    untyped_unsafe_insert_random_list(list_pointer, list_length, &mut memory, 4);
+    untyped_insert_random_list(list_pointer, list_length, &mut memory, 4);
 
     let nondeterminism = NonDeterminism::default().with_ram(memory);
     ExecutionState {
@@ -164,7 +170,7 @@ mod tests {
     #[test]
     fn new_snippet_test() {
         test_rust_equivalence_multiple_deprecated(
-            &UnsafeGet {
+            &Get {
                 data_type: DataType::Xfe,
             },
             true,
@@ -225,7 +231,7 @@ mod tests {
             }
         }
         let targeted_element: Vec<BFieldElement> =
-            unsafe_list_get(list_pointer, index as usize, &memory, element_size);
+            list_get(list_pointer, index as usize, &memory, element_size);
 
         let mut expected_end_stack = empty_stack();
         for i in 0..element_size {
@@ -233,7 +239,7 @@ mod tests {
         }
 
         test_rust_equivalence_given_input_values_deprecated(
-            &UnsafeGet { data_type },
+            &Get { data_type },
             &init_stack,
             &[],
             memory,
@@ -250,9 +256,7 @@ mod benches {
     use super::*;
 
     #[test]
-    fn unsafe_get_benchmark() {
-        bench_and_write(UnsafeGet {
-            data_type: DataType::Digest,
-        });
+    fn get_benchmark() {
+        bench_and_write(Get::new(DataType::Digest));
     }
 }

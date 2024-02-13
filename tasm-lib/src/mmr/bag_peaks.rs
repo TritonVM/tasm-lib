@@ -11,8 +11,9 @@ use twenty_first::util_types::shared::bag_peaks;
 
 use crate::data_type::DataType;
 use crate::empty_stack;
-use crate::list::unsafeimplu32::get::UnsafeGet;
-use crate::list::unsafeimplu32::length::Length as UnsafeLength;
+use crate::list::get::Get;
+use crate::list::length::Length;
+use crate::list::LIST_METADATA_SIZE;
 use crate::rust_shadowing_helper_functions;
 use crate::snippet_bencher::BenchmarkCase;
 use crate::traits::basic_snippet::BasicSnippet;
@@ -32,11 +33,7 @@ impl BagPeaks {
         let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
 
         // Insert list into memory
-        rust_shadowing_helper_functions::unsafe_list::unsafe_list_insert(
-            address,
-            peaks,
-            &mut memory,
-        );
+        rust_shadowing_helper_functions::list::list_insert(address, peaks, &mut memory);
 
         FunctionInitialState { stack, memory }
     }
@@ -61,12 +58,8 @@ impl BasicSnippet for BagPeaks {
     fn code(&self, library: &mut crate::library::Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
 
-        let get_element = library.import(Box::new(UnsafeGet {
-            data_type: DataType::Digest,
-        }));
-        let get_length = library.import(Box::new(UnsafeLength {
-            data_type: DataType::Digest,
-        }));
+        let get_element = library.import(Box::new(Get::new(DataType::Digest)));
+        let get_length = library.import(Box::new(Length::new(DataType::Digest)));
 
         let length_is_zero_label = format!("{entrypoint}_length_is_zero");
         let length_is_not_zero_label = format!("{entrypoint}_length_is_not_zero");
@@ -196,7 +189,7 @@ impl Function for BagPeaks {
     ) {
         let address = stack.pop().unwrap();
         let length = memory.get(&address).unwrap().value() as usize;
-        let safety_offset = BFieldElement::new(1); // unsafe lists
+        let safety_offset = BFieldElement::new(LIST_METADATA_SIZE as u64);
 
         let mut bfes: Vec<BFieldElement> = Vec::with_capacity(length * tip5::DIGEST_LENGTH);
 

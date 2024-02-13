@@ -9,19 +9,25 @@ use triton_vm::prelude::*;
 use crate::data_type::DataType;
 use crate::empty_stack;
 use crate::library::Library;
-use crate::rust_shadowing_helper_functions::unsafe_list::untyped_unsafe_insert_random_list;
+use crate::rust_shadowing_helper_functions::list::untyped_insert_random_list;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::ExecutionState;
 
-#[derive(Clone, Debug)]
-pub struct UnsafeSetLength {
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub struct SetLength {
     pub data_type: DataType,
 }
 
-impl DeprecatedSnippet for UnsafeSetLength {
+impl SetLength {
+    pub fn new(data_type: DataType) -> Self {
+        Self { data_type }
+    }
+}
+
+impl DeprecatedSnippet for SetLength {
     fn entrypoint_name(&self) -> String {
         format!(
-            "tasm_list_unsafeimplu32_set_length___{}",
+            "tasm_list_set_length___{}",
             self.data_type.label_friendly_name()
         )
     }
@@ -119,7 +125,7 @@ fn prepare_state(data_type: &DataType) -> ExecutionState {
     stack.push(list_pointer);
     stack.push(BFieldElement::new(new_length as u64));
     let mut memory = HashMap::default();
-    untyped_unsafe_insert_random_list(
+    untyped_insert_random_list(
         list_pointer,
         old_length,
         &mut memory,
@@ -139,7 +145,7 @@ mod tests {
     #[test]
     fn new_snippet_test() {
         test_rust_equivalence_multiple_deprecated(
-            &UnsafeSetLength {
+            &SetLength {
                 data_type: DataType::Xfe,
             },
             true,
@@ -177,7 +183,7 @@ mod tests {
         vm_memory.insert(list_address, BFieldElement::new(init_list_length as u64));
 
         let memory = test_rust_equivalence_given_input_values_deprecated(
-            &UnsafeSetLength { data_type },
+            &SetLength { data_type },
             &init_stack,
             &[],
             vm_memory,
@@ -201,9 +207,7 @@ mod benches {
     use super::*;
 
     #[test]
-    fn unsafe_set_length_benchmark() {
-        bench_and_write(UnsafeSetLength {
-            data_type: DataType::Digest,
-        });
+    fn set_length_benchmark() {
+        bench_and_write(SetLength::new(DataType::Digest));
     }
 }

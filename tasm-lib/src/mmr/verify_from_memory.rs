@@ -21,7 +21,7 @@ use crate::empty_stack;
 use crate::hashing::eq_digest::EqDigest;
 use crate::hashing::swap_digest::SwapDigest;
 use crate::library::Library;
-use crate::list::ListType;
+use crate::list::get::Get;
 use crate::rust_shadowing_helper_functions;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::Digest;
@@ -32,10 +32,8 @@ use crate::DIGEST_LENGTH;
 use super::leaf_index_to_mt_index_and_peak_index::MmrLeafIndexToMtIndexAndPeakIndex;
 use super::MAX_MMR_HEIGHT;
 
-#[derive(Clone, Debug)]
-pub struct MmrVerifyFromMemory {
-    pub list_type: ListType,
-}
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
+pub struct MmrVerifyFromMemory;
 
 impl MmrVerifyFromMemory {
     /// Returns (ExecutionState, auth_path_pointer, peaks_pointer)
@@ -73,28 +71,10 @@ impl MmrVerifyFromMemory {
 
         // Initialize memory
         let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
-        match self.list_type {
-            ListType::Safe => {
-                rust_shadowing_helper_functions::safe_list::safe_list_new(
-                    peaks_pointer,
-                    MAX_MMR_HEIGHT as u32,
-                    &mut memory,
-                );
-            }
-            ListType::Unsafe => {
-                rust_shadowing_helper_functions::unsafe_list::unsafe_list_new(
-                    peaks_pointer,
-                    &mut memory,
-                );
-            }
-        }
+        rust_shadowing_helper_functions::list::list_new(peaks_pointer, &mut memory);
 
-        let list_push = match self.list_type {
-            ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_push,
-            ListType::Unsafe => rust_shadowing_helper_functions::unsafe_list::unsafe_list_push,
-        };
         for peak in mmr.get_peaks() {
-            list_push(
+            rust_shadowing_helper_functions::list::list_push(
                 peaks_pointer,
                 peak.values().to_vec(),
                 &mut memory,
@@ -102,19 +82,9 @@ impl MmrVerifyFromMemory {
             );
         }
 
-        match self.list_type {
-            ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_new(
-                auth_path_pointer,
-                MAX_MMR_HEIGHT as u32,
-                &mut memory,
-            ),
-            ListType::Unsafe => rust_shadowing_helper_functions::unsafe_list::unsafe_list_new(
-                auth_path_pointer,
-                &mut memory,
-            ),
-        }
+        rust_shadowing_helper_functions::list::list_new(auth_path_pointer, &mut memory);
         for ap_element in auth_path.iter() {
-            list_push(
+            rust_shadowing_helper_functions::list::list_push(
                 auth_path_pointer,
                 ap_element.values().to_vec(),
                 &mut memory,
@@ -136,7 +106,7 @@ impl MmrVerifyFromMemory {
 
 impl DeprecatedSnippet for MmrVerifyFromMemory {
     fn entrypoint_name(&self) -> String {
-        format!("tasm_mmr_verify_from_memory_{}", self.list_type)
+        "tasm_mmr_verify_from_memory".into()
     }
 
     fn input_field_names(&self) -> Vec<String> {
@@ -188,7 +158,8 @@ impl DeprecatedSnippet for MmrVerifyFromMemory {
 
     fn function_code(&self, library: &mut Library) -> String {
         let leaf_index_to_mt_index = library.import(Box::new(MmrLeafIndexToMtIndexAndPeakIndex));
-        let get_list_element = library.import(self.list_type.get_snippet(DataType::Digest));
+
+        let get_list_element = library.import(Box::new(Get::new(DataType::Digest)));
         let u32_is_odd = library.import(Box::new(Isodd));
         let entrypoint = self.entrypoint_name();
         let eq_u64 = library.import(Box::new(EqU64));
@@ -356,10 +327,7 @@ impl DeprecatedSnippet for MmrVerifyFromMemory {
         // AFTER:  _ *auth_path leaf_index_hi leaf_index_lo validation_result
         let auth_path_pointer = stack.pop().unwrap();
 
-        let list_get = match self.list_type {
-            ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_get,
-            ListType::Unsafe => rust_shadowing_helper_functions::unsafe_list::unsafe_list_get,
-        };
+        let list_get = rust_shadowing_helper_functions::list::list_get;
         let auth_path_length = memory[&auth_path_pointer].value();
         let mut auth_path: Vec<Digest> = vec![];
         for i in 0..auth_path_length {
@@ -420,23 +388,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn verify_from_memory_test_unsafe_list() {
-        test_rust_equivalence_multiple_deprecated(
-            &MmrVerifyFromMemory {
-                list_type: ListType::Unsafe,
-            },
-            true,
-        );
-    }
-
-    #[test]
-    fn verify_from_memory_test_safe_list() {
-        test_rust_equivalence_multiple_deprecated(
-            &MmrVerifyFromMemory {
-                list_type: ListType::Safe,
-            },
-            true,
-        );
+    fn verify_from_memory_test() {
+        test_rust_equivalence_multiple_deprecated(&MmrVerifyFromMemory, true);
     }
 
     // This will crash the VM because leaf?index is not strictly less than leaf_count
@@ -606,11 +559,9 @@ mod tests {
         auth_path: Vec<Digest>,
         expect_validation_success: bool,
     ) {
-        let snippet_for_unsafe_lists = MmrVerifyFromMemory {
-            list_type: ListType::Unsafe,
-        };
+        let snippet = MmrVerifyFromMemory;
         let (exec_state, auth_path_pointer, _peaks_pointer) =
-            snippet_for_unsafe_lists.prepare_vm_state(mmr, leaf, leaf_index, auth_path.clone());
+            snippet.prepare_vm_state(mmr, leaf, leaf_index, auth_path.clone());
 
         let leaf_index_hi = BFieldElement::new(leaf_index >> 32);
         let leaf_index_lo = BFieldElement::new(leaf_index & u32::MAX as u64);
@@ -624,7 +575,7 @@ mod tests {
         expected_final_stack.push(BFieldElement::new(expect_validation_success as u64));
 
         test_rust_equivalence_given_input_values_deprecated(
-            &snippet_for_unsafe_lists,
+            &snippet,
             &init_stack,
             &[],
             exec_state.nondeterminism.ram,
@@ -649,16 +600,7 @@ mod benches {
     use super::*;
 
     #[test]
-    fn verify_from_memory_benchmark_unsafe_lists() {
-        bench_and_write(MmrVerifyFromMemory {
-            list_type: ListType::Unsafe,
-        });
-    }
-
-    #[test]
-    fn verify_from_memory_benchmark_safe_lists() {
-        bench_and_write(MmrVerifyFromMemory {
-            list_type: ListType::Safe,
-        });
+    fn verify_from_memory_benchmark() {
+        bench_and_write(MmrVerifyFromMemory);
     }
 }

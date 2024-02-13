@@ -6,17 +6,16 @@ use triton_vm::prelude::*;
 use twenty_first::shared_math::other::random_elements;
 
 use crate::data_type::DataType;
-use crate::list::ListType;
+use crate::list::LIST_METADATA_SIZE;
 
 /// Load a list from memory. Elements must be of `Copy` type.
-pub fn load_unsafe_list_with_copy_elements<const ELEMENT_SIZE: usize>(
+pub fn load_list_with_copy_elements<const ELEMENT_SIZE: usize>(
     list_pointer: BFieldElement,
     memory: &HashMap<BFieldElement, BFieldElement>,
 ) -> Vec<[BFieldElement; ELEMENT_SIZE]> {
     let list_length: usize = memory[&list_pointer].value().try_into().unwrap();
 
-    let mut element_pointer =
-        list_pointer + BFieldElement::new(ListType::Unsafe.metadata_size() as u64);
+    let mut element_pointer = list_pointer + BFieldElement::new(LIST_METADATA_SIZE as u64);
 
     let mut ret = Vec::with_capacity(list_length);
     for i in 0..list_length {
@@ -30,15 +29,15 @@ pub fn load_unsafe_list_with_copy_elements<const ELEMENT_SIZE: usize>(
     ret
 }
 
-pub fn unsafe_list_insert<T: BFieldCodec>(
+pub fn list_insert<T: BFieldCodec>(
     list_pointer: BFieldElement,
     vector: Vec<T>,
     memory: &mut HashMap<BFieldElement, BFieldElement>,
 ) {
-    unsafe_list_new(list_pointer, memory);
+    list_new(list_pointer, memory);
 
     for element in vector {
-        unsafe_list_push(
+        list_push(
             list_pointer,
             element.encode(),
             memory,
@@ -47,43 +46,40 @@ pub fn unsafe_list_insert<T: BFieldCodec>(
     }
 }
 
-pub fn unsafe_insert_random_list(
+pub fn insert_random_list(
     data_type: &DataType,
     list_pointer: BFieldElement,
     list_length: usize,
     memory: &mut HashMap<BFieldElement, BFieldElement>,
 ) {
-    unsafe_list_new(list_pointer, memory);
+    list_new(list_pointer, memory);
 
     let random_values = data_type.random_elements(list_length);
 
     for element in random_values {
-        unsafe_list_push(list_pointer, element, memory, data_type.stack_size());
+        list_push(list_pointer, element, memory, data_type.stack_size());
     }
 }
 
 // TODO: Get rid of this stupid "helper" function
-pub fn untyped_unsafe_insert_random_list(
+pub fn untyped_insert_random_list(
     list_pointer: BFieldElement,
     list_length: usize,
     memory: &mut HashMap<BFieldElement, BFieldElement>,
     element_length: usize,
 ) {
-    unsafe_list_new(list_pointer, memory);
+    list_new(list_pointer, memory);
     for _ in 0..list_length {
         let random_element: Vec<BFieldElement> = random_elements(element_length);
-        unsafe_list_push(list_pointer, random_element, memory, element_length);
+        list_push(list_pointer, random_element, memory, element_length);
     }
 }
 
-pub fn unsafe_list_new(
-    list_pointer: BFieldElement,
-    memory: &mut HashMap<BFieldElement, BFieldElement>,
-) {
+pub fn list_new(list_pointer: BFieldElement, memory: &mut HashMap<BFieldElement, BFieldElement>) {
     memory.insert(list_pointer, BFieldElement::zero());
 }
 
-pub fn unsafe_list_push(
+pub fn list_push(
     list_pointer: BFieldElement,
     value: Vec<BFieldElement>,
     memory: &mut HashMap<BFieldElement, BFieldElement>,
@@ -108,7 +104,7 @@ pub fn unsafe_list_push(
     }
 }
 
-pub fn unsafe_list_pop(
+pub fn list_pop(
     list_pointer: BFieldElement,
     memory: &mut HashMap<BFieldElement, BFieldElement>,
     element_length: usize,
@@ -131,7 +127,7 @@ pub fn unsafe_list_pop(
 }
 
 /// Read an element from a list.
-pub fn unsafe_list_get(
+pub fn list_get(
     list_pointer: BFieldElement,
     index: usize,
     memory: &HashMap<BFieldElement, BFieldElement>,
@@ -148,7 +144,7 @@ pub fn unsafe_list_get(
 }
 
 /// Write an element to a list.
-pub fn unsafe_list_set(
+pub fn list_set(
     list_pointer: BFieldElement,
     index: usize,
     value: Vec<BFieldElement>,
@@ -163,7 +159,7 @@ pub fn unsafe_list_set(
     }
 }
 
-pub fn unsafe_list_get_length(
+pub fn list_get_length(
     list_pointer: BFieldElement,
     memory: &HashMap<BFieldElement, BFieldElement>,
 ) -> usize {
@@ -172,7 +168,7 @@ pub fn unsafe_list_get_length(
     length as usize
 }
 
-pub fn unsafe_list_set_length(
+pub fn list_set_length(
     list_pointer: BFieldElement,
     new_length: usize,
     memory: &mut HashMap<BFieldElement, BFieldElement>,
@@ -188,10 +184,10 @@ mod tests {
     fn new_list_set_length() {
         let mut memory = HashMap::default();
         let list_pointer = BFieldElement::new(20);
-        unsafe_list_new(list_pointer, &mut memory);
-        assert!(unsafe_list_get_length(list_pointer, &memory).is_zero());
+        list_new(list_pointer, &mut memory);
+        assert!(list_get_length(list_pointer, &memory).is_zero());
         let new_length = 51;
-        unsafe_list_set_length(list_pointer, new_length, &mut memory);
-        assert_eq!(new_length, unsafe_list_get_length(list_pointer, &memory));
+        list_set_length(list_pointer, new_length, &mut memory);
+        assert_eq!(new_length, list_get_length(list_pointer, &memory));
     }
 }

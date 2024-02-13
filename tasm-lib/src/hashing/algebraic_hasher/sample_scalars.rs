@@ -10,8 +10,8 @@ use triton_vm::twenty_first::prelude::Sponge;
 use crate::data_type::DataType;
 use crate::empty_stack;
 use crate::hashing::squeeze_repeatedly::SqueezeRepeatedly;
-use crate::list::unsafeimplu32::new::UnsafeNew;
-use crate::list::unsafeimplu32::set_length::UnsafeSetLength;
+use crate::list::new::New;
+use crate::list::set_length::SetLength;
 use crate::memory::dyn_malloc::DYN_MALLOC_FIRST_ADDRESS;
 use crate::memory::encode_to_memory;
 use crate::traits::basic_snippet::BasicSnippet;
@@ -43,10 +43,10 @@ impl BasicSnippet for SampleScalars {
         assert_eq!(10, tip5::RATE, "Code assumes Tip5's RATE is 10");
 
         let entrypoint = self.entrypoint();
-        let set_length = library.import(Box::new(UnsafeSetLength {
+        let set_length = library.import(Box::new(SetLength {
             data_type: DataType::Xfe,
         }));
-        let new_list_of_xfes = library.import(Box::new(UnsafeNew {
+        let new_list_of_xfes = library.import(Box::new(New {
             data_type: DataType::Xfe,
         }));
         let safety_offset = 1;
@@ -245,7 +245,7 @@ mod test {
                 for (i, expected_scalar) in scalars_from_tip5.into_iter().enumerate() {
                     assert_eq!(
                         expected_scalar.coefficients.to_vec(),
-                        rust_shadowing_helper_functions::unsafe_list::unsafe_list_get(
+                        rust_shadowing_helper_functions::list::list_get(
                             snippet_output_scalar_pointer,
                             i,
                             &final_ram,

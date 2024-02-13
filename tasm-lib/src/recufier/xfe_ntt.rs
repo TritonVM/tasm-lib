@@ -40,10 +40,8 @@ impl BasicSnippet for XfeNtt {
         let tasm_arithmetic_u32_leadingzeros =
             library.import(Box::new(crate::arithmetic::u32::leadingzeros::Leadingzeros));
         #[allow(non_snake_case)]
-        let tasm_list_unsafeimplu32_length___xfe =
-            library.import(Box::new(crate::list::unsafeimplu32::length::Length {
-                data_type: DataType::Xfe,
-            }));
+        let tasm_list_length___xfe =
+            library.import(Box::new(crate::list::length::Length::new(DataType::Xfe)));
         const THREE_INV: BFieldElement = BFieldElement::new(12297829379609722881);
 
         let while_loop_with_bitreverse = format!("{entrypoint}_while_with_bitreverse");
@@ -63,7 +61,7 @@ impl BasicSnippet for XfeNtt {
             dup 1
             // _ *x omega *x
 
-            call {tasm_list_unsafeimplu32_length___xfe}
+            call {tasm_list_length___xfe}
             // _ *x omega size
 
             push 32

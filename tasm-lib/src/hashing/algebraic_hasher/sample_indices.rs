@@ -9,7 +9,10 @@ use triton_vm::twenty_first::prelude::AlgebraicHasher;
 
 use crate::data_type::DataType;
 use crate::empty_stack;
-use crate::list::ListType;
+use crate::list::length::Length;
+use crate::list::new::New;
+use crate::list::push::Push;
+use crate::list::LIST_METADATA_SIZE;
 use crate::rust_shadowing_helper_functions;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::procedure::Procedure;
@@ -18,10 +21,8 @@ use crate::VmHasher;
 
 /// Sample n pseudorandom integers between 0 and k. It does this by squeezing the sponge. It is the
 /// caller's responsibility to ensure that the sponge is initialized to the right state.
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
-pub struct SampleIndices {
-    pub list_type: ListType,
-}
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
+pub struct SampleIndices;
 
 impl BasicSnippet for SampleIndices {
     fn inputs(&self) -> Vec<(DataType, String)> {
@@ -39,10 +40,7 @@ impl BasicSnippet for SampleIndices {
     }
 
     fn entrypoint(&self) -> String {
-        format!(
-            "tasm_hashing_algebraic_hasher_sample_indices_{}",
-            self.list_type
-        )
+        "tasm_hashing_algebraic_hasher_sample_indices".into()
     }
 
     fn code(&self, library: &mut crate::library::Library) -> Vec<LabelledInstruction> {
@@ -51,9 +49,9 @@ impl BasicSnippet for SampleIndices {
         let then_reduce_and_save = format!("{entrypoint}_then_reduce_and_save");
         let else_drop_tip = format!("{entrypoint}_else_drop_tip");
 
-        let new_list = library.import(self.list_type.new_list_snippet(DataType::U32));
-        let length = library.import(self.list_type.length_snippet(DataType::U32));
-        let push_element = library.import(self.list_type.push_snippet(DataType::U32));
+        let new_list = library.import(Box::new(New::new(DataType::U32)));
+        let length = library.import(Box::new(Length::new(DataType::U32)));
+        let push_element = library.import(Box::new(Push::new(DataType::U32)));
 
         let if_can_sample = triton_asm! (
             // BEFORE: _ prn number upper_bound *indices
@@ -163,14 +161,16 @@ impl Procedure for SampleIndices {
 
         let indices = sponge.sample_indices(upper_bound, number);
 
-        // allocate memory for (unsafe) list
-        let list_pointer =
-            rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator(1 + number, memory);
-        rust_shadowing_helper_functions::unsafe_list::unsafe_list_new(list_pointer, memory);
+        // allocate memory for list
+        let list_pointer = rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator(
+            LIST_METADATA_SIZE + number,
+            memory,
+        );
+        rust_shadowing_helper_functions::list::list_new(list_pointer, memory);
 
         // store all indices
         for index in indices.iter() {
-            rust_shadowing_helper_functions::unsafe_list::unsafe_list_push(
+            rust_shadowing_helper_functions::list::list_push(
                 list_pointer,
                 vec![BFieldElement::new(*index as u64)],
                 memory,
@@ -232,10 +232,7 @@ mod test {
 
     #[test]
     fn test() {
-        ShadowedProcedure::new(SampleIndices {
-            list_type: ListType::Unsafe,
-        })
-        .test();
+        ShadowedProcedure::new(SampleIndices).test();
     }
 }
 
@@ -248,9 +245,6 @@ mod bench {
 
     #[test]
     fn bench() {
-        ShadowedProcedure::new(SampleIndices {
-            list_type: ListType::Unsafe,
-        })
-        .bench();
+        ShadowedProcedure::new(SampleIndices).bench();
     }
 }

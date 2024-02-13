@@ -9,15 +9,14 @@ use crate::hashing::algebraic_hasher::sample_indices::SampleIndices;
 use crate::hashing::algebraic_hasher::sample_scalars::SampleScalars;
 use crate::hashing::merkle_root::MerkleRoot;
 use crate::library::Library;
+use crate::list::get::Get;
 use crate::list::higher_order::inner_function::InnerFunction;
 use crate::list::higher_order::inner_function::RawCode;
 use crate::list::higher_order::map::Map;
 use crate::list::higher_order::zip::Zip;
-use crate::list::unsafeimplu32::get::UnsafeGet;
-use crate::list::unsafeimplu32::length::Length as UnsafeLength;
-use crate::list::unsafeimplu32::new::UnsafeNew;
-use crate::list::unsafeimplu32::push::UnsafePush;
-use crate::list::ListType;
+use crate::list::length::Length;
+use crate::list::new::New;
+use crate::list::push::Push;
 use crate::memory::dyn_malloc::DYN_MALLOC_ADDRESS;
 use crate::recufier::get_colinear_y::ColinearYXfe;
 use crate::recufier::get_colinearity_check_x::GetColinearityCheckX;
@@ -105,10 +104,10 @@ impl BasicSnippet for FriSnippet {
         let domain_generator = field!(FriVerify::domain_generator);
         let expansion_factor = field!(FriVerify::expansion_factor);
         let num_colinearity_checks = field!(FriVerify::num_colinearity_checks);
-        let new_list_of_digests = library.import(Box::new(UnsafeNew {
+        let new_list_of_digests = library.import(Box::new(New {
             data_type: DataType::Digest,
         }));
-        let push_digest_to_list = library.import(Box::new(UnsafePush {
+        let push_digest_to_list = library.import(Box::new(Push {
             data_type: DataType::Digest,
         }));
         let read_digest = triton_asm!(
@@ -116,13 +115,13 @@ impl BasicSnippet for FriSnippet {
             push 4 add                  // _ *digest+4
             read_mem 5 pop 1            // _ [digest; 5]
         );
-        let new_list_xfe = library.import(Box::new(UnsafeNew {
+        let new_list_xfe = library.import(Box::new(New {
             data_type: DataType::Xfe,
         }));
-        let get_scalar = library.import(Box::new(UnsafeGet {
+        let get_scalar = library.import(Box::new(Get {
             data_type: DataType::Xfe,
         }));
-        let push_scalar = library.import(Box::new(UnsafePush {
+        let push_scalar = library.import(Box::new(Push {
             data_type: DataType::Xfe,
         }));
 
@@ -136,9 +135,8 @@ impl BasicSnippet for FriSnippet {
         let vm_proof_iter_sample_scalars = library.import(Box::new(SampleScalars));
         let dequeue_commit_phase = format!("{entrypoint}_dequeue_commit_phase_remainder");
         let convert_xfe_to_digest = format!("{entrypoint}_convert_xfe_to_digest");
-        let map_convert_xfe_to_digest = library.import(Box::new(Map {
-            list_type: ListType::Unsafe,
-            f: InnerFunction::RawCode(RawCode {
+        let map_convert_xfe_to_digest =
+            library.import(Box::new(Map::new(InnerFunction::RawCode(RawCode {
                 function: triton_asm!(
                     {convert_xfe_to_digest}:
                         // _ xfe2 xfe1 xfe0
@@ -153,114 +151,78 @@ impl BasicSnippet for FriSnippet {
                 ),
                 input_type: DataType::Xfe,
                 output_type: DataType::Digest,
-            }),
-        }));
-        let length_of_list_of_digests = library.import(Box::new(UnsafeLength {
-            data_type: DataType::Digest,
-        }));
-        let length_of_list_of_u32s = library.import(Box::new(UnsafeLength {
-            data_type: DataType::U32,
-        }));
-        let length_of_list_of_xfes = library.import(Box::new(UnsafeLength {
-            data_type: DataType::Xfe,
-        }));
+            }))));
+        let length_of_list_of_digests = library.import(Box::new(Length::new(DataType::Digest)));
+        let length_of_list_of_u32s = library.import(Box::new(Length::new(DataType::U32)));
+        let length_of_list_of_xfes = library.import(Box::new(Length::new(DataType::Xfe)));
         let merkle_root = library.import(Box::new(MerkleRoot));
-        let get_digest = library.import(Box::new(UnsafeGet {
-            data_type: DataType::Digest,
-        }));
+        let get_digest = library.import(Box::new(Get::new(DataType::Digest)));
         let xfe_ntt = library.import(Box::new(XfeNtt));
         let assert_tail_xfe0 = format!("{entrypoint}_tail_xfe0");
-        let length_of_list_of_xfe = library.import(Box::new(UnsafeLength {
-            data_type: DataType::Xfe,
-        }));
-        let get_xfe_from_list = library.import(Box::new(UnsafeGet {
-            data_type: DataType::Xfe,
-        }));
-        let get_u32_from_list = library.import(Box::new(UnsafeGet {
-            data_type: DataType::U32,
-        }));
-        let sample_indices = library.import(Box::new(SampleIndices {
-            list_type: ListType::Unsafe,
-        }));
+        let length_of_list_of_xfe = library.import(Box::new(Length::new(DataType::Xfe)));
+        let get_xfe_from_list = library.import(Box::new(Get::new(DataType::Xfe)));
+        let get_u32_from_list = library.import(Box::new(Get::new(DataType::U32)));
+        let sample_indices = library.import(Box::new(SampleIndices));
         let revealed_leafs = field!(FriResponse::revealed_leaves);
-        let zip_digests_indices = library.import(Box::new(Zip {
-            list_type: ListType::Unsafe,
-            left_type: DataType::U32,
-            right_type: DataType::Digest,
-        }));
+        let zip_digests_indices =
+            library.import(Box::new(Zip::new(DataType::U32, DataType::Digest)));
         let verify_authentication_paths_for_leaf_and_index_list =
-            library.import(Box::new(VerifyAuthenticationPathForLeafAndIndexList {
-                list_type: ListType::Unsafe,
-            }));
-        let zip_index_xfe = library.import(Box::new(Zip {
-            list_type: ListType::Unsafe,
-            left_type: DataType::U32,
-            right_type: DataType::Xfe,
-        }));
+            library.import(Box::new(VerifyAuthenticationPathForLeafAndIndexList));
+        let zip_index_xfe = library.import(Box::new(Zip::new(DataType::U32, DataType::Xfe)));
         let query_phase_main_loop = format!("{entrypoint}_query_phase_main_loop");
         let add_half_label = format!("{entrypoint}_add_half_domain");
-        let map_add_half_domain_length = library.import(Box::new(Map {
-            list_type: ListType::Unsafe,
-            f: InnerFunction::RawCode(RawCode {
+        let map_add_half_domain_length =
+            library.import(Box::new(Map::new(InnerFunction::RawCode(RawCode {
                 function: triton_asm! {
                     {add_half_label}:
-                                            // _ current_domain_length r half_domain_length [bu ff er] index
-                        dup 4 add           // _ current_domain_length r half_domain_length [bu ff er] index+half_domain_length
-                        dup 6 swap 1 div_mod// _ current_domain_length r half_domain_length [bu ff er] (index+half_domain_length)/domain_length
-                        swap 1 pop 1        // _ current_domain_length r half_domain_length [bu ff er] (index+half_domain_length)%domain_length
-                        return
+                                        // _ current_domain_length r half_domain_length [bu ff er] index
+                    dup 4 add           // _ current_domain_length r half_domain_length [bu ff er] index+half_domain_length
+                    dup 6 swap 1 div_mod// _ current_domain_length r half_domain_length [bu ff er] (index+half_domain_length)/domain_length
+                    swap 1 pop 1        // _ current_domain_length r half_domain_length [bu ff er] (index+half_domain_length)%domain_length
+                    return
                 },
                 input_type: DataType::U32,
                 output_type: DataType::U32,
-            }),
-        }));
+            }))));
         let populate_return_vector_second_half =
             format!("{entrypoint}_populate_return_vector_second_half");
         let populate_loop = format!("{entrypoint}_populate_return_vector_loop");
-        let get_u32_and_xfe = library.import(Box::new(UnsafeGet {
-            data_type: DataType::Tuple(vec![DataType::U32, DataType::Xfe]),
-        }));
-        let push_u32_and_xfe = library.import(Box::new(UnsafePush {
-            data_type: DataType::Tuple(vec![DataType::U32, DataType::Xfe]),
-        }));
-        let push_xfe_to_list = library.import(Box::new(UnsafePush {
-            data_type: DataType::Xfe,
-        }));
+        let get_u32_and_xfe = library.import(Box::new(Get::new(DataType::Tuple(vec![
+            DataType::U32,
+            DataType::Xfe,
+        ]))));
+        let push_u32_and_xfe = library.import(Box::new(Push::new(DataType::Tuple(vec![
+            DataType::U32,
+            DataType::Xfe,
+        ]))));
+        let push_xfe_to_list = library.import(Box::new(Push::new(DataType::Xfe)));
         let reduce_indices_label = format!("{entrypoint}_reduce_indices");
-        let map_reduce_indices = library.import(Box::new(Map {
-            list_type: ListType::Unsafe,
-            f: InnerFunction::RawCode(RawCode {
+        let map_reduce_indices =
+            library.import(Box::new(Map::new(InnerFunction::RawCode(RawCode {
                 function: triton_asm! {
                     {reduce_indices_label}:
-                                            // _ half_domain_length [bu ff er] index
-                        dup 4 swap 1        // _ half_domain_length [bu ff er] half_domain_length index
-                        div_mod             // _ half_domain_length [bu ff er] q r
-                        swap 1 pop 1        // _ half_domain_length [bu ff er] index%half_domain_length
-                        return
+                                        // _ half_domain_length [bu ff er] index
+                    dup 4 swap 1        // _ half_domain_length [bu ff er] half_domain_length index
+                    div_mod             // _ half_domain_length [bu ff er] q r
+                    swap 1 pop 1        // _ half_domain_length [bu ff er] index%half_domain_length
+                    return
                 },
                 input_type: DataType::U32,
                 output_type: DataType::U32,
-            }),
-        }));
+            }))));
         let compute_c_values_loop = format!("{entrypoint}_compute_c_values_loop");
         let get_colinearity_check_x = library.import(Box::new(GetColinearityCheckX));
         let get_colinear_y = library.import(Box::new(ColinearYXfe));
         let identity_label = format!("{entrypoint}_identity");
-        let duplicate_list_xfe = library.import(Box::new(Map {
-            list_type: ListType::Unsafe,
-            f: InnerFunction::RawCode(RawCode {
+        let duplicate_list_xfe =
+            library.import(Box::new(Map::new(InnerFunction::RawCode(RawCode {
                 input_type: DataType::Xfe,
                 output_type: DataType::Xfe,
-                function: triton_asm! {
-                    {identity_label}:
-                        return
-                },
-            }),
-        }));
+                function: triton_asm! { {identity_label}: return },
+            }))));
         let assert_membership_label = format!("{entrypoint}_assert_codeword_membership");
-        let map_assert_membership = library.import(Box::new(Map {
-            list_type: ListType::Unsafe,
-            f: InnerFunction::RawCode(RawCode {
+        let map_assert_membership =
+            library.import(Box::new(Map::new(InnerFunction::RawCode(RawCode {
                 input_type: DataType::Tuple(vec![DataType::U32, DataType::Xfe]),
                 output_type: DataType::Tuple(vec![DataType::U32, DataType::Xfe]),
                 function: triton_asm! {
@@ -278,8 +240,7 @@ impl BasicSnippet for FriSnippet {
                         pop 1                   // _ *codeword [bu ff er] index xfe2 xfe1 xfe0
                         return
                 },
-            }),
-        }));
+            }))));
 
         triton_asm! {
             // INVARIANT:          _ *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_values i
@@ -610,7 +571,7 @@ impl BasicSnippet for FriSnippet {
                 dup 1 dup 1                 // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements *indices *a_elements
                 call {zip_index_xfe}        // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements *revealed_indices_and_leafs
                 hint indices_and_leafs = stack[0]
-                // zip allocates a new unsafe list, which we want to be twice as long
+                // zip allocates a new list, which we want to be twice as long
                 // (the second half will be populated in the first iteration of the main loop below)
                 read_mem 1                  // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements length (*revealed_indices_and_leafs - 1)
                 push 1 add swap 1           // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas tree_height *indices *a_elements *revealed_indices_and_leafs length

@@ -1,26 +1,31 @@
-use itertools::Itertools;
 use std::collections::HashMap;
+
+use itertools::Itertools;
 use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
 use crate::empty_stack;
 use crate::library::Library;
-use crate::rust_shadowing_helper_functions::unsafe_list::unsafe_list_new;
+use crate::rust_shadowing_helper_functions::list::list_new;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::traits::function::Function;
 use crate::ExecutionState;
 
-#[derive(Clone, Debug)]
-pub struct UnsafeNew {
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub struct New {
     pub data_type: DataType,
 }
 
-impl DeprecatedSnippet for UnsafeNew {
+impl New {
+    #[allow(clippy::self_named_constructors)] // 🤷
+    pub fn new(data_type: DataType) -> Self {
+        Self { data_type }
+    }
+}
+
+impl DeprecatedSnippet for New {
     fn entrypoint_name(&self) -> String {
-        format!(
-            "tasm_list_unsafeimplu32_new___{}",
-            self.data_type.label_friendly_name()
-        )
+        format!("tasm_list_new___{}", self.data_type.label_friendly_name())
     }
 
     fn input_field_names(&self) -> Vec<String> {
@@ -46,7 +51,6 @@ impl DeprecatedSnippet for UnsafeNew {
     fn function_code(&self, library: &mut Library) -> String {
         let entrypoint = self.entrypoint_name();
 
-        // Data structure for `list::safeimplu32` is: [length, element0, element1, ...]
         let element_size = self.data_type.stack_size();
         let dyn_alloc = library.import(Box::new(crate::dyn_malloc::DynMalloc));
 
@@ -122,7 +126,7 @@ impl DeprecatedSnippet for UnsafeNew {
         crate::dyn_malloc::DynMalloc.rust_shadow(stack, memory);
 
         let list_pointer = stack.pop().unwrap();
-        unsafe_list_new(list_pointer, memory);
+        list_new(list_pointer, memory);
 
         stack.push(list_pointer);
     }
@@ -136,13 +140,14 @@ fn prepare_state(capacity: u32) -> ExecutionState {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
+
+    use super::*;
 
     #[test]
     fn new_snippet_test() {
         fn test_rust_equivalence_and_export(data_type: DataType) {
-            test_rust_equivalence_multiple_deprecated(&UnsafeNew { data_type }, true);
+            test_rust_equivalence_multiple_deprecated(&New { data_type }, true);
         }
 
         test_rust_equivalence_and_export(DataType::Bool);
@@ -156,12 +161,12 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::snippet_bencher::bench_and_write;
 
+    use super::*;
+
     #[test]
-    fn unsafe_new_benchmark() {
-        let data_type = DataType::Digest;
-        bench_and_write(UnsafeNew { data_type });
+    fn new_benchmark() {
+        bench_and_write(New::new(DataType::Digest));
     }
 }

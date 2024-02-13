@@ -10,19 +10,25 @@ use triton_vm::prelude::*;
 use crate::data_type::DataType;
 use crate::empty_stack;
 use crate::library::Library;
-use crate::rust_shadowing_helper_functions::safe_list::safe_insert_random_list;
+use crate::rust_shadowing_helper_functions::list::untyped_insert_random_list;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::ExecutionState;
 
-#[derive(Clone, Debug)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct Length {
     pub data_type: DataType,
+}
+
+impl Length {
+    pub fn new(data_type: DataType) -> Self {
+        Self { data_type }
+    }
 }
 
 impl DeprecatedSnippet for Length {
     fn entrypoint_name(&self) -> String {
         format!(
-            "tasm_list_safeimplu32_length___{}",
+            "tasm_list_length___{}",
             self.data_type.label_friendly_name()
         )
     }
@@ -49,10 +55,11 @@ impl DeprecatedSnippet for Length {
     }
 
     fn function_code(&self, _library: &mut Library) -> String {
+        let entry_point = self.entrypoint_name();
         // BEFORE: _ *list
         // AFTER:  _ list_length_u32
         triton_asm!(
-            {self.entrypoint_name()}:
+            {entry_point}:
                 read_mem 1
                 pop 1
                 return
@@ -69,84 +76,64 @@ impl DeprecatedSnippet for Length {
         let mut ret: Vec<ExecutionState> = vec![];
         let mut rng = thread_rng();
         let mut stack = empty_stack();
-        let list_pointer: BFieldElement = random();
-        let capacity: u32 = 100;
-        let list_length: usize = rng.gen_range(0..=capacity as usize);
-        stack.push(list_pointer);
+        let list_address: BFieldElement = random();
+        let list_length: usize = rng.gen_range(0..100);
+        stack.push(list_address);
 
+        // Test for various values of `N` (list-element size)
         let mut memory = HashMap::default();
-        safe_insert_random_list(
-            &self.data_type,
-            list_pointer,
-            capacity,
-            list_length,
-            &mut memory,
-        );
+        untyped_insert_random_list(list_address, list_length, &mut memory, 1);
         ret.push(ExecutionState::with_stack_and_memory(
             stack.clone(),
             memory,
             0,
         ));
         memory = HashMap::default();
-        safe_insert_random_list(
-            &self.data_type,
-            list_pointer,
-            capacity,
-            list_length,
-            &mut memory,
-        );
+        untyped_insert_random_list(list_address, list_length, &mut memory, 2);
         ret.push(ExecutionState::with_stack_and_memory(
             stack.clone(),
             memory,
             0,
         ));
         memory = HashMap::default();
-        safe_insert_random_list(
-            &self.data_type,
-            list_pointer,
-            capacity,
-            list_length,
-            &mut memory,
-        );
+        untyped_insert_random_list(list_address, list_length, &mut memory, 3);
         ret.push(ExecutionState::with_stack_and_memory(
             stack.clone(),
             memory,
             0,
         ));
         memory = HashMap::default();
-        safe_insert_random_list(
-            &self.data_type,
-            list_pointer,
-            capacity,
-            list_length,
-            &mut memory,
-        );
+        untyped_insert_random_list(list_address, list_length, &mut memory, 4);
         ret.push(ExecutionState::with_stack_and_memory(
             stack.clone(),
             memory,
             0,
         ));
         memory = HashMap::default();
-        safe_insert_random_list(
-            &self.data_type,
-            list_pointer,
-            capacity,
-            list_length,
-            &mut memory,
-        );
+        untyped_insert_random_list(list_address, list_length, &mut memory, 11);
         ret.push(ExecutionState::with_stack_and_memory(stack, memory, 0));
 
         ret
     }
 
     fn common_case_input_state(&self) -> ExecutionState {
-        const COMMON_LENGTH: usize = 1 << 5;
-        get_benchmark_input_state(COMMON_LENGTH, &self.data_type)
+        let mut stack = empty_stack();
+        let list_address: u32 = random();
+        let list_address = BFieldElement::from(list_address as u64);
+        stack.push(list_address);
+        let mut memory = HashMap::default();
+        untyped_insert_random_list(BFieldElement::one(), 1 << 5, &mut memory, 1);
+        ExecutionState::with_stack_and_memory(stack.clone(), memory, 0)
     }
 
     fn worst_case_input_state(&self) -> ExecutionState {
-        const COMMON_LENGTH: usize = 1 << 6;
-        get_benchmark_input_state(COMMON_LENGTH, &self.data_type)
+        let mut stack = empty_stack();
+        let list_address: u32 = random();
+        let list_address = BFieldElement::from(list_address as u64);
+        stack.push(list_address);
+        let mut memory = HashMap::default();
+        untyped_insert_random_list(BFieldElement::one(), 1 << 6, &mut memory, 1);
+        ExecutionState::with_stack_and_memory(stack.clone(), memory, 0)
     }
 
     fn rust_shadowing(
@@ -163,37 +150,10 @@ impl DeprecatedSnippet for Length {
     }
 }
 
-fn get_benchmark_input_state(list_length: usize, data_type: &DataType) -> ExecutionState {
-    let mut memory = HashMap::default();
-    let list_pointer: BFieldElement = BFieldElement::one();
-
-    let capacity = list_length * 2;
-    safe_insert_random_list(
-        data_type,
-        list_pointer,
-        capacity as u32,
-        list_length,
-        &mut memory,
-    );
-
-    let mut stack = empty_stack();
-    stack.push(list_pointer);
-
-    let nondeterminism = NonDeterminism::default().with_ram(memory);
-    ExecutionState {
-        stack,
-        std_in: vec![],
-        nondeterminism,
-        words_allocated: 1,
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use num::One;
-    use BFieldElement;
+    use rand::RngCore;
 
-    use crate::empty_stack;
     use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
     use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
@@ -205,55 +165,52 @@ mod tests {
             test_rust_equivalence_multiple_deprecated(&Length { data_type }, true);
         }
 
-        test_rust_equivalence_and_export(DataType::Bool);
-        test_rust_equivalence_and_export(DataType::U32);
-        test_rust_equivalence_and_export(DataType::U64);
         test_rust_equivalence_and_export(DataType::Bfe);
-        test_rust_equivalence_and_export(DataType::Xfe);
+        test_rust_equivalence_and_export(DataType::U64);
         test_rust_equivalence_and_export(DataType::Digest);
     }
 
     #[test]
-    fn list_u32_simple() {
+    fn list_u32_simple_long() {
         let expected_end_stack = [empty_stack(), vec![BFieldElement::new(42)]].concat();
-        prop_length(DataType::U64, 42, &expected_end_stack);
+        prop_length_long(BFieldElement::one(), 42, Some(&expected_end_stack));
 
         let expected_end_stack = [empty_stack(), vec![BFieldElement::new(588)]].concat();
-        prop_length(DataType::Xfe, 588, &expected_end_stack);
-
-        let expected_end_stack = [empty_stack(), vec![BFieldElement::new(4)]].concat();
-        prop_length(DataType::Digest, 4, &expected_end_stack);
-
-        let expected_end_stack = [empty_stack(), vec![BFieldElement::new(7)]].concat();
-        prop_length(DataType::U32, 7, &expected_end_stack);
+        prop_length_long(BFieldElement::one(), 588, Some(&expected_end_stack));
     }
 
-    // Note that the *actual list* of length `list_length` is *actually* constructed in the VM in
-    // this test. So you may not want to exaggerate that number.
-    fn prop_length(element_type: DataType, list_length: usize, expected_stack: &[BFieldElement]) {
-        let list_pointer = BFieldElement::one();
-        let capacity = 1000;
+    // Note that the *actual list* of length `list_length` is *actually constructed in the VM in this test. So you may not
+    // want to exaggerate that number.
+    fn prop_length_long(
+        list_address: BFieldElement,
+        list_length: u32,
+        expected: Option<&[BFieldElement]>,
+    ) {
         let mut init_stack = empty_stack();
-        init_stack.push(list_pointer);
+        init_stack.push(list_address);
 
-        let mut memory = HashMap::default();
+        let mut init_memory = HashMap::default();
 
-        safe_insert_random_list(
-            &element_type,
-            list_pointer,
-            capacity,
-            list_length,
-            &mut memory,
-        );
+        // Insert length indicator of list, lives on offset = 0 from `list_address`
+        init_memory.insert(list_address, BFieldElement::new(list_length as u64));
+
+        // Insert random values for the elements in the list
+        let mut rng = thread_rng();
+        for i in 0..list_length {
+            init_memory.insert(
+                list_address + BFieldElement::new((i + 1) as u64),
+                BFieldElement::new(rng.next_u64()),
+            );
+        }
 
         let data_type = DataType::Bfe;
         test_rust_equivalence_given_input_values_deprecated(
             &Length { data_type },
             &init_stack,
             &[],
-            memory,
+            init_memory,
             0,
-            Some(expected_stack),
+            expected,
         );
     }
 }
@@ -265,8 +222,7 @@ mod benches {
     use super::*;
 
     #[test]
-    fn safe_length_benchmark() {
-        let data_type = DataType::Digest;
-        bench_and_write(Length { data_type });
+    fn length_long_benchmark() {
+        bench_and_write(Length::new(DataType::Digest));
     }
 }

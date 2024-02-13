@@ -1,5 +1,6 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::fmt::Debug;
 use std::rc::Rc;
 
 use anyhow::Result;
@@ -23,7 +24,7 @@ use crate::DIGEST_LENGTH;
 use super::basic_snippet::BasicSnippet;
 use super::rust_shadow::RustShadow;
 
-pub trait DeprecatedSnippet {
+pub trait DeprecatedSnippet: Debug {
     /// The name of a Snippet
     ///
     /// This is used as a unique identifier, e.g. when generating labels.

@@ -3,13 +3,11 @@ use triton_vm::triton_asm;
 
 use crate::data_type::DataType;
 use crate::library::Library;
-use crate::list::ListType;
+use crate::list::LIST_METADATA_SIZE;
 use crate::traits::basic_snippet::BasicSnippet;
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
-pub struct PadAndAbsorbAll {
-    pub list_type: ListType,
-}
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
+pub struct PadAndAbsorbAll;
 
 impl BasicSnippet for PadAndAbsorbAll {
     fn inputs(&self) -> Vec<(DataType, String)> {
@@ -21,17 +19,13 @@ impl BasicSnippet for PadAndAbsorbAll {
     }
 
     fn entrypoint(&self) -> String {
-        format!(
-            "tasm_hashing_sponge_hasher_pad_and_absorb_all_{}",
-            self.list_type
-        )
+        "tasm_hashing_sponge_hasher_pad_and_absorb_all".into()
     }
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
         let hash_absorb_snippet_subroutine =
             library.import(Box::new(crate::hashing::absorb_multiple::AbsorbMultiple));
-        let list_metadata_size = self.list_type.metadata_size();
         triton_asm!(
             {entrypoint}:
                 // _ *input_list
@@ -39,7 +33,7 @@ impl BasicSnippet for PadAndAbsorbAll {
                 read_mem 1
                 // _ length (*input_list - 1)
 
-                push {list_metadata_size + 1}
+                push {LIST_METADATA_SIZE + 1}
                 add
                 // _ length *first_element
 
@@ -58,7 +52,6 @@ impl BasicSnippet for PadAndAbsorbAll {
 mod test {
     use std::collections::HashMap;
 
-    use crate::twenty_first::prelude::Sponge;
     use arbitrary::*;
     use itertools::Itertools;
     use rand::rngs::StdRng;
@@ -66,9 +59,11 @@ mod test {
     use triton_vm::prelude::*;
 
     use crate::empty_stack;
+    use crate::rust_shadowing_helper_functions::list::insert_random_list;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::traits::procedure::*;
     use crate::traits::rust_shadow::RustShadow;
+    use crate::twenty_first::prelude::Sponge;
     use crate::VmHasher;
 
     use super::*;
@@ -81,12 +76,7 @@ mod test {
             let list_pointer: BFieldElement = random();
             let init_stack = [empty_stack(), vec![list_pointer]].concat();
             let mut init_memory = HashMap::default();
-            self.list_type.rust_shadowing_insert_random_list(
-                &DataType::Bfe,
-                list_pointer,
-                input_length,
-                &mut init_memory,
-            );
+            insert_random_list(&DataType::Bfe, list_pointer, input_length, &mut init_memory);
 
             (init_memory, init_stack)
         }
@@ -103,8 +93,7 @@ mod test {
         ) -> Vec<BFieldElement> {
             let sponge = sponge.as_mut().expect("sponge must be initialized");
             let input_pointer: BFieldElement = stack.pop().unwrap();
-            let first_word =
-                input_pointer + BFieldElement::new(self.list_type.metadata_size() as u64);
+            let first_word = input_pointer + BFieldElement::new(LIST_METADATA_SIZE as u64);
             let input_length = memory[&input_pointer].value();
             let input = (0..input_length)
                 .map(|i| memory[&(BFieldElement::new(i) + first_word)])
@@ -180,13 +169,6 @@ mod test {
 
     #[test]
     fn pad_and_absorb_all_test() {
-        ShadowedProcedure::new(PadAndAbsorbAll {
-            list_type: ListType::Safe,
-        })
-        .test();
-        ShadowedProcedure::new(PadAndAbsorbAll {
-            list_type: ListType::Unsafe,
-        })
-        .test();
+        ShadowedProcedure::new(PadAndAbsorbAll).test();
     }
 }

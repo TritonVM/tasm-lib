@@ -11,11 +11,11 @@ use triton_vm::prelude::*;
 use crate::data_type::DataType;
 use crate::empty_stack;
 use crate::library::Library;
-use crate::list::safeimplu32::new::SafeNew;
-use crate::list::safeimplu32::set_length::SafeSetLength;
-use crate::list::unsafeimplu32::new::UnsafeNew;
-use crate::list::unsafeimplu32::set_length::UnsafeSetLength;
-use crate::list::ListType;
+use crate::list::get::Get;
+use crate::list::length::Length;
+use crate::list::new::New;
+use crate::list::set_length::SetLength;
+use crate::list::LIST_METADATA_SIZE;
 use crate::memory::memcpy::MemCpy;
 use crate::rust_shadowing_helper_functions;
 use crate::traits::basic_snippet::BasicSnippet;
@@ -28,8 +28,8 @@ use super::inner_function::InnerFunction;
 /// Filters a given list for elements that satisfy a predicate. A new
 /// list is created, containing only those elements that satisfy the
 /// predicate. The predicate must be given as an InnerFunction.
+#[derive(Debug)]
 pub struct Filter {
-    pub list_type: ListType,
     pub f: InnerFunction,
 }
 
@@ -55,22 +55,19 @@ impl BasicSnippet for Filter {
     }
 
     fn entrypoint(&self) -> String {
-        format!(
-            "tasm_list_higher_order_{}_u32_filter_{}",
-            self.list_type,
-            self.f.entrypoint()
-        )
+        format!("tasm_list_higher_order_u32_filter_{}", self.f.entrypoint())
     }
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
         let input_type = self.f.domain();
         let output_type = self.f.range();
         assert_eq!(output_type, DataType::Bool);
-        let safety_offset = self.list_type.metadata_size();
-        let get_length = library.import(self.list_type.length_snippet(input_type.clone()));
-        let set_length = library.import(self.list_type.set_length(input_type.clone()));
-        let new_list = library.import(self.list_type.new_list_snippet(output_type));
-        let list_get = library.import(self.list_type.get_snippet(input_type));
+
+        let safety_offset = LIST_METADATA_SIZE;
+        let get_length = library.import(Box::new(Length::new(input_type.clone())));
+        let set_length = library.import(Box::new(SetLength::new(input_type.clone())));
+        let new_list = library.import(Box::new(New::new(input_type.clone())));
+        let list_get = library.import(Box::new(Get::new(output_type.clone())));
         let element_size = self.f.domain().stack_size();
 
         let inner_function_name = match &self.f {
@@ -193,70 +190,26 @@ impl Function for Filter {
 
         let element_size = self.f.domain().stack_size();
         let memcpy = MemCpy::rust_shadowing;
-        let safety_offset = match self.list_type {
-            ListType::Safe => 2,
-            ListType::Unsafe => 1,
-        };
+        let safety_offset = LIST_METADATA_SIZE;
 
         let list_pointer = stack.pop().unwrap();
 
         // get list length
-        let len = match self.list_type {
-            ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_get_length(
-                list_pointer,
-                memory,
-            ),
-            ListType::Unsafe => {
-                rust_shadowing_helper_functions::unsafe_list::unsafe_list_get_length(
-                    list_pointer,
-                    memory,
-                )
-            }
-        };
+        let len = rust_shadowing_helper_functions::list::list_get_length(list_pointer, memory);
 
-        let get_element = match self.list_type {
-            ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_get,
-            ListType::Unsafe => rust_shadowing_helper_functions::unsafe_list::unsafe_list_get,
-        };
+        let get_element = rust_shadowing_helper_functions::list::list_get;
 
         let output_list_capacity = len;
-        let output_list = match self.list_type {
-            ListType::Safe => {
-                // Push capacity to stack
-                stack.push(BFieldElement::new(output_list_capacity as u64));
-                SafeNew {
-                    data_type: input_type.clone(),
-                }
-                .rust_shadowing(stack, vec![], vec![], memory);
-                stack.pop().unwrap()
-            }
-            ListType::Unsafe => {
-                stack.push(BFieldElement::new(output_list_capacity as u64));
-                UnsafeNew {
-                    data_type: input_type.clone(),
-                }
-                .rust_shadowing(stack, vec![], vec![], memory);
-                stack.pop().unwrap()
-            }
+        let output_list = {
+            stack.push(BFieldElement::new(output_list_capacity as u64));
+            New::new(input_type.clone()).rust_shadowing(stack, vec![], vec![], memory);
+            stack.pop().unwrap()
         };
 
         // set length
         stack.push(output_list);
         stack.push(BFieldElement::new(len as u64));
-        match self.list_type {
-            ListType::Safe => {
-                SafeSetLength {
-                    data_type: output_type,
-                }
-                .rust_shadowing(stack, vec![], vec![], memory);
-            }
-            ListType::Unsafe => {
-                UnsafeSetLength {
-                    data_type: output_type,
-                }
-                .rust_shadowing(stack, vec![], vec![], memory);
-            }
-        }
+        SetLength::new(output_type).rust_shadowing(stack, vec![], vec![], memory);
         stack.pop();
 
         // forall elements, read + map + maybe copy
@@ -295,20 +248,7 @@ impl Function for Filter {
         // set length
         stack.push(output_list);
         stack.push(BFieldElement::new(output_index as u64));
-        match self.list_type {
-            ListType::Safe => {
-                SafeSetLength {
-                    data_type: input_type,
-                }
-                .rust_shadowing(stack, vec![], vec![], memory);
-            }
-            ListType::Unsafe => {
-                UnsafeSetLength {
-                    data_type: input_type,
-                }
-                .rust_shadowing(stack, vec![], vec![], memory);
-            }
-        }
+        SetLength::new(input_type).rust_shadowing(stack, vec![], vec![], memory);
     }
 
     fn pseudorandom_initial_state(
@@ -330,7 +270,7 @@ impl Function for Filter {
             type size: {input_type_size}, \
             address: {list_pointer}"
         );
-        let safety_offset = self.list_type.metadata_size();
+        let safety_offset = LIST_METADATA_SIZE;
         let last_element_index = safety_offset + list_length * input_type_size;
         let last_element_index = list_pointer + BFieldElement::new(last_element_index as u64);
 
@@ -339,10 +279,6 @@ impl Function for Filter {
 
         let capacity = list_length;
         memory.insert(list_pointer, BFieldElement::new(capacity as u64));
-        if matches!(self.list_type, ListType::Safe) {
-            let length_pointer = list_pointer + BFieldElement::new(1);
-            memory.insert(length_pointer, BFieldElement::new(list_length as u64));
-        }
 
         for i in 0..list_length {
             for j in 0..input_type_size {
@@ -523,18 +459,8 @@ mod tests {
     }
 
     #[test]
-    fn unsafe_list_prop_test() {
+    fn prop_test() {
         ShadowedFunction::new(Filter {
-            list_type: ListType::Unsafe,
-            f: InnerFunction::DeprecatedSnippet(Box::new(TestHashXFieldElementLsb)),
-        })
-        .test();
-    }
-
-    #[test]
-    fn with_safe_list_prop_test() {
-        ShadowedFunction::new(Filter {
-            list_type: ListType::Safe,
             f: InnerFunction::DeprecatedSnippet(Box::new(TestHashXFieldElementLsb)),
         })
         .test();
@@ -557,7 +483,6 @@ mod tests {
             DataType::Bool,
         );
         ShadowedFunction::new(Filter {
-            list_type: ListType::Unsafe,
             f: InnerFunction::RawCode(rawcode),
         })
         .test();
@@ -580,7 +505,6 @@ mod tests {
             DataType::Bool,
         );
         ShadowedFunction::new(Filter {
-            list_type: ListType::Unsafe,
             f: InnerFunction::RawCode(rawcode),
         })
         .test();
@@ -596,18 +520,8 @@ mod benches {
     use super::*;
 
     #[test]
-    fn unsafe_list_filter_benchmark() {
+    fn filter_benchmark() {
         ShadowedFunction::new(Filter {
-            list_type: ListType::Unsafe,
-            f: InnerFunction::DeprecatedSnippet(Box::new(TestHashXFieldElementLsb)),
-        })
-        .bench();
-    }
-
-    #[test]
-    fn safe_list_filter_benchmark() {
-        ShadowedFunction::new(Filter {
-            list_type: ListType::Safe,
             f: InnerFunction::DeprecatedSnippet(Box::new(TestHashXFieldElementLsb)),
         })
         .bench();

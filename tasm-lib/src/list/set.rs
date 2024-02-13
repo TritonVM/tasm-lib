@@ -10,20 +10,26 @@ use twenty_first::shared_math::other::random_elements;
 use crate::data_type::DataType;
 use crate::empty_stack;
 use crate::library::Library;
-use crate::rust_shadowing_helper_functions::unsafe_list::unsafe_list_set;
-use crate::rust_shadowing_helper_functions::unsafe_list::untyped_unsafe_insert_random_list;
+use crate::rust_shadowing_helper_functions::list::list_set;
+use crate::rust_shadowing_helper_functions::list::untyped_insert_random_list;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::ExecutionState;
 
-#[derive(Clone, Debug)]
-pub struct UnsafeSet {
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub struct Set {
     pub data_type: DataType,
 }
 
-impl DeprecatedSnippet for UnsafeSet {
+impl Set {
+    pub fn new(data_type: DataType) -> Self {
+        Self { data_type }
+    }
+}
+
+impl DeprecatedSnippet for Set {
     fn entrypoint_name(&self) -> String {
         format!(
-            "tasm_list_unsafeimplu32_set_element___{}",
+            "tasm_list_set_element___{}",
             self.data_type.label_friendly_name()
         )
     }
@@ -127,7 +133,7 @@ impl DeprecatedSnippet for UnsafeSet {
         for ee in element.iter_mut() {
             *ee = stack.pop().unwrap();
         }
-        unsafe_list_set(list_pointer, index as usize, element, memory);
+        list_set(list_pointer, index as usize, element, memory);
     }
 }
 
@@ -145,7 +151,7 @@ fn prepare_state(data_type: &DataType) -> ExecutionState {
     stack.push(BFieldElement::new(index as u64));
 
     let mut memory = HashMap::default();
-    untyped_unsafe_insert_random_list(
+    untyped_insert_random_list(
         list_pointer,
         list_length,
         &mut memory,
@@ -164,37 +170,37 @@ mod tests {
     #[test]
     fn new_snippet_test() {
         test_rust_equivalence_multiple_deprecated(
-            &UnsafeSet {
+            &Set {
                 data_type: DataType::Bool,
             },
             true,
         );
         test_rust_equivalence_multiple_deprecated(
-            &UnsafeSet {
+            &Set {
                 data_type: DataType::Bfe,
             },
             true,
         );
         test_rust_equivalence_multiple_deprecated(
-            &UnsafeSet {
+            &Set {
                 data_type: DataType::U32,
             },
             true,
         );
         test_rust_equivalence_multiple_deprecated(
-            &UnsafeSet {
+            &Set {
                 data_type: DataType::U64,
             },
             true,
         );
         test_rust_equivalence_multiple_deprecated(
-            &UnsafeSet {
+            &Set {
                 data_type: DataType::Xfe,
             },
             true,
         );
         test_rust_equivalence_multiple_deprecated(
-            &UnsafeSet {
+            &Set {
                 data_type: DataType::Digest,
             },
             true,
@@ -258,7 +264,7 @@ mod tests {
         let mut vm_memory = HashMap::default();
 
         // Insert length indicator of list, lives on offset = 0 from `list_address`
-        untyped_unsafe_insert_random_list(
+        untyped_insert_random_list(
             list_address,
             init_list_length as usize,
             &mut vm_memory,
@@ -266,7 +272,7 @@ mod tests {
         );
 
         let memory = test_rust_equivalence_given_input_values_deprecated(
-            &UnsafeSet {
+            &Set {
                 data_type: data_type.clone(),
             },
             &init_stack,
@@ -305,9 +311,7 @@ mod benches {
     use super::*;
 
     #[test]
-    fn unsafe_set_benchmark() {
-        bench_and_write(UnsafeSet {
-            data_type: DataType::Digest,
-        });
+    fn set_benchmark() {
+        bench_and_write(Set::new(DataType::Digest));
     }
 }

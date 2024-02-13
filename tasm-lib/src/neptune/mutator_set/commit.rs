@@ -218,7 +218,7 @@ mod benches {
     use super::*;
 
     #[test]
-    fn commit_benchmark_unsafe() {
+    fn commit_benchmark() {
         bench_and_write(Commit);
     }
 }

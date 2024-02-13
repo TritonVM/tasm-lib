@@ -1,3 +1,5 @@
+use triton_vm::proof_item::ProofItemVariant;
+
 use crate::arithmetic::u128::add_u128::AddU128;
 use crate::arithmetic::u128::safe_mul_u128::SafeMulU128;
 use crate::arithmetic::u128::shift_left_static_u128::ShiftLeftStaticU128;
@@ -52,22 +54,14 @@ use crate::io::read_input::ReadInput;
 use crate::io::write_to_stdout::WriteToStdout;
 use crate::io::InputSource;
 use crate::list::contiguous_list;
+use crate::list::get::Get;
+use crate::list::length::Length;
+use crate::list::new::New;
+use crate::list::pop::Pop;
+use crate::list::push::Push;
 use crate::list::range::Range;
-use crate::list::safeimplu32::get::SafeGet;
-use crate::list::safeimplu32::length::Length as SafeLength;
-use crate::list::safeimplu32::new::SafeNew;
-use crate::list::safeimplu32::pop::SafePop;
-use crate::list::safeimplu32::push::SafePush;
-use crate::list::safeimplu32::set::SafeSet;
-use crate::list::safeimplu32::set_length::SafeSetLength;
-use crate::list::unsafeimplu32::get::UnsafeGet;
-use crate::list::unsafeimplu32::length::Length as UnsafeLength;
-use crate::list::unsafeimplu32::new::UnsafeNew;
-use crate::list::unsafeimplu32::pop::UnsafePop;
-use crate::list::unsafeimplu32::push::UnsafePush;
-use crate::list::unsafeimplu32::set::UnsafeSet;
-use crate::list::unsafeimplu32::set_length::UnsafeSetLength;
-use crate::list::ListType;
+use crate::list::set::Set;
+use crate::list::set_length::SetLength;
 use crate::memory::dyn_malloc::DynMalloc;
 use crate::memory::memcpy::MemCpy;
 use crate::mmr::bag_peaks::BagPeaks;
@@ -82,7 +76,6 @@ use crate::other_snippets::bfe_add::BfeAdd;
 use crate::recufier::proof_stream::dequeue_next_as::DequeueNextAs;
 use crate::recufier::read_and_verify_own_program_digest_from_std_in::ReadAndVerifyOwnProgramDigestFromStdIn;
 use crate::traits::basic_snippet::BasicSnippet;
-use triton_vm::proof_item::ProofItemVariant;
 
 pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
     match fn_name {
@@ -207,20 +200,14 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
 
         // Hashing -> algebraic hasher trait
         "tasm_hashing_algebraic_hasher_hash_varlen" => Box::new(algebraic_hasher::hash_varlen::HashVarlen),
-        "tasm_hashing_algebraic_hasher_sample_indices_safeimplu32" => Box::new(algebraic_hasher::sample_indices::SampleIndices { list_type: ListType::Safe }),
-        "tasm_hashing_algebraic_hasher_sample_indices_unsafeimplu32" => Box::new(algebraic_hasher::sample_indices::SampleIndices { list_type: ListType::Unsafe }),
+        "tasm_hashing_algebraic_hasher_sample_indices" => Box::new(algebraic_hasher::sample_indices::SampleIndices),
         "tasm_hashing_algebraic_hasher_sample_scalars" => Box::new(algebraic_hasher::sample_scalars::SampleScalars),
 
         // Hashing -> Sponge hasher trait
         "tasm_hashing_sponge_hasher_init" => Box::new(sponge_hasher::init::Init),
         "tasm_hashing_sponge_hasher_absorb" => Box::new(sponge_hasher::absorb::Absorb),
         "tasm_hashing_sponge_hasher_squeeze" => Box::new(sponge_hasher::squeeze::Squeeze),
-        "tasm_hashing_sponge_hasher_pad_and_absorb_all_safeimplu32" => Box::new(sponge_hasher::pad_and_absorb_all::PadAndAbsorbAll {
-            list_type: ListType::Safe,
-        }),
-        "tasm_hashing_sponge_hasher_pad_and_absorb_all_unsafeimplu32" => Box::new(sponge_hasher::pad_and_absorb_all::PadAndAbsorbAll {
-            list_type: ListType::Unsafe,
-        }),
+        "tasm_hashing_sponge_hasher_pad_and_absorb_all" => Box::new(sponge_hasher::pad_and_absorb_all::PadAndAbsorbAll),
 
         // io
         "tasm_io_read_secin___bool" => Box::new(ReadInput {
@@ -289,157 +276,72 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
         "tasm_io_write_to_stdout___xfe" => Box::new(WriteToStdout { data_type: DataType::Xfe }),
         "tasm_io_write_to_stdout___digest" => Box::new(WriteToStdout { data_type: DataType::Digest }),
 
-        // safe lists
-        "tasm_list_safeimplu32_get_element___bool" => Box::new(SafeGet { data_type: DataType::Bool }),
-        "tasm_list_safeimplu32_get_element___u32" => Box::new(SafeGet { data_type: DataType::U32 }),
-        "tasm_list_safeimplu32_get_element___u64" => Box::new(SafeGet { data_type: DataType::U64 }),
-        "tasm_list_safeimplu32_get_element___bfe" => Box::new(SafeGet { data_type: DataType::Bfe }),
-        "tasm_list_safeimplu32_get_element___xfe" => Box::new(SafeGet { data_type: DataType::Xfe }),
-        "tasm_list_safeimplu32_get_element___digest" => Box::new(SafeGet { data_type: DataType::Digest }),
+        // lists
+        "tasm_list_get_element___bool" => Box::new(Get::new(DataType::Bool)),
+        "tasm_list_get_element___u32" => Box::new(Get::new(DataType::U32)),
+        "tasm_list_get_element___u64" => Box::new(Get::new(DataType::U64)),
+        "tasm_list_get_element___bfe" => Box::new(Get::new(DataType::Bfe)),
+        "tasm_list_get_element___xfe" => Box::new(Get::new(DataType::Xfe)),
+        "tasm_list_get_element___digest" => Box::new(Get::new(DataType::Digest)),
 
-        "tasm_list_safeimplu32_pop___bool" => Box::new(SafePop { data_type: DataType::Bool }),
-        "tasm_list_safeimplu32_pop___u32" => Box::new(SafePop { data_type: DataType::U32 }),
-        "tasm_list_safeimplu32_pop___u64" => Box::new(SafePop { data_type: DataType::U64 }),
-        "tasm_list_safeimplu32_pop___bfe" => Box::new(SafePop { data_type: DataType::Bfe }),
-        "tasm_list_safeimplu32_pop___xfe" => Box::new(SafePop { data_type: DataType::Xfe }),
-        "tasm_list_safeimplu32_pop___digest" => Box::new(SafePop { data_type: DataType::Digest }),
+        "tasm_list_pop___bool" => Box::new(Pop::new(DataType::Bool)),
+        "tasm_list_pop___u32" => Box::new(Pop::new(DataType::U32)),
+        "tasm_list_pop___u64" => Box::new(Pop::new(DataType::U64)),
+        "tasm_list_pop___bfe" => Box::new(Pop::new(DataType::Bfe)),
+        "tasm_list_pop___xfe" => Box::new(Pop::new(DataType::Xfe)),
+        "tasm_list_pop___digest" => Box::new(Pop::new(DataType::Digest)),
 
-        "tasm_list_safeimplu32_push___bool" => Box::new(SafePush { data_type: DataType::Bool }),
-        "tasm_list_safeimplu32_push___u32" => Box::new(SafePush { data_type: DataType::U32 }),
-        "tasm_list_safeimplu32_push___u64" => Box::new(SafePush { data_type: DataType::U64 }),
-        "tasm_list_safeimplu32_push___bfe" => Box::new(SafePush { data_type: DataType::Bfe }),
-        "tasm_list_safeimplu32_push___xfe" => Box::new(SafePush { data_type: DataType::Xfe }),
-        "tasm_list_safeimplu32_push___digest" => Box::new(SafePush { data_type: DataType::Digest }),
+        "tasm_list_push___bool" => Box::new(Push::new(DataType::Bool)),
+        "tasm_list_push___u32" => Box::new(Push::new(DataType::U32)),
+        "tasm_list_push___u64" => Box::new(Push::new(DataType::U64)),
+        "tasm_list_push___bfe" => Box::new(Push::new(DataType::Bfe)),
+        "tasm_list_push___xfe" => Box::new(Push::new(DataType::Xfe)),
+        "tasm_list_push___digest" => Box::new(Push::new(DataType::Digest)),
 
-        "tasm_list_safeimplu32_set_element___bool" => Box::new(SafeSet { data_type: DataType::Bool }),
-        "tasm_list_safeimplu32_set_element___u32" => Box::new(SafeSet { data_type: DataType::U32 }),
-        "tasm_list_safeimplu32_set_element___u64" => Box::new(SafeSet { data_type: DataType::U64 }),
-        "tasm_list_safeimplu32_set_element___bfe" => Box::new(SafeSet { data_type: DataType::Bfe }),
-        "tasm_list_safeimplu32_set_element___xfe" => Box::new(SafeSet { data_type: DataType::Xfe }),
-        "tasm_list_safeimplu32_set_element___digest" => Box::new(SafeSet { data_type: DataType::Digest }),
+        "tasm_list_set_element___bool" => Box::new(Set::new(DataType::Bool)),
+        "tasm_list_set_element___u32" => Box::new(Set::new(DataType::U32)),
+        "tasm_list_set_element___u64" => Box::new(Set::new(DataType::U64)),
+        "tasm_list_set_element___bfe" => Box::new(Set::new(DataType::Bfe)),
+        "tasm_list_set_element___xfe" => Box::new(Set::new(DataType::Xfe)),
+        "tasm_list_set_element___digest" => Box::new(Set::new(DataType::Digest)),
 
-        "tasm_list_safeimplu32_new___bool" => Box::new(SafeNew { data_type: DataType::Bool }),
-        "tasm_list_safeimplu32_new___u32" => Box::new(SafeNew { data_type: DataType::U32 }),
-        "tasm_list_safeimplu32_new___u64" => Box::new(SafeNew { data_type: DataType::U64 }),
-        "tasm_list_safeimplu32_new___bfe" => Box::new(SafeNew { data_type: DataType::Bfe }),
-        "tasm_list_safeimplu32_new___xfe" => Box::new(SafeNew { data_type: DataType::Xfe }),
-        "tasm_list_safeimplu32_new___digest" => Box::new(SafeNew { data_type: DataType::Digest }),
+        "tasm_list_new___bool" => Box::new(New::new(DataType::Bool)),
+        "tasm_list_new___u32" => Box::new(New::new(DataType::U32)),
+        "tasm_list_new___u64" => Box::new(New::new(DataType::U64)),
+        "tasm_list_new___bfe" => Box::new(New::new(DataType::Bfe)),
+        "tasm_list_new___xfe" => Box::new(New::new(DataType::Xfe)),
+        "tasm_list_new___digest" => Box::new(New::new(DataType::Digest)),
 
-        "tasm_list_safeimplu32_length___bool" => Box::new(SafeLength { data_type: DataType::Bool }),
-        "tasm_list_safeimplu32_length___u32" => Box::new(SafeLength { data_type: DataType::U32 }),
-        "tasm_list_safeimplu32_length___u64" => Box::new(SafeLength { data_type: DataType::U64 }),
-        "tasm_list_safeimplu32_length___bfe" => Box::new(SafeLength { data_type: DataType::Bfe }),
-        "tasm_list_safeimplu32_length___xfe" => Box::new(SafeLength { data_type: DataType::Xfe }),
-        "tasm_list_safeimplu32_length___digest" => Box::new(SafeLength { data_type: DataType::Digest }),
+        "tasm_list_length___bool" => Box::new(Length::new(DataType::Bool)),
+        "tasm_list_length___u32" => Box::new(Length::new(DataType::U32)),
+        "tasm_list_length___u64" => Box::new(Length::new(DataType::U64)),
+        "tasm_list_length___bfe" => Box::new(Length::new(DataType::Bfe)),
+        "tasm_list_length___xfe" => Box::new(Length::new(DataType::Xfe)),
+        "tasm_list_length___digest" => Box::new(Length::new(DataType::Digest)),
 
-        "tasm_list_safeimplu32_set_length___bool" => Box::new(SafeSetLength { data_type: DataType::Bool }),
-        "tasm_list_safeimplu32_set_length___u32" => Box::new(SafeSetLength { data_type: DataType::U32 }),
-        "tasm_list_safeimplu32_set_length___u64" => Box::new(SafeSetLength { data_type: DataType::U64 }),
-        "tasm_list_safeimplu32_set_length___bfe" => Box::new(SafeSetLength { data_type: DataType::Bfe }),
-        "tasm_list_safeimplu32_set_length___xfe" => Box::new(SafeSetLength { data_type: DataType::Xfe }),
-        "tasm_list_safeimplu32_set_length___digest" => Box::new(SafeSetLength { data_type: DataType::Digest }),
+        "tasm_list_set_length___bool" => Box::new(SetLength::new(DataType::Bool)),
+        "tasm_list_set_length___u32" => Box::new(SetLength::new(DataType::U32)),
+        "tasm_list_set_length___u64" => Box::new(SetLength::new(DataType::U64)),
+        "tasm_list_set_length___bfe" => Box::new(SetLength::new(DataType::Bfe)),
+        "tasm_list_set_length___xfe" => Box::new(SetLength::new(DataType::Xfe)),
+        "tasm_list_set_length___digest" => Box::new(SetLength::new(DataType::Digest)),
 
-        "tasm_list_safeimplu32_multiset_equality" => Box::new(crate::list::multiset_equality::MultisetEquality(ListType::Safe)),
-
-        "tasm_list_safeimplu32_range" => Box::new(Range { list_type: ListType::Safe }),
-
-        // unsafe lists
-        "tasm_list_unsafeimplu32_get_element___bool" => Box::new(UnsafeGet { data_type: DataType::Bool }),
-        "tasm_list_unsafeimplu32_get_element___u32" => Box::new(UnsafeGet { data_type: DataType::U32 }),
-        "tasm_list_unsafeimplu32_get_element___u64" => Box::new(UnsafeGet { data_type: DataType::U64 }),
-        "tasm_list_unsafeimplu32_get_element___bfe" => Box::new(UnsafeGet { data_type: DataType::Bfe }),
-        "tasm_list_unsafeimplu32_get_element___xfe" => Box::new(UnsafeGet { data_type: DataType::Xfe }),
-        "tasm_list_unsafeimplu32_get_element___digest" => Box::new(UnsafeGet { data_type: DataType::Digest }),
-
-        "tasm_list_unsafeimplu32_pop___bool" => Box::new(UnsafePop { data_type: DataType::Bool }),
-        "tasm_list_unsafeimplu32_pop___u32" => Box::new(UnsafePop { data_type: DataType::U32 }),
-        "tasm_list_unsafeimplu32_pop___u64" => Box::new(UnsafePop { data_type: DataType::U64 }),
-        "tasm_list_unsafeimplu32_pop___bfe" => Box::new(UnsafePop { data_type: DataType::Bfe }),
-        "tasm_list_unsafeimplu32_pop___xfe" => Box::new(UnsafePop { data_type: DataType::Xfe }),
-        "tasm_list_unsafeimplu32_pop___digest" => Box::new(UnsafePop { data_type: DataType::Digest }),
-
-        "tasm_list_unsafeimplu32_push___bool" => Box::new(UnsafePush { data_type: DataType::Bool }),
-        "tasm_list_unsafeimplu32_push___u32" => Box::new(UnsafePush { data_type: DataType::U32 }),
-        "tasm_list_unsafeimplu32_push___u64" => Box::new(UnsafePush { data_type: DataType::U64 }),
-        "tasm_list_unsafeimplu32_push___bfe" => Box::new(UnsafePush { data_type: DataType::Bfe }),
-        "tasm_list_unsafeimplu32_push___xfe" => Box::new(UnsafePush { data_type: DataType::Xfe }),
-        "tasm_list_unsafeimplu32_push___digest" => Box::new(UnsafePush { data_type: DataType::Digest }),
-
-        "tasm_list_unsafeimplu32_set_element___bool" => Box::new(UnsafeSet {
-            data_type: DataType::Bool
-        }),
-        "tasm_list_unsafeimplu32_set_element___u32" => Box::new(UnsafeSet {
-            data_type: DataType::U32
-        }),
-        "tasm_list_unsafeimplu32_set_element___u64" => Box::new(UnsafeSet {
-            data_type: DataType::U64
-        }),
-        "tasm_list_unsafeimplu32_set_element___bfe" => Box::new(UnsafeSet {
-            data_type: DataType::Bfe
-        }),
-        "tasm_list_unsafeimplu32_set_element___xfe" => Box::new(UnsafeSet {
-            data_type: DataType::Xfe
-        }),
-        "tasm_list_unsafeimplu32_set_element___digest" => Box::new(UnsafeSet {
-            data_type: DataType::Digest
-        }),
-
-        "tasm_list_unsafeimplu32_new___bool" => Box::new(UnsafeNew { data_type: DataType::Bool }),
-        "tasm_list_unsafeimplu32_new___u32" => Box::new(UnsafeNew { data_type: DataType::U32 }),
-        "tasm_list_unsafeimplu32_new___u64" => Box::new(UnsafeNew { data_type: DataType::U64 }),
-        "tasm_list_unsafeimplu32_new___bfe" => Box::new(UnsafeNew { data_type: DataType::Bfe }),
-        "tasm_list_unsafeimplu32_new___xfe" => Box::new(UnsafeNew { data_type: DataType::Xfe }),
-        "tasm_list_unsafeimplu32_new___digest" => Box::new(UnsafeNew { data_type: DataType::Digest }),
-
-        "tasm_list_unsafeimplu32_length___bool" => Box::new(UnsafeLength { data_type: DataType::Bool }),
-        "tasm_list_unsafeimplu32_length___u32" => Box::new(UnsafeLength { data_type: DataType::U32 }),
-        "tasm_list_unsafeimplu32_length___u64" => Box::new(UnsafeLength { data_type: DataType::U64 }),
-        "tasm_list_unsafeimplu32_length___bfe" => Box::new(UnsafeLength { data_type: DataType::Bfe }),
-        "tasm_list_unsafeimplu32_length___xfe" => Box::new(UnsafeLength { data_type: DataType::Xfe }),
-        "tasm_list_unsafeimplu32_length___digest" => Box::new(UnsafeLength { data_type: DataType::Digest }),
-
-        "tasm_list_unsafeimplu32_set_length___bool" => Box::new(UnsafeSetLength {
-            data_type: DataType::Bool
-        }),
-        "tasm_list_unsafeimplu32_set_length___u32" => Box::new(UnsafeSetLength {
-            data_type: DataType::U32
-        }),
-        "tasm_list_unsafeimplu32_set_length___u64" => Box::new(UnsafeSetLength {
-            data_type: DataType::U64
-        }),
-        "tasm_list_unsafeimplu32_set_length___bfe" => Box::new(UnsafeSetLength {
-            data_type: DataType::Bfe
-        }),
-        "tasm_list_unsafeimplu32_set_length___xfe" => Box::new(UnsafeSetLength {
-            data_type: DataType::Xfe
-        }),
-        "tasm_list_unsafeimplu32_set_length___digest" => Box::new(UnsafeSetLength {
-            data_type: DataType::Digest
-        }),
-
-        "tasm_list_unsafeimplu32_multiset_equality" => Box::new(crate::list::multiset_equality::MultisetEquality(ListType::Unsafe)),
-        "tasm_list_unsafeimplu32_range" => Box::new(Range { list_type: ListType::Unsafe }),
+        "tasm_list_multiset_equality" => Box::new(crate::list::multiset_equality::MultisetEquality),
+        "tasm_list_range" => Box::new(Range),
 
         // Contiguous lists
         "tasm_list_contiguous_list_get_length" => Box::new(contiguous_list::get_length::GetLength),
-        "tasm_list_contiguous_list_get_pointer_list_unsafeimplu32" => Box::new(contiguous_list::get_pointer_list::GetPointerList { output_list_type: ListType::Unsafe }),
-        "tasm_list_contiguous_list_get_pointer_list_safeimplu32" => Box::new(contiguous_list::get_pointer_list::GetPointerList { output_list_type: ListType::Safe }),
+        "tasm_list_contiguous_list_get_pointer_list" => Box::new(contiguous_list::get_pointer_list::GetPointerList),
 
         // MMR
-        "tasm_mmr_calculate_new_peaks_from_append_unsafeimplu32" => Box::new(CalculateNewPeaksFromAppend { list_type: ListType::Unsafe }),
-        "tasm_mmr_calculate_new_peaks_from_append_safeimplu32" => Box::new(CalculateNewPeaksFromAppend { list_type: ListType::Safe }),
-        "tasm_mmr_calculate_new_peaks_from_leaf_mutation_unsafeimplu32" => {
-            Box::new(MmrCalculateNewPeaksFromLeafMutationMtIndices { list_type: ListType::Unsafe })
-        }
-        "tasm_mmr_calculate_new_peaks_from_leaf_mutation_safeimplu32" => {
-            Box::new(MmrCalculateNewPeaksFromLeafMutationMtIndices { list_type: ListType::Safe })
+        "tasm_mmr_calculate_new_peaks_from_append" => Box::new(CalculateNewPeaksFromAppend),
+        "tasm_mmr_calculate_new_peaks_from_leaf_mutation" => {
+            Box::new(MmrCalculateNewPeaksFromLeafMutationMtIndices)
         }
         "tasm_mmr_leaf_index_to_mt_index_and_peak_index" => Box::new(MmrLeafIndexToMtIndexAndPeakIndex),
-        "tasm_mmr_verify_from_secret_in_unsafeimplu32" => Box::new(MmrVerifyLeafMembershipFromSecretIn { list_type: ListType::Unsafe }),
-        "tasm_mmr_verify_from_secret_in_safeimplu32" => Box::new(MmrVerifyLeafMembershipFromSecretIn { list_type: ListType::Safe }),
+        "tasm_mmr_verify_from_secret_in" => Box::new(MmrVerifyLeafMembershipFromSecretIn),
         "tasm_mmr_bag_peaks" => Box::new(BagPeaks),
-        "tasm_mmr_verify_from_memory_unsafeimplu32" => Box::new(MmrVerifyFromMemory { list_type: ListType::Unsafe }),
-        "tasm_mmr_verify_from_memory_safeimplu32" => Box::new(MmrVerifyFromMemory { list_type: ListType::Safe }),
+        "tasm_mmr_verify_from_memory" => Box::new(MmrVerifyFromMemory),
 
         // other
         "tasm_other_bfe_add" => Box::new(BfeAdd),

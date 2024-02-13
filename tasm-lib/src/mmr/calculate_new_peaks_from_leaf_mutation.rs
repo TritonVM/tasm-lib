@@ -18,11 +18,8 @@ use crate::arithmetic::u64::eq_u64::EqU64;
 use crate::data_type::DataType;
 use crate::empty_stack;
 use crate::library::Library;
-use crate::list::safeimplu32::get::SafeGet;
-use crate::list::safeimplu32::set::SafeSet;
-use crate::list::unsafeimplu32::get::UnsafeGet;
-use crate::list::unsafeimplu32::set::UnsafeSet;
-use crate::list::ListType;
+use crate::list::get::Get;
+use crate::list::set::Set;
 use crate::mmr::MAX_MMR_HEIGHT;
 use crate::rust_shadowing_helper_functions;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
@@ -33,10 +30,8 @@ use crate::DIGEST_LENGTH;
 use super::leaf_index_to_mt_index_and_peak_index::MmrLeafIndexToMtIndexAndPeakIndex;
 
 /// Calculate new MMR peaks from a leaf mutation using Merkle tree indices walk up the tree
-#[derive(Clone, Debug)]
-pub struct MmrCalculateNewPeaksFromLeafMutationMtIndices {
-    pub list_type: ListType,
-}
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
+pub struct MmrCalculateNewPeaksFromLeafMutationMtIndices;
 
 impl MmrCalculateNewPeaksFromLeafMutationMtIndices {
     // Returns: (execution state, auth path pointer, peaks pointer)
@@ -69,26 +64,10 @@ impl MmrCalculateNewPeaksFromLeafMutationMtIndices {
         stack.push(BFieldElement::new(leaf_count & u32::MAX as u64));
 
         // Initialize memory
-        let list_push = match self.list_type {
-            ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_push,
-            ListType::Unsafe => rust_shadowing_helper_functions::unsafe_list::unsafe_list_push,
-        };
+        let list_push = rust_shadowing_helper_functions::list::list_push;
         let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
-        match self.list_type {
-            ListType::Safe => {
-                rust_shadowing_helper_functions::safe_list::safe_list_new(
-                    peaks_pointer,
-                    MAX_MMR_HEIGHT as u32,
-                    &mut memory,
-                );
-            }
-            ListType::Unsafe => {
-                rust_shadowing_helper_functions::unsafe_list::unsafe_list_new(
-                    peaks_pointer,
-                    &mut memory,
-                );
-            }
-        }
+        rust_shadowing_helper_functions::list::list_new(peaks_pointer, &mut memory);
+
         for peak in start_mmr.get_peaks() {
             list_push(
                 peaks_pointer,
@@ -98,21 +77,7 @@ impl MmrCalculateNewPeaksFromLeafMutationMtIndices {
             );
         }
 
-        match self.list_type {
-            ListType::Safe => {
-                rust_shadowing_helper_functions::safe_list::safe_list_new(
-                    auth_path_pointer,
-                    MAX_MMR_HEIGHT as u32,
-                    &mut memory,
-                );
-            }
-            ListType::Unsafe => {
-                rust_shadowing_helper_functions::unsafe_list::unsafe_list_new(
-                    auth_path_pointer,
-                    &mut memory,
-                );
-            }
-        }
+        rust_shadowing_helper_functions::list::list_new(auth_path_pointer, &mut memory);
         for ap_element in auth_path.iter() {
             list_push(
                 auth_path_pointer,
@@ -138,10 +103,7 @@ impl MmrCalculateNewPeaksFromLeafMutationMtIndices {
 
 impl DeprecatedSnippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
     fn entrypoint_name(&self) -> String {
-        format!(
-            "tasm_mmr_calculate_new_peaks_from_leaf_mutation_{}",
-            self.list_type
-        )
+        "tasm_mmr_calculate_new_peaks_from_leaf_mutation".into()
     }
 
     fn input_field_names(&self) -> Vec<String> {
@@ -191,22 +153,8 @@ impl DeprecatedSnippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
         let leaf_index_to_mt_index = library.import(Box::new(MmrLeafIndexToMtIndexAndPeakIndex));
         let u32_is_odd = library.import(Box::new(Isodd));
         let eq_u64 = library.import(Box::new(EqU64));
-        let get = match self.list_type {
-            ListType::Safe => library.import(Box::new(SafeGet {
-                data_type: DataType::Digest,
-            })),
-            ListType::Unsafe => library.import(Box::new(UnsafeGet {
-                data_type: DataType::Digest,
-            })),
-        };
-        let set = match self.list_type {
-            ListType::Safe => library.import(Box::new(SafeSet {
-                data_type: DataType::Digest,
-            })),
-            ListType::Unsafe => library.import(Box::new(UnsafeSet {
-                data_type: DataType::Digest,
-            })),
-        };
+        let get = library.import(Box::new(Get::new(DataType::Digest)));
+        let set = library.import(Box::new(Set::new(DataType::Digest)));
         let div_2 = library.import(Box::new(Div2U64));
 
         format!(
@@ -376,14 +324,7 @@ impl DeprecatedSnippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
 
         let auth_paths_pointer = stack.pop().unwrap();
 
-        let list_get = match self.list_type {
-            ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_get,
-            ListType::Unsafe => rust_shadowing_helper_functions::unsafe_list::unsafe_list_get,
-        };
-        let list_set = match self.list_type {
-            ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_set,
-            ListType::Unsafe => rust_shadowing_helper_functions::unsafe_list::unsafe_list_set,
-        };
+        let list_get = rust_shadowing_helper_functions::list::list_get;
 
         let peaks_count: u64 = memory[&peaks_pointer].value();
         let mut peaks: Vec<Digest> = vec![];
@@ -415,7 +356,7 @@ impl DeprecatedSnippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
         // Write mutated peak back to memory
         // rust_shadowing_helper_functions::list_set(peaks_pointer, index, value, memory)
         for i in 0..peaks_count {
-            list_set(
+            rust_shadowing_helper_functions::list::list_set(
                 peaks_pointer,
                 i as usize,
                 new_peaks[i as usize].values().to_vec(),
@@ -442,21 +383,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn calculate_new_peaks_from_leaf_mutation_test_unsafe_lists() {
+    fn calculate_new_peaks_from_leaf_mutation_test() {
         test_rust_equivalence_multiple_deprecated(
-            &MmrCalculateNewPeaksFromLeafMutationMtIndices {
-                list_type: ListType::Unsafe,
-            },
-            true,
-        );
-    }
-
-    #[test]
-    fn calculate_new_peaks_from_leaf_mutation_test_safe_lists() {
-        test_rust_equivalence_multiple_deprecated(
-            &MmrCalculateNewPeaksFromLeafMutationMtIndices {
-                list_type: ListType::Safe,
-            },
+            &MmrCalculateNewPeaksFromLeafMutationMtIndices,
             true,
         );
     }
@@ -640,11 +569,9 @@ mod tests {
         expected_mmr: MmrAccumulator<VmHasher>,
         auth_path: Vec<Digest>,
     ) {
-        let implementation_with_unsafe_lists = MmrCalculateNewPeaksFromLeafMutationMtIndices {
-            list_type: ListType::Unsafe,
-        };
-        let (init_exec_state, auth_path_pointer, peaks_pointer) = implementation_with_unsafe_lists
-            .prepare_state_with_mmra(start_mmr, new_leaf_index, new_leaf, auth_path);
+        let mmr_new_peaks = MmrCalculateNewPeaksFromLeafMutationMtIndices;
+        let (init_exec_state, auth_path_pointer, peaks_pointer) =
+            mmr_new_peaks.prepare_state_with_mmra(start_mmr, new_leaf_index, new_leaf, auth_path);
         let init_stack = init_exec_state.stack;
         let memory = init_exec_state.nondeterminism.ram;
 
@@ -655,9 +582,7 @@ mod tests {
         expected_final_stack.push(BFieldElement::new(new_leaf_index & u32::MAX as u64));
 
         let vm_output = test_rust_equivalence_given_input_values_deprecated(
-            &MmrCalculateNewPeaksFromLeafMutationMtIndices {
-                list_type: ListType::Unsafe,
-            },
+            &MmrCalculateNewPeaksFromLeafMutationMtIndices,
             &init_stack,
             &[],
             memory,
@@ -671,7 +596,7 @@ mod tests {
         let mut produced_peaks = vec![];
         for i in 0..peaks_count {
             let peak: Digest = Digest::new(
-                rust_shadowing_helper_functions::unsafe_list::unsafe_list_get(
+                rust_shadowing_helper_functions::list::list_get(
                     peaks_pointer,
                     i as usize,
                     &final_memory,
@@ -694,7 +619,7 @@ mod tests {
         let mut auth_path = vec![];
         for i in 0..auth_path_element_count {
             let auth_path_element: Digest = Digest::new(
-                rust_shadowing_helper_functions::unsafe_list::unsafe_list_get(
+                rust_shadowing_helper_functions::list::list_get(
                     auth_path_pointer,
                     i as usize,
                     &final_memory,
@@ -745,16 +670,7 @@ mod benches {
     use super::*;
 
     #[test]
-    fn calculate_new_peaks_from_leaf_mutation_benchmark_unsafe_lists() {
-        bench_and_write(MmrCalculateNewPeaksFromLeafMutationMtIndices {
-            list_type: ListType::Unsafe,
-        });
-    }
-
-    #[test]
-    fn calculate_new_peaks_from_leaf_mutation_benchmark_safe_lists() {
-        bench_and_write(MmrCalculateNewPeaksFromLeafMutationMtIndices {
-            list_type: ListType::Safe,
-        });
+    fn calculate_new_peaks_from_leaf_mutation_benchmark() {
+        bench_and_write(MmrCalculateNewPeaksFromLeafMutationMtIndices);
     }
 }

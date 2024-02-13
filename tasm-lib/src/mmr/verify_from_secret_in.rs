@@ -20,10 +20,10 @@ use crate::empty_stack;
 use crate::hashing::divine_sibling_u64_index::DivineSiblingU64Index;
 use crate::hashing::eq_digest::EqDigest;
 use crate::library::Library;
-use crate::list::safeimplu32::get::SafeGet;
-use crate::list::unsafeimplu32::get::UnsafeGet;
-use crate::list::ListType;
+use crate::list::get::Get;
+use crate::list::LIST_METADATA_SIZE;
 use crate::rust_shadowing_helper_functions;
+use crate::rust_shadowing_helper_functions::list;
 use crate::snippet_bencher::BenchmarkCase;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::procedure::Procedure;
@@ -36,10 +36,8 @@ use crate::DIGEST_LENGTH;
 use super::leaf_index_to_mt_index_and_peak_index::MmrLeafIndexToMtIndexAndPeakIndex;
 use super::MAX_MMR_HEIGHT;
 
-#[derive(Clone, Debug)]
-pub struct MmrVerifyLeafMembershipFromSecretIn {
-    pub list_type: ListType,
-}
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
+pub struct MmrVerifyLeafMembershipFromSecretIn;
 
 impl MmrVerifyLeafMembershipFromSecretIn {
     // BEFORE: _ *peaks [digest (leaf_digest)] leaf_count_hi leaf_count_lo
@@ -127,28 +125,10 @@ impl MmrVerifyLeafMembershipFromSecretIn {
 
         // Write peaks to memory
         let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
-        match self.list_type {
-            ListType::Unsafe => {
-                rust_shadowing_helper_functions::unsafe_list::unsafe_list_new(
-                    peaks_pointer,
-                    &mut memory,
-                );
-            }
-            ListType::Safe => {
-                rust_shadowing_helper_functions::safe_list::safe_list_new(
-                    peaks_pointer,
-                    MAX_MMR_HEIGHT as u32,
-                    &mut memory,
-                );
-            }
-        }
+        rust_shadowing_helper_functions::list::list_new(peaks_pointer, &mut memory);
 
-        let list_push = match self.list_type {
-            ListType::Unsafe => rust_shadowing_helper_functions::unsafe_list::unsafe_list_push,
-            ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_push,
-        };
         for peak in mmra.get_peaks() {
-            list_push(
+            rust_shadowing_helper_functions::list::list_push(
                 peaks_pointer,
                 peak.values().to_vec(),
                 &mut memory,
@@ -156,10 +136,7 @@ impl MmrVerifyLeafMembershipFromSecretIn {
             );
         }
 
-        let list_metadata_size = match self.list_type {
-            ListType::Safe => 2,
-            ListType::Unsafe => 1,
-        };
+        let list_metadata_size = LIST_METADATA_SIZE;
         let nondeterminism = NonDeterminism::default().with_ram(memory);
         ExecutionState {
             stack,
@@ -192,7 +169,7 @@ impl BasicSnippet for MmrVerifyLeafMembershipFromSecretIn {
     }
 
     fn entrypoint(&self) -> String {
-        format!("tasm_mmr_verify_from_secret_in_{}", self.list_type)
+        "tasm_mmr_verify_from_secret_in".into()
     }
 
     // Already on stack (can be secret of public input): _ *peaks leaf_count_hi leaf_count_lo [digest (leaf)]
@@ -205,14 +182,7 @@ impl BasicSnippet for MmrVerifyLeafMembershipFromSecretIn {
         let eq_u64 = library.import(Box::new(EqU64));
         let compare_digest = library.import(Box::new(EqDigest));
         let divine_digest_u64_index = library.import(Box::new(DivineSiblingU64Index));
-        let list_get = match self.list_type {
-            ListType::Unsafe => library.import(Box::new(UnsafeGet {
-                data_type: DataType::Digest,
-            })),
-            ListType::Safe => library.import(Box::new(SafeGet {
-                data_type: DataType::Digest,
-            })),
-        };
+        let list_get = library.import(Box::new(Get::new(DataType::Digest)));
 
         // BEFORE: _ *peaks leaf_count_hi leaf_count_lo [digest (leaf_digest)]
         // AFTER:  _ leaf_index_hi leaf_index_lo validation_result
@@ -296,16 +266,12 @@ impl Procedure for MmrVerifyLeafMembershipFromSecretIn {
         let leaf_count_lo: u32 = stack.pop().unwrap().try_into().unwrap();
         let leaf_count_hi: u32 = stack.pop().unwrap().try_into().unwrap();
         let leaf_count: u64 = ((leaf_count_hi as u64) << 32) + leaf_count_lo as u64;
-        let list_get = match self.list_type {
-            ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_get,
-            ListType::Unsafe => rust_shadowing_helper_functions::unsafe_list::unsafe_list_get,
-        };
         let peaks_pointer = stack.pop().unwrap();
         let peaks_count: u64 = memory[&peaks_pointer].value();
         let mut peaks: Vec<Digest> = vec![];
         for i in 0..peaks_count {
             let digest = Digest::new(
-                list_get(peaks_pointer, i as usize, memory, DIGEST_LENGTH)
+                list::list_get(peaks_pointer, i as usize, memory, DIGEST_LENGTH)
                     .try_into()
                     .unwrap(),
             );
@@ -376,19 +342,8 @@ mod benches {
     use super::*;
 
     #[test]
-    fn verify_from_secret_in_benchmark_unsafe_lists() {
-        ShadowedProcedure::new(MmrVerifyLeafMembershipFromSecretIn {
-            list_type: ListType::Unsafe,
-        })
-        .bench();
-    }
-
-    #[test]
-    fn verify_from_secret_in_benchmark_safe_lists() {
-        ShadowedProcedure::new(MmrVerifyLeafMembershipFromSecretIn {
-            list_type: ListType::Safe,
-        })
-        .bench();
+    fn verify_from_secret_in_benchmark() {
+        ShadowedProcedure::new(MmrVerifyLeafMembershipFromSecretIn).bench();
     }
 }
 
@@ -408,14 +363,7 @@ mod tests {
     #[test]
     fn prop() {
         for _ in 0..10 {
-            ShadowedProcedure::new(MmrVerifyLeafMembershipFromSecretIn {
-                list_type: ListType::Unsafe,
-            })
-            .test();
-            ShadowedProcedure::new(MmrVerifyLeafMembershipFromSecretIn {
-                list_type: ListType::Safe,
-            })
-            .test()
+            ShadowedProcedure::new(MmrVerifyLeafMembershipFromSecretIn).test();
         }
     }
 
@@ -582,9 +530,9 @@ mod tests {
 
         // Initialize memory with peaks list
         let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
-        rust_shadowing_helper_functions::unsafe_list::unsafe_list_new(peaks_pointer, &mut memory);
+        rust_shadowing_helper_functions::list::list_new(peaks_pointer, &mut memory);
         for peak in mmr.get_peaks() {
-            rust_shadowing_helper_functions::unsafe_list::unsafe_list_push(
+            rust_shadowing_helper_functions::list::list_push(
                 peaks_pointer,
                 peak.values().to_vec(),
                 &mut memory,
@@ -606,12 +554,8 @@ mod tests {
             ram: memory,
         };
 
-        let snippet_with_unsafe_lists = MmrVerifyLeafMembershipFromSecretIn {
-            list_type: ListType::Unsafe,
-        };
-
         test_rust_equivalence_given_complete_state(
-            &ShadowedProcedure::new(snippet_with_unsafe_lists),
+            &ShadowedProcedure::new(MmrVerifyLeafMembershipFromSecretIn),
             &init_stack,
             &[],
             &non_determinism,
