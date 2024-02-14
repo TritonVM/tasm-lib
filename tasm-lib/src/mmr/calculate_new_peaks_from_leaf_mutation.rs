@@ -586,7 +586,6 @@ mod tests {
             &init_stack,
             &[],
             memory,
-            (MAX_MMR_HEIGHT * DIGEST_LENGTH + 1).try_into().unwrap(), // assume that 64 digests are allocated in memory when code starts to run
             Some(&expected_final_stack),
         );
 

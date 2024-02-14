@@ -291,7 +291,6 @@ mod tests {
             &[],
             &NonDeterminism::default().with_ram(memory),
             &None,
-            0,
             Some(&expected_final_stack),
         );
     }

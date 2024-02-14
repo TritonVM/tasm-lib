@@ -8,11 +8,12 @@
 //!     It occupies the only page that is not of size 2^32 words.
 //! - Page 0 is reserved for non-deterministically initialized memory.
 //! - The last full page, number (2^32)-2, starting at address 2^64 - 2·(2^32),
-//!     is reserved for static allocations.
+//!     is reserved for [static allocations](static_malloc_addr).
 //! - All other pages, i.e., pages 1 through (2^32)-3, are dynamically allocated.
 //!
 //! [prime]: BFieldElement::P
 //! [dyn_malloc_addr]: dyn_malloc::DYN_MALLOC_ADDRESS
+//! [static_malloc_addr]: crate::library::STATIC_MEMORY_START_ADDRESS
 
 use std::collections::HashMap;
 

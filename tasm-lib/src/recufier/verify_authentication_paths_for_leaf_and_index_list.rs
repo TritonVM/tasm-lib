@@ -329,7 +329,7 @@ mod test {
             }
 
             // run tvm
-            let code = link_for_isolated_run(Rc::new(RefCell::new(vap4lail)), 0);
+            let code = link_for_isolated_run(Rc::new(RefCell::new(vap4lail)));
             let program = Program::new(&code);
             let tvm_result =
                 execute_with_terminal_state(&program, &stdin, &stack, &nondeterminism, None);

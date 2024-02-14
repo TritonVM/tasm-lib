@@ -13,7 +13,7 @@ use crate::traits::deprecated_snippet::DeprecatedSnippet;
 pub const STATIC_MEMORY_START_ADDRESS: BFieldElement = BFieldElement::new(BFieldElement::MAX - 1);
 
 /// A Library represents a set of imports for a single Program or Snippet, and moreover
-/// tracks some data used for initializing the memory allocator.
+/// tracks some data used for initializing the [memory allocator](crate::memory).
 #[derive(Clone, Debug)]
 pub struct Library {
     seen_snippets: HashMap<String, Vec<LabelledInstruction>>,
@@ -39,6 +39,10 @@ impl Library {
         Self::new()
     }
 
+    #[deprecated(
+        since = "0.3.0",
+        note = "The current memory layout makes pre-allocation superfluous."
+    )]
     pub fn with_preallocated_memory(words_statically_allocated: u32) -> Self {
         let free_pointer =
             STATIC_MEMORY_START_ADDRESS - BFieldElement::new(words_statically_allocated as u64);
@@ -340,7 +344,6 @@ mod tests {
             &empty_stack,
             &[],
             HashMap::default(),
-            0,
             expected,
         );
         test_rust_equivalence_given_input_values_deprecated(
@@ -348,7 +351,6 @@ mod tests {
             &empty_stack,
             &[],
             HashMap::default(),
-            0,
             expected,
         );
         test_rust_equivalence_given_input_values_deprecated(
@@ -356,7 +358,6 @@ mod tests {
             &empty_stack,
             &[],
             HashMap::default(),
-            0,
             expected,
         );
     }

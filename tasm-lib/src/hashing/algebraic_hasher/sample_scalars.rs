@@ -227,7 +227,6 @@ mod test {
                     &[],
                     NonDeterminism::default(),
                     &Some(init_sponge.clone()),
-                    0,
                 );
 
                 let final_ram = tasm.final_ram;

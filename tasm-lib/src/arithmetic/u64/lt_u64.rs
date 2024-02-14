@@ -435,13 +435,11 @@ mod tests {
         init_stack.append(&mut lhs.encode().into_iter().rev().collect());
 
         let stdin = &[];
-        let words_allocated = 0;
         test_rust_equivalence_given_input_values_deprecated(
             &LtU64,
             &init_stack,
             stdin,
             HashMap::default(),
-            words_allocated,
             expected,
         );
     }
@@ -452,14 +450,12 @@ mod tests {
         init_stack.append(&mut lhs.encode().into_iter().rev().collect());
 
         let stdin = &[];
-        let words_allocated = 0;
         let expected = None;
         test_rust_equivalence_given_input_values_deprecated(
             &LtU64,
             &init_stack,
             stdin,
             HashMap::default(),
-            words_allocated,
             expected,
         );
     }

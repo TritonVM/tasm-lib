@@ -262,7 +262,6 @@ mod tests {
                 &[],
                 &NonDeterminism::default(),
                 &None,
-                1,
                 Some(&expected_final_stack),
             );
         }
@@ -272,7 +271,7 @@ mod tests {
     fn u32_pow_negative_test() {
         let safe_pow = Safepow;
 
-        let code = link_for_isolated_run(Rc::new(RefCell::new(safe_pow)), 0);
+        let code = link_for_isolated_run(Rc::new(RefCell::new(safe_pow)));
 
         for (base, exp) in [
             (2, 32),

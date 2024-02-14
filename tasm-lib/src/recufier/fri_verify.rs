@@ -1152,7 +1152,6 @@ mod test {
                 &[],
                 nondeterminism,
                 &Some(Tip5::init()),
-                0,
             );
         }
 
@@ -1409,14 +1408,12 @@ mod test {
             &sponge,
         );
 
-        let words_statically_allocated = 0;
         let tasm = tasm_final_state(
             &shadowed_procedure,
             &initial_stack,
             &stdin,
             nondeterminism,
             &sponge,
-            words_statically_allocated,
         );
 
         assert_eq!(rust.output, tasm.output);

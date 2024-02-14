@@ -425,7 +425,6 @@ mod tests {
                 &[],
                 &NonDeterminism::default(),
                 &None,
-                1,
                 Some(&expected_final_stack),
             );
         }
@@ -435,7 +434,7 @@ mod tests {
     fn primitive_root_negative_test() {
         let primitive_root = PrimitiveRootOfUnity;
 
-        let code = link_for_isolated_run(Rc::new(RefCell::new(primitive_root)), 0);
+        let code = link_for_isolated_run(Rc::new(RefCell::new(primitive_root)));
 
         for order in [
             0u64,

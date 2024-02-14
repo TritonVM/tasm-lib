@@ -243,7 +243,6 @@ mod tests {
             &init_stack,
             &[],
             memory,
-            0,
             Some(&expected_end_stack),
         );
     }

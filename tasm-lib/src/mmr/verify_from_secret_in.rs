@@ -353,7 +353,6 @@ mod tests {
     use triton_vm::twenty_first::prelude::AlgebraicHasher;
     use twenty_first::test_shared::mmr::get_empty_rustyleveldb_ammr;
 
-    use crate::mmr::MAX_MMR_HEIGHT;
     use crate::test_helpers::test_rust_equivalence_given_complete_state;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
@@ -560,7 +559,6 @@ mod tests {
             &[],
             &non_determinism,
             &None,
-            (MAX_MMR_HEIGHT * DIGEST_LENGTH + 1).try_into().unwrap(),
             Some(&expected_final_stack),
         );
 

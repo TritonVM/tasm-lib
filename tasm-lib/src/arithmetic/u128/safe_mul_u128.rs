@@ -482,7 +482,6 @@ mod tests {
                 &mut init_stack,
                 vec![],
                 NonDeterminism::default(),
-                Some(1),
             ) {
                 Ok(_) => panic!("Overflow must result in error"),
                 Err(err) => println!("Error: {}", err),
@@ -515,7 +514,6 @@ mod tests {
                 &mut init_stack,
                 vec![],
                 NonDeterminism::default(),
-                Some(1),
             ) {
                 Ok(_) => panic!("Overflow must result in error"),
                 Err(err) => println!("Error: {}", err),
@@ -553,7 +551,6 @@ mod tests {
                     &mut init_stack_no_overflow,
                     vec![],
                     NonDeterminism::default(),
-                    Some(1),
                 ) {
                     Ok(_) => (),
                     Err(err) => panic!(
@@ -603,7 +600,6 @@ mod tests {
                         &mut init_stack,
                         vec![],
                         NonDeterminism::default(),
-                        Some(1),
                     ) {
                         Ok(_) => {
                             panic!("Overflow must result in error. lhs = {lhs} , rhs = {rhs_overflow} ")
@@ -624,7 +620,6 @@ mod tests {
                         &mut init_stack_mirrored,
                         vec![],
                         NonDeterminism::default(),
-                        Some(1),
                     ) {
                         Ok(_) => {
                             panic!("Overflow must result in error. lhs = {lhs} , rhs = {rhs_overflow} ")
@@ -676,7 +671,6 @@ mod tests {
                 &mut init_stack,
                 vec![],
                 NonDeterminism::default(),
-                Some(1),
             ) {
                 Ok(_) => panic!("Overflow must result in error. lhs = {lhs} , rhs = {rhs} "),
                 Err(err) => println!("Error: {}", err),

@@ -467,8 +467,6 @@ mod tests {
             );
         }
 
-        let words_allocated = 1 + MAX_MMR_HEIGHT * DIGEST_LENGTH + 1;
-        let words_allocated: u32 = words_allocated.try_into().unwrap();
         let auth_paths_pointer = dyn_malloc::DYN_MALLOC_FIRST_ADDRESS;
         let mut expected_final_stack = empty_stack();
         expected_final_stack.push(peaks_pointer);
@@ -479,7 +477,6 @@ mod tests {
             &init_stack,
             &[],
             memory,
-            words_allocated,
             Some(&expected_final_stack),
         );
 

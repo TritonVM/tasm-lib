@@ -452,7 +452,6 @@ mod tests {
             &[],
             &nondeterminism,
             &None,
-            1,
             Some(&expected_end_stack_true),
         );
 
@@ -471,7 +470,6 @@ mod tests {
             &[],
             &nondeterminism,
             &None,
-            1,
             Some(&expected_end_stack_false),
         );
     }

@@ -522,15 +522,7 @@ mod test {
             let rust = rust_final_state(&function, &stack, &stdin, &nondeterminism, &None);
 
             // run tvm
-            let words_statically_allocated = 3;
-            let tasm = tasm_final_state(
-                &function,
-                &stack,
-                &stdin,
-                nondeterminism,
-                &None,
-                words_statically_allocated,
-            );
+            let tasm = tasm_final_state(&function, &stack, &stdin, nondeterminism, &None);
 
             assert_eq!(
                 rust.output, tasm.output,

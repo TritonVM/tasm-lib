@@ -84,7 +84,6 @@ impl<C: Closure + 'static> RustShadow for ShadowedClosure<C> {
                 &stdin,
                 &NonDeterminism::default(),
                 &None,
-                0,
                 None,
             );
         }
@@ -105,7 +104,6 @@ impl<C: Closure + 'static> RustShadow for ShadowedClosure<C> {
                 &stdin,
                 &NonDeterminism::default(),
                 &None,
-                0,
                 None,
             );
         }
@@ -125,7 +123,7 @@ impl<C: Closure + 'static> RustShadow for ShadowedClosure<C> {
                 .closure
                 .borrow()
                 .pseudorandom_initial_state(rng.gen(), Some(bench_case));
-            let program = link_for_isolated_run(self.closure.clone(), 1);
+            let program = link_for_isolated_run(self.closure.clone());
             let execution_result =
                 execute_bench(&program, &stack, vec![], NonDeterminism::new(vec![]), None);
             let benchmark = BenchmarkResult {

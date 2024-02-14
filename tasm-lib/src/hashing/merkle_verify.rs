@@ -246,7 +246,7 @@ mod tests {
             }
 
             // run tvm
-            let code = link_for_isolated_run(Rc::new(RefCell::new(MerkleVerify)), 0);
+            let code = link_for_isolated_run(Rc::new(RefCell::new(MerkleVerify)));
             let program = Program::new(&code);
             let tvm_result =
                 execute_with_terminal_state(&program, &stdin, &stack, &nondeterminism, None);

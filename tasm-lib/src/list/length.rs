@@ -209,7 +209,6 @@ mod tests {
             &init_stack,
             &[],
             init_memory,
-            0,
             expected,
         );
     }

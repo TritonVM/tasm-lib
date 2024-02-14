@@ -418,7 +418,6 @@ mod test {
                 &initial_state.public_input,
                 &initial_state.nondeterminism,
                 &initial_state.sponge,
-                0,
                 None,
             );
         }
@@ -526,7 +525,6 @@ mod test {
                 &initial_state.public_input,
                 &initial_state.nondeterminism,
                 &initial_state.sponge,
-                0,
                 None,
             );
         }

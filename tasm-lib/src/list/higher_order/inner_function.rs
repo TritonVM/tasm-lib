@@ -188,8 +188,7 @@ impl InnerFunction {
                 panic!("Cannot apply inner function without function body")
             }
             InnerFunction::BasicSnippet(bs) => {
-                // todo: document why allocating memory is necessary – if it even is
-                let mut snippet_state = Library::with_preallocated_memory(1);
+                let mut snippet_state = Library::new();
                 let entrypoint = bs.entrypoint();
                 let function_body = bs.annotated_code(&mut snippet_state);
                 let library_code = snippet_state.all_imports();

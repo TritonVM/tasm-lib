@@ -278,7 +278,6 @@ mod tests {
             &init_stack,
             &[],
             vm_memory,
-            0,
             Some(&expected_end_stack),
         )
         .final_ram;

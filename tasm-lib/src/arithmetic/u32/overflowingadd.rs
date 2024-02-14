@@ -118,7 +118,6 @@ mod tests {
                 &[],
                 &NonDeterminism::default(),
                 &None,
-                1,
                 Some(&expected_final_stack),
             );
         }
