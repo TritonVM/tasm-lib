@@ -156,7 +156,6 @@ fn input_state(list_length: usize) -> ExecutionState {
         stack,
         std_in: vec![],
         nondeterminism,
-        words_allocated: 0,
     }
 }
 

@@ -19,15 +19,12 @@ use crate::list::new::New;
 use crate::list::pop::Pop;
 use crate::list::push::Push;
 use crate::list::set_length::SetLength;
-use crate::list::LIST_METADATA_SIZE;
 use crate::memory::dyn_malloc;
 use crate::rust_shadowing_helper_functions;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::ExecutionState;
 use crate::VmHasher;
 use crate::DIGEST_LENGTH;
-
-use super::MAX_MMR_HEIGHT;
 
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct CalculateNewPeaksFromAppend;
@@ -64,15 +61,7 @@ impl CalculateNewPeaksFromAppend {
             );
         }
 
-        let list_meta_data_size = LIST_METADATA_SIZE;
-
-        ExecutionState::with_stack_and_memory(
-            stack,
-            memory,
-            (MAX_MMR_HEIGHT * DIGEST_LENGTH + list_meta_data_size + 1)
-                .try_into()
-                .unwrap(),
-        )
+        ExecutionState::with_stack_and_memory(stack, memory)
     }
 }
 

@@ -6,9 +6,11 @@ use crate::hashing::sponge_hasher::pad_and_absorb_all::PadAndAbsorbAll;
 use crate::library::Library;
 use crate::traits::basic_snippet::BasicSnippet;
 
-/// Reads a proof item of the supplied type from the [`ProofStream`].
+/// Reads a proof item of the supplied type from the [`ProofStream`][proof_stream].
 /// Crashes Triton VM if the proof item is not of the expected type.
 /// Updates an internal pointer to the next proof item.
+///
+/// [proof_stream]: triton_vm::proof_stream::ProofStream
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct DequeueNextAs {
     pub proof_item: ProofItemVariant,

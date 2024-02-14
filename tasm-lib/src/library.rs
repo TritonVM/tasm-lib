@@ -8,8 +8,13 @@ use crate::data_type::DataType;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 
-/// Ensure that static allocator does not overwrite the address dedicated to the dynamic allocator.
-/// Dynamic allocator is, [by convention](crate::memory), on address -1.
+/// By [convention](crate::memory), the last full memory page is reserved for the static allocator.
+/// For convenience during [debugging],[^1] the static allocator starts at the last address of that
+/// page, and grows downwards.
+///
+/// [^1]: and partly for historic reasons
+///
+/// [debugging]: crate::maybe_write_debuggable_program_to_disk
 pub const STATIC_MEMORY_START_ADDRESS: BFieldElement = BFieldElement::new(BFieldElement::MAX - 1);
 
 /// A Library represents a set of imports for a single Program or Snippet, and moreover

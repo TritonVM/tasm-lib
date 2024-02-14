@@ -245,7 +245,6 @@ impl Zip {
             stack: [empty_stack(), vec![left_pointer, right_pointer]].concat(),
             std_in: vec![],
             nondeterminism: NonDeterminism::default().with_ram(memory),
-            words_allocated: 0,
         }
     }
 }

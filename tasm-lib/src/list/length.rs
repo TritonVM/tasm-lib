@@ -83,35 +83,19 @@ impl DeprecatedSnippet for Length {
         // Test for various values of `N` (list-element size)
         let mut memory = HashMap::default();
         untyped_insert_random_list(list_address, list_length, &mut memory, 1);
-        ret.push(ExecutionState::with_stack_and_memory(
-            stack.clone(),
-            memory,
-            0,
-        ));
+        ret.push(ExecutionState::with_stack_and_memory(stack.clone(), memory));
         memory = HashMap::default();
         untyped_insert_random_list(list_address, list_length, &mut memory, 2);
-        ret.push(ExecutionState::with_stack_and_memory(
-            stack.clone(),
-            memory,
-            0,
-        ));
+        ret.push(ExecutionState::with_stack_and_memory(stack.clone(), memory));
         memory = HashMap::default();
         untyped_insert_random_list(list_address, list_length, &mut memory, 3);
-        ret.push(ExecutionState::with_stack_and_memory(
-            stack.clone(),
-            memory,
-            0,
-        ));
+        ret.push(ExecutionState::with_stack_and_memory(stack.clone(), memory));
         memory = HashMap::default();
         untyped_insert_random_list(list_address, list_length, &mut memory, 4);
-        ret.push(ExecutionState::with_stack_and_memory(
-            stack.clone(),
-            memory,
-            0,
-        ));
+        ret.push(ExecutionState::with_stack_and_memory(stack.clone(), memory));
         memory = HashMap::default();
         untyped_insert_random_list(list_address, list_length, &mut memory, 11);
-        ret.push(ExecutionState::with_stack_and_memory(stack, memory, 0));
+        ret.push(ExecutionState::with_stack_and_memory(stack, memory));
 
         ret
     }
@@ -123,7 +107,7 @@ impl DeprecatedSnippet for Length {
         stack.push(list_address);
         let mut memory = HashMap::default();
         untyped_insert_random_list(BFieldElement::one(), 1 << 5, &mut memory, 1);
-        ExecutionState::with_stack_and_memory(stack.clone(), memory, 0)
+        ExecutionState::with_stack_and_memory(stack.clone(), memory)
     }
 
     fn worst_case_input_state(&self) -> ExecutionState {
@@ -133,7 +117,7 @@ impl DeprecatedSnippet for Length {
         stack.push(list_address);
         let mut memory = HashMap::default();
         untyped_insert_random_list(BFieldElement::one(), 1 << 6, &mut memory, 1);
-        ExecutionState::with_stack_and_memory(stack.clone(), memory, 0)
+        ExecutionState::with_stack_and_memory(stack.clone(), memory)
     }
 
     fn rust_shadowing(

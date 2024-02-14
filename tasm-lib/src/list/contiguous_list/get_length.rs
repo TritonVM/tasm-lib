@@ -73,7 +73,7 @@ impl GetLength {
             address.increment();
         }
 
-        ExecutionState::with_stack_and_memory(stack, memory, 1)
+        ExecutionState::with_stack_and_memory(stack, memory)
     }
 }
 

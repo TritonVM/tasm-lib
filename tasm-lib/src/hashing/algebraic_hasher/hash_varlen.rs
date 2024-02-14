@@ -28,7 +28,6 @@ impl HashVarlen {
             stack: [empty_stack(), vec![memory_start, BFieldElement::new(k)]].concat(),
             std_in: vec![],
             nondeterminism,
-            words_allocated: 0,
         }
     }
 }

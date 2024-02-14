@@ -8,7 +8,7 @@
 //!     It occupies the only page that is not of size 2^32 words.
 //! - Page 0 is reserved for non-deterministically initialized memory.
 //! - The last full page, number (2^32)-2, starting at address 2^64 - 2·(2^32),
-//!     is reserved for [static allocations](static_malloc_addr).
+//!     is reserved for [static allocations][static_malloc_addr].
 //! - All other pages, i.e., pages 1 through (2^32)-3, are dynamically allocated.
 //!
 //! [prime]: BFieldElement::P

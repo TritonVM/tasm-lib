@@ -88,13 +88,7 @@ impl MmrCalculateNewPeaksFromLeafMutationMtIndices {
         }
 
         (
-            ExecutionState::with_stack_and_memory(
-                stack,
-                memory,
-                (2 * (MAX_MMR_HEIGHT * DIGEST_LENGTH + 1))
-                    .try_into()
-                    .unwrap(),
-            ),
+            ExecutionState::with_stack_and_memory(stack, memory),
             auth_path_pointer,
             peaks_pointer,
         )

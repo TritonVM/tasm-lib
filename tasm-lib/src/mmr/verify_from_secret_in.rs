@@ -21,7 +21,6 @@ use crate::hashing::divine_sibling_u64_index::DivineSiblingU64Index;
 use crate::hashing::eq_digest::EqDigest;
 use crate::library::Library;
 use crate::list::get::Get;
-use crate::list::LIST_METADATA_SIZE;
 use crate::rust_shadowing_helper_functions;
 use crate::rust_shadowing_helper_functions::list;
 use crate::snippet_bencher::BenchmarkCase;
@@ -34,7 +33,6 @@ use crate::VmHasher;
 use crate::DIGEST_LENGTH;
 
 use super::leaf_index_to_mt_index_and_peak_index::MmrLeafIndexToMtIndexAndPeakIndex;
-use super::MAX_MMR_HEIGHT;
 
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct MmrVerifyLeafMembershipFromSecretIn;
@@ -136,15 +134,11 @@ impl MmrVerifyLeafMembershipFromSecretIn {
             );
         }
 
-        let list_metadata_size = LIST_METADATA_SIZE;
         let nondeterminism = NonDeterminism::default().with_ram(memory);
         ExecutionState {
             stack,
             std_in: vec![],
             nondeterminism,
-            words_allocated: (DIGEST_LENGTH * MAX_MMR_HEIGHT + 1 + list_metadata_size)
-                .try_into()
-                .unwrap(),
         }
     }
 }

@@ -50,7 +50,6 @@ impl MultisetEquality {
             stack: [empty_stack(), vec![pointer_a, pointer_b]].concat(),
             std_in: vec![],
             nondeterminism,
-            words_allocated: 0,
         }
     }
 
@@ -70,7 +69,6 @@ impl MultisetEquality {
             stack: [empty_stack(), vec![pointer_a, pointer_b]].concat(),
             std_in: vec![],
             nondeterminism,
-            words_allocated: 0,
         }
     }
 
@@ -90,7 +88,6 @@ impl MultisetEquality {
             stack: [empty_stack(), vec![pointer_a, pointer_b]].concat(),
             std_in: vec![],
             nondeterminism,
-            words_allocated: 0,
         }
     }
 
@@ -115,7 +112,6 @@ impl MultisetEquality {
             stack: [empty_stack(), vec![pointer_a, pointer_b]].concat(),
             std_in: vec![],
             nondeterminism,
-            words_allocated: 0,
         }
     }
 }

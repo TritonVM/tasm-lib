@@ -291,7 +291,6 @@ impl Map {
             stack,
             std_in: vec![],
             nondeterminism,
-            words_allocated: 0,
         }
     }
 }

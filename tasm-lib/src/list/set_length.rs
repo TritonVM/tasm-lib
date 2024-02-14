@@ -131,7 +131,7 @@ fn prepare_state(data_type: &DataType) -> ExecutionState {
         &mut memory,
         data_type.stack_size(),
     );
-    ExecutionState::with_stack_and_memory(stack, memory, 0)
+    ExecutionState::with_stack_and_memory(stack, memory)
 }
 
 #[cfg(test)]

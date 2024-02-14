@@ -53,7 +53,6 @@ impl Commit {
             stack,
             std_in: vec![],
             nondeterminism: NonDeterminism::default(),
-            words_allocated: 1,
         }
     }
 }

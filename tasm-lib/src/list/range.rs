@@ -27,7 +27,6 @@ impl Range {
             stack,
             std_in: vec![],
             nondeterminism: NonDeterminism::new(vec![]),
-            words_allocated: 1,
         }
     }
 }
