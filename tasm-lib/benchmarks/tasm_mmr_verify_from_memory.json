@@ -1,0 +1,16 @@
+[
+  {
+    "name": "tasm_mmr_verify_from_memory",
+    "clock_cycle_count": 2074,
+    "hash_table_height": 438,
+    "u32_table_height": 837,
+    "case": "CommonCase"
+  },
+  {
+    "name": "tasm_mmr_verify_from_memory",
+    "clock_cycle_count": 3972,
+    "hash_table_height": 624,
+    "u32_table_height": 962,
+    "case": "WorstCase"
+  }
+]

@@ -1,0 +1,16 @@
+[
+  {
+    "name": "tasm_mmr_calculate_new_peaks_from_append",
+    "clock_cycle_count": 3566,
+    "hash_table_height": 390,
+    "u32_table_height": 132,
+    "case": "CommonCase"
+  },
+  {
+    "name": "tasm_mmr_calculate_new_peaks_from_append",
+    "clock_cycle_count": 7036,
+    "hash_table_height": 576,
+    "u32_table_height": 132,
+    "case": "WorstCase"
+  }
+]

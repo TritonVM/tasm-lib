@@ -1,15 +1,15 @@
 [
   {
-    "name": "tasm_hashing_sponge_hasher_squeeze",
+    "name": "tasm_list_pop___digest",
     "clock_cycle_count": 25,
-    "hash_table_height": 36,
+    "hash_table_height": 30,
     "u32_table_height": 0,
     "case": "CommonCase"
   },
   {
-    "name": "tasm_hashing_sponge_hasher_squeeze",
+    "name": "tasm_list_pop___digest",
     "clock_cycle_count": 25,
-    "hash_table_height": 36,
+    "hash_table_height": 30,
     "u32_table_height": 0,
     "case": "WorstCase"
   }
