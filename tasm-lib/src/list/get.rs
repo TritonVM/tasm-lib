@@ -70,20 +70,22 @@ impl DeprecatedSnippet for Get {
 
         let element_size = self.data_type.stack_size();
 
-        // Code to multiply with size. If size is 1, do nothing to save two clock cycles.
-        let mul_with_size = if element_size == 1 {
-            vec![]
-        } else {
-            triton_asm!(push {element_size} mul)
+        let mul_with_size = match element_size {
+            1 => vec![],
+            _ => triton_asm!(push {element_size} mul),
         };
 
         triton_asm!(
             // BEFORE: _ *list index
-            // AFTER:  _ elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}
+            // AFTER:  _ elem{N - 1}, elem{N - 2}, ..., elem{0}
             {entrypoint}:
                 push 1
                 add
                 {&mul_with_size}
+                // stack: _ *list (N * (index + 1))
+
+                // assert read access is in bounds
+                split swap 1 push 0 eq assert
                 // stack: _ *list (N * (index + 1))
 
                 add
@@ -131,10 +133,7 @@ impl DeprecatedSnippet for Get {
             self.data_type.stack_size(),
         );
 
-        // elements are placed on stack as: `elem[N - 1] elem[N - 2] .. elem[0]`
-        for i in (0..self.data_type.stack_size()).rev() {
-            stack.push(element[i]);
-        }
+        stack.extend(element.into_iter().rev());
     }
 }
 

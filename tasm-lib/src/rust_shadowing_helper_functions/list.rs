@@ -125,6 +125,9 @@ pub fn list_get(
     memory: &HashMap<BFieldElement, BFieldElement>,
     element_length: usize,
 ) -> Vec<BFieldElement> {
+    let highest_access_index = LIST_METADATA_SIZE + element_length * (index + 1);
+    assert!(u32::try_from(highest_access_index).is_ok());
+
     let read_word = |i| {
         let word_offset = (LIST_METADATA_SIZE + element_length * index + i) as u64;
         let word_index = list_pointer + BFieldElement::new(word_offset);
