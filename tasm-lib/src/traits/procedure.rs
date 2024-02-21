@@ -153,8 +153,7 @@ impl<P: Procedure + 'static> RustShadow for ShadowedProcedure<P> {
                 .procedure
                 .borrow()
                 .pseudorandom_initial_state(rng.gen(), Some(bench_case));
-            let words_statically_allocated = 10; // okay buffer
-            let program = link_for_isolated_run(self.procedure.clone(), words_statically_allocated);
+            let program = link_for_isolated_run(self.procedure.clone());
             let execution_result =
                 execute_bench(&program, &stack, public_input, nondeterminism, sponge);
             let benchmark = BenchmarkResult {
@@ -183,15 +182,7 @@ impl<P: Procedure + 'static> ShadowedProcedure<P> {
         let rust = rust_final_state(self, &stack, &public_input, &nondeterminism, &sponge);
 
         // run tvm
-        let words_statically_allocated = 0;
-        let tasm = tasm_final_state(
-            self,
-            &stack,
-            &public_input,
-            nondeterminism,
-            &sponge,
-            words_statically_allocated,
-        );
+        let tasm = tasm_final_state(self, &stack, &public_input, nondeterminism, &sponge);
 
         assert_eq!(
             rust.output, tasm.output,

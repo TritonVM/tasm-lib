@@ -33,7 +33,7 @@ impl MemCpy {
                 random::<BFieldElement>(),
             );
         }
-        crate::ExecutionState::with_stack_and_memory(stack, memory, 0)
+        crate::ExecutionState::with_stack_and_memory(stack, memory)
     }
 }
 

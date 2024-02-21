@@ -56,19 +56,11 @@ pub type VmHasher = Tip5;
 pub type Digest = tip5::Digest;
 pub const DIGEST_LENGTH: usize = tip5::DIGEST_LENGTH;
 
-const ENV_VARIABLE_WRITE_PROGRAM_AND_STATE_TO_DISK: &str = "TRITON_TUI";
-
 #[derive(Clone, Debug)]
 pub struct ExecutionState {
     pub stack: Vec<BFieldElement>,
     pub std_in: Vec<BFieldElement>,
     pub nondeterminism: NonDeterminism<BFieldElement>,
-
-    /// Ensures that you're not overwriting statically allocated memory when using the dynamic
-    /// allocator.
-    /// When you're writing a program you need to know how many words are statically allocated, and
-    /// then you need to feed that value to the dynamic allocator otherwise you are *** [redacted].
-    pub words_allocated: u32,
 }
 
 impl ExecutionState {
@@ -77,20 +69,17 @@ impl ExecutionState {
             stack,
             std_in: vec![],
             nondeterminism: NonDeterminism::default(),
-            words_allocated: 0,
         }
     }
 
     pub fn with_stack_and_memory(
         stack: Vec<BFieldElement>,
         memory: HashMap<BFieldElement, BFieldElement>,
-        words_statically_allocated: u32,
     ) -> Self {
         ExecutionState {
             stack,
             std_in: vec![],
             nondeterminism: NonDeterminism::default().with_ram(memory),
-            words_allocated: words_statically_allocated,
         }
     }
 }
@@ -269,7 +258,7 @@ pub fn execute_test(
     }
 }
 
-/// If the environment variable [`ENV_VARIABLE_WRITE_PROGRAM_AND_STATE_TO_DISK`] is set, write
+/// If the environment variable “TRITON_TUI” is set, write
 /// 1. the program to file `program.tasm`, and
 /// 2. the VM state to file `vm_state.json`.
 ///
@@ -280,7 +269,7 @@ pub fn execute_test(
 ///
 /// [Triton TUI]: https://crates.io/crates/triton-tui
 pub fn maybe_write_debuggable_program_to_disk(program: &Program, vm_state: &VMState) {
-    let Ok(_) = std::env::var(ENV_VARIABLE_WRITE_PROGRAM_AND_STATE_TO_DISK) else {
+    let Ok(_) = std::env::var("TRITON_TUI") else {
         return;
     };
 

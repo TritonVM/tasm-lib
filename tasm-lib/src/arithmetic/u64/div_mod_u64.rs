@@ -18,6 +18,7 @@ use crate::arithmetic::u64::sub_u64::SubU64;
 use crate::data_type::DataType;
 use crate::empty_stack;
 use crate::library::Library;
+use crate::library::STATIC_MEMORY_START_ADDRESS;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::ExecutionState;
 
@@ -480,30 +481,24 @@ impl DeprecatedSnippet for DivModU64 {
 
         let quotient = numerator / divisor;
         let quotient_u32_2 = U32s::<2>::try_from(quotient).unwrap();
-        let mut quotient_as_bfes = quotient_u32_2.encode();
-        for _ in 0..quotient_as_bfes.len() {
-            stack.push(quotient_as_bfes.pop().unwrap());
+        for bfe in quotient_u32_2.encode().into_iter().rev() {
+            stack.push(bfe);
         }
 
         let remainder = numerator % divisor;
 
         let remainder = U32s::<2>::try_from(remainder).unwrap();
-        let mut remainder = remainder.encode();
-        for _ in 0..remainder.len() {
-            stack.push(remainder.pop().unwrap());
+        for bfe in remainder.encode().into_iter().rev() {
+            stack.push(bfe);
         }
 
-        // Because of spilling, the divisor is stored in memory.
-        // This spilling could probably be avoided if the code didn't
-        // go through the tasm-lang compiler but was handcompiled instead.
-        memory.insert(
-            -BFieldElement::new(2),
-            BFieldElement::new(divisor_lo as u64),
-        );
-        memory.insert(
-            -BFieldElement::new(1),
-            BFieldElement::new(divisor_hi as u64),
-        );
+        // Because of spilling, the divisor is stored in memory. This spilling could probably be
+        // avoided if the code didn't go through the tasm-lang compiler but was handcompiled
+        // instead.
+        let static_address_0 = STATIC_MEMORY_START_ADDRESS;
+        let static_address_1 = static_address_0 - BFieldElement::one();
+        memory.insert(static_address_0, BFieldElement::from(divisor_hi));
+        memory.insert(static_address_1, BFieldElement::from(divisor_lo));
     }
 }
 
@@ -649,7 +644,6 @@ mod tests {
             &init_stack,
             &[],
             HashMap::default(),
-            0,
             Some(&expected_end_stack),
         );
     }

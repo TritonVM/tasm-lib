@@ -1,16 +1,16 @@
 [
   {
     "name": "tasm_hashing_algebraic_hasher_sample_scalars",
-    "clock_cycle_count": 217,
-    "hash_table_height": 150,
-    "u32_table_height": 29,
+    "clock_cycle_count": 203,
+    "hash_table_height": 138,
+    "u32_table_height": 13,
     "case": "CommonCase"
   },
   {
     "name": "tasm_hashing_algebraic_hasher_sample_scalars",
-    "clock_cycle_count": 126,
-    "hash_table_height": 108,
-    "u32_table_height": 26,
+    "clock_cycle_count": 112,
+    "hash_table_height": 96,
+    "u32_table_height": 12,
     "case": "WorstCase"
   }
 ]

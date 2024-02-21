@@ -1,7 +1,6 @@
 pub mod dyn_malloc;
 pub mod input;
-pub mod safe_list;
-pub mod unsafe_list;
+pub mod list;
 
 /// Count the number of non-leaf nodes that were inserted *prior* to
 /// the insertion of this leaf.

@@ -193,7 +193,6 @@ mod tests {
                 &[],
                 non_determinism,
                 &None,
-                0,
             );
             println!(
                 "final final_stack\n{}",

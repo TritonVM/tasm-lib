@@ -1,13 +1,31 @@
+//! Memory convention used in this crate:
+//!
+//! - A memory page is contiguous memory of size 2^32 words, aligned to 2^32 word boundaries.
+//!     There is one exception: due to the [base field's prime][prime] being 2^64 - 2^32 + 1,
+//!     the last page, starting at address 2^64 - 2^32, is of size 1.
+//! - The dynamic allocator lives at address [`DYN_MALLOC_ADDRESS`][dyn_malloc_addr], _i.e._, -1.
+//!     It is a single word, containing the value of the next free page.
+//!     It occupies the only page that is not of size 2^32 words.
+//! - Page 0 is reserved for non-deterministically initialized memory.
+//! - The last full page, number (2^32)-2, starting at address 2^64 - 2·(2^32),
+//!     is reserved for [static allocations][static_malloc_addr].
+//! - All other pages, i.e., pages 1 through (2^32)-3, are dynamically allocated.
+//!
+//! [prime]: BFieldElement::P
+//! [dyn_malloc_addr]: dyn_malloc::DYN_MALLOC_ADDRESS
+//! [static_malloc_addr]: crate::library::STATIC_MEMORY_START_ADDRESS
+
 use std::collections::HashMap;
 
 use triton_vm::prelude::*;
 
 pub mod dyn_malloc;
-pub mod dyn_malloc_const_size;
 pub mod memcpy;
 pub mod push_ram_to_stack;
 
-/// Non-deterministially initialized memory lives in the range $[0: 2^{32})$
+/// Non-deterministically initialized memory lives in the range $[0: 2^{32})$
+///
+/// See the [memory convention][self] for details.
 pub const FIRST_NON_DETERMINISTICALLY_INITIALIZED_MEMORY_ADDRESS: BFieldElement =
     BFieldElement::new(0);
 

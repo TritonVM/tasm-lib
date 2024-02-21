@@ -154,7 +154,7 @@ mod tests {
         let mut stack = empty_stack();
         push_encodable(&mut stack, &U32s::<2>::zero());
         assert!(DecrU64
-            .link_and_run_tasm_for_test(&mut stack, vec![], NonDeterminism::default(), None)
+            .link_and_run_tasm_for_test(&mut stack, vec![], NonDeterminism::default())
             .is_err());
     }
 
@@ -194,7 +194,6 @@ mod tests {
             &stack,
             &[],
             HashMap::default(),
-            0,
             None,
         );
     }

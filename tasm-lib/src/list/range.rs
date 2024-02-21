@@ -3,20 +3,20 @@ use std::collections::HashMap;
 use itertools::Itertools;
 use triton_vm::prelude::*;
 
+use tasm_lib::list::LIST_METADATA_SIZE;
+
 use crate::data_type::DataType;
 use crate::empty_stack;
+use crate::list::new::New;
+use crate::list::set_length::SetLength;
 use crate::rust_shadowing_helper_functions;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::ExecutionState;
 
-use super::ListType;
-
-/// Generates a (safe or unsafe) list containing all integers between the minimum (inclusive lower
-/// bound) and the supremum (exclusive upper bound).
-#[derive(Clone, Debug)]
-pub struct Range {
-    pub list_type: ListType,
-}
+/// Generates a list containing all integers between the minimum (inclusive lower bound) and the
+/// supremum (exclusive upper bound).
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
+pub struct Range;
 
 impl Range {
     fn init_state(minimum: u32, supremum: u32) -> ExecutionState {
@@ -27,14 +27,13 @@ impl Range {
             stack,
             std_in: vec![],
             nondeterminism: NonDeterminism::new(vec![]),
-            words_allocated: 1,
         }
     }
 }
 
 impl DeprecatedSnippet for Range {
     fn entrypoint_name(&self) -> String {
-        format!("tasm_list_{}_range", self.list_type)
+        "tasm_list_range".into()
     }
 
     fn input_field_names(&self) -> Vec<String>
@@ -68,8 +67,9 @@ impl DeprecatedSnippet for Range {
 
     fn function_code(&self, library: &mut crate::library::Library) -> String {
         let data_type = DataType::U32;
-        let new_list = library.import(self.list_type.new_list_snippet(data_type.clone()));
-        let set_length = library.import(self.list_type.set_length(data_type));
+
+        let new_list = library.import(Box::new(New::new(data_type.clone())));
+        let set_length = library.import(Box::new(SetLength::new(data_type)));
 
         let entrypoint = self.entrypoint_name();
         let inner_loop = format!("{entrypoint}_loop");
@@ -78,6 +78,8 @@ impl DeprecatedSnippet for Range {
             // BEFORE: _ minimum supremum
             // AFTER:  _ *list
             {entrypoint}:
+                hint supremum = stack[0]
+                hint minimum = stack[1]
                 dup 0 push 1 add dup 2  // _ minimum supremum (supremum + 1) minimum
                 lt                      // _ minimum supremum (minimum <= supremum)
                 assert
@@ -88,7 +90,6 @@ impl DeprecatedSnippet for Range {
                                         // _ minimum supremum length
 
                 // create list object
-                dup 0                   // _ minimum supremum length length
                 call {new_list}         // _ minimum supremum length *list
                 dup 1                   // _ minimum supremum length *list length
                 call {set_length}       // _ minimum supremum length *list
@@ -114,7 +115,8 @@ impl DeprecatedSnippet for Range {
 
                 // address to write to
                 dup 2                   // _ minimum supremum *list (index - 1) (minimum + index - 1) *list
-                push {self.list_type.metadata_size()}
+                push {LIST_METADATA_SIZE}
+                hint list_metadata_size = stack[0]
                 add                     // _ minimum supremum *list (index - 1) (minimum + index - 1) *list_start
                 dup 2 add               // _ minimum supremum *list (index - 1) (minimum + index - 1) *element
 
@@ -176,40 +178,15 @@ impl DeprecatedSnippet for Range {
         let minimum: u32 = stack.pop().unwrap().value().try_into().unwrap();
         let num_elements: usize = (supremum - minimum).try_into().unwrap();
 
-        let safety_offset = self.list_type.metadata_size();
+        let safety_offset = LIST_METADATA_SIZE;
         let length = num_elements;
-        let capacity = num_elements;
-        let memory_footprint = num_elements + safety_offset;
 
         // allocate space
-        let list_pointer = rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator(
-            memory_footprint,
-            memory,
-        );
+        let list_pointer = rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator(memory);
 
         // initialize list
-        match self.list_type {
-            ListType::Safe => {
-                rust_shadowing_helper_functions::safe_list::safe_list_new(
-                    list_pointer,
-                    capacity.try_into().unwrap(),
-                    memory,
-                );
-                rust_shadowing_helper_functions::safe_list::safe_list_set_length(
-                    list_pointer,
-                    length,
-                    memory,
-                );
-            }
-            ListType::Unsafe => {
-                rust_shadowing_helper_functions::unsafe_list::unsafe_list_new(list_pointer, memory);
-                rust_shadowing_helper_functions::unsafe_list::unsafe_list_set_length(
-                    list_pointer,
-                    length,
-                    memory,
-                );
-            }
-        }
+        rust_shadowing_helper_functions::list::list_new(list_pointer, memory);
+        rust_shadowing_helper_functions::list::list_set_length(list_pointer, length, memory);
 
         // write elements
         for i in minimum..supremum {
@@ -235,35 +212,13 @@ mod tests {
     use super::*;
 
     #[test]
-    fn new_snippet_test_safe_lists() {
-        let list_type = ListType::Safe;
-        test_rust_equivalence_multiple_deprecated(&Range { list_type }, true);
+    fn new_snippet_test() {
+        test_rust_equivalence_multiple_deprecated(&Range, true);
     }
-
     #[test]
-    fn new_snippet_test_unsafe_lists() {
-        let list_type = ListType::Unsafe;
-        test_rust_equivalence_multiple_deprecated(&Range { list_type }, true);
-    }
-
-    #[test]
-    fn bad_range_safe_test() {
-        let init_state = Range::init_state(10, 5);
-        let list_type = ListType::Safe;
-        let snippet = Range { list_type };
-        let stack_diff = snippet.stack_diff();
-        let execution_result =
-            execute_with_execution_state_deprecated(snippet, init_state, stack_diff);
-        let err = execution_result.unwrap_err();
-        let err = err.downcast::<VMError>().unwrap();
-        assert_eq!(InstructionError::AssertionFailed, err.source);
-    }
-
-    #[test]
-    fn bad_range_unsafe_test() {
+    fn bad_range_test() {
         let init_state = Range::init_state(13, 12);
-        let list_type = ListType::Unsafe;
-        let snippet = Range { list_type };
+        let snippet = Range;
         let stack_diff = snippet.stack_diff();
         let execution_result =
             execute_with_execution_state_deprecated(snippet, init_state, stack_diff);
@@ -280,14 +235,7 @@ mod benches {
     use super::*;
 
     #[test]
-    fn safe_benchmark() {
-        let list_type = ListType::Safe;
-        bench_and_write(Range { list_type });
-    }
-
-    #[test]
-    fn unsafe_benchmark() {
-        let list_type = ListType::Unsafe;
-        bench_and_write(Range { list_type });
+    fn benchmark() {
+        bench_and_write(Range);
     }
 }

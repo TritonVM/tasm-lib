@@ -10,16 +10,23 @@ use triton_vm::prelude::*;
 use crate::data_type::DataType;
 use crate::empty_stack;
 use crate::library::Library;
+use crate::list::LIST_METADATA_SIZE;
+use crate::rust_shadowing_helper_functions::list::insert_random_list;
+use crate::rust_shadowing_helper_functions::list::list_get;
+use crate::rust_shadowing_helper_functions::list::list_set;
 use crate::traits::algorithm::Algorithm;
 use crate::traits::algorithm::AlgorithmInitialState;
 use crate::traits::basic_snippet::BasicSnippet;
 
-use super::ListType;
-
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct SwapUnchecked {
-    list_type: ListType,
     element_type: DataType,
+}
+
+impl SwapUnchecked {
+    pub fn new(element_type: DataType) -> Self {
+        Self { element_type }
+    }
 }
 
 impl BasicSnippet for SwapUnchecked {
@@ -38,16 +45,12 @@ impl BasicSnippet for SwapUnchecked {
     }
 
     fn entrypoint(&self) -> String {
-        format!(
-            "tasm_list_{}_swap_{}",
-            self.list_type,
-            self.element_type.label_friendly_name()
-        )
+        format!("tasm_list_swap_{}", self.element_type.label_friendly_name())
     }
 
     fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
-        let metadata_size = self.list_type.metadata_size();
+        let metadata_size = LIST_METADATA_SIZE;
         let element_size = self.element_type.stack_size();
         assert!(
             element_size + 2 < NUM_OP_STACK_REGISTERS,
@@ -157,16 +160,10 @@ impl Algorithm for SwapUnchecked {
         let list_pointer = stack.pop().unwrap();
         let element_size = self.element_type.stack_size();
 
-        let a = self
-            .list_type
-            .rust_shadowing_get(list_pointer, a_index, memory, element_size);
-        let b = self
-            .list_type
-            .rust_shadowing_get(list_pointer, b_index, memory, element_size);
-        self.list_type
-            .rust_shadowing_set(list_pointer, a_index, b, memory);
-        self.list_type
-            .rust_shadowing_set(list_pointer, b_index, a, memory);
+        let a = list_get(list_pointer, a_index, memory, element_size);
+        let b = list_get(list_pointer, b_index, memory, element_size);
+        list_set(list_pointer, a_index, b, memory);
+        list_set(list_pointer, b_index, a, memory);
     }
 
     fn pseudorandom_initial_state(
@@ -200,7 +197,7 @@ impl SwapUnchecked {
         b: usize,
     ) -> AlgorithmInitialState {
         let mut init_memory = HashMap::default();
-        self.list_type.rust_shadowing_insert_random_list(
+        insert_random_list(
             &self.element_type,
             list_pointer,
             list_length,
@@ -252,16 +249,7 @@ mod test {
             ]),
             DataType::Tuple(vec![DataType::Digest, DataType::Digest, DataType::Xfe]),
         ] {
-            ShadowedAlgorithm::new(SwapUnchecked {
-                list_type: ListType::Unsafe,
-                element_type: data_type.clone(),
-            })
-            .test();
-            ShadowedAlgorithm::new(SwapUnchecked {
-                list_type: ListType::Safe,
-                element_type: data_type.clone(),
-            })
-            .test();
+            ShadowedAlgorithm::new(SwapUnchecked::new(data_type)).test();
         }
     }
 }
@@ -275,15 +263,6 @@ mod benches {
 
     #[test]
     fn bench() {
-        ShadowedAlgorithm::new(SwapUnchecked {
-            list_type: ListType::Unsafe,
-            element_type: DataType::Xfe,
-        })
-        .bench();
-        ShadowedAlgorithm::new(SwapUnchecked {
-            list_type: ListType::Safe,
-            element_type: DataType::Xfe,
-        })
-        .bench();
+        ShadowedAlgorithm::new(SwapUnchecked::new(DataType::Xfe)).bench();
     }
 }

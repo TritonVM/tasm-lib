@@ -192,7 +192,6 @@ mod tests {
             &init_stack,
             &[],
             HashMap::default(),
-            1,
             Some(&expected),
         );
     }

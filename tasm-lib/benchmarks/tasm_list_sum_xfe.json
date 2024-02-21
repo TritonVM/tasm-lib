@@ -1,0 +1,16 @@
+[
+  {
+    "name": "tasm_list_sum_xfe",
+    "clock_cycle_count": 466,
+    "hash_table_height": 72,
+    "u32_table_height": 12,
+    "case": "CommonCase"
+  },
+  {
+    "name": "tasm_list_sum_xfe",
+    "clock_cycle_count": 3886,
+    "hash_table_height": 72,
+    "u32_table_height": 15,
+    "case": "WorstCase"
+  }
+]

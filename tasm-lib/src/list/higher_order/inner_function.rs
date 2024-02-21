@@ -1,4 +1,3 @@
-use num_traits::One;
 use std::collections::HashMap;
 use triton_vm::instruction::AnInstruction;
 use triton_vm::instruction::LabelledInstruction;
@@ -11,7 +10,9 @@ use crate::library::Library;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 
-const MORE_THAN_ONE_INPUT_OR_OUTPUT_TYPE_IN_INNER_FUNCTION: &str = "higher-order functions currently only work with *one* input element in inner function. Use a tuple data type to circumvent this.";
+const MORE_THAN_ONE_INPUT_OR_OUTPUT_TYPE_IN_INNER_FUNCTION: &str = "higher-order functions \
+currently only work with *one* input element in inner function. \
+Use a tuple data type to circumvent this.";
 
 /// A data structure for describing an inner function predicate to filter with,
 /// or to map with.
@@ -79,6 +80,7 @@ impl RawCode {
     }
 }
 
+#[derive(Debug)]
 pub enum InnerFunction {
     RawCode(RawCode),
     DeprecatedSnippet(Box<dyn DeprecatedSnippet>),
@@ -101,21 +103,18 @@ impl InnerFunction {
         match self {
             InnerFunction::RawCode(raw) => raw.input_type.clone(),
             InnerFunction::DeprecatedSnippet(f) => {
-                let input_types = f.input_types();
-                assert!(
-                    input_types.len().is_one(),
-                    "{MORE_THAN_ONE_INPUT_OR_OUTPUT_TYPE_IN_INNER_FUNCTION}"
-                );
-                input_types[0].clone()
+                let [ref input] = f.input_types()[..] else {
+                    panic!("{MORE_THAN_ONE_INPUT_OR_OUTPUT_TYPE_IN_INNER_FUNCTION}");
+                };
+                input.clone()
             }
             InnerFunction::NoFunctionBody(f) => f.input_type.clone(),
             InnerFunction::BasicSnippet(bs) => {
-                let inputs = bs.inputs();
-                assert!(
-                    inputs.len().is_one(),
-                    "{MORE_THAN_ONE_INPUT_OR_OUTPUT_TYPE_IN_INNER_FUNCTION}"
-                );
-                inputs[0].0.clone()
+                let [ref input] = bs.inputs()[..] else {
+                    panic!("{MORE_THAN_ONE_INPUT_OR_OUTPUT_TYPE_IN_INNER_FUNCTION}");
+                };
+                let (input, _) = input;
+                input.clone()
             }
         }
     }
@@ -124,21 +123,18 @@ impl InnerFunction {
         match self {
             InnerFunction::RawCode(rc) => rc.output_type.clone(),
             InnerFunction::DeprecatedSnippet(sn) => {
-                let outputs = sn.output_types();
-                assert!(
-                    outputs.len().is_one(),
-                    "{MORE_THAN_ONE_INPUT_OR_OUTPUT_TYPE_IN_INNER_FUNCTION}"
-                );
-                outputs[0].clone()
+                let [ref output] = sn.output_types()[..] else {
+                    panic!("{MORE_THAN_ONE_INPUT_OR_OUTPUT_TYPE_IN_INNER_FUNCTION}");
+                };
+                output.clone()
             }
             InnerFunction::NoFunctionBody(lnat) => lnat.output_type.clone(),
             InnerFunction::BasicSnippet(bs) => {
-                let outputs = bs.outputs();
-                assert!(
-                    outputs.len().is_one(),
-                    "{MORE_THAN_ONE_INPUT_OR_OUTPUT_TYPE_IN_INNER_FUNCTION}"
-                );
-                outputs[0].0.clone()
+                let [ref output] = bs.outputs()[..] else {
+                    panic!("{MORE_THAN_ONE_INPUT_OR_OUTPUT_TYPE_IN_INNER_FUNCTION}");
+                };
+                let (output, _) = output;
+                output.clone()
             }
         }
     }
@@ -184,10 +180,7 @@ impl InnerFunction {
         memory: &HashMap<BFieldElement, BFieldElement>,
     ) {
         match &self {
-            InnerFunction::RawCode(rc) => {
-                let instructions = rc.function.clone();
-                Self::run_vm(&instructions, stack, memory);
-            }
+            InnerFunction::RawCode(rc) => Self::run_vm(&rc.function, stack, memory),
             InnerFunction::DeprecatedSnippet(sn) => {
                 sn.rust_shadowing(stack, vec![], vec![], &mut memory.clone());
             }
@@ -195,7 +188,7 @@ impl InnerFunction {
                 panic!("Cannot apply inner function without function body")
             }
             InnerFunction::BasicSnippet(bs) => {
-                let mut snippet_state: Library = Library::with_preallocated_memory(1);
+                let mut snippet_state = Library::new();
                 let entrypoint = bs.entrypoint();
                 let function_body = bs.annotated_code(&mut snippet_state);
                 let library_code = snippet_state.all_imports();

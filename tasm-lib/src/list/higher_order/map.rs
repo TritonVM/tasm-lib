@@ -4,21 +4,23 @@ use itertools::Itertools;
 use num_traits::One;
 use rand::rngs::StdRng;
 use rand::Rng;
-use rand::RngCore;
 use rand::SeedableRng;
 use triton_vm::parser::tokenize;
 use triton_vm::prelude::*;
-use twenty_first::shared_math::other::random_elements;
 
 use crate::data_type::DataType;
 use crate::empty_stack;
 use crate::library::Library;
-use crate::list;
-use crate::list::ListType;
-use crate::memory::dyn_malloc::DYN_MALLOC_ADDRESS;
-use crate::rust_shadowing_helper_functions;
-use crate::rust_shadowing_helper_functions::safe_list::safe_insert_random_list;
-use crate::rust_shadowing_helper_functions::unsafe_list::unsafe_insert_random_list;
+use crate::list::get::Get;
+use crate::list::length::Length;
+use crate::list::new::New;
+use crate::list::set::Set;
+use crate::list::set_length::SetLength;
+use crate::rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator;
+use crate::rust_shadowing_helper_functions::list::insert_random_list;
+use crate::rust_shadowing_helper_functions::list::list_get;
+use crate::rust_shadowing_helper_functions::list::list_get_length;
+use crate::rust_shadowing_helper_functions::list::list_set;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::traits::function::Function;
@@ -32,9 +34,15 @@ currently only works with *one* input element. Use a tuple data type to circumve
 
 /// Applies a given function to every element of a list, and collects the new elements
 /// into a new list.
+#[derive(Debug)]
 pub struct Map {
-    pub list_type: ListType,
     pub f: InnerFunction,
+}
+
+impl Map {
+    pub fn new(f: InnerFunction) -> Self {
+        Self { f }
+    }
 }
 
 impl BasicSnippet for Map {
@@ -79,11 +87,7 @@ impl BasicSnippet for Map {
     }
 
     fn entrypoint(&self) -> String {
-        format!(
-            "tasm_list_higher_order_{}_u32_map_{}",
-            self.list_type,
-            self.f.entrypoint()
-        )
+        format!("tasm_list_higher_order_u32_map_{}", self.f.entrypoint())
     }
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
@@ -91,11 +95,12 @@ impl BasicSnippet for Map {
         let output_type = self.f.range();
         let output_size_plus_one = 1 + output_type.stack_size();
 
-        let get_length = library.import(self.list_type.length_snippet(input_type.clone()));
-        let set_length = library.import(self.list_type.set_length(input_type.clone()));
-        let new_list = library.import(self.list_type.new_list_snippet(output_type.clone()));
-        let list_get = library.import(self.list_type.get_snippet(input_type.clone()));
-        let list_set = library.import(self.list_type.set_snippet(output_type));
+        let get_length = library.import(Box::new(Length::new(input_type.clone())));
+        let list_get = library.import(Box::new(Get::new(input_type)));
+
+        let set_length = library.import(Box::new(SetLength::new(output_type.clone())));
+        let new_list = library.import(Box::new(New::new(output_type.clone())));
+        let list_set = library.import(Box::new(Set::new(output_type)));
 
         // Declare the inner function entrypoint name and import inner function in case it's a snippet
         let inner_function_name = match &self.f {
@@ -137,15 +142,17 @@ impl BasicSnippet for Map {
             // BEFORE: _ <[additional_input_args]>  input_list
             // AFTER:  _ <[additional_input_args]>  output_list
             {entrypoint}:
-
+                hint input_list: Pointer = stack[0]
                 dup 0                   // _ <aia>  input_list input_list
                 call {get_length}       // _ <aia>  input_list len
-                dup 0                   // _ <aia>  input_list len len
+                hint list_len = stack[0]
                 call {new_list}         // _ <aia>  input_list len output_list
+                hint output_list: Pointer = stack[0]
                 dup 1                   // _ <aia>  input_list len output_list len
                 call {set_length}       // _ <aia>  input_list len output_list
                 swap 1                  // _ <aia>  input_list output_list len
 
+                hint item_to_map: Index = stack[0]
                 call {main_loop}        // _ <aia>  input_list output_list 0
 
                 pop 1                   // _ <aia>  input_list output_list
@@ -157,29 +164,29 @@ impl BasicSnippet for Map {
             // INVARIANT: _ <aia>  input_list output_list itr
             {main_loop}:
                 // test return condition
-                dup 0                   // _ <aia>  input_list output_list itr itr
-                push 0 eq               // _ <aia>  input_list output_list itr itr==0
+                dup 0           // _ <aia>  input_list output_list itr itr
+                push 0 eq       // _ <aia>  input_list output_list itr itr==0
 
-                skiz return
-                // _ input_list output_list itr
+                skiz return     // _ input_list output_list itr
 
                 // body
-                push -1 add             // _ <aia>  input_list output_list index
+                push -1 add     // _ <aia>  input_list output_list index
 
                 // read
-                dup 2 dup 1             // _ <aia>  input_list output_list index _input_list index
-                call {list_get}         // _ <aia>  input_list output_list index [input_element]
+                dup 2 dup 1     // _ <aia>  input_list output_list index input_list index
+                call {list_get} // _ <aia>  input_list output_list index [input_element]
 
                 // map
-                call {inner_function_name} // _ <aia>  input_list output_list index [output_element]
-
+                call {inner_function_name}
+                                // _ <aia>  input_list output_list index [output_element]
 
                 // write
-                dup {output_size_plus_one} // _ <aia>  input_list output_list index [output_element] output_list
-                dup {output_size_plus_one} // _ <aia>  input_list output_list index [output_element] output_list index
+                dup {output_size_plus_one}
+                                // _ <aia>  input_list output_list index [output_element] output_list
+                dup {output_size_plus_one}
+                                // _ <aia>  input_list output_list index [output_element] output_list index
 
-                call {list_set}            // _ <aia>  input_list output_list index
-
+                call {list_set} // _ <aia>  input_list output_list index
                 recurse
 
             {maybe_inner_function_body_raw}
@@ -195,113 +202,44 @@ impl Function for Map {
     ) {
         let input_list_element_type = self.f.domain();
         let output_type = self.f.range();
+        let input_elem_stack_size = input_list_element_type.stack_size();
 
-        let list_pointer = stack.pop().unwrap();
+        // stack: _ *input_list
+        let &list_pointer = stack.last().unwrap();
 
-        // get list length
-        let len = match self.list_type {
-            ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_get_length(
-                list_pointer,
-                memory,
-            ),
-            ListType::Unsafe => {
-                rust_shadowing_helper_functions::unsafe_list::unsafe_list_get_length(
-                    list_pointer,
-                    memory,
-                )
-            }
-        };
+        New::new(input_list_element_type).rust_shadowing(stack, vec![], vec![], memory);
+        // stack: _ *input_list *output_list
 
-        let list_element = match self.list_type {
-            ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_get,
-            ListType::Unsafe => rust_shadowing_helper_functions::unsafe_list::unsafe_list_get,
-        };
+        let list_len = list_get_length(list_pointer, memory);
+        let list_length = BFieldElement::new(list_len as u64);
+        stack.push(list_length);
+        // stack: _ *input_list *output_list list_len
+        SetLength::new(output_type.clone()).rust_shadowing(stack, vec![], vec![], memory);
+        // stack: _ *input_list *output_list
 
-        let set_element = match self.list_type {
-            ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_set,
-            ListType::Unsafe => rust_shadowing_helper_functions::unsafe_list::unsafe_list_set,
-        };
+        let &output_list = stack.last().unwrap();
+        stack.push(list_length);
 
-        // used for deprecated rust shadowers
-        let std_in = vec![];
-        let secret_in = vec![];
+        // for all elements, read + map + write
+        // stack: _ *input_list *output_list list_len
+        for i in (0..list_len).rev() {
+            let input_item = list_get(list_pointer, i, memory, input_elem_stack_size);
 
-        let output_list_capacity = len;
-        let output_list = match self.list_type {
-            ListType::Safe => {
-                // Push capacity to stack
-                stack.push(BFieldElement::new(output_list_capacity as u64));
-                list::safeimplu32::new::SafeNew {
-                    data_type: input_list_element_type.clone(),
-                }
-                .rust_shadowing(stack, std_in.clone(), secret_in.clone(), memory);
-                stack.pop().unwrap()
-            }
-            ListType::Unsafe => {
-                stack.push(BFieldElement::new(output_list_capacity as u64));
-                list::unsafeimplu32::new::UnsafeNew {
-                    data_type: input_list_element_type.clone(),
-                }
-                .rust_shadowing(stack, std_in.clone(), secret_in.clone(), memory);
-                stack.pop().unwrap()
-            }
-        };
-
-        // set length
-        stack.push(output_list);
-        stack.push(BFieldElement::new(len as u64));
-        match self.list_type {
-            ListType::Safe => {
-                list::safeimplu32::set_length::SafeSetLength {
-                    data_type: output_type.clone(),
-                }
-                .rust_shadowing(stack, std_in, secret_in, memory);
-            }
-            ListType::Unsafe => {
-                list::unsafeimplu32::set_length::UnsafeSetLength {
-                    data_type: output_type.clone(),
-                }
-                .rust_shadowing(stack, std_in, secret_in, memory);
-            }
-        }
-        stack.pop();
-
-        // Push three values that may not be changed by the inner function
-        let canary_count = 3;
-        let canaries: Vec<BFieldElement> = random_elements(canary_count);
-        stack.append(&mut canaries.clone());
-
-        // forall elements, read + map + write
-        for i in 0..len {
-            // read
-            let mut input_item = list_element(
-                list_pointer,
-                i,
-                memory,
-                input_list_element_type.stack_size(),
-            );
-
-            // put on stack
-            while let Some(element) = input_item.pop() {
-                stack.push(element);
+            for word in input_item.into_iter().rev() {
+                stack.push(word);
             }
 
             self.f.apply(stack, memory);
 
-            // pull from stack
-            let mut output_item = vec![];
-            for _ in 0..output_type.stack_size() {
-                output_item.push(stack.pop().unwrap());
-            }
-
-            // write
-            set_element(output_list, i, output_item, memory);
+            let output_item = (0..output_type.stack_size())
+                .map(|_| stack.pop().unwrap())
+                .collect();
+            list_set(output_list, i, output_item, memory);
         }
 
-        // Ensure canaries are still on the stack, then remove them
-        for i in 0..canary_count {
-            assert_eq!(canaries[canary_count - i - 1], stack.pop().unwrap());
-        }
+        let _item_index = stack.pop().unwrap();
+        let _output_list = stack.pop().unwrap();
+        let _input_list = stack.pop().unwrap();
 
         stack.push(output_list);
     }
@@ -312,17 +250,15 @@ impl Function for Map {
         _bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
     ) -> FunctionInitialState {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
-        let list_pointer = BFieldElement::new(rng.next_u64() % (1 << 25));
-        let list_length = (rng.next_u32() % (1 << 6)) as usize;
+        let list_length = rng.gen_range(0..(1 << 6));
 
         // Autogenerating these extra arguments seems pretty shady to me. Are they
         // u32s, BFEs, or XFEs? That depends on the inner function!
-        let num_additional_function_args = (rng.next_u32() % 7) as usize;
+        let num_additional_function_args = rng.gen_range(0..7);
         let additional_function_args = (0..num_additional_function_args)
-            .map(|_| BFieldElement::new((rng.gen::<u32>() / 2) as u64))
+            .map(|_| BFieldElement::new(rng.gen_range(0..(1 << 16))))
             .collect_vec();
-        let execution_state =
-            self.generate_input_state(list_pointer, list_length, additional_function_args);
+        let execution_state = self.generate_input_state(list_length, additional_function_args);
         FunctionInitialState {
             stack: execution_state.stack,
             memory: execution_state.nondeterminism.ram,
@@ -333,11 +269,9 @@ impl Function for Map {
 impl Map {
     fn generate_input_state(
         &self,
-        list_pointer: BFieldElement,
         list_length: usize,
         additional_function_args: Vec<BFieldElement>,
     ) -> ExecutionState {
-        let capacity = list_length;
         let mut stack = empty_stack();
 
         // Add additional input args to stack, if they exist
@@ -345,45 +279,18 @@ impl Map {
             stack.push(additional_function_arg);
         }
 
-        stack.push(list_pointer);
-
         let mut memory = HashMap::default();
         let input_element_type = self.f.domain();
-        let input_list_size = match self.list_type {
-            ListType::Safe => {
-                BFieldElement::new((2 + list_length * input_element_type.stack_size()) as u64)
-            }
-            ListType::Unsafe => {
-                BFieldElement::new((1 + list_length * input_element_type.stack_size()) as u64)
-            }
-        };
-        rust_shadowing_helper_functions::dyn_malloc::rust_dyn_malloc_initialize(
-            &mut memory,
-            (input_list_size + list_pointer) + DYN_MALLOC_ADDRESS,
-        );
+        let list_pointer = dynamic_allocator(&mut memory);
+        insert_random_list(&input_element_type, list_pointer, list_length, &mut memory);
 
-        match self.list_type {
-            ListType::Safe => safe_insert_random_list(
-                &input_element_type,
-                list_pointer,
-                capacity as u32,
-                list_length,
-                &mut memory,
-            ),
-            ListType::Unsafe => unsafe_insert_random_list(
-                &input_element_type,
-                list_pointer,
-                list_length,
-                &mut memory,
-            ),
-        };
+        stack.push(list_pointer);
 
         let nondeterminism = NonDeterminism::default().with_ram(memory);
         ExecutionState {
             stack,
             std_in: vec![],
             nondeterminism,
-            words_allocated: 0,
         }
     }
 }
@@ -395,9 +302,11 @@ mod tests {
 
     use crate::arithmetic;
     use crate::list::higher_order::inner_function::RawCode;
+    use crate::neptune::mutator_set::get_swbf_indices::u32_to_u128_add_another_u128;
     use crate::traits::deprecated_snippet::DeprecatedSnippet;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
+    use crate::twenty_first::shared_math::other::random_elements;
     use crate::VmHasher;
 
     use super::*;
@@ -551,20 +460,10 @@ mod tests {
     }
 
     #[test]
-    fn unsafe_list_prop_test() {
-        let snippet = Map {
-            list_type: ListType::Unsafe,
-            f: InnerFunction::DeprecatedSnippet(Box::new(TestHashXFieldElement)),
-        };
-        ShadowedFunction::new(snippet).test();
-    }
-
-    #[test]
-    fn with_safe_list_prop_test() {
-        let snippet = Map {
-            list_type: ListType::Safe,
-            f: InnerFunction::DeprecatedSnippet(Box::new(TestHashXFieldElement)),
-        };
+    fn prop_test() {
+        let snippet = Map::new(InnerFunction::DeprecatedSnippet(Box::new(
+            TestHashXFieldElement,
+        )));
         ShadowedFunction::new(snippet).test();
     }
 
@@ -575,10 +474,7 @@ mod tests {
             DataType::Bfe,
             DataType::Bfe,
         );
-        let snippet = Map {
-            list_type: ListType::Unsafe,
-            f: InnerFunction::RawCode(rawcode),
-        };
+        let snippet = Map::new(InnerFunction::RawCode(rawcode));
         ShadowedFunction::new(snippet).test();
     }
 
@@ -589,26 +485,20 @@ mod tests {
             DataType::Bfe,
             DataType::Bfe,
         );
-        let snippet = Map {
-            list_type: ListType::Unsafe,
-            f: InnerFunction::RawCode(rawcode),
-        };
+        let snippet = Map::new(InnerFunction::RawCode(rawcode));
         ShadowedFunction::new(snippet).test();
     }
 
     #[test]
     fn test_with_raw_function_square_plus_n_on_bfe() {
-        // Inner function calculates `|(n, x)| -> x*x + n`, where `x` is the list
-        // element, and `n` is the same value for all elements.
+        // Inner function calculates `|x| -> x*x + n`, where `x` is the list element, and `n` is the
+        // same value for all elements.
         let rawcode = RawCode::new(
             triton_asm!(square_plus_n_bfe: dup 0 mul dup 4 add return),
             DataType::Bfe,
             DataType::Bfe,
         );
-        let snippet = Map {
-            list_type: ListType::Unsafe,
-            f: InnerFunction::RawCode(rawcode),
-        };
+        let snippet = Map::new(InnerFunction::RawCode(rawcode));
         ShadowedFunction::new(snippet).test();
     }
 
@@ -621,10 +511,7 @@ mod tests {
             DataType::Xfe,
             DataType::Xfe,
         );
-        let snippet = Map {
-            list_type: ListType::Unsafe,
-            f: InnerFunction::RawCode(rawcode),
-        };
+        let snippet = Map::new(InnerFunction::RawCode(rawcode));
         ShadowedFunction::new(snippet).test();
     }
 
@@ -640,66 +527,35 @@ mod tests {
             DataType::Xfe,
             DataType::Xfe,
         );
-        let snippet = Map {
-            list_type: ListType::Unsafe,
-            f: InnerFunction::RawCode(rawcode),
-        };
+        let snippet = Map::new(InnerFunction::RawCode(rawcode));
         ShadowedFunction::new(snippet).test()
     }
 
     #[test]
-    fn test_u32_list_to_u128_list_plus_x() {
-        let rawcode = RawCode::new(
-            triton_asm!(
-                u32_to_u128_add_another_u128:
-                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index input_u32
-                dup 4
-                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index input_u32 x_0
-                add
-                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index (input_u32 + x_0)
-                split
-                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index carry_to_1 output_0
-                swap 1
-                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 carry_to_1
-                dup 6
-                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 carry_to_1 x_1
-                add
-                split
-                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 carry_to_2 output_1
-                swap 1
-                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 output_1 carry_to_2
-                dup 8
-                add
-                split
-                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 output_1 carry_to_3 output_2
-                swap 1
-                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 output_1 output_2 carry_to_3
-                dup 10
-                add
-                split
-                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 output_1 output_2 overflow output_3
-                swap 1
-                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 output_1 output_2 output_3 overflow
-
-                // verify no overflow
-                push 0
-                eq
-                assert
-                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 output_1 output_2 output_3
-                swap 3
-                swap 1
-                swap 2
-                swap 1
-                // stack:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_3 output_2 output_1 output_0
-                return
-            ),
+    fn test_u32_list_to_unit_list() {
+        let remove_elements = RawCode::new(
+            triton_asm!(remove_elements: pop 1 return),
             DataType::U32,
-            DataType::U128,
+            DataType::Tuple(vec![]),
         );
-        ShadowedFunction::new(Map {
-            list_type: ListType::Unsafe,
-            f: InnerFunction::RawCode(rawcode),
-        })
+        ShadowedFunction::new(Map::new(InnerFunction::RawCode(remove_elements))).test();
+    }
+
+    #[test]
+    fn test_u32_list_to_u64_list() {
+        let duplicate_u32 = RawCode::new(
+            triton_asm!(duplicate_u32: dup 0 return),
+            DataType::U32,
+            DataType::U64,
+        );
+        ShadowedFunction::new(Map::new(InnerFunction::RawCode(duplicate_u32))).test();
+    }
+
+    #[test]
+    fn test_u32_list_to_u128_list_plus_x() {
+        ShadowedFunction::new(Map::new(InnerFunction::RawCode(
+            u32_to_u128_add_another_u128(),
+        )))
         .test();
     }
 }
@@ -713,18 +569,8 @@ mod benches {
     use super::*;
 
     #[test]
-    fn unsafe_list_map_benchmark() {
+    fn map_benchmark() {
         ShadowedFunction::new(Map {
-            list_type: ListType::Unsafe,
-            f: InnerFunction::DeprecatedSnippet(Box::new(TestHashXFieldElement)),
-        })
-        .bench();
-    }
-
-    #[test]
-    fn safe_list_map_benchmark() {
-        ShadowedFunction::new(Map {
-            list_type: ListType::Safe,
             f: InnerFunction::DeprecatedSnippet(Box::new(TestHashXFieldElement)),
         })
         .bench();

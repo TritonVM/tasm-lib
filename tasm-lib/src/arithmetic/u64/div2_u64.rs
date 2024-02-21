@@ -163,7 +163,6 @@ mod tests {
             &init_stack,
             &[],
             HashMap::default(),
-            0,
             None,
         );
     }
@@ -180,7 +179,6 @@ mod tests {
             &init_stack,
             &[],
             HashMap::default(),
-            0,
             None,
         );
     }
@@ -227,7 +225,6 @@ mod tests {
             &init_stack,
             &[],
             HashMap::default(),
-            0,
             Some(&expected_stack),
         );
     }

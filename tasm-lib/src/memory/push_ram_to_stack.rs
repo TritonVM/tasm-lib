@@ -143,7 +143,6 @@ mod tests {
             &[],
             NonDeterminism::default().with_ram(init_state.memory),
             &None,
-            0,
         );
 
         let u64_lo = final_state.final_stack.pop().unwrap().value();

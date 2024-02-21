@@ -1,15 +1,13 @@
-use crate::data_type::DataType;
-use crate::library::Library;
-use crate::traits::basic_snippet::BasicSnippet;
 use triton_vm::prelude::*;
 use triton_vm::twenty_first::shared_math::x_field_element::EXTENSION_DEGREE;
 
-use super::ListType;
+use crate::data_type::DataType;
+use crate::library::Library;
+use crate::traits::basic_snippet::BasicSnippet;
 
 /// Calculate the sum of the `BFieldElement`s in a list
-struct SumOfXfes {
-    list_type: ListType,
-}
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
+struct SumOfXfes;
 
 impl BasicSnippet for SumOfXfes {
     fn inputs(&self) -> Vec<(DataType, String)> {
@@ -26,11 +24,7 @@ impl BasicSnippet for SumOfXfes {
     }
 
     fn entrypoint(&self) -> String {
-        format!(
-            "tasm_list_{}_sum_{}",
-            self.list_type,
-            DataType::Xfe.label_friendly_name()
-        )
+        format!("tasm_list_sum_{}", DataType::Xfe.label_friendly_name())
     }
 
     fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {
@@ -102,31 +96,11 @@ impl BasicSnippet for SumOfXfes {
                 recurse
         );
 
-        let adjust_offset_for_metadata = match self.list_type.metadata_size() {
-            1 => triton_asm!(),
-            2 => triton_asm!(push 1 add),
-            n => panic!("Unhandled metadata size. Got: {n}"),
-        };
         let offset_for_last_word = triton_asm!(
             // _ len
             push 3
-            mul
-            {&adjust_offset_for_metadata}
-            // _ offset_last_word
+            mul // _ offset_last_word
         );
-
-        let adjust_loops_end_condition_for_metadata = match self.list_type.metadata_size() {
-            1 => triton_asm!(),
-            2 => triton_asm!(
-                // _ *list s3 s2 s1 s0
-                swap 4
-                push 1
-                add
-                swap 4
-                // _ (*list + 1) s3 s2 s1 s0
-            ),
-            n => panic!("Unhandled metadata size. Got: {n}"),
-        };
 
         triton_asm!(
             {entrypoint}:
@@ -170,8 +144,6 @@ impl BasicSnippet for SumOfXfes {
                 dup 2
                 add
                 // _ *list *last_word ((len % 5) * 3 + *list)
-
-                {&adjust_offset_for_metadata}
                 // _ *list *last_word *end_5_loop
 
                 swap 1
@@ -188,8 +160,6 @@ impl BasicSnippet for SumOfXfes {
                 swap 3
                 pop 1
                 // _ *list *end_5_loop [acc]
-
-                {&adjust_loops_end_condition_for_metadata}
                 // _ *end_condition_1_loop *end_5_loop [acc]
 
                 call {accumulate_one_element_loop_label}
@@ -221,13 +191,16 @@ mod tests {
     use rand::SeedableRng;
     use triton_vm::twenty_first::shared_math::x_field_element::EXTENSION_DEGREE;
 
-    use super::*;
+    use crate::rust_shadowing_helper_functions::list::insert_random_list;
+    use crate::rust_shadowing_helper_functions::list::load_list_with_copy_elements;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::test_helpers::test_rust_equivalence_given_complete_state;
     use crate::traits::function::Function;
     use crate::traits::function::FunctionInitialState;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
+
+    use super::*;
 
     impl Function for SumOfXfes {
         fn rust_shadow(
@@ -236,12 +209,7 @@ mod tests {
             memory: &mut HashMap<BFieldElement, BFieldElement>,
         ) {
             let list_pointer = stack.pop().unwrap();
-            let list = self
-                .list_type
-                .rust_shadowing_load_list_with_copy_element::<EXTENSION_DEGREE>(
-                    list_pointer,
-                    memory,
-                );
+            let list = load_list_with_copy_elements::<EXTENSION_DEGREE>(list_pointer, memory);
 
             let sum: XFieldElement = list
                 .into_iter()
@@ -281,12 +249,7 @@ mod tests {
             list_length: usize,
         ) -> FunctionInitialState {
             let mut memory = HashMap::default();
-            self.list_type.rust_shadowing_insert_random_list(
-                &DataType::Xfe,
-                list_pointer,
-                list_length,
-                &mut memory,
-            );
+            insert_random_list(&DataType::Xfe, list_pointer, list_length, &mut memory);
 
             let mut init_stack = self.init_stack_for_isolated_run();
             init_stack.push(list_pointer);
@@ -298,26 +261,13 @@ mod tests {
     }
 
     #[test]
-    fn sum_xfes_pbt_unsafe_list() {
-        ShadowedFunction::new(SumOfXfes {
-            list_type: ListType::Unsafe,
-        })
-        .test()
+    fn sum_xfes_pbt() {
+        ShadowedFunction::new(SumOfXfes).test()
     }
 
     #[test]
-    fn sum_xfes_pbt_safe_list() {
-        ShadowedFunction::new(SumOfXfes {
-            list_type: ListType::Safe,
-        })
-        .test()
-    }
-
-    #[test]
-    fn sum_xfes_unit_test_unsafe_list() {
-        let snippet = SumOfXfes {
-            list_type: ListType::Unsafe,
-        };
+    fn sum_xfes_unit_test() {
+        let snippet = SumOfXfes;
         let input_list_2_long: Vec<XFieldElement> = vec![random(), random()];
         let expected_sum: XFieldElement = input_list_2_long.clone().into_iter().sum();
 
@@ -341,7 +291,6 @@ mod tests {
             &[],
             &NonDeterminism::default().with_ram(memory),
             &None,
-            0,
             Some(&expected_final_stack),
         );
     }
@@ -365,15 +314,13 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
 
+    use super::*;
+
     #[test]
-    fn sum_xfes_bench_unsafe_lists() {
-        ShadowedFunction::new(SumOfXfes {
-            list_type: ListType::Unsafe,
-        })
-        .bench();
+    fn sum_xfes_bench() {
+        ShadowedFunction::new(SumOfXfes).bench();
     }
 }

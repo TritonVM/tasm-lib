@@ -131,7 +131,6 @@ where
                 &stdin,
                 &corner_case.nondeterminism,
                 &None,
-                0,
                 None,
             );
         }
@@ -165,7 +164,6 @@ where
                 &stdin,
                 &nondeterminism,
                 &None,
-                0,
                 None,
             );
         }
@@ -188,7 +186,7 @@ where
                 .algorithm
                 .borrow()
                 .pseudorandom_initial_state(rng.gen(), Some(bench_case));
-            let program = link_for_isolated_run(self.algorithm.clone(), 1);
+            let program = link_for_isolated_run(self.algorithm.clone());
             let execution_result = execute_bench(&program, &stack, vec![], nondeterminism, None);
             let benchmark = BenchmarkResult {
                 name: self.algorithm.borrow().entrypoint(),

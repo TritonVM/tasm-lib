@@ -1,5 +1,6 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::fmt::Debug;
 use std::rc::Rc;
 
 use anyhow::Result;
@@ -23,7 +24,7 @@ use crate::DIGEST_LENGTH;
 use super::basic_snippet::BasicSnippet;
 use super::rust_shadow::RustShadow;
 
-pub trait DeprecatedSnippet {
+pub trait DeprecatedSnippet: Debug {
     /// The name of a Snippet
     ///
     /// This is used as a unique identifier, e.g. when generating labels.
@@ -76,15 +77,8 @@ pub trait DeprecatedSnippet {
         memory: &mut HashMap<BFieldElement, BFieldElement>,
     );
 
-    fn link_for_isolated_run(
-        &self,
-        words_statically_allocated: Option<u32>,
-    ) -> Vec<LabelledInstruction> {
-        let mut snippet_state = if let Some(number_of_words) = words_statically_allocated {
-            Library::with_preallocated_memory(number_of_words)
-        } else {
-            Library::new()
-        };
+    fn link_for_isolated_run(&self) -> Vec<LabelledInstruction> {
+        let mut snippet_state = Library::new();
         let entrypoint = self.entrypoint_name();
         let mut function_body = self.function_code(&mut snippet_state);
         function_body.push('\n'); // added bc of limitations in `triton_asm!`
@@ -113,7 +107,6 @@ pub trait DeprecatedSnippet {
         stack: &mut Vec<BFieldElement>,
         std_in: Vec<BFieldElement>,
         nondeterminism: NonDeterminism<BFieldElement>,
-        words_allocated: Option<u32>,
     ) -> Result<VmOutputState> {
         let expected_length_prior: usize = self.input_types().iter().map(|x| x.stack_size()).sum();
         let expected_length_after: usize = self.output_types().iter().map(|x| x.stack_size()).sum();
@@ -123,7 +116,7 @@ pub trait DeprecatedSnippet {
             "Declared stack diff must match type indicators"
         );
 
-        let code = self.link_for_isolated_run(words_allocated);
+        let code = self.link_for_isolated_run();
         let program = Program::new(&code);
         let tvm_result =
             execute_with_terminal_state(&program, &std_in, stack, &nondeterminism, None);
@@ -151,7 +144,6 @@ pub trait DeprecatedSnippet {
         stack: &mut Vec<BFieldElement>,
         std_in: Vec<BFieldElement>,
         nondeterminism: NonDeterminism<BFieldElement>,
-        words_statically_allocated: Option<u32>,
     ) -> Result<ExecutionResult> {
         let expected_length_prior: usize = self.input_types().iter().map(|x| x.stack_size()).sum();
         let expected_length_after: usize = self.output_types().iter().map(|x| x.stack_size()).sum();
@@ -161,7 +153,7 @@ pub trait DeprecatedSnippet {
             "Declared stack diff must match type indicators"
         );
 
-        let code = self.link_for_isolated_run(words_statically_allocated);
+        let code = self.link_for_isolated_run();
 
         execute_bench_deprecated(&code, stack, Self::stack_diff(self), std_in, nondeterminism)
     }
@@ -175,7 +167,6 @@ pub trait DeprecatedSnippet {
             &mut execution_state.stack,
             execution_state.std_in.clone(),
             execution_state.nondeterminism.to_owned(),
-            Some(execution_state.words_allocated),
         );
         let stack_after = execution_state.stack.clone();
 
@@ -198,7 +189,6 @@ pub trait DeprecatedSnippet {
             &mut execution_state.stack,
             execution_state.std_in.clone(),
             execution_state.nondeterminism.to_owned(),
-            Some(execution_state.words_allocated),
         );
         let stack_after = execution_state.stack.clone();
 

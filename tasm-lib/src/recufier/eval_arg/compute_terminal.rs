@@ -1,13 +1,12 @@
-use crate::data_type::DataType;
-use crate::library::Library;
-use crate::list::ListType;
-use crate::traits::basic_snippet::BasicSnippet;
 use triton_vm::prelude::*;
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
-pub struct ComputeTerminal {
-    list_type: ListType,
-}
+use crate::data_type::DataType;
+use crate::library::Library;
+use crate::list::LIST_METADATA_SIZE;
+use crate::traits::basic_snippet::BasicSnippet;
+
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
+pub struct ComputeTerminal;
 
 impl BasicSnippet for ComputeTerminal {
     fn inputs(&self) -> Vec<(DataType, String)> {
@@ -26,14 +25,14 @@ impl BasicSnippet for ComputeTerminal {
     }
 
     fn entrypoint(&self) -> String {
-        format!("tasm_recufier_eval_arg_compute_terminal_{}", self.list_type)
+        "tasm_recufier_eval_arg_compute_terminal".into()
     }
 
     fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
         let loop_label = format!("{entrypoint}_loop");
 
-        let metadata_size_plus_one = self.list_type.metadata_size() + 1;
+        let metadata_size_plus_one = LIST_METADATA_SIZE + 1;
         triton_asm!(
             {entrypoint}:
                 // _ [challenge] [initial] *symbols
@@ -127,27 +126,31 @@ impl BasicSnippet for ComputeTerminal {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::traits::function::Function;
-    use crate::traits::function::FunctionInitialState;
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
+    use std::collections::HashMap;
+
     use itertools::Itertools;
     use num_traits::One;
     use num_traits::Zero;
     use rand::rngs::StdRng;
     use rand::Rng;
     use rand::SeedableRng;
-    use std::collections::HashMap;
     use triton_vm::table::cross_table_argument::CrossTableArg;
     use triton_vm::table::cross_table_argument::EvalArg;
+
+    use crate::rust_shadowing_helper_functions::list::insert_random_list;
+    use crate::snippet_bencher::BenchmarkCase;
+    use crate::traits::function::Function;
+    use crate::traits::function::FunctionInitialState;
+    use crate::traits::function::ShadowedFunction;
+    use crate::traits::rust_shadow::RustShadow;
+
+    use super::*;
 
     impl Function for ComputeTerminal {
         fn rust_shadow(
             &self,
             stack: &mut Vec<BFieldElement>,
-            memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
+            memory: &mut HashMap<BFieldElement, BFieldElement>,
         ) {
             let symbols_pointer = stack.pop().unwrap();
             let initial = XFieldElement::new([
@@ -161,7 +164,7 @@ mod tests {
                 stack.pop().unwrap(),
             ]);
             let mut symbols_elem_pointer =
-                symbols_pointer + BFieldElement::new(self.list_type.metadata_size() as u64);
+                symbols_pointer + BFieldElement::new(LIST_METADATA_SIZE as u64);
 
             let symbols_length = memory[&symbols_pointer].value();
             let mut symbols = vec![];
@@ -244,7 +247,7 @@ mod tests {
             let challenge = challenge.coefficients.into_iter().rev().collect_vec();
 
             let mut init_memory = HashMap::default();
-            self.list_type.rust_shadowing_insert_random_list(
+            insert_random_list(
                 &DataType::Bfe,
                 symbols_pointer,
                 symbols_length,
@@ -266,41 +269,20 @@ mod tests {
     }
 
     #[test]
-    fn eval_compute_terminal_test_safe_lists() {
-        ShadowedFunction::new(ComputeTerminal {
-            list_type: ListType::Safe,
-        })
-        .test()
-    }
-
-    #[test]
-    fn eval_compute_terminal_test_unsafe_lists() {
-        ShadowedFunction::new(ComputeTerminal {
-            list_type: ListType::Unsafe,
-        })
-        .test()
+    fn eval_compute_terminal_test() {
+        ShadowedFunction::new(ComputeTerminal).test()
     }
 }
 
 #[cfg(test)]
 mod bench {
-    use super::*;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
 
-    #[test]
-    fn compute_terminal_unsafe_lists() {
-        ShadowedFunction::new(ComputeTerminal {
-            list_type: ListType::Unsafe,
-        })
-        .bench()
-    }
+    use super::*;
 
     #[test]
-    fn compute_terminal_safe_lists() {
-        ShadowedFunction::new(ComputeTerminal {
-            list_type: ListType::Safe,
-        })
-        .bench()
+    fn compute_terminal() {
+        ShadowedFunction::new(ComputeTerminal).bench()
     }
 }

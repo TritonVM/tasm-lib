@@ -53,7 +53,6 @@ impl Commit {
             stack,
             std_in: vec![],
             nondeterminism: NonDeterminism::default(),
-            words_allocated: 1,
         }
     }
 }
@@ -218,7 +217,7 @@ mod benches {
     use super::*;
 
     #[test]
-    fn commit_benchmark_unsafe() {
+    fn commit_benchmark() {
         bench_and_write(Commit);
     }
 }

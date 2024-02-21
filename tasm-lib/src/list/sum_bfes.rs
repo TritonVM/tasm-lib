@@ -1,14 +1,12 @@
+use triton_vm::prelude::*;
+
 use crate::data_type::DataType;
 use crate::library::Library;
 use crate::traits::basic_snippet::BasicSnippet;
-use triton_vm::prelude::*;
-
-use super::ListType;
 
 /// Calculate the sum of the `BFieldElement`s in a list
-struct SumOfBfes {
-    list_type: ListType,
-}
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
+struct SumOfBfes;
 
 impl BasicSnippet for SumOfBfes {
     fn inputs(&self) -> Vec<(DataType, String)> {
@@ -24,11 +22,7 @@ impl BasicSnippet for SumOfBfes {
     }
 
     fn entrypoint(&self) -> String {
-        format!(
-            "tasm_list_{}_sum_{}",
-            self.list_type,
-            DataType::Bfe.label_friendly_name()
-        )
+        format!("tasm_list_sum_{}", DataType::Bfe.label_friendly_name())
     }
 
     fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {
@@ -88,25 +82,6 @@ impl BasicSnippet for SumOfBfes {
                 recurse
         );
 
-        let adjust_for_metadata = match self.list_type.metadata_size() {
-            1 => triton_asm!(),
-            2 => triton_asm!(push 1 add),
-            n => panic!("Unhandled metadata size. Got: {n}"),
-        };
-
-        let set_loop_1_end_condition = match self.list_type.metadata_size() {
-            1 => triton_asm!(),
-            2 => triton_asm!(
-                // *list *next_element sum
-                swap 2
-                push 1
-                add
-                swap 2
-                // (*list + 1) *next_element sum
-            ),
-            n => panic!("Unhandled metadata size. Got: {n}"),
-        };
-
         triton_asm!(
             {entrypoint}:
                 // _ *list
@@ -122,7 +97,6 @@ impl BasicSnippet for SumOfBfes {
                 dup 1
                 dup 1
                 add
-                {&adjust_for_metadata}
                 // _ *list length *last_element
 
                 // Get pointer to *end_loop that is the loop termination condition
@@ -140,7 +114,6 @@ impl BasicSnippet for SumOfBfes {
 
                 dup 3
                 add
-                {&adjust_for_metadata}
                 // _ *list length *last_element *element[length % 5]
                 // _ *list length *last_element *end_loop
 
@@ -163,8 +136,6 @@ impl BasicSnippet for SumOfBfes {
                 swap 1
                 pop 1
                 // _ *list *next_element sum
-
-                {&set_loop_1_end_condition}
 
                 call {accumulate_one_element_loop_label}
                 // _ *list *list sum
@@ -191,12 +162,15 @@ mod tests {
     use rand::Rng;
     use rand::SeedableRng;
 
-    use super::*;
+    use crate::rust_shadowing_helper_functions::list::insert_random_list;
+    use crate::rust_shadowing_helper_functions::list::load_list_with_copy_elements;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::traits::function::Function;
     use crate::traits::function::FunctionInitialState;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
+
+    use super::*;
 
     impl Function for SumOfBfes {
         fn rust_shadow(
@@ -206,12 +180,7 @@ mod tests {
         ) {
             const BFIELDELEMENT_SIZE: usize = 1;
             let list_pointer = stack.pop().unwrap();
-            let list = self
-                .list_type
-                .rust_shadowing_load_list_with_copy_element::<BFIELDELEMENT_SIZE>(
-                    list_pointer,
-                    memory,
-                );
+            let list = load_list_with_copy_elements::<BFIELDELEMENT_SIZE>(list_pointer, memory);
 
             let sum: BFieldElement = list.into_iter().map(|x| x[0]).sum();
             stack.push(sum);
@@ -246,12 +215,7 @@ mod tests {
             list_length: usize,
         ) -> FunctionInitialState {
             let mut memory = HashMap::default();
-            self.list_type.rust_shadowing_insert_random_list(
-                &DataType::Bfe,
-                list_pointer,
-                list_length,
-                &mut memory,
-            );
+            insert_random_list(&DataType::Bfe, list_pointer, list_length, &mut memory);
 
             let mut init_stack = self.init_stack_for_isolated_run();
             init_stack.push(list_pointer);
@@ -263,33 +227,20 @@ mod tests {
     }
 
     #[test]
-    fn sum_bfes_pbt_unsafe_list() {
-        ShadowedFunction::new(SumOfBfes {
-            list_type: ListType::Unsafe,
-        })
-        .test()
-    }
-
-    #[test]
-    fn sum_bfes_pbt_safe_list() {
-        ShadowedFunction::new(SumOfBfes {
-            list_type: ListType::Safe,
-        })
-        .test()
+    fn sum_bfes_pbt() {
+        ShadowedFunction::new(SumOfBfes).test()
     }
 }
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
 
+    use super::*;
+
     #[test]
-    fn sum_bfes_bench_unsafe_lists() {
-        ShadowedFunction::new(SumOfBfes {
-            list_type: ListType::Unsafe,
-        })
-        .bench();
+    fn sum_bfes_bench() {
+        ShadowedFunction::new(SumOfBfes).bench();
     }
 }

@@ -10,9 +10,9 @@ use triton_vm::twenty_first::prelude::Sponge;
 use crate::data_type::DataType;
 use crate::empty_stack;
 use crate::hashing::squeeze_repeatedly::SqueezeRepeatedly;
-use crate::list::unsafeimplu32::new::UnsafeNew;
-use crate::list::unsafeimplu32::set_length::UnsafeSetLength;
-use crate::memory::dyn_malloc::FIRST_DYNAMICALLY_ALLOCATED_ADDRESS;
+use crate::list::new::New;
+use crate::list::set_length::SetLength;
+use crate::memory::dyn_malloc::DYN_MALLOC_FIRST_ADDRESS;
 use crate::memory::encode_to_memory;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::procedure::Procedure;
@@ -43,21 +43,14 @@ impl BasicSnippet for SampleScalars {
         assert_eq!(10, tip5::RATE, "Code assumes Tip5's RATE is 10");
 
         let entrypoint = self.entrypoint();
-        let set_length = library.import(Box::new(UnsafeSetLength {
-            data_type: DataType::Xfe,
-        }));
-        let new_list_of_xfes = library.import(Box::new(UnsafeNew {
-            data_type: DataType::Xfe,
-        }));
+        let set_length = library.import(Box::new(SetLength::new(DataType::Xfe)));
+        let new_list_of_xfes = library.import(Box::new(New::new(DataType::Xfe)));
         let safety_offset = 1;
         let squeeze_repeatedly = library.import(Box::new(SqueezeRepeatedly));
         triton_asm! {
             // BEFORE: _ num_scalars
             // AFTER:  _ *scalars
             {entrypoint}:
-
-                // create list of enough elements
-                dup 0           // _ num_scalars num_scalars
                 call {new_list_of_xfes}
                                 // _ num_scalars *scalars
 
@@ -115,7 +108,7 @@ impl Procedure for SampleScalars {
             .take(num_scalars)
             .map(|ch| XFieldElement::new(ch.try_into().unwrap()))
             .collect_vec();
-        let scalars_pointer = FIRST_DYNAMICALLY_ALLOCATED_ADDRESS;
+        let scalars_pointer = DYN_MALLOC_FIRST_ADDRESS;
 
         encode_to_memory(memory, scalars_pointer, scalars);
 
@@ -234,7 +227,6 @@ mod test {
                     &[],
                     NonDeterminism::default(),
                     &Some(init_sponge.clone()),
-                    0,
                 );
 
                 let final_ram = tasm.final_ram;
@@ -245,7 +237,7 @@ mod test {
                 for (i, expected_scalar) in scalars_from_tip5.into_iter().enumerate() {
                     assert_eq!(
                         expected_scalar.coefficients.to_vec(),
-                        rust_shadowing_helper_functions::unsafe_list::unsafe_list_get(
+                        rust_shadowing_helper_functions::list::list_get(
                             snippet_output_scalar_pointer,
                             i,
                             &final_ram,

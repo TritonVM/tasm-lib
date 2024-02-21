@@ -230,7 +230,7 @@ mod test {
     use crate::empty_stack;
     use crate::execute_with_terminal_state;
     use crate::library::Library;
-    use crate::list::unsafeimplu32::length::Length;
+    use crate::list::length::Length;
     use crate::memory::encode_to_memory;
     use crate::structure::tasm_object::TasmObject;
     use crate::Digest;

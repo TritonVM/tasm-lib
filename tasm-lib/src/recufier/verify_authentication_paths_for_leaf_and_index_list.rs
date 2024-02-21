@@ -11,7 +11,8 @@ use triton_vm::twenty_first::prelude::*;
 use crate::data_type::DataType;
 use crate::empty_stack;
 use crate::hashing::merkle_verify::MerkleVerify;
-use crate::list::ListType;
+use crate::list::get::Get;
+use crate::list::length::Length;
 use crate::rust_shadowing_helper_functions;
 use crate::structure::tasm_object::TasmObject;
 use crate::traits::algorithm::Algorithm;
@@ -30,19 +31,15 @@ use crate::VmHasher;
 ///
 /// Behavior: crashes the VM if even one of the authentication paths
 /// is invalid.
-#[derive(Debug, Clone)]
-pub struct VerifyAuthenticationPathForLeafAndIndexList {
-    pub list_type: ListType,
-}
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
+pub struct VerifyAuthenticationPathForLeafAndIndexList;
 
 impl BasicSnippet for VerifyAuthenticationPathForLeafAndIndexList {
     fn inputs(&self) -> Vec<(DataType, String)> {
+        let indexed_leaf_type = DataType::Tuple(vec![DataType::U32, DataType::Digest]);
         vec![
             (
-                DataType::List(Box::new(DataType::Tuple(vec![
-                    DataType::U32,
-                    DataType::Digest,
-                ]))),
+                DataType::List(Box::new(indexed_leaf_type)),
                 "leaf_and_index_list".to_string(),
             ),
             (DataType::Digest, "root".to_string()),
@@ -55,10 +52,7 @@ impl BasicSnippet for VerifyAuthenticationPathForLeafAndIndexList {
     }
 
     fn entrypoint(&self) -> String {
-        format!(
-            "tasm_recufier_verify_authentication_paths_for_leaf_and_index_list_{}",
-            self.list_type
-        )
+        "tasm_recufier_verify_authentication_paths_for_leaf_and_index_list".into()
     }
 
     fn code(&self, library: &mut crate::library::Library) -> Vec<LabelledInstruction> {
@@ -67,9 +61,8 @@ impl BasicSnippet for VerifyAuthenticationPathForLeafAndIndexList {
         let indices_and_leaves = DataType::Tuple(vec![DataType::U32, DataType::Digest]);
 
         let len_subroutine_label =
-            library.import(self.list_type.length_snippet(indices_and_leaves.clone()));
-        let get_element_subroutine_label =
-            library.import(self.list_type.get_snippet(indices_and_leaves.clone()));
+            library.import(Box::new(Length::new(indices_and_leaves.clone())));
+        let get_element_subroutine_label = library.import(Box::new(Get::new(indices_and_leaves)));
         let merkle_verify_subroutine_label = library.import(Box::new(MerkleVerify));
 
         triton_asm! {
@@ -132,16 +125,7 @@ impl Algorithm for VerifyAuthenticationPathForLeafAndIndexList {
         ]);
         let address = stack.pop().unwrap();
 
-        // read object from memory
-        let safety_offset = match self.list_type {
-            ListType::Safe => 1,
-            ListType::Unsafe => 0,
-        };
-        let indices_and_leafs = *Vec::<(u32, Digest)>::decode_from_memory(
-            memory,
-            address + BFieldElement::new(safety_offset),
-        )
-        .unwrap();
+        let indices_and_leafs = *Vec::<(u32, Digest)>::decode_from_memory(memory, address).unwrap();
 
         // iterate and verify
         for (i, (leaf_index, leaf_digest)) in indices_and_leafs.into_iter().enumerate() {
@@ -163,6 +147,26 @@ impl Algorithm for VerifyAuthenticationPathForLeafAndIndexList {
         stack.push(root.0[1]);
         stack.push(root.0[0]);
         stack.push(BFieldElement::new(height as u64));
+    }
+
+    fn pseudorandom_initial_state(
+        &self,
+        seed: [u8; 32],
+        bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
+    ) -> AlgorithmInitialState {
+        let mut rng: StdRng = SeedableRng::from_seed(seed);
+
+        // determine sizes
+        let height = if let Some(case) = bench_case {
+            match case {
+                crate::snippet_bencher::BenchmarkCase::CommonCase => 15,
+                crate::snippet_bencher::BenchmarkCase::WorstCase => 25,
+            }
+        } else {
+            rng.gen_range(6..=15)
+        };
+        let num_indices = rng.gen_range(2..5) as usize;
+        self.prepare_state(&mut rng, height, num_indices)
     }
 
     fn corner_case_initial_states(&self) -> Vec<AlgorithmInitialState> {
@@ -189,26 +193,6 @@ impl Algorithm for VerifyAuthenticationPathForLeafAndIndexList {
             four_leaves_reveal_3,
             four_leaves_reveal_4,
         ]
-    }
-
-    fn pseudorandom_initial_state(
-        &self,
-        seed: [u8; 32],
-        bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
-    ) -> AlgorithmInitialState {
-        let mut rng: StdRng = SeedableRng::from_seed(seed);
-
-        // determine sizes
-        let height = if let Some(case) = bench_case {
-            match case {
-                crate::snippet_bencher::BenchmarkCase::CommonCase => 15,
-                crate::snippet_bencher::BenchmarkCase::WorstCase => 25,
-            }
-        } else {
-            rng.gen_range(6..=15)
-        };
-        let num_indices = rng.gen_range(2..5) as usize;
-        self.prepare_state(&mut rng, height, num_indices)
     }
 }
 
@@ -243,19 +227,7 @@ impl VerifyAuthenticationPathForLeafAndIndexList {
         // prepare memory + stack + nondeterminism
         let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
         let address = BFieldElement::new(rng.next_u64() % (1 << 20));
-        match self.list_type {
-            ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_insert(
-                address,
-                num_indices as u32,
-                leafs_and_indices,
-                &mut memory,
-            ),
-            ListType::Unsafe => rust_shadowing_helper_functions::unsafe_list::unsafe_list_insert(
-                address,
-                leafs_and_indices,
-                &mut memory,
-            ),
-        };
+        rust_shadowing_helper_functions::list::list_insert(address, leafs_and_indices, &mut memory);
         let mut stack = empty_stack();
         stack.push(address);
         stack.push(root.0[4]);
@@ -285,7 +257,6 @@ mod test {
 
     use crate::execute_with_terminal_state;
     use crate::linker::link_for_isolated_run;
-    use crate::list::ListType;
     use crate::traits::algorithm::Algorithm;
     use crate::traits::algorithm::AlgorithmInitialState;
     use crate::traits::algorithm::ShadowedAlgorithm;
@@ -295,19 +266,14 @@ mod test {
 
     #[test]
     fn test() {
-        ShadowedAlgorithm::new(VerifyAuthenticationPathForLeafAndIndexList {
-            list_type: ListType::Unsafe,
-        })
-        .test();
+        ShadowedAlgorithm::new(VerifyAuthenticationPathForLeafAndIndexList).test();
     }
 
     #[test]
     fn negative_test() {
         let mut rng = thread_rng();
         let seed: [u8; 32] = rng.gen();
-        let vap4lail = VerifyAuthenticationPathForLeafAndIndexList {
-            list_type: ListType::Unsafe,
-        };
+        let vap4lail = VerifyAuthenticationPathForLeafAndIndexList;
         for i in 0..4 {
             let AlgorithmInitialState {
                 mut stack,
@@ -344,7 +310,7 @@ mod test {
             let rust_result = std::panic::catch_unwind(|| {
                 let mut rust_stack = stack.clone();
                 let mut rust_memory = nondeterminism.ram.clone();
-                ShadowedAlgorithm::new(vap4lail.clone()).rust_shadow_wrapper(
+                ShadowedAlgorithm::new(vap4lail).rust_shadow_wrapper(
                     &stdin,
                     &nondeterminism,
                     &mut rust_stack,
@@ -363,7 +329,7 @@ mod test {
             }
 
             // run tvm
-            let code = link_for_isolated_run(Rc::new(RefCell::new(vap4lail.clone())), 0);
+            let code = link_for_isolated_run(Rc::new(RefCell::new(vap4lail)));
             let program = Program::new(&code);
             let tvm_result =
                 execute_with_terminal_state(&program, &stdin, &stack, &nondeterminism, None);
@@ -387,9 +353,6 @@ mod benches {
     #[ignore = "Very slow, about 280s on my powerful laptop"]
     #[test]
     fn vap4lail_benchmark() {
-        ShadowedAlgorithm::new(VerifyAuthenticationPathForLeafAndIndexList {
-            list_type: ListType::Unsafe,
-        })
-        .bench();
+        ShadowedAlgorithm::new(VerifyAuthenticationPathForLeafAndIndexList).bench();
     }
 }

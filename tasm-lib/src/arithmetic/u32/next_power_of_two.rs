@@ -165,7 +165,7 @@ mod tests {
     #[test]
     fn npo2_overflow_negative_test() {
         let snippet = NextPowerOfTwo;
-        let code = link_for_isolated_run(Rc::new(RefCell::new(snippet)), 0);
+        let code = link_for_isolated_run(Rc::new(RefCell::new(snippet)));
 
         for self_ in [
             (1u32 << 31) + 1,

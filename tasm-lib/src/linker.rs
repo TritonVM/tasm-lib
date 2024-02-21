@@ -9,11 +9,8 @@ use crate::traits::basic_snippet::BasicSnippet;
 use crate::ExecutionResult;
 use crate::VmHasher;
 
-pub fn link_for_isolated_run<T: BasicSnippet>(
-    snippet: Rc<RefCell<T>>,
-    words_statically_allocated: usize,
-) -> Vec<LabelledInstruction> {
-    let mut snippet_state = Library::with_preallocated_memory(words_statically_allocated as u32);
+pub fn link_for_isolated_run<T: BasicSnippet>(snippet: Rc<RefCell<T>>) -> Vec<LabelledInstruction> {
+    let mut snippet_state = Library::new();
     let entrypoint = snippet.borrow().entrypoint();
     let function_body = snippet.borrow().annotated_code(&mut snippet_state);
     let library_code = snippet_state.all_imports();

@@ -228,7 +228,7 @@ mod tests {
         let bfe_14 = BFieldElement::new(14);
         let xfe_14 = XFieldElement::new([bfe_14, bfe_14, bfe_14]);
         let xfe_14: Vec<_> = xfe_14.coefficients.into_iter().rev().collect();
-        let code = link_for_isolated_run(Rc::new(RefCell::new(XfeModPowU32Generic)), 0);
+        let code = link_for_isolated_run(Rc::new(RefCell::new(XfeModPowU32Generic)));
         let program = Program::new(&code);
 
         for exponent in [

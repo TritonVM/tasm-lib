@@ -4,12 +4,13 @@ use triton_vm::proof_item::ProofItemVariant;
 use crate::data_type::DataType;
 use crate::hashing::sponge_hasher::pad_and_absorb_all::PadAndAbsorbAll;
 use crate::library::Library;
-use crate::list::ListType;
 use crate::traits::basic_snippet::BasicSnippet;
 
-/// Reads a proof item of the supplied type from the [`ProofStream`].
+/// Reads a proof item of the supplied type from the [`ProofStream`][proof_stream].
 /// Crashes Triton VM if the proof item is not of the expected type.
 /// Updates an internal pointer to the next proof item.
+///
+/// [proof_stream]: triton_vm::proof_stream::ProofStream
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct DequeueNextAs {
     pub proof_item: ProofItemVariant,
@@ -33,13 +34,10 @@ impl DequeueNextAs {
             return vec![];
         }
 
-        let list_type = ListType::Unsafe;
-        let pad_and_absorb_all = PadAndAbsorbAll { list_type };
-        let pad_and_absorb_all_entrypoint = library.import(Box::new(pad_and_absorb_all));
-
+        let pad_and_absorb_all = library.import(Box::new(PadAndAbsorbAll));
         triton_asm! {
             dup 0           // _ *proof_item_size *proof_item_size
-            call {pad_and_absorb_all_entrypoint}
+            call {pad_and_absorb_all}
                             // _ *proof_item_size
         }
     }
@@ -422,7 +420,6 @@ mod test {
                 &initial_state.public_input,
                 &initial_state.nondeterminism,
                 &initial_state.sponge,
-                0,
                 None,
             );
         }
@@ -453,6 +450,7 @@ mod test {
     }
 
     /// Helps testing dequeuing multiple items.
+    #[derive(Debug, Default, Clone, Eq, PartialEq)]
     struct TestHelperDequeueMultipleAs {
         proof_items: Vec<ProofItemVariant>,
     }
@@ -529,7 +527,6 @@ mod test {
                 &initial_state.public_input,
                 &initial_state.nondeterminism,
                 &initial_state.sponge,
-                0,
                 None,
             );
         }

@@ -1,16 +1,16 @@
 [
   {
     "name": "tasm_mmr_bag_peaks",
-    "clock_cycle_count": 656,
-    "hash_table_height": 282,
-    "u32_table_height": 0,
+    "clock_cycle_count": 806,
+    "hash_table_height": 288,
+    "u32_table_height": 223,
     "case": "CommonCase"
   },
   {
     "name": "tasm_mmr_bag_peaks",
-    "clock_cycle_count": 1286,
-    "hash_table_height": 462,
-    "u32_table_height": 0,
+    "clock_cycle_count": 1586,
+    "hash_table_height": 468,
+    "u32_table_height": 502,
     "case": "WorstCase"
   }
 ]

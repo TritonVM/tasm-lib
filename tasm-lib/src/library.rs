@@ -8,12 +8,17 @@ use crate::data_type::DataType;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 
-/// Ensure that static allocator does not overwrite the address dedicated to the dynamic allocator.
-/// Dynamic allocator is, by convention, on address 1 << 32.
-pub const STATIC_MEMORY_START_ADDRESS: BFieldElement = BFieldElement::new(BFieldElement::MAX);
+/// By [convention](crate::memory), the last full memory page is reserved for the static allocator.
+/// For convenience during [debugging],[^1] the static allocator starts at the last address of that
+/// page, and grows downwards.
+///
+/// [^1]: and partly for historic reasons
+///
+/// [debugging]: crate::maybe_write_debuggable_program_to_disk
+pub const STATIC_MEMORY_START_ADDRESS: BFieldElement = BFieldElement::new(BFieldElement::MAX - 1);
 
 /// A Library represents a set of imports for a single Program or Snippet, and moreover
-/// tracks some data used for initializing the memory allocator.
+/// tracks some data used for initializing the [memory allocator](crate::memory).
 #[derive(Clone, Debug)]
 pub struct Library {
     seen_snippets: HashMap<String, Vec<LabelledInstruction>>,
@@ -39,6 +44,10 @@ impl Library {
         Self::new()
     }
 
+    #[deprecated(
+        since = "0.3.0",
+        note = "The current memory layout makes pre-allocation superfluous."
+    )]
     pub fn with_preallocated_memory(words_statically_allocated: u32) -> Self {
         let free_pointer =
             STATIC_MEMORY_START_ADDRESS - BFieldElement::new(words_statically_allocated as u64);
@@ -324,7 +333,6 @@ mod tests {
     use triton_vm::triton_asm;
 
     use crate::empty_stack;
-    use crate::list::ListType;
     use crate::memory::memcpy::MemCpy;
     use crate::mmr::calculate_new_peaks_from_leaf_mutation::MmrCalculateNewPeaksFromLeafMutationMtIndices;
     use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
@@ -341,7 +349,6 @@ mod tests {
             &empty_stack,
             &[],
             HashMap::default(),
-            0,
             expected,
         );
         test_rust_equivalence_given_input_values_deprecated(
@@ -349,7 +356,6 @@ mod tests {
             &empty_stack,
             &[],
             HashMap::default(),
-            0,
             expected,
         );
         test_rust_equivalence_given_input_values_deprecated(
@@ -357,7 +363,6 @@ mod tests {
             &empty_stack,
             &[],
             HashMap::default(),
-            0,
             expected,
         );
     }
@@ -403,9 +408,7 @@ mod tests {
             let mut library = Library::new();
             let memcpy = library.import(Box::new(MemCpy));
             let calculate_new_peaks_from_leaf_mutation =
-                library.import(Box::new(MmrCalculateNewPeaksFromLeafMutationMtIndices {
-                    list_type: ListType::Safe,
-                }));
+                library.import(Box::new(MmrCalculateNewPeaksFromLeafMutationMtIndices));
 
             let code = triton_asm!(
                 lala_entrypoint:
@@ -438,19 +441,16 @@ mod tests {
 
     #[test]
     fn kmalloc_test() {
-        const B_FIELD_ELEMENT_LAST: BFieldElement = BFieldElement::new(BFieldElement::MAX);
+        const MINUS_TWO: BFieldElement = BFieldElement::new(BFieldElement::MAX - 1);
         let mut lib = Library::new();
 
-        // allocate 1 word and verify that -1 is returned
         let first_free_address = lib.kmalloc(1);
-        assert_eq!(B_FIELD_ELEMENT_LAST, first_free_address);
+        assert_eq!(MINUS_TWO, first_free_address);
 
-        // allocate 7 words and verify that -8 is returned
         let second_free_address = lib.kmalloc(7);
-        assert_eq!(-BFieldElement::new(8), second_free_address,);
+        assert_eq!(-BFieldElement::new(9), second_free_address,);
 
-        // Allocate 1000 words.
         let third_free_address = lib.kmalloc(1000);
-        assert_eq!(-BFieldElement::new(1008), third_free_address);
+        assert_eq!(-BFieldElement::new(1009), third_free_address);
     }
 }

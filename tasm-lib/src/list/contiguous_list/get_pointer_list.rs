@@ -6,23 +6,20 @@ use triton_vm::prelude::*;
 use crate::data_type::DataType;
 use crate::list::contiguous_list::get_length::DummyOuterDataStructure;
 use crate::list::contiguous_list::get_length::GetLength;
-use crate::list::ListType;
+use crate::list::new::New;
+use crate::list::set::Set;
+use crate::list::set_length::SetLength;
 use crate::memory::dyn_malloc;
 use crate::rust_shadowing_helper_functions;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 
-// All of `contiguous_list` assumes that each element has its length prepended
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
-pub struct GetPointerList {
-    pub output_list_type: ListType,
-}
+/// All of `contiguous_list` assumes that each element has its length prepended
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
+pub struct GetPointerList;
 
 impl DeprecatedSnippet for GetPointerList {
     fn entrypoint_name(&self) -> String {
-        format!(
-            "tasm_list_contiguous_list_get_pointer_list_{}",
-            self.output_list_type
-        )
+        "tasm_list_contiguous_list_get_pointer_list".into()
     }
 
     fn input_field_names(&self) -> Vec<String> {
@@ -50,9 +47,9 @@ impl DeprecatedSnippet for GetPointerList {
 
         let data_type = DataType::VoidPointer;
         let get_list_length = library.import(Box::new(GetLength));
-        let new_list = library.import(self.output_list_type.new_list_snippet(data_type.clone()));
-        let set_length = library.import(self.output_list_type.set_length(data_type.clone()));
-        let set_element = library.import(self.output_list_type.set_snippet(data_type));
+        let new_list = library.import(Box::new(New::new(data_type.clone())));
+        let set_length = library.import(Box::new(SetLength::new(data_type.clone())));
+        let set_element = library.import(Box::new(Set::new(data_type)));
 
         format!(
             "
@@ -65,7 +62,6 @@ impl DeprecatedSnippet for GetPointerList {
                 call {get_list_length}
                 // _ *cl (list_length = capacity)
 
-                dup 0
                 call {new_list}
                 // _ *cl list_length *list_of_pointers
 
@@ -202,27 +198,13 @@ impl DeprecatedSnippet for GetPointerList {
         assert_eq!(dummy_list.len(), length);
 
         // create list
-        let output_list_pointer = dyn_malloc::FIRST_DYNAMICALLY_ALLOCATED_ADDRESS;
-        match self.output_list_type {
-            ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_new(
-                output_list_pointer,
-                length as u32,
-                memory,
-            ),
-            ListType::Unsafe => rust_shadowing_helper_functions::unsafe_list::unsafe_list_new(
-                output_list_pointer,
-                memory,
-            ),
-        };
+        let output_list_pointer = dyn_malloc::DYN_MALLOC_FIRST_ADDRESS;
+        rust_shadowing_helper_functions::list::list_new(output_list_pointer, memory);
 
         // populate list
-        let list_push = match self.output_list_type {
-            ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_push,
-            ListType::Unsafe => rust_shadowing_helper_functions::unsafe_list::unsafe_list_push,
-        };
         address.increment();
         for d in dummy_list.into_iter() {
-            list_push(
+            rust_shadowing_helper_functions::list::list_push(
                 output_list_pointer,
                 vec![address + BFieldElement::one()],
                 memory,
@@ -245,30 +227,15 @@ mod tests {
     use super::*;
 
     #[test]
-    fn get_pointer_list_safe_test() {
-        test_rust_equivalence_multiple_deprecated(
-            &GetPointerList {
-                output_list_type: ListType::Safe,
-            },
-            true,
-        );
-    }
-
-    #[test]
-    fn get_pointer_list_unsafe_test() {
-        let output_states = test_rust_equivalence_multiple_deprecated(
-            &GetPointerList {
-                output_list_type: ListType::Unsafe,
-            },
-            true,
-        );
+    fn get_pointer_list_test() {
+        let output_states = test_rust_equivalence_multiple_deprecated(&GetPointerList, true);
 
         // Verify that the pointers in the list actually point to correctly encoded objects.
         for output_state in output_states {
             let mut stack = output_state.final_stack;
             let memory = output_state.final_ram;
             let output_list_pointer = stack.pop().unwrap();
-            let num_elements = rust_shadowing_helper_functions::unsafe_list::unsafe_list_get_length(
+            let num_elements = rust_shadowing_helper_functions::list::list_get_length(
                 output_list_pointer,
                 &memory,
             );
@@ -276,18 +243,13 @@ mod tests {
                 continue;
             }
 
-            let start = rust_shadowing_helper_functions::unsafe_list::unsafe_list_get(
-                output_list_pointer,
-                0,
-                &memory,
-                1,
-            )[0];
-            let stop = rust_shadowing_helper_functions::unsafe_list::unsafe_list_get(
-                output_list_pointer,
-                1,
-                &memory,
-                1,
-            )[0] - BFieldElement::one();
+            let start =
+                rust_shadowing_helper_functions::list::list_get(output_list_pointer, 0, &memory, 1)
+                    [0];
+            let stop =
+                rust_shadowing_helper_functions::list::list_get(output_list_pointer, 1, &memory, 1)
+                    [0]
+                    - BFieldElement::one();
 
             let mut addr = start;
             let mut encoding = vec![];
@@ -305,22 +267,12 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use crate::list::ListType;
     use crate::snippet_bencher::bench_and_write;
 
     use super::GetPointerList;
 
     #[test]
-    fn get_pointer_list_unsafe_benchmark() {
-        bench_and_write(GetPointerList {
-            output_list_type: ListType::Unsafe,
-        });
-    }
-
-    #[test]
-    fn get_pointer_list_safe_benchmark() {
-        bench_and_write(GetPointerList {
-            output_list_type: ListType::Safe,
-        });
+    fn get_pointer_list_benchmark() {
+        bench_and_write(GetPointerList);
     }
 }

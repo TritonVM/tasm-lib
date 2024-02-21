@@ -82,7 +82,6 @@ impl<P: Function + 'static> ShadowedFunction<P> {
             &stdin,
             &non_determinism,
             &None,
-            0,
             None,
         );
     }
@@ -152,7 +151,7 @@ where
                 .function
                 .borrow()
                 .pseudorandom_initial_state(rng.gen(), Some(bench_case));
-            let program = link_for_isolated_run(self.function.clone(), 1);
+            let program = link_for_isolated_run(self.function.clone());
             let non_determinism = NonDeterminism::default().with_ram(memory);
             let execution_result = execute_bench(&program, &stack, vec![], non_determinism, None);
             let benchmark = BenchmarkResult {

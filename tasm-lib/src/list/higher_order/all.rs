@@ -14,14 +14,12 @@ use crate::arithmetic;
 use crate::data_type::DataType;
 use crate::empty_stack;
 use crate::library::Library;
-use crate::list::safeimplu32::get::SafeGet;
-use crate::list::safeimplu32::length::Length as SafeLength;
-use crate::list::unsafeimplu32::get::UnsafeGet;
-use crate::list::unsafeimplu32::length::Length as UnsafeLength;
-use crate::list::ListType;
+use crate::list::get::Get;
+use crate::list::length::Length;
+use crate::list::LIST_METADATA_SIZE;
 use crate::rust_shadowing_helper_functions;
-use crate::rust_shadowing_helper_functions::safe_list::safe_insert_random_list;
-use crate::rust_shadowing_helper_functions::unsafe_list::untyped_unsafe_insert_random_list;
+use crate::rust_shadowing_helper_functions::list::list_get;
+use crate::rust_shadowing_helper_functions::list::untyped_insert_random_list;
 use crate::snippet_bencher::BenchmarkCase;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
@@ -32,10 +30,17 @@ use crate::VmHasher;
 
 use super::inner_function::InnerFunction;
 
-/// Runs a predicate over all elements of a list and returns true only if all elements satisfy the predicate.
+/// Runs a predicate over all elements of a list and returns true only if all elements satisfy the
+/// predicate.
+#[derive(Debug)]
 pub struct All {
-    pub list_type: ListType,
     pub f: InnerFunction,
+}
+
+impl All {
+    pub fn new(f: InnerFunction) -> Self {
+        Self { f }
+    }
 }
 
 impl All {
@@ -45,53 +50,31 @@ impl All {
         list_length: usize,
         random: bool,
     ) -> ExecutionState {
-        let capacity = list_length;
         let mut stack = empty_stack();
         stack.push(list_pointer);
 
         let mut memory = HashMap::default();
         let input_type = self.f.domain();
-        let list_bookkeeping_offset = self.list_type.metadata_size();
+        let list_bookkeeping_offset = LIST_METADATA_SIZE;
         let element_index_in_list = list_bookkeeping_offset + list_length * input_type.stack_size();
         let element_index = list_pointer + BFieldElement::new(element_index_in_list as u64);
         memory.insert(BFieldElement::zero(), element_index);
 
         if random {
-            match self.list_type {
-                ListType::Safe => safe_insert_random_list(
-                    &input_type,
-                    list_pointer,
-                    capacity as u32,
-                    list_length,
-                    &mut memory,
-                ),
-                ListType::Unsafe => untyped_unsafe_insert_random_list(
-                    list_pointer,
-                    list_length,
-                    &mut memory,
-                    input_type.stack_size(),
-                ),
-            };
+            untyped_insert_random_list(
+                list_pointer,
+                list_length,
+                &mut memory,
+                input_type.stack_size(),
+            );
         } else {
-            match self.list_type {
-                ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_insert(
-                    list_pointer,
-                    capacity as u32,
-                    (0..list_length as u64)
-                        .map(BFieldElement::new)
-                        .collect_vec(),
-                    &mut memory,
-                ),
-                ListType::Unsafe => {
-                    rust_shadowing_helper_functions::unsafe_list::unsafe_list_insert(
-                        list_pointer,
-                        (0..list_length as u64)
-                            .map(BFieldElement::new)
-                            .collect_vec(),
-                        &mut memory,
-                    )
-                }
-            };
+            rust_shadowing_helper_functions::list::list_insert(
+                list_pointer,
+                (0..list_length as u64)
+                    .map(BFieldElement::new)
+                    .collect_vec(),
+                &mut memory,
+            );
         }
 
         let nondeterminism = NonDeterminism::default().with_ram(memory);
@@ -99,7 +82,6 @@ impl All {
             stack,
             std_in: vec![],
             nondeterminism,
-            words_allocated: 0,
         }
     }
 }
@@ -120,33 +102,16 @@ impl BasicSnippet for All {
     }
 
     fn entrypoint(&self) -> String {
-        format!(
-            "tasm_list_higher_order_{}_u32_all_{}",
-            self.list_type,
-            self.f.entrypoint()
-        )
+        format!("tasm_list_higher_order_u32_all_{}", self.f.entrypoint())
     }
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
         let input_type = self.f.domain();
         let output_type = self.f.range();
         assert_eq!(output_type, DataType::Bool);
-        let get_length = match self.list_type {
-            ListType::Safe => library.import(Box::new(SafeLength {
-                data_type: input_type.clone(),
-            })),
-            ListType::Unsafe => library.import(Box::new(UnsafeLength {
-                data_type: input_type.clone(),
-            })),
-        };
-        let list_get = match self.list_type {
-            ListType::Safe => library.import(Box::new(SafeGet {
-                data_type: input_type,
-            })),
-            ListType::Unsafe => library.import(Box::new(UnsafeGet {
-                data_type: input_type,
-            })),
-        };
+
+        let get_length = library.import(Box::new(Length::new(input_type.clone())));
+        let list_get = library.import(Box::new(Get::new(input_type)));
 
         let inner_function_name = match &self.f {
             InnerFunction::RawCode(rc) => rc.entrypoint(),
@@ -175,27 +140,35 @@ impl BasicSnippet for All {
         let entrypoint = self.entrypoint();
         let main_loop = format!("{entrypoint}_loop");
 
+        let result_type_hint = format!("hint all_{}: Boolean = stack[0]", self.f.entrypoint());
+
         triton_asm!(
             // BEFORE: _ input_list
             // AFTER:  _ result
             {entrypoint}:
-                push 1 // _ input_list res
-                swap 1 // _ res input_list
-                dup 0 // _  res input_list input_list
-                call {get_length} // _ res input_list len
+                hint input_list = stack[0]
+                push 1  // _ input_list res
+                {result_type_hint}
+                swap 1  // _ res input_list
+                dup 0   // _ res input_list input_list
+                call {get_length}
+                hint list_item: Index = stack[0]
+                        // _ res input_list len
 
-                call {main_loop} // _ res input_list 0
+                call {main_loop}
+                        // _ res input_list 0
 
-                pop 2 // _ res
+                pop 2   // _ res
                 return
 
             // INVARIANT: _ res input_list index
             {main_loop}:
                 // test return condition
-                dup 0 push 0 eq // _ res input_list index index==0
+                dup 0 push 0 eq
+                        // _ res input_list index index==0
 
                 skiz return
-                // _ res input_list index
+                        // _ res input_list index
 
                 // decrement index
                 push -1 add
@@ -203,17 +176,20 @@ impl BasicSnippet for All {
                 // body
 
                 // read
-                dup 1 dup 1 // _ res input_list index input_list index
-                call {list_get} // _ res input_list index [input_elements]
+                dup 1 dup 1
+                        // _ res input_list index input_list index
+                call {list_get}
+                        // _ res input_list index [input_elements]
 
                 // compute predicate
-                call {inner_function_name} // _ res input_list index b
+                call {inner_function_name}
+                        // _ res input_list index b
 
                 // accumulate
-                dup 3 // _ res input_list index b res
-                mul //    _ res input_list index (b && res)
-                swap 3 // _ (b && res) input_list index res
-                pop 1
+                dup 3   // _ res input_list index b res
+                mul     // _ res input_list index (b && res)
+                swap 3  // _ (b && res) input_list index res
+                pop 1   // _ (b && res) input_list index
 
                 recurse
 
@@ -229,37 +205,16 @@ impl Function for All {
         memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
         let input_type = self.f.domain();
-
         let list_pointer = stack.pop().unwrap();
 
-        // get list length
-        let len = match self.list_type {
-            ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_get_length(
-                list_pointer,
-                memory,
-            ),
-            ListType::Unsafe => {
-                rust_shadowing_helper_functions::unsafe_list::unsafe_list_get_length(
-                    list_pointer,
-                    memory,
-                )
-            }
-        };
-
-        let get_element = match self.list_type {
-            ListType::Safe => rust_shadowing_helper_functions::safe_list::safe_list_get,
-            ListType::Unsafe => rust_shadowing_helper_functions::unsafe_list::unsafe_list_get,
-        };
-
         // forall elements, read + map + maybe copy
+        let list_length =
+            rust_shadowing_helper_functions::list::list_get_length(list_pointer, memory);
         let mut satisfied = true;
-        for i in 0..len {
-            // read
-            let mut input_item = get_element(list_pointer, i, memory, input_type.stack_size());
-
-            // put on stack
-            while let Some(element) = input_item.pop() {
-                stack.push(element);
+        for i in 0..list_length {
+            let input_item = list_get(list_pointer, i, memory, input_type.stack_size());
+            for bfe in input_item.into_iter().rev() {
+                stack.push(bfe);
             }
 
             self.f.apply(stack, memory);
@@ -268,14 +223,13 @@ impl Function for All {
             satisfied = satisfied && single_result;
         }
 
-        // set result
         stack.push(BFieldElement::new(satisfied as u64));
     }
 
     fn pseudorandom_initial_state(
         &self,
         seed: [u8; 32],
-        bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
+        bench_case: Option<BenchmarkCase>,
     ) -> FunctionInitialState {
         let (stack, memory) = match bench_case {
             Some(BenchmarkCase::CommonCase) => {
@@ -457,25 +411,15 @@ mod tests {
     use super::*;
 
     #[test]
-    fn unsafe_list_prop_test() {
-        let snippet = All {
-            list_type: ListType::Unsafe,
-            f: InnerFunction::DeprecatedSnippet(Box::new(TestHashXFieldElementLsb)),
-        };
+    fn prop_test() {
+        let snippet = All::new(InnerFunction::DeprecatedSnippet(Box::new(
+            TestHashXFieldElementLsb,
+        )));
         ShadowedFunction::new(snippet).test();
     }
 
     #[test]
-    fn with_safe_list_prop_test() {
-        let snippet = All {
-            list_type: ListType::Safe,
-            f: InnerFunction::DeprecatedSnippet(Box::new(TestHashXFieldElementLsb)),
-        };
-        ShadowedFunction::new(snippet).test();
-    }
-
-    #[test]
-    fn safe_list_all_lt_test() {
+    fn all_lt_test() {
         const TWO_POW_31: u64 = 1u64 << 31;
         let rawcode = RawCode::new(
             triton_asm!(
@@ -488,16 +432,12 @@ mod tests {
             DataType::Bfe,
             DataType::Bool,
         );
-        let snippet = All {
-            list_type: ListType::Safe,
-            f: InnerFunction::RawCode(rawcode),
-        };
+        let snippet = All::new(InnerFunction::RawCode(rawcode));
         let mut memory = HashMap::new();
 
         // Should return true
-        rust_shadowing_helper_functions::safe_list::safe_list_insert(
+        rust_shadowing_helper_functions::list::list_insert(
             BFieldElement::new(42),
-            42,
             (0..30).map(BFieldElement::new).collect_vec(),
             &mut memory,
         );
@@ -511,14 +451,12 @@ mod tests {
             &[],
             &nondeterminism,
             &None,
-            1,
             Some(&expected_end_stack_true),
         );
 
         // Should return false
-        rust_shadowing_helper_functions::safe_list::safe_list_insert(
+        rust_shadowing_helper_functions::list::list_insert(
             BFieldElement::new(42),
-            42,
             (0..30)
                 .map(|x| BFieldElement::new(x + TWO_POW_31 - 20))
                 .collect_vec(),
@@ -531,7 +469,6 @@ mod tests {
             &[],
             &nondeterminism,
             &None,
-            1,
             Some(&expected_end_stack_false),
         );
     }
@@ -552,10 +489,23 @@ mod tests {
             DataType::Bfe,
             DataType::Bool,
         );
-        let snippet = All {
-            list_type: ListType::Unsafe,
-            f: InnerFunction::RawCode(rawcode),
-        };
+        let snippet = All::new(InnerFunction::RawCode(rawcode));
+        ShadowedFunction::new(snippet).test();
+    }
+
+    #[test]
+    fn test_with_raw_function_eq_42() {
+        let raw_code = RawCode::new(
+            triton_asm!(
+                eq_42:
+                push 42
+                eq
+                return
+            ),
+            DataType::U32,
+            DataType::Bool,
+        );
+        let snippet = All::new(InnerFunction::RawCode(raw_code));
         ShadowedFunction::new(snippet).test();
     }
 
@@ -575,10 +525,7 @@ mod tests {
             DataType::Xfe,
             DataType::Bool,
         );
-        let snippet = All {
-            list_type: ListType::Unsafe,
-            f: InnerFunction::RawCode(rawcode),
-        };
+        let snippet = All::new(InnerFunction::RawCode(rawcode));
         ShadowedFunction::new(snippet).test();
     }
 }
@@ -591,11 +538,10 @@ mod benches {
     use super::*;
 
     #[test]
-    fn unsafe_list_all_benchmark() {
-        ShadowedFunction::new(All {
-            list_type: ListType::Unsafe,
-            f: InnerFunction::DeprecatedSnippet(Box::new(TestHashXFieldElementLsb)),
-        })
+    fn all_benchmark() {
+        ShadowedFunction::new(All::new(InnerFunction::DeprecatedSnippet(Box::new(
+            TestHashXFieldElementLsb,
+        ))))
         .bench();
     }
 }

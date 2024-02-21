@@ -156,7 +156,7 @@ mod tests {
         let u64_max = U32s::<2>::try_from(u64::MAX).unwrap();
         push_encodable(&mut stack, &u64_max);
         assert!(IncrU64
-            .link_and_run_tasm_for_test(&mut stack, vec![], NonDeterminism::default(), None)
+            .link_and_run_tasm_for_test(&mut stack, vec![], NonDeterminism::default())
             .is_err());
     }
 
