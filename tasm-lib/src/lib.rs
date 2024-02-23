@@ -1,6 +1,6 @@
 // Recursion limit for macro_rules expansions, used for
 // triton_asm!
-#![recursion_limit = "4096"]
+#![recursion_limit = "2048"]
 
 // This is needed for `#[derive(TasmObject)]` macro to work consistently across crates.
 // Specifically:
