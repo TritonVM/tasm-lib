@@ -1,3 +1,4 @@
+pub mod array;
 pub mod dyn_malloc;
 pub mod input;
 pub mod list;

@@ -28,6 +28,7 @@ use traits::basic_snippet::BasicSnippet;
 use traits::deprecated_snippet::DeprecatedSnippet;
 
 pub mod arithmetic;
+pub mod array;
 pub mod data_type;
 pub mod exported_snippets;
 pub mod hashing;
