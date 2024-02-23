@@ -28,7 +28,6 @@ use super::inner_function::InnerFunction;
 /// Filters a given list for elements that satisfy a predicate. A new
 /// list is created, containing only those elements that satisfy the
 /// predicate. The predicate must be given as an InnerFunction.
-#[derive(Debug)]
 pub struct Filter {
     pub f: InnerFunction,
 }

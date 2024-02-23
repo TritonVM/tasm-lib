@@ -34,7 +34,6 @@ currently only works with *one* input element. Use a tuple data type to circumve
 
 /// Applies a given function to every element of a list, and collects the new elements
 /// into a new list.
-#[derive(Debug)]
 pub struct Map {
     pub f: InnerFunction,
 }

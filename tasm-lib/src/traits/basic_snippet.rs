@@ -1,5 +1,4 @@
 use num_traits::Zero;
-use std::fmt::Debug;
 use triton_vm::op_stack::NUM_OP_STACK_REGISTERS;
 use triton_vm::prelude::*;
 
@@ -7,7 +6,7 @@ use crate::data_type::DataType;
 use crate::library::Library;
 use crate::VmHasher;
 
-pub trait BasicSnippet: Debug {
+pub trait BasicSnippet {
     fn inputs(&self) -> Vec<(DataType, String)>;
     fn outputs(&self) -> Vec<(DataType, String)>;
     fn entrypoint(&self) -> String;

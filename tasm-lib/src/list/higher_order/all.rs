@@ -32,7 +32,6 @@ use super::inner_function::InnerFunction;
 
 /// Runs a predicate over all elements of a list and returns true only if all elements satisfy the
 /// predicate.
-#[derive(Debug)]
 pub struct All {
     pub f: InnerFunction,
 }
