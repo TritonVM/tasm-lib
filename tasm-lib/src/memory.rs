@@ -43,7 +43,7 @@ pub fn encode_to_memory<T: BFieldCodec>(
     address + BFieldElement::new(encoding.len() as u64)
 }
 
-/// Return the code to read a `n` words from memory. Top of stack must point
+/// Return the code to read `n` words from memory. Top of stack must point
 /// to last word of words to read. Leaves mutated pointer on top of stack.
 ///
 /// ```text
@@ -62,7 +62,7 @@ pub fn load_words_from_memory_leave_pointer(n: usize) -> Vec<LabelledInstruction
     instructions
 }
 
-/// Return the code to read a `n` words from memory. Top of stack must point
+/// Return the code to read `n` words from memory. Top of stack must point
 /// to last word of words to read. Pops the memory pointer from the stack.
 ///
 /// ```text
