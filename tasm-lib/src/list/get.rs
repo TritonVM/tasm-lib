@@ -16,12 +16,14 @@ use crate::ExecutionState;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct Get {
-    pub data_type: DataType,
+    pub element_type: DataType,
 }
 
 impl Get {
     pub fn new(data_type: DataType) -> Self {
-        Self { data_type }
+        Self {
+            element_type: data_type,
+        }
     }
 }
 
@@ -29,7 +31,7 @@ impl DeprecatedSnippet for Get {
     fn entrypoint_name(&self) -> String {
         format!(
             "tasm_list_get_element___{}",
-            self.data_type.label_friendly_name()
+            self.element_type.label_friendly_name()
         )
     }
 
@@ -39,7 +41,7 @@ impl DeprecatedSnippet for Get {
 
     fn input_types(&self) -> Vec<DataType> {
         vec![
-            DataType::List(Box::new(self.data_type.clone())),
+            DataType::List(Box::new(self.element_type.clone())),
             DataType::U32,
         ]
     }
@@ -48,7 +50,7 @@ impl DeprecatedSnippet for Get {
         // This function returns element_0 on the top of the stack and the other elements below it.
         // E.g.: _ elem_2 elem_1 elem_0
         let mut ret: Vec<String> = vec![];
-        let size = self.data_type.stack_size();
+        let size = self.element_type.stack_size();
         for i in 0..size {
             ret.push(format!("element_{}", size - 1 - i));
         }
@@ -57,18 +59,18 @@ impl DeprecatedSnippet for Get {
     }
 
     fn output_types(&self) -> Vec<DataType> {
-        vec![DataType::Bfe; self.data_type.stack_size()]
+        vec![DataType::Bfe; self.element_type.stack_size()]
     }
 
     fn stack_diff(&self) -> isize {
-        self.data_type.stack_size() as isize - 2
+        self.element_type.stack_size() as isize - 2
     }
 
     fn function_code(&self, _library: &mut Library) -> String {
         let entrypoint = self.entrypoint_name();
         // Code to read an element from a list. No bounds-check.
 
-        let element_size = self.data_type.stack_size();
+        let element_size = self.element_type.stack_size();
 
         let mul_with_size = match element_size {
             1 => vec![],
@@ -91,7 +93,7 @@ impl DeprecatedSnippet for Get {
                 add
                 // stack: _ (*list + N * index + 1)
 
-                {&self.data_type.read_value_from_memory_pop_pointer()}
+                {&self.element_type.read_value_from_memory_pop_pointer()}
                 // stack: _ elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}}
 
                 return
@@ -106,17 +108,17 @@ impl DeprecatedSnippet for Get {
 
     fn gen_input_states(&self) -> Vec<ExecutionState> {
         let mut rng = thread_rng();
-        let list_length = rng.gen_range(1..100);
+        let list_length = rng.gen_range(1..=100);
         let index_to_read = rng.gen_range(0..list_length);
-        vec![input_state(rng.gen_range(1..100), index_to_read)]
+        vec![self.input_state(list_length, index_to_read)]
     }
 
     fn common_case_input_state(&self) -> ExecutionState {
-        input_state(1 << 5, 1 << 4)
+        self.input_state(1 << 5, 1 << 4)
     }
 
     fn worst_case_input_state(&self) -> ExecutionState {
-        input_state(1 << 6, (1 << 6) - 1)
+        self.input_state(1 << 6, (1 << 6) - 1)
     }
 
     fn rust_shadowing(
@@ -132,29 +134,36 @@ impl DeprecatedSnippet for Get {
             list_pointer,
             index as usize,
             memory,
-            self.data_type.stack_size(),
+            self.element_type.stack_size(),
         );
 
         stack.extend(element.into_iter().rev());
     }
 }
 
-fn input_state(list_length: usize, index: usize) -> ExecutionState {
-    let list_pointer: u32 = random();
-    let list_pointer = BFieldElement::new(list_pointer as u64);
-    let mut stack = empty_stack();
-    stack.push(list_pointer);
-    stack.push(BFieldElement::new(index as u64));
+impl Get {
+    fn input_state(&self, list_length: usize, index: usize) -> ExecutionState {
+        let list_pointer: u32 = random();
+        let list_pointer = BFieldElement::new(list_pointer as u64);
+        let mut stack = empty_stack();
+        stack.push(list_pointer);
+        stack.push(BFieldElement::new(index as u64));
 
-    let mut memory = HashMap::default();
+        let mut memory = HashMap::default();
 
-    untyped_insert_random_list(list_pointer, list_length, &mut memory, 4);
+        untyped_insert_random_list(
+            list_pointer,
+            list_length,
+            &mut memory,
+            self.element_type.stack_size(),
+        );
 
-    let nondeterminism = NonDeterminism::default().with_ram(memory);
-    ExecutionState {
-        stack,
-        std_in: vec![],
-        nondeterminism,
+        let nondeterminism = NonDeterminism::default().with_ram(memory);
+        ExecutionState {
+            stack,
+            std_in: vec![],
+            nondeterminism,
+        }
     }
 }
 
@@ -169,7 +178,7 @@ mod tests {
     fn new_snippet_test() {
         test_rust_equivalence_multiple_deprecated(
             &Get {
-                data_type: DataType::Xfe,
+                element_type: DataType::Xfe,
             },
             true,
         );
@@ -178,32 +187,41 @@ mod tests {
     #[test]
     fn get_simple_1() {
         let list_address = BFieldElement::new(48);
-        for i in 0..10 {
-            prop_get(DataType::Bfe, list_address, i, 10);
+        let list_length = 10;
+        for i in 0..list_length {
+            prop_get(DataType::Bfe, list_address, i, list_length);
         }
     }
 
     #[test]
     fn get_simple_2() {
         let list_address = BFieldElement::new(48);
-        for i in 0..10 {
-            prop_get(DataType::U64, list_address, i, 10);
+        let list_length = 10;
+        for i in 0..list_length {
+            prop_get(DataType::U64, list_address, i, list_length);
         }
     }
 
     #[test]
     fn get_simple_3() {
         let list_address = BFieldElement::new(48);
-        for i in 0..10 {
-            prop_get(DataType::Xfe, list_address, i, 10);
+        let list_length = 10;
+        for i in 0..list_length {
+            prop_get(DataType::Xfe, list_address, i, list_length);
         }
     }
 
     #[test]
     fn get_simple_15() {
         let list_address = BFieldElement::new(48);
-        for i in 0..10 {
-            prop_get(DataType::Digest, list_address, i, 10);
+        let list_length = 10;
+        for i in 0..list_length {
+            prop_get(
+                DataType::Tuple(vec![DataType::Digest; 3]),
+                list_address,
+                i,
+                list_length,
+            );
         }
     }
 
@@ -237,7 +255,9 @@ mod tests {
         }
 
         test_rust_equivalence_given_input_values_deprecated(
-            &Get { data_type },
+            &Get {
+                element_type: data_type,
+            },
             &init_stack,
             &[],
             memory,
