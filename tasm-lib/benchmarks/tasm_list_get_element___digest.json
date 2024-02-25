@@ -10,7 +10,7 @@
     "name": "tasm_list_get_element___digest",
     "clock_cycle_count": 15,
     "hash_table_height": 18,
-    "u32_table_height": 9,
+    "u32_table_height": 10,
     "case": "WorstCase"
   }
 ]

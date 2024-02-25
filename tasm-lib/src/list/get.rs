@@ -106,15 +106,17 @@ impl DeprecatedSnippet for Get {
 
     fn gen_input_states(&self) -> Vec<ExecutionState> {
         let mut rng = thread_rng();
-        vec![input_state(rng.gen_range(1..100))]
+        let list_length = rng.gen_range(1..100);
+        let index_to_read = rng.gen_range(0..list_length);
+        vec![input_state(rng.gen_range(1..100), index_to_read)]
     }
 
     fn common_case_input_state(&self) -> ExecutionState {
-        input_state(1 << 5)
+        input_state(1 << 5, 1 << 4)
     }
 
     fn worst_case_input_state(&self) -> ExecutionState {
-        input_state(1 << 6)
+        input_state(1 << 6, (1 << 6) - 1)
     }
 
     fn rust_shadowing(
@@ -137,11 +139,9 @@ impl DeprecatedSnippet for Get {
     }
 }
 
-fn input_state(list_length: usize) -> ExecutionState {
-    let mut rng = thread_rng();
+fn input_state(list_length: usize, index: usize) -> ExecutionState {
     let list_pointer: u32 = random();
     let list_pointer = BFieldElement::new(list_pointer as u64);
-    let index: usize = rng.gen_range(0..list_length);
     let mut stack = empty_stack();
     stack.push(list_pointer);
     stack.push(BFieldElement::new(index as u64));
