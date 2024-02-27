@@ -167,7 +167,7 @@ mod tests {
     impl SumOfXfes {
         fn prepare_state(&self, array_pointer: BFieldElement) -> FunctionInitialState {
             let mut memory = HashMap::default();
-            insert_random_array(&DataType::Bfe, array_pointer, self.length, &mut memory);
+            insert_random_array(&DataType::Xfe, array_pointer, self.length, &mut memory);
 
             let mut init_stack = self.init_stack_for_isolated_run();
             init_stack.push(array_pointer);
@@ -227,5 +227,23 @@ mod tests {
             &None,
             Some(&expected_final_stack),
         );
+    }
+}
+
+#[cfg(test)]
+mod benches {
+    use crate::traits::function::ShadowedFunction;
+    use crate::traits::rust_shadow::RustShadow;
+
+    use super::*;
+
+    #[test]
+    fn sum_xfes_bench_100() {
+        ShadowedFunction::new(SumOfXfes { length: 100 }).bench();
+    }
+
+    #[test]
+    fn sum_xfes_bench_200() {
+        ShadowedFunction::new(SumOfXfes { length: 200 }).bench();
     }
 }
