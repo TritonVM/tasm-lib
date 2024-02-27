@@ -6,6 +6,7 @@ use num_traits::Zero;
 use triton_vm::prelude::*;
 
 pub use derive_tasm_object::TasmObject;
+use triton_vm::twenty_first::error::BFieldCodecError;
 
 type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 
@@ -215,6 +216,36 @@ impl<'a> Iterator for MemoryIter<'a> {
     }
 }
 
+impl<T: TasmObject> TasmObject for Option<T> {
+    fn get_field(_field_name: &str) -> Vec<LabelledInstruction> {
+        unreachable!("cannot get field of an option type");
+    }
+
+    fn get_field_with_size(_field_name: &str) -> Vec<LabelledInstruction> {
+        unreachable!("cannot get field with size of an option type");
+    }
+
+    fn get_field_start_with_jump_distance(_field_name: &str) -> Vec<LabelledInstruction> {
+        unreachable!("cannot get field start with jump distance of an option type");
+    }
+
+    fn decode_iter<Itr: Iterator<Item = BFieldElement>>(iterator: &mut Itr) -> Result<Box<Self>> {
+        match iterator.next() {
+            Some(token) => {
+                if token == BFieldElement::new(0) {
+                    Ok(Box::new(None))
+                } else if token == BFieldElement::new(1) {
+                    let t: T = *T::decode_iter(iterator)?;
+                    Ok(Box::new(Some(t)))
+                } else {
+                    Err(Box::new(BFieldCodecError::ElementOutOfRange))
+                }
+            }
+            None => Err(Box::new(BFieldCodecError::SequenceTooShort)),
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use arbitrary::Arbitrary;
@@ -232,6 +263,7 @@ mod test {
     use crate::library::Library;
     use crate::list::length::Length;
     use crate::memory::encode_to_memory;
+    use crate::memory::FIRST_NON_DETERMINISTICALLY_INITIALIZED_MEMORY_ADDRESS;
     use crate::structure::tasm_object::TasmObject;
     use crate::Digest;
 
@@ -511,5 +543,23 @@ mod test {
                 execute_with_terminal_state(&program, &[], &stack, &nondeterminism, None).unwrap();
             final_state.op_stack.stack
         }
+    }
+
+    #[test]
+    fn test_option() {
+        let mut rng = thread_rng();
+        let n = rng.gen_range(0..5);
+        let v = (0..n).map(|_| rng.gen::<Digest>()).collect_vec();
+        let mut ram: HashMap<BFieldElement, BFieldElement> = HashMap::new();
+        let some_address = FIRST_NON_DETERMINISTICALLY_INITIALIZED_MEMORY_ADDRESS;
+        let none_address = encode_to_memory(&mut ram, some_address, Some(v.clone()));
+        encode_to_memory(&mut ram, none_address, Option::<Vec<Digest>>::None);
+
+        let some_decoded = *Option::<Vec<Digest>>::decode_from_memory(&ram, some_address).unwrap();
+        assert!(some_decoded.is_some());
+        assert_eq!(some_decoded.unwrap(), v);
+
+        let none_decoded = *Option::<Vec<Digest>>::decode_from_memory(&ram, none_address).unwrap();
+        assert!(none_decoded.is_none());
     }
 }
