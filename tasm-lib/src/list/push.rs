@@ -17,16 +17,16 @@ use crate::ExecutionState;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct Push {
-    pub data_type: DataType,
+    pub element_type: DataType,
 }
 
 impl Push {
-    pub fn new(data_type: DataType) -> Self {
-        Self { data_type }
+    pub fn new(element_type: DataType) -> Self {
+        Self { element_type }
     }
 
     fn write_type_to_mem(&self) -> Vec<LabelledInstruction> {
-        let data_size = self.data_type.stack_size();
+        let data_size = self.element_type.stack_size();
         let num_full_chunk_writes = data_size / 5;
         let num_remaining_words = data_size % 5;
         let mut instructions = vec![triton_instr!(write_mem 5); num_full_chunk_writes];
@@ -41,11 +41,14 @@ impl Push {
 
 impl DeprecatedSnippet for Push {
     fn entrypoint_name(&self) -> String {
-        format!("tasm_list_push___{}", self.data_type.label_friendly_name())
+        format!(
+            "tasm_list_push___{}",
+            self.element_type.label_friendly_name()
+        )
     }
 
     fn input_field_names(&self) -> Vec<String> {
-        let element_size = self.data_type.stack_size();
+        let element_size = self.element_type.stack_size();
 
         // _ *list elem{N - 1} … elem{0}
         let mut ret = vec!["*list".to_string()];
@@ -58,8 +61,8 @@ impl DeprecatedSnippet for Push {
 
     fn input_types(&self) -> Vec<DataType> {
         vec![
-            DataType::List(Box::new(self.data_type.clone())),
-            self.data_type.clone(),
+            DataType::List(Box::new(self.element_type.clone())),
+            self.element_type.clone(),
         ]
     }
 
@@ -72,12 +75,12 @@ impl DeprecatedSnippet for Push {
     }
 
     fn stack_diff(&self) -> isize {
-        -(self.data_type.stack_size() as isize) - 1
+        -(self.element_type.stack_size() as isize) - 1
     }
 
-    /// push one `self.data_type` element to the list in memory
+    /// push one `self.element_type` element to the list in memory
     fn function_code(&self, _library: &mut Library) -> String {
-        let element_size = self.data_type.stack_size();
+        let element_size = self.element_type.stack_size();
 
         let write_elements_to_memory = self.write_type_to_mem();
         let mul_with_size = match element_size {
@@ -126,19 +129,19 @@ impl DeprecatedSnippet for Push {
 
     fn gen_input_states(&self) -> Vec<ExecutionState> {
         vec![
-            prepare_state(&self.data_type),
-            prepare_state(&self.data_type),
-            prepare_state(&self.data_type),
-            prepare_state(&self.data_type),
+            prepare_state(&self.element_type),
+            prepare_state(&self.element_type),
+            prepare_state(&self.element_type),
+            prepare_state(&self.element_type),
         ]
     }
 
     fn common_case_input_state(&self) -> ExecutionState {
-        prepare_state(&self.data_type)
+        prepare_state(&self.element_type)
     }
 
     fn worst_case_input_state(&self) -> ExecutionState {
-        prepare_state(&self.data_type)
+        prepare_state(&self.element_type)
     }
 
     fn rust_shadowing(
@@ -148,14 +151,14 @@ impl DeprecatedSnippet for Push {
         _secret_in: Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
-        let list_address = stack[stack.len() - 1 - self.data_type.stack_size()];
+        let list_address = stack[stack.len() - 1 - self.element_type.stack_size()];
         let initial_list_length = memory[&list_address];
 
         let mut next_free_address = list_address
-            + initial_list_length * BFieldElement::new(self.data_type.stack_size() as u64)
+            + initial_list_length * BFieldElement::new(self.element_type.stack_size() as u64)
             + BFieldElement::one();
 
-        for _ in 0..self.data_type.stack_size() {
+        for _ in 0..self.element_type.stack_size() {
             let elem = stack.pop().unwrap();
             memory.insert(next_free_address, elem);
             next_free_address += BFieldElement::one();
@@ -169,13 +172,13 @@ impl DeprecatedSnippet for Push {
     }
 }
 
-fn prepare_state(data_type: &DataType) -> ExecutionState {
+fn prepare_state(element_type: &DataType) -> ExecutionState {
     let list_pointer: u32 = random();
     let list_pointer = BFieldElement::new(list_pointer as u64);
     let init_length: usize = thread_rng().gen_range(0..100);
     let mut stack = empty_stack();
     stack.push(list_pointer);
-    let mut push_value: Vec<BFieldElement> = random_elements(data_type.stack_size());
+    let mut push_value: Vec<BFieldElement> = random_elements(element_type.stack_size());
     while let Some(element) = push_value.pop() {
         stack.push(element);
     }
@@ -185,7 +188,7 @@ fn prepare_state(data_type: &DataType) -> ExecutionState {
         list_pointer,
         init_length,
         &mut memory,
-        data_type.stack_size(),
+        element_type.stack_size(),
     );
     ExecutionState::with_stack_and_memory(stack, memory)
 }
@@ -200,8 +203,8 @@ mod tests {
 
     #[test]
     fn new_snippet_test() {
-        fn test_rust_equivalence_and_export(data_type: DataType) {
-            test_rust_equivalence_multiple_deprecated(&Push { data_type }, true);
+        fn test_rust_equivalence_and_export(element_type: DataType) {
+            test_rust_equivalence_multiple_deprecated(&Push { element_type }, true);
         }
 
         test_rust_equivalence_and_export(DataType::Bool);
@@ -238,13 +241,13 @@ mod tests {
     }
 
     fn prop_push(
-        data_type: DataType,
+        element_type: DataType,
         list_address: BFieldElement,
         init_list_length: u32,
         push_value: Vec<BFieldElement>,
     ) {
         assert_eq!(
-            data_type.stack_size(),
+            element_type.stack_size(),
             push_value.len(),
             "Push value length must match data size"
         );
@@ -252,8 +255,8 @@ mod tests {
         let mut init_stack = empty_stack();
         init_stack.push(list_address);
 
-        for i in 0..data_type.stack_size() {
-            init_stack.push(push_value[data_type.stack_size() - 1 - i]);
+        for i in 0..element_type.stack_size() {
+            init_stack.push(push_value[element_type.stack_size() - 1 - i]);
         }
         let mut memory = HashMap::default();
 
@@ -261,12 +264,12 @@ mod tests {
             list_address,
             init_list_length as usize,
             &mut memory,
-            data_type.stack_size(),
+            element_type.stack_size(),
         );
 
         let memory = test_rust_equivalence_given_input_values_deprecated(
             &Push {
-                data_type: data_type.clone(),
+                element_type: element_type.clone(),
             },
             &init_stack,
             &[],
@@ -282,13 +285,13 @@ mod tests {
         );
 
         // verify that value was inserted at expected place
-        for i in 0..data_type.stack_size() {
+        for i in 0..element_type.stack_size() {
             assert_eq!(
                 push_value[i],
                 memory[&BFieldElement::new(
                     list_address.value()
                         + 1
-                        + data_type.stack_size() as u64 * init_list_length as u64
+                        + element_type.stack_size() as u64 * init_list_length as u64
                         + i as u64
                 )]
             );

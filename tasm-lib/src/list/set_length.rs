@@ -15,12 +15,14 @@ use crate::ExecutionState;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct SetLength {
-    pub data_type: DataType,
+    pub element_type: DataType,
 }
 
 impl SetLength {
     pub fn new(data_type: DataType) -> Self {
-        Self { data_type }
+        Self {
+            element_type: data_type,
+        }
     }
 }
 
@@ -28,7 +30,7 @@ impl DeprecatedSnippet for SetLength {
     fn entrypoint_name(&self) -> String {
         format!(
             "tasm_list_set_length___{}",
-            self.data_type.label_friendly_name()
+            self.element_type.label_friendly_name()
         )
     }
 
@@ -38,7 +40,7 @@ impl DeprecatedSnippet for SetLength {
 
     fn input_types(&self) -> Vec<DataType> {
         vec![
-            DataType::List(Box::new(self.data_type.clone())),
+            DataType::List(Box::new(self.element_type.clone())),
             DataType::U32,
         ]
     }
@@ -48,7 +50,7 @@ impl DeprecatedSnippet for SetLength {
     }
 
     fn output_types(&self) -> Vec<DataType> {
-        vec![DataType::List(Box::new(self.data_type.clone()))]
+        vec![DataType::List(Box::new(self.element_type.clone()))]
     }
 
     fn stack_diff(&self) -> isize {
@@ -87,18 +89,18 @@ impl DeprecatedSnippet for SetLength {
 
     fn gen_input_states(&self) -> Vec<ExecutionState> {
         vec![
-            prepare_state(&self.data_type),
-            prepare_state(&self.data_type),
-            prepare_state(&self.data_type),
+            prepare_state(&self.element_type),
+            prepare_state(&self.element_type),
+            prepare_state(&self.element_type),
         ]
     }
 
     fn common_case_input_state(&self) -> ExecutionState {
-        prepare_state(&self.data_type)
+        prepare_state(&self.element_type)
     }
 
     fn worst_case_input_state(&self) -> ExecutionState {
-        prepare_state(&self.data_type)
+        prepare_state(&self.element_type)
     }
 
     fn rust_shadowing(
@@ -146,7 +148,7 @@ mod tests {
     fn new_snippet_test() {
         test_rust_equivalence_multiple_deprecated(
             &SetLength {
-                data_type: DataType::Xfe,
+                element_type: DataType::Xfe,
             },
             true,
         );
@@ -183,7 +185,9 @@ mod tests {
         vm_memory.insert(list_address, BFieldElement::new(init_list_length as u64));
 
         let memory = test_rust_equivalence_given_input_values_deprecated(
-            &SetLength { data_type },
+            &SetLength {
+                element_type: data_type,
+            },
             &init_stack,
             &[],
             vm_memory,

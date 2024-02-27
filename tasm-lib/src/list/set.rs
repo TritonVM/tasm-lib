@@ -17,12 +17,14 @@ use crate::ExecutionState;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct Set {
-    pub data_type: DataType,
+    pub element_type: DataType,
 }
 
 impl Set {
     pub fn new(data_type: DataType) -> Self {
-        Self { data_type }
+        Self {
+            element_type: data_type,
+        }
     }
 }
 
@@ -30,14 +32,14 @@ impl DeprecatedSnippet for Set {
     fn entrypoint_name(&self) -> String {
         format!(
             "tasm_list_set_element___{}",
-            self.data_type.label_friendly_name()
+            self.element_type.label_friendly_name()
         )
     }
 
     fn input_field_names(&self) -> Vec<String> {
         // _ elem{{N - 1}}, elem{{N - 2}}, ..., elem{{0}} *list index
         [
-            vec!["element".to_string(); self.data_type.stack_size()],
+            vec!["element".to_string(); self.element_type.stack_size()],
             vec!["*list".to_string(), "index".to_string()],
         ]
         .concat()
@@ -45,8 +47,8 @@ impl DeprecatedSnippet for Set {
 
     fn input_types(&self) -> Vec<DataType> {
         vec![
-            self.data_type.clone(),
-            DataType::List(Box::new(self.data_type.clone())),
+            self.element_type.clone(),
+            DataType::List(Box::new(self.element_type.clone())),
             DataType::U32,
         ]
     }
@@ -60,14 +62,14 @@ impl DeprecatedSnippet for Set {
     }
 
     fn stack_diff(&self) -> isize {
-        -2 - self.data_type.stack_size() as isize
+        -2 - self.element_type.stack_size() as isize
     }
 
     fn function_code(&self, _library: &mut Library) -> String {
         let entrypoint = self.entrypoint_name();
-        let element_size = self.data_type.stack_size();
+        let element_size = self.element_type.stack_size();
 
-        let write_elements_to_memory_code = self.data_type.write_value_to_memory_leave_pointer();
+        let write_elements_to_memory_code = self.element_type.write_value_to_memory_leave_pointer();
 
         let mul_with_size = if element_size != 1 {
             triton_asm!(push {element_size} mul)
@@ -105,18 +107,18 @@ impl DeprecatedSnippet for Set {
 
     fn gen_input_states(&self) -> Vec<ExecutionState> {
         vec![
-            prepare_state(&self.data_type),
-            prepare_state(&self.data_type),
-            prepare_state(&self.data_type),
+            prepare_state(&self.element_type),
+            prepare_state(&self.element_type),
+            prepare_state(&self.element_type),
         ]
     }
 
     fn common_case_input_state(&self) -> ExecutionState {
-        prepare_state(&self.data_type)
+        prepare_state(&self.element_type)
     }
 
     fn worst_case_input_state(&self) -> ExecutionState {
-        prepare_state(&self.data_type)
+        prepare_state(&self.element_type)
     }
 
     fn rust_shadowing(
@@ -129,7 +131,7 @@ impl DeprecatedSnippet for Set {
         let index: u32 = stack.pop().unwrap().try_into().unwrap();
         let list_pointer = stack.pop().unwrap();
         let mut element: Vec<BFieldElement> =
-            vec![BFieldElement::new(0); self.data_type.stack_size()];
+            vec![BFieldElement::new(0); self.element_type.stack_size()];
         for ee in element.iter_mut() {
             *ee = stack.pop().unwrap();
         }
@@ -171,37 +173,37 @@ mod tests {
     fn new_snippet_test() {
         test_rust_equivalence_multiple_deprecated(
             &Set {
-                data_type: DataType::Bool,
+                element_type: DataType::Bool,
             },
             true,
         );
         test_rust_equivalence_multiple_deprecated(
             &Set {
-                data_type: DataType::Bfe,
+                element_type: DataType::Bfe,
             },
             true,
         );
         test_rust_equivalence_multiple_deprecated(
             &Set {
-                data_type: DataType::U32,
+                element_type: DataType::U32,
             },
             true,
         );
         test_rust_equivalence_multiple_deprecated(
             &Set {
-                data_type: DataType::U64,
+                element_type: DataType::U64,
             },
             true,
         );
         test_rust_equivalence_multiple_deprecated(
             &Set {
-                data_type: DataType::Xfe,
+                element_type: DataType::Xfe,
             },
             true,
         );
         test_rust_equivalence_multiple_deprecated(
             &Set {
-                data_type: DataType::Digest,
+                element_type: DataType::Digest,
             },
             true,
         );
@@ -273,7 +275,7 @@ mod tests {
 
         let memory = test_rust_equivalence_given_input_values_deprecated(
             &Set {
-                data_type: data_type.clone(),
+                element_type: data_type.clone(),
             },
             &init_stack,
             &[],

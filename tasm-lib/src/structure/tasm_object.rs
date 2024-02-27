@@ -352,10 +352,10 @@ mod test {
 
             let mut library = Library::new();
             let length_d = library.import(Box::new(Length {
-                data_type: DataType::Digest,
+                element_type: DataType::Digest,
             }));
             let length_f = library.import(Box::new(Length {
-                data_type: DataType::U32,
+                element_type: DataType::U32,
             }));
             let code = triton_asm! {
                     // _ *obj
@@ -418,13 +418,13 @@ mod test {
             // code snippet to access object's fields
             let mut library = Library::new();
             let length_digests = library.import(Box::new(Length {
-                data_type: DataType::Digest,
+                element_type: DataType::Digest,
             }));
             let length_bfes = library.import(Box::new(Length {
-                data_type: DataType::Bfe,
+                element_type: DataType::Bfe,
             }));
             let length_xfes = library.import(Box::new(Length {
-                data_type: DataType::Xfe,
+                element_type: DataType::Xfe,
             }));
             let code = triton_asm! {
                 // _ *obj
@@ -478,11 +478,11 @@ mod test {
             let mut library = Library::new();
             let get_authentication_structure = field!(FriResponse::auth_structure);
             let length_digests = library.import(Box::new(Length {
-                data_type: DataType::Digest,
+                element_type: DataType::Digest,
             }));
             let get_revealed_leafs = field!(FriResponse::revealed_leaves);
             let length_xfes = library.import(Box::new(Length {
-                data_type: DataType::Xfe,
+                element_type: DataType::Xfe,
             }));
             let code = triton_asm! {
                 // _ *fri_response

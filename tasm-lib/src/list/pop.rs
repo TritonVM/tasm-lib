@@ -16,18 +16,21 @@ use crate::ExecutionState;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct Pop {
-    pub data_type: DataType,
+    pub element_type: DataType,
 }
 
 impl Pop {
-    pub fn new(data_type: DataType) -> Self {
-        Self { data_type }
+    pub fn new(element_type: DataType) -> Self {
+        Self { element_type }
     }
 }
 
 impl DeprecatedSnippet for Pop {
     fn entrypoint_name(&self) -> String {
-        format!("tasm_list_pop___{}", self.data_type.label_friendly_name())
+        format!(
+            "tasm_list_pop___{}",
+            self.element_type.label_friendly_name()
+        )
     }
 
     fn input_field_names(&self) -> Vec<String> {
@@ -35,12 +38,12 @@ impl DeprecatedSnippet for Pop {
     }
 
     fn input_types(&self) -> Vec<DataType> {
-        vec![DataType::List(Box::new(self.data_type.clone()))]
+        vec![DataType::List(Box::new(self.element_type.clone()))]
     }
 
     fn output_field_names(&self) -> Vec<String> {
         let mut ret: Vec<String> = vec![];
-        let element_size = self.data_type.stack_size();
+        let element_size = self.element_type.stack_size();
         for i in 0..element_size {
             ret.push(format!("element_{}", element_size - 1 - i));
         }
@@ -49,11 +52,11 @@ impl DeprecatedSnippet for Pop {
     }
 
     fn output_types(&self) -> Vec<DataType> {
-        vec![self.data_type.clone()]
+        vec![self.element_type.clone()]
     }
 
     fn stack_diff(&self) -> isize {
-        self.data_type.stack_size() as isize - 1
+        self.element_type.stack_size() as isize - 1
     }
 
     /// Pop last element from list. Does *not* actually delete the last
@@ -61,7 +64,7 @@ impl DeprecatedSnippet for Pop {
     fn function_code(&self, _library: &mut Library) -> String {
         let entry_point = self.entrypoint_name();
 
-        let element_size = self.data_type.stack_size();
+        let element_size = self.element_type.stack_size();
         let mul_with_size = if element_size.is_one() {
             String::default()
         } else {
@@ -112,7 +115,7 @@ impl DeprecatedSnippet for Pop {
                 add
                 // stack : _  address_for_current_element_last_word
 
-                {&self.data_type.read_value_from_memory_pop_pointer()}
+                {&self.element_type.read_value_from_memory_pop_pointer()}
                 // Stack: _  [elements]
 
                 return
@@ -127,15 +130,15 @@ impl DeprecatedSnippet for Pop {
     }
 
     fn gen_input_states(&self) -> Vec<ExecutionState> {
-        vec![prepare_state(&self.data_type)]
+        vec![prepare_state(&self.element_type)]
     }
 
     fn common_case_input_state(&self) -> ExecutionState {
-        prepare_state(&self.data_type)
+        prepare_state(&self.element_type)
     }
 
     fn worst_case_input_state(&self) -> ExecutionState {
-        prepare_state(&self.data_type)
+        prepare_state(&self.element_type)
     }
 
     fn rust_shadowing(
@@ -152,9 +155,9 @@ impl DeprecatedSnippet for Pop {
         memory.insert(list_address, initial_list_length - BFieldElement::one());
 
         let mut last_used_address = list_address
-            + initial_list_length * BFieldElement::new(self.data_type.stack_size() as u64);
+            + initial_list_length * BFieldElement::new(self.element_type.stack_size() as u64);
 
-        for _ in 0..self.data_type.stack_size() {
+        for _ in 0..self.element_type.stack_size() {
             let elem = memory[&last_used_address];
             stack.push(elem);
             last_used_address -= BFieldElement::one();
@@ -162,7 +165,7 @@ impl DeprecatedSnippet for Pop {
     }
 }
 
-fn prepare_state(data_type: &DataType) -> ExecutionState {
+fn prepare_state(element_type: &DataType) -> ExecutionState {
     let list_pointer: u32 = random();
     let list_pointer = BFieldElement::new(list_pointer as u64);
     let old_length: usize = thread_rng().gen_range(1..30);
@@ -173,7 +176,7 @@ fn prepare_state(data_type: &DataType) -> ExecutionState {
         list_pointer,
         old_length,
         &mut memory,
-        data_type.stack_size(),
+        element_type.stack_size(),
     );
     ExecutionState::with_stack_and_memory(stack, memory)
 }
@@ -192,25 +195,25 @@ mod tests {
     fn new_snippet_test() {
         test_rust_equivalence_multiple_deprecated(
             &Pop {
-                data_type: DataType::U32,
+                element_type: DataType::U32,
             },
             true,
         );
         test_rust_equivalence_multiple_deprecated(
             &Pop {
-                data_type: DataType::U64,
+                element_type: DataType::U64,
             },
             true,
         );
         test_rust_equivalence_multiple_deprecated(
             &Pop {
-                data_type: DataType::Xfe,
+                element_type: DataType::Xfe,
             },
             true,
         );
         test_rust_equivalence_multiple_deprecated(
             &Pop {
-                data_type: DataType::Digest,
+                element_type: DataType::Digest,
             },
             true,
         );
@@ -259,7 +262,7 @@ mod tests {
     }
 
     fn prop_pop<const N: usize>(
-        data_type: DataType,
+        element_type: DataType,
         list_address: BFieldElement,
         init_list_length: u32,
     ) {
@@ -294,7 +297,7 @@ mod tests {
         }
 
         let memory = test_rust_equivalence_given_input_values_deprecated(
-            &Pop { data_type },
+            &Pop { element_type },
             &init_stack,
             &[],
             memory,

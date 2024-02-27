@@ -16,12 +16,14 @@ use crate::ExecutionState;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct Length {
-    pub data_type: DataType,
+    pub element_type: DataType,
 }
 
 impl Length {
     pub fn new(data_type: DataType) -> Self {
-        Self { data_type }
+        Self {
+            element_type: data_type,
+        }
     }
 }
 
@@ -29,7 +31,7 @@ impl DeprecatedSnippet for Length {
     fn entrypoint_name(&self) -> String {
         format!(
             "tasm_list_length___{}",
-            self.data_type.label_friendly_name()
+            self.element_type.label_friendly_name()
         )
     }
 
@@ -38,7 +40,7 @@ impl DeprecatedSnippet for Length {
     }
 
     fn input_types(&self) -> Vec<DataType> {
-        vec![DataType::List(Box::new(self.data_type.clone()))]
+        vec![DataType::List(Box::new(self.element_type.clone()))]
     }
 
     fn output_field_names(&self) -> Vec<String> {
@@ -146,7 +148,12 @@ mod tests {
     #[test]
     fn new_snippet_test_long() {
         fn test_rust_equivalence_and_export(data_type: DataType) {
-            test_rust_equivalence_multiple_deprecated(&Length { data_type }, true);
+            test_rust_equivalence_multiple_deprecated(
+                &Length {
+                    element_type: data_type,
+                },
+                true,
+            );
         }
 
         test_rust_equivalence_and_export(DataType::Bfe);
@@ -189,7 +196,9 @@ mod tests {
 
         let data_type = DataType::Bfe;
         test_rust_equivalence_given_input_values_deprecated(
-            &Length { data_type },
+            &Length {
+                element_type: data_type,
+            },
             &init_stack,
             &[],
             init_memory,

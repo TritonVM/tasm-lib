@@ -13,19 +13,24 @@ use crate::ExecutionState;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct New {
-    pub data_type: DataType,
+    pub element_type: DataType,
 }
 
 impl New {
     #[allow(clippy::self_named_constructors)] // 🤷
     pub fn new(data_type: DataType) -> Self {
-        Self { data_type }
+        Self {
+            element_type: data_type,
+        }
     }
 }
 
 impl DeprecatedSnippet for New {
     fn entrypoint_name(&self) -> String {
-        format!("tasm_list_new___{}", self.data_type.label_friendly_name())
+        format!(
+            "tasm_list_new___{}",
+            self.element_type.label_friendly_name()
+        )
     }
 
     fn input_field_names(&self) -> Vec<String> {
@@ -41,7 +46,7 @@ impl DeprecatedSnippet for New {
     }
 
     fn output_types(&self) -> Vec<DataType> {
-        vec![DataType::List(Box::new(self.data_type.clone()))]
+        vec![DataType::List(Box::new(self.element_type.clone()))]
     }
 
     fn stack_diff(&self) -> isize {

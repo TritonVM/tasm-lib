@@ -52,9 +52,9 @@ impl BasicSnippet for Map {
                     bs.inputs().len().is_one(),
                     "{MORE_THAN_ONE_INPUT_OR_OUTPUT_TYPE_IN_INNER_FUNCTION}"
                 );
-                let inner_type = &bs.inputs()[0].0;
+                let element_type = &bs.inputs()[0].0;
                 vec![(
-                    DataType::List(Box::new(inner_type.clone())),
+                    DataType::List(Box::new(element_type.clone())),
                     "*input_list".to_string(),
                 )]
             }
@@ -72,15 +72,15 @@ impl BasicSnippet for Map {
                     bs.inputs().len().is_one(),
                     "{MORE_THAN_ONE_INPUT_OR_OUTPUT_TYPE_IN_INNER_FUNCTION}"
                 );
-                let inner_type = &bs.outputs()[0].0;
+                let element_type = &bs.outputs()[0].0;
                 vec![(
-                    DataType::List(Box::new(inner_type.clone())),
-                    "*input_list".to_string(),
+                    DataType::List(Box::new(element_type.clone())),
+                    "*output_list".to_string(),
                 )]
             }
             _ => vec![(
                 DataType::List(Box::new(DataType::VoidPointer)),
-                "*input_list".to_string(),
+                "*output_list".to_string(),
             )],
         }
     }
