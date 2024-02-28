@@ -9,9 +9,9 @@ use crate::Library;
 /// list in reverse order and where symbols list length is statically
 /// known. Produces verbose code but minimizes clock cycle count.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
-pub struct ComputeTerminalConstSizedReversed<const N: usize>;
+pub struct ComputeTerminalConstSizedDynamicSymbolsReversed<const N: usize>;
 
-impl<const N: usize> BasicSnippet for ComputeTerminalConstSizedReversed<N> {
+impl<const N: usize> BasicSnippet for ComputeTerminalConstSizedDynamicSymbolsReversed<N> {
     fn inputs(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::Xfe, "challenge".to_owned()),
@@ -31,7 +31,7 @@ impl<const N: usize> BasicSnippet for ComputeTerminalConstSizedReversed<N> {
     }
 
     fn entrypoint(&self) -> String {
-        format!("tasm_recufier_eval_arg_compute_terminal_const_sized_reversed_sym_len_{N}")
+        format!("tasm_recufier_eval_arg_compute_terminal_const_sized_dynamic_symbols_reversed_sym_len_{N}")
     }
 
     fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {
@@ -40,27 +40,26 @@ impl<const N: usize> BasicSnippet for ComputeTerminalConstSizedReversed<N> {
             "Cannot generate code for const-symbols length of zero"
         );
 
-        // _ [challenge] [initial] *symbols
         let entrypoint = self.entrypoint();
         let one_iteration = triton_asm!(
-            // _ [challenge] *symbol [initial]
+                // _ [challenge] *symbol [acc]
 
                 dup 6
                 dup 6
                 dup 6
                 xxmul
-                // _ [challenge] *symbol [initial * challenge]
+                // _ [challenge] *symbol [acc * challenge]
 
                 dup 3
                 read_mem 1
-                // _ [challenge] *symbol [initial * challenge] symbol *symbol'
+                // _ [challenge] *symbol [acc * challenge] symbol *symbol'
 
                 swap 5
                 pop 1
-                // _ [challenge] *symbol' [initial * challenge] symbol
+                // _ [challenge] *symbol' [acc * challenge] symbol
 
                 add
-                // _ [challenge] *previous_elem [initial * challenge + symbol]
+                // _ [challenge] *previous_elem [acc * challenge + symbol]
                 // _ [challenge] *previous_elem [acc']
         );
         let iterations = vec![one_iteration; N].concat();
@@ -119,7 +118,7 @@ mod tests {
 
     use super::*;
 
-    impl<const N: usize> Function for ComputeTerminalConstSizedReversed<N> {
+    impl<const N: usize> Function for ComputeTerminalConstSizedDynamicSymbolsReversed<N> {
         fn rust_shadow(
             &self,
             stack: &mut Vec<BFieldElement>,
@@ -141,7 +140,7 @@ mod tests {
             let mut symbols = vec![];
             for _ in 0..N {
                 symbols.push(memory[&symbols_elem_pointer]);
-                symbols_elem_pointer.decrement()
+                symbols_elem_pointer.decrement();
             }
 
             let result = EvalArg::compute_terminal(&symbols, initial, challenge);
@@ -179,7 +178,7 @@ mod tests {
         }
     }
 
-    impl<const N: usize> ComputeTerminalConstSizedReversed<N> {
+    impl<const N: usize> ComputeTerminalConstSizedDynamicSymbolsReversed<N> {
         fn prepare_state(
             &self,
             symbols_pointer: BFieldElement,
@@ -211,32 +210,42 @@ mod tests {
 
     #[test]
     fn eval_compute_terminal_test_rev_const_sized_1() {
-        ShadowedFunction::new(ComputeTerminalConstSizedReversed::<1>).test()
+        ShadowedFunction::new(ComputeTerminalConstSizedDynamicSymbolsReversed::<1>).test()
     }
 
     #[test]
     fn eval_compute_terminal_test_rev_const_sized_2() {
-        ShadowedFunction::new(ComputeTerminalConstSizedReversed::<2>).test()
+        ShadowedFunction::new(ComputeTerminalConstSizedDynamicSymbolsReversed::<2>).test()
     }
 
     #[test]
     fn eval_compute_terminal_test_rev_const_sized_3() {
-        ShadowedFunction::new(ComputeTerminalConstSizedReversed::<3>).test()
+        ShadowedFunction::new(ComputeTerminalConstSizedDynamicSymbolsReversed::<3>).test()
     }
 
     #[test]
     fn eval_compute_terminal_test_rev_const_sized_4() {
-        ShadowedFunction::new(ComputeTerminalConstSizedReversed::<4>).test()
+        ShadowedFunction::new(ComputeTerminalConstSizedDynamicSymbolsReversed::<4>).test()
+    }
+
+    #[test]
+    fn eval_compute_terminal_test_rev_const_sized_5() {
+        ShadowedFunction::new(ComputeTerminalConstSizedDynamicSymbolsReversed::<5>).test()
     }
 
     #[test]
     fn eval_compute_terminal_test_rev_const_sized_34() {
-        ShadowedFunction::new(ComputeTerminalConstSizedReversed::<34>).test()
+        ShadowedFunction::new(ComputeTerminalConstSizedDynamicSymbolsReversed::<34>).test()
     }
 
     #[test]
     fn eval_compute_terminal_test_rev_const_sized_64() {
-        ShadowedFunction::new(ComputeTerminalConstSizedReversed::<64>).test()
+        ShadowedFunction::new(ComputeTerminalConstSizedDynamicSymbolsReversed::<64>).test()
+    }
+
+    #[test]
+    fn eval_compute_terminal_test_rev_const_sized_256() {
+        ShadowedFunction::new(ComputeTerminalConstSizedDynamicSymbolsReversed::<256>).test()
     }
 }
 
@@ -249,11 +258,16 @@ mod bench {
 
     #[test]
     fn bench_const_sized_terminal_calc_rev_30() {
-        ShadowedFunction::new(ComputeTerminalConstSizedReversed::<30>).bench()
+        ShadowedFunction::new(ComputeTerminalConstSizedDynamicSymbolsReversed::<30>).bench()
     }
 
     #[test]
     fn bench_const_sized_terminal_calc_rev_100() {
-        ShadowedFunction::new(ComputeTerminalConstSizedReversed::<100>).bench()
+        ShadowedFunction::new(ComputeTerminalConstSizedDynamicSymbolsReversed::<100>).bench()
+    }
+
+    #[test]
+    fn bench_const_sized_terminal_calc_rev_256() {
+        ShadowedFunction::new(ComputeTerminalConstSizedDynamicSymbolsReversed::<256>).bench()
     }
 }

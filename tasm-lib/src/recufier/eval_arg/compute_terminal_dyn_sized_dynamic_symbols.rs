@@ -6,9 +6,9 @@ use crate::list::LIST_METADATA_SIZE;
 use crate::traits::basic_snippet::BasicSnippet;
 
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
-pub struct ComputeTerminal;
+pub struct ComputeTerminalDynSizedDynamicSymbols;
 
-impl BasicSnippet for ComputeTerminal {
+impl BasicSnippet for ComputeTerminalDynSizedDynamicSymbols {
     fn inputs(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::Xfe, "challenge".to_owned()),
@@ -25,7 +25,7 @@ impl BasicSnippet for ComputeTerminal {
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_recufier_eval_arg_compute_terminal".into()
+        "tasm_recufier_eval_arg_compute_terminal_dyn_sized_dynamic_symbols".into()
     }
 
     fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {
@@ -146,7 +146,7 @@ mod tests {
 
     use super::*;
 
-    impl Function for ComputeTerminal {
+    impl Function for ComputeTerminalDynSizedDynamicSymbols {
         fn rust_shadow(
             &self,
             stack: &mut Vec<BFieldElement>,
@@ -235,7 +235,7 @@ mod tests {
         }
     }
 
-    impl ComputeTerminal {
+    impl ComputeTerminalDynSizedDynamicSymbols {
         fn prepare_state(
             &self,
             symbols_length: usize,
@@ -270,7 +270,7 @@ mod tests {
 
     #[test]
     fn eval_compute_terminal_test() {
-        ShadowedFunction::new(ComputeTerminal).test()
+        ShadowedFunction::new(ComputeTerminalDynSizedDynamicSymbols).test()
     }
 }
 
@@ -283,6 +283,6 @@ mod bench {
 
     #[test]
     fn compute_terminal() {
-        ShadowedFunction::new(ComputeTerminal).bench()
+        ShadowedFunction::new(ComputeTerminalDynSizedDynamicSymbols).bench()
     }
 }
