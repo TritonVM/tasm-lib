@@ -3,6 +3,8 @@ use std::fmt::Formatter;
 use std::str::FromStr;
 
 use itertools::Itertools;
+use num::One;
+use num::Zero;
 use rand::random;
 use rand::thread_rng;
 use rand::Rng;
@@ -322,5 +324,143 @@ impl FromStr for DataType {
         };
 
         Ok(res)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, arbitrary::Arbitrary)]
+pub enum Literal {
+    Bool(bool),
+    U32(u32),
+    U64(u64),
+    U128(u128),
+    Bfe(BFieldElement),
+    Xfe(XFieldElement),
+    Digest(Digest),
+}
+
+impl Literal {
+    pub fn data_type(&self) -> DataType {
+        match self {
+            Literal::Bool(_) => DataType::Bool,
+            Literal::U32(_) => DataType::U32,
+            Literal::U64(_) => DataType::U64,
+            Literal::U128(_) => DataType::U128,
+            Literal::Bfe(_) => DataType::Bfe,
+            Literal::Xfe(_) => DataType::Xfe,
+            Literal::Digest(_) => DataType::Digest,
+        }
+    }
+
+    /// Return the code to push the literal to the stack
+    pub fn push_to_stack_code(&self) -> Vec<LabelledInstruction> {
+        match self {
+            Literal::Bool(bool) => triton_asm!(push {*bool as u32}),
+            Literal::U32(val) => triton_asm!(push {*val}),
+            Literal::U64(val) => triton_asm!(
+                push {*val >> 32}
+                push {*val & u32::MAX as u64}
+            ),
+            Literal::U128(val) => {
+                triton_asm!(
+                    push {(*val >> 96) & u32::MAX as u128}
+                    push {(*val >> 64) & u32::MAX as u128}
+                    push {(*val >> 32) & u32::MAX as u128}
+                    push {(*val) & u32::MAX as u128}
+                )
+            }
+            Literal::Bfe(bfe) => triton_asm!(push { bfe }),
+            Literal::Xfe(xfe) => {
+                let x0 = xfe.coefficients[0];
+                let x1 = xfe.coefficients[1];
+                let x2 = xfe.coefficients[2];
+                triton_asm!(
+                    push { x2 }
+                    push { x1 }
+                    push { x0 }
+                )
+            }
+            Literal::Digest(digest) => {
+                let x0 = digest.0[0];
+                let x1 = digest.0[1];
+                let x2 = digest.0[2];
+                let x3 = digest.0[3];
+                let x4 = digest.0[4];
+                triton_asm!(
+                    push { x4 }
+                    push { x3 }
+                    push { x2 }
+                    push { x1 }
+                    push { x0 }
+                )
+            }
+        }
+    }
+
+    pub fn pop_from_stack(data_type: DataType, stack: &mut Vec<BFieldElement>) -> Self {
+        let mut words = vec![];
+        (0..data_type.stack_size()).for_each(|_| words.push(stack.pop().unwrap()));
+
+        fn is_u32_based(words: &[BFieldElement]) -> bool {
+            words.iter().all(|w| w.value() <= u32::MAX as u64)
+        }
+
+        match data_type {
+            DataType::Bool => {
+                assert!(words[0].is_one() || words[0].is_zero());
+                Literal::Bool(words[0].value() != 0)
+            }
+            DataType::U32 => {
+                assert!(is_u32_based(&words));
+                Literal::U32(words[0].value().try_into().unwrap())
+            }
+            DataType::U64 => {
+                assert!(is_u32_based(&words));
+                Literal::U64(words[0].value() + (words[1].value() << 32))
+            }
+            DataType::U128 => {
+                assert!(is_u32_based(&words));
+                Literal::U128(
+                    words[0].value() as u128
+                        + ((words[1].value() as u128) << 32)
+                        + ((words[2].value() as u128) << 64)
+                        + ((words[3].value() as u128) << 96),
+                )
+            }
+            DataType::Bfe => Literal::Bfe(words[0]),
+            DataType::Xfe => Literal::Xfe(XFieldElement::new([words[0], words[1], words[2]])),
+            DataType::Digest => Literal::Digest(Digest::new([
+                words[0], words[1], words[2], words[3], words[4],
+            ])),
+            DataType::List(_) => unimplemented!(),
+            DataType::Array(_) => unimplemented!(),
+            DataType::Tuple(_) => unimplemented!(),
+            DataType::VoidPointer => unimplemented!(),
+            DataType::StructRef(_) => unimplemented!(),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use proptest_arbitrary_interop::arb;
+    use test_strategy::proptest;
+
+    use super::*;
+
+    #[proptest]
+    fn push_to_stack_leaves_value_on_top_of_stack(#[strategy(arb())] literal: Literal) {
+        let code = triton_asm!(
+            {&literal.push_to_stack_code()}
+            halt
+        );
+
+        let mut vm_state = VMState::new(
+            &Program::new(&code),
+            PublicInput::default(),
+            NonDeterminism::default(),
+        );
+        vm_state.run().unwrap();
+        let read = Literal::pop_from_stack(literal.data_type(), &mut vm_state.op_stack.stack);
+        assert_eq!(literal, read);
     }
 }
