@@ -6,6 +6,7 @@ use crate::traits::basic_snippet::BasicSnippet;
 
 /// Squeeze the sponge `num_squeezes` times, storing all the produced pseudorandom `BFieldElement`s
 /// contiguously in memory. It is the caller's responsibility to allocate enough memory.
+/// Number of squeezes must be statically known.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct SqueezeRepeatedlyStaticNumber {
     num_squeezes: usize,
@@ -69,14 +70,22 @@ impl BasicSnippet for SqueezeRepeatedlyStaticNumber {
 mod tests {
     use std::collections::HashMap;
 
+    use rand::thread_rng;
+    use rand::RngCore;
+
     use super::*;
 
     use crate::hashing::squeeze_repeatedly::SqueezeRepeatedly;
     use crate::snippet_bencher::BenchmarkCase;
+    use crate::test_helpers::tasm_final_state;
+    use crate::test_helpers::verify_memory_equivalence;
+    use crate::test_helpers::verify_sponge_equivalence;
+    use crate::test_helpers::verify_stack_equivalence;
     use crate::traits::procedure::Procedure;
     use crate::traits::procedure::ProcedureInitialState;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
+    use crate::VmOutputState;
 
     impl Procedure for SqueezeRepeatedlyStaticNumber {
         fn rust_shadow(
@@ -112,6 +121,57 @@ mod tests {
         for num_squeezes in 0..25 {
             ShadowedProcedure::new(SqueezeRepeatedlyStaticNumber { num_squeezes }).test();
         }
+    }
+
+    #[test]
+    fn test_dyn_equivalence() {
+        // Verify that the snippets for the dynamically known and statically known
+        // number of squeezes agree.
+        fn dyn_output(seed: [u8; 32]) -> (VmOutputState, usize) {
+            let dyn_snippet = ShadowedProcedure::new(SqueezeRepeatedly);
+            let ProcedureInitialState {
+                stack,
+                nondeterminism,
+                public_input: stdin,
+                sponge,
+            } = SqueezeRepeatedly.pseudorandom_initial_state(seed, None);
+            let num_squeeze_count = stack.last().unwrap().value();
+
+            (
+                tasm_final_state(&dyn_snippet, &stack, &stdin, nondeterminism, &sponge),
+                num_squeeze_count as usize,
+            )
+        }
+
+        fn stat_output(seed: [u8; 32], num_squeezes: usize) -> VmOutputState {
+            let snippet = SqueezeRepeatedlyStaticNumber { num_squeezes };
+            let ProcedureInitialState {
+                stack,
+                nondeterminism,
+                public_input: stdin,
+                sponge,
+            } = snippet.pseudorandom_initial_state(seed, None);
+
+            tasm_final_state(
+                &ShadowedProcedure::new(snippet),
+                &stack,
+                &stdin,
+                nondeterminism,
+                &sponge,
+            )
+        }
+
+        let mut seed = [0u8; 32];
+        thread_rng().fill_bytes(&mut seed);
+        let (mut dyn_output, num_squeezes) = dyn_output(seed);
+        dyn_output.final_stack.pop();
+        dyn_output.final_stack.pop();
+
+        let stat_output = stat_output(seed, num_squeezes);
+
+        verify_memory_equivalence(&dyn_output.final_ram, &stat_output.final_ram);
+        verify_sponge_equivalence(&dyn_output.final_sponge, &stat_output.final_sponge);
+        verify_stack_equivalence(&dyn_output.final_stack, &stat_output.final_stack);
     }
 }
 
