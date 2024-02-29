@@ -351,6 +351,13 @@ impl Literal {
         }
     }
 
+    pub fn as_xfe(&self) -> XFieldElement {
+        match self {
+            Literal::Xfe(xfe) => *xfe,
+            n => panic!("Expected XFE, got {n:?}"),
+        }
+    }
+
     /// Return the code to push the literal to the stack
     pub fn push_to_stack_code(&self) -> Vec<LabelledInstruction> {
         match self {

@@ -81,7 +81,8 @@ impl<const N: usize> BasicSnippet for ComputeTerminalConstSizedStaticSymbols<N> 
             {entrypoint}:
                 // _ [challenge]
 
-                { &push_initial } // _ [challenge] [intial]
+                {&push_initial}
+                // _ [challenge] [intial]
 
                 {&iterations}
                 // _ [result]
@@ -93,7 +94,10 @@ impl<const N: usize> BasicSnippet for ComputeTerminalConstSizedStaticSymbols<N> 
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use itertools::Itertools;
+    use num::Zero;
     use proptest_arbitrary_interop::arb;
     use rand::rngs::StdRng;
     use rand::Rng;
@@ -102,9 +106,15 @@ mod tests {
     use triton_vm::table::cross_table_argument::CrossTableArg;
     use triton_vm::table::cross_table_argument::EvalArg;
 
+    use crate::recufier::eval_arg::compute_terminal_const_sized_dynamic_symbols_reversed::ComputeTerminalConstSizedDynamicSymbolsReversed;
+    use crate::recufier::eval_arg::compute_terminal_dyn_sized_dynamic_symbols::ComputeTerminalDynSizedDynamicSymbols;
+    use crate::rust_shadowing_helper_functions::array::insert_as_array;
+    use crate::rust_shadowing_helper_functions::list::list_insert;
     use crate::snippet_bencher::BenchmarkCase;
+    use crate::test_helpers::tasm_final_state;
     use crate::traits::closure::Closure;
     use crate::traits::closure::ShadowedClosure;
+    use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
 
     use super::*;
@@ -215,6 +225,162 @@ mod tests {
     ) {
         ShadowedClosure::new(ComputeTerminalConstSizedStaticSymbols::<256> { symbols, initial })
             .test();
+    }
+
+    #[proptest(cases = 3)]
+    fn compare_to_other_implementations_length_1(
+        #[strategy(arb())] initial: XFieldElement,
+        #[strategy(arb())] challenge: XFieldElement,
+        #[strategy(arb())] symbols: [BFieldElement; 1],
+    ) {
+        let stat_res_const_sized =
+            result_from_stat_snippet_const_sized(initial, challenge, symbols);
+        let dyn_res_const_sized = result_from_dyn_snippet_const_sized(initial, challenge, symbols);
+        let dyn_res_dyn_sized = result_from_dyn_snippet_dyn_sized(initial, challenge, symbols);
+        assert_eq!(stat_res_const_sized, dyn_res_const_sized);
+        assert_eq!(stat_res_const_sized, dyn_res_dyn_sized);
+    }
+
+    #[proptest(cases = 3)]
+    fn compare_to_other_implementations_length_2(
+        #[strategy(arb())] initial: XFieldElement,
+        #[strategy(arb())] challenge: XFieldElement,
+        #[strategy(arb())] symbols: [BFieldElement; 2],
+    ) {
+        let stat_res_const_sized =
+            result_from_stat_snippet_const_sized(initial, challenge, symbols);
+        let dyn_res_const_sized = result_from_dyn_snippet_const_sized(initial, challenge, symbols);
+        let dyn_res_dyn_sized = result_from_dyn_snippet_dyn_sized(initial, challenge, symbols);
+        assert_eq!(stat_res_const_sized, dyn_res_const_sized);
+        assert_eq!(stat_res_const_sized, dyn_res_dyn_sized);
+    }
+
+    #[proptest(cases = 3)]
+    fn compare_to_other_implementations_length_3(
+        #[strategy(arb())] initial: XFieldElement,
+        #[strategy(arb())] challenge: XFieldElement,
+        #[strategy(arb())] symbols: [BFieldElement; 3],
+    ) {
+        let stat_res_const_sized =
+            result_from_stat_snippet_const_sized(initial, challenge, symbols);
+        let dyn_res_const_sized = result_from_dyn_snippet_const_sized(initial, challenge, symbols);
+        let dyn_res_dyn_sized = result_from_dyn_snippet_dyn_sized(initial, challenge, symbols);
+        assert_eq!(stat_res_const_sized, dyn_res_const_sized);
+        assert_eq!(stat_res_const_sized, dyn_res_dyn_sized);
+    }
+
+    #[proptest(cases = 3)]
+    fn compare_to_other_implementations_length_4(
+        #[strategy(arb())] initial: XFieldElement,
+        #[strategy(arb())] challenge: XFieldElement,
+        #[strategy(arb())] symbols: [BFieldElement; 4],
+    ) {
+        let stat_res_const_sized =
+            result_from_stat_snippet_const_sized(initial, challenge, symbols);
+        let dyn_res_const_sized = result_from_dyn_snippet_const_sized(initial, challenge, symbols);
+        let dyn_res_dyn_sized = result_from_dyn_snippet_dyn_sized(initial, challenge, symbols);
+        assert_eq!(stat_res_const_sized, dyn_res_const_sized);
+        assert_eq!(stat_res_const_sized, dyn_res_dyn_sized);
+    }
+
+    #[proptest(cases = 3)]
+    fn compare_to_other_implementations_length_5(
+        #[strategy(arb())] initial: XFieldElement,
+        #[strategy(arb())] challenge: XFieldElement,
+        #[strategy(arb())] symbols: [BFieldElement; 5],
+    ) {
+        let stat_res_const_sized =
+            result_from_stat_snippet_const_sized(initial, challenge, symbols);
+        let dyn_res_const_sized = result_from_dyn_snippet_const_sized(initial, challenge, symbols);
+        let dyn_res_dyn_sized = result_from_dyn_snippet_dyn_sized(initial, challenge, symbols);
+        assert_eq!(stat_res_const_sized, dyn_res_const_sized);
+        assert_eq!(stat_res_const_sized, dyn_res_dyn_sized);
+    }
+
+    fn result_from_stat_snippet_const_sized<const N: usize>(
+        initial: XFieldElement,
+        challenge: XFieldElement,
+        symbols: [BFieldElement; N],
+    ) -> XFieldElement {
+        let snippet = ComputeTerminalConstSizedStaticSymbols::<N> { symbols, initial };
+        let challenge = challenge.coefficients.iter().cloned().rev().collect_vec();
+        let init_stack = [snippet.init_stack_for_isolated_run(), challenge].concat();
+        let mut final_state = tasm_final_state(
+            &ShadowedClosure::new(snippet),
+            &init_stack,
+            &[],
+            NonDeterminism::default(),
+            &None,
+        );
+        let terminal = Literal::pop_from_stack(DataType::Xfe, &mut final_state.final_stack);
+
+        terminal.as_xfe()
+    }
+
+    fn result_from_dyn_snippet_const_sized<const N: usize>(
+        initial: XFieldElement,
+        challenge: XFieldElement,
+        symbols: [BFieldElement; N],
+    ) -> XFieldElement {
+        let snippet = ComputeTerminalConstSizedDynamicSymbolsReversed::<N>;
+        let challenge = challenge.coefficients.iter().cloned().rev().collect_vec();
+        let initial = initial.coefficients.iter().cloned().rev().collect_vec();
+        let mut memory = HashMap::default();
+        let symbols_pointer = BFieldElement::zero();
+        insert_as_array(
+            symbols_pointer,
+            &mut memory,
+            symbols.into_iter().rev().collect_vec(),
+        );
+        let init_stack = [
+            snippet.init_stack_for_isolated_run(),
+            challenge,
+            initial,
+            vec![symbols_pointer],
+        ]
+        .concat();
+        let mut final_state = tasm_final_state(
+            &ShadowedFunction::new(snippet),
+            &init_stack,
+            &[],
+            NonDeterminism::default().with_ram(memory),
+            &None,
+        );
+
+        let terminal = Literal::pop_from_stack(DataType::Xfe, &mut final_state.final_stack);
+
+        terminal.as_xfe()
+    }
+
+    fn result_from_dyn_snippet_dyn_sized<const N: usize>(
+        initial: XFieldElement,
+        challenge: XFieldElement,
+        symbols: [BFieldElement; N],
+    ) -> XFieldElement {
+        let snippet = ComputeTerminalDynSizedDynamicSymbols;
+        let challenge = challenge.coefficients.iter().cloned().rev().collect_vec();
+        let initial = initial.coefficients.iter().cloned().rev().collect_vec();
+        let mut memory = HashMap::default();
+        let symbols_pointer = BFieldElement::zero();
+        list_insert(symbols_pointer, symbols.to_vec(), &mut memory);
+        let init_stack = [
+            snippet.init_stack_for_isolated_run(),
+            challenge,
+            initial,
+            vec![symbols_pointer],
+        ]
+        .concat();
+        let mut final_state = tasm_final_state(
+            &ShadowedFunction::new(snippet),
+            &init_stack,
+            &[],
+            NonDeterminism::default().with_ram(memory),
+            &None,
+        );
+
+        let terminal = Literal::pop_from_stack(DataType::Xfe, &mut final_state.final_stack);
+
+        terminal.as_xfe()
     }
 }
 
