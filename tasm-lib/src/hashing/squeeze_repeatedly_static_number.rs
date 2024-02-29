@@ -9,7 +9,7 @@ use crate::traits::basic_snippet::BasicSnippet;
 /// Number of squeezes must be statically known.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct SqueezeRepeatedlyStaticNumber {
-    num_squeezes: usize,
+    pub num_squeezes: usize,
 }
 
 impl BasicSnippet for SqueezeRepeatedlyStaticNumber {

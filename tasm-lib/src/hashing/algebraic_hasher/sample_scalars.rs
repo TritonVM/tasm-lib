@@ -1,23 +1,11 @@
-use std::collections::HashMap;
-
-use itertools::Itertools;
-use rand::rngs::StdRng;
-use rand::Rng;
-use rand::SeedableRng;
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::prelude::Sponge;
+use triton_vm::twenty_first::shared_math::x_field_element::EXTENSION_DEGREE;
 
 use crate::data_type::DataType;
-use crate::empty_stack;
 use crate::hashing::squeeze_repeatedly::SqueezeRepeatedly;
 use crate::list::new::New;
 use crate::list::set_length::SetLength;
-use crate::memory::dyn_malloc::DYN_MALLOC_FIRST_ADDRESS;
-use crate::memory::encode_to_memory;
 use crate::traits::basic_snippet::BasicSnippet;
-use crate::traits::procedure::Procedure;
-use crate::traits::procedure::ProcedureInitialState;
-use crate::VmHasher;
 
 /// Squeeze the sponge to sample a given number of `XFieldElement`s.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
@@ -41,6 +29,7 @@ impl BasicSnippet for SampleScalars {
 
     fn code(&self, library: &mut crate::library::Library) -> Vec<LabelledInstruction> {
         assert_eq!(10, tip5::RATE, "Code assumes Tip5's RATE is 10");
+        assert_eq!(3, EXTENSION_DEGREE, "Code assumes extension degree 3");
 
         let entrypoint = self.entrypoint();
         let set_length = library.import(Box::new(SetLength::new(DataType::Xfe)));
@@ -61,7 +50,9 @@ impl BasicSnippet for SampleScalars {
 
                 // calculate number of squeezes
                 dup 1           // _ num_scalars *scalars num_scalars
-                push 3 mul      // _ num_scalars *scalars num_bfes
+                push {EXTENSION_DEGREE} mul
+
+                // _ num_scalars *scalars num_bfes
                 push 9 add      // _ num_scalars *scalars (num_bfes+9)
                 push {tip5::RATE} swap 1
                                 // _ num_scalars *scalars rate (num_bfes+9)
@@ -88,117 +79,129 @@ impl BasicSnippet for SampleScalars {
     }
 }
 
-impl Procedure for SampleScalars {
-    fn rust_shadow(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        memory: &mut HashMap<BFieldElement, BFieldElement>,
-        _nondeterminism: &NonDeterminism<BFieldElement>,
-        _public_input: &[BFieldElement],
-        sponge: &mut Option<VmHasher>,
-    ) -> Vec<BFieldElement> {
-        let sponge = sponge.as_mut().expect("sponge must be initialized");
-        let num_scalars = stack.pop().unwrap().value() as usize;
-        let num_squeezes = (num_scalars * 3 + 9) / tip5::RATE;
-        let pseudorandomness = (0..num_squeezes)
-            .flat_map(|_| sponge.squeeze().to_vec())
-            .collect_vec();
-        let scalars = pseudorandomness
-            .chunks(3)
-            .take(num_scalars)
-            .map(|ch| XFieldElement::new(ch.try_into().unwrap()))
-            .collect_vec();
-        let scalars_pointer = DYN_MALLOC_FIRST_ADDRESS;
-
-        encode_to_memory(memory, scalars_pointer, scalars);
-
-        // store all pseudorandomness (not just sampled scalars) to memory
-        let safety_offset = BFieldElement::new(1);
-        for (i, pr) in pseudorandomness.iter().enumerate() {
-            memory.insert(
-                BFieldElement::new(i as u64) + scalars_pointer + safety_offset,
-                *pr,
-            );
-        }
-
-        // the list of scalars was allocated properly; reflect that fact
-        memory.insert(scalars_pointer, BFieldElement::new(num_scalars as u64));
-
-        stack.push(scalars_pointer);
-        vec![]
-    }
-
-    fn pseudorandom_initial_state(
-        &self,
-        seed: [u8; 32],
-        _bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
-    ) -> ProcedureInitialState {
-        let mut rng: StdRng = SeedableRng::from_seed(seed);
-        let num_scalars = rng.gen_range(0..40);
-        let mut stack = empty_stack();
-        stack.push(BFieldElement::new(num_scalars as u64));
-        let sponge = Tip5 { state: rng.gen() };
-
-        ProcedureInitialState {
-            stack,
-            sponge: Some(sponge),
-            ..Default::default()
-        }
-    }
-
-    fn corner_case_initial_states(&self) -> Vec<ProcedureInitialState> {
-        let zero_to_twenty_scalars_empty_sponge = (0..20)
-            .map(|num_scalars| {
-                let mut stack = empty_stack();
-                stack.push(BFieldElement::new(num_scalars as u64));
-                let sponge = Tip5::init();
-
-                ProcedureInitialState {
-                    stack,
-                    sponge: Some(sponge),
-                    ..Default::default()
-                }
-            })
-            .collect_vec();
-        let zero_to_twenty_scalars_non_empty_sponge = (0..20)
-            .map(|num_scalars| {
-                let mut stack = empty_stack();
-                stack.push(BFieldElement::new(num_scalars as u64));
-                let mut sponge = Tip5::init();
-                sponge.absorb([BFieldElement::new(42); Tip5::RATE]);
-
-                ProcedureInitialState {
-                    stack,
-                    sponge: Some(sponge),
-                    ..Default::default()
-                }
-            })
-            .collect_vec();
-
-        [
-            zero_to_twenty_scalars_empty_sponge,
-            zero_to_twenty_scalars_non_empty_sponge,
-        ]
-        .concat()
-    }
-}
-
 #[cfg(test)]
 mod test {
+    use std::collections::HashMap;
+
+    use itertools::Itertools;
+    use rand::rngs::StdRng;
+    use rand::{Rng, SeedableRng};
     use triton_vm::program::NonDeterminism;
     use triton_vm::twenty_first::shared_math::b_field_element::BFieldElement;
-    use triton_vm::twenty_first::shared_math::tip5::Tip5;
-    use triton_vm::twenty_first::shared_math::x_field_element::EXTENSION_DEGREE;
+    use triton_vm::twenty_first::shared_math::tip5::{self, Tip5};
+    use triton_vm::twenty_first::shared_math::x_field_element::{XFieldElement, EXTENSION_DEGREE};
     use triton_vm::twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
-    use crate::rust_shadowing_helper_functions;
+    use crate::memory::dyn_malloc::DYN_MALLOC_FIRST_ADDRESS;
+    use crate::memory::encode_to_memory;
+    use crate::snippet_bencher::BenchmarkCase;
     use crate::test_helpers::tasm_final_state;
     use crate::traits::basic_snippet::BasicSnippet;
-    use crate::traits::procedure::ShadowedProcedure;
+    use crate::traits::procedure::{Procedure, ProcedureInitialState, ShadowedProcedure};
     use crate::traits::rust_shadow::RustShadow;
     use crate::twenty_first::prelude::Sponge;
+    use crate::{empty_stack, rust_shadowing_helper_functions, VmHasher};
 
     use super::SampleScalars;
+
+    impl Procedure for SampleScalars {
+        fn rust_shadow(
+            &self,
+            stack: &mut Vec<BFieldElement>,
+            memory: &mut HashMap<BFieldElement, BFieldElement>,
+            _nondeterminism: &NonDeterminism<BFieldElement>,
+            _public_input: &[BFieldElement],
+            sponge: &mut Option<VmHasher>,
+        ) -> Vec<BFieldElement> {
+            let sponge = sponge.as_mut().expect("sponge must be initialized");
+            let num_scalars = stack.pop().unwrap().value() as usize;
+            let num_squeezes = (num_scalars * 3 + 9) / tip5::RATE;
+            let pseudorandomness = (0..num_squeezes)
+                .flat_map(|_| sponge.squeeze().to_vec())
+                .collect_vec();
+            let scalars = pseudorandomness
+                .chunks(3)
+                .take(num_scalars)
+                .map(|ch| XFieldElement::new(ch.try_into().unwrap()))
+                .collect_vec();
+            let scalars_pointer = DYN_MALLOC_FIRST_ADDRESS;
+
+            encode_to_memory(memory, scalars_pointer, scalars);
+
+            // store all pseudorandomness (not just sampled scalars) to memory
+            let safety_offset = BFieldElement::new(1);
+            for (i, pr) in pseudorandomness.iter().enumerate() {
+                memory.insert(
+                    BFieldElement::new(i as u64) + scalars_pointer + safety_offset,
+                    *pr,
+                );
+            }
+
+            // the list of scalars was allocated properly; reflect that fact
+            memory.insert(scalars_pointer, BFieldElement::new(num_scalars as u64));
+
+            stack.push(scalars_pointer);
+            vec![]
+        }
+
+        fn pseudorandom_initial_state(
+            &self,
+            seed: [u8; 32],
+            bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
+        ) -> ProcedureInitialState {
+            let mut rng: StdRng = SeedableRng::from_seed(seed);
+            let num_scalars = match bench_case {
+                Some(BenchmarkCase::CommonCase) => 10,
+                Some(BenchmarkCase::WorstCase) => 100,
+                None => rng.gen_range(0..40),
+            };
+            let mut stack = empty_stack();
+            stack.push(BFieldElement::new(num_scalars as u64));
+            let sponge = Tip5 { state: rng.gen() };
+
+            ProcedureInitialState {
+                stack,
+                sponge: Some(sponge),
+                ..Default::default()
+            }
+        }
+
+        fn corner_case_initial_states(&self) -> Vec<ProcedureInitialState> {
+            let zero_to_twenty_scalars_empty_sponge = (0..20)
+                .map(|num_scalars| {
+                    let mut stack = empty_stack();
+                    stack.push(BFieldElement::new(num_scalars as u64));
+                    let sponge = Tip5::init();
+
+                    ProcedureInitialState {
+                        stack,
+                        sponge: Some(sponge),
+                        ..Default::default()
+                    }
+                })
+                .collect_vec();
+            let zero_to_twenty_scalars_non_empty_sponge = (0..20)
+                .map(|num_scalars| {
+                    let mut stack = empty_stack();
+                    stack.push(BFieldElement::new(num_scalars as u64));
+                    let mut sponge = Tip5::init();
+                    sponge.absorb([BFieldElement::new(42); Tip5::RATE]);
+
+                    ProcedureInitialState {
+                        stack,
+                        sponge: Some(sponge),
+                        ..Default::default()
+                    }
+                })
+                .collect_vec();
+
+            [
+                zero_to_twenty_scalars_empty_sponge,
+                zero_to_twenty_scalars_non_empty_sponge,
+            ]
+            .concat()
+        }
+    }
 
     #[test]
     fn test() {
@@ -255,7 +258,7 @@ mod bench {
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
 
-    use super::SampleScalars;
+    use super::*;
 
     #[test]
     fn bench() {

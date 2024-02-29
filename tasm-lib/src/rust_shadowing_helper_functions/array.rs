@@ -35,3 +35,19 @@ pub fn insert_as_array<T: BFieldCodec>(
         }
     }
 }
+
+/// Read an element from a list.
+pub fn array_get(
+    pointer: BFieldElement,
+    index: usize,
+    memory: &HashMap<BFieldElement, BFieldElement>,
+    element_length: usize,
+) -> Vec<BFieldElement> {
+    let read_word = |i| {
+        let word_offset = (element_length * index + i) as u64;
+        let word_index = pointer + BFieldElement::new(word_offset);
+        memory[&word_index]
+    };
+
+    (0..element_length).map(read_word).collect()
+}
