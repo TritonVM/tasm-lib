@@ -7,4 +7,5 @@ pub mod merkle_verify;
 pub mod reverse_digest;
 pub mod sponge_hasher;
 pub mod squeeze_repeatedly;
+pub mod squeeze_repeatedly_static_number;
 pub mod swap_digest;
