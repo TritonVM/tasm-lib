@@ -11,8 +11,8 @@ use crate::traits::basic_snippet::BasicSnippet;
 /// `f(x) = initial·x^n + Σ_i symbols[n-i]·x^i`
 /// at point `challenge`, _i.e._, returns `f(challenge)`.
 pub struct ComputeTerminalConstSizedStaticSymbols<const N: usize> {
-    symbols: [BFieldElement; N],
-    initial: XFieldElement,
+    pub symbols: [BFieldElement; N],
+    pub initial: XFieldElement,
 }
 
 // This snippet is implemented as:
