@@ -191,7 +191,12 @@ impl<P: Procedure + 'static> ShadowedProcedure<P> {
 
         verify_stack_growth(self, &stack, &tasm.final_stack);
 
-        verify_stack_equivalence(&rust.final_stack, &tasm.final_stack);
+        verify_stack_equivalence(
+            "Rust-shadow",
+            &rust.final_stack,
+            "TVM execution",
+            &tasm.final_stack,
+        );
         verify_memory_equivalence(&rust.final_ram, &tasm.final_ram);
         verify_sponge_equivalence(&rust.final_sponge, &tasm.final_sponge);
     }

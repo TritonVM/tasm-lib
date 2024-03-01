@@ -171,7 +171,12 @@ mod tests {
 
         verify_memory_equivalence(&dyn_output.final_ram, &stat_output.final_ram);
         verify_sponge_equivalence(&dyn_output.final_sponge, &stat_output.final_sponge);
-        verify_stack_equivalence(&dyn_output.final_stack, &stat_output.final_stack);
+        verify_stack_equivalence(
+            "Snippet with dynamic symbols",
+            &dyn_output.final_stack,
+            "Snippet with static symbols",
+            &stat_output.final_stack,
+        );
     }
 }
 

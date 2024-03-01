@@ -530,7 +530,12 @@ mod test {
             );
 
             let len = 16;
-            verify_stack_equivalence(&rust.final_stack[0..len - 1], &tasm.final_stack[0..len - 1]);
+            verify_stack_equivalence(
+                "Rust-shadow",
+                &rust.final_stack[0..len - 1],
+                "TASM execution",
+                &tasm.final_stack[0..len - 1],
+            );
             verify_stack_growth(&function, &init_stack, &tasm.final_stack);
 
             // read out the output vectors and test agreement

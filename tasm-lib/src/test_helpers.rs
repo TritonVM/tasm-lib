@@ -311,14 +311,19 @@ pub fn tasm_final_state<T: RustShadow>(
 }
 
 /// assert stacks are equal, up to program hash
-pub fn verify_stack_equivalence(stack_a: &[BFieldElement], stack_b: &[BFieldElement]) {
+pub fn verify_stack_equivalence(
+    stack_a_name: &str,
+    stack_a: &[BFieldElement],
+    stack_b_name: &str,
+    stack_b: &[BFieldElement],
+) {
     let stack_a = &stack_a[DIGEST_LENGTH..];
     let stack_b = &stack_b[DIGEST_LENGTH..];
     let display = |stack: &[BFieldElement]| stack.iter().map(|&x| x.to_string()).join(",");
     assert_eq!(
         stack_a,
         stack_b,
-        "A stack must match B stack\n\nA: {}\n\nB: {}",
+        "{stack_a_name} stack must match {stack_b_name} stack\n\n{stack_a_name}: {}\n\n{stack_b_name}: {}",
         display(stack_a),
         display(stack_b),
     );
@@ -418,9 +423,14 @@ pub fn test_rust_equivalence_given_complete_state<T: RustShadow>(
         "Rust shadowing and VM std out must agree"
     );
 
-    verify_stack_equivalence(&rust.final_stack, &tasm.final_stack);
+    verify_stack_equivalence(
+        "rust-shadow final stack",
+        &rust.final_stack,
+        "TASM final stack",
+        &tasm.final_stack,
+    );
     if let Some(expected) = expected_final_stack {
-        verify_stack_equivalence(expected, &rust.final_stack);
+        verify_stack_equivalence("expected", expected, "actual", &rust.final_stack);
     }
     verify_memory_equivalence(&rust.final_ram, &tasm.final_ram);
     verify_stack_growth(shadowed_snippet, &init_stack, &tasm.final_stack);
