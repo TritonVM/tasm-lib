@@ -13,6 +13,33 @@ pub trait BasicSnippet {
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction>;
 
     fn annotated_code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
+        fn generate_hints_for_input_values(inputs: Vec<(DataType, String)>) -> Vec<String> {
+            let mut input_hints = vec![];
+            let mut stack_depth = 0;
+            for (data_type, name) in inputs.into_iter().rev() {
+                let stack_size = data_type.stack_size();
+                if stack_size.is_zero() {
+                    continue;
+                }
+
+                let data_name = data_type.label_friendly_name();
+
+                // TODO: Remove this once. the Triton-VM parser becomes more
+                // permissive WRT variable names
+                let name = name
+                    .replace(|c: char| !c.is_alphanumeric(), "_")
+                    .to_ascii_lowercase();
+
+                input_hints.push(format!(
+                    "hint {name}: {data_name} = stack[{stack_depth}..{}]",
+                    stack_depth + stack_size
+                ));
+                stack_depth += stack_size;
+            }
+
+            input_hints
+        }
+
         let code = self.code(library);
         let Some((entrypoint, snippet_body)) = code.split_first() else {
             return code;
@@ -23,28 +50,7 @@ pub trait BasicSnippet {
             return code;
         }
 
-        let mut input_hints = vec![];
-        let mut stack_depth = 0;
-        for (data_type, name) in self.inputs().into_iter().rev() {
-            let stack_size = data_type.stack_size();
-            if stack_size.is_zero() {
-                continue;
-            }
-
-            let data_name = data_type.label_friendly_name();
-
-            // TODO: Remove this once. the Triton-VM parser becomes more
-            // permissive WRT variable names
-            let name = name
-                .replace(|c: char| !c.is_alphanumeric(), "_")
-                .to_ascii_lowercase();
-
-            input_hints.push(format!(
-                "hint {name}: {data_name} = stack[{stack_depth}..{}]",
-                stack_depth + stack_size
-            ));
-            stack_depth += stack_size;
-        }
+        let input_hints = generate_hints_for_input_values(self.inputs());
 
         triton_asm! {
             {observed_entrypoint}:
