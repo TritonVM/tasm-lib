@@ -17,7 +17,9 @@ pub trait BasicSnippet {
         let Some((entrypoint, snippet_body)) = code.split_first() else {
             return code;
         };
-        if entrypoint.to_string() != self.entrypoint() {
+        let entrypoint = entrypoint.to_string();
+        let observed_entrypoint = entrypoint.trim_end_matches(':');
+        if *observed_entrypoint != self.entrypoint() {
             return code;
         }
 
@@ -27,14 +29,14 @@ pub trait BasicSnippet {
             let stack_size = data_type.stack_size();
             let data_name = data_type.label_friendly_name();
             input_hints.push(format!(
-                "hint {name}: {data_name} = stack[{stack_depth}..{}]",
+                "hint {name}: {data_name} = stack[{stack_depth}..{}]\n",
                 stack_depth + stack_size
             ));
             stack_depth += stack_size;
         }
 
         triton_asm! {
-            {entrypoint}:
+            {observed_entrypoint}:
                 {&input_hints}
                 {&snippet_body}
         }
