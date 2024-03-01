@@ -27,9 +27,20 @@ pub trait BasicSnippet {
         let mut stack_depth = 0;
         for (data_type, name) in self.inputs().into_iter().rev() {
             let stack_size = data_type.stack_size();
+            if stack_size.is_zero() {
+                continue;
+            }
+
             let data_name = data_type.label_friendly_name();
+
+            // TODO: Remove this once. the Triton-VM parser becomes more
+            // permissive WRT variable names
+            let name = name
+                .replace(|c: char| !c.is_alphanumeric(), "_")
+                .to_ascii_lowercase();
+
             input_hints.push(format!(
-                "hint {name}: {data_name} = stack[{stack_depth}..{}]\n",
+                "hint {name}: {data_name} = stack[{stack_depth}..{}]",
                 stack_depth + stack_size
             ));
             stack_depth += stack_size;
