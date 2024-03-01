@@ -12,7 +12,7 @@ use crate::traits::basic_snippet::BasicSnippet;
 /// Squeeze the sponge to sample a given number of `XFieldElement`s.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct SampleScalarsStaticLength {
-    num_elements: usize,
+    pub num_elements: usize,
 }
 
 impl SampleScalarsStaticLength {

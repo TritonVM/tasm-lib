@@ -1,0 +1,16 @@
+[
+  {
+    "name": "tasm_recufier_eval_arg_compute_terminal_from_digest",
+    "clock_cycle_count": 39,
+    "hash_table_height": 42,
+    "u32_table_height": 0,
+    "case": "CommonCase"
+  },
+  {
+    "name": "tasm_recufier_eval_arg_compute_terminal_from_digest",
+    "clock_cycle_count": 39,
+    "hash_table_height": 42,
+    "u32_table_height": 0,
+    "case": "WorstCase"
+  }
+]

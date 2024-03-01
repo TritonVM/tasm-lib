@@ -97,6 +97,7 @@ mod tests {
     use std::collections::HashMap;
 
     use itertools::Itertools;
+    use num::One;
     use num::Zero;
     use proptest_arbitrary_interop::arb;
     use rand::rngs::StdRng;
@@ -108,6 +109,7 @@ mod tests {
 
     use crate::recufier::eval_arg::compute_terminal_const_sized_dynamic_symbols_reversed::ComputeTerminalConstSizedDynamicSymbolsReversed;
     use crate::recufier::eval_arg::compute_terminal_dyn_sized_dynamic_symbols::ComputeTerminalDynSizedDynamicSymbols;
+    use crate::recufier::eval_arg::compute_terminal_from_digest::ComputeTerminalFromDigestInitialIsOne;
     use crate::rust_shadowing_helper_functions::array::insert_as_array;
     use crate::rust_shadowing_helper_functions::list::list_insert;
     use crate::snippet_bencher::BenchmarkCase;
@@ -295,6 +297,43 @@ mod tests {
         let dyn_res_dyn_sized = result_from_dyn_snippet_dyn_sized(initial, challenge, symbols);
         assert_eq!(stat_res_const_sized, dyn_res_const_sized);
         assert_eq!(stat_res_const_sized, dyn_res_dyn_sized);
+    }
+
+    #[proptest(cases = 3)]
+    fn compare_to_other_implementations_length_5_initial_is_one(
+        #[strategy(arb())] challenge: XFieldElement,
+        #[strategy(arb())] symbols: [BFieldElement; 5],
+    ) {
+        fn result_from_compute_terminal_from_digest(
+            challenge: XFieldElement,
+            digest: Digest,
+        ) -> XFieldElement {
+            let snippet = ComputeTerminalFromDigestInitialIsOne;
+            let challenge = challenge.coefficients.iter().cloned().rev().collect_vec();
+            let digest = digest.values().into_iter().rev().collect_vec();
+            let init_stack = [snippet.init_stack_for_isolated_run(), challenge, digest].concat();
+            let mut final_state = tasm_final_state(
+                &ShadowedClosure::new(snippet),
+                &init_stack,
+                &[],
+                NonDeterminism::default(),
+                &None,
+            );
+            let terminal = Literal::pop_from_stack(DataType::Xfe, &mut final_state.final_stack);
+
+            terminal.as_xfe()
+        }
+
+        let initial = XFieldElement::one();
+        let stat_res_const_sized =
+            result_from_stat_snippet_const_sized(initial, challenge, symbols);
+        let dyn_res_const_sized = result_from_dyn_snippet_const_sized(initial, challenge, symbols);
+        let dyn_res_dyn_sized = result_from_dyn_snippet_dyn_sized(initial, challenge, symbols);
+        let result_from_digest_snippet =
+            result_from_compute_terminal_from_digest(challenge, Digest::new(symbols));
+        assert_eq!(stat_res_const_sized, dyn_res_const_sized);
+        assert_eq!(stat_res_const_sized, dyn_res_dyn_sized);
+        assert_eq!(stat_res_const_sized, result_from_digest_snippet);
     }
 
     fn result_from_stat_snippet_const_sized<const N: usize>(
