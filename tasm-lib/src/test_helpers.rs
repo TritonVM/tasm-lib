@@ -331,7 +331,9 @@ pub fn verify_stack_equivalence(
 
 /// Verify equivalence of memory up to the value of dynamic allocator.
 pub(crate) fn verify_memory_equivalence(
+    a_name: &str,
     a_memory: &HashMap<BFieldElement, BFieldElement>,
+    b_name: &str,
     b_memory: &HashMap<BFieldElement, BFieldElement>,
 ) {
     let memory_without_dyn_malloc = |mem: HashMap<_, _>| -> HashMap<_, _> {
@@ -368,8 +370,8 @@ pub(crate) fn verify_memory_equivalence(
 
     panic!(
         "Memory for both implementations must match after execution.\n\n\
-        In B, different in A: {in_b_and_different_in_a}\n\n\
-        In A, different in B: {in_a_and_different_in_b}"
+        In {b_name}, different in {a_name}: {in_b_and_different_in_a}\n\n\
+        In {a_name}, different in {b_name}: {in_a_and_different_in_b}"
     );
 }
 
@@ -432,7 +434,7 @@ pub fn test_rust_equivalence_given_complete_state<T: RustShadow>(
     if let Some(expected) = expected_final_stack {
         verify_stack_equivalence("expected", expected, "actual", &rust.final_stack);
     }
-    verify_memory_equivalence(&rust.final_ram, &tasm.final_ram);
+    verify_memory_equivalence("Rust-shadow", &rust.final_ram, "TVM", &tasm.final_ram);
     verify_stack_growth(shadowed_snippet, &init_stack, &tasm.final_stack);
 
     tasm

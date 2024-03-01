@@ -197,7 +197,12 @@ impl<P: Procedure + 'static> ShadowedProcedure<P> {
             "TVM execution",
             &tasm.final_stack,
         );
-        verify_memory_equivalence(&rust.final_ram, &tasm.final_ram);
+        verify_memory_equivalence(
+            "Rust-shadow",
+            &rust.final_ram,
+            "TVM execution",
+            &tasm.final_ram,
+        );
         verify_sponge_equivalence(&rust.final_sponge, &tasm.final_sponge);
     }
 }

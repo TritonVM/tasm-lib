@@ -169,7 +169,12 @@ mod tests {
 
         let stat_output = stat_output(seed, num_squeezes);
 
-        verify_memory_equivalence(&dyn_output.final_ram, &stat_output.final_ram);
+        verify_memory_equivalence(
+            "Snippet with dynamic symbols",
+            &dyn_output.final_ram,
+            "Snippet with static symbols",
+            &stat_output.final_ram,
+        );
         verify_sponge_equivalence(&dyn_output.final_sponge, &stat_output.final_sponge);
         verify_stack_equivalence(
             "Snippet with dynamic symbols",
