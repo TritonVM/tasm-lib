@@ -23,6 +23,13 @@ pub struct NewEmptyInputAndOutput {
 }
 
 impl NewEmptyInputAndOutput {
+    pub fn new(num_challenges_to_sample: usize, num_challenges_to_compute: usize) -> Self {
+        Self {
+            num_of_fiat_shamir_challenges: num_challenges_to_sample,
+            num_of_claim_derived_challenges: num_challenges_to_compute,
+        }
+    }
+
     fn total_number_of_challenges_returned(&self) -> usize {
         self.num_of_fiat_shamir_challenges + self.num_of_claim_derived_challenges
     }

@@ -1,4 +1,5 @@
 use triton_vm::proof_item::ProofItemVariant;
+use triton_vm::table::challenges::Challenges;
 
 use crate::arithmetic::u128::add_u128::AddU128;
 use crate::arithmetic::u128::safe_mul_u128::SafeMulU128;
@@ -73,6 +74,7 @@ use crate::mmr::verify_from_secret_in::MmrVerifyLeafMembershipFromSecretIn;
 use crate::neptune::mutator_set::commit::Commit;
 use crate::neptune::mutator_set::get_swbf_indices::GetSwbfIndices;
 use crate::other_snippets::bfe_add::BfeAdd;
+use crate::recufier::challenges::new_empty_input_and_output::NewEmptyInputAndOutput;
 use crate::recufier::proof_stream::dequeue_next_as::DequeueNextAs;
 use crate::recufier::read_and_verify_own_program_digest_from_std_in::ReadAndVerifyOwnProgramDigestFromStdIn;
 use crate::traits::basic_snippet::BasicSnippet;
@@ -380,7 +382,18 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
         "tasm_recufier_proof_stream_dequeue_next_as_friresponse" => {
             Box::new(DequeueNextAs { proof_item: ProofItemVariant::FriResponse })
         }
-        "tasm_recufier_read_and_verify_own_program_digest_from_std_in" => Box::new(ReadAndVerifyOwnProgramDigestFromStdIn),
+        "tasm_recufier_read_and_verify_own_program_digest_from_std_in" => {
+            Box::new(ReadAndVerifyOwnProgramDigestFromStdIn)
+        }
+        "tasm_recufier_challenges_new_empty_input_and_output_59_4" => {
+            let num_challenges_to_sample = Challenges::num_challenges_to_sample();
+            let num_challenges_to_compute = Challenges::count() - num_challenges_to_sample;
+            assert_eq!(59, num_challenges_to_sample);
+            assert_eq!(4, num_challenges_to_compute);
+            let challenge_snippet
+                = NewEmptyInputAndOutput::new(num_challenges_to_sample, num_challenges_to_compute);
+            Box::new(challenge_snippet)
+        }
 
         // memory
         "tasm_memory_dyn_malloc" => Box::new(DynMalloc),
