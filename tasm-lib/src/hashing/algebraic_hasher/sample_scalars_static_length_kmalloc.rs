@@ -33,6 +33,12 @@ impl SampleScalarsStaticLengthKMalloc {
             .try_into()
             .unwrap()
     }
+
+    pub(crate) fn scalars_kmalloc_name(&self) -> String {
+        let num_elements_to_sample = self.num_elements_to_sample;
+        let extra_capacity = self.extra_capacity;
+        format!("scalars_kmalloc_{num_elements_to_sample}_{extra_capacity}")
+    }
 }
 
 impl BasicSnippet for SampleScalarsStaticLengthKMalloc {
@@ -67,7 +73,8 @@ impl BasicSnippet for SampleScalarsStaticLengthKMalloc {
         let entrypoint = self.entrypoint();
         let squeeze_repeatedly_static_number =
             library.import(Box::new(SqueezeRepeatedlyStaticNumber { num_squeezes }));
-        let scalars_pointer = library.kmalloc(self.num_words_to_allocate());
+        let scalars_pointer =
+            library.pub_kmalloc(self.num_words_to_allocate(), self.scalars_kmalloc_name());
 
         triton_asm!(
             {entrypoint}:
@@ -79,7 +86,7 @@ impl BasicSnippet for SampleScalarsStaticLengthKMalloc {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use std::ops::Neg;
 
     use itertools::Itertools;
@@ -105,7 +112,7 @@ mod tests {
 
     impl SampleScalarsStaticLengthKMalloc {
         /// For testing purposes only.
-        fn k_malloc_address_isolated_run(&self) -> BFieldElement {
+        pub fn k_malloc_address_isolated_run(&self) -> BFieldElement {
             let dyn_allocator_state_size = 1;
             BFieldElement::from(self.num_words_to_allocate() + dyn_allocator_state_size).neg()
         }
