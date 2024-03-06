@@ -11,17 +11,17 @@ use crate::traits::basic_snippet::BasicSnippet;
 
 /// Squeeze the sponge to sample a given number of `XFieldElement`s.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
-pub struct SampleScalarsStaticLength {
+pub struct SampleScalarsStaticLengthDynMalloc {
     pub num_elements: usize,
 }
 
-impl SampleScalarsStaticLength {
-    fn num_squeezes(&self) -> usize {
-        (self.num_elements * EXTENSION_DEGREE + RATE - 1) / RATE
+impl SampleScalarsStaticLengthDynMalloc {
+    pub(super) fn num_squeezes(num_elements: usize) -> usize {
+        (num_elements * EXTENSION_DEGREE + RATE - 1) / RATE
     }
 }
 
-impl BasicSnippet for SampleScalarsStaticLength {
+impl BasicSnippet for SampleScalarsStaticLengthDynMalloc {
     fn inputs(&self) -> Vec<(DataType, String)> {
         vec![]
     }
@@ -38,7 +38,7 @@ impl BasicSnippet for SampleScalarsStaticLength {
 
     fn entrypoint(&self) -> String {
         format!(
-            "tasm_hashing_algebraic_hasher_sample_scalars_static_length_{}",
+            "tasm_hashing_algebraic_hasher_sample_scalars_static_length_dyn_malloc_{}",
             self.num_elements
         )
     }
@@ -46,7 +46,7 @@ impl BasicSnippet for SampleScalarsStaticLength {
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
         assert_eq!(10, tip5::RATE, "Code assumes Tip5's RATE is 10");
         assert_eq!(3, EXTENSION_DEGREE, "Code assumes extension degree 3");
-        let num_squeezes = self.num_squeezes();
+        let num_squeezes = Self::num_squeezes(self.num_elements);
 
         debug_assert!(
             self.num_elements * EXTENSION_DEGREE <= num_squeezes * RATE,
@@ -96,9 +96,9 @@ mod tests {
     use crate::traits::rust_shadow::RustShadow;
     use crate::{rust_shadowing_helper_functions, VmHasher};
 
-    use super::SampleScalarsStaticLength;
+    use super::SampleScalarsStaticLengthDynMalloc;
 
-    impl Procedure for SampleScalarsStaticLength {
+    impl Procedure for SampleScalarsStaticLengthDynMalloc {
         fn rust_shadow(
             &self,
             stack: &mut Vec<BFieldElement>,
@@ -108,7 +108,7 @@ mod tests {
             sponge: &mut Option<VmHasher>,
         ) -> Vec<BFieldElement> {
             let sponge = sponge.as_mut().expect("sponge must be initialized");
-            let num_squeezes = self.num_squeezes();
+            let num_squeezes = Self::num_squeezes(self.num_elements);
             let pseudorandomness = (0..num_squeezes)
                 .flat_map(|_| sponge.squeeze().to_vec())
                 .collect_vec();
@@ -143,7 +143,7 @@ mod tests {
     #[test]
     fn sample_scalars_static_length_pbt() {
         for i in 0..100 {
-            ShadowedProcedure::new(SampleScalarsStaticLength { num_elements: i }).test();
+            ShadowedProcedure::new(SampleScalarsStaticLengthDynMalloc { num_elements: i }).test();
         }
     }
 
@@ -155,7 +155,7 @@ mod tests {
 
         for init_sponge in [empty_sponge, non_empty_sponge] {
             for num_elements in 0..30 {
-                let snippet = SampleScalarsStaticLength { num_elements };
+                let snippet = SampleScalarsStaticLengthDynMalloc { num_elements };
                 let init_stack = snippet.init_stack_for_isolated_run();
                 let tasm = tasm_final_state(
                     &ShadowedProcedure::new(snippet),
@@ -178,7 +178,7 @@ mod tests {
                             snippet_output_scalar_pointer,
                             i,
                             &final_ram,
-                            EXTENSION_DEGREE
+                            EXTENSION_DEGREE,
                         )
                     );
                 }
@@ -196,16 +196,16 @@ mod bench {
 
     #[test]
     fn bench_10() {
-        ShadowedProcedure::new(SampleScalarsStaticLength { num_elements: 10 }).bench();
+        ShadowedProcedure::new(SampleScalarsStaticLengthDynMalloc { num_elements: 10 }).bench();
     }
 
     #[test]
     fn bench_100() {
-        ShadowedProcedure::new(SampleScalarsStaticLength { num_elements: 100 }).bench();
+        ShadowedProcedure::new(SampleScalarsStaticLengthDynMalloc { num_elements: 100 }).bench();
     }
 
     #[test]
     fn bench_63() {
-        ShadowedProcedure::new(SampleScalarsStaticLength { num_elements: 63 }).bench();
+        ShadowedProcedure::new(SampleScalarsStaticLengthDynMalloc { num_elements: 63 }).bench();
     }
 }

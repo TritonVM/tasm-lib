@@ -69,7 +69,7 @@ impl BasicSnippet for NewEmptyInputAndOutput {
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
         let sample_scalars = library.import(Box::new(
-            hashing::algebraic_hasher::sample_scalars_static_length::SampleScalarsStaticLength {
+            hashing::algebraic_hasher::sample_scalars_static_length_dyn_malloc::SampleScalarsStaticLengthDynMalloc {
                 num_elements: self.num_of_fiat_shamir_challenges,
             },
         ));
