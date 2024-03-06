@@ -44,6 +44,9 @@ use crate::arithmetic::u64::sub_u64::SubU64;
 use crate::arithmetic::u64::wrapping_mul_u64::WrappingMulU64;
 use crate::arithmetic::u64::wrapping_sub_u64::WrappingSub;
 use crate::arithmetic::u64::xor_u64::XorU64;
+use crate::arithmetic::xfe::cube::Cube;
+use crate::arithmetic::xfe::square::Square;
+use crate::arithmetic::xfe::to_the_fourth::ToTheFourth;
 use crate::data_type::DataType;
 use crate::hashing::algebraic_hasher;
 use crate::hashing::eq_digest::EqDigest;
@@ -81,6 +84,11 @@ use crate::traits::basic_snippet::BasicSnippet;
 
 pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
     match fn_name {
+        // XFieldElement
+        "tasm_arithmetic_xfe_square" => Box::new(Square),
+        "tasm_arithmetic_xfe_cube" => Box::new(Cube),
+        "tasm_arithmetic_xfe_to_the_fourth" => Box::new(ToTheFourth),
+
         // u32
         "tasm_arithmetic_u32_isodd" => Box::new(Isodd),
         "tasm_arithmetic_u32_isu32" => Box::new(Isu32),
