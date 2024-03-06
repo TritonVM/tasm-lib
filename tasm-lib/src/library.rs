@@ -17,11 +17,18 @@ use crate::traits::deprecated_snippet::DeprecatedSnippet;
 /// [debugging]: crate::maybe_write_debuggable_program_to_disk
 pub const STATIC_MEMORY_START_ADDRESS: BFieldElement = BFieldElement::new(BFieldElement::MAX - 1);
 
-/// A Library represents a set of imports for a single Program or Snippet, and moreover
-/// tracks some data used for initializing the [memory allocator](crate::memory).
+/// Represents a set of imports for a single Program or Snippet, and moreover tracks some data used
+/// for initializing the [memory allocator](crate::memory).
 #[derive(Clone, Debug)]
 pub struct Library {
+    /// Imported dependencies.
     seen_snippets: HashMap<String, Vec<LabelledInstruction>>,
+
+    /// Known, and thus shareable, (static) memory allocations. Includes both their address and
+    /// their size.
+    pub_allocations: HashMap<String, (BFieldElement, u32)>,
+
+    /// The next free address in statically assignable memory.
     free_pointer: BFieldElement,
 }
 
@@ -34,7 +41,8 @@ impl Default for Library {
 impl Library {
     pub fn new() -> Self {
         Self {
-            seen_snippets: Default::default(),
+            seen_snippets: HashMap::default(),
+            pub_allocations: HashMap::default(),
             free_pointer: STATIC_MEMORY_START_ADDRESS,
         }
     }
@@ -57,7 +65,7 @@ impl Library {
         }
     }
 
-    /// Import `T: Snippet` into the library.
+    /// Import `T: Snippet`.
     ///
     /// Recursively imports `T`'s dependencies.
     /// Does not import the snippets with the same entrypoint twice.
@@ -113,6 +121,24 @@ impl Library {
         let address = self.free_pointer - BFieldElement::new(num_words as u64 - 1);
         self.free_pointer -= BFieldElement::new(num_words as u64);
         address
+    }
+
+    /// Statically allocate `num_words` words of memory and give it a name.
+    /// Allows sharing the allocation with other snippets.
+    pub fn pub_kmalloc(&mut self, num_words: u32, name: String) -> BFieldElement {
+        let address = self.kmalloc(num_words);
+        if let Some((addr, size)) = self
+            .pub_allocations
+            .insert(name.clone(), (address, num_words))
+        {
+            panic!("Public kmalloc for \"{name}\" overwrote previous allocation: ({addr}, {size})");
+        };
+        address
+    }
+
+    /// Get the address and size of a public allocation.
+    pub fn get_pub_allocation(&self, name: &str) -> (BFieldElement, u32) {
+        self.pub_allocations[name]
     }
 }
 
@@ -375,7 +401,7 @@ mod tests {
             vec![
                 "tasm_a_dummy_test_value",
                 "tasm_b_dummy_test_value",
-                "tasm_c_dummy_test_value"
+                "tasm_c_dummy_test_value",
             ],
             lib.get_all_snippet_names()
         );
@@ -452,5 +478,12 @@ mod tests {
 
         let third_free_address = lib.kmalloc(1000);
         assert_eq!(-BFieldElement::new(1009), third_free_address);
+
+        let fourth_free_address = lib.pub_kmalloc(10_000, "my_thing".to_string());
+        assert_eq!(-BFieldElement::new(11_009), fourth_free_address);
+
+        let (address, size) = lib.get_pub_allocation("my_thing");
+        assert_eq!(fourth_free_address, address);
+        assert_eq!(10_000, size);
     }
 }
