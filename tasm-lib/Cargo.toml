@@ -19,6 +19,7 @@ test-strategy = "0.3"
 arbitrary = { version = "1", features = ["derive"] }
 anyhow = "1"
 derive_tasm_object = { path = "../derive_tasm_object" }
+ndarray = { version = "0.15" }
 hex = "^0.4.3"
 itertools = "0"
 num = "0"
