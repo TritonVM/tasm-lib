@@ -36,7 +36,7 @@ pub fn insert_as_array<T: BFieldCodec>(
     }
 }
 
-/// Read an element from a list.
+/// Read an element from an array
 pub fn array_get(
     pointer: BFieldElement,
     index: usize,
