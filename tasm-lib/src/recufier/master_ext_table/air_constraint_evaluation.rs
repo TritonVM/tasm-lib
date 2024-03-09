@@ -5,7 +5,8 @@ use crate::triton_vm::table::*;
 use triton_vm::prelude::*;
 use triton_vm::table::master_table::num_quotients;
 use triton_vm::table::tasm_air_constraints::air_constraint_evaluation_tasm;
-use triton_vm::twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
+
+use crate::recufier::challenges::new_empty_input_and_output::NewEmptyInputAndOutput;
 
 const NUM_TOTAL_CONSTRAINTS: usize = num_quotients();
 
@@ -15,11 +16,32 @@ pub struct AirConstraintEvaluation {
 }
 
 impl AirConstraintEvaluation {
+    pub fn with_conventional_memory_layout() -> Self {
+        Self {
+            mem_layout: Self::conventional_air_constraint_memory_layout(),
+        }
+    }
+
     pub fn output_type(&self) -> DataType {
         DataType::Array(Box::new(ArrayType {
             element_type: DataType::Xfe,
             length: NUM_TOTAL_CONSTRAINTS,
         }))
+    }
+
+    /// The values returned here should match those used by STARK proof
+    pub fn conventional_air_constraint_memory_layout() -> TasmConstraintEvaluationMemoryLayout {
+        let mem_layout = TasmConstraintEvaluationMemoryLayout {
+            free_mem_page_ptr: BFieldElement::new((u32::MAX as u64 - 1) * (1u64 << 32)),
+            curr_base_row_ptr: BFieldElement::new(20u64),
+            curr_ext_row_ptr: BFieldElement::new(1068),
+            next_base_row_ptr: BFieldElement::new(1312),
+            next_ext_row_ptr: BFieldElement::new(2360),
+            challenges_ptr: NewEmptyInputAndOutput::conventional_challenges_pointer(),
+        };
+        assert!(mem_layout.is_integral());
+
+        mem_layout
     }
 }
 
@@ -40,19 +62,22 @@ impl BasicSnippet for AirConstraintEvaluation {
 
         // TODO: Use `let preimage = self.mem_layout.encode()` here once [https://github.com/TritonVM/triton-vm/issues/253]
         // is closed.
-        let preimage = [
-            self.mem_layout.free_mem_page_ptr,
-            self.mem_layout.curr_base_row_ptr,
-            self.mem_layout.curr_ext_row_ptr,
-            self.mem_layout.next_base_row_ptr,
-            self.mem_layout.next_ext_row_ptr,
-            self.mem_layout.challenges_ptr,
-        ];
-        let digest = Tip5::hash(&preimage);
-        format!(
-            "tasm_recufier_master_ext_table_air_constraint_evaluation_{}",
-            digest.values()[0]
-        )
+        // let preimage = [
+        //     self.mem_layout.free_mem_page_ptr,
+        //     self.mem_layout.curr_base_row_ptr,
+        //     self.mem_layout.curr_ext_row_ptr,
+        //     self.mem_layout.next_base_row_ptr,
+        //     self.mem_layout.next_ext_row_ptr,
+        //     self.mem_layout.challenges_ptr,
+        // ];
+        // let digest = Tip5::hash(&preimage);
+        // format!(
+        //     "tasm_recufier_master_ext_table_air_constraint_evaluation_{}",
+        //     digest.values()[0]
+        // )
+        // We probably only ever need to use *one* of these, so no need to parameterize
+        // the entrypoint name, I think.
+        "tasm_recufier_master_ext_table_air_constraint_evaluation".to_owned()
     }
 
     fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {
@@ -117,6 +142,11 @@ mod tests {
     use crate::VmOutputState;
 
     use super::*;
+
+    #[test]
+    fn conventional_air_constraint_memory_layout_is_integral() {
+        AirConstraintEvaluation::conventional_air_constraint_memory_layout();
+    }
 
     #[derive(Debug, Clone)]
     struct SnippetInputValues {
