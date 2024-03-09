@@ -5,11 +5,10 @@ use triton_vm::table::cross_table_argument::CrossTableArg;
 use triton_vm::table::cross_table_argument::EvalArg;
 use triton_vm::twenty_first::shared_math::x_field_element::EXTENSION_DEGREE;
 
-use tasm_lib::hashing::algebraic_hasher::sample_scalars_static_length_kmalloc::SampleScalarsStaticLengthKMalloc;
-
 use crate::data_type::ArrayType;
 use crate::data_type::DataType;
 use crate::data_type::StructType;
+use crate::hashing::algebraic_hasher::sample_scalars_static_length_static_pointer::SampleScalarsStaticLengthStaticPointer;
 use crate::library::Library;
 use crate::recufier::eval_arg::compute_terminal_const_sized_static_symbols::ComputeTerminalConstSizedStaticSymbols;
 use crate::recufier::eval_arg::compute_terminal_from_digest::ComputeTerminalFromDigestInitialIsOne;
@@ -20,13 +19,29 @@ pub struct NewEmptyInputAndOutput {
     // claim_output: Vec<BFieldElement>,
     num_of_fiat_shamir_challenges: usize,
     num_of_claim_derived_challenges: usize,
+
+    /// Memory address to store the challenges
+    pub challenges_pointer: BFieldElement,
 }
 
 impl NewEmptyInputAndOutput {
-    pub fn new(num_challenges_to_sample: usize, num_challenges_to_compute: usize) -> Self {
+    pub fn conventional_challenges_pointer() -> BFieldElement {
+        // By convention, the challenges are stored in the third-to-last
+        // memory page
+        BFieldElement::new(((1 << 32) - 3) * (1 << 32))
+    }
+}
+
+impl NewEmptyInputAndOutput {
+    pub fn new(
+        num_challenges_to_sample: usize,
+        num_challenges_to_compute: usize,
+        challenges_pointer: BFieldElement,
+    ) -> Self {
         Self {
             num_of_fiat_shamir_challenges: num_challenges_to_sample,
             num_of_claim_derived_challenges: num_challenges_to_compute,
+            challenges_pointer,
         }
     }
 
@@ -47,15 +62,12 @@ impl NewEmptyInputAndOutput {
         })
     }
 
-    fn sample_scalars_snippet(&self) -> SampleScalarsStaticLengthKMalloc {
-        SampleScalarsStaticLengthKMalloc {
+    fn sample_scalars_snippet(&self) -> SampleScalarsStaticLengthStaticPointer {
+        SampleScalarsStaticLengthStaticPointer {
             num_elements_to_sample: self.num_of_fiat_shamir_challenges,
             extra_capacity: self.num_of_claim_derived_challenges,
+            scalars_pointer: self.challenges_pointer,
         }
-    }
-
-    pub fn kmalloc_name(&self) -> String {
-        self.sample_scalars_snippet().scalars_kmalloc_name()
     }
 }
 
@@ -82,7 +94,7 @@ impl BasicSnippet for NewEmptyInputAndOutput {
         // let digest_first_word = parameters_as_digest.encode()[0];
         format!(
             "tasm_recufier_challenges_new_empty_input_and_output_{}_{}",
-            self.num_of_fiat_shamir_challenges, self.num_of_claim_derived_challenges
+            self.num_of_fiat_shamir_challenges, self.num_of_claim_derived_challenges,
         )
     }
 
@@ -92,17 +104,13 @@ impl BasicSnippet for NewEmptyInputAndOutput {
         let sample_scalars = library.import(Box::new(sample_scalars_snippet));
         let compute_compressed_digest =
             library.import(Box::new(ComputeTerminalFromDigestInitialIsOne));
-        let (scalars_pointer, scalars_len) =
-            library.get_pub_allocation(&sample_scalars_snippet.scalars_kmalloc_name());
         let calculate_lookup_terminal =
             library.import(Box::new(ComputeTerminalConstSizedStaticSymbols {
                 symbols: tip5::LOOKUP_TABLE.map(|i| BFieldElement::new(i as u64)),
                 initial: XFieldElement::one(),
             }));
 
-        let scalars_len = usize::try_from(scalars_len).unwrap();
-        assert!(scalars_len >= self.total_number_of_challenges_returned() * EXTENSION_DEGREE);
-
+        let scalars_pointer = self.challenges_pointer;
         let scalar_write_index = |i: ChallengeId| {
             scalars_pointer.value() + u64::try_from(i.index() * EXTENSION_DEGREE).unwrap()
         };
@@ -225,12 +233,10 @@ mod tests {
                 challenges.challenges.iter().join("\n")
             );
 
-            let scalars_pointer = self
-                .sample_scalars_snippet()
-                .k_malloc_address_isolated_run();
-            stack.push(scalars_pointer);
+            let challenges_pointer = Self::conventional_challenges_pointer();
+            stack.push(challenges_pointer);
 
-            insert_as_array(scalars_pointer, memory, challenges.challenges.to_vec());
+            insert_as_array(challenges_pointer, memory, challenges.challenges.to_vec());
 
             vec![]
         }
@@ -260,6 +266,7 @@ mod tests {
         ShadowedProcedure::new(NewEmptyInputAndOutput {
             num_of_claim_derived_challenges: NUM_OF_CLAIM_DERIVED_CHALLENGES,
             num_of_fiat_shamir_challenges: Challenges::count() - NUM_OF_CLAIM_DERIVED_CHALLENGES,
+            challenges_pointer: NewEmptyInputAndOutput::conventional_challenges_pointer(),
         })
         .test();
     }
@@ -280,6 +287,7 @@ mod benches {
         ShadowedProcedure::new(NewEmptyInputAndOutput {
             num_of_claim_derived_challenges: 4,
             num_of_fiat_shamir_challenges: Challenges::count() - NUM_OF_CLAIM_DERIVED_CHALLENGES,
+            challenges_pointer: NewEmptyInputAndOutput::conventional_challenges_pointer(),
         })
         .bench();
     }

@@ -399,7 +399,7 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
             assert_eq!(59, num_challenges_to_sample);
             assert_eq!(4, num_challenges_to_compute);
             let challenge_snippet
-                = NewEmptyInputAndOutput::new(num_challenges_to_sample, num_challenges_to_compute);
+                = NewEmptyInputAndOutput::new(num_challenges_to_sample, num_challenges_to_compute, NewEmptyInputAndOutput::conventional_challenges_pointer());
             Box::new(challenge_snippet)
         }
 
