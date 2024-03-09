@@ -78,6 +78,7 @@ use crate::neptune::mutator_set::commit::Commit;
 use crate::neptune::mutator_set::get_swbf_indices::GetSwbfIndices;
 use crate::other_snippets::bfe_add::BfeAdd;
 use crate::recufier::challenges::new_empty_input_and_output::NewEmptyInputAndOutput;
+use crate::recufier::master_ext_table::air_constraint_evaluation::AirConstraintEvaluation;
 use crate::recufier::proof_stream::dequeue_next_as::DequeueNextAs;
 use crate::recufier::read_and_verify_own_program_digest_from_std_in::ReadAndVerifyOwnProgramDigestFromStdIn;
 use crate::traits::basic_snippet::BasicSnippet;
@@ -401,6 +402,9 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
             let challenge_snippet
                 = NewEmptyInputAndOutput::new(num_challenges_to_sample, num_challenges_to_compute, NewEmptyInputAndOutput::conventional_challenges_pointer());
             Box::new(challenge_snippet)
+        }
+        "tasm_recufier_master_ext_table_air_constraint_evaluation" => {
+            Box::new(AirConstraintEvaluation::with_conventional_memory_layout())
         }
 
         // memory
