@@ -22,7 +22,7 @@ pub fn insert_random_array(
     }
 }
 
-/// Insert a list of elements into memory encoded as if the list was an array
+/// Insert a list of elements into memory encoded as if the list was an array.
 pub fn insert_as_array<T: BFieldCodec>(
     mut array_pointer: BFieldElement,
     memory: &mut HashMap<BFieldElement, BFieldElement>,
