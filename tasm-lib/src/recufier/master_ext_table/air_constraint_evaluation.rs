@@ -2,8 +2,11 @@ use crate::data_type::{ArrayType, DataType};
 use crate::library::Library;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::triton_vm::table::*;
+use ndarray::Array1;
 use triton_vm::prelude::*;
-use triton_vm::table::master_table::num_quotients;
+use triton_vm::table::challenges::Challenges;
+use triton_vm::table::extension_table::Evaluable;
+use triton_vm::table::master_table::{num_quotients, MasterExtTable};
 use triton_vm::table::tasm_air_constraints::air_constraint_evaluation_tasm;
 
 use crate::recufier::challenges::new_empty_input_and_output::NewEmptyInputAndOutput;
@@ -42,6 +45,46 @@ impl AirConstraintEvaluation {
         assert!(mem_layout.is_integral());
 
         mem_layout
+    }
+
+    /// Return the concatenated AIR-constraint evaluation
+    pub fn host_machine_air_constraint_evaluation(
+        input_values: AirConstraintSnippetInputs,
+    ) -> Vec<XFieldElement> {
+        let current_base_row = Array1::from(input_values.current_base_row);
+        let current_ext_row = Array1::from(input_values.current_ext_row);
+        let next_base_row = Array1::from(input_values.next_base_row);
+        let next_ext_row = Array1::from(input_values.next_ext_row);
+        let evaluated_initial_constraints = MasterExtTable::evaluate_initial_constraints(
+            current_base_row.view(),
+            current_ext_row.view(),
+            &input_values.challenges,
+        );
+        let evaluated_consistency_constraints = MasterExtTable::evaluate_consistency_constraints(
+            current_base_row.view(),
+            current_ext_row.view(),
+            &input_values.challenges,
+        );
+        let evaluated_transition_constraints = MasterExtTable::evaluate_transition_constraints(
+            current_base_row.view(),
+            current_ext_row.view(),
+            next_base_row.view(),
+            next_ext_row.view(),
+            &input_values.challenges,
+        );
+        let evaluated_terminal_constraints = MasterExtTable::evaluate_terminal_constraints(
+            current_base_row.view(),
+            current_ext_row.view(),
+            &input_values.challenges,
+        );
+
+        [
+            evaluated_initial_constraints,
+            evaluated_consistency_constraints,
+            evaluated_transition_constraints,
+            evaluated_terminal_constraints,
+        ]
+        .concat()
     }
 }
 
@@ -114,23 +157,28 @@ fn an_integral_memory_layout() -> TasmConstraintEvaluationMemoryLayout {
     mem_layout
 }
 
+#[derive(Debug, Clone)]
+pub struct AirConstraintSnippetInputs {
+    pub current_base_row: Vec<XFieldElement>,
+    pub current_ext_row: Vec<XFieldElement>,
+    pub next_base_row: Vec<XFieldElement>,
+    pub next_ext_row: Vec<XFieldElement>,
+    pub challenges: Challenges,
+}
+
 #[cfg(test)]
-pub mod tests {
+mod tests {
     use std::cell::RefCell;
     use std::collections::HashMap;
     use std::rc::Rc;
 
     use arbitrary::{Arbitrary, Unstructured};
-    use ndarray::Array1;
     use rand::distributions::Standard;
     use rand::rngs::StdRng;
     use rand::thread_rng;
     use rand::Rng;
     use rand::RngCore;
     use rand::SeedableRng;
-    use triton_vm::table::challenges::Challenges;
-    use triton_vm::table::extension_table::Evaluable;
-    use triton_vm::table::master_table::MasterExtTable;
     use triton_vm::twenty_first::shared_math::x_field_element::EXTENSION_DEGREE;
 
     use crate::execute_test;
@@ -146,15 +194,6 @@ pub mod tests {
     #[test]
     fn conventional_air_constraint_memory_layout_is_integral() {
         AirConstraintEvaluation::conventional_air_constraint_memory_layout();
-    }
-
-    #[derive(Debug, Clone)]
-    pub struct AirConstraintSnippetInputs {
-        current_base_row: Vec<XFieldElement>,
-        current_ext_row: Vec<XFieldElement>,
-        next_base_row: Vec<XFieldElement>,
-        next_ext_row: Vec<XFieldElement>,
-        challenges: Challenges,
     }
 
     impl Function for AirConstraintEvaluation {
@@ -299,47 +338,6 @@ pub mod tests {
             );
 
             Self::read_result_from_memory(final_state)
-        }
-
-        /// Return the concatenated AIR-constraint evaluation
-        pub fn host_machine_air_constraint_evaluation(
-            input_values: AirConstraintSnippetInputs,
-        ) -> Vec<XFieldElement> {
-            let current_base_row = Array1::from(input_values.current_base_row);
-            let current_ext_row = Array1::from(input_values.current_ext_row);
-            let next_base_row = Array1::from(input_values.next_base_row);
-            let next_ext_row = Array1::from(input_values.next_ext_row);
-            let evaluated_initial_constraints = MasterExtTable::evaluate_initial_constraints(
-                current_base_row.view(),
-                current_ext_row.view(),
-                &input_values.challenges,
-            );
-            let evaluated_consistency_constraints =
-                MasterExtTable::evaluate_consistency_constraints(
-                    current_base_row.view(),
-                    current_ext_row.view(),
-                    &input_values.challenges,
-                );
-            let evaluated_transition_constraints = MasterExtTable::evaluate_transition_constraints(
-                current_base_row.view(),
-                current_ext_row.view(),
-                next_base_row.view(),
-                next_ext_row.view(),
-                &input_values.challenges,
-            );
-            let evaluated_terminal_constraints = MasterExtTable::evaluate_terminal_constraints(
-                current_base_row.view(),
-                current_ext_row.view(),
-                &input_values.challenges,
-            );
-
-            [
-                evaluated_initial_constraints,
-                evaluated_consistency_constraints,
-                evaluated_transition_constraints,
-                evaluated_terminal_constraints,
-            ]
-            .concat()
         }
     }
 }
