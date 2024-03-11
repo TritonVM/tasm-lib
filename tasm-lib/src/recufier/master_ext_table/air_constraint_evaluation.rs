@@ -115,7 +115,7 @@ fn an_integral_memory_layout() -> TasmConstraintEvaluationMemoryLayout {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use std::cell::RefCell;
     use std::collections::HashMap;
     use std::rc::Rc;
@@ -149,7 +149,7 @@ mod tests {
     }
 
     #[derive(Debug, Clone)]
-    struct SnippetInputValues {
+    pub struct AirConstraintSnippetInputs {
         current_base_row: Vec<XFieldElement>,
         current_ext_row: Vec<XFieldElement>,
         next_base_row: Vec<XFieldElement>,
@@ -204,13 +204,13 @@ mod tests {
             let input_values = Self::random_input_values(&mut rng);
 
             let tasm_result = self.tasm_result(input_values.clone());
-            let host_machine_result = Self::host_machine_result(input_values);
+            let host_machine_result = Self::host_machine_air_constraint_evaluation(input_values);
 
             assert_eq!(tasm_result.len(), host_machine_result.len());
             assert_eq!(tasm_result, host_machine_result);
         }
 
-        fn random_input_values(rng: &mut StdRng) -> SnippetInputValues {
+        fn random_input_values(rng: &mut StdRng) -> AirConstraintSnippetInputs {
             let current_base_row: Vec<XFieldElement> =
                 rng.sample_iter(Standard).take(NUM_BASE_COLUMNS).collect();
             let current_ext_row: Vec<XFieldElement> =
@@ -225,7 +225,7 @@ mod tests {
             let mut unstructured = Unstructured::new(&ch_seed);
             let challenges: Challenges = Challenges::arbitrary(&mut unstructured).unwrap();
 
-            SnippetInputValues {
+            AirConstraintSnippetInputs {
                 current_base_row,
                 current_ext_row,
                 next_base_row,
@@ -236,7 +236,7 @@ mod tests {
 
         fn prepare_tvm_memory(
             &self,
-            input_values: SnippetInputValues,
+            input_values: AirConstraintSnippetInputs,
         ) -> HashMap<BFieldElement, BFieldElement> {
             let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
             insert_as_array(
@@ -284,7 +284,7 @@ mod tests {
             tasm_result
         }
 
-        fn tasm_result(&self, input_values: SnippetInputValues) -> Vec<XFieldElement> {
+        fn tasm_result(&self, input_values: AirConstraintSnippetInputs) -> Vec<XFieldElement> {
             let init_memory = self.prepare_tvm_memory(input_values);
 
             let stack = self.init_stack_for_isolated_run();
@@ -301,7 +301,10 @@ mod tests {
             Self::read_result_from_memory(final_state)
         }
 
-        fn host_machine_result(input_values: SnippetInputValues) -> Vec<XFieldElement> {
+        /// Return the concatenated AIR-constraint evaluation
+        pub fn host_machine_air_constraint_evaluation(
+            input_values: AirConstraintSnippetInputs,
+        ) -> Vec<XFieldElement> {
             let current_base_row = Array1::from(input_values.current_base_row);
             let current_ext_row = Array1::from(input_values.current_ext_row);
             let next_base_row = Array1::from(input_values.next_base_row);
