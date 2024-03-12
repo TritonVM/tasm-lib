@@ -421,6 +421,9 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
             Box::new(AirConstraintEvaluation::with_conventional_memory_layout())
         }
 
+        "tasm_array_inner_product_of_4_xfes" => {
+            Box::new(InnerProductOfXfes::new(4))
+        }
         WEIGHTS_QUOTIENTS_INNER_PRODUCT_ENTRYPOINT => {
             Box::new(InnerProductOfXfes::new(NUM_CONSTRAINTS_TVM))
         }
