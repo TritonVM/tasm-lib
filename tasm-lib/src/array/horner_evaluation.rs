@@ -15,6 +15,12 @@ pub struct HornerEvaluation {
     num_coefficients: usize,
 }
 
+impl HornerEvaluation {
+    pub fn new(num_coefficients: usize) -> Self {
+        Self { num_coefficients }
+    }
+}
+
 impl BasicSnippet for HornerEvaluation {
     fn inputs(&self) -> Vec<(crate::data_type::DataType, String)> {
         vec![
