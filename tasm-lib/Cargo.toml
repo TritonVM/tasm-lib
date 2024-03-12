@@ -16,6 +16,7 @@ strum = "0.26"
 test-strategy = "0.3"
 
 [dependencies]
+const_format = "0.2"
 arbitrary = { version = "1", features = ["derive"] }
 anyhow = "1"
 derive_tasm_object = { path = "../derive_tasm_object" }

@@ -1,5 +1,7 @@
+use const_format::formatcp;
 use triton_vm::proof_item::ProofItemVariant;
 use triton_vm::table::challenges::Challenges;
+use triton_vm::table::master_table::num_quotients;
 
 use crate::arithmetic::u128::add_u128::AddU128;
 use crate::arithmetic::u128::safe_mul_u128::SafeMulU128;
@@ -47,6 +49,7 @@ use crate::arithmetic::u64::xor_u64::XorU64;
 use crate::arithmetic::xfe::cube::Cube;
 use crate::arithmetic::xfe::square::Square;
 use crate::arithmetic::xfe::to_the_fourth::ToTheFourth;
+use crate::array::inner_product_of_xfes::InnerProductOfXfes;
 use crate::data_type::DataType;
 use crate::hashing::algebraic_hasher;
 use crate::hashing::eq_digest::EqDigest;
@@ -82,6 +85,10 @@ use crate::recufier::master_ext_table::air_constraint_evaluation::AirConstraintE
 use crate::recufier::proof_stream::dequeue_next_as::DequeueNextAs;
 use crate::recufier::read_and_verify_own_program_digest_from_std_in::ReadAndVerifyOwnProgramDigestFromStdIn;
 use crate::traits::basic_snippet::BasicSnippet;
+
+const NUM_CONSTRAINTS_TVM: usize = num_quotients();
+const WEIGHTS_QUOTIENTS_INNER_PRODUCT_ENTRYPOINT: &str =
+    formatcp!("tasm_array_inner_product_of_{}_xfes", NUM_CONSTRAINTS_TVM);
 
 pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
     match fn_name {
@@ -405,6 +412,10 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
         }
         "tasm_recufier_master_ext_table_air_constraint_evaluation" => {
             Box::new(AirConstraintEvaluation::with_conventional_memory_layout())
+        }
+
+        WEIGHTS_QUOTIENTS_INNER_PRODUCT_ENTRYPOINT => {
+            Box::new(InnerProductOfXfes::new(NUM_CONSTRAINTS_TVM))
         }
 
         // memory
