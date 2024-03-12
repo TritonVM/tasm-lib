@@ -7,9 +7,8 @@ use rand::Rng;
 use triton_vm::prelude::*;
 use triton_vm::twenty_first::prelude::AlgebraicHasher;
 use triton_vm::twenty_first::prelude::MmrMembershipProof;
+use triton_vm::twenty_first::test_shared::mmr::mmra_with_mps;
 use twenty_first::shared_math::other::random_elements;
-use twenty_first::test_shared::mmr::get_rustyleveldb_ammr_from_digests;
-use twenty_first::util_types::mmr::archival_mmr::ArchivalMmr;
 use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
 use twenty_first::util_types::mmr::mmr_trait::Mmr;
 
@@ -271,13 +270,13 @@ impl DeprecatedSnippet for MmrVerifyFromMemory {
         let digests: Vec<Digest> = random_elements(size);
         let leaf_index = rng.gen_range(0..size);
         let leaf = digests[leaf_index];
-        let ammr: ArchivalMmr<VmHasher, _> = get_rustyleveldb_ammr_from_digests(digests);
-        let auth_path = ammr
-            .prove_membership(leaf_index as u64)
-            .0
-            .authentication_path;
-        let (ret0, _, _) =
-            self.prepare_vm_state(&ammr.to_accumulator(), leaf, leaf_index as u64, auth_path);
+        let (mmra, mps) = mmra_with_mps::<Tip5>(size as u64, vec![(leaf_index as u64, leaf)]);
+        let (ret0, _, _) = self.prepare_vm_state(
+            &mmra,
+            leaf,
+            leaf_index as u64,
+            mps[0].authentication_path.clone(),
+        );
 
         vec![ret0]
     }
@@ -375,7 +374,7 @@ impl DeprecatedSnippet for MmrVerifyFromMemory {
 
 #[cfg(test)]
 mod tests {
-    use twenty_first::test_shared::mmr::get_empty_rustyleveldb_ammr;
+    use itertools::Itertools;
 
     use crate::empty_stack;
     use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
@@ -393,20 +392,18 @@ mod tests {
     #[should_panic]
     fn mmra_ap_verify_test_empty() {
         let digest0 = VmHasher::hash(&BFieldElement::new(4545));
-        let archival_mmr: ArchivalMmr<VmHasher, _> = get_empty_rustyleveldb_ammr();
-        let mut mmr = archival_mmr.to_accumulator();
+        let mmr = MmrAccumulator::<Tip5>::new(vec![]);
         let leaf_index = 0;
-        prop_verify_from_memory(&mut mmr, digest0, leaf_index, vec![], false);
+        prop_verify_from_memory(&mmr, digest0, leaf_index, vec![], false);
     }
 
     #[test]
     fn mmra_ap_verify_test_one() {
         let digest0 = VmHasher::hash(&BFieldElement::new(4545));
-        let mut archival_mmr: ArchivalMmr<VmHasher, _> = get_empty_rustyleveldb_ammr();
-        archival_mmr.append(digest0);
-        let mut mmr = archival_mmr.to_accumulator();
+        let mut mmr = MmrAccumulator::<Tip5>::new(vec![]);
+        mmr.append(digest0);
         let leaf_index = 0;
-        prop_verify_from_memory(&mut mmr, digest0, leaf_index, vec![], true);
+        prop_verify_from_memory(&mmr, digest0, leaf_index, vec![], true);
     }
 
     #[test]
@@ -414,16 +411,15 @@ mod tests {
         let digest0 = VmHasher::hash(&BFieldElement::new(123));
         let digest1 = VmHasher::hash(&BFieldElement::new(456));
 
-        let mut archival_mmr: ArchivalMmr<VmHasher, _> = get_empty_rustyleveldb_ammr();
-        archival_mmr.append(digest0);
-        archival_mmr.append(digest1);
-        let mut mmr = archival_mmr.to_accumulator();
+        let mut mmr = MmrAccumulator::<Tip5>::new(vec![]);
+        mmr.append(digest0);
+        mmr.append(digest1);
 
         let leaf_index_0 = 0;
-        prop_verify_from_memory(&mut mmr, digest0, leaf_index_0, vec![digest1], true);
+        prop_verify_from_memory(&mmr, digest0, leaf_index_0, vec![digest1], true);
 
         let leaf_index_1 = 1;
-        prop_verify_from_memory(&mut mmr, digest1, leaf_index_1, vec![digest0], true);
+        prop_verify_from_memory(&mmr, digest1, leaf_index_1, vec![digest0], true);
     }
 
     #[test]
@@ -432,17 +428,24 @@ mod tests {
 
         for leaf_count in 0..max_size {
             let digests: Vec<Digest> = random_elements(leaf_count);
-            let archival_mmr: ArchivalMmr<VmHasher, _> =
-                get_rustyleveldb_ammr_from_digests(digests.clone());
-            let mut mmr = archival_mmr.to_accumulator();
+
+            let (mmr, mps) = mmra_with_mps::<Tip5>(
+                leaf_count as u64,
+                digests
+                    .iter()
+                    .cloned()
+                    .enumerate()
+                    .map(|(i, d)| (i as u64, d))
+                    .collect_vec(),
+            );
 
             let bad_leaf: Digest = thread_rng().gen();
             for (leaf_index, leaf_digest) in digests.into_iter().enumerate() {
-                let (auth_path, _) = archival_mmr.prove_membership(leaf_index as u64);
+                let auth_path = mps[leaf_index].clone();
 
                 // Positive test
                 prop_verify_from_memory(
-                    &mut mmr,
+                    &mmr,
                     leaf_digest,
                     leaf_index as u64,
                     auth_path.authentication_path.clone(),
@@ -453,7 +456,7 @@ mod tests {
                 let bad_index = (leaf_index + 1) % leaf_count;
                 if bad_index != leaf_index {
                     prop_verify_from_memory(
-                        &mut mmr,
+                        &mmr,
                         leaf_digest,
                         bad_index as u64,
                         auth_path.authentication_path.clone(),
@@ -461,7 +464,7 @@ mod tests {
                     );
                 }
                 prop_verify_from_memory(
-                    &mut mmr,
+                    &mmr,
                     bad_leaf,
                     leaf_index as u64,
                     auth_path.authentication_path,
@@ -549,7 +552,7 @@ mod tests {
     }
 
     fn prop_verify_from_memory<H: AlgebraicHasher + PartialEq + std::fmt::Debug>(
-        mmr: &mut MmrAccumulator<H>,
+        mmr: &MmrAccumulator<H>,
         leaf: Digest,
         leaf_index: u64,
         auth_path: Vec<Digest>,
