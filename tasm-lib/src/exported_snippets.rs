@@ -84,6 +84,7 @@ use crate::neptune::mutator_set::get_swbf_indices::GetSwbfIndices;
 use crate::other_snippets::bfe_add::BfeAdd;
 use crate::recufier::challenges::new_empty_input_and_output::NewEmptyInputAndOutput;
 use crate::recufier::master_ext_table::air_constraint_evaluation::AirConstraintEvaluation;
+use crate::recufier::own_program_digest::OwnProgramDigest;
 use crate::recufier::proof_stream::dequeue_next_as::DequeueNextAs;
 use crate::recufier::read_and_verify_own_program_digest_from_std_in::ReadAndVerifyOwnProgramDigestFromStdIn;
 use crate::traits::basic_snippet::BasicSnippet;
@@ -425,6 +426,9 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
         }
         HORNER_EVALUATION_FOR_SUM_OF_EVALUATED_OUT_OF_DOMAIN_QUOTIENT_SEGMENTS_ENTRYPOINT => {
             Box::new(HornerEvaluation::new(NUM_QUOTIENT_SEGMENTS))
+        }
+        "tasm_recufier_own_program_digest" => {
+            Box::new(OwnProgramDigest)
         }
 
         // memory
