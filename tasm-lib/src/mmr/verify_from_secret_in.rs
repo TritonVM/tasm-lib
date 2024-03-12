@@ -7,9 +7,8 @@ use rand::Rng;
 use rand::SeedableRng;
 use triton_vm::prelude::*;
 use triton_vm::twenty_first::prelude::MmrMembershipProof;
+use triton_vm::twenty_first::test_shared::mmr::mmra_with_mps;
 use twenty_first::shared_math::other::random_elements;
-use twenty_first::test_shared::mmr::get_rustyleveldb_ammr_from_digests;
-use twenty_first::util_types::mmr::archival_mmr::ArchivalMmr;
 use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
 use twenty_first::util_types::mmr::mmr_trait::Mmr;
 use twenty_first::util_types::mmr::shared_basic::leaf_index_to_mt_index_and_peak_index;
@@ -47,8 +46,11 @@ impl MmrVerifyLeafMembershipFromSecretIn {
         generate_valid_proof: bool,
     ) -> ExecutionState {
         let digests: Vec<Digest> = random_elements(size);
-        let ammr: ArchivalMmr<VmHasher, _> = get_rustyleveldb_ammr_from_digests(digests.clone());
-        let mut vm_init_state = self.mmr_to_init_vm_state(&ammr.to_accumulator());
+        let (mmr, mps) = mmra_with_mps(
+            size as u64,
+            vec![(leaf_index, digests[leaf_index as usize])],
+        );
+        let mut vm_init_state = self.mmr_to_init_vm_state(&mmr);
 
         // Populate secret-in with the leaf index value, which is a u64
         vm_init_state
@@ -61,8 +63,7 @@ impl MmrVerifyLeafMembershipFromSecretIn {
             .push(BFieldElement::new(leaf_index & u32::MAX as u64));
 
         // Populate secret-in with the correct authentication path
-        let mmr_mp = ammr.prove_membership(leaf_index).0;
-        vm_init_state.nondeterminism.digests = mmr_mp.authentication_path;
+        vm_init_state.nondeterminism.digests = mps[0].authentication_path.clone();
 
         if generate_valid_proof {
             let good_leaf = digests[leaf_index as usize];
@@ -343,9 +344,9 @@ mod benches {
 
 #[cfg(test)]
 mod tests {
+    use itertools::Itertools;
     use rand::thread_rng;
     use triton_vm::twenty_first::prelude::AlgebraicHasher;
-    use twenty_first::test_shared::mmr::get_empty_rustyleveldb_ammr;
 
     use crate::test_helpers::test_rust_equivalence_given_complete_state;
     use crate::traits::procedure::ShadowedProcedure;
@@ -363,11 +364,8 @@ mod tests {
     #[test]
     fn mmra_ap_verify_test_one() {
         let digest0 = VmHasher::hash(&BFieldElement::new(4545));
-        let mut archival_mmr: ArchivalMmr<VmHasher, _> = get_empty_rustyleveldb_ammr();
-        archival_mmr.append(digest0);
-        let mut mmr = archival_mmr.to_accumulator();
-        let leaf_index = 0;
-        prop_verify_from_secret_in(&mut mmr, digest0, leaf_index, vec![], true);
+        let (mmra, _mps) = mmra_with_mps::<Tip5>(1u64, vec![(0, digest0)]);
+        prop_verify_from_secret_in(&mmra, digest0, 0u64, vec![], true);
     }
 
     #[test]
@@ -375,16 +373,14 @@ mod tests {
         let digest0 = VmHasher::hash(&BFieldElement::new(123));
         let digest1 = VmHasher::hash(&BFieldElement::new(456));
 
-        let mut archival_mmr: ArchivalMmr<VmHasher, _> = get_empty_rustyleveldb_ammr();
-        archival_mmr.append(digest0);
-        archival_mmr.append(digest1);
-        let mut mmr = archival_mmr.to_accumulator();
+        let leaf_count = 2u64;
+        let (mmr, _mps) = mmra_with_mps::<Tip5>(leaf_count, vec![(0u64, digest0), (1u64, digest1)]);
 
         let leaf_index_0 = 0;
-        prop_verify_from_secret_in(&mut mmr, digest0, leaf_index_0, vec![digest1], true);
+        prop_verify_from_secret_in(&mmr, digest0, leaf_index_0, vec![digest1], true);
 
         let leaf_index_1 = 1;
-        prop_verify_from_secret_in(&mut mmr, digest1, leaf_index_1, vec![digest0], true);
+        prop_verify_from_secret_in(&mmr, digest1, leaf_index_1, vec![digest0], true);
     }
 
     #[test]
@@ -393,17 +389,24 @@ mod tests {
 
         for leaf_count in 0..max_size {
             let digests: Vec<Digest> = random_elements(leaf_count);
-            let archival_mmr: ArchivalMmr<VmHasher, _> =
-                get_rustyleveldb_ammr_from_digests(digests.clone());
-            let mut mmr = archival_mmr.to_accumulator();
+
+            let (mmr, mps) = mmra_with_mps::<Tip5>(
+                leaf_count as u64,
+                digests
+                    .iter()
+                    .cloned()
+                    .enumerate()
+                    .map(|(i, d)| (i as u64, d))
+                    .collect_vec(),
+            );
 
             let bad_leaf: Digest = thread_rng().gen();
             for (leaf_index, leaf_digest) in digests.into_iter().enumerate() {
-                let (auth_path, _) = archival_mmr.prove_membership(leaf_index as u64);
+                let auth_path = mps[leaf_index].clone();
 
                 // Positive test
                 prop_verify_from_secret_in(
-                    &mut mmr,
+                    &mmr,
                     leaf_digest,
                     leaf_index as u64,
                     auth_path.authentication_path.clone(),
@@ -412,7 +415,7 @@ mod tests {
 
                 // Negative test
                 prop_verify_from_secret_in(
-                    &mut mmr,
+                    &mmr,
                     bad_leaf,
                     leaf_index as u64,
                     auth_path.authentication_path,
@@ -499,7 +502,7 @@ mod tests {
     // BEFORE: _ *peaks leaf_count_hi leaf_count_lo [digest (leaf_digest)]
     // AFTER:  _ leaf_index_hi leaf_index_lo validation_result
     fn prop_verify_from_secret_in<H: AlgebraicHasher>(
-        mmr: &mut MmrAccumulator<H>,
+        mmr: &MmrAccumulator<H>,
         leaf: Digest,
         leaf_index: u64,
         auth_path: Vec<Digest>,
