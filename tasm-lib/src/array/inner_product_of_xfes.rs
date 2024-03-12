@@ -9,6 +9,10 @@ pub struct InnerProductOfXfes {
 }
 
 impl InnerProductOfXfes {
+    pub fn new(length: usize) -> Self {
+        Self { length }
+    }
+
     fn argument_type(&self) -> DataType {
         DataType::Array(Box::new(ArrayType {
             element_type: DataType::Xfe,
