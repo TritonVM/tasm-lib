@@ -1,0 +1,16 @@
+[
+  {
+    "name": "tasm_array_horner_evaluation_with_100_coefficients",
+    "clock_cycle_count": 917,
+    "hash_table_height": 984,
+    "u32_table_height": 0,
+    "case": "CommonCase"
+  },
+  {
+    "name": "tasm_array_horner_evaluation_with_100_coefficients",
+    "clock_cycle_count": 917,
+    "hash_table_height": 984,
+    "u32_table_height": 0,
+    "case": "WorstCase"
+  }
+]
