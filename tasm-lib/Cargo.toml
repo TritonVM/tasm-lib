@@ -29,7 +29,7 @@ rand = "0.8.5"
 rayon = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-triton-vm = "0.38"
+triton-vm = "0.38.2"
 
 [dev-dependencies.cargo-husky]
 version = "1"

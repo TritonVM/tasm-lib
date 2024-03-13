@@ -265,7 +265,7 @@ mod tests {
         const NUM_OF_CLAIM_DERIVED_CHALLENGES: usize = 4;
         ShadowedProcedure::new(NewEmptyInputAndOutput {
             num_of_claim_derived_challenges: NUM_OF_CLAIM_DERIVED_CHALLENGES,
-            num_of_fiat_shamir_challenges: Challenges::count() - NUM_OF_CLAIM_DERIVED_CHALLENGES,
+            num_of_fiat_shamir_challenges: Challenges::COUNT - NUM_OF_CLAIM_DERIVED_CHALLENGES,
             challenges_pointer: NewEmptyInputAndOutput::conventional_challenges_pointer(),
         })
         .test();
@@ -286,7 +286,7 @@ mod benches {
         const NUM_OF_CLAIM_DERIVED_CHALLENGES: usize = 4;
         ShadowedProcedure::new(NewEmptyInputAndOutput {
             num_of_claim_derived_challenges: 4,
-            num_of_fiat_shamir_challenges: Challenges::count() - NUM_OF_CLAIM_DERIVED_CHALLENGES,
+            num_of_fiat_shamir_challenges: Challenges::COUNT - NUM_OF_CLAIM_DERIVED_CHALLENGES,
             challenges_pointer: NewEmptyInputAndOutput::conventional_challenges_pointer(),
         })
         .bench();
