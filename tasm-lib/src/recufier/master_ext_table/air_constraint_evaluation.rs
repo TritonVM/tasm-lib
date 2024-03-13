@@ -36,10 +36,10 @@ impl AirConstraintEvaluation {
     pub fn conventional_air_constraint_memory_layout() -> TasmConstraintEvaluationMemoryLayout {
         let mem_layout = TasmConstraintEvaluationMemoryLayout {
             free_mem_page_ptr: BFieldElement::new((u32::MAX as u64 - 1) * (1u64 << 32)),
-            curr_base_row_ptr: BFieldElement::new(20u64),
-            curr_ext_row_ptr: BFieldElement::new(1068),
-            next_base_row_ptr: BFieldElement::new(1312),
-            next_ext_row_ptr: BFieldElement::new(2360),
+            curr_base_row_ptr: BFieldElement::new(28u64),
+            curr_ext_row_ptr: BFieldElement::new(1098),
+            next_base_row_ptr: BFieldElement::new(1349),
+            next_ext_row_ptr: BFieldElement::new(2419),
             challenges_ptr: NewEmptyInputAndOutput::conventional_challenges_pointer(),
         };
         assert!(mem_layout.is_integral());
@@ -103,23 +103,7 @@ impl BasicSnippet for AirConstraintEvaluation {
             "Memory layout for input values for constraint evaluation must be integral"
         );
 
-        // TODO: Use `let preimage = self.mem_layout.encode()` here once [https://github.com/TritonVM/triton-vm/issues/253]
-        // is closed.
-        // let preimage = [
-        //     self.mem_layout.free_mem_page_ptr,
-        //     self.mem_layout.curr_base_row_ptr,
-        //     self.mem_layout.curr_ext_row_ptr,
-        //     self.mem_layout.next_base_row_ptr,
-        //     self.mem_layout.next_ext_row_ptr,
-        //     self.mem_layout.challenges_ptr,
-        // ];
-        // let digest = Tip5::hash(&preimage);
-        // format!(
-        //     "tasm_recufier_master_ext_table_air_constraint_evaluation_{}",
-        //     digest.values()[0]
-        // )
-        // We probably only ever need to use *one* of these, so no need to parameterize
-        // the entrypoint name, I think.
+        // Consider parameterizing this entrypoint name if you need more than one instance.
         "tasm_recufier_master_ext_table_air_constraint_evaluation".to_owned()
     }
 
@@ -179,6 +163,7 @@ mod tests {
     use rand::Rng;
     use rand::RngCore;
     use rand::SeedableRng;
+    use triton_vm::proof_stream::ProofStream;
     use triton_vm::twenty_first::shared_math::x_field_element::EXTENSION_DEGREE;
 
     use crate::execute_test;
@@ -194,6 +179,70 @@ mod tests {
     #[test]
     fn conventional_air_constraint_memory_layout_is_integral() {
         AirConstraintEvaluation::conventional_air_constraint_memory_layout();
+    }
+
+    #[test]
+    fn conventional_memory_layout_agrees_with_tvm_proof() {
+        let program = triton_program!(halt);
+        let claim = Claim::about_program(&program);
+
+        let proof = triton_vm::prove(
+            Stark::default(),
+            &claim,
+            &program,
+            NonDeterminism::default(),
+        )
+        .unwrap();
+        let Proof(proof_sequence) = proof.clone();
+        let proof_stream: ProofStream<Tip5> = (&proof).try_into().unwrap();
+        let assumed_memory_layout =
+            AirConstraintEvaluation::conventional_air_constraint_memory_layout();
+        const BASE_ROW_SIZE: usize = NUM_BASE_COLUMNS * EXTENSION_DEGREE;
+        const EXT_ROW_SIZE: usize = NUM_EXT_COLUMNS * EXTENSION_DEGREE;
+
+        let assumed_curr_base_row_ptr = assumed_memory_layout.curr_base_row_ptr.value() as usize;
+        let assumed_curr_base_row: [XFieldElement; NUM_BASE_COLUMNS] = *BFieldCodec::decode(
+            &proof_sequence[assumed_curr_base_row_ptr..assumed_curr_base_row_ptr + BASE_ROW_SIZE],
+        )
+        .unwrap();
+        let actual_curr_base_row_from_proof = proof_stream.items[4]
+            .clone()
+            .try_into_out_of_domain_base_row()
+            .unwrap();
+        assert_eq!(*actual_curr_base_row_from_proof, assumed_curr_base_row);
+
+        let assumed_curr_ext_row_ptr = assumed_memory_layout.curr_ext_row_ptr.value() as usize;
+        let assumed_curr_ext_row: [XFieldElement; NUM_EXT_COLUMNS] = *BFieldCodec::decode(
+            &proof_sequence[assumed_curr_ext_row_ptr..assumed_curr_ext_row_ptr + EXT_ROW_SIZE],
+        )
+        .unwrap();
+        let actual_curr_ext_row_from_proof = proof_stream.items[5]
+            .clone()
+            .try_into_out_of_domain_ext_row()
+            .unwrap();
+        assert_eq!(*actual_curr_ext_row_from_proof, assumed_curr_ext_row);
+
+        let assumed_next_base_row_ptr = assumed_memory_layout.next_base_row_ptr.value() as usize;
+        let assumed_next_base_row: [XFieldElement; NUM_BASE_COLUMNS] = *BFieldCodec::decode(
+            &proof_sequence[assumed_next_base_row_ptr..assumed_next_base_row_ptr + BASE_ROW_SIZE],
+        )
+        .unwrap();
+        let actual_next_base_row_from_proof = proof_stream.items[6]
+            .clone()
+            .try_into_out_of_domain_base_row()
+            .unwrap();
+        assert_eq!(*actual_next_base_row_from_proof, assumed_next_base_row);
+
+        let assumed_next_ext_row_ptr = assumed_memory_layout.next_ext_row_ptr.value() as usize;
+        let assumed_next_ext_row: [XFieldElement; NUM_EXT_COLUMNS] = *BFieldCodec::decode(
+            &proof_sequence[assumed_next_ext_row_ptr..assumed_next_ext_row_ptr + EXT_ROW_SIZE],
+        )
+        .unwrap();
+        let actual_next_ext_row_from_proof = proof_stream.items[7]
+            .clone()
+            .try_into_out_of_domain_ext_row()
+            .unwrap();
+        assert_eq!(*actual_next_ext_row_from_proof, assumed_next_ext_row);
     }
 
     impl Function for AirConstraintEvaluation {

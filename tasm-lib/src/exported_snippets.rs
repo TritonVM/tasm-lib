@@ -409,8 +409,8 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
             Box::new(ReadAndVerifyOwnProgramDigestFromStdIn)
         }
         "tasm_recufier_challenges_new_empty_input_and_output_59_4" => {
-            let num_challenges_to_sample = Challenges::num_challenges_to_sample();
-            let num_challenges_to_compute = Challenges::count() - num_challenges_to_sample;
+            let num_challenges_to_sample = Challenges::SAMPLE_COUNT;
+            let num_challenges_to_compute = Challenges::COUNT - num_challenges_to_sample;
             assert_eq!(59, num_challenges_to_sample);
             assert_eq!(4, num_challenges_to_compute);
             let challenge_snippet
