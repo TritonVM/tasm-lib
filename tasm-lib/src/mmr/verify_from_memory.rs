@@ -516,7 +516,7 @@ mod tests {
 
             // Positive tests
             prop_verify_from_memory(
-                &mut mmr,
+                &mmr,
                 second_to_last_leaf,
                 second_to_last_leaf_index,
                 real_membership_proof_second_to_last
@@ -525,7 +525,7 @@ mod tests {
                 true,
             );
             prop_verify_from_memory(
-                &mut mmr,
+                &mmr,
                 last_leaf,
                 last_leaf_index,
                 real_membership_proof_last.authentication_path.clone(),
@@ -535,14 +535,14 @@ mod tests {
             // Negative tests
             let bad_leaf: Digest = thread_rng().gen();
             prop_verify_from_memory(
-                &mut mmr,
+                &mmr,
                 bad_leaf,
                 second_to_last_leaf_index,
                 real_membership_proof_second_to_last.authentication_path,
                 false,
             );
             prop_verify_from_memory(
-                &mut mmr,
+                &mmr,
                 bad_leaf,
                 last_leaf_index,
                 real_membership_proof_last.authentication_path,
