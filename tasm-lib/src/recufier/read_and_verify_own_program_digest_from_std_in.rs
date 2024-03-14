@@ -100,7 +100,7 @@ mod tests {
     }
 
     #[test]
-    fn expect_assertion_fail_due_to_bad_std_in() {
+    fn negative_test_expect_assertion_fail_due_to_bad_std_in() {
         let test_setup = test_program();
 
         let bad_std_in = Digest::default().encode();

@@ -1,0 +1,16 @@
+[
+  {
+    "name": "tasm_list_split_off_xfe",
+    "clock_cycle_count": 534,
+    "hash_table_height": 144,
+    "u32_table_height": 235,
+    "case": "CommonCase"
+  },
+  {
+    "name": "tasm_list_split_off_xfe",
+    "clock_cycle_count": 9084,
+    "hash_table_height": 144,
+    "u32_table_height": 7002,
+    "case": "WorstCase"
+  }
+]

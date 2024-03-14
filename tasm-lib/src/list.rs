@@ -12,6 +12,7 @@ pub mod push;
 pub mod range;
 pub mod set;
 pub mod set_length;
+pub mod split_off;
 pub mod sum_bfes;
 pub mod sum_xfes;
 pub mod swap_unchecked;

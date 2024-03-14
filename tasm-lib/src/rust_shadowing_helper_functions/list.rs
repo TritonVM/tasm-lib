@@ -7,6 +7,28 @@ use twenty_first::shared_math::other::random_elements;
 use crate::data_type::DataType;
 use crate::list::LIST_METADATA_SIZE;
 
+/// Load a list from memory returning each element as a list of `BFieldElement`s.
+pub fn load_list_unstructured(
+    element_size: usize,
+    list_pointer: BFieldElement,
+    memory: &HashMap<BFieldElement, BFieldElement>,
+) -> Vec<Vec<BFieldElement>> {
+    let list_length: usize = memory[&list_pointer].value().try_into().unwrap();
+
+    let mut element_pointer = list_pointer + BFieldElement::new(LIST_METADATA_SIZE as u64);
+
+    let mut ret = Vec::with_capacity(list_length);
+    for i in 0..list_length {
+        ret.push(vec![]);
+        for _ in 0..element_size {
+            ret[i].push(memory[&element_pointer]);
+            element_pointer.increment();
+        }
+    }
+
+    ret
+}
+
 /// Load a list from memory. Elements must be of `Copy` type.
 pub fn load_list_with_copy_elements<const ELEMENT_SIZE: usize>(
     list_pointer: BFieldElement,
