@@ -1,6 +1,17 @@
+use anyhow::bail;
+use itertools::Itertools;
+use triton_vm::arithmetic_domain::ArithmeticDomain;
+use triton_vm::error::FriValidationError;
+use triton_vm::fri::Fri;
 use triton_vm::prelude::*;
 use triton_vm::proof_item::FriResponse;
 use triton_vm::proof_item::ProofItemVariant;
+use triton_vm::proof_stream::ProofStream;
+use triton_vm::twenty_first::shared_math::ntt::intt;
+use triton_vm::twenty_first::shared_math::other::log_2_ceil;
+use triton_vm::twenty_first::shared_math::polynomial::Polynomial;
+use triton_vm::twenty_first::shared_math::traits::ModPowU32;
+use triton_vm::twenty_first::util_types::merkle_tree::MerkleTreeInclusionProof;
 
 use crate::data_type::DataType;
 use crate::data_type::StructType;
@@ -34,7 +45,7 @@ use crate::traits::basic_snippet::BasicSnippet;
 /// probability *soundness error* if the codeword is far from low-degree. If the test is
 /// not successful, the VM crashes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, BFieldCodec, TasmObject)]
-pub(crate) struct FriVerify {
+pub struct FriVerify {
     // expansion factor = 1 / rate
     pub expansion_factor: u32,
     pub num_colinearity_checks: u32,
@@ -714,13 +725,337 @@ impl BasicSnippet for FriSnippet {
     }
 }
 
+impl FriVerify {
+    pub fn extract_digests_required_for_proving(
+        &self,
+        proof_stream: &ProofStream<Tip5>,
+    ) -> Vec<Digest> {
+        let mut digests = vec![];
+        self.inner_verify(&mut proof_stream.clone(), &mut digests)
+            .unwrap();
+        digests
+    }
+
+    pub fn to_fri(self) -> Fri<Tip5> {
+        let fri_domain = ArithmeticDomain::of_length(self.domain_length as usize)
+            .unwrap()
+            .with_offset(self.domain_offset);
+        let maybe_fri = Fri::new(
+            fri_domain,
+            self.expansion_factor as usize,
+            self.num_colinearity_checks as usize,
+        );
+
+        maybe_fri.unwrap()
+    }
+
+    /// Verify the FRI proof embedded in the proof stream. This function expands the list
+    /// `nondeterministic_digests` with the digests of the individual authentication paths
+    /// obtained from reduplicating the authentication structures that live in the proof
+    /// stream.
+    fn inner_verify(
+        &self,
+        proof_stream: &mut ProofStream<Tip5>,
+        nondeterministic_digests: &mut Vec<Digest>,
+    ) -> anyhow::Result<Vec<(u32, XFieldElement)>> {
+        let mut num_nondeterministic_digests_read = 0;
+
+        println!("Inside inner_verify.");
+
+        // calculate number of rounds
+        let num_rounds = self.num_rounds();
+        println!("Number of rounds: {num_rounds}");
+        let last_round_max_degree = self.last_round_max_degree();
+        println!("Max degree in last round: {last_round_max_degree}");
+
+        // Extract all roots and calculate alpha based on Fiat-Shamir challenge
+        let mut roots = Vec::with_capacity(num_rounds);
+        let mut alphas = Vec::with_capacity(num_rounds);
+
+        let first_root = proof_stream
+            .dequeue()
+            .unwrap()
+            .try_into_merkle_root()
+            .unwrap();
+        roots.push(first_root);
+
+        for _round in 0..num_rounds {
+            // get a challenge from the verifier
+            let alpha = proof_stream.sample_scalars(1)[0];
+            alphas.push(alpha);
+
+            // get a commitment from the prover
+            let root = proof_stream
+                .dequeue()
+                .unwrap()
+                .try_into_merkle_root()
+                .unwrap();
+            roots.push(root);
+        }
+        println!("alphas:");
+        for alpha in alphas.iter() {
+            println!("{}", alpha);
+        }
+
+        // Extract last codeword
+        let last_codeword = proof_stream
+            .dequeue()
+            .unwrap()
+            .try_into_fri_codeword()
+            .unwrap();
+        assert_eq!(
+            last_codeword.len(),
+            self.domain_length as usize >> self.num_rounds()
+        );
+
+        // Check if last codeword matches the given root
+        let codeword_digests = Self::map_convert_xfe_to_digest(&last_codeword);
+        let last_codeword_merkle_root =
+            MerkleRoot::call(&codeword_digests, 0, codeword_digests.len());
+
+        let last_root = roots.last().unwrap();
+        if *last_root != last_codeword_merkle_root {
+            bail!(FriValidationError::BadMerkleRootForLastCodeword);
+        }
+
+        // Verify that last codeword is of sufficiently low degree
+
+        // Compute interpolant to get the degree of the last codeword.
+        // Note that we don't have to scale the polynomial back to the trace
+        // subgroup since we only check its degree and don't use it further.
+        let log_2_of_n = last_codeword.len().ilog2();
+        let mut last_polynomial = last_codeword.clone();
+
+        let last_fri_domain_generator = self
+            .domain_generator
+            .mod_pow_u32(2u32.pow(num_rounds as u32));
+        intt::<XFieldElement>(&mut last_polynomial, last_fri_domain_generator, log_2_of_n);
+        let last_poly_degree = Polynomial::new(last_polynomial).degree();
+
+        if last_poly_degree > last_round_max_degree as isize {
+            println!(
+                "last_poly_degree is {last_poly_degree}, \
+                degree_of_last_round is {last_round_max_degree}",
+            );
+            bail!(FriValidationError::LastRoundPolynomialHasTooHighDegree)
+        }
+
+        // QUERY PHASE
+
+        // query step 0: get "A" indices and verify set membership of corresponding values.
+        let domain_length = self.domain_length as usize;
+        let num_collinearity_check = self.num_colinearity_checks as usize;
+        let mut a_indices = proof_stream.sample_indices(domain_length, num_collinearity_check);
+
+        let tree_height = self.domain_length.ilog2() as usize;
+        let fri_response = proof_stream
+            .dequeue()
+            .unwrap()
+            .try_into_fri_response()
+            .unwrap();
+        assert_eq!(a_indices.len(), fri_response.revealed_leaves.len());
+        let mut a_values = fri_response.revealed_leaves;
+
+        let leaf_digests = Self::map_convert_xfe_to_digest(&a_values);
+        let indexed_a_leaves = a_indices.iter().copied().zip_eq(leaf_digests).collect_vec();
+
+        // reduplicate authentication structures if necessary
+        if num_nondeterministic_digests_read >= nondeterministic_digests.len() {
+            let inclusion_proof = MerkleTreeInclusionProof::<Tip5> {
+                tree_height,
+                indexed_leaves: indexed_a_leaves.clone(),
+                authentication_structure: fri_response.auth_structure,
+                ..Default::default()
+            };
+
+            // sanity check: the authentication structure was valid, right?
+            assert!(inclusion_proof.clone().verify(roots[0]));
+            let reduplicated_authentication_paths = inclusion_proof.into_authentication_paths()?;
+            nondeterministic_digests
+                .extend(reduplicated_authentication_paths.into_iter().flatten());
+        }
+
+        // verify authentication paths for A leafs
+        for indexed_leaf in indexed_a_leaves {
+            let authentication_path = &nondeterministic_digests[num_nondeterministic_digests_read
+                ..(num_nondeterministic_digests_read + tree_height)];
+            num_nondeterministic_digests_read += tree_height;
+            let inclusion_proof = MerkleTreeInclusionProof::<Tip5> {
+                tree_height,
+                indexed_leaves: vec![indexed_leaf],
+                authentication_structure: authentication_path.to_vec(),
+                ..Default::default()
+            };
+            assert!(inclusion_proof.verify(roots[0]));
+        }
+
+        // save indices and revealed leafs of first round's codeword for returning
+        let revealed_indices_and_elements_first_half = a_indices
+            .iter()
+            .map(|&idx| idx as u32)
+            .zip_eq(a_values.iter().copied())
+            .collect_vec();
+        // these indices and values will be computed in the first iteration of the main loop below
+        let mut revealed_indices_and_elements_second_half = vec![];
+
+        // set up "B" for offsetting inside loop.  Note that "B" and "A" indices can be calculated
+        // from each other.
+        let mut b_indices = a_indices.clone();
+        let mut current_domain_len = self.domain_length as usize;
+        let mut current_tree_height = tree_height;
+
+        // query step 1:  loop over FRI rounds, verify "B"s, compute values for "C"s
+        for r in 0..num_rounds {
+            // get "B" indices and verify set membership of corresponding values
+            b_indices = b_indices
+                .iter()
+                .map(|x| (x + current_domain_len / 2) % current_domain_len)
+                .collect();
+            let fri_response = proof_stream
+                .dequeue()
+                .unwrap()
+                .try_into_fri_response()
+                .unwrap();
+            let b_values = fri_response.revealed_leaves;
+
+            let leaf_digests = Self::map_convert_xfe_to_digest(&b_values);
+            let indexed_b_leaves = b_indices.iter().copied().zip_eq(leaf_digests).collect_vec();
+
+            // reduplicate authentication structures if necessary
+            if num_nondeterministic_digests_read >= nondeterministic_digests.len() {
+                let inclusion_proof = MerkleTreeInclusionProof::<Tip5> {
+                    tree_height: current_tree_height,
+                    indexed_leaves: indexed_b_leaves.clone(),
+                    authentication_structure: fri_response.auth_structure,
+                    ..Default::default()
+                };
+
+                // sanity check: the auth structure was valid, right?
+                assert!(inclusion_proof.clone().verify(roots[r]));
+                let reduplicated_authentication_paths =
+                    inclusion_proof.into_authentication_paths()?;
+                nondeterministic_digests
+                    .extend(reduplicated_authentication_paths.into_iter().flatten());
+            }
+
+            // verify authentication paths for B leafs
+            for indexed_leaf in indexed_b_leaves {
+                let authentication_path = &nondeterministic_digests
+                    [num_nondeterministic_digests_read
+                        ..(num_nondeterministic_digests_read + current_tree_height)];
+                num_nondeterministic_digests_read += current_tree_height;
+                let inclusion_proof = MerkleTreeInclusionProof::<Tip5> {
+                    tree_height: current_tree_height,
+                    indexed_leaves: vec![indexed_leaf],
+                    authentication_structure: authentication_path.to_vec(),
+                    ..Default::default()
+                };
+                if !inclusion_proof.verify(roots[r]) {
+                    bail!(FriValidationError::BadMerkleAuthenticationPath);
+                }
+            }
+
+            debug_assert_eq!(self.num_colinearity_checks, a_indices.len() as u32);
+            debug_assert_eq!(self.num_colinearity_checks, b_indices.len() as u32);
+            debug_assert_eq!(self.num_colinearity_checks, a_values.len() as u32);
+            debug_assert_eq!(self.num_colinearity_checks, b_values.len() as u32);
+
+            if r == 0 {
+                // save other half of indices and revealed leafs of first round for returning
+                revealed_indices_and_elements_second_half = b_indices
+                    .iter()
+                    .map(|&idx| idx as u32)
+                    .zip_eq(b_values.iter().copied())
+                    .collect_vec();
+            }
+
+            // compute "C" indices and values for next round from "A" and "B" of current round
+            current_domain_len /= 2;
+            current_tree_height -= 1;
+            let c_indices = a_indices.iter().map(|x| x % current_domain_len).collect();
+            let c_values = (0..self.num_colinearity_checks as usize)
+                .map(|i| {
+                    let a_x = self.get_colinearity_check_x(a_indices[i] as u32, r);
+                    let b_x = self.get_colinearity_check_x(b_indices[i] as u32, r);
+                    Polynomial::<XFieldElement>::get_colinear_y(
+                        (a_x, a_values[i]),
+                        (b_x, b_values[i]),
+                        alphas[r],
+                    )
+                })
+                .collect();
+
+            // next rounds "A"s correspond to current rounds "C"s
+            a_indices = c_indices;
+            a_values = c_values;
+        }
+
+        // Finally compare "C" values (which are named "A" values in this enclosing scope) with
+        // last codeword from the proofstream.
+        a_indices = a_indices.iter().map(|x| x % current_domain_len).collect();
+        if !(0..self.num_colinearity_checks as usize)
+            .all(|i| last_codeword[a_indices[i]] == a_values[i])
+        {
+            bail!(FriValidationError::LastCodewordMismatch);
+        }
+
+        // compile return object and store to memory
+        let revealed_indices_and_elements = revealed_indices_and_elements_first_half
+            .into_iter()
+            .chain(revealed_indices_and_elements_second_half)
+            .collect_vec();
+
+        Ok(revealed_indices_and_elements)
+    }
+
+    /// Computes the number of rounds
+    pub fn num_rounds(&self) -> usize {
+        let first_round_code_dimension = self.first_round_max_degree() + 1;
+        let max_num_rounds = log_2_ceil(first_round_code_dimension as u128);
+
+        // Skip rounds for which Merkle tree verification cost exceeds arithmetic cost,
+        // because more than half the codeword's locations are queried.
+        let num_rounds_checking_all_locations = self.num_colinearity_checks.ilog2() as u64;
+        let num_rounds_checking_most_locations = num_rounds_checking_all_locations + 1;
+
+        max_num_rounds.saturating_sub(num_rounds_checking_most_locations) as usize
+    }
+
+    /// Computes the max degree of the codeword interpolant after the last round
+    pub fn last_round_max_degree(&self) -> usize {
+        self.first_round_max_degree() >> self.num_rounds()
+    }
+
+    /// Computes the max degree of the very first codeword interpolant
+    pub fn first_round_max_degree(&self) -> usize {
+        assert!(self.domain_length >= self.expansion_factor);
+        (self.domain_length / self.expansion_factor) as usize - 1
+    }
+
+    /// Compute a new list containing the `XFieldElement`s of the given list, but lifted
+    /// to the type `Digest` via padding with 2 zeros.
+    fn map_convert_xfe_to_digest(xfes: &[XFieldElement]) -> Vec<Digest> {
+        xfes.iter().map(|x| (*x).into()).collect()
+    }
+
+    /// Get the x-coordinate of an A or B point in a colinearity check, given the point's
+    /// index and the round number in which the check takes place. In Triton VM, this
+    /// method is called `get_evaluation_argument`.
+    pub fn get_colinearity_check_x(&self, idx: u32, round: usize) -> XFieldElement {
+        let domain_value = self.domain_offset * self.domain_generator.mod_pow_u32(idx);
+        let round_exponent = 2u32.pow(round as u32);
+        let evaluation_argument = domain_value.mod_pow_u32(round_exponent);
+
+        evaluation_argument.lift()
+    }
+}
+
 #[cfg(test)]
 mod test {
     use std::collections::HashMap;
     use std::collections::HashSet;
     use std::panic::catch_unwind;
 
-    use anyhow::bail;
     use itertools::Itertools;
     use num_traits::One;
     use num_traits::Zero;
@@ -733,14 +1068,11 @@ mod test {
     use rayon::prelude::*;
     use test_strategy::proptest;
     use triton_vm::arithmetic_domain::ArithmeticDomain;
-    use triton_vm::error::FriValidationError;
     use triton_vm::fri::Fri;
     use triton_vm::proof_item::ProofItem;
     use triton_vm::proof_stream::ProofStream;
     use triton_vm::twenty_first::prelude::*;
-    use twenty_first::shared_math::ntt::intt;
     use twenty_first::shared_math::ntt::ntt;
-    use twenty_first::shared_math::other::log_2_ceil;
     use twenty_first::shared_math::traits::PrimitiveRootOfUnity;
 
     use crate::empty_stack;
@@ -783,308 +1115,6 @@ mod test {
                 .unwrap()
         }
 
-        /// Computes the number of rounds
-        pub fn num_rounds(&self) -> usize {
-            let first_round_code_dimension = self.first_round_max_degree() + 1;
-            let max_num_rounds = log_2_ceil(first_round_code_dimension as u128);
-
-            // Skip rounds for which Merkle tree verification cost exceeds arithmetic cost,
-            // because more than half the codeword's locations are queried.
-            let num_rounds_checking_all_locations = self.num_colinearity_checks.ilog2() as u64;
-            let num_rounds_checking_most_locations = num_rounds_checking_all_locations + 1;
-
-            max_num_rounds.saturating_sub(num_rounds_checking_most_locations) as usize
-        }
-
-        /// Computes the max degree of the codeword interpolant after the last round
-        pub fn last_round_max_degree(&self) -> usize {
-            self.first_round_max_degree() >> self.num_rounds()
-        }
-
-        /// Computes the max degree of the very first codeword interpolant
-        pub fn first_round_max_degree(&self) -> usize {
-            assert!(self.domain_length >= self.expansion_factor);
-            (self.domain_length / self.expansion_factor) as usize - 1
-        }
-
-        /// Compute a new list containing the `XFieldElement`s of the given list, but lifted
-        /// to the type `Digest` via padding with 2 zeros.
-        fn map_convert_xfe_to_digest(xfes: &[XFieldElement]) -> Vec<Digest> {
-            xfes.iter().map(|x| (*x).into()).collect()
-        }
-
-        /// Get the x-coordinate of an A or B point in a colinearity check, given the point's
-        /// index and the round number in which the check takes place. In Triton VM, this
-        /// method is called `get_evaluation_argument`.
-        pub fn get_colinearity_check_x(&self, idx: u32, round: usize) -> XFieldElement {
-            let domain_value = self.domain_offset * self.domain_generator.mod_pow_u32(idx);
-            let round_exponent = 2u32.pow(round as u32);
-            let evaluation_argument = domain_value.mod_pow_u32(round_exponent);
-
-            evaluation_argument.lift()
-        }
-
-        /// Verify the FRI proof embedded in the proof stream. This function expands the list
-        /// `nondeterministic_digests` with the digests of the individual authentication paths
-        /// obtained from reduplicating the authentication structures that live in the proof
-        /// stream.
-        fn inner_verify(
-            &self,
-            proof_stream: &mut ProofStream<Tip5>,
-            nondeterministic_digests: &mut Vec<Digest>,
-        ) -> anyhow::Result<Vec<(u32, XFieldElement)>> {
-            let mut num_nondeterministic_digests_read = 0;
-
-            println!("Inside inner_verify.");
-
-            // calculate number of rounds
-            let num_rounds = self.num_rounds();
-            println!("Number of rounds: {num_rounds}");
-            let last_round_max_degree = self.last_round_max_degree();
-            println!("Max degree in last round: {last_round_max_degree}");
-
-            // Extract all roots and calculate alpha based on Fiat-Shamir challenge
-            let mut roots = Vec::with_capacity(num_rounds);
-            let mut alphas = Vec::with_capacity(num_rounds);
-
-            let first_root = proof_stream
-                .dequeue()
-                .unwrap()
-                .try_into_merkle_root()
-                .unwrap();
-            roots.push(first_root);
-
-            for _round in 0..num_rounds {
-                // get a challenge from the verifier
-                let alpha = proof_stream.sample_scalars(1)[0];
-                alphas.push(alpha);
-
-                // get a commitment from the prover
-                let root = proof_stream
-                    .dequeue()
-                    .unwrap()
-                    .try_into_merkle_root()
-                    .unwrap();
-                roots.push(root);
-            }
-            println!("alphas:");
-            for alpha in alphas.iter() {
-                println!("{}", alpha);
-            }
-
-            // Extract last codeword
-            let last_codeword = proof_stream
-                .dequeue()
-                .unwrap()
-                .try_into_fri_codeword()
-                .unwrap();
-            assert_eq!(
-                last_codeword.len(),
-                self.domain_length as usize >> self.num_rounds()
-            );
-
-            // Check if last codeword matches the given root
-            let codeword_digests = Self::map_convert_xfe_to_digest(&last_codeword);
-            let last_codeword_merkle_root =
-                MerkleRoot::call(&codeword_digests, 0, codeword_digests.len());
-
-            let last_root = roots.last().unwrap();
-            if *last_root != last_codeword_merkle_root {
-                bail!(FriValidationError::BadMerkleRootForLastCodeword);
-            }
-
-            // Verify that last codeword is of sufficiently low degree
-
-            // Compute interpolant to get the degree of the last codeword.
-            // Note that we don't have to scale the polynomial back to the trace
-            // subgroup since we only check its degree and don't use it further.
-            let log_2_of_n = last_codeword.len().ilog2();
-            let mut last_polynomial = last_codeword.clone();
-
-            let last_fri_domain_generator = self
-                .domain_generator
-                .mod_pow_u32(2u32.pow(num_rounds as u32));
-            intt::<XFieldElement>(&mut last_polynomial, last_fri_domain_generator, log_2_of_n);
-            let last_poly_degree = Polynomial::new(last_polynomial).degree();
-
-            if last_poly_degree > last_round_max_degree as isize {
-                println!(
-                    "last_poly_degree is {last_poly_degree}, \
-                degree_of_last_round is {last_round_max_degree}",
-                );
-                bail!(FriValidationError::LastRoundPolynomialHasTooHighDegree)
-            }
-
-            // QUERY PHASE
-
-            // query step 0: get "A" indices and verify set membership of corresponding values.
-            let domain_length = self.domain_length as usize;
-            let num_collinearity_check = self.num_colinearity_checks as usize;
-            let mut a_indices = proof_stream.sample_indices(domain_length, num_collinearity_check);
-
-            let tree_height = self.domain_length.ilog2() as usize;
-            let fri_response = proof_stream
-                .dequeue()
-                .unwrap()
-                .try_into_fri_response()
-                .unwrap();
-            assert_eq!(a_indices.len(), fri_response.revealed_leaves.len());
-            let mut a_values = fri_response.revealed_leaves;
-
-            let leaf_digests = Self::map_convert_xfe_to_digest(&a_values);
-            let indexed_a_leaves = a_indices.iter().copied().zip_eq(leaf_digests).collect_vec();
-
-            // reduplicate authentication structures if necessary
-            if num_nondeterministic_digests_read >= nondeterministic_digests.len() {
-                let inclusion_proof = MerkleTreeInclusionProof::<Tip5> {
-                    tree_height,
-                    indexed_leaves: indexed_a_leaves.clone(),
-                    authentication_structure: fri_response.auth_structure,
-                    ..Default::default()
-                };
-
-                // sanity check: the authentication structure was valid, right?
-                assert!(inclusion_proof.clone().verify(roots[0]));
-                let reduplicated_authentication_paths =
-                    inclusion_proof.into_authentication_paths()?;
-                nondeterministic_digests
-                    .extend(reduplicated_authentication_paths.into_iter().flatten());
-            }
-
-            // verify authentication paths for A leafs
-            for indexed_leaf in indexed_a_leaves {
-                let authentication_path = &nondeterministic_digests
-                    [num_nondeterministic_digests_read
-                        ..(num_nondeterministic_digests_read + tree_height)];
-                num_nondeterministic_digests_read += tree_height;
-                let inclusion_proof = MerkleTreeInclusionProof::<Tip5> {
-                    tree_height,
-                    indexed_leaves: vec![indexed_leaf],
-                    authentication_structure: authentication_path.to_vec(),
-                    ..Default::default()
-                };
-                assert!(inclusion_proof.verify(roots[0]));
-            }
-
-            // save indices and revealed leafs of first round's codeword for returning
-            let revealed_indices_and_elements_first_half = a_indices
-                .iter()
-                .map(|&idx| idx as u32)
-                .zip_eq(a_values.iter().copied())
-                .collect_vec();
-            // these indices and values will be computed in the first iteration of the main loop below
-            let mut revealed_indices_and_elements_second_half = vec![];
-
-            // set up "B" for offsetting inside loop.  Note that "B" and "A" indices can be calculated
-            // from each other.
-            let mut b_indices = a_indices.clone();
-            let mut current_domain_len = self.domain_length as usize;
-            let mut current_tree_height = tree_height;
-
-            // query step 1:  loop over FRI rounds, verify "B"s, compute values for "C"s
-            for r in 0..num_rounds {
-                // get "B" indices and verify set membership of corresponding values
-                b_indices = b_indices
-                    .iter()
-                    .map(|x| (x + current_domain_len / 2) % current_domain_len)
-                    .collect();
-                let fri_response = proof_stream
-                    .dequeue()
-                    .unwrap()
-                    .try_into_fri_response()
-                    .unwrap();
-                let b_values = fri_response.revealed_leaves;
-
-                let leaf_digests = Self::map_convert_xfe_to_digest(&b_values);
-                let indexed_b_leaves = b_indices.iter().copied().zip_eq(leaf_digests).collect_vec();
-
-                // reduplicate authentication structures if necessary
-                if num_nondeterministic_digests_read >= nondeterministic_digests.len() {
-                    let inclusion_proof = MerkleTreeInclusionProof::<Tip5> {
-                        tree_height: current_tree_height,
-                        indexed_leaves: indexed_b_leaves.clone(),
-                        authentication_structure: fri_response.auth_structure,
-                        ..Default::default()
-                    };
-
-                    // sanity check: the auth structure was valid, right?
-                    assert!(inclusion_proof.clone().verify(roots[r]));
-                    let reduplicated_authentication_paths =
-                        inclusion_proof.into_authentication_paths()?;
-                    nondeterministic_digests
-                        .extend(reduplicated_authentication_paths.into_iter().flatten());
-                }
-
-                // verify authentication paths for B leafs
-                for indexed_leaf in indexed_b_leaves {
-                    let authentication_path = &nondeterministic_digests
-                        [num_nondeterministic_digests_read
-                            ..(num_nondeterministic_digests_read + current_tree_height)];
-                    num_nondeterministic_digests_read += current_tree_height;
-                    let inclusion_proof = MerkleTreeInclusionProof::<Tip5> {
-                        tree_height: current_tree_height,
-                        indexed_leaves: vec![indexed_leaf],
-                        authentication_structure: authentication_path.to_vec(),
-                        ..Default::default()
-                    };
-                    if !inclusion_proof.verify(roots[r]) {
-                        bail!(FriValidationError::BadMerkleAuthenticationPath);
-                    }
-                }
-
-                debug_assert_eq!(self.num_colinearity_checks, a_indices.len() as u32);
-                debug_assert_eq!(self.num_colinearity_checks, b_indices.len() as u32);
-                debug_assert_eq!(self.num_colinearity_checks, a_values.len() as u32);
-                debug_assert_eq!(self.num_colinearity_checks, b_values.len() as u32);
-
-                if r == 0 {
-                    // save other half of indices and revealed leafs of first round for returning
-                    revealed_indices_and_elements_second_half = b_indices
-                        .iter()
-                        .map(|&idx| idx as u32)
-                        .zip_eq(b_values.iter().copied())
-                        .collect_vec();
-                }
-
-                // compute "C" indices and values for next round from "A" and "B" of current round
-                current_domain_len /= 2;
-                current_tree_height -= 1;
-                let c_indices = a_indices.iter().map(|x| x % current_domain_len).collect();
-                let c_values = (0..self.num_colinearity_checks as usize)
-                    .map(|i| {
-                        let a_x = self.get_colinearity_check_x(a_indices[i] as u32, r);
-                        let b_x = self.get_colinearity_check_x(b_indices[i] as u32, r);
-                        Polynomial::<XFieldElement>::get_colinear_y(
-                            (a_x, a_values[i]),
-                            (b_x, b_values[i]),
-                            alphas[r],
-                        )
-                    })
-                    .collect();
-
-                // next rounds "A"s correspond to current rounds "C"s
-                a_indices = c_indices;
-                a_values = c_values;
-            }
-
-            // Finally compare "C" values (which are named "A" values in this enclosing scope) with
-            // last codeword from the proofstream.
-            a_indices = a_indices.iter().map(|x| x % current_domain_len).collect();
-            if !(0..self.num_colinearity_checks as usize)
-                .all(|i| last_codeword[a_indices[i]] == a_values[i])
-            {
-                bail!(FriValidationError::LastCodewordMismatch);
-            }
-
-            // compile return object and store to memory
-            let revealed_indices_and_elements = revealed_indices_and_elements_first_half
-                .into_iter()
-                .chain(revealed_indices_and_elements_second_half)
-                .collect_vec();
-
-            Ok(revealed_indices_and_elements)
-        }
-
         /// Generate a proof, embedded in a proof stream.
         pub fn pseudorandom_fri_proof_stream(&self, seed: [u8; 32]) -> ProofStream<Tip5> {
             let max_degree = self.first_round_max_degree();
@@ -1107,29 +1137,6 @@ mod test {
                 items_index: 0,
                 sponge: Tip5::init(),
             }
-        }
-
-        pub fn extract_digests_required_for_proving(
-            &self,
-            proof_stream: &ProofStream<Tip5>,
-        ) -> Vec<Digest> {
-            let mut digests = vec![];
-            self.inner_verify(&mut proof_stream.clone(), &mut digests)
-                .unwrap();
-            digests
-        }
-
-        pub fn to_fri(self) -> Fri<Tip5> {
-            let fri_domain = ArithmeticDomain::of_length(self.domain_length as usize)
-                .unwrap()
-                .with_offset(self.domain_offset);
-            let maybe_fri = Fri::new(
-                fri_domain,
-                self.expansion_factor as usize,
-                self.num_colinearity_checks as usize,
-            );
-
-            maybe_fri.unwrap()
         }
     }
 
