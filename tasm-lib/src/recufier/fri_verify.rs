@@ -54,6 +54,18 @@ pub struct FriVerify {
     domain_generator: BFieldElement,
 }
 
+impl From<Fri<Tip5>> for FriVerify {
+    fn from(value: Fri<Tip5>) -> Self {
+        Self {
+            domain_generator: value.domain.generator,
+            domain_length: value.domain.length.try_into().unwrap(),
+            domain_offset: value.domain.offset,
+            expansion_factor: value.expansion_factor.try_into().unwrap(),
+            num_colinearity_checks: value.num_collinearity_checks.try_into().unwrap(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct FriSnippet {
     #[cfg(test)]
