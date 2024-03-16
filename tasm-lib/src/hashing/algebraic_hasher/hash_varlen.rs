@@ -42,7 +42,7 @@ impl DeprecatedSnippet for HashVarlen {
     }
 
     fn input_types(&self) -> Vec<DataType> {
-        vec![DataType::Bfe, DataType::U32]
+        vec![DataType::VoidPointer, DataType::U32]
     }
 
     fn output_field_names(&self) -> Vec<String> {
