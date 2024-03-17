@@ -15,6 +15,7 @@ use crate::library::Library;
 use crate::list::length::Length;
 use crate::rust_shadowing_helper_functions;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
+use crate::traits::procedure::Procedure;
 use crate::ExecutionState;
 use crate::VmHasher;
 use crate::DIGEST_LENGTH;
@@ -396,7 +397,7 @@ impl DeprecatedSnippet for MultisetEquality {
         let list_a_hash = {
             stack.push(list_a_pointer + first_element_offset);
             stack.push(BFieldElement::new(len as u64 * DIGEST_LENGTH as u64));
-            HashVarlen.rust_shadowing(stack, vec![], vec![], memory);
+            HashVarlen.rust_shadow(stack, memory, &NonDeterminism::default(), &[], &mut None);
             Digest::new([
                 stack.pop().unwrap(),
                 stack.pop().unwrap(),
@@ -408,7 +409,7 @@ impl DeprecatedSnippet for MultisetEquality {
         let list_b_hash = {
             stack.push(list_b_pointer + first_element_offset);
             stack.push(BFieldElement::new(len as u64 * DIGEST_LENGTH as u64));
-            HashVarlen.rust_shadowing(stack, vec![], vec![], memory);
+            HashVarlen.rust_shadow(stack, memory, &NonDeterminism::default(), &[], &mut None);
             Digest::new([
                 stack.pop().unwrap(),
                 stack.pop().unwrap(),

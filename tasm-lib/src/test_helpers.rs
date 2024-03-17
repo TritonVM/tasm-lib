@@ -493,39 +493,3 @@ pub fn test_rust_equivalence_given_execution_state<T: BasicSnippet + RustShadow>
         None,
     )
 }
-
-#[cfg(test)]
-mod test {
-    use rand::random;
-
-    use crate::empty_stack;
-    use crate::hashing::algebraic_hasher::hash_varlen::HashVarlen;
-
-    use super::*;
-
-    /// TIP6 sets the bottom of the stack to the program hash. While testing Snippets,
-    /// which are not standalone programs and therefore do not come with a well defined
-    /// program hash, we want to verify that the tasm and rust stacks are identical up
-    /// to these first five elements. This unit test tests this.
-    #[test]
-    fn test_program_hash_ignored() {
-        // arbitrary snippet that does something related to hashing
-        let snippet_struct = HashVarlen;
-        let mut stack = empty_stack();
-        stack.push(BFieldElement::new(45u64));
-        stack.push(BFieldElement::new(1u64 << 12));
-
-        let mut tasm_stack = stack.to_vec();
-        for item in tasm_stack.iter_mut().take(DIGEST_LENGTH) {
-            *item = random();
-        }
-
-        test_rust_equivalence_given_complete_state_deprecated(
-            &snippet_struct,
-            &stack,
-            &[],
-            &NonDeterminism::default(),
-            None,
-        );
-    }
-}
