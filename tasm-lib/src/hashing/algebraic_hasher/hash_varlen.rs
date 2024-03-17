@@ -40,6 +40,16 @@ impl HashVarlen {
             sponge: None,
         }
     }
+
+    /// Mutate the sponge with the same operations as this snippet
+    /// Used to facilitate rust-shadowing in downstream dependencies.
+    pub fn sponge_mutation(&self, sponge: &mut VmHasher, preimage: &[BFieldElement]) {
+        *sponge = Tip5::init();
+
+        sponge.pad_and_absorb_all(preimage);
+
+        sponge.squeeze();
+    }
 }
 
 impl BasicSnippet for HashVarlen {
@@ -138,6 +148,9 @@ impl Procedure for HashVarlen {
 
 #[cfg(test)]
 mod tests {
+    use rand::{thread_rng, RngCore};
+
+    use crate::test_helpers::tasm_final_state;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
 
@@ -146,6 +159,42 @@ mod tests {
     #[test]
     fn test() {
         ShadowedProcedure::new(HashVarlen).test();
+    }
+
+    #[test]
+    fn sponge_mutation_function_matches_snippet() {
+        let snippet = HashVarlen;
+        let mut seed = [0u8; 32];
+        thread_rng().fill_bytes(&mut seed);
+        let init_state = snippet.pseudorandom_initial_state(seed, None);
+        let init_sponge = Tip5 {
+            state: thread_rng().gen(),
+        };
+
+        let preimage_length: u32 = init_state.stack.last().unwrap().value().try_into().unwrap();
+        let mut preimage_pointer = init_state.stack[init_state.stack.len() - 2];
+        let mut preimage = vec![];
+        for _ in 0..preimage_length {
+            preimage.push(init_state.nondeterminism.ram[&preimage_pointer]);
+            preimage_pointer.increment();
+        }
+
+        let final_state = tasm_final_state(
+            &ShadowedProcedure::new(snippet.clone()),
+            &init_state.stack,
+            &[],
+            init_state.nondeterminism,
+            &Some(init_sponge.clone()),
+        );
+
+        let mut helper_function_sponge = init_sponge.clone();
+        snippet.sponge_mutation(&mut helper_function_sponge, &preimage);
+
+        assert_eq!(
+            final_state.final_sponge.clone().unwrap(),
+            helper_function_sponge
+        );
+        assert_ne!(final_state.final_sponge.unwrap(), init_sponge);
     }
 }
 
