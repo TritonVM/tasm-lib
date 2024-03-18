@@ -314,7 +314,7 @@ pub fn execute_with_terminal_state(
 }
 
 // If you run this, make sure `opt-level` is set to 3.
-fn prove_and_verify(
+pub fn prove_and_verify(
     program: &Program,
     std_in: &[BFieldElement],
     nondeterminism: &NonDeterminism<BFieldElement>,
@@ -330,8 +330,6 @@ fn prove_and_verify(
         .trace_execution(PublicInput::new(std_in.to_owned()), nondeterminism.clone())
         .unwrap();
 
-    // let code_header = &code[0..std::cmp::min(code.len(), 100)];
-    // println!("Execution succeeded. Now proving {code_header}");
     let tick = SystemTime::now();
     let proof =
         triton_vm::prove(Stark::default(), &claim, program, nondeterminism.clone()).unwrap();
