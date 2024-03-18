@@ -46,7 +46,7 @@ pub fn test_rust_shadow<P: CompiledProgram>(
 /// Run the program, collect benchmarkable performance statistics (including a profile),
 /// and write them to disk.
 pub fn bench_and_profile_program<P: CompiledProgram>(
-    name: String,
+    name: &str,
     case: crate::snippet_bencher::BenchmarkCase,
     public_input: &PublicInput,
     nondeterminism: &NonDeterminism<BFieldElement>,
@@ -68,7 +68,7 @@ pub fn bench_and_profile_program<P: CompiledProgram>(
     let benchmark = match program.trace_execution(public_input.clone(), nondeterminism.clone()) {
         Ok((aet, _output)) => BenchmarkResult {
             case,
-            name: name.clone(),
+            name: name.to_owned(),
             clock_cycle_count: aet.processor_table_length(),
             hash_table_height: aet.hash_table_length(),
             u32_table_height: aet.u32_table_length(),
@@ -79,7 +79,7 @@ pub fn bench_and_profile_program<P: CompiledProgram>(
     crate::snippet_bencher::write_benchmarks(vec![benchmark]);
 
     // write profile to standard output in case someone is watching
-    let str = crate::generate_full_profile(&name, program, public_input, nondeterminism);
+    let str = crate::generate_full_profile(name, program, public_input, nondeterminism);
     println!("{str}");
 
     // write profile to profile file
@@ -162,7 +162,7 @@ mod benches {
         let public_input = PublicInput::new(vec![BFieldElement::new(501)]);
         let secret_input = NonDeterminism::new(vec![]);
         bench_and_profile_program::<FiboTest>(
-            "fibo_test".to_string(),
+            "fibo_test",
             BenchmarkCase::CommonCase,
             &public_input,
             &secret_input,

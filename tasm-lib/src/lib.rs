@@ -352,7 +352,7 @@ pub fn prove_and_verify(
 }
 
 pub fn generate_full_profile(
-    name: &String,
+    name: &str,
     program: Program,
     public_input: &PublicInput,
     nondeterminism: &NonDeterminism<BFieldElement>,
