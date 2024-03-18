@@ -1516,6 +1516,31 @@ mod test {
                 ));
         });
     }
+
+    #[proptest(cases = 10)]
+    fn assert_nondeterministic_digests_are_all_used(test_case: TestCase) {
+        let ProcedureInitialState {
+            stack: initial_stack,
+            nondeterminism,
+            public_input: stdin,
+            sponge,
+        } = test_case.initial_state();
+
+        let snippet = FriSnippet {
+            test_instance: test_case.fri_verify,
+        };
+        let shadowed_procedure = ShadowedProcedure::new(snippet);
+
+        let tasm = tasm_final_state(
+            &shadowed_procedure,
+            &initial_stack,
+            &stdin,
+            nondeterminism,
+            &sponge,
+        );
+
+        assert!(tasm.secret_digests.is_empty());
+    }
 }
 
 #[cfg(test)]

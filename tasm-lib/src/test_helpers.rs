@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::collections::VecDeque;
 use std::fmt::Display;
 
 use itertools::Itertools;
@@ -290,6 +291,7 @@ pub fn rust_final_state<T: RustShadow>(
         final_stack: rust_stack,
         final_ram: rust_memory,
         final_sponge: rust_sponge,
+        secret_digests: VecDeque::<Digest>::new(),
     }
 }
 

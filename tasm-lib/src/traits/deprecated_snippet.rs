@@ -125,6 +125,7 @@ pub trait DeprecatedSnippet {
             final_sponge: st.sponge,
             final_stack: st.op_stack.stack,
             output: st.public_output,
+            secret_digests: st.secret_digests,
         })?;
 
         execute_test(

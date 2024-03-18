@@ -12,7 +12,7 @@
 // https://github.com/bkchr/proc-macro-crate/issues/2#issuecomment-572914520
 extern crate self as tasm_lib;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::io::Write;
 use std::time::SystemTime;
 
@@ -101,6 +101,7 @@ pub struct VmOutputState {
     pub final_stack: Vec<BFieldElement>,
     pub final_ram: HashMap<BFieldElement, BFieldElement>,
     pub final_sponge: Option<VmHasher>,
+    pub secret_digests: VecDeque<Digest>,
 }
 
 pub fn empty_stack() -> Vec<BFieldElement> {
@@ -256,6 +257,7 @@ pub fn execute_test(
         final_stack: stack.to_owned(),
         final_ram: terminal_state.ram,
         final_sponge: terminal_state.sponge,
+        secret_digests: terminal_state.secret_digests,
     }
 }
 
