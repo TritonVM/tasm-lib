@@ -356,6 +356,7 @@ pub fn generate_full_profile(
     program: Program,
     public_input: &PublicInput,
     nondeterminism: &NonDeterminism<BFieldElement>,
+    only_print_aggregate: bool,
 ) -> String {
     #[derive(Debug, Clone, Eq, PartialEq, Hash)]
     struct AggregateProfileLine {
@@ -368,13 +369,17 @@ pub fn generate_full_profile(
         .profile(public_input.clone(), nondeterminism.clone())
         .unwrap();
     let mut printed_profile = format!("{name}:\n");
-    printed_profile = format!("{printed_profile}\n# call graph\n");
-    for line in profile.iter() {
-        let indentation = vec!["  "; line.call_depth].join("");
-        let label = &line.label;
-        let cycle_count = line.cycle_count();
-        printed_profile = format!("{printed_profile}{indentation} {label}: {cycle_count}\n");
+    if !only_print_aggregate {
+        printed_profile = format!("{printed_profile}\n# call graph\n");
+
+        for line in profile.iter() {
+            let indentation = vec!["  "; line.call_depth].join("");
+            let label = &line.label;
+            let cycle_count = line.cycle_count();
+            printed_profile = format!("{printed_profile}{indentation} {label}: {cycle_count}\n");
+        }
     }
+
     printed_profile = format!("{printed_profile}\n# aggregated\n");
     let mut aggregated: Vec<AggregateProfileLine> = vec![];
     for line in profile {
