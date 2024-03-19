@@ -50,7 +50,13 @@ pub fn execute_bench(
     // produced proofs here should be valid.
     // If you run this, make sure `opt-level` is set to 3.
     if std::env::var("DYING_TO_PROVE").is_ok() {
-        prove_and_verify(&program, &std_in, &nondeterminism, &end_state.public_output);
+        prove_and_verify(
+            &program,
+            &std_in,
+            &nondeterminism,
+            &end_state.public_output,
+            Some(stack.to_vec()),
+        );
     }
 
     ExecutionResult {

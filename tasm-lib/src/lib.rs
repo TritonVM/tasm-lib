@@ -50,6 +50,7 @@ pub mod traits;
 
 // re-exports for types exposed in our public API.
 pub use triton_vm;
+use triton_vm::profiler::TritonProfiler;
 pub use triton_vm::twenty_first;
 
 // The hasher type must match whatever algebraic hasher the VM is using
@@ -145,12 +146,13 @@ pub fn execute_bench_deprecated(
     std_in: Vec<BFieldElement>,
     nondeterminism: NonDeterminism<BFieldElement>,
 ) -> anyhow::Result<ExecutionResult> {
-    let initial_stack_height = stack.len() as isize;
+    let init_stack = stack.to_owned();
+    let initial_stack_height = init_stack.len() as isize;
     let public_input = PublicInput::new(std_in.clone());
     let program = Program::new(code);
 
     let mut vm_state = VMState::new(&program, public_input, nondeterminism.clone());
-    vm_state.op_stack.stack = stack.to_owned();
+    vm_state.op_stack.stack = init_stack.clone();
 
     let (simulation_trace, terminal_state) = program.trace_execution_of_state(vm_state)?;
 
@@ -159,9 +161,7 @@ pub fn execute_bench_deprecated(
         bail!("Jump stack must be unchanged after code execution but was {jump_stack:?}")
     }
 
-    *stack = terminal_state.op_stack.stack;
-
-    let final_stack_height = stack.len() as isize;
+    let final_stack_height = terminal_state.op_stack.stack.len() as isize;
     if expected_stack_diff != final_stack_height - initial_stack_height {
         bail!(
             "Code must grow/shrink stack with expected number of elements.\n
@@ -169,7 +169,7 @@ pub fn execute_bench_deprecated(
             end height:  {final_stack_height}\n
             expected difference: {expected_stack_diff}\n\n
             final stack: {}",
-            stack.iter().join(",")
+            terminal_state.op_stack.stack.iter().join(",")
         )
     }
 
@@ -180,12 +180,19 @@ pub fn execute_bench_deprecated(
     // If you run this, make sure `opt-level` is set to 3.
     let output = terminal_state.public_output;
     if std::env::var("DYING_TO_PROVE").is_ok() {
-        prove_and_verify(&program, &std_in, &nondeterminism, &output);
+        prove_and_verify(
+            &program,
+            &std_in,
+            &nondeterminism,
+            &output,
+            Some(init_stack),
+        );
     }
 
+    *stack = terminal_state.op_stack.stack.clone();
     Ok(ExecutionResult {
         output,
-        final_stack: stack.clone(),
+        final_stack: terminal_state.op_stack.stack,
         final_ram: terminal_state.ram,
         cycle_count: terminal_state.cycle_count as usize,
         hash_table_height: simulation_trace.hash_table_length(),
@@ -204,12 +211,12 @@ pub fn execute_test(
     nondeterminism: NonDeterminism<BFieldElement>,
     maybe_sponge: Option<VmHasher>,
 ) -> VmOutputState {
-    let initial_stack_height = stack.len();
+    let init_stack = stack.to_owned();
     let public_input = PublicInput::new(std_in.clone());
     let program = Program::new(code);
 
     let mut vm_state = VMState::new(&program, public_input.clone(), nondeterminism.clone());
-    vm_state.op_stack.stack = stack.to_owned();
+    vm_state.op_stack.stack = init_stack.clone();
     vm_state.sponge = maybe_sponge;
 
     maybe_write_debuggable_program_to_disk(&program, &vm_state);
@@ -224,6 +231,7 @@ pub fn execute_test(
     }
 
     let final_stack_height = terminal_state.op_stack.stack.len() as isize;
+    let initial_stack_height = init_stack.len();
     assert_eq!(
         expected_stack_diff,
         final_stack_height - initial_stack_height as isize,
@@ -233,10 +241,14 @@ pub fn execute_test(
         expected difference: {expected_stack_diff}\n\n
         initial stack: {}\n
         final stack:   {}",
-        stack.iter().skip(16).join(","),
-        terminal_state.op_stack.stack.iter().skip(16).join(","),
+        init_stack.iter().skip(NUM_OP_STACK_REGISTERS).join(","),
+        terminal_state
+            .op_stack
+            .stack
+            .iter()
+            .skip(NUM_OP_STACK_REGISTERS)
+            .join(","),
     );
-    *stack = terminal_state.op_stack.stack;
 
     // If this environment variable is set, all programs, including the code to prepare the state,
     // will be proven and then verified.
@@ -249,12 +261,14 @@ pub fn execute_test(
             &std_in,
             &nondeterminism,
             &terminal_state.public_output,
+            Some(init_stack),
         );
     }
 
+    *stack = terminal_state.op_stack.stack.clone();
     VmOutputState {
         output: terminal_state.public_output,
-        final_stack: stack.to_owned(),
+        final_stack: terminal_state.op_stack.stack.clone(),
         final_ram: terminal_state.ram,
         final_sponge: terminal_state.sponge,
         secret_digests: terminal_state.secret_digests,
@@ -313,39 +327,75 @@ pub fn execute_with_terminal_state(
     }
 }
 
-// If you run this, make sure `opt-level` is set to 3.
+/// Run the prover on the program. If `init_stack` is provided, the prover is run on a program
+/// with the code to setup the stack prepended, since the prover will always fail if the stack
+/// is not initialized to the minimal height. The first `NUM_OP_STACK_REGISTERS` of `init_stack`
+/// are ignored.
+/// If you run this, make sure `opt-level` is set to 3.
 pub fn prove_and_verify(
     program: &Program,
     std_in: &[BFieldElement],
     nondeterminism: &NonDeterminism<BFieldElement>,
     output: &[BFieldElement],
+    init_stack: Option<Vec<BFieldElement>>,
 ) {
-    let claim = Claim {
-        program_digest: program.hash::<VmHasher>(),
-        input: std_in.to_owned(),
-        output: output.to_owned(),
+    use triton_vm::instruction::AnInstruction::*;
+    use triton_vm::prelude::LabelledInstruction::*;
+    let timing_report_label = match program.labelled_instructions().first().unwrap() {
+        Instruction(Call(func)) => func.to_owned(),
+        Label(label) => label.to_owned(),
+        _ => "Some program".to_owned(),
     };
 
-    let (simulation_trace, _) = program
+    // Construct the program that initializes the stack to the expected start value.
+    // If this is not done, a stack underflow will occur for most programs
+    let stack_initialization_code = match init_stack {
+        Some(init_stack) => init_stack
+            .into_iter()
+            .skip(NUM_OP_STACK_REGISTERS)
+            .map(|word| triton_instr!(push word))
+            .collect(),
+        None => triton_asm!(),
+    };
+
+    let program =
+        Program::new(&[stack_initialization_code, program.labelled_instructions()].concat());
+
+    let (aet, _) = program
         .trace_execution(PublicInput::new(std_in.to_owned()), nondeterminism.clone())
         .unwrap();
 
+    let stark = Stark::default();
+    let claim = Claim::about_program(&program)
+        .with_output(output.to_owned())
+        .with_input(std_in.to_owned());
+
     let tick = SystemTime::now();
-    let proof =
-        triton_vm::prove(Stark::default(), &claim, program, nondeterminism.clone()).unwrap();
-    println!(
-        "Done proving. Elapsed time: {:?}",
-        tick.elapsed().expect("Don't mess with time")
-    );
+    let mut profiler = Some(TritonProfiler::new(&timing_report_label));
+    let proof = stark.prove(&claim, &aet, &mut profiler).unwrap();
+    let mut profiler = profiler.unwrap();
+    profiler.finish();
+    let measured_time = tick.elapsed().expect("Don't mess with time");
+
+    let padded_height = proof.padded_height().unwrap();
+    let fri = stark.derive_fri(padded_height).unwrap();
+    let report = profiler
+        .report()
+        .with_cycle_count(aet.processor_trace.nrows())
+        .with_padded_height(padded_height)
+        .with_fri_domain_len(fri.domain.length);
+    println!("{report}");
+
+    println!("Done proving. Elapsed time: {:?}", measured_time);
     println!(
         "\nProof was generated from:\ntable heights:\nprocessor table: {}\nhash table: {}\nu32 table: {}",
-        simulation_trace.processor_trace.rows().into_iter().count(),
-        simulation_trace.hash_trace.rows().into_iter().count(),
-        simulation_trace.u32_entries.len(),
+        aet.processor_trace.rows().into_iter().count(),
+        aet.hash_trace.rows().into_iter().count(),
+        aet.u32_entries.len(),
     );
 
     assert!(
-        triton_vm::verify(Stark::default(), &claim, &proof),
+        triton_vm::verify(stark, &claim, &proof),
         "Generated proof must verify for program:\n {}",
         program,
     );
