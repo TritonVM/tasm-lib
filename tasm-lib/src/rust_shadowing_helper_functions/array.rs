@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use num::Zero;
 use triton_vm::twenty_first::shared_math::{
     b_field_element::BFieldElement, bfield_codec::BFieldCodec,
 };
@@ -50,4 +51,24 @@ pub fn array_get(
     };
 
     (0..element_length).map(read_word).collect()
+}
+
+pub fn array_from_memory<T: BFieldCodec + Clone>(
+    mut pointer: BFieldElement,
+    array_length: usize,
+    memory: &HashMap<BFieldElement, BFieldElement>,
+) -> Vec<T> {
+    let mut ret = vec![];
+    let element_length = T::static_length().unwrap();
+    for _ in 0..array_length {
+        let mut element = vec![BFieldElement::zero(); element_length];
+        for word in element.iter_mut() {
+            *word = *memory.get(&pointer).unwrap_or(&BFieldElement::zero());
+            pointer.increment();
+        }
+
+        ret.push(*T::decode(&element).unwrap());
+    }
+
+    ret
 }
