@@ -1,4 +1,6 @@
-use triton_vm::{triton_asm, twenty_first::shared_math::x_field_element::EXTENSION_DEGREE};
+use triton_vm::table::{NUM_BASE_COLUMNS, NUM_EXT_COLUMNS};
+use triton_vm::triton_asm;
+use triton_vm::twenty_first::shared_math::x_field_element::EXTENSION_DEGREE;
 
 use crate::{
     data_type::{ArrayType, DataType},
@@ -17,6 +19,16 @@ impl InnerProductOfThreeRowsWithWeights {
             base_length,
             ext_length,
             randomizer_length,
+        }
+    }
+
+    pub fn recufier_parameters() -> Self {
+        Self {
+            base_length: NUM_BASE_COLUMNS,
+            ext_length: NUM_EXT_COLUMNS,
+            // TODO: Use NUM_RANDOMIZERS from TVM here instead, once randomizers
+            // are handled correctly in TVM.
+            randomizer_length: 0,
         }
     }
 }
@@ -229,6 +241,11 @@ mod test {
     use crate::traits::rust_shadow::RustShadow;
 
     use super::*;
+
+    #[test]
+    fn three_rows_tvm_parameters_test() {
+        ShadowedFunction::new(InnerProductOfThreeRowsWithWeights::recufier_parameters()).test()
+    }
 
     #[proptest(cases = 5)]
     fn three_rows_pbt(

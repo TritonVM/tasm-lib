@@ -51,6 +51,7 @@ use crate::arithmetic::xfe::cube::Cube;
 use crate::arithmetic::xfe::square::Square;
 use crate::arithmetic::xfe::to_the_fourth::ToTheFourth;
 use crate::array::horner_evaluation::HornerEvaluation;
+use crate::array::inner_product_of_three_rows_with_weights::InnerProductOfThreeRowsWithWeights;
 use crate::array::inner_product_of_xfes::InnerProductOfXfes;
 use crate::data_type::DataType;
 use crate::hashing::algebraic_hasher;
@@ -432,6 +433,9 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
         }
         "tasm_recufier_own_program_digest" => {
             Box::new(OwnProgramDigest)
+        }
+        "tasm_array_inner_product_of_three_rows_with_weights" => {
+            Box::new(InnerProductOfThreeRowsWithWeights::recufier_parameters())
         }
 
         // memory
