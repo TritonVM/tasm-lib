@@ -380,7 +380,7 @@ pub fn generate_full_profile(
         }
     }
 
-    printed_profile = format!("{printed_profile}\n# aggregated\n");
+    printed_profile = format!("{printed_profile}\n# aggregated unsorted\n");
     let mut aggregated: Vec<AggregateProfileLine> = vec![];
     for line in profile {
         if let Some(agg) = aggregated
@@ -396,13 +396,26 @@ pub fn generate_full_profile(
             });
         }
     }
+
     let total_cycle_count = aggregated[0].cycle_count as f32;
+    for aggregate_line in aggregated.iter() {
+        let indentation = vec!["  "; aggregate_line.call_depth].join("");
+        let label = &aggregate_line.label;
+        let cycle_count = aggregate_line.cycle_count;
+        printed_profile = format!(
+            "{printed_profile}{indentation} {label}:, {cycle_count}, {};\n",
+            (aggregate_line.cycle_count as f32) / total_cycle_count
+        );
+    }
+
+    printed_profile = format!("{printed_profile}\n# aggregated + sorted\n");
+    aggregated.sort_by(|a, b| a.cycle_count.cmp(&b.cycle_count));
     for aggregate_line in aggregated {
         let indentation = vec!["  "; aggregate_line.call_depth].join("");
         let label = aggregate_line.label;
         let cycle_count = aggregate_line.cycle_count;
         printed_profile = format!(
-            "{printed_profile}{indentation} {label}: {cycle_count} ({})\n",
+            "{printed_profile}{indentation} {label}:, {cycle_count}, {};\n",
             (aggregate_line.cycle_count as f32) / total_cycle_count
         );
     }
