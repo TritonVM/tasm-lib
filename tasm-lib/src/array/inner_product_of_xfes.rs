@@ -328,6 +328,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
+    use triton_vm::table::extension_table::Quotientable;
+    use triton_vm::table::master_table::{MasterExtTable, NUM_COLUMNS};
+
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
 
@@ -341,5 +344,21 @@ mod benches {
     #[test]
     fn inner_product_xfes_bench_200() {
         ShadowedFunction::new(InnerProductOfXfes { length: 200 }).bench();
+    }
+
+    #[test]
+    fn inner_product_xfes_bench_num_columns_current_tvm() {
+        ShadowedFunction::new(InnerProductOfXfes {
+            length: NUM_COLUMNS,
+        })
+        .bench();
+    }
+
+    #[test]
+    fn inner_product_xfes_bench_num_constraints_current_tvm() {
+        ShadowedFunction::new(InnerProductOfXfes {
+            length: MasterExtTable::NUM_CONSTRAINTS,
+        })
+        .bench();
     }
 }
