@@ -30,3 +30,4 @@ tasm-lib/vm_state.json
 
 # IDEs
 /.idea
+/.vscode
