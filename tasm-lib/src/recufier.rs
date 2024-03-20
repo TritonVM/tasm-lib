@@ -3,6 +3,7 @@ pub mod eval_arg;
 pub mod fri_verify;
 pub mod get_colinear_y;
 pub mod get_colinearity_check_x;
+pub mod instantiate_fiat_shamir_with_claim;
 pub mod master_ext_table;
 pub mod own_program_digest;
 pub mod proof_stream;
