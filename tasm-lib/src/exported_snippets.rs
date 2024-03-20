@@ -83,7 +83,10 @@ use crate::mmr::verify_from_secret_in::MmrVerifyLeafMembershipFromSecretIn;
 use crate::neptune::mutator_set::commit::Commit;
 use crate::neptune::mutator_set::get_swbf_indices::GetSwbfIndices;
 use crate::other_snippets::bfe_add::BfeAdd;
+use crate::recufier::challenges;
 use crate::recufier::challenges::new_empty_input_and_output::NewEmptyInputAndOutput;
+use crate::recufier::challenges::new_generic_dyn_claim::NewGenericDynClaim;
+use crate::recufier::claim::instantiate_fiat_shamir_with_claim::InstantiateFiatShamirWithClaim;
 use crate::recufier::master_ext_table::air_constraint_evaluation::AirConstraintEvaluation;
 use crate::recufier::own_program_digest::OwnProgramDigest;
 use crate::recufier::proof_stream::dequeue_next_as::DequeueNextAs;
@@ -96,6 +99,11 @@ const WEIGHTS_QUOTIENTS_INNER_PRODUCT_ENTRYPOINT: &str =
 const HORNER_EVALUATION_FOR_SUM_OF_EVALUATED_OUT_OF_DOMAIN_QUOTIENT_SEGMENTS_ENTRYPOINT: &str = formatcp!(
     "tasm_array_horner_evaluation_with_{}_coefficients",
     NUM_QUOTIENT_SEGMENTS
+);
+const CHALLENGES_NEW_FROM_DYN_CLAIM: &str = formatcp!(
+    "tasm_recufier_challenges_new_generic_dyn_claim_{}_{}",
+    Challenges::SAMPLE_COUNT,
+    Challenges::COUNT - Challenges::SAMPLE_COUNT
 );
 
 pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
@@ -415,7 +423,7 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
             assert_eq!(59, num_challenges_to_sample);
             assert_eq!(4, num_challenges_to_compute);
             let challenge_snippet
-                = NewEmptyInputAndOutput::new(num_challenges_to_sample, num_challenges_to_compute, NewEmptyInputAndOutput::conventional_challenges_pointer());
+                = NewEmptyInputAndOutput::new(num_challenges_to_sample, num_challenges_to_compute, challenges::shared::conventional_challenges_pointer());
             Box::new(challenge_snippet)
         }
         "tasm_recufier_master_ext_table_air_constraint_evaluation" => {
@@ -437,6 +445,10 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
         "tasm_array_inner_product_of_three_rows_with_weights" => {
             Box::new(InnerProductOfThreeRowsWithWeights::recufier_parameters())
         }
+        "tasm_recufier_claim_instantiate_fiat_shamir_with_claim" => {
+            Box::new(InstantiateFiatShamirWithClaim)
+        }
+        CHALLENGES_NEW_FROM_DYN_CLAIM => Box::new(NewGenericDynClaim::new(Challenges::SAMPLE_COUNT, Challenges::COUNT - Challenges::SAMPLE_COUNT, challenges::shared::conventional_challenges_pointer())),
 
         // memory
         "tasm_memory_dyn_malloc" => Box::new(DynMalloc),

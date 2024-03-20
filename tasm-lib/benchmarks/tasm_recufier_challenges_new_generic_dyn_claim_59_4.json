@@ -1,0 +1,16 @@
+[
+  {
+    "name": "tasm_recufier_challenges_new_generic_dyn_claim_59_4",
+    "clock_cycle_count": 1796,
+    "hash_table_height": 1914,
+    "u32_table_height": 0,
+    "case": "CommonCase"
+  },
+  {
+    "name": "tasm_recufier_challenges_new_generic_dyn_claim_59_4",
+    "clock_cycle_count": 4996,
+    "hash_table_height": 1914,
+    "u32_table_height": 0,
+    "case": "WorstCase"
+  }
+]

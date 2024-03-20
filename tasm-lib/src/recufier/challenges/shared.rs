@@ -1,3 +1,5 @@
+use triton_vm::twenty_first::shared_math::b_field_element::BFieldElement;
+
 use crate::data_type::ArrayType;
 use crate::data_type::DataType;
 use crate::data_type::StructType;
@@ -13,4 +15,10 @@ pub(super) fn challenges_data_type(total_number_of_challenges: usize) -> DataTyp
             })),
         )],
     })
+}
+
+pub(crate) fn conventional_challenges_pointer() -> BFieldElement {
+    // By convention, the challenges are stored in the third-to-last
+    // memory page
+    BFieldElement::new(((1 << 32) - 3) * (1 << 32))
 }

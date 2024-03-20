@@ -1,0 +1,16 @@
+[
+  {
+    "name": "tasm_recufier_claim_instantiate_fiat_shamir_with_claim",
+    "clock_cycle_count": 147,
+    "hash_table_height": 96,
+    "u32_table_height": 10,
+    "case": "CommonCase"
+  },
+  {
+    "name": "tasm_recufier_claim_instantiate_fiat_shamir_with_claim",
+    "clock_cycle_count": 387,
+    "hash_table_height": 216,
+    "u32_table_height": 14,
+    "case": "WorstCase"
+  }
+]

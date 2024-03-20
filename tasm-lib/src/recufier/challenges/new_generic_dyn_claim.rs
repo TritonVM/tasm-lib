@@ -26,14 +26,6 @@ pub struct NewGenericDynClaim {
 }
 
 impl NewGenericDynClaim {
-    pub fn conventional_challenges_pointer() -> BFieldElement {
-        // By convention, the challenges are stored in the third-to-last
-        // memory page
-        BFieldElement::new(((1 << 32) - 3) * (1 << 32))
-    }
-}
-
-impl NewGenericDynClaim {
     pub fn new(
         num_challenges_to_sample: usize,
         num_challenges_to_compute: usize,
@@ -224,6 +216,7 @@ mod tests {
     use triton_vm::twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
     use crate::memory::encode_to_memory;
+    use crate::recufier::challenges::shared::conventional_challenges_pointer;
     use crate::rust_shadowing_helper_functions::array::insert_as_array;
     use crate::rust_shadowing_helper_functions::claim::load_claim_from_memory;
     use crate::snippet_bencher::BenchmarkCase;
@@ -251,7 +244,7 @@ mod tests {
             let challenges = sponge.sample_scalars(self.num_of_fiat_shamir_challenges);
             let challenges = Challenges::new(challenges, &claim);
 
-            let challenges_pointer = Self::conventional_challenges_pointer();
+            let challenges_pointer = conventional_challenges_pointer();
             stack.push(challenges_pointer);
 
             insert_as_array(challenges_pointer, memory, challenges.challenges.to_vec());
@@ -300,7 +293,7 @@ mod tests {
         ShadowedProcedure::new(NewGenericDynClaim {
             num_of_claim_derived_challenges: NUM_OF_CLAIM_DERIVED_CHALLENGES,
             num_of_fiat_shamir_challenges: Challenges::COUNT - NUM_OF_CLAIM_DERIVED_CHALLENGES,
-            challenges_pointer: NewGenericDynClaim::conventional_challenges_pointer(),
+            challenges_pointer: conventional_challenges_pointer(),
         })
         .test();
     }
@@ -310,6 +303,7 @@ mod tests {
 mod benches {
     use triton_vm::table::challenges::Challenges;
 
+    use crate::recufier::challenges::shared::conventional_challenges_pointer;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
 
@@ -321,7 +315,7 @@ mod benches {
         ShadowedProcedure::new(NewGenericDynClaim {
             num_of_claim_derived_challenges: 4,
             num_of_fiat_shamir_challenges: Challenges::COUNT - NUM_OF_CLAIM_DERIVED_CHALLENGES,
-            challenges_pointer: NewGenericDynClaim::conventional_challenges_pointer(),
+            challenges_pointer: conventional_challenges_pointer(),
         })
         .bench();
     }
