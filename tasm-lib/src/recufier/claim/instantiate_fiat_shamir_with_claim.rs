@@ -10,25 +10,23 @@ use crate::traits::basic_snippet::BasicSnippet;
 
 pub struct InstantiateFiatShamirWithClaim;
 
-impl InstantiateFiatShamirWithClaim {
-    // TODO: This *must* match the type of `Claim` used in Triton VM. It would be preferable if
-    // it could be derived/generated from that type at the source.
-    // The tests below *should* verify that this type is consistent with the one used in TVM.
-    fn claim_type() -> StructType {
-        StructType {
-            name: "Claim".to_owned(),
-            fields: vec![
-                ("program_digest".to_owned(), DataType::Digest),
-                ("input".to_owned(), DataType::List(Box::new(DataType::Bfe))),
-                ("output".to_owned(), DataType::List(Box::new(DataType::Bfe))),
-            ],
-        }
+// TODO: This *must* match the type of `Claim` used in Triton VM. It would be preferable if
+// it could be derived/generated from that type at the source.
+// The tests below *should* verify that this type is consistent with the one used in TVM.
+pub(crate) fn claim_type() -> StructType {
+    StructType {
+        name: "Claim".to_owned(),
+        fields: vec![
+            ("program_digest".to_owned(), DataType::Digest),
+            ("input".to_owned(), DataType::List(Box::new(DataType::Bfe))),
+            ("output".to_owned(), DataType::List(Box::new(DataType::Bfe))),
+        ],
     }
 }
 
 impl BasicSnippet for InstantiateFiatShamirWithClaim {
     fn inputs(&self) -> Vec<(DataType, String)> {
-        let claim_type = Self::claim_type();
+        let claim_type = claim_type();
         vec![(DataType::StructRef(claim_type), "*claim".to_owned())]
     }
 
@@ -37,7 +35,7 @@ impl BasicSnippet for InstantiateFiatShamirWithClaim {
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_recufier_fiat_shamir_claim".to_owned()
+        "tasm_recufier_claim_instantiate_fiat_shamir_with_claim".to_owned()
     }
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
@@ -90,19 +88,15 @@ impl BasicSnippet for InstantiateFiatShamirWithClaim {
 
 #[cfg(test)]
 mod tests {
-    use num::Zero;
     use rand::{rngs::StdRng, thread_rng, Rng, SeedableRng};
     use std::collections::HashMap;
-    use triton_vm::twenty_first::{
-        shared_math::other::random_elements, util_types::algebraic_hasher::Sponge,
-    };
+    use triton_vm::twenty_first::shared_math::other::random_elements;
+    use triton_vm::twenty_first::util_types::algebraic_hasher::Sponge;
 
-    use crate::{
-        memory::encode_to_memory,
-        snippet_bencher::BenchmarkCase,
-        structure::tasm_object::decode_from_memory_with_size,
-        traits::procedure::{Procedure, ProcedureInitialState},
-    };
+    use crate::memory::encode_to_memory;
+    use crate::rust_shadowing_helper_functions::claim::load_claim_from_memory;
+    use crate::snippet_bencher::BenchmarkCase;
+    use crate::traits::procedure::{Procedure, ProcedureInitialState};
 
     use super::*;
 
@@ -117,25 +111,7 @@ mod tests {
         ) -> Vec<BFieldElement> {
             let claim_pointer = stack.pop().unwrap();
 
-            let output_field_size_pointer = claim_pointer;
-            let output_field_size = memory
-                .get(&output_field_size_pointer)
-                .unwrap_or(&BFieldElement::zero())
-                .value();
-            let input_field_size_pointer =
-                claim_pointer + BFieldElement::new(output_field_size + 1);
-            let input_field_size = memory
-                .get(&input_field_size_pointer)
-                .unwrap_or(&BFieldElement::zero())
-                .value();
-            let size = input_field_size + output_field_size + DIGEST_LENGTH as u64 + 2;
-
-            // Load `Claim` struct into memory
-            // Notice that it's important to use the `Claim` type from Triton VM here, as it
-            // gives a reasonable assurance that the `Claim` type specified here and that in
-            // Triton VM agree
-            let claim: Claim =
-                *decode_from_memory_with_size(memory, claim_pointer, size as usize).unwrap();
+            let claim = load_claim_from_memory(claim_pointer, memory);
 
             sponge.as_mut().unwrap().pad_and_absorb_all(&claim.encode());
 

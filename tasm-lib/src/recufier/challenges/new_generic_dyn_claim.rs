@@ -9,13 +9,15 @@ use crate::data_type::DataType;
 use crate::hashing::algebraic_hasher::sample_scalars_static_length_static_pointer::SampleScalarsStaticLengthStaticPointer;
 use crate::library::Library;
 use crate::recufier::challenges::shared::challenges_data_type;
+use crate::recufier::claim::instantiate_fiat_shamir_with_claim::claim_type;
 use crate::recufier::eval_arg::compute_terminal_const_sized_static_symbols::ComputeTerminalConstSizedStaticSymbols;
+use crate::recufier::eval_arg::compute_terminal_dyn_sized_dynamic_symbols::ComputeTerminalDynSizedDynamicSymbols;
 use crate::recufier::eval_arg::compute_terminal_from_digest::ComputeTerminalFromDigestInitialIsOne;
+use crate::tip5::DIGEST_LENGTH;
 use crate::traits::basic_snippet::BasicSnippet;
 
-pub struct NewEmptyInputAndOutput {
-    // claim_input: Vec<BFieldElement>,
-    // claim_output: Vec<BFieldElement>,
+/// Calculate a `Challenges` structure from a claim that is only known at runtime
+pub struct NewGenericDynClaim {
     num_of_fiat_shamir_challenges: usize,
     num_of_claim_derived_challenges: usize,
 
@@ -23,7 +25,7 @@ pub struct NewEmptyInputAndOutput {
     pub challenges_pointer: BFieldElement,
 }
 
-impl NewEmptyInputAndOutput {
+impl NewGenericDynClaim {
     pub fn conventional_challenges_pointer() -> BFieldElement {
         // By convention, the challenges are stored in the third-to-last
         // memory page
@@ -31,7 +33,7 @@ impl NewEmptyInputAndOutput {
     }
 }
 
-impl NewEmptyInputAndOutput {
+impl NewGenericDynClaim {
     pub fn new(
         num_challenges_to_sample: usize,
         num_challenges_to_compute: usize,
@@ -57,9 +59,9 @@ impl NewEmptyInputAndOutput {
     }
 }
 
-impl BasicSnippet for NewEmptyInputAndOutput {
+impl BasicSnippet for NewGenericDynClaim {
     fn inputs(&self) -> Vec<(DataType, String)> {
-        vec![(DataType::Digest, "program_digest".to_owned())]
+        vec![(DataType::StructRef(claim_type()), "*claim".to_owned())]
     }
 
     fn outputs(&self) -> Vec<(DataType, String)> {
@@ -71,7 +73,7 @@ impl BasicSnippet for NewEmptyInputAndOutput {
 
     fn entrypoint(&self) -> String {
         format!(
-            "tasm_recufier_challenges_new_empty_input_and_output_{}_{}",
+            "tasm_recufier_challenges_new_generic_dyn_claim_{}_{}",
             self.num_of_fiat_shamir_challenges, self.num_of_claim_derived_challenges,
         )
     }
@@ -87,6 +89,7 @@ impl BasicSnippet for NewEmptyInputAndOutput {
                 symbols: tip5::LOOKUP_TABLE.map(|i| BFieldElement::new(i as u64)),
                 initial: XFieldElement::one(),
             }));
+        let calculate_io_terminal = library.import(Box::new(ComputeTerminalDynSizedDynamicSymbols));
 
         let scalars_pointer = self.challenges_pointer;
         let scalar_write_index = |i: ChallengeId| {
@@ -95,32 +98,94 @@ impl BasicSnippet for NewEmptyInputAndOutput {
         let scalar_read_index =
             |i: ChallengeId| scalar_write_index(i) + u64::try_from(EXTENSION_DEGREE - 1).unwrap();
 
+        let default_initial = EvalArg::default_initial();
+
         triton_asm!(
             {entrypoint}:
-                // _ [program_digest]
+                // _ *claim
                 call {sample_scalars}
-                // _ [program_digest]
+                // _ *claim
+
+                // Calculate and store `output_terminal`:
+                push {scalar_read_index(ChallengeId::StandardOutputIndeterminate)}
+                read_mem {EXTENSION_DEGREE}
+                pop 1
+                // _ *claim [standard_output_indeterminate; 3]
+
+                push {default_initial.coefficients[2]}
+                push {default_initial.coefficients[1]}
+                push {default_initial.coefficients[0]}
+                // _ *claim [standard_output_indeterminate; 3] [initial; 3]
+
+                dup 6
+                push 1
+                add
+                // _ *claim [standard_output_indeterminate; 3] [initial; 3] *outputs
+
+                call {calculate_io_terminal}
+                // _ *claim [standard_output_terminal; 3]
+
+                push {scalar_write_index(ChallengeId::StandardOutputTerminal)}
+                write_mem {EXTENSION_DEGREE}
+                pop 1
+                // _ *claim
+
+                // Calculate and store `input_terminal`:
+                push {scalar_read_index(ChallengeId::StandardInputIndeterminate)}
+                read_mem {EXTENSION_DEGREE}
+                pop 1
+                // _ *claim [standard_input_indeterminate; 3]
+
+                push {default_initial.coefficients[2]}
+                push {default_initial.coefficients[1]}
+                push {default_initial.coefficients[0]}
+                // _ *claim [standard_input_indeterminate; 3] [initial; 3]
+
+                dup 6
+                read_mem 1
+                push 3
+                add
+                add
+                // _ *claim [standard_input_indeterminate; 3] [initial; 3] *inputs
+
+                dup 0
+                swap 8
+                pop 1
+                // _ *inputs [standard_input_indeterminate; 3] [initial; 3] *inputs
+
+                call {calculate_io_terminal}
+                // _ *inputs [standard_input_terminal; 3]
+
+                push {scalar_write_index(ChallengeId::StandardInputTerminal)}
+                write_mem {EXTENSION_DEGREE}
+                pop 1
+                // _ *inputs
+
+                read_mem 1
+                // _ inputs_len (*inputs-1)
+
+                push {1 + DIGEST_LENGTH}
+                add
+                add
+                // _ *digest_last_word
 
                 push {scalar_read_index(ChallengeId::CompressProgramDigestIndeterminate)}
                 read_mem {EXTENSION_DEGREE}
                 pop 1
-                // _ [program_digest; 5] [compress_program_digest_indeterminate; 3]
-                dup 7
-                dup 7
-                dup 7
-                dup 7
-                dup 7
-                // _ [program_digest; 5] [compress_program_digest_indeterminate; 3] [program_digest; 5]
+                // _ *digest_last_word [compress_program_digest_indeterminate; 3]
+
+                dup 3
+                read_mem {DIGEST_LENGTH}
+                pop 1
+                // _ *digest_last_word [compress_program_digest_indeterminate; 3] [program_digest; 5]
 
                 call {compute_compressed_digest}
-                // _ [program_digest; 5] [compressed_digest; 3]
+                // _ *digest_last_word [compressed_digest; 3]
 
                 // **** Write compressed_digest to challenges array ****
                 push {scalar_write_index(ChallengeId::CompressedProgramDigest)}
                 write_mem {EXTENSION_DEGREE}
-                pop 1
-                // _ [program_digest; 5]
-                pop 5
+                pop 2
                 // _
 
                 // **** Calculate lookup_terminal ****
@@ -137,21 +202,6 @@ impl BasicSnippet for NewEmptyInputAndOutput {
                 write_mem {EXTENSION_DEGREE}
                 pop 1
 
-                // Store `input_terminal`
-                push {EvalArg::default_initial().coefficients[2]}
-                push {EvalArg::default_initial().coefficients[1]}
-                push {EvalArg::default_initial().coefficients[0]}
-                push {scalar_write_index(ChallengeId::StandardInputTerminal)}
-                write_mem {EXTENSION_DEGREE}
-                pop 1
-
-                // Store `output_terminal`
-                push {EvalArg::default_initial().coefficients[2]}
-                push {EvalArg::default_initial().coefficients[1]}
-                push {EvalArg::default_initial().coefficients[0]}
-                push {scalar_write_index(ChallengeId::StandardOutputTerminal)}
-                write_mem {EXTENSION_DEGREE}
-                pop 1
                 // _
 
                 push {scalars_pointer}
@@ -164,14 +214,19 @@ impl BasicSnippet for NewEmptyInputAndOutput {
 
 #[cfg(test)]
 mod tests {
-    use itertools::Itertools;
+    use std::collections::HashMap;
+
     use rand::rngs::StdRng;
     use rand::Rng;
     use rand::SeedableRng;
     use triton_vm::table::challenges::Challenges;
+    use triton_vm::twenty_first::shared_math::other::random_elements;
     use triton_vm::twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
+    use crate::memory::encode_to_memory;
     use crate::rust_shadowing_helper_functions::array::insert_as_array;
+    use crate::rust_shadowing_helper_functions::claim::load_claim_from_memory;
+    use crate::snippet_bencher::BenchmarkCase;
     use crate::traits::basic_snippet::BasicSnippet;
     use crate::traits::procedure::Procedure;
     use crate::traits::procedure::ProcedureInitialState;
@@ -181,7 +236,7 @@ mod tests {
 
     use super::*;
 
-    impl Procedure for NewEmptyInputAndOutput {
+    impl Procedure for NewGenericDynClaim {
         fn rust_shadow(
             &self,
             stack: &mut Vec<BFieldElement>,
@@ -191,25 +246,10 @@ mod tests {
             sponge: &mut Option<VmHasher>,
         ) -> Vec<BFieldElement> {
             let sponge = sponge.as_mut().expect("sponge must be initialized");
-            let program_digest = Digest::new([
-                stack.pop().unwrap(),
-                stack.pop().unwrap(),
-                stack.pop().unwrap(),
-                stack.pop().unwrap(),
-                stack.pop().unwrap(),
-            ]);
-
-            let claim = Claim {
-                program_digest,
-                input: vec![],
-                output: vec![],
-            };
+            let claim_pointer = stack.pop().unwrap();
+            let claim = load_claim_from_memory(claim_pointer, memory);
             let challenges = sponge.sample_scalars(self.num_of_fiat_shamir_challenges);
             let challenges = Challenges::new(challenges, &claim);
-            println!(
-                "Rust-shadowing challenges: {}",
-                challenges.challenges.iter().join("\n")
-            );
 
             let challenges_pointer = Self::conventional_challenges_pointer();
             stack.push(challenges_pointer);
@@ -222,29 +262,45 @@ mod tests {
         fn pseudorandom_initial_state(
             &self,
             seed: [u8; 32],
-            _bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
+            bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
         ) -> ProcedureInitialState {
             let mut rng: StdRng = SeedableRng::from_seed(seed);
-            let program_digest: Digest = rng.gen();
-            let challenge = program_digest.0.into_iter().rev().collect_vec();
-            let stack = [self.init_stack_for_isolated_run(), challenge].concat();
+            let (input_length, output_length) = match bench_case {
+                Some(BenchmarkCase::CommonCase) => (0, 0),
+                Some(BenchmarkCase::WorstCase) => (100, 100),
+                None => (rng.gen_range(0..1000), rng.gen_range(0..1000)),
+            };
+
+            let claim = Claim {
+                program_digest: rng.gen(),
+                input: random_elements(input_length),
+                output: random_elements(output_length),
+            };
+
+            let mut memory = HashMap::default();
+
+            let claim_pointer = rng.gen();
+            encode_to_memory(&mut memory, claim_pointer, claim);
+
+            let stack = [self.init_stack_for_isolated_run(), vec![claim_pointer]].concat();
             let sponge = Tip5 { state: rng.gen() };
 
             ProcedureInitialState {
                 stack,
                 sponge: Some(sponge),
-                ..Default::default()
+                nondeterminism: NonDeterminism::default().with_ram(memory),
+                public_input: vec![],
             }
         }
     }
 
     #[test]
-    fn new_challenge_empty_input_output_pbt() {
+    fn new_challenges_pbt() {
         const NUM_OF_CLAIM_DERIVED_CHALLENGES: usize = 4;
-        ShadowedProcedure::new(NewEmptyInputAndOutput {
+        ShadowedProcedure::new(NewGenericDynClaim {
             num_of_claim_derived_challenges: NUM_OF_CLAIM_DERIVED_CHALLENGES,
             num_of_fiat_shamir_challenges: Challenges::COUNT - NUM_OF_CLAIM_DERIVED_CHALLENGES,
-            challenges_pointer: NewEmptyInputAndOutput::conventional_challenges_pointer(),
+            challenges_pointer: NewGenericDynClaim::conventional_challenges_pointer(),
         })
         .test();
     }
@@ -262,10 +318,10 @@ mod benches {
     #[test]
     fn bench_for_challenges_calc_for_recufier() {
         const NUM_OF_CLAIM_DERIVED_CHALLENGES: usize = 4;
-        ShadowedProcedure::new(NewEmptyInputAndOutput {
+        ShadowedProcedure::new(NewGenericDynClaim {
             num_of_claim_derived_challenges: 4,
             num_of_fiat_shamir_challenges: Challenges::COUNT - NUM_OF_CLAIM_DERIVED_CHALLENGES,
-            challenges_pointer: NewEmptyInputAndOutput::conventional_challenges_pointer(),
+            challenges_pointer: NewGenericDynClaim::conventional_challenges_pointer(),
         })
         .bench();
     }
