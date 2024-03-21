@@ -7,9 +7,9 @@ use crate::traits::basic_snippet::BasicSnippet;
 
 /// Compute domain\[index\]^(1<<round)
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
-pub struct GetColinearityCheckX;
+pub struct GetCollinearityCheckX;
 
-impl BasicSnippet for GetColinearityCheckX {
+impl BasicSnippet for GetCollinearityCheckX {
     fn inputs(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::VoidPointer, "*fri_verify".to_string()),
@@ -23,7 +23,7 @@ impl BasicSnippet for GetColinearityCheckX {
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_recufier_get_colinearity_check_x".to_string()
+        "tasm_recufier_get_collinearity_check_x".to_string()
     }
 
     fn code(&self, _library: &mut crate::library::Library) -> Vec<LabelledInstruction> {
@@ -80,7 +80,7 @@ mod test {
 
     use super::*;
 
-    impl Function for GetColinearityCheckX {
+    impl Function for GetCollinearityCheckX {
         fn rust_shadow(
             &self,
             stack: &mut Vec<BFieldElement>,
@@ -95,7 +95,7 @@ mod test {
             let fri_verify = FriVerify::decode_from_memory(memory, fri_verify_address).unwrap();
 
             // invoke actual function
-            let x = fri_verify.get_colinearity_check_x(index, round);
+            let x = fri_verify.get_collinearity_check_x(index, round);
 
             // push to stack
             stack.push(x.coefficients[2]);
@@ -144,7 +144,7 @@ mod test {
 
     #[test]
     fn test() {
-        ShadowedFunction::new(GetColinearityCheckX).test();
+        ShadowedFunction::new(GetCollinearityCheckX).test();
     }
 }
 
@@ -153,10 +153,10 @@ mod bench {
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
 
-    use super::GetColinearityCheckX;
+    use super::GetCollinearityCheckX;
 
     #[test]
     fn bench() {
-        ShadowedFunction::new(GetColinearityCheckX).bench();
+        ShadowedFunction::new(GetCollinearityCheckX).bench();
     }
 }

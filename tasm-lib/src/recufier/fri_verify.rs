@@ -29,8 +29,8 @@ use crate::list::length::Length;
 use crate::list::new::New;
 use crate::list::push::Push;
 use crate::memory::dyn_malloc::DYN_MALLOC_ADDRESS;
-use crate::recufier::get_colinear_y::ColinearYXfe;
-use crate::recufier::get_colinearity_check_x::GetColinearityCheckX;
+use crate::recufier::get_collinear_y::CollinearYXfe;
+use crate::recufier::get_collinearity_check_x::GetCollinearityCheckX;
 use crate::recufier::proof_stream::dequeue_next_as::DequeueNextAs;
 use crate::recufier::verify_authentication_paths_for_leaf_and_index_list::VerifyAuthenticationPathForLeafAndIndexList;
 use crate::recufier::xfe_ntt::XfeNtt;
@@ -48,7 +48,7 @@ use crate::traits::basic_snippet::BasicSnippet;
 pub struct FriVerify {
     // expansion factor = 1 / rate
     pub expansion_factor: u32,
-    pub num_colinearity_checks: u32,
+    pub num_collinearity_checks: u32,
     pub domain_length: u32,
     pub domain_offset: BFieldElement,
     domain_generator: BFieldElement,
@@ -61,7 +61,7 @@ impl From<Fri<Tip5>> for FriVerify {
             domain_length: value.domain.length.try_into().unwrap(),
             domain_offset: value.domain.offset,
             expansion_factor: value.expansion_factor.try_into().unwrap(),
-            num_colinearity_checks: value.num_collinearity_checks.try_into().unwrap(),
+            num_collinearity_checks: value.num_collinearity_checks.try_into().unwrap(),
         }
     }
 }
@@ -84,7 +84,7 @@ impl FriSnippet {
         let name = "FriVerify".to_string();
         let fields = vec![
             ("expansion_factor".to_string(), DataType::U32),
-            ("num_colinearity_checks".to_string(), DataType::U32),
+            ("num_collinearity_checks".to_string(), DataType::U32),
             ("domain_length".to_string(), DataType::U32),
             ("domain_offset".to_string(), DataType::Bfe),
             ("domain_generator".to_string(), DataType::Bfe),
@@ -126,7 +126,7 @@ impl BasicSnippet for FriSnippet {
         let domain_length = field!(FriVerify::domain_length);
         let domain_generator = field!(FriVerify::domain_generator);
         let expansion_factor = field!(FriVerify::expansion_factor);
-        let num_colinearity_checks = field!(FriVerify::num_colinearity_checks);
+        let num_collinearity_checks = field!(FriVerify::num_collinearity_checks);
         let new_list_of_digests = library.import(Box::new(New::new(DataType::Digest)));
         let push_digest_to_list = library.import(Box::new(Push::new(DataType::Digest)));
         let read_digest = triton_asm!(
@@ -224,8 +224,8 @@ impl BasicSnippet for FriSnippet {
                 output_type: DataType::U32,
             }))));
         let compute_c_values_loop = format!("{entrypoint}_compute_c_values_loop");
-        let get_colinearity_check_x = library.import(Box::new(GetColinearityCheckX));
-        let get_colinear_y = library.import(Box::new(ColinearYXfe));
+        let get_collinearity_check_x = library.import(Box::new(GetCollinearityCheckX));
+        let get_collinear_y = library.import(Box::new(CollinearYXfe));
         let identity_label = format!("{entrypoint}_identity");
         let duplicate_list_xfe =
             library.import(Box::new(Map::new(InnerFunction::RawCode(RawCode {
@@ -272,7 +272,7 @@ impl BasicSnippet for FriSnippet {
                 dup 3 dup 6             // _ *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_values i *alphas *a_indices *b_indices r *fri_verify *a_indices i
                 call {get_u32_from_list}// _ *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_values i *alphas *a_indices *b_indices r *fri_verify a_indices[i]
                 dup 1 swap 1 dup 3      // _ *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_values i *alphas *a_indices *b_indices r *fri_verify *fri_verify a_indices[i] r
-                call {get_colinearity_check_x}
+                call {get_collinearity_check_x}
                                         // _ *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_values i *alphas *a_indices *b_indices r *fri_verify ax2 ax1 ax0
                 swap 2 pop 2            // _ *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_values i *alphas *a_indices *b_indices r *fri_verify ax0
 
@@ -281,7 +281,7 @@ impl BasicSnippet for FriSnippet {
 
                 swap 2  dup 5           // _ *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_values i *alphas ax0 *fri_verify r *b_indices i
                 call {get_u32_from_list}// _ *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_values i *alphas ax0 *fri_verify r b_indices[i]
-                swap 1 call {get_colinearity_check_x}
+                swap 1 call {get_collinearity_check_x}
                                         // _ *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_values i *alphas ax0 bx2 bx1 bx0
                 swap 2 pop 2            // _ *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_values i *alphas ax0 bx0
 
@@ -301,7 +301,7 @@ impl BasicSnippet for FriSnippet {
                 dup 3 call {get_xfe_from_list}
                                         // _ *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_values i by2 by0 by0 ay2 ay1 ay0 r ax0 bx0 alpha2 alpha1 alpha0
 
-                // reorder stack for call get_colinear_y
+                // reorder stack for call get_collinear_y
                 // stack needs to be of form: _ [cx] [by] [bx] [ay] [ax]
                 // where cx = alphas[r] and where a and b can be switched
                 swap 9  // _ by2 by1 alpha0 ay2 ay1 ay0 r ax0 bx0 alpha2 alpha1 by0
@@ -322,7 +322,7 @@ impl BasicSnippet for FriSnippet {
                 push 0
                 push 0
                 swap 2
-                call {get_colinear_y}
+                call {get_collinear_y}
                                         // _ *alphas current_tree_height *indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_values i cy2 cy1 cy0
                 dup 4 swap 4 pop 1      // _ *alphas current_tree_height *indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_values *c_values cy2 cy1 cy0
                 call {push_xfe_to_list} // _ *alphas current_tree_height *indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_values
@@ -405,9 +405,9 @@ impl BasicSnippet for FriSnippet {
                 log_2_floor                 // _ *vm_proof_iter *fri_verify max_num_rounds
                 hint max_num_rounds = stack[0]
 
-                dup 1 {&num_colinearity_checks}
-                read_mem 1 pop 1            // _ *vm_proof_iter *fri_verify max_num_rounds num_colinearity_checks
-                hint num_colinearity_checks = stack[0]
+                dup 1 {&num_collinearity_checks}
+                read_mem 1 pop 1            // _ *vm_proof_iter *fri_verify max_num_rounds num_collinearity_checks
+                hint num_collinearity_checks = stack[0]
 
                 log_2_floor push 1 add      // _ *vm_proof_iter *fri_verify max_num_rounds num_rounds_checking_most_locations
 
@@ -531,7 +531,7 @@ impl BasicSnippet for FriSnippet {
 
                 // get index count
                 dup 6                       // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *fri_verify
-                {&num_colinearity_checks}   // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *num_indices
+                {&num_collinearity_checks}   // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *num_indices
                 read_mem 1 pop 1            // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter num_indices
 
                 // get domain length
@@ -755,7 +755,7 @@ impl FriVerify {
         let maybe_fri = Fri::new(
             fri_domain,
             self.expansion_factor as usize,
-            self.num_colinearity_checks as usize,
+            self.num_collinearity_checks as usize,
         );
 
         maybe_fri.unwrap()
@@ -856,7 +856,7 @@ impl FriVerify {
 
         // query step 0: get "A" indices and verify set membership of corresponding values.
         let domain_length = self.domain_length as usize;
-        let num_collinearity_check = self.num_colinearity_checks as usize;
+        let num_collinearity_check = self.num_collinearity_checks as usize;
         let mut a_indices = proof_stream.sample_indices(domain_length, num_collinearity_check);
 
         let tree_height = self.domain_length.ilog2() as usize;
@@ -967,10 +967,10 @@ impl FriVerify {
                 }
             }
 
-            debug_assert_eq!(self.num_colinearity_checks, a_indices.len() as u32);
-            debug_assert_eq!(self.num_colinearity_checks, b_indices.len() as u32);
-            debug_assert_eq!(self.num_colinearity_checks, a_values.len() as u32);
-            debug_assert_eq!(self.num_colinearity_checks, b_values.len() as u32);
+            debug_assert_eq!(self.num_collinearity_checks, a_indices.len() as u32);
+            debug_assert_eq!(self.num_collinearity_checks, b_indices.len() as u32);
+            debug_assert_eq!(self.num_collinearity_checks, a_values.len() as u32);
+            debug_assert_eq!(self.num_collinearity_checks, b_values.len() as u32);
 
             if r == 0 {
                 // save other half of indices and revealed leafs of first round for returning
@@ -985,10 +985,10 @@ impl FriVerify {
             current_domain_len /= 2;
             current_tree_height -= 1;
             let c_indices = a_indices.iter().map(|x| x % current_domain_len).collect();
-            let c_values = (0..self.num_colinearity_checks as usize)
+            let c_values = (0..self.num_collinearity_checks as usize)
                 .map(|i| {
-                    let a_x = self.get_colinearity_check_x(a_indices[i] as u32, r);
-                    let b_x = self.get_colinearity_check_x(b_indices[i] as u32, r);
+                    let a_x = self.get_collinearity_check_x(a_indices[i] as u32, r);
+                    let b_x = self.get_collinearity_check_x(b_indices[i] as u32, r);
                     Polynomial::<XFieldElement>::get_colinear_y(
                         (a_x, a_values[i]),
                         (b_x, b_values[i]),
@@ -1005,7 +1005,7 @@ impl FriVerify {
         // Finally compare "C" values (which are named "A" values in this enclosing scope) with
         // last codeword from the proofstream.
         a_indices = a_indices.iter().map(|x| x % current_domain_len).collect();
-        if !(0..self.num_colinearity_checks as usize)
+        if !(0..self.num_collinearity_checks as usize)
             .all(|i| last_codeword[a_indices[i]] == a_values[i])
         {
             bail!(FriValidationError::LastCodewordMismatch);
@@ -1027,7 +1027,7 @@ impl FriVerify {
 
         // Skip rounds for which Merkle tree verification cost exceeds arithmetic cost,
         // because more than half the codeword's locations are queried.
-        let num_rounds_checking_all_locations = self.num_colinearity_checks.ilog2() as u64;
+        let num_rounds_checking_all_locations = self.num_collinearity_checks.ilog2() as u64;
         let num_rounds_checking_most_locations = num_rounds_checking_all_locations + 1;
 
         max_num_rounds.saturating_sub(num_rounds_checking_most_locations) as usize
@@ -1050,10 +1050,10 @@ impl FriVerify {
         xfes.iter().map(|x| (*x).into()).collect()
     }
 
-    /// Get the x-coordinate of an A or B point in a colinearity check, given the point's
+    /// Get the x-coordinate of an A or B point in a collinearity check, given the point's
     /// index and the round number in which the check takes place. In Triton VM, this
     /// method is called `get_evaluation_argument`.
-    pub fn get_colinearity_check_x(&self, idx: u32, round: usize) -> XFieldElement {
+    pub fn get_collinearity_check_x(&self, idx: u32, round: usize) -> XFieldElement {
         let domain_value = self.domain_offset * self.domain_generator.mod_pow_u32(idx);
         let round_exponent = 2u32.pow(round as u32);
         let evaluation_argument = domain_value.mod_pow_u32(round_exponent);
@@ -1104,14 +1104,14 @@ mod test {
             offset: BFieldElement,
             domain_length: u32,
             expansion_factor: u32,
-            num_colinearity_checks: u32,
+            num_collinearity_checks: u32,
         ) -> Self {
             let domain = ArithmeticDomain::of_length(domain_length as usize)
                 .unwrap()
                 .with_offset(offset);
             Self {
                 expansion_factor,
-                num_colinearity_checks,
+                num_collinearity_checks,
                 domain_length,
                 domain_offset: domain.offset,
                 domain_generator: domain.generator,
@@ -1555,13 +1555,13 @@ mod bench {
         let expansion_factor = 2;
         let domain_length = expansion_factor * 2;
         let offset = BFieldElement::new(7);
-        let num_colinearity_checks = 2;
+        let num_collinearity_checks = 2;
         // tiny parameters for FRI yes, but the bench framework is awful atm
         let fri_verify = FriVerify::new(
             offset,
             domain_length,
             expansion_factor,
-            num_colinearity_checks,
+            num_collinearity_checks,
         );
         let snippet = FriSnippet {
             test_instance: fri_verify,

@@ -20,13 +20,13 @@ impl StandaloneFriVerify {
         let offset = BFieldElement::new(7);
         let computation_size = 1 << 21;
         let expansion_factor = 1 << 4;
-        let num_colinearity_checks = 40;
+        let num_collinearity_checks = 40;
         let domain_length = computation_size * expansion_factor;
         FriVerify::new(
             offset,
             domain_length,
             expansion_factor,
-            num_colinearity_checks,
+            num_collinearity_checks,
         )
     }
 

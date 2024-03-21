@@ -13,9 +13,9 @@ use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::closure::Closure;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
-pub struct ColinearYXfe;
+pub struct CollinearYXfe;
 
-impl BasicSnippet for ColinearYXfe {
+impl BasicSnippet for CollinearYXfe {
     fn inputs(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::Xfe, "p_2_x".to_owned()),
@@ -31,7 +31,7 @@ impl BasicSnippet for ColinearYXfe {
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_recufier_colinear_y_xfe".to_owned()
+        "tasm_recufier_collinear_y_xfe".to_owned()
     }
 
     fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {
@@ -108,7 +108,7 @@ impl BasicSnippet for ColinearYXfe {
     }
 }
 
-impl Closure for ColinearYXfe {
+impl Closure for CollinearYXfe {
     fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
         let mut pop_xfe = || {
             let c_0 = stack.pop().unwrap();
@@ -150,11 +150,11 @@ mod test {
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
 
-    use super::ColinearYXfe;
+    use super::CollinearYXfe;
 
     #[test]
     fn test() {
-        ShadowedClosure::new(ColinearYXfe).test()
+        ShadowedClosure::new(CollinearYXfe).test()
     }
 }
 
@@ -163,10 +163,10 @@ mod bench {
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
 
-    use super::ColinearYXfe;
+    use super::CollinearYXfe;
 
     #[test]
     fn bench_colinear_y() {
-        ShadowedClosure::new(ColinearYXfe).bench();
+        ShadowedClosure::new(CollinearYXfe).bench();
     }
 }
