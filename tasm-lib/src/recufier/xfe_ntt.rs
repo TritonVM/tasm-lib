@@ -93,27 +93,48 @@ impl BasicSnippet for XfeNtt {
 
             return
 
-                // Subroutines:
+        // Subroutines:
+
+        // Invariant: n l r i
         {bitreverse_loop}:
             dup 0
             dup 3
             eq
             skiz
             return
+            // _ n l r i
+
             dup 1
             push 2
             mul
+            // _ n l r i (r * 2)
+
             dup 4
+            // _ n l r i (r * 2) n
+
             push 1
             and
+            // _ n l r i (r * 2) (n & 1)
                 dup 1
                 dup 1
+                // _ n l r i (r * 2) (n & 1) (r * 2) (n & 1)
                 xor
+                // _ n l r i (r * 2) (n & 1) ((r * 2) ^ (n & 1))
+
                 swap 2
+                // _ n l r i ((r * 2) ^ (n & 1)) (n & 1) (r * 2)
+
                 and
+                // _ n l r i ((r * 2) ^ (n & 1)) ((n & 1) && (r * 2))
+
                 add
+                // _ n l r i (((r * 2) ^ (n & 1)) + ((n & 1) && (r * 2)))
+                // _ n l r i r'
+
             swap 2
             pop 1
+            // _ n l r' i
+
             push 2
             dup 4
             div_mod
@@ -125,6 +146,8 @@ impl BasicSnippet for XfeNtt {
             recurse
 
         {bitreverse_function}:
+            // _ *x omega size log_2_size k n l
+
             push 0
             push 0
             call {bitreverse_loop}
@@ -207,6 +230,7 @@ impl BasicSnippet for XfeNtt {
 
             dup 0
             dup 2
+            // _ *x omega size log_2_size k k log_2_size
             call {bitreverse_function}
             // _ *x omega size log_2_size k rk
 

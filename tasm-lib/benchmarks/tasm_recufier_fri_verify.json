@@ -1,16 +1,16 @@
 [
   {
     "name": "tasm_recufier_fri_verify",
-    "clock_cycle_count": 3983,
-    "hash_table_height": 2082,
-    "u32_table_height": 281,
+    "clock_cycle_count": 506203,
+    "hash_table_height": 14760,
+    "u32_table_height": 43012,
     "case": "CommonCase"
   },
   {
     "name": "tasm_recufier_fri_verify",
-    "clock_cycle_count": 3983,
-    "hash_table_height": 2082,
-    "u32_table_height": 279,
+    "clock_cycle_count": 506203,
+    "hash_table_height": 14760,
+    "u32_table_height": 42769,
     "case": "WorstCase"
   }
 ]
