@@ -91,9 +91,25 @@ impl BasicSnippet for Map {
         let output_type = self.f.range();
         let new_list = library.import(Box::new(New::new(output_type.clone())));
 
-        // Declare the inner function entrypoint name and import inner function in case it's a snippet
-        let inner_function_name = match &self.f {
-            InnerFunction::RawCode(rc) => rc.entrypoint(),
+        // Declare the code to call the function argument
+        let (call_inner_function, maybe_inner_function_body_raw) = match &self.f {
+            InnerFunction::RawCode(rc) => {
+                if let Some(inlined_body) = rc.inlined_body() {
+                    // Raw functions that can be inlined are inlined to save two clock cycle counts
+                    // for each iteration.
+                    (inlined_body, String::default())
+                } else {
+                    // If function was supplied as raw instructions and cannot be inlined, we need
+                    // to append the inner function to the function body. Otherwise, `library`
+                    // handles the imports.
+                    (
+                        triton_asm!(
+                            call {rc.entrypoint()}
+                        ),
+                        rc.function.iter().map(|x| x.to_string()).join("\n"),
+                    )
+                }
+            }
             InnerFunction::DeprecatedSnippet(sn) => {
                 assert!(
                     sn.input_types().len().is_one(),
@@ -103,27 +119,26 @@ impl BasicSnippet for Map {
                 let (_, instructions) = tokenize(&fn_body).unwrap();
                 let labelled_instructions =
                     triton_vm::parser::to_labelled_instructions(&instructions);
-                library.explicit_import(&sn.entrypoint_name(), &labelled_instructions)
+                let snippet_name =
+                    library.explicit_import(&sn.entrypoint_name(), &labelled_instructions);
+                (triton_asm!(call { snippet_name }), String::default())
             }
-            InnerFunction::NoFunctionBody(lnat) => lnat.label_name.to_owned(),
+            InnerFunction::NoFunctionBody(lnat) => {
+                let snippet_name = lnat.label_name.to_owned();
+                (triton_asm!(call { snippet_name }), String::default())
+            }
             InnerFunction::BasicSnippet(bs) => {
                 assert!(
                     bs.inputs().len().is_one(),
                     "{MORE_THAN_ONE_INPUT_OR_OUTPUT_TYPE_IN_INNER_FUNCTION}"
                 );
                 let labelled_instructions = bs.annotated_code(library);
-                library.explicit_import(&bs.entrypoint(), &labelled_instructions)
+                let snippet_name =
+                    library.explicit_import(&bs.entrypoint(), &labelled_instructions);
+                (triton_asm!(call { snippet_name }), String::default())
             }
         };
 
-        // If function was supplied as raw instructions, we need to append the inner function to the function
-        // body. Otherwise, `library` handles the imports.
-        let maybe_inner_function_body_raw = match &self.f {
-            InnerFunction::RawCode(rc) => rc.function.iter().map(|x| x.to_string()).join("\n"),
-            InnerFunction::DeprecatedSnippet(_) => String::default(),
-            InnerFunction::NoFunctionBody(_) => String::default(),
-            InnerFunction::BasicSnippet(_) => String::default(),
-        };
         let entrypoint = self.entrypoint();
         let main_loop = format!("{entrypoint}_loop");
         let read_from_input_list = input_type.read_value_from_memory_leave_pointer();
@@ -219,17 +234,16 @@ impl BasicSnippet for Map {
                 skiz
                     return
 
-                push 0
-                swap 1
+                dup 0
                 {&read_from_input_list}
-                // _ <aia>  *end_condition_input_list *output_elem 0 [input_elem] *prev_input_elem
+                // _ <aia>  *end_condition_input_list *output_elem *input_elem [input_elem] *prev_input_elem
 
                 swap {input_elem_size_plus_one}
                 pop 1
                 // _ <aia>  *end_condition_input_list *output_elem *prev_input_elem [input_elem]
 
                 // map
-                call {inner_function_name}
+                {&call_inner_function}
                                 // _ <aia>  *end_condition_input_list *output_elem *prev_input_elem [output_elem]
 
                 // write

@@ -78,6 +78,23 @@ impl RawCode {
             LabelledInstruction::TypeHint(_) => unreachable!(),
         }
     }
+
+    /// Returns `Some(code)` iff the raw code is a function that can be inlined
+    pub fn inlined_body(&self) -> Option<Vec<LabelledInstruction>> {
+        // If the RawCode contains a recurse, it cannot be inlined
+        if self
+            .function
+            .iter()
+            .any(|x| matches!(x, LabelledInstruction::Instruction(AnInstruction::Recurse)))
+        {
+            None
+        } else if self.function.len() == 2 {
+            Some(triton_asm!())
+        } else {
+            // Remove label and `return`
+            Some(self.function[1..=self.function.len() - 2].to_vec())
+        }
+    }
 }
 
 pub enum InnerFunction {
