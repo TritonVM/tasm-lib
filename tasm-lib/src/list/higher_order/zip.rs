@@ -8,7 +8,6 @@ use triton_vm::prelude::*;
 use crate::data_type::DataType;
 use crate::list::new::New;
 use crate::list::LIST_METADATA_SIZE;
-use crate::memory::memcpy::MemCpy;
 use crate::rust_shadowing_helper_functions::list::untyped_insert_random_list;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::function::*;
@@ -56,89 +55,76 @@ impl BasicSnippet for Zip {
     }
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
-        let safety_offset = LIST_METADATA_SIZE;
-
-        let left_element_size = self.left_type.stack_size();
-
-        let right_element_size = self.right_type.stack_size();
-
         let output_type = DataType::Tuple(vec![self.left_type.clone(), self.right_type.clone()]);
-        let output_element_size = output_type.stack_size();
 
         let new_output_list = library.import(Box::new(New::new(output_type.clone())));
-
-        // helper function for memory
-        let memcpy = library.import(Box::new(MemCpy));
 
         let entrypoint = self.entrypoint();
         let main_loop_label = format!("{entrypoint}_loop");
 
+        let right_size = self.right_type.stack_size();
+        let left_size = self.left_type.stack_size();
+        let read_left_element = self.left_type.read_value_from_memory_leave_pointer();
+        let read_right_element = self.right_type.read_value_from_memory_leave_pointer();
+        let write_output_element = output_type.write_value_to_memory_leave_pointer();
+        let left_size_plus_one = left_size + 1;
+        let left_size_plus_three = left_size + 3;
+        let sum_of_size = left_size + right_size;
+        let sum_of_size_plus_two = sum_of_size + 2;
+        assert!(sum_of_size_plus_two <= NUM_OP_STACK_REGISTERS, "zip only works for an output element size less than or equal to the available op-stack words");
+        let minus_two_times_sum_of_size = -(2 * sum_of_size as i32);
+
+        let mul_with_size = |n| match n {
+            0 => triton_asm!(pop 1 push 0),
+            1 => triton_asm!(),
+            n => triton_asm!(
+                push {n}
+                mul
+            ),
+        };
+
         let main_loop = triton_asm!(
-            // INVARIANT: _ *left_list *right_list *pair_list itr
+            // INVARIANT: _ *l *l_elem_last_word *r_elem_last_word *pair_elem_first_word
             {main_loop_label}:
-                // test return condition
-                dup 0               // _ *left_list *right_list *pair_list itr itr
-                push 0 eq           // _ *left_list *right_list *pair_list itr itr==0
+                // test return condition: *l == *l_elem_last_word
+                dup 3
+                dup 3
+                eq
 
                 skiz return
+                // _*l *l_elem_last_word *r_elem_last_word *pair_elem_first_word
 
-                // decrease itr
-                push -1 add         // _ *left_list *right_list *pair_list index
+                dup 2
+                {&read_left_element}
+                // _ *l *l_elem_last_word *r_elem_last_word *pair_elem_first_word [left_element] *l_elem_last_word_prev
 
-                // main body
+                swap {left_size_plus_three}
+                pop 1
+                // _ *l *l_elem_last_word_prev *r_elem_last_word *pair_elem_first_word [left_element]
 
-                // compute write dest
-                dup 1               // _ *left_list *right_list *pair_list index *pair_list
-                push {safety_offset} add
-                                    // _ *left_list *right_list *pair_list index *pair_list_start
-                dup 1               // _ *left_list *right_list *pair_list index *pair_list_start index
-                push {output_element_size}
-                                    // _ *left_list *right_list *pair_list index *pair_list_start index size
-                mul add             // _ *left_list *right_list *pair_list index *pair_list_start+index*size
-                                    // _ *left_list *right_list *pair_list index *write_dest
+                dup {left_size_plus_one}
+                // _ *l *l_elem_last_word *r_elem_last_word *pair_elem_first_word [left_element] *r_elem_last_word
 
-                // compute read source
-                dup 3               // _ *left_list *right_list *pair_list index *write_dest *right_list
-                push {safety_offset} add
-                                    // _ *left_list *right_list *pair_list index *write_dest *right_list_start
-                dup 2               // _ *left_list *right_list *pair_list index *write_dest *right_list_start index
-                push {right_element_size}
-                                    // _ *left_list *right_list *pair_list index *write_dest *right_list_start index size
-                mul add             // _ *left_list *right_list *pair_list index *write_dest *right_list_start+index*size
-                                    // _ *left_list *right_list *pair_list index *write_dest *read_source
+                {&read_right_element}
+                // _ *l *l_elem_last_word *r_elem_last_word *pair_elem_first_word [left_element] [right_element] *r_elem_last_word_prev
 
-                dup 1               // _ *left_list *right_list *pair_list index *write_dest *read_source *write_dest
+                swap {sum_of_size_plus_two}
+                pop 1
+                // _ *l *l_elem_last_word_prev *r_elem_last_word_prev *pair_elem_first_word [left_element] [right_element]
 
-                // compute number of words
-                push {right_element_size}
-                                    // _ *left_list *right_list *pair_list index *write_dest *read_source *write_dest size
+                dup {sum_of_size}
+                // _ *l *l_elem_last_word_prev *r_elem_last_word_prev *pair_elem_first_word [right_element] [left_element] *pair_elem_first_word
 
-                // copy memory
-                call {memcpy}       // _ *left_list *right_list *pair_list index *write_dest
+                {&write_output_element}
+                // _ *l *l_elem_last_word_prev *r_elem_last_word_prev *pair_elem_first_word *pair_elem_first_word_next
 
-                // compute write dest
-                push {right_element_size} add
-                                    // _ *left_list *right_list *pair_list index *write_dest+size
-                                    // _ *left_list *right_list *pair_list index *write_dest'
+                push {minus_two_times_sum_of_size}
+                add
+                // _ *l *l_elem_last_word_prev *r_elem_last_word_prev *pair_elem_first_word *pair_elem_first_word_prev
 
-                // compute read source
-                dup 4               // _ *left_list *right_list *pair_list index *write_dest' *left_list
-                push {safety_offset} add
-                                    // _ *left_list *right_list *pair_list index *write_dest' *left_list_start
-                dup 2               // _ *left_list *right_list *pair_list index *write_dest' *left_list_start index
-                push {left_element_size}
-                                    // _ *left_list *right_list *pair_list index *write_dest' *left_list_start index size
-                mul add             // _ *left_list *right_list *pair_list index *write_dest' *left_list_start+index*size
-                                    // _ *left_list *right_list *pair_list index *write_dest' *read_source
-
-                swap 1              // _ *left_list *right_list *pair_list index *read_source *write_dest'
-
-                // compute number of words
-                push {left_element_size}
-                                    // _ *left_list *right_list *pair_list index *read_source *write_dest' size
-
-                // copy memory
-                call {memcpy}       // _ *left_list *right_list *pair_list index
+                swap 1
+                pop 1
+                // _ *l *l_elem_last_word_prev *r_elem_last_word_prev *pair_elem_first_word_prev
 
                 recurse
         );
@@ -161,18 +147,55 @@ impl BasicSnippet for Zip {
             // create object for pair list and set length
             call {new_output_list}  // _ *left_list *right_list len *pair_list
 
+            // Write length of *pair_list
             dup 1
-            dup 1
+            swap 1
             write_mem 1
-            pop 1
+            // _ *left_list *right_list len *pair_list_first_word
 
-            // prepare stack for loop
-            swap 1                  // _ *left_list *right_list *pair_list len
-            call {main_loop_label}        // _ *left_list *right_list *pair_list 0
+            // Change all pointers to point to end of lists, in preparation for loop
+            dup 1
+            push -1
+            add
+            // _ *left_list *right_list len *pair_list_first_word (len - 1)
 
-            // clean up stack
-            pop 1                   // _ *left_list *right_list *pair_list
-            swap 2 pop 2            // _ *pair_list
+            {&mul_with_size(sum_of_size)}
+            add
+            // _ *left_list *right_list len *pair_list_last_element_first_word
+
+            swap 2
+            // _ *left_list *pair_list_last_element_first_word len *right_list
+
+            dup 1
+            {&mul_with_size(right_size)}
+            add
+            // _ *left_list *pair_list_last_element_first_word len *r_list_last_elem_last_word
+
+            swap 1
+            // _ *left_list *pair_list_last_element_first_word *r_list_last_elem_last_word len
+
+            {&mul_with_size(left_size)}
+            // _ *left_list *pair_list_last_element_first_word *r_list_last_elem_last_word left_offset
+
+            dup 3
+            // _ *left_list *pair_list_last_element_first_word *r_list_last_elem_last_word left_offset *left_list
+
+            add
+            // _ *left_list *pair_list_last_element_first_word *r_list_last_elem_last_word *l_list_last_elem_last_word
+
+            swap 2
+            // _ *l *l_elem_last_word *r_elem_last_word *pair_elem_first_word
+
+            call {main_loop_label}
+            // _ *l *l_elem_last_word *r_elem_last_word *pair_elem_first_word
+
+            // Adjust *pair to point to list instead of element in list
+            push {sum_of_size - 1}
+            add
+
+            swap 3
+
+            pop 3
 
             return
 

@@ -1,16 +1,16 @@
 [
   {
     "name": "tasm_list_higher_order_u32_zip_xfe_with_digest",
-    "clock_cycle_count": 1926,
-    "hash_table_height": 168,
-    "u32_table_height": 12,
+    "clock_cycle_count": 390,
+    "hash_table_height": 90,
+    "u32_table_height": 0,
     "case": "CommonCase"
   },
   {
     "name": "tasm_list_higher_order_u32_zip_xfe_with_digest",
-    "clock_cycle_count": 1341,
-    "hash_table_height": 168,
-    "u32_table_height": 12,
+    "clock_cycle_count": 290,
+    "hash_table_height": 90,
+    "u32_table_height": 0,
     "case": "WorstCase"
   }
 ]
