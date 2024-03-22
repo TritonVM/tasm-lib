@@ -11,10 +11,7 @@ use triton_vm::prelude::*;
 use crate::data_type::DataType;
 use crate::empty_stack;
 use crate::library::Library;
-use crate::list::get::Get;
-use crate::list::length::Length;
 use crate::list::new::New;
-use crate::list::set::Set;
 use crate::list::set_length::SetLength;
 use crate::rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator;
 use crate::rust_shadowing_helper_functions::list::insert_random_list;
@@ -92,14 +89,7 @@ impl BasicSnippet for Map {
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
         let input_type = self.f.domain();
         let output_type = self.f.range();
-        let output_size_plus_one = 1 + output_type.stack_size();
-
-        let get_length = library.import(Box::new(Length::new(input_type.clone())));
-        let list_get = library.import(Box::new(Get::new(input_type)));
-
-        let set_length = library.import(Box::new(SetLength::new(output_type.clone())));
         let new_list = library.import(Box::new(New::new(output_type.clone())));
-        let list_set = library.import(Box::new(Set::new(output_type)));
 
         // Declare the inner function entrypoint name and import inner function in case it's a snippet
         let inner_function_name = match &self.f {
@@ -136,56 +126,126 @@ impl BasicSnippet for Map {
         };
         let entrypoint = self.entrypoint();
         let main_loop = format!("{entrypoint}_loop");
+        let read_from_input_list = input_type.read_value_from_memory_leave_pointer();
+        let write_to_output_list = output_type.write_value_to_memory_leave_pointer();
+        let input_elem_size = input_type.stack_size();
+        let output_elem_size = output_type.stack_size();
+        let input_elem_size_plus_one = input_elem_size + 1;
+        let output_elem_size_plus_one = output_type.stack_size() + 1;
+        let minus_two_times_output_size = -(output_type.stack_size() as i32 * 2);
+
+        let mul_elem_size = |n| match n {
+            0 => triton_asm!(pop 1 push 0),
+            1 => triton_asm!(),
+            n => triton_asm!(
+                push {n}
+                mul
+            ),
+        };
+
+        let adjust_output_list_pointer = match output_elem_size {
+            0 => triton_asm!(),
+            1 => triton_asm!(),
+            n => triton_asm!(
+                push {-(n as i32 - 1)}
+                add
+            ),
+        };
+
+        let final_output_list_pointer_adjust = match output_elem_size {
+            0 => triton_asm!(),
+            1 => triton_asm!(),
+            n => triton_asm!(
+                push {n - 1}
+                add
+            ),
+        };
 
         triton_asm!(
-            // BEFORE: _ <[additional_input_args]>  input_list
-            // AFTER:  _ <[additional_input_args]>  output_list
+            // BEFORE: _ <[additional_input_args]>  *input_list
+            // AFTER:  _ <[additional_input_args]>  *output_list
             {entrypoint}:
-                hint input_list: Pointer = stack[0]
-                dup 0                   // _ <aia>  input_list input_list
-                call {get_length}       // _ <aia>  input_list len
-                hint list_len = stack[0]
-                call {new_list}         // _ <aia>  input_list len output_list
-                hint output_list: Pointer = stack[0]
-                dup 1                   // _ <aia>  input_list len output_list len
-                call {set_length}       // _ <aia>  input_list len output_list
-                swap 1                  // _ <aia>  input_list output_list len
+                dup 0
+                read_mem 1
+                pop 1
+                // _ <aia> *input_list len
 
-                hint item_to_map: Index = stack[0]
-                call {main_loop}        // _ <aia>  input_list output_list 0
+                dup 1
+                dup 1
+                // _ <aia> *input_list len *input_list len
 
-                pop 1                   // _ <aia>  input_list output_list
-                swap 1                  // _ <aia>  output_list input_list
-                pop 1                   // _ <aia>  output_list
+                {&mul_elem_size(input_elem_size)}
+                add
+                // _ <aia> *input_list len *input_list_last_word
+
+                call {new_list}
+                // _ <aia> *input_list len *input_list_last_word *output_list
+
+                // Write output list's length
+                dup 2
+                dup 1
+                write_mem 1
+                pop 1
+
+                dup 2
+                {&mul_elem_size(output_elem_size)}
+                add
+                // _ <aia> *input_list len *input_list_last_word *output_list_last_word_last_element
+
+                {&adjust_output_list_pointer}
+                // _ <aia> *input_list len *input_list_last_word *output_list_first_word_last_element
+
+                swap 2
+                pop 1
+                // _ <aia> *input_list *output_list_first_word_last_element *input_list_last_word
+
+                call {main_loop}
+
+                pop 1
+                {&final_output_list_pointer_adjust}
+
+                swap 1
+                pop 1
+
 
                 return
 
-            // INVARIANT: _ <aia>  input_list output_list itr
+            // INVARIANT: _ <aia>  *end_condition_input_list *output_elem *input_elem
             {main_loop}:
                 // test return condition
-                dup 0           // _ <aia>  input_list output_list itr itr
-                push 0 eq       // _ <aia>  input_list output_list itr itr==0
+                dup 2
+                dup 1
+                eq
+                skiz
+                    return
 
-                skiz return     // _ input_list output_list itr
+                push 0
+                swap 1
+                {&read_from_input_list}
+                // _ <aia>  *end_condition_input_list *output_elem 0 [input_elem] *prev_input_elem
 
-                // body
-                push -1 add     // _ <aia>  input_list output_list index
-
-                // read
-                dup 2 dup 1     // _ <aia>  input_list output_list index input_list index
-                call {list_get} // _ <aia>  input_list output_list index [input_element]
+                swap {input_elem_size_plus_one}
+                pop 1
+                // _ <aia>  *end_condition_input_list *output_elem *prev_input_elem [input_elem]
 
                 // map
                 call {inner_function_name}
-                                // _ <aia>  input_list output_list index [output_element]
+                                // _ <aia>  *end_condition_input_list *output_elem *prev_input_elem [output_elem]
 
                 // write
-                dup {output_size_plus_one}
-                                // _ <aia>  input_list output_list index [output_element] output_list
-                dup {output_size_plus_one}
-                                // _ <aia>  input_list output_list index [output_element] output_list index
+                dup {output_elem_size_plus_one}
+                // _ <aia>  *end_condition_input_list *output_elem *prev_input_elem [output_elem] *output_elem
 
-                call {list_set} // _ <aia>  input_list output_list index
+                {&write_to_output_list}
+                // _ <aia>  *end_condition_input_list *output_elem *prev_input_elem *next_output_elem
+
+                push {minus_two_times_output_size}
+                add
+                // _ <aia>  *end_condition_input_list *output_elem *prev_input_elem *prev_output_elem
+
+                swap 2
+                pop 1
+
                 recurse
 
             {maybe_inner_function_body_raw}
