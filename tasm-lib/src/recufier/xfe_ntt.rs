@@ -104,35 +104,34 @@ impl BasicSnippet for XfeNtt {
             return
             // _ n l r i
 
-            dup 1
+            swap 1
             push 2
             mul
-            // _ n l r i (r * 2)
+            // _ n l i (r * 2)
 
-            dup 4
-            // _ n l r i (r * 2) n
+            dup 3
+            // _ n l i (r * 2) n
 
             push 1
             and
-            // _ n l r i (r * 2) (n & 1)
+            // _ n l i (r * 2) (n & 1)
                 dup 1
                 dup 1
-                // _ n l r i (r * 2) (n & 1) (r * 2) (n & 1)
+                // _ n l i (r * 2) (n & 1) (r * 2) (n & 1)
                 xor
-                // _ n l r i (r * 2) (n & 1) ((r * 2) ^ (n & 1))
+                // _ n l i (r * 2) (n & 1) ((r * 2) ^ (n & 1))
 
                 swap 2
-                // _ n l r i ((r * 2) ^ (n & 1)) (n & 1) (r * 2)
+                // _ n l i ((r * 2) ^ (n & 1)) (n & 1) (r * 2)
 
                 and
-                // _ n l r i ((r * 2) ^ (n & 1)) ((n & 1) && (r * 2))
+                // _ n l i ((r * 2) ^ (n & 1)) ((n & 1) && (r * 2))
 
                 add
-                // _ n l r i (((r * 2) ^ (n & 1)) + ((n & 1) && (r * 2)))
-                // _ n l r i r'
+                // _ n l i (((r * 2) ^ (n & 1)) + ((n & 1) && (r * 2)))
+                // _ n l i r'
 
-            swap 2
-            pop 1
+            swap 1
             // _ n l r' i
 
             push 2
