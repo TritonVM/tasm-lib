@@ -6,9 +6,7 @@ use rand::*;
 use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
-use crate::list::length::Length;
 use crate::list::new::New;
-use crate::list::set_length::SetLength;
 use crate::list::LIST_METADATA_SIZE;
 use crate::memory::memcpy::MemCpy;
 use crate::rust_shadowing_helper_functions::list::untyped_insert_random_list;
@@ -60,57 +58,24 @@ impl BasicSnippet for Zip {
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
         let safety_offset = LIST_METADATA_SIZE;
 
-        let get_length_left = library.import(Box::new(Length::new(self.left_type.clone())));
         let left_element_size = self.left_type.stack_size();
 
-        let get_length_right = library.import(Box::new(Length::new(self.right_type.clone())));
         let right_element_size = self.right_type.stack_size();
 
         let output_type = DataType::Tuple(vec![self.left_type.clone(), self.right_type.clone()]);
         let output_element_size = output_type.stack_size();
 
         let new_output_list = library.import(Box::new(New::new(output_type.clone())));
-        let set_output_list_length = library.import(Box::new(SetLength::new(output_type)));
 
         // helper function for memory
         let memcpy = library.import(Box::new(MemCpy));
 
         let entrypoint = self.entrypoint();
-        let main_loop = format!("{entrypoint}_loop");
+        let main_loop_label = format!("{entrypoint}_loop");
 
-        triton_asm!(
-            // BEFORE: _ *left_list *right_list
-            // AFTER:  _ *pair_list
-            {entrypoint}:
-            // get lengths
-            dup 1                   // _ *left_list *right_list *left_list
-            call {get_length_left}  // _ *left_list *right_list left_len
-            dup 1                   // _ *left_list *right_list left_len *right_list
-            call {get_length_right} // _ *left_list *right_list left_len right_len
-
-            // assert equal lengths
-            dup 1                   // _ *left_list *right_list left_len right_len left_len
-            eq assert               // _ *left_list *right_list len
-
-            // create object for pair list and set length
-            call {new_output_list}  // _ *left_list *right_list len *pair_list
-
-            dup 1                   // _ *left_list *right_list len *pair_list len
-            call {set_output_list_length}
-                                    // _ *left_list *right_list len *pair_list
-
-            // prepare stack for loop
-            swap 1                  // _ *left_list *right_list *pair_list len
-            call {main_loop}        // _ *left_list *right_list *pair_list 0
-
-            // clean up stack
-            pop 1                   // _ *left_list *right_list *pair_list
-            swap 2 pop 2            // _ *pair_list
-
-            return
-
+        let main_loop = triton_asm!(
             // INVARIANT: _ *left_list *right_list *pair_list itr
-            {main_loop}:
+            {main_loop_label}:
                 // test return condition
                 dup 0               // _ *left_list *right_list *pair_list itr itr
                 push 0 eq           // _ *left_list *right_list *pair_list itr itr==0
@@ -176,6 +141,42 @@ impl BasicSnippet for Zip {
                 call {memcpy}       // _ *left_list *right_list *pair_list index
 
                 recurse
+        );
+
+        triton_asm!(
+            // BEFORE: _ *left_list *right_list
+            // AFTER:  _ *pair_list
+            {entrypoint}:
+            // get lengths
+            dup 1                   // _ *left_list *right_list *left_list
+            read_mem 1 pop 1        // _ *left_list *right_list left_len
+
+            dup 1                   // _ *left_list *right_list left_len *right_list
+            read_mem 1 pop 1        // _ *left_list *right_list left_len right_len
+
+            // assert equal lengths
+            dup 1                   // _ *left_list *right_list left_len right_len left_len
+            eq assert               // _ *left_list *right_list len
+
+            // create object for pair list and set length
+            call {new_output_list}  // _ *left_list *right_list len *pair_list
+
+            dup 1
+            dup 1
+            write_mem 1
+            pop 1
+
+            // prepare stack for loop
+            swap 1                  // _ *left_list *right_list *pair_list len
+            call {main_loop_label}        // _ *left_list *right_list *pair_list 0
+
+            // clean up stack
+            pop 1                   // _ *left_list *right_list *pair_list
+            swap 2 pop 2            // _ *pair_list
+
+            return
+
+            {&main_loop}
         )
     }
 }
