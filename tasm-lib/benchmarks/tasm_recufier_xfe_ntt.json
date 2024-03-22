@@ -1,14 +1,14 @@
 [
   {
     "name": "tasm_recufier_xfe_ntt",
-    "clock_cycle_count": 10334,
+    "clock_cycle_count": 10174,
     "hash_table_height": 222,
     "u32_table_height": 944,
     "case": "CommonCase"
   },
   {
     "name": "tasm_recufier_xfe_ntt",
-    "clock_cycle_count": 53308,
+    "clock_cycle_count": 52412,
     "hash_table_height": 222,
     "u32_table_height": 4845,
     "case": "WorstCase"
