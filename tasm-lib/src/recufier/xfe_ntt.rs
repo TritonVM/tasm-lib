@@ -136,12 +136,20 @@ impl BasicSnippet for XfeNtt {
 
             push 2
             dup 4
+            // _ n l r' i n
+
             div_mod
             pop 1
+            // _ n l r' i (n / 2)
+
             swap 4
             pop 1
+            // _ (n / 2) l r' i
+
             push 1
             add
+            // _ (n / 2) l r' i'
+
             recurse
 
         {bitreverse_function}:
@@ -188,21 +196,21 @@ impl BasicSnippet for XfeNtt {
             mul
             push 3
             add
-            // _ *x omega size log_2_size k *x [x[rk]] *(x[rk] - 1) k_offset
+            // _ *x omega size log_2_size k *x [x[rk]] *x[rk] k_offset
 
             dup 5
             add
-            // _ *x omega size log_2_size k *x [x[rk]] *(x[rk] - 1) *(x[k] + 2)
+            // _ *x omega size log_2_size k *x [x[rk]] *x[rk] *(x[k] + 2)
 
             read_mem 3
-            // _ *x omega size log_2_size k *x [x[rk]] *(x[rk] - 1) x[k] *(x[k] - 1)
+            // _ *x omega size log_2_size k *x [x[rk]] *x[rk] [x[k]] *(x[k] - 1)
 
             push 1
             add
-            // _ *x omega size log_2_size k *x [x[rk]] *(x[rk] - 1) x[k] *x[k]
+            // _ *x omega size log_2_size k *x [x[rk]] *x[rk] [x[k]] *x[k]
 
             swap 4
-            // _ *x omega size log_2_size k *x [x[rk]] *(x[k] - 1) x[k] *x[rk]
+            // _ *x omega size log_2_size k *x [x[rk]] *x[k] [x[k]] *x[rk]
 
             write_mem 3
             pop 1
