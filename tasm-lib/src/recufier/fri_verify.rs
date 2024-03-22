@@ -1552,10 +1552,10 @@ mod bench {
 
     #[test]
     fn bench() {
-        let expansion_factor = 2;
-        let domain_length = expansion_factor * 2;
+        let expansion_factor = 4;
+        let domain_length = 1 << 10;
         let offset = BFieldElement::new(7);
-        let num_collinearity_checks = 2;
+        let num_collinearity_checks = 80;
         // tiny parameters for FRI yes, but the bench framework is awful atm
         let fri_verify = FriVerify::new(
             offset,
