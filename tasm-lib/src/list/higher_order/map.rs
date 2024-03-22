@@ -552,6 +552,28 @@ mod tests {
     }
 
     #[test]
+    fn test_with_raw_function_bfe_lift() {
+        let rawcode = RawCode::new(
+            triton_asm!(bfe_lift: push 0 push 0 swap 2 return),
+            DataType::Bfe,
+            DataType::Xfe,
+        );
+        let snippet = Map::new(InnerFunction::RawCode(rawcode));
+        ShadowedFunction::new(snippet).test();
+    }
+
+    #[test]
+    fn test_with_raw_function_xfe_get_coeff_0() {
+        let rawcode = RawCode::new(
+            triton_asm!(get_0: swap 2 pop 2 return),
+            DataType::Xfe,
+            DataType::Bfe,
+        );
+        let snippet = Map::new(InnerFunction::RawCode(rawcode));
+        ShadowedFunction::new(snippet).test();
+    }
+
+    #[test]
     fn test_with_raw_function_square_on_bfe() {
         let rawcode = RawCode::new(
             triton_asm!(square_bfe: dup 0 mul return),
@@ -582,6 +604,32 @@ mod tests {
                 square_xfe: dup 2 dup 2 dup 2 xxmul return
             ),
             DataType::Xfe,
+            DataType::Xfe,
+        );
+        let snippet = Map::new(InnerFunction::RawCode(rawcode));
+        ShadowedFunction::new(snippet).test();
+    }
+
+    #[test]
+    fn test_with_raw_function_xfe_to_digest() {
+        let rawcode = RawCode::new(
+            triton_asm!(
+                xfe_to_digest: push 0 push 0 return
+            ),
+            DataType::Xfe,
+            DataType::Digest,
+        );
+        let snippet = Map::new(InnerFunction::RawCode(rawcode));
+        ShadowedFunction::new(snippet).test();
+    }
+
+    #[test]
+    fn test_with_raw_function_digest_to_xfe() {
+        let rawcode = RawCode::new(
+            triton_asm!(
+                xfe_to_digest: pop 2 return
+            ),
+            DataType::Digest,
             DataType::Xfe,
         );
         let snippet = Map::new(InnerFunction::RawCode(rawcode));
