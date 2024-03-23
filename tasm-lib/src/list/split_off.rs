@@ -2,11 +2,12 @@ use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
 use crate::library::Library;
-use crate::memory::{dyn_malloc, memcpy};
+use crate::memory::dyn_malloc;
+use crate::memory::memcpy;
 use crate::traits::basic_snippet::BasicSnippet;
 
 /// Mutates an existing vector by reducing its length to `at` and returns the new vector. Mirrors
-// the behavior of the Rust method `Vec::split_off`.
+/// the behavior of the Rust method `Vec::split_off`.
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct SplitOff {
     pub element_type: DataType,
@@ -254,7 +255,7 @@ mod tests {
                 Some(BenchmarkCase::CommonCase) => (100, 50),
                 Some(BenchmarkCase::WorstCase) => (1000, 0),
                 None => {
-                    let list_length = rng.gen_range(0..1000);
+                    let list_length = rng.gen_range(1..1000);
                     (list_length, rng.gen_range(0..list_length))
                 }
             };
