@@ -411,8 +411,8 @@ impl BasicSnippet for FriSnippet {
 
                 log_2_floor push 1 add      // _ *vm_proof_iter *fri_verify max_num_rounds num_rounds_checking_most_locations
 
-                dup 1 dup 1 lt              // _ *vm_proof_iter *fri_verify max_num_rounds num_rounds_checking_most_locations num_rounds_checking_most_locations<max_num_rounds
-                swap 2 push -1 mul add      // _ *vm_proof_iter *fri_verify num_rounds_checking_most_locations<max_num_rounds num_rounds_checking_most_locations-max_num_rounds
+                dup 1 dup 1 lt              // _ *vm_proof_iter *fri_verify max_num_rounds num_rounds_checking_most_locations (num_rounds_checking_most_locations<max_num_rounds)
+                swap 2 push -1 mul add      // _ *vm_proof_iter *fri_verify (num_rounds_checking_most_locations<max_num_rounds) num_rounds_checking_most_locations-max_num_rounds
                 mul push -1 mul             // _ *vm_proof_iter *fri_verify if(num_rounds_checking_most_locations<max_num_rounds){max_num_rounds-num_rounds_checking_most_locations}else{0}
                                             // _ *vm_proof_iter *fri_verify num_rounds
                 hint num_rounds = stack[0]
