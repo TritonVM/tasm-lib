@@ -18,7 +18,6 @@ use crate::data_type::DataType;
 use crate::data_type::StructType;
 use crate::field;
 use crate::hashing::algebraic_hasher::sample_indices::SampleIndices;
-use crate::hashing::algebraic_hasher::sample_scalars::SampleScalars;
 use crate::hashing::algebraic_hasher::sample_scalars_static_length_dyn_malloc::SampleScalarsStaticLengthDynMalloc;
 use crate::hashing::merkle_root::MerkleRoot;
 use crate::library::Library;
