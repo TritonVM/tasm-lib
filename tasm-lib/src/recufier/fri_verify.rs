@@ -11,6 +11,7 @@ use triton_vm::twenty_first::shared_math::ntt::intt;
 use triton_vm::twenty_first::shared_math::other::log_2_ceil;
 use triton_vm::twenty_first::shared_math::polynomial::Polynomial;
 use triton_vm::twenty_first::shared_math::traits::ModPowU32;
+use triton_vm::twenty_first::shared_math::x_field_element::EXTENSION_DEGREE;
 use triton_vm::twenty_first::util_types::merkle_tree::MerkleTreeInclusionProof;
 
 use crate::data_type::DataType;
@@ -18,6 +19,7 @@ use crate::data_type::StructType;
 use crate::field;
 use crate::hashing::algebraic_hasher::sample_indices::SampleIndices;
 use crate::hashing::algebraic_hasher::sample_scalars::SampleScalars;
+use crate::hashing::algebraic_hasher::sample_scalars_static_length_dyn_malloc::SampleScalarsStaticLengthDynMalloc;
 use crate::hashing::merkle_root::MerkleRoot;
 use crate::library::Library;
 use crate::list::get::Get;
@@ -134,8 +136,10 @@ impl BasicSnippet for FriSnippet {
             push 4 add          // _ *digest+4
             read_mem 5 pop 1    // _ [digest; 5]
         );
+        let read_xfe = triton_asm!(
+            push {EXTENSION_DEGREE - 1} add read_mem {EXTENSION_DEGREE} pop 1
+        );
         let new_list_xfe = library.import(Box::new(New::new(DataType::Xfe)));
-        let get_scalar = library.import(Box::new(Get::new(DataType::Xfe)));
         let push_scalar = library.import(Box::new(Push::new(DataType::Xfe)));
 
         let vm_proof_iter_dequeue_next_as_merkle_root =
@@ -145,7 +149,10 @@ impl BasicSnippet for FriSnippet {
         let vm_proof_iter_dequeue_next_as_fri_response =
             library.import(Box::new(DequeueNextAs::new(ProofItemVariant::FriResponse)));
 
-        let vm_proof_iter_sample_scalars = library.import(Box::new(SampleScalars));
+        let vm_proof_iter_sample_one_scalar =
+            library.import(Box::new(SampleScalarsStaticLengthDynMalloc {
+                num_elements: 1,
+            }));
         let dequeue_commit_phase = format!("{entrypoint}_dequeue_commit_phase_remainder");
         let convert_xfe_to_digest = format!("{entrypoint}_convert_xfe_to_digest");
         let map_convert_xfe_to_digest =
@@ -362,12 +369,10 @@ impl BasicSnippet for FriSnippet {
                 swap 2      // _ num_rounds-1 *roots *alphas
 
                 // sample scalar
-                push 1      // _ num_rounds-1 *roots *alphas 1
-                call {vm_proof_iter_sample_scalars}
+                call {vm_proof_iter_sample_one_scalar}
                             // _ num_rounds-1 *roots *alphas *scalars
                 dup 1 swap 1// _ num_rounds-1 *roots *alphas *alphas *scalars
-                push 0      // _ num_rounds-1 *roots *alphas *alphas *scalars 0
-                call {get_scalar}
+                {&read_xfe}
                             // _ num_rounds-1 *roots *alphas *alphas [scalars[0]]
 
                 call {push_scalar}
