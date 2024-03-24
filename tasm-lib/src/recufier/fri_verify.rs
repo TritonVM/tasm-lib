@@ -437,13 +437,12 @@ impl BasicSnippet for FriSnippet {
                 // COMMIT PHASE
 
                 // create lists for roots and alphas
-                call {new_list_of_digests}  // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *roots
-                    hint roots: ListPointer = stack[0]
-                call {new_list_xfe}         // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *roots *alphas
+                call {new_list_xfe}         // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *alphas
                     hint folding_challenges: ListPointer = stack[0]
+                call {new_list_of_digests}  // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *alphas *roots
+                    hint roots: ListPointer = stack[0]
 
                 // dequeue first Merkle root
-                swap 1                      // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *alphas *roots
                 dup 5                       // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *alphas *roots *proof_iter
                 call {vm_proof_iter_dequeue_next_as_merkle_root}
                                             // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *alphas *roots *root
