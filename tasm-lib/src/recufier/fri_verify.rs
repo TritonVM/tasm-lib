@@ -160,12 +160,10 @@ impl BasicSnippet for FriSnippet {
                     {convert_xfe_to_digest}:
                         // _ xfe2 xfe1 xfe0
                         push 0 push 0       // _ xfe2 xfe1 xfe0 0 0
-                        swap 4              // _ 0 xfe1 xfe0 0 xfe2
-                        swap 2              // _ 0 xfe1 xfe2 0 xfe0
-                        swap 3              // _ 0 xfe0 xfe2 0 xfe1
-                        swap 1              // _ 0 xfe0 xfe2 xfe1 0
-                        swap 3              // _ 0 0 xfe2 xfe1 xfe0
-                        // _ 0 0 xfe2 xfe1 xfe0
+                        swap 3              // _ xfe2 0 xfe0 0 xfe1
+                        swap 1              // _ xfe2 0 xfe0 xfe1 0
+                        swap 4              // _ 0 0 xfe0 xfe1 xfe2
+                        swap 2              // _ 0 0 xfe2 xfe1 xfe0
                         return
                 ),
                 input_type: DataType::Xfe,
@@ -465,7 +463,7 @@ impl BasicSnippet for FriSnippet {
                 call {vm_proof_iter_dequeue_next_as_fri_codeword}
                     hint last_fri_codeword: ListPointer = stack[0]
                                             // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *last_codeword
-                dup 7 swap 1                // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_iter *last_codeword
+                dup 7 swap 1                // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *vm_proof_iter *last_codeword
 
                 // clone last codeword for later use
                 dup 0                       // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *vm_proof_iter *last_codeword *last_codeword
