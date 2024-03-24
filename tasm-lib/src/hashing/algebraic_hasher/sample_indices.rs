@@ -186,8 +186,11 @@ impl Procedure for SampleIndices {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
         let number = if let Some(case) = bench_case {
             match case {
-                crate::snippet_bencher::BenchmarkCase::CommonCase => 45,
-                crate::snippet_bencher::BenchmarkCase::WorstCase => 160,
+                // For FRI num_collinearity checks is 80 for expansion factor 4
+                crate::snippet_bencher::BenchmarkCase::CommonCase => 40,
+
+                // For FRI num_collinearity checks is 40 for expansion factor 8
+                crate::snippet_bencher::BenchmarkCase::WorstCase => 80,
             }
         } else {
             rng.gen_range(0..20)
