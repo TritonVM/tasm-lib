@@ -5,11 +5,13 @@ use num_traits::Zero;
 use rand::rngs::StdRng;
 use rand::Rng;
 use rand::SeedableRng;
+use triton_vm::prelude::tip5::DIGEST_LENGTH;
 use triton_vm::prelude::*;
 use triton_vm::twenty_first::prelude::AlgebraicHasher;
 
 use crate::data_type::DataType;
 use crate::empty_stack;
+use crate::library::Library;
 use crate::memory::encode_to_memory;
 use crate::snippet_bencher::BenchmarkCase;
 use crate::structure::tasm_object::TasmObject;
@@ -41,7 +43,7 @@ impl MerkleRoot {
 }
 
 impl BasicSnippet for MerkleRoot {
-    fn inputs(&self) -> Vec<(crate::data_type::DataType, String)> {
+    fn inputs(&self) -> Vec<(DataType, String)> {
         vec![
             (
                 DataType::List(Box::new(DataType::Digest)),
@@ -52,7 +54,7 @@ impl BasicSnippet for MerkleRoot {
         ]
     }
 
-    fn outputs(&self) -> Vec<(crate::data_type::DataType, String)> {
+    fn outputs(&self) -> Vec<(DataType, String)> {
         vec![(DataType::Digest, "root".to_string())]
     }
 
@@ -60,107 +62,114 @@ impl BasicSnippet for MerkleRoot {
         "tasm_hashing_merkle_root".to_string()
     }
 
-    fn code(
-        &self,
-        library: &mut crate::library::Library,
-    ) -> Vec<triton_vm::instruction::LabelledInstruction> {
+    fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
-        let tasm_arithmetic_u32_safe_add_u32 =
-            library.import(Box::new(crate::arithmetic::u32::safeadd::Safeadd));
-        let tasm_arithmetic_u32_safe_sub_u32 =
-            library.import(Box::new(crate::arithmetic::u32::safesub::Safesub));
-        #[allow(non_snake_case)]
-        let _leafs_start__LDigestR_Digest_10_then =
-            format!("{entrypoint}_leafs_start__LDigestR_Digest_10_then");
-        #[allow(non_snake_case)]
-        let _fn_call__LDigestR_Digest_30_else =
-            format!("{entrypoint}_fn_call__LDigestR_Digest_30_else");
+        let read_digest = DataType::Digest.read_value_from_memory_pop_pointer();
 
-        // kudos to tasm-lang compiler
-        triton_asm! {
-        {_leafs_start__LDigestR_Digest_10_then}:
-        pop 1
-        dup 2
-        dup 2
-        push 5
-        mul
-        push 5
-        add
-        add
-        read_mem 5
-        pop 1
-        push 0
-        return
+        let then_label = format!("{entrypoint}_then");
+        let else_label = format!("{entrypoint}_else");
+        triton_asm!(
+                {entrypoint}:
+                    // *leafs start stop
 
-        {_fn_call__LDigestR_Digest_30_else}:
-        dup 0
-        dup 2
-        swap 1
-        call {tasm_arithmetic_u32_safe_sub_u32}
-        push 2
-        swap 1
-        div_mod
-        pop 1
-        dup 3
-        dup 3
-        dup 3
-        dup 3
-        swap 1
-        call {tasm_arithmetic_u32_safe_sub_u32}
-        call {entrypoint}
-        dup 8
-        dup 8
-        dup 7
-        call {tasm_arithmetic_u32_safe_add_u32}
-        dup 8
-        call {entrypoint}
-        dup 4
-        dup 4
-        dup 4
-        dup 4
-        dup 4
-        dup 14
-        dup 14
-        dup 14
-        dup 14
-        dup 14
-        hash
-        swap 11
-        pop 1
-        swap 11
-        pop 1
-        swap 11
-        pop 1
-        swap 11
-        pop 1
-        swap 11
-        pop 5
-        pop 2
-        return
+                    push 1
 
-        {entrypoint}:
-        dup 0
-        dup 2
-        push 1
-        call {tasm_arithmetic_u32_safe_add_u32}
-        eq
-        push 1
-        swap 1
-        skiz
-        call {_leafs_start__LDigestR_Digest_10_then}
-        skiz
-        call {_fn_call__LDigestR_Digest_30_else}
-        swap 4
-        swap 7
-        pop 1
-        swap 2
-        swap 5
-        pop 1
-        swap 3
-        pop 1
-        swap 1
-        return
-        }
+                    dup 2
+                    push 1
+                    add
+                    // *leafs start stop 1 (start + 1)
+
+                    dup 2
+                    eq
+                    // *leafs start stop 1 (start + 1 == stop)
+
+                    skiz
+                        call {then_label}
+                    skiz
+                        call {else_label}
+                    // _ *leafs start stop garbage [digest; 5]
+                    // _ *leafs start stop garbage d4 d3 d2 d1 d0
+
+                    swap 4
+                    swap 8
+                    pop 1
+                    // _ d4 start stop garbage d0 d3 d2 d1
+
+                    swap 4
+                    pop 1
+                    // _ d4 start stop d1 d0 d3 d2
+
+                    swap 4
+                    pop 1
+                    // _ d4 start d2 d1 d0 d3
+
+                    swap 4
+                    pop 1
+                    // _ d4 d3 d2 d1 d0
+
+                    return
+
+                {then_label}:
+                    // *leafs start stop 1
+
+                    dup 2
+                    push {DIGEST_LENGTH}
+                    mul
+                    dup 4
+                    add
+                    push {DIGEST_LENGTH}
+                    add
+                    {&read_digest}
+                    // *leafs start stop 1 [digest; 5]
+
+                    push 0
+                    return
+
+                {else_label}:
+                        // _ *leafs start stop
+
+                        push 2
+                        dup 1
+                        dup 3
+                        push -1
+                        mul
+                        add
+                        // _ *leafs start stop 2 (stop - start)
+
+                        div_mod
+                        pop 1
+                        // _ *leafs start stop ((stop - start) / 2)
+                        // _ *leafs start stop half
+
+                        dup 3
+                        dup 3
+                        dup 2
+                        add
+                        // _ *leafs start stop half *leafs (start + half)
+
+                        dup 3
+                        // _ *leafs start stop half *leafs (start + half) stop
+
+                        call {entrypoint}
+                        // _ *leafs start stop half [right; 5]
+
+                        dup 8
+                        dup 8
+                        dup 8
+                        dup 8
+                        push -1
+                        mul
+                        add
+                        // _ *leafs start stop half [right; 5] *leafs start (stop - half)
+
+                        call {entrypoint}
+                        // _ *leafs start stop half [right; 5] [left; 5]
+
+                        hash
+
+                        return
+
+        )
     }
 }
 
@@ -193,7 +202,7 @@ impl Function for MerkleRoot {
         let num_leafs = match bench_case {
             Some(BenchmarkCase::CommonCase) => 32,
             Some(BenchmarkCase::WorstCase) => 128,
-            None => 64,
+            None => 1 << rng.gen_range(0..=8),
         };
         let leafs = (0..num_leafs).map(|_| rng.gen::<Digest>()).collect_vec();
 
