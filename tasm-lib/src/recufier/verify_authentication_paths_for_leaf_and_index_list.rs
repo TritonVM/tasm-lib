@@ -7,12 +7,11 @@ use rand::RngCore;
 use rand::SeedableRng;
 use triton_vm::prelude::*;
 use triton_vm::twenty_first::prelude::*;
+use triton_vm::twenty_first::shared_math::tip5::DIGEST_LENGTH;
 
 use crate::data_type::DataType;
 use crate::empty_stack;
 use crate::hashing::merkle_verify::MerkleVerify;
-use crate::list::get::Get;
-use crate::list::length::Length;
 use crate::rust_shadowing_helper_functions;
 use crate::structure::tasm_object::TasmObject;
 use crate::traits::algorithm::Algorithm;
@@ -34,9 +33,15 @@ use crate::VmHasher;
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct VerifyAuthenticationPathForLeafAndIndexList;
 
+impl VerifyAuthenticationPathForLeafAndIndexList {
+    fn indexed_leaf_type() -> DataType {
+        DataType::Tuple(vec![DataType::U32, DataType::Digest])
+    }
+}
+
 impl BasicSnippet for VerifyAuthenticationPathForLeafAndIndexList {
     fn inputs(&self) -> Vec<(DataType, String)> {
-        let indexed_leaf_type = DataType::Tuple(vec![DataType::U32, DataType::Digest]);
+        let indexed_leaf_type = Self::indexed_leaf_type();
         vec![
             (
                 DataType::List(Box::new(indexed_leaf_type)),
@@ -48,7 +53,7 @@ impl BasicSnippet for VerifyAuthenticationPathForLeafAndIndexList {
     }
 
     fn outputs(&self) -> Vec<(DataType, String)> {
-        self.inputs()
+        vec![]
     }
 
     fn entrypoint(&self) -> String {
@@ -58,50 +63,97 @@ impl BasicSnippet for VerifyAuthenticationPathForLeafAndIndexList {
     fn code(&self, library: &mut crate::library::Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
         let main_loop = format!("{entrypoint}_main_loop");
-        let indices_and_leaves = DataType::Tuple(vec![DataType::U32, DataType::Digest]);
 
-        let len_subroutine_label =
-            library.import(Box::new(Length::new(indices_and_leaves.clone())));
-        let get_element_subroutine_label = library.import(Box::new(Get::new(indices_and_leaves)));
         let merkle_verify_subroutine_label = library.import(Box::new(MerkleVerify));
+        let root_pointer = library.kmalloc(DIGEST_LENGTH as u32).value();
+        let pointer_to_root_last_word = root_pointer + DIGEST_LENGTH as u64 - 1;
+        let height_pointer = library.kmalloc(DataType::U32.stack_size() as u32);
+        let read_lai_list_element =
+            Self::indexed_leaf_type().read_value_from_memory_leave_pointer();
+        let lai_list_element_size = Self::indexed_leaf_type().stack_size();
 
         triton_asm! {
             // BEFORE: _ *leaf_and_index_list root4 root3 root2 root1 root0 height
-            // AFTER:  _ *leaf_and_index_list root4 root3 root2 root1 root0 height
+            // AFTER:  _
             {entrypoint}:
-                dup 6               // _ *leaf_and_index_list root4 root3 root2 root1 root0 height *leaf_and_index_list
-                call {len_subroutine_label}
-                                    // _ *leaf_and_index_list root4 root3 root2 root1 root0 height length
-                push 0              // _ *leaf_and_index_list root4 root3 root2 root1 root0 height length 0
 
-                call {main_loop}    // _ *leaf_and_index_list root4 root3 root2 root1 root0 height length length
+                // Store values to statically known memory address
+                push {height_pointer}
+                write_mem 1
+                pop 1
 
-                pop 2
+                push {root_pointer}
+                write_mem {DIGEST_LENGTH}
+                pop 1
+
+                // _ *lai_list
+
+                push {height_pointer}
+                read_mem 1
+                pop 1
+                // _ *lai_list height
+
+                dup 1
+                read_mem 1
+                pop 1
+                // _ *lai_list height len
+
+                dup 2
+                // _ *lai_list height len *lai_list
+
+                swap 1
+                // _ *lai_list height  *lai_list len
+
+                push {lai_list_element_size}
+                mul
+                // _ *lai_list_end_condition height *lai_list lai_offset
+
+                add
+                // _ *lai_list_end_condition height *ct
+
+                call {main_loop}
+                // _ *lai_list_end_condition height *lai_list
+
+                pop 3
+                // _
+
                 return
 
-            // INVARIANT: _ *leaf_and_index_list root4 root3 root2 root1 root0 height length iteration
+
+            // _ *lai_list_end_condition height *lai_element_last_word
             {main_loop}:
-                // evaluate termination criterion
-                dup 1 dup 1     // _ *leaf_and_index_list root4 root3 root2 root1 root0 height length iteration length iteration
-                eq              // _ *leaf_and_index_list root4 root3 root2 root1 root0 height length iteration length==iteration
-                skiz return     // _ *leaf_and_index_list root4 root3 root2 root1 root0 height length iteration
+                // condition
 
-                // duplicate root
-                dup 7 dup 7 dup 7 dup 7 dup 7
-                                // _ *leaf_and_index_list root4 root3 root2 root1 root0 height length iteration root4 root3 root2 root1 root0
+                dup 2
+                dup 1
+                eq
+                skiz
+                return
+                // _ *lai_list_end_condition height *lai_element_last_word
 
-                // read leaf and index
-                dup 13          // _ *leaf_and_index_list root4 root3 root2 root1 root0 height length iteration root4 root3 root2 root1 root0 lai_list
-                dup 6           // _ *leaf_and_index_list root4 root3 root2 root1 root0 height length iteration root4 root3 root2 root1 root0 lai_list iteration
-                call {get_element_subroutine_label}
-                                // _ *leaf_and_index_list root4 root3 root2 root1 root0 height length iteration root4 root3 root2 root1 root0 index leaf4 leaf3 leaf2 leaf1 leaf0
+                // loop body
 
-                // format and call merkle_verify
-                dup 13          // _ *leaf_and_index_list root4 root3 root2 root1 root0 height length iteration root4 root3 root2 root1 root0 index leaf4 leaf3 leaf2 leaf1 leaf0 height
+                push {pointer_to_root_last_word}
+                read_mem {DIGEST_LENGTH}
+                pop 1
+                // _ *lai_list_end_condition height *lai_element_last_word [root; 5]
+
+                // read leaf and leaf_index
+                dup 5
+                {&read_lai_list_element}
+                // _ *lai_list_end_condition height *lai_element_last_word [root; 5] leaf_index [leaf; 5] *lai_prev_elem_last_word
+
+                // TODO: Adjust *lai pointer here. Maybe add 12?
+
+                swap 12
+                pop 1
+                // _ *lai_list_end_condition height *lai_prev_elem_last_word [root; 5] leaf_index [leaf; 5]
+
+                dup 12
+                // _ *lai_prev_elem_last_word height *lai_list_end_condition [root; 5] leaf_index [leaf; 5] height
+
                 call {merkle_verify_subroutine_label}
 
-                // prepare for next iteration
-                push 1 add      // _ *leaf_and_index_list root4 root3 root2 root1 root0 height length iteration+1
                 recurse
         }
     }
@@ -115,7 +167,8 @@ impl Algorithm for VerifyAuthenticationPathForLeafAndIndexList {
         nondeterminism: &NonDeterminism<BFieldElement>,
     ) {
         // read arguments from stack
-        let height = stack.pop().unwrap().value() as usize;
+        let height = stack.pop().unwrap();
+        let height_as_usize = height.value() as usize;
         let root = Digest::new([
             stack.pop().unwrap(),
             stack.pop().unwrap(),
@@ -129,9 +182,10 @@ impl Algorithm for VerifyAuthenticationPathForLeafAndIndexList {
 
         // iterate and verify
         for (i, (leaf_index, leaf_digest)) in indices_and_leafs.into_iter().enumerate() {
-            let authentication_path = nondeterminism.digests[i * height..(i + 1) * height].to_vec();
+            let authentication_path =
+                nondeterminism.digests[i * height_as_usize..(i + 1) * height_as_usize].to_vec();
             let inclusion_proof = MerkleTreeInclusionProof::<Tip5> {
-                tree_height: height,
+                tree_height: height_as_usize,
                 indexed_leaves: vec![(leaf_index as usize, leaf_digest)],
                 authentication_structure: authentication_path,
                 ..Default::default()
@@ -139,14 +193,13 @@ impl Algorithm for VerifyAuthenticationPathForLeafAndIndexList {
             assert!(inclusion_proof.verify(root));
         }
 
-        // restore stack
-        stack.push(address);
-        stack.push(root.0[4]);
-        stack.push(root.0[3]);
-        stack.push(root.0[2]);
-        stack.push(root.0[1]);
-        stack.push(root.0[0]);
-        stack.push(BFieldElement::new(height as u64));
+        // Mimick allocation of static memory
+        memory.insert(-BFieldElement::new(2), root.0[4]);
+        memory.insert(-BFieldElement::new(3), root.0[3]);
+        memory.insert(-BFieldElement::new(4), root.0[2]);
+        memory.insert(-BFieldElement::new(5), root.0[1]);
+        memory.insert(-BFieldElement::new(6), root.0[0]);
+        memory.insert(-BFieldElement::new(7), height);
     }
 
     fn pseudorandom_initial_state(
