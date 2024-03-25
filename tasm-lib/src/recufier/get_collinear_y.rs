@@ -34,6 +34,25 @@ impl BasicSnippet for CollinearYXfe {
         "tasm_recufier_collinear_y_xfe".to_owned()
     }
 
+    // Original:
+    // let dy = p0.1 - p1.1;
+    // let dx = p0.0 - p1.0;
+    // let p2_y_times_dx = dy * (p2_x - p0.0) + dx * p0.1;
+
+    // // Can we implement this without division?
+    // p2_y_times_dx / dx
+
+    // let dy = a_y - b_y;
+    // let dx = a_x - b_x;
+    // let p2_y_times_dx = dy * (c_x - a_x) + dx * a_y;
+
+    // p2_y_times_dx / dx
+
+    // So we want:
+    // p2_y_times_dx = ((a_y - b_y) * (c_x - a_x) + (a_x - b_x) * a_y) / dx
+    // Calculate the inner parenthesis first.
+    // So first (a_y - b_y), then (c_x - a_x), then
+
     fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {
         triton_asm!(
             // BEFORE: _ [p2x; 3] [p1y; 3] [p1x; 3] [p0y; 3] [p0x; 3]
