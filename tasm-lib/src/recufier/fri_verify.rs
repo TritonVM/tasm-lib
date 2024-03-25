@@ -126,6 +126,7 @@ impl BasicSnippet for FriSnippet {
         let entrypoint = self.entrypoint();
         let domain_length = field!(FriVerify::domain_length);
         let domain_generator = field!(FriVerify::domain_generator);
+        let domain_offset = field!(FriVerify::domain_offset);
         let expansion_factor = field!(FriVerify::expansion_factor);
         let num_collinearity_checks = field!(FriVerify::num_collinearity_checks);
         let new_list_of_digests = library.import(Box::new(New::new(DataType::Digest)));
@@ -490,8 +491,6 @@ impl BasicSnippet for FriSnippet {
 
                 return
 
-            // OLD: INVARIANT:          _ *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_values i
-
             // INVARIANT:          _ *c_end_condition g offset r *c_elem *alphas[r] *a_elements *a_indices *b_elements *b_indices
             {compute_c_values_loop}:
                 // All pointers are traversed from highest address to lowest
@@ -503,157 +502,134 @@ impl BasicSnippet for FriSnippet {
                 eq
                 skiz return
 
+                // Strategy:
+                // 1. Calculate `a_y`
+                // 2. Calculate `a_x`
+                // 3. Calculate `-b_x`
+                // 4. Calculate `1 / (a_x - b_x)` while preserving `a_x`
+                // 5. Calculate `b_y`
+                // 6. Calculate `a_y - b_y`, preserving `a_y`
+                // 7. Calculate `a_y - b_y / (a_x - b_x)`
+                // 8. Calculate `c_x - a_x`
+                // 9. Calculate final `c_y`
+
+                // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem *a_index *b_elem *b_index
+
+                // 1:
                 dup 3
                 read_mem {EXTENSION_DEGREE}
-                // _ c_len g offset r *c_values *alphas[r] *a_elem *a_index *b_elem *b_index [a_y] *a_elem_prev
-
                 swap 7 pop 1
-                // _ c_len g offset r *c_values *alphas[r] *a_elem_prev *a_index *b_elem *b_index [a_y]
+                // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem_prev *a_index *b_elem *b_index [a_y]
 
-                // Now calculate `a_y - b_y`
-                dup 2
-                dup 2
-                dup 2
-                // _ c_len g offset r *c_values *alphas[r] *a_elem_prev *a_index *b_elem *b_index [a_y] [a_y]
+                // 2:
+                dup 5
+                read_mem 1
+                swap 7
+                pop 1
+                // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem *b_index [a_y] a_index
 
-                dup 7
+                dup 12
+                pow
+                // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem *b_index [a_y] (g^a_index)
+
+                dup 11
+                mul
+                // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem *b_index [a_y] (g^a_index * offset)
+
+                dup 10
+                push 2
+                pow
+                swap 1
+                pow
+                // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem *b_index [a_y] (g^a_index * offset)^(1<<round)
+                // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem *b_index [a_y] a_x
+
+                // 3:
+                dup 4
+                read_mem 1
+                swap 6
+                pop 1
+                // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem *b_index_prev [a_y] a_x b_index
+
+                dup 12
+                pow
+                dup 11
+                mul
+                dup 10
+                push 2
+                pow
+                swap 1
+                pow
+                // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem *b_index_prev [a_y] a_x b_x
+
+                push -1
+                mul
+                // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem *b_index_prev [a_y] a_x (-b_x)
+
+                // 4:
+                dup 1
+                add
+                invert
+                // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem *b_index_prev [a_y] a_x (1 / (a_x-b_x))
+
+                // 5:
+                dup 6
                 read_mem {EXTENSION_DEGREE}
                 swap 10 pop 1
-                // _ c_len g offset r *c_values *alphas[r] *a_elem_prev *a_index *b_elem_prev *b_index [a_y] [a_y] [b_y]
+                // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index_prev [a_y] a_x (1/(a_x-b_x)) [b_y]
+
+                // 6:
+                push -1
+                xbmul
+                // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index_prev [a_y] a_x (1/(a_x-b_x)) [-b_y]
+
+                dup 7
+                dup 7
+                dup 7
+                xxadd
+                // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index_prev [a_y] a_x (1/(a_x-b_x)) [a_y-b_y]
+
+                // 7:
+
+                swap 1 swap 2 swap 3
+                // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index_prev [a_y] a_x [a_y-b_y] (1/(a_x-b_x))
+
+                xbmul
+                // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index_prev [a_y] a_x [(a_y-b_y) / (a_x-b_x)]
+
+                swap 1 swap 2 swap 3
+                // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index_prev [a_y] [(a_y-b_y) / (a_x-b_x)] a_x
 
                 push -1
                 xbmul
+                // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index_prev [a_y] [(a_y-b_y) / (a_x-b_x)] (-a_x)
+
+                dup 11
+                read_mem {EXTENSION_DEGREE}
+                pop 1
+                // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index_prev [a_y] [(a_y-b_y) / (a_x-b_x)] (-a_x) [c_x]
+
+                swap 1 swap 2 swap 3
+                // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index_prev [a_y] [(a_y-b_y) / (a_x-b_x)] [c_x] (-a_x)
+
+                add
+                // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index_prev [a_y] [(a_y-b_y) / (a_x-b_x)] [c_x -a_x]
+
+                xxmul
                 xxadd
-                // _ c_len g offset r *c_values *alphas[r] *a_elem_prev *a_index *b_elem_prev *b_index [a_y] [a_y - b_y]
-
-                // Now get `a_x`
-                dup 8
-                read_mem 1
-                swap 9 pop 1
-                // _ c_len g offset r *c_values *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index [a_y] [a_y - b_y] a_index
-
-                dup 15
-                pow
-                // _ c_len g offset r *c_values *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index [a_y] [a_y - b_y] (g^a_index)
-
-                dup 14
-                mul
-                // _ c_len g offset r *c_values *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index [a_y] [a_y - b_y] (g^a_index * offset)
-
-                dup 13
-                push 2
-                pow
-                // _ c_len g offset r *c_values *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index [a_y] [a_y - b_y] (g^a_index * offset) (2^round)
-
-                swap 1
-                pow
-                // _ c_len g offset r *c_values *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index [a_y] [a_y - b_y] (g^a_index*offset)^(1<<round)
-                // _ c_len g offset r *c_values *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index [a_y] [a_y - b_y] a_x
-
-                // Now get `b_x`
-                dup 15
-                // _ c_len g offset r *c_values *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index [a_y] [a_y - b_y] a_x g
+                // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index_prev [c_value]
 
                 dup 8
-                read_mem 1
-                swap 9 pop 1
-                // _ c_len g offset r *c_values *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index_prev [a_y] [a_y - b_y] a_x g b_index
+                write_mem {EXTENSION_DEGREE}
+                // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index_prev *c_elem_next
 
-                swap 1
-                pow
-                // _ c_len g offset r *c_values *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index_prev [a_y] [a_y - b_y] a_x (g^b_index)
+                push {2 * EXTENSION_DEGREE}
+                add
+                // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index_prev *c_elem_prev
 
-                dup 15
-                mul
-                // _ c_len g offset r *c_values *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index_prev [a_y] [a_y - b_y] a_x (g^b_index * offset)
-
-                dup 14
-                push 2
-                pow
-                swap 1
-                pow
-                // _ c_len g offset r *c_values *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index [a_y] [a_y - b_y] a_x b_x
-
-                // The goal of this loop is to calculate a C-value, C(alphas[r], [ax], [ay], [bx], [by])
-                // alphas[r] is the same for all iterations, so it would be cool to have that on stack.
-                // For this, we need:
-                // - *a_indices
-                // - *b_indices
-                // - *a_elements
-                // - *b_elements
-                // - *alphas
-                // But *alphas[r] is the same for all rounds
-
-                // First calculation we want to do is `a_y`
-
-
-
-                // lift things to top of stack
-                dup 15 dup 14 dup 9     // _ *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_values i *alphas *a_indices *b_indices
-                dup 12 dup 9            // _ *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_values i *alphas *a_indices *b_indices r *fri_verify
-
-                // get p0x=ax
-                dup 3 dup 6             // _ *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_values i *alphas *a_indices *b_indices r *fri_verify *a_indices i
-                call {get_u32_from_list}// _ *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_values i *alphas *a_indices *b_indices r *fri_verify a_indices[i]
-                dup 1 swap 1 dup 3      // _ *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_values i *alphas *a_indices *b_indices r *fri_verify *fri_verify a_indices[i] r
-                call {get_collinearity_check_x}
-                                        // _ *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_values i *alphas *a_indices *b_indices r *fri_verify ax2 ax1 ax0
-                swap 2 pop 2            // _ *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_values i *alphas *a_indices *b_indices r *fri_verify ax0
-
-                // get p1x=bx
-                swap 4 pop 1            // _ *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_values i *alphas ax0 *b_indices r *fri_verify
-
-                swap 2  dup 5           // _ *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_values i *alphas ax0 *fri_verify r *b_indices i
-                call {get_u32_from_list}// _ *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_values i *alphas ax0 *fri_verify r b_indices[i]
-                swap 1 call {get_collinearity_check_x}
-                                        // _ *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_values i *alphas ax0 bx2 bx1 bx0
-                swap 2 pop 2            // _ *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_values i *alphas ax0 bx0
-
-                // get p0y = ay
-                dup 15 dup 4            // _ *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_values i *alphas ax0 bx0 *a_elements i
-                call {get_xfe_from_list}// _ *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_values i *alphas ax0 bx0 ay2 ay1 ay0
-
-                // keep r accessible; weneed it
-                dup 15                  // _ *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_values i *alphas ax0 bx0 ay2 ay1 ay0 r
-                dup 13 dup 8            // _ *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_values i *alphas ax0 bx0 ay2 ay1 ay0 r *b_elements i
-                call {get_xfe_from_list}// _ *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_values i *alphas ax0 bx0 ay2 ay1 ay0 r by2 by1 by0
-
-                // get alphas[r]
-                swap 7 swap 1           // _ *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_values i *alphas ax0 by0 ay2 ay1 ay0 r by2 bx0 by1
-                swap 8 swap 2           // _ *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_values i *alphas by0 by0 ay2 ay1 ay0 r ax0 bx0 by2
-                swap 9                  // _ *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_values i by2 by0 by0 ay2 ay1 ay0 r ax0 bx0 *alphas
-                dup 3 call {get_xfe_from_list}
-                                        // _ *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_values i by2 by0 by0 ay2 ay1 ay0 r ax0 bx0 alpha2 alpha1 alpha0
-
-                // We have: [by] [ay]
-
-                // reorder stack for call get_collinear_y
-                // stack needs to be of form: _ [cx] [by] [bx] [ay] [ax]
-                // where cx = alphas[r] and where a and b can be switched
-                swap 9  // _ by2 by1 alpha0 ay2 ay1 ay0 r ax0 bx0 alpha2 alpha1 by0
-                swap 1  // _ by2 by1 alpha0 ay2 ay1 ay0 r ax0 bx0 alpha2 by0 alpha1
-                swap 10 // _ by2 alpha1 alpha0 ay2 ay1 ay0 r ax0 bx0 alpha2 by0 by1
-                swap 2  // _ by2 alpha1 alpha0 ay2 ay1 ay0 r ax0 bx0 by1 by0 alpha2
-                swap 11 // _ alpha2 alpha1 alpha0 ay2 ay1 ay0 r ax0 bx0 by1 by0 by2
-                push 0  // _ alpha2 alpha1 alpha0 ay2 ay1 ay0 r ax0 bx0 by1 by0 by2 0
-                swap 6  // _ alpha2 alpha1 alpha0 ay2 ay1 ay0 0 ax0 bx0 by1 by0 by2 r
-                pop  1  // _ alpha2 alpha1 alpha0 ay2 ay1 ay0 0 ax0 bx0 by1 by0 by2
-                push 0  // _ alpha2 alpha1 alpha0 ay2 ay1 ay0 0 ax0 bx0 by1 by0 by2 0
-                swap 5  // _ alpha2 alpha1 alpha0 ay2 ay1 ay0 0 0 bx0 by1 by0 by2 ax0
-                swap 4  // _ alpha2 alpha1 alpha0 ay2 ay1 ay0 0 0 ax0 by1 by0 by2 bx0
-                swap 2  // _ alpha2 alpha1 alpha0 ay2 ay1 ay0 0 0 ax0 by1 bx0 by2 by0
-                swap 1  // _ alpha2 alpha1 alpha0 ay2 ay1 ay0 0 0 ax0 by1 bx0 by0 by2
-                swap 3  // _ alpha2 alpha1 alpha0 ay2 ay1 ay0 0 0 ax0 by2 bx0 by0 by1
-                swap 2  // _ alpha2 alpha1 alpha0 ay2 ay1 ay0 0 0 ax0 by2 by1 by0 bx0
-                push 0
-                push 0
-                swap 2
-                call {get_collinear_y}
-                                        // _ *alphas current_tree_height *indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_values i cy2 cy1 cy0
-                dup 4 swap 4 pop 1      // _ *alphas current_tree_height *indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_values *c_values cy2 cy1 cy0
-                call {push_xfe_to_list} // _ *alphas current_tree_height *indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_values
-                dup 0 read_mem 1 pop 1
-                                        // _ *alphas current_tree_height *indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_values i+1
+                swap 6
+                pop 1
+                // _ *c_end_condition g offset r *c_elem_prev *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index_prev
 
                 recurse
 
@@ -775,11 +751,77 @@ impl BasicSnippet for FriSnippet {
                 // reduce modulo N/2 to get C indices
                 dup 4 dup 4                 // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *b_indices
                 call {map_reduce_indices}   // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices
+                hint c_indices = stack[0]
 
                 // compute C elements
                 call {new_list_xfe}         // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_elements
-                push 0                      // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_elements 0
-                call {compute_c_values_loop}// _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_elements length
+                hint c_elements = stack[0]
+                break
+
+                // Prepare stack for c-values loop
+                // TODO: *a_elements *a_indices *b_elements *b_indices all need to point to last word, last element.
+                dup 14                     // _ ... *alphas
+                dup 9                      // _ ... *alphas r
+                push 1
+                add
+                push {EXTENSION_DEGREE}
+                mul
+                add                        // _ ... *alphas[r]_last_word
+                                           // _ ... *alphas[r]            <-- rename
+
+                dup 12
+                dup 14                      // _ ... *alphas[r] *a_elements *a_indices
+
+                dup 3
+                push {-(EXTENSION_DEGREE as i32 - 1)}
+                add                        // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition
+
+                dup 8
+                {&domain_generator}        // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g
+
+                dup 9
+                {&domain_offset}           // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset
+
+                dup 14                     // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset r
+
+                dup 7                      // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset r *c_elements
+                dup 9                      // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset r *c_elements *c_indices
+                read_mem 1 pop 1           // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset r *c_elements c_indices_len
+
+                // Write length to *c_elements
+                dup 0
+                dup 2
+                write_mem 1
+                pop 1                      // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset r *c_elements c_indices_len
+
+                push {EXTENSION_DEGREE}
+                mul
+                add
+                push 1
+                add                        // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset r *c_last_elem_first_word
+                break
+
+                dup 14
+                dup 14
+
+                dup 9                      // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset r *c_last_elem_first_word *b_indices *b_elements *alphas[r]
+
+                swap 2
+                swap 1                     // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset r *c_last_elem_first_word *alphas[r] *b_indices *b_elements
+
+                dup 9
+                dup 9                      // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset r *c_last_elem_first_word *alphas[r] *b_indices *b_elements *a_elements *a_indices
+
+                swap 2
+                swap 1
+                swap 3
+
+                // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elements *a_indices *b_elements *b_indices
+                call {compute_c_values_loop}
+
+                pop 5
+                pop 5
+                pop 3
 
                 // return stack to invariant and keep books for next iteration
                 pop 1                       // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_elements
