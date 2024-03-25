@@ -493,6 +493,7 @@ impl BasicSnippet for FriSnippet {
 
             // INVARIANT:          _ *c_end_condition g offset r *c_elem *alphas[r] *a_elements *a_indices *b_elements *b_indices
             {compute_c_values_loop}:
+                break
                 // All pointers are traversed from highest address to lowest
 
                 // evaluate termination criterion
@@ -551,11 +552,12 @@ impl BasicSnippet for FriSnippet {
                 pop 1
                 // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem *b_index_prev [a_y] a_x b_index
 
-                dup 12
+                break
+                dup 13
                 pow
-                dup 11
+                dup 12
                 mul
-                dup 10
+                dup 11
                 push 2
                 pow
                 swap 1
@@ -601,7 +603,7 @@ impl BasicSnippet for FriSnippet {
                 // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index_prev [a_y] [(a_y-b_y) / (a_x-b_x)] a_x
 
                 push -1
-                xbmul
+                mul
                 // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index_prev [a_y] [(a_y-b_y) / (a_x-b_x)] (-a_x)
 
                 dup 11
@@ -623,7 +625,8 @@ impl BasicSnippet for FriSnippet {
                 write_mem {EXTENSION_DEGREE}
                 // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index_prev *c_elem_next
 
-                push {2 * EXTENSION_DEGREE}
+                break
+                push {- 2 * EXTENSION_DEGREE as i32}
                 add
                 // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index_prev *c_elem_prev
 
@@ -756,21 +759,32 @@ impl BasicSnippet for FriSnippet {
                 // compute C elements
                 call {new_list_xfe}         // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_elements
                 hint c_elements = stack[0]
-                break
+
 
                 // Prepare stack for c-values loop
-                // TODO: *a_elements *a_indices *b_elements *b_indices all need to point to last word, last element.
-                dup 14                     // _ ... *alphas
-                dup 9                      // _ ... *alphas r
+                dup 14                      // _ ... *alphas
+                dup 9                       // _ ... *alphas r
                 push 1
                 add
                 push {EXTENSION_DEGREE}
                 mul
-                add                        // _ ... *alphas[r]_last_word
-                                           // _ ... *alphas[r]            <-- rename
+                add                         // _ ... *alphas[r]_last_word
+                                            // _ ... *alphas[r]            <-- rename
 
                 dup 12
+                dup 3                      // _ ... *alphas[r] *a_elements *c_indices
+                read_mem 1 pop 1           // _ ... *alphas[r] *a_elements *c_indices num_indices
+                push {EXTENSION_DEGREE}
+                mul
+                add                         // _ ,, *alphas[r] *a_elements_last_word
+                                            // _ ,, *alphas[r] *a_elements   <-- rename
+
                 dup 14                      // _ ... *alphas[r] *a_elements *a_indices
+                dup 4
+                read_mem 1 pop 1
+                add                         // _ ... *alphas[r] *a_elements *a_indices_last_word
+                                            // _ ... *alphas[r] *a_elements *a_indices <-- rename
+
 
                 dup 3
                 push {-(EXTENSION_DEGREE as i32 - 1)}
@@ -778,9 +792,13 @@ impl BasicSnippet for FriSnippet {
 
                 dup 8
                 {&domain_generator}        // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g
+                read_mem 1
+                pop 1
 
                 dup 9
                 {&domain_offset}           // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset
+                read_mem 1
+                pop 1
 
                 dup 14                     // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset r
 
@@ -794,20 +812,37 @@ impl BasicSnippet for FriSnippet {
                 write_mem 1
                 pop 1                      // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset r *c_elements c_indices_len
 
+                push -1
+                add
                 push {EXTENSION_DEGREE}
                 mul
                 add
                 push 1
-                add                        // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset r *c_last_elem_first_word
-                break
+                add
+                                            // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset r *c_last_elem_first_word
 
                 dup 14
-                dup 14
+                                            // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset r *c_last_elem_first_word *b_indices
+                dup 10
+                read_mem 1
+                pop 1
+                add                         // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset r *c_last_elem_first_word *b_index_last
 
-                dup 9                      // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset r *c_last_elem_first_word *b_indices *b_elements *alphas[r]
+                dup 14
+                dup 10
+                read_mem 1
+                pop 1
+                                            // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset r *c_last_elem_first_word *b_index_last *b_elements c_len
+
+                push {EXTENSION_DEGREE}
+                mul
+                add
+                                            // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset r *c_last_elem_first_word *b_index_last *b_elem_last
+
+                dup 9                       // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset r *c_last_elem_first_word *b_index_last *b_elem_last *alphas[r]
 
                 swap 2
-                swap 1                     // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset r *c_last_elem_first_word *alphas[r] *b_indices *b_elements
+                swap 1                     // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset r *c_last_elem_first_word *alphas[r] *b_index_last *b_elem_last
 
                 dup 9
                 dup 9                      // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset r *c_last_elem_first_word *alphas[r] *b_indices *b_elements *a_elements *a_indices
@@ -821,7 +856,7 @@ impl BasicSnippet for FriSnippet {
 
                 pop 5
                 pop 5
-                pop 3
+                pop 2
 
                 // return stack to invariant and keep books for next iteration
                 pop 1                       // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height-1 half_domain_length *c_indices *c_elements
