@@ -30,8 +30,6 @@ use crate::list::length::Length;
 use crate::list::new::New;
 use crate::list::push::Push;
 use crate::memory::dyn_malloc::DYN_MALLOC_ADDRESS;
-use crate::recufier::get_collinear_y::CollinearYXfe;
-use crate::recufier::get_collinearity_check_x::GetCollinearityCheckX;
 use crate::recufier::proof_stream::dequeue_next_as::DequeueNextAs;
 use crate::recufier::verify_authentication_paths_for_leaf_and_index_list::VerifyAuthenticationPathForLeafAndIndexList;
 use crate::recufier::xfe_ntt::XfeNtt;
@@ -179,7 +177,6 @@ impl BasicSnippet for FriSnippet {
         let assert_tail_xfe0 = format!("{entrypoint}_tail_xfe0");
         let length_of_list_of_xfe = library.import(Box::new(Length::new(DataType::Xfe)));
         let get_xfe_from_list = library.import(Box::new(Get::new(DataType::Xfe)));
-        let get_u32_from_list = library.import(Box::new(Get::new(DataType::U32)));
         let sample_indices = library.import(Box::new(SampleIndices));
         let revealed_leafs = field!(FriResponse::revealed_leaves);
         let zip_digests_indices =
@@ -213,7 +210,6 @@ impl BasicSnippet for FriSnippet {
             DataType::U32,
             DataType::Xfe,
         ]))));
-        let push_xfe_to_list = library.import(Box::new(Push::new(DataType::Xfe)));
         let reduce_indices_label = format!("{entrypoint}_reduce_indices");
         let map_reduce_indices =
             library.import(Box::new(Map::new(InnerFunction::RawCode(RawCode {
@@ -229,8 +225,6 @@ impl BasicSnippet for FriSnippet {
                 output_type: DataType::U32,
             }))));
         let compute_c_values_loop = format!("{entrypoint}_compute_c_values_loop");
-        let get_collinearity_check_x = library.import(Box::new(GetCollinearityCheckX));
-        let get_collinear_y = library.import(Box::new(CollinearYXfe));
         let identity_label = format!("{entrypoint}_identity");
         let duplicate_list_xfe =
             library.import(Box::new(Map::new(InnerFunction::RawCode(RawCode {
@@ -491,10 +485,10 @@ impl BasicSnippet for FriSnippet {
 
                 return
 
+            // Loop's end condition is determined by pointer values, so we don't need a loop counter value
+            // All pointers are traversed from highest address to lowest
             // INVARIANT:          _ *c_end_condition g offset r *c_elem *alphas[r] *a_elements *a_indices *b_elements *b_indices
             {compute_c_values_loop}:
-                break
-                // All pointers are traversed from highest address to lowest
 
                 // evaluate termination criterion
                 // c_elem
@@ -552,7 +546,6 @@ impl BasicSnippet for FriSnippet {
                 pop 1
                 // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem *b_index_prev [a_y] a_x b_index
 
-                break
                 dup 13
                 pow
                 dup 12
@@ -625,7 +618,6 @@ impl BasicSnippet for FriSnippet {
                 write_mem {EXTENSION_DEGREE}
                 // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index_prev *c_elem_next
 
-                break
                 push {- 2 * EXTENSION_DEGREE as i32}
                 add
                 // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index_prev *c_elem_prev
@@ -771,6 +763,7 @@ impl BasicSnippet for FriSnippet {
                 add                         // _ ... *alphas[r]_last_word
                                             // _ ... *alphas[r]            <-- rename
 
+                // Move `*a_elements` to top to stack and point to last element
                 dup 12
                 dup 3                      // _ ... *alphas[r] *a_elements *c_indices
                 read_mem 1 pop 1           // _ ... *alphas[r] *a_elements *c_indices num_indices
@@ -779,13 +772,14 @@ impl BasicSnippet for FriSnippet {
                 add                         // _ ,, *alphas[r] *a_elements_last_word
                                             // _ ,, *alphas[r] *a_elements   <-- rename
 
+                // Move `*a_indices` to top of stack and point to last element
                 dup 14                      // _ ... *alphas[r] *a_elements *a_indices
-                dup 4
+                dup 0
                 read_mem 1 pop 1
                 add                         // _ ... *alphas[r] *a_elements *a_indices_last_word
                                             // _ ... *alphas[r] *a_elements *a_indices <-- rename
 
-
+                // Move `c_elements` to top of stack and calculate loop-terminal condition
                 dup 3
                 push {-(EXTENSION_DEGREE as i32 - 1)}
                 add                        // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition
@@ -807,23 +801,21 @@ impl BasicSnippet for FriSnippet {
                 read_mem 1 pop 1           // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset r *c_elements c_indices_len
 
                 // Write length to *c_elements
-                dup 0
-                dup 2
+                dup 0                       // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset r *c_elements c_indices_len c_indices_len
+                swap 2                      // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset r c_indices_len c_indices_len *c_elements
                 write_mem 1
-                pop 1                      // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset r *c_elements c_indices_len
+                swap 1                      // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset r (*c_elements + 1) c_indices_len
 
                 push -1
                 add
                 push {EXTENSION_DEGREE}
                 mul
                 add
-                push 1
-                add
                                             // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset r *c_last_elem_first_word
 
                 dup 14
                                             // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset r *c_last_elem_first_word *b_indices
-                dup 10
+                dup 0
                 read_mem 1
                 pop 1
                 add                         // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset r *c_last_elem_first_word *b_index_last
