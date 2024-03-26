@@ -487,7 +487,7 @@ impl BasicSnippet for FriSnippet {
 
             // Loop's end condition is determined by pointer values, so we don't need a loop counter value
             // All pointers are traversed from highest address to lowest
-            // INVARIANT:          _ *c_end_condition g offset r *c_elem *alphas[r] *a_elements *a_indices *b_elements *b_indices
+            // INVARIANT:          _ *c_end_condition g offset (1<<round) *c_elem *alphas[r] *a_elements *a_indices *b_elements *b_indices
             {compute_c_values_loop}:
 
                 // evaluate termination criterion
@@ -514,117 +514,112 @@ impl BasicSnippet for FriSnippet {
                 dup 3
                 read_mem {EXTENSION_DEGREE}
                 swap 7 pop 1
-                // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem_prev *a_index *b_elem *b_index [a_y]
+                // _ *c_end_condition g offset (1<<round) *c_elem *alphas[r] *a_elem_prev *a_index *b_elem *b_index [a_y]
 
                 // 2:
+                dup 9
+                dup 6
+                read_mem 1
+                swap 8
+                pop 1
+                // _ *c_end_condition g offset (1<<round) *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem *b_index [a_y] (1<<round) a_index
+
+                dup 13
+                pow
+                // _ *c_end_condition g offset (1<<round) *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem *b_index [a_y] (1<<round) (g^a_index)
+
+                dup 12
+                mul
+                // _ *c_end_condition g offset (1<<round) *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem *b_index [a_y] (1<<round) (g^a_index * offset)
+
+                pow
+                // _ *c_end_condition g offset (1<<round) *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem *b_index [a_y] (g^a_index * offset)^(1<<round)
+                // _ *c_end_condition g offset (1<<round) *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem *b_index [a_y] a_x
+
+                // 3:
+                dup 10
                 dup 5
                 read_mem 1
                 swap 7
                 pop 1
-                // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem *b_index [a_y] a_index
+                // _ *c_end_condition g offset (1<<round) *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem *b_index_prev [a_y] a_x (1<<round) b_index
 
-                dup 12
+                dup 14
                 pow
-                // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem *b_index [a_y] (g^a_index)
-
-                dup 11
-                mul
-                // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem *b_index [a_y] (g^a_index * offset)
-
-                dup 10
-                push 2
-                pow
-                swap 1
-                pow
-                // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem *b_index [a_y] (g^a_index * offset)^(1<<round)
-                // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem *b_index [a_y] a_x
-
-                // 3:
-                dup 4
-                read_mem 1
-                swap 6
-                pop 1
-                // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem *b_index_prev [a_y] a_x b_index
-
                 dup 13
-                pow
-                dup 12
                 mul
-                dup 11
-                push 2
                 pow
-                swap 1
-                pow
-                // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem *b_index_prev [a_y] a_x b_x
+                // _ *c_end_condition g offset (1<<round) *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem *b_index_prev [a_y] a_x b_x
 
                 push -1
                 mul
-                // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem *b_index_prev [a_y] a_x (-b_x)
+                // _ *c_end_condition g offset (1<<round) *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem *b_index_prev [a_y] a_x (-b_x)
 
                 // 4:
                 dup 1
                 add
                 invert
-                // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem *b_index_prev [a_y] a_x (1 / (a_x-b_x))
+                // _ *c_end_condition g offset (1<<round) *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem *b_index_prev [a_y] a_x (1 / (a_x-b_x))
 
                 // 5:
                 dup 6
                 read_mem {EXTENSION_DEGREE}
-                swap 10 pop 1
-                // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index_prev [a_y] a_x (1/(a_x-b_x)) [b_y]
+                swap 10
+                pop 1
+                // _ *c_end_condition g offset (1<<round) *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index_prev [a_y] a_x (1/(a_x-b_x)) [b_y]
 
                 // 6:
                 push -1
                 xbmul
-                // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index_prev [a_y] a_x (1/(a_x-b_x)) [-b_y]
+                // _ *c_end_condition g offset (1<<round) *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index_prev [a_y] a_x (1/(a_x-b_x)) [-b_y]
 
                 dup 7
                 dup 7
                 dup 7
                 xxadd
-                // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index_prev [a_y] a_x (1/(a_x-b_x)) [a_y-b_y]
+                // _ *c_end_condition g offset (1<<round) *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index_prev [a_y] a_x (1/(a_x-b_x)) [a_y-b_y]
 
                 // 7:
 
                 swap 1 swap 2 swap 3
-                // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index_prev [a_y] a_x [a_y-b_y] (1/(a_x-b_x))
+                // _ *c_end_condition g offset (1<<round) *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index_prev [a_y] a_x [a_y-b_y] (1/(a_x-b_x))
 
                 xbmul
-                // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index_prev [a_y] a_x [(a_y-b_y) / (a_x-b_x)]
+                // _ *c_end_condition g offset (1<<round) *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index_prev [a_y] a_x [(a_y-b_y) / (a_x-b_x)]
 
                 swap 1 swap 2 swap 3
-                // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index_prev [a_y] [(a_y-b_y) / (a_x-b_x)] a_x
+                // _ *c_end_condition g offset (1<<round) *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index_prev [a_y] [(a_y-b_y) / (a_x-b_x)] a_x
 
                 push -1
                 mul
-                // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index_prev [a_y] [(a_y-b_y) / (a_x-b_x)] (-a_x)
+                // _ *c_end_condition g offset (1<<round) *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index_prev [a_y] [(a_y-b_y) / (a_x-b_x)] (-a_x)
 
                 dup 11
                 read_mem {EXTENSION_DEGREE}
                 pop 1
-                // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index_prev [a_y] [(a_y-b_y) / (a_x-b_x)] (-a_x) [c_x]
+                // _ *c_end_condition g offset (1<<round) *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index_prev [a_y] [(a_y-b_y) / (a_x-b_x)] (-a_x) [c_x]
 
                 swap 1 swap 2 swap 3
-                // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index_prev [a_y] [(a_y-b_y) / (a_x-b_x)] [c_x] (-a_x)
+                // _ *c_end_condition g offset (1<<round) *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index_prev [a_y] [(a_y-b_y) / (a_x-b_x)] [c_x] (-a_x)
 
                 add
-                // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index_prev [a_y] [(a_y-b_y) / (a_x-b_x)] [c_x -a_x]
+                // _ *c_end_condition g offset (1<<round) *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index_prev [a_y] [(a_y-b_y) / (a_x-b_x)] [c_x -a_x]
 
                 xxmul
                 xxadd
-                // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index_prev [c_value]
+                // _ *c_end_condition g offset (1<<round) *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index_prev [c_value]
 
                 dup 8
                 write_mem {EXTENSION_DEGREE}
-                // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index_prev *c_elem_next
+                // _ *c_end_condition g offset (1<<round) *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index_prev *c_elem_next
 
                 push {- 2 * EXTENSION_DEGREE as i32}
                 add
-                // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index_prev *c_elem_prev
+                // _ *c_end_condition g offset (1<<round) *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index_prev *c_elem_prev
 
                 swap 6
                 pop 1
-                // _ *c_end_condition g offset r *c_elem_prev *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index_prev
+                // _ *c_end_condition g offset (1<<round) *c_elem_prev *alphas[r] *a_elem_prev *a_index_prev *b_elem_prev *b_index_prev
 
                 recurse
 
@@ -795,55 +790,57 @@ impl BasicSnippet for FriSnippet {
                 pop 1
 
                 dup 14                     // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset r
+                push 2
+                pow                        // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset (1<<round)
 
-                dup 7                      // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset r *c_elements
-                dup 9                      // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset r *c_elements *c_indices
-                read_mem 1 pop 1           // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset r *c_elements c_indices_len
+                dup 7                      // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset (1<<round) *c_elements
+                dup 9                      // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset (1<<round) *c_elements *c_indices
+                read_mem 1 pop 1           // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset (1<<round) *c_elements c_indices_len
 
                 // Write length to *c_elements
-                dup 0                       // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset r *c_elements c_indices_len c_indices_len
-                swap 2                      // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset r c_indices_len c_indices_len *c_elements
+                dup 0                       // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset (1<<round) *c_elements c_indices_len c_indices_len
+                swap 2                      // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset (1<<round) c_indices_len c_indices_len *c_elements
                 write_mem 1
-                swap 1                      // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset r (*c_elements + 1) c_indices_len
+                swap 1                      // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset (1<<round) (*c_elements + 1) c_indices_len
 
                 push -1
                 add
                 push {EXTENSION_DEGREE}
                 mul
                 add
-                                            // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset r *c_last_elem_first_word
+                                            // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset (1<<round) *c_last_elem_first_word
 
                 dup 14
-                                            // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset r *c_last_elem_first_word *b_indices
+                                            // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset (1<<round) *c_last_elem_first_word *b_indices
                 dup 0
                 read_mem 1
                 pop 1
-                add                         // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset r *c_last_elem_first_word *b_index_last
+                add                         // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset (1<<round) *c_last_elem_first_word *b_index_last
 
                 dup 14
                 dup 10
                 read_mem 1
                 pop 1
-                                            // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset r *c_last_elem_first_word *b_index_last *b_elements c_len
+                                            // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset (1<<round) *c_last_elem_first_word *b_index_last *b_elements c_len
 
                 push {EXTENSION_DEGREE}
                 mul
                 add
-                                            // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset r *c_last_elem_first_word *b_index_last *b_elem_last
+                                            // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset (1<<round) *c_last_elem_first_word *b_index_last *b_elem_last
 
-                dup 9                       // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset r *c_last_elem_first_word *b_index_last *b_elem_last *alphas[r]
+                dup 9                       // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset (1<<round) *c_last_elem_first_word *b_index_last *b_elem_last *alphas[r]
 
                 swap 2
-                swap 1                     // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset r *c_last_elem_first_word *alphas[r] *b_index_last *b_elem_last
+                swap 1                     // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset (1<<round) *c_last_elem_first_word *alphas[r] *b_index_last *b_elem_last
 
                 dup 9
-                dup 9                      // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset r *c_last_elem_first_word *alphas[r] *b_indices *b_elements *a_elements *a_indices
+                dup 9                      // _ ... *alphas[r] *a_elements *a_indices *c_elements_end_condition g offset (1<<round) *c_last_elem_first_word *alphas[r] *b_indices *b_elements *a_elements *a_indices
 
                 swap 2
                 swap 1
                 swap 3
 
-                // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elements *a_indices *b_elements *b_indices
+                // _ *c_end_condition g offset (1<<round) *c_elem *alphas[r] *a_elements *a_indices *b_elements *b_indices
                 call {compute_c_values_loop}
 
                 pop 5
