@@ -1,4 +1,29 @@
 //! This crate provides a derive macro for the `TasmObject` trait.
+//!
+//! Example usage:
+//! ```
+//! #[derive(BFieldCodec, TasmObject)]
+//! pub struct Foo<T: BFieldCodec> {
+//!     t_list: Vec<T>,
+//! }
+//! ```
+//!
+//! notes:
+//!  1. BFieldCodec derive is required else build error will result.
+//!
+//!  2. If the target struct has a where clause with a trailing
+//!     comma, a build error will result.
+//!
+//!     see: <https://github.com/TritonVM/tasm-lib/issues/91>
+//!
+//!     Example: do not do this.
+//! ```
+//!     #[derive(BFieldCodec, TasmObject)]
+//!     pub struct Foo<T>
+//!     where T: BFieldCodec, {
+//!         t_list: Vec<T>,
+//!     }
+//! ```
 
 extern crate proc_macro;
 
