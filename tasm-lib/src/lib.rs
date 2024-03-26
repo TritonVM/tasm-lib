@@ -388,10 +388,24 @@ pub fn prove_and_verify(
 
     println!("Done proving. Elapsed time: {:?}", measured_time);
     println!(
-        "\nProof was generated from:\ntable heights:\nprocessor table: {}\nhash table: {}\nu32 table: {}",
-        aet.processor_trace.rows().into_iter().count(),
-        aet.hash_trace.rows().into_iter().count(),
-        aet.u32_entries.len(),
+        "Proof was generated from:
+        table lengths:
+          processor table: {}
+          hash table: {}
+          u32 table: {}
+          op-stack table: {}
+          RAM table: {}
+          Program table: {}
+          Cascade table: {}
+          Lookup table: {}",
+        aet.processor_table_length(),
+        aet.hash_table_length(),
+        aet.u32_table_length(),
+        aet.op_stack_table_length(),
+        aet.ram_table_length(),
+        aet.program_table_length(),
+        aet.cascade_table_length(),
+        aet.lookup_table_length(),
     );
 
     assert!(
