@@ -1,7 +1,7 @@
 //! This crate provides a derive macro for the `TasmObject` trait.
 //!
 //! Example usage:
-//! ```
+//! ```no_compile
 //! #[derive(BFieldCodec, TasmObject)]
 //! pub struct Foo<T: BFieldCodec> {
 //!     t_list: Vec<T>,
@@ -17,7 +17,7 @@
 //!     see: <https://github.com/TritonVM/tasm-lib/issues/91>
 //!
 //!     Example: do not do this.
-//! ```
+//! ```no_compile
 //!     #[derive(BFieldCodec, TasmObject)]
 //!     pub struct Foo<T>
 //!     where T: BFieldCodec, {
