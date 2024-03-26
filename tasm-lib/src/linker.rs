@@ -5,8 +5,8 @@ use triton_vm::prelude::*;
 
 use crate::library::Library;
 use crate::prove_and_verify;
+use crate::snippet_bencher::BenchmarkResult;
 use crate::traits::basic_snippet::BasicSnippet;
-use crate::ExecutionResult;
 use crate::VmHasher;
 
 pub fn link_for_isolated_run<T: BasicSnippet>(snippet: Rc<RefCell<T>>) -> Vec<LabelledInstruction> {
@@ -35,7 +35,7 @@ pub fn execute_bench(
     std_in: Vec<BFieldElement>,
     nondeterminism: NonDeterminism<BFieldElement>,
     sponge: Option<VmHasher>,
-) -> ExecutionResult {
+) -> BenchmarkResult {
     let program = Program::new(code);
     let public_input = PublicInput::new(std_in.clone());
 
@@ -59,12 +59,11 @@ pub fn execute_bench(
         );
     }
 
-    ExecutionResult {
-        output: end_state.public_output,
-        final_stack: end_state.op_stack.stack,
-        final_ram: end_state.ram,
-        cycle_count: end_state.cycle_count as usize,
+    BenchmarkResult {
+        clock_cycle_count: simulation_trace.processor_table_length(),
         hash_table_height: simulation_trace.hash_table_length(),
         u32_table_height: simulation_trace.u32_table_length(),
+        op_stack_table_height: simulation_trace.op_stack_table_length(),
+        ram_table_height: simulation_trace.ram_table_length(),
     }
 }

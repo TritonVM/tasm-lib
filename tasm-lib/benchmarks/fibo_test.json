@@ -1,9 +1,13 @@
 [
   {
     "name": "fibo_test",
-    "clock_cycle_count": 5523,
-    "hash_table_height": 24,
-    "u32_table_height": 0,
+    "benchmark_result": {
+      "clock_cycle_count": 5523,
+      "hash_table_height": 24,
+      "u32_table_height": 0,
+      "op_stack_table_height": 4518,
+      "ram_table_height": 0
+    },
     "case": "CommonCase"
   }
 ]

@@ -1,16 +1,24 @@
 [
   {
     "name": "tasm_hashing_sponge_hasher_init",
-    "clock_cycle_count": 4,
-    "hash_table_height": 7,
-    "u32_table_height": 0,
+    "benchmark_result": {
+      "clock_cycle_count": 4,
+      "hash_table_height": 7,
+      "u32_table_height": 0,
+      "op_stack_table_height": 0,
+      "ram_table_height": 0
+    },
     "case": "CommonCase"
   },
   {
     "name": "tasm_hashing_sponge_hasher_init",
-    "clock_cycle_count": 4,
-    "hash_table_height": 7,
-    "u32_table_height": 0,
+    "benchmark_result": {
+      "clock_cycle_count": 4,
+      "hash_table_height": 7,
+      "u32_table_height": 0,
+      "op_stack_table_height": 0,
+      "ram_table_height": 0
+    },
     "case": "WorstCase"
   }
 ]

@@ -470,7 +470,7 @@ mod tests {
         );
 
         // Find produced MMR
-        let final_memory = vm_output.final_ram;
+        let final_memory = vm_output.ram;
         let peaks_count = final_memory[&peaks_pointer].value();
         let mut produced_peaks = vec![];
         for i in 0..peaks_count {

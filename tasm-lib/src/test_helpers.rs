@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::collections::VecDeque;
 use std::fmt::Display;
 
 use itertools::Itertools;
@@ -13,15 +12,15 @@ use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::traits::rust_shadow::RustShadow;
 use crate::ExecutionState;
+use crate::RustShadowOutputState;
 use crate::VmHasher;
-use crate::VmOutputState;
 use crate::DIGEST_LENGTH;
 
 #[allow(dead_code)]
 pub fn test_rust_equivalence_multiple_deprecated<T: DeprecatedSnippet>(
     snippet_struct: &T,
     export_snippet: bool,
-) -> Vec<VmOutputState> {
+) -> Vec<VMState> {
     // Verify that snippet can be found in `all_snippets`, so that
     // it iss visible to the outside.
     // This call will panic if snippet is not found in that
@@ -52,7 +51,7 @@ pub fn test_rust_equivalence_multiple_deprecated<T: DeprecatedSnippet>(
 pub fn test_rust_equivalence_given_execution_state_deprecated<T: DeprecatedSnippet>(
     snippet_struct: &T,
     execution_state: ExecutionState,
-) -> VmOutputState {
+) -> VMState {
     test_rust_equivalence_given_complete_state_deprecated::<T>(
         snippet_struct,
         &execution_state.stack,
@@ -68,7 +67,7 @@ pub fn test_rust_equivalence_given_input_values_deprecated<T: DeprecatedSnippet>
     stdin: &[BFieldElement],
     memory: HashMap<BFieldElement, BFieldElement>,
     expected_final_stack: Option<&[BFieldElement]>,
-) -> VmOutputState {
+) -> VMState {
     let nondeterminism = NonDeterminism::<BFieldElement>::new(vec![]).with_ram(memory.clone());
 
     test_rust_equivalence_given_complete_state_deprecated(
@@ -108,7 +107,7 @@ pub fn link_and_run_tasm_for_test_deprecated<T: DeprecatedSnippet>(
     std_in: Vec<BFieldElement>,
     secret_in: Vec<BFieldElement>,
     memory: HashMap<BFieldElement, BFieldElement>,
-) -> VmOutputState {
+) -> VMState {
     let expected_length_prior: usize = snippet_struct
         .inputs()
         .iter()
@@ -144,7 +143,7 @@ pub(crate) fn test_rust_equivalence_given_complete_state_deprecated<T: Deprecate
     stdin: &[BFieldElement],
     nondeterminism: &NonDeterminism<BFieldElement>,
     expected_final_stack: Option<&[BFieldElement]>,
-) -> VmOutputState {
+) -> VMState {
     let init_stack = stack.to_vec();
 
     let mut rust_memory = nondeterminism.ram.clone();
@@ -168,7 +167,7 @@ pub(crate) fn test_rust_equivalence_given_complete_state_deprecated<T: Deprecate
         nondeterminism.individual_tokens.clone(),
         tasm_memory,
     );
-    let mut tasm_memory = vm_output_state.final_ram.clone();
+    let mut tasm_memory = vm_output_state.ram.clone();
 
     // assert stacks are equal, up to program hash
     let tasm_stack_skip_program_hash = tasm_stack.iter().cloned().skip(DIGEST_LENGTH).collect_vec();
@@ -272,7 +271,7 @@ pub fn rust_final_state<T: RustShadow>(
     stdin: &[BFieldElement],
     nondeterminism: &NonDeterminism<BFieldElement>,
     sponge: &Option<VmHasher>,
-) -> VmOutputState {
+) -> RustShadowOutputState {
     let mut rust_memory = nondeterminism.ram.clone();
     let mut rust_stack = stack.to_vec();
     let mut rust_sponge = sponge.clone();
@@ -286,12 +285,11 @@ pub fn rust_final_state<T: RustShadow>(
         &mut rust_sponge,
     );
 
-    VmOutputState {
-        output,
-        final_stack: rust_stack,
-        final_ram: rust_memory,
-        final_sponge: rust_sponge,
-        secret_digests: VecDeque::<Digest>::new(),
+    RustShadowOutputState {
+        public_output: output,
+        stack: rust_stack,
+        ram: rust_memory,
+        sponge: rust_sponge,
     }
 }
 
@@ -301,7 +299,7 @@ pub fn tasm_final_state<T: RustShadow>(
     stdin: &[BFieldElement],
     nondeterminism: NonDeterminism<BFieldElement>,
     sponge: &Option<VmHasher>,
-) -> VmOutputState {
+) -> VMState {
     // run tvm
     link_and_run_tasm_for_test(
         shadowed_snippet,
@@ -408,7 +406,7 @@ pub fn test_rust_equivalence_given_complete_state<T: RustShadow>(
     nondeterminism: &NonDeterminism<BFieldElement>,
     sponge: &Option<VmHasher>,
     expected_final_stack: Option<&[BFieldElement]>,
-) -> VmOutputState {
+) -> VMState {
     let init_stack = stack.to_vec();
 
     let rust = rust_final_state(shadowed_snippet, stack, stdin, nondeterminism, sponge);
@@ -423,21 +421,21 @@ pub fn test_rust_equivalence_given_complete_state<T: RustShadow>(
     );
 
     assert_eq!(
-        rust.output, tasm.output,
+        rust.public_output, tasm.public_output,
         "Rust shadowing and VM std out must agree"
     );
 
     verify_stack_equivalence(
         "rust-shadow final stack",
-        &rust.final_stack,
+        &rust.stack,
         "TASM final stack",
-        &tasm.final_stack,
+        &tasm.op_stack.stack,
     );
     if let Some(expected) = expected_final_stack {
-        verify_stack_equivalence("expected", expected, "actual", &rust.final_stack);
+        verify_stack_equivalence("expected", expected, "actual", &rust.stack);
     }
-    verify_memory_equivalence("Rust-shadow", &rust.final_ram, "TVM", &tasm.final_ram);
-    verify_stack_growth(shadowed_snippet, &init_stack, &tasm.final_stack);
+    verify_memory_equivalence("Rust-shadow", &rust.ram, "TVM", &tasm.ram);
+    verify_stack_growth(shadowed_snippet, &init_stack, &tasm.op_stack.stack);
 
     tasm
 }
@@ -448,7 +446,7 @@ pub fn link_and_run_tasm_for_test<T: RustShadow>(
     std_in: Vec<BFieldElement>,
     nondeterminism: NonDeterminism<BFieldElement>,
     maybe_sponge: Option<VmHasher>,
-) -> VmOutputState {
+) -> VMState {
     let code = link_for_isolated_run(snippet_struct);
 
     execute_test(
@@ -484,7 +482,7 @@ fn link_for_isolated_run<T: RustShadow>(snippet_struct: &T) -> Vec<LabelledInstr
 pub fn test_rust_equivalence_given_execution_state<T: BasicSnippet + RustShadow>(
     snippet_struct: &T,
     execution_state: ExecutionState,
-) -> VmOutputState {
+) -> VMState {
     let nondeterminism = execution_state.nondeterminism;
     test_rust_equivalence_given_complete_state::<T>(
         snippet_struct,

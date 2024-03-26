@@ -13,7 +13,7 @@ use crate::linker::execute_bench;
 use crate::linker::link_for_isolated_run;
 use crate::snippet_bencher::write_benchmarks;
 use crate::snippet_bencher::BenchmarkCase;
-use crate::snippet_bencher::BenchmarkResult;
+use crate::snippet_bencher::NamedBenchmarkResult;
 use crate::test_helpers::rust_final_state;
 use crate::test_helpers::tasm_final_state;
 use crate::test_helpers::verify_memory_equivalence;
@@ -154,13 +154,10 @@ impl<P: Procedure + 'static> RustShadow for ShadowedProcedure<P> {
                 .borrow()
                 .pseudorandom_initial_state(rng.gen(), Some(bench_case));
             let program = link_for_isolated_run(self.procedure.clone());
-            let execution_result =
-                execute_bench(&program, &stack, public_input, nondeterminism, sponge);
-            let benchmark = BenchmarkResult {
+            let benchmark = execute_bench(&program, &stack, public_input, nondeterminism, sponge);
+            let benchmark = NamedBenchmarkResult {
                 name: self.procedure.borrow().entrypoint(),
-                clock_cycle_count: execution_result.cycle_count,
-                hash_table_height: execution_result.hash_table_height,
-                u32_table_height: execution_result.u32_table_height,
+                benchmark_result: benchmark,
                 case: bench_case,
             };
             benchmarks.push(benchmark);
@@ -185,24 +182,19 @@ impl<P: Procedure + 'static> ShadowedProcedure<P> {
         let tasm = tasm_final_state(self, &stack, &public_input, nondeterminism, &sponge);
 
         assert_eq!(
-            rust.output, tasm.output,
+            rust.public_output, tasm.public_output,
             "Rust shadowing and VM std out must agree"
         );
 
-        verify_stack_growth(self, &stack, &tasm.final_stack);
+        verify_stack_growth(self, &stack, &tasm.op_stack.stack);
 
         verify_stack_equivalence(
             "Rust-shadow",
-            &rust.final_stack,
+            &rust.stack,
             "TVM execution",
-            &tasm.final_stack,
+            &tasm.op_stack.stack,
         );
-        verify_memory_equivalence(
-            "Rust-shadow",
-            &rust.final_ram,
-            "TVM execution",
-            &tasm.final_ram,
-        );
-        verify_sponge_equivalence(&rust.final_sponge, &tasm.final_sponge);
+        verify_memory_equivalence("Rust-shadow", &rust.ram, "TVM execution", &tasm.ram);
+        verify_sponge_equivalence(&rust.sponge, &tasm.sponge);
     }
 }

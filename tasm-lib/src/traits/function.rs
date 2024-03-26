@@ -12,7 +12,7 @@ use crate::linker::execute_bench;
 use crate::linker::link_for_isolated_run;
 use crate::snippet_bencher::write_benchmarks;
 use crate::snippet_bencher::BenchmarkCase;
-use crate::snippet_bencher::BenchmarkResult;
+use crate::snippet_bencher::NamedBenchmarkResult;
 use crate::test_helpers::test_rust_equivalence_given_complete_state;
 use crate::VmHasher;
 
@@ -153,12 +153,10 @@ where
                 .pseudorandom_initial_state(rng.gen(), Some(bench_case));
             let program = link_for_isolated_run(self.function.clone());
             let non_determinism = NonDeterminism::default().with_ram(memory);
-            let execution_result = execute_bench(&program, &stack, vec![], non_determinism, None);
-            let benchmark = BenchmarkResult {
+            let benchmark = execute_bench(&program, &stack, vec![], non_determinism, None);
+            let benchmark = NamedBenchmarkResult {
                 name: self.function.borrow().entrypoint(),
-                clock_cycle_count: execution_result.cycle_count,
-                hash_table_height: execution_result.hash_table_height,
-                u32_table_height: execution_result.u32_table_height,
+                benchmark_result: benchmark,
                 case: bench_case,
             };
             benchmarks.push(benchmark);

@@ -1,16 +1,24 @@
 [
   {
     "name": "tasm_list_length___digest",
-    "clock_cycle_count": 5,
-    "hash_table_height": 6,
-    "u32_table_height": 0,
+    "benchmark_result": {
+      "clock_cycle_count": 5,
+      "hash_table_height": 6,
+      "u32_table_height": 0,
+      "op_stack_table_height": 2,
+      "ram_table_height": 1
+    },
     "case": "CommonCase"
   },
   {
     "name": "tasm_list_length___digest",
-    "clock_cycle_count": 5,
-    "hash_table_height": 6,
-    "u32_table_height": 0,
+    "benchmark_result": {
+      "clock_cycle_count": 5,
+      "hash_table_height": 6,
+      "u32_table_height": 0,
+      "op_stack_table_height": 2,
+      "ram_table_height": 1
+    },
     "case": "WorstCase"
   }
 ]

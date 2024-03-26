@@ -204,9 +204,8 @@ impl DeprecatedSnippet for Range {
 #[cfg(test)]
 mod tests {
     use triton_vm::error::InstructionError;
-    use triton_vm::error::VMError;
 
-    use crate::execute_with_execution_state_deprecated;
+    use crate::execute_with_terminal_state;
     use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     use super::*;
@@ -219,12 +218,15 @@ mod tests {
     fn bad_range_test() {
         let init_state = Range::init_state(13, 12);
         let snippet = Range;
-        let stack_diff = snippet.stack_diff();
-        let execution_result =
-            execute_with_execution_state_deprecated(snippet, init_state, stack_diff);
-        let err = execution_result.unwrap_err();
-        let err = err.downcast::<VMError>().unwrap();
-        assert_eq!(InstructionError::AssertionFailed, err.source);
+        let terminal_state = execute_with_terminal_state(
+            &Program::new(&snippet.link_for_isolated_run()),
+            &init_state.std_in,
+            &init_state.stack,
+            &NonDeterminism::default(),
+            None,
+        );
+        let err = terminal_state.unwrap_err();
+        assert_eq!(InstructionError::AssertionFailed, err);
     }
 }
 

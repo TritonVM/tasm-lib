@@ -12,20 +12,19 @@
 // https://github.com/bkchr/proc-macro-crate/issues/2#issuecomment-572914520
 extern crate self as tasm_lib;
 
-use std::collections::{HashMap, VecDeque};
+use std::collections::HashMap;
 use std::io::Write;
 use std::time::SystemTime;
 
 use anyhow::bail;
 use itertools::Itertools;
 use num_traits::Zero;
+use snippet_bencher::BenchmarkResult;
 use triton_vm::op_stack::NUM_OP_STACK_REGISTERS;
 use triton_vm::prelude::*;
 
 use library::Library;
 use memory::dyn_malloc;
-use traits::basic_snippet::BasicSnippet;
-use traits::deprecated_snippet::DeprecatedSnippet;
 
 pub mod arithmetic;
 pub mod array;
@@ -87,22 +86,11 @@ impl ExecutionState {
 }
 
 #[derive(Clone, Debug)]
-pub struct ExecutionResult {
-    pub output: Vec<BFieldElement>,
-    pub final_stack: Vec<BFieldElement>,
-    pub final_ram: HashMap<BFieldElement, BFieldElement>,
-    pub cycle_count: usize,
-    pub hash_table_height: usize,
-    pub u32_table_height: usize,
-}
-
-#[derive(Clone, Debug)]
-pub struct VmOutputState {
-    pub output: Vec<BFieldElement>,
-    pub final_stack: Vec<BFieldElement>,
-    pub final_ram: HashMap<BFieldElement, BFieldElement>,
-    pub final_sponge: Option<VmHasher>,
-    pub secret_digests: VecDeque<Digest>,
+pub struct RustShadowOutputState {
+    pub public_output: Vec<BFieldElement>,
+    pub stack: Vec<BFieldElement>,
+    pub ram: HashMap<BFieldElement, BFieldElement>,
+    pub sponge: Option<VmHasher>,
 }
 
 pub fn empty_stack() -> Vec<BFieldElement> {
@@ -113,31 +101,6 @@ pub fn push_encodable<T: BFieldCodec>(stack: &mut Vec<BFieldElement>, value: &T)
     stack.append(&mut value.encode().into_iter().rev().collect());
 }
 
-#[allow(dead_code)] // used in tests
-pub(crate) fn execute_with_execution_state_deprecated<T: DeprecatedSnippet>(
-    snippet: T,
-    mut init_state: ExecutionState,
-    expected_stack_diff: isize,
-) -> anyhow::Result<ExecutionResult> {
-    let mut library = Library::new();
-    let entrypoint = snippet.entrypoint();
-    let insert_me = snippet.annotated_code(&mut library);
-    let insert_library = library.all_imports();
-    let code = triton_asm!(
-        call {entrypoint}
-        halt
-        {&insert_me}
-        {&insert_library}
-    );
-    execute_bench_deprecated(
-        &code,
-        &mut init_state.stack,
-        expected_stack_diff,
-        init_state.std_in,
-        init_state.nondeterminism,
-    )
-}
-
 /// Execute a Triton-VM program and return its output and execution trace length
 pub fn execute_bench_deprecated(
     code: &[LabelledInstruction],
@@ -145,7 +108,7 @@ pub fn execute_bench_deprecated(
     expected_stack_diff: isize,
     std_in: Vec<BFieldElement>,
     nondeterminism: NonDeterminism<BFieldElement>,
-) -> anyhow::Result<ExecutionResult> {
+) -> anyhow::Result<BenchmarkResult> {
     let init_stack = stack.to_owned();
     let initial_stack_height = init_stack.len() as isize;
     let public_input = PublicInput::new(std_in.clone());
@@ -156,7 +119,7 @@ pub fn execute_bench_deprecated(
 
     let (simulation_trace, terminal_state) = program.trace_execution_of_state(vm_state)?;
 
-    let jump_stack = terminal_state.jump_stack;
+    let jump_stack = &terminal_state.jump_stack;
     if !jump_stack.is_empty() {
         bail!("Jump stack must be unchanged after code execution but was {jump_stack:?}")
     }
@@ -178,25 +141,23 @@ pub fn execute_bench_deprecated(
     // Notice that this is only done after the successful execution of the program above, so all
     // produced proofs here should be valid.
     // If you run this, make sure `opt-level` is set to 3.
-    let output = terminal_state.public_output;
     if std::env::var("DYING_TO_PROVE").is_ok() {
         prove_and_verify(
             &program,
             &std_in,
             &nondeterminism,
-            &output,
+            &terminal_state.public_output,
             Some(init_stack),
         );
     }
 
     *stack = terminal_state.op_stack.stack.clone();
-    Ok(ExecutionResult {
-        output,
-        final_stack: terminal_state.op_stack.stack,
-        final_ram: terminal_state.ram,
-        cycle_count: terminal_state.cycle_count as usize,
+    Ok(BenchmarkResult {
+        clock_cycle_count: simulation_trace.processor_table_length(),
         hash_table_height: simulation_trace.hash_table_length(),
         u32_table_height: simulation_trace.u32_table_length(),
+        op_stack_table_height: simulation_trace.op_stack_table_length(),
+        ram_table_height: simulation_trace.ram_table_length(),
     })
 }
 
@@ -210,7 +171,7 @@ pub fn execute_test(
     std_in: Vec<BFieldElement>,
     nondeterminism: NonDeterminism<BFieldElement>,
     maybe_sponge: Option<VmHasher>,
-) -> VmOutputState {
+) -> VMState {
     let init_stack = stack.to_owned();
     let public_input = PublicInput::new(std_in.clone());
     let program = Program::new(code);
@@ -266,13 +227,7 @@ pub fn execute_test(
     }
 
     *stack = terminal_state.op_stack.stack.clone();
-    VmOutputState {
-        output: terminal_state.public_output,
-        final_stack: terminal_state.op_stack.stack.clone(),
-        final_ram: terminal_state.ram,
-        final_sponge: terminal_state.sponge,
-        secret_digests: terminal_state.secret_digests,
-    }
+    terminal_state
 }
 
 /// If the environment variable “TRITON_TUI” is set, write

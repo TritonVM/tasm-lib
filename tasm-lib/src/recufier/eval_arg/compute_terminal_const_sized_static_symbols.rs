@@ -319,7 +319,7 @@ mod tests {
                 NonDeterminism::default(),
                 &None,
             );
-            let terminal = Literal::pop_from_stack(DataType::Xfe, &mut final_state.final_stack);
+            let terminal = Literal::pop_from_stack(DataType::Xfe, &mut final_state.op_stack.stack);
 
             terminal.as_xfe()
         }
@@ -351,7 +351,7 @@ mod tests {
             NonDeterminism::default(),
             &None,
         );
-        let terminal = Literal::pop_from_stack(DataType::Xfe, &mut final_state.final_stack);
+        let terminal = Literal::pop_from_stack(DataType::Xfe, &mut final_state.op_stack.stack);
 
         terminal.as_xfe()
     }
@@ -386,7 +386,7 @@ mod tests {
             &None,
         );
 
-        let terminal = Literal::pop_from_stack(DataType::Xfe, &mut final_state.final_stack);
+        let terminal = Literal::pop_from_stack(DataType::Xfe, &mut final_state.op_stack.stack);
 
         terminal.as_xfe()
     }
@@ -417,7 +417,7 @@ mod tests {
             &None,
         );
 
-        let terminal = Literal::pop_from_stack(DataType::Xfe, &mut final_state.final_stack);
+        let terminal = Literal::pop_from_stack(DataType::Xfe, &mut final_state.op_stack.stack);
 
         terminal.as_xfe()
     }

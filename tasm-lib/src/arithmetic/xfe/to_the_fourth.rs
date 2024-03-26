@@ -145,12 +145,12 @@ mod tests {
 
         // Assert that height agrees, and the top-3 elements agree
         assert_eq!(
-            final_state_from_generic.final_stack.len(),
-            final_state_from_to_fourth.final_stack.len()
+            final_state_from_generic.op_stack.stack.len(),
+            final_state_from_to_fourth.op_stack.stack.len()
         );
         assert_eq!(
-            final_state_from_generic.final_stack[16..=18],
-            final_state_from_to_fourth.final_stack[16..=18],
+            final_state_from_generic.op_stack.stack[16..=18],
+            final_state_from_to_fourth.op_stack.stack[16..=18],
         );
     }
 }

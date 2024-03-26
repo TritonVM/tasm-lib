@@ -11,7 +11,7 @@ use crate::linker::execute_bench;
 use crate::linker::link_for_isolated_run;
 use crate::snippet_bencher::write_benchmarks;
 use crate::snippet_bencher::BenchmarkCase;
-use crate::snippet_bencher::BenchmarkResult;
+use crate::snippet_bencher::NamedBenchmarkResult;
 use crate::test_helpers::test_rust_equivalence_given_complete_state;
 use crate::VmHasher;
 
@@ -124,13 +124,11 @@ impl<C: Closure + 'static> RustShadow for ShadowedClosure<C> {
                 .borrow()
                 .pseudorandom_initial_state(rng.gen(), Some(bench_case));
             let program = link_for_isolated_run(self.closure.clone());
-            let execution_result =
+            let benchmark =
                 execute_bench(&program, &stack, vec![], NonDeterminism::new(vec![]), None);
-            let benchmark = BenchmarkResult {
+            let benchmark = NamedBenchmarkResult {
                 name: self.closure.borrow().entrypoint(),
-                clock_cycle_count: execution_result.cycle_count,
-                hash_table_height: execution_result.hash_table_height,
-                u32_table_height: execution_result.u32_table_height,
+                benchmark_result: benchmark,
                 case: bench_case,
             };
             benchmarks.push(benchmark);

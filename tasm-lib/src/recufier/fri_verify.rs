@@ -1601,15 +1601,15 @@ mod test {
             &sponge,
         );
 
-        assert_eq!(rust.output, tasm.output);
-        verify_stack_growth(&shadowed_procedure, &initial_stack, &tasm.final_stack);
-        verify_sponge_equivalence(&rust.final_sponge, &tasm.final_sponge);
+        assert_eq!(rust.public_output, tasm.public_output);
+        verify_stack_growth(&shadowed_procedure, &initial_stack, &tasm.op_stack.stack);
+        verify_sponge_equivalence(&rust.sponge, &tasm.sponge);
 
         type IndexedLeaves = Vec<(u32, XFieldElement)>;
-        let &rust_address = rust.final_stack.last().unwrap();
-        let &tasm_address = tasm.final_stack.last().unwrap();
-        let rust_object = IndexedLeaves::decode_from_memory(&rust.final_ram, rust_address).unwrap();
-        let tasm_object = IndexedLeaves::decode_from_memory(&tasm.final_ram, tasm_address).unwrap();
+        let &rust_address = rust.stack.last().unwrap();
+        let &tasm_address = tasm.op_stack.stack.last().unwrap();
+        let rust_object = IndexedLeaves::decode_from_memory(&rust.ram, rust_address).unwrap();
+        let tasm_object = IndexedLeaves::decode_from_memory(&tasm.ram, tasm_address).unwrap();
         assert_eq!(rust_object, tasm_object);
     }
 

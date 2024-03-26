@@ -13,11 +13,10 @@ use crate::execute_bench_deprecated;
 use crate::execute_test;
 use crate::execute_with_terminal_state;
 use crate::library::Library;
+use crate::snippet_bencher::BenchmarkResult;
 use crate::test_helpers::test_rust_equivalence_given_execution_state_deprecated;
-use crate::ExecutionResult;
 use crate::ExecutionState;
 use crate::VmHasher;
-use crate::VmOutputState;
 use crate::DIGEST_LENGTH;
 
 use super::basic_snippet::BasicSnippet;
@@ -106,7 +105,7 @@ pub trait DeprecatedSnippet {
         stack: &mut Vec<BFieldElement>,
         std_in: Vec<BFieldElement>,
         nondeterminism: NonDeterminism<BFieldElement>,
-    ) -> Result<VmOutputState> {
+    ) -> Result<VMState> {
         let expected_length_prior: usize = self.input_types().iter().map(|x| x.stack_size()).sum();
         let expected_length_after: usize = self.output_types().iter().map(|x| x.stack_size()).sum();
         assert_eq!(
@@ -120,13 +119,7 @@ pub trait DeprecatedSnippet {
         let tvm_result =
             execute_with_terminal_state(&program, &std_in, stack, &nondeterminism, None);
 
-        let final_state = tvm_result.map(|st| VmOutputState {
-            final_ram: st.ram,
-            final_sponge: st.sponge,
-            final_stack: st.op_stack.stack,
-            output: st.public_output,
-            secret_digests: st.secret_digests,
-        })?;
+        let final_state = tvm_result?;
 
         execute_test(
             &code,
@@ -144,7 +137,7 @@ pub trait DeprecatedSnippet {
         stack: &mut Vec<BFieldElement>,
         std_in: Vec<BFieldElement>,
         nondeterminism: NonDeterminism<BFieldElement>,
-    ) -> Result<ExecutionResult> {
+    ) -> Result<BenchmarkResult> {
         let expected_length_prior: usize = self.input_types().iter().map(|x| x.stack_size()).sum();
         let expected_length_after: usize = self.output_types().iter().map(|x| x.stack_size()).sum();
         assert_eq!(
@@ -161,7 +154,7 @@ pub trait DeprecatedSnippet {
     fn link_and_run_tasm_from_state_for_test(
         &self,
         execution_state: &mut ExecutionState,
-    ) -> VmOutputState {
+    ) -> VMState {
         let stack_prior = execution_state.stack.clone();
         let ret = self.link_and_run_tasm_for_test(
             &mut execution_state.stack,
@@ -183,7 +176,7 @@ pub trait DeprecatedSnippet {
     fn link_and_run_tasm_from_state_for_bench(
         &self,
         execution_state: &mut ExecutionState,
-    ) -> Result<ExecutionResult> {
+    ) -> Result<BenchmarkResult> {
         let stack_prior = execution_state.stack.clone();
         let ret = self.link_and_run_tasm_for_bench(
             &mut execution_state.stack,

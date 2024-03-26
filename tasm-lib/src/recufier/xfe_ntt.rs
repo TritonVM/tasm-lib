@@ -556,24 +556,24 @@ mod test {
             let tasm = tasm_final_state(&function, &stack, &stdin, nondeterminism, &None);
 
             assert_eq!(
-                rust.output, tasm.output,
+                rust.public_output, tasm.public_output,
                 "Rust shadowing and VM std out must agree"
             );
 
             let len = 16;
             verify_stack_equivalence(
                 "Rust-shadow",
-                &rust.final_stack[0..len - 1],
+                &rust.stack[0..len - 1],
                 "TASM execution",
-                &tasm.final_stack[0..len - 1],
+                &tasm.op_stack.stack[0..len - 1],
             );
-            verify_stack_growth(&function, &init_stack, &tasm.final_stack);
+            verify_stack_growth(&function, &init_stack, &tasm.op_stack.stack);
 
             // read out the output vectors and test agreement
             let rust_result =
-                *Vec::<XFieldElement>::decode_from_memory(&rust.final_ram, vector_address).unwrap();
+                *Vec::<XFieldElement>::decode_from_memory(&rust.ram, vector_address).unwrap();
             let tasm_result =
-                *Vec::<XFieldElement>::decode_from_memory(&tasm.final_ram, vector_address).unwrap();
+                *Vec::<XFieldElement>::decode_from_memory(&tasm.ram, vector_address).unwrap();
             assert_eq!(
                 rust_result,
                 tasm_result,
@@ -582,8 +582,11 @@ mod test {
                 tasm_result.iter().join(" | ")
             );
 
-            println!("tasm stack: {}", tasm.final_stack.iter().skip(16).join(","));
-            println!("rust stack: {}", rust.final_stack.iter().skip(16).join(","));
+            println!(
+                "tasm stack: {}",
+                tasm.op_stack.stack.iter().skip(16).join(",")
+            );
+            println!("rust stack: {}", rust.stack.iter().skip(16).join(","));
         }
     }
 }

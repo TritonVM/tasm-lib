@@ -172,7 +172,6 @@ mod tests {
     use crate::rust_shadowing_helper_functions::array::insert_as_array;
     use crate::traits::function::Function;
     use crate::traits::function::FunctionInitialState;
-    use crate::VmOutputState;
 
     use super::*;
 
@@ -358,12 +357,12 @@ mod tests {
 
         /// Note that the result lives as an array in TVM memory but is represented as a list here
         /// since its length is not known at `tasm-lib`'s compile time.
-        fn read_result_from_memory(mut final_state: VmOutputState) -> Vec<XFieldElement> {
-            let result_pointer = final_state.final_stack.pop().unwrap();
+        fn read_result_from_memory(mut final_state: VMState) -> Vec<XFieldElement> {
+            let result_pointer = final_state.op_stack.stack.pop().unwrap();
             let mut tasm_result: Vec<XFieldElement> = vec![];
             for i in 0..NUM_TOTAL_CONSTRAINTS {
                 tasm_result.push(XFieldElement::new(
-                    array_get(result_pointer, i, &final_state.final_ram, EXTENSION_DEGREE)
+                    array_get(result_pointer, i, &final_state.ram, EXTENSION_DEGREE)
                         .try_into()
                         .unwrap(),
                 ));

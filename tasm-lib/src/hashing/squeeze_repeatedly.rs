@@ -169,24 +169,19 @@ mod test {
             let tasm = tasm_final_state(&shadow, &stack, &stdin, nondeterminism, &sponge);
 
             assert_eq!(
-                rust.output, tasm.output,
+                rust.public_output, tasm.public_output,
                 "Rust shadowing and VM std out must agree"
             );
 
             verify_stack_equivalence(
                 "Rust-shadow",
-                &rust.final_stack,
+                &rust.stack,
                 "TVM execution",
-                &tasm.final_stack,
+                &tasm.op_stack.stack,
             );
-            verify_memory_equivalence(
-                "Rust-shadow",
-                &rust.final_ram,
-                "TVM execution",
-                &tasm.final_ram,
-            );
-            verify_stack_growth(&shadow, &init_stack, &tasm.final_stack);
-            verify_sponge_equivalence(&rust.final_sponge, &tasm.final_sponge);
+            verify_memory_equivalence("Rust-shadow", &rust.ram, "TVM execution", &tasm.ram);
+            verify_stack_growth(&shadow, &init_stack, &tasm.op_stack.stack);
+            verify_sponge_equivalence(&rust.sponge, &tasm.sponge);
         }
     }
 }

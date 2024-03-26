@@ -1,16 +1,24 @@
 [
   {
     "name": "tasm_arithmetic_u32_safemul",
-    "clock_cycle_count": 10,
-    "hash_table_height": 12,
-    "u32_table_height": 19,
+    "benchmark_result": {
+      "clock_cycle_count": 10,
+      "hash_table_height": 12,
+      "u32_table_height": 19,
+      "op_stack_table_height": 7,
+      "ram_table_height": 0
+    },
     "case": "CommonCase"
   },
   {
     "name": "tasm_arithmetic_u32_safemul",
-    "clock_cycle_count": 10,
-    "hash_table_height": 12,
-    "u32_table_height": 32,
+    "benchmark_result": {
+      "clock_cycle_count": 10,
+      "hash_table_height": 12,
+      "u32_table_height": 32,
+      "op_stack_table_height": 7,
+      "ram_table_height": 0
+    },
     "case": "WorstCase"
   }
 ]

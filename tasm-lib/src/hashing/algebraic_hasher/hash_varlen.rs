@@ -190,11 +190,8 @@ mod tests {
         let mut helper_function_sponge = init_sponge.clone();
         snippet.sponge_mutation(&mut helper_function_sponge, &preimage);
 
-        assert_eq!(
-            final_state.final_sponge.clone().unwrap(),
-            helper_function_sponge
-        );
-        assert_ne!(final_state.final_sponge.unwrap(), init_sponge);
+        assert_eq!(final_state.sponge.clone().unwrap(), helper_function_sponge);
+        assert_ne!(final_state.sponge.unwrap(), init_sponge);
     }
 }
 

@@ -1,16 +1,24 @@
 [
   {
     "name": "tasm_arithmetic_u128_safe_mul",
-    "clock_cycle_count": 147,
-    "hash_table_height": 144,
-    "u32_table_height": 146,
+    "benchmark_result": {
+      "clock_cycle_count": 147,
+      "hash_table_height": 144,
+      "u32_table_height": 146,
+      "op_stack_table_height": 126,
+      "ram_table_height": 0
+    },
     "case": "CommonCase"
   },
   {
     "name": "tasm_arithmetic_u128_safe_mul",
-    "clock_cycle_count": 147,
-    "hash_table_height": 144,
-    "u32_table_height": 164,
+    "benchmark_result": {
+      "clock_cycle_count": 147,
+      "hash_table_height": 144,
+      "u32_table_height": 164,
+      "op_stack_table_height": 126,
+      "ram_table_height": 0
+    },
     "case": "WorstCase"
   }
 ]

@@ -303,7 +303,7 @@ mod tests {
             memory,
             Some(&expected_end_stack),
         )
-        .final_ram;
+        .ram;
 
         // Verify that length is now indicated to be `init_list_length - 1`
         assert_eq!(

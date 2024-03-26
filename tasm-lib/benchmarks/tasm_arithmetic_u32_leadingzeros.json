@@ -1,16 +1,24 @@
 [
   {
     "name": "tasm_arithmetic_u32_leadingzeros",
-    "clock_cycle_count": 14,
-    "hash_table_height": 18,
-    "u32_table_height": 17,
+    "benchmark_result": {
+      "clock_cycle_count": 14,
+      "hash_table_height": 18,
+      "u32_table_height": 17,
+      "op_stack_table_height": 8,
+      "ram_table_height": 0
+    },
     "case": "CommonCase"
   },
   {
     "name": "tasm_arithmetic_u32_leadingzeros",
-    "clock_cycle_count": 14,
-    "hash_table_height": 18,
-    "u32_table_height": 33,
+    "benchmark_result": {
+      "clock_cycle_count": 14,
+      "hash_table_height": 18,
+      "u32_table_height": 33,
+      "op_stack_table_height": 8,
+      "ram_table_height": 0
+    },
     "case": "WorstCase"
   }
 ]

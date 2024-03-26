@@ -282,7 +282,7 @@ mod tests {
             vm_memory,
             Some(&expected_end_stack),
         )
-        .final_ram;
+        .ram;
 
         // Verify that length indicator is unchanged
         assert_eq!(

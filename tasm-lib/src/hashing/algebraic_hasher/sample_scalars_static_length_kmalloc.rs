@@ -202,7 +202,7 @@ pub(crate) mod tests {
         );
 
         let scalar_pointer = snippet.k_malloc_address_isolated_run();
-        let read_scalar = |i| array_get(scalar_pointer, i, &tasm.final_ram, EXTENSION_DEGREE);
+        let read_scalar = |i| array_get(scalar_pointer, i, &tasm.ram, EXTENSION_DEGREE);
 
         let scalars_from_tip5 = sponge.sample_scalars(num_elements_to_sample);
         for (i, expected_scalar) in scalars_from_tip5.into_iter().enumerate() {

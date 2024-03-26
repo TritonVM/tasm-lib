@@ -85,7 +85,6 @@ mod tests {
     use crate::traits::procedure::ProcedureInitialState;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
-    use crate::VmOutputState;
 
     impl Procedure for SqueezeRepeatedlyStaticNumber {
         fn rust_shadow(
@@ -127,7 +126,7 @@ mod tests {
     fn test_dyn_equivalence() {
         // Verify that the snippets for the dynamically known and statically known
         // number of squeezes agree.
-        fn dyn_output(seed: [u8; 32]) -> (VmOutputState, usize) {
+        fn dyn_output(seed: [u8; 32]) -> (VMState, usize) {
             let dyn_snippet = ShadowedProcedure::new(SqueezeRepeatedly);
             let ProcedureInitialState {
                 stack,
@@ -143,7 +142,7 @@ mod tests {
             )
         }
 
-        fn stat_output(seed: [u8; 32], num_squeezes: usize) -> VmOutputState {
+        fn stat_output(seed: [u8; 32], num_squeezes: usize) -> VMState {
             let snippet = SqueezeRepeatedlyStaticNumber { num_squeezes };
             let ProcedureInitialState {
                 stack,
@@ -164,23 +163,23 @@ mod tests {
         let mut seed = [0u8; 32];
         thread_rng().fill_bytes(&mut seed);
         let (mut dyn_output, num_squeezes) = dyn_output(seed);
-        dyn_output.final_stack.pop();
-        dyn_output.final_stack.pop();
+        dyn_output.op_stack.stack.pop();
+        dyn_output.op_stack.stack.pop();
 
         let stat_output = stat_output(seed, num_squeezes);
 
         verify_memory_equivalence(
             "Snippet with dynamic symbols",
-            &dyn_output.final_ram,
+            &dyn_output.ram,
             "Snippet with static symbols",
-            &stat_output.final_ram,
+            &stat_output.ram,
         );
-        verify_sponge_equivalence(&dyn_output.final_sponge, &stat_output.final_sponge);
+        verify_sponge_equivalence(&dyn_output.sponge, &stat_output.sponge);
         verify_stack_equivalence(
             "Snippet with dynamic symbols",
-            &dyn_output.final_stack,
+            &dyn_output.op_stack.stack,
             "Snippet with static symbols",
-            &stat_output.final_stack,
+            &stat_output.op_stack.stack,
         );
     }
 }

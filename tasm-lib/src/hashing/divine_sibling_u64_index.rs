@@ -196,10 +196,10 @@ mod tests {
             );
             println!(
                 "final final_stack\n{}",
-                tasm_final_state.final_stack.iter().join(", ")
+                tasm_final_state.op_stack.stack.iter().join(", ")
             );
 
-            let mut final_stack = tasm_final_state.final_stack;
+            let mut final_stack = tasm_final_state.op_stack.stack;
 
             // Pop and ignore digests
             for _ in 0..2 * DIGEST_LENGTH {

@@ -232,8 +232,8 @@ mod tests {
 
         // Verify that the pointers in the list actually point to correctly encoded objects.
         for output_state in output_states {
-            let mut stack = output_state.final_stack;
-            let memory = output_state.final_ram;
+            let mut stack = output_state.op_stack.stack;
+            let memory = output_state.ram;
             let output_list_pointer = stack.pop().unwrap();
             let num_elements = rust_shadowing_helper_functions::list::list_get_length(
                 output_list_pointer,

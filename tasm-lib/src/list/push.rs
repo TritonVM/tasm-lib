@@ -276,7 +276,7 @@ mod tests {
             memory,
             Some(&expected_end_stack),
         )
-        .final_ram;
+        .ram;
 
         // Verify that length indicator has increased by one
         assert_eq!(

@@ -11,10 +11,17 @@ use crate::traits::deprecated_snippet::DeprecatedSnippet;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct BenchmarkResult {
-    pub name: String,
     pub clock_cycle_count: usize,
     pub hash_table_height: usize,
     pub u32_table_height: usize,
+    pub op_stack_table_height: usize,
+    pub ram_table_height: usize,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct NamedBenchmarkResult {
+    pub name: String,
+    pub benchmark_result: BenchmarkResult,
     pub case: BenchmarkCase,
 }
 
@@ -25,21 +32,19 @@ pub enum BenchmarkCase {
 }
 
 #[allow(dead_code)]
-pub fn benchmark_snippet_deprecated<T: DeprecatedSnippet>(snippet: T) -> Vec<BenchmarkResult> {
+pub fn benchmark_snippet_deprecated<T: DeprecatedSnippet>(snippet: T) -> Vec<NamedBenchmarkResult> {
     let mut benchmarks = Vec::with_capacity(2);
 
     for (case, mut execution_state) in [
         (BenchmarkCase::CommonCase, snippet.common_case_input_state()),
         (BenchmarkCase::WorstCase, snippet.worst_case_input_state()),
     ] {
-        let execution_result = snippet
+        let benchmark_result = snippet
             .link_and_run_tasm_from_state_for_bench(&mut execution_state)
             .unwrap();
-        let benchmark = BenchmarkResult {
+        let benchmark = NamedBenchmarkResult {
             name: snippet.entrypoint_name(),
-            clock_cycle_count: execution_result.cycle_count,
-            hash_table_height: execution_result.hash_table_height,
-            u32_table_height: execution_result.u32_table_height,
+            benchmark_result,
             case,
         };
         benchmarks.push(benchmark);
@@ -49,7 +54,7 @@ pub fn benchmark_snippet_deprecated<T: DeprecatedSnippet>(snippet: T) -> Vec<Ben
 }
 
 #[allow(dead_code)]
-pub fn write_benchmarks(benchmarks: Vec<BenchmarkResult>) {
+pub fn write_benchmarks(benchmarks: Vec<NamedBenchmarkResult>) {
     let mut path = PathBuf::new();
     path.push("benchmarks");
     create_dir_all(&path).expect("benchmarks directory should exist");

@@ -145,8 +145,8 @@ mod tests {
             &None,
         );
 
-        let u64_lo = final_state.final_stack.pop().unwrap().value();
-        let u64_hi = final_state.final_stack.pop().unwrap().value();
+        let u64_lo = final_state.op_stack.stack.pop().unwrap().value();
+        let u64_hi = final_state.op_stack.stack.pop().unwrap().value();
 
         assert_eq!((1u64 << 46) + 3, (u64_hi << 32) + u64_lo);
     }

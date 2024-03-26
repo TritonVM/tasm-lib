@@ -3,6 +3,7 @@ use anyhow::Result;
 use triton_vm::prelude::*;
 
 use crate::library::Library;
+use crate::snippet_bencher::BenchmarkResult;
 
 pub trait CompiledProgram {
     fn rust_shadow(
@@ -56,7 +57,7 @@ pub fn bench_and_profile_program<P: CompiledProgram>(
     use std::path::Path;
     use std::path::PathBuf;
 
-    use crate::snippet_bencher::BenchmarkResult;
+    use crate::snippet_bencher::NamedBenchmarkResult;
     use std::io::Write;
 
     let (program_instructions, library) = P::code();
@@ -66,12 +67,16 @@ pub fn bench_and_profile_program<P: CompiledProgram>(
 
     // run in trace mode to get table heights
     let benchmark = match program.trace_execution(public_input.clone(), nondeterminism.clone()) {
-        Ok((aet, _output)) => BenchmarkResult {
-            case,
+        Ok((aet, _output)) => NamedBenchmarkResult {
             name: name.to_owned(),
-            clock_cycle_count: aet.processor_table_length(),
-            hash_table_height: aet.hash_table_length(),
-            u32_table_height: aet.u32_table_length(),
+            benchmark_result: BenchmarkResult {
+                clock_cycle_count: aet.processor_table_length(),
+                hash_table_height: aet.hash_table_length(),
+                u32_table_height: aet.u32_table_length(),
+                op_stack_table_height: aet.op_stack_table_length(),
+                ram_table_height: aet.ram_table_length(),
+            },
+            case,
         },
         Err(e) => panic!("{}", e),
     };

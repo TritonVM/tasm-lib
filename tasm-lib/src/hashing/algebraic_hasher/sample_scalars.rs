@@ -232,8 +232,9 @@ mod test {
                     &Some(init_sponge.clone()),
                 );
 
-                let final_ram = tasm.final_ram;
-                let snippet_output_scalar_pointer = tasm.final_stack[tasm.final_stack.len() - 1];
+                let final_ram = tasm.ram;
+                let snippet_output_scalar_pointer =
+                    tasm.op_stack.stack[tasm.op_stack.stack.len() - 1];
 
                 let scalars_from_tip5 = Tip5::sample_scalars(&mut init_sponge.clone(), num_scalars);
 
