@@ -55,7 +55,6 @@ impl BasicSnippet for DynMalloc {
         // AFTER:  _ *addr
         {entrypoint}:
             push {DYN_MALLOC_ADDRESS}       // _ *dyn_malloc_state
-            hint dyn_malloc_state: Pointer = stack[0]
             read_mem 1 pop 1                // _ page_idx
 
             dup 0 push 0 eq                 // _ page_idx (page_idx == 0)
@@ -65,15 +64,12 @@ impl BasicSnippet for DynMalloc {
             dup 0                           // _ page_idx page_idx
             push 1                          // _ page_idx page_idx 1
             add                             // _ page_idx next_page_idx
-            hint dyn_malloc_state: MemoryPageIdx = stack[0]
             push {DYN_MALLOC_ADDRESS}       // _ page_idx next_page_idx *dyn_malloc_state
             write_mem 1 pop 1               // _ page_idx
 
             // translate page number to address
             push {DYN_MALLOC_PAGE_SIZE}     // _ page_idx page_size
-            hint page_size = stack[0]
             mul                             // _ *free_page
-            hint free_page_address: Pointer = stack[0]
             return
 
         // BEFORE: _ 0
