@@ -89,8 +89,8 @@ use crate::recufier::challenges::new_generic_dyn_claim::NewGenericDynClaim;
 use crate::recufier::claim::instantiate_fiat_shamir_with_claim::InstantiateFiatShamirWithClaim;
 use crate::recufier::master_ext_table::air_constraint_evaluation::AirConstraintEvaluation;
 use crate::recufier::own_program_digest::OwnProgramDigest;
-use crate::recufier::proof_stream::dequeue_next_as::DequeueNextAs;
 use crate::recufier::read_and_verify_own_program_digest_from_std_in::ReadAndVerifyOwnProgramDigestFromStdIn;
+use crate::recufier::vm_proof_iter::dequeue_next_as::DequeueNextAs;
 use crate::traits::basic_snippet::BasicSnippet;
 
 const NUM_CONSTRAINTS_TVM: usize = num_quotients();
@@ -381,37 +381,37 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
         "tasm_other_bfe_add" => Box::new(BfeAdd),
 
         // recufy
-        "tasm_recufier_proof_stream_dequeue_next_as_merkleroot" => {
+        "tasm_recufier_vm_proof_iter_dequeue_next_as_merkleroot" => {
             Box::new(DequeueNextAs { proof_item: ProofItemVariant::MerkleRoot })
         }
-        "tasm_recufier_proof_stream_dequeue_next_as_outofdomainbaserow" => {
+        "tasm_recufier_vm_proof_iter_dequeue_next_as_outofdomainbaserow" => {
             Box::new(DequeueNextAs { proof_item: ProofItemVariant::OutOfDomainBaseRow })
         }
-        "tasm_recufier_proof_stream_dequeue_next_as_outofdomainextrow" => {
+        "tasm_recufier_vm_proof_iter_dequeue_next_as_outofdomainextrow" => {
             Box::new(DequeueNextAs { proof_item: ProofItemVariant::OutOfDomainExtRow })
         }
-        "tasm_recufier_proof_stream_dequeue_next_as_outofdomainquotientsegments" => {
+        "tasm_recufier_vm_proof_iter_dequeue_next_as_outofdomainquotientsegments" => {
             Box::new(DequeueNextAs { proof_item: ProofItemVariant::OutOfDomainQuotientSegments })
         }
-        "tasm_recufier_proof_stream_dequeue_next_as_authenticationstructure" => {
+        "tasm_recufier_vm_proof_iter_dequeue_next_as_authenticationstructure" => {
             Box::new(DequeueNextAs { proof_item: ProofItemVariant::AuthenticationStructure })
         }
-        "tasm_recufier_proof_stream_dequeue_next_as_masterbasetablerows" => {
+        "tasm_recufier_vm_proof_iter_dequeue_next_as_masterbasetablerows" => {
             Box::new(DequeueNextAs { proof_item: ProofItemVariant::MasterBaseTableRows })
         }
-        "tasm_recufier_proof_stream_dequeue_next_as_masterexttablerows" => {
+        "tasm_recufier_vm_proof_iter_dequeue_next_as_masterexttablerows" => {
             Box::new(DequeueNextAs { proof_item: ProofItemVariant::MasterExtTableRows })
         }
-        "tasm_recufier_proof_stream_dequeue_next_as_log2paddedheight" => {
+        "tasm_recufier_vm_proof_iter_dequeue_next_as_log2paddedheight" => {
             Box::new(DequeueNextAs { proof_item: ProofItemVariant::Log2PaddedHeight })
         }
-        "tasm_recufier_proof_stream_dequeue_next_as_quotientsegmentselements" => {
+        "tasm_recufier_vm_proof_iter_dequeue_next_as_quotientsegmentselements" => {
             Box::new(DequeueNextAs { proof_item: ProofItemVariant::QuotientSegmentsElements })
         }
-        "tasm_recufier_proof_stream_dequeue_next_as_fricodeword" => {
+        "tasm_recufier_vm_proof_iter_dequeue_next_as_fricodeword" => {
             Box::new(DequeueNextAs { proof_item: ProofItemVariant::FriCodeword })
         }
-        "tasm_recufier_proof_stream_dequeue_next_as_friresponse" => {
+        "tasm_recufier_vm_proof_iter_dequeue_next_as_friresponse" => {
             Box::new(DequeueNextAs { proof_item: ProofItemVariant::FriResponse })
         }
         "tasm_recufier_read_and_verify_own_program_digest_from_std_in" => {
