@@ -7,8 +7,8 @@ use crate::memory::encode_to_memory;
 use crate::memory::FIRST_NON_DETERMINISTICALLY_INITIALIZED_MEMORY_ADDRESS;
 use crate::traits::compiled_program::CompiledProgram;
 
-use super::fri_verify::FriSnippet;
-use super::fri_verify::FriVerify;
+use super::verify::FriSnippet;
+use super::verify::FriVerify;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 struct StandaloneFriVerify {
