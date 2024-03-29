@@ -9,7 +9,7 @@ use crate::data_type::DataType;
 use crate::hashing::algebraic_hasher::sample_scalars_static_length_static_pointer::SampleScalarsStaticLengthStaticPointer;
 use crate::library::Library;
 use crate::recufier::challenges::shared::challenges_data_type;
-use crate::recufier::claim::instantiate_fiat_shamir_with_claim::claim_type;
+use crate::recufier::claim::shared::claim_type;
 use crate::recufier::eval_arg::compute_terminal_const_sized_static_symbols::ComputeTerminalConstSizedStaticSymbols;
 use crate::recufier::eval_arg::compute_terminal_dyn_sized_dynamic_symbols::ComputeTerminalDynSizedDynamicSymbols;
 use crate::recufier::eval_arg::compute_terminal_from_digest::ComputeTerminalFromDigestInitialIsOne;
