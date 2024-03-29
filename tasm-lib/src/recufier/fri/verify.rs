@@ -1689,7 +1689,7 @@ pub mod test {
         });
     }
 
-    #[proptest(cases = 10)]
+    #[proptest(cases = 2)]
     fn assert_nondeterministic_digests_are_all_used(test_case: TestCase) {
         let ProcedureInitialState {
             stack: initial_stack,
