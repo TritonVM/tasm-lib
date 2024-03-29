@@ -115,12 +115,81 @@ impl BasicSnippet for StarkVerify {
 #[cfg(test)]
 pub mod tests {
     use itertools::Itertools;
-    use tests::fri::verify::test::extract_fri_proof;
+    use tests::fri::test_helpers::extract_fri_proof;
     use triton_vm::stark::StarkProofStream;
 
-    use crate::traits::procedure::Procedure;
+    use crate::execute_test;
 
     use super::*;
+
+    #[test]
+    fn verify_tvm_proof_factorial_program_no_io() {
+        const FACTORIAL_ARGUMENT: u32 = 3;
+        let factorial_program = factorial_program_with_io();
+        let (non_determinism, claim_for_proof, inner_padded_height) =
+            non_determinism_claim_and_padded_height(
+                &factorial_program,
+                &[FACTORIAL_ARGUMENT.into()],
+                NonDeterminism::default(),
+            );
+        let verifier_std_in = claim_to_stdin_for_stark_verifier(&claim_for_proof);
+
+        let snippet = StarkVerify {
+            stark_parameters: Stark::default(),
+            log_2_padded_height: None,
+        };
+        let mut init_stack = snippet.init_stack_for_isolated_run();
+        let code = snippet.link_for_isolated_run();
+        let final_tasm_state = execute_test(
+            &code,
+            &mut init_stack,
+            snippet.stack_diff(),
+            verifier_std_in,
+            non_determinism,
+            None,
+        );
+
+        println!(
+            "Clock cycle count of TASM-verifier of factorial({FACTORIAL_ARGUMENT}): {}.\nInner padded height was: {}",
+            final_tasm_state.cycle_count,
+            inner_padded_height,
+        );
+    }
+
+    pub(super) fn claim_to_stdin_for_stark_verifier(
+        claim: &triton_vm::proof::Claim,
+    ) -> Vec<BFieldElement> {
+        let mut ret = claim.program_digest.reversed().values().to_vec();
+        ret.extend(claim.input.encode());
+        ret.extend(claim.output.encode());
+
+        ret
+    }
+
+    pub(super) fn factorial_program_with_io() -> Program {
+        triton_program!(
+            read_io 1
+            push 1               // n accumulator
+            call factorial       // 0 accumulator!
+            write_io 1
+            halt
+
+            factorial:           // n acc
+                // if n == 0: return
+                dup 1            // n acc n
+                push 0 eq        // n acc n==0
+                skiz             // n acc
+                return           // 0 acc
+                // else: multiply accumulator with n and recurse
+                dup 1            // n acc n
+                mul              // n acc·n
+                swap 1           // acc·n n
+                push -1 add      // acc·n n-1
+                swap 1           // n-1 acc·n
+
+                recurse
+        )
+    }
 
     pub fn non_determinism_claim_and_padded_height(
         inner_program: &Program,
@@ -177,6 +246,33 @@ pub mod tests {
             .enumerate()
             .map(|(k, v)| (BFieldElement::new(k as u64), v))
             .collect();
-        todo!()
+
+        let nd_digests = [
+            fri_proof_digests,
+            proof_extraction
+                .base_tree_authentication_paths
+                .into_iter()
+                .flatten()
+                .collect_vec(),
+            proof_extraction
+                .ext_tree_authentication_paths
+                .into_iter()
+                .flatten()
+                .collect_vec(),
+            proof_extraction
+                .quot_tree_authentication_paths
+                .into_iter()
+                .flatten()
+                .collect_vec(),
+        ]
+        .concat();
+
+        (
+            NonDeterminism::default()
+                .with_ram(ram)
+                .with_digests(nd_digests),
+            claim,
+            padded_height,
+        )
     }
 }
