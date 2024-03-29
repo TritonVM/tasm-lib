@@ -456,7 +456,7 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
 
         // FRI
         #[cfg(not(test))]
-        "tasm_recufier_fri_verify" => Box::new(crate::recufier::fri_verify::FriSnippet {}),
+        "tasm_recufier_fri_verify" => Box::new(crate::recufier::fri::verify::FriSnippet {}),
 
         // structure
 

@@ -2,7 +2,7 @@ use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
 use crate::field;
-use crate::recufier::fri_verify::FriVerify;
+use crate::recufier::fri::verify::FriVerify;
 use crate::traits::basic_snippet::BasicSnippet;
 
 /// Compute domain\[index\]^(1<<round)
@@ -23,7 +23,7 @@ impl BasicSnippet for GetCollinearityCheckX {
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_recufier_get_collinearity_check_x".to_string()
+        "tasm_recufier_collinearity_check_x".to_string()
     }
 
     fn code(&self, _library: &mut crate::library::Library) -> Vec<LabelledInstruction> {
@@ -69,7 +69,6 @@ mod test {
 
     use crate::empty_stack;
     use crate::memory::encode_to_memory;
-    use crate::recufier::fri_verify::FriVerify;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::structure::tasm_object::TasmObject;
     use crate::traits::function::Function;
