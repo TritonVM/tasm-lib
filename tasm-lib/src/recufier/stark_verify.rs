@@ -1,7 +1,10 @@
 use triton_vm::prelude::*;
 use triton_vm::proof_item::ProofItemVariant;
 
+use crate::arithmetic;
+use crate::arithmetic::bfe::primitive_root_of_unity::PrimitiveRootOfUnity;
 use crate::data_type::DataType;
+use crate::hashing::algebraic_hasher::sample_scalars_static_length_dyn_malloc::SampleScalarsStaticLengthDynMalloc;
 use crate::library::Library;
 use crate::recufier::challenges::shared::conventional_challenges_pointer;
 use crate::recufier::claim::instantiate_fiat_shamir_with_claim::InstantiateFiatShamirWithClaim;
@@ -49,6 +52,11 @@ impl BasicSnippet for StarkVerify {
             challenges::new_generic_dyn_claim::NewGenericDynClaim::conventional_with_tvm_parameters(
             ),
         ));
+        let sample_quotient_codeword_weights =
+            library.import(Box::new(SampleScalarsStaticLengthDynMalloc {
+                num_elements: triton_vm::table::master_table::num_quotients(),
+            }));
+        let domain_generator = library.import(Box::new(PrimitiveRootOfUnity));
 
         let verify_log_2_padded_height =
             if let Some(expected_log_2_padded_height) = self.log_2_padded_height {
@@ -109,9 +117,23 @@ impl BasicSnippet for StarkVerify {
                 {&verify_challenges_pointer}
                 // _ *base_merkle_root *proof_iter padded_height
 
-                // dup 0
-                // call {derive_fri_parameters}
-                // // _ *claim *proof_iter padded_height *fri
+                dup 1
+                call {next_as_merkleroot}
+                // _ *base_merkle_root *proof_iter padded_height *ext_merkle_root
+
+                call {sample_quotient_codeword_weights}
+                // _ *base_merkle_root *proof_iter padded_height *ext_merkle_root *quot_codeword_weights
+
+                dup 3
+                call {next_as_merkleroot}
+                // _ *base_merkle_root *proof_iter padded_height *ext_merkle_root *quot_codeword_weights *quot_tree_merkle_root
+
+                push 0
+                dup 3
+                // _ *base_merkle_root *proof_iter padded_height *ext_merkle_root *quot_codeword_weights *quot_tree_merkle_root 0 padded_height
+
+                call {domain_generator}
+                // _ *base_merkle_root *proof_iter padded_height *ext_merkle_root *quot_codeword_weights *quot_tree_merkle_root trace_domain_generator
 
 
 
