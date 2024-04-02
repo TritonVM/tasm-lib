@@ -117,7 +117,7 @@ pub mod tests {
     use itertools::Itertools;
     use test_strategy::proptest;
 
-    use crate::memory::encode_to_memory;
+    use crate::recufier::claim::shared::insert_claim_into_static_memory;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::traits::procedure::{Procedure, ProcedureInitialState, ShadowedProcedure};
     use crate::traits::rust_shadow::RustShadow;
@@ -182,12 +182,7 @@ pub mod tests {
                 output,
             };
 
-            // Statically allocated memory starts at -2 and grows downward. So a value of size 1
-            // will be assigned to address `-2` if no other static memory allocations have occurred
-            // before it.
-            let claim_pointer = bfe!(-(claim.encode().len() as i32) - 1);
-
-            encode_to_memory(memory, claim_pointer, claim);
+            let (claim_pointer, _claim_size) = insert_claim_into_static_memory(memory, claim);
 
             stack.push(claim_pointer);
 
