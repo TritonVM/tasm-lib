@@ -1,4 +1,5 @@
-use crate::data_type::{DataType, StructType};
+use crate::data_type::DataType;
+use crate::data_type::StructType;
 
 // TODO: This *must* match the type of `Claim` used in Triton VM. It would be preferable if
 // it could be derived/generated from that type at the source.
