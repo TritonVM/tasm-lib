@@ -81,7 +81,12 @@ impl BasicSnippet for StarkVerify {
                 call {new_proof_iter}
                 // _ *claim *proof_iter
 
+                dup 0
                 call {next_as_log_2_padded_height}
+                // _ *claim *proof_iter *log_2_padded_height
+
+                read_mem 1
+                pop 1
                 // _ *claim *proof_iter log_2_padded_height
 
                 {&verify_log_2_padded_height}
@@ -91,10 +96,13 @@ impl BasicSnippet for StarkVerify {
                 pow
                 // _ *claim *proof_iter padded_height
 
+                dup 1
                 call {next_as_merkleroot}
                 // _ *claim *proof_iter padded_height *base_merkle_root
 
                 swap 3
+                // _  *base_merkle_root *proof_iter padded_height *claim
+
                 call {get_challenges}
                 // _ *base_merkle_root *proof_iter padded_height *challenges
 
@@ -119,41 +127,39 @@ pub mod tests {
     use triton_vm::stark::StarkProofStream;
 
     use crate::execute_test;
+    use crate::recufier::claim::shared::insert_claim_into_static_memory;
 
     use super::*;
-
-    /// Encode `Claim` to Vec<BFieldElement> in the format expected by the program
-    fn claim_to_stdin_for_stark_verifier(claim: &triton_vm::proof::Claim) -> Vec<BFieldElement> {
-        let mut ret = claim.program_digest.reversed().values().to_vec();
-        ret.extend(claim.input.encode());
-        ret.extend(claim.output.encode());
-
-        ret
-    }
 
     #[test]
     fn verify_tvm_proof_factorial_program() {
         const FACTORIAL_ARGUMENT: u32 = 3;
         let factorial_program = factorial_program_with_io();
-        let (non_determinism, claim_for_proof, inner_padded_height) =
+        let (mut non_determinism, claim_for_proof, inner_padded_height) =
             non_determinism_claim_and_padded_height(
                 &factorial_program,
                 &[FACTORIAL_ARGUMENT.into()],
                 NonDeterminism::default(),
             );
-        let verifier_std_in = claim_to_stdin_for_stark_verifier(&claim_for_proof);
+
+        // Insert `claim` into standard memory, since that's how the interface is defined
+        // In any real setting, you probably want to use the above snippet as an inner function,
+        // and instead call an entrypoint that puts the claim into memory and passes a pointer to
+        // the above snippet.
+        let (claim_pointer, claim_size) =
+            insert_claim_into_static_memory(&mut non_determinism.ram, claim_for_proof);
 
         let snippet = StarkVerify {
             stark_parameters: Stark::default(),
             log_2_padded_height: None,
         };
-        let mut init_stack = snippet.init_stack_for_isolated_run();
-        let code = snippet.link_for_isolated_run();
+        let mut init_stack = [snippet.init_stack_for_isolated_run(), vec![claim_pointer]].concat();
+        let code = snippet.link_for_isolated_run_populated_static_memory(claim_size);
         let final_tasm_state = execute_test(
             &code,
             &mut init_stack,
             snippet.stack_diff(),
-            verifier_std_in,
+            vec![],
             non_determinism,
             None,
         );

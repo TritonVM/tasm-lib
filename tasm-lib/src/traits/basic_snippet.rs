@@ -59,6 +59,29 @@ pub trait BasicSnippet {
         }
     }
 
+    #[cfg(test)]
+    fn link_for_isolated_run_populated_static_memory(
+        &self,
+        words_statically_allocated: u32,
+    ) -> Vec<LabelledInstruction> {
+        let mut library = Library::with_preallocated_memory(words_statically_allocated);
+        let entrypoint = self.entrypoint();
+        let function_body = self.annotated_code(&mut library);
+        let library_code = library.all_imports();
+
+        // The TASM code is always run through a function call, so the 1st instruction is a call to
+        // the function in question.
+        let code = triton_asm!(
+            call {entrypoint}
+            halt
+
+            {&function_body}
+            {&library_code}
+        );
+
+        code
+    }
+
     fn link_for_isolated_run(&self) -> Vec<LabelledInstruction> {
         let mut library = Library::empty();
         let entrypoint = self.entrypoint();
