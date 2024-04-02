@@ -122,8 +122,17 @@ pub mod tests {
 
     use super::*;
 
+    /// Encode `Claim` to Vec<BFieldElement> in the format expected by the program
+    fn claim_to_stdin_for_stark_verifier(claim: &triton_vm::proof::Claim) -> Vec<BFieldElement> {
+        let mut ret = claim.program_digest.reversed().values().to_vec();
+        ret.extend(claim.input.encode());
+        ret.extend(claim.output.encode());
+
+        ret
+    }
+
     #[test]
-    fn verify_tvm_proof_factorial_program_no_io() {
+    fn verify_tvm_proof_factorial_program() {
         const FACTORIAL_ARGUMENT: u32 = 3;
         let factorial_program = factorial_program_with_io();
         let (non_determinism, claim_for_proof, inner_padded_height) =
@@ -154,16 +163,6 @@ pub mod tests {
             final_tasm_state.cycle_count,
             inner_padded_height,
         );
-    }
-
-    pub(super) fn claim_to_stdin_for_stark_verifier(
-        claim: &triton_vm::proof::Claim,
-    ) -> Vec<BFieldElement> {
-        let mut ret = claim.program_digest.reversed().values().to_vec();
-        ret.extend(claim.input.encode());
-        ret.extend(claim.output.encode());
-
-        ret
     }
 
     pub(super) fn factorial_program_with_io() -> Program {
