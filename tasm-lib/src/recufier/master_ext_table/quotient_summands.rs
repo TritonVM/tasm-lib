@@ -53,7 +53,6 @@ impl BasicSnippet for QuotientSummands {
             zerofiers_inverse_pointer,
         };
         let zerofiers_inverse = library.import(Box::new(zerofiers_inverse_snippet));
-        let air_constraints_pointer_pointer = library.kmalloc(1);
 
         let read_all_air_elements = vec![
             triton_asm!(
@@ -67,22 +66,27 @@ impl BasicSnippet for QuotientSummands {
         let mul_and_write = |constraint_type: ConstraintType, num_constraints: usize| {
             vec![
                 triton_asm!(
-                    // _ [[air_elem]]
+                    // _ [[air_elem]] *air_elem
+
+                    swap 3
+                    swap 2
+                    swap 1
+                    // _ *air_elem [[air_elem]]
 
                     push {zerofiers_inverse_snippet.zerofier_inv_read_address(constraint_type)}
                     read_mem {EXTENSION_DEGREE}
                     pop 1
 
                     xxmul
-                    // _ [[air_elem] [[air_elem * z_inv]]]
+                    // _ [[air_elem] *air_elem [[air_elem * z_inv]]]
 
-                    push {air_constraints_pointer_pointer} // _ **p
-                    read_mem 1                             // _ *p (**p - 1)
-                    pop 1                                  // _ *p
-                    write_mem {EXTENSION_DEGREE}           // _ (*p + 3)
-                    push {air_constraints_pointer_pointer} // _ (*p + 3) **p
-                    write_mem 1                            // _ (**p + 1)
-                    pop 1                                  // _
+                    swap 1
+                    swap 2
+                    swap 3
+                    // _ [[air_elem] [[air_elem * z_inv]]] *air_elem
+
+                    write_mem {EXTENSION_DEGREE}
+                    // _ [[air_elem] *air_elem_next
 
                 );
                 num_constraints
@@ -136,27 +140,18 @@ impl BasicSnippet for QuotientSummands {
                 call {air_constraints_evaluation}
                 // _ *air_constraints
 
-                dup 0
-                push {air_constraints_pointer_pointer}
-                write_mem 1
-                pop 1
-                // _ *air_constraints
-
                 {&point_to_last_air_element}
-                // _ *air_elem_last
+                // _ *air_elem_last_word
 
                 {&read_all_air_elements}
-                // _ [[air_elem]] *air_elem_first
+                // _ [[air_elem]] (*air_constraints - 1)
 
-                pop 1
-                // _ [[air_elem]]
+                push 1 add
+                // _ [[air_elem]] *air_constraints
 
                 {&mul_and_write}
-                // _
+                // _ (*air_elem_last + 3)
 
-                push {air_constraints_pointer_pointer}
-                read_mem 1
-                pop 1
                 {&point_to_first_air_element}
 
                 return
@@ -202,14 +197,14 @@ mod tests {
             let (air_input_values, ood_point_curr_row, padded_height, trace_domain_generator) =
                 Self::random_input_values(&mut rng);
 
-            let tasm_result = self.tasm_result(
+            let (tasm_result, quotient_array_address) = self.tasm_result(
                 air_input_values.clone(),
                 ood_point_curr_row,
                 padded_height,
                 trace_domain_generator,
             );
             let host_machine_result = Self::host_machine_quotient_evaluation(
-                air_input_values,
+                air_input_values.clone(),
                 ood_point_curr_row,
                 padded_height,
                 trace_domain_generator,
@@ -217,6 +212,12 @@ mod tests {
 
             assert_eq!(tasm_result.len(), host_machine_result.len());
             assert_eq!(tasm_result, host_machine_result);
+
+            // Verify that quotient is stored in same address as AIR constraints, i.e. that
+            // AIR constraints were overwritten.
+            let (_air_tasm_result, air_array_address) =
+                self.air_constraint_evaluation.tasm_result(air_input_values);
+            assert_eq!(air_array_address, quotient_array_address);
         }
 
         pub(super) fn random_input_values(
@@ -241,13 +242,14 @@ mod tests {
             )
         }
 
+        /// Return the evaluated array of quotient values, and its address in memory
         fn tasm_result(
             &self,
             air_input_value: AirConstraintSnippetInputs,
             out_of_domain_point_curr_row: XFieldElement,
             padded_height: u32,
             trace_domain_generator: BFieldElement,
-        ) -> Vec<XFieldElement> {
+        ) -> (Vec<XFieldElement>, BFieldElement) {
             let init_memory = self
                 .air_constraint_evaluation
                 .prepare_tvm_memory(air_input_value);
