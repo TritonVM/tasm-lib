@@ -3,6 +3,7 @@ pub mod claim;
 pub mod eval_arg;
 pub mod fri;
 pub mod master_ext_table;
+pub mod out_of_domain_points;
 pub mod own_program_digest;
 pub mod read_and_verify_own_program_digest_from_std_in;
 pub mod stark_verify;
