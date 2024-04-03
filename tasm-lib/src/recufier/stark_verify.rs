@@ -1,14 +1,15 @@
 use triton_vm::prelude::*;
 use triton_vm::proof_item::ProofItemVariant;
 
-use crate::arithmetic;
 use crate::arithmetic::bfe::primitive_root_of_unity::PrimitiveRootOfUnity;
 use crate::data_type::DataType;
+use crate::hashing::algebraic_hasher::sample_scalar_one::SampleScalarOne;
 use crate::hashing::algebraic_hasher::sample_scalars_static_length_dyn_malloc::SampleScalarsStaticLengthDynMalloc;
 use crate::library::Library;
 use crate::recufier::challenges::shared::conventional_challenges_pointer;
 use crate::recufier::claim::instantiate_fiat_shamir_with_claim::InstantiateFiatShamirWithClaim;
 use crate::recufier::claim::shared::claim_type;
+use crate::recufier::out_of_domain_points::OutOfDomainPoints;
 use crate::recufier::vm_proof_iter::dequeue_next_as::DequeueNextAs;
 use crate::recufier::{challenges, fri, vm_proof_iter};
 use crate::traits::basic_snippet::BasicSnippet;
@@ -57,6 +58,8 @@ impl BasicSnippet for StarkVerify {
                 num_elements: triton_vm::table::master_table::num_quotients(),
             }));
         let domain_generator = library.import(Box::new(PrimitiveRootOfUnity));
+        let sample_scalar_one = library.import(Box::new(SampleScalarOne));
+        let calculate_out_of_domain_points = library.import(Box::new(OutOfDomainPoints));
 
         let verify_log_2_padded_height =
             if let Some(expected_log_2_padded_height) = self.log_2_padded_height {
@@ -80,62 +83,64 @@ impl BasicSnippet for StarkVerify {
             {entrypoint}:
                 sponge_init
 
-                // _ *claim
+                // _ *clm
 
                 dup 0
                 call {instantiate_fiat_shamir_with_claim}
-                // _ *claim
+                // _ *clm
 
                 call {new_proof_iter}
-                // _ *claim *proof_iter
+                // _ *clm *p_iter
 
                 dup 0
                 call {next_as_log_2_padded_height}
-                // _ *claim *proof_iter *log_2_padded_height
+                // _ *clm *p_iter *log_2_padded_height
 
                 read_mem 1
                 pop 1
-                // _ *claim *proof_iter log_2_padded_height
+                // _ *clm *p_iter log_2_padded_height
 
                 {&verify_log_2_padded_height}
-                // _ *claim *proof_iter log_2_padded_height
+                // _ *clm *p_iter log_2_padded_height
 
                 push 2
                 pow
-                // _ *claim *proof_iter padded_height
+                // _ *clm *p_iter padded_height
 
                 dup 1
                 call {next_as_merkleroot}
-                // _ *claim *proof_iter padded_height *base_merkle_root
+                // _ *clm *p_iter padded_height *base_mr
 
                 swap 3
-                // _  *base_merkle_root *proof_iter padded_height *claim
+                // _  *base_mr *p_iter padded_height *clm
 
                 call {get_challenges}
-                // _ *base_merkle_root *proof_iter padded_height *challenges
+                // _ *base_mr *p_iter padded_height *challenges
 
                 {&verify_challenges_pointer}
-                // _ *base_merkle_root *proof_iter padded_height
+                // _ *base_mr *p_iter padded_height
 
                 dup 1
                 call {next_as_merkleroot}
-                // _ *base_merkle_root *proof_iter padded_height *ext_merkle_root
+                // _ *base_mr *p_iter padded_height *ext_mr
 
                 call {sample_quotient_codeword_weights}
-                // _ *base_merkle_root *proof_iter padded_height *ext_merkle_root *quot_codeword_weights
+                // _ *base_mr *p_iter padded_height *ext_mr *quot_cw_ws
 
                 dup 3
                 call {next_as_merkleroot}
-                // _ *base_merkle_root *proof_iter padded_height *ext_merkle_root *quot_codeword_weights *quot_tree_merkle_root
+                // _ *base_mr *p_iter padded_height *ext_mr *quot_cw_ws *quot_mr
 
                 push 0
-                dup 3
-                // _ *base_merkle_root *proof_iter padded_height *ext_merkle_root *quot_codeword_weights *quot_tree_merkle_root 0 padded_height
-
+                dup 4
                 call {domain_generator}
-                // _ *base_merkle_root *proof_iter padded_height *ext_merkle_root *quot_codeword_weights *quot_tree_merkle_root trace_domain_generator
+                // _ *base_mr *p_iter padded_height *ext_mr *quot_cw_ws *quot_mr dom_gen
 
+                call {sample_scalar_one}
+                // _ *base_mr *p_iter padded_height *ext_mr *quot_cw_ws *quot_mr dom_gen [ood_curr_row]
 
+                call {calculate_out_of_domain_points}
+                // _ *base_mr *p_iter padded_height *ext_mr *quot_cw_ws *quot_mr *ood_points
 
                 return
         )
