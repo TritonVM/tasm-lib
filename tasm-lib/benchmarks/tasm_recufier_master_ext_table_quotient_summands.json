@@ -1,0 +1,24 @@
+[
+  {
+    "name": "tasm_recufier_master_ext_table_quotient_summands",
+    "benchmark_result": {
+      "clock_cycle_count": 40937,
+      "hash_table_height": 44196,
+      "u32_table_height": 31,
+      "op_stack_table_height": 74008,
+      "ram_table_height": 28485
+    },
+    "case": "CommonCase"
+  },
+  {
+    "name": "tasm_recufier_master_ext_table_quotient_summands",
+    "benchmark_result": {
+      "clock_cycle_count": 40664,
+      "hash_table_height": 44196,
+      "u32_table_height": 10,
+      "op_stack_table_height": 73756,
+      "ram_table_height": 28485
+    },
+    "case": "WorstCase"
+  }
+]

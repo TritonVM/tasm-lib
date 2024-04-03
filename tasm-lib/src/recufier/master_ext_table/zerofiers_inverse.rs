@@ -21,6 +21,7 @@ pub(super) enum ConstraintType {
 
 /// Calculate all inverses of the zerofiers. It is the caller's responsibility
 /// to statically allocate memory for the array where the result is stored.
+#[derive(Debug, Copy, Clone)]
 pub struct ZerofiersInverse {
     pub zerofiers_inverse_pointer: BFieldElement,
 }
@@ -30,10 +31,8 @@ impl ZerofiersInverse {
         EXTENSION_DEGREE * ConstraintType::COUNT
     }
 
-    pub(super) fn zerofier_inv_write_address(
-        &self,
-        constraint_type: ConstraintType,
-    ) -> BFieldElement {
+    /// Return the address needed to write to the inverted zerofiers array
+    fn zerofier_inv_write_address(&self, constraint_type: ConstraintType) -> BFieldElement {
         self.zerofiers_inverse_pointer
             + BFieldElement::new(
                 (EXTENSION_DEGREE * constraint_type as usize)
@@ -42,6 +41,7 @@ impl ZerofiersInverse {
             )
     }
 
+    /// Return the address needed to read from the inverted zerofiers array
     pub(super) fn zerofier_inv_read_address(
         &self,
         constraint_type: ConstraintType,
