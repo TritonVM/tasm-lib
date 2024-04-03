@@ -1,5 +1,6 @@
 use triton_vm::prelude::*;
 use triton_vm::proof_item::ProofItemVariant;
+use triton_vm::twenty_first::shared_math::x_field_element::EXTENSION_DEGREE;
 
 use crate::arithmetic::bfe::primitive_root_of_unity::PrimitiveRootOfUnity;
 use crate::data_type::DataType;
@@ -9,6 +10,7 @@ use crate::library::Library;
 use crate::recufier::challenges::shared::conventional_challenges_pointer;
 use crate::recufier::claim::instantiate_fiat_shamir_with_claim::InstantiateFiatShamirWithClaim;
 use crate::recufier::claim::shared::claim_type;
+use crate::recufier::master_ext_table::quotient_summands::QuotientSummands;
 use crate::recufier::out_of_domain_points::OutOfDomainPoints;
 use crate::recufier::vm_proof_iter::dequeue_next_as::DequeueNextAs;
 use crate::recufier::{challenges, fri, vm_proof_iter};
@@ -60,6 +62,8 @@ impl BasicSnippet for StarkVerify {
         let domain_generator = library.import(Box::new(PrimitiveRootOfUnity));
         let sample_scalar_one = library.import(Box::new(SampleScalarOne));
         let calculate_out_of_domain_points = library.import(Box::new(OutOfDomainPoints));
+        let quotient_summands =
+            library.import(Box::new(QuotientSummands::with_conventional_memory_layout()));
 
         let verify_log_2_padded_height =
             if let Some(expected_log_2_padded_height) = self.log_2_padded_height {
@@ -136,11 +140,38 @@ impl BasicSnippet for StarkVerify {
                 call {domain_generator}
                 // _ *base_mr *p_iter padded_height *ext_mr *quot_cw_ws *quot_mr dom_gen
 
+                dup 0
+                // _ *base_mr *p_iter padded_height *ext_mr *quot_cw_ws *quot_mr dom_gen dom_gen
+
                 call {sample_scalar_one}
-                // _ *base_mr *p_iter padded_height *ext_mr *quot_cw_ws *quot_mr dom_gen [ood_curr_row]
+                // _ *base_mr *p_iter padded_height *ext_mr *quot_cw_ws *quot_mr dom_gen dom_gen [ood_curr_row]
 
                 call {calculate_out_of_domain_points}
-                // _ *base_mr *p_iter padded_height *ext_mr *quot_cw_ws *quot_mr *ood_points
+                // _ *base_mr *p_iter padded_height *ext_mr *quot_cw_ws *quot_mr dom_gen *ood_points
+
+                push 2
+                add
+                read_mem {EXTENSION_DEGREE}
+                push 1
+                add
+                // _ *base_mr *p_iter padded_height *ext_mr *quot_cw_ws *quot_mr dom_gen [out_of_domain_curr_row] *ood_points
+
+                swap 7
+                // _ *base_mr *p_iter *ood_points *ext_mr *quot_cw_ws *quot_mr dom_gen [out_of_domain_curr_row] padded_height
+
+                swap 1
+                swap 2
+                swap 3
+                swap 4
+                swap 5
+                // _ *base_mr *p_iter *ood_points *ext_mr *quot_cw_ws *quot_mr [out_of_domain_curr_row] padded_height dom_gen
+
+                call {quotient_summands}
+                // _ *base_mr *p_iter *ood_points *ext_mr *quot_cw_ws *quot_mr *quotient_summands
+
+                swap 1
+                swap 2
+                // _ *base_mr *p_iter *ood_points *ext_mr *quot_mr *quotient_summands *quot_cw_ws
 
                 return
         )
