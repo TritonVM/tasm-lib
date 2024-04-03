@@ -289,7 +289,7 @@ mod tests {
             let mut rng: StdRng = SeedableRng::from_seed(seed);
             let input_values = Self::random_input_values(&mut rng);
 
-            let tasm_result = self.tasm_result(input_values.clone());
+            let (tasm_result, _) = self.tasm_result(input_values.clone());
             let host_machine_result = Self::host_machine_air_constraint_evaluation(input_values);
 
             assert_eq!(tasm_result.len(), host_machine_result.len());
@@ -354,9 +354,10 @@ mod tests {
             memory
         }
 
+        /// Return the pointed-to array and its address.
         /// Note that the result lives as an array in TVM memory but is represented as a list here
         /// since its length is not known at `tasm-lib`'s compile time.
-        pub(crate) fn read_result_from_memory(mut final_state: VMState) -> Vec<XFieldElement> {
+        pub(crate) fn read_result_from_memory(mut final_state: VMState) -> (Vec<XFieldElement>, BFieldElement) {
             let result_pointer = final_state.op_stack.stack.pop().unwrap();
             let mut tasm_result: Vec<XFieldElement> = vec![];
             for i in 0..MasterExtTable::NUM_CONSTRAINTS {
@@ -368,10 +369,14 @@ mod tests {
                 ));
             }
 
-            tasm_result
+            (tasm_result, result_pointer)
         }
 
-        fn tasm_result(&self, input_values: AirConstraintSnippetInputs) -> Vec<XFieldElement> {
+        /// Return evaluated constraints and their location in memory
+        pub(crate) fn tasm_result(
+            &self,
+            input_values: AirConstraintSnippetInputs,
+        ) -> (Vec<XFieldElement>, BFieldElement) {
             let init_memory = self.prepare_tvm_memory(input_values);
 
             let stack = self.init_stack_for_isolated_run();
