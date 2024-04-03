@@ -5,7 +5,6 @@ use triton_vm::twenty_first::shared_math::b_field_element::BFieldElement;
 use triton_vm::twenty_first::shared_math::x_field_element::EXTENSION_DEGREE;
 
 use crate::arithmetic::xfe::to_the_power_of_power_of_2::ToThePowerOfPowerOf2;
-use crate::data_type::ArrayType;
 use crate::data_type::DataType;
 use crate::library::Library;
 use crate::traits::basic_snippet::BasicSnippet;
@@ -20,13 +19,35 @@ pub(super) enum ConstraintType {
     Terminal,
 }
 
-pub struct ZerofiersInverse;
+/// Calculate all inverses of the zerofiers. It is the caller's responsibility
+/// to statically allocate memory for the array where the result is stored.
+pub struct ZerofiersInverse {
+    pub zerofiers_inverse_pointer: BFieldElement,
+}
 
 impl ZerofiersInverse {
-    fn array_size() -> i32 {
-        (EXTENSION_DEGREE * ConstraintType::COUNT)
-            .try_into()
-            .unwrap()
+    pub(super) fn array_size() -> usize {
+        EXTENSION_DEGREE * ConstraintType::COUNT
+    }
+
+    pub(super) fn zerofier_inv_write_address(
+        &self,
+        constraint_type: ConstraintType,
+    ) -> BFieldElement {
+        self.zerofiers_inverse_pointer
+            + BFieldElement::new(
+                (EXTENSION_DEGREE * constraint_type as usize)
+                    .try_into()
+                    .unwrap(),
+            )
+    }
+
+    pub(super) fn zerofier_inv_read_address(
+        &self,
+        constraint_type: ConstraintType,
+    ) -> BFieldElement {
+        self.zerofier_inv_write_address(constraint_type)
+            + BFieldElement::new((EXTENSION_DEGREE - 1).try_into().unwrap())
     }
 }
 
@@ -40,13 +61,7 @@ impl BasicSnippet for ZerofiersInverse {
     }
 
     fn outputs(&self) -> Vec<(DataType, String)> {
-        vec![(
-            DataType::Array(Box::new(ArrayType {
-                element_type: DataType::Xfe,
-                length: ConstraintType::COUNT,
-            })),
-            "*zerofiers_inv".to_owned(),
-        )]
+        vec![]
     }
 
     fn entrypoint(&self) -> String {
@@ -55,17 +70,6 @@ impl BasicSnippet for ZerofiersInverse {
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
         let xfe_mod_pow_pow_2 = library.import(Box::new(ToThePowerOfPowerOf2));
-
-        let zerofier_inverse_pointer = library.kmalloc(Self::array_size().try_into().unwrap());
-
-        let zerofier_inv_write_address = |x: ConstraintType| {
-            zerofier_inverse_pointer
-                + BFieldElement::new((EXTENSION_DEGREE * x as usize).try_into().unwrap())
-        };
-        let zerofier_inv_read_address = |x: ConstraintType| {
-            zerofier_inv_write_address(x)
-                + BFieldElement::new((EXTENSION_DEGREE - 1).try_into().unwrap())
-        };
 
         let calculate_initial_zerofier_inverse = triton_asm!(
             // _ [out_of_domain_point_curr_row] padded_height trace_domain_generator
@@ -121,7 +125,7 @@ impl BasicSnippet for ZerofiersInverse {
             dup 2
             // _ [except_last_row] [except_last_row]
 
-            push {zerofier_inv_read_address(ConstraintType::Consistency)}
+            push {self.zerofier_inv_read_address(ConstraintType::Consistency)}
             read_mem {EXTENSION_DEGREE}
             pop 1
             // _ [except_last_row] [except_last_row] [consistency_zerofier_inv]
@@ -143,7 +147,7 @@ impl BasicSnippet for ZerofiersInverse {
                 {&calculate_initial_zerofier_inverse}
                 // _ [out_of_domain_point_curr_row] padded_height trace_domain_generator [initial_zerofier_inv]
 
-                push {zerofier_inv_write_address(ConstraintType::Initial)}
+                push {self.zerofier_inv_write_address(ConstraintType::Initial)}
                 write_mem {EXTENSION_DEGREE}
                 pop 1
                 // _ [out_of_domain_point_curr_row] padded_height trace_domain_generator
@@ -151,7 +155,7 @@ impl BasicSnippet for ZerofiersInverse {
                 {&calculate_consistency_zerofier_inv}
                  // _ [out_of_domain_point_curr_row] trace_domain_generator [consistency_zerofier_inv]
 
-                push {zerofier_inv_write_address(ConstraintType::Consistency)}
+                push {self.zerofier_inv_write_address(ConstraintType::Consistency)}
                 write_mem {EXTENSION_DEGREE}
                 pop 1
                 // _ [out_of_domain_point_curr_row] trace_domain_generator
@@ -162,7 +166,7 @@ impl BasicSnippet for ZerofiersInverse {
                 {&calculate_transition_zerofier_inv}
                 // _ [except_last_row] [transition_zerofier_inv]
 
-                push {zerofier_inv_write_address(ConstraintType::Transition)}
+                push {self.zerofier_inv_write_address(ConstraintType::Transition)}
                 write_mem {EXTENSION_DEGREE}
                 pop 1
                  // _ [except_last_row]
@@ -170,12 +174,11 @@ impl BasicSnippet for ZerofiersInverse {
                 {&calculate_terminal_zerofier_inv}
                 // _ [terminal_zerofier_inv]
 
-                push {zerofier_inv_write_address(ConstraintType::Terminal)}
+                push {self.zerofier_inv_write_address(ConstraintType::Terminal)}
                 write_mem {EXTENSION_DEGREE}
                 pop 1
                 // _
 
-                push {zerofier_inverse_pointer}
 
                 return
         )
@@ -209,7 +212,12 @@ mod tests {
 
     #[test]
     fn zerofiers_inverse_pbt() {
-        ShadowedFunction::new(ZerofiersInverse).test()
+        let mem_address_if_first_static_malloc =
+            -BFieldElement::new(ZerofiersInverse::array_size() as u64) - BFieldElement::one();
+        ShadowedFunction::new(ZerofiersInverse {
+            zerofiers_inverse_pointer: mem_address_if_first_static_malloc,
+        })
+        .test()
     }
 
     impl Function for ZerofiersInverse {
@@ -234,10 +242,8 @@ mod tests {
             let transition_zerofier_inv = except_last_row * consistency_zerofier_inv;
             let terminal_zerofier_inv = except_last_row.inverse();
 
-            let zerofier_inverse_pointer = bfe!(-(Self::array_size() + 1));
-
             insert_as_array(
-                zerofier_inverse_pointer,
+                self.zerofiers_inverse_pointer,
                 memory,
                 vec![
                     initial_zerofier_inv,
@@ -246,8 +252,6 @@ mod tests {
                     terminal_zerofier_inv,
                 ],
             );
-
-            stack.push(zerofier_inverse_pointer)
         }
 
         fn pseudorandom_initial_state(
