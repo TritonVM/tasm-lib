@@ -12,7 +12,7 @@ use triton_vm::table::tasm_air_constraints::air_constraint_evaluation_tasm;
 
 use crate::recufier::challenges::new_empty_input_and_output::NewEmptyInputAndOutput;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct AirConstraintEvaluation {
     pub mem_layout: TasmConstraintEvaluationMemoryLayout,
 }
@@ -296,7 +296,7 @@ mod tests {
             assert_eq!(tasm_result, host_machine_result);
         }
 
-        fn random_input_values(rng: &mut StdRng) -> AirConstraintSnippetInputs {
+        pub(crate) fn random_input_values(rng: &mut StdRng) -> AirConstraintSnippetInputs {
             let current_base_row: Vec<XFieldElement> =
                 rng.sample_iter(Standard).take(NUM_BASE_COLUMNS).collect();
             let current_ext_row: Vec<XFieldElement> =
@@ -320,7 +320,7 @@ mod tests {
             }
         }
 
-        fn prepare_tvm_memory(
+        pub(crate) fn prepare_tvm_memory(
             &self,
             input_values: AirConstraintSnippetInputs,
         ) -> HashMap<BFieldElement, BFieldElement> {
@@ -356,10 +356,11 @@ mod tests {
 
         /// Note that the result lives as an array in TVM memory but is represented as a list here
         /// since its length is not known at `tasm-lib`'s compile time.
-        fn read_result_from_memory(mut final_state: VMState) -> Vec<XFieldElement> {
+        pub(crate) fn read_result_from_memory(mut final_state: VMState) -> Vec<XFieldElement> {
             let result_pointer = final_state.op_stack.stack.pop().unwrap();
             let mut tasm_result: Vec<XFieldElement> = vec![];
             for i in 0..MasterExtTable::NUM_CONSTRAINTS {
+                println!("{i} / {}", MasterExtTable::NUM_CONSTRAINTS - 1);
                 tasm_result.push(XFieldElement::new(
                     array_get(result_pointer, i, &final_state.ram, EXTENSION_DEGREE)
                         .try_into()
