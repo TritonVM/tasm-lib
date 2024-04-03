@@ -6,16 +6,15 @@ use ndarray::Array1;
 use triton_vm::prelude::*;
 use triton_vm::table::challenges::Challenges;
 use triton_vm::table::extension_table::Evaluable;
-use triton_vm::table::master_table::{num_quotients, MasterExtTable};
+use triton_vm::table::extension_table::Quotientable;
+use triton_vm::table::master_table::MasterExtTable;
 use triton_vm::table::tasm_air_constraints::air_constraint_evaluation_tasm;
 
 use crate::recufier::challenges::new_empty_input_and_output::NewEmptyInputAndOutput;
 
-const NUM_TOTAL_CONSTRAINTS: usize = num_quotients();
-
 #[derive(Debug, Clone)]
 pub struct AirConstraintEvaluation {
-    mem_layout: TasmConstraintEvaluationMemoryLayout,
+    pub mem_layout: TasmConstraintEvaluationMemoryLayout,
 }
 
 impl AirConstraintEvaluation {
@@ -25,10 +24,10 @@ impl AirConstraintEvaluation {
         }
     }
 
-    pub fn output_type(&self) -> DataType {
+    pub fn output_type() -> DataType {
         DataType::Array(Box::new(ArrayType {
             element_type: DataType::Xfe,
-            length: NUM_TOTAL_CONSTRAINTS,
+            length: MasterExtTable::NUM_CONSTRAINTS,
         }))
     }
 
@@ -94,7 +93,7 @@ impl BasicSnippet for AirConstraintEvaluation {
     }
 
     fn outputs(&self) -> Vec<(DataType, String)> {
-        vec![(self.output_type(), "evaluated_constraints".to_owned())]
+        vec![(Self::output_type(), "evaluated_constraints".to_owned())]
     }
 
     fn entrypoint(&self) -> String {
@@ -127,7 +126,7 @@ impl BasicSnippet for AirConstraintEvaluation {
 }
 
 #[cfg(test)]
-fn an_integral_memory_layout() -> TasmConstraintEvaluationMemoryLayout {
+fn an_integral_but_profane_memory_layout() -> TasmConstraintEvaluationMemoryLayout {
     let mem_layout = TasmConstraintEvaluationMemoryLayout {
         free_mem_page_ptr: BFieldElement::new((u32::MAX as u64 - 1) * (1u64 << 32)),
         curr_base_row_ptr: BFieldElement::new(1u64),
@@ -277,7 +276,7 @@ mod tests {
     #[test]
     fn constraint_evaluation_test() {
         let snippet = AirConstraintEvaluation {
-            mem_layout: an_integral_memory_layout(),
+            mem_layout: an_integral_but_profane_memory_layout(),
         };
 
         let mut seed: [u8; 32] = [0u8; 32];
@@ -360,7 +359,7 @@ mod tests {
         fn read_result_from_memory(mut final_state: VMState) -> Vec<XFieldElement> {
             let result_pointer = final_state.op_stack.stack.pop().unwrap();
             let mut tasm_result: Vec<XFieldElement> = vec![];
-            for i in 0..NUM_TOTAL_CONSTRAINTS {
+            for i in 0..MasterExtTable::NUM_CONSTRAINTS {
                 tasm_result.push(XFieldElement::new(
                     array_get(result_pointer, i, &final_state.ram, EXTENSION_DEGREE)
                         .try_into()
@@ -400,7 +399,7 @@ mod bench {
     #[test]
     fn bench_air_constraint_evaluation() {
         ShadowedFunction::new(AirConstraintEvaluation {
-            mem_layout: an_integral_memory_layout(),
+            mem_layout: an_integral_but_profane_memory_layout(),
         })
         .bench();
     }
