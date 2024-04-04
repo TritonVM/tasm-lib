@@ -2,6 +2,8 @@ use triton_vm::prelude::*;
 use triton_vm::proof_item::ProofItemVariant;
 use triton_vm::table::extension_table::Quotientable;
 use triton_vm::table::master_table::MasterExtTable;
+use triton_vm::table::NUM_BASE_COLUMNS;
+use triton_vm::table::NUM_EXT_COLUMNS;
 use triton_vm::table::NUM_QUOTIENT_SEGMENTS;
 use triton_vm::twenty_first::shared_math::x_field_element::EXTENSION_DEGREE;
 
@@ -85,6 +87,10 @@ impl BasicSnippet for StarkVerify {
         let horner_evaluation_of_ood_curr_row_quot_segments =
             library.import(Box::new(HornerEvaluation {
                 num_coefficients: NUM_QUOTIENT_SEGMENTS,
+            }));
+        let sample_base_ext_and_quotient_weights =
+            library.import(Box::new(SampleScalarsStaticLengthDynMalloc {
+                num_elements: NUM_BASE_COLUMNS + NUM_EXT_COLUMNS + NUM_QUOTIENT_SEGMENTS,
             }));
 
         let verify_log_2_padded_height =
@@ -269,6 +275,12 @@ impl BasicSnippet for StarkVerify {
                 /* Verify quotient's segments */
                 {&assert_top_two_xfes_eq}
                 // _ *base_mr *p_iter *ood_points *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr
+
+
+                /* Fiat-shamir 2 */
+                call {sample_base_ext_and_quotient_weights}
+                 // _ *base_mr *p_iter *ood_points *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *base_and_ext_codeword_weights
+
 
                 return
         )
