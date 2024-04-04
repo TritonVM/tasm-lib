@@ -1,5 +1,6 @@
 use triton_vm::instruction::LabelledInstruction;
 use triton_vm::triton_asm;
+use triton_vm::twenty_first::shared_math::b_field_element::BFieldElement;
 use triton_vm::twenty_first::shared_math::x_field_element::EXTENSION_DEGREE;
 
 use crate::arithmetic::xfe::to_the_fourth::ToTheFourth;
@@ -10,9 +11,36 @@ use crate::traits::basic_snippet::BasicSnippet;
 
 /// Calculate the three needed values related to out-of-domain points and store them in a statically
 /// allocated array. Return the pointer to this array.
+#[derive(Debug, Clone, Copy)]
 pub struct OutOfDomainPoints;
 
 pub const NUM_OF_OUT_OF_DOMAIN_POINTS: usize = 3;
+
+#[derive(Debug, Clone, Copy)]
+pub enum OodPoint {
+    CurrentRow,
+    NextRow,
+    CurrentRowPowNumSegments,
+}
+
+impl OutOfDomainPoints {
+    /// Push the requested OOD point to the stack, pop the pointer.
+    pub fn read_ood_point(ood_point_type: OodPoint) -> Vec<LabelledInstruction> {
+        let address_offset = (ood_point_type as usize) * EXTENSION_DEGREE + (EXTENSION_DEGREE - 1);
+        triton_asm!(
+            // _ *ood_points // of type same as the output value of this snippet
+
+            push {address_offset}
+            add
+            // _ (*ood_points[n] + 2)
+
+            read_mem {EXTENSION_DEGREE}
+            // _ [ood_piont] (*ood_points[n] - 1)
+
+            pop 1
+        )
+    }
+}
 
 impl BasicSnippet for OutOfDomainPoints {
     fn inputs(&self) -> Vec<(DataType, String)> {

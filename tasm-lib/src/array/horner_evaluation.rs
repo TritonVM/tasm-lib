@@ -12,7 +12,7 @@ use crate::{
 /// the object is to compute a random linear sum of a given set of points, and
 /// the weights are given by the powers of one challenge.
 pub struct HornerEvaluation {
-    num_coefficients: usize,
+    pub num_coefficients: usize,
 }
 
 impl HornerEvaluation {
