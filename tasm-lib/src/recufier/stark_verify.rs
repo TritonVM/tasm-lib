@@ -92,6 +92,10 @@ impl BasicSnippet for StarkVerify {
             library.import(Box::new(SampleScalarsStaticLengthDynMalloc {
                 num_elements: NUM_BASE_COLUMNS + NUM_EXT_COLUMNS + NUM_QUOTIENT_SEGMENTS,
             }));
+        const NUM_DEEP_CODEWORD_COMPONENTS: usize = 3;
+        let deep_codeword_weights = library.import(Box::new(SampleScalarsStaticLengthDynMalloc {
+            num_elements: NUM_DEEP_CODEWORD_COMPONENTS,
+        }));
 
         let verify_log_2_padded_height =
             if let Some(expected_log_2_padded_height) = self.log_2_padded_height {
@@ -163,52 +167,56 @@ impl BasicSnippet for StarkVerify {
                 hint padded_height = stack[0]
                 // _ *clm *p_iter padded_height
 
+                dup 0
+                call {derive_fri_parameters}
+                hint fri = stack[0]
+                // _ *clm *p_iter padded_height *fri
 
                 /* Fiat-Shamir 1 */
-                dup 1
+                dup 2
                 call {next_as_merkleroot}
                 hint base_mr = stack[0]
-                // _ *clm *p_iter padded_height *base_mr
+                // _ *clm *p_iter padded_height *fri *base_mr
 
-                swap 3
-                // _  *base_mr *p_iter padded_height *clm
+                swap 4
+                // _ *base_mr *p_iter padded_height *fri *clm
 
                 call {get_challenges}
-                // _ *base_mr *p_iter padded_height *challenges
+                // _ *base_mr *p_iter padded_height *fri *challenges
 
                 {&verify_challenges_pointer}
-                // _ *base_mr *p_iter padded_height
+                // _ *base_mr *p_iter padded_height *fri
 
-                dup 1
+                dup 2
                 call {next_as_merkleroot}
                 hint ext_mr = stack[0]
-                // _ *base_mr *p_iter padded_height *ext_mr
+                // _ *base_mr *p_iter padded_height *fri *ext_mr
 
                 call {sample_quotient_codeword_weights}
-                // _ *base_mr *p_iter padded_height *ext_mr *quot_cw_ws
+                // _ *base_mr *p_iter padded_height *fri *ext_mr *quot_cw_ws
                 hint quot_codeword_weights = stack[0]
 
-                dup 3
+                dup 4
                 call {next_as_merkleroot}
                 hint quot_mr = stack[0]
-                // _ *base_mr *p_iter padded_height *ext_mr *quot_cw_ws *quot_mr
+                // _ *base_mr *p_iter padded_height *fri *ext_mr *quot_cw_ws *quot_mr
 
 
                 /* sample and calculate OOD points (not rows) */
                 push 0
-                dup 4
+                dup 5
                 call {domain_generator}
                 hint trace_domain_generator = stack[0]
-                // _ *base_mr *p_iter padded_height *ext_mr *quot_cw_ws *quot_mr dom_gen
+                // _ *base_mr *p_iter padded_height *fri *ext_mr *quot_cw_ws *quot_mr dom_gen
 
                 dup 0
-                // _ *base_mr *p_iter padded_height *ext_mr *quot_cw_ws *quot_mr dom_gen dom_gen
+                // _ *base_mr *p_iter padded_height *fri *ext_mr *quot_cw_ws *quot_mr dom_gen dom_gen
 
                 call {sample_scalar_one}
-                // _ *base_mr *p_iter padded_height *ext_mr *quot_cw_ws *quot_mr dom_gen dom_gen [ood_curr_row]
+                // _ *base_mr *p_iter padded_height *fri *ext_mr *quot_cw_ws *quot_mr dom_gen dom_gen [ood_curr_row]
 
                 call {calculate_out_of_domain_points}
-                // _ *base_mr *p_iter padded_height *ext_mr *quot_cw_ws *quot_mr dom_gen *ood_points
+                // _ *base_mr *p_iter padded_height *fri *ext_mr *quot_cw_ws *quot_mr dom_gen *ood_points
 
 
                 /* out-of-domain quotient summands */
@@ -217,46 +225,46 @@ impl BasicSnippet for StarkVerify {
                 read_mem {EXTENSION_DEGREE}
                 push 1
                 add
-                // _ *base_mr *p_iter padded_height *ext_mr *quot_cw_ws *quot_mr dom_gen [out_of_domain_curr_row] *ood_points
+                // _ *base_mr *p_iter padded_height *fri *ext_mr *quot_cw_ws *quot_mr dom_gen [out_of_domain_curr_row] *ood_points
 
-                swap 8
-                // _ *base_mr *p_iter *ood_points *ext_mr *quot_cw_ws *quot_mr dom_gen [out_of_domain_curr_row] padded_height
+                swap 9
+                // _ *base_mr *p_iter *ood_points *fri *ext_mr *quot_cw_ws *quot_mr dom_gen [out_of_domain_curr_row] padded_height
 
                 swap 1
                 swap 2
                 swap 3
                 swap 4
-                // _ *base_mr *p_iter *ood_points *ext_mr *quot_cw_ws *quot_mr [out_of_domain_curr_row] padded_height dom_gen
+                // _ *base_mr *p_iter *ood_points *fri *ext_mr *quot_cw_ws *quot_mr [out_of_domain_curr_row] padded_height dom_gen
 
                 call {quotient_summands}
-                // _ *base_mr *p_iter *ood_points *ext_mr *quot_cw_ws *quot_mr *quotient_summands
+                // _ *base_mr *p_iter *ood_points *fri *ext_mr *quot_cw_ws *quot_mr *quotient_summands
 
 
                 /* Dequeue out-of-domain row */
-                dup 5
-                call {next_as_outofdomainbaserow}
-
                 dup 6
-                call {next_as_outofdomainextrow}
+                call {next_as_outofdomainbaserow}
 
                 dup 7
-                call {next_as_outofdomainbaserow}
-
-                dup 8
                 call {next_as_outofdomainextrow}
 
+                dup 8
+                call {next_as_outofdomainbaserow}
+
                 dup 9
+                call {next_as_outofdomainextrow}
+
+                dup 10
                 call {next_as_outofdomainquotientsegments}
-                // _ *base_mr *p_iter *ood_points *ext_mr *quot_cw_ws *quot_mr *quotient_summands *ood_base_row_curr *ood_ext_row_curr *odd_base_row_next *ood_ext_row_next *ood_quotient_segments
+                // _ *base_mr *p_iter *ood_points *fri *ext_mr *quot_cw_ws *quot_mr *quotient_summands *ood_base_row_curr *ood_ext_row_curr *odd_base_row_next *ood_ext_row_next *ood_quotient_segments
 
 
                 /* Calculate `sum_of_evaluated_out_of_domain_quotient_segments` */
-                dup 9
+                dup 10
                 {&OutOfDomainPoints::read_ood_point(OodPoint::CurrentRow)}
-                // _ *base_mr *p_iter *ood_points *ext_mr *quot_cw_ws *quot_mr *quotient_summands *ood_base_row_curr *ood_ext_row_curr *odd_base_row_next *ood_ext_row_next *ood_quotient_segments [ood_curr_row]
+                // _ *base_mr *p_iter *ood_points *fri *ext_mr *quot_cw_ws *quot_mr *quotient_summands *ood_base_row_curr *ood_ext_row_curr *odd_base_row_next *ood_ext_row_next *ood_quotient_segments [ood_curr_row]
 
                 call {horner_evaluation_of_ood_curr_row_quot_segments}
-                // _ *base_mr *p_iter *ood_points *ext_mr *quot_cw_ws *quot_mr *quotient_summands *ood_base_row_curr *ood_ext_row_curr *odd_base_row_next *ood_ext_row_next [sum_of_evaluated_out_of_domain_quotient_segments]
+                // _ *base_mr *p_iter *ood_points *fri *ext_mr *quot_cw_ws *quot_mr *quotient_summands *ood_base_row_curr *ood_ext_row_curr *odd_base_row_next *ood_ext_row_next [sum_of_evaluated_out_of_domain_quotient_segments]
 
 
                 /* Calculate inner product `out_of_domain_quotient_value` */
@@ -266,20 +274,23 @@ impl BasicSnippet for StarkVerify {
                 swap 1
                 swap 3
                 swap 7
-                // _ *base_mr *p_iter *ood_points *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr [sum_of_evaluated_out_of_domain_quotient_segments] *quot_cw_ws *quotient_summands
+                // _ *base_mr *p_iter *ood_points *fri *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr [sum_of_evaluated_out_of_domain_quotient_segments] *quot_cw_ws *quotient_summands
 
                 call {inner_product_quotient_summands}
-                // _ *base_mr *p_iter *ood_points *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr [sum_of_evaluated_out_of_domain_quotient_segments] [out_of_domain_quotient_value]
+                // _ *base_mr *p_iter *ood_points *fri *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr [sum_of_evaluated_out_of_domain_quotient_segments] [out_of_domain_quotient_value]
 
 
                 /* Verify quotient's segments */
                 {&assert_top_two_xfes_eq}
-                // _ *base_mr *p_iter *ood_points *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr
+                // _ *base_mr *p_iter *ood_points *fri *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr
 
 
                 /* Fiat-shamir 2 */
                 call {sample_base_ext_and_quotient_weights}
-                 // _ *base_mr *p_iter *ood_points *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *base_and_ext_codeword_weights
+                // _ *base_mr *p_iter *ood_points *fri *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *base_and_ext_codeword_weights
+
+                call {deep_codeword_weights}
+                // _ *base_mr *p_iter *ood_points *fri *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *base_and_ext_codeword_weights *deep_cw_ws
 
 
                 return
