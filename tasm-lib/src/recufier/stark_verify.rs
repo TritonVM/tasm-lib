@@ -1,8 +1,13 @@
 use triton_vm::prelude::*;
 use triton_vm::proof_item::ProofItemVariant;
+use triton_vm::table::extension_table::Quotientable;
+use triton_vm::table::master_table::MasterExtTable;
+use triton_vm::table::NUM_QUOTIENT_SEGMENTS;
 use triton_vm::twenty_first::shared_math::x_field_element::EXTENSION_DEGREE;
 
 use crate::arithmetic::bfe::primitive_root_of_unity::PrimitiveRootOfUnity;
+use crate::array::horner_evaluation::HornerEvaluation;
+use crate::array::inner_product_of_xfes::InnerProductOfXfes;
 use crate::data_type::DataType;
 use crate::hashing::algebraic_hasher::sample_scalar_one::SampleScalarOne;
 use crate::hashing::algebraic_hasher::sample_scalars_static_length_dyn_malloc::SampleScalarsStaticLengthDynMalloc;
@@ -11,6 +16,7 @@ use crate::recufier::challenges::shared::conventional_challenges_pointer;
 use crate::recufier::claim::instantiate_fiat_shamir_with_claim::InstantiateFiatShamirWithClaim;
 use crate::recufier::claim::shared::claim_type;
 use crate::recufier::master_ext_table::quotient_summands::QuotientSummands;
+use crate::recufier::out_of_domain_points::OodPoint;
 use crate::recufier::out_of_domain_points::OutOfDomainPoints;
 use crate::recufier::vm_proof_iter::dequeue_next_as::DequeueNextAs;
 use crate::recufier::{challenges, fri, vm_proof_iter};
@@ -46,6 +52,15 @@ impl BasicSnippet for StarkVerify {
         let next_as_merkleroot = library.import(Box::new(DequeueNextAs {
             proof_item: ProofItemVariant::MerkleRoot,
         }));
+        let next_as_outofdomainbaserow = library.import(Box::new(DequeueNextAs {
+            proof_item: ProofItemVariant::OutOfDomainBaseRow,
+        }));
+        let next_as_outofdomainextrow = library.import(Box::new(DequeueNextAs {
+            proof_item: ProofItemVariant::OutOfDomainExtRow,
+        }));
+        let next_as_outofdomainquotientsegments = library.import(Box::new(DequeueNextAs {
+            proof_item: ProofItemVariant::OutOfDomainQuotientSegments,
+        }));
         let derive_fri_parameters = library.import(Box::new(
             fri::derive_from_stark_params::DeriveFriFromStarkParams {
                 stark_parameters: self.stark_parameters,
@@ -64,6 +79,13 @@ impl BasicSnippet for StarkVerify {
         let calculate_out_of_domain_points = library.import(Box::new(OutOfDomainPoints));
         let quotient_summands =
             library.import(Box::new(QuotientSummands::with_conventional_memory_layout()));
+        let inner_product_quotient_summands = library.import(Box::new(InnerProductOfXfes {
+            length: MasterExtTable::NUM_CONSTRAINTS,
+        }));
+        let horner_evaluation_of_ood_curr_row_quot_segments =
+            library.import(Box::new(HornerEvaluation {
+                num_coefficients: NUM_QUOTIENT_SEGMENTS,
+            }));
 
         let verify_log_2_padded_height =
             if let Some(expected_log_2_padded_height) = self.log_2_padded_height {
@@ -94,6 +116,7 @@ impl BasicSnippet for StarkVerify {
                 // _ *clm
 
                 call {new_proof_iter}
+                hint p_iter = stack[0]
                 // _ *clm *p_iter
 
                 dup 0
@@ -109,10 +132,12 @@ impl BasicSnippet for StarkVerify {
 
                 push 2
                 pow
+                hint padded_height = stack[0]
                 // _ *clm *p_iter padded_height
 
                 dup 1
                 call {next_as_merkleroot}
+                hint base_mr = stack[0]
                 // _ *clm *p_iter padded_height *base_mr
 
                 swap 3
@@ -126,18 +151,22 @@ impl BasicSnippet for StarkVerify {
 
                 dup 1
                 call {next_as_merkleroot}
+                hint ext_mr = stack[0]
                 // _ *base_mr *p_iter padded_height *ext_mr
 
                 call {sample_quotient_codeword_weights}
                 // _ *base_mr *p_iter padded_height *ext_mr *quot_cw_ws
+                hint quot_codeword_weights = stack[0]
 
                 dup 3
                 call {next_as_merkleroot}
+                hint quot_mr = stack[0]
                 // _ *base_mr *p_iter padded_height *ext_mr *quot_cw_ws *quot_mr
 
                 push 0
                 dup 4
                 call {domain_generator}
+                hint trace_domain_generator = stack[0]
                 // _ *base_mr *p_iter padded_height *ext_mr *quot_cw_ws *quot_mr dom_gen
 
                 dup 0
@@ -156,22 +185,63 @@ impl BasicSnippet for StarkVerify {
                 add
                 // _ *base_mr *p_iter padded_height *ext_mr *quot_cw_ws *quot_mr dom_gen [out_of_domain_curr_row] *ood_points
 
-                swap 7
+                swap 8
                 // _ *base_mr *p_iter *ood_points *ext_mr *quot_cw_ws *quot_mr dom_gen [out_of_domain_curr_row] padded_height
+                // _ *base_mr *p_iter *ood_points *ext_mr *quot_cw_ws *quot_mr dom_gen oodcr2 oodcr1 oodcr0 padded_height
 
                 swap 1
                 swap 2
                 swap 3
                 swap 4
-                swap 5
-                // _ *base_mr *p_iter *ood_points *ext_mr *quot_cw_ws *quot_mr [out_of_domain_curr_row] padded_height dom_gen
+                // _ *base_mr *p_iter *ood_points *ext_mr *quot_cw_ws *quot_mr oodcr2 oodcr1 oodcr0 padded_height dom_gen
 
                 call {quotient_summands}
                 // _ *base_mr *p_iter *ood_points *ext_mr *quot_cw_ws *quot_mr *quotient_summands
 
+                // TODO: Calculate `[out_of_domain_quotient_value]` later!
                 swap 1
                 swap 2
                 // _ *base_mr *p_iter *ood_points *ext_mr *quot_mr *quotient_summands *quot_cw_ws
+
+                call {inner_product_quotient_summands}
+                // _ *base_mr *p_iter *ood_points *ext_mr *quot_mr [out_of_domain_quotient_value]
+
+                // Get all out-of-domain rows from proof
+                dup 6
+                call {next_as_outofdomainbaserow}
+
+                dup 7
+                call {next_as_outofdomainextrow}
+
+                dup 8
+                call {next_as_outofdomainbaserow}
+
+                dup 9
+                call {next_as_outofdomainextrow}
+
+                dup 10
+                call {next_as_outofdomainquotientsegments}
+                // _ *base_mr *p_iter *ood_points *ext_mr *quot_mr [out_of_domain_quotient_value] *ood_base_row_curr *ood_ext_row_curr *odd_base_row_next *ood_ext_row_next *ood_quotient_segments
+
+                // Calculate `sum_of_evaluated_out_of_domain_quotient_segments`
+                dup 10
+                {&OutOfDomainPoints::read_ood_point(OodPoint::CurrentRow)}
+                // _ *base_mr *p_iter *ood_points *ext_mr *quot_mr [out_of_domain_quotient_value] *ood_base_row_curr *ood_ext_row_curr *odd_base_row_next *ood_ext_row_next *ood_quotient_segments [ood_curr_row]
+
+                call {horner_evaluation_of_ood_curr_row_quot_segments}
+                // _ *base_mr *p_iter *ood_points *ext_mr *quot_mr [out_of_domain_quotient_value] *ood_base_row_curr *ood_ext_row_curr *odd_base_row_next *ood_ext_row_next [sum_of_evaluated_out_of_domain_quotient_segments]
+
+                dup 7
+                eq
+                assert
+                dup 7
+                eq
+                assert
+                dup 7
+                eq
+                assert
+                // _ *base_mr *p_iter *ood_points *ext_mr *quot_mr [out_of_domain_quotient_value] *ood_base_row_curr *ood_ext_row_curr *odd_base_row_next *ood_ext_row_next
+
 
                 return
         )

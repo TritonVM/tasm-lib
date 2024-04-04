@@ -1,6 +1,5 @@
 use triton_vm::instruction::LabelledInstruction;
 use triton_vm::triton_asm;
-use triton_vm::twenty_first::shared_math::b_field_element::BFieldElement;
 use triton_vm::twenty_first::shared_math::x_field_element::EXTENSION_DEGREE;
 
 use crate::arithmetic::xfe::to_the_fourth::ToTheFourth;
