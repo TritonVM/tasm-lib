@@ -105,16 +105,38 @@ impl BasicSnippet for StarkVerify {
             assert
         );
 
+        let assert_top_two_xfes_eq = triton_asm!(
+            // _ y2 y1 y0 x2 x1 x0
+
+            swap 4
+            eq
+            assert
+            // _ y2 x0 y0 x2
+
+            swap 2
+            eq
+            assert
+            // _ y2 x2
+
+            eq
+            assert
+            // _
+        );
+
         triton_asm!(
             {entrypoint}:
                 sponge_init
 
                 // _ *clm
 
+
+                /* Fiat-Shamir: Claim */
                 dup 0
                 call {instantiate_fiat_shamir_with_claim}
                 // _ *clm
 
+
+                /* derive additional parameters */
                 call {new_proof_iter}
                 hint p_iter = stack[0]
                 // _ *clm *p_iter
@@ -135,6 +157,8 @@ impl BasicSnippet for StarkVerify {
                 hint padded_height = stack[0]
                 // _ *clm *p_iter padded_height
 
+
+                /* Fiat-Shamir 1 */
                 dup 1
                 call {next_as_merkleroot}
                 hint base_mr = stack[0]
@@ -163,6 +187,8 @@ impl BasicSnippet for StarkVerify {
                 hint quot_mr = stack[0]
                 // _ *base_mr *p_iter padded_height *ext_mr *quot_cw_ws *quot_mr
 
+
+                /* sample and calculate OOD points (not rows) */
                 push 0
                 dup 4
                 call {domain_generator}
@@ -178,6 +204,8 @@ impl BasicSnippet for StarkVerify {
                 call {calculate_out_of_domain_points}
                 // _ *base_mr *p_iter padded_height *ext_mr *quot_cw_ws *quot_mr dom_gen *ood_points
 
+
+                /* out-of-domain quotient summands */
                 push 2
                 add
                 read_mem {EXTENSION_DEGREE}
@@ -187,61 +215,60 @@ impl BasicSnippet for StarkVerify {
 
                 swap 8
                 // _ *base_mr *p_iter *ood_points *ext_mr *quot_cw_ws *quot_mr dom_gen [out_of_domain_curr_row] padded_height
-                // _ *base_mr *p_iter *ood_points *ext_mr *quot_cw_ws *quot_mr dom_gen oodcr2 oodcr1 oodcr0 padded_height
 
                 swap 1
                 swap 2
                 swap 3
                 swap 4
-                // _ *base_mr *p_iter *ood_points *ext_mr *quot_cw_ws *quot_mr oodcr2 oodcr1 oodcr0 padded_height dom_gen
+                // _ *base_mr *p_iter *ood_points *ext_mr *quot_cw_ws *quot_mr [out_of_domain_curr_row] padded_height dom_gen
 
                 call {quotient_summands}
                 // _ *base_mr *p_iter *ood_points *ext_mr *quot_cw_ws *quot_mr *quotient_summands
 
-                // TODO: Calculate `[out_of_domain_quotient_value]` later!
-                swap 1
-                swap 2
-                // _ *base_mr *p_iter *ood_points *ext_mr *quot_mr *quotient_summands *quot_cw_ws
 
-                call {inner_product_quotient_summands}
-                // _ *base_mr *p_iter *ood_points *ext_mr *quot_mr [out_of_domain_quotient_value]
-
-                // Get all out-of-domain rows from proof
-                dup 6
+                /* Dequeue out-of-domain row */
+                dup 5
                 call {next_as_outofdomainbaserow}
 
-                dup 7
+                dup 6
                 call {next_as_outofdomainextrow}
+
+                dup 7
+                call {next_as_outofdomainbaserow}
 
                 dup 8
-                call {next_as_outofdomainbaserow}
-
-                dup 9
                 call {next_as_outofdomainextrow}
 
-                dup 10
+                dup 9
                 call {next_as_outofdomainquotientsegments}
-                // _ *base_mr *p_iter *ood_points *ext_mr *quot_mr [out_of_domain_quotient_value] *ood_base_row_curr *ood_ext_row_curr *odd_base_row_next *ood_ext_row_next *ood_quotient_segments
+                // _ *base_mr *p_iter *ood_points *ext_mr *quot_cw_ws *quot_mr *quotient_summands *ood_base_row_curr *ood_ext_row_curr *odd_base_row_next *ood_ext_row_next *ood_quotient_segments
 
-                // Calculate `sum_of_evaluated_out_of_domain_quotient_segments`
-                dup 10
+
+                /* Calculate `sum_of_evaluated_out_of_domain_quotient_segments` */
+                dup 9
                 {&OutOfDomainPoints::read_ood_point(OodPoint::CurrentRow)}
-                // _ *base_mr *p_iter *ood_points *ext_mr *quot_mr [out_of_domain_quotient_value] *ood_base_row_curr *ood_ext_row_curr *odd_base_row_next *ood_ext_row_next *ood_quotient_segments [ood_curr_row]
+                // _ *base_mr *p_iter *ood_points *ext_mr *quot_cw_ws *quot_mr *quotient_summands *ood_base_row_curr *ood_ext_row_curr *odd_base_row_next *ood_ext_row_next *ood_quotient_segments [ood_curr_row]
 
                 call {horner_evaluation_of_ood_curr_row_quot_segments}
-                // _ *base_mr *p_iter *ood_points *ext_mr *quot_mr [out_of_domain_quotient_value] *ood_base_row_curr *ood_ext_row_curr *odd_base_row_next *ood_ext_row_next [sum_of_evaluated_out_of_domain_quotient_segments]
+                // _ *base_mr *p_iter *ood_points *ext_mr *quot_cw_ws *quot_mr *quotient_summands *ood_base_row_curr *ood_ext_row_curr *odd_base_row_next *ood_ext_row_next [sum_of_evaluated_out_of_domain_quotient_segments]
 
-                dup 7
-                eq
-                assert
-                dup 7
-                eq
-                assert
-                dup 7
-                eq
-                assert
-                // _ *base_mr *p_iter *ood_points *ext_mr *quot_mr [out_of_domain_quotient_value] *ood_base_row_curr *ood_ext_row_curr *odd_base_row_next *ood_ext_row_next
 
+                /* Calculate inner product `out_of_domain_quotient_value` */
+                swap 2
+                swap 4
+                swap 9
+                swap 1
+                swap 3
+                swap 7
+                // _ *base_mr *p_iter *ood_points *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr [sum_of_evaluated_out_of_domain_quotient_segments] *quot_cw_ws *quotient_summands
+
+                call {inner_product_quotient_summands}
+                // _ *base_mr *p_iter *ood_points *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr [sum_of_evaluated_out_of_domain_quotient_segments] [out_of_domain_quotient_value]
+
+
+                /* Verify quotient's segments */
+                {&assert_top_two_xfes_eq}
+                // _ *base_mr *p_iter *ood_points *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr
 
                 return
         )
