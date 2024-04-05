@@ -17,6 +17,8 @@ use crate::library::Library;
 use crate::recufier::challenges::shared::conventional_challenges_pointer;
 use crate::recufier::claim::instantiate_fiat_shamir_with_claim::InstantiateFiatShamirWithClaim;
 use crate::recufier::claim::shared::claim_type;
+use crate::recufier::fri::verify::FriSnippet;
+use crate::recufier::fri::verify::FriVerify;
 use crate::recufier::master_ext_table::quotient_summands::QuotientSummands;
 use crate::recufier::out_of_domain_points::OodPoint;
 use crate::recufier::out_of_domain_points::OutOfDomainPoints;
@@ -68,6 +70,22 @@ impl BasicSnippet for StarkVerify {
                 stark_parameters: self.stark_parameters,
             },
         ));
+
+        fn fri_snippet() -> FriSnippet {
+            #[cfg(not(test))]
+            {
+                FriSnippet {}
+            }
+            #[cfg(test)]
+            {
+                FriSnippet {
+                    test_instance: FriVerify::dummy(),
+                }
+            }
+        }
+
+        let fri_verify = library.import(Box::new(fri_snippet()));
+
         let get_challenges = library.import(Box::new(
             challenges::new_generic_dyn_claim::NewGenericDynClaim::conventional_with_tvm_parameters(
             ),
@@ -292,6 +310,15 @@ impl BasicSnippet for StarkVerify {
                 call {deep_codeword_weights}
                 // _ *base_mr *p_iter *ood_points *fri *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *base_and_ext_codeword_weights *deep_cw_ws
 
+
+                /* FRI */
+                dup 10
+                swap 1
+                swap 9
+                // _ *base_mr *p_iter *ood_points *deep_cw_ws *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *base_and_ext_codeword_weights *p_iter *fri
+
+                call {fri_verify}
+                // _ *base_mr *p_iter *ood_points *deep_cw_ws *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *base_and_ext_codeword_weights *fri_revealed
 
                 return
         )
