@@ -1,3 +1,4 @@
+pub mod hash_static_size;
 pub mod hash_varlen;
 pub mod sample_indices;
 pub mod sample_scalar_one;
