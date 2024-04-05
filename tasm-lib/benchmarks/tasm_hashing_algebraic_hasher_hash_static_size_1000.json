@@ -1,0 +1,24 @@
+[
+  {
+    "name": "tasm_hashing_algebraic_hasher_hash_static_size_1000",
+    "benchmark_result": {
+      "clock_cycle_count": 733,
+      "hash_table_height": 1369,
+      "u32_table_height": 0,
+      "op_stack_table_height": 2440,
+      "ram_table_height": 1000
+    },
+    "case": "CommonCase"
+  },
+  {
+    "name": "tasm_hashing_algebraic_hasher_hash_static_size_1000",
+    "benchmark_result": {
+      "clock_cycle_count": 733,
+      "hash_table_height": 1369,
+      "u32_table_height": 0,
+      "op_stack_table_height": 2440,
+      "ram_table_height": 1000
+    },
+    "case": "WorstCase"
+  }
+]
