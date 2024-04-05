@@ -1,5 +1,6 @@
 use anyhow::bail;
 use itertools::Itertools;
+use num::Zero;
 use triton_vm::arithmetic_domain::ArithmeticDomain;
 use triton_vm::error::FriValidationError;
 use triton_vm::fri::Fri;
@@ -900,6 +901,19 @@ impl BasicSnippet for FriSnippet {
 }
 
 impl FriVerify {
+    /// Return a dummy FRI verify structure that can be used when an instance is not needed but the
+    /// compiler thinks it is. Is probably only needed when the FRI snippet is used in an external
+    /// test.
+    pub fn dummy() -> Self {
+        Self {
+            expansion_factor: 0,
+            num_collinearity_checks: 0,
+            domain_length: 0,
+            domain_offset: BFieldElement::zero(),
+            domain_generator: BFieldElement::zero(),
+        }
+    }
+
     pub fn extract_digests_required_for_proving(
         &self,
         proof_stream: &ProofStream<Tip5>,
