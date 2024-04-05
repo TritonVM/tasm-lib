@@ -66,7 +66,7 @@ impl BasicSnippet for AbsorbMultipleStaticSize {
     }
 
     fn outputs(&self) -> Vec<(DataType, String)> {
-        vec![]
+        vec![(DataType::VoidPointer, "(sequence + size)".to_string())]
     }
 
     fn entrypoint(&self) -> String {
@@ -108,8 +108,10 @@ impl BasicSnippet for AbsorbMultipleStaticSize {
                 {&read_remainder_and_pad}
 
                 sponge_absorb
-                pop 1
-                // _
+                push 1
+                add
+
+                // _ (*address + self.size)
 
                 return
         }
@@ -141,6 +143,8 @@ impl Procedure for AbsorbMultipleStaticSize {
 
         let sponge = sponge.as_mut().expect("sponge must be initialized");
         sponge.pad_and_absorb_all(&sequence);
+
+        stack.push(address + BFieldElement::new(self.size.try_into().unwrap()));
 
         // output empty
         vec![]

@@ -65,6 +65,12 @@ impl BasicSnippet for StarkVerify {
         let next_as_outofdomainquotientsegments = library.import(Box::new(DequeueNextAs {
             proof_item: ProofItemVariant::OutOfDomainQuotientSegments,
         }));
+        let next_as_basetablerows = library.import(Box::new(DequeueNextAs {
+            proof_item: ProofItemVariant::MasterBaseTableRows,
+        }));
+        let next_as_exttablerows = library.import(Box::new(DequeueNextAs {
+            proof_item: ProofItemVariant::MasterExtTableRows,
+        }));
         let derive_fri_parameters = library.import(Box::new(
             fri::derive_from_stark_params::DeriveFriFromStarkParams {
                 stark_parameters: self.stark_parameters,
@@ -319,6 +325,12 @@ impl BasicSnippet for StarkVerify {
 
                 call {fri_verify}
                 // _ *base_mr *p_iter *ood_points *deep_cw_ws *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *base_and_ext_codeword_weights *fri_revealed
+
+
+                /* Read base-table rows and verify against its Merkle root */
+                dup 10
+                call {next_as_basetablerows}
+                // _ *base_mr *p_iter *ood_points *deep_cw_ws *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *base_and_ext_codeword_weights *fri_revealed *base_table_rows
 
                 return
         )
