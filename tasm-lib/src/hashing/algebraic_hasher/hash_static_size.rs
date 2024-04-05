@@ -5,7 +5,7 @@ use triton_vm::prelude::*;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct HashStaticSize {
-    size: usize,
+    pub size: usize,
 }
 
 impl BasicSnippet for HashStaticSize {
@@ -14,7 +14,10 @@ impl BasicSnippet for HashStaticSize {
     }
 
     fn outputs(&self) -> Vec<(DataType, String)> {
-        vec![(DataType::Digest, "digest".to_owned())]
+        vec![
+            (DataType::VoidPointer, "*addr + size".to_owned()),
+            (DataType::Digest, "digest".to_owned()),
+        ]
     }
 
     fn entrypoint(&self) -> String {
@@ -35,12 +38,12 @@ impl BasicSnippet for HashStaticSize {
             {entrypoint}:
                 sponge_init
                 call {absorb_subroutine}
-                sponge_squeeze  // _ d[9] d[8] d[7] d[6] d[5] d[4] d[3] d[2] d[1] d[0]
-                swap 5 pop 1    // _ d[9] d[8] d[7] d[6] d[0] d[4] d[3] d[2] d[1]
-                swap 5 pop 1    // _ d[9] d[8] d[7] d[1] d[0] d[4] d[3] d[2]
-                swap 5 pop 1    // _ d[9] d[8] d[2] d[1] d[0] d[4] d[3]
-                swap 5 pop 1    // _ d[9] d[3] d[2] d[1] d[0] d[4]
-                swap 5 pop 1    // _ d[4] d[3] d[2] d[1] d[0]
+                sponge_squeeze  // _ *ret_addr d[9] d[8] d[7] d[6] d[5] d[4] d[3] d[2] d[1] d[0]
+                swap 5 pop 1    // _ *ret_addr d[9] d[8] d[7] d[6] d[0] d[4] d[3] d[2] d[1]
+                swap 5 pop 1    // _ *ret_addr d[9] d[8] d[7] d[1] d[0] d[4] d[3] d[2]
+                swap 5 pop 1    // _ *ret_addr d[9] d[8] d[2] d[1] d[0] d[4] d[3]
+                swap 5 pop 1    // _ *ret_addr d[9] d[3] d[2] d[1] d[0] d[4]
+                swap 5 pop 1    // _ *ret_addr d[4] d[3] d[2] d[1] d[0]
                 return
         )
     }

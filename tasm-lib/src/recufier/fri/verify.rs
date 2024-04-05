@@ -89,7 +89,7 @@ pub(super) fn fri_verify_type() -> StructType {
 }
 
 impl FriSnippet {
-    fn indexed_leaves_list_type() -> DataType {
+    pub(crate) fn indexed_leaves_list_type() -> DataType {
         let indexed_leaf_type = DataType::Tuple(vec![DataType::U32, DataType::Xfe]);
         DataType::List(Box::new(indexed_leaf_type))
     }
