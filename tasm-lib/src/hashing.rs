@@ -1,4 +1,5 @@
 pub mod absorb_multiple;
+pub mod absorb_multiple_static_size;
 pub mod algebraic_hasher;
 pub mod divine_sibling_u64_index;
 pub mod eq_digest;

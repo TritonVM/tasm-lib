@@ -1,0 +1,24 @@
+[
+  {
+    "name": "tasm_hashing_absorb_multiple_static_size_102",
+    "benchmark_result": {
+      "clock_cycle_count": 90,
+      "hash_table_height": 162,
+      "u32_table_height": 0,
+      "op_stack_table_height": 267,
+      "ram_table_height": 102
+    },
+    "case": "CommonCase"
+  },
+  {
+    "name": "tasm_hashing_absorb_multiple_static_size_102",
+    "benchmark_result": {
+      "clock_cycle_count": 90,
+      "hash_table_height": 162,
+      "u32_table_height": 0,
+      "op_stack_table_height": 267,
+      "ram_table_height": 102
+    },
+    "case": "WorstCase"
+  }
+]
