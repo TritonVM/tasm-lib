@@ -4,14 +4,24 @@ use crate::hashing::merkle_verify::MerkleVerify;
 use crate::library::Library;
 use crate::recufier::fri::verify::FriSnippet;
 use crate::traits::basic_snippet::BasicSnippet;
+use strum::Display;
 use triton_vm::prelude::*;
-use triton_vm::table::NUM_BASE_COLUMNS;
+use triton_vm::table::{NUM_BASE_COLUMNS, NUM_EXT_COLUMNS, NUM_QUOTIENT_SEGMENTS};
 use triton_vm::twenty_first::shared_math::tip5::DIGEST_LENGTH;
 use triton_vm::twenty_first::shared_math::x_field_element::EXTENSION_DEGREE;
 
+#[derive(Debug, Copy, Clone, Display)]
+pub enum ColumnType {
+    Base,
+    Extension,
+    Quotient,
+}
+
 /// Crashes the VM is the base table rows do not authenticate against the provided Merkle root
 /// First hashes the rows, then verifies that the digests belong in the Merkle tree.
-pub struct VerifyBaseTableRows;
+pub struct VerifyBaseTableRows {
+    pub column_type: ColumnType,
+}
 
 impl BasicSnippet for VerifyBaseTableRows {
     fn inputs(&self) -> Vec<(DataType, String)> {
@@ -23,10 +33,11 @@ impl BasicSnippet for VerifyBaseTableRows {
                 FriSnippet::indexed_leaves_list_type(),
                 "*fri_revealed".to_owned(),
             ),
-            // type of base table rows is `Vec<[BFieldElement: BASE_TABLE_COLUMNS]>` but encoded
+            // type of {base|ext|quot} table rows i
+            // `Vec<[{BaseFieldElement, XFieldElement, XFieldElement}: COLUMN_COUNT]>` but encoded
             // in memory as a flat structure. So I'm not sure what type to use here. Anyway, it's
-            // certainly a pointer.
-            (DataType::VoidPointer, "*base_table_rows".to_owned()),
+            // certainly a list.
+            (DataType::VoidPointer, "*table_rows".to_owned()),
         ]
     }
 
@@ -35,23 +46,26 @@ impl BasicSnippet for VerifyBaseTableRows {
     }
 
     fn entrypoint(&self) -> String {
-        "verify_base_table_rows".to_owned()
+        format!("verify_{}_table_rows", self.column_type)
     }
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
 
-        let hash_base_row = library.import(Box::new(HashStaticSize {
-            size: NUM_BASE_COLUMNS,
+        let hash_static_size = match self.column_type {
+            ColumnType::Base => NUM_BASE_COLUMNS,
+            ColumnType::Extension => NUM_EXT_COLUMNS * EXTENSION_DEGREE,
+            ColumnType::Quotient => NUM_QUOTIENT_SEGMENTS * EXTENSION_DEGREE,
+        };
+        let hash_row = library.import(Box::new(HashStaticSize {
+            size: hash_static_size,
         }));
         let merkle_root_verify = library.import(Box::new(MerkleVerify));
 
         let loop_label = format!("{entrypoint}_loop");
         let loop_code = triton_asm!(
-            // Invariant: _ remaining_iterations merkle_tree_height *merkle_tree_root *fri_revealed_leaf_index *base_row_elem
+            // Invariant: _ remaining_iterations merkle_tree_height *merkle_tree_root *fri_revealed_leaf_index *row_elem
             {loop_label}:
-                break
-
                 // Check end-loop condition
                 dup 4
                 push 0
@@ -72,41 +86,41 @@ impl BasicSnippet for VerifyBaseTableRows {
                 add
                 read_mem {DIGEST_LENGTH}
                 pop 1
-                // _ remaining_iterations merkle_tree_height *merkle_tree_root *fri_revealed_leaf_index *base_row_elem [mt_root]
+                // _ remaining_iterations merkle_tree_height *merkle_tree_root *fri_revealed_leaf_index *row_elem [mt_root]
 
                 /* 2. */
                 dup 6
                 read_mem 1
                 push {EXTENSION_DEGREE + 2}
                 add
-                // _ remaining_iterations merkle_tree_height *merkle_tree_root *fri_revealed_leaf_index *base_row_elem [mt_root] fri_revealed_leaf_index (*fri_revealed_leaf_index + 4)
-                // _ remaining_iterations merkle_tree_height *merkle_tree_root *fri_revealed_leaf_index *base_row_elem [mt_root] fri_revealed_leaf_index *fri_revealed_leaf_index_next
+                // _ remaining_iterations merkle_tree_height *merkle_tree_root *fri_revealed_leaf_index *row_elem [mt_root] fri_revealed_leaf_index (*fri_revealed_leaf_index + 4)
+                // _ remaining_iterations merkle_tree_height *merkle_tree_root *fri_revealed_leaf_index *row_elem [mt_root] fri_revealed_leaf_index *fri_revealed_leaf_index_next
 
                 swap 8
                 pop 1
-                // _ remaining_iterations merkle_tree_height *merkle_tree_root *fri_revealed_leaf_index_next *base_row_elem [mt_root] fri_revealed_leaf_index
+                // _ remaining_iterations merkle_tree_height *merkle_tree_root *fri_revealed_leaf_index_next *row_elem [mt_root] fri_revealed_leaf_index
 
                 /* 3. */
                 dup 6
-                call {hash_base_row}
-                // _ remaining_iterations merkle_tree_height *merkle_tree_root *fri_revealed_leaf_index_next *base_row_elem [mt_root] fri_revealed_leaf_index [base_row_digest] *base_row_elem_next
+                call {hash_row}
+                // _ remaining_iterations merkle_tree_height *merkle_tree_root *fri_revealed_leaf_index_next *row_elem [mt_root] fri_revealed_leaf_index [base_row_digest] *row_elem_next
 
                 swap 12
                 pop 1
-                // _ remaining_iterations merkle_tree_height *merkle_tree_root *fri_revealed_leaf_index_next *base_row_elem_next [mt_root] fri_revealed_leaf_index [base_row_digest]
+                // _ remaining_iterations merkle_tree_height *merkle_tree_root *fri_revealed_leaf_index_next *row_elem_next [mt_root] fri_revealed_leaf_index [base_row_digest]
 
                 /* 4. */
                 dup 14
-                // _ remaining_iterations merkle_tree_height *merkle_tree_root *fri_revealed_leaf_index_next *base_row_elem_next [mt_root] fri_revealed_leaf_index [base_row_digest] merkle_tree_height
+                // _ remaining_iterations merkle_tree_height *merkle_tree_root *fri_revealed_leaf_index_next *row_elem_next [mt_root] fri_revealed_leaf_index [base_row_digest] merkle_tree_height
 
                 call {merkle_root_verify}
-                // _ remaining_iterations merkle_tree_height *merkle_tree_root *fri_revealed_leaf_index_next *base_row_elem_next
+                // _ remaining_iterations merkle_tree_height *merkle_tree_root *fri_revealed_leaf_index_next *row_elem_next
 
                 swap 4
                 push -1
                 add
                 swap 4
-                // _ (remaining_iterations - 1) merkle_tree_height *merkle_tree_root *fri_revealed_leaf_index_next *base_row_elem_next
+                // _ (remaining_iterations - 1) merkle_tree_height *merkle_tree_root *fri_revealed_leaf_index_next *row_elem_next
 
                 recurse
         );
@@ -121,12 +135,12 @@ impl BasicSnippet for VerifyBaseTableRows {
                 swap 1
                 // _ num_combination_codeword_checks merkle_tree_height *merkle_tree_root (*fri_revealed_first_elem.0) *base_table_rows
 
-                // skip length indicator
+                // skip length indicator of row vector
                 push 1
                 add
 
                 call {loop_label}
-                // _ 0 merkle_tree_height *merkle_tree_root *fri_revealed_leaf_index_next *base_row_elem_next
+                // _ 0 merkle_tree_height *merkle_tree_root *fri_revealed_leaf_index_next *row_elem_next
 
                 pop 5
                 // _

@@ -21,6 +21,7 @@ use crate::recufier::claim::shared::claim_type;
 use crate::recufier::fri::verify::FriSnippet;
 use crate::recufier::fri::verify::FriVerify;
 use crate::recufier::master_ext_table::quotient_summands::QuotientSummands;
+use crate::recufier::master_ext_table::verify_base_table_rows::ColumnType;
 use crate::recufier::master_ext_table::verify_base_table_rows::VerifyBaseTableRows;
 use crate::recufier::out_of_domain_points::OodPoint;
 use crate::recufier::out_of_domain_points::OutOfDomainPoints;
@@ -69,6 +70,9 @@ impl BasicSnippet for StarkVerify {
         }));
         let next_as_basetablerows = library.import(Box::new(DequeueNextAs {
             proof_item: ProofItemVariant::MasterBaseTableRows,
+        }));
+        let next_as_authentication_path = library.import(Box::new(DequeueNextAs {
+            proof_item: ProofItemVariant::AuthenticationStructure,
         }));
         let next_as_exttablerows = library.import(Box::new(DequeueNextAs {
             proof_item: ProofItemVariant::MasterExtTableRows,
@@ -124,7 +128,15 @@ impl BasicSnippet for StarkVerify {
         let deep_codeword_weights = library.import(Box::new(SampleScalarsStaticLengthDynMalloc {
             num_elements: NUM_DEEP_CODEWORD_COMPONENTS,
         }));
-        let verify_base_table_rows = library.import(Box::new(VerifyBaseTableRows));
+        let verify_base_table_rows = library.import(Box::new(VerifyBaseTableRows {
+            column_type: ColumnType::Base,
+        }));
+        let verify_extension_table_rows = library.import(Box::new(VerifyBaseTableRows {
+            column_type: ColumnType::Extension,
+        }));
+        let verify_quotient_table_rows = library.import(Box::new(VerifyBaseTableRows {
+            column_type: ColumnType::Quotient,
+        }));
 
         let verify_log_2_padded_height =
             if let Some(expected_log_2_padded_height) = self.log_2_padded_height {
@@ -321,51 +333,109 @@ impl BasicSnippet for StarkVerify {
                 call {deep_codeword_weights}
                 // _ *base_mr *p_iter *ood_points *fri *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *b_and_ext_cw_ws *deep_cw_ws
 
+                swap 11
+                // _ *deep_cw_ws *p_iter *ood_points *fri *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *b_and_ext_cw_ws *base_mr
+
 
                 /* FRI */
                 // We need the `fri` data structure for field values later, so we preserve its pointer on the stack
                 dup 10
                 dup 9
                 call {fri_verify}
-                // _ *base_mr *p_iter *ood_points *fri *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *b_and_ext_cw_ws *deep_cw_ws *fri_revealed
+                // _ *deep_cw_ws *p_iter *ood_points *fri *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *b_and_ext_cw_ws *base_mr *fri_revealed
 
 
-                /* Read base-table rows and verify against its Merkle root */
+                /* Dequeue base-table rows and verify against its Merkle root */
                 dup 11
                 call {next_as_basetablerows}
-                // _ *base_mr *p_iter *ood_points *fri *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *b_and_ext_cw_ws *deep_cw_ws *fri_revealed *base_table_rows
+                // _ *deep_cw_ws *p_iter *ood_points *fri *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *b_and_ext_cw_ws *base_mr *fri_revealed *base_table_rows
 
 
                 dup 10
                 {&num_collinearity_checks_field}
                 read_mem 1
                 pop 1
-                // _ *base_mr *p_iter *ood_points *fri *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *b_and_ext_cw_ws *deep_cw_ws *fri_revealed *base_table_rows num_colli
+                // _ *deep_cw_ws *p_iter *ood_points *fri *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *b_and_ext_cw_ws *base_mr *fri_revealed *base_table_rows num_colli
 
                 push 2
                 mul
-                // _ *base_mr *p_iter *ood_points *fri *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *b_and_ext_cw_ws *deep_cw_ws *fri_revealed *base_table_rows num_cw_chks
+                // _ *deep_cw_ws *p_iter *ood_points *fri *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *b_and_ext_cw_ws *base_mr *fri_revealed *base_table_rows num_cw_chks
 
                 dup 11
                 {&domain_length_field}
                 read_mem 1
                 pop 1
-                // _ *base_mr *p_iter *ood_points *fri *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *b_and_ext_cw_ws *deep_cw_ws *fri_revealed *base_table_rows num_cw_chks dom_len
+                // _ *deep_cw_ws *p_iter *ood_points *fri *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *b_and_ext_cw_ws *base_mr *fri_revealed *base_table_rows num_cw_chks dom_len
 
                 log_2_floor
-                // _ *base_mr *p_iter *ood_points *fri *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *b_and_ext_cw_ws *deep_cw_ws *fri_revealed *base_table_rows num_cw_chks mt_height
+                // _ *deep_cw_ws *p_iter *ood_points *fri *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *b_and_ext_cw_ws *base_mr *fri_revealed *base_table_rows num_cw_chks mt_height
 
-                dup 15
-                // _ *base_mr *p_iter *ood_points *fri *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *b_and_ext_cw_ws *deep_cw_ws *fri_revealed *base_table_rows num_cw_chks mt_height *base_mr
+                swap 1
+                swap 2
+                swap 3
+                swap 4
+                // _ *deep_cw_ws *p_iter *ood_points *fri *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *b_and_ext_cw_ws *fri_revealed *base_table_rows num_cw_chks mt_height *base_mr
 
                 dup 4
-                // _ *base_mr *p_iter *ood_points *fri *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *b_and_ext_cw_ws *deep_cw_ws *fri_revealed *base_table_rows num_cw_chks mt_height *base_mr *fri_revealed
+                // _ *deep_cw_ws *p_iter *ood_points *fri *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *b_and_ext_cw_ws *fri_revealed *base_table_rows num_cw_chks mt_height *base_mr *fri_revealed
 
                 dup 4
-                // _ *base_mr *p_iter *ood_points *fri *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *b_and_ext_cw_ws *deep_cw_ws *fri_revealed *base_table_rows num_cw_chks mt_height *base_mr *fri_revealed *base_table_rows
+                // _ *deep_cw_ws *p_iter *ood_points *fri *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *b_and_ext_cw_ws *fri_revealed *base_table_rows num_cw_chks mt_height *base_mr *fri_revealed *base_table_rows
 
                 call {verify_base_table_rows}
-                // _ *base_mr *p_iter *ood_points *fri *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *b_and_ext_cw_ws *deep_cw_ws *fri_revealed *base_table_rows
+                // _ *deep_cw_ws *p_iter *ood_points *fri *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *b_and_ext_cw_ws *fri_revealed *base_table_rows
+
+
+                /* Dequeue and ignore base-table's authentication path */
+                dup 11
+                call {next_as_authentication_path}
+                pop 1
+                // _ *deep_cw_ws *p_iter *ood_points *fri *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *b_and_ext_cw_ws *fri_revealed *base_table_rows
+
+                swap 8
+                // _ *deep_cw_ws *p_iter *ood_points *fri *base_table_rows *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *b_and_ext_cw_ws *fri_revealed *ext_mr
+
+
+                /* Dequeue ext-table rows and verify against its Merkle root */
+                dup 11
+                call {next_as_exttablerows}
+                // _ *deep_cw_ws *p_iter *ood_points *fri *base_table_rows *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *b_and_ext_cw_ws *fri_revealed *ext_mr *ext_table_rows
+
+                swap 1
+                // _ *deep_cw_ws *p_iter *ood_points *fri *base_table_rows *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *b_and_ext_cw_ws *fri_revealed *ext_table_rows *ext_mr
+
+                dup 10
+                {&num_collinearity_checks_field}
+                read_mem 1
+                pop 1
+                dup 11
+                {&domain_length_field}
+                read_mem 1
+                pop 1
+                log_2_floor
+                // _ *deep_cw_ws *p_iter *ood_points *fri *base_table_rows *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *b_and_ext_cw_ws *fri_revealed *ext_table_rows *ext_mr num_cw_chks mt_height
+
+                swap 1
+                swap 2
+                dup 4
+                dup 4
+                // _ *deep_cw_ws *p_iter *ood_points *fri *base_table_rows *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *b_and_ext_cw_ws *fri_revealed *ext_table_rows num_cw_chks mt_height *ext_mr *fri_revealed *ext_table_rows
+
+                call {verify_extension_table_rows}
+                // _ *deep_cw_ws *p_iter *ood_points *fri *base_table_rows *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *b_and_ext_cw_ws *fri_revealed *ext_table_rows
+
+
+                /* Dequeue and ignore ext-table's authentication path */
+                dup 11
+                call {next_as_authentication_path}
+                pop 1
+
+                swap 6
+                // _ *deep_cw_ws *p_iter *ood_points *fri *base_table_rows *odd_base_row_next *ext_table_rows *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *b_and_ext_cw_ws *fri_revealed *quot_mr
+
+
+                /* Dequeue quotient-table rows and verify against its Merkle root */
+
 
                 return
         )
