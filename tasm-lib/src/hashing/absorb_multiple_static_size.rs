@@ -108,7 +108,7 @@ impl BasicSnippet for AbsorbMultipleStaticSize {
                 {&read_remainder_and_pad}
 
                 sponge_absorb
-                push 1
+                push {self.size % RATE + 1}
                 add
 
                 // _ (*address + self.size)
@@ -193,6 +193,21 @@ mod test {
     use crate::traits::rust_shadow::RustShadow;
 
     use super::AbsorbMultipleStaticSize;
+
+    #[test]
+    fn absorb_multiple_static_size_0() {
+        ShadowedProcedure::new(AbsorbMultipleStaticSize { size: 0 }).test();
+    }
+
+    #[test]
+    fn absorb_multiple_static_size_1() {
+        ShadowedProcedure::new(AbsorbMultipleStaticSize { size: 1 }).test();
+    }
+
+    #[test]
+    fn absorb_multiple_static_size_9() {
+        ShadowedProcedure::new(AbsorbMultipleStaticSize { size: 9 }).test();
+    }
 
     #[test]
     fn absorb_multiple_static_size_small_pbt() {
