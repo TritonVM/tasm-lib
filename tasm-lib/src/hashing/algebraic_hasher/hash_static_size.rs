@@ -33,8 +33,8 @@ impl BasicSnippet for HashStaticSize {
             library.import(Box::new(AbsorbMultipleStaticSize { size: self.size }));
 
         triton_asm!(
-            // BEFORE:      _ addr
-            // AFTER:       _ digest[4] digest[3] digest[2] digest[1] digest[0]
+            // BEFORE:      _ *addr
+            // AFTER:       _ (*addr + size) digest[4] digest[3] digest[2] digest[1] digest[0]
             {entrypoint}:
                 sponge_init
                 call {absorb_subroutine}
@@ -119,6 +119,8 @@ mod tests {
 
             // Put digest back on stack
             stack.extend(digest.reversed().values().to_vec());
+
+            // _ (*ret_addr) d4 d3 d2 d1 d0
 
             vec![]
         }
