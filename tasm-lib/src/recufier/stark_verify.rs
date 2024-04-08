@@ -470,7 +470,7 @@ impl BasicSnippet for StarkVerify {
                 // assert!(num_combination_codeword_checks == base_table_rows.len());
                 // assert!(num_combination_codeword_checks == ext_table_rows.len());
                 // assert!(num_combination_codeword_checks == quotient_segment_elements.len());
-                dup 10
+                dup 9
                 {&num_collinearity_checks_field}
                 read_mem 1
                 pop 1
@@ -479,12 +479,12 @@ impl BasicSnippet for StarkVerify {
                 // _ *deep_cw_ws *p_iter *ood_points *fri *btable_rows *odd_brow_next *ext_table_rows *ood_erow_nxt *ood_brow_curr *ood_erow_curr *b_and_ext_cw_ws *fri_revealed *quot_seg_elems num_cw_chks
 
                 // assert!(num_combination_codeword_checks == revealed_fri_indices_and_elements.len());
-                // dup 2
-                // read_mem 1
-                // pop 1
-                // dup 1
-                // eq
-                // assert
+                dup 2
+                read_mem 1
+                pop 1
+                dup 1
+                eq
+                assert
                 // _ *deep_cw_ws *p_iter *ood_points *fri *btable_rows *odd_brow_next *ext_table_rows *ood_erow_nxt *ood_brow_curr *ood_erow_curr *b_and_ext_cw_ws *fri_revealed *quot_seg_elems num_cw_chks
 
 
