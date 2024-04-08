@@ -2,7 +2,7 @@
   {
     "name": "tasm_hashing_algebraic_hasher_hash_static_size_249",
     "benchmark_result": {
-      "clock_cycle_count": 197,
+      "clock_cycle_count": 198,
       "hash_table_height": 361,
       "u32_table_height": 0,
       "op_stack_table_height": 619,
@@ -13,7 +13,7 @@
   {
     "name": "tasm_hashing_algebraic_hasher_hash_static_size_249",
     "benchmark_result": {
-      "clock_cycle_count": 197,
+      "clock_cycle_count": 198,
       "hash_table_height": 361,
       "u32_table_height": 0,
       "op_stack_table_height": 619,

@@ -15,8 +15,8 @@ impl BasicSnippet for HashStaticSize {
 
     fn outputs(&self) -> Vec<(DataType, String)> {
         vec![
-            (DataType::VoidPointer, "*addr + size".to_owned()),
             (DataType::Digest, "digest".to_owned()),
+            (DataType::VoidPointer, "*addr + size".to_owned()),
         ]
     }
 
@@ -39,11 +39,13 @@ impl BasicSnippet for HashStaticSize {
                 sponge_init
                 call {absorb_subroutine}
                 sponge_squeeze  // _ *ret_addr d[9] d[8] d[7] d[6] d[5] d[4] d[3] d[2] d[1] d[0]
-                swap 5 pop 1    // _ *ret_addr d[9] d[8] d[7] d[6] d[0] d[4] d[3] d[2] d[1]
-                swap 5 pop 1    // _ *ret_addr d[9] d[8] d[7] d[1] d[0] d[4] d[3] d[2]
-                swap 5 pop 1    // _ *ret_addr d[9] d[8] d[2] d[1] d[0] d[4] d[3]
-                swap 5 pop 1    // _ *ret_addr d[9] d[3] d[2] d[1] d[0] d[4]
-                swap 5 pop 1    // _ *ret_addr d[4] d[3] d[2] d[1] d[0]
+                swap 6 pop 1
+                swap 6 pop 1
+                swap 6 pop 1
+                swap 6 pop 1
+                swap 6
+                swap 1 pop 1
+                // _ d[4] d[3] d[2] d[1] d[0] *ret_addr
                 return
         )
     }
@@ -117,10 +119,15 @@ mod tests {
                 stack.pop().unwrap();
             }
 
+            // Remove pointer
+            let input_pointer_plus_size = stack.pop().unwrap();
+
             // Put digest back on stack
             stack.extend(digest.reversed().values().to_vec());
 
-            // _ (*ret_addr) d4 d3 d2 d1 d0
+            stack.push(input_pointer_plus_size);
+
+            // _ d4 d3 d2 d1 d0 *ret_addr
 
             vec![]
         }
