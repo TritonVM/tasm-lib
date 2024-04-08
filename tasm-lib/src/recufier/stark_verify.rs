@@ -11,6 +11,7 @@ use crate::arithmetic::bfe::primitive_root_of_unity::PrimitiveRootOfUnity;
 use crate::array::horner_evaluation::HornerEvaluation;
 use crate::array::inner_product_of_xfes::InnerProductOfXfes;
 use crate::data_type::DataType;
+use crate::field;
 use crate::hashing::algebraic_hasher::sample_scalar_one::SampleScalarOne;
 use crate::hashing::algebraic_hasher::sample_scalars_static_length_dyn_malloc::SampleScalarsStaticLengthDynMalloc;
 use crate::library::Library;
@@ -20,6 +21,7 @@ use crate::recufier::claim::shared::claim_type;
 use crate::recufier::fri::verify::FriSnippet;
 use crate::recufier::fri::verify::FriVerify;
 use crate::recufier::master_ext_table::quotient_summands::QuotientSummands;
+use crate::recufier::master_ext_table::verify_base_table_rows::VerifyBaseTableRows;
 use crate::recufier::out_of_domain_points::OodPoint;
 use crate::recufier::out_of_domain_points::OutOfDomainPoints;
 use crate::recufier::vm_proof_iter::dequeue_next_as::DequeueNextAs;
@@ -76,6 +78,8 @@ impl BasicSnippet for StarkVerify {
                 stark_parameters: self.stark_parameters,
             },
         ));
+        let num_collinearity_checks_field = field!(FriVerify::num_collinearity_checks);
+        let domain_length_field = field!(FriVerify::domain_length);
 
         fn fri_snippet() -> FriSnippet {
             #[cfg(not(test))]
@@ -120,6 +124,7 @@ impl BasicSnippet for StarkVerify {
         let deep_codeword_weights = library.import(Box::new(SampleScalarsStaticLengthDynMalloc {
             num_elements: NUM_DEEP_CODEWORD_COMPONENTS,
         }));
+        let verify_base_table_rows = library.import(Box::new(VerifyBaseTableRows));
 
         let verify_log_2_padded_height =
             if let Some(expected_log_2_padded_height) = self.log_2_padded_height {
@@ -311,26 +316,56 @@ impl BasicSnippet for StarkVerify {
 
                 /* Fiat-shamir 2 */
                 call {sample_base_ext_and_quotient_weights}
-                // _ *base_mr *p_iter *ood_points *fri *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *base_and_ext_codeword_weights
+                // _ *base_mr *p_iter *ood_points *fri *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *b_and_ext_cw_ws
 
                 call {deep_codeword_weights}
-                // _ *base_mr *p_iter *ood_points *fri *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *base_and_ext_codeword_weights *deep_cw_ws
+                // _ *base_mr *p_iter *ood_points *fri *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *b_and_ext_cw_ws *deep_cw_ws
 
 
                 /* FRI */
+                // We need the `fri` data structure for field values later, so we preserve its pointer on the stack
                 dup 10
-                swap 1
-                swap 9
-                // _ *base_mr *p_iter *ood_points *deep_cw_ws *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *base_and_ext_codeword_weights *p_iter *fri
-
+                dup 9
                 call {fri_verify}
-                // _ *base_mr *p_iter *ood_points *deep_cw_ws *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *base_and_ext_codeword_weights *fri_revealed
+                // _ *base_mr *p_iter *ood_points *fri *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *b_and_ext_cw_ws *deep_cw_ws *fri_revealed
 
 
                 /* Read base-table rows and verify against its Merkle root */
-                dup 10
+                dup 11
                 call {next_as_basetablerows}
-                // _ *base_mr *p_iter *ood_points *deep_cw_ws *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *base_and_ext_codeword_weights *fri_revealed *base_table_rows
+                // _ *base_mr *p_iter *ood_points *fri *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *b_and_ext_cw_ws *deep_cw_ws *fri_revealed *base_table_rows
+
+
+                dup 10
+                {&num_collinearity_checks_field}
+                read_mem 1
+                pop 1
+                // _ *base_mr *p_iter *ood_points *fri *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *b_and_ext_cw_ws *deep_cw_ws *fri_revealed *base_table_rows num_colli
+
+                push 2
+                mul
+                // _ *base_mr *p_iter *ood_points *fri *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *b_and_ext_cw_ws *deep_cw_ws *fri_revealed *base_table_rows num_cw_chks
+
+                dup 11
+                {&domain_length_field}
+                read_mem 1
+                pop 1
+                // _ *base_mr *p_iter *ood_points *fri *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *b_and_ext_cw_ws *deep_cw_ws *fri_revealed *base_table_rows num_cw_chks dom_len
+
+                log_2_floor
+                // _ *base_mr *p_iter *ood_points *fri *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *b_and_ext_cw_ws *deep_cw_ws *fri_revealed *base_table_rows num_cw_chks mt_height
+
+                dup 15
+                // _ *base_mr *p_iter *ood_points *fri *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *b_and_ext_cw_ws *deep_cw_ws *fri_revealed *base_table_rows num_cw_chks mt_height *base_mr
+
+                dup 4
+                // _ *base_mr *p_iter *ood_points *fri *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *b_and_ext_cw_ws *deep_cw_ws *fri_revealed *base_table_rows num_cw_chks mt_height *base_mr *fri_revealed
+
+                dup 4
+                // _ *base_mr *p_iter *ood_points *fri *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *b_and_ext_cw_ws *deep_cw_ws *fri_revealed *base_table_rows num_cw_chks mt_height *base_mr *fri_revealed *base_table_rows
+
+                call {verify_base_table_rows}
+                // _ *base_mr *p_iter *ood_points *fri *ext_mr *odd_base_row_next *quot_mr *ood_ext_row_next *ood_base_row_curr *ood_ext_row_curr *b_and_ext_cw_ws *deep_cw_ws *fri_revealed *base_table_rows
 
                 return
         )
