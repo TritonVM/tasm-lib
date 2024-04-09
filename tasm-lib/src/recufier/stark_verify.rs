@@ -9,6 +9,7 @@ use triton_vm::twenty_first::shared_math::x_field_element::EXTENSION_DEGREE;
 
 use crate::arithmetic::bfe::primitive_root_of_unity::PrimitiveRootOfUnity;
 use crate::array::horner_evaluation::HornerEvaluation;
+use crate::array::inner_product_of_three_rows_with_weights::InnerProductOfThreeRowsWithWeights;
 use crate::array::inner_product_of_xfes::InnerProductOfXfes;
 use crate::data_type::DataType;
 use crate::field;
@@ -49,6 +50,13 @@ impl BasicSnippet for StarkVerify {
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
+
+        let ood_curr_row_base_and_ext_value_pointer =
+            library.kmalloc(EXTENSION_DEGREE.try_into().unwrap());
+        let ood_next_row_base_and_ext_value_pointer =
+            library.kmalloc(EXTENSION_DEGREE.try_into().unwrap());
+        let ood_curr_row_quotient_segment_value_pointer =
+            library.kmalloc(EXTENSION_DEGREE.try_into().unwrap());
 
         let instantiate_fiat_shamir_with_claim =
             library.import(Box::new(InstantiateFiatShamirWithClaim));
@@ -140,6 +148,9 @@ impl BasicSnippet for StarkVerify {
         let verify_quotient_segments = library.import(Box::new(VerifyBaseTableRows {
             column_type: ColumnType::Quotient,
         }));
+        let inner_product_three_rows_with_weights = library.import(Box::new(
+            InnerProductOfThreeRowsWithWeights::recufier_parameters(),
+        ));
 
         let verify_log_2_padded_height =
             if let Some(expected_log_2_padded_height) = self.log_2_padded_height {
@@ -402,10 +413,10 @@ impl BasicSnippet for StarkVerify {
                 /* Dequeue ext-table rows and verify against its Merkle root */
                 dup 11
                 call {next_as_exttablerows}
-                // _ *deep_cw_ws *p_iter *ood_points *fri *btable_rows *odd_brow_nxt *quot_mr *ood_erow_nxt *ood_brow_curr *ood_erow_curr *b_and_ext_cw_ws *fri_revealed *e_mr *ext_table_rows
+                // _ *deep_cw_ws *p_iter *ood_points *fri *btable_rows *odd_brow_nxt *quot_mr *ood_erow_nxt *ood_brow_curr *ood_erow_curr *b_and_ext_cw_ws *fri_revealed *e_mr *etable_rows
 
                 swap 1
-                // _ *deep_cw_ws *p_iter *ood_points *fri *btable_rows *odd_brow_nxt *quot_mr *ood_erow_nxt *ood_brow_curr *ood_erow_curr *b_and_ext_cw_ws *fri_revealed *ext_table_rows *e_mr
+                // _ *deep_cw_ws *p_iter *ood_points *fri *btable_rows *odd_brow_nxt *quot_mr *ood_erow_nxt *ood_brow_curr *ood_erow_curr *b_and_ext_cw_ws *fri_revealed *etable_rows *e_mr
 
                 dup 10
                 {&num_collinearity_checks_field}
@@ -418,16 +429,16 @@ impl BasicSnippet for StarkVerify {
                 read_mem 1
                 pop 1
                 log_2_floor
-                // _ *deep_cw_ws *p_iter *ood_points *fri *btable_rows *odd_brow_next *quot_mr *ood_erow_nxt *ood_brow_curr *ood_erow_curr *b_and_ext_cw_ws *fri_revealed *ext_table_rows *e_mr num_cw_chks mt_height
+                // _ *deep_cw_ws *p_iter *ood_points *fri *btable_rows *odd_brow_next *quot_mr *ood_erow_nxt *ood_brow_curr *ood_erow_curr *b_and_ext_cw_ws *fri_revealed *etable_rows *e_mr num_cw_chks mt_height
 
                 swap 1
                 swap 2
                 dup 4
                 dup 4
-                // _ *deep_cw_ws *p_iter *ood_points *fri *btable_rows *odd_brow_next *quot_mr *ood_erow_nxt *ood_brow_curr *ood_erow_curr *b_and_ext_cw_ws *fri_revealed *ext_table_rows num_cw_chks mt_height *e_mr *fri_revealed *ext_table_rows
+                // _ *deep_cw_ws *p_iter *ood_points *fri *btable_rows *odd_brow_next *quot_mr *ood_erow_nxt *ood_brow_curr *ood_erow_curr *b_and_ext_cw_ws *fri_revealed *etable_rows num_cw_chks mt_height *e_mr *fri_revealed *etable_rows
 
                 call {verify_extension_table_rows}
-                // _ *deep_cw_ws *p_iter *ood_points *fri *btable_rows *odd_brow_next *quot_mr *ood_erow_nxt *ood_brow_curr *ood_erow_curr *b_and_ext_cw_ws *fri_revealed *ext_table_rows
+                // _ *deep_cw_ws *p_iter *ood_points *fri *btable_rows *odd_brow_next *quot_mr *ood_erow_nxt *ood_brow_curr *ood_erow_curr *b_and_ext_cw_ws *fri_revealed *etable_rows
 
 
                 /* Dequeue and ignore ext-table's authentication path */
@@ -436,7 +447,7 @@ impl BasicSnippet for StarkVerify {
                 pop 1
 
                 swap 6
-                // _ *deep_cw_ws *p_iter *ood_points *fri *btable_rows *odd_brow_next *ext_table_rows *ood_erow_nxt *ood_brow_curr *ood_erow_curr *b_and_ext_cw_ws *fri_revealed *quot_mr
+                // _ *deep_cw_ws *p_iter *ood_points *fri *btable_rows *odd_brow_next *etable_rows *ood_erow_nxt *ood_brow_curr *ood_erow_curr *b_and_ext_cw_ws *fri_revealed *quot_mr
 
 
                 /* Dequeue quotient-table rows and verify against its Merkle root */
@@ -454,21 +465,20 @@ impl BasicSnippet for StarkVerify {
                 read_mem 1
                 pop 1
                 log_2_floor
-                // _ *deep_cw_ws *p_iter *ood_points *fri *btable_rows *odd_brow_next *ext_table_rows *ood_erow_nxt *ood_brow_curr *ood_erow_curr *b_and_ext_cw_ws *fri_revealed *quot_seg_elems *quot_mr num_cw_chks mt_height
+                // _ *deep_cw_ws *p_iter *ood_points *fri *btable_rows *odd_brow_next *etable_rows *ood_erow_nxt *ood_brow_curr *ood_erow_curr *b_and_ext_cw_ws *fri_revealed *quot_seg_elems *quot_mr num_cw_chks mt_height
 
                 swap 1
                 swap 2
-                // _ *deep_cw_ws *p_iter *ood_points *fri *btable_rows *odd_brow_next *ext_table_rows *ood_erow_nxt *ood_brow_curr *ood_erow_curr *b_and_ext_cw_ws *fri_revealed *quot_seg_elems num_cw_chks mt_height *quot_mr
+                // _ *deep_cw_ws *p_iter *ood_points *fri *btable_rows *odd_brow_next *etable_rows *ood_erow_nxt *ood_brow_curr *ood_erow_curr *b_and_ext_cw_ws *fri_revealed *quot_seg_elems num_cw_chks mt_height *quot_mr
 
                 dup 4
                 dup 4
-                // _ *deep_cw_ws *p_iter *ood_points *fri *btable_rows *odd_brow_next *ext_table_rows *ood_erow_nxt *ood_brow_curr *ood_erow_curr *b_and_ext_cw_ws *fri_revealed *quot_seg_elems num_cw_chks mt_height *quot_mr *fri_revealed *quot_seg_elems
+                // _ *deep_cw_ws *p_iter *ood_points *fri *btable_rows *odd_brow_next *etable_rows *ood_erow_nxt *ood_brow_curr *ood_erow_curr *b_and_ext_cw_ws *fri_revealed *quot_seg_elems num_cw_chks mt_height *quot_mr *fri_revealed *quot_seg_elems
 
                 call {verify_quotient_segments}
-                // _ *deep_cw_ws *p_iter *ood_points *fri *btable_rows *odd_brow_next *ext_table_rows *ood_erow_nxt *ood_brow_curr *ood_erow_curr *b_and_ext_cw_ws *fri_revealed *quot_seg_elems
+                // _ *deep_cw_ws *p_iter *ood_points *fri *btable_rows *odd_brow_next *etable_rows *ood_erow_nxt *ood_brow_curr *ood_erow_curr *b_and_ext_cw_ws *fri_revealed *quot_seg_elems
 
-                // assert!(num_combination_codeword_checks == base_table_rows.len());
-                // assert!(num_combination_codeword_checks == ext_table_rows.len());
+                /* Various length asserts */
                 // assert!(num_combination_codeword_checks == quotient_segment_elements.len());
                 dup 9
                 {&num_collinearity_checks_field}
@@ -476,16 +486,104 @@ impl BasicSnippet for StarkVerify {
                 pop 1
                 push 2
                 mul
-                // _ *deep_cw_ws *p_iter *ood_points *fri *btable_rows *odd_brow_next *ext_table_rows *ood_erow_nxt *ood_brow_curr *ood_erow_curr *b_and_ext_cw_ws *fri_revealed *quot_seg_elems num_cw_chks
+                // _ *deep_cw_ws *p_iter *ood_points *fri *btable_rows *odd_brow_next *etable_rows *ood_erow_nxt *ood_brow_curr *ood_erow_curr *b_and_ext_cw_ws *fri_revealed *quot_seg_elems num_cw_chks
 
-                // assert!(num_combination_codeword_checks == revealed_fri_indices_and_elements.len());
+                // assert!(num_combination_codeword_checks == revealed_fri_indices_and_elements.len())
                 dup 2
                 read_mem 1
                 pop 1
                 dup 1
                 eq
                 assert
-                // _ *deep_cw_ws *p_iter *ood_points *fri *btable_rows *odd_brow_next *ext_table_rows *ood_erow_nxt *ood_brow_curr *ood_erow_curr *b_and_ext_cw_ws *fri_revealed *quot_seg_elems num_cw_chks
+                // _ *deep_cw_ws *p_iter *ood_points *fri *btable_rows *odd_brow_next *etable_rows *ood_erow_nxt *ood_brow_curr *ood_erow_curr *b_and_ext_cw_ws *fri_revealed *quot_seg_elems num_cw_chks
+
+                // assert!(num_combination_codeword_checks == base_table_rows.len());
+                dup 9
+                read_mem 1
+                pop 1
+                dup 1
+                eq
+                assert
+
+                // assert!(num_combination_codeword_checks == ext_table_rows.len())
+                dup 7
+                read_mem 1
+                pop 1
+                dup 1
+                eq
+                assert
+
+                // assert!(num_combination_codeword_checks == quotient_segment_elements.len());
+                dup 1
+                read_mem 1
+                pop 1
+                dup 1
+                eq
+                assert
+                // _ *deep_cw_ws *p_iter *ood_points *fri *btable_rows *odd_brow_next *etable_rows *ood_erow_nxt *ood_brow_curr *ood_erow_curr *b_and_ext_cw_ws *fri_revealed *quot_seg_elems num_cw_chks
+
+                /* Clean up stack */
+                swap 13
+                swap 12
+                pop 1
+                // _ num_cw_chks *deep_cw_ws *ood_points *fri *btable_rows *odd_brow_next *etable_rows *ood_erow_nxt *ood_brow_curr *ood_erow_curr *b_and_ext_cw_ws *fri_revealed *quot_seg_elems
+
+                /* Sum out-of-domain values */
+                // Goal for stack: _ *b_and_ext_cw_ws *ood_brow_curr *ood_erow_curr
+
+                dup 2
+                swap 2
+                // _ num_cw_chks *deep_cw_ws *ood_points *fri *btable_rows *odd_brow_next *etable_rows *ood_erow_nxt *ood_brow_curr *ood_erow_curr *b_and_ext_cw_ws *b_and_ext_cw_ws *quot_seg_elems *fri_revealed
+
+                swap 5
+                swap 1
+                swap 4
+                // _ num_cw_chks *deep_cw_ws *ood_points *fri *btable_rows *odd_brow_next *etable_rows *ood_erow_nxt *fri_revealed *quot_seg_elems *b_and_ext_cw_ws *b_and_ext_cw_ws *ood_brow_curr *ood_erow_curr
+
+                call {inner_product_three_rows_with_weights}
+                // _ num_cw_chks *deep_cw_ws *ood_points *fri *btable_rows *odd_brow_next *etable_rows *ood_erow_nxt *fri_revealed *quot_seg_elems *b_and_ext_cw_ws [ood_curr_beval]
+
+                push {ood_curr_row_base_and_ext_value_pointer}
+                write_mem {EXTENSION_DEGREE}
+                pop 1
+                // _ num_cw_chks *deep_cw_ws *ood_points *fri *btable_rows *odd_brow_next *etable_rows *ood_erow_nxt *fri_revealed *quot_seg_elems *b_and_ext_cw_ws
+
+                // Goal: _ *b_and_ext_cw_ws *odd_brow_next *ood_erow_nxt
+                dup 0
+                swap 2
+                swap 6
+                swap 1
+                swap 4
+                // _ num_cw_chks *deep_cw_ws *ood_points *fri *btable_rows *quot_seg_elems *etable_rows *b_and_ext_cw_ws *fri_revealed *b_and_ext_cw_ws *odd_brow_next *ood_erow_nxt
+
+                call {inner_product_three_rows_with_weights}
+                // _ num_cw_chks *deep_cw_ws *ood_points *fri *btable_rows *quot_seg_elems *etable_rows *b_and_ext_cw_ws *fri_revealed [ood_next_value]
+
+                push {ood_next_row_base_and_ext_value_pointer}
+                write_mem {EXTENSION_DEGREE}
+                pop 1
+                // _ num_cw_chks *deep_cw_ws *ood_points *fri *btable_rows *quot_seg_elems *etable_rows *b_and_ext_cw_ws *fri_revealed
+
+
+
+                // sum out-of-domain values
+                //     let out_of_domain_curr_row_base_and_ext_value: XFieldElement =
+                //     Recufier::linearly_sum_xfe_base_and_ext_row(
+                //         out_of_domain_curr_base_row,
+                //         out_of_domain_curr_ext_row,
+                //         &base_and_ext_codeword_weights,
+                //     );
+                // let out_of_domain_next_row_base_and_ext_value: XFieldElement =
+                //     Recufier::linearly_sum_xfe_base_and_ext_row(
+                //         out_of_domain_next_base_row,
+                //         out_of_domain_next_ext_row,
+                //         &base_and_ext_codeword_weights,
+                //     );
+                // let out_of_domain_curr_row_quotient_segment_value: XFieldElement =
+                //     tasm::tasm_array_inner_product_of_4_xfes(
+                //         quotient_segment_codeword_weights,
+                //         *out_of_domain_curr_row_quot_segments,
+                //     );
 
 
                 return
