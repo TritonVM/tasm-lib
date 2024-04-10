@@ -55,8 +55,11 @@ impl BasicSnippet for StarkVerify {
             library.kmalloc(EXTENSION_DEGREE.try_into().unwrap());
         let ood_next_row_base_and_ext_value_pointer =
             library.kmalloc(EXTENSION_DEGREE.try_into().unwrap());
-        let ood_curr_row_quotient_segment_value_pointer =
+        let ood_curr_row_quotient_segment_value_pointer_write =
             library.kmalloc(EXTENSION_DEGREE.try_into().unwrap());
+        let ood_curr_row_quotient_segment_value_pointer_read =
+            ood_curr_row_quotient_segment_value_pointer_write
+                + BFieldElement::new(EXTENSION_DEGREE as u64 - 1);
         let out_of_domain_curr_row_quot_segments_pointer_pointer = library.kmalloc(1);
 
         let instantiate_fiat_shamir_with_claim =
@@ -200,44 +203,86 @@ impl BasicSnippet for StarkVerify {
         );
 
         let main_loop_label = format!("{entrypoint}_main_loop");
-        // let main_loop_body = triton_asm!(
-        //     //                                             (u32, XFieldElement)
-        //     // _ remaining_rounds *deepws *oodpnts *felem_idx *btrow *quot_seg_elem *etrow *b_and_ext_cw_ws fdoffset fri_gen
-        //     // Calculate `current_fri_domain_value`
-        //     dup 6
-        //     read_mem 1
-        //     swap 8
-        //     pop 1
-        //     // _ remaining_rounds *deepws *oodpnts *felem_xfe *btrow *quot_seg_elem *etrow *b_and_ext_cw_ws fdoffset fri_gen fri_idx
+        let main_loop_body = triton_asm!(
+            //                                             (u32, XFieldElement)
+            // _ remaining_rounds *deepws *oodpnts *felem_idx *btrow *qseg_elem *etrow *b_and_ext_cw_ws fdoffset fri_gen
+            // Calculate `current_fri_domain_value`
+            dup 6
+            read_mem 1
+            swap 8
+            pop 1
+            // _ remaining_rounds *deepws *oodpnts *felem_xfe *btrow *qseg_elem *etrow *b_and_ext_cw_ws fdoffset fri_gen fri_idx
 
-        //     dup 1
-        //     pow
-        //     dup 2
-        //     mul
-        //     // _ remaining_rounds *deepws *oodpnts *felem_xfe *btrow *quot_seg_elem *etrow *b_and_ext_cw_ws fdoffset fri_gen fdom_pnt
+            dup 1
+            pow
+            dup 2
+            mul
+            hint fri_domain_point = stack[0]
+            // _ remaining_rounds *deepws *oodpnts *felem_xfe *btrow *qseg_elem *etrow *b_and_ext_cw_ws fdoffset fri_gen fdom_pnt
 
-        //     dup 3
-        //     dup 7
-        //     dup 6
-        //     call {inner_product_three_rows_with_weights}
-        //     // _ remaining_rounds *deepws *oodpnts *felem_xfe *btrow *quot_seg_elem *etrow *b_and_ext_cw_ws fdoffset fri_gen fdom_pnt [be_opnd_elem]
 
-        //     // Calculate `cuotient_curr_row_deep_value`
-        //     dup 11
-        //     {&OutOfDomainPoints::read_ood_point(OodPoint::CurrentRowPowNumSegments)}
-        //     // _ remaining_rounds *deepws *oodpnts *felem_xfe *btrow *quot_seg_elem *etrow *b_and_ext_cw_ws fdoffset fri_gen fdom_pnt [be_opnd_elem] [oodp_pow_nsegs]
+            dup 3
+            dup 7
+            dup 6
+            call {inner_product_three_rows_with_weights}
+            // _ remaining_rounds *deepws *oodpnts *felem_xfe *btrow *qseg_elem *etrow *b_and_ext_cw_ws fdoffset fri_gen fdom_pnt [be_opnd_elem]
 
-        //     dup 6
-        //     push -1
-        //     mul
-        //     add
-        //     // _ remaining_rounds *deepws *oodpnts *felem_xfe *btrow *quot_seg_elem *etrow *b_and_ext_cw_ws fdoffset fri_gen fdom_pnt [be_opnd_elem] [oodp_pow_nsegs - fdom_pnt]
+            // Update `*btrow` and `*etrow` pointer values to point to previous element
+            swap 7
+            push {-((EXTENSION_DEGREE * NUM_EXT_COLUMNS) as i32)}
+            add
+            swap 7
+            swap 9
+            push {-(NUM_BASE_COLUMNS as i32)}
+            add
+            swap 9
+            // _ remaining_rounds *deepws *oodpnts *felem_xfe *btrow_prev *qseg_elem *etrow_prev *b_and_ext_cw_ws fdoffset fri_gen fdom_pnt [be_opnd_elem]
 
-        //     // _ remaining_rounds *deepws *oodpnts *fri_elem_prev *btrow_prev *quot_seg_elem_prev *etrow_prev *b_and_ext_cw_ws fdoffset fri_gen
-        // );
+            // Calculate `cuotient_curr_row_deep_value`
+            dup 11
+            {&OutOfDomainPoints::read_ood_point(OodPoint::CurrentRowPowNumSegments)}
+            // _ remaining_rounds *deepws *oodpnts *felem_xfe *btrow_prev *qseg_elem *etrow_prev *b_and_ext_cw_ws fdoffset fri_gen fdom_pnt [be_opnd_elem] [oodp_pow_nsegs]
+
+            dup 6
+            push -1
+            mul
+            add
+            // _ remaining_rounds *deepws *oodpnts *felem_xfe *btrow_prev *qseg_elem *etrow_prev *b_and_ext_cw_ws fdoffset fri_gen fdom_pnt [be_opnd_elem] [oodp_pow_nsegs - fdom_pnt]
+
+            xinvert
+            // _ remaining_rounds *deepws *oodpnts *felem_xfe *btrow_prev *qseg_elem *etrow_prev *b_and_ext_cw_ws fdoffset fri_gen fdom_pnt [be_opnd_elem] [1/(oodp_pow_nsegs - fdom_pnt)]
+
+            dup 9
+            {&quotient_segment_codeword_weights_from_be_weights}
+            dup 12
+            call {inner_product_4_xfes}
+            // _ remaining_rounds *deepws *oodpnts *felem_xfe *btrow_prev *qseg_elem *etrow_prev *b_and_ext_cw_ws fdoffset fri_gen fdom_pnt [be_opnd_elem] [1/(oodp_pow_nsegs - fdom_pnt)] [inner_prod]
+
+            swap 14
+            push {NUM_QUOTIENT_SEGMENTS}
+            add
+            swap 14
+            // _ remaining_rounds *deepws *oodpnts *felem_xfe *btrow_prev *qseg_elem_prev *etrow_prev *b_and_ext_cw_ws fdoffset fri_gen fdom_pnt [be_opnd_elem] [1/(oodp_pow_nsegs - fdom_pnt)] [inner_prod]
+
+            push -1
+            xbmul
+            // _ remaining_rounds *deepws *oodpnts *felem_xfe *btrow_prev *qseg_elem_prev *etrow_prev *b_and_ext_cw_ws fdoffset fri_gen fdom_pnt [be_opnd_elem] [1/(oodp_pow_nsegs - fdom_pnt)] [-inner_prod]
+
+            push {ood_curr_row_quotient_segment_value_pointer_read}
+            read_mem {EXTENSION_DEGREE}
+            pop 1
+            // _ remaining_rounds *deepws *oodpnts *felem_xfe *btrow_prev *qseg_elem_prev *etrow_prev *b_and_ext_cw_ws fdoffset fri_gen fdom_pnt [be_opnd_elem] [1/(oodp_pow_nsegs - fdom_pnt)] [-inner_prod] [out_of_domain_curr_row_quotient_segment_value]
+
+            xxadd
+            xxmul
+            // _ remaining_rounds *deepws *oodpnts *felem_xfe *btrow_prev *qseg_elem_prev *etrow_prev *b_and_ext_cw_ws fdoffset fri_gen fdom_pnt [be_opnd_elem] [(out_of_domain_curr_row_quotient_segment_value - inner_prod) / (oodp_pow_nsegs - fdom_pnt)]
+            // _ remaining_rounds *deepws *oodpnts *felem_xfe *btrow_prev *qseg_elem_prev *etrow_prev *b_and_ext_cw_ws fdoffset fri_gen fdom_pnt [be_opnd_elem] [quot_curr_row_deep_value]
+
+            // _ remaining_rounds *deepws *oodpnts *fri_elem_prev *btrow_prev *qseg_elem_prev *etrow_prev *b_and_ext_cw_ws fdoffset fri_gen
+        );
         let main_loop = triton_asm!(
             // The loop goes from last index to 1st index
-            // Invariant: _ remaining_rounds *deepws *oodpnts *fri_revealed *btrows *quot_seg_elems *etrows *b_and_ext_cw_ws fdoffset fri_gen
+            // Invariant: _ remaining_rounds *deepws *oodpnts *fri_revealed *btrows *qseg_elems *etrows *b_and_ext_cw_ws fdoffset fri_gen
             {main_loop_label}:
                 // test end-condition
                 dup 9
@@ -246,7 +291,7 @@ impl BasicSnippet for StarkVerify {
                 skiz
                     return
 
-                // {&main_loop_body}
+                {&main_loop_body}
 
                 // Update counter
                 swap 9
@@ -542,18 +587,18 @@ impl BasicSnippet for StarkVerify {
                 read_mem 1
                 pop 1
                 log_2_floor
-                // _ *deepws *p_iter *oodpnts *fri *btrows *odd_brow_next *etrows *ood_erow_nxt *ood_brow_curr *ood_erow_curr *b_and_ext_cw_ws *fri_revealed *quot_seg_elems *quot_mr num_cw_chks mt_height
+                // _ *deepws *p_iter *oodpnts *fri *btrows *odd_brow_next *etrows *ood_erow_nxt *ood_brow_curr *ood_erow_curr *b_and_ext_cw_ws *fri_revealed *qseg_elems *quot_mr num_cw_chks mt_height
 
                 swap 1
                 swap 2
-                // _ *deepws *p_iter *oodpnts *fri *btrows *odd_brow_next *etrows *ood_erow_nxt *ood_brow_curr *ood_erow_curr *b_and_ext_cw_ws *fri_revealed *quot_seg_elems num_cw_chks mt_height *quot_mr
+                // _ *deepws *p_iter *oodpnts *fri *btrows *odd_brow_next *etrows *ood_erow_nxt *ood_brow_curr *ood_erow_curr *b_and_ext_cw_ws *fri_revealed *qseg_elems num_cw_chks mt_height *quot_mr
 
                 dup 4
                 dup 4
-                // _ *deepws *p_iter *oodpnts *fri *btrows *odd_brow_next *etrows *ood_erow_nxt *ood_brow_curr *ood_erow_curr *b_and_ext_cw_ws *fri_revealed *quot_seg_elems num_cw_chks mt_height *quot_mr *fri_revealed *quot_seg_elems
+                // _ *deepws *p_iter *oodpnts *fri *btrows *odd_brow_next *etrows *ood_erow_nxt *ood_brow_curr *ood_erow_curr *b_and_ext_cw_ws *fri_revealed *qseg_elems num_cw_chks mt_height *quot_mr *fri_revealed *qseg_elems
 
                 call {verify_quotient_segments}
-                // _ *deepws *p_iter *oodpnts *fri *btrows *odd_brow_next *etrows *ood_erow_nxt *ood_brow_curr *ood_erow_curr *b_and_ext_cw_ws *fri_revealed *quot_seg_elems
+                // _ *deepws *p_iter *oodpnts *fri *btrows *odd_brow_next *etrows *ood_erow_nxt *ood_brow_curr *ood_erow_curr *b_and_ext_cw_ws *fri_revealed *qseg_elems
 
                 /* Various length asserts */
                 // assert!(num_combination_codeword_checks == quotient_segment_elements.len());
@@ -564,7 +609,7 @@ impl BasicSnippet for StarkVerify {
                 push 2
                 mul
                 hint num_combination_codeword_checks = stack[0]
-                // _ *deepws *p_iter *oodpnts *fri *btrows *odd_brow_next *etrows *ood_erow_nxt *ood_brow_curr *ood_erow_curr *b_and_ext_cw_ws *fri_revealed *quot_seg_elems num_cw_chks
+                // _ *deepws *p_iter *oodpnts *fri *btrows *odd_brow_next *etrows *ood_erow_nxt *ood_brow_curr *ood_erow_curr *b_and_ext_cw_ws *fri_revealed *qseg_elems num_cw_chks
 
                 // assert!(num_combination_codeword_checks == revealed_fri_indices_and_elements.len())
                 dup 2
@@ -573,7 +618,7 @@ impl BasicSnippet for StarkVerify {
                 dup 1
                 eq
                 assert
-                // _ *deepws *p_iter *oodpnts *fri *btrows *odd_brow_next *etrows *ood_erow_nxt *ood_brow_curr *ood_erow_curr *b_and_ext_cw_ws *fri_revealed *quot_seg_elems num_cw_chks
+                // _ *deepws *p_iter *oodpnts *fri *btrows *odd_brow_next *etrows *ood_erow_nxt *ood_brow_curr *ood_erow_curr *b_and_ext_cw_ws *fri_revealed *qseg_elems num_cw_chks
 
                 // assert!(num_combination_codeword_checks == base_table_rows.len());
                 dup 9
@@ -598,33 +643,33 @@ impl BasicSnippet for StarkVerify {
                 dup 1
                 eq
                 assert
-                // _ *deepws *p_iter *oodpnts *fri *btrows *odd_brow_next *etrows *ood_erow_nxt *ood_brow_curr *ood_erow_curr *b_and_ext_cw_ws *fri_revealed *quot_seg_elems num_cw_chks
+                // _ *deepws *p_iter *oodpnts *fri *btrows *odd_brow_next *etrows *ood_erow_nxt *ood_brow_curr *ood_erow_curr *b_and_ext_cw_ws *fri_revealed *qseg_elems num_cw_chks
 
                 /* Clean up stack */
                 swap 13
                 swap 12
                 pop 1
-                // _ num_cw_chks *deepws *oodpnts *fri *btrows *odd_brow_next *etrows *ood_erow_nxt *ood_brow_curr *ood_erow_curr *b_and_ext_cw_ws *fri_revealed *quot_seg_elems
+                // _ num_cw_chks *deepws *oodpnts *fri *btrows *odd_brow_next *etrows *ood_erow_nxt *ood_brow_curr *ood_erow_curr *b_and_ext_cw_ws *fri_revealed *qseg_elems
 
                 /* Sum out-of-domain values */
                 // Goal for stack: _ *b_and_ext_cw_ws *ood_brow_curr *ood_erow_curr
 
                 dup 2
                 swap 2
-                // _ num_cw_chks *deepws *oodpnts *fri *btrows *odd_brow_next *etrows *ood_erow_nxt *ood_brow_curr *ood_erow_curr *b_and_ext_cw_ws *b_and_ext_cw_ws *quot_seg_elems *fri_revealed
+                // _ num_cw_chks *deepws *oodpnts *fri *btrows *odd_brow_next *etrows *ood_erow_nxt *ood_brow_curr *ood_erow_curr *b_and_ext_cw_ws *b_and_ext_cw_ws *qseg_elems *fri_revealed
 
                 swap 5
                 swap 1
                 swap 4
-                // _ num_cw_chks *deepws *oodpnts *fri *btrows *odd_brow_next *etrows *ood_erow_nxt *fri_revealed *quot_seg_elems *b_and_ext_cw_ws *b_and_ext_cw_ws *ood_brow_curr *ood_erow_curr
+                // _ num_cw_chks *deepws *oodpnts *fri *btrows *odd_brow_next *etrows *ood_erow_nxt *fri_revealed *qseg_elems *b_and_ext_cw_ws *b_and_ext_cw_ws *ood_brow_curr *ood_erow_curr
 
                 call {inner_product_three_rows_with_weights}
-                // _ num_cw_chks *deepws *oodpnts *fri *btrows *odd_brow_next *etrows *ood_erow_nxt *fri_revealed *quot_seg_elems *b_and_ext_cw_ws [ood_curr_beval]
+                // _ num_cw_chks *deepws *oodpnts *fri *btrows *odd_brow_next *etrows *ood_erow_nxt *fri_revealed *qseg_elems *b_and_ext_cw_ws [ood_curr_beval]
 
                 push {ood_curr_row_base_and_ext_value_pointer}
                 write_mem {EXTENSION_DEGREE}
                 pop 1
-                // _ num_cw_chks *deepws *oodpnts *fri *btrows *odd_brow_next *etrows *ood_erow_nxt *fri_revealed *quot_seg_elems *b_and_ext_cw_ws
+                // _ num_cw_chks *deepws *oodpnts *fri *btrows *odd_brow_next *etrows *ood_erow_nxt *fri_revealed *qseg_elems *b_and_ext_cw_ws
 
                 // Goal: _ *b_and_ext_cw_ws *odd_brow_next *ood_erow_nxt
                 dup 0
@@ -632,33 +677,33 @@ impl BasicSnippet for StarkVerify {
                 swap 6
                 swap 1
                 swap 4
-                // _ num_cw_chks *deepws *oodpnts *fri *btrows *quot_seg_elems *etrows *b_and_ext_cw_ws *fri_revealed *b_and_ext_cw_ws *odd_brow_next *ood_erow_nxt
+                // _ num_cw_chks *deepws *oodpnts *fri *btrows *qseg_elems *etrows *b_and_ext_cw_ws *fri_revealed *b_and_ext_cw_ws *odd_brow_next *ood_erow_nxt
 
                 call {inner_product_three_rows_with_weights}
-                // _ num_cw_chks *deepws *oodpnts *fri *btrows *quot_seg_elems *etrows *b_and_ext_cw_ws *fri_revealed [ood_next_value]
+                // _ num_cw_chks *deepws *oodpnts *fri *btrows *qseg_elems *etrows *b_and_ext_cw_ws *fri_revealed [ood_next_value]
 
                 push {ood_next_row_base_and_ext_value_pointer}
                 write_mem {EXTENSION_DEGREE}
                 pop 1
-                // _ num_cw_chks *deepws *oodpnts *fri *btrows *quot_seg_elems *etrows *b_and_ext_cw_ws *fri_revealed
+                // _ num_cw_chks *deepws *oodpnts *fri *btrows *qseg_elems *etrows *b_and_ext_cw_ws *fri_revealed
 
                 // Goal: _ *quotient_segment_codeword_weights *ood_curr_row_quot_segments
                 dup 1
                 {&quotient_segment_codeword_weights_from_be_weights}
-                // _ num_cw_chks *deepws *oodpnts *fri *btrows *quot_seg_elems *etrows *b_and_ext_cw_ws *fri_revealed *quotient_segment_codeword_weights
+                // _ num_cw_chks *deepws *oodpnts *fri *btrows *qseg_elems *etrows *b_and_ext_cw_ws *fri_revealed *quotient_segment_codeword_weights
 
                 push {out_of_domain_curr_row_quot_segments_pointer_pointer}
                 read_mem 1
                 pop 1
-                // _ num_cw_chks *deepws *oodpnts *fri *btrows *quot_seg_elems *etrows *b_and_ext_cw_ws *fri_revealed *quotient_segment_codeword_weights *ood_curr_row_quot_segments
+                // _ num_cw_chks *deepws *oodpnts *fri *btrows *qseg_elems *etrows *b_and_ext_cw_ws *fri_revealed *quotient_segment_codeword_weights *ood_curr_row_quot_segments
 
                 call {inner_product_4_xfes}
-                // _ num_cw_chks *deepws *oodpnts *fri *btrows *quot_seg_elems *etrows *b_and_ext_cw_ws *fri_revealed [out_of_domain_curr_row_quotient_segment_value]
+                // _ num_cw_chks *deepws *oodpnts *fri *btrows *qseg_elems *etrows *b_and_ext_cw_ws *fri_revealed [out_of_domain_curr_row_quotient_segment_value]
 
-                push {ood_curr_row_quotient_segment_value_pointer}
+                push {ood_curr_row_quotient_segment_value_pointer_write}
                 write_mem {EXTENSION_DEGREE}
                 pop 1
-                // _ num_cw_chks *deepws *oodpnts *fri *btrows *quot_seg_elems *etrows *b_and_ext_cw_ws *fri_revealed
+                // _ num_cw_chks *deepws *oodpnts *fri *btrows *qseg_elems *etrows *b_and_ext_cw_ws *fri_revealed
 
                 // Put fri domain generator and domain offset on stack
                 swap 5
@@ -667,14 +712,14 @@ impl BasicSnippet for StarkVerify {
                 read_mem 1
                 pop 1
                 hint fri_domain_offset = stack[0]
-                // _ num_cw_chks *deepws *oodpnts *fri_revealed *btrows *quot_seg_elems *etrows *b_and_ext_cw_ws *fri fdoffset
+                // _ num_cw_chks *deepws *oodpnts *fri_revealed *btrows *qseg_elems *etrows *b_and_ext_cw_ws *fri fdoffset
 
                 swap 1
                 {&domain_generator_field}
                 read_mem 1
                 pop 1
                 hint fri_domain_gen = stack[0]
-                // _ num_cw_chks *deepws *oodpnts *fri_revealed *btrows *quot_seg_elems *etrows *b_and_ext_cw_ws fdoffset fri_gen
+                // _ num_cw_chks *deepws *oodpnts *fri_revealed *btrows *qseg_elems *etrows *b_and_ext_cw_ws fdoffset fri_gen
 
                 // adjust relevant pointers to point to last word in sequence, as they are traversed
                 // high-to-low in the main loop
@@ -685,6 +730,7 @@ impl BasicSnippet for StarkVerify {
                 push {EXTENSION_DEGREE + 1}
                 mul
                 add
+                hint fri_revealed_elem = stack[0]
                 swap 6
 
                 // Adjust *btrows (list) to point to last element
@@ -697,6 +743,7 @@ impl BasicSnippet for StarkVerify {
                 add
                 mul
                 add
+                hint base_table_row = stack[0]
                 swap 5
 
                 // Adjust *etrows (list) to point to last element
@@ -709,8 +756,22 @@ impl BasicSnippet for StarkVerify {
                 add
                 mul
                 add
+                hint ext_table_row = stack[0]
                 swap 3
-                // _ num_cw_chks *deepws *oodpnts *fri_revealed *btrows *quot_seg_elems *etrows *b_and_ext_cw_ws fdoffset fri_gen
+                // _ num_cw_chks *deepws *oodpnts *fri_revealed *btrows *qseg_elems *etrows *b_and_ext_cw_ws fdoffset fri_gen
+
+                // Adjust *qseg_elems to point to last element
+                swap 4
+                push 1
+                add
+                push {NUM_QUOTIENT_SEGMENTS}
+                dup 10
+                push -1
+                add
+                mul
+                add
+                hint quotient_segment_elem = stack[0]
+                swap 4
 
 
                 call {main_loop_label}
