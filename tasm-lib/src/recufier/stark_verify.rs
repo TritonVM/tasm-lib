@@ -51,15 +51,24 @@ impl BasicSnippet for StarkVerify {
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
 
-        let ood_curr_row_base_and_ext_value_pointer =
+        let ood_curr_row_base_and_ext_value_pointer_write =
             library.kmalloc(EXTENSION_DEGREE.try_into().unwrap());
-        let ood_next_row_base_and_ext_value_pointer =
+        let ood_curr_row_base_and_ext_value_pointer_read =
+            ood_curr_row_base_and_ext_value_pointer_write
+                + BFieldElement::new(EXTENSION_DEGREE as u64 - 1);
+
+        let ood_next_row_base_and_ext_value_pointer_write =
             library.kmalloc(EXTENSION_DEGREE.try_into().unwrap());
+        let ood_next_row_base_and_ext_value_pointer_read =
+            ood_next_row_base_and_ext_value_pointer_write
+                + BFieldElement::new(EXTENSION_DEGREE as u64 - 1);
+
         let ood_curr_row_quotient_segment_value_pointer_write =
             library.kmalloc(EXTENSION_DEGREE.try_into().unwrap());
         let ood_curr_row_quotient_segment_value_pointer_read =
             ood_curr_row_quotient_segment_value_pointer_write
                 + BFieldElement::new(EXTENSION_DEGREE as u64 - 1);
+
         let out_of_domain_curr_row_quot_segments_pointer_pointer = library.kmalloc(1);
 
         let instantiate_fiat_shamir_with_claim =
@@ -202,87 +211,201 @@ impl BasicSnippet for StarkVerify {
             // _
         );
 
+        let swap_top_two_xfes = triton_asm!(
+            // _ y2 y1 y0 x2 x1 x0
+            swap 3
+            swap 1
+            swap 4
+            swap 1
+            swap 2
+            swap 5
+            swap 2
+
+            // _ x2 x1 x0 y2 y1 y0
+        );
+
         let main_loop_label = format!("{entrypoint}_main_loop");
         let main_loop_body = triton_asm!(
-            //                                             (u32, XFieldElement)
-            // _ remaining_rounds *deepws *oodpnts *felem_idx *btrow *qseg_elem *etrow *b_and_ext_cw_ws fdoffset fri_gen
+            //                                                        (u32, XFieldElement)
+            // _ remaining_rounds fri_gen fdoffset *etrow *btrow *qseg_elem *fri_revealed_idx *b_and_ext_cw_ws *deepws *oodpnts
             // Calculate `current_fri_domain_value`
-            dup 6
+            dup 3
             read_mem 1
-            swap 8
+            swap 5
             pop 1
-            // _ remaining_rounds *deepws *oodpnts *felem_xfe *btrow *qseg_elem *etrow *b_and_ext_cw_ws fdoffset fri_gen fri_idx
+            // _ remaining_rounds fri_gen fdoffset *etrow *btrow *qseg_elem *fri_revealed_xfe *b_and_ext_cw_ws *deepws *oodpnts fri_idx
 
-            dup 1
+            dup 9
             pow
-            dup 2
+            dup 8
             mul
-            hint fri_domain_point = stack[0]
-            // _ remaining_rounds *deepws *oodpnts *felem_xfe *btrow *qseg_elem *etrow *b_and_ext_cw_ws fdoffset fri_gen fdom_pnt
+            push -1
+            mul
+            hint neg_fri_domain_point = stack[0]
+            // _ remaining_rounds fri_gen fdoffset *etrow *btrow *qseg_elem *fri_revealed_xfe *b_and_ext_cw_ws *deepws *oodpnts (-fdom_pnt)
 
 
             dup 3
             dup 7
-            dup 6
+            dup 9
             call {inner_product_three_rows_with_weights}
-            // _ remaining_rounds *deepws *oodpnts *felem_xfe *btrow *qseg_elem *etrow *b_and_ext_cw_ws fdoffset fri_gen fdom_pnt [be_opnd_elem]
+            hint base_and_ext_opened_row_element: Xfe = stack[0..3]
+            // _ remaining_rounds fri_gen fdoffset *etrow *btrow *qseg_elem *fri_revealed_xfe *b_and_ext_cw_ws *deepws *oodpnts (-fdom_pnt) [be_opnd_elem]
 
             // Update `*btrow` and `*etrow` pointer values to point to previous element
-            swap 7
+            swap 10
             push {-((EXTENSION_DEGREE * NUM_EXT_COLUMNS) as i32)}
             add
-            swap 7
+            swap 10
             swap 9
             push {-(NUM_BASE_COLUMNS as i32)}
             add
             swap 9
-            // _ remaining_rounds *deepws *oodpnts *felem_xfe *btrow_prev *qseg_elem *etrow_prev *b_and_ext_cw_ws fdoffset fri_gen fdom_pnt [be_opnd_elem]
+            // _ remaining_rounds fri_gen fdoffset *etrow_prev *btrow_prev *qseg_elem *fri_revealed_xfe *b_and_ext_cw_ws *deepws *oodpnts (-fdom_pnt) [-be_opnd_elem]
+
+            push -1
+            xbmul
+            hint neg_base_and_ext_opened_row_element: Xfe = stack[0..3]
 
             // Calculate `cuotient_curr_row_deep_value`
-            dup 11
+            dup 4
             {&OutOfDomainPoints::read_ood_point(OodPoint::CurrentRowPowNumSegments)}
-            // _ remaining_rounds *deepws *oodpnts *felem_xfe *btrow_prev *qseg_elem *etrow_prev *b_and_ext_cw_ws fdoffset fri_gen fdom_pnt [be_opnd_elem] [oodp_pow_nsegs]
+            // _ remaining_rounds fri_gen fdoffset *etrow_prev *btrow_prev *qseg_elem *fri_revealed_xfe *b_and_ext_cw_ws *deepws *oodpnts (-fdom_pnt) [-be_opnd_elem] [oodp_pow_nsegs]
 
             dup 6
-            push -1
-            mul
             add
-            // _ remaining_rounds *deepws *oodpnts *felem_xfe *btrow_prev *qseg_elem *etrow_prev *b_and_ext_cw_ws fdoffset fri_gen fdom_pnt [be_opnd_elem] [oodp_pow_nsegs - fdom_pnt]
+            // _ remaining_rounds fri_gen fdoffset *etrow_prev *btrow_prev *qseg_elem *fri_revealed_xfe *b_and_ext_cw_ws *deepws *oodpnts (-fdom_pnt) [-be_opnd_elem] [oodp_pow_nsegs - fdom_pnt]
 
             xinvert
-            // _ remaining_rounds *deepws *oodpnts *felem_xfe *btrow_prev *qseg_elem *etrow_prev *b_and_ext_cw_ws fdoffset fri_gen fdom_pnt [be_opnd_elem] [1/(oodp_pow_nsegs - fdom_pnt)]
+            // _ remaining_rounds fri_gen fdoffset *etrow_prev *btrow_prev *qseg_elem *fri_revealed_xfe *b_and_ext_cw_ws *deepws *oodpnts (-fdom_pnt) [-be_opnd_elem] [1/(oodp_pow_nsegs - fdom_pnt)]
 
             dup 9
             {&quotient_segment_codeword_weights_from_be_weights}
             dup 12
             call {inner_product_4_xfes}
-            // _ remaining_rounds *deepws *oodpnts *felem_xfe *btrow_prev *qseg_elem *etrow_prev *b_and_ext_cw_ws fdoffset fri_gen fdom_pnt [be_opnd_elem] [1/(oodp_pow_nsegs - fdom_pnt)] [inner_prod]
+            // _ remaining_rounds fri_gen fdoffset *etrow_prev *btrow_prev *qseg_elem *fri_revealed_xfe *b_and_ext_cw_ws *deepws *oodpnts (-fdom_pnt) [-be_opnd_elem] [1/(oodp_pow_nsegs - fdom_pnt)] [inner_prod]
 
+            break
             swap 14
-            push {NUM_QUOTIENT_SEGMENTS}
+            push {-((NUM_QUOTIENT_SEGMENTS * EXTENSION_DEGREE) as i32)}
             add
             swap 14
-            // _ remaining_rounds *deepws *oodpnts *felem_xfe *btrow_prev *qseg_elem_prev *etrow_prev *b_and_ext_cw_ws fdoffset fri_gen fdom_pnt [be_opnd_elem] [1/(oodp_pow_nsegs - fdom_pnt)] [inner_prod]
+            // _ remaining_rounds fri_gen fdoffset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *b_and_ext_cw_ws *deepws *oodpnts (-fdom_pnt) [-be_opnd_elem] [1/(oodp_pow_nsegs - fdom_pnt)] [inner_prod]
 
             push -1
             xbmul
-            // _ remaining_rounds *deepws *oodpnts *felem_xfe *btrow_prev *qseg_elem_prev *etrow_prev *b_and_ext_cw_ws fdoffset fri_gen fdom_pnt [be_opnd_elem] [1/(oodp_pow_nsegs - fdom_pnt)] [-inner_prod]
+            // _ remaining_rounds fri_gen fdoffset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *b_and_ext_cw_ws *deepws *oodpnts (-fdom_pnt) [-be_opnd_elem] [1/(oodp_pow_nsegs - fdom_pnt)] [-inner_prod]
 
             push {ood_curr_row_quotient_segment_value_pointer_read}
             read_mem {EXTENSION_DEGREE}
             pop 1
-            // _ remaining_rounds *deepws *oodpnts *felem_xfe *btrow_prev *qseg_elem_prev *etrow_prev *b_and_ext_cw_ws fdoffset fri_gen fdom_pnt [be_opnd_elem] [1/(oodp_pow_nsegs - fdom_pnt)] [-inner_prod] [out_of_domain_curr_row_quotient_segment_value]
+            // _ remaining_rounds fri_gen fdoffset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *b_and_ext_cw_ws *deepws *oodpnts (-fdom_pnt) [-be_opnd_elem] [1/(oodp_pow_nsegs - fdom_pnt)] [-inner_prod] [out_of_domain_curr_row_quotient_segment_value]
 
             xxadd
             xxmul
-            // _ remaining_rounds *deepws *oodpnts *felem_xfe *btrow_prev *qseg_elem_prev *etrow_prev *b_and_ext_cw_ws fdoffset fri_gen fdom_pnt [be_opnd_elem] [(out_of_domain_curr_row_quotient_segment_value - inner_prod) / (oodp_pow_nsegs - fdom_pnt)]
-            // _ remaining_rounds *deepws *oodpnts *felem_xfe *btrow_prev *qseg_elem_prev *etrow_prev *b_and_ext_cw_ws fdoffset fri_gen fdom_pnt [be_opnd_elem] [quot_curr_row_deep_value]
+            hint quot_curr_row_deep_value: XFieldElement = stack[0..3]
+            // _ remaining_rounds fri_gen fdoffset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *b_and_ext_cw_ws *deepws *oodpnts (-fdom_pnt) [-be_opnd_elem] [(out_of_domain_curr_row_quotient_segment_value - inner_prod) / (oodp_pow_nsegs - fdom_pnt)]
+            // _ remaining_rounds fri_gen fdoffset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *b_and_ext_cw_ws *deepws *oodpnts (-fdom_pnt) [-be_opnd_elem] [quot_curr_row_deep_value]
 
-            // _ remaining_rounds *deepws *oodpnts *fri_elem_prev *btrow_prev *qseg_elem_prev *etrow_prev *b_and_ext_cw_ws fdoffset fri_gen
+
+            /* Calculate $dv2 = quot_curr_row_deep_value * deep_codeword_weights[2]$ */
+            dup 8
+            push {EXTENSION_DEGREE * 2 + {EXTENSION_DEGREE - 1}} // read deep_codeword_weights[2]
+            add
+            read_mem {EXTENSION_DEGREE}
+            pop 1
+            xxmul
+            // _ remaining_rounds fri_gen fdoffset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *b_and_ext_cw_ws *deepws *oodpnts (-fdom_pnt) [-be_opnd_elem] [quot_curr_row_deep_value * deep_codeword_weights[2]]
+            // _ remaining_rounds fri_gen fdoffset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *b_and_ext_cw_ws *deepws *oodpnts (-fdom_pnt) [-be_opnd_elem] [dv2]
+
+            dup 7
+            {&OutOfDomainPoints::read_ood_point(OodPoint::CurrentRow)}
+            // _ remaining_rounds fri_gen fdoffset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *b_and_ext_cw_ws *deepws *oodpnts (-fdom_pnt) [-be_opnd_elem] [dv2] [ood_point_curr_row]
+
+            dup 9
+            add
+            xinvert
+            // _ remaining_rounds fri_gen fdoffset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *b_and_ext_cw_ws *deepws *oodpnts (-fdom_pnt) [-be_opnd_elem] [dv2] [1/(ood_point_curr_row - fdom_pnt)]
+
+            push {ood_curr_row_base_and_ext_value_pointer_read}
+            read_mem {EXTENSION_DEGREE}
+            pop 1
+            // _ remaining_rounds fri_gen fdoffset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *b_and_ext_cw_ws *deepws *oodpnts (-fdom_pnt) [-be_opnd_elem] [dv2] [1/(ood_point_curr_row - fdom_pnt)] [out_of_domain_curr_row_base_and_ext_value]
+
+            dup 11
+            dup 11
+            dup 11
+            xxadd
+            // _ remaining_rounds fri_gen fdoffset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *b_and_ext_cw_ws *deepws *oodpnts (-fdom_pnt) [-be_opnd_elem] [dv2] [1/(ood_point_curr_row - fdom_pnt)] [out_of_domain_curr_row_base_and_ext_value - be_opnd_elem]
+
+            xxmul
+            // _ remaining_rounds fri_gen fdoffset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *b_and_ext_cw_ws *deepws *oodpnts (-fdom_pnt) [-be_opnd_elem] [dv2] [(out_of_domain_curr_row_base_and_ext_value - be_opnd_elem)/(ood_point_curr_row - fdom_pnt)]
+
+            dup 11
+            push {EXTENSION_DEGREE - 1} // read deep_codeword_weights[0]
+            add
+            read_mem {EXTENSION_DEGREE}
+            pop 1
+            xxmul
+            // _ remaining_rounds fri_gen fdoffset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *b_and_ext_cw_ws *deepws *oodpnts (-fdom_pnt) [-be_opnd_elem] [dv2] [deep_codeword_weights[0] * (out_of_domain_curr_row_base_and_ext_value - be_opnd_elem)/(ood_point_curr_row - fdom_pnt)]
+            // _ remaining_rounds fri_gen fdoffset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *b_and_ext_cw_ws *deepws *oodpnts (-fdom_pnt) [-be_opnd_elem] [dv2] [dv0]
+
+            xxadd
+            // _ remaining_rounds fri_gen fdoffset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *b_and_ext_cw_ws *deepws *oodpnts (-fdom_pnt) [-be_opnd_elem] [dv2 + dv0]
+            hint dv2_plus_dv0: XFieldElement = stack[0..3]
+
+            {&swap_top_two_xfes}
+            // _ remaining_rounds fri_gen fdoffset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *b_and_ext_cw_ws *deepws *oodpnts (-fdom_pnt) [dv2 + dv0] [-be_opnd_elem]
+
+            push {ood_next_row_base_and_ext_value_pointer_read}
+            read_mem {EXTENSION_DEGREE}
+            pop 1
+            xxadd
+            // _ remaining_rounds fri_gen fdoffset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *b_and_ext_cw_ws *deepws *oodpnts (-fdom_pnt) [dv2 + dv0] [ood_next_row_be_value - be_opnd_elem]
+
+            dup 7
+            {&OutOfDomainPoints::read_ood_point(OodPoint::NextRow)}
+            // _ remaining_rounds fri_gen fdoffset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *b_and_ext_cw_ws *deepws *oodpnts (-fdom_pnt) [dv2 + dv0] [ood_next_row_be_value - be_opnd_elem] [out_of_domain_point_next_row]
+
+            dup 9
+            add
+            // _ remaining_rounds fri_gen fdoffset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *b_and_ext_cw_ws *deepws *oodpnts (-fdom_pnt) [dv2 + dv0] [ood_next_row_be_value - be_opnd_elem] [out_of_domain_point_next_row - fdom_pnt]
+
+            xinvert
+            xxmul
+            // _ remaining_rounds fri_gen fdoffset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *b_and_ext_cw_ws *deepws *oodpnts (-fdom_pnt) [dv2 + dv0] [(ood_next_row_be_value - be_opnd_elem)/(out_of_domain_point_next_row - fdom_pnt)]
+
+            dup 8
+            push {EXTENSION_DEGREE + EXTENSION_DEGREE - 1} // read deep_codeword_weights[1]
+            add
+            read_mem {EXTENSION_DEGREE}
+            pop 1
+            xxmul
+            // _ remaining_rounds fri_gen fdoffset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *b_and_ext_cw_ws *deepws *oodpnts (-fdom_pnt) [dv2 + dv0] [deep_codeword_weights[1] * (ood_next_row_be_value - be_opnd_elem)/(out_of_domain_point_next_row - fdom_pnt)]
+            // _ remaining_rounds fri_gen fdoffset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *b_and_ext_cw_ws *deepws *oodpnts (-fdom_pnt) [dv2 + dv0] [dv1]
+
+            xxadd
+            // _ remaining_rounds fri_gen fdoffset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *b_and_ext_cw_ws *deepws *oodpnts (-fdom_pnt) [dv2 + dv0 + dv1]
+            // _ remaining_rounds fri_gen fdoffset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *b_and_ext_cw_ws *deepws *oodpnts (-fdom_pnt) [deep_value]
+
+            swap 1
+            swap 2
+            swap 3
+            // _ remaining_rounds fri_gen fdoffset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *b_and_ext_cw_ws *deepws *oodpnts [deep_value] (-fdom_pnt)
+
+            swap 7
+            read_mem {EXTENSION_DEGREE}
+            swap 10
+            pop 1
+            // _ remaining_rounds fri_gen fdoffset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_idx_prev *b_and_ext_cw_ws *deepws *oodpnts [deep_value] [fri_revealed_value]
+
+            {&assert_top_two_xfes_eq}
+
+            // _ remaining_rounds fri_gen fdoffset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_idx_prev *b_and_ext_cw_ws *deepws *oodpnts
         );
         let main_loop = triton_asm!(
             // The loop goes from last index to 1st index
-            // Invariant: _ remaining_rounds *deepws *oodpnts *fri_revealed *btrows *qseg_elems *etrows *b_and_ext_cw_ws fdoffset fri_gen
+            // Invariant: _ num_cw_chks fri_gen fdoffset *etrow *btrow *qseg_elem *fri_revealed_elem *b_and_ext_cw_ws *deepws *oodpnts
             {main_loop_label}:
                 // test end-condition
                 dup 9
@@ -664,9 +787,10 @@ impl BasicSnippet for StarkVerify {
                 // _ num_cw_chks *deepws *oodpnts *fri *btrows *odd_brow_next *etrows *ood_erow_nxt *fri_revealed *qseg_elems *b_and_ext_cw_ws *b_and_ext_cw_ws *ood_brow_curr *ood_erow_curr
 
                 call {inner_product_three_rows_with_weights}
+                hint out_of_domain_curr_row_base_and_ext_value: XFieldElement = stack[0..3]
                 // _ num_cw_chks *deepws *oodpnts *fri *btrows *odd_brow_next *etrows *ood_erow_nxt *fri_revealed *qseg_elems *b_and_ext_cw_ws [ood_curr_beval]
 
-                push {ood_curr_row_base_and_ext_value_pointer}
+                push {ood_curr_row_base_and_ext_value_pointer_write}
                 write_mem {EXTENSION_DEGREE}
                 pop 1
                 // _ num_cw_chks *deepws *oodpnts *fri *btrows *odd_brow_next *etrows *ood_erow_nxt *fri_revealed *qseg_elems *b_and_ext_cw_ws
@@ -680,9 +804,10 @@ impl BasicSnippet for StarkVerify {
                 // _ num_cw_chks *deepws *oodpnts *fri *btrows *qseg_elems *etrows *b_and_ext_cw_ws *fri_revealed *b_and_ext_cw_ws *odd_brow_next *ood_erow_nxt
 
                 call {inner_product_three_rows_with_weights}
+                hint out_of_domain_next_row_base_and_ext_value: XFieldElement = stack[0..3]
                 // _ num_cw_chks *deepws *oodpnts *fri *btrows *qseg_elems *etrows *b_and_ext_cw_ws *fri_revealed [ood_next_value]
 
-                push {ood_next_row_base_and_ext_value_pointer}
+                push {ood_next_row_base_and_ext_value_pointer_write}
                 write_mem {EXTENSION_DEGREE}
                 pop 1
                 // _ num_cw_chks *deepws *oodpnts *fri *btrows *qseg_elems *etrows *b_and_ext_cw_ws *fri_revealed
@@ -698,6 +823,7 @@ impl BasicSnippet for StarkVerify {
                 // _ num_cw_chks *deepws *oodpnts *fri *btrows *qseg_elems *etrows *b_and_ext_cw_ws *fri_revealed *quotient_segment_codeword_weights *ood_curr_row_quot_segments
 
                 call {inner_product_4_xfes}
+                hint out_of_domain_curr_row_quotient_segment_value: XFieldElement = stack[0..3]
                 // _ num_cw_chks *deepws *oodpnts *fri *btrows *qseg_elems *etrows *b_and_ext_cw_ws *fri_revealed [out_of_domain_curr_row_quotient_segment_value]
 
                 push {ood_curr_row_quotient_segment_value_pointer_write}
@@ -764,7 +890,7 @@ impl BasicSnippet for StarkVerify {
                 swap 4
                 push 1
                 add
-                push {NUM_QUOTIENT_SEGMENTS}
+                push {NUM_QUOTIENT_SEGMENTS * EXTENSION_DEGREE}
                 dup 10
                 push -1
                 add
@@ -773,6 +899,16 @@ impl BasicSnippet for StarkVerify {
                 hint quotient_segment_elem = stack[0]
                 swap 4
 
+                // _ num_cw_chks *deepws *oodpnts *fri_revealed_last_elem *btrows_last_elem *qseg_elems_last_elem *etrows_last_elem *b_and_ext_cw_ws fdoffset fri_gen
+
+                /* Reorganize stack for main-loop, to keep all necessary words accessible without spilling */
+                swap 8
+                swap 1
+                swap 7
+                swap 3
+                swap 6
+                swap 3
+                // _ num_cw_chks fri_gen fdoffset *etrows_last_elem *btrows_last_elem *qseg_elems_last_elem *fri_revealed_last_elem *b_and_ext_cw_ws *deepws *oodpnts
 
                 call {main_loop_label}
 
