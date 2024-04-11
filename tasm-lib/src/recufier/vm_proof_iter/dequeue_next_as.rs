@@ -6,6 +6,8 @@ use crate::hashing::sponge_hasher::pad_and_absorb_all::PadAndAbsorbAll;
 use crate::library::Library;
 use crate::traits::basic_snippet::BasicSnippet;
 
+const MAX_SIZE_FOR_DYNAMICALLY_SIZED_PROOF_ITEMS: u32 = 1u32 << 22;
+
 /// Reads a proof item of the supplied type from the [`ProofStream`][proof_stream].
 /// Crashes Triton VM if the proof item is not of the expected type.
 /// Updates an internal pointer to the next proof item.
@@ -66,14 +68,14 @@ impl DequeueNextAs {
         let Some(static_length) = self.proof_item.payload_static_length() else {
             return self.advance_proof_item_pointer_to_next_item_reading_length_from_memory();
         };
-        Self::advance_proof_item_pointer_to_next_item_using_length(static_length)
+        Self::advance_proof_item_pointer_to_next_item_using_static_size(static_length)
     }
 
     /// ```text
     /// BEFORE: _ *proof_item_size
     /// AFTER:  _ *next_proof_item_size
     /// ```
-    fn advance_proof_item_pointer_to_next_item_using_length(
+    fn advance_proof_item_pointer_to_next_item_using_static_size(
         length: usize,
     ) -> Vec<LabelledInstruction> {
         let length_plus_bookkeeping_offset = length + 2;
@@ -94,6 +96,17 @@ impl DequeueNextAs {
         triton_asm! {
             read_mem 1          // _ proof_item_size (*proof_item_size - 1)
             hint proof_item_length = stack[1]
+
+            // Verify that size does not exceed max allowed size
+            push {MAX_SIZE_FOR_DYNAMICALLY_SIZED_PROOF_ITEMS}
+            dup 2
+            // _ proof_item_size (*proof_item_size - 1) max_size proof_item_size
+
+            lt
+            // _ proof_item_size (*proof_item_size - 1) (max_size > proof_item_size)
+
+            assert
+            // _ proof_item_size (*proof_item_size - 1)
 
             push 2 add add      // _ *next_proof_item_size
         }
@@ -174,7 +187,9 @@ impl BasicSnippet for DequeueNextAs {
 
 #[cfg(test)]
 mod test {
+    use std::cell::RefCell;
     use std::collections::HashMap;
+    use std::rc::Rc;
 
     use arbitrary::Arbitrary;
     use arbitrary::Unstructured;
@@ -187,8 +202,11 @@ mod test {
     use test_strategy::proptest;
     use triton_vm::proof_item::ProofItem;
     use triton_vm::proof_stream::ProofStream;
+    use triton_vm::table::NUM_BASE_COLUMNS;
 
     use crate::empty_stack;
+    use crate::execute_with_terminal_state;
+    use crate::linker::link_for_isolated_run;
     use crate::memory::encode_to_memory;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::structure::tasm_object::decode_from_memory_with_size;
@@ -237,6 +255,10 @@ mod test {
         fn fetch_current_proof_item_list_element_size_from_memory(&self) -> BFieldElement {
             let size_pointer = self.current_proof_item_list_element_size_pointer();
             let &element_size = self.memory.get(&size_pointer).unwrap();
+            assert!(
+                element_size.value() < MAX_SIZE_FOR_DYNAMICALLY_SIZED_PROOF_ITEMS as u64,
+                "proof item size may not exceed max allowed size"
+            );
             element_size
         }
 
@@ -423,6 +445,49 @@ mod test {
                 None,
             );
         }
+    }
+
+    #[test]
+    fn disallow_too_big_dynamically_sized_proof_item() {
+        let dequeue_next_as = DequeueNextAs::new(ProofItemVariant::MasterBaseTableRows);
+        let initial_state = initial_state_with_too_big_master_table_rows();
+        let code = link_for_isolated_run(Rc::new(RefCell::new(dequeue_next_as)));
+        let program = Program::new(&code);
+        let tvm_result = execute_with_terminal_state(
+            &program,
+            &[],
+            &initial_state.stack,
+            &initial_state.nondeterminism,
+            None,
+        );
+
+        let rust_result = std::panic::catch_unwind(|| {
+            let mut stack = initial_state.stack.clone();
+            let mut memory = initial_state.nondeterminism.ram.clone();
+            dequeue_next_as.rust_shadow(
+                &mut stack,
+                &mut memory,
+                &NonDeterminism::default(),
+                &[],
+                &mut None,
+            );
+        });
+
+        assert!(
+            rust_result.is_err() && tvm_result.is_err(),
+            "Test case: Too big dynamically-sized proof item must fail on both platforms."
+        );
+        let err = tvm_result.unwrap_err();
+        assert_eq!(InstructionError::AssertionFailed, err);
+    }
+
+    fn initial_state_with_too_big_master_table_rows() -> ProcedureInitialState {
+        let dummy_master_table_rows = vec![[bfe!(101); NUM_BASE_COLUMNS]; 15000];
+        let proof_item = ProofItem::MasterBaseTableRows(dummy_master_table_rows);
+        let mut proof_stream = ProofStream::<Tip5>::new();
+        proof_stream.enqueue(proof_item);
+        let address = BFieldElement::zero();
+        DequeueNextAs::initial_state_from_proof_stream_and_address(proof_stream, address)
     }
 
     #[test]
