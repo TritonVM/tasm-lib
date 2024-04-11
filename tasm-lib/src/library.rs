@@ -52,10 +52,7 @@ impl Library {
         Self::new()
     }
 
-    #[deprecated(
-        since = "0.3.0",
-        note = "The current memory layout makes pre-allocation superfluous."
-    )]
+    #[cfg(test)]
     pub fn with_preallocated_memory(words_statically_allocated: u32) -> Self {
         let free_pointer =
             STATIC_MEMORY_START_ADDRESS - BFieldElement::new(words_statically_allocated as u64);
