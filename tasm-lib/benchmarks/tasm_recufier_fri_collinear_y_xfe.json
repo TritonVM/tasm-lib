@@ -1,6 +1,6 @@
 [
   {
-    "name": "tasm_recufier_collinear_y_xfe",
+    "name": "tasm_recufier_fri_collinear_y_xfe",
     "benchmark_result": {
       "clock_cycle_count": 94,
       "hash_table_height": 108,
@@ -11,7 +11,7 @@
     "case": "CommonCase"
   },
   {
-    "name": "tasm_recufier_collinear_y_xfe",
+    "name": "tasm_recufier_fri_collinear_y_xfe",
     "benchmark_result": {
       "clock_cycle_count": 94,
       "hash_table_height": 108,

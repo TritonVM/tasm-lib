@@ -187,7 +187,7 @@ mod tests {
         ) -> Vec<BFieldElement> {
             let mut rng: StdRng = SeedableRng::from_seed(seed);
             let exponent = match bench_case {
-                Some(BenchmarkCase::CommonCase) => 31,
+                Some(BenchmarkCase::CommonCase) => 1 << 25,
                 Some(BenchmarkCase::WorstCase) => u32::MAX,
                 None => rng.gen(),
             };
@@ -266,7 +266,7 @@ mod benches {
     use super::*;
 
     #[test]
-    fn xfe_ntt_benchmark() {
+    fn xfe_mod_pow_benchmark() {
         ShadowedClosure::new(XfeModPowU32Generic).bench();
     }
 }

@@ -6,16 +6,15 @@ use ndarray::Array1;
 use triton_vm::prelude::*;
 use triton_vm::table::challenges::Challenges;
 use triton_vm::table::extension_table::Evaluable;
-use triton_vm::table::master_table::{num_quotients, MasterExtTable};
+use triton_vm::table::extension_table::Quotientable;
+use triton_vm::table::master_table::MasterExtTable;
 use triton_vm::table::tasm_air_constraints::air_constraint_evaluation_tasm;
 
 use crate::recufier::challenges::new_empty_input_and_output::NewEmptyInputAndOutput;
 
-const NUM_TOTAL_CONSTRAINTS: usize = num_quotients();
-
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct AirConstraintEvaluation {
-    mem_layout: TasmConstraintEvaluationMemoryLayout,
+    pub mem_layout: TasmConstraintEvaluationMemoryLayout,
 }
 
 impl AirConstraintEvaluation {
@@ -25,10 +24,10 @@ impl AirConstraintEvaluation {
         }
     }
 
-    pub fn output_type(&self) -> DataType {
+    pub fn output_type() -> DataType {
         DataType::Array(Box::new(ArrayType {
             element_type: DataType::Xfe,
-            length: NUM_TOTAL_CONSTRAINTS,
+            length: MasterExtTable::NUM_CONSTRAINTS,
         }))
     }
 
@@ -94,7 +93,7 @@ impl BasicSnippet for AirConstraintEvaluation {
     }
 
     fn outputs(&self) -> Vec<(DataType, String)> {
-        vec![(self.output_type(), "evaluated_constraints".to_owned())]
+        vec![(Self::output_type(), "evaluated_constraints".to_owned())]
     }
 
     fn entrypoint(&self) -> String {
@@ -127,7 +126,7 @@ impl BasicSnippet for AirConstraintEvaluation {
 }
 
 #[cfg(test)]
-fn an_integral_memory_layout() -> TasmConstraintEvaluationMemoryLayout {
+fn an_integral_but_profane_memory_layout() -> TasmConstraintEvaluationMemoryLayout {
     let mem_layout = TasmConstraintEvaluationMemoryLayout {
         free_mem_page_ptr: BFieldElement::new((u32::MAX as u64 - 1) * (1u64 << 32)),
         curr_base_row_ptr: BFieldElement::new(1u64),
@@ -277,7 +276,7 @@ mod tests {
     #[test]
     fn constraint_evaluation_test() {
         let snippet = AirConstraintEvaluation {
-            mem_layout: an_integral_memory_layout(),
+            mem_layout: an_integral_but_profane_memory_layout(),
         };
 
         let mut seed: [u8; 32] = [0u8; 32];
@@ -290,14 +289,14 @@ mod tests {
             let mut rng: StdRng = SeedableRng::from_seed(seed);
             let input_values = Self::random_input_values(&mut rng);
 
-            let tasm_result = self.tasm_result(input_values.clone());
+            let (tasm_result, _) = self.tasm_result(input_values.clone());
             let host_machine_result = Self::host_machine_air_constraint_evaluation(input_values);
 
             assert_eq!(tasm_result.len(), host_machine_result.len());
             assert_eq!(tasm_result, host_machine_result);
         }
 
-        fn random_input_values(rng: &mut StdRng) -> AirConstraintSnippetInputs {
+        pub(crate) fn random_input_values(rng: &mut StdRng) -> AirConstraintSnippetInputs {
             let current_base_row: Vec<XFieldElement> =
                 rng.sample_iter(Standard).take(NUM_BASE_COLUMNS).collect();
             let current_ext_row: Vec<XFieldElement> =
@@ -321,7 +320,7 @@ mod tests {
             }
         }
 
-        fn prepare_tvm_memory(
+        pub(crate) fn prepare_tvm_memory(
             &self,
             input_values: AirConstraintSnippetInputs,
         ) -> HashMap<BFieldElement, BFieldElement> {
@@ -355,12 +354,14 @@ mod tests {
             memory
         }
 
+        /// Return the pointed-to array and its address.
         /// Note that the result lives as an array in TVM memory but is represented as a list here
         /// since its length is not known at `tasm-lib`'s compile time.
-        fn read_result_from_memory(mut final_state: VMState) -> Vec<XFieldElement> {
+        pub(crate) fn read_result_from_memory(mut final_state: VMState) -> (Vec<XFieldElement>, BFieldElement) {
             let result_pointer = final_state.op_stack.stack.pop().unwrap();
             let mut tasm_result: Vec<XFieldElement> = vec![];
-            for i in 0..NUM_TOTAL_CONSTRAINTS {
+            for i in 0..MasterExtTable::NUM_CONSTRAINTS {
+                println!("{i} / {}", MasterExtTable::NUM_CONSTRAINTS - 1);
                 tasm_result.push(XFieldElement::new(
                     array_get(result_pointer, i, &final_state.ram, EXTENSION_DEGREE)
                         .try_into()
@@ -368,10 +369,14 @@ mod tests {
                 ));
             }
 
-            tasm_result
+            (tasm_result, result_pointer)
         }
 
-        fn tasm_result(&self, input_values: AirConstraintSnippetInputs) -> Vec<XFieldElement> {
+        /// Return evaluated constraints and their location in memory
+        pub(crate) fn tasm_result(
+            &self,
+            input_values: AirConstraintSnippetInputs,
+        ) -> (Vec<XFieldElement>, BFieldElement) {
             let init_memory = self.prepare_tvm_memory(input_values);
 
             let stack = self.init_stack_for_isolated_run();
@@ -400,7 +405,7 @@ mod bench {
     #[test]
     fn bench_air_constraint_evaluation() {
         ShadowedFunction::new(AirConstraintEvaluation {
-            mem_layout: an_integral_memory_layout(),
+            mem_layout: an_integral_but_profane_memory_layout(),
         })
         .bench();
     }

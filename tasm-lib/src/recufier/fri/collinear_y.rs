@@ -31,7 +31,7 @@ impl BasicSnippet for CollinearYXfe {
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_recufier_collinear_y_xfe".to_owned()
+        "tasm_recufier_fri_collinear_y_xfe".to_owned()
     }
 
     // Original:

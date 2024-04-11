@@ -1,6 +1,6 @@
 [
   {
-    "name": "tasm_recufier_get_collinearity_check_x",
+    "name": "tasm_recufier_collinearity_check_x",
     "benchmark_result": {
       "clock_cycle_count": 29,
       "hash_table_height": 36,
@@ -11,7 +11,7 @@
     "case": "CommonCase"
   },
   {
-    "name": "tasm_recufier_get_collinearity_check_x",
+    "name": "tasm_recufier_collinearity_check_x",
     "benchmark_result": {
       "clock_cycle_count": 29,
       "hash_table_height": 36,

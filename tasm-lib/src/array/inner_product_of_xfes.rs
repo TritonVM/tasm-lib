@@ -5,7 +5,7 @@ use triton_vm::prelude::*;
 use triton_vm::twenty_first::shared_math::x_field_element::EXTENSION_DEGREE;
 
 pub struct InnerProductOfXfes {
-    length: usize,
+    pub length: usize,
 }
 
 impl InnerProductOfXfes {

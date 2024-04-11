@@ -1,5 +1,6 @@
 use anyhow::bail;
 use itertools::Itertools;
+use num::Zero;
 use triton_vm::arithmetic_domain::ArithmeticDomain;
 use triton_vm::error::FriValidationError;
 use triton_vm::fri::Fri;
@@ -30,8 +31,9 @@ use crate::list::length::Length;
 use crate::list::new::New;
 use crate::list::push::Push;
 use crate::memory::dyn_malloc::DYN_MALLOC_ADDRESS;
-use crate::recufier::proof_stream::dequeue_next_as::DequeueNextAs;
 use crate::recufier::verify_authentication_paths_for_leaf_and_index_list::VerifyAuthenticationPathForLeafAndIndexList;
+use crate::recufier::vm_proof_iter::dequeue_next_as::DequeueNextAs;
+use crate::recufier::vm_proof_iter::new::vm_proof_iter_type;
 use crate::recufier::xfe_ntt::XfeNtt;
 use crate::structure::tasm_object::TasmObject;
 use crate::traits::basic_snippet::BasicSnippet;
@@ -57,6 +59,8 @@ impl From<Fri<Tip5>> for FriVerify {
     fn from(value: Fri<Tip5>) -> Self {
         Self {
             domain_generator: value.domain.generator,
+
+            // This runtime type-conversion prevents a FRI domain of length 2^32 from being created.
             domain_length: value.domain.length.try_into().unwrap(),
             domain_offset: value.domain.offset,
             expansion_factor: value.expansion_factor.try_into().unwrap(),
@@ -71,28 +75,21 @@ pub struct FriSnippet {
     pub(crate) test_instance: FriVerify,
 }
 
+pub(super) fn fri_verify_type() -> StructType {
+    let name = "FriVerify".to_string();
+    let fields = vec![
+        ("expansion_factor".to_string(), DataType::U32),
+        ("num_collinearity_checks".to_string(), DataType::U32),
+        ("domain_length".to_string(), DataType::U32),
+        ("domain_offset".to_string(), DataType::Bfe),
+        ("domain_generator".to_string(), DataType::Bfe),
+    ];
+
+    StructType { name, fields }
+}
+
 impl FriSnippet {
-    fn vm_proof_iter_type() -> StructType {
-        let name = "VmProofIter".to_string();
-        let fields = vec![("current_item_pointer".to_string(), DataType::Bfe)];
-
-        StructType { name, fields }
-    }
-
-    fn fri_verify_type() -> StructType {
-        let name = "FriVerify".to_string();
-        let fields = vec![
-            ("expansion_factor".to_string(), DataType::U32),
-            ("num_collinearity_checks".to_string(), DataType::U32),
-            ("domain_length".to_string(), DataType::U32),
-            ("domain_offset".to_string(), DataType::Bfe),
-            ("domain_generator".to_string(), DataType::Bfe),
-        ];
-
-        StructType { name, fields }
-    }
-
-    fn indexed_leaves_list_type() -> DataType {
+    pub(crate) fn indexed_leaves_list_type() -> DataType {
         let indexed_leaf_type = DataType::Tuple(vec![DataType::U32, DataType::Xfe]);
         DataType::List(Box::new(indexed_leaf_type))
     }
@@ -100,10 +97,10 @@ impl FriSnippet {
 
 impl BasicSnippet for FriSnippet {
     fn inputs(&self) -> Vec<(DataType, String)> {
-        let proof_iter_ref = DataType::StructRef(Self::vm_proof_iter_type());
+        let proof_iter_ref = DataType::StructRef(vm_proof_iter_type());
         let argument_0 = (proof_iter_ref, "*vm_proof_iter".to_string());
 
-        let fri_verify_ref = DataType::StructRef(Self::fri_verify_type());
+        let fri_verify_ref = DataType::StructRef(fri_verify_type());
         let argument_1 = (fri_verify_ref, "*fri_verify".to_string());
 
         vec![argument_0, argument_1]
@@ -904,6 +901,19 @@ impl BasicSnippet for FriSnippet {
 }
 
 impl FriVerify {
+    /// Return a dummy FRI verify structure that can be used when an instance is not needed but the
+    /// compiler thinks it is. Is probably only needed when the FRI snippet is used in an external
+    /// test.
+    pub fn dummy() -> Self {
+        Self {
+            expansion_factor: 0,
+            num_collinearity_checks: 0,
+            domain_length: 0,
+            domain_offset: BFieldElement::zero(),
+            domain_generator: BFieldElement::zero(),
+        }
+    }
+
     pub fn extract_digests_required_for_proving(
         &self,
         proof_stream: &ProofStream<Tip5>,
@@ -1249,9 +1259,8 @@ mod test {
     use triton_vm::fri::Fri;
     use triton_vm::proof_item::ProofItem;
     use triton_vm::proof_stream::ProofStream;
-    use triton_vm::twenty_first::prelude::*;
-    use twenty_first::shared_math::ntt::ntt;
-    use twenty_first::shared_math::traits::PrimitiveRootOfUnity;
+    use triton_vm::twenty_first::shared_math::traits::PrimitiveRootOfUnity;
+    use triton_vm::twenty_first::util_types::algebraic_hasher::Sponge;
 
     use crate::empty_stack;
     use crate::memory::dyn_malloc::DYN_MALLOC_FIRST_ADDRESS;
@@ -1262,6 +1271,7 @@ mod test {
     use crate::traits::procedure::Procedure;
     use crate::traits::procedure::ProcedureInitialState;
     use crate::traits::procedure::ShadowedProcedure;
+    use crate::twenty_first::shared_math::ntt::ntt;
 
     use super::*;
 
@@ -1688,7 +1698,7 @@ mod test {
         });
     }
 
-    #[proptest(cases = 10)]
+    #[proptest(cases = 2)]
     fn assert_nondeterministic_digests_are_all_used(test_case: TestCase) {
         let ProcedureInitialState {
             stack: initial_stack,

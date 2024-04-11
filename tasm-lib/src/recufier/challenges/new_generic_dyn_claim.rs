@@ -1,6 +1,7 @@
 use num::One;
 use triton_vm::prelude::*;
 use triton_vm::table::challenges::ChallengeId;
+use triton_vm::table::challenges::Challenges;
 use triton_vm::table::cross_table_argument::CrossTableArg;
 use triton_vm::table::cross_table_argument::EvalArg;
 use triton_vm::twenty_first::shared_math::x_field_element::EXTENSION_DEGREE;
@@ -9,13 +10,16 @@ use crate::data_type::DataType;
 use crate::hashing::algebraic_hasher::sample_scalars_static_length_static_pointer::SampleScalarsStaticLengthStaticPointer;
 use crate::library::Library;
 use crate::recufier::challenges::shared::challenges_data_type;
-use crate::recufier::claim::instantiate_fiat_shamir_with_claim::claim_type;
+use crate::recufier::claim::shared::claim_type;
 use crate::recufier::eval_arg::compute_terminal_const_sized_static_symbols::ComputeTerminalConstSizedStaticSymbols;
 use crate::recufier::eval_arg::compute_terminal_dyn_sized_dynamic_symbols::ComputeTerminalDynSizedDynamicSymbols;
 use crate::recufier::eval_arg::compute_terminal_from_digest::ComputeTerminalFromDigestInitialIsOne;
 use crate::tip5::DIGEST_LENGTH;
 use crate::traits::basic_snippet::BasicSnippet;
 
+use super::shared::conventional_challenges_pointer;
+
+pub const NUMBER_OF_CLAIM_DERIVED_CHALLENGES: usize = 4;
 /// Calculate a `Challenges` structure from a claim that is only known at runtime
 pub struct NewGenericDynClaim {
     num_of_fiat_shamir_challenges: usize,
@@ -26,6 +30,14 @@ pub struct NewGenericDynClaim {
 }
 
 impl NewGenericDynClaim {
+    pub fn conventional_with_tvm_parameters() -> Self {
+        Self {
+            num_of_fiat_shamir_challenges: Challenges::COUNT - NUMBER_OF_CLAIM_DERIVED_CHALLENGES,
+            num_of_claim_derived_challenges: NUMBER_OF_CLAIM_DERIVED_CHALLENGES,
+            challenges_pointer: conventional_challenges_pointer(),
+        }
+    }
+
     pub fn new(
         num_challenges_to_sample: usize,
         num_challenges_to_compute: usize,
@@ -289,34 +301,18 @@ mod tests {
 
     #[test]
     fn new_challenges_pbt() {
-        const NUM_OF_CLAIM_DERIVED_CHALLENGES: usize = 4;
-        ShadowedProcedure::new(NewGenericDynClaim {
-            num_of_claim_derived_challenges: NUM_OF_CLAIM_DERIVED_CHALLENGES,
-            num_of_fiat_shamir_challenges: Challenges::COUNT - NUM_OF_CLAIM_DERIVED_CHALLENGES,
-            challenges_pointer: conventional_challenges_pointer(),
-        })
-        .test();
+        ShadowedProcedure::new(NewGenericDynClaim::conventional_with_tvm_parameters()).test();
     }
 }
 
 #[cfg(test)]
 mod benches {
-    use triton_vm::table::challenges::Challenges;
-
-    use crate::recufier::challenges::shared::conventional_challenges_pointer;
+    use super::*;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
 
-    use super::*;
-
     #[test]
     fn bench_for_challenges_calc_for_recufier() {
-        const NUM_OF_CLAIM_DERIVED_CHALLENGES: usize = 4;
-        ShadowedProcedure::new(NewGenericDynClaim {
-            num_of_claim_derived_challenges: 4,
-            num_of_fiat_shamir_challenges: Challenges::COUNT - NUM_OF_CLAIM_DERIVED_CHALLENGES,
-            challenges_pointer: conventional_challenges_pointer(),
-        })
-        .bench();
+        ShadowedProcedure::new(NewGenericDynClaim::conventional_with_tvm_parameters()).bench();
     }
 }
