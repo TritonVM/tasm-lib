@@ -38,7 +38,7 @@ ctags:
 	rusty-tags vi
 
 format:
-	cargo fmt
+	cargo fmt --all
 
 lint:
 	cargo clippy --all-targets

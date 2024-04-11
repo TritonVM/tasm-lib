@@ -357,7 +357,9 @@ mod tests {
         /// Return the pointed-to array and its address.
         /// Note that the result lives as an array in TVM memory but is represented as a list here
         /// since its length is not known at `tasm-lib`'s compile time.
-        pub(crate) fn read_result_from_memory(mut final_state: VMState) -> (Vec<XFieldElement>, BFieldElement) {
+        pub(crate) fn read_result_from_memory(
+            mut final_state: VMState,
+        ) -> (Vec<XFieldElement>, BFieldElement) {
             let result_pointer = final_state.op_stack.stack.pop().unwrap();
             let mut tasm_result: Vec<XFieldElement> = vec![];
             for i in 0..MasterExtTable::NUM_CONSTRAINTS {
