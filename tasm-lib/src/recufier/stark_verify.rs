@@ -9,6 +9,7 @@ use triton_vm::twenty_first::shared_math::x_field_element::EXTENSION_DEGREE;
 
 use crate::arithmetic::bfe::primitive_root_of_unity::PrimitiveRootOfUnity;
 use crate::array::horner_evaluation::HornerEvaluation;
+use crate::array::inner_product_of_three_rows_with_weights::BaseElementType;
 use crate::array::inner_product_of_three_rows_with_weights::InnerProductOfThreeRowsWithWeights;
 use crate::array::inner_product_of_xfes::InnerProductOfXfes;
 use crate::data_type::DataType;
@@ -163,8 +164,11 @@ impl BasicSnippet for StarkVerify {
         let verify_quotient_segments = library.import(Box::new(VerifyBaseTableRows {
             column_type: ColumnType::Quotient,
         }));
-        let inner_product_three_rows_with_weights = library.import(Box::new(
-            InnerProductOfThreeRowsWithWeights::recufier_parameters(),
+        let inner_product_three_rows_with_weights_bfe_base = library.import(Box::new(
+            InnerProductOfThreeRowsWithWeights::recufier_parameters(BaseElementType::Bfe),
+        ));
+        let inner_product_three_rows_with_weights_xfe_base = library.import(Box::new(
+            InnerProductOfThreeRowsWithWeights::recufier_parameters(BaseElementType::Xfe),
         ));
         let inner_product_4_xfes = library.import(Box::new(InnerProductOfXfes { length: 4 }));
         let quotient_segment_codeword_weights_from_be_weights = triton_asm!(
@@ -248,7 +252,7 @@ impl BasicSnippet for StarkVerify {
             dup 3
             dup 7
             dup 9
-            call {inner_product_three_rows_with_weights}
+            call {inner_product_three_rows_with_weights_bfe_base}
             hint base_and_ext_opened_row_element: Xfe = stack[0..3]
             // _ remaining_rounds fri_gen fdoffset *etrow *btrow *qseg_elem *fri_revealed_xfe *b_and_ext_cw_ws *deepws *oodpnts (-fdom_pnt) [be_opnd_elem]
 
@@ -285,7 +289,6 @@ impl BasicSnippet for StarkVerify {
             call {inner_product_4_xfes}
             // _ remaining_rounds fri_gen fdoffset *etrow_prev *btrow_prev *qseg_elem *fri_revealed_xfe *b_and_ext_cw_ws *deepws *oodpnts (-fdom_pnt) [-be_opnd_elem] [1/(oodp_pow_nsegs - fdom_pnt)] [inner_prod]
 
-            break
             swap 14
             push {-((NUM_QUOTIENT_SEGMENTS * EXTENSION_DEGREE) as i32)}
             add
@@ -385,6 +388,7 @@ impl BasicSnippet for StarkVerify {
             // _ remaining_rounds fri_gen fdoffset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *b_and_ext_cw_ws *deepws *oodpnts (-fdom_pnt) [dv2 + dv0] [dv1]
 
             xxadd
+            hint deep_value: XFieldElement = stack[0..3]
             // _ remaining_rounds fri_gen fdoffset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *b_and_ext_cw_ws *deepws *oodpnts (-fdom_pnt) [dv2 + dv0 + dv1]
             // _ remaining_rounds fri_gen fdoffset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *b_and_ext_cw_ws *deepws *oodpnts (-fdom_pnt) [deep_value]
 
@@ -535,18 +539,23 @@ impl BasicSnippet for StarkVerify {
                 /* Dequeue out-of-domain row */
                 dup 6
                 call {next_as_outofdomainbaserow}
+                hint out_of_domain_curr_base_row: Pointer = stack[0]
 
                 dup 7
                 call {next_as_outofdomainextrow}
+                hint out_of_domain_curr_ext_row: Pointer = stack[0]
 
                 dup 8
                 call {next_as_outofdomainbaserow}
+                hint out_of_domain_next_base_row: Pointer = stack[0]
 
                 dup 9
                 call {next_as_outofdomainextrow}
+                hint out_of_domain_next_ext_row: Pointer = stack[0]
 
                 dup 10
                 call {next_as_outofdomainquotientsegments}
+                hint out_of_domain_quotient_segments: Pointer = stack[0]
                 // _ *b_mr *p_iter *oodpnts *fri *e_mr *quot_cw_ws *quot_mr *quotient_summands *ood_brow_curr *ood_erow_curr *odd_brow_nxt *ood_erow_nxt *ood_quotient_segments
 
                 dup 0
@@ -786,7 +795,7 @@ impl BasicSnippet for StarkVerify {
                 swap 4
                 // _ num_cw_chks *deepws *oodpnts *fri *btrows *odd_brow_next *etrows *ood_erow_nxt *fri_revealed *qseg_elems *b_and_ext_cw_ws *b_and_ext_cw_ws *ood_brow_curr *ood_erow_curr
 
-                call {inner_product_three_rows_with_weights}
+                call {inner_product_three_rows_with_weights_xfe_base}
                 hint out_of_domain_curr_row_base_and_ext_value: XFieldElement = stack[0..3]
                 // _ num_cw_chks *deepws *oodpnts *fri *btrows *odd_brow_next *etrows *ood_erow_nxt *fri_revealed *qseg_elems *b_and_ext_cw_ws [ood_curr_beval]
 
@@ -803,7 +812,7 @@ impl BasicSnippet for StarkVerify {
                 swap 4
                 // _ num_cw_chks *deepws *oodpnts *fri *btrows *qseg_elems *etrows *b_and_ext_cw_ws *fri_revealed *b_and_ext_cw_ws *odd_brow_next *ood_erow_nxt
 
-                call {inner_product_three_rows_with_weights}
+                call {inner_product_three_rows_with_weights_xfe_base}
                 hint out_of_domain_next_row_base_and_ext_value: XFieldElement = stack[0..3]
                 // _ num_cw_chks *deepws *oodpnts *fri *btrows *qseg_elems *etrows *b_and_ext_cw_ws *fri_revealed [ood_next_value]
 
@@ -853,7 +862,7 @@ impl BasicSnippet for StarkVerify {
                 // Adjust *fri_revealed (list) to point to last word
                 swap 6
                 dup 9
-                push {EXTENSION_DEGREE + 1}
+                push {EXTENSION_DEGREE + 1} // size of element in `fri_revealed` list
                 mul
                 add
                 hint fri_revealed_elem = stack[0]
@@ -863,7 +872,7 @@ impl BasicSnippet for StarkVerify {
                 swap 5
                 push 1
                 add
-                push {NUM_BASE_COLUMNS}
+                push {NUM_BASE_COLUMNS} // size of element of base row list
                 dup 10
                 push -1
                 add
@@ -876,7 +885,7 @@ impl BasicSnippet for StarkVerify {
                 swap 3
                 push 1
                 add
-                push {NUM_EXT_COLUMNS * EXTENSION_DEGREE}
+                push {NUM_EXT_COLUMNS * EXTENSION_DEGREE} // size of element of ext row list
                 dup 10
                 push -1
                 add
@@ -890,7 +899,7 @@ impl BasicSnippet for StarkVerify {
                 swap 4
                 push 1
                 add
-                push {NUM_QUOTIENT_SEGMENTS * EXTENSION_DEGREE}
+                push {NUM_QUOTIENT_SEGMENTS * EXTENSION_DEGREE} // size of element of quot row list
                 dup 10
                 push -1
                 add
@@ -911,6 +920,10 @@ impl BasicSnippet for StarkVerify {
                 // _ num_cw_chks fri_gen fdoffset *etrows_last_elem *btrows_last_elem *qseg_elems_last_elem *fri_revealed_last_elem *b_and_ext_cw_ws *deepws *oodpnts
 
                 call {main_loop_label}
+                // _ num_cw_chks fri_gen fdoffset *etrows_last_elem *btrows_last_elem *qseg_elems_last_elem *fri_revealed_last_elem *b_and_ext_cw_ws *deepws *oodpnts
+
+                /* Cleanup stack */
+                pop 5 pop 5
 
                 return
 
@@ -929,6 +942,40 @@ pub mod tests {
     use crate::recufier::claim::shared::insert_claim_into_static_memory;
 
     use super::*;
+
+    #[ignore = "Used for debugging when comparing two versions of the verifier"]
+    #[test]
+    fn verify_from_stored_proof_output() {
+        use std::fs::File;
+        let stark = File::open("stark.json").expect("stark file should open read only");
+        let stark: Stark = serde_json::from_reader(stark).unwrap();
+        let claim = File::open("claim.json").expect("claim file should open read only");
+        let claim_for_proof: Claim = serde_json::from_reader(claim).unwrap();
+        let proof = File::open("proof.json").expect("proof file should open read only");
+        let proof: Proof = serde_json::from_reader(proof).unwrap();
+
+        let (mut non_determinism, _inner_padded_height) =
+            nd_from_proof(&stark, &claim_for_proof, proof);
+
+        let (claim_pointer, claim_size) =
+            insert_claim_into_static_memory(&mut non_determinism.ram, claim_for_proof);
+
+        let snippet = StarkVerify {
+            stark_parameters: Stark::default(),
+            log_2_padded_height: None,
+        };
+
+        let mut init_stack = [snippet.init_stack_for_isolated_run(), vec![claim_pointer]].concat();
+        let code = snippet.link_for_isolated_run_populated_static_memory(claim_size);
+        let _final_tasm_state = execute_test(
+            &code,
+            &mut init_stack,
+            snippet.stack_diff(),
+            vec![],
+            non_determinism,
+            None,
+        );
+    }
 
     #[test]
     fn verify_tvm_proof_factorial_program() {
@@ -964,9 +1011,10 @@ pub mod tests {
         );
 
         println!(
-            "Clock cycle count of TASM-verifier of factorial({FACTORIAL_ARGUMENT}): {}.\nInner padded height was: {}",
-            final_tasm_state.cycle_count,
-            inner_padded_height,
+            "TASM-verifier of factorial({FACTORIAL_ARGUMENT}):\n
+            clock cycle count: {}.\n
+             Inner padded height was: {}",
+            final_tasm_state.cycle_count, inner_padded_height,
         );
     }
 
@@ -992,6 +1040,53 @@ pub mod tests {
                 swap 1           // n-1 acc·n
 
                 recurse
+        )
+    }
+
+    fn nd_from_proof(
+        stark: &Stark,
+        claim: &Claim,
+        proof: Proof,
+    ) -> (NonDeterminism<BFieldElement>, usize) {
+        let fri = stark.derive_fri(proof.padded_height().unwrap()).unwrap();
+        let proof_stream = StarkProofStream::try_from(&proof).unwrap();
+        let proof_extraction = extract_fri_proof(&proof_stream, claim, stark);
+        let tasm_lib_fri: fri::verify::FriVerify = fri.into();
+        let fri_proof_digests =
+            tasm_lib_fri.extract_digests_required_for_proving(&proof_extraction.fri_proof_stream);
+        let padded_height = proof.padded_height().unwrap();
+        let Proof(raw_proof) = proof;
+        let ram = raw_proof
+            .into_iter()
+            .enumerate()
+            .map(|(k, v)| (BFieldElement::new(k as u64), v))
+            .collect();
+
+        let nd_digests = [
+            fri_proof_digests,
+            proof_extraction
+                .base_tree_authentication_paths
+                .into_iter()
+                .flatten()
+                .collect_vec(),
+            proof_extraction
+                .ext_tree_authentication_paths
+                .into_iter()
+                .flatten()
+                .collect_vec(),
+            proof_extraction
+                .quot_tree_authentication_paths
+                .into_iter()
+                .flatten()
+                .collect_vec(),
+        ]
+        .concat();
+
+        (
+            NonDeterminism::default()
+                .with_ram(ram)
+                .with_digests(nd_digests),
+            padded_height,
         )
     }
 
@@ -1037,46 +1132,8 @@ pub mod tests {
             "Proof from TVM must verify through TVM"
         );
 
-        let fri = stark.derive_fri(proof.padded_height().unwrap()).unwrap();
-        let proof_stream = StarkProofStream::try_from(&proof).unwrap();
-        let proof_extraction = extract_fri_proof(&proof_stream, &claim, stark);
-        let tasm_lib_fri: fri::verify::FriVerify = fri.into();
-        let fri_proof_digests =
-            tasm_lib_fri.extract_digests_required_for_proving(&proof_extraction.fri_proof_stream);
-        let padded_height = proof.padded_height().unwrap();
-        let Proof(raw_proof) = proof;
-        let ram = raw_proof
-            .into_iter()
-            .enumerate()
-            .map(|(k, v)| (BFieldElement::new(k as u64), v))
-            .collect();
+        let (non_determinism, padded_height) = nd_from_proof(&stark, &claim, proof);
 
-        let nd_digests = [
-            fri_proof_digests,
-            proof_extraction
-                .base_tree_authentication_paths
-                .into_iter()
-                .flatten()
-                .collect_vec(),
-            proof_extraction
-                .ext_tree_authentication_paths
-                .into_iter()
-                .flatten()
-                .collect_vec(),
-            proof_extraction
-                .quot_tree_authentication_paths
-                .into_iter()
-                .flatten()
-                .collect_vec(),
-        ]
-        .concat();
-
-        (
-            NonDeterminism::default()
-                .with_ram(ram)
-                .with_digests(nd_digests),
-            claim,
-            padded_height,
-        )
+        (non_determinism, claim, padded_height)
     }
 }
