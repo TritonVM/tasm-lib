@@ -25,7 +25,7 @@ pub struct StarkProofExtraction {
 pub fn extract_fri_proof(
     proof_stream: &StarkProofStream,
     claim: &Claim,
-    stark: Stark,
+    stark: &Stark,
 ) -> StarkProofExtraction {
     let mut proof_stream = proof_stream.to_owned();
     let log2_padded_height = proof_stream
@@ -205,7 +205,8 @@ mod tests {
         let fri = stark.derive_fri(padded_height).unwrap();
 
         let proof_stream = StarkProofStream::try_from(&proof).unwrap();
-        let mut fri_proof_stream = extract_fri_proof(&proof_stream, &claim, stark).fri_proof_stream;
+        let mut fri_proof_stream =
+            extract_fri_proof(&proof_stream, &claim, &stark).fri_proof_stream;
         assert!(
             fri.verify(&mut fri_proof_stream, &mut None).is_ok(),
             "Extracted proof must verify"
