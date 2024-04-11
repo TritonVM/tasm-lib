@@ -1,31 +1,55 @@
+use arbitrary::Arbitrary;
+use strum::Display;
 use triton_vm::table::{NUM_BASE_COLUMNS, NUM_EXT_COLUMNS};
 use triton_vm::triton_asm;
 use triton_vm::twenty_first::shared_math::x_field_element::EXTENSION_DEGREE;
 
-use crate::{
-    data_type::{ArrayType, DataType},
-    traits::basic_snippet::BasicSnippet,
-};
+use crate::data_type::ArrayType;
+use crate::data_type::DataType;
+use crate::traits::basic_snippet::BasicSnippet;
+
+#[derive(Debug, Clone, Copy, Display, Arbitrary)]
+pub enum BaseElementType {
+    Bfe,
+    Xfe,
+}
+
+impl From<BaseElementType> for DataType {
+    fn from(value: BaseElementType) -> Self {
+        match value {
+            BaseElementType::Bfe => DataType::Bfe,
+            BaseElementType::Xfe => DataType::Xfe,
+        }
+    }
+}
 
 pub struct InnerProductOfThreeRowsWithWeights {
     base_length: usize,
+    base_element_type: BaseElementType,
     ext_length: usize,
     randomizer_length: usize,
 }
 
 impl InnerProductOfThreeRowsWithWeights {
-    pub fn new(base_length: usize, ext_length: usize, randomizer_length: usize) -> Self {
+    pub fn new(
+        base_length: usize,
+        base_element_type: BaseElementType,
+        ext_length: usize,
+        randomizer_length: usize,
+    ) -> Self {
         Self {
             base_length,
+            base_element_type,
             ext_length,
             randomizer_length,
         }
     }
 
-    pub fn recufier_parameters() -> Self {
+    pub fn recufier_parameters(base_element_type: BaseElementType) -> Self {
         Self {
             base_length: NUM_BASE_COLUMNS,
             ext_length: NUM_EXT_COLUMNS,
+            base_element_type,
             // TODO: Use NUM_RANDOMIZERS from TVM here instead, once randomizers
             // are handled correctly in TVM.
             randomizer_length: 0,
@@ -45,7 +69,7 @@ impl BasicSnippet for InnerProductOfThreeRowsWithWeights {
             ),
             (
                 DataType::Array(Box::new(ArrayType {
-                    element_type: DataType::Bfe,
+                    element_type: self.base_element_type.into(),
                     length: self.base_length,
                 })),
                 "*base_row".to_string(),
@@ -65,7 +89,10 @@ impl BasicSnippet for InnerProductOfThreeRowsWithWeights {
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_array_inner_product_of_three_rows_with_weights".to_string()
+        format!(
+            "tasm_array_inner_product_of_three_rows_with_weights_{}_baserowelem",
+            self.base_element_type
+        )
     }
 
     fn code(
@@ -86,9 +113,11 @@ impl BasicSnippet for InnerProductOfThreeRowsWithWeights {
         );
         let move_ext_row_pointer_to_last_word =
             move_to_last_word((self.ext_length - self.randomizer_length) * EXTENSION_DEGREE);
-        let move_base_row_pointer_to_last_word = move_to_last_word(self.base_length);
+        let base_element_type: DataType = self.base_element_type.into();
+        let base_row_size = base_element_type.stack_size() * self.base_length;
+        let move_base_row_pointer_to_last_word = move_to_last_word(base_row_size);
 
-        let acc_once_from_ext = triton_asm!(
+        let acc_once_from_xfe_array = triton_asm!(
             // _ *a *b [acc]
 
             dup 3
@@ -111,8 +140,9 @@ impl BasicSnippet for InnerProductOfThreeRowsWithWeights {
             xxadd
             // _ *b_prev *a_prev [acc']
         );
-        let acc_all_from_ext =
-            vec![acc_once_from_ext; self.ext_length - self.randomizer_length].concat();
+        let acc_all_from_extension_row =
+            vec![acc_once_from_xfe_array.clone(); self.ext_length - self.randomizer_length]
+                .concat();
         let clean_stack = if (self.ext_length + self.randomizer_length) % 2 == 1 {
             triton_asm!(
                 // _ *w_last *e_last [acc]
@@ -181,10 +211,18 @@ impl BasicSnippet for InnerProductOfThreeRowsWithWeights {
         );
 
         let acc_two_from_base = [acc_once_from_base_even.clone(), acc_once_from_base_odd].concat();
-        let mut acc_all_from_base = vec![acc_two_from_base; self.base_length / 2].concat();
-        if self.base_length % 2 == 1 {
-            acc_all_from_base.extend(acc_once_from_base_even);
-        }
+        let acc_all_from_base_row = match self.base_element_type {
+            BaseElementType::Bfe => {
+                let mut acc_all_from_base_row =
+                    vec![acc_two_from_base; self.base_length / 2].concat();
+                if self.base_length % 2 == 1 {
+                    acc_all_from_base_row.extend(acc_once_from_base_even);
+                }
+
+                acc_all_from_base_row
+            }
+            BaseElementType::Xfe => vec![acc_once_from_xfe_array; self.base_length].concat(),
+        };
 
         triton_asm! {
             // BEFORE: _ *weights *base_row *ext_row
@@ -203,11 +241,11 @@ impl BasicSnippet for InnerProductOfThreeRowsWithWeights {
                 push 0
 
                 // accumulate ext inner product
-                {&acc_all_from_ext}
+                {&acc_all_from_extension_row}
                 {&clean_stack}                          // _ *b_last *w_middle [acc]
 
                 // accumulate base inner product
-                {&acc_all_from_base}
+                {&acc_all_from_base_row}
                 // _ garbage0 garbage1 [acc]
 
                 swap 2 // _ g0 g1 acc0 acc1 acc2
@@ -227,6 +265,7 @@ mod test {
     use std::collections::HashMap;
 
     use itertools::Itertools;
+    use proptest_arbitrary_interop::arb;
     use rand::rngs::StdRng;
     use rand::Rng;
     use rand::SeedableRng;
@@ -243,12 +282,24 @@ mod test {
     use super::*;
 
     #[test]
-    fn three_rows_tvm_parameters_test() {
-        ShadowedFunction::new(InnerProductOfThreeRowsWithWeights::recufier_parameters()).test()
+    fn three_rows_tvm_parameters_xfe_base_test() {
+        ShadowedFunction::new(InnerProductOfThreeRowsWithWeights::recufier_parameters(
+            BaseElementType::Xfe,
+        ))
+        .test()
     }
 
-    #[proptest(cases = 5)]
+    #[test]
+    fn three_rows_tvm_parameters_bfe_base_test() {
+        ShadowedFunction::new(InnerProductOfThreeRowsWithWeights::recufier_parameters(
+            BaseElementType::Bfe,
+        ))
+        .test()
+    }
+
+    #[proptest(cases = 6)]
     fn three_rows_pbt(
+        #[strategy(arb())] base_element_type: BaseElementType,
         #[strategy(0_usize..500)] base_length: usize,
         #[strategy(0_usize..500)] ext_length: usize,
         #[filter(#randomizer_length<#ext_length)]
@@ -257,6 +308,7 @@ mod test {
     ) {
         let snippet = InnerProductOfThreeRowsWithWeights {
             base_length,
+            base_element_type,
             ext_length,
             randomizer_length,
         };
@@ -283,17 +335,34 @@ mod test {
                 self.ext_length - self.randomizer_length,
                 memory,
             );
-            let base_row: Vec<BFieldElement> =
-                array_from_memory(base_row_address, self.base_length, memory);
 
-            // compute inner product
-            let ip = base_row
-                .iter()
-                .map(|b| b.lift())
-                .chain(ext_row)
-                .zip_eq(weights)
-                .map(|(l, r)| l * r)
-                .sum::<XFieldElement>();
+            let ip = match self.base_element_type {
+                BaseElementType::Bfe => {
+                    let base_row: Vec<BFieldElement> =
+                        array_from_memory(base_row_address, self.base_length, memory);
+
+                    // compute inner product
+                    base_row
+                        .iter()
+                        .map(|b| b.lift())
+                        .chain(ext_row)
+                        .zip_eq(weights)
+                        .map(|(l, r)| l * r)
+                        .sum::<XFieldElement>()
+                }
+                BaseElementType::Xfe => {
+                    let base_row: Vec<XFieldElement> =
+                        array_from_memory(base_row_address, self.base_length, memory);
+
+                    // compute inner product
+                    base_row
+                        .into_iter()
+                        .chain(ext_row)
+                        .zip_eq(weights)
+                        .map(|(l, r)| l * r)
+                        .sum::<XFieldElement>()
+                }
+            };
 
             // write inner product back to stack
             let mut res = ip.coefficients.to_vec();
@@ -314,7 +383,14 @@ mod test {
 
             let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
 
-            insert_random_array(&DataType::Bfe, base_address, self.base_length, &mut memory);
+            match self.base_element_type {
+                BaseElementType::Bfe => {
+                    insert_random_array(&DataType::Bfe, base_address, self.base_length, &mut memory)
+                }
+                BaseElementType::Xfe => {
+                    insert_random_array(&DataType::Xfe, base_address, self.base_length, &mut memory)
+                }
+            }
             insert_random_array(&DataType::Xfe, ext_address, self.ext_length, &mut memory);
             insert_random_array(
                 &DataType::Xfe,
@@ -351,6 +427,7 @@ mod benches {
             base_length: NUM_BASE_COLUMNS,
             ext_length: NUM_EXT_COLUMNS,
             randomizer_length: NUM_RANDOMIZER_POLYNOMIALS,
+            base_element_type: BaseElementType::Bfe,
         })
         .bench();
     }

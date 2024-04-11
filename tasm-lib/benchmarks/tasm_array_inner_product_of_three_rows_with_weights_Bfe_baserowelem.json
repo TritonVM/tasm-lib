@@ -1,6 +1,6 @@
 [
   {
-    "name": "tasm_array_inner_product_of_three_rows_with_weights",
+    "name": "tasm_array_inner_product_of_three_rows_with_weights_Bfe_baserowelem",
     "benchmark_result": {
       "clock_cycle_count": 3528,
       "hash_table_height": 3708,
@@ -11,7 +11,7 @@
     "case": "CommonCase"
   },
   {
-    "name": "tasm_array_inner_product_of_three_rows_with_weights",
+    "name": "tasm_array_inner_product_of_three_rows_with_weights_Bfe_baserowelem",
     "benchmark_result": {
       "clock_cycle_count": 3528,
       "hash_table_height": 3708,
