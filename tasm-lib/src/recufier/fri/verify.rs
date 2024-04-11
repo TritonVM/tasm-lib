@@ -33,7 +33,7 @@ use crate::list::push::Push;
 use crate::memory::dyn_malloc::DYN_MALLOC_ADDRESS;
 use crate::recufier::verify_authentication_paths_for_leaf_and_index_list::VerifyAuthenticationPathForLeafAndIndexList;
 use crate::recufier::vm_proof_iter::dequeue_next_as::DequeueNextAs;
-use crate::recufier::vm_proof_iter::new::vm_proof_iter_type;
+use crate::recufier::vm_proof_iter::shared::vm_proof_iter_type;
 use crate::recufier::xfe_ntt::XfeNtt;
 use crate::structure::tasm_object::TasmObject;
 use crate::traits::basic_snippet::BasicSnippet;

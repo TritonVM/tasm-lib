@@ -17,9 +17,11 @@ use crate::field;
 use crate::hashing::algebraic_hasher::sample_scalar_one::SampleScalarOne;
 use crate::hashing::algebraic_hasher::sample_scalars_static_length_dyn_malloc::SampleScalarsStaticLengthDynMalloc;
 use crate::library::Library;
+use crate::recufier::challenges;
 use crate::recufier::challenges::shared::conventional_challenges_pointer;
 use crate::recufier::claim::instantiate_fiat_shamir_with_claim::InstantiateFiatShamirWithClaim;
 use crate::recufier::claim::shared::claim_type;
+use crate::recufier::fri;
 use crate::recufier::fri::verify::FriSnippet;
 use crate::recufier::fri::verify::FriVerify;
 use crate::recufier::master_ext_table::quotient_summands::QuotientSummands;
@@ -28,7 +30,7 @@ use crate::recufier::master_ext_table::verify_base_table_rows::VerifyBaseTableRo
 use crate::recufier::out_of_domain_points::OodPoint;
 use crate::recufier::out_of_domain_points::OutOfDomainPoints;
 use crate::recufier::vm_proof_iter::dequeue_next_as::DequeueNextAs;
-use crate::recufier::{challenges, fri, vm_proof_iter};
+use crate::recufier::vm_proof_iter::shared::vm_proof_iter_type;
 use crate::traits::basic_snippet::BasicSnippet;
 
 pub struct StarkVerify {
@@ -38,7 +40,13 @@ pub struct StarkVerify {
 
 impl BasicSnippet for StarkVerify {
     fn inputs(&self) -> Vec<(DataType, String)> {
-        vec![(DataType::StructRef(claim_type()), "claim".to_owned())]
+        vec![
+            (DataType::StructRef(claim_type()), "claim".to_owned()),
+            (
+                DataType::StructRef(vm_proof_iter_type()),
+                "vm_proof_iter".to_owned(),
+            ),
+        ]
     }
 
     fn outputs(&self) -> Vec<(DataType, String)> {
@@ -74,7 +82,6 @@ impl BasicSnippet for StarkVerify {
 
         let instantiate_fiat_shamir_with_claim =
             library.import(Box::new(InstantiateFiatShamirWithClaim));
-        let new_proof_iter = library.import(Box::new(vm_proof_iter::new::New));
         let next_as_log_2_padded_height = library.import(Box::new(DequeueNextAs {
             proof_item: ProofItemVariant::Log2PaddedHeight,
         }));
@@ -431,21 +438,16 @@ impl BasicSnippet for StarkVerify {
         triton_asm!(
             {entrypoint}:
                 sponge_init
-
-                // _ *clm
+                // _ *clm *proof_iter
 
 
                 /* Fiat-Shamir: Claim */
-                dup 0
+                dup 1
                 call {instantiate_fiat_shamir_with_claim}
-                // _ *clm
+                // _ *clm *p_iter
 
 
                 /* derive additional parameters */
-                call {new_proof_iter}
-                hint p_iter = stack[0]
-                // _ *clm *p_iter
-
                 dup 0
                 call {next_as_log_2_padded_height}
                 // _ *clm *p_iter *log_2_padded_height
@@ -940,6 +942,7 @@ pub mod tests {
 
     use crate::execute_test;
     use crate::recufier::claim::shared::insert_claim_into_static_memory;
+    use crate::recufier::vm_proof_iter::shared::insert_default_proof_iter_into_memory;
 
     use super::*;
 
@@ -960,12 +963,19 @@ pub mod tests {
         let (claim_pointer, claim_size) =
             insert_claim_into_static_memory(&mut non_determinism.ram, claim_for_proof);
 
+        let proof_iter_pointer = BFieldElement::new(1 << 31);
+        insert_default_proof_iter_into_memory(&mut non_determinism.ram, proof_iter_pointer);
+
         let snippet = StarkVerify {
             stark_parameters: Stark::default(),
             log_2_padded_height: None,
         };
 
-        let mut init_stack = [snippet.init_stack_for_isolated_run(), vec![claim_pointer]].concat();
+        let mut init_stack = [
+            snippet.init_stack_for_isolated_run(),
+            vec![claim_pointer, proof_iter_pointer],
+        ]
+        .concat();
         let code = snippet.link_for_isolated_run_populated_static_memory(claim_size);
         let _final_tasm_state = execute_test(
             &code,
@@ -988,18 +998,25 @@ pub mod tests {
                 NonDeterminism::default(),
             );
 
-        // Insert `claim` into standard memory, since that's how the interface is defined
+        // Insert `claim` into standard memory, since that's how the interface is defined.
         // In any real setting, you probably want to use the above snippet as an inner function,
-        // and instead call an entrypoint that puts the claim into memory and passes a pointer to
-        // the above snippet.
+        // and instead call an entrypoint that puts the claim into memory and passes it as a pointer
+        // to the above snippet. Same goes for the proof-iterator.
         let (claim_pointer, claim_size) =
             insert_claim_into_static_memory(&mut non_determinism.ram, claim_for_proof);
+
+        let proof_iter_pointer = BFieldElement::new(1 << 31);
+        insert_default_proof_iter_into_memory(&mut non_determinism.ram, proof_iter_pointer);
 
         let snippet = StarkVerify {
             stark_parameters: Stark::default(),
             log_2_padded_height: None,
         };
-        let mut init_stack = [snippet.init_stack_for_isolated_run(), vec![claim_pointer]].concat();
+        let mut init_stack = [
+            snippet.init_stack_for_isolated_run(),
+            vec![claim_pointer, proof_iter_pointer],
+        ]
+        .concat();
         let code = snippet.link_for_isolated_run_populated_static_memory(claim_size);
         let final_tasm_state = execute_test(
             &code,

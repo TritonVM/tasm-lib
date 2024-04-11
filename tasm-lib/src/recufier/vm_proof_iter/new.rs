@@ -1,18 +1,11 @@
 use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
-use crate::data_type::StructType;
 use crate::memory::dyn_malloc::DynMalloc;
+use crate::recufier::vm_proof_iter::shared::vm_proof_iter_type;
 use crate::traits::basic_snippet::BasicSnippet;
 
 pub const FIRST_PROOF_ITEM_ELEMENT_POINTER: BFieldElement = BFieldElement::new(2);
-
-pub fn vm_proof_iter_type() -> StructType {
-    let name = "VmProofIter".to_string();
-    let fields = vec![("current_item_pointer".to_string(), DataType::Bfe)];
-
-    StructType { name, fields }
-}
 
 pub struct New;
 
