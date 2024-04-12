@@ -1164,13 +1164,11 @@ mod benches {
     use benches::tests::{factorial_program_with_io, non_determinism_claim_and_padded_height};
 
     use crate::linker::execute_bench;
+    use crate::memory::encode_to_memory;
     use crate::snippet_bencher::{write_benchmarks, BenchmarkCase, NamedBenchmarkResult};
     use crate::{
         linker::link_for_isolated_run,
-        recufier::{
-            claim::shared::insert_claim_into_memory,
-            vm_proof_iter::shared::insert_default_proof_iter_into_memory,
-        },
+        recufier::vm_proof_iter::shared::insert_default_proof_iter_into_memory,
     };
 
     use super::*;
@@ -1209,7 +1207,7 @@ mod benches {
             );
 
         let claim_pointer = BFieldElement::new(1 << 30);
-        insert_claim_into_memory(&mut non_determinism.ram, claim_for_proof, claim_pointer);
+        encode_to_memory(&mut non_determinism.ram, claim_pointer, claim_for_proof);
 
         let proof_iter_pointer = BFieldElement::new(1 << 31);
         insert_default_proof_iter_into_memory(&mut non_determinism.ram, proof_iter_pointer);
