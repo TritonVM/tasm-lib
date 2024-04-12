@@ -25,8 +25,8 @@ use crate::recufier::fri;
 use crate::recufier::fri::verify::FriSnippet;
 use crate::recufier::fri::verify::FriVerify;
 use crate::recufier::master_ext_table::quotient_summands::QuotientSummands;
-use crate::recufier::master_ext_table::verify_base_table_rows::ColumnType;
-use crate::recufier::master_ext_table::verify_base_table_rows::VerifyBaseTableRows;
+use crate::recufier::master_ext_table::verify_table_rows::ColumnType;
+use crate::recufier::master_ext_table::verify_table_rows::VerifyTableRows;
 use crate::recufier::out_of_domain_points::OodPoint;
 use crate::recufier::out_of_domain_points::OutOfDomainPoints;
 use crate::recufier::vm_proof_iter::dequeue_next_as::DequeueNextAs;
@@ -163,13 +163,13 @@ impl BasicSnippet for StarkVerify {
         let deep_codeword_weights = library.import(Box::new(SampleScalarsStaticLengthDynMalloc {
             num_elements: NUM_DEEP_CODEWORD_COMPONENTS,
         }));
-        let verify_base_table_rows = library.import(Box::new(VerifyBaseTableRows {
+        let verify_base_table_rows = library.import(Box::new(VerifyTableRows {
             column_type: ColumnType::Base,
         }));
-        let verify_extension_table_rows = library.import(Box::new(VerifyBaseTableRows {
+        let verify_extension_table_rows = library.import(Box::new(VerifyTableRows {
             column_type: ColumnType::Extension,
         }));
-        let verify_quotient_segments = library.import(Box::new(VerifyBaseTableRows {
+        let verify_quotient_segments = library.import(Box::new(VerifyTableRows {
             column_type: ColumnType::Quotient,
         }));
         let inner_product_three_rows_with_weights_bfe_base = library.import(Box::new(
