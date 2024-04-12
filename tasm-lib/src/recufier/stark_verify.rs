@@ -33,6 +33,7 @@ use crate::recufier::vm_proof_iter::dequeue_next_as::DequeueNextAs;
 use crate::recufier::vm_proof_iter::shared::vm_proof_iter_type;
 use crate::traits::basic_snippet::BasicSnippet;
 
+#[derive(Debug, Clone)]
 pub struct StarkVerify {
     stark_parameters: Stark,
     log_2_padded_height: Option<u32>,
@@ -1152,5 +1153,87 @@ pub mod tests {
         let (non_determinism, padded_height) = nd_from_proof(&stark, &claim, proof);
 
         (non_determinism, claim, padded_height)
+    }
+}
+
+#[cfg(test)]
+mod benches {
+    use std::cell::RefCell;
+    use std::rc::Rc;
+
+    use benches::tests::{factorial_program_with_io, non_determinism_claim_and_padded_height};
+
+    use crate::linker::execute_bench;
+    use crate::snippet_bencher::{write_benchmarks, BenchmarkCase, NamedBenchmarkResult};
+    use crate::{
+        linker::link_for_isolated_run,
+        recufier::{
+            claim::shared::insert_claim_into_memory,
+            vm_proof_iter::shared::insert_default_proof_iter_into_memory,
+        },
+    };
+
+    use super::*;
+
+    #[ignore = "Intended to generate data about verifier table heights as a function of inner padded
+       height Make sure to run with `RUSTFLAGS=\"-C opt-level=3 -C debug-assertions=no`"]
+    #[test]
+    fn benchmark_verification_as_a_function_of_inner_padded_height() {
+        for (fact_arg, expected_inner_padded_height) in [
+            (10, 1 << 8),
+            (40, 1 << 9),
+            (80, 1 << 10),
+            (100, 1 << 11),
+            (200, 1 << 12),
+            (400, 1 << 13),
+            (800, 1 << 14),
+            (1600, 1 << 15),
+            (3200, 1 << 16),
+            (6400, 1 << 17),
+            (12800, 1 << 18),
+            (25600, 1 << 19),
+            (51200, 1 << 20),
+            (102400, 1 << 21),
+        ] {
+            benchmark_verifier(fact_arg, expected_inner_padded_height);
+        }
+    }
+
+    fn benchmark_verifier(factorial_argument: u32, expected_inner_padded_height: usize) {
+        let factorial_program = factorial_program_with_io();
+        let (mut non_determinism, claim_for_proof, inner_padded_height) =
+            non_determinism_claim_and_padded_height(
+                &factorial_program,
+                &[bfe!(factorial_argument)],
+                NonDeterminism::default(),
+            );
+
+        let claim_pointer = BFieldElement::new(1 << 30);
+        insert_claim_into_memory(&mut non_determinism.ram, claim_for_proof, claim_pointer);
+
+        let proof_iter_pointer = BFieldElement::new(1 << 31);
+        insert_default_proof_iter_into_memory(&mut non_determinism.ram, proof_iter_pointer);
+
+        assert_eq!(expected_inner_padded_height, inner_padded_height);
+
+        let snippet = StarkVerify {
+            stark_parameters: Stark::default(),
+            log_2_padded_height: None,
+        };
+
+        let stack = [
+            snippet.init_stack_for_isolated_run(),
+            vec![claim_pointer, proof_iter_pointer],
+        ]
+        .concat();
+        let code = link_for_isolated_run(Rc::new(RefCell::new(snippet.clone())));
+        let benchmark = execute_bench(&code, &stack, vec![], non_determinism, None);
+        let benchmark = NamedBenchmarkResult {
+            name: format!("{}_{}", snippet.entrypoint(), inner_padded_height),
+            benchmark_result: benchmark,
+            case: BenchmarkCase::CommonCase,
+        };
+
+        write_benchmarks(vec![benchmark]);
     }
 }
