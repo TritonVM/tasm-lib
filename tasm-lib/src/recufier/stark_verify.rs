@@ -992,11 +992,13 @@ pub mod tests {
     fn verify_tvm_proof_factorial_program() {
         const FACTORIAL_ARGUMENT: u32 = 3;
         let factorial_program = factorial_program_with_io();
+        let stark = Stark::default();
         let (mut non_determinism, claim_for_proof, inner_padded_height) =
             non_determinism_claim_and_padded_height(
                 &factorial_program,
                 &[FACTORIAL_ARGUMENT.into()],
                 NonDeterminism::default(),
+                &stark,
             );
 
         // Insert `claim` into standard memory, since that's how the interface is defined.
@@ -1010,7 +1012,7 @@ pub mod tests {
         insert_default_proof_iter_into_memory(&mut non_determinism.ram, proof_iter_pointer);
 
         let snippet = StarkVerify {
-            stark_parameters: Stark::default(),
+            stark_parameters: stark,
             log_2_padded_height: None,
         };
         let mut init_stack = [
@@ -1112,45 +1114,32 @@ pub mod tests {
         inner_program: &Program,
         inner_public_input: &[BFieldElement],
         inner_nondeterminism: NonDeterminism<BFieldElement>,
+        stark: &Stark,
     ) -> (
         NonDeterminism<BFieldElement>,
         triton_vm::proof::Claim,
         usize,
     ) {
-        // TODO: Delete this function once `u64` types are removed from TVM interface
-        fn nd_bf_to_u64(nd: NonDeterminism<BFieldElement>) -> NonDeterminism<u64> {
-            let individual_tokens = nd
-                .individual_tokens
-                .iter()
-                .map(|&element| element.into())
-                .collect();
-            let ram = nd
-                .ram
-                .iter()
-                .map(|(&key, &value)| (key.into(), value.into()))
-                .collect();
-            NonDeterminism {
-                individual_tokens,
-                digests: nd.digests.clone(),
-                ram,
-            }
-        }
-
         println!("Generating proof for non-determinism");
-        let (stark, claim, proof) = triton_vm::prove_program(
-            inner_program,
-            &inner_public_input.iter().map(|x| x.value()).collect_vec(),
-            &nd_bf_to_u64(inner_nondeterminism),
-        )
-        .unwrap();
+
+        let (aet, inner_output) = inner_program
+            .trace_execution(inner_public_input.into(), inner_nondeterminism.clone())
+            .unwrap();
+        let claim = Claim {
+            program_digest: inner_program.hash::<Tip5>(),
+            input: inner_public_input.to_vec(),
+            output: inner_output,
+        };
+
+        let proof = stark.prove(&claim, &aet, &mut None).unwrap();
         println!("Done generating proof for non-determinism");
 
         assert!(
-            triton_vm::verify(stark, &claim, &proof),
+            stark.verify(&claim, &proof, &mut None).is_ok(),
             "Proof from TVM must verify through TVM"
         );
 
-        let (non_determinism, padded_height) = nd_from_proof(&stark, &claim, proof);
+        let (non_determinism, padded_height) = nd_from_proof(stark, &claim, proof);
 
         (non_determinism, claim, padded_height)
     }
@@ -1199,11 +1188,13 @@ mod benches {
 
     fn benchmark_verifier(factorial_argument: u32, expected_inner_padded_height: usize) {
         let factorial_program = factorial_program_with_io();
+        let stark = Stark::default();
         let (mut non_determinism, claim_for_proof, inner_padded_height) =
             non_determinism_claim_and_padded_height(
                 &factorial_program,
                 &[bfe!(factorial_argument)],
                 NonDeterminism::default(),
+                &stark,
             );
 
         let claim_pointer = BFieldElement::new(1 << 30);
@@ -1215,7 +1206,7 @@ mod benches {
         assert_eq!(expected_inner_padded_height, inner_padded_height);
 
         let snippet = StarkVerify {
-            stark_parameters: Stark::default(),
+            stark_parameters: stark,
             log_2_padded_height: None,
         };
 
