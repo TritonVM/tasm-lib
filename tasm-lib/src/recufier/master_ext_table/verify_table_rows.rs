@@ -317,8 +317,8 @@ mod tests {
         ) -> ProcedureInitialState {
             let mut rng: StdRng = SeedableRng::from_seed(seed);
             let merkle_tree_height = match bench_case {
-                Some(BenchmarkCase::CommonCase) => 10,
-                Some(BenchmarkCase::WorstCase) => 15,
+                Some(BenchmarkCase::CommonCase) => 17,
+                Some(BenchmarkCase::WorstCase) => 22,
                 None => rng.gen_range(2..7),
             };
             let num_leafs = 1 << merkle_tree_height;
@@ -392,5 +392,37 @@ mod tests {
                 sponge: None,
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod benches {
+    use crate::traits::procedure::ShadowedProcedure;
+    use crate::traits::rust_shadow::RustShadow;
+
+    use super::*;
+
+    #[test]
+    fn verify_table_bench_base() {
+        ShadowedProcedure::new(VerifyTableRows {
+            column_type: ColumnType::Base,
+        })
+        .bench()
+    }
+
+    #[test]
+    fn verify_table_bench_ext() {
+        ShadowedProcedure::new(VerifyTableRows {
+            column_type: ColumnType::Extension,
+        })
+        .bench()
+    }
+
+    #[test]
+    fn verify_table_bench_quot() {
+        ShadowedProcedure::new(VerifyTableRows {
+            column_type: ColumnType::Quotient,
+        })
+        .bench()
     }
 }

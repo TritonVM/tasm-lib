@@ -1,0 +1,24 @@
+[
+  {
+    "name": "verify_Quotient_table_rows",
+    "benchmark_result": {
+      "clock_cycle_count": 654,
+      "hash_table_height": 477,
+      "u32_table_height": 63,
+      "op_stack_table_height": 1073,
+      "ram_table_height": 55
+    },
+    "case": "CommonCase"
+  },
+  {
+    "name": "verify_Quotient_table_rows",
+    "benchmark_result": {
+      "clock_cycle_count": 759,
+      "hash_table_height": 567,
+      "u32_table_height": 78,
+      "op_stack_table_height": 1283,
+      "ram_table_height": 55
+    },
+    "case": "WorstCase"
+  }
+]
