@@ -1,6 +1,6 @@
 use triton_vm::instruction::LabelledInstruction;
 use triton_vm::triton_asm;
-use triton_vm::twenty_first::shared_math::x_field_element::EXTENSION_DEGREE;
+use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
 use crate::arithmetic::xfe::to_the_fourth::ToTheFourth;
 use crate::data_type::ArrayType;
@@ -136,8 +136,8 @@ mod tests {
     use rand::SeedableRng;
     use triton_vm::prelude::*;
     use triton_vm::table::NUM_QUOTIENT_SEGMENTS;
-    use triton_vm::twenty_first::shared_math::traits::ModPowU32;
-    use triton_vm::twenty_first::shared_math::traits::PrimitiveRootOfUnity;
+    use triton_vm::twenty_first::math::traits::ModPowU32;
+    use triton_vm::twenty_first::math::traits::PrimitiveRootOfUnity;
 
     use crate::rust_shadowing_helper_functions::array::insert_as_array;
     use crate::snippet_bencher::BenchmarkCase;

@@ -1,5 +1,5 @@
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::shared_math::tip5::RATE;
+use triton_vm::twenty_first::math::tip5::RATE;
 
 use crate::data_type::DataType;
 use crate::traits::basic_snippet::BasicSnippet;
@@ -91,7 +91,7 @@ mod tests {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &mut HashMap<BFieldElement, BFieldElement>,
-            nondeterminism: &NonDeterminism<BFieldElement>,
+            nondeterminism: &NonDeterminism,
             public_input: &[BFieldElement],
             sponge: &mut Option<crate::VmHasher>,
         ) -> Vec<BFieldElement> {

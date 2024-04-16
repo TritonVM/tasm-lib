@@ -68,7 +68,7 @@ pub fn test_rust_equivalence_given_input_values_deprecated<T: DeprecatedSnippet>
     memory: HashMap<BFieldElement, BFieldElement>,
     expected_final_stack: Option<&[BFieldElement]>,
 ) -> VMState {
-    let nondeterminism = NonDeterminism::<BFieldElement>::new(vec![]).with_ram(memory.clone());
+    let nondeterminism = NonDeterminism::new(vec![]).with_ram(memory.clone());
 
     test_rust_equivalence_given_complete_state_deprecated(
         snippet_struct,
@@ -125,7 +125,7 @@ pub fn link_and_run_tasm_for_test_deprecated<T: DeprecatedSnippet>(
     );
 
     let code = link_for_isolated_run_deprecated(snippet_struct);
-    let nondeterminism = NonDeterminism::<BFieldElement>::new(secret_in).with_ram(memory.clone());
+    let nondeterminism = NonDeterminism::new(secret_in).with_ram(memory.clone());
 
     execute_test(
         &code,
@@ -141,7 +141,7 @@ pub(crate) fn test_rust_equivalence_given_complete_state_deprecated<T: Deprecate
     snippet_struct: &T,
     stack: &[BFieldElement],
     stdin: &[BFieldElement],
-    nondeterminism: &NonDeterminism<BFieldElement>,
+    nondeterminism: &NonDeterminism,
     expected_final_stack: Option<&[BFieldElement]>,
 ) -> VMState {
     let init_stack = stack.to_vec();
@@ -269,7 +269,7 @@ pub fn rust_final_state<T: RustShadow>(
     shadowed_snippet: &T,
     stack: &[BFieldElement],
     stdin: &[BFieldElement],
-    nondeterminism: &NonDeterminism<BFieldElement>,
+    nondeterminism: &NonDeterminism,
     sponge: &Option<VmHasher>,
 ) -> RustShadowOutputState {
     let mut rust_memory = nondeterminism.ram.clone();
@@ -297,7 +297,7 @@ pub fn tasm_final_state<T: RustShadow>(
     shadowed_snippet: &T,
     stack: &[BFieldElement],
     stdin: &[BFieldElement],
-    nondeterminism: NonDeterminism<BFieldElement>,
+    nondeterminism: NonDeterminism,
     sponge: &Option<VmHasher>,
 ) -> VMState {
     // run tvm
@@ -403,7 +403,7 @@ pub fn test_rust_equivalence_given_complete_state<T: RustShadow>(
     shadowed_snippet: &T,
     stack: &[BFieldElement],
     stdin: &[BFieldElement],
-    nondeterminism: &NonDeterminism<BFieldElement>,
+    nondeterminism: &NonDeterminism,
     sponge: &Option<VmHasher>,
     expected_final_stack: Option<&[BFieldElement]>,
 ) -> VMState {
@@ -444,7 +444,7 @@ pub fn link_and_run_tasm_for_test<T: RustShadow>(
     snippet_struct: &T,
     stack: &mut Vec<BFieldElement>,
     std_in: Vec<BFieldElement>,
-    nondeterminism: NonDeterminism<BFieldElement>,
+    nondeterminism: NonDeterminism,
     maybe_sponge: Option<VmHasher>,
 ) -> VMState {
     let code = link_for_isolated_run(snippet_struct);

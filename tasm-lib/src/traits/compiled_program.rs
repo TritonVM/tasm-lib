@@ -1,6 +1,7 @@
 use anyhow::anyhow;
 use anyhow::Result;
 use triton_vm::prelude::*;
+use triton_vm::table::master_table::TableId;
 
 use crate::library::Library;
 use crate::snippet_bencher::BenchmarkResult;
@@ -8,7 +9,7 @@ use crate::snippet_bencher::BenchmarkResult;
 pub trait CompiledProgram {
     fn rust_shadow(
         public_input: &PublicInput,
-        nondeterminism: &NonDeterminism<BFieldElement>,
+        nondeterminism: &NonDeterminism,
     ) -> Result<Vec<BFieldElement>>;
 
     fn program() -> Program {
@@ -21,7 +22,7 @@ pub trait CompiledProgram {
 
     fn run(
         public_input: &PublicInput,
-        nondeterminism: &NonDeterminism<BFieldElement>,
+        nondeterminism: &NonDeterminism,
     ) -> Result<Vec<BFieldElement>> {
         let p = Self::program();
         p.run(public_input.clone(), nondeterminism.clone())
@@ -37,7 +38,7 @@ pub trait CompiledProgram {
 
 pub fn test_rust_shadow<P: CompiledProgram>(
     public_input: &PublicInput,
-    nondeterminism: &NonDeterminism<BFieldElement>,
+    nondeterminism: &NonDeterminism,
 ) {
     let rust_output = P::rust_shadow(public_input, nondeterminism).unwrap();
     let tasm_output = P::run(public_input, nondeterminism).unwrap();
@@ -50,7 +51,7 @@ pub fn bench_and_profile_program<P: CompiledProgram>(
     name: &str,
     case: crate::snippet_bencher::BenchmarkCase,
     public_input: &PublicInput,
-    nondeterminism: &NonDeterminism<BFieldElement>,
+    nondeterminism: &NonDeterminism,
 ) {
     use std::fs::create_dir_all;
     use std::fs::File;
@@ -70,11 +71,11 @@ pub fn bench_and_profile_program<P: CompiledProgram>(
         Ok((aet, _output)) => NamedBenchmarkResult {
             name: name.to_owned(),
             benchmark_result: BenchmarkResult {
-                clock_cycle_count: aet.processor_table_length(),
-                hash_table_height: aet.hash_table_length(),
-                u32_table_height: aet.u32_table_length(),
-                op_stack_table_height: aet.op_stack_table_length(),
-                ram_table_height: aet.ram_table_length(),
+                clock_cycle_count: aet.height_of_table(TableId::Processor),
+                hash_table_height: aet.height_of_table(TableId::Hash),
+                u32_table_height: aet.height_of_table(TableId::U32),
+                op_stack_table_height: aet.height_of_table(TableId::OpStack),
+                ram_table_height: aet.height_of_table(TableId::Ram),
             },
             case,
         },
@@ -106,7 +107,7 @@ mod test {
     impl CompiledProgram for FiboTest {
         fn rust_shadow(
             public_input: &PublicInput,
-            _secret_input: &NonDeterminism<BFieldElement>,
+            _secret_input: &NonDeterminism,
         ) -> Result<Vec<BFieldElement>> {
             let num_iterations = public_input.individual_tokens[0].value() as usize;
             let mut a = BFieldElement::new(0);

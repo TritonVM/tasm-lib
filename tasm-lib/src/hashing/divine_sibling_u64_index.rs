@@ -83,7 +83,7 @@ impl Procedure for DivineSiblingU64Index {
         &self,
         stack: &mut Vec<BFieldElement>,
         _memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
-        nondeterminism: &NonDeterminism<BFieldElement>,
+        nondeterminism: &NonDeterminism,
         _public_input: &[BFieldElement],
         _sponge: &mut Option<Tip5>,
     ) -> Vec<BFieldElement> {
@@ -141,7 +141,7 @@ impl DivineSiblingU64Index {
     fn prepare_stack_and_non_determinism(
         &self,
         leaf_index: u64,
-    ) -> (Vec<BFieldElement>, NonDeterminism<BFieldElement>) {
+    ) -> (Vec<BFieldElement>, NonDeterminism) {
         let mut init_stack = empty_stack();
         init_stack.push(BFieldElement::new(leaf_index >> 32));
         init_stack.push(BFieldElement::new(leaf_index & u32::MAX as u64));

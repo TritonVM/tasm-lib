@@ -43,6 +43,3 @@ lto = false
 incremental = false
 codegen-units = 16
 rpath = false
-
-[patch.crates-io]
-twenty-first = { git = "https://github.com/Neptune-Crypto/twenty-first.git", rev = "4f5f46b33f25f83940cbd934ae63c5848a041a7a" }

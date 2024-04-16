@@ -6,7 +6,7 @@ use rand::random;
 use triton_vm::prelude::*;
 use triton_vm::twenty_first::prelude::AlgebraicHasher;
 use triton_vm::twenty_first::prelude::Mmr;
-use twenty_first::shared_math::other::random_elements;
+use twenty_first::math::other::random_elements;
 use twenty_first::util_types::mmr;
 use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
 
@@ -323,7 +323,7 @@ impl DeprecatedSnippet for CalculateNewPeaksFromAppend {
 mod tests {
     use num::Zero;
     use triton_vm::twenty_first::prelude::MmrMembershipProof;
-    use twenty_first::shared_math::other::random_elements;
+    use twenty_first::math::other::random_elements;
     use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
 
     use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;

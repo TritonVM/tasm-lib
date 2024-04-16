@@ -1,6 +1,6 @@
 use triton_vm::instruction::LabelledInstruction;
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::shared_math::tip5::RATE;
+use triton_vm::twenty_first::math::tip5::RATE;
 
 use crate::data_type::ArrayType;
 use crate::data_type::DataType;
@@ -83,7 +83,7 @@ mod test {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &mut HashMap<BFieldElement, BFieldElement>,
-            _nondeterminism: &NonDeterminism<BFieldElement>,
+            _nondeterminism: &NonDeterminism,
             _public_input: &[BFieldElement],
             sponge: &mut Option<VmHasher>,
         ) -> Vec<BFieldElement> {

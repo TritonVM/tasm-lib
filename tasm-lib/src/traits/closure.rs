@@ -62,7 +62,7 @@ impl<C: Closure + 'static> RustShadow for ShadowedClosure<C> {
     fn rust_shadow_wrapper(
         &self,
         _stdin: &[BFieldElement],
-        _nondeterminism: &NonDeterminism<BFieldElement>,
+        _nondeterminism: &NonDeterminism,
         stack: &mut Vec<BFieldElement>,
         _memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
         _sponge: &mut Option<VmHasher>,

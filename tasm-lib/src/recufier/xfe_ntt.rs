@@ -4,8 +4,8 @@ use rand::rngs::StdRng;
 use rand::Rng;
 use rand::SeedableRng;
 use triton_vm::prelude::*;
-use twenty_first::shared_math::ntt::ntt;
-use twenty_first::shared_math::traits::PrimitiveRootOfUnity;
+use twenty_first::math::ntt::ntt;
+use twenty_first::math::traits::PrimitiveRootOfUnity;
 
 use crate::data_type::DataType;
 use crate::empty_stack;

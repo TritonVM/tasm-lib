@@ -1,7 +1,8 @@
 use const_format::formatcp;
 use triton_vm::proof_item::ProofItemVariant;
 use triton_vm::table::challenges::Challenges;
-use triton_vm::table::master_table::num_quotients;
+use triton_vm::table::extension_table::Quotientable;
+use triton_vm::table::master_table::MasterExtTable;
 use triton_vm::table::NUM_QUOTIENT_SEGMENTS;
 
 use crate::arithmetic::u128::add_u128::AddU128;
@@ -94,7 +95,7 @@ use crate::recufier::read_and_verify_own_program_digest_from_std_in::ReadAndVeri
 use crate::recufier::vm_proof_iter::dequeue_next_as::DequeueNextAs;
 use crate::traits::basic_snippet::BasicSnippet;
 
-const NUM_CONSTRAINTS_TVM: usize = num_quotients();
+const NUM_CONSTRAINTS_TVM: usize = MasterExtTable::NUM_CONSTRAINTS;
 const WEIGHTS_QUOTIENTS_INNER_PRODUCT_ENTRYPOINT: &str = formatcp!(
     "tasmlib_array_inner_product_of_{}_xfes",
     NUM_CONSTRAINTS_TVM

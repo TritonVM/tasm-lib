@@ -60,7 +60,7 @@ mod tests {
     use rand::Rng;
     use rand::SeedableRng;
     use test_strategy::proptest;
-    use triton_vm::twenty_first::shared_math::tip5::DIGEST_LENGTH;
+    use triton_vm::twenty_first::math::tip5::DIGEST_LENGTH;
     use triton_vm::twenty_first::util_types::algebraic_hasher::Sponge;
 
     use crate::snippet_bencher::BenchmarkCase;
@@ -91,7 +91,7 @@ mod tests {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &mut HashMap<BFieldElement, BFieldElement>,
-            nondeterminism: &NonDeterminism<BFieldElement>,
+            nondeterminism: &NonDeterminism,
             public_input: &[BFieldElement],
             sponge: &mut Option<VmHasher>,
         ) -> Vec<BFieldElement> {

@@ -50,6 +50,7 @@ pub mod traits;
 // re-exports for types exposed in our public API.
 pub use triton_vm;
 use triton_vm::profiler::TritonProfiler;
+use triton_vm::table::master_table::TableId;
 pub use triton_vm::twenty_first;
 
 // The hasher type must match whatever algebraic hasher the VM is using
@@ -61,7 +62,7 @@ pub const DIGEST_LENGTH: usize = tip5::DIGEST_LENGTH;
 pub struct ExecutionState {
     pub stack: Vec<BFieldElement>,
     pub std_in: Vec<BFieldElement>,
-    pub nondeterminism: NonDeterminism<BFieldElement>,
+    pub nondeterminism: NonDeterminism,
 }
 
 impl ExecutionState {
@@ -107,7 +108,7 @@ pub fn execute_bench_deprecated(
     stack: &mut Vec<BFieldElement>,
     expected_stack_diff: isize,
     std_in: Vec<BFieldElement>,
-    nondeterminism: NonDeterminism<BFieldElement>,
+    nondeterminism: NonDeterminism,
 ) -> anyhow::Result<BenchmarkResult> {
     let init_stack = stack.to_owned();
     let initial_stack_height = init_stack.len() as isize;
@@ -153,11 +154,11 @@ pub fn execute_bench_deprecated(
 
     *stack = terminal_state.op_stack.stack.clone();
     Ok(BenchmarkResult {
-        clock_cycle_count: simulation_trace.processor_table_length(),
-        hash_table_height: simulation_trace.hash_table_length(),
-        u32_table_height: simulation_trace.u32_table_length(),
-        op_stack_table_height: simulation_trace.op_stack_table_length(),
-        ram_table_height: simulation_trace.ram_table_length(),
+        clock_cycle_count: simulation_trace.height_of_table(TableId::Processor),
+        hash_table_height: simulation_trace.height_of_table(TableId::Hash),
+        u32_table_height: simulation_trace.height_of_table(TableId::U32),
+        op_stack_table_height: simulation_trace.height_of_table(TableId::OpStack),
+        ram_table_height: simulation_trace.height_of_table(TableId::Ram),
     })
 }
 
@@ -169,7 +170,7 @@ pub fn execute_test(
     stack: &mut Vec<BFieldElement>,
     expected_stack_diff: isize,
     std_in: Vec<BFieldElement>,
-    nondeterminism: NonDeterminism<BFieldElement>,
+    nondeterminism: NonDeterminism,
     maybe_sponge: Option<VmHasher>,
 ) -> VMState {
     let init_stack = stack.to_owned();
@@ -258,7 +259,7 @@ pub fn execute_with_terminal_state(
     program: &Program,
     std_in: &[BFieldElement],
     stack: &[BFieldElement],
-    nondeterminism: &NonDeterminism<BFieldElement>,
+    nondeterminism: &NonDeterminism,
     maybe_sponge: Option<VmHasher>,
 ) -> Result<VMState, InstructionError> {
     let public_input = PublicInput::new(std_in.into());
@@ -290,7 +291,7 @@ pub fn execute_with_terminal_state(
 pub fn prove_and_verify(
     program: &Program,
     std_in: &[BFieldElement],
-    nondeterminism: &NonDeterminism<BFieldElement>,
+    nondeterminism: &NonDeterminism,
     output: &[BFieldElement],
     init_stack: Option<Vec<BFieldElement>>,
 ) {
@@ -353,14 +354,14 @@ pub fn prove_and_verify(
           Program table: {}
           Cascade table: {}
           Lookup table: {}",
-        aet.processor_table_length(),
-        aet.hash_table_length(),
-        aet.u32_table_length(),
-        aet.op_stack_table_length(),
-        aet.ram_table_length(),
-        aet.program_table_length(),
-        aet.cascade_table_length(),
-        aet.lookup_table_length(),
+        aet.height_of_table(TableId::Processor),
+        aet.height_of_table(TableId::Hash),
+        aet.height_of_table(TableId::U32),
+        aet.height_of_table(TableId::OpStack),
+        aet.height_of_table(TableId::Ram),
+        aet.height_of_table(TableId::Program),
+        aet.height_of_table(TableId::Cascade),
+        aet.height_of_table(TableId::Lookup),
     );
 
     assert!(
@@ -374,7 +375,7 @@ pub fn generate_full_profile(
     name: &str,
     program: Program,
     public_input: &PublicInput,
-    nondeterminism: &NonDeterminism<BFieldElement>,
+    nondeterminism: &NonDeterminism,
     only_print_aggregate: bool,
 ) -> String {
     #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -391,27 +392,27 @@ pub fn generate_full_profile(
     if !only_print_aggregate {
         printed_profile = format!("{printed_profile}\n# call graph\n");
 
-        for line in profile.iter() {
+        for line in profile.profile.iter() {
             let indentation = vec!["  "; line.call_depth].join("");
             let label = &line.label;
-            let cycle_count = line.cycle_count();
+            let cycle_count = line.table_heights_start.processor;
             printed_profile = format!("{printed_profile}{indentation} {label}: {cycle_count}\n");
         }
     }
 
     printed_profile = format!("{printed_profile}\n# aggregated unsorted\n");
     let mut aggregated: Vec<AggregateProfileLine> = vec![];
-    for line in profile {
+    for line in profile.profile.iter() {
         if let Some(agg) = aggregated
             .iter_mut()
             .find(|a| a.label == line.label && a.call_depth == line.call_depth)
         {
-            agg.cycle_count += line.cycle_count();
+            agg.cycle_count += line.table_heights_start.processor;
         } else {
             aggregated.push(AggregateProfileLine {
                 label: line.label.to_owned(),
                 call_depth: line.call_depth,
-                cycle_count: line.cycle_count(),
+                cycle_count: line.table_heights_start.processor,
             });
         }
     }

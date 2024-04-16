@@ -1,5 +1,5 @@
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::shared_math::x_field_element::EXTENSION_DEGREE;
+use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
 use crate::data_type::DataType;
 use crate::library::Library;
@@ -189,7 +189,7 @@ mod tests {
     use rand::rngs::StdRng;
     use rand::Rng;
     use rand::SeedableRng;
-    use triton_vm::twenty_first::shared_math::x_field_element::EXTENSION_DEGREE;
+    use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
     use crate::rust_shadowing_helper_functions::list::insert_random_list;
     use crate::rust_shadowing_helper_functions::list::load_list_with_copy_elements;

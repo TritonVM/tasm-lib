@@ -6,7 +6,7 @@ use rand::random;
 use triton_vm::prelude::*;
 use triton_vm::twenty_first::prelude::x_field_element;
 use triton_vm::twenty_first::prelude::AlgebraicHasher;
-use twenty_first::shared_math::other::random_elements;
+use twenty_first::math::other::random_elements;
 
 use crate::data_type::DataType;
 use crate::empty_stack;

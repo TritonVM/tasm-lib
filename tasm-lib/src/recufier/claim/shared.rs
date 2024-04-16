@@ -20,12 +20,12 @@ pub(crate) fn claim_type() -> StructType {
 #[cfg(test)]
 pub(crate) fn insert_claim_into_static_memory(
     memory: &mut std::collections::HashMap<
-        triton_vm::twenty_first::shared_math::b_field_element::BFieldElement,
-        triton_vm::twenty_first::shared_math::b_field_element::BFieldElement,
+        triton_vm::twenty_first::math::b_field_element::BFieldElement,
+        triton_vm::twenty_first::math::b_field_element::BFieldElement,
     >,
     claim: triton_vm::proof::Claim,
 ) -> (
-    triton_vm::twenty_first::shared_math::b_field_element::BFieldElement,
+    triton_vm::twenty_first::math::b_field_element::BFieldElement,
     u32,
 ) {
     // Statically allocated memory starts at -2 and grows downward. So a value of size 1

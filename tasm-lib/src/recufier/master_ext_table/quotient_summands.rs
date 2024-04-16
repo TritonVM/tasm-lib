@@ -2,7 +2,7 @@ use triton_vm::instruction::LabelledInstruction;
 use triton_vm::prelude::*;
 use triton_vm::table::extension_table::Quotientable;
 use triton_vm::table::master_table::MasterExtTable;
-use triton_vm::twenty_first::shared_math::x_field_element::EXTENSION_DEGREE;
+use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
 use crate::data_type::DataType;
 use crate::library::Library;
@@ -172,9 +172,9 @@ mod tests {
     use rand::RngCore;
     use rand::SeedableRng;
     use triton_vm::table::extension_table::Evaluable;
-    use triton_vm::twenty_first::shared_math::traits::Inverse;
-    use triton_vm::twenty_first::shared_math::traits::ModPowU32;
-    use triton_vm::twenty_first::shared_math::traits::PrimitiveRootOfUnity;
+    use triton_vm::twenty_first::math::traits::Inverse;
+    use triton_vm::twenty_first::math::traits::ModPowU32;
+    use triton_vm::twenty_first::math::traits::PrimitiveRootOfUnity;
 
     use crate::execute_test;
     use crate::linker::link_for_isolated_run;

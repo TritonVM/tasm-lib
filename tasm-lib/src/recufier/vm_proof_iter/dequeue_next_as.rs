@@ -331,7 +331,7 @@ mod test {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &mut HashMap<BFieldElement, BFieldElement>,
-            _: &NonDeterminism<BFieldElement>,
+            _: &NonDeterminism,
             _: &[BFieldElement],
             sponge: &mut Option<Tip5>,
         ) -> Vec<BFieldElement> {
@@ -351,7 +351,7 @@ mod test {
             _: Option<BenchmarkCase>,
         ) -> ProcedureInitialState {
             let mut rng = StdRng::from_seed(seed);
-            let mut proof_stream = ProofStream::<Tip5>::new();
+            let mut proof_stream = ProofStream::new();
             proof_stream.enqueue(self.pseudorandom_proof_item(rng.gen()));
 
             let other_item_type = ProofItemVariant::iter().choose(&mut rng).unwrap();
@@ -364,7 +364,7 @@ mod test {
 
     impl DequeueNextAs {
         fn initial_state_from_proof_stream_and_address(
-            proof_stream: ProofStream<Tip5>,
+            proof_stream: ProofStream,
             address: BFieldElement,
         ) -> ProcedureInitialState {
             let mut ram = HashMap::new();
@@ -484,7 +484,7 @@ mod test {
     fn initial_state_with_too_big_master_table_rows() -> ProcedureInitialState {
         let dummy_master_table_rows = vec![[bfe!(101); NUM_BASE_COLUMNS]; 15000];
         let proof_item = ProofItem::MasterBaseTableRows(dummy_master_table_rows);
-        let mut proof_stream = ProofStream::<Tip5>::new();
+        let mut proof_stream = ProofStream::new();
         proof_stream.enqueue(proof_item);
         let address = BFieldElement::zero();
         DequeueNextAs::initial_state_from_proof_stream_and_address(proof_stream, address)
@@ -499,7 +499,7 @@ mod test {
     fn small_merkle_root_initial_state() -> ProcedureInitialState {
         let dummy_digest = Digest::new([42, 43, 44, 45, 46].map(BFieldElement::new));
         let proof_item = ProofItem::MerkleRoot(dummy_digest);
-        let mut proof_stream = ProofStream::<Tip5>::new();
+        let mut proof_stream = ProofStream::new();
         proof_stream.enqueue(proof_item.clone());
         proof_stream.enqueue(proof_item);
 
@@ -554,7 +554,7 @@ mod test {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &mut HashMap<BFieldElement, BFieldElement>,
-            non_determinism: &NonDeterminism<BFieldElement>,
+            non_determinism: &NonDeterminism,
             std_in: &[BFieldElement],
             sponge: &mut Option<Tip5>,
         ) -> Vec<BFieldElement> {
@@ -574,7 +574,7 @@ mod test {
             _: Option<BenchmarkCase>,
         ) -> ProcedureInitialState {
             let mut rng = StdRng::from_seed(seed);
-            let mut proof_stream = ProofStream::<Tip5>::new();
+            let mut proof_stream = ProofStream::new();
             for &proof_item in &self.proof_items {
                 let dequeue_next_as = DequeueNextAs { proof_item };
                 let item = dequeue_next_as.pseudorandom_proof_item(rng.gen());

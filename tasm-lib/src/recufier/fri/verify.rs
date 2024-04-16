@@ -8,11 +8,10 @@ use triton_vm::prelude::*;
 use triton_vm::proof_item::FriResponse;
 use triton_vm::proof_item::ProofItemVariant;
 use triton_vm::proof_stream::ProofStream;
-use triton_vm::twenty_first::shared_math::ntt::intt;
-use triton_vm::twenty_first::shared_math::other::log_2_ceil;
-use triton_vm::twenty_first::shared_math::polynomial::Polynomial;
-use triton_vm::twenty_first::shared_math::traits::ModPowU32;
-use triton_vm::twenty_first::shared_math::x_field_element::EXTENSION_DEGREE;
+use triton_vm::twenty_first::math::ntt::intt;
+use triton_vm::twenty_first::math::polynomial::Polynomial;
+use triton_vm::twenty_first::math::traits::ModPowU32;
+use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 use triton_vm::twenty_first::util_types::merkle_tree::MerkleTreeInclusionProof;
 
 use crate::data_type::DataType;
@@ -914,10 +913,7 @@ impl FriVerify {
         }
     }
 
-    pub fn extract_digests_required_for_proving(
-        &self,
-        proof_stream: &ProofStream<Tip5>,
-    ) -> Vec<Digest> {
+    pub fn extract_digests_required_for_proving(&self, proof_stream: &ProofStream) -> Vec<Digest> {
         let mut digests = vec![];
         self.inner_verify(&mut proof_stream.clone(), &mut digests)
             .unwrap();
@@ -943,7 +939,7 @@ impl FriVerify {
     /// stream.
     fn inner_verify(
         &self,
-        proof_stream: &mut ProofStream<Tip5>,
+        proof_stream: &mut ProofStream,
         nondeterministic_digests: &mut Vec<Digest>,
     ) -> anyhow::Result<Vec<(u32, XFieldElement)>> {
         let mut num_nondeterministic_digests_read = 0;
@@ -1199,14 +1195,14 @@ impl FriVerify {
     /// Computes the number of rounds
     pub fn num_rounds(&self) -> usize {
         let first_round_code_dimension = self.first_round_max_degree() + 1;
-        let max_num_rounds = log_2_ceil(first_round_code_dimension as u128);
+        let max_num_rounds = first_round_code_dimension.next_power_of_two().ilog2();
 
         // Skip rounds for which Merkle tree verification cost exceeds arithmetic cost,
         // because more than half the codeword's locations are queried.
         let num_rounds_checking_all_locations = self.num_collinearity_checks.ilog2() as u64;
         let num_rounds_checking_most_locations = num_rounds_checking_all_locations + 1;
 
-        max_num_rounds.saturating_sub(num_rounds_checking_most_locations) as usize
+        (max_num_rounds as u64).saturating_sub(num_rounds_checking_most_locations) as usize
     }
 
     /// Computes the max degree of the codeword interpolant after the last round
@@ -1259,7 +1255,7 @@ mod test {
     use triton_vm::fri::Fri;
     use triton_vm::proof_item::ProofItem;
     use triton_vm::proof_stream::ProofStream;
-    use triton_vm::twenty_first::shared_math::traits::PrimitiveRootOfUnity;
+    use triton_vm::twenty_first::math::traits::PrimitiveRootOfUnity;
     use triton_vm::twenty_first::util_types::algebraic_hasher::Sponge;
 
     use crate::empty_stack;
@@ -1271,7 +1267,7 @@ mod test {
     use crate::traits::procedure::Procedure;
     use crate::traits::procedure::ProcedureInitialState;
     use crate::traits::procedure::ShadowedProcedure;
-    use crate::twenty_first::shared_math::ntt::ntt;
+    use crate::twenty_first::math::ntt::ntt;
 
     use super::*;
 
@@ -1296,15 +1292,15 @@ mod test {
 
         pub fn call(
             &self,
-            proof_stream: &mut ProofStream<Tip5>,
-            nondeterminism: &NonDeterminism<BFieldElement>,
+            proof_stream: &mut ProofStream,
+            nondeterminism: &NonDeterminism,
         ) -> Vec<(u32, XFieldElement)> {
             self.inner_verify(proof_stream, &mut nondeterminism.digests.clone())
                 .unwrap()
         }
 
         /// Generate a proof, embedded in a proof stream.
-        pub fn pseudorandom_fri_proof_stream(&self, seed: [u8; 32]) -> ProofStream<Tip5> {
+        pub fn pseudorandom_fri_proof_stream(&self, seed: [u8; 32]) -> ProofStream {
             let max_degree = self.first_round_max_degree();
             let mut rng: StdRng = SeedableRng::from_seed(seed);
             let polynomial_coefficients = (0..=max_degree).map(|_| rng.gen()).collect_vec();
@@ -1316,7 +1312,7 @@ mod test {
             let log_2_of_n = self.domain_length.ilog2();
             ntt::<XFieldElement>(&mut codeword, primitive_root, log_2_of_n);
 
-            let mut proof_stream = ProofStream::<Tip5>::new();
+            let mut proof_stream = ProofStream::new();
             let fri = self.to_fri();
             fri.prove(&codeword, &mut proof_stream).unwrap();
 
@@ -1352,8 +1348,8 @@ mod test {
 
         fn set_up_stack_and_non_determinism(
             &self,
-            proof_stream: ProofStream<Tip5>,
-        ) -> (Vec<BFieldElement>, NonDeterminism<BFieldElement>) {
+            proof_stream: ProofStream,
+        ) -> (Vec<BFieldElement>, NonDeterminism) {
             let digests = self
                 .test_instance
                 .extract_digests_required_for_proving(&proof_stream);
@@ -1362,9 +1358,9 @@ mod test {
 
         fn set_up_stack_and_non_determinism_using_digests(
             &self,
-            proof_stream: ProofStream<Tip5>,
+            proof_stream: ProofStream,
             digests: Vec<Digest>,
-        ) -> (Vec<BFieldElement>, NonDeterminism<BFieldElement>) {
+        ) -> (Vec<BFieldElement>, NonDeterminism) {
             let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
             let vm_proof_iter_pointer = BFieldElement::zero();
             // uses highly specific knowledge about `BFieldCodec`
@@ -1396,7 +1392,7 @@ mod test {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &mut HashMap<BFieldElement, BFieldElement>,
-            nondeterminism: &NonDeterminism<BFieldElement>,
+            nondeterminism: &NonDeterminism,
             _public_input: &[BFieldElement],
             sponge: &mut Option<Tip5>,
         ) -> Vec<BFieldElement> {
@@ -1412,7 +1408,7 @@ mod test {
             // todo: hack using local knowledge: `fri_verify` lives directly after `vm_proof_iter`.
             //  Replace this once we have a better way to decode.
             let proof_stream_size = (fri_pointer - proof_stream_pointer).value() as usize;
-            let mut proof_stream = decode_from_memory_with_size::<ProofStream<Tip5>>(
+            let mut proof_stream = decode_from_memory_with_size::<ProofStream>(
                 memory,
                 proof_stream_pointer,
                 proof_stream_size,
@@ -1499,7 +1495,7 @@ mod test {
 
             Self {
                 fri_verify,
-                polynomial_coefficients: vec![XFieldElement::new_u64([42; 3])],
+                polynomial_coefficients: vec![xfe!([42; 3])],
             }
         }
 
@@ -1516,9 +1512,7 @@ mod test {
 
             Self {
                 fri_verify,
-                polynomial_coefficients: coefficients
-                    .map(|n| XFieldElement::new_u64([n; 3]))
-                    .to_vec(),
+                polynomial_coefficients: coefficients.map(|n| xfe!([n; 3])).to_vec(),
             }
         }
 
@@ -1547,7 +1541,7 @@ mod test {
             proof_stream.items
         }
 
-        fn proof_stream(&self) -> ProofStream<Tip5> {
+        fn proof_stream(&self) -> ProofStream {
             ProofStream {
                 items: self.proof_items(),
                 items_index: 0,

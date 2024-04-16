@@ -5,7 +5,7 @@ use rand::rngs::StdRng;
 use rand::Rng;
 use rand::SeedableRng;
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::shared_math::tip5::DIGEST_LENGTH;
+use triton_vm::twenty_first::math::tip5::DIGEST_LENGTH;
 use triton_vm::twenty_first::util_types::algebraic_hasher::Sponge;
 
 use crate::data_type::DataType;
@@ -94,7 +94,7 @@ impl Procedure for HashVarlen {
         &self,
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
-        nondeterminism: &NonDeterminism<BFieldElement>,
+        nondeterminism: &NonDeterminism,
         public_input: &[BFieldElement],
         sponge: &mut Option<VmHasher>,
     ) -> Vec<BFieldElement> {

@@ -2,7 +2,7 @@ use crate::data_type::{ArrayType, DataType};
 use crate::library::Library;
 use crate::traits::basic_snippet::BasicSnippet;
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::shared_math::x_field_element::EXTENSION_DEGREE;
+use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
 pub struct InnerProductOfXfes {
     pub length: usize,
@@ -124,7 +124,7 @@ mod tests {
     use rand::rngs::StdRng;
     use rand::Rng;
     use rand::SeedableRng;
-    use triton_vm::twenty_first::shared_math::b_field_element::BFIELD_ZERO;
+    use triton_vm::twenty_first::math::b_field_element::BFIELD_ZERO;
 
     use crate::rust_shadowing_helper_functions::array::insert_as_array;
     use crate::rust_shadowing_helper_functions::array::insert_random_array;

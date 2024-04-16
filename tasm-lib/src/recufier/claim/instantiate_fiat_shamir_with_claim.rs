@@ -1,6 +1,6 @@
 use triton_vm::instruction::LabelledInstruction;
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::shared_math::tip5::DIGEST_LENGTH;
+use triton_vm::twenty_first::math::tip5::DIGEST_LENGTH;
 
 use crate::data_type::DataType;
 use crate::hashing::absorb_multiple::AbsorbMultiple;
@@ -76,7 +76,7 @@ impl BasicSnippet for InstantiateFiatShamirWithClaim {
 mod tests {
     use rand::{rngs::StdRng, thread_rng, Rng, SeedableRng};
     use std::collections::HashMap;
-    use triton_vm::twenty_first::shared_math::other::random_elements;
+    use triton_vm::twenty_first::math::other::random_elements;
     use triton_vm::twenty_first::util_types::algebraic_hasher::Sponge;
 
     use crate::memory::encode_to_memory;
@@ -91,7 +91,7 @@ mod tests {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
-            _nondeterminism: &NonDeterminism<BFieldElement>,
+            _nondeterminism: &NonDeterminism,
             _public_input: &[BFieldElement],
             sponge: &mut Option<crate::VmHasher>,
         ) -> Vec<BFieldElement> {

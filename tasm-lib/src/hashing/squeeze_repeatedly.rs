@@ -73,7 +73,7 @@ impl Procedure for SqueezeRepeatedly {
         &self,
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
-        _nondeterminism: &NonDeterminism<BFieldElement>,
+        _nondeterminism: &NonDeterminism,
         _public_input: &[BFieldElement],
         sponge: &mut Option<VmHasher>,
     ) -> Vec<BFieldElement> {

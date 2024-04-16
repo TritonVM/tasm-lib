@@ -2,7 +2,7 @@ use arbitrary::Arbitrary;
 use strum::Display;
 use triton_vm::table::{NUM_BASE_COLUMNS, NUM_EXT_COLUMNS};
 use triton_vm::triton_asm;
-use triton_vm::twenty_first::shared_math::x_field_element::EXTENSION_DEGREE;
+use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
 use crate::data_type::ArrayType;
 use crate::data_type::DataType;
@@ -277,8 +277,8 @@ mod test {
     use rand::Rng;
     use rand::SeedableRng;
     use test_strategy::proptest;
-    use triton_vm::twenty_first::shared_math::b_field_element::BFieldElement;
-    use triton_vm::twenty_first::shared_math::x_field_element::XFieldElement;
+    use triton_vm::twenty_first::math::b_field_element::BFieldElement;
+    use triton_vm::twenty_first::math::x_field_element::XFieldElement;
 
     use crate::rust_shadowing_helper_functions::array::array_from_memory;
     use crate::rust_shadowing_helper_functions::array::insert_random_array;

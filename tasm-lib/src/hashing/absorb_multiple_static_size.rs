@@ -6,8 +6,8 @@ use rand::Rng;
 use rand::RngCore;
 use rand::SeedableRng;
 use triton_vm::prelude::*;
+use triton_vm::twenty_first::math::tip5::RATE;
 use triton_vm::twenty_first::prelude::Sponge;
-use triton_vm::twenty_first::shared_math::tip5::RATE;
 
 use crate::data_type::DataType;
 use crate::memory::load_words_from_memory_pop_pointer;
@@ -123,7 +123,7 @@ impl Procedure for AbsorbMultipleStaticSize {
         &self,
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
-        _nondeterminism: &NonDeterminism<BFieldElement>,
+        _nondeterminism: &NonDeterminism,
         _public_input: &[BFieldElement],
         sponge: &mut Option<VmHasher>,
     ) -> Vec<BFieldElement> {

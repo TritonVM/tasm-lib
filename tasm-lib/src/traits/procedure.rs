@@ -41,16 +41,12 @@ pub trait Procedure: BasicSnippet {
         &self,
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
-        nondeterminism: &NonDeterminism<BFieldElement>,
+        nondeterminism: &NonDeterminism,
         public_input: &[BFieldElement],
         sponge: &mut Option<VmHasher>,
     ) -> Vec<BFieldElement>;
 
-    fn preprocess<T: BFieldCodec>(
-        _meta_input: T,
-        _nondeterminism: &mut NonDeterminism<BFieldElement>,
-    ) {
-    }
+    fn preprocess<T: BFieldCodec>(_meta_input: T, _nondeterminism: &mut NonDeterminism) {}
 
     fn pseudorandom_initial_state(
         &self,
@@ -66,7 +62,7 @@ pub trait Procedure: BasicSnippet {
 #[derive(Debug, Clone, Default)]
 pub struct ProcedureInitialState {
     pub stack: Vec<BFieldElement>,
-    pub nondeterminism: NonDeterminism<BFieldElement>,
+    pub nondeterminism: NonDeterminism,
     pub public_input: Vec<BFieldElement>,
     pub sponge: Option<VmHasher>,
 }
@@ -91,7 +87,7 @@ impl<P: Procedure + 'static> RustShadow for ShadowedProcedure<P> {
     fn rust_shadow_wrapper(
         &self,
         stdin: &[BFieldElement],
-        nondeterminism: &NonDeterminism<BFieldElement>,
+        nondeterminism: &NonDeterminism,
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
         sponge: &mut Option<VmHasher>,

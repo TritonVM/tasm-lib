@@ -1,8 +1,8 @@
 use strum::EnumCount;
 use strum::EnumIter;
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::shared_math::b_field_element::BFieldElement;
-use triton_vm::twenty_first::shared_math::x_field_element::EXTENSION_DEGREE;
+use triton_vm::twenty_first::math::b_field_element::BFieldElement;
+use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
 use crate::arithmetic::xfe::to_the_power_of_power_of_2::ToThePowerOfPowerOf2;
 use crate::data_type::DataType;
@@ -194,7 +194,7 @@ mod tests {
     use itertools::Itertools;
     use num::One;
     use rand::{rngs::StdRng, Rng, SeedableRng};
-    use triton_vm::twenty_first::shared_math::{
+    use triton_vm::twenty_first::math::{
         b_field_element::BFieldElement,
         traits::{Inverse, ModPowU32, PrimitiveRootOfUnity},
         x_field_element::XFieldElement,

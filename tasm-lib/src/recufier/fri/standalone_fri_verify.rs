@@ -64,13 +64,13 @@ impl StandaloneFriVerify {
 struct IntermediateState {
     fri_verify: FriVerify,
     stack_excess: Vec<BFieldElement>,
-    nondeterminism: NonDeterminism<BFieldElement>,
+    nondeterminism: NonDeterminism,
 }
 
 impl CompiledProgram for StandaloneFriVerify {
     fn rust_shadow(
         _public_input: &PublicInput,
-        _nondeterminism: &NonDeterminism<BFieldElement>,
+        _nondeterminism: &NonDeterminism,
     ) -> anyhow::Result<Vec<BFieldElement>> {
         todo!()
     }

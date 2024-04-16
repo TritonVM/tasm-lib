@@ -1,5 +1,5 @@
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::shared_math::x_field_element::EXTENSION_DEGREE;
+use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
 use crate::data_type::DataType;
 use crate::hashing::squeeze_repeatedly::SqueezeRepeatedly;
@@ -87,9 +87,9 @@ mod test {
     use rand::rngs::StdRng;
     use rand::{Rng, SeedableRng};
     use triton_vm::program::NonDeterminism;
-    use triton_vm::twenty_first::shared_math::b_field_element::BFieldElement;
-    use triton_vm::twenty_first::shared_math::tip5::{self, Tip5};
-    use triton_vm::twenty_first::shared_math::x_field_element::{XFieldElement, EXTENSION_DEGREE};
+    use triton_vm::twenty_first::math::b_field_element::BFieldElement;
+    use triton_vm::twenty_first::math::tip5::{self, Tip5};
+    use triton_vm::twenty_first::math::x_field_element::{XFieldElement, EXTENSION_DEGREE};
     use triton_vm::twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
     use crate::memory::dyn_malloc::DYN_MALLOC_FIRST_ADDRESS;
@@ -109,7 +109,7 @@ mod test {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &mut HashMap<BFieldElement, BFieldElement>,
-            _nondeterminism: &NonDeterminism<BFieldElement>,
+            _nondeterminism: &NonDeterminism,
             _public_input: &[BFieldElement],
             sponge: &mut Option<VmHasher>,
         ) -> Vec<BFieldElement> {

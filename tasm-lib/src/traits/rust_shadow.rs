@@ -14,7 +14,7 @@ pub trait RustShadow {
     fn rust_shadow_wrapper(
         &self,
         stdin: &[BFieldElement],
-        nondeterminism: &NonDeterminism<BFieldElement>,
+        nondeterminism: &NonDeterminism,
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
         sponge: &mut Option<VmHasher>,

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use num::Zero;
 use triton_vm::prelude::*;
-use twenty_first::shared_math::other::random_elements;
+use twenty_first::math::other::random_elements;
 
 use crate::data_type::DataType;
 use crate::list::LIST_METADATA_SIZE;

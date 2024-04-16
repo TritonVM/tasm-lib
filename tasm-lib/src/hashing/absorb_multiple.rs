@@ -141,7 +141,7 @@ impl Procedure for AbsorbMultiple {
         &self,
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
-        _nondeterminism: &NonDeterminism<BFieldElement>,
+        _nondeterminism: &NonDeterminism,
         _public_input: &[BFieldElement],
         sponge: &mut Option<VmHasher>,
     ) -> Vec<BFieldElement> {
@@ -230,7 +230,7 @@ impl AbsorbMultiple {
         let sequence = vec![BFieldElement::new(2); num_words as usize];
 
         let stack = [empty_stack(), vec![list_address, list_length]].concat();
-        let ram = sequence
+        let ram: HashMap<_, _> = sequence
             .into_iter()
             .enumerate()
             .map(|(i, bfe)| (BFieldElement::from(i as u32), bfe))

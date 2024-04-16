@@ -6,7 +6,7 @@ use rand::random;
 use rand::thread_rng;
 use rand::Rng;
 use triton_vm::prelude::*;
-use twenty_first::shared_math::other::random_elements;
+use twenty_first::math::other::random_elements;
 
 use crate::data_type::DataType;
 use crate::empty_stack;

@@ -96,7 +96,7 @@ impl Algorithm for MerkleVerify {
         &self,
         stack: &mut Vec<BFieldElement>,
         _memory: &mut HashMap<BFieldElement, BFieldElement>,
-        nondeterminism: &NonDeterminism<BFieldElement>,
+        nondeterminism: &NonDeterminism,
     ) {
         let pop_digest_from = |stack: &mut Vec<BFieldElement>| {
             Digest::new([

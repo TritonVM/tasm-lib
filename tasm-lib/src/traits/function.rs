@@ -98,7 +98,7 @@ where
     fn rust_shadow_wrapper(
         &self,
         _stdin: &[BFieldElement],
-        _nondeterminism: &NonDeterminism<BFieldElement>,
+        _nondeterminism: &NonDeterminism,
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
         _sponge: &mut Option<VmHasher>,

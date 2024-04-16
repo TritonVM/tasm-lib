@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use num::Zero;
 use triton_vm::proof::Claim;
-use triton_vm::twenty_first::shared_math::b_field_element::BFieldElement;
+use triton_vm::twenty_first::math::b_field_element::BFieldElement;
 
 use crate::structure::tasm_object::decode_from_memory_with_size;
 use crate::DIGEST_LENGTH;

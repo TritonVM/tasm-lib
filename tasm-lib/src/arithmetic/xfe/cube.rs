@@ -46,8 +46,8 @@ mod tests {
     use rand::rngs::StdRng;
     use rand::Rng;
     use rand::SeedableRng;
-    use triton_vm::twenty_first::shared_math::traits::ModPowU32;
-    use triton_vm::twenty_first::shared_math::x_field_element::EXTENSION_DEGREE;
+    use triton_vm::twenty_first::math::traits::ModPowU32;
+    use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
     use super::*;
     use crate::arithmetic::xfe::mod_pow_u32_generic::XfeModPowU32Generic;

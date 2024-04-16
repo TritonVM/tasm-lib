@@ -3,7 +3,7 @@ use triton_vm::prelude::*;
 use triton_vm::table::challenges::ChallengeId;
 use triton_vm::table::cross_table_argument::CrossTableArg;
 use triton_vm::table::cross_table_argument::EvalArg;
-use triton_vm::twenty_first::shared_math::x_field_element::EXTENSION_DEGREE;
+use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
 use crate::data_type::DataType;
 use crate::hashing::algebraic_hasher::sample_scalars_static_length_static_pointer::SampleScalarsStaticLengthStaticPointer;
@@ -186,7 +186,7 @@ mod tests {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
-            _nondeterminism: &NonDeterminism<BFieldElement>,
+            _nondeterminism: &NonDeterminism,
             _public_input: &[BFieldElement],
             sponge: &mut Option<VmHasher>,
         ) -> Vec<BFieldElement> {

@@ -7,7 +7,7 @@ use rand::Rng;
 use rand::SeedableRng;
 use triton_vm::prelude::*;
 use triton_vm::twenty_first::prelude::MmrMembershipProof;
-use twenty_first::shared_math::other::random_elements;
+use twenty_first::math::other::random_elements;
 use twenty_first::util_types::mmr::mmr_accumulator::util::mmra_with_mps;
 use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
 use twenty_first::util_types::mmr::mmr_trait::Mmr;
@@ -248,7 +248,7 @@ impl Procedure for MmrVerifyLeafMembershipFromSecretIn {
         &self,
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
-        nondeterminism: &NonDeterminism<BFieldElement>,
+        nondeterminism: &NonDeterminism,
         _public_input: &[BFieldElement],
         _sponge: &mut Option<VmHasher>,
     ) -> Vec<BFieldElement> {

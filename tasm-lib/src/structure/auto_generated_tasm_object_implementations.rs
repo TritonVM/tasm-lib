@@ -9,14 +9,14 @@ impl ::tasm_lib::structure::tasm_object::TasmObject for MmrMembershipProof<Tip5>
         match field_name {
             "authentication_path" => {
                 let current = {
-                    if let Some(size) =  <Vec<Digest>as twenty_first::shared_math::bfield_codec::BFieldCodec> ::static_length(){
+                    if let Some(size) =  <Vec<Digest>as twenty_first::math::bfield_codec::BFieldCodec> ::static_length(){
             [triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(size as u64)))].to_vec()
           }else {
             [triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::ReadMem(::triton_vm::op_stack::NumberOfWords::N1)),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(1u64))),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Swap(::triton_vm::op_stack::OpStackElement::ST1)),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(1u64))),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),].to_vec()
           }
                 };
                 let getter = {
-                    if<Vec<Digest>as twenty_first::shared_math::bfield_codec::BFieldCodec> ::static_length().is_some(){
+                    if<Vec<Digest>as twenty_first::math::bfield_codec::BFieldCodec> ::static_length().is_some(){
             [triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Pop(::triton_vm::op_stack::NumberOfWords::N1)),].to_vec()
           }else {
             [triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Pop(::triton_vm::op_stack::NumberOfWords::N1)),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(1u64))),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),].to_vec()
@@ -27,7 +27,7 @@ impl ::tasm_lib::structure::tasm_object::TasmObject for MmrMembershipProof<Tip5>
             "leaf_index" => {
                 let current = {
                     [Self::get_field_start_with_jump_distance("authentication_path"),[triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add)].to_vec(),{
-            if let Some(size) =  <u64 as twenty_first::shared_math::bfield_codec::BFieldCodec> ::static_length(){
+            if let Some(size) =  <u64 as twenty_first::math::bfield_codec::BFieldCodec> ::static_length(){
               [triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(size as u64)))].to_vec()
             }else {
               [triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::ReadMem(::triton_vm::op_stack::NumberOfWords::N1)),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(1u64))),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Swap(::triton_vm::op_stack::OpStackElement::ST1)),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(1u64))),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),].to_vec()
@@ -35,9 +35,8 @@ impl ::tasm_lib::structure::tasm_object::TasmObject for MmrMembershipProof<Tip5>
           },].concat()
                 };
                 let getter = {
-                    if <u64 as twenty_first::shared_math::bfield_codec::BFieldCodec>::static_length(
-                    )
-                    .is_some()
+                    if <u64 as twenty_first::math::bfield_codec::BFieldCodec>::static_length()
+                        .is_some()
                     {
                         [triton_vm::instruction::LabelledInstruction::Instruction(
                             triton_vm::instruction::AnInstruction::Pop(
@@ -73,14 +72,14 @@ impl ::tasm_lib::structure::tasm_object::TasmObject for MmrMembershipProof<Tip5>
         match field_name {
             "authentication_path" => {
                 let current = {
-                    if let Some(size) =  <Vec<Digest>as twenty_first::shared_math::bfield_codec::BFieldCodec> ::static_length(){
+                    if let Some(size) =  <Vec<Digest>as twenty_first::math::bfield_codec::BFieldCodec> ::static_length(){
             [triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(size as u64)))].to_vec()
           }else {
             [triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::ReadMem(::triton_vm::op_stack::NumberOfWords::N1)),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(1u64))),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Swap(::triton_vm::op_stack::OpStackElement::ST1)),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(1u64))),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),].to_vec()
           }
                 };
                 let getter_sizer = {
-                    if<Vec<Digest>as twenty_first::shared_math::bfield_codec::BFieldCodec> ::static_length().is_some(){
+                    if<Vec<Digest>as twenty_first::math::bfield_codec::BFieldCodec> ::static_length().is_some(){
             std::vec::Vec:: <triton_vm::instruction::LabelledInstruction> ::new()
           }else {
             [triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(-BFieldElement::new(1u64))),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Swap(triton_vm::op_stack::OpStackElement::ST1)),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(1u64))),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Swap(triton_vm::op_stack::OpStackElement::ST1)),].to_vec()
@@ -91,7 +90,7 @@ impl ::tasm_lib::structure::tasm_object::TasmObject for MmrMembershipProof<Tip5>
             "leaf_index" => {
                 let current = {
                     [Self::get_field_start_with_jump_distance("authentication_path"),[triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add)].to_vec(),{
-            if let Some(size) =  <u64 as twenty_first::shared_math::bfield_codec::BFieldCodec> ::static_length(){
+            if let Some(size) =  <u64 as twenty_first::math::bfield_codec::BFieldCodec> ::static_length(){
               [triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(size as u64)))].to_vec()
             }else {
               [triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::ReadMem(::triton_vm::op_stack::NumberOfWords::N1)),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(1u64))),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Swap(::triton_vm::op_stack::OpStackElement::ST1)),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(1u64))),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),].to_vec()
@@ -99,9 +98,8 @@ impl ::tasm_lib::structure::tasm_object::TasmObject for MmrMembershipProof<Tip5>
           },].concat()
                 };
                 let getter_sizer = {
-                    if <u64 as twenty_first::shared_math::bfield_codec::BFieldCodec>::static_length(
-                    )
-                    .is_some()
+                    if <u64 as twenty_first::math::bfield_codec::BFieldCodec>::static_length()
+                        .is_some()
                     {
                         std::vec::Vec::<triton_vm::instruction::LabelledInstruction>::new()
                     } else {
@@ -146,11 +144,42 @@ impl ::tasm_lib::structure::tasm_object::TasmObject for MmrMembershipProof<Tip5>
     ) -> Vec<triton_vm::instruction::LabelledInstruction> {
         match field_name {
             "authentication_path" => {
-                if let Some(size) =  <Vec<Digest>as twenty_first::shared_math::bfield_codec::BFieldCodec> ::static_length(){
-          [triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(size as u64)))].to_vec()
-        }else {
-          [triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::ReadMem(::triton_vm::op_stack::NumberOfWords::N1)),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(1u64))),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Swap(::triton_vm::op_stack::OpStackElement::ST1)),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(1u64))),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),].to_vec()
-        }
+                if let Some(size) =
+                    <Vec<Digest> as twenty_first::math::bfield_codec::BFieldCodec>::static_length()
+                {
+                    [triton_vm::instruction::LabelledInstruction::Instruction(
+                        triton_vm::instruction::AnInstruction::Push(BFieldElement::new(
+                            size as u64,
+                        )),
+                    )]
+                    .to_vec()
+                } else {
+                    [
+                        triton_vm::instruction::LabelledInstruction::Instruction(
+                            triton_vm::instruction::AnInstruction::ReadMem(
+                                ::triton_vm::op_stack::NumberOfWords::N1,
+                            ),
+                        ),
+                        triton_vm::instruction::LabelledInstruction::Instruction(
+                            triton_vm::instruction::AnInstruction::Push(BFieldElement::new(1u64)),
+                        ),
+                        triton_vm::instruction::LabelledInstruction::Instruction(
+                            triton_vm::instruction::AnInstruction::Add,
+                        ),
+                        triton_vm::instruction::LabelledInstruction::Instruction(
+                            triton_vm::instruction::AnInstruction::Swap(
+                                ::triton_vm::op_stack::OpStackElement::ST1,
+                            ),
+                        ),
+                        triton_vm::instruction::LabelledInstruction::Instruction(
+                            triton_vm::instruction::AnInstruction::Push(BFieldElement::new(1u64)),
+                        ),
+                        triton_vm::instruction::LabelledInstruction::Instruction(
+                            triton_vm::instruction::AnInstruction::Add,
+                        ),
+                    ]
+                    .to_vec()
+                }
             }
             "leaf_index" => {
                 let prev = [
@@ -163,8 +192,7 @@ impl ::tasm_lib::structure::tasm_object::TasmObject for MmrMembershipProof<Tip5>
                 .concat();
                 let jumper = {
                     if let Some(size) =
-                        <u64 as twenty_first::shared_math::bfield_codec::BFieldCodec>::static_length(
-                        )
+                        <u64 as twenty_first::math::bfield_codec::BFieldCodec>::static_length()
                     {
                         [triton_vm::instruction::LabelledInstruction::Instruction(
                             triton_vm::instruction::AnInstruction::Push(BFieldElement::new(
@@ -216,7 +244,7 @@ impl ::tasm_lib::structure::tasm_object::TasmObject for MmrMembershipProof<Tip5>
         ::std::boxed::Box<dyn std::error::Error + ::core::marker::Send + ::core::marker::Sync>,
     > {
         let length: usize = if let Some(static_length) =
-            <Vec<Digest> as twenty_first::shared_math::bfield_codec::BFieldCodec>::static_length()
+            <Vec<Digest> as twenty_first::math::bfield_codec::BFieldCodec>::static_length()
         {
             static_length
         } else {
@@ -226,9 +254,9 @@ impl ::tasm_lib::structure::tasm_object::TasmObject for MmrMembershipProof<Tip5>
             .map(|_| iterator.next().unwrap())
             .collect::<Vec<_>>();
         let authentication_path: Vec<Digest> =
-            *twenty_first::shared_math::bfield_codec::BFieldCodec::decode(&sequence)?;
+            *twenty_first::math::bfield_codec::BFieldCodec::decode(&sequence)?;
         let length: usize = if let Some(static_length) =
-            <u64 as twenty_first::shared_math::bfield_codec::BFieldCodec>::static_length()
+            <u64 as twenty_first::math::bfield_codec::BFieldCodec>::static_length()
         {
             static_length
         } else {
@@ -237,8 +265,7 @@ impl ::tasm_lib::structure::tasm_object::TasmObject for MmrMembershipProof<Tip5>
         let sequence = (0..length)
             .map(|_| iterator.next().unwrap())
             .collect::<Vec<_>>();
-        let leaf_index: u64 =
-            *twenty_first::shared_math::bfield_codec::BFieldCodec::decode(&sequence)?;
+        let leaf_index: u64 = *twenty_first::math::bfield_codec::BFieldCodec::decode(&sequence)?;
         ::std::result::Result::Ok(::std::boxed::Box::new(Self::new(
             leaf_index,
             authentication_path,
@@ -248,20 +275,20 @@ impl ::tasm_lib::structure::tasm_object::TasmObject for MmrMembershipProof<Tip5>
 
 // Autogenerated `TasmObject` implementation of `MmrAccumulator`. Generated on Dec 12, 2023. Head was: f4f39ae856c75fc75c17efe33d8109294621a01d
 impl ::tasm_lib::structure::tasm_object::TasmObject
-    for MmrAccumulator<twenty_first::shared_math::tip5::Tip5>
+    for MmrAccumulator<twenty_first::math::tip5::Tip5>
 {
     fn get_field(field_name: &str) -> Vec<triton_vm::instruction::LabelledInstruction> {
         match field_name {
             "peaks" => {
                 let current = {
-                    if let Some(size) =  <Vec<Digest>as twenty_first::shared_math::bfield_codec::BFieldCodec> ::static_length(){
+                    if let Some(size) =  <Vec<Digest>as twenty_first::math::bfield_codec::BFieldCodec> ::static_length(){
             [triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(size as u64)))].to_vec()
           }else {
             [triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::ReadMem(::triton_vm::op_stack::NumberOfWords::N1)),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(1u64))),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Swap(::triton_vm::op_stack::OpStackElement::ST1)),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(1u64))),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),].to_vec()
           }
                 };
                 let getter = {
-                    if<Vec<Digest>as twenty_first::shared_math::bfield_codec::BFieldCodec> ::static_length().is_some(){
+                    if<Vec<Digest>as twenty_first::math::bfield_codec::BFieldCodec> ::static_length().is_some(){
             [triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Pop(::triton_vm::op_stack::NumberOfWords::N1)),].to_vec()
           }else {
             [triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Pop(::triton_vm::op_stack::NumberOfWords::N1)),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(1u64))),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),].to_vec()
@@ -272,7 +299,7 @@ impl ::tasm_lib::structure::tasm_object::TasmObject
             "leaf_count" => {
                 let current = {
                     [Self::get_field_start_with_jump_distance("peaks"),[triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add)].to_vec(),{
-            if let Some(size) =  <u64 as twenty_first::shared_math::bfield_codec::BFieldCodec> ::static_length(){
+            if let Some(size) =  <u64 as twenty_first::math::bfield_codec::BFieldCodec> ::static_length(){
               [triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(size as u64)))].to_vec()
             }else {
               [triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::ReadMem(::triton_vm::op_stack::NumberOfWords::N1)),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(1u64))),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Swap(::triton_vm::op_stack::OpStackElement::ST1)),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(1u64))),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),].to_vec()
@@ -280,9 +307,8 @@ impl ::tasm_lib::structure::tasm_object::TasmObject
           },].concat()
                 };
                 let getter = {
-                    if <u64 as twenty_first::shared_math::bfield_codec::BFieldCodec>::static_length(
-                    )
-                    .is_some()
+                    if <u64 as twenty_first::math::bfield_codec::BFieldCodec>::static_length()
+                        .is_some()
                     {
                         [triton_vm::instruction::LabelledInstruction::Instruction(
                             triton_vm::instruction::AnInstruction::Pop(
@@ -318,14 +344,14 @@ impl ::tasm_lib::structure::tasm_object::TasmObject
         match field_name {
             "peaks" => {
                 let current = {
-                    if let Some(size) =  <Vec<Digest>as twenty_first::shared_math::bfield_codec::BFieldCodec> ::static_length(){
+                    if let Some(size) =  <Vec<Digest>as twenty_first::math::bfield_codec::BFieldCodec> ::static_length(){
             [triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(size as u64)))].to_vec()
           }else {
             [triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::ReadMem(::triton_vm::op_stack::NumberOfWords::N1)),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(1u64))),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Swap(::triton_vm::op_stack::OpStackElement::ST1)),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(1u64))),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),].to_vec()
           }
                 };
                 let getter_sizer = {
-                    if<Vec<Digest>as twenty_first::shared_math::bfield_codec::BFieldCodec> ::static_length().is_some(){
+                    if<Vec<Digest>as twenty_first::math::bfield_codec::BFieldCodec> ::static_length().is_some(){
             std::vec::Vec:: <triton_vm::instruction::LabelledInstruction> ::new()
           }else {
             [triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(-BFieldElement::new(1u64))),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Swap(triton_vm::op_stack::OpStackElement::ST1)),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(1u64))),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Swap(triton_vm::op_stack::OpStackElement::ST1)),].to_vec()
@@ -336,7 +362,7 @@ impl ::tasm_lib::structure::tasm_object::TasmObject
             "leaf_count" => {
                 let current = {
                     [Self::get_field_start_with_jump_distance("peaks"),[triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add)].to_vec(),{
-            if let Some(size) =  <u64 as twenty_first::shared_math::bfield_codec::BFieldCodec> ::static_length(){
+            if let Some(size) =  <u64 as twenty_first::math::bfield_codec::BFieldCodec> ::static_length(){
               [triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(size as u64)))].to_vec()
             }else {
               [triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::ReadMem(::triton_vm::op_stack::NumberOfWords::N1)),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(1u64))),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Swap(::triton_vm::op_stack::OpStackElement::ST1)),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(1u64))),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),].to_vec()
@@ -344,9 +370,8 @@ impl ::tasm_lib::structure::tasm_object::TasmObject
           },].concat()
                 };
                 let getter_sizer = {
-                    if <u64 as twenty_first::shared_math::bfield_codec::BFieldCodec>::static_length(
-                    )
-                    .is_some()
+                    if <u64 as twenty_first::math::bfield_codec::BFieldCodec>::static_length()
+                        .is_some()
                     {
                         std::vec::Vec::<triton_vm::instruction::LabelledInstruction>::new()
                     } else {
@@ -391,11 +416,42 @@ impl ::tasm_lib::structure::tasm_object::TasmObject
     ) -> Vec<triton_vm::instruction::LabelledInstruction> {
         match field_name {
             "peaks" => {
-                if let Some(size) =  <Vec<Digest>as twenty_first::shared_math::bfield_codec::BFieldCodec> ::static_length(){
-          [triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(size as u64)))].to_vec()
-        }else {
-          [triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::ReadMem(::triton_vm::op_stack::NumberOfWords::N1)),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(1u64))),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Swap(::triton_vm::op_stack::OpStackElement::ST1)),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(1u64))),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),].to_vec()
-        }
+                if let Some(size) =
+                    <Vec<Digest> as twenty_first::math::bfield_codec::BFieldCodec>::static_length()
+                {
+                    [triton_vm::instruction::LabelledInstruction::Instruction(
+                        triton_vm::instruction::AnInstruction::Push(BFieldElement::new(
+                            size as u64,
+                        )),
+                    )]
+                    .to_vec()
+                } else {
+                    [
+                        triton_vm::instruction::LabelledInstruction::Instruction(
+                            triton_vm::instruction::AnInstruction::ReadMem(
+                                ::triton_vm::op_stack::NumberOfWords::N1,
+                            ),
+                        ),
+                        triton_vm::instruction::LabelledInstruction::Instruction(
+                            triton_vm::instruction::AnInstruction::Push(BFieldElement::new(1u64)),
+                        ),
+                        triton_vm::instruction::LabelledInstruction::Instruction(
+                            triton_vm::instruction::AnInstruction::Add,
+                        ),
+                        triton_vm::instruction::LabelledInstruction::Instruction(
+                            triton_vm::instruction::AnInstruction::Swap(
+                                ::triton_vm::op_stack::OpStackElement::ST1,
+                            ),
+                        ),
+                        triton_vm::instruction::LabelledInstruction::Instruction(
+                            triton_vm::instruction::AnInstruction::Push(BFieldElement::new(1u64)),
+                        ),
+                        triton_vm::instruction::LabelledInstruction::Instruction(
+                            triton_vm::instruction::AnInstruction::Add,
+                        ),
+                    ]
+                    .to_vec()
+                }
             }
             "leaf_count" => {
                 let prev = [
@@ -408,8 +464,7 @@ impl ::tasm_lib::structure::tasm_object::TasmObject
                 .concat();
                 let jumper = {
                     if let Some(size) =
-                        <u64 as twenty_first::shared_math::bfield_codec::BFieldCodec>::static_length(
-                        )
+                        <u64 as twenty_first::math::bfield_codec::BFieldCodec>::static_length()
                     {
                         [triton_vm::instruction::LabelledInstruction::Instruction(
                             triton_vm::instruction::AnInstruction::Push(BFieldElement::new(
@@ -461,7 +516,7 @@ impl ::tasm_lib::structure::tasm_object::TasmObject
         ::std::boxed::Box<dyn std::error::Error + ::core::marker::Send + ::core::marker::Sync>,
     > {
         let length: usize = if let Some(static_length) =
-            <Vec<Digest> as twenty_first::shared_math::bfield_codec::BFieldCodec>::static_length()
+            <Vec<Digest> as twenty_first::math::bfield_codec::BFieldCodec>::static_length()
         {
             static_length
         } else {
@@ -470,10 +525,9 @@ impl ::tasm_lib::structure::tasm_object::TasmObject
         let sequence = (0..length)
             .map(|_| iterator.next().unwrap())
             .collect::<Vec<_>>();
-        let peaks: Vec<Digest> =
-            *twenty_first::shared_math::bfield_codec::BFieldCodec::decode(&sequence)?;
+        let peaks: Vec<Digest> = *twenty_first::math::bfield_codec::BFieldCodec::decode(&sequence)?;
         let length: usize = if let Some(static_length) =
-            <u64 as twenty_first::shared_math::bfield_codec::BFieldCodec>::static_length()
+            <u64 as twenty_first::math::bfield_codec::BFieldCodec>::static_length()
         {
             static_length
         } else {
@@ -482,8 +536,7 @@ impl ::tasm_lib::structure::tasm_object::TasmObject
         let sequence = (0..length)
             .map(|_| iterator.next().unwrap())
             .collect::<Vec<_>>();
-        let leaf_count: u64 =
-            *twenty_first::shared_math::bfield_codec::BFieldCodec::decode(&sequence)?;
+        let leaf_count: u64 = *twenty_first::math::bfield_codec::BFieldCodec::decode(&sequence)?;
         ::std::result::Result::Ok(::std::boxed::Box::new(Self::init(peaks, leaf_count)))
     }
 }
@@ -494,14 +547,14 @@ impl ::tasm_lib::structure::tasm_object::TasmObject for FriResponse {
         match field_name {
             "revealed_leaves" => {
                 let current = {
-                    if let Some(size) =  <Vec<XFieldElement>as twenty_first::shared_math::bfield_codec::BFieldCodec> ::static_length(){
+                    if let Some(size) =  <Vec<XFieldElement>as twenty_first::math::bfield_codec::BFieldCodec> ::static_length(){
               [triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(size as u64)))].to_vec()
             }else {
               [triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::ReadMem(::triton_vm::op_stack::NumberOfWords::N1)),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(1u64))),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Swap(::triton_vm::op_stack::OpStackElement::ST1)),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(1u64))),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),].to_vec()
             }
                 };
                 let getter = {
-                    if<Vec<XFieldElement>as twenty_first::shared_math::bfield_codec::BFieldCodec> ::static_length().is_some(){
+                    if<Vec<XFieldElement>as twenty_first::math::bfield_codec::BFieldCodec> ::static_length().is_some(){
               [triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Pop(::triton_vm::op_stack::NumberOfWords::N1)),].to_vec()
             }else {
               [triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Pop(::triton_vm::op_stack::NumberOfWords::N1)),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(1u64))),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),].to_vec()
@@ -512,7 +565,7 @@ impl ::tasm_lib::structure::tasm_object::TasmObject for FriResponse {
             "auth_structure" => {
                 let current = {
                     [Self::get_field_start_with_jump_distance("revealed_leaves"),[triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add)].to_vec(),{
-              if let Some(size) =  <Vec<Digest> as twenty_first::shared_math::bfield_codec::BFieldCodec> ::static_length(){
+              if let Some(size) =  <Vec<Digest> as twenty_first::math::bfield_codec::BFieldCodec> ::static_length(){
                 [triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(size as u64)))].to_vec()
               }else {
                 [triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::ReadMem(::triton_vm::op_stack::NumberOfWords::N1)),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(1u64))),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Swap(::triton_vm::op_stack::OpStackElement::ST1)),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(1u64))),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),].to_vec()
@@ -520,7 +573,7 @@ impl ::tasm_lib::structure::tasm_object::TasmObject for FriResponse {
             },].concat()
                 };
                 let getter = {
-                    if<Vec<Digest> as twenty_first::shared_math::bfield_codec::BFieldCodec> ::static_length().is_some(){
+                    if<Vec<Digest> as twenty_first::math::bfield_codec::BFieldCodec> ::static_length().is_some(){
               [triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Pop(::triton_vm::op_stack::NumberOfWords::N1)),].to_vec()
             }else {
               [triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Pop(::triton_vm::op_stack::NumberOfWords::N1)),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(1u64))),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),].to_vec()
@@ -535,14 +588,14 @@ impl ::tasm_lib::structure::tasm_object::TasmObject for FriResponse {
         match field_name {
             "revealed_leaves" => {
                 let current = {
-                    if let Some(size) =  <Vec<XFieldElement>as twenty_first::shared_math::bfield_codec::BFieldCodec> ::static_length(){
+                    if let Some(size) =  <Vec<XFieldElement>as twenty_first::math::bfield_codec::BFieldCodec> ::static_length(){
               [triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(size as u64)))].to_vec()
             }else {
               [triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::ReadMem(::triton_vm::op_stack::NumberOfWords::N1)),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(1u64))),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Swap(::triton_vm::op_stack::OpStackElement::ST1)),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(1u64))),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),].to_vec()
             }
                 };
                 let getter_sizer = {
-                    if<Vec<XFieldElement>as twenty_first::shared_math::bfield_codec::BFieldCodec> ::static_length().is_some(){
+                    if<Vec<XFieldElement>as twenty_first::math::bfield_codec::BFieldCodec> ::static_length().is_some(){
               std::vec::Vec:: <triton_vm::instruction::LabelledInstruction> ::new()
             }else {
               [triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(-BFieldElement::new(1u64))),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Swap(triton_vm::op_stack::OpStackElement::ST1)),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(1u64))),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Swap(triton_vm::op_stack::OpStackElement::ST1)),].to_vec()
@@ -553,7 +606,7 @@ impl ::tasm_lib::structure::tasm_object::TasmObject for FriResponse {
             "auth_structure" => {
                 let current = {
                     [Self::get_field_start_with_jump_distance("revealed_leaves"),[triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add)].to_vec(),{
-              if let Some(size) =  <Vec<Digest> as twenty_first::shared_math::bfield_codec::BFieldCodec> ::static_length(){
+              if let Some(size) =  <Vec<Digest> as twenty_first::math::bfield_codec::BFieldCodec> ::static_length(){
                 [triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(size as u64)))].to_vec()
               }else {
                 [triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::ReadMem(::triton_vm::op_stack::NumberOfWords::N1)),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(1u64))),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Swap(::triton_vm::op_stack::OpStackElement::ST1)),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(1u64))),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),].to_vec()
@@ -561,7 +614,7 @@ impl ::tasm_lib::structure::tasm_object::TasmObject for FriResponse {
             },].concat()
                 };
                 let getter_sizer = {
-                    if<Vec<Digest> as twenty_first::shared_math::bfield_codec::BFieldCodec> ::static_length().is_some(){
+                    if<Vec<Digest> as twenty_first::math::bfield_codec::BFieldCodec> ::static_length().is_some(){
               std::vec::Vec:: <triton_vm::instruction::LabelledInstruction> ::new()
             }else {
               [triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(-BFieldElement::new(1u64))),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Swap(triton_vm::op_stack::OpStackElement::ST1)),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(1u64))),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Swap(triton_vm::op_stack::OpStackElement::ST1)),].to_vec()
@@ -576,26 +629,32 @@ impl ::tasm_lib::structure::tasm_object::TasmObject for FriResponse {
         field_name: &str,
     ) -> Vec<triton_vm::instruction::LabelledInstruction> {
         match field_name {
-        "revealed_leaves" => {
-          if let Some(size) =  <Vec<XFieldElement>as twenty_first::shared_math::bfield_codec::BFieldCodec> ::static_length(){
+            "revealed_leaves" => {
+                if let Some(size) =  <Vec<XFieldElement>as twenty_first::math::bfield_codec::BFieldCodec> ::static_length(){
             [triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(size as u64)))].to_vec()
           }else {
             [triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::ReadMem(::triton_vm::op_stack::NumberOfWords::N1)),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(1u64))),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Swap(::triton_vm::op_stack::OpStackElement::ST1)),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(1u64))),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),].to_vec()
           }
-        },
-        "auth_structure" => {
-          let prev = [Self::get_field_start_with_jump_distance("revealed_leaves"),[triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add)].to_vec(),].concat();
-          let jumper = {
-            if let Some(size) =  <Vec<Digest> as twenty_first::shared_math::bfield_codec::BFieldCodec> ::static_length(){
+            }
+            "auth_structure" => {
+                let prev = [
+                    Self::get_field_start_with_jump_distance("revealed_leaves"),
+                    [triton_vm::instruction::LabelledInstruction::Instruction(
+                        triton_vm::instruction::AnInstruction::Add,
+                    )]
+                    .to_vec(),
+                ]
+                .concat();
+                let jumper = {
+                    if let Some(size) =  <Vec<Digest> as twenty_first::math::bfield_codec::BFieldCodec> ::static_length(){
               [triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(size as u64)))].to_vec()
             }else {
               [triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::ReadMem(::triton_vm::op_stack::NumberOfWords::N1)),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(1u64))),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Swap(::triton_vm::op_stack::OpStackElement::ST1)),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(1u64))),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),].to_vec()
             }
-          };
-          [prev,jumper].concat()
-        },
-        unknown_field_name => panic!("Cannot match on field name `{unknown_field_name}`."),
-
+                };
+                [prev, jumper].concat()
+            }
+            unknown_field_name => panic!("Cannot match on field name `{unknown_field_name}`."),
         }
     }
     fn decode_iter<Itr: Iterator<Item = BFieldElement>>(
@@ -604,18 +663,20 @@ impl ::tasm_lib::structure::tasm_object::TasmObject for FriResponse {
         ::std::boxed::Box<Self>,
         ::std::boxed::Box<dyn std::error::Error + ::core::marker::Send + ::core::marker::Sync>,
     > {
-        let length:usize = if let Some(static_length) =  <Vec<XFieldElement>as twenty_first::shared_math::bfield_codec::BFieldCodec> ::static_length(){
-        static_length
-      }else {
-        iterator.next().unwrap().value()as usize
-      };
+        let length: usize = if let Some(static_length) =
+            <Vec<XFieldElement> as twenty_first::math::bfield_codec::BFieldCodec>::static_length()
+        {
+            static_length
+        } else {
+            iterator.next().unwrap().value() as usize
+        };
         let sequence = (0..length)
             .map(|_| iterator.next().unwrap())
             .collect::<Vec<_>>();
         let revealed_leaves: Vec<XFieldElement> =
-            *twenty_first::shared_math::bfield_codec::BFieldCodec::decode(&sequence)?;
+            *twenty_first::math::bfield_codec::BFieldCodec::decode(&sequence)?;
         let length: usize = if let Some(static_length) =
-            <Vec<Digest> as twenty_first::shared_math::bfield_codec::BFieldCodec>::static_length()
+            <Vec<Digest> as twenty_first::math::bfield_codec::BFieldCodec>::static_length()
         {
             static_length
         } else {
@@ -625,7 +686,7 @@ impl ::tasm_lib::structure::tasm_object::TasmObject for FriResponse {
             .map(|_| iterator.next().unwrap())
             .collect::<Vec<_>>();
         let auth_structure: Vec<Digest> =
-            *twenty_first::shared_math::bfield_codec::BFieldCodec::decode(&sequence)?;
+            *twenty_first::math::bfield_codec::BFieldCodec::decode(&sequence)?;
         ::std::result::Result::Ok(::std::boxed::Box::new(Self {
             revealed_leaves,
             auth_structure,

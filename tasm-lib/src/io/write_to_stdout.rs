@@ -46,7 +46,7 @@ impl Procedure for WriteToStdout {
         &self,
         stack: &mut Vec<BFieldElement>,
         _memory: &mut HashMap<BFieldElement, BFieldElement>,
-        _nondeterminism: &NonDeterminism<BFieldElement>,
+        _nondeterminism: &NonDeterminism,
         _public_input: &[BFieldElement],
         _sponge: &mut Option<VmHasher>,
     ) -> Vec<BFieldElement> {

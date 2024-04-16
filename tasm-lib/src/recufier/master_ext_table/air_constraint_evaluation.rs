@@ -163,7 +163,7 @@ mod tests {
     use rand::RngCore;
     use rand::SeedableRng;
     use triton_vm::proof_stream::ProofStream;
-    use triton_vm::twenty_first::shared_math::x_field_element::EXTENSION_DEGREE;
+    use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
     use crate::execute_test;
     use crate::linker::link_for_isolated_run;
@@ -192,7 +192,7 @@ mod tests {
         )
         .unwrap();
         let Proof(proof_sequence) = proof.clone();
-        let proof_stream: ProofStream<Tip5> = (&proof).try_into().unwrap();
+        let proof_stream: ProofStream = (&proof).try_into().unwrap();
         let assumed_memory_layout =
             AirConstraintEvaluation::conventional_air_constraint_memory_layout();
         const BASE_ROW_SIZE: usize = NUM_BASE_COLUMNS * EXTENSION_DEGREE;

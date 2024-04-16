@@ -103,7 +103,7 @@ mod test {
 
     use num::Zero;
     use rand::{rngs::StdRng, Rng, RngCore, SeedableRng};
-    use triton_vm::twenty_first::shared_math::{
+    use triton_vm::twenty_first::math::{
         b_field_element::BFieldElement, x_field_element::XFieldElement,
     };
 

@@ -104,7 +104,7 @@ pub trait DeprecatedSnippet {
         &self,
         stack: &mut Vec<BFieldElement>,
         std_in: Vec<BFieldElement>,
-        nondeterminism: NonDeterminism<BFieldElement>,
+        nondeterminism: NonDeterminism,
     ) -> Result<VMState> {
         let expected_length_prior: usize = self.input_types().iter().map(|x| x.stack_size()).sum();
         let expected_length_after: usize = self.output_types().iter().map(|x| x.stack_size()).sum();
@@ -136,7 +136,7 @@ pub trait DeprecatedSnippet {
         &self,
         stack: &mut Vec<BFieldElement>,
         std_in: Vec<BFieldElement>,
-        nondeterminism: NonDeterminism<BFieldElement>,
+        nondeterminism: NonDeterminism,
     ) -> Result<BenchmarkResult> {
         let expected_length_prior: usize = self.input_types().iter().map(|x| x.stack_size()).sum();
         let expected_length_after: usize = self.output_types().iter().map(|x| x.stack_size()).sum();
@@ -208,7 +208,7 @@ impl<S: DeprecatedSnippet + Clone + 'static> RustShadow for DeprecatedSnippetWra
     fn rust_shadow_wrapper(
         &self,
         stdin: &[BFieldElement],
-        nondeterminism: &NonDeterminism<BFieldElement>,
+        nondeterminism: &NonDeterminism,
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
         _sponge: &mut Option<VmHasher>,

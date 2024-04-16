@@ -156,7 +156,7 @@ impl Algorithm for SwapUnchecked {
         &self,
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
-        _nondeterminism: &NonDeterminism<BFieldElement>,
+        _nondeterminism: &NonDeterminism,
     ) {
         let b_index = stack.pop().unwrap().value() as usize;
         let a_index = stack.pop().unwrap().value() as usize;

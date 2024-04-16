@@ -1,6 +1,6 @@
 use num::Zero;
 use triton_vm::prelude::*;
-use twenty_first::shared_math::other::random_elements;
+use twenty_first::math::other::random_elements;
 
 use crate::Digest;
 use crate::DIGEST_LENGTH;

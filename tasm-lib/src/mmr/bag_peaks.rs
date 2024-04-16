@@ -6,7 +6,7 @@ use rand::rngs::StdRng;
 use rand::Rng;
 use rand::SeedableRng;
 use triton_vm::prelude::*;
-use twenty_first::shared_math::other::random_elements;
+use twenty_first::math::other::random_elements;
 use twenty_first::util_types::shared::bag_peaks;
 
 use crate::data_type::DataType;

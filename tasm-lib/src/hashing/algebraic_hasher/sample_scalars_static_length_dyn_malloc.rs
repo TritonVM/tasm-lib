@@ -1,6 +1,6 @@
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::shared_math::tip5::RATE;
-use triton_vm::twenty_first::shared_math::x_field_element::EXTENSION_DEGREE;
+use triton_vm::twenty_first::math::tip5::RATE;
+use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
 use crate::data_type::ArrayType;
 use crate::data_type::DataType;
@@ -86,7 +86,7 @@ mod tests {
     use rand::rngs::StdRng;
     use rand::{Rng, SeedableRng};
     use triton_vm::prelude::*;
-    use triton_vm::twenty_first::shared_math::x_field_element::EXTENSION_DEGREE;
+    use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
     use triton_vm::twenty_first::util_types::algebraic_hasher::{AlgebraicHasher, Sponge};
 
     use crate::memory::dyn_malloc::DYN_MALLOC_FIRST_ADDRESS;
@@ -103,7 +103,7 @@ mod tests {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
-            _nondeterminism: &NonDeterminism<BFieldElement>,
+            _nondeterminism: &NonDeterminism,
             _public_input: &[BFieldElement],
             sponge: &mut Option<VmHasher>,
         ) -> Vec<BFieldElement> {

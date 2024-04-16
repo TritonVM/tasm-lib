@@ -2,8 +2,8 @@ use rand::rngs::StdRng;
 use rand::Rng;
 use rand::SeedableRng;
 use triton_vm::prelude::*;
-use twenty_first::shared_math::polynomial::Polynomial;
-use twenty_first::shared_math::x_field_element::EXTENSION_DEGREE;
+use twenty_first::math::polynomial::Polynomial;
+use twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
 use crate::data_type::DataType;
 use crate::empty_stack;

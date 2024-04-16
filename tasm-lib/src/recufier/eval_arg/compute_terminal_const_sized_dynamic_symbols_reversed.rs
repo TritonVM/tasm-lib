@@ -251,7 +251,7 @@ mod tests {
 
 #[cfg(test)]
 mod bench {
-    use triton_vm::twenty_first::shared_math::tip5::DIGEST_LENGTH;
+    use triton_vm::twenty_first::math::tip5::DIGEST_LENGTH;
 
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;

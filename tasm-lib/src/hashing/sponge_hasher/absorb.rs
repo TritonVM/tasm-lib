@@ -1,6 +1,6 @@
 use triton_vm::instruction::LabelledInstruction;
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::shared_math::tip5::RATE;
+use triton_vm::twenty_first::math::tip5::RATE;
 
 use crate::data_type::ArrayType;
 use crate::data_type::DataType;
@@ -63,7 +63,7 @@ mod test {
     use itertools::Itertools;
     use rand::rngs::StdRng;
     use rand::*;
-    use triton_vm::twenty_first::shared_math::other::random_elements;
+    use triton_vm::twenty_first::math::other::random_elements;
 
     use crate::empty_stack;
     use crate::snippet_bencher::BenchmarkCase;
@@ -89,7 +89,7 @@ mod test {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &mut HashMap<BFieldElement, BFieldElement>,
-            _nondeterminism: &NonDeterminism<BFieldElement>,
+            _nondeterminism: &NonDeterminism,
             _public_input: &[BFieldElement],
             sponge: &mut Option<VmHasher>,
         ) -> Vec<BFieldElement> {

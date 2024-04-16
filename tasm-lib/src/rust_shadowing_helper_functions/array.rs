@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use num::Zero;
-use triton_vm::twenty_first::shared_math::b_field_element::BFieldElement;
-use triton_vm::twenty_first::shared_math::bfield_codec::BFieldCodec;
+use triton_vm::twenty_first::math::b_field_element::BFieldElement;
+use triton_vm::twenty_first::math::bfield_codec::BFieldCodec;
 
 use crate::data_type::DataType;
 

@@ -50,7 +50,7 @@ impl Procedure for ReadInput {
         &self,
         stack: &mut Vec<BFieldElement>,
         _memory: &mut HashMap<BFieldElement, BFieldElement>,
-        nondeterminism: &NonDeterminism<BFieldElement>,
+        nondeterminism: &NonDeterminism,
         public_input: &[BFieldElement],
         _sponge: &mut Option<crate::VmHasher>,
     ) -> Vec<BFieldElement> {

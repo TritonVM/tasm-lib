@@ -153,7 +153,7 @@ mod tests {
     use rand::Rng;
     use rand::SeedableRng;
     use triton_vm::prelude::*;
-    use triton_vm::twenty_first::shared_math::traits::ModPowU32;
+    use triton_vm::twenty_first::math::traits::ModPowU32;
 
     use crate::empty_stack;
     use crate::execute_with_terminal_state;

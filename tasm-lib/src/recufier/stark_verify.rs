@@ -5,7 +5,7 @@ use triton_vm::table::master_table::MasterExtTable;
 use triton_vm::table::NUM_BASE_COLUMNS;
 use triton_vm::table::NUM_EXT_COLUMNS;
 use triton_vm::table::NUM_QUOTIENT_SEGMENTS;
-use triton_vm::twenty_first::shared_math::x_field_element::EXTENSION_DEGREE;
+use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
 use crate::arithmetic::bfe::primitive_root_of_unity::PrimitiveRootOfUnity;
 use crate::array::horner_evaluation::HornerEvaluation;
@@ -141,7 +141,7 @@ impl BasicSnippet for StarkVerify {
         ));
         let sample_quotient_codeword_weights =
             library.import(Box::new(SampleScalarsStaticLengthDynMalloc {
-                num_elements: triton_vm::table::master_table::num_quotients(),
+                num_elements: MasterExtTable::NUM_CONSTRAINTS,
             }));
         let domain_generator = library.import(Box::new(PrimitiveRootOfUnity));
         let sample_scalar_one = library.import(Box::new(SampleScalarOne));
@@ -937,9 +937,11 @@ impl BasicSnippet for StarkVerify {
 
 #[cfg(test)]
 pub mod tests {
+    use std::collections::HashMap;
+
     use itertools::Itertools;
     use tests::fri::test_helpers::extract_fri_proof;
-    use triton_vm::stark::StarkProofStream;
+    use triton_vm::proof_stream::ProofStream;
 
     use crate::execute_test;
     use crate::recufier::claim::shared::insert_claim_into_static_memory;
@@ -1063,20 +1065,16 @@ pub mod tests {
         )
     }
 
-    fn nd_from_proof(
-        stark: &Stark,
-        claim: &Claim,
-        proof: Proof,
-    ) -> (NonDeterminism<BFieldElement>, usize) {
+    fn nd_from_proof(stark: &Stark, claim: &Claim, proof: Proof) -> (NonDeterminism, usize) {
         let fri = stark.derive_fri(proof.padded_height().unwrap()).unwrap();
-        let proof_stream = StarkProofStream::try_from(&proof).unwrap();
+        let proof_stream = ProofStream::try_from(&proof).unwrap();
         let proof_extraction = extract_fri_proof(&proof_stream, claim, stark);
         let tasm_lib_fri: fri::verify::FriVerify = fri.into();
         let fri_proof_digests =
             tasm_lib_fri.extract_digests_required_for_proving(&proof_extraction.fri_proof_stream);
         let padded_height = proof.padded_height().unwrap();
         let Proof(raw_proof) = proof;
-        let ram = raw_proof
+        let ram: HashMap<_, _> = raw_proof
             .into_iter()
             .enumerate()
             .map(|(k, v)| (BFieldElement::new(k as u64), v))
@@ -1113,13 +1111,9 @@ pub mod tests {
     pub fn non_determinism_claim_and_padded_height(
         inner_program: &Program,
         inner_public_input: &[BFieldElement],
-        inner_nondeterminism: NonDeterminism<BFieldElement>,
+        inner_nondeterminism: NonDeterminism,
         stark: &Stark,
-    ) -> (
-        NonDeterminism<BFieldElement>,
-        triton_vm::proof::Claim,
-        usize,
-    ) {
+    ) -> (NonDeterminism, triton_vm::proof::Claim, usize) {
         println!("Generating proof for non-determinism");
 
         let (aet, inner_output) = inner_program

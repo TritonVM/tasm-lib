@@ -1,13 +1,10 @@
 fibo_test:
 
 # call graph
- fibo_test_loop: 5516
- total: 5523
+ fibo_test_loop: 3
 
 # aggregated unsorted
- fibo_test_loop:, 5516, 1;
- total:, 5523, 1.001269;
+ fibo_test_loop:, 3, 1;
 
 # aggregated + sorted
- fibo_test_loop:, 5516, 1;
- total:, 5523, 1.001269;
+ fibo_test_loop:, 3, 1;

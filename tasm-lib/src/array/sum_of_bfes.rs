@@ -80,7 +80,7 @@ mod tests {
     use rand::rngs::StdRng;
     use rand::Rng;
     use rand::SeedableRng;
-    use triton_vm::twenty_first::shared_math::b_field_element::BFIELD_ZERO;
+    use triton_vm::twenty_first::math::b_field_element::BFIELD_ZERO;
 
     use crate::rust_shadowing_helper_functions::array::insert_random_array;
     use crate::snippet_bencher::BenchmarkCase;

@@ -112,7 +112,7 @@ impl Algorithm for VerifyAuthenticationPathForLeafAndIndexList {
         &self,
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
-        nondeterminism: &NonDeterminism<BFieldElement>,
+        nondeterminism: &NonDeterminism,
     ) {
         // read arguments from stack
         let height = stack.pop().unwrap().value() as usize;
@@ -236,7 +236,7 @@ impl VerifyAuthenticationPathForLeafAndIndexList {
         stack.push(root.0[1]);
         stack.push(root.0[0]);
         stack.push(BFieldElement::new(height as u64));
-        let nondeterminism = NonDeterminism::<BFieldElement>::default()
+        let nondeterminism = NonDeterminism::default()
             .with_digests(authentication_paths.into_iter().flatten().collect_vec())
             .with_ram(memory);
 

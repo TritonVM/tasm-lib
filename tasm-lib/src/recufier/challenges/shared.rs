@@ -1,4 +1,4 @@
-use triton_vm::twenty_first::shared_math::b_field_element::BFieldElement;
+use triton_vm::twenty_first::math::b_field_element::BFieldElement;
 
 use crate::data_type::ArrayType;
 use crate::data_type::DataType;

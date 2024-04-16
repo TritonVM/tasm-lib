@@ -77,7 +77,7 @@ mod tests {
     use rand::Rng;
     use rand::SeedableRng;
     use triton_vm::prelude::*;
-    use triton_vm::twenty_first::shared_math::traits::ModPowU32;
+    use triton_vm::twenty_first::math::traits::ModPowU32;
 
     use crate::arithmetic::xfe::mod_pow_u32_generic::XfeModPowU32Generic;
     use crate::snippet_bencher::BenchmarkCase;

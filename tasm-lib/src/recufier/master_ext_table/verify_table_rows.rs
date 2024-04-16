@@ -9,8 +9,8 @@ use triton_vm::prelude::*;
 use triton_vm::table::NUM_BASE_COLUMNS;
 use triton_vm::table::NUM_EXT_COLUMNS;
 use triton_vm::table::NUM_QUOTIENT_SEGMENTS;
-use triton_vm::twenty_first::shared_math::tip5::DIGEST_LENGTH;
-use triton_vm::twenty_first::shared_math::x_field_element::EXTENSION_DEGREE;
+use triton_vm::twenty_first::math::tip5::DIGEST_LENGTH;
+use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
 #[derive(Debug, Copy, Clone, Display, EnumIter)]
 pub enum ColumnType {
@@ -204,8 +204,8 @@ mod tests {
     use rand::rngs::StdRng;
     use rand::Rng;
     use rand::SeedableRng;
-    use triton_vm::twenty_first::shared_math::other::random_elements;
-    use triton_vm::twenty_first::shared_math::tip5::RATE;
+    use triton_vm::twenty_first::math::other::random_elements;
+    use triton_vm::twenty_first::math::tip5::RATE;
     use triton_vm::twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
     use triton_vm::twenty_first::util_types::algebraic_hasher::Sponge;
     use triton_vm::twenty_first::util_types::merkle_tree::CpuParallel;
@@ -322,7 +322,7 @@ mod tests {
             &self,
             stack: &mut Vec<BFieldElement>,
             memory: &mut HashMap<BFieldElement, BFieldElement>,
-            nondeterminism: &NonDeterminism<BFieldElement>,
+            nondeterminism: &NonDeterminism,
             _public_input: &[BFieldElement],
             sponge: &mut Option<VmHasher>,
         ) -> Vec<BFieldElement> {

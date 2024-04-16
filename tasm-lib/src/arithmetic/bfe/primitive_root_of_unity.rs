@@ -3,7 +3,7 @@ use rand::rngs::StdRng;
 use rand::Rng;
 use rand::SeedableRng;
 use triton_vm::prelude::*;
-use twenty_first::shared_math::traits::PrimitiveRootOfUnity as PRU;
+use twenty_first::math::traits::PrimitiveRootOfUnity as PRU;
 
 use crate::data_type::DataType;
 use crate::empty_stack;

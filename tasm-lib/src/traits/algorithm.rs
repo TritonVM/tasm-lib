@@ -32,7 +32,7 @@ pub trait Algorithm: BasicSnippet {
         &self,
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
-        nondeterminism: &NonDeterminism<BFieldElement>,
+        nondeterminism: &NonDeterminism,
     );
 
     /// Take a object about which something is being proven in order to extract out the
@@ -54,11 +54,7 @@ pub trait Algorithm: BasicSnippet {
     ///    the NTT-transformed vector and verify that it satisfies the right relation. In
     ///    this case the preprocessor calculates the NTT and populates the non-determinism
     ///    with the transformed vector.
-    fn preprocess<T: BFieldCodec>(
-        _meta_input: T,
-        _nondeterminism: &mut NonDeterminism<BFieldElement>,
-    ) {
-    }
+    fn preprocess<T: BFieldCodec>(_meta_input: T, _nondeterminism: &mut NonDeterminism) {}
 
     fn pseudorandom_initial_state(
         &self,
@@ -74,7 +70,7 @@ pub trait Algorithm: BasicSnippet {
 #[derive(Debug, Clone, Default)]
 pub struct AlgorithmInitialState {
     pub stack: Vec<BFieldElement>,
-    pub nondeterminism: NonDeterminism<BFieldElement>,
+    pub nondeterminism: NonDeterminism,
 }
 
 pub struct ShadowedAlgorithm<T: Algorithm + 'static> {
@@ -100,7 +96,7 @@ where
     fn rust_shadow_wrapper(
         &self,
         _stdin: &[BFieldElement],
-        nondeterminism: &NonDeterminism<BFieldElement>,
+        nondeterminism: &NonDeterminism,
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
         _sponge: &mut Option<VmHasher>,

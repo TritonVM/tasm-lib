@@ -379,7 +379,7 @@ mod tests {
     use crate::traits::deprecated_snippet::DeprecatedSnippet;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-    use crate::twenty_first::shared_math::other::random_elements;
+    use crate::twenty_first::math::other::random_elements;
     use crate::VmHasher;
 
     use super::*;

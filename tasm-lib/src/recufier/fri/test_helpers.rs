@@ -1,20 +1,20 @@
 use itertools::Itertools;
 use triton_vm::prelude::BFieldCodec;
 use triton_vm::proof::Claim;
+use triton_vm::proof_stream::ProofStream;
 use triton_vm::stark::Stark;
-use triton_vm::stark::StarkProofStream;
 use triton_vm::table::challenges::Challenges;
 use triton_vm::table::extension_table::Quotientable;
 use triton_vm::table::master_table::MasterExtTable;
 use triton_vm::table::*;
-use triton_vm::twenty_first::shared_math::tip5::Tip5;
+use triton_vm::twenty_first::math::tip5::Tip5;
 use triton_vm::twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 use triton_vm::twenty_first::util_types::merkle_tree::MerkleTreeInclusionProof;
 
 use crate::Digest;
 
 pub struct StarkProofExtraction {
-    pub fri_proof_stream: StarkProofStream,
+    pub fri_proof_stream: ProofStream,
     pub base_tree_authentication_paths: Vec<Vec<Digest>>,
     pub ext_tree_authentication_paths: Vec<Vec<Digest>>,
     pub quot_tree_authentication_paths: Vec<Vec<Digest>>,
@@ -23,7 +23,7 @@ pub struct StarkProofExtraction {
 /// Extracts a proof stream that will work for FRI verification from a proof stream that works for
 /// the whole STARK verification.
 pub fn extract_fri_proof(
-    proof_stream: &StarkProofStream,
+    proof_stream: &ProofStream,
     claim: &Claim,
     stark: &Stark,
 ) -> StarkProofExtraction {
@@ -200,11 +200,12 @@ mod tests {
         let public_input = [];
         let non_determinism = NonDeterminism::default();
         let (stark, claim, proof) =
-            triton_vm::prove_program(&simple_program, &public_input, &non_determinism).unwrap();
+            triton_vm::prove_program(&simple_program, public_input.into(), non_determinism)
+                .unwrap();
         let padded_height = proof.padded_height().unwrap();
         let fri = stark.derive_fri(padded_height).unwrap();
 
-        let proof_stream = StarkProofStream::try_from(&proof).unwrap();
+        let proof_stream = ProofStream::try_from(&proof).unwrap();
         let mut fri_proof_stream =
             extract_fri_proof(&proof_stream, &claim, &stark).fri_proof_stream;
         assert!(
