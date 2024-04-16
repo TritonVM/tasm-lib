@@ -23,6 +23,9 @@ impl From<BaseElementType> for DataType {
     }
 }
 
+/// Calculate inner product of both base columns and extension columns with weights. Returns one
+/// scalar in the form of an extension-field element. Base column can be either a base-field
+// element, or an extension-field element.
 pub struct InnerProductOfThreeRowsWithWeights {
     base_length: usize,
     base_element_type: BaseElementType,
@@ -102,10 +105,14 @@ impl BasicSnippet for InnerProductOfThreeRowsWithWeights {
         let entrypoint = self.entrypoint();
 
         let move_to_last_word = |length: usize| {
-            triton_asm! {
-                // _ *ptr
-                push {length-1}
-                add
+            if length == 0 {
+                triton_asm!()
+            } else {
+                triton_asm! {
+                    // _ *ptr
+                    push {length-1}
+                    add
+                }
             }
         };
         let move_weights_pointer_to_last_word = move_to_last_word(
@@ -297,8 +304,44 @@ mod test {
         .test()
     }
 
+    #[test]
+    fn works_with_base_or_ext_column_count_of_zero() {
+        let num_base_columns_is_zero_bfe = InnerProductOfThreeRowsWithWeights {
+            base_length: 0,
+            base_element_type: BaseElementType::Bfe,
+            ext_length: 8,
+            randomizer_length: 0,
+        };
+        let num_base_columns_is_zero_xfe = InnerProductOfThreeRowsWithWeights {
+            base_length: 0,
+            base_element_type: BaseElementType::Xfe,
+            ext_length: 14,
+            randomizer_length: 0,
+        };
+        let num_ext_columns_is_zero = InnerProductOfThreeRowsWithWeights {
+            base_length: 12,
+            base_element_type: BaseElementType::Xfe,
+            ext_length: 0,
+            randomizer_length: 0,
+        };
+        let num_ext_columns_is_num_randomizers = InnerProductOfThreeRowsWithWeights {
+            base_length: 12,
+            base_element_type: BaseElementType::Xfe,
+            ext_length: 2,
+            randomizer_length: 2,
+        };
+        for snippet in [
+            num_base_columns_is_zero_bfe,
+            num_base_columns_is_zero_xfe,
+            num_ext_columns_is_zero,
+            num_ext_columns_is_num_randomizers,
+        ] {
+            ShadowedFunction::new(snippet).test()
+        }
+    }
+
     #[proptest(cases = 6)]
-    fn three_rows_pbt(
+    fn three_rows_pbt_pbt(
         #[strategy(arb())] base_element_type: BaseElementType,
         #[strategy(0_usize..500)] base_length: usize,
         #[strategy(0_usize..500)] ext_length: usize,
@@ -422,12 +465,26 @@ mod benches {
     use super::*;
 
     #[test]
-    fn inner_product_of_three_rows_bench_current_tvm() {
+    fn inner_product_of_three_rows_bench_current_tvm_base_is_bfe() {
+        // This benchmark is for the calculation of the (inside-of-domain) current row element that
+        // takes place inside the main-loop where all revealed FRI values are verified.
         ShadowedFunction::new(InnerProductOfThreeRowsWithWeights {
             base_length: NUM_BASE_COLUMNS,
             ext_length: NUM_EXT_COLUMNS,
             randomizer_length: NUM_RANDOMIZER_POLYNOMIALS,
             base_element_type: BaseElementType::Bfe,
+        })
+        .bench();
+    }
+
+    #[test]
+    fn inner_product_of_three_rows_bench_current_tvm_base_is_xfe() {
+        // This benchmark is for the calculation of the out-of-domain current and next row values.
+        ShadowedFunction::new(InnerProductOfThreeRowsWithWeights {
+            base_length: NUM_BASE_COLUMNS,
+            ext_length: NUM_EXT_COLUMNS,
+            randomizer_length: NUM_RANDOMIZER_POLYNOMIALS,
+            base_element_type: BaseElementType::Xfe,
         })
         .bench();
     }
