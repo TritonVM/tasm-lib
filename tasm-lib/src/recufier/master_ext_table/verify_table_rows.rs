@@ -5,6 +5,7 @@ use crate::library::Library;
 use crate::recufier::fri::verify::FriSnippet;
 use crate::traits::basic_snippet::BasicSnippet;
 use strum::Display;
+use strum::EnumIter;
 use triton_vm::prelude::*;
 use triton_vm::table::NUM_BASE_COLUMNS;
 use triton_vm::table::NUM_EXT_COLUMNS;
@@ -12,7 +13,7 @@ use triton_vm::table::NUM_QUOTIENT_SEGMENTS;
 use triton_vm::twenty_first::shared_math::tip5::DIGEST_LENGTH;
 use triton_vm::twenty_first::shared_math::x_field_element::EXTENSION_DEGREE;
 
-#[derive(Debug, Copy, Clone, Display)]
+#[derive(Debug, Copy, Clone, Display, EnumIter)]
 pub enum ColumnType {
     Base,
     Extension,
@@ -21,6 +22,7 @@ pub enum ColumnType {
 
 /// Crashes the VM is the base table rows do not authenticate against the provided Merkle root
 /// First hashes the rows, then verifies that the digests belong in the Merkle tree.
+#[derive(Debug, Copy, Clone)]
 pub struct VerifyTableRows {
     pub column_type: ColumnType,
 }
@@ -217,6 +219,72 @@ mod tests {
             column_type: ColumnType::Quotient,
         })
         .test()
+    }
+
+    mod negative_tests {
+        use std::{cell::RefCell, rc::Rc};
+
+        use rand::{thread_rng, RngCore};
+        use strum::IntoEnumIterator;
+
+        use crate::{execute_with_terminal_state, linker::link_for_isolated_run};
+
+        use super::*;
+
+        #[test]
+        fn verify_bad_auth_path_crashes_vm() {
+            let mut rng = thread_rng();
+            let mut seed = [0u8; 32];
+            rng.fill_bytes(&mut seed);
+            let snippets = ColumnType::iter().map(|column_type| VerifyTableRows { column_type });
+
+            for snippet in snippets {
+                let mut init_state = snippet.pseudorandom_initial_state(seed, None);
+                let num_digests = init_state.nondeterminism.digests.len();
+                init_state.nondeterminism.digests[rng.gen_range(0..num_digests)] = rng.gen();
+
+                // run rust shadow
+                let rust_result = std::panic::catch_unwind(|| {
+                    let mut init_state_copy = init_state.clone();
+                    let mut ram = init_state_copy.nondeterminism.ram.clone();
+                    ShadowedProcedure::new(snippet).rust_shadow_wrapper(
+                        &[],
+                        &init_state_copy.nondeterminism,
+                        &mut init_state_copy.stack,
+                        &mut ram,
+                        &mut init_state_copy.sponge,
+                    )
+                });
+
+                // Run on Triton
+                let code = link_for_isolated_run(Rc::new(RefCell::new(snippet)));
+                let program = Program::new(&code);
+                let tvm_result = execute_with_terminal_state(
+                    &program,
+                    &[],
+                    &init_state.stack,
+                    &init_state.nondeterminism,
+                    init_state.sponge,
+                );
+
+                if rust_result.is_ok() || tvm_result.is_ok() {
+                    if rust_result.is_ok() {
+                        eprintln!("Rust shadow did **not** panic");
+                    } else {
+                        eprintln!("TVM execution did **not** fail");
+                    }
+                    panic!(
+                        "Test case: Verifying row with bad auth path must fail. Row type was {}",
+                        snippet.column_type
+                    );
+                }
+
+                assert_eq!(
+                    InstructionError::VectorAssertionFailed(0),
+                    tvm_result.unwrap_err()
+                );
+            }
+        }
     }
 
     // TODO: Add negative tests, to verify that VM crashes with bad authentication paths, and
