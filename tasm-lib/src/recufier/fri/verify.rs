@@ -114,7 +114,7 @@ impl BasicSnippet for FriSnippet {
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_recufier_fri_verify".to_string()
+        "tasmlib_recufier_fri_verify".to_string()
     }
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {

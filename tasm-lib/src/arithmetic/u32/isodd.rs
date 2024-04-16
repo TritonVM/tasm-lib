@@ -15,7 +15,7 @@ pub struct Isodd;
 
 impl DeprecatedSnippet for Isodd {
     fn entrypoint_name(&self) -> String {
-        "tasm_arithmetic_u32_isodd".to_string()
+        "tasmlib_arithmetic_u32_isodd".to_string()
     }
 
     fn input_field_names(&self) -> Vec<String> {

@@ -17,7 +17,7 @@ pub struct Isu32;
 
 impl DeprecatedSnippet for Isu32 {
     fn entrypoint_name(&self) -> String {
-        "tasm_arithmetic_u32_isu32".to_string()
+        "tasmlib_arithmetic_u32_isu32".to_string()
     }
 
     fn input_field_names(&self) -> Vec<String> {

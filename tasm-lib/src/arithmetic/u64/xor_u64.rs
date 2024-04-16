@@ -17,7 +17,7 @@ pub struct XorU64;
 
 impl DeprecatedSnippet for XorU64 {
     fn entrypoint_name(&self) -> String {
-        "tasm_arithmetic_u64_xor".to_string()
+        "tasmlib_arithmetic_u64_xor".to_string()
     }
 
     fn input_field_names(&self) -> Vec<String> {

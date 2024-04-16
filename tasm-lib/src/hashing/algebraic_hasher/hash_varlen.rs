@@ -65,7 +65,7 @@ impl BasicSnippet for HashVarlen {
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_hashing_algebraic_hasher_hash_varlen".to_owned()
+        "tasmlib_hashing_algebraic_hasher_hash_varlen".to_owned()
     }
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {

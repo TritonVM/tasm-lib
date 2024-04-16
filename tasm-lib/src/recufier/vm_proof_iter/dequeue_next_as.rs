@@ -142,7 +142,7 @@ impl BasicSnippet for DequeueNextAs {
 
     fn entrypoint(&self) -> String {
         let proof_item_name = self.item_name();
-        format!("tasm_recufier_vm_proof_iter_dequeue_next_as_{proof_item_name}")
+        format!("tasmlib_recufier_vm_proof_iter_dequeue_next_as_{proof_item_name}")
     }
 
     /// ```text

@@ -26,7 +26,7 @@ impl BasicSnippet for Absorb {
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_hashing_sponge_hasher_absorb".to_string()
+        "tasmlib_hashing_sponge_hasher_absorb".to_string()
     }
 
     fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {

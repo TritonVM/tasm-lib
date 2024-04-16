@@ -21,7 +21,7 @@ impl BasicSnippet for XfeModPowU32Generic {
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_arithmetic_xfe_mod_pow_u32".to_owned()
+        "tasmlib_arithmetic_xfe_mod_pow_u32".to_owned()
     }
 
     // This implementation is far from optimized, not very efficient. To make a snippet

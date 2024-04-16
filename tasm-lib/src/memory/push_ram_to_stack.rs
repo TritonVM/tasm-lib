@@ -28,7 +28,7 @@ impl BasicSnippet for PushRamToStack {
 
     fn entrypoint(&self) -> String {
         format!(
-            "tasm_memory_push_ram_to_stack___{}",
+            "tasmlib_memory_push_ram_to_stack___{}",
             self.data_type.label_friendly_name()
         )
     }

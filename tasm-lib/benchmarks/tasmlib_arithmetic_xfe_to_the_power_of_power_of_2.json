@@ -1,0 +1,24 @@
+[
+  {
+    "name": "tasmlib_arithmetic_xfe_to_the_power_of_power_of_2",
+    "benchmark_result": {
+      "clock_cycle_count": 273,
+      "hash_table_height": 24,
+      "u32_table_height": 0,
+      "op_stack_table_height": 245,
+      "ram_table_height": 0
+    },
+    "case": "CommonCase"
+  },
+  {
+    "name": "tasmlib_arithmetic_xfe_to_the_power_of_power_of_2",
+    "benchmark_result": {
+      "clock_cycle_count": 416,
+      "hash_table_height": 24,
+      "u32_table_height": 0,
+      "op_stack_table_height": 377,
+      "ram_table_height": 0
+    },
+    "case": "WorstCase"
+  }
+]

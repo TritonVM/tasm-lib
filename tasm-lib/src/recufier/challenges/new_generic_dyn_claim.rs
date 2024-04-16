@@ -77,7 +77,7 @@ impl BasicSnippet for NewGenericDynClaim {
 
     fn entrypoint(&self) -> String {
         format!(
-            "tasm_recufier_challenges_new_generic_dyn_claim_{}_{}",
+            "tasmlib_recufier_challenges_new_generic_dyn_claim_{}_{}",
             self.num_of_fiat_shamir_challenges, self.num_of_claim_derived_challenges,
         )
     }

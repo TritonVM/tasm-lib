@@ -25,7 +25,7 @@ impl BasicSnippet for ComputeTerminalDynSizedDynamicSymbols {
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_recufier_eval_arg_compute_terminal_dyn_sized_dynamic_symbols".into()
+        "tasmlib_recufier_eval_arg_compute_terminal_dyn_sized_dynamic_symbols".into()
     }
 
     fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {

@@ -42,7 +42,7 @@ impl Push {
 impl DeprecatedSnippet for Push {
     fn entrypoint_name(&self) -> String {
         format!(
-            "tasm_list_push___{}",
+            "tasmlib_list_push___{}",
             self.element_type.label_friendly_name()
         )
     }

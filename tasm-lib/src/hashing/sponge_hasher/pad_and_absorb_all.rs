@@ -19,7 +19,7 @@ impl BasicSnippet for PadAndAbsorbAll {
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_hashing_sponge_hasher_pad_and_absorb_all".into()
+        "tasmlib_hashing_sponge_hasher_pad_and_absorb_all".into()
     }
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {

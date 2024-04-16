@@ -1,0 +1,24 @@
+[
+  {
+    "name": "tasmlib_hashing_squeeze_repeatedly_static_number_10",
+    "benchmark_result": {
+      "clock_cycle_count": 64,
+      "hash_table_height": 132,
+      "u32_table_height": 0,
+      "op_stack_table_height": 221,
+      "ram_table_height": 100
+    },
+    "case": "CommonCase"
+  },
+  {
+    "name": "tasmlib_hashing_squeeze_repeatedly_static_number_10",
+    "benchmark_result": {
+      "clock_cycle_count": 64,
+      "hash_table_height": 132,
+      "u32_table_height": 0,
+      "op_stack_table_height": 221,
+      "ram_table_height": 100
+    },
+    "case": "WorstCase"
+  }
+]

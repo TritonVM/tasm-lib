@@ -1,0 +1,24 @@
+[
+  {
+    "name": "tasmlib_memory_push_ram_to_stack___digest",
+    "benchmark_result": {
+      "clock_cycle_count": 7,
+      "hash_table_height": 12,
+      "u32_table_height": 0,
+      "op_stack_table_height": 8,
+      "ram_table_height": 5
+    },
+    "case": "CommonCase"
+  },
+  {
+    "name": "tasmlib_memory_push_ram_to_stack___digest",
+    "benchmark_result": {
+      "clock_cycle_count": 7,
+      "hash_table_height": 12,
+      "u32_table_height": 0,
+      "op_stack_table_height": 8,
+      "ram_table_height": 5
+    },
+    "case": "WorstCase"
+  }
+]

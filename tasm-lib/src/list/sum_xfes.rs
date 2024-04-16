@@ -24,7 +24,7 @@ impl BasicSnippet for SumOfXfes {
     }
 
     fn entrypoint(&self) -> String {
-        format!("tasm_list_sum_{}", DataType::Xfe.label_friendly_name())
+        format!("tasmlib_list_sum_{}", DataType::Xfe.label_friendly_name())
     }
 
     fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {

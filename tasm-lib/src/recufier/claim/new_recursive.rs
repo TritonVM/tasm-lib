@@ -32,7 +32,7 @@ impl BasicSnippet for NewRecursive {
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_recufier_claim_new_recursive".to_owned()
+        "tasmlib_recufier_claim_new_recursive".to_owned()
     }
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {

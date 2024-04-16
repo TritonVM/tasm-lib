@@ -70,7 +70,7 @@ impl BasicSnippet for AbsorbMultipleStaticSize {
     }
 
     fn entrypoint(&self) -> String {
-        format!("tasm_hashing_absorb_multiple_static_size_{}", self.size)
+        format!("tasmlib_hashing_absorb_multiple_static_size_{}", self.size)
     }
 
     fn code(&self, _library: &mut crate::library::Library) -> Vec<LabelledInstruction> {

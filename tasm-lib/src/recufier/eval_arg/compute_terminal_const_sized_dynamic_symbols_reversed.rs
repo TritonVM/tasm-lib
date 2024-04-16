@@ -31,7 +31,7 @@ impl<const N: usize> BasicSnippet for ComputeTerminalConstSizedDynamicSymbolsRev
     }
 
     fn entrypoint(&self) -> String {
-        format!("tasm_recufier_eval_arg_compute_terminal_const_sized_dynamic_symbols_reversed_sym_len_{N}")
+        format!("tasmlib_recufier_eval_arg_compute_terminal_const_sized_dynamic_symbols_reversed_sym_len_{N}")
     }
 
     fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {

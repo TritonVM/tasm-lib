@@ -17,7 +17,7 @@ pub struct IndexOfLastNonZeroBitU64;
 
 impl DeprecatedSnippet for IndexOfLastNonZeroBitU64 {
     fn entrypoint_name(&self) -> String {
-        "tasm_arithmetic_u64_index_of_last_nonzero_bit".to_string()
+        "tasmlib_arithmetic_u64_index_of_last_nonzero_bit".to_string()
     }
 
     fn input_field_names(&self) -> Vec<String> {

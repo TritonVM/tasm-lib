@@ -29,7 +29,7 @@ impl SetLength {
 impl DeprecatedSnippet for SetLength {
     fn entrypoint_name(&self) -> String {
         format!(
-            "tasm_list_set_length___{}",
+            "tasmlib_list_set_length___{}",
             self.element_type.label_friendly_name()
         )
     }

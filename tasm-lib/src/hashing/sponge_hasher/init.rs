@@ -18,7 +18,7 @@ impl BasicSnippet for Init {
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_hashing_sponge_hasher_init".to_string()
+        "tasmlib_hashing_sponge_hasher_init".to_string()
     }
 
     fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {

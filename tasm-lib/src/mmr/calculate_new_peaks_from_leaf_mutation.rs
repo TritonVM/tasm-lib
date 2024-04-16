@@ -97,7 +97,7 @@ impl MmrCalculateNewPeaksFromLeafMutationMtIndices {
 
 impl DeprecatedSnippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
     fn entrypoint_name(&self) -> String {
-        "tasm_mmr_calculate_new_peaks_from_leaf_mutation".into()
+        "tasmlib_mmr_calculate_new_peaks_from_leaf_mutation".into()
     }
 
     fn input_field_names(&self) -> Vec<String> {

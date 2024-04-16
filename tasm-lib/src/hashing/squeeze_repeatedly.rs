@@ -37,7 +37,7 @@ impl BasicSnippet for SqueezeRepeatedly {
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_hashing_squeeze_repeatedly".to_string()
+        "tasmlib_hashing_squeeze_repeatedly".to_string()
     }
 
     fn code(&self, _library: &mut crate::library::Library) -> Vec<LabelledInstruction> {

@@ -16,7 +16,7 @@ pub struct Shiftright;
 
 impl DeprecatedSnippet for Shiftright {
     fn entrypoint_name(&self) -> String {
-        "tasm_arithmetic_u32_shiftright".to_string()
+        "tasmlib_arithmetic_u32_shiftright".to_string()
     }
 
     fn input_field_names(&self) -> Vec<String> {

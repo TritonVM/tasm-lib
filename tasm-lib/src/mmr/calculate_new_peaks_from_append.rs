@@ -67,7 +67,7 @@ impl CalculateNewPeaksFromAppend {
 
 impl DeprecatedSnippet for CalculateNewPeaksFromAppend {
     fn entrypoint_name(&self) -> String {
-        "tasm_mmr_calculate_new_peaks_from_append".into()
+        "tasmlib_mmr_calculate_new_peaks_from_append".into()
     }
 
     fn input_field_names(&self) -> Vec<String> {

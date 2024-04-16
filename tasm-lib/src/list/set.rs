@@ -31,7 +31,7 @@ impl Set {
 impl DeprecatedSnippet for Set {
     fn entrypoint_name(&self) -> String {
         format!(
-            "tasm_list_set_element___{}",
+            "tasmlib_list_set_element___{}",
             self.element_type.label_friendly_name()
         )
     }

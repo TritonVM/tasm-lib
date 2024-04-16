@@ -83,7 +83,7 @@ impl BasicSnippet for Map {
     }
 
     fn entrypoint(&self) -> String {
-        format!("tasm_list_higher_order_u32_map_{}", self.f.entrypoint())
+        format!("tasmlib_list_higher_order_u32_map_{}", self.f.entrypoint())
     }
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {

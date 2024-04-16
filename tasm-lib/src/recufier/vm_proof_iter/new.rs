@@ -22,7 +22,7 @@ impl BasicSnippet for New {
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_recufier_vm_proof_iter_new".to_owned()
+        "tasmlib_recufier_vm_proof_iter_new".to_owned()
     }
 
     fn code(&self, library: &mut crate::library::Library) -> Vec<LabelledInstruction> {

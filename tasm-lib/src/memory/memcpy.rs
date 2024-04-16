@@ -39,7 +39,7 @@ impl MemCpy {
 
 impl DeprecatedSnippet for MemCpy {
     fn entrypoint_name(&self) -> String {
-        "tasm_memory_memcpy".to_string()
+        "tasmlib_memory_memcpy".to_string()
     }
 
     fn input_field_names(&self) -> Vec<String> {

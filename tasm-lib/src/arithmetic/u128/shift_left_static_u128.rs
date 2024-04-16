@@ -17,7 +17,7 @@ impl<const N: u8> DeprecatedSnippet for ShiftLeftStaticU128<N> {
             N <= 32,
             "Static left-shift snippet cannot shift by more than 32 bits"
         );
-        format!("tasm_arithmetic_u128_shift_left_static_{N}")
+        format!("tasmlib_arithmetic_u128_shift_left_static_{N}")
     }
 
     fn input_field_names(&self) -> Vec<String>

@@ -48,7 +48,7 @@ impl BasicSnippet for GetSwbfIndices {
 
     fn entrypoint(&self) -> String {
         format!(
-            "tasm_neptune_mutator_get_swbf_indices_{}_{}",
+            "tasmlib_neptune_mutator_get_swbf_indices_{}_{}",
             self.window_size, self.num_trials
         )
     }

@@ -27,7 +27,7 @@ impl BasicSnippet for OverflowingSub {
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_arithmetic_u64_overflowing_sub".to_string()
+        "tasmlib_arithmetic_u64_overflowing_sub".to_string()
     }
 
     fn code(&self, _library: &mut crate::library::Library) -> Vec<LabelledInstruction> {

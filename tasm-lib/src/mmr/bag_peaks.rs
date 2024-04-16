@@ -52,7 +52,7 @@ impl BasicSnippet for BagPeaks {
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_mmr_bag_peaks".to_string()
+        "tasmlib_mmr_bag_peaks".to_string()
     }
 
     fn code(&self, library: &mut crate::library::Library) -> Vec<LabelledInstruction> {

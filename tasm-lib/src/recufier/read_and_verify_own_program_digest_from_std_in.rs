@@ -21,7 +21,7 @@ impl BasicSnippet for ReadAndVerifyOwnProgramDigestFromStdIn {
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_recufier_read_and_verify_own_program_digest_from_std_in".to_string()
+        "tasmlib_recufier_read_and_verify_own_program_digest_from_std_in".to_string()
     }
 
     fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {

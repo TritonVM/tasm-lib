@@ -43,7 +43,7 @@ impl BasicSnippet for DynMalloc {
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_memory_dyn_malloc".to_string()
+        "tasmlib_memory_dyn_malloc".to_string()
     }
 
     fn code(&self, _: &mut Library) -> Vec<LabelledInstruction> {
@@ -159,7 +159,7 @@ mod tests {
         }
 
         fn entrypoint(&self) -> String {
-            "tasm_memory_dyn_malloc_multiple_calls".to_string()
+            "tasmlib_memory_dyn_malloc_multiple_calls".to_string()
         }
 
         fn code(&self, lib: &mut Library) -> Vec<LabelledInstruction> {

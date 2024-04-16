@@ -21,7 +21,7 @@ impl BasicSnippet for InstantiateFiatShamirWithClaim {
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_recufier_claim_instantiate_fiat_shamir_with_claim".to_owned()
+        "tasmlib_recufier_claim_instantiate_fiat_shamir_with_claim".to_owned()
     }
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {

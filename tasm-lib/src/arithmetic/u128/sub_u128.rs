@@ -15,7 +15,7 @@ pub struct SubU128;
 
 impl DeprecatedSnippet for SubU128 {
     fn entrypoint_name(&self) -> String {
-        "tasm_arithmetic_u128_sub".to_string()
+        "tasmlib_arithmetic_u128_sub".to_string()
     }
 
     fn input_field_names(&self) -> Vec<String> {

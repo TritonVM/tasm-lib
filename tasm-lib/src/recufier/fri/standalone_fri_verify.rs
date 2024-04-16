@@ -117,7 +117,7 @@ mod bench {
         let intermediate_state = StandaloneFriVerify::singleton().pseudorandom_intermediate_state();
 
         bench_and_profile_program::<StandaloneFriVerify>(
-            "tasm_recufier_standalone_fri_verify",
+            "tasmlib_recufier_standalone_fri_verify",
             BenchmarkCase::WorstCase,
             &public_input,
             &intermediate_state.nondeterminism,

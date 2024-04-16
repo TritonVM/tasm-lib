@@ -38,7 +38,7 @@ impl BasicSnippet for SampleScalarsStaticLengthDynMalloc {
 
     fn entrypoint(&self) -> String {
         format!(
-            "tasm_hashing_algebraic_hasher_sample_scalars_static_length_dyn_malloc_{}",
+            "tasmlib_hashing_algebraic_hasher_sample_scalars_static_length_dyn_malloc_{}",
             self.num_elements
         )
     }

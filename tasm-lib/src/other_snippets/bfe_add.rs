@@ -46,7 +46,7 @@ impl DeprecatedSnippet for BfeAdd {
     }
 
     fn entrypoint_name(&self) -> String {
-        "tasm_other_bfe_add".to_string()
+        "tasmlib_other_bfe_add".to_string()
     }
 
     fn function_code(&self, _library: &mut Library) -> String {

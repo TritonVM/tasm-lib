@@ -71,7 +71,7 @@ impl BasicSnippet for NewEmptyInputAndOutput {
 
     fn entrypoint(&self) -> String {
         format!(
-            "tasm_recufier_challenges_new_empty_input_and_output_{}_{}",
+            "tasmlib_recufier_challenges_new_empty_input_and_output_{}_{}",
             self.num_of_fiat_shamir_challenges, self.num_of_claim_derived_challenges,
         )
     }

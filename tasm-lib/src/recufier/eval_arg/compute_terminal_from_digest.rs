@@ -19,7 +19,7 @@ impl BasicSnippet for ComputeTerminalFromDigestInitialIsOne {
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_recufier_eval_arg_compute_terminal_from_digest".to_owned()
+        "tasmlib_recufier_eval_arg_compute_terminal_from_digest".to_owned()
     }
 
     fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {

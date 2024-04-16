@@ -103,7 +103,7 @@ impl BasicSnippet for AirConstraintEvaluation {
         );
 
         // Consider parameterizing this entrypoint name if you need more than one instance.
-        "tasm_recufier_master_ext_table_air_constraint_evaluation".to_owned()
+        "tasmlib_recufier_master_ext_table_air_constraint_evaluation".to_owned()
     }
 
     fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {

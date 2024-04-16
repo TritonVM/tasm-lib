@@ -16,7 +16,7 @@ impl BasicSnippet for Cube {
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_arithmetic_xfe_cube".to_owned()
+        "tasmlib_arithmetic_xfe_cube".to_owned()
     }
 
     fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {

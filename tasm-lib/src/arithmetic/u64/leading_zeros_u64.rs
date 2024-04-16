@@ -13,7 +13,7 @@ pub struct LeadingZerosU64;
 
 impl DeprecatedSnippet for LeadingZerosU64 {
     fn entrypoint_name(&self) -> String {
-        "tasm_arithmetic_u64_leading_zeros".to_string()
+        "tasmlib_arithmetic_u64_leading_zeros".to_string()
     }
 
     fn input_field_names(&self) -> Vec<String> {

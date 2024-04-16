@@ -1,0 +1,24 @@
+[
+  {
+    "name": "tasmlib_list_push___digest",
+    "benchmark_result": {
+      "clock_cycle_count": 22,
+      "hash_table_height": 24,
+      "u32_table_height": 0,
+      "op_stack_table_height": 20,
+      "ram_table_height": 8
+    },
+    "case": "CommonCase"
+  },
+  {
+    "name": "tasmlib_list_push___digest",
+    "benchmark_result": {
+      "clock_cycle_count": 22,
+      "hash_table_height": 24,
+      "u32_table_height": 0,
+      "op_stack_table_height": 20,
+      "ram_table_height": 8
+    },
+    "case": "WorstCase"
+  }
+]

@@ -33,7 +33,7 @@ impl BasicSnippet for SplitOff {
 
     fn entrypoint(&self) -> String {
         format!(
-            "tasm_list_split_off_{}",
+            "tasmlib_list_split_off_{}",
             self.element_type.label_friendly_name()
         )
     }

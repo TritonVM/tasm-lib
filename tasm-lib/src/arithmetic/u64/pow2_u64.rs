@@ -18,7 +18,7 @@ pub struct Pow2U64;
 
 impl DeprecatedSnippet for Pow2U64 {
     fn entrypoint_name(&self) -> String {
-        "tasm_arithmetic_u64_pow2".to_string()
+        "tasmlib_arithmetic_u64_pow2".to_string()
     }
 
     fn input_field_names(&self) -> Vec<String> {

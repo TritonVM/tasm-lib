@@ -1,0 +1,24 @@
+[
+  {
+    "name": "tasmlib_memory_memcpy",
+    "benchmark_result": {
+      "clock_cycle_count": 85,
+      "hash_table_height": 84,
+      "u32_table_height": 19,
+      "op_stack_table_height": 87,
+      "ram_table_height": 34
+    },
+    "case": "CommonCase"
+  },
+  {
+    "name": "tasmlib_memory_memcpy",
+    "benchmark_result": {
+      "clock_cycle_count": 3030,
+      "hash_table_height": 84,
+      "u32_table_height": 2004,
+      "op_stack_table_height": 3625,
+      "ram_table_height": 2000
+    },
+    "case": "WorstCase"
+  }
+]

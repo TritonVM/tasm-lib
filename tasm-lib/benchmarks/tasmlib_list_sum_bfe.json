@@ -1,0 +1,24 @@
+[
+  {
+    "name": "tasmlib_list_sum_bfe",
+    "benchmark_result": {
+      "clock_cycle_count": 357,
+      "hash_table_height": 54,
+      "u32_table_height": 12,
+      "op_stack_table_height": 376,
+      "ram_table_height": 105
+    },
+    "case": "CommonCase"
+  },
+  {
+    "name": "tasmlib_list_sum_bfe",
+    "benchmark_result": {
+      "clock_cycle_count": 2877,
+      "hash_table_height": 54,
+      "u32_table_height": 15,
+      "op_stack_table_height": 3256,
+      "ram_table_height": 1005
+    },
+    "case": "WorstCase"
+  }
+]

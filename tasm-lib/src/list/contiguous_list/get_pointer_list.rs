@@ -19,7 +19,7 @@ pub struct GetPointerList;
 
 impl DeprecatedSnippet for GetPointerList {
     fn entrypoint_name(&self) -> String {
-        "tasm_list_contiguous_list_get_pointer_list".into()
+        "tasmlib_list_contiguous_list_get_pointer_list".into()
     }
 
     fn input_field_names(&self) -> Vec<String> {

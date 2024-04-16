@@ -27,7 +27,7 @@ pub struct MmrLeafIndexToMtIndexAndPeakIndex;
 
 impl DeprecatedSnippet for MmrLeafIndexToMtIndexAndPeakIndex {
     fn entrypoint_name(&self) -> String {
-        "tasm_mmr_leaf_index_to_mt_index_and_peak_index".to_string()
+        "tasmlib_mmr_leaf_index_to_mt_index_and_peak_index".to_string()
     }
 
     fn input_field_names(&self) -> Vec<String> {

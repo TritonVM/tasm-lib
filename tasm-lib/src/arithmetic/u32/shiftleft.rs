@@ -16,7 +16,7 @@ pub struct Shiftleft;
 
 impl DeprecatedSnippet for Shiftleft {
     fn entrypoint_name(&self) -> String {
-        "tasm_arithmetic_u32_shiftleft".to_string()
+        "tasmlib_arithmetic_u32_shiftleft".to_string()
     }
 
     fn input_field_names(&self) -> Vec<String> {

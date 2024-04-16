@@ -17,7 +17,7 @@ pub struct AddU128;
 
 impl DeprecatedSnippet for AddU128 {
     fn entrypoint_name(&self) -> String {
-        "tasm_arithmetic_u128_add".to_string()
+        "tasmlib_arithmetic_u128_add".to_string()
     }
 
     fn input_field_names(&self) -> Vec<String> {

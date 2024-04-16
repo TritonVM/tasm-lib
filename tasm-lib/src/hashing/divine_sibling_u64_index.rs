@@ -34,7 +34,7 @@ impl BasicSnippet for DivineSiblingU64Index {
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_hashing_divine_sibling_u64_index".to_owned()
+        "tasmlib_hashing_divine_sibling_u64_index".to_owned()
     }
 
     fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {

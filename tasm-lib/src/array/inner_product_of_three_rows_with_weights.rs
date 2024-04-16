@@ -93,7 +93,7 @@ impl BasicSnippet for InnerProductOfThreeRowsWithWeights {
 
     fn entrypoint(&self) -> String {
         format!(
-            "tasm_array_inner_product_of_three_rows_with_weights_{}_baserowelem",
+            "tasmlib_array_inner_product_of_three_rows_with_weights_{}_baserowelem",
             self.base_element_type
         )
     }

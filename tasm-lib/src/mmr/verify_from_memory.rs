@@ -101,7 +101,7 @@ impl MmrVerifyFromMemory {
 
 impl DeprecatedSnippet for MmrVerifyFromMemory {
     fn entrypoint_name(&self) -> String {
-        "tasm_mmr_verify_from_memory".into()
+        "tasmlib_mmr_verify_from_memory".into()
     }
 
     fn input_field_names(&self) -> Vec<String> {

@@ -22,7 +22,7 @@ impl ReverseDigest {
 
 impl DeprecatedSnippet for ReverseDigest {
     fn entrypoint_name(&self) -> String {
-        "tasm_hashing_reverse_digest".to_owned()
+        "tasmlib_hashing_reverse_digest".to_owned()
     }
 
     fn input_field_names(&self) -> Vec<String> {

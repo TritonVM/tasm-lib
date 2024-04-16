@@ -24,7 +24,7 @@ impl BasicSnippet for SampleScalars {
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_hashing_algebraic_hasher_sample_scalars".to_string()
+        "tasmlib_hashing_algebraic_hasher_sample_scalars".to_string()
     }
 
     fn code(&self, library: &mut crate::library::Library) -> Vec<LabelledInstruction> {

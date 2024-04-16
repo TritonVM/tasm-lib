@@ -21,7 +21,7 @@ pub struct XfeNtt;
 
 impl BasicSnippet for XfeNtt {
     fn entrypoint(&self) -> String {
-        "tasm_recufier_xfe_ntt".to_owned()
+        "tasmlib_recufier_xfe_ntt".to_owned()
     }
 
     fn outputs(&self) -> Vec<(DataType, String)> {

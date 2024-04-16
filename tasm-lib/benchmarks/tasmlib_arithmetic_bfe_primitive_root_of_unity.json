@@ -1,0 +1,24 @@
+[
+  {
+    "name": "tasmlib_arithmetic_bfe_primitive_root_of_unity",
+    "benchmark_result": {
+      "clock_cycle_count": 162,
+      "hash_table_height": 186,
+      "u32_table_height": 33,
+      "op_stack_table_height": 159,
+      "ram_table_height": 0
+    },
+    "case": "CommonCase"
+  },
+  {
+    "name": "tasmlib_arithmetic_bfe_primitive_root_of_unity",
+    "benchmark_result": {
+      "clock_cycle_count": 162,
+      "hash_table_height": 186,
+      "u32_table_height": 33,
+      "op_stack_table_height": 159,
+      "ram_table_height": 0
+    },
+    "case": "WorstCase"
+  }
+]

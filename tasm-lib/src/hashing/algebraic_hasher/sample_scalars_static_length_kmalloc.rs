@@ -52,7 +52,7 @@ impl BasicSnippet for SampleScalarsStaticLengthKMalloc {
 
     fn entrypoint(&self) -> String {
         format!(
-            "tasm_hashing_algebraic_hasher_sample_scalars_static_length_k_malloc{}",
+            "tasmlib_hashing_algebraic_hasher_sample_scalars_static_length_k_malloc{}",
             self.num_elements_to_sample
         )
     }

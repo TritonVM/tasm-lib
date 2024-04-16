@@ -13,7 +13,7 @@ pub struct DoublePow2U64;
 
 impl DeprecatedSnippet for DoublePow2U64 {
     fn entrypoint_name(&self) -> String {
-        "tasm_arithmetic_u64_pow2_double".to_string()
+        "tasmlib_arithmetic_u64_pow2_double".to_string()
     }
 
     fn input_field_names(&self) -> Vec<String> {

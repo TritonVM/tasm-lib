@@ -12,7 +12,7 @@ pub struct Or;
 
 impl DeprecatedSnippet for Or {
     fn entrypoint_name(&self) -> String {
-        "tasm_arithmetic_u32_or".to_string()
+        "tasmlib_arithmetic_u32_or".to_string()
     }
 
     fn input_field_names(&self) -> Vec<String> {

@@ -21,7 +21,7 @@ impl BasicSnippet for OwnProgramDigest {
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_recufier_own_program_digest".to_owned()
+        "tasmlib_recufier_own_program_digest".to_owned()
     }
 
     fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {

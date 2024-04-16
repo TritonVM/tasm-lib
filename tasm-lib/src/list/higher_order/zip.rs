@@ -48,7 +48,7 @@ impl BasicSnippet for Zip {
 
     fn entrypoint(&self) -> String {
         format!(
-            "tasm_list_higher_order_u32_zip_{}_with_{}",
+            "tasmlib_list_higher_order_u32_zip_{}_with_{}",
             self.left_type.label_friendly_name(),
             self.right_type.label_friendly_name()
         )

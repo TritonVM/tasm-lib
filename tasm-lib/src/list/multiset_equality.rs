@@ -119,7 +119,7 @@ impl MultisetEquality {
 
 impl DeprecatedSnippet for MultisetEquality {
     fn entrypoint_name(&self) -> String {
-        "tasm_list_multiset_equality".into()
+        "tasmlib_list_multiset_equality".into()
     }
 
     fn input_field_names(&self) -> Vec<String> {

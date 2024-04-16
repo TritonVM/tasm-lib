@@ -19,7 +19,7 @@ impl BasicSnippet for ToThePowerOfPowerOf2 {
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_arithmetic_xfe_to_the_power_of_power_of_2".to_owned()
+        "tasmlib_arithmetic_xfe_to_the_power_of_power_of_2".to_owned()
     }
 
     fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {

@@ -30,7 +30,7 @@ impl Get {
 impl DeprecatedSnippet for Get {
     fn entrypoint_name(&self) -> String {
         format!(
-            "tasm_list_get_element___{}",
+            "tasmlib_list_get_element___{}",
             self.element_type.label_friendly_name()
         )
     }

@@ -150,7 +150,7 @@ pub struct DummyTestSnippetC;
 
 impl DeprecatedSnippet for DummyTestSnippetA {
     fn entrypoint_name(&self) -> String {
-        "tasm_a_dummy_test_value".to_string()
+        "tasmlib_a_dummy_test_value".to_string()
     }
 
     fn input_field_names(&self) -> Vec<String> {
@@ -219,7 +219,7 @@ impl DeprecatedSnippet for DummyTestSnippetA {
 
 impl DeprecatedSnippet for DummyTestSnippetB {
     fn entrypoint_name(&self) -> String {
-        "tasm_b_dummy_test_value".to_string()
+        "tasmlib_b_dummy_test_value".to_string()
     }
 
     fn input_field_names(&self) -> Vec<String> {
@@ -286,7 +286,7 @@ impl DeprecatedSnippet for DummyTestSnippetB {
 
 impl DeprecatedSnippet for DummyTestSnippetC {
     fn entrypoint_name(&self) -> String {
-        "tasm_c_dummy_test_value".to_string()
+        "tasmlib_c_dummy_test_value".to_string()
     }
 
     fn input_field_names(&self) -> Vec<String> {
@@ -396,9 +396,9 @@ mod tests {
         lib.import(Box::new(DummyTestSnippetA));
         assert_eq!(
             vec![
-                "tasm_a_dummy_test_value",
-                "tasm_b_dummy_test_value",
-                "tasm_c_dummy_test_value",
+                "tasmlib_a_dummy_test_value",
+                "tasmlib_b_dummy_test_value",
+                "tasmlib_c_dummy_test_value",
             ],
             lib.get_all_snippet_names()
         );
@@ -409,7 +409,7 @@ mod tests {
         let mut lib = Library::new();
         lib.import(Box::new(DummyTestSnippetB));
         assert_eq!(
-            vec!["tasm_b_dummy_test_value", "tasm_c_dummy_test_value"],
+            vec!["tasmlib_b_dummy_test_value", "tasmlib_c_dummy_test_value"],
             lib.get_all_snippet_names()
         );
     }

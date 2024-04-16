@@ -23,7 +23,7 @@ impl BasicSnippet for GetCollinearityCheckX {
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_recufier_collinearity_check_x".to_string()
+        "tasmlib_recufier_collinearity_check_x".to_string()
     }
 
     fn code(&self, _library: &mut crate::library::Library) -> Vec<LabelledInstruction> {

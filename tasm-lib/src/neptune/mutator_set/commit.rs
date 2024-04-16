@@ -59,7 +59,7 @@ impl Commit {
 
 impl DeprecatedSnippet for Commit {
     fn entrypoint_name(&self) -> String {
-        "tasm_neptune_mutator_set_commit".to_string()
+        "tasmlib_neptune_mutator_set_commit".to_string()
     }
 
     fn input_field_names(&self) -> Vec<String>

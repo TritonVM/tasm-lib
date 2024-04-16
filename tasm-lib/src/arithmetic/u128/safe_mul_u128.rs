@@ -14,7 +14,7 @@ pub struct SafeMulU128;
 
 impl DeprecatedSnippet for SafeMulU128 {
     fn entrypoint_name(&self) -> String {
-        "tasm_arithmetic_u128_safe_mul".to_string()
+        "tasmlib_arithmetic_u128_safe_mul".to_string()
     }
 
     fn input_field_names(&self) -> Vec<String> {

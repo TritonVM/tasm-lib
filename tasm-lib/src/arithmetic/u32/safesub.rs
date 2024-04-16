@@ -13,7 +13,7 @@ pub struct Safesub;
 
 impl DeprecatedSnippet for Safesub {
     fn entrypoint_name(&self) -> String {
-        "tasm_arithmetic_u32_safesub".to_string()
+        "tasmlib_arithmetic_u32_safesub".to_string()
     }
 
     fn input_field_names(&self) -> Vec<String> {

@@ -28,7 +28,7 @@ impl BasicSnippet for ReadInput {
 
     fn entrypoint(&self) -> String {
         format!(
-            "tasm_io_read_{}___{}",
+            "tasmlib_io_read_{}___{}",
             self.input_source.label_friendly_name(),
             self.data_type.label_friendly_name()
         )

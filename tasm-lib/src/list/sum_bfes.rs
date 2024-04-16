@@ -22,7 +22,7 @@ impl BasicSnippet for SumOfBfes {
     }
 
     fn entrypoint(&self) -> String {
-        format!("tasm_list_sum_{}", DataType::Bfe.label_friendly_name())
+        format!("tasmlib_list_sum_{}", DataType::Bfe.label_friendly_name())
     }
 
     fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {

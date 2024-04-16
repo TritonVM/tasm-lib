@@ -17,7 +17,7 @@ pub struct Div2U64;
 
 impl DeprecatedSnippet for Div2U64 {
     fn entrypoint_name(&self) -> String {
-        "tasm_arithmetic_u64_div2".to_string()
+        "tasmlib_arithmetic_u64_div2".to_string()
     }
 
     fn input_field_names(&self) -> Vec<String> {

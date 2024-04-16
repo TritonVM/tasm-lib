@@ -15,7 +15,7 @@ impl BasicSnippet for SampleScalarOne {
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_hashing_algebraic_hasher_sample_scalar_one".to_owned()
+        "tasmlib_hashing_algebraic_hasher_sample_scalar_one".to_owned()
     }
 
     fn code(

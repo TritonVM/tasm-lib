@@ -26,7 +26,7 @@ impl BasicSnippet for Safepow {
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_arithmetic_u32_safepow".to_string()
+        "tasmlib_arithmetic_u32_safepow".to_string()
     }
 
     fn code(&self, _library: &mut crate::library::Library) -> Vec<LabelledInstruction> {

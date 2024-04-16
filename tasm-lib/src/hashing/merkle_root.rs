@@ -59,7 +59,7 @@ impl BasicSnippet for MerkleRoot {
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_hashing_merkle_root".to_string()
+        "tasmlib_hashing_merkle_root".to_string()
     }
 
     fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {

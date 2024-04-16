@@ -14,7 +14,7 @@ pub struct WrappingMulU64;
 
 impl DeprecatedSnippet for WrappingMulU64 {
     fn entrypoint_name(&self) -> String {
-        "tasm_arithmetic_u64_wrapping_mul".to_string()
+        "tasmlib_arithmetic_u64_wrapping_mul".to_string()
     }
 
     fn input_field_names(&self) -> Vec<String> {

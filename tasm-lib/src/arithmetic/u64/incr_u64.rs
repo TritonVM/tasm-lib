@@ -17,7 +17,7 @@ pub struct IncrU64;
 
 impl DeprecatedSnippet for IncrU64 {
     fn entrypoint_name(&self) -> String {
-        "tasm_arithmetic_u64_incr".to_string()
+        "tasmlib_arithmetic_u64_incr".to_string()
     }
 
     fn input_field_names(&self) -> Vec<String> {

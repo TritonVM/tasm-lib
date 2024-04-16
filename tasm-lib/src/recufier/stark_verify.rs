@@ -55,7 +55,7 @@ impl BasicSnippet for StarkVerify {
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_recufier_stark_verify".to_owned()
+        "tasmlib_recufier_stark_verify".to_owned()
     }
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {

@@ -14,7 +14,7 @@ pub struct MulTwoU64sToU128;
 
 impl DeprecatedSnippet for MulTwoU64sToU128 {
     fn entrypoint_name(&self) -> String {
-        "tasm_arithmetic_u64_mul_two_u64s_to_u128_u64".to_string()
+        "tasmlib_arithmetic_u64_mul_two_u64s_to_u128_u64".to_string()
     }
 
     fn input_field_names(&self) -> Vec<String> {

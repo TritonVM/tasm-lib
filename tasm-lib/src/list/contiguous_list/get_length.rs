@@ -79,7 +79,7 @@ impl GetLength {
 
 impl DeprecatedSnippet for GetLength {
     fn entrypoint_name(&self) -> String {
-        "tasm_list_contiguous_list_get_length".to_string()
+        "tasmlib_list_contiguous_list_get_length".to_string()
     }
 
     fn input_field_names(&self) -> Vec<String> {

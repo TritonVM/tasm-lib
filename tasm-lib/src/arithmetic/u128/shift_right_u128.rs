@@ -14,7 +14,7 @@ pub struct ShiftRightU128;
 
 impl DeprecatedSnippet for ShiftRightU128 {
     fn entrypoint_name(&self) -> String {
-        "tasm_arithmetic_u128_shift_right".to_string()
+        "tasmlib_arithmetic_u128_shift_right".to_string()
     }
 
     fn input_field_names(&self) -> Vec<String> {

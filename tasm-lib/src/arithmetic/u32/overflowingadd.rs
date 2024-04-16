@@ -27,7 +27,7 @@ impl BasicSnippet for Overflowingadd {
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_arithmetic_u32_overflowingadd".to_string()
+        "tasmlib_arithmetic_u32_overflowingadd".to_string()
     }
 
     fn code(&self, _library: &mut crate::library::Library) -> Vec<LabelledInstruction> {

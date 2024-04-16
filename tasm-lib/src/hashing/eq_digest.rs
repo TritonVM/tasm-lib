@@ -16,7 +16,7 @@ pub struct EqDigest;
 
 impl DeprecatedSnippet for EqDigest {
     fn entrypoint_name(&self) -> String {
-        "tasm_hashing_eq_digest".to_string()
+        "tasmlib_hashing_eq_digest".to_string()
     }
 
     fn input_field_names(&self) -> Vec<String> {

@@ -17,7 +17,7 @@ pub struct DecrU64;
 
 impl DeprecatedSnippet for DecrU64 {
     fn entrypoint_name(&self) -> String {
-        "tasm_arithmetic_u64_decr".to_string()
+        "tasmlib_arithmetic_u64_decr".to_string()
     }
 
     fn input_field_names(&self) -> Vec<String> {

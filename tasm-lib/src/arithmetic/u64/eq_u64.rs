@@ -18,7 +18,7 @@ pub struct EqU64;
 
 impl DeprecatedSnippet for EqU64 {
     fn entrypoint_name(&self) -> String {
-        "tasm_arithmetic_u64_eq".to_string()
+        "tasmlib_arithmetic_u64_eq".to_string()
     }
 
     fn input_field_names(&self) -> Vec<String> {

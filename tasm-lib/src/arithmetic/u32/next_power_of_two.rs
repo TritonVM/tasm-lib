@@ -19,7 +19,7 @@ impl BasicSnippet for NextPowerOfTwo {
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_arithmetic_u32_next_power_of_two".to_string()
+        "tasmlib_arithmetic_u32_next_power_of_two".to_string()
     }
 
     fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {

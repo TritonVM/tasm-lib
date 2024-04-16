@@ -52,7 +52,7 @@ impl BasicSnippet for VerifyAuthenticationPathForLeafAndIndexList {
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_recufier_verify_authentication_paths_for_leaf_and_index_list".into()
+        "tasmlib_recufier_verify_authentication_paths_for_leaf_and_index_list".into()
     }
 
     fn code(&self, library: &mut crate::library::Library) -> Vec<LabelledInstruction> {

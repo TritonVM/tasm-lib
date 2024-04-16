@@ -1,0 +1,24 @@
+[
+  {
+    "name": "tasmlib_recufier_xfe_ntt",
+    "benchmark_result": {
+      "clock_cycle_count": 10174,
+      "hash_table_height": 222,
+      "u32_table_height": 944,
+      "op_stack_table_height": 9622,
+      "ram_table_height": 1105
+    },
+    "case": "CommonCase"
+  },
+  {
+    "name": "tasmlib_recufier_xfe_ntt",
+    "benchmark_result": {
+      "clock_cycle_count": 52412,
+      "hash_table_height": 222,
+      "u32_table_height": 4845,
+      "op_stack_table_height": 49958,
+      "ram_table_height": 6049
+    },
+    "case": "WorstCase"
+  }
+]

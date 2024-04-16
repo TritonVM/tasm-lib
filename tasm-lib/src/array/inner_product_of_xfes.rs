@@ -34,7 +34,7 @@ impl BasicSnippet for InnerProductOfXfes {
     }
 
     fn entrypoint(&self) -> String {
-        format!("tasm_array_inner_product_of_{}_xfes", self.length)
+        format!("tasmlib_array_inner_product_of_{}_xfes", self.length)
     }
 
     fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {

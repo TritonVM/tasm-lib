@@ -33,7 +33,7 @@ impl Range {
 
 impl DeprecatedSnippet for Range {
     fn entrypoint_name(&self) -> String {
-        "tasm_list_range".into()
+        "tasmlib_list_range".into()
     }
 
     fn input_field_names(&self) -> Vec<String>

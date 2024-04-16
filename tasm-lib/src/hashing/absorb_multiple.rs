@@ -33,7 +33,7 @@ impl BasicSnippet for AbsorbMultiple {
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_hashing_absorb_multiple".to_string()
+        "tasmlib_hashing_absorb_multiple".to_string()
     }
 
     fn code(&self, _library: &mut crate::library::Library) -> Vec<LabelledInstruction> {

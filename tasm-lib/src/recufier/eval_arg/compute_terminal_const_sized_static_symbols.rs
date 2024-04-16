@@ -40,7 +40,7 @@ impl<const N: usize> BasicSnippet for ComputeTerminalConstSizedStaticSymbols<N> 
         let variables_as_digest = Tip5::hash_varlen(&all_variables);
         let first_word = variables_as_digest.encode()[0];
         format!(
-            "tasm_recufier_eval_arg_compute_terminal_const_sized_static_symbols_symbol_count_{}_{}",
+            "tasmlib_recufier_eval_arg_compute_terminal_const_sized_static_symbols_symbol_count_{}_{}",
             N, first_word
         )
     }

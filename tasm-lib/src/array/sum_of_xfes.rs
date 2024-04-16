@@ -31,7 +31,7 @@ impl BasicSnippet for SumOfXfes {
     }
 
     fn entrypoint(&self) -> String {
-        format!("tasm_array_sum_of_{}_xfes", self.length)
+        format!("tasmlib_array_sum_of_{}_xfes", self.length)
     }
 
     fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {

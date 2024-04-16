@@ -1,0 +1,24 @@
+[
+  {
+    "name": "tasmlib_arithmetic_xfe_mod_pow_u32",
+    "benchmark_result": {
+      "clock_cycle_count": 752,
+      "hash_table_height": 54,
+      "u32_table_height": 760,
+      "op_stack_table_height": 589,
+      "ram_table_height": 0
+    },
+    "case": "CommonCase"
+  },
+  {
+    "name": "tasmlib_arithmetic_xfe_mod_pow_u32",
+    "benchmark_result": {
+      "clock_cycle_count": 1106,
+      "hash_table_height": 54,
+      "u32_table_height": 1123,
+      "op_stack_table_height": 907,
+      "ram_table_height": 0
+    },
+    "case": "WorstCase"
+  }
+]

@@ -23,7 +23,7 @@ pub struct LtStandardU64;
 /// less branching (fewer cycles) and less local cleanup (smaller program).
 impl DeprecatedSnippet for LtStandardU64 {
     fn entrypoint_name(&self) -> String {
-        "tasm_arithmetic_u64_lt_standard".to_string()
+        "tasmlib_arithmetic_u64_lt_standard".to_string()
     }
 
     fn input_field_names(&self) -> Vec<String> {
@@ -152,7 +152,7 @@ pub struct LtU64;
 /// See `LtStandardU64` for a variant that does.
 impl DeprecatedSnippet for LtU64 {
     fn entrypoint_name(&self) -> String {
-        "tasm_arithmetic_u64_lt".to_string()
+        "tasmlib_arithmetic_u64_lt".to_string()
     }
 
     fn input_field_names(&self) -> Vec<String> {

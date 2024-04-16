@@ -12,7 +12,7 @@ pub struct Safeadd;
 
 impl DeprecatedSnippet for Safeadd {
     fn entrypoint_name(&self) -> String {
-        "tasm_arithmetic_u32_safeadd".to_string()
+        "tasmlib_arithmetic_u32_safeadd".to_string()
     }
 
     fn input_field_names(&self) -> Vec<String> {

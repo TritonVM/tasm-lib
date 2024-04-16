@@ -54,7 +54,10 @@ impl BasicSnippet for Filter {
     }
 
     fn entrypoint(&self) -> String {
-        format!("tasm_list_higher_order_u32_filter_{}", self.f.entrypoint())
+        format!(
+            "tasmlib_list_higher_order_u32_filter_{}",
+            self.f.entrypoint()
+        )
     }
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {

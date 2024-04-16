@@ -45,7 +45,10 @@ impl BasicSnippet for SwapUnchecked {
     }
 
     fn entrypoint(&self) -> String {
-        format!("tasm_list_swap_{}", self.element_type.label_friendly_name())
+        format!(
+            "tasmlib_list_swap_{}",
+            self.element_type.label_friendly_name()
+        )
     }
 
     fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {

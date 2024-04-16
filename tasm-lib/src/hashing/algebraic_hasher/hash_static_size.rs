@@ -22,7 +22,7 @@ impl BasicSnippet for HashStaticSize {
 
     fn entrypoint(&self) -> String {
         format!(
-            "tasm_hashing_algebraic_hasher_hash_static_size_{}",
+            "tasmlib_hashing_algebraic_hasher_hash_static_size_{}",
             self.size
         )
     }

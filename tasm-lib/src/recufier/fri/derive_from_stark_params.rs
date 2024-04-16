@@ -85,7 +85,7 @@ impl BasicSnippet for DeriveFriFromStarkParams {
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_recufier_fri_derive_from_stark_params".to_owned()
+        "tasmlib_recufier_fri_derive_from_stark_params".to_owned()
     }
 
     fn code(&self, library: &mut crate::library::Library) -> Vec<LabelledInstruction> {

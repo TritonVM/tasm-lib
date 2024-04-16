@@ -60,7 +60,7 @@ impl BasicSnippet for OutOfDomainPoints {
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_recufier_out_of_domain_points".to_owned()
+        "tasmlib_recufier_out_of_domain_points".to_owned()
     }
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {

@@ -23,7 +23,7 @@ impl BasicSnippet for SqueezeRepeatedlyStaticNumber {
 
     fn entrypoint(&self) -> String {
         format!(
-            "tasm_hashing_squeeze_repeatedly_static_number_{}",
+            "tasmlib_hashing_squeeze_repeatedly_static_number_{}",
             self.num_squeezes
         )
     }

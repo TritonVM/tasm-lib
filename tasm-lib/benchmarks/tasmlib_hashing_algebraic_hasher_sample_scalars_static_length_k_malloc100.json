@@ -1,0 +1,24 @@
+[
+  {
+    "name": "tasmlib_hashing_algebraic_hasher_sample_scalars_static_length_k_malloc100",
+    "benchmark_result": {
+      "clock_cycle_count": 187,
+      "hash_table_height": 390,
+      "u32_table_height": 0,
+      "op_stack_table_height": 662,
+      "ram_table_height": 300
+    },
+    "case": "CommonCase"
+  },
+  {
+    "name": "tasmlib_hashing_algebraic_hasher_sample_scalars_static_length_k_malloc100",
+    "benchmark_result": {
+      "clock_cycle_count": 187,
+      "hash_table_height": 390,
+      "u32_table_height": 0,
+      "op_stack_table_height": 662,
+      "ram_table_height": 300
+    },
+    "case": "WorstCase"
+  }
+]

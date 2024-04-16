@@ -27,7 +27,7 @@ impl BasicSnippet for SumOfBfes {
     }
 
     fn entrypoint(&self) -> String {
-        format!("tasm_array_sum_of_{}_bfes", self.length)
+        format!("tasmlib_array_sum_of_{}_bfes", self.length)
     }
 
     fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {

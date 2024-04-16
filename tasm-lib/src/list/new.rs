@@ -28,7 +28,7 @@ impl New {
 impl DeprecatedSnippet for New {
     fn entrypoint_name(&self) -> String {
         format!(
-            "tasm_list_new___{}",
+            "tasmlib_list_new___{}",
             self.element_type.label_friendly_name()
         )
     }

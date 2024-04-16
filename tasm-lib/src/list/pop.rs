@@ -28,7 +28,7 @@ impl Pop {
 impl DeprecatedSnippet for Pop {
     fn entrypoint_name(&self) -> String {
         format!(
-            "tasm_list_pop___{}",
+            "tasmlib_list_pop___{}",
             self.element_type.label_friendly_name()
         )
     }

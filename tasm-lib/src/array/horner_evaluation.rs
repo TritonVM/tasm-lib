@@ -41,7 +41,7 @@ impl BasicSnippet for HornerEvaluation {
 
     fn entrypoint(&self) -> String {
         format!(
-            "tasm_array_horner_evaluation_with_{}_coefficients",
+            "tasmlib_array_horner_evaluation_with_{}_coefficients",
             self.num_coefficients
         )
     }

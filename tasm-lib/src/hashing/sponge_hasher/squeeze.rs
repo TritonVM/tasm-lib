@@ -26,7 +26,7 @@ impl BasicSnippet for Squeeze {
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_hashing_sponge_hasher_squeeze".to_string()
+        "tasmlib_hashing_sponge_hasher_squeeze".to_string()
     }
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {

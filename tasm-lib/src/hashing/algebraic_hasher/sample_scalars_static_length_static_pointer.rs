@@ -41,7 +41,7 @@ impl BasicSnippet for SampleScalarsStaticLengthStaticPointer {
 
     fn entrypoint(&self) -> String {
         format!(
-            "tasm_hashing_algebraic_hasher_sample_scalars_static_length_static_pointer_{}_{}",
+            "tasmlib_hashing_algebraic_hasher_sample_scalars_static_length_static_pointer_{}_{}",
             self.num_elements_to_sample, self.scalars_pointer
         )
     }

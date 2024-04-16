@@ -24,7 +24,7 @@ impl BasicSnippet for PrimitiveRootOfUnity {
     }
 
     fn entrypoint(&self) -> String {
-        "tasm_arithmetic_bfe_primitive_root_of_unity".to_string()
+        "tasmlib_arithmetic_bfe_primitive_root_of_unity".to_string()
     }
 
     fn code(&self, _library: &mut crate::library::Library) -> Vec<LabelledInstruction> {
