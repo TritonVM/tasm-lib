@@ -1162,6 +1162,12 @@ mod benches {
 
     use super::*;
 
+    #[test]
+    fn benchmark_small() {
+        benchmark_verifier(3, 1 << 8);
+        benchmark_verifier(40, 1 << 9);
+    }
+
     #[ignore = "Intended to generate data about verifier table heights as a function of inner padded
        height Make sure to run with `RUSTFLAGS=\"-C opt-level=3 -C debug-assertions=no`"]
     #[test]

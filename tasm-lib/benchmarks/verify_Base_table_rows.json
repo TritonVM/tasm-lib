@@ -2,22 +2,22 @@
   {
     "name": "verify_Base_table_rows",
     "benchmark_result": {
-      "clock_cycle_count": 1359,
-      "hash_table_height": 1335,
-      "u32_table_height": 63,
-      "op_stack_table_height": 3521,
-      "ram_table_height": 1087
+      "clock_cycle_count": 1318,
+      "hash_table_height": 1353,
+      "u32_table_height": 6,
+      "op_stack_table_height": 3471,
+      "ram_table_height": 1077
     },
     "case": "CommonCase"
   },
   {
     "name": "verify_Base_table_rows",
     "benchmark_result": {
-      "clock_cycle_count": 1464,
-      "hash_table_height": 1425,
-      "u32_table_height": 78,
-      "op_stack_table_height": 3731,
-      "ram_table_height": 1087
+      "clock_cycle_count": 1423,
+      "hash_table_height": 1443,
+      "u32_table_height": 6,
+      "op_stack_table_height": 3681,
+      "ram_table_height": 1077
     },
     "case": "WorstCase"
   }

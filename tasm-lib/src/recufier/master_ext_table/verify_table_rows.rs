@@ -1,6 +1,5 @@
 use crate::data_type::DataType;
 use crate::hashing::algebraic_hasher::hash_static_size::HashStaticSize;
-use crate::hashing::merkle_verify::MerkleVerify;
 use crate::library::Library;
 use crate::recufier::fri::verify::FriSnippet;
 use crate::traits::basic_snippet::BasicSnippet;
@@ -60,7 +59,10 @@ impl BasicSnippet for VerifyTableRows {
     }
 
     fn entrypoint(&self) -> String {
-        format!("verify_{}_table_rows", self.column_type)
+        format!(
+            "tasmlib_recufier_master_ext_table_verify_{}_table_rows",
+            self.column_type
+        )
     }
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
@@ -69,69 +71,76 @@ impl BasicSnippet for VerifyTableRows {
         let hash_row = library.import(Box::new(HashStaticSize {
             size: self.row_size(),
         }));
-        let merkle_root_verify = library.import(Box::new(MerkleVerify));
 
-        let loop_label = format!("{entrypoint}_loop");
-        let loop_code = triton_asm!(
-            // Invariant: _ remaining_iterations merkle_tree_height *merkle_tree_root *fri_revealed_leaf_index *row_elem
-            {loop_label}:
+        let loop_over_auth_path_digests_label =
+            format!("{entrypoint}_loop_over_auth_path_elements");
+        let loop_over_auth_paths_code = triton_asm!(
+            {loop_over_auth_path_digests_label}:
+                dup 5 push 1 eq skiz return         // break loop if node_index is 1
+                divine_sibling hash recurse         // move up one level in the Merkle tree
+        );
+
+        let loop_over_rows_label = format!("{entrypoint}_loop_over_rows");
+        let loop_over_rows_code = triton_asm!(
+            // Invariant: _ remaining_iterations num_leaves *merkle_tree_root *fri_revealed_leaf_index *row_elem [mt_root]
+            {loop_over_rows_label}:
                 // Check end-loop condition
-                dup 4
+                dup 9
                 push 0
                 eq
                 skiz
                     return
 
-                // 1. dup up *merkle_tree_root, and get digest
-                // 2.
-                //   a. Read revealed FRI leaf index
-                //   b. Update revealed FRI leaf index to next value
-                // 3. get digest through call to `hash_base_row`, and update pointer value to next item
-                // 4. dup Merkle tree height to the top.
-
-                /* 1. */
-                dup 2
-                push {DIGEST_LENGTH - 1}
-                add
-                read_mem {DIGEST_LENGTH}
-                pop 1
-                // _ remaining_iterations merkle_tree_height *merkle_tree_root *fri_revealed_leaf_index *row_elem [mt_root]
+                // _ remaining_iterations num_leaves *merkle_tree_root *fri_revealed_leaf_index *row_elem [mt_root]
 
                 /* 2. */
                 dup 6
                 read_mem 1
                 push {EXTENSION_DEGREE + 2}
                 add
-                // _ remaining_iterations merkle_tree_height *merkle_tree_root *fri_revealed_leaf_index *row_elem [mt_root] fri_revealed_leaf_index (*fri_revealed_leaf_index + 4)
-                // _ remaining_iterations merkle_tree_height *merkle_tree_root *fri_revealed_leaf_index *row_elem [mt_root] fri_revealed_leaf_index *fri_revealed_leaf_index_next
+                // _ remaining_iterations num_leaves *merkle_tree_root *fri_revealed_leaf_index *row_elem [mt_root] fri_revealed_leaf_index (*fri_revealed_leaf_index + 4)
+                // _ remaining_iterations num_leaves *merkle_tree_root *fri_revealed_leaf_index *row_elem [mt_root] fri_revealed_leaf_index *fri_revealed_leaf_index_next
 
                 swap 8
                 pop 1
-                // _ remaining_iterations merkle_tree_height *merkle_tree_root *fri_revealed_leaf_index_next *row_elem [mt_root] fri_revealed_leaf_index
+                // _ remaining_iterations num_leaves *merkle_tree_root *fri_revealed_leaf_index_next *row_elem [mt_root] fri_revealed_leaf_index
+
+                dup 9
+                add
+                // _ remaining_iterations num_leaves *merkle_tree_root *fri_revealed_leaf_index_next *row_elem [mt_root] node_index
 
                 /* 3. */
                 dup 6
                 call {hash_row}
-                // _ remaining_iterations merkle_tree_height *merkle_tree_root *fri_revealed_leaf_index_next *row_elem [mt_root] fri_revealed_leaf_index [base_row_digest] *row_elem_next
+                // _ remaining_iterations num_leaves *merkle_tree_root *fri_revealed_leaf_index_next *row_elem [mt_root] node_index [base_row_digest] *row_elem_next
 
                 swap 12
                 pop 1
-                // _ remaining_iterations merkle_tree_height *merkle_tree_root *fri_revealed_leaf_index_next *row_elem_next [mt_root] fri_revealed_leaf_index [base_row_digest]
+                // _ remaining_iterations num_leaves *merkle_tree_root *fri_revealed_leaf_index_next *row_elem_next [mt_root] node_index [base_row_digest]
 
-                /* 4. */
-                dup 14
-                // _ remaining_iterations merkle_tree_height *merkle_tree_root *fri_revealed_leaf_index_next *row_elem_next [mt_root] fri_revealed_leaf_index [base_row_digest] merkle_tree_height
+                call {loop_over_auth_path_digests_label}
+                // _ remaining_iterations num_leaves *merkle_tree_root *fri_revealed_leaf_index_next *row_elem_next [mt_root] 1 [calculated_root]
 
-                call {merkle_root_verify}
-                // _ remaining_iterations merkle_tree_height *merkle_tree_root *fri_revealed_leaf_index_next *row_elem_next
-
+                swap 1
+                swap 2
+                swap 3
                 swap 4
+                swap 5
+                pop 1
+                // _ remaining_iterations num_leaves *merkle_tree_root *fri_revealed_leaf_index_next *row_elem_next [mt_root] [calculated_root]
+
+                assert_vector
+                // _ remaining_iterations num_leaves *merkle_tree_root *fri_revealed_leaf_index_next *row_elem_next [mt_root]
+
+                swap 9
                 push -1
                 add
-                swap 4
-                // _ (remaining_iterations - 1) merkle_tree_height *merkle_tree_root *fri_revealed_leaf_index_next *row_elem_next
+                swap 9
+                // _ (remaining_iterations - 1) num_leaves *merkle_tree_root *fri_revealed_leaf_index_next *row_elem_next [mt_root]
 
                 recurse
+
+                {&loop_over_auth_paths_code}
         );
 
         triton_asm!(
@@ -156,15 +165,33 @@ impl BasicSnippet for VerifyTableRows {
                 assert
                 // _ num_combination_codeword_checks merkle_tree_height *merkle_tree_root (*fri_revealed_first_elem.0) *table_rows[0]
 
-                call {loop_label}
-                // _ 0 merkle_tree_height *merkle_tree_root *fri_revealed_leaf_index_next *row_elem_next
+                swap 3
+                push 2
+                pow
+                // _ num_combination_codeword_checks *table_rows[0] *merkle_tree_root (*fri_revealed_first_elem.0) (2^merkle_tree_height)
+                // _ num_combination_codeword_checks *table_rows[0] *merkle_tree_root (*fri_revealed_first_elem.0) num_leaves
 
+                swap 3
+                // _ num_combination_codeword_checks num_leaves *merkle_tree_root (*fri_revealed_first_elem.0) *table_rows[0]
+
+                dup 2
+                push {DIGEST_LENGTH - 1}
+                add
+                read_mem {DIGEST_LENGTH}
+                pop 1
+
+                // _ num_combination_codeword_checks num_leaves *merkle_tree_root (*fri_revealed_first_elem.0) *table_rows[0] [mt_root]
+
+                call {loop_over_rows_label}
+                // _ 0 num_leaves *merkle_tree_root *fri_revealed_leaf_index_next *row_elem_next [mt_root]
+
+                pop 5
                 pop 5
                 // _
 
                 return
 
-            {&loop_code}
+            {&loop_over_rows_code}
         )
     }
 }
