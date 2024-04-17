@@ -2,11 +2,11 @@
   {
     "name": "tasmlib_recufier_stark_verify_512",
     "benchmark_result": {
-      "clock_cycle_count": 1221679,
+      "clock_cycle_count": 1221657,
       "hash_table_height": 190879,
-      "u32_table_height": 51283,
-      "op_stack_table_height": 1675336,
-      "ram_table_height": 516823
+      "u32_table_height": 51160,
+      "op_stack_table_height": 1675318,
+      "ram_table_height": 516821
     },
     "case": "CommonCase"
   }
