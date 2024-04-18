@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::fmt::Display;
 
 use itertools::Itertools;
+use triton_vm::op_stack::NUM_OP_STACK_REGISTERS;
 use triton_vm::prelude::*;
 
 use crate::dyn_malloc::DYN_MALLOC_ADDRESS;
@@ -492,4 +493,21 @@ pub fn test_rust_equivalence_given_execution_state<T: BasicSnippet + RustShadow>
         &None,
         None,
     )
+}
+
+pub fn prepend_program_with_stack_setup(
+    init_stack: &[BFieldElement],
+    program: &Program,
+) -> Program {
+    let stack_initialization_code = init_stack
+        .iter()
+        .skip(NUM_OP_STACK_REGISTERS)
+        .map(|&word| triton_instr!(push word))
+        .collect_vec();
+
+    Program::new(&[stack_initialization_code, program.labelled_instructions()].concat())
+}
+
+pub fn prepend_program_with_sponge_init(program: &Program) -> Program {
+    Program::new(&[triton_asm!(sponge_init), program.labelled_instructions()].concat())
 }

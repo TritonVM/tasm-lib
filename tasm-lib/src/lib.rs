@@ -53,6 +53,8 @@ use triton_vm::profiler::TritonProfiler;
 use triton_vm::table::master_table::TableId;
 pub use triton_vm::twenty_first;
 
+use crate::test_helpers::prepend_program_with_stack_setup;
+
 // The hasher type must match whatever algebraic hasher the VM is using
 pub type VmHasher = Tip5;
 pub type Digest = tip5::Digest;
@@ -299,17 +301,10 @@ pub fn prove_and_verify(
 
     // Construct the program that initializes the stack to the expected start value.
     // If this is not done, a stack underflow will occur for most programs
-    let stack_initialization_code = match init_stack {
-        Some(init_stack) => init_stack
-            .into_iter()
-            .skip(NUM_OP_STACK_REGISTERS)
-            .map(|word| triton_instr!(push word))
-            .collect(),
-        None => triton_asm!(),
+    let program = match &init_stack {
+        Some(init_stack) => prepend_program_with_stack_setup(init_stack, program),
+        None => program.to_owned(),
     };
-
-    let program =
-        Program::new(&[stack_initialization_code, program.labelled_instructions()].concat());
 
     let (aet, _) = program
         .trace_execution(PublicInput::new(std_in.to_owned()), nondeterminism.clone())

@@ -1479,15 +1479,22 @@ mod test {
     }
 
     #[derive(Debug, Clone, test_strategy::Arbitrary)]
-    struct TestCase {
+    pub(super) struct TestCase {
         #[strategy(any::<ArbitraryFriVerify>().prop_map(|x| x.fri_verify()))]
-        fri_verify: FriVerify,
+        pub(super) fri_verify: FriVerify,
 
         #[strategy(vec(arb(), #fri_verify.first_round_max_degree()))]
         polynomial_coefficients: Vec<XFieldElement>,
     }
 
     impl TestCase {
+        fn thirty_two_coefficients() -> [u64; 32] {
+            [
+                92, 42, 91, 59, 86, 64, 5, 64, 74, 53, 54, 68, 54, 23, 24, 58, 15, 44, 33, 31, 38,
+                97, 25, 69, 11, 67, 66, 33, 37, 58, 43, 14,
+            ]
+        }
+
         /// A test case with no FRI rounds.
         fn tiny_case() -> Self {
             let fri_verify = FriVerify::new(BFieldElement::one(), 2, 2, 1);
@@ -1504,11 +1511,26 @@ mod test {
             let fri_verify = FriVerify::new(BFieldElement::one(), 64, 2, 7);
             assert_eq!(2, fri_verify.num_rounds(), "test case must be meaningful");
 
-            let coefficients = [
-                92, 42, 91, 59, 86, 64, 5, 64, 74, 53, 54, 68, 54, 23, 24, 58, 15, 44, 33, 31, 38,
-                97, 25, 69, 11, 67, 66, 33, 37, 58, 43, 14,
-            ];
+            let coefficients = Self::thirty_two_coefficients();
             assert_eq!(fri_verify.first_round_max_degree() + 1, coefficients.len());
+
+            Self {
+                fri_verify,
+                polynomial_coefficients: coefficients.map(|n| xfe!([n; 3])).to_vec(),
+            }
+        }
+
+        /// A test case resembling that which will be run by the STARK verifier
+        pub(super) fn recursive_case(
+            inner_padded_height: usize,
+            log2_expansion_factor: usize,
+        ) -> Self {
+            const SECURITY_LEVEL: usize = 160;
+            let stark = Stark::new(SECURITY_LEVEL, log2_expansion_factor);
+
+            let fri_verify: FriVerify = stark.derive_fri(inner_padded_height).unwrap().into();
+
+            let coefficients = Self::thirty_two_coefficients();
 
             Self {
                 fri_verify,
@@ -1549,7 +1571,7 @@ mod test {
             }
         }
 
-        fn initial_state(&self) -> ProcedureInitialState {
+        pub(super) fn initial_state(&self) -> ProcedureInitialState {
             let fri_verify = self.fri_verify;
             let proof_stream = self.proof_stream();
             let snippet = FriSnippet {
@@ -1720,8 +1742,19 @@ mod test {
 
 #[cfg(test)]
 mod bench {
+    use std::fs::create_dir_all;
+    use std::fs::File;
+    use std::io::Write;
+    use std::path::Path;
+    use std::path::PathBuf;
+
+    use crate::generate_full_profile;
+    use crate::test_helpers::prepend_program_with_sponge_init;
+    use crate::test_helpers::prepend_program_with_stack_setup;
+    use crate::traits::procedure::ProcedureInitialState;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
+    use crate::verifier::fri::verify::test::TestCase;
 
     use super::*;
 
@@ -1731,7 +1764,6 @@ mod bench {
         let domain_length = 1 << 10;
         let offset = BFieldElement::new(7);
         let num_collinearity_checks = 80;
-        // tiny parameters for FRI yes, but the bench framework is awful atm
         let fri_verify = FriVerify::new(
             offset,
             domain_length,
@@ -1742,5 +1774,63 @@ mod bench {
             test_instance: fri_verify,
         };
         ShadowedProcedure::new(snippet).bench();
+    }
+
+    #[ignore = "Takes many minutes to run"]
+    #[test]
+    fn profile_fri() {
+        const INNER_PADDED_HEIGHTS: [usize; 4] = [1 << 8, 1 << 9, 1 << 10, 1 << 11];
+        const SECURITY_LEVEL: usize = 160;
+
+        for inner_padded_height in INNER_PADDED_HEIGHTS {
+            for log2_fri_expansion_factor in 1..=5 {
+                let stark = Stark::new(SECURITY_LEVEL, log2_fri_expansion_factor);
+                profile_and_bench_fri_run(stark, inner_padded_height);
+            }
+        }
+    }
+
+    fn profile_and_bench_fri_run(stark: Stark, inner_padded_height: usize) {
+        let test_case = TestCase::recursive_case(
+            inner_padded_height,
+            stark.fri_expansion_factor.ilog2() as usize,
+        );
+        let fri_params = stark.derive_fri(inner_padded_height).unwrap();
+        let name = format!(
+            "fri_verify_expansion_factor_inner_padded_height_{}_expansion_factor_{}",
+            inner_padded_height, fri_params.expansion_factor
+        );
+
+        let ProcedureInitialState {
+            stack: initial_stack,
+            nondeterminism,
+            public_input: stdin,
+            sponge: _,
+        } = test_case.initial_state();
+        let snippet = FriSnippet {
+            test_instance: test_case.fri_verify,
+        };
+        let code = snippet.link_for_isolated_run();
+        let program = Program::new(&code);
+        let program = prepend_program_with_stack_setup(&initial_stack, &program);
+        let program = prepend_program_with_sponge_init(&program);
+
+        let profile = generate_full_profile(&name, program, &stdin.into(), &nondeterminism);
+
+        // write profile to profile file
+        let mut path = PathBuf::new();
+        path.push("profiles");
+        create_dir_all(&path).expect("profiles directory must be created successfully");
+
+        path.push(Path::new(&name).with_extension("profile"));
+        let mut file = File::create(path).expect("open file for writing");
+        write!(file, "{profile}").unwrap();
+
+        println!("{}", profile);
+
+        // Don't do this since entrypoint label of FRI snippet is not parameterized over its
+        // variables, meaning all benchmarks are overwritten.
+        // // Also create benchmarks for quick reference
+        // ShadowedProcedure::new(snippet).bench();
     }
 }

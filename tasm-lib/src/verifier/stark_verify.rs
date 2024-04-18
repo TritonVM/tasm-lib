@@ -1208,10 +1208,11 @@ mod benches {
     #[ignore = "Takes a fairly long time. Intended to find optimal FRI expansion factor."]
     #[test]
     fn small_benchmark_different_fri_expansion_factors() {
-        for log2_of_fri_expansion_factor in 2..=5 {
+        for log2_of_fri_expansion_factor in 1..=5 {
             let stark = Stark::new(160, log2_of_fri_expansion_factor);
             benchmark_verifier(10, 1 << 8, stark);
             benchmark_verifier(40, 1 << 9, stark);
+            benchmark_verifier(80, 1 << 10, stark);
         }
     }
 
