@@ -48,7 +48,7 @@ impl InnerProductOfThreeRowsWithWeights {
         }
     }
 
-    pub fn recufier_parameters(base_element_type: BaseElementType) -> Self {
+    pub fn triton_vm_parameters(base_element_type: BaseElementType) -> Self {
         Self {
             base_length: NUM_BASE_COLUMNS,
             ext_length: NUM_EXT_COLUMNS,
@@ -290,7 +290,7 @@ mod test {
 
     #[test]
     fn three_rows_tvm_parameters_xfe_base_test() {
-        ShadowedFunction::new(InnerProductOfThreeRowsWithWeights::recufier_parameters(
+        ShadowedFunction::new(InnerProductOfThreeRowsWithWeights::triton_vm_parameters(
             BaseElementType::Xfe,
         ))
         .test()
@@ -298,7 +298,7 @@ mod test {
 
     #[test]
     fn three_rows_tvm_parameters_bfe_base_test() {
-        ShadowedFunction::new(InnerProductOfThreeRowsWithWeights::recufier_parameters(
+        ShadowedFunction::new(InnerProductOfThreeRowsWithWeights::triton_vm_parameters(
             BaseElementType::Bfe,
         ))
         .test()

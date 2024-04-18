@@ -1,0 +1,24 @@
+[
+  {
+    "name": "tasmlib_verifier_challenges_new_generic_dyn_claim_59_4",
+    "benchmark_result": {
+      "clock_cycle_count": 1796,
+      "hash_table_height": 1914,
+      "u32_table_height": 0,
+      "op_stack_table_height": 2588,
+      "ram_table_height": 213
+    },
+    "case": "CommonCase"
+  },
+  {
+    "name": "tasmlib_verifier_challenges_new_generic_dyn_claim_59_4",
+    "benchmark_result": {
+      "clock_cycle_count": 4996,
+      "hash_table_height": 1914,
+      "u32_table_height": 0,
+      "op_stack_table_height": 5788,
+      "ram_table_height": 413
+    },
+    "case": "WorstCase"
+  }
+]

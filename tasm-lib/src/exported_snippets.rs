@@ -85,15 +85,15 @@ use crate::mmr::verify_from_secret_in::MmrVerifyLeafMembershipFromSecretIn;
 use crate::neptune::mutator_set::commit::Commit;
 use crate::neptune::mutator_set::get_swbf_indices::GetSwbfIndices;
 use crate::other_snippets::bfe_add::BfeAdd;
-use crate::recufier::challenges;
-use crate::recufier::challenges::new_empty_input_and_output::NewEmptyInputAndOutput;
-use crate::recufier::challenges::new_generic_dyn_claim::NewGenericDynClaim;
-use crate::recufier::claim::instantiate_fiat_shamir_with_claim::InstantiateFiatShamirWithClaim;
-use crate::recufier::master_ext_table::air_constraint_evaluation::AirConstraintEvaluation;
-use crate::recufier::own_program_digest::OwnProgramDigest;
-use crate::recufier::read_and_verify_own_program_digest_from_std_in::ReadAndVerifyOwnProgramDigestFromStdIn;
-use crate::recufier::vm_proof_iter::dequeue_next_as::DequeueNextAs;
 use crate::traits::basic_snippet::BasicSnippet;
+use crate::verifier::challenges;
+use crate::verifier::challenges::new_empty_input_and_output::NewEmptyInputAndOutput;
+use crate::verifier::challenges::new_generic_dyn_claim::NewGenericDynClaim;
+use crate::verifier::claim::instantiate_fiat_shamir_with_claim::InstantiateFiatShamirWithClaim;
+use crate::verifier::master_ext_table::air_constraint_evaluation::AirConstraintEvaluation;
+use crate::verifier::own_program_digest::OwnProgramDigest;
+use crate::verifier::read_and_verify_own_program_digest_from_std_in::ReadAndVerifyOwnProgramDigestFromStdIn;
+use crate::verifier::vm_proof_iter::dequeue_next_as::DequeueNextAs;
 
 const NUM_CONSTRAINTS_TVM: usize = MasterExtTable::NUM_CONSTRAINTS;
 const WEIGHTS_QUOTIENTS_INNER_PRODUCT_ENTRYPOINT: &str = formatcp!(
@@ -105,7 +105,7 @@ const HORNER_EVALUATION_FOR_SUM_OF_EVALUATED_OUT_OF_DOMAIN_QUOTIENT_SEGMENTS_ENT
     NUM_QUOTIENT_SEGMENTS
 );
 const CHALLENGES_NEW_FROM_DYN_CLAIM: &str = formatcp!(
-    "tasmlib_recufier_challenges_new_generic_dyn_claim_{}_{}",
+    "tasmlib_verifier_challenges_new_generic_dyn_claim_{}_{}",
     Challenges::SAMPLE_COUNT,
     Challenges::COUNT - Challenges::SAMPLE_COUNT
 );
@@ -385,43 +385,43 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
         "tasmlib_other_bfe_add" => Box::new(BfeAdd),
 
         // recufy
-        "tasmlib_recufier_vm_proof_iter_dequeue_next_as_merkleroot" => {
+        "tasmlib_verifier_vm_proof_iter_dequeue_next_as_merkleroot" => {
             Box::new(DequeueNextAs { proof_item: ProofItemVariant::MerkleRoot })
         }
-        "tasmlib_recufier_vm_proof_iter_dequeue_next_as_outofdomainbaserow" => {
+        "tasmlib_verifier_vm_proof_iter_dequeue_next_as_outofdomainbaserow" => {
             Box::new(DequeueNextAs { proof_item: ProofItemVariant::OutOfDomainBaseRow })
         }
-        "tasmlib_recufier_vm_proof_iter_dequeue_next_as_outofdomainextrow" => {
+        "tasmlib_verifier_vm_proof_iter_dequeue_next_as_outofdomainextrow" => {
             Box::new(DequeueNextAs { proof_item: ProofItemVariant::OutOfDomainExtRow })
         }
-        "tasmlib_recufier_vm_proof_iter_dequeue_next_as_outofdomainquotientsegments" => {
+        "tasmlib_verifier_vm_proof_iter_dequeue_next_as_outofdomainquotientsegments" => {
             Box::new(DequeueNextAs { proof_item: ProofItemVariant::OutOfDomainQuotientSegments })
         }
-        "tasmlib_recufier_vm_proof_iter_dequeue_next_as_authenticationstructure" => {
+        "tasmlib_verifier_vm_proof_iter_dequeue_next_as_authenticationstructure" => {
             Box::new(DequeueNextAs { proof_item: ProofItemVariant::AuthenticationStructure })
         }
-        "tasmlib_recufier_vm_proof_iter_dequeue_next_as_masterbasetablerows" => {
+        "tasmlib_verifier_vm_proof_iter_dequeue_next_as_masterbasetablerows" => {
             Box::new(DequeueNextAs { proof_item: ProofItemVariant::MasterBaseTableRows })
         }
-        "tasmlib_recufier_vm_proof_iter_dequeue_next_as_masterexttablerows" => {
+        "tasmlib_verifier_vm_proof_iter_dequeue_next_as_masterexttablerows" => {
             Box::new(DequeueNextAs { proof_item: ProofItemVariant::MasterExtTableRows })
         }
-        "tasmlib_recufier_vm_proof_iter_dequeue_next_as_log2paddedheight" => {
+        "tasmlib_verifier_vm_proof_iter_dequeue_next_as_log2paddedheight" => {
             Box::new(DequeueNextAs { proof_item: ProofItemVariant::Log2PaddedHeight })
         }
-        "tasmlib_recufier_vm_proof_iter_dequeue_next_as_quotientsegmentselements" => {
+        "tasmlib_verifier_vm_proof_iter_dequeue_next_as_quotientsegmentselements" => {
             Box::new(DequeueNextAs { proof_item: ProofItemVariant::QuotientSegmentsElements })
         }
-        "tasmlib_recufier_vm_proof_iter_dequeue_next_as_fricodeword" => {
+        "tasmlib_verifier_vm_proof_iter_dequeue_next_as_fricodeword" => {
             Box::new(DequeueNextAs { proof_item: ProofItemVariant::FriCodeword })
         }
-        "tasmlib_recufier_vm_proof_iter_dequeue_next_as_friresponse" => {
+        "tasmlib_verifier_vm_proof_iter_dequeue_next_as_friresponse" => {
             Box::new(DequeueNextAs { proof_item: ProofItemVariant::FriResponse })
         }
-        "tasmlib_recufier_read_and_verify_own_program_digest_from_std_in" => {
+        "tasmlib_verifier_read_and_verify_own_program_digest_from_std_in" => {
             Box::new(ReadAndVerifyOwnProgramDigestFromStdIn)
         }
-        "tasmlib_recufier_challenges_new_empty_input_and_output_59_4" => {
+        "tasmlib_verifier_challenges_new_empty_input_and_output_59_4" => {
             let num_challenges_to_sample = Challenges::SAMPLE_COUNT;
             let num_challenges_to_compute = Challenges::COUNT - num_challenges_to_sample;
             assert_eq!(59, num_challenges_to_sample);
@@ -430,7 +430,7 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
                 = NewEmptyInputAndOutput::new(num_challenges_to_sample, num_challenges_to_compute, challenges::shared::conventional_challenges_pointer());
             Box::new(challenge_snippet)
         }
-        "tasmlib_recufier_master_ext_table_air_constraint_evaluation" => {
+        "tasmlib_verifier_master_ext_table_air_constraint_evaluation" => {
             Box::new(AirConstraintEvaluation::with_conventional_memory_layout())
         }
 
@@ -443,16 +443,16 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
         HORNER_EVALUATION_FOR_SUM_OF_EVALUATED_OUT_OF_DOMAIN_QUOTIENT_SEGMENTS_ENTRYPOINT => {
             Box::new(HornerEvaluation::new(NUM_QUOTIENT_SEGMENTS))
         }
-        "tasmlib_recufier_own_program_digest" => {
+        "tasmlib_verifier_own_program_digest" => {
             Box::new(OwnProgramDigest)
         }
         "tasmlib_array_inner_product_of_three_rows_with_weights_Bfe_baserowelem" => {
-            Box::new(InnerProductOfThreeRowsWithWeights::recufier_parameters(BaseElementType::Bfe))
+            Box::new(InnerProductOfThreeRowsWithWeights::triton_vm_parameters(BaseElementType::Bfe))
         }
         "tasmlib_array_inner_product_of_three_rows_with_weights_Xfe_baserowelem" => {
-            Box::new(InnerProductOfThreeRowsWithWeights::recufier_parameters(BaseElementType::Xfe))
+            Box::new(InnerProductOfThreeRowsWithWeights::triton_vm_parameters(BaseElementType::Xfe))
         }
-        "tasmlib_recufier_claim_instantiate_fiat_shamir_with_claim" => {
+        "tasmlib_verifier_claim_instantiate_fiat_shamir_with_claim" => {
             Box::new(InstantiateFiatShamirWithClaim)
         }
         CHALLENGES_NEW_FROM_DYN_CLAIM => Box::new(NewGenericDynClaim::new(Challenges::SAMPLE_COUNT, Challenges::COUNT - Challenges::SAMPLE_COUNT, challenges::shared::conventional_challenges_pointer())),
@@ -463,7 +463,7 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
 
         // FRI
         #[cfg(not(test))]
-        "tasmlib_recufier_fri_verify" => Box::new(crate::recufier::fri::verify::FriSnippet {}),
+        "tasmlib_verifier_fri_verify" => Box::new(crate::verifier::fri::verify::FriSnippet {}),
 
         // structure
 

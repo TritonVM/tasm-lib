@@ -1,0 +1,24 @@
+[
+  {
+    "name": "tasmlib_verifier_eval_arg_compute_terminal_const_sized_static_symbols_symbol_count_256_15758478658178208130",
+    "benchmark_result": {
+      "clock_cycle_count": 1539,
+      "hash_table_height": 1542,
+      "u32_table_height": 0,
+      "op_stack_table_height": 2048,
+      "ram_table_height": 0
+    },
+    "case": "CommonCase"
+  },
+  {
+    "name": "tasmlib_verifier_eval_arg_compute_terminal_const_sized_static_symbols_symbol_count_256_15758478658178208130",
+    "benchmark_result": {
+      "clock_cycle_count": 1539,
+      "hash_table_height": 1542,
+      "u32_table_height": 0,
+      "op_stack_table_height": 2048,
+      "ram_table_height": 0
+    },
+    "case": "WorstCase"
+  }
+]

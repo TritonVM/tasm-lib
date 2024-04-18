@@ -1,0 +1,24 @@
+[
+  {
+    "name": "tasmlib_verifier_challenges_new_empty_input_and_output_59_4",
+    "benchmark_result": {
+      "clock_cycle_count": 1724,
+      "hash_table_height": 1854,
+      "u32_table_height": 0,
+      "op_stack_table_height": 2538,
+      "ram_table_height": 198
+    },
+    "case": "CommonCase"
+  },
+  {
+    "name": "tasmlib_verifier_challenges_new_empty_input_and_output_59_4",
+    "benchmark_result": {
+      "clock_cycle_count": 1724,
+      "hash_table_height": 1854,
+      "u32_table_height": 0,
+      "op_stack_table_height": 2538,
+      "ram_table_height": 198
+    },
+    "case": "WorstCase"
+  }
+]

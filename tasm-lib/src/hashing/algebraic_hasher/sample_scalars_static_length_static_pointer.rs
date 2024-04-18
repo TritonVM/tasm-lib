@@ -22,7 +22,7 @@ pub struct SampleScalarsStaticLengthStaticPointer {
     /// [extension field element][xfe]s.
     /// Necessary for [`Challenges`][chall].
     ///
-    /// [chall]: crate::recufier::challenges::new_empty_input_and_output::NewEmptyInputAndOutput
+    /// [chall]: crate::verifier::challenges::new_empty_input_and_output::NewEmptyInputAndOutput
     /// [xfe]: XFieldElement
     pub extra_capacity: usize,
 
@@ -195,9 +195,9 @@ pub(crate) mod tests {
 
 #[cfg(test)]
 mod bench {
-    use crate::recufier::challenges::new_empty_input_and_output::NewEmptyInputAndOutput;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
+    use crate::verifier::challenges::new_empty_input_and_output::NewEmptyInputAndOutput;
 
     use super::*;
 

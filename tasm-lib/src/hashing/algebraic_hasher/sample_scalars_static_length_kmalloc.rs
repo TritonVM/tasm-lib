@@ -22,7 +22,7 @@ pub struct SampleScalarsStaticLengthKMalloc {
     /// [extension field element][xfe]s.
     /// Necessary for [`Challenges`][chall].
     ///
-    /// [chall]: crate::recufier::challenges::new_empty_input_and_output::NewEmptyInputAndOutput
+    /// [chall]: crate::verifier::challenges::new_empty_input_and_output::NewEmptyInputAndOutput
     /// [xfe]: XFieldElement
     pub extra_capacity: usize,
 }

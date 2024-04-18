@@ -40,12 +40,12 @@ pub mod mmr;
 pub mod neptune;
 pub mod other_snippets;
 pub mod prelude;
-pub mod recufier;
 pub mod rust_shadowing_helper_functions;
 pub mod snippet_bencher;
 pub mod structure;
 pub mod test_helpers;
 pub mod traits;
+pub mod verifier;
 
 // re-exports for types exposed in our public API.
 pub use triton_vm;

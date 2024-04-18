@@ -1,0 +1,24 @@
+[
+  {
+    "name": "tasmlib_verifier_master_ext_table_verify_Quotient_table_rows",
+    "benchmark_result": {
+      "clock_cycle_count": 613,
+      "hash_table_height": 471,
+      "u32_table_height": 6,
+      "op_stack_table_height": 1023,
+      "ram_table_height": 45
+    },
+    "case": "CommonCase"
+  },
+  {
+    "name": "tasmlib_verifier_master_ext_table_verify_Quotient_table_rows",
+    "benchmark_result": {
+      "clock_cycle_count": 718,
+      "hash_table_height": 561,
+      "u32_table_height": 6,
+      "op_stack_table_height": 1233,
+      "ram_table_height": 45
+    },
+    "case": "WorstCase"
+  }
+]
