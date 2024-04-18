@@ -1,7 +1,6 @@
 use anyhow::anyhow;
 use anyhow::Result;
 use triton_vm::prelude::*;
-use triton_vm::table::master_table::TableId;
 
 use crate::library::Library;
 use crate::snippet_bencher::BenchmarkResult;
@@ -67,35 +66,30 @@ pub fn bench_and_profile_program<P: CompiledProgram>(
     let program = Program::new(&all_instructions);
 
     // run in trace mode to get table heights
-    let benchmark = match program.trace_execution(public_input.clone(), nondeterminism.clone()) {
-        Ok((aet, _output)) => NamedBenchmarkResult {
-            name: name.to_owned(),
-            benchmark_result: BenchmarkResult {
-                clock_cycle_count: aet.height_of_table(TableId::Processor),
-                hash_table_height: aet.height_of_table(TableId::Hash),
-                u32_table_height: aet.height_of_table(TableId::U32),
-                op_stack_table_height: aet.height_of_table(TableId::OpStack),
-                ram_table_height: aet.height_of_table(TableId::Ram),
-            },
-            case,
-        },
-        Err(e) => panic!("{}", e),
+    let (aet, _output) = program
+        .trace_execution(public_input.clone(), nondeterminism.clone())
+        .unwrap();
+    let benchmark_result = BenchmarkResult::new(&aet);
+    let benchmark = NamedBenchmarkResult {
+        name: name.to_owned(),
+        benchmark_result,
+        case,
     };
 
     crate::snippet_bencher::write_benchmarks(vec![benchmark]);
 
     // write profile to standard output in case someone is watching
-    let str = crate::generate_full_profile(name, program, public_input, nondeterminism);
-    println!("{str}");
+    let profile = crate::generate_full_profile(name, program, public_input, nondeterminism);
+    println!("{profile}");
 
     // write profile to profile file
     let mut path = PathBuf::new();
     path.push("profiles");
     create_dir_all(&path).expect("profiles directory should exist");
 
-    path.push(Path::new(&name).with_extension("profile"));
-    let mut file = File::create(&path).expect("open file for writing");
-    write!(file, "{str}").unwrap();
+    path.push(Path::new(name).with_extension("profile"));
+    let mut file = File::create(path).expect("open file for writing");
+    write!(file, "{profile}").unwrap();
 }
 
 #[cfg(test)]

@@ -2,7 +2,6 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use triton_vm::prelude::*;
-use triton_vm::table::master_table::TableId;
 
 use crate::library::Library;
 use crate::prove_and_verify;
@@ -60,11 +59,5 @@ pub fn execute_bench(
         );
     }
 
-    BenchmarkResult {
-        clock_cycle_count: simulation_trace.height_of_table(TableId::Processor),
-        hash_table_height: simulation_trace.height_of_table(TableId::Hash),
-        u32_table_height: simulation_trace.height_of_table(TableId::U32),
-        op_stack_table_height: simulation_trace.height_of_table(TableId::OpStack),
-        ram_table_height: simulation_trace.height_of_table(TableId::Ram),
-    }
+    BenchmarkResult::new(&simulation_trace)
 }

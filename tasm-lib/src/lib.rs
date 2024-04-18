@@ -153,13 +153,7 @@ pub fn execute_bench_deprecated(
     }
 
     *stack = terminal_state.op_stack.stack.clone();
-    Ok(BenchmarkResult {
-        clock_cycle_count: simulation_trace.height_of_table(TableId::Processor),
-        hash_table_height: simulation_trace.height_of_table(TableId::Hash),
-        u32_table_height: simulation_trace.height_of_table(TableId::U32),
-        op_stack_table_height: simulation_trace.height_of_table(TableId::OpStack),
-        ram_table_height: simulation_trace.height_of_table(TableId::Ram),
-    })
+    Ok(BenchmarkResult::new(&simulation_trace))
 }
 
 /// Execute a Triton-VM program and test correct behavior indicators.
@@ -371,24 +365,15 @@ pub fn prove_and_verify(
     );
 }
 
+/// A thin wrapper around [`Program::profile`].
 pub fn generate_full_profile(
     name: &str,
     program: Program,
     public_input: &PublicInput,
     nondeterminism: &NonDeterminism,
 ) -> String {
-    #[derive(Debug, Clone, Eq, PartialEq, Hash)]
-    struct AggregateProfileLine {
-        label: String,
-        call_depth: usize,
-        cycle_count: u32,
-    }
-
     let (_output, profile) = program
         .profile(public_input.clone(), nondeterminism.clone())
         .unwrap();
-    let mut printed_profile = format!("{name}:\n");
-    printed_profile.push_str(&profile.to_string());
-
-    printed_profile
+    format!("{name}:\n{profile}")
 }

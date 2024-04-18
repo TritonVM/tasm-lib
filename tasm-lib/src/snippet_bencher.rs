@@ -6,6 +6,8 @@ use std::path::PathBuf;
 use serde::Deserialize;
 use serde::Serialize;
 use serde_json::to_writer_pretty;
+use triton_vm::aet::AlgebraicExecutionTrace;
+use triton_vm::table::master_table::TableId;
 
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 
@@ -29,6 +31,18 @@ pub struct NamedBenchmarkResult {
 pub enum BenchmarkCase {
     CommonCase,
     WorstCase,
+}
+
+impl BenchmarkResult {
+    pub fn new(aet: &AlgebraicExecutionTrace) -> Self {
+        BenchmarkResult {
+            clock_cycle_count: aet.height_of_table(TableId::Processor),
+            hash_table_height: aet.height_of_table(TableId::Hash),
+            u32_table_height: aet.height_of_table(TableId::U32),
+            op_stack_table_height: aet.height_of_table(TableId::OpStack),
+            ram_table_height: aet.height_of_table(TableId::Ram),
+        }
+    }
 }
 
 #[allow(dead_code)]
