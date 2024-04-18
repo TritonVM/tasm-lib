@@ -994,23 +994,21 @@ pub mod tests {
         );
     }
 
-    #[test]
-    fn verify_tvm_proof_factorial_program() {
-        const FACTORIAL_ARGUMENT: u32 = 3;
-        let factorial_program = factorial_program_with_io();
-        let stark = Stark::default();
+    /// Run the verifier, and return the inner padded height for (extremely) crude benchmarking.
+    fn prop(
+        inner_nondeterminism: NonDeterminism,
+        inner_program: &Program,
+        inner_public_input: &[BFieldElement],
+        stark: Stark,
+    ) -> (VMState, usize) {
         let (mut non_determinism, claim_for_proof, inner_padded_height) =
             non_determinism_claim_and_padded_height(
-                &factorial_program,
-                &[FACTORIAL_ARGUMENT.into()],
-                NonDeterminism::default(),
+                inner_program,
+                inner_public_input,
+                inner_nondeterminism,
                 &stark,
             );
 
-        // Insert `claim` into standard memory, since that's how the interface is defined.
-        // In any real setting, you probably want to use the above snippet as an inner function,
-        // and instead call an entrypoint that puts the claim into memory and passes it as a pointer
-        // to the above snippet. Same goes for the proof-iterator.
         let (claim_pointer, claim_size) =
             insert_claim_into_static_memory(&mut non_determinism.ram, claim_for_proof);
 
@@ -1027,6 +1025,7 @@ pub mod tests {
         ]
         .concat();
         let code = snippet.link_for_isolated_run_populated_static_memory(claim_size);
+
         let final_tasm_state = execute_test(
             &code,
             &mut init_stack,
@@ -1036,11 +1035,51 @@ pub mod tests {
             None,
         );
 
+        (final_tasm_state, inner_padded_height)
+    }
+
+    #[test]
+    fn different_fri_expansion_factors() {
+        const FACTORIAL_ARGUMENT: u32 = 3;
+
+        for log2_of_fri_expansion_factor in 2..=5 {
+            let factorial_program = factorial_program_with_io();
+            let stark = Stark::new(160, log2_of_fri_expansion_factor);
+            let (final_vm_state, inner_padded_height) = prop(
+                NonDeterminism::default(),
+                &factorial_program,
+                &[FACTORIAL_ARGUMENT.into()],
+                stark,
+            );
+            println!(
+                "TASM-verifier of factorial({FACTORIAL_ARGUMENT}):\n
+                Fri expansion factor: {}\n
+                clock cycle count: {}.\n
+                Inner padded height was: {}",
+                1 << log2_of_fri_expansion_factor,
+                final_vm_state.cycle_count,
+                inner_padded_height,
+            );
+        }
+    }
+
+    #[test]
+    fn verify_tvm_proof_factorial_program() {
+        const FACTORIAL_ARGUMENT: u32 = 3;
+        let factorial_program = factorial_program_with_io();
+        let stark = Stark::default();
+        let (final_vm_state, inner_padded_height) = prop(
+            NonDeterminism::default(),
+            &factorial_program,
+            &[FACTORIAL_ARGUMENT.into()],
+            stark,
+        );
+
         println!(
             "TASM-verifier of factorial({FACTORIAL_ARGUMENT}):\n
             clock cycle count: {}.\n
-             Inner padded height was: {}",
-            final_tasm_state.cycle_count, inner_padded_height,
+            Inner padded height was: {}",
+            final_vm_state.cycle_count, inner_padded_height,
         );
     }
 
