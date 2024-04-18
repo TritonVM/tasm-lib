@@ -1200,13 +1200,37 @@ mod benches {
     use super::*;
 
     #[test]
-    fn benchmark_small() {
-        benchmark_verifier(3, 1 << 8);
-        benchmark_verifier(40, 1 << 9);
+    fn benchmark_small_default_stark() {
+        benchmark_verifier(3, 1 << 8, Stark::default());
+        benchmark_verifier(40, 1 << 9, Stark::default());
+    }
+
+    #[ignore = "Takes a fairly long time. Intended to find optimal FRI expansion factor."]
+    #[test]
+    fn small_benchmark_different_fri_expansion_factors() {
+        for log2_of_fri_expansion_factor in 2..=5 {
+            let stark = Stark::new(160, log2_of_fri_expansion_factor);
+            benchmark_verifier(10, 1 << 8, stark);
+            benchmark_verifier(40, 1 << 9, stark);
+        }
+    }
+
+    #[ignore = "Takes a very long time. Intended to find optimal FRI expansion factor. Make sure to run
+       with `RUSTFLAGS=\"-C opt-level=3 -C debug-assertions=no`"]
+    #[test]
+    fn big_benchmark_different_fri_expansion_factors() {
+        for log2_of_fri_expansion_factor in 2..=5 {
+            let stark = Stark::new(160, log2_of_fri_expansion_factor);
+            benchmark_verifier(10, 1 << 8, stark);
+            benchmark_verifier(40, 1 << 9, stark);
+            benchmark_verifier(80, 1 << 10, stark);
+            benchmark_verifier(102400, 1 << 21, stark);
+            benchmark_verifier(204800, 1 << 22, stark);
+        }
     }
 
     #[ignore = "Intended to generate data about verifier table heights as a function of inner padded
-       height Make sure to run with `RUSTFLAGS=\"-C opt-level=3 -C debug-assertions=no`"]
+       height. Make sure to run with `RUSTFLAGS=\"-C opt-level=3 -C debug-assertions=no`"]
     #[test]
     fn benchmark_verification_as_a_function_of_inner_padded_height() {
         for (fact_arg, expected_inner_padded_height) in [
@@ -1225,13 +1249,16 @@ mod benches {
             (51200, 1 << 20),
             (102400, 1 << 21),
         ] {
-            benchmark_verifier(fact_arg, expected_inner_padded_height);
+            benchmark_verifier(fact_arg, expected_inner_padded_height, Stark::default());
         }
     }
 
-    fn benchmark_verifier(factorial_argument: u32, expected_inner_padded_height: usize) {
+    fn benchmark_verifier(
+        factorial_argument: u32,
+        expected_inner_padded_height: usize,
+        stark: Stark,
+    ) {
         let factorial_program = factorial_program_with_io();
-        let stark = Stark::default();
         let (mut non_determinism, claim_for_proof, inner_padded_height) =
             non_determinism_claim_and_padded_height(
                 &factorial_program,
@@ -1261,7 +1288,12 @@ mod benches {
         let code = link_for_isolated_run(Rc::new(RefCell::new(snippet.clone())));
         let benchmark = execute_bench(&code, &stack, vec![], non_determinism, None);
         let benchmark = NamedBenchmarkResult {
-            name: format!("{}_{}", snippet.entrypoint(), inner_padded_height),
+            name: format!(
+                "{}_inner_padded_height_{}_fri_exp_{}",
+                snippet.entrypoint(),
+                inner_padded_height,
+                stark.fri_expansion_factor
+            ),
             benchmark_result: benchmark,
             case: BenchmarkCase::CommonCase,
         };
