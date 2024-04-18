@@ -85,7 +85,7 @@ pub fn bench_and_profile_program<P: CompiledProgram>(
     crate::snippet_bencher::write_benchmarks(vec![benchmark]);
 
     // write profile to standard output in case someone is watching
-    let str = crate::generate_full_profile(name, program, public_input, nondeterminism, false);
+    let str = crate::generate_full_profile(name, program, public_input, nondeterminism);
     println!("{str}");
 
     // write profile to profile file

@@ -376,7 +376,6 @@ pub fn generate_full_profile(
     program: Program,
     public_input: &PublicInput,
     nondeterminism: &NonDeterminism,
-    only_print_aggregate: bool,
 ) -> String {
     #[derive(Debug, Clone, Eq, PartialEq, Hash)]
     struct AggregateProfileLine {
@@ -389,55 +388,7 @@ pub fn generate_full_profile(
         .profile(public_input.clone(), nondeterminism.clone())
         .unwrap();
     let mut printed_profile = format!("{name}:\n");
-    if !only_print_aggregate {
-        printed_profile = format!("{printed_profile}\n# call graph\n");
+    printed_profile.push_str(&profile.to_string());
 
-        for line in profile.profile.iter() {
-            let indentation = vec!["  "; line.call_depth].join("");
-            let label = &line.label;
-            let cycle_count = line.table_heights_start.processor;
-            printed_profile = format!("{printed_profile}{indentation} {label}: {cycle_count}\n");
-        }
-    }
-
-    printed_profile = format!("{printed_profile}\n# aggregated unsorted\n");
-    let mut aggregated: Vec<AggregateProfileLine> = vec![];
-    for line in profile.profile.iter() {
-        if let Some(agg) = aggregated
-            .iter_mut()
-            .find(|a| a.label == line.label && a.call_depth == line.call_depth)
-        {
-            agg.cycle_count += line.table_heights_start.processor;
-        } else {
-            aggregated.push(AggregateProfileLine {
-                label: line.label.to_owned(),
-                call_depth: line.call_depth,
-                cycle_count: line.table_heights_start.processor,
-            });
-        }
-    }
-
-    let total_cycle_count = aggregated[0].cycle_count as f32;
-    for aggregate_line in aggregated.iter() {
-        let indentation = vec!["  "; aggregate_line.call_depth].join("");
-        let label = &aggregate_line.label;
-        let cycle_count = aggregate_line.cycle_count;
-        printed_profile = format!(
-            "{printed_profile}{indentation} {label}:, {cycle_count}, {};\n",
-            (aggregate_line.cycle_count as f32) / total_cycle_count
-        );
-    }
-
-    printed_profile = format!("{printed_profile}\n# aggregated + sorted\n");
-    aggregated.sort_by(|a, b| a.cycle_count.cmp(&b.cycle_count));
-    for aggregate_line in aggregated {
-        let indentation = vec!["  "; aggregate_line.call_depth].join("");
-        let label = aggregate_line.label;
-        let cycle_count = aggregate_line.cycle_count;
-        printed_profile = format!(
-            "{printed_profile}{indentation} {label}:, {cycle_count}, {};\n",
-            (aggregate_line.cycle_count as f32) / total_cycle_count
-        );
-    }
     printed_profile
 }

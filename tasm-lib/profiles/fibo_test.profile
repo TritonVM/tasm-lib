@@ -1,10 +1,5 @@
 fibo_test:
-
-# call graph
- fibo_test_loop: 3
-
-# aggregated unsorted
- fibo_test_loop:, 3, 1;
-
-# aggregated + sorted
- fibo_test_loop:, 3, 1;
+| Subroutine           |            Processor |             Op Stack |                  RAM |                 Hash |                  U32 |
+|:---------------------|---------------------:|---------------------:|---------------------:|---------------------:|---------------------:|
+| fibo_test_loop       |        5516 ( 99.9%) |        4513 ( 99.9%) |           0 (  NaN%) |           0 (  0.0%) |           0 (  NaN%) |
+| Total                |        5523 (100.0%) |        4518 (100.0%) |           0 (  NaN%) |          24 (100.0%) |           0 (  NaN%) |
