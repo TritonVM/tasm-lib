@@ -361,9 +361,11 @@ impl DeprecatedSnippet for MmrVerifyFromMemory {
             peaks.push(digest);
         }
 
-        let valid_mp = MmrMembershipProof::<VmHasher>::new(leaf_index, auth_path)
-            .verify(&peaks, leaf_digest, leaf_count)
-            .0;
+        let valid_mp = MmrMembershipProof::<VmHasher>::new(leaf_index, auth_path).verify(
+            &peaks,
+            leaf_digest,
+            leaf_count,
+        );
 
         stack.push(auth_path_pointer);
         stack.push(BFieldElement::new(leaf_index_hi as u64));
@@ -584,9 +586,11 @@ mod tests {
         // Verify that auth path expectation was correct
         assert_eq!(
             expect_validation_success,
-            MmrMembershipProof::<H>::new(leaf_index, auth_path)
-                .verify(&mmr.get_peaks(), leaf, mmr.count_leaves())
-                .0
+            MmrMembershipProof::<H>::new(leaf_index, auth_path).verify(
+                &mmr.get_peaks(),
+                leaf,
+                mmr.count_leaves()
+            )
         );
     }
 }

@@ -504,13 +504,11 @@ mod tests {
             _hasher: std::marker::PhantomData,
         };
         assert!(
-            produced_mp
-                .verify(
-                    &produced_mmr.get_peaks(),
-                    new_leaf,
-                    produced_mmr.count_leaves(),
-                )
-                .0,
+            produced_mp.verify(
+                &produced_mmr.get_peaks(),
+                new_leaf,
+                produced_mmr.count_leaves(),
+            ),
             "TASM-produced authentication path must be valid"
         );
     }

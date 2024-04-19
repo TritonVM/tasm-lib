@@ -292,7 +292,7 @@ impl Procedure for MmrVerifyLeafMembershipFromSecretIn {
             i += 1;
         }
 
-        let (valid_mp, _) = MmrMembershipProof::<VmHasher>::new(leaf_index, auth_path).verify(
+        let valid_mp = MmrMembershipProof::<VmHasher>::new(leaf_index, auth_path).verify(
             &peaks,
             leaf_digest,
             leaf_count,
@@ -562,9 +562,11 @@ mod tests {
         // Sanity check
         assert_eq!(
             expect_validation_success,
-            MmrMembershipProof::<H>::new(leaf_index, auth_path)
-                .verify(&mmr.get_peaks(), leaf, leaf_count)
-                .0
+            MmrMembershipProof::<H>::new(leaf_index, auth_path).verify(
+                &mmr.get_peaks(),
+                leaf,
+                leaf_count
+            )
         );
     }
 }

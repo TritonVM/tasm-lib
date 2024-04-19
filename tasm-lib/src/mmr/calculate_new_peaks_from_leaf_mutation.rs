@@ -569,13 +569,11 @@ mod tests {
             _hasher: std::marker::PhantomData,
         };
         assert!(
-            mmr_mp
-                .verify(
-                    &produced_mmr.get_peaks(),
-                    new_leaf,
-                    produced_mmr.count_leaves(),
-                )
-                .0,
+            mmr_mp.verify(
+                &produced_mmr.get_peaks(),
+                new_leaf,
+                produced_mmr.count_leaves(),
+            ),
             "TASM-produced authentication path must be valid"
         );
 
@@ -583,15 +581,11 @@ mod tests {
         let mut expected_final_mmra_double_check = start_mmr.to_accumulator();
         expected_final_mmra_double_check.mutate_leaf(&mmr_mp, new_leaf);
         assert_eq!(expected_final_mmra_double_check, produced_mmr);
-        assert!(
-            mmr_mp
-                .verify(
-                    &expected_final_mmra_double_check.get_peaks(),
-                    new_leaf,
-                    expected_final_mmra_double_check.count_leaves()
-                )
-                .0
-        );
+        assert!(mmr_mp.verify(
+            &expected_final_mmra_double_check.get_peaks(),
+            new_leaf,
+            expected_final_mmra_double_check.count_leaves()
+        ));
     }
 }
 
