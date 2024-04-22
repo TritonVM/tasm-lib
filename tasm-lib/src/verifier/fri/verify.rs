@@ -252,7 +252,7 @@ impl BasicSnippet for FriSnippet {
 
         triton_asm! {
             // BEFORE: _ *proof_iter *fri_verify
-            // AFTER:  _ *proof_iter *indices_and_leafs
+            // AFTER:  _ *indices_and_leafs
             {entrypoint}:
                 hint fri_verify_pointer = stack[0]
                 hint proof_iter_pointer = stack[1]
