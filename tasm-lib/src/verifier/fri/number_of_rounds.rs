@@ -74,8 +74,8 @@ mod test {
         b_field_element::BFieldElement, traits::PrimitiveRootOfUnity,
     };
 
+    use crate::traits::basic_snippet::BasicSnippet;
     use crate::{
-        empty_stack,
         memory::{dyn_malloc::DYN_MALLOC_ADDRESS, encode_to_memory},
         prelude::TasmObject,
         snippet_bencher::BenchmarkCase,
@@ -94,7 +94,7 @@ mod test {
             stack: &mut Vec<BFieldElement>,
             memory: &mut HashMap<BFieldElement, BFieldElement>,
         ) {
-            let fri_verify = FriVerify::decode_from_memory(&memory, stack.pop().unwrap()).unwrap();
+            let fri_verify = FriVerify::decode_from_memory(memory, stack.pop().unwrap()).unwrap();
             stack.push(BFieldElement::new(fri_verify.num_rounds() as u64));
         }
 
@@ -106,13 +106,10 @@ mod test {
             let mut rng: StdRng = SeedableRng::from_seed(seed);
             let rate_entropy = rng.gen_range(1..16);
             let num_colinearity_checks = f64::ceil(160.0 / (rate_entropy as f64)) as usize;
-            let domain_length = if bench_case.is_none() {
-                1 << rng.gen_range(rate_entropy..=22)
-            } else {
-                match bench_case.unwrap() {
-                    BenchmarkCase::CommonCase => 1 << 17,
-                    BenchmarkCase::WorstCase => 1 << 22,
-                }
+            let domain_length = match bench_case {
+                Some(BenchmarkCase::CommonCase) => 1 << 17,
+                Some(BenchmarkCase::WorstCase) => 1 << 22,
+                None => 1 << rng.gen_range(rate_entropy..=22),
             };
             let fri_verify = FriVerify {
                 expansion_factor: 1 << rate_entropy,
@@ -122,7 +119,7 @@ mod test {
                 domain_generator: BFieldElement::primitive_root_of_unity(domain_length.into())
                     .unwrap(),
             };
-            let mut stack = empty_stack();
+            let mut stack = self.init_stack_for_isolated_run();
             let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
 
             let address = DYN_MALLOC_ADDRESS;
