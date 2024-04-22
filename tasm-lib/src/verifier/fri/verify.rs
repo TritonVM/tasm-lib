@@ -32,6 +32,7 @@ use crate::list::push::Push;
 use crate::memory::dyn_malloc::DYN_MALLOC_ADDRESS;
 use crate::structure::tasm_object::TasmObject;
 use crate::traits::basic_snippet::BasicSnippet;
+use crate::verifier::fri::number_of_rounds::NumberOfRounds;
 use crate::verifier::verify_authentication_paths_for_leaf_and_index_list::VerifyAuthenticationPathForLeafAndIndexList;
 use crate::verifier::vm_proof_iter::dequeue_next_as::DequeueNextAs;
 use crate::verifier::vm_proof_iter::shared::vm_proof_iter_type;
@@ -51,7 +52,7 @@ pub struct FriVerify {
     pub num_collinearity_checks: u32,
     pub domain_length: u32,
     pub domain_offset: BFieldElement,
-    domain_generator: BFieldElement,
+    pub domain_generator: BFieldElement,
 }
 
 impl From<Fri<Tip5>> for FriVerify {
@@ -118,6 +119,7 @@ impl BasicSnippet for FriSnippet {
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
+        let fri_num_rounds = library.import(Box::new(NumberOfRounds {}));
         let domain_length = field!(FriVerify::domain_length);
         let domain_generator = field!(FriVerify::domain_generator);
         let domain_offset = field!(FriVerify::domain_offset);
@@ -258,28 +260,8 @@ impl BasicSnippet for FriSnippet {
                 hint proof_iter_pointer = stack[1]
 
                 // calculate number of rounds
-                dup 0 {&domain_length}      // _ *vm_proof_iter *fri_verify *domain_length
-                read_mem 1 pop 1            // _ *vm_proof_iter *fri_verify domain_length
-                hint domain_length = stack[0]
-
-                dup 1 {&expansion_factor}   // _ *vm_proof_iter *fri_verify domain_length *expansion_factor
-                read_mem 1 pop 1            // _ *vm_proof_iter *fri_verify domain_length expansion_factor
-                hint expansion_factor = stack[0]
-
-                swap 1 div_mod pop 1        // _ *vm_proof_iter *fri_verify first_round_code_dimension
-                log_2_floor                 // _ *vm_proof_iter *fri_verify max_num_rounds
-                hint max_num_rounds = stack[0]
-
-                dup 1 {&num_collinearity_checks}
-                read_mem 1 pop 1            // _ *vm_proof_iter *fri_verify max_num_rounds num_collinearity_checks
-                hint num_collinearity_checks = stack[0]
-
-                log_2_floor push 1 add      // _ *vm_proof_iter *fri_verify max_num_rounds num_rounds_checking_most_locations
-
-                dup 1 dup 1 lt              // _ *vm_proof_iter *fri_verify max_num_rounds num_rounds_checking_most_locations (num_rounds_checking_most_locations<max_num_rounds)
-                swap 2 push -1 mul add      // _ *vm_proof_iter *fri_verify (num_rounds_checking_most_locations<max_num_rounds) num_rounds_checking_most_locations-max_num_rounds
-                mul push -1 mul             // _ *vm_proof_iter *fri_verify if(num_rounds_checking_most_locations<max_num_rounds){max_num_rounds-num_rounds_checking_most_locations}else{0}
-                                            // _ *vm_proof_iter *fri_verify num_rounds
+                dup 0                       // _ *vm_proof_iter *fri_verify *fri_verify
+                call {fri_num_rounds}       // _ *vm_proof_iter *fri_verify num_rounds
                 hint num_rounds = stack[0]
 
                 // calculate max degree of last round

@@ -126,7 +126,7 @@ where
 
         for _ in 0..num_rng_states {
             let seed: [u8; 32] = rng.gen();
-            println!("testing {entrypoint} with seed: {:x?}", seed);
+            println!("testing {entrypoint} with seed: {:#03x?}", seed);
             self.test_initial_state(
                 self.function
                     .borrow()

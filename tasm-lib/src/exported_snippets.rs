@@ -90,6 +90,7 @@ use crate::verifier::challenges;
 use crate::verifier::challenges::new_empty_input_and_output::NewEmptyInputAndOutput;
 use crate::verifier::challenges::new_generic_dyn_claim::NewGenericDynClaim;
 use crate::verifier::claim::instantiate_fiat_shamir_with_claim::InstantiateFiatShamirWithClaim;
+use crate::verifier::fri;
 use crate::verifier::master_ext_table::air_constraint_evaluation::AirConstraintEvaluation;
 use crate::verifier::own_program_digest::OwnProgramDigest;
 use crate::verifier::read_and_verify_own_program_digest_from_std_in::ReadAndVerifyOwnProgramDigestFromStdIn;
@@ -433,6 +434,8 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
         "tasmlib_verifier_master_ext_table_air_constraint_evaluation" => {
             Box::new(AirConstraintEvaluation::with_conventional_memory_layout())
         }
+
+        "tasmlib_verifier_fri_number_of_rounds" => { Box::new(fri::number_of_rounds::NumberOfRounds{}) }
 
         "tasmlib_array_inner_product_of_4_xfes" => {
             Box::new(InnerProductOfXfes::new(4))
