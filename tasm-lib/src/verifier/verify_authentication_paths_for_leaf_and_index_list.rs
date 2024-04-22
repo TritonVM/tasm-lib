@@ -157,15 +157,12 @@ impl Algorithm for VerifyAuthenticationPathForLeafAndIndexList {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
 
         // determine sizes
-        let height = if let Some(case) = bench_case {
-            match case {
-                crate::snippet_bencher::BenchmarkCase::CommonCase => 15,
-                crate::snippet_bencher::BenchmarkCase::WorstCase => 25,
-            }
-        } else {
-            rng.gen_range(6..=15)
+        let (height, num_indices) = match bench_case {
+            Some(BenchmarkCase::CommonCase) => (10, 80),
+            Some(BenchmarkCase::WorstCase) => (20, 80),
+            None => (rng.gen_range(6..=15), rng.gen_range(2..10) as usize),
         };
-        let num_indices = rng.gen_range(2..5) as usize;
+
         self.prepare_state(&mut rng, height, num_indices)
     }
 
