@@ -1,3 +1,4 @@
+pub mod barycentric_evaluation;
 pub mod collinear_y;
 pub mod collinearity_check_x;
 pub mod derive_from_stark_params;

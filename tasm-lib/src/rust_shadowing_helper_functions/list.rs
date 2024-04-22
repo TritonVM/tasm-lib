@@ -68,17 +68,17 @@ pub fn list_insert<T: BFieldCodec>(
 }
 
 pub fn insert_random_list(
-    data_type: &DataType,
+    element_type: &DataType,
     list_pointer: BFieldElement,
     list_length: usize,
     memory: &mut HashMap<BFieldElement, BFieldElement>,
 ) {
     list_new(list_pointer, memory);
 
-    let random_values = data_type.random_elements(list_length);
+    let random_values = element_type.random_elements(list_length);
 
     for element in random_values {
-        list_push(list_pointer, element, memory, data_type.stack_size());
+        list_push(list_pointer, element, memory, element_type.stack_size());
     }
 }
 
