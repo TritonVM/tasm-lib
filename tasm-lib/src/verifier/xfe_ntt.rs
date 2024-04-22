@@ -499,9 +499,9 @@ impl Function for XfeNtt {
     ) -> FunctionInitialState {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
         let n = match bench_case {
-            Some(crate::snippet_bencher::BenchmarkCase::CommonCase) => 32,
-            Some(crate::snippet_bencher::BenchmarkCase::WorstCase) => 128,
-            None => 32,
+            Some(crate::snippet_bencher::BenchmarkCase::CommonCase) => 256,
+            Some(crate::snippet_bencher::BenchmarkCase::WorstCase) => 512,
+            None => 1 << rng.gen_range(1..=9),
         };
         let vector = (0..n).map(|_| rng.gen()).collect::<Vec<XFieldElement>>();
 
