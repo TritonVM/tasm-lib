@@ -120,6 +120,7 @@ impl BasicSnippet for BaryCentricEvaluation {
                 {&swap_top_and_third_xfe}
                 // _ *stop_condition [indeterminate] geni geniacc *codeword_elem [denominator'] [numerator] [dodse]
 
+                /* 6. */
                 dup 9
                 read_mem {EXTENSION_DEGREE}
                 swap 13
@@ -127,6 +128,7 @@ impl BasicSnippet for BaryCentricEvaluation {
                 // _ *stop_condition [indeterminate] geni geniacc *codeword_elem_prev [denominator'] [numerator] [dodse] [code_word_elem]
                 // _ *stop_condition [indeterminate] geni geniacc *codeword_elem' [denominator'] [numerator] [dodse] [code_word_elem]     <-- rename
 
+                /* 7. */
                 xxmul
                 xxadd
                 // _ *stop_condition [indeterminate] geni geniacc *codeword_elem' [denominator'] [numerator + dodse * code_word_elem]
