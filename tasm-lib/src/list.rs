@@ -4,6 +4,7 @@ pub const LIST_METADATA_SIZE: usize = 1;
 pub mod contiguous_list;
 pub mod get;
 pub mod higher_order;
+pub mod horner_evaluation_dynamic_length;
 pub mod length;
 pub mod multiset_equality;
 pub mod new;

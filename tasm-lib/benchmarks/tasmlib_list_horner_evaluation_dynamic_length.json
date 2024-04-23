@@ -1,0 +1,24 @@
+[
+  {
+    "name": "tasmlib_list_horner_evaluation_dynamic_length",
+    "benchmark_result": {
+      "clock_cycle_count": 264,
+      "hash_table_height": 210,
+      "u32_table_height": 38,
+      "op_stack_table_height": 351,
+      "ram_table_height": 61
+    },
+    "case": "CommonCase"
+  },
+  {
+    "name": "tasmlib_list_horner_evaluation_dynamic_length",
+    "benchmark_result": {
+      "clock_cycle_count": 1039,
+      "hash_table_height": 210,
+      "u32_table_height": 80,
+      "op_stack_table_height": 1521,
+      "ram_table_height": 301
+    },
+    "case": "WorstCase"
+  }
+]

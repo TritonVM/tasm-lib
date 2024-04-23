@@ -429,6 +429,9 @@ mod test {
                 ProofItemVariant::FriCodeword => {
                     ProofItem::FriCodeword(Arbitrary::arbitrary(&mut unstructured).unwrap())
                 }
+                ProofItemVariant::FriPolynomial => {
+                    ProofItem::FriPolynomial(Arbitrary::arbitrary(&mut unstructured).unwrap())
+                }
                 ProofItemVariant::FriResponse => {
                     ProofItem::FriResponse(Arbitrary::arbitrary(&mut unstructured).unwrap())
                 }

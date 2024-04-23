@@ -36,7 +36,6 @@ use crate::verifier::fri::number_of_rounds::NumberOfRounds;
 use crate::verifier::verify_authentication_paths_for_leaf_and_index_list::VerifyAuthenticationPathForLeafAndIndexList;
 use crate::verifier::vm_proof_iter::dequeue_next_as::DequeueNextAs;
 use crate::verifier::vm_proof_iter::shared::vm_proof_iter_type;
-use crate::verifier::xfe_ntt::XfeNtt;
 
 /// `FriVerify` checks that a Reed-Solomon codeword, provided as an oracle, has a low
 /// degree interpolant. Specifically, the algorithm takes a `ProofStream` object, runs the
@@ -142,6 +141,9 @@ impl BasicSnippet for FriSnippet {
             library.import(Box::new(DequeueNextAs::new(ProofItemVariant::MerkleRoot)));
         let vm_proof_iter_dequeue_next_as_fri_codeword =
             library.import(Box::new(DequeueNextAs::new(ProofItemVariant::FriCodeword)));
+        let vm_proof_iter_dequeue_next_as_fri_polynomial = library.import(Box::new(
+            DequeueNextAs::new(ProofItemVariant::FriPolynomial),
+        ));
         let vm_proof_iter_dequeue_next_as_fri_response =
             library.import(Box::new(DequeueNextAs::new(ProofItemVariant::FriResponse)));
 
@@ -171,7 +173,6 @@ impl BasicSnippet for FriSnippet {
         let length_of_list_of_xfes = library.import(Box::new(Length::new(DataType::Xfe)));
         let merkle_root = library.import(Box::new(MerkleRoot));
         let get_digest = library.import(Box::new(Get::new(DataType::Digest)));
-        let xfe_ntt = library.import(Box::new(XfeNtt));
         let assert_tail_xfe0 = format!("{entrypoint}_tail_xfe0");
         let length_of_list_of_xfe = library.import(Box::new(Length::new(DataType::Xfe)));
         let get_xfe_from_list = library.import(Box::new(Get::new(DataType::Xfe)));
@@ -300,7 +301,7 @@ impl BasicSnippet for FriSnippet {
                 // dequeue remaining roots and collect Fiat-Shamir challenges
                 dup 3                       // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *alphas *roots num_rounds
                 swap 2                      // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree num_rounds *roots *alphas
-                call {dequeue_commit_phase}  // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree 0 *roots *alphas
+                call {dequeue_commit_phase} // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree 0 *roots *alphas
 
                 // dequeue last codeword and check length
                 dup 6                       // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *proof_iter
@@ -351,24 +352,35 @@ impl BasicSnippet for FriSnippet {
                 // clean up top of stack
                 pop 5                       // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword
 
-                // get omega
-                dup 7                       // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword *fri_verify
-                {&domain_generator}         // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword *generator
-                read_mem 1 pop 1            // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword domain_generator
-                dup 7                       // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword domain_generator num_rounds
-                push 2 pow                  // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword domain_generator 1<<num_rounds
-                swap 1 pow                  // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword domain_generator^(num_rounds)
-
-                // compute intt (without scaling)
-                invert                      // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword omega_inv
-                dup 1 swap 1                // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword *last_codeword omega_inv
-                call {xfe_ntt}              // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_polynomial
+                // dequeue polynomial
+                dup 1                       // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword *vm_proof_iter
+                call {vm_proof_iter_dequeue_next_as_fri_polynomial}
+                                            // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword *last_polynomial
+                hint last_fri_polynomial: ListPointer = stack[0]
 
                 // test low degree of polynomial
-                dup 5 push 1 add            // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_polynomial num_nonzero_coefficients
+                dup 0                       // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword *last_polynomial *last_polynomial
+                call {length_of_list_of_xfes}
+                                            // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword *last_polynomial num_coefficients_received
 
-                call {assert_tail_xfe0}     // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_polynomial *total_num_coefficients
-                pop 2                       // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter
+                dup 7 push 1 add            // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword *last_polynomial num_coefficients_received num_coefficients_allowed
+                eq                          // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword *last_polynomial num_coefficients_received==num_coefficients_allowed
+                assert                      // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword *last_polynomial
+
+                // check that polynomial agrees with codeword
+                call {vm_proof_iter_sample_one_scalar}
+                                            // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword *last_polynomial *indeterminates
+                push 0 push 0 dup 3 dup 3   // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword *last_polynomial *indeterminates 0 0 *last_polynomial *indeterminates
+                push 0
+                call {get_xfe_from_list}    // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword *last_polynomial *indeterminates 0 0 *last_polynomial [x]
+                // call {polynomial_evaluation}// _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword *last_polynomial *indeterminates 0 0 [poly(x)]
+                push 0 push 0 dup 9 dup 8   // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword *last_polynomial *indeterminates 0 0 [poly(x)] 0 0 *last_codeword *indeterminates
+                push 0
+                call {get_xfe_from_list}    // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword *last_polynomial *indeterminates 0 0 [poly(x)] 0 0 *last_codeword [x]
+                // call {barycentric_evaluation}
+                                            // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword *last_polynomial *indeterminates 0 0 [poly(x)] 0 0 [codeword(x)]
+                assert_vector
+                pop 8                       // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter
 
                 // QUERY PHASE
 
@@ -450,7 +462,7 @@ impl BasicSnippet for FriSnippet {
                 call {zip_index_xfe}        // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *indices *a_elements *revealed_indices_and_leafs current_domain_length num_rounds *last_codeword' *c_indices_and_elements
                 call {map_assert_membership}// _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *indices *a_elements *revealed_indices_and_leafs current_domain_length num_rounds *last_codeword' *c_indices_and_elements
 
-                // clean up stack and return
+                // clean up stack
                 pop 4                       // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *indices *a_elements *revealed_indices_and_leafs
                 swap 9                      // _ *vm_proof_iter *revealed_indices_and_leafs num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *indices *a_elements *fri_verify
                 pop 5                       // _ *vm_proof_iter *revealed_indices_and_leafs *fri_verify num_rounds last_round_max_degree 0 *roots
