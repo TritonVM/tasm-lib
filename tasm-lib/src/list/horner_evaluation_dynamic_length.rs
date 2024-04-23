@@ -1,10 +1,11 @@
 use itertools::Itertools;
-use triton_vm::{instruction::LabelledInstruction, triton_asm};
+use triton_vm::instruction::LabelledInstruction;
+use triton_vm::triton_asm;
 
-use crate::{
-    data_type::DataType, library::Library, list::length::Length,
-    traits::basic_snippet::BasicSnippet,
-};
+use crate::data_type::DataType;
+use crate::library::Library;
+use crate::list::length::Length;
+use crate::traits::basic_snippet::BasicSnippet;
 
 /// HornerEvaluationDynamicLength takes a list of XFieldElements, representing
 /// the coefficients of a polynomial, and evaluates it in a given indeterminate,
@@ -103,23 +104,43 @@ mod test {
     use std::collections::HashMap;
 
     use itertools::Itertools;
-    use rand::{rngs::StdRng, Rng, SeedableRng};
-    use triton_vm::twenty_first::math::{
-        b_field_element::BFieldElement, polynomial::Polynomial, x_field_element::XFieldElement,
-    };
+    use rand::rngs::StdRng;
+    use rand::Rng;
+    use rand::SeedableRng;
+    use triton_vm::prelude::*;
+    use triton_vm::twenty_first::math::polynomial::Polynomial;
+    use triton_vm::twenty_first::xfe_vec;
 
-    use crate::{
-        empty_stack,
-        memory::{dyn_malloc::DYN_MALLOC_ADDRESS, encode_to_memory},
-        prelude::TasmObject,
-        snippet_bencher::BenchmarkCase,
-        traits::{
-            function::{Function, FunctionInitialState, ShadowedFunction},
-            rust_shadow::RustShadow,
-        },
-    };
+    use crate::memory::encode_to_memory;
+    use crate::prelude::TasmObject;
+    use crate::snippet_bencher::BenchmarkCase;
+    use crate::traits::basic_snippet::BasicSnippet;
+    use crate::traits::function::Function;
+    use crate::traits::function::FunctionInitialState;
+    use crate::traits::function::ShadowedFunction;
+    use crate::traits::rust_shadow::RustShadow;
 
     use super::HornerEvaluationDynamicLength;
+
+    impl HornerEvaluationDynamicLength {
+        fn prepare_state(
+            &self,
+            coefficients: Vec<XFieldElement>,
+            coefficients_pointer: BFieldElement,
+            indeterminate: XFieldElement,
+        ) -> FunctionInitialState {
+            let mut memory = HashMap::default();
+            let mut stack = self.init_stack_for_isolated_run();
+            encode_to_memory(&mut memory, coefficients_pointer, coefficients);
+
+            stack.push(coefficients_pointer);
+            stack.push(indeterminate.coefficients[2]);
+            stack.push(indeterminate.coefficients[1]);
+            stack.push(indeterminate.coefficients[0]);
+
+            FunctionInitialState { stack, memory }
+        }
+    }
 
     impl Function for HornerEvaluationDynamicLength {
         fn rust_shadow(
@@ -148,31 +169,34 @@ mod test {
             bench_case: Option<BenchmarkCase>,
         ) -> FunctionInitialState {
             let mut rng: StdRng = SeedableRng::from_seed(seed);
-            let num_coefficients = if bench_case.is_none() {
-                rng.gen_range(0..50)
-            } else {
-                match bench_case.unwrap() {
-                    BenchmarkCase::CommonCase => 20,
-                    BenchmarkCase::WorstCase => 100,
-                }
+            let num_coefficients = match bench_case {
+                Some(BenchmarkCase::CommonCase) => 256,
+                Some(BenchmarkCase::WorstCase) => 512,
+                None => rng.gen_range(0..1000),
             };
             let coefficients = (0..num_coefficients)
-                .into_iter()
                 .map(|_| rng.gen::<XFieldElement>())
                 .collect_vec();
 
-            let mut memory = HashMap::<BFieldElement, BFieldElement>::new();
-            let mut stack = empty_stack();
-            let address = DYN_MALLOC_ADDRESS;
-            encode_to_memory(&mut memory, address, coefficients);
+            let coefficients_pointer = bfe!(rng.gen_range(0..(1u64 << 35)));
 
             let indeterminate = rng.gen::<XFieldElement>();
-            stack.push(address);
-            stack.push(indeterminate.coefficients[2]);
-            stack.push(indeterminate.coefficients[1]);
-            stack.push(indeterminate.coefficients[0]);
 
-            FunctionInitialState { stack, memory }
+            self.prepare_state(coefficients, coefficients_pointer, indeterminate)
+        }
+
+        fn corner_case_initial_states(&self) -> Vec<FunctionInitialState> {
+            let an_indeterminate = xfe!([1u64 << 45, 47, 49]);
+            let one_coefficient = self.prepare_state(xfe_vec![19991], bfe!(333), an_indeterminate);
+            let two_coefficients =
+                self.prepare_state(xfe_vec![19991, 299999992], bfe!(333), an_indeterminate);
+            let three_coefficients = self.prepare_state(
+                xfe_vec![19991, 299999992, 399999993],
+                bfe!(333),
+                an_indeterminate,
+            );
+
+            vec![one_coefficient, two_coefficients, three_coefficients]
         }
     }
 
@@ -186,7 +210,8 @@ mod test {
 
 #[cfg(test)]
 mod bench {
-    use crate::traits::{function::ShadowedFunction, rust_shadow::RustShadow};
+    use crate::traits::function::ShadowedFunction;
+    use crate::traits::rust_shadow::RustShadow;
 
     use super::HornerEvaluationDynamicLength;
 
