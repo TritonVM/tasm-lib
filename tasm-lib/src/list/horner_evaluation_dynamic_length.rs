@@ -9,7 +9,7 @@ use crate::{
 /// HornerEvaluationDynamicLength takes a list of XFieldElements, representing
 /// the coefficients of a polynomial, and evaluates it in a given indeterminate,
 /// which is also an XFieldElement.
-struct HornerEvaluationDynamicLength;
+pub struct HornerEvaluationDynamicLength;
 
 impl BasicSnippet for HornerEvaluationDynamicLength {
     fn inputs(&self) -> Vec<(DataType, String)> {

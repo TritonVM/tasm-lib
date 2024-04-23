@@ -26,12 +26,14 @@ use crate::list::higher_order::inner_function::InnerFunction;
 use crate::list::higher_order::inner_function::RawCode;
 use crate::list::higher_order::map::Map;
 use crate::list::higher_order::zip::Zip;
+use crate::list::horner_evaluation_dynamic_length::HornerEvaluationDynamicLength;
 use crate::list::length::Length;
 use crate::list::new::New;
 use crate::list::push::Push;
 use crate::memory::dyn_malloc::DYN_MALLOC_ADDRESS;
 use crate::structure::tasm_object::TasmObject;
 use crate::traits::basic_snippet::BasicSnippet;
+use crate::verifier::fri::barycentric_evaluation::BarycentricEvaluation;
 use crate::verifier::fri::number_of_rounds::NumberOfRounds;
 use crate::verifier::verify_authentication_paths_for_leaf_and_index_list::VerifyAuthenticationPathForLeafAndIndexList;
 use crate::verifier::vm_proof_iter::dequeue_next_as::DequeueNextAs;
@@ -144,6 +146,8 @@ impl BasicSnippet for FriSnippet {
         let vm_proof_iter_dequeue_next_as_fri_polynomial = library.import(Box::new(
             DequeueNextAs::new(ProofItemVariant::FriPolynomial),
         ));
+        let polynomial_evaluation = library.import(Box::new(HornerEvaluationDynamicLength));
+        let barycentric_evaluation = library.import(Box::new(BarycentricEvaluation));
         let vm_proof_iter_dequeue_next_as_fri_response =
             library.import(Box::new(DequeueNextAs::new(ProofItemVariant::FriResponse)));
 
@@ -373,14 +377,14 @@ impl BasicSnippet for FriSnippet {
                 push 0 push 0 dup 3 dup 3   // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword *last_polynomial *indeterminates 0 0 *last_polynomial *indeterminates
                 push 0
                 call {get_xfe_from_list}    // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword *last_polynomial *indeterminates 0 0 *last_polynomial [x]
-                // call {polynomial_evaluation}// _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword *last_polynomial *indeterminates 0 0 [poly(x)]
+                call {polynomial_evaluation}// _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword *last_polynomial *indeterminates 0 0 [poly(x)]
                 push 0 push 0 dup 9 dup 8   // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword *last_polynomial *indeterminates 0 0 [poly(x)] 0 0 *last_codeword *indeterminates
                 push 0
                 call {get_xfe_from_list}    // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword *last_polynomial *indeterminates 0 0 [poly(x)] 0 0 *last_codeword [x]
-                // call {barycentric_evaluation}
+                call {barycentric_evaluation}
                                             // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword *last_polynomial *indeterminates 0 0 [poly(x)] 0 0 [codeword(x)]
                 assert_vector
-                pop 8                       // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter
+                pop 5 pop 3                 // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter
 
                 // QUERY PHASE
 

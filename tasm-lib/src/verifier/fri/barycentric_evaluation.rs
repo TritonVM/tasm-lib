@@ -6,9 +6,9 @@ use crate::data_type::DataType;
 use crate::library::Library;
 use crate::traits::basic_snippet::BasicSnippet;
 
-pub struct BaryCentricEvaluation;
+pub struct BarycentricEvaluation;
 
-impl BasicSnippet for BaryCentricEvaluation {
+impl BasicSnippet for BarycentricEvaluation {
     fn inputs(&self) -> Vec<(DataType, String)> {
         vec![
             (
@@ -242,10 +242,10 @@ mod tests {
 
     #[test]
     fn barycentric_evaluation_pbt() {
-        ShadowedFunction::new(BaryCentricEvaluation).test()
+        ShadowedFunction::new(BarycentricEvaluation).test()
     }
 
-    impl BaryCentricEvaluation {
+    impl BarycentricEvaluation {
         fn prepare_state(
             &self,
             codeword: Vec<XFieldElement>,
@@ -266,7 +266,7 @@ mod tests {
         }
     }
 
-    impl Function for BaryCentricEvaluation {
+    impl Function for BarycentricEvaluation {
         fn rust_shadow(
             &self,
             stack: &mut Vec<BFieldElement>,
@@ -355,6 +355,6 @@ mod benches {
 
     #[test]
     fn bench_barycentric_evaluation() {
-        ShadowedFunction::new(BaryCentricEvaluation).bench();
+        ShadowedFunction::new(BarycentricEvaluation).bench();
     }
 }
