@@ -29,7 +29,8 @@ rand = "0.8.5"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 strum = { version = "0.26", features = ["derive"] }
-triton-vm = "0.40.0"
+# triton-vm = "0.41.0"
+triton-vm = { path = "../../triton-vm/triton-vm/" }
 
 [dev-dependencies.cargo-husky]
 version = "1"

@@ -3,12 +3,12 @@ use itertools::Itertools;
 use num::Zero;
 use triton_vm::arithmetic_domain::ArithmeticDomain;
 use triton_vm::error::FriValidationError;
+use triton_vm::fri::barycentric_evaluate;
 use triton_vm::fri::Fri;
 use triton_vm::prelude::*;
 use triton_vm::proof_item::FriResponse;
 use triton_vm::proof_item::ProofItemVariant;
 use triton_vm::proof_stream::ProofStream;
-use triton_vm::twenty_first::math::ntt::intt;
 use triton_vm::twenty_first::math::polynomial::Polynomial;
 use triton_vm::twenty_first::math::traits::ModPowU32;
 use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
@@ -362,46 +362,51 @@ impl BasicSnippet for FriSnippet {
                                             // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword *last_polynomial
                 hint last_fri_polynomial: ListPointer = stack[0]
 
-                // test low degree of polynomial
-                dup 0                       // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword *last_polynomial *last_polynomial
-                call {length_of_list_of_xfes}
-                                            // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword *last_polynomial num_coefficients_received
-
-                dup 7 push 1 add            // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword *last_polynomial num_coefficients_received num_coefficients_allowed
-                eq                          // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword *last_polynomial num_coefficients_received==num_coefficients_allowed
-                assert                      // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword *last_polynomial
-
-                // check that polynomial agrees with codeword
-                call {vm_proof_iter_sample_one_scalar}
-                                            // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword *last_polynomial *indeterminates
-                push 0 push 0 dup 3 dup 3   // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword *last_polynomial *indeterminates 0 0 *last_polynomial *indeterminates
-                push 0
-                call {get_xfe_from_list}    // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword *last_polynomial *indeterminates 0 0 *last_polynomial [x]
-                call {polynomial_evaluation}// _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword *last_polynomial *indeterminates 0 0 [poly(x)]
-                push 0 push 0 dup 9 dup 8   // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword *last_polynomial *indeterminates 0 0 [poly(x)] 0 0 *last_codeword *indeterminates
-                push 0
-                call {get_xfe_from_list}    // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword *last_polynomial *indeterminates 0 0 [poly(x)] 0 0 *last_codeword [x]
-                call {barycentric_evaluation}
-                                            // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword *last_polynomial *indeterminates 0 0 [poly(x)] 0 0 [codeword(x)]
-                assert_vector
-                pop 5 pop 3                 // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter
 
                 // QUERY PHASE
 
                 // get "A" indices and verify membership
 
                 // get index count
-                dup 6                       // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *fri_verify
-                {&num_collinearity_checks}   // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *num_indices
-                read_mem 1 pop 1            // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter num_indices
+                dup 8                       // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword *last_polynomial *fri_verify
+                {&num_collinearity_checks}   // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword *last_polynomial *num_indices
+                read_mem 1 pop 1            // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword *last_polynomial num_indices
 
                 // get domain length
-                dup 7                       // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter num_indices *fri_verify
-                {&domain_length}            // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter num_indices *domain_length
-                read_mem 1 pop 1            // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter num_indices domain_length
+                dup 9                       // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword *last_polynomial num_indices *fri_verify
+                {&domain_length}            // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword *last_polynomial num_indices *domain_length
+                read_mem 1 pop 1            // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword *last_polynomial num_indices domain_length
 
                 // sample "A" indices
-                call {sample_indices}       // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *indices
+                call {sample_indices}       // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword *last_polynomial *indices
+
+                // Verify low degree of last polynomial
+                swap 2
+                swap 1                      // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *indices *last_codeword *last_polynomial
+
+                dup 0                       // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *indices *last_codeword *last_polynomial *last_polynomial
+                call {length_of_list_of_xfes}
+                                            // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *indices *last_codeword *last_polynomial num_coefficients_received
+
+                dup 8 push 1 add            // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *indices *last_codeword *last_polynomial num_coefficients_received num_coefficients_allowed
+                lt                          // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *indices *last_codeword *last_polynomial (num_coefficients_received>num_coefficients_allowed)
+                push 0 eq                   // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *indices *last_codeword *last_polynomial (num_coefficients_received<=num_coefficients_allowed)
+                assert                      // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *indices *last_codeword *last_polynomial
+
+                // check that last polynomial agrees with codeword
+                call {vm_proof_iter_sample_one_scalar}
+                                            // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *indices *last_codeword *last_polynomial *indeterminates
+                push 0 push 0 dup 3 dup 3   // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *indices *last_codeword *last_polynomial *indeterminates 0 0 *last_polynomial *indeterminates
+                push 0
+                call {get_xfe_from_list}    // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *indices *last_codeword *last_polynomial *indeterminates 0 0 *last_polynomial [x]
+                call {polynomial_evaluation}// _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *indices *last_codeword *last_polynomial *indeterminates 0 0 [poly(x)]
+                push 0 push 0 dup 9 dup 8   // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *indices *last_codeword *last_polynomial *indeterminates 0 0 [poly(x)] 0 0 *last_codeword *indeterminates
+                push 0
+                call {get_xfe_from_list}    // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *indices *last_codeword *last_polynomial *indeterminates 0 0 [poly(x)] 0 0 *last_codeword [x]
+                call {barycentric_evaluation}
+                                            // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *indices *last_codeword *last_polynomial *indeterminates 0 0 [poly(x)] 0 0 [codeword(x)]
+                assert_vector
+                pop 5 pop 3                 // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *indices
 
                 // get largest tree height
                 dup 7                       // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *indices *fri_verify
@@ -974,7 +979,7 @@ impl FriVerify {
             println!("{}", alpha);
         }
 
-        // Extract last codeword
+        // Extract last codeword and last polynomial
         let last_codeword = proof_stream
             .dequeue()
             .unwrap()
@@ -985,37 +990,11 @@ impl FriVerify {
             self.domain_length as usize >> self.num_rounds()
         );
 
-        // Check if last codeword matches the given root
-        let codeword_digests = Self::map_convert_xfe_to_digest(&last_codeword);
-        let last_codeword_merkle_root =
-            MerkleRoot::call(&codeword_digests, 0, codeword_digests.len());
-
-        let last_root = roots.last().unwrap();
-        if *last_root != last_codeword_merkle_root {
-            bail!(FriValidationError::BadMerkleRootForLastCodeword);
-        }
-
-        // Verify that last codeword is of sufficiently low degree
-
-        // Compute interpolant to get the degree of the last codeword.
-        // Note that we don't have to scale the polynomial back to the trace
-        // subgroup since we only check its degree and don't use it further.
-        let log_2_of_n = last_codeword.len().ilog2();
-        let mut last_polynomial = last_codeword.clone();
-
-        let last_fri_domain_generator = self
-            .domain_generator
-            .mod_pow_u32(2u32.pow(num_rounds as u32));
-        intt::<XFieldElement>(&mut last_polynomial, last_fri_domain_generator, log_2_of_n);
-        let last_poly_degree = Polynomial::new(last_polynomial).degree();
-
-        if last_poly_degree > last_round_max_degree as isize {
-            println!(
-                "last_poly_degree is {last_poly_degree}, \
-                degree_of_last_round is {last_round_max_degree}",
-            );
-            bail!(FriValidationError::LastRoundPolynomialHasTooHighDegree)
-        }
+        let last_polynomial = proof_stream
+            .dequeue()
+            .unwrap()
+            .try_into_fri_polynomial()
+            .unwrap();
 
         // QUERY PHASE
 
@@ -1035,6 +1014,33 @@ impl FriVerify {
 
         let leaf_digests = Self::map_convert_xfe_to_digest(&a_values);
         let indexed_a_leaves = a_indices.iter().copied().zip_eq(leaf_digests).collect_vec();
+
+        // Check if last codeword matches the given root
+        let codeword_digests = Self::map_convert_xfe_to_digest(&last_codeword);
+        let last_codeword_merkle_root =
+            MerkleRoot::call(&codeword_digests, 0, codeword_digests.len());
+
+        let last_root = roots.last().unwrap();
+        if *last_root != last_codeword_merkle_root {
+            bail!(FriValidationError::BadMerkleRootForLastCodeword);
+        }
+
+        // Verify that last codeword is of sufficiently low degree
+        let last_polynomial = Polynomial::new(last_polynomial);
+        let barycentric_indeterminate = proof_stream.sample_scalars(1)[0];
+        let barycentric_evaluation =
+            barycentric_evaluate(&last_codeword, barycentric_indeterminate);
+        let horner_evaluation = last_polynomial.evaluate(barycentric_indeterminate);
+
+        if barycentric_evaluation != horner_evaluation
+            || last_polynomial.degree() > self.last_round_max_degree() as isize
+        {
+            println!(
+                "last_poly_degree is too high; barycentric evaluation did not match Horner. \
+                Max degree_of_last_round is {last_round_max_degree}",
+            );
+            bail!(FriValidationError::LastRoundPolynomialHasTooHighDegree)
+        }
 
         // reduplicate authentication structures if necessary
         if num_nondeterministic_digests_read >= nondeterministic_digests.len() {
@@ -1492,6 +1498,7 @@ mod test {
         fn tiny_case() -> Self {
             let fri_verify = FriVerify::new(BFieldElement::one(), 2, 2, 1);
             assert_eq!(0, fri_verify.num_rounds());
+            assert_eq!(0, fri_verify.last_round_max_degree());
 
             Self {
                 fri_verify,
