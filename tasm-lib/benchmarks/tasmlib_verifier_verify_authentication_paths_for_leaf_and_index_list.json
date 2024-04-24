@@ -1,0 +1,24 @@
+[
+  {
+    "name": "tasmlib_verifier_verify_authentication_paths_for_leaf_and_index_list",
+    "benchmark_result": {
+      "clock_cycle_count": 8195,
+      "hash_table_height": 4872,
+      "u32_table_height": 5,
+      "op_stack_table_height": 13463,
+      "ram_table_height": 321
+    },
+    "case": "CommonCase"
+  },
+  {
+    "name": "tasmlib_verifier_verify_authentication_paths_for_leaf_and_index_list",
+    "benchmark_result": {
+      "clock_cycle_count": 13795,
+      "hash_table_height": 9672,
+      "u32_table_height": 6,
+      "op_stack_table_height": 24663,
+      "ram_table_height": 321
+    },
+    "case": "WorstCase"
+  }
+]
