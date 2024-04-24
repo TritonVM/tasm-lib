@@ -1026,19 +1026,16 @@ impl FriVerify {
         }
 
         // Verify that last codeword is of sufficiently low degree
-        let last_polynomial = Polynomial::new(last_polynomial);
         let barycentric_indeterminate = proof_stream.sample_scalars(1)[0];
         let barycentric_evaluation =
             barycentric_evaluate(&last_codeword, barycentric_indeterminate);
         let horner_evaluation = last_polynomial.evaluate(barycentric_indeterminate);
 
-        if barycentric_evaluation != horner_evaluation
-            || last_polynomial.degree() > self.last_round_max_degree() as isize
-        {
-            println!(
-                "last_poly_degree is too high; barycentric evaluation did not match Horner. \
-                Max degree_of_last_round is {last_round_max_degree}",
-            );
+        if barycentric_evaluation != horner_evaluation {
+            bail!(FriValidationError::LastRoundPolynomialEvaluationMismatch)
+        }
+
+        if last_polynomial.degree() > self.last_round_max_degree() as isize {
             bail!(FriValidationError::LastRoundPolynomialHasTooHighDegree)
         }
 

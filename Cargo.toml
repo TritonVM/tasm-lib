@@ -43,7 +43,3 @@ lto = false
 incremental = false
 codegen-units = 16
 rpath = false
-
-[patch.crates-io]
-# 2a331dd3267f53d04b3669d47eb0b54f04092e54 = tip of branch: master,  on 2024-04-22
-twenty-first = { git = "https://github.com/Neptune-Crypto/twenty-first.git", rev = "2a331dd3267f53d04b3669d47eb0b54f04092e54" }
