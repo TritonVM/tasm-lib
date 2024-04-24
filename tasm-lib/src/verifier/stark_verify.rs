@@ -1183,7 +1183,7 @@ pub mod tests {
             "Proof from TVM must verify through TVM"
         );
 
-        maybe_write_tvm_output_to_disk(&stark, &claim, &proof);
+        maybe_write_tvm_output_to_disk(stark, &claim, &proof);
 
         let (non_determinism, padded_height) = nd_from_proof(stark, &claim, proof);
 
