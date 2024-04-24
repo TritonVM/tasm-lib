@@ -1108,7 +1108,11 @@ pub mod tests {
         )
     }
 
-    fn nd_from_proof(stark: &Stark, claim: &Claim, proof: Proof) -> (NonDeterminism, usize) {
+    pub(super) fn nd_from_proof(
+        stark: &Stark,
+        claim: &Claim,
+        proof: Proof,
+    ) -> (NonDeterminism, usize) {
         let fri = stark.derive_fri(proof.padded_height().unwrap()).unwrap();
         let proof_stream = ProofStream::try_from(&proof).unwrap();
         let proof_extraction = extract_fri_proof(&proof_stream, claim, stark);
@@ -1187,17 +1191,65 @@ mod benches {
     use std::cell::RefCell;
     use std::rc::Rc;
 
-    use benches::tests::{factorial_program_with_io, non_determinism_claim_and_padded_height};
+    use benches::tests::{
+        factorial_program_with_io, nd_from_proof, non_determinism_claim_and_padded_height,
+    };
 
+    use crate::generate_full_profile;
     use crate::linker::execute_bench;
     use crate::memory::encode_to_memory;
     use crate::snippet_bencher::{write_benchmarks, BenchmarkCase, NamedBenchmarkResult};
+    use crate::test_helpers::prepend_program_with_stack_setup;
+    use crate::verifier::claim::shared::insert_claim_into_static_memory;
     use crate::{
         linker::link_for_isolated_run,
         verifier::vm_proof_iter::shared::insert_default_proof_iter_into_memory,
     };
 
     use super::*;
+
+    #[ignore = "Used for profiling the verification of a proof stored on disk."]
+    #[test]
+    fn profile_from_stored_proof_output() {
+        use std::fs::File;
+        let stark = File::open("stark.json").expect("stark file should open read only");
+        let stark: Stark = serde_json::from_reader(stark).unwrap();
+        let claim_file = File::open("claim.json").expect("claim file should open read only");
+        let claim_for_proof: Claim = serde_json::from_reader(claim_file).unwrap();
+        let proof = File::open("proof.json").expect("proof file should open read only");
+        let proof: Proof = serde_json::from_reader(proof).unwrap();
+
+        let (mut non_determinism, _inner_padded_height) =
+            nd_from_proof(&stark, &claim_for_proof, proof);
+
+        let (claim_pointer, claim_size) =
+            insert_claim_into_static_memory(&mut non_determinism.ram, claim_for_proof.clone());
+
+        let proof_iter_pointer = BFieldElement::new(1 << 31);
+        insert_default_proof_iter_into_memory(&mut non_determinism.ram, proof_iter_pointer);
+
+        let snippet = StarkVerify {
+            stark_parameters: Stark::default(),
+            log_2_padded_height: None,
+        };
+
+        let init_stack = [
+            snippet.init_stack_for_isolated_run(),
+            vec![claim_pointer, proof_iter_pointer],
+        ]
+        .concat();
+        let code = snippet.link_for_isolated_run_populated_static_memory(claim_size);
+        let program = prepend_program_with_stack_setup(&init_stack, &Program::new(&code));
+
+        let name = snippet.entrypoint();
+        let profile = generate_full_profile(
+            &name,
+            program,
+            &PublicInput::new(claim_for_proof.input),
+            &non_determinism,
+        );
+        println!("{}", profile);
+    }
 
     #[test]
     fn benchmark_small_default_stark() {
