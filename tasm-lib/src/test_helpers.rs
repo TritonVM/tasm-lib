@@ -511,3 +511,26 @@ pub fn prepend_program_with_stack_setup(
 pub fn prepend_program_with_sponge_init(program: &Program) -> Program {
     Program::new(&[triton_asm!(sponge_init), program.labelled_instructions()].concat())
 }
+
+/// Store the output from Triton VM's `proof` function as files, such that a deterministic
+/// proof can be used for debugging purposes.
+pub fn maybe_write_tvm_output_to_disk(
+    stark: &Stark,
+    claim: &triton_vm::proof::Claim,
+    proof: &Proof,
+) {
+    use std::io::Write;
+    let Ok(_) = std::env::var("TASMLIB_STORE") else {
+        return;
+    };
+
+    let mut stark_file = std::fs::File::create("stark.json").unwrap();
+    let state = serde_json::to_string(stark).unwrap();
+    write!(stark_file, "{state}").unwrap();
+    let mut claim_file = std::fs::File::create("claim.json").unwrap();
+    let claim = serde_json::to_string(claim).unwrap();
+    write!(claim_file, "{claim}").unwrap();
+    let mut proof_file = std::fs::File::create("proof.json").unwrap();
+    let proof = serde_json::to_string(proof).unwrap();
+    write!(proof_file, "{proof}").unwrap();
+}

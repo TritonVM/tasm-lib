@@ -948,6 +948,7 @@ pub mod tests {
     use triton_vm::proof_stream::ProofStream;
 
     use crate::execute_test;
+    use crate::test_helpers::maybe_write_tvm_output_to_disk;
     use crate::verifier::claim::shared::insert_claim_into_static_memory;
     use crate::verifier::vm_proof_iter::shared::insert_default_proof_iter_into_memory;
 
@@ -1155,6 +1156,8 @@ pub mod tests {
         )
     }
 
+    /// Generate the required data for the verifier, when verifying
+    /// a given program, input, nondeterminism, and STARK parameters.
     pub fn non_determinism_claim_and_padded_height(
         inner_program: &Program,
         inner_public_input: &[BFieldElement],
@@ -1179,6 +1182,8 @@ pub mod tests {
             stark.verify(&claim, &proof, &mut None).is_ok(),
             "Proof from TVM must verify through TVM"
         );
+
+        maybe_write_tvm_output_to_disk(&stark, &claim, &proof);
 
         let (non_determinism, padded_height) = nd_from_proof(stark, &claim, proof);
 
@@ -1277,6 +1282,7 @@ mod benches {
             benchmark_verifier(10, 1 << 8, stark);
             benchmark_verifier(40, 1 << 9, stark);
             benchmark_verifier(80, 1 << 10, stark);
+            benchmark_verifier(51200, 1 << 20, stark);
             benchmark_verifier(102400, 1 << 21, stark);
             benchmark_verifier(204800, 1 << 22, stark);
         }
