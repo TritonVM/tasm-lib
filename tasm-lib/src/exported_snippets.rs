@@ -416,6 +416,9 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
         "tasmlib_verifier_vm_proof_iter_dequeue_next_as_fricodeword" => {
             Box::new(DequeueNextAs { proof_item: ProofItemVariant::FriCodeword })
         }
+        "tasmlib_verifier_vm_proof_iter_dequeue_next_as_fripolynomial" => {
+            Box::new(DequeueNextAs { proof_item: ProofItemVariant::FriPolynomial })
+        }
         "tasmlib_verifier_vm_proof_iter_dequeue_next_as_friresponse" => {
             Box::new(DequeueNextAs { proof_item: ProofItemVariant::FriResponse })
         }
