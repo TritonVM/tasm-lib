@@ -384,27 +384,30 @@ impl BasicSnippet for FriSnippet {
                 swap 2
                 swap 1                      // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *indices *last_codeword *last_polynomial
 
-                dup 0                       // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *indices *last_codeword *last_polynomial *last_polynomial
-                call {length_of_list_of_xfes}
-                                            // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *indices *last_codeword *last_polynomial num_coefficients_received
+                push 1
+                add                         // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *indices *last_codeword *last_poly_coeffs
 
-                dup 8 push 1 add            // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *indices *last_codeword *last_polynomial num_coefficients_received num_coefficients_allowed
-                lt                          // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *indices *last_codeword *last_polynomial (num_coefficients_received>num_coefficients_allowed)
-                push 0 eq                   // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *indices *last_codeword *last_polynomial (num_coefficients_received<=num_coefficients_allowed)
-                assert                      // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *indices *last_codeword *last_polynomial
+                dup 0                       // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *indices *last_codeword *last_poly_coeffs *last_poly_coeffs
+                call {length_of_list_of_xfes}
+                                            // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *indices *last_codeword *last_poly_coeffs num_coefficients_received
+
+                dup 8 push 1 add            // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *indices *last_codeword *last_poly_coeffs num_coefficients_received num_coefficients_allowed
+                lt                          // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *indices *last_codeword *last_poly_coeffs (num_coefficients_received>num_coefficients_allowed)
+                push 0 eq                   // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *indices *last_codeword *last_poly_coeffs (num_coefficients_received<=num_coefficients_allowed)
+                assert                      // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *indices *last_codeword *last_poly_coeffs
 
                 // check that last polynomial agrees with codeword
                 call {vm_proof_iter_sample_one_scalar}
-                                            // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *indices *last_codeword *last_polynomial *indeterminates
-                push 0 push 0 dup 3 dup 3   // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *indices *last_codeword *last_polynomial *indeterminates 0 0 *last_polynomial *indeterminates
+                                            // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *indices *last_codeword *last_poly_coeffs *indeterminates
+                push 0 push 0 dup 3 dup 3   // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *indices *last_codeword *last_poly_coeffs *indeterminates 0 0 *last_poly_coeffs *indeterminates
                 push 0
-                call {get_xfe_from_list}    // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *indices *last_codeword *last_polynomial *indeterminates 0 0 *last_polynomial [x]
-                call {polynomial_evaluation}// _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *indices *last_codeword *last_polynomial *indeterminates 0 0 [poly(x)]
-                push 0 push 0 dup 9 dup 8   // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *indices *last_codeword *last_polynomial *indeterminates 0 0 [poly(x)] 0 0 *last_codeword *indeterminates
+                call {get_xfe_from_list}    // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *indices *last_codeword *last_poly_coeffs *indeterminates 0 0 *last_poly_coeffs [x]
+                call {polynomial_evaluation}// _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *indices *last_codeword *last_poly_coeffs *indeterminates 0 0 [poly(x)]
+                push 0 push 0 dup 9 dup 8   // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *indices *last_codeword *last_poly_coeffs *indeterminates 0 0 [poly(x)] 0 0 *last_codeword *indeterminates
                 push 0
-                call {get_xfe_from_list}    // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *indices *last_codeword *last_polynomial *indeterminates 0 0 [poly(x)] 0 0 *last_codeword [x]
+                call {get_xfe_from_list}    // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *indices *last_codeword *last_poly_coeffs *indeterminates 0 0 [poly(x)] 0 0 *last_codeword [x]
                 call {barycentric_evaluation}
-                                            // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *indices *last_codeword *last_polynomial *indeterminates 0 0 [poly(x)] 0 0 [codeword(x)]
+                                            // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *indices *last_codeword *last_poly_coeffs *indeterminates 0 0 [poly(x)] 0 0 [codeword(x)]
                 assert_vector
                 pop 5 pop 3                 // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *indices
 
