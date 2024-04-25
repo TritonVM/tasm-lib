@@ -266,6 +266,7 @@ pub fn execute_with_terminal_state(
     vm_state.op_stack.stack = stack.to_owned();
     vm_state.sponge = maybe_sponge;
 
+    maybe_write_debuggable_program_to_disk(program, &vm_state);
     match vm_state.run() {
         Ok(()) => {
             println!("Triton VM execution successful.");

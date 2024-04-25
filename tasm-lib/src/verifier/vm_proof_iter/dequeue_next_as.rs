@@ -1,5 +1,6 @@
 use triton_vm::prelude::*;
 use triton_vm::proof_item::ProofItemVariant;
+use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
 use crate::data_type::DataType;
 use crate::hashing::sponge_hasher::pad_and_absorb_all::PadAndAbsorbAll;
@@ -128,6 +129,62 @@ impl DequeueNextAs {
 
         triton_asm! { push {bookkeeping_offset} hint bookkeeping_offset = stack[0] add }
     }
+
+    /// A `BFielcCodec`` encoding of a `Polynomial<T>` may not contain trailing zeros. This is
+    /// because it must be easy to read the degree of the polynomial. In order to be consistent with
+    /// that rule, we perform this check here, before returning a pointer to the polynomial to the
+    /// caller.
+    /// ```text
+    /// BEFORE:  _ *proof_item_payload
+    /// AFTER:  _ *proof_item_payload
+    /// ```
+    fn verify_last_xfe_is_non_zero_if_payload_is_polynomial(&self) -> Vec<LabelledInstruction> {
+        match self.proof_item {
+            ProofItemVariant::FriPolynomial => triton_asm!(
+                // _ *fri_polynomial
+
+                dup 0
+                push 1
+                add
+                read_mem 1
+                pop 1
+                // _ *fri_polynomial num_coefficients
+
+                push {EXTENSION_DEGREE}
+                mul
+                push 1
+                add
+                // _ *fri_polynomial offset_last_word
+
+                dup 1
+                add
+                // _ *proof_item_payload *coefficients_last_word
+
+                read_mem {EXTENSION_DEGREE}
+                pop 1
+                push 0
+                eq
+                swap 2
+                push 0
+                eq
+                swap 1
+                push 0
+                eq
+                add
+                add
+                push {EXTENSION_DEGREE}
+                eq
+                // _ *proof_item_payload (last_coefficient == 0)
+
+                push 0
+                eq
+                // _ *proof_item_payload (last_coefficient != 0)
+
+                assert
+            ),
+            _ => triton_asm!(),
+        }
+    }
 }
 
 impl BasicSnippet for DequeueNextAs {
@@ -180,6 +237,10 @@ impl BasicSnippet for DequeueNextAs {
 
             {&self.advance_list_element_pointer_to_proof_item_payload()}
             {final_hint}        // _ *proof_item_payload
+
+            {&self.verify_last_xfe_is_non_zero_if_payload_is_polynomial()}
+            {final_hint}        // _ *proof_item_payload
+
             return
         }
     }
@@ -203,6 +264,7 @@ mod test {
     use triton_vm::proof_item::ProofItem;
     use triton_vm::proof_stream::ProofStream;
     use triton_vm::table::NUM_BASE_COLUMNS;
+    use triton_vm::twenty_first::math::polynomial::Polynomial;
 
     use crate::empty_stack;
     use crate::execute_with_terminal_state;
@@ -491,6 +553,87 @@ mod test {
         proof_stream.enqueue(proof_item);
         let address = BFieldElement::zero();
         DequeueNextAs::initial_state_from_proof_stream_and_address(proof_stream, address)
+    }
+
+    #[test]
+    fn disallow_trailing_zeros_in_xfe_poly_encoding() {
+        let dequeue_next_as = DequeueNextAs::new(ProofItemVariant::FriPolynomial);
+        let initial_state = initial_state_with_trailing_zeros_in_xfe_poly_encoding();
+        let code = link_for_isolated_run(Rc::new(RefCell::new(dequeue_next_as)));
+        let program = Program::new(&code);
+        let tvm_result = execute_with_terminal_state(
+            &program,
+            &[],
+            &initial_state.stack,
+            &initial_state.nondeterminism,
+            None,
+        );
+
+        let rust_result = std::panic::catch_unwind(|| {
+            let mut stack = initial_state.stack.clone();
+            let mut memory = initial_state.nondeterminism.ram.clone();
+            dequeue_next_as.rust_shadow(
+                &mut stack,
+                &mut memory,
+                &NonDeterminism::default(),
+                &[],
+                &mut None,
+            );
+        });
+
+        assert!(
+            rust_result.is_err() && tvm_result.is_err(),
+            "Test case: Too big dynamically-sized proof item must fail on both platforms."
+        );
+        let err = tvm_result.unwrap_err();
+        assert_eq!(InstructionError::AssertionFailed, err);
+    }
+
+    fn initial_state_with_trailing_zeros_in_xfe_poly_encoding() -> ProcedureInitialState {
+        let mut encoded_fri_poly_proof_item =
+            ProofItem::FriPolynomial(Polynomial::new(vec![xfe!(1), xfe!(2), xfe!(3), xfe!(100)]))
+                .encode();
+
+        // Manually set the leading coefficient to zero
+        let encoding_length = encoded_fri_poly_proof_item.len();
+        for i in 0..EXTENSION_DEGREE {
+            encoded_fri_poly_proof_item[encoding_length - 1 - i] = bfe!(0);
+        }
+
+        let proof_start_address = BFieldElement::zero();
+
+        let mut ram = HashMap::new();
+
+        let mut address = proof_start_address;
+
+        // Inidicate a field-size of `ProofStream`
+        ram.insert(address, bfe!(encoding_length as u64 + 2));
+        address.increment();
+
+        // Indicate that there is one proof item
+        ram.insert(address, bfe!(1));
+        address.increment();
+
+        // Indicate size of encoded proof item
+        ram.insert(address, bfe!(encoding_length as u64));
+        address.increment();
+
+        // Add proof item to ND memory
+        for word in encoded_fri_poly_proof_item {
+            ram.insert(address, word);
+            address.increment();
+        }
+
+        // uses highly specific knowledge of `BFieldCodec`
+        let address_of_first_element = proof_start_address + BFieldElement::new(2);
+        let proof_iter_address = proof_start_address - BFieldElement::one();
+        ram.insert(proof_iter_address, address_of_first_element);
+        ProcedureInitialState {
+            stack: [empty_stack(), vec![proof_iter_address]].concat(),
+            nondeterminism: NonDeterminism::default().with_ram(ram),
+            public_input: vec![],
+            sponge: Some(Tip5::init()),
+        }
     }
 
     #[test]
