@@ -2,7 +2,6 @@ use crate::data_type::DataType;
 use crate::hashing::algebraic_hasher::hash_static_size::HashStaticSize;
 use crate::library::Library;
 use crate::traits::basic_snippet::BasicSnippet;
-use crate::verifier::fri::verify::FriSnippet;
 use strum::Display;
 use strum::EnumIter;
 use triton_vm::prelude::*;

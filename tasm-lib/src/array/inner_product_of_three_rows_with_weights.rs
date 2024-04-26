@@ -2,7 +2,6 @@ use arbitrary::Arbitrary;
 use strum::Display;
 use triton_vm::table::{NUM_BASE_COLUMNS, NUM_EXT_COLUMNS};
 use triton_vm::triton_asm;
-use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
 use crate::data_type::ArrayType;
 use crate::data_type::DataType;
