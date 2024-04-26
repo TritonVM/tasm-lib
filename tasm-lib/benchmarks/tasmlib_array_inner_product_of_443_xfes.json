@@ -1,23 +1,23 @@
 [
   {
-    "name": "tasmlib_array_inner_product_of_three_rows_with_weights_Bfe_baserowelem",
+    "name": "tasmlib_array_inner_product_of_443_xfes",
     "benchmark_result": {
       "clock_cycle_count": 3560,
       "hash_table_height": 3744,
       "u32_table_height": 0,
-      "op_stack_table_height": 4760,
-      "ram_table_height": 1932
+      "op_stack_table_height": 6211,
+      "ram_table_height": 2658
     },
     "case": "CommonCase"
   },
   {
-    "name": "tasmlib_array_inner_product_of_three_rows_with_weights_Bfe_baserowelem",
+    "name": "tasmlib_array_inner_product_of_443_xfes",
     "benchmark_result": {
       "clock_cycle_count": 3560,
       "hash_table_height": 3744,
       "u32_table_height": 0,
-      "op_stack_table_height": 4760,
-      "ram_table_height": 1932
+      "op_stack_table_height": 6211,
+      "ram_table_height": 2658
     },
     "case": "WorstCase"
   }

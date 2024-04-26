@@ -9,6 +9,7 @@ use triton_vm::table::extension_table::Evaluable;
 use triton_vm::table::extension_table::Quotientable;
 use triton_vm::table::master_table::MasterExtTable;
 use triton_vm::table::tasm_air_constraints::air_constraint_evaluation_tasm;
+use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
 use crate::verifier::challenges::new_empty_input_and_output::NewEmptyInputAndOutput;
 
@@ -33,12 +34,28 @@ impl AirConstraintEvaluation {
 
     /// The values returned here should match those used by STARK proof
     pub fn conventional_air_constraint_memory_layout() -> TasmConstraintEvaluationMemoryLayout {
+        const CURRENT_BASE_ROW_PTR: u64 = 28u64;
+        const BASE_ROW_SIZE: u64 = (NUM_BASE_COLUMNS * EXTENSION_DEGREE) as u64;
+        const EXT_ROW_SIZE: u64 = (NUM_EXT_COLUMNS * EXTENSION_DEGREE) as u64;
+        const METADATA_SIZE_PER_PROOF_ITEM_ELEMENT: u64 = 2; // 1 for discriminant, 1 for elem size
         let mem_layout = TasmConstraintEvaluationMemoryLayout {
             free_mem_page_ptr: BFieldElement::new((u32::MAX as u64 - 1) * (1u64 << 32)),
-            curr_base_row_ptr: BFieldElement::new(28u64),
-            curr_ext_row_ptr: BFieldElement::new(1098),
-            next_base_row_ptr: BFieldElement::new(1349),
-            next_ext_row_ptr: BFieldElement::new(2419),
+            curr_base_row_ptr: BFieldElement::new(CURRENT_BASE_ROW_PTR),
+            curr_ext_row_ptr: BFieldElement::new(
+                CURRENT_BASE_ROW_PTR + BASE_ROW_SIZE + METADATA_SIZE_PER_PROOF_ITEM_ELEMENT,
+            ),
+            next_base_row_ptr: BFieldElement::new(
+                CURRENT_BASE_ROW_PTR
+                    + BASE_ROW_SIZE
+                    + EXT_ROW_SIZE
+                    + 2 * METADATA_SIZE_PER_PROOF_ITEM_ELEMENT,
+            ),
+            next_ext_row_ptr: BFieldElement::new(
+                CURRENT_BASE_ROW_PTR
+                    + 2 * BASE_ROW_SIZE
+                    + EXT_ROW_SIZE
+                    + 3 * METADATA_SIZE_PER_PROOF_ITEM_ELEMENT,
+            ),
             challenges_ptr: NewEmptyInputAndOutput::conventional_challenges_pointer(),
         };
         assert!(mem_layout.is_integral());

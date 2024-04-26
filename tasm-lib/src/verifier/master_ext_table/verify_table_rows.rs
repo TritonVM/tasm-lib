@@ -27,6 +27,12 @@ pub struct VerifyTableRows {
 }
 
 impl VerifyTableRows {
+    pub fn new(column_type: ColumnType) -> Self {
+        Self { column_type }
+    }
+}
+
+impl VerifyTableRows {
     pub fn row_size(&self) -> usize {
         match self.column_type {
             ColumnType::Base => NUM_BASE_COLUMNS,

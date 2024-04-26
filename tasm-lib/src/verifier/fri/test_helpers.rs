@@ -92,12 +92,11 @@ pub fn extract_fri_proof(
         .try_into_out_of_domain_quot_segments()
         .unwrap();
 
-    // `base_and_ext_and_quotient_segment_codeword_weights`
-    proof_stream.sample_scalars(NUM_BASE_COLUMNS + NUM_EXT_COLUMNS + NUM_QUOTIENT_SEGMENTS);
-
-    // Deep codeword weights
+    // `beqd_weights`
     const NUM_DEEP_CODEWORD_COMPONENTS: usize = 3;
-    proof_stream.sample_scalars(NUM_DEEP_CODEWORD_COMPONENTS);
+    proof_stream.sample_scalars(
+        NUM_BASE_COLUMNS + NUM_EXT_COLUMNS + NUM_QUOTIENT_SEGMENTS + NUM_DEEP_CODEWORD_COMPONENTS,
+    );
 
     let padded_height = 1 << log2_padded_height;
     let fri: triton_vm::fri::Fri<Tip5> = stark.derive_fri(padded_height).unwrap();
