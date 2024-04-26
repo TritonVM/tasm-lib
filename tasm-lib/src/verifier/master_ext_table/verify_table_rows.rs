@@ -48,10 +48,7 @@ impl BasicSnippet for VerifyTableRows {
             (DataType::U32, "num_combination_codeword_checks".to_owned()),
             (DataType::U32, "merkle_tree_height".to_owned()),
             (DataType::VoidPointer, "*merkle_tree_root".to_owned()),
-            (
-                FriSnippet::indexed_leaves_list_type(),
-                "*fri_revealed".to_owned(),
-            ),
+            (DataType::VoidPointer, "*fri_revealed".to_owned()),
             // type of {base|ext|quot} table rows i
             // `Vec<[{BaseFieldElement, XFieldElement, XFieldElement}: COLUMN_COUNT]>` but encoded
             // in memory as a flat structure. So I'm not sure what type to use here. Anyway, it's

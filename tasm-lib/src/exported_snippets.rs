@@ -92,6 +92,8 @@ use crate::verifier::challenges::new_generic_dyn_claim::NewGenericDynClaim;
 use crate::verifier::claim::instantiate_fiat_shamir_with_claim::InstantiateFiatShamirWithClaim;
 use crate::verifier::fri;
 use crate::verifier::master_ext_table::air_constraint_evaluation::AirConstraintEvaluation;
+use crate::verifier::master_ext_table::verify_table_rows::ColumnType;
+use crate::verifier::master_ext_table::verify_table_rows::VerifyTableRows;
 use crate::verifier::own_program_digest::OwnProgramDigest;
 use crate::verifier::read_and_verify_own_program_digest_from_std_in::ReadAndVerifyOwnProgramDigestFromStdIn;
 use crate::verifier::vm_proof_iter::dequeue_next_as::DequeueNextAs;
@@ -436,6 +438,15 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
         }
         "tasmlib_verifier_master_ext_table_air_constraint_evaluation" => {
             Box::new(AirConstraintEvaluation::with_conventional_memory_layout())
+        }
+        "tasmlib_verifier_master_ext_table_verify_Base_table_rows"=> {
+            Box::new(VerifyTableRows::new(ColumnType::Base))
+        }
+        "tasmlib_verifier_master_ext_table_verify_Extension_table_rows"=> {
+            Box::new(VerifyTableRows::new(ColumnType::Extension))
+        }
+        "tasmlib_verifier_master_ext_table_verify_Quotient_table_rows"=> {
+            Box::new(VerifyTableRows::new(ColumnType::Quotient))
         }
 
         "tasmlib_verifier_fri_number_of_rounds" => { Box::new(fri::number_of_rounds::NumberOfRounds{}) }
