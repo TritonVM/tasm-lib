@@ -2,7 +2,6 @@ use crate::data_type::{ArrayType, DataType};
 use crate::library::Library;
 use crate::traits::basic_snippet::BasicSnippet;
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
 pub struct InnerProductOfXfes {
     pub length: usize,
@@ -40,75 +39,28 @@ impl BasicSnippet for InnerProductOfXfes {
     fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
 
-        let move_pointers_to_last_word = match self.length {
-            0 => triton_asm!(),
-            n => {
-                let word_length_minus_one = EXTENSION_DEGREE * n - 1;
-                triton_asm!(
-                    // _ *a *b
-
-                    push {word_length_minus_one}
-                    add
-                    // _ *a *b_last_word
-
-                    swap 1
-                    push {word_length_minus_one}
-                    add
-                    // _ *b_last_word *a_last_word
-                )
-            }
-        };
-
-        let acc_one_index = triton_asm!(
-            // _ *a *b [acc]
-
-            dup 3
-            // _ *a *b [acc] *b
-
-            read_mem 3
-            // _ *a *b [acc] [b_elem] *b_prev
-
-            swap 8
-            // _ *b_prev *b [acc] [b_elem] *a
-
-            read_mem 3
-            // _ *b_prev *b [acc] [b_elem] [a_elem] *a_prev
-
-            swap 10
-            pop 1
-            // _ *b_prev *a_prev [acc] [b_elem] [a_elem]
-
-            xxmul
-            xxadd
-            // _ *b_prev *a_prev [acc']
-        );
-
-        let accumulate_all_indices = vec![acc_one_index; self.length].concat();
+        let accumulate_all_indices = triton_asm![xxdotstep; self.length];
 
         triton_asm!(
             {entrypoint}:
                 // _ *a *b
 
-                {&move_pointers_to_last_word}
-                // _ *b_last_word *a_last_word
+                push 0
+                push 0
+                push 0
+                // _ *a *b 0 0 0
 
-                push 0
-                push 0
-                push 0
-                // _ *b_last_word *a_last_word [acc]
+                swap 4
+                swap 1
+                swap 3
+                // _ 0 0 0 *a *b
+                // _ 0 0 0 *a *b
 
                 {&accumulate_all_indices}
-                // _ pointer0 pointer1 [acc]
-                // _ pointer0 pointer1 acc2 acc1 acc0
+                // _ acc2 acc1 acc0 *garbage0 *garbage1
 
-                swap 2
-                swap 4
-                pop 1
-                // _ acc2 pointer1 acc0 acc1
-
-                swap 2
-                pop 1
-                // _ [acc]
+                pop 2
+                // _ acc2 acc1 acc0
 
                 return
         )
@@ -125,6 +77,7 @@ mod tests {
     use rand::Rng;
     use rand::SeedableRng;
     use triton_vm::twenty_first::math::b_field_element::BFIELD_ZERO;
+    use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
     use crate::rust_shadowing_helper_functions::array::insert_as_array;
     use crate::rust_shadowing_helper_functions::array::insert_random_array;
