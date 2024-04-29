@@ -1,166 +1,33 @@
-use std::collections::HashMap;
-
-use num::One;
-use rand::random;
-use rand::rngs::StdRng;
-use rand::Rng;
-use rand::SeedableRng;
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::prelude::MmrMembershipProof;
-use twenty_first::math::other::random_elements;
-use twenty_first::util_types::mmr::mmr_accumulator::util::mmra_with_mps;
-use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
-use twenty_first::util_types::mmr::mmr_trait::Mmr;
-use twenty_first::util_types::mmr::shared_basic::leaf_index_to_mt_index_and_peak_index;
 
 use crate::arithmetic::u64::eq_u64::EqU64;
 use crate::data_type::DataType;
-use crate::empty_stack;
 use crate::hashing::divine_sibling_u64_index::DivineSiblingU64Index;
-use crate::hashing::eq_digest::EqDigest;
 use crate::library::Library;
 use crate::list::get::Get;
-use crate::rust_shadowing_helper_functions;
-use crate::rust_shadowing_helper_functions::list;
-use crate::snippet_bencher::BenchmarkCase;
 use crate::traits::basic_snippet::BasicSnippet;
-use crate::traits::procedure::Procedure;
-use crate::traits::procedure::ProcedureInitialState;
-use crate::Digest;
-use crate::ExecutionState;
-use crate::VmHasher;
-use crate::DIGEST_LENGTH;
 
 use super::leaf_index_to_mt_index_and_peak_index::MmrLeafIndexToMtIndexAndPeakIndex;
 
+/// Verify that a digest is a leaf in the MMR accumulator. Takes both authentication path and
+/// leaf index from secret-in. Crashes the VM if the authentication fails.
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct MmrVerifyLeafMembershipFromSecretIn;
 
-impl MmrVerifyLeafMembershipFromSecretIn {
-    // BEFORE: _ *peaks [digest (leaf_digest)] leaf_count_hi leaf_count_lo
-    // AFTER:  _ *auth_path leaf_index_hi leaf_index_lo
-    fn prepare_state_for_tests(
-        &self,
-        size: usize,
-        leaf_index: u64,
-        generate_valid_proof: bool,
-    ) -> ExecutionState {
-        let digests: Vec<Digest> = random_elements(size);
-        let (mmr, mps) = mmra_with_mps(
-            size as u64,
-            vec![(leaf_index, digests[leaf_index as usize])],
-        );
-        let mut vm_init_state = self.mmr_to_init_vm_state(&mmr);
-
-        // Populate secret-in with the leaf index value, which is a u64
-        vm_init_state
-            .nondeterminism
-            .individual_tokens
-            .push(BFieldElement::new(leaf_index >> 32));
-        vm_init_state
-            .nondeterminism
-            .individual_tokens
-            .push(BFieldElement::new(leaf_index & u32::MAX as u64));
-
-        // Populate secret-in with the correct authentication path
-        vm_init_state.nondeterminism.digests = mps[0].authentication_path.clone();
-
-        if generate_valid_proof {
-            let good_leaf = digests[leaf_index as usize];
-            for value in good_leaf.values().iter().rev() {
-                vm_init_state.stack.push(*value);
-            }
-        } else {
-            let bad_leaf = digests[(leaf_index as usize + 1) % size];
-            for value in bad_leaf.values().iter().rev() {
-                vm_init_state.stack.push(*value);
-            }
-        }
-        vm_init_state
-    }
-
-    fn prepare_state_for_benchmark(&self, log_2_leaf_count: u8, leaf_index: u64) -> ExecutionState {
-        let leaf_count = 2u64.pow(log_2_leaf_count as u32);
-        let peaks: Vec<Digest> = random_elements(log_2_leaf_count as usize);
-        let mut mmra = MmrAccumulator::<VmHasher>::init(peaks, leaf_count - 1);
-        let new_leaf: Digest = random();
-        let authentication_path = mmra.append(new_leaf).authentication_path;
-
-        let mut vm_init_state = self.mmr_to_init_vm_state(&mmra);
-
-        // Populate secret-in with the leaf index value, which is a u64
-        vm_init_state
-            .nondeterminism
-            .individual_tokens
-            .push(BFieldElement::new(leaf_index >> 32));
-        vm_init_state
-            .nondeterminism
-            .individual_tokens
-            .push(BFieldElement::new(leaf_index & u32::MAX as u64));
-
-        // Populate secret-in with the an authentication path
-        vm_init_state.nondeterminism.digests = authentication_path;
-
-        for value in new_leaf.values().iter().rev() {
-            vm_init_state.stack.push(*value);
-        }
-
-        vm_init_state
-    }
-
-    /// Prepare the part of the state that can be derived from the MMR without
-    /// knowing e.g. the leaf index of the leaf digest that you want to authenticate
-    /// so this function does not populate e.g. `secret_in`. The caller has to do that.
-    fn mmr_to_init_vm_state(&self, mmra: &MmrAccumulator<VmHasher>) -> ExecutionState {
-        let mut stack: Vec<BFieldElement> = empty_stack();
-        let peaks_pointer = BFieldElement::one();
-        stack.push(peaks_pointer);
-
-        let leaf_count = mmra.count_leaves();
-        let leaf_count_hi = BFieldElement::new(leaf_count >> 32);
-        let leaf_count_lo = BFieldElement::new(leaf_count & u32::MAX as u64);
-        stack.push(leaf_count_hi);
-        stack.push(leaf_count_lo);
-
-        // Write peaks to memory
-        let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
-        rust_shadowing_helper_functions::list::list_new(peaks_pointer, &mut memory);
-
-        for peak in mmra.get_peaks() {
-            rust_shadowing_helper_functions::list::list_push(
-                peaks_pointer,
-                peak.values().to_vec(),
-                &mut memory,
-                DIGEST_LENGTH,
-            );
-        }
-
-        let nondeterminism = NonDeterminism::default().with_ram(memory);
-        ExecutionState {
-            stack,
-            std_in: vec![],
-            nondeterminism,
-        }
-    }
-}
-
 impl BasicSnippet for MmrVerifyLeafMembershipFromSecretIn {
     fn inputs(&self) -> Vec<(DataType, String)> {
-        vec![
-            (
-                DataType::List(Box::new(DataType::Digest)),
-                "peaks_list".to_owned(),
-            ),
-            (DataType::U64, "leaf_count".to_owned()),
-            (DataType::Digest, "leaf_digest".to_owned()),
-        ]
+        vec![(
+            DataType::Tuple(vec![
+                DataType::List(Box::new(DataType::Digest)), // *peaks
+                DataType::U64,                              // leaf_count
+                DataType::Digest,                           // leaf
+            ]),
+            "*peaks_leaf_count_and_leaf".to_owned(),
+        )]
     }
 
     fn outputs(&self) -> Vec<(DataType, String)> {
-        vec![
-            (DataType::U64, "leaf_index".to_owned()),
-            (DataType::Bool, "validation_result".to_owned()),
-        ]
+        vec![]
     }
 
     fn entrypoint(&self) -> String {
@@ -175,7 +42,6 @@ impl BasicSnippet for MmrVerifyLeafMembershipFromSecretIn {
 
         let leaf_index_to_mt_index = library.import(Box::new(MmrLeafIndexToMtIndexAndPeakIndex));
         let eq_u64 = library.import(Box::new(EqU64));
-        let compare_digest = library.import(Box::new(EqDigest));
         let divine_digest_u64_index = library.import(Box::new(DivineSiblingU64Index));
         let list_get = library.import(Box::new(Get::new(DataType::Digest)));
 
@@ -211,14 +77,13 @@ impl BasicSnippet for MmrVerifyLeafMembershipFromSecretIn {
                 dup 8 dup 8 call {list_get}
                 // _ leaf_index_hi leaf_index_lo *peaks peak_index mt_index_hi mt_index_lo [digest (acc_hash)] [digest (peaks[peak_index])]
 
-                call {compare_digest}
-                // _ leaf_index_hi leaf_index_lo *peaks peak_index mt_index_hi mt_index_lo (acc_hash == peaks[peak_index])
+                assert_vector
+                // _ leaf_index_hi leaf_index_lo *peaks peak_index mt_index_hi mt_index_lo [digest (acc_hash)]
 
-                swap 4 pop 1
-                // _ leaf_index_hi leaf_index_lo (acc_hash == peaks[peak_index]) peak_index mt_index_hi mt_index_lo
-
-                pop 3
-                // _ leaf_index_hi leaf_index_lo validation_result
+                pop 5
+                pop 5
+                pop 1
+                // _
 
                 return
 
@@ -243,92 +108,6 @@ impl BasicSnippet for MmrVerifyLeafMembershipFromSecretIn {
     }
 }
 
-impl Procedure for MmrVerifyLeafMembershipFromSecretIn {
-    fn rust_shadow(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        memory: &mut HashMap<BFieldElement, BFieldElement>,
-        nondeterminism: &NonDeterminism,
-        _public_input: &[BFieldElement],
-        _sponge: &mut Option<VmHasher>,
-    ) -> Vec<BFieldElement> {
-        let mut leaf_digest = [BFieldElement::new(0); DIGEST_LENGTH];
-        for elem in leaf_digest.iter_mut() {
-            *elem = stack.pop().unwrap();
-        }
-
-        let leaf_digest = Digest::new(leaf_digest);
-        let leaf_count_lo: u32 = stack.pop().unwrap().try_into().unwrap();
-        let leaf_count_hi: u32 = stack.pop().unwrap().try_into().unwrap();
-        let leaf_count: u64 = ((leaf_count_hi as u64) << 32) + leaf_count_lo as u64;
-        let peaks_pointer = stack.pop().unwrap();
-        let peaks_count: u64 = memory[&peaks_pointer].value();
-        let mut peaks: Vec<Digest> = vec![];
-        for i in 0..peaks_count {
-            let digest = Digest::new(
-                list::list_get(peaks_pointer, i as usize, memory, DIGEST_LENGTH)
-                    .try_into()
-                    .unwrap(),
-            );
-            peaks.push(digest);
-        }
-        let leaf_index_hi: u32 = nondeterminism.individual_tokens[0]
-            .value()
-            .try_into()
-            .unwrap();
-        let leaf_index_lo: u32 = nondeterminism.individual_tokens[1]
-            .value()
-            .try_into()
-            .unwrap();
-        let leaf_index: u64 = ((leaf_index_hi as u64) << 32) + leaf_index_lo as u64;
-        let (mut mt_index, _peak_index) =
-            leaf_index_to_mt_index_and_peak_index(leaf_index, leaf_count);
-
-        let mut auth_path: Vec<Digest> = vec![];
-        let mut i = 0;
-        while mt_index != 1 {
-            auth_path.push(nondeterminism.digests[i]);
-            mt_index /= 2;
-            i += 1;
-        }
-
-        let valid_mp = MmrMembershipProof::<VmHasher>::new(leaf_index, auth_path).verify(
-            &peaks,
-            leaf_digest,
-            leaf_count,
-        );
-
-        stack.push(BFieldElement::new(leaf_index_hi as u64));
-        stack.push(BFieldElement::new(leaf_index_lo as u64));
-        stack.push(BFieldElement::new(valid_mp as u64));
-
-        vec![]
-    }
-
-    fn pseudorandom_initial_state(
-        &self,
-        seed: [u8; 32],
-        bench_case: Option<BenchmarkCase>,
-    ) -> ProcedureInitialState {
-        let mut rng: StdRng = SeedableRng::from_seed(seed);
-        let leaf_count = rng.gen_range(1..10000);
-        let leaf_index = rng.gen_range(0..leaf_count);
-
-        let init_state = match bench_case {
-            Some(BenchmarkCase::CommonCase) => self.prepare_state_for_benchmark(32, (1 << 32) - 1),
-            Some(BenchmarkCase::WorstCase) => self.prepare_state_for_benchmark(62, (1 << 62) - 1),
-            None => self.prepare_state_for_tests(leaf_count, leaf_index as u64, true),
-        };
-
-        ProcedureInitialState {
-            stack: init_state.stack,
-            nondeterminism: init_state.nondeterminism,
-            public_input: init_state.std_in,
-            sponge: None,
-        }
-    }
-}
-
 #[cfg(test)]
 mod benches {
     use crate::traits::procedure::ShadowedProcedure;
@@ -344,13 +123,32 @@ mod benches {
 
 #[cfg(test)]
 mod tests {
-    use itertools::Itertools;
-    use rand::thread_rng;
-    use triton_vm::twenty_first::prelude::AlgebraicHasher;
+    use std::collections::HashMap;
 
+    use itertools::Itertools;
+    use num::One;
+    use rand::random;
+    use rand::rngs::StdRng;
+    use rand::thread_rng;
+    use rand::Rng;
+    use rand::SeedableRng;
+    use triton_vm::twenty_first::math::other::random_elements;
+    use triton_vm::twenty_first::prelude::AlgebraicHasher;
+    use triton_vm::twenty_first::util_types::mmr::mmr_accumulator::util::mmra_with_mps;
+    use triton_vm::twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
+    use triton_vm::twenty_first::util_types::mmr::mmr_membership_proof::MmrMembershipProof;
+    use triton_vm::twenty_first::util_types::mmr::mmr_trait::Mmr;
+    use triton_vm::twenty_first::util_types::mmr::shared_basic::leaf_index_to_mt_index_and_peak_index;
+
+    use crate::rust_shadowing_helper_functions;
+    use crate::snippet_bencher::BenchmarkCase;
     use crate::test_helpers::test_rust_equivalence_given_complete_state;
+    use crate::traits::procedure::Procedure;
+    use crate::traits::procedure::ProcedureInitialState;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
+    use crate::VmHasher;
+    use crate::{execute_with_terminal_state, DIGEST_LENGTH};
 
     use super::*;
 
@@ -365,7 +163,12 @@ mod tests {
     fn mmra_ap_verify_test_one() {
         let digest0 = VmHasher::hash(&BFieldElement::new(4545));
         let (mmra, _mps) = mmra_with_mps::<Tip5>(1u64, vec![(0, digest0)]);
-        prop_verify_from_secret_in(&mmra, digest0, 0u64, vec![], true);
+        MmrVerifyLeafMembershipFromSecretIn.prop_verify_from_secret_in_positive_test(
+            &mmra,
+            digest0,
+            0u64,
+            vec![],
+        );
     }
 
     #[test]
@@ -377,15 +180,26 @@ mod tests {
         let (mmr, _mps) = mmra_with_mps::<Tip5>(leaf_count, vec![(0u64, digest0), (1u64, digest1)]);
 
         let leaf_index_0 = 0;
-        prop_verify_from_secret_in(&mmr, digest0, leaf_index_0, vec![digest1], true);
+        MmrVerifyLeafMembershipFromSecretIn.prop_verify_from_secret_in_positive_test(
+            &mmr,
+            digest0,
+            leaf_index_0,
+            vec![digest1],
+        );
 
         let leaf_index_1 = 1;
-        prop_verify_from_secret_in(&mmr, digest1, leaf_index_1, vec![digest0], true);
+        MmrVerifyLeafMembershipFromSecretIn.prop_verify_from_secret_in_positive_test(
+            &mmr,
+            digest1,
+            leaf_index_1,
+            vec![digest0],
+        );
     }
 
     #[test]
     fn mmra_ap_verify_test_pbt() {
         let max_size = 19;
+        let snippet = MmrVerifyLeafMembershipFromSecretIn;
 
         for leaf_count in 0..max_size {
             let digests: Vec<Digest> = random_elements(leaf_count);
@@ -405,21 +219,19 @@ mod tests {
                 let auth_path = mps[leaf_index].clone();
 
                 // Positive test
-                prop_verify_from_secret_in(
+                snippet.prop_verify_from_secret_in_positive_test(
                     &mmr,
                     leaf_digest,
                     leaf_index as u64,
                     auth_path.authentication_path.clone(),
-                    true,
                 );
 
                 // Negative test
-                prop_verify_from_secret_in(
+                snippet.prop_verify_from_secret_in_negative_test(
                     &mmr,
                     bad_leaf,
                     leaf_index as u64,
                     auth_path.authentication_path,
-                    false,
                 );
             }
         }
@@ -463,110 +275,325 @@ mod tests {
             let real_membership_proof_last = mmr.append(last_leaf);
 
             // Positive tests
-            prop_verify_from_secret_in(
+            MmrVerifyLeafMembershipFromSecretIn.prop_verify_from_secret_in_positive_test(
                 &mmr,
                 second_to_last_leaf,
                 second_to_last_leaf_index,
                 real_membership_proof_second_to_last
                     .authentication_path
                     .clone(),
-                true,
             );
-            prop_verify_from_secret_in(
+            MmrVerifyLeafMembershipFromSecretIn.prop_verify_from_secret_in_positive_test(
                 &mmr,
                 last_leaf,
                 last_leaf_index,
                 real_membership_proof_last.authentication_path.clone(),
-                true,
             );
 
             // Negative tests
             let bad_leaf: Digest = thread_rng().gen();
-            prop_verify_from_secret_in(
+            MmrVerifyLeafMembershipFromSecretIn.prop_verify_from_secret_in_negative_test(
                 &mmr,
                 bad_leaf,
                 second_to_last_leaf_index,
                 real_membership_proof_second_to_last.authentication_path,
-                false,
             );
-            prop_verify_from_secret_in(
+            MmrVerifyLeafMembershipFromSecretIn.prop_verify_from_secret_in_negative_test(
                 &mmr,
                 bad_leaf,
                 last_leaf_index,
                 real_membership_proof_last.authentication_path,
-                false,
             );
         }
     }
 
-    // BEFORE: _ *peaks leaf_count_hi leaf_count_lo [digest (leaf_digest)]
-    // AFTER:  _ leaf_index_hi leaf_index_lo validation_result
-    fn prop_verify_from_secret_in<H: AlgebraicHasher>(
-        mmr: &MmrAccumulator<H>,
-        leaf: Digest,
-        leaf_index: u64,
-        auth_path: Vec<Digest>,
-        expect_validation_success: bool,
-    ) {
-        let mut init_stack = empty_stack();
+    impl Procedure for MmrVerifyLeafMembershipFromSecretIn {
+        fn rust_shadow(
+            &self,
+            stack: &mut Vec<BFieldElement>,
+            memory: &mut HashMap<BFieldElement, BFieldElement>,
+            nondeterminism: &NonDeterminism,
+            _public_input: &[BFieldElement],
+            _sponge: &mut Option<VmHasher>,
+        ) -> Vec<BFieldElement> {
+            let mut leaf_digest = [BFieldElement::new(0); DIGEST_LENGTH];
+            for elem in leaf_digest.iter_mut() {
+                *elem = stack.pop().unwrap();
+            }
 
-        let peaks_pointer = BFieldElement::one();
-        init_stack.push(peaks_pointer);
+            let leaf_digest = Digest::new(leaf_digest);
+            let leaf_count_lo: u32 = stack.pop().unwrap().try_into().unwrap();
+            let leaf_count_hi: u32 = stack.pop().unwrap().try_into().unwrap();
+            let leaf_count: u64 = ((leaf_count_hi as u64) << 32) + leaf_count_lo as u64;
+            let peaks_pointer = stack.pop().unwrap();
+            let peaks_count: u64 = memory[&peaks_pointer].value();
+            let mut peaks: Vec<Digest> = vec![];
+            for i in 0..peaks_count {
+                let digest = Digest::new(
+                    rust_shadowing_helper_functions::list::list_get(
+                        peaks_pointer,
+                        i as usize,
+                        memory,
+                        DIGEST_LENGTH,
+                    )
+                    .try_into()
+                    .unwrap(),
+                );
+                peaks.push(digest);
+            }
+            let leaf_index_hi: u32 = nondeterminism.individual_tokens[0]
+                .value()
+                .try_into()
+                .unwrap();
+            let leaf_index_lo: u32 = nondeterminism.individual_tokens[1]
+                .value()
+                .try_into()
+                .unwrap();
+            let leaf_index: u64 = ((leaf_index_hi as u64) << 32) + leaf_index_lo as u64;
+            let (mut mt_index, _peak_index) =
+                leaf_index_to_mt_index_and_peak_index(leaf_index, leaf_count);
 
-        let leaf_count: u64 = mmr.count_leaves();
-        let leaf_count_hi = BFieldElement::new(leaf_count >> 32);
-        let leaf_count_lo = BFieldElement::new(leaf_count & u32::MAX as u64);
-        init_stack.push(leaf_count_hi);
-        init_stack.push(leaf_count_lo);
+            let mut auth_path: Vec<Digest> = vec![];
+            let mut i = 0;
+            while mt_index != 1 {
+                auth_path.push(nondeterminism.digests[i]);
+                mt_index /= 2;
+                i += 1;
+            }
 
-        // push digests such that element 0 of digest is on top of stack
-        for value in leaf.values().iter().rev() {
-            init_stack.push(*value);
+            let valid_mp = MmrMembershipProof::<VmHasher>::new(leaf_index, auth_path).verify(
+                &peaks,
+                leaf_digest,
+                leaf_count,
+            );
+
+            assert!(valid_mp, "MMR leaf not authenticated");
+
+            vec![]
         }
 
-        // Initialize memory with peaks list
-        let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
-        rust_shadowing_helper_functions::list::list_new(peaks_pointer, &mut memory);
-        for peak in mmr.get_peaks() {
-            rust_shadowing_helper_functions::list::list_push(
-                peaks_pointer,
-                peak.values().to_vec(),
-                &mut memory,
-                DIGEST_LENGTH,
+        fn pseudorandom_initial_state(
+            &self,
+            seed: [u8; 32],
+            bench_case: Option<BenchmarkCase>,
+        ) -> ProcedureInitialState {
+            let mut rng: StdRng = SeedableRng::from_seed(seed);
+            let leaf_count = rng.gen_range(1..10000);
+            let leaf_index = rng.gen_range(0..leaf_count);
+
+            match bench_case {
+                Some(BenchmarkCase::CommonCase) => {
+                    self.prepare_state_for_benchmark(32, (1 << 32) - 1)
+                }
+                Some(BenchmarkCase::WorstCase) => {
+                    self.prepare_state_for_benchmark(62, (1 << 62) - 1)
+                }
+                None => self.prepare_state_for_tests(leaf_count, leaf_index as u64, true),
+            }
+        }
+    }
+
+    impl MmrVerifyLeafMembershipFromSecretIn {
+        fn prepare_state(
+            &self,
+            mmr: &MmrAccumulator<Tip5>,
+            claimed_leaf: Digest,
+            leaf_index: u64,
+            auth_path: Vec<Digest>,
+        ) -> ProcedureInitialState {
+            let ProcedureInitialState {
+                mut stack,
+                mut nondeterminism,
+                public_input: _,
+                sponge: _,
+            } = self.mmr_to_init_vm_state(mmr);
+
+            // push digests such that element 0 of digest is on top of stack
+            for value in claimed_leaf.values().iter().rev() {
+                stack.push(*value);
+            }
+
+            // Populate secret-in with leaf index and the provided authentication path
+            let leaf_index_hi = BFieldElement::new(leaf_index >> 32);
+            let leaf_index_lo = BFieldElement::new(leaf_index & u32::MAX as u64);
+            nondeterminism.individual_tokens = vec![leaf_index_hi, leaf_index_lo];
+            nondeterminism.digests = auth_path;
+
+            ProcedureInitialState {
+                stack,
+                nondeterminism,
+                ..Default::default()
+            }
+        }
+
+        fn prop_verify_from_secret_in_negative_test(
+            &self,
+            mmr: &MmrAccumulator<Tip5>,
+            claimed_leaf: Digest,
+            leaf_index: u64,
+            auth_path: Vec<Digest>,
+        ) {
+            let init_state = self.prepare_state(mmr, claimed_leaf, leaf_index, auth_path.clone());
+
+            let rust_result = std::panic::catch_unwind(|| {
+                let mut rust_stack = init_state.stack.clone();
+                let mut rust_memory = init_state.nondeterminism.ram.clone();
+                let mut rust_sponge = init_state.sponge.clone();
+                ShadowedProcedure::new(Self).rust_shadow_wrapper(
+                    &init_state.public_input,
+                    &init_state.nondeterminism,
+                    &mut rust_stack,
+                    &mut rust_memory,
+                    &mut rust_sponge,
+                )
+            });
+
+            // Run on Triton
+            let code = self.link_for_isolated_run();
+            let program = Program::new(&code);
+            let tvm_result = execute_with_terminal_state(
+                &program,
+                &init_state.public_input,
+                &init_state.stack,
+                &init_state.nondeterminism,
+                init_state.sponge,
+            );
+
+            assert!(
+                rust_result.is_err() && tvm_result.is_err(),
+                "Test case: negative test-case for MMR auth path verification must fail"
+            );
+
+            // Sanity check
+            assert!(
+                !MmrMembershipProof::<Tip5>::new(leaf_index, auth_path).verify(
+                    &mmr.get_peaks(),
+                    claimed_leaf,
+                    mmr.count_leaves()
+                )
             );
         }
 
-        let leaf_index_hi = BFieldElement::new(leaf_index >> 32);
-        let leaf_index_lo = BFieldElement::new(leaf_index & u32::MAX as u64);
-        let mut expected_final_stack = empty_stack();
-        expected_final_stack.push(leaf_index_hi);
-        expected_final_stack.push(leaf_index_lo);
-        expected_final_stack.push(BFieldElement::new(expect_validation_success as u64));
+        // BEFORE: _ *peaks leaf_count_hi leaf_count_lo [digest (leaf_digest)]
+        // AFTER:  _
+        fn prop_verify_from_secret_in_positive_test(
+            &self,
+            mmr: &MmrAccumulator<Tip5>,
+            claimed_leaf: Digest,
+            leaf_index: u64,
+            auth_path: Vec<Digest>,
+        ) {
+            let init_state = self.prepare_state(mmr, claimed_leaf, leaf_index, auth_path.clone());
+            let expected_final_stack = self.init_stack_for_isolated_run();
+            test_rust_equivalence_given_complete_state(
+                &ShadowedProcedure::new(MmrVerifyLeafMembershipFromSecretIn),
+                &init_state.stack,
+                &[],
+                &init_state.nondeterminism,
+                &None,
+                Some(&expected_final_stack),
+            );
 
-        // Populate secret-in with leaf index and the provided authentication path
-        let non_determinism = NonDeterminism {
-            individual_tokens: vec![leaf_index_hi, leaf_index_lo],
-            digests: auth_path.clone(),
-            ram: memory,
-        };
+            // Sanity check
+            assert!(
+                MmrMembershipProof::<Tip5>::new(leaf_index, auth_path).verify(
+                    &mmr.get_peaks(),
+                    claimed_leaf,
+                    mmr.count_leaves()
+                )
+            );
+        }
 
-        test_rust_equivalence_given_complete_state(
-            &ShadowedProcedure::new(MmrVerifyLeafMembershipFromSecretIn),
-            &init_stack,
-            &[],
-            &non_determinism,
-            &None,
-            Some(&expected_final_stack),
-        );
+        // BEFORE: _ *peaks [digest (leaf_digest)] leaf_count_hi leaf_count_lo
+        // AFTER:  _
+        fn prepare_state_for_tests(
+            &self,
+            size: usize,
+            leaf_index: u64,
+            generate_valid_proof: bool,
+        ) -> ProcedureInitialState {
+            let valid_leaf: Digest = random();
+            let (mmr, mps) = mmra_with_mps(size as u64, vec![(leaf_index, valid_leaf)]);
+            let claimed_leaf = if generate_valid_proof {
+                valid_leaf
+            } else {
+                random()
+            };
 
-        // Sanity check
-        assert_eq!(
-            expect_validation_success,
-            MmrMembershipProof::<H>::new(leaf_index, auth_path).verify(
-                &mmr.get_peaks(),
-                leaf,
-                leaf_count
+            self.prepare_state(
+                &mmr,
+                claimed_leaf,
+                leaf_index,
+                mps[0].authentication_path.clone(),
             )
-        );
+        }
+
+        fn prepare_state_for_benchmark(
+            &self,
+            log_2_leaf_count: u8,
+            leaf_index: u64,
+        ) -> ProcedureInitialState {
+            let leaf_count = 2u64.pow(log_2_leaf_count as u32);
+            let peaks: Vec<Digest> = random_elements(log_2_leaf_count as usize);
+            let mut mmra = MmrAccumulator::<VmHasher>::init(peaks, leaf_count - 1);
+            let new_leaf: Digest = random();
+            let authentication_path = mmra.append(new_leaf).authentication_path;
+
+            let mut vm_init_state = self.mmr_to_init_vm_state(&mmra);
+
+            // Populate secret-in with the leaf index value, which is a u64
+            vm_init_state
+                .nondeterminism
+                .individual_tokens
+                .push(BFieldElement::new(leaf_index >> 32));
+            vm_init_state
+                .nondeterminism
+                .individual_tokens
+                .push(BFieldElement::new(leaf_index & u32::MAX as u64));
+
+            // Populate secret-in with the an authentication path
+            vm_init_state.nondeterminism.digests = authentication_path;
+
+            for value in new_leaf.values().iter().rev() {
+                vm_init_state.stack.push(*value);
+            }
+
+            vm_init_state
+        }
+
+        /// Prepare the part of the state that can be derived from the MMR without
+        /// knowing e.g. the leaf index of the leaf digest that you want to authenticate
+        /// so this function does not populate e.g. `secret_in`. The caller has to do that.
+        fn mmr_to_init_vm_state(&self, mmra: &MmrAccumulator<VmHasher>) -> ProcedureInitialState {
+            let mut stack: Vec<BFieldElement> = self.init_stack_for_isolated_run();
+            let peaks_pointer = BFieldElement::one();
+            stack.push(peaks_pointer);
+
+            let leaf_count = mmra.count_leaves();
+            let leaf_count_hi = BFieldElement::new(leaf_count >> 32);
+            let leaf_count_lo = BFieldElement::new(leaf_count & u32::MAX as u64);
+            stack.push(leaf_count_hi);
+            stack.push(leaf_count_lo);
+
+            // Write peaks to memory
+            let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
+            rust_shadowing_helper_functions::list::list_new(peaks_pointer, &mut memory);
+
+            for peak in mmra.get_peaks() {
+                rust_shadowing_helper_functions::list::list_push(
+                    peaks_pointer,
+                    peak.values().to_vec(),
+                    &mut memory,
+                    DIGEST_LENGTH,
+                );
+            }
+
+            let nondeterminism = NonDeterminism::default().with_ram(memory);
+            ProcedureInitialState {
+                stack,
+                nondeterminism,
+                ..Default::default()
+            }
+        }
     }
 }
