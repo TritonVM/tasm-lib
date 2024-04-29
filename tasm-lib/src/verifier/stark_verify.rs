@@ -1234,7 +1234,7 @@ mod benches {
         insert_default_proof_iter_into_memory(&mut non_determinism.ram, proof_iter_pointer);
 
         let snippet = StarkVerify {
-            stark_parameters: Stark::default(),
+            stark_parameters: stark,
             log_2_padded_height: None,
         };
 
