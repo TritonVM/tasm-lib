@@ -6,6 +6,8 @@ use crate::data_type::DataType;
 use crate::library::Library;
 use crate::traits::basic_snippet::BasicSnippet;
 
+/// Use the barycentric Lagrange evaluation formula to extrapolate the codeword
+/// to an out-of-domain location.
 pub struct BarycentricEvaluation;
 
 impl BasicSnippet for BarycentricEvaluation {
@@ -28,6 +30,27 @@ impl BasicSnippet for BarycentricEvaluation {
     }
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
+        // This snippet is implemented as:
+        // fn barycentric_evaluate_local(
+        //     codeword: &[XFieldElement],
+        //     indeterminate: XFieldElement,
+        // ) -> XFieldElement {
+        //     let root_order = codeword.len().try_into().unwrap();
+        //     let generator = BFieldElement::primitive_root_of_unity(root_order).unwrap();
+        //     let mut numerator = xfe!(0);
+        //     let mut denominator = xfe!(0);
+        //     let mut domain_iter_elem = bfe!(1);
+        //     for code_word_elem in codeword {
+        //         let domain_shift_elem = indeterminate - domain_iter_elem;
+        //         let domain_over_domain_shift_elem = domain_iter_elem.lift() / domain_shift_elem;
+        //         denominator += domain_over_domain_shift_elem;
+        //         numerator += domain_over_domain_shift_elem * *code_word_elem;
+        //         domain_iter_elem *= generator;
+        //     }
+
+        //     numerator / denominator
+        // }
+
         let entrypoint = self.entrypoint();
         let loop_label = format!("{entrypoint}_loop");
         let generator = library.import(Box::new(PrimitiveRootOfUnity));
@@ -226,8 +249,8 @@ mod tests {
     use rand::rngs::StdRng;
     use rand::Rng;
     use rand::SeedableRng;
+    use triton_vm::fri::barycentric_evaluate;
     use triton_vm::twenty_first::math::other::random_elements;
-    use triton_vm::twenty_first::math::traits::PrimitiveRootOfUnity;
     use triton_vm::twenty_first::xfe_vec;
 
     use crate::rust_shadowing_helper_functions::list::list_insert;
@@ -272,28 +295,6 @@ mod tests {
             stack: &mut Vec<BFieldElement>,
             memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
         ) {
-            // TODO: Replace this function by one in twenty-first or triton-vm once
-            // <https://github.com/TritonVM/triton-vm/pull/266> is merged.
-            fn barycentric_evaluate_local(
-                codeword: &[XFieldElement],
-                indeterminate: XFieldElement,
-            ) -> XFieldElement {
-                let root_order = codeword.len().try_into().unwrap();
-                let generator = BFieldElement::primitive_root_of_unity(root_order).unwrap();
-                let mut numerator = xfe!(0);
-                let mut denominator = xfe!(0);
-                let mut domain_iter_elem = bfe!(1);
-                for code_word_elem in codeword {
-                    let domain_shift_elem = indeterminate - domain_iter_elem;
-                    let domain_over_domain_shift_elem = domain_iter_elem.lift() / domain_shift_elem;
-                    denominator += domain_over_domain_shift_elem;
-                    numerator += domain_over_domain_shift_elem * *code_word_elem;
-                    domain_iter_elem *= generator;
-                }
-
-                numerator / denominator
-            }
-
             let indeterminate = XFieldElement::new([
                 stack.pop().unwrap(),
                 stack.pop().unwrap(),
@@ -303,7 +304,7 @@ mod tests {
             let codeword =
                 load_list_with_copy_elements::<EXTENSION_DEGREE>(codeword_pointer, memory);
             let codeword: Vec<XFieldElement> = codeword.into_iter().map(|x| x.into()).collect_vec();
-            let result = barycentric_evaluate_local(&codeword, indeterminate);
+            let result = barycentric_evaluate(&codeword, indeterminate);
 
             for word in result.coefficients.into_iter().rev() {
                 stack.push(word);
