@@ -60,7 +60,7 @@ pub type VmHasher = Tip5;
 pub type Digest = tip5::Digest;
 pub const DIGEST_LENGTH: usize = tip5::DIGEST_LENGTH;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct InitVmState {
     pub stack: Vec<BFieldElement>,
     pub public_input: Vec<BFieldElement>,

@@ -142,13 +142,14 @@ mod tests {
 
     use crate::rust_shadowing_helper_functions;
     use crate::snippet_bencher::BenchmarkCase;
+    use crate::test_helpers::negative_test;
     use crate::test_helpers::test_rust_equivalence_given_complete_state;
     use crate::traits::procedure::Procedure;
     use crate::traits::procedure::ProcedureInitialState;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
     use crate::VmHasher;
-    use crate::{execute_with_terminal_state, DIGEST_LENGTH};
+    use crate::DIGEST_LENGTH;
 
     use super::*;
 
@@ -435,33 +436,10 @@ mod tests {
         ) {
             let init_state = self.prepare_state(mmr, claimed_leaf, leaf_index, auth_path.clone());
 
-            let rust_result = std::panic::catch_unwind(|| {
-                let mut rust_stack = init_state.stack.clone();
-                let mut rust_memory = init_state.nondeterminism.ram.clone();
-                let mut rust_sponge = init_state.sponge.clone();
-                ShadowedProcedure::new(Self).rust_shadow_wrapper(
-                    &init_state.public_input,
-                    &init_state.nondeterminism,
-                    &mut rust_stack,
-                    &mut rust_memory,
-                    &mut rust_sponge,
-                )
-            });
-
-            // Run on Triton
-            let code = self.link_for_isolated_run();
-            let program = Program::new(&code);
-            let tvm_result = execute_with_terminal_state(
-                &program,
-                &init_state.public_input,
-                &init_state.stack,
-                &init_state.nondeterminism,
-                init_state.sponge,
-            );
-
-            assert!(
-                rust_result.is_err() && tvm_result.is_err(),
-                "Test case: negative test-case for MMR auth path verification must fail"
+            negative_test(
+                &ShadowedProcedure::new(MmrVerifyFromSecretInSecretLeafIndex),
+                init_state.into(),
+                &[InstructionError::VectorAssertionFailed(0)],
             );
 
             // Sanity check

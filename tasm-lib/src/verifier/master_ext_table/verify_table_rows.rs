@@ -249,12 +249,10 @@ mod tests {
     }
 
     mod negative_tests {
-        use std::{cell::RefCell, rc::Rc};
-
         use rand::{thread_rng, RngCore};
         use strum::IntoEnumIterator;
 
-        use crate::{execute_with_terminal_state, linker::link_for_isolated_run};
+        use crate::test_helpers::negative_test;
 
         use super::*;
 
@@ -270,52 +268,39 @@ mod tests {
                 let num_digests = init_state.nondeterminism.digests.len();
                 init_state.nondeterminism.digests[rng.gen_range(0..num_digests)] = rng.gen();
 
-                // run rust shadow
-                let rust_result = std::panic::catch_unwind(|| {
-                    let mut init_state_copy = init_state.clone();
-                    let mut ram = init_state_copy.nondeterminism.ram.clone();
-                    ShadowedProcedure::new(snippet).rust_shadow_wrapper(
-                        &[],
-                        &init_state_copy.nondeterminism,
-                        &mut init_state_copy.stack,
-                        &mut ram,
-                        &mut init_state_copy.sponge,
-                    )
-                });
-
-                // Run on Triton
-                let code = link_for_isolated_run(Rc::new(RefCell::new(snippet)));
-                let program = Program::new(&code);
-                let tvm_result = execute_with_terminal_state(
-                    &program,
-                    &[],
-                    &init_state.stack,
-                    &init_state.nondeterminism,
-                    init_state.sponge,
+                negative_test(
+                    &ShadowedProcedure::new(snippet),
+                    init_state.into(),
+                    &[InstructionError::VectorAssertionFailed(0)],
                 );
+            }
+        }
 
-                if rust_result.is_ok() || tvm_result.is_ok() {
-                    if rust_result.is_ok() {
-                        eprintln!("Rust shadow did **not** panic");
-                    } else {
-                        eprintln!("TVM execution did **not** fail");
-                    }
-                    panic!(
-                        "Test case: Verifying row with bad auth path must fail. Row type was {}",
-                        snippet.column_type
-                    );
-                }
+        #[test]
+        fn verify_bad_row_list_length() {
+            let mut rng = thread_rng();
+            let mut seed = [0u8; 32];
+            rng.fill_bytes(&mut seed);
+            let snippets = ColumnType::iter().map(|column_type| VerifyTableRows { column_type });
 
-                assert_eq!(
-                    InstructionError::VectorAssertionFailed(0),
-                    tvm_result.unwrap_err()
+            for snippet in snippets {
+                let mut init_state = snippet.pseudorandom_initial_state(seed, None);
+
+                // Mutate `num_combination_codeword_checks` to make it invalid
+                let init_stack_length = init_state.stack.len();
+                init_state.stack[init_stack_length - 5].increment();
+
+                negative_test(
+                    &ShadowedProcedure::new(snippet),
+                    init_state.into(),
+                    &[InstructionError::AssertionFailed],
                 );
             }
         }
     }
 
-    // TODO: Add negative tests, to verify that VM crashes with bad authentication paths, and
-    // that it crashes if fed a leaf index that's not a valid u32.
+    // TODO: Add negative tests, to verify that VM crashes if fed a leaf index that's not a valid
+    // u32.
 
     impl Procedure for VerifyTableRows {
         fn rust_shadow(

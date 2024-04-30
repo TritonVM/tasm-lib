@@ -193,15 +193,11 @@ impl Closure for Safepow {
 
 #[cfg(test)]
 mod tests {
-    use std::cell::RefCell;
-    use std::collections::HashMap;
-    use std::rc::Rc;
-
-    use crate::execute_with_terminal_state;
-    use crate::linker::link_for_isolated_run;
+    use crate::test_helpers::negative_test;
     use crate::test_helpers::test_rust_equivalence_given_complete_state;
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
+    use crate::InitVmState;
 
     use super::*;
 
@@ -271,8 +267,6 @@ mod tests {
     fn u32_pow_negative_test() {
         let safe_pow = Safepow;
 
-        let code = link_for_isolated_run(Rc::new(RefCell::new(safe_pow)));
-
         for (base, exp) in [
             (2, 32),
             (3, 21),
@@ -306,38 +300,18 @@ mod tests {
             (1 << 8, 32),
         ] {
             let init_stack = [
-                empty_stack(),
+                safe_pow.init_stack_for_isolated_run(),
                 vec![
                     BFieldElement::new(base as u64),
                     BFieldElement::new(exp as u64),
                 ],
             ]
             .concat();
-            // run rust shadow
-            let rust_result = std::panic::catch_unwind(|| {
-                let mut rust_stack = init_stack.clone();
-                ShadowedClosure::new(Safepow).rust_shadow_wrapper(
-                    &[],
-                    &NonDeterminism::new(vec![]),
-                    &mut rust_stack,
-                    &mut HashMap::default(),
-                    &mut None,
-                )
-            });
 
-            // Run on Triton
-            let program = Program::new(&code);
-            let tvm_result = execute_with_terminal_state(
-                &program,
-                &[],
-                &init_stack,
-                &NonDeterminism::new(vec![]),
-                None,
-            );
-
-            assert!(
-                rust_result.is_err() && tvm_result.is_err(),
-                "Test case: {base}**{exp} failed to fail"
+            negative_test(
+                &ShadowedClosure::new(safe_pow),
+                InitVmState::with_stack(init_stack),
+                &[InstructionError::AssertionFailed],
             );
         }
     }

@@ -499,7 +499,7 @@ pub fn test_rust_equivalence_given_execution_state<T: BasicSnippet + RustShadow>
 pub fn negative_test<T: RustShadow>(
     snippet_struct: &T,
     init_state: InitVmState,
-    expected_tvm_error: InstructionError,
+    allowed_failure_codes: &[InstructionError],
 ) {
     let rust_result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         let mut rust_stack = init_state.stack.clone();
@@ -538,9 +538,10 @@ pub fn negative_test<T: RustShadow>(
     );
 
     let err = tvm_result.unwrap_err();
-    assert_eq!(
-        expected_tvm_error, err,
-        "Triton VM execution must fail with expected error:\n{expected_tvm_error}\n\n Got:\n{err}"
+    assert!(
+        allowed_failure_codes.contains(&err),
+        "Triton VM execution must fail with one of the expected errors:\n{}\n\n Got:\n{err}",
+        allowed_failure_codes.iter().join(",")
     );
 }
 

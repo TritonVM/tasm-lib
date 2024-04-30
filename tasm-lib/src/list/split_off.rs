@@ -132,26 +132,24 @@ impl BasicSnippet for SplitOff {
 
 #[cfg(test)]
 mod tests {
-    use std::cell::RefCell;
     use std::collections::HashMap;
-    use std::rc::Rc;
 
     use rand::rngs::StdRng;
     use rand::thread_rng;
     use rand::Rng;
     use rand::SeedableRng;
 
-    use crate::execute_with_terminal_state;
-    use crate::linker::link_for_isolated_run;
     use crate::rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator;
     use crate::rust_shadowing_helper_functions::list::insert_random_list;
     use crate::rust_shadowing_helper_functions::list::list_set_length;
     use crate::rust_shadowing_helper_functions::list::load_list_unstructured;
     use crate::snippet_bencher::BenchmarkCase;
+    use crate::test_helpers::negative_test;
     use crate::traits::function::Function;
     use crate::traits::function::FunctionInitialState;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
+    use crate::InitVmState;
 
     use super::*;
 
@@ -175,7 +173,6 @@ mod tests {
             element_type: element_type.clone(),
         };
         let mut init_stack = snippet.init_stack_for_isolated_run();
-        let code = link_for_isolated_run(Rc::new(RefCell::new(snippet.clone())));
 
         let mut memory = HashMap::default();
         let mut rng = thread_rng();
@@ -186,32 +183,11 @@ mod tests {
         init_stack.push(BFieldElement::new(at as u64));
         insert_random_list(&element_type, list_pointer, list_length, &mut memory);
 
-        let rust_result = std::panic::catch_unwind(|| {
-            let mut rust_stack = init_stack.clone();
-            ShadowedFunction::new(snippet).rust_shadow_wrapper(
-                &[],
-                &NonDeterminism::default().with_ram(memory.clone()),
-                &mut rust_stack,
-                &mut memory.clone(),
-                &mut None,
-            )
-        });
-
-        let program = Program::new(&code);
-        let tvm_result = execute_with_terminal_state(
-            &program,
-            &[],
-            &init_stack,
-            &NonDeterminism::default().with_ram(memory),
-            None,
+        negative_test(
+            &ShadowedFunction::new(snippet),
+            InitVmState::with_stack_and_memory(init_stack, memory),
+            &[InstructionError::AssertionFailed],
         );
-
-        assert!(
-            rust_result.is_err() && tvm_result.is_err(),
-            "Test case: split_off for list length={list_length} `at`={at} must fail"
-        );
-        let err = tvm_result.unwrap_err();
-        assert_eq!(InstructionError::AssertionFailed, err);
     }
 
     impl Function for SplitOff {

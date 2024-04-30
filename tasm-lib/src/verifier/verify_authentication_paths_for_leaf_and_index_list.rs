@@ -315,16 +315,11 @@ impl VerifyAuthenticationPathForLeafAndIndexList {
 
 #[cfg(test)]
 mod test {
-    use std::cell::RefCell;
-    use std::rc::Rc;
-
     use rand::thread_rng;
     use rand::Rng;
 
-    use crate::execute_with_terminal_state;
-    use crate::linker::link_for_isolated_run;
+    use crate::test_helpers::negative_test;
     use crate::traits::algorithm::Algorithm;
-    use crate::traits::algorithm::AlgorithmInitialState;
     use crate::traits::algorithm::ShadowedAlgorithm;
     use crate::traits::rust_shadow::RustShadow;
 
@@ -336,75 +331,39 @@ mod test {
     }
 
     #[test]
-    fn negative_test() {
+    fn leaf_index_indices_auth_path_negative_test() {
         let mut rng = thread_rng();
         let seed: [u8; 32] = rng.gen();
         let vap4lail = VerifyAuthenticationPathForLeafAndIndexList;
         for i in 0..4 {
-            let AlgorithmInitialState {
-                mut stack,
-                mut nondeterminism,
-            } = vap4lail.pseudorandom_initial_state(seed, None);
-            let len = stack.len();
+            let mut initial_state = vap4lail.pseudorandom_initial_state(seed, None);
+            let stack_size = initial_state.stack.len();
 
             match i {
                 0 => {
                     // change height; should fail
-                    stack[len - 1] += BFieldElement::new(1);
+                    initial_state.stack[stack_size - 1] += BFieldElement::new(1);
                 }
                 1 => {
                     // change height; should fail
-                    stack[len - 1] -= BFieldElement::new(1);
+                    initial_state.stack[stack_size - 1] -= BFieldElement::new(1);
                 }
                 2 => {
                     // change root; should fail
-                    stack[len - 2].increment();
+                    initial_state.stack[stack_size - 2].increment();
                 }
                 3 => {
                     // change authentication path; should fail
-                    nondeterminism.digests[0].0[0].increment();
+                    initial_state.nondeterminism.digests[0].0[0].increment();
                 }
-                _ => {} // no change; should be valid
+                _ => unreachable!(), // no change; should be valid
             }
 
-            // test rust/tasm equivalence
-            // in this case: verify that they both fail
-
-            let stdin = vec![];
-
-            // run rust shadow
-            let rust_result = std::panic::catch_unwind(|| {
-                let mut rust_stack = stack.clone();
-                let mut rust_memory = nondeterminism.ram.clone();
-                ShadowedAlgorithm::new(vap4lail).rust_shadow_wrapper(
-                    &stdin,
-                    &nondeterminism,
-                    &mut rust_stack,
-                    &mut rust_memory,
-                    &mut None,
-                )
-            });
-
-            if let Ok(result) = &rust_result {
-                println!(
-                    "rust result: {:?}\ni: {}\nstack: {:?}",
-                    result,
-                    i,
-                    stack.clone()
-                );
-            }
-
-            // run tvm
-            let code = link_for_isolated_run(Rc::new(RefCell::new(vap4lail)));
-            let program = Program::new(&code);
-            let tvm_result =
-                execute_with_terminal_state(&program, &stdin, &stack, &nondeterminism, None);
-            if let Ok(result) = &tvm_result {
-                println!("tasm result: {}\ni: {}", result, i);
-            }
-
-            assert!(rust_result.is_err());
-            assert!(tvm_result.is_err());
+            negative_test(
+                &ShadowedAlgorithm::new(vap4lail),
+                initial_state.into(),
+                &[InstructionError::VectorAssertionFailed(0)],
+            );
         }
     }
 }

@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use rand::RngCore;
 use triton_vm::prelude::*;
 use triton_vm::twenty_first::prelude::U32s;
@@ -45,8 +46,7 @@ impl DeprecatedSnippet for SafeMulU64 {
     fn function_code(&self, _library: &mut Library) -> String {
         let entrypoint = self.entrypoint_name();
 
-        format!(
-            "
+        triton_asm!(
                 // BEFORE: _ rhs_hi rhs_lo lhs_hi lhs_lo
                 // AFTER:  _ prod_hi prod_lo
                 {entrypoint}:
@@ -121,8 +121,9 @@ impl DeprecatedSnippet for SafeMulU64 {
                     // _ prod_hi prod_lo
 
                     return
-                    "
         )
+        .iter()
+        .join("\n")
     }
 
     fn crash_conditions(&self) -> Vec<String> {
@@ -195,8 +196,11 @@ mod tests {
 
     use num::Zero;
 
+    use crate::test_helpers::negative_test;
     use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
     use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
+    use crate::traits::basic_snippet::BasicSnippet;
+    use crate::traits::deprecated_snippet::DeprecatedSnippetWrapper;
 
     use super::*;
 
@@ -205,13 +209,14 @@ mod tests {
         test_rust_equivalence_multiple_deprecated(&SafeMulU64, true);
     }
 
-    #[should_panic]
     #[test]
     fn overflow_test_1() {
         // Crash because (rhs_hi * lhs_hi) != 0
+
+        let snippet = SafeMulU64;
         let lhs: U32s<2> = U32s::try_from(1u64 << 32).unwrap();
         let rhs: U32s<2> = U32s::try_from(1u64 << 32).unwrap();
-        let mut init_stack = empty_stack();
+        let mut init_stack = snippet.init_stack_for_isolated_run();
         for elem in rhs.encode().into_iter().rev() {
             init_stack.push(elem);
         }
@@ -219,16 +224,22 @@ mod tests {
             init_stack.push(elem);
         }
 
-        SafeMulU64.link_and_run_tasm_from_state_for_test(&mut InitVmState::with_stack(init_stack));
+        let snippet = DeprecatedSnippetWrapper::new(snippet);
+        negative_test(
+            &snippet,
+            InitVmState::with_stack(init_stack),
+            &[InstructionError::AssertionFailed],
+        );
     }
 
-    #[should_panic]
     #[test]
     fn overflow_test_2() {
         // Crash because (rhs_lo * lhs_hi)_hi != 0
+
+        let snippet = SafeMulU64;
         let lhs: U32s<2> = U32s::try_from(1u64 << 31).unwrap();
         let rhs: U32s<2> = U32s::try_from(1u64 << 33).unwrap();
-        let mut init_stack = empty_stack();
+        let mut init_stack = snippet.init_stack_for_isolated_run();
         for elem in rhs.encode().into_iter().rev() {
             init_stack.push(elem);
         }
@@ -236,16 +247,22 @@ mod tests {
             init_stack.push(elem);
         }
 
-        SafeMulU64.link_and_run_tasm_from_state_for_test(&mut InitVmState::with_stack(init_stack));
+        let snippet = DeprecatedSnippetWrapper::new(snippet);
+        negative_test(
+            &snippet,
+            InitVmState::with_stack(init_stack),
+            &[InstructionError::AssertionFailed],
+        );
     }
 
-    #[should_panic]
     #[test]
     fn overflow_test_3() {
         // Crash because (lhs_lo * rhs_hi)_hi != 0
+
+        let snippet = SafeMulU64;
         let lhs: U32s<2> = U32s::try_from(1u64 << 33).unwrap();
         let rhs: U32s<2> = U32s::try_from(1u64 << 31).unwrap();
-        let mut init_stack = empty_stack();
+        let mut init_stack = snippet.init_stack_for_isolated_run();
         for elem in rhs.encode().into_iter().rev() {
             init_stack.push(elem);
         }
@@ -253,16 +270,22 @@ mod tests {
             init_stack.push(elem);
         }
 
-        SafeMulU64.link_and_run_tasm_from_state_for_test(&mut InitVmState::with_stack(init_stack));
+        let snippet = DeprecatedSnippetWrapper::new(snippet);
+        negative_test(
+            &snippet,
+            InitVmState::with_stack(init_stack),
+            &[InstructionError::AssertionFailed],
+        );
     }
 
-    #[should_panic]
     #[test]
     fn overflow_test_4() {
         // Crash because (c_lo + a_hi + b_lo)_hi != 0
+
+        let snippet = SafeMulU64;
         let lhs: U32s<2> = U32s::try_from((1u64 << 33) + 5).unwrap();
         let rhs: U32s<2> = U32s::try_from((1u64 << 31) - 1).unwrap();
-        let mut init_stack = empty_stack();
+        let mut init_stack = snippet.init_stack_for_isolated_run();
         for elem in rhs.encode().into_iter().rev() {
             init_stack.push(elem);
         }
@@ -270,7 +293,12 @@ mod tests {
             init_stack.push(elem);
         }
 
-        SafeMulU64.link_and_run_tasm_from_state_for_test(&mut InitVmState::with_stack(init_stack));
+        let snippet = DeprecatedSnippetWrapper::new(snippet);
+        negative_test(
+            &snippet,
+            InitVmState::with_stack(init_stack),
+            &[InstructionError::AssertionFailed],
+        );
     }
 
     #[test]

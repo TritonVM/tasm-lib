@@ -88,20 +88,16 @@ impl BasicSnippet for NextPowerOfTwo {
 
 #[cfg(test)]
 mod tests {
-    use std::cell::RefCell;
-    use std::collections::HashMap;
-    use std::rc::Rc;
-
     use itertools::Itertools;
     use rand::rngs::StdRng;
     use rand::RngCore;
     use rand::SeedableRng;
 
-    use crate::execute_with_terminal_state;
-    use crate::linker::link_for_isolated_run;
+    use crate::test_helpers::negative_test;
     use crate::traits::closure::Closure;
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
+    use crate::InitVmState;
 
     use super::*;
 
@@ -164,9 +160,6 @@ mod tests {
 
     #[test]
     fn npo2_overflow_negative_test() {
-        let snippet = NextPowerOfTwo;
-        let code = link_for_isolated_run(Rc::new(RefCell::new(snippet)));
-
         for self_ in [
             (1u32 << 31) + 1,
             (1u32 << 31) + 2,
@@ -176,41 +169,17 @@ mod tests {
             u32::MAX,
         ] {
             let init_stack = [
-                snippet.init_stack_for_isolated_run(),
+                NextPowerOfTwo.init_stack_for_isolated_run(),
                 vec![BFieldElement::new(self_ as u64)],
             ]
             .concat();
 
-            // run rust shadow
-            let rust_result = std::panic::catch_unwind(|| {
-                let mut rust_stack = init_stack.clone();
-                ShadowedClosure::new(NextPowerOfTwo).rust_shadow_wrapper(
-                    &[],
-                    &NonDeterminism::new(vec![]),
-                    &mut rust_stack,
-                    &mut HashMap::default(),
-                    &mut None,
-                )
-            });
-
-            // Run on Triton
-            let program = Program::new(&code);
-            let tvm_result = execute_with_terminal_state(
-                &program,
-                &[],
-                &init_stack,
-                &NonDeterminism::default(),
-                None,
+            let init_state = InitVmState::with_stack(init_stack);
+            negative_test(
+                &ShadowedClosure::new(NextPowerOfTwo),
+                init_state,
+                &[InstructionError::AssertionFailed],
             );
-
-            if rust_result.is_ok() || tvm_result.is_ok() {
-                if rust_result.is_ok() {
-                    eprintln!("Rust shadow did **not** panic");
-                } else {
-                    eprintln!("TVM execution did **not** fail");
-                }
-                panic!("Test case: Next power of 2 of {self_} must fail due to overflow");
-            }
         }
     }
 }

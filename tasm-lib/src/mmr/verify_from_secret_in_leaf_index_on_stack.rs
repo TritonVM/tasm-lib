@@ -104,6 +104,7 @@ mod tests {
     use rand::Rng;
     use rand::SeedableRng;
     use test_strategy::proptest;
+    use triton_vm::twenty_first::math::other::random_elements;
     use triton_vm::twenty_first::util_types::mmr::mmr_accumulator::util::mmra_with_mps;
     use triton_vm::twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
     use triton_vm::twenty_first::util_types::mmr::mmr_membership_proof::MmrMembershipProof;
@@ -139,18 +140,23 @@ mod tests {
     ) {
         let (mmr, mps) = mmra_with_mps(leaf_count, vec![(real_leaf_index, leaf)]);
         let auth_path = mps[0].authentication_path.clone();
+
+        // Extend the auth path to ensure that execution does not run out of digests in non-
+        // determinism since this would result in another error code in TVM than the one we intend
+        // to get: vector assertion error.
+        let padded_auth_path: Vec<Digest> = [auth_path.clone(), random_elements(64)].concat();
         let init_state = MmrVerifyFromSecretInLeafIndexOnStack.prepare_state(
             &mmr,
             peaks_pointer,
             bad_leaf_index,
             leaf,
-            auth_path.clone(),
+            padded_auth_path,
         );
 
         negative_test(
             &ShadowedProcedure::new(MmrVerifyFromSecretInLeafIndexOnStack),
             init_state.into(),
-            InstructionError::VectorAssertionFailed(0),
+            &[InstructionError::VectorAssertionFailed(0)],
         );
 
         // Sanity check

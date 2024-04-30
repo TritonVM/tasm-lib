@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use itertools::Itertools;
 use num::One;
 use num::Zero;
 use triton_vm::prelude::*;
@@ -42,10 +43,10 @@ impl DeprecatedSnippet for DecrU64 {
 
     fn function_code(&self, _library: &mut Library) -> String {
         let entrypoint = self.entrypoint_name();
+        let carry_entrypoint = format!("{entrypoint}_carry");
         const U32_MAX: u32 = u32::MAX;
 
-        format!(
-            "
+        triton_asm!(
             {entrypoint}:
                 push -1
                 add
@@ -53,10 +54,10 @@ impl DeprecatedSnippet for DecrU64 {
                 push -1
                 eq
                 skiz
-                    call {entrypoint}_carry
+                    call {carry_entrypoint}
                 return
 
-            {entrypoint}_carry:
+            {carry_entrypoint}:
                 pop 1
                 push -1
                 add
@@ -68,8 +69,9 @@ impl DeprecatedSnippet for DecrU64 {
                 assert
                 push {U32_MAX}
                 return
-            "
         )
+        .iter()
+        .join("\n")
     }
 
     fn crash_conditions(&self) -> Vec<String> {
@@ -139,8 +141,11 @@ mod tests {
 
     use crate::empty_stack;
     use crate::push_encodable;
+    use crate::test_helpers::negative_test;
     use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
     use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
+    use crate::traits::basic_snippet::BasicSnippet;
+    use crate::traits::deprecated_snippet::DeprecatedSnippetWrapper;
 
     use super::*;
 
@@ -159,16 +164,15 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
     fn decr_u64_negative_rust_test() {
-        let mut stack = empty_stack();
+        let snippet = DecrU64;
+        let mut stack = DecrU64.init_stack_for_isolated_run();
         push_encodable(&mut stack, &U32s::<2>::zero());
-        DecrU64::rust_shadowing(
-            &DecrU64,
-            &mut stack,
-            vec![],
-            vec![],
-            &mut HashMap::default(),
+        let snippet = DeprecatedSnippetWrapper::new(snippet);
+        negative_test(
+            &snippet,
+            InitVmState::with_stack(stack),
+            &[InstructionError::AssertionFailed],
         );
     }
 

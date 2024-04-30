@@ -193,8 +193,15 @@ pub trait DeprecatedSnippet {
     }
 }
 
-struct DeprecatedSnippetWrapper<S: DeprecatedSnippet> {
-    pub deprecated_snippet: S,
+pub(crate) struct DeprecatedSnippetWrapper<S: DeprecatedSnippet> {
+    pub(crate) deprecated_snippet: S,
+}
+
+impl<S: DeprecatedSnippet> DeprecatedSnippetWrapper<S> {
+    #[cfg(test)]
+    pub(crate) fn new(deprecated_snippet: S) -> Self {
+        Self { deprecated_snippet }
+    }
 }
 
 impl<S: DeprecatedSnippet + Clone + 'static> RustShadow for DeprecatedSnippetWrapper<S> {

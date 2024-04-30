@@ -13,6 +13,7 @@ use crate::snippet_bencher::write_benchmarks;
 use crate::snippet_bencher::BenchmarkCase;
 use crate::snippet_bencher::NamedBenchmarkResult;
 use crate::test_helpers::test_rust_equivalence_given_complete_state;
+use crate::InitVmState;
 use crate::VmHasher;
 
 use super::basic_snippet::BasicSnippet;
@@ -71,6 +72,16 @@ pub trait Algorithm: BasicSnippet {
 pub struct AlgorithmInitialState {
     pub stack: Vec<BFieldElement>,
     pub nondeterminism: NonDeterminism,
+}
+
+impl From<AlgorithmInitialState> for InitVmState {
+    fn from(value: AlgorithmInitialState) -> Self {
+        Self {
+            stack: value.stack,
+            nondeterminism: value.nondeterminism,
+            ..Default::default()
+        }
+    }
 }
 
 pub struct ShadowedAlgorithm<T: Algorithm + 'static> {
