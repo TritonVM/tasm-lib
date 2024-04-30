@@ -12,9 +12,9 @@ use super::leaf_index_to_mt_index_and_peak_index::MmrLeafIndexToMtIndexAndPeakIn
 /// Verify that a digest is a leaf in the MMR accumulator. Takes both authentication path and
 /// leaf index from secret-in. Crashes the VM if the authentication fails.
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
-pub struct MmrVerifyLeafMembershipFromSecretIn;
+pub struct MmrVerifyFromSecretInSecretLeafIndex;
 
-impl BasicSnippet for MmrVerifyLeafMembershipFromSecretIn {
+impl BasicSnippet for MmrVerifyFromSecretInSecretLeafIndex {
     fn inputs(&self) -> Vec<(DataType, String)> {
         vec![(
             DataType::Tuple(vec![
@@ -31,7 +31,7 @@ impl BasicSnippet for MmrVerifyLeafMembershipFromSecretIn {
     }
 
     fn entrypoint(&self) -> String {
-        "tasmlib_mmr_verify_from_secret_in".into()
+        "tasmlib_mmr_verify_from_secret_in_secret_leaf_index".into()
     }
 
     // Already on stack (can be secret of public input): _ *peaks leaf_count_hi leaf_count_lo [digest (leaf)]
@@ -117,7 +117,7 @@ mod benches {
 
     #[test]
     fn verify_from_secret_in_benchmark() {
-        ShadowedProcedure::new(MmrVerifyLeafMembershipFromSecretIn).bench();
+        ShadowedProcedure::new(MmrVerifyFromSecretInSecretLeafIndex).bench();
     }
 }
 
@@ -155,7 +155,7 @@ mod tests {
     #[test]
     fn prop() {
         for _ in 0..10 {
-            ShadowedProcedure::new(MmrVerifyLeafMembershipFromSecretIn).test();
+            ShadowedProcedure::new(MmrVerifyFromSecretInSecretLeafIndex).test();
         }
     }
 
@@ -163,7 +163,7 @@ mod tests {
     fn mmra_ap_verify_test_one() {
         let digest0 = VmHasher::hash(&BFieldElement::new(4545));
         let (mmra, _mps) = mmra_with_mps::<Tip5>(1u64, vec![(0, digest0)]);
-        MmrVerifyLeafMembershipFromSecretIn.prop_verify_from_secret_in_positive_test(
+        MmrVerifyFromSecretInSecretLeafIndex.prop_verify_from_secret_in_positive_test(
             &mmra,
             digest0,
             0u64,
@@ -180,7 +180,7 @@ mod tests {
         let (mmr, _mps) = mmra_with_mps::<Tip5>(leaf_count, vec![(0u64, digest0), (1u64, digest1)]);
 
         let leaf_index_0 = 0;
-        MmrVerifyLeafMembershipFromSecretIn.prop_verify_from_secret_in_positive_test(
+        MmrVerifyFromSecretInSecretLeafIndex.prop_verify_from_secret_in_positive_test(
             &mmr,
             digest0,
             leaf_index_0,
@@ -188,7 +188,7 @@ mod tests {
         );
 
         let leaf_index_1 = 1;
-        MmrVerifyLeafMembershipFromSecretIn.prop_verify_from_secret_in_positive_test(
+        MmrVerifyFromSecretInSecretLeafIndex.prop_verify_from_secret_in_positive_test(
             &mmr,
             digest1,
             leaf_index_1,
@@ -199,7 +199,7 @@ mod tests {
     #[test]
     fn mmra_ap_verify_test_pbt() {
         let max_size = 19;
-        let snippet = MmrVerifyLeafMembershipFromSecretIn;
+        let snippet = MmrVerifyFromSecretInSecretLeafIndex;
 
         for leaf_count in 0..max_size {
             let digests: Vec<Digest> = random_elements(leaf_count);
@@ -275,7 +275,7 @@ mod tests {
             let real_membership_proof_last = mmr.append(last_leaf);
 
             // Positive tests
-            MmrVerifyLeafMembershipFromSecretIn.prop_verify_from_secret_in_positive_test(
+            MmrVerifyFromSecretInSecretLeafIndex.prop_verify_from_secret_in_positive_test(
                 &mmr,
                 second_to_last_leaf,
                 second_to_last_leaf_index,
@@ -283,7 +283,7 @@ mod tests {
                     .authentication_path
                     .clone(),
             );
-            MmrVerifyLeafMembershipFromSecretIn.prop_verify_from_secret_in_positive_test(
+            MmrVerifyFromSecretInSecretLeafIndex.prop_verify_from_secret_in_positive_test(
                 &mmr,
                 last_leaf,
                 last_leaf_index,
@@ -292,13 +292,13 @@ mod tests {
 
             // Negative tests
             let bad_leaf: Digest = thread_rng().gen();
-            MmrVerifyLeafMembershipFromSecretIn.prop_verify_from_secret_in_negative_test(
+            MmrVerifyFromSecretInSecretLeafIndex.prop_verify_from_secret_in_negative_test(
                 &mmr,
                 bad_leaf,
                 second_to_last_leaf_index,
                 real_membership_proof_second_to_last.authentication_path,
             );
-            MmrVerifyLeafMembershipFromSecretIn.prop_verify_from_secret_in_negative_test(
+            MmrVerifyFromSecretInSecretLeafIndex.prop_verify_from_secret_in_negative_test(
                 &mmr,
                 bad_leaf,
                 last_leaf_index,
@@ -307,7 +307,7 @@ mod tests {
         }
     }
 
-    impl Procedure for MmrVerifyLeafMembershipFromSecretIn {
+    impl Procedure for MmrVerifyFromSecretInSecretLeafIndex {
         fn rust_shadow(
             &self,
             stack: &mut Vec<BFieldElement>,
@@ -393,7 +393,7 @@ mod tests {
         }
     }
 
-    impl MmrVerifyLeafMembershipFromSecretIn {
+    impl MmrVerifyFromSecretInSecretLeafIndex {
         fn prepare_state(
             &self,
             mmr: &MmrAccumulator<Tip5>,
@@ -486,7 +486,7 @@ mod tests {
             let init_state = self.prepare_state(mmr, claimed_leaf, leaf_index, auth_path.clone());
             let expected_final_stack = self.init_stack_for_isolated_run();
             test_rust_equivalence_given_complete_state(
-                &ShadowedProcedure::new(MmrVerifyLeafMembershipFromSecretIn),
+                &ShadowedProcedure::new(MmrVerifyFromSecretInSecretLeafIndex),
                 &init_state.stack,
                 &[],
                 &init_state.nondeterminism,

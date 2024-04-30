@@ -81,7 +81,7 @@ use crate::mmr::calculate_new_peaks_from_append::CalculateNewPeaksFromAppend;
 use crate::mmr::calculate_new_peaks_from_leaf_mutation::MmrCalculateNewPeaksFromLeafMutationMtIndices;
 use crate::mmr::leaf_index_to_mt_index_and_peak_index::MmrLeafIndexToMtIndexAndPeakIndex;
 use crate::mmr::verify_from_memory::MmrVerifyFromMemory;
-use crate::mmr::verify_from_secret_in::MmrVerifyLeafMembershipFromSecretIn;
+use crate::mmr::verify_from_secret_in_secret_leaf_index::MmrVerifyFromSecretInSecretLeafIndex;
 use crate::neptune::mutator_set::commit::Commit;
 use crate::neptune::mutator_set::get_swbf_indices::GetSwbfIndices;
 use crate::other_snippets::bfe_add::BfeAdd;
@@ -378,7 +378,7 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
             Box::new(MmrCalculateNewPeaksFromLeafMutationMtIndices)
         }
         "tasmlib_mmr_leaf_index_to_mt_index_and_peak_index" => Box::new(MmrLeafIndexToMtIndexAndPeakIndex),
-        "tasmlib_mmr_verify_from_secret_in" => Box::new(MmrVerifyLeafMembershipFromSecretIn),
+        "tasmlib_mmr_verify_from_secret_in_secret_leaf_index" => Box::new(MmrVerifyFromSecretInSecretLeafIndex),
         "tasmlib_mmr_bag_peaks" => Box::new(BagPeaks),
         "tasmlib_mmr_verify_from_memory" => Box::new(MmrVerifyFromMemory),
 
