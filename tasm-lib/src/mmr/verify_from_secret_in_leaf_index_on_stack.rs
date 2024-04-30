@@ -32,7 +32,7 @@ impl BasicSnippet for MmrVerifyFromSecretInLeafIndexOnStack {
     }
 
     fn entrypoint(&self) -> String {
-        "tasmlib_mmr_verify_from_secret_in".into()
+        "tasmlib_mmr_verify_from_secret_in_leaf_index_on_stack".into()
     }
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
