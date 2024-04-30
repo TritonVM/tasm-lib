@@ -9,7 +9,7 @@ use crate::empty_stack;
 use crate::library::Library;
 use crate::push_encodable;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::ExecutionState;
+use crate::InitVmState;
 
 /// Consumes top element which is interpreted as exponent. Pushes a
 /// U32<2> to the top of the stack. So grows the stack by 1.
@@ -58,22 +58,22 @@ impl DeprecatedSnippet for Pow2U64 {
         vec![]
     }
 
-    fn gen_input_states(&self) -> Vec<ExecutionState> {
+    fn gen_input_states(&self) -> Vec<InitVmState> {
         (0..64)
             .map(|i: u32| {
                 let mut stack = empty_stack();
                 push_encodable(&mut stack, &i);
-                ExecutionState::with_stack(stack)
+                InitVmState::with_stack(stack)
             })
             .collect()
     }
 
-    fn common_case_input_state(&self) -> ExecutionState {
-        ExecutionState::with_stack([empty_stack(), vec![BFieldElement::new(31)]].concat())
+    fn common_case_input_state(&self) -> InitVmState {
+        InitVmState::with_stack([empty_stack(), vec![BFieldElement::new(31)]].concat())
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState {
-        ExecutionState::with_stack([empty_stack(), vec![BFieldElement::new(63)]].concat())
+    fn worst_case_input_state(&self) -> InitVmState {
+        InitVmState::with_stack([empty_stack(), vec![BFieldElement::new(63)]].concat())
     }
 
     fn rust_shadowing(

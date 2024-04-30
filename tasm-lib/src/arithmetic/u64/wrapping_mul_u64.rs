@@ -7,7 +7,7 @@ use crate::empty_stack;
 use crate::library::Library;
 use crate::push_encodable;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::ExecutionState;
+use crate::InitVmState;
 
 #[derive(Clone, Debug)]
 pub struct WrappingMulU64;
@@ -109,7 +109,7 @@ impl DeprecatedSnippet for WrappingMulU64 {
         todo!()
     }
 
-    fn gen_input_states(&self) -> Vec<ExecutionState> {
+    fn gen_input_states(&self) -> Vec<InitVmState> {
         let mut rng = rand::thread_rng();
 
         let mut ret = vec![];
@@ -120,11 +120,11 @@ impl DeprecatedSnippet for WrappingMulU64 {
         ret
     }
 
-    fn common_case_input_state(&self) -> ExecutionState {
+    fn common_case_input_state(&self) -> InitVmState {
         prepare_state(1 << 60, (1 << 42) - 1)
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState {
+    fn worst_case_input_state(&self) -> InitVmState {
         prepare_state(1 << 60, (1 << 42) - 1)
     }
 
@@ -151,13 +151,13 @@ impl DeprecatedSnippet for WrappingMulU64 {
     }
 }
 
-fn prepare_state(a: u64, b: u64) -> ExecutionState {
+fn prepare_state(a: u64, b: u64) -> InitVmState {
     let a = U32s::<2>::try_from(a).unwrap();
     let b = U32s::<2>::try_from(b).unwrap();
     let mut init_stack = empty_stack();
     push_encodable(&mut init_stack, &a);
     push_encodable(&mut init_stack, &b);
-    ExecutionState::with_stack(init_stack)
+    InitVmState::with_stack(init_stack)
 }
 
 #[cfg(test)]

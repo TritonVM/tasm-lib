@@ -20,7 +20,7 @@ use crate::empty_stack;
 use crate::library::Library;
 use crate::library::STATIC_MEMORY_START_ADDRESS;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::ExecutionState;
+use crate::InitVmState;
 
 #[derive(Clone, Debug)]
 pub struct DivModU64;
@@ -436,7 +436,7 @@ impl DeprecatedSnippet for DivModU64 {
         vec!["inputs are not valid u32s".to_owned()]
     }
 
-    fn gen_input_states(&self) -> Vec<ExecutionState> {
+    fn gen_input_states(&self) -> Vec<InitVmState> {
         let mut rng = rand::thread_rng();
 
         let mut ret = vec![];
@@ -454,11 +454,11 @@ impl DeprecatedSnippet for DivModU64 {
         ret
     }
 
-    fn common_case_input_state(&self) -> ExecutionState {
+    fn common_case_input_state(&self) -> InitVmState {
         prepare_state(u32::MAX as u64, 1 << 15)
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState {
+    fn worst_case_input_state(&self) -> InitVmState {
         prepare_state(u64::MAX, (1 << 32) + 45454545)
     }
 
@@ -502,8 +502,8 @@ impl DeprecatedSnippet for DivModU64 {
     }
 }
 
-fn prepare_state(numerator: u64, divisor: u64) -> ExecutionState {
-    ExecutionState::with_stack(
+fn prepare_state(numerator: u64, divisor: u64) -> InitVmState {
+    InitVmState::with_stack(
         [
             empty_stack(),
             vec![

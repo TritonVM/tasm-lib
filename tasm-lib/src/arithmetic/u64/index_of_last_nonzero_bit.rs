@@ -7,7 +7,7 @@ use crate::arithmetic::u64::log_2_floor_u64::Log2FloorU64;
 use crate::data_type::DataType;
 use crate::empty_stack;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::ExecutionState;
+use crate::InitVmState;
 
 use super::decr_u64::DecrU64;
 use super::xor_u64::XorU64;
@@ -90,7 +90,7 @@ impl DeprecatedSnippet for IndexOfLastNonZeroBitU64 {
         ]
     }
 
-    fn gen_input_states(&self) -> Vec<ExecutionState> {
+    fn gen_input_states(&self) -> Vec<InitVmState> {
         let mut rng = thread_rng();
         let mut ret = vec![];
         for _ in 0..10 {
@@ -100,11 +100,11 @@ impl DeprecatedSnippet for IndexOfLastNonZeroBitU64 {
         ret
     }
 
-    fn common_case_input_state(&self) -> ExecutionState {
+    fn common_case_input_state(&self) -> InitVmState {
         prepare_state(1 << 31)
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState {
+    fn worst_case_input_state(&self) -> InitVmState {
         prepare_state(1 << 62)
     }
 
@@ -130,13 +130,13 @@ impl DeprecatedSnippet for IndexOfLastNonZeroBitU64 {
     }
 }
 
-fn prepare_state(value: u64) -> ExecutionState {
+fn prepare_state(value: u64) -> InitVmState {
     let value_hi: u32 = (value >> 32) as u32;
     let value_lo: u32 = (value & u32::MAX as u64) as u32;
     let mut stack = empty_stack();
     stack.push(BFieldElement::new(value_hi as u64));
     stack.push(BFieldElement::new(value_lo as u64));
-    ExecutionState::with_stack(stack)
+    InitVmState::with_stack(stack)
 }
 
 #[cfg(test)]

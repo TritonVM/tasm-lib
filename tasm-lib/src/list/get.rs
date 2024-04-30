@@ -12,7 +12,7 @@ use crate::library::Library;
 use crate::rust_shadowing_helper_functions::list::list_get;
 use crate::rust_shadowing_helper_functions::list::untyped_insert_random_list;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::ExecutionState;
+use crate::InitVmState;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct Get {
@@ -106,18 +106,18 @@ impl DeprecatedSnippet for Get {
         vec![]
     }
 
-    fn gen_input_states(&self) -> Vec<ExecutionState> {
+    fn gen_input_states(&self) -> Vec<InitVmState> {
         let mut rng = thread_rng();
         let list_length = rng.gen_range(1..=100);
         let index_to_read = rng.gen_range(0..list_length);
         vec![self.input_state(list_length, index_to_read)]
     }
 
-    fn common_case_input_state(&self) -> ExecutionState {
+    fn common_case_input_state(&self) -> InitVmState {
         self.input_state(1 << 5, 1 << 4)
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState {
+    fn worst_case_input_state(&self) -> InitVmState {
         self.input_state(1 << 6, (1 << 6) - 1)
     }
 
@@ -142,7 +142,7 @@ impl DeprecatedSnippet for Get {
 }
 
 impl Get {
-    fn input_state(&self, list_length: usize, index: usize) -> ExecutionState {
+    fn input_state(&self, list_length: usize, index: usize) -> InitVmState {
         let list_pointer: u32 = random();
         let list_pointer = BFieldElement::new(list_pointer as u64);
         let mut stack = empty_stack();
@@ -158,12 +158,7 @@ impl Get {
             self.element_type.stack_size(),
         );
 
-        let nondeterminism = NonDeterminism::default().with_ram(memory);
-        ExecutionState {
-            stack,
-            std_in: vec![],
-            nondeterminism,
-        }
+        InitVmState::with_stack_and_memory(stack, memory)
     }
 }
 

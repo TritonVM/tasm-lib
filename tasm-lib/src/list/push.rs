@@ -13,7 +13,7 @@ use crate::empty_stack;
 use crate::library::Library;
 use crate::rust_shadowing_helper_functions::list::untyped_insert_random_list;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::ExecutionState;
+use crate::InitVmState;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct Push {
@@ -127,7 +127,7 @@ impl DeprecatedSnippet for Push {
         vec![]
     }
 
-    fn gen_input_states(&self) -> Vec<ExecutionState> {
+    fn gen_input_states(&self) -> Vec<InitVmState> {
         vec![
             prepare_state(&self.element_type),
             prepare_state(&self.element_type),
@@ -136,11 +136,11 @@ impl DeprecatedSnippet for Push {
         ]
     }
 
-    fn common_case_input_state(&self) -> ExecutionState {
+    fn common_case_input_state(&self) -> InitVmState {
         prepare_state(&self.element_type)
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState {
+    fn worst_case_input_state(&self) -> InitVmState {
         prepare_state(&self.element_type)
     }
 
@@ -172,7 +172,7 @@ impl DeprecatedSnippet for Push {
     }
 }
 
-fn prepare_state(element_type: &DataType) -> ExecutionState {
+fn prepare_state(element_type: &DataType) -> InitVmState {
     let list_pointer: u32 = random();
     let list_pointer = BFieldElement::new(list_pointer as u64);
     let init_length: usize = thread_rng().gen_range(0..100);
@@ -190,7 +190,7 @@ fn prepare_state(element_type: &DataType) -> ExecutionState {
         &mut memory,
         element_type.stack_size(),
     );
-    ExecutionState::with_stack_and_memory(stack, memory)
+    InitVmState::with_stack_and_memory(stack, memory)
 }
 
 #[cfg(test)]

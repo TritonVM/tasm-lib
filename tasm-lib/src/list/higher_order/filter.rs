@@ -300,7 +300,7 @@ mod tests {
     use crate::traits::deprecated_snippet::DeprecatedSnippet;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-    use crate::ExecutionState;
+    use crate::InitVmState;
     use crate::VmHasher;
 
     use super::*;
@@ -397,11 +397,11 @@ mod tests {
             vec![]
         }
 
-        fn gen_input_states(&self) -> Vec<ExecutionState>
+        fn gen_input_states(&self) -> Vec<InitVmState>
         where
             Self: Sized,
         {
-            vec![ExecutionState::with_stack(
+            vec![InitVmState::with_stack(
                 [
                     vec![BFieldElement::zero(); 16],
                     random_elements::<BFieldElement>(3),
@@ -410,11 +410,11 @@ mod tests {
             )]
         }
 
-        fn common_case_input_state(&self) -> ExecutionState
+        fn common_case_input_state(&self) -> InitVmState
         where
             Self: Sized,
         {
-            ExecutionState::with_stack(
+            InitVmState::with_stack(
                 [
                     vec![BFieldElement::zero(); 16],
                     random_elements::<BFieldElement>(3),
@@ -423,11 +423,11 @@ mod tests {
             )
         }
 
-        fn worst_case_input_state(&self) -> ExecutionState
+        fn worst_case_input_state(&self) -> InitVmState
         where
             Self: Sized,
         {
-            ExecutionState::with_stack(
+            InitVmState::with_stack(
                 [
                     vec![BFieldElement::zero(); 16],
                     random_elements::<BFieldElement>(3),

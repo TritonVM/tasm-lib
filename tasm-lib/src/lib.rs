@@ -61,18 +61,20 @@ pub type Digest = tip5::Digest;
 pub const DIGEST_LENGTH: usize = tip5::DIGEST_LENGTH;
 
 #[derive(Clone, Debug)]
-pub struct ExecutionState {
+pub struct InitVmState {
     pub stack: Vec<BFieldElement>,
-    pub std_in: Vec<BFieldElement>,
+    pub public_input: Vec<BFieldElement>,
     pub nondeterminism: NonDeterminism,
+    pub sponge: Option<VmHasher>,
 }
 
-impl ExecutionState {
+impl InitVmState {
     pub fn with_stack(stack: Vec<BFieldElement>) -> Self {
-        ExecutionState {
+        InitVmState {
             stack,
-            std_in: vec![],
+            public_input: vec![],
             nondeterminism: NonDeterminism::default(),
+            sponge: None,
         }
     }
 
@@ -80,10 +82,11 @@ impl ExecutionState {
         stack: Vec<BFieldElement>,
         memory: HashMap<BFieldElement, BFieldElement>,
     ) -> Self {
-        ExecutionState {
+        InitVmState {
             stack,
-            std_in: vec![],
+            public_input: vec![],
             nondeterminism: NonDeterminism::default().with_ram(memory),
+            sponge: None,
         }
     }
 }

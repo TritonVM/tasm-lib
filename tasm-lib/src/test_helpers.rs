@@ -7,12 +7,13 @@ use triton_vm::prelude::*;
 
 use crate::dyn_malloc::DYN_MALLOC_ADDRESS;
 use crate::execute_test;
+use crate::execute_with_terminal_state;
 use crate::exported_snippets;
 use crate::library::Library;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::traits::rust_shadow::RustShadow;
-use crate::ExecutionState;
+use crate::InitVmState;
 use crate::RustShadowOutputState;
 use crate::VmHasher;
 use crate::DIGEST_LENGTH;
@@ -51,12 +52,12 @@ pub fn test_rust_equivalence_multiple_deprecated<T: DeprecatedSnippet>(
 #[allow(dead_code)]
 pub fn test_rust_equivalence_given_execution_state_deprecated<T: DeprecatedSnippet>(
     snippet_struct: &T,
-    execution_state: ExecutionState,
+    execution_state: InitVmState,
 ) -> VMState {
     test_rust_equivalence_given_complete_state_deprecated::<T>(
         snippet_struct,
         &execution_state.stack,
-        &execution_state.std_in,
+        &execution_state.public_input,
         &execution_state.nondeterminism,
         None,
     )

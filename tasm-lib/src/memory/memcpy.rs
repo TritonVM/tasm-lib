@@ -14,7 +14,7 @@ use crate::traits::deprecated_snippet::DeprecatedSnippet;
 pub struct MemCpy; // TODO: add field `static_length : Option<usize>` to avoid loop
 
 impl MemCpy {
-    fn random_input_state(len: usize) -> crate::ExecutionState {
+    fn random_input_state(len: usize) -> crate::InitVmState {
         let mut rng = thread_rng();
         let read_source = random::<BFieldElement>();
         let write_dest = BFieldElement::new(read_source.value() + rng.next_u32() as u64);
@@ -33,7 +33,7 @@ impl MemCpy {
                 random::<BFieldElement>(),
             );
         }
-        crate::ExecutionState::with_stack_and_memory(stack, memory)
+        crate::InitVmState::with_stack_and_memory(stack, memory)
     }
 }
 
@@ -263,7 +263,7 @@ impl DeprecatedSnippet for MemCpy {
         vec![]
     }
 
-    fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
+    fn gen_input_states(&self) -> Vec<crate::InitVmState> {
         let mut rng = thread_rng();
         vec![
             Self::random_input_state(1),
@@ -283,11 +283,11 @@ impl DeprecatedSnippet for MemCpy {
         ]
     }
 
-    fn common_case_input_state(&self) -> crate::ExecutionState {
+    fn common_case_input_state(&self) -> crate::InitVmState {
         Self::random_input_state(17)
     }
 
-    fn worst_case_input_state(&self) -> crate::ExecutionState {
+    fn worst_case_input_state(&self) -> crate::InitVmState {
         Self::random_input_state(1000)
     }
 

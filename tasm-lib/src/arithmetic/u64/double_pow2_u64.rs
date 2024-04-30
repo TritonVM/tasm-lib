@@ -6,7 +6,7 @@ use crate::data_type::DataType;
 use crate::empty_stack;
 use crate::push_encodable;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::ExecutionState;
+use crate::InitVmState;
 
 #[derive(Clone, Debug)]
 pub struct DoublePow2U64;
@@ -83,7 +83,7 @@ impl DeprecatedSnippet for DoublePow2U64 {
         vec![]
     }
 
-    fn gen_input_states(&self) -> Vec<ExecutionState> {
+    fn gen_input_states(&self) -> Vec<InitVmState> {
         let mut ret = vec![];
         for n in 0..63 {
             let n: U32s<2> = (1u64 >> n).try_into().unwrap();
@@ -91,14 +91,14 @@ impl DeprecatedSnippet for DoublePow2U64 {
 
             push_encodable(&mut input_stack, &n);
 
-            ret.push(ExecutionState::with_stack(input_stack))
+            ret.push(InitVmState::with_stack(input_stack))
         }
 
         ret
     }
 
-    fn common_case_input_state(&self) -> ExecutionState {
-        ExecutionState::with_stack(
+    fn common_case_input_state(&self) -> InitVmState {
+        InitVmState::with_stack(
             [
                 empty_stack(),
                 vec![BFieldElement::zero(), BFieldElement::new(1 << 12)],
@@ -107,9 +107,9 @@ impl DeprecatedSnippet for DoublePow2U64 {
         )
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState {
+    fn worst_case_input_state(&self) -> InitVmState {
         // worst-case has carry from lower-bits to higher-bits
-        ExecutionState::with_stack(
+        InitVmState::with_stack(
             [
                 empty_stack(),
                 vec![BFieldElement::zero(), BFieldElement::new(1 << 31)],

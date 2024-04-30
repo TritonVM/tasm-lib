@@ -6,7 +6,7 @@ use crate::empty_stack;
 use crate::library::Library;
 use crate::push_encodable;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::ExecutionState;
+use crate::InitVmState;
 
 #[derive(Clone, Debug)]
 pub struct ShiftLeftU128;
@@ -155,7 +155,7 @@ impl DeprecatedSnippet for ShiftLeftU128 {
         ]
     }
 
-    fn gen_input_states(&self) -> Vec<ExecutionState>
+    fn gen_input_states(&self) -> Vec<InitVmState>
     where
         Self: Sized,
     {
@@ -168,14 +168,14 @@ impl DeprecatedSnippet for ShiftLeftU128 {
         ret
     }
 
-    fn common_case_input_state(&self) -> ExecutionState
+    fn common_case_input_state(&self) -> InitVmState
     where
         Self: Sized,
     {
         prepare_state(0x1282, 15)
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState
+    fn worst_case_input_state(&self) -> InitVmState
     where
         Self: Sized,
     {
@@ -209,11 +209,11 @@ impl DeprecatedSnippet for ShiftLeftU128 {
     }
 }
 
-fn prepare_state(value: u128, shift_amount: u32) -> ExecutionState {
+fn prepare_state(value: u128, shift_amount: u32) -> InitVmState {
     let mut init_stack = empty_stack();
     push_encodable(&mut init_stack, &value.encode());
     init_stack.push(BFieldElement::new(shift_amount as u64));
-    ExecutionState::with_stack(init_stack)
+    InitVmState::with_stack(init_stack)
 }
 
 #[cfg(test)]
@@ -254,7 +254,7 @@ mod tests {
         init_stack.push(BFieldElement::new(u32::MAX as u64));
         init_stack.push(128u64.into());
         ShiftLeftU128
-            .link_and_run_tasm_from_state_for_test(&mut ExecutionState::with_stack(init_stack));
+            .link_and_run_tasm_from_state_for_test(&mut InitVmState::with_stack(init_stack));
     }
 
     fn prop_left_left(value: u128, shift_amount: u32) {

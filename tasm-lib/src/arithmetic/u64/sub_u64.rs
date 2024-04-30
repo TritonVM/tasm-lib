@@ -11,7 +11,7 @@ use crate::empty_stack;
 use crate::library::Library;
 use crate::push_encodable;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::ExecutionState;
+use crate::InitVmState;
 
 #[derive(Clone, Debug)]
 pub struct SubU64;
@@ -106,7 +106,7 @@ impl DeprecatedSnippet for SubU64 {
         vec!["if (lhs - rhs) overflows u64".to_string()]
     }
 
-    fn gen_input_states(&self) -> Vec<ExecutionState> {
+    fn gen_input_states(&self) -> Vec<InitVmState> {
         let mut rng = rand::thread_rng();
 
         let mut ret = vec![];
@@ -123,7 +123,7 @@ impl DeprecatedSnippet for SubU64 {
             let mut stack_1 = empty_stack();
             push_encodable(&mut stack_1, &smaller_b);
             push_encodable(&mut stack_1, &small_a);
-            ret.push(ExecutionState::with_stack(stack_1));
+            ret.push(InitVmState::with_stack(stack_1));
 
             // no overflow, carry: large_c - smaller_carry_d
             // large_c is 2^32..2^64, smaller_carry_d < large_c
@@ -139,7 +139,7 @@ impl DeprecatedSnippet for SubU64 {
             let mut stack_2 = empty_stack();
             push_encodable(&mut stack_2, &smaller_carry_d);
             push_encodable(&mut stack_2, &large_c);
-            ret.push(ExecutionState::with_stack(stack_2));
+            ret.push(InitVmState::with_stack(stack_2));
 
             // no overflow, no carry: large_e - smaller_f
             // large_e is 0..2^64, smaller_f < large_e
@@ -155,15 +155,15 @@ impl DeprecatedSnippet for SubU64 {
             let mut stack_3 = empty_stack();
             push_encodable(&mut stack_3, &smaller_f);
             push_encodable(&mut stack_3, &large_e);
-            ret.push(ExecutionState::with_stack(stack_3));
+            ret.push(InitVmState::with_stack(stack_3));
         }
 
         ret
     }
 
-    fn common_case_input_state(&self) -> ExecutionState {
+    fn common_case_input_state(&self) -> InitVmState {
         // no carry
-        ExecutionState::with_stack(
+        InitVmState::with_stack(
             [
                 empty_stack(),
                 vec![BFieldElement::zero(), BFieldElement::new((1 << 10) - 1)],
@@ -173,9 +173,9 @@ impl DeprecatedSnippet for SubU64 {
         )
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState {
+    fn worst_case_input_state(&self) -> InitVmState {
         // with carry
-        ExecutionState::with_stack(
+        InitVmState::with_stack(
             [
                 empty_stack(),
                 vec![BFieldElement::one(), BFieldElement::new((1 << 31) - 1)],
@@ -320,7 +320,7 @@ mod tests {
             init_stack.push(elem);
         }
 
-        SubU64.link_and_run_tasm_from_state_for_test(&mut ExecutionState::with_stack(init_stack));
+        SubU64.link_and_run_tasm_from_state_for_test(&mut InitVmState::with_stack(init_stack));
     }
 
     fn prop_sub(lhs: U32s<2>, rhs: U32s<2>, expected: Option<&[BFieldElement]>) {

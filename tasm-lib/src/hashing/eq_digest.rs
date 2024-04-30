@@ -9,7 +9,7 @@ use crate::library::Library;
 use crate::push_encodable;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::Digest;
-use crate::ExecutionState;
+use crate::InitVmState;
 
 #[derive(Clone, Debug)]
 pub struct EqDigest;
@@ -82,7 +82,7 @@ impl DeprecatedSnippet for EqDigest {
         vec![]
     }
 
-    fn gen_input_states(&self) -> Vec<ExecutionState> {
+    fn gen_input_states(&self) -> Vec<InitVmState> {
         let mut rng = rand::thread_rng();
         let digest_a: Digest = rng.gen();
         let digest_b: Digest = rng.gen();
@@ -91,18 +91,18 @@ impl DeprecatedSnippet for EqDigest {
         push_encodable(&mut stack, &digest_b);
         push_encodable(&mut stack, &digest_a);
 
-        vec![ExecutionState::with_stack(stack)]
+        vec![InitVmState::with_stack(stack)]
     }
 
-    fn common_case_input_state(&self) -> ExecutionState {
+    fn common_case_input_state(&self) -> InitVmState {
         let mut stack = empty_stack();
         push_encodable(&mut stack, &Digest::default());
         push_encodable(&mut stack, &Digest::default());
 
-        ExecutionState::with_stack(stack)
+        InitVmState::with_stack(stack)
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState {
+    fn worst_case_input_state(&self) -> InitVmState {
         let mut rng = rand::thread_rng();
         let digest_a: Digest = rng.gen();
         let digest_b: Digest = rng.gen();
@@ -111,7 +111,7 @@ impl DeprecatedSnippet for EqDigest {
         push_encodable(&mut stack, &digest_b);
         push_encodable(&mut stack, &digest_a);
 
-        ExecutionState::with_stack(stack)
+        InitVmState::with_stack(stack)
     }
 
     fn rust_shadowing(

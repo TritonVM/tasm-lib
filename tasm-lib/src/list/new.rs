@@ -9,7 +9,7 @@ use crate::library::Library;
 use crate::rust_shadowing_helper_functions::list::list_new;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::traits::function::Function;
-use crate::ExecutionState;
+use crate::InitVmState;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct New {
@@ -82,7 +82,7 @@ impl DeprecatedSnippet for New {
         vec![]
     }
 
-    fn gen_input_states(&self) -> Vec<ExecutionState> {
+    fn gen_input_states(&self) -> Vec<InitVmState> {
         vec![
             prepare_state(0),
             prepare_state(1),
@@ -93,11 +93,11 @@ impl DeprecatedSnippet for New {
         ]
     }
 
-    fn common_case_input_state(&self) -> ExecutionState {
+    fn common_case_input_state(&self) -> InitVmState {
         prepare_state(2)
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState {
+    fn worst_case_input_state(&self) -> InitVmState {
         prepare_state(1000000)
     }
 
@@ -117,10 +117,10 @@ impl DeprecatedSnippet for New {
     }
 }
 
-fn prepare_state(capacity: u32) -> ExecutionState {
+fn prepare_state(capacity: u32) -> InitVmState {
     let mut stack = empty_stack();
     stack.push(BFieldElement::new(capacity as u64));
-    ExecutionState::with_stack(stack)
+    InitVmState::with_stack(stack)
 }
 
 #[cfg(test)]

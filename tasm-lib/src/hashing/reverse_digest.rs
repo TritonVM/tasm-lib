@@ -5,7 +5,7 @@ use crate::data_type::DataType;
 use crate::empty_stack;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::Digest;
-use crate::ExecutionState;
+use crate::InitVmState;
 use crate::DIGEST_LENGTH;
 
 /// Reverse the order of elements in a digest: [d4, d3, d2, d1, d0] -> [d0, d1, d2, d3, d4]
@@ -13,10 +13,10 @@ use crate::DIGEST_LENGTH;
 pub struct ReverseDigest;
 
 impl ReverseDigest {
-    fn get_input_state() -> ExecutionState {
+    fn get_input_state() -> InitVmState {
         let digest: Digest = random();
         let stack = [empty_stack(), digest.values().to_vec()].concat();
-        ExecutionState::with_stack(stack)
+        InitVmState::with_stack(stack)
     }
 }
 
@@ -86,15 +86,15 @@ impl DeprecatedSnippet for ReverseDigest {
         vec![]
     }
 
-    fn gen_input_states(&self) -> Vec<ExecutionState> {
+    fn gen_input_states(&self) -> Vec<InitVmState> {
         vec![Self::get_input_state()]
     }
 
-    fn common_case_input_state(&self) -> ExecutionState {
+    fn common_case_input_state(&self) -> InitVmState {
         Self::get_input_state()
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState {
+    fn worst_case_input_state(&self) -> InitVmState {
         Self::get_input_state()
     }
 

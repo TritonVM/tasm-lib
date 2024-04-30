@@ -23,7 +23,7 @@ use crate::list::set::Set;
 use crate::mmr::MAX_MMR_HEIGHT;
 use crate::rust_shadowing_helper_functions;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::ExecutionState;
+use crate::InitVmState;
 use crate::VmHasher;
 use crate::DIGEST_LENGTH;
 
@@ -41,7 +41,7 @@ impl MmrCalculateNewPeaksFromLeafMutationMtIndices {
         leaf_index: u64,
         new_leaf: Digest,
         auth_path: Vec<Digest>,
-    ) -> (ExecutionState, BFieldElement, BFieldElement) {
+    ) -> (InitVmState, BFieldElement, BFieldElement) {
         let mut stack = empty_stack();
 
         // We assume that the auth paths can safely be stored in memory on this address
@@ -88,7 +88,7 @@ impl MmrCalculateNewPeaksFromLeafMutationMtIndices {
         }
 
         (
-            ExecutionState::with_stack_and_memory(stack, memory),
+            InitVmState::with_stack_and_memory(stack, memory),
             auth_path_pointer,
             peaks_pointer,
         )
@@ -238,7 +238,7 @@ impl DeprecatedSnippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
         vec![]
     }
 
-    fn gen_input_states(&self) -> Vec<ExecutionState> {
+    fn gen_input_states(&self) -> Vec<InitVmState> {
         let mmr_size: usize = 10;
         let digests: Vec<Digest> = random_elements(mmr_size);
         let leaf_index: usize = thread_rng().gen_range(0..mmr_size);
@@ -258,7 +258,7 @@ impl DeprecatedSnippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
         vec![ret0.0]
     }
 
-    fn common_case_input_state(&self) -> ExecutionState {
+    fn common_case_input_state(&self) -> InitVmState {
         let mmr_leaf_count_log2 = 31u64;
         let mmr_size = 1 << mmr_leaf_count_log2;
         let peaks: Vec<Digest> = random_elements(mmr_leaf_count_log2 as usize);
@@ -275,7 +275,7 @@ impl DeprecatedSnippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
         .0
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState {
+    fn worst_case_input_state(&self) -> InitVmState {
         let mmr_leaf_count_log2 = 62u64;
         let mmr_size = 1 << mmr_leaf_count_log2;
         let peaks: Vec<Digest> = random_elements(mmr_leaf_count_log2 as usize);

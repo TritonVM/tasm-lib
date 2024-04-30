@@ -7,7 +7,7 @@ use crate::empty_stack;
 use crate::library::Library;
 use crate::push_encodable;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::ExecutionState;
+use crate::InitVmState;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct ShiftRightU128;
@@ -165,7 +165,7 @@ impl DeprecatedSnippet for ShiftRightU128 {
         vec!["Shift amount is greater than 128".to_string()]
     }
 
-    fn gen_input_states(&self) -> Vec<ExecutionState> {
+    fn gen_input_states(&self) -> Vec<InitVmState> {
         let mut ret = vec![];
         for i in 0..128 {
             ret.push(prepare_state(random::<u128>(), i));
@@ -174,11 +174,11 @@ impl DeprecatedSnippet for ShiftRightU128 {
         ret
     }
 
-    fn common_case_input_state(&self) -> ExecutionState {
+    fn common_case_input_state(&self) -> InitVmState {
         prepare_state(0x642, 20)
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState {
+    fn worst_case_input_state(&self) -> InitVmState {
         prepare_state(0x123, 127)
     }
 
@@ -205,12 +205,12 @@ impl DeprecatedSnippet for ShiftRightU128 {
     }
 }
 
-fn prepare_state(value: u128, shift_amount: u32) -> ExecutionState {
+fn prepare_state(value: u128, shift_amount: u32) -> InitVmState {
     let value = U32s::<4>::try_from(value).unwrap();
     let mut init_stack = empty_stack();
     push_encodable(&mut init_stack, &value);
     init_stack.push(BFieldElement::new(shift_amount as u64));
-    ExecutionState::with_stack(init_stack)
+    InitVmState::with_stack(init_stack)
 }
 
 #[cfg(test)]

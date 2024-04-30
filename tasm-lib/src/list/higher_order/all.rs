@@ -25,7 +25,7 @@ use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::traits::function::Function;
 use crate::traits::function::FunctionInitialState;
-use crate::ExecutionState;
+use crate::InitVmState;
 use crate::VmHasher;
 
 use super::inner_function::InnerFunction;
@@ -48,7 +48,7 @@ impl All {
         list_pointer: BFieldElement,
         list_length: usize,
         random: bool,
-    ) -> ExecutionState {
+    ) -> InitVmState {
         let mut stack = empty_stack();
         stack.push(list_pointer);
 
@@ -76,12 +76,7 @@ impl All {
             );
         }
 
-        let nondeterminism = NonDeterminism::default().with_ram(memory);
-        ExecutionState {
-            stack,
-            std_in: vec![],
-            nondeterminism,
-        }
+        InitVmState::with_stack_and_memory(stack, memory)
     }
 }
 
@@ -337,10 +332,10 @@ impl DeprecatedSnippet for TestHashXFieldElementLsb {
         vec![]
     }
 
-    fn gen_input_states(&self) -> Vec<ExecutionState> {
+    fn gen_input_states(&self) -> Vec<InitVmState> {
         // Function does not output random values, since that would make the benchmark output
         // non-deterministic.
-        vec![ExecutionState::with_stack(
+        vec![InitVmState::with_stack(
             [
                 vec![BFieldElement::zero(); 16],
                 vec![
@@ -353,8 +348,8 @@ impl DeprecatedSnippet for TestHashXFieldElementLsb {
         )]
     }
 
-    fn common_case_input_state(&self) -> ExecutionState {
-        ExecutionState::with_stack(
+    fn common_case_input_state(&self) -> InitVmState {
+        InitVmState::with_stack(
             [
                 vec![BFieldElement::zero(); 16],
                 vec![
@@ -367,8 +362,8 @@ impl DeprecatedSnippet for TestHashXFieldElementLsb {
         )
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState {
-        ExecutionState::with_stack(
+    fn worst_case_input_state(&self) -> InitVmState {
+        InitVmState::with_stack(
             [
                 vec![BFieldElement::zero(); 16],
                 vec![

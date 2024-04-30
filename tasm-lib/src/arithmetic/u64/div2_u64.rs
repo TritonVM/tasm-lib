@@ -10,7 +10,7 @@ use crate::empty_stack;
 use crate::library::Library;
 use crate::push_encodable;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::ExecutionState;
+use crate::InitVmState;
 
 #[derive(Clone, Debug)]
 pub struct Div2U64;
@@ -88,18 +88,18 @@ impl DeprecatedSnippet for Div2U64 {
         ]
     }
 
-    fn gen_input_states(&self) -> Vec<ExecutionState> {
+    fn gen_input_states(&self) -> Vec<InitVmState> {
         let n: u64 = rand::thread_rng().next_u64();
         let n: U32s<2> = n.try_into().unwrap();
         let mut input_stack = empty_stack();
 
         push_encodable(&mut input_stack, &n);
 
-        vec![ExecutionState::with_stack(input_stack)]
+        vec![InitVmState::with_stack(input_stack)]
     }
 
-    fn common_case_input_state(&self) -> ExecutionState {
-        ExecutionState::with_stack(
+    fn common_case_input_state(&self) -> InitVmState {
+        InitVmState::with_stack(
             [
                 empty_stack(),
                 vec![BFieldElement::zero(), BFieldElement::new(1 << 31)],
@@ -108,12 +108,12 @@ impl DeprecatedSnippet for Div2U64 {
         )
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState {
+    fn worst_case_input_state(&self) -> InitVmState {
         let big_number = 1 << 31;
         let worst_case_input = [big_number + 1, big_number].map(BFieldElement::new);
         let worst_case_stack = [empty_stack(), worst_case_input.to_vec()].concat();
 
-        ExecutionState::with_stack(worst_case_stack)
+        InitVmState::with_stack(worst_case_stack)
     }
 
     fn rust_shadowing(

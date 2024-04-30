@@ -6,7 +6,7 @@ use crate::data_type::DataType;
 use crate::empty_stack;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::Digest;
-use crate::ExecutionState;
+use crate::InitVmState;
 use crate::VmHasher;
 
 #[derive(Clone, Debug)]
@@ -32,7 +32,7 @@ pub struct Commit;
 ///                     - receiver_digest 3
 ///                     - receiver_digest 4
 impl Commit {
-    fn test_state() -> ExecutionState {
+    fn test_state() -> InitVmState {
         let item: Digest = random();
         let sender_randomness: Digest = random();
         let receiver_digest: Digest = random();
@@ -49,11 +49,7 @@ impl Commit {
         {
             stack.push(*d);
         }
-        ExecutionState {
-            stack,
-            std_in: vec![],
-            nondeterminism: NonDeterminism::default(),
-        }
+        InitVmState::with_stack(stack)
     }
 }
 
@@ -135,21 +131,21 @@ impl DeprecatedSnippet for Commit {
         vec!["Stack too shallow.".to_string()]
     }
 
-    fn gen_input_states(&self) -> Vec<crate::ExecutionState>
+    fn gen_input_states(&self) -> Vec<crate::InitVmState>
     where
         Self: Sized,
     {
         vec![Self::test_state()]
     }
 
-    fn common_case_input_state(&self) -> crate::ExecutionState
+    fn common_case_input_state(&self) -> crate::InitVmState
     where
         Self: Sized,
     {
         Self::test_state()
     }
 
-    fn worst_case_input_state(&self) -> crate::ExecutionState
+    fn worst_case_input_state(&self) -> crate::InitVmState
     where
         Self: Sized,
     {

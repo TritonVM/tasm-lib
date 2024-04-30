@@ -22,6 +22,7 @@ use crate::test_helpers::verify_stack_equivalence;
 use crate::test_helpers::verify_stack_growth;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::rust_shadow::RustShadow;
+use crate::InitVmState;
 use crate::VmHasher;
 
 /// A Procedure is a piece of tasm code that can do almost anything: modify stack, read
@@ -65,6 +66,17 @@ pub struct ProcedureInitialState {
     pub nondeterminism: NonDeterminism,
     pub public_input: Vec<BFieldElement>,
     pub sponge: Option<VmHasher>,
+}
+
+impl From<ProcedureInitialState> for InitVmState {
+    fn from(value: ProcedureInitialState) -> Self {
+        Self {
+            stack: value.stack,
+            public_input: value.public_input,
+            nondeterminism: value.nondeterminism,
+            sponge: value.sponge,
+        }
+    }
 }
 
 pub struct ShadowedProcedure<P: Procedure + 'static> {

@@ -13,7 +13,7 @@ use crate::data_type::DataType;
 use crate::empty_stack;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::Digest;
-use crate::ExecutionState;
+use crate::InitVmState;
 
 /// Returns the number of elements of a contiguous list.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
@@ -41,7 +41,7 @@ struct DummyInnerDataStructure {
 ///
 /// AFTER: _ length
 impl GetLength {
-    pub(super) fn pseudorandom_input_state(seed: [u8; 32], length: usize) -> ExecutionState {
+    pub(super) fn pseudorandom_input_state(seed: [u8; 32], length: usize) -> InitVmState {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
         let mut data = vec![];
 
@@ -73,7 +73,7 @@ impl GetLength {
             address.increment();
         }
 
-        ExecutionState::with_stack_and_memory(stack, memory)
+        InitVmState::with_stack_and_memory(stack, memory)
     }
 }
 
@@ -121,21 +121,21 @@ impl DeprecatedSnippet for GetLength {
         vec!["memory blob lives outside of first 2^32 words".to_string()]
     }
 
-    fn gen_input_states(&self) -> Vec<ExecutionState> {
+    fn gen_input_states(&self) -> Vec<InitVmState> {
         let mut rng = thread_rng();
         (0..25)
             .map(|_| Self::pseudorandom_input_state(rng.gen(), rng.gen_range(0..4)))
             .collect_vec()
     }
 
-    fn common_case_input_state(&self) -> ExecutionState {
+    fn common_case_input_state(&self) -> InitVmState {
         let mut seed = [0u8; 32];
         seed[0] = 0x01;
         seed[1] = 0xfd;
         Self::pseudorandom_input_state(seed, 2)
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState {
+    fn worst_case_input_state(&self) -> InitVmState {
         let mut seed = [0u8; 32];
         seed[0] = 0x01;
         seed[1] = 0xfd;

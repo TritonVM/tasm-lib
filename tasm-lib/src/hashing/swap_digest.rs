@@ -9,7 +9,7 @@ use crate::library::Library;
 use crate::push_encodable;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::Digest;
-use crate::ExecutionState;
+use crate::InitVmState;
 use crate::DIGEST_LENGTH;
 
 #[derive(Clone, Debug)]
@@ -101,7 +101,7 @@ impl DeprecatedSnippet for SwapDigest {
         vec![]
     }
 
-    fn gen_input_states(&self) -> Vec<ExecutionState> {
+    fn gen_input_states(&self) -> Vec<InitVmState> {
         let mut rng = rand::thread_rng();
         let digest_a: Digest = rng.gen();
         let digest_b: Digest = rng.gen();
@@ -110,18 +110,18 @@ impl DeprecatedSnippet for SwapDigest {
         push_encodable(&mut stack, &digest_b);
         push_encodable(&mut stack, &digest_a);
 
-        vec![ExecutionState::with_stack(stack)]
+        vec![InitVmState::with_stack(stack)]
     }
 
-    fn common_case_input_state(&self) -> ExecutionState {
+    fn common_case_input_state(&self) -> InitVmState {
         let mut rng = rand::thread_rng();
         let mut stack = empty_stack();
         push_encodable(&mut stack, &rng.gen::<Digest>());
         push_encodable(&mut stack, &rng.gen::<Digest>());
-        ExecutionState::with_stack(stack)
+        InitVmState::with_stack(stack)
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState {
+    fn worst_case_input_state(&self) -> InitVmState {
         self.common_case_input_state()
     }
 

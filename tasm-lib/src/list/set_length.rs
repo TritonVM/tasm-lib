@@ -11,7 +11,7 @@ use crate::empty_stack;
 use crate::library::Library;
 use crate::rust_shadowing_helper_functions::list::untyped_insert_random_list;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::ExecutionState;
+use crate::InitVmState;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct SetLength {
@@ -87,7 +87,7 @@ impl DeprecatedSnippet for SetLength {
         vec![]
     }
 
-    fn gen_input_states(&self) -> Vec<ExecutionState> {
+    fn gen_input_states(&self) -> Vec<InitVmState> {
         vec![
             prepare_state(&self.element_type),
             prepare_state(&self.element_type),
@@ -95,11 +95,11 @@ impl DeprecatedSnippet for SetLength {
         ]
     }
 
-    fn common_case_input_state(&self) -> ExecutionState {
+    fn common_case_input_state(&self) -> InitVmState {
         prepare_state(&self.element_type)
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState {
+    fn worst_case_input_state(&self) -> InitVmState {
         prepare_state(&self.element_type)
     }
 
@@ -119,7 +119,7 @@ impl DeprecatedSnippet for SetLength {
     }
 }
 
-fn prepare_state(data_type: &DataType) -> ExecutionState {
+fn prepare_state(data_type: &DataType) -> InitVmState {
     let list_pointer: BFieldElement = random();
     let old_length: usize = thread_rng().gen_range(0..100);
     let new_length: usize = thread_rng().gen_range(0..100);
@@ -133,7 +133,7 @@ fn prepare_state(data_type: &DataType) -> ExecutionState {
         &mut memory,
         data_type.stack_size(),
     );
-    ExecutionState::with_stack_and_memory(stack, memory)
+    InitVmState::with_stack_and_memory(stack, memory)
 }
 
 #[cfg(test)]

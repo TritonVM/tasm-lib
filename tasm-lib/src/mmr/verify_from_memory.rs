@@ -24,7 +24,7 @@ use crate::list::get::Get;
 use crate::rust_shadowing_helper_functions;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::Digest;
-use crate::ExecutionState;
+use crate::InitVmState;
 use crate::VmHasher;
 use crate::DIGEST_LENGTH;
 
@@ -42,7 +42,7 @@ impl MmrVerifyFromMemory {
         leaf: Digest,
         leaf_index: u64,
         auth_path: Vec<Digest>,
-    ) -> (ExecutionState, BFieldElement, BFieldElement) {
+    ) -> (InitVmState, BFieldElement, BFieldElement) {
         // BEFORE: _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo [digest (leaf_digest)] *auth_path
         // AFTER:  _ *auth_path leaf_index_hi leaf_index_lo validation_result
         let mut stack = empty_stack();
@@ -92,7 +92,7 @@ impl MmrVerifyFromMemory {
         }
 
         (
-            ExecutionState::with_stack_and_memory(stack, memory),
+            InitVmState::with_stack_and_memory(stack, memory),
             auth_path_pointer,
             peaks_pointer,
         )
@@ -263,7 +263,7 @@ impl DeprecatedSnippet for MmrVerifyFromMemory {
         ]
     }
 
-    fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
+    fn gen_input_states(&self) -> Vec<crate::InitVmState> {
         let mut rng = thread_rng();
         let max_size = 100;
         let size = rng.gen_range(1..max_size);
@@ -281,7 +281,7 @@ impl DeprecatedSnippet for MmrVerifyFromMemory {
         vec![ret0]
     }
 
-    fn common_case_input_state(&self) -> ExecutionState {
+    fn common_case_input_state(&self) -> InitVmState {
         let log2_size = 31;
         let leaf_count_after_add = 1u64 << log2_size;
         let peaks: Vec<Digest> = random_elements(log2_size as usize);
@@ -296,7 +296,7 @@ impl DeprecatedSnippet for MmrVerifyFromMemory {
             .0
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState {
+    fn worst_case_input_state(&self) -> InitVmState {
         let log2_size = 62;
         let leaf_count_after_add = 1u64 << log2_size;
         let peaks: Vec<Digest> = random_elements(log2_size as usize);

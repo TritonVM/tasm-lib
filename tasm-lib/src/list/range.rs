@@ -11,7 +11,7 @@ use crate::list::new::New;
 use crate::list::set_length::SetLength;
 use crate::rust_shadowing_helper_functions;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::ExecutionState;
+use crate::InitVmState;
 
 /// Generates a list containing all integers between the minimum (inclusive lower bound) and the
 /// supremum (exclusive upper bound).
@@ -19,15 +19,11 @@ use crate::ExecutionState;
 pub struct Range;
 
 impl Range {
-    fn init_state(minimum: u32, supremum: u32) -> ExecutionState {
+    fn init_state(minimum: u32, supremum: u32) -> InitVmState {
         let mut stack = empty_stack();
         stack.push(BFieldElement::new(minimum as u64));
         stack.push(BFieldElement::new(supremum as u64));
-        ExecutionState {
-            stack,
-            std_in: vec![],
-            nondeterminism: NonDeterminism::new(vec![]),
-        }
+        InitVmState::with_stack(stack)
     }
 }
 
@@ -139,7 +135,7 @@ impl DeprecatedSnippet for Range {
         ]
     }
 
-    fn gen_input_states(&self) -> Vec<ExecutionState>
+    fn gen_input_states(&self) -> Vec<InitVmState>
     where
         Self: Sized,
     {
@@ -151,14 +147,14 @@ impl DeprecatedSnippet for Range {
         ]
     }
 
-    fn common_case_input_state(&self) -> ExecutionState
+    fn common_case_input_state(&self) -> InitVmState
     where
         Self: Sized,
     {
         Self::init_state(0, 45)
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState
+    fn worst_case_input_state(&self) -> InitVmState
     where
         Self: Sized,
     {
@@ -220,7 +216,7 @@ mod tests {
         let snippet = Range;
         let terminal_state = execute_with_terminal_state(
             &Program::new(&snippet.link_for_isolated_run()),
-            &init_state.std_in,
+            &init_state.public_input,
             &init_state.stack,
             &NonDeterminism::default(),
             None,

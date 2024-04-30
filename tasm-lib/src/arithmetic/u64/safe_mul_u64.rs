@@ -7,7 +7,7 @@ use crate::empty_stack;
 use crate::library::Library;
 use crate::push_encodable;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::ExecutionState;
+use crate::InitVmState;
 
 #[derive(Clone, Debug)]
 pub struct SafeMulU64;
@@ -129,7 +129,7 @@ impl DeprecatedSnippet for SafeMulU64 {
         vec!["Product is greater than u64::MAX".to_string()]
     }
 
-    fn gen_input_states(&self) -> Vec<ExecutionState> {
+    fn gen_input_states(&self) -> Vec<InitVmState> {
         let mut rng = rand::thread_rng();
 
         let mut ret = vec![];
@@ -147,11 +147,11 @@ impl DeprecatedSnippet for SafeMulU64 {
         ret
     }
 
-    fn common_case_input_state(&self) -> ExecutionState {
+    fn common_case_input_state(&self) -> InitVmState {
         prepare_state(1 << 31, (1 << 25) - 1)
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState {
+    fn worst_case_input_state(&self) -> InitVmState {
         prepare_state(1 << 31, (1 << 31) - 1)
     }
 
@@ -180,13 +180,13 @@ impl DeprecatedSnippet for SafeMulU64 {
     }
 }
 
-fn prepare_state(a: u64, b: u64) -> ExecutionState {
+fn prepare_state(a: u64, b: u64) -> InitVmState {
     let a = U32s::<2>::try_from(a).unwrap();
     let b = U32s::<2>::try_from(b).unwrap();
     let mut init_stack = empty_stack();
     push_encodable(&mut init_stack, &a);
     push_encodable(&mut init_stack, &b);
-    ExecutionState::with_stack(init_stack)
+    InitVmState::with_stack(init_stack)
 }
 
 #[cfg(test)]
@@ -219,8 +219,7 @@ mod tests {
             init_stack.push(elem);
         }
 
-        SafeMulU64
-            .link_and_run_tasm_from_state_for_test(&mut ExecutionState::with_stack(init_stack));
+        SafeMulU64.link_and_run_tasm_from_state_for_test(&mut InitVmState::with_stack(init_stack));
     }
 
     #[should_panic]
@@ -237,8 +236,7 @@ mod tests {
             init_stack.push(elem);
         }
 
-        SafeMulU64
-            .link_and_run_tasm_from_state_for_test(&mut ExecutionState::with_stack(init_stack));
+        SafeMulU64.link_and_run_tasm_from_state_for_test(&mut InitVmState::with_stack(init_stack));
     }
 
     #[should_panic]
@@ -255,8 +253,7 @@ mod tests {
             init_stack.push(elem);
         }
 
-        SafeMulU64
-            .link_and_run_tasm_from_state_for_test(&mut ExecutionState::with_stack(init_stack));
+        SafeMulU64.link_and_run_tasm_from_state_for_test(&mut InitVmState::with_stack(init_stack));
     }
 
     #[should_panic]
@@ -273,8 +270,7 @@ mod tests {
             init_stack.push(elem);
         }
 
-        SafeMulU64
-            .link_and_run_tasm_from_state_for_test(&mut ExecutionState::with_stack(init_stack));
+        SafeMulU64.link_and_run_tasm_from_state_for_test(&mut InitVmState::with_stack(init_stack));
     }
 
     #[test]

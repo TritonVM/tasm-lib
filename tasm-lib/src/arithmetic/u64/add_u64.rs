@@ -10,7 +10,7 @@ use crate::empty_stack;
 use crate::library::Library;
 use crate::push_encodable;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::ExecutionState;
+use crate::InitVmState;
 
 #[derive(Clone, Debug)]
 pub struct AddU64;
@@ -90,7 +90,7 @@ impl DeprecatedSnippet for AddU64 {
         vec!["if (lhs + rhs) overflows u64".to_string()]
     }
 
-    fn gen_input_states(&self) -> Vec<ExecutionState> {
+    fn gen_input_states(&self) -> Vec<InitVmState> {
         let mut rng = rand::thread_rng();
 
         let zero = U32s::<2>::zero();
@@ -106,7 +106,7 @@ impl DeprecatedSnippet for AddU64 {
             let mut stack = empty_stack();
             push_encodable(&mut stack, &zero);
             push_encodable(&mut stack, &large_a);
-            ExecutionState::with_stack(stack)
+            InitVmState::with_stack(stack)
         });
 
         // 1. two small
@@ -114,14 +114,14 @@ impl DeprecatedSnippet for AddU64 {
             let mut stack = empty_stack();
             push_encodable(&mut stack, &small_a);
             push_encodable(&mut stack, &small_b);
-            ExecutionState::with_stack(stack)
+            InitVmState::with_stack(stack)
         });
 
         states
     }
 
-    fn common_case_input_state(&self) -> ExecutionState {
-        ExecutionState::with_stack(
+    fn common_case_input_state(&self) -> InitVmState {
+        InitVmState::with_stack(
             [
                 empty_stack(),
                 vec![BFieldElement::zero(), BFieldElement::new(1 << 31)],
@@ -131,8 +131,8 @@ impl DeprecatedSnippet for AddU64 {
         )
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState {
-        ExecutionState::with_stack(
+    fn worst_case_input_state(&self) -> InitVmState {
+        InitVmState::with_stack(
             [
                 empty_stack(),
                 vec![BFieldElement::new(1 << 31), BFieldElement::new(1 << 31)],
@@ -297,7 +297,7 @@ mod tests {
             init_stack.push(elem);
         }
 
-        AddU64.link_and_run_tasm_from_state_for_test(&mut ExecutionState::with_stack(init_stack));
+        AddU64.link_and_run_tasm_from_state_for_test(&mut InitVmState::with_stack(init_stack));
     }
 
     #[should_panic]
@@ -313,7 +313,7 @@ mod tests {
             init_stack.push(elem);
         }
 
-        AddU64.link_and_run_tasm_from_state_for_test(&mut ExecutionState::with_stack(init_stack));
+        AddU64.link_and_run_tasm_from_state_for_test(&mut InitVmState::with_stack(init_stack));
     }
 
     fn prop_add(lhs: U32s<2>, rhs: U32s<2>, expected: Option<&[BFieldElement]>) {

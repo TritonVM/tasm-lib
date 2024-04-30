@@ -22,7 +22,7 @@ use crate::list::set_length::SetLength;
 use crate::memory::dyn_malloc;
 use crate::rust_shadowing_helper_functions;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::ExecutionState;
+use crate::InitVmState;
 use crate::VmHasher;
 use crate::DIGEST_LENGTH;
 
@@ -34,7 +34,7 @@ impl CalculateNewPeaksFromAppend {
         &self,
         start_mmr: MmrAccumulator<VmHasher>,
         new_leaf: Digest,
-    ) -> ExecutionState {
+    ) -> InitVmState {
         // We assume that the peaks can safely be stored in memory on address 1
         let peaks_pointer = BFieldElement::one();
 
@@ -61,7 +61,7 @@ impl CalculateNewPeaksFromAppend {
             );
         }
 
-        ExecutionState::with_stack_and_memory(stack, memory)
+        InitVmState::with_stack_and_memory(stack, memory)
     }
 }
 
@@ -206,7 +206,7 @@ impl DeprecatedSnippet for CalculateNewPeaksFromAppend {
         vec!["Snippet arguments are not a valid MMR accumulator".to_string()]
     }
 
-    fn gen_input_states(&self) -> Vec<ExecutionState> {
+    fn gen_input_states(&self) -> Vec<InitVmState> {
         let mut ret = vec![];
         for mmr_size in [
             0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 100, 1000,
@@ -220,14 +220,14 @@ impl DeprecatedSnippet for CalculateNewPeaksFromAppend {
         ret
     }
 
-    fn common_case_input_state(&self) -> ExecutionState {
+    fn common_case_input_state(&self) -> InitVmState {
         let peaks: Vec<Digest> = random_elements(31);
         let new_leaf: Digest = random();
         let mmra = MmrAccumulator::init(peaks, (1 << 31) - 1);
         self.prepare_state_with_mmra(mmra, new_leaf)
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState {
+    fn worst_case_input_state(&self) -> InitVmState {
         let peaks: Vec<Digest> = random_elements(62);
         let new_leaf: Digest = random();
         let mmra = MmrAccumulator::init(peaks, (1 << 62) - 1);

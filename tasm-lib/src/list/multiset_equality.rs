@@ -16,7 +16,7 @@ use crate::list::length::Length;
 use crate::rust_shadowing_helper_functions;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::traits::procedure::Procedure;
-use crate::ExecutionState;
+use crate::InitVmState;
 use crate::VmHasher;
 use crate::DIGEST_LENGTH;
 
@@ -33,7 +33,7 @@ pub struct MultisetEquality;
 /// support for permutation checks instead of Fiat-Shamir and running
 /// products.
 impl MultisetEquality {
-    fn random_equal_lists(&self, length: usize) -> ExecutionState {
+    fn random_equal_lists(&self, length: usize) -> InitVmState {
         let list_a: Vec<Digest> = random_elements(length);
         let mut list_b = list_a.clone();
         list_b.sort();
@@ -46,15 +46,11 @@ impl MultisetEquality {
         rust_shadowing_helper_functions::list::list_insert(pointer_a, list_a, &mut memory);
         rust_shadowing_helper_functions::list::list_insert(pointer_b, list_b, &mut memory);
 
-        let nondeterminism = NonDeterminism::default().with_ram(memory);
-        ExecutionState {
-            stack: [empty_stack(), vec![pointer_a, pointer_b]].concat(),
-            std_in: vec![],
-            nondeterminism,
-        }
+        let stack = [empty_stack(), vec![pointer_a, pointer_b]].concat();
+        InitVmState::with_stack_and_memory(stack, memory)
     }
 
-    fn random_unequal_lists(&self, length: usize) -> ExecutionState {
+    fn random_unequal_lists(&self, length: usize) -> InitVmState {
         let list_a: Vec<Digest> = random_elements(length);
         let list_b: Vec<Digest> = random_elements(length);
         let pointer_a: BFieldElement = random();
@@ -65,15 +61,11 @@ impl MultisetEquality {
         rust_shadowing_helper_functions::list::list_insert(pointer_a, list_a, &mut memory);
         rust_shadowing_helper_functions::list::list_insert(pointer_b, list_b, &mut memory);
 
-        let nondeterminism = NonDeterminism::default().with_ram(memory);
-        ExecutionState {
-            stack: [empty_stack(), vec![pointer_a, pointer_b]].concat(),
-            std_in: vec![],
-            nondeterminism,
-        }
+        let stack = [empty_stack(), vec![pointer_a, pointer_b]].concat();
+        InitVmState::with_stack_and_memory(stack, memory)
     }
 
-    fn random_unequal_length_lists(&self, length_a: usize, length_b: usize) -> ExecutionState {
+    fn random_unequal_length_lists(&self, length_a: usize, length_b: usize) -> InitVmState {
         let list_a: Vec<Digest> = random_elements(length_a);
         let list_b: Vec<Digest> = random_elements(length_b);
         let pointer_a: BFieldElement = random();
@@ -84,15 +76,11 @@ impl MultisetEquality {
         rust_shadowing_helper_functions::list::list_insert(pointer_a, list_a, &mut memory);
         rust_shadowing_helper_functions::list::list_insert(pointer_b, list_b, &mut memory);
 
-        let nondeterminism = NonDeterminism::default().with_ram(memory);
-        ExecutionState {
-            stack: [empty_stack(), vec![pointer_a, pointer_b]].concat(),
-            std_in: vec![],
-            nondeterminism,
-        }
+        let stack = [empty_stack(), vec![pointer_a, pointer_b]].concat();
+        InitVmState::with_stack_and_memory(stack, memory)
     }
 
-    fn random_lists_one_element_flipped(&self, length: usize) -> ExecutionState {
+    fn random_lists_one_element_flipped(&self, length: usize) -> InitVmState {
         let list_a: Vec<Digest> = random_elements(length);
         let mut list_b = list_a.clone();
         list_b.sort();
@@ -108,12 +96,8 @@ impl MultisetEquality {
         rust_shadowing_helper_functions::list::list_insert(pointer_a, list_a, &mut memory);
         rust_shadowing_helper_functions::list::list_insert(pointer_b, list_b, &mut memory);
 
-        let nondeterminism = NonDeterminism::default().with_ram(memory);
-        ExecutionState {
-            stack: [empty_stack(), vec![pointer_a, pointer_b]].concat(),
-            std_in: vec![],
-            nondeterminism,
-        }
+        let stack = [empty_stack(), vec![pointer_a, pointer_b]].concat();
+        InitVmState::with_stack_and_memory(stack, memory)
     }
 }
 
@@ -292,7 +276,7 @@ impl DeprecatedSnippet for MultisetEquality {
         vec!["Length exceeds u32::MAX".to_string()]
     }
 
-    fn gen_input_states(&self) -> Vec<ExecutionState> {
+    fn gen_input_states(&self) -> Vec<InitVmState> {
         vec![
             self.random_equal_lists(0),
             self.random_equal_lists(1),
@@ -332,11 +316,11 @@ impl DeprecatedSnippet for MultisetEquality {
         ]
     }
 
-    fn common_case_input_state(&self) -> ExecutionState {
+    fn common_case_input_state(&self) -> InitVmState {
         self.random_equal_lists(2)
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState {
+    fn worst_case_input_state(&self) -> InitVmState {
         self.random_equal_lists(100)
     }
 

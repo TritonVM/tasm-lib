@@ -10,7 +10,7 @@ use crate::empty_stack;
 use crate::library::Library;
 use crate::push_encodable;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::ExecutionState;
+use crate::InitVmState;
 
 #[derive(Clone, Debug)]
 pub struct DecrU64;
@@ -76,7 +76,7 @@ impl DeprecatedSnippet for DecrU64 {
         vec!["value == 0".to_string()]
     }
 
-    fn gen_input_states(&self) -> Vec<ExecutionState> {
+    fn gen_input_states(&self) -> Vec<InitVmState> {
         let values = vec![
             // U32s::<2>::zero(),
             U32s::<2>::new([0, 14]),
@@ -87,14 +87,14 @@ impl DeprecatedSnippet for DecrU64 {
             .map(|value| {
                 let mut stack = empty_stack();
                 push_encodable(&mut stack, &value);
-                ExecutionState::with_stack(stack)
+                InitVmState::with_stack(stack)
             })
             .collect()
     }
 
-    fn common_case_input_state(&self) -> ExecutionState {
+    fn common_case_input_state(&self) -> InitVmState {
         // no carry
-        ExecutionState::with_stack(
+        InitVmState::with_stack(
             [
                 empty_stack(),
                 vec![BFieldElement::zero(), BFieldElement::new(7)],
@@ -103,9 +103,9 @@ impl DeprecatedSnippet for DecrU64 {
         )
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState {
+    fn worst_case_input_state(&self) -> InitVmState {
         // with carry
-        ExecutionState::with_stack(
+        InitVmState::with_stack(
             [
                 empty_stack(),
                 vec![BFieldElement::new(1000), BFieldElement::new(0)],

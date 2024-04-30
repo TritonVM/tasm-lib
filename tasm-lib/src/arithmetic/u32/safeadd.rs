@@ -5,7 +5,7 @@ use triton_vm::prelude::*;
 use crate::data_type::DataType;
 use crate::empty_stack;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::ExecutionState;
+use crate::InitVmState;
 
 #[derive(Clone, Debug)]
 pub struct Safeadd;
@@ -56,8 +56,8 @@ impl DeprecatedSnippet for Safeadd {
         vec!["u32 overflow".to_string()]
     }
 
-    fn gen_input_states(&self) -> Vec<ExecutionState> {
-        let mut ret: Vec<ExecutionState> = vec![];
+    fn gen_input_states(&self) -> Vec<InitVmState> {
+        let mut ret: Vec<InitVmState> = vec![];
         for _ in 0..10 {
             let mut stack = empty_stack();
             let lhs = thread_rng().gen_range(0..u32::MAX / 2);
@@ -66,14 +66,14 @@ impl DeprecatedSnippet for Safeadd {
             let rhs = BFieldElement::new(rhs as u64);
             stack.push(rhs);
             stack.push(lhs);
-            ret.push(ExecutionState::with_stack(stack));
+            ret.push(InitVmState::with_stack(stack));
         }
 
         ret
     }
 
-    fn common_case_input_state(&self) -> ExecutionState {
-        ExecutionState::with_stack(
+    fn common_case_input_state(&self) -> InitVmState {
+        InitVmState::with_stack(
             [
                 empty_stack(),
                 vec![BFieldElement::new(1 << 16), BFieldElement::new(1 << 15)],
@@ -82,8 +82,8 @@ impl DeprecatedSnippet for Safeadd {
         )
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState {
-        ExecutionState::with_stack(
+    fn worst_case_input_state(&self) -> InitVmState {
+        InitVmState::with_stack(
             [
                 empty_stack(),
                 vec![

@@ -15,7 +15,7 @@ use crate::execute_with_terminal_state;
 use crate::library::Library;
 use crate::snippet_bencher::BenchmarkResult;
 use crate::test_helpers::test_rust_equivalence_given_execution_state_deprecated;
-use crate::ExecutionState;
+use crate::InitVmState;
 use crate::VmHasher;
 use crate::DIGEST_LENGTH;
 
@@ -49,11 +49,11 @@ pub trait DeprecatedSnippet {
     fn crash_conditions(&self) -> Vec<String>;
 
     /// Examples of valid initial states for running this snippet
-    fn gen_input_states(&self) -> Vec<ExecutionState>;
+    fn gen_input_states(&self) -> Vec<InitVmState>;
 
-    fn common_case_input_state(&self) -> ExecutionState;
+    fn common_case_input_state(&self) -> InitVmState;
 
-    fn worst_case_input_state(&self) -> ExecutionState;
+    fn worst_case_input_state(&self) -> InitVmState;
 
     fn function_code_as_instructions(&self, library: &mut Library) -> Vec<LabelledInstruction> {
         let f_body = self.function_code(library);
@@ -151,14 +151,11 @@ pub trait DeprecatedSnippet {
         execute_bench_deprecated(&code, stack, Self::stack_diff(self), std_in, nondeterminism)
     }
 
-    fn link_and_run_tasm_from_state_for_test(
-        &self,
-        execution_state: &mut ExecutionState,
-    ) -> VMState {
+    fn link_and_run_tasm_from_state_for_test(&self, execution_state: &mut InitVmState) -> VMState {
         let stack_prior = execution_state.stack.clone();
         let ret = self.link_and_run_tasm_for_test(
             &mut execution_state.stack,
-            execution_state.std_in.clone(),
+            execution_state.public_input.clone(),
             execution_state.nondeterminism.to_owned(),
         );
         let stack_after = execution_state.stack.clone();
@@ -175,12 +172,12 @@ pub trait DeprecatedSnippet {
 
     fn link_and_run_tasm_from_state_for_bench(
         &self,
-        execution_state: &mut ExecutionState,
+        execution_state: &mut InitVmState,
     ) -> Result<BenchmarkResult> {
         let stack_prior = execution_state.stack.clone();
         let ret = self.link_and_run_tasm_for_bench(
             &mut execution_state.stack,
-            execution_state.std_in.clone(),
+            execution_state.public_input.clone(),
             execution_state.nondeterminism.to_owned(),
         );
         let stack_after = execution_state.stack.clone();

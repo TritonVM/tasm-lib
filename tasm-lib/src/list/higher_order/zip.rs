@@ -251,7 +251,7 @@ impl Function for Zip {
 }
 
 impl Zip {
-    fn generate_input_state(&self, left_length: usize, right_length: usize) -> ExecutionState {
+    fn generate_input_state(&self, left_length: usize, right_length: usize) -> InitVmState {
         let fill_with_random_elements =
             |data_type: &DataType, list_pointer, list_len, memory: &mut _| {
                 untyped_insert_random_list(list_pointer, list_len, memory, data_type.stack_size())
@@ -265,11 +265,9 @@ impl Zip {
         fill_with_random_elements(&self.left_type, left_pointer, left_length, &mut memory);
         fill_with_random_elements(&self.right_type, right_pointer, right_length, &mut memory);
 
-        ExecutionState {
-            stack: [empty_stack(), vec![left_pointer, right_pointer]].concat(),
-            std_in: vec![],
-            nondeterminism: NonDeterminism::default().with_ram(memory),
-        }
+        let stack = [empty_stack(), vec![left_pointer, right_pointer]].concat();
+
+        InitVmState::with_stack_and_memory(stack, memory)
     }
 }
 

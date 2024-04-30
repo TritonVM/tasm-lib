@@ -7,7 +7,7 @@ use crate::data_type::DataType;
 use crate::empty_stack;
 use crate::push_encodable;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::ExecutionState;
+use crate::InitVmState;
 
 #[derive(Clone, Debug)]
 pub struct MulTwoU64sToU128;
@@ -145,8 +145,8 @@ impl DeprecatedSnippet for MulTwoU64sToU128 {
         vec![]
     }
 
-    fn gen_input_states(&self) -> Vec<ExecutionState> {
-        let mut ret: Vec<ExecutionState> = vec![
+    fn gen_input_states(&self) -> Vec<InitVmState> {
+        let mut ret: Vec<InitVmState> = vec![
             prepare_state(1, 1),
             prepare_state(1, 2),
             prepare_state(2, 1),
@@ -196,11 +196,11 @@ impl DeprecatedSnippet for MulTwoU64sToU128 {
         ret
     }
 
-    fn common_case_input_state(&self) -> ExecutionState {
+    fn common_case_input_state(&self) -> InitVmState {
         prepare_state(1 << 63, (1 << 45) - 1)
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState {
+    fn worst_case_input_state(&self) -> InitVmState {
         prepare_state(1 << 63, (1 << 63) - 1)
     }
 
@@ -228,13 +228,13 @@ impl DeprecatedSnippet for MulTwoU64sToU128 {
     }
 }
 
-fn prepare_state(a: u64, b: u64) -> ExecutionState {
+fn prepare_state(a: u64, b: u64) -> InitVmState {
     let a = U32s::<2>::try_from(a).unwrap();
     let b = U32s::<2>::try_from(b).unwrap();
     let mut init_stack = empty_stack();
     push_encodable(&mut init_stack, &a);
     push_encodable(&mut init_stack, &b);
-    ExecutionState::with_stack(init_stack)
+    InitVmState::with_stack(init_stack)
 }
 
 #[cfg(test)]

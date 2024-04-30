@@ -8,7 +8,7 @@ use crate::data_type::DataType;
 use crate::empty_stack;
 use crate::library::Library;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::ExecutionState;
+use crate::InitVmState;
 
 #[derive(Clone, Debug)]
 pub struct SubU128;
@@ -160,7 +160,7 @@ impl DeprecatedSnippet for SubU128 {
         vec!["(lhs - rhs) overflows u128".to_string()]
     }
 
-    fn gen_input_states(&self) -> Vec<ExecutionState> {
+    fn gen_input_states(&self) -> Vec<InitVmState> {
         let mut rng = rand::thread_rng();
 
         let mut ret = vec![];
@@ -193,11 +193,11 @@ impl DeprecatedSnippet for SubU128 {
         ret
     }
 
-    fn common_case_input_state(&self) -> ExecutionState {
+    fn common_case_input_state(&self) -> InitVmState {
         prepare_state(1u128 << 127, 1u128 << 126)
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState {
+    fn worst_case_input_state(&self) -> InitVmState {
         prepare_state(
             (1u128 << 127) + (1u128 << 64),
             (1u128 << 126) + (1u128 << 56),
@@ -232,7 +232,7 @@ impl DeprecatedSnippet for SubU128 {
     }
 }
 
-fn prepare_state(lhs: u128, rhs: u128) -> ExecutionState {
+fn prepare_state(lhs: u128, rhs: u128) -> InitVmState {
     let mut init_stack = empty_stack();
     for elem in rhs.encode().into_iter().rev() {
         init_stack.push(elem);
@@ -241,7 +241,7 @@ fn prepare_state(lhs: u128, rhs: u128) -> ExecutionState {
         init_stack.push(elem);
     }
 
-    ExecutionState::with_stack(init_stack)
+    InitVmState::with_stack(init_stack)
 }
 
 #[cfg(test)]

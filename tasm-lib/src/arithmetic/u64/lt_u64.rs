@@ -11,7 +11,7 @@ use crate::empty_stack;
 use crate::library::Library;
 use crate::push_encodable;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::ExecutionState;
+use crate::InitVmState;
 
 #[derive(Clone, Debug)]
 pub struct LtStandardU64;
@@ -97,14 +97,14 @@ impl DeprecatedSnippet for LtStandardU64 {
         vec!["Either input is not u32".to_string()]
     }
 
-    fn gen_input_states(&self) -> Vec<ExecutionState> {
+    fn gen_input_states(&self) -> Vec<InitVmState> {
         // The input states for the two u64::lt operators can be reused. But the
         // rust shadowin cannot.
         LtU64::gen_input_states(&LtU64)
     }
 
-    fn common_case_input_state(&self) -> ExecutionState {
-        ExecutionState::with_stack(
+    fn common_case_input_state(&self) -> InitVmState {
+        InitVmState::with_stack(
             [
                 empty_stack(),
                 vec![BFieldElement::zero(), BFieldElement::new(1 << 31)],
@@ -114,8 +114,8 @@ impl DeprecatedSnippet for LtStandardU64 {
         )
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState {
-        ExecutionState::with_stack(
+    fn worst_case_input_state(&self) -> InitVmState {
+        InitVmState::with_stack(
             [
                 empty_stack(),
                 vec![BFieldElement::new(8), BFieldElement::new(1 << 31)],
@@ -228,8 +228,8 @@ impl DeprecatedSnippet for LtU64 {
         vec!["if inputs are not u32".to_string()]
     }
 
-    fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
-        let mut ret: Vec<ExecutionState> = vec![];
+    fn gen_input_states(&self) -> Vec<crate::InitVmState> {
+        let mut ret: Vec<InitVmState> = vec![];
 
         for _ in 0..30 {
             let n: u64 = rand::thread_rng().next_u64();
@@ -241,14 +241,14 @@ impl DeprecatedSnippet for LtU64 {
             push_encodable(&mut input_stack, &n);
             push_encodable(&mut input_stack, &m);
 
-            ret.push(ExecutionState::with_stack(input_stack))
+            ret.push(InitVmState::with_stack(input_stack))
         }
 
         ret
     }
 
-    fn common_case_input_state(&self) -> ExecutionState {
-        ExecutionState::with_stack(
+    fn common_case_input_state(&self) -> InitVmState {
+        InitVmState::with_stack(
             [
                 empty_stack(),
                 vec![BFieldElement::zero(), BFieldElement::new(1 << 31)],
@@ -258,8 +258,8 @@ impl DeprecatedSnippet for LtU64 {
         )
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState {
-        ExecutionState::with_stack(
+    fn worst_case_input_state(&self) -> InitVmState {
+        InitVmState::with_stack(
             [
                 empty_stack(),
                 vec![BFieldElement::new(8), BFieldElement::new(1 << 31)],

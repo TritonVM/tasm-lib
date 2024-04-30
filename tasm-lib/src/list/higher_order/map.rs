@@ -22,7 +22,7 @@ use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::traits::function::Function;
 use crate::traits::function::FunctionInitialState;
-use crate::ExecutionState;
+use crate::InitVmState;
 
 use super::inner_function::InnerFunction;
 
@@ -344,7 +344,7 @@ impl Map {
         &self,
         list_length: usize,
         additional_function_args: Vec<BFieldElement>,
-    ) -> ExecutionState {
+    ) -> InitVmState {
         let mut stack = empty_stack();
 
         // Add additional input args to stack, if they exist
@@ -359,12 +359,7 @@ impl Map {
 
         stack.push(list_pointer);
 
-        let nondeterminism = NonDeterminism::default().with_ram(memory);
-        ExecutionState {
-            stack,
-            std_in: vec![],
-            nondeterminism,
-        }
+        InitVmState::with_stack_and_memory(stack, memory)
     }
 }
 
@@ -473,11 +468,11 @@ mod tests {
             vec![]
         }
 
-        fn gen_input_states(&self) -> Vec<ExecutionState>
+        fn gen_input_states(&self) -> Vec<InitVmState>
         where
             Self: Sized,
         {
-            vec![ExecutionState::with_stack(
+            vec![InitVmState::with_stack(
                 [
                     vec![BFieldElement::zero(); 16],
                     random_elements::<BFieldElement>(3),
@@ -486,11 +481,11 @@ mod tests {
             )]
         }
 
-        fn common_case_input_state(&self) -> ExecutionState
+        fn common_case_input_state(&self) -> InitVmState
         where
             Self: Sized,
         {
-            ExecutionState::with_stack(
+            InitVmState::with_stack(
                 [
                     vec![BFieldElement::zero(); 16],
                     random_elements::<BFieldElement>(3),
@@ -499,11 +494,11 @@ mod tests {
             )
         }
 
-        fn worst_case_input_state(&self) -> ExecutionState
+        fn worst_case_input_state(&self) -> InitVmState
         where
             Self: Sized,
         {
-            ExecutionState::with_stack(
+            InitVmState::with_stack(
                 [
                     vec![BFieldElement::zero(); 16],
                     random_elements::<BFieldElement>(3),

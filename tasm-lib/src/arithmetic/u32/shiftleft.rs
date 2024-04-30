@@ -9,7 +9,7 @@ use crate::data_type::DataType;
 use crate::empty_stack;
 use crate::library::Library;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::ExecutionState;
+use crate::InitVmState;
 
 #[derive(Clone, Debug)]
 pub struct Shiftleft;
@@ -73,9 +73,9 @@ impl DeprecatedSnippet for Shiftleft {
         ]
     }
 
-    fn gen_input_states(&self) -> Vec<ExecutionState> {
+    fn gen_input_states(&self) -> Vec<InitVmState> {
         let mut rng = thread_rng();
-        let mut ret: Vec<ExecutionState> = vec![];
+        let mut ret: Vec<InitVmState> = vec![];
         for _ in 0..100 {
             let value = rng.next_u32();
             let shift = rng.gen_range(0..32);
@@ -85,11 +85,11 @@ impl DeprecatedSnippet for Shiftleft {
         ret
     }
 
-    fn common_case_input_state(&self) -> ExecutionState {
+    fn common_case_input_state(&self) -> InitVmState {
         prepare_state((1 << 16) - 1, 16)
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState {
+    fn worst_case_input_state(&self) -> InitVmState {
         prepare_state(u32::MAX, 31)
     }
 
@@ -111,14 +111,14 @@ impl DeprecatedSnippet for Shiftleft {
     }
 }
 
-fn prepare_state(value: u32, shift: u32) -> ExecutionState {
+fn prepare_state(value: u32, shift: u32) -> InitVmState {
     let mut stack = empty_stack();
     let value = BFieldElement::new(value as u64);
     let shift = BFieldElement::new(shift as u64);
     stack.push(value);
     stack.push(shift);
 
-    ExecutionState::with_stack(stack)
+    InitVmState::with_stack(stack)
 }
 
 #[cfg(test)]
@@ -146,8 +146,7 @@ mod tests {
         let mut init_stack = empty_stack();
         init_stack.push(BFieldElement::new(u32::MAX as u64));
         init_stack.push(32u64.into());
-        Shiftleft
-            .link_and_run_tasm_from_state_for_test(&mut ExecutionState::with_stack(init_stack));
+        Shiftleft.link_and_run_tasm_from_state_for_test(&mut InitVmState::with_stack(init_stack));
     }
 
     fn prop_shift_left(value: u32, shift_amount: u32) {

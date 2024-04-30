@@ -192,15 +192,15 @@ impl DeprecatedSnippet for DummyTestSnippetA {
         vec![]
     }
 
-    fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
+    fn gen_input_states(&self) -> Vec<crate::InitVmState> {
         vec![]
     }
 
-    fn common_case_input_state(&self) -> crate::ExecutionState {
+    fn common_case_input_state(&self) -> crate::InitVmState {
         todo!()
     }
 
-    fn worst_case_input_state(&self) -> crate::ExecutionState {
+    fn worst_case_input_state(&self) -> crate::InitVmState {
         todo!()
     }
 
@@ -260,15 +260,15 @@ impl DeprecatedSnippet for DummyTestSnippetB {
         vec![]
     }
 
-    fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
+    fn gen_input_states(&self) -> Vec<crate::InitVmState> {
         vec![]
     }
 
-    fn common_case_input_state(&self) -> crate::ExecutionState {
+    fn common_case_input_state(&self) -> crate::InitVmState {
         todo!()
     }
 
-    fn worst_case_input_state(&self) -> crate::ExecutionState {
+    fn worst_case_input_state(&self) -> crate::InitVmState {
         todo!()
     }
 
@@ -325,15 +325,15 @@ impl DeprecatedSnippet for DummyTestSnippetC {
         vec![]
     }
 
-    fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
+    fn gen_input_states(&self) -> Vec<crate::InitVmState> {
         vec![]
     }
 
-    fn common_case_input_state(&self) -> crate::ExecutionState {
+    fn common_case_input_state(&self) -> crate::InitVmState {
         todo!()
     }
 
-    fn worst_case_input_state(&self) -> crate::ExecutionState {
+    fn worst_case_input_state(&self) -> crate::InitVmState {
         todo!()
     }
 

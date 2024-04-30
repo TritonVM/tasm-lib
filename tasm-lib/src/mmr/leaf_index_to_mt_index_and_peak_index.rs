@@ -20,7 +20,7 @@ use crate::data_type::DataType;
 use crate::empty_stack;
 use crate::library::Library;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::ExecutionState;
+use crate::InitVmState;
 
 #[derive(Clone, Debug)]
 pub struct MmrLeafIndexToMtIndexAndPeakIndex;
@@ -156,8 +156,8 @@ impl DeprecatedSnippet for MmrLeafIndexToMtIndexAndPeakIndex {
         vec!["Input values are not valid u32s".to_string()]
     }
 
-    fn gen_input_states(&self) -> Vec<ExecutionState> {
-        let mut ret: Vec<ExecutionState> = vec![];
+    fn gen_input_states(&self) -> Vec<InitVmState> {
+        let mut ret: Vec<InitVmState> = vec![];
         for _ in 0..10 {
             let leaf_count = thread_rng().gen_range(0..u64::MAX / 2);
             let leaf_index = thread_rng().gen_range(0..leaf_count);
@@ -167,11 +167,11 @@ impl DeprecatedSnippet for MmrLeafIndexToMtIndexAndPeakIndex {
         ret
     }
 
-    fn common_case_input_state(&self) -> ExecutionState {
+    fn common_case_input_state(&self) -> InitVmState {
         prepare_state((1 << 32) - 1, (1 << 31) + (1 << 30) + 100000)
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState {
+    fn worst_case_input_state(&self) -> InitVmState {
         // This function has some pretty bad worst-case behavior. Common-case is orders of magnitudes
         // better, it seems.
         // The below input is the worst-case input I could find.
@@ -202,7 +202,7 @@ impl DeprecatedSnippet for MmrLeafIndexToMtIndexAndPeakIndex {
     }
 }
 
-fn prepare_state(leaf_count: u64, leaf_index: u64) -> ExecutionState {
+fn prepare_state(leaf_count: u64, leaf_index: u64) -> InitVmState {
     let mut stack = empty_stack();
     let leaf_count_hi = BFieldElement::new(leaf_count >> 32);
     let leaf_count_lo = BFieldElement::new(leaf_count & u32::MAX as u64);
@@ -212,7 +212,7 @@ fn prepare_state(leaf_count: u64, leaf_index: u64) -> ExecutionState {
     let leaf_index_lo = BFieldElement::new(leaf_index & u32::MAX as u64);
     stack.push(leaf_index_hi);
     stack.push(leaf_index_lo);
-    ExecutionState::with_stack(stack)
+    InitVmState::with_stack(stack)
 }
 
 #[cfg(test)]

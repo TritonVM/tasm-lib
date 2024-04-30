@@ -133,7 +133,7 @@ impl DeprecatedSnippet for GetPointerList {
         vec!["Memory outside of first 2^32 words is accessed".to_owned()]
     }
 
-    fn gen_input_states(&self) -> Vec<crate::ExecutionState> {
+    fn gen_input_states(&self) -> Vec<crate::InitVmState> {
         let mut rng = thread_rng();
         vec![
             GetLength::pseudorandom_input_state(rng.gen(), 0),
@@ -145,14 +145,14 @@ impl DeprecatedSnippet for GetPointerList {
         ]
     }
 
-    fn common_case_input_state(&self) -> crate::ExecutionState {
+    fn common_case_input_state(&self) -> crate::InitVmState {
         let mut seed = [0u8; 32];
         seed[0] = 0x01;
         seed[1] = 0xdd;
         GetLength::pseudorandom_input_state(seed, 2)
     }
 
-    fn worst_case_input_state(&self) -> crate::ExecutionState {
+    fn worst_case_input_state(&self) -> crate::InitVmState {
         let mut seed = [0u8; 32];
         seed[0] = 0xa1;
         seed[1] = 0xde;

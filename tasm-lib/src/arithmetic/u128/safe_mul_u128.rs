@@ -7,7 +7,7 @@ use crate::empty_stack;
 use crate::library::Library;
 use crate::push_encodable;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::ExecutionState;
+use crate::InitVmState;
 
 #[derive(Clone, Debug)]
 pub struct SafeMulU128;
@@ -344,7 +344,7 @@ impl DeprecatedSnippet for SafeMulU128 {
         vec!["Product is greater than u128::MAX".to_string()]
     }
 
-    fn gen_input_states(&self) -> Vec<ExecutionState> {
+    fn gen_input_states(&self) -> Vec<InitVmState> {
         let mut rng = rand::thread_rng();
 
         let mut ret = vec![];
@@ -395,11 +395,11 @@ impl DeprecatedSnippet for SafeMulU128 {
         ret
     }
 
-    fn common_case_input_state(&self) -> ExecutionState {
+    fn common_case_input_state(&self) -> InitVmState {
         prepare_state(1 << 63, (1 << 45) - 1)
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState {
+    fn worst_case_input_state(&self) -> InitVmState {
         prepare_state(1 << 63, (1 << 63) - 1)
     }
 
@@ -443,13 +443,13 @@ impl DeprecatedSnippet for SafeMulU128 {
     }
 }
 
-fn prepare_state(a: u128, b: u128) -> ExecutionState {
+fn prepare_state(a: u128, b: u128) -> InitVmState {
     let a = U32s::<4>::try_from(a).unwrap();
     let b = U32s::<4>::try_from(b).unwrap();
     let mut init_stack = empty_stack();
     push_encodable(&mut init_stack, &a);
     push_encodable(&mut init_stack, &b);
-    ExecutionState::with_stack(init_stack)
+    InitVmState::with_stack(init_stack)
 }
 
 #[cfg(test)]

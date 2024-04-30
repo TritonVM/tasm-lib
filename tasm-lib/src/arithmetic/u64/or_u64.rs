@@ -7,7 +7,7 @@ use crate::data_type::DataType;
 use crate::empty_stack;
 use crate::push_encodable;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::ExecutionState;
+use crate::InitVmState;
 
 #[derive(Clone, Debug)]
 pub struct OrU64;
@@ -86,8 +86,8 @@ impl DeprecatedSnippet for OrU64 {
         vec!["Inputs are not u32".to_owned()]
     }
 
-    fn gen_input_states(&self) -> Vec<ExecutionState> {
-        let mut ret: Vec<ExecutionState> = vec![];
+    fn gen_input_states(&self) -> Vec<InitVmState> {
+        let mut ret: Vec<InitVmState> = vec![];
         for _ in 0..100 {
             ret.push(prepare_state(
                 thread_rng().next_u64(),
@@ -98,11 +98,11 @@ impl DeprecatedSnippet for OrU64 {
         ret
     }
 
-    fn common_case_input_state(&self) -> ExecutionState {
+    fn common_case_input_state(&self) -> InitVmState {
         prepare_state(u32::MAX as u64, u32::MAX as u64)
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState {
+    fn worst_case_input_state(&self) -> InitVmState {
         prepare_state(u64::MAX, u64::MAX)
     }
 
@@ -127,13 +127,13 @@ impl DeprecatedSnippet for OrU64 {
     }
 }
 
-fn prepare_state(a: u64, b: u64) -> ExecutionState {
+fn prepare_state(a: u64, b: u64) -> InitVmState {
     let a = U32s::<2>::try_from(a).unwrap();
     let b = U32s::<2>::try_from(b).unwrap();
     let mut init_stack = empty_stack();
     push_encodable(&mut init_stack, &a);
     push_encodable(&mut init_stack, &b);
-    ExecutionState::with_stack(init_stack)
+    InitVmState::with_stack(init_stack)
 }
 
 #[cfg(test)]

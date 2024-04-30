@@ -10,7 +10,7 @@ use crate::empty_stack;
 use crate::library::Library;
 use crate::push_encodable;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::ExecutionState;
+use crate::InitVmState;
 
 #[derive(Clone, Debug)]
 pub struct XorU64;
@@ -69,18 +69,18 @@ impl DeprecatedSnippet for XorU64 {
         vec!["any input is not u32".to_string()]
     }
 
-    fn gen_input_states(&self) -> Vec<ExecutionState> {
+    fn gen_input_states(&self) -> Vec<InitVmState> {
         let mut rng = rand::thread_rng();
         let lhs = U32s::<2>::try_from(rng.next_u64()).unwrap();
         let rhs = U32s::<2>::try_from(rng.next_u64()).unwrap();
         let mut stack = empty_stack();
         push_encodable(&mut stack, &lhs);
         push_encodable(&mut stack, &rhs);
-        vec![ExecutionState::with_stack(stack)]
+        vec![InitVmState::with_stack(stack)]
     }
 
-    fn common_case_input_state(&self) -> ExecutionState {
-        ExecutionState::with_stack(
+    fn common_case_input_state(&self) -> InitVmState {
+        InitVmState::with_stack(
             [
                 empty_stack(),
                 vec![BFieldElement::zero(), BFieldElement::new((1 << 31) - 1)],
@@ -90,8 +90,8 @@ impl DeprecatedSnippet for XorU64 {
         )
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState {
-        ExecutionState::with_stack(
+    fn worst_case_input_state(&self) -> InitVmState {
+        InitVmState::with_stack(
             [
                 empty_stack(),
                 vec![BFieldElement::new(1 << 31), BFieldElement::new(1 << 31)],

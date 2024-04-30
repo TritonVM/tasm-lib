@@ -12,7 +12,7 @@ use crate::empty_stack;
 use crate::library::Library;
 use crate::rust_shadowing_helper_functions::list::untyped_insert_random_list;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::ExecutionState;
+use crate::InitVmState;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct Length {
@@ -74,8 +74,8 @@ impl DeprecatedSnippet for Length {
         vec![]
     }
 
-    fn gen_input_states(&self) -> Vec<ExecutionState> {
-        let mut ret: Vec<ExecutionState> = vec![];
+    fn gen_input_states(&self) -> Vec<InitVmState> {
+        let mut ret: Vec<InitVmState> = vec![];
         let mut rng = thread_rng();
         let mut stack = empty_stack();
         let list_address: BFieldElement = random();
@@ -85,41 +85,41 @@ impl DeprecatedSnippet for Length {
         // Test for various values of `N` (list-element size)
         let mut memory = HashMap::default();
         untyped_insert_random_list(list_address, list_length, &mut memory, 1);
-        ret.push(ExecutionState::with_stack_and_memory(stack.clone(), memory));
+        ret.push(InitVmState::with_stack_and_memory(stack.clone(), memory));
         memory = HashMap::default();
         untyped_insert_random_list(list_address, list_length, &mut memory, 2);
-        ret.push(ExecutionState::with_stack_and_memory(stack.clone(), memory));
+        ret.push(InitVmState::with_stack_and_memory(stack.clone(), memory));
         memory = HashMap::default();
         untyped_insert_random_list(list_address, list_length, &mut memory, 3);
-        ret.push(ExecutionState::with_stack_and_memory(stack.clone(), memory));
+        ret.push(InitVmState::with_stack_and_memory(stack.clone(), memory));
         memory = HashMap::default();
         untyped_insert_random_list(list_address, list_length, &mut memory, 4);
-        ret.push(ExecutionState::with_stack_and_memory(stack.clone(), memory));
+        ret.push(InitVmState::with_stack_and_memory(stack.clone(), memory));
         memory = HashMap::default();
         untyped_insert_random_list(list_address, list_length, &mut memory, 11);
-        ret.push(ExecutionState::with_stack_and_memory(stack, memory));
+        ret.push(InitVmState::with_stack_and_memory(stack, memory));
 
         ret
     }
 
-    fn common_case_input_state(&self) -> ExecutionState {
+    fn common_case_input_state(&self) -> InitVmState {
         let mut stack = empty_stack();
         let list_address: u32 = random();
         let list_address = BFieldElement::from(list_address as u64);
         stack.push(list_address);
         let mut memory = HashMap::default();
         untyped_insert_random_list(BFieldElement::one(), 1 << 5, &mut memory, 1);
-        ExecutionState::with_stack_and_memory(stack.clone(), memory)
+        InitVmState::with_stack_and_memory(stack.clone(), memory)
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState {
+    fn worst_case_input_state(&self) -> InitVmState {
         let mut stack = empty_stack();
         let list_address: u32 = random();
         let list_address = BFieldElement::from(list_address as u64);
         stack.push(list_address);
         let mut memory = HashMap::default();
         untyped_insert_random_list(BFieldElement::one(), 1 << 6, &mut memory, 1);
-        ExecutionState::with_stack_and_memory(stack.clone(), memory)
+        InitVmState::with_stack_and_memory(stack.clone(), memory)
     }
 
     fn rust_shadowing(

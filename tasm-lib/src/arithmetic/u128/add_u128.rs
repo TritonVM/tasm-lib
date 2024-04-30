@@ -10,7 +10,7 @@ use crate::empty_stack;
 use crate::library::Library;
 use crate::push_encodable;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::ExecutionState;
+use crate::InitVmState;
 
 #[derive(Clone, Debug)]
 pub struct AddU128;
@@ -136,7 +136,7 @@ impl DeprecatedSnippet for AddU128 {
         vec!["if (lhs + rhs) overflows u128".to_string()]
     }
 
-    fn gen_input_states(&self) -> Vec<ExecutionState> {
+    fn gen_input_states(&self) -> Vec<InitVmState> {
         let mut rng = rand::thread_rng();
 
         let mut states = vec![];
@@ -154,7 +154,7 @@ impl DeprecatedSnippet for AddU128 {
                 let mut stack = empty_stack();
                 push_encodable(&mut stack, &zero);
                 push_encodable(&mut stack, &large_a);
-                ExecutionState::with_stack(stack)
+                InitVmState::with_stack(stack)
             });
 
             // 1. two small
@@ -162,15 +162,15 @@ impl DeprecatedSnippet for AddU128 {
                 let mut stack = empty_stack();
                 push_encodable(&mut stack, &small_a);
                 push_encodable(&mut stack, &small_b);
-                ExecutionState::with_stack(stack)
+                InitVmState::with_stack(stack)
             });
         }
 
         states
     }
 
-    fn common_case_input_state(&self) -> ExecutionState {
-        ExecutionState::with_stack(
+    fn common_case_input_state(&self) -> InitVmState {
+        InitVmState::with_stack(
             [
                 empty_stack(),
                 vec![BFieldElement::zero(), BFieldElement::new(1 << 31)],
@@ -182,8 +182,8 @@ impl DeprecatedSnippet for AddU128 {
         )
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState {
-        ExecutionState::with_stack(
+    fn worst_case_input_state(&self) -> InitVmState {
+        InitVmState::with_stack(
             [
                 empty_stack(),
                 vec![BFieldElement::zero(), BFieldElement::new(1 << 31)],

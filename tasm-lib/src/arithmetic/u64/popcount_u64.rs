@@ -8,7 +8,7 @@ use crate::empty_stack;
 use crate::library::Library;
 use crate::push_encodable;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::ExecutionState;
+use crate::InitVmState;
 
 #[derive(Clone, Debug)]
 pub struct PopCountU64;
@@ -60,7 +60,7 @@ impl DeprecatedSnippet for PopCountU64 {
         vec!["Input are not valid u32s".to_string()]
     }
 
-    fn gen_input_states(&self) -> Vec<ExecutionState> {
+    fn gen_input_states(&self) -> Vec<InitVmState> {
         let mut rng = rand::thread_rng();
 
         let mut ret = vec![];
@@ -72,31 +72,31 @@ impl DeprecatedSnippet for PopCountU64 {
         let mut init_stack_zero = empty_stack();
         init_stack_zero.push(BFieldElement::zero());
         init_stack_zero.push(BFieldElement::zero());
-        ret.push(ExecutionState::with_stack(init_stack_zero));
+        ret.push(InitVmState::with_stack(init_stack_zero));
 
         let mut init_stack_max_value = empty_stack();
         init_stack_max_value.push(BFieldElement::new((1u64 << 32) - 1));
         init_stack_max_value.push(BFieldElement::new((1u64 << 32) - 1));
-        ret.push(ExecutionState::with_stack(init_stack_max_value));
+        ret.push(InitVmState::with_stack(init_stack_max_value));
 
         let mut init_stack_max_value2 = empty_stack();
         init_stack_max_value2.push(BFieldElement::new((1u64 << 32) - 1));
         init_stack_max_value2.push(BFieldElement::new((1u64 << 30) - 1));
-        ret.push(ExecutionState::with_stack(init_stack_max_value2));
+        ret.push(InitVmState::with_stack(init_stack_max_value2));
 
         let mut init_stack_max_value3 = empty_stack();
         init_stack_max_value3.push(BFieldElement::new((1u64 << 30) - 1));
         init_stack_max_value3.push(BFieldElement::new((1u64 << 32) - 1));
-        ret.push(ExecutionState::with_stack(init_stack_max_value3));
+        ret.push(InitVmState::with_stack(init_stack_max_value3));
 
         ret
     }
 
-    fn common_case_input_state(&self) -> ExecutionState {
+    fn common_case_input_state(&self) -> InitVmState {
         prepare_state(1 << 60)
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState {
+    fn worst_case_input_state(&self) -> InitVmState {
         prepare_state(1 << 60)
     }
 
@@ -118,11 +118,11 @@ impl DeprecatedSnippet for PopCountU64 {
     }
 }
 
-fn prepare_state(a: u64) -> ExecutionState {
+fn prepare_state(a: u64) -> InitVmState {
     let a = U32s::<2>::try_from(a).unwrap();
     let mut init_stack = empty_stack();
     push_encodable(&mut init_stack, &a);
-    ExecutionState::with_stack(init_stack)
+    InitVmState::with_stack(init_stack)
 }
 
 #[cfg(test)]

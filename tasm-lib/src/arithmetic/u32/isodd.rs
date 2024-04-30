@@ -8,7 +8,7 @@ use crate::empty_stack;
 use crate::library::Library;
 use crate::push_encodable;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::ExecutionState;
+use crate::InitVmState;
 
 #[derive(Clone, Debug)]
 pub struct Isodd;
@@ -60,7 +60,7 @@ impl DeprecatedSnippet for Isodd {
         vec!["if `value` is not a u32".to_string()]
     }
 
-    fn gen_input_states(&self) -> Vec<ExecutionState> {
+    fn gen_input_states(&self) -> Vec<InitVmState> {
         let n: u32 = rand::thread_rng().next_u32();
 
         let mut even_stack = empty_stack();
@@ -72,19 +72,17 @@ impl DeprecatedSnippet for Isodd {
         push_encodable(&mut odd_stack, &odd_value);
 
         vec![
-            ExecutionState::with_stack(even_stack),
-            ExecutionState::with_stack(odd_stack),
+            InitVmState::with_stack(even_stack),
+            InitVmState::with_stack(odd_stack),
         ]
     }
 
-    fn common_case_input_state(&self) -> ExecutionState {
-        ExecutionState::with_stack([empty_stack(), vec![BFieldElement::new(1 << 16)]].concat())
+    fn common_case_input_state(&self) -> InitVmState {
+        InitVmState::with_stack([empty_stack(), vec![BFieldElement::new(1 << 16)]].concat())
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState {
-        ExecutionState::with_stack(
-            [empty_stack(), vec![BFieldElement::new((1 << 32) - 1)]].concat(),
-        )
+    fn worst_case_input_state(&self) -> InitVmState {
+        InitVmState::with_stack([empty_stack(), vec![BFieldElement::new((1 << 32) - 1)]].concat())
     }
 
     fn rust_shadowing(

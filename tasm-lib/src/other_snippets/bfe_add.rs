@@ -7,7 +7,7 @@ use crate::data_type::DataType;
 use crate::empty_stack;
 use crate::library::Library;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::ExecutionState;
+use crate::InitVmState;
 
 #[derive(Clone, Debug)]
 pub struct BfeAdd;
@@ -33,12 +33,12 @@ impl DeprecatedSnippet for BfeAdd {
         vec![]
     }
 
-    fn gen_input_states(&self) -> Vec<ExecutionState> {
+    fn gen_input_states(&self) -> Vec<InitVmState> {
         let mut rng = rand::thread_rng();
         let mut stack = empty_stack();
         stack.push(rng.gen());
         stack.push(rng.gen());
-        vec![ExecutionState::with_stack(stack)]
+        vec![InitVmState::with_stack(stack)]
     }
 
     fn stack_diff(&self) -> isize {
@@ -72,8 +72,8 @@ impl DeprecatedSnippet for BfeAdd {
         stack.push(a + b);
     }
 
-    fn common_case_input_state(&self) -> ExecutionState {
-        ExecutionState::with_stack(
+    fn common_case_input_state(&self) -> InitVmState {
+        InitVmState::with_stack(
             [
                 empty_stack(),
                 vec![BFieldElement::new(10), BFieldElement::new(20)],
@@ -82,8 +82,8 @@ impl DeprecatedSnippet for BfeAdd {
         )
     }
 
-    fn worst_case_input_state(&self) -> ExecutionState {
-        ExecutionState::with_stack(
+    fn worst_case_input_state(&self) -> InitVmState {
+        InitVmState::with_stack(
             [
                 empty_stack(),
                 vec![BFieldElement::new(10), BFieldElement::new(20)],
