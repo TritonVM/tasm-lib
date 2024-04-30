@@ -483,17 +483,65 @@ fn link_for_isolated_run<T: RustShadow>(snippet_struct: &T) -> Vec<LabelledInstr
 #[allow(dead_code)]
 pub fn test_rust_equivalence_given_execution_state<T: BasicSnippet + RustShadow>(
     snippet_struct: &T,
-    execution_state: ExecutionState,
+    execution_state: InitVmState,
 ) -> VMState {
     let nondeterminism = execution_state.nondeterminism;
     test_rust_equivalence_given_complete_state::<T>(
         snippet_struct,
         &execution_state.stack,
-        &execution_state.std_in,
+        &execution_state.public_input,
         &nondeterminism,
         &None,
         None,
     )
+}
+
+pub fn negative_test<T: RustShadow>(
+    snippet_struct: &T,
+    init_state: InitVmState,
+    expected_tvm_error: InstructionError,
+) {
+    let rust_result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let mut rust_stack = init_state.stack.clone();
+        let mut rust_memory = init_state.nondeterminism.ram.clone();
+        let mut rust_sponge = init_state.sponge.clone();
+        snippet_struct.rust_shadow_wrapper(
+            &init_state.public_input,
+            &init_state.nondeterminism,
+            &mut rust_stack,
+            &mut rust_memory,
+            &mut rust_sponge,
+        )
+    }));
+
+    // Run on Triton
+    let code = snippet_struct.inner().borrow().link_for_isolated_run();
+    let program = Program::new(&code);
+    let tvm_result = execute_with_terminal_state(
+        &program,
+        &init_state.public_input,
+        &init_state.stack,
+        &init_state.nondeterminism,
+        init_state.sponge,
+    );
+
+    let rust_failed_successfully = rust_result.is_err();
+    assert!(
+        rust_failed_successfully,
+        "Test case: Rust-shadowing must panic in negative test case"
+    );
+
+    let tvm_failed_successfully = tvm_result.is_err();
+    assert!(
+        tvm_failed_successfully,
+        "Test case: TVM-execution must panic in negative test case"
+    );
+
+    let err = tvm_result.unwrap_err();
+    assert_eq!(
+        expected_tvm_error, err,
+        "Triton VM execution must fail with expected error:\n{expected_tvm_error}\n\n Got:\n{err}"
+    );
 }
 
 pub fn prepend_program_with_stack_setup(

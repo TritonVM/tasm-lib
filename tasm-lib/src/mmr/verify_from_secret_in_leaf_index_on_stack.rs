@@ -110,9 +110,9 @@ mod tests {
     use triton_vm::twenty_first::util_types::mmr::mmr_trait::Mmr;
     use triton_vm::twenty_first::util_types::mmr::shared_basic::leaf_index_to_mt_index_and_peak_index;
 
-    use crate::execute_with_terminal_state;
     use crate::rust_shadowing_helper_functions;
     use crate::snippet_bencher::BenchmarkCase;
+    use crate::test_helpers::negative_test;
     use crate::traits::procedure::Procedure;
     use crate::traits::procedure::ProcedureInitialState;
     use crate::traits::procedure::ShadowedProcedure;
@@ -147,33 +147,10 @@ mod tests {
             auth_path.clone(),
         );
 
-        let rust_result = std::panic::catch_unwind(|| {
-            let mut rust_stack = init_state.stack.clone();
-            let mut rust_memory = init_state.nondeterminism.ram.clone();
-            let mut rust_sponge = init_state.sponge.clone();
-            ShadowedProcedure::new(MmrVerifyFromSecretInLeafIndexOnStack).rust_shadow_wrapper(
-                &init_state.public_input,
-                &init_state.nondeterminism,
-                &mut rust_stack,
-                &mut rust_memory,
-                &mut rust_sponge,
-            )
-        });
-
-        // Run on Triton
-        let code = MmrVerifyFromSecretInLeafIndexOnStack.link_for_isolated_run();
-        let program = Program::new(&code);
-        let tvm_result = execute_with_terminal_state(
-            &program,
-            &init_state.public_input,
-            &init_state.stack,
-            &init_state.nondeterminism,
-            init_state.sponge,
-        );
-
-        assert!(
-            rust_result.is_err() && tvm_result.is_err(),
-            "Test case: negative test-case for MMR auth path verification must fail"
+        negative_test(
+            &ShadowedProcedure::new(MmrVerifyFromSecretInLeafIndexOnStack),
+            init_state.into(),
+            InstructionError::VectorAssertionFailed(0),
         );
 
         // Sanity check
