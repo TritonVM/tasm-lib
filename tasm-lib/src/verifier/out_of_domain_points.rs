@@ -95,7 +95,7 @@ impl BasicSnippet for OutOfDomainPoints {
                 swap 7
                 // _ *ood_points[1] [ood_curr_row] [ood_curr_row] trace_domain_generator
 
-                xbmul
+                xb_mul
                 // _ *ood_points[1] [ood_curr_row] [ood_next_row]
 
                 dup 6

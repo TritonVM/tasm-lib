@@ -47,7 +47,7 @@ impl<const N: usize> BasicSnippet for ComputeTerminalConstSizedDynamicSymbolsRev
                 dup 6
                 dup 6
                 dup 6
-                xxmul
+                xx_mul
                 // _ [challenge] *symbol [acc * challenge]
 
                 dup 3

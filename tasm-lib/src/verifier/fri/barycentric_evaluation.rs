@@ -120,11 +120,11 @@ impl BasicSnippet for BarycentricEvaluation {
                 // _ *stop_condition [indeterminate] geni geniacc *codeword_elem [denominator] [numerator] [geniacc] [indeterminate - geniacc]
 
                 /* 3. */
-                xinvert
+                x_invert
                 // _ *stop_condition [indeterminate] geni geniacc *codeword_elem [denominator] [numerator] [geniacc] [1 / (indeterminate - geniacc)]
 
                 /* 4. */
-                xxmul
+                xx_mul
                 // _ *stop_condition [indeterminate] geni geniacc *codeword_elem [denominator] [numerator] [geniacc / (indeterminate - geniacc)]
                 // _ *stop_condition [indeterminate] geni geniacc *codeword_elem [denominator] [numerator] [dodse] <-- rename
 
@@ -136,7 +136,7 @@ impl BasicSnippet for BarycentricEvaluation {
                 dup 8
                 dup 8
                 dup 8
-                xxadd
+                xx_add
                 // _ *stop_condition [indeterminate] geni geniacc *codeword_elem [dodse] [numerator] [denominator + dodse]
                 // _ *stop_condition [indeterminate] geni geniacc *codeword_elem [dodse] [numerator] [denominator'] <-- rename
 
@@ -152,8 +152,8 @@ impl BasicSnippet for BarycentricEvaluation {
                 // _ *stop_condition [indeterminate] geni geniacc *codeword_elem' [denominator'] [numerator] [dodse] [code_word_elem]     <-- rename
 
                 /* 7. */
-                xxmul
-                xxadd
+                xx_mul
+                xx_add
                 // _ *stop_condition [indeterminate] geni geniacc *codeword_elem' [denominator'] [numerator + dodse * code_word_elem]
                 // _ *stop_condition [indeterminate] geni geniacc *codeword_elem' [denominator'] [numerator']   <-- rename
 
@@ -220,8 +220,8 @@ impl BasicSnippet for BarycentricEvaluation {
                 {&swap_top_two_xfes}
                 // _ *codeword [indeterminate] geni geniacc *codeword [numerator] [denominator]
 
-                xinvert
-                xxmul
+                x_invert
+                xx_mul
                 // _ *codeword [indeterminate] geni geniacc *codeword [numerator / denominator]
 
                 swap 7

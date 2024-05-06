@@ -29,8 +29,8 @@ impl BasicSnippet for Cube {
                 dup 2
                 dup 2
                 dup 2
-                xxmul
-                xxmul
+                xx_mul
+                xx_mul
 
                 return
         )

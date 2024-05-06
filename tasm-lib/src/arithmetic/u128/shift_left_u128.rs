@@ -89,7 +89,7 @@ impl DeprecatedSnippet for ShiftLeftU128 {
 
                 mul    // _ (2 ^ shift) v2 v1 v0 v3<<shift
                 swap 4 // _ v3<<shift v2 v1 v0 (2^shift)
-                xbmul  // _ v3<<shift v2<<shift v1<<shift v0<<shift
+                xb_mul  // _ v3<<shift v2<<shift v1<<shift v0<<shift
 
                 split  // _ v3s v2s v1s v0s_hi v0s_lo
                 swap 2 // _ v3s v2s v0s_lo v0s_hi v1s

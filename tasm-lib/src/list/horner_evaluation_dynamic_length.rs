@@ -37,11 +37,11 @@ impl BasicSnippet for HornerEvaluationDynamicLength {
             // BEFORE: _ *ptr [x] [acc]
             // AFTER: _ *ptr-3 [x] [acc*x+ct]
             dup 5 dup 5 dup 5   // _ *ptr [x] [acc] [x]
-            xxmul               // _ *ptr [x] [x*acc]
+            xx_mul               // _ *ptr [x] [x*acc]
             dup 6               // _ *ptr [x] [x*acc] *ptr
             read_mem 3          // _ *ptr [x] [x*acc] [ct] *ptr-3
             swap 10 pop 1       // _ *ptr-3 [x] [x*acc] [ct]
-            xxadd               // _ *ptr-3 [x] [x*acc+ct]
+            xx_add               // _ *ptr-3 [x] [x*acc+ct]
 
         };
         let batch_size = 16;

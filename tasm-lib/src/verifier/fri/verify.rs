@@ -545,13 +545,13 @@ impl BasicSnippet for FriSnippet {
                 // _ *c_end_condition (1<<round) g offset *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem *b_index [a_y] a_x [b_y]
 
                 push -1
-                xbmul
+                xb_mul
                 // _ *c_end_condition (1<<round) g offset *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem *b_index [a_y] a_x [-b_y]
 
                 dup 6
                 dup 6
                 dup 6
-                xxadd
+                xx_add
                 // _ *c_end_condition (1<<round) g offset *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem *b_index [a_y] a_x [a_y-b_y]
 
                 // 4: Calculate `b_x`
@@ -588,7 +588,7 @@ impl BasicSnippet for FriSnippet {
 
                 // 7:  Calculate `(a_y - b_y) / (a_x - b_x)`
 
-                xbmul
+                xb_mul
                 // _ *c_end_condition (1<<round) g offset *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem *b_index_prev [a_y] a_x [(a_y-b_y)/(a_x-b_x)]
 
                 // 8: Read `[c_x]`
@@ -605,7 +605,7 @@ impl BasicSnippet for FriSnippet {
                 // _ *c_end_condition (1<<round) g offset *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem *b_index_prev [a_y] a_x [(a_y-b_y)/(a_x-b_x)] [c_x - a_x]
 
                 // 10: Calculate final `c_y`
-                xxmul
+                xx_mul
                 // _ *c_end_condition (1<<round) g offset *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem *b_index_prev [a_y] a_x [(a_y-b_y)/(a_x-b_x) * (c_x -a_x)]
 
                 swap 1
@@ -614,7 +614,7 @@ impl BasicSnippet for FriSnippet {
                 pop 1
                 // _ *c_end_condition (1<<round) g offset *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem *b_index_prev [a_y] [(a_y-b_y)/(a_x-b_x) * (c_x -a_x)]
 
-                xxadd
+                xx_add
                 // _ *c_end_condition (1<<round) g offset *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem *b_index_prev [(a_y-b_y)/(a_x-b_x) * (c_x -a_x) + a_y]
                 // _ *c_end_condition (1<<round) g offset *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem *b_index_prev [c_y]
 

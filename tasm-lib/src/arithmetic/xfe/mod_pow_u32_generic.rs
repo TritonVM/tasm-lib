@@ -101,7 +101,7 @@ impl BasicSnippet for XfeModPowU32Generic {
                 dup 2 dup 2 dup 2
                 // _ i [x] [acc'] [x] [x]
 
-                xxmul
+                xx_mul
                 // _ i [x] [acc'] [x * x]
 
                 swap 6
@@ -135,7 +135,7 @@ impl BasicSnippet for XfeModPowU32Generic {
                  dup 5
                  dup 5
                  dup 5
-                 xxmul
+                 xx_mul
                  // _ [x] [acc * x]
 
                  return

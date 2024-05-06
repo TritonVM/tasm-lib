@@ -79,7 +79,7 @@ impl BasicSnippet for ZerofiersInverse {
             dup 4
             push -1
             add
-            xinvert
+            x_invert
             // _ [out_of_domain_point_curr_row] padded_height trace_domain_generator [initial_zerofier_inv]
         );
 
@@ -101,7 +101,7 @@ impl BasicSnippet for ZerofiersInverse {
 
            push -1
            add
-           xinvert
+           x_invert
            // _ [out_of_domain_point_curr_row] trace_domain_generator [consistency_zerofier_inv]
         );
 
@@ -130,13 +130,13 @@ impl BasicSnippet for ZerofiersInverse {
             pop 1
             // _ [except_last_row] [except_last_row] [consistency_zerofier_inv]
 
-            xxmul
+            xx_mul
             // _ [except_last_row] [transition_zerofier_inv]
         );
 
         let calculate_terminal_zerofier_inv = triton_asm!(
             // _ [except_last_row]
-            xinvert // _ [terminal_zerofier_inv]
+            x_invert // _ [terminal_zerofier_inv]
         );
 
         let entrypoint = self.entrypoint();

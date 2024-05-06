@@ -60,7 +60,7 @@ impl<const N: usize> BasicSnippet for ComputeTerminalConstSizedStaticSymbols<N> 
                 // _ [challenge] [acc]
 
                 {&dup_challenge}
-                xxmul
+                xx_mul
                 // _ <[challenge]> [acc * challenge]
 
                 push {symbol}

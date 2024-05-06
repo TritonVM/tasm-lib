@@ -596,7 +596,7 @@ mod tests {
     fn test_with_raw_function_square_on_xfe() {
         let rawcode = RawCode::new(
             triton_asm!(
-                square_xfe: dup 2 dup 2 dup 2 xxmul return
+                square_xfe: dup 2 dup 2 dup 2 xx_mul return
             ),
             DataType::Xfe,
             DataType::Xfe,
@@ -636,8 +636,8 @@ mod tests {
         let rawcode = RawCode::new(
             triton_asm!(
                 square_xfe_plus_another_xfe:
-                    dup 2 dup 2 dup 2 xxmul
-                    dup 8 dup 8 dup 8 xxadd
+                    dup 2 dup 2 dup 2 xx_mul
+                    dup 8 dup 8 dup 8 xx_add
                     return
             ),
             DataType::Xfe,

@@ -100,7 +100,7 @@ impl BasicSnippet for ComputeTerminalDynSizedDynamicSymbols {
                 dup 7
                 // [challenge] *next_bfe (*last_bfe + 1) [acc] [challenge]
 
-                xxmul
+                xx_mul
                 // [challenge] *next_bfe (*last_bfe + 1) [acc * challenge]
 
                 dup 4

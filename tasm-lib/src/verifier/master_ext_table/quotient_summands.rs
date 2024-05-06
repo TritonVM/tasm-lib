@@ -77,7 +77,7 @@ impl BasicSnippet for QuotientSummands {
                     read_mem {EXTENSION_DEGREE}
                     pop 1
 
-                    xxmul
+                    xx_mul
                     // _ [[air_elem] *air_elem [[air_elem * z_inv]]]
 
                     swap 1

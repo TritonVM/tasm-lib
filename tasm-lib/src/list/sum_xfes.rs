@@ -54,11 +54,11 @@ impl BasicSnippet for SumOfXfes {
                 pop 1
                 // _ *end_loop *element_last_word [acc] [elem_4] [elem_3] [elem_2] [elem_1] [elem_0]
 
-                xxadd
-                xxadd
-                xxadd
-                xxadd
-                xxadd
+                xx_add
+                xx_add
+                xx_add
+                xx_add
+                xx_add
                 // _ *end_loop *element_last_word [acc']
 
                 swap 3
@@ -90,7 +90,7 @@ impl BasicSnippet for SumOfXfes {
                 pop 1
                 // _ *end_loop (*element_last_word - 3) [acc; 3] [element_last_words; 3]
 
-                xxadd
+                xx_add
                 // _ *end_loop *element_last_word' [acc']
 
                 recurse

@@ -41,7 +41,7 @@ impl BasicSnippet for ComputeTerminalFromDigestInitialIsOne {
                 dup 10
                 dup 10
                 dup 10
-                xxmul
+                xx_mul
                 // _ [challenge] d4 d3 d2 d1 d0 [(challenge + d0) * challenge]
 
                 dup 4
@@ -51,7 +51,7 @@ impl BasicSnippet for ComputeTerminalFromDigestInitialIsOne {
                 dup 10
                 dup 10
                 dup 10
-                xxmul
+                xx_mul
                 // _ [challenge] d4 d3 d2 d1 d0 [((challenge + d0) * challenge + d1) * challenge]
 
                 dup 5
@@ -61,7 +61,7 @@ impl BasicSnippet for ComputeTerminalFromDigestInitialIsOne {
                 dup 10
                 dup 10
                 dup 10
-                xxmul
+                xx_mul
                 dup 6
                 add
                 // _ [challenge] d4 d3 d2 d1 d0 [running_eval_3]
@@ -69,7 +69,7 @@ impl BasicSnippet for ComputeTerminalFromDigestInitialIsOne {
                 dup 10
                 dup 10
                 dup 10
-                xxmul
+                xx_mul
                 dup 7
                 add
                 // _ [challenge] d4 d3 d2 d1 d0 [terminal]

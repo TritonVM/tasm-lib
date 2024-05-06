@@ -39,7 +39,7 @@ impl BasicSnippet for InnerProductOfXfes {
     fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
 
-        let accumulate_all_indices = triton_asm![xxdotstep; self.length];
+        let accumulate_all_indices = triton_asm![xx_dot_step; self.length];
 
         triton_asm!(
             {entrypoint}:

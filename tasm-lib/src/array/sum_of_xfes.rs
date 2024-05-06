@@ -58,7 +58,7 @@ impl BasicSnippet for SumOfXfes {
                 push 0
             )
         } else {
-            vec![triton_asm!(xxadd); self.length - 1].concat()
+            vec![triton_asm!(xx_add); self.length - 1].concat()
         };
 
         triton_asm!(

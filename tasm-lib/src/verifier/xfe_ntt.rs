@@ -298,7 +298,7 @@ impl BasicSnippet for XfeNtt {
             // _ *x omega size log_2_size (3*m) outer_count w_m k w *x[k+m] *xx [u]      [v]
 
             dup 8
-            xbmul
+            xb_mul
             // _ *x omega size log_2_size (3*m) outer_count w_m k w *x[k+m] *xx [u] (v * w)
             // _ *x omega size log_2_size (3*m) outer_count w_m k w *x[k+m] *xx [u] [v']
 
@@ -308,7 +308,7 @@ impl BasicSnippet for XfeNtt {
             dup 5
             dup 5
             dup 5
-            xxadd
+            xx_add
             // _ *x omega size log_2_size (3*m) outer_count w_m k w *x[k+m] *xx [u] [v'] [u + v']
 
             dup 9
@@ -319,8 +319,8 @@ impl BasicSnippet for XfeNtt {
             // _ *x omega size log_2_size (3*m) outer_count w_m k w *x[k+m] *xx [u] [v']
 
             push -1
-            xbmul
-            xxadd
+            xb_mul
+            xx_add
             // _ *x omega size log_2_size (3*m) outer_count w_m k w *x[k+m] *xx [u - v']
 
             dup 3

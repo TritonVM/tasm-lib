@@ -103,10 +103,10 @@ impl BasicSnippet for InnerProductOfThreeRowsWithWeights {
     ) -> Vec<triton_vm::prelude::LabelledInstruction> {
         let entrypoint = self.entrypoint();
         let acc_all_base_rows = match self.base_element_type {
-            BaseElementType::Bfe => triton_asm![xbdotstep; self.base_length],
-            BaseElementType::Xfe => triton_asm![xxdotstep; self.base_length],
+            BaseElementType::Bfe => triton_asm![xb_dot_step; self.base_length],
+            BaseElementType::Xfe => triton_asm![xx_dot_step; self.base_length],
         };
-        let acc_all_ext_rows = triton_asm![xxdotstep; self.ext_length - self.randomizer_length];
+        let acc_all_ext_rows = triton_asm![xx_dot_step; self.ext_length - self.randomizer_length];
 
         triton_asm! {
             // BEFORE: _ *ext_row *base_row *weights

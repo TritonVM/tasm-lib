@@ -5,8 +5,8 @@
       "clock_cycle_count": 1345,
       "hash_table_height": 1353,
       "u32_table_height": 6,
-      "op_stack_table_height": 3537,
-      "ram_table_height": 1089
+      "op_stack_table_height": 3543,
+      "ram_table_height": 1098
     },
     "case": "CommonCase"
   },
@@ -16,8 +16,8 @@
       "clock_cycle_count": 1450,
       "hash_table_height": 1443,
       "u32_table_height": 6,
-      "op_stack_table_height": 3747,
-      "ram_table_height": 1089
+      "op_stack_table_height": 3753,
+      "ram_table_height": 1098
     },
     "case": "WorstCase"
   }
