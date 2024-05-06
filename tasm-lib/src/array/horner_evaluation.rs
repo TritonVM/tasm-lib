@@ -56,12 +56,12 @@ impl BasicSnippet for HornerEvaluation {
             // BEFORE: _ *coefficients_end [x] [v]
             // AFTER : _ [vx+c]
             dup 5 dup 5 dup 5           // _ *coefficients_end [x] [v] [x]
-            xxmul                       // _ *coefficients_end [x] [vx]
+            xx_mul                       // _ *coefficients_end [x] [vx]
             dup 6                       // _ *coefficients_end [x] [vx] *coefficients_end
             read_mem 3                  // _ *coefficients_end [x] [vx] [c] *coefficients_end+3
             swap 10                     // _ *coefficients_end-3 [x] [vx] [c] *coefficients_end
             pop 1                       // _ *coefficients_end-3 [x] [vx] [c]
-            xxadd                       // _ *coefficients_end-3 [x] [vc+c]
+            xx_add                       // _ *coefficients_end-3 [x] [vc+c]
         };
 
         let update_running_evaluation_for_each_coefficient = (0..self.num_coefficients)

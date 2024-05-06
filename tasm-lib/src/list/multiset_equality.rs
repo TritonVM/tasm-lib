@@ -260,12 +260,12 @@ impl DeprecatedSnippet for MultisetEquality {
 
                 // subtract indeterminate
                 dup 10 dup 10 dup 10 // _ list len d2 d1 d0 addr+{DIGEST_LENGTH} (itrs_left-1) rp2 rp1 rp0 m2 m1 m0 d2 d1 d0
-                push -1 xbmul        // _ list len d2 d1 d0 addr+{DIGEST_LENGTH} (itrs_left-1) rp2 rp1 rp0 m2 m1 m0 -d2 -d1 -d0
-                xxadd                // _ list len d2 d1 d0 addr+{DIGEST_LENGTH} (itrs_left-1) rp2 rp1 rp0 (m2-d2) (m1-d1) (m0-d0)
-                push -1 xbmul        // _ list len d2 d1 d0 addr+{DIGEST_LENGTH} (itrs_left-1) rp2 rp1 rp0 (d2-m2) (d1-m1) (d0-m0)
+                push -1 xb_mul        // _ list len d2 d1 d0 addr+{DIGEST_LENGTH} (itrs_left-1) rp2 rp1 rp0 m2 m1 m0 -d2 -d1 -d0
+                xx_add                // _ list len d2 d1 d0 addr+{DIGEST_LENGTH} (itrs_left-1) rp2 rp1 rp0 (m2-d2) (m1-d1) (m0-d0)
+                push -1 xb_mul        // _ list len d2 d1 d0 addr+{DIGEST_LENGTH} (itrs_left-1) rp2 rp1 rp0 (d2-m2) (d1-m1) (d0-m0)
 
                 // multiply into running product
-                xxmul                // _ list len d2 d1 d0 addr+{DIGEST_LENGTH} (itrs_left-1) rp2' rp1' rp0'
+                xx_mul                // _ list len d2 d1 d0 addr+{DIGEST_LENGTH} (itrs_left-1) rp2' rp1' rp0'
 
                 recurse
             "

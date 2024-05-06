@@ -100,10 +100,10 @@ mod tests {
             let mut array_pointer = stack.pop().unwrap();
             let mut array_quote_unquote = vec![BFieldElement::zero(); self.length];
             for array_elem in array_quote_unquote.iter_mut() {
-                *array_elem = memory
+                memory
                     .get(&array_pointer)
                     .unwrap_or(&BFIELD_ZERO)
-                    .to_owned();
+                    .clone_into(array_elem);
                 array_pointer.increment();
             }
 

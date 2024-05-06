@@ -40,7 +40,7 @@ impl BasicSnippet for ToThePowerOfPowerOf2 {
                 dup 2
                 dup 2
                 dup 2
-                xxmul
+                xx_mul
                 // _ remainder [acc^2]
 
                 swap 3

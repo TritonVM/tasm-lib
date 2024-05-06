@@ -2,7 +2,6 @@ use crate::data_type::DataType;
 use crate::hashing::algebraic_hasher::hash_static_size::HashStaticSize;
 use crate::library::Library;
 use crate::traits::basic_snippet::BasicSnippet;
-use crate::verifier::fri::verify::FriSnippet;
 use strum::Display;
 use strum::EnumIter;
 use triton_vm::prelude::*;
@@ -27,6 +26,12 @@ pub struct VerifyTableRows {
 }
 
 impl VerifyTableRows {
+    pub fn new(column_type: ColumnType) -> Self {
+        Self { column_type }
+    }
+}
+
+impl VerifyTableRows {
     pub fn row_size(&self) -> usize {
         match self.column_type {
             ColumnType::Base => NUM_BASE_COLUMNS,
@@ -42,10 +47,7 @@ impl BasicSnippet for VerifyTableRows {
             (DataType::U32, "num_combination_codeword_checks".to_owned()),
             (DataType::U32, "merkle_tree_height".to_owned()),
             (DataType::VoidPointer, "*merkle_tree_root".to_owned()),
-            (
-                FriSnippet::indexed_leaves_list_type(),
-                "*fri_revealed".to_owned(),
-            ),
+            (DataType::VoidPointer, "*fri_revealed".to_owned()),
             // type of {base|ext|quot} table rows i
             // `Vec<[{BaseFieldElement, XFieldElement, XFieldElement}: COLUMN_COUNT]>` but encoded
             // in memory as a flat structure. So I'm not sure what type to use here. Anyway, it's

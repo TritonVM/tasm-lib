@@ -68,10 +68,10 @@ impl BasicSnippet for CollinearYXfe {
                 dup 5 dup 5 dup 5
                             // _ [p2x; 3] [p0x; 3] [p1x; 3] [p0y; 3] [p1y; 3] [p0y; 3]
                 push -1
-                xbmul       // _ [p2x; 3] [p0x; 3] [p1x; 3] [p0y; 3] [p1y; 3] [-p0y; 3]
-                xxadd       // _ [p2x; 3] [p0x; 3] [p1x; 3] [p0y; 3] [p1y - p0y; 3]
+                xb_mul       // _ [p2x; 3] [p0x; 3] [p1x; 3] [p0y; 3] [p1y; 3] [-p0y; 3]
+                xx_add       // _ [p2x; 3] [p0x; 3] [p1x; 3] [p0y; 3] [p1y - p0y; 3]
                 push -1
-                xbmul       // dy = p0y - p1y
+                xb_mul       // dy = p0y - p1y
                             // _ [p2x; 3] [p0x; 3] [p1x; 3] [p0y; 3] [dy; 3]
 
                 swap 6      // _ [p2x; 3] [p0x; 3] p1x2 p1x1 dy0 [p0y; 3] dy2 dy1 p1x0
@@ -84,10 +84,10 @@ impl BasicSnippet for CollinearYXfe {
                 dup 11 dup 11 dup 11
                             // _ [p2x; 3] [p0x; 3] [dy; 3] [p0y; 3] [p1x; 3] [p0x; 3]
                 push -1
-                xbmul       // _ [p2x; 3] [p0x; 3] [dy; 3] [p0y; 3] [p1x; 3] [-p0x; 3]
-                xxadd       // _ [p2x; 3] [p0x; 3] [dy; 3] [p0y; 3] [p1x - p0x; 3]
+                xb_mul       // _ [p2x; 3] [p0x; 3] [dy; 3] [p0y; 3] [p1x; 3] [-p0x; 3]
+                xx_add       // _ [p2x; 3] [p0x; 3] [dy; 3] [p0y; 3] [p1x - p0x; 3]
                 push -1
-                xbmul       // dx = p0x - p1x
+                xb_mul       // dx = p0x - p1x
                             // _ [p2x; 3] [p0x; 3] [dy; 3] [p0y; 3] [dx; 3]
 
                 swap 12 swap 1 swap 13 swap 2 swap 14 swap 2 swap 1
@@ -99,28 +99,28 @@ impl BasicSnippet for CollinearYXfe {
                 swap 9 swap 1 swap 10 swap 2 swap 11 swap 2 swap 1
                             // _ [p0y; 3] [dx; 3] [dy; 3] [p2x; 3] [p0x; 3]
                 push -1
-                xbmul
-                xxadd       // _ [p0y; 3] [dx; 3] [dy; 3] [p2x - p0x; 3]
-                xxmul       // a = (p2x - p0x) * dy
+                xb_mul
+                xx_add       // _ [p0y; 3] [dx; 3] [dy; 3] [p2x - p0x; 3]
+                xx_mul       // a = (p2x - p0x) * dy
                             // _ [p0y; 3] [dx; 3] [a; 3]
 
                 swap 6 swap 1 swap 7 swap 2 swap 8 swap 2 swap 1
                             // _ [a; 3] [dx; 3] [p0y; 3]
                 dup 5 dup 5 dup 5
                             // _ [a; 3] [dx; 3] [p0y; 3] [dx; 3]
-                xxmul       // b = p0y * dx
+                xx_mul       // b = p0y * dx
                             // _ [a; 3] [dx; 3] [b; 3]
 
                 swap 3 swap 1 swap 4 swap 2 swap 5 swap 2 swap 1
                             // _ [a; 3] [b; 3] [dx; 3]
                 swap 6 swap 1 swap 7 swap 2 swap 8 swap 2 swap 1
                             // _ [dx; 3] [b; 3] [a; 3]
-                xxadd       // c = a + b
+                xx_add       // c = a + b
                             // _ [dx; 3] [c; 3]
 
-                xinvert     // _ [dx; 3] [1/c; 3]
-                xxmul       // _ [dx/c; 3]
-                xinvert     // _ [c/dx; 3]
+                x_invert     // _ [dx; 3] [1/c; 3]
+                xx_mul       // _ [dx/c; 3]
+                x_invert     // _ [c/dx; 3]
                             // _ [p2y; 3]
                 return
         )

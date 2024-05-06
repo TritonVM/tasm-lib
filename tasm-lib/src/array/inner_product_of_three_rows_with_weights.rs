@@ -2,7 +2,6 @@ use arbitrary::Arbitrary;
 use strum::Display;
 use triton_vm::table::{NUM_BASE_COLUMNS, NUM_EXT_COLUMNS};
 use triton_vm::triton_asm;
-use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
 use crate::data_type::ArrayType;
 use crate::data_type::DataType;
@@ -66,9 +65,9 @@ impl BasicSnippet for InnerProductOfThreeRowsWithWeights {
             (
                 DataType::Array(Box::new(ArrayType {
                     element_type: DataType::Xfe,
-                    length: self.base_length + self.ext_length - self.randomizer_length,
+                    length: self.ext_length,
                 })),
-                "*weights".to_string(),
+                "*ext_row".to_string(),
             ),
             (
                 DataType::Array(Box::new(ArrayType {
@@ -80,9 +79,9 @@ impl BasicSnippet for InnerProductOfThreeRowsWithWeights {
             (
                 DataType::Array(Box::new(ArrayType {
                     element_type: DataType::Xfe,
-                    length: self.ext_length,
+                    length: self.base_length + self.ext_length - self.randomizer_length,
                 })),
-                "*ext_row".to_string(),
+                "*weights".to_string(),
             ),
         ]
     }
@@ -103,164 +102,45 @@ impl BasicSnippet for InnerProductOfThreeRowsWithWeights {
         _library: &mut crate::library::Library,
     ) -> Vec<triton_vm::prelude::LabelledInstruction> {
         let entrypoint = self.entrypoint();
-
-        let move_to_last_word = |length: usize| {
-            if length == 0 {
-                triton_asm!()
-            } else {
-                triton_asm! {
-                    // _ *ptr
-                    push {length-1}
-                    add
-                }
-            }
+        let acc_all_base_rows = match self.base_element_type {
+            BaseElementType::Bfe => triton_asm![xb_dot_step; self.base_length],
+            BaseElementType::Xfe => triton_asm![xx_dot_step; self.base_length],
         };
-        let move_weights_pointer_to_last_word = move_to_last_word(
-            (self.base_length + self.ext_length - self.randomizer_length) * EXTENSION_DEGREE,
-        );
-        let move_ext_row_pointer_to_last_word =
-            move_to_last_word((self.ext_length - self.randomizer_length) * EXTENSION_DEGREE);
-        let base_element_type: DataType = self.base_element_type.into();
-        let base_row_size = base_element_type.stack_size() * self.base_length;
-        let move_base_row_pointer_to_last_word = move_to_last_word(base_row_size);
-
-        let acc_once_from_xfe_array = triton_asm!(
-            // _ *a *b [acc]
-
-            dup 3
-            // _ *a *b [acc] *b
-
-            read_mem 3
-            // _ *a *b [acc] [b_elem] *b_prev
-
-            swap 8
-            // _ *b_prev *b [acc] [b_elem] *a
-
-            read_mem 3
-            // _ *b_prev *b [acc] [b_elem] [a_elem] *a_prev
-
-            swap 10
-            pop 1
-            // _ *b_prev *a_prev [acc] [b_elem] [a_elem]
-
-            xxmul
-            xxadd
-            // _ *b_prev *a_prev [acc']
-        );
-        let acc_all_from_extension_row =
-            vec![acc_once_from_xfe_array.clone(); self.ext_length - self.randomizer_length]
-                .concat();
-        let clean_stack = if (self.ext_length + self.randomizer_length) % 2 == 1 {
-            triton_asm!(
-                // _ *w_last *e_last [acc]
-                swap 3 pop 1        // _ *w_last acc0 acc2 acc1
-                swap 1 swap 2       // _ *w_last acc2 acc1 acc0
-                // _ *w_last [acc]
-            )
-        } else {
-            triton_asm!(
-            // _ *e_last *w_last [acc]
-            swap 1              // _ *e_last *w_last acc2 acc0 acc1
-            swap 2              // _ *e_last *w_last acc1 acc0 acc2
-            swap 3              // _ *e_last acc2 acc1 acc0 *w_last
-            swap 4              // _ *w_last acc2 acc1 acc0 *e_last
-            pop 1
-            // _ *w_last [acc]
-            )
-        };
-
-        let acc_once_from_base_even = triton_asm!(
-            // _ *b *w [acc]
-
-            dup 3
-            // _ *b *w [acc] *w
-
-            read_mem 3
-            // _ *b *w [acc] [w_elem] *w_prev
-
-            swap 8
-            // _ *w_prev *w [acc] [w_elem] *b
-
-            read_mem 1
-            // _ *w_prev *w [acc] [w_elem] b_elem *b_prev
-
-            swap 8
-            pop 1
-            // _ *w_prev *b_prev [acc] [w_elem] b_elem
-
-            xbmul
-            xxadd
-            // _ *w_prev *b_prev [acc']
-        );
-
-        let acc_once_from_base_odd = triton_asm!(
-            // _ *w *b [acc]
-
-            dup 4
-            // _ *w *b [acc] *w
-
-            read_mem 3
-            // _ *w *b [acc] [w_elem] *w_prev
-
-            swap 7
-            // _ *w *w_prev [acc] [w_elem] *b
-
-            read_mem 1
-            // _ *w *w_prev [acc] [w_elem] b_elem *b_prev
-
-            swap 9
-            pop 1
-            // _ *b_prev *w_prev [acc] [w_elem] b_elem
-
-            xbmul
-            xxadd
-            // _ *b_prev *w_prev [acc']
-        );
-
-        let acc_two_from_base = [acc_once_from_base_even.clone(), acc_once_from_base_odd].concat();
-        let acc_all_from_base_row = match self.base_element_type {
-            BaseElementType::Bfe => {
-                let mut acc_all_from_base_row =
-                    vec![acc_two_from_base; self.base_length / 2].concat();
-                if self.base_length % 2 == 1 {
-                    acc_all_from_base_row.extend(acc_once_from_base_even);
-                }
-
-                acc_all_from_base_row
-            }
-            BaseElementType::Xfe => vec![acc_once_from_xfe_array; self.base_length].concat(),
-        };
+        let acc_all_ext_rows = triton_asm![xx_dot_step; self.ext_length - self.randomizer_length];
 
         triton_asm! {
-            // BEFORE: _ *weights *base_row *ext_row
+            // BEFORE: _ *ext_row *base_row *weights
             // AFTER: _ [inner_product]
             {entrypoint}:
-                // move pointers to last word
-                {&move_ext_row_pointer_to_last_word}    // _ *w *b *e_last
-                swap 1                                  // _ *w *e_last *b
-                {&move_base_row_pointer_to_last_word}   // _ *w *e_last *b_last
-                swap 2                                  // _ *b_last *e_last *w
-                {&move_weights_pointer_to_last_word}    // _ *b_last *e_last *w_last
 
-                // push accumulator
+
                 push 0
                 push 0
                 push 0
+                // _ *ext_row *base_row *weights 0 0 0
 
-                // accumulate ext inner product
-                {&acc_all_from_extension_row}
-                {&clean_stack}                          // _ *b_last *w_middle [acc]
+                swap 3
+                swap 1
+                swap 4
+                // _ *ext_row 0 0 0 *weights *base_row
 
-                // accumulate base inner product
-                {&acc_all_from_base_row}
-                // _ garbage0 garbage1 [acc]
+                {&acc_all_base_rows}
+                // _ *ext_row acc2 acc1 acc0 *weights_next *garbage0
 
-                swap 2 // _ g0 g1 acc0 acc1 acc2
-                swap 4 // _ acc2 g1 acc0 acc1 g0
-                pop 1  // _ acc2 g1 acc0 acc1
-                swap 2 // _ acc2 acc1 acc0 g1
+                swap 5
+                // _ *garbage0 acc2 acc1 acc0 *weights_next *ext_row
+
+                {&acc_all_ext_rows}
+                // _ *garbage0 acc2 acc1 acc0 *garbage1 garbage2
+                // _ *garbage0 result2 result1 result0 *garbage1 garbage2 <-- rename
+
+                pop 2
+                swap 1
+                swap 2
+                swap 3
                 pop 1
-                // _ acc2 acc1 acc0
+                // _ result2 result1 result0
+                // _ [result]
 
                 return
         }
@@ -364,10 +244,10 @@ mod test {
             stack: &mut Vec<BFieldElement>,
             memory: &mut HashMap<BFieldElement, BFieldElement>,
         ) {
-            // read stack: _ *w *b *e
-            let extension_row_address = stack.pop().unwrap();
-            let base_row_address = stack.pop().unwrap();
+            // read stack: _ *e *b *w
             let weights_address = stack.pop().unwrap();
+            let base_row_address = stack.pop().unwrap();
+            let extension_row_address = stack.pop().unwrap();
 
             // read arrays
             let weights_len = self.base_length + self.ext_length - self.randomizer_length;
@@ -444,7 +324,7 @@ mod test {
 
             let stack = [
                 self.init_stack_for_isolated_run(),
-                vec![weights_address, base_address, ext_address],
+                vec![ext_address, base_address, weights_address],
             ]
             .concat();
 

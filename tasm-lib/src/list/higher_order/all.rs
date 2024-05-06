@@ -8,9 +8,7 @@ use rand::SeedableRng;
 use triton_vm::instruction::LabelledInstruction;
 use triton_vm::parser::tokenize;
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::prelude::AlgebraicHasher;
 
-use crate::arithmetic;
 use crate::data_type::DataType;
 use crate::empty_stack;
 use crate::library::Library;
@@ -22,11 +20,9 @@ use crate::rust_shadowing_helper_functions::list::list_get;
 use crate::rust_shadowing_helper_functions::list::untyped_insert_random_list;
 use crate::snippet_bencher::BenchmarkCase;
 use crate::traits::basic_snippet::BasicSnippet;
-use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::traits::function::Function;
 use crate::traits::function::FunctionInitialState;
 use crate::InitVmState;
-use crate::VmHasher;
 
 use super::inner_function::InnerFunction;
 
@@ -251,156 +247,18 @@ impl Function for All {
     }
 }
 
-// Only used for tests. Please don't export this.
-#[derive(Debug, Clone)]
-struct TestHashXFieldElementLsb;
-
-impl DeprecatedSnippet for TestHashXFieldElementLsb {
-    fn entrypoint_name(&self) -> String {
-        "test_hash_xfield_element_lsb".to_string()
-    }
-
-    fn input_field_names(&self) -> Vec<String> {
-        vec![
-            "elem2".to_string(),
-            "elem1".to_string(),
-            "elem0".to_string(),
-        ]
-    }
-
-    fn input_types(&self) -> Vec<DataType> {
-        vec![DataType::Xfe]
-    }
-
-    fn output_field_names(&self) -> Vec<String> {
-        vec!["bool".to_string()]
-    }
-
-    fn output_types(&self) -> Vec<DataType> {
-        vec![DataType::Bool]
-    }
-
-    fn stack_diff(&self) -> isize {
-        -2
-    }
-
-    fn function_code(&self, library: &mut Library) -> String {
-        let entrypoint = self.entrypoint_name();
-        let unused_import = library.import(Box::new(arithmetic::u32::safeadd::Safeadd));
-        format!(
-            "
-        // BEFORE: _ x2 x1 x0
-        // AFTER:  _ b
-        {entrypoint}:
-            // Useless additions, to ensure that dependencies are accepted inside the `all` generated code
-                push 0
-                push 0
-                call {unused_import}
-                pop 1
-
-            push 0
-            push 0
-            push 0
-            push 1 // _ x2 x1 x0 0 0 0 1
-            push 0 swap 7 // _ 0 x1 x0 0 0 0 1 x2
-            push 0 swap 7 // _ 0 0 x0 0 0 0 1 x2 x1
-            push 0 swap 7 // _ 0 0 0 0 0 0 1 x2 x1 x0
-
-            sponge_init
-            sponge_absorb
-            sponge_squeeze // _ d9 d8 d7 d6 d5 d4 d3 d2 d1 d0
-            swap 5 pop 1   // _ d9 d8 d7 d6 d0 d4 d3 d2 d1
-            swap 5 pop 1   // _ d9 d8 d7 d1 d0 d4 d3 d2
-            swap 5 pop 1
-            swap 5 pop 1
-            swap 5 pop 1
-
-            // _ d4 d3 d2 d1 d0
-
-            split // _ d4 d3 d2 d1 hi lo
-            push 2 // _ d4 d3 d2 d1 hi lo 2
-            swap 1
-            div_mod // _ d4 d3 d2 d1 hi q r
-            swap 6
-            pop 5 pop 1
-            return
-        "
-        )
-    }
-
-    fn crash_conditions(&self) -> Vec<String> {
-        vec![]
-    }
-
-    fn gen_input_states(&self) -> Vec<InitVmState> {
-        // Function does not output random values, since that would make the benchmark output
-        // non-deterministic.
-        vec![InitVmState::with_stack(
-            [
-                vec![BFieldElement::zero(); 16],
-                vec![
-                    BFieldElement::new(4888),
-                    BFieldElement::new(1u64 << 63),
-                    BFieldElement::new((1u64 << 51) + 1000),
-                ],
-            ]
-            .concat(),
-        )]
-    }
-
-    fn common_case_input_state(&self) -> InitVmState {
-        InitVmState::with_stack(
-            [
-                vec![BFieldElement::zero(); 16],
-                vec![
-                    BFieldElement::new(4888),
-                    BFieldElement::new(1u64 << 63),
-                    BFieldElement::new((1u64 << 51) + 1000),
-                ],
-            ]
-            .concat(),
-        )
-    }
-
-    fn worst_case_input_state(&self) -> InitVmState {
-        InitVmState::with_stack(
-            [
-                vec![BFieldElement::zero(); 16],
-                vec![
-                    BFieldElement::new(488800000),
-                    BFieldElement::new(1u64 << 62),
-                    BFieldElement::new((1u64 << 41) + 1001),
-                ],
-            ]
-            .concat(),
-        )
-    }
-
-    fn rust_shadowing(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        _std_in: Vec<BFieldElement>,
-        _secret_in: Vec<BFieldElement>,
-        _memory: &mut HashMap<BFieldElement, BFieldElement>,
-    ) {
-        let mut xfield_element = vec![];
-        for _ in 0..3 {
-            xfield_element.push(stack.pop().unwrap());
-        }
-        let digest = VmHasher::hash_varlen(&xfield_element).values().to_vec();
-        let b = digest[0].value() % 2;
-        stack.push(BFieldElement::new(b));
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use num::One;
+    use triton_vm::twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
+    use crate::arithmetic;
     use crate::list::higher_order::inner_function::RawCode;
     use crate::test_helpers::test_rust_equivalence_given_complete_state;
+    use crate::traits::deprecated_snippet::DeprecatedSnippet;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
+    use crate::VmHasher;
 
     use super::*;
 
@@ -522,10 +380,153 @@ mod tests {
         let snippet = All::new(InnerFunction::RawCode(rawcode));
         ShadowedFunction::new(snippet).test();
     }
+
+    // Only used for tests. Please don't export this.
+    #[derive(Debug, Clone)]
+    pub(super) struct TestHashXFieldElementLsb;
+
+    impl DeprecatedSnippet for TestHashXFieldElementLsb {
+        fn entrypoint_name(&self) -> String {
+            "test_hash_xfield_element_lsb".to_string()
+        }
+
+        fn input_field_names(&self) -> Vec<String> {
+            vec![
+                "elem2".to_string(),
+                "elem1".to_string(),
+                "elem0".to_string(),
+            ]
+        }
+
+        fn input_types(&self) -> Vec<DataType> {
+            vec![DataType::Xfe]
+        }
+
+        fn output_field_names(&self) -> Vec<String> {
+            vec!["bool".to_string()]
+        }
+
+        fn output_types(&self) -> Vec<DataType> {
+            vec![DataType::Bool]
+        }
+
+        fn stack_diff(&self) -> isize {
+            -2
+        }
+
+        fn function_code(&self, library: &mut Library) -> String {
+            let entrypoint = self.entrypoint_name();
+            let unused_import = library.import(Box::new(arithmetic::u32::safeadd::Safeadd));
+            format!(
+            "
+        // BEFORE: _ x2 x1 x0
+        // AFTER:  _ b
+        {entrypoint}:
+            // Useless additions, to ensure that dependencies are accepted inside the `all` generated code
+                push 0
+                push 0
+                call {unused_import}
+                pop 1
+
+            push 0
+            push 0
+            push 0
+            push 1 // _ x2 x1 x0 0 0 0 1
+            push 0 swap 7 // _ 0 x1 x0 0 0 0 1 x2
+            push 0 swap 7 // _ 0 0 x0 0 0 0 1 x2 x1
+            push 0 swap 7 // _ 0 0 0 0 0 0 1 x2 x1 x0
+
+            sponge_init
+            sponge_absorb
+            sponge_squeeze // _ d9 d8 d7 d6 d5 d4 d3 d2 d1 d0
+            swap 5 pop 1   // _ d9 d8 d7 d6 d0 d4 d3 d2 d1
+            swap 5 pop 1   // _ d9 d8 d7 d1 d0 d4 d3 d2
+            swap 5 pop 1
+            swap 5 pop 1
+            swap 5 pop 1
+
+            // _ d4 d3 d2 d1 d0
+
+            split // _ d4 d3 d2 d1 hi lo
+            push 2 // _ d4 d3 d2 d1 hi lo 2
+            swap 1
+            div_mod // _ d4 d3 d2 d1 hi q r
+            swap 6
+            pop 5 pop 1
+            return
+        "
+        )
+        }
+
+        fn crash_conditions(&self) -> Vec<String> {
+            vec![]
+        }
+
+        fn gen_input_states(&self) -> Vec<InitVmState> {
+            // Function does not output random values, since that would make the benchmark output
+            // non-deterministic.
+            vec![InitVmState::with_stack(
+                [
+                    vec![BFieldElement::zero(); 16],
+                    vec![
+                        BFieldElement::new(4888),
+                        BFieldElement::new(1u64 << 63),
+                        BFieldElement::new((1u64 << 51) + 1000),
+                    ],
+                ]
+                .concat(),
+            )]
+        }
+
+        fn common_case_input_state(&self) -> InitVmState {
+            InitVmState::with_stack(
+                [
+                    vec![BFieldElement::zero(); 16],
+                    vec![
+                        BFieldElement::new(4888),
+                        BFieldElement::new(1u64 << 63),
+                        BFieldElement::new((1u64 << 51) + 1000),
+                    ],
+                ]
+                .concat(),
+            )
+        }
+
+        fn worst_case_input_state(&self) -> InitVmState {
+            InitVmState::with_stack(
+                [
+                    vec![BFieldElement::zero(); 16],
+                    vec![
+                        BFieldElement::new(488800000),
+                        BFieldElement::new(1u64 << 62),
+                        BFieldElement::new((1u64 << 41) + 1001),
+                    ],
+                ]
+                .concat(),
+            )
+        }
+
+        fn rust_shadowing(
+            &self,
+            stack: &mut Vec<BFieldElement>,
+            _std_in: Vec<BFieldElement>,
+            _secret_in: Vec<BFieldElement>,
+            _memory: &mut HashMap<BFieldElement, BFieldElement>,
+        ) {
+            let mut xfield_element = vec![];
+            for _ in 0..3 {
+                xfield_element.push(stack.pop().unwrap());
+            }
+            let digest = VmHasher::hash_varlen(&xfield_element).values().to_vec();
+            let b = digest[0].value() % 2;
+            stack.push(BFieldElement::new(b));
+        }
+    }
 }
 
 #[cfg(test)]
 mod benches {
+    use self::tests::TestHashXFieldElementLsb;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
 

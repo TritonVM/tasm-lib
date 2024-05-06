@@ -266,10 +266,10 @@ impl BasicSnippet for StarkVerify {
             // _ remaining_rounds fri_gen fri_offset *etrow *btrow *qseg_elem *fri_revealed_xfe *beqd_ws *oodpnts (-fdom_pnt)
 
 
-            dup 2
             dup 6
-            dup 8
-            call {inner_product_three_rows_with_weights_bfe_base}
+            dup 6
+            dup 4
+            call {inner_product_three_rows_with_weights_bfe_base} // expect arguments: *ext *base *ws
             hint base_and_ext_opened_row_element: Xfe = stack[0..3]
             // _ remaining_rounds fri_gen fri_offset *etrow *btrow *qseg_elem *fri_revealed_xfe *beqd_ws *oodpnts (-fdom_pnt) [be_opnd_elem]
 
@@ -285,7 +285,7 @@ impl BasicSnippet for StarkVerify {
             // _ remaining_rounds fri_gen fri_offset *etrow_prev *btrow_prev *qseg_elem *fri_revealed_xfe *beqd_ws *oodpnts (-fdom_pnt) [be_opnd_elem]
 
             push -1
-            xbmul
+            xb_mul
             hint neg_base_and_ext_opened_row_element: Xfe = stack[0..3]
 
             // Calculate `cuotient_curr_row_deep_value`
@@ -297,7 +297,7 @@ impl BasicSnippet for StarkVerify {
             add
             // _ remaining_rounds fri_gen fri_offset *etrow_prev *btrow_prev *qseg_elem *fri_revealed_xfe *beqd_ws *oodpnts (-fdom_pnt) [-be_opnd_elem] [oodp_pow_nsegs - fdom_pnt]
 
-            xinvert
+            x_invert
             // _ remaining_rounds fri_gen fri_offset *etrow_prev *btrow_prev *qseg_elem *fri_revealed_xfe *beqd_ws *oodpnts (-fdom_pnt) [-be_opnd_elem] [1/(oodp_pow_nsegs - fdom_pnt)]
 
             dup 8
@@ -313,7 +313,7 @@ impl BasicSnippet for StarkVerify {
             // _ remaining_rounds fri_gen fri_offset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *beqd_ws *oodpnts (-fdom_pnt) [-be_opnd_elem] [1/(oodp_pow_nsegs - fdom_pnt)] [inner_prod]
 
             push -1
-            xbmul
+            xb_mul
             // _ remaining_rounds fri_gen fri_offset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *beqd_ws *oodpnts (-fdom_pnt) [-be_opnd_elem] [1/(oodp_pow_nsegs - fdom_pnt)] [-inner_prod]
 
             push {ood_curr_row_quotient_segment_value_pointer_read}
@@ -321,8 +321,8 @@ impl BasicSnippet for StarkVerify {
             pop 1
             // _ remaining_rounds fri_gen fri_offset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *beqd_ws *oodpnts (-fdom_pnt) [-be_opnd_elem] [1/(oodp_pow_nsegs - fdom_pnt)] [-inner_prod] [out_of_domain_curr_row_quotient_segment_value]
 
-            xxadd
-            xxmul
+            xx_add
+            xx_mul
             hint quot_curr_row_deep_value: XFieldElement = stack[0..3]
             // _ remaining_rounds fri_gen fri_offset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *beqd_ws *oodpnts (-fdom_pnt) [-be_opnd_elem] [(out_of_domain_curr_row_quotient_segment_value - inner_prod) / (oodp_pow_nsegs - fdom_pnt)]
             // _ remaining_rounds fri_gen fri_offset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *beqd_ws *oodpnts (-fdom_pnt) [-be_opnd_elem] [quot_curr_row_deep_value]
@@ -333,7 +333,7 @@ impl BasicSnippet for StarkVerify {
             {&deep_codeword_weights_read_address(2)}
             read_mem {EXTENSION_DEGREE}
             pop 1
-            xxmul
+            xx_mul
             // _ remaining_rounds fri_gen fri_offset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *beqd_ws *oodpnts (-fdom_pnt) [-be_opnd_elem] [quot_curr_row_deep_value * deep_codeword_weights[2]]
             // _ remaining_rounds fri_gen fri_offset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *beqd_ws *oodpnts (-fdom_pnt) [-be_opnd_elem] [dv2]
 
@@ -343,7 +343,7 @@ impl BasicSnippet for StarkVerify {
 
             dup 9
             add
-            xinvert
+            x_invert
             // _ remaining_rounds fri_gen fri_offset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *beqd_ws *oodpnts (-fdom_pnt) [-be_opnd_elem] [dv2] [1/(ood_point_curr_row - fdom_pnt)]
 
             push {ood_curr_row_base_and_ext_value_pointer_read}
@@ -354,21 +354,21 @@ impl BasicSnippet for StarkVerify {
             dup 11
             dup 11
             dup 11
-            xxadd
+            xx_add
             // _ remaining_rounds fri_gen fri_offset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *beqd_ws *oodpnts (-fdom_pnt) [-be_opnd_elem] [dv2] [1/(ood_point_curr_row - fdom_pnt)] [out_of_domain_curr_row_base_and_ext_value - be_opnd_elem]
 
-            xxmul
+            xx_mul
             // _ remaining_rounds fri_gen fri_offset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *beqd_ws *oodpnts (-fdom_pnt) [-be_opnd_elem] [dv2] [(out_of_domain_curr_row_base_and_ext_value - be_opnd_elem)/(ood_point_curr_row - fdom_pnt)]
 
             dup 11
             {&deep_codeword_weights_read_address(0)}
             read_mem {EXTENSION_DEGREE}              // read deep_codeword_weights[0]
             pop 1
-            xxmul
+            xx_mul
             // _ remaining_rounds fri_gen fri_offset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *beqd_ws *oodpnts (-fdom_pnt) [-be_opnd_elem] [dv2] [deep_codeword_weights[0] * (out_of_domain_curr_row_base_and_ext_value - be_opnd_elem)/(ood_point_curr_row - fdom_pnt)]
             // _ remaining_rounds fri_gen fri_offset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *beqd_ws *oodpnts (-fdom_pnt) [-be_opnd_elem] [dv2] [dv0]
 
-            xxadd
+            xx_add
             // _ remaining_rounds fri_gen fri_offset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *beqd_ws *oodpnts (-fdom_pnt) [-be_opnd_elem] [dv2 + dv0]
             hint dv2_plus_dv0: XFieldElement = stack[0..3]
 
@@ -378,7 +378,7 @@ impl BasicSnippet for StarkVerify {
             push {ood_next_row_base_and_ext_value_pointer_read}
             read_mem {EXTENSION_DEGREE}
             pop 1
-            xxadd
+            xx_add
             // _ remaining_rounds fri_gen fri_offset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *beqd_ws *oodpnts (-fdom_pnt) [dv2 + dv0] [ood_next_row_be_value - be_opnd_elem]
 
             dup 7
@@ -389,19 +389,19 @@ impl BasicSnippet for StarkVerify {
             add
             // _ remaining_rounds fri_gen fri_offset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *beqd_ws *oodpnts (-fdom_pnt) [dv2 + dv0] [ood_next_row_be_value - be_opnd_elem] [out_of_domain_point_next_row - fdom_pnt]
 
-            xinvert
-            xxmul
+            x_invert
+            xx_mul
             // _ remaining_rounds fri_gen fri_offset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *beqd_ws *oodpnts (-fdom_pnt) [dv2 + dv0] [(ood_next_row_be_value - be_opnd_elem)/(out_of_domain_point_next_row - fdom_pnt)]
 
             dup 8
             {&deep_codeword_weights_read_address(1)}
             read_mem {EXTENSION_DEGREE}              // read deep_codeword_weights[1]
             pop 1
-            xxmul
+            xx_mul
             // _ remaining_rounds fri_gen fri_offset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *beqd_ws *oodpnts (-fdom_pnt) [dv2 + dv0] [deep_codeword_weights[1] * (ood_next_row_be_value - be_opnd_elem)/(out_of_domain_point_next_row - fdom_pnt)]
             // _ remaining_rounds fri_gen fri_offset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *beqd_ws *oodpnts (-fdom_pnt) [dv2 + dv0] [dv1]
 
-            xxadd
+            xx_add
             hint deep_value: XFieldElement = stack[0..3]
             // _ remaining_rounds fri_gen fri_offset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *beqd_ws *oodpnts (-fdom_pnt) [dv2 + dv0 + dv1]
             // _ remaining_rounds fri_gen fri_offset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *beqd_ws *oodpnts (-fdom_pnt) [deep_value]
@@ -788,7 +788,7 @@ impl BasicSnippet for StarkVerify {
                 // _ num_cw_chks *beqd_ws *oodpnts *fri *btrows *odd_brow_next *etrows *ood_erow_nxt *ood_brow_curr *ood_erow_curr *fri_revealed *qseg_elems
 
                 /* Sum out-of-domain values */
-                // Goal for stack: `_ *beqd_ws *ood_brow_curr *ood_erow_curr`, preserving `*beqd_ws`.
+                // Goal for stack: `_ *ood_erow_curr *ood_brow_curr *beqd_ws`, preserving `*beqd_ws`.
 
                 dup 10
                 swap 2
@@ -797,10 +797,10 @@ impl BasicSnippet for StarkVerify {
                 swap 4
                 swap 1
                 swap 3
-                // _ num_cw_chks *beqd_ws *oodpnts *fri *btrows *odd_brow_next *etrows *ood_erow_nxt *fri_revealed *qseg_elems *beqd_ws *ood_brow_curr *ood_erow_curr
-                // _ num_cw_chks *beqd_ws *oodpnts *fri *btrows *odd_brow_next *etrows *ood_erow_nxt *fri_revealed *qseg_elems *beqd_ws *ood_brow_curr *ood_erow_curr
+                swap 2
+                // _ num_cw_chks *beqd_ws *oodpnts *fri *btrows *odd_brow_next *etrows *ood_erow_nxt *fri_revealed *qseg_elems *ood_erow_curr *ood_brow_curr *beqd_ws
 
-                call {inner_product_three_rows_with_weights_xfe_base}
+                call {inner_product_three_rows_with_weights_xfe_base} // expects arguments: *ext *base *ws
                 hint out_of_domain_curr_row_base_and_ext_value: XFieldElement = stack[0..3]
                 // _ num_cw_chks *beqd_ws *oodpnts *fri *btrows *odd_brow_next *etrows *ood_erow_nxt *fri_revealed *qseg_elems [ood_curr_beval]
 
@@ -809,15 +809,15 @@ impl BasicSnippet for StarkVerify {
                 pop 1
                 // _ num_cw_chks *beqd_ws *oodpnts *fri *btrows *odd_brow_next *etrows *ood_erow_nxt *fri_revealed *qseg_elems
 
-                // Goal: `_ *beqd_ws *odd_brow_next *ood_erow_nxt`, preserving `*beqd_ws`.
-                dup 8
-                swap 2
-                swap 5
-                swap 1
-                swap 3
-                // _ num_cw_chks *beqd_ws *oodpnts *fri *btrows *fri_revealed *etrows *qseg_elems *beqd_ws *odd_brow_next *ood_erow_nxt
+                // Goal: `_ *ood_erow_nxt *odd_brow_next *beqd_ws`, preserving `*beqd_ws`.
 
-                call {inner_product_three_rows_with_weights_xfe_base}
+                swap 2
+                swap 1
+                swap 4
+                dup 8
+                // _ num_cw_chks *beqd_ws *oodpnts *fri *btrows *fri_revealed *etrows *qseg_elems *ood_erow_nxt *odd_brow_next *beqd_ws
+
+                call {inner_product_three_rows_with_weights_xfe_base}  // expects arguments: *ext *base *ws
                 hint out_of_domain_next_row_base_and_ext_value: XFieldElement = stack[0..3]
                 // _ num_cw_chks *beqd_ws *oodpnts *fri *btrows *fri_revealed *etrows *qseg_elems [ood_next_value]
 
@@ -1234,7 +1234,7 @@ mod benches {
         insert_default_proof_iter_into_memory(&mut non_determinism.ram, proof_iter_pointer);
 
         let snippet = StarkVerify {
-            stark_parameters: Stark::default(),
+            stark_parameters: stark,
             log_2_padded_height: None,
         };
 

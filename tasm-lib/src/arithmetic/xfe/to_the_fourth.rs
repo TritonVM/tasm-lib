@@ -26,12 +26,12 @@ impl BasicSnippet for ToTheFourth {
                 dup 2
                 dup 2
                 dup 2
-                xxmul
+                xx_mul
 
                 dup 2
                 dup 2
                 dup 2
-                xxmul
+                xx_mul
 
                 return
         )

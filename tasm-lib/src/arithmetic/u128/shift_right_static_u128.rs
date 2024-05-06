@@ -77,7 +77,7 @@ impl<const N: u8> DeprecatedSnippet for ShiftRightStaticU128<N> {
                 mul             // _ v3 v2 v1 v0s
                 swap 3          // _ v0s v2 v1 v3
                 push {pow_2_alt}
-                xbmul           // _ v0s v2s v1s v3s
+                xb_mul           // _ v0s v2s v1s v3s
                 swap 3          // _ v3s v2s v1s v0s
 
                 // add: v1_lo + v0s_hi etc.
