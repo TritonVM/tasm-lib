@@ -145,7 +145,7 @@ mod tests {
     use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
     use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
     use crate::traits::basic_snippet::BasicSnippet;
-    use crate::traits::deprecated_snippet::DeprecatedSnippetWrapper;
+    use crate::traits::deprecated_snippet::tests::DeprecatedSnippetWrapper;
 
     use super::*;
 

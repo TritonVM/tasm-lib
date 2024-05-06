@@ -1,6 +1,4 @@
-use std::cell::RefCell;
 use std::collections::HashMap;
-use std::rc::Rc;
 
 use anyhow::Result;
 use triton_vm::instruction::LabelledInstruction;
@@ -14,13 +12,10 @@ use crate::execute_test;
 use crate::execute_with_terminal_state;
 use crate::library::Library;
 use crate::snippet_bencher::BenchmarkResult;
-use crate::test_helpers::test_rust_equivalence_given_execution_state_deprecated;
 use crate::InitVmState;
-use crate::VmHasher;
 use crate::DIGEST_LENGTH;
 
 use super::basic_snippet::BasicSnippet;
-use super::rust_shadow::RustShadow;
 
 pub trait DeprecatedSnippet {
     /// The name of a Snippet
@@ -193,59 +188,6 @@ pub trait DeprecatedSnippet {
     }
 }
 
-pub(crate) struct DeprecatedSnippetWrapper<S: DeprecatedSnippet> {
-    pub(crate) deprecated_snippet: S,
-}
-
-impl<S: DeprecatedSnippet> DeprecatedSnippetWrapper<S> {
-    #[cfg(test)]
-    pub(crate) fn new(deprecated_snippet: S) -> Self {
-        Self { deprecated_snippet }
-    }
-}
-
-impl<S: DeprecatedSnippet + Clone + 'static> RustShadow for DeprecatedSnippetWrapper<S> {
-    fn inner(&self) -> Rc<RefCell<dyn BasicSnippet>> {
-        Rc::new(RefCell::new(self.deprecated_snippet.clone()))
-    }
-
-    fn rust_shadow_wrapper(
-        &self,
-        stdin: &[BFieldElement],
-        nondeterminism: &NonDeterminism,
-        stack: &mut Vec<BFieldElement>,
-        memory: &mut HashMap<BFieldElement, BFieldElement>,
-        _sponge: &mut Option<VmHasher>,
-    ) -> Vec<BFieldElement> {
-        let mut stack_copy = stack.to_vec();
-        self.deprecated_snippet.rust_shadowing(
-            &mut stack_copy,
-            stdin.to_vec(),
-            nondeterminism.individual_tokens.clone(),
-            memory,
-        );
-        *stack = stack_copy;
-        vec![]
-    }
-
-    fn test(&self) {
-        let mut execution_states = self.deprecated_snippet.gen_input_states();
-
-        let snippet = &self.deprecated_snippet;
-
-        for execution_state in execution_states.iter_mut() {
-            test_rust_equivalence_given_execution_state_deprecated(
-                snippet,
-                execution_state.clone(),
-            );
-        }
-    }
-
-    fn bench(&self) {
-        todo!()
-    }
-}
-
 impl<S: DeprecatedSnippet> BasicSnippet for S {
     fn inputs(&self) -> Vec<(DataType, String)> {
         // Notice that the deprecated snippet trait has its input and output
@@ -301,14 +243,69 @@ impl<S: DeprecatedSnippet> BasicSnippet for S {
 }
 
 #[cfg(test)]
-mod tests {
-    use std::str::FromStr;
+pub(crate) mod tests {
+    use std::{cell::RefCell, rc::Rc, str::FromStr};
 
     use itertools::Itertools;
 
     use crate::arithmetic;
+    use crate::test_helpers::test_rust_equivalence_given_execution_state_deprecated;
+    use crate::traits::rust_shadow::RustShadow;
+    use crate::VmHasher;
 
     use super::*;
+
+    pub(crate) struct DeprecatedSnippetWrapper<S: DeprecatedSnippet> {
+        pub(crate) deprecated_snippet: S,
+    }
+
+    impl<S: DeprecatedSnippet> DeprecatedSnippetWrapper<S> {
+        pub(crate) fn new(deprecated_snippet: S) -> Self {
+            Self { deprecated_snippet }
+        }
+    }
+
+    impl<S: DeprecatedSnippet + Clone + 'static> RustShadow for DeprecatedSnippetWrapper<S> {
+        fn inner(&self) -> Rc<RefCell<dyn BasicSnippet>> {
+            Rc::new(RefCell::new(self.deprecated_snippet.clone()))
+        }
+
+        fn rust_shadow_wrapper(
+            &self,
+            stdin: &[BFieldElement],
+            nondeterminism: &NonDeterminism,
+            stack: &mut Vec<BFieldElement>,
+            memory: &mut HashMap<BFieldElement, BFieldElement>,
+            _sponge: &mut Option<VmHasher>,
+        ) -> Vec<BFieldElement> {
+            let mut stack_copy = stack.to_vec();
+            self.deprecated_snippet.rust_shadowing(
+                &mut stack_copy,
+                stdin.to_vec(),
+                nondeterminism.individual_tokens.clone(),
+                memory,
+            );
+            *stack = stack_copy;
+            vec![]
+        }
+
+        fn test(&self) {
+            let mut execution_states = self.deprecated_snippet.gen_input_states();
+
+            let snippet = &self.deprecated_snippet;
+
+            for execution_state in execution_states.iter_mut() {
+                test_rust_equivalence_given_execution_state_deprecated(
+                    snippet,
+                    execution_state.clone(),
+                );
+            }
+        }
+
+        fn bench(&self) {
+            todo!()
+        }
+    }
 
     #[test]
     fn can_return_code() {

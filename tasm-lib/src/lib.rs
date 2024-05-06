@@ -121,7 +121,7 @@ pub fn execute_bench_deprecated(
     let program = Program::new(code);
 
     let mut vm_state = VMState::new(&program, public_input, nondeterminism.clone());
-    vm_state.op_stack.stack = init_stack.clone();
+    vm_state.op_stack.stack.clone_from(&init_stack);
 
     let (simulation_trace, terminal_state) = program.trace_execution_of_state(vm_state)?;
 
@@ -157,7 +157,7 @@ pub fn execute_bench_deprecated(
         );
     }
 
-    *stack = terminal_state.op_stack.stack.clone();
+    stack.clone_from(&terminal_state.op_stack.stack);
     Ok(BenchmarkResult::new(&simulation_trace))
 }
 
@@ -177,7 +177,7 @@ pub fn execute_test(
     let program = Program::new(code);
 
     let mut vm_state = VMState::new(&program, public_input.clone(), nondeterminism.clone());
-    vm_state.op_stack.stack = init_stack.clone();
+    vm_state.op_stack.stack.clone_from(&init_stack);
     vm_state.sponge = maybe_sponge;
 
     maybe_write_debuggable_program_to_disk(&program, &vm_state);
@@ -226,7 +226,7 @@ pub fn execute_test(
         );
     }
 
-    *stack = terminal_state.op_stack.stack.clone();
+    stack.clone_from(&terminal_state.op_stack.stack);
     terminal_state
 }
 
@@ -263,7 +263,7 @@ pub fn execute_with_terminal_state(
 ) -> Result<VMState, InstructionError> {
     let public_input = PublicInput::new(std_in.into());
     let mut vm_state = VMState::new(program, public_input, nondeterminism.to_owned());
-    vm_state.op_stack.stack = stack.to_owned();
+    stack.clone_into(&mut vm_state.op_stack.stack);
     vm_state.sponge = maybe_sponge;
 
     maybe_write_debuggable_program_to_disk(program, &vm_state);
@@ -320,7 +320,7 @@ pub fn prove_and_verify(
         .with_input(std_in.to_owned());
 
     let tick = SystemTime::now();
-    let mut profiler = Some(TritonProfiler::new(&timing_report_label));
+    let mut profiler = Some(TritonProfiler::new(timing_report_label));
     let proof = stark.prove(&claim, &aet, &mut profiler).unwrap();
     let mut profiler = profiler.unwrap();
     profiler.finish();

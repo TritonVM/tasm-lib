@@ -183,8 +183,8 @@ impl InnerFunction {
         );
         let program = Program::new(&instructions);
         let mut vmstate = VMState::new(&program, PublicInput::default(), NonDeterminism::default());
-        vmstate.op_stack.stack = stack.clone();
-        vmstate.ram = memory.clone();
+        vmstate.op_stack.stack.clone_from(stack);
+        vmstate.ram.clone_from(memory);
         vmstate.run().unwrap();
         *stack = vmstate.op_stack.stack;
     }
