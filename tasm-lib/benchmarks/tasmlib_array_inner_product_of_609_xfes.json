@@ -1,0 +1,24 @@
+[
+  {
+    "name": "tasmlib_array_inner_product_of_609_xfes",
+    "benchmark_result": {
+      "clock_cycle_count": 619,
+      "hash_table_height": 378,
+      "u32_table_height": 0,
+      "op_stack_table_height": 5,
+      "ram_table_height": 3654
+    },
+    "case": "CommonCase"
+  },
+  {
+    "name": "tasmlib_array_inner_product_of_609_xfes",
+    "benchmark_result": {
+      "clock_cycle_count": 619,
+      "hash_table_height": 378,
+      "u32_table_height": 0,
+      "op_stack_table_height": 5,
+      "ram_table_height": 3654
+    },
+    "case": "WorstCase"
+  }
+]

@@ -61,7 +61,7 @@ impl BasicSnippet for VerifyAuthenticationPathForLeafAndIndexList {
         let loop_over_auth_paths_code = triton_asm!(
             {loop_over_auth_paths_label}:
                 dup 5 push 1 eq skiz return         // break loop if node_index is 1
-                divine_sibling hash recurse         // move up one level in the Merkle tree
+                merkle_step recurse                 // move up one level in the Merkle tree
         );
 
         const LIST_ELEMENT_SIZE: usize = EXTENSION_DEGREE + 1;

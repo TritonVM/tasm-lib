@@ -2,7 +2,7 @@ use triton_vm::prelude::*;
 
 use crate::arithmetic::u64::eq_u64::EqU64;
 use crate::data_type::DataType;
-use crate::hashing::divine_sibling_u64_index::DivineSiblingU64Index;
+use crate::hashing::merkle_step_u64_index::MerkleStepU64Index;
 use crate::library::Library;
 use crate::list::get::Get;
 use crate::traits::basic_snippet::BasicSnippet;
@@ -42,7 +42,7 @@ impl BasicSnippet for MmrVerifyFromSecretInSecretLeafIndex {
 
         let leaf_index_to_mt_index = library.import(Box::new(MmrLeafIndexToMtIndexAndPeakIndex));
         let eq_u64 = library.import(Box::new(EqU64));
-        let divine_digest_u64_index = library.import(Box::new(DivineSiblingU64Index));
+        let merkle_step_u64_index = library.import(Box::new(MerkleStepU64Index));
         let list_get = library.import(Box::new(Get::new(DataType::Digest)));
 
         // BEFORE: _ *peaks leaf_count_hi leaf_count_lo [digest (leaf_digest)]
@@ -95,12 +95,9 @@ impl BasicSnippet for MmrVerifyFromSecretInSecretLeafIndex {
                 skiz return
                 // __ mt_index_hi mt_index_lo [digest (acc_hash)]
 
-                // read next auth path element from secret in, and calculate Merkle tree parent index
-                call {divine_digest_u64_index}
+                // move up one layer in the Merkle tree
+                call {merkle_step_u64_index}
 
-                // __ (mt_index / 2)_hi (mt_index / 2)_lo [left_digest] [right_digest]
-
-                hash
                 // _ mt_index_hi (mt_index_lo / 2) [digest (acc_hash)]
 
                 recurse

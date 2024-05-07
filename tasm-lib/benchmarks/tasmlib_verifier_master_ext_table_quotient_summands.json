@@ -2,22 +2,22 @@
   {
     "name": "tasmlib_verifier_master_ext_table_quotient_summands",
     "benchmark_result": {
-      "clock_cycle_count": 41932,
-      "hash_table_height": 45450,
-      "u32_table_height": 18,
-      "op_stack_table_height": 72392,
-      "ram_table_height": 28113
+      "clock_cycle_count": 42337,
+      "hash_table_height": 45672,
+      "u32_table_height": 33,
+      "op_stack_table_height": 72952,
+      "ram_table_height": 28242
     },
     "case": "CommonCase"
   },
   {
     "name": "tasmlib_verifier_master_ext_table_quotient_summands",
     "benchmark_result": {
-      "clock_cycle_count": 42075,
-      "hash_table_height": 45450,
-      "u32_table_height": 29,
-      "op_stack_table_height": 72524,
-      "ram_table_height": 28113
+      "clock_cycle_count": 42233,
+      "hash_table_height": 45672,
+      "u32_table_height": 25,
+      "op_stack_table_height": 72856,
+      "ram_table_height": 28242
     },
     "case": "WorstCase"
   }

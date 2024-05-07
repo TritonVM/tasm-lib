@@ -72,7 +72,7 @@ impl BasicSnippet for MerkleVerify {
             // AFTER:     _ 1 [root'; 5]
             {traverse_tree}:
                 dup 5 push 1 eq skiz return         // break loop if node_index is 1
-                divine_sibling hash recurse         // move up one level in the Merkle tree
+                merkle_step recurse                 // move up one level in the Merkle tree
         )
     }
 }
@@ -113,6 +113,7 @@ mod tests {
 
             let allowed_error_codes = match i {
                 0 => {
+                    println!("now testing: too high height");
                     init_state.nondeterminism.digests.push(random());
                     init_state.stack[len - 1].increment(); // height
                     vec![
@@ -121,6 +122,7 @@ mod tests {
                     ]
                 }
                 1 => {
+                    println!("now testing: too small height");
                     init_state.nondeterminism.digests.push(random());
                     init_state.stack[len - 1].decrement(); // height
                     vec![
@@ -129,18 +131,22 @@ mod tests {
                     ]
                 }
                 2 => {
+                    println!("now testing: corrupt leaf");
                     init_state.stack[len - 2].increment(); // leaf
                     vec![InstructionError::VectorAssertionFailed(0)]
                 }
                 3 => {
+                    println!("now testing: too high leaf index");
                     init_state.stack[len - 6].increment(); // leaf index
                     vec![InstructionError::VectorAssertionFailed(0)]
                 }
                 4 => {
+                    println!("now testing: too small leaf index");
                     init_state.stack[len - 6].decrement(); // leaf index
                     vec![InstructionError::VectorAssertionFailed(0)]
                 }
                 5 => {
+                    println!("now testing: corrupt root");
                     init_state.stack[len - 7].increment(); // root
                     vec![InstructionError::VectorAssertionFailed(0)]
                 }
@@ -206,7 +212,7 @@ mod tests {
                 let tree_height = match maybe_bench_case {
                     Some(BenchmarkCase::CommonCase) => 6,
                     Some(BenchmarkCase::WorstCase) => 20,
-                    None => rng.gen_range(0..20),
+                    None => rng.gen_range(1..20),
                 };
 
                 // sample unconstrained inputs directly

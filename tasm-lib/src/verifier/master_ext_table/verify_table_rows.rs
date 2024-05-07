@@ -79,7 +79,7 @@ impl BasicSnippet for VerifyTableRows {
         let loop_over_auth_paths_code = triton_asm!(
             {loop_over_auth_path_digests_label}:
                 dup 5 push 1 eq skiz return         // break loop if node_index is 1
-                divine_sibling hash recurse         // move up one level in the Merkle tree
+                merkle_step recurse                 // move up one level in the Merkle tree
         );
 
         let loop_over_rows_label = format!("{entrypoint}_loop_over_rows");
