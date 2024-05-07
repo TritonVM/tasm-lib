@@ -945,6 +945,7 @@ pub mod tests {
 
     use itertools::Itertools;
     use tests::fri::test_helpers::extract_fri_proof;
+    use triton_vm::profiler::TritonProfiler;
     use triton_vm::proof_stream::ProofStream;
 
     use crate::execute_test;
@@ -1175,8 +1176,18 @@ pub mod tests {
             output: inner_output,
         };
 
-        let proof = stark.prove(&claim, &aet, &mut None).unwrap();
+        let mut timing_reporter = Some(TritonProfiler::new("inner program "));
+        let proof = stark.prove(&claim, &aet, &mut timing_reporter).unwrap();
+        let padded_height = proof.padded_height().unwrap();
+        let mut profiler = timing_reporter.unwrap();
+        profiler.finish();
+        let report = profiler
+            .report()
+            .with_cycle_count(aet.processor_trace.nrows())
+            .with_padded_height(padded_height)
+            .with_fri_domain_len(stark.derive_fri(padded_height).unwrap().domain.length);
         println!("Done generating proof for non-determinism");
+        println!("{report}");
 
         assert!(
             stark.verify(&claim, &proof, &mut None).is_ok(),
@@ -1274,22 +1285,19 @@ mod benches {
     }
 
     #[ignore = "Takes a very long time. Intended to find optimal FRI expansion factor. Make sure to run
-       with `RUSTFLAGS=\"-C opt-level=3 -C debug-assertions=no`"]
+       with `RUSTFLAGS=\"-C opt-level=3 -C debug-assertions=no\"`"]
     #[test]
     fn big_benchmark_different_fri_expansion_factors() {
-        for log2_of_fri_expansion_factor in 2..=5 {
+        for log2_of_fri_expansion_factor in 1..=5 {
             let stark = Stark::new(160, log2_of_fri_expansion_factor);
-            benchmark_verifier(10, 1 << 8, stark);
-            benchmark_verifier(40, 1 << 9, stark);
-            benchmark_verifier(80, 1 << 10, stark);
+            benchmark_verifier(25600, 1 << 19, stark);
             benchmark_verifier(51200, 1 << 20, stark);
             benchmark_verifier(102400, 1 << 21, stark);
-            benchmark_verifier(204800, 1 << 22, stark);
         }
     }
 
     #[ignore = "Intended to generate data about verifier table heights as a function of inner padded
-       height. Make sure to run with `RUSTFLAGS=\"-C opt-level=3 -C debug-assertions=no`"]
+       height. Make sure to run with `RUSTFLAGS=\"-C opt-level=3 -C debug-assertions=no\"`"]
     #[test]
     fn benchmark_verification_as_a_function_of_inner_padded_height() {
         for (fact_arg, expected_inner_padded_height) in [
@@ -1327,7 +1335,11 @@ mod benches {
             );
 
         let claim_pointer = BFieldElement::new(1 << 30);
-        encode_to_memory(&mut non_determinism.ram, claim_pointer, claim_for_proof);
+        encode_to_memory(
+            &mut non_determinism.ram,
+            claim_pointer,
+            claim_for_proof.clone(),
+        );
 
         let proof_iter_pointer = BFieldElement::new(1 << 31);
         insert_default_proof_iter_into_memory(&mut non_determinism.ram, proof_iter_pointer);
@@ -1339,13 +1351,13 @@ mod benches {
             log_2_padded_height: None,
         };
 
-        let stack = [
+        let init_stack = [
             snippet.init_stack_for_isolated_run(),
             vec![claim_pointer, proof_iter_pointer],
         ]
         .concat();
         let code = link_for_isolated_run(Rc::new(RefCell::new(snippet.clone())));
-        let benchmark = execute_bench(&code, &stack, vec![], non_determinism, None);
+        let benchmark = execute_bench(&code, &init_stack, vec![], non_determinism.clone(), None);
         let benchmark = NamedBenchmarkResult {
             name: format!(
                 "{}_inner_padded_height_{}_fri_exp_{}",
@@ -1358,5 +1370,15 @@ mod benches {
         };
 
         write_benchmarks(vec![benchmark]);
+
+        let program = prepend_program_with_stack_setup(&init_stack, &Program::new(&code));
+        let name = snippet.entrypoint();
+        let profile = generate_full_profile(
+            &name,
+            program,
+            &PublicInput::new(claim_for_proof.input),
+            &non_determinism,
+        );
+        println!("{}", profile);
     }
 }
