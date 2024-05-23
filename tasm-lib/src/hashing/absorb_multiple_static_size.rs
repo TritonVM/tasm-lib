@@ -36,25 +36,26 @@ impl AbsorbMultipleStaticSize {
         self.size - self.num_absorbs_before_pad() * RATE
     }
 
-    fn read_remainder_code_pop_pointer(&self) -> Vec<LabelledInstruction> {
-        load_words_from_memory_pop_pointer(self.num_remaining_words())
-    }
-
     fn read_remainder_and_pad(&self) -> Vec<LabelledInstruction> {
         let num_zeros = self.padded_length() - self.size - 1;
         let adjust_read_pointer = match self.num_remaining_words() {
-            0 => triton_asm!(),
+            0 | 1 => triton_asm!(),
             n => triton_asm!(
-                push {n}
+                // _ *first_unread_word
+                push {n-1}
                 add
+                // _ *last_unread_word
             ),
         };
         [
             vec![triton_asm!(push 0); num_zeros].concat(),
             triton_asm!(push 1),
             triton_asm!(dup {num_zeros + 1}),
+            // _ *first_unread_word [0] 1 *first_unread_word
             adjust_read_pointer,
-            self.read_remainder_code_pop_pointer(),
+            // _ *first_unread_word [0] 1 *last_unread_word
+            load_words_from_memory_pop_pointer(self.num_remaining_words()),
+            // _ *first_unread_word [0] 1 [un-absorbed-words]
         ]
         .concat()
     }
@@ -76,19 +77,8 @@ impl BasicSnippet for AbsorbMultipleStaticSize {
     fn code(&self, _library: &mut crate::library::Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
         let absorb_once = triton_asm!(
-            // (*address - 1)
-
-            push 10
-            add
-            dup 0
-            // (*address + RATE - 1) (*address + RATE - 1)
-
-            read_mem 5 read_mem 5
-            // (*address + RATE - 1) [words; RATE] (*address + RATE - 11)
-
-            pop 1
-            sponge_absorb
-            // (*address + RATE - 1)
+            // _ d c b a *address
+            sponge_absorb_mem // _ h g f e (*address + RATE)
         );
 
         let absorb_all_non_padded = vec![absorb_once; self.num_absorbs_before_pad()].concat();
@@ -99,16 +89,25 @@ impl BasicSnippet for AbsorbMultipleStaticSize {
             // AFTER:  _
             {entrypoint}:
                 // _ *bfe_sequence
-                push -1
-                add
+
+                push 0
+                push 0
+                push 0
+                push 0
+                swap 4
+                // _ 0 0 0 0 *bfe_sequence
 
                 {&absorb_all_non_padded}
-                // _ *address
+                // _ g0 g1 g2 g3 *next_unread_word
+
+                swap 4
+                pop 4
+                // _ *next_unread_word
 
                 {&read_remainder_and_pad}
 
                 sponge_absorb
-                push {self.size % RATE + 1}
+                push {self.size % RATE}
                 add
 
                 // _ (*address + self.size)
@@ -211,7 +210,7 @@ mod test {
 
     #[test]
     fn absorb_multiple_static_size_small_pbt() {
-        for size in 0..20 {
+        for size in 0..30 {
             println!("Testing size {size}");
             ShadowedProcedure::new(AbsorbMultipleStaticSize { size }).test();
         }
