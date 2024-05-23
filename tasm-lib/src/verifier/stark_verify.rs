@@ -945,7 +945,6 @@ pub mod tests {
 
     use itertools::Itertools;
     use tests::fri::test_helpers::extract_fri_proof;
-    use triton_vm::profiler::TritonProfiler;
     use triton_vm::proof_stream::ProofStream;
 
     use crate::execute_test;
@@ -1045,6 +1044,7 @@ pub mod tests {
         const FACTORIAL_ARGUMENT: u32 = 3;
 
         for log2_of_fri_expansion_factor in 2..=5 {
+            println!("log2_of_fri_expansion_factor: {log2_of_fri_expansion_factor}");
             let factorial_program = factorial_program_with_io();
             let stark = Stark::new(160, log2_of_fri_expansion_factor);
             let (final_vm_state, inner_padded_height) = prop(
@@ -1176,13 +1176,11 @@ pub mod tests {
             output: inner_output,
         };
 
-        let mut timing_reporter = Some(TritonProfiler::new("inner program "));
-        let proof = stark.prove(&claim, &aet, &mut timing_reporter).unwrap();
+        triton_vm::profiler::start("inner program");
+        let proof = stark.prove(&claim, &aet).unwrap();
+        let profile = triton_vm::profiler::finish();
         let padded_height = proof.padded_height().unwrap();
-        let mut profiler = timing_reporter.unwrap();
-        profiler.finish();
-        let report = profiler
-            .report()
+        let report = profile
             .with_cycle_count(aet.processor_trace.nrows())
             .with_padded_height(padded_height)
             .with_fri_domain_len(stark.derive_fri(padded_height).unwrap().domain.length);
@@ -1190,7 +1188,7 @@ pub mod tests {
         println!("{report}");
 
         assert!(
-            stark.verify(&claim, &proof, &mut None).is_ok(),
+            stark.verify(&claim, &proof).is_ok(),
             "Proof from TVM must verify through TVM"
         );
 

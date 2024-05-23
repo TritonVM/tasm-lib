@@ -49,7 +49,6 @@ pub mod verifier;
 
 // re-exports for types exposed in our public API.
 pub use triton_vm;
-use triton_vm::profiler::TritonProfiler;
 use triton_vm::table::master_table::TableId;
 pub use triton_vm::twenty_first;
 
@@ -320,16 +319,14 @@ pub fn prove_and_verify(
         .with_input(std_in.to_owned());
 
     let tick = SystemTime::now();
-    let mut profiler = Some(TritonProfiler::new(timing_report_label));
-    let proof = stark.prove(&claim, &aet, &mut profiler).unwrap();
-    let mut profiler = profiler.unwrap();
-    profiler.finish();
+    triton_vm::profiler::start(timing_report_label);
+    let proof = stark.prove(&claim, &aet).unwrap();
+    let profile = triton_vm::profiler::finish();
     let measured_time = tick.elapsed().expect("Don't mess with time");
 
     let padded_height = proof.padded_height().unwrap();
     let fri = stark.derive_fri(padded_height).unwrap();
-    let report = profiler
-        .report()
+    let report = profile
         .with_cycle_count(aet.processor_trace.nrows())
         .with_padded_height(padded_height)
         .with_fri_domain_len(fri.domain.length);

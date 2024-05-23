@@ -101,7 +101,7 @@ pub fn extract_fri_proof(
     let padded_height = 1 << log2_padded_height;
     let fri: triton_vm::fri::Fri<Tip5> = stark.derive_fri(padded_height).unwrap();
     let fri_proof_stream = proof_stream.clone();
-    let fri_verify_result = fri.verify(&mut proof_stream, &mut None).unwrap();
+    let fri_verify_result = fri.verify(&mut proof_stream).unwrap();
     let indices = fri_verify_result.iter().map(|(i, _)| *i).collect_vec();
     let tree_height = fri.domain.length.ilog2() as usize;
 
@@ -208,7 +208,7 @@ mod tests {
         let mut fri_proof_stream =
             extract_fri_proof(&proof_stream, &claim, &stark).fri_proof_stream;
         assert!(
-            fri.verify(&mut fri_proof_stream, &mut None).is_ok(),
+            fri.verify(&mut fri_proof_stream).is_ok(),
             "Extracted proof must verify"
         );
     }

@@ -1659,7 +1659,7 @@ mod test {
     fn test_inner_verify(test_case: TestCase) {
         let fri = test_case.fri();
         let mut vm_proof_iter = test_case.proof_stream();
-        let verify_result = fri.verify(&mut vm_proof_iter, &mut None);
+        let verify_result = fri.verify(&mut vm_proof_iter);
         prop_assert!(verify_result.is_ok(), "FRI verify error: {verify_result:?}");
 
         let fri_verify = test_case.fri_verify;
