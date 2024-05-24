@@ -36,21 +36,42 @@ impl BasicSnippet for Absorb {
             {entrypoint}:
                 // _ *input
 
-                push 9 add
-                // _ *last_bfe
+                push 0
+                push 0
+                push 0
+                push 0
+                swap 4
+                // _ 0 0 0 0 *input
 
-                read_mem 5
-                read_mem 5
-                // _ [word_9..word_0] (*first_elem - 1)
+                sponge_absorb_mem
+                // _ g0 g1 g2 g3 (*input+10)
 
-                pop 1
-                // _ [word_9..word_0]
-
-                sponge_absorb
+                pop 5
                 // _
 
                 return
         )
+
+        // Can also be implemented without the use of `sponge_absorb_mem`:
+        // triton_asm!(
+        //     {entrypoint}:
+        //         // _ *input
+
+        //         push 9 add
+        //         // _ *last_bfe
+
+        //         read_mem 5
+        //         read_mem 5
+        //         // _ [word_9..word_0] (*first_elem - 1)
+
+        //         pop 1
+        //         // _ [word_9..word_0]
+
+        //         sponge_absorb
+        //         // _
+
+        //         return
+        // )
     }
 }
 
