@@ -49,38 +49,45 @@ impl BasicSnippet for AbsorbMultiple {
                 dup 0
                 push 10
                 swap 1
-                div_mod     // _ *bfe_sequence length length/10 length%10
+                div_mod     // _ *bfe_sequence length (length/10) (length%10)
                 swap 1
-                pop 1       // _ *bfe_sequence length length%10
+                pop 1       // _ *bfe_sequence length (length%10)
 
-                swap 1      // _ *bfe_sequence length%10 length
-                dup 1       // _ *bfe_sequence length%10 length length%10
-                push -1 mul // _ *bfe_sequence length%10 length -length%10
+                swap 1      // _ *bfe_sequence (length%10) length
+                dup 1       // _ *bfe_sequence (length%10) length (length%10)
+                push -1 mul // _ *bfe_sequence (length%10) length (-length%10)
                 dup 3
-                add add     // _ *bfe_sequence length%10 (*bfe_sequence + length - length%10)
-                            // _ *bfe_sequence length%10 *remainder
-
-                push -1
-                add         // _ *bfe_sequence length%10 (*remainder - 1)
+                add add     // _ *bfe_sequence (length%10) (*bfe_sequence + length - length%10)
+                            // _ *bfe_sequence (length%10) *remainder
 
                 swap 1
-                swap 2      // _ length%10 (*remainder - 1) *bfe_sequence
-                push -1
-                add         // _ length%10 (*remainder - 1) (*bfe_sequence - 1)
+                swap 2      // _ (length%10) *remainder *bfe_sequence
+
+                push 0
+                push 0
+                push 0
+                push 0
+                swap 4
+                // _ (length%10) *remainder 0 0 0 0 *bfe_sequence
 
                 call {hash_all_full_chunks}
-                            // _ length%10 (*remainder - 1) (*remainder - 1)
-                pop 1       // _ length%10 (*remainder - 1)
+                            // _ (length%10) *remainder e f g h *remainder
+                pop 5       // _ (length%10) *remainder
 
-                push 9      // _ length%10 (*remainder - 1) 9
-                dup 2       // _ length%10 (*remainder - 1) 9 length%10
-                push -1     // _ length%10 (*remainder - 1) 9 length%10 -1
-                mul add     // _ length%10 (*remainder - 1) 9-length%10
+                /* Calculate stop condition for reading remainder */
+                push -1
+                add
+                // _ (length%10) (*remainder - 1)
+
+                push 9      // _ (length%10) (*remainder - 1) 9
+                dup 2       // _ (length%10) (*remainder - 1) 9 (length%10)
+                push -1     // _ (length%10) (*remainder - 1) 9 (length%10) -1
+                mul add     // _ (length%10) (*remainder - 1) (9-length%10)
                 call {pad_varnum_zeros}
-                            // _ [0; 9-length%10] length%10 (*remainder - 1) 0
+                            // _ [0; 9-length%10] (length%10) (*remainder - 1) 0
                 pop 1
-                push 1      // _ [0; 9-length%10] length%10 (*remainder - 1) 1
-                swap 2      // _ [0; 9-length%10] 1 (*remainder - 1) length%10
+                push 1      // _ [0; 9-length%10] (length%10) (*remainder - 1) 1
+                swap 2      // _ [0; 9-length%10] 1 (*remainder - 1) (length%10)
                 dup 1 add   // _ [0; 9-length%10] 1 (*remainder - 1) *last_word
                 call {read_remainder}
                             // _ [last_chunk_padded; 10] (*remainder - 1) (*remainder - 1)
@@ -88,34 +95,32 @@ impl BasicSnippet for AbsorbMultiple {
                 sponge_absorb
                 return
 
-            // BEFORE:    _ (*remainder - 1) (*bfe_sequence - 1)
-            // INVARIANT: _ (*remainder - 1) (*bfe_sequence' - 1)
-            // AFTER:     _ (*remainder - 1) (*remainder - 1)
+            // BEFORE:    _ *remainder 0 0 0 0 *bfe_sequence
+            // INVARIANT: _ *remainder a b c d *bfe_sequence'
+            // AFTER:     _ *remainder e f g h *remainder
             {hash_all_full_chunks}:
-                dup 1 dup 1 eq
+                dup 5 dup 1 eq
                 skiz return
-                push 10 add // _ (*remainder - 1) (*bfe_sequence + 9)
-                dup 0       // _ (*remainder - 1) (*bfe_sequence + 9) (*bfe_sequence + 9)
-                read_mem 5 read_mem 5
-                            // _ (*remainder - 1) (*bfe_sequence + 9) [chunk] (*bfe_sequence - 1)
-                pop 1       // _ (*remainder - 1) (*bfe_sequence + 9) [chunk]
-                sponge_absorb
-                            // _ *remainder (*bfe_sequence + 9)
+
+                // _ *remainder a b c d *bfe_sequence
+                sponge_absorb_mem
+
+                // _ *remainder e f g h *bfe_sequence'
                 recurse
 
-            // BEFORE:    _ length%10 (*remainder - 1) num_zeros
-            // INVARIANT: _ [0; i] length%10 (*remainder - 1) (num_zeros - i)
-            // AFTER:     _ [0; num_zeros] length%10 (*remainder - 1) 0
+            // BEFORE:    _ (length%10) (*remainder - 1) num_zeros
+            // INVARIANT: _ [0; i] (length%10) (*remainder - 1) (num_zeros - i)
+            // AFTER:     _ [0; num_zeros] (length%10) (*remainder - 1) 0
             {pad_varnum_zeros}:
-                dup 0       // _ [0; i] length%10 (*remainder - 1) (num_zeros - i)
-                push 0 eq   // _ [0; i] length%10 (*remainder - 1) (num_zeros - i == 0)
+                dup 0       // _ [0; i] (length%10) (*remainder - 1) (num_zeros - i)
+                push 0 eq   // _ [0; i] (length%10) (*remainder - 1) (num_zeros - i == 0)
                 skiz return
-                            // _ [0; i] length%10 (*remainder - 1) (num_zeros - i)
+                            // _ [0; i] (length%10) (*remainder - 1) (num_zeros - i)
 
-                push 0      // _ [0; i] length%10 (*remainder - 1) (num_zeros - i) 0
+                push 0      // _ [0; i] (length%10) (*remainder - 1) (num_zeros - i) 0
                 swap 3
                 swap 2
-                swap 1      // _ [0; i+1] length%10 (*remainder - 1) (num_zeros - i)
+                swap 1      // _ [0; i+1] (length%10) (*remainder - 1) (num_zeros - i)
                 push -1
                 add
                 recurse
