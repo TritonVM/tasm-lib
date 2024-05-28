@@ -201,17 +201,6 @@ impl BasicSnippet for FriSnippet {
                 input_type: DataType::U32,
                 output_type: DataType::U32,
             }))));
-        let populate_return_vector_second_half =
-            format!("{entrypoint}_populate_return_vector_second_half");
-        let populate_loop = format!("{entrypoint}_populate_return_vector_loop");
-        let get_u32_and_xfe = library.import(Box::new(Get::new(DataType::Tuple(vec![
-            DataType::U32,
-            DataType::Xfe,
-        ]))));
-        let push_u32_and_xfe = library.import(Box::new(Push::new(DataType::Tuple(vec![
-            DataType::U32,
-            DataType::Xfe,
-        ]))));
         let reduce_indices_label = format!("{entrypoint}_reduce_indices");
         let map_reduce_indices =
             library.import(Box::new(Map::new(InnerFunction::RawCode(RawCode {
@@ -718,11 +707,6 @@ impl BasicSnippet for FriSnippet {
                 {&revealed_leafs}           // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *a_indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements
                 hint b_elements: Pointer = stack[0]
 
-                // if in first round (r==0), populate second half of return vector
-                dup 3 push 0 eq
-                skiz call {populate_return_vector_second_half}
-                                            // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height *indices *a_elements *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements
-
                 // check batch merkle membership
                 dup 0
                 hint b_leaves: Pointer = stack[0]
@@ -862,39 +846,6 @@ impl BasicSnippet for FriSnippet {
                 swap 10                     // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height-1 *c_indices *c_elements *revealed_indices_and_leafs half_domain_length r half_domain_length *b_indices *b_elements *fri_verify current_tree_height
                 pop 5                       // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height-1 *c_indices *c_elements *revealed_indices_and_leafs half_domain_length r
                 push 1 add                  // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas current_tree_height-1 *c_indices *c_elements *revealed_indices_and_leafs half_domain_length r+1
-                recurse
-
-            // BEFORE: _  *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements
-            // AFTER:  _  *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements
-            {populate_return_vector_second_half}:
-                dup 1 dup 1 call {zip_index_xfe}
-                                            // _ *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *indices_and_elements
-                push 0 call {populate_loop} // _ *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *indices_and_elements length
-                pop 2                       // _ *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements
-                return
-
-            // INVARIANT:  _ *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *indices_and_elements index
-            {populate_loop}:
-                // evaluate termination condition:
-                // if index == list length, then return
-                dup 0                       // _ *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *indices_and_elements index index
-                dup 4 call {length_of_list_of_u32s} eq
-                                            // _ *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *indices_and_elements index index==length
-                skiz return
-
-                // prepare push
-                dup 7                       // _ *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *indices_and_elements index *revealed_indices_and_leafs
-
-                // read element
-                dup 2 dup 2                 // _ *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *indices_and_elements index *revealed_indices_and_leafs *indices_and_elements index
-                call {get_u32_and_xfe}      // _ *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *indices_and_elements index *revealed_indices_and_leafs [index-and-element]
-
-                // push
-                call {push_u32_and_xfe}     // _ *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *indices_and_elements index
-
-                // prepare for next iteration
-                push 1 add              // _ *revealed_indices_and_leafs current_domain_length r half_domain_length *b_indices *b_elements *indices_and_elements index+1
-
                 recurse
         }
     }
@@ -1073,13 +1024,11 @@ impl FriVerify {
         }
 
         // save indices and revealed leafs of first round's codeword for returning
-        let revealed_indices_and_elements_first_half = a_indices
+        let revealed_indices_and_elements_round_0 = a_indices
             .iter()
             .map(|&idx| idx as u32)
             .zip_eq(a_values.iter().copied())
             .collect_vec();
-        // these indices and values will be computed in the first iteration of the main loop below
-        let mut revealed_indices_and_elements_second_half = vec![];
 
         // set up "B" for offsetting inside loop.  Note that "B" and "A" indices can be calculated
         // from each other.
@@ -1143,15 +1092,6 @@ impl FriVerify {
             debug_assert_eq!(self.num_collinearity_checks, a_values.len() as u32);
             debug_assert_eq!(self.num_collinearity_checks, b_values.len() as u32);
 
-            if r == 0 {
-                // save other half of indices and revealed leafs of first round for returning
-                revealed_indices_and_elements_second_half = b_indices
-                    .iter()
-                    .map(|&idx| idx as u32)
-                    .zip_eq(b_values.iter().copied())
-                    .collect_vec();
-            }
-
             // compute "C" indices and values for next round from "A" and "B" of current round
             current_domain_len /= 2;
             current_tree_height -= 1;
@@ -1182,13 +1122,7 @@ impl FriVerify {
             bail!(FriValidationError::LastCodewordMismatch);
         }
 
-        // compile return object and store to memory
-        let revealed_indices_and_elements = revealed_indices_and_elements_first_half
-            .into_iter()
-            .chain(revealed_indices_and_elements_second_half)
-            .collect_vec();
-
-        Ok(revealed_indices_and_elements)
+        Ok(revealed_indices_and_elements_round_0)
     }
 
     /// Computes the number of rounds
