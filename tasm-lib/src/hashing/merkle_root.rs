@@ -12,6 +12,7 @@ use triton_vm::twenty_first::prelude::AlgebraicHasher;
 use crate::data_type::DataType;
 use crate::empty_stack;
 use crate::library::Library;
+use crate::memory::dyn_malloc::DynMalloc;
 use crate::memory::encode_to_memory;
 use crate::snippet_bencher::BenchmarkCase;
 use crate::structure::tasm_object::TasmObject;
@@ -27,8 +28,6 @@ pub struct MerkleRoot;
 
 impl MerkleRoot {
     pub fn call(leafs: &[Digest], start: usize, stop: usize) -> Digest {
-        // #[allow(unused_assignments)]
-        // let mut result: Digest = Digest::default();
         let result: Digest = if stop == start + 1usize {
             leafs[start]
         } else {
@@ -62,113 +61,127 @@ impl BasicSnippet for MerkleRoot {
         "tasmlib_hashing_merkle_root".to_string()
     }
 
-    fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {
+    fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
-        let read_digest = DataType::Digest.read_value_from_memory_pop_pointer();
+        let dyn_malloc = library.import(Box::new(DynMalloc));
 
-        let then_label = format!("{entrypoint}_then");
-        let else_label = format!("{entrypoint}_else");
+        let calculate_parent_digests_label = format!("{entrypoint}_calculate_parent_digests");
+
+        let calculate_parent_digests_code = triton_asm!(
+            // Populate the `*next` diges list
+            // START: _ *curr *next_last_elem_first_word *curr_last_word
+            // INVARIANT: _ *curr *next_elem *curr_elem
+            // END: _ *curr *next *curr
+            {calculate_parent_digests_label}:
+                dup 2
+                dup 1
+                eq
+                skiz
+                    return
+                // _ *curr *next_elem *curr_elem[n]
+
+                dup 0
+                read_mem {DIGEST_LENGTH}
+                read_mem {DIGEST_LENGTH}
+                // _ *curr *next_elem *curr_elem [right] [left] (*curr_elem[n] - 10)
+                // _ *curr *next_elem *curr_elem [right] [left] *curr_elem[n - 2]
+                // _ *curr *next_elem *curr_elem [right] [left] *curr_elem'
+
+
+                swap 11
+                pop 1
+                // _ *curr *next_elem *curr_elem' [right] [left]
+
+                hash
+                // _ *curr *next_elem *curr_elem' [parent_digest]
+
+                dup 6
+                // _ *curr *next_elem *curr_elem' [parent_digest] *next_elem
+
+                write_mem {DIGEST_LENGTH}
+                // _ *curr *next_elem *curr_elem' (*next_elem + 5)
+
+                push -10
+                add
+                // _ *curr *next_elem *curr_elem' (*next_elem - 5)
+                // _ *curr *next_elem *curr_elem' *next_elem[n-1]
+                // _ *curr *next_elem *curr_elem' *next_elem'
+
+                swap 2
+                pop 1
+                // _ *curr *next_elem' *curr_elem'
+
+                recurse
+        );
+
+        let next_layer_label = format!("{entrypoint}_next_layer");
+        let next_layer_code = triton_asm!(
+            // _ *digests
+            {next_layer_label}:
+                // _ *current_level
+
+                dup 0
+                // _ *current_level *current_level
+
+                read_mem 1
+                push 1
+                add
+                // _ *current_level len *current_level
+
+                /* Allocate and calculate end of `next_level`, preserve `len` */
+                call {dyn_malloc}
+                // _ *current_level len *current_level *next_level
+
+                push 2
+                dup 3
+                div_mod
+                pop 1
+                // _ *current_level len *current_level *next_level (len / 2)
+
+                dup 0
+                swap 2
+                // _ *current_level len *current_level (len / 2) (len / 2) *next_level
+
+                write_mem 1
+                // _ *current_level len *current_level (len / 2) (*next_level+1)
+
+                swap 1
+                // _ *current_level len *current_level (*next_level+1) (len / 2)
+
+                push -1
+                add
+                // _ *current_level len *current_level (*next_level+1) (len / 2 - 1)
+
+                push {DIGEST_LENGTH}
+                mul
+                add
+                // _ *current_level len *current_level *next_level_last_elem_first_word
+
+                swap 2
+                // _ *current_level *next_level_last_elem_first_word *current_level len
+
+                push {DIGEST_LENGTH}
+                mul
+                add
+                // _ *current_level *next_level_last_elem_first_word *current_level_last_digest
+
+                call {calculate_parent_digests_label}
+                // _ *curr (*next_elem-DIGEST_LENGTH+1) *curr_elem
+
+                /* Cleanup stack */
+                pop 1
+                push {DIGEST_LENGTH - 1}
+                add
+                swap 1
+                pop 1
+                // _ *next
+        );
+
         triton_asm!(
                 {entrypoint}:
-                    // *leafs start stop
+                    // *leafs
 
-                    push 1
-
-                    dup 2
-                    push 1
-                    add
-                    // *leafs start stop 1 (start + 1)
-
-                    dup 2
-                    eq
-                    // *leafs start stop 1 (start + 1 == stop)
-
-                    skiz
-                        call {then_label}
-                    skiz
-                        call {else_label}
-                    // _ *leafs start stop garbage [digest; 5]
-                    // _ *leafs start stop garbage d4 d3 d2 d1 d0
-
-                    swap 4
-                    swap 8
-                    pop 1
-                    // _ d4 start stop garbage d0 d3 d2 d1
-
-                    swap 4
-                    pop 1
-                    // _ d4 start stop d1 d0 d3 d2
-
-                    swap 4
-                    pop 1
-                    // _ d4 start d2 d1 d0 d3
-
-                    swap 4
-                    pop 1
-                    // _ d4 d3 d2 d1 d0
-
-                    return
-
-                {then_label}:
-                    // *leafs start stop 1
-
-                    dup 2
-                    push {DIGEST_LENGTH}
-                    mul
-                    dup 4
-                    add
-                    push {DIGEST_LENGTH}
-                    add
-                    {&read_digest}
-                    // *leafs start stop 1 [digest; 5]
-
-                    push 0
-                    return
-
-                {else_label}:
-                        // _ *leafs start stop
-
-                        push 2
-                        dup 1
-                        dup 3
-                        push -1
-                        mul
-                        add
-                        // _ *leafs start stop 2 (stop - start)
-
-                        div_mod
-                        pop 1
-                        // _ *leafs start stop ((stop - start) / 2)
-                        // _ *leafs start stop half
-
-                        dup 3
-                        dup 3
-                        dup 2
-                        add
-                        // _ *leafs start stop half *leafs (start + half)
-
-                        dup 3
-                        // _ *leafs start stop half *leafs (start + half) stop
-
-                        call {entrypoint}
-                        // _ *leafs start stop half [right; 5]
-
-                        dup 8
-                        dup 8
-                        dup 8
-                        dup 8
-                        push -1
-                        mul
-                        add
-                        // _ *leafs start stop half [right; 5] *leafs start (stop - half)
-
-                        call {entrypoint}
-                        // _ *leafs start stop half [right; 5] [left; 5]
-
-                        hash
-
-                        return
-
+                   return
         )
     }
 }
