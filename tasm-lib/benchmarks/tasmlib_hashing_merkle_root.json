@@ -2,22 +2,22 @@
   {
     "name": "tasmlib_hashing_merkle_root",
     "benchmark_result": {
-      "clock_cycle_count": 18647,
-      "hash_table_height": 1590,
-      "u32_table_height": 55,
-      "op_stack_table_height": 15836,
-      "ram_table_height": 1280
+      "clock_cycle_count": 9195,
+      "hash_table_height": 3150,
+      "u32_table_height": 66,
+      "op_stack_table_height": 15746,
+      "ram_table_height": 7707
     },
     "case": "CommonCase"
   },
   {
     "name": "tasmlib_hashing_merkle_root",
     "benchmark_result": {
-      "clock_cycle_count": 37335,
-      "hash_table_height": 3126,
-      "u32_table_height": 66,
-      "op_stack_table_height": 31708,
-      "ram_table_height": 2560
+      "clock_cycle_count": 17953,
+      "hash_table_height": 6222,
+      "u32_table_height": 78,
+      "op_stack_table_height": 31150,
+      "ram_table_height": 15391
     },
     "case": "WorstCase"
   }

@@ -13,6 +13,9 @@ use triton_vm::twenty_first::math::polynomial::Polynomial;
 use triton_vm::twenty_first::math::traits::ModPowU32;
 use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 use triton_vm::twenty_first::util_types::merkle_tree::MerkleTreeInclusionProof;
+use twenty_first::util_types::merkle_tree::CpuParallel;
+use twenty_first::util_types::merkle_tree::MerkleTree;
+use twenty_first::util_types::merkle_tree_maker::MerkleTreeMaker;
 
 use crate::data_type::DataType;
 use crate::data_type::StructType;
@@ -327,9 +330,8 @@ impl BasicSnippet for FriSnippet {
                 swap 1 push 2               // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword *leafs num_leafs domain_length num_rounds 2
                 pow                         // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword *leafs num_leafs domain_length (1<<num_rounds)
                 swap 1 div_mod pop 1        // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword *leafs num_leafs (domain_length>>num_rounds)
-                dup 1 eq                    // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword *leafs num_leafs eq
-                assert                      // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword *leafs num_leafs
-                push 0 swap 1               // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword *leafs 0 num_leafs
+                eq                          // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword *leafs (num_leafs == (domain_length>>num_rounds))
+                assert                      // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword *leafs
                 call {merkle_root}          // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword' *roots *alphas *vm_proof_iter *last_codeword [last_root]
                 hint merkle_root: Digest = stack[0..5]
 
@@ -971,8 +973,8 @@ impl FriVerify {
 
         // Check if last codeword matches the given root
         let codeword_digests = Self::map_convert_xfe_to_digest(&last_codeword);
-        let last_codeword_merkle_root =
-            MerkleRoot::call(&codeword_digests, 0, codeword_digests.len());
+        let mt: MerkleTree<Tip5> = CpuParallel::from_digests(&codeword_digests).unwrap();
+        let last_codeword_merkle_root = mt.root();
 
         let last_root = roots.last().unwrap();
         if *last_root != last_codeword_merkle_root {
