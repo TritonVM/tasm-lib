@@ -200,8 +200,8 @@ impl Function for MerkleRoot {
     ) -> FunctionInitialState {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
         let num_leafs = match bench_case {
-            Some(BenchmarkCase::CommonCase) => 32,
-            Some(BenchmarkCase::WorstCase) => 128,
+            Some(BenchmarkCase::CommonCase) => 512,
+            Some(BenchmarkCase::WorstCase) => 1024,
             None => 1 << rng.gen_range(0..=8),
         };
         let leafs = (0..num_leafs).map(|_| rng.gen::<Digest>()).collect_vec();
