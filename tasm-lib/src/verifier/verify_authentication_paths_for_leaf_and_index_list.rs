@@ -28,7 +28,7 @@ use crate::VmHasher;
 ///   - height : U32
 ///
 /// Behavior: crashes the VM if even one of the authentication paths
-/// is invalid.
+/// is invalid. Goes into an infinite loop that crashes VM if height == 0.
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct VerifyAuthenticationPathForLeafAndIndexList;
 
@@ -60,8 +60,8 @@ impl BasicSnippet for VerifyAuthenticationPathForLeafAndIndexList {
         let loop_over_auth_paths_label = format!("{entrypoint}_loop_over_auth_path_elements");
         let loop_over_auth_paths_code = triton_asm!(
             {loop_over_auth_paths_label}:
-                dup 5 push 1 eq skiz return         // break loop if node_index is 1
-                merkle_step recurse                 // move up one level in the Merkle tree
+                merkle_step                         // move up one level in the Merkle tree
+                recurse_or_return                   // break loop if node_index is 1
         );
 
         const LIST_ELEMENT_SIZE: usize = EXTENSION_DEGREE + 1;
@@ -135,40 +135,46 @@ impl BasicSnippet for VerifyAuthenticationPathForLeafAndIndexList {
                 dup 7
                 eq
                 skiz return
-
                 // _ *leaf_and_index_list_end_condition *leaf_and_index_element_idx num_leafs [root]
-                dup 6
-                read_mem 1
-                swap 8
-                pop 1
-                // _ *leaf_and_index_list_end_condition *leaf_and_index_element_val num_leafs [root] leaf_index
 
-                dup 6
+                /* Add Merkle auth path's stop condition to stack */
+                push 1
+                // _ *leaf_and_index_list_end_condition *leaf_and_index_element_idx num_leafs [root] 1
+
+                dup 7
+                read_mem 1
+                swap 9
+                pop 1
+                // _ *leaf_and_index_list_end_condition *leaf_and_index_element_val num_leafs [root] 1 leaf_index
+
+                dup 7
                 add
-                // _ *leaf_and_index_list_end_condition *leaf_and_index_element_val num_leafs [root] node_index
+                // _ *leaf_and_index_list_end_condition *leaf_and_index_element_val num_leafs [root] 1 node_index
+
 
                 // Get indicated digest onto stack
                 push 0
                 push 0
-                // _ *leaf_and_index_list_end_condition *leaf_and_index_element_val num_leafs [root] node_index 0 0
+                // _ *leaf_and_index_list_end_condition *leaf_and_index_element_val num_leafs [root] 1 node_index 0 0
 
-                dup 9
+                dup 10
                 read_mem {EXTENSION_DEGREE}
                 push {2 * LIST_ELEMENT_SIZE}
                 add
-                swap 13
+                swap 14
                 pop 1
-                // _ *leaf_and_index_list_end_condition *leaf_and_index_element_idx_next num_leafs [root] node_index 0 0 xfe2 xfe1 xfe0
-                // _ *leaf_and_index_list_end_condition *leaf_and_index_element_idx_next num_leafs [root] node_index [leaf]  <-- rename
+                // _ *leaf_and_index_list_end_condition *leaf_and_index_element_idx_next num_leafs [root] 1 node_index 0 0 xfe2 xfe1 xfe0
+                // _ *leaf_and_index_list_end_condition *leaf_and_index_element_idx_next num_leafs [root] 1 node_index [leaf]  <-- rename
 
                 call {loop_over_auth_paths_label}
-                // _ *leaf_and_index_list_end_condition *leaf_and_index_element_idx_next num_leafs [root] 1 [calculated_root]  <-- rename
+                // _ *leaf_and_index_list_end_condition *leaf_and_index_element_idx_next num_leafs [root] 1 1 [calculated_root]  <-- rename
 
-                swap 1
                 swap 2
-                swap 3
                 swap 4
-                swap 5
+                swap 6
+                pop 1
+                swap 2
+                swap 4
                 pop 1
                 // _ *leaf_and_index_list_end_condition *leaf_and_index_element_idx_next num_leafs [root] [calculated_root]
 
@@ -235,8 +241,6 @@ impl Algorithm for VerifyAuthenticationPathForLeafAndIndexList {
 
     fn corner_case_initial_states(&self) -> Vec<AlgorithmInitialState> {
         let mut rng: StdRng = SeedableRng::from_seed([42u8; 32]);
-        let one_leaf_reveal_0 = self.prepare_state(&mut rng, 0, 0);
-        let one_leaf_reveal_1 = self.prepare_state(&mut rng, 0, 1);
         let two_leaves_reveal_0 = self.prepare_state(&mut rng, 1, 1);
         let two_leaves_reveal_1 = self.prepare_state(&mut rng, 1, 1);
         let two_leaves_reveal_2 = self.prepare_state(&mut rng, 1, 2);
@@ -246,8 +250,6 @@ impl Algorithm for VerifyAuthenticationPathForLeafAndIndexList {
         let four_leaves_reveal_3 = self.prepare_state(&mut rng, 2, 3);
         let four_leaves_reveal_4 = self.prepare_state(&mut rng, 2, 4);
         vec![
-            one_leaf_reveal_0,
-            one_leaf_reveal_1,
             two_leaves_reveal_0,
             two_leaves_reveal_1,
             two_leaves_reveal_2,

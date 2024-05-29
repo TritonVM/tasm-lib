@@ -26,9 +26,9 @@ impl BasicSnippet for MerkleVerify {
     fn inputs(&self) -> Vec<(DataType, String)> {
         vec![
             (DataType::Digest, "root".to_string()),
+            (DataType::U32, "tree_height".to_string()),
             (DataType::U32, "leaf_index".to_string()),
             (DataType::Digest, "leaf".to_string()),
-            (DataType::U32, "tree_height".to_string()),
         ]
     }
 
@@ -43,36 +43,79 @@ impl BasicSnippet for MerkleVerify {
     fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
         let traverse_tree = format!("{entrypoint}_traverse_tree");
+        let tree_height_is_not_zero = format!("{entrypoint}_tree_height_is_not_zero");
         triton_asm!(
-            // BEFORE: _ [root; 5] leaf_index [leaf; 5] tree_height
+            // BEFORE: _ [root; 5] tree_height leaf_index [leaf; 5]
             // AFTER:  _
             {entrypoint}:
-                hint tree_height: u32 = stack[0]
-                hint leaf: Digest = stack[1..6]
-                hint leaf_index: u32 = stack[6]
-                hint root: Digest = stack[7..12]
-                // calculate node index from tree height and leaf index:
-                push 2 pow              // _ [root; 5] leaf_index [leaf; 5] num_leaves
-                hint num_leaves: u32 = stack[0]
-                dup 0 dup 7 lt          // _ [root; 5] leaf_index [leaf; 5] num_leaves (leaf_index < num_leaves)
-                assert                  // _ [root; 5] leaf_index [leaf; 5] num_leaves
-                dup 6 add               // _ [root; 5] leaf_index [leaf; 5] node_index
-                hint node_index: u32 = stack[0]
-                swap 6 pop 1            // _ [root; 5] node_index [leaf; 5]
-                call {traverse_tree}    // _ [root; 5] 1 [root'; 5]
-                swap 1 swap 2 swap 3
-                swap 4 swap 5           // _ [root; 5] [root'; 5] 1
-                pop 1                   // _ [root; 5] [root'; 5]
-                assert_vector           // _ [root; 5]
-                pop 5                   // _
+
+                /* Calculate node index from tree height and leaf index */
+                dup 6
+                push 2
+                pow
+                // _ [root; 5] tree_height leaf_index [leaf; 5] num_leaves
+
+                dup 0 dup 7 lt
+                // _ [root; 5] tree_height leaf_index [leaf; 5] num_leaves (leaf_index < num_leaves)
+
+                assert
+                // _ [root; 5] tree_height leaf_index [leaf; 5] num_leaves
+
+                dup 6
+                add
+                // _ [root; 5] tree_height leaf_index [leaf; 5] node_index
+
+                swap 6
+                pop 1
+                // _ [root; 5] tree_height node_index [leaf; 5]
+
+                dup 6
+                skiz
+                    call {tree_height_is_not_zero}
+
+                // _ [root; 5] [0|1] [0|1] [calculated_root; 5]
+
+                /* compare calculated and provided root */
+                // _ [root; 5] g1 g0 cr4 cr3 cr2 cr1 cr0
+
+                swap 2
+                swap 4
+                swap 6
+                // _ [root; 5] cr4 g0 cr2 cr3 cr0 cr1 g1
+
+                pop 1
+                // _ [root; 5] cr4 g0 cr2 cr3 cr0 cr1
+
+                swap 2
+                swap 4
+                // _ [root; 5] cr4 cr3 cr2 cr1 cr0 g0
+
+                pop 1
+                // _ [root; 5] cr4 cr3 cr2 cr1 cr0
+                // _ [root; 5] [calculated_root; 5]
+
+                assert_vector
+                pop 5
+
                 return
 
-            // BEFORE:    _ node_index [leaf; 5]
-            // INVARIANT: _ (node_index >> i) [some_digest; 5]
-            // AFTER:     _ 1 [root'; 5]
+            {tree_height_is_not_zero}:
+                // _ [root; 5] tree_height node_index [leaf; 5]
+
+                push 1
+                swap 7
+                pop 1
+                // _ [root; 5] 1 node_index [leaf; 5]
+
+                call {traverse_tree}
+                // _ [root; 5] 1 1 [calculated_root; 5]
+
+                return
+
             {traverse_tree}:
-                dup 5 push 1 eq skiz return         // break loop if node_index is 1
-                merkle_step recurse                 // move up one level in the Merkle tree
+                merkle_step
+                recurse_or_return
+
         )
     }
 }
@@ -111,11 +154,12 @@ mod tests {
             let mut init_state = MerkleVerify.pseudorandom_initial_state(seed, None);
             let len = init_state.stack.len();
 
+            // BEFORE: _ [root; 5] tree_height leaf_index [leaf; 5]
             let allowed_error_codes = match i {
                 0 => {
                     println!("now testing: too high height");
                     init_state.nondeterminism.digests.push(random());
-                    init_state.stack[len - 1].increment(); // height
+                    init_state.stack[len - 7].increment(); // height
                     vec![
                         InstructionError::VectorAssertionFailed(0),
                         InstructionError::AssertionFailed,
@@ -124,7 +168,7 @@ mod tests {
                 1 => {
                     println!("now testing: too small height");
                     init_state.nondeterminism.digests.push(random());
-                    init_state.stack[len - 1].decrement(); // height
+                    init_state.stack[len - 7].decrement(); // height
                     vec![
                         InstructionError::VectorAssertionFailed(0),
                         InstructionError::AssertionFailed,
@@ -132,7 +176,7 @@ mod tests {
                 }
                 2 => {
                     println!("now testing: corrupt leaf");
-                    init_state.stack[len - 2].increment(); // leaf
+                    init_state.stack[len - 1].increment(); // leaf
                     vec![InstructionError::VectorAssertionFailed(0)]
                 }
                 3 => {
@@ -147,7 +191,7 @@ mod tests {
                 }
                 5 => {
                     println!("now testing: corrupt root");
-                    init_state.stack[len - 7].increment(); // root
+                    init_state.stack[len - 8].increment(); // root
                     vec![InstructionError::VectorAssertionFailed(0)]
                 }
                 _ => unreachable!(),
@@ -168,6 +212,8 @@ mod tests {
             _memory: &mut HashMap<BFieldElement, BFieldElement>,
             nondeterminism: &NonDeterminism,
         ) {
+            // BEFORE: _ [root; 5] tree_height leaf_index [leaf; 5]
+            // AFTER:  _
             let pop_digest_from = |stack: &mut Vec<BFieldElement>| {
                 Digest::new([
                     stack.pop().unwrap(),
@@ -178,9 +224,9 @@ mod tests {
                 ])
             };
 
-            let tree_height: u32 = stack.pop().unwrap().try_into().unwrap();
             let leaf = pop_digest_from(stack);
             let leaf_index: u32 = stack.pop().unwrap().try_into().unwrap();
+            let tree_height: u32 = stack.pop().unwrap().try_into().unwrap();
             let root = pop_digest_from(stack);
 
             let num_leaves = 1 << tree_height;
@@ -208,6 +254,7 @@ mod tests {
             maybe_bench_case: Option<BenchmarkCase>,
         ) -> AlgorithmInitialState {
             {
+                // BEFORE: _ [root; 5] tree_height leaf_index [leaf; 5]
                 let mut rng: StdRng = SeedableRng::from_seed(seed);
                 let tree_height = match maybe_bench_case {
                     Some(BenchmarkCase::CommonCase) => 6,
@@ -239,11 +286,11 @@ mod tests {
                 for r in root.reversed().values().into_iter() {
                     stack.push(r);
                 }
+                stack.push(BFieldElement::new(tree_height));
                 stack.push(BFieldElement::new(leaf_index));
                 for l in leaf.reversed().values().into_iter() {
                     stack.push(l);
                 }
-                stack.push(BFieldElement::new(tree_height));
 
                 let nondeterminism = NonDeterminism::default().with_digests(path);
                 AlgorithmInitialState {

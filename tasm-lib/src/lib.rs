@@ -240,7 +240,7 @@ pub fn execute_test(
 ///
 /// [Triton TUI]: https://crates.io/crates/triton-tui
 pub fn maybe_write_debuggable_program_to_disk(program: &Program, vm_state: &VMState) {
-    let Ok(_) = std::env::var("TRITON_TUI") else {
+    let Ok(_) = std::env::var("TASMLIB_TRITON_TUI") else {
         return;
     };
 
