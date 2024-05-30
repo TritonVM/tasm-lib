@@ -22,7 +22,7 @@ use crate::data_type::StructType;
 use crate::field;
 use crate::hashing::algebraic_hasher::sample_indices::SampleIndices;
 use crate::hashing::algebraic_hasher::sample_scalars_static_length_dyn_malloc::SampleScalarsStaticLengthDynMalloc;
-use crate::hashing::merkle_root::MerkleRoot;
+use crate::hashing::merkle_root_from_xfes::MerkleRootFromXfes;
 use crate::library::Library;
 use crate::list::get::Get;
 use crate::list::higher_order::inner_function::InnerFunction;
@@ -159,26 +159,10 @@ impl BasicSnippet for FriSnippet {
                 num_elements: 1,
             }));
         let dequeue_commit_phase = format!("{entrypoint}_dequeue_commit_phase_remainder");
-        let convert_xfe_to_digest = format!("{entrypoint}_convert_xfe_to_digest");
-        let map_convert_xfe_to_digest =
-            library.import(Box::new(Map::new(InnerFunction::RawCode(RawCode {
-                function: triton_asm!(
-                    {convert_xfe_to_digest}:
-                        // _ xfe2 xfe1 xfe0
-                        push 0 push 0       // _ xfe2 xfe1 xfe0 0 0
-                        swap 3              // _ xfe2 0 xfe0 0 xfe1
-                        swap 1              // _ xfe2 0 xfe0 xfe1 0
-                        swap 4              // _ 0 0 xfe0 xfe1 xfe2
-                        swap 2              // _ 0 0 xfe2 xfe1 xfe0
-                        return
-                ),
-                input_type: DataType::Xfe,
-                output_type: DataType::Digest,
-            }))));
         let length_of_list_of_digests = library.import(Box::new(Length::new(DataType::Digest)));
         let length_of_list_of_u32s = library.import(Box::new(Length::new(DataType::U32)));
         let length_of_list_of_xfes = library.import(Box::new(Length::new(DataType::Xfe)));
-        let merkle_root = library.import(Box::new(MerkleRoot));
+        let merkle_root_from_xfes = library.import(Box::new(MerkleRootFromXfes));
         let get_digest = library.import(Box::new(Get::new(DataType::Digest)));
         let assert_tail_xfe0 = format!("{entrypoint}_tail_xfe0");
         let length_of_list_of_xfe = library.import(Box::new(Length::new(DataType::Xfe)));
@@ -297,31 +281,29 @@ impl BasicSnippet for FriSnippet {
                 call {vm_proof_iter_dequeue_next_as_fri_codeword}
                     hint last_fri_codeword: ListPointer = stack[0]
                                             // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *last_codeword
+
                 dup 7 swap 1                // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree 0 *roots *alphas *vm_proof_iter *last_codeword
 
                 swap 4 pop 1                // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword *roots *alphas *vm_proof_iter
 
                 // compute Merkle root
-                dup 3                       // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword *roots *alphas *vm_proof_iter *last_codeword
-                call {map_convert_xfe_to_digest}
-                    hint list_of_leaves: ListPointer = stack[0]
-                                            // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword *roots *alphas *vm_proof_iter *leafs
-                dup 0                       // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword *roots *alphas *vm_proof_iter *leafs *leafs
+                dup 3
+                dup 0
                 call {length_of_list_of_digests}
-                                            // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword *roots *alphas *vm_proof_iter *leafs num_leafs
-                dup 8 dup 8                 // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword *roots *alphas *vm_proof_iter *leafs num_leafs *fri_verify num_rounds
-                swap 1                      // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword *roots *alphas *vm_proof_iter *leafs num_leafs num_rounds *fri_verify
-                {&domain_length}            // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword *roots *alphas *vm_proof_iter *leafs num_leafs num_rounds *domain_length
-                    hint domain_length_pointer: Pointer = stack[0]
+                                            // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword *roots *alphas *vm_proof_iter *last_codeword codeword_len
+
+                dup 8 dup 8                 // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword *roots *alphas *vm_proof_iter *last_codeword codeword_len *fri_verify num_rounds
+                swap 1                      // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword *roots *alphas *vm_proof_iter *last_codeword codeword_len num_rounds *fri_verify
+                {&domain_length}            // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword *roots *alphas *vm_proof_iter *last_codeword codeword_len num_rounds *domain_length
                 read_mem 1
                     hint domain_length = stack[1]
-                pop 1                       // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword *roots *alphas *vm_proof_iter *leafs num_leafs num_rounds domain_length
-                swap 1 push 2               // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword *roots *alphas *vm_proof_iter *leafs num_leafs domain_length num_rounds 2
-                pow                         // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword *roots *alphas *vm_proof_iter *leafs num_leafs domain_length (1<<num_rounds)
-                swap 1 div_mod pop 1        // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword *roots *alphas *vm_proof_iter *leafs num_leafs (domain_length>>num_rounds)
-                eq                          // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword *roots *alphas *vm_proof_iter *leafs (num_leafs == (domain_length>>num_rounds))
-                assert                      // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword *roots *alphas *vm_proof_iter *leafs
-                call {merkle_root}          // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword *roots *alphas *vm_proof_iter [last_root]
+                pop 1                       // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword *roots *alphas *vm_proof_iter *last_codeword codeword_len num_rounds domain_length
+                swap 1 push 2               // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword *roots *alphas *vm_proof_iter *last_codeword codeword_len domain_length num_rounds 2
+                pow                         // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword *roots *alphas *vm_proof_iter *last_codeword codeword_len domain_length (1<<num_rounds)
+                swap 1 div_mod pop 1        // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword *roots *alphas *vm_proof_iter *last_codeword codeword_len (domain_length>>num_rounds)
+                eq                          // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword *roots *alphas *vm_proof_iter *last_codeword (codeword_len == (domain_length>>num_rounds))
+                assert                      // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword *roots *alphas *vm_proof_iter *last_codeword
+                call {merkle_root_from_xfes}// _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword *roots *alphas *vm_proof_iter [last_root]
                 hint merkle_root: Digest = stack[0..5]
 
                 // check against last root dequeued
