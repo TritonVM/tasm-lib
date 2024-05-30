@@ -237,7 +237,7 @@ impl Function for MerkleRoot {
             None => 1 << rng.gen_range(0..=8),
         };
 
-        let digests_pointer = BFieldElement::zero();
+        let digests_pointer = rng.gen();
 
         let leafs = (0..num_leafs).map(|_| rng.gen::<Digest>()).collect_vec();
 
