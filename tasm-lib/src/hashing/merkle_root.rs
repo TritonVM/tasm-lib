@@ -16,8 +16,6 @@ use crate::library::Library;
 use crate::memory::dyn_malloc::DynMalloc;
 use crate::memory::encode_to_memory;
 use crate::rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator;
-use crate::rust_shadowing_helper_functions::list::list_new;
-use crate::rust_shadowing_helper_functions::list::list_push;
 use crate::snippet_bencher::BenchmarkCase;
 use crate::structure::tasm_object::TasmObject;
 use crate::traits::basic_snippet::BasicSnippet;
@@ -56,97 +54,113 @@ impl BasicSnippet for MerkleRoot {
                 {entrypoint}:
                     // _ *leafs
 
-                    call {next_layer_loop}
-                    // _ *root_list len *root_list
-
-                    pop 2
-                    // _ *root_list
-
-                    push {DIGEST_LENGTH}
+                    read_mem 1
+                    push 1
                     add
+                    // _ leafs_len *leafs
+
+                    call {dyn_malloc}
+                    // _ leafs_len *leafs *parent_level
+
+                    /* Adjust pointers to point to last element in both lists */
+                    /* Adjust `*parent_level` pointer to point to 1st word in
+                       its last element */
+                    dup 2
+                    push -1
+                    add
+                    push {DIGEST_LENGTH}
+                    mul
+                    add
+                    // _ leafs_len *leafs (*parent_level + (leafs_len - 1)*DIGEST_LENGTH)
+                    // _ leafs_len *leafs *parent_level'
+
+                    swap 1
+                    // _ leafs_len *parent_level' *leafs
+
+                    /* Adjust `*leafs` to point to last element, last word */
+                    dup 2
+                    push {DIGEST_LENGTH}
+                    mul
+                    add
+                    // _ leafs_len *parent_level' (*leafs + leafs_len * DIGEST_LENGTH)
+                    // _ leafs_len *parent_level' *leafs'
+
+                    call {next_layer_loop}
+                    // _ 1 *address (*root + DIGEST_LENGTH)
+
+                    swap 2
+                    pop 2
+                    // _ (*root + DIGEST_LENGTH - 1)
+
                     read_mem {DIGEST_LENGTH}
-                    // _ [root; 5] *root_list
+                    // _ [root; 5] (*root - 1)
 
                     pop 1
                     // _ [root; 5]
 
                    return
 
-                    // _ *digests
+                // INVARIANT:  _ current_len *next_level[last]_first_word *current_level[last]_last_word
                 {next_layer_loop}:
-                    // _ *current_level
+                    // _ current_len *next_level *current_level
 
-                    dup 0
-                    // _ *current_level *current_level
-
-                    read_mem 1
-                    push 1
-                    add
-                    // _ *current_level len *current_level
-
-                    /* end loop when `len == 1` */
-                    dup 1
+                    /* end loop when `current_len == 1` */
+                    dup 2
                     push 1
                     eq
                     skiz
                         return
-                    // _ *current_level len *current_level
+                    // _ current_len *next_level *current_level
 
-                    /* Allocate and calculate end of `next_level`, preserve `len` */
-                    call {dyn_malloc}
-                    // _ *current_level len *current_level *next_level
-
-                    push 2
-                    dup 3
-                    div_mod
-                    pop 1
-                    // _ *current_level len *current_level *next_level (len / 2)
-
+                    // What is the stop-condition for `*current_level`?
+                    // It must be `*curr - current_length * DIGEST_LENGTH`
                     dup 0
-                    swap 2
-                    // _ *current_level len *current_level (len / 2) (len / 2) *next_level
-
-                    write_mem 1
-                    // _ *current_level len *current_level (len / 2) (*next_level+1)
+                    dup 3
+                    push {-(DIGEST_LENGTH as isize)}
+                    mul
+                    add
+                    // _ current_len *next_level *current_level *current_level_stop
 
                     swap 1
-                    // _ *current_level len *current_level (*next_level+1) (len / 2)
+                    // _ current_len *next_level *current_level_stop *current_level
 
-                    push -1
-                    add
-                    // _ *current_level len *current_level (*next_level+1) (len / 2 - 1)
-
-                    push {DIGEST_LENGTH}
-                    mul
-                    add
-                    // _ *current_level len *current_level *next_level_last_elem_first_word
-
-                    swap 2
-                    // _ *current_level *next_level_last_elem_first_word *current_level len
-
-                    push {DIGEST_LENGTH}
-                    mul
-                    add
-                    // _ *current_level *next_level_last_elem_first_word *current_level_last_digest
+                    dup 2
+                    swap 1
+                    // _ current_len *next_level *current_level_stop *next_level *current_level
 
                     call {calculate_parent_digests}
-                    // _ *curr (*next_elem-DIGEST_LENGTH+1) *curr_elem
+                    // _ current_len *next_level *current_level_stop *next_level' *current_level_stop
 
-                    /* Cleanup stack */
                     pop 1
-                    push {DIGEST_LENGTH - 1}
-                    add
                     swap 1
                     pop 1
+                    // _ current_len *next_level *next_level_next
 
-                    // _ *next
+                    /*Update `current_len` */
+                    swap 2
+                    log_2_floor
+                    push -1
+                    add
+                    push 2
+                    pow
+                    swap 2
+                    // _ (current_len / 2) *next_level *next_level'
+                    // _ current_len' *next_level *next_level'
+
+                    /* Update `*current_level` based on `*next_level` */
+                    swap 1
+                    // _ (current_len / 2) *next_level' *next_level
+
+                    push {DIGEST_LENGTH - 1}
+                    add
+                    // _ (current_len / 2) *next_level' *current_level'
 
                     recurse
 
-                // Populate the `*next` diges list
-                // START: _ *curr *next_last_elem_first_word *curr_last_word
-                // INVARIANT: _ *curr *next_elem *curr_elem
-                // END: _ *curr *next *curr
+                // Populate the `*next` digest list
+                // START: _ *current_level_stop *next_last_elem_first_word *curr_last_word
+                // INVARIANT: _ *current_level_stop *next_elem *curr_elem
+                // END: _ *current_level_stop *next *current_level_stop
                 {calculate_parent_digests}:
                     dup 2
                     dup 1
@@ -203,18 +217,13 @@ impl Function for MerkleRoot {
         let root = mt.root();
 
         // Write entire Merkle tree to memory, because that's what the VM does
+        let pointer = dynamic_allocator(memory);
         for layer in 1..(mt.height() + 1) {
-            let digests_in_this_layer_pointer = dynamic_allocator(memory);
-            list_new(digests_in_this_layer_pointer, memory);
             for node_count in 0..(leafs.len() >> layer) {
                 let node_index = node_count + (1 << (mt.height() - layer));
                 let node = mt.node(node_index).unwrap();
-                list_push(
-                    digests_in_this_layer_pointer,
-                    node.values().to_vec(),
-                    memory,
-                    DIGEST_LENGTH,
-                )
+                let pointer = pointer + BFieldElement::new((node_index * DIGEST_LENGTH) as u64);
+                encode_to_memory(memory, pointer, node);
             }
         }
 

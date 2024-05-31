@@ -223,18 +223,26 @@ mod test {
             let root = mt.root();
 
             // Write entire Merkle tree to memory, because that's what the VM does
-            for layer in 1..(mt.height() + 1) {
-                let digests_in_this_layer_pointer = dynamic_allocator(memory);
-                list_new(digests_in_this_layer_pointer, memory);
+            let digests_in_layer_one = dynamic_allocator(memory);
+            list_new(digests_in_layer_one, memory);
+            for node_count in 0..(leafs.len() >> 1) {
+                let node_index = node_count + (1 << (mt.height() - 1));
+                let node = mt.node(node_index).unwrap();
+                list_push(
+                    digests_in_layer_one,
+                    node.values().to_vec(),
+                    memory,
+                    DIGEST_LENGTH,
+                )
+            }
+
+            let pointer = dynamic_allocator(memory);
+            for layer in 2..(mt.height() + 1) {
                 for node_count in 0..(leafs.len() >> layer) {
                     let node_index = node_count + (1 << (mt.height() - layer));
                     let node = mt.node(node_index).unwrap();
-                    list_push(
-                        digests_in_this_layer_pointer,
-                        node.values().to_vec(),
-                        memory,
-                        DIGEST_LENGTH,
-                    )
+                    let pointer = pointer + BFieldElement::new((node_index * DIGEST_LENGTH) as u64);
+                    encode_to_memory(memory, pointer, node);
                 }
             }
 
