@@ -43,3 +43,6 @@ lto = false
 incremental = false
 codegen-units = 16
 rpath = false
+
+[patch.crates-io]
+triton-vm = { path = "/home/triton/Code/triton-vm/triton-vm" }
