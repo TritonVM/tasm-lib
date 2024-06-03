@@ -9,7 +9,6 @@ use triton_vm::prelude::tip5::DIGEST_LENGTH;
 use triton_vm::prelude::*;
 use twenty_first::util_types::merkle_tree::CpuParallel;
 use twenty_first::util_types::merkle_tree::MerkleTree;
-use twenty_first::util_types::merkle_tree_maker::MerkleTreeMaker;
 
 use crate::data_type::DataType;
 use crate::library::Library;
@@ -212,26 +211,19 @@ impl Function for MerkleRoot {
     ) {
         let leafs_pointer = stack.pop().unwrap();
         let leafs = *Vec::<Digest>::decode_from_memory(memory, leafs_pointer).unwrap();
-
-        let mt: MerkleTree<Tip5> = CpuParallel::from_digests(&leafs).unwrap();
-        let root = mt.root();
+        let mt = MerkleTree::<Tip5>::new::<CpuParallel>(&leafs).unwrap();
 
         // Write entire Merkle tree to memory, because that's what the VM does
         let pointer = dynamic_allocator(memory);
-        for layer in 1..(mt.height() + 1) {
-            for node_count in 0..(leafs.len() >> layer) {
-                let node_index = node_count + (1 << (mt.height() - layer));
-                let node = mt.node(node_index).unwrap();
-                let pointer = pointer + BFieldElement::new((node_index * DIGEST_LENGTH) as u64);
-                encode_to_memory(memory, pointer, node);
-            }
+        let num_non_leaf_nodes = leafs.len();
+
+        // skip dummy digest at index 0
+        for (node_index, &node) in (0..num_non_leaf_nodes).zip(mt.nodes()).skip(1) {
+            let node_address = pointer + bfe!(node_index as u32) * bfe!(DIGEST_LENGTH as u32);
+            encode_to_memory(memory, node_address, node);
         }
 
-        stack.push(root.0[4]);
-        stack.push(root.0[3]);
-        stack.push(root.0[2]);
-        stack.push(root.0[1]);
-        stack.push(root.0[0]);
+        stack.extend(mt.root().reversed().values());
     }
 
     fn pseudorandom_initial_state(

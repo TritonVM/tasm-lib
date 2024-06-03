@@ -4,6 +4,8 @@ pub mod algebraic_hasher;
 pub mod eq_digest;
 pub mod merkle_root;
 pub mod merkle_root_from_xfes;
+pub mod merkle_root_from_xfes_static_size;
+pub(crate) mod merkle_root_static_size;
 pub mod merkle_step_u64_index;
 pub mod merkle_verify;
 pub mod reverse_digest;
