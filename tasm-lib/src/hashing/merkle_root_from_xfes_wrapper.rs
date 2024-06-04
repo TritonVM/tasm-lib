@@ -31,16 +31,60 @@ impl BasicSnippet for MerkleRootFromXfesWrapper {
         let pointer_for_node_memory =
             library.kmalloc(MAX_LENGTH_SUPPORTED * (DIGEST_LENGTH as u32));
 
+        let snippet_for_length_2 = MerkleRootFromXfesStaticSize {
+            log2_length: 1,
+            static_memory_pointer: pointer_for_node_memory,
+        };
+        let snippet_for_length_2 = library.import(Box::new(snippet_for_length_2));
+
+        let snippet_for_length_4 = MerkleRootFromXfesStaticSize {
+            log2_length: 2,
+            static_memory_pointer: pointer_for_node_memory,
+        };
+        let snippet_for_length_4 = library.import(Box::new(snippet_for_length_4));
+
+        let snippet_for_length_8 = MerkleRootFromXfesStaticSize {
+            log2_length: 3,
+            static_memory_pointer: pointer_for_node_memory,
+        };
+        let snippet_for_length_8 = library.import(Box::new(snippet_for_length_8));
+
+        let snippet_for_length_16 = MerkleRootFromXfesStaticSize {
+            log2_length: 4,
+            static_memory_pointer: pointer_for_node_memory,
+        };
+        let snippet_for_length_16 = library.import(Box::new(snippet_for_length_16));
+
+        let snippet_for_length_32 = MerkleRootFromXfesStaticSize {
+            log2_length: 5,
+            static_memory_pointer: pointer_for_node_memory,
+        };
+        let snippet_for_length_32 = library.import(Box::new(snippet_for_length_32));
+
+        let snippet_for_length_64 = MerkleRootFromXfesStaticSize {
+            log2_length: 6,
+            static_memory_pointer: pointer_for_node_memory,
+        };
+        let snippet_for_length_64 = library.import(Box::new(snippet_for_length_64));
+
+        let snippet_for_length_128 = MerkleRootFromXfesStaticSize {
+            log2_length: 7,
+            static_memory_pointer: pointer_for_node_memory,
+        };
+        let snippet_for_length_128 = library.import(Box::new(snippet_for_length_128));
+
         let snippet_for_length_256 = MerkleRootFromXfesStaticSize {
             log2_length: 8,
             static_memory_pointer: pointer_for_node_memory,
         };
         let snippet_for_length_256 = library.import(Box::new(snippet_for_length_256));
+
         let snippet_for_length_512 = MerkleRootFromXfesStaticSize {
             log2_length: 9,
             static_memory_pointer: pointer_for_node_memory,
         };
         let snippet_for_length_512 = library.import(Box::new(snippet_for_length_512));
+
         let snippet_for_length_1024 = MerkleRootFromXfesStaticSize {
             log2_length: 10,
             static_memory_pointer: pointer_for_node_memory,
@@ -56,21 +100,18 @@ impl BasicSnippet for MerkleRootFromXfesWrapper {
                 swap 1
                 // _ (*xfes + 1) len
 
-                /* Check if length is supported */
-                dup 0
-                push 256
-                eq
+                /* Check if length is supported, must be sufficiently small and power of two */
+                push {MAX_LENGTH_SUPPORTED + 1}
                 dup 1
-                push 512
-                eq
-                dup 2
-                push 1024
-                eq
-                // _ (*xfes + 1) len (len == 256) (len == 512) (len == 1024)
+                lt
+                // _ (*xfes + 1) len (len <= MAX)
 
-                add
-                add
-                // _ (*xfes + 1) len (len == 256 || len == 512 || len == 1024)
+                assert
+                // _ (*xfes + 1) len
+
+                dup 0
+                pop_count
+                // _ (*xfes + 1) len (len.is_power_of_two())
 
                 assert
                 // _ (*xfes + 1) len
@@ -81,6 +122,69 @@ impl BasicSnippet for MerkleRootFromXfesWrapper {
                 pop 1
                 // _ (*xfes + 1) len
 
+                push 2
+                eq
+                skiz
+                    call {snippet_for_length_2}
+                // _ ((*xfes + 1)|[root])
+
+                push {length_pointer}
+                read_mem 1
+                pop 1
+                push 4
+                eq
+                skiz
+                    call {snippet_for_length_4}
+                // _ ((*xfes + 1)|[root])
+
+                push {length_pointer}
+                read_mem 1
+                pop 1
+                push 8
+                eq
+                skiz
+                    call {snippet_for_length_8}
+                // _ ((*xfes + 1)|[root])
+
+                push {length_pointer}
+                read_mem 1
+                pop 1
+                push 16
+                eq
+                skiz
+                    call {snippet_for_length_16}
+                // _ ((*xfes + 1)|[root])
+
+                push {length_pointer}
+                read_mem 1
+                pop 1
+                push 32
+                eq
+                skiz
+                    call {snippet_for_length_32}
+                // _ ((*xfes + 1)|[root])
+
+                push {length_pointer}
+                read_mem 1
+                pop 1
+                push 64
+                eq
+                skiz
+                    call {snippet_for_length_64}
+                // _ ((*xfes + 1)|[root])
+
+                push {length_pointer}
+                read_mem 1
+                pop 1
+                push 128
+                eq
+                skiz
+                    call {snippet_for_length_128}
+                // _ ((*xfes + 1)|[root])
+
+                push {length_pointer}
+                read_mem 1
+                pop 1
                 push 256
                 eq
                 skiz
@@ -147,8 +251,8 @@ mod tests {
             let xfes = *Vec::<XFieldElement>::decode_from_memory(memory, leafs_pointer).unwrap();
             let xfes_len = xfes.len();
             assert!(
-                xfes_len == 256 || xfes_len == 512 || xfes_len == 1024,
-                "This algorithm currently can currently only handle lengths of 256, 512, and 1024."
+                xfes_len.is_power_of_two() && xfes_len <= MAX_LENGTH_SUPPORTED as usize,
+                "This algorithm currently can only handle lengths below 1024 and lengths that are powers of two."
             );
             let as_digests: Vec<Digest> = xfes.into_iter().map(|x| x.into()).collect_vec();
             let mt = MerkleTree::<Tip5>::new::<CpuParallel>(&as_digests).unwrap();
@@ -156,7 +260,7 @@ mod tests {
 
             // Modify statically allocated memory as the above snippet does.
             // `.skip(2)`: dummy-digest at index 0, root at index 1
-            let num_skips = 2;
+            let num_skips = if xfes_len == 2 { 1 } else { 2 };
             for (node_index, &node) in (0..num_not_leaf_nodes).zip(mt.nodes()).skip(num_skips) {
                 let node_address = Self::static_memory_address_for_isolated_run_nodes()
                     + bfe!(node_index) * bfe!(DIGEST_LENGTH as u32);
@@ -180,7 +284,7 @@ mod tests {
             let num_leafs = match bench_case {
                 Some(BenchmarkCase::CommonCase) => 512,
                 Some(BenchmarkCase::WorstCase) => 1024,
-                None => 1 << rng.gen_range(8..=10),
+                None => 1 << rng.gen_range(1..=10),
             };
 
             let digests_pointer = rng.gen();

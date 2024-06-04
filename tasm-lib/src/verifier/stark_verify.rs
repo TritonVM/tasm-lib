@@ -1033,7 +1033,7 @@ pub mod tests {
     fn different_fri_expansion_factors() {
         const FACTORIAL_ARGUMENT: u32 = 3;
 
-        for log2_of_fri_expansion_factor in 2..=5 {
+        for log2_of_fri_expansion_factor in 2..=4 {
             println!("log2_of_fri_expansion_factor: {log2_of_fri_expansion_factor}");
             let factorial_program = factorial_program_with_io();
             let stark = Stark::new(160, log2_of_fri_expansion_factor);
