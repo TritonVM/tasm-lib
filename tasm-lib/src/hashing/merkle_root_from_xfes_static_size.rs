@@ -14,6 +14,10 @@ use crate::DIGEST_LENGTH;
 pub struct MerkleRootFromXfesStaticSize {
     /// Aka `height` of the Merkle tree
     log2_length: u8,
+
+    /// A section of memory this snippet can use to store intermediate node
+    /// digests. It's the caller's responsibility to allocate enough memory.
+    static_memory_pointer: BFieldElement,
 }
 
 impl MerkleRootFromXfesStaticSize {
@@ -39,17 +43,15 @@ impl BasicSnippet for MerkleRootFromXfesStaticSize {
 
     fn entrypoint(&self) -> String {
         format!(
-            "tasmlib_hashing_merkle_root_from_xfes_static_size_{}",
-            self.num_leaves()
+            "tasmlib_hashing_merkle_root_from_xfes_static_size_{}_at_{}",
+            self.num_leaves(),
+            self.static_memory_pointer,
         )
     }
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
         assert!(self.log2_length >= 1, "need at least 1 actual layer");
         let entrypoint = self.entrypoint();
-
-        // Allocate static memory for whole Merkle tree, except for the xfe-leaves
-        let pointer = library.kmalloc((self.num_leaves() * DIGEST_LENGTH) as u32);
 
         let xfe_to_digest_on_stack = triton_asm!(
             push 0
@@ -64,7 +66,7 @@ impl BasicSnippet for MerkleRootFromXfesStaticSize {
             let parent_index = left_child_node_index / 2;
             triton_asm!(
                 hash
-                push {pointer + bfe!(parent_index) * bfe!(DIGEST_LENGTH as u32)}
+                push {self.static_memory_pointer + bfe!(parent_index) * bfe!(DIGEST_LENGTH as u32)}
                 write_mem {DIGEST_LENGTH}
                 pop 1
             )
@@ -78,7 +80,7 @@ impl BasicSnippet for MerkleRootFromXfesStaticSize {
 
         let merke_root_snippet = MerkleRootStaticSize {
             log2_length: self.log2_length - 1,
-            nodes_pointer: pointer,
+            nodes_pointer: self.static_memory_pointer,
         };
         let merkle_root_snippet_label = library.import(Box::new(merke_root_snippet));
 
@@ -107,6 +109,7 @@ impl BasicSnippet for MerkleRootFromXfesStaticSize {
 #[cfg(test)]
 mod test {
     use num::Zero;
+    use proptest_arbitrary_interop::arb;
     use rand::rngs::StdRng;
     use rand::{Rng, SeedableRng};
     use test_strategy::proptest;
@@ -114,7 +117,6 @@ mod test {
     use super::*;
     use std::collections::HashMap;
 
-    use crate::library::STATIC_MEMORY_START_ADDRESS;
     use crate::memory::encode_to_memory;
     use crate::rust_shadowing_helper_functions::array::{array_from_memory, insert_as_array};
     use crate::snippet_bencher::BenchmarkCase;
@@ -133,14 +135,14 @@ mod test {
             let mt = MerkleTree::<Tip5>::new::<CpuParallel>(&as_digests).unwrap();
 
             let num_not_leaf_nodes = self.num_leaves() as u32;
-            let static_pointer = self.static_pointer_for_isolated_run();
 
             // `.skip(2)`: dummy-digest at index 0, root at index 1
             // In the case where the input leaf length is one, the root
             // is written to memory. Otherwise, it is not.
             let num_skips = if self.log2_length == 1 { 1 } else { 2 };
             for (node_index, &node) in (0..num_not_leaf_nodes).zip(mt.nodes()).skip(num_skips) {
-                let node_address = static_pointer + bfe!(node_index) * bfe!(DIGEST_LENGTH as u32);
+                let node_address =
+                    self.static_memory_pointer + bfe!(node_index) * bfe!(DIGEST_LENGTH as u32);
                 encode_to_memory(memory, node_address, node);
             }
 
@@ -159,11 +161,6 @@ mod test {
     }
 
     impl MerkleRootFromXfesStaticSize {
-        fn static_pointer_for_isolated_run(&self) -> BFieldElement {
-            let size_internal_nodes = self.num_leaves() * DIGEST_LENGTH;
-            STATIC_MEMORY_START_ADDRESS - bfe!(size_internal_nodes as u32 - 1)
-        }
-
         fn init_state(
             &self,
             leafs: Vec<XFieldElement>,
@@ -179,34 +176,54 @@ mod test {
         }
     }
 
+    pub(super) const STATIC_MEMORY_POINTER_FOR_TESTS: BFieldElement =
+        BFieldElement::new(BFieldElement::MAX - (1 << 30));
+
     #[test]
     fn merkle_root_from_xfes_height_1() {
-        let shadowed_function = MerkleRootFromXfesStaticSize { log2_length: 1 };
+        let shadowed_function = MerkleRootFromXfesStaticSize {
+            log2_length: 1,
+            static_memory_pointer: STATIC_MEMORY_POINTER_FOR_TESTS,
+        };
         ShadowedFunction::new(shadowed_function).test();
     }
 
     #[test]
     fn merkle_root_from_xfes_height_2() {
-        let shadowed_function = MerkleRootFromXfesStaticSize { log2_length: 2 };
+        let shadowed_function = MerkleRootFromXfesStaticSize {
+            log2_length: 2,
+            static_memory_pointer: STATIC_MEMORY_POINTER_FOR_TESTS,
+        };
         ShadowedFunction::new(shadowed_function).test();
     }
 
     #[proptest(cases = 10)]
-    fn merkle_root_from_xfes_static_size_pbt_pbt(#[strategy(1u8..=8)] log2_length: u8) {
-        let shadowed_function = MerkleRootFromXfesStaticSize { log2_length };
+    fn merkle_root_from_xfes_static_size_pbt_pbt(
+        #[strategy(1u8..=8)] log2_length: u8,
+        #[strategy(arb())] static_memory_pointer: BFieldElement,
+    ) {
+        let shadowed_function = MerkleRootFromXfesStaticSize {
+            log2_length,
+            static_memory_pointer,
+        };
         ShadowedFunction::new(shadowed_function).test();
     }
 }
 
 #[cfg(test)]
 mod benches {
+    use test::STATIC_MEMORY_POINTER_FOR_TESTS;
+
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
 
     use super::*;
 
     fn bench_case(log2_length: u8) {
-        let shadowed_function = MerkleRootFromXfesStaticSize { log2_length };
+        let shadowed_function = MerkleRootFromXfesStaticSize {
+            log2_length,
+            static_memory_pointer: STATIC_MEMORY_POINTER_FOR_TESTS,
+        };
         ShadowedFunction::new(shadowed_function).bench();
     }
 
