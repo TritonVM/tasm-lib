@@ -460,14 +460,13 @@ impl BasicSnippet for FriSnippet {
                 // 1. Read `a_y`
                 // 2. Calculate `a_x`
                 // 3. Calculate `[a_y- b_y]`, preserve a[y]
-                // 4. Calculate `b_x`
-                // 5. Calculate `-b_x`
-                // 6. Calculate `1 / (a_x - b_x)` while preserving `a_x`
-                // 7. Calculate `(a_y - b_y) / (a_x - b_x)`
-                // 8: Read `[c_x]`
-                // 9. Calculate `c_x - a_x`
-                // 10. Calculate final `c_y`
-                // 11. Write c_y to *c_elem
+                // 4. Calculate `-b_x = a_x`
+                // 5. Calculate `1 / (a_x - b_x)` while preserving `a_x`
+                // 6. Calculate `(a_y - b_y) / (a_x - b_x)`
+                // 7: Read `[c_x]`
+                // 8. Calculate `c_x - a_x`
+                // 9. Calculate final `c_y`
+                // 10. Write c_y to *c_elem
 
                 // _ *c_end_condition g offset r *c_elem *alphas[r] *a_elem *a_index *b_elem *b_index
 
@@ -515,57 +514,35 @@ impl BasicSnippet for FriSnippet {
                 xx_add
                 // _ *c_end_condition (1<<round) g offset *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem *b_index [a_y] a_x [a_y-b_y]
 
-                // 4: Calculate `b_x`
-                dup 15
-                dup 15
-                dup 9
-                read_mem 1
-                swap 11
-                pop 1
-                // _ *c_end_condition (1<<round) g offset *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem *b_index_prev [a_y] a_x [a_y-b_y] (1<<round) g b_index
-
-                swap 1
-                pow
-                // _ *c_end_condition (1<<round) g offset *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem *b_index_prev [a_y] a_x [a_y-b_y] (1<<round) (g^b_index)
-
-                dup 15
-                mul
-                // _ *c_end_condition (1<<round) g offset *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem *b_index_prev [a_y] a_x [a_y-b_y] (1<<round) (g^b_index * offset)
-
-                pow
-                // _ *c_end_condition (1<<round) g offset *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem *b_index_prev [a_y] a_x [a_y-b_y] (g^b_index * offset)^((1<<round))
-                // _ *c_end_condition (1<<round) g offset *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem *b_index_prev [a_y] a_x [a_y-b_y] b_x
-
-                // 5: Calculate `-b_x`
-                push -1
-                mul
+                // 4: Calculate `-b_x`
+                dup 3
                 // _ *c_end_condition (1<<round) g offset *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem *b_index_prev [a_y] a_x [a_y-b_y] (-b_x)
 
-                // 6: Calculate `1 / (a_x - b_x)` while preserving `a_x`
+                // 5: Calculate `1 / (a_x - b_x)` while preserving `a_x`
                 dup 4
                 add
                 invert
                 // _ *c_end_condition (1<<round) g offset *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem *b_index_prev [a_y] a_x [a_y-b_y] (1/(a_x-b_x))
 
-                // 7:  Calculate `(a_y - b_y) / (a_x - b_x)`
+                // 6:  Calculate `(a_y - b_y) / (a_x - b_x)`
 
                 xb_mul
                 // _ *c_end_condition (1<<round) g offset *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem *b_index_prev [a_y] a_x [(a_y-b_y)/(a_x-b_x)]
 
-                // 8: Read `[c_x]`
+                // 7: Read `[c_x]`
                 dup 11
                 read_mem {EXTENSION_DEGREE}
                 pop 1
                 // _ *c_end_condition (1<<round) g offset *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem *b_index_prev [a_y] a_x [(a_y-b_y)/(a_x-b_x)] [c_x]
 
-                // 9:  Calculate `c_x - a_x`
+                // 8:  Calculate `c_x - a_x`
                 dup 6
                 push -1
                 mul
                 add
                 // _ *c_end_condition (1<<round) g offset *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem *b_index_prev [a_y] a_x [(a_y-b_y)/(a_x-b_x)] [c_x - a_x]
 
-                // 10: Calculate final `c_y`
+                // 9: Calculate final `c_y`
                 xx_mul
                 // _ *c_end_condition (1<<round) g offset *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem *b_index_prev [a_y] a_x [(a_y-b_y)/(a_x-b_x) * (c_x -a_x)]
 
@@ -579,7 +556,7 @@ impl BasicSnippet for FriSnippet {
                 // _ *c_end_condition (1<<round) g offset *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem *b_index_prev [(a_y-b_y)/(a_x-b_x) * (c_x -a_x) + a_y]
                 // _ *c_end_condition (1<<round) g offset *c_elem *alphas[r] *a_elem_prev *a_index_prev *b_elem *b_index_prev [c_y]
 
-                // 11. Write c_y to *c_elem
+                // 10. Write c_y to *c_elem
                 dup 8
                 write_mem {EXTENSION_DEGREE}
                 push {- 2 * EXTENSION_DEGREE as i32}
