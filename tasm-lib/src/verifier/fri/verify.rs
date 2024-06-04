@@ -22,7 +22,7 @@ use crate::data_type::StructType;
 use crate::field;
 use crate::hashing::algebraic_hasher::sample_indices::SampleIndices;
 use crate::hashing::algebraic_hasher::sample_scalars_static_length_dyn_malloc::SampleScalarsStaticLengthDynMalloc;
-use crate::hashing::merkle_root_from_xfes::MerkleRootFromXfes;
+use crate::hashing::merkle_root_from_xfes_generic::MerkleRootFromXfesGeneric;
 use crate::library::Library;
 use crate::list::get::Get;
 use crate::list::higher_order::inner_function::InnerFunction;
@@ -162,7 +162,7 @@ impl BasicSnippet for FriSnippet {
         let length_of_list_of_digests = library.import(Box::new(Length::new(DataType::Digest)));
         let length_of_list_of_u32s = library.import(Box::new(Length::new(DataType::U32)));
         let length_of_list_of_xfes = library.import(Box::new(Length::new(DataType::Xfe)));
-        let merkle_root_from_xfes = library.import(Box::new(MerkleRootFromXfes));
+        let merkle_root_from_xfes = library.import(Box::new(MerkleRootFromXfesGeneric));
         let get_digest = library.import(Box::new(Get::new(DataType::Digest)));
         let assert_tail_xfe0 = format!("{entrypoint}_tail_xfe0");
         let length_of_list_of_xfe = library.import(Box::new(Length::new(DataType::Xfe)));

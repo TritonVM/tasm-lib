@@ -13,11 +13,11 @@ use crate::DIGEST_LENGTH;
 
 pub struct MerkleRootFromXfesStaticSize {
     /// Aka `height` of the Merkle tree
-    log2_length: u8,
+    pub log2_length: u8,
 
     /// A section of memory this snippet can use to store intermediate node
     /// digests. It's the caller's responsibility to allocate enough memory.
-    static_memory_pointer: BFieldElement,
+    pub static_memory_pointer: BFieldElement,
 }
 
 impl MerkleRootFromXfesStaticSize {
