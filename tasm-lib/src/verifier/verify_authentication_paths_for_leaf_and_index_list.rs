@@ -18,9 +18,12 @@ use crate::traits::basic_snippet::BasicSnippet;
 use crate::Digest;
 use crate::VmHasher;
 
-/// Verify a batch of Merkle membership claims.
-/// Behavior: crashes the VM if even one of the authentication paths
-/// is invalid. Goes into an infinite loop that crashes VM if height == 0.
+/// Verify a batch of Merkle membership claims in a FRI context where only the
+/// a-indices are known and the b-indices must be calculated on the fly.
+///
+/// Behavior: crashes the VM if just one of the authentication paths is
+/// invalid. Goes into an infinite loop if a node index value is initialized to
+/// 0 or 1 through wrong domain-length values. Also cannot handle empty lists.
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct VerifyAuthenticationPathForLeafAndIndexList;
 
@@ -153,17 +156,16 @@ impl Algorithm for VerifyAuthenticationPathForLeafAndIndexList {
         let idx_last_elem = stack.pop().unwrap();
         let idx_end_condition = stack.pop().unwrap();
         let leaf_last_element_pointer = stack.pop().unwrap();
-        let half_dom_len_plus_dom_len: u32 = stack.pop().unwrap().try_into().unwrap();
+        let _half_dom_len_plus_dom_len: u32 = stack.pop().unwrap().try_into().unwrap();
         let dom_len_minus_one: u32 = stack.pop().unwrap().try_into().unwrap();
 
         let tree_height: usize = (dom_len_minus_one + 1).ilog2().try_into().unwrap();
+        let half_dom_len: u32 = 2u32.pow(tree_height as u32 - 1);
 
         let mut auth_path_counter = 0;
         let mut idx_element_pointer = idx_last_elem;
         let mut leaf_pointer = leaf_last_element_pointer;
         while idx_element_pointer != idx_end_condition {
-            println!("idx_element_pointer: {idx_element_pointer}");
-            println!("idx_end_condition: {idx_end_condition}");
             let authentication_path = nondeterminism.digests
                 [auth_path_counter * tree_height..(auth_path_counter + 1) * tree_height]
                 .to_vec();
@@ -175,7 +177,7 @@ impl Algorithm for VerifyAuthenticationPathForLeafAndIndexList {
                 .try_into()
                 .unwrap();
             let leaf_index_b_this_round: u32 =
-                (leaf_index_a_round_0 & dom_len_minus_one) ^ half_dom_len_plus_dom_len;
+                (leaf_index_a_round_0 & dom_len_minus_one) ^ half_dom_len;
             let read_word_from_mem =
                 |pointer: BFieldElement| memory.get(&pointer).copied().unwrap_or_default();
             let leaf = XFieldElement::new([
@@ -189,7 +191,7 @@ impl Algorithm for VerifyAuthenticationPathForLeafAndIndexList {
                 authentication_structure: authentication_path,
                 ..Default::default()
             };
-            // assert!(inclusion_proof.verify(root));
+            assert!(inclusion_proof.verify(root));
 
             idx_element_pointer.decrement();
             auth_path_counter += 1;
@@ -216,19 +218,23 @@ impl Algorithm for VerifyAuthenticationPathForLeafAndIndexList {
 
     fn corner_case_initial_states(&self) -> Vec<AlgorithmInitialState> {
         let mut rng: StdRng = SeedableRng::from_seed([42u8; 32]);
-        let two_leaves_reveal_0 = self.prepare_state(&mut rng, 1, 1);
-        let two_leaves_reveal_1 = self.prepare_state(&mut rng, 1, 1);
+        let two_leaves_reveal_1a = self.prepare_state(&mut rng, 1, 1);
+        let two_leaves_reveal_1b = self.prepare_state(&mut rng, 1, 1);
+        let two_leaves_reveal_1c = self.prepare_state(&mut rng, 1, 1);
+        let two_leaves_reveal_1d = self.prepare_state(&mut rng, 1, 1);
+        let two_leaves_reveal_1e = self.prepare_state(&mut rng, 1, 1);
         let two_leaves_reveal_2 = self.prepare_state(&mut rng, 1, 2);
-        let four_leaves_reveal_0 = self.prepare_state(&mut rng, 2, 0);
         let four_leaves_reveal_1 = self.prepare_state(&mut rng, 2, 1);
         let four_leaves_reveal_2 = self.prepare_state(&mut rng, 2, 2);
         let four_leaves_reveal_3 = self.prepare_state(&mut rng, 2, 3);
         let four_leaves_reveal_4 = self.prepare_state(&mut rng, 2, 4);
         vec![
-            two_leaves_reveal_0,
-            two_leaves_reveal_1,
+            two_leaves_reveal_1a,
+            two_leaves_reveal_1b,
+            two_leaves_reveal_1c,
+            two_leaves_reveal_1d,
+            two_leaves_reveal_1e,
             two_leaves_reveal_2,
-            four_leaves_reveal_0,
             four_leaves_reveal_1,
             four_leaves_reveal_2,
             four_leaves_reveal_3,
@@ -246,6 +252,8 @@ impl VerifyAuthenticationPathForLeafAndIndexList {
     ) -> AlgorithmInitialState {
         // generate data structure
         let dom_len = 1 << height;
+        let dom_len_minus_one = dom_len - 1;
+        let dom_len_half: u32 = dom_len / 2;
 
         let xfe_leafs = (0..dom_len)
             .map(|_| rng.gen::<XFieldElement>())
@@ -255,52 +263,47 @@ impl VerifyAuthenticationPathForLeafAndIndexList {
             <CpuParallel as MerkleTreeMaker<VmHasher>>::from_digests(&leafs_as_digest).unwrap();
         let root = tree.root();
 
-        let indices = (0..num_indices)
+        let a_indices = (0..num_indices)
             .map(|_| rng.gen_range(0..dom_len) as usize)
             .collect_vec();
-        let indicated_leafs = indices.iter().map(|i| xfe_leafs[*i]).collect_vec();
-        let authentication_paths = indices
+
+        // TODO: Generalize for other values than round=0
+        let b_indices_revealed = a_indices
+            .clone()
+            .into_iter()
+            .map(|x| (x + dom_len as usize / 2) & dom_len_minus_one as usize)
+            .collect_vec();
+        let opened_leafs = b_indices_revealed
+            .iter()
+            .map(|i| xfe_leafs[*i])
+            .collect_vec();
+        let authentication_paths = b_indices_revealed
             .iter()
             .rev()
             .map(|i| tree.authentication_structure(&[*i]).unwrap())
             .collect_vec();
-        let indices: Vec<u32> = indices.into_iter().map(|idx| idx as u32).collect_vec();
+        let a_indices: Vec<u32> = a_indices.into_iter().map(|idx| idx as u32).collect_vec();
 
         // prepare memory + stack + nondeterminism
         let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
 
         let a_indices_pointer = BFieldElement::new(rng.next_u64() % (1 << 20));
-        rust_shadowing_helper_functions::list::list_insert(a_indices_pointer, indices, &mut memory);
-
-        let leaf_pointer = BFieldElement::new(rng.next_u64() % (1 << 20) + (1 << 32));
         rust_shadowing_helper_functions::list::list_insert(
-            leaf_pointer,
-            indicated_leafs,
+            a_indices_pointer,
+            a_indices,
             &mut memory,
         );
 
-        // vec![
-        //     (DataType::U32, "dom_len_minus_one".to_owned()),
-        //     (DataType::U32, "half_dom_len".to_owned()),
-        //     (DataType::List(Box::new(DataType::Xfe)), "*leaf".to_owned()),
-        //     (
-        //         DataType::List(Box::new(DataType::U32)),
-        //         "*idx_end_condition".to_owned(),
-        //     ),
-        //     (DataType::List(Box::new(DataType::U32)), "*idx".to_owned()),
-        //     (DataType::Digest, "root".to_string()),
-        // ]
+        let leaf_pointer = BFieldElement::new(rng.next_u64() % (1 << 20) + (1 << 32));
+        rust_shadowing_helper_functions::list::list_insert(leaf_pointer, opened_leafs, &mut memory);
+
         let a_indices_last_word = a_indices_pointer + bfe!(num_indices as u64);
         let leaf_pointer_last_word = leaf_pointer + bfe!((EXTENSION_DEGREE * num_indices) as u64);
         let dom_len_minus_one: u32 = dom_len - 1;
-        let half_dom_len: u32 = dom_len / 2;
-        println!("dom_len: {dom_len}");
-        println!("dom_len_minus_one: {dom_len_minus_one}");
-        println!("half_dom_len: {half_dom_len}");
 
         let mut stack = self.init_stack_for_isolated_run();
         stack.push(bfe!(dom_len_minus_one));
-        stack.push(bfe!(half_dom_len + dom_len));
+        stack.push(bfe!(dom_len_half + dom_len));
         stack.push(leaf_pointer_last_word);
         stack.push(a_indices_pointer);
         stack.push(a_indices_last_word);
