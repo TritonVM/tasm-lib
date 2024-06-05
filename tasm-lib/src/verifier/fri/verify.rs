@@ -607,36 +607,36 @@ impl BasicSnippet for FriSnippet {
                 swap 1                      // _ num_rounds-1 *roots *alphas
                 recurse
 
-            // INVARIANT:  _ num_checks *proof_iter *roots dom_len half_dom_len *indices num_rounds r g_r offset_r *alphas *a_elements *c_elements
+            // INVARIANT:  _ *alphas num_checks *proof_iter *roots dom_len half_dom_len num_rounds r g_r offset_r *c *idx *idx *a
             {query_phase_main_loop}:
                 /* Check end condition, r == num_rounds */
-                // TODO: Replace this with a `return_or_recurse`
-                dup 6
-                dup 6
+                dup 7
+                dup 7
                 eq
                 skiz
                     return
-                // _ num_checks *proof_iter *roots dom_len half_dom_len *indices num_rounds r g_r offset_r *alphas *a_elements *c_elements
+                // _ *alphas num_checks *proof_iter *roots dom_len half_dom_len num_rounds r g_r offset_r *c *idx *idx *a
 
                 /* Dequeue FRI response and get "B" elements */
                 dup 11
                 call {vm_proof_iter_dequeue_next_as_fri_response}
-                // _ num_checks *proof_iter *roots dom_len half_dom_len *indices num_rounds r g_r offset_r *alphas *a_elements *c_elements *fri_response
+                // _ *alphas num_checks *proof_iter *roots dom_len half_dom_len num_rounds r g_r offset_r *c *idx *idx *a *fri_response
 
                 {&revealed_leafs}
-                // _ num_checks *proof_iter *roots dom_len half_dom_len *indices num_rounds r g_r offset_r *alphas *a_elements *c_elements *b_elements
+                // _ *alphas num_checks *proof_iter *roots dom_len half_dom_len num_rounds r g_r offset_r *c *idx *idx *a *b_elements
+                // _ *alphas num_checks *proof_iter *roots dom_len half_dom_len num_rounds r g_r offset_r *c *idx *idx *a *b
 
                 /* Verify that *b_elements has expected length */
                 read_mem 1
                 push 1
                 add
                 swap 1
-                // _ num_checks *proof_iter *roots dom_len half_dom_len *indices num_rounds r g_r offset_r *alphas *a_elements *c_elements *b_elements b_len
+                // _ *alphas num_checks *proof_iter *roots dom_len half_dom_len num_rounds r g_r offset_r *c *idx *idx *a *b b_len
 
                 dup 14
                 eq
                 assert // b_len == num_checks
-                // _ num_checks *proof_iter *roots dom_len half_dom_len *indices num_rounds r g_r offset_r *alphas *a_elements *c_elements *b_elements
+                // _ *alphas num_checks *proof_iter *roots dom_len half_dom_len num_rounds r g_r offset_r *c *idx *idx *a *b
 
                 // TODO: Verify *b_elements against relevant Merkle-root
 
@@ -651,39 +651,100 @@ impl BasicSnippet for FriSnippet {
                 // - *a_elements (read)
                 // - *indices    (read)
 
-                /* Update `*b_elements` to point to last element */
+                /* Update `*b_elements` to point to last element, for read */
                 dup 13
                 push {EXTENSION_DEGREE}
                 mul
                 add
-                // _ num_checks *proof_iter *roots dom_len half_dom_len *indices num_rounds r g_r offset_r *alphas *a_elements *c_elements *b_last
+                // _ *alphas num_checks *proof_iter *roots dom_len half_dom_len num_rounds r g_r offset_r *c *idx *idx *a *b_last
 
+                /* Update `*a_elements` to point to last element, for read */
                 swap 1
                 dup 13
                 push {EXTENSION_DEGREE}
                 mul
                 add
-                push {-((EXTENSION_DEGREE - 1) as isize)}
                 swap 1
-                // _ num_checks *proof_iter *roots dom_len half_dom_len *indices num_rounds r g_r offset_r *alphas *a_elements *c_last *b_last
+                // _ *alphas num_checks *proof_iter *roots dom_len half_dom_len num_rounds r g_r offset_r *c *idx *idx *a_last *b_last
 
+                /* Update `*idx` to point to last element, for read */
                 swap 2
+                dup 13
+                add
+                swap 2
+                // _ *alphas num_checks *proof_iter *roots dom_len half_dom_len num_rounds r g_r offset_r *c *idx *idx_last *a_last *b_last
+
+                /* Update `*c` to point to last element, for write */
+                swap 4
                 dup 13
                 push {EXTENSION_DEGREE}
                 mul
                 add
-                swap 2
-                // _ num_checks *proof_iter *roots dom_len half_dom_len *indices num_rounds r g_r offset_r *alphas *a_last *c_last *b_last
-
-                swap 8
-                dup 13
+                push {EXTENSION_DEGREE - 1}
                 add
-                swap 8
-                // _ num_checks *proof_iter *roots dom_len half_dom_len *idx_lst num_rounds r g_r offset_r *alphas *a_last *c_last *b_last
+                swap 4
+                // _ *alphas num_checks *proof_iter *roots dom_len half_dom_len num_rounds r g_r offset_r *c_last *idx *idx_last *a_last *b_last
 
+                /* Put round-challenge on top of stack for the c-values loop */
+                dup 14
+                dup 8
+                // _ *alphas num_checks *proof_iter *roots dom_len half_dom_len num_rounds r g_r offset_r *c_last *idx *idx_last *a_last *b_last *alphas r
+
+                call {get_xfe_from_list}
+                // _ *alphas num_checks *proof_iter *roots dom_len half_dom_len num_rounds r g_r offset_r *c_last *idx *idx_last *a_last *b_last [alphas[r]]
+
+                call {compute_c_values_loop}
+                // _ *alphas num_checks *proof_iter *roots dom_len half_dom_len num_rounds r g_r offset_r (*c - 2) *idx *idx *a *b [alphas[r]]
+
+                pop {EXTENSION_DEGREE}
+                // _ *alphas num_checks *proof_iter *roots dom_len half_dom_len num_rounds r g_r offset_r (*c - 2) *idx *idx *a *b
+
+                swap 4
+                push {EXTENSION_DEGREE - 1}
+                add
+                swap 4
+                // _ *alphas num_checks *proof_iter *roots dom_len half_dom_len num_rounds r g_r offset_r *c *idx *idx *a *b
 
                 /* Update round parameters */
-                // TODO: Update parameters
+                /* Update round index r' = r + 1 */
+                swap 7
+                push 1
+                add
+                swap 7
+                // _ *alphas num_checks *proof_iter *roots dom_len half_dom_len num_rounds r' g_r offset_r *c *idx *idx *a *b
+
+                /* dom_len' = half_dom_len */
+                dup 9
+                swap 11
+                pop 1
+                // _ *alphas num_checks *proof_iter *roots dom_len' half_dom_len num_rounds r' g_r offset_r *c *idx *idx *a *b
+
+                /* half_dom_len' = half_dom_len / 2 */
+                swap 9
+                log_2_floor
+                push -1
+                add
+                push 2
+                pow
+                swap 9
+                // _ *alphas num_checks *proof_iter *roots dom_len' half_dom_len' num_rounds r' g_r offset_r *c *idx *idx *a *b
+
+                /* g_r' = g_r ** 2 */
+                swap 6
+                dup 0
+                mul
+                swap 6
+                // _ *alphas num_checks *proof_iter *roots dom_len' half_dom_len' num_rounds r' g_r' offset_r *c *idx *idx *a *b
+
+                /* offset_r' = offset_r ** 2 */
+                swap 5
+                dup 0
+                mul
+                swap 5
+                // _ *alphas num_checks *proof_iter *roots dom_len' half_dom_len' num_rounds r' g_r' offset_r' *c *idx *idx *a *b
+
+                /* a' = c, but that overwriting already happened in the c-values loop */
+
 
                 recurse
         }
