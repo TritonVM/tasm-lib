@@ -33,7 +33,6 @@ use crate::list::horner_evaluation_dynamic_length::HornerEvaluationDynamicLength
 use crate::list::length::Length;
 use crate::list::new::New;
 use crate::list::push::Push;
-use crate::memory::dyn_malloc::DYN_MALLOC_ADDRESS;
 use crate::structure::tasm_object::TasmObject;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::verifier::fri::barycentric_evaluation::BarycentricEvaluation;

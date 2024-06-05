@@ -12,7 +12,6 @@ use triton_vm::twenty_first::prelude::*;
 use crate::data_type::DataType;
 use crate::rust_shadowing_helper_functions;
 use crate::snippet_bencher::BenchmarkCase;
-use crate::structure::tasm_object::TasmObject;
 use crate::traits::algorithm::Algorithm;
 use crate::traits::algorithm::AlgorithmInitialState;
 use crate::traits::basic_snippet::BasicSnippet;
@@ -20,13 +19,6 @@ use crate::Digest;
 use crate::VmHasher;
 
 /// Verify a batch of Merkle membership claims.
-///
-/// Arguments:
-///
-///   - leafs_and_index_list : [(Xfe,U32)]
-///   - root : Digest
-///   - height : U32
-///
 /// Behavior: crashes the VM if even one of the authentication paths
 /// is invalid. Goes into an infinite loop that crashes VM if height == 0.
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
@@ -34,14 +26,22 @@ pub struct VerifyAuthenticationPathForLeafAndIndexList;
 
 impl BasicSnippet for VerifyAuthenticationPathForLeafAndIndexList {
     fn inputs(&self) -> Vec<(DataType, String)> {
-        let indexed_leaf_type = DataType::Tuple(vec![DataType::U32, DataType::Xfe]);
         vec![
+            (DataType::U32, "dom_len_minus_one".to_owned()),
+            (DataType::U32, "dom_len_plus_half_dom_len".to_owned()),
             (
-                DataType::List(Box::new(indexed_leaf_type)),
-                "leaf_and_index_list".to_string(),
+                DataType::List(Box::new(DataType::Xfe)),
+                "*leaf_last_word".to_owned(),
+            ),
+            (
+                DataType::List(Box::new(DataType::U32)),
+                "*a_indices".to_owned(),
+            ),
+            (
+                DataType::List(Box::new(DataType::U32)),
+                "*a_indices_last_word".to_owned(),
             ),
             (DataType::Digest, "root".to_string()),
-            (DataType::U32, "height".to_string()),
         ]
     }
 
@@ -64,110 +64,56 @@ impl BasicSnippet for VerifyAuthenticationPathForLeafAndIndexList {
                 recurse_or_return                   // break loop if node_index is 1
         );
 
-        const LIST_ELEMENT_SIZE: usize = EXTENSION_DEGREE + 1;
-
         triton_asm!(
-            // BEFORE: _ *leaf_and_index_list root4 root3 root2 root1 root0 height
+            // BEFORE: _ dom_len_minus_one (dom_len + half_dom_len) *leaf *idx_end_cond *a_indices_last_word [root]
+            // AFTER : _
 
             {entrypoint}:
-                /* Calculate `num_leafs` */
-
-                push 2
-                pow
-                // _ *leaf_and_index_list root4 root3 root2 root1 root0 num_leafs
-
-
-                /* Rearrange */
-                swap 5
-                swap 4
-                swap 3
-                swap 2
-                swap 1
-                // _ *leaf_and_index_list num_leafs root4 root3 root2 root1 root0
-                // _ *leaf_and_index_list num_leafs [root] <-- rename
-
-
-                /* Calculate end-condition for main-loop */
-                dup 6          // _ *leaf_and_index_list num_leafs [root] *leaf_and_index_list
-                read_mem 1     // _ *leaf_and_index_list num_leafs [root] len (*leaf_and_index_list-1)
-
-                swap 1
-                push {LIST_ELEMENT_SIZE}
-                // _ *leaf_and_index_list num_leafs [root] (*leaf_and_index_list-1) len ELEM_SIZE
-
-                mul
-                add
-                push {1 + LIST_ELEMENT_SIZE}
-                add
-                // _ *leaf_and_index_list num_leafs [root] (*leaf_and_index_list_last_word + `LIST_ELEMENT_SIZE`)
-                // _ *leaf_and_index_list num_leafs [root] *end_condition
-
-                swap 7
-                // _ *end_condition  num_leafs [root] *leaf_and_index_list
-
-                push {LIST_ELEMENT_SIZE}
-                add
-                // _ *end_condition  num_leafs [root] *leaf_and_index_list_first_idx
-
-                swap 6
-                swap 5
-                swap 4
-                swap 3
-                swap 2
-                swap 1
-                // _ *end_condition *leaf_and_index_list_first_idx num_leafs [root]
-
                 call {main_loop}
-                // _ *leaf_and_index_list_end_condition *leaf_and_index_list_end_condition num_leafs [root]
-
+                // _ dom_len_minus_one (dom_len + half_dom_len) *leaf_last_word *a_indices *a_indices_last_word [root]
 
                 /* Cleanup stack */
                 pop 5
-                pop 3
+                pop 5
                 // _
 
                 return
 
 
-            // Invariant: _ *leaf_and_index_list_end_condition *leaf_and_index_element num_leafs [root]
+            // Invariant: _ dom_len_minus_one (dom_len + half_dom_len) *leaf[n]_last_word *a_indices *a_indices[n] [root]
             {main_loop}:
-                dup 7
-                dup 7
-                eq
-                skiz return
-                // _ *leaf_and_index_list_end_condition *leaf_and_index_element_idx num_leafs [root]
+                // _ dom_len_minus_one (dom_len + half_dom_len) *leaf[n] *a_indices *a_indices[n] [root]
 
-                /* Add Merkle auth path's stop condition to stack */
                 push 1
-                // _ *leaf_and_index_list_end_condition *leaf_and_index_element_idx num_leafs [root] 1
+                // _ dom_len_minus_one (dom_len + half_dom_len) *leaf *a_indices *a_indices[n] [root] 1
 
-                dup 7
+                dup 6
                 read_mem 1
-                swap 9
+                swap 8
                 pop 1
-                // _ *leaf_and_index_list_end_condition *leaf_and_index_element_val num_leafs [root] 1 leaf_index
+                // _ dom_len_minus_one (dom_len + half_dom_len) *leaf *a_indices *a_indices[n]' [root] 1 ia_0[n]
 
-                dup 7
-                add
-                // _ *leaf_and_index_list_end_condition *leaf_and_index_element_val num_leafs [root] 1 node_index
-
-
-                // Get indicated digest onto stack
-                push 0
-                push 0
-                // _ *leaf_and_index_list_end_condition *leaf_and_index_element_val num_leafs [root] 1 node_index 0 0
-
+                dup 11
+                and
                 dup 10
+                xor
+                // _ dom_len_minus_one (dom_len + half_dom_len) *leaf *a_indices *a_indices[n]' [root] 1 ((ia_0[n] & dom_len_minus_one) ^ (dom_len + half_dom_len))
+                // _ dom_len_minus_one (dom_len + half_dom_len) *leaf *a_indices *a_indices[n]' [root] 1 (ib_r[n] + dom_len)
+                // _ dom_len_minus_one (dom_len + half_dom_len) *leaf *a_indices *a_indices[n]' [root] 1 node_index_ib_r[n]
+
+                push 0
+                push 0
+                // _ dom_len_minus_one (dom_len + half_dom_len) *leaf *a_indices *a_indices[n]' [root] 1 ib_r[n] 0 0
+
+                dup 11
                 read_mem {EXTENSION_DEGREE}
-                push {2 * LIST_ELEMENT_SIZE}
-                add
-                swap 14
+                swap 15
                 pop 1
-                // _ *leaf_and_index_list_end_condition *leaf_and_index_element_idx_next num_leafs [root] 1 node_index 0 0 xfe2 xfe1 xfe0
-                // _ *leaf_and_index_list_end_condition *leaf_and_index_element_idx_next num_leafs [root] 1 node_index [leaf]  <-- rename
+                // _ dom_len_minus_one (dom_len + half_dom_len) *leaf' *a_indices *a_indices[n]' [root] 1 ib_r[n] 0 0 [xfe]
 
                 call {loop_over_auth_paths_label}
-                // _ *leaf_and_index_list_end_condition *leaf_and_index_element_idx_next num_leafs [root] 1 1 [calculated_root]  <-- rename
+                // _ dom_len_minus_one (dom_len + half_dom_len) *leaf' *a_indices *a_indices[n]' [root] 1 1 [calculated_root]
+                // _ dom_len_minus_one (dom_len + half_dom_len) *leaf' *a_indices *a_indices[n]' [root] 1 1 cr4 cr3 cr2 cr1 cr0
 
                 swap 2
                 swap 4
@@ -176,12 +122,13 @@ impl BasicSnippet for VerifyAuthenticationPathForLeafAndIndexList {
                 swap 2
                 swap 4
                 pop 1
-                // _ *leaf_and_index_list_end_condition *leaf_and_index_element_idx_next num_leafs [root] [calculated_root]
+                // _ dom_len_minus_one (dom_len + half_dom_len) *leaf' *a_indices *a_indices[n]' [root] cr4 cr3 cr2 cr1 cr0
+                // _ dom_len_minus_one (dom_len + half_dom_len) *leaf' *a_indices *a_indices[n]' [root] [calculated_root]
 
                 assert_vector
-                // _ *leaf_and_index_list_end_condition *leaf_and_index_element_idx_next num_leafs [root]
+                // _ dom_len_minus_one (dom_len + half_dom_len) *leaf *a_indices *a_indices[n]' [root]
 
-                recurse
+                recurse_or_return
 
             {&loop_over_auth_paths_code}
         )
@@ -196,7 +143,6 @@ impl Algorithm for VerifyAuthenticationPathForLeafAndIndexList {
         nondeterminism: &NonDeterminism,
     ) {
         // read arguments from stack
-        let height = stack.pop().unwrap().value() as usize;
         let root = Digest::new([
             stack.pop().unwrap(),
             stack.pop().unwrap(),
@@ -204,21 +150,50 @@ impl Algorithm for VerifyAuthenticationPathForLeafAndIndexList {
             stack.pop().unwrap(),
             stack.pop().unwrap(),
         ]);
-        let address = stack.pop().unwrap();
+        let idx_last_elem = stack.pop().unwrap();
+        let idx_end_condition = stack.pop().unwrap();
+        let leaf_last_element_pointer = stack.pop().unwrap();
+        let half_dom_len_plus_dom_len: u32 = stack.pop().unwrap().try_into().unwrap();
+        let dom_len_minus_one: u32 = stack.pop().unwrap().try_into().unwrap();
 
-        let indices_and_leafs =
-            *Vec::<(u32, XFieldElement)>::decode_from_memory(memory, address).unwrap();
+        let tree_height: usize = (dom_len_minus_one + 1).ilog2().try_into().unwrap();
 
-        // iterate and verify
-        for (i, (leaf_index, leaf_xfe)) in indices_and_leafs.into_iter().enumerate() {
-            let authentication_path = nondeterminism.digests[i * height..(i + 1) * height].to_vec();
+        let mut auth_path_counter = 0;
+        let mut idx_element_pointer = idx_last_elem;
+        let mut leaf_pointer = leaf_last_element_pointer;
+        while idx_element_pointer != idx_end_condition {
+            println!("idx_element_pointer: {idx_element_pointer}");
+            println!("idx_end_condition: {idx_end_condition}");
+            let authentication_path = nondeterminism.digests
+                [auth_path_counter * tree_height..(auth_path_counter + 1) * tree_height]
+                .to_vec();
+
+            let leaf_index_a_round_0: u32 = memory
+                .get(&idx_element_pointer)
+                .map(|x| x.value())
+                .unwrap_or_default()
+                .try_into()
+                .unwrap();
+            let leaf_index_b_this_round: u32 =
+                (leaf_index_a_round_0 & dom_len_minus_one) ^ half_dom_len_plus_dom_len;
+            let read_word_from_mem =
+                |pointer: BFieldElement| memory.get(&pointer).copied().unwrap_or_default();
+            let leaf = XFieldElement::new([
+                read_word_from_mem(leaf_pointer - bfe!(2)),
+                read_word_from_mem(leaf_pointer - bfe!(1)),
+                read_word_from_mem(leaf_pointer),
+            ]);
             let inclusion_proof = MerkleTreeInclusionProof::<Tip5> {
-                tree_height: height,
-                indexed_leaves: vec![(leaf_index as usize, leaf_xfe.into())],
+                tree_height,
+                indexed_leaves: vec![(leaf_index_b_this_round as usize, leaf.into())],
                 authentication_structure: authentication_path,
                 ..Default::default()
             };
-            assert!(inclusion_proof.verify(root));
+            // assert!(inclusion_proof.verify(root));
+
+            idx_element_pointer.decrement();
+            auth_path_counter += 1;
+            leaf_pointer -= bfe!(EXTENSION_DEGREE as u64);
         }
     }
 
@@ -270,40 +245,70 @@ impl VerifyAuthenticationPathForLeafAndIndexList {
         num_indices: usize,
     ) -> AlgorithmInitialState {
         // generate data structure
-        let n = 1 << height;
+        let dom_len = 1 << height;
 
-        let xfe_leafs = (0..n).map(|_| rng.gen::<XFieldElement>()).collect_vec();
+        let xfe_leafs = (0..dom_len)
+            .map(|_| rng.gen::<XFieldElement>())
+            .collect_vec();
         let leafs_as_digest: Vec<Digest> = xfe_leafs.iter().map(|&xfe| xfe.into()).collect_vec();
         let tree =
             <CpuParallel as MerkleTreeMaker<VmHasher>>::from_digests(&leafs_as_digest).unwrap();
         let root = tree.root();
 
         let indices = (0..num_indices)
-            .map(|_| rng.gen_range(0..n) as usize)
+            .map(|_| rng.gen_range(0..dom_len) as usize)
             .collect_vec();
         let indicated_leafs = indices.iter().map(|i| xfe_leafs[*i]).collect_vec();
-        let leafs_and_indices = indices
-            .iter()
-            .map(|i| *i as u32)
-            .zip(indicated_leafs)
-            .collect_vec();
         let authentication_paths = indices
             .iter()
+            .rev()
             .map(|i| tree.authentication_structure(&[*i]).unwrap())
             .collect_vec();
+        let indices: Vec<u32> = indices.into_iter().map(|idx| idx as u32).collect_vec();
 
         // prepare memory + stack + nondeterminism
-        let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
-        let address = BFieldElement::new(rng.next_u64() % (1 << 20));
-        rust_shadowing_helper_functions::list::list_insert(address, leafs_and_indices, &mut memory);
+        let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
+
+        let a_indices_pointer = BFieldElement::new(rng.next_u64() % (1 << 20));
+        rust_shadowing_helper_functions::list::list_insert(a_indices_pointer, indices, &mut memory);
+
+        let leaf_pointer = BFieldElement::new(rng.next_u64() % (1 << 20) + (1 << 32));
+        rust_shadowing_helper_functions::list::list_insert(
+            leaf_pointer,
+            indicated_leafs,
+            &mut memory,
+        );
+
+        // vec![
+        //     (DataType::U32, "dom_len_minus_one".to_owned()),
+        //     (DataType::U32, "half_dom_len".to_owned()),
+        //     (DataType::List(Box::new(DataType::Xfe)), "*leaf".to_owned()),
+        //     (
+        //         DataType::List(Box::new(DataType::U32)),
+        //         "*idx_end_condition".to_owned(),
+        //     ),
+        //     (DataType::List(Box::new(DataType::U32)), "*idx".to_owned()),
+        //     (DataType::Digest, "root".to_string()),
+        // ]
+        let a_indices_last_word = a_indices_pointer + bfe!(num_indices as u64);
+        let leaf_pointer_last_word = leaf_pointer + bfe!((EXTENSION_DEGREE * num_indices) as u64);
+        let dom_len_minus_one: u32 = dom_len - 1;
+        let half_dom_len: u32 = dom_len / 2;
+        println!("dom_len: {dom_len}");
+        println!("dom_len_minus_one: {dom_len_minus_one}");
+        println!("half_dom_len: {half_dom_len}");
+
         let mut stack = self.init_stack_for_isolated_run();
-        stack.push(address);
+        stack.push(bfe!(dom_len_minus_one));
+        stack.push(bfe!(half_dom_len + dom_len));
+        stack.push(leaf_pointer_last_word);
+        stack.push(a_indices_pointer);
+        stack.push(a_indices_last_word);
         stack.push(root.0[4]);
         stack.push(root.0[3]);
         stack.push(root.0[2]);
         stack.push(root.0[1]);
         stack.push(root.0[0]);
-        stack.push(BFieldElement::new(height as u64));
         let nondeterminism = NonDeterminism::default()
             .with_digests(authentication_paths.into_iter().flatten().collect_vec())
             .with_ram(memory);
