@@ -168,25 +168,10 @@ impl BasicSnippet for FriSnippet {
         let get_digest_from_list = library.import(Box::new(Get::new(DataType::Digest)));
         let sample_indices = library.import(Box::new(SampleIndices));
         let revealed_leafs = field!(FriResponse::revealed_leaves);
-        let zip_xfes_indices = library.import(Box::new(Zip::new(DataType::U32, DataType::Xfe)));
         let verify_authentication_paths_for_leaf_and_index_list =
             library.import(Box::new(VerifyFriAuthenticationPaths));
         let zip_index_xfe = library.import(Box::new(Zip::new(DataType::U32, DataType::Xfe)));
         let query_phase_main_loop = format!("{entrypoint}_query_phase_main_loop");
-        let add_half_label = format!("{entrypoint}_add_half_domain");
-        let map_add_half_domain_length =
-            library.import(Box::new(Map::new(InnerFunction::RawCode(RawCode {
-                function: triton_asm! {
-                    {add_half_label}:
-                                        // _ current_domain_length r half_domain_length [bu ff er] index
-                    dup 4 add           // _ current_domain_length r half_domain_length [bu ff er] index+half_domain_length
-                    dup 6 swap 1 div_mod// _ current_domain_length r half_domain_length [bu ff er] (index+half_domain_length)/domain_length
-                    swap 1 pop 1        // _ current_domain_length r half_domain_length [bu ff er] (index+half_domain_length)%domain_length
-                    return
-                },
-                input_type: DataType::U32,
-                output_type: DataType::U32,
-            }))));
         let reduce_indices_label = format!("{entrypoint}_reduce_indices");
         let map_reduce_indices =
             library.import(Box::new(Map::new(InnerFunction::RawCode(RawCode {
@@ -223,6 +208,45 @@ impl BasicSnippet for FriSnippet {
                         return
                 },
             }))));
+
+        let verify_a_values_authentication_paths_against_input_codeword = triton_asm!(
+            // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword *roots *alphas dom_len *indices *a_elements num_leafs
+
+            dup 3
+            push -1
+            add
+            // _ ... (dom_len - 1)
+
+            dup 4
+            // _ ... (dom_len - 1) dom_len
+
+            dup 3
+            // _ ... (dom_len - 1) dom_len *a_elements
+
+            dup 3
+            push {EXTENSION_DEGREE}
+            mul
+            add
+            // _ ... (dom_len - 1) dom_len *a_elements_last_word
+
+            dup 5
+            // _ ... (dom_len - 1) dom_len *a_elements_last_word *idx
+
+            dup 0
+            dup 5
+            add
+            // _ ... (dom_len - 1) dom_len *a_elements_last_word *idx *idx_last
+
+            dup 10
+            push 0
+            call {get_digest_from_list}
+            // _ ... (dom_len - 1) dom_len *a_elements_last_word *idx *idx_last [root]
+
+            call {verify_authentication_paths_for_leaf_and_index_list}
+            // _ ...
+
+            // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword *roots *alphas dom_len *indices *a_elements num_leafs
+        );
 
         let verify_b_values_authentication_paths_in_main_loop = triton_asm!(
             /*Verify the authentication paths for the b-elements read from the proof stream */
@@ -430,40 +454,7 @@ impl BasicSnippet for FriSnippet {
                 eq assert                   // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword *roots *alphas dom_len *indices *a_elements num_leafs
 
                 /* Verify round-0 authentication paths for a-values */
-                // TODO: FACTOR THIS CODE-CHUNK OUT
-                dup 3
-                push -1
-                add
-                // _ ... (dom_len - 1)
-
-                dup 4
-                // _ ... (dom_len - 1) dom_len
-
-                dup 3
-                // _ ... (dom_len - 1) dom_len *a_elements
-
-                dup 3
-                push {EXTENSION_DEGREE}
-                mul
-                add
-                // _ ... (dom_len - 1) dom_len *a_elements_last_word
-
-                dup 5
-                // _ ... (dom_len - 1) dom_len *a_elements_last_word *idx
-
-                dup 0
-                dup 5
-                add
-                // _ ... (dom_len - 1) dom_len *a_elements_last_word *idx *idx_last
-
-                dup 10
-                push 0
-                call {get_digest_from_list}
-                // _ ... (dom_len - 1) dom_len *a_elements_last_word *idx *idx_last [root]
-
-                call {verify_authentication_paths_for_leaf_and_index_list}
-                // _ ...
-
+                {&verify_a_values_authentication_paths_against_input_codeword}
                 // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword *roots *alphas dom_len *indices *a_elements num_leafs
 
                 pop 1
@@ -1058,17 +1049,17 @@ impl FriVerify {
         }
 
         // verify authentication paths for A leafs
-        for indexed_leaf in indexed_a_leaves {
-            // let authentication_path = &nondeterministic_digests[num_nondeterministic_digests_read
-            //     ..(num_nondeterministic_digests_read + tree_height)];
+        for indexed_leaf in indexed_a_leaves.iter().rev() {
+            let authentication_path = &nondeterministic_digests[num_nondeterministic_digests_read
+                ..(num_nondeterministic_digests_read + tree_height)];
             num_nondeterministic_digests_read += tree_height;
-            // let inclusion_proof = MerkleTreeInclusionProof::<Tip5> {
-            //     tree_height,
-            //     indexed_leaves: vec![indexed_leaf],
-            //     authentication_structure: authentication_path.to_vec(),
-            //     ..Default::default()
-            // };
-            // assert!(inclusion_proof.verify(roots[0]));
+            let inclusion_proof = MerkleTreeInclusionProof::<Tip5> {
+                tree_height,
+                indexed_leaves: vec![*indexed_leaf],
+                authentication_structure: authentication_path.to_vec(),
+                ..Default::default()
+            };
+            assert!(inclusion_proof.verify(roots[0]));
         }
 
         // save indices and revealed leafs of first round's codeword for returning
@@ -1111,7 +1102,7 @@ impl FriVerify {
                 };
 
                 // sanity check: the auth structure was valid, right?
-                // assert!(inclusion_proof.clone().verify(roots[r]));
+                assert!(inclusion_proof.clone().verify(roots[r]));
                 let reduplicated_authentication_paths =
                     inclusion_proof.into_authentication_paths()?;
                 nondeterministic_digests.extend(
@@ -1123,20 +1114,20 @@ impl FriVerify {
             }
 
             // verify authentication paths for B leafs
-            for indexed_leaf in indexed_b_leaves {
+            for indexed_leaf in indexed_b_leaves.iter().rev() {
                 let authentication_path = &nondeterministic_digests
                     [num_nondeterministic_digests_read
                         ..(num_nondeterministic_digests_read + current_tree_height)];
                 num_nondeterministic_digests_read += current_tree_height;
                 let inclusion_proof = MerkleTreeInclusionProof::<Tip5> {
                     tree_height: current_tree_height,
-                    indexed_leaves: vec![indexed_leaf],
+                    indexed_leaves: vec![*indexed_leaf],
                     authentication_structure: authentication_path.to_vec(),
                     ..Default::default()
                 };
-                // if !inclusion_proof.verify(roots[r]) {
-                //     bail!(FriValidationError::BadMerkleAuthenticationPath);
-                // }
+                if !inclusion_proof.verify(roots[r]) {
+                    bail!(FriValidationError::BadMerkleAuthenticationPath);
+                }
             }
 
             debug_assert_eq!(self.num_collinearity_checks, a_indices.len() as u32);
