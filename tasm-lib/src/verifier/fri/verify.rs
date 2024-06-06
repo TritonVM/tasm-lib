@@ -37,7 +37,7 @@ use crate::structure::tasm_object::TasmObject;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::verifier::fri::barycentric_evaluation::BarycentricEvaluation;
 use crate::verifier::fri::number_of_rounds::NumberOfRounds;
-use crate::verifier::verify_authentication_paths_for_leaf_and_index_list::VerifyAuthenticationPathForLeafAndIndexList;
+use crate::verifier::fri::verify_authentication_paths_for_leaf_and_index_list::VerifyAuthenticationPathForLeafAndIndexList;
 use crate::verifier::vm_proof_iter::dequeue_next_as::DequeueNextAs;
 use crate::verifier::vm_proof_iter::shared::vm_proof_iter_type;
 
