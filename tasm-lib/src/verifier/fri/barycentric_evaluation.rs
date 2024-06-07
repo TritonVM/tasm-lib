@@ -7,7 +7,8 @@ use crate::library::Library;
 use crate::traits::basic_snippet::BasicSnippet;
 
 /// Use the barycentric Lagrange evaluation formula to extrapolate the codeword
-/// to an out-of-domain location.
+/// to an out-of-domain location. Codeword must have a length that is a power
+/// of 2.
 pub struct BarycentricEvaluation;
 
 impl BasicSnippet for BarycentricEvaluation {
@@ -52,7 +53,10 @@ impl BasicSnippet for BarycentricEvaluation {
         // }
 
         let entrypoint = self.entrypoint();
-        let loop_label = format!("{entrypoint}_loop");
+        let loop_dispatcher_lbl = format!("{entrypoint}_loop_dispatcher");
+        let multiple_iteration_loop = format!("{entrypoint}_multiple_iteration_loop");
+        let single_iteration_loop = format!("{entrypoint}_single_iteration_loop");
+        let multiple_iteration_wrapper = format!("{entrypoint}_if_body_wrapper");
         let generator = library.import(Box::new(PrimitiveRootOfUnity));
 
         let swap_top_and_third_xfe = triton_asm!(
@@ -80,19 +84,8 @@ impl BasicSnippet for BarycentricEvaluation {
             // _ x2 x1 x0 y2 y1 y0
         );
 
-        let loop_over_codeword_elements = triton_asm!(
-            // INVARIANT:  *stop_condition [indeterminate] geni geniacc *codeword_elem [denominator] [numerator]
-            {loop_label}:
-                /* End-condition: `*stop_condition == *codeword_elem` */
-                /* Note that `geniacc == 1` could also be used for loop stop-condition but then the
-                   loop stop-condition would have to happen at the end of the loop body. */
-                dup 12
-                dup 7
-                eq
-                skiz return
-                // _  *stop_condition [indeterminate] geni geniacc *codeword_elem [denominator] [numerator]
-
-                /* Loop body:
+        let single_iteration_body = triton_asm!(
+                            /* Loop body:
                 1. Put a lifted $ geniacc $ on top of stack
                 2. calculate $ indeterminate - geniacc $
                 3. Calculate $ 1 / (indeterminate - geniacc) $
@@ -164,9 +157,13 @@ impl BasicSnippet for BarycentricEvaluation {
                 swap 7
                 // _ *stop_condition [indeterminate] geni (geniacc * geni) *codeword_elem' [denominator'] [numerator']
                 // _ *stop_condition [indeterminate] geni geniacc' *codeword_elem' [denominator'] [numerator']   <-- rename
-
-                recurse
         );
+
+        const PARTIAL_UNROLLING_ITERATION_COUNT: usize = 16;
+        let multiple_iteration_body = (0..PARTIAL_UNROLLING_ITERATION_COUNT)
+            .map(|_| single_iteration_body.clone())
+            .collect::<Vec<_>>()
+            .concat();
 
         triton_asm!(
             {entrypoint}:
@@ -199,7 +196,7 @@ impl BasicSnippet for BarycentricEvaluation {
                 /* Find last word of `codeword` list */
                 push {EXTENSION_DEGREE}
                 mul
-                // _ *codeword [indeterminate] geni geni offset
+                // _ *codeword [indeterminate] geni geni ptr_offset
 
                 dup 6
                 add
@@ -214,7 +211,7 @@ impl BasicSnippet for BarycentricEvaluation {
                 push 0
                 // _ *codeword [indeterminate] geni geniacc *codeword_last_word [denominator] [numerator]
 
-                call {loop_label}
+                call {loop_dispatcher_lbl}
                 // _ *codeword [indeterminate] geni geniacc *codeword [denominator] [numerator]
 
                 {&swap_top_two_xfes}
@@ -236,7 +233,61 @@ impl BasicSnippet for BarycentricEvaluation {
 
                 return
 
-                {&loop_over_codeword_elements}
+            // INVARIANT:  *stop_condition [indeterminate] geni geniacc *codeword_elem [denominator] [numerator]
+            {multiple_iteration_loop}:
+                /* End-condition: `*stop_condition == *codeword_elem` */
+                /* Note that `geniacc == 1` could also be used for loop stop-condition but then the
+                   loop stop-condition would have to happen at the end of the loop body. */
+                dup 12
+                dup 7
+                eq // (stop_condition==codeword_elem)
+                skiz return
+                // _  *stop_condition [indeterminate] geni geniacc *codeword_elem [denominator] [numerator]
+
+                {&multiple_iteration_body}
+
+                recurse
+
+            {multiple_iteration_wrapper}:
+                pop 1
+                call {multiple_iteration_loop}
+                push 0
+                return
+
+            // INVARIANT:  *stop_condition [indeterminate] geni geniacc *codeword_elem [denominator] [numerator]
+            {single_iteration_loop}:
+                /* End-condition: `*stop_condition == *codeword_elem` */
+                /* Note that `geniacc == 1` could also be used for loop stop-condition but then the
+                loop stop-condition would have to happen at the end of the loop body. */
+                dup 12
+                dup 7
+                eq // stop_condition=?=codeword_elem
+                skiz return
+                // _  *stop_condition [indeterminate] geni geniacc *codeword_elem [denominator] [numerator]
+
+                {&single_iteration_body}
+
+                recurse
+
+            // INVARIANT:  *stop_condition [indeterminate] geni geniacc *codeword_elem [denominator] [numerator]
+            {loop_dispatcher_lbl}:
+                /* End-condition: `*stop_condition == *codeword_elem` */
+                /* Note that `geniacc == 1` could also be used for loop stop-condition but then the
+                   loop stop-condition would have to happen at the end of the loop body. */
+                dup 12      // _ stop_condition
+                dup 7       // _ stop_condition *codeword_elem
+
+                swap 1
+                push -1 mul
+                add     // _ (*codeword_elem-stop_condition)
+
+                push {EXTENSION_DEGREE * PARTIAL_UNROLLING_ITERATION_COUNT}
+                lt      // _ (3*BATCH_SIZE<(*codeword_elem-stop_condition))
+                push 1 swap 1
+                skiz call {multiple_iteration_wrapper}
+                skiz call {single_iteration_loop}
+
+                return
         )
     }
 }
@@ -321,8 +372,14 @@ mod tests {
                 some_codeword_pointer,
                 some_indeterminate,
             );
+            let codeword_of_length_8 =
+                self.prepare_state(xfe_vec![155; 8], some_codeword_pointer, some_indeterminate);
 
-            vec![codeword_of_length_one, codeword_of_length_two]
+            vec![
+                codeword_of_length_one,
+                codeword_of_length_two,
+                codeword_of_length_8,
+            ]
         }
 
         fn pseudorandom_initial_state(
