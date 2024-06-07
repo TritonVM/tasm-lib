@@ -78,8 +78,8 @@ impl BasicSnippet for VerifyTableRows {
             format!("{entrypoint}_loop_over_auth_path_elements");
         let loop_over_auth_paths_code = triton_asm!(
             {loop_over_auth_path_digests_label}:
-                dup 5 push 1 eq skiz return         // break loop if node_index is 1
-                merkle_step recurse                 // move up one level in the Merkle tree
+                merkle_step                 // move up one level in the Merkle tree
+                recurse_or_return           // break loop if node_index is 1
         );
 
         let loop_over_rows_label = format!("{entrypoint}_loop_over_rows");
@@ -95,39 +95,43 @@ impl BasicSnippet for VerifyTableRows {
 
                 // _ remaining_iterations num_leaves *merkle_tree_root *fri_revealed_leaf_index *row_elem [mt_root]
 
+                push 1
+                // _ remaining_iterations num_leaves *merkle_tree_root *fri_revealed_leaf_index *row_elem [mt_root] 1
+
                 /* 2. */
-                dup 6
+                dup 7
                 read_mem 1
                 push {EXTENSION_DEGREE + 2}
                 add
-                // _ remaining_iterations num_leaves *merkle_tree_root *fri_revealed_leaf_index *row_elem [mt_root] fri_revealed_leaf_index (*fri_revealed_leaf_index + 4)
-                // _ remaining_iterations num_leaves *merkle_tree_root *fri_revealed_leaf_index *row_elem [mt_root] fri_revealed_leaf_index *fri_revealed_leaf_index_next
+                // _ remaining_iterations num_leaves *merkle_tree_root *fri_revealed_leaf_index *row_elem [mt_root] 1 fri_revealed_leaf_index (*fri_revealed_leaf_index + 4)
+                // _ remaining_iterations num_leaves *merkle_tree_root *fri_revealed_leaf_index *row_elem [mt_root] 1 fri_revealed_leaf_index *fri_revealed_leaf_index_next
 
-                swap 8
+                swap 9
                 pop 1
-                // _ remaining_iterations num_leaves *merkle_tree_root *fri_revealed_leaf_index_next *row_elem [mt_root] fri_revealed_leaf_index
+                // _ remaining_iterations num_leaves *merkle_tree_root *fri_revealed_leaf_index_next *row_elem [mt_root] 1 fri_revealed_leaf_index
 
-                dup 9
+                dup 10
                 add
-                // _ remaining_iterations num_leaves *merkle_tree_root *fri_revealed_leaf_index_next *row_elem [mt_root] node_index
+                // _ remaining_iterations num_leaves *merkle_tree_root *fri_revealed_leaf_index_next *row_elem [mt_root] 1 node_index
 
                 /* 3. */
-                dup 6
+                dup 7
                 call {hash_row}
-                // _ remaining_iterations num_leaves *merkle_tree_root *fri_revealed_leaf_index_next *row_elem [mt_root] node_index [base_row_digest] *row_elem_next
+                // _ remaining_iterations num_leaves *merkle_tree_root *fri_revealed_leaf_index_next *row_elem [mt_root] 1 node_index [base_row_digest] *row_elem_next
 
-                swap 12
+                swap 13
                 pop 1
-                // _ remaining_iterations num_leaves *merkle_tree_root *fri_revealed_leaf_index_next *row_elem_next [mt_root] node_index [base_row_digest]
+                // _ remaining_iterations num_leaves *merkle_tree_root *fri_revealed_leaf_index_next *row_elem_next [mt_root] 1 node_index [base_row_digest]
 
                 call {loop_over_auth_path_digests_label}
-                // _ remaining_iterations num_leaves *merkle_tree_root *fri_revealed_leaf_index_next *row_elem_next [mt_root] 1 [calculated_root]
+                // _ remaining_iterations num_leaves *merkle_tree_root *fri_revealed_leaf_index_next *row_elem_next [mt_root] 1 1 [calculated_root]
 
-                swap 1
                 swap 2
-                swap 3
                 swap 4
-                swap 5
+                swap 6
+                pop 1
+                swap 2
+                swap 4
                 pop 1
                 // _ remaining_iterations num_leaves *merkle_tree_root *fri_revealed_leaf_index_next *row_elem_next [mt_root] [calculated_root]
 

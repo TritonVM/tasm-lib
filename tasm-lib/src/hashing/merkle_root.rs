@@ -7,51 +7,31 @@ use rand::Rng;
 use rand::SeedableRng;
 use triton_vm::prelude::tip5::DIGEST_LENGTH;
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::prelude::AlgebraicHasher;
+use twenty_first::util_types::merkle_tree::CpuParallel;
+use twenty_first::util_types::merkle_tree::MerkleTree;
 
 use crate::data_type::DataType;
-use crate::empty_stack;
 use crate::library::Library;
+use crate::memory::dyn_malloc::DynMalloc;
 use crate::memory::encode_to_memory;
+use crate::rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator;
 use crate::snippet_bencher::BenchmarkCase;
 use crate::structure::tasm_object::TasmObject;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::function::Function;
 use crate::traits::function::FunctionInitialState;
 use crate::Digest;
-use crate::VmHasher;
 
 /// Compute the Merkle root of a slice of `Digest`s
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct MerkleRoot;
 
-impl MerkleRoot {
-    pub fn call(leafs: &[Digest], start: usize, stop: usize) -> Digest {
-        // #[allow(unused_assignments)]
-        // let mut result: Digest = Digest::default();
-        let result: Digest = if stop == start + 1usize {
-            leafs[start]
-        } else {
-            let half: usize = (stop - start) / 2;
-            let left: Digest = Self::call(leafs, start, stop - half);
-            let right: Digest = Self::call(leafs, start + half, stop);
-            VmHasher::hash_pair(left, right)
-        };
-
-        result
-    }
-}
-
 impl BasicSnippet for MerkleRoot {
     fn inputs(&self) -> Vec<(DataType, String)> {
-        vec![
-            (
-                DataType::List(Box::new(DataType::Digest)),
-                "*leafs".to_string(),
-            ),
-            (DataType::U32, "start".to_string()),
-            (DataType::U32, "stop".to_string()),
-        ]
+        vec![(
+            DataType::List(Box::new(DataType::Digest)),
+            "*leafs".to_string(),
+        )]
     }
 
     fn outputs(&self) -> Vec<(DataType, String)> {
@@ -62,113 +42,163 @@ impl BasicSnippet for MerkleRoot {
         "tasmlib_hashing_merkle_root".to_string()
     }
 
-    fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {
+    fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
-        let read_digest = DataType::Digest.read_value_from_memory_pop_pointer();
+        let dyn_malloc = library.import(Box::new(DynMalloc));
 
-        let then_label = format!("{entrypoint}_then");
-        let else_label = format!("{entrypoint}_else");
+        let calculate_parent_digests = format!("{entrypoint}_calculate_parent_digests");
+        let next_layer_loop = format!("{entrypoint}_next_layer_loop");
+
         triton_asm!(
                 {entrypoint}:
-                    // *leafs start stop
+                    // _ *leafs
 
-                    push 1
-
-                    dup 2
+                    read_mem 1
                     push 1
                     add
-                    // *leafs start stop 1 (start + 1)
+                    // _ leafs_len *leafs
 
+                    call {dyn_malloc}
+                    // _ leafs_len *leafs *parent_level
+
+                    /* Adjust pointers to point to last element in both lists */
+                    /* Adjust `*parent_level` pointer to point to 1st word in
+                       its last element */
                     dup 2
-                    eq
-                    // *leafs start stop 1 (start + 1 == stop)
+                    push -1
+                    add
+                    push {DIGEST_LENGTH}
+                    mul
+                    add
+                    // _ leafs_len *leafs (*parent_level + (leafs_len - 1)*DIGEST_LENGTH)
+                    // _ leafs_len *leafs *parent_level'
 
-                    skiz
-                        call {then_label}
-                    skiz
-                        call {else_label}
-                    // _ *leafs start stop garbage [digest; 5]
-                    // _ *leafs start stop garbage d4 d3 d2 d1 d0
+                    swap 1
+                    // _ leafs_len *parent_level' *leafs
 
-                    swap 4
-                    swap 8
-                    pop 1
-                    // _ d4 start stop garbage d0 d3 d2 d1
-
-                    swap 4
-                    pop 1
-                    // _ d4 start stop d1 d0 d3 d2
-
-                    swap 4
-                    pop 1
-                    // _ d4 start d2 d1 d0 d3
-
-                    swap 4
-                    pop 1
-                    // _ d4 d3 d2 d1 d0
-
-                    return
-
-                {then_label}:
-                    // *leafs start stop 1
-
+                    /* Adjust `*leafs` to point to last element, last word */
                     dup 2
                     push {DIGEST_LENGTH}
                     mul
-                    dup 4
                     add
-                    push {DIGEST_LENGTH}
-                    add
-                    {&read_digest}
-                    // *leafs start stop 1 [digest; 5]
+                    // _ leafs_len *parent_level' (*leafs + leafs_len * DIGEST_LENGTH)
+                    // _ leafs_len *parent_level' *leafs'
 
-                    push 0
-                    return
+                    call {next_layer_loop}
+                    // _ 1 *address (*root + DIGEST_LENGTH)
 
-                {else_label}:
-                        // _ *leafs start stop
+                    swap 2
+                    pop 2
+                    // _ (*root + DIGEST_LENGTH - 1)
 
-                        push 2
-                        dup 1
-                        dup 3
-                        push -1
-                        mul
-                        add
-                        // _ *leafs start stop 2 (stop - start)
+                    read_mem {DIGEST_LENGTH}
+                    // _ [root; 5] (*root - 1)
 
-                        div_mod
-                        pop 1
-                        // _ *leafs start stop ((stop - start) / 2)
-                        // _ *leafs start stop half
+                    pop 1
+                    // _ [root; 5]
 
-                        dup 3
-                        dup 3
-                        dup 2
-                        add
-                        // _ *leafs start stop half *leafs (start + half)
+                   return
 
-                        dup 3
-                        // _ *leafs start stop half *leafs (start + half) stop
+                // INVARIANT:  _ current_len *next_level[last]_first_word *current_level[last]_last_word
+                {next_layer_loop}:
+                    // _ current_len *next_level *current_level
 
-                        call {entrypoint}
-                        // _ *leafs start stop half [right; 5]
-
-                        dup 8
-                        dup 8
-                        dup 8
-                        dup 8
-                        push -1
-                        mul
-                        add
-                        // _ *leafs start stop half [right; 5] *leafs start (stop - half)
-
-                        call {entrypoint}
-                        // _ *leafs start stop half [right; 5] [left; 5]
-
-                        hash
-
+                    /* end loop when `current_len == 1` */
+                    dup 2
+                    push 1
+                    eq
+                    skiz
                         return
+                    // _ current_len *next_level *current_level
 
+                    // What is the stop-condition for `*current_level`?
+                    // It must be `*curr - current_length * DIGEST_LENGTH`
+                    dup 0
+                    dup 3
+                    push {-(DIGEST_LENGTH as isize)}
+                    mul
+                    add
+                    // _ current_len *next_level *current_level *current_level_stop
+
+                    swap 1
+                    // _ current_len *next_level *current_level_stop *current_level
+
+                    dup 2
+                    swap 1
+                    // _ current_len *next_level *current_level_stop *next_level *current_level
+
+                    call {calculate_parent_digests}
+                    // _ current_len *next_level *current_level_stop *next_level' *current_level_stop
+
+                    pop 1
+                    swap 1
+                    pop 1
+                    // _ current_len *next_level *next_level_next
+
+                    /*Update `current_len` */
+                    swap 2
+                    log_2_floor
+                    push -1
+                    add
+                    push 2
+                    pow
+                    swap 2
+                    // _ (current_len / 2) *next_level *next_level'
+                    // _ current_len' *next_level *next_level'
+
+                    /* Update `*current_level` based on `*next_level` */
+                    swap 1
+                    // _ (current_len / 2) *next_level' *next_level
+
+                    push {DIGEST_LENGTH - 1}
+                    add
+                    // _ (current_len / 2) *next_level' *current_level'
+
+                    recurse
+
+                // Populate the `*next` digest list
+                // START: _ *current_level_stop *next_last_elem_first_word *curr_last_word
+                // INVARIANT: _ *current_level_stop *next_elem *curr_elem
+                // END: _ *current_level_stop *next *current_level_stop
+                {calculate_parent_digests}:
+                    dup 2
+                    dup 1
+                    eq
+                    skiz
+                        return
+                    // _ *curr *next_elem *curr_elem[n]
+
+                    dup 0
+                    read_mem {DIGEST_LENGTH}
+                    read_mem {DIGEST_LENGTH}
+                    // _ *curr *next_elem *curr_elem [right] [left] (*curr_elem[n] - 10)
+                    // _ *curr *next_elem *curr_elem [right] [left] *curr_elem[n - 2]
+                    // _ *curr *next_elem *curr_elem [right] [left] *curr_elem'
+
+                    swap 11
+                    pop 1
+                    // _ *curr *next_elem *curr_elem' [right] [left]
+
+                    hash
+                    // _ *curr *next_elem *curr_elem' [parent_digest]
+
+                    dup 6
+                    // _ *curr *next_elem *curr_elem' [parent_digest] *next_elem
+
+                    write_mem {DIGEST_LENGTH}
+                    // _ *curr *next_elem *curr_elem' (*next_elem + 5)
+
+                    push -10
+                    add
+                    // _ *curr *next_elem *curr_elem' (*next_elem - 5)
+                    // _ *curr *next_elem *curr_elem' *next_elem[n-1]
+                    // _ *curr *next_elem *curr_elem' *next_elem'
+
+                    swap 2
+                    pop 1
+                    // _ *curr *next_elem' *curr_elem'
+
+                    recurse
         )
     }
 }
@@ -179,18 +209,21 @@ impl Function for MerkleRoot {
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
-        let stop = stack.pop().unwrap().value() as usize;
-        let start = stack.pop().unwrap().value() as usize;
         let leafs_pointer = stack.pop().unwrap();
         let leafs = *Vec::<Digest>::decode_from_memory(memory, leafs_pointer).unwrap();
+        let mt = MerkleTree::<Tip5>::new::<CpuParallel>(&leafs).unwrap();
 
-        let root: Digest = Self::call(&leafs, start, stop);
+        // Write entire Merkle tree to memory, because that's what the VM does
+        let pointer = dynamic_allocator(memory);
+        let num_non_leaf_nodes = leafs.len();
 
-        stack.push(root.0[4]);
-        stack.push(root.0[3]);
-        stack.push(root.0[2]);
-        stack.push(root.0[1]);
-        stack.push(root.0[0]);
+        // skip dummy digest at index 0
+        for (node_index, &node) in (0..num_non_leaf_nodes).zip(mt.nodes()).skip(1) {
+            let node_address = pointer + bfe!(node_index as u32) * bfe!(DIGEST_LENGTH as u32);
+            encode_to_memory(memory, node_address, node);
+        }
+
+        stack.extend(mt.root().reversed().values());
     }
 
     fn pseudorandom_initial_state(
@@ -200,19 +233,39 @@ impl Function for MerkleRoot {
     ) -> FunctionInitialState {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
         let num_leafs = match bench_case {
-            Some(BenchmarkCase::CommonCase) => 32,
-            Some(BenchmarkCase::WorstCase) => 128,
+            Some(BenchmarkCase::CommonCase) => 512,
+            Some(BenchmarkCase::WorstCase) => 1024,
             None => 1 << rng.gen_range(0..=8),
         };
+
+        let digests_pointer = rng.gen();
+
         let leafs = (0..num_leafs).map(|_| rng.gen::<Digest>()).collect_vec();
 
+        self.init_state(leafs, digests_pointer)
+    }
+
+    fn corner_case_initial_states(&self) -> Vec<FunctionInitialState> {
+        let height_0 = self.init_state(vec![Digest::default()], BFieldElement::zero());
+        let height_1 = self.init_state(
+            vec![Digest::default(), Digest::default()],
+            BFieldElement::zero(),
+        );
+
+        vec![height_0, height_1]
+    }
+}
+
+impl MerkleRoot {
+    fn init_state(
+        &self,
+        leafs: Vec<Digest>,
+        digests_pointer: BFieldElement,
+    ) -> FunctionInitialState {
         let mut memory = HashMap::<BFieldElement, BFieldElement>::new();
-        let address = BFieldElement::zero();
-        encode_to_memory(&mut memory, address, leafs);
-        let mut stack = empty_stack();
-        stack.push(address);
-        stack.push(BFieldElement::new(0)); // start
-        stack.push(BFieldElement::new(num_leafs)); // stop
+        encode_to_memory(&mut memory, digests_pointer, leafs);
+        let mut stack = self.init_stack_for_isolated_run();
+        stack.push(digests_pointer);
 
         FunctionInitialState { stack, memory }
     }

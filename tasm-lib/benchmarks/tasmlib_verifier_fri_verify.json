@@ -2,22 +2,22 @@
   {
     "name": "tasmlib_verifier_fri_verify",
     "benchmark_result": {
-      "clock_cycle_count": 124551,
-      "hash_table_height": 14838,
-      "u32_table_height": 12046,
-      "op_stack_table_height": 109233,
-      "ram_table_height": 19397
+      "clock_cycle_count": 59521,
+      "hash_table_height": 14670,
+      "u32_table_height": 11431,
+      "op_stack_table_height": 56001,
+      "ram_table_height": 12924
     },
     "case": "CommonCase"
   },
   {
     "name": "tasmlib_verifier_fri_verify",
     "benchmark_result": {
-      "clock_cycle_count": 124551,
-      "hash_table_height": 14838,
-      "u32_table_height": 11671,
-      "op_stack_table_height": 109233,
-      "ram_table_height": 19397
+      "clock_cycle_count": 59521,
+      "hash_table_height": 14670,
+      "u32_table_height": 11043,
+      "op_stack_table_height": 56001,
+      "ram_table_height": 12924
     },
     "case": "WorstCase"
   }
