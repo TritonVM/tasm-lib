@@ -8,9 +8,10 @@ use crate::traits::basic_snippet::BasicSnippet;
 /// Verify a batch of Merkle membership claims in a FRI context where only the
 /// a-indices are known and the b-indices must be calculated on the fly. This
 /// snippet can be used for both a and b-indices. For a-indices the
-/// `xor_bitflag` value must be set to the domain length, and for b indices,
-/// `xor_bitflag` must be set to 3/2 times the domain length. The `xor_bitflag`
-/// is used to convert a leaf index into a Merkle tree node index.
+/// `xor_bit_mask` value must be set to the domain length, and for b indices,
+/// `xor_bit_mask` must be set to 3/2 times the domain length. The
+/// `xor_bit_mask` is used to convert a leaf index into a Merkle tree node
+/// index.
 ///
 /// Behavior: crashes the VM if just one of the authentication paths is
 /// invalid. Goes into an infinite loop if a node index value is initialized to

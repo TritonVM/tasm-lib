@@ -162,8 +162,6 @@ impl BasicSnippet for FriSnippet {
         let length_of_list_of_u32s = library.import(Box::new(Length::new(DataType::U32)));
         let length_of_list_of_xfes = library.import(Box::new(Length::new(DataType::Xfe)));
         let merkle_root_from_xfes = library.import(Box::new(MerkleRootFromXfesGeneric));
-        let assert_tail_xfe0 = format!("{entrypoint}_tail_xfe0");
-        let length_of_list_of_xfe = library.import(Box::new(Length::new(DataType::Xfe)));
         let get_xfe_from_list = library.import(Box::new(Get::new(DataType::Xfe)));
         let get_digest_from_list = library.import(Box::new(Get::new(DataType::Digest)));
         let sample_indices = library.import(Box::new(SampleIndices));
@@ -554,11 +552,11 @@ impl BasicSnippet for FriSnippet {
             // START    : _ g_r offset_r *c_last_elem_first_word *idx_end_condition *idx_last_word *a_last_word    *b_last_word    [alphas[r]]
             // INVARIANT: _ g_r offset_r *c[n]_first_word        *idx_end_condition *idx[n]        *a[n]_last_word *b[n]_last_word [alphas[r]]
             {compute_c_values_loop}:
-                // Strategy:
+                // Strategy for one iteration:
                 // 1. Read `a_y`
                 // 2. Calculate `a_x`
                 // 3. Read `b_y`
-                // 4. Calculate `[a_y- b_y]`, preserve a[y]
+                // 4. Calculate `[a_y- b_y]`, preserve [a_y]
                 // 5. Calculate `-b_x = a_x`
                 // 6. Calculate `1 / (a_x - b_x)` while preserving `a_x`
                 // 7. Calculate `(a_y - b_y) / (a_x - b_x)`
@@ -668,22 +666,6 @@ impl BasicSnippet for FriSnippet {
                 // _ g_r offset_r *c' *idx_end_condition *idx' *a' *b' [alphas[r]]
 
                 recurse_or_return
-
-            // BEFORE: _ *list index
-            // AFTER:  _ *list length
-            {assert_tail_xfe0}:
-                dup 1                           // _ *list index *list
-                call {length_of_list_of_xfe}    // _ *list index len
-                dup 1 eq                        // _ *list index len==index
-                skiz return                     // _ *list index
-
-                dup 1 dup 1                     // _ *list index *list index
-                call {get_xfe_from_list}        // _ *list index xfe2 xfe1 xfe0
-                push 0 eq assert                // _ *list index xfe2 xfe1
-                push 0 eq assert                // _ *list index xfe2
-                push 0 eq assert                // _ *list index
-                push 1 add                      // _ *list index+1
-                recurse
 
             // BEFORE: _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree | num_rounds *roots *alphas
             // AFTER:  _ ... | 0 *roots *alphas
