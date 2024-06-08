@@ -150,16 +150,20 @@ mod tests {
     #[test]
     fn merkle_verify_negative_test() {
         let seed: [u8; 32] = thread_rng().gen();
-        for i in 0..6 {
+        for i in 0..=4 {
             let mut init_state = MerkleVerify.pseudorandom_initial_state(seed, None);
             let len = init_state.stack.len();
+            let height: usize = len - 7;
+            let leaf: usize = len - 1;
+            let leaf_index: usize = len - 6;
+            let root: usize = len - 8;
 
             // BEFORE: _ [root; 5] tree_height leaf_index [leaf; 5]
             let allowed_error_codes = match i {
                 0 => {
                     println!("now testing: too high height");
                     init_state.nondeterminism.digests.push(random());
-                    init_state.stack[len - 7].increment(); // height
+                    init_state.stack[height].increment();
                     vec![
                         InstructionError::VectorAssertionFailed(0),
                         InstructionError::AssertionFailed,
@@ -168,7 +172,7 @@ mod tests {
                 1 => {
                     println!("now testing: too small height");
                     init_state.nondeterminism.digests.push(random());
-                    init_state.stack[len - 7].decrement(); // height
+                    init_state.stack[height].decrement();
                     vec![
                         InstructionError::VectorAssertionFailed(0),
                         InstructionError::AssertionFailed,
@@ -176,22 +180,18 @@ mod tests {
                 }
                 2 => {
                     println!("now testing: corrupt leaf");
-                    init_state.stack[len - 1].increment(); // leaf
+                    init_state.stack[leaf].increment();
                     vec![InstructionError::VectorAssertionFailed(0)]
                 }
                 3 => {
-                    println!("now testing: too high leaf index");
-                    init_state.stack[len - 6].increment(); // leaf index
+                    println!("now testing: wrong leaf index");
+                    init_state.stack[leaf_index] =
+                        BFieldElement::new(init_state.stack[leaf_index].value() ^ 1);
                     vec![InstructionError::VectorAssertionFailed(0)]
                 }
                 4 => {
-                    println!("now testing: too small leaf index");
-                    init_state.stack[len - 6].decrement(); // leaf index
-                    vec![InstructionError::VectorAssertionFailed(0)]
-                }
-                5 => {
                     println!("now testing: corrupt root");
-                    init_state.stack[len - 8].increment(); // root
+                    init_state.stack[root].increment();
                     vec![InstructionError::VectorAssertionFailed(0)]
                 }
                 _ => unreachable!(),
