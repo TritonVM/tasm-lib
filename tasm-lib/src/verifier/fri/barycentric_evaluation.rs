@@ -6,9 +6,11 @@ use crate::data_type::DataType;
 use crate::library::Library;
 use crate::traits::basic_snippet::BasicSnippet;
 
+const MAX_CODEWORD_LENGTH: u32 = 1 << 15;
+
 /// Use the barycentric Lagrange evaluation formula to extrapolate the codeword
 /// to an out-of-domain location. Codeword must have a length that is a power
-/// of 2.
+/// of 2 and may not exceed `MAX_CODEWORD_LENGTH`.
 pub struct BarycentricEvaluation;
 
 impl BasicSnippet for BarycentricEvaluation {
@@ -31,263 +33,230 @@ impl BasicSnippet for BarycentricEvaluation {
     }
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
-        // This snippet is implemented as:
-        // fn barycentric_evaluate_local(
-        //     codeword: &[XFieldElement],
-        //     indeterminate: XFieldElement,
-        // ) -> XFieldElement {
-        //     let root_order = codeword.len().try_into().unwrap();
-        //     let generator = BFieldElement::primitive_root_of_unity(root_order).unwrap();
-        //     let mut numerator = xfe!(0);
-        //     let mut denominator = xfe!(0);
-        //     let mut domain_iter_elem = bfe!(1);
-        //     for code_word_elem in codeword {
-        //         let domain_shift_elem = indeterminate - domain_iter_elem;
-        //         let domain_over_domain_shift_elem = domain_iter_elem.lift() / domain_shift_elem;
-        //         denominator += domain_over_domain_shift_elem;
-        //         numerator += domain_over_domain_shift_elem * *code_word_elem;
-        //         domain_iter_elem *= generator;
-        //     }
-
-        //     numerator / denominator
-        // }
-
         let entrypoint = self.entrypoint();
-        let loop_dispatcher_lbl = format!("{entrypoint}_loop_dispatcher");
-        let multiple_iteration_loop = format!("{entrypoint}_multiple_iteration_loop");
-        let single_iteration_loop = format!("{entrypoint}_single_iteration_loop");
-        let multiple_iteration_wrapper = format!("{entrypoint}_if_body_wrapper");
         let generator = library.import(Box::new(PrimitiveRootOfUnity));
+        let partial_terms_pointer = library.kmalloc(MAX_CODEWORD_LENGTH * EXTENSION_DEGREE as u32);
+        let partial_terms_pointer_minus_one = partial_terms_pointer - bfe!(1);
 
-        let swap_top_and_third_xfe = triton_asm!(
-            // [xfe1] buf0 buf1 buf 2 [xfe0]
-            swap 6
-            swap 2
-            swap 8
-            swap 2
-            swap 1
-            swap 7
-            swap 1
-            // [xfe0] buf0 buf1 buf 2 [xfe1]
-        );
-
-        let swap_top_two_xfes = triton_asm!(
-            // _ y2 y1 y0 x2 x1 x0
-            swap 3
-            swap 1
-            swap 4
-            swap 1
-            swap 2
-            swap 5
-            swap 2
-
-            // _ x2 x1 x0 y2 y1 y0
-        );
-
-        let single_iteration_body = triton_asm!(
-                            /* Loop body:
-                1. Put a lifted $ geniacc $ on top of stack
-                2. calculate $ indeterminate - geniacc $
-                3. Calculate $ 1 / (indeterminate - geniacc) $
-                4. Multiply two top stack elements to get $ dodse = geniacc / (indeterminate - geniacc) $
-                5. Add this value to $ denominator $ while preserving $ dodse $
-                6. Read element from $ codewords $
-                7. Multiply this element with $ dodse $ and add to $ numerator $
-                8. Get next power of `geniacc`
-                */
-
-                /* 1. */
-                push 0
-                push 0
-                dup 9
-                // _ *stop_condition [indeterminate] geni geniacc *codeword_elem [denominator] [numerator] [geniacc]
-
-                /* 2. */
-                dup 14
-                dup 14
-                dup 14
-                dup 13
-                push -1
-                mul
+        // Partial terms are of the form $ g^i / (g^i - indeterminate) $
+        let calculate_and_store_partial_terms_loop_label =
+            format!("{entrypoint}_partial_terms_loop");
+        let calculate_and_store_partial_terms_code = triton_asm!(
+            // BEGIN:     _ *partial_terms_end_cond *partial_terms[0] generator [-indeterminate] 1
+            // INVARIANT: _ *partial_terms_end_cond *partial_terms[n] generator [-indeterminate] generator_acc
+            {calculate_and_store_partial_terms_loop_label}:
+                dup 3
+                dup 3
+                dup 3
+                dup 3
                 add
-                // _ *stop_condition [indeterminate] geni geniacc *codeword_elem [denominator] [numerator] [geniacc] [indeterminate - geniacc]
+                // _ *partial_terms_end_cond *partial_terms generator [-indeterminate] generator_acc [generator_acc-indeterminate]
 
-                /* 3. */
                 x_invert
-                // _ *stop_condition [indeterminate] geni geniacc *codeword_elem [denominator] [numerator] [geniacc] [1 / (indeterminate - geniacc)]
+                // _ *partial_terms_end_cond *partial_terms generator [-indeterminate] generator_acc [1/(generator_acc-indeterminate)]
 
-                /* 4. */
-                xx_mul
-                // _ *stop_condition [indeterminate] geni geniacc *codeword_elem [denominator] [numerator] [geniacc / (indeterminate - geniacc)]
-                // _ *stop_condition [indeterminate] geni geniacc *codeword_elem [denominator] [numerator] [dodse] <-- rename
-
-                /* 5. */
-                {&swap_top_and_third_xfe}
-
-                // _ *stop_condition [indeterminate] geni geniacc *codeword_elem [dodse] [numerator] [denominator]
+                dup 3
+                xb_mul
+                // _ *partial_terms_end_cond *partial_terms generator [-indeterminate] generator_acc [generator_acc/(generator_acc-indeterminate)]
 
                 dup 8
-                dup 8
-                dup 8
-                xx_add
-                // _ *stop_condition [indeterminate] geni geniacc *codeword_elem [dodse] [numerator] [denominator + dodse]
-                // _ *stop_condition [indeterminate] geni geniacc *codeword_elem [dodse] [numerator] [denominator'] <-- rename
-
-                {&swap_top_and_third_xfe}
-                // _ *stop_condition [indeterminate] geni geniacc *codeword_elem [denominator'] [numerator] [dodse]
-
-                /* 6. */
-                dup 9
-                read_mem {EXTENSION_DEGREE}
-                swap 13
+                write_mem {EXTENSION_DEGREE}
+                swap 6
                 pop 1
-                // _ *stop_condition [indeterminate] geni geniacc *codeword_elem_prev [denominator'] [numerator] [dodse] [code_word_elem]
-                // _ *stop_condition [indeterminate] geni geniacc *codeword_elem' [denominator'] [numerator] [dodse] [code_word_elem]     <-- rename
+                // _ *partial_terms_end_cond *partial_terms' generator [-indeterminate] generator_acc
 
-                /* 7. */
-                xx_mul
-                xx_add
-                // _ *stop_condition [indeterminate] geni geniacc *codeword_elem' [denominator'] [numerator + dodse * code_word_elem]
-                // _ *stop_condition [indeterminate] geni geniacc *codeword_elem' [denominator'] [numerator']   <-- rename
-
-                /* 8. */
-                swap 7
-                dup 8
+                dup 4
                 mul
-                swap 7
-                // _ *stop_condition [indeterminate] geni (geniacc * geni) *codeword_elem' [denominator'] [numerator']
-                // _ *stop_condition [indeterminate] geni geniacc' *codeword_elem' [denominator'] [numerator']   <-- rename
+                // _ *partial_terms_end_cond *partial_terms' generator [-indeterminate] generator_acc'
+
+                recurse_or_return
         );
 
-        const PARTIAL_UNROLLING_ITERATION_COUNT: usize = 16;
-        let multiple_iteration_body = (0..PARTIAL_UNROLLING_ITERATION_COUNT)
-            .map(|_| single_iteration_body.clone())
-            .collect::<Vec<_>>()
-            .concat();
+        // The numerator is the sum of codeword[n] * partial_terms[n], i.e. the
+        // inner product of the codeword and the partial terms.
+        let numerator_from_partial_sums_loop_label =
+            format!("{entrypoint}_numerator_from_partial_sums");
+        let numerator_from_partial_sums_loop_code = triton_asm!(
+            // BEGIN:     _ *ptec *partial_terms[0] [0]   *codeword[0] *partial_terms[0]
+            // INVARIANT: _ *ptec *partial_terms[n] [acc] *codeword[n] *partial_terms[n]
+            {numerator_from_partial_sums_loop_label}:
+                // _ *ptec *partial_terms[n] [acc] *codeword[n] *partial_terms[n]
+
+                xx_dot_step
+                // _ *ptec *partial_terms[n] [acc'] *codeword[n'] *partial_terms[n']
+
+                dup 0
+                swap 6
+                pop 1
+                // _ *ptec *partial_terms[n'] [acc'] *codeword[n'] *partial_terms[n']
+
+                recurse_or_return
+        );
+
+        // The denominator is the sum of all terms in `partial_terms`
+        let denominator_from_partial_sums_loop_label =
+            format!("{entrypoint}_denominator_from_partial_sums");
+        let denominator_from_partial_sums_loop_code = triton_asm!(
+            // START:     _ (*partial_terms-1) *partial_terms_last_word 0 0 [0]
+            // INVARIANT: _ (*partial_terms-1) *partial_terms[n]        0 0 [acc]
+            {denominator_from_partial_sums_loop_label}:
+                // _ (*partial_terms-1) *partial_terms[n] 0 0 [acc]
+
+                dup 5
+                read_mem {EXTENSION_DEGREE}
+                // _ (*partial_terms-1) *partial_terms[n] 0 0 [acc] [term] *partial_terms[n-1]
+
+                swap 9
+                pop 1
+                // _ (*partial_terms-1) *partial_terms[n-1] 0 0 [acc] [term]
+
+                xx_add
+                // _ (*partial_terms-1) *partial_terms[n-1] 0 0 [acc']
+
+                recurse_or_return
+        );
 
         triton_asm!(
             {entrypoint}:
                 // _ *codeword [indeterminate]
 
-                /* Get generator */
+                push -1
+                xb_mul
+                hint neg_indeterminate = stack[0..3]
+                // _ *codeword [-indeterminate]
+
+                /* Prepare stack for call to partial terms' loop */
                 dup 3
                 read_mem 1
                 pop 1
-                // _ *codeword [indeterminate] codeword_len
+                // _ *codeword [-indeterminate] codeword_len
+
+                /* assert `codeword_len <= MAX_CODEWORD_LENGTH`` */
+                push {MAX_CODEWORD_LENGTH + 1}
+                dup 1
+                lt
+                assert
+                // _ *codeword [-indeterminate] codeword_len
 
                 push 0
                 dup 1
-                // _ *codeword [indeterminate] codeword_len 0 codeword_len
+                // _ *codeword [-indeterminate] codeword_len [codeword_len; as u64]
 
-                /* Notice that this call to `PrimitiveRootOfUnity` will fail if `codeword_len` is not
-                   a valid `u32` (exceeds `u32::MAX`) which is desired behavior.
-                */
+                /* This call to get the generator will fail if codeword_len
+                   exceeds u32::MAX, or, if it is not a power of 2. Which is
+                   desired behavior. */
                 call {generator}
+                hint generator: BFieldElement = stack[0]
+                // _ *codeword [-indeterminate] codeword_len generator
 
-                /* Invert generator since codeword is traversed high-to-low */
-                invert
-                // _ *codeword [indeterminate] codeword_len generator^{-1}
-                // _ *codeword [indeterminate] len geni <-- rename
+                swap 1
+                // _ *codeword [-indeterminate] generator codeword_len
 
-                dup 0
-                swap 2
-                // _ *codeword [indeterminate] geni geni len
-
-                /* Find last word of `codeword` list */
                 push {EXTENSION_DEGREE}
                 mul
-                // _ *codeword [indeterminate] geni geni ptr_offset
-
-                dup 6
+                push {partial_terms_pointer}
                 add
-                // _ *codeword [indeterminate] geni geni *codeword_last_word
-                // _ *codeword [indeterminate] geni geniacc *codeword_last_word <-- rename
+                // _ *codeword [-indeterminate]  generator (*partial_terms_last_word+1)
+                // _ *codeword (-i2) (-i1) (-i0) generator (*partial_terms_last_word+1) <-- rename
+
+                swap 4
+                // _ *codeword (*partial_terms_last_word+1) (-i1) (-i0) generator (-i2)
+
+                push {partial_terms_pointer}
+                swap 4
+                // _ *codeword (*partial_terms_last_word+1) *partial_terms[0] (-i0) generator (-i2) (-i1)
+
+                swap 1
+                swap 2
+                swap 3
+                // _ *codeword (*partial_terms_last_word+1) *partial_terms[0] generator (-i2) (-i1) (-i0)
+                // _ *codeword (*partial_terms_last_word+1) *partial_terms[0] generator [-indeterminate] <-- rename
+
+                push 1
+                // _ *codeword (*partial_terms_last_word+1) *partial_terms[0] generator [-indeterminate] generator_acc
+
+                call {calculate_and_store_partial_terms_loop_label}
+                // _ *codeword (*partial_terms_last_word+1) (*partial_terms_last_word+1) generator [-indeterminate] generator_acc
+
+                pop 5
+                pop 1
+                // _ *codeword (*partial_terms_last_word+1)
+
+                swap 1
+                // _ (*partial_terms_last_word+1) *codeword
+
+                push 1
+                add
+                // _ (*partial_terms_last_word+1) *codeword[0]
+
+                push 0
+                push 0
+                push 0
+                // _ (*partial_terms_last_word+1) *codeword[0] [acc]
+
+                push {partial_terms_pointer}
+                swap 4
+                // _ (*partial_terms_last_word+1) *partial_terms[0] [acc] *codeword[0]
+
+                push {partial_terms_pointer}
+                // _ (*partial_terms_last_word+1) *partial_terms[0] [acc] *codeword[0] *partial_terms[0]
+
+                call {numerator_from_partial_sums_loop_label}
+                // _ (*partial_terms_last_word+1) (*partial_terms_last_word+1) [numerator] *codeword[last + 1] (*partial_terms_last_word+1)
+
+                pop 2
+                // _ (*partial_terms_last_word+1) (*partial_terms_last_word+1) [numerator]
+                hint numerator: XFieldElement = stack[0..3]
+
+                // _ (*partial_terms_last_word+1) (*partial_terms_last_word+1) n2 n1 n0    <-- rename
+
+
+                swap 2
+                swap 4
+                // _ n2 (*partial_terms_last_word+1) n0 n1 (*partial_terms_last_word+1)
+
+                push -1
+                add
+                // _ n2 (*partial_terms_last_word+1) n0 n1 *partial_terms_last_word
+
+                push {partial_terms_pointer_minus_one}
+                // _ n2 (*partial_terms_last_word+1) n0 n1 *partial_terms_last_word (*partial_terms - 1)
+
+                swap 2
+                swap 4
+                pop 1
+                // _ n2 n1 n0 (*partial_terms - 1) *partial_terms_last_word
+                // _ [numerator] (*partial_terms - 1) *partial_terms_last_word <-- rename
 
                 push 0
                 push 0
                 push 0
                 push 0
                 push 0
-                push 0
-                // _ *codeword [indeterminate] geni geniacc *codeword_last_word [denominator] [numerator]
+                // _ [numerator] (*partial_terms - 1) *partial_terms_last_word 0 0 [0]
 
-                call {loop_dispatcher_lbl}
-                // _ *codeword [indeterminate] geni geniacc *codeword [denominator] [numerator]
+                call {denominator_from_partial_sums_loop_label}
+                // _ [numerator] (*partial_terms - 1) *partial_terms_last_word 0 0 [denominator]
 
-                {&swap_top_two_xfes}
-                // _ *codeword [indeterminate] geni geniacc *codeword [numerator] [denominator]
+                swap 4
+                pop 1
+                swap 4
+                pop 1
+                swap 4
+                pop 2
+                // _ [numerator] [denominator]
+                hint denominator: XFieldElement = stack[0..2]
 
                 x_invert
                 xx_mul
-                // _ *codeword [indeterminate] geni geniacc *codeword [numerator / denominator]
-
-                swap 7
-                pop 1
-                swap 7
-                pop 1
-                swap 7
-                // _ [numerator / denominator] i0 geni geniacc *codeword id1
-
-                pop 5
                 // _ [numerator / denominator]
+                // _ [result]                  <-- rename
 
                 return
 
-            // INVARIANT:  *stop_condition [indeterminate] geni geniacc *codeword_elem [denominator] [numerator]
-            {multiple_iteration_loop}:
-                /* End-condition: `*stop_condition == *codeword_elem` */
-                /* Note that `geniacc == 1` could also be used for loop stop-condition but then the
-                   loop stop-condition would have to happen at the end of the loop body. */
-                dup 12
-                dup 7
-                eq // (stop_condition==codeword_elem)
-                skiz return
-                // _  *stop_condition [indeterminate] geni geniacc *codeword_elem [denominator] [numerator]
-
-                {&multiple_iteration_body}
-
-                recurse
-
-            {multiple_iteration_wrapper}:
-                pop 1
-                call {multiple_iteration_loop}
-                push 0
-                return
-
-            // INVARIANT:  *stop_condition [indeterminate] geni geniacc *codeword_elem [denominator] [numerator]
-            {single_iteration_loop}:
-                /* End-condition: `*stop_condition == *codeword_elem` */
-                /* Note that `geniacc == 1` could also be used for loop stop-condition but then the
-                loop stop-condition would have to happen at the end of the loop body. */
-                dup 12
-                dup 7
-                eq // stop_condition=?=codeword_elem
-                skiz return
-                // _  *stop_condition [indeterminate] geni geniacc *codeword_elem [denominator] [numerator]
-
-                {&single_iteration_body}
-
-                recurse
-
-            // INVARIANT:  *stop_condition [indeterminate] geni geniacc *codeword_elem [denominator] [numerator]
-            {loop_dispatcher_lbl}:
-                /* End-condition: `*stop_condition == *codeword_elem` */
-                /* Note that `geniacc == 1` could also be used for loop stop-condition but then the
-                   loop stop-condition would have to happen at the end of the loop body. */
-                dup 12      // _ stop_condition
-                dup 7       // _ stop_condition *codeword_elem
-
-                swap 1
-                push -1 mul
-                add     // _ (*codeword_elem-stop_condition)
-
-                push {EXTENSION_DEGREE * PARTIAL_UNROLLING_ITERATION_COUNT}
-                lt      // _ (3*BATCH_SIZE<(*codeword_elem-stop_condition))
-                push 1 swap 1
-                skiz call {multiple_iteration_wrapper}
-                skiz call {single_iteration_loop}
-
-                return
+            {&calculate_and_store_partial_terms_code}
+            {&numerator_from_partial_sums_loop_code}
+            {&denominator_from_partial_sums_loop_code}
         )
     }
 }
@@ -303,7 +272,10 @@ mod tests {
     use triton_vm::fri::barycentric_evaluate;
     use triton_vm::twenty_first::math::other::random_elements;
     use triton_vm::twenty_first::xfe_vec;
+    use twenty_first::math::traits::Inverse;
+    use twenty_first::math::traits::PrimitiveRootOfUnity;
 
+    use crate::library::STATIC_MEMORY_START_ADDRESS;
     use crate::rust_shadowing_helper_functions::list::list_insert;
     use crate::rust_shadowing_helper_functions::list::load_list_with_copy_elements;
     use crate::snippet_bencher::BenchmarkCase;
@@ -354,8 +326,30 @@ mod tests {
             let codeword_pointer = stack.pop().unwrap();
             let codeword =
                 load_list_with_copy_elements::<EXTENSION_DEGREE>(codeword_pointer, memory);
+            let codeword_length: u32 = codeword.len().try_into().unwrap();
+            assert!(codeword_length <= MAX_CODEWORD_LENGTH);
+
             let codeword: Vec<XFieldElement> = codeword.into_iter().map(|x| x.into()).collect_vec();
             let result = barycentric_evaluate(&codeword, indeterminate);
+
+            // Emulate effect on memory
+            let generator = BFieldElement::primitive_root_of_unity(codeword.len() as u64).unwrap();
+            let mut partial_terms_pointer = STATIC_MEMORY_START_ADDRESS
+                - bfe!(MAX_CODEWORD_LENGTH * EXTENSION_DEGREE as u32 - 1);
+            let mut gen_acc = bfe!(1);
+            for _ in 0..codeword_length {
+                let n = gen_acc;
+                let d = gen_acc - indeterminate;
+                let term: XFieldElement = d.inverse() * n;
+                memory.insert(partial_terms_pointer, term.coefficients[0]);
+                partial_terms_pointer.increment();
+                memory.insert(partial_terms_pointer, term.coefficients[1]);
+                partial_terms_pointer.increment();
+                memory.insert(partial_terms_pointer, term.coefficients[2]);
+                partial_terms_pointer.increment();
+
+                gen_acc *= generator;
+            }
 
             for word in result.coefficients.into_iter().rev() {
                 stack.push(word);
@@ -367,18 +361,24 @@ mod tests {
             let some_codeword_pointer = bfe!(19191919);
             let codeword_of_length_one =
                 self.prepare_state(xfe_vec![155], some_codeword_pointer, some_indeterminate);
-            let codeword_of_length_two = self.prepare_state(
+            let const_codeword_of_length_two = self.prepare_state(
+                xfe_vec![155, 155],
+                some_codeword_pointer,
+                some_indeterminate,
+            );
+            let non_const_codeword_of_length_two = self.prepare_state(
                 xfe_vec![155, 1_919_191_919],
                 some_codeword_pointer,
                 some_indeterminate,
             );
-            let codeword_of_length_8 =
+            let const_codeword_of_length_8 =
                 self.prepare_state(xfe_vec![155; 8], some_codeword_pointer, some_indeterminate);
 
             vec![
                 codeword_of_length_one,
-                codeword_of_length_two,
-                codeword_of_length_8,
+                const_codeword_of_length_two,
+                non_const_codeword_of_length_two,
+                const_codeword_of_length_8,
             ]
         }
 
