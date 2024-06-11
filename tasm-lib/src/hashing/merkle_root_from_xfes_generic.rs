@@ -36,51 +36,44 @@ impl BasicSnippet for MerkleRootFromXfesGeneric {
 
         let build_1st_layer = format!("{entrypoint}_build_parent_layer");
         let build_1st_layer_code = triton_asm!(
-            // INVARIANT: _ *parent_digests[-1] *parent_digests[n] *xfes[2*n]_last_word
+            // INVARIANT: _ (*parent_nodes - 4) *parent_digests[n] 0 0 0 0 *xfes[2*n]_last_word
             {build_1st_layer}:
-                // TODO: Replace end-condition check with `recurse_or_return`
-                dup 2
-                dup 2
-                eq
-                skiz
-                    return
-
                 push 0
                 push 0
                 dup 2
                 read_mem {EXTENSION_DEGREE}
-                // _ *parent_digests[-1] *parent_digests[n] *xfes[2*n] [0 0 right_xfe] *xfes[2*n - 1]
+                // _ (*parent_nodes - 4) *parent_digests[n] 0 0 0 0 *xfes[2*n] [0 0 right_xfe] *xfes[2*n - 1]
 
                 push 0
                 push 0
                 swap 2
-                // _ *parent_digests[-1] *parent_digests[n] *xfes[2*n] [0 0 right_xfe] 0 0 *xfes[2*n - 1]
+                // _ (*parent_nodes - 4) *parent_digests[n] 0 0 0 0 *xfes[2*n] [0 0 right_xfe] 0 0 *xfes[2*n - 1]
 
                 read_mem {EXTENSION_DEGREE}
-                // _ *parent_digests[-1] *parent_digests[n] *xfes[2*n] [0 0 right_xfe] [0 0 left_xfe] *xfes[2*(n-1)]
-                // _ *parent_digests[-1] *parent_digests[n] *xfes[2*n] [0 0 right_xfe] [0 0 left_xfe] *xfes[2*n]'
+                // _ (*parent_nodes - 4) *parent_digests[n] 0 0 0 0 *xfes[2*n] [0 0 right_xfe] [0 0 left_xfe] *xfes[2*(n-1)]
+                // _ (*parent_nodes - 4) *parent_digests[n] 0 0 0 0 *xfes[2*n] [0 0 right_xfe] [0 0 left_xfe] *xfes[2*n]'
 
                 swap 11
                 pop 1
-                // _ *parent_digests[-1] *parent_digests[n] *xfes[2*n]' [0 0 right_xfe] [0 0 left_xfe]
+                // _ (*parent_nodes - 4) *parent_digests[n] 0 0 0 0 *xfes[2*n]' [0 0 right_xfe] [0 0 left_xfe]
 
                 hash
-                // _ *parent_digests[-1] *parent_digests[n] *xfes[2*n]' [parent_digest]
+                // _ (*parent_nodes - 4) *parent_digests[n] 0 0 0 0 *xfes[2*n]' [parent_digest]
 
-                dup 6
+                dup 10
                 write_mem {DIGEST_LENGTH}
-                // _ *parent_digests[-1] *parent_digests[n] *xfes[2*n]' *parent_digests[n+1]
+                // _ (*parent_nodes - 4) *parent_digests[n] 0 0 0 0 *xfes[2*n]' *parent_digests[n+1]
 
                 push -10
                 add
-                // _ *parent_digests[-1] *parent_digests[n] *xfes[2*n]' *parent_digests[n-1]
+                // _ (*parent_nodes - 4) *parent_digests[n] 0 0 0 0 *xfes[2*n]' *parent_digests[n-1]
 
-                swap 2
+                swap 6
                 pop 1
-                // _ *parent_digests[-1] *parent_digests[n-1] *xfes[2*n]'
-                // _ *parent_digests[-1] *parent_digests[n]' *xfes[2*n]'
+                // _ (*parent_nodes - 4) *parent_digests[n-1] 0 0 0 0 *xfes[2*n]'
+                // _ (*parent_nodes - 4) *parent_digests[n]'  0 0 0 0 *xfes[2*n]'
 
-                recurse
+                recurse_or_return
         );
 
         triton_asm!(
@@ -150,16 +143,24 @@ impl BasicSnippet for MerkleRootFromXfesGeneric {
 
                 push {EXTENSION_DEGREE}
                 mul
-                // _ *parent_nodes - 4) *parent_nodes[last] *xfes xfe_offset_last_word
+                // _ (*parent_nodes - 4) *parent_nodes[last] *xfes xfe_offset_last_word
 
                 add
-                // _ *parent_nodes - 4) *parent_nodes[last] *xfes[last]_last_word
+                // _ (*parent_nodes - 4) *parent_nodes[last] *xfes[last]_last_word
+
+                push 0
+                push 0
+                push 0
+                push 0
+                swap 4
+                // _ (*parent_nodes - 4) *parent_nodes[last] 0 0 0 0 *xfes[last]_last_word
 
                 call {build_1st_layer}
-                // _ *parent_nodes - 4) *parent_digests[n] *xfes[2*n]_last_word
+                // _ (*parent_nodes - 4) *parent_digests[n] 0 0 0 0 *xfes[2*n]_last_word
 
-                pop 2
-                // _ *parent_nodes - 4)
+                pop 5
+                pop 1
+                // _ (*parent_nodes - 4)
 
                 push {DIGEST_LENGTH - 1}
                 add
