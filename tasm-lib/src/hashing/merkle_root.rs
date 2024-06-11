@@ -111,30 +111,6 @@ impl BasicSnippet for MerkleRoot {
                         return
                     // _ current_len *next_level *current_level
 
-                    // What is the stop-condition for `*current_level`?
-                    // It must be `*curr - current_length * DIGEST_LENGTH`
-                    dup 0
-                    dup 3
-                    push {-(DIGEST_LENGTH as isize)}
-                    mul
-                    add
-                    // _ current_len *next_level *current_level *current_level_stop
-
-                    swap 1
-                    // _ current_len *next_level *current_level_stop *current_level
-
-                    dup 2
-                    swap 1
-                    // _ current_len *next_level *current_level_stop *next_level *current_level
-
-                    call {calculate_parent_digests}
-                    // _ current_len *next_level *current_level_stop *next_level' *current_level_stop
-
-                    pop 1
-                    swap 1
-                    pop 1
-                    // _ current_len *next_level *next_level_next
-
                     /*Update `current_len` */
                     swap 2
                     log_2_floor
@@ -143,12 +119,41 @@ impl BasicSnippet for MerkleRoot {
                     push 2
                     pow
                     swap 2
-                    // _ (current_len / 2) *next_level *next_level'
-                    // _ current_len' *next_level *next_level'
+                    // _ (current_len / 2) *next_level *current_level
+                    // _ current_len' *next_level *current_level
+
+                    // What is the stop-condition for `*next_level`?
+                    // It must be `*next_level - current_len / 2 * DIGEST_LENGTH`
+                    dup 1
+                    dup 3
+                    push {-(DIGEST_LENGTH as isize)}
+                    mul
+                    add
+                    // _ current_len' *next_level *current_level *next_level_stop
+
+                    swap 1
+                    // _ current_len' *next_level *next_level_stop *current_level
+
+                    dup 2
+                    swap 1
+                    // _ current_len' *next_level *next_level_stop *next_level *current_level
+
+                    push 0
+                    push 0
+                    push 0
+                    push 0
+
+                    // _ current_len' *next_level *next_elem_stop *next_elem *curr_elem 0 0 0 0
+                    call {calculate_parent_digests}
+                    // _ current_len' *next_level *next_elem_stop *next_elem_stop *curr_elem_stop 0 0 0 0
+
+                    pop 5
+                    pop 1
+                    // _ current_len' *next_level *next_elem_stop
 
                     /* Update `*current_level` based on `*next_level` */
                     swap 1
-                    // _ (current_len / 2) *next_level' *next_level
+                    // _ current_len' *next_level' *next_level
 
                     push {DIGEST_LENGTH - 1}
                     add
@@ -157,48 +162,40 @@ impl BasicSnippet for MerkleRoot {
                     recurse
 
                 // Populate the `*next` digest list
-                // START: _ *current_level_stop *next_last_elem_first_word *curr_last_word
-                // INVARIANT: _ *current_level_stop *next_elem *curr_elem
-                // END: _ *current_level_stop *next *current_level_stop
+                // INVARIANT: _ *next_elem_stop *next_elem *curr_elem 0 0 0 0
                 {calculate_parent_digests}:
-                    dup 2
-                    dup 1
-                    eq
-                    skiz
-                        return
-                    // _ *curr *next_elem *curr_elem[n]
 
-                    dup 0
+                    dup 4
                     read_mem {DIGEST_LENGTH}
                     read_mem {DIGEST_LENGTH}
-                    // _ *curr *next_elem *curr_elem [right] [left] (*curr_elem[n] - 10)
-                    // _ *curr *next_elem *curr_elem [right] [left] *curr_elem[n - 2]
-                    // _ *curr *next_elem *curr_elem [right] [left] *curr_elem'
+                    // _ *next_elem_stop *next_elem *curr_elem 0 0 0 0 [right] [left] (*curr_elem[n] - 10)
+                    // _ *next_elem_stop *next_elem *curr_elem 0 0 0 0 [right] [left] *curr_elem[n - 2]
+                    // _ *next_elem_stop *next_elem *curr_elem 0 0 0 0 [right] [left] *curr_elem'
 
-                    swap 11
+                    swap 15
                     pop 1
-                    // _ *curr *next_elem *curr_elem' [right] [left]
+                    // _ *next_elem_stop *next_elem *curr_elem' 0 0 0 0 [right] [left]
 
                     hash
-                    // _ *curr *next_elem *curr_elem' [parent_digest]
+                    // _ *next_elem_stop *next_elem *curr_elem' 0 0 0 0 [parent_digest]
 
-                    dup 6
-                    // _ *curr *next_elem *curr_elem' [parent_digest] *next_elem
+                    dup 10
+                    // _ *next_elem_stop *next_elem *curr_elem' 0 0 0 0 [parent_digest] *next_elem
 
                     write_mem {DIGEST_LENGTH}
-                    // _ *curr *next_elem *curr_elem' (*next_elem + 5)
+                    // _ *next_elem_stop *next_elem *curr_elem' 0 0 0 0 (*next_elem + 5)
 
                     push -10
                     add
-                    // _ *curr *next_elem *curr_elem' (*next_elem - 5)
-                    // _ *curr *next_elem *curr_elem' *next_elem[n-1]
-                    // _ *curr *next_elem *curr_elem' *next_elem'
+                    // _ *next_elem_stop *next_elem *curr_elem' 0 0 0 0 (*next_elem - 5)
+                    // _ *next_elem_stop *next_elem *curr_elem' 0 0 0 0 *next_elem[n-1]
+                    // _ *next_elem_stop *next_elem *curr_elem' 0 0 0 0 *next_elem'
 
-                    swap 2
+                    swap 6
                     pop 1
-                    // _ *curr *next_elem' *curr_elem'
+                    // _ *next_elem_stop *next_elem' *curr_elem' 0 0 0 0
 
-                    recurse
+                    recurse_or_return
         )
     }
 }
@@ -246,13 +243,17 @@ impl Function for MerkleRoot {
     }
 
     fn corner_case_initial_states(&self) -> Vec<FunctionInitialState> {
-        let height_0 = self.init_state(vec![Digest::default()], BFieldElement::zero());
+        let height_0_a = self.init_state(vec![Digest::default()], BFieldElement::zero());
+        let height_0_b = self.init_state(
+            vec![Digest::new([bfe!(6), bfe!(5), bfe!(4), bfe!(3), bfe!(2)])],
+            bfe!(1u64 << 44),
+        );
         let height_1 = self.init_state(
             vec![Digest::default(), Digest::default()],
             BFieldElement::zero(),
         );
 
-        vec![height_0, height_1]
+        vec![height_0_a, height_0_b, height_1]
     }
 }
 
