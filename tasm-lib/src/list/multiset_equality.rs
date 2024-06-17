@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use itertools::Itertools;
 use num::Zero;
 use num_traits::One;
 use rand::random;
@@ -130,14 +131,18 @@ impl DeprecatedSnippet for MultisetEquality {
     }
 
     fn function_code(&self, library: &mut Library) -> String {
+        let entrypoint = self.entrypoint_name();
         let length_snippet = library.import(Box::new(Length::new(DataType::Digest)));
         let first_element_offset = LIST_METADATA_SIZE;
         let hash_varlen = library.import(Box::new(HashVarlen));
-        let entrypoint = self.entrypoint_name();
         const DIGEST_LENGTH_PLUS_ONE: usize = DIGEST_LENGTH + 1;
 
-        format!(
-            "
+        let early_abort_label = format!("{entrypoint}_early_abort");
+        let continue_label = format!("{entrypoint}_continue");
+        let running_product_label = format!("{entrypoint}_running_product");
+        let running_product_loop_label = format!("{entrypoint}_running_product_loop");
+
+        triton_asm!(
             // BEFORE: _ list_a list_b
             // AFTER:  _ list_a==list_b (as multisets, or up to permutation)
             {entrypoint}:
@@ -156,13 +161,13 @@ impl DeprecatedSnippet for MultisetEquality {
                 // early return if lengths mismatch
                 // otherwise continue
                 push 1 swap 1           // _ list_a list_b len_b 1 (len_a!=len_b)
-                skiz call {entrypoint}_early_abort
-                skiz call {entrypoint}_continue
+                skiz call {early_abort_label}
+                skiz call {continue_label}
 
                 // _ (list_a == list_b) (as multisets, or up to permutation)
                 return
 
-            {entrypoint}_early_abort:
+            {early_abort_label}:
                 // _ list_a list_b len_b 1
                 pop 4
 
@@ -173,7 +178,7 @@ impl DeprecatedSnippet for MultisetEquality {
                 push 0
                 return
 
-            {entrypoint}_continue:
+            {continue_label}:
                 // _ list_a list_b len
 
                 // hash list_a
@@ -194,11 +199,11 @@ impl DeprecatedSnippet for MultisetEquality {
                 hash  // _ list_a list_b len d4 d3 d2 d1 d0
                 pop 2 // _ list_a list_b len d4 d3 d2
 
-                call {entrypoint}_running_product // _ list_a list_b len d4 d3 d2 rpb2 rpb1 rpb0
+                call {running_product_label} // _ list_a list_b len d4 d3 d2 rpb2 rpb1 rpb0
                 dup 8 // _ list_a list_b len d4 d3 d2 rpb2 rpb1 rpb0 list_a
                 dup 7 // _ list_a list_b len d4 d3 d2 rpb2 rpb1 rpb0 list_a len
                 dup 7 dup 7 dup 7 // _ list_a list_b len d4 d3 d2 rpb2 rpb1 rpb0 list_a len d4 d3 d2
-                call {entrypoint}_running_product // _ list_a list_b len d4 d3 d2 rpb2 rpb1 rpb0 list_a len d4 d3 d2 rpa2 rpa1 rpa0
+                call {running_product_label} // _ list_a list_b len d4 d3 d2 rpb2 rpb1 rpb0 list_a len d4 d3 d2 rpa2 rpa1 rpa0
 
                 // test equality
                 dup 8 // _ list_a list_b len d4 d3 d2 rpb2 rpb1 rpb0 list_a len d4 d3 d2 rpa2 rpa1 rpa0 rpb0
@@ -219,14 +224,14 @@ impl DeprecatedSnippet for MultisetEquality {
 
             // BEFORE: _ list len d2 d1 d0
             // AFTER:  _ list len d2 d1 d0 rp2 rp1 rp0
-            {entrypoint}_running_product:
+            {running_product_label}:
                 // initialize loop
                 dup 4 // _ list len d2 d1 d0 list
                 push {first_element_offset} add // _ list len d2 d1 d0 addr
                 dup 4 // _ list len d2 d1 d0 addr itrs_left
                 push 0 push 0 push 1 // _ list len d2 d1 d0 addr itrs_left 0 0 1
 
-                call {entrypoint}_running_product_loop
+                call {running_product_loop_label}
                 // _ list len d2 d1 d0 addr* 0 rp2 rp1 rp0
 
                 // clean up and return
@@ -239,7 +244,7 @@ impl DeprecatedSnippet for MultisetEquality {
                 return
 
             // INVARIANT: _ list len d2 d1 d0 addr itrs_left rp2 rp1 rp0
-            {entrypoint}_running_product_loop:
+            {running_product_loop_label}:
                 // test termination condition
                 dup 3       // _ list len d2 d1 d0 addr itrs_left rp2 rp1 rp0 itrs_left
                 push 0 eq   // _ list len d2 d1 d0 addr itrs_left rp2 rp1 rp0 itrs_left==0
@@ -268,8 +273,9 @@ impl DeprecatedSnippet for MultisetEquality {
                 xx_mul                // _ list len d2 d1 d0 addr+{DIGEST_LENGTH} (itrs_left-1) rp2' rp1' rp0'
 
                 recurse
-            "
         )
+        .iter()
+        .join("\n")
     }
 
     fn crash_conditions(&self) -> Vec<String> {
@@ -277,43 +283,36 @@ impl DeprecatedSnippet for MultisetEquality {
     }
 
     fn gen_input_states(&self) -> Vec<InitVmState> {
-        vec![
-            self.random_equal_lists(0),
-            self.random_equal_lists(1),
-            self.random_equal_lists(2),
-            self.random_equal_lists(3),
-            self.random_equal_lists(4),
-            self.random_equal_lists(5),
-            self.random_equal_lists(6),
-            self.random_equal_lists(7),
-            self.random_equal_lists(8),
-            self.random_equal_lists(9),
-            self.random_equal_lists(10),
-            self.random_equal_lists(11),
-            self.random_equal_lists(12),
-            self.random_equal_lists(13),
-            self.random_equal_lists(14),
-            self.random_equal_lists(15),
-            self.random_equal_lists(21),
-            self.random_unequal_lists(1),
-            self.random_unequal_lists(2),
-            self.random_unequal_lists(3),
-            self.random_unequal_lists(10),
-            self.random_unequal_lists(21),
-            self.random_unequal_length_lists(0, 5),
-            self.random_unequal_length_lists(1, 2),
-            self.random_unequal_length_lists(2, 1),
-            self.random_unequal_length_lists(10, 17),
-            self.random_unequal_length_lists(21, 0),
-            self.random_lists_one_element_flipped(1),
-            self.random_lists_one_element_flipped(2),
-            self.random_lists_one_element_flipped(3),
-            self.random_lists_one_element_flipped(4),
-            self.random_lists_one_element_flipped(5),
-            self.random_lists_one_element_flipped(7),
-            self.random_lists_one_element_flipped(20),
-            self.random_lists_one_element_flipped(21),
+        let mut input_states = vec![];
+        for i in 0..15 {
+            input_states.push(self.random_equal_lists(i));
+        }
+
+        [
+            input_states,
+            vec![
+                self.random_equal_lists(21),
+                self.random_unequal_lists(1),
+                self.random_unequal_lists(2),
+                self.random_unequal_lists(3),
+                self.random_unequal_lists(10),
+                self.random_unequal_lists(21),
+                self.random_unequal_length_lists(0, 5),
+                self.random_unequal_length_lists(1, 2),
+                self.random_unequal_length_lists(2, 1),
+                self.random_unequal_length_lists(10, 17),
+                self.random_unequal_length_lists(21, 0),
+                self.random_lists_one_element_flipped(1),
+                self.random_lists_one_element_flipped(2),
+                self.random_lists_one_element_flipped(3),
+                self.random_lists_one_element_flipped(4),
+                self.random_lists_one_element_flipped(5),
+                self.random_lists_one_element_flipped(7),
+                self.random_lists_one_element_flipped(20),
+                self.random_lists_one_element_flipped(21),
+            ],
         ]
+        .concat()
     }
 
     fn common_case_input_state(&self) -> InitVmState {
