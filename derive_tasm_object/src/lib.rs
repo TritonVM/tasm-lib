@@ -401,14 +401,12 @@ fn generate_tokens_for_struct_with_unnamed_fields(fields: &syn::FieldsUnnamed) -
 
     let sizers = fields_iterator
         .clone()
-        .enumerate()
-        .map(|(_i, f)| generate_tasm_for_sizer_postprocess(&f.ty))
+        .map(|f| generate_tasm_for_sizer_postprocess(&f.ty))
         .collect::<Vec<_>>();
 
     let jumpers = fields_iterator
         .clone()
-        .enumerate()
-        .map(|(_i, f)| generate_tasm_for_extend_field_start_with_jump_amount(&f.ty))
+        .map(|f| generate_tasm_for_extend_field_start_with_jump_amount(&f.ty))
         .collect::<Vec<_>>();
 
     let field_types = fields_iterator
