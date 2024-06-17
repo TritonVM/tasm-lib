@@ -133,7 +133,6 @@ impl DeprecatedSnippet for MultisetEquality {
     fn function_code(&self, library: &mut Library) -> String {
         let entrypoint = self.entrypoint_name();
         let length_snippet = library.import(Box::new(Length::new(DataType::Digest)));
-        let first_element_offset = LIST_METADATA_SIZE;
         let hash_varlen = library.import(Box::new(HashVarlen));
         const DIGEST_LENGTH_PLUS_ONE: usize = DIGEST_LENGTH + 1;
 
@@ -143,24 +142,24 @@ impl DeprecatedSnippet for MultisetEquality {
         let running_product_loop_label = format!("{entrypoint}_running_product_loop");
 
         triton_asm!(
-            // BEFORE: _ list_a list_b
+            // BEFORE: _ *list_a *list_b
             // AFTER:  _ list_a==list_b (as multisets, or up to permutation)
             {entrypoint}:
 
                 // read lengths of lists
-                dup 1 dup 1             // _ list_a list_b list_a list_b
-                call {length_snippet}   // _ list_a list_b list_a len_b
-                swap 1                  // _ list_a list_b len_b list_a
-                call {length_snippet}   // _ list_a list_b len_b len_a
+                dup 1 dup 1             // _ *list_a *list_b *list_a *list_b
+                call {length_snippet}   // _ *list_a *list_b *list_a len_b
+                swap 1                  // _ *list_a *list_b len_b *list_a
+                call {length_snippet}   // _ *list_a *list_b len_b len_a
 
                 // equate lengths and return early if possible
-                dup 1                   // _ list_a list_b len_b len_a len_b
-                eq                      // _ list_a list_b len_b (len_a==len_b)
-                push 0 eq               // _ list_a list_b len_b (len_a!=len_b)
+                dup 1                   // _ *list_a *list_b len_b len_a len_b
+                eq                      // _ *list_a *list_b len_b (len_a==len_b)
+                push 0 eq               // _ *list_a *list_b len_b (len_a!=len_b)
 
                 // early return if lengths mismatch
                 // otherwise continue
-                push 1 swap 1           // _ list_a list_b len_b 1 (len_a!=len_b)
+                push 1 swap 1           // _ *list_a *list_b len_b 1 (len_a!=len_b)
                 skiz call {early_abort_label}
                 skiz call {continue_label}
 
@@ -168,7 +167,7 @@ impl DeprecatedSnippet for MultisetEquality {
                 return
 
             {early_abort_label}:
-                // _ list_a list_b len_b 1
+                // _ *list_a *list_b len_b 1
                 pop 4
 
                 // push return value (false)
@@ -179,100 +178,100 @@ impl DeprecatedSnippet for MultisetEquality {
                 return
 
             {continue_label}:
-                // _ list_a list_b len
+                // _ *list_a *list_b len
 
                 // hash list_a
-                dup 2 // _ list_a list_b len list_a
-                push {first_element_offset} add // _ list_a list_b len (list_a+n)
-                dup 1                    // _ list_a list_b len list_a len
-                push {DIGEST_LENGTH} mul // _ list_a list_b len list_a) (len*{DIGEST_LENGTH})
-                call {hash_varlen}       // _ list_a list_b len da4 da3 da2 da1 da0
+                dup 2                    // _ *list_a *list_b len *list_a
+                push 1 add               // _ *list_a *list_b len *list_a[0]
+                dup 1                    // _ *list_a *list_b len *list_a[0] len
+                push {DIGEST_LENGTH} mul // _ *list_a *list_b len *list_a[0] (len*{DIGEST_LENGTH})
+                call {hash_varlen}       // _ *list_a *list_b len da4 da3 da2 da1 da0
 
                 // hash list_b
-                dup 6 // _ list_a list_b len da4 da3 da2 da1 da0 list_b
-                push {first_element_offset} add // _ list_a list_b len (list_a+n)
-                dup 6 // _ list_a list_b len da4 da3 da2 da1 da0 list_b len
-                push {DIGEST_LENGTH} mul // _ list_a list_b len da4 da3 da2 da1 da0 list_b (len*{DIGEST_LENGTH})
-                call {hash_varlen} // _ list_a list_b len da4 da3 da2 da1 da0 db4 db3 db2 db1 db0
+                dup 6                            // _ *list_a *list_b len da4 da3 da2 da1 da0 *list_b
+                push 1 add                       // _ *list_a *list_b len *list_b[0]
+                dup 6                            // _ *list_a *list_b len da4 da3 da2 da1 da0 *list_b[0] len
+                push {DIGEST_LENGTH} mul         // _ *list_a *list_b len da4 da3 da2 da1 da0 *list_b[0] (len*{DIGEST_LENGTH})
+                call {hash_varlen}               // _ *list_a *list_b len da4 da3 da2 da1 da0 db4 db3 db2 db1 db0
 
                 // hash together
-                hash  // _ list_a list_b len d4 d3 d2 d1 d0
-                pop 2 // _ list_a list_b len d4 d3 d2
+                hash  // _ *list_a *list_b len d4 d3 d2 d1 d0
+                pop 2 // _ *list_a *list_b len d4 d3 d2
 
-                call {running_product_label} // _ list_a list_b len d4 d3 d2 rpb2 rpb1 rpb0
-                dup 8 // _ list_a list_b len d4 d3 d2 rpb2 rpb1 rpb0 list_a
-                dup 7 // _ list_a list_b len d4 d3 d2 rpb2 rpb1 rpb0 list_a len
-                dup 7 dup 7 dup 7 // _ list_a list_b len d4 d3 d2 rpb2 rpb1 rpb0 list_a len d4 d3 d2
-                call {running_product_label} // _ list_a list_b len d4 d3 d2 rpb2 rpb1 rpb0 list_a len d4 d3 d2 rpa2 rpa1 rpa0
+                call {running_product_label} // _ *list_a *list_b len d4 d3 d2 rpb2 rpb1 rpb0
+                dup 8                        // _ *list_a *list_b len d4 d3 d2 rpb2 rpb1 rpb0 *list_a
+                dup 7                        // _ *list_a *list_b len d4 d3 d2 rpb2 rpb1 rpb0 *list_a len
+                dup 7 dup 7 dup 7            // _ *list_a *list_b len d4 d3 d2 rpb2 rpb1 rpb0 *list_a len d4 d3 d2
+                call {running_product_label} // _ *list_a *list_b len d4 d3 d2 rpb2 rpb1 rpb0 *list_a len d4 d3 d2 rpa2 rpa1 rpa0
 
                 // test equality
-                dup 8 // _ list_a list_b len d4 d3 d2 rpb2 rpb1 rpb0 list_a len d4 d3 d2 rpa2 rpa1 rpa0 rpb0
-                eq //  _ list_a list_b len d4 d3 d2 rpb2 rpb1 rpb0 list_a len d4 d3 d2 rpa2 rpa1 rpa0==rpb0
-                swap 1 //  _ list_a list_b len d4 d3 d2 rpb2 rpb1 rpb0 list_a len d4 d3 d2 rpa2 rpa0==rpb0 rpa1
-                dup 9 //   _ list_a list_b len d4 d3 d2 rpb2 rpb1 rpb0 list_a len d4 d3 d2 rpa2 rpa0==rpb0 rpa1 rpb1
-                eq mul // _ list_a list_b len d4 d3 d2 rpb2 rpb1 rpb0 list_a len d4 d3 d2 rpa2 rpa0==rpb0&&rpa1==rpb1
-                swap 1 // _ list_a list_b len d4 d3 d2 rpb2 rpb1 rpb0 list_a len d4 d3 d2 rpa0==rpb0&&rpa1==rpb1 rpa2
-                dup 9 // _ list_a list_b len d4 d3 d2 rpb2 rpb1 rpb0 list_a len d4 d3 d2 rpa0==rpb0&&rpa1==rpb1 rpa2 rpb2
-                eq mul // _ list_a list_b len d4 d3 d2 rpb2 rpb1 rpb0 list_a len d4 d3 d2 rpa0==rpb0&&rpa1==rpb1&&rpa2==rpb2
+                dup 8  // _ *list_a *list_b len d4 d3 d2 rpb2 rpb1 rpb0 *list_a len d4 d3 d2 rpa2 rpa1 rpa0 rpb0
+                eq     // _ *list_a *list_b len d4 d3 d2 rpb2 rpb1 rpb0 *list_a len d4 d3 d2 rpa2 rpa1 rpa0==rpb0
+                swap 1 // _ *list_a *list_b len d4 d3 d2 rpb2 rpb1 rpb0 *list_a len d4 d3 d2 rpa2 rpa0==rpb0 rpa1
+                dup 9  // _ *list_a *list_b len d4 d3 d2 rpb2 rpb1 rpb0 *list_a len d4 d3 d2 rpa2 rpa0==rpb0 rpa1 rpb1
+                eq mul // _ *list_a *list_b len d4 d3 d2 rpb2 rpb1 rpb0 *list_a len d4 d3 d2 rpa2 rpa0==rpb0&&rpa1==rpb1
+                swap 1 // _ *list_a *list_b len d4 d3 d2 rpb2 rpb1 rpb0 *list_a len d4 d3 d2 rpa0==rpb0&&rpa1==rpb1 rpa2
+                dup 9  // _ *list_a *list_b len d4 d3 d2 rpb2 rpb1 rpb0 *list_a len d4 d3 d2 rpa0==rpb0&&rpa1==rpb1 rpa2 rpb2
+                eq mul // _ *list_a *list_b len d4 d3 d2 rpb2 rpb1 rpb0 *list_a len d4 d3 d2 rpa0==rpb0&&rpa1==rpb1&&rpa2==rpb2
 
                 // clean up and return
-                swap 14 // _ rpa0==rpb0&&rpa1==rpb1 rpa2 rpb2 list_b len d4 d3 d2 rpb2 rpb1 rpb0 list_a len d4 d3 d2 list_a
+                swap 14 // _ rpa0==rpb0&&rpa1==rpb1 rpa2 rpb2 *list_b len d4 d3 d2 rpb2 rpb1 rpb0 *list_a len d4 d3 d2 list_a
                 pop 5 pop 5 pop 4
                 // _ (rpa0==rpb0&&rpa1==rpb1)
 
                 return
 
-            // BEFORE: _ list len d2 d1 d0
-            // AFTER:  _ list len d2 d1 d0 rp2 rp1 rp0
+            // BEFORE: _ *list len d2 d1 d0
+            // AFTER:  _ *list len d2 d1 d0 rp2 rp1 rp0
             {running_product_label}:
                 // initialize loop
-                dup 4 // _ list len d2 d1 d0 list
-                push {first_element_offset} add // _ list len d2 d1 d0 addr
-                dup 4 // _ list len d2 d1 d0 addr itrs_left
-                push 0 push 0 push 1 // _ list len d2 d1 d0 addr itrs_left 0 0 1
+                dup 4                // _ *list len d2 d1 d0 *list
+                push 1 add           // _ *list len d2 d1 d0 addr
+                dup 4                // _ *list len d2 d1 d0 addr itrs_left
+                push 0 push 0 push 1 // _ *list len d2 d1 d0 addr itrs_left 0 0 1
 
                 call {running_product_loop_label}
-                // _ list len d2 d1 d0 addr* 0 rp2 rp1 rp0
+                // _ *list len d2 d1 d0 addr* 0 rp2 rp1 rp0
 
                 // clean up and return
-                swap 2 // _ list len d2 d1 d0 addr* 0 rp0 rp1 rp2
-                swap 4 // _ list len d2 d1 d0 rp2 0 rp0 rp1 addr*
-                pop 1  // _ list len d2 d1 d0 rp2 0 rp0 rp1
-                swap 2 // _ list len d2 d1 d0 rp2 rp1 rp0 0
-                pop 1  // _ list len d2 d1 d0 rp2 rp1 rp0
+                swap 2 // _ *list len d2 d1 d0 addr* 0 rp0 rp1 rp2
+                swap 4 // _ *list len d2 d1 d0 rp2 0 rp0 rp1 addr*
+                pop 1  // _ *list len d2 d1 d0 rp2 0 rp0 rp1
+                swap 2 // _ *list len d2 d1 d0 rp2 rp1 rp0 0
+                pop 1  // _ *list len d2 d1 d0 rp2 rp1 rp0
 
                 return
 
-            // INVARIANT: _ list len d2 d1 d0 addr itrs_left rp2 rp1 rp0
+            // INVARIANT: _ *list len d2 d1 d0 addr itrs_left rp2 rp1 rp0
             {running_product_loop_label}:
                 // test termination condition
-                dup 3       // _ list len d2 d1 d0 addr itrs_left rp2 rp1 rp0 itrs_left
-                push 0 eq   // _ list len d2 d1 d0 addr itrs_left rp2 rp1 rp0 itrs_left==0
-                skiz return // _ list len d2 d1 d0 addr itrs_left rp2 rp1 rp0
+                dup 3       // _ *list len d2 d1 d0 addr itrs_left rp2 rp1 rp0 itrs_left
+                push 0 eq   // _ *list len d2 d1 d0 addr itrs_left rp2 rp1 rp0 itrs_left==0
+                skiz return // _ *list len d2 d1 d0 addr itrs_left rp2 rp1 rp0
 
                 // read addr+2, addr+1, addr+0
                 dup 4 push 2 add read_mem 3
-                // _ list len d2 d1 d0 addr itrs_left rp2 rp1 rp0 m2 m1 m0 (addr - 1)
+                // _ *list len d2 d1 d0 addr itrs_left rp2 rp1 rp0 m2 m1 m0 (addr - 1)
 
                 // addr += DIGEST_LENGTH + 1
-                push {DIGEST_LENGTH_PLUS_ONE} add // _ list len d2 d1 d0 addr itrs_left rp2 rp1 rp0 m2 m1 m0 addr+{DIGEST_LENGTH}
-                swap 8 // _ list len d2 d1 d0 addr+{DIGEST_LENGTH} itrs_left rp2 rp1 rp0 m2 m1 m0 addr
-                pop 1  // _ list len d2 d1 d0 addr+{DIGEST_LENGTH} itrs_left rp2 rp1 rp0 m2 m1 m0
+                push {DIGEST_LENGTH_PLUS_ONE} add // _ *list len d2 d1 d0 addr itrs_left rp2 rp1 rp0 m2 m1 m0 addr+{DIGEST_LENGTH}
+                swap 8                            // _ *list len d2 d1 d0 addr+{DIGEST_LENGTH} itrs_left rp2 rp1 rp0 m2 m1 m0 addr
+                pop 1                             // _ *list len d2 d1 d0 addr+{DIGEST_LENGTH} itrs_left rp2 rp1 rp0 m2 m1 m0
 
                 push -1
                 xb_mul
-                // _ list len d2 d1 d0 addr+{DIGEST_LENGTH} itrs_left rp2 rp1 rp0 (-m2) (-m1) (-m0)
+                // _ *list len d2 d1 d0 addr+{DIGEST_LENGTH} itrs_left rp2 rp1 rp0 (-m2) (-m1) (-m0)
 
                 // itrs_left -= 1
-                swap 6              // _ list len d2 d1 d0 addr+{DIGEST_LENGTH} (-m0) rp2 rp1 rp0 (-m2) (-m1) itrs_left
-                push -1 add swap 6  // _ list len d2 d1 d0 addr+{DIGEST_LENGTH} (itrs_left-1) rp2 rp1 rp0 (-m2) (-m1) (-m0)
+                swap 6              // _ *list len d2 d1 d0 addr+{DIGEST_LENGTH} (-m0) rp2 rp1 rp0 (-m2) (-m1) itrs_left
+                push -1 add swap 6  // _ *list len d2 d1 d0 addr+{DIGEST_LENGTH} (itrs_left-1) rp2 rp1 rp0 (-m2) (-m1) (-m0)
 
-                // subtract indeterminate
-                dup 10 dup 10 dup 10 // _ list len d2 d1 d0 addr+{DIGEST_LENGTH} (itrs_left-1) rp2 rp1 rp0 (-m2) (-m1) (-m0) d2 d1 d0
-                xx_add                // _ list len d2 d1 d0 addr+{DIGEST_LENGTH} (itrs_left-1) rp2 rp1 rp0 (d2-m2) (d1-m1) (d0-m0)
+                // add indeterminate
+                dup 10 dup 10 dup 10  // _ *list len d2 d1 d0 addr+{DIGEST_LENGTH} (itrs_left-1) rp2 rp1 rp0 (-m2) (-m1) (-m0) d2 d1 d0
+                xx_add                // _ *list len d2 d1 d0 addr+{DIGEST_LENGTH} (itrs_left-1) rp2 rp1 rp0 (d2-m2) (d1-m1) (d0-m0)
 
                 // multiply into running product
-                xx_mul                // _ list len d2 d1 d0 addr+{DIGEST_LENGTH} (itrs_left-1) rp2' rp1' rp0'
+                xx_mul                // _ *list len d2 d1 d0 addr+{DIGEST_LENGTH} (itrs_left-1) rp2' rp1' rp0'
 
                 recurse
         )
