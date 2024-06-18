@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use itertools::Itertools;
 use rand::Rng;
 use triton_vm::prelude::*;
 
@@ -64,8 +65,7 @@ impl DeprecatedSnippet for SwapDigest {
 
     fn function_code(&self, _library: &mut Library) -> String {
         let entrypoint = self.entrypoint_name();
-        format!(
-            "
+        triton_asm!(
             // Before: _ b4 b3 b2 b1 b0 a4 a3 a2 a1 a0
             // After:  _ a4 a3 a2 a1 a0 b4 b3 b2 b1 b0
             {entrypoint}:
@@ -93,8 +93,9 @@ impl DeprecatedSnippet for SwapDigest {
                 swap 5 // _ a4 a3 a2 a1 a0 b4 b3 b2 b1 b0
 
                 return
-            "
         )
+        .iter()
+        .join("\n")
     }
 
     fn crash_conditions(&self) -> Vec<String> {
