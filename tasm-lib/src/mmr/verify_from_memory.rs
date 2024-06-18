@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use itertools::Itertools;
 use num::One;
 use rand::random;
 use rand::thread_rng;
@@ -152,70 +153,21 @@ impl DeprecatedSnippet for MmrVerifyFromMemory {
     }
 
     fn function_code(&self, library: &mut Library) -> String {
-        let leaf_index_to_mt_index = library.import(Box::new(MmrLeafIndexToMtIndexAndPeakIndex));
+        let entrypoint = self.entrypoint_name();
 
+        let leaf_index_to_mt_index = library.import(Box::new(MmrLeafIndexToMtIndexAndPeakIndex));
         let get_list_element = library.import(Box::new(Get::new(DataType::Digest)));
         let u32_is_odd = library.import(Box::new(Isodd));
-        let entrypoint = self.entrypoint_name();
         let eq_u64 = library.import(Box::new(EqU64));
         let div_2 = library.import(Box::new(Div2U64));
         let swap_digests = library.import(Box::new(SwapDigest));
         let eq_digest = library.import(Box::new(EqDigest));
-        format!(
-            "
-                // BEFORE: _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo [digest (leaf_digest)] *auth_path
-                // AFTER:  _ *auth_path leaf_index_hi leaf_index_lo validation_result
-                // Will crash if `leaf_index >= leaf_count`
-                {entrypoint}:
-                    dup 9 dup 9 dup 9 dup 9
-                    call {leaf_index_to_mt_index}
-                    // stack: _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo [digest (leaf_digest)] *auth_path mt_index_hi mt_index_lo peak_index
+        let loop_label = format!("{entrypoint}_loop");
 
-                    // Push index counter into memory, `i`, to stack
-                    push 0
-                    /// stack: _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo [digest (leaf_digest)] *auth_path mt_index_hi mt_index_lo peak_index i
-
-                    swap 9 swap 4 swap 8 swap 3 swap 6 swap 1 swap 7 swap 2 swap 5
-                    // stack: _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo i *auth_path peak_index mt_index_hi mt_index_lo [digest (leaf_digest)]
-
-                    // rename: leaf_digest -> acc_hash
-                    // stack: _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo i *auth_path peak_index mt_index_hi mt_index_lo [digest (acc_hash)]
-
-                    call {entrypoint}_while
-                    // _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo i *auth_path peak_index mt_index_hi mt_index_lo [digest (acc_hash)]
-
-                    // Compare `acc_hash` to the `expected_peak`, where `expected_peak = peaks[peak_index]`
-                    dup 14 dup 8
-                    // _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo i *auth_path peak_index mt_index_hi mt_index_lo [digest (acc_hash)] *peaks peak_index
-
-                    call {get_list_element}
-                    // _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo i *auth_path peak_index mt_index_hi mt_index_lo [digest (acc_hash)] [digest (expected_peak)]
-
-                    // Compare top two digests
-                    call {eq_digest}
-                    // _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo i *auth_path peak_index mt_index_hi mt_index_lo (expected_peak == acc_hash)
-
-                    // Rename: expected_peak == acc_hash -> validation_result
-                    // _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo i *auth_path peak_index mt_index_hi mt_index_lo validation_result
-
-                    // Cleanup stack
-                    swap 7
-                    // _ *peaks leaf_count_hi leaf_count_lo validation_result leaf_index_lo i *auth_path peak_index mt_index_hi mt_index_lo leaf_index_hi
-
-                    swap 9 pop 4
-                    // _ *peaks leaf_index_hi leaf_count_lo validation_result leaf_index_lo i *auth_path
-
-                    swap 6 pop 2
-                    // _ *auth_path leaf_index_hi leaf_count_lo validation_result leaf_index_lo
-
-                    swap 2 pop 1
-                    // _ *auth_path leaf_index_hi leaf_index_lo validation_result
-
-                    return
-
+        let loop_code = triton_asm!(
                 // Note that this while loop is the same as one in `calculate_new_peaks_from_leaf_mutation`
                 // BEFORE/AFTER: _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo i *auth_path peak_index mt_index_hi mt_index_lo [digest (acc_hash)]
-                {entrypoint}_while:
+                {loop_label}:
                     dup 6 dup 6 push 0 push 1 call {eq_u64}
                     // _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo i *auth_path peak_index mt_index_hi mt_index_lo [digest (acc_hash)] (mt_index == 1)
 
@@ -252,8 +204,64 @@ impl DeprecatedSnippet for MmrVerifyFromMemory {
                     // _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo i *auth_path peak_index mt_index_hi mt_index_lo [digest (acc_hash)]
 
                     recurse
-                    "
+        );
+
+        triton_asm!(
+                // BEFORE: _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo [digest (leaf_digest)] *auth_path
+                // AFTER:  _ *auth_path leaf_index_hi leaf_index_lo validation_result
+                // Will crash if `leaf_index >= leaf_count`
+                {entrypoint}:
+                    dup 9 dup 9 dup 9 dup 9
+                    call {leaf_index_to_mt_index}
+                    // stack: _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo [digest (leaf_digest)] *auth_path mt_index_hi mt_index_lo peak_index
+
+                    // Push index counter into memory, `i`, to stack
+                    push 0
+                    // stack: _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo [digest (leaf_digest)] *auth_path mt_index_hi mt_index_lo peak_index i
+
+                    swap 9 swap 4 swap 8 swap 3 swap 6 swap 1 swap 7 swap 2 swap 5
+                    // stack: _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo i *auth_path peak_index mt_index_hi mt_index_lo [digest (leaf_digest)]
+
+                    // rename: leaf_digest -> acc_hash
+                    // stack: _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo i *auth_path peak_index mt_index_hi mt_index_lo [digest (acc_hash)]
+
+                    call {loop_label}
+                    // _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo i *auth_path peak_index mt_index_hi mt_index_lo [digest (acc_hash)]
+
+                    // Compare `acc_hash` to the `expected_peak`, where `expected_peak = peaks[peak_index]`
+                    dup 14 dup 8
+                    // _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo i *auth_path peak_index mt_index_hi mt_index_lo [digest (acc_hash)] *peaks peak_index
+
+                    call {get_list_element}
+                    // _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo i *auth_path peak_index mt_index_hi mt_index_lo [digest (acc_hash)] [digest (expected_peak)]
+
+                    // Compare top two digests
+                    call {eq_digest}
+                    // _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo i *auth_path peak_index mt_index_hi mt_index_lo (expected_peak == acc_hash)
+
+                    // Rename: expected_peak == acc_hash -> validation_result
+                    // _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo i *auth_path peak_index mt_index_hi mt_index_lo validation_result
+
+                    // Cleanup stack
+                    swap 7
+                    // _ *peaks leaf_count_hi leaf_count_lo validation_result leaf_index_lo i *auth_path peak_index mt_index_hi mt_index_lo leaf_index_hi
+
+                    swap 9 pop 4
+                    // _ *peaks leaf_index_hi leaf_count_lo validation_result leaf_index_lo i *auth_path
+
+                    swap 6 pop 2
+                    // _ *auth_path leaf_index_hi leaf_count_lo validation_result leaf_index_lo
+
+                    swap 2 pop 1
+                    // _ *auth_path leaf_index_hi leaf_index_lo validation_result
+
+                    return
+
+                    {&loop_code}
+
         )
+        .iter()
+        .join("\n")
     }
 
     fn crash_conditions(&self) -> Vec<String> {
