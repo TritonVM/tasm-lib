@@ -159,16 +159,15 @@ impl DeprecatedSnippet for MmrVerifyFromMemory {
         );
 
         let loop_code = triton_asm!(
-                // Note that this while loop is the same as one in `calculate_new_peaks_from_leaf_mutation`
-                // BEFORE/AFTER: _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo *auth_path[n] peak_index mt_index_hi mt_index_lo [digest (acc_hash)]
+                // BEFORE/AFTER: _ *auth_path[n] peak_index mt_index_hi mt_index_lo [digest (acc_hash)]
                 {loop_label}:
                     dup 6 push 0 eq
                     dup 6 push 1 eq
                     mul
-                    // _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo *auth_path[n] peak_index mt_index_hi mt_index_lo [digest (acc_hash)] (mt_index == 1)
+                    // _ *auth_path[n] peak_index mt_index_hi mt_index_lo [digest (acc_hash)] (mt_index == 1)
 
                     skiz return
-                    // _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo *auth_path[n] peak_index mt_index_hi mt_index_lo [digest (acc_hash)]
+                    // _ *auth_path[n] peak_index mt_index_hi mt_index_lo [digest (acc_hash)]
 
                     // declare `ap_element = auth_path[i]`
                     dup 8
@@ -177,26 +176,26 @@ impl DeprecatedSnippet for MmrVerifyFromMemory {
                     add
                     swap 14
                     pop 1
-                    // _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo *auth_path[n+1] peak_index mt_index_hi mt_index_lo [digest (acc_hash)] [digest (ap_element)]
+                    // _ *auth_path[n+1] peak_index mt_index_hi mt_index_lo [digest (acc_hash)] [digest (ap_element)]
 
                     dup 10
                     {&u32_is_even}
-                    // _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo *auth_path[n+1] peak_index mt_index_hi mt_index_lo [digest (acc_hash)] [digest (ap_element)] (mt_index % 2 == 0)
+                    // _ *auth_path[n+1] peak_index mt_index_hi mt_index_lo [digest (acc_hash)] [digest (ap_element)] (mt_index % 2 == 0)
 
                     skiz call {swap_digests}
-                    // _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo *auth_path[n+1] peak_index mt_index_hi mt_index_lo [digest (right_node)] [digest (left_node)]
+                    // _ *auth_path[n+1] peak_index mt_index_hi mt_index_lo [digest (right_node)] [digest (left_node)]
 
                     hash
-                    // _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo *auth_path[n+1] peak_index mt_index_hi mt_index_lo [digest (acc_hash)]
+                    // _ *auth_path[n+1] peak_index mt_index_hi mt_index_lo [digest (acc_hash)]
 
                     // mt_index -> mt_index / 2
                     swap 6 swap 1 swap 5
                     call {div_2}
                     swap 5 swap 1 swap 6
-                    // _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo *auth_path[n+1] peak_index (mt_index / 2)_hi (mt_index / 2)_lo acc_hash_4 acc_hash_3 acc_hash_2 acc_hash_1 acc_hash_0
+                    // _ *auth_path[n+1] peak_index (mt_index / 2)_hi (mt_index / 2)_lo acc_hash_4 acc_hash_3 acc_hash_2 acc_hash_1 acc_hash_0
 
                     // Rename: (mt_index / 2) -> mt_index
-                    // _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo *auth_path[n+1] peak_index mt_index_hi mt_index_lo [digest (acc_hash)]
+                    // _ *auth_path[n+1] peak_index mt_index_hi mt_index_lo [digest (acc_hash)]
 
                     recurse
         );
