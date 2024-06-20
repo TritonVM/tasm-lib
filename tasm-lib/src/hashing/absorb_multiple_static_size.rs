@@ -48,7 +48,7 @@ impl AbsorbMultipleStaticSize {
             ),
         };
         [
-            vec![triton_asm!(push 0); num_zeros].concat(),
+            triton_asm![push 0; num_zeros],
             triton_asm!(push 1),
             triton_asm!(dup {num_zeros + 1}),
             // _ *first_unread_word [0] 1 *first_unread_word
@@ -76,17 +76,13 @@ impl BasicSnippet for AbsorbMultipleStaticSize {
 
     fn code(&self, _library: &mut crate::library::Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
-        let absorb_once = triton_asm!(
-            // _ d c b a *address
-            sponge_absorb_mem // _ h g f e (*address + RATE)
-        );
 
-        let absorb_all_non_padded = vec![absorb_once; self.num_absorbs_before_pad()].concat();
+        let absorb_all_non_padded = triton_asm![sponge_absorb_mem; self.num_absorbs_before_pad()];
         let read_remainder_and_pad = self.read_remainder_and_pad();
 
         triton_asm! {
             // BEFORE: _ *bfe_sequence
-            // AFTER:  _
+            // AFTER:  _ (*bfe_sequence + self.size)
             {entrypoint}:
                 // _ *bfe_sequence
 

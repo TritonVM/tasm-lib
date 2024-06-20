@@ -53,7 +53,7 @@ pub fn encode_to_memory<T: BFieldCodec>(
 pub fn load_words_from_memory_leave_pointer(n: usize) -> Vec<LabelledInstruction> {
     let num_full_chunk_reads = n / 5;
     let num_remaining_words = n % 5;
-    let mut instructions = vec![triton_instr!(read_mem 5); num_full_chunk_reads];
+    let mut instructions = triton_asm![read_mem 5; num_full_chunk_reads];
     if num_remaining_words > 0 {
         instructions.extend(triton_asm!(read_mem {
             num_remaining_words
