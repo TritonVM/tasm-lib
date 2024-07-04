@@ -8,17 +8,6 @@ use triton_vm::prelude::*;
 /// is non-deterministically divined. This algorithm asserts
 /// that the path is valid; phrased differently, it crashes the
 /// VM if it is not.
-///
-/// inputs:
-///
-///  - root : Digest
-///  - leaf index: u32
-///  - leaf : Digest
-///  - tree height: u32
-///
-/// outputs:
-///
-///  - (none)
 #[derive(Clone, Debug)]
 pub struct MerkleVerify;
 
