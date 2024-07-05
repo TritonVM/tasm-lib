@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use num::Zero;
-use rand::Rng;
+use rand::prelude::*;
 use triton_vm::prelude::*;
 use triton_vm::twenty_first::prelude::U32s;
 
@@ -225,8 +225,6 @@ impl DeprecatedSnippet for AddU128 {
 
 #[cfg(test)]
 mod tests {
-    use triton_vm::prelude::BFieldCodec;
-
     use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
     use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
@@ -268,8 +266,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use crate::snippet_bencher::bench_and_write;
+
+    use super::*;
 
     #[test]
     fn add_u128_benchmark() {

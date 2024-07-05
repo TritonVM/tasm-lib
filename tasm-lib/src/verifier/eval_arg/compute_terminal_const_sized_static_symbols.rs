@@ -1,8 +1,9 @@
 use itertools::Itertools;
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
+use triton_vm::twenty_first::prelude::AlgebraicHasher;
 
-use crate::data_type::{DataType, Literal};
+use crate::data_type::DataType;
+use crate::data_type::Literal;
 use crate::library::Library;
 use crate::traits::basic_snippet::BasicSnippet;
 
@@ -100,9 +101,7 @@ mod tests {
     use num::One;
     use num::Zero;
     use proptest_arbitrary_interop::arb;
-    use rand::rngs::StdRng;
-    use rand::Rng;
-    use rand::SeedableRng;
+    use rand::prelude::*;
     use test_strategy::proptest;
     use triton_vm::table::cross_table_argument::CrossTableArg;
     use triton_vm::table::cross_table_argument::EvalArg;
@@ -425,7 +424,8 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use crate::traits::{closure::ShadowedClosure, rust_shadow::RustShadow};
+    use crate::traits::closure::ShadowedClosure;
+    use crate::traits::rust_shadow::RustShadow;
 
     use super::*;
 

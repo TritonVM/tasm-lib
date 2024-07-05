@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use rand::Rng;
+use rand::prelude::*;
 use triton_vm::prelude::*;
 use triton_vm::twenty_first::prelude::U32s;
 

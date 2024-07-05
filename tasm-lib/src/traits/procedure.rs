@@ -3,10 +3,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use itertools::Itertools;
-use rand::rngs::StdRng;
-use rand::thread_rng;
-use rand::Rng;
-use rand::SeedableRng;
+use rand::prelude::*;
 use triton_vm::prelude::*;
 
 use crate::linker::execute_bench;

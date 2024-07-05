@@ -1,5 +1,4 @@
 use itertools::Itertools;
-use triton_vm::instruction::LabelledInstruction;
 use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
@@ -110,10 +109,9 @@ mod tests {
     use std::collections::HashMap;
 
     use proptest_arbitrary_interop::arb;
-    use rand::prelude::StdRng;
-    use rand::Rng;
-    use rand::SeedableRng;
+    use rand::prelude::*;
     use test_strategy::proptest;
+    use triton_vm::twenty_first::prelude::*;
 
     use crate::memory::encode_to_memory;
     use crate::rust_shadowing_helper_functions::array::array_from_memory;
@@ -123,8 +121,6 @@ mod tests {
     use crate::traits::function::FunctionInitialState;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-    use crate::twenty_first::prelude::CpuParallel;
-    use crate::twenty_first::prelude::MerkleTree;
 
     use super::*;
 

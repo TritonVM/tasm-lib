@@ -250,11 +250,7 @@ impl<T: TasmObject> TasmObject for Option<T> {
 mod test {
     use arbitrary::Arbitrary;
     use arbitrary::Unstructured;
-    use rand::rngs::StdRng;
-    use rand::thread_rng;
-    use rand::Rng;
-    use rand::RngCore;
-    use rand::SeedableRng;
+    use rand::prelude::*;
     use triton_vm::proof_item::FriResponse;
 
     use crate::data_type::DataType;

@@ -3,9 +3,9 @@ use std::collections::HashMap;
 use itertools::Itertools;
 use num::Zero;
 use num_traits::One;
-use rand::random;
+use rand::prelude::*;
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::prelude::x_field_element;
+use triton_vm::twenty_first::math::x_field_element;
 use triton_vm::twenty_first::prelude::AlgebraicHasher;
 use twenty_first::math::other::random_elements;
 

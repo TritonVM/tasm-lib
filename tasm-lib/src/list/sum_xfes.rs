@@ -185,10 +185,7 @@ mod tests {
     use std::collections::HashMap;
 
     use itertools::Itertools;
-    use rand::random;
-    use rand::rngs::StdRng;
-    use rand::Rng;
-    use rand::SeedableRng;
+    use rand::prelude::*;
     use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
     use crate::rust_shadowing_helper_functions::list::insert_random_list;

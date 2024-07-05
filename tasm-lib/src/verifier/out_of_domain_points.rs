@@ -130,10 +130,7 @@ impl BasicSnippet for OutOfDomainPoints {
 mod tests {
     use std::collections::HashMap;
 
-    use rand::random;
-    use rand::rngs::StdRng;
-    use rand::Rng;
-    use rand::SeedableRng;
+    use rand::prelude::*;
     use triton_vm::prelude::*;
     use triton_vm::table::NUM_QUOTIENT_SEGMENTS;
     use triton_vm::twenty_first::math::traits::ModPowU32;

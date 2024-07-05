@@ -84,25 +84,23 @@ mod test {
     use std::collections::HashMap;
 
     use itertools::Itertools;
-    use rand::rngs::StdRng;
-    use rand::{Rng, SeedableRng};
-    use triton_vm::program::NonDeterminism;
-    use triton_vm::twenty_first::math::b_field_element::BFieldElement;
-    use triton_vm::twenty_first::math::tip5::{self, Tip5};
-    use triton_vm::twenty_first::math::x_field_element::{XFieldElement, EXTENSION_DEGREE};
-    use triton_vm::twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
+    use rand::prelude::*;
+    use triton_vm::twenty_first::prelude::*;
 
+    use crate::empty_stack;
     use crate::memory::dyn_malloc::DYN_MALLOC_FIRST_ADDRESS;
     use crate::memory::encode_to_memory;
+    use crate::rust_shadowing_helper_functions;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::test_helpers::tasm_final_state;
     use crate::traits::basic_snippet::BasicSnippet;
-    use crate::traits::procedure::{Procedure, ProcedureInitialState, ShadowedProcedure};
+    use crate::traits::procedure::Procedure;
+    use crate::traits::procedure::ProcedureInitialState;
+    use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
-    use crate::twenty_first::prelude::Sponge;
-    use crate::{empty_stack, rust_shadowing_helper_functions, VmHasher};
+    use crate::VmHasher;
 
-    use super::SampleScalars;
+    use super::*;
 
     impl Procedure for SampleScalars {
         fn rust_shadow(

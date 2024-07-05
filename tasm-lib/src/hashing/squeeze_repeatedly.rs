@@ -1,10 +1,7 @@
 use std::collections::HashMap;
 
 use itertools::Itertools;
-use rand::rngs::StdRng;
-use rand::Rng;
-use rand::RngCore;
-use rand::SeedableRng;
+use rand::prelude::*;
 use triton_vm::prelude::*;
 use triton_vm::twenty_first::prelude::Sponge;
 
@@ -125,8 +122,7 @@ impl Procedure for SqueezeRepeatedly {
 
 #[cfg(test)]
 mod test {
-    use rand::thread_rng;
-    use rand::Rng;
+    use rand::prelude::*;
 
     use crate::test_helpers::rust_final_state;
     use crate::test_helpers::tasm_final_state;

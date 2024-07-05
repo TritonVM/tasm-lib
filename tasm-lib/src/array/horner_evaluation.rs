@@ -1,10 +1,9 @@
 use itertools::Itertools;
 use triton_vm::triton_asm;
 
-use crate::{
-    data_type::{ArrayType, DataType},
-    traits::basic_snippet::BasicSnippet,
-};
+use crate::data_type::ArrayType;
+use crate::data_type::DataType;
+use crate::traits::basic_snippet::BasicSnippet;
 
 /// HornerEvaluation takes an array of coefficients (representing a polynomial)
 /// and a scalar (representing an indeterminate) and computes the value of the
@@ -102,19 +101,16 @@ mod test {
     use std::collections::HashMap;
 
     use num::Zero;
-    use rand::{rngs::StdRng, Rng, RngCore, SeedableRng};
-    use triton_vm::twenty_first::math::{
-        b_field_element::BFieldElement, x_field_element::XFieldElement,
-    };
+    use rand::prelude::*;
+    use triton_vm::twenty_first::prelude::*;
 
-    use crate::{
-        empty_stack,
-        rust_shadowing_helper_functions::array::{array_get, insert_as_array},
-        traits::{
-            function::{Function, FunctionInitialState, ShadowedFunction},
-            rust_shadow::RustShadow,
-        },
-    };
+    use crate::empty_stack;
+    use crate::rust_shadowing_helper_functions::array::array_get;
+    use crate::rust_shadowing_helper_functions::array::insert_as_array;
+    use crate::traits::function::Function;
+    use crate::traits::function::FunctionInitialState;
+    use crate::traits::function::ShadowedFunction;
+    use crate::traits::rust_shadow::RustShadow;
 
     use super::*;
 

@@ -183,9 +183,7 @@ mod test {
     use itertools::Itertools;
     use num::One;
     use num::Zero;
-    use rand::rngs::StdRng;
-    use rand::Rng;
-    use rand::SeedableRng;
+    use rand::prelude::*;
     use twenty_first::util_types::merkle_tree::CpuParallel;
     use twenty_first::util_types::merkle_tree::MerkleTree;
     use twenty_first::util_types::merkle_tree_maker::MerkleTreeMaker;

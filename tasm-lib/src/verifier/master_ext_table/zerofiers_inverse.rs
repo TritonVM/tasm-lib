@@ -1,7 +1,6 @@
 use strum::EnumCount;
 use strum::EnumIter;
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::math::b_field_element::BFieldElement;
 use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
 use crate::arithmetic::xfe::to_the_power_of_power_of_2::ToThePowerOfPowerOf2;
@@ -187,28 +186,24 @@ impl BasicSnippet for ZerofiersInverse {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use std::collections::HashMap;
 
     use itertools::Itertools;
     use num::One;
-    use rand::{rngs::StdRng, Rng, SeedableRng};
-    use triton_vm::twenty_first::math::{
-        b_field_element::BFieldElement,
-        traits::{Inverse, ModPowU32, PrimitiveRootOfUnity},
-        x_field_element::XFieldElement,
-    };
+    use rand::prelude::*;
+    use triton_vm::twenty_first::math::traits::Inverse;
+    use triton_vm::twenty_first::math::traits::ModPowU32;
+    use triton_vm::twenty_first::math::traits::PrimitiveRootOfUnity;
 
-    use crate::{
-        rust_shadowing_helper_functions::array::insert_as_array,
-        snippet_bencher::BenchmarkCase,
-        traits::{
-            basic_snippet::BasicSnippet,
-            function::{Function, FunctionInitialState, ShadowedFunction},
-            rust_shadow::RustShadow,
-        },
-    };
+    use crate::rust_shadowing_helper_functions::array::insert_as_array;
+    use crate::snippet_bencher::BenchmarkCase;
+    use crate::traits::basic_snippet::BasicSnippet;
+    use crate::traits::function::Function;
+    use crate::traits::function::FunctionInitialState;
+    use crate::traits::function::ShadowedFunction;
+    use crate::traits::rust_shadow::RustShadow;
+
+    use super::*;
 
     #[test]
     fn zerofiers_inverse_pbt() {

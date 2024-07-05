@@ -1,15 +1,13 @@
 use itertools::Itertools;
-use triton_vm::prelude::BFieldCodec;
-use triton_vm::proof::Claim;
+use triton_vm::prelude::*;
 use triton_vm::proof_stream::ProofStream;
-use triton_vm::stark::Stark;
 use triton_vm::table::challenges::Challenges;
 use triton_vm::table::extension_table::Quotientable;
 use triton_vm::table::master_table::MasterExtTable;
-use triton_vm::table::*;
-use triton_vm::twenty_first::math::tip5::Tip5;
-use triton_vm::twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
-use triton_vm::twenty_first::util_types::merkle_tree::MerkleTreeInclusionProof;
+use triton_vm::table::NUM_BASE_COLUMNS;
+use triton_vm::table::NUM_EXT_COLUMNS;
+use triton_vm::table::NUM_QUOTIENT_SEGMENTS;
+use triton_vm::twenty_first::prelude::*;
 
 use crate::Digest;
 
@@ -191,7 +189,6 @@ fn extract_paths<const N: usize, T: BFieldCodec>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use triton_vm::prelude::*;
 
     #[test]
     fn extract_fri_proof_works() {

@@ -2,9 +2,7 @@ use std::collections::HashMap;
 
 use itertools::Itertools;
 use num_traits::One;
-use rand::rngs::StdRng;
-use rand::Rng;
-use rand::SeedableRng;
+use rand::prelude::*;
 use triton_vm::parser::tokenize;
 use triton_vm::prelude::*;
 
@@ -366,6 +364,7 @@ impl Map {
 #[cfg(test)]
 mod tests {
     use num_traits::Zero;
+    use triton_vm::twenty_first::math::other::random_elements;
     use triton_vm::twenty_first::prelude::AlgebraicHasher;
 
     use crate::arithmetic;
@@ -374,7 +373,6 @@ mod tests {
     use crate::traits::deprecated_snippet::DeprecatedSnippet;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-    use crate::twenty_first::math::other::random_elements;
     use crate::VmHasher;
 
     use super::*;

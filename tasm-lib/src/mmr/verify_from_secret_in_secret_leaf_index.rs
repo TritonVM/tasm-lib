@@ -124,11 +124,7 @@ mod tests {
 
     use itertools::Itertools;
     use num::One;
-    use rand::random;
-    use rand::rngs::StdRng;
-    use rand::thread_rng;
-    use rand::Rng;
-    use rand::SeedableRng;
+    use rand::prelude::*;
     use triton_vm::twenty_first::math::other::random_elements;
     use triton_vm::twenty_first::prelude::AlgebraicHasher;
     use triton_vm::twenty_first::util_types::mmr::mmr_accumulator::util::mmra_with_mps;

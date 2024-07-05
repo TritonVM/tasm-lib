@@ -43,10 +43,7 @@ mod tests {
     use itertools::Itertools;
     use num::One;
     use num::Zero;
-    use rand::random;
-    use rand::rngs::StdRng;
-    use rand::Rng;
-    use rand::SeedableRng;
+    use rand::prelude::*;
     use triton_vm::twenty_first::math::traits::ModPowU32;
     use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 

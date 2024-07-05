@@ -1,6 +1,4 @@
-use rand::rngs::StdRng;
-use rand::Rng;
-use rand::SeedableRng;
+use rand::prelude::*;
 use triton_vm::prelude::*;
 use twenty_first::math::polynomial::Polynomial;
 use twenty_first::math::x_field_element::EXTENSION_DEGREE;

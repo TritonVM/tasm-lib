@@ -108,20 +108,23 @@ impl BasicSnippet for MerkleRootFromXfesStaticSize {
 
 #[cfg(test)]
 mod test {
-    use num::Zero;
-    use proptest_arbitrary_interop::arb;
-    use rand::rngs::StdRng;
-    use rand::{Rng, SeedableRng};
-    use test_strategy::proptest;
-
-    use super::*;
     use std::collections::HashMap;
 
+    use num::Zero;
+    use proptest_arbitrary_interop::arb;
+    use rand::prelude::*;
+    use test_strategy::proptest;
+
     use crate::memory::encode_to_memory;
-    use crate::rust_shadowing_helper_functions::array::{array_from_memory, insert_as_array};
+    use crate::rust_shadowing_helper_functions::array::array_from_memory;
+    use crate::rust_shadowing_helper_functions::array::insert_as_array;
     use crate::snippet_bencher::BenchmarkCase;
-    use crate::traits::function::{Function, FunctionInitialState, ShadowedFunction};
+    use crate::traits::function::Function;
+    use crate::traits::function::FunctionInitialState;
+    use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
+
+    use super::*;
 
     impl Function for MerkleRootFromXfesStaticSize {
         fn rust_shadow(

@@ -1,9 +1,10 @@
-use triton_vm::{instruction::LabelledInstruction, triton_asm};
+use triton_vm::prelude::*;
 
-use crate::{
-    data_type::DataType, field, library::Library, traits::basic_snippet::BasicSnippet,
-    verifier::fri::verify::FriVerify,
-};
+use crate::data_type::DataType;
+use crate::field;
+use crate::library::Library;
+use crate::traits::basic_snippet::BasicSnippet;
+use crate::verifier::fri::verify::FriVerify;
 
 pub struct NumberOfRounds {}
 
@@ -65,28 +66,21 @@ impl BasicSnippet for NumberOfRounds {
 mod test {
     use std::collections::HashMap;
 
-    use rand::thread_rng;
-    use rand::{rngs::StdRng, Rng, SeedableRng};
+    use rand::prelude::*;
     use triton_vm::arithmetic_domain::ArithmeticDomain;
     use triton_vm::fri::Fri;
-    use triton_vm::twenty_first::math::tip5::Tip5;
-    use triton_vm::twenty_first::math::{
-        b_field_element::BFieldElement, traits::PrimitiveRootOfUnity,
-    };
+    use triton_vm::twenty_first::math::traits::PrimitiveRootOfUnity;
 
-    use crate::traits::basic_snippet::BasicSnippet;
-    use crate::{
-        memory::{dyn_malloc::DYN_MALLOC_ADDRESS, encode_to_memory},
-        prelude::TasmObject,
-        snippet_bencher::BenchmarkCase,
-        traits::{
-            function::{Function, FunctionInitialState, ShadowedFunction},
-            rust_shadow::RustShadow,
-        },
-        verifier::fri::verify::FriVerify,
-    };
+    use crate::memory::dyn_malloc::DYN_MALLOC_ADDRESS;
+    use crate::memory::encode_to_memory;
+    use crate::prelude::TasmObject;
+    use crate::snippet_bencher::BenchmarkCase;
+    use crate::traits::function::Function;
+    use crate::traits::function::FunctionInitialState;
+    use crate::traits::function::ShadowedFunction;
+    use crate::traits::rust_shadow::RustShadow;
 
-    use super::NumberOfRounds;
+    use super::*;
 
     impl Function for NumberOfRounds {
         fn rust_shadow(

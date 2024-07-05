@@ -63,9 +63,8 @@ mod test {
     use std::collections::HashMap;
 
     use num_traits::Zero;
-    use rand::prelude::StdRng;
-    use rand::Rng;
-    use rand::SeedableRng;
+    use rand::prelude::*;
+    use triton_vm::twenty_first::prelude::BFieldElement;
 
     use crate::empty_stack;
     use crate::memory::encode_to_memory;
@@ -75,7 +74,6 @@ mod test {
     use crate::traits::function::FunctionInitialState;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-    use crate::twenty_first::prelude::BFieldElement;
 
     use super::*;
 

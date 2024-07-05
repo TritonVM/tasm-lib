@@ -1,7 +1,9 @@
-use crate::data_type::{ArrayType, DataType};
+use triton_vm::prelude::*;
+
+use crate::data_type::ArrayType;
+use crate::data_type::DataType;
 use crate::library::Library;
 use crate::traits::basic_snippet::BasicSnippet;
-use triton_vm::prelude::*;
 
 pub struct InnerProductOfXfes {
     pub length: usize,
@@ -73,9 +75,7 @@ mod tests {
 
     use itertools::Itertools;
     use num::Zero;
-    use rand::rngs::StdRng;
-    use rand::Rng;
-    use rand::SeedableRng;
+    use rand::prelude::*;
     use triton_vm::twenty_first::math::b_field_element::BFIELD_ZERO;
     use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
@@ -282,7 +282,8 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use triton_vm::table::extension_table::Quotientable;
-    use triton_vm::table::master_table::{MasterExtTable, NUM_COLUMNS};
+    use triton_vm::table::master_table::MasterExtTable;
+    use triton_vm::table::master_table::NUM_COLUMNS;
 
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use num::Zero;
-use rand::RngCore;
+use rand::prelude::*;
 use triton_vm::prelude::*;
 use triton_vm::twenty_first::prelude::U32s;
 
@@ -146,9 +146,6 @@ impl DeprecatedSnippet for Log2FloorU64 {
 
 #[cfg(test)]
 mod tests {
-    use triton_vm::prelude::BFieldCodec;
-    use triton_vm::twenty_first::prelude::U32s;
-
     use crate::empty_stack;
     use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
     use crate::test_helpers::test_rust_equivalence_multiple_deprecated;

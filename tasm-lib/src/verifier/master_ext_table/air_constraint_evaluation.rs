@@ -1,7 +1,3 @@
-use crate::data_type::{ArrayType, DataType};
-use crate::library::Library;
-use crate::traits::basic_snippet::BasicSnippet;
-use crate::triton_vm::table::*;
 use ndarray::Array1;
 use triton_vm::prelude::*;
 use triton_vm::table::challenges::Challenges;
@@ -11,6 +7,11 @@ use triton_vm::table::master_table::MasterExtTable;
 use triton_vm::table::tasm_air_constraints::air_constraint_evaluation_tasm;
 use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
+use crate::data_type::ArrayType;
+use crate::data_type::DataType;
+use crate::library::Library;
+use crate::traits::basic_snippet::BasicSnippet;
+use crate::triton_vm::table::*;
 use crate::verifier::challenges::new_empty_input_and_output::NewEmptyInputAndOutput;
 
 #[derive(Debug, Clone, Copy)]
@@ -172,13 +173,10 @@ mod tests {
     use std::collections::HashMap;
     use std::rc::Rc;
 
-    use arbitrary::{Arbitrary, Unstructured};
+    use arbitrary::Arbitrary;
+    use arbitrary::Unstructured;
     use rand::distributions::Standard;
-    use rand::rngs::StdRng;
-    use rand::thread_rng;
-    use rand::Rng;
-    use rand::RngCore;
-    use rand::SeedableRng;
+    use rand::prelude::*;
     use triton_vm::proof_stream::ProofStream;
     use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 

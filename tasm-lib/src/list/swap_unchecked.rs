@@ -1,9 +1,7 @@
 use std::collections::HashMap;
 
 use num_traits::One;
-use rand::rngs::StdRng;
-use rand::Rng;
-use rand::SeedableRng;
+use rand::prelude::*;
 use triton_vm::op_stack::NUM_OP_STACK_REGISTERS;
 use triton_vm::prelude::*;
 

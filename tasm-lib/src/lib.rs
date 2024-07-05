@@ -49,6 +49,7 @@ pub mod verifier;
 
 // re-exports for types exposed in our public API.
 pub use triton_vm;
+use triton_vm::instruction::AnInstruction;
 use triton_vm::table::master_table::TableId;
 pub use triton_vm::twenty_first;
 
@@ -294,12 +295,11 @@ pub fn prove_and_verify(
     output: &[BFieldElement],
     init_stack: Option<Vec<BFieldElement>>,
 ) {
-    use triton_vm::instruction::AnInstruction::*;
-    use triton_vm::prelude::LabelledInstruction::*;
-    let timing_report_label = match program.labelled_instructions().first().unwrap() {
-        Instruction(Call(func)) => func.to_owned(),
-        Label(label) => label.to_owned(),
-        _ => "Some program".to_owned(),
+    let labelled_instructions = program.labelled_instructions();
+    let timing_report_label = match labelled_instructions.first().unwrap() {
+        LabelledInstruction::Instruction(AnInstruction::Call(func)) => func,
+        LabelledInstruction::Label(label) => label,
+        _ => "Some program",
     };
 
     // Construct the program that initializes the stack to the expected start value.

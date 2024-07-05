@@ -74,7 +74,7 @@ impl BasicSnippet for InstantiateFiatShamirWithClaim {
 
 #[cfg(test)]
 mod tests {
-    use rand::{rngs::StdRng, thread_rng, Rng, SeedableRng};
+    use rand::prelude::*;
     use std::collections::HashMap;
     use triton_vm::twenty_first::math::other::random_elements;
     use triton_vm::twenty_first::util_types::algebraic_hasher::Sponge;
@@ -82,7 +82,8 @@ mod tests {
     use crate::memory::encode_to_memory;
     use crate::rust_shadowing_helper_functions::claim::load_claim_from_memory;
     use crate::snippet_bencher::BenchmarkCase;
-    use crate::traits::procedure::{Procedure, ProcedureInitialState};
+    use crate::traits::procedure::Procedure;
+    use crate::traits::procedure::ProcedureInitialState;
 
     use super::*;
 

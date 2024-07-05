@@ -8,7 +8,8 @@ use crate::data_type::DataType;
 use crate::library::Library;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::verifier::master_ext_table::air_constraint_evaluation::AirConstraintEvaluation;
-use crate::verifier::master_ext_table::zerofiers_inverse::{ConstraintType, ZerofiersInverse};
+use crate::verifier::master_ext_table::zerofiers_inverse::ConstraintType;
+use crate::verifier::master_ext_table::zerofiers_inverse::ZerofiersInverse;
 
 #[derive(Debug, Clone)]
 pub struct QuotientSummands {
@@ -166,11 +167,7 @@ mod tests {
 
     use itertools::Itertools;
     use ndarray::Array1;
-    use rand::rngs::StdRng;
-    use rand::thread_rng;
-    use rand::Rng;
-    use rand::RngCore;
-    use rand::SeedableRng;
+    use rand::prelude::*;
     use triton_vm::table::extension_table::Evaluable;
     use triton_vm::twenty_first::math::traits::Inverse;
     use triton_vm::twenty_first::math::traits::ModPowU32;
@@ -347,10 +344,11 @@ mod bench {
     use std::collections::HashMap;
 
     use itertools::Itertools;
-    use rand::rngs::StdRng;
-    use rand::SeedableRng;
+    use rand::prelude::*;
 
-    use crate::traits::function::{Function, FunctionInitialState, ShadowedFunction};
+    use crate::traits::function::Function;
+    use crate::traits::function::FunctionInitialState;
+    use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
 
     use super::*;

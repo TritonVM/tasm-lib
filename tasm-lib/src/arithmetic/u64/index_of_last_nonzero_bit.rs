@@ -1,5 +1,4 @@
-use rand::thread_rng;
-use rand::RngCore;
+use rand::prelude::*;
 use triton_vm::prelude::*;
 
 use crate::arithmetic::u64::and_u64::AndU64;

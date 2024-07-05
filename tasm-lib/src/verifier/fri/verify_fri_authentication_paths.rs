@@ -146,13 +146,8 @@ mod test {
     use std::collections::HashMap;
 
     use itertools::Itertools;
-    use rand::distributions::Distribution;
     use rand::distributions::Standard;
-    use rand::rngs::StdRng;
-    use rand::thread_rng;
-    use rand::Rng;
-    use rand::RngCore;
-    use rand::SeedableRng;
+    use rand::prelude::*;
     use strum::EnumIter;
     use strum::IntoEnumIterator;
     use triton_vm::twenty_first::prelude::*;

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use num::One;
 use num::Zero;
-use rand::Rng;
+use rand::prelude::*;
 use triton_vm::prelude::*;
 use triton_vm::twenty_first::prelude::U32s;
 
@@ -213,7 +213,7 @@ impl DeprecatedSnippet for SubU64 {
 mod tests {
     use num::BigUint;
     use num::Zero;
-    use rand::Rng;
+    use rand::prelude::*;
     use BFieldElement;
 
     use crate::empty_stack;

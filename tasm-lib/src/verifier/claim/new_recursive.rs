@@ -1,9 +1,6 @@
 use num::Zero;
-use triton_vm::instruction::LabelledInstruction;
 use triton_vm::op_stack::NUM_OP_STACK_REGISTERS;
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::math::b_field_element::BFieldElement;
-use triton_vm::twenty_first::math::bfield_codec::BFieldCodec;
 
 use crate::data_type::DataType;
 use crate::io::InputSource;
@@ -11,7 +8,7 @@ use crate::library::Library;
 use crate::memory::write_words_to_memory_pop_pointer;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::verifier::claim::shared::claim_type;
-use crate::{Digest, DIGEST_LENGTH};
+use crate::DIGEST_LENGTH;
 
 /// Return a pointer to a claim representing the verification of a proof of the program's own
 /// execution. Must be called with an empty stack, as the program digest is read from the bottom
@@ -112,13 +109,16 @@ impl BasicSnippet for NewRecursive {
 
 #[cfg(test)]
 pub mod tests {
-    use std::collections::{HashMap, VecDeque};
+    use std::collections::HashMap;
+    use std::collections::VecDeque;
 
     use itertools::Itertools;
     use test_strategy::proptest;
 
     use crate::snippet_bencher::BenchmarkCase;
-    use crate::traits::procedure::{Procedure, ProcedureInitialState, ShadowedProcedure};
+    use crate::traits::procedure::Procedure;
+    use crate::traits::procedure::ProcedureInitialState;
+    use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
     use crate::verifier::claim::shared::insert_claim_into_static_memory;
     use crate::VmHasher;

@@ -2,9 +2,7 @@ use std::collections::HashMap;
 
 use itertools::Itertools;
 use num::One;
-use rand::random;
-use rand::thread_rng;
-use rand::Rng;
+use rand::prelude::*;
 use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
@@ -184,7 +182,7 @@ fn prepare_state(element_type: &DataType) -> InitVmState {
 #[cfg(test)]
 mod tests {
     use num::Zero;
-    use rand::RngCore;
+    use rand::prelude::*;
 
     use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
     use crate::test_helpers::test_rust_equivalence_multiple_deprecated;

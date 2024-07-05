@@ -94,9 +94,7 @@ impl BasicSnippet for ComputeTerminalFromDigestInitialIsOne {
 mod tests {
     use itertools::Itertools;
     use num::One;
-    use rand::rngs::StdRng;
-    use rand::Rng;
-    use rand::SeedableRng;
+    use rand::prelude::*;
     use triton_vm::table::cross_table_argument::CrossTableArg;
     use triton_vm::table::cross_table_argument::EvalArg;
 

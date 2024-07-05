@@ -83,18 +83,20 @@ impl BasicSnippet for SampleScalarsStaticLengthDynMalloc {
 #[cfg(test)]
 mod tests {
     use itertools::Itertools;
-    use rand::rngs::StdRng;
-    use rand::{Rng, SeedableRng};
+    use rand::prelude::*;
     use triton_vm::prelude::*;
     use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
-    use triton_vm::twenty_first::util_types::algebraic_hasher::{AlgebraicHasher, Sponge};
+    use triton_vm::twenty_first::prelude::*;
 
     use crate::memory::dyn_malloc::DYN_MALLOC_FIRST_ADDRESS;
+    use crate::rust_shadowing_helper_functions;
     use crate::test_helpers::tasm_final_state;
     use crate::traits::basic_snippet::BasicSnippet;
-    use crate::traits::procedure::{Procedure, ProcedureInitialState, ShadowedProcedure};
+    use crate::traits::procedure::Procedure;
+    use crate::traits::procedure::ProcedureInitialState;
+    use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
-    use crate::{rust_shadowing_helper_functions, VmHasher};
+    use crate::VmHasher;
 
     use super::SampleScalarsStaticLengthDynMalloc;
 

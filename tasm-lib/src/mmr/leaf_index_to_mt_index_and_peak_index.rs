@@ -2,8 +2,7 @@ use std::collections::HashMap;
 
 use itertools::Itertools;
 use num::BigUint;
-use rand::thread_rng;
-use rand::Rng;
+use rand::prelude::*;
 use triton_vm::prelude::*;
 use triton_vm::twenty_first::prelude::U32s;
 use twenty_first::util_types::mmr;

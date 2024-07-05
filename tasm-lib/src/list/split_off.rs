@@ -134,10 +134,7 @@ impl BasicSnippet for SplitOff {
 mod tests {
     use std::collections::HashMap;
 
-    use rand::rngs::StdRng;
-    use rand::thread_rng;
-    use rand::Rng;
-    use rand::SeedableRng;
+    use rand::prelude::*;
 
     use crate::rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator;
     use crate::rust_shadowing_helper_functions::list::insert_random_list;

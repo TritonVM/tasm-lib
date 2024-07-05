@@ -137,7 +137,7 @@ impl DeprecatedSnippet for DecrU64 {
 #[cfg(test)]
 mod tests {
     use num::Zero;
-    use rand::Rng;
+    use rand::prelude::*;
 
     use crate::empty_stack;
     use crate::push_encodable;

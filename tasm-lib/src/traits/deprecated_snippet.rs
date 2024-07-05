@@ -244,7 +244,9 @@ impl<S: DeprecatedSnippet> BasicSnippet for S {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use std::{cell::RefCell, rc::Rc, str::FromStr};
+    use std::cell::RefCell;
+    use std::rc::Rc;
+    use std::str::FromStr;
 
     use itertools::Itertools;
 

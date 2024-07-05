@@ -1,6 +1,7 @@
 use arbitrary::Arbitrary;
 use strum::Display;
-use triton_vm::table::{NUM_BASE_COLUMNS, NUM_EXT_COLUMNS};
+use triton_vm::table::NUM_BASE_COLUMNS;
+use triton_vm::table::NUM_EXT_COLUMNS;
 use triton_vm::triton_asm;
 
 use crate::data_type::ArrayType;
@@ -153,17 +154,16 @@ mod test {
 
     use itertools::Itertools;
     use proptest_arbitrary_interop::arb;
-    use rand::rngs::StdRng;
-    use rand::Rng;
-    use rand::SeedableRng;
+    use rand::prelude::*;
     use test_strategy::proptest;
-    use triton_vm::twenty_first::math::b_field_element::BFieldElement;
-    use triton_vm::twenty_first::math::x_field_element::XFieldElement;
+    use triton_vm::prelude::*;
 
     use crate::rust_shadowing_helper_functions::array::array_from_memory;
     use crate::rust_shadowing_helper_functions::array::insert_random_array;
     use crate::snippet_bencher::BenchmarkCase;
-    use crate::traits::function::{Function, FunctionInitialState, ShadowedFunction};
+    use crate::traits::function::Function;
+    use crate::traits::function::FunctionInitialState;
+    use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
 
     use super::*;

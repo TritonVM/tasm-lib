@@ -77,9 +77,7 @@ mod tests {
     use std::collections::HashMap;
 
     use num::Zero;
-    use rand::rngs::StdRng;
-    use rand::Rng;
-    use rand::SeedableRng;
+    use rand::prelude::*;
     use triton_vm::twenty_first::math::b_field_element::BFIELD_ZERO;
 
     use crate::rust_shadowing_helper_functions::array::insert_random_array;

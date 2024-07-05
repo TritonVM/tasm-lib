@@ -1,8 +1,7 @@
 use std::collections::HashMap;
 
 use itertools::Itertools;
-use rand::rngs::StdRng;
-use rand::*;
+use rand::prelude::*;
 use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
@@ -210,7 +209,8 @@ impl Function for Zip {
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
-        use rust_shadowing_helper_functions::*;
+        use rust_shadowing_helper_functions::dyn_malloc;
+        use rust_shadowing_helper_functions::list;
 
         let right_pointer = stack.pop().unwrap();
         let left_pointer = stack.pop().unwrap();
@@ -278,7 +278,7 @@ mod tests {
     use proptest_arbitrary_interop::arb;
     use test_strategy::proptest;
 
-    use crate::rust_shadowing_helper_functions::list::*;
+    use crate::rust_shadowing_helper_functions::list;
     use crate::structure::tasm_object::MemoryIter;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
@@ -337,9 +337,9 @@ mod tests {
         item_type: &DataType,
         list: &[T],
     ) {
-        list_new(list_pointer, ram);
+        list::list_new(list_pointer, ram);
         for &item in list {
-            list_push(list_pointer, item.encode(), ram, item_type.stack_size());
+            list::list_push(list_pointer, item.encode(), ram, item_type.stack_size());
         }
     }
 }

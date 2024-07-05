@@ -1,8 +1,6 @@
 use std::collections::HashMap;
 
-use rand::rngs::StdRng;
-use rand::Rng;
-use rand::SeedableRng;
+use rand::prelude::*;
 use triton_vm::prelude::*;
 use twenty_first::math::ntt::ntt;
 use twenty_first::math::traits::PrimitiveRootOfUnity;
@@ -520,8 +518,7 @@ impl Function for XfeNtt {
 #[cfg(test)]
 mod test {
     use itertools::Itertools;
-    use rand::thread_rng;
-    use rand::Rng;
+    use rand::prelude::*;
 
     use crate::structure::tasm_object::TasmObject;
     use crate::test_helpers::rust_final_state;

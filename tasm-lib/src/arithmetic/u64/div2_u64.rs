@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use num::Zero;
-use rand::RngCore;
+use rand::prelude::*;
 use triton_vm::prelude::*;
 use triton_vm::twenty_first::prelude::U32s;
 
@@ -135,8 +135,7 @@ impl DeprecatedSnippet for Div2U64 {
 
 #[cfg(test)]
 mod tests {
-    use rand::thread_rng;
-    use rand::RngCore;
+    use rand::prelude::*;
     use BFieldElement;
 
     use crate::empty_stack;

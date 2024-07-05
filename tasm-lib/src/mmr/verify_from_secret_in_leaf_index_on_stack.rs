@@ -96,10 +96,7 @@ mod tests {
     use std::collections::HashMap;
 
     use proptest_arbitrary_interop::arb;
-    use rand::random;
-    use rand::rngs::StdRng;
-    use rand::Rng;
-    use rand::SeedableRng;
+    use rand::prelude::*;
     use test_strategy::proptest;
     use triton_vm::twenty_first::math::other::random_elements;
     use triton_vm::twenty_first::util_types::mmr::mmr_accumulator::util::mmra_with_mps;

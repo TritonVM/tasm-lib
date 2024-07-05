@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use itertools::Itertools;
 use num::Zero;
-use rand::RngCore;
+use rand::prelude::*;
 use triton_vm::prelude::*;
 use triton_vm::twenty_first::prelude::U32s;
 
@@ -136,7 +136,7 @@ impl DeprecatedSnippet for EqU64 {
 #[cfg(test)]
 mod tests {
     use num_traits::One;
-    use rand::RngCore;
+    use rand::prelude::*;
 
     use crate::empty_stack;
     use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;

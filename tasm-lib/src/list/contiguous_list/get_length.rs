@@ -1,11 +1,7 @@
 use std::collections::HashMap;
 
 use itertools::Itertools;
-use rand::random;
-use rand::rngs::StdRng;
-use rand::thread_rng;
-use rand::Rng;
-use rand::SeedableRng;
+use rand::prelude::*;
 use triton_vm::prelude::*;
 use twenty_first::math::other::random_elements;
 

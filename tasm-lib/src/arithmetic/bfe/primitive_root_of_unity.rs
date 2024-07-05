@@ -1,7 +1,5 @@
 use num_traits::Zero;
-use rand::rngs::StdRng;
-use rand::Rng;
-use rand::SeedableRng;
+use rand::prelude::*;
 use triton_vm::prelude::*;
 use twenty_first::math::traits::PrimitiveRootOfUnity as PRU;
 

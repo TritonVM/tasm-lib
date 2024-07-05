@@ -1,5 +1,7 @@
-use crate::{data_type::DataType, traits::basic_snippet::BasicSnippet};
 use triton_vm::prelude::*;
+
+use crate::data_type::DataType;
+use crate::traits::basic_snippet::BasicSnippet;
 
 /// Sample a single scalar from the sponge state
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
@@ -50,7 +52,7 @@ impl BasicSnippet for SampleScalarOne {
 mod tests {
     use std::collections::HashMap;
 
-    use rand::random;
+    use rand::prelude::*;
     use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
     use triton_vm::twenty_first::util_types::algebraic_hasher::Sponge;
 

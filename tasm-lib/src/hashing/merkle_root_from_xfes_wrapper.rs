@@ -115,12 +115,10 @@ mod tests {
     use std::collections::HashMap;
 
     use itertools::Itertools;
-    use rand::rngs::StdRng;
-    use rand::{Rng, SeedableRng};
+    use rand::prelude::*;
     use test_strategy::proptest;
-    use twenty_first::util_types::merkle_tree::MerkleTree;
+    use triton_vm::twenty_first::prelude::*;
 
-    use super::*;
     use crate::library::STATIC_MEMORY_START_ADDRESS;
     use crate::memory::encode_to_memory;
     use crate::prelude::TasmObject;
@@ -129,8 +127,9 @@ mod tests {
     use crate::traits::function::FunctionInitialState;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-    use crate::twenty_first::util_types::merkle_tree::CpuParallel;
     use crate::DIGEST_LENGTH;
+
+    use super::*;
 
     #[proptest(cases = 4)]
     fn merkle_root_from_xfes_wrapper_pbt_pbt() {

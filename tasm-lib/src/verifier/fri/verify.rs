@@ -1204,15 +1204,14 @@ mod test {
     use proptest::collection::vec;
     use proptest::prelude::*;
     use proptest_arbitrary_interop::arb;
-    use rand::rngs::StdRng;
-    use rand::Rng;
-    use rand::SeedableRng;
+    use rand::prelude::*;
     use rayon::prelude::*;
     use test_strategy::proptest;
     use triton_vm::arithmetic_domain::ArithmeticDomain;
     use triton_vm::fri::Fri;
     use triton_vm::proof_item::ProofItem;
     use triton_vm::proof_stream::ProofStream;
+    use triton_vm::twenty_first::math::ntt::ntt;
     use triton_vm::twenty_first::math::traits::PrimitiveRootOfUnity;
     use triton_vm::twenty_first::util_types::algebraic_hasher::Sponge;
 
@@ -1221,11 +1220,13 @@ mod test {
     use crate::memory::encode_to_memory;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::structure::tasm_object::decode_from_memory_with_size;
-    use crate::test_helpers::*;
+    use crate::test_helpers::rust_final_state;
+    use crate::test_helpers::tasm_final_state;
+    use crate::test_helpers::verify_sponge_equivalence;
+    use crate::test_helpers::verify_stack_growth;
     use crate::traits::procedure::Procedure;
     use crate::traits::procedure::ProcedureInitialState;
     use crate::traits::procedure::ShadowedProcedure;
-    use crate::twenty_first::math::ntt::ntt;
 
     use super::*;
 

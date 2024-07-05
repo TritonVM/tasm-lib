@@ -1,9 +1,7 @@
 use std::collections::HashMap;
 
 use num::One;
-use rand::random;
-use rand::thread_rng;
-use rand::Rng;
+use rand::prelude::*;
 use triton_vm::prelude::*;
 use triton_vm::twenty_first::prelude::MmrMembershipProof;
 use twenty_first::math::other::random_elements;

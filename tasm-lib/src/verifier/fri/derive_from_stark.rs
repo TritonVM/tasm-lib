@@ -120,9 +120,7 @@ mod tests {
     use std::collections::HashMap;
 
     use proptest_arbitrary_interop::arb;
-    use rand::rngs::StdRng;
-    use rand::Rng;
-    use rand::SeedableRng;
+    use rand::prelude::*;
     use test_strategy::proptest;
 
     use crate::memory::encode_to_memory;

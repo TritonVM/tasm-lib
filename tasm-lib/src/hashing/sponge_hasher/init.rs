@@ -35,14 +35,16 @@ impl BasicSnippet for Init {
 mod test {
     use std::collections::HashMap;
 
-    use crate::twenty_first::prelude::Sponge;
-    use arbitrary::*;
-    use rand::rngs::StdRng;
-    use rand::*;
+    use arbitrary::Arbitrary;
+    use arbitrary::Unstructured;
+    use rand::prelude::*;
+    use triton_vm::twenty_first::prelude::Sponge;
 
     use crate::empty_stack;
     use crate::snippet_bencher::BenchmarkCase;
-    use crate::traits::procedure::*;
+    use crate::traits::procedure::Procedure;
+    use crate::traits::procedure::ProcedureInitialState;
+    use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
     use crate::VmHasher;
 

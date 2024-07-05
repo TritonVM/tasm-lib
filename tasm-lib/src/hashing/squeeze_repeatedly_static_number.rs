@@ -70,8 +70,7 @@ impl BasicSnippet for SqueezeRepeatedlyStaticNumber {
 mod tests {
     use std::collections::HashMap;
 
-    use rand::thread_rng;
-    use rand::RngCore;
+    use rand::prelude::*;
 
     use super::*;
 

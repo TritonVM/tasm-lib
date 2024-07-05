@@ -1,8 +1,6 @@
-use rand::random;
-use rand::rngs::StdRng;
-use rand::Rng;
-use rand::SeedableRng;
+use rand::prelude::*;
 use triton_vm::prelude::*;
+use triton_vm::twenty_first::prelude::AlgebraicHasher;
 
 use crate::data_type::DataType;
 use crate::empty_stack;
@@ -12,7 +10,6 @@ use crate::snippet_bencher::BenchmarkCase;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::procedure::Procedure;
 use crate::traits::procedure::ProcedureInitialState;
-use crate::twenty_first::prelude::AlgebraicHasher;
 
 /// `merkle_step` but for index of type `u64`
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]

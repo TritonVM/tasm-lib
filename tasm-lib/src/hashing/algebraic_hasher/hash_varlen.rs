@@ -1,9 +1,6 @@
 use std::collections::HashMap;
 
-use rand::random;
-use rand::rngs::StdRng;
-use rand::Rng;
-use rand::SeedableRng;
+use rand::prelude::*;
 use triton_vm::prelude::*;
 use triton_vm::twenty_first::math::tip5::DIGEST_LENGTH;
 use triton_vm::twenty_first::util_types::algebraic_hasher::Sponge;
@@ -148,7 +145,7 @@ impl Procedure for HashVarlen {
 
 #[cfg(test)]
 mod tests {
-    use rand::{thread_rng, RngCore};
+    use rand::prelude::*;
 
     use crate::test_helpers::tasm_final_state;
     use crate::traits::procedure::ShadowedProcedure;

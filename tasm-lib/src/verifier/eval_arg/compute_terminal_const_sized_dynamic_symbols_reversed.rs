@@ -104,9 +104,7 @@ mod tests {
     use itertools::Itertools;
     use num_traits::One;
     use num_traits::Zero;
-    use rand::rngs::StdRng;
-    use rand::Rng;
-    use rand::SeedableRng;
+    use rand::prelude::*;
     use triton_vm::table::cross_table_argument::CrossTableArg;
     use triton_vm::table::cross_table_argument::EvalArg;
 

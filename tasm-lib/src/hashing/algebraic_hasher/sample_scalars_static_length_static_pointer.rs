@@ -76,10 +76,7 @@ impl BasicSnippet for SampleScalarsStaticLengthStaticPointer {
 pub(crate) mod tests {
     use itertools::Itertools;
     use proptest_arbitrary_interop::arb;
-    use rand::random;
-    use rand::rngs::StdRng;
-    use rand::Rng;
-    use rand::SeedableRng;
+    use rand::prelude::*;
     use test_strategy::proptest;
     use triton_vm::prelude::*;
     use triton_vm::twenty_first::util_types::algebraic_hasher::AlgebraicHasher;

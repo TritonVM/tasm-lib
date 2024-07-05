@@ -1,4 +1,3 @@
-use triton_vm::instruction::LabelledInstruction;
 use triton_vm::prelude::*;
 use triton_vm::twenty_first::math::tip5::RATE;
 
@@ -63,17 +62,19 @@ impl BasicSnippet for Squeeze {
 mod test {
     use std::collections::HashMap;
 
-    use arbitrary::*;
-    use rand::rngs::StdRng;
-    use rand::*;
+    use arbitrary::Arbitrary;
+    use arbitrary::Unstructured;
+    use rand::prelude::*;
+    use triton_vm::twenty_first::prelude::Sponge;
 
     use crate::empty_stack;
     use crate::memory::dyn_malloc::DYN_MALLOC_ADDRESS;
     use crate::rust_shadowing_helper_functions;
     use crate::snippet_bencher::BenchmarkCase;
-    use crate::traits::procedure::*;
+    use crate::traits::procedure::Procedure;
+    use crate::traits::procedure::ProcedureInitialState;
+    use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
-    use crate::twenty_first::prelude::Sponge;
     use crate::VmHasher;
 
     use super::*;

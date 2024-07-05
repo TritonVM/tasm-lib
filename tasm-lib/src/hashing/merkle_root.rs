@@ -2,9 +2,7 @@ use std::collections::HashMap;
 
 use itertools::Itertools;
 use num_traits::Zero;
-use rand::rngs::StdRng;
-use rand::Rng;
-use rand::SeedableRng;
+use rand::prelude::*;
 use triton_vm::prelude::tip5::DIGEST_LENGTH;
 use triton_vm::prelude::*;
 use twenty_first::util_types::merkle_tree::CpuParallel;

@@ -72,10 +72,7 @@ impl BasicSnippet for ToThePowerOfPowerOf2 {
 #[cfg(test)]
 mod tests {
     use itertools::Itertools;
-    use rand::random;
-    use rand::rngs::StdRng;
-    use rand::Rng;
-    use rand::SeedableRng;
+    use rand::prelude::*;
     use triton_vm::prelude::*;
     use triton_vm::twenty_first::math::traits::ModPowU32;
 

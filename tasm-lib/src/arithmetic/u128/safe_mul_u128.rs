@@ -1,4 +1,4 @@
-use rand::RngCore;
+use rand::prelude::*;
 use triton_vm::prelude::*;
 use triton_vm::twenty_first::prelude::U32s;
 
@@ -454,7 +454,7 @@ fn prepare_state(a: u128, b: u128) -> InitVmState {
 
 #[cfg(test)]
 mod tests {
-    use rand::Rng;
+    use rand::prelude::*;
 
     use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 

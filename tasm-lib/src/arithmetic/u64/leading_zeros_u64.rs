@@ -1,6 +1,5 @@
-use rand::thread_rng;
-use rand::RngCore;
-use triton_vm::prelude::BFieldElement;
+use rand::prelude::*;
+use triton_vm::prelude::*;
 
 use crate::arithmetic::u32::leadingzeros::Leadingzeros;
 use crate::data_type::DataType;

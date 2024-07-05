@@ -5,9 +5,7 @@ use std::str::FromStr;
 use itertools::Itertools;
 use num::One;
 use num::Zero;
-use rand::random;
-use rand::thread_rng;
-use rand::Rng;
+use rand::prelude::*;
 use triton_vm::prelude::*;
 
 use crate::io::InputSource;
@@ -294,12 +292,10 @@ impl FromStr for DataType {
 
     // This implementation must be the inverse of `label_friendly_name`
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        use DataType::*;
-
         let res = if s.starts_with("list_L") && s.ends_with('R') {
             let inner = &s[6..s.len() - 1];
             let inner = FromStr::from_str(inner)?;
-            DataType::List(Box::new(inner))
+            Self::List(Box::new(inner))
         } else if s.starts_with("tuple_L") && s.ends_with('R') {
             let inner = &s[7..s.len() - 1];
             let inners = inner.split("___");
@@ -311,14 +307,14 @@ impl FromStr for DataType {
             Self::Tuple(inners_resolved)
         } else {
             match s {
-                "void_pointer" => VoidPointer,
-                "bool" => Bool,
-                "u32" => U32,
-                "u64" => U64,
-                "u128" => U128,
-                "bfe" => Bfe,
-                "xfe" => Xfe,
-                "digest" => Digest,
+                "void_pointer" => Self::VoidPointer,
+                "bool" => Self::Bool,
+                "u32" => Self::U32,
+                "u64" => Self::U64,
+                "u128" => Self::U128,
+                "bfe" => Self::Bfe,
+                "xfe" => Self::Xfe,
+                "digest" => Self::Digest,
                 _ => anyhow::bail!("Could not parse {s} as a data type"),
             }
         };

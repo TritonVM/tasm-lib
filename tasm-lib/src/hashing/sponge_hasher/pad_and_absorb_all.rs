@@ -52,18 +52,20 @@ impl BasicSnippet for PadAndAbsorbAll {
 mod test {
     use std::collections::HashMap;
 
-    use arbitrary::*;
+    use arbitrary::Arbitrary;
+    use arbitrary::Unstructured;
     use itertools::Itertools;
-    use rand::rngs::StdRng;
-    use rand::*;
+    use rand::prelude::*;
     use triton_vm::prelude::*;
+    use triton_vm::twenty_first::prelude::Sponge;
 
     use crate::empty_stack;
     use crate::rust_shadowing_helper_functions::list::insert_random_list;
     use crate::snippet_bencher::BenchmarkCase;
-    use crate::traits::procedure::*;
+    use crate::traits::procedure::Procedure;
+    use crate::traits::procedure::ProcedureInitialState;
+    use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
-    use crate::twenty_first::prelude::Sponge;
     use crate::VmHasher;
 
     use super::*;

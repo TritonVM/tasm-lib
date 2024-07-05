@@ -104,9 +104,7 @@ mod test {
     use std::collections::HashMap;
 
     use itertools::Itertools;
-    use rand::rngs::StdRng;
-    use rand::Rng;
-    use rand::SeedableRng;
+    use rand::prelude::*;
     use triton_vm::prelude::*;
     use triton_vm::twenty_first::math::polynomial::Polynomial;
     use triton_vm::twenty_first::xfe_vec;

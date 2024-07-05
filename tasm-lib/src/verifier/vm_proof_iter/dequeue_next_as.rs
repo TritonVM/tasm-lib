@@ -265,6 +265,7 @@ mod test {
     use triton_vm::proof_stream::ProofStream;
     use triton_vm::table::NUM_BASE_COLUMNS;
     use triton_vm::twenty_first::math::polynomial::Polynomial;
+    use triton_vm::twenty_first::prelude::Sponge;
 
     use crate::empty_stack;
     use crate::execute_with_terminal_state;
@@ -276,7 +277,6 @@ mod test {
     use crate::traits::procedure::Procedure;
     use crate::traits::procedure::ProcedureInitialState;
     use crate::traits::procedure::ShadowedProcedure;
-    use crate::twenty_first::prelude::Sponge;
 
     use super::*;
 

@@ -1173,20 +1173,20 @@ mod benches {
     use std::cell::RefCell;
     use std::rc::Rc;
 
-    use benches::tests::{
-        factorial_program_with_io, nd_from_proof, non_determinism_claim_and_padded_height,
-    };
+    use benches::tests::factorial_program_with_io;
+    use benches::tests::nd_from_proof;
+    use benches::tests::non_determinism_claim_and_padded_height;
 
     use crate::generate_full_profile;
     use crate::linker::execute_bench;
+    use crate::linker::link_for_isolated_run;
     use crate::memory::encode_to_memory;
-    use crate::snippet_bencher::{write_benchmarks, BenchmarkCase, NamedBenchmarkResult};
+    use crate::snippet_bencher::write_benchmarks;
+    use crate::snippet_bencher::BenchmarkCase;
+    use crate::snippet_bencher::NamedBenchmarkResult;
     use crate::test_helpers::prepend_program_with_stack_setup;
     use crate::verifier::claim::shared::insert_claim_into_static_memory;
-    use crate::{
-        linker::link_for_isolated_run,
-        verifier::vm_proof_iter::shared::insert_default_proof_iter_into_memory,
-    };
+    use crate::verifier::vm_proof_iter::shared::insert_default_proof_iter_into_memory;
 
     use super::*;
 

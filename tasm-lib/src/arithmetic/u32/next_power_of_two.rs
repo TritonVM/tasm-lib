@@ -89,9 +89,7 @@ impl BasicSnippet for NextPowerOfTwo {
 #[cfg(test)]
 mod tests {
     use itertools::Itertools;
-    use rand::rngs::StdRng;
-    use rand::RngCore;
-    use rand::SeedableRng;
+    use rand::prelude::*;
 
     use crate::test_helpers::negative_test;
     use crate::traits::closure::Closure;

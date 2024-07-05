@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use num_traits::Zero;
-use rand::random;
+use rand::prelude::*;
 use triton_vm::prelude::*;
 
 use crate::data_type::DataType;

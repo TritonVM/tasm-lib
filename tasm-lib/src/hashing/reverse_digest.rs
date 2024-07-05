@@ -1,5 +1,5 @@
-use rand::random;
-use triton_vm::prelude::BFieldElement;
+use rand::prelude::*;
+use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
 use crate::empty_stack;

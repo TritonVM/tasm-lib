@@ -1,4 +1,4 @@
-use rand::RngCore;
+use rand::prelude::*;
 use triton_vm::prelude::*;
 use triton_vm::twenty_first::prelude::U32s;
 

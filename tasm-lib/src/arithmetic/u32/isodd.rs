@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use rand::RngCore;
-use triton_vm::prelude::BFieldElement;
+use rand::prelude::*;
+use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
 use crate::empty_stack;
@@ -99,8 +99,7 @@ impl DeprecatedSnippet for Isodd {
 
 #[cfg(test)]
 mod tests {
-    use rand::thread_rng;
-    use rand::RngCore;
+    use rand::prelude::*;
 
     use crate::empty_stack;
     use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;

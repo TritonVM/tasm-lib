@@ -165,9 +165,7 @@ impl BasicSnippet for NewEmptyInputAndOutput {
 #[cfg(test)]
 mod tests {
     use itertools::Itertools;
-    use rand::rngs::StdRng;
-    use rand::Rng;
-    use rand::SeedableRng;
+    use rand::prelude::*;
     use triton_vm::table::challenges::Challenges;
     use triton_vm::twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 

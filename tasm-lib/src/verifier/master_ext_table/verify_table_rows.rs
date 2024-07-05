@@ -1,7 +1,3 @@
-use crate::data_type::DataType;
-use crate::hashing::algebraic_hasher::hash_static_size::HashStaticSize;
-use crate::library::Library;
-use crate::traits::basic_snippet::BasicSnippet;
 use strum::Display;
 use strum::EnumIter;
 use triton_vm::prelude::*;
@@ -10,6 +6,11 @@ use triton_vm::table::NUM_EXT_COLUMNS;
 use triton_vm::table::NUM_QUOTIENT_SEGMENTS;
 use triton_vm::twenty_first::math::tip5::DIGEST_LENGTH;
 use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
+
+use crate::data_type::DataType;
+use crate::hashing::algebraic_hasher::hash_static_size::HashStaticSize;
+use crate::library::Library;
+use crate::traits::basic_snippet::BasicSnippet;
 
 #[derive(Debug, Copy, Clone, Display, EnumIter)]
 pub enum ColumnType {
@@ -207,9 +208,7 @@ mod tests {
     use std::collections::HashMap;
 
     use itertools::Itertools;
-    use rand::rngs::StdRng;
-    use rand::Rng;
-    use rand::SeedableRng;
+    use rand::prelude::*;
     use triton_vm::twenty_first::math::other::random_elements;
     use triton_vm::twenty_first::math::tip5::RATE;
     use triton_vm::twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
@@ -255,7 +254,7 @@ mod tests {
     }
 
     mod negative_tests {
-        use rand::{thread_rng, RngCore};
+        use rand::prelude::*;
         use strum::IntoEnumIterator;
 
         use crate::test_helpers::negative_test;

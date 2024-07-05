@@ -220,9 +220,7 @@ impl BasicSnippet for NewGenericDynClaim {
 mod tests {
     use std::collections::HashMap;
 
-    use rand::rngs::StdRng;
-    use rand::Rng;
-    use rand::SeedableRng;
+    use rand::prelude::*;
     use triton_vm::table::challenges::Challenges;
     use triton_vm::twenty_first::math::other::random_elements;
     use triton_vm::twenty_first::util_types::algebraic_hasher::AlgebraicHasher;

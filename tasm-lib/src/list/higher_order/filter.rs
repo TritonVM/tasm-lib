@@ -2,9 +2,7 @@ use std::collections::HashMap;
 
 use itertools::Itertools;
 use num::Zero;
-use rand::rngs::StdRng;
-use rand::Rng;
-use rand::SeedableRng;
+use rand::prelude::*;
 use triton_vm::parser::tokenize;
 use triton_vm::prelude::*;
 

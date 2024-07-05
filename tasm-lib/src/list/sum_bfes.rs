@@ -158,9 +158,7 @@ mod tests {
 
     use itertools::Itertools;
     use num_traits::Zero;
-    use rand::rngs::StdRng;
-    use rand::Rng;
-    use rand::SeedableRng;
+    use rand::prelude::*;
 
     use crate::rust_shadowing_helper_functions::list::insert_random_list;
     use crate::rust_shadowing_helper_functions::list::load_list_with_copy_elements;

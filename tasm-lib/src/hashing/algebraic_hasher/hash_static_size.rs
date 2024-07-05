@@ -56,15 +56,15 @@ mod tests {
     use std::collections::HashMap;
 
     use proptest_arbitrary_interop::arb;
-    use rand::rngs::StdRng;
-    use rand::Rng;
-    use rand::SeedableRng;
+    use rand::prelude::*;
     use test_strategy::proptest;
     use triton_vm::twenty_first::math::tip5::DIGEST_LENGTH;
     use triton_vm::twenty_first::util_types::algebraic_hasher::Sponge;
 
     use crate::snippet_bencher::BenchmarkCase;
-    use crate::traits::procedure::{Procedure, ProcedureInitialState, ShadowedProcedure};
+    use crate::traits::procedure::Procedure;
+    use crate::traits::procedure::ProcedureInitialState;
+    use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
     use crate::VmHasher;
 

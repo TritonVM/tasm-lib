@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
-use rand::rngs::StdRng;
-use rand::SeedableRng;
+use rand::prelude::*;
 use triton_vm::prelude::*;
 
 use crate::data_type::DataType;

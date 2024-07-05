@@ -1,11 +1,8 @@
 use std::collections::HashMap;
 
 use num_traits::Zero;
-use rand::random;
-use rand::thread_rng;
-use rand::Rng;
-use rand::RngCore;
-use triton_vm::prelude::BFieldElement;
+use rand::prelude::*;
+use triton_vm::prelude::*;
 
 use crate::empty_stack;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
