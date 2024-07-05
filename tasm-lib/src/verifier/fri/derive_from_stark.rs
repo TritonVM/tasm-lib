@@ -12,17 +12,17 @@ use crate::verifier::fri::verify::fri_verify_type;
 
 /// Mimics Triton-VM's FRI parameter-derivation method, but doesn't allow for a FRI-domain length
 /// of 2^32 bc the domain length is stored in a single word/a `u32`.
-pub struct DeriveFriFromStarkParams {
-    pub stark_parameters: Stark,
+pub struct DeriveFriFromStark {
+    pub stark: Stark,
 }
 
-impl DeriveFriFromStarkParams {
+impl DeriveFriFromStark {
     fn derive_fri_field_values(&self, library: &mut Library) -> Vec<LabelledInstruction> {
         let next_power_of_two = library.import(Box::new(NextPowerOfTwo));
         let domain_generator = library.import(Box::new(PrimitiveRootOfUnity));
 
-        let num_trace_randomizers = self.stark_parameters.num_trace_randomizers;
-        let fri_expansion_factor = self.stark_parameters.fri_expansion_factor;
+        let num_trace_randomizers = self.stark.num_trace_randomizers;
+        let fri_expansion_factor = self.stark.fri_expansion_factor;
         let interpolant_codeword_length_code = triton_asm!(
             // _ padded_height
 
@@ -43,8 +43,8 @@ impl DeriveFriFromStarkParams {
         );
 
         let domain_offset = BFieldElement::generator();
-        let num_collinearity_checks = self.stark_parameters.num_collinearity_checks;
-        let expansion_factor = self.stark_parameters.fri_expansion_factor;
+        let num_collinearity_checks = self.stark.num_collinearity_checks;
+        let expansion_factor = self.stark.fri_expansion_factor;
         triton_asm!(
             // _ padded_height
 
@@ -72,7 +72,7 @@ impl DeriveFriFromStarkParams {
     }
 }
 
-impl BasicSnippet for DeriveFriFromStarkParams {
+impl BasicSnippet for DeriveFriFromStark {
     fn inputs(&self) -> Vec<(DataType, String)> {
         vec![(DataType::U32, "padded_height".to_owned())]
     }
@@ -85,7 +85,7 @@ impl BasicSnippet for DeriveFriFromStarkParams {
     }
 
     fn entrypoint(&self) -> String {
-        "tasmlib_verifier_fri_derive_from_stark_params".to_owned()
+        "tasmlib_verifier_fri_derive_from_stark".to_owned()
     }
 
     fn code(&self, library: &mut crate::library::Library) -> Vec<LabelledInstruction> {
@@ -138,18 +138,18 @@ mod tests {
 
     #[test]
     fn fri_param_derivation_default_stark_pbt() {
-        ShadowedFunction::new(DeriveFriFromStarkParams {
-            stark_parameters: Stark::default(),
+        ShadowedFunction::new(DeriveFriFromStark {
+            stark: Stark::default(),
         })
         .test();
     }
 
     #[proptest(cases = 10)]
-    fn fri_param_derivation_pbt_pbt(#[strategy(arb())] stark_parameters: Stark) {
-        ShadowedFunction::new(DeriveFriFromStarkParams { stark_parameters }).test();
+    fn fri_param_derivation_pbt_pbt(#[strategy(arb())] stark: Stark) {
+        ShadowedFunction::new(DeriveFriFromStark { stark }).test();
     }
 
-    impl Function for DeriveFriFromStarkParams {
+    impl Function for DeriveFriFromStark {
         fn rust_shadow(
             &self,
             stack: &mut Vec<BFieldElement>,
@@ -157,7 +157,7 @@ mod tests {
         ) {
             let padded_height: u32 = stack.pop().unwrap().try_into().unwrap();
             let fri_from_tvm = self
-                .stark_parameters
+                .stark
                 .derive_fri(padded_height.try_into().unwrap())
                 .unwrap();
             let local_fri: FriVerify = fri_from_tvm.into();
@@ -184,11 +184,7 @@ mod tests {
                     // the type used to hold this value is a `u32` in this repo. I think such a
                     // large FRI domain is unfeasible anyway, so I'm reasonably comfortable
                     // excluding that option.
-                    while self
-                        .stark_parameters
-                        .derive_fri(padded_height as usize * 2)
-                        .is_err()
-                    {
+                    while self.stark.derive_fri(padded_height as usize * 2).is_err() {
                         padded_height /= 2;
                     }
 

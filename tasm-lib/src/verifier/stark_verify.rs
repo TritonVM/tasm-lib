@@ -35,18 +35,16 @@ use crate::verifier::vm_proof_iter::shared::vm_proof_iter_type;
 
 #[derive(Debug, Clone)]
 pub struct StarkVerify {
-    stark_parameters: Stark,
-    log_2_padded_height: Option<u32>,
+    stark: Stark,
 }
 
 impl BasicSnippet for StarkVerify {
     fn inputs(&self) -> Vec<(DataType, String)> {
+        let claim_type = DataType::StructRef(claim_type());
+        let proof_iter_type = DataType::StructRef(vm_proof_iter_type());
         vec![
-            (DataType::StructRef(claim_type()), "claim".to_owned()),
-            (
-                DataType::StructRef(vm_proof_iter_type()),
-                "vm_proof_iter".to_owned(),
-            ),
+            (claim_type, "claim".to_string()),
+            (proof_iter_type, "vm_proof_iter".to_string()),
         ]
     }
 
@@ -55,7 +53,7 @@ impl BasicSnippet for StarkVerify {
     }
 
     fn entrypoint(&self) -> String {
-        "tasmlib_verifier_stark_verify".to_owned()
+        "tasmlib_verifier_stark_verify".to_string()
     }
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
@@ -110,11 +108,10 @@ impl BasicSnippet for StarkVerify {
         let next_as_quotient_segment_elements = library.import(Box::new(DequeueNextAs {
             proof_item: ProofItemVariant::QuotientSegmentsElements,
         }));
-        let derive_fri_parameters = library.import(Box::new(
-            fri::derive_from_stark_params::DeriveFriFromStarkParams {
-                stark_parameters: self.stark_parameters,
-            },
-        ));
+        let derive_fri_parameters =
+            library.import(Box::new(fri::derive_from_stark::DeriveFriFromStark {
+                stark: self.stark,
+            }));
         let num_collinearity_checks_field = field!(FriVerify::num_collinearity_checks);
         let domain_length_field = field!(FriVerify::domain_length);
         let domain_offset_field = field!(FriVerify::domain_offset);
@@ -195,18 +192,6 @@ impl BasicSnippet for StarkVerify {
                 // _ *deep_codeword_weight[n]_last_word
             )
         };
-
-        let verify_log_2_padded_height =
-            if let Some(expected_log_2_padded_height) = self.log_2_padded_height {
-                triton_asm!(
-                    dup 0
-                    push {expected_log_2_padded_height}
-                    eq
-                    assert
-                )
-            } else {
-                triton_asm!()
-            };
 
         let verify_challenges_pointer = triton_asm!(
             push {conventional_challenges_pointer()}
@@ -461,9 +446,6 @@ impl BasicSnippet for StarkVerify {
 
                 read_mem 1
                 pop 1
-                // _ *clm *p_iter log_2_padded_height
-
-                {&verify_log_2_padded_height}
                 // _ *clm *p_iter log_2_padded_height
 
                 push 2
@@ -965,8 +947,7 @@ pub mod tests {
         insert_default_proof_iter_into_memory(&mut non_determinism.ram, proof_iter_pointer);
 
         let snippet = StarkVerify {
-            stark_parameters: Stark::default(),
-            log_2_padded_height: None,
+            stark: Stark::default(),
         };
 
         let mut init_stack = [
@@ -1006,10 +987,7 @@ pub mod tests {
         let proof_iter_pointer = BFieldElement::new(1 << 31);
         insert_default_proof_iter_into_memory(&mut non_determinism.ram, proof_iter_pointer);
 
-        let snippet = StarkVerify {
-            stark_parameters: stark,
-            log_2_padded_height: None,
-        };
+        let snippet = StarkVerify { stark };
         let mut init_stack = [
             snippet.init_stack_for_isolated_run(),
             vec![claim_pointer, proof_iter_pointer],
@@ -1148,7 +1126,7 @@ pub mod tests {
     }
 
     /// Generate the required data for the verifier, when verifying
-    /// a given program, input, nondeterminism, and STARK parameters.
+    /// a given program, input, nondeterminism, and STARK.
     pub fn non_determinism_claim_and_padded_height(
         inner_program: &Program,
         inner_public_input: &[BFieldElement],
@@ -1232,10 +1210,7 @@ mod benches {
         let proof_iter_pointer = BFieldElement::new(1 << 31);
         insert_default_proof_iter_into_memory(&mut non_determinism.ram, proof_iter_pointer);
 
-        let snippet = StarkVerify {
-            stark_parameters: stark,
-            log_2_padded_height: None,
-        };
+        let snippet = StarkVerify { stark };
 
         let init_stack = [
             snippet.init_stack_for_isolated_run(),
@@ -1334,10 +1309,7 @@ mod benches {
 
         assert_eq!(expected_inner_padded_height, inner_padded_height);
 
-        let snippet = StarkVerify {
-            stark_parameters: stark,
-            log_2_padded_height: None,
-        };
+        let snippet = StarkVerify { stark };
 
         let init_stack = [
             snippet.init_stack_for_isolated_run(),
