@@ -9,7 +9,7 @@ use triton_vm::prelude::*;
 ///
 /// Mirrors the `contains` method from Rust `core` as closely as possible.
 pub struct Contains {
-    element_type: DataType,
+    pub element_type: DataType,
 }
 
 impl BasicSnippet for Contains {
