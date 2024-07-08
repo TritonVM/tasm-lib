@@ -144,7 +144,9 @@ impl BasicSnippet for Contains {
 mod tests {
     use std::collections::HashMap;
 
+    use itertools::Itertools;
     use num::One;
+    use num::Zero;
     use rand::rngs::StdRng;
     use rand::seq::SliceRandom;
     use rand::Rng;
@@ -153,6 +155,7 @@ mod tests {
     use crate::library::STATIC_MEMORY_START_ADDRESS;
     use crate::rust_shadowing_helper_functions::list::load_list_unstructured;
     use crate::snippet_bencher::BenchmarkCase;
+    use crate::test_helpers::test_rust_equivalence_given_complete_state;
     use crate::traits::function::Function;
     use crate::traits::function::FunctionInitialState;
     use crate::traits::function::ShadowedFunction;
@@ -199,8 +202,69 @@ mod tests {
     }
 
     #[test]
+    fn contains_returns_true_on_contained_value() {
+        let snippet = Contains {
+            element_type: DataType::U64,
+        };
+        let a_u64_element = vec![bfe!(2), bfe!(3)];
+        let u64_list = vec![a_u64_element.clone()];
+        let init_state = snippet.prepare_state(BFieldElement::zero(), a_u64_element, u64_list);
+        let nd = NonDeterminism::default().with_ram(init_state.memory);
+
+        let expected_final_stack = [
+            snippet.init_stack_for_isolated_run(),
+            vec![BFieldElement::one()],
+        ]
+        .concat();
+
+        test_rust_equivalence_given_complete_state(
+            &ShadowedFunction::new(Contains {
+                element_type: DataType::U64,
+            }),
+            &init_state.stack,
+            &[],
+            &nd,
+            &None,
+            Some(&expected_final_stack),
+        );
+    }
+
+    #[test]
+    fn contains_returns_false_on_mirrored_value() {
+        let snippet = Contains {
+            element_type: DataType::U64,
+        };
+        let a_u64_element = vec![bfe!(2), bfe!(3)];
+        let mirrored_u64_element = vec![bfe!(3), bfe!(2)];
+        let init_state = snippet.prepare_state(
+            BFieldElement::zero(),
+            a_u64_element,
+            vec![mirrored_u64_element],
+        );
+        let nd = NonDeterminism::default().with_ram(init_state.memory);
+
+        let expected_final_stack = [
+            snippet.init_stack_for_isolated_run(),
+            vec![BFieldElement::zero()],
+        ]
+        .concat();
+
+        test_rust_equivalence_given_complete_state(
+            &ShadowedFunction::new(Contains {
+                element_type: DataType::U64,
+            }),
+            &init_state.stack,
+            &[],
+            &nd,
+            &None,
+            Some(&expected_final_stack),
+        );
+    }
+
+    #[test]
     fn contains_pbt() {
         for element_type in [
+            DataType::Bfe,
             DataType::U32,
             DataType::U64,
             DataType::Xfe,
@@ -315,6 +379,17 @@ mod tests {
                 vec![an_element.clone(), an_element.clone()],
             );
 
+            let non_symmetric_value = (0..self.element_type.stack_size())
+                .map(|i| bfe!(i as u64 + 200))
+                .collect_vec();
+            let mut mirrored_non_symmetric_value = non_symmetric_value.clone();
+            mirrored_non_symmetric_value.reverse();
+            let no_match_on_inverted_value_unless_size_1 = self.prepare_state(
+                a_pointer,
+                non_symmetric_value,
+                vec![mirrored_non_symmetric_value],
+            );
+
             vec![
                 empty_list,
                 one_element_match,
@@ -323,6 +398,7 @@ mod tests {
                 two_elements_match_last,
                 two_elements_no_match,
                 two_elements_both_match,
+                no_match_on_inverted_value_unless_size_1,
             ]
         }
     }
