@@ -6,6 +6,7 @@ use itertools::Itertools;
 use num::One;
 use num::Zero;
 use rand::prelude::*;
+use triton_vm::op_stack::NUM_OP_STACK_REGISTERS;
 use triton_vm::prelude::*;
 
 use crate::io::InputSource;
@@ -158,6 +159,32 @@ impl DataType {
     /// ```
     pub fn write_value_to_stdout(&self) -> Vec<LabelledInstruction> {
         crate::io::write_words(self.stack_size())
+    }
+
+    /// Return the code that compares two elements of this type.
+    ///
+    /// ```text
+    /// BEFORE: _ [self] [other]
+    /// AFTER: _ (self == other)
+    /// ```
+    pub fn compare(&self) -> Vec<LabelledInstruction> {
+        match self.stack_size() {
+            0 => triton_asm!(push 1),
+            1 => triton_asm!(eq),
+            n => {
+                let size_plus_one = n + 1;
+                let size_minus_one = n - 1;
+
+                assert!(size_plus_one < NUM_OP_STACK_REGISTERS);
+
+                let first_cmps =
+                    vec![triton_asm!(swap {size_plus_one} eq ); size_minus_one].concat();
+                let last_cmp = triton_asm!(swap 2 eq);
+                let boolean_ands = triton_asm![mul; size_minus_one];
+
+                [first_cmps, last_cmp, boolean_ands].concat()
+            }
+        }
     }
 
     /// Return a string matching how the variant looks in source code

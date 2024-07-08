@@ -1,0 +1,24 @@
+[
+  {
+    "name": "tasmlib_list_contains___u64",
+    "benchmark_result": {
+      "clock_cycle_count": 1075,
+      "hash_table_height": 42,
+      "u32_table_height": 0,
+      "op_stack_table_height": 920,
+      "ram_table_height": 203
+    },
+    "case": "CommonCase"
+  },
+  {
+    "name": "tasmlib_list_contains___u64",
+    "benchmark_result": {
+      "clock_cycle_count": 4225,
+      "hash_table_height": 42,
+      "u32_table_height": 0,
+      "op_stack_table_height": 3620,
+      "ram_table_height": 803
+    },
+    "case": "WorstCase"
+  }
+]
