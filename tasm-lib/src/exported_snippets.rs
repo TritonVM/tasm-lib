@@ -5,7 +5,7 @@ use triton_vm::table::extension_table::Quotientable;
 use triton_vm::table::master_table::MasterExtTable;
 use triton_vm::table::NUM_QUOTIENT_SEGMENTS;
 
-use crate::arithmetic::u128::add_u128::AddU128;
+use crate::arithmetic::u128::safe_add::SafeAddU128;
 use crate::arithmetic::u128::safe_mul_u128::SafeMulU128;
 use crate::arithmetic::u128::shift_left_static_u128::ShiftLeftStaticU128;
 use crate::arithmetic::u128::shift_left_u128::ShiftLeftU128;
@@ -161,7 +161,7 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
         "tasmlib_arithmetic_u64_overflowing_sub" => Box::new(OverflowingSub),
 
         // u128
-        "tasmlib_arithmetic_u128_add" => Box::new(AddU128),
+        "tasmlib_arithmetic_u128_safe_add" => Box::new(SafeAddU128),
         "tasmlib_arithmetic_u128_shift_left" => Box::new(ShiftLeftU128),
         "tasmlib_arithmetic_u128_shift_right" => Box::new(ShiftRightU128),
         "tasmlib_arithmetic_u128_sub" => Box::new(SubU128),
