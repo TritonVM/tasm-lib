@@ -1,0 +1,24 @@
+[
+  {
+    "name": "tasmlib_hashing_lt_digest",
+    "benchmark_result": {
+      "clock_cycle_count": 46,
+      "hash_table_height": 48,
+      "u32_table_height": 15,
+      "op_stack_table_height": 37,
+      "ram_table_height": 2
+    },
+    "case": "CommonCase"
+  },
+  {
+    "name": "tasmlib_hashing_lt_digest",
+    "benchmark_result": {
+      "clock_cycle_count": 97,
+      "hash_table_height": 48,
+      "u32_table_height": 0,
+      "op_stack_table_height": 79,
+      "ram_table_height": 10
+    },
+    "case": "WorstCase"
+  }
+]
