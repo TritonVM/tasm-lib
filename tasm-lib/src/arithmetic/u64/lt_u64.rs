@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use itertools::Itertools;
 use num::One;
 use num::Zero;
 use rand::prelude::*;
@@ -13,14 +14,14 @@ use crate::push_encodable;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::InitVmState;
 
-#[derive(Clone, Debug)]
-pub struct LtStandardU64;
-
 /// This `lt_standard_u64` does consume its argument.
 ///
 /// The fastest way we know is to calculate without consuming, and then pop the operands.
 /// This is because there are three branches, so sharing cleanup unconditionally means
 /// less branching (fewer cycles) and less local cleanup (smaller program).
+#[derive(Clone, Debug)]
+pub struct LtStandardU64;
+
 impl DeprecatedSnippet for LtStandardU64 {
     fn entrypoint_name(&self) -> String {
         "tasmlib_arithmetic_u64_lt_standard".to_string()
@@ -53,18 +54,20 @@ impl DeprecatedSnippet for LtStandardU64 {
 
     fn function_code(&self, _library: &mut Library) -> String {
         let entrypoint = self.entrypoint_name();
-        format!(
-            "
+        let aux_label = format!("{entrypoint}_aux");
+        let lo_label = format!("{entrypoint}_lo");
+
+        triton_asm!(
             // Before: _ rhs_hi rhs_lo lhs_hi lhs_lo
             // After:  _ (lhs < rhs)
             {entrypoint}:
-                call {entrypoint}_aux // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs)
-                swap 4 pop 4           // _ (lhs < rhs)
+                call {aux_label} // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs)
+                swap 4 pop 4     // _ (lhs < rhs)
                 return
 
             // BEFORE: _ rhs_hi rhs_lo lhs_hi lhs_lo
             // AFTER:  _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs)
-            {entrypoint}_aux:
+            {aux_label}:
                 dup 3 // _ rhs_hi rhs_lo lhs_hi lhs_lo rhs_hi
                 dup 2 // _ rhs_hi rhs_lo lhs_hi lhs_lo rhs_hi lhs_hi
                 lt   // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_hi < rhs_hi)
@@ -76,21 +79,22 @@ impl DeprecatedSnippet for LtStandardU64 {
                 dup 4 // _ rhs_hi rhs_lo lhs_hi lhs_lo 0 rhs_hi
                 dup 3 // _ rhs_hi rhs_lo lhs_hi lhs_lo 0 rhs_hi lhs_hi
                 eq    // _ rhs_hi rhs_lo lhs_hi lhs_lo 0 (lhs_hi == rhs_hi)
-                skiz call {entrypoint}_lo
+                skiz call {lo_label}
                       // true: _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs, aka lhs_lo < rhs_lo)
                       // false: _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs, aka 0)
                 return
 
             // BEFORE: _ rhs_hi rhs_lo lhs_hi lhs_lo 0
             // AFTER:  _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_lo < rhs_lo)
-            {entrypoint}_lo:
+            {lo_label}:
                 pop 1 // _ rhs_hi rhs_lo lhs_hi lhs_lo
                 dup 2 // _ rhs_hi rhs_lo lhs_hi lhs_lo rhs_lo
                 dup 1 // _ rhs_hi rhs_lo lhs_hi lhs_lo rhs_lo lhs_lo
                 lt    // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs)
                 return
-            "
         )
+        .iter()
+        .join("\n")
     }
 
     fn crash_conditions(&self) -> Vec<String> {
