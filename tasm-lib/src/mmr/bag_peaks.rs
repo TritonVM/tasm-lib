@@ -8,6 +8,7 @@ use twenty_first::util_types::shared::bag_peaks;
 
 use crate::data_type::DataType;
 use crate::list::LIST_METADATA_SIZE;
+use crate::mmr::MAX_MMR_HEIGHT;
 use crate::rust_shadowing_helper_functions;
 use crate::snippet_bencher::BenchmarkCase;
 use crate::traits::basic_snippet::BasicSnippet;
@@ -65,6 +66,12 @@ impl BasicSnippet for BagPeaks {
         {entrypoint}:
             dup 0 read_mem 1 pop 1
             // _ *peaks length
+
+            /* Verify that number of peaks does not exceed 63 */
+            push {MAX_MMR_HEIGHT}
+            dup 1
+            lt
+            assert
 
             // special case 0
             push 1 dup 1 push 0 eq // _ *peaks length 1 (length==0)
