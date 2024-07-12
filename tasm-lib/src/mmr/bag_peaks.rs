@@ -7,9 +7,6 @@ use twenty_first::math::other::random_elements;
 use twenty_first::util_types::shared::bag_peaks;
 
 use crate::data_type::DataType;
-use crate::empty_stack;
-use crate::list::get::Get;
-use crate::list::length::Length;
 use crate::list::LIST_METADATA_SIZE;
 use crate::rust_shadowing_helper_functions;
 use crate::snippet_bencher::BenchmarkCase;
@@ -17,15 +14,16 @@ use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::function::Function;
 use crate::traits::function::FunctionInitialState;
 use crate::VmHasher;
+use crate::DIGEST_LENGTH;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct BagPeaks;
 
 impl BagPeaks {
-    fn input_state(num_peaks: usize) -> FunctionInitialState {
+    fn input_state(&self, num_peaks: usize) -> FunctionInitialState {
         let peaks: Vec<Digest> = random_elements(num_peaks);
         let address: BFieldElement = random();
-        let mut stack = empty_stack();
+        let mut stack = self.init_stack_for_isolated_run();
         stack.push(address);
         let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
 
@@ -52,11 +50,8 @@ impl BasicSnippet for BagPeaks {
         "tasmlib_mmr_bag_peaks".to_string()
     }
 
-    fn code(&self, library: &mut crate::library::Library) -> Vec<LabelledInstruction> {
+    fn code(&self, _library: &mut crate::library::Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
-
-        let get_element = library.import(Box::new(Get::new(DataType::Digest)));
-        let get_length = library.import(Box::new(Length::new(DataType::Digest)));
 
         let length_is_zero_label = format!("{entrypoint}_length_is_zero");
         let length_is_not_zero_label = format!("{entrypoint}_length_is_not_zero");
@@ -68,8 +63,8 @@ impl BasicSnippet for BagPeaks {
         // BEFORE: _ *peaks
         // AFTER:  _ d4 d3 d2 d1 d0
         {entrypoint}:
-            dup 0  // _ *peaks *peaks
-            call {get_length} // _ *peaks length
+            dup 0 read_mem 1 pop 1
+            // _ *peaks length
 
             // special case 0
             push 1 dup 1 push 0 eq // _ *peaks length 1 (length==0)
@@ -110,70 +105,68 @@ impl BasicSnippet for BagPeaks {
         // AFTER:  _ d4 d3 d2 d1 d0 0
         {length_is_one_label}:
             pop 2
-            push 0
-            // _ *peaks 0
-            call {get_element} // _ d4 d3 d2 d1 d0
+
+            push {DIGEST_LENGTH} add
+            // _ *peaks[0]_lw
+
+            read_mem {DIGEST_LENGTH}
+            pop 1
+
             push 0
             return
 
         // BEFORE: _ *peaks length
         // AFTER:  _ d4 d3 d2 d1 d0
         {length_is_not_zero_or_one}:
-            // base case
-            push -1 add             // _ *peaks length-1
-            dup 1 dup 1             // _ *peaks length-1 *peaks length-1
-            call {get_element}      // _ *peaks length-1 l4 l3 l2 l1 l0
-            dup 6 dup 6             // _*peaks length-1 l4 l3 l2 l1 l0 *peaks length-1
-            push -1 add             // _*peaks length-1 l4 l3 l2 l1 l0 *peaks length-2
-            call {get_element}      // _ *peaks length-1 l4 l3 l2 l1 l0 p4 p3 p2 p1 p0
-            hash
-            // _ *peaks length-1 [acc]
 
-            swap 5
-            push -1 add
-            swap 5
-            // _ *peaks length-2 [acc]
+            /* Get pointer to last word of peaks list */
+            push {DIGEST_LENGTH}
+            mul
+            // _ *peaks offset
+
+            push 0
+            swap 1
+            dup 2
+            add
+            // _ *peaks 0 *peaks[last]_lw
+
+            read_mem {DIGEST_LENGTH}
+            // _ *peaks 0 [peaks[last]] *peaks[last-1]_lw
+
+            swap 6
+            pop 1
+            // _ *peaks *peaks[last-2]_lw [peaks[last]]
+            // _ *peaks *peaks[last-2]_lw [acc]
 
             call {loop_label}
-            // *peaks 0 [acc]
-            // *peaks 0 d4 d3 d2 d1 d0
+            // *peaks *peaks [acc]
+            // *peaks *peaks d4 d3 d2 d1 d0
 
-            swap 2 // *peaks 0 d4 d3 d0 d1 d2
-            swap 4 // *peaks 0 d2 d3 d0 d1 d4
-            swap 6 // d4 0 d2 d3 d0 d1 *peaks
-            pop 1  // d4 0 d2 d3 d0 d1
-            swap 2 // d4 0 d2 d1 d0 d3
-            swap 4 // d4 d3 d2 d1 d0 0
+            swap 2 // *peaks *peaks d4 d3 d0 d1 d2
+            swap 4 // *peaks *peaks d2 d3 d0 d1 d4
+            swap 6 // d4 *peaks d2 d3 d0 d1 *peaks
+            pop 1  // d4 *peaks d2 d3 d0 d1
+            swap 2 // d4 *peaks d2 d1 d0 d3
+            swap 4 // d4 d3 d2 d1 d0 *peaks
             pop 1  // d4 d3 d2 d1 d0
 
             return
 
-        // INVARIANT: _ *peaks elements_left [acc]
+        // INVARIANT: _ *peaks *peaks[i]_lw [acc]
         {loop_label}:
             // evaluate termination condition
-            dup 5     // _ *peaks elements_left [acc] elements_left
-            push 0 eq // _ *peaks elements_left [acc] elements_left==0
-            skiz return
-            // _ *peaks elements_left [acc]
+            // _ *peaks *peaks[i]_lw [acc]
 
-            // body
-            swap 5
-            push -1
-            add
-            swap 5
-            // _ *peaks elements_left' [acc]
-
-            dup 6
-            dup 6
-            // _ *peaks elements_left' [acc] *peaks elements_left'
-
-            call {get_element}
-            // _*peaks elements_left' [acc] [peaks[elements_left - 1]]
+            dup 5
+            read_mem {DIGEST_LENGTH}
+            swap 11
+            pop 1
+            // _*peaks *peaks[i-1] [acc] [peaks[i - 1]]
 
             hash
-            // _*peaks elements_left' [acc']
+            // _*peaks *peaks[i-1] [acc']
 
-            recurse
+            recurse_or_return
         )
     }
 }
@@ -215,22 +208,24 @@ impl Function for BagPeaks {
         bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
     ) -> FunctionInitialState {
         match bench_case {
-            Some(BenchmarkCase::CommonCase) => Self::input_state(30),
-            Some(BenchmarkCase::WorstCase) => Self::input_state(60),
+            Some(BenchmarkCase::CommonCase) => self.input_state(30),
+            Some(BenchmarkCase::WorstCase) => self.input_state(60),
             None => {
                 let mut rng: StdRng = SeedableRng::from_seed(seed);
-                Self::input_state(rng.gen_range(0..=63))
+                self.input_state(rng.gen_range(0..=63))
             }
         }
     }
 
     fn corner_case_initial_states(&self) -> Vec<FunctionInitialState> {
         vec![
-            Self::input_state(0),
-            Self::input_state(1),
-            Self::input_state(2),
-            Self::input_state(3),
-            Self::input_state(63),
+            self.input_state(0),
+            self.input_state(1),
+            self.input_state(2),
+            self.input_state(3),
+            self.input_state(4),
+            self.input_state(5),
+            self.input_state(63),
         ]
     }
 }
