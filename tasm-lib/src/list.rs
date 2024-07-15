@@ -8,6 +8,7 @@ pub mod higher_order;
 pub mod horner_evaluation_dynamic_length;
 pub mod length;
 pub mod multiset_equality_digests;
+pub mod multiset_equality_u64s;
 pub mod new;
 pub mod pop;
 pub mod push;

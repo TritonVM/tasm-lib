@@ -1,0 +1,24 @@
+[
+  {
+    "name": "tasmlib_list_multiset_equality_u64s",
+    "benchmark_result": {
+      "clock_cycle_count": 2613,
+      "hash_table_height": 440,
+      "u32_table_height": 14,
+      "op_stack_table_height": 3011,
+      "ram_table_height": 730
+    },
+    "case": "CommonCase"
+  },
+  {
+    "name": "tasmlib_list_multiset_equality_u64s",
+    "benchmark_result": {
+      "clock_cycle_count": 9201,
+      "hash_table_height": 1088,
+      "u32_table_height": 16,
+      "op_stack_table_height": 11003,
+      "ram_table_height": 2890
+    },
+    "case": "WorstCase"
+  }
+]
