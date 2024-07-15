@@ -24,7 +24,7 @@ use crate::DIGEST_LENGTH;
 use super::LIST_METADATA_SIZE;
 
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
-pub struct MultisetEquality;
+pub struct MultisetEqualityDigests;
 
 /// Determine whether two lists are equal up to permutation. The
 /// lists are given as lists of digests. This function uses hashing
@@ -33,7 +33,7 @@ pub struct MultisetEquality;
 /// function may be replaced by one that uses Triton VM's native
 /// support for permutation checks instead of Fiat-Shamir and running
 /// products.
-impl MultisetEquality {
+impl MultisetEqualityDigests {
     fn random_equal_lists(&self, length: usize) -> InitVmState {
         let list_a: Vec<Digest> = random_elements(length);
         let mut list_b = list_a.clone();
@@ -102,9 +102,9 @@ impl MultisetEquality {
     }
 }
 
-impl DeprecatedSnippet for MultisetEquality {
+impl DeprecatedSnippet for MultisetEqualityDigests {
     fn entrypoint_name(&self) -> String {
-        "tasmlib_list_multiset_equality".into()
+        "tasmlib_list_multiset_equality_digests".into()
     }
 
     fn input_field_names(&self) -> Vec<String> {
@@ -440,7 +440,7 @@ mod tests {
 
     #[test]
     fn prop_test() {
-        test_rust_equivalence_multiple_deprecated(&MultisetEquality, true);
+        test_rust_equivalence_multiple_deprecated(&MultisetEqualityDigests, true);
     }
 }
 
@@ -451,7 +451,7 @@ mod benches {
     use super::*;
 
     #[test]
-    fn multiset_eq_benchmark() {
-        bench_and_write(MultisetEquality);
+    fn multiset_eq_digests_benchmark() {
+        bench_and_write(MultisetEqualityDigests);
     }
 }

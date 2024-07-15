@@ -367,7 +367,7 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
         "tasmlib_list_set_length___xfe" => Box::new(SetLength::new(DataType::Xfe)),
         "tasmlib_list_set_length___digest" => Box::new(SetLength::new(DataType::Digest)),
 
-        "tasmlib_list_multiset_equality" => Box::new(crate::list::multiset_equality::MultisetEquality),
+        "tasmlib_list_multiset_equality_digests" => Box::new(crate::list::multiset_equality_digests::MultisetEqualityDigests),
         "tasmlib_list_range" => Box::new(Range),
 
         // Contiguous lists
