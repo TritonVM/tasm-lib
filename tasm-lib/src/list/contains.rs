@@ -218,9 +218,7 @@ mod tests {
         .concat();
 
         test_rust_equivalence_given_complete_state(
-            &ShadowedFunction::new(Contains {
-                element_type: DataType::U64,
-            }),
+            &ShadowedFunction::new(snippet),
             &init_state.stack,
             &[],
             &nd,
