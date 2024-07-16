@@ -1,30 +1,11 @@
-use std::collections::HashMap;
-
-use itertools::Itertools;
-use num::Zero;
-use num_traits::One;
-use rand::prelude::*;
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::math::x_field_element;
-use triton_vm::twenty_first::prelude::AlgebraicHasher;
-use twenty_first::math::other::random_elements;
 
 use crate::data_type::DataType;
-use crate::empty_stack;
 use crate::hashing::algebraic_hasher::hash_varlen::HashVarlen;
 use crate::library::Library;
 use crate::list::length::Length;
-use crate::rust_shadowing_helper_functions;
-use crate::traits::deprecated_snippet::DeprecatedSnippet;
-use crate::traits::procedure::Procedure;
-use crate::InitVmState;
-use crate::VmHasher;
+use crate::traits::basic_snippet::BasicSnippet;
 use crate::DIGEST_LENGTH;
-
-use super::LIST_METADATA_SIZE;
-
-#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
-pub struct MultisetEqualityDigests;
 
 /// Determine whether two lists are equal up to permutation. The
 /// lists are given as lists of digests. This function uses hashing
@@ -33,105 +14,27 @@ pub struct MultisetEqualityDigests;
 /// function may be replaced by one that uses Triton VM's native
 /// support for permutation checks instead of Fiat-Shamir and running
 /// products.
-impl MultisetEqualityDigests {
-    fn random_equal_lists(&self, length: usize) -> InitVmState {
-        let list_a: Vec<Digest> = random_elements(length);
-        let mut list_b = list_a.clone();
-        list_b.sort();
-        let pointer_a: BFieldElement = random();
-        let pointer_b: BFieldElement =
-            BFieldElement::new(pointer_a.value() + random::<u32>() as u64);
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
+pub struct MultisetEqualityDigests;
 
-        let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
-
-        rust_shadowing_helper_functions::list::list_insert(pointer_a, list_a, &mut memory);
-        rust_shadowing_helper_functions::list::list_insert(pointer_b, list_b, &mut memory);
-
-        let stack = [empty_stack(), vec![pointer_a, pointer_b]].concat();
-        InitVmState::with_stack_and_memory(stack, memory)
-    }
-
-    fn random_unequal_lists(&self, length: usize) -> InitVmState {
-        let list_a: Vec<Digest> = random_elements(length);
-        let list_b: Vec<Digest> = random_elements(length);
-        let pointer_a: BFieldElement = random();
-        let pointer_b: BFieldElement =
-            BFieldElement::new(pointer_a.value() + random::<u32>() as u64);
-        let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
-
-        rust_shadowing_helper_functions::list::list_insert(pointer_a, list_a, &mut memory);
-        rust_shadowing_helper_functions::list::list_insert(pointer_b, list_b, &mut memory);
-
-        let stack = [empty_stack(), vec![pointer_a, pointer_b]].concat();
-        InitVmState::with_stack_and_memory(stack, memory)
-    }
-
-    fn random_unequal_length_lists(&self, length_a: usize, length_b: usize) -> InitVmState {
-        let list_a: Vec<Digest> = random_elements(length_a);
-        let list_b: Vec<Digest> = random_elements(length_b);
-        let pointer_a: BFieldElement = random();
-        let pointer_b: BFieldElement =
-            BFieldElement::new(pointer_a.value() + random::<u32>() as u64);
-        let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
-
-        rust_shadowing_helper_functions::list::list_insert(pointer_a, list_a, &mut memory);
-        rust_shadowing_helper_functions::list::list_insert(pointer_b, list_b, &mut memory);
-
-        let stack = [empty_stack(), vec![pointer_a, pointer_b]].concat();
-        InitVmState::with_stack_and_memory(stack, memory)
-    }
-
-    fn random_lists_one_element_flipped(&self, length: usize) -> InitVmState {
-        let list_a: Vec<Digest> = random_elements(length);
-        let mut list_b = list_a.clone();
-        list_b.sort();
-        let manipulated_index = random::<usize>() % length;
-        let manipulated_digest_elem_index = random::<usize>() % x_field_element::EXTENSION_DEGREE;
-        list_b[manipulated_index].0[manipulated_digest_elem_index] += BFieldElement::one();
-        let pointer_a: BFieldElement = random();
-        let pointer_b: BFieldElement =
-            BFieldElement::new(pointer_a.value() + random::<u32>() as u64);
-
-        let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
-
-        rust_shadowing_helper_functions::list::list_insert(pointer_a, list_a, &mut memory);
-        rust_shadowing_helper_functions::list::list_insert(pointer_b, list_b, &mut memory);
-
-        let stack = [empty_stack(), vec![pointer_a, pointer_b]].concat();
-        InitVmState::with_stack_and_memory(stack, memory)
-    }
-}
-
-impl DeprecatedSnippet for MultisetEqualityDigests {
-    fn entrypoint_name(&self) -> String {
-        "tasmlib_list_multiset_equality_digests".into()
-    }
-
-    fn input_field_names(&self) -> Vec<String> {
-        vec!["list_a".to_string(), "list_b".to_string()]
-    }
-
-    fn input_types(&self) -> Vec<DataType> {
+impl BasicSnippet for MultisetEqualityDigests {
+    fn inputs(&self) -> Vec<(DataType, String)> {
         vec![
-            DataType::List(Box::new(DataType::Digest)),
-            DataType::List(Box::new(DataType::Digest)),
+            (DataType::List(Box::new(DataType::Digest)), "a".to_owned()),
+            (DataType::List(Box::new(DataType::Digest)), "b".to_owned()),
         ]
     }
 
-    fn output_field_names(&self) -> Vec<String> {
-        vec!["multisets_are_equal".to_string()]
+    fn outputs(&self) -> Vec<(DataType, String)> {
+        vec![(DataType::Bool, "equal_multisets".to_owned())]
     }
 
-    fn output_types(&self) -> Vec<DataType> {
-        vec![DataType::Bool]
+    fn entrypoint(&self) -> String {
+        "tasmlib_list_multiset_equality_digests".to_owned()
     }
 
-    fn stack_diff(&self) -> isize {
-        -1
-    }
-
-    fn function_code(&self, library: &mut Library) -> String {
-        let entrypoint = self.entrypoint_name();
+    fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
+        let entrypoint = self.entrypoint();
         let length_snippet = library.import(Box::new(Length::new(DataType::Digest)));
         let hash_varlen = library.import(Box::new(HashVarlen));
         const DIGEST_LENGTH_PLUS_ONE: usize = DIGEST_LENGTH + 1;
@@ -275,183 +178,288 @@ impl DeprecatedSnippet for MultisetEqualityDigests {
 
                 recurse
         )
-        .iter()
-        .join("\n")
-    }
-
-    fn crash_conditions(&self) -> Vec<String> {
-        vec!["Length exceeds u32::MAX".to_string()]
-    }
-
-    fn gen_input_states(&self) -> Vec<InitVmState> {
-        let mut input_states = vec![];
-        for i in 0..15 {
-            input_states.push(self.random_equal_lists(i));
-        }
-
-        [
-            input_states,
-            vec![
-                self.random_equal_lists(21),
-                self.random_unequal_lists(1),
-                self.random_unequal_lists(2),
-                self.random_unequal_lists(3),
-                self.random_unequal_lists(10),
-                self.random_unequal_lists(21),
-                self.random_unequal_length_lists(0, 5),
-                self.random_unequal_length_lists(1, 2),
-                self.random_unequal_length_lists(2, 1),
-                self.random_unequal_length_lists(10, 17),
-                self.random_unequal_length_lists(21, 0),
-                self.random_lists_one_element_flipped(1),
-                self.random_lists_one_element_flipped(2),
-                self.random_lists_one_element_flipped(3),
-                self.random_lists_one_element_flipped(4),
-                self.random_lists_one_element_flipped(5),
-                self.random_lists_one_element_flipped(7),
-                self.random_lists_one_element_flipped(20),
-                self.random_lists_one_element_flipped(21),
-            ],
-        ]
-        .concat()
-    }
-
-    fn common_case_input_state(&self) -> InitVmState {
-        self.random_equal_lists(2)
-    }
-
-    fn worst_case_input_state(&self) -> InitVmState {
-        self.random_equal_lists(100)
-    }
-
-    fn rust_shadowing(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        _std_in: Vec<BFieldElement>,
-        _secret_in: Vec<BFieldElement>,
-        memory: &mut HashMap<BFieldElement, BFieldElement>,
-    ) {
-        let list_b_pointer = stack.pop().unwrap();
-        let list_a_pointer = stack.pop().unwrap();
-
-        // compare lengths and return early if unequal
-        let len_a: u32 = memory
-            .get(&list_a_pointer)
-            .unwrap()
-            .value()
-            .try_into()
-            .unwrap();
-        let len_b: u32 = memory
-            .get(&list_b_pointer)
-            .unwrap()
-            .value()
-            .try_into()
-            .unwrap();
-
-        if len_a != len_b {
-            stack.push(BFieldElement::zero());
-            return;
-        }
-
-        let len = len_a;
-
-        // prepare lists for hashing
-        let mut list_a_bfes = vec![];
-        let mut list_b_bfes = vec![];
-
-        let rust_shadowing_helper_list_read = rust_shadowing_helper_functions::list::list_get;
-
-        for i in 0..len as usize {
-            list_a_bfes.append(&mut rust_shadowing_helper_list_read(
-                list_a_pointer,
-                i,
-                memory,
-                DIGEST_LENGTH,
-            ));
-            list_b_bfes.append(&mut rust_shadowing_helper_list_read(
-                list_b_pointer,
-                i,
-                memory,
-                DIGEST_LENGTH,
-            ));
-        }
-
-        // hash to get Fiat-Shamir challenge
-        let first_element_offset = BFieldElement::new(LIST_METADATA_SIZE as u64);
-        let list_a_hash = {
-            stack.push(list_a_pointer + first_element_offset);
-            stack.push(BFieldElement::new(len as u64 * DIGEST_LENGTH as u64));
-            HashVarlen.rust_shadow(stack, memory, &NonDeterminism::default(), &[], &mut None);
-            Digest::new([
-                stack.pop().unwrap(),
-                stack.pop().unwrap(),
-                stack.pop().unwrap(),
-                stack.pop().unwrap(),
-                stack.pop().unwrap(),
-            ])
-        };
-        let list_b_hash = {
-            stack.push(list_b_pointer + first_element_offset);
-            stack.push(BFieldElement::new(len as u64 * DIGEST_LENGTH as u64));
-            HashVarlen.rust_shadow(stack, memory, &NonDeterminism::default(), &[], &mut None);
-            Digest::new([
-                stack.pop().unwrap(),
-                stack.pop().unwrap(),
-                stack.pop().unwrap(),
-                stack.pop().unwrap(),
-                stack.pop().unwrap(),
-            ])
-        };
-
-        let digest = VmHasher::hash_pair(list_a_hash, list_b_hash);
-        let indeterminate =
-            XFieldElement::new([digest.values()[0], digest.values()[1], digest.values()[2]]);
-
-        // compute running products
-        let mut running_product_a = XFieldElement::one();
-        for i in 0..len as u64 {
-            let digest_elems =
-                rust_shadowing_helper_list_read(list_a_pointer, i as usize, memory, DIGEST_LENGTH);
-            let m = XFieldElement::new([digest_elems[0], digest_elems[1], digest_elems[2]]);
-            let factor = indeterminate - m;
-            running_product_a *= factor;
-        }
-        let mut running_product_b = XFieldElement::one();
-        for i in 0..len as u64 {
-            let digest_elems =
-                rust_shadowing_helper_list_read(list_b_pointer, i as usize, memory, DIGEST_LENGTH);
-            let m = XFieldElement::new([digest_elems[0], digest_elems[1], digest_elems[2]]);
-            let factor = indeterminate - m;
-            running_product_b *= factor;
-        }
-
-        // equate and push result to stack
-        let result = running_product_a == running_product_b;
-        // println!("result: {}", result);
-        stack.push(BFieldElement::new(result as u64));
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
+    use std::collections::HashMap;
+
+    use itertools::Itertools;
+    use num::One;
+    use num::Zero;
+    use rand::random;
+    use rand::rngs::StdRng;
+    use rand::Rng;
+    use rand::SeedableRng;
+    use twenty_first::math::other::random_elements;
+    use twenty_first::math::x_field_element;
+    use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
+
+    use crate::empty_stack;
+    use crate::list::LIST_METADATA_SIZE;
+    use crate::rust_shadowing_helper_functions;
+    use crate::snippet_bencher::BenchmarkCase;
+    use crate::traits::function::{Function, FunctionInitialState, ShadowedFunction};
+    use crate::traits::procedure::Procedure;
+    use crate::traits::rust_shadow::RustShadow;
+    use crate::VmHasher;
 
     use super::*;
 
     #[test]
     fn prop_test() {
-        test_rust_equivalence_multiple_deprecated(&MultisetEqualityDigests, true);
+        ShadowedFunction::new(MultisetEqualityDigests).test();
+    }
+
+    impl Function for MultisetEqualityDigests {
+        fn rust_shadow(
+            &self,
+            stack: &mut Vec<BFieldElement>,
+            memory: &mut HashMap<BFieldElement, BFieldElement>,
+        ) {
+            let list_b_pointer = stack.pop().unwrap();
+            let list_a_pointer = stack.pop().unwrap();
+
+            // compare lengths and return early if unequal
+            let len_a: u32 = memory
+                .get(&list_a_pointer)
+                .unwrap()
+                .value()
+                .try_into()
+                .unwrap();
+            let len_b: u32 = memory
+                .get(&list_b_pointer)
+                .unwrap()
+                .value()
+                .try_into()
+                .unwrap();
+
+            if len_a != len_b {
+                stack.push(BFieldElement::zero());
+                return;
+            }
+
+            let len = len_a;
+
+            // prepare lists for hashing
+            let mut list_a_bfes = vec![];
+            let mut list_b_bfes = vec![];
+
+            let rust_shadowing_helper_list_read = rust_shadowing_helper_functions::list::list_get;
+
+            for i in 0..len as usize {
+                list_a_bfes.append(&mut rust_shadowing_helper_list_read(
+                    list_a_pointer,
+                    i,
+                    memory,
+                    DIGEST_LENGTH,
+                ));
+                list_b_bfes.append(&mut rust_shadowing_helper_list_read(
+                    list_b_pointer,
+                    i,
+                    memory,
+                    DIGEST_LENGTH,
+                ));
+            }
+
+            // hash to get Fiat-Shamir challenge
+            let first_element_offset = BFieldElement::new(LIST_METADATA_SIZE as u64);
+            let list_a_hash = {
+                stack.push(list_a_pointer + first_element_offset);
+                stack.push(BFieldElement::new(len as u64 * DIGEST_LENGTH as u64));
+                HashVarlen.rust_shadow(stack, memory, &NonDeterminism::default(), &[], &mut None);
+                Digest::new([
+                    stack.pop().unwrap(),
+                    stack.pop().unwrap(),
+                    stack.pop().unwrap(),
+                    stack.pop().unwrap(),
+                    stack.pop().unwrap(),
+                ])
+            };
+            let list_b_hash = {
+                stack.push(list_b_pointer + first_element_offset);
+                stack.push(BFieldElement::new(len as u64 * DIGEST_LENGTH as u64));
+                HashVarlen.rust_shadow(stack, memory, &NonDeterminism::default(), &[], &mut None);
+                Digest::new([
+                    stack.pop().unwrap(),
+                    stack.pop().unwrap(),
+                    stack.pop().unwrap(),
+                    stack.pop().unwrap(),
+                    stack.pop().unwrap(),
+                ])
+            };
+
+            let digest = VmHasher::hash_pair(list_a_hash, list_b_hash);
+            let indeterminate =
+                XFieldElement::new([digest.values()[0], digest.values()[1], digest.values()[2]]);
+
+            // compute running products
+            let mut running_product_a = XFieldElement::one();
+            for i in 0..len as u64 {
+                let digest_elems = rust_shadowing_helper_list_read(
+                    list_a_pointer,
+                    i as usize,
+                    memory,
+                    DIGEST_LENGTH,
+                );
+                let m = XFieldElement::new([digest_elems[0], digest_elems[1], digest_elems[2]]);
+                let factor = indeterminate - m;
+                running_product_a *= factor;
+            }
+            let mut running_product_b = XFieldElement::one();
+            for i in 0..len as u64 {
+                let digest_elems = rust_shadowing_helper_list_read(
+                    list_b_pointer,
+                    i as usize,
+                    memory,
+                    DIGEST_LENGTH,
+                );
+                let m = XFieldElement::new([digest_elems[0], digest_elems[1], digest_elems[2]]);
+                let factor = indeterminate - m;
+                running_product_b *= factor;
+            }
+
+            // equate and push result to stack
+            let result = running_product_a == running_product_b;
+            // println!("result: {}", result);
+            stack.push(BFieldElement::new(result as u64));
+        }
+
+        fn pseudorandom_initial_state(
+            &self,
+            seed: [u8; 32],
+            bench_case: Option<BenchmarkCase>,
+        ) -> FunctionInitialState {
+            match bench_case {
+                Some(BenchmarkCase::CommonCase) => self.random_equal_lists(2),
+                Some(BenchmarkCase::WorstCase) => self.random_equal_lists(100),
+                None => {
+                    let mut rng: StdRng = SeedableRng::from_seed(seed);
+                    let length = rng.gen_range(0..50);
+                    let another_length = length + rng.gen_range(1..10);
+                    match rng.gen_range(0..=3) {
+                        0 => self.random_equal_lists(length),
+                        1 => self.random_unequal_lists(length),
+                        2 => self.random_unequal_length_lists(length, another_length),
+                        3 => self.random_lists_one_element_flipped(length),
+                        _ => unreachable!(),
+                    }
+                }
+            }
+        }
+
+        fn corner_case_initial_states(&self) -> Vec<FunctionInitialState> {
+            let short_equal_multisets = (0..15).map(|i| self.random_equal_lists(i)).collect_vec();
+            let short_unequal_multisets =
+                (0..15).map(|i| self.random_unequal_lists(i)).collect_vec();
+            let short_lists_one_element_flipped = (1..15)
+                .map(|i| self.random_lists_one_element_flipped(i))
+                .collect_vec();
+
+            let unequal_lengths = vec![
+                self.random_unequal_length_lists(0, 5),
+                self.random_unequal_length_lists(5, 0),
+                self.random_unequal_length_lists(1, 2),
+                self.random_unequal_length_lists(2, 1),
+                self.random_unequal_length_lists(10, 17),
+                self.random_unequal_length_lists(21, 0),
+            ];
+
+            [
+                short_equal_multisets,
+                short_unequal_multisets,
+                short_lists_one_element_flipped,
+                unequal_lengths,
+            ]
+            .concat()
+        }
+    }
+
+    impl MultisetEqualityDigests {
+        fn random_equal_lists(&self, length: usize) -> FunctionInitialState {
+            let list_a: Vec<Digest> = random_elements(length);
+            let mut list_b = list_a.clone();
+            list_b.sort();
+            let pointer_a: BFieldElement = random();
+            let pointer_b: BFieldElement =
+                BFieldElement::new(pointer_a.value() + random::<u32>() as u64);
+
+            let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
+
+            rust_shadowing_helper_functions::list::list_insert(pointer_a, list_a, &mut memory);
+            rust_shadowing_helper_functions::list::list_insert(pointer_b, list_b, &mut memory);
+
+            let stack = [empty_stack(), vec![pointer_a, pointer_b]].concat();
+            FunctionInitialState { stack, memory }
+        }
+
+        fn random_unequal_lists(&self, length: usize) -> FunctionInitialState {
+            let list_a: Vec<Digest> = random_elements(length);
+            let list_b: Vec<Digest> = random_elements(length);
+            let pointer_a: BFieldElement = random();
+            let pointer_b: BFieldElement =
+                BFieldElement::new(pointer_a.value() + random::<u32>() as u64);
+            let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
+
+            rust_shadowing_helper_functions::list::list_insert(pointer_a, list_a, &mut memory);
+            rust_shadowing_helper_functions::list::list_insert(pointer_b, list_b, &mut memory);
+
+            let stack = [empty_stack(), vec![pointer_a, pointer_b]].concat();
+            FunctionInitialState { stack, memory }
+        }
+
+        fn random_unequal_length_lists(
+            &self,
+            length_a: usize,
+            length_b: usize,
+        ) -> FunctionInitialState {
+            let list_a: Vec<Digest> = random_elements(length_a);
+            let list_b: Vec<Digest> = random_elements(length_b);
+            let pointer_a: BFieldElement = random();
+            let pointer_b: BFieldElement =
+                BFieldElement::new(pointer_a.value() + random::<u32>() as u64);
+            let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
+
+            rust_shadowing_helper_functions::list::list_insert(pointer_a, list_a, &mut memory);
+            rust_shadowing_helper_functions::list::list_insert(pointer_b, list_b, &mut memory);
+
+            let stack = [empty_stack(), vec![pointer_a, pointer_b]].concat();
+            FunctionInitialState { stack, memory }
+        }
+
+        fn random_lists_one_element_flipped(&self, length: usize) -> FunctionInitialState {
+            let list_a: Vec<Digest> = random_elements(length);
+            let mut list_b = list_a.clone();
+            list_b.sort();
+            let manipulated_index = random::<usize>() % length;
+            let manipulated_digest_elem_index =
+                random::<usize>() % x_field_element::EXTENSION_DEGREE;
+            list_b[manipulated_index].0[manipulated_digest_elem_index] += BFieldElement::one();
+            let pointer_a: BFieldElement = random();
+            let pointer_b: BFieldElement =
+                BFieldElement::new(pointer_a.value() + random::<u32>() as u64);
+
+            let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
+
+            rust_shadowing_helper_functions::list::list_insert(pointer_a, list_a, &mut memory);
+            rust_shadowing_helper_functions::list::list_insert(pointer_b, list_b, &mut memory);
+
+            let stack = [empty_stack(), vec![pointer_a, pointer_b]].concat();
+            FunctionInitialState { stack, memory }
+        }
     }
 }
 
 #[cfg(test)]
 mod benches {
-    use crate::snippet_bencher::bench_and_write;
+    use crate::traits::function::ShadowedFunction;
+    use crate::traits::rust_shadow::RustShadow;
 
     use super::*;
 
     #[test]
     fn multiset_eq_digests_benchmark() {
-        bench_and_write(MultisetEqualityDigests);
+        ShadowedFunction::new(MultisetEqualityDigests).bench();
     }
 }
