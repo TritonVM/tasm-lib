@@ -1,6 +1,6 @@
 [
   {
-    "name": "tasmlib_list_multiset_equality",
+    "name": "tasmlib_list_multiset_equality_digests",
     "benchmark_result": {
       "clock_cycle_count": 541,
       "hash_table_height": 236,
@@ -11,7 +11,7 @@
     "case": "CommonCase"
   },
   {
-    "name": "tasmlib_list_multiset_equality",
+    "name": "tasmlib_list_multiset_equality_digests",
     "benchmark_result": {
       "clock_cycle_count": 5833,
       "hash_table_height": 824,
