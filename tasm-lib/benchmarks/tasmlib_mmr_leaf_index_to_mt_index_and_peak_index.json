@@ -3,7 +3,7 @@
     "name": "tasmlib_mmr_leaf_index_to_mt_index_and_peak_index",
     "benchmark_result": {
       "clock_cycle_count": 115,
-      "hash_table_height": 126,
+      "hash_table_height": 120,
       "u32_table_height": 298,
       "op_stack_table_height": 69,
       "ram_table_height": 0
@@ -14,7 +14,7 @@
     "name": "tasmlib_mmr_leaf_index_to_mt_index_and_peak_index",
     "benchmark_result": {
       "clock_cycle_count": 115,
-      "hash_table_height": 126,
+      "hash_table_height": 120,
       "u32_table_height": 326,
       "op_stack_table_height": 69,
       "ram_table_height": 0

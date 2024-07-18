@@ -13,7 +13,7 @@
   {
     "name": "tasmlib_mmr_verify_from_memory",
     "benchmark_result": {
-      "clock_cycle_count": 2863,
+      "clock_cycle_count": 2860,
       "hash_table_height": 612,
       "u32_table_height": 1557,
       "op_stack_table_height": 2240,
