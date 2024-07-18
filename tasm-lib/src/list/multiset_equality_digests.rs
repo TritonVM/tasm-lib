@@ -336,7 +336,7 @@ mod tests {
                 Some(BenchmarkCase::WorstCase) => self.random_equal_lists(100),
                 None => {
                     let mut rng: StdRng = SeedableRng::from_seed(seed);
-                    let length = rng.gen_range(0..50);
+                    let length = rng.gen_range(1..50);
                     let another_length = length + rng.gen_range(1..10);
                     match rng.gen_range(0..=3) {
                         0 => self.random_equal_lists(length),
@@ -359,6 +359,8 @@ mod tests {
 
             let unequal_lengths = vec![
                 self.random_unequal_length_lists(0, 5),
+                self.random_unequal_length_lists(0, 1),
+                self.random_unequal_length_lists(1, 0),
                 self.random_unequal_length_lists(5, 0),
                 self.random_unequal_length_lists(1, 2),
                 self.random_unequal_length_lists(2, 1),
