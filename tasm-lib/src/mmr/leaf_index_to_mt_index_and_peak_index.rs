@@ -14,7 +14,6 @@ use crate::arithmetic::u64::log_2_floor_u64::Log2FloorU64;
 use crate::arithmetic::u64::lt_u64::LtU64PreserveArgs;
 use crate::arithmetic::u64::popcount_u64::PopCountU64;
 use crate::arithmetic::u64::pow2_u64::Pow2U64;
-use crate::arithmetic::u64::xor_u64::XorU64;
 use crate::data_type::DataType;
 use crate::empty_stack;
 use crate::library::Library;
@@ -66,7 +65,6 @@ impl DeprecatedSnippet for MmrLeafIndexToMtIndexAndPeakIndex {
         let add_u64 = library.import(Box::new(AddU64));
         let and_u64 = library.import(Box::new(AndU64));
         let pow2_u64 = library.import(Box::new(Pow2U64));
-        let xor_u64 = library.import(Box::new(XorU64));
         let decr_u64 = library.import(Box::new(DecrU64));
         let popcount_u64 = library.import(Box::new(PopCountU64));
 
@@ -81,11 +79,11 @@ impl DeprecatedSnippet for MmrLeafIndexToMtIndexAndPeakIndex {
 
             // `discrepancies`
             dup 3
+            dup 2
+            xor
             dup 3
-            dup 3
-            dup 3
-
-            call {xor_u64}
+            dup 2
+            xor
             // stack: _ leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo discrepancies_hi discrepancies_lo
 
             // `local_mt_height`
