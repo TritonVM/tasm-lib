@@ -34,8 +34,8 @@ use crate::arithmetic::u64::incr_u64::IncrU64;
 use crate::arithmetic::u64::index_of_last_nonzero_bit::IndexOfLastNonZeroBitU64;
 use crate::arithmetic::u64::leading_zeros_u64::LeadingZerosU64;
 use crate::arithmetic::u64::log_2_floor_u64::Log2FloorU64;
-use crate::arithmetic::u64::lt_u64::LtStandardU64;
-use crate::arithmetic::u64::lt_u64::LtU64;
+use crate::arithmetic::u64::lt_u64::LtU64ConsumeArgs;
+use crate::arithmetic::u64::lt_u64::LtU64PreserveArgs;
 use crate::arithmetic::u64::mul_two_u64s_to_u128_u64::MulTwoU64sToU128;
 use crate::arithmetic::u64::or_u64::OrU64;
 use crate::arithmetic::u64::overflowing_sub_u64::OverflowingSub;
@@ -144,8 +144,8 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
         "tasmlib_arithmetic_u64_eq" => Box::new(EqU64),
         "tasmlib_arithmetic_u64_incr" => Box::new(IncrU64),
         "tasmlib_arithmetic_u64_log_2_floor" => Box::new(Log2FloorU64),
-        "tasmlib_arithmetic_u64_lt" => Box::new(LtU64),
-        "tasmlib_arithmetic_u64_lt_standard" => Box::new(LtStandardU64),
+        "tasmlib_arithmetic_u64_lt_preserve_args" => Box::new(LtU64PreserveArgs),
+        "tasmlib_arithmetic_u64_lt" => Box::new(LtU64ConsumeArgs),
         "tasmlib_arithmetic_u64_pow2" => Box::new(Pow2U64),
         "tasmlib_arithmetic_u64_sub" => Box::new(SubU64),
         "tasmlib_arithmetic_u64_leading_zeros" => Box::new(LeadingZerosU64),

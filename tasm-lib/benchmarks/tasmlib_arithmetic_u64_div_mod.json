@@ -2,10 +2,10 @@
   {
     "name": "tasmlib_arithmetic_u64_div_mod",
     "benchmark_result": {
-      "clock_cycle_count": 235,
-      "hash_table_height": 540,
+      "clock_cycle_count": 227,
+      "hash_table_height": 528,
       "u32_table_height": 218,
-      "op_stack_table_height": 182,
+      "op_stack_table_height": 172,
       "ram_table_height": 12
     },
     "case": "CommonCase"
@@ -13,10 +13,10 @@
   {
     "name": "tasmlib_arithmetic_u64_div_mod",
     "benchmark_result": {
-      "clock_cycle_count": 9155,
-      "hash_table_height": 540,
-      "u32_table_height": 11290,
-      "op_stack_table_height": 6434,
+      "clock_cycle_count": 9047,
+      "hash_table_height": 528,
+      "u32_table_height": 11767,
+      "op_stack_table_height": 6228,
       "ram_table_height": 142
     },
     "case": "WorstCase"

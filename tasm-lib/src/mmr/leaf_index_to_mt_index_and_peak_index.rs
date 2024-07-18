@@ -11,7 +11,7 @@ use crate::arithmetic::u64::add_u64::AddU64;
 use crate::arithmetic::u64::and_u64::AndU64;
 use crate::arithmetic::u64::decr_u64::DecrU64;
 use crate::arithmetic::u64::log_2_floor_u64::Log2FloorU64;
-use crate::arithmetic::u64::lt_u64::LtU64;
+use crate::arithmetic::u64::lt_u64::LtU64PreserveArgs;
 use crate::arithmetic::u64::popcount_u64::PopCountU64;
 use crate::arithmetic::u64::pow2_u64::Pow2U64;
 use crate::arithmetic::u64::xor_u64::XorU64;
@@ -62,7 +62,7 @@ impl DeprecatedSnippet for MmrLeafIndexToMtIndexAndPeakIndex {
     fn function_code(&self, library: &mut Library) -> String {
         let entrypoint = self.entrypoint_name();
         let log_2_floor_u64 = library.import(Box::new(Log2FloorU64));
-        let lt_u64 = library.import(Box::new(LtU64));
+        let lt_u64 = library.import(Box::new(LtU64PreserveArgs));
         let add_u64 = library.import(Box::new(AddU64));
         let and_u64 = library.import(Box::new(AndU64));
         let pow2_u64 = library.import(Box::new(Pow2U64));

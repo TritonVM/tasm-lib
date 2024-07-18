@@ -10,7 +10,7 @@ use crate::arithmetic::u32::safeadd::Safeadd;
 use crate::arithmetic::u32::safesub::Safesub;
 use crate::arithmetic::u64::and_u64::AndU64;
 use crate::arithmetic::u64::leading_zeros_u64::LeadingZerosU64;
-use crate::arithmetic::u64::lt_u64::LtStandardU64;
+use crate::arithmetic::u64::lt_u64::LtU64ConsumeArgs;
 use crate::arithmetic::u64::or_u64::OrU64;
 use crate::arithmetic::u64::shift_left_u64::ShiftLeftU64;
 use crate::arithmetic::u64::shift_right_u64::ShiftRightU64;
@@ -65,7 +65,7 @@ impl DeprecatedSnippet for DivModU64 {
         let shift_right_u64 = library.import(Box::new(ShiftRightU64));
         let shift_left_u64 = library.import(Box::new(ShiftLeftU64));
         let and_u64 = library.import(Box::new(AndU64));
-        let lt_u64 = library.import(Box::new(LtStandardU64));
+        let lt_u64 = library.import(Box::new(LtU64ConsumeArgs));
         let or_u64 = library.import(Box::new(OrU64));
         let sub_u64 = library.import(Box::new(SubU64));
         let sub_u32 = library.import(Box::new(Safesub));

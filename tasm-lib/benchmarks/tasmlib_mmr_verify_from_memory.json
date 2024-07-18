@@ -2,10 +2,10 @@
   {
     "name": "tasmlib_mmr_verify_from_memory",
     "benchmark_result": {
-      "clock_cycle_count": 1517,
-      "hash_table_height": 432,
+      "clock_cycle_count": 1513,
+      "hash_table_height": 426,
       "u32_table_height": 1399,
-      "op_stack_table_height": 1174,
+      "op_stack_table_height": 1172,
       "ram_table_height": 160
     },
     "case": "CommonCase"
@@ -13,10 +13,10 @@
   {
     "name": "tasmlib_mmr_verify_from_memory",
     "benchmark_result": {
-      "clock_cycle_count": 2857,
-      "hash_table_height": 618,
-      "u32_table_height": 1524,
-      "op_stack_table_height": 2234,
+      "clock_cycle_count": 2863,
+      "hash_table_height": 612,
+      "u32_table_height": 1557,
+      "op_stack_table_height": 2240,
       "ram_table_height": 315
     },
     "case": "WorstCase"

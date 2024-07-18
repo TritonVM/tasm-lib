@@ -11,152 +11,73 @@ use crate::data_type::DataType;
 use crate::empty_stack;
 use crate::library::Library;
 use crate::push_encodable;
+use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::InitVmState;
 
-/// This `lt_standard_u64` does consume its argument.
-///
-/// The fastest way we know is to calculate without consuming, and then pop the operands.
-/// This is because there are three branches, so sharing cleanup unconditionally means
-/// less branching (fewer cycles) and less local cleanup (smaller program).
 #[derive(Clone, Debug)]
-pub struct LtStandardU64;
+pub struct LtU64ConsumeArgs;
 
-impl DeprecatedSnippet for LtStandardU64 {
-    fn entrypoint_name(&self) -> String {
-        "tasmlib_arithmetic_u64_lt_standard".to_string()
-    }
-
-    fn input_field_names(&self) -> Vec<String> {
+impl BasicSnippet for LtU64ConsumeArgs {
+    fn inputs(&self) -> Vec<(DataType, String)> {
         vec![
-            "rhs_hi".to_string(),
-            "rhs_lo".to_string(),
-            "lhs_hi".to_string(),
-            "lhs_lo".to_string(),
+            (DataType::U64, "rhs".to_owned()),
+            (DataType::U64, "lhs".to_owned()),
         ]
     }
 
-    fn input_types(&self) -> Vec<DataType> {
-        vec![DataType::U64, DataType::U64]
+    fn outputs(&self) -> Vec<(DataType, String)> {
+        vec![(DataType::Bool, "lhs < rhs".to_owned())]
     }
 
-    fn output_field_names(&self) -> Vec<String> {
-        vec!["(lhs < rhs)".to_string()]
+    fn entrypoint(&self) -> String {
+        "tasmlib_arithmetic_u64_lt".to_owned()
     }
 
-    fn output_types(&self) -> Vec<DataType> {
-        vec![DataType::Bool]
-    }
-
-    fn stack_diff(&self) -> isize {
-        -3
-    }
-
-    fn function_code(&self, _library: &mut Library) -> String {
-        let entrypoint = self.entrypoint_name();
-        let aux_label = format!("{entrypoint}_aux");
-        let lo_label = format!("{entrypoint}_lo");
+    fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {
+        let entrypoint = self.entrypoint();
 
         triton_asm!(
-            // Before: _ rhs_hi rhs_lo lhs_hi lhs_lo
-            // After:  _ (lhs < rhs)
             {entrypoint}:
-                call {aux_label} // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs)
-                swap 4 pop 4     // _ (lhs < rhs)
-                return
+                // _ rhs_hi rhs_lo lhs_hi lhs_lo
 
-            // BEFORE: _ rhs_hi rhs_lo lhs_hi lhs_lo
-            // AFTER:  _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs)
-            {aux_label}:
-                dup 3 // _ rhs_hi rhs_lo lhs_hi lhs_lo rhs_hi
-                dup 2 // _ rhs_hi rhs_lo lhs_hi lhs_lo rhs_hi lhs_hi
-                lt   // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_hi < rhs_hi)
-                dup 0 // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_hi < rhs_hi) (lhs_hi < rhs_hi)
-                skiz return
-                     // true: _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs)
-                     // false: _ rhs_hi rhs_lo lhs_hi lhs_lo 0
+                /* calculate lhs_hi < rhs_hi || lhs_hi == rhs_hi && lhs_lo < rhs_lo */
+                swap 3
+                swap 2
+                // _ lhs_lo rhs_hi lhs_hi rhs_lo
 
-                dup 4 // _ rhs_hi rhs_lo lhs_hi lhs_lo 0 rhs_hi
-                dup 3 // _ rhs_hi rhs_lo lhs_hi lhs_lo 0 rhs_hi lhs_hi
-                eq    // _ rhs_hi rhs_lo lhs_hi lhs_lo 0 (lhs_hi == rhs_hi)
-                skiz call {lo_label}
-                      // true: _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs, aka lhs_lo < rhs_lo)
-                      // false: _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs, aka 0)
-                return
+                dup 2
+                dup 2
+                lt
+                // _ lhs_lo rhs_hi lhs_hi rhs_lo (rhs_hi > lhs_hi)
 
-            // BEFORE: _ rhs_hi rhs_lo lhs_hi lhs_lo 0
-            // AFTER:  _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_lo < rhs_lo)
-            {lo_label}:
-                pop 1 // _ rhs_hi rhs_lo lhs_hi lhs_lo
-                dup 2 // _ rhs_hi rhs_lo lhs_hi lhs_lo rhs_lo
-                dup 1 // _ rhs_hi rhs_lo lhs_hi lhs_lo rhs_lo lhs_lo
-                lt    // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs)
+                swap 4
+                lt
+                // _ (rhs_hi > lhs_hi) rhs_hi lhs_hi (rhs_lo > lhs_lo)
+
+                swap 2
+                eq
+                // _ (rhs_hi > lhs_hi) (rhs_lo > lhs_lo) (lhs_hi == rhs_hi)
+
+                mul
+                add
+                // _ (rhs_hi > lhs_hi || rhs_lo > lhs_lo && lhs_hi == rhs_hi)
+
                 return
         )
-        .iter()
-        .join("\n")
-    }
-
-    fn crash_conditions(&self) -> Vec<String> {
-        vec!["Either input is not u32".to_string()]
-    }
-
-    fn gen_input_states(&self) -> Vec<InitVmState> {
-        // The input states for the two u64::lt operators can be reused. But the
-        // rust shadowin cannot.
-        LtU64::gen_input_states(&LtU64)
-    }
-
-    fn common_case_input_state(&self) -> InitVmState {
-        InitVmState::with_stack(
-            [
-                empty_stack(),
-                vec![BFieldElement::zero(), BFieldElement::new(1 << 31)],
-                vec![BFieldElement::one(), BFieldElement::new(1 << 30)],
-            ]
-            .concat(),
-        )
-    }
-
-    fn worst_case_input_state(&self) -> InitVmState {
-        InitVmState::with_stack(
-            [
-                empty_stack(),
-                vec![BFieldElement::new(8), BFieldElement::new(1 << 31)],
-                vec![BFieldElement::new(8), BFieldElement::new(1 << 30)],
-            ]
-            .concat(),
-        )
-    }
-
-    fn rust_shadowing(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        _std_in: Vec<BFieldElement>,
-        _secret_in: Vec<BFieldElement>,
-        _memory: &mut HashMap<BFieldElement, BFieldElement>,
-    ) {
-        let lhs_lo: u32 = stack.pop().unwrap().try_into().unwrap();
-        let lhs_hi: u32 = stack.pop().unwrap().try_into().unwrap();
-        let lhs = U32s::new([lhs_lo, lhs_hi]);
-
-        let rhs_lo: u32 = stack.pop().unwrap().try_into().unwrap();
-        let rhs_hi: u32 = stack.pop().unwrap().try_into().unwrap();
-        let rhs = U32s::new([rhs_lo, rhs_hi]);
-
-        stack.push(BFieldElement::new((lhs < rhs) as u64));
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct LtU64;
-
-/// This `lt_u64` does not consume its arguments, which is the norm for tasm functions.
+/// This `LtU64PreserveArgs` does not consume its arguments, which is the norm
+/// for tasm functions.
 ///
-/// See `LtStandardU64` for a variant that does.
-impl DeprecatedSnippet for LtU64 {
+/// See `LtU64ConsumeArgs` for a variant that does.
+#[derive(Clone, Debug)]
+pub struct LtU64PreserveArgs;
+
+impl DeprecatedSnippet for LtU64PreserveArgs {
     fn entrypoint_name(&self) -> String {
-        "tasmlib_arithmetic_u64_lt".to_string()
+        "tasmlib_arithmetic_u64_lt_preserve_args".to_string()
     }
 
     fn input_field_names(&self) -> Vec<String> {
@@ -194,38 +115,33 @@ impl DeprecatedSnippet for LtU64 {
     /// AFTER:  _ rhs_hi rhs_lo lhs_hi lhs_lo  (lhs < rhs)
     fn function_code(&self, _library: &mut Library) -> String {
         let entrypoint = self.entrypoint_name();
-        format!(
-            "
+        triton_asm!(
             // Before: _ rhs_hi rhs_lo lhs_hi lhs_lo
             // After:  _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs < rhs)
             {entrypoint}:
                 dup 3
                 dup 2
-                lt          // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_hi < rhs_hi)
-                dup 0
-                skiz
-                    return  // => _ rhs_hi rhs_lo lhs_hi lhs_lo 1
+                lt
+                // _ rhs_hi rhs_lo lhs_hi lhs_lo (rhs_hi > lhs_hi)
 
-                // => _ rhs_hi rhs_lo lhs_hi lhs_lo 0
-                dup 4      // => _ rhs_hi rhs_lo lhs_hi lhs_lo 0 rhs_hi
-                dup 3      // => _ rhs_hi rhs_lo lhs_hi lhs_lo 0 rhs_hi lhs_hi
-                eq         // => _ rhs_hi rhs_lo lhs_hi lhs_lo 0 (rhs_hi == lhs_hi)
-                skiz
-                    call {entrypoint}_lo // => _ rhs_hi rhs_lo lhs_hi lhs_lo 0
+                dup 4
+                dup 3
+                eq
+                // _ rhs_hi rhs_lo lhs_hi lhs_lo (rhs_hi > lhs_hi) (rhs_hi == lhs_hi)
 
-                           // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_lo < rhs_lo)|0
+                dup 4
+                dup 3
+                lt
+                // _ rhs_hi rhs_lo lhs_hi lhs_lo (rhs_hi > lhs_hi) (rhs_hi == lhs_hi) (rhs_lo > lhs_lo)
+
+                mul
+                add
+                // _ rhs_hi rhs_lo lhs_hi lhs_lo ((rhs_hi > lhs_hi) || (rhs_hi == lhs_hi) && (rhs_lo > lhs_lo))
+
                 return
-
-            // BEFORE: _ rhs_hi rhs_lo lhs_hi lhs_lo 0
-            // AFTER:  _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_lo < rhs_lo)
-            {entrypoint}_lo:
-                pop 1      // _ rhs_hi rhs_lo lhs_hi lhs_lo
-                dup 2      // _ rhs_hi rhs_lo lhs_hi lhs_lo rhs_lo
-                dup 1      // _ rhs_hi rhs_lo lhs_hi lhs_lo rhs_lo lhs_lo
-                lt         // _ rhs_hi rhs_lo lhs_hi lhs_lo (lhs_lo < rhs_lo)
-                return
-            "
         )
+        .iter()
+        .join("\n")
     }
 
     fn crash_conditions(&self) -> Vec<String> {
@@ -303,8 +219,13 @@ mod tests {
     use rand::prelude::*;
 
     use crate::empty_stack;
+    use crate::snippet_bencher::BenchmarkCase;
+    use crate::test_helpers::test_rust_equivalence_given_complete_state;
     use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
     use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
+    use crate::traits::closure::Closure;
+    use crate::traits::closure::ShadowedClosure;
+    use crate::traits::rust_shadow::RustShadow;
 
     use super::*;
 
@@ -317,12 +238,7 @@ mod tests {
 
     #[test]
     fn lt_u64_test_new_snippet() {
-        test_rust_equivalence_multiple_deprecated(&LtU64, true);
-    }
-
-    #[test]
-    fn standard_lt_u64_test_new_snippet() {
-        test_rust_equivalence_multiple_deprecated(&LtStandardU64, true);
+        test_rust_equivalence_multiple_deprecated(&LtU64PreserveArgs, true);
     }
 
     #[test]
@@ -338,8 +254,8 @@ mod tests {
 
         let lhs = U32s::try_from(11 * (1u64 << 32)).unwrap();
         let rhs = U32s::try_from(15 * (1u64 << 32)).unwrap();
-        prop_lt(lhs, rhs, Some(&expected_end_stack));
-        prop_lt_standard(lhs, rhs);
+        prop_lt_preserve(lhs, rhs, Some(&expected_end_stack));
+        prop_lt_consume(lhs, rhs);
     }
 
     #[test]
@@ -353,8 +269,8 @@ mod tests {
         ]
         .concat();
         let zero = U32s::zero();
-        prop_lt(zero, zero, Some(&expected_end_stack));
-        prop_lt_standard(zero, zero);
+        prop_lt_preserve(zero, zero, Some(&expected_end_stack));
+        prop_lt_consume(zero, zero);
     }
 
     #[test]
@@ -362,8 +278,8 @@ mod tests {
         for _ in 0..100 {
             let lhs: U32s<2> = random_gen();
             let rhs: U32s<2> = random_gen();
-            prop_lt(lhs, rhs, None);
-            prop_lt_standard(lhs, rhs);
+            prop_lt_preserve(lhs, rhs, None);
+            prop_lt_consume(lhs, rhs);
         }
     }
 
@@ -384,8 +300,8 @@ mod tests {
             ]
             .concat();
 
-            prop_lt(lhs, rhs, Some(&expected));
-            prop_lt_standard(lhs, rhs);
+            prop_lt_preserve(lhs, rhs, Some(&expected));
+            prop_lt_consume(lhs, rhs);
         }
     }
 
@@ -406,8 +322,8 @@ mod tests {
             ]
             .concat();
 
-            prop_lt(lhs, rhs, Some(&expected));
-            prop_lt_standard(lhs, rhs);
+            prop_lt_preserve(lhs, rhs, Some(&expected));
+            prop_lt_consume(lhs, rhs);
         }
     }
 
@@ -428,19 +344,19 @@ mod tests {
             ]
             .concat();
 
-            prop_lt(lhs, rhs, Some(&expected));
-            prop_lt_standard(lhs, rhs);
+            prop_lt_preserve(lhs, rhs, Some(&expected));
+            prop_lt_consume(lhs, rhs);
         }
     }
 
-    fn prop_lt(lhs: U32s<2>, rhs: U32s<2>, expected: Option<&[BFieldElement]>) {
+    fn prop_lt_preserve(lhs: U32s<2>, rhs: U32s<2>, expected: Option<&[BFieldElement]>) {
         let mut init_stack = empty_stack();
         init_stack.append(&mut rhs.encode().into_iter().rev().collect());
         init_stack.append(&mut lhs.encode().into_iter().rev().collect());
 
         let stdin = &[];
         test_rust_equivalence_given_input_values_deprecated(
-            &LtU64,
+            &LtU64PreserveArgs,
             &init_stack,
             stdin,
             HashMap::default(),
@@ -448,31 +364,110 @@ mod tests {
         );
     }
 
-    fn prop_lt_standard(lhs: U32s<2>, rhs: U32s<2>) {
+    fn prop_lt_consume(lhs: U32s<2>, rhs: U32s<2>) {
         let mut init_stack = empty_stack();
         init_stack.append(&mut rhs.encode().into_iter().rev().collect());
         init_stack.append(&mut lhs.encode().into_iter().rev().collect());
 
         let stdin = &[];
         let expected = None;
-        test_rust_equivalence_given_input_values_deprecated(
-            &LtU64,
+        test_rust_equivalence_given_complete_state(
+            &ShadowedClosure::new(LtU64ConsumeArgs),
             &init_stack,
             stdin,
-            HashMap::default(),
+            &NonDeterminism::default(),
+            &None,
             expected,
         );
+    }
+
+    #[test]
+    fn lt_u64_pbt() {
+        ShadowedClosure::new(LtU64ConsumeArgs).test()
+    }
+
+    impl LtU64ConsumeArgs {
+        fn init_state(&self, rhs: u64, lhs: u64) -> Vec<BFieldElement> {
+            [
+                self.init_stack_for_isolated_run(),
+                rhs.encode(),
+                lhs.encode(),
+            ]
+            .concat()
+        }
+    }
+
+    impl Closure for LtU64ConsumeArgs {
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
+            let lhs = U32s::new([
+                stack.pop().unwrap().try_into().unwrap(),
+                stack.pop().unwrap().try_into().unwrap(),
+            ]);
+            let rhs = U32s::new([
+                stack.pop().unwrap().try_into().unwrap(),
+                stack.pop().unwrap().try_into().unwrap(),
+            ]);
+
+            stack.push(bfe!((lhs < rhs) as u64));
+        }
+
+        fn pseudorandom_initial_state(
+            &self,
+            seed: [u8; 32],
+            bench_case: Option<BenchmarkCase>,
+        ) -> Vec<BFieldElement> {
+            match bench_case {
+                Some(BenchmarkCase::CommonCase) => self.init_state(
+                    (1u64 << 40) + u32::MAX as u64 - 1,
+                    (1u64 << 40) + u32::MAX as u64,
+                ),
+                Some(BenchmarkCase::WorstCase) => self.init_state(u64::MAX, u64::MAX - 1),
+                None => {
+                    let mut rng: StdRng = SeedableRng::from_seed(seed);
+                    self.init_state(rng.gen(), rng.gen())
+                }
+            }
+        }
+
+        fn corner_case_initial_states(&self) -> Vec<Vec<BFieldElement>> {
+            let zero_zero = self.init_state(0, 0);
+            let max_max = self.init_state(u64::MAX, u64::MAX);
+            let same_hi0_same_lo = self.init_state(1 << 31, 1 << 31);
+            let same_hi0_greater_lo = self.init_state(1 << 29, 1 << 31);
+            let same_hi0_less_lo = self.init_state(1 << 31, 1 << 29);
+            let same_hi1_same_lo = self.init_state(1 << 32, 1 << 32);
+            let same_hi1_greater_lo = self.init_state(1 << 32, (1 << 32) + 5);
+            let same_hi1_less_lo = self.init_state((1 << 32) + 5, 1 << 32);
+
+            vec![
+                zero_zero,
+                max_max,
+                same_hi0_same_lo,
+                same_hi0_greater_lo,
+                same_hi0_less_lo,
+                same_hi1_same_lo,
+                same_hi1_greater_lo,
+                same_hi1_less_lo,
+            ]
+        }
     }
 }
 
 #[cfg(test)]
 mod benches {
     use crate::snippet_bencher::bench_and_write;
+    use crate::traits::closure::ShadowedClosure;
+    use crate::traits::rust_shadow::RustShadow;
 
     use super::*;
 
     #[test]
+    fn lt_u64_benchmark_other() {
+        bench_and_write(LtU64PreserveArgs);
+    }
+
+    #[test]
     fn lt_u64_benchmark() {
-        bench_and_write(LtStandardU64);
+        ShadowedClosure::new(LtU64ConsumeArgs).bench();
     }
 }
