@@ -2,22 +2,22 @@
   {
     "name": "tasmlib_list_multiset_equality_digests",
     "benchmark_result": {
-      "clock_cycle_count": 533,
-      "hash_table_height": 230,
+      "clock_cycle_count": 590,
+      "hash_table_height": 266,
       "u32_table_height": 10,
-      "op_stack_table_height": 451,
-      "ram_table_height": 34
+      "op_stack_table_height": 533,
+      "ram_table_height": 42
     },
     "case": "CommonCase"
   },
   {
     "name": "tasmlib_list_multiset_equality_digests",
     "benchmark_result": {
-      "clock_cycle_count": 5433,
-      "hash_table_height": 818,
+      "clock_cycle_count": 7450,
+      "hash_table_height": 854,
       "u32_table_height": 15,
-      "op_stack_table_height": 5547,
-      "ram_table_height": 1602
+      "op_stack_table_height": 8373,
+      "ram_table_height": 2002
     },
     "case": "WorstCase"
   }
