@@ -35,3 +35,6 @@ triton-vm = { version = "0.42.0-alpha.5", default-features = false }
 version = "1"
 default-features = false
 features = ["precommit-hook", "run-cargo-clippy", "run-cargo-fmt"]
+
+[patch.crates-io]
+triton-vm = { git = "https://github.com/TritonVM/triton-vm.git", rev = "32ac704e8bcdfca3169d87f8e70e8217678bfb93" }
