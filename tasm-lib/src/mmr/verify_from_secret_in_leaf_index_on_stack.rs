@@ -113,7 +113,6 @@ mod tests {
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
     use crate::VmHasher;
-    use crate::DIGEST_LENGTH;
 
     use super::*;
 
@@ -154,13 +153,12 @@ mod tests {
         );
 
         // Sanity check
-        assert!(
-            !MmrMembershipProof::<Tip5>::new(bad_leaf_index, auth_path).verify(
-                &mmr.get_peaks(),
-                leaf,
-                mmr.count_leaves()
-            )
-        );
+        assert!(!MmrMembershipProof::<Tip5>::new(auth_path).verify(
+            bad_leaf_index,
+            leaf,
+            &mmr.peaks(),
+            mmr.num_leafs()
+        ));
     }
 
     impl Procedure for MmrVerifyFromSecretInLeafIndexOnStack {
@@ -194,7 +192,7 @@ mod tests {
                         peaks_pointer,
                         i as usize,
                         memory,
-                        DIGEST_LENGTH,
+                        Digest::LEN,
                     )
                     .try_into()
                     .unwrap(),
@@ -213,9 +211,10 @@ mod tests {
                 i += 1;
             }
 
-            let valid_mp = MmrMembershipProof::<VmHasher>::new(leaf_index, auth_path).verify(
-                &peaks,
+            let valid_mp = MmrMembershipProof::<VmHasher>::new(auth_path).verify(
+                leaf_index,
                 leaf_digest,
+                &peaks,
                 leaf_count,
             );
 
@@ -290,7 +289,7 @@ mod tests {
                 stack.push(word);
             }
 
-            let leaf_count = mmra.count_leaves();
+            let leaf_count = mmra.num_leafs();
             let leaf_count_hi = BFieldElement::new(leaf_count >> 32);
             let leaf_count_lo = BFieldElement::new(leaf_count & u32::MAX as u64);
             stack.push(leaf_count_hi);
@@ -300,7 +299,7 @@ mod tests {
             let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
             rust_shadowing_helper_functions::list::list_insert(
                 peaks_pointer,
-                mmra.get_peaks(),
+                mmra.peaks(),
                 &mut memory,
             );
             let nondeterminism = NonDeterminism::default().with_ram(memory);

@@ -16,7 +16,6 @@ use crate::traits::rust_shadow::RustShadow;
 use crate::InitVmState;
 use crate::RustShadowOutputState;
 use crate::VmHasher;
-use crate::DIGEST_LENGTH;
 
 #[allow(dead_code)]
 pub fn test_rust_equivalence_multiple_deprecated<T: DeprecatedSnippet>(
@@ -172,8 +171,8 @@ pub(crate) fn test_rust_equivalence_given_complete_state_deprecated<T: Deprecate
     let mut tasm_memory = vm_output_state.ram.clone();
 
     // assert stacks are equal, up to program hash
-    let tasm_stack_skip_program_hash = tasm_stack.iter().cloned().skip(DIGEST_LENGTH).collect_vec();
-    let rust_stack_skip_program_hash = rust_stack.iter().cloned().skip(DIGEST_LENGTH).collect_vec();
+    let tasm_stack_skip_program_hash = tasm_stack.iter().cloned().skip(Digest::LEN).collect_vec();
+    let rust_stack_skip_program_hash = rust_stack.iter().cloned().skip(Digest::LEN).collect_vec();
     assert_eq!(
         tasm_stack_skip_program_hash,
         rust_stack_skip_program_hash,
@@ -190,7 +189,7 @@ pub(crate) fn test_rust_equivalence_given_complete_state_deprecated<T: Deprecate
     // if expected final stack is given, test against it
     if let Some(expected) = expected_final_stack {
         let expected_final_stack_skip_program_hash =
-            expected.iter().skip(DIGEST_LENGTH).cloned().collect_vec();
+            expected.iter().skip(Digest::LEN).cloned().collect_vec();
         assert_eq!(
             tasm_stack_skip_program_hash,
             expected_final_stack_skip_program_hash,
@@ -319,8 +318,8 @@ pub fn verify_stack_equivalence(
     stack_b_name: &str,
     stack_b: &[BFieldElement],
 ) {
-    let stack_a = &stack_a[DIGEST_LENGTH..];
-    let stack_b = &stack_b[DIGEST_LENGTH..];
+    let stack_a = &stack_a[Digest::LEN..];
+    let stack_b = &stack_b[Digest::LEN..];
     let display = |stack: &[BFieldElement]| stack.iter().map(|&x| x.to_string()).join(",");
     assert_eq!(
         stack_a,

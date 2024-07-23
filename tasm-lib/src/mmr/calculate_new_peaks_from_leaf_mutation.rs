@@ -23,7 +23,6 @@ use crate::rust_shadowing_helper_functions;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::InitVmState;
 use crate::VmHasher;
-use crate::DIGEST_LENGTH;
 
 use super::leaf_index_to_mt_index_and_peak_index::MmrLeafIndexToMtIndexAndPeakIndex;
 
@@ -43,7 +42,7 @@ impl MmrCalculateNewPeaksFromLeafMutationMtIndices {
         let mut stack = empty_stack();
 
         // We assume that the auth paths can safely be stored in memory on this address
-        let auth_path_pointer = BFieldElement::new((MAX_MMR_HEIGHT * DIGEST_LENGTH + 2) as u64);
+        let auth_path_pointer = BFieldElement::new((MAX_MMR_HEIGHT * Digest::LEN + 2) as u64);
         stack.push(auth_path_pointer);
 
         stack.push(BFieldElement::new(leaf_index >> 32));
@@ -57,7 +56,7 @@ impl MmrCalculateNewPeaksFromLeafMutationMtIndices {
             stack.push(*value);
         }
 
-        let leaf_count: u64 = start_mmr.count_leaves();
+        let leaf_count: u64 = start_mmr.num_leafs();
         stack.push(BFieldElement::new(leaf_count >> 32));
         stack.push(BFieldElement::new(leaf_count & u32::MAX as u64));
 
@@ -66,12 +65,12 @@ impl MmrCalculateNewPeaksFromLeafMutationMtIndices {
         let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
         rust_shadowing_helper_functions::list::list_new(peaks_pointer, &mut memory);
 
-        for peak in start_mmr.get_peaks() {
+        for peak in start_mmr.peaks() {
             list_push(
                 peaks_pointer,
                 peak.values().to_vec(),
                 &mut memory,
-                DIGEST_LENGTH,
+                Digest::LEN,
             );
         }
 
@@ -81,7 +80,7 @@ impl MmrCalculateNewPeaksFromLeafMutationMtIndices {
                 auth_path_pointer,
                 ap_element.values().to_vec(),
                 &mut memory,
-                DIGEST_LENGTH,
+                Digest::LEN,
             );
         }
 
@@ -303,7 +302,7 @@ impl DeprecatedSnippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
         let leaf_count_hi: u32 = stack.pop().unwrap().try_into().unwrap();
         let leaf_count: u64 = ((leaf_count_hi as u64) << 32) + leaf_count_lo as u64;
 
-        let mut new_leaf_digest_values = [BFieldElement::new(0); DIGEST_LENGTH];
+        let mut new_leaf_digest_values = [BFieldElement::new(0); Digest::LEN];
         for elem in new_leaf_digest_values.iter_mut() {
             *elem = stack.pop().unwrap();
         }
@@ -324,7 +323,7 @@ impl DeprecatedSnippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
         let mut peaks: Vec<Digest> = vec![];
         for i in 0..peaks_count {
             let digest = Digest::new(
-                list_get(peaks_pointer, i as usize, memory, DIGEST_LENGTH)
+                list_get(peaks_pointer, i as usize, memory, Digest::LEN)
                     .try_into()
                     .unwrap(),
             );
@@ -335,16 +334,16 @@ impl DeprecatedSnippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
         let mut auth_path: Vec<Digest> = vec![];
         for i in 0..auth_path_length {
             let digest = Digest::new(
-                list_get(auth_paths_pointer, i as usize, memory, DIGEST_LENGTH)
+                list_get(auth_paths_pointer, i as usize, memory, Digest::LEN)
                     .try_into()
                     .unwrap(),
             );
             auth_path.push(digest);
         }
 
-        let mmr_mp = MmrMembershipProof::new(leaf_index, auth_path);
+        let mmr_mp = MmrMembershipProof::new(auth_path);
         let new_peaks = mmr::shared_basic::calculate_new_peaks_from_leaf_mutation::<VmHasher>(
-            &peaks, new_leaf, leaf_count, &mmr_mp,
+            &peaks, leaf_count, new_leaf, leaf_index, &mmr_mp,
         );
 
         // Write mutated peak back to memory
@@ -368,6 +367,7 @@ impl DeprecatedSnippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
 #[cfg(test)]
 mod tests {
     use itertools::Itertools;
+    use mmr::mmr_trait::LeafMutation;
     use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
     use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
@@ -480,7 +480,8 @@ mod tests {
             let mp = init_mmr.append(thread_rng().gen());
 
             let mut final_mmr = init_mmr.clone();
-            final_mmr.mutate_leaf(&mp, new_leaf);
+            let leaf_mutation = LeafMutation::new(before_insertion_mmr.num_leafs(), new_leaf, &mp);
+            final_mmr.mutate_leaf(leaf_mutation);
 
             // Mutate the last element for which we just acquired an authentication path
             prop_calculate_new_peaks_from_leaf_mutation(
@@ -530,7 +531,7 @@ mod tests {
                     peaks_pointer,
                     i as usize,
                     &final_memory,
-                    DIGEST_LENGTH,
+                    Digest::LEN,
                 )
                 .try_into()
                 .unwrap(),
@@ -538,8 +539,7 @@ mod tests {
             produced_peaks.push(peak);
         }
 
-        let produced_mmr =
-            MmrAccumulator::<VmHasher>::init(produced_peaks, start_mmr.count_leaves());
+        let produced_mmr = MmrAccumulator::<VmHasher>::init(produced_peaks, start_mmr.num_leafs());
 
         // Verify that both code paths produce the same MMR
         assert_eq!(expected_mmr, produced_mmr);
@@ -553,7 +553,7 @@ mod tests {
                     auth_path_pointer,
                     i as usize,
                     &final_memory,
-                    DIGEST_LENGTH,
+                    Digest::LEN,
                 )
                 .try_into()
                 .unwrap(),
@@ -562,27 +562,32 @@ mod tests {
         }
 
         let mmr_mp = MmrMembershipProof::<VmHasher> {
-            leaf_index: new_leaf_index,
             authentication_path: auth_path,
             _hasher: std::marker::PhantomData,
         };
         assert!(
             mmr_mp.verify(
-                &produced_mmr.get_peaks(),
+                new_leaf_index,
                 new_leaf,
-                produced_mmr.count_leaves(),
+                &produced_mmr.peaks(),
+                produced_mmr.num_leafs(),
             ),
             "TASM-produced authentication path must be valid"
         );
 
         // Extra checks because paranoia
         let mut expected_final_mmra_double_check = start_mmr.to_accumulator();
-        expected_final_mmra_double_check.mutate_leaf(&mmr_mp, new_leaf);
+        expected_final_mmra_double_check.mutate_leaf(LeafMutation::new(
+            new_leaf_index,
+            new_leaf,
+            &mmr_mp,
+        ));
         assert_eq!(expected_final_mmra_double_check, produced_mmr);
         assert!(mmr_mp.verify(
-            &expected_final_mmra_double_check.get_peaks(),
+            new_leaf_index,
             new_leaf,
-            expected_final_mmra_double_check.count_leaves()
+            &expected_final_mmra_double_check.peaks(),
+            expected_final_mmra_double_check.num_leafs()
         ));
     }
 }

@@ -15,7 +15,6 @@ use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::function::Function;
 use crate::traits::function::FunctionInitialState;
 use crate::VmHasher;
-use crate::DIGEST_LENGTH;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct BagPeaks;
@@ -113,10 +112,10 @@ impl BasicSnippet for BagPeaks {
         {length_is_one_label}:
             pop 2
 
-            push {DIGEST_LENGTH} add
+            push {Digest::LEN} add
             // _ *peaks[0]_lw
 
-            read_mem {DIGEST_LENGTH}
+            read_mem {Digest::LEN}
             pop 1
 
             push 0
@@ -127,7 +126,7 @@ impl BasicSnippet for BagPeaks {
         {length_is_not_zero_or_one}:
 
             /* Get pointer to last word of peaks list */
-            push {DIGEST_LENGTH}
+            push {Digest::LEN}
             mul
             // _ *peaks offset
 
@@ -137,7 +136,7 @@ impl BasicSnippet for BagPeaks {
             add
             // _ *peaks 0 *peaks[last]_lw
 
-            read_mem {DIGEST_LENGTH}
+            read_mem {Digest::LEN}
             // _ *peaks 0 [peaks[last]] *peaks[last-1]_lw
 
             swap 6
@@ -165,7 +164,7 @@ impl BasicSnippet for BagPeaks {
             // _ *peaks *peaks[i]_lw [acc]
 
             dup 5
-            read_mem {DIGEST_LENGTH}
+            read_mem {Digest::LEN}
             swap 11
             pop 1
             // _*peaks *peaks[i-1] [acc] [peaks[i - 1]]
@@ -188,9 +187,9 @@ impl Function for BagPeaks {
         let length = memory.get(&address).unwrap().value() as usize;
         let safety_offset = BFieldElement::new(LIST_METADATA_SIZE as u64);
 
-        let mut bfes: Vec<BFieldElement> = Vec::with_capacity(length * tip5::DIGEST_LENGTH);
+        let mut bfes: Vec<BFieldElement> = Vec::with_capacity(length * tip5::Digest::LEN);
 
-        for i in 0..length * tip5::DIGEST_LENGTH {
+        for i in 0..length * tip5::Digest::LEN {
             let element_index = address + safety_offset + BFieldElement::new(i as u64);
             bfes.push(*memory.get(&(element_index)).unwrap());
         }

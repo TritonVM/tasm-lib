@@ -58,7 +58,6 @@ use crate::test_helpers::prepend_program_with_stack_setup;
 // The hasher type must match whatever algebraic hasher the VM is using
 pub type VmHasher = Tip5;
 pub type Digest = tip5::Digest;
-pub const DIGEST_LENGTH: usize = tip5::DIGEST_LENGTH;
 
 #[derive(Clone, Debug, Default)]
 pub struct InitVmState {

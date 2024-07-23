@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use rand::prelude::*;
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::math::tip5::DIGEST_LENGTH;
+use triton_vm::twenty_first::math::tip5::Digest;
 use triton_vm::twenty_first::util_types::algebraic_hasher::Sponge;
 
 use crate::data_type::DataType;
@@ -115,7 +115,7 @@ impl Procedure for HashVarlen {
         ]);
 
         // Remove 5 more words:
-        for _ in 0..DIGEST_LENGTH {
+        for _ in 0..Digest::LEN {
             stack.pop().unwrap();
         }
 

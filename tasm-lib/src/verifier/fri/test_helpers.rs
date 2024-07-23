@@ -178,7 +178,7 @@ fn extract_paths<const N: usize, T: BFieldCodec>(
     let leafs = rows.iter().map(Tip5::hash).collect_vec();
     let inclusion_proof = MerkleTreeInclusionProof::<Tip5> {
         tree_height,
-        indexed_leaves: indices.iter().cloned().zip(leafs).collect_vec(),
+        indexed_leafs: indices.iter().cloned().zip(leafs).collect_vec(),
         authentication_structure: authentication_structure.to_vec(),
         _hasher: std::marker::PhantomData,
     };

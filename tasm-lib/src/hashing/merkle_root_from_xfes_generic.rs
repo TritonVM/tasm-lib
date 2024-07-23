@@ -6,7 +6,6 @@ use crate::hashing::merkle_root::MerkleRoot;
 use crate::library::Library;
 use crate::memory::dyn_malloc::DynMalloc;
 use crate::traits::basic_snippet::BasicSnippet;
-use crate::DIGEST_LENGTH;
 
 /// Calculate a Merkle root from a list of X-field elements.
 /// The input list must have a length that is a power of two
@@ -61,7 +60,7 @@ impl BasicSnippet for MerkleRootFromXfesGeneric {
                 // _ (*parent_nodes - 4) *parent_digests[n] 0 0 0 0 *xfes[2*n]' [parent_digest]
 
                 dup 10
-                write_mem {DIGEST_LENGTH}
+                write_mem {Digest::LEN}
                 // _ (*parent_nodes - 4) *parent_digests[n] 0 0 0 0 *xfes[2*n]' *parent_digests[n+1]
 
                 push -10
@@ -121,7 +120,7 @@ impl BasicSnippet for MerkleRootFromXfesGeneric {
                 add
                 // _ *xfes len *parent_nodes[0] (len / 2 - 1)
 
-                push {DIGEST_LENGTH}
+                push {Digest::LEN}
                 mul
                 // _ *xfes len *parent_nodes[0] parent_offset_last_element
 
@@ -133,7 +132,7 @@ impl BasicSnippet for MerkleRootFromXfesGeneric {
                 swap 1
                 // _ *xfes *parent_nodes[last] len *parent_nodes[0]
 
-                push {-(DIGEST_LENGTH as isize)}
+                push {-(Digest::LEN as isize)}
                 add
                 // _ *xfes *parent_nodes[last] len (*parent_nodes - 4)
 
@@ -162,7 +161,7 @@ impl BasicSnippet for MerkleRootFromXfesGeneric {
                 pop 1
                 // _ (*parent_nodes - 4)
 
-                push {DIGEST_LENGTH - 1}
+                push {Digest::LEN - 1}
                 add
                 // _ *parent_digests
 
@@ -231,7 +230,7 @@ mod test {
                     digests_in_layer_one,
                     node.values().to_vec(),
                     memory,
-                    DIGEST_LENGTH,
+                    Digest::LEN,
                 )
             }
 
@@ -240,7 +239,7 @@ mod test {
                 for node_count in 0..(leafs.len() >> layer) {
                     let node_index = node_count + (1 << (mt.height() - layer));
                     let node = mt.node(node_index).unwrap();
-                    let pointer = pointer + BFieldElement::new((node_index * DIGEST_LENGTH) as u64);
+                    let pointer = pointer + BFieldElement::new((node_index * Digest::LEN) as u64);
                     encode_to_memory(memory, pointer, node);
                 }
             }

@@ -142,7 +142,6 @@ mod tests {
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
     use crate::VmHasher;
-    use crate::DIGEST_LENGTH;
 
     use super::*;
 
@@ -252,10 +251,6 @@ mod tests {
             let second_to_last_leaf: Digest = thread_rng().gen();
             let second_to_last_leaf_index = init_leaf_count;
             let mut real_membership_proof_second_to_last = mmr.append(second_to_last_leaf);
-            assert_eq!(
-                real_membership_proof_second_to_last.leaf_index,
-                second_to_last_leaf_index
-            );
 
             // Insert one more leaf and update the existing membership proof
             let last_leaf: Digest = thread_rng().gen();
@@ -263,8 +258,9 @@ mod tests {
             MmrMembershipProof::update_from_append(
                 &mut real_membership_proof_second_to_last,
                 init_leaf_count + 1,
+                second_to_last_leaf_index,
                 last_leaf,
-                &mmr.get_peaks(),
+                &mmr.peaks(),
             );
             let real_membership_proof_last = mmr.append(last_leaf);
 
@@ -310,7 +306,7 @@ mod tests {
             _public_input: &[BFieldElement],
             _sponge: &mut Option<VmHasher>,
         ) -> Vec<BFieldElement> {
-            let mut leaf_digest = [BFieldElement::new(0); DIGEST_LENGTH];
+            let mut leaf_digest = [BFieldElement::new(0); Digest::LEN];
             for elem in leaf_digest.iter_mut() {
                 *elem = stack.pop().unwrap();
             }
@@ -328,7 +324,7 @@ mod tests {
                         peaks_pointer,
                         i as usize,
                         memory,
-                        DIGEST_LENGTH,
+                        Digest::LEN,
                     )
                     .try_into()
                     .unwrap(),
@@ -355,9 +351,10 @@ mod tests {
                 i += 1;
             }
 
-            let valid_mp = MmrMembershipProof::<VmHasher>::new(leaf_index, auth_path).verify(
-                &peaks,
+            let valid_mp = MmrMembershipProof::<VmHasher>::new(auth_path).verify(
+                leaf_index,
                 leaf_digest,
+                &peaks,
                 leaf_count,
             );
 
@@ -436,13 +433,12 @@ mod tests {
             );
 
             // Sanity check
-            assert!(
-                !MmrMembershipProof::<Tip5>::new(leaf_index, auth_path).verify(
-                    &mmr.get_peaks(),
-                    claimed_leaf,
-                    mmr.count_leaves()
-                )
-            );
+            assert!(!MmrMembershipProof::<Tip5>::new(auth_path).verify(
+                leaf_index,
+                claimed_leaf,
+                &mmr.peaks(),
+                mmr.num_leafs()
+            ));
         }
 
         // BEFORE: _ *peaks leaf_count_hi leaf_count_lo [digest (leaf_digest)]
@@ -466,13 +462,12 @@ mod tests {
             );
 
             // Sanity check
-            assert!(
-                MmrMembershipProof::<Tip5>::new(leaf_index, auth_path).verify(
-                    &mmr.get_peaks(),
-                    claimed_leaf,
-                    mmr.count_leaves()
-                )
-            );
+            assert!(MmrMembershipProof::<Tip5>::new(auth_path).verify(
+                leaf_index,
+                claimed_leaf,
+                &mmr.peaks(),
+                mmr.num_leafs()
+            ));
         }
 
         // BEFORE: _ *peaks [digest (leaf_digest)] leaf_count_hi leaf_count_lo
@@ -540,7 +535,7 @@ mod tests {
             let peaks_pointer = BFieldElement::one();
             stack.push(peaks_pointer);
 
-            let leaf_count = mmra.count_leaves();
+            let leaf_count = mmra.num_leafs();
             let leaf_count_hi = BFieldElement::new(leaf_count >> 32);
             let leaf_count_lo = BFieldElement::new(leaf_count & u32::MAX as u64);
             stack.push(leaf_count_hi);
@@ -550,12 +545,12 @@ mod tests {
             let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
             rust_shadowing_helper_functions::list::list_new(peaks_pointer, &mut memory);
 
-            for peak in mmra.get_peaks() {
+            for peak in mmra.peaks() {
                 rust_shadowing_helper_functions::list::list_push(
                     peaks_pointer,
                     peak.values().to_vec(),
                     &mut memory,
-                    DIGEST_LENGTH,
+                    Digest::LEN,
                 );
             }
 

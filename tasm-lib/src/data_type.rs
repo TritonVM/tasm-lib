@@ -14,7 +14,6 @@ use crate::memory::load_words_from_memory_leave_pointer;
 use crate::memory::load_words_from_memory_pop_pointer;
 use crate::memory::write_words_to_memory_leave_pointer;
 use crate::memory::write_words_to_memory_pop_pointer;
-use crate::DIGEST_LENGTH;
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub enum DataType {
@@ -90,7 +89,7 @@ impl DataType {
             DataType::U128 => 4,
             DataType::Bfe => 1,
             DataType::Xfe => 3,
-            DataType::Digest => DIGEST_LENGTH,
+            DataType::Digest => Digest::LEN,
             DataType::List(_) => 1,
             DataType::Array(_) => 1,
             DataType::VoidPointer => 1,
@@ -291,7 +290,7 @@ impl DataType {
             DataType::Xfe => (0..count)
                 .map(|_| vec![random(), random(), random()])
                 .collect_vec(),
-            DataType::Digest => (0..DIGEST_LENGTH * count)
+            DataType::Digest => (0..Digest::LEN * count)
                 .map(|_| BFieldElement::new(rng.gen_range(0..=BFieldElement::MAX)))
                 .tuples()
                 .map(|(a, b, c, d, e)| vec![a, b, c, d, e])

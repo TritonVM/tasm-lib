@@ -11,7 +11,6 @@ use crate::push_encodable;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::Digest;
 use crate::InitVmState;
-use crate::DIGEST_LENGTH;
 
 #[derive(Clone, Debug)]
 pub struct SwapDigest;
@@ -134,9 +133,9 @@ impl DeprecatedSnippet for SwapDigest {
         _memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
         let h = stack.len();
-        for i in 0..DIGEST_LENGTH {
+        for i in 0..Digest::LEN {
             let ai_pos = h - i - 1;
-            let bi_pos = h - i - DIGEST_LENGTH - 1;
+            let bi_pos = h - i - Digest::LEN - 1;
             stack.swap(ai_pos, bi_pos);
         }
     }

@@ -92,7 +92,7 @@ pub(super) fn fri_verify_type() -> StructType {
 }
 
 impl FriSnippet {
-    pub(crate) fn indexed_leaves_list_type() -> DataType {
+    pub(crate) fn indexed_leafs_list_type() -> DataType {
         let indexed_leaf_type = DataType::Tuple(vec![DataType::U32, DataType::Xfe]);
         DataType::List(Box::new(indexed_leaf_type))
     }
@@ -111,7 +111,7 @@ impl BasicSnippet for FriSnippet {
 
     fn outputs(&self) -> Vec<(DataType, String)> {
         vec![(
-            Self::indexed_leaves_list_type(),
+            Self::indexed_leafs_list_type(),
             "indices_and_elements".to_string(),
         )]
     }
@@ -1014,7 +1014,7 @@ impl FriVerify {
         if num_nondeterministic_digests_read >= nondeterministic_digests.len() {
             let inclusion_proof = MerkleTreeInclusionProof::<Tip5> {
                 tree_height,
-                indexed_leaves: indexed_a_leaves.clone(),
+                indexed_leafs: indexed_a_leaves.clone(),
                 authentication_structure: fri_response.auth_structure,
                 ..Default::default()
             };
@@ -1037,7 +1037,7 @@ impl FriVerify {
             num_nondeterministic_digests_read += tree_height;
             let inclusion_proof = MerkleTreeInclusionProof::<Tip5> {
                 tree_height,
-                indexed_leaves: vec![*indexed_leaf],
+                indexed_leafs: vec![*indexed_leaf],
                 authentication_structure: authentication_path.to_vec(),
                 ..Default::default()
             };
@@ -1078,7 +1078,7 @@ impl FriVerify {
             if num_nondeterministic_digests_read >= nondeterministic_digests.len() {
                 let inclusion_proof = MerkleTreeInclusionProof::<Tip5> {
                     tree_height: current_tree_height,
-                    indexed_leaves: indexed_b_leaves.clone(),
+                    indexed_leafs: indexed_b_leaves.clone(),
                     authentication_structure: fri_response.auth_structure,
                     ..Default::default()
                 };
@@ -1103,7 +1103,7 @@ impl FriVerify {
                 num_nondeterministic_digests_read += current_tree_height;
                 let inclusion_proof = MerkleTreeInclusionProof::<Tip5> {
                     tree_height: current_tree_height,
-                    indexed_leaves: vec![*indexed_leaf],
+                    indexed_leafs: vec![*indexed_leaf],
                     authentication_structure: authentication_path.to_vec(),
                     ..Default::default()
                 };

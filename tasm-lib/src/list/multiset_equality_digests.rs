@@ -5,7 +5,6 @@ use crate::hashing::algebraic_hasher::hash_varlen::HashVarlen;
 use crate::library::Library;
 use crate::list::length::Length;
 use crate::traits::basic_snippet::BasicSnippet;
-use crate::DIGEST_LENGTH;
 
 /// Determine whether two lists are equal up to permutation. The
 /// lists are given as lists of digests. This function uses hashing
@@ -86,14 +85,14 @@ impl BasicSnippet for MultisetEqualityDigests {
                 dup 2                    // _ *list_a *list_b len *list_a
                 push 1 add               // _ *list_a *list_b len *list_a[0]
                 dup 1                    // _ *list_a *list_b len *list_a[0] len
-                push {DIGEST_LENGTH} mul // _ *list_a *list_b len *list_a[0] (len*{DIGEST_LENGTH})
+                push {Digest::LEN} mul // _ *list_a *list_b len *list_a[0] (len*{Digest::LEN})
                 call {hash_varlen}       // _ *list_a *list_b len da4 da3 da2 da1 da0
 
                 // hash list_b
                 dup 6                            // _ *list_a *list_b len da4 da3 da2 da1 da0 *list_b
                 push 1 add                       // _ *list_a *list_b len *list_b[0]
                 dup 6                            // _ *list_a *list_b len da4 da3 da2 da1 da0 *list_b[0] len
-                push {DIGEST_LENGTH} mul         // _ *list_a *list_b len da4 da3 da2 da1 da0 *list_b[0] (len*{DIGEST_LENGTH})
+                push {Digest::LEN} mul         // _ *list_a *list_b len da4 da3 da2 da1 da0 *list_b[0] (len*{Digest::LEN})
                 call {hash_varlen}               // _ *list_a *list_b len da4 da3 da2 da1 da0 db4 db3 db2 db1 db0
 
                 // hash together
@@ -184,7 +183,7 @@ impl BasicSnippet for MultisetEqualityDigests {
                 skiz return // _ *list len [-x0] [x1] addr itrs_left [rp]
 
                 // read two first words
-                dup 4 push {DIGEST_LENGTH - 1} add read_mem 2
+                dup 4 push {Digest::LEN - 1} add read_mem 2
                 // _ *list len [-x0] [x1] addr itrs_left [rp] m4 m3 (addr + 2)
 
                 swap 7
@@ -203,7 +202,7 @@ impl BasicSnippet for MultisetEqualityDigests {
                 // Read last three words
                 dup 7
                 read_mem 3
-                push {DIGEST_LENGTH + 1} add
+                push {Digest::LEN + 1} add
                 swap 11
                 pop 1
                 // _ *list len [-x0] [x1] (addr + 5) itrs_left [rp] m4' m3' µ m2 m1 m0
@@ -236,7 +235,7 @@ mod tests {
     use rand::rngs::StdRng;
     use rand::Rng;
     use rand::SeedableRng;
-    use tip5::DIGEST_LENGTH;
+    use tip5::Digest;
     use twenty_first::math::other::random_elements;
 
     use crate::empty_stack;
@@ -262,11 +261,11 @@ mod tests {
             let list_b_pointer = stack.pop().unwrap();
             let list_a_pointer = stack.pop().unwrap();
 
-            let a: Vec<[BFieldElement; DIGEST_LENGTH]> =
+            let a: Vec<[BFieldElement; Digest::LEN]> =
                 load_list_with_copy_elements(list_a_pointer, memory);
             let mut a = a.into_iter().map(Digest::new).collect_vec();
             a.sort_unstable();
-            let b: Vec<[BFieldElement; DIGEST_LENGTH]> =
+            let b: Vec<[BFieldElement; Digest::LEN]> =
                 load_list_with_copy_elements(list_b_pointer, memory);
             let mut b = b.into_iter().map(Digest::new).collect_vec();
             b.sort_unstable();
@@ -288,7 +287,7 @@ mod tests {
                     let mut rng: StdRng = SeedableRng::from_seed(seed);
                     let length = rng.gen_range(1..50);
                     let index = rng.gen_range(0..length);
-                    let digest_word_index = rng.gen_range(0..DIGEST_LENGTH);
+                    let digest_word_index = rng.gen_range(0..Digest::LEN);
                     let another_length = length + rng.gen_range(1..10);
                     match rng.gen_range(0..=3) {
                         0 => self.random_equal_lists(length),
@@ -310,7 +309,7 @@ mod tests {
             let mut short_lists_one_element_flipped = vec![];
             for length in 1..7 {
                 for manipulated_element in 0..length {
-                    for manipulated_word in 0..DIGEST_LENGTH {
+                    for manipulated_word in 0..Digest::LEN {
                         short_lists_one_element_flipped.push(
                             self.random_lists_one_element_flipped(
                                 length,
@@ -402,7 +401,7 @@ mod tests {
             manipulated_digest_word_index: usize,
         ) -> FunctionInitialState {
             assert!(manipulated_index < length);
-            assert!(manipulated_digest_word_index < DIGEST_LENGTH);
+            assert!(manipulated_digest_word_index < Digest::LEN);
             let list_a: Vec<Digest> = random_elements(length);
             let mut list_b = list_a.clone();
             list_b.sort();

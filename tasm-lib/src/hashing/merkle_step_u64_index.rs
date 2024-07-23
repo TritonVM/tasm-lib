@@ -145,7 +145,6 @@ mod tests {
 
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
-    use crate::DIGEST_LENGTH;
 
     use super::*;
 
@@ -183,7 +182,7 @@ mod tests {
             let mut final_stack = tasm_final_state.op_stack.stack;
 
             // Pop and ignore digest
-            for _ in 0..DIGEST_LENGTH {
+            for _ in 0..Digest::LEN {
                 final_stack.pop();
             }
 

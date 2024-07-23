@@ -264,7 +264,7 @@ mod tests {
     use rand::Rng;
     use rand::RngCore;
     use rand::SeedableRng;
-    use tip5::DIGEST_LENGTH;
+    use tip5::Digest;
     use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
     use crate::library::STATIC_MEMORY_START_ADDRESS;
@@ -367,7 +367,7 @@ mod tests {
             let b_digest = Tip5::hash(&b);
             let indeterminate = Tip5::hash_pair(b_digest, a_digest);
             let indeterminate =
-                -XFieldElement::new(indeterminate.values()[2..DIGEST_LENGTH].try_into().unwrap());
+                -XFieldElement::new(indeterminate.values()[2..Digest::LEN].try_into().unwrap());
 
             // compute running products
             let mut running_product_a = XFieldElement::one();

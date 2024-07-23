@@ -249,7 +249,7 @@ mod tests {
 
 #[cfg(test)]
 mod bench {
-    use triton_vm::twenty_first::math::tip5::DIGEST_LENGTH;
+    use triton_vm::twenty_first::math::tip5::Digest;
 
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
@@ -260,7 +260,7 @@ mod bench {
     fn bench_const_sized_terminal_calc_rev_5() {
         // What's the cost if input is a digest? Does not include code to move digest into
         // memory as an array.
-        ShadowedFunction::new(ComputeTerminalConstSizedDynamicSymbolsReversed::<DIGEST_LENGTH>)
+        ShadowedFunction::new(ComputeTerminalConstSizedDynamicSymbolsReversed::<{ Digest::LEN }>)
             .bench()
     }
 

@@ -1,4 +1,4 @@
-use tip5::DIGEST_LENGTH;
+use tip5::Digest;
 use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
@@ -28,8 +28,7 @@ impl BasicSnippet for MerkleRootFromXfesWrapper {
         let entrypoint = self.entrypoint();
         let length_pointer = library.kmalloc(1);
 
-        let pointer_for_node_memory =
-            library.kmalloc(MAX_LENGTH_SUPPORTED * (DIGEST_LENGTH as u32));
+        let pointer_for_node_memory = library.kmalloc(MAX_LENGTH_SUPPORTED * (Digest::LEN as u32));
 
         let snippet_for_length_256 = MerkleRootFromXfesStaticSize {
             log2_length: 8,
@@ -127,7 +126,6 @@ mod tests {
     use crate::traits::function::FunctionInitialState;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-    use crate::DIGEST_LENGTH;
 
     use super::*;
 
@@ -158,7 +156,7 @@ mod tests {
             let num_skips = 2;
             for (node_index, &node) in (0..num_not_leaf_nodes).zip(mt.nodes()).skip(num_skips) {
                 let node_address = Self::static_memory_address_for_isolated_run_nodes()
-                    + bfe!(node_index) * bfe!(DIGEST_LENGTH as u32);
+                    + bfe!(node_index) * bfe!(Digest::LEN as u32);
                 encode_to_memory(memory, node_address, node);
             }
 
@@ -194,7 +192,7 @@ mod tests {
 
     impl MerkleRootFromXfesWrapper {
         fn static_memory_address_for_isolated_run_nodes() -> BFieldElement {
-            STATIC_MEMORY_START_ADDRESS - bfe!(MAX_LENGTH_SUPPORTED * DIGEST_LENGTH as u32)
+            STATIC_MEMORY_START_ADDRESS - bfe!(MAX_LENGTH_SUPPORTED * Digest::LEN as u32)
         }
 
         fn static_memory_address_for_isolated_run_length() -> BFieldElement {

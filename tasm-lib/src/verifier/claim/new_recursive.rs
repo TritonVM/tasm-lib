@@ -8,7 +8,6 @@ use crate::library::Library;
 use crate::memory::write_words_to_memory_pop_pointer;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::verifier::claim::shared::claim_type;
-use crate::DIGEST_LENGTH;
 
 /// Return a pointer to a claim representing the verification of a proof of the program's own
 /// execution. Must be called with an empty stack, as the program digest is read from the bottom
@@ -58,8 +57,8 @@ impl BasicSnippet for NewRecursive {
             self.input_size + METADATA_SIZE_FOR_FIELD_WITH_VEC_VALUE,
         );
         let dup_own_program_digest =
-            vec![triton_asm!(dup {NUM_OP_STACK_REGISTERS - 1}); DIGEST_LENGTH].concat();
-        let write_digest_to_memory = write_words_to_memory_pop_pointer(DIGEST_LENGTH);
+            vec![triton_asm!(dup {NUM_OP_STACK_REGISTERS - 1}); Digest::LEN].concat();
+        let write_digest_to_memory = write_words_to_memory_pop_pointer(Digest::LEN);
 
         triton_asm!(
             {entrypoint}:
@@ -128,7 +127,7 @@ pub mod tests {
     #[test]
     fn new_recursive_claim_small_params_pbt() {
         ShadowedProcedure::new(NewRecursive {
-            input_size: DIGEST_LENGTH,
+            input_size: Digest::LEN,
             output_size: 0,
         })
         .test()
