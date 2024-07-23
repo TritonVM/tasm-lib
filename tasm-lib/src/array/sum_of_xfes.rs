@@ -86,8 +86,9 @@ mod tests {
     use itertools::Itertools;
     use num::One;
     use num::Zero;
+    use num_traits::ConstZero;
     use rand::prelude::*;
-    use triton_vm::twenty_first::math::b_field_element::BFIELD_ZERO;
+    use triton_vm::twenty_first::math::b_field_element::BFieldElement;
 
     use crate::rust_shadowing_helper_functions::array::insert_as_array;
     use crate::rust_shadowing_helper_functions::array::insert_random_array;
@@ -112,7 +113,7 @@ mod tests {
                 for word in array_elem.coefficients.iter_mut() {
                     memory
                         .get(&array_pointer)
-                        .unwrap_or(&BFIELD_ZERO)
+                        .unwrap_or(&BFieldElement::ZERO)
                         .clone_into(word);
                     array_pointer.increment();
                 }

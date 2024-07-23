@@ -1,4 +1,4 @@
-use tip5::DIGEST_LENGTH;
+use tip5::Digest;
 use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
@@ -114,16 +114,16 @@ impl BasicSnippet for LtDigest {
                 swap 2
                 // _ 0 *rhs *lhs
 
-                push {DIGEST_LENGTH - 1} add
+                push {Digest::LEN - 1} add
                 // _ 0 *rhs *lhs[4]
 
-                dup 0 push {-(DIGEST_LENGTH as isize)} add
+                dup 0 push {-(Digest::LEN as isize)} add
                 // _ 0 *rhs *lhs[4] (*lhs - 1)
 
                 swap 2
                 // _ 0 (*lhs - 1) *lhs[4] *rhs
 
-                push {DIGEST_LENGTH - 1} add
+                push {Digest::LEN - 1} add
                 // _ 0 (*lhs - 1) *lhs[4] *rhs[4]
 
                 push 0
@@ -238,7 +238,7 @@ mod tests {
 
             let mut adjacent_digest_pairs = vec![];
             let mut rng = thread_rng();
-            for i in 0..DIGEST_LENGTH {
+            for i in 0..Digest::LEN {
                 let a: Digest = rng.gen();
                 let mut b: Digest = a;
 

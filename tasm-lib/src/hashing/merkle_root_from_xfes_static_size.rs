@@ -9,7 +9,6 @@ use crate::data_type::DataType;
 use crate::hashing::merkle_root_static_size::MerkleRootStaticSize;
 use crate::library::Library;
 use crate::traits::basic_snippet::BasicSnippet;
-use crate::DIGEST_LENGTH;
 
 pub struct MerkleRootFromXfesStaticSize {
     /// Aka `height` of the Merkle tree
@@ -66,8 +65,8 @@ impl BasicSnippet for MerkleRootFromXfesStaticSize {
             let parent_index = left_child_node_index / 2;
             triton_asm!(
                 hash
-                push {self.static_memory_pointer + bfe!(parent_index) * bfe!(DIGEST_LENGTH as u32)}
-                write_mem {DIGEST_LENGTH}
+                push {self.static_memory_pointer + bfe!(parent_index) * bfe!(Digest::LEN as u32)}
+                write_mem {Digest::LEN}
                 pop 1
             )
         };
@@ -145,7 +144,7 @@ mod test {
             let num_skips = if self.log2_length == 1 { 1 } else { 2 };
             for (node_index, &node) in (0..num_not_leaf_nodes).zip(mt.nodes()).skip(num_skips) {
                 let node_address =
-                    self.static_memory_pointer + bfe!(node_index) * bfe!(DIGEST_LENGTH as u32);
+                    self.static_memory_pointer + bfe!(node_index) * bfe!(Digest::LEN as u32);
                 encode_to_memory(memory, node_address, node);
             }
 

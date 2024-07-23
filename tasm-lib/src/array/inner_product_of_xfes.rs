@@ -76,7 +76,7 @@ mod tests {
     use itertools::Itertools;
     use num::Zero;
     use rand::prelude::*;
-    use triton_vm::twenty_first::math::b_field_element::BFIELD_ZERO;
+    use triton_vm::twenty_first::math::b_field_element::BFieldElement;
     use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
     use crate::rust_shadowing_helper_functions::array::insert_as_array;
@@ -87,6 +87,7 @@ mod tests {
     use crate::traits::function::FunctionInitialState;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
+    use num_traits::ConstZero;
 
     use super::*;
 
@@ -106,29 +107,29 @@ mod tests {
                 let element_a = XFieldElement::new([
                     memory
                         .get(&array_pointer_a)
-                        .unwrap_or(&BFIELD_ZERO)
+                        .unwrap_or(&BFieldElement::ZERO)
                         .to_owned(),
                     memory
                         .get(&(array_pointer_a + one))
-                        .unwrap_or(&BFIELD_ZERO)
+                        .unwrap_or(&BFieldElement::ZERO)
                         .to_owned(),
                     memory
                         .get(&(array_pointer_a + two))
-                        .unwrap_or(&BFIELD_ZERO)
+                        .unwrap_or(&BFieldElement::ZERO)
                         .to_owned(),
                 ]);
                 let element_b = XFieldElement::new([
                     memory
                         .get(&array_pointer_b)
-                        .unwrap_or(&BFIELD_ZERO)
+                        .unwrap_or(&BFieldElement::ZERO)
                         .to_owned(),
                     memory
                         .get(&(array_pointer_b + one))
-                        .unwrap_or(&BFIELD_ZERO)
+                        .unwrap_or(&BFieldElement::ZERO)
                         .to_owned(),
                     memory
                         .get(&(array_pointer_b + two))
-                        .unwrap_or(&BFIELD_ZERO)
+                        .unwrap_or(&BFieldElement::ZERO)
                         .to_owned(),
                 ]);
 

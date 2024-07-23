@@ -58,7 +58,7 @@ mod tests {
     use proptest_arbitrary_interop::arb;
     use rand::prelude::*;
     use test_strategy::proptest;
-    use triton_vm::twenty_first::math::tip5::DIGEST_LENGTH;
+    use triton_vm::twenty_first::math::tip5::Digest;
     use triton_vm::twenty_first::util_types::algebraic_hasher::Sponge;
 
     use crate::snippet_bencher::BenchmarkCase;
@@ -115,7 +115,7 @@ mod tests {
             ]);
 
             // Remove 5 more words:
-            for _ in 0..DIGEST_LENGTH {
+            for _ in 0..Digest::LEN {
                 stack.pop().unwrap();
             }
 

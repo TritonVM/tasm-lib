@@ -24,7 +24,6 @@ use crate::rust_shadowing_helper_functions;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::InitVmState;
 use crate::VmHasher;
-use crate::DIGEST_LENGTH;
 
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct CalculateNewPeaksFromAppend;
@@ -39,7 +38,7 @@ impl CalculateNewPeaksFromAppend {
         let peaks_pointer = BFieldElement::one();
 
         let mut stack = empty_stack();
-        let old_leaf_count: u64 = start_mmr.count_leaves();
+        let old_leaf_count: u64 = start_mmr.num_leafs();
         stack.push(BFieldElement::new(old_leaf_count >> 32));
         stack.push(BFieldElement::new(old_leaf_count & u32::MAX as u64));
         stack.push(peaks_pointer);
@@ -52,12 +51,12 @@ impl CalculateNewPeaksFromAppend {
         // Initialize memory
         let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
         rust_shadowing_helper_functions::list::list_new(peaks_pointer, &mut memory);
-        for peak in start_mmr.get_peaks() {
+        for peak in start_mmr.peaks() {
             rust_shadowing_helper_functions::list::list_push(
                 peaks_pointer,
                 peak.values().to_vec(),
                 &mut memory,
-                DIGEST_LENGTH,
+                Digest::LEN,
             );
         }
 
@@ -267,7 +266,7 @@ impl DeprecatedSnippet for CalculateNewPeaksFromAppend {
                     peaks_pointer,
                     i as usize,
                     memory,
-                    DIGEST_LENGTH,
+                    Digest::LEN,
                 )
                 .try_into()
                 .unwrap(),
@@ -280,19 +279,19 @@ impl DeprecatedSnippet for CalculateNewPeaksFromAppend {
             peaks_pointer,
             new_leaf.values().to_vec(),
             memory,
-            DIGEST_LENGTH,
+            Digest::LEN,
         );
         let new_node_index = mmr::shared_advanced::leaf_index_to_node_index(old_leaf_count);
         let (mut right_lineage_count, _height) =
             mmr::shared_advanced::right_lineage_length_and_own_height(new_node_index);
         while right_lineage_count != 0 {
             let new_hash = Digest::new(
-                list_pop(peaks_pointer, memory, DIGEST_LENGTH)
+                list_pop(peaks_pointer, memory, Digest::LEN)
                     .try_into()
                     .unwrap(),
             );
             let previous_peak = Digest::new(
-                list_pop(peaks_pointer, memory, DIGEST_LENGTH)
+                list_pop(peaks_pointer, memory, Digest::LEN)
                     .try_into()
                     .unwrap(),
             );
@@ -300,7 +299,7 @@ impl DeprecatedSnippet for CalculateNewPeaksFromAppend {
                 auth_path_pointer,
                 previous_peak.values().to_vec(),
                 memory,
-                DIGEST_LENGTH,
+                Digest::LEN,
             );
             list_push(
                 peaks_pointer,
@@ -308,7 +307,7 @@ impl DeprecatedSnippet for CalculateNewPeaksFromAppend {
                     .values()
                     .to_vec(),
                 memory,
-                DIGEST_LENGTH,
+                Digest::LEN,
             );
             right_lineage_count -= 1;
         }
@@ -343,7 +342,7 @@ mod tests {
         for mmr_size in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 14, 100, 1000] {
             let digests: Vec<Digest> = random_elements(mmr_size);
             let mmr_by_new: Mmra = MmrAccumulator::new(digests);
-            let mmr_by_init: Mmra = MmrAccumulator::init(mmr_by_new.get_peaks(), mmr_size as u64);
+            let mmr_by_init: Mmra = MmrAccumulator::init(mmr_by_new.peaks(), mmr_size as u64);
             assert_eq!(mmr_by_new, mmr_by_init);
         }
     }
@@ -432,7 +431,7 @@ mod tests {
         // BEFORE: _ old_leaf_count_hi old_leaf_count_lo *peaks [digests (new_leaf)]
         // AFTER:  _ *new_peaks *auth_path
         let mut init_stack = empty_stack();
-        let old_leaf_count: u64 = start_mmr.count_leaves();
+        let old_leaf_count: u64 = start_mmr.num_leafs();
         init_stack.push(BFieldElement::new(old_leaf_count >> 32));
         init_stack.push(BFieldElement::new(old_leaf_count & u32::MAX as u64));
         init_stack.push(peaks_pointer);
@@ -447,12 +446,12 @@ mod tests {
         rust_shadowing_helper_functions::list::list_new(peaks_pointer, &mut memory);
 
         let list_get = rust_shadowing_helper_functions::list::list_get;
-        for peak in start_mmr.get_peaks() {
+        for peak in start_mmr.peaks() {
             rust_shadowing_helper_functions::list::list_push(
                 peaks_pointer,
                 peak.values().to_vec(),
                 &mut memory,
-                DIGEST_LENGTH,
+                Digest::LEN,
             );
         }
 
@@ -475,14 +474,14 @@ mod tests {
         let mut produced_peaks = vec![];
         for i in 0..peaks_count {
             let peak = Digest::new(
-                list_get(peaks_pointer, i as usize, &final_memory, DIGEST_LENGTH)
+                list_get(peaks_pointer, i as usize, &final_memory, Digest::LEN)
                     .try_into()
                     .unwrap(),
             );
             produced_peaks.push(peak);
         }
 
-        let produced_mmr: Mmra = MmrAccumulator::init(produced_peaks, start_mmr.count_leaves() + 1);
+        let produced_mmr: Mmra = MmrAccumulator::init(produced_peaks, start_mmr.num_leafs() + 1);
 
         // Verify that both code paths produce the same MMR
         assert_eq!(expected_mmr, produced_mmr);
@@ -492,22 +491,22 @@ mod tests {
         let mut produced_auth_path = vec![];
         for i in 0..auth_path_element_count {
             produced_auth_path.push(Digest::new(
-                list_get(auth_paths_pointer, i as usize, &final_memory, DIGEST_LENGTH)
+                list_get(auth_paths_pointer, i as usize, &final_memory, Digest::LEN)
                     .try_into()
                     .unwrap(),
             ));
         }
 
         let produced_mp = MmrMembershipProof::<VmHasher> {
-            leaf_index: start_mmr.count_leaves(),
             authentication_path: produced_auth_path,
             _hasher: std::marker::PhantomData,
         };
         assert!(
             produced_mp.verify(
-                &produced_mmr.get_peaks(),
+                start_mmr.num_leafs(),
                 new_leaf,
-                produced_mmr.count_leaves(),
+                &produced_mmr.peaks(),
+                produced_mmr.num_leafs(),
             ),
             "TASM-produced authentication path must be valid"
         );

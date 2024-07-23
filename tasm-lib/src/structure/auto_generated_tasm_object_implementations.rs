@@ -255,21 +255,7 @@ impl ::tasm_lib::structure::tasm_object::TasmObject for MmrMembershipProof<Tip5>
             .collect::<Vec<_>>();
         let authentication_path: Vec<Digest> =
             *twenty_first::math::bfield_codec::BFieldCodec::decode(&sequence)?;
-        let length: usize = if let Some(static_length) =
-            <u64 as twenty_first::math::bfield_codec::BFieldCodec>::static_length()
-        {
-            static_length
-        } else {
-            iterator.next().unwrap().value() as usize
-        };
-        let sequence = (0..length)
-            .map(|_| iterator.next().unwrap())
-            .collect::<Vec<_>>();
-        let leaf_index: u64 = *twenty_first::math::bfield_codec::BFieldCodec::decode(&sequence)?;
-        ::std::result::Result::Ok(::std::boxed::Box::new(Self::new(
-            leaf_index,
-            authentication_path,
-        )))
+        ::std::result::Result::Ok(::std::boxed::Box::new(Self::new(authentication_path)))
     }
 }
 
@@ -296,7 +282,7 @@ impl ::tasm_lib::structure::tasm_object::TasmObject
                 };
                 [current, getter].concat()
             }
-            "leaf_count" => {
+            "num_leafs" => {
                 let current = {
                     [Self::get_field_start_with_jump_distance("peaks"),[triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add)].to_vec(),{
             if let Some(size) =  <u64 as twenty_first::math::bfield_codec::BFieldCodec> ::static_length(){

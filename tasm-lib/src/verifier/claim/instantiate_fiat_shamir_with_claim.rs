@@ -1,6 +1,6 @@
 use triton_vm::instruction::LabelledInstruction;
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::math::tip5::DIGEST_LENGTH;
+use triton_vm::twenty_first::math::tip5::Digest;
 
 use crate::data_type::DataType;
 use crate::hashing::absorb_multiple::AbsorbMultiple;
@@ -47,7 +47,7 @@ impl BasicSnippet for InstantiateFiatShamirWithClaim {
             pop 1
             // _ output_size input_size
 
-            push {DIGEST_LENGTH + 2}
+            push {Digest::LEN + 2}
             add
             add
             // _ size

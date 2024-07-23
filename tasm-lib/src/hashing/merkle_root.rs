@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use itertools::Itertools;
 use num_traits::Zero;
 use rand::prelude::*;
-use triton_vm::prelude::tip5::DIGEST_LENGTH;
+use triton_vm::prelude::tip5::Digest;
 use triton_vm::prelude::*;
 use twenty_first::util_types::merkle_tree::CpuParallel;
 use twenty_first::util_types::merkle_tree::MerkleTree;
@@ -18,7 +18,6 @@ use crate::structure::tasm_object::TasmObject;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::function::Function;
 use crate::traits::function::FunctionInitialState;
-use crate::Digest;
 
 /// Compute the Merkle root of a slice of `Digest`s
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
@@ -65,10 +64,10 @@ impl BasicSnippet for MerkleRoot {
                     dup 2
                     push -1
                     add
-                    push {DIGEST_LENGTH}
+                    push {Digest::LEN}
                     mul
                     add
-                    // _ leafs_len *leafs (*parent_level + (leafs_len - 1)*DIGEST_LENGTH)
+                    // _ leafs_len *leafs (*parent_level + (leafs_len - 1)*Digest::LEN)
                     // _ leafs_len *leafs *parent_level'
 
                     swap 1
@@ -76,20 +75,20 @@ impl BasicSnippet for MerkleRoot {
 
                     /* Adjust `*leafs` to point to last element, last word */
                     dup 2
-                    push {DIGEST_LENGTH}
+                    push {Digest::LEN}
                     mul
                     add
-                    // _ leafs_len *parent_level' (*leafs + leafs_len * DIGEST_LENGTH)
+                    // _ leafs_len *parent_level' (*leafs + leafs_len * Digest::LEN)
                     // _ leafs_len *parent_level' *leafs'
 
                     call {next_layer_loop}
-                    // _ 1 *address (*root + DIGEST_LENGTH)
+                    // _ 1 *address (*root + Digest::LEN)
 
                     swap 2
                     pop 2
-                    // _ (*root + DIGEST_LENGTH - 1)
+                    // _ (*root + Digest::LEN - 1)
 
-                    read_mem {DIGEST_LENGTH}
+                    read_mem {Digest::LEN}
                     // _ [root; 5] (*root - 1)
 
                     pop 1
@@ -121,10 +120,10 @@ impl BasicSnippet for MerkleRoot {
                     // _ current_len' *next_level *current_level
 
                     // What is the stop-condition for `*next_level`?
-                    // It must be `*next_level - current_len / 2 * DIGEST_LENGTH`
+                    // It must be `*next_level - current_len / 2 * Digest::LEN`
                     dup 1
                     dup 3
-                    push {-(DIGEST_LENGTH as isize)}
+                    push {-(Digest::LEN as isize)}
                     mul
                     add
                     // _ current_len' *next_level *current_level *next_level_stop
@@ -153,7 +152,7 @@ impl BasicSnippet for MerkleRoot {
                     swap 1
                     // _ current_len' *next_level' *next_level
 
-                    push {DIGEST_LENGTH - 1}
+                    push {Digest::LEN - 1}
                     add
                     // _ (current_len / 2) *next_level' *current_level'
 
@@ -164,8 +163,8 @@ impl BasicSnippet for MerkleRoot {
                 {calculate_parent_digests}:
 
                     dup 4
-                    read_mem {DIGEST_LENGTH}
-                    read_mem {DIGEST_LENGTH}
+                    read_mem {Digest::LEN}
+                    read_mem {Digest::LEN}
                     // _ *next_elem_stop *next_elem *curr_elem 0 0 0 0 [right] [left] (*curr_elem[n] - 10)
                     // _ *next_elem_stop *next_elem *curr_elem 0 0 0 0 [right] [left] *curr_elem[n - 2]
                     // _ *next_elem_stop *next_elem *curr_elem 0 0 0 0 [right] [left] *curr_elem'
@@ -180,7 +179,7 @@ impl BasicSnippet for MerkleRoot {
                     dup 10
                     // _ *next_elem_stop *next_elem *curr_elem' 0 0 0 0 [parent_digest] *next_elem
 
-                    write_mem {DIGEST_LENGTH}
+                    write_mem {Digest::LEN}
                     // _ *next_elem_stop *next_elem *curr_elem' 0 0 0 0 (*next_elem + 5)
 
                     push -10
@@ -214,7 +213,7 @@ impl Function for MerkleRoot {
 
         // skip dummy digest at index 0
         for (node_index, &node) in (0..num_non_leaf_nodes).zip(mt.nodes()).skip(1) {
-            let node_address = pointer + bfe!(node_index as u32) * bfe!(DIGEST_LENGTH as u32);
+            let node_address = pointer + bfe!(node_index as u32) * bfe!(Digest::LEN as u32);
             encode_to_memory(memory, node_address, node);
         }
 

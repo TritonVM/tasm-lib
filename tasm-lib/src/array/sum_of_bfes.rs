@@ -78,7 +78,7 @@ mod tests {
 
     use num::Zero;
     use rand::prelude::*;
-    use triton_vm::twenty_first::math::b_field_element::BFIELD_ZERO;
+    use triton_vm::twenty_first::math::b_field_element::BFieldElement;
 
     use crate::rust_shadowing_helper_functions::array::insert_random_array;
     use crate::snippet_bencher::BenchmarkCase;
@@ -86,6 +86,7 @@ mod tests {
     use crate::traits::function::FunctionInitialState;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
+    use num_traits::ConstZero;
 
     use super::*;
 
@@ -100,7 +101,7 @@ mod tests {
             for array_elem in array_quote_unquote.iter_mut() {
                 memory
                     .get(&array_pointer)
-                    .unwrap_or(&BFIELD_ZERO)
+                    .unwrap_or(&BFieldElement::ZERO)
                     .clone_into(array_elem);
                 array_pointer.increment();
             }

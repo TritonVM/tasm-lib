@@ -219,7 +219,7 @@ mod test {
                 ]);
                 let inclusion_proof = MerkleTreeInclusionProof::<Tip5> {
                     tree_height,
-                    indexed_leaves: vec![(leaf_index as usize, leaf.into())],
+                    indexed_leafs: vec![(leaf_index as usize, leaf.into())],
                     authentication_structure: authentication_path,
                     ..Default::default()
                 };

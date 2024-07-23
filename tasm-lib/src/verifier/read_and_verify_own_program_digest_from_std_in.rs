@@ -45,7 +45,6 @@ impl BasicSnippet for ReadAndVerifyOwnProgramDigestFromStdIn {
 mod tests {
     use crate::execute_with_terminal_state;
     use crate::VmHasher;
-    use crate::DIGEST_LENGTH;
 
     use super::*;
 
@@ -92,7 +91,7 @@ mod tests {
 
         let expected_stack = [
             test_setup.init_stack.clone(),
-            test_setup.init_stack[..DIGEST_LENGTH].to_vec(),
+            test_setup.init_stack[..Digest::LEN].to_vec(),
         ]
         .concat();
         assert_eq!(expected_stack, vm_end_state.op_stack.stack);

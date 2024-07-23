@@ -3,12 +3,11 @@ use triton_vm::prelude::*;
 use twenty_first::math::other::random_elements;
 
 use crate::Digest;
-use crate::DIGEST_LENGTH;
 
 pub fn write_digest_to_std_in(std_in: &mut Vec<BFieldElement>, digest: Digest) {
     let digest_elements = digest.values();
-    for i in 0..DIGEST_LENGTH {
-        std_in.push(digest_elements[DIGEST_LENGTH - 1 - i]);
+    for i in 0..Digest::LEN {
+        std_in.push(digest_elements[Digest::LEN - 1 - i]);
     }
 }
 
@@ -18,8 +17,8 @@ pub fn write_value_to_secret_in(secret_in: &mut Vec<BFieldElement>, value: BFiel
 
 pub fn write_digest_to_secret_in(secret_in: &mut Vec<BFieldElement>, digest: Digest) {
     let digest_elements = digest.values();
-    for i in 0..DIGEST_LENGTH {
-        secret_in.push(digest_elements[DIGEST_LENGTH - 1 - i]);
+    for i in 0..Digest::LEN {
+        secret_in.push(digest_elements[Digest::LEN - 1 - i]);
     }
 }
 
@@ -32,10 +31,10 @@ pub fn write_dummy_ap_path(input: &mut Vec<BFieldElement>, ap_length: usize) {
 }
 
 pub fn read_digest_from_std_in(std_in: &[BFieldElement], std_in_cursor: &mut usize) -> Digest {
-    let mut values = [BFieldElement::zero(); DIGEST_LENGTH];
+    let mut values = [BFieldElement::zero(); Digest::LEN];
     let mut i = 0;
-    while i < DIGEST_LENGTH {
-        values[DIGEST_LENGTH - 1 - i] = std_in[*std_in_cursor];
+    while i < Digest::LEN {
+        values[Digest::LEN - 1 - i] = std_in[*std_in_cursor];
         *std_in_cursor += 1;
         i += 1;
     }
@@ -47,10 +46,10 @@ pub fn read_digest_from_secret_in(
     secret_in: &[BFieldElement],
     secret_in_cursor: &mut usize,
 ) -> Digest {
-    let mut values = [BFieldElement::zero(); DIGEST_LENGTH];
+    let mut values = [BFieldElement::zero(); Digest::LEN];
     let mut i = 0;
-    while i < DIGEST_LENGTH {
-        values[DIGEST_LENGTH - 1 - i] = secret_in[*secret_in_cursor];
+    while i < Digest::LEN {
+        values[Digest::LEN - 1 - i] = secret_in[*secret_in_cursor];
         *secret_in_cursor += 1;
         i += 1;
     }

@@ -4,7 +4,6 @@ use triton_vm::prelude::*;
 use crate::data_type::DataType;
 use crate::library::Library;
 use crate::prelude::BasicSnippet;
-use crate::DIGEST_LENGTH;
 
 /// Compute the Merkle root of a slice of `Digest`s
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
@@ -48,7 +47,7 @@ impl BasicSnippet for MerkleRootStaticSize {
         let entrypoint = self.entrypoint();
 
         let leaves_last_word = self.nodes_pointer
-            + bfe!(self.num_nodes() as u32) * bfe!(DIGEST_LENGTH as u32) // last element
+            + bfe!(self.num_nodes() as u32) * bfe!(Digest::LEN as u32) // last element
             - bfe!(1); // last word in last element
         let read_all_leaves = triton_asm![read_mem 5; self.num_leaves()];
         let read_leaf_layer = triton_asm!(
@@ -76,8 +75,8 @@ impl BasicSnippet for MerkleRootStaticSize {
             let parent_node_index = left_child_node_index / 2;
             triton_asm!(
                 hash
-                push {self.nodes_pointer + bfe!(parent_node_index) * bfe!(DIGEST_LENGTH as u32)}
-                write_mem {DIGEST_LENGTH}
+                push {self.nodes_pointer + bfe!(parent_node_index) * bfe!(Digest::LEN as u32)}
+                write_mem {Digest::LEN}
                 pop 1
             )
         };
@@ -131,7 +130,7 @@ mod tests {
             memory: &mut HashMap<BFieldElement, BFieldElement>,
         ) {
             let leafs_pointer =
-                self.nodes_pointer + bfe!(self.num_leaves() as u32) * bfe!(DIGEST_LENGTH as u32);
+                self.nodes_pointer + bfe!(self.num_leaves() as u32) * bfe!(Digest::LEN as u32);
             let leafs = array_from_memory::<Digest>(leafs_pointer, self.num_leaves(), memory);
             let mt = MerkleTree::<Tip5>::new::<CpuParallel>(&leafs).unwrap();
 
@@ -139,8 +138,7 @@ mod tests {
 
             // `.skip(2)`: dummy-digest at index 0, root at index 1
             for (node_index, &node) in (0..num_not_leaf_nodes).zip(mt.nodes()).skip(2) {
-                let node_address =
-                    self.nodes_pointer + bfe!(node_index) * bfe!(DIGEST_LENGTH as u32);
+                let node_address = self.nodes_pointer + bfe!(node_index) * bfe!(Digest::LEN as u32);
                 encode_to_memory(memory, node_address, node);
             }
 
@@ -165,7 +163,7 @@ mod tests {
             let stack = self.init_stack_for_isolated_run();
             let mut memory = HashMap::new();
             let leafs_pointer =
-                self.nodes_pointer + bfe!(self.num_leaves() as u32) * bfe!(DIGEST_LENGTH as u32);
+                self.nodes_pointer + bfe!(self.num_leaves() as u32) * bfe!(Digest::LEN as u32);
             insert_as_array(leafs_pointer, &mut memory, leafs);
 
             FunctionInitialState { stack, memory }

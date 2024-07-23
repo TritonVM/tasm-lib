@@ -4,7 +4,7 @@ use triton_vm::prelude::*;
 use triton_vm::table::NUM_BASE_COLUMNS;
 use triton_vm::table::NUM_EXT_COLUMNS;
 use triton_vm::table::NUM_QUOTIENT_SEGMENTS;
-use triton_vm::twenty_first::math::tip5::DIGEST_LENGTH;
+use triton_vm::twenty_first::math::tip5::Digest;
 use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
 use crate::data_type::DataType;
@@ -182,9 +182,9 @@ impl BasicSnippet for VerifyTableRows {
                 // _ num_combination_codeword_checks num_leaves *merkle_tree_root (*fri_revealed_first_elem.0) *table_rows[0]
 
                 dup 2
-                push {DIGEST_LENGTH - 1}
+                push {Digest::LEN - 1}
                 add
-                read_mem {DIGEST_LENGTH}
+                read_mem {Digest::LEN}
                 pop 1
 
                 // _ num_combination_codeword_checks num_leaves *merkle_tree_root (*fri_revealed_first_elem.0) *table_rows[0] [mt_root]
@@ -331,13 +331,13 @@ mod tests {
                     sponge.pad_and_absorb_all(input);
                     let produce: [BFieldElement; RATE] = sponge.squeeze();
 
-                    Digest::new((&produce[..DIGEST_LENGTH]).try_into().unwrap())
+                    Digest::new((&produce[..Digest::LEN]).try_into().unwrap())
                 }
 
                 let leaf_digest = local_hash_varlen(row, sponge);
                 let merkle_tree_inclusion_proof = MerkleTreeInclusionProof::<Tip5> {
                     tree_height: merkle_tree_height as usize,
-                    indexed_leaves: vec![(leaf_index as usize, leaf_digest)],
+                    indexed_leafs: vec![(leaf_index as usize, leaf_digest)],
                     authentication_structure: authentication_path,
                     _hasher: std::marker::PhantomData,
                 };
@@ -353,7 +353,7 @@ mod tests {
             let num_combination_codeword_checks: u32 = stack.pop().unwrap().try_into().unwrap();
 
             let merkle_root = Digest::new(
-                (0..DIGEST_LENGTH)
+                (0..Digest::LEN)
                     .map(|i| memory[&(merkle_tree_root_pointer + bfe!(i as u32))])
                     .collect_vec()
                     .try_into()

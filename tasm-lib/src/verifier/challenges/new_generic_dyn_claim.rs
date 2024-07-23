@@ -9,7 +9,7 @@ use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 use crate::data_type::DataType;
 use crate::hashing::algebraic_hasher::sample_scalars_static_length_static_pointer::SampleScalarsStaticLengthStaticPointer;
 use crate::library::Library;
-use crate::tip5::DIGEST_LENGTH;
+use crate::tip5::Digest;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::verifier::challenges::shared::challenges_data_type;
 use crate::verifier::claim::shared::claim_type;
@@ -168,7 +168,7 @@ impl BasicSnippet for NewGenericDynClaim {
                 read_mem 1
                 // _ inputs_len (*inputs-1)
 
-                push {1 + DIGEST_LENGTH}
+                push {1 + Digest::LEN}
                 add
                 add
                 // _ *digest_last_word
@@ -179,7 +179,7 @@ impl BasicSnippet for NewGenericDynClaim {
                 // _ *digest_last_word [compress_program_digest_indeterminate; 3]
 
                 dup 3
-                read_mem {DIGEST_LENGTH}
+                read_mem {Digest::LEN}
                 pop 1
                 // _ *digest_last_word [compress_program_digest_indeterminate; 3] [program_digest; 5]
 

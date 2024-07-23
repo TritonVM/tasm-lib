@@ -107,7 +107,7 @@ pub trait BasicSnippet {
         let program_digest = program.hash::<VmHasher>();
         [
             program_digest.reversed().values().to_vec(),
-            vec![BFieldElement::zero(); NUM_OP_STACK_REGISTERS - tip5::DIGEST_LENGTH],
+            vec![BFieldElement::zero(); NUM_OP_STACK_REGISTERS - tip5::Digest::LEN],
         ]
         .concat()
     }

@@ -5,7 +5,7 @@ use triton_vm::proof::Claim;
 use triton_vm::twenty_first::math::b_field_element::BFieldElement;
 
 use crate::structure::tasm_object::decode_from_memory_with_size;
-use crate::DIGEST_LENGTH;
+use crate::Digest;
 
 pub fn load_claim_from_memory(
     claim_pointer: BFieldElement,
@@ -21,7 +21,7 @@ pub fn load_claim_from_memory(
         .get(&input_field_size_pointer)
         .unwrap_or(&BFieldElement::zero())
         .value();
-    let size = input_field_size + output_field_size + DIGEST_LENGTH as u64 + 2;
+    let size = input_field_size + output_field_size + Digest::LEN as u64 + 2;
 
     // Load `Claim` struct into memory
     // Notice that it's important to use the `Claim` type from Triton VM here, as it

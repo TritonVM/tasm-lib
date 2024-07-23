@@ -6,7 +6,6 @@ use crate::empty_stack;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::Digest;
 use crate::InitVmState;
-use crate::DIGEST_LENGTH;
 
 /// Reverse the order of elements in a digest: [d4, d3, d2, d1, d0] -> [d0, d1, d2, d3, d4]
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
@@ -106,7 +105,7 @@ impl DeprecatedSnippet for ReverseDigest {
         _memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
     ) {
         let mut elems = vec![];
-        for _ in 0..DIGEST_LENGTH {
+        for _ in 0..Digest::LEN {
             elems.push(stack.pop().unwrap())
         }
 

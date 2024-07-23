@@ -13,7 +13,6 @@ use crate::execute_with_terminal_state;
 use crate::library::Library;
 use crate::snippet_bencher::BenchmarkResult;
 use crate::InitVmState;
-use crate::DIGEST_LENGTH;
 
 use super::basic_snippet::BasicSnippet;
 
@@ -158,8 +157,8 @@ pub trait DeprecatedSnippet {
         // Assert equality of stack elements under input arguments, but don't check program
         // hash that's located at the bottom of the stack.
         assert_eq!(
-            stack_prior[DIGEST_LENGTH..(stack_prior.len() - Self::input_field_names(self).len())],
-            stack_after[DIGEST_LENGTH..(stack_after.len() - Self::output_field_names(self).len())]
+            stack_prior[Digest::LEN..(stack_prior.len() - Self::input_field_names(self).len())],
+            stack_after[Digest::LEN..(stack_after.len() - Self::output_field_names(self).len())]
         );
 
         ret.unwrap()
@@ -180,8 +179,8 @@ pub trait DeprecatedSnippet {
         // Assert equality of stack elements under input arguments, but don't check program
         // hash that's located at the bottom of the stack.
         assert_eq!(
-            stack_prior[DIGEST_LENGTH..(stack_prior.len() - Self::input_field_names(self).len())],
-            stack_after[DIGEST_LENGTH..(stack_after.len() - Self::output_field_names(self).len())]
+            stack_prior[Digest::LEN..(stack_prior.len() - Self::input_field_names(self).len())],
+            stack_after[Digest::LEN..(stack_after.len() - Self::output_field_names(self).len())]
         );
 
         ret

@@ -23,7 +23,6 @@ use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::Digest;
 use crate::InitVmState;
 use crate::VmHasher;
-use crate::DIGEST_LENGTH;
 
 use super::leaf_index_to_mt_index_and_peak_index::MmrLeafIndexToMtIndexAndPeakIndex;
 use super::MAX_MMR_HEIGHT;
@@ -46,7 +45,7 @@ impl MmrVerifyFromMemory {
         let peaks_pointer = BFieldElement::one();
         stack.push(peaks_pointer);
 
-        let leaf_count: u64 = mmr.count_leaves();
+        let leaf_count: u64 = mmr.num_leafs();
         stack.push(BFieldElement::new(leaf_count >> 32));
         stack.push(BFieldElement::new(leaf_count & u32::MAX as u64));
 
@@ -61,19 +60,19 @@ impl MmrVerifyFromMemory {
         }
 
         // We assume that the auth paths can safely be stored in memory on this address
-        let auth_path_pointer = BFieldElement::new((MAX_MMR_HEIGHT * DIGEST_LENGTH + 1) as u64);
+        let auth_path_pointer = BFieldElement::new((MAX_MMR_HEIGHT * Digest::LEN + 1) as u64);
         stack.push(auth_path_pointer);
 
         // Initialize memory
         let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
         rust_shadowing_helper_functions::list::list_new(peaks_pointer, &mut memory);
 
-        for peak in mmr.get_peaks() {
+        for peak in mmr.peaks() {
             rust_shadowing_helper_functions::list::list_push(
                 peaks_pointer,
                 peak.values().to_vec(),
                 &mut memory,
-                DIGEST_LENGTH,
+                Digest::LEN,
             );
         }
 
@@ -83,7 +82,7 @@ impl MmrVerifyFromMemory {
                 auth_path_pointer,
                 ap_element.values().to_vec(),
                 &mut memory,
-                DIGEST_LENGTH,
+                Digest::LEN,
             );
         }
 
@@ -169,8 +168,8 @@ impl DeprecatedSnippet for MmrVerifyFromMemory {
 
                     // declare `ap_element = auth_path[i]`
                     dup 8
-                    read_mem {DIGEST_LENGTH}
-                    push {DIGEST_LENGTH * 2}
+                    read_mem {Digest::LEN}
+                    push {Digest::LEN * 2}
                     add
                     swap 14
                     pop 1
@@ -223,7 +222,7 @@ impl DeprecatedSnippet for MmrVerifyFromMemory {
                     // stack: _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo *auth_path peak_index mt_index_hi mt_index_lo [digest (acc_hash)]
 
                     swap 8
-                    push {DIGEST_LENGTH}
+                    push {Digest::LEN}
                     add
                     swap 8
                     // _ *peaks leaf_count_hi leaf_count_lo leaf_index_hi leaf_index_lo *auth_path[0] peak_index mt_index_hi mt_index_lo [digest (acc_hash)]
@@ -328,14 +327,14 @@ impl DeprecatedSnippet for MmrVerifyFromMemory {
         let mut auth_path: Vec<Digest> = vec![];
         for i in 0..auth_path_length {
             let digest = Digest::new(
-                list_get(auth_path_pointer, i as usize, memory, DIGEST_LENGTH)
+                list_get(auth_path_pointer, i as usize, memory, Digest::LEN)
                     .try_into()
                     .unwrap(),
             );
             auth_path.push(digest);
         }
 
-        let mut new_leaf_digest_values = [BFieldElement::new(0); DIGEST_LENGTH];
+        let mut new_leaf_digest_values = [BFieldElement::new(0); Digest::LEN];
         for elem in new_leaf_digest_values.iter_mut() {
             *elem = stack.pop().unwrap();
         }
@@ -355,16 +354,17 @@ impl DeprecatedSnippet for MmrVerifyFromMemory {
         let mut peaks: Vec<Digest> = vec![];
         for i in 0..peaks_count {
             let digest = Digest::new(
-                list_get(peaks_pointer, i as usize, memory, DIGEST_LENGTH)
+                list_get(peaks_pointer, i as usize, memory, Digest::LEN)
                     .try_into()
                     .unwrap(),
             );
             peaks.push(digest);
         }
 
-        let valid_mp = MmrMembershipProof::<VmHasher>::new(leaf_index, auth_path).verify(
-            &peaks,
+        let valid_mp = MmrMembershipProof::<VmHasher>::new(auth_path).verify(
+            leaf_index,
             leaf_digest,
+            &peaks,
             leaf_count,
         );
 
@@ -498,19 +498,16 @@ mod tests {
             let second_to_last_leaf: Digest = thread_rng().gen();
             let second_to_last_leaf_index = init_leaf_count;
             let mut real_membership_proof_second_to_last = mmr.append(second_to_last_leaf);
-            assert_eq!(
-                real_membership_proof_second_to_last.leaf_index,
-                second_to_last_leaf_index
-            );
 
             // Insert one more leaf and update the existing membership proof
             let last_leaf: Digest = thread_rng().gen();
             let last_leaf_index = second_to_last_leaf_index + 1;
             MmrMembershipProof::update_from_append(
                 &mut real_membership_proof_second_to_last,
-                init_leaf_count + 1,
+                second_to_last_leaf_index,
+                mmr.num_leafs(),
                 last_leaf,
-                &mmr.get_peaks(),
+                &mmr.peaks(),
             );
             let real_membership_proof_last = mmr.append(last_leaf);
 
@@ -578,10 +575,11 @@ mod tests {
         // Verify that auth path expectation was correct
         assert_eq!(
             expect_validation_success,
-            MmrMembershipProof::<H>::new(leaf_index, auth_path).verify(
-                &mmr.get_peaks(),
+            MmrMembershipProof::<H>::new(auth_path).verify(
+                leaf_index,
                 leaf,
-                mmr.count_leaves()
+                &mmr.peaks(),
+                mmr.num_leafs(),
             )
         );
     }
