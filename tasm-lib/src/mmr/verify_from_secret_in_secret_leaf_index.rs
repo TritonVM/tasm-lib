@@ -257,8 +257,8 @@ mod tests {
             let last_leaf_index = second_to_last_leaf_index + 1;
             MmrMembershipProof::update_from_append(
                 &mut real_membership_proof_second_to_last,
-                init_leaf_count + 1,
                 second_to_last_leaf_index,
+                mmr.num_leafs(),
                 last_leaf,
                 &mmr.peaks(),
             );
