@@ -33,7 +33,7 @@ use crate::verifier::out_of_domain_points::OutOfDomainPoints;
 use crate::verifier::vm_proof_iter::dequeue_next_as::DequeueNextAs;
 use crate::verifier::vm_proof_iter::shared::vm_proof_iter_type;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct StarkVerify {
     stark: Stark,
 }
@@ -914,17 +914,94 @@ impl BasicSnippet for StarkVerify {
 #[cfg(test)]
 pub mod tests {
     use std::collections::HashMap;
-
-    use itertools::Itertools;
-    use tests::fri::test_helpers::extract_fri_proof;
-    use triton_vm::proof_stream::ProofStream;
+    use std::io::Write;
 
     use crate::execute_test;
     use crate::test_helpers::maybe_write_tvm_output_to_disk;
     use crate::verifier::claim::shared::insert_claim_into_static_memory;
     use crate::verifier::vm_proof_iter::shared::insert_default_proof_iter_into_memory;
+    use itertools::Itertools;
+    use tests::fri::test_helpers::extract_fri_proof;
+    use triton_vm::example_programs::FIBONACCI_SEQUENCE;
+    use triton_vm::instruction::Instruction;
+    use triton_vm::proof_stream::ProofStream;
+    use triton_vm::table::table_column::{MasterBaseTableColumn, ProcessorBaseTableColumn};
 
     use super::*;
+
+    #[test]
+    fn dump_stark_verifier() {
+        let code = StarkVerify::default().link_for_isolated_run();
+        let program = triton_program!({ &code });
+        let mut program_file = std::fs::File::create("stark_verifier.tasm").unwrap();
+        write!(program_file, "{program}").unwrap();
+    }
+
+    #[test]
+    fn list_all_executed_instructions_of_stark_verifier() {
+        // first iteration – just any proof
+        let (stark, claim, proof) = triton_vm::prove_program(
+            &FIBONACCI_SEQUENCE,
+            PublicInput::new(bfe_vec![10]),
+            NonDeterminism::default(),
+        )
+        .unwrap();
+
+        let (mut non_determinism, _) = nd_from_proof(&stark, &claim, proof);
+        let (claim_pointer, claim_size) =
+            insert_claim_into_static_memory(&mut non_determinism.ram, claim);
+
+        let proof_iter_pointer = bfe!(1_u32 << 31);
+        insert_default_proof_iter_into_memory(&mut non_determinism.ram, proof_iter_pointer);
+
+        let stark_verify_snippet = StarkVerify::default();
+        let stark_verifier = triton_program! {
+            push {claim_pointer}
+            push {proof_iter_pointer}
+            {&stark_verify_snippet.link_for_isolated_run_populated_static_memory(claim_size)}
+        };
+
+        // next iteration – first recurisve proof
+        let (stark, claim, proof) =
+            triton_vm::prove_program(&stark_verifier, PublicInput::default(), non_determinism)
+                .unwrap();
+
+        let (mut non_determinism, _) = nd_from_proof(&stark, &claim, proof);
+        let (claim_pointer, claim_size) =
+            insert_claim_into_static_memory(&mut non_determinism.ram, claim);
+
+        let proof_iter_pointer = bfe!(1_u32 << 31);
+        insert_default_proof_iter_into_memory(&mut non_determinism.ram, proof_iter_pointer);
+
+        let stark_verify_snippet = StarkVerify::default();
+        let stark_verifier = triton_program! {
+            push {claim_pointer}
+            push {proof_iter_pointer}
+            {&stark_verify_snippet.link_for_isolated_run_populated_static_memory(claim_size)}
+        };
+
+        // now just run, don't prove
+        let (aet, _) = stark_verifier
+            .trace_execution(PublicInput::default(), non_determinism)
+            .unwrap();
+
+        let mut executed_instructions = vec![];
+        for row in aet.processor_trace.rows() {
+            let ci = row[ProcessorBaseTableColumn::CI.base_table_index()];
+            let instruction = Instruction::try_from(ci).unwrap();
+            let instruction = if instruction.arg().is_some() {
+                let arg = row[ProcessorBaseTableColumn::NIA.base_table_index()];
+                instruction.change_arg(arg).unwrap()
+            } else {
+                instruction
+            };
+            executed_instructions.push(instruction);
+        }
+
+        let instructions_str = executed_instructions.iter().join("\n");
+        let mut the_file = std::fs::File::create("stark_verifier.instructions").unwrap();
+        write!(the_file, "{instructions_str}").unwrap();
+    }
 
     #[ignore = "Used for debugging when comparing two versions of the verifier"]
     #[test]
