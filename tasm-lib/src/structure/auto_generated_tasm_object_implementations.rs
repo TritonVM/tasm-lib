@@ -24,47 +24,6 @@ impl ::tasm_lib::structure::tasm_object::TasmObject for MmrMembershipProof<Tip5>
                 };
                 [current, getter].concat()
             }
-            "leaf_index" => {
-                let current = {
-                    [Self::get_field_start_with_jump_distance("authentication_path"),[triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add)].to_vec(),{
-            if let Some(size) =  <u64 as twenty_first::math::bfield_codec::BFieldCodec> ::static_length(){
-              [triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(size as u64)))].to_vec()
-            }else {
-              [triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::ReadMem(::triton_vm::op_stack::NumberOfWords::N1)),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(1u64))),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Swap(::triton_vm::op_stack::OpStackElement::ST1)),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(1u64))),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),].to_vec()
-            }
-          },].concat()
-                };
-                let getter = {
-                    if <u64 as twenty_first::math::bfield_codec::BFieldCodec>::static_length()
-                        .is_some()
-                    {
-                        [triton_vm::instruction::LabelledInstruction::Instruction(
-                            triton_vm::instruction::AnInstruction::Pop(
-                                ::triton_vm::op_stack::NumberOfWords::N1,
-                            ),
-                        )]
-                        .to_vec()
-                    } else {
-                        [
-                            triton_vm::instruction::LabelledInstruction::Instruction(
-                                triton_vm::instruction::AnInstruction::Pop(
-                                    ::triton_vm::op_stack::NumberOfWords::N1,
-                                ),
-                            ),
-                            triton_vm::instruction::LabelledInstruction::Instruction(
-                                triton_vm::instruction::AnInstruction::Push(BFieldElement::new(
-                                    1u64,
-                                )),
-                            ),
-                            triton_vm::instruction::LabelledInstruction::Instruction(
-                                triton_vm::instruction::AnInstruction::Add,
-                            ),
-                        ]
-                        .to_vec()
-                    }
-                };
-                [current, getter].concat()
-            }
             unknown_field_name => panic!("Cannot match on field name `{unknown_field_name}`."),
         }
     }
@@ -84,55 +43,6 @@ impl ::tasm_lib::structure::tasm_object::TasmObject for MmrMembershipProof<Tip5>
           }else {
             [triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(-BFieldElement::new(1u64))),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Swap(triton_vm::op_stack::OpStackElement::ST1)),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(1u64))),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Swap(triton_vm::op_stack::OpStackElement::ST1)),].to_vec()
           }
-                };
-                [current, getter_sizer].concat()
-            }
-            "leaf_index" => {
-                let current = {
-                    [Self::get_field_start_with_jump_distance("authentication_path"),[triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add)].to_vec(),{
-            if let Some(size) =  <u64 as twenty_first::math::bfield_codec::BFieldCodec> ::static_length(){
-              [triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(size as u64)))].to_vec()
-            }else {
-              [triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::ReadMem(::triton_vm::op_stack::NumberOfWords::N1)),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(1u64))),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Swap(::triton_vm::op_stack::OpStackElement::ST1)),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Push(BFieldElement::new(1u64))),triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add),].to_vec()
-            }
-          },].concat()
-                };
-                let getter_sizer = {
-                    if <u64 as twenty_first::math::bfield_codec::BFieldCodec>::static_length()
-                        .is_some()
-                    {
-                        std::vec::Vec::<triton_vm::instruction::LabelledInstruction>::new()
-                    } else {
-                        [
-                            triton_vm::instruction::LabelledInstruction::Instruction(
-                                triton_vm::instruction::AnInstruction::Push(-BFieldElement::new(
-                                    1u64,
-                                )),
-                            ),
-                            triton_vm::instruction::LabelledInstruction::Instruction(
-                                triton_vm::instruction::AnInstruction::Add,
-                            ),
-                            triton_vm::instruction::LabelledInstruction::Instruction(
-                                triton_vm::instruction::AnInstruction::Swap(
-                                    triton_vm::op_stack::OpStackElement::ST1,
-                                ),
-                            ),
-                            triton_vm::instruction::LabelledInstruction::Instruction(
-                                triton_vm::instruction::AnInstruction::Push(BFieldElement::new(
-                                    1u64,
-                                )),
-                            ),
-                            triton_vm::instruction::LabelledInstruction::Instruction(
-                                triton_vm::instruction::AnInstruction::Add,
-                            ),
-                            triton_vm::instruction::LabelledInstruction::Instruction(
-                                triton_vm::instruction::AnInstruction::Swap(
-                                    triton_vm::op_stack::OpStackElement::ST1,
-                                ),
-                            ),
-                        ]
-                        .to_vec()
-                    }
                 };
                 [current, getter_sizer].concat()
             }
@@ -180,59 +90,6 @@ impl ::tasm_lib::structure::tasm_object::TasmObject for MmrMembershipProof<Tip5>
                     ]
                     .to_vec()
                 }
-            }
-            "leaf_index" => {
-                let prev = [
-                    Self::get_field_start_with_jump_distance("authentication_path"),
-                    [triton_vm::instruction::LabelledInstruction::Instruction(
-                        triton_vm::instruction::AnInstruction::Add,
-                    )]
-                    .to_vec(),
-                ]
-                .concat();
-                let jumper = {
-                    if let Some(size) =
-                        <u64 as twenty_first::math::bfield_codec::BFieldCodec>::static_length()
-                    {
-                        [triton_vm::instruction::LabelledInstruction::Instruction(
-                            triton_vm::instruction::AnInstruction::Push(BFieldElement::new(
-                                size as u64,
-                            )),
-                        )]
-                        .to_vec()
-                    } else {
-                        [
-                            triton_vm::instruction::LabelledInstruction::Instruction(
-                                triton_vm::instruction::AnInstruction::ReadMem(
-                                    ::triton_vm::op_stack::NumberOfWords::N1,
-                                ),
-                            ),
-                            triton_vm::instruction::LabelledInstruction::Instruction(
-                                triton_vm::instruction::AnInstruction::Push(BFieldElement::new(
-                                    1u64,
-                                )),
-                            ),
-                            triton_vm::instruction::LabelledInstruction::Instruction(
-                                triton_vm::instruction::AnInstruction::Add,
-                            ),
-                            triton_vm::instruction::LabelledInstruction::Instruction(
-                                triton_vm::instruction::AnInstruction::Swap(
-                                    ::triton_vm::op_stack::OpStackElement::ST1,
-                                ),
-                            ),
-                            triton_vm::instruction::LabelledInstruction::Instruction(
-                                triton_vm::instruction::AnInstruction::Push(BFieldElement::new(
-                                    1u64,
-                                )),
-                            ),
-                            triton_vm::instruction::LabelledInstruction::Instruction(
-                                triton_vm::instruction::AnInstruction::Add,
-                            ),
-                        ]
-                        .to_vec()
-                    }
-                };
-                [prev, jumper].concat()
             }
             unknown_field_name => panic!("Cannot match on field name `{unknown_field_name}`."),
         }
@@ -282,7 +139,7 @@ impl ::tasm_lib::structure::tasm_object::TasmObject
                 };
                 [current, getter].concat()
             }
-            "num_leafs" => {
+            "leaf_count" => {
                 let current = {
                     [Self::get_field_start_with_jump_distance("peaks"),[triton_vm::instruction::LabelledInstruction::Instruction(triton_vm::instruction::AnInstruction::Add)].to_vec(),{
             if let Some(size) =  <u64 as twenty_first::math::bfield_codec::BFieldCodec> ::static_length(){
