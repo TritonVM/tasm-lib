@@ -1,22 +1,40 @@
 from collections import Counter
+from dataclasses import dataclass
 import re
+
+in_file = "./stark_verifier.instructions"
+out_file = "./common_sequences.md"
+
+@dataclass
+class Sequence:
+    incidence: int
+    length: int
+    tokens: str
 
 def find_most_common_sequences(text, sequence_length):
     words = re.findall(r'\w+', text.lower())
     sequences = [' '.join(words[i:i+sequence_length]) for i in range(len(words) - sequence_length + 1)]
-    sequence_counts = Counter(sequences)
-    return sequence_counts.most_common()[:15]
+    most_common = Counter(sequences).most_common()[:15]
+    return [Sequence(incidence=incidence, length=sequence_length, tokens=tokens) for (tokens, incidence) in most_common]
 
-with open("./stark_verifier.instructions", "r") as file:
-    text = file.read()
+if __name__ == "__main__":
+    with open(in_file, "r") as file:
+        text = file.read()
 
-out_file = "./common_sequences.txt"
-with open(out_file, 'w') as file:
-    pass  # reset file content
+    sequences = []
+    for sequence_length in range(21, 1, -1):
+        for new_sequence in find_most_common_sequences(text, sequence_length):
+            include_new_sequence = True
+            for existing_sequence in sequences:
+                if new_sequence.tokens in existing_sequence.tokens:
+                    if new_sequence.incidence <= 1.1 * existing_sequence.incidence:
+                        include_new_sequence = False
+            if include_new_sequence:
+                sequences += [new_sequence]
+    sequences.sort(key=lambda sequence: -sequence.incidence)
 
-for sequence_length in range(2, 20):
-    most_common = find_most_common_sequences(text, sequence_length)
-    with open(out_file, "a") as file:
-        file.write(f"For sequence length {sequence_length}:\n")
-        for (sequence, num) in most_common:
-            file.write(f"  {num:>7} {sequence}\n")
+    with open(out_file, 'w') as file:
+        file.write(f"| incidence | len | sequence |\n")
+        file.write(f"|----------:|----:|:---------|\n")
+        for sequence in sequences:
+            file.write(f"| {sequence.incidence:>9} | {sequence.length:>3} | {sequence.tokens} |\n")
