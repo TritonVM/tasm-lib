@@ -33,6 +33,7 @@ use crate::verifier::out_of_domain_points::OutOfDomainPoints;
 use crate::verifier::vm_proof_iter::dequeue_next_as::DequeueNextAs;
 use crate::verifier::vm_proof_iter::shared::vm_proof_iter_type;
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct StarkVerify {
     stark: Stark,

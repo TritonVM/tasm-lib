@@ -12,6 +12,7 @@ use crate::verifier::claim::shared::claim_type;
 /// Return a pointer to a claim representing the verification of a proof of the program's own
 /// execution. Must be called with an empty stack, as the program digest is read from the bottom
 /// of the stack.
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct NewRecursive {
     input_size: usize,

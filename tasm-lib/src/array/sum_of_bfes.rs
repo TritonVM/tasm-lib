@@ -7,6 +7,7 @@ use crate::library::Library;
 use crate::memory::load_words_from_memory_pop_pointer;
 use crate::traits::basic_snippet::BasicSnippet;
 
+#[allow(dead_code)]
 pub struct SumOfBfes {
     length: usize,
 }
