@@ -22,7 +22,6 @@ use crate::mmr::MAX_MMR_HEIGHT;
 use crate::rust_shadowing_helper_functions;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::InitVmState;
-use crate::VmHasher;
 
 use super::leaf_index_to_mt_index_and_peak_index::MmrLeafIndexToMtIndexAndPeakIndex;
 
@@ -34,7 +33,7 @@ impl MmrCalculateNewPeaksFromLeafMutationMtIndices {
     // Returns: (execution state, auth path pointer, peaks pointer)
     fn prepare_state_with_mmra(
         &self,
-        start_mmr: &mut MmrAccumulator<VmHasher>,
+        start_mmr: &mut MmrAccumulator,
         leaf_index: u64,
         new_leaf: Digest,
         auth_path: Vec<Digest>,
@@ -259,7 +258,7 @@ impl DeprecatedSnippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
         let mmr_leaf_count_log2 = 31u64;
         let mmr_size = 1 << mmr_leaf_count_log2;
         let peaks: Vec<Digest> = random_elements(mmr_leaf_count_log2 as usize);
-        let mut mmra = MmrAccumulator::<VmHasher>::init(peaks, mmr_size - 1);
+        let mut mmra = MmrAccumulator::init(peaks, mmr_size - 1);
         let inserted_leaf: Digest = random();
         let leaf_after_mutation: Digest = random();
         let auth_path = mmra.append(inserted_leaf).authentication_path;
@@ -276,7 +275,7 @@ impl DeprecatedSnippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
         let mmr_leaf_count_log2 = 62u64;
         let mmr_size = 1 << mmr_leaf_count_log2;
         let peaks: Vec<Digest> = random_elements(mmr_leaf_count_log2 as usize);
-        let mut mmra = MmrAccumulator::<VmHasher>::init(peaks, mmr_size - 1);
+        let mut mmra = MmrAccumulator::init(peaks, mmr_size - 1);
         let inserted_leaf: Digest = random();
         let leaf_after_mutation: Digest = random();
         let auth_path = mmra.append(inserted_leaf).authentication_path;
@@ -342,7 +341,7 @@ impl DeprecatedSnippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
         }
 
         let mmr_mp = MmrMembershipProof::new(auth_path);
-        let new_peaks = mmr::shared_basic::calculate_new_peaks_from_leaf_mutation::<VmHasher>(
+        let new_peaks = mmr::shared_basic::calculate_new_peaks_from_leaf_mutation(
             &peaks, leaf_count, new_leaf, leaf_index, &mmr_mp,
         );
 
@@ -368,7 +367,7 @@ impl DeprecatedSnippet for MmrCalculateNewPeaksFromLeafMutationMtIndices {
 mod tests {
     use itertools::Itertools;
     use mmr::mmr_trait::LeafMutation;
-    use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
+    use twenty_first::prelude::AlgebraicHasher;
 
     use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
     use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
@@ -385,11 +384,11 @@ mod tests {
 
     #[test]
     fn mmra_leaf_mutate_test_single() {
-        let digest0 = VmHasher::hash(&BFieldElement::new(4545));
-        let digest1 = VmHasher::hash(&BFieldElement::new(12345));
-        let mut mmr = MmrAccumulator::<Tip5>::new(vec![]);
+        let digest0 = Tip5::hash(&BFieldElement::new(4545));
+        let digest1 = Tip5::hash(&BFieldElement::new(12345));
+        let mut mmr = MmrAccumulator::new_from_leafs(vec![]);
         mmr.append(digest0);
-        let expected_final_mmra = MmrAccumulator::new(vec![digest1]);
+        let expected_final_mmra = MmrAccumulator::new_from_leafs(vec![digest1]);
         let mutated_index = 0;
         prop_calculate_new_peaks_from_leaf_mutation(
             &mut mmr,
@@ -418,7 +417,7 @@ mod tests {
             let auth_path = mps[mutated_index].authentication_path.clone();
             let mut final_digests = init_leaf_digests.clone();
             final_digests[mutated_index] = new_leaf;
-            let expected_final_mmra = MmrAccumulator::new(final_digests);
+            let expected_final_mmra = MmrAccumulator::new_from_leafs(final_digests);
             prop_calculate_new_peaks_from_leaf_mutation(
                 &mut mmra.clone(),
                 new_leaf,
@@ -449,13 +448,12 @@ mod tests {
             println!("log_sizes = {log_sizes}");
             let init_peak_digests: Vec<Digest> = random_elements(log_sizes as usize);
             let new_leaf: Digest = thread_rng().gen();
-            let mut init_mmr: MmrAccumulator<VmHasher> =
+            let mut init_mmr =
                 MmrAccumulator::init(init_peak_digests.clone(), (1u64 << log_sizes) - 1);
 
             let mut final_peaks = init_peak_digests.clone();
             final_peaks[log_sizes as usize - 1] = new_leaf;
-            let expected_final_mmra: MmrAccumulator<VmHasher> =
-                MmrAccumulator::init(final_peaks, (1u64 << log_sizes) - 1);
+            let expected_final_mmra = MmrAccumulator::init(final_peaks, (1u64 << log_sizes) - 1);
             prop_calculate_new_peaks_from_leaf_mutation(
                 &mut init_mmr,
                 new_leaf,
@@ -472,7 +470,7 @@ mod tests {
             println!("log_sizes = {log_size}");
             let init_peak_digests: Vec<Digest> = random_elements(log_size as usize);
             let new_leaf: Digest = thread_rng().gen();
-            let before_insertion_mmr: MmrAccumulator<VmHasher> =
+            let before_insertion_mmr =
                 MmrAccumulator::init(init_peak_digests.clone(), (1u64 << log_size) - 1);
 
             // Insert a leaf such that a very long (log_size long) auth path is returned
@@ -480,7 +478,8 @@ mod tests {
             let mp = init_mmr.append(thread_rng().gen());
 
             let mut final_mmr = init_mmr.clone();
-            let leaf_mutation = LeafMutation::new(before_insertion_mmr.num_leafs(), new_leaf, &mp);
+            let leaf_mutation =
+                LeafMutation::new(before_insertion_mmr.num_leafs(), new_leaf, mp.clone());
             final_mmr.mutate_leaf(leaf_mutation);
 
             // Mutate the last element for which we just acquired an authentication path
@@ -495,10 +494,10 @@ mod tests {
     }
 
     fn prop_calculate_new_peaks_from_leaf_mutation(
-        start_mmr: &mut MmrAccumulator<VmHasher>,
+        start_mmr: &mut MmrAccumulator,
         new_leaf: Digest,
         new_leaf_index: u64,
-        expected_mmr: MmrAccumulator<VmHasher>,
+        expected_mmr: MmrAccumulator,
         auth_path: Vec<Digest>,
     ) {
         let mmr_new_peaks = MmrCalculateNewPeaksFromLeafMutationMtIndices;
@@ -539,7 +538,7 @@ mod tests {
             produced_peaks.push(peak);
         }
 
-        let produced_mmr = MmrAccumulator::<VmHasher>::init(produced_peaks, start_mmr.num_leafs());
+        let produced_mmr = MmrAccumulator::init(produced_peaks, start_mmr.num_leafs());
 
         // Verify that both code paths produce the same MMR
         assert_eq!(expected_mmr, produced_mmr);
@@ -561,9 +560,8 @@ mod tests {
             auth_path.push(auth_path_element);
         }
 
-        let mmr_mp = MmrMembershipProof::<VmHasher> {
+        let mmr_mp = MmrMembershipProof {
             authentication_path: auth_path,
-            _hasher: std::marker::PhantomData,
         };
         assert!(
             mmr_mp.verify(
@@ -580,7 +578,7 @@ mod tests {
         expected_final_mmra_double_check.mutate_leaf(LeafMutation::new(
             new_leaf_index,
             new_leaf,
-            &mmr_mp,
+            mmr_mp.clone(),
         ));
         assert_eq!(expected_final_mmra_double_check, produced_mmr);
         assert!(mmr_mp.verify(

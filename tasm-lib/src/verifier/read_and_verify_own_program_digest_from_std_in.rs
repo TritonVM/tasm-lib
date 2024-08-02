@@ -44,7 +44,6 @@ impl BasicSnippet for ReadAndVerifyOwnProgramDigestFromStdIn {
 #[cfg(test)]
 mod tests {
     use crate::execute_with_terminal_state;
-    use crate::VmHasher;
 
     use super::*;
 
@@ -65,7 +64,7 @@ mod tests {
         );
 
         let program = Program::new(&code_for_test);
-        let program_digest = program.hash::<VmHasher>();
+        let program_digest = program.hash();
         let init_stack = snippet.init_stack_for_isolated_run();
 
         ProgramSetup {

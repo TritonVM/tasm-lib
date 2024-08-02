@@ -14,7 +14,6 @@ use crate::snippet_bencher::BenchmarkCase;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::function::Function;
 use crate::traits::function::FunctionInitialState;
-use crate::VmHasher;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct BagPeaks;
@@ -199,7 +198,7 @@ impl Function for BagPeaks {
             .map(|ch| Digest::new(ch.try_into().unwrap()))
             .collect_vec();
 
-        let bag = bag_peaks::<VmHasher>(&peaks);
+        let bag = bag_peaks(&peaks);
 
         let mut bag_bfes = bag.values().to_vec();
 

@@ -4,7 +4,6 @@ use itertools::Itertools;
 use num::One;
 use rand::prelude::*;
 use triton_vm::prelude::*;
-use triton_vm::twenty_first::prelude::AlgebraicHasher;
 use triton_vm::twenty_first::prelude::MmrMembershipProof;
 use twenty_first::math::other::random_elements;
 use twenty_first::util_types::mmr::mmr_accumulator::util::mmra_with_mps;
@@ -22,7 +21,6 @@ use crate::rust_shadowing_helper_functions;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::Digest;
 use crate::InitVmState;
-use crate::VmHasher;
 
 use super::leaf_index_to_mt_index_and_peak_index::MmrLeafIndexToMtIndexAndPeakIndex;
 use super::MAX_MMR_HEIGHT;
@@ -31,9 +29,9 @@ use super::MAX_MMR_HEIGHT;
 pub struct MmrVerifyFromMemory;
 
 impl MmrVerifyFromMemory {
-    fn prepare_vm_state<H: AlgebraicHasher>(
+    fn prepare_vm_state(
         &self,
-        mmr: &MmrAccumulator<H>,
+        mmr: &MmrAccumulator,
         leaf: Digest,
         leaf_index: u64,
         auth_path: Vec<Digest>,
@@ -272,7 +270,7 @@ impl DeprecatedSnippet for MmrVerifyFromMemory {
         let digests: Vec<Digest> = random_elements(size);
         let leaf_index = rng.gen_range(0..size);
         let leaf = digests[leaf_index];
-        let (mmra, mps) = mmra_with_mps::<Tip5>(size as u64, vec![(leaf_index as u64, leaf)]);
+        let (mmra, mps) = mmra_with_mps(size as u64, vec![(leaf_index as u64, leaf)]);
         let ret0 = self.prepare_vm_state(
             &mmra,
             leaf,
@@ -287,7 +285,7 @@ impl DeprecatedSnippet for MmrVerifyFromMemory {
         let log2_size = 31;
         let leaf_count_after_add = 1u64 << log2_size;
         let peaks: Vec<Digest> = random_elements(log2_size as usize);
-        let mut mmra = MmrAccumulator::<VmHasher>::init(peaks, leaf_count_after_add - 1);
+        let mut mmra = MmrAccumulator::init(peaks, leaf_count_after_add - 1);
         let new_leaf: Digest = random();
         let mp = mmra.append(new_leaf);
         let auth_path = mp.authentication_path;
@@ -301,7 +299,7 @@ impl DeprecatedSnippet for MmrVerifyFromMemory {
         let log2_size = 62;
         let leaf_count_after_add = 1u64 << log2_size;
         let peaks: Vec<Digest> = random_elements(log2_size as usize);
-        let mut mmra = MmrAccumulator::<VmHasher>::init(peaks, leaf_count_after_add - 1);
+        let mut mmra = MmrAccumulator::init(peaks, leaf_count_after_add - 1);
         let new_leaf: Digest = random();
         let mp = mmra.append(new_leaf);
         let auth_path = mp.authentication_path;
@@ -361,12 +359,8 @@ impl DeprecatedSnippet for MmrVerifyFromMemory {
             peaks.push(digest);
         }
 
-        let valid_mp = MmrMembershipProof::<VmHasher>::new(auth_path).verify(
-            leaf_index,
-            leaf_digest,
-            &peaks,
-            leaf_count,
-        );
+        let valid_mp =
+            MmrMembershipProof::new(auth_path).verify(leaf_index, leaf_digest, &peaks, leaf_count);
 
         stack.push(BFieldElement::new(valid_mp as u64));
     }
@@ -375,6 +369,7 @@ impl DeprecatedSnippet for MmrVerifyFromMemory {
 #[cfg(test)]
 mod tests {
     use itertools::Itertools;
+    use twenty_first::prelude::AlgebraicHasher;
 
     use crate::empty_stack;
     use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
@@ -391,16 +386,16 @@ mod tests {
     #[test]
     #[should_panic]
     fn mmra_ap_verify_test_empty() {
-        let digest0 = VmHasher::hash(&BFieldElement::new(4545));
-        let mmr = MmrAccumulator::<Tip5>::new(vec![]);
+        let digest0 = Tip5::hash(&BFieldElement::new(4545));
+        let mmr = MmrAccumulator::new_from_leafs(vec![]);
         let leaf_index = 0;
         prop_verify_from_memory(&mmr, digest0, leaf_index, vec![], false);
     }
 
     #[test]
     fn mmra_ap_verify_test_one() {
-        let digest0 = VmHasher::hash(&BFieldElement::new(4545));
-        let mut mmr = MmrAccumulator::<Tip5>::new(vec![]);
+        let digest0 = Tip5::hash(&BFieldElement::new(4545));
+        let mut mmr = MmrAccumulator::new_from_leafs(vec![]);
         mmr.append(digest0);
         let leaf_index = 0;
         prop_verify_from_memory(&mmr, digest0, leaf_index, vec![], true);
@@ -408,10 +403,10 @@ mod tests {
 
     #[test]
     fn mmra_ap_verify_test_two() {
-        let digest0 = VmHasher::hash(&BFieldElement::new(123));
-        let digest1 = VmHasher::hash(&BFieldElement::new(456));
+        let digest0 = Tip5::hash(&BFieldElement::new(123));
+        let digest1 = Tip5::hash(&BFieldElement::new(456));
 
-        let mut mmr = MmrAccumulator::<Tip5>::new(vec![]);
+        let mut mmr = MmrAccumulator::new_from_leafs(vec![]);
         mmr.append(digest0);
         mmr.append(digest1);
 
@@ -429,7 +424,7 @@ mod tests {
         for leaf_count in 0..max_size {
             let digests: Vec<Digest> = random_elements(leaf_count);
 
-            let (mmr, mps) = mmra_with_mps::<Tip5>(
+            let (mmr, mps) = mmra_with_mps(
                 leaf_count as u64,
                 digests
                     .iter()
@@ -491,8 +486,7 @@ mod tests {
             // We can't construct this large archival MMRs, so we have to handle it with an MMRA
             // and handle the membership proofs ourselves
             let fake_peaks: Vec<Digest> = random_elements(init_peak_count as usize);
-            let mut mmr: MmrAccumulator<VmHasher> =
-                MmrAccumulator::init(fake_peaks, init_leaf_count);
+            let mut mmr = MmrAccumulator::init(fake_peaks, init_leaf_count);
 
             // Insert the 1st leaf
             let second_to_last_leaf: Digest = thread_rng().gen();
@@ -548,8 +542,8 @@ mod tests {
         }
     }
 
-    fn prop_verify_from_memory<H: AlgebraicHasher + PartialEq + std::fmt::Debug>(
-        mmr: &MmrAccumulator<H>,
+    fn prop_verify_from_memory(
+        mmr: &MmrAccumulator,
         leaf: Digest,
         leaf_index: u64,
         auth_path: Vec<Digest>,
@@ -575,7 +569,7 @@ mod tests {
         // Verify that auth path expectation was correct
         assert_eq!(
             expect_validation_success,
-            MmrMembershipProof::<H>::new(auth_path).verify(
+            MmrMembershipProof::new(auth_path).verify(
                 leaf_index,
                 leaf,
                 &mmr.peaks(),

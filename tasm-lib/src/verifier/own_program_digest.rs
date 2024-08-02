@@ -45,7 +45,6 @@ mod tests {
 
     use crate::execute_with_terminal_state;
     use crate::linker::link_for_isolated_run;
-    use crate::VmHasher;
 
     use super::*;
 
@@ -59,7 +58,7 @@ mod tests {
     fn test_program() -> ProgramSetup {
         let snippet = OwnProgramDigest;
         let program = Program::new(&link_for_isolated_run(Rc::new(RefCell::new(snippet))));
-        let program_digest = program.hash::<VmHasher>();
+        let program_digest = program.hash();
         let init_stack = snippet.init_stack_for_isolated_run();
 
         ProgramSetup {

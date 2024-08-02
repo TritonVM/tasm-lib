@@ -155,7 +155,7 @@ mod tests {
     #[test]
     fn mmra_ap_verify_test_one() {
         let digest0 = VmHasher::hash(&BFieldElement::new(4545));
-        let (mmra, _mps) = mmra_with_mps::<Tip5>(1u64, vec![(0, digest0)]);
+        let (mmra, _mps) = mmra_with_mps(1u64, vec![(0, digest0)]);
         MmrVerifyFromSecretInSecretLeafIndex.prop_verify_from_secret_in_positive_test(
             &mmra,
             digest0,
@@ -170,7 +170,7 @@ mod tests {
         let digest1 = VmHasher::hash(&BFieldElement::new(456));
 
         let leaf_count = 2u64;
-        let (mmr, _mps) = mmra_with_mps::<Tip5>(leaf_count, vec![(0u64, digest0), (1u64, digest1)]);
+        let (mmr, _mps) = mmra_with_mps(leaf_count, vec![(0u64, digest0), (1u64, digest1)]);
 
         let leaf_index_0 = 0;
         MmrVerifyFromSecretInSecretLeafIndex.prop_verify_from_secret_in_positive_test(
@@ -197,7 +197,7 @@ mod tests {
         for leaf_count in 0..max_size {
             let digests: Vec<Digest> = random_elements(leaf_count);
 
-            let (mmr, mps) = mmra_with_mps::<Tip5>(
+            let (mmr, mps) = mmra_with_mps(
                 leaf_count as u64,
                 digests
                     .iter()
@@ -244,8 +244,7 @@ mod tests {
             // We can't construct this large archival MMRs, so we have to handle it with an MMRA
             // and handle the membership proofs ourselves
             let fake_peaks: Vec<Digest> = random_elements(init_peak_count as usize);
-            let mut mmr: MmrAccumulator<VmHasher> =
-                MmrAccumulator::init(fake_peaks, init_leaf_count);
+            let mut mmr: MmrAccumulator = MmrAccumulator::init(fake_peaks, init_leaf_count);
 
             // Insert the 1st leaf
             let second_to_last_leaf: Digest = thread_rng().gen();
@@ -351,7 +350,7 @@ mod tests {
                 i += 1;
             }
 
-            let valid_mp = MmrMembershipProof::<VmHasher>::new(auth_path).verify(
+            let valid_mp = MmrMembershipProof::new(auth_path).verify(
                 leaf_index,
                 leaf_digest,
                 &peaks,
@@ -387,7 +386,7 @@ mod tests {
     impl MmrVerifyFromSecretInSecretLeafIndex {
         fn prepare_state(
             &self,
-            mmr: &MmrAccumulator<Tip5>,
+            mmr: &MmrAccumulator,
             claimed_leaf: Digest,
             leaf_index: u64,
             auth_path: Vec<Digest>,
@@ -419,7 +418,7 @@ mod tests {
 
         fn prop_verify_from_secret_in_negative_test(
             &self,
-            mmr: &MmrAccumulator<Tip5>,
+            mmr: &MmrAccumulator,
             claimed_leaf: Digest,
             leaf_index: u64,
             auth_path: Vec<Digest>,
@@ -433,7 +432,7 @@ mod tests {
             );
 
             // Sanity check
-            assert!(!MmrMembershipProof::<Tip5>::new(auth_path).verify(
+            assert!(!MmrMembershipProof::new(auth_path).verify(
                 leaf_index,
                 claimed_leaf,
                 &mmr.peaks(),
@@ -445,7 +444,7 @@ mod tests {
         // AFTER:  _
         fn prop_verify_from_secret_in_positive_test(
             &self,
-            mmr: &MmrAccumulator<Tip5>,
+            mmr: &MmrAccumulator,
             claimed_leaf: Digest,
             leaf_index: u64,
             auth_path: Vec<Digest>,
@@ -462,7 +461,7 @@ mod tests {
             );
 
             // Sanity check
-            assert!(MmrMembershipProof::<Tip5>::new(auth_path).verify(
+            assert!(MmrMembershipProof::new(auth_path).verify(
                 leaf_index,
                 claimed_leaf,
                 &mmr.peaks(),
@@ -501,7 +500,7 @@ mod tests {
         ) -> ProcedureInitialState {
             let leaf_count = 2u64.pow(log_2_leaf_count as u32);
             let peaks: Vec<Digest> = random_elements(log_2_leaf_count as usize);
-            let mut mmra = MmrAccumulator::<VmHasher>::init(peaks, leaf_count - 1);
+            let mut mmra = MmrAccumulator::init(peaks, leaf_count - 1);
             let new_leaf: Digest = random();
             let authentication_path = mmra.append(new_leaf).authentication_path;
 
@@ -530,7 +529,7 @@ mod tests {
         /// Prepare the part of the state that can be derived from the MMR without
         /// knowing e.g. the leaf index of the leaf digest that you want to authenticate
         /// so this function does not populate e.g. `secret_in`. The caller has to do that.
-        fn mmr_to_init_vm_state(&self, mmra: &MmrAccumulator<VmHasher>) -> ProcedureInitialState {
+        fn mmr_to_init_vm_state(&self, mmra: &MmrAccumulator) -> ProcedureInitialState {
             let mut stack: Vec<BFieldElement> = self.init_stack_for_isolated_run();
             let peaks_pointer = BFieldElement::one();
             stack.push(peaks_pointer);

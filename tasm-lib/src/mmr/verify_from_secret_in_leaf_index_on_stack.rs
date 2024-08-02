@@ -153,7 +153,7 @@ mod tests {
         );
 
         // Sanity check
-        assert!(!MmrMembershipProof::<Tip5>::new(auth_path).verify(
+        assert!(!MmrMembershipProof::new(auth_path).verify(
             bad_leaf_index,
             leaf,
             &mmr.peaks(),
@@ -211,7 +211,7 @@ mod tests {
                 i += 1;
             }
 
-            let valid_mp = MmrMembershipProof::<VmHasher>::new(auth_path).verify(
+            let valid_mp = MmrMembershipProof::new(auth_path).verify(
                 leaf_index,
                 leaf_digest,
                 &peaks,
@@ -257,7 +257,7 @@ mod tests {
     impl MmrVerifyFromSecretInLeafIndexOnStack {
         fn prepare_state(
             &self,
-            mmr: &MmrAccumulator<Tip5>,
+            mmr: &MmrAccumulator,
             peaks_pointer: BFieldElement,
             claimed_leaf_index: u64,
             claimed_leaf: Digest,
@@ -278,7 +278,7 @@ mod tests {
         /// leaf index and auth path.
         fn mmr_to_init_vm_state(
             &self,
-            mmra: &MmrAccumulator<VmHasher>,
+            mmra: &MmrAccumulator,
             peaks_pointer: BFieldElement,
             claimed_leaf: Digest,
         ) -> ProcedureInitialState {

@@ -5,6 +5,7 @@ use crate::library::Library;
 use crate::traits::basic_snippet::BasicSnippet;
 
 /// Calculate the sum of the `BFieldElement`s in a list
+#[allow(dead_code)]
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
 struct SumOfBfes;
 

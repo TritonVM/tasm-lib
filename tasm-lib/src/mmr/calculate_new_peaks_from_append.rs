@@ -29,11 +29,7 @@ use crate::VmHasher;
 pub struct CalculateNewPeaksFromAppend;
 
 impl CalculateNewPeaksFromAppend {
-    fn prepare_state_with_mmra(
-        &self,
-        start_mmr: MmrAccumulator<VmHasher>,
-        new_leaf: Digest,
-    ) -> InitVmState {
+    fn prepare_state_with_mmra(&self, start_mmr: MmrAccumulator, new_leaf: Digest) -> InitVmState {
         // We assume that the peaks can safely be stored in memory on address 1
         let peaks_pointer = BFieldElement::one();
 
@@ -212,7 +208,7 @@ impl DeprecatedSnippet for CalculateNewPeaksFromAppend {
         ] {
             let digests: Vec<Digest> = random_elements(mmr_size);
             let new_leaf: Digest = random();
-            let mmra = MmrAccumulator::new(digests);
+            let mmra = MmrAccumulator::new_from_leafs(digests);
             ret.push(self.prepare_state_with_mmra(mmra, new_leaf));
         }
 
@@ -330,8 +326,6 @@ mod tests {
 
     use super::*;
 
-    type Mmra = MmrAccumulator<VmHasher>;
-
     #[test]
     fn calculate_new_peaks_from_append_test_lists() {
         test_rust_equivalence_multiple_deprecated(&CalculateNewPeaksFromAppend, true);
@@ -341,17 +335,17 @@ mod tests {
     fn mmr_sanity_check_new_and_init() {
         for mmr_size in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 14, 100, 1000] {
             let digests: Vec<Digest> = random_elements(mmr_size);
-            let mmr_by_new: Mmra = MmrAccumulator::new(digests);
-            let mmr_by_init: Mmra = MmrAccumulator::init(mmr_by_new.peaks(), mmr_size as u64);
+            let mmr_by_new = MmrAccumulator::new_from_leafs(digests);
+            let mmr_by_init = MmrAccumulator::init(mmr_by_new.peaks(), mmr_size as u64);
             assert_eq!(mmr_by_new, mmr_by_init);
         }
     }
 
     #[test]
     fn mmra_append_test_empty() {
-        let mmra: Mmra = MmrAccumulator::new(vec![]);
+        let mmra = MmrAccumulator::new_from_leafs(vec![]);
         let digest = VmHasher::hash(&BFieldElement::zero());
-        let expected_final_mmra = MmrAccumulator::new(vec![digest]);
+        let expected_final_mmra = MmrAccumulator::new_from_leafs(vec![digest]);
         prop_calculate_new_peaks_from_append(mmra, digest, expected_final_mmra);
     }
 
@@ -359,8 +353,8 @@ mod tests {
     fn mmra_append_test_single() {
         let digest0 = VmHasher::hash(&BFieldElement::new(4545));
         let digest1 = VmHasher::hash(&BFieldElement::new(12345));
-        let mmra: Mmra = MmrAccumulator::new(vec![digest0]);
-        let expected_final_mmra = MmrAccumulator::new(vec![digest0, digest1]);
+        let mmra = MmrAccumulator::new_from_leafs(vec![digest0]);
+        let expected_final_mmra = MmrAccumulator::new_from_leafs(vec![digest0, digest1]);
         prop_calculate_new_peaks_from_append(mmra, digest1, expected_final_mmra);
     }
 
@@ -369,8 +363,8 @@ mod tests {
         let digest0 = VmHasher::hash(&BFieldElement::new(4545));
         let digest1 = VmHasher::hash(&BFieldElement::new(12345));
         let digest2 = VmHasher::hash(&BFieldElement::new(55488));
-        let mmra: Mmra = MmrAccumulator::new(vec![digest0, digest1]);
-        let expected_final_mmra = MmrAccumulator::new(vec![digest0, digest1, digest2]);
+        let mmra = MmrAccumulator::new_from_leafs(vec![digest0, digest1]);
+        let expected_final_mmra = MmrAccumulator::new_from_leafs(vec![digest0, digest1, digest2]);
         prop_calculate_new_peaks_from_append(mmra, digest2, expected_final_mmra);
     }
     #[test]
@@ -379,8 +373,9 @@ mod tests {
         let digest1 = VmHasher::hash(&BFieldElement::new(12345));
         let digest2 = VmHasher::hash(&BFieldElement::new(55488));
         let digest3 = VmHasher::hash(&BFieldElement::new(554880000000));
-        let mmra: Mmra = MmrAccumulator::new(vec![digest0, digest1, digest2]);
-        let expected_final_mmra = MmrAccumulator::new(vec![digest0, digest1, digest2, digest3]);
+        let mmra = MmrAccumulator::new_from_leafs(vec![digest0, digest1, digest2]);
+        let expected_final_mmra =
+            MmrAccumulator::new_from_leafs(vec![digest0, digest1, digest2, digest3]);
         prop_calculate_new_peaks_from_append(mmra, digest3, expected_final_mmra);
     }
 
@@ -390,9 +385,9 @@ mod tests {
         for init_size in 0..40 {
             println!("init_size = {init_size}");
             let leaf_digests: Vec<Digest> = random_elements(init_size);
-            let init_mmra: Mmra = MmrAccumulator::new(leaf_digests.clone());
-            let expected_final_mmra: Mmra =
-                MmrAccumulator::new([leaf_digests, vec![inserted_digest]].concat());
+            let init_mmra = MmrAccumulator::new_from_leafs(leaf_digests.clone());
+            let expected_final_mmra =
+                MmrAccumulator::new_from_leafs([leaf_digests, vec![inserted_digest]].concat());
             prop_calculate_new_peaks_from_append(init_mmra, inserted_digest, expected_final_mmra);
         }
     }
@@ -401,7 +396,7 @@ mod tests {
     fn mmra_append_big_mmr() {
         // Set MMR to be with 2^32 - 1 leaves and 32 peaks. Prepending one leaf should then reduce the number of leaves to 1.
         let inserted_digest: Digest = VmHasher::hash(&BFieldElement::new(1337));
-        let init_mmra: Mmra = MmrAccumulator::init(
+        let init_mmra = MmrAccumulator::init(
             vec![VmHasher::hash(&BFieldElement::zero()); 32],
             (1 << 32) - 1,
         );
@@ -411,7 +406,7 @@ mod tests {
 
         // Set MMR to be with 2^33 - 1 leaves and 33 peaks. Prepending one leaf should then reduce the number of leaves to 1.
         let inserted_digest: Digest = VmHasher::hash(&BFieldElement::new(1337));
-        let init_mmra: Mmra = MmrAccumulator::init(
+        let init_mmra = MmrAccumulator::init(
             vec![VmHasher::hash(&BFieldElement::zero()); 33],
             (1 << 33) - 1,
         );
@@ -421,9 +416,9 @@ mod tests {
     }
 
     fn prop_calculate_new_peaks_from_append(
-        start_mmr: MmrAccumulator<VmHasher>,
+        start_mmr: MmrAccumulator,
         new_leaf: Digest,
-        expected_mmr: MmrAccumulator<VmHasher>,
+        expected_mmr: MmrAccumulator,
     ) {
         // We assume that the peaks can safely be stored in memory on address 0
         let peaks_pointer = BFieldElement::one();
@@ -481,7 +476,7 @@ mod tests {
             produced_peaks.push(peak);
         }
 
-        let produced_mmr: Mmra = MmrAccumulator::init(produced_peaks, start_mmr.num_leafs() + 1);
+        let produced_mmr = MmrAccumulator::init(produced_peaks, start_mmr.num_leafs() + 1);
 
         // Verify that both code paths produce the same MMR
         assert_eq!(expected_mmr, produced_mmr);
@@ -497,9 +492,8 @@ mod tests {
             ));
         }
 
-        let produced_mp = MmrMembershipProof::<VmHasher> {
+        let produced_mp = MmrMembershipProof {
             authentication_path: produced_auth_path,
-            _hasher: std::marker::PhantomData,
         };
         assert!(
             produced_mp.verify(

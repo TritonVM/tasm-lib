@@ -1140,7 +1140,7 @@ pub mod tests {
             .trace_execution(inner_public_input.into(), inner_nondeterminism.clone())
             .unwrap();
         let claim = Claim {
-            program_digest: inner_program.hash::<Tip5>(),
+            program_digest: inner_program.hash(),
             input: inner_public_input.to_vec(),
             output: inner_output,
         };
@@ -1252,7 +1252,7 @@ mod benches {
        with `RUSTFLAGS=\"-C opt-level=3 -C debug-assertions=no\"`"]
     #[test]
     fn big_benchmark_different_fri_expansion_factors() {
-        for log2_of_fri_expansion_factor in 1..=5 {
+        for log2_of_fri_expansion_factor in 2..=3 {
             let stark = Stark::new(160, log2_of_fri_expansion_factor);
             benchmark_verifier(25600, 1 << 19, stark);
             benchmark_verifier(51200, 1 << 20, stark);
