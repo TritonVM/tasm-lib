@@ -373,6 +373,7 @@ mod test {
     use rand::Rng;
     use rand::RngCore;
     use rand::SeedableRng;
+    use triton_vm::error::InstructionError;
     use triton_vm::{
         prelude::BFieldElement,
         program::NonDeterminism,
@@ -403,6 +404,10 @@ mod test {
     use super::VerifyMmrSuccessor;
 
     fn num_digests_to_read(old_mmr: &MmrAccumulator, new_mmr: &MmrAccumulator) -> usize {
+        if new_mmr.num_leafs() <= old_mmr.num_leafs() {
+            return 0;
+        }
+
         let mut number = 0;
         let mut running_leaf_count = 0;
         let old_peak_heights = get_peak_heights(old_mmr.num_leafs());
@@ -447,8 +452,15 @@ mod test {
     fn failing_initial_states() -> Vec<AlgorithmInitialState> {
         let mut rng = thread_rng();
         let mut initial_states = vec![];
-        for old_num_leafs in [0u64, 1, 8] {
+        for old_num_leafs in [1u64, 8] {
             for num_new_leafs in [0u64, 1, 8] {
+                if [(0, 0)]
+                    .into_iter()
+                    .contains(&(old_num_leafs, num_new_leafs))
+                {
+                    continue;
+                }
+
                 let old_mmr = MmrAccumulator::init(
                     (0..old_num_leafs.count_ones())
                         .map(|_| rng.gen::<Digest>())
@@ -464,15 +476,6 @@ mod test {
                 }
                 let mmr_successor_proof =
                     MmrSuccessorProof::new_from_batch_append(&old_mmr, &new_leafs);
-
-                if old_num_leafs == 0u64 {
-                    // correct
-                    initial_states.push(initial_state_from_mmr_tuple(
-                        &old_mmr,
-                        &new_mmr,
-                        &mmr_successor_proof,
-                    ));
-                }
 
                 // rotate old num leafs
                 let old_mmr_fake_1 = MmrAccumulator::init(
@@ -510,12 +513,16 @@ mod test {
                     ));
                 }
 
-                // flip old and new
-                initial_states.push(initial_state_from_mmr_tuple(
-                    &new_mmr,
-                    &old_mmr,
-                    &mmr_successor_proof,
-                ));
+                // We can't actually test this failing state because the rust
+                // code doesn't crash when it runs out of digests, whereas we
+                // don't know how to catch this crash in TritonVM when the digests
+                // come from nondeterminism.
+                // // flip old and new
+                // initial_states.push(initial_state_from_mmr_tuple(
+                //     &new_mmr,
+                //     &old_mmr,
+                //     &mmr_successor_proof,
+                // ));
 
                 // inconsistent new mmr
                 let new_mmr_fake_2 = MmrAccumulator::init(
@@ -621,23 +628,34 @@ mod test {
         ShadowedAlgorithm::new(VerifyMmrSuccessor).test();
     }
 
-    // #[test]
-    // fn verify_mmr_successor_negative_test() {
-    //     for init_state in failing_initial_states() {
-    //         negative_test(VerifyMmrSuccessor, init_state, &[]);
-    //     }
-    // }
+    #[test]
+    fn verify_mmr_successor_negative_test() {
+        for (i, init_state) in failing_initial_states().into_iter().enumerate() {
+            println!("Trying failing initial state {i}.");
+            negative_test(
+                &ShadowedAlgorithm::new(VerifyMmrSuccessor),
+                init_state.into(),
+                &[
+                    InstructionError::AssertionFailed,
+                    InstructionError::EmptySecretDigestInput,
+                ],
+            );
+        }
+    }
 
     #[test]
     fn test_num_digests_in_proof() {
-        let old_mmr_num_leafs = 116u64;
-        let new_mmr_num_leafs = 182u64;
+        for (old_num_leafs, new_num_leafs) in [(1, 0), (0, 1), (116, 182)] {
+            num_digests_prop(old_num_leafs, new_num_leafs);
+        }
+    }
+
+    fn num_digests_prop(old_mmr_num_leafs: u64, num_new_leafs: u64) {
         let mut rng = thread_rng();
         let old_peaks = (0..old_mmr_num_leafs.count_ones())
             .map(|_| rng.gen::<Digest>())
             .collect_vec();
         let old_mmr = MmrAccumulator::init(old_peaks, old_mmr_num_leafs);
-        let num_new_leafs = new_mmr_num_leafs - old_mmr_num_leafs;
         let new_leafs = (0..num_new_leafs)
             .map(|_| rng.gen::<Digest>())
             .collect_vec();
