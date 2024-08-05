@@ -14,7 +14,10 @@ use crate::{
     data_type::DataType,
     field,
     hashing::merkle_step_u64_index::MerkleStepU64Index,
-    mmr::leaf_index_to_mt_index_and_peak_index::MmrLeafIndexToMtIndexAndPeakIndex,
+    mmr::{
+        bag_peaks::BagPeaks,
+        leaf_index_to_mt_index_and_peak_index::MmrLeafIndexToMtIndexAndPeakIndex,
+    },
     prelude::BasicSnippet,
     Digest,
 };
@@ -77,9 +80,12 @@ impl BasicSnippet for VerifyMmrSuccessor {
         let shr_u64 = library.import(Box::new(ShiftRightU64));
         let compare_digests = DataType::Digest.compare();
         let compare_u64 = DataType::U64.compare();
+        let bag_peaks = library.import(Box::new(BagPeaks));
         let entrypoint = self.entrypoint();
         let main_loop = format!("{entrypoint}_main_loop");
         let traverse = format!("{entrypoint}_traverse_partial_auth_path");
+        let cleanup_and_return = format!("{entrypoint}_cleanup_and_return");
+        let assert_mmrs_equal = format!("{entrypoint}_assert_mmrs_equal");
 
         let strip_top_bit = triton_asm!(
             // BEFORE: [num_leafs_remaining] garbage
@@ -113,6 +119,42 @@ impl BasicSnippet for VerifyMmrSuccessor {
 
             /* tests before preparing loop */
 
+            // num old leafs == 0 ?
+            push 0
+            // _ *old_mmr *new_mmr 0
+
+            dup 2 {&num_leafs}
+            // _ *old_mmr *new_mmr 0 [old_num_leafs]
+
+            push 0 push 0
+            // _ *old_mmr *new_mmr 0 [old_num_leafs] [0]
+
+            {&compare_u64}
+            // _ *old_mmr *new_mmr 0 (old_num_leafs == 0)
+
+            skiz call {cleanup_and_return}
+            skiz return
+            // _ *old_mmr *new_mmr
+
+
+            // new num leafs == old num leafs
+            push 0
+            // _ *old_mmr *new_mmr 0
+
+            dup 2 {&num_leafs}
+            // _ *old_mmr *new_mmr 0 [old_num_leafs]
+
+            dup 3 {&num_leafs}
+            // _ *old_mmr *new_mmr 0 [old_num_leafs] [new_num_leafs]
+
+            {&compare_u64}
+            // _ *old_mmr *new_mmr 0 (old_num_leafs == new_num_leafs)
+
+            skiz call {assert_mmrs_equal}
+            skiz return
+            // _ *old_mmr *new_mmr
+
+
             // new num leafs < old num leafs  ?
             dup 1 {&num_leafs}
             // _ *old_mmr *new_mmr [old_num_leafs]
@@ -128,6 +170,7 @@ impl BasicSnippet for VerifyMmrSuccessor {
 
             assert
             // _ *old_mmr *new_mmr
+
 
             // consistent new mmr?
             dup 0 {&num_peaks}
@@ -180,17 +223,6 @@ impl BasicSnippet for VerifyMmrSuccessor {
 
             // INVARIANT: _ *new_mmr *current_peak *end_of_memory [running_leaf_count] [num_leafs_remaining] garbage
             {main_loop}:
-                dup 2 dup 2
-                // _ *new_mmr *current_peak *end_of_memory [running_leaf_count] [num_leafs_remaining] garbage [num_leafs_remaining]
-
-                push 0 push 0 {&compare_u64}
-                // _ *new_mmr *current_peak *end_of_memory [running_leaf_count] [num_leafs_remaining] garbage (num_leafs_remaining == 0)
-
-                push 0 eq
-                // _ *new_mmr *current_peak *end_of_memory [running_leaf_count] [num_leafs_remaining] garbage (num_leafs_remaining != 0)
-
-                assert
-                // _ *new_mmr *current_peak *end_of_memory [running_leaf_count] [num_leafs_remaining] garbage
 
                 {&strip_top_bit}
                 // _ *new_mmr *current_peak *end_of_memory [running_leaf_count] [num_leafs_remaining*] old_height
@@ -279,6 +311,42 @@ impl BasicSnippet for VerifyMmrSuccessor {
                 // _ [merkle_tree_index] [current_node*]
 
                 recurse
+
+            // BEFORE: _ *old_mmr *new_mmr 0
+            // AFTER: _ 1
+            {cleanup_and_return}:
+                pop 3
+                push 1
+                return
+
+            // BEFORE: _ *old_mmr *new_mmr 0
+            // AFTER: _ 1
+            {assert_mmrs_equal}:
+                dup 1 {&field_peaks}
+                // _ *old_mmr *new_mmr 0 *new_mmr_peaks
+
+                call {bag_peaks}
+                // _ *old_mmr *new_mmr 0 [new_bagged]
+
+                dup 7 {&field_peaks}
+                // _ *old_mmr *new_mmr 0 [new_bagged] *old_mmr_peaks
+
+                call {bag_peaks}
+                // _ *old_mmr *new_mmr 0 [new_bagged] [old_bagged]
+
+                {&compare_digests}
+                // _ *old_mmr *new_mmr 0 (new_bagged == old_bagged)
+
+                assert
+                // _ *old_mmr *new_mmr 0
+
+                pop 3
+                // _
+
+                push 1
+                // _ 1
+
+                return
         }
     }
 }
@@ -396,6 +464,15 @@ mod test {
                 }
                 let mmr_successor_proof =
                     MmrSuccessorProof::new_from_batch_append(&old_mmr, &new_leafs);
+
+                if old_num_leafs == 0u64 {
+                    // correct
+                    initial_states.push(initial_state_from_mmr_tuple(
+                        &old_mmr,
+                        &new_mmr,
+                        &mmr_successor_proof,
+                    ));
+                }
 
                 // rotate old num leafs
                 let old_mmr_fake_1 = MmrAccumulator::init(
@@ -527,14 +604,12 @@ mod test {
                     let mmr_successor_proof =
                         MmrSuccessorProof::new_from_batch_append(&old_mmr, &new_leafs);
 
-                    if old_num_leafs != 0 {
-                        // correct
-                        initial_states.push(initial_state_from_mmr_tuple(
-                            &old_mmr,
-                            &new_mmr,
-                            &mmr_successor_proof,
-                        ));
-                    }
+                    // correct
+                    initial_states.push(initial_state_from_mmr_tuple(
+                        &old_mmr,
+                        &new_mmr,
+                        &mmr_successor_proof,
+                    ));
                 }
             }
             initial_states
