@@ -288,6 +288,7 @@ mod test {
         traits::algorithm::{Algorithm, AlgorithmInitialState},
         Digest,
     };
+    use rand::thread_rng;
 
     use super::VerifyMmrSuccessor;
 
@@ -297,9 +298,10 @@ mod test {
         let old_peak_heights = get_peak_heights(old_mmr.num_leafs());
         let mut new_merkle_tree_indices_of_old_peaks = vec![];
         for old_peak_height in old_peak_heights {
-            let (merkle_tree_index, _peak_index) =
+            let (mut merkle_tree_index, _peak_index) =
                 leaf_index_to_mt_index_and_peak_index(running_leaf_count, new_mmr.num_leafs());
             running_leaf_count += 1 << old_peak_height;
+            merkle_tree_index >>= old_peak_height;
             new_merkle_tree_indices_of_old_peaks.push(merkle_tree_index);
         }
         for mut merkle_tree_index in new_merkle_tree_indices_of_old_peaks {
@@ -383,5 +385,29 @@ mod test {
     #[test]
     fn verify_mmr_successor_simple_test() {
         ShadowedAlgorithm::new(VerifyMmrSuccessor).test();
+    }
+
+    #[test]
+    fn test_num_digests_in_proof() {
+        let old_mmr_num_leafs = 116u64;
+        let new_mmr_num_leafs = 182u64;
+        let mut rng = thread_rng();
+        let old_peaks = (0..old_mmr_num_leafs.count_ones())
+            .map(|_| rng.gen::<Digest>())
+            .collect_vec();
+        let old_mmr = MmrAccumulator::init(old_peaks, old_mmr_num_leafs);
+        let num_new_leafs = new_mmr_num_leafs - old_mmr_num_leafs;
+        let new_leafs = (0..num_new_leafs)
+            .map(|_| rng.gen::<Digest>())
+            .collect_vec();
+        let mut new_mmr = old_mmr.clone();
+        for leaf in new_leafs.iter().copied() {
+            new_mmr.append(leaf);
+        }
+
+        let num_leafs_on_path = num_digests_to_read(&old_mmr, &new_mmr);
+        let mmr_successor_proof = MmrSuccessorProof::new_from_batch_append(&old_mmr, &new_leafs);
+
+        assert_eq!(mmr_successor_proof.paths.len(), num_leafs_on_path);
     }
 }
