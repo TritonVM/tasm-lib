@@ -434,7 +434,7 @@ mod test {
         mmr_successor_proof: &MmrSuccessorProof,
     ) -> AlgorithmInitialState {
         let mut nondeterminism = NonDeterminism::new(vec![]);
-        VerifyMmrSuccessor::update_nondeterminism(&mut nondeterminism, &mmr_successor_proof);
+        VerifyMmrSuccessor::update_nondeterminism(&mut nondeterminism, mmr_successor_proof);
         let old_mmr_address = FIRST_NON_DETERMINISTICALLY_INITIALIZED_MEMORY_ADDRESS;
         let new_mmr_address =
             encode_to_memory(&mut nondeterminism.ram, old_mmr_address, old_mmr.clone());
@@ -668,5 +668,18 @@ mod test {
         let mmr_successor_proof = MmrSuccessorProof::new_from_batch_append(&old_mmr, &new_leafs);
 
         assert_eq!(mmr_successor_proof.paths.len(), num_leafs_on_path);
+    }
+}
+
+#[cfg(test)]
+mod bench {
+    use crate::traits::algorithm::ShadowedAlgorithm;
+    use crate::traits::rust_shadow::RustShadow;
+
+    use super::*;
+
+    #[test]
+    fn verify_mmr_successor_benchmark() {
+        ShadowedAlgorithm::new(VerifyMmrSuccessor).bench();
     }
 }
