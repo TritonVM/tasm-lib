@@ -34,4 +34,4 @@ triton-vm = { version = "0.42.0-alpha.8", default-features = false }
 [dev-dependencies.cargo-husky]
 version = "1"
 default-features = false
-features = ["precommit-hook", "run-cargo-clippy", "run-cargo-fmt"]
+features = ["user-hooks"]
