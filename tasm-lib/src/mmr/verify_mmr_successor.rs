@@ -566,16 +566,20 @@ mod test {
             bench_case: Option<BenchmarkCase>,
         ) -> AlgorithmInitialState {
             let mut rng: StdRng = SeedableRng::from_seed(seed);
-            let old_num_leafs = rng.next_u64() & (u64::MAX >> 1);
+            let old_num_leafs = match bench_case {
+                Some(BenchmarkCase::WorstCase) => u64::MAX >> 2,
+                Some(BenchmarkCase::CommonCase) => u32::MAX as u64,
+                None => rng.next_u64() & (u64::MAX >> 1),
+            };
             let old_peaks = (0..old_num_leafs.count_ones())
                 .map(|_| rng.gen::<Digest>())
                 .collect_vec();
             let old_mmr = MmrAccumulator::init(old_peaks, old_num_leafs);
 
             let num_new_leafs = match bench_case {
-                Some(BenchmarkCase::CommonCase) => rng.gen_range(0..10),
-                Some(BenchmarkCase::WorstCase) => rng.gen_range(0..15),
-                None => rng.gen_range(0..5),
+                Some(BenchmarkCase::CommonCase) => 100,
+                Some(BenchmarkCase::WorstCase) => 1000,
+                None => 1 << rng.gen_range(0..5),
             };
             let new_leafs = (0..num_new_leafs)
                 .map(|_| rng.gen::<Digest>())
