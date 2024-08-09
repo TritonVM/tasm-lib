@@ -229,7 +229,7 @@ pub fn execute_test(
     terminal_state
 }
 
-/// If the environment variable “TRITON_TUI” is set, write
+/// If the environment variable TASMLIB_TRITON_TUI is set, write
 /// 1. the program to file `program.tasm`, and
 /// 2. the VM state to file `vm_state.json`.
 ///
