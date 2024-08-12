@@ -8,15 +8,16 @@ pub fn vm_proof_iter_type() -> StructType {
     StructType { name, fields }
 }
 
+/// Assumes the proof starts at address 0 (and that there is only one).
 #[cfg(test)]
 pub(crate) fn insert_default_proof_iter_into_memory(
     memory: &mut std::collections::HashMap<
-        triton_vm::twenty_first::math::b_field_element::BFieldElement,
-        triton_vm::twenty_first::math::b_field_element::BFieldElement,
+        triton_vm::prelude::BFieldElement,
+        triton_vm::prelude::BFieldElement,
     >,
-    address: triton_vm::twenty_first::math::b_field_element::BFieldElement,
+    address: triton_vm::prelude::BFieldElement,
 ) {
-    use super::new::FIRST_PROOF_ITEM_ELEMENT_POINTER;
+    let default_first_proof_item_pointer = triton_vm::prelude::BFieldElement::new(2u64);
 
-    memory.insert(address, FIRST_PROOF_ITEM_ELEMENT_POINTER);
+    memory.insert(address, default_first_proof_item_pointer);
 }

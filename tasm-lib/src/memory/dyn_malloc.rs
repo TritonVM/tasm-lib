@@ -27,7 +27,8 @@ pub const DYN_MALLOC_PAGE_SIZE: u64 = 1 << 32;
 pub const DYN_MALLOC_FIRST_ADDRESS: BFieldElement =
     BFieldElement::new(DYN_MALLOC_FIRST_PAGE * DYN_MALLOC_PAGE_SIZE);
 
-/// Return a pointer to the next free page of memory.
+/// Return a pointer to the next free page of memory. Updates the dyn malloc state
+/// accordingly
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
 pub struct DynMalloc;
 

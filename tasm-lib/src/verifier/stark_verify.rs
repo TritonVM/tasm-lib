@@ -1079,6 +1079,8 @@ pub mod tests {
         )
     }
 
+    /// Extract the nondeterminism (for verifying) from the proof, and also return
+    /// the padded height of the execution being verified.
     pub(super) fn nd_from_proof(
         stark: &Stark,
         claim: &Claim,
@@ -1126,8 +1128,14 @@ pub mod tests {
         )
     }
 
-    /// Generate the required data for the verifier, when verifying
-    /// a given program, input, nondeterminism, and STARK.
+    /// Generate a proof return and the required data for the verifier, when verifying
+    /// it, input, nondeterminism, and STARK.
+    ///
+    /// Prepares the caller so that the caller can call verify on a simple program
+    /// execution. Specifically, given an inner program, inner public input, inner
+    /// nondeterminism, and stark parameters; produce a proof and extract from it
+    /// nondeterminism for verifying it. Also returns the (inner) claim and the inner
+    /// padded height.
     pub fn non_determinism_claim_and_padded_height(
         inner_program: &Program,
         inner_public_input: &[BFieldElement],
@@ -1163,9 +1171,9 @@ pub mod tests {
 
         maybe_write_tvm_output_to_disk(stark, &claim, &proof);
 
-        let (non_determinism, padded_height) = nd_from_proof(stark, &claim, proof);
+        let (non_determinism, inner_padded_height) = nd_from_proof(stark, &claim, proof);
 
-        (non_determinism, claim, padded_height)
+        (non_determinism, claim, inner_padded_height)
     }
 }
 
