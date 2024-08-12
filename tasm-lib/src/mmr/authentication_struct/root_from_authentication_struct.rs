@@ -1,9 +1,10 @@
 use triton_vm::prelude::*;
 use twenty_first::math::x_field_element::EXTENSION_DEGREE;
+use twenty_first::prelude::Inverse;
 
 use crate::data_type::DataType;
-use crate::hashing::absorb_multiple::AbsorbMultiple;
 use crate::library::Library;
+use crate::mmr::authentication_struct::derive_challenges::DeriveChallenges;
 use crate::prelude::BasicSnippet;
 
 pub struct RootFromAuthenticationStruct;
@@ -38,7 +39,6 @@ impl BasicSnippet for RootFromAuthenticationStruct {
     }
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
-        let absorb_multiple = library.import(Box::new(AbsorbMultiple));
         let alpha_challenge_pointer_write = library.kmalloc(EXTENSION_DEGREE as u32);
         let alpha_challenge_pointer_read =
             alpha_challenge_pointer_write + bfe!(EXTENSION_DEGREE as u64 - 1);
@@ -48,51 +48,19 @@ impl BasicSnippet for RootFromAuthenticationStruct {
         let gamma_challenge_pointer_write = library.kmalloc(EXTENSION_DEGREE as u32);
         let gamma_challenge_pointer_read =
             gamma_challenge_pointer_write + bfe!(EXTENSION_DEGREE as u64 - 1);
+        let t_digest_pointer_write = library.kmalloc(Digest::LEN as u32);
+        let t_digest_pointer_read = t_digest_pointer_write + bfe!(Digest::LEN as u64 - 1);
+        let t_xfe_pointer_write = library.kmalloc(EXTENSION_DEGREE as u32);
+        let t_xfe_pointer_read = t_xfe_pointer_write + bfe!(EXTENSION_DEGREE as u64 - 1);
+        let p_pointer_write = library.kmalloc(EXTENSION_DEGREE as u32);
+        let p_pointer_read = p_pointer_write + bfe!(EXTENSION_DEGREE as u64 - 1);
 
         let indexed_leaf_element_size = Self::indexed_leaf_element_type().stack_size();
+        let derive_challenges = library.import(Box::new(DeriveChallenges));
         let calculate_and_store_challenges = triton_asm!(
             // _ *auth_struct *indexed_leafs
 
-            sponge_init
-            // _ *auth_struct *indexed_leafs
-
-            read_mem 1
-            push 1
-            add
-            // _ *auth_struct indexed_leafs_len *indexed_leafs
-
-            swap 1
-            // _ *auth_struct *indexed_leafs indexed_leafs_len
-
-            push {indexed_leaf_element_size}
-            mul
-            push 1
-            add
-            // _ *auth_struct *indexed_leafs indexed_leafs_size
-
-            call {absorb_multiple}
-            // _ *auth_struct
-
-            read_mem 1
-            push 1
-            add
-            // _ auth_struct_len *auth_struct
-
-            swap 1
-            push {Digest::LEN}
-            mul
-            push 1
-            add
-            // _ *auth_struct auth_struct_size
-
-            call {absorb_multiple}
-            // _
-
-            sponge_squeeze
-            // _ w9 w8 w7 w6 w5 w4 w3 w2 w1 w0
-
-            pop 1
-            // _ w9 w8 w7 w6 w5 w4 w3 w2 w1
+            call {derive_challenges}
             hint alpha: XFieldElement = stack[0..3]
             hint minus_beta: XFieldElement = stack[3..6]
             hint gamma: XFieldElement = stack[6..9]
@@ -165,6 +133,8 @@ impl BasicSnippet for RootFromAuthenticationStruct {
                 pop 1
                 // _ num_leafs *auth_struct *idx_leafs (*idx_leafs[n]_lw - 2) [0; 2] [p; 3] [γ] [leaf_idx; 2]
 
+                // TODO: Assert that `leaf_idx < num_leafs`?
+
                 {&u64_to_bfe}
                 // _ num_leafs *auth_struct *idx_leafs (*idx_leafs[n]_lw - 2) [0; 2] [p; 3] [γ] leaf_idx_bfe
 
@@ -212,6 +182,15 @@ impl BasicSnippet for RootFromAuthenticationStruct {
             push 1
             add
             swap 1
+            // _ num_leafs *auth_struct *indexed_leafs *indexed_leafs indexed_leafs_len
+
+            /* Disallow empty list of indexed leafs */
+            dup 0
+            push 0
+            eq
+            push 0
+            eq
+            assert
             // _ num_leafs *auth_struct *indexed_leafs *indexed_leafs indexed_leafs_len
 
             push {indexed_leaf_element_size}
@@ -346,21 +325,187 @@ impl BasicSnippet for RootFromAuthenticationStruct {
                 recurse_or_return
         );
 
-        let set_initial_t_value = triton_asm!(
-            // _ num_leafs *indexed_leafs *auth_struct [p]
+        let nd_loop_label = format!("{entrypoint}_nd_loop");
+        let dup_top_two_digests = triton_asm![dup 9; Digest::LEN * 2];
+        let dup_top_digest = triton_asm![dup 4; Digest::LEN];
+        let dup_top_xfe = triton_asm![dup 2; EXTENSION_DEGREE];
+        let one_half = BFieldElement::new(2).inverse();
+        let nd_loop = triton_asm!(
+            // _ INVARIANT: _
+            {nd_loop_label}:
+                divine 1
+                // _ left_index
 
-            /* Set `t` digest to according to the rules:
-            let mut t = auth_struct
-                .first()
-                .copied()
-                .unwrap_or_else(|| indexed_leafs.first().unwrap().1);
-         */
-            dup 3
-            read_mem 1
-            pop 1
-            // _ num_leafs *indexed_leafs *auth_struct [p] auth_struct_len
+                divine 1
+                // _ left_index right_index
+
+                dup 1
+                push 1
+                add
+                eq
+                // _ l_index_bfe (left_index + 1 == right_index)
+
+                assert
+                // _ l_index_bfe
+
+                /* Update parent index */
+                push {one_half}
+                mul
+                hint parent_index: BFieldElement = stack[0..1]
+                // _ (l_index_bfe / 2)
+                // _ parent_index <-- rename
+
+                /* Calculate parent digest, preserving child digests */
+                divine {Digest::LEN}
+                hint right: Digest = stack[0..5]
+
+                divine {Digest::LEN}
+                hint left: Digest = stack[0..5]
+
+                {&dup_top_two_digests}
+                hash
+                hint t: Digest = stack[0..5]
+                // _ parent_index [right] [left] [t]
+
+                {&dup_top_digest}
+                push {t_digest_pointer_write}
+                write_mem {Digest::LEN}
+                pop 1
+                // _ parent_index [right] [left] [t]
+
+                {&digest_to_xfe}
+                hint t_xfe: XFieldElement = stack[0..3]
+                // _ parent_index [right] [left] [t_xfe]
+
+                {&dup_top_xfe}
+                push {t_xfe_pointer_write}
+                write_mem {EXTENSION_DEGREE}
+                pop 1
+                // _ parent_index [right] [left] [t_xfe]
+
+                push {beta_challenge_pointer_read}
+                read_mem {EXTENSION_DEGREE}
+                pop 1
+                xx_add
+                // _ parent_index [right] [left] [t_xfe - β]
+
+                dup 13
+                push {gamma_challenge_pointer_read}
+                read_mem {EXTENSION_DEGREE}
+                pop 1
+                // _ parent_index [right] [left] [t_xfe - β] parent_index [γ]
+
+                swap 1
+                swap 2
+                swap 3
+                xb_mul
+                // _ parent_index [right] [left] [t_xfe - β] [γ * parent_index]
+
+                xx_add
+                // _ parent_index [right] [left] [t_xfe - β + γ * parent_index]
+                // _ parent_index [right] [left] [fact_parent] <-- rename
+
+                /* Accumulate `fact_parent` into `p` */
+                push {p_pointer_read}
+                read_mem {EXTENSION_DEGREE}
+                pop 1
+                xx_mul
+                push {p_pointer_write}
+                write_mem {EXTENSION_DEGREE}
+                pop 1
+                // _ parent_index [right] [left]
+
+                /* Claculate `fact_1` */
+                {&digest_to_xfe}
+                // _ parent_index [right] [left_xfe]
+
+                push {beta_challenge_pointer_read}
+                read_mem {EXTENSION_DEGREE}
+                pop 1
+                xx_add
+                // _ parent_index [right] [left_xfe - β]
+
+                push {gamma_challenge_pointer_read}
+                read_mem {EXTENSION_DEGREE}
+                pop 1
+                // _ parent_index [right] [left_xfe - β] [γ]
+
+                dup 11
+                push 2
+                mul
+                // _ parent_index [right] [left_xfe - β] [γ] left_index
+
+                xb_mul
+                // _ parent_index [right] [left_xfe - β] [γ * left_index]
+
+                xx_add
+                // _ parent_index [right] [left_xfe - β + γ * left_index]
+                // _ parent_index [right] [fact_1] <-- rename
+
+                x_invert
+                // _ parent_index [right] [fact_1^{-1}]
+
+                /* Divide `fact_1` out of `p` */
+                push {p_pointer_read}
+                read_mem {EXTENSION_DEGREE}
+                pop 1
+                xx_mul
+                push {p_pointer_write}
+                write_mem {EXTENSION_DEGREE}
+                pop 1
+                // _ parent_index [right]
+
+                /* Calculate `fact_2` */
+                {&digest_to_xfe}
+                // _ parent_index [right_xfe]
+
+                push {beta_challenge_pointer_read}
+                read_mem {EXTENSION_DEGREE}
+                pop 1
+                xx_add
+                // _ parent_index [right_xfe - β]
+
+                push {gamma_challenge_pointer_read}
+                read_mem {EXTENSION_DEGREE}
+                pop 1
+                // _ parent_index [right_xfe - β] [γ]
+
+                dup 6
+                push 2
+                mul
+                push 1
+                add
+                // _ parent_index [right_xfe - β] [γ] right_index
+
+                xb_mul
+                // _ parent_index [right_xfe - β] [right_index * γ]
+
+                xx_add
+                // _ parent_index [right_xfe - β + right_index * γ]
+                // _ parent_index [fact_2] <-- rename
+
+                x_invert
+                // _ parent_index [fact_2^{-1}]
+
+                /* Divide `fact_2` out of `p` */
+                push {p_pointer_read}
+                read_mem {EXTENSION_DEGREE}
+                pop 1
+                xx_mul
+                push {p_pointer_write}
+                write_mem {EXTENSION_DEGREE}
+                pop 1
+                // _ parent_index
+
+                push 1
+                eq
+                skiz
+                    return
+
+                recurse
         );
 
+        let compare_xfes = DataType::Xfe.compare();
         triton_asm!(
             {entrypoint}:
                 // _ tree_height *auth_struct *indexed_leafs
@@ -372,65 +517,146 @@ impl BasicSnippet for RootFromAuthenticationStruct {
                 {&calculate_and_store_challenges}
                 // _ tree_height *auth_struct *indexed_leafs
 
-                /* Calculate number of leafs in Merkle tree */
+                /* Calculate number of leafs in Merkle tree
+                   Notice that `tree_num_leafs` is not necessarily a u32, but is a
+                   BFE and a power of two whose log_2 value is in the range
+                   [0,63] */
                 swap 2
                 push 2
                 pow
                 swap 2
-                hint num_leafs = stack[2]
-                // _ num_leafs *auth_struct *indexed_leafs
+                hint tree_num_leafs: BFieldElement = stack[2]
+                // _ tree_num_leafs *auth_struct *indexed_leafs
 
                 {&accumulate_indexed_leafs_from_public_data}
-                // _ num_leafs *auth_struct *indexed_leafs *indexed_leafs [garbage; 2] [p; 3]
-                // _ num_leafs *auth_struct *indexed_leafs *indexed_leafs [garbage; 2] p2 p1 p0 <-- rename
+                // _ tree_num_leafs *auth_struct *indexed_leafs *indexed_leafs [garbage; 2] [p; 3]
+                // _ tree_num_leafs *auth_struct *indexed_leafs *indexed_leafs [garbage; 2] p2 p1 p0 <-- rename
 
                 /* Prepare for next loop, absorption of auth-struct digests into accumulator */
                 swap 7
                 swap 6
                 pop 1
-                // _ num_leafs p0 *auth_struct *indexed_leafs [0; 2] p2 p1
+                // _ tree_num_leafs p0 *auth_struct *indexed_leafs [0; 2] p2 p1
 
                 dup 5
                 read_mem 1
                 push 1
                 add
                 swap 1
-                // _ num_leafs p0 *auth_struct *indexed_leafs [0; 2] p2 p1 *auth_struct auth_struct_len
+                // _ tree_num_leafs p0 *auth_struct *indexed_leafs [0; 2] p2 p1 *auth_struct auth_struct_len
 
                 push {Digest::LEN}
                 mul
                 add
-                // _ num_leafs p0 *auth_struct *indexed_leafs [0; 2] p2 p1 *auth_struct_last_word
+                // _ tree_num_leafs p0 *auth_struct *indexed_leafs [0; 2] p2 p1 *auth_struct_last_word
 
                 swap 5
                 swap 7
-                // _ num_leafs *indexed_leafs *auth_struct *auth_struct_last_word [0; 2] p2 p1 p0
-                // _ num_leafs *indexed_leafs *auth_struct *auth_struct_last_word [prev; 2] [p] <-- rename
+                // _ tree_num_leafs *indexed_leafs *auth_struct *auth_struct_last_word [0; 2] p2 p1 p0
+                // _ tree_num_leafs *indexed_leafs *auth_struct *auth_struct_last_word [prev; 2] [p] <-- rename
 
                 dup 6
                 dup 6
                 eq
                 push 0
                 eq
-                // _ num_leafs *indexed_leafs *auth_struct *auth_struct_last_word [prev; 2] [p] (*auth_struct_last_word != *auth_struct)
+                // _ tree_num_leafs *indexed_leafs *auth_struct *auth_struct_last_word [prev; 2] [p] (*auth_struct_last_word != *auth_struct)
 
                 skiz
                     call {accumulate_auth_struct_leafs_from_public_data_label}
-                // _ num_leafs *indexed_leafs *auth_struct *auth_struct_last_word [prev; 2] [p]
+                // _ tree_num_leafs *indexed_leafs *auth_struct *auth_struct_last_word [prev; 2] [p]
 
                 /* Cleanup stack before next loop */
-                swap 3
+                swap 4
                 pop 1
-                swap 3
+                swap 4
                 pop 1
-                swap 3
+                swap 4
+                pop 2
+                // _ tree_num_leafs *indexed_leafs [p]
+
+                /* Set initial t values, from indexed_leafs[0] */
+                dup 3
+                push {Digest::LEN}
+                add
+                read_mem {Digest::LEN}
                 pop 1
-                // _ num_leafs *indexed_leafs *auth_struct [p]
+                // _ tree_num_leafs *indexed_leafs [p] [t; 5]
+
+                dup 4
+                dup 4
+                dup 4
+                dup 4
+                dup 4
+                {&digest_to_xfe}
+                // _ tree_num_leafs *indexed_leafs [p] [t; 5] [t_xfe]
+
+                /* Write t values, and `p` to static memory */
+                push {t_xfe_pointer_write}
+                write_mem {EXTENSION_DEGREE}
+                pop 1
+                push {t_digest_pointer_write}
+                write_mem {Digest::LEN}
+                pop 1
+                // _ tree_num_leafs *indexed_leafs [p]
+
+                push {p_pointer_write}
+                write_mem {EXTENSION_DEGREE}
+                pop 2
+                // _ tree_num_leafs
+
+                /* Call the ND-loop if tree_num_leafs != 1 */
+                push 1
+                eq
+                push 0
+                eq
+                // (tree_num_leafs != 1)
+
+                skiz
+                    call {nd_loop_label}
+                // _
+
+                /* Assert that p == t_xfe - beta + gamma */
+                break
+                push {p_pointer_read}
+                read_mem {EXTENSION_DEGREE}
+                pop 1
+                // _ [p]
+
+                push {t_xfe_pointer_read}
+                read_mem {EXTENSION_DEGREE}
+                pop 1
+                // _ [p] [t_xfe]
+
+                push {beta_challenge_pointer_read}
+                read_mem {EXTENSION_DEGREE}
+                pop 1
+                xx_add
+                // _ [p] [t_xfe - β]
+
+                push {gamma_challenge_pointer_read}
+                read_mem {EXTENSION_DEGREE}
+                pop 1
+                xx_add
+                // _ [p] [t_xfe - β + γ]
+
+                {&compare_xfes}
+                // _ (p == t_xfe - β + γ)
+
+                assert
+                // _
+
+                /* Return `t` (digest) */
+                push {t_digest_pointer_read}
+                read_mem {Digest::LEN}
+                pop 1
+                // _ [t]
 
                 return
 
                 {&accumulated_indexed_leafs_loop}
                 {&accumulate_auth_struct_leafs_from_public_data}
+                {&nd_loop}
         )
     }
 }
@@ -445,12 +671,16 @@ mod tests {
     use rand::rngs::StdRng;
     use rand::Rng;
     use rand::SeedableRng;
+    use twenty_first::prelude::AlgebraicHasher;
     use twenty_first::prelude::CpuParallel;
     use twenty_first::prelude::MerkleTree;
     use twenty_first::prelude::Sponge;
 
+    use crate::mmr::authentication_struct::shared::AuthStructIntegrityProof;
+    use crate::rust_shadowing_helper_functions::input::consume_digest_from_secret_in;
     use crate::rust_shadowing_helper_functions::list::list_insert;
     use crate::rust_shadowing_helper_functions::list::load_list_with_copy_elements;
+    use crate::rust_shadowing_helper_functions::memory::write_to_memory;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::traits::procedure::Procedure;
     use crate::traits::procedure::ProcedureInitialState;
@@ -484,6 +714,33 @@ mod tests {
                 challenge * leaf_xfe_lo + leaf_xfe_hi
             }
 
+            fn mimic_use_of_static_memory(
+                memory: &mut HashMap<BFieldElement, BFieldElement>,
+                alpha: XFieldElement,
+                beta: XFieldElement,
+                gamma: XFieldElement,
+                t: Digest,
+                t_xfe: XFieldElement,
+                p: XFieldElement,
+            ) {
+                const ALPHA_POINTER_WRITE: BFieldElement = BFieldElement::new(BFieldElement::P - 4);
+                const BETA_POINTER_WRITE: BFieldElement = BFieldElement::new(BFieldElement::P - 7);
+                const GAMMA_POINTER_WRITE: BFieldElement =
+                    BFieldElement::new(BFieldElement::P - 10);
+                const T_DIGEST_POINTER_WRITE: BFieldElement =
+                    BFieldElement::new(BFieldElement::P - 15);
+                const T_XFE_POINTER_WRITE: BFieldElement =
+                    BFieldElement::new(BFieldElement::P - 18);
+                const P_POINTER_WRITE: BFieldElement = BFieldElement::new(BFieldElement::P - 21);
+
+                write_to_memory(ALPHA_POINTER_WRITE, alpha, memory);
+                write_to_memory(BETA_POINTER_WRITE, beta, memory);
+                write_to_memory(GAMMA_POINTER_WRITE, gamma, memory);
+                write_to_memory(T_DIGEST_POINTER_WRITE, t, memory);
+                write_to_memory(T_XFE_POINTER_WRITE, t_xfe, memory);
+                write_to_memory(P_POINTER_WRITE, p, memory);
+            }
+
             assert_eq!(
                 SIZE_OF_INDEXED_LEAFS_ELEMENT,
                 Self::indexed_leaf_element_type().stack_size()
@@ -497,20 +754,17 @@ mod tests {
                     *<(u64, Digest)>::decode(&bfes).unwrap()
                 };
             let bfes_to_digest = |bfes: [BFieldElement; Digest::LEN]| -> Digest {
-                println!("bfes_to_digest:\nbfes: {bfes:?}");
                 *Digest::decode(&bfes[0..Digest::LEN]).unwrap()
             };
 
             let indexed_leafs: Vec<[BFieldElement; SIZE_OF_INDEXED_LEAFS_ELEMENT]> =
                 load_list_with_copy_elements(indexed_leafs_pointer, memory);
-            println!("indexed_leafs: {indexed_leafs:?}");
             let indexed_leafs = indexed_leafs
                 .into_iter()
                 .map(bfes_to_indexed_leaf)
                 .collect_vec();
             let auth_struct: Vec<[BFieldElement; Digest::LEN]> =
                 load_list_with_copy_elements(auth_struct_pointer, memory);
-            println!("auth_struct: {auth_struct:?}");
             let auth_struct = auth_struct.into_iter().map(bfes_to_digest).collect_vec();
 
             let sponge = sponge.as_mut().expect("sponge must be initialized");
@@ -522,27 +776,16 @@ mod tests {
             let alpha = XFieldElement::new([sponge_output[1], sponge_output[2], sponge_output[3]]);
             let beta = -XFieldElement::new([sponge_output[4], sponge_output[5], sponge_output[6]]);
             let gamma = XFieldElement::new([sponge_output[7], sponge_output[8], sponge_output[9]]);
-            println!("alpha {alpha}");
-            println!("-beta {}", -beta);
-            println!("gamma {}", -gamma);
 
-            let num_leafs = 1 << tree_height;
+            let tree_num_leafs = 1 << tree_height;
             let mut p = XFieldElement::one();
             for (leaf_idx, leaf) in indexed_leafs.iter().copied().rev() {
                 let leaf_idx_as_bfe = bfe!(leaf_idx);
-                let node_idx_as_bfe = leaf_idx_as_bfe + bfe!(num_leafs);
-
+                let node_idx_as_bfe = leaf_idx_as_bfe + bfe!(tree_num_leafs);
                 let leaf_as_xfe = digest_to_xfe(leaf, alpha);
-
-                println!("gamma * node_idx_as_bfe = {}", gamma * node_idx_as_bfe);
-                println!("leaf_as_xfe = {}", leaf_as_xfe);
-
                 let fact = leaf_as_xfe - beta + gamma * node_idx_as_bfe;
-                println!("indexed-leaf fact: {fact}");
                 p *= fact;
             }
-
-            println!("Rust-shadow, p, after indexed-leafs absorption: {p}");
 
             let mut prev = 0u64;
             let mut individual_tokens: VecDeque<BFieldElement> =
@@ -554,7 +797,6 @@ mod tests {
                     individual_tokens.pop_front().unwrap().try_into().unwrap();
                 let auth_struct_elem_node_index = ((auth_struct_elem_node_index_hi as u64) << 32)
                     + auth_struct_elem_node_index_lo as u64;
-                println!("auth_struct_elem_node_index: {auth_struct_elem_node_index}");
                 assert!(auth_struct_elem_node_index > prev);
                 prev = auth_struct_elem_node_index;
 
@@ -563,11 +805,45 @@ mod tests {
                 let auth_struct_elem_xfe = digest_to_xfe(auth_struct_elem, alpha);
                 let fact = auth_struct_elem_xfe - beta + gamma * auth_struct_index_as_bfe;
 
-                println!("auth struct fact: {fact}");
                 p *= fact;
             }
 
-            println!("Rust-shadow, p, after auth-struct absorption: {p}");
+            let mut t = indexed_leafs[0].1;
+            let mut t_xfe = digest_to_xfe(t, alpha);
+            if tree_num_leafs != 1 {
+                loop {
+                    let left_index = individual_tokens.pop_front().unwrap();
+                    let right_index = individual_tokens.pop_front().unwrap();
+                    assert_eq!(left_index + bfe!(1), right_index);
+
+                    let parent_index = left_index / bfe!(2);
+
+                    let right = consume_digest_from_secret_in(&mut individual_tokens);
+                    let left = consume_digest_from_secret_in(&mut individual_tokens);
+
+                    t = Tip5::hash_pair(left, right);
+                    t_xfe = digest_to_xfe(t, alpha);
+                    let l_xfe = digest_to_xfe(left, alpha);
+                    let r_xfe = digest_to_xfe(right, alpha);
+                    let fact1 = l_xfe - beta + gamma * left_index;
+                    let fact2 = r_xfe - beta + gamma * right_index;
+                    let fact_parent = t_xfe - beta + gamma * parent_index;
+
+                    p *= fact1.inverse() * fact2.inverse() * fact_parent;
+
+                    if parent_index.is_one() {
+                        break;
+                    }
+                }
+            }
+
+            assert_eq!(t_xfe - beta + gamma, p);
+
+            for elem in t.encode().into_iter().rev() {
+                stack.push(elem);
+            }
+
+            mimic_use_of_static_memory(memory, alpha, -beta, gamma, t, t_xfe, p);
 
             vec![]
         }
@@ -580,25 +856,28 @@ mod tests {
             let mut rng: StdRng = SeedableRng::from_seed(seed);
 
             // TODO: use real `mmr_authentication_struct` code here
-            let tree_height = rng.gen_range(1..5);
+            let tree_height = rng.gen_range(0..5);
             let leaf_count = 1 << tree_height;
-            let num_revealed_leafs = rng.gen_range(1..leaf_count);
+            let num_revealed_leafs = rng.gen_range(1..=leaf_count);
             let revealed_leaf_indices = (0..num_revealed_leafs)
                 .map(|_| rng.gen_range(0..leaf_count))
                 .unique()
                 .collect_vec();
+            println!(
+                "revealed_leaf_indices: [{}]",
+                revealed_leaf_indices.iter().join(", ")
+            );
             let leafs = (0..leaf_count).map(|_| rng.gen()).collect_vec();
             let tree = MerkleTree::<Tip5>::new::<CpuParallel>(&leafs).unwrap();
             let mmr_authentication_struct =
-                mmr_authentication_struct::AuthStructIntegrityProof::new_from_merkle_tree(
-                    &tree,
-                    revealed_leaf_indices,
-                );
+                AuthStructIntegrityProof::new_from_merkle_tree(&tree, revealed_leaf_indices);
+            println!("tree.root() = {}", tree.root());
 
             let mut memory = HashMap::new();
             let authentication_structure_ptr = rng.gen();
             let indexed_leafs_ptr = rng.gen();
 
+            println!("leaf_count: {leaf_count}");
             println!(
                 "indexed_leafs.len(): {}",
                 mmr_authentication_struct.indexed_leafs.len()
@@ -637,13 +916,40 @@ mod tests {
                     .iter()
                     .join(", ")
             );
-            let individual_tokens = mmr_authentication_struct
+            let nd_auth_struct_indices = mmr_authentication_struct
                 .witness
                 .nd_auth_struct_indices
                 .into_iter()
                 .rev()
                 .flat_map(|node_index| node_index.encode().into_iter().rev().collect_vec())
                 .collect_vec();
+            println!(
+                "nd_auth_struct_indices (encoded as BFEs): {}",
+                nd_auth_struct_indices.iter().join(", ")
+            );
+            let nd_loop_nd = mmr_authentication_struct
+                .witness
+                .nd_sibling_indices
+                .iter()
+                .copied()
+                .zip_eq(
+                    mmr_authentication_struct
+                        .witness
+                        .nd_siblings
+                        .iter()
+                        .copied(),
+                )
+                .flat_map(|((left_index, right_index), (left_node, right_node))| {
+                    [
+                        vec![bfe!(left_index), bfe!(right_index)],
+                        right_node.encode().into_iter().rev().collect_vec(),
+                        left_node.encode().into_iter().rev().collect_vec(),
+                    ]
+                    .concat()
+                })
+                .collect_vec();
+
+            let individual_tokens = [nd_auth_struct_indices, nd_loop_nd].concat();
             println!("individual_tokens: {}", individual_tokens.iter().join(", "));
             let nondeterminism = NonDeterminism::new(individual_tokens).with_ram(memory);
             ProcedureInitialState {
@@ -656,371 +962,6 @@ mod tests {
 
         fn corner_case_initial_states(&self) -> Vec<ProcedureInitialState> {
             vec![]
-        }
-    }
-}
-
-// TODO: Use this logic from `twenty-first` instead!
-mod mmr_authentication_struct {
-    use std::collections::{HashMap, HashSet};
-
-    use itertools::Itertools;
-    use num::One;
-    use twenty_first::{
-        prelude::{AlgebraicHasher, Inverse, MerkleTree, Mmr, MmrMembershipProof, Sponge},
-        util_types::mmr::{
-            mmr_accumulator::MmrAccumulator, shared_advanced::get_peak_heights,
-            shared_basic::leaf_index_to_mt_index_and_peak_index,
-        },
-    };
-
-    use super::*;
-
-    const ROOT_MT_INDEX: u64 = 1;
-
-    /// A witness to facilitate the proving of the authenticity of a Merkle
-    /// authentication struct.
-    #[derive(Debug, Clone)]
-    pub struct AuthStructIntegrityProof {
-        // All indices are Merkle tree node indices
-        pub nd_auth_struct_indices: Vec<u64>,
-        pub nd_sibling_indices: Vec<(u64, u64)>,
-        pub nd_siblings: Vec<(Digest, Digest)>,
-    }
-
-    /// An authentication structure that can be used to prove membership of a list
-    /// of leaves in a Merkle tree, along with the indexed leaves in question, and
-    /// the witness necessary to prove membership in a ZK program.
-    #[derive(Debug, Clone)]
-    pub struct AuthenticatedMerkleAuthStruct {
-        pub auth_struct: Vec<Digest>,
-        pub indexed_leafs: Vec<(u64, Digest)>,
-        pub witness: AuthStructIntegrityProof,
-    }
-
-    impl AuthStructIntegrityProof {
-        /// Return the Merkle tree node indices of the digests required to prove
-        /// membership for the specified leaf indices, as well as the node indices
-        /// that can be derived from the leaf indices and their authentication
-        /// path.
-        fn auth_struct_and_nd_indices(
-            num_leafs: u64,
-            leaf_indices: &[u64],
-        ) -> (Vec<u64>, Vec<(u64, u64)>) {
-            // The set of indices of nodes that need to be included in the authentications
-            // structure. In principle, every node of every authentication path is needed.
-            // The root is never needed. Hence, it is not considered below.
-            let mut node_is_needed = HashSet::new();
-
-            // The set of indices of nodes that can be computed from other nodes in the
-            // authentication structure or the leafs that are explicitly supplied during
-            // verification. Every node on the direct path from the leaf to the root can
-            // be computed by the very nature of “authentication path”.
-            let mut node_can_be_computed = HashSet::new();
-
-            for &leaf_index in leaf_indices {
-                assert!(num_leafs > leaf_index, "Leaf index must be less than number of leafs. Got leaf_index = {leaf_index}; num_leafs = {num_leafs}");
-
-                let mut node_index = leaf_index + num_leafs;
-                while node_index > ROOT_MT_INDEX {
-                    let sibling_index = node_index ^ 1;
-                    node_can_be_computed.insert(node_index);
-                    node_is_needed.insert(sibling_index);
-                    node_index /= 2;
-                }
-            }
-
-            let set_difference = node_is_needed.difference(&node_can_be_computed).copied();
-            let set_union = node_is_needed
-                .union(&node_can_be_computed)
-                .sorted_unstable()
-                .rev();
-
-            let mut set_union = set_union.peekable();
-
-            let mut set_union_as_ordered_pairs = Vec::new();
-            while set_union.peek().is_some() {
-                let right_index = *set_union.next().unwrap();
-
-                // Crashes on odd-length of input list, which is what we want, as
-                // this acts as a sanity check.
-                let left_index = *set_union.next().unwrap();
-                set_union_as_ordered_pairs.push((left_index, right_index));
-            }
-
-            (
-                set_difference.sorted_unstable().rev().collect(),
-                set_union_as_ordered_pairs,
-            )
-        }
-
-        pub fn root_from_authentication_struct(
-            &self,
-            tree_height: u32,
-            auth_struct: Vec<Digest>,
-            indexed_leafs: Vec<(u64, Digest)>,
-        ) -> Digest {
-            fn digest_to_xfe(digest: Digest, challenge: XFieldElement) -> XFieldElement {
-                let leaf_xfe_lo = XFieldElement::new([digest.0[0], digest.0[1], digest.0[2]]);
-                let leaf_xfe_hi = challenge
-                    * XFieldElement::new([digest.0[3], digest.0[4], BFieldElement::one()]);
-
-                leaf_xfe_lo + leaf_xfe_hi
-            }
-
-            fn node_index_to_bfe(node_index: u64) -> BFieldElement {
-                BFieldElement::new(node_index)
-            }
-
-            // Sanity check
-            assert_eq!(
-                self.nd_auth_struct_indices.len(),
-                auth_struct.len(),
-                "Provided auth struct length must match that specified in receiver"
-            );
-
-            // Get challenges
-            let (alpha, beta, gamma) = {
-                let mut sponge = Tip5::init();
-                sponge.pad_and_absorb_all(&indexed_leafs.encode());
-                sponge.pad_and_absorb_all(&auth_struct.encode());
-                let challenges = sponge.sample_scalars(3);
-                (challenges[0], challenges[1], challenges[2])
-            };
-
-            // Accumulate `p` from public data
-            let mut p = XFieldElement::one();
-            for i in (0..indexed_leafs.len()).rev() {
-                let node_index_as_bfe = node_index_to_bfe((1 << tree_height) ^ indexed_leafs[i].0);
-                let leaf_as_xfe = digest_to_xfe(indexed_leafs[i].1, alpha);
-                let fact = leaf_as_xfe - beta + gamma * node_index_as_bfe;
-                p *= fact;
-            }
-
-            let mut prev = 0;
-            for i in (0..auth_struct.len()).rev() {
-                let auth_struct_index = self.nd_auth_struct_indices[i];
-
-                // `auth_struct` must be sorted high-to-low by node-index. But since
-                // we're traversing in reverse order, the inequality is flipped.
-                assert!(auth_struct_index > prev);
-                prev = auth_struct_index;
-
-                let auth_struct_index_as_bfe = node_index_to_bfe(auth_struct_index);
-
-                let auth_str_elem_as_xfe = digest_to_xfe(auth_struct[i], alpha);
-                let fact = auth_str_elem_as_xfe - beta + gamma * auth_struct_index_as_bfe;
-                p *= fact;
-            }
-
-            // Use secret data to invert `p` back and to calculate the root
-            let mut t = auth_struct
-                .first()
-                .copied()
-                .unwrap_or_else(|| indexed_leafs.first().unwrap().1);
-            let mut t_xfe = digest_to_xfe(t, alpha);
-            let mut parent_index_bfe = BFieldElement::one();
-            for ((l, r), (left_index, right_index)) in self
-                .nd_siblings
-                .iter()
-                .zip_eq(self.nd_sibling_indices.clone())
-            {
-                assert_eq!(left_index + 1, right_index);
-
-                t = Tip5::hash_pair(*l, *r);
-
-                let l_xfe = digest_to_xfe(*l, alpha);
-                let r_xfe = digest_to_xfe(*r, alpha);
-                t_xfe = digest_to_xfe(t, alpha);
-
-                let left_index_bfe = node_index_to_bfe(left_index);
-                let right_index_bfe = node_index_to_bfe(right_index);
-                parent_index_bfe = left_index_bfe / bfe!(2);
-
-                let fact1 = l_xfe - beta + gamma * left_index_bfe;
-                let fact2 = r_xfe - beta + gamma * right_index_bfe;
-                let fact_parent = t_xfe - beta + gamma * parent_index_bfe;
-
-                p *= fact1.inverse() * fact2.inverse() * fact_parent;
-            }
-
-            assert_eq!(t_xfe - beta + gamma, p);
-            assert!(parent_index_bfe.is_one());
-
-            t
-        }
-
-        /// Return the authentication structure authenticity witness,
-        /// authentication structure, and the (leaf-index, leaf-digest) pairs
-        /// from a list of MMR membership proofs. All MMR membership proofs must
-        /// belong under the same peak, i.e., be part of the same Merkle tree in
-        /// the list of Merkle trees that the MMR contains.
-        ///
-        /// Panics if the input list of MMR-membership proofs is empty, or if they
-        /// do not all belong under the same peak.
-        pub fn new_from_mmr_membership_proofs(
-            mmra: &MmrAccumulator,
-            indexed_mmr_mps: Vec<(u64, Digest, MmrMembershipProof)>,
-        ) -> HashMap<u32, AuthenticatedMerkleAuthStruct> {
-            #[derive(Clone, Debug)]
-            struct IndexedAuthenticatedMmrLeaf {
-                merkle_tree_node_index: u64,
-                merkle_tree_leaf_index: u64,
-                leaf_digest: Digest,
-                membership_proof: MmrMembershipProof,
-            }
-
-            // Split indexed MMR-mps into a hashmap with one entry for each
-            // referenced peak in the MMR.
-            let num_mmr_leafs = mmra.num_leafs();
-            let mut peak_index_to_indexed_mmr_mp: HashMap<u32, Vec<IndexedAuthenticatedMmrLeaf>> =
-                HashMap::default();
-            let peak_heights = get_peak_heights(num_mmr_leafs);
-            for (mmr_leaf_index, leaf, mmr_mp) in indexed_mmr_mps {
-                let (mt_index, peak_index) =
-                    leaf_index_to_mt_index_and_peak_index(mmr_leaf_index, num_mmr_leafs);
-                let peak_index_as_usize: usize = peak_index.try_into().unwrap();
-                let num_leafs_local_mt = 1 << peak_heights[peak_index_as_usize];
-                let mt_leaf_index = mt_index - num_leafs_local_mt;
-                peak_index_to_indexed_mmr_mp
-                    .entry(peak_index)
-                    .or_default()
-                    .push(IndexedAuthenticatedMmrLeaf {
-                        merkle_tree_node_index: mt_index,
-                        merkle_tree_leaf_index: mt_leaf_index,
-                        leaf_digest: leaf,
-                        membership_proof: mmr_mp,
-                    });
-            }
-
-            // Loop over all peaks and collect an authentication witness struct
-            // for each peak.
-            let mut peak_index_to_authenticated_auth_struct = HashMap::default();
-            for (peak_index, indexed_mmr_mp_structs) in peak_index_to_indexed_mmr_mp {
-                let peak_index_as_usize: usize = peak_index.try_into().unwrap();
-                let num_leafs_in_local_mt = 1 << peak_heights[peak_index_as_usize];
-                let local_mt_leaf_indices = indexed_mmr_mp_structs
-                    .iter()
-                    .map(|x| x.merkle_tree_leaf_index)
-                    .collect_vec();
-
-                let (nd_auth_struct_indices, nd_sibling_indices) =
-                    Self::auth_struct_and_nd_indices(num_leafs_in_local_mt, &local_mt_leaf_indices);
-                let peak = mmra.peaks()[peak_index_as_usize];
-
-                let mut node_digests: HashMap<u64, Digest> = HashMap::default();
-                node_digests.insert(ROOT_MT_INDEX, peak);
-
-                // Loop over all indexed leafs for this peak
-                for indexed_mmr_mp in indexed_mmr_mp_structs.iter() {
-                    let mut mt_node_index = indexed_mmr_mp.merkle_tree_node_index;
-                    let mut node = indexed_mmr_mp.leaf_digest;
-
-                    // Loop over all authentication path elements for this indexed leaf
-                    for ap_elem in indexed_mmr_mp.membership_proof.authentication_path.iter() {
-                        node_digests.insert(mt_node_index, node);
-                        node_digests.insert(mt_node_index ^ 1, *ap_elem);
-                        node = if mt_node_index & 1 == 0 {
-                            Tip5::hash_pair(node, *ap_elem)
-                        } else {
-                            Tip5::hash_pair(*ap_elem, node)
-                        };
-
-                        mt_node_index /= 2;
-                    }
-
-                    // Sanity check that MMR-MPs are valid
-                    assert_eq!(peak, node, "Derived peak must match provided peak");
-                }
-                let nd_siblings = nd_sibling_indices
-                    .iter()
-                    .map(|(left_idx, right_idx)| (node_digests[left_idx], node_digests[right_idx]))
-                    .collect_vec();
-                let auth_struct = nd_auth_struct_indices
-                    .iter()
-                    .map(|idx| node_digests[idx])
-                    .collect_vec();
-                let indexed_leafs = indexed_mmr_mp_structs
-                    .into_iter()
-                    .map(|indexed_mmr_mp| {
-                        (
-                            indexed_mmr_mp.merkle_tree_leaf_index,
-                            indexed_mmr_mp.leaf_digest,
-                        )
-                    })
-                    .collect_vec();
-
-                let witness = Self {
-                    nd_auth_struct_indices,
-                    nd_sibling_indices,
-                    nd_siblings,
-                };
-
-                peak_index_to_authenticated_auth_struct.insert(
-                    peak_index,
-                    AuthenticatedMerkleAuthStruct {
-                        auth_struct,
-                        indexed_leafs,
-                        witness,
-                    },
-                );
-            }
-
-            peak_index_to_authenticated_auth_struct
-        }
-
-        /// Return the authentication structure witness, authentication structure,
-        /// and the (leaf-index, leaf-digest) pairs.
-        pub fn new_from_merkle_tree(
-            tree: &MerkleTree<Tip5>,
-            mut revealed_leaf_indices: Vec<u64>,
-        ) -> AuthenticatedMerkleAuthStruct {
-            revealed_leaf_indices.sort_unstable();
-            revealed_leaf_indices.dedup();
-            revealed_leaf_indices.reverse();
-            let num_leafs: u64 = tree.num_leafs() as u64;
-
-            let (mut nd_auth_struct_indices, nd_sibling_indices) =
-                Self::auth_struct_and_nd_indices(num_leafs, &revealed_leaf_indices);
-            if revealed_leaf_indices.is_empty() {
-                nd_auth_struct_indices = vec![ROOT_MT_INDEX];
-            }
-
-            let nd_siblings = nd_sibling_indices
-                .iter()
-                .map(|&(l, r)| {
-                    let l: usize = l.try_into().unwrap();
-                    let r: usize = r.try_into().unwrap();
-                    (tree.node(l).unwrap(), tree.node(r).unwrap())
-                })
-                .collect_vec();
-
-            let revealed_leafs = revealed_leaf_indices
-                .iter()
-                .map(|j| tree.node((*j + num_leafs) as usize).unwrap())
-                .collect_vec();
-            let indexed_leafs = revealed_leaf_indices
-                .clone()
-                .into_iter()
-                .zip_eq(revealed_leafs)
-                .collect_vec();
-
-            let auth_struct = nd_auth_struct_indices
-                .iter()
-                .map(|node_index| tree.node(*node_index as usize).unwrap())
-                .collect_vec();
-
-            let witness = Self {
-                nd_auth_struct_indices,
-                nd_sibling_indices,
-                nd_siblings,
-            };
-
-            AuthenticatedMerkleAuthStruct {
-                auth_struct,
-                indexed_leafs,
-                witness,
-            }
         }
     }
 }
