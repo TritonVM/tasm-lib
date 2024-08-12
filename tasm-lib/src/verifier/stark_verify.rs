@@ -1,11 +1,18 @@
+use std::marker::PhantomData;
+
+use itertools::Itertools;
+use num_traits::ConstZero;
 use triton_vm::prelude::*;
 use triton_vm::proof_item::ProofItemVariant;
+use triton_vm::table::challenges::Challenges;
 use triton_vm::table::extension_table::Quotientable;
 use triton_vm::table::master_table::MasterExtTable;
 use triton_vm::table::NUM_BASE_COLUMNS;
 use triton_vm::table::NUM_EXT_COLUMNS;
 use triton_vm::table::NUM_QUOTIENT_SEGMENTS;
 use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
+use triton_vm::twenty_first::prelude::AlgebraicHasher;
+use twenty_first::prelude::MerkleTreeInclusionProof;
 
 use crate::arithmetic::bfe::primitive_root_of_unity::PrimitiveRootOfUnity;
 use crate::array::horner_evaluation::HornerEvaluation;
@@ -17,6 +24,7 @@ use crate::field;
 use crate::hashing::algebraic_hasher::sample_scalar_one::SampleScalarOne;
 use crate::hashing::algebraic_hasher::sample_scalars_static_length_dyn_malloc::SampleScalarsStaticLengthDynMalloc;
 use crate::library::Library;
+use crate::memory::encode_to_memory;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::verifier::challenges;
 use crate::verifier::challenges::shared::conventional_challenges_pointer;
@@ -31,21 +39,229 @@ use crate::verifier::master_ext_table::verify_table_rows::VerifyTableRows;
 use crate::verifier::out_of_domain_points::OodPoint;
 use crate::verifier::out_of_domain_points::OutOfDomainPoints;
 use crate::verifier::vm_proof_iter::dequeue_next_as::DequeueNextAs;
-use crate::verifier::vm_proof_iter::shared::vm_proof_iter_type;
+use crate::verifier::vm_proof_iter::new::New;
+use triton_vm::proof_stream::ProofStream;
+
+#[derive(Debug, Clone)]
+pub enum MemoryLayout {
+    Dynamic,
+    Static,
+}
 
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct StarkVerify {
     stark: Stark,
+    layout: MemoryLayout,
+}
+
+impl StarkVerify {
+    /// Prepares the non-determinism for verifying a STARK proof. Stores the proof
+    /// in the first free address in (nondeterministically initialized) memory.
+    /// Extracts the digests for traversing authentication paths and adds them to
+    /// nondeterministic digests.
+    pub fn update_nondeterminism(
+        &self,
+        nondeterminism: &mut NonDeterminism,
+        proof: Proof,
+        claim: Claim,
+    ) {
+        nondeterminism
+            .digests
+            .append(&mut self.extract_nondeterministic_digests(&proof, claim.clone()));
+
+        let first_free_address = nondeterminism
+            .ram
+            .keys()
+            .map(|&b| b.value())
+            .filter(|&b| b < (1u64 << 32))
+            .max()
+            .map(|m| BFieldElement::new(m + 1))
+            .unwrap_or(BFieldElement::ZERO);
+        encode_to_memory(&mut nondeterminism.ram, first_free_address, proof);
+    }
+
+    fn extract_nondeterministic_digests(&self, proof: &Proof, claim: Claim) -> Vec<Digest> {
+        {
+            // We do need to carefully update the sponge state because otherwise
+            // we end up sampling indices that generate different authentication
+            // paths.
+            let mut proof_stream = ProofStream::try_from(proof).unwrap();
+            let log2_padded_height = proof_stream
+                .dequeue()
+                .unwrap()
+                .try_into_log2_padded_height()
+                .unwrap();
+            proof_stream.alter_fiat_shamir_state_with(&claim);
+
+            // Base-table Merkle root
+            let _base_table_root = proof_stream
+                .dequeue()
+                .unwrap()
+                .try_into_merkle_root()
+                .unwrap();
+
+            // Extension challenge weights
+            proof_stream.sample_scalars(Challenges::SAMPLE_COUNT);
+
+            // Extension-table Merkle root
+            let _ext_mt_root = proof_stream
+                .dequeue()
+                .unwrap()
+                .try_into_merkle_root()
+                .unwrap();
+
+            // Quotient codeword weights
+            proof_stream.sample_scalars(MasterExtTable::NUM_CONSTRAINTS);
+
+            // Quotient codeword Merkle root
+            let _quotient_root = proof_stream
+                .dequeue()
+                .unwrap()
+                .try_into_merkle_root()
+                .unwrap();
+
+            // Out-of-domain point current row
+            proof_stream.sample_scalars(1);
+
+            // Five out-of-domain values
+            proof_stream
+                .dequeue()
+                .unwrap()
+                .try_into_out_of_domain_base_row()
+                .unwrap();
+            proof_stream
+                .dequeue()
+                .unwrap()
+                .try_into_out_of_domain_ext_row()
+                .unwrap();
+            proof_stream
+                .dequeue()
+                .unwrap()
+                .try_into_out_of_domain_base_row()
+                .unwrap();
+            proof_stream
+                .dequeue()
+                .unwrap()
+                .try_into_out_of_domain_ext_row()
+                .unwrap();
+            proof_stream
+                .dequeue()
+                .unwrap()
+                .try_into_out_of_domain_quot_segments()
+                .unwrap();
+
+            // `beqd_weights`
+            const NUM_DEEP_CODEWORD_COMPONENTS: usize = 3;
+            proof_stream.sample_scalars(
+                NUM_BASE_COLUMNS
+                    + NUM_EXT_COLUMNS
+                    + NUM_QUOTIENT_SEGMENTS
+                    + NUM_DEEP_CODEWORD_COMPONENTS,
+            );
+
+            fn extract_paths<R: BFieldCodec>(
+                indices: Vec<usize>,
+                leaf_preimages: Vec<R>,
+                tree_height: usize,
+                authentication_structure: Vec<Digest>,
+            ) -> Vec<Vec<Digest>> {
+                MerkleTreeInclusionProof::<Tip5> {
+                    tree_height,
+                    indexed_leafs: indices
+                        .into_iter()
+                        .zip(leaf_preimages.iter().map(Tip5::hash))
+                        .collect_vec(),
+                    authentication_structure,
+                    _hasher: PhantomData,
+                }
+                .into_authentication_paths()
+                .unwrap()
+            }
+
+            // FRI digests
+            let padded_height = 1 << log2_padded_height;
+            let fri = self.stark.derive_fri(padded_height).unwrap();
+            let fri_proof_stream = proof_stream.clone();
+            let fri_verify_result = fri.verify(&mut proof_stream).unwrap();
+            let indices = fri_verify_result.iter().map(|(i, _)| *i).collect_vec();
+            let tree_height = fri.domain.length.ilog2() as usize;
+            let fri_digests =
+                FriVerify::from(fri).extract_digests_required_for_proving(&fri_proof_stream);
+
+            // base
+            let base_table_rows = proof_stream
+                .dequeue()
+                .unwrap()
+                .try_into_master_base_table_rows()
+                .unwrap();
+            let base_authentication_structure = proof_stream
+                .dequeue()
+                .unwrap()
+                .try_into_authentication_structure()
+                .unwrap();
+            let base_tree_auth_paths = extract_paths(
+                indices.clone(),
+                base_table_rows,
+                tree_height,
+                base_authentication_structure,
+            );
+
+            // extension
+            let ext_table_rows = proof_stream
+                .dequeue()
+                .unwrap()
+                .try_into_master_ext_table_rows()
+                .unwrap();
+            let ext_authentication_structure = proof_stream
+                .dequeue()
+                .unwrap()
+                .try_into_authentication_structure()
+                .unwrap();
+            let ext_tree_auth_paths = extract_paths(
+                indices.clone(),
+                ext_table_rows,
+                tree_height,
+                ext_authentication_structure,
+            );
+
+            // quotient
+            let quot_table_rows = proof_stream
+                .dequeue()
+                .unwrap()
+                .try_into_quot_segments_elements()
+                .unwrap();
+            let quot_authentication_structure = proof_stream
+                .dequeue()
+                .unwrap()
+                .try_into_authentication_structure()
+                .unwrap();
+            let quot_tree_auth_paths = extract_paths(
+                indices,
+                quot_table_rows,
+                tree_height,
+                quot_authentication_structure,
+            );
+
+            let stark_digests = [
+                base_tree_auth_paths,
+                ext_tree_auth_paths,
+                quot_tree_auth_paths,
+            ]
+            .concat()
+            .concat();
+
+            [fri_digests, stark_digests].concat()
+        }
+    }
 }
 
 impl BasicSnippet for StarkVerify {
     fn inputs(&self) -> Vec<(DataType, String)> {
         let claim_type = DataType::StructRef(claim_type());
-        let proof_iter_type = DataType::StructRef(vm_proof_iter_type());
         vec![
             (claim_type, "claim".to_string()),
-            (proof_iter_type, "vm_proof_iter".to_string()),
+            (DataType::VoidPointer, "*proof".to_string()),
         ]
     }
 
@@ -59,6 +275,8 @@ impl BasicSnippet for StarkVerify {
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
+
+        let proof_to_vm_proof_iter = library.import(Box::new(New));
 
         let ood_curr_row_base_and_ext_value_pointer_write =
             library.kmalloc(EXTENSION_DEGREE.try_into().unwrap());
@@ -431,6 +649,11 @@ impl BasicSnippet for StarkVerify {
         triton_asm!(
             {entrypoint}:
                 sponge_init
+                // _ *claim *proof
+
+                call {proof_to_vm_proof_iter}
+                hint proof_iter = stack[0]
+
                 // _ *clm *proof_iter
 
 
@@ -577,6 +800,7 @@ impl BasicSnippet for StarkVerify {
                 call {inner_product_quotient_summands}
                 // _ *b_mr *p_iter *oodpnts *fri *e_mr *odd_brow_nxt *quot_mr *ood_erow_nxt *ood_brow_curr *ood_erow_curr [sum_of_evaluated_out_of_domain_quotient_segments] [out_of_domain_quotient_value]
 
+                break
 
                 /* Verify quotient's segments */
                 {&assert_top_two_xfes_eq}
@@ -914,16 +1138,10 @@ impl BasicSnippet for StarkVerify {
 
 #[cfg(test)]
 pub mod tests {
-    use std::collections::HashMap;
 
-    use itertools::Itertools;
-    use tests::fri::test_helpers::extract_fri_proof;
-    use triton_vm::proof_stream::ProofStream;
-
-    use crate::execute_test;
     use crate::test_helpers::maybe_write_tvm_output_to_disk;
     use crate::verifier::claim::shared::insert_claim_into_static_memory;
-    use crate::verifier::vm_proof_iter::shared::insert_default_proof_iter_into_memory;
+    use crate::{execute_test, maybe_write_debuggable_program_to_disk};
 
     use super::*;
 
@@ -938,22 +1156,21 @@ pub mod tests {
         let proof = File::open("proof.json").expect("proof file should open read only");
         let proof: Proof = serde_json::from_reader(proof).unwrap();
 
-        let (mut non_determinism, _inner_padded_height) =
-            nd_from_proof(&stark, &claim_for_proof, proof);
+        let snippet = StarkVerify {
+            stark,
+            layout: MemoryLayout::Static,
+        };
+        let mut nondeterminism = NonDeterminism::new(vec![]);
+        snippet.update_nondeterminism(&mut nondeterminism, proof, claim_for_proof.clone());
 
         let (claim_pointer, claim_size) =
-            insert_claim_into_static_memory(&mut non_determinism.ram, claim_for_proof);
+            insert_claim_into_static_memory(&mut nondeterminism.ram, claim_for_proof);
 
-        let proof_iter_pointer = BFieldElement::new(1 << 31);
-        insert_default_proof_iter_into_memory(&mut non_determinism.ram, proof_iter_pointer);
-
-        let snippet = StarkVerify {
-            stark: Stark::default(),
-        };
+        let default_proof_pointer = BFieldElement::ZERO;
 
         let mut init_stack = [
             snippet.init_stack_for_isolated_run(),
-            vec![claim_pointer, proof_iter_pointer],
+            vec![claim_pointer, default_proof_pointer],
         ]
         .concat();
         let code = snippet.link_for_isolated_run_populated_static_memory(claim_size);
@@ -962,39 +1179,46 @@ pub mod tests {
             &mut init_stack,
             snippet.stack_diff(),
             vec![],
-            non_determinism,
+            nondeterminism,
             None,
         );
     }
 
-    /// Run the verifier, and return the inner padded height for (extremely) crude benchmarking.
-    fn prop(
+    /// Run the (static) verifier, and return the cycle count and inner padded
+    /// height for crude benchmarking.
+    fn test_verify_and_report_basic_features(
         inner_nondeterminism: NonDeterminism,
         inner_program: &Program,
         inner_public_input: &[BFieldElement],
         stark: Stark,
-    ) -> (VMState, usize) {
-        let (mut non_determinism, claim_for_proof, inner_padded_height) =
-            non_determinism_claim_and_padded_height(
-                inner_program,
-                inner_public_input,
-                inner_nondeterminism,
-                &stark,
-            );
+    ) -> (usize, usize) {
+        let (mut non_determinism, claim_for_proof) = prove_and_get_non_determinism_and_claim(
+            inner_program,
+            inner_public_input,
+            inner_nondeterminism.clone(),
+            &stark,
+        );
 
         let (claim_pointer, claim_size) =
-            insert_claim_into_static_memory(&mut non_determinism.ram, claim_for_proof);
+            insert_claim_into_static_memory(&mut non_determinism.ram, claim_for_proof.clone());
 
-        let proof_iter_pointer = BFieldElement::new(1 << 31);
-        insert_default_proof_iter_into_memory(&mut non_determinism.ram, proof_iter_pointer);
+        let default_proof_pointer = bfe!(0);
 
-        let snippet = StarkVerify { stark };
+        let snippet = StarkVerify {
+            stark,
+            layout: MemoryLayout::Static,
+        };
         let mut init_stack = [
             snippet.init_stack_for_isolated_run(),
-            vec![claim_pointer, proof_iter_pointer],
+            vec![claim_pointer, default_proof_pointer],
         ]
         .concat();
         let code = snippet.link_for_isolated_run_populated_static_memory(claim_size);
+
+        let program = Program::new(&code);
+        let mut vm_state = VMState::new(&program, [].into(), non_determinism.clone());
+        vm_state.op_stack.stack = init_stack.clone();
+        maybe_write_debuggable_program_to_disk(&program, &vm_state);
 
         let final_tasm_state = execute_test(
             &code,
@@ -1005,7 +1229,12 @@ pub mod tests {
             None,
         );
 
-        (final_tasm_state, inner_padded_height)
+        let (aet, _public_output) = inner_program
+            .trace_execution((&claim_for_proof.input).into(), inner_nondeterminism)
+            .unwrap();
+        let inner_padded_height = aet.padded_height();
+
+        (final_tasm_state.cycle_count as usize, inner_padded_height)
     }
 
     #[test]
@@ -1016,7 +1245,7 @@ pub mod tests {
             println!("log2_of_fri_expansion_factor: {log2_of_fri_expansion_factor}");
             let factorial_program = factorial_program_with_io();
             let stark = Stark::new(160, log2_of_fri_expansion_factor);
-            let (final_vm_state, inner_padded_height) = prop(
+            let (cycle_count, inner_padded_height) = test_verify_and_report_basic_features(
                 NonDeterminism::default(),
                 &factorial_program,
                 &[FACTORIAL_ARGUMENT.into()],
@@ -1028,7 +1257,7 @@ pub mod tests {
                 clock cycle count: {}.\n
                 Inner padded height was: {}",
                 1 << log2_of_fri_expansion_factor,
-                final_vm_state.cycle_count,
+                cycle_count,
                 inner_padded_height,
             );
         }
@@ -1039,7 +1268,7 @@ pub mod tests {
         const FACTORIAL_ARGUMENT: u32 = 3;
         let factorial_program = factorial_program_with_io();
         let stark = Stark::default();
-        let (final_vm_state, inner_padded_height) = prop(
+        let (cycle_count, inner_padded_height) = test_verify_and_report_basic_features(
             NonDeterminism::default(),
             &factorial_program,
             &[FACTORIAL_ARGUMENT.into()],
@@ -1050,7 +1279,7 @@ pub mod tests {
             "TASM-verifier of factorial({FACTORIAL_ARGUMENT}):\n
             clock cycle count: {}.\n
             Inner padded height was: {}",
-            final_vm_state.cycle_count, inner_padded_height,
+            cycle_count, inner_padded_height,
         );
     }
 
@@ -1079,69 +1308,16 @@ pub mod tests {
         )
     }
 
-    /// Extract the nondeterminism (for verifying) from the proof, and also return
-    /// the padded height of the execution being verified.
-    pub(super) fn nd_from_proof(
-        stark: &Stark,
-        claim: &Claim,
-        proof: Proof,
-    ) -> (NonDeterminism, usize) {
-        let fri = stark.derive_fri(proof.padded_height().unwrap()).unwrap();
-        let proof_stream = ProofStream::try_from(&proof).unwrap();
-        let proof_extraction = extract_fri_proof(&proof_stream, claim, stark);
-        let tasm_lib_fri: fri::verify::FriVerify = fri.into();
-        let fri_proof_digests =
-            tasm_lib_fri.extract_digests_required_for_proving(&proof_extraction.fri_proof_stream);
-        let padded_height = proof.padded_height().unwrap();
-        let Proof(raw_proof) = proof;
-        let ram: HashMap<_, _> = raw_proof
-            .into_iter()
-            .enumerate()
-            .map(|(k, v)| (BFieldElement::new(k as u64), v))
-            .collect();
-
-        let nd_digests = [
-            fri_proof_digests,
-            proof_extraction
-                .base_tree_authentication_paths
-                .into_iter()
-                .flatten()
-                .collect_vec(),
-            proof_extraction
-                .ext_tree_authentication_paths
-                .into_iter()
-                .flatten()
-                .collect_vec(),
-            proof_extraction
-                .quot_tree_authentication_paths
-                .into_iter()
-                .flatten()
-                .collect_vec(),
-        ]
-        .concat();
-
-        (
-            NonDeterminism::default()
-                .with_ram(ram)
-                .with_digests(nd_digests),
-            padded_height,
-        )
-    }
-
-    /// Generate a proof return and the required data for the verifier, when verifying
-    /// it, input, nondeterminism, and STARK.
-    ///
     /// Prepares the caller so that the caller can call verify on a simple program
     /// execution. Specifically, given an inner program, inner public input, inner
     /// nondeterminism, and stark parameters; produce a proof and extract from it
-    /// nondeterminism for verifying it. Also returns the (inner) claim and the inner
-    /// padded height.
-    pub fn non_determinism_claim_and_padded_height(
+    /// nondeterminism for verifying it. Also returns the (inner) claim.
+    pub fn prove_and_get_non_determinism_and_claim(
         inner_program: &Program,
         inner_public_input: &[BFieldElement],
         inner_nondeterminism: NonDeterminism,
         stark: &Stark,
-    ) -> (NonDeterminism, triton_vm::proof::Claim, usize) {
+    ) -> (NonDeterminism, triton_vm::proof::Claim) {
         println!("Generating proof for non-determinism");
 
         let (aet, inner_output) = inner_program
@@ -1171,9 +1347,14 @@ pub mod tests {
 
         maybe_write_tvm_output_to_disk(stark, &claim, &proof);
 
-        let (non_determinism, inner_padded_height) = nd_from_proof(stark, &claim, proof);
+        let mut nondeterminism = NonDeterminism::new(vec![]);
+        let stark_verify = StarkVerify {
+            stark: *stark,
+            layout: MemoryLayout::Static,
+        };
+        stark_verify.update_nondeterminism(&mut nondeterminism, proof, claim.clone());
 
-        (non_determinism, claim, inner_padded_height)
+        (nondeterminism, claim)
     }
 }
 
@@ -1183,8 +1364,7 @@ mod benches {
     use std::rc::Rc;
 
     use benches::tests::factorial_program_with_io;
-    use benches::tests::nd_from_proof;
-    use benches::tests::non_determinism_claim_and_padded_height;
+    use benches::tests::prove_and_get_non_determinism_and_claim;
 
     use crate::generate_full_profile;
     use crate::linker::execute_bench;
@@ -1195,7 +1375,6 @@ mod benches {
     use crate::snippet_bencher::NamedBenchmarkResult;
     use crate::test_helpers::prepend_program_with_stack_setup;
     use crate::verifier::claim::shared::insert_claim_into_static_memory;
-    use crate::verifier::vm_proof_iter::shared::insert_default_proof_iter_into_memory;
 
     use super::*;
 
@@ -1210,20 +1389,26 @@ mod benches {
         let proof = File::open("proof.json").expect("proof file should open read only");
         let proof: Proof = serde_json::from_reader(proof).unwrap();
 
-        let (mut non_determinism, _inner_padded_height) =
-            nd_from_proof(&stark, &claim_for_proof, proof);
+        let stark_verify = StarkVerify {
+            stark,
+            layout: MemoryLayout::Static,
+        };
+        let mut nondeterminism = NonDeterminism::new(vec![]);
+        stark_verify.update_nondeterminism(&mut nondeterminism, proof, claim_for_proof.clone());
 
         let (claim_pointer, claim_size) =
-            insert_claim_into_static_memory(&mut non_determinism.ram, claim_for_proof.clone());
+            insert_claim_into_static_memory(&mut nondeterminism.ram, claim_for_proof.clone());
 
-        let proof_iter_pointer = BFieldElement::new(1 << 31);
-        insert_default_proof_iter_into_memory(&mut non_determinism.ram, proof_iter_pointer);
+        let default_proof_pointer = BFieldElement::ZERO;
 
-        let snippet = StarkVerify { stark };
+        let snippet = StarkVerify {
+            stark,
+            layout: MemoryLayout::Static,
+        };
 
         let init_stack = [
             snippet.init_stack_for_isolated_run(),
-            vec![claim_pointer, proof_iter_pointer],
+            vec![claim_pointer, default_proof_pointer],
         ]
         .concat();
         let code = snippet.link_for_isolated_run_populated_static_memory(claim_size);
@@ -1234,7 +1419,7 @@ mod benches {
             &name,
             program,
             &PublicInput::new(claim_for_proof.input),
-            &non_determinism,
+            &nondeterminism,
         );
         println!("{}", profile);
     }
@@ -1292,19 +1477,14 @@ mod benches {
         }
     }
 
-    fn benchmark_verifier(
-        factorial_argument: u32,
-        expected_inner_padded_height: usize,
-        stark: Stark,
-    ) {
+    fn benchmark_verifier(factorial_argument: u32, inner_padded_height: usize, stark: Stark) {
         let factorial_program = factorial_program_with_io();
-        let (mut non_determinism, claim_for_proof, inner_padded_height) =
-            non_determinism_claim_and_padded_height(
-                &factorial_program,
-                &[bfe!(factorial_argument)],
-                NonDeterminism::default(),
-                &stark,
-            );
+        let (mut non_determinism, claim_for_proof) = prove_and_get_non_determinism_and_claim(
+            &factorial_program,
+            &[bfe!(factorial_argument)],
+            NonDeterminism::default(),
+            &stark,
+        );
 
         let claim_pointer = BFieldElement::new(1 << 30);
         encode_to_memory(
@@ -1313,16 +1493,16 @@ mod benches {
             claim_for_proof.clone(),
         );
 
-        let proof_iter_pointer = BFieldElement::new(1 << 31);
-        insert_default_proof_iter_into_memory(&mut non_determinism.ram, proof_iter_pointer);
+        let default_proof_pointer = BFieldElement::ZERO;
 
-        assert_eq!(expected_inner_padded_height, inner_padded_height);
-
-        let snippet = StarkVerify { stark };
+        let snippet = StarkVerify {
+            stark,
+            layout: MemoryLayout::Static,
+        };
 
         let init_stack = [
             snippet.init_stack_for_isolated_run(),
-            vec![claim_pointer, proof_iter_pointer],
+            vec![claim_pointer, default_proof_pointer],
         ]
         .concat();
         let code = link_for_isolated_run(Rc::new(RefCell::new(snippet.clone())));

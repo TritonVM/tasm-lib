@@ -8,7 +8,7 @@ use crate::verifier::vm_proof_iter::shared::vm_proof_iter_type;
 pub struct New;
 
 impl New {
-    pub const FIRST_PROOF_ITEM_OFFSET: u64 = 2;
+    pub const FIRST_PROOF_ITEM_OFFSET: u64 = 4;
 }
 
 impl BasicSnippet for New {
