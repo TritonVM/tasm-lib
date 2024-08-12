@@ -4,6 +4,7 @@ use std::collections::HashSet;
 use itertools::Itertools;
 use num_traits::One;
 
+use crate::data_type::DataType;
 use crate::twenty_first::bfe;
 use crate::twenty_first::prelude::*;
 use crate::twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
@@ -11,6 +12,10 @@ use crate::twenty_first::util_types::mmr::shared_advanced::get_peak_heights;
 use crate::twenty_first::util_types::mmr::shared_basic::leaf_index_to_mt_index_and_peak_index;
 
 const ROOT_MT_INDEX: u64 = 1;
+
+pub(super) fn indexed_leaf_element_type() -> DataType {
+    DataType::Tuple(vec![DataType::U64, DataType::Digest])
+}
 
 /// A witness to facilitate the proving of the authenticity of a Merkle
 /// authentication struct.
@@ -88,6 +93,9 @@ impl AuthStructIntegrityProof {
         )
     }
 
+    /// Calculate a root from an authentication structure, indexed leafs, and
+    /// additional witness data on `self`. Crashes if the witness data is
+    /// incorrect and if the list of indexed leafs is empty.
     pub fn root_from_authentication_struct(
         &self,
         tree_height: u32,
@@ -148,10 +156,7 @@ impl AuthStructIntegrityProof {
         }
 
         // Use secret data to invert `p` back and to calculate the root
-        let mut t = auth_struct
-            .first()
-            .copied()
-            .unwrap_or_else(|| indexed_leafs.first().unwrap().1);
+        let mut t = indexed_leafs.first().unwrap().1;
         let mut t_xfe = digest_to_xfe(t, alpha);
         let mut parent_index_bfe = BFieldElement::one();
         for ((l, r), (left_index, right_index)) in self
@@ -159,17 +164,16 @@ impl AuthStructIntegrityProof {
             .iter()
             .zip_eq(self.nd_sibling_indices.clone())
         {
+            let left_index_bfe = node_index_to_bfe(left_index);
+            let right_index_bfe = node_index_to_bfe(right_index);
             assert_eq!(left_index + 1, right_index);
+            parent_index_bfe = left_index_bfe / bfe!(2);
 
             t = Tip5::hash_pair(*l, *r);
 
             let l_xfe = digest_to_xfe(*l, alpha);
             let r_xfe = digest_to_xfe(*r, alpha);
             t_xfe = digest_to_xfe(t, alpha);
-
-            let left_index_bfe = node_index_to_bfe(left_index);
-            let right_index_bfe = node_index_to_bfe(right_index);
-            parent_index_bfe = left_index_bfe / bfe!(2);
 
             let fact1 = l_xfe - beta + gamma * left_index_bfe;
             let fact2 = r_xfe - beta + gamma * right_index_bfe;
@@ -315,11 +319,8 @@ impl AuthStructIntegrityProof {
         revealed_leaf_indices.reverse();
         let num_leafs: u64 = tree.num_leafs() as u64;
 
-        let (mut nd_auth_struct_indices, nd_sibling_indices) =
+        let (nd_auth_struct_indices, nd_sibling_indices) =
             Self::auth_struct_and_nd_indices(num_leafs, &revealed_leaf_indices);
-        if revealed_leaf_indices.is_empty() {
-            nd_auth_struct_indices = vec![ROOT_MT_INDEX];
-        }
 
         let nd_siblings = nd_sibling_indices
             .iter()
@@ -598,20 +599,6 @@ mod tests {
     }
 
     #[test]
-    fn root_from_authentication_struct_tree_height_0_no_revealed_leafs() {
-        let tree_height = 0;
-        let leaf_indices = vec![];
-        let nd_auth_struct_indices = vec![1];
-        let nd_sibling_indices = vec![];
-        prop_from_merkle_tree(
-            tree_height,
-            leaf_indices,
-            nd_auth_struct_indices,
-            nd_sibling_indices,
-        )
-    }
-
-    #[test]
     fn root_from_authentication_struct_tree_height_0_1_revealed() {
         let tree_height = 0;
         let leaf_indices = vec![0];
@@ -649,20 +636,6 @@ mod tests {
             tree_height,
             leaf_indices,
             nd_auth_struct_indices,
-            nd_sibling_indices,
-        )
-    }
-
-    #[test]
-    fn root_from_authentication_struct_tree_height_2_0_revealed() {
-        let tree_height = 2;
-        let leaf_indices = vec![];
-        let auth_struct_indices = vec![1];
-        let nd_sibling_indices = vec![];
-        prop_from_merkle_tree(
-            tree_height,
-            leaf_indices,
-            auth_struct_indices,
             nd_sibling_indices,
         )
     }
