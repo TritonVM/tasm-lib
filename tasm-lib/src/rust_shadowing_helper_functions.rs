@@ -3,6 +3,7 @@ pub mod claim;
 pub mod dyn_malloc;
 pub mod input;
 pub mod list;
+pub mod memory;
 
 /// Count the number of non-leaf nodes that were inserted *prior* to
 /// the insertion of this leaf.

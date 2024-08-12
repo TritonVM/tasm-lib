@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 use num::Zero;
 use triton_vm::prelude::*;
 use twenty_first::math::other::random_elements;
@@ -42,15 +44,11 @@ pub fn read_digest_from_std_in(std_in: &[BFieldElement], std_in_cursor: &mut usi
     Digest::new(values)
 }
 
-pub fn read_digest_from_secret_in(
-    secret_in: &[BFieldElement],
-    secret_in_cursor: &mut usize,
-) -> Digest {
+pub fn consume_digest_from_secret_in(secret_in: &mut VecDeque<BFieldElement>) -> Digest {
     let mut values = [BFieldElement::zero(); Digest::LEN];
     let mut i = 0;
     while i < Digest::LEN {
-        values[Digest::LEN - 1 - i] = secret_in[*secret_in_cursor];
-        *secret_in_cursor += 1;
+        values[Digest::LEN - 1 - i] = secret_in.pop_front().unwrap();
         i += 1;
     }
 
