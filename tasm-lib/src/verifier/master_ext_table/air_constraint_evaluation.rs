@@ -35,7 +35,7 @@ impl AirConstraintEvaluation {
 
     /// The values returned here should match those used by STARK proof
     pub fn conventional_air_constraint_memory_layout() -> TasmConstraintEvaluationMemoryLayout {
-        const CURRENT_BASE_ROW_PTR: u64 = 28u64;
+        const CURRENT_BASE_ROW_PTR: u64 = 30u64;
         const BASE_ROW_SIZE: u64 = (NUM_BASE_COLUMNS * EXTENSION_DEGREE) as u64;
         const EXT_ROW_SIZE: u64 = (NUM_EXT_COLUMNS * EXTENSION_DEGREE) as u64;
         const METADATA_SIZE_PER_PROOF_ITEM_ELEMENT: u64 = 2; // 1 for discriminant, 1 for elem size
@@ -175,6 +175,7 @@ mod tests {
 
     use arbitrary::Arbitrary;
     use arbitrary::Unstructured;
+    use num_traits::ConstZero;
     use rand::distributions::Standard;
     use rand::prelude::*;
     use triton_vm::proof_stream::ProofStream;
@@ -182,8 +183,10 @@ mod tests {
 
     use crate::execute_test;
     use crate::linker::link_for_isolated_run;
+    use crate::memory::encode_to_memory;
     use crate::rust_shadowing_helper_functions::array::array_get;
     use crate::rust_shadowing_helper_functions::array::insert_as_array;
+    use crate::structure::tasm_object::decode_from_memory_with_size;
     use crate::traits::function::Function;
     use crate::traits::function::FunctionInitialState;
 
@@ -195,7 +198,7 @@ mod tests {
     }
 
     #[test]
-    fn conventional_memory_layout_agrees_with_tvm_proof() {
+    fn conventional_memory_layout_agrees_with_tvm_proof_stored_at_address_zero() {
         let program = triton_program!(halt);
         let claim = Claim::about_program(&program);
 
@@ -206,27 +209,34 @@ mod tests {
             NonDeterminism::default(),
         )
         .unwrap();
-        let Proof(proof_sequence) = proof.clone();
-        let proof_stream: ProofStream = (&proof).try_into().unwrap();
+
+        const PROOF_ADDRESS: BFieldElement = BFieldElement::ZERO;
+        let mut memory = HashMap::<BFieldElement, BFieldElement>::new();
+        let proof_stream = ProofStream::try_from(&proof).unwrap();
+        encode_to_memory(&mut memory, PROOF_ADDRESS, proof);
+
         let assumed_memory_layout =
             AirConstraintEvaluation::conventional_air_constraint_memory_layout();
         const BASE_ROW_SIZE: usize = NUM_BASE_COLUMNS * EXTENSION_DEGREE;
         const EXT_ROW_SIZE: usize = NUM_EXT_COLUMNS * EXTENSION_DEGREE;
 
-        let assumed_curr_base_row_ptr = assumed_memory_layout.curr_base_row_ptr.value() as usize;
-        let assumed_curr_base_row: [XFieldElement; NUM_BASE_COLUMNS] = *BFieldCodec::decode(
-            &proof_sequence[assumed_curr_base_row_ptr..assumed_curr_base_row_ptr + BASE_ROW_SIZE],
-        )
-        .unwrap();
+        let assumed_curr_base_row: [XFieldElement; NUM_BASE_COLUMNS] =
+            *decode_from_memory_with_size(
+                &memory,
+                assumed_memory_layout.curr_base_row_ptr,
+                BASE_ROW_SIZE,
+            )
+            .unwrap();
         let actual_curr_base_row_from_proof = proof_stream.items[4]
             .clone()
             .try_into_out_of_domain_base_row()
             .unwrap();
         assert_eq!(*actual_curr_base_row_from_proof, assumed_curr_base_row);
 
-        let assumed_curr_ext_row_ptr = assumed_memory_layout.curr_ext_row_ptr.value() as usize;
-        let assumed_curr_ext_row: [XFieldElement; NUM_EXT_COLUMNS] = *BFieldCodec::decode(
-            &proof_sequence[assumed_curr_ext_row_ptr..assumed_curr_ext_row_ptr + EXT_ROW_SIZE],
+        let assumed_curr_ext_row: [XFieldElement; NUM_EXT_COLUMNS] = *decode_from_memory_with_size(
+            &memory,
+            assumed_memory_layout.curr_ext_row_ptr,
+            EXT_ROW_SIZE,
         )
         .unwrap();
         let actual_curr_ext_row_from_proof = proof_stream.items[5]
@@ -235,20 +245,23 @@ mod tests {
             .unwrap();
         assert_eq!(*actual_curr_ext_row_from_proof, assumed_curr_ext_row);
 
-        let assumed_next_base_row_ptr = assumed_memory_layout.next_base_row_ptr.value() as usize;
-        let assumed_next_base_row: [XFieldElement; NUM_BASE_COLUMNS] = *BFieldCodec::decode(
-            &proof_sequence[assumed_next_base_row_ptr..assumed_next_base_row_ptr + BASE_ROW_SIZE],
-        )
-        .unwrap();
+        let assumed_next_base_row: [XFieldElement; NUM_BASE_COLUMNS] =
+            *decode_from_memory_with_size(
+                &memory,
+                assumed_memory_layout.next_base_row_ptr,
+                BASE_ROW_SIZE,
+            )
+            .unwrap();
         let actual_next_base_row_from_proof = proof_stream.items[6]
             .clone()
             .try_into_out_of_domain_base_row()
             .unwrap();
         assert_eq!(*actual_next_base_row_from_proof, assumed_next_base_row);
 
-        let assumed_next_ext_row_ptr = assumed_memory_layout.next_ext_row_ptr.value() as usize;
-        let assumed_next_ext_row: [XFieldElement; NUM_EXT_COLUMNS] = *BFieldCodec::decode(
-            &proof_sequence[assumed_next_ext_row_ptr..assumed_next_ext_row_ptr + EXT_ROW_SIZE],
+        let assumed_next_ext_row: [XFieldElement; NUM_EXT_COLUMNS] = *decode_from_memory_with_size(
+            &memory,
+            assumed_memory_layout.next_ext_row_ptr,
+            EXT_ROW_SIZE,
         )
         .unwrap();
         let actual_next_ext_row_from_proof = proof_stream.items[7]
