@@ -33,11 +33,13 @@ impl QuotientSummands {
 
 impl BasicSnippet for QuotientSummands {
     fn inputs(&self) -> Vec<(DataType, String)> {
-        vec![
+        let air_evaluation_arguments = self.air_constraint_evaluation.inputs();
+        let zerofiers_inverse_arguments = vec![
             (DataType::Xfe, "out_of_domain_point_curr_row".to_owned()),
             (DataType::U32, "padded_height".to_owned()),
             (DataType::Bfe, "trace_domain_generator".to_owned()),
-        ]
+        ];
+        [air_evaluation_arguments, zerofiers_inverse_arguments].concat()
     }
 
     fn outputs(&self) -> Vec<(DataType, String)> {
@@ -140,7 +142,7 @@ impl BasicSnippet for QuotientSummands {
 
         triton_asm!(
             {entrypoint}:
-                // _ [out_of_domain_point_curr_row] padded_height trace_domain_generator
+                // _ (*curr_base_row *curr_ext_row *next_bas_row *next_ext_row)? [out_of_domain_point_curr_row] padded_height trace_domain_generator
 
                 call {zerofiers_inverse}
                 // _
@@ -194,14 +196,14 @@ mod tests {
 
         let mut seed: [u8; 32] = [0u8; 32];
         thread_rng().fill_bytes(&mut seed);
-        static_snippet.prop(seed);
+        static_snippet.test_equivalence_with_host_machine(seed);
 
         thread_rng().fill_bytes(&mut seed);
-        dynamic_snippet.prop(seed);
+        dynamic_snippet.test_equivalence_with_host_machine(seed);
     }
 
     impl QuotientSummands {
-        fn prop(&self, seed: [u8; 32]) {
+        fn test_equivalence_with_host_machine(&self, seed: [u8; 32]) {
             let mut rng: StdRng = SeedableRng::from_seed(seed);
             let (air_input_values, ood_point_curr_row, padded_height, trace_domain_generator) =
                 Self::random_input_values(&mut rng);

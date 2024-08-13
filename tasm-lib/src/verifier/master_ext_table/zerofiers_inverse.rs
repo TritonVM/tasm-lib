@@ -53,7 +53,10 @@ impl ZerofiersInverse {
 impl BasicSnippet for ZerofiersInverse {
     fn inputs(&self) -> Vec<(DataType, String)> {
         vec![
-            (DataType::Xfe, "out_of_domain_point_curr_row".to_owned()),
+            (
+                DataType::Xfe,
+                "out_of_domain_point_curr_row_point".to_owned(),
+            ),
             (DataType::U32, "padded_height".to_owned()),
             (DataType::Bfe, "trace_domain_generator".to_owned()),
         ]
