@@ -246,7 +246,6 @@ mod tests {
 
     use arbitrary::Arbitrary;
     use arbitrary::Unstructured;
-    use itertools::Itertools;
     use num_traits::ConstZero;
     use rand::distributions::Standard;
     use rand::prelude::*;
@@ -399,24 +398,6 @@ mod tests {
             let mut rng: StdRng = SeedableRng::from_seed(seed);
             let input_values = Self::random_input_values(&mut rng);
 
-            println!("inputs:");
-            println!(
-                " - curr base row: [{}...]",
-                input_values.current_base_row.iter().take(3).join(",")
-            );
-            println!(
-                " - curr ext row: [{}...]",
-                input_values.current_ext_row.iter().take(3).join(",")
-            );
-            println!(
-                " - next base row: [{}...]",
-                input_values.next_base_row.iter().take(3).join(",")
-            );
-            println!(
-                " - next ext row: [{}...]",
-                input_values.next_ext_row.iter().take(3).join(",")
-            );
-
             let (tasm_result, _) = self.tasm_result(input_values.clone());
             let host_machine_result = Self::host_machine_air_constraint_evaluation(input_values);
 
@@ -493,7 +474,7 @@ mod tests {
             input_values: AirConstraintSnippetInputs,
         ) -> (HashMap<BFieldElement, BFieldElement>, Vec<BFieldElement>) {
             let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
-            let curr_base_row_ptr = dynamic_layout.challenges_ptr + bfe!(10);
+            let curr_base_row_ptr = dynamic_layout.challenges_ptr + bfe!(10000);
             let curr_ext_row_ptr = curr_base_row_ptr
                 + bfe!((input_values.current_base_row.len() * EXTENSION_DEGREE + 1) as u64);
             let next_base_row_ptr = curr_ext_row_ptr
@@ -515,11 +496,6 @@ mod tests {
                 input_values.challenges.challenges.to_vec(),
             );
 
-            println!("curr_base_row_ptr: {curr_base_row_ptr}");
-            println!("curr_ext_row_ptr: {curr_ext_row_ptr}");
-            println!("next_base_row_ptr: {next_base_row_ptr}");
-            println!("next_ext_row_ptr: {next_ext_row_ptr}");
-
             let mut stack = self.init_stack_for_isolated_run();
             stack.push(curr_base_row_ptr);
             stack.push(curr_ext_row_ptr);
@@ -538,7 +514,6 @@ mod tests {
             let result_pointer = final_state.op_stack.stack.pop().unwrap();
             let mut tasm_result: Vec<XFieldElement> = vec![];
             for i in 0..MasterExtTable::NUM_CONSTRAINTS {
-                println!("{i} / {}", MasterExtTable::NUM_CONSTRAINTS - 1);
                 tasm_result.push(XFieldElement::new(
                     array_get(result_pointer, i, &final_state.ram, EXTENSION_DEGREE)
                         .try_into()
