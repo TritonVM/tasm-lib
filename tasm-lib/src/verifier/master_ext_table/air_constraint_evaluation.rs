@@ -1,6 +1,8 @@
 use ndarray::Array1;
+use triton_vm::air::memory_layout::DynamicTasmConstraintEvaluationMemoryLayout;
 use triton_vm::air::memory_layout::IntegralMemoryLayout;
 use triton_vm::air::memory_layout::StaticTasmConstraintEvaluationMemoryLayout;
+use triton_vm::air::tasm_air_constraints::dynamic_air_constraint_evaluation_tasm;
 use triton_vm::air::tasm_air_constraints::static_air_constraint_evaluation_tasm;
 use triton_vm::prelude::*;
 use triton_vm::table::challenges::Challenges;
@@ -17,14 +19,38 @@ use crate::triton_vm::table::*;
 use crate::verifier::challenges::new_empty_input_and_output::NewEmptyInputAndOutput;
 
 #[derive(Debug, Clone, Copy)]
+pub enum MemoryLayout {
+    Dynamic(DynamicTasmConstraintEvaluationMemoryLayout),
+    Static(StaticTasmConstraintEvaluationMemoryLayout),
+}
+
+impl MemoryLayout {
+    pub fn is_integral(&self) -> bool {
+        match self {
+            MemoryLayout::Dynamic(dl) => dl.is_integral(),
+            MemoryLayout::Static(sl) => sl.is_integral(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
 pub struct AirConstraintEvaluation {
-    pub mem_layout: StaticTasmConstraintEvaluationMemoryLayout,
+    pub memory_layout: MemoryLayout,
 }
 
 impl AirConstraintEvaluation {
-    pub fn with_conventional_memory_layout() -> Self {
+    pub fn with_conventional_static_memory_layout() -> Self {
         Self {
-            mem_layout: Self::conventional_air_constraint_memory_layout(),
+            memory_layout: MemoryLayout::Static(
+                Self::conventional_static_air_constraint_memory_layout(),
+            ),
+        }
+    }
+    pub fn with_conventional_dynamic_memory_layout() -> Self {
+        Self {
+            memory_layout: MemoryLayout::Dynamic(
+                Self::conventional_dynamic_air_constraint_memory_layout(),
+            ),
         }
     }
 
@@ -35,15 +61,16 @@ impl AirConstraintEvaluation {
         }))
     }
 
-    /// The values returned here should match those used by STARK proof
-    pub fn conventional_air_constraint_memory_layout() -> StaticTasmConstraintEvaluationMemoryLayout
-    {
+    /// Generate a memory layout that agrees with the STARK proof being stored
+    /// at address 0.
+    pub fn conventional_static_air_constraint_memory_layout(
+    ) -> StaticTasmConstraintEvaluationMemoryLayout {
         const CURRENT_BASE_ROW_PTR: u64 = 30u64;
         const BASE_ROW_SIZE: u64 = (NUM_BASE_COLUMNS * EXTENSION_DEGREE) as u64;
         const EXT_ROW_SIZE: u64 = (NUM_EXT_COLUMNS * EXTENSION_DEGREE) as u64;
         const METADATA_SIZE_PER_PROOF_ITEM_ELEMENT: u64 = 2; // 1 for discriminant, 1 for elem size
         let mem_layout = StaticTasmConstraintEvaluationMemoryLayout {
-            free_mem_page_ptr: BFieldElement::new((u32::MAX as u64 - 1) * (1u64 << 32)),
+            free_mem_page_ptr: BFieldElement::new(((1u64 << 32) - 2) * (1u64 << 32)),
             curr_base_row_ptr: BFieldElement::new(CURRENT_BASE_ROW_PTR),
             curr_ext_row_ptr: BFieldElement::new(
                 CURRENT_BASE_ROW_PTR + BASE_ROW_SIZE + METADATA_SIZE_PER_PROOF_ITEM_ELEMENT,
@@ -60,6 +87,19 @@ impl AirConstraintEvaluation {
                     + EXT_ROW_SIZE
                     + 3 * METADATA_SIZE_PER_PROOF_ITEM_ELEMENT,
             ),
+            challenges_ptr: NewEmptyInputAndOutput::conventional_challenges_pointer(),
+        };
+        assert!(mem_layout.is_integral());
+
+        mem_layout
+    }
+
+    /// Generate a memory layout that allows you to store the proof anywhere in
+    /// memory.
+    pub fn conventional_dynamic_air_constraint_memory_layout(
+    ) -> DynamicTasmConstraintEvaluationMemoryLayout {
+        let mem_layout = DynamicTasmConstraintEvaluationMemoryLayout {
+            free_mem_page_ptr: BFieldElement::new(((1u64 << 32) - 2) * (1u64 << 32)),
             challenges_ptr: NewEmptyInputAndOutput::conventional_challenges_pointer(),
         };
         assert!(mem_layout.is_integral());
@@ -110,7 +150,15 @@ impl AirConstraintEvaluation {
 
 impl BasicSnippet for AirConstraintEvaluation {
     fn inputs(&self) -> Vec<(DataType, String)> {
-        vec![]
+        match self.memory_layout {
+            MemoryLayout::Dynamic(_) => vec![
+                (DataType::VoidPointer, "*curr_base_row".to_string()),
+                (DataType::VoidPointer, "*curr_extrow".to_string()),
+                (DataType::VoidPointer, "*next_base_row".to_string()),
+                (DataType::VoidPointer, "*next_ext_row".to_string()),
+            ],
+            MemoryLayout::Static(_) => vec![],
+        }
     }
 
     fn outputs(&self) -> Vec<(DataType, String)> {
@@ -119,7 +167,7 @@ impl BasicSnippet for AirConstraintEvaluation {
 
     fn entrypoint(&self) -> String {
         assert!(
-            self.mem_layout.is_integral(),
+            self.memory_layout.is_integral(),
             "Memory layout for input values for constraint evaluation must be integral"
         );
 
@@ -129,11 +177,18 @@ impl BasicSnippet for AirConstraintEvaluation {
 
     fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {
         assert!(
-            self.mem_layout.is_integral(),
+            self.memory_layout.is_integral(),
             "Memory layout for input values for constraint evaluation must be integral"
         );
 
-        let snippet_body = static_air_constraint_evaluation_tasm(self.mem_layout);
+        let snippet_body = match self.memory_layout {
+            MemoryLayout::Dynamic(dynamic_layout) => {
+                dynamic_air_constraint_evaluation_tasm(dynamic_layout)
+            }
+            MemoryLayout::Static(static_layout) => {
+                static_air_constraint_evaluation_tasm(static_layout)
+            }
+        };
 
         let entrypoint = self.entrypoint();
         let mut code = triton_asm!(
@@ -147,13 +202,26 @@ impl BasicSnippet for AirConstraintEvaluation {
 }
 
 #[cfg(test)]
-fn an_integral_but_profane_memory_layout() -> StaticTasmConstraintEvaluationMemoryLayout {
+pub fn an_integral_but_profane_static_memory_layout() -> StaticTasmConstraintEvaluationMemoryLayout
+{
     let mem_layout = StaticTasmConstraintEvaluationMemoryLayout {
         free_mem_page_ptr: BFieldElement::new((u32::MAX as u64 - 1) * (1u64 << 32)),
         curr_base_row_ptr: BFieldElement::new(1u64),
         curr_ext_row_ptr: BFieldElement::new(1u64 << 20),
         next_base_row_ptr: BFieldElement::new(1u64 << 21),
         next_ext_row_ptr: BFieldElement::new(1u64 << 22),
+        challenges_ptr: BFieldElement::new(1u64 << 23),
+    };
+    assert!(mem_layout.is_integral());
+
+    mem_layout
+}
+
+#[cfg(test)]
+pub fn an_integral_but_profane_dynamic_memory_layout() -> DynamicTasmConstraintEvaluationMemoryLayout
+{
+    let mem_layout = DynamicTasmConstraintEvaluationMemoryLayout {
+        free_mem_page_ptr: BFieldElement::new((u32::MAX as u64 - 1) * (1u64 << 32)),
         challenges_ptr: BFieldElement::new(1u64 << 23),
     };
     assert!(mem_layout.is_integral());
@@ -178,6 +246,7 @@ mod tests {
 
     use arbitrary::Arbitrary;
     use arbitrary::Unstructured;
+    use itertools::Itertools;
     use num_traits::ConstZero;
     use rand::distributions::Standard;
     use rand::prelude::*;
@@ -196,8 +265,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn conventional_air_constraint_memory_layout_is_integral() {
-        AirConstraintEvaluation::conventional_air_constraint_memory_layout();
+    fn conventional_air_constraint_memory_layouts_are_integral() {
+        AirConstraintEvaluation::conventional_static_air_constraint_memory_layout();
+        AirConstraintEvaluation::conventional_dynamic_air_constraint_memory_layout();
     }
 
     #[test]
@@ -219,7 +289,7 @@ mod tests {
         encode_to_memory(&mut memory, PROOF_ADDRESS, proof);
 
         let assumed_memory_layout =
-            AirConstraintEvaluation::conventional_air_constraint_memory_layout();
+            AirConstraintEvaluation::conventional_static_air_constraint_memory_layout();
         const BASE_ROW_SIZE: usize = NUM_BASE_COLUMNS * EXTENSION_DEGREE;
         const EXT_ROW_SIZE: usize = NUM_EXT_COLUMNS * EXTENSION_DEGREE;
 
@@ -295,35 +365,66 @@ mod tests {
             // Used for benchmarking
             let mut rng: StdRng = SeedableRng::from_seed(seed);
             let input_values = Self::random_input_values(&mut rng);
-            let memory = self.prepare_tvm_memory(input_values);
+            let (memory, stack) = match self.memory_layout {
+                MemoryLayout::Dynamic(dynamic_layout) => self
+                    .prepare_tvm_memory_and_stack_with_dynamic_layout(dynamic_layout, input_values),
+                MemoryLayout::Static(static_layout) => self
+                    .prepare_tvm_memory_and_stack_with_static_layout(static_layout, input_values),
+            };
 
-            FunctionInitialState {
-                stack: self.init_stack_for_isolated_run(),
-                memory,
-            }
+            FunctionInitialState { stack, memory }
         }
     }
 
     #[test]
     fn constraint_evaluation_test() {
-        let snippet = AirConstraintEvaluation {
-            mem_layout: an_integral_but_profane_memory_layout(),
+        let static_snippet = AirConstraintEvaluation {
+            memory_layout: MemoryLayout::Static(an_integral_but_profane_static_memory_layout()),
+        };
+
+        let dynamic_snippet = AirConstraintEvaluation {
+            memory_layout: MemoryLayout::Dynamic(an_integral_but_profane_dynamic_memory_layout()),
         };
 
         let mut seed: [u8; 32] = [0u8; 32];
         thread_rng().fill_bytes(&mut seed);
-        snippet.prop(seed);
+        static_snippet.test_equivalence_with_host_machine_evaluation(seed);
+
+        thread_rng().fill_bytes(&mut seed);
+        dynamic_snippet.test_equivalence_with_host_machine_evaluation(seed);
     }
 
     impl AirConstraintEvaluation {
-        fn prop(&self, seed: [u8; 32]) {
+        fn test_equivalence_with_host_machine_evaluation(&self, seed: [u8; 32]) {
             let mut rng: StdRng = SeedableRng::from_seed(seed);
             let input_values = Self::random_input_values(&mut rng);
+
+            println!("inputs:");
+            println!(
+                " - curr base row: [{}...]",
+                input_values.current_base_row.iter().take(3).join(",")
+            );
+            println!(
+                " - curr ext row: [{}...]",
+                input_values.current_ext_row.iter().take(3).join(",")
+            );
+            println!(
+                " - next base row: [{}...]",
+                input_values.next_base_row.iter().take(3).join(",")
+            );
+            println!(
+                " - next ext row: [{}...]",
+                input_values.next_ext_row.iter().take(3).join(",")
+            );
 
             let (tasm_result, _) = self.tasm_result(input_values.clone());
             let host_machine_result = Self::host_machine_air_constraint_evaluation(input_values);
 
             assert_eq!(tasm_result.len(), host_machine_result.len());
+            assert_eq!(
+                tasm_result.iter().copied().sum::<XFieldElement>(),
+                host_machine_result.iter().copied().sum::<XFieldElement>()
+            );
             assert_eq!(tasm_result, host_machine_result);
         }
 
@@ -351,38 +452,81 @@ mod tests {
             }
         }
 
-        pub(crate) fn prepare_tvm_memory(
+        pub(crate) fn prepare_tvm_memory_and_stack_with_static_layout(
             &self,
+            static_layout: StaticTasmConstraintEvaluationMemoryLayout,
             input_values: AirConstraintSnippetInputs,
-        ) -> HashMap<BFieldElement, BFieldElement> {
+        ) -> (HashMap<BFieldElement, BFieldElement>, Vec<BFieldElement>) {
             let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
             insert_as_array(
-                self.mem_layout.curr_base_row_ptr,
+                static_layout.curr_base_row_ptr,
                 &mut memory,
                 input_values.current_base_row,
             );
             insert_as_array(
-                self.mem_layout.curr_ext_row_ptr,
+                static_layout.curr_ext_row_ptr,
                 &mut memory,
                 input_values.current_ext_row,
             );
             insert_as_array(
-                self.mem_layout.next_base_row_ptr,
+                static_layout.next_base_row_ptr,
                 &mut memory,
                 input_values.next_base_row,
             );
             insert_as_array(
-                self.mem_layout.next_ext_row_ptr,
+                static_layout.next_ext_row_ptr,
                 &mut memory,
                 input_values.next_ext_row,
             );
             insert_as_array(
-                self.mem_layout.challenges_ptr,
+                static_layout.challenges_ptr,
                 &mut memory,
                 input_values.challenges.challenges.to_vec(),
             );
 
-            memory
+            (memory, self.init_stack_for_isolated_run())
+        }
+
+        pub(crate) fn prepare_tvm_memory_and_stack_with_dynamic_layout(
+            &self,
+            dynamic_layout: DynamicTasmConstraintEvaluationMemoryLayout,
+            input_values: AirConstraintSnippetInputs,
+        ) -> (HashMap<BFieldElement, BFieldElement>, Vec<BFieldElement>) {
+            let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
+            let curr_base_row_ptr = dynamic_layout.challenges_ptr + bfe!(10);
+            let curr_ext_row_ptr = curr_base_row_ptr
+                + bfe!((input_values.current_base_row.len() * EXTENSION_DEGREE + 1) as u64);
+            let next_base_row_ptr = curr_ext_row_ptr
+                + bfe!((input_values.current_ext_row.len() * EXTENSION_DEGREE + 2) as u64);
+            let next_ext_row_ptr = next_base_row_ptr
+                + bfe!((input_values.next_base_row.len() * EXTENSION_DEGREE + 3) as u64);
+
+            insert_as_array(
+                curr_base_row_ptr,
+                &mut memory,
+                input_values.current_base_row,
+            );
+            insert_as_array(curr_ext_row_ptr, &mut memory, input_values.current_ext_row);
+            insert_as_array(next_base_row_ptr, &mut memory, input_values.next_base_row);
+            insert_as_array(next_ext_row_ptr, &mut memory, input_values.next_ext_row);
+            insert_as_array(
+                dynamic_layout.challenges_ptr,
+                &mut memory,
+                input_values.challenges.challenges.to_vec(),
+            );
+
+            println!("curr_base_row_ptr: {curr_base_row_ptr}");
+            println!("curr_ext_row_ptr: {curr_ext_row_ptr}");
+            println!("next_base_row_ptr: {next_base_row_ptr}");
+            println!("next_ext_row_ptr: {next_ext_row_ptr}");
+
+            let mut stack = self.init_stack_for_isolated_run();
+            stack.push(curr_base_row_ptr);
+            stack.push(curr_ext_row_ptr);
+            stack.push(next_base_row_ptr);
+            stack.push(next_ext_row_ptr);
+
+            (memory, stack)
         }
 
         /// Return the pointed-to array and its address.
@@ -410,9 +554,13 @@ mod tests {
             &self,
             input_values: AirConstraintSnippetInputs,
         ) -> (Vec<XFieldElement>, BFieldElement) {
-            let init_memory = self.prepare_tvm_memory(input_values);
+            let (init_memory, stack) = match self.memory_layout {
+                MemoryLayout::Dynamic(dynamic_layout) => self
+                    .prepare_tvm_memory_and_stack_with_dynamic_layout(dynamic_layout, input_values),
+                MemoryLayout::Static(static_layout) => self
+                    .prepare_tvm_memory_and_stack_with_static_layout(static_layout, input_values),
+            };
 
-            let stack = self.init_stack_for_isolated_run();
             let code = link_for_isolated_run(Rc::new(RefCell::new(self.to_owned())));
             let final_state = execute_test(
                 &code,
@@ -438,7 +586,7 @@ mod bench {
     #[test]
     fn bench_air_constraint_evaluation() {
         ShadowedFunction::new(AirConstraintEvaluation {
-            mem_layout: an_integral_but_profane_memory_layout(),
+            memory_layout: MemoryLayout::Static(an_integral_but_profane_static_memory_layout()),
         })
         .bench();
     }

@@ -17,9 +17,16 @@ pub struct QuotientSummands {
 }
 
 impl QuotientSummands {
-    pub fn with_conventional_memory_layout() -> Self {
+    pub fn with_conventional_static_memory_layout() -> Self {
         Self {
-            air_constraint_evaluation: AirConstraintEvaluation::with_conventional_memory_layout(),
+            air_constraint_evaluation:
+                AirConstraintEvaluation::with_conventional_static_memory_layout(),
+        }
+    }
+    pub fn with_conventional_dynamic_memory_layout() -> Self {
+        Self {
+            air_constraint_evaluation:
+                AirConstraintEvaluation::with_conventional_dynamic_memory_layout(),
         }
     }
 }
@@ -176,16 +183,21 @@ mod tests {
     use crate::execute_test;
     use crate::linker::link_for_isolated_run;
     use crate::verifier::master_ext_table::air_constraint_evaluation::AirConstraintSnippetInputs;
+    use crate::verifier::master_ext_table::air_constraint_evaluation::MemoryLayout;
 
     use super::*;
 
     #[test]
     fn quotient_summands_evaluation_test() {
-        let snippet = QuotientSummands::with_conventional_memory_layout();
+        let static_snippet = QuotientSummands::with_conventional_static_memory_layout();
+        let dynamic_snippet = QuotientSummands::with_conventional_dynamic_memory_layout();
 
         let mut seed: [u8; 32] = [0u8; 32];
         thread_rng().fill_bytes(&mut seed);
-        snippet.prop(seed);
+        static_snippet.prop(seed);
+
+        thread_rng().fill_bytes(&mut seed);
+        dynamic_snippet.prop(seed);
     }
 
     impl QuotientSummands {
@@ -247,12 +259,23 @@ mod tests {
             padded_height: u32,
             trace_domain_generator: BFieldElement,
         ) -> (Vec<XFieldElement>, BFieldElement) {
-            let init_memory = self
-                .air_constraint_evaluation
-                .prepare_tvm_memory(air_input_value);
+            let (init_memory, stack) = match self.air_constraint_evaluation.memory_layout {
+                MemoryLayout::Dynamic(dynamic_layout) => self
+                    .air_constraint_evaluation
+                    .prepare_tvm_memory_and_stack_with_dynamic_layout(
+                        dynamic_layout,
+                        air_input_value,
+                    ),
+                MemoryLayout::Static(static_layout) => self
+                    .air_constraint_evaluation
+                    .prepare_tvm_memory_and_stack_with_static_layout(
+                        static_layout,
+                        air_input_value,
+                    ),
+            };
 
             let stack = [
-                self.init_stack_for_isolated_run(),
+                stack,
                 out_of_domain_point_curr_row
                     .coefficients
                     .into_iter()
@@ -350,12 +373,13 @@ mod bench {
     use crate::traits::function::FunctionInitialState;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
+    use crate::verifier::master_ext_table::air_constraint_evaluation::MemoryLayout;
 
     use super::*;
 
     #[test]
     fn bench_quotient_summands_evaluation() {
-        ShadowedFunction::new(QuotientSummands::with_conventional_memory_layout()).bench();
+        ShadowedFunction::new(QuotientSummands::with_conventional_static_memory_layout()).bench();
     }
 
     impl Function for QuotientSummands {
@@ -380,12 +404,23 @@ mod bench {
             let mut rng: StdRng = SeedableRng::from_seed(seed);
             let (air_input_values, ood_point_curr_row, padded_height, trace_domain_generator) =
                 Self::random_input_values(&mut rng);
-            let memory = self
-                .air_constraint_evaluation
-                .prepare_tvm_memory(air_input_values);
+            let (memory, stack) = match self.air_constraint_evaluation.memory_layout {
+                MemoryLayout::Dynamic(dynamic_layout) => self
+                    .air_constraint_evaluation
+                    .prepare_tvm_memory_and_stack_with_dynamic_layout(
+                        dynamic_layout,
+                        air_input_values,
+                    ),
+                MemoryLayout::Static(static_layout) => self
+                    .air_constraint_evaluation
+                    .prepare_tvm_memory_and_stack_with_static_layout(
+                        static_layout,
+                        air_input_values,
+                    ),
+            };
 
             let stack = [
-                self.init_stack_for_isolated_run(),
+                stack,
                 ood_point_curr_row
                     .coefficients
                     .into_iter()

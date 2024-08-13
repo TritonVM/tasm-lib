@@ -42,11 +42,7 @@ use crate::verifier::vm_proof_iter::dequeue_next_as::DequeueNextAs;
 use crate::verifier::vm_proof_iter::new::New;
 use triton_vm::proof_stream::ProofStream;
 
-#[derive(Debug, Clone)]
-pub enum MemoryLayout {
-    Dynamic,
-    Static,
-}
+use super::master_ext_table::air_constraint_evaluation::MemoryLayout;
 
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
@@ -362,8 +358,9 @@ impl BasicSnippet for StarkVerify {
         let domain_generator = library.import(Box::new(PrimitiveRootOfUnity));
         let sample_scalar_one = library.import(Box::new(SampleScalarOne));
         let calculate_out_of_domain_points = library.import(Box::new(OutOfDomainPoints));
-        let quotient_summands =
-            library.import(Box::new(QuotientSummands::with_conventional_memory_layout()));
+        let quotient_summands = library.import(Box::new(
+            QuotientSummands::with_conventional_static_memory_layout(),
+        ));
         let inner_product_quotient_summands = library.import(Box::new(InnerProductOfXfes {
             length: MasterExtTable::NUM_CONSTRAINTS,
         }));
@@ -1140,6 +1137,7 @@ pub mod tests {
 
     use crate::test_helpers::maybe_write_tvm_output_to_disk;
     use crate::verifier::claim::shared::insert_claim_into_static_memory;
+    use crate::verifier::master_ext_table::air_constraint_evaluation::an_integral_but_profane_static_memory_layout;
     use crate::{execute_test, maybe_write_debuggable_program_to_disk};
 
     use super::*;
@@ -1157,7 +1155,7 @@ pub mod tests {
 
         let snippet = StarkVerify {
             stark,
-            layout: MemoryLayout::Static,
+            layout: MemoryLayout::Static(an_integral_but_profane_static_memory_layout()),
         };
         let mut nondeterminism = NonDeterminism::new(vec![]);
         snippet.update_nondeterminism(&mut nondeterminism, proof, claim_for_proof.clone());
@@ -1205,7 +1203,7 @@ pub mod tests {
 
         let snippet = StarkVerify {
             stark,
-            layout: MemoryLayout::Static,
+            layout: MemoryLayout::Static(an_integral_but_profane_static_memory_layout()),
         };
         let mut init_stack = [
             snippet.init_stack_for_isolated_run(),
@@ -1349,7 +1347,7 @@ pub mod tests {
         let mut nondeterminism = NonDeterminism::new(vec![]);
         let stark_verify = StarkVerify {
             stark: *stark,
-            layout: MemoryLayout::Static,
+            layout: MemoryLayout::Static(an_integral_but_profane_static_memory_layout()),
         };
         stark_verify.update_nondeterminism(&mut nondeterminism, proof, claim.clone());
 
@@ -1374,6 +1372,7 @@ mod benches {
     use crate::snippet_bencher::NamedBenchmarkResult;
     use crate::test_helpers::prepend_program_with_stack_setup;
     use crate::verifier::claim::shared::insert_claim_into_static_memory;
+    use crate::verifier::master_ext_table::air_constraint_evaluation::an_integral_but_profane_static_memory_layout;
 
     use super::*;
 
@@ -1390,7 +1389,7 @@ mod benches {
 
         let stark_verify = StarkVerify {
             stark,
-            layout: MemoryLayout::Static,
+            layout: MemoryLayout::Static(an_integral_but_profane_static_memory_layout()),
         };
         let mut nondeterminism = NonDeterminism::new(vec![]);
         stark_verify.update_nondeterminism(&mut nondeterminism, proof, claim_for_proof.clone());
@@ -1402,7 +1401,7 @@ mod benches {
 
         let snippet = StarkVerify {
             stark,
-            layout: MemoryLayout::Static,
+            layout: MemoryLayout::Static(an_integral_but_profane_static_memory_layout()),
         };
 
         let init_stack = [
@@ -1496,7 +1495,7 @@ mod benches {
 
         let snippet = StarkVerify {
             stark,
-            layout: MemoryLayout::Static,
+            layout: MemoryLayout::Static(an_integral_but_profane_static_memory_layout()),
         };
 
         let init_stack = [

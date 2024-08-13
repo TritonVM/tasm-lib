@@ -24,9 +24,9 @@ pub struct NewEmptyInputAndOutput {
 }
 
 impl NewEmptyInputAndOutput {
+    /// By convention, the challenges are stored in the third-to-last
+    /// memory page
     pub fn conventional_challenges_pointer() -> BFieldElement {
-        // By convention, the challenges are stored in the third-to-last
-        // memory page
         BFieldElement::new(((1 << 32) - 3) * (1 << 32))
     }
 }
