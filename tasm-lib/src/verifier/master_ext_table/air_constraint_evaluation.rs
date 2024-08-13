@@ -1,10 +1,12 @@
 use ndarray::Array1;
+use triton_vm::air::memory_layout::IntegralMemoryLayout;
+use triton_vm::air::memory_layout::StaticTasmConstraintEvaluationMemoryLayout;
+use triton_vm::air::tasm_air_constraints::static_air_constraint_evaluation_tasm;
 use triton_vm::prelude::*;
 use triton_vm::table::challenges::Challenges;
 use triton_vm::table::extension_table::Evaluable;
 use triton_vm::table::extension_table::Quotientable;
 use triton_vm::table::master_table::MasterExtTable;
-use triton_vm::table::tasm_air_constraints::air_constraint_evaluation_tasm;
 use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
 use crate::data_type::ArrayType;
@@ -16,7 +18,7 @@ use crate::verifier::challenges::new_empty_input_and_output::NewEmptyInputAndOut
 
 #[derive(Debug, Clone, Copy)]
 pub struct AirConstraintEvaluation {
-    pub mem_layout: TasmConstraintEvaluationMemoryLayout,
+    pub mem_layout: StaticTasmConstraintEvaluationMemoryLayout,
 }
 
 impl AirConstraintEvaluation {
@@ -34,12 +36,13 @@ impl AirConstraintEvaluation {
     }
 
     /// The values returned here should match those used by STARK proof
-    pub fn conventional_air_constraint_memory_layout() -> TasmConstraintEvaluationMemoryLayout {
+    pub fn conventional_air_constraint_memory_layout() -> StaticTasmConstraintEvaluationMemoryLayout
+    {
         const CURRENT_BASE_ROW_PTR: u64 = 30u64;
         const BASE_ROW_SIZE: u64 = (NUM_BASE_COLUMNS * EXTENSION_DEGREE) as u64;
         const EXT_ROW_SIZE: u64 = (NUM_EXT_COLUMNS * EXTENSION_DEGREE) as u64;
         const METADATA_SIZE_PER_PROOF_ITEM_ELEMENT: u64 = 2; // 1 for discriminant, 1 for elem size
-        let mem_layout = TasmConstraintEvaluationMemoryLayout {
+        let mem_layout = StaticTasmConstraintEvaluationMemoryLayout {
             free_mem_page_ptr: BFieldElement::new((u32::MAX as u64 - 1) * (1u64 << 32)),
             curr_base_row_ptr: BFieldElement::new(CURRENT_BASE_ROW_PTR),
             curr_ext_row_ptr: BFieldElement::new(
@@ -130,7 +133,7 @@ impl BasicSnippet for AirConstraintEvaluation {
             "Memory layout for input values for constraint evaluation must be integral"
         );
 
-        let snippet_body = air_constraint_evaluation_tasm(self.mem_layout);
+        let snippet_body = static_air_constraint_evaluation_tasm(self.mem_layout);
 
         let entrypoint = self.entrypoint();
         let mut code = triton_asm!(
@@ -144,8 +147,8 @@ impl BasicSnippet for AirConstraintEvaluation {
 }
 
 #[cfg(test)]
-fn an_integral_but_profane_memory_layout() -> TasmConstraintEvaluationMemoryLayout {
-    let mem_layout = TasmConstraintEvaluationMemoryLayout {
+fn an_integral_but_profane_memory_layout() -> StaticTasmConstraintEvaluationMemoryLayout {
+    let mem_layout = StaticTasmConstraintEvaluationMemoryLayout {
         free_mem_page_ptr: BFieldElement::new((u32::MAX as u64 - 1) * (1u64 << 32)),
         curr_base_row_ptr: BFieldElement::new(1u64),
         curr_ext_row_ptr: BFieldElement::new(1u64 << 20),
