@@ -102,7 +102,7 @@ impl StarkVerify {
                 .unwrap();
 
             // Extension challenge weights
-            proof_stream.sample_scalars(Challenges::SAMPLE_COUNT);
+            let _challenges = proof_stream.sample_scalars(Challenges::SAMPLE_COUNT);
 
             // Extension-table Merkle root
             let _ext_mt_root = proof_stream
@@ -122,7 +122,7 @@ impl StarkVerify {
                 .unwrap();
 
             // Out-of-domain point current row
-            proof_stream.sample_scalars(1);
+            let _out_of_domain_point_curr_row = proof_stream.sample_scalars(1);
 
             // Five out-of-domain values
             proof_stream
@@ -694,6 +694,7 @@ impl BasicSnippet for StarkVerify {
                 call {get_challenges}
                 // _ *b_mr *p_iter padded_height *fri *challenges
 
+                // verify that the challenges are stored at the right place
                 {&verify_challenges_pointer}
                 // _ *b_mr *p_iter padded_height *fri
 
@@ -799,8 +800,6 @@ impl BasicSnippet for StarkVerify {
 
                 call {inner_product_quotient_summands}
                 // _ *b_mr *p_iter *oodpnts *fri *e_mr *odd_brow_nxt *quot_mr *ood_erow_nxt *ood_brow_curr *ood_erow_curr [sum_of_evaluated_out_of_domain_quotient_segments] [out_of_domain_quotient_value]
-
-                break
 
                 /* Verify quotient's segments */
                 {&assert_top_two_xfes_eq}
