@@ -33,7 +33,7 @@ use crate::verifier::claim::shared::claim_type;
 use crate::verifier::fri;
 use crate::verifier::fri::verify::FriSnippet;
 use crate::verifier::fri::verify::FriVerify;
-use crate::verifier::master_ext_table::quotient_summands::QuotientSummands;
+use crate::verifier::master_ext_table::divide_out_zerofiers::DivideOutZerofiers;
 use crate::verifier::master_ext_table::verify_table_rows::ColumnType;
 use crate::verifier::master_ext_table::verify_table_rows::VerifyTableRows;
 use crate::verifier::out_of_domain_points::OodPoint;
@@ -42,6 +42,7 @@ use crate::verifier::vm_proof_iter::dequeue_next_as::DequeueNextAs;
 use crate::verifier::vm_proof_iter::new::New;
 use triton_vm::proof_stream::ProofStream;
 
+use super::master_ext_table::air_constraint_evaluation::AirConstraintEvaluation;
 use super::master_ext_table::air_constraint_evaluation::MemoryLayout;
 
 #[allow(dead_code)]
@@ -52,6 +53,24 @@ pub struct StarkVerify {
 }
 
 impl StarkVerify {
+    pub fn new_with_static_layout(stark: Stark) -> Self {
+        Self {
+            stark,
+            layout: MemoryLayout::Static(
+                AirConstraintEvaluation::conventional_static_air_constraint_memory_layout(),
+            ),
+        }
+    }
+
+    pub fn new_with_dynamic_layout(stark: Stark) -> Self {
+        Self {
+            stark,
+            layout: MemoryLayout::Dynamic(
+                AirConstraintEvaluation::conventional_dynamic_air_constraint_memory_layout(),
+            ),
+        }
+    }
+
     /// Prepares the non-determinism for verifying a STARK proof. Stores the proof
     /// in the first free address in (nondeterministically initialized) memory.
     /// Extracts the digests for traversing authentication paths and adds them to
@@ -358,8 +377,8 @@ impl BasicSnippet for StarkVerify {
         let domain_generator = library.import(Box::new(PrimitiveRootOfUnity));
         let sample_scalar_one = library.import(Box::new(SampleScalarOne));
         let calculate_out_of_domain_points = library.import(Box::new(OutOfDomainPoints));
-        let quotient_summands = library.import(Box::new(
-            QuotientSummands::with_conventional_static_memory_layout(),
+        let evaluate_air_and_divide_out_zerofiers = library.import(Box::new(
+            DivideOutZerofiers::with_conventional_static_memory_layout(),
         ));
         let inner_product_quotient_summands = library.import(Box::new(InnerProductOfXfes {
             length: MasterExtTable::NUM_CONSTRAINTS,
@@ -745,7 +764,9 @@ impl BasicSnippet for StarkVerify {
                 swap 4
                 // _ *b_mr *p_iter *oodpnts *fri *e_mr *quot_cw_ws *quot_mr [out_of_domain_curr_row] padded_height dom_gen
 
-                call {quotient_summands}
+                // The next function calls the (static or dynamic) AIR evaluation
+                // and then divides out the zerofiers in-place.
+                call {evaluate_air_and_divide_out_zerofiers}
                 // _ *b_mr *p_iter *oodpnts *fri *e_mr *quot_cw_ws *quot_mr *quotient_summands
 
 

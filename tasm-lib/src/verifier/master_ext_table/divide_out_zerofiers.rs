@@ -11,12 +11,14 @@ use crate::verifier::master_ext_table::air_constraint_evaluation::AirConstraintE
 use crate::verifier::master_ext_table::zerofiers_inverse::ConstraintType;
 use crate::verifier::master_ext_table::zerofiers_inverse::ZerofiersInverse;
 
+/// Evaluates the AIR and divides out the zerofiers in-place, meaning that the
+/// results from the AIR-evaluation are overwritten.
 #[derive(Debug, Clone)]
-pub struct QuotientSummands {
+pub struct DivideOutZerofiers {
     pub air_constraint_evaluation: AirConstraintEvaluation,
 }
 
-impl QuotientSummands {
+impl DivideOutZerofiers {
     pub fn with_conventional_static_memory_layout() -> Self {
         Self {
             air_constraint_evaluation:
@@ -31,7 +33,7 @@ impl QuotientSummands {
     }
 }
 
-impl BasicSnippet for QuotientSummands {
+impl BasicSnippet for DivideOutZerofiers {
     fn inputs(&self) -> Vec<(DataType, String)> {
         let air_evaluation_arguments = self.air_constraint_evaluation.inputs();
         let zerofiers_inverse_arguments = vec![
@@ -191,8 +193,8 @@ mod tests {
 
     #[test]
     fn quotient_summands_evaluation_test() {
-        let static_snippet = QuotientSummands::with_conventional_static_memory_layout();
-        let dynamic_snippet = QuotientSummands::with_conventional_dynamic_memory_layout();
+        let static_snippet = DivideOutZerofiers::with_conventional_static_memory_layout();
+        let dynamic_snippet = DivideOutZerofiers::with_conventional_dynamic_memory_layout();
 
         let mut seed: [u8; 32] = [0u8; 32];
         thread_rng().fill_bytes(&mut seed);
@@ -202,7 +204,7 @@ mod tests {
         dynamic_snippet.test_equivalence_with_host_machine(seed);
     }
 
-    impl QuotientSummands {
+    impl DivideOutZerofiers {
         fn test_equivalence_with_host_machine(&self, seed: [u8; 32]) {
             let mut rng: StdRng = SeedableRng::from_seed(seed);
             let (air_input_values, ood_point_curr_row, padded_height, trace_domain_generator) =
@@ -381,10 +383,10 @@ mod bench {
 
     #[test]
     fn bench_quotient_summands_evaluation() {
-        ShadowedFunction::new(QuotientSummands::with_conventional_static_memory_layout()).bench();
+        ShadowedFunction::new(DivideOutZerofiers::with_conventional_static_memory_layout()).bench();
     }
 
-    impl Function for QuotientSummands {
+    impl Function for DivideOutZerofiers {
         fn rust_shadow(
             &self,
             _stack: &mut Vec<BFieldElement>,
