@@ -377,9 +377,7 @@ impl BasicSnippet for StarkVerify {
         let domain_generator = library.import(Box::new(PrimitiveRootOfUnity));
         let sample_scalar_one = library.import(Box::new(SampleScalarOne));
         let calculate_out_of_domain_points = library.import(Box::new(OutOfDomainPoints));
-        let evaluate_air_and_divide_out_zerofiers = library.import(Box::new(
-            DivideOutZerofiers::with_conventional_static_memory_layout(),
-        ));
+        let evaluate_air_and_divide_out_zerofiers = library.import(Box::new(DivideOutZerofiers));
         let inner_product_quotient_summands = library.import(Box::new(InnerProductOfXfes {
             length: MasterExtTable::NUM_CONSTRAINTS,
         }));
