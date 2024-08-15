@@ -44,7 +44,9 @@ pub fn read_digest_from_std_in(std_in: &[BFieldElement], std_in_cursor: &mut usi
     Digest::new(values)
 }
 
-pub fn consume_digest_from_secret_in(secret_in: &mut VecDeque<BFieldElement>) -> Digest {
+/// Read and consume a digest from an input source, either public input or
+/// secret input. Returns the digest.
+pub fn read_digest_from_input(secret_in: &mut VecDeque<BFieldElement>) -> Digest {
     let mut values = [BFieldElement::zero(); Digest::LEN];
     let mut i = 0;
     while i < Digest::LEN {
