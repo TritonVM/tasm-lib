@@ -333,10 +333,7 @@ impl BasicSnippet for RootFromAuthenticationStruct {
         let nd_loop = triton_asm!(
             // _ INVARIANT: _
             {nd_loop_label}:
-                divine 1
-                // _ left_index
-
-                divine 1
+                divine 2
                 // _ left_index right_index
 
                 dup 1
