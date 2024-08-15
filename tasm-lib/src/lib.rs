@@ -39,6 +39,7 @@ pub mod memory;
 pub mod mmr;
 pub mod neptune;
 pub mod other_snippets;
+mod performance_experiments;
 pub mod prelude;
 pub mod rust_shadowing_helper_functions;
 pub mod snippet_bencher;
