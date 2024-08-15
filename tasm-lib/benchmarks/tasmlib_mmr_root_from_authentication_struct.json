@@ -2,22 +2,22 @@
   {
     "name": "tasmlib_mmr_root_from_authentication_struct",
     "benchmark_result": {
-      "clock_cycle_count": 82876,
-      "hash_table_height": 5413,
-      "u32_table_height": 11235,
-      "op_stack_table_height": 128066,
-      "ram_table_height": 36514
+      "clock_cycle_count": 21218,
+      "hash_table_height": 1753,
+      "u32_table_height": 2932,
+      "op_stack_table_height": 32926,
+      "ram_table_height": 9604
     },
     "case": "CommonCase"
   },
   {
     "name": "tasmlib_mmr_root_from_authentication_struct",
     "benchmark_result": {
-      "clock_cycle_count": 171813,
-      "hash_table_height": 10747,
-      "u32_table_height": 41115,
-      "op_stack_table_height": 265630,
-      "ram_table_height": 75652
+      "clock_cycle_count": 26162,
+      "hash_table_height": 2053,
+      "u32_table_height": 1736,
+      "op_stack_table_height": 40578,
+      "ram_table_height": 11786
     },
     "case": "WorstCase"
   }

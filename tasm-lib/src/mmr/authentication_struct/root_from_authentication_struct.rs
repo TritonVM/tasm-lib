@@ -580,7 +580,7 @@ impl BasicSnippet for RootFromAuthenticationStruct {
                 pop 1
                 // _ tree_num_leafs *indexed_leafs [p] [t; 5]
 
-                /* Write t value */
+                /* Write t value (in case we're not entering the loop) */
                 push {t_digest_pointer_write}
                 write_mem {Digest::LEN}
                 pop 1
@@ -878,22 +878,57 @@ mod tests {
         ) -> ProcedureInitialState {
             let mut rng: StdRng = SeedableRng::from_seed(seed);
 
-            let (tree_height, num_revealed_leafs) = match bench_case {
+            let num_chunks = 45;
+            let num_accessible_chunk_indices = 1 << 8;
+            let (tree_height, revealed_leaf_indices) = match bench_case {
                 None => {
-                    let tree_height = rng.gen_range(0..32);
+                    let tree_height = rng.gen_range(0..62);
                     let num_leafs_in_merkle_tree = 1 << tree_height;
-                    let num_revealed_leafs = rng.gen_range(1..=min(num_leafs_in_merkle_tree, 20));
-                    (tree_height, num_revealed_leafs)
+                    let num_revealed_leafs =
+                        rng.gen_range(1..=min(num_leafs_in_merkle_tree, num_chunks));
+
+                    let revealed_leaf_indices = (0..num_revealed_leafs)
+                        .map(|_| {
+                            rng.gen_range(
+                                0..min(num_accessible_chunk_indices, num_leafs_in_merkle_tree),
+                            )
+                        })
+                        .unique()
+                        .collect_vec();
+
+                    (tree_height, revealed_leaf_indices)
                 }
-                Some(BenchmarkCase::CommonCase) => (32, 20),
-                Some(BenchmarkCase::WorstCase) => (62, 20),
+
+                // In both benchmarks, we leafs from the middle of the Merkle
+                // tree. Were we pick the indices is not so relevant for
+                // performance, as long as they're grouped together in a
+                // realistic way for the mutator set.
+                Some(BenchmarkCase::CommonCase) => {
+                    let tree_height = 32;
+                    let midpoint = 1 << (tree_height - 1);
+                    let revealed_leaf_indices = (0..num_chunks)
+                        .map(|_| rng.gen_range(midpoint..num_accessible_chunk_indices + midpoint))
+                        .unique()
+                        .collect_vec();
+
+                    (tree_height, revealed_leaf_indices)
+                }
+                Some(BenchmarkCase::WorstCase) => {
+                    let tree_height = 62;
+                    let midpoint = 1 << (tree_height - 1);
+                    let revealed_leaf_indices = (0..num_chunks)
+                        .map(|_| rng.gen_range(midpoint..num_accessible_chunk_indices + midpoint))
+                        .unique()
+                        .collect_vec();
+
+                    (tree_height, revealed_leaf_indices)
+                }
             };
             let num_leafs_in_merkle_tree = 1 << tree_height;
 
-            let revealed_leaf_indices = (0..num_revealed_leafs)
-                .map(|_| rng.gen_range(0..num_leafs_in_merkle_tree))
-                .unique()
-                .collect_vec();
+            // This picks leaf-indices with low values but I don't think that
+            // matters for performance.
+
             let num_revealed_leafs = revealed_leaf_indices.len();
             assert!(!num_revealed_leafs.is_zero());
 
