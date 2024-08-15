@@ -1,0 +1,24 @@
+[
+  {
+    "name": "tasmlib_performance_experiments_program_size_impact_100000",
+    "benchmark_result": {
+      "clock_cycle_count": 100003,
+      "hash_table_height": 120006,
+      "u32_table_height": 0,
+      "op_stack_table_height": 100000,
+      "ram_table_height": 0
+    },
+    "case": "CommonCase"
+  },
+  {
+    "name": "tasmlib_performance_experiments_program_size_impact_100000",
+    "benchmark_result": {
+      "clock_cycle_count": 100003,
+      "hash_table_height": 120006,
+      "u32_table_height": 0,
+      "op_stack_table_height": 100000,
+      "ram_table_height": 0
+    },
+    "case": "WorstCase"
+  }
+]
