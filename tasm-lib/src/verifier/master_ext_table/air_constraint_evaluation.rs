@@ -364,12 +364,7 @@ mod tests {
             // Used for benchmarking
             let mut rng: StdRng = SeedableRng::from_seed(seed);
             let input_values = Self::random_input_values(&mut rng);
-            let (memory, stack) = match self.memory_layout {
-                MemoryLayout::Dynamic(dynamic_layout) => self
-                    .prepare_tvm_memory_and_stack_with_dynamic_layout(dynamic_layout, input_values),
-                MemoryLayout::Static(static_layout) => self
-                    .prepare_tvm_memory_and_stack_with_static_layout(static_layout, input_values),
-            };
+            let (memory, stack) = self.prepare_tvm_memory_and_stack(input_values);
 
             FunctionInitialState { stack, memory }
         }
@@ -433,76 +428,74 @@ mod tests {
             }
         }
 
-        pub(crate) fn prepare_tvm_memory_and_stack_with_static_layout(
+        pub(crate) fn prepare_tvm_memory_and_stack(
             &self,
-            static_layout: StaticTasmConstraintEvaluationMemoryLayout,
             input_values: AirConstraintSnippetInputs,
         ) -> (HashMap<BFieldElement, BFieldElement>, Vec<BFieldElement>) {
-            let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
-            insert_as_array(
-                static_layout.curr_base_row_ptr,
-                &mut memory,
-                input_values.current_base_row,
-            );
-            insert_as_array(
-                static_layout.curr_ext_row_ptr,
-                &mut memory,
-                input_values.current_ext_row,
-            );
-            insert_as_array(
-                static_layout.next_base_row_ptr,
-                &mut memory,
-                input_values.next_base_row,
-            );
-            insert_as_array(
-                static_layout.next_ext_row_ptr,
-                &mut memory,
-                input_values.next_ext_row,
-            );
-            insert_as_array(
-                static_layout.challenges_ptr,
-                &mut memory,
-                input_values.challenges.challenges.to_vec(),
-            );
+            match self.memory_layout {
+                MemoryLayout::Static(static_layout) => {
+                    let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
+                    insert_as_array(
+                        static_layout.curr_base_row_ptr,
+                        &mut memory,
+                        input_values.current_base_row,
+                    );
+                    insert_as_array(
+                        static_layout.curr_ext_row_ptr,
+                        &mut memory,
+                        input_values.current_ext_row,
+                    );
+                    insert_as_array(
+                        static_layout.next_base_row_ptr,
+                        &mut memory,
+                        input_values.next_base_row,
+                    );
+                    insert_as_array(
+                        static_layout.next_ext_row_ptr,
+                        &mut memory,
+                        input_values.next_ext_row,
+                    );
+                    insert_as_array(
+                        static_layout.challenges_ptr,
+                        &mut memory,
+                        input_values.challenges.challenges.to_vec(),
+                    );
 
-            (memory, self.init_stack_for_isolated_run())
-        }
+                    (memory, self.init_stack_for_isolated_run())
+                }
+                MemoryLayout::Dynamic(dynamic_layout) => {
+                    let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
+                    let curr_base_row_ptr = dynamic_layout.challenges_ptr + bfe!(10000);
+                    let curr_ext_row_ptr = curr_base_row_ptr
+                        + bfe!((input_values.current_base_row.len() * EXTENSION_DEGREE + 1) as u64);
+                    let next_base_row_ptr = curr_ext_row_ptr
+                        + bfe!((input_values.current_ext_row.len() * EXTENSION_DEGREE + 2) as u64);
+                    let next_ext_row_ptr = next_base_row_ptr
+                        + bfe!((input_values.next_base_row.len() * EXTENSION_DEGREE + 3) as u64);
 
-        pub(crate) fn prepare_tvm_memory_and_stack_with_dynamic_layout(
-            &self,
-            dynamic_layout: DynamicTasmConstraintEvaluationMemoryLayout,
-            input_values: AirConstraintSnippetInputs,
-        ) -> (HashMap<BFieldElement, BFieldElement>, Vec<BFieldElement>) {
-            let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
-            let curr_base_row_ptr = dynamic_layout.challenges_ptr + bfe!(10000);
-            let curr_ext_row_ptr = curr_base_row_ptr
-                + bfe!((input_values.current_base_row.len() * EXTENSION_DEGREE + 1) as u64);
-            let next_base_row_ptr = curr_ext_row_ptr
-                + bfe!((input_values.current_ext_row.len() * EXTENSION_DEGREE + 2) as u64);
-            let next_ext_row_ptr = next_base_row_ptr
-                + bfe!((input_values.next_base_row.len() * EXTENSION_DEGREE + 3) as u64);
+                    insert_as_array(
+                        curr_base_row_ptr,
+                        &mut memory,
+                        input_values.current_base_row,
+                    );
+                    insert_as_array(curr_ext_row_ptr, &mut memory, input_values.current_ext_row);
+                    insert_as_array(next_base_row_ptr, &mut memory, input_values.next_base_row);
+                    insert_as_array(next_ext_row_ptr, &mut memory, input_values.next_ext_row);
+                    insert_as_array(
+                        dynamic_layout.challenges_ptr,
+                        &mut memory,
+                        input_values.challenges.challenges.to_vec(),
+                    );
 
-            insert_as_array(
-                curr_base_row_ptr,
-                &mut memory,
-                input_values.current_base_row,
-            );
-            insert_as_array(curr_ext_row_ptr, &mut memory, input_values.current_ext_row);
-            insert_as_array(next_base_row_ptr, &mut memory, input_values.next_base_row);
-            insert_as_array(next_ext_row_ptr, &mut memory, input_values.next_ext_row);
-            insert_as_array(
-                dynamic_layout.challenges_ptr,
-                &mut memory,
-                input_values.challenges.challenges.to_vec(),
-            );
+                    let mut stack = self.init_stack_for_isolated_run();
+                    stack.push(curr_base_row_ptr);
+                    stack.push(curr_ext_row_ptr);
+                    stack.push(next_base_row_ptr);
+                    stack.push(next_ext_row_ptr);
 
-            let mut stack = self.init_stack_for_isolated_run();
-            stack.push(curr_base_row_ptr);
-            stack.push(curr_ext_row_ptr);
-            stack.push(next_base_row_ptr);
-            stack.push(next_ext_row_ptr);
-
-            (memory, stack)
+                    (memory, stack)
+                }
+            }
         }
 
         /// Return the pointed-to array and its address.
@@ -529,12 +522,7 @@ mod tests {
             &self,
             input_values: AirConstraintSnippetInputs,
         ) -> (Vec<XFieldElement>, BFieldElement) {
-            let (init_memory, stack) = match self.memory_layout {
-                MemoryLayout::Dynamic(dynamic_layout) => self
-                    .prepare_tvm_memory_and_stack_with_dynamic_layout(dynamic_layout, input_values),
-                MemoryLayout::Static(static_layout) => self
-                    .prepare_tvm_memory_and_stack_with_static_layout(static_layout, input_values),
-            };
+            let (init_memory, stack) = self.prepare_tvm_memory_and_stack(input_values);
 
             let code = link_for_isolated_run(Rc::new(RefCell::new(self.to_owned())));
             let final_state = execute_test(
