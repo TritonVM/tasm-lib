@@ -175,11 +175,11 @@ impl AuthStructIntegrityProof {
             let r_xfe = digest_to_xfe(*r, alpha);
             t_xfe = digest_to_xfe(t, alpha);
 
-            let fact1 = l_xfe - beta + gamma * left_index_bfe;
-            let fact2 = r_xfe - beta + gamma * right_index_bfe;
+            let fact_left = l_xfe - beta + gamma * left_index_bfe;
+            let fact_right = r_xfe - beta + gamma * right_index_bfe;
             let fact_parent = t_xfe - beta + gamma * parent_index_bfe;
 
-            p *= fact1.inverse() * fact2.inverse() * fact_parent;
+            p *= fact_left.inverse() * fact_right.inverse() * fact_parent;
         }
 
         assert_eq!(t_xfe - beta + gamma, p);

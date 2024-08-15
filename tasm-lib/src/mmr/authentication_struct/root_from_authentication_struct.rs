@@ -340,14 +340,8 @@ impl BasicSnippet for RootFromAuthenticationStruct {
                 // _ l_index_bfe (left_index + 1 == right_index)
 
                 assert
+                hint left_index: BFieldElement = stack[0..1]
                 // _ l_index_bfe
-
-                /* Update parent index */
-                push {one_half}
-                mul
-                hint parent_index: BFieldElement = stack[0..1]
-                // _ (l_index_bfe / 2)
-                // _ parent_index <-- rename
 
                 /* Calculate parent digest, preserving child digests */
                 divine {Digest::LEN}
@@ -359,39 +353,41 @@ impl BasicSnippet for RootFromAuthenticationStruct {
                 {&dup_top_two_digests}
                 hash
                 hint t: Digest = stack[0..5]
-                // _ parent_index [right] [left] [t]
+                // _ left_index [right] [left] [t]
 
                 {&dup_top_digest}
                 push {t_digest_pointer_write}
                 write_mem {Digest::LEN}
                 pop 1
-                // _ parent_index [right] [left] [t]
+                // _ left_index [right] [left] [t]
 
                 {&digest_to_xfe}
                 hint t_xfe: XFieldElement = stack[0..3]
-                // _ parent_index [right] [left] [t_xfe]
+                // _ left_index [right] [left] [t_xfe]
 
                 push {beta_challenge_pointer_read}
                 read_mem {EXTENSION_DEGREE}
                 pop 1
                 xx_add
-                // _ parent_index [right] [left] [t_xfe - β]
+                // _ left_index [right] [left] [t_xfe - β]
 
                 dup 13
+                push {one_half}
+                mul
                 push {gamma_challenge_pointer_read}
                 read_mem {EXTENSION_DEGREE}
                 pop 1
-                // _ parent_index [right] [left] [t_xfe - β] parent_index [γ]
+                // _ left_index [right] [left] [t_xfe - β] parent_index [γ]
 
                 swap 1
                 swap 2
                 swap 3
                 xb_mul
-                // _ parent_index [right] [left] [t_xfe - β] [γ * parent_index]
+                // _ left_index [right] [left] [t_xfe - β] [γ * parent_index]
 
                 xx_add
-                // _ parent_index [right] [left] [t_xfe - β + γ * parent_index]
-                // _ parent_index [right] [left] [fact_parent] <-- rename
+                // _ left_index [right] [left] [t_xfe - β + γ * parent_index]
+                // _ left_index [right] [left] [fact_parent] <-- rename
 
                 /* Accumulate `fact_parent` into `p` */
                 push {p_pointer_read}
@@ -401,39 +397,37 @@ impl BasicSnippet for RootFromAuthenticationStruct {
                 push {p_pointer_write}
                 write_mem {EXTENSION_DEGREE}
                 pop 1
-                // _ parent_index [right] [left]
+                // _ left_index [right] [left]
 
-                /* Claculate `fact_1` */
+                /* Calculate `fact_left` */
                 {&digest_to_xfe}
-                // _ parent_index [right] [left_xfe]
+                // _ left_index [right] [left_xfe]
 
                 push {beta_challenge_pointer_read}
                 read_mem {EXTENSION_DEGREE}
                 pop 1
                 xx_add
-                // _ parent_index [right] [left_xfe - β]
+                // _ left_index [right] [left_xfe - β]
 
                 push {gamma_challenge_pointer_read}
                 read_mem {EXTENSION_DEGREE}
                 pop 1
-                // _ parent_index [right] [left_xfe - β] [γ]
+                // _ left_index [right] [left_xfe - β] [γ]
 
                 dup 11
-                push 2
-                mul
-                // _ parent_index [right] [left_xfe - β] [γ] left_index
+                // _ left_index [right] [left_xfe - β] [γ] left_index
 
                 xb_mul
-                // _ parent_index [right] [left_xfe - β] [γ * left_index]
+                // _ left_index [right] [left_xfe - β] [γ * left_index]
 
                 xx_add
-                // _ parent_index [right] [left_xfe - β + γ * left_index]
-                // _ parent_index [right] [fact_1] <-- rename
+                // _ left_index [right] [left_xfe - β + γ * left_index]
+                // _ left_index [right] [fact_left] <-- rename
 
                 x_invert
-                // _ parent_index [right] [fact_1^{-1}]
+                // _ left_index [right] [fact_left^{-1}]
 
-                /* Divide `fact_1` out of `p` */
+                /* Divide `fact_left` out of `p` */
                 push {p_pointer_read}
                 read_mem {EXTENSION_DEGREE}
                 pop 1
@@ -441,41 +435,39 @@ impl BasicSnippet for RootFromAuthenticationStruct {
                 push {p_pointer_write}
                 write_mem {EXTENSION_DEGREE}
                 pop 1
-                // _ parent_index [right]
+                // _ left_index [right]
 
-                /* Calculate `fact_2` */
+                /* Calculate `fact_right` */
                 {&digest_to_xfe}
-                // _ parent_index [right_xfe]
+                // _ left_index [right_xfe]
 
                 push {beta_challenge_pointer_read}
                 read_mem {EXTENSION_DEGREE}
                 pop 1
                 xx_add
-                // _ parent_index [right_xfe - β]
+                // _ left_index [right_xfe - β]
 
                 push {gamma_challenge_pointer_read}
                 read_mem {EXTENSION_DEGREE}
                 pop 1
-                // _ parent_index [right_xfe - β] [γ]
+                // _ left_index [right_xfe - β] [γ]
 
                 dup 6
-                push 2
-                mul
                 push 1
                 add
-                // _ parent_index [right_xfe - β] [γ] right_index
+                // _ left_index [right_xfe - β] [γ] right_index
 
                 xb_mul
-                // _ parent_index [right_xfe - β] [right_index * γ]
+                // _ left_index [right_xfe - β] [right_index * γ]
 
                 xx_add
-                // _ parent_index [right_xfe - β + right_index * γ]
-                // _ parent_index [fact_2] <-- rename
+                // _ left_index [right_xfe - β + right_index * γ]
+                // _ left_index [fact_right] <-- rename
 
                 x_invert
-                // _ parent_index [fact_2^{-1}]
+                // _ left_index [fact_right^{-1}]
 
-                /* Divide `fact_2` out of `p` */
+                /* Divide `fact_right` out of `p` */
                 push {p_pointer_read}
                 read_mem {EXTENSION_DEGREE}
                 pop 1
@@ -483,9 +475,10 @@ impl BasicSnippet for RootFromAuthenticationStruct {
                 push {p_pointer_write}
                 write_mem {EXTENSION_DEGREE}
                 pop 1
-                // _ parent_index
+                // _ left_index
 
-                push 1
+                /* Terminate loop when left_index == 2 <=> parent_index == 1 */
+                push 2
                 eq
                 skiz
                     return
