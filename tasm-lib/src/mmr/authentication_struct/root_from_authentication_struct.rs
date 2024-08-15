@@ -50,8 +50,6 @@ impl BasicSnippet for RootFromAuthenticationStruct {
             gamma_challenge_pointer_write + bfe!(EXTENSION_DEGREE as u64 - 1);
         let t_digest_pointer_write = library.kmalloc(Digest::LEN as u32);
         let t_digest_pointer_read = t_digest_pointer_write + bfe!(Digest::LEN as u64 - 1);
-        let t_xfe_pointer_write = library.kmalloc(EXTENSION_DEGREE as u32);
-        let t_xfe_pointer_read = t_xfe_pointer_write + bfe!(EXTENSION_DEGREE as u64 - 1);
         let p_pointer_write = library.kmalloc(EXTENSION_DEGREE as u32);
         let p_pointer_read = p_pointer_write + bfe!(EXTENSION_DEGREE as u64 - 1);
 
@@ -328,7 +326,6 @@ impl BasicSnippet for RootFromAuthenticationStruct {
         let nd_loop_label = format!("{entrypoint}_nd_loop");
         let dup_top_two_digests = triton_asm![dup 9; Digest::LEN * 2];
         let dup_top_digest = triton_asm![dup 4; Digest::LEN];
-        let dup_top_xfe = triton_asm![dup 2; EXTENSION_DEGREE];
         let one_half = BFieldElement::new(2).inverse();
         let nd_loop = triton_asm!(
             // _ INVARIANT: _
@@ -372,12 +369,6 @@ impl BasicSnippet for RootFromAuthenticationStruct {
 
                 {&digest_to_xfe}
                 hint t_xfe: XFieldElement = stack[0..3]
-                // _ parent_index [right] [left] [t_xfe]
-
-                {&dup_top_xfe}
-                push {t_xfe_pointer_write}
-                write_mem {EXTENSION_DEGREE}
-                pop 1
                 // _ parent_index [right] [left] [t_xfe]
 
                 push {beta_challenge_pointer_read}
@@ -580,18 +571,7 @@ impl BasicSnippet for RootFromAuthenticationStruct {
                 pop 1
                 // _ tree_num_leafs *indexed_leafs [p] [t; 5]
 
-                dup 4
-                dup 4
-                dup 4
-                dup 4
-                dup 4
-                {&digest_to_xfe}
-                // _ tree_num_leafs *indexed_leafs [p] [t; 5] [t_xfe]
-
-                /* Write t values, and `p` to static memory */
-                push {t_xfe_pointer_write}
-                write_mem {EXTENSION_DEGREE}
-                pop 1
+                /* Write t value, and `p` to static memory */
                 push {t_digest_pointer_write}
                 write_mem {Digest::LEN}
                 pop 1
@@ -619,9 +599,10 @@ impl BasicSnippet for RootFromAuthenticationStruct {
                 pop 1
                 // _ [p]
 
-                push {t_xfe_pointer_read}
-                read_mem {EXTENSION_DEGREE}
+                push {t_digest_pointer_read}
+                read_mem {Digest::LEN}
                 pop 1
+                {&digest_to_xfe}
                 // _ [p] [t_xfe]
 
                 push {beta_challenge_pointer_read}
@@ -717,7 +698,6 @@ mod tests {
                 beta: XFieldElement,
                 gamma: XFieldElement,
                 t: Digest,
-                t_xfe: XFieldElement,
                 p: XFieldElement,
             ) {
                 const ALPHA_POINTER_WRITE: BFieldElement = BFieldElement::new(BFieldElement::P - 4);
@@ -726,15 +706,12 @@ mod tests {
                     BFieldElement::new(BFieldElement::P - 10);
                 const T_DIGEST_POINTER_WRITE: BFieldElement =
                     BFieldElement::new(BFieldElement::P - 15);
-                const T_XFE_POINTER_WRITE: BFieldElement =
-                    BFieldElement::new(BFieldElement::P - 18);
-                const P_POINTER_WRITE: BFieldElement = BFieldElement::new(BFieldElement::P - 21);
+                const P_POINTER_WRITE: BFieldElement = BFieldElement::new(BFieldElement::P - 18);
 
                 write_to_memory(ALPHA_POINTER_WRITE, alpha, memory);
                 write_to_memory(BETA_POINTER_WRITE, beta, memory);
                 write_to_memory(GAMMA_POINTER_WRITE, gamma, memory);
                 write_to_memory(T_DIGEST_POINTER_WRITE, t, memory);
-                write_to_memory(T_XFE_POINTER_WRITE, t_xfe, memory);
                 write_to_memory(P_POINTER_WRITE, p, memory);
             }
 
@@ -874,7 +851,7 @@ mod tests {
                 stack.push(elem);
             }
 
-            mimic_use_of_static_memory(memory, alpha, -beta, gamma, t, t_xfe, p);
+            mimic_use_of_static_memory(memory, alpha, -beta, gamma, t, p);
 
             vec![]
         }
