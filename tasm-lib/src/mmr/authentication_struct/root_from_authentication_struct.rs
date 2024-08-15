@@ -50,8 +50,10 @@ impl BasicSnippet for RootFromAuthenticationStruct {
             gamma_challenge_pointer_write + bfe!(EXTENSION_DEGREE as u64 - 1);
         let t_digest_pointer_write = library.kmalloc(Digest::LEN as u32);
         let t_digest_pointer_read = t_digest_pointer_write + bfe!(Digest::LEN as u64 - 1);
-        let p_pointer_write = library.kmalloc(EXTENSION_DEGREE as u32);
-        let p_pointer_read = p_pointer_write + bfe!(EXTENSION_DEGREE as u64 - 1);
+        let right_digest_pointer_write = library.kmalloc(Digest::LEN as u32);
+        let right_digest_pointer_read = right_digest_pointer_write + bfe!(Digest::LEN as u64 - 1);
+        let left_digest_pointer_write = library.kmalloc(Digest::LEN as u32);
+        let left_digest_pointer_read = left_digest_pointer_write + bfe!(Digest::LEN as u64 - 1);
 
         let indexed_leaf_element_size = Self::indexed_leaf_element_type().stack_size();
         let derive_challenges = library.import(Box::new(DeriveChallenges));
@@ -324,164 +326,163 @@ impl BasicSnippet for RootFromAuthenticationStruct {
         );
 
         let nd_loop_label = format!("{entrypoint}_nd_loop");
-        let dup_top_two_digests = triton_asm![dup 9; Digest::LEN * 2];
         let dup_top_digest = triton_asm![dup 4; Digest::LEN];
         let one_half = BFieldElement::new(2).inverse();
         let nd_loop = triton_asm!(
-            // _ INVARIANT: _
+            // _ INVARIANT: _ [p]
             {nd_loop_label}:
                 divine 2
-                // _ left_index right_index
+                // _ [p] left_index right_index
 
                 dup 1
                 push 1
                 add
                 eq
-                // _ l_index_bfe (left_index + 1 == right_index)
+                // _ [p] l_index_bfe (left_index + 1 == right_index)
 
                 assert
                 hint left_index: BFieldElement = stack[0..1]
-                // _ l_index_bfe
+                // _ [p] l_index_bfe
+
+                swap 3
+                swap 2
+                swap 1
+                // _ l_index_bfe [p]
 
                 /* Calculate parent digest, preserving child digests */
                 divine {Digest::LEN}
                 hint right: Digest = stack[0..5]
+                // _ l_index_bfe [p] [right]
+
+                {&dup_top_digest}
+                push {right_digest_pointer_write}
+                write_mem {Digest::LEN}
+                pop 1
+                // _ l_index_bfe [p] [right]
+
+                {&digest_to_xfe}
+                // _ l_index_bfe [p] [right_xfe]
+
+                push {beta_challenge_pointer_read}
+                read_mem {EXTENSION_DEGREE}
+                pop 1
+                xx_add
+                // _ l_index_bfe [p] [right_xfe - β]
+
+                push {gamma_challenge_pointer_read}
+                read_mem {EXTENSION_DEGREE}
+                pop 1
+                // _ l_index_bfe [p] [right_xfe - β] [γ]
+
+                dup 9
+                push 1
+                add
+                // _ l_index_bfe [p] [right_xfe - β] [γ] r_index_bfe
+
+                xb_mul
+                // _ l_index_bfe [p] [right_xfe - β] [γ * r_index_bfe]
+
+                xx_add
+                // _ l_index_bfe [p] [t_xfe - β + γ * parent_index]
+                // _ l_index_bfe [p] [fact_right]
 
                 divine {Digest::LEN}
                 hint left: Digest = stack[0..5]
+                // _ l_index_bfe [p] [fact_right] [left]
 
-                {&dup_top_two_digests}
+                {&dup_top_digest}
+                push {left_digest_pointer_write}
+                write_mem {Digest::LEN}
+                pop 1
+                // _ l_index_bfe [p] [fact_right] [left]
+
+                {&digest_to_xfe}
+                // _ l_index_bfe [p] [fact_right] [left_xfe]
+
+                push {beta_challenge_pointer_read}
+                read_mem {EXTENSION_DEGREE}
+                pop 1
+                xx_add
+                // _ l_index_bfe [p] [fact_right] [left_xfe - β]
+
+                push {gamma_challenge_pointer_read}
+                read_mem {EXTENSION_DEGREE}
+                pop 1
+                // _ l_index_bfe [p] [fact_right] [left_xfe - β] [γ]
+
+                dup 12
+                xb_mul
+                // _ l_index_bfe [p] [fact_right] [left_xfe - β] [l_index_bfe * γ]
+
+                xx_add
+                // _ l_index_bfe [p] [fact_right] [fact_left]
+
+                xx_mul
+                // _ l_index_bfe [p] [fact_right * fact_left]
+
+                x_invert
+                // _ l_index_bfe [p] [(fact_right*fact_left)^{-1}]
+
+                xx_mul
+                // _ l_index_bfe [p * (fact_right*fact_left)^{-1}]
+
+                /* Calculate t = hash(left, right) */
+                push {right_digest_pointer_read}
+                read_mem {Digest::LEN}
+                pop 1
+                push {left_digest_pointer_read}
+                read_mem {Digest::LEN}
+                pop 1
                 hash
-                hint t: Digest = stack[0..5]
-                // _ left_index [right] [left] [t]
+                // _ l_index_bfe [p * (fact_right*fact_left)^{-1}] [t]
 
+                // TODO: We only need to store `t` here if l_index_bfe == 2
                 {&dup_top_digest}
                 push {t_digest_pointer_write}
                 write_mem {Digest::LEN}
                 pop 1
-                // _ left_index [right] [left] [t]
+                // _ l_index_bfe [p * (fact_right*fact_left)^{-1}] [t]
 
                 {&digest_to_xfe}
-                hint t_xfe: XFieldElement = stack[0..3]
-                // _ left_index [right] [left] [t_xfe]
+                // _ l_index_bfe [p * (fact_right*fact_left)^{-1}] [t_xfe]
 
                 push {beta_challenge_pointer_read}
                 read_mem {EXTENSION_DEGREE}
                 pop 1
                 xx_add
-                // _ left_index [right] [left] [t_xfe - β]
+                // _ l_index_bfe [p * (fact_right*fact_left)^{-1}] [t_xfe - β]
 
-                dup 13
-                push {one_half}
-                mul
                 push {gamma_challenge_pointer_read}
                 read_mem {EXTENSION_DEGREE}
                 pop 1
-                // _ left_index [right] [left] [t_xfe - β] parent_index [γ]
+                // _ l_index_bfe [p * (fact_right*fact_left)^{-1}] [t_xfe - β] [γ]
+
+                dup 9
+                push {one_half}
+                mul
+                // _ l_index_bfe [p * (fact_right*fact_left)^{-1}] [t_xfe - β] [γ] parent_index
+
+                xb_mul
+                // _ l_index_bfe [p * (fact_right*fact_left)^{-1}] [t_xfe - β] [parent_index * γ]
+
+                xx_add
+                // _ l_index_bfe [p * (fact_right*fact_left)^{-1}] [fact_parent]
+
+                xx_mul
+                // _ l_index_bfe [p * (fact_right*fact_left)^{-1} * fact_parent]
+                // _ l_index_bfe [p']
 
                 swap 1
                 swap 2
                 swap 3
-                xb_mul
-                // _ left_index [right] [left] [t_xfe - β] [γ * parent_index]
-
-                xx_add
-                // _ left_index [right] [left] [t_xfe - β + γ * parent_index]
-                // _ left_index [right] [left] [fact_parent] <-- rename
-
-                /* Accumulate `fact_parent` into `p` */
-                push {p_pointer_read}
-                read_mem {EXTENSION_DEGREE}
-                pop 1
-                xx_mul
-                push {p_pointer_write}
-                write_mem {EXTENSION_DEGREE}
-                pop 1
-                // _ left_index [right] [left]
-
-                /* Calculate `fact_left` */
-                {&digest_to_xfe}
-                // _ left_index [right] [left_xfe]
-
-                push {beta_challenge_pointer_read}
-                read_mem {EXTENSION_DEGREE}
-                pop 1
-                xx_add
-                // _ left_index [right] [left_xfe - β]
-
-                push {gamma_challenge_pointer_read}
-                read_mem {EXTENSION_DEGREE}
-                pop 1
-                // _ left_index [right] [left_xfe - β] [γ]
-
-                dup 11
-                // _ left_index [right] [left_xfe - β] [γ] left_index
-
-                xb_mul
-                // _ left_index [right] [left_xfe - β] [γ * left_index]
-
-                xx_add
-                // _ left_index [right] [left_xfe - β + γ * left_index]
-                // _ left_index [right] [fact_left] <-- rename
-
-                x_invert
-                // _ left_index [right] [fact_left^{-1}]
-
-                /* Divide `fact_left` out of `p` */
-                push {p_pointer_read}
-                read_mem {EXTENSION_DEGREE}
-                pop 1
-                xx_mul
-                push {p_pointer_write}
-                write_mem {EXTENSION_DEGREE}
-                pop 1
-                // _ left_index [right]
-
-                /* Calculate `fact_right` */
-                {&digest_to_xfe}
-                // _ left_index [right_xfe]
-
-                push {beta_challenge_pointer_read}
-                read_mem {EXTENSION_DEGREE}
-                pop 1
-                xx_add
-                // _ left_index [right_xfe - β]
-
-                push {gamma_challenge_pointer_read}
-                read_mem {EXTENSION_DEGREE}
-                pop 1
-                // _ left_index [right_xfe - β] [γ]
-
-                dup 6
-                push 1
-                add
-                // _ left_index [right_xfe - β] [γ] right_index
-
-                xb_mul
-                // _ left_index [right_xfe - β] [right_index * γ]
-
-                xx_add
-                // _ left_index [right_xfe - β + right_index * γ]
-                // _ left_index [fact_right] <-- rename
-
-                x_invert
-                // _ left_index [fact_right^{-1}]
-
-                /* Divide `fact_right` out of `p` */
-                push {p_pointer_read}
-                read_mem {EXTENSION_DEGREE}
-                pop 1
-                xx_mul
-                push {p_pointer_write}
-                write_mem {EXTENSION_DEGREE}
-                pop 1
-                // _ left_index
+                // _ [p'] l_index_bfe
 
                 /* Terminate loop when left_index == 2 <=> parent_index == 1 */
                 push 2
                 eq
                 skiz
                     return
+                // _ [p']
 
                 recurse
         );
@@ -564,34 +565,32 @@ impl BasicSnippet for RootFromAuthenticationStruct {
                 pop 1
                 // _ tree_num_leafs *indexed_leafs [p] [t; 5]
 
-                /* Write t value, and `p` to static memory */
+                /* Write t value */
                 push {t_digest_pointer_write}
                 write_mem {Digest::LEN}
                 pop 1
                 // _ tree_num_leafs *indexed_leafs [p]
 
-                push {p_pointer_write}
-                write_mem {EXTENSION_DEGREE}
-                pop 2
-                // _ tree_num_leafs
+                // _ tree_num_leafs *indexed_leafs p2 p1 p0
+                swap 2
+                swap 4
+                swap 1
+                swap 3
+                pop 1
+                // _ [p] tree_num_leafs
 
                 /* Call the ND-loop if tree_num_leafs != 1 */
                 push 1
                 eq
                 push 0
                 eq
-                // (tree_num_leafs != 1)
+                // [p] (tree_num_leafs != 1)
 
                 skiz
                     call {nd_loop_label}
-                // _
-
-                /* Assert that p == t_xfe - beta + gamma */
-                push {p_pointer_read}
-                read_mem {EXTENSION_DEGREE}
-                pop 1
                 // _ [p]
 
+                /* Assert that p == t_xfe - beta + gamma */
                 push {t_digest_pointer_read}
                 read_mem {Digest::LEN}
                 pop 1
@@ -691,7 +690,8 @@ mod tests {
                 beta: XFieldElement,
                 gamma: XFieldElement,
                 t: Digest,
-                p: XFieldElement,
+                right: Digest,
+                left: Digest,
             ) {
                 const ALPHA_POINTER_WRITE: BFieldElement = BFieldElement::new(BFieldElement::P - 4);
                 const BETA_POINTER_WRITE: BFieldElement = BFieldElement::new(BFieldElement::P - 7);
@@ -699,13 +699,17 @@ mod tests {
                     BFieldElement::new(BFieldElement::P - 10);
                 const T_DIGEST_POINTER_WRITE: BFieldElement =
                     BFieldElement::new(BFieldElement::P - 15);
-                const P_POINTER_WRITE: BFieldElement = BFieldElement::new(BFieldElement::P - 18);
+                const RIGHT_DIGEST_POINTER_WRITE: BFieldElement =
+                    BFieldElement::new(BFieldElement::P - 20);
+                const LEFT_DIGEST_POINTER_WRITE: BFieldElement =
+                    BFieldElement::new(BFieldElement::P - 25);
 
                 write_to_memory(ALPHA_POINTER_WRITE, alpha, memory);
                 write_to_memory(BETA_POINTER_WRITE, beta, memory);
                 write_to_memory(GAMMA_POINTER_WRITE, gamma, memory);
                 write_to_memory(T_DIGEST_POINTER_WRITE, t, memory);
-                write_to_memory(P_POINTER_WRITE, p, memory);
+                write_to_memory(RIGHT_DIGEST_POINTER_WRITE, right, memory);
+                write_to_memory(LEFT_DIGEST_POINTER_WRITE, left, memory);
             }
 
             fn accumulate_indexed_leafs(
@@ -810,6 +814,8 @@ mod tests {
             // "Unaccumulate" into `p` from secret data, and calculate Merkle root
             let mut t = indexed_leafs[0].1;
             let mut t_xfe = digest_to_xfe(t, alpha);
+            let mut right = Digest::default();
+            let mut left = Digest::default();
             if tree_num_leafs != 1 {
                 loop {
                     let left_index = individual_tokens.pop_front().unwrap();
@@ -818,8 +824,8 @@ mod tests {
 
                     let parent_index = left_index / bfe!(2);
 
-                    let right = read_digest_from_input(&mut individual_tokens);
-                    let left = read_digest_from_input(&mut individual_tokens);
+                    right = read_digest_from_input(&mut individual_tokens);
+                    left = read_digest_from_input(&mut individual_tokens);
 
                     t = Tip5::hash_pair(left, right);
                     t_xfe = digest_to_xfe(t, alpha);
@@ -844,7 +850,7 @@ mod tests {
                 stack.push(elem);
             }
 
-            mimic_use_of_static_memory(memory, alpha, -beta, gamma, t, p);
+            mimic_use_of_static_memory(memory, alpha, -beta, gamma, t, right, left);
 
             vec![]
         }
