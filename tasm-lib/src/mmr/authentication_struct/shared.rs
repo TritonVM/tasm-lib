@@ -529,7 +529,7 @@ mod tests {
     #[proptest(cases = 20)]
     fn root_from_authentication_struct_prop_test(
         #[strategy(0..12u64)] tree_height: u64,
-        #[strategy(0usize..100)] _num_revealed_leafs: usize,
+        #[strategy(1usize..100)] _num_revealed_leafs: usize,
         #[strategy(vec(0u64..1<<#tree_height, #_num_revealed_leafs))] revealed_leaf_indices: Vec<
             u64,
         >,

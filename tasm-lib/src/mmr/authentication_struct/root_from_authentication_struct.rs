@@ -668,16 +668,16 @@ mod tests {
 
     use itertools::Itertools;
     use num::One;
+    use num::Zero;
     use rand::rngs::StdRng;
     use rand::Rng;
     use rand::SeedableRng;
     use twenty_first::prelude::AlgebraicHasher;
-    use twenty_first::prelude::CpuParallel;
-    use twenty_first::prelude::MerkleTree;
     use twenty_first::prelude::Sponge;
+    use twenty_first::util_types::mmr::mmr_accumulator::util::mmra_with_mps;
 
     use crate::mmr::authentication_struct::shared::AuthStructIntegrityProof;
-    use crate::rust_shadowing_helper_functions::input::consume_digest_from_secret_in;
+    use crate::rust_shadowing_helper_functions::input::read_digest_from_input;
     use crate::rust_shadowing_helper_functions::list::list_insert;
     use crate::rust_shadowing_helper_functions::list::load_list_with_copy_elements;
     use crate::rust_shadowing_helper_functions::memory::write_to_memory;
@@ -703,7 +703,7 @@ mod tests {
             stack: &mut Vec<BFieldElement>,
             memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
             nondeterminism: &NonDeterminism,
-            public_input: &[BFieldElement],
+            _public_input: &[BFieldElement],
             sponge: &mut Option<VmHasher>,
         ) -> Vec<BFieldElement> {
             fn digest_to_xfe(digest: Digest, challenge: XFieldElement) -> XFieldElement {
@@ -741,10 +741,63 @@ mod tests {
                 write_to_memory(P_POINTER_WRITE, p, memory);
             }
 
+            fn accumulate_indexed_leafs(
+                indexed_leafs: &[(u64, Digest)],
+                alpha: XFieldElement,
+                beta: XFieldElement,
+                gamma: XFieldElement,
+                tree_num_leafs: u64,
+            ) -> XFieldElement {
+                let mut p = XFieldElement::one();
+                for (leaf_idx, leaf) in indexed_leafs.iter().copied().rev() {
+                    let leaf_idx_as_bfe = bfe!(leaf_idx);
+                    let node_idx_as_bfe = leaf_idx_as_bfe + bfe!(tree_num_leafs);
+                    let leaf_as_xfe = digest_to_xfe(leaf, alpha);
+                    let fact = leaf_as_xfe - beta + gamma * node_idx_as_bfe;
+                    p *= fact;
+                }
+
+                p
+            }
+
+            fn accumulate_auth_struct(
+                mut p: XFieldElement,
+                auth_struct: Vec<Digest>,
+                individual_tokens: &mut VecDeque<BFieldElement>,
+                alpha: XFieldElement,
+                beta: XFieldElement,
+                gamma: XFieldElement,
+            ) -> XFieldElement {
+                let mut prev = 0u64;
+
+                for auth_struct_elem in auth_struct.iter().copied().rev() {
+                    let auth_struct_elem_node_index_hi: u32 =
+                        individual_tokens.pop_front().unwrap().try_into().unwrap();
+                    let auth_struct_elem_node_index_lo: u32 =
+                        individual_tokens.pop_front().unwrap().try_into().unwrap();
+                    let auth_struct_elem_node_index = ((auth_struct_elem_node_index_hi as u64)
+                        << 32)
+                        + auth_struct_elem_node_index_lo as u64;
+                    assert!(auth_struct_elem_node_index > prev);
+                    prev = auth_struct_elem_node_index;
+
+                    let auth_struct_index_as_bfe = bfe!(auth_struct_elem_node_index);
+
+                    let auth_struct_elem_xfe = digest_to_xfe(auth_struct_elem, alpha);
+                    let fact = auth_struct_elem_xfe - beta + gamma * auth_struct_index_as_bfe;
+
+                    p *= fact;
+                }
+
+                p
+            }
+
             assert_eq!(
                 SIZE_OF_INDEXED_LEAFS_ELEMENT,
                 Self::indexed_leaf_element_type().stack_size()
             );
+
+            // declare input-arguments
             let indexed_leafs_pointer = stack.pop().unwrap();
             let auth_struct_pointer = stack.pop().unwrap();
             let tree_height: u32 = stack.pop().unwrap().try_into().unwrap();
@@ -767,8 +820,8 @@ mod tests {
                 load_list_with_copy_elements(auth_struct_pointer, memory);
             let auth_struct = auth_struct.into_iter().map(bfes_to_digest).collect_vec();
 
+            // Calculate challenges
             let sponge = sponge.as_mut().expect("sponge must be initialized");
-
             sponge.pad_and_absorb_all(&indexed_leafs.encode());
             sponge.pad_and_absorb_all(&auth_struct.encode());
 
@@ -777,37 +830,17 @@ mod tests {
             let beta = -XFieldElement::new([sponge_output[4], sponge_output[5], sponge_output[6]]);
             let gamma = XFieldElement::new([sponge_output[7], sponge_output[8], sponge_output[9]]);
 
-            let tree_num_leafs = 1 << tree_height;
-            let mut p = XFieldElement::one();
-            for (leaf_idx, leaf) in indexed_leafs.iter().copied().rev() {
-                let leaf_idx_as_bfe = bfe!(leaf_idx);
-                let node_idx_as_bfe = leaf_idx_as_bfe + bfe!(tree_num_leafs);
-                let leaf_as_xfe = digest_to_xfe(leaf, alpha);
-                let fact = leaf_as_xfe - beta + gamma * node_idx_as_bfe;
-                p *= fact;
-            }
+            let tree_num_leafs = 1u64 << tree_height;
 
-            let mut prev = 0u64;
+            // Accumulate into `p` from public data
+            let mut p =
+                accumulate_indexed_leafs(&indexed_leafs, alpha, beta, gamma, tree_num_leafs);
+
             let mut individual_tokens: VecDeque<BFieldElement> =
                 nondeterminism.individual_tokens.to_owned().into();
-            for auth_struct_elem in auth_struct.iter().copied().rev() {
-                let auth_struct_elem_node_index_hi: u32 =
-                    individual_tokens.pop_front().unwrap().try_into().unwrap();
-                let auth_struct_elem_node_index_lo: u32 =
-                    individual_tokens.pop_front().unwrap().try_into().unwrap();
-                let auth_struct_elem_node_index = ((auth_struct_elem_node_index_hi as u64) << 32)
-                    + auth_struct_elem_node_index_lo as u64;
-                assert!(auth_struct_elem_node_index > prev);
-                prev = auth_struct_elem_node_index;
+            p = accumulate_auth_struct(p, auth_struct, &mut individual_tokens, alpha, beta, gamma);
 
-                let auth_struct_index_as_bfe = bfe!(auth_struct_elem_node_index);
-
-                let auth_struct_elem_xfe = digest_to_xfe(auth_struct_elem, alpha);
-                let fact = auth_struct_elem_xfe - beta + gamma * auth_struct_index_as_bfe;
-
-                p *= fact;
-            }
-
+            // "Unaccumulate" into `p` from secret data, and calculate Merkle root
             let mut t = indexed_leafs[0].1;
             let mut t_xfe = digest_to_xfe(t, alpha);
             if tree_num_leafs != 1 {
@@ -818,8 +851,8 @@ mod tests {
 
                     let parent_index = left_index / bfe!(2);
 
-                    let right = consume_digest_from_secret_in(&mut individual_tokens);
-                    let left = consume_digest_from_secret_in(&mut individual_tokens);
+                    let right = read_digest_from_input(&mut individual_tokens);
+                    let left = read_digest_from_input(&mut individual_tokens);
 
                     t = Tip5::hash_pair(left, right);
                     t_xfe = digest_to_xfe(t, alpha);
@@ -839,6 +872,7 @@ mod tests {
 
             assert_eq!(t_xfe - beta + gamma, p);
 
+            // Return the Merkle root on the stack
             for elem in t.encode().into_iter().rev() {
                 stack.push(elem);
             }
@@ -855,37 +889,38 @@ mod tests {
         ) -> ProcedureInitialState {
             let mut rng: StdRng = SeedableRng::from_seed(seed);
 
-            // TODO: use real `mmr_authentication_struct` code here
             let tree_height = rng.gen_range(0..5);
-            let leaf_count = 1 << tree_height;
-            let num_revealed_leafs = rng.gen_range(1..=leaf_count);
+            let num_leafs_in_merkle_tree = 1 << tree_height;
+            let num_revealed_leafs = rng.gen_range(1..=num_leafs_in_merkle_tree);
             let revealed_leaf_indices = (0..num_revealed_leafs)
-                .map(|_| rng.gen_range(0..leaf_count))
+                .map(|_| rng.gen_range(0..num_leafs_in_merkle_tree))
                 .unique()
                 .collect_vec();
-            println!(
-                "revealed_leaf_indices: [{}]",
-                revealed_leaf_indices.iter().join(", ")
-            );
-            let leafs = (0..leaf_count).map(|_| rng.gen()).collect_vec();
-            let tree = MerkleTree::<Tip5>::new::<CpuParallel>(&leafs).unwrap();
+            let num_revealed_leafs = revealed_leaf_indices.len();
+            assert!(!num_revealed_leafs.is_zero());
+
+            let revealed_leafs: Vec<Digest> =
+                (0..num_revealed_leafs).map(|_| rng.gen()).collect_vec();
+            let indexed_leafs = revealed_leaf_indices
+                .into_iter()
+                .zip_eq(revealed_leafs)
+                .collect_vec();
+
+            let (mmra, mps) = mmra_with_mps(num_leafs_in_merkle_tree, indexed_leafs.clone());
+            let indexed_mmr_mps = indexed_leafs
+                .into_iter()
+                .zip_eq(mps)
+                .map(|((idx, leaf), mp)| (idx, leaf, mp))
+                .collect_vec();
+
             let mmr_authentication_struct =
-                AuthStructIntegrityProof::new_from_merkle_tree(&tree, revealed_leaf_indices);
-            println!("tree.root() = {}", tree.root());
+                AuthStructIntegrityProof::new_from_mmr_membership_proofs(&mmra, indexed_mmr_mps);
+            assert!(mmr_authentication_struct.len().is_one());
+            let mmr_authentication_struct = &mmr_authentication_struct[&0];
 
             let mut memory = HashMap::new();
             let authentication_structure_ptr = rng.gen();
             let indexed_leafs_ptr = rng.gen();
-
-            println!("leaf_count: {leaf_count}");
-            println!(
-                "indexed_leafs.len(): {}",
-                mmr_authentication_struct.indexed_leafs.len()
-            );
-            println!(
-                "authentication_structure.len(): {}",
-                mmr_authentication_struct.auth_struct.len()
-            );
 
             list_insert(
                 authentication_structure_ptr,
@@ -894,7 +929,7 @@ mod tests {
             );
             list_insert(
                 indexed_leafs_ptr,
-                mmr_authentication_struct.indexed_leafs,
+                mmr_authentication_struct.indexed_leafs.clone(),
                 &mut memory,
             );
 
@@ -908,25 +943,13 @@ mod tests {
             ]
             .concat();
 
-            println!(
-                "node indices: {}",
-                mmr_authentication_struct
-                    .witness
-                    .nd_auth_struct_indices
-                    .iter()
-                    .join(", ")
-            );
             let nd_auth_struct_indices = mmr_authentication_struct
                 .witness
                 .nd_auth_struct_indices
-                .into_iter()
+                .iter()
                 .rev()
                 .flat_map(|node_index| node_index.encode().into_iter().rev().collect_vec())
                 .collect_vec();
-            println!(
-                "nd_auth_struct_indices (encoded as BFEs): {}",
-                nd_auth_struct_indices.iter().join(", ")
-            );
             let nd_loop_nd = mmr_authentication_struct
                 .witness
                 .nd_sibling_indices
@@ -950,7 +973,6 @@ mod tests {
                 .collect_vec();
 
             let individual_tokens = [nd_auth_struct_indices, nd_loop_nd].concat();
-            println!("individual_tokens: {}", individual_tokens.iter().join(", "));
             let nondeterminism = NonDeterminism::new(individual_tokens).with_ram(memory);
             ProcedureInitialState {
                 stack,
