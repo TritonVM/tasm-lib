@@ -617,7 +617,6 @@ impl BasicSnippet for RootFromAuthenticationStruct {
                 // _
 
                 /* Assert that p == t_xfe - beta + gamma */
-                break
                 push {p_pointer_read}
                 read_mem {EXTENSION_DEGREE}
                 pop 1
@@ -663,6 +662,7 @@ impl BasicSnippet for RootFromAuthenticationStruct {
 
 #[cfg(test)]
 mod tests {
+    use std::cmp::min;
     use std::collections::HashMap;
     use std::collections::VecDeque;
 
@@ -889,9 +889,18 @@ mod tests {
         ) -> ProcedureInitialState {
             let mut rng: StdRng = SeedableRng::from_seed(seed);
 
-            let tree_height = rng.gen_range(0..5);
+            let (tree_height, num_revealed_leafs) = match bench_case {
+                None => {
+                    let tree_height = rng.gen_range(0..32);
+                    let num_leafs_in_merkle_tree = 1 << tree_height;
+                    let num_revealed_leafs = rng.gen_range(1..=min(num_leafs_in_merkle_tree, 20));
+                    (tree_height, num_revealed_leafs)
+                }
+                Some(BenchmarkCase::CommonCase) => (32, 20),
+                Some(BenchmarkCase::WorstCase) => (62, 20),
+            };
             let num_leafs_in_merkle_tree = 1 << tree_height;
-            let num_revealed_leafs = rng.gen_range(1..=num_leafs_in_merkle_tree);
+
             let revealed_leaf_indices = (0..num_revealed_leafs)
                 .map(|_| rng.gen_range(0..num_leafs_in_merkle_tree))
                 .unique()
@@ -985,5 +994,18 @@ mod tests {
         fn corner_case_initial_states(&self) -> Vec<ProcedureInitialState> {
             vec![]
         }
+    }
+}
+
+#[cfg(test)]
+mod benches {
+    use crate::traits::procedure::ShadowedProcedure;
+    use crate::traits::rust_shadow::RustShadow;
+
+    use super::*;
+
+    #[test]
+    fn bench_root_from_auth_struct() {
+        ShadowedProcedure::new(RootFromAuthenticationStruct).bench();
     }
 }
