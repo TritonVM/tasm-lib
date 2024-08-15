@@ -325,8 +325,22 @@ impl BasicSnippet for RootFromAuthenticationStruct {
                 recurse_or_return
         );
 
-        let nd_loop_label = format!("{entrypoint}_nd_loop");
         let dup_top_digest = triton_asm![dup 4; Digest::LEN];
+        let store_t_digest_in_memory_label = format!("{entrypoint}_store_t_digest");
+        let store_t_digest_in_memory = triton_asm!(
+            {store_t_digest_in_memory_label}:
+                // _ [t]
+
+                {&dup_top_digest}
+                push {t_digest_pointer_write}
+                write_mem {Digest::LEN}
+                pop 1
+                // _ [t]
+
+                return
+        );
+
+        let nd_loop_label = format!("{entrypoint}_nd_loop");
         let one_half = BFieldElement::new(2).inverse();
         let nd_loop = triton_asm!(
             // _ INVARIANT: _ [p]
@@ -436,11 +450,12 @@ impl BasicSnippet for RootFromAuthenticationStruct {
                 hash
                 // _ l_index_bfe [p * (fact_right*fact_left)^{-1}] [t]
 
-                // TODO: We only need to store `t` here if l_index_bfe == 2
-                {&dup_top_digest}
-                push {t_digest_pointer_write}
-                write_mem {Digest::LEN}
-                pop 1
+                /* Store [t] digest in memory if this is last loop iteration */
+                dup 8
+                push 2
+                eq
+                skiz
+                    call {store_t_digest_in_memory_label}
                 // _ l_index_bfe [p * (fact_right*fact_left)^{-1}] [t]
 
                 {&digest_to_xfe}
@@ -626,6 +641,7 @@ impl BasicSnippet for RootFromAuthenticationStruct {
                 {&accumulated_indexed_leafs_loop}
                 {&accumulate_auth_struct_leafs_from_public_data}
                 {&nd_loop}
+                {&store_t_digest_in_memory}
         )
     }
 }
