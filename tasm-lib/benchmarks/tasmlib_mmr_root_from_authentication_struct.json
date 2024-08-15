@@ -2,8 +2,8 @@
   {
     "name": "tasmlib_mmr_root_from_authentication_struct",
     "benchmark_result": {
-      "clock_cycle_count": 93344,
-      "hash_table_height": 5437,
+      "clock_cycle_count": 92793,
+      "hash_table_height": 5431,
       "u32_table_height": 11235,
       "op_stack_table_height": 140194,
       "ram_table_height": 39822
@@ -13,8 +13,8 @@
   {
     "name": "tasmlib_mmr_root_from_authentication_struct",
     "benchmark_result": {
-      "clock_cycle_count": 193548,
-      "hash_table_height": 10771,
+      "clock_cycle_count": 192404,
+      "hash_table_height": 10765,
       "u32_table_height": 41115,
       "op_stack_table_height": 290804,
       "ram_table_height": 82518
