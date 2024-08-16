@@ -19,7 +19,7 @@ use crate::traits::deprecated_snippet::DeprecatedSnippet;
 const STATIC_MEMORY_FIRST_ADDRESS_AS_U64: u64 = BFieldElement::MAX - 1;
 pub const STATIC_MEMORY_FIRST_ADDRESS: BFieldElement =
     BFieldElement::new(STATIC_MEMORY_FIRST_ADDRESS_AS_U64);
-const STATIC_MEMORY_LAST_ADDRESS: BFieldElement =
+pub const STATIC_MEMORY_LAST_ADDRESS: BFieldElement =
     BFieldElement::new(STATIC_MEMORY_FIRST_ADDRESS_AS_U64 - u32::MAX as u64);
 
 /// Represents a set of imports for a single Program or Snippet, and moreover tracks some data used
