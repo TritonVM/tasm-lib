@@ -14,8 +14,8 @@ Please place code in the appropriate directories, or create them if non-existent
 ### Memory
 Triton-VM has $P = 2^{64} - 2^{32} + 1$ number of words in its RAM, where each word is a prime field element in the prime $P$, colloquially called "0xfoi" due to its hexadecimal representation. RAM can be initialized at startup. The following memory conventions are followed in all snippets:
 - The address region $[0, 2^{32})$ is reserved for initialized memory
-- The address region $[2^{32}, 2^{64} - 2^{32} + 1)$ is used for dynamically allocated memory, memory that was allocated at runtime. The address $-1$ handles the state of the dynamic allocator
-- Statically allocated memory, which is reserved by snippets and compiled code, starts at address $-2$ and grows downwards. Note that $-1 = 2^{64} - 2^{32}$. We don't believe that these memory ranges can overlap in any realistic set of programs, as the memory allocator always gives exactly ${2^{32}}$ words at a time, so a program overwriting statically allocated memory would need to run for at least $2^{32}$ cycles.
+- The address region $[2^{32}, 2^{63})$ is used for dynamically allocated memory, memory that was allocated at runtime. The address $-1$ handles the state of the dynamic allocator
+- Statically allocated memory, which is reserved by snippets and compiled code, starts at address $-2$ and grows downwards. Note that $-1 = 2^{64} - 2^{32}$. We don't believe that these memory ranges can overlap in any realistic set of programs, as the dynamic memory allocator always gives exactly ${2^{32}}$ words at a time, so a program overwriting statically allocated memory would need to run for at least $2^{32}$ cycles.
 
 ### U64
 A `u64` type is stored on the stack as two `u32` elements. Triton VM provides native support for `u32`. A `u64` is stored with the least significant part on top of the stack and the most significant part below it. So if the least significant part is `st0`, then the most significant part is stored in `st1`.
