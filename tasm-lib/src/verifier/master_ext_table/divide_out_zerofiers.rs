@@ -34,7 +34,7 @@ impl BasicSnippet for DivideOutZerofiers {
     }
 
     fn entrypoint(&self) -> String {
-        "tasmlib_verifier_deep_rows_divide_out_zerofiers".to_owned()
+        "tasmlib_verifier_master_ext_table_divide_out_zerofiers".to_owned()
     }
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {

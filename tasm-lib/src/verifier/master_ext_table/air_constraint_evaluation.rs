@@ -80,6 +80,13 @@ impl MemoryLayout {
             MemoryLayout::Static(sl) => sl.is_integral(),
         }
     }
+
+    pub fn label_friendly_name(&self) -> &str {
+        match self {
+            MemoryLayout::Dynamic(_) => "dynamic",
+            MemoryLayout::Static(_) => "static",
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
