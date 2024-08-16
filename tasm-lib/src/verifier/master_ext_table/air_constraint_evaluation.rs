@@ -84,30 +84,34 @@ impl MemoryLayout {
         // D: cannot have overlapping regions
 
         // Notice that it's allowed to point to ND memory, $[0, 2^{32})$.
-
-        let kmalloc_region = Library::kmalloc_memory_region();
-        let dyn_malloc_region = DynMalloc::memory_region();
         let memory_regions = match self {
             MemoryLayout::Dynamic(dl) => dl.memory_regions(),
             MemoryLayout::Static(sl) => sl.memory_regions(),
         };
 
-        let a = memory_regions
+        let kmalloc_region = Library::kmalloc_memory_region();
+        let kmalloc_disjoint = memory_regions
             .iter()
             .all(|mr| mr.disjoint_from(&kmalloc_region));
-        let b = memory_regions
+
+        let dyn_malloc_region = DynMalloc::memory_region();
+        let dyn_malloc_disjoint = memory_regions
             .iter()
             .all(|mr| mr.disjoint_from(&dyn_malloc_region));
-        let c = memory_regions
+
+        let dyn_malloc_state_disjoint = memory_regions
             .iter()
             .all(|mr| !mr.contains_address(DYN_MALLOC_ADDRESS));
 
-        let d = match self {
+        let internally_consistent = match self {
             MemoryLayout::Dynamic(dl) => dl.is_integral(),
             MemoryLayout::Static(sl) => sl.is_integral(),
         };
 
-        a && b && c && d
+        kmalloc_disjoint
+            && dyn_malloc_disjoint
+            && dyn_malloc_state_disjoint
+            && internally_consistent
     }
 
     pub fn label_friendly_name(&self) -> &str {
@@ -304,6 +308,7 @@ mod tests {
     use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
     use crate::execute_test;
+    use crate::library::STATIC_MEMORY_LAST_ADDRESS;
     use crate::linker::link_for_isolated_run;
     use crate::memory::encode_to_memory;
     use crate::rust_shadowing_helper_functions::array::array_get;
@@ -318,6 +323,45 @@ mod tests {
     fn conventional_air_constraint_memory_layouts_are_integral() {
         assert!(MemoryLayout::conventional_static().is_integral());
         assert!(MemoryLayout::conventional_dynamic().is_integral());
+    }
+
+    #[test]
+    fn disallow_using_kmalloc_region() {
+        let mem_layout = MemoryLayout::Dynamic(DynamicTasmConstraintEvaluationMemoryLayout {
+            free_mem_page_ptr: STATIC_MEMORY_LAST_ADDRESS,
+            challenges_ptr: BFieldElement::new(1u64 << 30),
+        });
+        assert!(!mem_layout.is_integral());
+    }
+
+    #[test]
+    fn disallow_using_dynmalloc_region() {
+        let mem_layout = MemoryLayout::Dynamic(DynamicTasmConstraintEvaluationMemoryLayout {
+            free_mem_page_ptr: BFieldElement::new(42 * (1u64 << 32)),
+            challenges_ptr: BFieldElement::new(1u64 << 30),
+        });
+        assert!(!mem_layout.is_integral());
+    }
+
+    #[test]
+    fn disallow_using_dynmalloc_state() {
+        let mem_layout = MemoryLayout::Dynamic(DynamicTasmConstraintEvaluationMemoryLayout {
+            free_mem_page_ptr: BFieldElement::new(42 * (1u64 << 32)),
+            challenges_ptr: BFieldElement::new(BFieldElement::MAX),
+        });
+        assert!(!mem_layout.is_integral());
+    }
+
+    #[test]
+    fn disallow_overlapping_regions() {
+        let mut dyn_memory_layout = DynamicTasmConstraintEvaluationMemoryLayout {
+            free_mem_page_ptr: BFieldElement::new((u32::MAX as u64 - 100) * (1u64 << 32)),
+            challenges_ptr: conventional_challenges_pointer(),
+        };
+        assert!(MemoryLayout::Dynamic(dyn_memory_layout).is_integral());
+
+        dyn_memory_layout.challenges_ptr = dyn_memory_layout.free_mem_page_ptr;
+        assert!(!MemoryLayout::Dynamic(dyn_memory_layout).is_integral());
     }
 
     #[test]
