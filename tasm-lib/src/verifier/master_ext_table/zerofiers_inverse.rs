@@ -67,7 +67,7 @@ impl BasicSnippet for ZerofiersInverse {
     }
 
     fn entrypoint(&self) -> String {
-        "tasmlib_verifier_master_ext_table_zerofiers".to_owned()
+        "tasmlib_verifier_master_ext_table_zerofiers_inverse".to_owned()
     }
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
