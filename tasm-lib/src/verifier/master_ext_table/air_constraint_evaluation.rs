@@ -16,7 +16,7 @@ use crate::data_type::DataType;
 use crate::library::Library;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::triton_vm::table::*;
-use crate::verifier::challenges::new_empty_input_and_output::NewEmptyInputAndOutput;
+use crate::verifier::challenges::shared::conventional_challenges_pointer;
 
 #[derive(Debug, Clone, Copy)]
 pub enum MemoryLayout {
@@ -25,46 +25,7 @@ pub enum MemoryLayout {
 }
 
 impl MemoryLayout {
-    pub fn is_integral(&self) -> bool {
-        match self {
-            MemoryLayout::Dynamic(dl) => dl.is_integral(),
-            MemoryLayout::Static(sl) => sl.is_integral(),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct AirConstraintEvaluation {
-    pub memory_layout: MemoryLayout,
-}
-
-impl AirConstraintEvaluation {
-    pub fn with_conventional_static_memory_layout() -> Self {
-        Self {
-            memory_layout: MemoryLayout::Static(
-                Self::conventional_static_air_constraint_memory_layout(),
-            ),
-        }
-    }
-    pub fn with_conventional_dynamic_memory_layout() -> Self {
-        Self {
-            memory_layout: MemoryLayout::Dynamic(
-                Self::conventional_dynamic_air_constraint_memory_layout(),
-            ),
-        }
-    }
-
-    pub fn output_type() -> DataType {
-        DataType::Array(Box::new(ArrayType {
-            element_type: DataType::Xfe,
-            length: MasterExtTable::NUM_CONSTRAINTS,
-        }))
-    }
-
-    /// Generate a memory layout that agrees with the STARK proof being stored
-    /// at address 0.
-    pub fn conventional_static_air_constraint_memory_layout(
-    ) -> StaticTasmConstraintEvaluationMemoryLayout {
+    pub fn conventional_static() -> Self {
         const CURRENT_BASE_ROW_PTR: u64 = 30u64;
         const BASE_ROW_SIZE: u64 = (NUM_BASE_COLUMNS * EXTENSION_DEGREE) as u64;
         const EXT_ROW_SIZE: u64 = (NUM_EXT_COLUMNS * EXTENSION_DEGREE) as u64;
@@ -87,24 +48,75 @@ impl AirConstraintEvaluation {
                     + EXT_ROW_SIZE
                     + 3 * METADATA_SIZE_PER_PROOF_ITEM_ELEMENT,
             ),
-            challenges_ptr: NewEmptyInputAndOutput::conventional_challenges_pointer(),
+            challenges_ptr: conventional_challenges_pointer(),
         };
         assert!(mem_layout.is_integral());
 
-        mem_layout
+        Self::Static(mem_layout)
     }
 
     /// Generate a memory layout that allows you to store the proof anywhere in
     /// memory.
-    pub fn conventional_dynamic_air_constraint_memory_layout(
-    ) -> DynamicTasmConstraintEvaluationMemoryLayout {
+    pub fn conventional_dynamic() -> Self {
         let mem_layout = DynamicTasmConstraintEvaluationMemoryLayout {
             free_mem_page_ptr: BFieldElement::new(((1u64 << 32) - 2) * (1u64 << 32)),
-            challenges_ptr: NewEmptyInputAndOutput::conventional_challenges_pointer(),
+            challenges_ptr: conventional_challenges_pointer(),
         };
         assert!(mem_layout.is_integral());
 
-        mem_layout
+        Self::Dynamic(mem_layout)
+    }
+
+    pub fn challenges_pointer(&self) -> BFieldElement {
+        match self {
+            MemoryLayout::Dynamic(dl) => dl.challenges_ptr,
+            MemoryLayout::Static(sl) => sl.challenges_ptr,
+        }
+    }
+
+    pub fn is_integral(&self) -> bool {
+        match self {
+            MemoryLayout::Dynamic(dl) => dl.is_integral(),
+            MemoryLayout::Static(sl) => sl.is_integral(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct AirConstraintEvaluation {
+    pub memory_layout: MemoryLayout,
+}
+
+impl AirConstraintEvaluation {
+    pub fn new_static(static_layout: StaticTasmConstraintEvaluationMemoryLayout) -> Self {
+        Self {
+            memory_layout: MemoryLayout::Static(static_layout),
+        }
+    }
+
+    pub fn new_dynamic(static_layout: DynamicTasmConstraintEvaluationMemoryLayout) -> Self {
+        Self {
+            memory_layout: MemoryLayout::Dynamic(static_layout),
+        }
+    }
+
+    pub fn with_conventional_static_memory_layout() -> Self {
+        Self {
+            memory_layout: MemoryLayout::conventional_static(),
+        }
+    }
+
+    pub fn with_conventional_dynamic_memory_layout() -> Self {
+        Self {
+            memory_layout: MemoryLayout::conventional_dynamic(),
+        }
+    }
+
+    pub fn output_type() -> DataType {
+        DataType::Array(Box::new(ArrayType {
+            element_type: DataType::Xfe,
+            length: MasterExtTable::NUM_CONSTRAINTS,
+        }))
     }
 
     /// Return the concatenated AIR-constraint evaluation
@@ -201,6 +213,9 @@ impl BasicSnippet for AirConstraintEvaluation {
     }
 }
 
+/// Please notice that putting the proof into ND memory will *not* result in
+/// memory that's compatible with this layout. So this layout will fail to
+/// yield a functional STARK verifier program.
 #[cfg(test)]
 pub fn an_integral_but_profane_static_memory_layout() -> StaticTasmConstraintEvaluationMemoryLayout
 {
@@ -221,8 +236,8 @@ pub fn an_integral_but_profane_static_memory_layout() -> StaticTasmConstraintEva
 pub fn an_integral_but_profane_dynamic_memory_layout() -> DynamicTasmConstraintEvaluationMemoryLayout
 {
     let mem_layout = DynamicTasmConstraintEvaluationMemoryLayout {
-        free_mem_page_ptr: BFieldElement::new((u32::MAX as u64 - 1) * (1u64 << 32)),
-        challenges_ptr: BFieldElement::new(1u64 << 23),
+        free_mem_page_ptr: BFieldElement::new((u32::MAX as u64 - 100) * (1u64 << 32)),
+        challenges_ptr: BFieldElement::new(1u64 << 30),
     };
     assert!(mem_layout.is_integral());
 
@@ -265,8 +280,8 @@ mod tests {
 
     #[test]
     fn conventional_air_constraint_memory_layouts_are_integral() {
-        AirConstraintEvaluation::conventional_static_air_constraint_memory_layout();
-        AirConstraintEvaluation::conventional_dynamic_air_constraint_memory_layout();
+        assert!(MemoryLayout::conventional_static().is_integral());
+        assert!(MemoryLayout::conventional_dynamic().is_integral());
     }
 
     #[test]
@@ -287,8 +302,10 @@ mod tests {
         let proof_stream = ProofStream::try_from(&proof).unwrap();
         encode_to_memory(&mut memory, PROOF_ADDRESS, proof);
 
-        let assumed_memory_layout =
-            AirConstraintEvaluation::conventional_static_air_constraint_memory_layout();
+        let assumed_memory_layout = MemoryLayout::conventional_static();
+        let MemoryLayout::Static(assumed_memory_layout) = assumed_memory_layout else {
+            panic!()
+        };
         const BASE_ROW_SIZE: usize = NUM_BASE_COLUMNS * EXTENSION_DEGREE;
         const EXT_ROW_SIZE: usize = NUM_EXT_COLUMNS * EXTENSION_DEGREE;
 

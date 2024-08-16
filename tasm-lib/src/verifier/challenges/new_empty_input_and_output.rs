@@ -24,14 +24,6 @@ pub struct NewEmptyInputAndOutput {
 }
 
 impl NewEmptyInputAndOutput {
-    /// By convention, the challenges are stored in the third-to-last
-    /// memory page
-    pub fn conventional_challenges_pointer() -> BFieldElement {
-        BFieldElement::new(((1 << 32) - 3) * (1 << 32))
-    }
-}
-
-impl NewEmptyInputAndOutput {
     pub fn new(
         num_challenges_to_sample: usize,
         num_challenges_to_compute: usize,
@@ -175,6 +167,7 @@ mod tests {
     use crate::traits::procedure::ProcedureInitialState;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
+    use crate::verifier::challenges::shared;
     use crate::VmHasher;
 
     use super::*;
@@ -209,10 +202,13 @@ mod tests {
                 challenges.challenges.iter().join("\n")
             );
 
-            let challenges_pointer = Self::conventional_challenges_pointer();
-            stack.push(challenges_pointer);
+            stack.push(self.challenges_pointer);
 
-            insert_as_array(challenges_pointer, memory, challenges.challenges.to_vec());
+            insert_as_array(
+                self.challenges_pointer,
+                memory,
+                challenges.challenges.to_vec(),
+            );
 
             vec![]
         }
@@ -242,7 +238,7 @@ mod tests {
         ShadowedProcedure::new(NewEmptyInputAndOutput {
             num_of_claim_derived_challenges: NUM_OF_CLAIM_DERIVED_CHALLENGES,
             num_of_fiat_shamir_challenges: Challenges::COUNT - NUM_OF_CLAIM_DERIVED_CHALLENGES,
-            challenges_pointer: NewEmptyInputAndOutput::conventional_challenges_pointer(),
+            challenges_pointer: shared::conventional_challenges_pointer(),
         })
         .test();
     }
@@ -254,6 +250,7 @@ mod benches {
 
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
+    use crate::verifier::challenges::shared;
 
     use super::*;
 
@@ -263,7 +260,7 @@ mod benches {
         ShadowedProcedure::new(NewEmptyInputAndOutput {
             num_of_claim_derived_challenges: 4,
             num_of_fiat_shamir_challenges: Challenges::COUNT - NUM_OF_CLAIM_DERIVED_CHALLENGES,
-            challenges_pointer: NewEmptyInputAndOutput::conventional_challenges_pointer(),
+            challenges_pointer: shared::conventional_challenges_pointer(),
         })
         .bench();
     }

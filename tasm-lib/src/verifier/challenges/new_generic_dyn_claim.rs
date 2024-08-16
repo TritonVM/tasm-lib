@@ -17,9 +17,6 @@ use crate::verifier::eval_arg::compute_terminal_const_sized_static_symbols::Comp
 use crate::verifier::eval_arg::compute_terminal_dyn_sized_dynamic_symbols::ComputeTerminalDynSizedDynamicSymbols;
 use crate::verifier::eval_arg::compute_terminal_from_digest::ComputeTerminalFromDigestInitialIsOne;
 
-use super::shared::conventional_challenges_pointer;
-
-pub const NUMBER_OF_CLAIM_DERIVED_CHALLENGES: usize = 4;
 /// Calculate a `Challenges` structure from a claim that is only known at runtime
 pub struct NewGenericDynClaim {
     num_of_fiat_shamir_challenges: usize,
@@ -30,11 +27,15 @@ pub struct NewGenericDynClaim {
 }
 
 impl NewGenericDynClaim {
-    pub fn conventional_with_tvm_parameters() -> Self {
+    /// An instantiation of this snippet that contains the same number of
+    /// challenges that TVM uses in its STARK engine
+    pub fn tvm_challenges(challenges_pointer: BFieldElement) -> Self {
+        const NUMBER_OF_CLAIM_DERIVED_CHALLENGES: usize = 4;
+
         Self {
             num_of_fiat_shamir_challenges: Challenges::COUNT - NUMBER_OF_CLAIM_DERIVED_CHALLENGES,
             num_of_claim_derived_challenges: NUMBER_OF_CLAIM_DERIVED_CHALLENGES,
-            challenges_pointer: conventional_challenges_pointer(),
+            challenges_pointer,
         }
     }
 
@@ -254,7 +255,7 @@ mod tests {
             let challenges = sponge.sample_scalars(self.num_of_fiat_shamir_challenges);
             let challenges = Challenges::new(challenges, &claim);
 
-            let challenges_pointer = conventional_challenges_pointer();
+            let challenges_pointer = self.challenges_pointer;
             stack.push(challenges_pointer);
 
             insert_as_array(challenges_pointer, memory, challenges.challenges.to_vec());
@@ -299,18 +300,25 @@ mod tests {
 
     #[test]
     fn new_challenges_pbt() {
-        ShadowedProcedure::new(NewGenericDynClaim::conventional_with_tvm_parameters()).test();
+        ShadowedProcedure::new(NewGenericDynClaim::tvm_challenges(
+            conventional_challenges_pointer(),
+        ))
+        .test();
     }
 }
 
 #[cfg(test)]
 mod benches {
+    use super::super::shared::conventional_challenges_pointer;
     use super::*;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
 
     #[test]
     fn bench_for_challenges_calc_for_recufier() {
-        ShadowedProcedure::new(NewGenericDynClaim::conventional_with_tvm_parameters()).bench();
+        ShadowedProcedure::new(NewGenericDynClaim::tvm_challenges(
+            conventional_challenges_pointer(),
+        ))
+        .bench();
     }
 }

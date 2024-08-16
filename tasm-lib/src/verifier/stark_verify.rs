@@ -27,7 +27,6 @@ use crate::library::Library;
 use crate::memory::encode_to_memory;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::verifier::challenges;
-use crate::verifier::challenges::shared::conventional_challenges_pointer;
 use crate::verifier::claim::instantiate_fiat_shamir_with_claim::InstantiateFiatShamirWithClaim;
 use crate::verifier::claim::shared::claim_type;
 use crate::verifier::fri;
@@ -56,18 +55,14 @@ impl StarkVerify {
     pub fn new_with_static_layout(stark: Stark) -> Self {
         Self {
             stark,
-            layout: MemoryLayout::Static(
-                AirConstraintEvaluation::conventional_static_air_constraint_memory_layout(),
-            ),
+            layout: MemoryLayout::conventional_static(),
         }
     }
 
     pub fn new_with_dynamic_layout(stark: Stark) -> Self {
         Self {
             stark,
-            layout: MemoryLayout::Dynamic(
-                AirConstraintEvaluation::conventional_dynamic_air_constraint_memory_layout(),
-            ),
+            layout: MemoryLayout::conventional_dynamic(),
         }
     }
 
@@ -367,7 +362,8 @@ impl BasicSnippet for StarkVerify {
         let fri_verify = library.import(Box::new(fri_snippet()));
 
         let get_challenges = library.import(Box::new(
-            challenges::new_generic_dyn_claim::NewGenericDynClaim::conventional_with_tvm_parameters(
+            challenges::new_generic_dyn_claim::NewGenericDynClaim::tvm_challenges(
+                self.layout.challenges_pointer(),
             ),
         ));
         let sample_quotient_codeword_weights =
