@@ -321,7 +321,7 @@ impl BasicSnippet for StarkVerify {
         let next_as_merkleroot = library.import(Box::new(DequeueNextAs {
             proof_item: ProofItemVariant::MerkleRoot,
         }));
-        let next_as_outofdomainbaserow = library.import(Box::new(DequeueNextAs {
+        let next_as_outofdomainmainrow = library.import(Box::new(DequeueNextAs {
             proof_item: ProofItemVariant::OutOfDomainBaseRow,
         }));
         let next_as_outofdomainextrow = library.import(Box::new(DequeueNextAs {
@@ -377,7 +377,7 @@ impl BasicSnippet for StarkVerify {
         let domain_generator = library.import(Box::new(PrimitiveRootOfUnity));
         let sample_scalar_one = library.import(Box::new(SampleScalarOne));
         let calculate_out_of_domain_points = library.import(Box::new(OutOfDomainPoints));
-        let evaluate_air_and_divide_out_zerofiers = library.import(Box::new(DivideOutZerofiers));
+        let divide_out_zerofiers = library.import(Box::new(DivideOutZerofiers));
         let inner_product_quotient_summands = library.import(Box::new(InnerProductOfXfes {
             length: MasterExtTable::NUM_CONSTRAINTS,
         }));
@@ -424,6 +424,39 @@ impl BasicSnippet for StarkVerify {
                 add
                 // _ *deep_codeword_weight[n]_last_word
             )
+        };
+
+        let dequeue_four_ood_rows = triton_asm! {
+            // _ *proof_iter
+            dup 0
+            call {next_as_outofdomainmainrow}
+            hint out_of_domain_curr_base_row: Pointer = stack[0]
+
+            dup 1
+            call {next_as_outofdomainextrow}
+            hint out_of_domain_curr_ext_row: Pointer = stack[0]
+
+            dup 2
+            call {next_as_outofdomainmainrow}
+            hint out_of_domain_next_base_row: Pointer = stack[0]
+
+            dup 3
+            call {next_as_outofdomainextrow}
+            hint out_of_domain_next_ext_row: Pointer = stack[0]
+            // _ *proof_iter *curr_main *curr_aux *next_main *next_aux
+        };
+
+        // BEFORE:
+        // _ *p_iter - - - *quot_cw_ws - dom_gen [out_of_domain_curr_row] padded_height
+        // AFTER:
+        // _ *p_iter - - - *quot_cw_ws - dom_gen [out_of_domain_curr_row] padded_height *air_evaluation_result
+        let dequeue_ood_row_and_evaluate_air = match self.layout {
+            MemoryLayout::Static(static_layout) => {
+                triton_asm! {}
+            }
+            MemoryLayout::Dynamic(dynamic_layout) => {
+                triton_asm! {}
+            }
         };
 
         let verify_challenges_pointer = triton_asm!(
@@ -756,21 +789,21 @@ impl BasicSnippet for StarkVerify {
                 swap 9
                 // _ *b_mr *p_iter *oodpnts *fri *e_mr *quot_cw_ws *quot_mr dom_gen [out_of_domain_curr_row] padded_height
 
-                swap 1
-                swap 2
-                swap 3
-                swap 4
-                // _ *b_mr *p_iter *oodpnts *fri *e_mr *quot_cw_ws *quot_mr [out_of_domain_curr_row] padded_height dom_gen
+                {&dequeue_ood_row_and_evaluate_air}
+                // _ *b_mr *p_iter *oodpnts *fri *e_mr *quot_cw_ws *quot_mr dom_gen [out_of_domain_curr_row] padded_height *air_evaluation_result
 
-                // The next function calls the (static or dynamic) AIR evaluation
-                // and then divides out the zerofiers in-place.
-                call {evaluate_air_and_divide_out_zerofiers}
+                swap 5
+                // _ *b_mr *p_iter *oodpnts *fri *e_mr *quot_cw_ws *quot_mr *air_evaluation_result [out_of_domain_curr_row] padded_height dom_gen
+
+                call {divide_out_zerofiers}
                 // _ *b_mr *p_iter *oodpnts *fri *e_mr *quot_cw_ws *quot_mr *quotient_summands
 
 
                 /* Dequeue out-of-domain row */
                 dup 6
-                call {next_as_outofdomainbaserow}
+                // _ *b_mr *p_iter *oodpnts *fri *e_mr *quot_cw_ws *quot_mr *quotient_summands *p_iter
+
+                call {next_as_outofdomainmainrow}
                 hint out_of_domain_curr_base_row: Pointer = stack[0]
 
                 dup 7
@@ -778,7 +811,7 @@ impl BasicSnippet for StarkVerify {
                 hint out_of_domain_curr_ext_row: Pointer = stack[0]
 
                 dup 8
-                call {next_as_outofdomainbaserow}
+                call {next_as_outofdomainmainrow}
                 hint out_of_domain_next_base_row: Pointer = stack[0]
 
                 dup 9
