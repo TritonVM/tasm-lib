@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use num::One;
 use num::Zero;
 use rand::prelude::*;
+use triton_vm::air::memory_layout::MemoryRegion;
 use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
@@ -21,6 +22,9 @@ pub const DYN_MALLOC_ADDRESS: BFieldElement = BFieldElement::new(BFieldElement::
 /// The address of the first page that can be dynamically allocated.
 pub const DYN_MALLOC_FIRST_PAGE: u64 = 1;
 
+/// The number of pages that can be dynamically allocated.
+const NUM_ALLOCATABLE_PAGES: u64 = (1 << 31) - 1;
+
 /// The size of one dynamically allocated page.
 pub const DYN_MALLOC_PAGE_SIZE: u64 = 1 << 32;
 
@@ -31,6 +35,17 @@ pub const DYN_MALLOC_FIRST_ADDRESS: BFieldElement =
 /// accordingly
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
 pub struct DynMalloc;
+
+impl DynMalloc {
+    pub fn memory_region() -> MemoryRegion {
+        MemoryRegion::new(
+            DYN_MALLOC_FIRST_ADDRESS,
+            (NUM_ALLOCATABLE_PAGES * DYN_MALLOC_PAGE_SIZE)
+                .try_into()
+                .unwrap(),
+        )
+    }
+}
 
 impl BasicSnippet for DynMalloc {
     fn inputs(&self) -> Vec<(DataType, String)> {

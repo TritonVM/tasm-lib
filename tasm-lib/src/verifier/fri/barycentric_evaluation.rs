@@ -273,7 +273,7 @@ mod tests {
     use twenty_first::math::traits::Inverse;
     use twenty_first::math::traits::PrimitiveRootOfUnity;
 
-    use crate::library::STATIC_MEMORY_START_ADDRESS;
+    use crate::library::STATIC_MEMORY_FIRST_ADDRESS;
     use crate::rust_shadowing_helper_functions::list::list_insert;
     use crate::rust_shadowing_helper_functions::list::load_list_with_copy_elements;
     use crate::snippet_bencher::BenchmarkCase;
@@ -332,7 +332,7 @@ mod tests {
 
             // Emulate effect on memory
             let generator = BFieldElement::primitive_root_of_unity(codeword.len() as u64).unwrap();
-            let mut partial_terms_pointer = STATIC_MEMORY_START_ADDRESS
+            let mut partial_terms_pointer = STATIC_MEMORY_FIRST_ADDRESS
                 - bfe!(MAX_CODEWORD_LENGTH * EXTENSION_DEGREE as u32 - 1);
             let mut gen_acc = bfe!(1);
             for _ in 0..codeword_length {

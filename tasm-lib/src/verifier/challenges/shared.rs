@@ -18,7 +18,7 @@ pub(super) fn challenges_data_type(total_number_of_challenges: usize) -> DataTyp
 }
 
 pub(crate) fn conventional_challenges_pointer() -> BFieldElement {
-    // By convention, the challenges are stored in the third-to-last
+    // By convention, the challenges are stored in the fourth-to-last
     // memory page
-    BFieldElement::new(((1 << 32) - 3) * (1 << 32))
+    BFieldElement::new(((1 << 32) - 4) * (1 << 32))
 }
