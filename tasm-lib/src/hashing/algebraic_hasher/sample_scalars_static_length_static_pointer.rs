@@ -194,7 +194,7 @@ pub(crate) mod tests {
 mod bench {
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
-    use crate::verifier::challenges::new_empty_input_and_output::NewEmptyInputAndOutput;
+    use crate::verifier::challenges::shared::conventional_challenges_pointer;
 
     use super::*;
 
@@ -203,7 +203,7 @@ mod bench {
         ShadowedProcedure::new(SampleScalarsStaticLengthStaticPointer {
             num_elements_to_sample: 10,
             extra_capacity: 4,
-            scalars_pointer: NewEmptyInputAndOutput::conventional_challenges_pointer(),
+            scalars_pointer: conventional_challenges_pointer(),
         })
         .bench();
     }
@@ -213,7 +213,7 @@ mod bench {
         ShadowedProcedure::new(SampleScalarsStaticLengthStaticPointer {
             num_elements_to_sample: 100,
             extra_capacity: 4,
-            scalars_pointer: NewEmptyInputAndOutput::conventional_challenges_pointer(),
+            scalars_pointer: conventional_challenges_pointer(),
         })
         .bench();
     }
@@ -223,7 +223,7 @@ mod bench {
         ShadowedProcedure::new(SampleScalarsStaticLengthStaticPointer {
             num_elements_to_sample: 63,
             extra_capacity: 4,
-            scalars_pointer: NewEmptyInputAndOutput::conventional_challenges_pointer(),
+            scalars_pointer: conventional_challenges_pointer(),
         })
         .bench();
     }
