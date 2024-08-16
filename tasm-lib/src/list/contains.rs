@@ -152,7 +152,7 @@ mod tests {
     use rand::Rng;
     use rand::SeedableRng;
 
-    use crate::library::STATIC_MEMORY_START_ADDRESS;
+    use crate::library::STATIC_MEMORY_FIRST_ADDRESS;
     use crate::rust_shadowing_helper_functions::list::load_list_unstructured;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::test_helpers::test_rust_equivalence_given_complete_state;
@@ -165,7 +165,7 @@ mod tests {
 
     impl Contains {
         fn static_pointer_isolated_run(&self) -> BFieldElement {
-            STATIC_MEMORY_START_ADDRESS - bfe!(self.element_type.stack_size() as u64)
+            STATIC_MEMORY_FIRST_ADDRESS - bfe!(self.element_type.stack_size() as u64)
                 + BFieldElement::one()
         }
 

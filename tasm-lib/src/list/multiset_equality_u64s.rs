@@ -267,7 +267,7 @@ mod tests {
     use tip5::Digest;
     use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
-    use crate::library::STATIC_MEMORY_START_ADDRESS;
+    use crate::library::STATIC_MEMORY_FIRST_ADDRESS;
     use crate::list::LIST_METADATA_SIZE;
     use crate::memory::encode_to_memory;
     use crate::rust_shadowing_helper_functions;
@@ -388,7 +388,7 @@ mod tests {
             // Write to static memory, since that's what the TASM code does
             encode_to_memory(
                 memory,
-                STATIC_MEMORY_START_ADDRESS - bfe!(EXTENSION_DEGREE as u64 - 1),
+                STATIC_MEMORY_FIRST_ADDRESS - bfe!(EXTENSION_DEGREE as u64 - 1),
                 running_product_a,
             );
 

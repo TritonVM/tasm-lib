@@ -14,6 +14,8 @@ use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 use crate::data_type::ArrayType;
 use crate::data_type::DataType;
 use crate::library::Library;
+use crate::memory::dyn_malloc::DYN_MALLOC_ADDRESS;
+use crate::prelude::DynMalloc;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::triton_vm::table::*;
 use crate::verifier::challenges::shared::conventional_challenges_pointer;
@@ -31,7 +33,7 @@ impl MemoryLayout {
         const EXT_ROW_SIZE: u64 = (NUM_EXT_COLUMNS * EXTENSION_DEGREE) as u64;
         const METADATA_SIZE_PER_PROOF_ITEM_ELEMENT: u64 = 2; // 1 for discriminant, 1 for elem size
         let mem_layout = StaticTasmConstraintEvaluationMemoryLayout {
-            free_mem_page_ptr: BFieldElement::new(((1u64 << 32) - 2) * (1u64 << 32)),
+            free_mem_page_ptr: BFieldElement::new(((1u64 << 32) - 3) * (1u64 << 32)),
             curr_base_row_ptr: BFieldElement::new(CURRENT_BASE_ROW_PTR),
             curr_ext_row_ptr: BFieldElement::new(
                 CURRENT_BASE_ROW_PTR + BASE_ROW_SIZE + METADATA_SIZE_PER_PROOF_ITEM_ELEMENT,
@@ -59,7 +61,7 @@ impl MemoryLayout {
     /// memory.
     pub fn conventional_dynamic() -> Self {
         let mem_layout = DynamicTasmConstraintEvaluationMemoryLayout {
-            free_mem_page_ptr: BFieldElement::new(((1u64 << 32) - 2) * (1u64 << 32)),
+            free_mem_page_ptr: BFieldElement::new(((1u64 << 32) - 3) * (1u64 << 32)),
             challenges_ptr: conventional_challenges_pointer(),
         };
         assert!(mem_layout.is_integral());
@@ -74,11 +76,38 @@ impl MemoryLayout {
         }
     }
 
+    /// Check that the memory layout matches the convention of this standard-library
     pub fn is_integral(&self) -> bool {
-        match self {
+        // A: cannot collide with `kmalloc`
+        // B: cannot collide with `dyn_malloc` (must only use static memory (address.value() >= 2^{63}))
+        // C: cannot collide with state of `dyn_malloc`
+        // D: cannot have overlapping regions
+
+        // Notice that it's allowed to point to ND memory, $[0, 2^{32})$.
+
+        let kmalloc_region = Library::kmalloc_memory_region();
+        let dyn_malloc_region = DynMalloc::memory_region();
+        let memory_regions = match self {
+            MemoryLayout::Dynamic(dl) => dl.memory_regions(),
+            MemoryLayout::Static(sl) => sl.memory_regions(),
+        };
+
+        let a = memory_regions
+            .iter()
+            .all(|mr| mr.disjoint_from(&kmalloc_region));
+        let b = memory_regions
+            .iter()
+            .all(|mr| mr.disjoint_from(&dyn_malloc_region));
+        let c = memory_regions
+            .iter()
+            .all(|mr| !mr.contains_address(DYN_MALLOC_ADDRESS));
+
+        let d = match self {
             MemoryLayout::Dynamic(dl) => dl.is_integral(),
             MemoryLayout::Static(sl) => sl.is_integral(),
-        }
+        };
+
+        a && b && c && d
     }
 
     pub fn label_friendly_name(&self) -> &str {
@@ -227,7 +256,7 @@ impl BasicSnippet for AirConstraintEvaluation {
 pub fn an_integral_but_profane_static_memory_layout() -> StaticTasmConstraintEvaluationMemoryLayout
 {
     let mem_layout = StaticTasmConstraintEvaluationMemoryLayout {
-        free_mem_page_ptr: BFieldElement::new((u32::MAX as u64 - 1) * (1u64 << 32)),
+        free_mem_page_ptr: BFieldElement::new((u32::MAX as u64 - 200) * (1u64 << 32)),
         curr_base_row_ptr: BFieldElement::new(1u64),
         curr_ext_row_ptr: BFieldElement::new(1u64 << 20),
         next_base_row_ptr: BFieldElement::new(1u64 << 21),
