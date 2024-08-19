@@ -1566,16 +1566,12 @@ mod benches {
        with `RUSTFLAGS=\"-C opt-level=3 -C debug-assertions=no\"`"]
     #[test]
     fn big_benchmark_different_fri_expansion_factors() {
+        let mem_layout = MemoryLayout::conventional_static();
         for log2_of_fri_expansion_factor in 2..=3 {
             let stark = Stark::new(160, log2_of_fri_expansion_factor);
-            for mem_layout in [
-                MemoryLayout::conventional_static(),
-                MemoryLayout::conventional_dynamic(),
-            ] {
-                benchmark_verifier(25600, 1 << 19, stark, mem_layout);
-                benchmark_verifier(51200, 1 << 20, stark, mem_layout);
-                benchmark_verifier(102400, 1 << 21, stark, mem_layout);
-            }
+            benchmark_verifier(25600, 1 << 19, stark, mem_layout);
+            benchmark_verifier(51200, 1 << 20, stark, mem_layout);
+            benchmark_verifier(102400, 1 << 21, stark, mem_layout);
         }
     }
 
