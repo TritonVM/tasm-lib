@@ -20,7 +20,7 @@ const_format = "0.2"
 arbitrary = { version = "1", features = ["derive"] }
 anyhow = "1"
 derive_tasm_object = { path = "../derive_tasm_object" }
-ndarray = { version = "0.15" }
+ndarray = { version = "0.16" }
 hex = "^0.4.3"
 itertools = "0"
 num = "0"
@@ -29,7 +29,7 @@ rand = "0.8.5"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 strum = { version = "0.26", features = ["derive"] }
-triton-vm = { version = "0.42.0-alpha.8", default-features = false }
+triton-vm = { version = "0.42.0-alpha.9", default-features = false }
 
 [dev-dependencies.cargo-husky]
 version = "1"

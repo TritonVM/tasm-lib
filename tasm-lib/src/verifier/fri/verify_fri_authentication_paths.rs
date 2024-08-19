@@ -141,7 +141,6 @@ mod test {
     use crate::traits::algorithm::ShadowedAlgorithm;
     use crate::traits::rust_shadow::RustShadow;
     use crate::Digest;
-    use crate::VmHasher;
 
     use std::collections::HashMap;
 
@@ -217,11 +216,10 @@ mod test {
                     read_word_from_mem(leaf_pointer - bfe!(1)),
                     read_word_from_mem(leaf_pointer),
                 ]);
-                let inclusion_proof = MerkleTreeInclusionProof::<Tip5> {
+                let inclusion_proof = MerkleTreeInclusionProof {
                     tree_height,
                     indexed_leafs: vec![(leaf_index as usize, leaf.into())],
                     authentication_structure: authentication_path,
-                    ..Default::default()
                 };
                 assert!(inclusion_proof.verify(root));
 
@@ -289,8 +287,7 @@ mod test {
                 .collect_vec();
             let leafs_as_digest: Vec<Digest> =
                 xfe_leafs.iter().map(|&xfe| xfe.into()).collect_vec();
-            let tree =
-                <CpuParallel as MerkleTreeMaker<VmHasher>>::from_digests(&leafs_as_digest).unwrap();
+            let tree = CpuParallel::from_digests(&leafs_as_digest).unwrap();
             let root = tree.root();
 
             let a_indices = (0..num_indices)

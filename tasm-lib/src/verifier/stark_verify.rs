@@ -1,5 +1,3 @@
-use std::marker::PhantomData;
-
 use itertools::Itertools;
 use num_traits::ConstZero;
 use triton_vm::prelude::*;
@@ -176,14 +174,13 @@ impl StarkVerify {
                 tree_height: usize,
                 authentication_structure: Vec<Digest>,
             ) -> Vec<Vec<Digest>> {
-                MerkleTreeInclusionProof::<Tip5> {
+                MerkleTreeInclusionProof {
                     tree_height,
                     indexed_leafs: indices
                         .into_iter()
                         .zip(leaf_preimages.iter().map(Tip5::hash))
                         .collect_vec(),
                     authentication_structure,
-                    _hasher: PhantomData,
                 }
                 .into_authentication_paths()
                 .unwrap()

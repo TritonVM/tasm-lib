@@ -205,7 +205,7 @@ impl Function for MerkleRoot {
     ) {
         let leafs_pointer = stack.pop().unwrap();
         let leafs = *Vec::<Digest>::decode_from_memory(memory, leafs_pointer).unwrap();
-        let mt = MerkleTree::<Tip5>::new::<CpuParallel>(&leafs).unwrap();
+        let mt = MerkleTree::new::<CpuParallel>(&leafs).unwrap();
 
         // Write entire Merkle tree to memory, because that's what the VM does
         let pointer = dynamic_allocator(memory);

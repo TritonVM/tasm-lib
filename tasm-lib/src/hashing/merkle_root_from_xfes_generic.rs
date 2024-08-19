@@ -183,9 +183,9 @@ mod test {
     use num::One;
     use num::Zero;
     use rand::prelude::*;
+    use twenty_first::prelude::MerkleTreeMaker;
     use twenty_first::util_types::merkle_tree::CpuParallel;
     use twenty_first::util_types::merkle_tree::MerkleTree;
-    use twenty_first::util_types::merkle_tree_maker::MerkleTreeMaker;
 
     use crate::memory::encode_to_memory;
     use crate::prelude::TasmObject;
@@ -217,7 +217,7 @@ mod test {
             );
             let leafs: Vec<Digest> = leafs.into_iter().map(|x| x.into()).collect();
 
-            let mt: MerkleTree<Tip5> = CpuParallel::from_digests(&leafs).unwrap();
+            let mt: MerkleTree = CpuParallel::from_digests(&leafs).unwrap();
             let root = mt.root();
 
             // Write entire Merkle tree to memory, because that's what the VM does
