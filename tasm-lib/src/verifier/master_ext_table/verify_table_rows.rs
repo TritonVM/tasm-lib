@@ -216,7 +216,7 @@ mod tests {
     use triton_vm::twenty_first::util_types::merkle_tree::CpuParallel;
     use triton_vm::twenty_first::util_types::merkle_tree::MerkleTree;
     use triton_vm::twenty_first::util_types::merkle_tree::MerkleTreeInclusionProof;
-    use triton_vm::twenty_first::util_types::merkle_tree_maker::MerkleTreeMaker;
+    use twenty_first::prelude::MerkleTreeMaker;
 
     use crate::memory::encode_to_memory;
     use crate::rust_shadowing_helper_functions::list::list_insert;
@@ -335,11 +335,10 @@ mod tests {
                 }
 
                 let leaf_digest = local_hash_varlen(row, sponge);
-                let merkle_tree_inclusion_proof = MerkleTreeInclusionProof::<Tip5> {
+                let merkle_tree_inclusion_proof = MerkleTreeInclusionProof {
                     tree_height: merkle_tree_height as usize,
                     indexed_leafs: vec![(leaf_index as usize, leaf_digest)],
                     authentication_structure: authentication_path,
-                    _hasher: std::marker::PhantomData,
                 };
 
                 assert!(merkle_tree_inclusion_proof.verify(merkle_root));
@@ -423,7 +422,7 @@ mod tests {
                 leafs[*leaf_index] = Tip5::hash_varlen(leaf_preimage);
             }
 
-            let merkle_tree: MerkleTree<Tip5> = CpuParallel::from_digests(&leafs).unwrap();
+            let merkle_tree: MerkleTree = CpuParallel::from_digests(&leafs).unwrap();
             let merkle_root = merkle_tree.root();
             let merkle_root_pointer: BFieldElement = rng.gen();
             encode_to_memory(&mut memory, merkle_root_pointer, merkle_root);

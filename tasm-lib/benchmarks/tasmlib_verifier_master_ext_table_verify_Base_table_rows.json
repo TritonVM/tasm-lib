@@ -3,10 +3,10 @@
     "name": "tasmlib_verifier_master_ext_table_verify_Base_table_rows",
     "benchmark_result": {
       "clock_cycle_count": 445,
-      "hash_table_height": 1101,
+      "hash_table_height": 1137,
       "u32_table_height": 564,
-      "op_stack_table_height": 243,
-      "ram_table_height": 1059
+      "op_stack_table_height": 249,
+      "ram_table_height": 1134
     },
     "case": "CommonCase"
   },
@@ -14,10 +14,10 @@
     "name": "tasmlib_verifier_master_ext_table_verify_Base_table_rows",
     "benchmark_result": {
       "clock_cycle_count": 475,
-      "hash_table_height": 1191,
+      "hash_table_height": 1227,
       "u32_table_height": 885,
-      "op_stack_table_height": 243,
-      "ram_table_height": 1059
+      "op_stack_table_height": 249,
+      "ram_table_height": 1134
     },
     "case": "WorstCase"
   }

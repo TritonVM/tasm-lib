@@ -1,5 +1,3 @@
-use std::marker::PhantomData;
-
 use itertools::Itertools;
 use num_traits::ConstZero;
 use triton_vm::prelude::*;
@@ -27,13 +25,12 @@ use crate::library::Library;
 use crate::memory::encode_to_memory;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::verifier::challenges;
-use crate::verifier::challenges::shared::conventional_challenges_pointer;
 use crate::verifier::claim::instantiate_fiat_shamir_with_claim::InstantiateFiatShamirWithClaim;
 use crate::verifier::claim::shared::claim_type;
 use crate::verifier::fri;
 use crate::verifier::fri::verify::FriSnippet;
 use crate::verifier::fri::verify::FriVerify;
-use crate::verifier::master_ext_table::quotient_summands::QuotientSummands;
+use crate::verifier::master_ext_table::divide_out_zerofiers::DivideOutZerofiers;
 use crate::verifier::master_ext_table::verify_table_rows::ColumnType;
 use crate::verifier::master_ext_table::verify_table_rows::VerifyTableRows;
 use crate::verifier::out_of_domain_points::OodPoint;
@@ -42,16 +39,31 @@ use crate::verifier::vm_proof_iter::dequeue_next_as::DequeueNextAs;
 use crate::verifier::vm_proof_iter::new::New;
 use triton_vm::proof_stream::ProofStream;
 
+use super::master_ext_table::air_constraint_evaluation::AirConstraintEvaluation;
 use super::master_ext_table::air_constraint_evaluation::MemoryLayout;
 
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct StarkVerify {
     stark: Stark,
-    layout: MemoryLayout,
+    memory_layout: MemoryLayout,
 }
 
 impl StarkVerify {
+    pub fn new_with_static_layout(stark: Stark) -> Self {
+        Self {
+            stark,
+            memory_layout: MemoryLayout::conventional_static(),
+        }
+    }
+
+    pub fn new_with_dynamic_layout(stark: Stark) -> Self {
+        Self {
+            stark,
+            memory_layout: MemoryLayout::conventional_dynamic(),
+        }
+    }
+
     /// Prepares the non-determinism for verifying a STARK proof. Stores the proof
     /// in the first free address in (nondeterministically initialized) memory.
     /// Extracts the digests for traversing authentication paths and adds them to
@@ -162,14 +174,13 @@ impl StarkVerify {
                 tree_height: usize,
                 authentication_structure: Vec<Digest>,
             ) -> Vec<Vec<Digest>> {
-                MerkleTreeInclusionProof::<Tip5> {
+                MerkleTreeInclusionProof {
                     tree_height,
                     indexed_leafs: indices
                         .into_iter()
                         .zip(leaf_preimages.iter().map(Tip5::hash))
                         .collect_vec(),
                     authentication_structure,
-                    _hasher: PhantomData,
                 }
                 .into_authentication_paths()
                 .unwrap()
@@ -266,7 +277,8 @@ impl BasicSnippet for StarkVerify {
     }
 
     fn entrypoint(&self) -> String {
-        "tasmlib_verifier_stark_verify".to_string()
+        let memory_layout_category = self.memory_layout.label_friendly_name();
+        format!("tasmlib_verifier_stark_verify_{memory_layout_category}")
     }
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
@@ -302,7 +314,7 @@ impl BasicSnippet for StarkVerify {
         let next_as_merkleroot = library.import(Box::new(DequeueNextAs {
             proof_item: ProofItemVariant::MerkleRoot,
         }));
-        let next_as_outofdomainbaserow = library.import(Box::new(DequeueNextAs {
+        let next_as_outofdomainmainrow = library.import(Box::new(DequeueNextAs {
             proof_item: ProofItemVariant::OutOfDomainBaseRow,
         }));
         let next_as_outofdomainextrow = library.import(Box::new(DequeueNextAs {
@@ -348,7 +360,8 @@ impl BasicSnippet for StarkVerify {
         let fri_verify = library.import(Box::new(fri_snippet()));
 
         let get_challenges = library.import(Box::new(
-            challenges::new_generic_dyn_claim::NewGenericDynClaim::conventional_with_tvm_parameters(
+            challenges::new_generic_dyn_claim::NewGenericDynClaim::tvm_challenges(
+                self.memory_layout.challenges_pointer(),
             ),
         ));
         let sample_quotient_codeword_weights =
@@ -358,9 +371,7 @@ impl BasicSnippet for StarkVerify {
         let domain_generator = library.import(Box::new(PrimitiveRootOfUnity));
         let sample_scalar_one = library.import(Box::new(SampleScalarOne));
         let calculate_out_of_domain_points = library.import(Box::new(OutOfDomainPoints));
-        let quotient_summands = library.import(Box::new(
-            QuotientSummands::with_conventional_static_memory_layout(),
-        ));
+        let divide_out_zerofiers = library.import(Box::new(DivideOutZerofiers));
         let inner_product_quotient_summands = library.import(Box::new(InnerProductOfXfes {
             length: MasterExtTable::NUM_CONSTRAINTS,
         }));
@@ -409,8 +420,95 @@ impl BasicSnippet for StarkVerify {
             )
         };
 
+        let dequeue_four_ood_rows = triton_asm! {
+            // _ *proof_iter
+            dup 0
+            call {next_as_outofdomainmainrow}
+            hint out_of_domain_curr_base_row: Pointer = stack[0]
+
+            dup 1
+            call {next_as_outofdomainextrow}
+            hint out_of_domain_curr_ext_row: Pointer = stack[0]
+
+            dup 2
+            call {next_as_outofdomainmainrow}
+            hint out_of_domain_next_base_row: Pointer = stack[0]
+
+            dup 3
+            call {next_as_outofdomainextrow}
+            hint out_of_domain_next_ext_row: Pointer = stack[0]
+            // _ *proof_iter *curr_main *curr_aux *next_main *next_aux
+        };
+
+        const NUM_OOD_ROWS_WO_QUOTIENT: u32 = 4;
+        // BEFORE:
+        // _ *p_iter - - - *quot_cw_ws - dom_gen [out_of_domain_curr_row] padded_height
+        // AFTER:
+        // _ *p_iter - - - *quot_cw_ws - dom_gen [out_of_domain_curr_row] padded_height *air_evaluation_result
+        let ood_pointers_pointer = library.kmalloc(NUM_OOD_ROWS_WO_QUOTIENT);
+        let dequeue_ood_rows_and_evaluate_air = match self.memory_layout {
+            MemoryLayout::Static(static_layout) => {
+                let static_eval =
+                    library.import(Box::new(AirConstraintEvaluation::new_static(static_layout)));
+                triton_asm! {
+                    dup 10
+                    // _ *proof_iter
+
+                    {&dequeue_four_ood_rows}
+                    // _ *proof_iter *curr_main *curr_aux *next_main *next_aux
+
+                    push {ood_pointers_pointer}
+                    write_mem {NUM_OOD_ROWS_WO_QUOTIENT}
+
+                    pop 2
+                    // _
+
+                    call {static_eval}
+                    // _ *air_evaluation_result
+                }
+            }
+            MemoryLayout::Dynamic(dynamic_layout) => {
+                let dynamic_eval = library.import(Box::new(AirConstraintEvaluation::new_dynamic(
+                    dynamic_layout,
+                )));
+                triton_asm! {
+                    dup 10
+                    // _ *proof_iter
+
+                    {&dequeue_four_ood_rows}
+                    // _ *proof_iter *curr_main *curr_aux *next_main *next_aux
+
+                    // store pointers to static memory
+                    dup 3
+                    dup 3
+                    dup 3
+                    dup 3
+                    push {ood_pointers_pointer}
+                    write_mem {NUM_OOD_ROWS_WO_QUOTIENT}
+                    pop 1
+                    // _ *proof_iter *curr_main *curr_aux *next_main *next_aux
+
+                    call {dynamic_eval}
+                    // _ *proof_iter *air_evaluation_result
+
+                    swap 1 pop 1
+                    // _ *air_evaluation_result
+                }
+            }
+        };
+
+        let put_ood_row_pointers_back_on_stack = triton_asm! {
+            // _
+            push {ood_pointers_pointer+bfe!(NUM_OOD_ROWS_WO_QUOTIENT - 1)}
+            read_mem {NUM_OOD_ROWS_WO_QUOTIENT}
+            pop 1
+
+            // _ *curr_main *curr_aux *next_main *next_aux
+        };
+
+        let challenges_ptr = self.memory_layout.challenges_pointer();
         let verify_challenges_pointer = triton_asm!(
-            push {conventional_challenges_pointer()}
+            push {challenges_ptr}
             eq
             assert
         );
@@ -739,32 +837,17 @@ impl BasicSnippet for StarkVerify {
                 swap 9
                 // _ *b_mr *p_iter *oodpnts *fri *e_mr *quot_cw_ws *quot_mr dom_gen [out_of_domain_curr_row] padded_height
 
-                swap 1
-                swap 2
-                swap 3
-                swap 4
-                // _ *b_mr *p_iter *oodpnts *fri *e_mr *quot_cw_ws *quot_mr [out_of_domain_curr_row] padded_height dom_gen
+                {&dequeue_ood_rows_and_evaluate_air}
+                // _ *b_mr *p_iter *oodpnts *fri *e_mr *quot_cw_ws *quot_mr dom_gen [out_of_domain_curr_row] padded_height *air_evaluation_result
 
-                call {quotient_summands}
+                swap 5
+                // _ *b_mr *p_iter *oodpnts *fri *e_mr *quot_cw_ws *quot_mr *air_evaluation_result [out_of_domain_curr_row] padded_height dom_gen
+
+                call {divide_out_zerofiers}
                 // _ *b_mr *p_iter *oodpnts *fri *e_mr *quot_cw_ws *quot_mr *quotient_summands
 
-
-                /* Dequeue out-of-domain row */
-                dup 6
-                call {next_as_outofdomainbaserow}
-                hint out_of_domain_curr_base_row: Pointer = stack[0]
-
-                dup 7
-                call {next_as_outofdomainextrow}
-                hint out_of_domain_curr_ext_row: Pointer = stack[0]
-
-                dup 8
-                call {next_as_outofdomainbaserow}
-                hint out_of_domain_next_base_row: Pointer = stack[0]
-
-                dup 9
-                call {next_as_outofdomainextrow}
-                hint out_of_domain_next_ext_row: Pointer = stack[0]
+                {&put_ood_row_pointers_back_on_stack}
+                // _ *b_mr *p_iter *oodpnts *fri *e_mr *quot_cw_ws *quot_mr *quotient_summands *ood_brow_curr *ood_erow_curr *odd_brow_nxt *ood_erow_nxt
 
                 dup 10
                 call {next_as_outofdomainquotientsegments}
@@ -1135,10 +1218,11 @@ impl BasicSnippet for StarkVerify {
 #[cfg(test)]
 pub mod tests {
 
+    use crate::execute_test;
+    use crate::maybe_write_debuggable_program_to_disk;
     use crate::test_helpers::maybe_write_tvm_output_to_disk;
     use crate::verifier::claim::shared::insert_claim_into_static_memory;
-    use crate::verifier::master_ext_table::air_constraint_evaluation::an_integral_but_profane_static_memory_layout;
-    use crate::{execute_test, maybe_write_debuggable_program_to_disk};
+    use crate::verifier::master_ext_table::air_constraint_evaluation::an_integral_but_profane_dynamic_memory_layout;
 
     use super::*;
 
@@ -1155,7 +1239,7 @@ pub mod tests {
 
         let snippet = StarkVerify {
             stark,
-            layout: MemoryLayout::Static(an_integral_but_profane_static_memory_layout()),
+            memory_layout: MemoryLayout::conventional_dynamic(),
         };
         let mut nondeterminism = NonDeterminism::new(vec![]);
         snippet.update_nondeterminism(&mut nondeterminism, proof, claim_for_proof.clone());
@@ -1188,6 +1272,7 @@ pub mod tests {
         inner_program: &Program,
         inner_public_input: &[BFieldElement],
         stark: Stark,
+        layout: MemoryLayout,
     ) -> (usize, usize) {
         let (mut non_determinism, claim_for_proof) = prove_and_get_non_determinism_and_claim(
             inner_program,
@@ -1203,7 +1288,7 @@ pub mod tests {
 
         let snippet = StarkVerify {
             stark,
-            layout: MemoryLayout::Static(an_integral_but_profane_static_memory_layout()),
+            memory_layout: layout,
         };
         let mut init_stack = [
             snippet.init_stack_for_isolated_run(),
@@ -1247,6 +1332,7 @@ pub mod tests {
                 &factorial_program,
                 &[FACTORIAL_ARGUMENT.into()],
                 stark,
+                MemoryLayout::conventional_static(),
             );
             println!(
                 "TASM-verifier of factorial({FACTORIAL_ARGUMENT}):\n
@@ -1260,8 +1346,7 @@ pub mod tests {
         }
     }
 
-    #[test]
-    fn verify_tvm_proof_factorial_program() {
+    fn verify_tvm_proof_factorial_program_basic_properties(mem_layout: MemoryLayout) {
         const FACTORIAL_ARGUMENT: u32 = 3;
         let factorial_program = factorial_program_with_io();
         let stark = Stark::default();
@@ -1270,6 +1355,7 @@ pub mod tests {
             &factorial_program,
             &[FACTORIAL_ARGUMENT.into()],
             stark,
+            mem_layout,
         );
 
         println!(
@@ -1278,6 +1364,23 @@ pub mod tests {
             Inner padded height was: {}",
             cycle_count, inner_padded_height,
         );
+    }
+
+    #[test]
+    fn verify_tvm_proof_factorial_program_conventional_static_memlayout() {
+        verify_tvm_proof_factorial_program_basic_properties(MemoryLayout::conventional_static());
+    }
+
+    #[test]
+    fn verify_tvm_proof_factorial_program_conventional_dynamic_memlayout() {
+        verify_tvm_proof_factorial_program_basic_properties(MemoryLayout::conventional_dynamic());
+    }
+
+    #[test]
+    fn verify_tvm_proof_factorial_program_profane_dynamic_memlayout() {
+        verify_tvm_proof_factorial_program_basic_properties(MemoryLayout::Dynamic(
+            an_integral_but_profane_dynamic_memory_layout(),
+        ));
     }
 
     pub(super) fn factorial_program_with_io() -> Program {
@@ -1347,7 +1450,7 @@ pub mod tests {
         let mut nondeterminism = NonDeterminism::new(vec![]);
         let stark_verify = StarkVerify {
             stark: *stark,
-            layout: MemoryLayout::Static(an_integral_but_profane_static_memory_layout()),
+            memory_layout: MemoryLayout::conventional_static(),
         };
         stark_verify.update_nondeterminism(&mut nondeterminism, proof, claim.clone());
 
@@ -1372,7 +1475,6 @@ mod benches {
     use crate::snippet_bencher::NamedBenchmarkResult;
     use crate::test_helpers::prepend_program_with_stack_setup;
     use crate::verifier::claim::shared::insert_claim_into_static_memory;
-    use crate::verifier::master_ext_table::air_constraint_evaluation::an_integral_but_profane_static_memory_layout;
 
     use super::*;
 
@@ -1387,22 +1489,17 @@ mod benches {
         let proof = File::open("proof.json").expect("proof file should open read only");
         let proof: Proof = serde_json::from_reader(proof).unwrap();
 
-        let stark_verify = StarkVerify {
+        let snippet = StarkVerify {
             stark,
-            layout: MemoryLayout::Static(an_integral_but_profane_static_memory_layout()),
+            memory_layout: MemoryLayout::conventional_static(),
         };
         let mut nondeterminism = NonDeterminism::new(vec![]);
-        stark_verify.update_nondeterminism(&mut nondeterminism, proof, claim_for_proof.clone());
+        snippet.update_nondeterminism(&mut nondeterminism, proof, claim_for_proof.clone());
 
         let (claim_pointer, claim_size) =
             insert_claim_into_static_memory(&mut nondeterminism.ram, claim_for_proof.clone());
 
         let default_proof_pointer = BFieldElement::ZERO;
-
-        let snippet = StarkVerify {
-            stark,
-            layout: MemoryLayout::Static(an_integral_but_profane_static_memory_layout()),
-        };
 
         let init_stack = [
             snippet.init_stack_for_isolated_run(),
@@ -1423,9 +1520,35 @@ mod benches {
     }
 
     #[test]
-    fn benchmark_small_default_stark() {
-        benchmark_verifier(3, 1 << 8, Stark::default());
-        benchmark_verifier(40, 1 << 9, Stark::default());
+    fn benchmark_small_default_stark_static_memory() {
+        benchmark_verifier(
+            3,
+            1 << 8,
+            Stark::default(),
+            MemoryLayout::conventional_static(),
+        );
+        benchmark_verifier(
+            40,
+            1 << 9,
+            Stark::default(),
+            MemoryLayout::conventional_static(),
+        );
+    }
+
+    #[test]
+    fn benchmark_small_default_stark_dynamic_memory() {
+        benchmark_verifier(
+            3,
+            1 << 8,
+            Stark::default(),
+            MemoryLayout::conventional_dynamic(),
+        );
+        benchmark_verifier(
+            40,
+            1 << 9,
+            Stark::default(),
+            MemoryLayout::conventional_dynamic(),
+        );
     }
 
     #[ignore = "Takes a fairly long time. Intended to find optimal FRI expansion factor."]
@@ -1433,9 +1556,9 @@ mod benches {
     fn small_benchmark_different_fri_expansion_factors() {
         for log2_of_fri_expansion_factor in 1..=5 {
             let stark = Stark::new(160, log2_of_fri_expansion_factor);
-            benchmark_verifier(10, 1 << 8, stark);
-            benchmark_verifier(40, 1 << 9, stark);
-            benchmark_verifier(80, 1 << 10, stark);
+            benchmark_verifier(10, 1 << 8, stark, MemoryLayout::conventional_static());
+            benchmark_verifier(40, 1 << 9, stark, MemoryLayout::conventional_static());
+            benchmark_verifier(80, 1 << 10, stark, MemoryLayout::conventional_static());
         }
     }
 
@@ -1445,9 +1568,14 @@ mod benches {
     fn big_benchmark_different_fri_expansion_factors() {
         for log2_of_fri_expansion_factor in 2..=3 {
             let stark = Stark::new(160, log2_of_fri_expansion_factor);
-            benchmark_verifier(25600, 1 << 19, stark);
-            benchmark_verifier(51200, 1 << 20, stark);
-            benchmark_verifier(102400, 1 << 21, stark);
+            for mem_layout in [
+                MemoryLayout::conventional_static(),
+                MemoryLayout::conventional_dynamic(),
+            ] {
+                benchmark_verifier(25600, 1 << 19, stark, mem_layout);
+                benchmark_verifier(51200, 1 << 20, stark, mem_layout);
+                benchmark_verifier(102400, 1 << 21, stark, mem_layout);
+            }
         }
     }
 
@@ -1471,11 +1599,21 @@ mod benches {
             (51200, 1 << 20),
             (102400, 1 << 21),
         ] {
-            benchmark_verifier(fact_arg, expected_inner_padded_height, Stark::default());
+            benchmark_verifier(
+                fact_arg,
+                expected_inner_padded_height,
+                Stark::default(),
+                MemoryLayout::conventional_static(),
+            );
         }
     }
 
-    fn benchmark_verifier(factorial_argument: u32, inner_padded_height: usize, stark: Stark) {
+    fn benchmark_verifier(
+        factorial_argument: u32,
+        inner_padded_height: usize,
+        stark: Stark,
+        mem_layout: MemoryLayout,
+    ) {
         let factorial_program = factorial_program_with_io();
         let (mut non_determinism, claim_for_proof) = prove_and_get_non_determinism_and_claim(
             &factorial_program,
@@ -1495,7 +1633,7 @@ mod benches {
 
         let snippet = StarkVerify {
             stark,
-            layout: MemoryLayout::Static(an_integral_but_profane_static_memory_layout()),
+            memory_layout: mem_layout,
         };
 
         let init_stack = [

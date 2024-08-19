@@ -14,9 +14,11 @@ use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 use crate::data_type::ArrayType;
 use crate::data_type::DataType;
 use crate::library::Library;
+use crate::memory::dyn_malloc::DYN_MALLOC_ADDRESS;
+use crate::prelude::DynMalloc;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::triton_vm::table::*;
-use crate::verifier::challenges::new_empty_input_and_output::NewEmptyInputAndOutput;
+use crate::verifier::challenges::shared::conventional_challenges_pointer;
 
 #[derive(Debug, Clone, Copy)]
 pub enum MemoryLayout {
@@ -25,52 +27,13 @@ pub enum MemoryLayout {
 }
 
 impl MemoryLayout {
-    pub fn is_integral(&self) -> bool {
-        match self {
-            MemoryLayout::Dynamic(dl) => dl.is_integral(),
-            MemoryLayout::Static(sl) => sl.is_integral(),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct AirConstraintEvaluation {
-    pub memory_layout: MemoryLayout,
-}
-
-impl AirConstraintEvaluation {
-    pub fn with_conventional_static_memory_layout() -> Self {
-        Self {
-            memory_layout: MemoryLayout::Static(
-                Self::conventional_static_air_constraint_memory_layout(),
-            ),
-        }
-    }
-    pub fn with_conventional_dynamic_memory_layout() -> Self {
-        Self {
-            memory_layout: MemoryLayout::Dynamic(
-                Self::conventional_dynamic_air_constraint_memory_layout(),
-            ),
-        }
-    }
-
-    pub fn output_type() -> DataType {
-        DataType::Array(Box::new(ArrayType {
-            element_type: DataType::Xfe,
-            length: MasterExtTable::NUM_CONSTRAINTS,
-        }))
-    }
-
-    /// Generate a memory layout that agrees with the STARK proof being stored
-    /// at address 0.
-    pub fn conventional_static_air_constraint_memory_layout(
-    ) -> StaticTasmConstraintEvaluationMemoryLayout {
+    pub fn conventional_static() -> Self {
         const CURRENT_BASE_ROW_PTR: u64 = 30u64;
         const BASE_ROW_SIZE: u64 = (NUM_BASE_COLUMNS * EXTENSION_DEGREE) as u64;
         const EXT_ROW_SIZE: u64 = (NUM_EXT_COLUMNS * EXTENSION_DEGREE) as u64;
         const METADATA_SIZE_PER_PROOF_ITEM_ELEMENT: u64 = 2; // 1 for discriminant, 1 for elem size
         let mem_layout = StaticTasmConstraintEvaluationMemoryLayout {
-            free_mem_page_ptr: BFieldElement::new(((1u64 << 32) - 2) * (1u64 << 32)),
+            free_mem_page_ptr: BFieldElement::new(((1u64 << 32) - 3) * (1u64 << 32)),
             curr_base_row_ptr: BFieldElement::new(CURRENT_BASE_ROW_PTR),
             curr_ext_row_ptr: BFieldElement::new(
                 CURRENT_BASE_ROW_PTR + BASE_ROW_SIZE + METADATA_SIZE_PER_PROOF_ITEM_ELEMENT,
@@ -87,24 +50,113 @@ impl AirConstraintEvaluation {
                     + EXT_ROW_SIZE
                     + 3 * METADATA_SIZE_PER_PROOF_ITEM_ELEMENT,
             ),
-            challenges_ptr: NewEmptyInputAndOutput::conventional_challenges_pointer(),
+            challenges_ptr: conventional_challenges_pointer(),
         };
         assert!(mem_layout.is_integral());
 
-        mem_layout
+        Self::Static(mem_layout)
     }
 
     /// Generate a memory layout that allows you to store the proof anywhere in
     /// memory.
-    pub fn conventional_dynamic_air_constraint_memory_layout(
-    ) -> DynamicTasmConstraintEvaluationMemoryLayout {
+    pub fn conventional_dynamic() -> Self {
         let mem_layout = DynamicTasmConstraintEvaluationMemoryLayout {
-            free_mem_page_ptr: BFieldElement::new(((1u64 << 32) - 2) * (1u64 << 32)),
-            challenges_ptr: NewEmptyInputAndOutput::conventional_challenges_pointer(),
+            free_mem_page_ptr: BFieldElement::new(((1u64 << 32) - 3) * (1u64 << 32)),
+            challenges_ptr: conventional_challenges_pointer(),
         };
         assert!(mem_layout.is_integral());
 
-        mem_layout
+        Self::Dynamic(mem_layout)
+    }
+
+    pub fn challenges_pointer(&self) -> BFieldElement {
+        match self {
+            MemoryLayout::Dynamic(dl) => dl.challenges_ptr,
+            MemoryLayout::Static(sl) => sl.challenges_ptr,
+        }
+    }
+
+    /// Check that the memory layout matches the convention of this standard-library
+    pub fn is_integral(&self) -> bool {
+        // A: cannot collide with `kmalloc`
+        // B: cannot collide with `dyn_malloc` (must only use static memory (address.value() >= 2^{63}))
+        // C: cannot collide with state of `dyn_malloc`
+        // D: cannot have overlapping regions
+
+        // Notice that it's allowed to point to ND memory, $[0, 2^{32})$.
+        let memory_regions = match self {
+            MemoryLayout::Dynamic(dl) => dl.memory_regions(),
+            MemoryLayout::Static(sl) => sl.memory_regions(),
+        };
+
+        let kmalloc_region = Library::kmalloc_memory_region();
+        let kmalloc_disjoint = memory_regions
+            .iter()
+            .all(|mr| mr.disjoint_from(&kmalloc_region));
+
+        let dyn_malloc_region = DynMalloc::memory_region();
+        let dyn_malloc_disjoint = memory_regions
+            .iter()
+            .all(|mr| mr.disjoint_from(&dyn_malloc_region));
+
+        let dyn_malloc_state_disjoint = memory_regions
+            .iter()
+            .all(|mr| !mr.contains_address(DYN_MALLOC_ADDRESS));
+
+        let internally_consistent = match self {
+            MemoryLayout::Dynamic(dl) => dl.is_integral(),
+            MemoryLayout::Static(sl) => sl.is_integral(),
+        };
+
+        kmalloc_disjoint
+            && dyn_malloc_disjoint
+            && dyn_malloc_state_disjoint
+            && internally_consistent
+    }
+
+    pub fn label_friendly_name(&self) -> &str {
+        match self {
+            MemoryLayout::Dynamic(_) => "dynamic",
+            MemoryLayout::Static(_) => "static",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct AirConstraintEvaluation {
+    pub memory_layout: MemoryLayout,
+}
+
+impl AirConstraintEvaluation {
+    pub fn new_static(static_layout: StaticTasmConstraintEvaluationMemoryLayout) -> Self {
+        Self {
+            memory_layout: MemoryLayout::Static(static_layout),
+        }
+    }
+
+    pub fn new_dynamic(static_layout: DynamicTasmConstraintEvaluationMemoryLayout) -> Self {
+        Self {
+            memory_layout: MemoryLayout::Dynamic(static_layout),
+        }
+    }
+
+    pub fn with_conventional_static_memory_layout() -> Self {
+        Self {
+            memory_layout: MemoryLayout::conventional_static(),
+        }
+    }
+
+    pub fn with_conventional_dynamic_memory_layout() -> Self {
+        Self {
+            memory_layout: MemoryLayout::conventional_dynamic(),
+        }
+    }
+
+    pub fn output_type() -> DataType {
+        DataType::Array(Box::new(ArrayType {
+            element_type: DataType::Xfe,
+            length: MasterExtTable::NUM_CONSTRAINTS,
+        }))
     }
 
     /// Return the concatenated AIR-constraint evaluation
@@ -201,11 +253,14 @@ impl BasicSnippet for AirConstraintEvaluation {
     }
 }
 
+/// Please notice that putting the proof into ND memory will *not* result in
+/// memory that's compatible with this layout. So this layout will fail to
+/// yield a functional STARK verifier program.
 #[cfg(test)]
 pub fn an_integral_but_profane_static_memory_layout() -> StaticTasmConstraintEvaluationMemoryLayout
 {
     let mem_layout = StaticTasmConstraintEvaluationMemoryLayout {
-        free_mem_page_ptr: BFieldElement::new((u32::MAX as u64 - 1) * (1u64 << 32)),
+        free_mem_page_ptr: BFieldElement::new((u32::MAX as u64 - 200) * (1u64 << 32)),
         curr_base_row_ptr: BFieldElement::new(1u64),
         curr_ext_row_ptr: BFieldElement::new(1u64 << 20),
         next_base_row_ptr: BFieldElement::new(1u64 << 21),
@@ -221,8 +276,8 @@ pub fn an_integral_but_profane_static_memory_layout() -> StaticTasmConstraintEva
 pub fn an_integral_but_profane_dynamic_memory_layout() -> DynamicTasmConstraintEvaluationMemoryLayout
 {
     let mem_layout = DynamicTasmConstraintEvaluationMemoryLayout {
-        free_mem_page_ptr: BFieldElement::new((u32::MAX as u64 - 1) * (1u64 << 32)),
-        challenges_ptr: BFieldElement::new(1u64 << 23),
+        free_mem_page_ptr: BFieldElement::new((u32::MAX as u64 - 100) * (1u64 << 32)),
+        challenges_ptr: BFieldElement::new(1u64 << 30),
     };
     assert!(mem_layout.is_integral());
 
@@ -253,6 +308,7 @@ mod tests {
     use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
     use crate::execute_test;
+    use crate::library::STATIC_MEMORY_LAST_ADDRESS;
     use crate::linker::link_for_isolated_run;
     use crate::memory::encode_to_memory;
     use crate::rust_shadowing_helper_functions::array::array_get;
@@ -265,8 +321,47 @@ mod tests {
 
     #[test]
     fn conventional_air_constraint_memory_layouts_are_integral() {
-        AirConstraintEvaluation::conventional_static_air_constraint_memory_layout();
-        AirConstraintEvaluation::conventional_dynamic_air_constraint_memory_layout();
+        assert!(MemoryLayout::conventional_static().is_integral());
+        assert!(MemoryLayout::conventional_dynamic().is_integral());
+    }
+
+    #[test]
+    fn disallow_using_kmalloc_region() {
+        let mem_layout = MemoryLayout::Dynamic(DynamicTasmConstraintEvaluationMemoryLayout {
+            free_mem_page_ptr: STATIC_MEMORY_LAST_ADDRESS,
+            challenges_ptr: BFieldElement::new(1u64 << 30),
+        });
+        assert!(!mem_layout.is_integral());
+    }
+
+    #[test]
+    fn disallow_using_dynmalloc_region() {
+        let mem_layout = MemoryLayout::Dynamic(DynamicTasmConstraintEvaluationMemoryLayout {
+            free_mem_page_ptr: BFieldElement::new(42 * (1u64 << 32)),
+            challenges_ptr: BFieldElement::new(1u64 << 30),
+        });
+        assert!(!mem_layout.is_integral());
+    }
+
+    #[test]
+    fn disallow_using_dynmalloc_state() {
+        let mem_layout = MemoryLayout::Dynamic(DynamicTasmConstraintEvaluationMemoryLayout {
+            free_mem_page_ptr: BFieldElement::new(42 * (1u64 << 32)),
+            challenges_ptr: BFieldElement::new(BFieldElement::MAX),
+        });
+        assert!(!mem_layout.is_integral());
+    }
+
+    #[test]
+    fn disallow_overlapping_regions() {
+        let mut dyn_memory_layout = DynamicTasmConstraintEvaluationMemoryLayout {
+            free_mem_page_ptr: BFieldElement::new((u32::MAX as u64 - 100) * (1u64 << 32)),
+            challenges_ptr: conventional_challenges_pointer(),
+        };
+        assert!(MemoryLayout::Dynamic(dyn_memory_layout).is_integral());
+
+        dyn_memory_layout.challenges_ptr = dyn_memory_layout.free_mem_page_ptr;
+        assert!(!MemoryLayout::Dynamic(dyn_memory_layout).is_integral());
     }
 
     #[test]
@@ -287,8 +382,10 @@ mod tests {
         let proof_stream = ProofStream::try_from(&proof).unwrap();
         encode_to_memory(&mut memory, PROOF_ADDRESS, proof);
 
-        let assumed_memory_layout =
-            AirConstraintEvaluation::conventional_static_air_constraint_memory_layout();
+        let assumed_memory_layout = MemoryLayout::conventional_static();
+        let MemoryLayout::Static(assumed_memory_layout) = assumed_memory_layout else {
+            panic!()
+        };
         const BASE_ROW_SIZE: usize = NUM_BASE_COLUMNS * EXTENSION_DEGREE;
         const EXT_ROW_SIZE: usize = NUM_EXT_COLUMNS * EXTENSION_DEGREE;
 
@@ -364,12 +461,7 @@ mod tests {
             // Used for benchmarking
             let mut rng: StdRng = SeedableRng::from_seed(seed);
             let input_values = Self::random_input_values(&mut rng);
-            let (memory, stack) = match self.memory_layout {
-                MemoryLayout::Dynamic(dynamic_layout) => self
-                    .prepare_tvm_memory_and_stack_with_dynamic_layout(dynamic_layout, input_values),
-                MemoryLayout::Static(static_layout) => self
-                    .prepare_tvm_memory_and_stack_with_static_layout(static_layout, input_values),
-            };
+            let (memory, stack) = self.prepare_tvm_memory_and_stack(input_values);
 
             FunctionInitialState { stack, memory }
         }
@@ -433,76 +525,74 @@ mod tests {
             }
         }
 
-        pub(crate) fn prepare_tvm_memory_and_stack_with_static_layout(
+        pub(crate) fn prepare_tvm_memory_and_stack(
             &self,
-            static_layout: StaticTasmConstraintEvaluationMemoryLayout,
             input_values: AirConstraintSnippetInputs,
         ) -> (HashMap<BFieldElement, BFieldElement>, Vec<BFieldElement>) {
-            let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
-            insert_as_array(
-                static_layout.curr_base_row_ptr,
-                &mut memory,
-                input_values.current_base_row,
-            );
-            insert_as_array(
-                static_layout.curr_ext_row_ptr,
-                &mut memory,
-                input_values.current_ext_row,
-            );
-            insert_as_array(
-                static_layout.next_base_row_ptr,
-                &mut memory,
-                input_values.next_base_row,
-            );
-            insert_as_array(
-                static_layout.next_ext_row_ptr,
-                &mut memory,
-                input_values.next_ext_row,
-            );
-            insert_as_array(
-                static_layout.challenges_ptr,
-                &mut memory,
-                input_values.challenges.challenges.to_vec(),
-            );
+            match self.memory_layout {
+                MemoryLayout::Static(static_layout) => {
+                    let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
+                    insert_as_array(
+                        static_layout.curr_base_row_ptr,
+                        &mut memory,
+                        input_values.current_base_row,
+                    );
+                    insert_as_array(
+                        static_layout.curr_ext_row_ptr,
+                        &mut memory,
+                        input_values.current_ext_row,
+                    );
+                    insert_as_array(
+                        static_layout.next_base_row_ptr,
+                        &mut memory,
+                        input_values.next_base_row,
+                    );
+                    insert_as_array(
+                        static_layout.next_ext_row_ptr,
+                        &mut memory,
+                        input_values.next_ext_row,
+                    );
+                    insert_as_array(
+                        static_layout.challenges_ptr,
+                        &mut memory,
+                        input_values.challenges.challenges.to_vec(),
+                    );
 
-            (memory, self.init_stack_for_isolated_run())
-        }
+                    (memory, self.init_stack_for_isolated_run())
+                }
+                MemoryLayout::Dynamic(dynamic_layout) => {
+                    let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
+                    let curr_base_row_ptr = dynamic_layout.challenges_ptr + bfe!(10000);
+                    let curr_ext_row_ptr = curr_base_row_ptr
+                        + bfe!((input_values.current_base_row.len() * EXTENSION_DEGREE + 1) as u64);
+                    let next_base_row_ptr = curr_ext_row_ptr
+                        + bfe!((input_values.current_ext_row.len() * EXTENSION_DEGREE + 2) as u64);
+                    let next_ext_row_ptr = next_base_row_ptr
+                        + bfe!((input_values.next_base_row.len() * EXTENSION_DEGREE + 3) as u64);
 
-        pub(crate) fn prepare_tvm_memory_and_stack_with_dynamic_layout(
-            &self,
-            dynamic_layout: DynamicTasmConstraintEvaluationMemoryLayout,
-            input_values: AirConstraintSnippetInputs,
-        ) -> (HashMap<BFieldElement, BFieldElement>, Vec<BFieldElement>) {
-            let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
-            let curr_base_row_ptr = dynamic_layout.challenges_ptr + bfe!(10000);
-            let curr_ext_row_ptr = curr_base_row_ptr
-                + bfe!((input_values.current_base_row.len() * EXTENSION_DEGREE + 1) as u64);
-            let next_base_row_ptr = curr_ext_row_ptr
-                + bfe!((input_values.current_ext_row.len() * EXTENSION_DEGREE + 2) as u64);
-            let next_ext_row_ptr = next_base_row_ptr
-                + bfe!((input_values.next_base_row.len() * EXTENSION_DEGREE + 3) as u64);
+                    insert_as_array(
+                        curr_base_row_ptr,
+                        &mut memory,
+                        input_values.current_base_row,
+                    );
+                    insert_as_array(curr_ext_row_ptr, &mut memory, input_values.current_ext_row);
+                    insert_as_array(next_base_row_ptr, &mut memory, input_values.next_base_row);
+                    insert_as_array(next_ext_row_ptr, &mut memory, input_values.next_ext_row);
+                    insert_as_array(
+                        dynamic_layout.challenges_ptr,
+                        &mut memory,
+                        input_values.challenges.challenges.to_vec(),
+                    );
 
-            insert_as_array(
-                curr_base_row_ptr,
-                &mut memory,
-                input_values.current_base_row,
-            );
-            insert_as_array(curr_ext_row_ptr, &mut memory, input_values.current_ext_row);
-            insert_as_array(next_base_row_ptr, &mut memory, input_values.next_base_row);
-            insert_as_array(next_ext_row_ptr, &mut memory, input_values.next_ext_row);
-            insert_as_array(
-                dynamic_layout.challenges_ptr,
-                &mut memory,
-                input_values.challenges.challenges.to_vec(),
-            );
+                    let mut stack = self.init_stack_for_isolated_run();
+                    stack.push(curr_base_row_ptr);
+                    stack.push(curr_ext_row_ptr);
+                    stack.push(next_base_row_ptr);
+                    stack.push(next_ext_row_ptr);
 
-            let mut stack = self.init_stack_for_isolated_run();
-            stack.push(curr_base_row_ptr);
-            stack.push(curr_ext_row_ptr);
-            stack.push(next_base_row_ptr);
-            stack.push(next_ext_row_ptr);
-
-            (memory, stack)
+                    (memory, stack)
+                }
+            }
         }
 
         /// Return the pointed-to array and its address.
@@ -529,12 +619,7 @@ mod tests {
             &self,
             input_values: AirConstraintSnippetInputs,
         ) -> (Vec<XFieldElement>, BFieldElement) {
-            let (init_memory, stack) = match self.memory_layout {
-                MemoryLayout::Dynamic(dynamic_layout) => self
-                    .prepare_tvm_memory_and_stack_with_dynamic_layout(dynamic_layout, input_values),
-                MemoryLayout::Static(static_layout) => self
-                    .prepare_tvm_memory_and_stack_with_static_layout(static_layout, input_values),
-            };
+            let (init_memory, stack) = self.prepare_tvm_memory_and_stack(input_values);
 
             let code = link_for_isolated_run(Rc::new(RefCell::new(self.to_owned())));
             let final_state = execute_test(

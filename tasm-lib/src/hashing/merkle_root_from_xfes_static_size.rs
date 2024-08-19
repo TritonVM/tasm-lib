@@ -134,7 +134,7 @@ mod test {
             let xfes_pointer = stack.pop().unwrap();
             let xfes = array_from_memory::<XFieldElement>(xfes_pointer, self.num_leaves(), memory);
             let as_digests: Vec<Digest> = xfes.into_iter().map(|x| x.into()).collect_vec();
-            let mt = MerkleTree::<Tip5>::new::<CpuParallel>(&as_digests).unwrap();
+            let mt = MerkleTree::new::<CpuParallel>(&as_digests).unwrap();
 
             let num_not_leaf_nodes = self.num_leaves() as u32;
 

@@ -118,7 +118,7 @@ mod tests {
     use test_strategy::proptest;
     use triton_vm::twenty_first::prelude::*;
 
-    use crate::library::STATIC_MEMORY_START_ADDRESS;
+    use crate::library::STATIC_MEMORY_FIRST_ADDRESS;
     use crate::memory::encode_to_memory;
     use crate::prelude::TasmObject;
     use crate::snippet_bencher::BenchmarkCase;
@@ -148,7 +148,7 @@ mod tests {
                 "This algorithm currently can currently only handle lengths of 256, 512, and 1024."
             );
             let as_digests: Vec<Digest> = xfes.into_iter().map(|x| x.into()).collect_vec();
-            let mt = MerkleTree::<Tip5>::new::<CpuParallel>(&as_digests).unwrap();
+            let mt = MerkleTree::new::<CpuParallel>(&as_digests).unwrap();
             let num_not_leaf_nodes = xfes_len as u32;
 
             // Modify statically allocated memory as the above snippet does.
@@ -192,11 +192,11 @@ mod tests {
 
     impl MerkleRootFromXfesWrapper {
         fn static_memory_address_for_isolated_run_nodes() -> BFieldElement {
-            STATIC_MEMORY_START_ADDRESS - bfe!(MAX_LENGTH_SUPPORTED * Digest::LEN as u32)
+            STATIC_MEMORY_FIRST_ADDRESS - bfe!(MAX_LENGTH_SUPPORTED * Digest::LEN as u32)
         }
 
         fn static_memory_address_for_isolated_run_length() -> BFieldElement {
-            STATIC_MEMORY_START_ADDRESS
+            STATIC_MEMORY_FIRST_ADDRESS
         }
 
         fn init_state(

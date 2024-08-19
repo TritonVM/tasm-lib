@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use itertools::Itertools;
 use num::One;
+use triton_vm::air::memory_layout::MemoryRegion;
 use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
@@ -15,7 +16,11 @@ use crate::traits::deprecated_snippet::DeprecatedSnippet;
 /// [^1]: and partly for historic reasons
 ///
 /// [debugging]: crate::maybe_write_debuggable_program_to_disk
-pub const STATIC_MEMORY_START_ADDRESS: BFieldElement = BFieldElement::new(BFieldElement::MAX - 1);
+const STATIC_MEMORY_FIRST_ADDRESS_AS_U64: u64 = BFieldElement::MAX - 1;
+pub const STATIC_MEMORY_FIRST_ADDRESS: BFieldElement =
+    BFieldElement::new(STATIC_MEMORY_FIRST_ADDRESS_AS_U64);
+pub const STATIC_MEMORY_LAST_ADDRESS: BFieldElement =
+    BFieldElement::new(STATIC_MEMORY_FIRST_ADDRESS_AS_U64 - u32::MAX as u64);
 
 /// Represents a set of imports for a single Program or Snippet, and moreover tracks some data used
 /// for initializing the [memory allocator](crate::memory).
@@ -28,8 +33,8 @@ pub struct Library {
     /// their size.
     pub_allocations: HashMap<String, (BFieldElement, u32)>,
 
-    /// The next free address in statically assignable memory.
-    free_pointer: BFieldElement,
+    /// The number of statically allocated words
+    num_allocated_words: u32,
 }
 
 impl Default for Library {
@@ -39,11 +44,15 @@ impl Default for Library {
 }
 
 impl Library {
+    pub fn kmalloc_memory_region() -> MemoryRegion {
+        MemoryRegion::new(STATIC_MEMORY_LAST_ADDRESS, 1usize << 32)
+    }
+
     pub fn new() -> Self {
         Self {
             seen_snippets: HashMap::default(),
             pub_allocations: HashMap::default(),
-            free_pointer: STATIC_MEMORY_START_ADDRESS,
+            num_allocated_words: 0,
         }
     }
 
@@ -54,10 +63,8 @@ impl Library {
 
     #[cfg(test)]
     pub fn with_preallocated_memory(words_statically_allocated: u32) -> Self {
-        let free_pointer =
-            STATIC_MEMORY_START_ADDRESS - BFieldElement::new(words_statically_allocated as u64);
         Library {
-            free_pointer,
+            num_allocated_words: words_statically_allocated,
             ..Self::new()
         }
     }
@@ -113,10 +120,17 @@ impl Library {
         self.all_external_dependencies().concat()
     }
 
-    /// Statically allocate `num_words` words of memory.
+    /// Statically allocate `num_words` words of memory. Panics if more static
+    /// memory is required than what the capacity allows for.
     pub fn kmalloc(&mut self, num_words: u32) -> BFieldElement {
-        let address = self.free_pointer - BFieldElement::new(num_words as u64 - 1);
-        self.free_pointer -= BFieldElement::new(num_words as u64);
+        let address = STATIC_MEMORY_FIRST_ADDRESS
+            - bfe!(self.num_allocated_words)
+            - BFieldElement::new(num_words as u64 - 1);
+        self.num_allocated_words = self
+            .num_allocated_words
+            .checked_add(num_words)
+            .expect("Cannot allocate more that u32::MAX words through `kmalloc`.");
+
         address
     }
 

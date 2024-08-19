@@ -18,7 +18,7 @@ use crate::arithmetic::u64::sub_u64::SubU64;
 use crate::data_type::DataType;
 use crate::empty_stack;
 use crate::library::Library;
-use crate::library::STATIC_MEMORY_START_ADDRESS;
+use crate::library::STATIC_MEMORY_FIRST_ADDRESS;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::InitVmState;
 
@@ -495,7 +495,7 @@ impl DeprecatedSnippet for DivModU64 {
         // Because of spilling, the divisor is stored in memory. This spilling could probably be
         // avoided if the code didn't go through the tasm-lang compiler but was handcompiled
         // instead.
-        let static_address_0 = STATIC_MEMORY_START_ADDRESS;
+        let static_address_0 = STATIC_MEMORY_FIRST_ADDRESS;
         let static_address_1 = static_address_0 - BFieldElement::one();
         memory.insert(static_address_0, BFieldElement::from(divisor_hi));
         memory.insert(static_address_1, BFieldElement::from(divisor_lo));
