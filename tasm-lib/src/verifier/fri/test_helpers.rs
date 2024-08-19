@@ -176,11 +176,10 @@ fn extract_paths<const N: usize, T: BFieldCodec>(
     tree_height: usize,
 ) -> Vec<Vec<Digest>> {
     let leafs = rows.iter().map(Tip5::hash).collect_vec();
-    let inclusion_proof = MerkleTreeInclusionProof::<Tip5> {
+    let inclusion_proof = MerkleTreeInclusionProof {
         tree_height,
         indexed_leafs: indices.iter().cloned().zip(leafs).collect_vec(),
         authentication_structure: authentication_structure.to_vec(),
-        _hasher: std::marker::PhantomData,
     };
     assert!(inclusion_proof.clone().verify(root));
     inclusion_proof.into_authentication_paths().unwrap()

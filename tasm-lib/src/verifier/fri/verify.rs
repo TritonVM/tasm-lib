@@ -13,9 +13,9 @@ use triton_vm::twenty_first::math::polynomial::Polynomial;
 use triton_vm::twenty_first::math::traits::ModPowU32;
 use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 use triton_vm::twenty_first::util_types::merkle_tree::MerkleTreeInclusionProof;
+use twenty_first::prelude::MerkleTreeMaker;
 use twenty_first::util_types::merkle_tree::CpuParallel;
 use twenty_first::util_types::merkle_tree::MerkleTree;
-use twenty_first::util_types::merkle_tree_maker::MerkleTreeMaker;
 
 use crate::data_type::DataType;
 use crate::data_type::StructType;
@@ -988,7 +988,7 @@ impl FriVerify {
 
         // Check if last codeword matches the given root
         let codeword_digests = Self::map_convert_xfe_to_digest(&last_codeword);
-        let mt: MerkleTree<Tip5> = CpuParallel::from_digests(&codeword_digests).unwrap();
+        let mt: MerkleTree = CpuParallel::from_digests(&codeword_digests).unwrap();
         let last_codeword_merkle_root = mt.root();
 
         let last_root = roots.last().unwrap();
@@ -1012,11 +1012,10 @@ impl FriVerify {
 
         // reduplicate authentication structures if necessary
         if num_nondeterministic_digests_read >= nondeterministic_digests.len() {
-            let inclusion_proof = MerkleTreeInclusionProof::<Tip5> {
+            let inclusion_proof = MerkleTreeInclusionProof {
                 tree_height,
                 indexed_leafs: indexed_a_leaves.clone(),
                 authentication_structure: fri_response.auth_structure,
-                ..Default::default()
             };
 
             // sanity check: the authentication structure was valid, right?
@@ -1035,11 +1034,10 @@ impl FriVerify {
             let authentication_path = &nondeterministic_digests[num_nondeterministic_digests_read
                 ..(num_nondeterministic_digests_read + tree_height)];
             num_nondeterministic_digests_read += tree_height;
-            let inclusion_proof = MerkleTreeInclusionProof::<Tip5> {
+            let inclusion_proof = MerkleTreeInclusionProof {
                 tree_height,
                 indexed_leafs: vec![*indexed_leaf],
                 authentication_structure: authentication_path.to_vec(),
-                ..Default::default()
             };
             assert!(inclusion_proof.verify(roots[0]));
         }
@@ -1076,11 +1074,10 @@ impl FriVerify {
 
             // reduplicate authentication structures if necessary
             if num_nondeterministic_digests_read >= nondeterministic_digests.len() {
-                let inclusion_proof = MerkleTreeInclusionProof::<Tip5> {
+                let inclusion_proof = MerkleTreeInclusionProof {
                     tree_height: current_tree_height,
                     indexed_leafs: indexed_b_leaves.clone(),
                     authentication_structure: fri_response.auth_structure,
-                    ..Default::default()
                 };
 
                 // sanity check: the auth structure was valid, right?
@@ -1101,11 +1098,10 @@ impl FriVerify {
                     [num_nondeterministic_digests_read
                         ..(num_nondeterministic_digests_read + current_tree_height)];
                 num_nondeterministic_digests_read += current_tree_height;
-                let inclusion_proof = MerkleTreeInclusionProof::<Tip5> {
+                let inclusion_proof = MerkleTreeInclusionProof {
                     tree_height: current_tree_height,
                     indexed_leafs: vec![*indexed_leaf],
                     authentication_structure: authentication_path.to_vec(),
-                    ..Default::default()
                 };
                 if !inclusion_proof.verify(roots[r]) {
                     bail!(FriValidationError::BadMerkleAuthenticationPath);
