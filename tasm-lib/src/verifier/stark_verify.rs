@@ -1218,8 +1218,11 @@ impl BasicSnippet for StarkVerify {
 #[cfg(test)]
 pub mod tests {
 
+    use std::collections::HashMap;
+
     use crate::execute_test;
     use crate::maybe_write_debuggable_program_to_disk;
+    use crate::memory::FIRST_NON_DETERMINISTICALLY_INITIALIZED_MEMORY_ADDRESS;
     use crate::test_helpers::maybe_write_tvm_output_to_disk;
     use crate::verifier::claim::shared::insert_claim_into_static_memory;
     use crate::verifier::master_ext_table::air_constraint_evaluation::an_integral_but_profane_dynamic_memory_layout;
@@ -1455,6 +1458,84 @@ pub mod tests {
         stark_verify.update_nondeterminism(&mut nondeterminism, proof, claim.clone());
 
         (nondeterminism, claim)
+    }
+
+    #[test]
+    fn verify_two_proofs() {
+        let stark = Stark::default();
+        let stark_snippet = StarkVerify::new_with_dynamic_layout(stark);
+
+        let mut library = Library::new();
+        let stark_verify = library.import(Box::new(stark_snippet.clone()));
+        let verify_two_proofs_program = triton_asm! {
+            read_io 1 // claim 1
+            read_io 1 // proof 1
+            read_io 1 // claim 2
+            read_io 1 // proof 2
+
+            call {stark_verify}
+            break
+            call {stark_verify}
+            halt
+
+            {&library.all_imports()}
+        };
+
+        let inner_input_1 = bfe_vec![3];
+        let factorial_program = factorial_program_with_io();
+        let (aet_1, inner_output_1) = factorial_program
+            .trace_execution(inner_input_1.clone().into(), [].into())
+            .unwrap();
+        let claim_1 = Claim::new(factorial_program.hash())
+            .with_input(inner_input_1.clone())
+            .with_output(inner_output_1.clone());
+        let proof_1 = stark.prove(&claim_1, &aet_1).unwrap();
+        let padded_height_1 = proof_1.padded_height().unwrap();
+        println!("padded_height_1: {padded_height_1}");
+
+        let inner_input_2 = bfe_vec![24];
+        let (aet_2, inner_output_2) = factorial_program
+            .trace_execution(inner_input_2.clone().into(), [].into())
+            .unwrap();
+        let claim_2 = Claim::new(factorial_program.hash())
+            .with_input(inner_input_2.clone())
+            .with_output(inner_output_2.clone());
+        let proof_2 = stark.prove(&claim_2, &aet_2).unwrap();
+        let padded_height_2 = proof_2.padded_height().unwrap();
+        println!("padded_height_2: {padded_height_2}");
+
+        let mut memory = HashMap::<BFieldElement, BFieldElement>::new();
+        let mut address = FIRST_NON_DETERMINISTICALLY_INITIALIZED_MEMORY_ADDRESS;
+        let mut outer_input = vec![];
+        outer_input.push(address);
+        address = encode_to_memory(&mut memory, address, claim_1.clone());
+        outer_input.push(address);
+        address = encode_to_memory(&mut memory, address, proof_1.clone());
+        outer_input.push(address);
+        address = encode_to_memory(&mut memory, address, claim_2.clone());
+        outer_input.push(address);
+        encode_to_memory(&mut memory, address, proof_2.clone());
+
+        let mut outer_nondeterminism = NonDeterminism::new(vec![]).with_ram(memory);
+        stark_snippet.update_nondeterminism(&mut outer_nondeterminism, proof_2, claim_2);
+        stark_snippet.update_nondeterminism(&mut outer_nondeterminism, proof_1, claim_1);
+
+        assert!(
+            Program::new(&verify_two_proofs_program)
+                .run(outer_input.into(), outer_nondeterminism)
+                .is_ok(),
+            "could not verify two STARK proofs"
+        );
+
+        println!(
+            "fact({}) == {}  /\\  fact({}) == {}",
+            inner_input_1[0], inner_output_1[0], inner_input_2[0], inner_output_2[0]
+        );
+
+        assert_ne!(
+            padded_height_1, padded_height_2,
+            "proofs do not have different padded heights"
+        );
     }
 }
 
