@@ -913,13 +913,8 @@ impl FriVerify {
     ) -> anyhow::Result<Vec<(u32, XFieldElement)>> {
         let mut num_nondeterministic_digests_read = 0;
 
-        println!("Inside inner_verify.");
-
         // calculate number of rounds
         let num_rounds = self.num_rounds();
-        println!("Number of rounds: {num_rounds}");
-        let last_round_max_degree = self.last_round_max_degree();
-        println!("Max degree in last round: {last_round_max_degree}");
 
         // Extract all roots and calculate alpha based on Fiat-Shamir challenge
         let mut roots = Vec::with_capacity(num_rounds);
@@ -944,10 +939,6 @@ impl FriVerify {
                 .try_into_merkle_root()
                 .unwrap();
             roots.push(root);
-        }
-        println!("alphas:");
-        for alpha in alphas.iter() {
-            println!("{}", alpha);
         }
 
         // Extract last codeword and last polynomial
