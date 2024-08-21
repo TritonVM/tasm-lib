@@ -137,7 +137,7 @@ mod tests {
             let num_not_leaf_nodes = self.num_leaves() as u32;
 
             // `.skip(2)`: dummy-digest at index 0, root at index 1
-            for (node_index, &node) in (0..num_not_leaf_nodes).zip(mt.nodes()).skip(2) {
+            for (node_index, node) in (0..num_not_leaf_nodes).zip(mt.nodes()).skip(2) {
                 let node_address = self.nodes_pointer + bfe!(node_index) * bfe!(Digest::LEN as u32);
                 encode_to_memory(memory, node_address, node);
             }

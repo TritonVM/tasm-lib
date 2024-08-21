@@ -173,8 +173,8 @@ mod tests {
             rhs: Digest,
         ) -> FunctionInitialState {
             let mut memory = HashMap::default();
-            encode_to_memory(&mut memory, lhs_ptr, lhs);
-            encode_to_memory(&mut memory, rhs_ptr, rhs);
+            encode_to_memory(&mut memory, lhs_ptr, &lhs);
+            encode_to_memory(&mut memory, rhs_ptr, &rhs);
 
             let stack = [self.init_stack_for_isolated_run(), vec![lhs_ptr, rhs_ptr]].concat();
 

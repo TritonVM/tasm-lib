@@ -129,7 +129,7 @@ mod test {
         ) -> FunctionInitialState {
             let mut memory = HashMap::default();
             let mut stack = self.init_stack_for_isolated_run();
-            encode_to_memory(&mut memory, coefficients_pointer, coefficients);
+            encode_to_memory(&mut memory, coefficients_pointer, &coefficients);
 
             stack.push(coefficients_pointer);
             stack.push(indeterminate.coefficients[2]);

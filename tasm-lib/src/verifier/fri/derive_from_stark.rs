@@ -161,7 +161,7 @@ mod tests {
             let local_fri: FriVerify = fri_from_tvm.into();
             let fri_pointer =
                 rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator(memory);
-            encode_to_memory(memory, fri_pointer, local_fri);
+            encode_to_memory(memory, fri_pointer, &local_fri);
             stack.push(fri_pointer)
         }
 

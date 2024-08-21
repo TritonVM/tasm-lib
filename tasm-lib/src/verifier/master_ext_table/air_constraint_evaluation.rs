@@ -380,7 +380,7 @@ mod tests {
         const PROOF_ADDRESS: BFieldElement = BFieldElement::ZERO;
         let mut memory = HashMap::<BFieldElement, BFieldElement>::new();
         let proof_stream = ProofStream::try_from(&proof).unwrap();
-        encode_to_memory(&mut memory, PROOF_ADDRESS, proof);
+        encode_to_memory(&mut memory, PROOF_ADDRESS, &proof);
 
         let assumed_memory_layout = MemoryLayout::conventional_static();
         let MemoryLayout::Static(assumed_memory_layout) = assumed_memory_layout else {

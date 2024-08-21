@@ -46,8 +46,8 @@ impl StandaloneFriVerify {
         let digests = fri_verify.extract_digests_required_for_proving(&proof_stream);
         let mut memory = HashMap::<BFieldElement, BFieldElement>::new();
         let proof_stream_pointer = FIRST_NON_DETERMINISTICALLY_INITIALIZED_MEMORY_ADDRESS;
-        let fri_verify_pointer = encode_to_memory(&mut memory, proof_stream_pointer, proof_stream);
-        encode_to_memory(&mut memory, fri_verify_pointer, fri_verify);
+        let fri_verify_pointer = encode_to_memory(&mut memory, proof_stream_pointer, &proof_stream);
+        encode_to_memory(&mut memory, fri_verify_pointer, &fri_verify);
         let nondeterminism = NonDeterminism::new(vec![])
             .with_digests(digests)
             .with_ram(memory);

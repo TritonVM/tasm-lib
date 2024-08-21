@@ -1313,13 +1313,13 @@ mod test {
             let proof_iter_current_item_pointer = vm_proof_iter_pointer + BFieldElement::new(2);
 
             let fri_verify_pointer =
-                encode_to_memory(&mut memory, vm_proof_iter_pointer, proof_stream);
+                encode_to_memory(&mut memory, vm_proof_iter_pointer, &proof_stream);
             let proof_iter_pointer =
-                encode_to_memory(&mut memory, fri_verify_pointer, self.test_instance);
+                encode_to_memory(&mut memory, fri_verify_pointer, &self.test_instance);
             encode_to_memory(
                 &mut memory,
                 proof_iter_pointer,
-                proof_iter_current_item_pointer,
+                &proof_iter_current_item_pointer,
             );
             let nondeterminism = NonDeterminism::default()
                 .with_ram(memory)
@@ -1367,7 +1367,7 @@ mod test {
             encode_to_memory(
                 memory,
                 indices_and_leafs_pointer,
-                revealed_indices_and_elements,
+                &revealed_indices_and_elements,
             );
 
             stack.push(indices_and_leafs_pointer);

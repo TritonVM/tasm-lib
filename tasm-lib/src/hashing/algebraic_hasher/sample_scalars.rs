@@ -124,7 +124,7 @@ mod test {
                 .collect_vec();
             let scalars_pointer = DYN_MALLOC_FIRST_ADDRESS;
 
-            encode_to_memory(memory, scalars_pointer, scalars);
+            encode_to_memory(memory, scalars_pointer, &scalars);
 
             // store all pseudorandomness (not just sampled scalars) to memory
             let safety_offset = BFieldElement::new(1);

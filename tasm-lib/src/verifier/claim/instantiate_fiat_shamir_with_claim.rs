@@ -127,7 +127,7 @@ mod tests {
             let mut memory = HashMap::default();
 
             let claim_pointer = rng.gen();
-            encode_to_memory(&mut memory, claim_pointer, claim);
+            encode_to_memory(&mut memory, claim_pointer, &claim);
 
             let sponge: Tip5 = Tip5 { state: rng.gen() };
             ProcedureInitialState {
@@ -148,7 +148,7 @@ mod tests {
 
                 let claim_pointer = thread_rng().gen();
                 let mut memory = HashMap::default();
-                encode_to_memory(&mut memory, claim_pointer, minimal_claim);
+                encode_to_memory(&mut memory, claim_pointer, &minimal_claim);
                 ProcedureInitialState {
                     stack: [self.init_stack_for_isolated_run(), vec![claim_pointer]].concat(),
                     nondeterminism: NonDeterminism::default().with_ram(memory),

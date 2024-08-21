@@ -436,10 +436,8 @@ mod test {
         let mut nondeterminism = NonDeterminism::new(vec![]);
         VerifyMmrSuccessor::update_nondeterminism(&mut nondeterminism, mmr_successor_proof);
         let old_mmr_address = FIRST_NON_DETERMINISTICALLY_INITIALIZED_MEMORY_ADDRESS;
-        let new_mmr_address =
-            encode_to_memory(&mut nondeterminism.ram, old_mmr_address, old_mmr.clone());
-        let _garbage_address =
-            encode_to_memory(&mut nondeterminism.ram, new_mmr_address, new_mmr.clone());
+        let new_mmr_address = encode_to_memory(&mut nondeterminism.ram, old_mmr_address, old_mmr);
+        let _garbage_address = encode_to_memory(&mut nondeterminism.ram, new_mmr_address, new_mmr);
         let mut stack = empty_stack();
         stack.push(old_mmr_address);
         stack.push(new_mmr_address);

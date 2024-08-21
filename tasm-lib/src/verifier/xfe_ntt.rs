@@ -487,7 +487,7 @@ impl Function for XfeNtt {
 
         ntt(&mut vector, omega, n.ilog2());
 
-        encode_to_memory(memory, input_pointer, vector);
+        encode_to_memory(memory, input_pointer, &vector);
     }
 
     fn pseudorandom_initial_state(
@@ -507,7 +507,7 @@ impl Function for XfeNtt {
         let mut memory = HashMap::new();
 
         let vector_pointer = BFieldElement::new(100);
-        encode_to_memory(&mut memory, vector_pointer, vector);
+        encode_to_memory(&mut memory, vector_pointer, &vector);
         stack.push(vector_pointer);
         stack.push(BFieldElement::primitive_root_of_unity(n as u64).unwrap());
 

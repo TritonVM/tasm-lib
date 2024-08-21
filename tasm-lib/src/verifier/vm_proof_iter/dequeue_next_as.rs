@@ -430,7 +430,7 @@ mod test {
             address: BFieldElement,
         ) -> ProcedureInitialState {
             let mut ram = HashMap::new();
-            encode_to_memory(&mut ram, address, proof_stream);
+            encode_to_memory(&mut ram, address, &proof_stream);
 
             // uses highly specific knowledge of `BFieldCodec`
             let address_of_first_element = address + BFieldElement::new(2);

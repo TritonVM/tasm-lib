@@ -157,7 +157,7 @@ mod tests {
             for (node_index, &node) in (0..num_not_leaf_nodes).zip(mt.nodes()).skip(num_skips) {
                 let node_address = Self::static_memory_address_for_isolated_run_nodes()
                     + bfe!(node_index) * bfe!(Digest::LEN as u32);
-                encode_to_memory(memory, node_address, node);
+                encode_to_memory(memory, node_address, &node);
             }
 
             memory.insert(
@@ -205,7 +205,7 @@ mod tests {
             xfe_pointer: BFieldElement,
         ) -> FunctionInitialState {
             let mut memory = HashMap::<BFieldElement, BFieldElement>::new();
-            encode_to_memory(&mut memory, xfe_pointer, xfes);
+            encode_to_memory(&mut memory, xfe_pointer, &xfes);
             let mut stack = self.init_stack_for_isolated_run();
             stack.push(xfe_pointer);
 

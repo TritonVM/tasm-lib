@@ -50,7 +50,7 @@ pub fn last_populated_nd_memory_address(
 pub fn encode_to_memory<T: BFieldCodec>(
     memory: &mut HashMap<BFieldElement, BFieldElement>,
     address: BFieldElement,
-    object: T,
+    object: &T,
 ) -> BFieldElement {
     let encoding = object.encode();
     for (i, e) in encoding.iter().enumerate() {

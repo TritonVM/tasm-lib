@@ -145,7 +145,7 @@ mod test {
             for (node_index, &node) in (0..num_not_leaf_nodes).zip(mt.nodes()).skip(num_skips) {
                 let node_address =
                     self.static_memory_pointer + bfe!(node_index) * bfe!(Digest::LEN as u32);
-                encode_to_memory(memory, node_address, node);
+                encode_to_memory(memory, node_address, &node);
             }
 
             stack.extend(mt.root().reversed().values());

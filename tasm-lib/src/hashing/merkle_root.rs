@@ -212,7 +212,7 @@ impl Function for MerkleRoot {
         let num_non_leaf_nodes = leafs.len();
 
         // skip dummy digest at index 0
-        for (node_index, &node) in (0..num_non_leaf_nodes).zip(mt.nodes()).skip(1) {
+        for (node_index, node) in (0..num_non_leaf_nodes).zip(mt.nodes()).skip(1) {
             let node_address = pointer + bfe!(node_index as u32) * bfe!(Digest::LEN as u32);
             encode_to_memory(memory, node_address, node);
         }
@@ -261,7 +261,7 @@ impl MerkleRoot {
         digests_pointer: BFieldElement,
     ) -> FunctionInitialState {
         let mut memory = HashMap::<BFieldElement, BFieldElement>::new();
-        encode_to_memory(&mut memory, digests_pointer, leafs);
+        encode_to_memory(&mut memory, digests_pointer, &leafs);
         let mut stack = self.init_stack_for_isolated_run();
         stack.push(digests_pointer);
 

@@ -71,12 +71,12 @@ impl StarkVerify {
     pub fn update_nondeterminism(
         &self,
         nondeterminism: &mut NonDeterminism,
-        proof: Proof,
+        proof: &Proof,
         claim: Claim,
     ) {
         nondeterminism
             .digests
-            .append(&mut self.extract_nondeterministic_digests(&proof, claim.clone()));
+            .append(&mut self.extract_nondeterministic_digests(proof, claim.clone()));
 
         let first_free_address = nondeterminism
             .ram
@@ -1245,10 +1245,10 @@ pub mod tests {
             memory_layout: MemoryLayout::conventional_dynamic(),
         };
         let mut nondeterminism = NonDeterminism::new(vec![]);
-        snippet.update_nondeterminism(&mut nondeterminism, proof, claim_for_proof.clone());
+        snippet.update_nondeterminism(&mut nondeterminism, &proof, claim_for_proof.clone());
 
         let (claim_pointer, claim_size) =
-            insert_claim_into_static_memory(&mut nondeterminism.ram, claim_for_proof);
+            insert_claim_into_static_memory(&mut nondeterminism.ram, &claim_for_proof);
 
         let default_proof_pointer = BFieldElement::ZERO;
 
@@ -1285,7 +1285,7 @@ pub mod tests {
         );
 
         let (claim_pointer, claim_size) =
-            insert_claim_into_static_memory(&mut non_determinism.ram, claim_for_proof.clone());
+            insert_claim_into_static_memory(&mut non_determinism.ram, &claim_for_proof);
 
         let default_proof_pointer = bfe!(0);
 
@@ -1455,7 +1455,7 @@ pub mod tests {
             stark: *stark,
             memory_layout: MemoryLayout::conventional_static(),
         };
-        stark_verify.update_nondeterminism(&mut nondeterminism, proof, claim.clone());
+        stark_verify.update_nondeterminism(&mut nondeterminism, &proof, claim.clone());
 
         (nondeterminism, claim)
     }
@@ -1508,17 +1508,17 @@ pub mod tests {
         let mut address = FIRST_NON_DETERMINISTICALLY_INITIALIZED_MEMORY_ADDRESS;
         let mut outer_input = vec![];
         outer_input.push(address);
-        address = encode_to_memory(&mut memory, address, claim_1.clone());
+        address = encode_to_memory(&mut memory, address, &claim_1);
         outer_input.push(address);
-        address = encode_to_memory(&mut memory, address, proof_1.clone());
+        address = encode_to_memory(&mut memory, address, &proof_1);
         outer_input.push(address);
-        address = encode_to_memory(&mut memory, address, claim_2.clone());
+        address = encode_to_memory(&mut memory, address, &claim_2);
         outer_input.push(address);
-        encode_to_memory(&mut memory, address, proof_2.clone());
+        encode_to_memory(&mut memory, address, &proof_2);
 
         let mut outer_nondeterminism = NonDeterminism::new(vec![]).with_ram(memory);
-        stark_snippet.update_nondeterminism(&mut outer_nondeterminism, proof_2, claim_2);
-        stark_snippet.update_nondeterminism(&mut outer_nondeterminism, proof_1, claim_1);
+        stark_snippet.update_nondeterminism(&mut outer_nondeterminism, &proof_2, claim_2);
+        stark_snippet.update_nondeterminism(&mut outer_nondeterminism, &proof_1, claim_1);
 
         assert!(
             Program::new(&verify_two_proofs_program)
@@ -1575,10 +1575,10 @@ mod benches {
             memory_layout: MemoryLayout::conventional_static(),
         };
         let mut nondeterminism = NonDeterminism::new(vec![]);
-        snippet.update_nondeterminism(&mut nondeterminism, proof, claim_for_proof.clone());
+        snippet.update_nondeterminism(&mut nondeterminism, &proof, claim_for_proof.clone());
 
         let (claim_pointer, claim_size) =
-            insert_claim_into_static_memory(&mut nondeterminism.ram, claim_for_proof.clone());
+            insert_claim_into_static_memory(&mut nondeterminism.ram, &claim_for_proof);
 
         let default_proof_pointer = BFieldElement::ZERO;
 
@@ -1700,11 +1700,7 @@ mod benches {
         );
 
         let claim_pointer = BFieldElement::new(1 << 30);
-        encode_to_memory(
-            &mut non_determinism.ram,
-            claim_pointer,
-            claim_for_proof.clone(),
-        );
+        encode_to_memory(&mut non_determinism.ram, claim_pointer, &claim_for_proof);
 
         let default_proof_pointer = BFieldElement::ZERO;
 

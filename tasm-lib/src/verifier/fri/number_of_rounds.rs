@@ -117,7 +117,7 @@ mod test {
             let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
 
             let address = DYN_MALLOC_ADDRESS;
-            encode_to_memory(&mut memory, address, fri_verify);
+            encode_to_memory(&mut memory, address, &fri_verify);
             stack.push(address);
 
             FunctionInitialState { stack, memory }

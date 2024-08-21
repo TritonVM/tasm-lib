@@ -182,7 +182,7 @@ pub mod tests {
                 output,
             };
 
-            let (claim_pointer, _claim_size) = insert_claim_into_static_memory(memory, claim);
+            let (claim_pointer, _claim_size) = insert_claim_into_static_memory(memory, &claim);
 
             stack.push(claim_pointer);
 

@@ -240,7 +240,7 @@ mod test {
                     let node_index = node_count + (1 << (mt.height() - layer));
                     let node = mt.node(node_index).unwrap();
                     let pointer = pointer + BFieldElement::new((node_index * Digest::LEN) as u64);
-                    encode_to_memory(memory, pointer, node);
+                    encode_to_memory(memory, pointer, &node);
                 }
             }
 
@@ -288,7 +288,7 @@ mod test {
             xfe_pointer: BFieldElement,
         ) -> FunctionInitialState {
             let mut memory = HashMap::<BFieldElement, BFieldElement>::new();
-            encode_to_memory(&mut memory, xfe_pointer, xfes);
+            encode_to_memory(&mut memory, xfe_pointer, &xfes);
             let mut stack = self.init_stack_for_isolated_run();
             stack.push(xfe_pointer);
 

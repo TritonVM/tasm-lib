@@ -425,7 +425,7 @@ mod tests {
             let merkle_tree: MerkleTree = CpuParallel::from_digests(&leafs).unwrap();
             let merkle_root = merkle_tree.root();
             let merkle_root_pointer: BFieldElement = rng.gen();
-            encode_to_memory(&mut memory, merkle_root_pointer, merkle_root);
+            encode_to_memory(&mut memory, merkle_root_pointer, &merkle_root);
 
             // Insert all rows into memory, as a list
             let row_pointer: BFieldElement = rng.gen();

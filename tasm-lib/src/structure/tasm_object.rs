@@ -312,7 +312,7 @@ mod test {
 
         let object = pseudorandom_object(rng.gen());
         let address = rng.gen();
-        encode_to_memory(&mut memory, address, object.clone());
+        encode_to_memory(&mut memory, address, &object);
         let object_again: OuterStruct = *OuterStruct::decode_from_memory(&memory, address).unwrap();
         assert_eq!(object, object_again);
     }
@@ -341,7 +341,7 @@ mod test {
             let address = random_address.into();
             let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
 
-            encode_to_memory(&mut memory, address, random_object.clone());
+            encode_to_memory(&mut memory, address, &random_object);
             let object_again: NamedFields =
                 *NamedFields::decode_from_memory(&memory, address).unwrap();
             assert_eq!(random_object, object_again);
@@ -406,7 +406,7 @@ mod test {
             let random_address: u64 = thread_rng().gen_range(0..(1 << 30));
             let address = random_address.into();
 
-            encode_to_memory(&mut memory, address, random_object.clone());
+            encode_to_memory(&mut memory, address, &random_object);
             let object_again: TupleStruct =
                 *TupleStruct::decode_from_memory(&memory, address).unwrap();
             assert_eq!(random_object, object_again);
@@ -516,7 +516,7 @@ mod test {
             let random_address: u64 = thread_rng().gen_range(0..(1 << 30));
             let address = random_address.into();
 
-            encode_to_memory(&mut memory, address, obj.to_owned());
+            encode_to_memory(&mut memory, address, obj);
             let stack = [empty_stack(), vec![address]].concat();
 
             // link by hand
@@ -548,8 +548,8 @@ mod test {
         let v = (0..n).map(|_| rng.gen::<Digest>()).collect_vec();
         let mut ram: HashMap<BFieldElement, BFieldElement> = HashMap::new();
         let some_address = FIRST_NON_DETERMINISTICALLY_INITIALIZED_MEMORY_ADDRESS;
-        let none_address = encode_to_memory(&mut ram, some_address, Some(v.clone()));
-        encode_to_memory(&mut ram, none_address, Option::<Vec<Digest>>::None);
+        let none_address = encode_to_memory(&mut ram, some_address, &Some(v.clone()));
+        encode_to_memory(&mut ram, none_address, &Option::<Vec<Digest>>::None);
 
         let some_decoded = *Option::<Vec<Digest>>::decode_from_memory(&ram, some_address).unwrap();
         assert!(some_decoded.is_some());

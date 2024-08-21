@@ -128,7 +128,7 @@ mod test {
 
             let mut memory = HashMap::<BFieldElement, BFieldElement>::new();
             let fri_verify_address = BFieldElement::zero();
-            encode_to_memory(&mut memory, fri_verify_address, fri_verify);
+            encode_to_memory(&mut memory, fri_verify_address, &fri_verify);
 
             let mut stack = empty_stack();
             stack.push(fri_verify_address);

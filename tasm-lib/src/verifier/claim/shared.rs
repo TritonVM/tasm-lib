@@ -23,7 +23,7 @@ pub(crate) fn insert_claim_into_static_memory(
         triton_vm::twenty_first::math::b_field_element::BFieldElement,
         triton_vm::twenty_first::math::b_field_element::BFieldElement,
     >,
-    claim: triton_vm::proof::Claim,
+    claim: &triton_vm::proof::Claim,
 ) -> (
     triton_vm::twenty_first::math::b_field_element::BFieldElement,
     u32,

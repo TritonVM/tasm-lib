@@ -389,7 +389,7 @@ mod tests {
             encode_to_memory(
                 memory,
                 STATIC_MEMORY_FIRST_ADDRESS - bfe!(EXTENSION_DEGREE as u64 - 1),
-                running_product_a,
+                &running_product_a,
             );
 
             stack.push(bfe!((running_product_a == running_product_b) as u64))

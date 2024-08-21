@@ -284,7 +284,7 @@ mod tests {
             let mut memory = HashMap::default();
 
             let claim_pointer = rng.gen();
-            encode_to_memory(&mut memory, claim_pointer, claim);
+            encode_to_memory(&mut memory, claim_pointer, &claim);
 
             let stack = [self.init_stack_for_isolated_run(), vec![claim_pointer]].concat();
             let sponge = Tip5 { state: rng.gen() };
