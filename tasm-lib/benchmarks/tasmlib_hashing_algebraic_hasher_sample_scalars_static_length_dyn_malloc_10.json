@@ -2,10 +2,10 @@
   {
     "name": "tasmlib_hashing_algebraic_hasher_sample_scalars_static_length_dyn_malloc_10",
     "benchmark_result": {
-      "clock_cycle_count": 46,
+      "clock_cycle_count": 50,
       "hash_table_height": 72,
-      "u32_table_height": 0,
-      "op_stack_table_height": 85,
+      "u32_table_height": 32,
+      "op_stack_table_height": 89,
       "ram_table_height": 32
     },
     "case": "CommonCase"
@@ -13,10 +13,10 @@
   {
     "name": "tasmlib_hashing_algebraic_hasher_sample_scalars_static_length_dyn_malloc_10",
     "benchmark_result": {
-      "clock_cycle_count": 46,
+      "clock_cycle_count": 50,
       "hash_table_height": 72,
-      "u32_table_height": 0,
-      "op_stack_table_height": 85,
+      "u32_table_height": 32,
+      "op_stack_table_height": 89,
       "ram_table_height": 32
     },
     "case": "WorstCase"

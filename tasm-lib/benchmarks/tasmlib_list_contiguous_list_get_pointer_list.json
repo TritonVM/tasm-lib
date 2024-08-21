@@ -2,10 +2,10 @@
   {
     "name": "tasmlib_list_contiguous_list_get_pointer_list",
     "benchmark_result": {
-      "clock_cycle_count": 107,
+      "clock_cycle_count": 111,
       "hash_table_height": 84,
-      "u32_table_height": 0,
-      "op_stack_table_height": 78,
+      "u32_table_height": 32,
+      "op_stack_table_height": 82,
       "ram_table_height": 9
     },
     "case": "CommonCase"
@@ -13,10 +13,10 @@
   {
     "name": "tasmlib_list_contiguous_list_get_pointer_list",
     "benchmark_result": {
-      "clock_cycle_count": 182,
+      "clock_cycle_count": 186,
       "hash_table_height": 84,
-      "u32_table_height": 0,
-      "op_stack_table_height": 138,
+      "u32_table_height": 32,
+      "op_stack_table_height": 142,
       "ram_table_height": 15
     },
     "case": "WorstCase"

@@ -2,10 +2,10 @@
   {
     "name": "tasmlib_memory_dyn_malloc",
     "benchmark_result": {
-      "clock_cycle_count": 18,
-      "hash_table_height": 24,
-      "u32_table_height": 0,
-      "op_stack_table_height": 15,
+      "clock_cycle_count": 22,
+      "hash_table_height": 30,
+      "u32_table_height": 32,
+      "op_stack_table_height": 19,
       "ram_table_height": 2
     },
     "case": "CommonCase"
@@ -13,10 +13,10 @@
   {
     "name": "tasmlib_memory_dyn_malloc",
     "benchmark_result": {
-      "clock_cycle_count": 18,
-      "hash_table_height": 24,
-      "u32_table_height": 0,
-      "op_stack_table_height": 15,
+      "clock_cycle_count": 22,
+      "hash_table_height": 30,
+      "u32_table_height": 32,
+      "op_stack_table_height": 19,
       "ram_table_height": 2
     },
     "case": "WorstCase"

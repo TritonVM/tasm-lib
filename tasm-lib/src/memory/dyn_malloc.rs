@@ -23,7 +23,7 @@ pub const DYN_MALLOC_ADDRESS: BFieldElement = BFieldElement::new(BFieldElement::
 pub const DYN_MALLOC_FIRST_PAGE: u64 = 1;
 
 /// The number of pages that can be dynamically allocated.
-const NUM_ALLOCATABLE_PAGES: u64 = (1 << 31) - 1;
+pub const NUM_ALLOCATABLE_PAGES: u64 = (1 << 31) - 1;
 
 /// The size of one dynamically allocated page.
 pub const DYN_MALLOC_PAGE_SIZE: u64 = 1 << 32;
@@ -74,6 +74,12 @@ impl BasicSnippet for DynMalloc {
             dup 0 push 0 eq                 // _ page_idx (page_idx == 0)
             skiz call {dyn_malloc_init}     // _ page_idx
 
+            // Verify that we are mapping inside allowed region
+            push {NUM_ALLOCATABLE_PAGES}
+            dup 1
+            lt                              // _ page_idx (page_idx < NUM_ALLOCATABLE_PAGES)
+            assert
+
             // update dynamic allocator state
             dup 0                           // _ page_idx page_idx
             push 1                          // _ page_idx page_idx 1
@@ -108,7 +114,13 @@ impl Function for DynMalloc {
         }
         let page_idx = page_idx;
 
+        assert!(
+            page_idx.value() < NUM_ALLOCATABLE_PAGES,
+            "All allocations must happen inside dyn malloc's region"
+        );
+
         let next_page_idx = page_idx + BFieldElement::one();
+
         memory.insert(DYN_MALLOC_ADDRESS, next_page_idx);
 
         let page_address = page_idx * BFieldElement::new(DYN_MALLOC_PAGE_SIZE);
@@ -125,25 +137,63 @@ impl Function for DynMalloc {
         let stack = empty_stack();
 
         let mut memory = HashMap::new();
-        let page_number = rng.gen_range(0..(1u64 << 32));
+        let page_number = rng.gen_range(0..(1u64 << 31));
         memory.insert(DYN_MALLOC_ADDRESS, page_number.into());
 
         FunctionInitialState { stack, memory }
     }
 
     fn corner_case_initial_states(&self) -> Vec<FunctionInitialState> {
-        let stack = empty_stack();
-        let memory = HashMap::new();
-        vec![FunctionInitialState { stack, memory }]
+        let empty_vm_state = {
+            let stack = self.init_stack_for_isolated_run();
+            let memory = HashMap::new();
+
+            FunctionInitialState { stack, memory }
+        };
+
+        let one_page_has_been_allocated = {
+            let stack = self.init_stack_for_isolated_run();
+            let memory: HashMap<_, _> = [(DYN_MALLOC_ADDRESS, bfe!(1))].into_iter().collect();
+
+            FunctionInitialState { stack, memory }
+        };
+
+        let second_to_last_page_has_been_allocated = {
+            let stack = self.init_stack_for_isolated_run();
+            let memory: HashMap<_, _> = [(DYN_MALLOC_ADDRESS, bfe!(NUM_ALLOCATABLE_PAGES - 1))]
+                .into_iter()
+                .collect();
+
+            FunctionInitialState { stack, memory }
+        };
+
+        let third_to_last_page_has_been_allocated = {
+            let stack = self.init_stack_for_isolated_run();
+            let memory: HashMap<_, _> = [(DYN_MALLOC_ADDRESS, bfe!(NUM_ALLOCATABLE_PAGES - 2))]
+                .into_iter()
+                .collect();
+
+            FunctionInitialState { stack, memory }
+        };
+
+        vec![
+            empty_vm_state,
+            one_page_has_been_allocated,
+            second_to_last_page_has_been_allocated,
+            third_to_last_page_has_been_allocated,
+        ]
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use proptest_arbitrary_interop::arb;
     use test_strategy::proptest;
 
+    use crate::test_helpers::negative_test;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
+    use crate::InitVmState;
 
     use super::*;
 
@@ -156,6 +206,61 @@ mod tests {
     #[test]
     fn dynamic_allocator_behaves_like_rust_shadowing() {
         ShadowedFunction::new(DynMalloc).test();
+    }
+
+    #[test]
+    fn disallow_allocation_outside_of_region_unit_test() {
+        fn negative_prop_disallow_allocation_outside_of_region(memory_page_index: BFieldElement) {
+            let snippet = DynMalloc;
+            let init_stack = snippet.init_stack_for_isolated_run();
+            let shadowed_snippet = ShadowedFunction::new(snippet);
+
+            let memory_filled_dyn_malloc: HashMap<_, _> = [(DYN_MALLOC_ADDRESS, memory_page_index)]
+                .into_iter()
+                .collect();
+            let init_state =
+                InitVmState::with_stack_and_memory(init_stack, memory_filled_dyn_malloc);
+            negative_test(
+                &shadowed_snippet,
+                init_state,
+                &[InstructionError::AssertionFailed],
+            );
+        }
+
+        // Last page has been allocated, next call must fail
+        negative_prop_disallow_allocation_outside_of_region(bfe!(NUM_ALLOCATABLE_PAGES));
+        negative_prop_disallow_allocation_outside_of_region(bfe!(NUM_ALLOCATABLE_PAGES + 1));
+        negative_prop_disallow_allocation_outside_of_region(bfe!(NUM_ALLOCATABLE_PAGES + 2));
+        negative_prop_disallow_allocation_outside_of_region(bfe!(u32::MAX - 1));
+        negative_prop_disallow_allocation_outside_of_region(bfe!(u32::MAX));
+    }
+
+    #[proptest]
+    fn disallow_allocation_if_page_counter_is_not_a_u32(
+        #[strategy(arb())]
+        #[filter(#address.value() > u32::MAX as u64)]
+        address: BFieldElement,
+    ) {
+        fn negative_prop_disallow_allocation_with_non_u32_page_counter(
+            memory_page_index: BFieldElement,
+        ) {
+            let snippet = DynMalloc;
+            let init_stack = snippet.init_stack_for_isolated_run();
+            let shadowed_snippet = ShadowedFunction::new(snippet);
+
+            let memory_filled_dyn_malloc: HashMap<_, _> = [(DYN_MALLOC_ADDRESS, memory_page_index)]
+                .into_iter()
+                .collect();
+            let init_state =
+                InitVmState::with_stack_and_memory(init_stack, memory_filled_dyn_malloc);
+            negative_test(
+                &shadowed_snippet,
+                init_state,
+                &[InstructionError::FailedU32Conversion(memory_page_index)],
+            );
+        }
+
+        negative_prop_disallow_allocation_with_non_u32_page_counter(address);
     }
 
     #[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
