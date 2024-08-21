@@ -17,7 +17,8 @@
 
 use std::collections::HashMap;
 
-use triton_vm::prelude::*;
+use num::One;
+use triton_vm::{air::memory_layout::MemoryRegion, prelude::*};
 
 pub mod dyn_malloc;
 pub mod memcpy;
@@ -36,13 +37,38 @@ pub const LAST_ADDRESS_AVAILABLE_FOR_NON_DETERMINISTICALLY_ALLOCATED_MEMORY: BFi
 /// designated for non-determinism.
 pub fn last_populated_nd_memory_address(
     memory: &HashMap<BFieldElement, BFieldElement>,
-) -> Option<u32> {
+) -> Option<BFieldElement> {
     memory
         .keys()
         .map(|b| b.value())
         .filter(|u| *u <= LAST_ADDRESS_AVAILABLE_FOR_NON_DETERMINISTICALLY_ALLOCATED_MEMORY.value())
         .max()
-        .map(|address| address.try_into().unwrap())
+        .map(|address| bfe!(address))
+}
+
+/// Returns the address of the first unpopulated word belonging to the memory
+/// region designated for non-determinism.
+pub fn first_free_nd_address(
+    memory: &HashMap<BFieldElement, BFieldElement>,
+) -> Option<BFieldElement> {
+    let last_populated = last_populated_nd_memory_address(memory);
+    match last_populated {
+        None => Some(FIRST_NON_DETERMINISTICALLY_INITIALIZED_MEMORY_ADDRESS),
+        Some(last_populated) => match last_populated {
+            LAST_ADDRESS_AVAILABLE_FOR_NON_DETERMINISTICALLY_ALLOCATED_MEMORY => None,
+            addr => Some(addr + BFieldElement::one()),
+        },
+    }
+}
+
+pub fn nd_memory_region() -> MemoryRegion {
+    let size = LAST_ADDRESS_AVAILABLE_FOR_NON_DETERMINISTICALLY_ALLOCATED_MEMORY.value()
+        - FIRST_NON_DETERMINISTICALLY_INITIALIZED_MEMORY_ADDRESS.value();
+
+    MemoryRegion::new(
+        FIRST_NON_DETERMINISTICALLY_INITIALIZED_MEMORY_ADDRESS,
+        size.try_into().unwrap(),
+    )
 }
 
 /// Stores the encoding of the given object into memory at the given address, and returns
@@ -133,6 +159,7 @@ pub fn write_words_to_memory_pop_pointer(n: usize) -> Vec<LabelledInstruction> {
 mod tests {
     use std::collections::HashMap;
 
+    use num::Zero;
     use triton_vm::prelude::BFieldElement;
 
     use super::*;
@@ -141,18 +168,26 @@ mod tests {
     fn last_populated_nd_memory_address_looks_sane() {
         let empty_memory = HashMap::default();
         assert!(last_populated_nd_memory_address(&empty_memory).is_none());
+        assert_eq!(
+            Some(BFieldElement::zero()),
+            first_free_nd_address(&empty_memory)
+        );
 
         let empty_nd_region: HashMap<_, _> = [(bfe!(1u64 << 32), BFieldElement::new(42))]
             .into_iter()
             .collect();
         assert!(last_populated_nd_memory_address(&empty_nd_region).is_none());
+        assert_eq!(
+            Some(BFieldElement::zero()),
+            first_free_nd_address(&empty_nd_region)
+        );
 
         for address in [0, 1, 100, u32::MAX - 3, u32::MAX - 1, u32::MAX] {
             let one_populated_word: HashMap<_, _> = [(bfe!(address), BFieldElement::new(42))]
                 .into_iter()
                 .collect();
             assert_eq!(
-                Some(address),
+                Some(bfe!(address)),
                 last_populated_nd_memory_address(&one_populated_word)
             );
         }
@@ -165,7 +200,7 @@ mod tests {
             .into_iter()
             .collect();
             assert_eq!(
-                Some(address),
+                Some(bfe!(address)),
                 last_populated_nd_memory_address(&two_populated_words)
             );
         }
@@ -173,23 +208,67 @@ mod tests {
         let much_poulated_zero_is_empty: HashMap<_, _> =
             (1..4000).map(|address| (bfe!(address), bfe!(42))).collect();
         assert_eq!(
-            Some(3999),
+            Some(bfe!(3999)),
             last_populated_nd_memory_address(&much_poulated_zero_is_empty)
+        );
+        assert_eq!(
+            Some(bfe!(4000)),
+            first_free_nd_address(&much_poulated_zero_is_empty)
         );
 
         let much_poulated_zero_populated: HashMap<_, _> =
             (0..4021).map(|address| (bfe!(address), bfe!(42))).collect();
         assert_eq!(
-            Some(4020),
+            Some(bfe!(4020)),
             last_populated_nd_memory_address(&much_poulated_zero_populated)
+        );
+        assert_eq!(
+            Some(bfe!(4021)),
+            first_free_nd_address(&much_poulated_zero_populated)
         );
 
         let scattered_population: HashMap<_, _> = [(bfe!(30), bfe!(42)), (bfe!(2000), bfe!(42))]
             .into_iter()
             .collect();
         assert_eq!(
-            Some(2000),
+            Some(bfe!(2000)),
             last_populated_nd_memory_address(&scattered_population)
         );
+        assert_eq!(
+            Some(bfe!(2001)),
+            first_free_nd_address(&scattered_population)
+        );
+    }
+
+    #[test]
+    fn first_free_nd_address_looks_sane() {
+        for address in [0, 1, 100, u32::MAX - 3, u32::MAX - 3] {
+            let one_populated_word: HashMap<_, _> = [(bfe!(address), BFieldElement::new(42))]
+                .into_iter()
+                .collect();
+            assert_eq!(
+                Some(bfe!(address + 1)),
+                first_free_nd_address(&one_populated_word)
+            );
+
+            let two_populated_words: HashMap<_, _> = [
+                (bfe!(address), BFieldElement::new(42)),
+                (bfe!(address + 1), BFieldElement::new(42)),
+            ]
+            .into_iter()
+            .collect();
+            assert_eq!(
+                Some(bfe!(address + 2)),
+                first_free_nd_address(&two_populated_words)
+            );
+        }
+
+        let last_word_populated: HashMap<_, _> = [(
+            LAST_ADDRESS_AVAILABLE_FOR_NON_DETERMINISTICALLY_ALLOCATED_MEMORY,
+            bfe!(42),
+        )]
+        .into_iter()
+        .collect();
+        assert!(first_free_nd_address(&last_word_populated).is_none());
     }
 }
