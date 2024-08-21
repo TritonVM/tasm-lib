@@ -160,6 +160,9 @@ mod tests {
     use std::collections::HashMap;
 
     use num::Zero;
+    use proptest::prop_assert;
+    use proptest_arbitrary_interop::arb;
+    use test_strategy::proptest;
     use triton_vm::prelude::BFieldElement;
 
     use super::*;
@@ -270,5 +273,19 @@ mod tests {
         .into_iter()
         .collect();
         assert!(first_free_nd_address(&last_word_populated).is_none());
+    }
+
+    #[proptest]
+    fn all_addresses_between_0_and_u32max_belong_to_nd_memory(nd_address: u32) {
+        prop_assert!(nd_memory_region().contains_address(bfe!(nd_address)));
+    }
+
+    #[proptest]
+    fn addresses_outside_u32_range_do_not_belong_to_nd_memory(
+        #[strategy(arb())]
+        #[filter(#address.value() > u32::MAX as u64)]
+        address: BFieldElement,
+    ) {
+        prop_assert!(!nd_memory_region().contains_address(address));
     }
 }
