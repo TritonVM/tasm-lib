@@ -1,5 +1,4 @@
 use itertools::Itertools;
-use num_traits::ConstZero;
 use triton_vm::prelude::*;
 use triton_vm::proof_item::ProofItemVariant;
 use triton_vm::table::challenges::Challenges;
@@ -23,6 +22,7 @@ use crate::hashing::algebraic_hasher::sample_scalar_one::SampleScalarOne;
 use crate::hashing::algebraic_hasher::sample_scalars_static_length_dyn_malloc::SampleScalarsStaticLengthDynMalloc;
 use crate::library::Library;
 use crate::memory::encode_to_memory;
+use crate::memory::first_free_nd_address;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::verifier::challenges;
 use crate::verifier::claim::instantiate_fiat_shamir_with_claim::InstantiateFiatShamirWithClaim;
@@ -78,14 +78,8 @@ impl StarkVerify {
             .digests
             .append(&mut self.extract_nondeterministic_digests(proof, claim.clone()));
 
-        let first_free_address = nondeterminism
-            .ram
-            .keys()
-            .map(|&b| b.value())
-            .filter(|&b| b < (1u64 << 32))
-            .max()
-            .map(|m| BFieldElement::new(m + 1))
-            .unwrap_or(BFieldElement::ZERO);
+        let first_free_address = first_free_nd_address(&nondeterminism.ram)
+            .expect("Must have free space in ND-memory to store proof");
         encode_to_memory(&mut nondeterminism.ram, first_free_address, proof);
     }
 
@@ -1217,8 +1211,9 @@ impl BasicSnippet for StarkVerify {
 
 #[cfg(test)]
 pub mod tests {
-
     use std::collections::HashMap;
+
+    use num_traits::ConstZero;
 
     use crate::execute_test;
     use crate::maybe_write_debuggable_program_to_disk;
@@ -1474,7 +1469,6 @@ pub mod tests {
             read_io 1 // proof 2
 
             call {stark_verify}
-            break
             call {stark_verify}
             halt
 
@@ -1546,6 +1540,7 @@ mod benches {
 
     use benches::tests::factorial_program_with_io;
     use benches::tests::prove_and_get_non_determinism_and_claim;
+    use num_traits::ConstZero;
 
     use crate::generate_full_profile;
     use crate::linker::execute_bench;
