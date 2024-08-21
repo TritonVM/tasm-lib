@@ -7,6 +7,11 @@ use crate::library::Library;
 use crate::memory::dyn_malloc::DynMalloc;
 use crate::traits::basic_snippet::BasicSnippet;
 
+/// Snippet that emulates the Tip5 implementation of twenty-first's
+/// `sponge_hasher` trait function `squeeze`. You probably don't want to use
+/// this snippet for whatever cryptography you're doing and instead use the
+/// instruction `sponge_squeeze` directly, or some version of
+/// `squeeze_repeatedly`.
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct Squeeze;
 
