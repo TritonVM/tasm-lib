@@ -37,6 +37,7 @@ use crate::verifier::out_of_domain_points::OodPoint;
 use crate::verifier::out_of_domain_points::OutOfDomainPoints;
 use crate::verifier::vm_proof_iter::dequeue_next_as::DequeueNextAs;
 use crate::verifier::vm_proof_iter::new::New;
+use crate::verifier::vm_proof_iter::read_current_item_pointer::ReadCurrentItemPointer;
 use triton_vm::proof_stream::ProofStream;
 
 use super::master_ext_table::air_constraint_evaluation::AirConstraintEvaluation;
@@ -267,7 +268,7 @@ impl BasicSnippet for StarkVerify {
     }
 
     fn outputs(&self) -> Vec<(DataType, String)> {
-        vec![]
+        vec![(DataType::VoidPointer, "next_proof".to_string())]
     }
 
     fn entrypoint(&self) -> String {
@@ -299,6 +300,7 @@ impl BasicSnippet for StarkVerify {
                 + BFieldElement::new(EXTENSION_DEGREE as u64 - 1);
 
         let out_of_domain_curr_row_quot_segments_pointer_pointer = library.kmalloc(1);
+        let proof_stream_end_pointer_pointer = library.kmalloc(1);
 
         let instantiate_fiat_shamir_with_claim =
             library.import(Box::new(InstantiateFiatShamirWithClaim));
@@ -329,6 +331,7 @@ impl BasicSnippet for StarkVerify {
         let next_as_quotient_segment_elements = library.import(Box::new(DequeueNextAs {
             proof_item: ProofItemVariant::QuotientSegmentsElements,
         }));
+        let read_out_current_item_pointer = library.import(Box::new(ReadCurrentItemPointer));
         let derive_fri_parameters =
             library.import(Box::new(fri::derive_from_stark::DeriveFriFromStark {
                 stark: self.stark,
@@ -1051,9 +1054,21 @@ impl BasicSnippet for StarkVerify {
                 assert
                 // _ *beqd_ws *p_iter *oodpnts *fri *btrows *odd_brow_next *etrows *ood_erow_nxt *ood_brow_curr *ood_erow_curr *fri_revealed *qseg_elems num_colli
 
-                /* Clean up stack */
+                /* Clean up stack, and prepare return value, which is the pointer one beyond the last element of the proof stream */
                 swap 12
                 swap 11
+                // _ num_colli *beqd_ws *oodpnts *fri *btrows *odd_brow_next *etrows *ood_erow_nxt *ood_brow_curr *ood_erow_curr *fri_revealed *qseg_elems *p_iter
+
+                dup 0
+                call {next_as_authentication_path}
+                pop 1
+                // _ num_colli *beqd_ws *oodpnts *fri *btrows *odd_brow_next *etrows *ood_erow_nxt *ood_brow_curr *ood_erow_curr *fri_revealed *qseg_elems *p_iter
+
+                call {read_out_current_item_pointer}
+                // _ num_colli *beqd_ws *oodpnts *fri *btrows *odd_brow_next *etrows *ood_erow_nxt *ood_brow_curr *ood_erow_curr *fri_revealed *qseg_elems *next_proof_item
+
+                push {proof_stream_end_pointer_pointer}
+                write_mem 1
                 pop 1
                 // _ num_colli *beqd_ws *oodpnts *fri *btrows *odd_brow_next *etrows *ood_erow_nxt *ood_brow_curr *ood_erow_curr *fri_revealed *qseg_elems
 
@@ -1199,8 +1214,12 @@ impl BasicSnippet for StarkVerify {
                 call {main_loop_label}
                 // _ 0 fri_gen fri_offset *etrow_elem *btrows_elem *qseg_elem *fri_revealed_elem *beqd_ws *oodpnts
 
-                /* Cleanup stack */
+                /* Cleanup stack, and prepare return value, the pointer after the last proof item */
                 pop 5 pop 4
+
+                push {proof_stream_end_pointer_pointer}
+                read_mem 1
+                pop 1
 
                 return
 
@@ -1451,6 +1470,7 @@ pub mod tests {
             memory_layout: MemoryLayout::conventional_static(),
         };
         stark_verify.update_nondeterminism(&mut nondeterminism, &proof, claim.clone());
+        println!("proof size is {} B-field elements", proof.encode().len());
 
         (nondeterminism, claim)
     }
