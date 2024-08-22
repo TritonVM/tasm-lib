@@ -1404,8 +1404,10 @@ pub mod tests {
 
     /// Prepares the caller so that the caller can call verify on a simple program
     /// execution. Specifically, given an inner program, inner public input, inner
-    /// nondeterminism, and stark parameters; produce a proof and extract from it
-    /// nondeterminism for verifying it. Also returns the (inner) claim.
+    /// nondeterminism, and stark parameters; produce the proof, and use it to
+    /// populate non-determism (both memory and streams). Returns the claim that
+    /// the caller will then have to put into memory. Proof is stored on first
+    /// address of the ND-memory region.
     pub fn prove_and_get_non_determinism_and_claim(
         inner_program: &Program,
         inner_public_input: &[BFieldElement],
@@ -1447,6 +1449,12 @@ pub mod tests {
             memory_layout: MemoryLayout::conventional_static(),
         };
         stark_verify.update_nondeterminism(&mut nondeterminism, &proof, claim.clone());
+
+        encode_to_memory(
+            &mut nondeterminism.ram,
+            FIRST_NON_DETERMINISTICALLY_INITIALIZED_MEMORY_ADDRESS,
+            &proof,
+        );
 
         (nondeterminism, claim)
     }
