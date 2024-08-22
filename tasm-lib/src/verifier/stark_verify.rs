@@ -1,5 +1,4 @@
 use itertools::Itertools;
-use num_traits::ConstZero;
 use triton_vm::prelude::*;
 use triton_vm::proof_item::ProofItemVariant;
 use triton_vm::table::challenges::Challenges;
@@ -22,7 +21,6 @@ use crate::field;
 use crate::hashing::algebraic_hasher::sample_scalar_one::SampleScalarOne;
 use crate::hashing::algebraic_hasher::sample_scalars_static_length_dyn_malloc::SampleScalarsStaticLengthDynMalloc;
 use crate::library::Library;
-use crate::memory::encode_to_memory;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::verifier::challenges;
 use crate::verifier::claim::instantiate_fiat_shamir_with_claim::InstantiateFiatShamirWithClaim;
@@ -64,10 +62,9 @@ impl StarkVerify {
         }
     }
 
-    /// Prepares the non-determinism for verifying a STARK proof. Stores the proof
-    /// in the first free address in (nondeterministically initialized) memory.
-    /// Extracts the digests for traversing authentication paths and adds them to
-    /// nondeterministic digests.
+    /// Prepares the non-determinism for verifying a STARK proof. Specifically,
+    /// extracts the digests for traversing authentication paths and appends them
+    /// to nondeterministic digests. Leaves memory and individual tokens intact.
     pub fn update_nondeterminism(
         &self,
         nondeterminism: &mut NonDeterminism,
@@ -77,16 +74,6 @@ impl StarkVerify {
         nondeterminism
             .digests
             .append(&mut self.extract_nondeterministic_digests(proof, claim.clone()));
-
-        let first_free_address = nondeterminism
-            .ram
-            .keys()
-            .map(|&b| b.value())
-            .filter(|&b| b < (1u64 << 32))
-            .max()
-            .map(|m| BFieldElement::new(m + 1))
-            .unwrap_or(BFieldElement::ZERO);
-        encode_to_memory(&mut nondeterminism.ram, first_free_address, proof);
     }
 
     fn extract_nondeterministic_digests(&self, proof: &Proof, claim: Claim) -> Vec<Digest> {
@@ -1220,12 +1207,16 @@ pub mod tests {
 
     use std::collections::HashMap;
 
+    use derive_tasm_object::TasmObject;
+
     use crate::execute_test;
     use crate::maybe_write_debuggable_program_to_disk;
+    use crate::memory::encode_to_memory;
     use crate::memory::FIRST_NON_DETERMINISTICALLY_INITIALIZED_MEMORY_ADDRESS;
     use crate::test_helpers::maybe_write_tvm_output_to_disk;
     use crate::verifier::claim::shared::insert_claim_into_static_memory;
     use crate::verifier::master_ext_table::air_constraint_evaluation::an_integral_but_profane_dynamic_memory_layout;
+    use num_traits::ConstZero;
 
     use super::*;
 
@@ -1462,20 +1453,47 @@ pub mod tests {
 
     #[test]
     fn verify_two_proofs() {
+        #[derive(Debug, Clone, BFieldCodec, TasmObject)]
+        struct TwoProofs {
+            proof1: Proof,
+            claim1: Claim,
+            proof2: Proof,
+            claim2: Claim,
+        }
+
         let stark = Stark::default();
         let stark_snippet = StarkVerify::new_with_dynamic_layout(stark);
 
         let mut library = Library::new();
         let stark_verify = library.import(Box::new(stark_snippet.clone()));
+        let proof1 = field!(TwoProofs::proof1);
+        let proof2 = field!(TwoProofs::proof2);
+        let claim1 = field!(TwoProofs::claim1);
+        let claim2 = field!(TwoProofs::claim2);
         let verify_two_proofs_program = triton_asm! {
-            read_io 1 // claim 1
-            read_io 1 // proof 1
-            read_io 1 // claim 2
-            read_io 1 // proof 2
+
+
+            push {FIRST_NON_DETERMINISTICALLY_INITIALIZED_MEMORY_ADDRESS}
+            // *two_proofs
+
+            dup 0
+            {&claim1}
+
+            dup 1
+            {&proof1}
+            // *two_proofs *claim1 *proof1
 
             call {stark_verify}
-            break
+
+            dup 0
+            {&claim2}
+
+            dup 1
+            {&proof2}
+            // *two_proofs *claim2 *proof2
+
             call {stark_verify}
+
             halt
 
             {&library.all_imports()}
@@ -1504,21 +1522,24 @@ pub mod tests {
         let padded_height_2 = proof_2.padded_height().unwrap();
         println!("padded_height_2: {padded_height_2}");
 
+        let two_proofs = TwoProofs {
+            proof1: proof_1.clone(),
+            claim1: claim_1.clone(),
+            proof2: proof_2.clone(),
+            claim2: claim_2.clone(),
+        };
+
         let mut memory = HashMap::<BFieldElement, BFieldElement>::new();
-        let mut address = FIRST_NON_DETERMINISTICALLY_INITIALIZED_MEMORY_ADDRESS;
-        let mut outer_input = vec![];
-        outer_input.push(address);
-        address = encode_to_memory(&mut memory, address, &claim_1);
-        outer_input.push(address);
-        address = encode_to_memory(&mut memory, address, &proof_1);
-        outer_input.push(address);
-        address = encode_to_memory(&mut memory, address, &claim_2);
-        outer_input.push(address);
-        encode_to_memory(&mut memory, address, &proof_2);
+        let outer_input = vec![];
+        encode_to_memory(
+            &mut memory,
+            FIRST_NON_DETERMINISTICALLY_INITIALIZED_MEMORY_ADDRESS,
+            &two_proofs,
+        );
 
         let mut outer_nondeterminism = NonDeterminism::new(vec![]).with_ram(memory);
-        stark_snippet.update_nondeterminism(&mut outer_nondeterminism, &proof_2, claim_2);
         stark_snippet.update_nondeterminism(&mut outer_nondeterminism, &proof_1, claim_1);
+        stark_snippet.update_nondeterminism(&mut outer_nondeterminism, &proof_2, claim_2);
 
         assert!(
             Program::new(&verify_two_proofs_program)
@@ -1556,6 +1577,7 @@ mod benches {
     use crate::snippet_bencher::NamedBenchmarkResult;
     use crate::test_helpers::prepend_program_with_stack_setup;
     use crate::verifier::claim::shared::insert_claim_into_static_memory;
+    use num_traits::ConstZero;
 
     use super::*;
 
