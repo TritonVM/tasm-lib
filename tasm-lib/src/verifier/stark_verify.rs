@@ -40,6 +40,14 @@ use triton_vm::proof_stream::ProofStream;
 use super::master_ext_table::air_constraint_evaluation::AirConstraintEvaluation;
 use super::master_ext_table::air_constraint_evaluation::MemoryLayout;
 
+/// Verify a STARK proof located in memory. Assumes the nondeterministic digests
+/// stream has been updated with the digests extracted from the proof using
+/// [`update_nondeterminism`](Self::update_nondeterminism). Crashes the VM if the
+/// proof is invalid.
+///
+/// Stack signature:
+///  - BEFORE: _ *claim *proof
+///  - AFTER: _
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct StarkVerify {
@@ -62,6 +70,28 @@ impl StarkVerify {
         }
     }
 
+    /// Computes and returns the number of nondeterministic digests that will be
+    /// consumed when this snippets verifies the given (claim,proof) pair.
+    pub fn number_of_nondeterministic_digests_consumed(
+        &self,
+        proof: &Proof,
+        claim: &Claim,
+    ) -> usize {
+        self.extract_nondeterministic_digests(proof, claim).len()
+    }
+
+    /// Computes and returns the number of nondeterministic individual tokens that
+    /// will be consumed when this snippets verifies the given (claim,proof) pair.
+    /// Right now this number is zero because the snippet does not consume any,
+    /// but that might change in the future.
+    pub fn number_of_nondeterministic_tokens_consumed(
+        &self,
+        _proof: &Proof,
+        _claim: &Claim,
+    ) -> usize {
+        0
+    }
+
     /// Prepares the non-determinism for verifying a STARK proof. Specifically,
     /// extracts the digests for traversing authentication paths and appends them
     /// to nondeterministic digests. Leaves memory and individual tokens intact.
@@ -69,14 +99,14 @@ impl StarkVerify {
         &self,
         nondeterminism: &mut NonDeterminism,
         proof: &Proof,
-        claim: Claim,
+        claim: &Claim,
     ) {
         nondeterminism
             .digests
-            .append(&mut self.extract_nondeterministic_digests(proof, claim.clone()));
+            .append(&mut self.extract_nondeterministic_digests(proof, claim));
     }
 
-    fn extract_nondeterministic_digests(&self, proof: &Proof, claim: Claim) -> Vec<Digest> {
+    fn extract_nondeterministic_digests(&self, proof: &Proof, claim: &Claim) -> Vec<Digest> {
         {
             // We do need to carefully update the sponge state because otherwise
             // we end up sampling indices that generate different authentication
@@ -87,7 +117,7 @@ impl StarkVerify {
                 .unwrap()
                 .try_into_log2_padded_height()
                 .unwrap();
-            proof_stream.alter_fiat_shamir_state_with(&claim);
+            proof_stream.alter_fiat_shamir_state_with(claim);
 
             // Base-table Merkle root
             let _base_table_root = proof_stream
@@ -1236,7 +1266,7 @@ pub mod tests {
             memory_layout: MemoryLayout::conventional_dynamic(),
         };
         let mut nondeterminism = NonDeterminism::new(vec![]);
-        snippet.update_nondeterminism(&mut nondeterminism, &proof, claim_for_proof.clone());
+        snippet.update_nondeterminism(&mut nondeterminism, &proof, &claim_for_proof);
 
         let (claim_pointer, claim_size) =
             insert_claim_into_static_memory(&mut nondeterminism.ram, &claim_for_proof);
@@ -1448,7 +1478,7 @@ pub mod tests {
             stark: *stark,
             memory_layout: MemoryLayout::conventional_static(),
         };
-        stark_verify.update_nondeterminism(&mut nondeterminism, &proof, claim.clone());
+        stark_verify.update_nondeterminism(&mut nondeterminism, &proof, &claim);
 
         encode_to_memory(
             &mut nondeterminism.ram,
@@ -1546,8 +1576,19 @@ pub mod tests {
         );
 
         let mut outer_nondeterminism = NonDeterminism::new(vec![]).with_ram(memory);
-        stark_snippet.update_nondeterminism(&mut outer_nondeterminism, &proof_1, claim_1);
-        stark_snippet.update_nondeterminism(&mut outer_nondeterminism, &proof_2, claim_2);
+
+        let num_nd_digests_before = outer_nondeterminism.digests.len();
+
+        stark_snippet.update_nondeterminism(&mut outer_nondeterminism, &proof_1, &claim_1);
+        stark_snippet.update_nondeterminism(&mut outer_nondeterminism, &proof_2, &claim_2);
+
+        let num_nd_digests_after = outer_nondeterminism.digests.len();
+
+        assert_eq!(
+            num_nd_digests_after - num_nd_digests_before,
+            stark_snippet.number_of_nondeterministic_digests_consumed(&proof_1, &claim_1)
+                + stark_snippet.number_of_nondeterministic_digests_consumed(&proof_2, &claim_2)
+        );
 
         assert!(
             Program::new(&verify_two_proofs_program)
@@ -1605,7 +1646,7 @@ mod benches {
             memory_layout: MemoryLayout::conventional_static(),
         };
         let mut nondeterminism = NonDeterminism::new(vec![]);
-        snippet.update_nondeterminism(&mut nondeterminism, &proof, claim_for_proof.clone());
+        snippet.update_nondeterminism(&mut nondeterminism, &proof, &claim_for_proof);
 
         let (claim_pointer, claim_size) =
             insert_claim_into_static_memory(&mut nondeterminism.ram, &claim_for_proof);
