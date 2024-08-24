@@ -437,7 +437,7 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
             Box::new(challenge_snippet)
         }
         "tasmlib_verifier_master_ext_table_air_constraint_evaluation" => {
-            Box::new(AirConstraintEvaluation::with_conventional_static_memory_layout())
+            Box::new(AirConstraintEvaluation::with_conventional_dynamic_memory_layout())
         }
         "tasmlib_verifier_master_ext_table_verify_Base_table_rows"=> {
             Box::new(VerifyTableRows::new(ColumnType::Base))
