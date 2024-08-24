@@ -92,6 +92,7 @@ use crate::verifier::challenges::new_generic_dyn_claim::NewGenericDynClaim;
 use crate::verifier::claim::instantiate_fiat_shamir_with_claim::InstantiateFiatShamirWithClaim;
 use crate::verifier::fri;
 use crate::verifier::master_ext_table::air_constraint_evaluation::AirConstraintEvaluation;
+use crate::verifier::master_ext_table::divide_out_zerofiers::DivideOutZerofiers;
 use crate::verifier::master_ext_table::verify_table_rows::ColumnType;
 use crate::verifier::master_ext_table::verify_table_rows::VerifyTableRows;
 use crate::verifier::own_program_digest::OwnProgramDigest;
@@ -438,6 +439,9 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
         }
         "tasmlib_verifier_master_ext_table_air_constraint_evaluation" => {
             Box::new(AirConstraintEvaluation::with_conventional_dynamic_memory_layout())
+        }
+        "tasmlib_verifier_master_ext_table_divide_out_zerofiers" => {
+            Box::new(DivideOutZerofiers)
         }
         "tasmlib_verifier_master_ext_table_verify_Base_table_rows"=> {
             Box::new(VerifyTableRows::new(ColumnType::Base))
