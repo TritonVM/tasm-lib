@@ -459,29 +459,23 @@ impl BasicSnippet for StarkVerify {
 
         const NUM_OOD_ROWS_WO_QUOTIENT: u32 = 4;
         // BEFORE:
-        // _ *p_iter - - - *quot_cw_ws - dom_gen [out_of_domain_curr_row] padded_height
+        // _ *p_iter - - - *quot_cw_ws - dom_gen [out_of_domain_curr_row] padded_height *proof_iter *curr_main *curr_aux *next_main *next_aux
         // AFTER:
         // _ *p_iter - - - *quot_cw_ws - dom_gen [out_of_domain_curr_row] padded_height *air_evaluation_result
         let ood_pointers_pointer = library.kmalloc(NUM_OOD_ROWS_WO_QUOTIENT);
-        let dequeue_ood_rows_and_evaluate_air = match self.memory_layout {
+        let evaluate_air_and_store_ood_pointers = match self.memory_layout {
             MemoryLayout::Static(static_layout) => {
                 let static_eval =
                     library.import(Box::new(AirConstraintEvaluation::new_static(static_layout)));
                 triton_asm! {
-                    dup 10
-                    // _ *proof_iter
-
-                    {&dequeue_four_ood_rows}
-                    // _ *proof_iter *curr_main *curr_aux *next_main *next_aux
-
                     push {ood_pointers_pointer}
                     write_mem {NUM_OOD_ROWS_WO_QUOTIENT}
 
                     pop 2
-                    // _
+                    // _ ... padded_height
 
                     call {static_eval}
-                    // _ *air_evaluation_result
+                    // _ ... padded_height *air_evaluation_result
                 }
             }
             MemoryLayout::Dynamic(dynamic_layout) => {
@@ -489,12 +483,6 @@ impl BasicSnippet for StarkVerify {
                     dynamic_layout,
                 )));
                 triton_asm! {
-                    dup 10
-                    // _ *proof_iter
-
-                    {&dequeue_four_ood_rows}
-                    // _ *proof_iter *curr_main *curr_aux *next_main *next_aux
-
                     // store pointers to static memory
                     dup 3
                     dup 3
@@ -503,13 +491,13 @@ impl BasicSnippet for StarkVerify {
                     push {ood_pointers_pointer}
                     write_mem {NUM_OOD_ROWS_WO_QUOTIENT}
                     pop 1
-                    // _ *proof_iter *curr_main *curr_aux *next_main *next_aux
+                    // _ ... padded_height *proof_iter *curr_main *curr_aux *next_main *next_aux
 
                     call {dynamic_eval}
-                    // _ *proof_iter *air_evaluation_result
+                    // _ ... padded_height *proof_iter *air_evaluation_result
 
                     swap 1 pop 1
-                    // _ *air_evaluation_result
+                    // _ ... padded_height *air_evaluation_result
                 }
             }
         };
@@ -854,7 +842,11 @@ impl BasicSnippet for StarkVerify {
                 swap 9
                 // _ *b_mr *p_iter *oodpnts *fri *e_mr *quot_cw_ws *quot_mr dom_gen [out_of_domain_curr_row] padded_height
 
-                {&dequeue_ood_rows_and_evaluate_air}
+                dup 10
+                {&dequeue_four_ood_rows}
+                // _ *b_mr *p_iter *oodpnts *fri *e_mr *quot_cw_ws *quot_mr dom_gen [out_of_domain_curr_row] padded_height *proof_iter *curr_main *curr_aux *next_main *next_aux
+
+                {&evaluate_air_and_store_ood_pointers}
                 // _ *b_mr *p_iter *oodpnts *fri *e_mr *quot_cw_ws *quot_mr dom_gen [out_of_domain_curr_row] padded_height *air_evaluation_result
 
                 swap 5
