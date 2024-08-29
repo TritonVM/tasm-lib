@@ -1582,12 +1582,9 @@ pub mod tests {
                 + stark_snippet.number_of_nondeterministic_digests_consumed(&proof_2, &claim_2)
         );
 
-        assert!(
-            Program::new(&verify_two_proofs_program)
-                .run(outer_input.into(), outer_nondeterminism)
-                .is_ok(),
-            "could not verify two STARK proofs"
-        );
+        Program::new(&verify_two_proofs_program)
+            .run(outer_input.into(), outer_nondeterminism)
+            .expect("could not verify two STARK proofs");
 
         println!(
             "fact({}) == {}  /\\  fact({}) == {}",

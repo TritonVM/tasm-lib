@@ -16,6 +16,12 @@ type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 /// The arguments referring to fields are strings. For structs with unnamed fields, the
 /// nth field name is implicitly `field_n`.
 pub trait TasmObject {
+    /// Maximum jump distance for encoded size and length indicators.
+    /// The field getters will compare any length or size indicator read
+    /// from memory against this value and crash the VM if the indicator
+    /// is larger or equal.
+    const MAX_OFFSET: u64 = 1u64 << 30;
+
     /// Returns tasm code that returns a pointer the field of the object, assuming:
     ///  - that a pointer to the said object lives on top of the stack;
     ///  - said object has a type that implements the TasmObject trait;
