@@ -223,17 +223,54 @@ fn impl_derive_tasm_object_macro(ast: DeriveInput) -> TokenStream {
         impl #impl_generics crate::tasm_lib::structure::tasm_object::TasmObject
         for #name #ty_generics #new_where_clause {
             fn get_field( field_name : &str ) -> Vec<crate::triton_vm::instruction::LabelledInstruction> {
-                match field_name {
+                let field_getter = match field_name {
                     #( #just_field_clauses ,)*
                     unknown_field_name => panic!("Cannot match on field name `{unknown_field_name}`."),
-                }
+                };
+                let hint_appendix = [
+                    crate::triton_vm::instruction::LabelledInstruction::TypeHint(
+                        crate::triton_vm::instruction::TypeHint {
+                            starting_index: 0,
+                            length: 1,
+                            type_name: std::option::Option::<std::string::String>::None,
+                            variable_name: std::string::String::from(field_name),
+                        }
+                    )
+                ].to_vec();
+                [
+                    field_getter,
+                    hint_appendix,
+                ].concat()
             }
 
             fn get_field_with_size( field_name : &str ) -> Vec<crate::triton_vm::instruction::LabelledInstruction> {
-                match field_name {
+                let field_getter = match field_name {
                     #( #field_with_size_clauses ,)*
                     unknown_field_name => panic!("Cannot match on field name `{unknown_field_name}`."),
-                }
+                };
+                let hint_appendix = [
+                    crate::triton_vm::instruction::LabelledInstruction::TypeHint(
+                        crate::triton_vm::instruction::TypeHint {
+                            starting_index: 0,
+                            length: 1,
+                            type_name: std::option::Option::<std::string::String>::Some(std::string::String::from("u32")),
+                            variable_name: std::string::String::from("size"),
+                        }
+                    ),
+                    crate::triton_vm::instruction::LabelledInstruction::TypeHint(
+                        crate::triton_vm::instruction::TypeHint {
+                            starting_index: 1,
+                            length: 1,
+                            type_name: std::option::Option::<std::string::String>::None,
+                            variable_name: std::string::String::from(field_name),
+                        }
+                    )
+                ].to_vec();
+
+                [
+                    field_getter,
+                    hint_appendix
+                ].concat()
             }
 
             fn get_field_start_with_jump_distance( field_name : &str ) -> Vec<crate::triton_vm::instruction::LabelledInstruction> {
