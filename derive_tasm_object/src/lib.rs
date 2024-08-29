@@ -181,6 +181,43 @@ fn impl_derive_tasm_object_macro(ast: DeriveInput) -> TokenStream {
         }
     };
 
+    let encoding_length = if let Some(tokens) = get_current_field_start_with_jump.clone().last() {
+        quote! {
+            let first_field_with_jump_distance = { #tokens };
+            let add = crate::triton_vm::instruction::LabelledInstruction::Instruction(crate::triton_vm::instruction::AnInstruction::Add);
+            let dup0 = crate::triton_vm::instruction::LabelledInstruction::Instruction(crate::triton_vm::instruction::AnInstruction::Dup(crate::triton_vm::op_stack::OpStackElement::ST0));
+            let swap1 = crate::triton_vm::instruction::LabelledInstruction::Instruction(crate::triton_vm::instruction::AnInstruction::Swap(crate::triton_vm::op_stack::OpStackElement::ST1));
+            let push_neg_1 = crate::triton_vm::instruction::LabelledInstruction::Instruction(crate::triton_vm::instruction::AnInstruction::Push(crate::triton_vm::prelude::BFieldElement::new(crate::triton_vm::prelude::BFieldElement::P-1)));
+            let mul = crate::triton_vm::instruction::LabelledInstruction::Instruction(crate::triton_vm::instruction::AnInstruction::Mul);
+
+            let extract_encoding_size = [
+                    // _ *object *field size
+                    add.clone(),
+                    // _ *object (*field+size)
+                    swap1,
+                    // _ (*field+size) *object
+                    push_neg_1,
+                    // _ (*field+size) *object -1
+                    mul,
+                    // _ (*field+size) (-*object)
+                    add
+                    // _ encoding_size
+                ].to_vec();
+
+            [
+                [dup0].to_vec(),
+                first_field_with_jump_distance,
+                extract_encoding_size].concat()
+        }
+    } else {
+        quote! {
+            [
+                crate::triton_vm::instruction::LabelledInstruction::Instruction(crate::triton_vm::instruction::AnInstruction::Pop(1crate::triton_vm::op_stack::OpStackElement::ST1)),
+                crate::triton_vm::instruction::LabelledInstruction::Instruction(crate::triton_vm::instruction::AnInstruction::Push(crate::triton_vm::prelude::BFieldElement::new(0u64))),
+            ].to_vec()
+        }
+    };
+
     let name = &ast.ident;
     let gen = quote! {
         impl #impl_generics crate::tasm_lib::structure::tasm_object::TasmObject
@@ -204,6 +241,10 @@ fn impl_derive_tasm_object_macro(ast: DeriveInput) -> TokenStream {
                     #( #field_starter_clauses ,)*
                     unknown_field_name => panic!("Cannot match on field name `{unknown_field_name}`."),
                 }
+            }
+
+            fn get_encoding_length() -> Vec<crate::triton_vm::instruction::LabelledInstruction> {
+                #encoding_length
             }
 
             fn decode_iter<Itr: Iterator<Item=crate::BFieldElement>>(

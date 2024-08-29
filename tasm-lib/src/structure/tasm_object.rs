@@ -57,6 +57,15 @@ pub trait TasmObject {
     /// [`get_field_with_size`](TasmObject::get_field_with_size) instead.
     fn get_field_start_with_jump_distance(field_name: &str) -> Vec<LabelledInstruction>;
 
+    /// Returns tasm code that computes the length of the encoded object given a
+    /// pointer to it.
+    ///
+    /// ```text
+    /// BEFORE: _ *object
+    /// AFTER: _ size
+    /// ```
+    fn get_encoding_length() -> Vec<LabelledInstruction>;
+
     /// Decode as [`Self`].
     fn decode_iter<Itr: Iterator<Item = BFieldElement>>(iterator: &mut Itr) -> Result<Box<Self>>;
 
@@ -110,6 +119,10 @@ impl<T: BFieldCodec> TasmObject for Vec<T> {
             vector.push(object);
         }
         Ok(Box::new(vector))
+    }
+
+    fn get_encoding_length() -> Vec<LabelledInstruction> {
+        todo!()
     }
 }
 
@@ -243,6 +256,10 @@ impl<T: TasmObject> TasmObject for Option<T> {
             }
             None => Err(Box::new(BFieldCodecError::SequenceTooShort)),
         }
+    }
+
+    fn get_encoding_length() -> Vec<LabelledInstruction> {
+        todo!()
     }
 }
 
@@ -422,7 +439,7 @@ mod test {
             let length_xfes = library.import(Box::new(Length {
                 element_type: DataType::Xfe,
             }));
-            let code = triton_asm! {
+            let code_for_list_lengths = triton_asm! {
                 // _ *obj
 
                 dup 0
@@ -442,7 +459,7 @@ mod test {
             };
 
             // extract list lengths
-            let mut stack = get_final_stack(&random_object, library, code);
+            let mut stack = get_final_stack(&random_object, library, code_for_list_lengths);
             let extracted_bfe_count = stack.pop().unwrap().value() as usize;
             let extracted_digest_count = stack.pop().unwrap().value() as usize;
             let extracted_xfe_count = stack.pop().unwrap().value() as usize;
@@ -451,6 +468,23 @@ mod test {
             assert_eq!(random_object.3.len(), extracted_digest_count);
             assert_eq!(random_object.5.len(), extracted_bfe_count);
             assert_eq!(random_object.0.len(), extracted_xfe_count);
+
+            // code snippet to get encoding length
+            let code_for_encoding_length = triton_asm! {
+                // _ *obj
+                {&TupleStruct::get_encoding_length()}
+                // _ len
+            };
+
+            println!(
+                "encoding length code:\n{}",
+                code_for_encoding_length.iter().join("\n")
+            );
+
+            // extract length
+            stack = get_final_stack(&random_object, Library::new(), code_for_encoding_length);
+            let computed_length = stack.pop().unwrap().value() as usize;
+            assert_eq!(random_object.encode().len(), computed_length);
         }
 
         #[test]
