@@ -10,6 +10,8 @@ use triton_vm::twenty_first::error::BFieldCodecError;
 
 type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 
+pub const DEFAULT_MAX_DYN_FIELD_SIZE: u64 = 1u64 << 30;
+
 /// This trait defines methods for dealing with custom-defined objects from within the VM,
 /// assuming those methods live in memory as they are encoded with [`BFieldCodec`].
 ///
@@ -20,7 +22,7 @@ pub trait TasmObject {
     /// The field getters will compare any length or size indicator read
     /// from memory against this value and crash the VM if the indicator
     /// is larger or equal.
-    const MAX_OFFSET: u64 = 1u64 << 30;
+    const MAX_OFFSET: u64 = DEFAULT_MAX_DYN_FIELD_SIZE;
 
     /// Returns tasm code that returns a pointer the field of the object, assuming:
     ///  - that a pointer to the said object lives on top of the stack;
