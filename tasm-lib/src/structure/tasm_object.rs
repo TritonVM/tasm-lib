@@ -342,6 +342,8 @@ mod test {
 
     /// Test derivation of field getters and manual derivations of the `field!` macro
     mod derive_tests {
+        use num_traits::ConstZero;
+
         use super::*;
 
         #[test]
@@ -401,34 +403,106 @@ mod test {
             assert_eq!(random_object.f.len(), extracted_f_length);
         }
 
-        #[test]
-        fn load_and_decode_tuple_struct_containing_enums_from_memory() {
-            #[derive(BFieldCodec, PartialEq, Eq, Clone, Debug, Arbitrary)]
-            enum MyEnum {
-                A(u64, Digest),
-                B,
-                C,
-            }
+        #[derive(BFieldCodec, PartialEq, Eq, Clone, Debug, Arbitrary)]
+        enum MyEnum {
+            A(u64, Digest),
+            B,
+            C,
+        }
 
-            #[derive(BFieldCodec, TasmObject, PartialEq, Eq, Clone, Debug, Arbitrary)]
-            struct TupleStruct(
-                Vec<XFieldElement>,
-                MyEnum,
-                u32,
-                Vec<Digest>,
-                Digest,
-                Vec<BFieldElement>,
-                Digest,
+        #[derive(BFieldCodec, TasmObject, PartialEq, Eq, Clone, Debug, Arbitrary)]
+        struct TupleStruct(
+            Vec<XFieldElement>,
+            MyEnum,
+            u32,
+            Vec<Digest>,
+            Digest,
+            Vec<BFieldElement>,
+            Digest,
+        );
+
+        fn prepare_random_object(seed: [u8; 32]) -> TupleStruct {
+            let mut rng: StdRng = SeedableRng::from_seed(seed);
+            let mut randomness = [0u8; 100000];
+            rng.fill_bytes(&mut randomness);
+            let mut unstructured = Unstructured::new(&randomness);
+            TupleStruct::arbitrary(&mut unstructured).unwrap()
+        }
+
+        #[test]
+        fn mess_with_size_indicators_negative_test() {
+            let random_object = prepare_random_object(random());
+
+            const START_OF_OBJ: BFieldElement = BFieldElement::ZERO;
+            let third_to_last_field = field!(TupleStruct::field_4);
+            let code = triton_asm!(
+                // _
+
+                push {START_OF_OBJ}
+                // _ *tuple_struct
+
+                {&third_to_last_field}
+                // _ *digest
+
+                addi {Digest::LEN - 1}
+                read_mem {Digest::LEN}
+                pop 1
+                // _ [digest]
+
+                halt
             );
 
-            let mut randomness = [0u8; 100000];
-            thread_rng().fill_bytes(&mut randomness);
-            let mut unstructured = Unstructured::new(&randomness);
-            let random_object = TupleStruct::arbitrary(&mut unstructured).unwrap();
-            let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
+            // No-messed works
+            let mut no_messed_memory = HashMap::new();
+            encode_to_memory(&mut no_messed_memory, START_OF_OBJ, &random_object);
+
+            let program = Program::new(&code);
+            let no_messed_nd = NonDeterminism::default().with_ram(no_messed_memory.clone());
+            let mut vm_state_pass =
+                VMState::new(&program, PublicInput::default(), no_messed_nd.clone());
+            vm_state_pass.run().unwrap();
+            assert_eq!(
+                random_object.4.values(),
+                [
+                    vm_state_pass.op_stack[0],
+                    vm_state_pass.op_stack[1],
+                    vm_state_pass.op_stack[2],
+                    vm_state_pass.op_stack[3],
+                    vm_state_pass.op_stack[4]
+                ]
+            );
+
+            // Messed-up encoding fails: Too big but still u32
+            const POINTER_TO_MESSED_UP_SI: BFieldElement = BFieldElement::new(5);
+            let mut messed_up_memory = no_messed_memory.clone();
+            messed_up_memory.insert(POINTER_TO_MESSED_UP_SI, bfe!(TupleStruct::MAX_OFFSET + 1));
+            let messed_up_nd_0 = NonDeterminism::default().with_ram(messed_up_memory.clone());
+            let mut vm_state_fail0 =
+                VMState::new(&program, PublicInput::default(), messed_up_nd_0.clone());
+            let instruction_error = vm_state_fail0.run().unwrap_err();
+            assert_eq!(InstructionError::AssertionFailed, instruction_error,);
+
+            // Messed-up encoding fails: Negative sizes banned
+            let negative_number = bfe!(-42);
+            messed_up_memory = no_messed_memory;
+            messed_up_memory.insert(POINTER_TO_MESSED_UP_SI, negative_number);
+            let messed_up_nd_1 = NonDeterminism::default().with_ram(messed_up_memory.clone());
+            let mut vm_state_fail1 =
+                VMState::new(&program, PublicInput::default(), messed_up_nd_1.clone());
+            let instruction_error = vm_state_fail1.run().unwrap_err();
+            assert_eq!(
+                InstructionError::FailedU32Conversion(negative_number),
+                instruction_error,
+            );
+        }
+
+        #[test]
+        fn load_and_decode_tuple_struct_containing_enums_from_memory() {
+            let random_object = prepare_random_object(random());
             let random_address: u64 = thread_rng().gen_range(0..(1 << 30));
             let address = random_address.into();
 
+            let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
             encode_to_memory(&mut memory, address, &random_object);
             let object_again: TupleStruct =
                 *TupleStruct::decode_from_memory(&memory, address).unwrap();
