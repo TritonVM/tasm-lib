@@ -1,10 +1,12 @@
 use std::collections::HashMap;
 
+use itertools::Itertools;
 use num_traits::Zero;
 use rand::prelude::*;
 use triton_vm::prelude::*;
 
 use crate::empty_stack;
+use crate::structure::tasm_object::DEFAULT_MAX_DYN_FIELD_SIZE;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
@@ -69,11 +71,26 @@ impl DeprecatedSnippet for MemCpy {
 
     fn function_code(&self, _library: &mut crate::library::Library) -> String {
         let entrypoint = self.entrypoint_name();
-        format!(
-            "
+
+        let copy_5_words_loop_label = format!("{entrypoint}_loop_cpy5_words");
+        let copy_4_words_label = format!("{entrypoint}_cpy4_words");
+        let copy_3_words_label = format!("{entrypoint}_cpy3_words");
+        let copy_2_words_label = format!("{entrypoint}_cpy2_words");
+        let copy_1_words_label = format!("{entrypoint}_cpy1_words");
+        triton_asm!(
         // BEFORE: _ read_source write_dest num_words
         // AFTER:  _
         {entrypoint}:
+
+            /* Cap size of memcpy operation */
+            push {DEFAULT_MAX_DYN_FIELD_SIZE}
+            dup 1
+            lt
+            // _ read_source write_dest (num_words < MAX)
+
+            assert
+            // _ read_source write_dest
+
 
             swap 2
             push 4
@@ -81,7 +98,7 @@ impl DeprecatedSnippet for MemCpy {
             swap 2
             // _ (read_source + 4) write_dest num_words
 
-            call {entrypoint}_loop_cpy5_words
+            call {copy_5_words_loop_label}
             // _ read_source write_dest remaining_words
 
             dup 0
@@ -89,28 +106,28 @@ impl DeprecatedSnippet for MemCpy {
             eq
             // _ read_source write_dest remaining_words (remaining_words == 4)
             skiz
-                call {entrypoint}_cpy4_words
+                call {copy_4_words_label}
             // _ read_source write_dest remaining_words
 
             dup 0
             push 3
             eq
             skiz
-                call {entrypoint}_cpy3_words
+                call {copy_3_words_label}
             // _ read_source write_dest remaining_words
 
             dup 0
             push 2
             eq
             skiz
-                call {entrypoint}_cpy2_words
+                call {copy_2_words_label}
             // _ read_source write_dest remaining_words
 
             dup 0
             push 1
             eq
             skiz
-                call {entrypoint}_cpy1_word
+                call {copy_1_words_label}
             // read_source write_dest 0
 
             // clean up stack
@@ -119,7 +136,7 @@ impl DeprecatedSnippet for MemCpy {
             return
 
         // INVARIANT:  _ (read_source + 4) write_dest remaining_words
-        {entrypoint}_loop_cpy5_words:
+        {copy_5_words_loop_label}:
             // termination condition
             push 5
             dup 1
@@ -141,11 +158,11 @@ impl DeprecatedSnippet for MemCpy {
 
             swap 1 // _ (read_source + 9) (write_dest + 5) remaining_words
 
-            push -5 add // _ (read_source + 9) (write_dest + 5) (remaining_words-5)
+            addi -5 // _ (read_source + 9) (write_dest + 5) (remaining_words-5)
 
             recurse
 
-        {entrypoint}_cpy4_words:
+        {copy_4_words_label}:
             // (read_source + 4) write_dest remaining_words
 
             pop 1
@@ -155,7 +172,7 @@ impl DeprecatedSnippet for MemCpy {
             swap 1
             // write_dest (read_source + 4)
 
-            push -1 add
+            addi -1
             // write_dest (read_source + 3)
 
             read_mem 4
@@ -172,7 +189,7 @@ impl DeprecatedSnippet for MemCpy {
 
             return
 
-        {entrypoint}_cpy3_words:
+        {copy_3_words_label}:
             // (read_source + 4) write_dest remaining_words
 
             pop 1
@@ -182,7 +199,7 @@ impl DeprecatedSnippet for MemCpy {
             swap 1
             // write_dest (read_source + 4)
 
-            push -2 add
+            addi -2
             // write_dest (read_source + 2)
 
             read_mem 3
@@ -199,7 +216,7 @@ impl DeprecatedSnippet for MemCpy {
 
             return
 
-        {entrypoint}_cpy2_words:
+        {copy_2_words_label}:
             // (read_source + 4) write_dest remaining_words
 
             pop 1
@@ -209,7 +226,7 @@ impl DeprecatedSnippet for MemCpy {
             swap 1
             // write_dest (read_source + 4)
 
-            push -3 add
+            addi -3
             // write_dest (read_source + 1)
 
             read_mem 2
@@ -226,7 +243,7 @@ impl DeprecatedSnippet for MemCpy {
 
             return
 
-        {entrypoint}_cpy1_word:
+        {copy_1_words_label}:
             // (read_source + 4) write_dest remaining_words
 
             pop 1
@@ -236,7 +253,7 @@ impl DeprecatedSnippet for MemCpy {
             swap 1
             // write_dest (read_source + 4)
 
-            push -4 add
+            addi -4
             // write_dest (read_source)
 
             read_mem 1
@@ -252,12 +269,16 @@ impl DeprecatedSnippet for MemCpy {
             // read_source' write_dest' remaining_words
 
             return
-        "
         )
+        .iter()
+        .join("\n")
     }
 
     fn crash_conditions(&self) -> Vec<String> {
-        vec![]
+        vec![format!(
+            "Attempts to copy more than {} words",
+            DEFAULT_MAX_DYN_FIELD_SIZE
+        )]
     }
 
     fn gen_input_states(&self) -> Vec<crate::InitVmState> {
@@ -299,6 +320,8 @@ impl DeprecatedSnippet for MemCpy {
         let write_dest = stack.pop().unwrap();
         let read_source = stack.pop().unwrap();
 
+        assert!(len < DEFAULT_MAX_DYN_FIELD_SIZE as usize);
+
         for i in 0..len {
             let read_element = memory
                 .get(&(BFieldElement::new(i as u64) + read_source))
@@ -311,13 +334,40 @@ impl DeprecatedSnippet for MemCpy {
 
 #[cfg(test)]
 mod tests {
-    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
+    use crate::{
+        prelude::BasicSnippet,
+        test_helpers::{negative_test, test_rust_equivalence_multiple_deprecated},
+        traits::deprecated_snippet::tests::DeprecatedSnippetWrapper,
+    };
 
     use super::*;
 
     #[test]
     fn memcpy_test() {
         test_rust_equivalence_multiple_deprecated(&MemCpy, true);
+    }
+
+    #[test]
+    fn exceed_max_memcpy_size_negative_test() {
+        let snippet_struct = DeprecatedSnippetWrapper::new(MemCpy);
+        let stack = [
+            snippet_struct
+                .deprecated_snippet
+                .init_stack_for_isolated_run(),
+            vec![bfe!(0), bfe!(0), bfe!(1u64 << 31)],
+        ]
+        .concat();
+        let init_state = crate::InitVmState {
+            stack,
+            public_input: Vec::default(),
+            nondeterminism: NonDeterminism::default(),
+            sponge: None,
+        };
+        negative_test(
+            &snippet_struct,
+            init_state,
+            &[InstructionError::AssertionFailed],
+        );
     }
 }
 
