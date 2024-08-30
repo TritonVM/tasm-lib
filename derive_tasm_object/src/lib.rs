@@ -440,10 +440,15 @@ fn generate_tasm_for_extend_field_start_with_jump_amount(
             ].to_vec()
         } else {
             [
+                // _ *object
                 crate::triton_vm::instruction::LabelledInstruction::Instruction(crate::triton_vm::instruction::AnInstruction::ReadMem(crate::triton_vm::op_stack::NumberOfWords::N1)),
+                // _ si (*object-1)
                 crate::triton_vm::instruction::LabelledInstruction::Instruction(crate::triton_vm::instruction::AnInstruction::Push(crate::triton_vm::prelude::BFieldElement::new(Self::MAX_OFFSET))),
-                crate::triton_vm::instruction::LabelledInstruction::Instruction(crate::triton_vm::instruction::AnInstruction::Dup(crate::triton_vm::op_stack::OpStackElement::ST1)),
+                // _ si (*object-1) MAX
+                crate::triton_vm::instruction::LabelledInstruction::Instruction(crate::triton_vm::instruction::AnInstruction::Dup(crate::triton_vm::op_stack::OpStackElement::ST2)),
+                // _ si (*object-1) MAX si
                 crate::triton_vm::instruction::LabelledInstruction::Instruction(crate::triton_vm::instruction::AnInstruction::Lt),
+                // _ si (*object-1) (si < MAX)
                 crate::triton_vm::instruction::LabelledInstruction::Instruction(crate::triton_vm::instruction::AnInstruction::Assert),
                 crate::triton_vm::instruction::LabelledInstruction::Instruction(crate::triton_vm::instruction::AnInstruction::Push(crate::BFieldElement::new(1u64))),
                 crate::triton_vm::instruction::LabelledInstruction::Instruction(crate::triton_vm::instruction::AnInstruction::Add),

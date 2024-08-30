@@ -1582,7 +1582,15 @@ pub mod tests {
                 + stark_snippet.number_of_nondeterministic_digests_consumed(&proof_2, &claim_2)
         );
 
-        Program::new(&verify_two_proofs_program)
+        let program = Program::new(&verify_two_proofs_program);
+
+        let vm_state = VMState::new(
+            &program,
+            outer_input.clone().into(),
+            outer_nondeterminism.clone(),
+        );
+        maybe_write_debuggable_program_to_disk(&program, &vm_state);
+        program
             .run(outer_input.into(), outer_nondeterminism)
             .expect("could not verify two STARK proofs");
 
