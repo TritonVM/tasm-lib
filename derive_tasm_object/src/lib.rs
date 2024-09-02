@@ -190,6 +190,9 @@ fn impl_derive_tasm_object_macro(ast: DeriveInput) -> TokenStream {
             let push_neg_1 = crate::triton_vm::instruction::LabelledInstruction::Instruction(crate::triton_vm::instruction::AnInstruction::Push(crate::triton_vm::prelude::BFieldElement::new(crate::triton_vm::prelude::BFieldElement::P-1)));
             let mul = crate::triton_vm::instruction::LabelledInstruction::Instruction(crate::triton_vm::instruction::AnInstruction::Mul);
 
+            // Get `*field` and `size` for last field of encoding, which is the 1st in the definition.
+            // Then add them to a pointer one past the end of the object. Then subtract `*object`
+            // of the object to get final size.
             let extract_encoding_size = [
                     // _ *object *field size
                     add.clone(),
