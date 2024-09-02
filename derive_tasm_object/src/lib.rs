@@ -212,7 +212,7 @@ fn impl_derive_tasm_object_macro(ast: DeriveInput) -> TokenStream {
     } else {
         quote! {
             [
-                crate::triton_vm::instruction::LabelledInstruction::Instruction(crate::triton_vm::instruction::AnInstruction::Pop(1crate::triton_vm::op_stack::OpStackElement::ST1)),
+                crate::triton_vm::instruction::LabelledInstruction::Instruction(crate::triton_vm::instruction::AnInstruction::Pop(crate::triton_vm::op_stack::NumberOfWords::N1)),
                 crate::triton_vm::instruction::LabelledInstruction::Instruction(crate::triton_vm::instruction::AnInstruction::Push(crate::triton_vm::prelude::BFieldElement::new(0u64))),
             ].to_vec()
         }
