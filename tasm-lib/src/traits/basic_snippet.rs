@@ -100,6 +100,7 @@ pub trait BasicSnippet {
         code
     }
 
+    /// Intial stack on program start, when the snippet runs in isolation.
     fn init_stack_for_isolated_run(&self) -> Vec<BFieldElement> {
         let code = self.link_for_isolated_run();
         let program = Program::new(&code);
