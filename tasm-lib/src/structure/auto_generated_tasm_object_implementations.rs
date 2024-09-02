@@ -30,7 +30,7 @@ impl crate::tasm_lib::structure::tasm_object::TasmObject for MmrAccumulator {
                                 crate::triton_vm::instruction::LabelledInstruction::Instruction(
                                     crate::triton_vm::instruction::AnInstruction::Push(
                                         crate::triton_vm::prelude::BFieldElement::new(
-                                            Self::MAX_OFFSET,
+                                            Self::MAX_OFFSET.into(),
                                         ),
                                     ),
                                 ),
@@ -129,7 +129,7 @@ impl crate::tasm_lib::structure::tasm_object::TasmObject for MmrAccumulator {
                                         crate::triton_vm::instruction::LabelledInstruction::Instruction(
                                             crate::triton_vm::instruction::AnInstruction::Push(
                                                 crate::triton_vm::prelude::BFieldElement::new(
-                                                    Self::MAX_OFFSET,
+                                                    Self::MAX_OFFSET.into(),
                                                 ),
                                             ),
                                         ),
@@ -244,7 +244,7 @@ impl crate::tasm_lib::structure::tasm_object::TasmObject for MmrAccumulator {
                                 crate::triton_vm::instruction::LabelledInstruction::Instruction(
                                     crate::triton_vm::instruction::AnInstruction::Push(
                                         crate::triton_vm::prelude::BFieldElement::new(
-                                            Self::MAX_OFFSET,
+                                            Self::MAX_OFFSET.into(),
                                         ),
                                     ),
                                 ),
@@ -351,7 +351,7 @@ impl crate::tasm_lib::structure::tasm_object::TasmObject for MmrAccumulator {
                                         crate::triton_vm::instruction::LabelledInstruction::Instruction(
                                             crate::triton_vm::instruction::AnInstruction::Push(
                                                 crate::triton_vm::prelude::BFieldElement::new(
-                                                    Self::MAX_OFFSET,
+                                                    Self::MAX_OFFSET.into(),
                                                 ),
                                             ),
                                         ),
@@ -481,7 +481,7 @@ impl crate::tasm_lib::structure::tasm_object::TasmObject for MmrAccumulator {
                             crate::triton_vm::instruction::LabelledInstruction::Instruction(
                                 crate::triton_vm::instruction::AnInstruction::Push(
                                     crate::triton_vm::prelude::BFieldElement::new(
-                                        Self::MAX_OFFSET,
+                                        Self::MAX_OFFSET.into(),
                                     ),
                                 ),
                             ),
@@ -548,7 +548,9 @@ impl crate::tasm_lib::structure::tasm_object::TasmObject for MmrAccumulator {
                             ),
                             crate::triton_vm::instruction::LabelledInstruction::Instruction(
                                 crate::triton_vm::instruction::AnInstruction::Push(
-                                    crate::triton_vm::prelude::BFieldElement::new(Self::MAX_OFFSET),
+                                    crate::triton_vm::prelude::BFieldElement::new(
+                                        Self::MAX_OFFSET.into(),
+                                    ),
                                 ),
                             ),
                             crate::triton_vm::instruction::LabelledInstruction::Instruction(
@@ -618,7 +620,7 @@ impl crate::tasm_lib::structure::tasm_object::TasmObject for MmrAccumulator {
                                 crate::triton_vm::instruction::LabelledInstruction::Instruction(
                                     crate::triton_vm::instruction::AnInstruction::Push(
                                         crate::triton_vm::prelude::BFieldElement::new(
-                                            Self::MAX_OFFSET,
+                                            Self::MAX_OFFSET.into(),
                                         ),
                                     ),
                                 ),
@@ -746,7 +748,7 @@ impl crate::tasm_lib::structure::tasm_object::TasmObject for MmrMembershipProof 
                                 crate::triton_vm::instruction::LabelledInstruction::Instruction(
                                     crate::triton_vm::instruction::AnInstruction::Push(
                                         crate::triton_vm::prelude::BFieldElement::new(
-                                            Self::MAX_OFFSET,
+                                            Self::MAX_OFFSET.into(),
                                         ),
                                     ),
                                 ),
@@ -859,7 +861,7 @@ impl crate::tasm_lib::structure::tasm_object::TasmObject for MmrMembershipProof 
                                 crate::triton_vm::instruction::LabelledInstruction::Instruction(
                                     crate::triton_vm::instruction::AnInstruction::Push(
                                         crate::triton_vm::prelude::BFieldElement::new(
-                                            Self::MAX_OFFSET,
+                                            Self::MAX_OFFSET.into(),
                                         ),
                                     ),
                                 ),
@@ -989,7 +991,7 @@ impl crate::tasm_lib::structure::tasm_object::TasmObject for MmrMembershipProof 
                             crate::triton_vm::instruction::LabelledInstruction::Instruction(
                                 crate::triton_vm::instruction::AnInstruction::Push(
                                     crate::triton_vm::prelude::BFieldElement::new(
-                                        Self::MAX_OFFSET,
+                                        Self::MAX_OFFSET.into(),
                                     ),
                                 ),
                             ),
@@ -1051,7 +1053,7 @@ impl crate::tasm_lib::structure::tasm_object::TasmObject for MmrMembershipProof 
                     ),
                     crate::triton_vm::instruction::LabelledInstruction::Instruction(
                         crate::triton_vm::instruction::AnInstruction::Push(
-                            crate::triton_vm::prelude::BFieldElement::new(Self::MAX_OFFSET),
+                            crate::triton_vm::prelude::BFieldElement::new(Self::MAX_OFFSET.into()),
                         ),
                     ),
                     crate::triton_vm::instruction::LabelledInstruction::Instruction(
@@ -1165,7 +1167,7 @@ impl crate::tasm_lib::structure::tasm_object::TasmObject for FriResponse {
                                 crate::triton_vm::instruction::LabelledInstruction::Instruction(
                                     crate::triton_vm::instruction::AnInstruction::Push(
                                         crate::triton_vm::prelude::BFieldElement::new(
-                                            Self::MAX_OFFSET,
+                                            Self::MAX_OFFSET.into(),
                                         ),
                                     ),
                                 ),
@@ -1264,7 +1266,7 @@ impl crate::tasm_lib::structure::tasm_object::TasmObject for FriResponse {
                                         crate::triton_vm::instruction::LabelledInstruction::Instruction(
                                             crate::triton_vm::instruction::AnInstruction::Push(
                                                 crate::triton_vm::prelude::BFieldElement::new(
-                                                    Self::MAX_OFFSET,
+                                                    Self::MAX_OFFSET.into(),
                                                 ),
                                             ),
                                         ),
@@ -1378,7 +1380,7 @@ impl crate::tasm_lib::structure::tasm_object::TasmObject for FriResponse {
                                 crate::triton_vm::instruction::LabelledInstruction::Instruction(
                                     crate::triton_vm::instruction::AnInstruction::Push(
                                         crate::triton_vm::prelude::BFieldElement::new(
-                                            Self::MAX_OFFSET,
+                                            Self::MAX_OFFSET.into(),
                                         ),
                                     ),
                                 ),
@@ -1485,7 +1487,7 @@ impl crate::tasm_lib::structure::tasm_object::TasmObject for FriResponse {
                                         crate::triton_vm::instruction::LabelledInstruction::Instruction(
                                             crate::triton_vm::instruction::AnInstruction::Push(
                                                 crate::triton_vm::prelude::BFieldElement::new(
-                                                    Self::MAX_OFFSET,
+                                                    Self::MAX_OFFSET.into(),
                                                 ),
                                             ),
                                         ),
@@ -1616,7 +1618,7 @@ impl crate::tasm_lib::structure::tasm_object::TasmObject for FriResponse {
                             crate::triton_vm::instruction::LabelledInstruction::Instruction(
                                 crate::triton_vm::instruction::AnInstruction::Push(
                                     crate::triton_vm::prelude::BFieldElement::new(
-                                        Self::MAX_OFFSET,
+                                        Self::MAX_OFFSET.into(),
                                     ),
                                 ),
                             ),
@@ -1681,7 +1683,7 @@ impl crate::tasm_lib::structure::tasm_object::TasmObject for FriResponse {
                                 crate::triton_vm::instruction::LabelledInstruction::Instruction(
                                     crate::triton_vm::instruction::AnInstruction::Push(
                                         crate::triton_vm::prelude::BFieldElement::new(
-                                            Self::MAX_OFFSET,
+                                            Self::MAX_OFFSET.into(),
                                         ),
                                     ),
                                 ),
@@ -1752,7 +1754,7 @@ impl crate::tasm_lib::structure::tasm_object::TasmObject for FriResponse {
                                 crate::triton_vm::instruction::LabelledInstruction::Instruction(
                                     crate::triton_vm::instruction::AnInstruction::Push(
                                         crate::triton_vm::prelude::BFieldElement::new(
-                                            Self::MAX_OFFSET,
+                                            Self::MAX_OFFSET.into(),
                                         ),
                                     ),
                                 ),
