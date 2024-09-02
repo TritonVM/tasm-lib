@@ -431,13 +431,120 @@ mod test {
             TupleStruct::arbitrary(&mut unstructured).unwrap()
         }
 
-        #[test]
-        fn mess_with_size_indicators_negative_test() {
-            let random_object = prepare_random_object(random());
+        /// Verify correct field-getter behavior when the dynamically-sized
+        /// field of the `Vec<BFieldElement>`, 2nd to last field in
+        /// `[TupleStruct]` gets a malicious size-indicator.
+        fn prop_negative_test_messed_up_size_indicators(
+            program: &Program,
+            tuple_struct: &TupleStruct,
+            obj_pointer: BFieldElement,
+            expected_stack: &[BFieldElement],
+        ) {
+            // No-messed works
+            let mut no_messed_memory = HashMap::new();
+            encode_to_memory(&mut no_messed_memory, obj_pointer, tuple_struct);
+            let no_messed_nd = NonDeterminism::default().with_ram(no_messed_memory.clone());
+            let mut vm_state_pass =
+                VMState::new(program, PublicInput::default(), no_messed_nd.clone());
+            vm_state_pass.run().unwrap();
 
+            let expected_output_len = expected_stack.len();
+            let actual_stack = (0..expected_output_len)
+                .map(|i| vm_state_pass.op_stack[i])
+                .collect_vec();
+            assert_eq!(expected_stack, actual_stack);
+
+            // Messed-up encoding fails: Too big but still u32
+            const POINTER_TO_MESSED_UP_SI: BFieldElement = BFieldElement::new(5);
+            let mut messed_up_memory = no_messed_memory.clone();
+            messed_up_memory.insert(POINTER_TO_MESSED_UP_SI, bfe!(TupleStruct::MAX_OFFSET + 1));
+            let messed_up_nd_0 = NonDeterminism::default().with_ram(messed_up_memory.clone());
+            let mut vm_state_fail0 =
+                VMState::new(program, PublicInput::default(), messed_up_nd_0.clone());
+            let instruction_error = vm_state_fail0.run().unwrap_err();
+            assert_eq!(InstructionError::AssertionFailed, instruction_error,);
+
+            // Messed-up encoding fails: Negative sizes banned
+            let negative_number = bfe!(-42);
+            messed_up_memory = no_messed_memory;
+            messed_up_memory.insert(POINTER_TO_MESSED_UP_SI, negative_number);
+            let messed_up_nd_1 = NonDeterminism::default().with_ram(messed_up_memory.clone());
+            let mut vm_state_fail1 =
+                VMState::new(program, PublicInput::default(), messed_up_nd_1.clone());
+            let instruction_error = vm_state_fail1.run().unwrap_err();
+            assert_eq!(
+                InstructionError::FailedU32Conversion(negative_number),
+                instruction_error,
+            );
+        }
+
+        #[test]
+        fn mess_with_size_indicators_total_size_negative_test() {
             const START_OF_OBJ: BFieldElement = BFieldElement::ZERO;
+            let random_object = prepare_random_object(random());
+            let get_encoding_length = TupleStruct::get_encoding_length();
+            let code_using_total_length_getter = triton_asm!(
+                // _
+                push { START_OF_OBJ }
+                // _ *tuple_struct
+
+                {&get_encoding_length}
+                // _ total_len
+
+                halt
+            );
+
+            let program = Program::new(&code_using_total_length_getter);
+            let expected_stack_benign_nd = [bfe!(random_object.encode().len() as u64)];
+            prop_negative_test_messed_up_size_indicators(
+                &program,
+                &random_object,
+                START_OF_OBJ,
+                &expected_stack_benign_nd,
+            );
+        }
+
+        #[test]
+        fn mess_with_size_indicators_field_and_size_getter_negative_test() {
+            const START_OF_OBJ: BFieldElement = BFieldElement::ZERO;
+            let random_object = prepare_random_object(random());
+            let fourth_to_last_field = field_with_size!(TupleStruct::field_3);
+            let code_using_field_and_size_getter = triton_asm!(
+                // _
+                push { START_OF_OBJ }
+                // _ *tuple_struct
+
+                {&fourth_to_last_field}
+                // _ *digests digests_size
+
+                swap 1
+                // _ digests_size *digests
+
+                read_mem 1
+                pop 1
+                // _ digests_size digests_len
+
+                halt
+            );
+
+            let program = Program::new(&code_using_field_and_size_getter);
+            let expected_field_size = bfe!(random_object.3.len() as u64 * Digest::LEN as u64 + 1);
+            let expected_list_len = bfe!(random_object.3.len() as u64);
+            let expected_stack_benign_nd = [expected_list_len, expected_field_size];
+            prop_negative_test_messed_up_size_indicators(
+                &program,
+                &random_object,
+                START_OF_OBJ,
+                &expected_stack_benign_nd,
+            );
+        }
+
+        #[test]
+        fn mess_with_size_indicators_field_getter_negative_test() {
+            const START_OF_OBJ: BFieldElement = BFieldElement::ZERO;
+            let random_object = prepare_random_object(random());
             let third_to_last_field = field!(TupleStruct::field_4);
-            let code = triton_asm!(
+            let code_using_field_getter = triton_asm!(
                 // _
 
                 push {START_OF_OBJ}
@@ -454,47 +561,13 @@ mod test {
                 halt
             );
 
-            // No-messed works
-            let mut no_messed_memory = HashMap::new();
-            encode_to_memory(&mut no_messed_memory, START_OF_OBJ, &random_object);
-
-            let program = Program::new(&code);
-            let no_messed_nd = NonDeterminism::default().with_ram(no_messed_memory.clone());
-            let mut vm_state_pass =
-                VMState::new(&program, PublicInput::default(), no_messed_nd.clone());
-            vm_state_pass.run().unwrap();
-            assert_eq!(
-                random_object.4.values(),
-                [
-                    vm_state_pass.op_stack[0],
-                    vm_state_pass.op_stack[1],
-                    vm_state_pass.op_stack[2],
-                    vm_state_pass.op_stack[3],
-                    vm_state_pass.op_stack[4]
-                ]
-            );
-
-            // Messed-up encoding fails: Too big but still u32
-            const POINTER_TO_MESSED_UP_SI: BFieldElement = BFieldElement::new(5);
-            let mut messed_up_memory = no_messed_memory.clone();
-            messed_up_memory.insert(POINTER_TO_MESSED_UP_SI, bfe!(TupleStruct::MAX_OFFSET + 1));
-            let messed_up_nd_0 = NonDeterminism::default().with_ram(messed_up_memory.clone());
-            let mut vm_state_fail0 =
-                VMState::new(&program, PublicInput::default(), messed_up_nd_0.clone());
-            let instruction_error = vm_state_fail0.run().unwrap_err();
-            assert_eq!(InstructionError::AssertionFailed, instruction_error,);
-
-            // Messed-up encoding fails: Negative sizes banned
-            let negative_number = bfe!(-42);
-            messed_up_memory = no_messed_memory;
-            messed_up_memory.insert(POINTER_TO_MESSED_UP_SI, negative_number);
-            let messed_up_nd_1 = NonDeterminism::default().with_ram(messed_up_memory.clone());
-            let mut vm_state_fail1 =
-                VMState::new(&program, PublicInput::default(), messed_up_nd_1.clone());
-            let instruction_error = vm_state_fail1.run().unwrap_err();
-            assert_eq!(
-                InstructionError::FailedU32Conversion(negative_number),
-                instruction_error,
+            let program = Program::new(&code_using_field_getter);
+            let expected_output_benign_nd = random_object.4.values();
+            prop_negative_test_messed_up_size_indicators(
+                &program,
+                &random_object,
+                START_OF_OBJ,
+                &expected_output_benign_nd,
             );
         }
 
