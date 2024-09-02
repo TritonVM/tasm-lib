@@ -5,6 +5,8 @@ use crate::data_type::DataType;
 
 use crate::traits::basic_snippet::BasicSnippet;
 
+/// Verify Merkle authentication paths in a FRI context.
+///
 /// Verify a batch of Merkle membership claims in a FRI context where only the
 /// a-indices are known and the b-indices must be calculated on the fly. This
 /// snippet can be used for both a and b-indices. For a-indices the

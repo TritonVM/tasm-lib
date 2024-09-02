@@ -6,8 +6,9 @@ use crate::library::Library;
 use crate::list::length::Length;
 use crate::traits::basic_snippet::BasicSnippet;
 
-/// Determine whether two lists are equal up to permutation. The
-/// lists are given as lists of digests. This function uses hashing
+/// Determine whether two lists are equal up to permutation.
+///
+/// The lists are given as lists of digests. This function uses hashing
 /// to compute a challenge indeterminate, and then computes a running
 /// products for both lists. In the future, the implementation of
 /// function may be replaced by one that uses Triton VM's native

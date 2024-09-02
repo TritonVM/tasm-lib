@@ -22,6 +22,8 @@ use crate::{
     Digest,
 };
 
+/// Verify that one MMR is a successor to another.
+///
 /// Verify a the scucessorship relation between two MMRs. A `MmrSuccessorProof`
 /// is necessary to demonstrate this relation, but it is not a *stack* argument
 /// because this algorithm obtains the relevant info (authentication paths) from

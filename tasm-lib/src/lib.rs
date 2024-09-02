@@ -282,6 +282,8 @@ pub fn execute_with_terminal_state(
     }
 }
 
+/// Run prover on the program, with stack-initialization converted to code.
+///
 /// Run the prover on the program. If `init_stack` is provided, the prover is run on a program
 /// with the code to setup the stack prepended, since the prover will always fail if the stack
 /// is not initialized to the minimal height. The first `NUM_OP_STACK_REGISTERS` of `init_stack`

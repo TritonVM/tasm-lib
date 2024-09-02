@@ -4,6 +4,8 @@ use crate::data_type::DataType;
 use crate::library::Library;
 use crate::traits::basic_snippet::BasicSnippet;
 
+/// Return own program digest. Must be called with a clean stack.
+///
 /// Move own program digest to the top of the stack
 /// Must be called as the first function in the program, as
 /// it assumes that the bottom of the stack (stack[15..=11])

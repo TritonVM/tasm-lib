@@ -40,6 +40,8 @@ use triton_vm::proof_stream::ProofStream;
 use super::master_ext_table::air_constraint_evaluation::AirConstraintEvaluation;
 use super::master_ext_table::air_constraint_evaluation::MemoryLayout;
 
+/// Verify a STARK proof.
+///
 /// Verify a STARK proof located in memory. Assumes the nondeterministic digests
 /// stream has been updated with the digests extracted from the proof using
 /// [`update_nondeterminism`](Self::update_nondeterminism). Crashes the VM if the
@@ -1424,6 +1426,8 @@ pub mod tests {
         )
     }
 
+    /// Return data needed to verify a program execution's proof.
+    ///
     /// Prepares the caller so that the caller can call verify on a simple program
     /// execution. Specifically, given an inner program, inner public input, inner
     /// nondeterminism, and stark parameters; produce the proof, and use it to

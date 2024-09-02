@@ -4,6 +4,8 @@ use crate::data_type::DataType;
 use crate::library::Library;
 use crate::traits::basic_snippet::BasicSnippet;
 
+/// Crash the VM if std-in does not agree with own program digest.
+///
 /// Crash the VM if std in does not agree with own digest
 /// Must be called as the first function in the program, as
 /// it assumes that the bottom of the stack (stack[15..=11])

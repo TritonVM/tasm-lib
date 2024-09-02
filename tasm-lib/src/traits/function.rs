@@ -16,6 +16,8 @@ use crate::VmHasher;
 use super::basic_snippet::BasicSnippet;
 use super::rust_shadow::RustShadow;
 
+/// A function can modify stack and extend memory.
+///
 /// A Function is a piece of tasm code that can modify the top of the stack, and can read
 /// and even extend memory. Specifically: any memory writes have to happen to addresses
 /// larger than the dynamic memory allocator and the dynamic memory allocator value has to

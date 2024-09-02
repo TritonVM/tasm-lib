@@ -7,6 +7,8 @@ use crate::library::Library;
 use crate::memory::dyn_malloc::DynMalloc;
 use crate::traits::basic_snippet::BasicSnippet;
 
+/// Squeeze the sponge and return an array of `[RATE]` elements
+///
 /// Snippet that emulates the Tip5 implementation of twenty-first's
 /// `sponge_hasher` trait function `squeeze`. You probably don't want to use
 /// this snippet for whatever cryptography you're doing and instead use the

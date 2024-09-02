@@ -5,6 +5,8 @@ use crate::data_type::ArrayType;
 use crate::data_type::DataType;
 use crate::traits::basic_snippet::BasicSnippet;
 
+/// Evaluate a polynomial in a point using the Horner method.
+///
 /// HornerEvaluation takes an array of coefficients (representing a polynomial)
 /// and a scalar (representing an indeterminate) and computes the value of the
 /// polynomial in that point. It can be used for univariate batching, whereby

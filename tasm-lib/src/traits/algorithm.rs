@@ -17,6 +17,8 @@ use crate::VmHasher;
 use super::basic_snippet::BasicSnippet;
 use super::rust_shadow::RustShadow;
 
+/// An Algorithm can modify memory and take ND_input.
+///
 /// An Algorithm is a piece of tasm code that can modify memory even at addresses below
 /// the dynamic memory allocator, and can take nondeterministic input. It cannot read from
 /// standard in or write to standard out.

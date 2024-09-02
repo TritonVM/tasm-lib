@@ -41,6 +41,8 @@ use crate::verifier::fri::verify_fri_authentication_paths::VerifyFriAuthenticati
 use crate::verifier::vm_proof_iter::dequeue_next_as::DequeueNextAs;
 use crate::verifier::vm_proof_iter::shared::vm_proof_iter_type;
 
+/// FRI verification of a Reed-Solomon codeword.
+///
 /// `FriVerify` checks that a Reed-Solomon codeword, provided as an oracle, has a low
 /// degree interpolant. Specifically, the algorithm takes a `ProofStream` object, runs the
 /// verifier of the FRI protocol, and (if successful) returns the lists of indices at

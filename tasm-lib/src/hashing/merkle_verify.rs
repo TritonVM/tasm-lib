@@ -3,6 +3,8 @@ use crate::library::Library;
 use crate::traits::basic_snippet::BasicSnippet;
 use triton_vm::prelude::*;
 
+/// Verify membership in a Merkle tree.
+///
 /// MerkleVerify -- verify that a leaf lives in a Merkle tree,
 /// given the root, leaf index, and leaf. The authentication path
 /// is non-deterministically divined. This algorithm asserts

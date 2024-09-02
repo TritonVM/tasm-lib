@@ -7,7 +7,9 @@ use crate::data_type::Literal;
 use crate::library::Library;
 use crate::traits::basic_snippet::BasicSnippet;
 
-/// Compute the evaluation for an evaluation argument as specified by `initial`, `challenge`,
+/// Compute a terminal-value for an evaluation argument.
+///
+/// Compute the terminal for an evaluation argument as specified by `initial`, `challenge`,
 /// and `symbols`. This amounts to evaluating polynomial
 /// `f(x) = initial·x^n + Σ_i symbols[n-i]·x^i`
 /// at point `challenge`, _i.e._, returns `f(challenge)`.

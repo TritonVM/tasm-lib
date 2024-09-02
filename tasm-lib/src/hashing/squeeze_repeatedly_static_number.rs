@@ -4,6 +4,8 @@ use triton_vm::twenty_first::math::tip5::RATE;
 use crate::data_type::DataType;
 use crate::traits::basic_snippet::BasicSnippet;
 
+/// Squeeze the sponge a statically-known number of times.
+///
 /// Squeeze the sponge `num_squeezes` times, storing all the produced pseudorandom `BFieldElement`s
 /// contiguously in memory. It is the caller's responsibility to allocate enough memory.
 /// Number of squeezes must be statically known.

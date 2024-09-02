@@ -22,6 +22,8 @@ use crate::traits::rust_shadow::RustShadow;
 use crate::InitVmState;
 use crate::VmHasher;
 
+/// A trait that can modify all parts of the VM state.
+///
 /// A Procedure is a piece of tasm code that can do almost anything: modify stack, read
 /// from and write to memory, take in nondeterminism, and read and write from standard
 /// input/output. What it cannot do is stand alone. In other words, it is still wrapped
