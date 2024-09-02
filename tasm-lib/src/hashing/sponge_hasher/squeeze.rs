@@ -72,7 +72,6 @@ mod test {
     use rand::prelude::*;
     use triton_vm::twenty_first::prelude::Sponge;
 
-    use crate::empty_stack;
     use crate::memory::dyn_malloc;
     use crate::memory::dyn_malloc::DYN_MALLOC_ADDRESS;
     use crate::rust_shadowing_helper_functions;
@@ -124,7 +123,7 @@ mod test {
             let mut unstructured = Unstructured::new(&bytes);
 
             ProcedureInitialState {
-                stack: empty_stack(),
+                stack: self.init_stack_for_isolated_run(),
                 nondeterminism: NonDeterminism::default().with_ram(init_memory),
                 public_input: Vec::default(),
                 sponge: Some(Tip5::arbitrary(&mut unstructured).unwrap()),

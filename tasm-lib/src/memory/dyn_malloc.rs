@@ -14,22 +14,38 @@ use crate::snippet_bencher::BenchmarkCase;
 use crate::traits::function::Function;
 use crate::traits::function::FunctionInitialState;
 
+use super::NUM_PAGES_FOR_DYN_MALLOC;
+
 /// The location of the dynamic allocator state in memory.
 ///
 /// See the [memory convention][super] for details.
 pub const DYN_MALLOC_ADDRESS: BFieldElement = BFieldElement::new(BFieldElement::MAX);
 
-/// The address of the first page that can be dynamically allocated.
-pub const DYN_MALLOC_FIRST_PAGE: u64 = 1;
+/// Initial counter-value if the dynamic allocator state is not initialized.
+pub const DYN_MALLOC_INIT_COUNTER: u64 = 1;
 
-/// The number of pages that can be dynamically allocated.
-pub const NUM_ALLOCATABLE_PAGES: u64 = (1 << 31) - 1;
+/// Constant that adds extra space between each allocated memory page. Since no
+/// program needs all available [NUM_PAGES_FOR_DYN_MALLOC], only every N pages
+/// need to be available for the dynamic allocator. If this constant is set to
+/// 1, then all pages available for dynamic allocation can be returned.
+pub const INTERSPERCE_PARAMETER: u64 = 1 << 3;
+
+/// The number of different pages this snippet can allocate. If the state of
+/// the dynamic allocator is initialized to zero, this is also the number of
+/// times this memory allocator can be called before crashing due to running
+/// out of memory.
+pub const NUM_ALLOCATABLE_PAGES: u64 = NUM_PAGES_FOR_DYN_MALLOC / INTERSPERCE_PARAMETER;
 
 /// The size of one dynamically allocated page.
 pub const DYN_MALLOC_PAGE_SIZE: u64 = 1 << 32;
 
+/// The number of words seperating each subsequent page allocated by this
+/// snippet.
+pub const NUM_WORDS_BETWEEN_ALLOCATED_PAGES: u64 = INTERSPERCE_PARAMETER * DYN_MALLOC_PAGE_SIZE;
+
+/// The address of the first page that can be dynamically allocated.
 pub const DYN_MALLOC_FIRST_ADDRESS: BFieldElement =
-    BFieldElement::new(DYN_MALLOC_FIRST_PAGE * DYN_MALLOC_PAGE_SIZE);
+    BFieldElement::new(DYN_MALLOC_INIT_COUNTER * NUM_WORDS_BETWEEN_ALLOCATED_PAGES);
 
 /// Return a pointer to the next free page of memory. Updates the dyn malloc state
 /// accordingly
@@ -40,7 +56,7 @@ impl DynMalloc {
     pub fn memory_region() -> MemoryRegion {
         MemoryRegion::new(
             DYN_MALLOC_FIRST_ADDRESS,
-            (NUM_ALLOCATABLE_PAGES * DYN_MALLOC_PAGE_SIZE)
+            (NUM_PAGES_FOR_DYN_MALLOC * DYN_MALLOC_PAGE_SIZE)
                 .try_into()
                 .unwrap(),
         )
@@ -88,15 +104,17 @@ impl BasicSnippet for DynMalloc {
             write_mem 1 pop 1               // _ page_idx
 
             // translate page number to address
-            push {DYN_MALLOC_PAGE_SIZE}     // _ page_idx page_size
-            mul                             // _ *free_page
+            push {NUM_WORDS_BETWEEN_ALLOCATED_PAGES}
+            mul
+            // _ *free_page
+
             return
 
         // BEFORE: _ 0
         // AFTER:  _ DYN_MALLOC_FIRST_PAGE
         {dyn_malloc_init}:
             pop 1
-            push {DYN_MALLOC_FIRST_PAGE}
+            push {DYN_MALLOC_INIT_COUNTER}
             return
         }
     }
@@ -110,7 +128,7 @@ impl Function for DynMalloc {
     ) {
         let mut page_idx = memory.get(&DYN_MALLOC_ADDRESS).copied().unwrap_or_default();
         if page_idx.is_zero() {
-            page_idx = DYN_MALLOC_FIRST_PAGE.into();
+            page_idx = DYN_MALLOC_INIT_COUNTER.into();
         }
         let page_idx = page_idx;
 
@@ -123,7 +141,7 @@ impl Function for DynMalloc {
 
         memory.insert(DYN_MALLOC_ADDRESS, next_page_idx);
 
-        let page_address = page_idx * BFieldElement::new(DYN_MALLOC_PAGE_SIZE);
+        let page_address = page_idx * bfe!(NUM_WORDS_BETWEEN_ALLOCATED_PAGES);
         stack.push(page_address);
     }
 
@@ -137,7 +155,7 @@ impl Function for DynMalloc {
         let stack = empty_stack();
 
         let mut memory = HashMap::new();
-        let page_number = rng.gen_range(0..(1u64 << 31));
+        let page_number = rng.gen_range(0..NUM_ALLOCATABLE_PAGES);
         memory.insert(DYN_MALLOC_ADDRESS, page_number.into());
 
         FunctionInitialState { stack, memory }
@@ -231,6 +249,9 @@ mod tests {
         negative_prop_disallow_allocation_outside_of_region(bfe!(NUM_ALLOCATABLE_PAGES));
         negative_prop_disallow_allocation_outside_of_region(bfe!(NUM_ALLOCATABLE_PAGES + 1));
         negative_prop_disallow_allocation_outside_of_region(bfe!(NUM_ALLOCATABLE_PAGES + 2));
+        negative_prop_disallow_allocation_outside_of_region(bfe!(NUM_ALLOCATABLE_PAGES * 2));
+        negative_prop_disallow_allocation_outside_of_region(bfe!(u32::MAX / 2 - 1));
+        negative_prop_disallow_allocation_outside_of_region(bfe!(u32::MAX / 2));
         negative_prop_disallow_allocation_outside_of_region(bfe!(u32::MAX - 1));
         negative_prop_disallow_allocation_outside_of_region(bfe!(u32::MAX));
     }

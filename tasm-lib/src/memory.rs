@@ -39,6 +39,9 @@ pub const FIRST_NON_DETERMINISTICALLY_INITIALIZED_MEMORY_ADDRESS: BFieldElement 
 pub const LAST_ADDRESS_AVAILABLE_FOR_NON_DETERMINISTICALLY_ALLOCATED_MEMORY: BFieldElement =
     BFieldElement::new(u32::MAX as u64);
 
+/// The number of pages that can be dynamically allocated.
+pub const NUM_PAGES_FOR_DYN_MALLOC: u64 = (1 << 31) - 1;
+
 /// Returns the address of the last populated word belonging to the memory region
 /// designated for non-determinism.
 pub fn last_populated_nd_memory_address(
