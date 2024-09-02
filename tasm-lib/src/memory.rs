@@ -4,16 +4,22 @@
 //!     There is one exception: due to the [base field's prime][prime] being 2^64 - 2^32 + 1,
 //!     the last page, starting at address 2^64 - 2^32, is of size 1.
 //! - The dynamic allocator lives at address [`DYN_MALLOC_ADDRESS`][dyn_malloc_addr], _i.e._, -1.
-//!     It is a single word, containing the value of the next free page.
+//!     It is a single word, containing a counter of allocated pages.
 //!     It occupies the only page that is not of size 2^32 words.
 //! - Page 0 is reserved for non-deterministically initialized memory.
 //! - The last full page, number (2^32)-2, starting at address 2^64 - 2·(2^32),
 //!     is reserved for [static allocations][static_malloc_addr].
-//! - All other pages, i.e., pages 1 through (2^32)-3, are dynamically allocated.
+//! - The two preceding pages, number 2^32-4 and 2^32-3 are used by the
+//!   [STARK verifier][stark_verifier] (when standard memory layouts are used).
+//! - Pages 1 through 2^31-1 are dynamically allocated by the
+//!   [dynamic allocator][dynamic_allocator] snippet.
+//! - Pages 2^31 through 2^32-5 are not in use by this crate.
 //!
 //! [prime]: BFieldElement::P
 //! [dyn_malloc_addr]: dyn_malloc::DYN_MALLOC_ADDRESS
 //! [static_malloc_addr]: crate::library::STATIC_MEMORY_START_ADDRESS
+//! [stark_verifier]: crate::verifier::stark_verify::StarkVerify
+//! [dynamic_allocator]: dyn_malloc::DynMalloc
 
 use std::collections::HashMap;
 
