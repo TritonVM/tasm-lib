@@ -581,15 +581,32 @@ mod test {
             let program = Program::new(&code_using_size_integrity_code);
             let expected_stack_benign = [bfe!(random_object.encode().len() as u64)];
 
-            // mess up size-indicator of 2nd-to-last field
-            let offset_of_messed_up_si = bfe!(Digest::LEN as u64);
-            prop_negative_test_messed_up_size_indicators(
-                &program,
-                &random_object,
-                OBJ_POINTER,
-                offset_of_messed_up_si,
-                &expected_stack_benign,
-            );
+            // mess up size-indicator of all size-indicators
+            const SIZE_OF_SIZE_INDICATOR: usize = 1;
+            let size_indicator_for_bfe_vec = Digest::LEN;
+            let size_indicator_for_digest_vec_ptr = size_indicator_for_bfe_vec
+                + random_object.5.encode().len()
+                + SIZE_OF_SIZE_INDICATOR
+                + Digest::LEN;
+            let size_indicator_for_xfe_vec = size_indicator_for_digest_vec_ptr
+                + random_object.3.encode().len()
+                + SIZE_OF_SIZE_INDICATOR
+                + 1
+                + 4;
+
+            for size_indicator_offset in [
+                size_indicator_for_bfe_vec,
+                size_indicator_for_digest_vec_ptr,
+                size_indicator_for_xfe_vec,
+            ] {
+                prop_negative_test_messed_up_size_indicators(
+                    &program,
+                    &random_object,
+                    OBJ_POINTER,
+                    bfe!(size_indicator_offset as u64),
+                    &expected_stack_benign,
+                );
+            }
         }
 
         #[test]
