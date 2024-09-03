@@ -431,13 +431,13 @@ mod test {
             TupleStruct::arbitrary(&mut unstructured).unwrap()
         }
 
-        /// Verify correct field-getter behavior when the dynamically-sized
-        /// field of the `Vec<BFieldElement>`, 2nd to last field in
-        /// `[TupleStruct]` gets a malicious size-indicator.
-        fn prop_negative_test_messed_up_size_indicators(
+        /// Verify correct field-getter behavior when a size-indicator gets
+        /// manipulated to illegal values.
+        fn prop_negative_test_messed_up_size_indicators<T: BFieldCodec>(
             program: &Program,
-            tuple_struct: &TupleStruct,
+            tuple_struct: &T,
             obj_pointer: BFieldElement,
+            offset_for_manipulated_si: BFieldElement,
             expected_stack: &[BFieldElement],
         ) {
             // No-messed works
@@ -455,9 +455,11 @@ mod test {
             assert_eq!(expected_stack, actual_stack);
 
             // Messed-up encoding fails: Too big but still u32
-            const POINTER_TO_MESSED_UP_SI: BFieldElement = BFieldElement::new(5);
             let mut messed_up_memory = no_messed_memory.clone();
-            messed_up_memory.insert(POINTER_TO_MESSED_UP_SI, bfe!(TupleStruct::MAX_OFFSET + 1));
+            messed_up_memory.insert(
+                obj_pointer + offset_for_manipulated_si,
+                bfe!(TupleStruct::MAX_OFFSET + 1),
+            );
             let messed_up_nd_0 = NonDeterminism::default().with_ram(messed_up_memory.clone());
             let mut vm_state_fail0 =
                 VMState::new(program, PublicInput::default(), messed_up_nd_0.clone());
@@ -467,7 +469,7 @@ mod test {
             // Messed-up encoding fails: Negative sizes banned
             let negative_number = bfe!(-42);
             messed_up_memory = no_messed_memory;
-            messed_up_memory.insert(POINTER_TO_MESSED_UP_SI, negative_number);
+            messed_up_memory.insert(obj_pointer + offset_for_manipulated_si, negative_number);
             let messed_up_nd_1 = NonDeterminism::default().with_ram(messed_up_memory.clone());
             let mut vm_state_fail1 =
                 VMState::new(program, PublicInput::default(), messed_up_nd_1.clone());
@@ -475,6 +477,56 @@ mod test {
             assert_eq!(
                 InstructionError::FailedU32Conversion(negative_number),
                 instruction_error,
+            );
+        }
+
+        #[test]
+        fn mess_with_size_indicator_field_getter_named_fields_negative_test() {
+            #[derive(BFieldCodec, TasmObject, PartialEq, Eq, Clone, Debug, Arbitrary)]
+            struct WithNamedFields {
+                a: Vec<Digest>,
+                b: Vec<BFieldElement>,
+                c: Digest,
+                d: Vec<XFieldElement>,
+            }
+
+            fn prepare_random_object(seed: [u8; 32]) -> WithNamedFields {
+                let mut rng: StdRng = SeedableRng::from_seed(seed);
+                let mut randomness = [0u8; 100000];
+                rng.fill_bytes(&mut randomness);
+                let mut unstructured = Unstructured::new(&randomness);
+                WithNamedFields::arbitrary(&mut unstructured).unwrap()
+            }
+
+            const START_OF_OBJ: BFieldElement = BFieldElement::new(800);
+            let random_object = prepare_random_object(random());
+            let third_to_last_field = field!(WithNamedFields::c);
+            let code_using_field_getter = triton_asm!(
+                // _
+
+                push {START_OF_OBJ}
+                // _ *with_named_fields
+
+                {&third_to_last_field}
+                // _ *digest
+
+                addi {Digest::LEN - 1}
+                read_mem {Digest::LEN}
+                pop 1
+                // _ [digest]
+
+                halt
+            );
+
+            let program = Program::new(&code_using_field_getter);
+            let expected_stack_benign = random_object.c.values();
+            let offset_for_manipulated_si = bfe!(0);
+            prop_negative_test_messed_up_size_indicators(
+                &program,
+                &random_object,
+                START_OF_OBJ,
+                offset_for_manipulated_si,
+                &expected_stack_benign,
             );
         }
 
@@ -500,6 +552,7 @@ mod test {
                 &program,
                 &random_object,
                 START_OF_OBJ,
+                bfe!(Digest::LEN as u64),
                 &expected_stack_benign_nd,
             );
         }
@@ -535,6 +588,7 @@ mod test {
                 &program,
                 &random_object,
                 START_OF_OBJ,
+                bfe!(Digest::LEN as u64),
                 &expected_stack_benign_nd,
             );
         }
@@ -567,6 +621,7 @@ mod test {
                 &program,
                 &random_object,
                 START_OF_OBJ,
+                bfe!(Digest::LEN as u64),
                 &expected_output_benign_nd,
             );
         }
