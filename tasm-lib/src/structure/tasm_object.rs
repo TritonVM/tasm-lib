@@ -290,27 +290,19 @@ mod test {
 
     use super::*;
 
+    #[derive(Debug, Clone, PartialEq, Eq, BFieldCodec, TasmObject, Arbitrary)]
+    struct InnerStruct(XFieldElement, u32);
+
     #[test]
     fn test_load_and_decode_from_memory() {
-        #[derive(Debug, Clone, PartialEq, Eq, BFieldCodec)]
-        enum InnerEnum {
-            Cow(u32),
-            Horse(u128, u128),
-            Pig(XFieldElement),
-            Sheep([BFieldElement; 13]),
-        }
-
-        #[derive(Debug, Clone, PartialEq, Eq, BFieldCodec, TasmObject)]
-        struct InnerStruct(XFieldElement, u32);
-
         #[derive(Debug, Clone, PartialEq, Eq, BFieldCodec, TasmObject)]
         struct OuterStruct {
-            o: InnerEnum,
+            o: InnerStruct,
             a: Vec<Option<bool>>,
             b: InnerStruct,
-            p: InnerEnum,
+            p: Vec<Digest>,
             c: BFieldElement,
-            l: InnerEnum,
+            l: Vec<Digest>,
         }
 
         fn pseudorandom_object(seed: [u8; 32]) -> OuterStruct {
@@ -320,15 +312,21 @@ mod test {
                 .collect_vec();
             let b0: XFieldElement = rng.gen();
             let b1: u32 = rng.gen();
+            let b2: XFieldElement = rng.gen();
+            let b3: u32 = rng.gen();
             let c: BFieldElement = rng.gen();
+            let digests_len_p = rng.gen_range(0..5);
+            let digests_p = (0..digests_len_p).map(|_| rng.gen()).collect_vec();
+            let digests_len_l = rng.gen_range(0..5);
+            let digests_l = (0..digests_len_l).map(|_| rng.gen()).collect_vec();
 
             OuterStruct {
-                o: InnerEnum::Pig(XFieldElement::new_const(443u64.into())),
+                o: InnerStruct(b0, b1),
                 a,
-                b: InnerStruct(b0, b1),
-                p: InnerEnum::Cow(999),
+                b: InnerStruct(b2, b3),
+                p: digests_p,
                 c,
-                l: InnerEnum::Horse(1 << 99, 1 << 108),
+                l: digests_l,
             }
         }
 
@@ -405,17 +403,10 @@ mod test {
             assert_eq!(random_object.f.len(), extracted_f_length);
         }
 
-        #[derive(BFieldCodec, PartialEq, Eq, Clone, Debug, Arbitrary)]
-        enum MyEnum {
-            A(u64, Digest),
-            B,
-            C,
-        }
-
         #[derive(BFieldCodec, TasmObject, PartialEq, Eq, Clone, Debug, Arbitrary)]
         struct TupleStruct(
             Vec<XFieldElement>,
-            MyEnum,
+            InnerStruct,
             u32,
             Vec<Digest>,
             Digest,
