@@ -221,6 +221,125 @@ fn impl_derive_tasm_object_macro(ast: DeriveInput) -> TokenStream {
         }
     };
 
+    let mut integral_size_indicators_code = quote! {};
+    for field_type in parse_result.field_types.iter() {
+        // INVARIANT: accumulated_size *field_start
+        integral_size_indicators_code = quote! {
+            #integral_size_indicators_code
+            // _ accumulated_size *field_start
+            if let Some(static_length) = <#field_type as crate::triton_vm::twenty_first::math::bfield_codec::BFieldCodec>::static_length() {
+                let addi_len = crate::triton_vm::instruction::LabelledInstruction::Instruction(crate::triton_vm::instruction::AnInstruction::AddI(crate::BFieldElement::new(static_length as u64)));
+                [
+                    // _ accumulated_size *field
+                    addi_len.clone(),
+                    swap1.clone(),
+                    addi_len.clone(),
+                    swap1.clone(),
+                    // _ accumulated_size' *next_field
+                ].to_vec()
+            } else {
+                [
+                    [
+                        // _ accumulated_size *indicated_field_size
+                        read_mem1.clone(),
+                        // _ accumulated_size indicated_field_size (*field-2)
+
+                        pushmax.clone(),
+                        dup2.clone(),
+                        lt.clone(),
+                        // _ accumulated_size indicated_field_size (*field-2) (MAX > indicated_field_size)
+
+                        assert.clone(),
+                        // _ accumulated_size indicated_field_size (*field-2)
+
+                        addi2.clone(),
+                        // _ accumulated_size indicated_field_size *field
+
+                        dup0.clone(),
+                        // _ accumulated_size indicated_field_size *field *field
+                    ].to_vec(),
+                    <#field_type as crate::tasm_lib::structure::tasm_object::TasmObject>::compute_size_and_assert_valid_size_indicator(),
+                    // _ accumulated_size indicated_field_size *field computed_size
+                    [
+                        dup2.clone(),
+                        // _ accumulated_size indicated_field_size *field computed_size indicated_field_size
+                        eq.clone(),
+                        // _ accumulated_size indicated_field_size *field (computed_size == indicated_field_size)
+                        assert.clone(),
+                        // _ accumulated_size indicated_field_size *field
+
+                        dup1.clone(),
+                        add.clone(),
+                        // _ accumulated_size indicated_field_size *next_field
+
+                        swap2.clone(),
+                        // _ *next_field indicated_field_size accumulated_size
+
+                        /* Add one for size-indicator on this struct */
+                        add.clone(),
+                        addi1.clone(),
+                        // _ *next_field accumulated_size'
+
+                        swap1.clone(),
+                        // _ accumulated_size' *next_field
+                    ].to_vec(),
+                ].concat()
+            },
+        };
+    }
+
+    integral_size_indicators_code = quote! {
+        let push0 = crate::triton_vm::instruction::LabelledInstruction::Instruction(crate::triton_vm::instruction::AnInstruction::Push(0u64.into()));
+        let pushmax = crate::triton_vm::instruction::LabelledInstruction::Instruction(crate::triton_vm::instruction::AnInstruction::Push(Self::MAX_OFFSET.into()));
+        let dup0 = crate::triton_vm::instruction::LabelledInstruction::Instruction(crate::triton_vm::instruction::AnInstruction::Dup(crate::triton_vm::op_stack::OpStackElement::ST0));
+        let dup1 = crate::triton_vm::instruction::LabelledInstruction::Instruction(crate::triton_vm::instruction::AnInstruction::Dup(crate::triton_vm::op_stack::OpStackElement::ST1));
+        let dup2 = crate::triton_vm::instruction::LabelledInstruction::Instruction(crate::triton_vm::instruction::AnInstruction::Dup(crate::triton_vm::op_stack::OpStackElement::ST2));
+        let swap1 = crate::triton_vm::instruction::LabelledInstruction::Instruction(crate::triton_vm::instruction::AnInstruction::Swap(crate::triton_vm::op_stack::OpStackElement::ST1));
+        let swap2 = crate::triton_vm::instruction::LabelledInstruction::Instruction(crate::triton_vm::instruction::AnInstruction::Swap(crate::triton_vm::op_stack::OpStackElement::ST2));
+        let lt = crate::triton_vm::instruction::LabelledInstruction::Instruction(crate::triton_vm::instruction::AnInstruction::Lt);
+        let assert = crate::triton_vm::instruction::LabelledInstruction::Instruction(crate::triton_vm::instruction::AnInstruction::Assert);
+        let eq = crate::triton_vm::instruction::LabelledInstruction::Instruction(crate::triton_vm::instruction::AnInstruction::Eq);
+        let add = crate::triton_vm::instruction::LabelledInstruction::Instruction(crate::triton_vm::instruction::AnInstruction::Add);
+        let read_mem1 = crate::triton_vm::instruction::LabelledInstruction::Instruction(crate::triton_vm::instruction::AnInstruction::ReadMem(crate::triton_vm::op_stack::NumberOfWords::N1));
+        let addi1 = crate::triton_vm::instruction::LabelledInstruction::Instruction(crate::triton_vm::instruction::AnInstruction::AddI(crate::BFieldElement::new(1u64)));
+        let addi2 = crate::triton_vm::instruction::LabelledInstruction::Instruction(crate::triton_vm::instruction::AnInstruction::AddI(crate::BFieldElement::new(2u64)));
+        let pop1 = crate::triton_vm::instruction::LabelledInstruction::Instruction(crate::triton_vm::instruction::AnInstruction::Pop(crate::triton_vm::op_stack::NumberOfWords::N1));
+        let hint_acc_size = [
+                    crate::triton_vm::instruction::LabelledInstruction::TypeHint(
+                        crate::triton_vm::instruction::TypeHint {
+                            starting_index: 1,
+                            length: 1,
+                            type_name: std::option::Option::<std::string::String>::None,
+                            variable_name: std::string::String::from("acc_size"),
+                        }
+                    )
+                ].to_vec();
+        let hint_field_ptr = [
+            crate::triton_vm::instruction::LabelledInstruction::TypeHint(
+                crate::triton_vm::instruction::TypeHint {
+                    starting_index: 0,
+                    length: 1,
+                    type_name: std::option::Option::<std::string::String>::None,
+                    variable_name: std::string::String::from("field_ptr"),
+                }
+            )
+        ].to_vec();
+        [
+            [
+                push0.clone(),
+                swap1.clone(),
+            ].to_vec(),
+            hint_acc_size,
+            hint_field_ptr,
+            #integral_size_indicators_code
+            [
+                // _ acc_size *EOF
+                pop1.clone(),
+                // _ acc_size
+            ].to_vec(),
+        ].concat()
+    };
+
     let name = &ast.ident;
     let gen = quote! {
         impl #impl_generics crate::tasm_lib::structure::tasm_object::TasmObject
@@ -285,6 +404,10 @@ fn impl_derive_tasm_object_macro(ast: DeriveInput) -> TokenStream {
 
             fn get_encoding_length() -> Vec<crate::triton_vm::instruction::LabelledInstruction> {
                 #encoding_length
+            }
+
+            fn compute_size_and_assert_valid_size_indicator() -> Vec<crate::triton_vm::instruction::LabelledInstruction> {
+                #integral_size_indicators_code
             }
 
             fn decode_iter<Itr: Iterator<Item=crate::BFieldElement>>(

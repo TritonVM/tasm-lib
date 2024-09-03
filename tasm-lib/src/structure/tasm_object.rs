@@ -6,9 +6,8 @@ use num_traits::Zero;
 use triton_vm::prelude::*;
 
 pub use derive_tasm_object::TasmObject;
-use triton_vm::twenty_first::error::BFieldCodecError;
 
-type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
+pub(super) type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 
 pub const DEFAULT_MAX_DYN_FIELD_SIZE: u32 = 1u32 << 28;
 
@@ -74,6 +73,15 @@ pub trait TasmObject {
     /// ```
     fn get_encoding_length() -> Vec<LabelledInstruction>;
 
+    /// Return the size of a struct and crash if any contained size-indicator
+    /// is not valid.
+    ///
+    /// ```text
+    /// BEFORE: _ *object
+    /// AFTER: _ calculated_size
+    /// ```
+    fn compute_size_and_assert_valid_size_indicator() -> Vec<LabelledInstruction>;
+
     /// Decode as [`Self`].
     fn decode_iter<Itr: Iterator<Item = BFieldElement>>(iterator: &mut Itr) -> Result<Box<Self>>;
 
@@ -96,42 +104,6 @@ pub fn decode_from_memory_with_size<T: BFieldCodec>(
         .map(|b| memory.get(&b).copied().unwrap_or(BFieldElement::new(0)))
         .collect_vec();
     T::decode(&sequence).map_err(|e| e.into())
-}
-
-impl<T: BFieldCodec> TasmObject for Vec<T> {
-    fn get_field(_field_name: &str) -> Vec<LabelledInstruction> {
-        panic!("`Vec` does not have fields; cannot access them")
-    }
-
-    fn get_field_with_size(_field_name: &str) -> Vec<LabelledInstruction> {
-        panic!("`Vec` does not have fields; cannot access them")
-    }
-
-    fn get_field_start_with_jump_distance(_field_name: &str) -> Vec<LabelledInstruction> {
-        panic!("`Vec` does not have fields; cannot access them")
-    }
-
-    fn decode_iter<Itr: Iterator<Item = BFieldElement>>(iterator: &mut Itr) -> Result<Box<Self>> {
-        let length = iterator.next().unwrap().value() as usize;
-        let mut vector = vec![];
-        for _ in 0..length {
-            let sequence_length = if let Some(static_size) = T::static_length() {
-                static_size
-            } else {
-                iterator.next().unwrap().value() as usize
-            };
-            let sequence = (0..sequence_length)
-                .map(|_| iterator.next().unwrap())
-                .collect_vec();
-            let object = *T::decode(&sequence).map_err(|e| e.into())?;
-            vector.push(object);
-        }
-        Ok(Box::new(vector))
-    }
-
-    fn get_encoding_length() -> Vec<LabelledInstruction> {
-        todo!()
-    }
 }
 
 /// Convenience struct for converting between string literals and field name identifiers.
@@ -237,40 +209,6 @@ impl<'a> Iterator for MemoryIter<'a> {
     }
 }
 
-impl<T: TasmObject> TasmObject for Option<T> {
-    fn get_field(_field_name: &str) -> Vec<LabelledInstruction> {
-        unreachable!("cannot get field of an option type");
-    }
-
-    fn get_field_with_size(_field_name: &str) -> Vec<LabelledInstruction> {
-        unreachable!("cannot get field with size of an option type");
-    }
-
-    fn get_field_start_with_jump_distance(_field_name: &str) -> Vec<LabelledInstruction> {
-        unreachable!("cannot get field start with jump distance of an option type");
-    }
-
-    fn decode_iter<Itr: Iterator<Item = BFieldElement>>(iterator: &mut Itr) -> Result<Box<Self>> {
-        match iterator.next() {
-            Some(token) => {
-                if token == BFieldElement::new(0) {
-                    Ok(Box::new(None))
-                } else if token == BFieldElement::new(1) {
-                    let t: T = *T::decode_iter(iterator)?;
-                    Ok(Box::new(Some(t)))
-                } else {
-                    Err(Box::new(BFieldCodecError::ElementOutOfRange))
-                }
-            }
-            None => Err(Box::new(BFieldCodecError::SequenceTooShort)),
-        }
-    }
-
-    fn get_encoding_length() -> Vec<LabelledInstruction> {
-        todo!()
-    }
-}
-
 #[cfg(test)]
 mod test {
     use arbitrary::Arbitrary;
@@ -343,6 +281,8 @@ mod test {
     /// Test derivation of field getters and manual derivations of the `field!` macro
     mod derive_tests {
         use num_traits::ConstZero;
+
+        use crate::maybe_write_debuggable_program_to_disk;
 
         use super::*;
 
@@ -437,6 +377,7 @@ mod test {
             let no_messed_nd = NonDeterminism::default().with_ram(no_messed_memory.clone());
             let mut vm_state_pass =
                 VMState::new(program, PublicInput::default(), no_messed_nd.clone());
+            maybe_write_debuggable_program_to_disk(program, &vm_state_pass);
             vm_state_pass.run().unwrap();
 
             let expected_output_len = expected_stack.len();
@@ -454,6 +395,7 @@ mod test {
             let messed_up_nd_0 = NonDeterminism::default().with_ram(messed_up_memory.clone());
             let mut vm_state_fail0 =
                 VMState::new(program, PublicInput::default(), messed_up_nd_0.clone());
+            maybe_write_debuggable_program_to_disk(program, &vm_state_fail0);
             let instruction_error = vm_state_fail0.run().unwrap_err();
             assert_eq!(InstructionError::AssertionFailed, instruction_error,);
 
@@ -464,6 +406,7 @@ mod test {
             let messed_up_nd_1 = NonDeterminism::default().with_ram(messed_up_memory.clone());
             let mut vm_state_fail1 =
                 VMState::new(program, PublicInput::default(), messed_up_nd_1.clone());
+            maybe_write_debuggable_program_to_disk(program, &vm_state_fail1);
             let instruction_error = vm_state_fail1.run().unwrap_err();
             assert_eq!(
                 InstructionError::FailedU32Conversion(negative_number),
@@ -615,6 +558,79 @@ mod test {
                 bfe!(Digest::LEN as u64),
                 &expected_output_benign_nd,
             );
+        }
+
+        #[test]
+        fn mess_with_size_indicators_size_indicator_validity_check_negative_test() {
+            const OBJ_POINTER: BFieldElement = BFieldElement::new(422);
+            let random_object = prepare_random_object(random());
+            let assert_size_indicator_validity =
+                TupleStruct::compute_size_and_assert_valid_size_indicator();
+            let code_using_size_integrity_code = triton_asm!(
+                // _
+
+                push {OBJ_POINTER}
+                // _ *tuple_struct
+
+                {&assert_size_indicator_validity}
+                // _ encoding_length
+
+                halt
+            );
+
+            let program = Program::new(&code_using_size_integrity_code);
+            let expected_stack_benign = [bfe!(random_object.encode().len() as u64)];
+
+            // mess up size-indicator of 2nd-to-last field
+            let offset_of_messed_up_si = bfe!(Digest::LEN as u64);
+            prop_negative_test_messed_up_size_indicators(
+                &program,
+                &random_object,
+                OBJ_POINTER,
+                offset_of_messed_up_si,
+                &expected_stack_benign,
+            );
+        }
+
+        #[test]
+        fn validate_total_size_statically_sized_struct() {
+            #[derive(BFieldCodec, TasmObject, Debug, Clone, Copy)]
+            struct StaticallySizedStruct {
+                a: Digest,
+                b: Digest,
+                c: XFieldElement,
+            }
+            const OBJ_POINTER: BFieldElement = BFieldElement::new(422);
+            let random_object = StaticallySizedStruct {
+                a: random(),
+                b: random(),
+                c: random(),
+            };
+            let assert_size_indicator_validity =
+                StaticallySizedStruct::compute_size_and_assert_valid_size_indicator();
+            let code_using_size_integrity_code = triton_asm!(
+                // _
+
+                push {OBJ_POINTER}
+                // _ *tuple_struct
+
+                {&assert_size_indicator_validity}
+                // _ encoding_length
+
+                halt
+            );
+
+            let program = Program::new(&code_using_size_integrity_code);
+            let mut no_messed_memory = HashMap::new();
+            encode_to_memory(&mut no_messed_memory, OBJ_POINTER, &random_object);
+            let no_messed_nd = NonDeterminism::default().with_ram(no_messed_memory.clone());
+            let mut vm_state = VMState::new(&program, PublicInput::default(), no_messed_nd.clone());
+            maybe_write_debuggable_program_to_disk(&program, &vm_state);
+            vm_state.run().unwrap();
+
+            let expected_stack = vec![bfe!(random_object.encode().len() as u64)];
+            let actual_stack = vec![vm_state.op_stack[0]];
+            assert_eq!(expected_stack, actual_stack);
         }
 
         #[test]
