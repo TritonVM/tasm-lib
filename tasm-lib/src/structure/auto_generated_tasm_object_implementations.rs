@@ -5,6 +5,10 @@ use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
 use twenty_first::util_types::mmr::mmr_membership_proof::MmrMembershipProof;
 
 impl crate::tasm_lib::structure::tasm_object::TasmObject for MmrAccumulator {
+    fn label_friendly_name() -> String {
+        "MmrAccumulator".to_owned()
+    }
+
     fn get_field(field_name: &str) -> Vec<crate::triton_vm::instruction::LabelledInstruction> {
         let field_getter = match field_name {
             "peaks" => {
@@ -689,6 +693,7 @@ impl crate::tasm_lib::structure::tasm_object::TasmObject for MmrAccumulator {
         .concat()
     }
     fn compute_size_and_assert_valid_size_indicator(
+        library: &mut crate::tasm_lib::Library,
     ) -> Vec<crate::triton_vm::instruction::LabelledInstruction> {
         let push0 = crate::triton_vm::instruction::LabelledInstruction::Instruction(
             crate::triton_vm::instruction::AnInstruction::Push(0u64.into()),
@@ -763,7 +768,7 @@ impl crate::tasm_lib::structure::tasm_object::TasmObject for MmrAccumulator {
                         dup0.clone(),
                     ]
                         .to_vec(),
-                    <u64 as crate::tasm_lib::structure::tasm_object::TasmObject>::compute_size_and_assert_valid_size_indicator(),
+                    <u64 as crate::tasm_lib::structure::tasm_object::TasmObject>::compute_size_and_assert_valid_size_indicator(library),
                     [
                         dup2.clone(),
                         eq.clone(),
@@ -800,7 +805,7 @@ impl crate::tasm_lib::structure::tasm_object::TasmObject for MmrAccumulator {
                         .to_vec(),
                     <Vec<
                         Digest,
-                    > as crate::tasm_lib::structure::tasm_object::TasmObject>::compute_size_and_assert_valid_size_indicator(),
+                    > as crate::tasm_lib::structure::tasm_object::TasmObject>::compute_size_and_assert_valid_size_indicator(library),
                     [
                         dup2.clone(),
                         eq.clone(),
@@ -851,6 +856,10 @@ impl crate::tasm_lib::structure::tasm_object::TasmObject for MmrAccumulator {
     }
 }
 impl crate::tasm_lib::structure::tasm_object::TasmObject for MmrMembershipProof {
+    fn label_friendly_name() -> String {
+        "MmrMembershipProof".to_owned()
+    }
+
     fn get_field(field_name: &str) -> Vec<crate::triton_vm::instruction::LabelledInstruction> {
         let field_getter = match field_name {
             "authentication_path" => {
@@ -1246,6 +1255,7 @@ impl crate::tasm_lib::structure::tasm_object::TasmObject for MmrMembershipProof 
         .concat()
     }
     fn compute_size_and_assert_valid_size_indicator(
+        library: &mut crate::tasm_lib::Library,
     ) -> Vec<crate::triton_vm::instruction::LabelledInstruction> {
         let push0 = crate::triton_vm::instruction::LabelledInstruction::Instruction(
             crate::triton_vm::instruction::AnInstruction::Push(0u64.into()),
@@ -1324,7 +1334,7 @@ impl crate::tasm_lib::structure::tasm_object::TasmObject for MmrMembershipProof 
                         .to_vec(),
                     <Vec<
                         Digest,
-                    > as crate::tasm_lib::structure::tasm_object::TasmObject>::compute_size_and_assert_valid_size_indicator(),
+                    > as crate::tasm_lib::structure::tasm_object::TasmObject>::compute_size_and_assert_valid_size_indicator(library),
                     [
                         dup2.clone(),
                         eq.clone(),
@@ -1365,6 +1375,10 @@ impl crate::tasm_lib::structure::tasm_object::TasmObject for MmrMembershipProof 
     }
 }
 impl crate::tasm_lib::structure::tasm_object::TasmObject for FriResponse {
+    fn label_friendly_name() -> String {
+        "FriResponse".to_owned()
+    }
+
     fn get_field(field_name: &str) -> Vec<crate::triton_vm::instruction::LabelledInstruction> {
         let field_getter = match field_name {
             "revealed_leaves" => {
@@ -2049,6 +2063,7 @@ impl crate::tasm_lib::structure::tasm_object::TasmObject for FriResponse {
         .concat()
     }
     fn compute_size_and_assert_valid_size_indicator(
+        library: &mut crate::tasm_lib::Library,
     ) -> Vec<crate::triton_vm::instruction::LabelledInstruction> {
         let push0 = crate::triton_vm::instruction::LabelledInstruction::Instruction(
             crate::triton_vm::instruction::AnInstruction::Push(0u64.into()),
@@ -2123,7 +2138,7 @@ impl crate::tasm_lib::structure::tasm_object::TasmObject for FriResponse {
                         dup0.clone(),
                     ]
                         .to_vec(),
-                    <AuthenticationStructure as crate::tasm_lib::structure::tasm_object::TasmObject>::compute_size_and_assert_valid_size_indicator(),
+                    <AuthenticationStructure as crate::tasm_lib::structure::tasm_object::TasmObject>::compute_size_and_assert_valid_size_indicator(library),
                     [
                         dup2.clone(),
                         eq.clone(),
@@ -2160,7 +2175,7 @@ impl crate::tasm_lib::structure::tasm_object::TasmObject for FriResponse {
                         .to_vec(),
                     <Vec<
                         XFieldElement,
-                    > as crate::tasm_lib::structure::tasm_object::TasmObject>::compute_size_and_assert_valid_size_indicator(),
+                    > as crate::tasm_lib::structure::tasm_object::TasmObject>::compute_size_and_assert_valid_size_indicator(library),
                     [
                         dup2.clone(),
                         eq.clone(),
@@ -2212,6 +2227,10 @@ impl crate::tasm_lib::structure::tasm_object::TasmObject for FriResponse {
     }
 }
 impl crate::tasm_lib::structure::tasm_object::TasmObject for Claim {
+    fn label_friendly_name() -> String {
+        "Claim".to_owned()
+    }
+
     fn get_field(field_name: &str) -> Vec<crate::triton_vm::instruction::LabelledInstruction> {
         let field_getter = match field_name {
             "output" => {
@@ -3181,6 +3200,7 @@ impl crate::tasm_lib::structure::tasm_object::TasmObject for Claim {
         .concat()
     }
     fn compute_size_and_assert_valid_size_indicator(
+        library: &mut crate::tasm_lib::Library,
     ) -> Vec<crate::triton_vm::instruction::LabelledInstruction> {
         let push0 = crate::triton_vm::instruction::LabelledInstruction::Instruction(
             crate::triton_vm::instruction::AnInstruction::Push(0u64.into()),
@@ -3255,7 +3275,7 @@ impl crate::tasm_lib::structure::tasm_object::TasmObject for Claim {
                         dup0.clone(),
                     ]
                         .to_vec(),
-                    <Digest as crate::tasm_lib::structure::tasm_object::TasmObject>::compute_size_and_assert_valid_size_indicator(),
+                    <Digest as crate::tasm_lib::structure::tasm_object::TasmObject>::compute_size_and_assert_valid_size_indicator(library),
                     [
                         dup2.clone(),
                         eq.clone(),
@@ -3292,7 +3312,7 @@ impl crate::tasm_lib::structure::tasm_object::TasmObject for Claim {
                         .to_vec(),
                     <Vec<
                         BFieldElement,
-                    > as crate::tasm_lib::structure::tasm_object::TasmObject>::compute_size_and_assert_valid_size_indicator(),
+                    > as crate::tasm_lib::structure::tasm_object::TasmObject>::compute_size_and_assert_valid_size_indicator(library),
                     [
                         dup2.clone(),
                         eq.clone(),
@@ -3329,7 +3349,7 @@ impl crate::tasm_lib::structure::tasm_object::TasmObject for Claim {
                         .to_vec(),
                     <Vec<
                         BFieldElement,
-                    > as crate::tasm_lib::structure::tasm_object::TasmObject>::compute_size_and_assert_valid_size_indicator(),
+                    > as crate::tasm_lib::structure::tasm_object::TasmObject>::compute_size_and_assert_valid_size_indicator(library),
                     [
                         dup2.clone(),
                         eq.clone(),

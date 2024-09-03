@@ -2,11 +2,15 @@ use itertools::Itertools;
 use triton_vm::prelude::*;
 use twenty_first::error::BFieldCodecError;
 
-use crate::prelude::TasmObject;
+use crate::{data_type::DataType, prelude::TasmObject};
 
 use super::tasm_object::Result;
 
-impl<T: BFieldCodec> TasmObject for Vec<T> {
+impl<T: BFieldCodec + TasmObject> TasmObject for Vec<T> {
+    fn label_friendly_name() -> String {
+        format!("vec___{}", T::label_friendly_name())
+    }
+
     fn get_field(_field_name: &str) -> Vec<LabelledInstruction> {
         panic!("`Vec` does not have fields; cannot access them")
     }
@@ -41,7 +45,9 @@ impl<T: BFieldCodec> TasmObject for Vec<T> {
         todo!()
     }
 
-    fn compute_size_and_assert_valid_size_indicator() -> Vec<LabelledInstruction> {
+    fn compute_size_and_assert_valid_size_indicator(
+        library: &mut crate::tasm_lib::Library,
+    ) -> Vec<LabelledInstruction> {
         if let Some(static_size) = T::static_length() {
             // _ *list_len
             triton_asm!(
@@ -56,30 +62,123 @@ impl<T: BFieldCodec> TasmObject for Vec<T> {
                 // _ calculated_size
             )
         } else {
-            todo!("integral SI check not implemented for vec of dynamically-sized elements yet")
+            // _ *list_len
+
+            let verified_element_size = T::compute_size_and_assert_valid_size_indicator(library);
+
+            let loop_label = format!(
+                "tasmlib_structure_tasmobject_verify_size_indicators_dyn_elem_sizes___{}",
+                T::label_friendly_name()
+            );
+
+            let loop_code = triton_asm!(
+                // INVARIANT: _ remaining_elements acc_size *element_si
+                {loop_label}:
+
+                    dup 2
+                    push 0
+                    eq
+                    skiz
+                        return
+                    // _ remaining_elements acc_size *element_si
+
+                    read_mem 1
+                    // _ remaining_elements acc_size element_si (*element_si-1)
+
+                    /* Verify that max allowed size is not exceeded */
+                    push {T::MAX_OFFSET}
+                    dup 2
+                    lt
+                    assert
+                    // _ remaining_elements acc_size element_si (*element_si-1)
+
+                    addi 2
+                    // _ remaining_elements acc_size element_si *element
+
+                    dup 0
+                    {&verified_element_size}
+                    // _ remaining_elements acc_size element_si *element calculated_elem_size
+
+                    dup 2
+                    eq
+                    assert
+                    // _ remaining_elements acc_size element_si *element
+
+                    dup 2
+                    dup 2
+                    add
+                    // _ remaining_elements acc_size element_si *element acc_size'
+
+                    swap 3
+                    pop 1
+                    // _ remaining_elements acc_size' element_si *element
+
+                    add
+                    // _ remaining_elements acc_size' *next_element
+
+                    swap 2
+                    addi -1
+                    swap 2
+                    // _ (remaining_elements-1) acc_size' *next_element
+
+                    recurse
+            );
+
+            library.explicit_import(&loop_label, &loop_code);
+            triton_asm!(
+                // _ *list_len
+
+                read_mem 1
+                // _ list_len (*list_len - 1)
+
+                push 0
+                swap 1
+                // _ list_len 0 (*list_len - 1)
+
+                addi 2
+                hint elem_si_ptr = stack[0]
+                hint acc_size = stack[1]
+                hint remaining_elements = stack[2]
+                // _ list_len 0 (*list_len + 1)
+                // _ remaining_elements acc_size *element[0]_si <-- rename
+
+                call {loop_label}
+                // _ 0 acc_size *EOF
+
+                pop 1
+                swap 1
+                pop 1
+                // _ acc_size
+            )
         }
     }
 }
 
 impl TasmObject for BFieldElement {
+    fn label_friendly_name() -> String {
+        unreachable!()
+    }
+
     fn get_field(_field_name: &str) -> Vec<LabelledInstruction> {
-        panic!()
+        unreachable!()
     }
 
     fn get_field_with_size(_field_name: &str) -> Vec<LabelledInstruction> {
-        panic!()
+        unreachable!()
     }
 
     fn get_field_start_with_jump_distance(_field_name: &str) -> Vec<LabelledInstruction> {
-        panic!()
+        unreachable!()
     }
 
     fn get_encoding_length() -> Vec<LabelledInstruction> {
-        panic!()
+        unreachable!()
     }
 
-    fn compute_size_and_assert_valid_size_indicator() -> Vec<LabelledInstruction> {
-        panic!("Size is known statically for BFieldElement encoding")
+    fn compute_size_and_assert_valid_size_indicator(
+        _library: &mut crate::tasm_lib::Library,
+    ) -> Vec<LabelledInstruction> {
+        unreachable!("Size is known statically for BFieldElement encoding")
     }
 
     fn decode_iter<Itr: Iterator<Item = BFieldElement>>(_iterator: &mut Itr) -> Result<Box<Self>> {
@@ -88,24 +187,30 @@ impl TasmObject for BFieldElement {
 }
 
 impl TasmObject for XFieldElement {
+    fn label_friendly_name() -> String {
+        DataType::Xfe.label_friendly_name()
+    }
+
     fn get_field(_field_name: &str) -> Vec<LabelledInstruction> {
-        panic!()
+        unreachable!()
     }
 
     fn get_field_with_size(_field_name: &str) -> Vec<LabelledInstruction> {
-        panic!()
+        unreachable!()
     }
 
     fn get_field_start_with_jump_distance(_field_name: &str) -> Vec<LabelledInstruction> {
-        panic!()
+        unreachable!()
     }
 
     fn get_encoding_length() -> Vec<LabelledInstruction> {
-        panic!()
+        unreachable!()
     }
 
-    fn compute_size_and_assert_valid_size_indicator() -> Vec<LabelledInstruction> {
-        panic!("Size is known statically for XFieldElement encoding")
+    fn compute_size_and_assert_valid_size_indicator(
+        _library: &mut crate::tasm_lib::Library,
+    ) -> Vec<LabelledInstruction> {
+        unreachable!("Size is known statically for XFieldElement encoding")
     }
 
     fn decode_iter<Itr: Iterator<Item = BFieldElement>>(_iterator: &mut Itr) -> Result<Box<Self>> {
@@ -114,24 +219,62 @@ impl TasmObject for XFieldElement {
 }
 
 impl TasmObject for Digest {
+    fn label_friendly_name() -> String {
+        DataType::Digest.label_friendly_name()
+    }
+
     fn get_field(_field_name: &str) -> Vec<LabelledInstruction> {
-        panic!()
+        unreachable!()
     }
 
     fn get_field_with_size(_field_name: &str) -> Vec<LabelledInstruction> {
-        panic!()
+        unreachable!()
     }
 
     fn get_field_start_with_jump_distance(_field_name: &str) -> Vec<LabelledInstruction> {
-        panic!()
+        unreachable!()
     }
 
     fn get_encoding_length() -> Vec<LabelledInstruction> {
-        panic!()
+        unreachable!()
     }
 
-    fn compute_size_and_assert_valid_size_indicator() -> Vec<LabelledInstruction> {
-        panic!("Size is known statically for Digest encoding")
+    fn compute_size_and_assert_valid_size_indicator(
+        _library: &mut crate::tasm_lib::Library,
+    ) -> Vec<LabelledInstruction> {
+        unreachable!("Size is known statically for Digest encoding")
+    }
+
+    fn decode_iter<Itr: Iterator<Item = BFieldElement>>(_iterator: &mut Itr) -> Result<Box<Self>> {
+        todo!()
+    }
+}
+
+impl TasmObject for bool {
+    fn label_friendly_name() -> String {
+        DataType::Bool.label_friendly_name()
+    }
+
+    fn get_field(_field_name: &str) -> Vec<LabelledInstruction> {
+        unreachable!()
+    }
+
+    fn get_field_with_size(_field_name: &str) -> Vec<LabelledInstruction> {
+        unreachable!()
+    }
+
+    fn get_field_start_with_jump_distance(_field_name: &str) -> Vec<LabelledInstruction> {
+        unreachable!()
+    }
+
+    fn get_encoding_length() -> Vec<LabelledInstruction> {
+        unreachable!()
+    }
+
+    fn compute_size_and_assert_valid_size_indicator(
+        _library: &mut crate::tasm_lib::Library,
+    ) -> Vec<LabelledInstruction> {
+        unreachable!("Size is known statically for u32 encoding")
     }
 
     fn decode_iter<Itr: Iterator<Item = BFieldElement>>(_iterator: &mut Itr) -> Result<Box<Self>> {
@@ -140,24 +283,30 @@ impl TasmObject for Digest {
 }
 
 impl TasmObject for u32 {
+    fn label_friendly_name() -> String {
+        DataType::U32.label_friendly_name()
+    }
+
     fn get_field(_field_name: &str) -> Vec<LabelledInstruction> {
-        panic!()
+        unreachable!()
     }
 
     fn get_field_with_size(_field_name: &str) -> Vec<LabelledInstruction> {
-        panic!()
+        unreachable!()
     }
 
     fn get_field_start_with_jump_distance(_field_name: &str) -> Vec<LabelledInstruction> {
-        panic!()
+        unreachable!()
     }
 
     fn get_encoding_length() -> Vec<LabelledInstruction> {
-        panic!()
+        unreachable!()
     }
 
-    fn compute_size_and_assert_valid_size_indicator() -> Vec<LabelledInstruction> {
-        panic!("Size is known statically for u32 encoding")
+    fn compute_size_and_assert_valid_size_indicator(
+        _library: &mut crate::tasm_lib::Library,
+    ) -> Vec<LabelledInstruction> {
+        unreachable!("Size is known statically for u32 encoding")
     }
 
     fn decode_iter<Itr: Iterator<Item = BFieldElement>>(_iterator: &mut Itr) -> Result<Box<Self>> {
@@ -166,24 +315,30 @@ impl TasmObject for u32 {
 }
 
 impl TasmObject for u64 {
+    fn label_friendly_name() -> String {
+        DataType::U64.label_friendly_name()
+    }
+
     fn get_field(_field_name: &str) -> Vec<LabelledInstruction> {
-        panic!()
+        unreachable!()
     }
 
     fn get_field_with_size(_field_name: &str) -> Vec<LabelledInstruction> {
-        panic!()
+        unreachable!()
     }
 
     fn get_field_start_with_jump_distance(_field_name: &str) -> Vec<LabelledInstruction> {
-        panic!()
+        unreachable!()
     }
 
     fn get_encoding_length() -> Vec<LabelledInstruction> {
-        panic!()
+        unreachable!()
     }
 
-    fn compute_size_and_assert_valid_size_indicator() -> Vec<LabelledInstruction> {
-        panic!("Size is known statically for u64 encoding")
+    fn compute_size_and_assert_valid_size_indicator(
+        _library: &mut crate::tasm_lib::Library,
+    ) -> Vec<LabelledInstruction> {
+        unreachable!("Size is known statically for u64 encoding")
     }
 
     fn decode_iter<Itr: Iterator<Item = BFieldElement>>(_iterator: &mut Itr) -> Result<Box<Self>> {
@@ -192,6 +347,46 @@ impl TasmObject for u64 {
 }
 
 impl TasmObject for u128 {
+    fn label_friendly_name() -> String {
+        DataType::U128.label_friendly_name()
+    }
+
+    fn get_field(_field_name: &str) -> Vec<LabelledInstruction> {
+        unreachable!()
+    }
+
+    fn get_field_with_size(_field_name: &str) -> Vec<LabelledInstruction> {
+        unreachable!()
+    }
+
+    fn get_field_start_with_jump_distance(_field_name: &str) -> Vec<LabelledInstruction> {
+        unreachable!()
+    }
+
+    fn get_encoding_length() -> Vec<LabelledInstruction> {
+        unreachable!()
+    }
+
+    fn compute_size_and_assert_valid_size_indicator(
+        _library: &mut crate::tasm_lib::Library,
+    ) -> Vec<LabelledInstruction> {
+        unreachable!("Size is known statically for u128 encoding")
+    }
+
+    fn decode_iter<Itr: Iterator<Item = BFieldElement>>(_iterator: &mut Itr) -> Result<Box<Self>> {
+        todo!()
+    }
+}
+
+impl<T: TasmObject, S: TasmObject> TasmObject for (T, S) {
+    fn label_friendly_name() -> String {
+        format!(
+            "tuple_L_{}_{}_R",
+            T::label_friendly_name(),
+            S::label_friendly_name()
+        )
+    }
+
     fn get_field(_field_name: &str) -> Vec<LabelledInstruction> {
         panic!()
     }
@@ -208,8 +403,10 @@ impl TasmObject for u128 {
         panic!()
     }
 
-    fn compute_size_and_assert_valid_size_indicator() -> Vec<LabelledInstruction> {
-        panic!("Size is known statically for u128 encoding")
+    fn compute_size_and_assert_valid_size_indicator(
+        _library: &mut crate::tasm_lib::Library,
+    ) -> Vec<LabelledInstruction> {
+        panic!("Size is known statically for u32 encoding")
     }
 
     fn decode_iter<Itr: Iterator<Item = BFieldElement>>(_iterator: &mut Itr) -> Result<Box<Self>> {
@@ -218,6 +415,10 @@ impl TasmObject for u128 {
 }
 
 impl TasmObject for Proof {
+    fn label_friendly_name() -> String {
+        "tvm_proof".to_owned()
+    }
+
     fn get_field(_field_name: &str) -> Vec<LabelledInstruction> {
         panic!()
     }
@@ -234,7 +435,9 @@ impl TasmObject for Proof {
         panic!()
     }
 
-    fn compute_size_and_assert_valid_size_indicator() -> Vec<LabelledInstruction> {
+    fn compute_size_and_assert_valid_size_indicator(
+        _library: &mut crate::tasm_lib::Library,
+    ) -> Vec<LabelledInstruction> {
         panic!()
     }
 
@@ -244,6 +447,10 @@ impl TasmObject for Proof {
 }
 
 impl<T: TasmObject> TasmObject for Option<T> {
+    fn label_friendly_name() -> String {
+        format!("option_L_{}_R", T::label_friendly_name())
+    }
+
     fn get_field(_field_name: &str) -> Vec<LabelledInstruction> {
         unreachable!("cannot get field of an option type");
     }
@@ -276,7 +483,9 @@ impl<T: TasmObject> TasmObject for Option<T> {
         todo!()
     }
 
-    fn compute_size_and_assert_valid_size_indicator() -> Vec<LabelledInstruction> {
+    fn compute_size_and_assert_valid_size_indicator(
+        _library: &mut crate::tasm_lib::Library,
+    ) -> Vec<LabelledInstruction> {
         todo!()
     }
 }

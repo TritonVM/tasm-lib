@@ -7,6 +7,8 @@ use triton_vm::prelude::*;
 
 pub use derive_tasm_object::TasmObject;
 
+use crate::library::Library;
+
 pub(super) type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 
 pub const DEFAULT_MAX_DYN_FIELD_SIZE: u32 = 1u32 << 28;
@@ -22,6 +24,8 @@ pub trait TasmObject {
     /// from memory against this value and crash the VM if the indicator
     /// is larger or equal.
     const MAX_OFFSET: u32 = DEFAULT_MAX_DYN_FIELD_SIZE;
+
+    fn label_friendly_name() -> String;
 
     /// Returns tasm code that returns a pointer the field of the object, assuming:
     ///  - that a pointer to the said object lives on top of the stack;
@@ -80,7 +84,9 @@ pub trait TasmObject {
     /// BEFORE: _ *object
     /// AFTER: _ calculated_size
     /// ```
-    fn compute_size_and_assert_valid_size_indicator() -> Vec<LabelledInstruction>;
+    fn compute_size_and_assert_valid_size_indicator(
+        library: &mut Library,
+    ) -> Vec<LabelledInstruction>;
 
     /// Decode as [`Self`].
     fn decode_iter<Itr: Iterator<Item = BFieldElement>>(iterator: &mut Itr) -> Result<Box<Self>>;
@@ -281,6 +287,7 @@ mod test {
     /// Test derivation of field getters and manual derivations of the `field!` macro
     mod derive_tests {
         use num_traits::ConstZero;
+        use twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
         use crate::maybe_write_debuggable_program_to_disk;
 
@@ -354,7 +361,7 @@ mod test {
             Digest,
         );
 
-        fn prepare_random_object(seed: [u8; 32]) -> TupleStruct {
+        fn prepare_random_tuple_struct(seed: [u8; 32]) -> TupleStruct {
             let mut rng: StdRng = SeedableRng::from_seed(seed);
             let mut randomness = [0u8; 100000];
             rng.fill_bytes(&mut randomness);
@@ -362,14 +369,15 @@ mod test {
             TupleStruct::arbitrary(&mut unstructured).unwrap()
         }
 
-        /// Verify correct field-getter behavior when a size-indicator gets
-        /// manipulated to illegal values.
+        /// Verify correct field-macro behavior when the size-indicators have
+        /// illegal values.
         fn prop_negative_test_messed_up_size_indicators<T: BFieldCodec>(
             program: &Program,
             tuple_struct: &T,
             obj_pointer: BFieldElement,
             offset_for_manipulated_si: BFieldElement,
             expected_stack: &[BFieldElement],
+            also_run_negative_tests_for_correct_size_indicators: bool,
         ) {
             // No-messed works
             let mut no_messed_memory = HashMap::new();
@@ -396,22 +404,55 @@ mod test {
             let mut vm_state_fail0 =
                 VMState::new(program, PublicInput::default(), messed_up_nd_0.clone());
             maybe_write_debuggable_program_to_disk(program, &vm_state_fail0);
-            let instruction_error = vm_state_fail0.run().unwrap_err();
-            assert_eq!(InstructionError::AssertionFailed, instruction_error,);
+            let instruction_error0 = vm_state_fail0.run().unwrap_err();
+            assert_eq!(InstructionError::AssertionFailed, instruction_error0,);
 
             // Messed-up encoding fails: Negative sizes banned
             let negative_number = bfe!(-42);
-            messed_up_memory = no_messed_memory;
+            messed_up_memory = no_messed_memory.clone();
             messed_up_memory.insert(obj_pointer + offset_for_manipulated_si, negative_number);
             let messed_up_nd_1 = NonDeterminism::default().with_ram(messed_up_memory.clone());
             let mut vm_state_fail1 =
                 VMState::new(program, PublicInput::default(), messed_up_nd_1.clone());
             maybe_write_debuggable_program_to_disk(program, &vm_state_fail1);
-            let instruction_error = vm_state_fail1.run().unwrap_err();
+            let instruction_error1 = vm_state_fail1.run().unwrap_err();
             assert_eq!(
                 InstructionError::FailedU32Conversion(negative_number),
-                instruction_error,
+                instruction_error1,
             );
+
+            // Messed-up encoding fails: Size-indicator is within allowed
+            // range but does not have the correct value. This is not checked
+            // by all the `TasmObject` trait functions, so these checks are run
+            // conditionally.
+            if also_run_negative_tests_for_correct_size_indicators {
+                // Messed-up encoding fails: Size-indicator is *one* too big
+                messed_up_memory = no_messed_memory.clone();
+                let address_for_manipulated_si = obj_pointer + offset_for_manipulated_si;
+                messed_up_memory.insert(
+                    address_for_manipulated_si,
+                    messed_up_memory[&address_for_manipulated_si] + bfe!(1),
+                );
+                let messed_up_nd_2 = NonDeterminism::default().with_ram(messed_up_memory.clone());
+                let mut vm_state_fail2 =
+                    VMState::new(program, PublicInput::default(), messed_up_nd_2.clone());
+                maybe_write_debuggable_program_to_disk(program, &vm_state_fail2);
+                let instruction_error2 = vm_state_fail2.run().unwrap_err();
+                assert_eq!(InstructionError::AssertionFailed, instruction_error2,);
+
+                // Messed-up encoding fails: Size-indicator is *one* too small
+                messed_up_memory = no_messed_memory.clone();
+                messed_up_memory.insert(
+                    address_for_manipulated_si,
+                    messed_up_memory[&address_for_manipulated_si] - bfe!(1),
+                );
+                let messed_up_nd_3 = NonDeterminism::default().with_ram(messed_up_memory.clone());
+                let mut vm_state_fail3 =
+                    VMState::new(program, PublicInput::default(), messed_up_nd_3.clone());
+                maybe_write_debuggable_program_to_disk(program, &vm_state_fail3);
+                let instruction_error3 = vm_state_fail3.run().unwrap_err();
+                assert_eq!(InstructionError::AssertionFailed, instruction_error3,);
+            }
         }
 
         #[test]
@@ -461,13 +502,14 @@ mod test {
                 START_OF_OBJ,
                 offset_for_manipulated_si,
                 &expected_stack_benign,
+                false,
             );
         }
 
         #[test]
         fn mess_with_size_indicators_total_size_negative_test() {
             const START_OF_OBJ: BFieldElement = BFieldElement::ZERO;
-            let random_object = prepare_random_object(random());
+            let random_object = prepare_random_tuple_struct(random());
             let get_encoding_length = TupleStruct::get_encoding_length();
             let code_using_total_length_getter = triton_asm!(
                 // _
@@ -488,13 +530,14 @@ mod test {
                 START_OF_OBJ,
                 bfe!(Digest::LEN as u64),
                 &expected_stack_benign_nd,
+                false,
             );
         }
 
         #[test]
         fn mess_with_size_indicators_field_and_size_getter_negative_test() {
             const START_OF_OBJ: BFieldElement = BFieldElement::ZERO;
-            let random_object = prepare_random_object(random());
+            let random_object = prepare_random_tuple_struct(random());
             let fourth_to_last_field = field_with_size!(TupleStruct::field_3);
             let code_using_field_and_size_getter = triton_asm!(
                 // _
@@ -524,13 +567,14 @@ mod test {
                 START_OF_OBJ,
                 bfe!(Digest::LEN as u64),
                 &expected_stack_benign_nd,
+                false,
             );
         }
 
         #[test]
         fn mess_with_size_indicators_field_getter_negative_test() {
             const START_OF_OBJ: BFieldElement = BFieldElement::ZERO;
-            let random_object = prepare_random_object(random());
+            let random_object = prepare_random_tuple_struct(random());
             let third_to_last_field = field!(TupleStruct::field_4);
             let code_using_field_getter = triton_asm!(
                 // _
@@ -557,15 +601,17 @@ mod test {
                 START_OF_OBJ,
                 bfe!(Digest::LEN as u64),
                 &expected_output_benign_nd,
+                false,
             );
         }
 
         #[test]
         fn mess_with_size_indicators_size_indicator_validity_check_negative_test() {
+            let mut library = Library::default();
             const OBJ_POINTER: BFieldElement = BFieldElement::new(422);
-            let random_object = prepare_random_object(random());
+            let random_object = prepare_random_tuple_struct(random());
             let assert_size_indicator_validity =
-                TupleStruct::compute_size_and_assert_valid_size_indicator();
+                TupleStruct::compute_size_and_assert_valid_size_indicator(&mut library);
             let code_using_size_integrity_code = triton_asm!(
                 // _
 
@@ -605,8 +651,65 @@ mod test {
                     OBJ_POINTER,
                     bfe!(size_indicator_offset as u64),
                     &expected_stack_benign,
+                    true,
                 );
             }
+        }
+
+        #[test]
+        fn mess_with_size_indicators_checked_size_list_w_dyn_sized_elems_negative_test() {
+            #[derive(BFieldCodec, TasmObject, Debug, Clone, Arbitrary)]
+            struct ListDynSizedElements {
+                a: Vec<Digest>,
+                b: Vec<Vec<Digest>>,
+                c: Vec<XFieldElement>,
+            }
+
+            fn random_struct(seed: [u8; 32]) -> ListDynSizedElements {
+                let mut rng: StdRng = SeedableRng::from_seed(seed);
+                let mut randomness = [0u8; 100000];
+                rng.fill_bytes(&mut randomness);
+                let mut unstructured = Unstructured::new(&randomness);
+                ListDynSizedElements::arbitrary(&mut unstructured).unwrap()
+            }
+
+            const OBJ_POINTER: BFieldElement = BFieldElement::new(422);
+            let mut library = Library::default();
+            let assert_size_indicator_validity =
+                ListDynSizedElements::compute_size_and_assert_valid_size_indicator(&mut library);
+
+            let imports = library.all_imports();
+            let code_using_size_integrity_code = triton_asm!(
+                // _
+
+                push {OBJ_POINTER}
+                // _ *list_dyn_sized_elems
+
+                {&assert_size_indicator_validity}
+                // _ encoding_length
+
+                halt
+
+                {&imports}
+            );
+
+            let random_obj = random_struct(random());
+            let program = Program::new(&code_using_size_integrity_code);
+            let expected_stack_benign = [bfe!(random_obj.encode().len() as u64)];
+
+            const SIZE_OF_SIZE_INDICATOR: usize = 1;
+            const SIZE_OF_LENGTH_INDICATOR: usize = 1;
+            let offset_for_vec_vec_digest_size_indicator = random_obj.c.len() * EXTENSION_DEGREE
+                + SIZE_OF_SIZE_INDICATOR
+                + SIZE_OF_LENGTH_INDICATOR;
+            prop_negative_test_messed_up_size_indicators(
+                &program,
+                &random_obj,
+                OBJ_POINTER,
+                bfe!(offset_for_vec_vec_digest_size_indicator as u64),
+                &expected_stack_benign,
+                true,
+            )
         }
 
         #[test]
@@ -623,8 +726,10 @@ mod test {
                 b: random(),
                 c: random(),
             };
+
+            let mut library = Library::default();
             let assert_size_indicator_validity =
-                StaticallySizedStruct::compute_size_and_assert_valid_size_indicator();
+                StaticallySizedStruct::compute_size_and_assert_valid_size_indicator(&mut library);
             let code_using_size_integrity_code = triton_asm!(
                 // _
 
@@ -652,7 +757,7 @@ mod test {
 
         #[test]
         fn load_and_decode_tuple_struct_containing_enums_from_memory() {
-            let random_object = prepare_random_object(random());
+            let random_object = prepare_random_tuple_struct(random());
             let random_address: u64 = thread_rng().gen_range(0..(1 << 30));
             let address = random_address.into();
 

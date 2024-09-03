@@ -89,6 +89,13 @@ impl Library {
         dep_entrypoint
     }
 
+    /// Import code that does not implement the `Snippet` trait
+    ///
+    /// If possible, you should use the [`import`](Self::import) method as
+    /// it gives better protections and allows you to test functions in
+    /// isolation. This method is intended to add function to the assembly
+    /// that you have defined inline and where a function call is needed due to
+    /// e.g. a dynamic counter.
     pub fn explicit_import(&mut self, name: &str, body: &[LabelledInstruction]) -> String {
         if !self.seen_snippets.contains_key(name) {
             self.seen_snippets.insert(name.to_owned(), body.to_vec());
