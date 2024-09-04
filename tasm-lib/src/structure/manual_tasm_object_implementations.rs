@@ -109,6 +109,10 @@ impl<T: BFieldCodec + TasmObject> TasmObject for Vec<T> {
                     add
                     // _ remaining_elements acc_size element_si *element acc_size'
 
+                    /* Account for element's size indicator, since it's dynamically sized */
+                    addi 1
+                    // _ remaining_elements acc_size element_si *element acc_size'
+
                     swap 3
                     pop 1
                     // _ remaining_elements acc_size' element_si *element
@@ -149,6 +153,9 @@ impl<T: BFieldCodec + TasmObject> TasmObject for Vec<T> {
                 swap 1
                 pop 1
                 // _ acc_size
+
+                /* Add size of (outer) list's length indicator */
+                addi 1
             )
         }
     }

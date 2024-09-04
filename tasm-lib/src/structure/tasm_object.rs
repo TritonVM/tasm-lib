@@ -673,7 +673,7 @@ mod test {
                 ListDynSizedElements::arbitrary(&mut unstructured).unwrap()
             }
 
-            const OBJ_POINTER: BFieldElement = BFieldElement::new(422);
+            const OBJ_POINTER: BFieldElement = BFieldElement::new(423);
             let mut library = Library::default();
             let assert_size_indicator_validity =
                 ListDynSizedElements::compute_size_and_assert_valid_size_indicator(&mut library);
