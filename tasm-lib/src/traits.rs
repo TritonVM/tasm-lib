@@ -1,3 +1,4 @@
+pub mod accessor;
 pub mod algorithm;
 pub mod basic_snippet;
 pub mod closure;

@@ -23,11 +23,12 @@ use super::rust_shadow::RustShadow;
 /// the dynamic memory allocator, and can take nondeterministic input. It cannot read from
 /// standard in or write to standard out.
 ///
-/// See also: [closure], [function], [procedure]
+/// See also: [closure], [function], [procedure], [accessor]
 ///
 /// [closure]: crate::traits::closure::Closure
 /// [function]: crate::traits::function::Function
 /// [procedure]: crate::traits::procedure::Procedure
+/// [accessor]: crate::traits::accessor::Accessor
 pub trait Algorithm: BasicSnippet {
     fn rust_shadow(
         &self,
