@@ -1,5 +1,6 @@
 use arbitrary::Arbitrary;
 use triton_vm::prelude::*;
+use twenty_first::prelude::MmrMembershipProof;
 
 use crate::prelude::TasmObject;
 
@@ -16,4 +17,40 @@ pub(crate) struct ProofCollectionLookalike {
     pub kernel_mast_hash: Digest,
     pub salted_inputs_hash: Digest,
     pub salted_outputs_hash: Digest,
+}
+
+#[derive(Debug, Clone, TasmObject, BFieldCodec, Arbitrary)]
+pub(crate) struct CoinLookalike {
+    pub type_script_hash: Digest,
+    pub state: Vec<BFieldElement>,
+}
+
+#[derive(Debug, Clone, TasmObject, BFieldCodec, Arbitrary)]
+pub(crate) struct UtxoLookalike {
+    pub lock_script_hash: Digest,
+    pub coins: Vec<CoinLookalike>,
+}
+
+#[derive(Debug, Clone, TasmObject, BFieldCodec, Arbitrary)]
+pub(crate) struct SaltedUtxosLookalike {
+    pub utxos: Vec<UtxoLookalike>,
+    pub salt: [BFieldElement; 3],
+}
+
+#[derive(Debug, Clone, TasmObject, BFieldCodec, Arbitrary)]
+pub(crate) struct CollectLockScriptsWitnessLookalike {
+    salted_input_utxos: SaltedUtxosLookalike,
+}
+
+#[derive(Debug, Clone, TasmObject, BFieldCodec, Arbitrary)]
+pub(crate) struct NeptuneCoinsLookalike(u128);
+
+#[derive(Debug, Clone, TasmObject, BFieldCodec, Arbitrary)]
+pub(crate) struct ChunkLookalike {
+    pub relative_indices: Vec<u32>,
+}
+
+#[derive(Debug, Clone, TasmObject, BFieldCodec, Arbitrary)]
+pub(crate) struct ChunkDictionaryLookalike {
+    dictionary: Vec<(u64, (MmrMembershipProof, ChunkLookalike))>,
 }

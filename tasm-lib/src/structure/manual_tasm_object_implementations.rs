@@ -6,6 +6,49 @@ use crate::{data_type::DataType, prelude::TasmObject};
 
 use super::tasm_object::Result;
 
+impl<const N: usize, T: BFieldCodec + TasmObject> TasmObject for [T; N] {
+    fn label_friendly_name() -> String {
+        format!("array{}___{}", N, T::label_friendly_name())
+    }
+
+    fn get_field(field_name: &str) -> Vec<LabelledInstruction> {
+        todo!()
+    }
+
+    fn get_field_with_size(field_name: &str) -> Vec<LabelledInstruction> {
+        todo!()
+    }
+
+    fn get_field_start_with_jump_distance(field_name: &str) -> Vec<LabelledInstruction> {
+        todo!()
+    }
+
+    fn get_encoding_length() -> Vec<LabelledInstruction> {
+        todo!()
+    }
+
+    fn compute_size_and_assert_valid_size_indicator(
+        library: &mut crate::prelude::Library,
+    ) -> Vec<LabelledInstruction> {
+        if let Some(static_size) = T::static_length() {
+            let own_size = static_size * N;
+            triton_asm!(
+                // _ *elem[0]
+
+                pop 1
+                push {own_size}
+                // _ own_size
+            )
+        } else {
+            todo!()
+        }
+    }
+
+    fn decode_iter<Itr: Iterator<Item = BFieldElement>>(iterator: &mut Itr) -> Result<Box<Self>> {
+        todo!()
+    }
+}
+
 impl<T: BFieldCodec + TasmObject> TasmObject for Vec<T> {
     fn label_friendly_name() -> String {
         format!("vec___{}", T::label_friendly_name())
@@ -163,7 +206,7 @@ impl<T: BFieldCodec + TasmObject> TasmObject for Vec<T> {
 
 impl TasmObject for BFieldElement {
     fn label_friendly_name() -> String {
-        unreachable!()
+        DataType::Bfe.label_friendly_name()
     }
 
     fn get_field(_field_name: &str) -> Vec<LabelledInstruction> {

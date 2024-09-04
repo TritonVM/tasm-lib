@@ -66,7 +66,7 @@ mod tests {
     use std::collections::HashMap;
 
     use crate::memory::encode_to_memory;
-    use crate::neptune::neptune_like_types_for_tests::ProofCollectionLookalike;
+    use crate::neptune::neptune_like_types_for_tests::*;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::traits::accessor::Accessor;
     use crate::traits::accessor::AccessorInitialState;
@@ -97,6 +97,63 @@ mod tests {
     #[test]
     fn test_pbt_proof() {
         let snippet: VerifyNdSiIntegrity<Proof> = VerifyNdSiIntegrity {
+            _phantom_data: PhantomData,
+        };
+        ShadowedAccessor::new(snippet).test();
+    }
+
+    #[test]
+    fn test_pbt_coin() {
+        let snippet: VerifyNdSiIntegrity<CoinLookalike> = VerifyNdSiIntegrity {
+            _phantom_data: PhantomData,
+        };
+        ShadowedAccessor::new(snippet).test();
+    }
+
+    #[test]
+    fn pbt_utxo() {
+        let snippet: VerifyNdSiIntegrity<UtxoLookalike> = VerifyNdSiIntegrity {
+            _phantom_data: PhantomData,
+        };
+        ShadowedAccessor::new(snippet).test();
+    }
+
+    #[test]
+    fn pbt_salted_utxos() {
+        let snippet: VerifyNdSiIntegrity<SaltedUtxosLookalike> = VerifyNdSiIntegrity {
+            _phantom_data: PhantomData,
+        };
+        ShadowedAccessor::new(snippet).test();
+    }
+
+    #[test]
+    fn pbt_collect_lock_scripts_witness() {
+        let snippet: VerifyNdSiIntegrity<CollectLockScriptsWitnessLookalike> =
+            VerifyNdSiIntegrity {
+                _phantom_data: PhantomData,
+            };
+        ShadowedAccessor::new(snippet).test();
+    }
+
+    #[test]
+    fn test_pbt_claim() {
+        let snippet: VerifyNdSiIntegrity<Claim> = VerifyNdSiIntegrity {
+            _phantom_data: PhantomData,
+        };
+        ShadowedAccessor::new(snippet).test();
+    }
+
+    #[test]
+    fn test_neptune_coins() {
+        let snippet: VerifyNdSiIntegrity<NeptuneCoinsLookalike> = VerifyNdSiIntegrity {
+            _phantom_data: PhantomData,
+        };
+        ShadowedAccessor::new(snippet).test();
+    }
+
+    #[test]
+    fn test_option_neptune_coins() {
+        let snippet: VerifyNdSiIntegrity<Option<NeptuneCoinsLookalike>> = VerifyNdSiIntegrity {
             _phantom_data: PhantomData,
         };
         ShadowedAccessor::new(snippet).test();
