@@ -445,11 +445,32 @@ impl TasmObject for Proof {
     fn compute_size_and_assert_valid_size_indicator(
         _library: &mut crate::tasm_lib::Library,
     ) -> Vec<LabelledInstruction> {
-        panic!()
+        // Proofs are special, as the fields of a proof is only accessed through
+        // the [`DequeueNextAs`](crate::verifier::vm_proof_iter::dequeue_next_as)
+        // snippet which does some checks itself. So we just report the total size
+        // here.
+
+        triton_asm!(
+            // _ *proof
+            read_mem 1
+            // _ field_0_len (*proof - 1)
+
+            pop 1
+            // _ field_0_len
+
+            addi 1
+
+            // _ own_size
+        )
     }
 
-    fn decode_iter<Itr: Iterator<Item = BFieldElement>>(_iterator: &mut Itr) -> Result<Box<Self>> {
-        todo!()
+    fn decode_iter<Itr: Iterator<Item = BFieldElement>>(iterator: &mut Itr) -> Result<Box<Self>> {
+        match iterator.next() {
+            Some(_field_0_size) => Ok(Box::new(Self(*Vec::<BFieldElement>::decode_iter(
+                iterator,
+            )?))),
+            None => Err(Box::new(BFieldCodecError::SequenceTooShort)),
+        }
     }
 }
 

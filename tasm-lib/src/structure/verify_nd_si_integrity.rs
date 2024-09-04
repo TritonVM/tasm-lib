@@ -66,6 +66,7 @@ mod tests {
     use std::collections::HashMap;
 
     use crate::memory::encode_to_memory;
+    use crate::neptune::neptune_like_types_for_tests::ProofCollectionLookalike;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::traits::accessor::Accessor;
     use crate::traits::accessor::AccessorInitialState;
@@ -75,13 +76,12 @@ mod tests {
     use arbitrary::Unstructured;
     use rand::rngs::StdRng;
     use rand::Rng;
-    use rand::RngCore;
     use rand::SeedableRng;
 
     use super::*;
 
     #[test]
-    fn unit_test() {
+    fn test_pbt_simple_struct() {
         #[derive(Debug, Clone, TasmObject, BFieldCodec, Arbitrary)]
         struct TestStruct {
             a: Vec<u128>,
@@ -94,7 +94,23 @@ mod tests {
         ShadowedAccessor::new(snippet).test();
     }
 
-    impl<'a, T: TasmObject + BFieldCodec + Arbitrary<'a>> Accessor for VerifyNdSiIntegrity<T> {
+    #[test]
+    fn test_pbt_proof() {
+        let snippet: VerifyNdSiIntegrity<Proof> = VerifyNdSiIntegrity {
+            _phantom_data: PhantomData,
+        };
+        ShadowedAccessor::new(snippet).test();
+    }
+
+    #[test]
+    fn test_pbt_proof_collection_lookalike() {
+        let snippet: VerifyNdSiIntegrity<ProofCollectionLookalike> = VerifyNdSiIntegrity {
+            _phantom_data: PhantomData,
+        };
+        ShadowedAccessor::new(snippet).test();
+    }
+
+    impl<T: TasmObject + BFieldCodec + for<'a> Arbitrary<'a>> Accessor for VerifyNdSiIntegrity<T> {
         fn rust_shadow(
             &self,
             stack: &mut Vec<BFieldElement>,
@@ -112,19 +128,17 @@ mod tests {
             seed: [u8; 32],
             _bench_case: Option<BenchmarkCase>,
         ) -> AccessorInitialState {
-            fn prepare_random_object<'a, T: Arbitrary<'a>>(randomness: &'static [u8; 100000]) -> T {
+            fn prepare_random_object<T: for<'a> Arbitrary<'a>>(randomness: &[u8; 100000]) -> T {
                 let unstructured = Unstructured::new(randomness);
                 T::arbitrary_take_rest(unstructured).unwrap()
             }
 
             let mut rng: StdRng = SeedableRng::from_seed(seed);
 
-            let t: T = unsafe {
-                use std::ptr::addr_of;
-                use std::ptr::addr_of_mut;
-                static mut RANDOMNESS: [u8; 100_000] = [0u8; 100_000];
-                rng.fill_bytes(&mut *addr_of_mut!(RANDOMNESS));
-                prepare_random_object(&*addr_of!(RANDOMNESS))
+            let t: T = {
+                let mut randomness = [0u8; 100000];
+                rng.fill(&mut randomness);
+                prepare_random_object(&randomness)
             };
 
             let mut memory = HashMap::default();
@@ -137,5 +151,22 @@ mod tests {
                 memory,
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod benches {
+    use crate::neptune::neptune_like_types_for_tests::ProofCollectionLookalike;
+    use crate::traits::accessor::ShadowedAccessor;
+    use crate::traits::rust_shadow::RustShadow;
+
+    use super::*;
+
+    #[test]
+    fn bench_pbt_proof_collection_lookalike() {
+        let snippet: VerifyNdSiIntegrity<ProofCollectionLookalike> = VerifyNdSiIntegrity {
+            _phantom_data: PhantomData,
+        };
+        ShadowedAccessor::new(snippet).bench();
     }
 }
