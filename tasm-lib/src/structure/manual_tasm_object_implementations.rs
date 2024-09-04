@@ -11,15 +11,15 @@ impl<const N: usize, T: BFieldCodec + TasmObject> TasmObject for [T; N] {
         format!("array{}___{}", N, T::label_friendly_name())
     }
 
-    fn get_field(field_name: &str) -> Vec<LabelledInstruction> {
+    fn get_field(_field_name: &str) -> Vec<LabelledInstruction> {
         todo!()
     }
 
-    fn get_field_with_size(field_name: &str) -> Vec<LabelledInstruction> {
+    fn get_field_with_size(_field_name: &str) -> Vec<LabelledInstruction> {
         todo!()
     }
 
-    fn get_field_start_with_jump_distance(field_name: &str) -> Vec<LabelledInstruction> {
+    fn get_field_start_with_jump_distance(_field_name: &str) -> Vec<LabelledInstruction> {
         todo!()
     }
 
@@ -28,7 +28,7 @@ impl<const N: usize, T: BFieldCodec + TasmObject> TasmObject for [T; N] {
     }
 
     fn compute_size_and_assert_valid_size_indicator(
-        library: &mut crate::prelude::Library,
+        _library: &mut crate::prelude::Library,
     ) -> Vec<LabelledInstruction> {
         if let Some(static_size) = T::static_length() {
             let own_size = static_size * N;
@@ -44,7 +44,7 @@ impl<const N: usize, T: BFieldCodec + TasmObject> TasmObject for [T; N] {
         }
     }
 
-    fn decode_iter<Itr: Iterator<Item = BFieldElement>>(iterator: &mut Itr) -> Result<Box<Self>> {
+    fn decode_iter<Itr: Iterator<Item = BFieldElement>>(_iterator: &mut Itr) -> Result<Box<Self>> {
         todo!()
     }
 }
@@ -428,7 +428,7 @@ impl TasmObject for u128 {
     }
 }
 
-impl<T: TasmObject, S: TasmObject> TasmObject for (T, S) {
+impl<T: TasmObject + BFieldCodec, S: TasmObject + BFieldCodec> TasmObject for (T, S) {
     fn label_friendly_name() -> String {
         format!(
             "tuple_L_{}_{}_R",
@@ -454,9 +454,106 @@ impl<T: TasmObject, S: TasmObject> TasmObject for (T, S) {
     }
 
     fn compute_size_and_assert_valid_size_indicator(
-        _library: &mut crate::tasm_lib::Library,
+        library: &mut crate::tasm_lib::Library,
     ) -> Vec<LabelledInstruction> {
-        panic!("Size is known statically for u32 encoding")
+        let size_left = match T::static_length() {
+            Some(static_size) => triton_asm!(
+                // _ *left
+
+                pop 1
+                push { static_size }
+                // _ left_size
+            ),
+            None => {
+                let recursive_call = T::compute_size_and_assert_valid_size_indicator(library);
+
+                triton_asm!(
+                    // _ *left_si
+                    hint left_si_ptr = stack[0]
+
+                    read_mem 1
+                    addi 2
+                    // _ left_si *left
+
+                    {&recursive_call}
+                    hint calculated_left = stack[0]
+                    // _ left_si calculated_left
+
+                    dup 1
+                    eq
+                    assert
+                    // _ left_size
+
+                    addi 1
+                    // _ (left_size + 1)
+                )
+            }
+        };
+        let size_right = match S::static_length() {
+            Some(static_size) => triton_asm!(
+                // _ *right
+
+                push { static_size }
+                hint right_size = stack[0]
+                 // _ *right right_size
+            ),
+            None => {
+                let recursive_call = S::compute_size_and_assert_valid_size_indicator(library);
+
+                triton_asm!(
+                    // _ *right_si
+                    hint right_si_ptr = stack[0]
+
+                    read_mem 1
+                    addi 2
+                    hint right_ptr = stack[0]
+
+                    swap 1
+                    dup 1
+                    // _ *right right_si *right
+
+                    {&recursive_call}
+                    hint calculated_right = stack[0]
+                    // _ *right right_si calculated_right
+
+                    dup 1
+                    eq
+                    assert
+                    // _ *right right_size
+
+                    // TODO: Can this be made nicer?
+                    swap 1
+                    addi -1
+                    swap 1
+                    addi 1
+                )
+            }
+        };
+
+        // panic!("Size is known statically for u32 encoding")
+        triton_asm!(
+            // _ *tuple
+
+            // TODO: addi 1 here?
+            {&size_right}
+            hint right_ptr = stack[1]
+            hint right_size = stack[0]
+            // _ *right right_size
+
+            swap 1
+            dup 1
+            add
+            hint left = stack[0]
+            // _ right_size (*right + right_size)
+            // _ right_size *left
+
+            {&size_left}
+            hint left_size = stack[0]
+            // _ right_size left_size
+
+            add
+            // _ addi 1 or addi 2 here?
+        )
     }
 
     fn decode_iter<Itr: Iterator<Item = BFieldElement>>(_iterator: &mut Itr) -> Result<Box<Self>> {
@@ -517,7 +614,7 @@ impl TasmObject for Proof {
     }
 }
 
-impl<T: TasmObject> TasmObject for Option<T> {
+impl<T: TasmObject + BFieldCodec> TasmObject for Option<T> {
     fn label_friendly_name() -> String {
         format!("option_L_{}_R", T::label_friendly_name())
     }
@@ -555,8 +652,73 @@ impl<T: TasmObject> TasmObject for Option<T> {
     }
 
     fn compute_size_and_assert_valid_size_indicator(
-        _library: &mut crate::tasm_lib::Library,
+        library: &mut crate::tasm_lib::Library,
     ) -> Vec<LabelledInstruction> {
-        todo!()
+        let get_payload_size = match T::static_length() {
+            Some(static_size) => triton_asm!(push { static_size }),
+            None => T::compute_size_and_assert_valid_size_indicator(library),
+        };
+
+        let some_branch_label = format!(
+            "tasmlib_tasmobject_size_verifier_option_some_branch___{}",
+            T::label_friendly_name()
+        );
+        let some_branch = triton_asm!(
+            {some_branch_label}:
+
+                // _ *value 1
+                pop 1
+
+                {&get_payload_size}
+                // _ value_size
+
+                /* Push 0 to avoid `None` branch from being taken */
+                push 0
+
+                return
+        );
+
+        let none_branch_label = "tasmlib_tasmobject_size_verifier_option_none".to_owned();
+        let none_branch = triton_asm!(
+            {none_branch_label}:
+                // _ *ptr
+
+                pop 1
+                push 0
+                // _ value_size
+
+                return
+        );
+
+        library.explicit_import(&some_branch_label, &some_branch);
+        library.explicit_import(&none_branch_label, &none_branch);
+
+        triton_asm!(
+            // _ *discriminant
+            read_mem 1
+            addi 2
+            // _ discriminant (*discriminant + 1)
+
+            swap 1
+            // _ (*discriminant + 1) discriminant
+
+            push 1
+            swap 1
+            // _ (*discriminant + 1) 1 discriminant
+
+            push 1
+            eq
+            // _ (*discriminant + 1) 1 (discriminant == 1)
+
+            skiz
+                call {some_branch_label}
+            skiz
+                call {none_branch_label}
+
+            // _ value_size
+            addi 1
+
+            // _ total_size
+        )
     }
 }

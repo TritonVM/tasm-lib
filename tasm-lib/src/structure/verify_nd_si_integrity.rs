@@ -64,6 +64,7 @@ impl<T: TasmObject + BFieldCodec> BasicSnippet for VerifyNdSiIntegrity<T> {
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
+    use std::fmt::Debug;
 
     use crate::memory::encode_to_memory;
     use crate::neptune::neptune_like_types_for_tests::*;
@@ -74,6 +75,7 @@ mod tests {
     use crate::traits::rust_shadow::RustShadow;
     use arbitrary::Arbitrary;
     use arbitrary::Unstructured;
+    use num_traits::ConstZero;
     use rand::rngs::StdRng;
     use rand::Rng;
     use rand::SeedableRng;
@@ -89,6 +91,69 @@ mod tests {
             c: Vec<Digest>,
         }
         let snippet: VerifyNdSiIntegrity<TestStruct> = VerifyNdSiIntegrity {
+            _phantom_data: PhantomData,
+        };
+        ShadowedAccessor::new(snippet).test();
+    }
+
+    #[test]
+    fn test_option_dyn_sized_elem() {
+        #[derive(Debug, Clone, TasmObject, BFieldCodec, Arbitrary)]
+        struct TestStruct {
+            a: Option<Vec<u128>>,
+            b: Digest,
+            c: Vec<Vec<BFieldElement>>,
+            d: Option<Vec<Option<BFieldElement>>>,
+        }
+        let snippet: VerifyNdSiIntegrity<TestStruct> = VerifyNdSiIntegrity {
+            _phantom_data: PhantomData,
+        };
+        ShadowedAccessor::new(snippet).test();
+    }
+
+    #[test]
+    fn test_stat_sized_tuple() {
+        #[derive(Debug, Clone, TasmObject, BFieldCodec, Arbitrary)]
+        struct TestStruct {
+            a: (Digest, XFieldElement),
+        }
+        let snippet: VerifyNdSiIntegrity<TestStruct> = VerifyNdSiIntegrity {
+            _phantom_data: PhantomData,
+        };
+        ShadowedAccessor::new(snippet).test();
+    }
+
+    #[test]
+    fn test_dyn_state_sized_tuple_right_dyn() {
+        #[derive(Debug, Clone, TasmObject, BFieldCodec, Arbitrary)]
+        struct RightIsDyn {
+            a: (Digest, Vec<XFieldElement>),
+        }
+        let snippet: VerifyNdSiIntegrity<RightIsDyn> = VerifyNdSiIntegrity {
+            _phantom_data: PhantomData,
+        };
+        ShadowedAccessor::new(snippet).test();
+    }
+
+    #[test]
+    fn test_dyn_state_sized_tuple_left_dyn() {
+        #[derive(Debug, Clone, TasmObject, BFieldCodec, Arbitrary)]
+        struct LeftIsDyn {
+            a: (Vec<XFieldElement>, Digest),
+        }
+        let snippet: VerifyNdSiIntegrity<LeftIsDyn> = VerifyNdSiIntegrity {
+            _phantom_data: PhantomData,
+        };
+        ShadowedAccessor::new(snippet).test();
+    }
+
+    #[test]
+    fn test_dyn_state_sized_tuple_both_dyn() {
+        #[derive(Debug, Clone, TasmObject, BFieldCodec, Arbitrary)]
+        struct BothDyn {
+            a: (Vec<XFieldElement>, Vec<XFieldElement>),
+        }
+        let snippet: VerifyNdSiIntegrity<BothDyn> = VerifyNdSiIntegrity {
             _phantom_data: PhantomData,
         };
         ShadowedAccessor::new(snippet).test();
@@ -160,6 +225,22 @@ mod tests {
     }
 
     #[test]
+    fn test_chunk() {
+        let snippet: VerifyNdSiIntegrity<ChunkLookalike> = VerifyNdSiIntegrity {
+            _phantom_data: PhantomData,
+        };
+        ShadowedAccessor::new(snippet).test();
+    }
+
+    #[test]
+    fn test_chunk_dictionary() {
+        let snippet: VerifyNdSiIntegrity<ChunkDictionaryLookalike> = VerifyNdSiIntegrity {
+            _phantom_data: PhantomData,
+        };
+        ShadowedAccessor::new(snippet).test();
+    }
+
+    #[test]
     fn test_pbt_proof_collection_lookalike() {
         let snippet: VerifyNdSiIntegrity<ProofCollectionLookalike> = VerifyNdSiIntegrity {
             _phantom_data: PhantomData,
@@ -167,7 +248,21 @@ mod tests {
         ShadowedAccessor::new(snippet).test();
     }
 
-    impl<T: TasmObject + BFieldCodec + for<'a> Arbitrary<'a>> Accessor for VerifyNdSiIntegrity<T> {
+    impl<T: TasmObject + BFieldCodec> VerifyNdSiIntegrity<T> {
+        fn initial_state(&self, address: BFieldElement, t: T) -> AccessorInitialState {
+            let mut memory = HashMap::default();
+            encode_to_memory(&mut memory, address, &t);
+
+            AccessorInitialState {
+                stack: [self.init_stack_for_isolated_run(), vec![address]].concat(),
+                memory,
+            }
+        }
+    }
+
+    impl<T: TasmObject + BFieldCodec + for<'a> Arbitrary<'a> + Debug> Accessor
+        for VerifyNdSiIntegrity<T>
+    {
         fn rust_shadow(
             &self,
             stack: &mut Vec<BFieldElement>,
@@ -198,15 +293,23 @@ mod tests {
                 prepare_random_object(&randomness)
             };
 
-            let mut memory = HashMap::default();
             let address: u32 = rng.gen_range(0..(1 << 30));
             let address = bfe!(address);
-            encode_to_memory(&mut memory, address, &t);
+            self.initial_state(address, t)
+        }
 
-            AccessorInitialState {
-                stack: [self.init_stack_for_isolated_run(), vec![address]].concat(),
-                memory,
-            }
+        fn corner_case_initial_states(&self) -> Vec<AccessorInitialState> {
+            // This *should* always return `None` if `T: Option<S>`, and empty
+            // vec if type is Vec<T>. So some notion of "empty" or default.
+            let empty_struct: T = {
+                let unstructured = Unstructured::new(&[]);
+                T::arbitrary_take_rest(unstructured).unwrap()
+            };
+
+            println!("empty_struct:\n{empty_struct:?}");
+            let empty_struct_at_zero = self.initial_state(BFieldElement::ZERO, empty_struct);
+
+            vec![empty_struct_at_zero]
         }
     }
 }
