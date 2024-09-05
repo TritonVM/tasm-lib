@@ -68,15 +68,6 @@ pub trait TasmObject {
     /// [`get_field_with_size`](TasmObject::get_field_with_size) instead.
     fn get_field_start_with_jump_distance(field_name: &str) -> Vec<LabelledInstruction>;
 
-    /// Returns tasm code that computes the length of the encoded object given a
-    /// pointer to it.
-    ///
-    /// ```text
-    /// BEFORE: _ *object
-    /// AFTER: _ size
-    /// ```
-    fn get_encoding_length() -> Vec<LabelledInstruction>;
-
     /// Return the size of a struct and crash if any contained size-indicator
     /// is not valid.
     ///
@@ -507,34 +498,6 @@ mod test {
         }
 
         #[test]
-        fn mess_with_size_indicators_total_size_negative_test() {
-            const START_OF_OBJ: BFieldElement = BFieldElement::ZERO;
-            let random_object = prepare_random_tuple_struct(random());
-            let get_encoding_length = TupleStruct::get_encoding_length();
-            let code_using_total_length_getter = triton_asm!(
-                // _
-                push { START_OF_OBJ }
-                // _ *tuple_struct
-
-                {&get_encoding_length}
-                // _ total_len
-
-                halt
-            );
-
-            let program = Program::new(&code_using_total_length_getter);
-            let expected_stack_benign_nd = [bfe!(random_object.encode().len() as u64)];
-            prop_negative_test_messed_up_size_indicators(
-                &program,
-                &random_object,
-                START_OF_OBJ,
-                bfe!(Digest::LEN as u64),
-                &expected_stack_benign_nd,
-                false,
-            );
-        }
-
-        #[test]
         fn mess_with_size_indicators_field_and_size_getter_negative_test() {
             const START_OF_OBJ: BFieldElement = BFieldElement::ZERO;
             let random_object = prepare_random_tuple_struct(random());
@@ -756,7 +719,7 @@ mod test {
         }
 
         #[test]
-        fn load_and_decode_tuple_struct_containing_enums_from_memory() {
+        fn load_and_decode_tuple_structs_from_memory() {
             let random_object = prepare_random_tuple_struct(random());
             let random_address: u64 = thread_rng().gen_range(0..(1 << 30));
             let address = random_address.into();
@@ -807,23 +770,6 @@ mod test {
             assert_eq!(random_object.3.len(), extracted_digest_count);
             assert_eq!(random_object.5.len(), extracted_bfe_count);
             assert_eq!(random_object.0.len(), extracted_xfe_count);
-
-            // code snippet to get encoding length
-            let code_for_encoding_length = triton_asm! {
-                // _ *obj
-                {&TupleStruct::get_encoding_length()}
-                // _ len
-            };
-
-            println!(
-                "encoding length code:\n{}",
-                code_for_encoding_length.iter().join("\n")
-            );
-
-            // extract length
-            stack = get_final_stack(&random_object, Library::new(), code_for_encoding_length);
-            let computed_length = stack.pop().unwrap().value() as usize;
-            assert_eq!(random_object.encode().len(), computed_length);
         }
 
         #[test]

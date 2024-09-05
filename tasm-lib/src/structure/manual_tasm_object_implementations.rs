@@ -23,10 +23,6 @@ impl<const N: usize, T: BFieldCodec + TasmObject> TasmObject for [T; N] {
         todo!()
     }
 
-    fn get_encoding_length() -> Vec<LabelledInstruction> {
-        todo!()
-    }
-
     fn compute_size_and_assert_valid_size_indicator(
         _library: &mut crate::prelude::Library,
     ) -> Vec<LabelledInstruction> {
@@ -82,10 +78,6 @@ impl<T: BFieldCodec + TasmObject> TasmObject for Vec<T> {
             vector.push(object);
         }
         Ok(Box::new(vector))
-    }
-
-    fn get_encoding_length() -> Vec<LabelledInstruction> {
-        todo!()
     }
 
     fn compute_size_and_assert_valid_size_indicator(
@@ -221,10 +213,6 @@ impl TasmObject for BFieldElement {
         unreachable!()
     }
 
-    fn get_encoding_length() -> Vec<LabelledInstruction> {
-        unreachable!()
-    }
-
     fn compute_size_and_assert_valid_size_indicator(
         _library: &mut crate::tasm_lib::Library,
     ) -> Vec<LabelledInstruction> {
@@ -250,10 +238,6 @@ impl TasmObject for XFieldElement {
     }
 
     fn get_field_start_with_jump_distance(_field_name: &str) -> Vec<LabelledInstruction> {
-        unreachable!()
-    }
-
-    fn get_encoding_length() -> Vec<LabelledInstruction> {
         unreachable!()
     }
 
@@ -285,10 +269,6 @@ impl TasmObject for Digest {
         unreachable!()
     }
 
-    fn get_encoding_length() -> Vec<LabelledInstruction> {
-        unreachable!()
-    }
-
     fn compute_size_and_assert_valid_size_indicator(
         _library: &mut crate::tasm_lib::Library,
     ) -> Vec<LabelledInstruction> {
@@ -314,10 +294,6 @@ impl TasmObject for bool {
     }
 
     fn get_field_start_with_jump_distance(_field_name: &str) -> Vec<LabelledInstruction> {
-        unreachable!()
-    }
-
-    fn get_encoding_length() -> Vec<LabelledInstruction> {
         unreachable!()
     }
 
@@ -349,10 +325,6 @@ impl TasmObject for u32 {
         unreachable!()
     }
 
-    fn get_encoding_length() -> Vec<LabelledInstruction> {
-        unreachable!()
-    }
-
     fn compute_size_and_assert_valid_size_indicator(
         _library: &mut crate::tasm_lib::Library,
     ) -> Vec<LabelledInstruction> {
@@ -381,10 +353,6 @@ impl TasmObject for u64 {
         unreachable!()
     }
 
-    fn get_encoding_length() -> Vec<LabelledInstruction> {
-        unreachable!()
-    }
-
     fn compute_size_and_assert_valid_size_indicator(
         _library: &mut crate::tasm_lib::Library,
     ) -> Vec<LabelledInstruction> {
@@ -410,10 +378,6 @@ impl TasmObject for u128 {
     }
 
     fn get_field_start_with_jump_distance(_field_name: &str) -> Vec<LabelledInstruction> {
-        unreachable!()
-    }
-
-    fn get_encoding_length() -> Vec<LabelledInstruction> {
         unreachable!()
     }
 
@@ -446,10 +410,6 @@ impl<T: TasmObject + BFieldCodec, S: TasmObject + BFieldCodec> TasmObject for (T
     }
 
     fn get_field_start_with_jump_distance(_field_name: &str) -> Vec<LabelledInstruction> {
-        panic!()
-    }
-
-    fn get_encoding_length() -> Vec<LabelledInstruction> {
         panic!()
     }
 
@@ -575,10 +535,6 @@ impl TasmObject for Proof {
         panic!()
     }
 
-    fn get_encoding_length() -> Vec<LabelledInstruction> {
-        panic!()
-    }
-
     fn compute_size_and_assert_valid_size_indicator(
         _library: &mut crate::tasm_lib::Library,
     ) -> Vec<LabelledInstruction> {
@@ -642,10 +598,6 @@ impl<T: TasmObject + BFieldCodec> TasmObject for Option<T> {
             }
             None => Err(Box::new(BFieldCodecError::SequenceTooShort)),
         }
-    }
-
-    fn get_encoding_length() -> Vec<LabelledInstruction> {
-        todo!()
     }
 
     fn compute_size_and_assert_valid_size_indicator(
