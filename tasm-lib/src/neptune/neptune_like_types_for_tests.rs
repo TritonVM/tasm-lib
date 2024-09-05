@@ -141,3 +141,26 @@ pub(crate) struct RemovalRecordsIntegrityWitnessLookalike {
     mast_path_inputs: Vec<Digest>,
     mast_root: Digest,
 }
+
+#[derive(Debug, Clone, BFieldCodec, TasmObject, Arbitrary)]
+pub(crate) struct MmrSuccessorProofLookalike {
+    pub paths: Vec<Digest>,
+}
+
+#[derive(Debug, Clone, BFieldCodec, TasmObject, Arbitrary)]
+pub(crate) struct UpdateWitnessLookalike {
+    old_kernel: TransactionKernelLookalike,
+    new_kernel: TransactionKernelLookalike,
+    old_kernel_mast_hash: Digest,
+    new_kernel_mast_hash: Digest,
+    old_proof: Proof,
+    new_swbfi_bagged: Digest,
+    new_aocl: MmrAccumulator,
+    new_swbfa_hash: Digest,
+    old_swbfi_bagged: Digest,
+    old_aocl: MmrAccumulator,
+    old_swbfa_hash: Digest,
+    aocl_successor_proof: MmrSuccessorProofLookalike,
+    outputs_hash: Digest,
+    public_announcements_hash: Digest,
+}

@@ -79,6 +79,7 @@ mod tests {
     use rand::rngs::StdRng;
     use rand::Rng;
     use rand::SeedableRng;
+    use twenty_first::util_types::mmr::mmr_successor_proof::MmrSuccessorProof;
 
     use super::*;
 
@@ -347,6 +348,41 @@ mod tests {
             VerifyNdSiIntegrity {
                 _phantom_data: PhantomData,
             };
+        ShadowedAccessor::new(snippet).test();
+    }
+
+    #[test]
+    fn test_update_witness_lookalike() {
+        let snippet: VerifyNdSiIntegrity<UpdateWitnessLookalike> = VerifyNdSiIntegrity {
+            _phantom_data: PhantomData,
+        };
+        ShadowedAccessor::new(snippet).test();
+    }
+
+    #[test]
+    fn test_mmr_successor_proof_auto_derived_code() {
+        // TODO:
+        // Test to verify that the auto-derived code for `MmrSuccessorProof`
+        // handles size-indicator verification correctly. `MmrSuccessorProof`
+        // is wrapped in another type since `Arbitrary` was not implemented for
+        // upstream `MmrSuccessorProof` at the time of writing. Once it is,
+        // feel free to simplify this test.
+        #[derive(Debug, Clone, BFieldCodec, TasmObject)]
+        struct MmrSuccessorProofWrapper {
+            pub msp: MmrSuccessorProof,
+        }
+
+        impl<'a> Arbitrary<'a> for MmrSuccessorProofWrapper {
+            fn arbitrary(u: &mut Unstructured) -> arbitrary::Result<Self> {
+                let digests = <Vec<Digest> as Arbitrary>::arbitrary(u)?;
+                Ok(Self {
+                    msp: MmrSuccessorProof { paths: digests },
+                })
+            }
+        }
+        let snippet: VerifyNdSiIntegrity<MmrSuccessorProofWrapper> = VerifyNdSiIntegrity {
+            _phantom_data: PhantomData,
+        };
         ShadowedAccessor::new(snippet).test();
     }
 
