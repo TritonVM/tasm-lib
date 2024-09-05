@@ -97,6 +97,18 @@ mod tests {
     }
 
     #[test]
+    fn test_option_stat_sized_elem() {
+        #[derive(Debug, Clone, TasmObject, BFieldCodec, Arbitrary)]
+        struct TestStruct {
+            a: Option<Digest>,
+        }
+        let snippet: VerifyNdSiIntegrity<TestStruct> = VerifyNdSiIntegrity {
+            _phantom_data: PhantomData,
+        };
+        ShadowedAccessor::new(snippet).test();
+    }
+
+    #[test]
     fn test_option_dyn_sized_elem() {
         #[derive(Debug, Clone, TasmObject, BFieldCodec, Arbitrary)]
         struct TestStruct {

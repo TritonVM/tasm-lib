@@ -505,27 +505,24 @@ impl<T: TasmObject + BFieldCodec, S: TasmObject + BFieldCodec> TasmObject for (T
                     hint right_si_ptr = stack[0]
 
                     read_mem 1
-                    addi 2
-                    hint right_ptr = stack[0]
-
+                    addi 1
                     swap 1
                     dup 1
-                    // _ *right right_si *right
+                    addi 1
+                    // _ *right_si right_si *right
 
                     {&recursive_call}
                     hint calculated_right = stack[0]
-                    // _ *right right_si calculated_right
+                    // _ *right_si right_si calculated_right
 
                     dup 1
                     eq
                     assert
-                    // _ *right right_size
+                    // _ *right_si right_size
 
-                    // TODO: Can this be made nicer?
-                    swap 1
-                    addi -1
-                    swap 1
+                    /* Include size of size-indicator */
                     addi 1
+                    // _ *right_si (right_size+1)
                 )
             }
         };
@@ -536,23 +533,23 @@ impl<T: TasmObject + BFieldCodec, S: TasmObject + BFieldCodec> TasmObject for (T
 
             // TODO: addi 1 here?
             {&size_right}
-            hint right_ptr = stack[1]
-            hint right_size = stack[0]
-            // _ *right right_size
+            hint right_ptr_or_right_si = stack[1]
+            hint right_size_incl_pot_si = stack[0]
+            // _ *right right_size'
 
             swap 1
             dup 1
             add
             hint left = stack[0]
-            // _ right_size (*right + right_size)
-            // _ right_size *left
+            // _ right_size' (*right + right_size')
+            // _ right_size' *left
 
             {&size_left}
-            hint left_size = stack[0]
-            // _ right_size left_size
+            hint left_size_incl_si = stack[0]
+            // _ right_size' left_size'
 
             add
-            // _ addi 1 or addi 2 here?
+            // _ total_tuple_size <-- includes tuple-element's size-indicators (if dyn-sized)
         )
     }
 
@@ -655,7 +652,13 @@ impl<T: TasmObject + BFieldCodec> TasmObject for Option<T> {
         library: &mut crate::tasm_lib::Library,
     ) -> Vec<LabelledInstruction> {
         let get_payload_size = match T::static_length() {
-            Some(static_size) => triton_asm!(push { static_size }),
+            Some(static_size) => triton_asm!(
+                // _ *value
+
+                pop 1
+                push { static_size }
+                // _ value_size
+            ),
             None => T::compute_size_and_assert_valid_size_indicator(library),
         };
 
