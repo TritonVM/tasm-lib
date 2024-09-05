@@ -213,6 +213,15 @@ mod tests {
     }
 
     #[test]
+    fn pbt_collect_type_scripts_witness() {
+        let snippet: VerifyNdSiIntegrity<CollectTypeScriptsWitnessLookalike> =
+            VerifyNdSiIntegrity {
+                _phantom_data: PhantomData,
+            };
+        ShadowedAccessor::new(snippet).test();
+    }
+
+    #[test]
     fn test_pbt_claim() {
         let snippet: VerifyNdSiIntegrity<Claim> = VerifyNdSiIntegrity {
             _phantom_data: PhantomData,
@@ -257,6 +266,87 @@ mod tests {
         let snippet: VerifyNdSiIntegrity<ProofCollectionLookalike> = VerifyNdSiIntegrity {
             _phantom_data: PhantomData,
         };
+        ShadowedAccessor::new(snippet).test();
+    }
+
+    #[test]
+    fn test_absolute_index_set_lookalike() {
+        let snippet: VerifyNdSiIntegrity<AbsoluteIndexSetLookalike> = VerifyNdSiIntegrity {
+            _phantom_data: PhantomData,
+        };
+        ShadowedAccessor::new(snippet).test();
+    }
+
+    #[test]
+    fn test_removal_record_lookalike() {
+        let snippet: VerifyNdSiIntegrity<RemovalRecordLookalike> = VerifyNdSiIntegrity {
+            _phantom_data: PhantomData,
+        };
+        ShadowedAccessor::new(snippet).test();
+    }
+
+    #[test]
+    fn test_addition_record_lookalike() {
+        let snippet: VerifyNdSiIntegrity<AdditionRecordLookalike> = VerifyNdSiIntegrity {
+            _phantom_data: PhantomData,
+        };
+        ShadowedAccessor::new(snippet).test();
+    }
+
+    #[test]
+    fn test_public_announcement_lookalike() {
+        let snippet: VerifyNdSiIntegrity<PublicAnnouncementLookalike> = VerifyNdSiIntegrity {
+            _phantom_data: PhantomData,
+        };
+        ShadowedAccessor::new(snippet).test();
+    }
+
+    #[test]
+    fn test_timestamp_lookalike() {
+        let snippet: VerifyNdSiIntegrity<TimestampLookalike> = VerifyNdSiIntegrity {
+            _phantom_data: PhantomData,
+        };
+        ShadowedAccessor::new(snippet).test();
+    }
+
+    #[test]
+    fn test_transaction_kernel_lookalike() {
+        let snippet: VerifyNdSiIntegrity<TransactionKernelLookalike> = VerifyNdSiIntegrity {
+            _phantom_data: PhantomData,
+        };
+        ShadowedAccessor::new(snippet).test();
+    }
+
+    #[test]
+    fn test_kernel_to_outputs_witness_lookalike() {
+        let snippet: VerifyNdSiIntegrity<KernelToOutputsWitnessLookalike> = VerifyNdSiIntegrity {
+            _phantom_data: PhantomData,
+        };
+        ShadowedAccessor::new(snippet).test();
+    }
+
+    #[test]
+    fn test_merge_witness_lookalike() {
+        let snippet: VerifyNdSiIntegrity<MergeWitnessLookalike> = VerifyNdSiIntegrity {
+            _phantom_data: PhantomData,
+        };
+        ShadowedAccessor::new(snippet).test();
+    }
+
+    #[test]
+    fn test_ms_membership_proof_lookalike() {
+        let snippet: VerifyNdSiIntegrity<MsMembershipProofLookalike> = VerifyNdSiIntegrity {
+            _phantom_data: PhantomData,
+        };
+        ShadowedAccessor::new(snippet).test();
+    }
+
+    #[test]
+    fn test_removal_records_witness_lookalike() {
+        let snippet: VerifyNdSiIntegrity<RemovalRecordsIntegrityWitnessLookalike> =
+            VerifyNdSiIntegrity {
+                _phantom_data: PhantomData,
+            };
         ShadowedAccessor::new(snippet).test();
     }
 
@@ -329,14 +419,23 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use crate::neptune::neptune_like_types_for_tests::ProofCollectionLookalike;
+    use crate::neptune::neptune_like_types_for_tests::TransactionKernelLookalike;
     use crate::traits::accessor::ShadowedAccessor;
     use crate::traits::rust_shadow::RustShadow;
 
     use super::*;
 
     #[test]
-    fn bench_pbt_proof_collection_lookalike() {
+    fn bench_proof_collection_lookalike() {
         let snippet: VerifyNdSiIntegrity<ProofCollectionLookalike> = VerifyNdSiIntegrity {
+            _phantom_data: PhantomData,
+        };
+        ShadowedAccessor::new(snippet).bench();
+    }
+
+    #[test]
+    fn bench_transaction_kernel_lookalike() {
+        let snippet: VerifyNdSiIntegrity<TransactionKernelLookalike> = VerifyNdSiIntegrity {
             _phantom_data: PhantomData,
         };
         ShadowedAccessor::new(snippet).bench();
