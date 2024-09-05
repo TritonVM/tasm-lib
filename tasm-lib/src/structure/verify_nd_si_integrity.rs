@@ -360,6 +360,30 @@ mod tests {
     }
 
     #[test]
+    fn test_lock_script_and_witness_lookalike() {
+        let snippet: VerifyNdSiIntegrity<LockScriptAndWitnessLookalike> = VerifyNdSiIntegrity {
+            _phantom_data: PhantomData,
+        };
+        ShadowedAccessor::new(snippet).test();
+    }
+
+    #[test]
+    fn test_mutator_set_accumulator_lookalike() {
+        let snippet: VerifyNdSiIntegrity<MutatorSetAccumulatorLookalike> = VerifyNdSiIntegrity {
+            _phantom_data: PhantomData,
+        };
+        ShadowedAccessor::new(snippet).test();
+    }
+
+    #[test]
+    fn test_primitive_witness_lookalike() {
+        let snippet: VerifyNdSiIntegrity<PrimitiveWitnessLookalike> = VerifyNdSiIntegrity {
+            _phantom_data: PhantomData,
+        };
+        ShadowedAccessor::new(snippet).test();
+    }
+
+    #[test]
     fn test_mmr_successor_proof_auto_derived_code() {
         // TODO:
         // Test to verify that the auto-derived code for `MmrSuccessorProof`

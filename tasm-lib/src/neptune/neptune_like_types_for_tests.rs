@@ -164,3 +164,42 @@ pub(crate) struct UpdateWitnessLookalike {
     outputs_hash: Digest,
     public_announcements_hash: Digest,
 }
+
+#[derive(Debug, Clone, BFieldCodec, TasmObject, Arbitrary)]
+pub(crate) struct LockScriptAndWitnessLookalike {
+    nd_memory: Vec<(BFieldElement, BFieldElement)>,
+    nd_tokens: Vec<BFieldElement>,
+    nd_digests: Vec<Digest>,
+}
+
+#[derive(Debug, Clone, BFieldCodec, TasmObject, Arbitrary)]
+struct TypeScriptAndWitnessLookalike {
+    nd_tokens: Vec<BFieldElement>,
+    nd_memory: Vec<(BFieldElement, BFieldElement)>,
+    nd_digests: Vec<Digest>,
+}
+
+#[derive(Debug, Clone, BFieldCodec, TasmObject, Arbitrary)]
+struct ActiveWindowLookalike {
+    sbf: Vec<u32>,
+}
+
+#[derive(Debug, Clone, BFieldCodec, TasmObject, Arbitrary)]
+pub(crate) struct MutatorSetAccumulatorLookalike {
+    aocl: MmrAccumulator,
+    swbf_inactive: MmrAccumulator,
+    swbf_active: ActiveWindowLookalike,
+}
+
+#[derive(Debug, Clone, BFieldCodec, TasmObject, Arbitrary)]
+pub(crate) struct PrimitiveWitnessLookalike {
+    input_utxos: SaltedUtxosLookalike,
+    input_membership_proofs: Vec<MsMembershipProofLookalike>,
+    lock_scripts_and_witnesses: Vec<LockScriptAndWitnessLookalike>,
+    type_scripts_and_witnesses: Vec<TypeScriptAndWitnessLookalike>,
+    output_utxos: SaltedUtxosLookalike,
+    output_sender_randomnesses: Vec<Digest>,
+    output_receiver_digests: Vec<Digest>,
+    mutator_set_accumulator: MutatorSetAccumulatorLookalike,
+    kernel: TransactionKernelLookalike,
+}
