@@ -83,18 +83,172 @@ mod tests {
 
     use super::*;
 
-    #[test]
-    fn test_pbt_simple_struct() {
+    impl<T: TasmObject + BFieldCodec + for<'a> Arbitrary<'a> + Debug> VerifyNdSiIntegrity<T> {
+        fn initial_state(&self, address: BFieldElement, t: T) -> AccessorInitialState {
+            let mut memory = HashMap::default();
+            encode_to_memory(&mut memory, address, &t);
+
+            AccessorInitialState {
+                stack: [self.init_stack_for_isolated_run(), vec![address]].concat(),
+                memory,
+            }
+        }
+
+        fn prepare_random_object(&self, randomness: &[u8]) -> T {
+            let unstructured = Unstructured::new(randomness);
+            T::arbitrary_take_rest(unstructured).unwrap()
+        }
+    }
+
+    impl<T: TasmObject + BFieldCodec + for<'a> Arbitrary<'a> + Debug> Accessor
+        for VerifyNdSiIntegrity<T>
+    {
+        fn rust_shadow(
+            &self,
+            stack: &mut Vec<BFieldElement>,
+            memory: &HashMap<BFieldElement, BFieldElement>,
+        ) {
+            // If the type can be decoded then it must have valid size indicators
+            let pointer = stack.pop().unwrap();
+            let obj = T::decode_from_memory(memory, pointer).unwrap();
+            let encoding_len = obj.encode().len();
+            let encoding_len: u32 = encoding_len.try_into().unwrap();
+
+            // Verify contained in ND-region
+            let start_address: u32 = pointer.value().try_into().unwrap();
+            let _end_address = start_address.checked_add(encoding_len).unwrap();
+
+            stack.push(bfe!(obj.encode().len() as u64));
+        }
+
+        fn pseudorandom_initial_state(
+            &self,
+            seed: [u8; 32],
+            _bench_case: Option<BenchmarkCase>,
+        ) -> AccessorInitialState {
+            let mut rng: StdRng = SeedableRng::from_seed(seed);
+
+            let t: T = {
+                let mut randomness = [0u8; 100000];
+                rng.fill(&mut randomness);
+                self.prepare_random_object(&randomness)
+            };
+
+            let address: u32 = rng.gen_range(0..(1 << 30));
+            let address = bfe!(address);
+            self.initial_state(address, t)
+        }
+
+        fn corner_case_initial_states(&self) -> Vec<AccessorInitialState> {
+            // This *should* always return `None` if `T: Option<S>`, and empty
+            // vec if type is Vec<T>. So some notion of "empty" or default.
+            let empty_struct: T = {
+                let unstructured = Unstructured::new(&[]);
+                T::arbitrary_take_rest(unstructured).unwrap()
+            };
+
+            println!("empty_struct:\n{empty_struct:?}");
+            let empty_struct_at_zero = self.initial_state(BFieldElement::ZERO, empty_struct);
+
+            vec![empty_struct_at_zero]
+        }
+    }
+
+    mod simple_struct {
+        use crate::test_helpers::negative_test;
+
+        use super::*;
+
         #[derive(Debug, Clone, TasmObject, BFieldCodec, Arbitrary)]
         struct TestStruct {
             a: Vec<u128>,
             b: Digest,
             c: Vec<Digest>,
         }
-        let snippet: VerifyNdSiIntegrity<TestStruct> = VerifyNdSiIntegrity {
-            _phantom_data: PhantomData,
-        };
-        ShadowedAccessor::new(snippet).test();
+
+        #[test]
+        fn test_pbt_simple_struct() {
+            let snippet: VerifyNdSiIntegrity<TestStruct> = VerifyNdSiIntegrity {
+                _phantom_data: PhantomData,
+            };
+            ShadowedAccessor::new(snippet).test();
+        }
+
+        #[test]
+        fn struct_not_contained_in_nd_region() {
+            let snippet: VerifyNdSiIntegrity<TestStruct> = VerifyNdSiIntegrity {
+                _phantom_data: PhantomData,
+            };
+
+            let t: TestStruct = snippet.prepare_random_object(&[]);
+            let begin_address = bfe!((1u64 << 32) - 4);
+            let init_state = snippet.initial_state(begin_address, t.clone());
+
+            let actual_size = t.encode().len();
+            let end_address = begin_address + bfe!(actual_size as u64);
+            negative_test(
+                &ShadowedAccessor::new(snippet),
+                init_state.into(),
+                &[InstructionError::FailedU32Conversion(end_address)],
+            )
+        }
+
+        #[test]
+        fn struct_does_not_start_in_nd_region() {
+            let snippet: VerifyNdSiIntegrity<TestStruct> = VerifyNdSiIntegrity {
+                _phantom_data: PhantomData,
+            };
+
+            let begin_address = bfe!(-4);
+            let init_state =
+                snippet.initial_state(begin_address, snippet.prepare_random_object(&[]));
+            negative_test(
+                &ShadowedAccessor::new(snippet),
+                init_state.into(),
+                &[InstructionError::FailedU32Conversion(begin_address)],
+            )
+        }
+
+        #[test]
+        fn lie_about_digest_vec_size() {
+            let snippet: VerifyNdSiIntegrity<TestStruct> = VerifyNdSiIntegrity {
+                _phantom_data: PhantomData,
+            };
+
+            let begin_address = bfe!(4);
+            let mut init_state =
+                snippet.initial_state(begin_address, snippet.prepare_random_object(&[]));
+            let true_value = init_state.memory[&begin_address];
+            init_state
+                .memory
+                .insert(begin_address, true_value + bfe!(1));
+            negative_test(
+                &ShadowedAccessor::new(snippet),
+                init_state.into(),
+                &[InstructionError::AssertionFailed],
+            )
+        }
+
+        #[test]
+        fn lie_about_digest_vec_len() {
+            let snippet: VerifyNdSiIntegrity<TestStruct> = VerifyNdSiIntegrity {
+                _phantom_data: PhantomData,
+            };
+
+            let begin_address = bfe!(4);
+            let mut init_state =
+                snippet.initial_state(begin_address, snippet.prepare_random_object(&[42u8; 200]));
+            let vec_digest_len_indicator = begin_address + bfe!(1);
+            let true_value = init_state.memory[&vec_digest_len_indicator];
+            init_state
+                .memory
+                .insert(vec_digest_len_indicator, true_value + bfe!(1));
+            negative_test(
+                &ShadowedAccessor::new(snippet),
+                init_state.into(),
+                &[InstructionError::AssertionFailed],
+            )
+        }
     }
 
     #[test]
@@ -408,71 +562,6 @@ mod tests {
             _phantom_data: PhantomData,
         };
         ShadowedAccessor::new(snippet).test();
-    }
-
-    impl<T: TasmObject + BFieldCodec> VerifyNdSiIntegrity<T> {
-        fn initial_state(&self, address: BFieldElement, t: T) -> AccessorInitialState {
-            let mut memory = HashMap::default();
-            encode_to_memory(&mut memory, address, &t);
-
-            AccessorInitialState {
-                stack: [self.init_stack_for_isolated_run(), vec![address]].concat(),
-                memory,
-            }
-        }
-    }
-
-    impl<T: TasmObject + BFieldCodec + for<'a> Arbitrary<'a> + Debug> Accessor
-        for VerifyNdSiIntegrity<T>
-    {
-        fn rust_shadow(
-            &self,
-            stack: &mut Vec<BFieldElement>,
-            memory: &HashMap<BFieldElement, BFieldElement>,
-        ) {
-            // If the type can be decoded then it must have valid size indicators
-            let pointer = stack.pop().unwrap();
-            let obj = T::decode_from_memory(memory, pointer).unwrap();
-
-            stack.push(bfe!(obj.encode().len() as u64));
-        }
-
-        fn pseudorandom_initial_state(
-            &self,
-            seed: [u8; 32],
-            _bench_case: Option<BenchmarkCase>,
-        ) -> AccessorInitialState {
-            fn prepare_random_object<T: for<'a> Arbitrary<'a>>(randomness: &[u8; 100000]) -> T {
-                let unstructured = Unstructured::new(randomness);
-                T::arbitrary_take_rest(unstructured).unwrap()
-            }
-
-            let mut rng: StdRng = SeedableRng::from_seed(seed);
-
-            let t: T = {
-                let mut randomness = [0u8; 100000];
-                rng.fill(&mut randomness);
-                prepare_random_object(&randomness)
-            };
-
-            let address: u32 = rng.gen_range(0..(1 << 30));
-            let address = bfe!(address);
-            self.initial_state(address, t)
-        }
-
-        fn corner_case_initial_states(&self) -> Vec<AccessorInitialState> {
-            // This *should* always return `None` if `T: Option<S>`, and empty
-            // vec if type is Vec<T>. So some notion of "empty" or default.
-            let empty_struct: T = {
-                let unstructured = Unstructured::new(&[]);
-                T::arbitrary_take_rest(unstructured).unwrap()
-            };
-
-            println!("empty_struct:\n{empty_struct:?}");
-            let empty_struct_at_zero = self.initial_state(BFieldElement::ZERO, empty_struct);
-
-            vec![empty_struct_at_zero]
-        }
     }
 }
 
