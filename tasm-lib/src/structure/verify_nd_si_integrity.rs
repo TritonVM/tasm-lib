@@ -1,3 +1,4 @@
+use std::fmt::Debug;
 use std::marker::PhantomData;
 
 use triton_vm::prelude::*;
@@ -7,11 +8,12 @@ use crate::library::Library;
 use crate::prelude::BasicSnippet;
 use crate::prelude::TasmObject;
 
-pub struct VerifyNdSiIntegrity<T: TasmObject + BFieldCodec> {
+#[derive(Clone, Debug)]
+pub struct VerifyNdSiIntegrity<T: TasmObject + BFieldCodec + Clone + Debug> {
     _phantom_data: PhantomData<T>,
 }
 
-impl<T: TasmObject + BFieldCodec> BasicSnippet for VerifyNdSiIntegrity<T> {
+impl<T: TasmObject + BFieldCodec + Clone + Debug> BasicSnippet for VerifyNdSiIntegrity<T> {
     fn inputs(&self) -> Vec<(DataType, String)> {
         vec![(DataType::VoidPointer, "*struct".to_owned())]
     }
@@ -83,7 +85,7 @@ mod tests {
 
     use super::*;
 
-    impl<T: TasmObject + BFieldCodec + for<'a> Arbitrary<'a> + Debug> VerifyNdSiIntegrity<T> {
+    impl<T: TasmObject + BFieldCodec + for<'a> Arbitrary<'a> + Debug + Clone> VerifyNdSiIntegrity<T> {
         fn initial_state(&self, address: BFieldElement, t: T) -> AccessorInitialState {
             let mut memory = HashMap::default();
             encode_to_memory(&mut memory, address, &t);
@@ -100,7 +102,7 @@ mod tests {
         }
     }
 
-    impl<T: TasmObject + BFieldCodec + for<'a> Arbitrary<'a> + Debug> Accessor
+    impl<T: TasmObject + BFieldCodec + for<'a> Arbitrary<'a> + Debug + Clone> Accessor
         for VerifyNdSiIntegrity<T>
     {
         fn rust_shadow(
@@ -237,7 +239,7 @@ mod tests {
 
             let begin_address = bfe!(4);
             let mut init_state =
-                snippet.initial_state(begin_address, snippet.prepare_random_object(&[42u8; 200]));
+                snippet.initial_state(begin_address, snippet.prepare_random_object(&[42u8; 20000]));
             let vec_digest_len_indicator = begin_address + bfe!(1);
             let true_value = init_state.memory[&vec_digest_len_indicator];
             init_state
@@ -251,31 +253,124 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_option_stat_sized_elem() {
+    mod option_types {
+        use crate::test_helpers::negative_test;
+        use rand::thread_rng;
+        use rand::RngCore;
+
+        use super::*;
+
         #[derive(Debug, Clone, TasmObject, BFieldCodec, Arbitrary)]
-        struct TestStruct {
+        struct StatSizedPayload {
             a: Option<Digest>,
         }
-        let snippet: VerifyNdSiIntegrity<TestStruct> = VerifyNdSiIntegrity {
-            _phantom_data: PhantomData,
-        };
-        ShadowedAccessor::new(snippet).test();
-    }
 
-    #[test]
-    fn test_option_dyn_sized_elem() {
-        #[derive(Debug, Clone, TasmObject, BFieldCodec, Arbitrary)]
-        struct TestStruct {
+        #[derive(Debug, Clone, TasmObject, BFieldCodec, Arbitrary, Default)]
+        struct DynSizedPayload {
             a: Option<Vec<u128>>,
             b: Digest,
             c: Vec<Vec<BFieldElement>>,
             d: Option<Vec<Option<BFieldElement>>>,
         }
-        let snippet: VerifyNdSiIntegrity<TestStruct> = VerifyNdSiIntegrity {
-            _phantom_data: PhantomData,
-        };
-        ShadowedAccessor::new(snippet).test();
+
+        #[test]
+        fn test_option_stat_sized_elem() {
+            let snippet: VerifyNdSiIntegrity<StatSizedPayload> = VerifyNdSiIntegrity {
+                _phantom_data: PhantomData,
+            };
+            ShadowedAccessor::new(snippet).test();
+        }
+
+        #[test]
+        fn test_option_dyn_sized_elem() {
+            let snippet: VerifyNdSiIntegrity<DynSizedPayload> = VerifyNdSiIntegrity {
+                _phantom_data: PhantomData,
+            };
+            ShadowedAccessor::new(snippet).test();
+        }
+
+        #[test]
+        fn lie_about_option_payload_field_size() {
+            let snippet: VerifyNdSiIntegrity<DynSizedPayload> = VerifyNdSiIntegrity {
+                _phantom_data: PhantomData,
+            };
+
+            let begin_address = bfe!(4);
+            let mut randomness = [0u8; 100_000];
+            thread_rng().fill_bytes(&mut randomness);
+            let obj = snippet.prepare_random_object(&randomness);
+            let true_init_state = snippet.initial_state(begin_address, obj.clone());
+
+            /*  Lie about size of field 'd'*/
+            let mut manipulated_si_outer = true_init_state.clone();
+            let outer_option_payload_si_ptr = begin_address; // The field size-indicator of `d` field
+            let true_value = true_init_state.memory[&outer_option_payload_si_ptr];
+            manipulated_si_outer
+                .memory
+                .insert(outer_option_payload_si_ptr, true_value + bfe!(1));
+            negative_test(
+                &ShadowedAccessor::new(snippet),
+                manipulated_si_outer.into(),
+                &[InstructionError::AssertionFailed],
+            );
+        }
+
+        #[test]
+        fn illegal_discriminant_value_for_option() {
+            let snippet: VerifyNdSiIntegrity<DynSizedPayload> = VerifyNdSiIntegrity {
+                _phantom_data: PhantomData,
+            };
+
+            let obj = DynSizedPayload::default();
+            let begin_address = bfe!(4);
+            let mut manipulated_init_state = snippet.initial_state(begin_address, obj.clone());
+            let option_discriminant_ptr = begin_address + bfe!(1);
+            manipulated_init_state
+                .memory
+                .insert(option_discriminant_ptr, bfe!(2));
+            negative_test(
+                &ShadowedAccessor::new(snippet.clone()),
+                manipulated_init_state.into(),
+                &[InstructionError::AssertionFailed],
+            );
+        }
+
+        #[test]
+        fn lie_about_option_payload_size() {
+            let snippet: VerifyNdSiIntegrity<DynSizedPayload> = VerifyNdSiIntegrity {
+                _phantom_data: PhantomData,
+            };
+
+            let obj = DynSizedPayload {
+                d: Some(vec![Some(bfe!(14)), None, Some(bfe!(15))]),
+                ..Default::default()
+            };
+            let begin_address = bfe!(4);
+            let true_init_state = snippet.initial_state(begin_address, obj.clone());
+
+            /*  Lie about size of payload of outer Some(...)*/
+            let mut add_one = true_init_state.clone();
+            let len_of_dyn_sized_list_elem_0 = begin_address + bfe!(3);
+            let true_value = true_init_state.memory[&len_of_dyn_sized_list_elem_0];
+            add_one
+                .memory
+                .insert(len_of_dyn_sized_list_elem_0, true_value + bfe!(1));
+            negative_test(
+                &ShadowedAccessor::new(snippet.clone()),
+                add_one.into(),
+                &[InstructionError::AssertionFailed],
+            );
+
+            let mut sub_one = true_init_state.clone();
+            sub_one
+                .memory
+                .insert(len_of_dyn_sized_list_elem_0, true_value - bfe!(1));
+            negative_test(
+                &ShadowedAccessor::new(snippet),
+                sub_one.into(),
+                &[InstructionError::AssertionFailed],
+            );
+        }
     }
 
     #[test]

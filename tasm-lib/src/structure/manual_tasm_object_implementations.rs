@@ -654,6 +654,18 @@ impl<T: TasmObject + BFieldCodec> TasmObject for Option<T> {
             addi 2
             // _ discriminant (*discriminant + 1)
 
+            /* Ensure discriminant has legal value */
+            dup 1
+            push 0
+            eq
+            dup 2
+            push 1
+            eq
+            add
+            // _ discriminant (*discriminant + 1) ((discriminant == 0) || (discriminant == 1))
+
+            assert
+
             swap 1
             // _ (*discriminant + 1) discriminant
 
