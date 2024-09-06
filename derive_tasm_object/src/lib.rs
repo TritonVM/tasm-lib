@@ -373,7 +373,7 @@ fn impl_derive_tasm_object_macro(ast: DeriveInput) -> TokenStream {
                 }
             }
 
-            fn compute_size_and_assert_valid_size_indicator(library: &mut crate::tasm_lib::Library) -> Vec<crate::triton_vm::instruction::LabelledInstruction> {
+            fn compute_size_and_assert_valid_size_indicator(library: &mut crate::tasm_lib::library::Library) -> Vec<crate::triton_vm::instruction::LabelledInstruction> {
                 #integral_size_indicators_code
             }
 
