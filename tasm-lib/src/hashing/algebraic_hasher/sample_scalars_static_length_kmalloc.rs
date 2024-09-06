@@ -33,12 +33,6 @@ impl SampleScalarsStaticLengthKMalloc {
             .try_into()
             .unwrap()
     }
-
-    pub(crate) fn scalars_kmalloc_name(&self) -> String {
-        let num_elements_to_sample = self.num_elements_to_sample;
-        let extra_capacity = self.extra_capacity;
-        format!("scalars_kmalloc_{num_elements_to_sample}_{extra_capacity}")
-    }
 }
 
 impl BasicSnippet for SampleScalarsStaticLengthKMalloc {
@@ -60,6 +54,10 @@ impl BasicSnippet for SampleScalarsStaticLengthKMalloc {
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
         assert_eq!(10, tip5::RATE, "Code assumes Tip5's RATE is 10");
         assert_eq!(3, EXTENSION_DEGREE, "Code assumes extension degree 3");
+        assert!(
+            self.extra_capacity + self.num_elements_to_sample > 0,
+            "Must allocate positive number of words"
+        );
         let num_squeezes =
             SampleScalarsStaticLengthDynMalloc::num_squeezes(self.num_elements_to_sample);
 
@@ -73,8 +71,7 @@ impl BasicSnippet for SampleScalarsStaticLengthKMalloc {
         let entrypoint = self.entrypoint();
         let squeeze_repeatedly_static_number =
             library.import(Box::new(SqueezeRepeatedlyStaticNumber { num_squeezes }));
-        let scalars_pointer =
-            library.pub_kmalloc(self.num_words_to_allocate(), self.scalars_kmalloc_name());
+        let scalars_pointer = library.kmalloc(self.num_words_to_allocate());
 
         triton_asm!(
             {entrypoint}:
@@ -182,8 +179,8 @@ pub(crate) mod tests {
 
     #[proptest]
     fn verify_agreement_with_tip5_sample_scalars(
-        #[strategy(0_usize..500)] num_elements_to_sample: usize,
-        #[strategy(0_usize..500)] extra_capacity: usize,
+        #[strategy(1_usize..500)] num_elements_to_sample: usize,
+        #[strategy(1_usize..500)] extra_capacity: usize,
         #[strategy(arb())] mut sponge: Tip5,
     ) {
         let snippet = SampleScalarsStaticLengthKMalloc {

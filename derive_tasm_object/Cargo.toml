@@ -7,6 +7,7 @@ description = "Derive macro for TasmObject"
 [dependencies]
 quote = "1.0"
 syn = { version = "^2", features = ["full", "derive"] }
+proc-macro2 = { version = "1" }
 
 [lib]
 proc-macro = true

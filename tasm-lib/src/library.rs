@@ -29,10 +29,6 @@ pub struct Library {
     /// Imported dependencies.
     seen_snippets: HashMap<String, Vec<LabelledInstruction>>,
 
-    /// Known, and thus shareable, (static) memory allocations. Includes both their address and
-    /// their size.
-    pub_allocations: HashMap<String, (BFieldElement, u32)>,
-
     /// The number of statically allocated words
     num_allocated_words: u32,
 }
@@ -51,7 +47,6 @@ impl Library {
     pub fn new() -> Self {
         Self {
             seen_snippets: HashMap::default(),
-            pub_allocations: HashMap::default(),
             num_allocated_words: 0,
         }
     }
@@ -89,6 +84,13 @@ impl Library {
         dep_entrypoint
     }
 
+    /// Import code that does not implement the `Snippet` trait
+    ///
+    /// If possible, you should use the [`import`](Self::import) method as
+    /// it gives better protections and allows you to test functions in
+    /// isolation. This method is intended to add function to the assembly
+    /// that you have defined inline and where a function call is needed due to
+    /// e.g. a dynamic counter.
     pub fn explicit_import(&mut self, name: &str, body: &[LabelledInstruction]) -> String {
         if !self.seen_snippets.contains_key(name) {
             self.seen_snippets.insert(name.to_owned(), body.to_vec());
@@ -123,6 +125,7 @@ impl Library {
     /// Statically allocate `num_words` words of memory. Panics if more static
     /// memory is required than what the capacity allows for.
     pub fn kmalloc(&mut self, num_words: u32) -> BFieldElement {
+        assert!(num_words > 0, "must allocate a positive number of words");
         let address = STATIC_MEMORY_FIRST_ADDRESS
             - bfe!(self.num_allocated_words)
             - BFieldElement::new(num_words as u64 - 1);
@@ -132,24 +135,6 @@ impl Library {
             .expect("Cannot allocate more that u32::MAX words through `kmalloc`.");
 
         address
-    }
-
-    /// Statically allocate `num_words` words of memory and give it a name.
-    /// Allows sharing the allocation with other snippets.
-    pub fn pub_kmalloc(&mut self, num_words: u32, name: String) -> BFieldElement {
-        let address = self.kmalloc(num_words);
-        if let Some((addr, size)) = self
-            .pub_allocations
-            .insert(name.clone(), (address, num_words))
-        {
-            panic!("Public kmalloc for \"{name}\" overwrote previous allocation: ({addr}, {size})");
-        };
-        address
-    }
-
-    /// Get the address and size of a public allocation.
-    pub fn get_pub_allocation(&self, name: &str) -> (BFieldElement, u32) {
-        self.pub_allocations[name]
     }
 }
 
@@ -489,12 +474,5 @@ mod tests {
 
         let third_free_address = lib.kmalloc(1000);
         assert_eq!(-BFieldElement::new(1009), third_free_address);
-
-        let fourth_free_address = lib.pub_kmalloc(10_000, "my_thing".to_string());
-        assert_eq!(-BFieldElement::new(11_009), fourth_free_address);
-
-        let (address, size) = lib.get_pub_allocation("my_thing");
-        assert_eq!(fourth_free_address, address);
-        assert_eq!(10_000, size);
     }
 }

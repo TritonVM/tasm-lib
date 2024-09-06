@@ -1,0 +1,24 @@
+[
+  {
+    "name": "tasmlib_structure_verify_nd_si_integrity___TransactionKernelLookalike",
+    "benchmark_result": {
+      "clock_cycle_count": 270,
+      "hash_table_height": 384,
+      "u32_table_height": 240,
+      "op_stack_table_height": 176,
+      "ram_table_height": 15
+    },
+    "case": "CommonCase"
+  },
+  {
+    "name": "tasmlib_structure_verify_nd_si_integrity___TransactionKernelLookalike",
+    "benchmark_result": {
+      "clock_cycle_count": 236,
+      "hash_table_height": 384,
+      "u32_table_height": 212,
+      "op_stack_table_height": 156,
+      "ram_table_height": 14
+    },
+    "case": "WorstCase"
+  }
+]
