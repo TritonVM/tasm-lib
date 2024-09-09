@@ -151,8 +151,8 @@ mod test {
             let arithmetic_domain = ArithmeticDomain::of_length(domain_length.try_into().unwrap())
                 .unwrap()
                 .with_offset(domain_offset);
-            let fri = Fri::<Tip5>::new(arithmetic_domain, expansion_factor, num_colinearity_checks)
-                .unwrap();
+            let fri =
+                Fri::new(arithmetic_domain, expansion_factor, num_colinearity_checks).unwrap();
 
             assert_eq!(fri.num_rounds(), fri_verify.num_rounds());
         }

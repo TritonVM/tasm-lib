@@ -105,8 +105,8 @@ mod tests {
     use proptest_arbitrary_interop::arb;
     use rand::prelude::*;
     use test_strategy::proptest;
-    use triton_vm::table::cross_table_argument::CrossTableArg;
-    use triton_vm::table::cross_table_argument::EvalArg;
+    use triton_vm::air::cross_table_argument::CrossTableArg;
+    use triton_vm::air::cross_table_argument::EvalArg;
 
     use crate::rust_shadowing_helper_functions::array::insert_as_array;
     use crate::rust_shadowing_helper_functions::list::list_insert;

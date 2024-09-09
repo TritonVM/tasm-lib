@@ -6,7 +6,7 @@ use itertools::Itertools;
 use num::One;
 use num::Zero;
 use rand::prelude::*;
-use triton_vm::op_stack::NUM_OP_STACK_REGISTERS;
+use triton_vm::isa::op_stack::NUM_OP_STACK_REGISTERS;
 use triton_vm::prelude::*;
 
 use crate::io::InputSource;

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use num_traits::One;
 use rand::prelude::*;
-use triton_vm::op_stack::NUM_OP_STACK_REGISTERS;
+use triton_vm::isa::op_stack::NUM_OP_STACK_REGISTERS;
 use triton_vm::prelude::*;
 
 use crate::data_type::DataType;

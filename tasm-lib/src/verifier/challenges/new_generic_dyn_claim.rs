@@ -1,9 +1,9 @@
 use num::One;
+use triton_vm::air::challenge_id::ChallengeId;
+use triton_vm::air::cross_table_argument::CrossTableArg;
+use triton_vm::air::cross_table_argument::EvalArg;
+use triton_vm::challenges::Challenges;
 use triton_vm::prelude::*;
-use triton_vm::table::challenges::ChallengeId;
-use triton_vm::table::challenges::Challenges;
-use triton_vm::table::cross_table_argument::CrossTableArg;
-use triton_vm::table::cross_table_argument::EvalArg;
 use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
 use crate::data_type::DataType;
@@ -222,7 +222,7 @@ mod tests {
     use std::collections::HashMap;
 
     use rand::prelude::*;
-    use triton_vm::table::challenges::Challenges;
+    use triton_vm::challenges::Challenges;
     use triton_vm::twenty_first::math::other::random_elements;
     use triton_vm::twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 

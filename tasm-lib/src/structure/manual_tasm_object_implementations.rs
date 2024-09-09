@@ -4,7 +4,8 @@ use triton_vm::prelude::*;
 use twenty_first::error::BFieldCodecError;
 use twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
-use crate::{data_type::DataType, prelude::TasmObject};
+use crate::data_type::DataType;
+use crate::prelude::TasmObject;
 
 use super::tasm_object::Result;
 

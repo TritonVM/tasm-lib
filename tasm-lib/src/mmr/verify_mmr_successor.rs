@@ -1,5 +1,4 @@
-use triton_vm::program::NonDeterminism;
-use triton_vm::triton_asm;
+use triton_vm::prelude::*;
 use triton_vm::twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
 use triton_vm::twenty_first::util_types::mmr::mmr_successor_proof::MmrSuccessorProof;
 
@@ -15,11 +14,10 @@ use crate::hashing::merkle_step_u64_index::MerkleStepU64Index;
 use crate::mmr::bag_peaks::BagPeaks;
 use crate::mmr::leaf_index_to_mt_index_and_peak_index::MmrLeafIndexToMtIndexAndPeakIndex;
 use crate::prelude::BasicSnippet;
-use crate::Digest;
 
 /// Verify that one MMR is a successor to another.
 ///
-/// Verify a the successorship relation between two MMRs. A `MmrSuccessorProof`
+/// Verify the scucessorship relation between two MMRs. A `MmrSuccessorProof`
 /// is necessary to demonstrate this relation, but it is not a *stack* argument
 /// because this algorithm obtains the relevant info (authentication paths) from
 /// nondeterministic digests. Accordingly, nondeterminism must be initialized
@@ -368,16 +366,16 @@ mod test {
 
     use itertools::Itertools;
     use rand::prelude::StdRng;
+    use rand::thread_rng;
     use rand::Rng;
     use rand::RngCore;
     use rand::SeedableRng;
+    use tasm_lib::prelude::TasmObject;
+    use tasm_lib::snippet_bencher::BenchmarkCase;
+    use tasm_lib::test_helpers::negative_test;
+    use tasm_lib::traits::mem_preserver::ShadowedMemPreserver;
+    use tasm_lib::traits::rust_shadow::RustShadow;
     use triton_vm::error::InstructionError;
-    use triton_vm::prelude::bfe;
-    use triton_vm::prelude::BFieldElement;
-    use triton_vm::prelude::Tip5;
-    use triton_vm::program::NonDeterminism;
-    use triton_vm::twenty_first::prelude::AlgebraicHasher;
-    use triton_vm::twenty_first::prelude::Mmr;
     use triton_vm::twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
     use triton_vm::twenty_first::util_types::mmr::mmr_successor_proof::MmrSuccessorProof;
     use triton_vm::twenty_first::util_types::mmr::shared_advanced::get_peak_heights;
@@ -385,17 +383,12 @@ mod test {
 
     use crate::empty_stack;
     use crate::memory::encode_to_memory;
-    use crate::prelude::TasmObject;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::test_helpers::negative_test;
     use crate::traits::mem_preserver::MemPreserver;
     use crate::traits::mem_preserver::MemPreserverInitialState;
-    use crate::traits::mem_preserver::ShadowedMemPreserver;
-    use crate::traits::rust_shadow::RustShadow;
-    use crate::Digest;
-    use rand::thread_rng;
+    use crate::twenty_first::prelude::AlgebraicHasher;
+    use crate::twenty_first::prelude::Mmr;
 
-    use super::VerifyMmrSuccessor;
+    use super::*;
 
     fn num_digests_to_read(old_mmr: &MmrAccumulator, new_mmr: &MmrAccumulator) -> usize {
         if new_mmr.num_leafs() <= old_mmr.num_leafs() {

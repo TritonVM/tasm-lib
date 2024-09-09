@@ -95,8 +95,8 @@ mod tests {
     use itertools::Itertools;
     use num::One;
     use rand::prelude::*;
-    use triton_vm::table::cross_table_argument::CrossTableArg;
-    use triton_vm::table::cross_table_argument::EvalArg;
+    use triton_vm::air::cross_table_argument::CrossTableArg;
+    use triton_vm::air::cross_table_argument::EvalArg;
 
     use crate::snippet_bencher::BenchmarkCase;
     use crate::traits::closure::Closure;

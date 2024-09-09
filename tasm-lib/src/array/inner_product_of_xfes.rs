@@ -97,45 +97,28 @@ mod tests {
             stack: &mut Vec<BFieldElement>,
             memory: &mut HashMap<BFieldElement, BFieldElement>,
         ) {
-            let one = BFieldElement::new(1);
-            let two = BFieldElement::new(2);
-            let three = BFieldElement::new(3);
+            fn read_xfe(
+                memory: &HashMap<BFieldElement, BFieldElement>,
+                address: BFieldElement,
+            ) -> XFieldElement {
+                let coefficients = [
+                    memory.get(&address),
+                    memory.get(&(address + bfe!(1))),
+                    memory.get(&(address + bfe!(2))),
+                ]
+                .map(|b| b.copied().unwrap_or(BFieldElement::ZERO));
+                xfe!(coefficients)
+            }
+
             let mut array_pointer_b = stack.pop().unwrap();
             let mut array_pointer_a = stack.pop().unwrap();
             let mut acc = XFieldElement::zero();
             for _ in 0..self.length {
-                let element_a = XFieldElement::new([
-                    memory
-                        .get(&array_pointer_a)
-                        .unwrap_or(&BFieldElement::ZERO)
-                        .to_owned(),
-                    memory
-                        .get(&(array_pointer_a + one))
-                        .unwrap_or(&BFieldElement::ZERO)
-                        .to_owned(),
-                    memory
-                        .get(&(array_pointer_a + two))
-                        .unwrap_or(&BFieldElement::ZERO)
-                        .to_owned(),
-                ]);
-                let element_b = XFieldElement::new([
-                    memory
-                        .get(&array_pointer_b)
-                        .unwrap_or(&BFieldElement::ZERO)
-                        .to_owned(),
-                    memory
-                        .get(&(array_pointer_b + one))
-                        .unwrap_or(&BFieldElement::ZERO)
-                        .to_owned(),
-                    memory
-                        .get(&(array_pointer_b + two))
-                        .unwrap_or(&BFieldElement::ZERO)
-                        .to_owned(),
-                ]);
-
+                let element_a = read_xfe(memory, array_pointer_a);
+                let element_b = read_xfe(memory, array_pointer_b);
                 acc += element_a * element_b;
-                array_pointer_b += three;
-                array_pointer_a += three;
+                array_pointer_b += bfe!(3);
+                array_pointer_a += bfe!(3);
             }
 
             for word in acc.coefficients.into_iter().rev() {
@@ -282,9 +265,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use triton_vm::table::extension_table::Quotientable;
-    use triton_vm::table::master_table::MasterExtTable;
-    use triton_vm::table::master_table::NUM_COLUMNS;
+    use triton_vm::table::master_table::MasterAuxTable;
+    use triton_vm::table::master_table::MasterMainTable;
+    use triton_vm::table::master_table::MasterTable;
 
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
@@ -304,7 +287,7 @@ mod benches {
     #[test]
     fn inner_product_xfes_bench_num_columns_current_tvm() {
         ShadowedFunction::new(InnerProductOfXfes {
-            length: NUM_COLUMNS,
+            length: MasterMainTable::NUM_COLUMNS + MasterAuxTable::NUM_COLUMNS,
         })
         .bench();
     }
@@ -312,7 +295,7 @@ mod benches {
     #[test]
     fn inner_product_xfes_bench_num_constraints_current_tvm() {
         ShadowedFunction::new(InnerProductOfXfes {
-            length: MasterExtTable::NUM_CONSTRAINTS,
+            length: MasterAuxTable::NUM_CONSTRAINTS,
         })
         .bench();
     }

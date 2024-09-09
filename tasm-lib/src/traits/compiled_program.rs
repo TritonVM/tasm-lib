@@ -13,9 +13,7 @@ pub trait CompiledProgram {
 
     fn program() -> Program {
         let (program_instructions, library) = Self::code();
-
         let library_instructions = library.all_imports();
-
         Program::new(&[program_instructions, library_instructions].concat())
     }
 
@@ -23,9 +21,12 @@ pub trait CompiledProgram {
         public_input: &PublicInput,
         nondeterminism: &NonDeterminism,
     ) -> Result<Vec<BFieldElement>> {
-        let p = Self::program();
-        p.run(public_input.clone(), nondeterminism.clone())
-            .map_err(|err| anyhow!(err))
+        VM::run(
+            &Self::program(),
+            public_input.clone(),
+            nondeterminism.clone(),
+        )
+        .map_err(|err| anyhow!(err))
     }
 
     fn code() -> (Vec<LabelledInstruction>, Library);
@@ -66,9 +67,8 @@ pub fn bench_and_profile_program<P: CompiledProgram>(
     let program = Program::new(&all_instructions);
 
     // run in trace mode to get table heights
-    let (aet, _output) = program
-        .trace_execution(public_input.clone(), nondeterminism.clone())
-        .unwrap();
+    let (aet, _output) =
+        VM::trace_execution(&program, public_input.clone(), nondeterminism.clone()).unwrap();
     let benchmark_result = BenchmarkResult::new(&aet);
     let benchmark = NamedBenchmarkResult {
         name: name.to_owned(),

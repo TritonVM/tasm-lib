@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use itertools::Itertools;
 use num::One;
-use triton_vm::air::memory_layout::MemoryRegion;
+use triton_vm::memory_layout::MemoryRegion;
 use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
@@ -351,8 +351,8 @@ impl DeprecatedSnippet for DummyTestSnippetC {
 mod tests {
     use std::collections::HashMap;
 
-    use triton_vm::program::Program;
-    use triton_vm::triton_asm;
+    use triton_vm::prelude::triton_asm;
+    use triton_vm::prelude::Program;
 
     use crate::empty_stack;
     use crate::memory::memcpy::MemCpy;

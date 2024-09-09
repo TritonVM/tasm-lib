@@ -188,10 +188,12 @@ mod tests {
 
             let actual_size = t.encode().len();
             let end_address = begin_address + bfe!(actual_size as u64);
+            let expected_err =
+                InstructionError::OpStackError(OpStackError::FailedU32Conversion(end_address));
             negative_test(
                 &ShadowedAccessor::new(snippet),
                 init_state.into(),
-                &[InstructionError::FailedU32Conversion(end_address)],
+                &[expected_err],
             )
         }
 
@@ -204,10 +206,12 @@ mod tests {
             let begin_address = bfe!(-4);
             let init_state =
                 snippet.initial_state(begin_address, snippet.prepare_random_object(&[]));
+            let expected_err =
+                InstructionError::OpStackError(OpStackError::FailedU32Conversion(begin_address));
             negative_test(
                 &ShadowedAccessor::new(snippet),
                 init_state.into(),
-                &[InstructionError::FailedU32Conversion(begin_address)],
+                &[expected_err],
             )
         }
 

@@ -1,7 +1,6 @@
-use triton_vm::instruction::LabelledInstruction;
+use triton_vm::prelude::LabelledInstruction;
 use triton_vm::prelude::*;
-use triton_vm::table::extension_table::Quotientable;
-use triton_vm::table::master_table::MasterExtTable;
+use triton_vm::table::master_table::MasterAuxTable;
 use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
 use crate::data_type::DataType;
@@ -52,7 +51,7 @@ impl BasicSnippet for DivideOutZerofiers {
                 // _ *air_elem
                 read_mem { EXTENSION_DEGREE } // _ [air_elem] *air_elem_prev
             );
-            MasterExtTable::NUM_CONSTRAINTS
+            MasterAuxTable::NUM_CONSTRAINTS
         ]
         .concat();
 
@@ -90,19 +89,19 @@ impl BasicSnippet for DivideOutZerofiers {
         let mul_and_write = [
             mul_and_write(
                 ConstraintType::Initial,
-                MasterExtTable::NUM_INITIAL_CONSTRAINTS,
+                MasterAuxTable::NUM_INITIAL_CONSTRAINTS,
             ),
             mul_and_write(
                 ConstraintType::Consistency,
-                MasterExtTable::NUM_CONSISTENCY_CONSTRAINTS,
+                MasterAuxTable::NUM_CONSISTENCY_CONSTRAINTS,
             ),
             mul_and_write(
                 ConstraintType::Transition,
-                MasterExtTable::NUM_TRANSITION_CONSTRAINTS,
+                MasterAuxTable::NUM_TRANSITION_CONSTRAINTS,
             ),
             mul_and_write(
                 ConstraintType::Terminal,
-                MasterExtTable::NUM_TERMINAL_CONSTRAINTS,
+                MasterAuxTable::NUM_TERMINAL_CONSTRAINTS,
             ),
         ]
         .concat();
@@ -110,7 +109,7 @@ impl BasicSnippet for DivideOutZerofiers {
         let jump_to_last_air_element = triton_asm!(
             // _ *air_elem[0]
 
-            push {MasterExtTable::NUM_CONSTRAINTS * EXTENSION_DEGREE - 1}
+            push {MasterAuxTable::NUM_CONSTRAINTS * EXTENSION_DEGREE - 1}
             add
             // _ *air_elem_last_word
         );
@@ -118,7 +117,7 @@ impl BasicSnippet for DivideOutZerofiers {
         let jump_to_first_air_element = triton_asm!(
             // _ *air_elem[n]
 
-            push {-((MasterExtTable::NUM_CONSTRAINTS * EXTENSION_DEGREE) as i32)}
+            push {-((MasterAuxTable::NUM_CONSTRAINTS * EXTENSION_DEGREE) as i32)}
             add
             // _ *air_elem_last_word
         );
@@ -209,13 +208,13 @@ mod tests {
         pub(super) fn random_input_values(
             rng: &mut StdRng,
         ) -> (
-            [XFieldElement; MasterExtTable::NUM_CONSTRAINTS],
+            [XFieldElement; MasterAuxTable::NUM_CONSTRAINTS],
             XFieldElement,
             u32,
             BFieldElement,
         ) {
             let air_evaluation_result =
-                rng.gen::<[XFieldElement; MasterExtTable::NUM_CONSTRAINTS]>();
+                rng.gen::<[XFieldElement; MasterAuxTable::NUM_CONSTRAINTS]>();
             let ood_point_curr_row: XFieldElement = rng.gen();
             let padded_height = 2u32.pow(rng.gen_range(8..32));
             let trace_domain_generator =
@@ -232,7 +231,7 @@ mod tests {
         /// Return the evaluated array of quotient values, and its address in memory
         fn tasm_result(
             &self,
-            air_evaluation_result: [XFieldElement; MasterExtTable::NUM_CONSTRAINTS],
+            air_evaluation_result: [XFieldElement; MasterAuxTable::NUM_CONSTRAINTS],
             out_of_domain_point_curr_row: XFieldElement,
             padded_height: u32,
             trace_domain_generator: BFieldElement,
@@ -276,7 +275,7 @@ mod tests {
         }
 
         pub fn rust_result(
-            air_evaluation_result: [XFieldElement; MasterExtTable::NUM_CONSTRAINTS],
+            air_evaluation_result: [XFieldElement; MasterAuxTable::NUM_CONSTRAINTS],
             out_of_domain_point_curr_row: XFieldElement,
             padded_height: u32,
             trace_domain_generator: BFieldElement,
@@ -298,28 +297,28 @@ mod tests {
 
             let mut running_total_constraints = 0;
             let initial_quotients = air_evaluation_result[running_total_constraints
-                ..(running_total_constraints + MasterExtTable::NUM_INITIAL_CONSTRAINTS)]
+                ..(running_total_constraints + MasterAuxTable::NUM_INITIAL_CONSTRAINTS)]
                 .iter()
                 .map(|&x| x * initial_zerofier_inv)
                 .collect_vec();
-            running_total_constraints += MasterExtTable::NUM_INITIAL_CONSTRAINTS;
+            running_total_constraints += MasterAuxTable::NUM_INITIAL_CONSTRAINTS;
 
             let consistency_quotients = air_evaluation_result[running_total_constraints
-                ..(running_total_constraints + MasterExtTable::NUM_CONSISTENCY_CONSTRAINTS)]
+                ..(running_total_constraints + MasterAuxTable::NUM_CONSISTENCY_CONSTRAINTS)]
                 .iter()
                 .map(|&x| x * consistency_zerofier_inv)
                 .collect_vec();
-            running_total_constraints += MasterExtTable::NUM_CONSISTENCY_CONSTRAINTS;
+            running_total_constraints += MasterAuxTable::NUM_CONSISTENCY_CONSTRAINTS;
 
             let transition_quotients = air_evaluation_result[running_total_constraints
-                ..(running_total_constraints + MasterExtTable::NUM_TRANSITION_CONSTRAINTS)]
+                ..(running_total_constraints + MasterAuxTable::NUM_TRANSITION_CONSTRAINTS)]
                 .iter()
                 .map(|&x| x * transition_zerofier_inv)
                 .collect_vec();
-            running_total_constraints += MasterExtTable::NUM_TRANSITION_CONSTRAINTS;
+            running_total_constraints += MasterAuxTable::NUM_TRANSITION_CONSTRAINTS;
 
             let terminal_quotients = air_evaluation_result[running_total_constraints
-                ..(running_total_constraints + MasterExtTable::NUM_TERMINAL_CONSTRAINTS)]
+                ..(running_total_constraints + MasterAuxTable::NUM_TERMINAL_CONSTRAINTS)]
                 .iter()
                 .map(|&x| x * terminal_zerofier_inv)
                 .collect_vec();
@@ -377,7 +376,7 @@ mod bench {
             // Used for benchmarking
             let mut rng: StdRng = SeedableRng::from_seed(seed);
             let air_evaluation_result =
-                rng.gen::<[XFieldElement; MasterExtTable::NUM_CONSTRAINTS]>();
+                rng.gen::<[XFieldElement; MasterAuxTable::NUM_CONSTRAINTS]>();
             let ood_point_current_row = rng.gen::<XFieldElement>();
             let padded_height = 1 << 20;
             let trace_domain_generator =

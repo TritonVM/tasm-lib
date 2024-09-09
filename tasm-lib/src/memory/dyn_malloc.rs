@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use num::One;
 use num::Zero;
 use rand::prelude::*;
-use triton_vm::air::memory_layout::MemoryRegion;
+use triton_vm::memory_layout::MemoryRegion;
 use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
@@ -238,26 +238,23 @@ mod tests {
     #[proptest]
     fn disallow_allocation_if_page_counter_is_not_a_u32(
         #[strategy(arb())]
-        #[filter(#address.value() > u32::MAX as u64)]
+        #[filter(#address.value() > u64::from(u32::MAX))]
         address: BFieldElement,
     ) {
         fn negative_prop_disallow_allocation_with_non_u32_page_counter(
-            memory_page_index: BFieldElement,
+            mem_page_index: BFieldElement,
         ) {
             let snippet = DynMalloc;
             let init_stack = snippet.init_stack_for_isolated_run();
             let shadowed_snippet = ShadowedFunction::new(snippet);
 
-            let memory_filled_dyn_malloc: HashMap<_, _> = [(DYN_MALLOC_ADDRESS, memory_page_index)]
-                .into_iter()
-                .collect();
+            let memory_filled_dyn_malloc: HashMap<_, _> =
+                [(DYN_MALLOC_ADDRESS, mem_page_index)].into_iter().collect();
             let init_state =
                 InitVmState::with_stack_and_memory(init_stack, memory_filled_dyn_malloc);
-            negative_test(
-                &shadowed_snippet,
-                init_state,
-                &[InstructionError::FailedU32Conversion(memory_page_index)],
-            );
+            let expected_err =
+                InstructionError::OpStackError(OpStackError::FailedU32Conversion(mem_page_index));
+            negative_test(&shadowed_snippet, init_state, &[expected_err]);
         }
 
         negative_prop_disallow_allocation_with_non_u32_page_counter(address);

@@ -1,14 +1,15 @@
 use ndarray::Array1;
-use triton_vm::air::memory_layout::DynamicTasmConstraintEvaluationMemoryLayout;
-use triton_vm::air::memory_layout::IntegralMemoryLayout;
-use triton_vm::air::memory_layout::StaticTasmConstraintEvaluationMemoryLayout;
-use triton_vm::air::tasm_air_constraints::dynamic_air_constraint_evaluation_tasm;
-use triton_vm::air::tasm_air_constraints::static_air_constraint_evaluation_tasm;
+use triton_vm::challenges::Challenges;
+use triton_vm::constraints::dynamic_air_constraint_evaluation_tasm;
+use triton_vm::constraints::static_air_constraint_evaluation_tasm;
+use triton_vm::memory_layout::DynamicTasmConstraintEvaluationMemoryLayout;
+use triton_vm::memory_layout::IntegralMemoryLayout;
+use triton_vm::memory_layout::StaticTasmConstraintEvaluationMemoryLayout;
 use triton_vm::prelude::*;
-use triton_vm::table::challenges::Challenges;
-use triton_vm::table::extension_table::Evaluable;
-use triton_vm::table::extension_table::Quotientable;
-use triton_vm::table::master_table::MasterExtTable;
+use triton_vm::table::auxiliary_table::Evaluable;
+use triton_vm::table::master_table::MasterAuxTable;
+use triton_vm::table::master_table::MasterMainTable;
+use triton_vm::table::master_table::MasterTable;
 use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
 use crate::data_type::ArrayType;
@@ -17,7 +18,6 @@ use crate::library::Library;
 use crate::memory::dyn_malloc::DYN_MALLOC_ADDRESS;
 use crate::prelude::DynMalloc;
 use crate::traits::basic_snippet::BasicSnippet;
-use crate::triton_vm::table::*;
 use crate::verifier::challenges::shared::conventional_challenges_pointer;
 
 #[derive(Debug, Clone, Copy)]
@@ -29,22 +29,22 @@ pub enum MemoryLayout {
 impl MemoryLayout {
     pub fn conventional_static() -> Self {
         const CURRENT_BASE_ROW_PTR: u64 = 30u64;
-        const BASE_ROW_SIZE: u64 = (NUM_BASE_COLUMNS * EXTENSION_DEGREE) as u64;
-        const EXT_ROW_SIZE: u64 = (NUM_EXT_COLUMNS * EXTENSION_DEGREE) as u64;
+        const BASE_ROW_SIZE: u64 = (MasterMainTable::NUM_COLUMNS * EXTENSION_DEGREE) as u64;
+        const EXT_ROW_SIZE: u64 = (MasterAuxTable::NUM_COLUMNS * EXTENSION_DEGREE) as u64;
         const METADATA_SIZE_PER_PROOF_ITEM_ELEMENT: u64 = 2; // 1 for discriminant, 1 for elem size
         let mem_layout = StaticTasmConstraintEvaluationMemoryLayout {
             free_mem_page_ptr: BFieldElement::new(((1u64 << 32) - 3) * (1u64 << 32)),
-            curr_base_row_ptr: BFieldElement::new(CURRENT_BASE_ROW_PTR),
-            curr_ext_row_ptr: BFieldElement::new(
+            curr_main_row_ptr: BFieldElement::new(CURRENT_BASE_ROW_PTR),
+            curr_aux_row_ptr: BFieldElement::new(
                 CURRENT_BASE_ROW_PTR + BASE_ROW_SIZE + METADATA_SIZE_PER_PROOF_ITEM_ELEMENT,
             ),
-            next_base_row_ptr: BFieldElement::new(
+            next_main_row_ptr: BFieldElement::new(
                 CURRENT_BASE_ROW_PTR
                     + BASE_ROW_SIZE
                     + EXT_ROW_SIZE
                     + 2 * METADATA_SIZE_PER_PROOF_ITEM_ELEMENT,
             ),
-            next_ext_row_ptr: BFieldElement::new(
+            next_aux_row_ptr: BFieldElement::new(
                 CURRENT_BASE_ROW_PTR
                     + 2 * BASE_ROW_SIZE
                     + EXT_ROW_SIZE
@@ -155,7 +155,7 @@ impl AirConstraintEvaluation {
     pub fn output_type() -> DataType {
         DataType::Array(Box::new(ArrayType {
             element_type: DataType::Xfe,
-            length: MasterExtTable::NUM_CONSTRAINTS,
+            length: MasterAuxTable::NUM_CONSTRAINTS,
         }))
     }
 
@@ -167,24 +167,24 @@ impl AirConstraintEvaluation {
         let current_ext_row = Array1::from(input_values.current_ext_row);
         let next_base_row = Array1::from(input_values.next_base_row);
         let next_ext_row = Array1::from(input_values.next_ext_row);
-        let evaluated_initial_constraints = MasterExtTable::evaluate_initial_constraints(
+        let evaluated_initial_constraints = MasterAuxTable::evaluate_initial_constraints(
             current_base_row.view(),
             current_ext_row.view(),
             &input_values.challenges,
         );
-        let evaluated_consistency_constraints = MasterExtTable::evaluate_consistency_constraints(
+        let evaluated_consistency_constraints = MasterAuxTable::evaluate_consistency_constraints(
             current_base_row.view(),
             current_ext_row.view(),
             &input_values.challenges,
         );
-        let evaluated_transition_constraints = MasterExtTable::evaluate_transition_constraints(
+        let evaluated_transition_constraints = MasterAuxTable::evaluate_transition_constraints(
             current_base_row.view(),
             current_ext_row.view(),
             next_base_row.view(),
             next_ext_row.view(),
             &input_values.challenges,
         );
-        let evaluated_terminal_constraints = MasterExtTable::evaluate_terminal_constraints(
+        let evaluated_terminal_constraints = MasterAuxTable::evaluate_terminal_constraints(
             current_base_row.view(),
             current_ext_row.view(),
             &input_values.challenges,
@@ -261,10 +261,10 @@ pub fn an_integral_but_profane_static_memory_layout() -> StaticTasmConstraintEva
 {
     let mem_layout = StaticTasmConstraintEvaluationMemoryLayout {
         free_mem_page_ptr: BFieldElement::new((u32::MAX as u64 - 200) * (1u64 << 32)),
-        curr_base_row_ptr: BFieldElement::new(1u64),
-        curr_ext_row_ptr: BFieldElement::new(1u64 << 20),
-        next_base_row_ptr: BFieldElement::new(1u64 << 21),
-        next_ext_row_ptr: BFieldElement::new(1u64 << 22),
+        curr_main_row_ptr: BFieldElement::new(1u64),
+        curr_aux_row_ptr: BFieldElement::new(1u64 << 20),
+        next_main_row_ptr: BFieldElement::new(1u64 << 21),
+        next_aux_row_ptr: BFieldElement::new(1u64 << 22),
         challenges_ptr: BFieldElement::new(1u64 << 23),
     };
     assert!(mem_layout.is_integral());
@@ -305,6 +305,8 @@ mod tests {
     use rand::distributions::Standard;
     use rand::prelude::*;
     use triton_vm::proof_stream::ProofStream;
+    use triton_vm::table::master_table::MasterMainTable;
+    use triton_vm::table::master_table::MasterTable;
     use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
     use crate::execute_test;
@@ -386,56 +388,58 @@ mod tests {
         let MemoryLayout::Static(assumed_memory_layout) = assumed_memory_layout else {
             panic!()
         };
-        const BASE_ROW_SIZE: usize = NUM_BASE_COLUMNS * EXTENSION_DEGREE;
-        const EXT_ROW_SIZE: usize = NUM_EXT_COLUMNS * EXTENSION_DEGREE;
+        const BASE_ROW_SIZE: usize = MasterMainTable::NUM_COLUMNS * EXTENSION_DEGREE;
+        const EXT_ROW_SIZE: usize = MasterAuxTable::NUM_COLUMNS * EXTENSION_DEGREE;
 
-        let assumed_curr_base_row: [XFieldElement; NUM_BASE_COLUMNS] =
+        let assumed_curr_base_row: [XFieldElement; MasterMainTable::NUM_COLUMNS] =
             *decode_from_memory_with_size(
                 &memory,
-                assumed_memory_layout.curr_base_row_ptr,
+                assumed_memory_layout.curr_main_row_ptr,
                 BASE_ROW_SIZE,
             )
             .unwrap();
         let actual_curr_base_row_from_proof = proof_stream.items[4]
             .clone()
-            .try_into_out_of_domain_base_row()
+            .try_into_out_of_domain_main_row()
             .unwrap();
         assert_eq!(*actual_curr_base_row_from_proof, assumed_curr_base_row);
 
-        let assumed_curr_ext_row: [XFieldElement; NUM_EXT_COLUMNS] = *decode_from_memory_with_size(
-            &memory,
-            assumed_memory_layout.curr_ext_row_ptr,
-            EXT_ROW_SIZE,
-        )
-        .unwrap();
+        let assumed_curr_ext_row: [XFieldElement; MasterAuxTable::NUM_COLUMNS] =
+            *decode_from_memory_with_size(
+                &memory,
+                assumed_memory_layout.curr_aux_row_ptr,
+                EXT_ROW_SIZE,
+            )
+            .unwrap();
         let actual_curr_ext_row_from_proof = proof_stream.items[5]
             .clone()
-            .try_into_out_of_domain_ext_row()
+            .try_into_out_of_domain_aux_row()
             .unwrap();
         assert_eq!(*actual_curr_ext_row_from_proof, assumed_curr_ext_row);
 
-        let assumed_next_base_row: [XFieldElement; NUM_BASE_COLUMNS] =
+        let assumed_next_base_row: [XFieldElement; MasterMainTable::NUM_COLUMNS] =
             *decode_from_memory_with_size(
                 &memory,
-                assumed_memory_layout.next_base_row_ptr,
+                assumed_memory_layout.next_main_row_ptr,
                 BASE_ROW_SIZE,
             )
             .unwrap();
         let actual_next_base_row_from_proof = proof_stream.items[6]
             .clone()
-            .try_into_out_of_domain_base_row()
+            .try_into_out_of_domain_main_row()
             .unwrap();
         assert_eq!(*actual_next_base_row_from_proof, assumed_next_base_row);
 
-        let assumed_next_ext_row: [XFieldElement; NUM_EXT_COLUMNS] = *decode_from_memory_with_size(
-            &memory,
-            assumed_memory_layout.next_ext_row_ptr,
-            EXT_ROW_SIZE,
-        )
-        .unwrap();
+        let assumed_next_ext_row: [XFieldElement; MasterAuxTable::NUM_COLUMNS] =
+            *decode_from_memory_with_size(
+                &memory,
+                assumed_memory_layout.next_aux_row_ptr,
+                EXT_ROW_SIZE,
+            )
+            .unwrap();
         let actual_next_ext_row_from_proof = proof_stream.items[7]
             .clone()
-            .try_into_out_of_domain_ext_row()
+            .try_into_out_of_domain_aux_row()
             .unwrap();
         assert_eq!(*actual_next_ext_row_from_proof, assumed_next_ext_row);
     }
@@ -502,14 +506,22 @@ mod tests {
         }
 
         pub(crate) fn random_input_values(rng: &mut StdRng) -> AirConstraintSnippetInputs {
-            let current_base_row: Vec<XFieldElement> =
-                rng.sample_iter(Standard).take(NUM_BASE_COLUMNS).collect();
-            let current_ext_row: Vec<XFieldElement> =
-                rng.sample_iter(Standard).take(NUM_EXT_COLUMNS).collect();
-            let next_base_row: Vec<XFieldElement> =
-                rng.sample_iter(Standard).take(NUM_BASE_COLUMNS).collect();
-            let next_ext_row: Vec<XFieldElement> =
-                rng.sample_iter(Standard).take(NUM_EXT_COLUMNS).collect();
+            let current_base_row: Vec<XFieldElement> = rng
+                .sample_iter(Standard)
+                .take(MasterMainTable::NUM_COLUMNS)
+                .collect();
+            let current_ext_row: Vec<XFieldElement> = rng
+                .sample_iter(Standard)
+                .take(MasterAuxTable::NUM_COLUMNS)
+                .collect();
+            let next_base_row: Vec<XFieldElement> = rng
+                .sample_iter(Standard)
+                .take(MasterMainTable::NUM_COLUMNS)
+                .collect();
+            let next_ext_row: Vec<XFieldElement> = rng
+                .sample_iter(Standard)
+                .take(MasterAuxTable::NUM_COLUMNS)
+                .collect();
 
             let mut ch_seed = [0u8; 12000];
             rng.fill_bytes(&mut ch_seed);
@@ -533,22 +545,22 @@ mod tests {
                 MemoryLayout::Static(static_layout) => {
                     let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
                     insert_as_array(
-                        static_layout.curr_base_row_ptr,
+                        static_layout.curr_main_row_ptr,
                         &mut memory,
                         input_values.current_base_row,
                     );
                     insert_as_array(
-                        static_layout.curr_ext_row_ptr,
+                        static_layout.curr_aux_row_ptr,
                         &mut memory,
                         input_values.current_ext_row,
                     );
                     insert_as_array(
-                        static_layout.next_base_row_ptr,
+                        static_layout.next_main_row_ptr,
                         &mut memory,
                         input_values.next_base_row,
                     );
                     insert_as_array(
-                        static_layout.next_ext_row_ptr,
+                        static_layout.next_aux_row_ptr,
                         &mut memory,
                         input_values.next_ext_row,
                     );
@@ -562,22 +574,22 @@ mod tests {
                 }
                 MemoryLayout::Dynamic(dynamic_layout) => {
                     let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
-                    let curr_base_row_ptr = dynamic_layout.challenges_ptr + bfe!(10000);
-                    let curr_ext_row_ptr = curr_base_row_ptr
+                    let curr_main_row_ptr = dynamic_layout.challenges_ptr + bfe!(10000);
+                    let curr_aux_row_ptr = curr_main_row_ptr
                         + bfe!((input_values.current_base_row.len() * EXTENSION_DEGREE + 1) as u64);
-                    let next_base_row_ptr = curr_ext_row_ptr
+                    let next_main_row_ptr = curr_aux_row_ptr
                         + bfe!((input_values.current_ext_row.len() * EXTENSION_DEGREE + 2) as u64);
-                    let next_ext_row_ptr = next_base_row_ptr
+                    let next_aux_row_ptr = next_main_row_ptr
                         + bfe!((input_values.next_base_row.len() * EXTENSION_DEGREE + 3) as u64);
 
                     insert_as_array(
-                        curr_base_row_ptr,
+                        curr_main_row_ptr,
                         &mut memory,
                         input_values.current_base_row,
                     );
-                    insert_as_array(curr_ext_row_ptr, &mut memory, input_values.current_ext_row);
-                    insert_as_array(next_base_row_ptr, &mut memory, input_values.next_base_row);
-                    insert_as_array(next_ext_row_ptr, &mut memory, input_values.next_ext_row);
+                    insert_as_array(curr_aux_row_ptr, &mut memory, input_values.current_ext_row);
+                    insert_as_array(next_main_row_ptr, &mut memory, input_values.next_base_row);
+                    insert_as_array(next_aux_row_ptr, &mut memory, input_values.next_ext_row);
                     insert_as_array(
                         dynamic_layout.challenges_ptr,
                         &mut memory,
@@ -585,10 +597,10 @@ mod tests {
                     );
 
                     let mut stack = self.init_stack_for_isolated_run();
-                    stack.push(curr_base_row_ptr);
-                    stack.push(curr_ext_row_ptr);
-                    stack.push(next_base_row_ptr);
-                    stack.push(next_ext_row_ptr);
+                    stack.push(curr_main_row_ptr);
+                    stack.push(curr_aux_row_ptr);
+                    stack.push(next_main_row_ptr);
+                    stack.push(next_aux_row_ptr);
 
                     (memory, stack)
                 }
@@ -603,7 +615,7 @@ mod tests {
         ) -> (Vec<XFieldElement>, BFieldElement) {
             let result_pointer = final_state.op_stack.stack.pop().unwrap();
             let mut tasm_result: Vec<XFieldElement> = vec![];
-            for i in 0..MasterExtTable::NUM_CONSTRAINTS {
+            for i in 0..MasterAuxTable::NUM_CONSTRAINTS {
                 tasm_result.push(XFieldElement::new(
                     array_get(result_pointer, i, &final_state.ram, EXTENSION_DEGREE)
                         .try_into()

@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::error::Error;
 
 use itertools::Itertools;
+use num_traits::ConstZero;
 use num_traits::Zero;
 use triton_vm::prelude::*;
 
@@ -97,8 +98,8 @@ pub fn decode_from_memory_with_size<T: BFieldCodec>(
     size: usize,
 ) -> Result<Box<T>> {
     let sequence = (0..size)
-        .map(|i| address + BFieldElement::new(i as u64))
-        .map(|b| memory.get(&b).copied().unwrap_or(BFieldElement::new(0)))
+        .map(|i| address + bfe!(i as u64))
+        .map(|b| memory.get(&b).copied().unwrap_or(BFieldElement::ZERO))
         .collect_vec();
     T::decode(&sequence).map_err(|e| e.into())
 }
@@ -407,10 +408,9 @@ mod test {
                 VMState::new(program, PublicInput::default(), messed_up_nd_1.clone());
             maybe_write_debuggable_program_to_disk(program, &vm_state_fail1);
             let instruction_error1 = vm_state_fail1.run().unwrap_err();
-            assert_eq!(
-                InstructionError::FailedU32Conversion(negative_number),
-                instruction_error1,
-            );
+            let expected_err =
+                InstructionError::OpStackError(OpStackError::FailedU32Conversion(negative_number));
+            assert_eq!(expected_err, instruction_error1);
 
             // Messed-up encoding fails: Size-indicator is within allowed
             // range but does not have the correct value. This is not checked

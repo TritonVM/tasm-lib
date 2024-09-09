@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use itertools::Itertools;
 use num_traits::One;
 use rand::prelude::*;
-use triton_vm::parser::tokenize;
+use triton_vm::isa::parser::tokenize;
 use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
@@ -115,8 +115,7 @@ impl BasicSnippet for Map {
                 );
                 let fn_body = sn.function_code(library);
                 let (_, instructions) = tokenize(&fn_body).unwrap();
-                let labelled_instructions =
-                    triton_vm::parser::to_labelled_instructions(&instructions);
+                let labelled_instructions = isa::parser::to_labelled_instructions(&instructions);
                 let snippet_name =
                     library.explicit_import(&sn.entrypoint_name(), &labelled_instructions);
                 (triton_asm!(call { snippet_name }), String::default())

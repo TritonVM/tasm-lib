@@ -148,8 +148,10 @@ impl BasicSnippet for LtDigest {
 mod tests {
     use std::collections::HashMap;
 
+    use rand::rngs::StdRng;
     use rand::thread_rng;
-    use rand::{rngs::StdRng, Rng, SeedableRng};
+    use rand::Rng;
+    use rand::SeedableRng;
 
     use super::*;
     use crate::memory::encode_to_memory;

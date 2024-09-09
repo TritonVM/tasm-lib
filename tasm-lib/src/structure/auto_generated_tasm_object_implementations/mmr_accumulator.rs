@@ -5,166 +5,166 @@ impl crate::tasm_lib::structure::tasm_object::TasmObject for MmrAccumulator {
     fn label_friendly_name() -> String {
         "MmrAccumulator".to_owned()
     }
-    fn get_field(field_name: &str) -> Vec<crate::triton_vm::instruction::LabelledInstruction> {
+    fn get_field(field_name: &str) -> Vec<crate::triton_vm::isa::instruction::LabelledInstruction> {
         let field_getter = match field_name {
             "peaks" => {
                 let current = {
                     if let Some(size) = <Vec<
-                            Digest,
-                        > as crate::twenty_first::math::bfield_codec::BFieldCodec>::static_length() {
-                            [
-                                crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                    crate::triton_vm::instruction::AnInstruction::Push(
-                                        crate::BFieldElement::new(size as u64),
-                                    ),
+                        Digest,
+                    > as crate::twenty_first::math::bfield_codec::BFieldCodec>::static_length() {
+                        [
+                            crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                                crate::triton_vm::isa::instruction::AnInstruction::Push(
+                                    crate::BFieldElement::new(size as u64),
                                 ),
-                            ]
-                                .to_vec()
-                        } else {
-                            [
-                                crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                    crate::triton_vm::instruction::AnInstruction::ReadMem(
-                                        crate::triton_vm::op_stack::NumberOfWords::N1,
-                                    ),
+                            ),
+                        ]
+                            .to_vec()
+                    } else {
+                        [
+                            crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                                crate::triton_vm::isa::instruction::AnInstruction::ReadMem(
+                        crate::triton_vm::isa::op_stack::NumberOfWords::N1,
+                        ),
+                        ),
+                        crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                            crate::triton_vm::isa::instruction::AnInstruction::Push(
+                                crate::triton_vm::prelude::BFieldElement::new(
+                                    Self::MAX_OFFSET.into(),
                                 ),
-                                crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                    crate::triton_vm::instruction::AnInstruction::Push(
-                                        crate::triton_vm::prelude::BFieldElement::new(
-                                            Self::MAX_OFFSET.into(),
-                                        ),
-                                    ),
-                                ),
-                                crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                    crate::triton_vm::instruction::AnInstruction::Dup(
-                                        crate::triton_vm::op_stack::OpStackElement::ST2,
-                                    ),
-                                ),
-                                crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                    crate::triton_vm::instruction::AnInstruction::Lt,
-                                ),
-                                crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                    crate::triton_vm::instruction::AnInstruction::Assert,
-                                ),
-                                crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                    crate::triton_vm::instruction::AnInstruction::AddI(
-                                        crate::BFieldElement::new(1u64),
-                                    ),
-                                ),
-                                crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                    crate::triton_vm::instruction::AnInstruction::Swap(
-                                        crate::triton_vm::op_stack::OpStackElement::ST1,
-                                    ),
-                                ),
-                                crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                    crate::triton_vm::instruction::AnInstruction::AddI(
-                                        crate::BFieldElement::new(1u64),
-                                    ),
-                                ),
-                            ]
-                                .to_vec()
-                        }
+                            ),
+                        ),
+                        crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                            crate::triton_vm::isa::instruction::AnInstruction::Dup(
+                        crate::triton_vm::isa::op_stack::OpStackElement::ST2,
+                        ),
+                        ),
+                        crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                            crate::triton_vm::isa::instruction::AnInstruction::Lt,
+                        ),
+                        crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                            crate::triton_vm::isa::instruction::AnInstruction::Assert,
+                        ),
+                        crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                            crate::triton_vm::isa::instruction::AnInstruction::AddI(
+                                crate::BFieldElement::new(1u64),
+                            ),
+                        ),
+                        crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                            crate::triton_vm::isa::instruction::AnInstruction::Swap(
+                        crate::triton_vm::isa::op_stack::OpStackElement::ST1,
+                        ),
+                        ),
+                        crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                            crate::triton_vm::isa::instruction::AnInstruction::AddI(
+                                crate::BFieldElement::new(1u64),
+                            ),
+                        ),
+                        ]
+                        .to_vec()
+                    }
                 };
                 let getter = {
                     if <Vec<
-                            Digest,
-                        > as crate::twenty_first::math::bfield_codec::BFieldCodec>::static_length()
-                            .is_some()
-                        {
-                            [
-                                crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                    crate::triton_vm::instruction::AnInstruction::Pop(
-                                        crate::triton_vm::op_stack::NumberOfWords::N1,
-                                    ),
-                                ),
-                            ]
-                                .to_vec()
-                        } else {
-                            [
-                                crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                    crate::triton_vm::instruction::AnInstruction::Pop(
-                                        crate::triton_vm::op_stack::NumberOfWords::N1,
-                                    ),
-                                ),
-                                crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                    crate::triton_vm::instruction::AnInstruction::Push(
-                                        crate::BFieldElement::new(1u64),
-                                    ),
-                                ),
-                                crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                    crate::triton_vm::instruction::AnInstruction::Add,
-                                ),
-                            ]
-                                .to_vec()
-                        }
+                        Digest,
+                    > as crate::twenty_first::math::bfield_codec::BFieldCodec>::static_length()
+                        .is_some()
+                    {
+                        [
+                            crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                                crate::triton_vm::isa::instruction::AnInstruction::Pop(
+                        crate::triton_vm::isa::op_stack::NumberOfWords::N1,
+                        ),
+                        ),
+                        ]
+                        .to_vec()
+                    } else {
+                        [
+                            crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                                crate::triton_vm::isa::instruction::AnInstruction::Pop(
+                        crate::triton_vm::isa::op_stack::NumberOfWords::N1,
+                        ),
+                        ),
+                        crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                            crate::triton_vm::isa::instruction::AnInstruction::Push(
+                                crate::BFieldElement::new(1u64),
+                            ),
+                        ),
+                        crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                            crate::triton_vm::isa::instruction::AnInstruction::Add,
+                        ),
+                        ]
+                        .to_vec()
+                    }
                 };
                 [current, getter].concat()
             }
             "leaf_count" => {
                 let current = {
                     [
-                            Self::get_field_start_with_jump_distance("peaks"),
-                            [
-                                crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                    crate::triton_vm::instruction::AnInstruction::Add,
-                                ),
-                            ]
-                                .to_vec(),
-                            {
-                                if let Some(size) = <u64 as crate::twenty_first::math::bfield_codec::BFieldCodec>::static_length() {
-                                    [
-                                        crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                            crate::triton_vm::instruction::AnInstruction::Push(
-                                                crate::BFieldElement::new(size as u64),
-                                            ),
-                                        ),
-                                    ]
-                                        .to_vec()
-                                } else {
-                                    [
-                                        crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                            crate::triton_vm::instruction::AnInstruction::ReadMem(
-                                                crate::triton_vm::op_stack::NumberOfWords::N1,
-                                            ),
-                                        ),
-                                        crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                            crate::triton_vm::instruction::AnInstruction::Push(
-                                                crate::triton_vm::prelude::BFieldElement::new(
-                                                    Self::MAX_OFFSET.into(),
-                                                ),
-                                            ),
-                                        ),
-                                        crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                            crate::triton_vm::instruction::AnInstruction::Dup(
-                                                crate::triton_vm::op_stack::OpStackElement::ST2,
-                                            ),
-                                        ),
-                                        crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                            crate::triton_vm::instruction::AnInstruction::Lt,
-                                        ),
-                                        crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                            crate::triton_vm::instruction::AnInstruction::Assert,
-                                        ),
-                                        crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                            crate::triton_vm::instruction::AnInstruction::AddI(
-                                                crate::BFieldElement::new(1u64),
-                                            ),
-                                        ),
-                                        crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                            crate::triton_vm::instruction::AnInstruction::Swap(
-                                                crate::triton_vm::op_stack::OpStackElement::ST1,
-                                            ),
-                                        ),
-                                        crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                            crate::triton_vm::instruction::AnInstruction::AddI(
-                                                crate::BFieldElement::new(1u64),
-                                            ),
-                                        ),
-                                    ]
-                                        .to_vec()
-                                }
-                            },
+                        Self::get_field_start_with_jump_distance("peaks"),
+                        [
+                            crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                                crate::triton_vm::isa::instruction::AnInstruction::Add,
+                            ),
                         ]
-                            .concat()
+                            .to_vec(),
+                        {
+                            if let Some(size) = <u64 as crate::twenty_first::math::bfield_codec::BFieldCodec>::static_length() {
+                                [
+                                    crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                                        crate::triton_vm::isa::instruction::AnInstruction::Push(
+                                            crate::BFieldElement::new(size as u64),
+                                        ),
+                                    ),
+                                ]
+                                    .to_vec()
+                            } else {
+                                [
+                                    crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                                        crate::triton_vm::isa::instruction::AnInstruction::ReadMem(
+                                crate::triton_vm::isa::op_stack::NumberOfWords::N1,
+                                ),
+                                ),
+                                crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                                    crate::triton_vm::isa::instruction::AnInstruction::Push(
+                                        crate::triton_vm::prelude::BFieldElement::new(
+                                            Self::MAX_OFFSET.into(),
+                                        ),
+                                    ),
+                                ),
+                                crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                                    crate::triton_vm::isa::instruction::AnInstruction::Dup(
+                                crate::triton_vm::isa::op_stack::OpStackElement::ST2,
+                                ),
+                                ),
+                                crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                                    crate::triton_vm::isa::instruction::AnInstruction::Lt,
+                                ),
+                                crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                                    crate::triton_vm::isa::instruction::AnInstruction::Assert,
+                                ),
+                                crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                                    crate::triton_vm::isa::instruction::AnInstruction::AddI(
+                                        crate::BFieldElement::new(1u64),
+                                    ),
+                                ),
+                                crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                                    crate::triton_vm::isa::instruction::AnInstruction::Swap(
+                                crate::triton_vm::isa::op_stack::OpStackElement::ST1,
+                                ),
+                                ),
+                                crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                                    crate::triton_vm::isa::instruction::AnInstruction::AddI(
+                                        crate::BFieldElement::new(1u64),
+                                    ),
+                                ),
+                                ]
+                                .to_vec()
+                            }
+                        },
+                    ]
+                        .concat()
                 };
                 let getter = {
                     if <u64 as crate::twenty_first::math::bfield_codec::BFieldCodec>::static_length(
@@ -172,27 +172,27 @@ impl crate::tasm_lib::structure::tasm_object::TasmObject for MmrAccumulator {
                     .is_some()
                     {
                         [
-                            crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                crate::triton_vm::instruction::AnInstruction::Pop(
-                                    crate::triton_vm::op_stack::NumberOfWords::N1,
+                            crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                                crate::triton_vm::isa::instruction::AnInstruction::Pop(
+                                    crate::triton_vm::isa::op_stack::NumberOfWords::N1,
                                 ),
                             ),
                         ]
                         .to_vec()
                     } else {
                         [
-                            crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                crate::triton_vm::instruction::AnInstruction::Pop(
-                                    crate::triton_vm::op_stack::NumberOfWords::N1,
+                            crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                                crate::triton_vm::isa::instruction::AnInstruction::Pop(
+                                    crate::triton_vm::isa::op_stack::NumberOfWords::N1,
                                 ),
                             ),
-                            crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                crate::triton_vm::instruction::AnInstruction::Push(
+                            crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                                crate::triton_vm::isa::instruction::AnInstruction::Push(
                                     crate::BFieldElement::new(1u64),
                                 ),
                             ),
-                            crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                crate::triton_vm::instruction::AnInstruction::Add,
+                            crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                                crate::triton_vm::isa::instruction::AnInstruction::Add,
                             ),
                         ]
                         .to_vec()
@@ -205,8 +205,8 @@ impl crate::tasm_lib::structure::tasm_object::TasmObject for MmrAccumulator {
             }
         };
         let hint_appendix = [
-            crate::triton_vm::instruction::LabelledInstruction::TypeHint(
-                crate::triton_vm::instruction::TypeHint {
+            crate::triton_vm::isa::instruction::LabelledInstruction::TypeHint(
+                crate::triton_vm::isa::instruction::TypeHint {
                     starting_index: 0,
                     length: 1,
                     type_name: std::option::Option::<std::string::String>::None,
@@ -219,207 +219,207 @@ impl crate::tasm_lib::structure::tasm_object::TasmObject for MmrAccumulator {
     }
     fn get_field_with_size(
         field_name: &str,
-    ) -> Vec<crate::triton_vm::instruction::LabelledInstruction> {
+    ) -> Vec<crate::triton_vm::isa::instruction::LabelledInstruction> {
         let field_getter = match field_name {
             "peaks" => {
                 let current = {
                     if let Some(size) = <Vec<
-                            Digest,
-                        > as crate::twenty_first::math::bfield_codec::BFieldCodec>::static_length() {
-                            [
-                                crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                    crate::triton_vm::instruction::AnInstruction::Push(
-                                        crate::BFieldElement::new(size as u64),
-                                    ),
+                        Digest,
+                    > as crate::twenty_first::math::bfield_codec::BFieldCodec>::static_length() {
+                        [
+                            crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                                crate::triton_vm::isa::instruction::AnInstruction::Push(
+                                    crate::BFieldElement::new(size as u64),
                                 ),
-                            ]
-                                .to_vec()
-                        } else {
-                            [
-                                crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                    crate::triton_vm::instruction::AnInstruction::ReadMem(
-                                        crate::triton_vm::op_stack::NumberOfWords::N1,
-                                    ),
+                            ),
+                        ]
+                            .to_vec()
+                    } else {
+                        [
+                            crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                                crate::triton_vm::isa::instruction::AnInstruction::ReadMem(
+                        crate::triton_vm::isa::op_stack::NumberOfWords::N1,
+                        ),
+                        ),
+                        crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                            crate::triton_vm::isa::instruction::AnInstruction::Push(
+                                crate::triton_vm::prelude::BFieldElement::new(
+                                    Self::MAX_OFFSET.into(),
                                 ),
-                                crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                    crate::triton_vm::instruction::AnInstruction::Push(
-                                        crate::triton_vm::prelude::BFieldElement::new(
-                                            Self::MAX_OFFSET.into(),
-                                        ),
-                                    ),
-                                ),
-                                crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                    crate::triton_vm::instruction::AnInstruction::Dup(
-                                        crate::triton_vm::op_stack::OpStackElement::ST2,
-                                    ),
-                                ),
-                                crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                    crate::triton_vm::instruction::AnInstruction::Lt,
-                                ),
-                                crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                    crate::triton_vm::instruction::AnInstruction::Assert,
-                                ),
-                                crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                    crate::triton_vm::instruction::AnInstruction::AddI(
-                                        crate::BFieldElement::new(1u64),
-                                    ),
-                                ),
-                                crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                    crate::triton_vm::instruction::AnInstruction::Swap(
-                                        crate::triton_vm::op_stack::OpStackElement::ST1,
-                                    ),
-                                ),
-                                crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                    crate::triton_vm::instruction::AnInstruction::AddI(
-                                        crate::BFieldElement::new(1u64),
-                                    ),
-                                ),
-                            ]
-                                .to_vec()
-                        }
+                            ),
+                        ),
+                        crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                            crate::triton_vm::isa::instruction::AnInstruction::Dup(
+                        crate::triton_vm::isa::op_stack::OpStackElement::ST2,
+                        ),
+                        ),
+                        crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                            crate::triton_vm::isa::instruction::AnInstruction::Lt,
+                        ),
+                        crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                            crate::triton_vm::isa::instruction::AnInstruction::Assert,
+                        ),
+                        crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                            crate::triton_vm::isa::instruction::AnInstruction::AddI(
+                                crate::BFieldElement::new(1u64),
+                            ),
+                        ),
+                        crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                            crate::triton_vm::isa::instruction::AnInstruction::Swap(
+                        crate::triton_vm::isa::op_stack::OpStackElement::ST1,
+                        ),
+                        ),
+                        crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                            crate::triton_vm::isa::instruction::AnInstruction::AddI(
+                                crate::BFieldElement::new(1u64),
+                            ),
+                        ),
+                        ]
+                        .to_vec()
+                    }
                 };
                 let getter_sizer = {
                     if <Vec<
-                            Digest,
-                        > as crate::twenty_first::math::bfield_codec::BFieldCodec>::static_length()
-                            .is_some()
-                        {
-                            ::std::vec::Vec::<
-                                crate::triton_vm::instruction::LabelledInstruction,
-                            >::new()
-                        } else {
-                            [
-                                crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                    crate::triton_vm::instruction::AnInstruction::Push(
-                                        -crate::BFieldElement::new(1u64),
-                                    ),
+                        Digest,
+                    > as crate::twenty_first::math::bfield_codec::BFieldCodec>::static_length()
+                        .is_some()
+                    {
+                        ::std::vec::Vec::<
+                            crate::triton_vm::isa::instruction::LabelledInstruction,
+                        >::new()
+                    } else {
+                        [
+                            crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                                crate::triton_vm::isa::instruction::AnInstruction::Push(
+                                    -crate::BFieldElement::new(1u64),
                                 ),
-                                crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                    crate::triton_vm::instruction::AnInstruction::Add,
-                                ),
-                                crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                    crate::triton_vm::instruction::AnInstruction::Swap(
-                                        crate::triton_vm::op_stack::OpStackElement::ST1,
-                                    ),
-                                ),
-                                crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                    crate::triton_vm::instruction::AnInstruction::Push(
-                                        crate::BFieldElement::new(1u64),
-                                    ),
-                                ),
-                                crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                    crate::triton_vm::instruction::AnInstruction::Add,
-                                ),
-                                crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                    crate::triton_vm::instruction::AnInstruction::Swap(
-                                        crate::triton_vm::op_stack::OpStackElement::ST1,
-                                    ),
-                                ),
-                            ]
-                                .to_vec()
-                        }
+                            ),
+                            crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                                crate::triton_vm::isa::instruction::AnInstruction::Add,
+                            ),
+                            crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                                crate::triton_vm::isa::instruction::AnInstruction::Swap(
+                        crate::triton_vm::isa::op_stack::OpStackElement::ST1,
+                        ),
+                        ),
+                        crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                            crate::triton_vm::isa::instruction::AnInstruction::Push(
+                                crate::BFieldElement::new(1u64),
+                            ),
+                        ),
+                        crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                            crate::triton_vm::isa::instruction::AnInstruction::Add,
+                        ),
+                        crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                            crate::triton_vm::isa::instruction::AnInstruction::Swap(
+                        crate::triton_vm::isa::op_stack::OpStackElement::ST1,
+                        ),
+                        ),
+                        ]
+                        .to_vec()
+                    }
                 };
                 [current, getter_sizer].concat()
             }
             "leaf_count" => {
                 let current = {
                     [
-                            Self::get_field_start_with_jump_distance("peaks"),
-                            [
-                                crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                    crate::triton_vm::instruction::AnInstruction::Add,
-                                ),
-                            ]
-                                .to_vec(),
-                            {
-                                if let Some(size) = <u64 as crate::twenty_first::math::bfield_codec::BFieldCodec>::static_length() {
-                                    [
-                                        crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                            crate::triton_vm::instruction::AnInstruction::Push(
-                                                crate::BFieldElement::new(size as u64),
-                                            ),
-                                        ),
-                                    ]
-                                        .to_vec()
-                                } else {
-                                    [
-                                        crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                            crate::triton_vm::instruction::AnInstruction::ReadMem(
-                                                crate::triton_vm::op_stack::NumberOfWords::N1,
-                                            ),
-                                        ),
-                                        crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                            crate::triton_vm::instruction::AnInstruction::Push(
-                                                crate::triton_vm::prelude::BFieldElement::new(
-                                                    Self::MAX_OFFSET.into(),
-                                                ),
-                                            ),
-                                        ),
-                                        crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                            crate::triton_vm::instruction::AnInstruction::Dup(
-                                                crate::triton_vm::op_stack::OpStackElement::ST2,
-                                            ),
-                                        ),
-                                        crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                            crate::triton_vm::instruction::AnInstruction::Lt,
-                                        ),
-                                        crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                            crate::triton_vm::instruction::AnInstruction::Assert,
-                                        ),
-                                        crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                            crate::triton_vm::instruction::AnInstruction::AddI(
-                                                crate::BFieldElement::new(1u64),
-                                            ),
-                                        ),
-                                        crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                            crate::triton_vm::instruction::AnInstruction::Swap(
-                                                crate::triton_vm::op_stack::OpStackElement::ST1,
-                                            ),
-                                        ),
-                                        crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                            crate::triton_vm::instruction::AnInstruction::AddI(
-                                                crate::BFieldElement::new(1u64),
-                                            ),
-                                        ),
-                                    ]
-                                        .to_vec()
-                                }
-                            },
+                        Self::get_field_start_with_jump_distance("peaks"),
+                        [
+                            crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                                crate::triton_vm::isa::instruction::AnInstruction::Add,
+                            ),
                         ]
-                            .concat()
+                            .to_vec(),
+                        {
+                            if let Some(size) = <u64 as crate::twenty_first::math::bfield_codec::BFieldCodec>::static_length() {
+                                [
+                                    crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                                        crate::triton_vm::isa::instruction::AnInstruction::Push(
+                                            crate::BFieldElement::new(size as u64),
+                                        ),
+                                    ),
+                                ]
+                                    .to_vec()
+                            } else {
+                                [
+                                    crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                                        crate::triton_vm::isa::instruction::AnInstruction::ReadMem(
+                                crate::triton_vm::isa::op_stack::NumberOfWords::N1,
+                                ),
+                                ),
+                                crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                                    crate::triton_vm::isa::instruction::AnInstruction::Push(
+                                        crate::triton_vm::prelude::BFieldElement::new(
+                                            Self::MAX_OFFSET.into(),
+                                        ),
+                                    ),
+                                ),
+                                crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                                    crate::triton_vm::isa::instruction::AnInstruction::Dup(
+                                crate::triton_vm::isa::op_stack::OpStackElement::ST2,
+                                ),
+                                ),
+                                crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                                    crate::triton_vm::isa::instruction::AnInstruction::Lt,
+                                ),
+                                crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                                    crate::triton_vm::isa::instruction::AnInstruction::Assert,
+                                ),
+                                crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                                    crate::triton_vm::isa::instruction::AnInstruction::AddI(
+                                        crate::BFieldElement::new(1u64),
+                                    ),
+                                ),
+                                crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                                    crate::triton_vm::isa::instruction::AnInstruction::Swap(
+                                crate::triton_vm::isa::op_stack::OpStackElement::ST1,
+                                ),
+                                ),
+                                crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                                    crate::triton_vm::isa::instruction::AnInstruction::AddI(
+                                        crate::BFieldElement::new(1u64),
+                                    ),
+                                ),
+                                ]
+                                .to_vec()
+                            }
+                        },
+                    ]
+                        .concat()
                 };
                 let getter_sizer = {
                     if <u64 as crate::twenty_first::math::bfield_codec::BFieldCodec>::static_length(
                     )
                     .is_some()
                     {
-                        ::std::vec::Vec::<crate::triton_vm::instruction::LabelledInstruction>::new()
+                        ::std::vec::Vec::<crate::triton_vm::isa::instruction::LabelledInstruction>::new()
                     } else {
                         [
-                            crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                crate::triton_vm::instruction::AnInstruction::Push(
+                            crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                                crate::triton_vm::isa::instruction::AnInstruction::Push(
                                     -crate::BFieldElement::new(1u64),
                                 ),
                             ),
-                            crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                crate::triton_vm::instruction::AnInstruction::Add,
+                            crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                                crate::triton_vm::isa::instruction::AnInstruction::Add,
                             ),
-                            crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                crate::triton_vm::instruction::AnInstruction::Swap(
-                                    crate::triton_vm::op_stack::OpStackElement::ST1,
+                            crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                                crate::triton_vm::isa::instruction::AnInstruction::Swap(
+                                    crate::triton_vm::isa::op_stack::OpStackElement::ST1,
                                 ),
                             ),
-                            crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                crate::triton_vm::instruction::AnInstruction::Push(
+                            crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                                crate::triton_vm::isa::instruction::AnInstruction::Push(
                                     crate::BFieldElement::new(1u64),
                                 ),
                             ),
-                            crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                crate::triton_vm::instruction::AnInstruction::Add,
+                            crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                                crate::triton_vm::isa::instruction::AnInstruction::Add,
                             ),
-                            crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                crate::triton_vm::instruction::AnInstruction::Swap(
-                                    crate::triton_vm::op_stack::OpStackElement::ST1,
+                            crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                                crate::triton_vm::isa::instruction::AnInstruction::Swap(
+                                    crate::triton_vm::isa::op_stack::OpStackElement::ST1,
                                 ),
                             ),
                         ]
@@ -433,8 +433,8 @@ impl crate::tasm_lib::structure::tasm_object::TasmObject for MmrAccumulator {
             }
         };
         let hint_appendix = [
-            crate::triton_vm::instruction::LabelledInstruction::TypeHint(
-                crate::triton_vm::instruction::TypeHint {
+            crate::triton_vm::isa::instruction::LabelledInstruction::TypeHint(
+                crate::triton_vm::isa::instruction::TypeHint {
                     starting_index: 0,
                     length: 1,
                     type_name: std::option::Option::<std::string::String>::Some(
@@ -443,8 +443,8 @@ impl crate::tasm_lib::structure::tasm_object::TasmObject for MmrAccumulator {
                     variable_name: std::string::String::from("size"),
                 },
             ),
-            crate::triton_vm::instruction::LabelledInstruction::TypeHint(
-                crate::triton_vm::instruction::TypeHint {
+            crate::triton_vm::isa::instruction::LabelledInstruction::TypeHint(
+                crate::triton_vm::isa::instruction::TypeHint {
                     starting_index: 1,
                     length: 1,
                     type_name: std::option::Option::<std::string::String>::None,
@@ -457,70 +457,70 @@ impl crate::tasm_lib::structure::tasm_object::TasmObject for MmrAccumulator {
     }
     fn get_field_start_with_jump_distance(
         field_name: &str,
-    ) -> Vec<crate::triton_vm::instruction::LabelledInstruction> {
+    ) -> Vec<crate::triton_vm::isa::instruction::LabelledInstruction> {
         match field_name {
             "peaks" => {
                 if let Some(size) = <Vec<
-                        Digest,
-                    > as crate::twenty_first::math::bfield_codec::BFieldCodec>::static_length() {
-                        [
-                            crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                crate::triton_vm::instruction::AnInstruction::Push(
-                                    crate::BFieldElement::new(size as u64),
-                                ),
+                    Digest,
+                > as crate::twenty_first::math::bfield_codec::BFieldCodec>::static_length() {
+                    [
+                        crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                            crate::triton_vm::isa::instruction::AnInstruction::Push(
+                                crate::BFieldElement::new(size as u64),
                             ),
-                        ]
-                            .to_vec()
-                    } else {
-                        [
-                            crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                crate::triton_vm::instruction::AnInstruction::ReadMem(
-                                    crate::triton_vm::op_stack::NumberOfWords::N1,
-                                ),
+                        ),
+                    ]
+                        .to_vec()
+                } else {
+                    [
+                        crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                            crate::triton_vm::isa::instruction::AnInstruction::ReadMem(
+                    crate::triton_vm::isa::op_stack::NumberOfWords::N1,
+                    ),
+                    ),
+                    crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                        crate::triton_vm::isa::instruction::AnInstruction::Push(
+                            crate::triton_vm::prelude::BFieldElement::new(
+                                Self::MAX_OFFSET.into(),
                             ),
-                            crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                crate::triton_vm::instruction::AnInstruction::Push(
-                                    crate::triton_vm::prelude::BFieldElement::new(
-                                        Self::MAX_OFFSET.into(),
-                                    ),
-                                ),
-                            ),
-                            crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                crate::triton_vm::instruction::AnInstruction::Dup(
-                                    crate::triton_vm::op_stack::OpStackElement::ST2,
-                                ),
-                            ),
-                            crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                crate::triton_vm::instruction::AnInstruction::Lt,
-                            ),
-                            crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                crate::triton_vm::instruction::AnInstruction::Assert,
-                            ),
-                            crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                crate::triton_vm::instruction::AnInstruction::AddI(
-                                    crate::BFieldElement::new(1u64),
-                                ),
-                            ),
-                            crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                crate::triton_vm::instruction::AnInstruction::Swap(
-                                    crate::triton_vm::op_stack::OpStackElement::ST1,
-                                ),
-                            ),
-                            crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                crate::triton_vm::instruction::AnInstruction::AddI(
-                                    crate::BFieldElement::new(1u64),
-                                ),
-                            ),
-                        ]
-                            .to_vec()
-                    }
+                        ),
+                    ),
+                    crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                        crate::triton_vm::isa::instruction::AnInstruction::Dup(
+                    crate::triton_vm::isa::op_stack::OpStackElement::ST2,
+                    ),
+                    ),
+                    crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                        crate::triton_vm::isa::instruction::AnInstruction::Lt,
+                    ),
+                    crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                        crate::triton_vm::isa::instruction::AnInstruction::Assert,
+                    ),
+                    crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                        crate::triton_vm::isa::instruction::AnInstruction::AddI(
+                            crate::BFieldElement::new(1u64),
+                        ),
+                    ),
+                    crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                        crate::triton_vm::isa::instruction::AnInstruction::Swap(
+                    crate::triton_vm::isa::op_stack::OpStackElement::ST1,
+                    ),
+                    ),
+                    crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                        crate::triton_vm::isa::instruction::AnInstruction::AddI(
+                            crate::BFieldElement::new(1u64),
+                        ),
+                    ),
+                    ]
+                    .to_vec()
+                }
             }
             "leaf_count" => {
                 let prev = [
                     Self::get_field_start_with_jump_distance("peaks"),
                     [
-                        crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                            crate::triton_vm::instruction::AnInstruction::Add,
+                        crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                            crate::triton_vm::isa::instruction::AnInstruction::Add,
                         ),
                     ]
                     .to_vec(),
@@ -532,8 +532,8 @@ impl crate::tasm_lib::structure::tasm_object::TasmObject for MmrAccumulator {
                         )
                     {
                         [
-                            crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                crate::triton_vm::instruction::AnInstruction::Push(
+                            crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                                crate::triton_vm::isa::instruction::AnInstruction::Push(
                                     crate::BFieldElement::new(size as u64),
                                 ),
                             ),
@@ -541,41 +541,41 @@ impl crate::tasm_lib::structure::tasm_object::TasmObject for MmrAccumulator {
                         .to_vec()
                     } else {
                         [
-                            crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                crate::triton_vm::instruction::AnInstruction::ReadMem(
-                                    crate::triton_vm::op_stack::NumberOfWords::N1,
+                            crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                                crate::triton_vm::isa::instruction::AnInstruction::ReadMem(
+                                    crate::triton_vm::isa::op_stack::NumberOfWords::N1,
                                 ),
                             ),
-                            crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                crate::triton_vm::instruction::AnInstruction::Push(
+                            crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                                crate::triton_vm::isa::instruction::AnInstruction::Push(
                                     crate::triton_vm::prelude::BFieldElement::new(
                                         Self::MAX_OFFSET.into(),
                                     ),
                                 ),
                             ),
-                            crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                crate::triton_vm::instruction::AnInstruction::Dup(
-                                    crate::triton_vm::op_stack::OpStackElement::ST2,
+                            crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                                crate::triton_vm::isa::instruction::AnInstruction::Dup(
+                                    crate::triton_vm::isa::op_stack::OpStackElement::ST2,
                                 ),
                             ),
-                            crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                crate::triton_vm::instruction::AnInstruction::Lt,
+                            crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                                crate::triton_vm::isa::instruction::AnInstruction::Lt,
                             ),
-                            crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                crate::triton_vm::instruction::AnInstruction::Assert,
+                            crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                                crate::triton_vm::isa::instruction::AnInstruction::Assert,
                             ),
-                            crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                crate::triton_vm::instruction::AnInstruction::AddI(
+                            crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                                crate::triton_vm::isa::instruction::AnInstruction::AddI(
                                     crate::BFieldElement::new(1u64),
                                 ),
                             ),
-                            crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                crate::triton_vm::instruction::AnInstruction::Swap(
-                                    crate::triton_vm::op_stack::OpStackElement::ST1,
+                            crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                                crate::triton_vm::isa::instruction::AnInstruction::Swap(
+                                    crate::triton_vm::isa::op_stack::OpStackElement::ST1,
                                 ),
                             ),
-                            crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                                crate::triton_vm::instruction::AnInstruction::AddI(
+                            crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                                crate::triton_vm::isa::instruction::AnInstruction::AddI(
                                     crate::BFieldElement::new(1u64),
                                 ),
                             ),
@@ -592,69 +592,73 @@ impl crate::tasm_lib::structure::tasm_object::TasmObject for MmrAccumulator {
     }
     fn compute_size_and_assert_valid_size_indicator(
         library: &mut crate::tasm_lib::Library,
-    ) -> Vec<crate::triton_vm::instruction::LabelledInstruction> {
-        let push0 = crate::triton_vm::instruction::LabelledInstruction::Instruction(
-            crate::triton_vm::instruction::AnInstruction::Push(0u64.into()),
+    ) -> Vec<crate::triton_vm::isa::instruction::LabelledInstruction> {
+        let push0 = crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+            crate::triton_vm::isa::instruction::AnInstruction::Push(0u64.into()),
         );
-        let pushmax = crate::triton_vm::instruction::LabelledInstruction::Instruction(
-            crate::triton_vm::instruction::AnInstruction::Push(Self::MAX_OFFSET.into()),
+        let pushmax = crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+            crate::triton_vm::isa::instruction::AnInstruction::Push(Self::MAX_OFFSET.into()),
         );
-        let dup0 = crate::triton_vm::instruction::LabelledInstruction::Instruction(
-            crate::triton_vm::instruction::AnInstruction::Dup(
-                crate::triton_vm::op_stack::OpStackElement::ST0,
+        let dup0 = crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+            crate::triton_vm::isa::instruction::AnInstruction::Dup(
+                crate::triton_vm::isa::op_stack::OpStackElement::ST0,
             ),
         );
-        let dup1 = crate::triton_vm::instruction::LabelledInstruction::Instruction(
-            crate::triton_vm::instruction::AnInstruction::Dup(
-                crate::triton_vm::op_stack::OpStackElement::ST1,
+        let dup1 = crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+            crate::triton_vm::isa::instruction::AnInstruction::Dup(
+                crate::triton_vm::isa::op_stack::OpStackElement::ST1,
             ),
         );
-        let dup2 = crate::triton_vm::instruction::LabelledInstruction::Instruction(
-            crate::triton_vm::instruction::AnInstruction::Dup(
-                crate::triton_vm::op_stack::OpStackElement::ST2,
+        let dup2 = crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+            crate::triton_vm::isa::instruction::AnInstruction::Dup(
+                crate::triton_vm::isa::op_stack::OpStackElement::ST2,
             ),
         );
-        let swap1 = crate::triton_vm::instruction::LabelledInstruction::Instruction(
-            crate::triton_vm::instruction::AnInstruction::Swap(
-                crate::triton_vm::op_stack::OpStackElement::ST1,
+        let swap1 = crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+            crate::triton_vm::isa::instruction::AnInstruction::Swap(
+                crate::triton_vm::isa::op_stack::OpStackElement::ST1,
             ),
         );
-        let swap2 = crate::triton_vm::instruction::LabelledInstruction::Instruction(
-            crate::triton_vm::instruction::AnInstruction::Swap(
-                crate::triton_vm::op_stack::OpStackElement::ST2,
+        let swap2 = crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+            crate::triton_vm::isa::instruction::AnInstruction::Swap(
+                crate::triton_vm::isa::op_stack::OpStackElement::ST2,
             ),
         );
-        let lt = crate::triton_vm::instruction::LabelledInstruction::Instruction(
-            crate::triton_vm::instruction::AnInstruction::Lt,
+        let lt = crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+            crate::triton_vm::isa::instruction::AnInstruction::Lt,
         );
-        let assert = crate::triton_vm::instruction::LabelledInstruction::Instruction(
-            crate::triton_vm::instruction::AnInstruction::Assert,
+        let assert = crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+            crate::triton_vm::isa::instruction::AnInstruction::Assert,
         );
-        let eq = crate::triton_vm::instruction::LabelledInstruction::Instruction(
-            crate::triton_vm::instruction::AnInstruction::Eq,
+        let eq = crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+            crate::triton_vm::isa::instruction::AnInstruction::Eq,
         );
-        let add = crate::triton_vm::instruction::LabelledInstruction::Instruction(
-            crate::triton_vm::instruction::AnInstruction::Add,
+        let add = crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+            crate::triton_vm::isa::instruction::AnInstruction::Add,
         );
-        let read_mem1 = crate::triton_vm::instruction::LabelledInstruction::Instruction(
-            crate::triton_vm::instruction::AnInstruction::ReadMem(
-                crate::triton_vm::op_stack::NumberOfWords::N1,
+        let read_mem1 = crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+            crate::triton_vm::isa::instruction::AnInstruction::ReadMem(
+                crate::triton_vm::isa::op_stack::NumberOfWords::N1,
             ),
         );
-        let addi1 = crate::triton_vm::instruction::LabelledInstruction::Instruction(
-            crate::triton_vm::instruction::AnInstruction::AddI(crate::BFieldElement::new(1u64)),
+        let addi1 = crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+            crate::triton_vm::isa::instruction::AnInstruction::AddI(crate::BFieldElement::new(
+                1u64,
+            )),
         );
-        let addi2 = crate::triton_vm::instruction::LabelledInstruction::Instruction(
-            crate::triton_vm::instruction::AnInstruction::AddI(crate::BFieldElement::new(2u64)),
+        let addi2 = crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+            crate::triton_vm::isa::instruction::AnInstruction::AddI(crate::BFieldElement::new(
+                2u64,
+            )),
         );
-        let pop1 = crate::triton_vm::instruction::LabelledInstruction::Instruction(
-            crate::triton_vm::instruction::AnInstruction::Pop(
-                crate::triton_vm::op_stack::NumberOfWords::N1,
+        let pop1 = crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+            crate::triton_vm::isa::instruction::AnInstruction::Pop(
+                crate::triton_vm::isa::op_stack::NumberOfWords::N1,
             ),
         );
         let hint_acc_size = [
-            crate::triton_vm::instruction::LabelledInstruction::TypeHint(
-                crate::triton_vm::instruction::TypeHint {
+            crate::triton_vm::isa::instruction::LabelledInstruction::TypeHint(
+                crate::triton_vm::isa::instruction::TypeHint {
                     starting_index: 1,
                     length: 1,
                     type_name: std::option::Option::<std::string::String>::None,
@@ -664,8 +668,8 @@ impl crate::tasm_lib::structure::tasm_object::TasmObject for MmrAccumulator {
         ]
         .to_vec();
         let hint_field_ptr = [
-            crate::triton_vm::instruction::LabelledInstruction::TypeHint(
-                crate::triton_vm::instruction::TypeHint {
+            crate::triton_vm::isa::instruction::LabelledInstruction::TypeHint(
+                crate::triton_vm::isa::instruction::TypeHint {
                     starting_index: 0,
                     length: 1,
                     type_name: std::option::Option::<std::string::String>::None,
@@ -675,92 +679,92 @@ impl crate::tasm_lib::structure::tasm_object::TasmObject for MmrAccumulator {
         ]
         .to_vec();
         [
-                [push0.clone(), swap1.clone()].to_vec(),
-                hint_acc_size,
-                hint_field_ptr,
-                if let Some(static_length) = <Vec<
-                    Digest,
-                > as crate::triton_vm::twenty_first::math::bfield_codec::BFieldCodec>::static_length() {
-                    let addi_len = crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                        crate::triton_vm::instruction::AnInstruction::AddI(
-                            crate::BFieldElement::new(static_length as u64),
-                        ),
-                    );
-                    [addi_len.clone(), swap1.clone(), addi_len.clone(), swap1.clone()]
-                        .to_vec()
-                } else {
+            [push0.clone(), swap1.clone()].to_vec(),
+            hint_acc_size,
+            hint_field_ptr,
+            if let Some(static_length) = <Vec<
+                Digest,
+            > as crate::triton_vm::twenty_first::math::bfield_codec::BFieldCodec>::static_length() {
+                let addi_len = crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                    crate::triton_vm::isa::instruction::AnInstruction::AddI(
+                        crate::BFieldElement::new(static_length as u64),
+                    ),
+                );
+                [addi_len.clone(), swap1.clone(), addi_len.clone(), swap1.clone()]
+                    .to_vec()
+            } else {
+                [
                     [
-                        [
-                            read_mem1.clone(),
-                            pushmax.clone(),
-                            dup2.clone(),
-                            lt.clone(),
-                            assert.clone(),
-                            addi2.clone(),
-                            dup0.clone(),
-                        ]
-                            .to_vec(),
-                        <Vec<
-                            Digest,
-                        > as crate::tasm_lib::structure::tasm_object::TasmObject>::compute_size_and_assert_valid_size_indicator(
-                            library,
-                        ),
-                        [
-                            dup2.clone(),
-                            eq.clone(),
-                            assert.clone(),
-                            dup1.clone(),
-                            add.clone(),
-                            swap2.clone(),
-                            add.clone(),
-                            addi1.clone(),
-                            swap1.clone(),
-                        ]
-                            .to_vec(),
+                        read_mem1.clone(),
+                        pushmax.clone(),
+                        dup2.clone(),
+                        lt.clone(),
+                        assert.clone(),
+                        addi2.clone(),
+                        dup0.clone(),
                     ]
-                        .concat()
-                },
-                if let Some(static_length) = <u64 as crate::triton_vm::twenty_first::math::bfield_codec::BFieldCodec>::static_length() {
-                    let addi_len = crate::triton_vm::instruction::LabelledInstruction::Instruction(
-                        crate::triton_vm::instruction::AnInstruction::AddI(
-                            crate::BFieldElement::new(static_length as u64),
-                        ),
-                    );
-                    [addi_len.clone(), swap1.clone(), addi_len.clone(), swap1.clone()]
-                        .to_vec()
-                } else {
+                        .to_vec(),
+                    <Vec<
+                        Digest,
+                    > as crate::tasm_lib::structure::tasm_object::TasmObject>::compute_size_and_assert_valid_size_indicator(
+                        library,
+                    ),
                     [
-                        [
-                            read_mem1.clone(),
-                            pushmax.clone(),
-                            dup2.clone(),
-                            lt.clone(),
-                            assert.clone(),
-                            addi2.clone(),
-                            dup0.clone(),
-                        ]
-                            .to_vec(),
-                        <u64 as crate::tasm_lib::structure::tasm_object::TasmObject>::compute_size_and_assert_valid_size_indicator(
-                            library,
-                        ),
-                        [
-                            dup2.clone(),
-                            eq.clone(),
-                            assert.clone(),
-                            dup1.clone(),
-                            add.clone(),
-                            swap2.clone(),
-                            add.clone(),
-                            addi1.clone(),
-                            swap1.clone(),
-                        ]
-                            .to_vec(),
+                        dup2.clone(),
+                        eq.clone(),
+                        assert.clone(),
+                        dup1.clone(),
+                        add.clone(),
+                        swap2.clone(),
+                        add.clone(),
+                        addi1.clone(),
+                        swap1.clone(),
                     ]
-                        .concat()
-                },
-                [pop1.clone()].to_vec(),
-            ]
-                .concat()
+                        .to_vec(),
+                ]
+                    .concat()
+            },
+            if let Some(static_length) = <u64 as crate::triton_vm::twenty_first::math::bfield_codec::BFieldCodec>::static_length() {
+                let addi_len = crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(
+                    crate::triton_vm::isa::instruction::AnInstruction::AddI(
+                        crate::BFieldElement::new(static_length as u64),
+                    ),
+                );
+                [addi_len.clone(), swap1.clone(), addi_len.clone(), swap1.clone()]
+                    .to_vec()
+            } else {
+                [
+                    [
+                        read_mem1.clone(),
+                        pushmax.clone(),
+                        dup2.clone(),
+                        lt.clone(),
+                        assert.clone(),
+                        addi2.clone(),
+                        dup0.clone(),
+                    ]
+                        .to_vec(),
+                    <u64 as crate::tasm_lib::structure::tasm_object::TasmObject>::compute_size_and_assert_valid_size_indicator(
+                        library,
+                    ),
+                    [
+                        dup2.clone(),
+                        eq.clone(),
+                        assert.clone(),
+                        dup1.clone(),
+                        add.clone(),
+                        swap2.clone(),
+                        add.clone(),
+                        addi1.clone(),
+                        swap1.clone(),
+                    ]
+                        .to_vec(),
+                ]
+                    .concat()
+            },
+            [pop1.clone()].to_vec(),
+        ]
+            .concat()
     }
     fn decode_iter<Itr: Iterator<Item = crate::BFieldElement>>(
         iterator: &mut Itr,

@@ -1,6 +1,6 @@
 use itertools::Itertools;
-use triton_vm::instruction::LabelledInstruction;
-use triton_vm::triton_asm;
+use triton_vm::prelude::triton_asm;
+use triton_vm::prelude::LabelledInstruction;
 
 use crate::data_type::DataType;
 use crate::library::Library;

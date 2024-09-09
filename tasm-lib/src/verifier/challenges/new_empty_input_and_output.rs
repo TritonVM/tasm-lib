@@ -1,8 +1,8 @@
 use num::One;
+use triton_vm::air::challenge_id::ChallengeId;
+use triton_vm::air::cross_table_argument::CrossTableArg;
+use triton_vm::air::cross_table_argument::EvalArg;
 use triton_vm::prelude::*;
-use triton_vm::table::challenges::ChallengeId;
-use triton_vm::table::cross_table_argument::CrossTableArg;
-use triton_vm::table::cross_table_argument::EvalArg;
 use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
 use crate::data_type::DataType;
@@ -158,7 +158,7 @@ impl BasicSnippet for NewEmptyInputAndOutput {
 mod tests {
     use itertools::Itertools;
     use rand::prelude::*;
-    use triton_vm::table::challenges::Challenges;
+    use triton_vm::challenges::Challenges;
     use triton_vm::twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
     use crate::rust_shadowing_helper_functions::array::insert_as_array;
@@ -246,7 +246,7 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use triton_vm::table::challenges::Challenges;
+    use triton_vm::challenges::Challenges;
 
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;

@@ -3,8 +3,7 @@ use std::collections::HashMap;
 use itertools::Itertools;
 use num::Zero;
 use rand::prelude::*;
-use triton_vm::instruction::LabelledInstruction;
-use triton_vm::parser::tokenize;
+use triton_vm::isa::parser::tokenize;
 use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
@@ -106,8 +105,7 @@ impl BasicSnippet for All {
             InnerFunction::DeprecatedSnippet(sn) => {
                 let fn_body = sn.function_code(library);
                 let (_, instructions) = tokenize(&fn_body).unwrap();
-                let labelled_instructions =
-                    triton_vm::parser::to_labelled_instructions(&instructions);
+                let labelled_instructions = isa::parser::to_labelled_instructions(&instructions);
                 library.explicit_import(&sn.entrypoint_name(), &labelled_instructions)
             }
             InnerFunction::NoFunctionBody(_) => todo!(),

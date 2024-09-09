@@ -60,16 +60,16 @@ pub struct FriVerify {
     pub domain_generator: BFieldElement,
 }
 
-impl From<Fri<Tip5>> for FriVerify {
-    fn from(value: Fri<Tip5>) -> Self {
+impl From<Fri> for FriVerify {
+    fn from(fri: Fri) -> Self {
         Self {
-            domain_generator: value.domain.generator,
+            domain_generator: fri.domain.generator,
 
             // This runtime type-conversion prevents a FRI domain of length 2^32 from being created.
-            domain_length: value.domain.length.try_into().unwrap(),
-            domain_offset: value.domain.offset,
-            expansion_factor: value.expansion_factor.try_into().unwrap(),
-            num_collinearity_checks: value.num_collinearity_checks.try_into().unwrap(),
+            domain_length: fri.domain.length.try_into().unwrap(),
+            domain_offset: fri.domain.offset,
+            expansion_factor: fri.expansion_factor.try_into().unwrap(),
+            num_collinearity_checks: fri.num_collinearity_checks.try_into().unwrap(),
         }
     }
 }
@@ -891,7 +891,7 @@ impl FriVerify {
         digests
     }
 
-    pub fn to_fri(self) -> Fri<Tip5> {
+    pub fn to_fri(self) -> Fri {
         let fri_domain = ArithmeticDomain::of_length(self.domain_length as usize)
             .unwrap()
             .with_offset(self.domain_offset);
@@ -1487,7 +1487,7 @@ mod test {
             }
         }
 
-        fn fri(&self) -> Fri<Tip5> {
+        fn fri(&self) -> Fri {
             self.fri_verify.to_fri()
         }
 

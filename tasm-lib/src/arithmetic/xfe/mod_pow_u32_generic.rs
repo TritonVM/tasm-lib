@@ -1,5 +1,5 @@
-use triton_vm::instruction::LabelledInstruction;
-use triton_vm::triton_asm;
+use triton_vm::prelude::triton_asm;
+use triton_vm::prelude::LabelledInstruction;
 
 use crate::data_type::DataType;
 use crate::library::Library;
@@ -250,8 +250,10 @@ mod tests {
                 &NonDeterminism::default(),
                 None,
             );
-            let err = tvm_result.unwrap_err();
-            assert!(matches!(err, InstructionError::FailedU32Conversion(_)));
+            assert!(matches!(
+                tvm_result.unwrap_err(),
+                InstructionError::OpStackError(OpStackError::FailedU32Conversion(_))
+            ));
         }
     }
 }

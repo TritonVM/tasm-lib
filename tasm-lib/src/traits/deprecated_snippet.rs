@@ -1,9 +1,8 @@
 use std::collections::HashMap;
 
 use anyhow::Result;
-use triton_vm::instruction::LabelledInstruction;
-use triton_vm::parser::to_labelled_instructions;
-use triton_vm::parser::tokenize;
+use triton_vm::isa::parser::to_labelled_instructions;
+use triton_vm::isa::parser::tokenize;
 use triton_vm::prelude::*;
 
 use crate::data_type::DataType;

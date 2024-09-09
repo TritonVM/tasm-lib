@@ -263,7 +263,8 @@ mod test {
     use test_strategy::proptest;
     use triton_vm::proof_item::ProofItem;
     use triton_vm::proof_stream::ProofStream;
-    use triton_vm::table::NUM_BASE_COLUMNS;
+    use triton_vm::table::master_table::MasterMainTable;
+    use triton_vm::table::master_table::MasterTable;
     use triton_vm::twenty_first::math::polynomial::Polynomial;
     use triton_vm::twenty_first::prelude::Sponge;
 
@@ -462,11 +463,11 @@ mod test {
                 ProofItemVariant::MerkleRoot => {
                     ProofItem::MerkleRoot(Arbitrary::arbitrary(&mut unstructured).unwrap())
                 }
-                ProofItemVariant::OutOfDomainBaseRow => {
-                    ProofItem::OutOfDomainBaseRow(Arbitrary::arbitrary(&mut unstructured).unwrap())
+                ProofItemVariant::OutOfDomainMainRow => {
+                    ProofItem::OutOfDomainMainRow(Arbitrary::arbitrary(&mut unstructured).unwrap())
                 }
-                ProofItemVariant::OutOfDomainExtRow => {
-                    ProofItem::OutOfDomainExtRow(Arbitrary::arbitrary(&mut unstructured).unwrap())
+                ProofItemVariant::OutOfDomainAuxRow => {
+                    ProofItem::OutOfDomainAuxRow(Arbitrary::arbitrary(&mut unstructured).unwrap())
                 }
                 ProofItemVariant::OutOfDomainQuotientSegments => {
                     ProofItem::OutOfDomainQuotientSegments(
@@ -476,11 +477,11 @@ mod test {
                 ProofItemVariant::AuthenticationStructure => ProofItem::AuthenticationStructure(
                     Arbitrary::arbitrary(&mut unstructured).unwrap(),
                 ),
-                ProofItemVariant::MasterBaseTableRows => {
-                    ProofItem::MasterBaseTableRows(Arbitrary::arbitrary(&mut unstructured).unwrap())
+                ProofItemVariant::MasterMainTableRows => {
+                    ProofItem::MasterMainTableRows(Arbitrary::arbitrary(&mut unstructured).unwrap())
                 }
-                ProofItemVariant::MasterExtTableRows => {
-                    ProofItem::MasterExtTableRows(Arbitrary::arbitrary(&mut unstructured).unwrap())
+                ProofItemVariant::MasterAuxTableRows => {
+                    ProofItem::MasterAuxTableRows(Arbitrary::arbitrary(&mut unstructured).unwrap())
                 }
                 ProofItemVariant::Log2PaddedHeight => {
                     ProofItem::Log2PaddedHeight(Arbitrary::arbitrary(&mut unstructured).unwrap())
@@ -514,7 +515,7 @@ mod test {
 
     #[test]
     fn disallow_too_big_dynamically_sized_proof_item() {
-        let dequeue_next_as = DequeueNextAs::new(ProofItemVariant::MasterBaseTableRows);
+        let dequeue_next_as = DequeueNextAs::new(ProofItemVariant::MasterMainTableRows);
         let initial_state = initial_state_with_too_big_master_table_rows();
         let code = link_for_isolated_run(Rc::new(RefCell::new(dequeue_next_as)));
         let program = Program::new(&code);
@@ -547,8 +548,8 @@ mod test {
     }
 
     fn initial_state_with_too_big_master_table_rows() -> ProcedureInitialState {
-        let dummy_master_table_rows = vec![[bfe!(101); NUM_BASE_COLUMNS]; 15000];
-        let proof_item = ProofItem::MasterBaseTableRows(dummy_master_table_rows);
+        let dummy_master_table_rows = vec![[bfe!(101); MasterMainTable::NUM_COLUMNS]; 15000];
+        let proof_item = ProofItem::MasterMainTableRows(dummy_master_table_rows);
         let mut proof_stream = ProofStream::new();
         proof_stream.enqueue(proof_item);
         let address = BFieldElement::zero();

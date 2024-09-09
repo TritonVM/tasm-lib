@@ -1,4 +1,4 @@
-use triton_vm::instruction::LabelledInstruction;
+use triton_vm::prelude::LabelledInstruction;
 use triton_vm::prelude::*;
 use triton_vm::stark::Stark;
 

@@ -105,8 +105,8 @@ mod tests {
     use num_traits::One;
     use num_traits::Zero;
     use rand::prelude::*;
-    use triton_vm::table::cross_table_argument::CrossTableArg;
-    use triton_vm::table::cross_table_argument::EvalArg;
+    use triton_vm::air::cross_table_argument::CrossTableArg;
+    use triton_vm::air::cross_table_argument::EvalArg;
 
     use crate::snippet_bencher::BenchmarkCase;
     use crate::traits::function::Function;

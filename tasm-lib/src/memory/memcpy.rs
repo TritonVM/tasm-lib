@@ -334,11 +334,10 @@ impl DeprecatedSnippet for MemCpy {
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        prelude::BasicSnippet,
-        test_helpers::{negative_test, test_rust_equivalence_multiple_deprecated},
-        traits::deprecated_snippet::tests::DeprecatedSnippetWrapper,
-    };
+    use crate::prelude::BasicSnippet;
+    use crate::test_helpers::negative_test;
+    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
+    use crate::traits::deprecated_snippet::tests::DeprecatedSnippetWrapper;
 
     use super::*;
 

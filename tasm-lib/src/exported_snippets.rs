@@ -1,8 +1,7 @@
 use const_format::formatcp;
+use triton_vm::challenges::Challenges;
 use triton_vm::proof_item::ProofItemVariant;
-use triton_vm::table::challenges::Challenges;
-use triton_vm::table::extension_table::Quotientable;
-use triton_vm::table::master_table::MasterExtTable;
+use triton_vm::table::master_table::MasterAuxTable;
 use triton_vm::table::NUM_QUOTIENT_SEGMENTS;
 
 use crate::arithmetic::u128::safe_add::SafeAddU128;
@@ -52,8 +51,8 @@ use crate::arithmetic::xfe::cube::Cube;
 use crate::arithmetic::xfe::square::Square;
 use crate::arithmetic::xfe::to_the_fourth::ToTheFourth;
 use crate::array::horner_evaluation::HornerEvaluation;
-use crate::array::inner_product_of_three_rows_with_weights::BaseElementType;
 use crate::array::inner_product_of_three_rows_with_weights::InnerProductOfThreeRowsWithWeights;
+use crate::array::inner_product_of_three_rows_with_weights::MainElementType;
 use crate::array::inner_product_of_xfes::InnerProductOfXfes;
 use crate::data_type::DataType;
 use crate::hashing::algebraic_hasher;
@@ -99,7 +98,7 @@ use crate::verifier::own_program_digest::OwnProgramDigest;
 use crate::verifier::read_and_verify_own_program_digest_from_std_in::ReadAndVerifyOwnProgramDigestFromStdIn;
 use crate::verifier::vm_proof_iter::dequeue_next_as::DequeueNextAs;
 
-const NUM_CONSTRAINTS_TVM: usize = MasterExtTable::NUM_CONSTRAINTS;
+const NUM_CONSTRAINTS_TVM: usize = MasterAuxTable::NUM_CONSTRAINTS;
 const WEIGHTS_QUOTIENTS_INNER_PRODUCT_ENTRYPOINT: &str = formatcp!(
     "tasmlib_array_inner_product_of_{}_xfes",
     NUM_CONSTRAINTS_TVM
@@ -392,11 +391,11 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
         "tasmlib_verifier_vm_proof_iter_dequeue_next_as_merkleroot" => {
             Box::new(DequeueNextAs { proof_item: ProofItemVariant::MerkleRoot })
         }
-        "tasmlib_verifier_vm_proof_iter_dequeue_next_as_outofdomainbaserow" => {
-            Box::new(DequeueNextAs { proof_item: ProofItemVariant::OutOfDomainBaseRow })
+        "tasmlib_verifier_vm_proof_iter_dequeue_next_as_OutOfDomainMainRow" => {
+            Box::new(DequeueNextAs { proof_item: ProofItemVariant::OutOfDomainMainRow })
         }
-        "tasmlib_verifier_vm_proof_iter_dequeue_next_as_outofdomainextrow" => {
-            Box::new(DequeueNextAs { proof_item: ProofItemVariant::OutOfDomainExtRow })
+        "tasmlib_verifier_vm_proof_iter_dequeue_next_as_OutOfDomainAuxRow" => {
+            Box::new(DequeueNextAs { proof_item: ProofItemVariant::OutOfDomainAuxRow })
         }
         "tasmlib_verifier_vm_proof_iter_dequeue_next_as_outofdomainquotientsegments" => {
             Box::new(DequeueNextAs { proof_item: ProofItemVariant::OutOfDomainQuotientSegments })
@@ -404,11 +403,11 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
         "tasmlib_verifier_vm_proof_iter_dequeue_next_as_authenticationstructure" => {
             Box::new(DequeueNextAs { proof_item: ProofItemVariant::AuthenticationStructure })
         }
-        "tasmlib_verifier_vm_proof_iter_dequeue_next_as_masterbasetablerows" => {
-            Box::new(DequeueNextAs { proof_item: ProofItemVariant::MasterBaseTableRows })
+        "tasmlib_verifier_vm_proof_iter_dequeue_next_as_MasterMainTableRows" => {
+            Box::new(DequeueNextAs { proof_item: ProofItemVariant::MasterMainTableRows })
         }
-        "tasmlib_verifier_vm_proof_iter_dequeue_next_as_masterexttablerows" => {
-            Box::new(DequeueNextAs { proof_item: ProofItemVariant::MasterExtTableRows })
+        "tasmlib_verifier_vm_proof_iter_dequeue_next_as_MasterAuxTablerows" => {
+            Box::new(DequeueNextAs { proof_item: ProofItemVariant::MasterAuxTableRows })
         }
         "tasmlib_verifier_vm_proof_iter_dequeue_next_as_log2paddedheight" => {
             Box::new(DequeueNextAs { proof_item: ProofItemVariant::Log2PaddedHeight })
@@ -468,10 +467,10 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
             Box::new(OwnProgramDigest)
         }
         "tasmlib_array_inner_product_of_three_rows_with_weights_Bfe_baserowelem" => {
-            Box::new(InnerProductOfThreeRowsWithWeights::triton_vm_parameters(BaseElementType::Bfe))
+            Box::new(InnerProductOfThreeRowsWithWeights::triton_vm_parameters(MainElementType::Bfe))
         }
         "tasmlib_array_inner_product_of_three_rows_with_weights_Xfe_baserowelem" => {
-            Box::new(InnerProductOfThreeRowsWithWeights::triton_vm_parameters(BaseElementType::Xfe))
+            Box::new(InnerProductOfThreeRowsWithWeights::triton_vm_parameters(MainElementType::Xfe))
         }
         "tasmlib_verifier_claim_instantiate_fiat_shamir_with_claim" => {
             Box::new(InstantiateFiatShamirWithClaim)

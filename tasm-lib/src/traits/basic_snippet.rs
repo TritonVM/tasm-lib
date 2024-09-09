@@ -1,5 +1,5 @@
 use num_traits::Zero;
-use triton_vm::op_stack::NUM_OP_STACK_REGISTERS;
+use triton_vm::isa::op_stack::NUM_OP_STACK_REGISTERS;
 use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
@@ -126,8 +126,8 @@ pub trait BasicSnippet {
 
 #[cfg(test)]
 mod tests {
-    use triton_vm::program::Program;
-    use triton_vm::triton_asm;
+    use triton_vm::prelude::triton_asm;
+    use triton_vm::prelude::Program;
 
     use crate::traits::basic_snippet::BasicSnippet;
 

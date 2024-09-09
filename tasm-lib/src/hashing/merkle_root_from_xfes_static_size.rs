@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use triton_vm::instruction::LabelledInstruction;
+use triton_vm::prelude::LabelledInstruction;
 use triton_vm::prelude::*;
 use twenty_first::prelude::*;
 use x_field_element::EXTENSION_DEGREE;

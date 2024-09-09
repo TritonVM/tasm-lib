@@ -103,10 +103,10 @@ mod tests {
             // Get input value as a u64
             let lo: u32 = stack.pop().unwrap().try_into().unwrap();
             let hi: u32 = stack.pop().unwrap().try_into().unwrap();
-            let value_u64: u64 = lo as u64 + (1 << 32) * (hi as u64);
+            let value = u64::from(lo) + (1 << 32) * u64::from(hi);
 
-            let log_2_floor = value_u64.ilog2() as u64;
-            stack.push(BFieldElement::new(log_2_floor));
+            let log_2_floor = value.ilog2();
+            stack.push(bfe!(log_2_floor));
         }
 
         fn pseudorandom_initial_state(
@@ -115,7 +115,7 @@ mod tests {
             bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
         ) -> Vec<BFieldElement> {
             match bench_case {
-                Some(BenchmarkCase::CommonCase) => self.init_state(u32::MAX as u64),
+                Some(BenchmarkCase::CommonCase) => self.init_state(u64::from(u32::MAX)),
                 Some(BenchmarkCase::WorstCase) => self.init_state(u64::MAX),
                 None => {
                     let mut rng: StdRng = SeedableRng::from_seed(seed);
@@ -141,47 +141,53 @@ mod tests {
 
     #[test]
     fn lo_is_not_u32_hi_is_zero() {
-        let not_u32 = BFieldElement::new(u32::MAX as u64 + 1);
+        let not_u32 = bfe!(u64::from(u32::MAX) + 1);
         let mut init_stack = Log2FloorU64.init_stack_for_isolated_run();
-        init_stack.push(BFieldElement::new(0));
+        init_stack.push(bfe!(0));
         init_stack.push(not_u32);
 
         let init_state = InitVmState::with_stack(init_stack);
+        let expected_err =
+            InstructionError::OpStackError(OpStackError::FailedU32Conversion(not_u32));
         negative_test(
             &ShadowedClosure::new(Log2FloorU64),
             init_state,
-            &[InstructionError::FailedU32Conversion(not_u32)],
+            &[expected_err],
         );
     }
 
     #[test]
     fn hi_is_not_u32() {
-        let not_u32 = BFieldElement::new(u32::MAX as u64 + 1);
+        let not_u32 = bfe!(u64::from(u32::MAX) + 1);
         let mut init_stack = Log2FloorU64.init_stack_for_isolated_run();
         init_stack.push(not_u32);
-        init_stack.push(BFieldElement::new(16));
+        init_stack.push(bfe!(16));
 
         let init_state = InitVmState::with_stack(init_stack);
+        let expected_err =
+            InstructionError::OpStackError(OpStackError::FailedU32Conversion(not_u32));
         negative_test(
             &ShadowedClosure::new(Log2FloorU64),
             init_state,
-            &[InstructionError::FailedU32Conversion(not_u32)],
+            &[expected_err],
         );
     }
 
     #[test]
     fn hi_is_not_u32_alt() {
-        let n: u64 = rand::thread_rng().next_u32() as u64;
-        let not_u32 = BFieldElement::new(u32::MAX as u64 + 1 + n);
+        let n = u64::from(rand::thread_rng().next_u32());
+        let not_u32 = bfe!(u64::from(u32::MAX) + 1 + n);
         let mut init_stack = Log2FloorU64.init_stack_for_isolated_run();
         init_stack.push(not_u32);
-        init_stack.push(BFieldElement::new(16));
+        init_stack.push(bfe!(16));
 
         let init_state = InitVmState::with_stack(init_stack);
+        let expected_err =
+            InstructionError::OpStackError(OpStackError::FailedU32Conversion(not_u32));
         negative_test(
             &ShadowedClosure::new(Log2FloorU64),
             init_state,
-            &[InstructionError::FailedU32Conversion(not_u32)],
+            &[expected_err],
         );
     }
 

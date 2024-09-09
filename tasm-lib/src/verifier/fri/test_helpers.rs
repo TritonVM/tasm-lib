@@ -1,11 +1,10 @@
 use itertools::Itertools;
+use triton_vm::challenges::Challenges;
 use triton_vm::prelude::*;
 use triton_vm::proof_stream::ProofStream;
-use triton_vm::table::challenges::Challenges;
-use triton_vm::table::extension_table::Quotientable;
-use triton_vm::table::master_table::MasterExtTable;
-use triton_vm::table::NUM_BASE_COLUMNS;
-use triton_vm::table::NUM_EXT_COLUMNS;
+use triton_vm::table::master_table::MasterAuxTable;
+use triton_vm::table::master_table::MasterMainTable;
+use triton_vm::table::master_table::MasterTable;
 use triton_vm::table::NUM_QUOTIENT_SEGMENTS;
 use triton_vm::twenty_first::prelude::*;
 
@@ -51,7 +50,7 @@ pub fn extract_fri_proof(
         .unwrap();
 
     // Quotient codeword weights
-    proof_stream.sample_scalars(MasterExtTable::NUM_CONSTRAINTS);
+    proof_stream.sample_scalars(MasterAuxTable::NUM_CONSTRAINTS);
 
     // Quotient codeword Merkle root
     let quotient_root = proof_stream
@@ -67,22 +66,22 @@ pub fn extract_fri_proof(
     proof_stream
         .dequeue()
         .unwrap()
-        .try_into_out_of_domain_base_row()
+        .try_into_out_of_domain_main_row()
         .unwrap();
     proof_stream
         .dequeue()
         .unwrap()
-        .try_into_out_of_domain_ext_row()
+        .try_into_out_of_domain_aux_row()
         .unwrap();
     proof_stream
         .dequeue()
         .unwrap()
-        .try_into_out_of_domain_base_row()
+        .try_into_out_of_domain_main_row()
         .unwrap();
     proof_stream
         .dequeue()
         .unwrap()
-        .try_into_out_of_domain_ext_row()
+        .try_into_out_of_domain_aux_row()
         .unwrap();
     proof_stream
         .dequeue()
@@ -93,11 +92,14 @@ pub fn extract_fri_proof(
     // `beqd_weights`
     const NUM_DEEP_CODEWORD_COMPONENTS: usize = 3;
     proof_stream.sample_scalars(
-        NUM_BASE_COLUMNS + NUM_EXT_COLUMNS + NUM_QUOTIENT_SEGMENTS + NUM_DEEP_CODEWORD_COMPONENTS,
+        MasterMainTable::NUM_COLUMNS
+            + MasterAuxTable::NUM_COLUMNS
+            + NUM_QUOTIENT_SEGMENTS
+            + NUM_DEEP_CODEWORD_COMPONENTS,
     );
 
     let padded_height = 1 << log2_padded_height;
-    let fri: triton_vm::fri::Fri<Tip5> = stark.derive_fri(padded_height).unwrap();
+    let fri = stark.derive_fri(padded_height).unwrap();
     let fri_proof_stream = proof_stream.clone();
     let fri_verify_result = fri.verify(&mut proof_stream).unwrap();
     let indices = fri_verify_result.iter().map(|(i, _)| *i).collect_vec();
@@ -107,7 +109,7 @@ pub fn extract_fri_proof(
     let base_table_rows = proof_stream
         .dequeue()
         .unwrap()
-        .try_into_master_base_table_rows()
+        .try_into_master_main_table_rows()
         .unwrap();
     let base_authentication_structure = proof_stream
         .dequeue()
@@ -126,7 +128,7 @@ pub fn extract_fri_proof(
     let ext_table_rows = proof_stream
         .dequeue()
         .unwrap()
-        .try_into_master_ext_table_rows()
+        .try_into_master_aux_table_rows()
         .unwrap();
     let ext_authentication_structure = proof_stream
         .dequeue()

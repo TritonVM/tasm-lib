@@ -243,7 +243,9 @@ mod tests {
     use crate::rust_shadowing_helper_functions;
     use crate::rust_shadowing_helper_functions::list::load_list_with_copy_elements;
     use crate::snippet_bencher::BenchmarkCase;
-    use crate::traits::function::{Function, FunctionInitialState, ShadowedFunction};
+    use crate::traits::function::Function;
+    use crate::traits::function::FunctionInitialState;
+    use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
 
     use super::*;

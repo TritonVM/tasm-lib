@@ -7,7 +7,7 @@ use serde::Deserialize;
 use serde::Serialize;
 use serde_json::to_writer_pretty;
 use triton_vm::aet::AlgebraicExecutionTrace;
-use triton_vm::table::master_table::TableId;
+use triton_vm::prelude::TableId;
 
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 

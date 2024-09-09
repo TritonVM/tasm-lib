@@ -1,8 +1,9 @@
 use strum::Display;
 use strum::EnumIter;
 use triton_vm::prelude::*;
-use triton_vm::table::NUM_BASE_COLUMNS;
-use triton_vm::table::NUM_EXT_COLUMNS;
+use triton_vm::table::master_table::MasterAuxTable;
+use triton_vm::table::master_table::MasterMainTable;
+use triton_vm::table::master_table::MasterTable;
 use triton_vm::table::NUM_QUOTIENT_SEGMENTS;
 use triton_vm::twenty_first::math::tip5::Digest;
 use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
@@ -35,8 +36,8 @@ impl VerifyTableRows {
 impl VerifyTableRows {
     pub fn row_size(&self) -> usize {
         match self.column_type {
-            ColumnType::Base => NUM_BASE_COLUMNS,
-            ColumnType::Extension => NUM_EXT_COLUMNS * EXTENSION_DEGREE,
+            ColumnType::Base => MasterMainTable::NUM_COLUMNS,
+            ColumnType::Extension => MasterAuxTable::NUM_COLUMNS * EXTENSION_DEGREE,
             ColumnType::Quotient => NUM_QUOTIENT_SEGMENTS * EXTENSION_DEGREE,
         }
     }

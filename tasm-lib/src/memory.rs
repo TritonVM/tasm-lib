@@ -17,14 +17,15 @@
 //!
 //! [prime]: BFieldElement::P
 //! [dyn_malloc_addr]: dyn_malloc::DYN_MALLOC_ADDRESS
-//! [static_malloc_addr]: crate::library::STATIC_MEMORY_START_ADDRESS
+//! [static_malloc_addr]: crate::library::STATIC_MEMORY_FIRST_ADDRESS
 //! [stark_verifier]: crate::verifier::stark_verify::StarkVerify
 //! [dynamic_allocator]: dyn_malloc::DynMalloc
 
 use std::collections::HashMap;
 
 use num::One;
-use triton_vm::{air::memory_layout::MemoryRegion, prelude::*};
+use triton_vm::memory_layout::MemoryRegion;
+use triton_vm::prelude::*;
 
 pub mod dyn_malloc;
 pub mod memcpy;

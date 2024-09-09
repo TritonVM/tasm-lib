@@ -20,7 +20,7 @@ use anyhow::bail;
 use itertools::Itertools;
 use num_traits::Zero;
 use snippet_bencher::BenchmarkResult;
-use triton_vm::op_stack::NUM_OP_STACK_REGISTERS;
+use triton_vm::isa::op_stack::NUM_OP_STACK_REGISTERS;
 use triton_vm::prelude::*;
 
 use library::Library;
@@ -49,8 +49,8 @@ pub mod verifier;
 
 // re-exports for types exposed in our public API.
 pub use triton_vm;
-use triton_vm::instruction::AnInstruction;
-use triton_vm::table::master_table::TableId;
+use triton_vm::isa::instruction::AnInstruction;
+use triton_vm::prelude::TableId;
 pub use triton_vm::twenty_first;
 
 use crate::test_helpers::prepend_program_with_stack_setup;
@@ -122,7 +122,7 @@ pub fn execute_bench_deprecated(
     let mut vm_state = VMState::new(&program, public_input, nondeterminism.clone());
     vm_state.op_stack.stack.clone_from(&init_stack);
 
-    let (simulation_trace, terminal_state) = program.trace_execution_of_state(vm_state)?;
+    let (simulation_trace, terminal_state) = VM::trace_execution_of_state(&program, vm_state)?;
 
     let jump_stack = &terminal_state.jump_stack;
     if !jump_stack.is_empty() {
@@ -310,9 +310,12 @@ pub fn prove_and_verify(
         None => program.to_owned(),
     };
 
-    let (aet, _) = program
-        .trace_execution(PublicInput::new(std_in.to_owned()), nondeterminism.clone())
-        .unwrap();
+    let (aet, _) = VM::trace_execution(
+        &program,
+        PublicInput::new(std_in.to_owned()),
+        nondeterminism.clone(),
+    )
+    .unwrap();
 
     let stark = Stark::default();
     let claim = Claim::about_program(&program)
@@ -362,15 +365,14 @@ pub fn prove_and_verify(
     );
 }
 
-/// A thin wrapper around [`Program::profile`].
+/// A thin wrapper around [`VM::profile`].
 pub fn generate_full_profile(
     name: &str,
     program: Program,
     public_input: &PublicInput,
     nondeterminism: &NonDeterminism,
 ) -> String {
-    let (_output, profile) = program
-        .profile(public_input.clone(), nondeterminism.clone())
-        .unwrap();
+    let (_output, profile) =
+        VM::profile(&program, public_input.clone(), nondeterminism.clone()).unwrap();
     format!("{name}:\n{profile}")
 }

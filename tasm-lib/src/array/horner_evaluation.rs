@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use triton_vm::triton_asm;
+use triton_vm::prelude::triton_asm;
 
 use crate::data_type::ArrayType;
 use crate::data_type::DataType;

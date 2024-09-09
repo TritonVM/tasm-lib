@@ -1,11 +1,10 @@
 use itertools::Itertools;
+use triton_vm::challenges::Challenges;
 use triton_vm::prelude::*;
 use triton_vm::proof_item::ProofItemVariant;
-use triton_vm::table::challenges::Challenges;
-use triton_vm::table::extension_table::Quotientable;
-use triton_vm::table::master_table::MasterExtTable;
-use triton_vm::table::NUM_BASE_COLUMNS;
-use triton_vm::table::NUM_EXT_COLUMNS;
+use triton_vm::table::master_table::MasterAuxTable;
+use triton_vm::table::master_table::MasterMainTable;
+use triton_vm::table::master_table::MasterTable;
 use triton_vm::table::NUM_QUOTIENT_SEGMENTS;
 use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 use triton_vm::twenty_first::prelude::AlgebraicHasher;
@@ -13,8 +12,8 @@ use twenty_first::prelude::MerkleTreeInclusionProof;
 
 use crate::arithmetic::bfe::primitive_root_of_unity::PrimitiveRootOfUnity;
 use crate::array::horner_evaluation::HornerEvaluation;
-use crate::array::inner_product_of_three_rows_with_weights::BaseElementType;
 use crate::array::inner_product_of_three_rows_with_weights::InnerProductOfThreeRowsWithWeights;
+use crate::array::inner_product_of_three_rows_with_weights::MainElementType;
 use crate::array::inner_product_of_xfes::InnerProductOfXfes;
 use crate::data_type::DataType;
 use crate::field;
@@ -139,7 +138,7 @@ impl StarkVerify {
                 .unwrap();
 
             // Quotient codeword weights
-            proof_stream.sample_scalars(MasterExtTable::NUM_CONSTRAINTS);
+            proof_stream.sample_scalars(MasterAuxTable::NUM_CONSTRAINTS);
 
             // Quotient codeword Merkle root
             let _quotient_root = proof_stream
@@ -155,22 +154,22 @@ impl StarkVerify {
             proof_stream
                 .dequeue()
                 .unwrap()
-                .try_into_out_of_domain_base_row()
+                .try_into_out_of_domain_main_row()
                 .unwrap();
             proof_stream
                 .dequeue()
                 .unwrap()
-                .try_into_out_of_domain_ext_row()
+                .try_into_out_of_domain_aux_row()
                 .unwrap();
             proof_stream
                 .dequeue()
                 .unwrap()
-                .try_into_out_of_domain_base_row()
+                .try_into_out_of_domain_main_row()
                 .unwrap();
             proof_stream
                 .dequeue()
                 .unwrap()
-                .try_into_out_of_domain_ext_row()
+                .try_into_out_of_domain_aux_row()
                 .unwrap();
             proof_stream
                 .dequeue()
@@ -181,8 +180,8 @@ impl StarkVerify {
             // `beqd_weights`
             const NUM_DEEP_CODEWORD_COMPONENTS: usize = 3;
             proof_stream.sample_scalars(
-                NUM_BASE_COLUMNS
-                    + NUM_EXT_COLUMNS
+                MasterMainTable::NUM_COLUMNS
+                    + MasterAuxTable::NUM_COLUMNS
                     + NUM_QUOTIENT_SEGMENTS
                     + NUM_DEEP_CODEWORD_COMPONENTS,
             );
@@ -219,7 +218,7 @@ impl StarkVerify {
             let base_table_rows = proof_stream
                 .dequeue()
                 .unwrap()
-                .try_into_master_base_table_rows()
+                .try_into_master_main_table_rows()
                 .unwrap();
             let base_authentication_structure = proof_stream
                 .dequeue()
@@ -237,7 +236,7 @@ impl StarkVerify {
             let ext_table_rows = proof_stream
                 .dequeue()
                 .unwrap()
-                .try_into_master_ext_table_rows()
+                .try_into_master_aux_table_rows()
                 .unwrap();
             let ext_authentication_structure = proof_stream
                 .dequeue()
@@ -334,22 +333,22 @@ impl BasicSnippet for StarkVerify {
             proof_item: ProofItemVariant::MerkleRoot,
         }));
         let next_as_outofdomainmainrow = library.import(Box::new(DequeueNextAs {
-            proof_item: ProofItemVariant::OutOfDomainBaseRow,
+            proof_item: ProofItemVariant::OutOfDomainMainRow,
         }));
-        let next_as_outofdomainextrow = library.import(Box::new(DequeueNextAs {
-            proof_item: ProofItemVariant::OutOfDomainExtRow,
+        let next_as_outofdomainauxrow = library.import(Box::new(DequeueNextAs {
+            proof_item: ProofItemVariant::OutOfDomainAuxRow,
         }));
         let next_as_outofdomainquotientsegments = library.import(Box::new(DequeueNextAs {
             proof_item: ProofItemVariant::OutOfDomainQuotientSegments,
         }));
         let next_as_basetablerows = library.import(Box::new(DequeueNextAs {
-            proof_item: ProofItemVariant::MasterBaseTableRows,
+            proof_item: ProofItemVariant::MasterMainTableRows,
         }));
         let next_as_authentication_path = library.import(Box::new(DequeueNextAs {
             proof_item: ProofItemVariant::AuthenticationStructure,
         }));
         let next_as_exttablerows = library.import(Box::new(DequeueNextAs {
-            proof_item: ProofItemVariant::MasterExtTableRows,
+            proof_item: ProofItemVariant::MasterAuxTableRows,
         }));
         let next_as_quotient_segment_elements = library.import(Box::new(DequeueNextAs {
             proof_item: ProofItemVariant::QuotientSegmentsElements,
@@ -385,14 +384,14 @@ impl BasicSnippet for StarkVerify {
         ));
         let sample_quotient_codeword_weights =
             library.import(Box::new(SampleScalarsStaticLengthDynMalloc {
-                num_elements: MasterExtTable::NUM_CONSTRAINTS,
+                num_elements: MasterAuxTable::NUM_CONSTRAINTS,
             }));
         let domain_generator = library.import(Box::new(PrimitiveRootOfUnity));
         let sample_scalar_one = library.import(Box::new(SampleScalarOne));
         let calculate_out_of_domain_points = library.import(Box::new(OutOfDomainPoints));
         let divide_out_zerofiers = library.import(Box::new(DivideOutZerofiers));
         let inner_product_quotient_summands = library.import(Box::new(InnerProductOfXfes {
-            length: MasterExtTable::NUM_CONSTRAINTS,
+            length: MasterAuxTable::NUM_CONSTRAINTS,
         }));
         let horner_evaluation_of_ood_curr_row_quot_segments =
             library.import(Box::new(HornerEvaluation {
@@ -400,8 +399,8 @@ impl BasicSnippet for StarkVerify {
             }));
         const NUM_DEEP_CODEWORD_COMPONENTS: usize = 3;
         let sample_beqd_weights = library.import(Box::new(SampleScalarsStaticLengthDynMalloc {
-            num_elements: NUM_BASE_COLUMNS
-                + NUM_EXT_COLUMNS
+            num_elements: MasterMainTable::NUM_COLUMNS
+                + MasterAuxTable::NUM_COLUMNS
                 + NUM_QUOTIENT_SEGMENTS
                 + NUM_DEEP_CODEWORD_COMPONENTS,
         }));
@@ -415,16 +414,16 @@ impl BasicSnippet for StarkVerify {
             column_type: ColumnType::Quotient,
         }));
         let inner_product_three_rows_with_weights_bfe_base = library.import(Box::new(
-            InnerProductOfThreeRowsWithWeights::triton_vm_parameters(BaseElementType::Bfe),
+            InnerProductOfThreeRowsWithWeights::triton_vm_parameters(MainElementType::Bfe),
         ));
         let inner_product_three_rows_with_weights_xfe_base = library.import(Box::new(
-            InnerProductOfThreeRowsWithWeights::triton_vm_parameters(BaseElementType::Xfe),
+            InnerProductOfThreeRowsWithWeights::triton_vm_parameters(MainElementType::Xfe),
         ));
         let inner_product_4_xfes = library.import(Box::new(InnerProductOfXfes { length: 4 }));
         let quotient_segment_codeword_weights_from_be_weights = triton_asm!(
             // _ *beqd_ws
 
-            push {(NUM_BASE_COLUMNS + NUM_EXT_COLUMNS) * EXTENSION_DEGREE}
+            push {(MasterMainTable::NUM_COLUMNS + MasterAuxTable::NUM_COLUMNS) * EXTENSION_DEGREE}
             add
             // _ *quotient_segment_weights
         );
@@ -433,7 +432,7 @@ impl BasicSnippet for StarkVerify {
             triton_asm!(
                 // _ *beqd_ws
 
-                push {(NUM_BASE_COLUMNS + NUM_EXT_COLUMNS + NUM_QUOTIENT_SEGMENTS + n) * EXTENSION_DEGREE + {EXTENSION_DEGREE - 1}}
+                push {(MasterMainTable::NUM_COLUMNS + MasterAuxTable::NUM_COLUMNS + NUM_QUOTIENT_SEGMENTS + n) * EXTENSION_DEGREE + {EXTENSION_DEGREE - 1}}
                 add
                 // _ *deep_codeword_weight[n]_last_word
             )
@@ -446,7 +445,7 @@ impl BasicSnippet for StarkVerify {
             hint out_of_domain_curr_base_row: Pointer = stack[0]
 
             dup 1
-            call {next_as_outofdomainextrow}
+            call {next_as_outofdomainauxrow}
             hint out_of_domain_curr_ext_row: Pointer = stack[0]
 
             dup 2
@@ -454,7 +453,7 @@ impl BasicSnippet for StarkVerify {
             hint out_of_domain_next_base_row: Pointer = stack[0]
 
             dup 3
-            call {next_as_outofdomainextrow}
+            call {next_as_outofdomainauxrow}
             hint out_of_domain_next_ext_row: Pointer = stack[0]
             // _ *proof_iter *curr_main *curr_aux *next_main *next_aux
         };
@@ -581,11 +580,11 @@ impl BasicSnippet for StarkVerify {
 
             // Update `*btrow` and `*etrow` pointer values to point to previous element
             swap 9
-            push {-((EXTENSION_DEGREE * NUM_EXT_COLUMNS) as i32)}
+            push {-((EXTENSION_DEGREE * MasterAuxTable::NUM_COLUMNS) as i32)}
             add
             swap 9
             swap 8
-            push {-(NUM_BASE_COLUMNS as i32)}
+            push {-(MasterMainTable::NUM_COLUMNS as i32)}
             add
             swap 8
             // _ remaining_rounds fri_gen fri_offset *etrow_prev *btrow_prev *qseg_elem *fri_revealed_xfe *beqd_ws *oodpnts (-fdom_pnt) [be_opnd_elem]
@@ -1164,7 +1163,7 @@ impl BasicSnippet for StarkVerify {
                 swap 4
                 push 1
                 add
-                push {NUM_BASE_COLUMNS} // size of element of base row list
+                push {MasterMainTable::NUM_COLUMNS} // size of element of base row list
                 dup 9
                 push -1
                 add
@@ -1177,7 +1176,7 @@ impl BasicSnippet for StarkVerify {
                 swap 2
                 push 1
                 add
-                push {NUM_EXT_COLUMNS * EXTENSION_DEGREE} // size of element of ext row list
+                push {MasterAuxTable::NUM_COLUMNS * EXTENSION_DEGREE} // size of element of ext row list
                 dup 9
                 push -1
                 add
@@ -1329,9 +1328,12 @@ pub mod tests {
             None,
         );
 
-        let (aet, _public_output) = inner_program
-            .trace_execution((&claim_for_proof.input).into(), inner_nondeterminism)
-            .unwrap();
+        let (aet, _public_output) = VM::trace_execution(
+            inner_program,
+            (&claim_for_proof.input).into(),
+            inner_nondeterminism,
+        )
+        .unwrap();
         let inner_padded_height = aet.padded_height();
 
         (final_tasm_state.cycle_count as usize, inner_padded_height)
@@ -1442,9 +1444,12 @@ pub mod tests {
     ) -> (NonDeterminism, triton_vm::proof::Claim) {
         println!("Generating proof for non-determinism");
 
-        let (aet, inner_output) = inner_program
-            .trace_execution(inner_public_input.into(), inner_nondeterminism.clone())
-            .unwrap();
+        let (aet, inner_output) = VM::trace_execution(
+            inner_program,
+            inner_public_input.into(),
+            inner_nondeterminism.clone(),
+        )
+        .unwrap();
         let claim = Claim {
             program_digest: inner_program.hash(),
             input: inner_public_input.to_vec(),
@@ -1535,9 +1540,9 @@ pub mod tests {
 
         let inner_input_1 = bfe_vec![3];
         let factorial_program = factorial_program_with_io();
-        let (aet_1, inner_output_1) = factorial_program
-            .trace_execution(inner_input_1.clone().into(), [].into())
-            .unwrap();
+        let (aet_1, inner_output_1) =
+            VM::trace_execution(&factorial_program, inner_input_1.clone().into(), [].into())
+                .unwrap();
         let claim_1 = Claim::new(factorial_program.hash())
             .with_input(inner_input_1.clone())
             .with_output(inner_output_1.clone());
@@ -1546,9 +1551,9 @@ pub mod tests {
         println!("padded_height_1: {padded_height_1}");
 
         let inner_input_2 = bfe_vec![24];
-        let (aet_2, inner_output_2) = factorial_program
-            .trace_execution(inner_input_2.clone().into(), [].into())
-            .unwrap();
+        let (aet_2, inner_output_2) =
+            VM::trace_execution(&factorial_program, inner_input_2.clone().into(), [].into())
+                .unwrap();
         let claim_2 = Claim::new(factorial_program.hash())
             .with_input(inner_input_2.clone())
             .with_output(inner_output_2.clone());
@@ -1594,8 +1599,7 @@ pub mod tests {
             outer_nondeterminism.clone(),
         );
         maybe_write_debuggable_program_to_disk(&program, &vm_state);
-        program
-            .run(outer_input.into(), outer_nondeterminism)
+        VM::run(&program, outer_input.into(), outer_nondeterminism)
             .expect("could not verify two STARK proofs");
 
         println!(
