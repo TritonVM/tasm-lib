@@ -1,6 +1,8 @@
 use itertools::Itertools;
+use num::Zero;
 use triton_vm::prelude::*;
 use twenty_first::error::BFieldCodecError;
+use twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
 use crate::{data_type::DataType, prelude::TasmObject};
 
@@ -219,8 +221,11 @@ impl TasmObject for BFieldElement {
         unreachable!("Size is known statically for BFieldElement encoding")
     }
 
-    fn decode_iter<Itr: Iterator<Item = BFieldElement>>(_iterator: &mut Itr) -> Result<Box<Self>> {
-        todo!()
+    fn decode_iter<Itr: Iterator<Item = BFieldElement>>(iterator: &mut Itr) -> Result<Box<Self>> {
+        match iterator.next() {
+            Some(word) => Ok(Box::new(word)),
+            None => Err(Box::new(BFieldCodecError::SequenceTooShort)),
+        }
     }
 }
 
@@ -247,8 +252,16 @@ impl TasmObject for XFieldElement {
         unreachable!("Size is known statically for XFieldElement encoding")
     }
 
-    fn decode_iter<Itr: Iterator<Item = BFieldElement>>(_iterator: &mut Itr) -> Result<Box<Self>> {
-        todo!()
+    fn decode_iter<Itr: Iterator<Item = BFieldElement>>(iterator: &mut Itr) -> Result<Box<Self>> {
+        let mut xfe = XFieldElement::zero();
+        for i in 0..EXTENSION_DEGREE {
+            match iterator.next() {
+                Some(word) => xfe.coefficients[i] = word,
+                None => return Err(Box::new(BFieldCodecError::SequenceTooShort)),
+            }
+        }
+
+        Ok(Box::new(xfe))
     }
 }
 
@@ -275,8 +288,16 @@ impl TasmObject for Digest {
         unreachable!("Size is known statically for Digest encoding")
     }
 
-    fn decode_iter<Itr: Iterator<Item = BFieldElement>>(_iterator: &mut Itr) -> Result<Box<Self>> {
-        todo!()
+    fn decode_iter<Itr: Iterator<Item = BFieldElement>>(iterator: &mut Itr) -> Result<Box<Self>> {
+        let mut digest = Digest::default();
+        for i in 0..Digest::LEN {
+            match iterator.next() {
+                Some(word) => digest.0[i] = word,
+                None => return Err(Box::new(BFieldCodecError::SequenceTooShort)),
+            }
+        }
+
+        Ok(Box::new(digest))
     }
 }
 
@@ -303,8 +324,18 @@ impl TasmObject for bool {
         unreachable!("Size is known statically for u32 encoding")
     }
 
-    fn decode_iter<Itr: Iterator<Item = BFieldElement>>(_iterator: &mut Itr) -> Result<Box<Self>> {
-        todo!()
+    fn decode_iter<Itr: Iterator<Item = BFieldElement>>(iterator: &mut Itr) -> Result<Box<Self>> {
+        match iterator.next() {
+            Some(word) => {
+                let bool_val: bool = match word.value() {
+                    0 => false,
+                    1 => true,
+                    _ => return Err(Box::new(BFieldCodecError::ElementOutOfRange)),
+                };
+                Ok(Box::new(bool_val))
+            }
+            None => Err(Box::new(BFieldCodecError::SequenceTooShort)),
+        }
     }
 }
 
@@ -331,8 +362,17 @@ impl TasmObject for u32 {
         unreachable!("Size is known statically for u32 encoding")
     }
 
-    fn decode_iter<Itr: Iterator<Item = BFieldElement>>(_iterator: &mut Itr) -> Result<Box<Self>> {
-        todo!()
+    fn decode_iter<Itr: Iterator<Item = BFieldElement>>(iterator: &mut Itr) -> Result<Box<Self>> {
+        match iterator.next() {
+            Some(word) => {
+                let u32_val: u32 = match word.value().try_into() {
+                    Ok(u32_val) => u32_val,
+                    Err(_) => return Err(Box::new(BFieldCodecError::ElementOutOfRange)),
+                };
+                Ok(Box::new(u32_val))
+            }
+            None => Err(Box::new(BFieldCodecError::SequenceTooShort)),
+        }
     }
 }
 
@@ -359,8 +399,22 @@ impl TasmObject for u64 {
         unreachable!("Size is known statically for u64 encoding")
     }
 
-    fn decode_iter<Itr: Iterator<Item = BFieldElement>>(_iterator: &mut Itr) -> Result<Box<Self>> {
-        todo!()
+    fn decode_iter<Itr: Iterator<Item = BFieldElement>>(iterator: &mut Itr) -> Result<Box<Self>> {
+        let mut val: u64 = 0;
+        for i in 0..u64::static_length().unwrap() {
+            match iterator.next() {
+                Some(word) => {
+                    let u32_val: u32 = match word.value().try_into() {
+                        Ok(u32_val) => u32_val,
+                        Err(_) => return Err(Box::new(BFieldCodecError::ElementOutOfRange)),
+                    };
+                    val |= (u32_val as u64) << (32 * i);
+                }
+                None => return Err(Box::new(BFieldCodecError::SequenceTooShort)),
+            }
+        }
+
+        Ok(Box::new(val))
     }
 }
 
@@ -387,8 +441,22 @@ impl TasmObject for u128 {
         unreachable!("Size is known statically for u128 encoding")
     }
 
-    fn decode_iter<Itr: Iterator<Item = BFieldElement>>(_iterator: &mut Itr) -> Result<Box<Self>> {
-        todo!()
+    fn decode_iter<Itr: Iterator<Item = BFieldElement>>(iterator: &mut Itr) -> Result<Box<Self>> {
+        let mut val: u128 = 0;
+        for i in 0..u128::static_length().unwrap() {
+            match iterator.next() {
+                Some(word) => {
+                    let u32_val: u32 = match word.value().try_into() {
+                        Ok(u32_val) => u32_val,
+                        Err(_) => return Err(Box::new(BFieldCodecError::ElementOutOfRange)),
+                    };
+                    val |= (u32_val as u128) << (32 * i);
+                }
+                None => return Err(Box::new(BFieldCodecError::SequenceTooShort)),
+            }
+        }
+
+        Ok(Box::new(val))
     }
 }
 
@@ -687,5 +755,60 @@ impl<T: TasmObject + BFieldCodec> TasmObject for Option<T> {
 
             // _ total_size
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+    use std::fmt::Debug;
+
+    use rand::random;
+
+    use crate::memory::encode_to_memory;
+
+    use super::*;
+
+    fn decode_iter_prop<T: TasmObject + BFieldCodec + Eq + Debug>(obj_written: T) {
+        let mut memory = HashMap::default();
+        let address = random();
+        encode_to_memory(&mut memory, address, &obj_written);
+        let obj_read = *T::decode_from_memory(&memory, address).unwrap();
+        assert_eq!(obj_written, obj_read);
+    }
+
+    #[test]
+    fn decode_iter_bfe() {
+        decode_iter_prop::<BFieldElement>(random());
+    }
+
+    #[test]
+    fn decode_iter_xfe() {
+        decode_iter_prop::<XFieldElement>(random());
+    }
+
+    #[test]
+    fn decode_iter_digest() {
+        decode_iter_prop::<Digest>(random());
+    }
+
+    #[test]
+    fn decode_iter_bool() {
+        decode_iter_prop::<bool>(random());
+    }
+
+    #[test]
+    fn decode_iter_u32() {
+        decode_iter_prop::<u32>(random());
+    }
+
+    #[test]
+    fn decode_iter_u64() {
+        decode_iter_prop::<u64>(random());
+    }
+
+    #[test]
+    fn decode_iter_u128() {
+        decode_iter_prop::<u128>(random());
     }
 }
