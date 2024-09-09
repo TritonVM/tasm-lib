@@ -18,12 +18,13 @@ use super::rust_shadow::RustShadow;
 /// A Closure is a piece of tasm code that modifies the top of the stack without access to
 /// memory or nondeterminism or standard input/output.
 ///
-/// See also: [function], [algorithm], [procedure], [accessor]
+/// See also: [function], [algorithm], [procedure], [accessor], [mem_preserver]
 ///
 /// [function]: crate::traits::function::Function
 /// [algorithm]: crate::traits::algorithm::Algorithm
 /// [procedure]: crate::traits::procedure::Procedure
 /// [accessor]: crate::traits::accessor::Accessor
+/// [mem_preserver]: crate::traits::mem_preserver::MemPreserver
 pub trait Closure: BasicSnippet {
     fn rust_shadow(&self, stack: &mut Vec<BFieldElement>);
 

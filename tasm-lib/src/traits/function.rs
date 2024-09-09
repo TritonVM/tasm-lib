@@ -23,12 +23,13 @@ use super::rust_shadow::RustShadow;
 /// larger than the dynamic memory allocator and the dynamic memory allocator value has to
 /// be updated accordingly.
 ///
-/// See also: [closure], [algorithm], [procedure], [accessor]
+/// See also: [closure], [algorithm], [procedure], [accessor], [mem_preserver]
 ///
 /// [closure]: crate::traits::closure::Closure
 /// [algorithm]: crate::traits::algorithm::Algorithm
 /// [procedure]: crate::traits::procedure::Procedure
 /// [accessor]: crate::traits::accessor::Accessor
+/// [mem_preserver]: crate::traits::mem_preserver::MemPreserver
 pub trait Function: BasicSnippet {
     fn rust_shadow(
         &self,

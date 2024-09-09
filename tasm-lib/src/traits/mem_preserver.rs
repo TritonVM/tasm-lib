@@ -1,5 +1,6 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::collections::VecDeque;
 use std::rc::Rc;
 
 use rand::prelude::*;
@@ -17,93 +18,76 @@ use crate::VmHasher;
 use super::basic_snippet::BasicSnippet;
 use super::rust_shadow::RustShadow;
 
-/// An Algorithm can modify memory and take ND_input.
+/// A MemPreserver cannot modify memory
 ///
-/// An Algorithm is a piece of tasm code that can modify memory even at addresses below
-/// the dynamic memory allocator, and can take nondeterministic input. It cannot read from
-/// standard in or write to standard out.
-///
-/// See also: [closure], [function], [procedure], [accessor], [mem_preserver]
+/// An MemPreserver is a piece of tasm code that can do pretty much everything
+/// except modify memory, including static memory. It can read from any input
+/// and write to standard out. It can also modify the sponge state.
+/// See also: [closure], [function], [procedure], [algorithm], [accessor]
 ///
 /// [closure]: crate::traits::closure::Closure
 /// [function]: crate::traits::function::Function
 /// [procedure]: crate::traits::procedure::Procedure
+/// [algorithm]: crate::traits::algorithm::Algorithm
 /// [accessor]: crate::traits::accessor::Accessor
-/// [mem_preserver]: crate::traits::mem_preserver::MemPreserver
-pub trait Algorithm: BasicSnippet {
+pub trait MemPreserver: BasicSnippet {
     fn rust_shadow(
         &self,
         stack: &mut Vec<BFieldElement>,
-        memory: &mut HashMap<BFieldElement, BFieldElement>,
-        nondeterminism: &NonDeterminism,
-    );
-
-    /// Take a object about which something is being proven in order to extract out the
-    /// right nondeterminism. Update the mutably referenced non-determism argument.
-    ///
-    /// For example:
-    ///  - When proving the correct verification of a proof, you might want to pull all
-    ///    digests out of the authentication structures and put them in the `digests`
-    ///    field of the non-determinism. This way the VM can avoid the processing
-    ///    required by authentication structures and just divine in the right digests
-    ///    as it walks up the Merkle trees.
-    ///  - When proving the correct sorting of a list, the VM ought to avoid running a
-    ///    sorting algorithm; instead it should divine the sorted list and then prove
-    ///    that the two lists are equal. The preprocessing step in this case would take
-    ///    the unsorted list, sort it, and use the sorted list to populate the non-
-    ///    determinism.
-    ///  - When verifying a Falcon signature, at some point the NTT of a vector is needed.
-    ///    The VM should not compute the NTT because expensive; instead it should divine
-    ///    the NTT-transformed vector and verify that it satisfies the right relation. In
-    ///    this case the preprocessor calculates the NTT and populates the non-determinism
-    ///    with the transformed vector.
-    fn preprocess<T: BFieldCodec>(_meta_input: T, _nondeterminism: &mut NonDeterminism) {}
+        memory: &HashMap<BFieldElement, BFieldElement>,
+        nd_tokens: VecDeque<BFieldElement>,
+        nd_digests: VecDeque<Digest>,
+        sponge: &mut Option<VmHasher>,
+    ) -> Vec<BFieldElement>;
 
     fn pseudorandom_initial_state(
         &self,
         seed: [u8; 32],
         bench_case: Option<BenchmarkCase>,
-    ) -> AlgorithmInitialState;
+    ) -> MemPreserverInitialState;
 
-    fn corner_case_initial_states(&self) -> Vec<AlgorithmInitialState> {
+    fn corner_case_initial_states(&self) -> Vec<MemPreserverInitialState> {
         vec![]
     }
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct AlgorithmInitialState {
+pub struct MemPreserverInitialState {
     pub stack: Vec<BFieldElement>,
     pub nondeterminism: NonDeterminism,
+    pub public_input: VecDeque<BFieldElement>,
+    pub sponge_state: Option<Tip5>,
 }
 
-impl From<AlgorithmInitialState> for InitVmState {
-    fn from(value: AlgorithmInitialState) -> Self {
+impl From<MemPreserverInitialState> for InitVmState {
+    fn from(value: MemPreserverInitialState) -> Self {
         Self {
             stack: value.stack,
             nondeterminism: value.nondeterminism,
-            ..Default::default()
+            public_input: value.public_input.into(),
+            sponge: value.sponge_state,
         }
     }
 }
 
-pub struct ShadowedAlgorithm<T: Algorithm + 'static> {
-    algorithm: Rc<RefCell<T>>,
+pub struct ShadowedMemPreserver<T: MemPreserver + 'static> {
+    mem_preserver: Rc<RefCell<T>>,
 }
 
-impl<T: Algorithm + 'static> ShadowedAlgorithm<T> {
+impl<T: MemPreserver + 'static> ShadowedMemPreserver<T> {
     pub fn new(algorithm: T) -> Self {
         Self {
-            algorithm: Rc::new(RefCell::new(algorithm)),
+            mem_preserver: Rc::new(RefCell::new(algorithm)),
         }
     }
 }
 
-impl<T> RustShadow for ShadowedAlgorithm<T>
+impl<T> RustShadow for ShadowedMemPreserver<T>
 where
-    T: Algorithm + 'static,
+    T: MemPreserver + 'static,
 {
     fn inner(&self) -> Rc<RefCell<dyn BasicSnippet>> {
-        self.algorithm.clone()
+        self.mem_preserver.clone()
     }
 
     fn rust_shadow_wrapper(
@@ -112,17 +96,20 @@ where
         nondeterminism: &NonDeterminism,
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
-        _sponge: &mut Option<VmHasher>,
+        sponge: &mut Option<VmHasher>,
     ) -> Vec<BFieldElement> {
-        self.algorithm
-            .borrow()
-            .rust_shadow(stack, memory, nondeterminism);
-        vec![]
+        self.mem_preserver.borrow().rust_shadow(
+            stack,
+            memory,
+            nondeterminism.individual_tokens.to_owned().into(),
+            nondeterminism.digests.to_owned().into(),
+            sponge,
+        )
     }
 
     fn test(&self) {
         for (i, corner_case) in self
-            .algorithm
+            .mem_preserver
             .borrow()
             .corner_case_initial_states()
             .into_iter()
@@ -130,16 +117,17 @@ where
         {
             println!(
                 "testing {} corner case number {i}",
-                self.algorithm.borrow().entrypoint(),
+                self.mem_preserver.borrow().entrypoint(),
             );
 
-            let stdin = vec![];
+            let stdin: Vec<_> = corner_case.public_input.into();
+
             test_rust_equivalence_given_complete_state(
                 self,
                 &corner_case.stack,
                 &stdin,
                 &corner_case.nondeterminism,
-                &None,
+                &corner_case.sponge_state,
                 None,
             );
         }
@@ -151,24 +139,26 @@ where
             let seed: [u8; 32] = rng.gen();
             println!(
                 "testing {} common case with seed: {:#4x?}",
-                self.algorithm.borrow().entrypoint(),
+                self.mem_preserver.borrow().entrypoint(),
                 seed
             );
-            let AlgorithmInitialState {
+            let MemPreserverInitialState {
                 stack,
-                nondeterminism,
+                public_input,
+                sponge_state,
+                nondeterminism: non_determinism,
             } = self
-                .algorithm
+                .mem_preserver
                 .borrow()
                 .pseudorandom_initial_state(seed, None);
 
-            let stdin = vec![];
+            let stdin: Vec<_> = public_input.into();
             test_rust_equivalence_given_complete_state(
                 self,
                 &stack,
                 &stdin,
-                &nondeterminism,
-                &None,
+                &non_determinism,
+                &sponge_state,
                 None,
             );
         }
@@ -184,17 +174,25 @@ where
         let mut benchmarks = Vec::with_capacity(2);
 
         for bench_case in [BenchmarkCase::CommonCase, BenchmarkCase::WorstCase] {
-            let AlgorithmInitialState {
+            let MemPreserverInitialState {
                 stack,
-                nondeterminism,
+                public_input,
+                sponge_state,
+                nondeterminism: non_determinism,
             } = self
-                .algorithm
+                .mem_preserver
                 .borrow()
                 .pseudorandom_initial_state(rng.gen(), Some(bench_case));
-            let program = link_for_isolated_run(self.algorithm.clone());
-            let benchmark = execute_bench(&program, &stack, vec![], nondeterminism, None);
+            let program = link_for_isolated_run(self.mem_preserver.clone());
+            let benchmark = execute_bench(
+                &program,
+                &stack,
+                public_input.into(),
+                non_determinism,
+                sponge_state,
+            );
             let benchmark = NamedBenchmarkResult {
-                name: self.algorithm.borrow().entrypoint(),
+                name: self.mem_preserver.borrow().entrypoint(),
                 benchmark_result: benchmark,
                 case: bench_case,
             };

@@ -30,12 +30,13 @@ use crate::VmHasher;
 /// in a function (lower case f, as in 'labelled scope'); and cannot be proved as
 /// a standalone program.
 ///
-/// See also: [closure], [function], [algorithm], [accessor]
+/// See also: [closure], [function], [algorithm], [accessor], [mem_preserver]
 ///
 /// [closure]: crate::traits::closure::Closure
 /// [function]: crate::traits::function::Function
 /// [algorithm]: crate::traits::algorithm::Algorithm
 /// [accessor]: crate::traits::accessor::Accessor
+/// [mem_preserver]: crate::traits::mem_preserver::MemPreserver
 pub trait Procedure: BasicSnippet {
     /// Returns standard output
     fn rust_shadow(
