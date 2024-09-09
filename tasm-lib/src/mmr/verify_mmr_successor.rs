@@ -538,6 +538,7 @@ mod test {
             memory: &HashMap<BFieldElement, BFieldElement>,
             _nd_tokens: VecDeque<BFieldElement>,
             nd_digests: VecDeque<Digest>,
+            _stdin: VecDeque<BFieldElement>,
             _sponge: &mut Option<Tip5>,
         ) -> Vec<BFieldElement> {
             let new_mmr_pointer = stack.pop().unwrap();

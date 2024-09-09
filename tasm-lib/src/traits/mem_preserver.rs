@@ -36,6 +36,7 @@ pub trait MemPreserver: BasicSnippet {
         memory: &HashMap<BFieldElement, BFieldElement>,
         nd_tokens: VecDeque<BFieldElement>,
         nd_digests: VecDeque<Digest>,
+        stdin: VecDeque<BFieldElement>,
         sponge: &mut Option<Tip5>,
     ) -> Vec<BFieldElement>;
 
@@ -91,7 +92,7 @@ where
 
     fn rust_shadow_wrapper(
         &self,
-        _stdin: &[BFieldElement],
+        stdin: &[BFieldElement],
         nondeterminism: &NonDeterminism,
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
@@ -102,6 +103,7 @@ where
             memory,
             nondeterminism.individual_tokens.to_owned().into(),
             nondeterminism.digests.to_owned().into(),
+            stdin.to_vec().into(),
             sponge,
         )
     }
