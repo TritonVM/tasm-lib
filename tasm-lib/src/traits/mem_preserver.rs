@@ -13,7 +13,6 @@ use crate::snippet_bencher::BenchmarkCase;
 use crate::snippet_bencher::NamedBenchmarkResult;
 use crate::test_helpers::test_rust_equivalence_given_complete_state;
 use crate::InitVmState;
-use crate::VmHasher;
 
 use super::basic_snippet::BasicSnippet;
 use super::rust_shadow::RustShadow;
@@ -37,7 +36,7 @@ pub trait MemPreserver: BasicSnippet {
         memory: &HashMap<BFieldElement, BFieldElement>,
         nd_tokens: VecDeque<BFieldElement>,
         nd_digests: VecDeque<Digest>,
-        sponge: &mut Option<VmHasher>,
+        sponge: &mut Option<Tip5>,
     ) -> Vec<BFieldElement>;
 
     fn pseudorandom_initial_state(
@@ -96,7 +95,7 @@ where
         nondeterminism: &NonDeterminism,
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
-        sponge: &mut Option<VmHasher>,
+        sponge: &mut Option<Tip5>,
     ) -> Vec<BFieldElement> {
         self.mem_preserver.borrow().rust_shadow(
             stack,

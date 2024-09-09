@@ -1,30 +1,25 @@
-use triton_vm::{
-    program::NonDeterminism,
-    triton_asm,
-    twenty_first::util_types::mmr::{
-        mmr_accumulator::MmrAccumulator, mmr_successor_proof::MmrSuccessorProof,
-    },
-};
+use triton_vm::program::NonDeterminism;
+use triton_vm::triton_asm;
+use triton_vm::twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
+use triton_vm::twenty_first::util_types::mmr::mmr_successor_proof::MmrSuccessorProof;
 
-use crate::{
-    arithmetic::u64::{
-        add_u64::AddU64, log_2_floor_u64::Log2FloorU64, lt_u64::LtU64ConsumeArgs,
-        popcount_u64::PopCountU64, shift_right_u64::ShiftRightU64, sub_u64::SubU64,
-    },
-    data_type::DataType,
-    field,
-    hashing::merkle_step_u64_index::MerkleStepU64Index,
-    mmr::{
-        bag_peaks::BagPeaks,
-        leaf_index_to_mt_index_and_peak_index::MmrLeafIndexToMtIndexAndPeakIndex,
-    },
-    prelude::BasicSnippet,
-    Digest,
-};
+use crate::arithmetic::u64::add_u64::AddU64;
+use crate::arithmetic::u64::log_2_floor_u64::Log2FloorU64;
+use crate::arithmetic::u64::lt_u64::LtU64ConsumeArgs;
+use crate::arithmetic::u64::popcount_u64::PopCountU64;
+use crate::arithmetic::u64::shift_right_u64::ShiftRightU64;
+use crate::arithmetic::u64::sub_u64::SubU64;
+use crate::data_type::DataType;
+use crate::field;
+use crate::hashing::merkle_step_u64_index::MerkleStepU64Index;
+use crate::mmr::bag_peaks::BagPeaks;
+use crate::mmr::leaf_index_to_mt_index_and_peak_index::MmrLeafIndexToMtIndexAndPeakIndex;
+use crate::prelude::BasicSnippet;
+use crate::Digest;
 
 /// Verify that one MMR is a successor to another.
 ///
-/// Verify a the scucessorship relation between two MMRs. A `MmrSuccessorProof`
+/// Verify a the successorship relation between two MMRs. A `MmrSuccessorProof`
 /// is necessary to demonstrate this relation, but it is not a *stack* argument
 /// because this algorithm obtains the relevant info (authentication paths) from
 /// nondeterministic digests. Accordingly, nondeterminism must be initialized
@@ -369,6 +364,7 @@ impl VerifyMmrSuccessor {
 #[cfg(test)]
 mod test {
     use std::collections::HashMap;
+    use std::collections::VecDeque;
 
     use itertools::Itertools;
     use rand::prelude::StdRng;
@@ -376,31 +372,26 @@ mod test {
     use rand::RngCore;
     use rand::SeedableRng;
     use triton_vm::error::InstructionError;
-    use triton_vm::{
-        prelude::BFieldElement,
-        program::NonDeterminism,
-        twenty_first::{
-            prelude::Mmr,
-            util_types::mmr::{
-                mmr_accumulator::MmrAccumulator, mmr_successor_proof::MmrSuccessorProof,
-                shared_advanced::get_peak_heights,
-                shared_basic::leaf_index_to_mt_index_and_peak_index,
-            },
-        },
-    };
+    use triton_vm::prelude::BFieldElement;
+    use triton_vm::prelude::Tip5;
+    use triton_vm::program::NonDeterminism;
+    use triton_vm::twenty_first::prelude::Mmr;
+    use triton_vm::twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
+    use triton_vm::twenty_first::util_types::mmr::mmr_successor_proof::MmrSuccessorProof;
+    use triton_vm::twenty_first::util_types::mmr::shared_advanced::get_peak_heights;
+    use triton_vm::twenty_first::util_types::mmr::shared_basic::leaf_index_to_mt_index_and_peak_index;
 
     use crate::empty_stack;
     use crate::memory::encode_to_memory;
     use crate::memory::FIRST_NON_DETERMINISTICALLY_INITIALIZED_MEMORY_ADDRESS;
+    use crate::prelude::TasmObject;
+    use crate::snippet_bencher::BenchmarkCase;
     use crate::test_helpers::negative_test;
-    use crate::traits::algorithm::ShadowedAlgorithm;
+    use crate::traits::mem_preserver::MemPreserver;
+    use crate::traits::mem_preserver::MemPreserverInitialState;
+    use crate::traits::mem_preserver::ShadowedMemPreserver;
     use crate::traits::rust_shadow::RustShadow;
-    use crate::{
-        prelude::TasmObject,
-        snippet_bencher::BenchmarkCase,
-        traits::algorithm::{Algorithm, AlgorithmInitialState},
-        Digest,
-    };
+    use crate::Digest;
     use rand::thread_rng;
 
     use super::VerifyMmrSuccessor;
@@ -434,7 +425,7 @@ mod test {
         old_mmr: &MmrAccumulator,
         new_mmr: &MmrAccumulator,
         mmr_successor_proof: &MmrSuccessorProof,
-    ) -> AlgorithmInitialState {
+    ) -> MemPreserverInitialState {
         let mut nondeterminism = NonDeterminism::new(vec![]);
         VerifyMmrSuccessor::update_nondeterminism(&mut nondeterminism, mmr_successor_proof);
         let old_mmr_address = FIRST_NON_DETERMINISTICALLY_INITIALIZED_MEMORY_ADDRESS;
@@ -443,13 +434,14 @@ mod test {
         let mut stack = empty_stack();
         stack.push(old_mmr_address);
         stack.push(new_mmr_address);
-        AlgorithmInitialState {
+        MemPreserverInitialState {
             stack,
             nondeterminism,
+            ..Default::default()
         }
     }
 
-    fn failing_initial_states() -> Vec<AlgorithmInitialState> {
+    fn failing_initial_states() -> Vec<MemPreserverInitialState> {
         let mut rng = thread_rng();
         let mut initial_states = vec![];
         for old_num_leafs in [1u64, 8] {
@@ -539,13 +531,15 @@ mod test {
         initial_states
     }
 
-    impl Algorithm for VerifyMmrSuccessor {
+    impl MemPreserver for VerifyMmrSuccessor {
         fn rust_shadow(
             &self,
             stack: &mut Vec<BFieldElement>,
-            memory: &mut HashMap<BFieldElement, BFieldElement>,
-            nondeterminism: &NonDeterminism,
-        ) {
+            memory: &HashMap<BFieldElement, BFieldElement>,
+            _nd_tokens: VecDeque<BFieldElement>,
+            nd_digests: VecDeque<Digest>,
+            _sponge: &mut Option<Tip5>,
+        ) -> Vec<BFieldElement> {
             let new_mmr_pointer = stack.pop().unwrap();
             let old_mmr_pointer = stack.pop().unwrap();
 
@@ -554,17 +548,19 @@ mod test {
 
             let num_digests = num_digests_to_read(&old_mmr, &new_mmr);
 
-            let digests = nondeterminism.digests[0..num_digests].to_vec();
+            let digests = (0..num_digests).map(|i| nd_digests[i]).collect_vec();
             let mmr_successor_proof = MmrSuccessorProof { paths: digests };
 
             assert!(mmr_successor_proof.verify(&old_mmr, &new_mmr));
+
+            vec![]
         }
 
         fn pseudorandom_initial_state(
             &self,
             seed: [u8; 32],
             bench_case: Option<BenchmarkCase>,
-        ) -> AlgorithmInitialState {
+        ) -> MemPreserverInitialState {
             let mut rng: StdRng = SeedableRng::from_seed(seed);
             let old_num_leafs = match bench_case {
                 Some(BenchmarkCase::WorstCase) => u64::MAX >> 2,
@@ -594,7 +590,7 @@ mod test {
             initial_state_from_mmr_tuple(&old_mmr, &new_mmr, &mmr_successor_proof)
         }
 
-        fn corner_case_initial_states(&self) -> Vec<AlgorithmInitialState> {
+        fn corner_case_initial_states(&self) -> Vec<MemPreserverInitialState> {
             let mut rng = thread_rng();
             let mut initial_states = vec![];
             for old_num_leafs in [0u64, 1, 8] {
@@ -629,7 +625,7 @@ mod test {
 
     #[test]
     fn verify_mmr_successor_simple_test() {
-        ShadowedAlgorithm::new(VerifyMmrSuccessor).test();
+        ShadowedMemPreserver::new(VerifyMmrSuccessor).test();
     }
 
     #[test]
@@ -637,7 +633,7 @@ mod test {
         for (i, init_state) in failing_initial_states().into_iter().enumerate() {
             println!("Trying failing initial state {i}.");
             negative_test(
-                &ShadowedAlgorithm::new(VerifyMmrSuccessor),
+                &ShadowedMemPreserver::new(VerifyMmrSuccessor),
                 init_state.into(),
                 &[
                     InstructionError::AssertionFailed,
@@ -677,13 +673,13 @@ mod test {
 
 #[cfg(test)]
 mod bench {
-    use crate::traits::algorithm::ShadowedAlgorithm;
+    use crate::traits::mem_preserver::ShadowedMemPreserver;
     use crate::traits::rust_shadow::RustShadow;
 
     use super::*;
 
     #[test]
     fn verify_mmr_successor_benchmark() {
-        ShadowedAlgorithm::new(VerifyMmrSuccessor).bench();
+        ShadowedMemPreserver::new(VerifyMmrSuccessor).bench();
     }
 }
