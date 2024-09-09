@@ -7,4 +7,5 @@ pub mod deprecated_snippet;
 pub mod function;
 pub mod mem_preserver;
 pub mod procedure;
+pub mod read_only_algorithm;
 pub mod rust_shadow;

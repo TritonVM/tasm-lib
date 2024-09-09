@@ -114,6 +114,7 @@ impl BasicSnippet for MerkleVerify {
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
+    use std::collections::VecDeque;
 
     use itertools::Itertools;
     use rand::prelude::*;
@@ -121,9 +122,9 @@ mod tests {
 
     use crate::snippet_bencher::BenchmarkCase;
     use crate::test_helpers::negative_test;
-    use crate::traits::algorithm::Algorithm;
-    use crate::traits::algorithm::AlgorithmInitialState;
-    use crate::traits::algorithm::ShadowedAlgorithm;
+    use crate::traits::read_only_algorithm::ReadOnlyAlgorithm;
+    use crate::traits::read_only_algorithm::ReadOnlyAlgorithmInitialState;
+    use crate::traits::read_only_algorithm::ShadowedReadOnlyAlgorithm;
     use crate::traits::rust_shadow::RustShadow;
     use crate::VmHasher;
 
@@ -131,7 +132,7 @@ mod tests {
 
     #[test]
     fn merkle_verify_test() {
-        ShadowedAlgorithm::new(MerkleVerify).test()
+        ShadowedReadOnlyAlgorithm::new(MerkleVerify).test()
     }
 
     #[test]
@@ -185,19 +186,20 @@ mod tests {
             };
 
             negative_test(
-                &ShadowedAlgorithm::new(MerkleVerify),
+                &ShadowedReadOnlyAlgorithm::new(MerkleVerify),
                 init_state.into(),
                 &allowed_error_codes,
             );
         }
     }
 
-    impl Algorithm for MerkleVerify {
+    impl ReadOnlyAlgorithm for MerkleVerify {
         fn rust_shadow(
             &self,
             stack: &mut Vec<BFieldElement>,
-            _memory: &mut HashMap<BFieldElement, BFieldElement>,
-            nondeterminism: &NonDeterminism,
+            _memory: &HashMap<BFieldElement, BFieldElement>,
+            _nd_tokens: VecDeque<BFieldElement>,
+            nd_digests: VecDeque<Digest>,
         ) {
             // BEFORE: _ [root; 5] tree_height leaf_index [leaf; 5]
             // AFTER:  _
@@ -223,11 +225,12 @@ mod tests {
             let mut sibling_height = 0;
             let mut node_index = leaf_index + num_leaves;
             while node_index != 1 {
-                let sibling = nondeterminism.digests[sibling_height];
+                let sibling = nd_digests[sibling_height];
                 let node_is_left_sibling = node_index % 2 == 0;
-                node_digest = match node_is_left_sibling {
-                    true => VmHasher::hash_pair(node_digest, sibling),
-                    false => VmHasher::hash_pair(sibling, node_digest),
+                node_digest = if node_is_left_sibling {
+                    Tip5::hash_pair(node_digest, sibling)
+                } else {
+                    Tip5::hash_pair(sibling, node_digest)
                 };
                 sibling_height += 1;
                 node_index /= 2;
@@ -239,7 +242,7 @@ mod tests {
             &self,
             seed: [u8; 32],
             maybe_bench_case: Option<BenchmarkCase>,
-        ) -> AlgorithmInitialState {
+        ) -> ReadOnlyAlgorithmInitialState {
             {
                 // BEFORE: _ [root; 5] tree_height leaf_index [leaf; 5]
                 let mut rng: StdRng = SeedableRng::from_seed(seed);
@@ -280,7 +283,7 @@ mod tests {
                 }
 
                 let nondeterminism = NonDeterminism::default().with_digests(path);
-                AlgorithmInitialState {
+                ReadOnlyAlgorithmInitialState {
                     stack,
                     nondeterminism,
                 }
@@ -291,13 +294,13 @@ mod tests {
 
 #[cfg(test)]
 mod bench {
-    use crate::traits::algorithm::ShadowedAlgorithm;
+    use crate::traits::read_only_algorithm::ShadowedReadOnlyAlgorithm;
     use crate::traits::rust_shadow::RustShadow;
 
     use super::MerkleVerify;
 
     #[test]
     fn merkle_verify_bench() {
-        ShadowedAlgorithm::new(MerkleVerify).bench()
+        ShadowedReadOnlyAlgorithm::new(MerkleVerify).bench()
     }
 }
