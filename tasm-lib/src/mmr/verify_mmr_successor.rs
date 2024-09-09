@@ -199,7 +199,7 @@ impl BasicSnippet for VerifyMmrSuccessor {
             // _ *old_mmr *new_mmr *old_peaks[0] *end_of_memory [0]
             hint running_leaf_count = stack[0..2]
 
-            dup 6 {&num_leafs}
+            dup 5 {&num_leafs}
             // _ *old_mmr *new_mmr *old_peaks[0] *end_of_memory [0] [old_num_leafs]
             hint num_leafs_remaining = stack[0..2]
 
@@ -372,9 +372,11 @@ mod test {
     use rand::RngCore;
     use rand::SeedableRng;
     use triton_vm::error::InstructionError;
+    use triton_vm::prelude::bfe;
     use triton_vm::prelude::BFieldElement;
     use triton_vm::prelude::Tip5;
     use triton_vm::program::NonDeterminism;
+    use triton_vm::twenty_first::prelude::AlgebraicHasher;
     use triton_vm::twenty_first::prelude::Mmr;
     use triton_vm::twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
     use triton_vm::twenty_first::util_types::mmr::mmr_successor_proof::MmrSuccessorProof;
@@ -383,7 +385,6 @@ mod test {
 
     use crate::empty_stack;
     use crate::memory::encode_to_memory;
-    use crate::memory::FIRST_NON_DETERMINISTICALLY_INITIALIZED_MEMORY_ADDRESS;
     use crate::prelude::TasmObject;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::test_helpers::negative_test;
@@ -426,11 +427,20 @@ mod test {
         new_mmr: &MmrAccumulator,
         mmr_successor_proof: &MmrSuccessorProof,
     ) -> MemPreserverInitialState {
+        let seed = Tip5::hash_pair(Tip5::hash(old_mmr), Tip5::hash(new_mmr));
+        let seed: u64 = seed.0[0].value();
+        let seed: [u8; 8] = seed.to_be_bytes();
+        let seed: [u8; 32] = seed.repeat(4).try_into().unwrap();
+        let mut rng: StdRng = SeedableRng::from_seed(seed);
+        let old_mmr_address: u32 = rng.gen_range(0..1 << 30);
+        let new_mmr_address: u32 = old_mmr_address + rng.gen_range(0..1 << 28);
+        let old_mmr_address = bfe!(old_mmr_address);
+        let new_mmr_address = old_mmr_address + bfe!(new_mmr_address);
+
         let mut nondeterminism = NonDeterminism::new(vec![]);
         VerifyMmrSuccessor::update_nondeterminism(&mut nondeterminism, mmr_successor_proof);
-        let old_mmr_address = FIRST_NON_DETERMINISTICALLY_INITIALIZED_MEMORY_ADDRESS;
-        let new_mmr_address = encode_to_memory(&mut nondeterminism.ram, old_mmr_address, old_mmr);
-        let _garbage_address = encode_to_memory(&mut nondeterminism.ram, new_mmr_address, new_mmr);
+        encode_to_memory(&mut nondeterminism.ram, old_mmr_address, old_mmr);
+        encode_to_memory(&mut nondeterminism.ram, new_mmr_address, new_mmr);
         let mut stack = empty_stack();
         stack.push(old_mmr_address);
         stack.push(new_mmr_address);
@@ -444,7 +454,7 @@ mod test {
     fn failing_initial_states() -> Vec<MemPreserverInitialState> {
         let mut rng = thread_rng();
         let mut initial_states = vec![];
-        for old_num_leafs in [1u64, 8] {
+        for old_num_leafs in [1u64, 2, 3, 8] {
             for num_new_leafs in [0u64, 1, 8] {
                 if [(0, 0)]
                     .into_iter()
@@ -594,15 +604,15 @@ mod test {
         fn corner_case_initial_states(&self) -> Vec<MemPreserverInitialState> {
             let mut rng = thread_rng();
             let mut initial_states = vec![];
-            for old_num_leafs in [0u64, 1, 8] {
-                for num_new_leafs in [0u64, 1, 8] {
+            for old_num_leafs in [0u64, 1, 2, 3, 4, 8] {
+                for num_inserted_leafs in [0u64, 1, 2, 3, 4, 8] {
                     let old_mmr = MmrAccumulator::init(
                         (0..old_num_leafs.count_ones())
                             .map(|_| rng.gen::<Digest>())
                             .collect_vec(),
                         old_num_leafs,
                     );
-                    let new_leafs = (0..num_new_leafs)
+                    let new_leafs = (0..num_inserted_leafs)
                         .map(|_| rng.gen::<Digest>())
                         .collect_vec();
                     let mut new_mmr = old_mmr.clone();
