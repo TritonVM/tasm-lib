@@ -15,12 +15,12 @@ use crate::traits::basic_snippet::BasicSnippet;
 
 #[derive(Debug, Copy, Clone, Display, EnumIter)]
 pub enum ColumnType {
-    Base,
-    Extension,
+    Main,
+    Aux,
     Quotient,
 }
 
-/// Crashes the VM is the base table rows do not authenticate against the provided Merkle root
+/// Crashes the VM is the table rows do not authenticate against the provided Merkle root
 /// First hashes the rows, then verifies that the digests belong in the Merkle tree.
 #[derive(Debug, Copy, Clone)]
 pub struct VerifyTableRows {
@@ -36,8 +36,8 @@ impl VerifyTableRows {
 impl VerifyTableRows {
     pub fn row_size(&self) -> usize {
         match self.column_type {
-            ColumnType::Base => MasterMainTable::NUM_COLUMNS,
-            ColumnType::Extension => MasterAuxTable::NUM_COLUMNS * EXTENSION_DEGREE,
+            ColumnType::Main => MasterMainTable::NUM_COLUMNS,
+            ColumnType::Aux => MasterAuxTable::NUM_COLUMNS * EXTENSION_DEGREE,
             ColumnType::Quotient => NUM_QUOTIENT_SEGMENTS * EXTENSION_DEGREE,
         }
     }
@@ -50,7 +50,7 @@ impl BasicSnippet for VerifyTableRows {
             (DataType::U32, "merkle_tree_height".to_owned()),
             (DataType::VoidPointer, "*merkle_tree_root".to_owned()),
             (DataType::VoidPointer, "*fri_revealed".to_owned()),
-            // type of {base|ext|quot} table rows i
+            // type of {main|aux|quot} table rows i
             // `Vec<[{BaseFieldElement, XFieldElement, XFieldElement}: COLUMN_COUNT]>` but encoded
             // in memory as a flat structure. So I'm not sure what type to use here. Anyway, it's
             // certainly a list.
@@ -64,7 +64,7 @@ impl BasicSnippet for VerifyTableRows {
 
     fn entrypoint(&self) -> String {
         format!(
-            "tasmlib_verifier_master_ext_table_verify_{}_table_rows",
+            "tasmlib_verifier_master_aux_table_verify_{}_table_rows",
             self.column_type
         )
     }
@@ -119,11 +119,11 @@ impl BasicSnippet for VerifyTableRows {
                 /* 3. */
                 dup 7
                 call {hash_row}
-                // _ remaining_iterations num_leaves *merkle_tree_root *fri_revealed_leaf_index_next *row_elem [mt_root] 1 node_index [base_row_digest] *row_elem_next
+                // _ remaining_iterations num_leaves *merkle_tree_root *fri_revealed_leaf_index_next *row_elem [mt_root] 1 node_index [row_digest] *row_elem_next
 
                 swap 13
                 pop 1
-                // _ remaining_iterations num_leaves *merkle_tree_root *fri_revealed_leaf_index_next *row_elem_next [mt_root] 1 node_index [base_row_digest]
+                // _ remaining_iterations num_leaves *merkle_tree_root *fri_revealed_leaf_index_next *row_elem_next [mt_root] 1 node_index [row_digest]
 
                 call {loop_over_auth_path_digests_label}
                 // _ remaining_iterations num_leaves *merkle_tree_root *fri_revealed_leaf_index_next *row_elem_next [mt_root] 1 1 [calculated_root]
@@ -231,17 +231,17 @@ mod tests {
     use super::*;
 
     #[test]
-    fn verify_table_pbt_base() {
+    fn verify_table_pbt_main() {
         ShadowedProcedure::new(VerifyTableRows {
-            column_type: ColumnType::Base,
+            column_type: ColumnType::Main,
         })
         .test()
     }
 
     #[test]
-    fn verify_table_pbt_ext() {
+    fn verify_table_pbt_aux() {
         ShadowedProcedure::new(VerifyTableRows {
-            column_type: ColumnType::Extension,
+            column_type: ColumnType::Aux,
         })
         .test()
     }
@@ -488,17 +488,17 @@ mod benches {
     use super::*;
 
     #[test]
-    fn verify_table_bench_base() {
+    fn verify_table_bench_main() {
         ShadowedProcedure::new(VerifyTableRows {
-            column_type: ColumnType::Base,
+            column_type: ColumnType::Main,
         })
         .bench()
     }
 
     #[test]
-    fn verify_table_bench_ext() {
+    fn verify_table_bench_aux() {
         ShadowedProcedure::new(VerifyTableRows {
-            column_type: ColumnType::Extension,
+            column_type: ColumnType::Aux,
         })
         .bench()
     }

@@ -161,13 +161,13 @@ mod benches {
 
     use super::HashStaticSize;
 
-    // Picked to be the size of a base table row at time of writing
+    // Picked to be the size of a main table row at time of writing
     #[test]
     fn hash_var_lenstatic_size_benchmark_356() {
         ShadowedProcedure::new(HashStaticSize { size: 356 }).bench();
     }
 
-    // Picked to be the size of a extension table row at time of writing
+    // Picked to be the size of a auxiliary table row at time of writing
     #[test]
     fn hash_var_lenstatic_size_benchmark_249() {
         ShadowedProcedure::new(HashStaticSize { size: 249 }).bench();

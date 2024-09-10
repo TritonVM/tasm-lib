@@ -1,6 +1,6 @@
 [
   {
-    "name": "tasmlib_verifier_master_ext_table_verify_Quotient_table_rows",
+    "name": "tasmlib_verifier_master_aux_table_verify_Quotient_table_rows",
     "benchmark_result": {
       "clock_cycle_count": 346,
       "hash_table_height": 471,
@@ -11,7 +11,7 @@
     "case": "CommonCase"
   },
   {
-    "name": "tasmlib_verifier_master_ext_table_verify_Quotient_table_rows",
+    "name": "tasmlib_verifier_master_aux_table_verify_Quotient_table_rows",
     "benchmark_result": {
       "clock_cycle_count": 376,
       "hash_table_height": 561,

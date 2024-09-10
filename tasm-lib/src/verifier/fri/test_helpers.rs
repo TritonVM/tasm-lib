@@ -12,8 +12,8 @@ use crate::Digest;
 
 pub struct StarkProofExtraction {
     pub fri_proof_stream: ProofStream,
-    pub base_tree_authentication_paths: Vec<Vec<Digest>>,
-    pub ext_tree_authentication_paths: Vec<Vec<Digest>>,
+    pub main_tree_authentication_paths: Vec<Vec<Digest>>,
+    pub aux_tree_authentication_paths: Vec<Vec<Digest>>,
     pub quot_tree_authentication_paths: Vec<Vec<Digest>>,
 }
 
@@ -32,18 +32,18 @@ pub fn extract_fri_proof(
         .unwrap();
     proof_stream.alter_fiat_shamir_state_with(claim);
 
-    // Base-table Merkle root
-    let base_table_root = proof_stream
+    // Main-table Merkle root
+    let main_table_root = proof_stream
         .dequeue()
         .unwrap()
         .try_into_merkle_root()
         .unwrap();
 
-    // Extension challenge weights
+    // Aux challenge weights
     proof_stream.sample_scalars(Challenges::SAMPLE_COUNT);
 
-    // Extension-table Merkle root
-    let ext_mt_root = proof_stream
+    // Aux-table Merkle root
+    let aux_mt_root = proof_stream
         .dequeue()
         .unwrap()
         .try_into_merkle_root()
@@ -105,41 +105,41 @@ pub fn extract_fri_proof(
     let indices = fri_verify_result.iter().map(|(i, _)| *i).collect_vec();
     let tree_height = fri.domain.length.ilog2() as usize;
 
-    // base
-    let base_table_rows = proof_stream
+    // main
+    let main_table_rows = proof_stream
         .dequeue()
         .unwrap()
         .try_into_master_main_table_rows()
         .unwrap();
-    let base_authentication_structure = proof_stream
+    let main_authentication_structure = proof_stream
         .dequeue()
         .unwrap()
         .try_into_authentication_structure()
         .unwrap();
-    let base_tree_auth_paths = extract_paths(
-        base_table_root,
+    let main_tree_authentication_paths = extract_paths(
+        main_table_root,
         &indices,
-        &base_table_rows,
-        &base_authentication_structure,
+        &main_table_rows,
+        &main_authentication_structure,
         tree_height,
     );
 
-    // extension
-    let ext_table_rows = proof_stream
+    // auxiliary
+    let aux_table_rows = proof_stream
         .dequeue()
         .unwrap()
         .try_into_master_aux_table_rows()
         .unwrap();
-    let ext_authentication_structure = proof_stream
+    let aux_authentication_structure = proof_stream
         .dequeue()
         .unwrap()
         .try_into_authentication_structure()
         .unwrap();
-    let ext_tree_auth_paths = extract_paths(
-        ext_mt_root,
+    let aux_tree_authentication_paths = extract_paths(
+        aux_mt_root,
         &indices,
-        &ext_table_rows,
-        &ext_authentication_structure,
+        &aux_table_rows,
+        &aux_authentication_structure,
         tree_height,
     );
 
@@ -154,7 +154,7 @@ pub fn extract_fri_proof(
         .unwrap()
         .try_into_authentication_structure()
         .unwrap();
-    let quot_tree_auth_paths = extract_paths(
+    let quot_tree_authentication_paths = extract_paths(
         quotient_root,
         &indices,
         &quot_table_rows,
@@ -164,9 +164,9 @@ pub fn extract_fri_proof(
 
     StarkProofExtraction {
         fri_proof_stream,
-        base_tree_authentication_paths: base_tree_auth_paths,
-        ext_tree_authentication_paths: ext_tree_auth_paths,
-        quot_tree_authentication_paths: quot_tree_auth_paths,
+        main_tree_authentication_paths,
+        aux_tree_authentication_paths,
+        quot_tree_authentication_paths,
     }
 }
 

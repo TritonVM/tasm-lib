@@ -1,6 +1,6 @@
 [
   {
-    "name": "tasmlib_verifier_master_ext_table_divide_out_zerofiers",
+    "name": "tasmlib_verifier_master_aux_table_divide_out_zerofiers",
     "benchmark_result": {
       "clock_cycle_count": 7425,
       "hash_table_height": 8244,
@@ -11,7 +11,7 @@
     "case": "CommonCase"
   },
   {
-    "name": "tasmlib_verifier_master_ext_table_divide_out_zerofiers",
+    "name": "tasmlib_verifier_master_aux_table_divide_out_zerofiers",
     "benchmark_result": {
       "clock_cycle_count": 7425,
       "hash_table_height": 8244,

@@ -28,26 +28,26 @@ pub enum MemoryLayout {
 
 impl MemoryLayout {
     pub fn conventional_static() -> Self {
-        const CURRENT_BASE_ROW_PTR: u64 = 30u64;
-        const BASE_ROW_SIZE: u64 = (MasterMainTable::NUM_COLUMNS * EXTENSION_DEGREE) as u64;
-        const EXT_ROW_SIZE: u64 = (MasterAuxTable::NUM_COLUMNS * EXTENSION_DEGREE) as u64;
+        const CURRENT_MAIN_ROW_PTR: u64 = 30u64;
+        const MAIN_ROW_SIZE: u64 = (MasterMainTable::NUM_COLUMNS * EXTENSION_DEGREE) as u64;
+        const AUX_ROW_SIZE: u64 = (MasterAuxTable::NUM_COLUMNS * EXTENSION_DEGREE) as u64;
         const METADATA_SIZE_PER_PROOF_ITEM_ELEMENT: u64 = 2; // 1 for discriminant, 1 for elem size
         let mem_layout = StaticTasmConstraintEvaluationMemoryLayout {
             free_mem_page_ptr: BFieldElement::new(((1u64 << 32) - 3) * (1u64 << 32)),
-            curr_main_row_ptr: BFieldElement::new(CURRENT_BASE_ROW_PTR),
+            curr_main_row_ptr: BFieldElement::new(CURRENT_MAIN_ROW_PTR),
             curr_aux_row_ptr: BFieldElement::new(
-                CURRENT_BASE_ROW_PTR + BASE_ROW_SIZE + METADATA_SIZE_PER_PROOF_ITEM_ELEMENT,
+                CURRENT_MAIN_ROW_PTR + MAIN_ROW_SIZE + METADATA_SIZE_PER_PROOF_ITEM_ELEMENT,
             ),
             next_main_row_ptr: BFieldElement::new(
-                CURRENT_BASE_ROW_PTR
-                    + BASE_ROW_SIZE
-                    + EXT_ROW_SIZE
+                CURRENT_MAIN_ROW_PTR
+                    + MAIN_ROW_SIZE
+                    + AUX_ROW_SIZE
                     + 2 * METADATA_SIZE_PER_PROOF_ITEM_ELEMENT,
             ),
             next_aux_row_ptr: BFieldElement::new(
-                CURRENT_BASE_ROW_PTR
-                    + 2 * BASE_ROW_SIZE
-                    + EXT_ROW_SIZE
+                CURRENT_MAIN_ROW_PTR
+                    + 2 * MAIN_ROW_SIZE
+                    + AUX_ROW_SIZE
                     + 3 * METADATA_SIZE_PER_PROOF_ITEM_ELEMENT,
             ),
             challenges_ptr: conventional_challenges_pointer(),
@@ -163,30 +163,30 @@ impl AirConstraintEvaluation {
     pub fn host_machine_air_constraint_evaluation(
         input_values: AirConstraintSnippetInputs,
     ) -> Vec<XFieldElement> {
-        let current_base_row = Array1::from(input_values.current_base_row);
-        let current_ext_row = Array1::from(input_values.current_ext_row);
-        let next_base_row = Array1::from(input_values.next_base_row);
-        let next_ext_row = Array1::from(input_values.next_ext_row);
+        let current_main_row = Array1::from(input_values.current_main_row);
+        let current_aux_row = Array1::from(input_values.current_aux_row);
+        let next_main_row = Array1::from(input_values.next_main_row);
+        let next_aux_row = Array1::from(input_values.next_aux_row);
         let evaluated_initial_constraints = MasterAuxTable::evaluate_initial_constraints(
-            current_base_row.view(),
-            current_ext_row.view(),
+            current_main_row.view(),
+            current_aux_row.view(),
             &input_values.challenges,
         );
         let evaluated_consistency_constraints = MasterAuxTable::evaluate_consistency_constraints(
-            current_base_row.view(),
-            current_ext_row.view(),
+            current_main_row.view(),
+            current_aux_row.view(),
             &input_values.challenges,
         );
         let evaluated_transition_constraints = MasterAuxTable::evaluate_transition_constraints(
-            current_base_row.view(),
-            current_ext_row.view(),
-            next_base_row.view(),
-            next_ext_row.view(),
+            current_main_row.view(),
+            current_aux_row.view(),
+            next_main_row.view(),
+            next_aux_row.view(),
             &input_values.challenges,
         );
         let evaluated_terminal_constraints = MasterAuxTable::evaluate_terminal_constraints(
-            current_base_row.view(),
-            current_ext_row.view(),
+            current_main_row.view(),
+            current_aux_row.view(),
             &input_values.challenges,
         );
 
@@ -204,10 +204,10 @@ impl BasicSnippet for AirConstraintEvaluation {
     fn inputs(&self) -> Vec<(DataType, String)> {
         match self.memory_layout {
             MemoryLayout::Dynamic(_) => vec![
-                (DataType::VoidPointer, "*curr_base_row".to_string()),
+                (DataType::VoidPointer, "*curr_main_row".to_string()),
                 (DataType::VoidPointer, "*curr_extrow".to_string()),
-                (DataType::VoidPointer, "*next_base_row".to_string()),
-                (DataType::VoidPointer, "*next_ext_row".to_string()),
+                (DataType::VoidPointer, "*next_main_row".to_string()),
+                (DataType::VoidPointer, "*next_aux_row".to_string()),
             ],
             MemoryLayout::Static(_) => vec![],
         }
@@ -224,7 +224,7 @@ impl BasicSnippet for AirConstraintEvaluation {
         );
 
         // Consider parameterizing this entrypoint name if you need more than one instance.
-        "tasmlib_verifier_master_ext_table_air_constraint_evaluation".to_owned()
+        "tasmlib_verifier_master_aux_table_air_constraint_evaluation".to_owned()
     }
 
     fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {
@@ -286,10 +286,10 @@ pub fn an_integral_but_profane_dynamic_memory_layout() -> DynamicTasmConstraintE
 
 #[derive(Debug, Clone)]
 pub struct AirConstraintSnippetInputs {
-    pub current_base_row: Vec<XFieldElement>,
-    pub current_ext_row: Vec<XFieldElement>,
-    pub next_base_row: Vec<XFieldElement>,
-    pub next_ext_row: Vec<XFieldElement>,
+    pub current_main_row: Vec<XFieldElement>,
+    pub current_aux_row: Vec<XFieldElement>,
+    pub next_main_row: Vec<XFieldElement>,
+    pub next_aux_row: Vec<XFieldElement>,
     pub challenges: Challenges,
 }
 
@@ -388,60 +388,60 @@ mod tests {
         let MemoryLayout::Static(assumed_memory_layout) = assumed_memory_layout else {
             panic!()
         };
-        const BASE_ROW_SIZE: usize = MasterMainTable::NUM_COLUMNS * EXTENSION_DEGREE;
-        const EXT_ROW_SIZE: usize = MasterAuxTable::NUM_COLUMNS * EXTENSION_DEGREE;
+        const MAIN_ROW_SIZE: usize = MasterMainTable::NUM_COLUMNS * EXTENSION_DEGREE;
+        const AUX_ROW_SIZE: usize = MasterAuxTable::NUM_COLUMNS * EXTENSION_DEGREE;
 
-        let assumed_curr_base_row: [XFieldElement; MasterMainTable::NUM_COLUMNS] =
+        let assumed_curr_main_row: [XFieldElement; MasterMainTable::NUM_COLUMNS] =
             *decode_from_memory_with_size(
                 &memory,
                 assumed_memory_layout.curr_main_row_ptr,
-                BASE_ROW_SIZE,
+                MAIN_ROW_SIZE,
             )
             .unwrap();
-        let actual_curr_base_row_from_proof = proof_stream.items[4]
+        let actual_curr_main_row_from_proof = proof_stream.items[4]
             .clone()
             .try_into_out_of_domain_main_row()
             .unwrap();
-        assert_eq!(*actual_curr_base_row_from_proof, assumed_curr_base_row);
+        assert_eq!(*actual_curr_main_row_from_proof, assumed_curr_main_row);
 
-        let assumed_curr_ext_row: [XFieldElement; MasterAuxTable::NUM_COLUMNS] =
+        let assumed_curr_aux_row: [XFieldElement; MasterAuxTable::NUM_COLUMNS] =
             *decode_from_memory_with_size(
                 &memory,
                 assumed_memory_layout.curr_aux_row_ptr,
-                EXT_ROW_SIZE,
+                AUX_ROW_SIZE,
             )
             .unwrap();
-        let actual_curr_ext_row_from_proof = proof_stream.items[5]
+        let actual_curr_aux_row_from_proof = proof_stream.items[5]
             .clone()
             .try_into_out_of_domain_aux_row()
             .unwrap();
-        assert_eq!(*actual_curr_ext_row_from_proof, assumed_curr_ext_row);
+        assert_eq!(*actual_curr_aux_row_from_proof, assumed_curr_aux_row);
 
-        let assumed_next_base_row: [XFieldElement; MasterMainTable::NUM_COLUMNS] =
+        let assumed_next_main_row: [XFieldElement; MasterMainTable::NUM_COLUMNS] =
             *decode_from_memory_with_size(
                 &memory,
                 assumed_memory_layout.next_main_row_ptr,
-                BASE_ROW_SIZE,
+                MAIN_ROW_SIZE,
             )
             .unwrap();
-        let actual_next_base_row_from_proof = proof_stream.items[6]
+        let actual_next_main_row_from_proof = proof_stream.items[6]
             .clone()
             .try_into_out_of_domain_main_row()
             .unwrap();
-        assert_eq!(*actual_next_base_row_from_proof, assumed_next_base_row);
+        assert_eq!(*actual_next_main_row_from_proof, assumed_next_main_row);
 
-        let assumed_next_ext_row: [XFieldElement; MasterAuxTable::NUM_COLUMNS] =
+        let assumed_next_aux_row: [XFieldElement; MasterAuxTable::NUM_COLUMNS] =
             *decode_from_memory_with_size(
                 &memory,
                 assumed_memory_layout.next_aux_row_ptr,
-                EXT_ROW_SIZE,
+                AUX_ROW_SIZE,
             )
             .unwrap();
-        let actual_next_ext_row_from_proof = proof_stream.items[7]
+        let actual_next_aux_row_from_proof = proof_stream.items[7]
             .clone()
             .try_into_out_of_domain_aux_row()
             .unwrap();
-        assert_eq!(*actual_next_ext_row_from_proof, assumed_next_ext_row);
+        assert_eq!(*actual_next_aux_row_from_proof, assumed_next_aux_row);
     }
 
     impl Function for AirConstraintEvaluation {
@@ -506,19 +506,19 @@ mod tests {
         }
 
         pub(crate) fn random_input_values(rng: &mut StdRng) -> AirConstraintSnippetInputs {
-            let current_base_row: Vec<XFieldElement> = rng
+            let current_main_row: Vec<XFieldElement> = rng
                 .sample_iter(Standard)
                 .take(MasterMainTable::NUM_COLUMNS)
                 .collect();
-            let current_ext_row: Vec<XFieldElement> = rng
+            let current_aux_row: Vec<XFieldElement> = rng
                 .sample_iter(Standard)
                 .take(MasterAuxTable::NUM_COLUMNS)
                 .collect();
-            let next_base_row: Vec<XFieldElement> = rng
+            let next_main_row: Vec<XFieldElement> = rng
                 .sample_iter(Standard)
                 .take(MasterMainTable::NUM_COLUMNS)
                 .collect();
-            let next_ext_row: Vec<XFieldElement> = rng
+            let next_aux_row: Vec<XFieldElement> = rng
                 .sample_iter(Standard)
                 .take(MasterAuxTable::NUM_COLUMNS)
                 .collect();
@@ -529,10 +529,10 @@ mod tests {
             let challenges: Challenges = Challenges::arbitrary(&mut unstructured).unwrap();
 
             AirConstraintSnippetInputs {
-                current_base_row,
-                current_ext_row,
-                next_base_row,
-                next_ext_row,
+                current_main_row,
+                current_aux_row,
+                next_main_row,
+                next_aux_row,
                 challenges,
             }
         }
@@ -547,22 +547,22 @@ mod tests {
                     insert_as_array(
                         static_layout.curr_main_row_ptr,
                         &mut memory,
-                        input_values.current_base_row,
+                        input_values.current_main_row,
                     );
                     insert_as_array(
                         static_layout.curr_aux_row_ptr,
                         &mut memory,
-                        input_values.current_ext_row,
+                        input_values.current_aux_row,
                     );
                     insert_as_array(
                         static_layout.next_main_row_ptr,
                         &mut memory,
-                        input_values.next_base_row,
+                        input_values.next_main_row,
                     );
                     insert_as_array(
                         static_layout.next_aux_row_ptr,
                         &mut memory,
-                        input_values.next_ext_row,
+                        input_values.next_aux_row,
                     );
                     insert_as_array(
                         static_layout.challenges_ptr,
@@ -576,20 +576,20 @@ mod tests {
                     let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
                     let curr_main_row_ptr = dynamic_layout.challenges_ptr + bfe!(10000);
                     let curr_aux_row_ptr = curr_main_row_ptr
-                        + bfe!((input_values.current_base_row.len() * EXTENSION_DEGREE + 1) as u64);
+                        + bfe!((input_values.current_main_row.len() * EXTENSION_DEGREE + 1) as u64);
                     let next_main_row_ptr = curr_aux_row_ptr
-                        + bfe!((input_values.current_ext_row.len() * EXTENSION_DEGREE + 2) as u64);
+                        + bfe!((input_values.current_aux_row.len() * EXTENSION_DEGREE + 2) as u64);
                     let next_aux_row_ptr = next_main_row_ptr
-                        + bfe!((input_values.next_base_row.len() * EXTENSION_DEGREE + 3) as u64);
+                        + bfe!((input_values.next_main_row.len() * EXTENSION_DEGREE + 3) as u64);
 
                     insert_as_array(
                         curr_main_row_ptr,
                         &mut memory,
-                        input_values.current_base_row,
+                        input_values.current_main_row,
                     );
-                    insert_as_array(curr_aux_row_ptr, &mut memory, input_values.current_ext_row);
-                    insert_as_array(next_main_row_ptr, &mut memory, input_values.next_base_row);
-                    insert_as_array(next_aux_row_ptr, &mut memory, input_values.next_ext_row);
+                    insert_as_array(curr_aux_row_ptr, &mut memory, input_values.current_aux_row);
+                    insert_as_array(next_main_row_ptr, &mut memory, input_values.next_main_row);
+                    insert_as_array(next_aux_row_ptr, &mut memory, input_values.next_aux_row);
                     insert_as_array(
                         dynamic_layout.challenges_ptr,
                         &mut memory,

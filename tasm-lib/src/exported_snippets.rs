@@ -90,10 +90,10 @@ use crate::verifier::challenges::new_empty_input_and_output::NewEmptyInputAndOut
 use crate::verifier::challenges::new_generic_dyn_claim::NewGenericDynClaim;
 use crate::verifier::claim::instantiate_fiat_shamir_with_claim::InstantiateFiatShamirWithClaim;
 use crate::verifier::fri;
-use crate::verifier::master_ext_table::air_constraint_evaluation::AirConstraintEvaluation;
-use crate::verifier::master_ext_table::divide_out_zerofiers::DivideOutZerofiers;
-use crate::verifier::master_ext_table::verify_table_rows::ColumnType;
-use crate::verifier::master_ext_table::verify_table_rows::VerifyTableRows;
+use crate::verifier::master_aux_table::air_constraint_evaluation::AirConstraintEvaluation;
+use crate::verifier::master_aux_table::divide_out_zerofiers::DivideOutZerofiers;
+use crate::verifier::master_aux_table::verify_table_rows::ColumnType;
+use crate::verifier::master_aux_table::verify_table_rows::VerifyTableRows;
 use crate::verifier::own_program_digest::OwnProgramDigest;
 use crate::verifier::read_and_verify_own_program_digest_from_std_in::ReadAndVerifyOwnProgramDigestFromStdIn;
 use crate::verifier::vm_proof_iter::dequeue_next_as::DequeueNextAs;
@@ -391,10 +391,10 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
         "tasmlib_verifier_vm_proof_iter_dequeue_next_as_merkleroot" => {
             Box::new(DequeueNextAs { proof_item: ProofItemVariant::MerkleRoot })
         }
-        "tasmlib_verifier_vm_proof_iter_dequeue_next_as_OutOfDomainMainRow" => {
+        "tasmlib_verifier_vm_proof_iter_dequeue_next_as_outofdomainmainrow" => {
             Box::new(DequeueNextAs { proof_item: ProofItemVariant::OutOfDomainMainRow })
         }
-        "tasmlib_verifier_vm_proof_iter_dequeue_next_as_OutOfDomainAuxRow" => {
+        "tasmlib_verifier_vm_proof_iter_dequeue_next_as_outofdomainauxrow" => {
             Box::new(DequeueNextAs { proof_item: ProofItemVariant::OutOfDomainAuxRow })
         }
         "tasmlib_verifier_vm_proof_iter_dequeue_next_as_outofdomainquotientsegments" => {
@@ -403,10 +403,10 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
         "tasmlib_verifier_vm_proof_iter_dequeue_next_as_authenticationstructure" => {
             Box::new(DequeueNextAs { proof_item: ProofItemVariant::AuthenticationStructure })
         }
-        "tasmlib_verifier_vm_proof_iter_dequeue_next_as_MasterMainTableRows" => {
+        "tasmlib_verifier_vm_proof_iter_dequeue_next_as_mastermaintablerows" => {
             Box::new(DequeueNextAs { proof_item: ProofItemVariant::MasterMainTableRows })
         }
-        "tasmlib_verifier_vm_proof_iter_dequeue_next_as_MasterAuxTablerows" => {
+        "tasmlib_verifier_vm_proof_iter_dequeue_next_as_masterauxtablerows" => {
             Box::new(DequeueNextAs { proof_item: ProofItemVariant::MasterAuxTableRows })
         }
         "tasmlib_verifier_vm_proof_iter_dequeue_next_as_log2paddedheight" => {
@@ -436,19 +436,19 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
                 = NewEmptyInputAndOutput::new(num_challenges_to_sample, num_challenges_to_compute, challenges::shared::conventional_challenges_pointer());
             Box::new(challenge_snippet)
         }
-        "tasmlib_verifier_master_ext_table_air_constraint_evaluation" => {
+        "tasmlib_verifier_master_aux_table_air_constraint_evaluation" => {
             Box::new(AirConstraintEvaluation::with_conventional_dynamic_memory_layout())
         }
-        "tasmlib_verifier_master_ext_table_divide_out_zerofiers" => {
+        "tasmlib_verifier_master_aux_table_divide_out_zerofiers" => {
             Box::new(DivideOutZerofiers)
         }
-        "tasmlib_verifier_master_ext_table_verify_Base_table_rows"=> {
-            Box::new(VerifyTableRows::new(ColumnType::Base))
+        "tasmlib_verifier_master_aux_table_verify_Main_table_rows"=> {
+            Box::new(VerifyTableRows::new(ColumnType::Main))
         }
-        "tasmlib_verifier_master_ext_table_verify_Extension_table_rows"=> {
-            Box::new(VerifyTableRows::new(ColumnType::Extension))
+        "tasmlib_verifier_master_aux_table_verify_Aux_table_rows"=> {
+            Box::new(VerifyTableRows::new(ColumnType::Aux))
         }
-        "tasmlib_verifier_master_ext_table_verify_Quotient_table_rows"=> {
+        "tasmlib_verifier_master_aux_table_verify_Quotient_table_rows"=> {
             Box::new(VerifyTableRows::new(ColumnType::Quotient))
         }
 
@@ -466,10 +466,10 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
         "tasmlib_verifier_own_program_digest" => {
             Box::new(OwnProgramDigest)
         }
-        "tasmlib_array_inner_product_of_three_rows_with_weights_Bfe_baserowelem" => {
+        "tasmlib_array_inner_product_of_three_rows_with_weights_Bfe_mainrowelem" => {
             Box::new(InnerProductOfThreeRowsWithWeights::triton_vm_parameters(MainElementType::Bfe))
         }
-        "tasmlib_array_inner_product_of_three_rows_with_weights_Xfe_baserowelem" => {
+        "tasmlib_array_inner_product_of_three_rows_with_weights_Xfe_mainrowelem" => {
             Box::new(InnerProductOfThreeRowsWithWeights::triton_vm_parameters(MainElementType::Xfe))
         }
         "tasmlib_verifier_claim_instantiate_fiat_shamir_with_claim" => {

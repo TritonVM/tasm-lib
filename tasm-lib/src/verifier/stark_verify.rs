@@ -27,17 +27,17 @@ use crate::verifier::claim::shared::claim_type;
 use crate::verifier::fri;
 use crate::verifier::fri::verify::FriSnippet;
 use crate::verifier::fri::verify::FriVerify;
-use crate::verifier::master_ext_table::divide_out_zerofiers::DivideOutZerofiers;
-use crate::verifier::master_ext_table::verify_table_rows::ColumnType;
-use crate::verifier::master_ext_table::verify_table_rows::VerifyTableRows;
+use crate::verifier::master_aux_table::divide_out_zerofiers::DivideOutZerofiers;
+use crate::verifier::master_aux_table::verify_table_rows::ColumnType;
+use crate::verifier::master_aux_table::verify_table_rows::VerifyTableRows;
 use crate::verifier::out_of_domain_points::OodPoint;
 use crate::verifier::out_of_domain_points::OutOfDomainPoints;
 use crate::verifier::vm_proof_iter::dequeue_next_as::DequeueNextAs;
 use crate::verifier::vm_proof_iter::new::New;
 use triton_vm::proof_stream::ProofStream;
 
-use super::master_ext_table::air_constraint_evaluation::AirConstraintEvaluation;
-use super::master_ext_table::air_constraint_evaluation::MemoryLayout;
+use super::master_aux_table::air_constraint_evaluation::AirConstraintEvaluation;
+use super::master_aux_table::air_constraint_evaluation::MemoryLayout;
 
 /// Verify a STARK proof.
 ///
@@ -120,18 +120,18 @@ impl StarkVerify {
                 .unwrap();
             proof_stream.alter_fiat_shamir_state_with(claim);
 
-            // Base-table Merkle root
-            let _base_table_root = proof_stream
+            // Main-table Merkle root
+            let _main_table_root = proof_stream
                 .dequeue()
                 .unwrap()
                 .try_into_merkle_root()
                 .unwrap();
 
-            // Extension challenge weights
+            // Auxiliary challenge weights
             let _challenges = proof_stream.sample_scalars(Challenges::SAMPLE_COUNT);
 
-            // Extension-table Merkle root
-            let _ext_mt_root = proof_stream
+            // Auxiliary-table Merkle root
+            let _aux_mt_root = proof_stream
                 .dequeue()
                 .unwrap()
                 .try_into_merkle_root()
@@ -214,40 +214,40 @@ impl StarkVerify {
             let fri_digests =
                 FriVerify::from(fri).extract_digests_required_for_proving(&fri_proof_stream);
 
-            // base
-            let base_table_rows = proof_stream
+            // main
+            let main_table_rows = proof_stream
                 .dequeue()
                 .unwrap()
                 .try_into_master_main_table_rows()
                 .unwrap();
-            let base_authentication_structure = proof_stream
+            let main_authentication_structure = proof_stream
                 .dequeue()
                 .unwrap()
                 .try_into_authentication_structure()
                 .unwrap();
-            let base_tree_auth_paths = extract_paths(
+            let main_tree_auth_paths = extract_paths(
                 indices.clone(),
-                base_table_rows,
+                main_table_rows,
                 tree_height,
-                base_authentication_structure,
+                main_authentication_structure,
             );
 
-            // extension
-            let ext_table_rows = proof_stream
+            // aux
+            let aux_table_rows = proof_stream
                 .dequeue()
                 .unwrap()
                 .try_into_master_aux_table_rows()
                 .unwrap();
-            let ext_authentication_structure = proof_stream
+            let aux_authentication_structure = proof_stream
                 .dequeue()
                 .unwrap()
                 .try_into_authentication_structure()
                 .unwrap();
-            let ext_tree_auth_paths = extract_paths(
+            let aux_tree_auth_paths = extract_paths(
                 indices.clone(),
-                ext_table_rows,
+                aux_table_rows,
                 tree_height,
-                ext_authentication_structure,
+                aux_authentication_structure,
             );
 
             // quotient
@@ -269,8 +269,8 @@ impl StarkVerify {
             );
 
             let stark_digests = [
-                base_tree_auth_paths,
-                ext_tree_auth_paths,
+                main_tree_auth_paths,
+                aux_tree_auth_paths,
                 quot_tree_auth_paths,
             ]
             .concat()
@@ -304,16 +304,16 @@ impl BasicSnippet for StarkVerify {
 
         let proof_to_vm_proof_iter = library.import(Box::new(New));
 
-        let ood_curr_row_base_and_ext_value_pointer_write =
+        let ood_curr_row_main_and_aux_value_pointer_write =
             library.kmalloc(EXTENSION_DEGREE.try_into().unwrap());
-        let ood_curr_row_base_and_ext_value_pointer_read =
-            ood_curr_row_base_and_ext_value_pointer_write
+        let ood_curr_row_main_and_aux_value_pointer_read =
+            ood_curr_row_main_and_aux_value_pointer_write
                 + BFieldElement::new(EXTENSION_DEGREE as u64 - 1);
 
-        let ood_next_row_base_and_ext_value_pointer_write =
+        let ood_next_row_main_and_aux_value_pointer_write =
             library.kmalloc(EXTENSION_DEGREE.try_into().unwrap());
-        let ood_next_row_base_and_ext_value_pointer_read =
-            ood_next_row_base_and_ext_value_pointer_write
+        let ood_next_row_main_and_aux_value_pointer_read =
+            ood_next_row_main_and_aux_value_pointer_write
                 + BFieldElement::new(EXTENSION_DEGREE as u64 - 1);
 
         let ood_curr_row_quotient_segment_value_pointer_write =
@@ -341,13 +341,13 @@ impl BasicSnippet for StarkVerify {
         let next_as_outofdomainquotientsegments = library.import(Box::new(DequeueNextAs {
             proof_item: ProofItemVariant::OutOfDomainQuotientSegments,
         }));
-        let next_as_basetablerows = library.import(Box::new(DequeueNextAs {
+        let next_as_maintablerows = library.import(Box::new(DequeueNextAs {
             proof_item: ProofItemVariant::MasterMainTableRows,
         }));
         let next_as_authentication_path = library.import(Box::new(DequeueNextAs {
             proof_item: ProofItemVariant::AuthenticationStructure,
         }));
-        let next_as_exttablerows = library.import(Box::new(DequeueNextAs {
+        let next_as_auxtablerows = library.import(Box::new(DequeueNextAs {
             proof_item: ProofItemVariant::MasterAuxTableRows,
         }));
         let next_as_quotient_segment_elements = library.import(Box::new(DequeueNextAs {
@@ -404,19 +404,19 @@ impl BasicSnippet for StarkVerify {
                 + NUM_QUOTIENT_SEGMENTS
                 + NUM_DEEP_CODEWORD_COMPONENTS,
         }));
-        let verify_base_table_rows = library.import(Box::new(VerifyTableRows {
-            column_type: ColumnType::Base,
+        let verify_main_table_rows = library.import(Box::new(VerifyTableRows {
+            column_type: ColumnType::Main,
         }));
-        let verify_extension_table_rows = library.import(Box::new(VerifyTableRows {
-            column_type: ColumnType::Extension,
+        let verify_aux_table_rows = library.import(Box::new(VerifyTableRows {
+            column_type: ColumnType::Aux,
         }));
         let verify_quotient_segments = library.import(Box::new(VerifyTableRows {
             column_type: ColumnType::Quotient,
         }));
-        let inner_product_three_rows_with_weights_bfe_base = library.import(Box::new(
+        let inner_product_three_rows_with_weights_bfe_main = library.import(Box::new(
             InnerProductOfThreeRowsWithWeights::triton_vm_parameters(MainElementType::Bfe),
         ));
-        let inner_product_three_rows_with_weights_xfe_base = library.import(Box::new(
+        let inner_product_three_rows_with_weights_xfe_main = library.import(Box::new(
             InnerProductOfThreeRowsWithWeights::triton_vm_parameters(MainElementType::Xfe),
         ));
         let inner_product_4_xfes = library.import(Box::new(InnerProductOfXfes { length: 4 }));
@@ -442,19 +442,19 @@ impl BasicSnippet for StarkVerify {
             // _ *proof_iter
             dup 0
             call {next_as_outofdomainmainrow}
-            hint out_of_domain_curr_base_row: Pointer = stack[0]
+            hint out_of_domain_curr_main_row: Pointer = stack[0]
 
             dup 1
             call {next_as_outofdomainauxrow}
-            hint out_of_domain_curr_ext_row: Pointer = stack[0]
+            hint out_of_domain_curr_aux_row: Pointer = stack[0]
 
             dup 2
             call {next_as_outofdomainmainrow}
-            hint out_of_domain_next_base_row: Pointer = stack[0]
+            hint out_of_domain_next_main_row: Pointer = stack[0]
 
             dup 3
             call {next_as_outofdomainauxrow}
-            hint out_of_domain_next_ext_row: Pointer = stack[0]
+            hint out_of_domain_next_aux_row: Pointer = stack[0]
             // _ *proof_iter *curr_main *curr_aux *next_main *next_aux
         };
 
@@ -574,8 +574,8 @@ impl BasicSnippet for StarkVerify {
             dup 6
             dup 6
             dup 4
-            call {inner_product_three_rows_with_weights_bfe_base} // expect arguments: *ext *base *ws
-            hint base_and_ext_opened_row_element: Xfe = stack[0..3]
+            call {inner_product_three_rows_with_weights_bfe_main} // expect arguments: *aux *main *ws
+            hint main_and_aux_opened_row_element: Xfe = stack[0..3]
             // _ remaining_rounds fri_gen fri_offset *etrow *btrow *qseg_elem *fri_revealed_xfe *beqd_ws *oodpnts (-fdom_pnt) [be_opnd_elem]
 
             // Update `*btrow` and `*etrow` pointer values to point to previous element
@@ -591,7 +591,7 @@ impl BasicSnippet for StarkVerify {
 
             push -1
             xb_mul
-            hint neg_base_and_ext_opened_row_element: Xfe = stack[0..3]
+            hint neg_main_and_aux_opened_row_element: Xfe = stack[0..3]
 
             // Calculate `cuotient_curr_row_deep_value`
             dup 4
@@ -651,26 +651,26 @@ impl BasicSnippet for StarkVerify {
             x_invert
             // _ remaining_rounds fri_gen fri_offset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *beqd_ws *oodpnts (-fdom_pnt) [-be_opnd_elem] [dv2] [1/(ood_point_curr_row - fdom_pnt)]
 
-            push {ood_curr_row_base_and_ext_value_pointer_read}
+            push {ood_curr_row_main_and_aux_value_pointer_read}
             read_mem {EXTENSION_DEGREE}
             pop 1
-            // _ remaining_rounds fri_gen fri_offset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *beqd_ws *oodpnts (-fdom_pnt) [-be_opnd_elem] [dv2] [1/(ood_point_curr_row - fdom_pnt)] [out_of_domain_curr_row_base_and_ext_value]
+            // _ remaining_rounds fri_gen fri_offset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *beqd_ws *oodpnts (-fdom_pnt) [-be_opnd_elem] [dv2] [1/(ood_point_curr_row - fdom_pnt)] [out_of_domain_curr_row_main_and_aux_value]
 
             dup 11
             dup 11
             dup 11
             xx_add
-            // _ remaining_rounds fri_gen fri_offset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *beqd_ws *oodpnts (-fdom_pnt) [-be_opnd_elem] [dv2] [1/(ood_point_curr_row - fdom_pnt)] [out_of_domain_curr_row_base_and_ext_value - be_opnd_elem]
+            // _ remaining_rounds fri_gen fri_offset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *beqd_ws *oodpnts (-fdom_pnt) [-be_opnd_elem] [dv2] [1/(ood_point_curr_row - fdom_pnt)] [out_of_domain_curr_row_main_and_aux_value - be_opnd_elem]
 
             xx_mul
-            // _ remaining_rounds fri_gen fri_offset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *beqd_ws *oodpnts (-fdom_pnt) [-be_opnd_elem] [dv2] [(out_of_domain_curr_row_base_and_ext_value - be_opnd_elem)/(ood_point_curr_row - fdom_pnt)]
+            // _ remaining_rounds fri_gen fri_offset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *beqd_ws *oodpnts (-fdom_pnt) [-be_opnd_elem] [dv2] [(out_of_domain_curr_row_main_and_aux_value - be_opnd_elem)/(ood_point_curr_row - fdom_pnt)]
 
             dup 11
             {&deep_codeword_weights_read_address(0)}
             read_mem {EXTENSION_DEGREE}              // read deep_codeword_weights[0]
             pop 1
             xx_mul
-            // _ remaining_rounds fri_gen fri_offset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *beqd_ws *oodpnts (-fdom_pnt) [-be_opnd_elem] [dv2] [deep_codeword_weights[0] * (out_of_domain_curr_row_base_and_ext_value - be_opnd_elem)/(ood_point_curr_row - fdom_pnt)]
+            // _ remaining_rounds fri_gen fri_offset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *beqd_ws *oodpnts (-fdom_pnt) [-be_opnd_elem] [dv2] [deep_codeword_weights[0] * (out_of_domain_curr_row_main_and_aux_value - be_opnd_elem)/(ood_point_curr_row - fdom_pnt)]
             // _ remaining_rounds fri_gen fri_offset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *beqd_ws *oodpnts (-fdom_pnt) [-be_opnd_elem] [dv2] [dv0]
 
             xx_add
@@ -680,7 +680,7 @@ impl BasicSnippet for StarkVerify {
             {&swap_top_two_xfes}
             // _ remaining_rounds fri_gen fri_offset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *beqd_ws *oodpnts (-fdom_pnt) [dv2 + dv0] [-be_opnd_elem]
 
-            push {ood_next_row_base_and_ext_value_pointer_read}
+            push {ood_next_row_main_and_aux_value_pointer_read}
             read_mem {EXTENSION_DEGREE}
             pop 1
             xx_add
@@ -913,9 +913,9 @@ impl BasicSnippet for StarkVerify {
                 // _ *beqd_ws *p_iter *oodpnts *fri *e_mr *odd_brow_nxt *quot_mr *ood_erow_nxt *ood_brow_curr *ood_erow_curr *b_mr *fri_revealed
 
 
-                /* Dequeue base-table rows and verify against its Merkle root */
+                /* Dequeue main-table rows and verify against its Merkle root */
                 dup 10
-                call {next_as_basetablerows}
+                call {next_as_maintablerows}
                 // _ *beqd_ws *p_iter *oodpnts *fri *e_mr *odd_brow_nxt *quot_mr *ood_erow_nxt *ood_brow_curr *ood_erow_curr *b_mr *fri_revealed *btrows
 
 
@@ -946,11 +946,11 @@ impl BasicSnippet for StarkVerify {
                 dup 4
                 // _ *beqd_ws *p_iter *oodpnts *fri *e_mr *odd_brow_nxt *quot_mr *ood_erow_nxt *ood_brow_curr *ood_erow_curr *fri_revealed *btrows num_colli mt_height *b_mr *fri_revealed *btrows
 
-                call {verify_base_table_rows}
+                call {verify_main_table_rows}
                 // _ *beqd_ws *p_iter *oodpnts *fri *e_mr *odd_brow_nxt *quot_mr *ood_erow_nxt *ood_brow_curr *ood_erow_curr *fri_revealed *btrows
 
 
-                /* Dequeue and ignore base-table's authentication path */
+                /* Dequeue and ignore main-table's authentication path */
                 dup 10
                 call {next_as_authentication_path}
                 pop 1
@@ -960,9 +960,9 @@ impl BasicSnippet for StarkVerify {
                 // _ *beqd_ws *p_iter *oodpnts *fri *btrows *odd_brow_nxt *quot_mr *ood_erow_nxt *ood_brow_curr *ood_erow_curr *fri_revealed *e_mr
 
 
-                /* Dequeue ext-table rows and verify against its Merkle root */
+                /* Dequeue aux-table rows and verify against its Merkle root */
                 dup 10
-                call {next_as_exttablerows}
+                call {next_as_auxtablerows}
                 // _ *beqd_ws *p_iter *oodpnts *fri *btrows *odd_brow_nxt *quot_mr *ood_erow_nxt *ood_brow_curr *ood_erow_curr *fri_revealed *e_mr *etrows
 
                 swap 1
@@ -985,11 +985,11 @@ impl BasicSnippet for StarkVerify {
                 dup 4
                 // _ *beqd_ws *p_iter *oodpnts *fri *btrows *odd_brow_next *quot_mr *ood_erow_nxt *ood_brow_curr *ood_erow_curr *fri_revealed *etrows num_colli mt_height *e_mr *fri_revealed *etrows
 
-                call {verify_extension_table_rows}
+                call {verify_aux_table_rows}
                 // _ *beqd_ws *p_iter *oodpnts *fri *btrows *odd_brow_next *quot_mr *ood_erow_nxt *ood_brow_curr *ood_erow_curr *fri_revealed *etrows
 
 
-                /* Dequeue and ignore ext-table's authentication path */
+                /* Dequeue and ignore aux-table's authentication path */
                 dup 10
                 call {next_as_authentication_path}
                 pop 1
@@ -1042,7 +1042,7 @@ impl BasicSnippet for StarkVerify {
                 assert
                 // _ *beqd_ws *p_iter *oodpnts *fri *btrows *odd_brow_next *etrows *ood_erow_nxt *ood_brow_curr *ood_erow_curr *fri_revealed *qseg_elems num_colli
 
-                // assert!(num_combination_codeword_checks == base_table_rows.len());
+                // assert!(num_combination_codeword_checks == main_table_rows.len());
                 dup 8
                 read_mem 1
                 pop 1
@@ -1050,7 +1050,7 @@ impl BasicSnippet for StarkVerify {
                 eq
                 assert
 
-                // assert!(num_combination_codeword_checks == ext_table_rows.len())
+                // assert!(num_combination_codeword_checks == aux_table_rows.len())
                 dup 6
                 read_mem 1
                 pop 1
@@ -1086,11 +1086,11 @@ impl BasicSnippet for StarkVerify {
                 swap 2
                 // _ num_colli *beqd_ws *oodpnts *fri *btrows *odd_brow_next *etrows *ood_erow_nxt *fri_revealed *qseg_elems *ood_erow_curr *ood_brow_curr *beqd_ws
 
-                call {inner_product_three_rows_with_weights_xfe_base} // expects arguments: *ext *base *ws
-                hint out_of_domain_curr_row_base_and_ext_value: XFieldElement = stack[0..3]
+                call {inner_product_three_rows_with_weights_xfe_main} // expects arguments: *aux *main *ws
+                hint out_of_domain_curr_row_main_and_aux_value: XFieldElement = stack[0..3]
                 // _ num_colli *beqd_ws *oodpnts *fri *btrows *odd_brow_next *etrows *ood_erow_nxt *fri_revealed *qseg_elems [ood_curr_beval]
 
-                push {ood_curr_row_base_and_ext_value_pointer_write}
+                push {ood_curr_row_main_and_aux_value_pointer_write}
                 write_mem {EXTENSION_DEGREE}
                 pop 1
                 // _ num_colli *beqd_ws *oodpnts *fri *btrows *odd_brow_next *etrows *ood_erow_nxt *fri_revealed *qseg_elems
@@ -1103,11 +1103,11 @@ impl BasicSnippet for StarkVerify {
                 dup 8
                 // _ num_colli *beqd_ws *oodpnts *fri *btrows *fri_revealed *etrows *qseg_elems *ood_erow_nxt *odd_brow_next *beqd_ws
 
-                call {inner_product_three_rows_with_weights_xfe_base}  // expects arguments: *ext *base *ws
-                hint out_of_domain_next_row_base_and_ext_value: XFieldElement = stack[0..3]
+                call {inner_product_three_rows_with_weights_xfe_main}  // expects arguments: *aux *main *ws
+                hint out_of_domain_next_row_main_and_aux_value: XFieldElement = stack[0..3]
                 // _ num_colli *beqd_ws *oodpnts *fri *btrows *fri_revealed *etrows *qseg_elems [ood_next_value]
 
-                push {ood_next_row_base_and_ext_value_pointer_write}
+                push {ood_next_row_main_and_aux_value_pointer_write}
                 write_mem {EXTENSION_DEGREE}
                 pop 1
                 // _ num_colli *beqd_ws *oodpnts *fri *btrows *fri_revealed *etrows *qseg_elems
@@ -1163,26 +1163,26 @@ impl BasicSnippet for StarkVerify {
                 swap 4
                 push 1
                 add
-                push {MasterMainTable::NUM_COLUMNS} // size of element of base row list
+                push {MasterMainTable::NUM_COLUMNS} // size of element of main row list
                 dup 9
                 push -1
                 add
                 mul
                 add
-                hint base_table_row = stack[0]
+                hint main_table_row = stack[0]
                 swap 4
 
                 // Adjust *etrows (list) to point to last element
                 swap 2
                 push 1
                 add
-                push {MasterAuxTable::NUM_COLUMNS * EXTENSION_DEGREE} // size of element of ext row list
+                push {MasterAuxTable::NUM_COLUMNS * EXTENSION_DEGREE} // size of element of aux row list
                 dup 9
                 push -1
                 add
                 mul
                 add
-                hint ext_table_row = stack[0]
+                hint aux_table_row = stack[0]
                 swap 2
 
                 // Adjust *qseg_elems to point to last element
@@ -1238,7 +1238,7 @@ pub mod tests {
     use crate::memory::FIRST_NON_DETERMINISTICALLY_INITIALIZED_MEMORY_ADDRESS;
     use crate::test_helpers::maybe_write_tvm_output_to_disk;
     use crate::verifier::claim::shared::insert_claim_into_static_memory;
-    use crate::verifier::master_ext_table::air_constraint_evaluation::an_integral_but_profane_dynamic_memory_layout;
+    use crate::verifier::master_aux_table::air_constraint_evaluation::an_integral_but_profane_dynamic_memory_layout;
     use num_traits::ConstZero;
 
     use super::*;

@@ -24,9 +24,11 @@ impl From<MainElementType> for DataType {
     }
 }
 
+/// Calculate inner products of with weights.
+///
 /// Calculate inner product of both main columns and auxiliary columns with weights. Returns one
-/// scalar in the form of an extension-field element. Main column can be either a base field
-/// element, or an extension-field element.
+/// scalar in the form of an auxiliary-field element. Main column can be either a base field
+/// element, or an auxiliary-field element.
 pub struct InnerProductOfThreeRowsWithWeights {
     main_length: usize,
     main_element_type: MainElementType,
@@ -36,24 +38,24 @@ pub struct InnerProductOfThreeRowsWithWeights {
 
 impl InnerProductOfThreeRowsWithWeights {
     pub fn new(
-        base_length: usize,
-        base_element_type: MainElementType,
-        ext_length: usize,
+        main_length: usize,
+        main_element_type: MainElementType,
+        aux_length: usize,
         randomizer_length: usize,
     ) -> Self {
         Self {
-            main_length: base_length,
-            main_element_type: base_element_type,
-            aux_length: ext_length,
+            main_length,
+            main_element_type,
+            aux_length,
             randomizer_length,
         }
     }
 
-    pub fn triton_vm_parameters(base_element_type: MainElementType) -> Self {
+    pub fn triton_vm_parameters(main_element_type: MainElementType) -> Self {
         Self {
             main_length: MasterMainTable::NUM_COLUMNS,
             aux_length: MasterAuxTable::NUM_COLUMNS,
-            main_element_type: base_element_type,
+            main_element_type,
             // TODO: Use NUM_RANDOMIZERS from TVM here instead, once randomizers
             // are handled correctly in TVM.
             randomizer_length: 0,
@@ -69,14 +71,14 @@ impl BasicSnippet for InnerProductOfThreeRowsWithWeights {
                     element_type: DataType::Xfe,
                     length: self.aux_length,
                 })),
-                "*ext_row".to_string(),
+                "*aux_row".to_string(),
             ),
             (
                 DataType::Array(Box::new(ArrayType {
                     element_type: self.main_element_type.into(),
                     length: self.main_length,
                 })),
-                "*base_row".to_string(),
+                "*main_row".to_string(),
             ),
             (
                 DataType::Array(Box::new(ArrayType {
@@ -94,7 +96,7 @@ impl BasicSnippet for InnerProductOfThreeRowsWithWeights {
 
     fn entrypoint(&self) -> String {
         format!(
-            "tasmlib_array_inner_product_of_three_rows_with_weights_{}_baserowelem",
+            "tasmlib_array_inner_product_of_three_rows_with_weights_{}_mainrowelem",
             self.main_element_type
         )
     }
@@ -104,14 +106,14 @@ impl BasicSnippet for InnerProductOfThreeRowsWithWeights {
         _library: &mut crate::library::Library,
     ) -> Vec<triton_vm::prelude::LabelledInstruction> {
         let entrypoint = self.entrypoint();
-        let acc_all_base_rows = match self.main_element_type {
+        let acc_all_main_rows = match self.main_element_type {
             MainElementType::Bfe => triton_asm![xb_dot_step; self.main_length],
             MainElementType::Xfe => triton_asm![xx_dot_step; self.main_length],
         };
-        let acc_all_ext_rows = triton_asm![xx_dot_step; self.aux_length - self.randomizer_length];
+        let acc_all_aux_rows = triton_asm![xx_dot_step; self.aux_length - self.randomizer_length];
 
         triton_asm! {
-            // BEFORE: _ *ext_row *base_row *weights
+            // BEFORE: _ *aux_row *main_row *weights
             // AFTER: _ [inner_product]
             {entrypoint}:
 
@@ -119,20 +121,20 @@ impl BasicSnippet for InnerProductOfThreeRowsWithWeights {
                 push 0
                 push 0
                 push 0
-                // _ *ext_row *base_row *weights 0 0 0
+                // _ *aux_row *main_row *weights 0 0 0
 
                 swap 3
                 swap 1
                 swap 4
-                // _ *ext_row 0 0 0 *weights *base_row
+                // _ *aux_row 0 0 0 *weights *main_row
 
-                {&acc_all_base_rows}
-                // _ *ext_row acc2 acc1 acc0 *weights_next *garbage0
+                {&acc_all_main_rows}
+                // _ *aux_row acc2 acc1 acc0 *weights_next *garbage0
 
                 swap 5
-                // _ *garbage0 acc2 acc1 acc0 *weights_next *ext_row
+                // _ *garbage0 acc2 acc1 acc0 *weights_next *aux_row
 
-                {&acc_all_ext_rows}
+                {&acc_all_aux_rows}
                 // _ *garbage0 acc2 acc1 acc0 *garbage1 garbage2
                 // _ *garbage0 result2 result1 result0 *garbage1 garbage2 <-- rename
 
@@ -170,7 +172,7 @@ mod test {
     use super::*;
 
     #[test]
-    fn three_rows_tvm_parameters_xfe_base_test() {
+    fn three_rows_tvm_parameters_xfe_main_test() {
         ShadowedFunction::new(InnerProductOfThreeRowsWithWeights::triton_vm_parameters(
             MainElementType::Xfe,
         ))
@@ -178,7 +180,7 @@ mod test {
     }
 
     #[test]
-    fn three_rows_tvm_parameters_bfe_base_test() {
+    fn three_rows_tvm_parameters_bfe_main_test() {
         ShadowedFunction::new(InnerProductOfThreeRowsWithWeights::triton_vm_parameters(
             MainElementType::Bfe,
         ))
@@ -186,7 +188,7 @@ mod test {
     }
 
     #[test]
-    fn works_with_base_or_ext_column_count_of_zero() {
+    fn works_with_main_or_aux_column_count_of_zero() {
         let num_main_columns_is_zero_bfe = InnerProductOfThreeRowsWithWeights {
             main_length: 0,
             main_element_type: MainElementType::Bfe,
@@ -223,17 +225,17 @@ mod test {
 
     #[proptest(cases = 6)]
     fn three_rows_pbt_pbt(
-        #[strategy(arb())] base_element_type: MainElementType,
-        #[strategy(0_usize..500)] base_length: usize,
-        #[strategy(0_usize..500)] ext_length: usize,
-        #[filter(#randomizer_length<#ext_length)]
+        #[strategy(arb())] main_element_type: MainElementType,
+        #[strategy(0_usize..500)] main_length: usize,
+        #[strategy(0_usize..500)] aux_length: usize,
+        #[filter(#randomizer_length<#aux_length)]
         #[strategy(0_usize..10)]
         randomizer_length: usize,
     ) {
         let snippet = InnerProductOfThreeRowsWithWeights {
-            main_length: base_length,
-            main_element_type: base_element_type,
-            aux_length: ext_length,
+            main_length,
+            main_element_type,
+            aux_length,
             randomizer_length,
         };
         ShadowedFunction::new(snippet).test()
@@ -247,41 +249,41 @@ mod test {
         ) {
             // read stack: _ *e *b *w
             let weights_address = stack.pop().unwrap();
-            let base_row_address = stack.pop().unwrap();
-            let extension_row_address = stack.pop().unwrap();
+            let main_row_address = stack.pop().unwrap();
+            let auxiliary_row_address = stack.pop().unwrap();
 
             // read arrays
             let weights_len = self.main_length + self.aux_length - self.randomizer_length;
             let weights: Vec<XFieldElement> =
                 array_from_memory(weights_address, weights_len, memory);
-            let ext_row: Vec<XFieldElement> = array_from_memory(
-                extension_row_address,
+            let aux_row: Vec<XFieldElement> = array_from_memory(
+                auxiliary_row_address,
                 self.aux_length - self.randomizer_length,
                 memory,
             );
 
             let ip = match self.main_element_type {
                 MainElementType::Bfe => {
-                    let base_row: Vec<BFieldElement> =
-                        array_from_memory(base_row_address, self.main_length, memory);
+                    let main_row: Vec<BFieldElement> =
+                        array_from_memory(main_row_address, self.main_length, memory);
 
                     // compute inner product
-                    base_row
+                    main_row
                         .iter()
                         .map(|b| b.lift())
-                        .chain(ext_row)
+                        .chain(aux_row)
                         .zip_eq(weights)
                         .map(|(l, r)| l * r)
                         .sum::<XFieldElement>()
                 }
                 MainElementType::Xfe => {
-                    let base_row: Vec<XFieldElement> =
-                        array_from_memory(base_row_address, self.main_length, memory);
+                    let main_row: Vec<XFieldElement> =
+                        array_from_memory(main_row_address, self.main_length, memory);
 
                     // compute inner product
-                    base_row
+                    main_row
                         .into_iter()
-                        .chain(ext_row)
+                        .chain(aux_row)
                         .zip_eq(weights)
                         .map(|(l, r)| l * r)
                         .sum::<XFieldElement>()
@@ -301,21 +303,21 @@ mod test {
             _bench_case: Option<BenchmarkCase>,
         ) -> FunctionInitialState {
             let mut rng: StdRng = SeedableRng::from_seed(seed);
-            let base_address = rng.gen();
-            let ext_address = rng.gen();
+            let main_address = rng.gen();
+            let aux_address = rng.gen();
             let weights_address = rng.gen();
 
             let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::default();
 
             match self.main_element_type {
                 MainElementType::Bfe => {
-                    insert_random_array(&DataType::Bfe, base_address, self.main_length, &mut memory)
+                    insert_random_array(&DataType::Bfe, main_address, self.main_length, &mut memory)
                 }
                 MainElementType::Xfe => {
-                    insert_random_array(&DataType::Xfe, base_address, self.main_length, &mut memory)
+                    insert_random_array(&DataType::Xfe, main_address, self.main_length, &mut memory)
                 }
             }
-            insert_random_array(&DataType::Xfe, ext_address, self.aux_length, &mut memory);
+            insert_random_array(&DataType::Xfe, aux_address, self.aux_length, &mut memory);
             insert_random_array(
                 &DataType::Xfe,
                 weights_address,
@@ -325,7 +327,7 @@ mod test {
 
             let stack = [
                 self.init_stack_for_isolated_run(),
-                vec![ext_address, base_address, weights_address],
+                vec![aux_address, main_address, weights_address],
             ]
             .concat();
 
@@ -344,7 +346,7 @@ mod benches {
     use super::*;
 
     #[test]
-    fn inner_product_of_three_rows_bench_current_tvm_base_is_bfe() {
+    fn inner_product_of_three_rows_bench_current_tvm_main_is_bfe() {
         // This benchmark is for the calculation of the (inside-of-domain) current row element that
         // takes place inside the main-loop where all revealed FRI values are verified.
         ShadowedFunction::new(InnerProductOfThreeRowsWithWeights {
@@ -357,7 +359,7 @@ mod benches {
     }
 
     #[test]
-    fn inner_product_of_three_rows_bench_current_tvm_base_is_xfe() {
+    fn inner_product_of_three_rows_bench_current_tvm_main_is_xfe() {
         // This benchmark is for the calculation of the out-of-domain current and next row values.
         ShadowedFunction::new(InnerProductOfThreeRowsWithWeights {
             main_length: MasterMainTable::NUM_COLUMNS,
