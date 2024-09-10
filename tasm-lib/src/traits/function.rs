@@ -11,6 +11,7 @@ use crate::snippet_bencher::write_benchmarks;
 use crate::snippet_bencher::BenchmarkCase;
 use crate::snippet_bencher::NamedBenchmarkResult;
 use crate::test_helpers::test_rust_equivalence_given_complete_state;
+use crate::InitVmState;
 use crate::VmHasher;
 
 use super::basic_snippet::BasicSnippet;
@@ -53,6 +54,17 @@ pub trait Function: BasicSnippet {
 pub struct FunctionInitialState {
     pub stack: Vec<BFieldElement>,
     pub memory: HashMap<BFieldElement, BFieldElement>,
+}
+
+impl From<FunctionInitialState> for InitVmState {
+    fn from(value: FunctionInitialState) -> Self {
+        let nd = NonDeterminism::default().with_ram(value.memory);
+        Self {
+            stack: value.stack,
+            nondeterminism: nd,
+            ..Default::default()
+        }
+    }
 }
 
 pub struct ShadowedFunction<F: Function + 'static> {
