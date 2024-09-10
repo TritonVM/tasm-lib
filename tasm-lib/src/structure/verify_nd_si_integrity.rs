@@ -13,6 +13,14 @@ pub struct VerifyNdSiIntegrity<T: TasmObject + BFieldCodec + Clone + Debug> {
     _phantom_data: PhantomData<T>,
 }
 
+impl<T: TasmObject + BFieldCodec + Clone + Debug> Default for VerifyNdSiIntegrity<T> {
+    fn default() -> Self {
+        Self {
+            _phantom_data: PhantomData,
+        }
+    }
+}
+
 impl<T: TasmObject + BFieldCodec + Clone + Debug> BasicSnippet for VerifyNdSiIntegrity<T> {
     fn inputs(&self) -> Vec<(DataType, String)> {
         vec![(DataType::VoidPointer, "*struct".to_owned())]
