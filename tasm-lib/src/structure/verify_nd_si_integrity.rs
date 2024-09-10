@@ -8,7 +8,7 @@ use crate::library::Library;
 use crate::prelude::BasicSnippet;
 use crate::prelude::TasmObject;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct VerifyNdSiIntegrity<T: TasmObject + BFieldCodec + Clone + Debug> {
     _phantom_data: PhantomData<T>,
 }
