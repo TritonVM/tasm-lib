@@ -8,9 +8,21 @@ use crate::library::Library;
 use crate::prelude::BasicSnippet;
 use crate::prelude::TasmObject;
 
-#[derive(Clone, Debug, Default)]
-pub struct VerifyNdSiIntegrity<T: TasmObject + BFieldCodec + Clone + Debug> {
-    _phantom_data: PhantomData<T>,
+/// Verify size-indicator integrity of preloaded data, return size.
+///
+/// Crashes the VM if the structure in question is not entirely contained within
+/// the non-deterministic section of memory as defined in the memory layout.
+#[derive(Clone, Debug)]
+pub struct VerifyNdSiIntegrity<PreloadedData: TasmObject + BFieldCodec + Clone + Debug> {
+    _phantom_data: PhantomData<PreloadedData>,
+}
+
+impl<T: TasmObject + BFieldCodec + Clone + Debug> Default for VerifyNdSiIntegrity<T> {
+    fn default() -> Self {
+        Self {
+            _phantom_data: Default::default(),
+        }
+    }
 }
 
 impl<T: TasmObject + BFieldCodec + Clone + Debug> BasicSnippet for VerifyNdSiIntegrity<T> {
