@@ -64,7 +64,7 @@ impl BasicSnippet for VerifyTableRows {
 
     fn entrypoint(&self) -> String {
         format!(
-            "tasmlib_verifier_master_aux_table_verify_{}_table_rows",
+            "tasmlib_verifier_master_table_verify_{}_table_rows",
             self.column_type
         )
     }

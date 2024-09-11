@@ -224,7 +224,7 @@ impl BasicSnippet for AirConstraintEvaluation {
         );
 
         // Consider parameterizing this entrypoint name if you need more than one instance.
-        "tasmlib_verifier_master_aux_table_air_constraint_evaluation".to_owned()
+        "tasmlib_verifier_master_table_air_constraint_evaluation".to_owned()
     }
 
     fn code(&self, _library: &mut Library) -> Vec<LabelledInstruction> {

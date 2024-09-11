@@ -27,17 +27,17 @@ use crate::verifier::claim::shared::claim_type;
 use crate::verifier::fri;
 use crate::verifier::fri::verify::FriSnippet;
 use crate::verifier::fri::verify::FriVerify;
-use crate::verifier::master_aux_table::divide_out_zerofiers::DivideOutZerofiers;
-use crate::verifier::master_aux_table::verify_table_rows::ColumnType;
-use crate::verifier::master_aux_table::verify_table_rows::VerifyTableRows;
+use crate::verifier::master_table::divide_out_zerofiers::DivideOutZerofiers;
+use crate::verifier::master_table::verify_table_rows::ColumnType;
+use crate::verifier::master_table::verify_table_rows::VerifyTableRows;
 use crate::verifier::out_of_domain_points::OodPoint;
 use crate::verifier::out_of_domain_points::OutOfDomainPoints;
 use crate::verifier::vm_proof_iter::dequeue_next_as::DequeueNextAs;
 use crate::verifier::vm_proof_iter::new::New;
 use triton_vm::proof_stream::ProofStream;
 
-use super::master_aux_table::air_constraint_evaluation::AirConstraintEvaluation;
-use super::master_aux_table::air_constraint_evaluation::MemoryLayout;
+use super::master_table::air_constraint_evaluation::AirConstraintEvaluation;
+use super::master_table::air_constraint_evaluation::MemoryLayout;
 
 /// Verify a STARK proof.
 ///
@@ -1238,7 +1238,7 @@ pub mod tests {
     use crate::memory::FIRST_NON_DETERMINISTICALLY_INITIALIZED_MEMORY_ADDRESS;
     use crate::test_helpers::maybe_write_tvm_output_to_disk;
     use crate::verifier::claim::shared::insert_claim_into_static_memory;
-    use crate::verifier::master_aux_table::air_constraint_evaluation::an_integral_but_profane_dynamic_memory_layout;
+    use crate::verifier::master_table::air_constraint_evaluation::an_integral_but_profane_dynamic_memory_layout;
     use num_traits::ConstZero;
 
     use super::*;

@@ -90,10 +90,10 @@ use crate::verifier::challenges::new_empty_input_and_output::NewEmptyInputAndOut
 use crate::verifier::challenges::new_generic_dyn_claim::NewGenericDynClaim;
 use crate::verifier::claim::instantiate_fiat_shamir_with_claim::InstantiateFiatShamirWithClaim;
 use crate::verifier::fri;
-use crate::verifier::master_aux_table::air_constraint_evaluation::AirConstraintEvaluation;
-use crate::verifier::master_aux_table::divide_out_zerofiers::DivideOutZerofiers;
-use crate::verifier::master_aux_table::verify_table_rows::ColumnType;
-use crate::verifier::master_aux_table::verify_table_rows::VerifyTableRows;
+use crate::verifier::master_table::air_constraint_evaluation::AirConstraintEvaluation;
+use crate::verifier::master_table::divide_out_zerofiers::DivideOutZerofiers;
+use crate::verifier::master_table::verify_table_rows::ColumnType;
+use crate::verifier::master_table::verify_table_rows::VerifyTableRows;
 use crate::verifier::own_program_digest::OwnProgramDigest;
 use crate::verifier::read_and_verify_own_program_digest_from_std_in::ReadAndVerifyOwnProgramDigestFromStdIn;
 use crate::verifier::vm_proof_iter::dequeue_next_as::DequeueNextAs;
@@ -436,19 +436,19 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
                 = NewEmptyInputAndOutput::new(num_challenges_to_sample, num_challenges_to_compute, challenges::shared::conventional_challenges_pointer());
             Box::new(challenge_snippet)
         }
-        "tasmlib_verifier_master_aux_table_air_constraint_evaluation" => {
+        "tasmlib_verifier_master_table_air_constraint_evaluation" => {
             Box::new(AirConstraintEvaluation::with_conventional_dynamic_memory_layout())
         }
-        "tasmlib_verifier_master_aux_table_divide_out_zerofiers" => {
+        "tasmlib_verifier_master_table_divide_out_zerofiers" => {
             Box::new(DivideOutZerofiers)
         }
-        "tasmlib_verifier_master_aux_table_verify_Main_table_rows"=> {
+        "tasmlib_verifier_master_table_verify_Main_table_rows"=> {
             Box::new(VerifyTableRows::new(ColumnType::Main))
         }
-        "tasmlib_verifier_master_aux_table_verify_Aux_table_rows"=> {
+        "tasmlib_verifier_master_table_verify_Aux_table_rows"=> {
             Box::new(VerifyTableRows::new(ColumnType::Aux))
         }
-        "tasmlib_verifier_master_aux_table_verify_Quotient_table_rows"=> {
+        "tasmlib_verifier_master_table_verify_Quotient_table_rows"=> {
             Box::new(VerifyTableRows::new(ColumnType::Quotient))
         }
 

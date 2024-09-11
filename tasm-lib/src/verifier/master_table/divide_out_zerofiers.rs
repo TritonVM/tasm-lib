@@ -6,9 +6,9 @@ use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 use crate::data_type::DataType;
 use crate::library::Library;
 use crate::traits::basic_snippet::BasicSnippet;
-use crate::verifier::master_aux_table::air_constraint_evaluation::AirConstraintEvaluation;
-use crate::verifier::master_aux_table::zerofiers_inverse::ConstraintType;
-use crate::verifier::master_aux_table::zerofiers_inverse::ZerofiersInverse;
+use crate::verifier::master_table::air_constraint_evaluation::AirConstraintEvaluation;
+use crate::verifier::master_table::zerofiers_inverse::ConstraintType;
+use crate::verifier::master_table::zerofiers_inverse::ZerofiersInverse;
 
 /// Evaluates the AIR and divides out the zerofiers in-place, meaning that the
 /// results from the AIR-evaluation are overwritten.
@@ -33,7 +33,7 @@ impl BasicSnippet for DivideOutZerofiers {
     }
 
     fn entrypoint(&self) -> String {
-        "tasmlib_verifier_master_aux_table_divide_out_zerofiers".to_owned()
+        "tasmlib_verifier_master_table_divide_out_zerofiers".to_owned()
     }
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
