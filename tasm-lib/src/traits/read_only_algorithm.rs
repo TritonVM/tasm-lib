@@ -22,6 +22,16 @@ use super::rust_shadow::RustShadow;
 ///
 /// An ReadOnlyAlgorithm is a piece of tasm code that can read memory and read
 /// from non-determinism.
+///
+/// See also: [closure], [function], [procedure], [accessor], [mem_preserver],
+///           [algorithm]
+///
+/// [closure]: crate::traits::closure::Closure
+/// [function]: crate::traits::function::Function
+/// [procedure]: crate::traits::procedure::Procedure
+/// [accessor]: crate::traits::accessor::Accessor
+/// [mem_preserver]: crate::traits::mem_preserver::MemPreserver
+/// [algorithm]: crate::traits::algorithm::Algorithm
 pub trait ReadOnlyAlgorithm: BasicSnippet {
     fn rust_shadow(
         &self,

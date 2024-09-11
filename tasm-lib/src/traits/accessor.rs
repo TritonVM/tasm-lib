@@ -23,12 +23,14 @@ use super::rust_shadow::RustShadow;
 /// stack but can only read from memory. Note that it cannot write to static
 /// memory. It cannot read from any inputs or write to standard out. It cannot
 /// modify the sponge state.
-/// See also: [closure], [function], [procedure], [algorithm], [mem_preserver]
+/// See also: [closure], [function], [procedure], [algorithm],
+///           [read_only_algorithm], [mem_preserver]
 ///
 /// [closure]: crate::traits::closure::Closure
 /// [function]: crate::traits::function::Function
 /// [procedure]: crate::traits::procedure::Procedure
 /// [algorithm]: crate::traits::algorithm::Algorithm
+/// [read_only_algorithm]: crate::traits::read_only_algorithm::ReadOnlyAlgorithm
 /// [mem_preserver]: crate::traits::mem_preserver::MemPreserver
 pub trait Accessor: BasicSnippet {
     fn rust_shadow(

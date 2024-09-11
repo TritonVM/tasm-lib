@@ -22,12 +22,14 @@ use super::rust_shadow::RustShadow;
 /// An MemPreserver is a piece of tasm code that can do pretty much everything
 /// except modify memory, including static memory. It can read from any input
 /// and write to standard out. It can also modify the sponge state.
-/// See also: [closure], [function], [procedure], [algorithm], [accessor]
+/// See also: [closure], [function], [procedure], [algorithm],
+///           [read_only_algorithm], [accessor]
 ///
 /// [closure]: crate::traits::closure::Closure
 /// [function]: crate::traits::function::Function
 /// [procedure]: crate::traits::procedure::Procedure
 /// [algorithm]: crate::traits::algorithm::Algorithm
+/// [read_only_algorithm]: crate::traits::read_only_algorithm::ReadOnlyAlgorithm
 /// [accessor]: crate::traits::accessor::Accessor
 pub trait MemPreserver: BasicSnippet {
     fn rust_shadow(
