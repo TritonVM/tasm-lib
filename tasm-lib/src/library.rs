@@ -1,13 +1,10 @@
 use std::collections::HashMap;
 
 use itertools::Itertools;
-use num::One;
 use triton_vm::memory_layout::MemoryRegion;
 use triton_vm::prelude::*;
 
-use crate::data_type::DataType;
 use crate::traits::basic_snippet::BasicSnippet;
-use crate::traits::deprecated_snippet::DeprecatedSnippet;
 
 /// By [convention](crate::memory), the last full memory page is reserved for the static allocator.
 /// For convenience during [debugging],[^1] the static allocator starts at the last address of that
@@ -138,228 +135,231 @@ impl Library {
     }
 }
 
-#[derive(Debug)]
-pub struct DummyTestSnippetA;
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
 
-#[derive(Debug)]
-pub struct DummyTestSnippetB;
+    use num::One;
+    use triton_vm::prelude::triton_asm;
+    use triton_vm::prelude::Program;
 
-#[derive(Debug)]
-pub struct DummyTestSnippetC;
+    use crate::data_type::DataType;
+    use crate::empty_stack;
+    use crate::memory::memcpy::MemCpy;
+    use crate::mmr::calculate_new_peaks_from_leaf_mutation::MmrCalculateNewPeaksFromLeafMutationMtIndices;
+    use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
+    use crate::traits::deprecated_snippet::DeprecatedSnippet;
 
-impl DeprecatedSnippet for DummyTestSnippetA {
-    fn entrypoint_name(&self) -> String {
-        "tasmlib_a_dummy_test_value".to_string()
-    }
+    use super::*;
 
-    fn input_field_names(&self) -> Vec<String> {
-        vec![]
-    }
+    #[derive(Debug)]
+    struct DummyTestSnippetA;
 
-    fn input_types(&self) -> Vec<DataType> {
-        vec![]
-    }
+    #[derive(Debug)]
+    struct DummyTestSnippetB;
 
-    fn output_field_names(&self) -> Vec<String> {
-        vec!["1".to_string(), "1".to_string(), "1".to_string()]
-    }
+    #[derive(Debug)]
+    struct DummyTestSnippetC;
 
-    fn output_types(&self) -> Vec<DataType> {
-        vec![DataType::Bfe, DataType::Bfe, DataType::Bfe]
-    }
+    impl DeprecatedSnippet for DummyTestSnippetA {
+        fn entrypoint_name(&self) -> String {
+            "tasmlib_a_dummy_test_value".to_string()
+        }
 
-    fn stack_diff(&self) -> isize {
-        3
-    }
+        fn input_field_names(&self) -> Vec<String> {
+            vec![]
+        }
 
-    fn function_code(&self, library: &mut Library) -> String {
-        let entrypoint = self.entrypoint_name();
-        let b = library.import(Box::new(DummyTestSnippetB));
-        let c = library.import(Box::new(DummyTestSnippetC));
+        fn input_types(&self) -> Vec<DataType> {
+            vec![]
+        }
 
-        format!(
-            "
+        fn output_field_names(&self) -> Vec<String> {
+            vec!["1".to_string(), "1".to_string(), "1".to_string()]
+        }
+
+        fn output_types(&self) -> Vec<DataType> {
+            vec![DataType::Bfe, DataType::Bfe, DataType::Bfe]
+        }
+
+        fn stack_diff(&self) -> isize {
+            3
+        }
+
+        fn function_code(&self, library: &mut Library) -> String {
+            let entrypoint = self.entrypoint_name();
+            let b = library.import(Box::new(DummyTestSnippetB));
+            let c = library.import(Box::new(DummyTestSnippetC));
+
+            format!(
+                "
                 {entrypoint}:
                     call {b}
                     call {c}
                     return
                 "
-        )
+            )
+        }
+
+        fn crash_conditions(&self) -> Vec<String> {
+            vec![]
+        }
+
+        fn gen_input_states(&self) -> Vec<crate::InitVmState> {
+            vec![]
+        }
+
+        fn common_case_input_state(&self) -> crate::InitVmState {
+            todo!()
+        }
+
+        fn worst_case_input_state(&self) -> crate::InitVmState {
+            todo!()
+        }
+
+        fn rust_shadowing(
+            &self,
+            stack: &mut Vec<BFieldElement>,
+            _std_in: Vec<BFieldElement>,
+            _secret_in: Vec<BFieldElement>,
+            _memory: &mut HashMap<BFieldElement, BFieldElement>,
+        ) {
+            stack.push(BFieldElement::one());
+            stack.push(BFieldElement::one());
+            stack.push(BFieldElement::one());
+        }
     }
 
-    fn crash_conditions(&self) -> Vec<String> {
-        vec![]
-    }
+    impl DeprecatedSnippet for DummyTestSnippetB {
+        fn entrypoint_name(&self) -> String {
+            "tasmlib_b_dummy_test_value".to_string()
+        }
 
-    fn gen_input_states(&self) -> Vec<crate::InitVmState> {
-        vec![]
-    }
+        fn input_field_names(&self) -> Vec<String> {
+            vec![]
+        }
 
-    fn common_case_input_state(&self) -> crate::InitVmState {
-        todo!()
-    }
+        fn input_types(&self) -> Vec<DataType> {
+            vec![]
+        }
 
-    fn worst_case_input_state(&self) -> crate::InitVmState {
-        todo!()
-    }
+        fn output_field_names(&self) -> Vec<String> {
+            vec!["1".to_string(), "1".to_string()]
+        }
 
-    fn rust_shadowing(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        _std_in: Vec<BFieldElement>,
-        _secret_in: Vec<BFieldElement>,
-        _memory: &mut HashMap<BFieldElement, BFieldElement>,
-    ) {
-        stack.push(BFieldElement::one());
-        stack.push(BFieldElement::one());
-        stack.push(BFieldElement::one());
-    }
-}
+        fn output_types(&self) -> Vec<DataType> {
+            vec![DataType::Bfe, DataType::Bfe]
+        }
 
-impl DeprecatedSnippet for DummyTestSnippetB {
-    fn entrypoint_name(&self) -> String {
-        "tasmlib_b_dummy_test_value".to_string()
-    }
+        fn stack_diff(&self) -> isize {
+            2
+        }
 
-    fn input_field_names(&self) -> Vec<String> {
-        vec![]
-    }
+        fn function_code(&self, library: &mut Library) -> String {
+            let entrypoint = self.entrypoint_name();
+            let c = library.import(Box::new(DummyTestSnippetC));
 
-    fn input_types(&self) -> Vec<DataType> {
-        vec![]
-    }
-
-    fn output_field_names(&self) -> Vec<String> {
-        vec!["1".to_string(), "1".to_string()]
-    }
-
-    fn output_types(&self) -> Vec<DataType> {
-        vec![DataType::Bfe, DataType::Bfe]
-    }
-
-    fn stack_diff(&self) -> isize {
-        2
-    }
-
-    fn function_code(&self, library: &mut Library) -> String {
-        let entrypoint = self.entrypoint_name();
-        let c = library.import(Box::new(DummyTestSnippetC));
-
-        format!(
-            "
+            format!(
+                "
                 {entrypoint}:
                     call {c}
                     call {c}
                     return
                 "
-        )
+            )
+        }
+
+        fn crash_conditions(&self) -> Vec<String> {
+            vec![]
+        }
+
+        fn gen_input_states(&self) -> Vec<crate::InitVmState> {
+            vec![]
+        }
+
+        fn common_case_input_state(&self) -> crate::InitVmState {
+            todo!()
+        }
+
+        fn worst_case_input_state(&self) -> crate::InitVmState {
+            todo!()
+        }
+
+        fn rust_shadowing(
+            &self,
+            stack: &mut Vec<BFieldElement>,
+            _std_in: Vec<BFieldElement>,
+            _secret_in: Vec<BFieldElement>,
+            _memory: &mut HashMap<BFieldElement, BFieldElement>,
+        ) {
+            stack.push(BFieldElement::one());
+            stack.push(BFieldElement::one());
+        }
     }
 
-    fn crash_conditions(&self) -> Vec<String> {
-        vec![]
-    }
+    impl DeprecatedSnippet for DummyTestSnippetC {
+        fn entrypoint_name(&self) -> String {
+            "tasmlib_c_dummy_test_value".to_string()
+        }
 
-    fn gen_input_states(&self) -> Vec<crate::InitVmState> {
-        vec![]
-    }
+        fn input_field_names(&self) -> Vec<String> {
+            vec![]
+        }
 
-    fn common_case_input_state(&self) -> crate::InitVmState {
-        todo!()
-    }
+        fn input_types(&self) -> Vec<DataType> {
+            vec![]
+        }
 
-    fn worst_case_input_state(&self) -> crate::InitVmState {
-        todo!()
-    }
+        fn output_field_names(&self) -> Vec<String> {
+            vec!["1".to_string()]
+        }
 
-    fn rust_shadowing(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        _std_in: Vec<BFieldElement>,
-        _secret_in: Vec<BFieldElement>,
-        _memory: &mut HashMap<BFieldElement, BFieldElement>,
-    ) {
-        stack.push(BFieldElement::one());
-        stack.push(BFieldElement::one());
-    }
-}
+        fn output_types(&self) -> Vec<DataType> {
+            vec![DataType::Bfe]
+        }
 
-impl DeprecatedSnippet for DummyTestSnippetC {
-    fn entrypoint_name(&self) -> String {
-        "tasmlib_c_dummy_test_value".to_string()
-    }
+        fn stack_diff(&self) -> isize {
+            1
+        }
 
-    fn input_field_names(&self) -> Vec<String> {
-        vec![]
-    }
+        fn function_code(&self, _library: &mut Library) -> String {
+            let entrypoint = self.entrypoint_name();
 
-    fn input_types(&self) -> Vec<DataType> {
-        vec![]
-    }
-
-    fn output_field_names(&self) -> Vec<String> {
-        vec!["1".to_string()]
-    }
-
-    fn output_types(&self) -> Vec<DataType> {
-        vec![DataType::Bfe]
-    }
-
-    fn stack_diff(&self) -> isize {
-        1
-    }
-
-    fn function_code(&self, _library: &mut Library) -> String {
-        let entrypoint = self.entrypoint_name();
-
-        format!(
-            "
+            format!(
+                "
                 {entrypoint}:
                     push 1
                     return
                 "
-        )
+            )
+        }
+
+        fn crash_conditions(&self) -> Vec<String> {
+            vec![]
+        }
+
+        fn gen_input_states(&self) -> Vec<crate::InitVmState> {
+            vec![]
+        }
+
+        fn common_case_input_state(&self) -> crate::InitVmState {
+            todo!()
+        }
+
+        fn worst_case_input_state(&self) -> crate::InitVmState {
+            todo!()
+        }
+
+        fn rust_shadowing(
+            &self,
+            stack: &mut Vec<BFieldElement>,
+            _std_in: Vec<BFieldElement>,
+            _secret_in: Vec<BFieldElement>,
+            _memory: &mut HashMap<BFieldElement, BFieldElement>,
+        ) {
+            stack.push(BFieldElement::one())
+        }
     }
-
-    fn crash_conditions(&self) -> Vec<String> {
-        vec![]
-    }
-
-    fn gen_input_states(&self) -> Vec<crate::InitVmState> {
-        vec![]
-    }
-
-    fn common_case_input_state(&self) -> crate::InitVmState {
-        todo!()
-    }
-
-    fn worst_case_input_state(&self) -> crate::InitVmState {
-        todo!()
-    }
-
-    fn rust_shadowing(
-        &self,
-        stack: &mut Vec<BFieldElement>,
-        _std_in: Vec<BFieldElement>,
-        _secret_in: Vec<BFieldElement>,
-        _memory: &mut HashMap<BFieldElement, BFieldElement>,
-    ) {
-        stack.push(BFieldElement::one())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use std::collections::HashMap;
-
-    use triton_vm::prelude::triton_asm;
-    use triton_vm::prelude::Program;
-
-    use crate::empty_stack;
-    use crate::memory::memcpy::MemCpy;
-    use crate::mmr::calculate_new_peaks_from_leaf_mutation::MmrCalculateNewPeaksFromLeafMutationMtIndices;
-    use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
-
-    use super::*;
 
     #[test]
     fn library_includes() {
