@@ -58,10 +58,9 @@ impl BasicSnippet for BarycentricEvaluation {
                 xb_mul
                 // _ *partial_terms_end_cond *partial_terms generator [-indeterminate] generator_acc [generator_acc/(generator_acc-indeterminate)]
 
-                dup 8
+                pick 8
                 write_mem {EXTENSION_DEGREE}
-                swap 6
-                pop 1
+                place 5
                 // _ *partial_terms_end_cond *partial_terms' generator [-indeterminate] generator_acc
 
                 dup 4
@@ -76,19 +75,12 @@ impl BasicSnippet for BarycentricEvaluation {
         let numerator_from_partial_sums_loop_label =
             format!("{entrypoint}_numerator_from_partial_sums");
         let numerator_from_partial_sums_loop_code = triton_asm!(
-            // BEGIN:     _ *ptec *partial_terms[0] [0]   *codeword[0] *partial_terms[0]
-            // INVARIANT: _ *ptec *partial_terms[n] [acc] *codeword[n] *partial_terms[n]
+            // BEGIN:     _ *ptec *partial_terms[0] 0 [0]   *codeword[0]
+            // INVARIANT: _ *ptec *partial_terms[n] 0 [acc] *codeword[n]
             {numerator_from_partial_sums_loop_label}:
-                // _ *ptec *partial_terms[n] [acc] *codeword[n] *partial_terms[n]
-
+                pick 5
                 xx_dot_step
-                // _ *ptec *partial_terms[n] [acc'] *codeword[n'] *partial_terms[n']
-
-                dup 0
-                swap 6
-                pop 1
-                // _ *ptec *partial_terms[n'] [acc'] *codeword[n'] *partial_terms[n']
-
+                place 5
                 recurse_or_return
         );
 
@@ -101,12 +93,9 @@ impl BasicSnippet for BarycentricEvaluation {
             {denominator_from_partial_sums_loop_label}:
                 // _ (*partial_terms-1) *partial_terms[n] 0 0 [acc]
 
-                dup 5
+                pick 5
                 read_mem {EXTENSION_DEGREE}
-                // _ (*partial_terms-1) *partial_terms[n] 0 0 [acc] [term] *partial_terms[n-1]
-
-                swap 9
-                pop 1
+                place 8
                 // _ (*partial_terms-1) *partial_terms[n-1] 0 0 [acc] [term]
 
                 xx_add
@@ -148,28 +137,20 @@ impl BasicSnippet for BarycentricEvaluation {
                 hint generator: BFieldElement = stack[0]
                 // _ *codeword [-indeterminate] codeword_len generator
 
-                swap 1
+                pick 1
                 // _ *codeword [-indeterminate] generator codeword_len
 
                 push {EXTENSION_DEGREE}
                 mul
                 push {partial_terms_alloc.write_address()}
                 add
-                // _ *codeword [-indeterminate]  generator (*partial_terms_last_word+1)
-                // _ *codeword (-i2) (-i1) (-i0) generator (*partial_terms_last_word+1) <-- rename
+                // _ *codeword [-indeterminate] generator (*partial_terms_last_word+1)
 
-                swap 4
-                // _ *codeword (*partial_terms_last_word+1) (-i1) (-i0) generator (-i2)
-
+                place 4
+                place 3
                 push {partial_terms_alloc.write_address()}
-                swap 4
-                // _ *codeword (*partial_terms_last_word+1) *partial_terms[0] (-i0) generator (-i2) (-i1)
-
-                swap 1
-                swap 2
-                swap 3
-                // _ *codeword (*partial_terms_last_word+1) *partial_terms[0] generator (-i2) (-i1) (-i0)
-                // _ *codeword (*partial_terms_last_word+1) *partial_terms[0] generator [-indeterminate] <-- rename
+                place 4
+                // _ *codeword (*partial_terms_last_word+1) *partial_terms[0] generator [-indeterminate]
 
                 push 1
                 // _ *codeword (*partial_terms_last_word+1) *partial_terms[0] generator [-indeterminate] generator_acc
@@ -181,70 +162,52 @@ impl BasicSnippet for BarycentricEvaluation {
                 pop 1
                 // _ *codeword (*partial_terms_last_word+1)
 
-                swap 1
-                // _ (*partial_terms_last_word+1) *codeword
-
-                push 1
-                add
-                // _ (*partial_terms_last_word+1) *codeword[0]
-
-                push 0
-                push 0
-                push 0
-                // _ (*partial_terms_last_word+1) *codeword[0] [acc]
-
+                place 1
                 push {partial_terms_alloc.write_address()}
-                swap 4
-                // _ (*partial_terms_last_word+1) *partial_terms[0] [acc] *codeword[0]
+                push 0
+                push 0 push 0 push 0
+                // _ (*partial_terms_last_word+1) *codeword *partial_terms[0] 0 [acc]
 
-                push {partial_terms_alloc.write_address()}
-                // _ (*partial_terms_last_word+1) *partial_terms[0] [acc] *codeword[0] *partial_terms[0]
+                pick 5
+                addi 1
+                // _ (*partial_terms_last_word+1) *partial_terms[0] 0 [acc] *codeword[0]
 
                 call {numerator_from_partial_sums_loop_label}
-                // _ (*partial_terms_last_word+1) (*partial_terms_last_word+1) [numerator] *codeword[last + 1] (*partial_terms_last_word+1)
+                // _ (*partial_terms_last_word+1) (*partial_terms_last_word+1) 0 [numerator] *codeword[last + 1]
 
+                pick 4
                 pop 2
                 // _ (*partial_terms_last_word+1) (*partial_terms_last_word+1) [numerator]
                 hint numerator: XFieldElement = stack[0..3]
 
-                // _ (*partial_terms_last_word+1) (*partial_terms_last_word+1) n2 n1 n0    <-- rename
+                place 4
+                place 4
+                place 4
+                pop 1
+                addi -1
+                // _ [numerator] *partial_terms_last_word
 
-
-                swap 2
-                swap 4
-                // _ n2 (*partial_terms_last_word+1) n0 n1 (*partial_terms_last_word+1)
-
-                push -1
-                add
-                // _ n2 (*partial_terms_last_word+1) n0 n1 *partial_terms_last_word
+                push 0
+                push 0
+                push 0
+                push 0
+                push 0
+                // _ [numerator] *partial_terms_last_word 0 0 [0]
 
                 push {partial_terms_alloc.write_address() - bfe!(1)}
-                // _ n2 (*partial_terms_last_word+1) n0 n1 *partial_terms_last_word (*partial_terms - 1)
-
-                swap 2
-                swap 4
-                pop 1
-                // _ n2 n1 n0 (*partial_terms - 1) *partial_terms_last_word
-                // _ [numerator] (*partial_terms - 1) *partial_terms_last_word <-- rename
-
-                push 0
-                push 0
-                push 0
-                push 0
-                push 0
+                hint loop_end_condition = stack[0]
+                place 6
                 // _ [numerator] (*partial_terms - 1) *partial_terms_last_word 0 0 [0]
 
                 call {denominator_from_partial_sums_loop_label}
+                hint denominator: XFieldElement = stack[0..2]
                 // _ [numerator] (*partial_terms - 1) *partial_terms_last_word 0 0 [denominator]
 
-                swap 4
-                pop 1
-                swap 4
-                pop 1
-                swap 4
-                pop 2
+                place 6
+                place 6
+                place 6
+                pop 4
                 // _ [numerator] [denominator]
-                hint denominator: XFieldElement = stack[0..2]
 
                 x_invert
                 xx_mul
