@@ -1,6 +1,6 @@
 [
   {
-    "name": "tasmlib_verifier_master_aux_table_verify_Aux_table_rows",
+    "name": "tasmlib_verifier_master_table_verify_Aux_table_rows",
     "benchmark_result": {
       "clock_cycle_count": 415,
       "hash_table_height": 933,
@@ -11,7 +11,7 @@
     "case": "CommonCase"
   },
   {
-    "name": "tasmlib_verifier_master_aux_table_verify_Aux_table_rows",
+    "name": "tasmlib_verifier_master_table_verify_Aux_table_rows",
     "benchmark_result": {
       "clock_cycle_count": 445,
       "hash_table_height": 1023,
