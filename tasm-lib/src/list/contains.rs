@@ -41,8 +41,7 @@ impl BasicSnippet for Contains {
         let elem_size: u32 = self.element_type.stack_size().try_into().unwrap();
         let elem_size_plus_one = elem_size + 1;
 
-        let needle_pointer_write = library.kmalloc(self.element_type.stack_size() as u32);
-        let needle_pointer_read = needle_pointer_write + bfe!(elem_size - 1);
+        let needle_alloc = library.kmalloc(elem_size);
 
         let loop_label = format!("{entrypoint}_loop");
 
@@ -76,7 +75,7 @@ impl BasicSnippet for Contains {
                 pop 1
                 // _ 0 *list *list[i-1] [haystack]
 
-                push {needle_pointer_read}
+                push {needle_alloc.read_address()}
                 {&read_element}
                 pop 1
                 // _ 0 *list *list[i-1] [haystack] [needle]
@@ -102,7 +101,7 @@ impl BasicSnippet for Contains {
             // BEFORE: _ *list [value]
             // AFTER: match_found
             {entrypoint}:
-                push {needle_pointer_write}
+                push {needle_alloc.write_address()}
                 {&write_element}
                 pop 1
                 // _ *list

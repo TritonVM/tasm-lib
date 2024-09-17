@@ -304,25 +304,14 @@ impl BasicSnippet for StarkVerify {
 
         let proof_to_vm_proof_iter = library.import(Box::new(New));
 
-        let ood_curr_row_main_and_aux_value_pointer_write =
+        let ood_curr_row_main_and_aux_value_pointer_alloc =
             library.kmalloc(EXTENSION_DEGREE.try_into().unwrap());
-        let ood_curr_row_main_and_aux_value_pointer_read =
-            ood_curr_row_main_and_aux_value_pointer_write
-                + BFieldElement::new(EXTENSION_DEGREE as u64 - 1);
-
-        let ood_next_row_main_and_aux_value_pointer_write =
+        let ood_next_row_main_and_aux_value_pointer_alloc =
             library.kmalloc(EXTENSION_DEGREE.try_into().unwrap());
-        let ood_next_row_main_and_aux_value_pointer_read =
-            ood_next_row_main_and_aux_value_pointer_write
-                + BFieldElement::new(EXTENSION_DEGREE as u64 - 1);
-
-        let ood_curr_row_quotient_segment_value_pointer_write =
+        let ood_curr_row_quotient_segment_value_pointer_alloc =
             library.kmalloc(EXTENSION_DEGREE.try_into().unwrap());
-        let ood_curr_row_quotient_segment_value_pointer_read =
-            ood_curr_row_quotient_segment_value_pointer_write
-                + BFieldElement::new(EXTENSION_DEGREE as u64 - 1);
 
-        let out_of_domain_curr_row_quot_segments_pointer_pointer = library.kmalloc(1);
+        let out_of_domain_curr_row_quot_segments_pointer_alloc = library.kmalloc(1);
 
         let instantiate_fiat_shamir_with_claim =
             library.import(Box::new(InstantiateFiatShamirWithClaim));
@@ -463,14 +452,14 @@ impl BasicSnippet for StarkVerify {
         // _ *p_iter - - - *quot_cw_ws - dom_gen [out_of_domain_curr_row] padded_height *proof_iter *curr_main *curr_aux *next_main *next_aux
         // AFTER:
         // _ *p_iter - - - *quot_cw_ws - dom_gen [out_of_domain_curr_row] padded_height *air_evaluation_result
-        let ood_pointers_pointer = library.kmalloc(NUM_OOD_ROWS_WO_QUOTIENT);
+        let ood_pointers_alloc = library.kmalloc(NUM_OOD_ROWS_WO_QUOTIENT);
         let evaluate_air_and_store_ood_pointers = match self.memory_layout {
             MemoryLayout::Static(static_layout) => {
                 let static_eval =
                     library.import(Box::new(AirConstraintEvaluation::new_static(static_layout)));
                 triton_asm! {
-                    push {ood_pointers_pointer}
-                    write_mem {NUM_OOD_ROWS_WO_QUOTIENT}
+                    push {ood_pointers_alloc.write_address()}
+                    write_mem {ood_pointers_alloc.num_words()}
 
                     pop 2
                     // _ ... padded_height
@@ -489,8 +478,8 @@ impl BasicSnippet for StarkVerify {
                     dup 3
                     dup 3
                     dup 3
-                    push {ood_pointers_pointer}
-                    write_mem {NUM_OOD_ROWS_WO_QUOTIENT}
+                    push {ood_pointers_alloc.write_address()}
+                    write_mem {ood_pointers_alloc.num_words()}
                     pop 1
                     // _ ... padded_height *proof_iter *curr_main *curr_aux *next_main *next_aux
 
@@ -505,8 +494,8 @@ impl BasicSnippet for StarkVerify {
 
         let put_ood_row_pointers_back_on_stack = triton_asm! {
             // _
-            push {ood_pointers_pointer+bfe!(NUM_OOD_ROWS_WO_QUOTIENT - 1)}
-            read_mem {NUM_OOD_ROWS_WO_QUOTIENT}
+            push {ood_pointers_alloc.read_address()}
+            read_mem {ood_pointers_alloc.num_words()}
             pop 1
 
             // _ *curr_main *curr_aux *next_main *next_aux
@@ -621,7 +610,7 @@ impl BasicSnippet for StarkVerify {
             xb_mul
             // _ remaining_rounds fri_gen fri_offset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *beqd_ws *oodpnts (-fdom_pnt) [-be_opnd_elem] [1/(oodp_pow_nsegs - fdom_pnt)] [-inner_prod]
 
-            push {ood_curr_row_quotient_segment_value_pointer_read}
+            push {ood_curr_row_quotient_segment_value_pointer_alloc.read_address()}
             read_mem {EXTENSION_DEGREE}
             pop 1
             // _ remaining_rounds fri_gen fri_offset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *beqd_ws *oodpnts (-fdom_pnt) [-be_opnd_elem] [1/(oodp_pow_nsegs - fdom_pnt)] [-inner_prod] [out_of_domain_curr_row_quotient_segment_value]
@@ -651,7 +640,7 @@ impl BasicSnippet for StarkVerify {
             x_invert
             // _ remaining_rounds fri_gen fri_offset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *beqd_ws *oodpnts (-fdom_pnt) [-be_opnd_elem] [dv2] [1/(ood_point_curr_row - fdom_pnt)]
 
-            push {ood_curr_row_main_and_aux_value_pointer_read}
+            push {ood_curr_row_main_and_aux_value_pointer_alloc.read_address()}
             read_mem {EXTENSION_DEGREE}
             pop 1
             // _ remaining_rounds fri_gen fri_offset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *beqd_ws *oodpnts (-fdom_pnt) [-be_opnd_elem] [dv2] [1/(ood_point_curr_row - fdom_pnt)] [out_of_domain_curr_row_main_and_aux_value]
@@ -680,7 +669,7 @@ impl BasicSnippet for StarkVerify {
             {&swap_top_two_xfes}
             // _ remaining_rounds fri_gen fri_offset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *beqd_ws *oodpnts (-fdom_pnt) [dv2 + dv0] [-be_opnd_elem]
 
-            push {ood_next_row_main_and_aux_value_pointer_read}
+            push {ood_next_row_main_and_aux_value_pointer_alloc.read_address()}
             read_mem {EXTENSION_DEGREE}
             pop 1
             xx_add
@@ -865,8 +854,8 @@ impl BasicSnippet for StarkVerify {
                 // _ *b_mr *p_iter *oodpnts *fri *e_mr *quot_cw_ws *quot_mr *quotient_summands *ood_brow_curr *ood_erow_curr *odd_brow_nxt *ood_erow_nxt *ood_quotient_segments
 
                 dup 0
-                push {out_of_domain_curr_row_quot_segments_pointer_pointer}
-                write_mem 1
+                push {out_of_domain_curr_row_quot_segments_pointer_alloc.write_address()}
+                write_mem {out_of_domain_curr_row_quot_segments_pointer_alloc.num_words()}
                 pop 1
 
 
@@ -1090,8 +1079,8 @@ impl BasicSnippet for StarkVerify {
                 hint out_of_domain_curr_row_main_and_aux_value: XFieldElement = stack[0..3]
                 // _ num_colli *beqd_ws *oodpnts *fri *btrows *odd_brow_next *etrows *ood_erow_nxt *fri_revealed *qseg_elems [ood_curr_beval]
 
-                push {ood_curr_row_main_and_aux_value_pointer_write}
-                write_mem {EXTENSION_DEGREE}
+                push {ood_curr_row_main_and_aux_value_pointer_alloc.write_address()}
+                write_mem {ood_curr_row_main_and_aux_value_pointer_alloc.num_words()}
                 pop 1
                 // _ num_colli *beqd_ws *oodpnts *fri *btrows *odd_brow_next *etrows *ood_erow_nxt *fri_revealed *qseg_elems
 
@@ -1107,8 +1096,8 @@ impl BasicSnippet for StarkVerify {
                 hint out_of_domain_next_row_main_and_aux_value: XFieldElement = stack[0..3]
                 // _ num_colli *beqd_ws *oodpnts *fri *btrows *fri_revealed *etrows *qseg_elems [ood_next_value]
 
-                push {ood_next_row_main_and_aux_value_pointer_write}
-                write_mem {EXTENSION_DEGREE}
+                push {ood_next_row_main_and_aux_value_pointer_alloc.write_address()}
+                write_mem {ood_next_row_main_and_aux_value_pointer_alloc.num_words()}
                 pop 1
                 // _ num_colli *beqd_ws *oodpnts *fri *btrows *fri_revealed *etrows *qseg_elems
 
@@ -1117,8 +1106,8 @@ impl BasicSnippet for StarkVerify {
                 {&quotient_segment_codeword_weights_from_be_weights}
                 // _ num_colli *beqd_ws *oodpnts *fri *btrows *fri_revealed *etrows *qseg_elems *quotient_segment_codeword_weights
 
-                push {out_of_domain_curr_row_quot_segments_pointer_pointer}
-                read_mem 1
+                push {out_of_domain_curr_row_quot_segments_pointer_alloc.read_address()}
+                read_mem {out_of_domain_curr_row_quot_segments_pointer_alloc.num_words()}
                 pop 1
                 // _ num_colli *beqd_ws *oodpnts *fri *btrows *fri_revealed *etrows *qseg_elems *quotient_segment_codeword_weights *ood_curr_row_quot_segments
 
@@ -1126,8 +1115,8 @@ impl BasicSnippet for StarkVerify {
                 hint out_of_domain_curr_row_quotient_segment_value: XFieldElement = stack[0..3]
                 // _ num_colli *beqd_ws *oodpnts *fri *btrows *fri_revealed *etrows *qseg_elems [out_of_domain_curr_row_quotient_segment_value]
 
-                push {ood_curr_row_quotient_segment_value_pointer_write}
-                write_mem {EXTENSION_DEGREE}
+                push {ood_curr_row_quotient_segment_value_pointer_alloc.write_address()}
+                write_mem {ood_curr_row_quotient_segment_value_pointer_alloc.num_words()}
                 pop 1
                 // _ num_colli *beqd_ws *oodpnts *fri *btrows *fri_revealed *etrows *qseg_elems
 

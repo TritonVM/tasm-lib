@@ -71,11 +71,11 @@ impl BasicSnippet for SampleScalarsStaticLengthKMalloc {
         let entrypoint = self.entrypoint();
         let squeeze_repeatedly_static_number =
             library.import(Box::new(SqueezeRepeatedlyStaticNumber { num_squeezes }));
-        let scalars_pointer = library.kmalloc(self.num_words_to_allocate());
+        let scalars_pointer_alloc = library.kmalloc(self.num_words_to_allocate());
 
         triton_asm!(
             {entrypoint}:
-                push {scalars_pointer}
+                push {scalars_pointer_alloc.write_address()}
                 call {squeeze_repeatedly_static_number}
                 return
         )

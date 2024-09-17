@@ -35,8 +35,7 @@ impl BasicSnippet for BarycentricEvaluation {
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
         let generator = library.import(Box::new(PrimitiveRootOfUnity));
-        let partial_terms_pointer = library.kmalloc(MAX_CODEWORD_LENGTH * EXTENSION_DEGREE as u32);
-        let partial_terms_pointer_minus_one = partial_terms_pointer - bfe!(1);
+        let partial_terms_alloc = library.kmalloc(MAX_CODEWORD_LENGTH * EXTENSION_DEGREE as u32);
 
         // Partial terms are of the form $ g^i / (g^i - indeterminate) $
         let calculate_and_store_partial_terms_loop_label =
@@ -154,7 +153,7 @@ impl BasicSnippet for BarycentricEvaluation {
 
                 push {EXTENSION_DEGREE}
                 mul
-                push {partial_terms_pointer}
+                push {partial_terms_alloc.write_address()}
                 add
                 // _ *codeword [-indeterminate]  generator (*partial_terms_last_word+1)
                 // _ *codeword (-i2) (-i1) (-i0) generator (*partial_terms_last_word+1) <-- rename
@@ -162,7 +161,7 @@ impl BasicSnippet for BarycentricEvaluation {
                 swap 4
                 // _ *codeword (*partial_terms_last_word+1) (-i1) (-i0) generator (-i2)
 
-                push {partial_terms_pointer}
+                push {partial_terms_alloc.write_address()}
                 swap 4
                 // _ *codeword (*partial_terms_last_word+1) *partial_terms[0] (-i0) generator (-i2) (-i1)
 
@@ -194,11 +193,11 @@ impl BasicSnippet for BarycentricEvaluation {
                 push 0
                 // _ (*partial_terms_last_word+1) *codeword[0] [acc]
 
-                push {partial_terms_pointer}
+                push {partial_terms_alloc.write_address()}
                 swap 4
                 // _ (*partial_terms_last_word+1) *partial_terms[0] [acc] *codeword[0]
 
-                push {partial_terms_pointer}
+                push {partial_terms_alloc.write_address()}
                 // _ (*partial_terms_last_word+1) *partial_terms[0] [acc] *codeword[0] *partial_terms[0]
 
                 call {numerator_from_partial_sums_loop_label}
@@ -219,7 +218,7 @@ impl BasicSnippet for BarycentricEvaluation {
                 add
                 // _ n2 (*partial_terms_last_word+1) n0 n1 *partial_terms_last_word
 
-                push {partial_terms_pointer_minus_one}
+                push {partial_terms_alloc.write_address() - bfe!(1)}
                 // _ n2 (*partial_terms_last_word+1) n0 n1 *partial_terms_last_word (*partial_terms - 1)
 
                 swap 2

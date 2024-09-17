@@ -70,11 +70,10 @@ impl BasicSnippet for OutOfDomainPoints {
         // - `out_of_domain_point_curr_row`
         // - `out_of_domain_point_next_row`
         // - `out_of_domain_point_curr_row_pow_num_segments`
-        let ood_points_pointer = library.kmalloc(
-            (NUM_OF_OUT_OF_DOMAIN_POINTS * EXTENSION_DEGREE)
-                .try_into()
-                .unwrap(),
-        );
+        let num_words_for_out_of_domain_points = (NUM_OF_OUT_OF_DOMAIN_POINTS * EXTENSION_DEGREE)
+            .try_into()
+            .unwrap();
+        let ood_points_alloc = library.kmalloc(num_words_for_out_of_domain_points);
 
         let pow_four = library.import(Box::new(ToTheFourth));
 
@@ -88,7 +87,7 @@ impl BasicSnippet for OutOfDomainPoints {
                 dup 2
                 dup 2
                 dup 2
-                push {ood_points_pointer}
+                push {ood_points_alloc.write_address()}
                 write_mem {EXTENSION_DEGREE}
                 // _ trace_domain_generator [ood_curr_row] [ood_curr_row] *ood_points[1]
 

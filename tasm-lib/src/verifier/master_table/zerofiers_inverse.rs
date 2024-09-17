@@ -10,6 +10,7 @@ use crate::traits::basic_snippet::BasicSnippet;
 
 // TODO: Remove this once `ConstraintType` is made public in Triton VM:
 // https://github.com/TritonVM/triton-vm/issues/263
+#[repr(usize)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, EnumCount, EnumIter)]
 pub(super) enum ConstraintType {
     Initial,
@@ -22,7 +23,7 @@ pub(super) enum ConstraintType {
 /// to statically allocate memory for the array where the result is stored.
 #[derive(Debug, Copy, Clone)]
 pub struct ZerofiersInverse {
-    pub zerofiers_inverse_pointer: BFieldElement,
+    pub zerofiers_inverse_write_address: BFieldElement,
 }
 
 impl ZerofiersInverse {
@@ -32,12 +33,9 @@ impl ZerofiersInverse {
 
     /// Return the address needed to write to the inverted zerofiers array
     fn zerofier_inv_write_address(&self, constraint_type: ConstraintType) -> BFieldElement {
-        self.zerofiers_inverse_pointer
-            + BFieldElement::new(
-                (EXTENSION_DEGREE * constraint_type as usize)
-                    .try_into()
-                    .unwrap(),
-            )
+        let constraint_type_offset =
+            u64::try_from(EXTENSION_DEGREE * constraint_type as usize).unwrap();
+        self.zerofiers_inverse_write_address + bfe!(constraint_type_offset)
     }
 
     /// Return the address needed to read from the inverted zerofiers array
@@ -213,7 +211,7 @@ mod tests {
         let mem_address_if_first_static_malloc =
             -BFieldElement::new(ZerofiersInverse::array_size() as u64) - BFieldElement::one();
         ShadowedFunction::new(ZerofiersInverse {
-            zerofiers_inverse_pointer: mem_address_if_first_static_malloc,
+            zerofiers_inverse_write_address: mem_address_if_first_static_malloc,
         })
         .test()
     }
@@ -241,7 +239,7 @@ mod tests {
             let terminal_zerofier_inv = except_last_row.inverse();
 
             insert_as_array(
-                self.zerofiers_inverse_pointer,
+                self.zerofiers_inverse_write_address,
                 memory,
                 vec![
                     initial_zerofier_inv,

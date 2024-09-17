@@ -1,4 +1,4 @@
-use num::Zero;
+use num_traits::ConstZero;
 use triton_vm::isa::op_stack::NUM_OP_STACK_REGISTERS;
 use triton_vm::prelude::*;
 
@@ -36,14 +36,14 @@ impl BasicSnippet for NewRecursive {
         let entrypoint = self.entrypoint();
         let claim_size = Claim {
             program_digest: Digest::default(),
-            input: vec![BFieldElement::zero(); self.input_size],
-            output: vec![BFieldElement::zero(); self.output_size],
+            input: vec![BFieldElement::ZERO; self.input_size],
+            output: vec![BFieldElement::ZERO; self.output_size],
         }
         .encode()
         .len();
-        let claim_pointer = library.kmalloc(claim_size.try_into().unwrap());
+        let claim_alloc = library.kmalloc(claim_size.try_into().unwrap());
         const METADATA_SIZE_FOR_FIELD_WITH_VEC_VALUE: usize = 2;
-        let output_field_pointer = claim_pointer;
+        let output_field_pointer = claim_alloc.write_address();
         let output_field_size: u32 = (1 + self.output_size).try_into().unwrap();
         let input_field_pointer = output_field_pointer + bfe!(output_field_size + 1);
         let input_field_size: u32 = (1 + self.input_size).try_into().unwrap();
@@ -99,7 +99,7 @@ impl BasicSnippet for NewRecursive {
                 {&write_digest_to_memory}
                 // _
 
-                push {claim_pointer}
+                push {claim_alloc.write_address()}
                 // _ *claim
 
                 return

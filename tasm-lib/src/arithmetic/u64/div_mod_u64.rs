@@ -71,9 +71,7 @@ impl DeprecatedSnippet for DivModU64 {
         let sub_u32 = library.import(Box::new(Safesub));
         let leading_zeros_u64 = library.import(Box::new(LeadingZerosU64));
         let add_u32 = library.import(Box::new(Safeadd));
-        let mem_address_for_spilled_divisor = library.kmalloc(2);
-        let last_mem_address_for_spilled_divisor =
-            mem_address_for_spilled_divisor + BFieldElement::one();
+        let spilled_divisor_alloc = library.kmalloc(2);
 
         // The below code has been compiled from a Rust implementation of an LLVM function
         // called `divmoddi4` that can do u64 divmod with only access to u32 bit divmod and
@@ -86,7 +84,7 @@ impl DeprecatedSnippet for DivModU64 {
             {entrypoint}:
                 dup 1
                 dup 1
-                push {mem_address_for_spilled_divisor}
+                push {spilled_divisor_alloc.write_address()}
                 write_mem 2
                 pop 1
                 dup 3
@@ -103,15 +101,15 @@ impl DeprecatedSnippet for DivModU64 {
                 call {and_u64}
                 swap 1
                 pop 1
-                push {last_mem_address_for_spilled_divisor}
-                read_mem 2
+                push {spilled_divisor_alloc.read_address()}
+                read_mem {spilled_divisor_alloc.num_words()}
                 pop 1
                 push 32
                 call {shift_right_u64}
                 swap 1
                 pop 1
-                push {last_mem_address_for_spilled_divisor}
-                read_mem 2
+                push {spilled_divisor_alloc.read_address()}
+                read_mem {spilled_divisor_alloc.num_words()}
                 pop 1
                 push 00000000004294967295
                 push 0
@@ -125,8 +123,8 @@ impl DeprecatedSnippet for DivModU64 {
                 push 0
                 dup 11
                 dup 11
-                push {last_mem_address_for_spilled_divisor}
-                read_mem 2
+                push {spilled_divisor_alloc.read_address()}
+                read_mem {spilled_divisor_alloc.num_words()}
                 pop 1
                 dup 3
                 dup 3
@@ -248,8 +246,8 @@ impl DeprecatedSnippet for DivModU64 {
                 pop 1
                 swap 7
                 pop 1
-                push {last_mem_address_for_spilled_divisor}
-                read_mem 2
+                push {spilled_divisor_alloc.read_address()}
+                read_mem {spilled_divisor_alloc.num_words()}
                 pop 1
                 dup 5
                 dup 5
@@ -266,8 +264,8 @@ impl DeprecatedSnippet for DivModU64 {
                 pop 1
                 dup 3
                 dup 3
-                push {last_mem_address_for_spilled_divisor}
-                read_mem 2
+                push {spilled_divisor_alloc.read_address()}
+                read_mem {spilled_divisor_alloc.num_words()}
                 pop 1
                 dup 5
                 dup 5
@@ -290,8 +288,8 @@ impl DeprecatedSnippet for DivModU64 {
                 recurse
                 _binop_Or_bool_bool_44_then:
                 pop 1
-                push {last_mem_address_for_spilled_divisor}
-                read_mem 2
+                push {spilled_divisor_alloc.read_address()}
+                read_mem {spilled_divisor_alloc.num_words()}
                 pop 1
                 push 0
                 push 1
@@ -311,8 +309,8 @@ impl DeprecatedSnippet for DivModU64 {
                 _binop_Or_bool_bool_44_else:
                 push 0
                 push 0
-                push {last_mem_address_for_spilled_divisor}
-                read_mem 2
+                push {spilled_divisor_alloc.read_address()}
+                read_mem {spilled_divisor_alloc.num_words()}
                 pop 1
                 swap 3
                 eq
@@ -322,8 +320,8 @@ impl DeprecatedSnippet for DivModU64 {
                 push 0
                 eq
                 assert
-                push {last_mem_address_for_spilled_divisor}
-                read_mem 2
+                push {spilled_divisor_alloc.read_address()}
+                read_mem {spilled_divisor_alloc.num_words()}
                 pop 1
                 call {leading_zeros_u64}
                 dup 2
@@ -393,8 +391,8 @@ impl DeprecatedSnippet for DivModU64 {
                 dup 7
                 push 0
                 eq
-                push {last_mem_address_for_spilled_divisor}
-                read_mem 2
+                push {spilled_divisor_alloc.read_address()}
+                read_mem {spilled_divisor_alloc.num_words()}
                 pop 1
                 push 0
                 push 1

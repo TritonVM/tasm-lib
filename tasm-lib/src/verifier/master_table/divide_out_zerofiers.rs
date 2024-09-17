@@ -10,8 +10,7 @@ use crate::verifier::master_table::air_constraint_evaluation::AirConstraintEvalu
 use crate::verifier::master_table::zerofiers_inverse::ConstraintType;
 use crate::verifier::master_table::zerofiers_inverse::ZerofiersInverse;
 
-/// Evaluates the AIR and divides out the zerofiers in-place, meaning that the
-/// results from the AIR-evaluation are overwritten.
+/// Takes an AIR evaluation and divides out the zerofiers.
 #[derive(Debug, Clone)]
 pub struct DivideOutZerofiers;
 
@@ -39,10 +38,10 @@ impl BasicSnippet for DivideOutZerofiers {
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
 
-        let zerofiers_inverse_pointer =
+        let zerofiers_inverse_alloc =
             library.kmalloc(ZerofiersInverse::array_size().try_into().unwrap());
         let zerofiers_inverse_snippet = ZerofiersInverse {
-            zerofiers_inverse_pointer,
+            zerofiers_inverse_write_address: zerofiers_inverse_alloc.write_address(),
         };
         let zerofiers_inverse = library.import(Box::new(zerofiers_inverse_snippet));
 

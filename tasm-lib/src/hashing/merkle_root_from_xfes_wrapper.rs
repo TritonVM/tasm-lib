@@ -26,23 +26,23 @@ impl BasicSnippet for MerkleRootFromXfesWrapper {
 
     fn code(&self, library: &mut crate::library::Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
-        let length_pointer = library.kmalloc(1);
+        let list_length_alloc = library.kmalloc(1);
 
-        let pointer_for_node_memory = library.kmalloc(MAX_LENGTH_SUPPORTED * (Digest::LEN as u32));
+        let node_memory_alloc = library.kmalloc(MAX_LENGTH_SUPPORTED * (Digest::LEN as u32));
 
         let snippet_for_length_256 = MerkleRootFromXfesStaticSize {
             log2_length: 8,
-            static_memory_pointer: pointer_for_node_memory,
+            static_memory_pointer: node_memory_alloc.write_address(),
         };
         let snippet_for_length_256 = library.import(Box::new(snippet_for_length_256));
         let snippet_for_length_512 = MerkleRootFromXfesStaticSize {
             log2_length: 9,
-            static_memory_pointer: pointer_for_node_memory,
+            static_memory_pointer: node_memory_alloc.write_address(),
         };
         let snippet_for_length_512 = library.import(Box::new(snippet_for_length_512));
         let snippet_for_length_1024 = MerkleRootFromXfesStaticSize {
             log2_length: 10,
-            static_memory_pointer: pointer_for_node_memory,
+            static_memory_pointer: node_memory_alloc.write_address(),
         };
         let snippet_for_length_1024 = library.import(Box::new(snippet_for_length_1024));
 
@@ -75,8 +75,8 @@ impl BasicSnippet for MerkleRootFromXfesWrapper {
                 // _ (*xfes + 1) len
 
                 dup 0
-                push {length_pointer}
-                write_mem 1
+                push {list_length_alloc.write_address()}
+                write_mem {list_length_alloc.num_words()}
                 pop 1
                 // _ (*xfes + 1) len
 
@@ -86,8 +86,8 @@ impl BasicSnippet for MerkleRootFromXfesWrapper {
                     call {snippet_for_length_256}
                 // _ ((*xfes + 1)|[root])
 
-                push {length_pointer}
-                read_mem 1
+                push {list_length_alloc.read_address()}
+                read_mem {list_length_alloc.num_words()}
                 pop 1
                 push 512
                 eq
@@ -95,8 +95,8 @@ impl BasicSnippet for MerkleRootFromXfesWrapper {
                     call {snippet_for_length_512}
                 // _ ((*xfes + 1)|[root])
 
-                push {length_pointer}
-                read_mem 1
+                push {list_length_alloc.read_address()}
+                read_mem {list_length_alloc.num_words()}
                 pop 1
                 push 1024
                 eq

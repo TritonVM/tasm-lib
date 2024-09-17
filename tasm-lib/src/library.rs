@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 
+use arbitrary::Arbitrary;
 use itertools::Itertools;
+use num_traits::ConstOne;
 use triton_vm::memory_layout::MemoryRegion;
 use triton_vm::prelude::*;
 
@@ -28,6 +30,34 @@ pub struct Library {
 
     /// The number of statically allocated words
     num_allocated_words: u32,
+}
+
+/// Represents a [static memory allocation][kmalloc] within Triton VM.
+/// Both its location within Triton VM's memory and its size and are fix.
+///
+/// [kmalloc]: Library::kmalloc
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Arbitrary)]
+pub struct StaticAllocation {
+    write_address: BFieldElement,
+    num_words: u32,
+}
+
+impl StaticAllocation {
+    /// The address from which the allocated memory can be read.
+    pub fn read_address(&self) -> BFieldElement {
+        let offset = bfe!(self.num_words) - BFieldElement::ONE;
+        self.write_address() + offset
+    }
+
+    /// The address to which the allocated memory can be written.
+    pub fn write_address(&self) -> BFieldElement {
+        self.write_address
+    }
+
+    /// The number of words allocated in this memory block.
+    pub fn num_words(&self) -> u32 {
+        self.num_words
+    }
 }
 
 impl Default for Library {
@@ -119,19 +149,26 @@ impl Library {
         self.all_external_dependencies().concat()
     }
 
-    /// Statically allocate `num_words` words of memory. Panics if more static
-    /// memory is required than what the capacity allows for.
-    pub fn kmalloc(&mut self, num_words: u32) -> BFieldElement {
+    /// Statically allocate `num_words` words of memory.
+    ///
+    /// # Panics
+    ///
+    /// Panics if
+    /// - `num_words` is zero,
+    /// - the total number of statically allocated words exceeds `u32::MAX`.
+    pub fn kmalloc(&mut self, num_words: u32) -> StaticAllocation {
         assert!(num_words > 0, "must allocate a positive number of words");
-        let address = STATIC_MEMORY_FIRST_ADDRESS
-            - bfe!(self.num_allocated_words)
-            - BFieldElement::new(num_words as u64 - 1);
+        let write_address =
+            STATIC_MEMORY_FIRST_ADDRESS - bfe!(self.num_allocated_words) - bfe!(num_words - 1);
         self.num_allocated_words = self
             .num_allocated_words
             .checked_add(num_words)
             .expect("Cannot allocate more that u32::MAX words through `kmalloc`.");
 
-        address
+        StaticAllocation {
+            write_address,
+            num_words,
+        }
     }
 }
 
@@ -466,13 +503,13 @@ mod tests {
         const MINUS_TWO: BFieldElement = BFieldElement::new(BFieldElement::MAX - 1);
         let mut lib = Library::new();
 
-        let first_free_address = lib.kmalloc(1);
-        assert_eq!(MINUS_TWO, first_free_address);
+        let first_chunk = lib.kmalloc(1);
+        assert_eq!(MINUS_TWO, first_chunk.write_address());
 
-        let second_free_address = lib.kmalloc(7);
-        assert_eq!(-BFieldElement::new(9), second_free_address,);
+        let second_chunk = lib.kmalloc(7);
+        assert_eq!(-bfe!(9), second_chunk.write_address());
 
-        let third_free_address = lib.kmalloc(1000);
-        assert_eq!(-BFieldElement::new(1009), third_free_address);
+        let third_chunk = lib.kmalloc(1000);
+        assert_eq!(-bfe!(1009), third_chunk.write_address());
     }
 }

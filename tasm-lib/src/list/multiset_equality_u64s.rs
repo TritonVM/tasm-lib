@@ -34,10 +34,7 @@ impl BasicSnippet for MultisetEqualityU64s {
         let hash_varlen = library.import(Box::new(HashVarlen));
         let compare_xfes = DataType::Xfe.compare();
 
-        let running_product_result_write_pointer =
-            library.kmalloc(EXTENSION_DEGREE.try_into().unwrap());
-        let running_product_result_read_pointer =
-            running_product_result_write_pointer + bfe!(EXTENSION_DEGREE as u64 - 1);
+        let running_product_result_alloc = library.kmalloc(EXTENSION_DEGREE.try_into().unwrap());
 
         let compare_lengths = triton_asm!(
             // _ *a *b
@@ -172,8 +169,8 @@ impl BasicSnippet for MultisetEqualityU64s {
                 // _ *a *b size [-indeterminate] *a *a [garbage; 2] [a_rp]
 
                 /* store result in static memory and cleanup stack */
-                push {running_product_result_write_pointer}
-                write_mem {EXTENSION_DEGREE}
+                push {running_product_result_alloc.write_address()}
+                write_mem {running_product_result_alloc.num_words()}
                 pop 5
                 // _ *a *b size [-indeterminate]
 
@@ -214,8 +211,8 @@ impl BasicSnippet for MultisetEqualityU64s {
                 pop 3
                 // _ [b_rp]
 
-                push {running_product_result_read_pointer}
-                read_mem {EXTENSION_DEGREE}
+                push {running_product_result_alloc.read_address()}
+                read_mem {running_product_result_alloc.num_words()}
                 pop 1
                 // _ [b_rp] [a_rp]
 
