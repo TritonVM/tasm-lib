@@ -219,3 +219,30 @@ impl InnerFunction {
         };
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn breakpoint_does_not_influence_raw_code_inlining() {
+        let raw_code = RawCode {
+            function: triton_asm! { my_label: return break },
+            input_type: DataType::VoidPointer,
+            output_type: DataType::VoidPointer,
+        };
+        let inlined_code = raw_code.inlined_body().unwrap();
+        assert_eq!(triton_asm!(), inlined_code);
+    }
+
+    #[test]
+    fn type_hints_do_not_influence_raw_code_inlining() {
+        let raw_code = RawCode {
+            function: triton_asm! { my_label: hint a = stack[0] hint b = stack[1] return },
+            input_type: DataType::VoidPointer,
+            output_type: DataType::VoidPointer,
+        };
+        let inlined_code = raw_code.inlined_body().unwrap();
+        assert_eq!(triton_asm!(), inlined_code);
+    }
+}
