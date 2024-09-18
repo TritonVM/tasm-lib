@@ -12,7 +12,7 @@ currently only work with *one* input element in inner function. \
 Use a tuple data type to circumvent this.";
 
 /// A data structure for describing an inner function predicate to filter with,
-/// or to map with.
+/// or a function to map with.
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct RawCode {
     pub function: Vec<LabelledInstruction>,
@@ -26,9 +26,13 @@ impl RawCode {
         input_type: DataType,
         output_type: DataType,
     ) -> Self {
+        let is_label = |x: &_| matches!(x, LabelledInstruction::Label(_));
+        let is_instruction = |x: &_| matches!(x, LabelledInstruction::Instruction(_));
+        let labels_and_instructions = function.iter().filter(|i| is_label(i) || is_instruction(i));
+
         // Verify that 1st line is a label
         assert!(
-            function.len() >= 2,
+            labels_and_instructions.count() >= 2,
             "Inner function must have at least two lines: a label and a return or recurse"
         );
         assert!(
@@ -41,8 +45,9 @@ impl RawCode {
                 function.last().unwrap(),
                 LabelledInstruction::Instruction(AnInstruction::Return)
                     | LabelledInstruction::Instruction(AnInstruction::Recurse)
+                    | LabelledInstruction::Instruction(AnInstruction::RecurseOrReturn)
             ),
-            "Last line of inner function must be either return or recurse. Got: {}",
+            "Last line of inner function must be either return, recurse, or recurse_or_return. Got: {}",
             function.last().unwrap()
         );
 
@@ -267,5 +272,29 @@ mod tests {
         };
         let inlined_code = raw_code.inlined_body().unwrap();
         assert_eq!(triton_asm!(), inlined_code);
+    }
+
+    #[test]
+    fn allow_raw_code_with_recurse_or_return_instruction() {
+        let raw_code = triton_asm!(
+            please_help_me:
+                hint im_falling = stack[0]
+                hint in_love_with_you = stack[1]
+
+                call close_the_door_to_temptation
+
+                return
+
+                close_the_door_to_temptation:
+                    hint turn_away_from_me_darling = stack[5]
+                    break
+                    merkle_step_mem
+                    recurse_or_return
+        );
+        let raw_code = RawCode::new(raw_code, DataType::VoidPointer, DataType::VoidPointer);
+        assert!(
+            raw_code.inlined_body().is_none(),
+            "Disallow inling of code with `recurse_or_return` instruction"
+        );
     }
 }
