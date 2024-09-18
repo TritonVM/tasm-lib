@@ -75,13 +75,9 @@ impl All {
 
 impl BasicSnippet for All {
     fn inputs(&self) -> Vec<(DataType, String)> {
-        let input_type = match &self.f {
-            InnerFunction::BasicSnippet(basic_snippet) => {
-                DataType::List(Box::new(basic_snippet.inputs()[0].0.clone()))
-            }
-            _ => DataType::VoidPointer,
-        };
-        vec![(input_type, "*input_list".to_string())]
+        let element_type = self.f.domain();
+        let list_type = DataType::List(Box::new(element_type));
+        vec![(list_type, "*input_list".to_string())]
     }
 
     fn outputs(&self) -> Vec<(DataType, String)> {

@@ -123,10 +123,9 @@ impl InnerFunction {
             }
             InnerFunction::NoFunctionBody(f) => f.input_type.clone(),
             InnerFunction::BasicSnippet(bs) => {
-                let [ref input] = bs.inputs()[..] else {
+                let [(ref input, _)] = bs.inputs()[..] else {
                     panic!("{MORE_THAN_ONE_INPUT_OR_OUTPUT_TYPE_IN_INNER_FUNCTION}");
                 };
-                let (input, _) = input;
                 input.clone()
             }
         }
@@ -143,10 +142,9 @@ impl InnerFunction {
             }
             InnerFunction::NoFunctionBody(lnat) => lnat.output_type.clone(),
             InnerFunction::BasicSnippet(bs) => {
-                let [ref output] = bs.outputs()[..] else {
+                let [(ref output, _)] = bs.outputs()[..] else {
                     panic!("{MORE_THAN_ONE_INPUT_OR_OUTPUT_TYPE_IN_INNER_FUNCTION}");
                 };
-                let (output, _) = output;
                 output.clone()
             }
         }
@@ -163,8 +161,8 @@ impl InnerFunction {
     }
 
     /// Run the VM for on a given stack and memory to observe how it manipulates the
-    /// stack. This is a helper function for [`apply`](apply), which in some cases just
-    /// grabs the inner function's code and then needs a VM to apply it.
+    /// stack. This is a helper function for [`apply`](Self::apply), which in some cases
+    /// just grabs the inner function's code and then needs a VM to apply it.
     fn run_vm(
         instructions: &[LabelledInstruction],
         stack: &mut Vec<BFieldElement>,

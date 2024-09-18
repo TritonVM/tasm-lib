@@ -25,29 +25,21 @@ use super::inner_function::InnerFunction;
 
 /// Filters a given list for elements that satisfy a predicate. A new
 /// list is created, containing only those elements that satisfy the
-/// predicate. The predicate must be given as an InnerFunction.
+/// predicate. The predicate must be given as an [`InnerFunction`].
 pub struct Filter {
     pub f: InnerFunction,
 }
 
 impl BasicSnippet for Filter {
     fn inputs(&self) -> Vec<(DataType, String)> {
-        let list_type = match &self.f {
-            InnerFunction::BasicSnippet(basic_snippet) => {
-                DataType::List(Box::new(basic_snippet.inputs()[0].0.clone()))
-            }
-            _ => DataType::VoidPointer,
-        };
+        let element_type = self.f.domain();
+        let list_type = DataType::List(Box::new(element_type));
         vec![(list_type, "*input_list".to_string())]
     }
 
     fn outputs(&self) -> Vec<(DataType, String)> {
-        let list_type = match &self.f {
-            InnerFunction::BasicSnippet(basic_snippet) => {
-                DataType::List(Box::new(basic_snippet.inputs()[0].0.clone()))
-            }
-            _ => DataType::VoidPointer,
-        };
+        let element_type = self.f.range();
+        let list_type = DataType::List(Box::new(element_type));
         vec![(list_type, "*output_list".to_string())]
     }
 
@@ -90,7 +82,7 @@ impl BasicSnippet for Filter {
         // If function was supplied as raw instructions, we need to append the inner function to the function
         // body. Otherwise, `library` handles the imports.
         let maybe_inner_function_body_raw = match &self.f {
-            InnerFunction::RawCode(rc) => rc.function.iter().map(|x| x.to_string()).join("\n"),
+            InnerFunction::RawCode(rc) => rc.function.iter().join("\n"),
             InnerFunction::DeprecatedSnippet(_) => String::default(),
             InnerFunction::NoFunctionBody(_) => todo!(),
             InnerFunction::BasicSnippet(_) => String::default(),
@@ -114,7 +106,7 @@ impl BasicSnippet for Filter {
                 call {main_loop}    // _ *input_list *output_list input_len input_len output_len
 
                 swap 2 pop 2        // _ *input_list *output_list output_len
-                call {set_length}   // _input_list *output_list
+                call {set_length}   // _ *input_list *output_list
 
                 swap 1              // _ *output_list *input_list
                 pop 1               // _ *output_list
@@ -123,7 +115,7 @@ impl BasicSnippet for Filter {
             // INVARIANT:  _ *input_list *output_list input_len input_index output_index
             {main_loop}:
                 // test return condition
-                dup 1 // _ *input_list *output_list input_len input_index output_index input_index
+                dup 1    // _ *input_list *output_list input_len input_index output_index input_index
                 dup 3 eq // _ *input_list *output_list input_len input_index output_index input_index==input_len
 
                 skiz return

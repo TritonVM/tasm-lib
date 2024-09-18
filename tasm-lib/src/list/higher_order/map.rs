@@ -25,8 +25,6 @@ use super::inner_function::InnerFunction;
 
 const INNER_FN_INCORRECT_NUM_INPUTS: &str = "Inner function in `map` only works with *one* \
     input. Use a tuple as a workaround.";
-const INNER_FN_INCORRECT_NUM_OUTPUTS: &str = "Inner function in `map` only works with *one* \
-    output. Use a tuple as a workaround.";
 
 /// Applies a given function to every element of a list, and collects the new elements
 /// into a new list.
@@ -42,29 +40,13 @@ impl Map {
 
 impl BasicSnippet for Map {
     fn inputs(&self) -> Vec<(DataType, String)> {
-        let element_type = if let InnerFunction::BasicSnippet(snippet) = &self.f {
-            let [(ref element_type, _)] = snippet.inputs()[..] else {
-                panic!("{INNER_FN_INCORRECT_NUM_INPUTS}");
-            };
-            element_type.to_owned()
-        } else {
-            DataType::VoidPointer
-        };
-
+        let element_type = self.f.domain();
         let list_type = DataType::List(Box::new(element_type));
         vec![(list_type, "*input_list".to_string())]
     }
 
     fn outputs(&self) -> Vec<(DataType, String)> {
-        let element_type = if let InnerFunction::BasicSnippet(snippet) = &self.f {
-            let [(ref element_type, _)] = snippet.outputs()[..] else {
-                panic!("{INNER_FN_INCORRECT_NUM_OUTPUTS}");
-            };
-            element_type.to_owned()
-        } else {
-            DataType::VoidPointer
-        };
-
+        let element_type = self.f.range();
         let list_type = DataType::List(Box::new(element_type));
         vec![(list_type, "*output_list".to_string())]
     }
