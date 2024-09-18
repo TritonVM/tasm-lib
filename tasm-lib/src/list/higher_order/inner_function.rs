@@ -77,20 +77,43 @@ impl RawCode {
     }
 
     /// Returns `Some(code)` iff the raw code is a function that can be inlined
+    ///
+    /// Type hints and breakpoints are stripped.
     pub fn inlined_body(&self) -> Option<Vec<LabelledInstruction>> {
-        // If the RawCode contains a recurse, it cannot be inlined
-        if self
+        let is_label = |x: &_| matches!(x, LabelledInstruction::Label(_));
+        let is_instruction = |x: &_| matches!(x, LabelledInstruction::Instruction(_));
+        let is_recursive = |x: &_| {
+            matches!(
+                x,
+                LabelledInstruction::Instruction(AnInstruction::Recurse)
+                    | LabelledInstruction::Instruction(AnInstruction::RecurseOrReturn)
+            )
+        };
+
+        if self.function.iter().any(is_recursive) {
+            // recursion needs to be wrapped in a function
+            return None;
+        }
+
+        let mut labels_and_instructions = self
             .function
             .iter()
-            .any(|x| matches!(x, LabelledInstruction::Instruction(AnInstruction::Recurse)))
-        {
-            None
-        } else if self.function.len() == 2 {
-            Some(triton_asm!())
-        } else {
-            // Remove label and `return`
-            Some(self.function[1..=self.function.len() - 2].to_vec())
-        }
+            .filter(|i| is_label(i) || is_instruction(i));
+
+        let Some(first_thing) = labels_and_instructions.next() else {
+            return Some(triton_asm!());
+        };
+        let LabelledInstruction::Label(_) = first_thing else {
+            panic!("Raw Code must start with a label.")
+        };
+
+        let Some(LabelledInstruction::Instruction(AnInstruction::Return)) =
+            labels_and_instructions.next_back()
+        else {
+            panic!("Raw Code is probably buggy: too short, or doesn't end with `return`.");
+        };
+
+        Some(labels_and_instructions.cloned().collect())
     }
 }
 
