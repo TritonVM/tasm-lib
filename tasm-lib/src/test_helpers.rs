@@ -318,13 +318,19 @@ pub fn verify_stack_equivalence(
     stack_b_name: &str,
     stack_b: &[BFieldElement],
 ) {
+    let stack_a_name = format!("{stack_a_name}:");
+    let stack_b_name = format!("{stack_b_name}:");
+    let max_stack_name_len = stack_a_name.len().max(stack_b_name.len());
+
     let stack_a = &stack_a[Digest::LEN..];
     let stack_b = &stack_b[Digest::LEN..];
-    let display = |stack: &[BFieldElement]| stack.iter().map(|&x| x.to_string()).join(",");
+    let display = |stack: &[BFieldElement]| stack.iter().join(",");
     assert_eq!(
         stack_a,
         stack_b,
-        "{stack_a_name} stack must match {stack_b_name} stack\n\n{stack_a_name}: {}\n\n{stack_b_name}: {}",
+        "{stack_a_name} stack must match {stack_b_name} stack\n\n\
+         {stack_a_name:<max_stack_name_len$} {}\n\n\
+         {stack_b_name:<max_stack_name_len$} {}",
         display(stack_a),
         display(stack_b),
     );

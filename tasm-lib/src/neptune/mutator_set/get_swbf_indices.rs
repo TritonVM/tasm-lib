@@ -271,37 +271,36 @@ impl Function for GetSwbfIndices {
 }
 
 /// ```text
-/// BEFORE: _ [x_3, x_2, x_1, x_0] input_list output_list index input_u32
-/// AFTER:  _ [x_3, x_2, x_1, x_0] input_list output_list index output_3 output_2 output_1 output_0
+/// BEFORE: _ [x_3, x_2, x_1, x_0] [buffer; 4] input_u32
+/// AFTER:  _ [x_3, x_2, x_1, x_0] [buffer; 4] output_3 output_2 output_1 output_0
 /// ```
 pub(crate) fn u32_to_u128_add_another_u128() -> RawCode {
     let assembly = triton_asm!(
         u32_to_u128_add_another_u128:
-        dup 4   // _ [x_3, x_2, x_1, x_0] input_list output_list index input_u32 x_0
-        add     // _ [x_3, x_2, x_1, x_0] input_list output_list index (input_u32 + x_0)
-        split   // _ [x_3, x_2, x_1, x_0] input_list output_list index carry_to_1 output_0
-        swap 1  // _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 carry_to_1
-        dup 6   // _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 carry_to_1 x_1
+        dup 5   // _ [x_3, x_2, x_1, x_0] [buffer; 4] input_u32 x_0
+        add     // _ [x_3, x_2, x_1, x_0] [buffer; 4] (input_u32 + x_0)
+        split   // _ [x_3, x_2, x_1, x_0] [buffer; 4] carry_to_1 output_0
+        pick 1  // _ [x_3, x_2, x_1, x_0] [buffer; 4] output_0 carry_to_1
+        dup 7   // _ [x_3, x_2, x_1, x_0] [buffer; 4] output_0 carry_to_1 x_1
         add
-        split   // _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 carry_to_2 output_1
-        swap 1  // _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 output_1 carry_to_2
-        dup 8
+        split   // _ [x_3, x_2, x_1, x_0] [buffer; 4] output_0 carry_to_2 output_1
+        pick 1  // _ [x_3, x_2, x_1, x_0] [buffer; 4] output_0 output_1 carry_to_2
+        dup 9
         add
-        split   // _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 output_1 carry_to_3 output_2
-        swap 1  // _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 output_1 output_2 carry_to_3
-        dup 10
+        split   // _ [x_3, x_2, x_1, x_0] [buffer; 4] output_0 output_1 carry_to_3 output_2
+        pick 1  // _ [x_3, x_2, x_1, x_0] [buffer; 4] output_0 output_1 output_2 carry_to_3
+        dup 11
         add
-        split   // _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 output_1 output_2 overflow output_3
-        swap 1  // _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 output_1 output_2 output_3 overflow
+        split   // _ [x_3, x_2, x_1, x_0] [buffer; 4] output_0 output_1 output_2 overflow output_3
+        pick 1  // _ [x_3, x_2, x_1, x_0] [buffer; 4] output_0 output_1 output_2 output_3 overflow
 
         // verify no overflow
         push 0
         eq
-        assert  // _ [x_3, x_2, x_1, x_0] input_list output_list index output_0 output_1 output_2 output_3
-        swap 3
-        swap 1
-        swap 2
-        swap 1  // _ [x_3, x_2, x_1, x_0] input_list output_list index output_3 output_2 output_1 output_0
+        assert  // _ [x_3, x_2, x_1, x_0] [buffer; 4] output_0 output_1 output_2 output_3
+        place 3
+        place 2
+        place 1 // _ [x_3, x_2, x_1, x_0] [buffer; 4] output_3 output_2 output_1 output_0
         return
     );
     RawCode::new(assembly, DataType::U32, DataType::U128)

@@ -176,10 +176,10 @@ impl BasicSnippet for FriSnippet {
             library.import(Box::new(Map::new(InnerFunction::RawCode(RawCode {
                 function: triton_asm! {
                     {reduce_indices_label}:
-                                        // _ half_domain_length [bu ff er] index
-                    dup 4 place 1       // _ half_domain_length [bu ff er] half_domain_length index
-                    div_mod             // _ half_domain_length [bu ff er] q r
-                    pick 1 pop 1        // _ half_domain_length [bu ff er] index%half_domain_length
+                                        // _ half_domain_length [buffer; 4] index
+                    dup 5 place 1       // _ half_domain_length [buffer; 4] half_domain_length index
+                    div_mod             // _ half_domain_length [buffer; 4] q r
+                    pick 1 pop 1        // _ half_domain_length [buffer; 4] index%half_domain_length
                     return
                 },
                 input_type: DataType::U32,
@@ -192,18 +192,18 @@ impl BasicSnippet for FriSnippet {
                 input_type: DataType::Tuple(vec![DataType::U32, DataType::Xfe]),
                 output_type: DataType::Tuple(vec![DataType::U32, DataType::Xfe]),
                 function: triton_asm! {
-                    // BEFORE: _ *codeword [bu ff er] index xfe2 xfe1 xfe0
-                    // AFTER:  _ *codeword [bu ff er] index xfe2 xfe1 xfe0
+                    // BEFORE: _ *codeword [buffer; 4] index xfe2 xfe1 xfe0
+                    // AFTER:  _ *codeword [buffer; 4] index xfe2 xfe1 xfe0
                     {assert_membership_label}:
                         hint element_to_check: Xfe = stack[0..3]
                         hint codeword_index = stack[3]
-                        hint codeword: Pointer = stack[7]
-                        push 0                  // _ *codeword [bu ff er] index xfe2 xfe1 xfe0 0
-                        dup 4 dup 9 dup 1       // _ *codeword [bu ff er] index xfe2 xfe1 xfe0 0 index *codeword index
-                        call {get_xfe_from_list}// _ *codeword [bu ff er] index xfe2 xfe1 xfe0 0 index xfe2' xfe1' xfe0'
-                        push 0                  // _ *codeword [bu ff er] index xfe2 xfe1 xfe0 0 index xfe2' xfe1' xfe0' 0
-                        assert_vector           // _ *codeword [bu ff er] index xfe2 xfe1 xfe0 0
-                        pop 1                   // _ *codeword [bu ff er] index xfe2 xfe1 xfe0
+                        hint codeword: Pointer = stack[8]
+                        push 0                  // _ *codeword [buffer; 4] index xfe2 xfe1 xfe0 0
+                        dup 4 dup 10 dup 1      // _ *codeword [buffer; 4] index xfe2 xfe1 xfe0 0 index *codeword index
+                        call {get_xfe_from_list}// _ *codeword [buffer; 4] index xfe2 xfe1 xfe0 0 index xfe2' xfe1' xfe0'
+                        push 0                  // _ *codeword [buffer; 4] index xfe2 xfe1 xfe0 0 index xfe2' xfe1' xfe0' 0
+                        assert_vector           // _ *codeword [buffer; 4] index xfe2 xfe1 xfe0 0
+                        pop 1                   // _ *codeword [buffer; 4] index xfe2 xfe1 xfe0
                         return
                 },
             }))));
