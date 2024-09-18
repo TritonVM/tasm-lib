@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use itertools::Itertools;
-use num_traits::One;
 use rand::prelude::*;
 use triton_vm::isa::parser::tokenize;
 use triton_vm::prelude::*;
@@ -24,8 +23,10 @@ use crate::InitVmState;
 
 use super::inner_function::InnerFunction;
 
-const MORE_THAN_ONE_INPUT_OR_OUTPUT_TYPE_IN_INNER_FUNCTION: &str = "inner function in `map` \
-currently only works with *one* input element. Use a tuple data type to circumvent this.";
+const INNER_FN_INCORRECT_NUM_INPUTS: &str = "Inner function in `map` only works with *one* \
+    input. Use a tuple as a workaround.";
+const INNER_FN_INCORRECT_NUM_OUTPUTS: &str = "Inner function in `map` only works with *one* \
+    output. Use a tuple as a workaround.";
 
 /// Applies a given function to every element of a list, and collects the new elements
 /// into a new list.
@@ -41,43 +42,31 @@ impl Map {
 
 impl BasicSnippet for Map {
     fn inputs(&self) -> Vec<(DataType, String)> {
-        match &self.f {
-            InnerFunction::BasicSnippet(bs) => {
-                assert!(
-                    bs.inputs().len().is_one(),
-                    "{MORE_THAN_ONE_INPUT_OR_OUTPUT_TYPE_IN_INNER_FUNCTION}"
-                );
-                let element_type = &bs.inputs()[0].0;
-                vec![(
-                    DataType::List(Box::new(element_type.clone())),
-                    "*input_list".to_string(),
-                )]
-            }
-            _ => vec![(
-                DataType::List(Box::new(DataType::VoidPointer)),
-                "*input_list".to_string(),
-            )],
-        }
+        let element_type = if let InnerFunction::BasicSnippet(snippet) = &self.f {
+            let [(ref element_type, _)] = snippet.inputs()[..] else {
+                panic!("{INNER_FN_INCORRECT_NUM_INPUTS}");
+            };
+            element_type.to_owned()
+        } else {
+            DataType::VoidPointer
+        };
+
+        let list_type = DataType::List(Box::new(element_type));
+        vec![(list_type, "*input_list".to_string())]
     }
 
     fn outputs(&self) -> Vec<(DataType, String)> {
-        match &self.f {
-            InnerFunction::BasicSnippet(bs) => {
-                assert!(
-                    bs.inputs().len().is_one(),
-                    "{MORE_THAN_ONE_INPUT_OR_OUTPUT_TYPE_IN_INNER_FUNCTION}"
-                );
-                let element_type = &bs.outputs()[0].0;
-                vec![(
-                    DataType::List(Box::new(element_type.clone())),
-                    "*output_list".to_string(),
-                )]
-            }
-            _ => vec![(
-                DataType::List(Box::new(DataType::VoidPointer)),
-                "*output_list".to_string(),
-            )],
-        }
+        let element_type = if let InnerFunction::BasicSnippet(snippet) = &self.f {
+            let [(ref element_type, _)] = snippet.outputs()[..] else {
+                panic!("{INNER_FN_INCORRECT_NUM_OUTPUTS}");
+            };
+            element_type.to_owned()
+        } else {
+            DataType::VoidPointer
+        };
+
+        let list_type = DataType::List(Box::new(element_type));
+        vec![(list_type, "*output_list".to_string())]
     }
 
     fn entrypoint(&self) -> String {
@@ -109,10 +98,7 @@ impl BasicSnippet for Map {
                 }
             }
             InnerFunction::DeprecatedSnippet(sn) => {
-                assert!(
-                    sn.input_types().len().is_one(),
-                    "{MORE_THAN_ONE_INPUT_OR_OUTPUT_TYPE_IN_INNER_FUNCTION}"
-                );
+                assert_eq!(1, sn.input_types().len(), "{INNER_FN_INCORRECT_NUM_INPUTS}");
                 let fn_body = sn.function_code(library);
                 let (_, instructions) = tokenize(&fn_body).unwrap();
                 let labelled_instructions = isa::parser::to_labelled_instructions(&instructions);
@@ -125,10 +111,7 @@ impl BasicSnippet for Map {
                 (triton_asm!(call { snippet_name }), String::default())
             }
             InnerFunction::BasicSnippet(bs) => {
-                assert!(
-                    bs.inputs().len().is_one(),
-                    "{MORE_THAN_ONE_INPUT_OR_OUTPUT_TYPE_IN_INNER_FUNCTION}"
-                );
+                assert_eq!(1, bs.inputs().len(), "{INNER_FN_INCORRECT_NUM_INPUTS}");
                 let labelled_instructions = bs.annotated_code(library);
                 let snippet_name =
                     library.explicit_import(&bs.entrypoint(), &labelled_instructions);
@@ -142,40 +125,26 @@ impl BasicSnippet for Map {
         let write_to_output_list = output_type.write_value_to_memory_leave_pointer();
         let input_elem_size = input_type.stack_size();
         let output_elem_size = output_type.stack_size();
-        let input_elem_size_plus_one = input_elem_size + 1;
-        let output_elem_size_plus_one = output_type.stack_size() + 1;
-        let minus_two_times_output_size = -(output_type.stack_size() as i32 * 2);
 
         let mul_elem_size = |n| match n {
             0 => triton_asm!(pop 1 push 0),
             1 => triton_asm!(),
-            n => triton_asm!(
-                push {n}
-                mul
-            ),
+            n => triton_asm!(push {n} mul),
         };
 
         let adjust_output_list_pointer = match output_elem_size {
-            0 => triton_asm!(),
-            1 => triton_asm!(),
-            n => triton_asm!(
-                push {-(n as i32 - 1)}
-                add
-            ),
+            0 | 1 => triton_asm!(),
+            n => triton_asm!(addi {-(n as i32 - 1)}),
         };
 
         let final_output_list_pointer_adjust = match output_elem_size {
-            0 => triton_asm!(),
-            1 => triton_asm!(),
-            n => triton_asm!(
-                push {n - 1}
-                add
-            ),
+            0 | 1 => triton_asm!(),
+            n => triton_asm!(addi {n - 1}),
         };
 
         triton_asm!(
-            // BEFORE: _ <[additional_input_args]>  *input_list
-            // AFTER:  _ <[additional_input_args]>  *output_list
+            // BEFORE: _ <[additional_input_args]> *input_list
+            // AFTER:  _ <[additional_input_args]> *output_list
             {entrypoint}:
                 dup 0
                 read_mem 1
@@ -219,10 +188,9 @@ impl BasicSnippet for Map {
                 swap 1
                 pop 1
 
-
                 return
 
-            // INVARIANT: _ <aia>  *end_condition_input_list *output_elem *input_elem
+            // INVARIANT: _ <aia> *end_condition_input_list *output_elem *input_elem
             {main_loop}:
                 // test return condition
                 dup 2
@@ -233,26 +201,25 @@ impl BasicSnippet for Map {
 
                 dup 0
                 {&read_from_input_list}
-                // _ <aia>  *end_condition_input_list *output_elem *input_elem [input_elem] *prev_input_elem
+                // _ <aia> *end_condition_input_list *output_elem *input_elem [input_elem] *prev_input_elem
 
-                swap {input_elem_size_plus_one}
+                swap {input_elem_size + 1}
                 pop 1
-                // _ <aia>  *end_condition_input_list *output_elem *prev_input_elem [input_elem]
+                // _ <aia> *end_condition_input_list *output_elem *prev_input_elem [input_elem]
 
                 // map
                 {&call_inner_function}
-                                // _ <aia>  *end_condition_input_list *output_elem *prev_input_elem [output_elem]
+                // _ <aia> *end_condition_input_list *output_elem *prev_input_elem [output_elem]
 
                 // write
-                dup {output_elem_size_plus_one}
-                // _ <aia>  *end_condition_input_list *output_elem *prev_input_elem [output_elem] *output_elem
+                dup {output_type.stack_size() + 1}
+                // _ <aia> *end_condition_input_list *output_elem *prev_input_elem [output_elem] *output_elem
 
                 {&write_to_output_list}
-                // _ <aia>  *end_condition_input_list *output_elem *prev_input_elem *next_output_elem
+                // _ <aia> *end_condition_input_list *output_elem *prev_input_elem *next_output_elem
 
-                push {minus_two_times_output_size}
-                add
-                // _ <aia>  *end_condition_input_list *output_elem *prev_input_elem *prev_output_elem
+                addi {-(output_type.stack_size() as i32 * 2)}
+                // _ <aia> *end_condition_input_list *output_elem *prev_input_elem *prev_output_elem
 
                 swap 2
                 pop 1
