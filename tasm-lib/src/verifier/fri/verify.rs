@@ -172,12 +172,14 @@ impl BasicSnippet for FriSnippet {
         let zip_index_xfe = library.import(Box::new(Zip::new(DataType::U32, DataType::Xfe)));
         let query_phase_main_loop = format!("{entrypoint}_query_phase_main_loop");
         let reduce_indices_label = format!("{entrypoint}_reduce_indices");
+        let map_buffer_len = Map::NUM_INTERNAL_REGISTERS;
         let map_reduce_indices =
             library.import(Box::new(Map::new(InnerFunction::RawCode(RawCode {
                 function: triton_asm! {
                     {reduce_indices_label}:
                                         // _ half_domain_length [bu ff er] index
-                    dup 4 place 1       // _ half_domain_length [bu ff er] half_domain_length index
+                    dup {map_buffer_len + 1}
+                    place 1             // _ half_domain_length [bu ff er] half_domain_length index
                     div_mod             // _ half_domain_length [bu ff er] q r
                     pick 1 pop 1        // _ half_domain_length [bu ff er] index%half_domain_length
                     return
@@ -197,9 +199,10 @@ impl BasicSnippet for FriSnippet {
                     {assert_membership_label}:
                         hint element_to_check: Xfe = stack[0..3]
                         hint codeword_index = stack[3]
-                        hint codeword: Pointer = stack[7]
+                        hint codeword: Pointer = stack[8]
                         push 0                  // _ *codeword [bu ff er] index xfe2 xfe1 xfe0 0
-                        dup 4 dup 9 dup 1       // _ *codeword [bu ff er] index xfe2 xfe1 xfe0 0 index *codeword index
+                        dup 4 dup {map_buffer_len + 6}
+                        dup 1                   // _ *codeword [bu ff er] index xfe2 xfe1 xfe0 0 index *codeword index
                         call {get_xfe_from_list}// _ *codeword [bu ff er] index xfe2 xfe1 xfe0 0 index xfe2' xfe1' xfe0'
                         push 0                  // _ *codeword [bu ff er] index xfe2 xfe1 xfe0 0 index xfe2' xfe1' xfe0' 0
                         assert_vector           // _ *codeword [bu ff er] index xfe2 xfe1 xfe0 0
