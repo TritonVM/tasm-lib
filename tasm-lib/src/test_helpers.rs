@@ -480,7 +480,7 @@ fn link_for_isolated_run<T: RustShadow>(snippet_struct: &T) -> Vec<LabelledInstr
 }
 
 #[allow(dead_code)]
-pub fn test_rust_equivalence_given_execution_state<T: BasicSnippet + RustShadow>(
+pub fn test_rust_equivalence_given_execution_state<T: RustShadow>(
     snippet_struct: &T,
     execution_state: InitVmState,
 ) -> VMState {
@@ -490,7 +490,7 @@ pub fn test_rust_equivalence_given_execution_state<T: BasicSnippet + RustShadow>
         &execution_state.stack,
         &execution_state.public_input,
         &nondeterminism,
-        &None,
+        &execution_state.sponge,
         None,
     )
 }
