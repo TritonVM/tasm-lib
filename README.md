@@ -16,14 +16,14 @@ Triton-VM has $P = 2^{64} - 2^{32} + 1$ number of words in its RAM, where each w
 
 Memory is, by convention, divided up into chunks called pages. All pages, except the last one, have a size of $2^{32}$ words. The last page has a size of $1$. Memory consists of $2^{32}$ pages.
 
-| page                   | region                           | size in words   | category          | purpose                          |
-|------------------------|----------------------------------|-----------------|-------------------|----------------------------------|
-| $0$                    | $[0, 2^{32})$                    | $2^{32}$        | non-deterministic | for pre-loaded data              |
-| $[1,2^{31})$           | $[2^{32}, 2^{63})$               | $2^{63}-2^{32}$ | dynamic           | run-time data                    |
-| $[2^{31},2^{32}-4)$    | $[2^{63}, 2^{34})$               | $2^{63}-2^{34}$ | static            | not reserved                     |
-| $[2^{32}-4, 2^{32}-2)$ | $[2^{64}-2^{34},2^{64}-2^{33})$  | $2^{33}$        | static            | Reserved for STARK-verifier      |
-| $2^{32}-2$             | $[2^{64}-2^{33}, 2^{64}-2^{32})$ | $2^{32}$        | static            | available for `Library::kmalloc` |
-| $2^{32}-1$             | $[2^{64}-2^{32}, 0)$             | $1$             | static            | state of `DynMalloc` snippet     |
+| pages                     | region                           | size in words   | category          | purpose                          |
+|---------------------------|----------------------------------|-----------------|-------------------|----------------------------------|
+| $0$                       | $[0, 2^{32})$                    | $2^{32}$        | non-deterministic | for pre-loaded data              |
+| $[1,2^{31})$              | $[2^{32}, 2^{63})$               | $2^{63}-2^{32}$ | dynamic           | run-time data                    |
+| $[2^{31},2^{32}-4)$       | $[2^{63}, 2^{34})$               | $2^{63}-2^{34}$ | static            | not reserved                     |
+| $2^{32}-4$ and $2^{32}-3$ | $[2^{64}-2^{34},2^{64}-2^{33})$  | $2^{33}$        | static            | Reserved for STARK-verifier      |
+| $2^{32}-2$                | $[2^{64}-2^{33}, 2^{64}-2^{32})$ | $2^{32}$        | static            | available for `Library::kmalloc` |
+| $2^{32}-1$                | $[2^{64}-2^{32}, 0)$             | $1$             | static            | state of `DynMalloc` snippet     |
 
 
 - The first memory page, page 0, the address region $[0, 2^{32})$, is reserved for pre-loaded data. Note that $0$ is included and $2^{32}$ is excluded.
