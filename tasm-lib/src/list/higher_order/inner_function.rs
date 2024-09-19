@@ -127,8 +127,8 @@ pub enum InnerFunction {
     DeprecatedSnippet(Box<dyn DeprecatedSnippet>),
     BasicSnippet(Box<dyn BasicSnippet>),
 
-    // Used when a snippet is declared somewhere else, and it's not the responsibility of
-    // the higher order function to import it.
+    /// Used when a snippet is declared somewhere else, and it's not the responsibility of
+    /// the higher order function to import it.
     NoFunctionBody(NoFunctionBody),
 }
 

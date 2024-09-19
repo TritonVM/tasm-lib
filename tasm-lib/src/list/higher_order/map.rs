@@ -132,28 +132,28 @@ impl<const NUM_INPUT_LISTS: usize> BasicSnippet for ChainMap<NUM_INPUT_LISTS> {
             // INVARIANT: _ *end_condition_in_list *output_elem *input_elem
             {main_loop_fn}:
 
-            /* maybe return */
-            // not using `recurse_or_return` to have more room for parameters
-            // that might live on the stack, to and used by the inner function
-            dup 2 dup 1 eq
-            skiz return
+                /* maybe return */
+                // not using `recurse_or_return` to have more room for parameters
+                // that might live on the stack, to and used by the inner function
+                dup 2 dup 1 eq
+                skiz return
 
-            /* read */
-            {&input_type.read_value_from_memory_leave_pointer()}
-            place {input_elem_size}
-                        // _ *end_condition_in_list *output_elem *prev_input_elem [input_elem]
+                /* read */
+                {&input_type.read_value_from_memory_leave_pointer()}
+                place {input_elem_size}
+                            // _ *end_condition_in_list *output_elem *prev_input_elem [input_elem]
 
-            /* map */
-            {&exec_or_call_inner_function}
-                        // _ *end_condition_in_list *output_elem *prev_input_elem [output_elem]
+                /* map */
+                {&exec_or_call_inner_function}
+                            // _ *end_condition_in_list *output_elem *prev_input_elem [output_elem]
 
-            /* write */
-            pick {output_type.stack_size() + 1}
-            {&output_type.write_value_to_memory_leave_pointer()}
-            addi {-2 * output_type.stack_size() as i32}
-            place 1     // _ *end_condition_in_list *prev_output_elem *prev_input_elem
+                /* write */
+                pick {output_type.stack_size() + 1}
+                {&output_type.write_value_to_memory_leave_pointer()}
+                addi {-2 * output_type.stack_size() as i32}
+                place 1     // _ *end_condition_in_list *prev_output_elem *prev_input_elem
 
-            recurse
+                recurse
         };
 
         let map_one_list = triton_asm! {
@@ -231,6 +231,7 @@ mod tests {
     use num_traits::Zero;
     use rand::random;
     use rand::rngs::StdRng;
+    use rand::thread_rng;
     use rand::Rng;
     use rand::SeedableRng;
     use strum::EnumCount;
@@ -241,7 +242,6 @@ mod tests {
 
     use crate::arithmetic;
     use crate::data_type::DataType;
-    use crate::empty_stack;
     use crate::library::Library;
     use crate::list::higher_order::inner_function::InnerFunction;
     use crate::list::higher_order::inner_function::RawCode;
@@ -253,6 +253,7 @@ mod tests {
     use crate::rust_shadowing_helper_functions::list::list_set;
     use crate::rust_shadowing_helper_functions::list::list_set_length;
     use crate::snippet_bencher::BenchmarkCase;
+    use crate::test_helpers::test_rust_equivalence_given_execution_state;
     use crate::traits::deprecated_snippet::DeprecatedSnippet;
     use crate::traits::function::Function;
     use crate::traits::function::FunctionInitialState;
@@ -263,6 +264,29 @@ mod tests {
     use crate::VmHasher;
 
     use super::*;
+
+    impl<const NUM_INPUT_LISTS: usize> ChainMap<NUM_INPUT_LISTS> {
+        fn init_state(
+            &self,
+            environment_args: Vec<BFieldElement>,
+            list_lengths: [u16; NUM_INPUT_LISTS],
+        ) -> FunctionInitialState {
+            let input_type = self.f.domain();
+            let mut stack = self.init_stack_for_isolated_run();
+            let mut memory = HashMap::default();
+
+            stack.extend(environment_args);
+
+            for list_length in list_lengths {
+                let list_length = usize::from(list_length);
+                let list_pointer = dynamic_allocator(&mut memory);
+                insert_random_list(&input_type, list_pointer, list_length, &mut memory);
+                stack.push(list_pointer);
+            }
+
+            FunctionInitialState { stack, memory }
+        }
+    }
 
     impl<const NUM_INPUT_LISTS: usize> Function for ChainMap<NUM_INPUT_LISTS> {
         fn rust_shadow(
@@ -313,28 +337,22 @@ mod tests {
         fn pseudorandom_initial_state(
             &self,
             seed: [u8; 32],
-            _: Option<BenchmarkCase>,
+            bench: Option<BenchmarkCase>,
         ) -> FunctionInitialState {
-            let input_type = self.f.domain();
             let mut rng = StdRng::from_seed(seed);
-            let mut stack = empty_stack();
-            let mut memory = HashMap::default();
 
-            // Some inner functions rely on additional arguments on the stack.
-            // Some tested functions panic if these arguments are too large. 😵
             let environment_args = rng
-                .gen::<[u32; OpStackElement::COUNT]>()
+                .gen::<[BFieldElement; OpStackElement::COUNT]>()
                 .map(BFieldElement::from);
-            stack.extend(environment_args);
 
-            for list_length in rng.gen::<[u8; NUM_INPUT_LISTS]>() {
-                let list_length = usize::from(list_length);
-                let list_pointer = dynamic_allocator(&mut memory);
-                insert_random_list(&input_type, list_pointer, list_length, &mut memory);
-                stack.push(list_pointer);
-            }
+            let list_lengths = match bench {
+                None => rng.gen::<[u8; NUM_INPUT_LISTS]>(),
+                Some(BenchmarkCase::CommonCase) => [10; NUM_INPUT_LISTS],
+                Some(BenchmarkCase::WorstCase) => [100; NUM_INPUT_LISTS],
+            };
+            let list_lengths = list_lengths.map(|x| x.into());
 
-            FunctionInitialState { stack, memory }
+            self.init_state(environment_args.to_vec(), list_lengths)
         }
     }
 
@@ -682,7 +700,13 @@ mod tests {
     fn test_u32_list_to_u128_list_plus_x() {
         // this code only works with 1 input list
         let raw_code = InnerFunction::RawCode(u32_to_u128_add_another_u128());
-        ShadowedFunction::new(Map::new(raw_code)).test();
+        let snippet = Map::new(raw_code);
+        let encoded_u128 = random::<u128>().encode();
+        let init_state = snippet.init_state(encoded_u128, [thread_rng().gen_range(0u16..200)]);
+        test_rust_equivalence_given_execution_state(
+            &ShadowedFunction::new(snippet),
+            init_state.into(),
+        );
     }
 }
 
