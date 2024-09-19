@@ -96,6 +96,7 @@ mod tests {
     use crate::traits::accessor::AccessorInitialState;
     use crate::traits::accessor::ShadowedAccessor;
     use crate::traits::rust_shadow::RustShadow;
+    use crate::verifier::proof_for_nd_memory::ProofForNdMemory;
 
     impl<T: TasmObject + BFieldCodec + for<'a> Arbitrary<'a> + Debug + Clone> VerifyNdSiIntegrity<T> {
         fn initial_state(&self, address: BFieldElement, t: T) -> AccessorInitialState {
@@ -438,7 +439,7 @@ mod tests {
 
     #[test]
     fn test_pbt_proof() {
-        let snippet: VerifyNdSiIntegrity<Proof> = VerifyNdSiIntegrity {
+        let snippet: VerifyNdSiIntegrity<ProofForNdMemory> = VerifyNdSiIntegrity {
             _phantom_data: PhantomData,
         };
         ShadowedAccessor::new(snippet).test();
