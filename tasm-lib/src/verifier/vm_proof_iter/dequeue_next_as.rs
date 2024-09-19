@@ -1,10 +1,17 @@
+use triton_vm::fri::AuthenticationStructure;
 use triton_vm::prelude::*;
+use triton_vm::proof_item::FriResponse;
 use triton_vm::proof_item::ProofItemVariant;
+use triton_vm::table::AuxiliaryRow;
+use triton_vm::table::MainRow;
+use triton_vm::table::QuotientSegments;
 use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
+use twenty_first::prelude::Polynomial;
 
 use crate::data_type::DataType;
 use crate::hashing::sponge_hasher::pad_and_absorb_all::PadAndAbsorbAll;
 use crate::library::Library;
+use crate::structure::tasm_object::TasmObject;
 use crate::traits::basic_snippet::BasicSnippet;
 
 const MAX_SIZE_FOR_DYNAMICALLY_SIZED_PROOF_ITEMS: u32 = 1u32 << 22;
@@ -26,6 +33,85 @@ impl DequeueNextAs {
 
     fn item_name(&self) -> String {
         self.proof_item.to_string().to_lowercase()
+    }
+
+    fn proof_item_calculate_size(&self, library: &mut Library) -> Vec<LabelledInstruction> {
+        match self.proof_item {
+            ProofItemVariant::MasterMainTableRows => {
+                Vec::<MainRow<BFieldElement>>::compute_size_and_assert_valid_size_indicator(library)
+            }
+            ProofItemVariant::MasterAuxTableRows => {
+                Vec::<AuxiliaryRow>::compute_size_and_assert_valid_size_indicator(library)
+            }
+            ProofItemVariant::QuotientSegmentsElements => {
+                Vec::<QuotientSegments>::compute_size_and_assert_valid_size_indicator(library)
+            }
+            ProofItemVariant::FriCodeword => {
+                Vec::<XFieldElement>::compute_size_and_assert_valid_size_indicator(library)
+            }
+            ProofItemVariant::FriPolynomial => {
+                Polynomial::<XFieldElement>::compute_size_and_assert_valid_size_indicator(library)
+            }
+            ProofItemVariant::FriResponse => {
+                FriResponse::compute_size_and_assert_valid_size_indicator(library)
+            }
+            ProofItemVariant::AuthenticationStructure => {
+                // All authentication structures should be stripped from loaded proofs, but for
+                // more complete tests, we support it here anyway.
+                AuthenticationStructure::compute_size_and_assert_valid_size_indicator(library)
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    /// ```text
+    /// BEFORE: _ *proof_item_size
+    /// AFTER:  _ *proof_item_size
+    /// ```
+    fn assert_consistent_size_indicators(&self, library: &mut Library) -> Vec<LabelledInstruction> {
+        if self.proof_item.payload_static_length().is_some() {
+            return vec![];
+        }
+
+        let calculate_own_size = self.proof_item_calculate_size(library);
+
+        triton_asm! {
+            // _ *proof_item_size
+
+            dup 0
+            addi 3
+            {&calculate_own_size}
+            hint calculated_payload_size = stack[0]
+            // _ *proof_item_size calculated_payload_size
+
+            dup 1
+            addi 2
+            read_mem 1
+            pop 1
+            hint indicated_payload_size = stack[0]
+            // _ *proof_item_size calculated_payload_size reported_field_size
+
+            dup 1
+            eq
+            assert
+            hint payload_size = stack[0]
+            // _ *proof_item_size payload_size
+
+
+            /* Account for discriminant and size-indicator */
+            addi 2
+            hint calculated_item_size = stack[0]
+            // _ *proof_item_size calculated_item_size
+
+            dup 1
+            read_mem 1
+            pop 1
+            // _ *proof_item_size calculated_own_size indicated_item_size
+
+            eq
+            assert
+            // _ *proof_item_size
+        }
     }
 
     /// ```text
@@ -213,10 +299,10 @@ impl BasicSnippet for DequeueNextAs {
             read_mem 1
             hint proof_item_list_element_size_pointer = stack[1]
 
-            push 1 add
+            addi 1
             swap 1              // _ *proof_item_iter *proof_item_size
 
-            push 1 add
+            addi 1
             hint proof_item_discriminant_pointer = stack[0]
 
             read_mem 1          // _ *proof_item_iter discriminant *proof_item_size
@@ -228,6 +314,9 @@ impl BasicSnippet for DequeueNextAs {
             hint expected_proof_item_discriminant = stack[0]
 
             eq assert           // _ *proof_item_iter *proof_item_size
+
+            {&self.assert_consistent_size_indicators(library)}
+                                // _ *proof_item_iter *proof_item_size
 
             {&self.fiat_shamir_absorb_snippet(library)}
                                 // _ *proof_item_iter *proof_item_size
@@ -455,7 +544,7 @@ mod test {
         /// An item to be `Dequeued`, matching the variant in `self`.
         fn pseudorandom_proof_item(&self, seed: [u8; 32]) -> ProofItem {
             let mut rng = StdRng::from_seed(seed);
-            let proof_stream_seed: [u8; 100] = rng.gen();
+            let proof_stream_seed: [u8; 10000] = rng.gen();
             let mut unstructured = Unstructured::new(&proof_stream_seed);
 
             match &self.proof_item {
@@ -495,7 +584,12 @@ mod test {
                     ProofItem::FriPolynomial(Arbitrary::arbitrary(&mut unstructured).unwrap())
                 }
                 ProofItemVariant::FriResponse => {
-                    ProofItem::FriResponse(Arbitrary::arbitrary(&mut unstructured).unwrap())
+                    // This code requires the authentication paths field to be empty
+                    let fri_response: FriResponse = FriResponse {
+                        auth_structure: vec![],
+                        revealed_leaves: Arbitrary::arbitrary(&mut unstructured).unwrap(),
+                    };
+                    ProofItem::FriResponse(fri_response)
                 }
             }
         }
@@ -636,21 +730,23 @@ mod test {
         }
     }
 
-    #[test]
-    fn dequeueing_a_merkle_root_is_equivalent_in_rust_and_tasm() {
-        let dequeue_next_as = DequeueNextAs::new(ProofItemVariant::MerkleRoot);
-        dequeue_next_as.test_rust_equivalence(small_merkle_root_initial_state());
-    }
-
-    fn small_merkle_root_initial_state() -> ProcedureInitialState {
-        let dummy_digest = Digest::new([42, 43, 44, 45, 46].map(BFieldElement::new));
-        let proof_item = ProofItem::MerkleRoot(dummy_digest);
+    fn dequeueing_is_equivalent_in_rust_and_tasm_prop(proof_item_variant: ProofItemVariant) {
+        let dequeue_next_as = DequeueNextAs::new(proof_item_variant);
         let mut proof_stream = ProofStream::new();
-        proof_stream.enqueue(proof_item.clone());
+        let proof_item = dequeue_next_as.pseudorandom_proof_item(random());
         proof_stream.enqueue(proof_item);
 
-        let address = BFieldElement::zero();
-        DequeueNextAs::initial_state_from_proof_stream_and_address(proof_stream, address)
+        let address = BFieldElement::new(14);
+        let init_state =
+            DequeueNextAs::initial_state_from_proof_stream_and_address(proof_stream, address);
+        dequeue_next_as.test_rust_equivalence(init_state);
+    }
+
+    #[test]
+    fn dequeueing_all_proof_items_individually_is_equivalent_in_rust_and_tasm() {
+        for variant in ProofItemVariant::iter() {
+            dequeueing_is_equivalent_in_rust_and_tasm_prop(variant);
+        }
     }
 
     #[proptest]

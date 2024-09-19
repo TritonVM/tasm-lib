@@ -4,6 +4,7 @@ use triton_vm::prelude::*;
 use triton_vm::proof_item::FriResponse;
 use twenty_first::error::BFieldCodecError;
 use twenty_first::math::x_field_element::EXTENSION_DEGREE;
+use twenty_first::prelude::Polynomial;
 
 use super::tasm_object::Result;
 use crate::data_type::DataType;
@@ -323,7 +324,7 @@ impl TasmObject for bool {
     fn compute_size_and_assert_valid_size_indicator(
         _library: &mut crate::tasm_lib::Library,
     ) -> Vec<LabelledInstruction> {
-        unreachable!("Size is known statically for u32 encoding")
+        unreachable!("Size is known statically for bool encoding")
     }
 
     fn decode_iter<Itr: Iterator<Item = BFieldElement>>(iterator: &mut Itr) -> Result<Box<Self>> {
@@ -671,6 +672,63 @@ impl TasmObject for FriResponse {
             /* Account for two size indicators and an empty list */
             addi 3
             // _ fri_response_size
+        )
+    }
+
+    fn decode_iter<Itr: Iterator<Item = BFieldElement>>(_iterator: &mut Itr) -> Result<Box<Self>> {
+        todo!()
+    }
+}
+
+impl TasmObject for Polynomial<XFieldElement> {
+    fn label_friendly_name() -> String {
+        "polynomial_xfe".to_owned()
+    }
+
+    fn get_field(_field_name: &str) -> Vec<LabelledInstruction> {
+        todo!()
+    }
+
+    fn get_field_with_size(_field_name: &str) -> Vec<LabelledInstruction> {
+        todo!()
+    }
+
+    fn get_field_start_with_jump_distance(_field_name: &str) -> Vec<LabelledInstruction> {
+        todo!()
+    }
+
+    fn compute_size_and_assert_valid_size_indicator(
+        _library: &mut crate::prelude::Library,
+    ) -> Vec<LabelledInstruction> {
+        triton_asm!(
+            // _ *field_size
+
+            addi 1
+            // _ *list_length
+
+            read_mem 2
+            pop 1
+            // _ list_length field_size
+
+            push {Polynomial::<XFieldElement>::MAX_OFFSET}
+            dup 1
+            lt
+            assert
+            // _ list_length field_size
+
+            swap 1
+            push {EXTENSION_DEGREE}
+            mul
+            addi 1
+            // _ field_size calculated_field_size
+
+            dup 1
+            eq
+            assert
+            // _ field_size
+
+            /* Account for a size-indicator */
+            addi 1
         )
     }
 
