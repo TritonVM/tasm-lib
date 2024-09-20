@@ -22,8 +22,11 @@ pub fn vm_proof_iter_type() -> StructType {
 
 #[cfg(test)]
 pub(super) mod vm_proof_iter_struct {
+    use triton_vm::prelude::bfe;
     use triton_vm::prelude::BFieldCodec;
     use triton_vm::prelude::BFieldElement;
+    use triton_vm::proof::Proof;
+    use triton_vm::proof_stream::ProofStream;
 
     use crate::prelude::TasmObject;
 
@@ -34,5 +37,21 @@ pub(super) mod vm_proof_iter_struct {
         pub(crate) proof_start_pointer: BFieldElement,
         pub(crate) proof_length: u32,
         pub(crate) current_item_pointer: BFieldElement,
+    }
+
+    impl VmProofIter {
+        pub(crate) fn new(proof_pointer: BFieldElement, proof_stream: &ProofStream) -> Self {
+            let proof: Proof = proof_stream.into();
+            let proof_length = proof.encode().len();
+            VmProofIter {
+                current_item_count: 0,
+                total_item_count: proof_stream.items.len().try_into().unwrap(),
+                proof_start_pointer: proof_pointer,
+                proof_length: proof_length.try_into().unwrap(),
+
+                // uses highly specific knowledge of `BFieldCodec`
+                current_item_pointer: proof_pointer + bfe!(2),
+            }
+        }
     }
 }

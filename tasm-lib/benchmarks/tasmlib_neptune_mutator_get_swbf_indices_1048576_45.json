@@ -1,24 +1,24 @@
 [
-      {
-            "name": "tasmlib_neptune_mutator_get_swbf_indices_1048576_45",
-            "benchmark_result": {
-                  "clock_cycle_count": 4397,
-                  "hash_table_height": 481,
-                  "u32_table_height": 4633,
-                  "op_stack_table_height": 3188,
-                  "ram_table_height": 470
-            },
-            "case": "CommonCase"
-      },
-      {
-            "name": "tasmlib_neptune_mutator_get_swbf_indices_1048576_45",
-            "benchmark_result": {
-                  "clock_cycle_count": 4397,
-                  "hash_table_height": 481,
-                  "u32_table_height": 4507,
-                  "op_stack_table_height": 3188,
-                  "ram_table_height": 470
-            },
-            "case": "WorstCase"
-      }
+  {
+    "name": "tasmlib_neptune_mutator_get_swbf_indices_1048576_45",
+    "benchmark_result": {
+      "clock_cycle_count": 4397,
+      "hash_table_height": 481,
+      "u32_table_height": 4633,
+      "op_stack_table_height": 3188,
+      "ram_table_height": 470
+    },
+    "case": "CommonCase"
+  },
+  {
+    "name": "tasmlib_neptune_mutator_get_swbf_indices_1048576_45",
+    "benchmark_result": {
+      "clock_cycle_count": 4397,
+      "hash_table_height": 481,
+      "u32_table_height": 4507,
+      "op_stack_table_height": 3188,
+      "ram_table_height": 470
+    },
+    "case": "WorstCase"
+  }
 ]
