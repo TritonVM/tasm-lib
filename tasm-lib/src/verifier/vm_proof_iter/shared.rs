@@ -3,7 +3,36 @@ use crate::data_type::StructType;
 
 pub fn vm_proof_iter_type() -> StructType {
     let name = "VmProofIter".to_string();
-    let fields = vec![("current_item_pointer".to_string(), DataType::Bfe)];
+    let current_item_pointer = ("current_item_pointer".to_string(), DataType::Bfe);
+    let current_item_count = ("current_item_count".to_string(), DataType::U32);
+    let total_item_count = ("total_item_count".to_string(), DataType::U32);
+    let proof_start_pointer = ("proof_start_pointer".to_string(), DataType::Bfe);
+    let proof_length = ("proof_length".to_string(), DataType::U32);
+
+    let fields = vec![
+        current_item_count,
+        total_item_count,
+        proof_start_pointer,
+        proof_length,
+        current_item_pointer,
+    ];
 
     StructType { name, fields }
+}
+
+#[cfg(test)]
+pub(super) mod vm_proof_iter_struct {
+    use triton_vm::prelude::BFieldCodec;
+    use triton_vm::prelude::BFieldElement;
+
+    use crate::prelude::TasmObject;
+
+    #[derive(Debug, Clone, Eq, PartialEq, BFieldCodec, TasmObject)]
+    pub(crate) struct VmProofIter {
+        pub(crate) current_item_count: u32,
+        pub(crate) total_item_count: u32,
+        pub(crate) proof_start_pointer: BFieldElement,
+        pub(crate) proof_length: u32,
+        pub(crate) current_item_pointer: BFieldElement,
+    }
 }

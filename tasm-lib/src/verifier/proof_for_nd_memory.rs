@@ -1,5 +1,4 @@
 use arbitrary::Arbitrary;
-
 use triton_vm::error::ProofStreamError;
 use triton_vm::prelude::BFieldCodec;
 use triton_vm::prelude::BFieldElement;
@@ -51,8 +50,23 @@ impl TryFrom<&Proof> for ProofForNdMemory {
     }
 }
 
+impl From<ProofForNdMemory> for Proof {
+    fn from(value: ProofForNdMemory) -> Self {
+        Proof(value.0)
+    }
+}
+
 impl From<ProofStream> for ProofForNdMemory {
     fn from(proof_stream: ProofStream) -> Self {
         ProofForNdMemory(proof_stream.encode())
+    }
+}
+
+impl TryFrom<&ProofForNdMemory> for ProofStream {
+    type Error = ProofStreamError;
+
+    fn try_from(proof: &ProofForNdMemory) -> Result<Self, ProofStreamError> {
+        let proof_stream = *ProofStream::decode(&proof.0)?;
+        Ok(proof_stream)
     }
 }

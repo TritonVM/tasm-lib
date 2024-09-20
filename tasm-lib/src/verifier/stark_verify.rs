@@ -1254,7 +1254,7 @@ pub mod tests {
         );
     }
 
-    /// Run the (static) verifier, and return the cycle count and inner padded
+    /// Run the verifier, and return the cycle count and inner padded
     /// height for crude benchmarking.
     fn test_verify_and_report_basic_features(
         inner_nondeterminism: NonDeterminism,
