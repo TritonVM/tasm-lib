@@ -126,9 +126,9 @@ impl<const NUM_INPUT_LISTS: usize> BasicSnippet for ChainMap<NUM_INPUT_LISTS> {
         };
         let pop_input_lists = match NUM_INPUT_LISTS {
             0 => triton_asm!(),
-            i if 0 < i && i <= 5 => triton_asm!(pop { i }),
-            i if 5 < i && i <= 10 => triton_asm!(pop 5 pop { i - 5 }),
-            i if 10 < i && i <= 15 => triton_asm!(pop 5 pop 5 pop { i - 10 }),
+            i @ 0..=5 => triton_asm!(pop { i }),
+            i @ 6..=10 => triton_asm!(pop 5 pop { i - 5 }),
+            i @ 11..=15 => triton_asm!(pop 5 pop 5 pop { i - 10 }),
             _ => panic!("too many input lists"),
         };
 
