@@ -39,6 +39,9 @@ use crate::verifier::vm_proof_iter::dequeue_next_as::DequeueNextAs;
 use crate::verifier::vm_proof_iter::drop::Drop;
 use crate::verifier::vm_proof_iter::new::New;
 
+pub(crate) const NUM_PROOF_ITEMS_PER_FRI_ROUND: usize = 2;
+pub(crate) const NUM_PROOF_ITEMS_EXCLUDING_FRI: usize = 15;
+
 /// Verify a STARK proof.
 ///
 /// Verify a STARK proof located in memory. Assumes the nondeterministic digests
@@ -72,13 +75,24 @@ impl StarkVerify {
     }
 
     /// Computes and returns the number of nondeterministic digests that will be
-    /// consumed when this snippets verifies the given (claim,proof) pair.
-    pub fn number_of_nondeterministic_digests_consumed(
-        &self,
-        proof: &Proof,
-        claim: &Claim,
-    ) -> usize {
-        self.extract_nondeterministic_digests(proof, claim).len()
+    /// consumed when this snippets verifies the given proof.
+    pub fn number_of_nondeterministic_digests_consumed(&self, proof: &Proof) -> usize {
+        let padded_height = proof.padded_height().unwrap();
+        let fri_params = self.stark.derive_fri(padded_height).unwrap();
+        let num_fri_rounds = fri_params.num_rounds();
+
+        let mut j = 0;
+        let mut tree_height: usize = fri_params.domain.length.ilog2().try_into().unwrap();
+
+        const NUM_FULL_DOMAIN_AUTH_PATHS: usize = 4;
+        let mut acc = NUM_FULL_DOMAIN_AUTH_PATHS * tree_height * fri_params.num_collinearity_checks;
+        while j < num_fri_rounds {
+            acc += fri_params.num_collinearity_checks * tree_height;
+            j += 1;
+            tree_height -= 1;
+        }
+
+        acc
     }
 
     /// Computes and returns the number of nondeterministic individual tokens that
@@ -1453,8 +1467,19 @@ pub mod tests {
             stark: *stark,
             memory_layout: MemoryLayout::conventional_static(),
         };
-        stark_verify.update_nondeterminism(&mut nondeterminism, &proof, &claim);
 
+        // Verify nd-digest count
+        let actual_num_extracted_digests = stark_verify
+            .extract_nondeterministic_digests(&proof, &claim)
+            .len();
+        let expected_num_extracted_digests =
+            stark_verify.number_of_nondeterministic_digests_consumed(&proof);
+        assert_eq!(
+            actual_num_extracted_digests, expected_num_extracted_digests,
+            "Number of extracted digests must match expected value"
+        );
+
+        stark_verify.update_nondeterminism(&mut nondeterminism, &proof, &claim);
         let proof: ProofForNdMemory = proof.try_into().unwrap();
         encode_to_memory(
             &mut nondeterminism.ram,
@@ -1548,8 +1573,8 @@ pub mod tests {
 
         assert_eq!(
             num_nd_digests_after - num_nd_digests_before,
-            stark_snippet.number_of_nondeterministic_digests_consumed(&proof_1, &claim_1)
-                + stark_snippet.number_of_nondeterministic_digests_consumed(&proof_2, &claim_2)
+            stark_snippet.number_of_nondeterministic_digests_consumed(&proof_1)
+                + stark_snippet.number_of_nondeterministic_digests_consumed(&proof_2)
         );
 
         let proof_1: ProofForNdMemory = proof_1.try_into().unwrap();

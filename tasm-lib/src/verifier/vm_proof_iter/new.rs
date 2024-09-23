@@ -3,6 +3,8 @@ use triton_vm::prelude::*;
 use crate::data_type::DataType;
 use crate::memory::dyn_malloc::DynMalloc;
 use crate::traits::basic_snippet::BasicSnippet;
+use crate::verifier::stark_verify::NUM_PROOF_ITEMS_EXCLUDING_FRI;
+use crate::verifier::stark_verify::NUM_PROOF_ITEMS_PER_FRI_ROUND;
 use crate::verifier::vm_proof_iter::shared::vm_proof_iter_type;
 
 /// Create a new `VmProofIter` instance.
@@ -17,12 +19,10 @@ impl New {
     pub const MAX_PROOF_SIZE: usize = 1 << 26;
 
     const MAX_NUMBER_OF_FRI_ROUNDS: usize = 24;
-    const NUM_PROOF_ITEMS_PER_FRI_ROUND: usize = 2;
-    const PROOF_ITEMS_EXCLUDING_FRI: usize = 15;
     const SAFETY_MARGIN_PER_FRI_ROUND: usize = 1;
     pub const MAX_NUM_PROOF_ITEMS: usize = Self::MAX_NUMBER_OF_FRI_ROUNDS
-        * (Self::NUM_PROOF_ITEMS_PER_FRI_ROUND + Self::SAFETY_MARGIN_PER_FRI_ROUND)
-        + Self::PROOF_ITEMS_EXCLUDING_FRI;
+        * (NUM_PROOF_ITEMS_PER_FRI_ROUND + Self::SAFETY_MARGIN_PER_FRI_ROUND)
+        + NUM_PROOF_ITEMS_EXCLUDING_FRI;
 }
 
 impl BasicSnippet for New {
