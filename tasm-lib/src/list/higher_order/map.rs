@@ -55,7 +55,7 @@ pub type Map = ChainMap<1>;
 ///
 /// The special case of one input list is also accessible through [`Map`].
 pub struct ChainMap<const NUM_INPUT_LISTS: usize> {
-    pub f: InnerFunction,
+    f: InnerFunction,
 }
 
 impl<const NUM_INPUT_LISTS: usize> ChainMap<NUM_INPUT_LISTS> {
