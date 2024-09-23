@@ -36,6 +36,7 @@ use crate::verifier::master_table::verify_table_rows::VerifyTableRows;
 use crate::verifier::out_of_domain_points::OodPoint;
 use crate::verifier::out_of_domain_points::OutOfDomainPoints;
 use crate::verifier::vm_proof_iter::dequeue_next_as::DequeueNextAs;
+use crate::verifier::vm_proof_iter::drop::Drop;
 use crate::verifier::vm_proof_iter::new::New;
 
 /// Verify a STARK proof.
@@ -302,6 +303,7 @@ impl BasicSnippet for StarkVerify {
         let entrypoint = self.entrypoint();
 
         let proof_to_vm_proof_iter = library.import(Box::new(New));
+        let drop_vm_proof_iter = library.import(Box::new(Drop));
 
         let ood_curr_row_main_and_aux_value_pointer_alloc =
             library.kmalloc(EXTENSION_DEGREE.try_into().unwrap());
@@ -331,9 +333,6 @@ impl BasicSnippet for StarkVerify {
         }));
         let next_as_maintablerows = library.import(Box::new(DequeueNextAs {
             proof_item: ProofItemVariant::MasterMainTableRows,
-        }));
-        let next_as_authentication_path = library.import(Box::new(DequeueNextAs {
-            proof_item: ProofItemVariant::AuthenticationStructure,
         }));
         let next_as_auxtablerows = library.import(Box::new(DequeueNextAs {
             proof_item: ProofItemVariant::MasterAuxTableRows,
@@ -937,13 +936,6 @@ impl BasicSnippet for StarkVerify {
                 call {verify_main_table_rows}
                 // _ *beqd_ws *p_iter *oodpnts *fri *e_mr *odd_brow_nxt *quot_mr *ood_erow_nxt *ood_brow_curr *ood_erow_curr *fri_revealed *btrows
 
-
-                /* Dequeue and ignore main-table's authentication path */
-                dup 10
-                call {next_as_authentication_path}
-                pop 1
-                // _ *beqd_ws *p_iter *oodpnts *fri *e_mr *odd_brow_nxt *quot_mr *ood_erow_nxt *ood_brow_curr *ood_erow_curr *fri_revealed *btrows
-
                 swap 7
                 // _ *beqd_ws *p_iter *oodpnts *fri *btrows *odd_brow_nxt *quot_mr *ood_erow_nxt *ood_brow_curr *ood_erow_curr *fri_revealed *e_mr
 
@@ -975,12 +967,6 @@ impl BasicSnippet for StarkVerify {
 
                 call {verify_aux_table_rows}
                 // _ *beqd_ws *p_iter *oodpnts *fri *btrows *odd_brow_next *quot_mr *ood_erow_nxt *ood_brow_curr *ood_erow_curr *fri_revealed *etrows
-
-
-                /* Dequeue and ignore aux-table's authentication path */
-                dup 10
-                call {next_as_authentication_path}
-                pop 1
 
                 swap 5
                 // _ *beqd_ws *p_iter *oodpnts *fri *btrows *odd_brow_next *etrows *ood_erow_nxt *ood_brow_curr *ood_erow_curr *fri_revealed *quot_mr
@@ -1055,10 +1041,10 @@ impl BasicSnippet for StarkVerify {
                 assert
                 // _ *beqd_ws *p_iter *oodpnts *fri *btrows *odd_brow_next *etrows *ood_erow_nxt *ood_brow_curr *ood_erow_curr *fri_revealed *qseg_elems num_colli
 
-                /* Clean up stack */
+                /* Clean up stack and drop p_iter, ensuring that it ends up in a consistent state */
                 swap 12
                 swap 11
-                pop 1
+                call {drop_vm_proof_iter}
                 // _ num_colli *beqd_ws *oodpnts *fri *btrows *odd_brow_next *etrows *ood_erow_nxt *ood_brow_curr *ood_erow_curr *fri_revealed *qseg_elems
 
                 /* Sum out-of-domain values */
@@ -1229,6 +1215,7 @@ pub mod tests {
     use crate::test_helpers::maybe_write_tvm_output_to_disk;
     use crate::verifier::claim::shared::insert_claim_into_static_memory;
     use crate::verifier::master_table::air_constraint_evaluation::an_integral_but_profane_dynamic_memory_layout;
+    use crate::verifier::proof_for_nd_memory::ProofForNdMemory;
 
     #[ignore = "Used for debugging when comparing two versions of the verifier"]
     #[test]
@@ -1269,7 +1256,7 @@ pub mod tests {
         );
     }
 
-    /// Run the (static) verifier, and return the cycle count and inner padded
+    /// Run the verifier, and return the cycle count and inner padded
     /// height for crude benchmarking.
     fn test_verify_and_report_basic_features(
         inner_nondeterminism: NonDeterminism,
@@ -1468,6 +1455,7 @@ pub mod tests {
         };
         stark_verify.update_nondeterminism(&mut nondeterminism, &proof, &claim);
 
+        let proof: ProofForNdMemory = proof.try_into().unwrap();
         encode_to_memory(
             &mut nondeterminism.ram,
             FIRST_NON_DETERMINISTICALLY_INITIALIZED_MEMORY_ADDRESS,
@@ -1481,9 +1469,9 @@ pub mod tests {
     fn verify_two_proofs() {
         #[derive(Debug, Clone, BFieldCodec, TasmObject)]
         struct TwoProofs {
-            proof1: Proof,
+            proof1: ProofForNdMemory,
             claim1: Claim,
-            proof2: Proof,
+            proof2: ProofForNdMemory,
             claim2: Claim,
         }
 
@@ -1545,9 +1533,27 @@ pub mod tests {
             .with_input(inner_input_2.clone())
             .with_output(inner_output_2.clone());
         let proof_2 = stark.prove(&claim_2, &aet_2).unwrap();
+
         let padded_height_2 = proof_2.padded_height().unwrap();
         println!("padded_height_2: {padded_height_2}");
 
+        let mut outer_nondeterminism = NonDeterminism::new(vec![]);
+
+        let num_nd_digests_before = outer_nondeterminism.digests.len();
+
+        stark_snippet.update_nondeterminism(&mut outer_nondeterminism, &proof_1, &claim_1);
+        stark_snippet.update_nondeterminism(&mut outer_nondeterminism, &proof_2, &claim_2);
+
+        let num_nd_digests_after = outer_nondeterminism.digests.len();
+
+        assert_eq!(
+            num_nd_digests_after - num_nd_digests_before,
+            stark_snippet.number_of_nondeterministic_digests_consumed(&proof_1, &claim_1)
+                + stark_snippet.number_of_nondeterministic_digests_consumed(&proof_2, &claim_2)
+        );
+
+        let proof_1: ProofForNdMemory = proof_1.try_into().unwrap();
+        let proof_2: ProofForNdMemory = proof_2.try_into().unwrap();
         let two_proofs = TwoProofs {
             proof1: proof_1.clone(),
             claim1: claim_1.clone(),
@@ -1563,21 +1569,7 @@ pub mod tests {
             &two_proofs,
         );
 
-        let mut outer_nondeterminism = NonDeterminism::new(vec![]).with_ram(memory);
-
-        let num_nd_digests_before = outer_nondeterminism.digests.len();
-
-        stark_snippet.update_nondeterminism(&mut outer_nondeterminism, &proof_1, &claim_1);
-        stark_snippet.update_nondeterminism(&mut outer_nondeterminism, &proof_2, &claim_2);
-
-        let num_nd_digests_after = outer_nondeterminism.digests.len();
-
-        assert_eq!(
-            num_nd_digests_after - num_nd_digests_before,
-            stark_snippet.number_of_nondeterministic_digests_consumed(&proof_1, &claim_1)
-                + stark_snippet.number_of_nondeterministic_digests_consumed(&proof_2, &claim_2)
-        );
-
+        let outer_nondeterminism = outer_nondeterminism.with_ram(memory);
         let program = Program::new(&verify_two_proofs_program);
 
         let vm_state = VMState::new(

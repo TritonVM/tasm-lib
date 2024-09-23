@@ -277,6 +277,7 @@ mod test {
     /// Test derivation of field getters and manual derivations of the `field!` macro
     mod derive_tests {
         use num_traits::ConstZero;
+        use twenty_first::math::other::random_elements;
         use twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
         use super::*;
@@ -769,56 +770,106 @@ mod test {
             assert_eq!(random_object.0.len(), extracted_xfe_count);
         }
 
-        #[test]
-        fn test_fri_response() {
-            let mut rng = thread_rng();
-            let num_digests = 50;
-            let num_leafs = 20;
-
-            // generate object
-            let authentication_structure =
-                (0..num_digests).map(|_| rng.gen::<Digest>()).collect_vec();
-            let revealed_leafs = (0..num_leafs)
-                .map(|_| rng.gen::<XFieldElement>())
-                .collect_vec();
-            let fri_response = FriResponse {
-                auth_structure: authentication_structure,
-                revealed_leaves: revealed_leafs,
-            };
-
-            // code snippet to access object's fields
+        fn fri_response_prop(fri_response: FriResponse) {
             let mut library = Library::new();
-            let get_authentication_structure = field!(FriResponse::auth_structure);
-            let length_digests = library.import(Box::new(Length {
-                element_type: DataType::Digest,
-            }));
             let get_revealed_leafs = field!(FriResponse::revealed_leaves);
+            let get_revealed_leafs_with_size = field_with_size!(FriResponse::revealed_leaves);
             let length_xfes = library.import(Box::new(Length {
                 element_type: DataType::Xfe,
             }));
+
+            let assert_valid_size_indicators =
+                FriResponse::compute_size_and_assert_valid_size_indicator(&mut library);
             let code = triton_asm! {
                 // _ *fri_response
-                dup 0 // _ *fri_response *fri_response
 
-                {&get_authentication_structure} // _ *fri_response *authentication_structure
-                swap 1                          // _ *authentication_structure *fri_response
-                {&get_revealed_leafs}           // _ *authentication_structure *revealed_leafs
+                dup 0
+                // _ *fri_response *fri_response
 
-                swap 1                          // _ *revealed_leafs *authentication_structure
-                call {length_digests}           // _ *revealed_leafs num_digests
-                swap 1                          // _ num_digests *revealed_leafs
-                call {length_xfes}              // _ num_digests num_leafs
+                {&assert_valid_size_indicators}
+                // _ *fri_response fri_response_size
 
+                swap 1
+                // _ fri_response_size *fri_response
+
+                dup 0
+                {&get_revealed_leafs_with_size}
+                // _ fri_response_size *fri_response *revealed_leafs revealed_leafs_size
+
+                swap 2
+                // _ fri_response_size revealed_leafs_size *revealed_leafs *fri_response
+
+                {&get_revealed_leafs}
+                // _ fri_response_size revealed_leafs_size *revealed_leafs *revealed_leafs
+
+
+                /* Verify that both field-getters agree on field pointer */
+                dup 1
+                eq
+                assert
+                // _ fri_response_size revealed_leafs_size *revealed_leafs
+
+                call {length_xfes}
+                // _ fri_response_size revealed_leafs_size num_revealed_leafs
             };
 
-            // extract list lengths
-            let mut stack = get_final_stack(&fri_response, library, code);
-            let extracted_xfes_length = stack.pop().unwrap().value() as usize;
-            let extracted_digests_length = stack.pop().unwrap().value() as usize;
+            let mut memory: HashMap<BFieldElement, BFieldElement> = HashMap::new();
+            let random_address: u64 = thread_rng().gen_range(0..(1 << 30));
+            let address = random_address.into();
+            encode_to_memory(&mut memory, address, &fri_response);
+            let stack = [empty_stack(), vec![address]].concat();
 
-            // assert correct lengths
-            assert_eq!(num_digests, extracted_digests_length);
-            assert_eq!(num_leafs, extracted_xfes_length);
+            let library_code = library.all_imports();
+            let code = triton_asm!(
+                {&code}
+                halt
+                {&library_code}
+            );
+
+            let public_input = vec![];
+            let sponge = None;
+            let nondeterminism = NonDeterminism::new(vec![]).with_ram(memory);
+
+            let tvm_result = execute_with_terminal_state(
+                &Program::new(&code),
+                &public_input,
+                &stack,
+                &nondeterminism,
+                sponge,
+            );
+
+            // Only FriResponse objects with empty `auth_struct` fields are
+            // allowed since digests are read from the ND digest stream
+            // instead.
+            if !fri_response.auth_structure.is_empty() {
+                let err = tvm_result.unwrap_err();
+                assert_eq!(InstructionError::AssertionFailed, err,);
+            } else {
+                let mut stack = tvm_result.unwrap().op_stack.stack;
+
+                let extracted_xfes_length = stack.pop().unwrap().value() as usize;
+                assert_eq!(fri_response.revealed_leaves.len(), extracted_xfes_length);
+
+                let extracted_revealed_leafs_field_size = stack.pop().unwrap().value() as usize;
+                assert_eq!(
+                    fri_response.revealed_leaves.len() * EXTENSION_DEGREE + 1,
+                    extracted_revealed_leafs_field_size
+                );
+
+                let reported_size = stack.pop().unwrap().value() as usize;
+                assert_eq!(fri_response.encode().len(), reported_size);
+            }
+        }
+
+        #[test]
+        fn test_fri_response_tasm_object_impl() {
+            for n in 0..10 {
+                let fri_response = FriResponse {
+                    auth_structure: random_elements(n),
+                    revealed_leaves: random_elements(32),
+                };
+                fri_response_prop(fri_response);
+            }
         }
 
         /// Helper function for testing field getters. Only returns the final stack.

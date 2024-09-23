@@ -533,13 +533,13 @@ pub fn negative_test<T: RustShadow>(
     let rust_failed_successfully = rust_result.is_err();
     assert!(
         rust_failed_successfully,
-        "Test case: Rust-shadowing must panic in negative test case"
+        "Failed to fail: Rust-shadowing must panic in negative test case"
     );
 
     let tvm_failed_successfully = tvm_result.is_err();
     assert!(
         tvm_failed_successfully,
-        "Test case: TVM-execution must panic in negative test case"
+        "Failed to fail: TVM-execution must crash in negative test case"
     );
 
     let err = tvm_result.unwrap_err();

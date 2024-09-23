@@ -71,9 +71,9 @@ pub struct ShadowedAccessor<T: Accessor + 'static> {
 }
 
 impl<T: Accessor + 'static> ShadowedAccessor<T> {
-    pub fn new(algorithm: T) -> Self {
+    pub fn new(accessor: T) -> Self {
         Self {
-            accessor: Rc::new(RefCell::new(algorithm)),
+            accessor: Rc::new(RefCell::new(accessor)),
         }
     }
 }

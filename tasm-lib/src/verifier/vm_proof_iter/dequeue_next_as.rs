@@ -1,10 +1,17 @@
+use triton_vm::fri::AuthenticationStructure;
 use triton_vm::prelude::*;
+use triton_vm::proof_item::FriResponse;
 use triton_vm::proof_item::ProofItemVariant;
+use triton_vm::table::AuxiliaryRow;
+use triton_vm::table::MainRow;
+use triton_vm::table::QuotientSegments;
 use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
+use twenty_first::prelude::Polynomial;
 
 use crate::data_type::DataType;
 use crate::hashing::sponge_hasher::pad_and_absorb_all::PadAndAbsorbAll;
 use crate::library::Library;
+use crate::structure::tasm_object::TasmObject;
 use crate::traits::basic_snippet::BasicSnippet;
 
 const MAX_SIZE_FOR_DYNAMICALLY_SIZED_PROOF_ITEMS: u32 = 1u32 << 22;
@@ -26,6 +33,116 @@ impl DequeueNextAs {
 
     fn item_name(&self) -> String {
         self.proof_item.to_string().to_lowercase()
+    }
+
+    fn proof_item_calculate_size(&self, library: &mut Library) -> Vec<LabelledInstruction> {
+        match self.proof_item {
+            ProofItemVariant::MasterMainTableRows => {
+                Vec::<MainRow<BFieldElement>>::compute_size_and_assert_valid_size_indicator(library)
+            }
+            ProofItemVariant::MasterAuxTableRows => {
+                Vec::<AuxiliaryRow>::compute_size_and_assert_valid_size_indicator(library)
+            }
+            ProofItemVariant::QuotientSegmentsElements => {
+                Vec::<QuotientSegments>::compute_size_and_assert_valid_size_indicator(library)
+            }
+            ProofItemVariant::FriCodeword => {
+                Vec::<XFieldElement>::compute_size_and_assert_valid_size_indicator(library)
+            }
+            ProofItemVariant::FriPolynomial => {
+                Polynomial::<XFieldElement>::compute_size_and_assert_valid_size_indicator(library)
+            }
+            ProofItemVariant::FriResponse => {
+                FriResponse::compute_size_and_assert_valid_size_indicator(library)
+            }
+            ProofItemVariant::AuthenticationStructure => {
+                // All authentication structures should be stripped from loaded proofs, but for
+                // more complete tests, we support it here anyway.
+                AuthenticationStructure::compute_size_and_assert_valid_size_indicator(library)
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    /// Increment the counter of proof items already dequeued.
+    ///
+    /// ```text
+    /// BEFORE: _ *vm_proof_iter
+    /// AFTER:  _ *vm_proof_iter
+    /// ```
+    fn increment_current_item_count(&self) -> Vec<LabelledInstruction> {
+        const CURRENT_ITEM_COUNT_OFFSET: BFieldElement = BFieldElement::new(4);
+
+        triton_asm!(
+            // _ *proof_item_iter
+
+            dup 0
+            addi {CURRENT_ITEM_COUNT_OFFSET}
+            // _ *proof_item_iter *current_item_count
+
+            read_mem 1
+            addi 1
+            // _ *proof_item_iter current_item_count *current_item_count
+
+            pick 1
+            addi 1
+            pick 1
+            // _ *proof_item_iter (current_item_count + 1) *current_item_count
+
+            write_mem 1
+            pop 1
+            // _ *proof_item_iter
+        )
+    }
+
+    /// ```text
+    /// BEFORE: _ *proof_item_size
+    /// AFTER:  _ *proof_item_size
+    /// ```
+    fn assert_consistent_size_indicators(&self, library: &mut Library) -> Vec<LabelledInstruction> {
+        if self.proof_item.payload_static_length().is_some() {
+            return vec![];
+        }
+
+        let calculate_own_size = self.proof_item_calculate_size(library);
+
+        triton_asm! {
+            // _ *proof_item_size
+
+            dup 0
+            addi 3
+            {&calculate_own_size}
+            hint calculated_payload_size = stack[0]
+            // _ *proof_item_size calculated_payload_size
+
+            dup 1
+            addi 2
+            read_mem 1
+            pop 1
+            hint indicated_payload_size = stack[0]
+            // _ *proof_item_size calculated_payload_size reported_field_size
+
+            dup 1
+            eq
+            assert
+            hint payload_size = stack[0]
+            // _ *proof_item_size payload_size
+
+
+            /* Account for discriminant and size-indicator */
+            addi 2
+            hint calculated_item_size = stack[0]
+            // _ *proof_item_size calculated_item_size
+
+            dup 1
+            read_mem 1
+            pop 1
+            // _ *proof_item_size calculated_own_size indicated_item_size
+
+            eq
+            assert
+            // _ *proof_item_size
+        }
     }
 
     /// ```text
@@ -203,45 +320,51 @@ impl BasicSnippet for DequeueNextAs {
     }
 
     /// ```text
-    /// BEFORE: _ *proof_item_iter
+    /// BEFORE: _ *vm_proof_iter
     /// AFTER:  _ *proof_item_payload
     /// ```
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
         let final_hint = format!("hint {}_pointer: Pointer = stack[0]", self.item_name());
         triton_asm! {
             {self.entrypoint()}:
-            read_mem 1
-            hint proof_item_list_element_size_pointer = stack[1]
+                {&self.increment_current_item_count()}
+                                    // _ *vm_proof_iter
 
-            push 1 add
-            swap 1              // _ *proof_item_iter *proof_item_size
+                read_mem 1
+                hint proof_item_list_element_size_pointer = stack[1]
 
-            push 1 add
-            hint proof_item_discriminant_pointer = stack[0]
+                addi 1
+                swap 1              // _ *proof_item_iter *proof_item_size
 
-            read_mem 1          // _ *proof_item_iter discriminant *proof_item_size
-            hint proof_item_list_element_size_pointer = stack[0]
-            hint proof_item_discriminant = stack[1]
+                addi 1
+                hint proof_item_discriminant_pointer = stack[0]
 
-            swap 1
-            push {self.proof_item.bfield_codec_discriminant()}
-            hint expected_proof_item_discriminant = stack[0]
+                read_mem 1          // _ *proof_item_iter discriminant *proof_item_size
+                hint proof_item_list_element_size_pointer = stack[0]
+                hint proof_item_discriminant = stack[1]
 
-            eq assert           // _ *proof_item_iter *proof_item_size
+                swap 1
+                push {self.proof_item.bfield_codec_discriminant()}
+                hint expected_proof_item_discriminant = stack[0]
 
-            {&self.fiat_shamir_absorb_snippet(library)}
-                                // _ *proof_item_iter *proof_item_size
+                eq assert           // _ *proof_item_iter *proof_item_size
 
-            {&self.update_proof_item_iter_to_next_proof_item()}
-                                // _ *proof_item_size
+                {&self.assert_consistent_size_indicators(library)}
+                                    // _ *proof_item_iter *proof_item_size
 
-            {&self.advance_list_element_pointer_to_proof_item_payload()}
-            {final_hint}        // _ *proof_item_payload
+                {&self.fiat_shamir_absorb_snippet(library)}
+                                    // _ *proof_item_iter *proof_item_size
 
-            {&self.verify_last_xfe_is_non_zero_if_payload_is_polynomial()}
-            {final_hint}        // _ *proof_item_payload
+                {&self.update_proof_item_iter_to_next_proof_item()}
+                                    // _ *proof_item_size
 
-            return
+                {&self.advance_list_element_pointer_to_proof_item_payload()}
+                {final_hint}        // _ *proof_item_payload
+
+                {&self.verify_last_xfe_is_non_zero_if_payload_is_polynomial()}
+                {final_hint}        // _ *proof_item_payload
+
+                return
         }
     }
 }
@@ -273,12 +396,14 @@ mod test {
     use crate::execute_with_terminal_state;
     use crate::linker::link_for_isolated_run;
     use crate::memory::encode_to_memory;
+    use crate::rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::structure::tasm_object::decode_from_memory_with_size;
     use crate::test_helpers::test_rust_equivalence_given_complete_state;
     use crate::traits::procedure::Procedure;
     use crate::traits::procedure::ProcedureInitialState;
     use crate::traits::procedure::ShadowedProcedure;
+    use crate::verifier::vm_proof_iter::shared::vm_proof_iter_struct::VmProofIter;
 
     #[derive(Debug)]
     struct RustShadowForDequeueNextAs<'a> {
@@ -297,6 +422,7 @@ mod test {
             self.maybe_alter_fiat_shamir_heuristic_with_proof_item();
             self.update_stack_using_current_proof_item();
             self.update_proof_item_iter();
+            self.update_current_item_count();
             self.public_output()
         }
 
@@ -383,6 +509,14 @@ mod test {
                 .insert(self.proof_iter_pointer, next_item_pointer);
         }
 
+        fn update_current_item_count(&mut self) {
+            let count = self
+                .memory
+                .get_mut(&(self.proof_iter_pointer + bfe!(4)))
+                .unwrap();
+            count.increment();
+        }
+
         fn public_output(&self) -> Vec<BFieldElement> {
             vec![]
         }
@@ -414,31 +548,30 @@ mod test {
         ) -> ProcedureInitialState {
             let mut rng = StdRng::from_seed(seed);
             let mut proof_stream = ProofStream::new();
-            proof_stream.enqueue(self.pseudorandom_proof_item(rng.gen()));
+            proof_stream.enqueue(Self::pseudorandom_proof_item(self.proof_item, rng.gen()));
 
             let other_item_type = ProofItemVariant::iter().choose(&mut rng).unwrap();
-            let other_dequeue_next_as = DequeueNextAs::new(other_item_type);
-            proof_stream.enqueue(other_dequeue_next_as.pseudorandom_proof_item(rng.gen()));
+            proof_stream.enqueue(Self::pseudorandom_proof_item(other_item_type, rng.gen()));
 
-            Self::initial_state_from_proof_stream_and_address(proof_stream, rng.gen())
+            self.initial_state_from_proof_and_address(proof_stream.into(), rng.gen())
         }
     }
 
     impl DequeueNextAs {
-        fn initial_state_from_proof_stream_and_address(
-            proof_stream: ProofStream,
-            address: BFieldElement,
+        fn initial_state_from_proof_and_address(
+            &self,
+            proof: Proof,
+            proof_address: BFieldElement,
         ) -> ProcedureInitialState {
             let mut ram = HashMap::new();
-            encode_to_memory(&mut ram, address, &proof_stream);
+            encode_to_memory(&mut ram, proof_address, &proof);
 
-            // uses highly specific knowledge of `BFieldCodec`
-            let address_of_first_element = address + BFieldElement::new(2);
-            let proof_iter_address = address - BFieldElement::one();
-            ram.insert(proof_iter_address, address_of_first_element);
+            let proof_iter_address = dynamic_allocator(&mut ram);
+            let vm_proof_iter_init_state = VmProofIter::new(proof_address, &proof);
+            encode_to_memory(&mut ram, proof_iter_address, &vm_proof_iter_init_state);
 
             ProcedureInitialState {
-                stack: [empty_stack(), vec![proof_iter_address]].concat(),
+                stack: [self.init_stack_for_isolated_run(), vec![proof_iter_address]].concat(),
                 nondeterminism: NonDeterminism::default().with_ram(ram),
                 public_input: vec![],
                 sponge: Some(Tip5::init()),
@@ -452,50 +585,71 @@ mod test {
             Self { proof_item }
         }
 
-        /// An item to be `Dequeued`, matching the variant in `self`.
-        fn pseudorandom_proof_item(&self, seed: [u8; 32]) -> ProofItem {
+        pub(crate) fn pseudorandom_proof_stream(
+            proof_items_variants: Vec<ProofItemVariant>,
+            seed: [u8; 32],
+        ) -> ProofStream {
+            let mut rng: StdRng = SeedableRng::from_seed(seed);
+
+            let mut proof_stream = ProofStream::new();
+            for &proof_item in &proof_items_variants {
+                let item = DequeueNextAs::pseudorandom_proof_item(proof_item, rng.gen());
+                proof_stream.enqueue(item);
+            }
+
+            proof_stream
+        }
+
+        fn pseudorandom_proof_item(
+            proof_item_variant: ProofItemVariant,
+            seed: [u8; 32],
+        ) -> ProofItem {
             let mut rng = StdRng::from_seed(seed);
-            let proof_stream_seed: [u8; 100] = rng.gen();
+            let proof_stream_seed: [u8; 10000] = rng.gen();
             let mut unstructured = Unstructured::new(&proof_stream_seed);
 
-            match &self.proof_item {
-                ProofItemVariant::MerkleRoot => {
+            use ProofItemVariant::*;
+            match proof_item_variant {
+                MerkleRoot => {
                     ProofItem::MerkleRoot(Arbitrary::arbitrary(&mut unstructured).unwrap())
                 }
-                ProofItemVariant::OutOfDomainMainRow => {
+                OutOfDomainMainRow => {
                     ProofItem::OutOfDomainMainRow(Arbitrary::arbitrary(&mut unstructured).unwrap())
                 }
-                ProofItemVariant::OutOfDomainAuxRow => {
+                OutOfDomainAuxRow => {
                     ProofItem::OutOfDomainAuxRow(Arbitrary::arbitrary(&mut unstructured).unwrap())
                 }
-                ProofItemVariant::OutOfDomainQuotientSegments => {
-                    ProofItem::OutOfDomainQuotientSegments(
-                        Arbitrary::arbitrary(&mut unstructured).unwrap(),
-                    )
-                }
-                ProofItemVariant::AuthenticationStructure => ProofItem::AuthenticationStructure(
+                OutOfDomainQuotientSegments => ProofItem::OutOfDomainQuotientSegments(
                     Arbitrary::arbitrary(&mut unstructured).unwrap(),
                 ),
-                ProofItemVariant::MasterMainTableRows => {
+                AuthenticationStructure => ProofItem::AuthenticationStructure(
+                    Arbitrary::arbitrary(&mut unstructured).unwrap(),
+                ),
+                MasterMainTableRows => {
                     ProofItem::MasterMainTableRows(Arbitrary::arbitrary(&mut unstructured).unwrap())
                 }
-                ProofItemVariant::MasterAuxTableRows => {
+                MasterAuxTableRows => {
                     ProofItem::MasterAuxTableRows(Arbitrary::arbitrary(&mut unstructured).unwrap())
                 }
-                ProofItemVariant::Log2PaddedHeight => {
+                Log2PaddedHeight => {
                     ProofItem::Log2PaddedHeight(Arbitrary::arbitrary(&mut unstructured).unwrap())
                 }
-                ProofItemVariant::QuotientSegmentsElements => ProofItem::QuotientSegmentsElements(
+                QuotientSegmentsElements => ProofItem::QuotientSegmentsElements(
                     Arbitrary::arbitrary(&mut unstructured).unwrap(),
                 ),
-                ProofItemVariant::FriCodeword => {
+                FriCodeword => {
                     ProofItem::FriCodeword(Arbitrary::arbitrary(&mut unstructured).unwrap())
                 }
-                ProofItemVariant::FriPolynomial => {
+                FriPolynomial => {
                     ProofItem::FriPolynomial(Arbitrary::arbitrary(&mut unstructured).unwrap())
                 }
-                ProofItemVariant::FriResponse => {
-                    ProofItem::FriResponse(Arbitrary::arbitrary(&mut unstructured).unwrap())
+                FriResponse => {
+                    // This code requires the authentication paths field to be empty
+                    let fri_response = triton_vm::proof_item::FriResponse {
+                        auth_structure: vec![],
+                        revealed_leaves: Arbitrary::arbitrary(&mut unstructured).unwrap(),
+                    };
+                    ProofItem::FriResponse(fri_response)
                 }
             }
         }
@@ -551,8 +705,9 @@ mod test {
         let proof_item = ProofItem::MasterMainTableRows(dummy_master_table_rows);
         let mut proof_stream = ProofStream::new();
         proof_stream.enqueue(proof_item);
-        let address = BFieldElement::zero();
-        DequeueNextAs::initial_state_from_proof_stream_and_address(proof_stream, address)
+        let proof_ptr = BFieldElement::zero();
+        DequeueNextAs::new(ProofItemVariant::MasterMainTableRows)
+            .initial_state_from_proof_and_address(proof_stream.into(), proof_ptr)
     }
 
     #[test]
@@ -636,21 +791,23 @@ mod test {
         }
     }
 
-    #[test]
-    fn dequeueing_a_merkle_root_is_equivalent_in_rust_and_tasm() {
-        let dequeue_next_as = DequeueNextAs::new(ProofItemVariant::MerkleRoot);
-        dequeue_next_as.test_rust_equivalence(small_merkle_root_initial_state());
-    }
-
-    fn small_merkle_root_initial_state() -> ProcedureInitialState {
-        let dummy_digest = Digest::new([42, 43, 44, 45, 46].map(BFieldElement::new));
-        let proof_item = ProofItem::MerkleRoot(dummy_digest);
+    fn dequeueing_is_equivalent_in_rust_and_tasm_prop(proof_item_variant: ProofItemVariant) {
         let mut proof_stream = ProofStream::new();
-        proof_stream.enqueue(proof_item.clone());
+        let proof_item = DequeueNextAs::pseudorandom_proof_item(proof_item_variant, random());
         proof_stream.enqueue(proof_item);
 
-        let address = BFieldElement::zero();
-        DequeueNextAs::initial_state_from_proof_stream_and_address(proof_stream, address)
+        let dequeue_next_as = DequeueNextAs::new(proof_item_variant);
+        let proof_ptr = BFieldElement::new(14);
+        let init_state =
+            dequeue_next_as.initial_state_from_proof_and_address(proof_stream.into(), proof_ptr);
+        dequeue_next_as.test_rust_equivalence(init_state);
+    }
+
+    #[test]
+    fn dequeueing_all_proof_items_individually_is_equivalent_in_rust_and_tasm() {
+        for variant in ProofItemVariant::iter() {
+            dequeueing_is_equivalent_in_rust_and_tasm_prop(variant);
+        }
     }
 
     #[proptest]
@@ -720,13 +877,15 @@ mod test {
             _: Option<BenchmarkCase>,
         ) -> ProcedureInitialState {
             let mut rng = StdRng::from_seed(seed);
-            let mut proof_stream = ProofStream::new();
-            for &proof_item in &self.proof_items {
-                let dequeue_next_as = DequeueNextAs { proof_item };
-                let item = dequeue_next_as.pseudorandom_proof_item(rng.gen());
-                proof_stream.enqueue(item);
-            }
-            DequeueNextAs::initial_state_from_proof_stream_and_address(proof_stream, rng.gen())
+            let proof_stream =
+                DequeueNextAs::pseudorandom_proof_stream(self.proof_items.clone(), rng.gen());
+
+            // We just use the state-initialization method from the `[DequeueNextAs]` snippet.
+            // This is OK as long as we don't read the program hash which we don't do in this
+            // snippet.
+            let dummy_snippet_for_state_init = DequeueNextAs::new(ProofItemVariant::MerkleRoot);
+            dummy_snippet_for_state_init
+                .initial_state_from_proof_and_address(proof_stream.into(), rng.gen())
         }
     }
 
