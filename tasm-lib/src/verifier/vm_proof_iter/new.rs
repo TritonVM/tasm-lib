@@ -14,6 +14,15 @@ pub struct New;
 
 impl New {
     pub const FIRST_PROOF_ITEM_OFFSET: u64 = 4;
+    pub const MAX_PROOF_SIZE: usize = 1 << 26;
+
+    const MAX_NUMBER_OF_FRI_ROUNDS: usize = 24;
+    const NUM_PROOF_ITEMS_PER_FRI_ROUND: usize = 2;
+    const PROOF_ITEMS_EXCLUDING_FRI: usize = 15;
+    const SAFETY_MARGIN_PER_FRI_ROUND: usize = 1;
+    pub const MAX_NUM_PROOF_ITEMS: usize = Self::MAX_NUMBER_OF_FRI_ROUNDS
+        * (Self::NUM_PROOF_ITEMS_PER_FRI_ROUND + Self::SAFETY_MARGIN_PER_FRI_ROUND)
+        + Self::PROOF_ITEMS_EXCLUDING_FRI;
 }
 
 impl BasicSnippet for New {
@@ -70,6 +79,41 @@ impl BasicSnippet for New {
                 eq
                 assert
                 // _ *first_proof_item current_proof_item num_proof_items *proof proof_len
+
+
+                /* Verify sane sizes */
+                push {Self::MAX_PROOF_SIZE}
+                dup 1
+                lt
+                // _ *first_proof_item current_proof_item num_proof_items *proof proof_len (proof_len < MAX_SIZE)
+
+                assert
+
+                push {Self::MAX_NUM_PROOF_ITEMS}
+                dup 3
+                lt
+                // _ *first_proof_item current_proof_item num_proof_items *proof proof_len (num_proof_items < MAX_NUM_ITEMS)
+
+                assert
+                // _ *first_proof_item current_proof_item num_proof_items *proof proof_len
+
+
+                /* Verify that all of Proof lives in ND memory */
+                dup 1
+                pop_count
+                pop 1
+                // _ *first_proof_item current_proof_item num_proof_items *proof proof_len
+
+                dup 0
+                pop_count
+                pop 1
+                // _ *first_proof_item current_proof_item num_proof_items *proof proof_len
+
+                dup 1
+                dup 1
+                add
+                pop_count
+                pop 1
 
 
                 /* Write proof information to memory */
