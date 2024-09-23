@@ -61,9 +61,26 @@ pub struct ChainMap<const NUM_INPUT_LISTS: usize> {
 impl<const NUM_INPUT_LISTS: usize> ChainMap<NUM_INPUT_LISTS> {
     /// The number of registers required internally. See [`ChainMap`] for additional
     /// details.
-    pub const NUM_INTERNAL_REGISTERS: usize = 3 + NUM_INPUT_LISTS;
+    pub const NUM_INTERNAL_REGISTERS: usize = {
+        assert!(NUM_INPUT_LISTS <= Self::MAX_NUM_INPUT_LISTS);
 
+        3 + NUM_INPUT_LISTS
+    };
+
+    /// Need access to all lists, plus a little wiggle room.
+    const MAX_NUM_INPUT_LISTS: usize = OpStackElement::COUNT - 1;
+
+    /// # Panics
+    ///
+    /// - if the input type takes up [`OpStackElement::COUNT`] or more words
+    /// - if the output type takes up [`OpStackElement::COUNT`]` - 1` or more words
     pub fn new(f: InnerFunction) -> Self {
+        // need instruction `place {input_type.stack_size()}`
+        assert!(f.domain().stack_size() < OpStackElement::COUNT);
+
+        // need instruction `pick {output_type.stack_size() + 1}`
+        assert!(f.range().stack_size() + 1 < OpStackElement::COUNT);
+
         Self { f }
     }
 }
@@ -131,14 +148,12 @@ impl<const NUM_INPUT_LISTS: usize> BasicSnippet for ChainMap<NUM_INPUT_LISTS> {
 
         let entrypoint = self.entrypoint();
         let main_loop_fn = format!("{entrypoint}_loop");
-        let input_elem_size = input_type.stack_size();
-        let output_elem_size = output_type.stack_size();
 
         let mul_elem_size = |n| match n {
             1 => triton_asm!(),
             n => triton_asm!(push {n} mul),
         };
-        let adjust_output_list_pointer = match output_elem_size {
+        let adjust_output_list_pointer = match output_type.stack_size() {
             0 | 1 => triton_asm!(),
             n => triton_asm!(addi {-(n as i32 - 1)}),
         };
@@ -161,7 +176,7 @@ impl<const NUM_INPUT_LISTS: usize> BasicSnippet for ChainMap<NUM_INPUT_LISTS> {
 
             /* read */
             {&input_type.read_value_from_memory_leave_pointer()}
-            place {input_elem_size}
+            place {input_type.stack_size()}
                         // _ *end_condition_in_list *output_elem *prev_input_elem [input_elem]
 
             /* map */
@@ -191,7 +206,7 @@ impl<const NUM_INPUT_LISTS: usize> BasicSnippet for ChainMap<NUM_INPUT_LISTS> {
 
             /* prepare in_list pointer for main loop */
             dup 1
-            {&mul_elem_size(input_elem_size)}
+            {&mul_elem_size(input_type.stack_size())}
             dup 1
             add         // _ [_; M] [_; N-M-1] out_list_len *out_list in_list_len *in_list *in_list_first_elem_last_word
 
@@ -211,7 +226,7 @@ impl<const NUM_INPUT_LISTS: usize> BasicSnippet for ChainMap<NUM_INPUT_LISTS> {
 
             /* prepare out_list pointer for main loop */
             pick 1
-            {&mul_elem_size(output_elem_size)}
+            {&mul_elem_size(output_type.stack_size())}
             add         // _ [_; M] [_; N-M-1] *out_list *in_list *in_list_first_elem_last_word *out_list_last_elem_last_word
 
             {&adjust_output_list_pointer}
