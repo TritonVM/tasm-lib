@@ -1,7 +1,6 @@
 use itertools::Itertools;
 use num::Zero;
 use triton_vm::prelude::*;
-use triton_vm::proof_item::FriResponse;
 use twenty_first::error::BFieldCodecError;
 use twenty_first::math::x_field_element::EXTENSION_DEGREE;
 use twenty_first::prelude::Polynomial;
@@ -9,7 +8,6 @@ use twenty_first::prelude::Polynomial;
 use super::tasm_object::Result;
 use crate::data_type::DataType;
 use crate::prelude::TasmObject;
-use crate::verifier::proof_for_nd_memory::ProofForNdMemory;
 
 impl<const N: usize, T: BFieldCodec + TasmObject> TasmObject for [T; N] {
     fn label_friendly_name() -> String {
@@ -589,97 +587,6 @@ impl<T: TasmObject + BFieldCodec, S: TasmObject + BFieldCodec> TasmObject for (T
     }
 }
 
-impl TasmObject for FriResponse {
-    fn label_friendly_name() -> String {
-        "fri_response".to_owned()
-    }
-
-    fn get_field(field_name: &str) -> Vec<LabelledInstruction> {
-        match field_name {
-            "revealed_leaves" => triton_asm!(addi 1),
-            _ => panic!("Only the revealed_leaves field should be accessed in the FriResponse"),
-        }
-    }
-
-    fn get_field_with_size(field_name: &str) -> Vec<LabelledInstruction> {
-        match field_name {
-            "revealed_leaves" => triton_asm!(read_mem 1 addi 2 swap 1),
-            _ => panic!("Only the revealed_leaves field should be accessed in the FriResponse"),
-        }
-    }
-
-    fn get_field_start_with_jump_distance(_field_name: &str) -> Vec<LabelledInstruction> {
-        todo!()
-    }
-
-    fn compute_size_and_assert_valid_size_indicator(
-        _library: &mut crate::prelude::Library,
-    ) -> Vec<LabelledInstruction> {
-        // Assert that all authentication paths have been stripped from memory,
-        // and that size indicator of `revealed_leaves` matches its length.
-        triton_asm!(
-            // _ *fri_response
-
-            addi 1
-            read_mem 2
-            hint revealed_leafs_size = stack[1]
-            hint revealed_leafs_len = stack[2]
-            // _ revealed_leafs_len revealed_leafs_size (*fri_response - 1)
-
-
-            /* Assert max size of `revealed_leafs` */
-            push {FriResponse::MAX_OFFSET}
-            dup 2
-            lt
-            assert
-            // _ revealed_leafs_len revealed_leafs_size (*fri_response - 1)
-
-
-            /* Assert revealed_leafs_size matches revealed_leafs_len */
-            swap 2
-            push {EXTENSION_DEGREE}
-            mul
-            addi 1
-            dup 1
-            eq
-            assert
-            // _ (*fri_response - 1) revealed_leafs_size
-
-            swap 1
-            // _ revealed_leafs_size (*fri_response - 1)
-
-            addi 3
-            dup 1
-            add
-            // _ revealed_leafs_size *auth_structure
-
-            read_mem 2
-            pop 1
-            // _ revealed_leafs_size auth_struct_si auth_struct_len
-
-
-            /* Assert that `auth_struct` field is empty */
-            push 1
-            eq
-            assert
-
-            push 0
-            eq
-            assert
-            // _ revealed_leafs_size
-
-
-            /* Account for two size indicators and an empty list */
-            addi 3
-            // _ fri_response_size
-        )
-    }
-
-    fn decode_iter<Itr: Iterator<Item = BFieldElement>>(_iterator: &mut Itr) -> Result<Box<Self>> {
-        todo!()
-    }
-}
-
 impl TasmObject for Polynomial<XFieldElement> {
     fn label_friendly_name() -> String {
         "polynomial_xfe".to_owned()
@@ -737,9 +644,9 @@ impl TasmObject for Polynomial<XFieldElement> {
     }
 }
 
-impl TasmObject for ProofForNdMemory {
+impl TasmObject for Proof {
     fn label_friendly_name() -> String {
-        "proof_for_nd_memory".to_owned()
+        "tvm_proof".to_owned()
     }
 
     fn get_field(_field_name: &str) -> Vec<LabelledInstruction> {

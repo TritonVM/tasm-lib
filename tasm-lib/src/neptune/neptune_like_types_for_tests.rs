@@ -4,16 +4,15 @@ use twenty_first::prelude::MmrMembershipProof;
 use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
 
 use crate::prelude::TasmObject;
-use crate::verifier::proof_for_nd_memory::ProofForNdMemory;
 
 #[derive(Debug, Clone, TasmObject, BFieldCodec, Arbitrary)]
 pub(crate) struct ProofCollectionLookalike {
-    pub removal_records_integrity: ProofForNdMemory,
-    pub collect_lock_scripts: ProofForNdMemory,
-    pub lock_scripts_halt: Vec<ProofForNdMemory>,
-    pub kernel_to_outputs: ProofForNdMemory,
-    pub collect_type_scripts: ProofForNdMemory,
-    pub type_scripts_halt: Vec<ProofForNdMemory>,
+    pub removal_records_integrity: Proof,
+    pub collect_lock_scripts: Proof,
+    pub lock_scripts_halt: Vec<Proof>,
+    pub kernel_to_outputs: Proof,
+    pub collect_type_scripts: Proof,
+    pub type_scripts_halt: Vec<Proof>,
     pub lock_script_hashes: Vec<Digest>,
     pub type_script_hashes: Vec<Digest>,
     pub kernel_mast_hash: Digest,
@@ -116,8 +115,8 @@ pub(crate) struct MergeWitnessLookalike {
     left_kernel: TransactionKernelLookalike,
     right_kernel: TransactionKernelLookalike,
     new_kernel: TransactionKernelLookalike,
-    left_proof: ProofForNdMemory,
-    right_proof: ProofForNdMemory,
+    left_proof: Proof,
+    right_proof: Proof,
 }
 
 #[derive(Debug, Clone, TasmObject, BFieldCodec, Arbitrary)]
@@ -154,7 +153,7 @@ pub(crate) struct UpdateWitnessLookalike {
     new_kernel: TransactionKernelLookalike,
     old_kernel_mast_hash: Digest,
     new_kernel_mast_hash: Digest,
-    old_proof: ProofForNdMemory,
+    old_proof: Proof,
     new_swbfi_bagged: Digest,
     new_aocl: MmrAccumulator,
     new_swbfa_hash: Digest,

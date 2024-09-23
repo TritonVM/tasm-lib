@@ -153,7 +153,6 @@ mod tests {
     use crate::traits::function::FunctionInitialState;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-    use crate::verifier::proof_for_nd_memory::ProofForNdMemory;
     use crate::verifier::vm_proof_iter::shared::vm_proof_iter_struct::VmProofIter;
 
     #[test]
@@ -173,7 +172,6 @@ mod tests {
             }
 
             let proof: Proof = proof_stream.into();
-            let proof: ProofForNdMemory = proof.try_into().unwrap();
             let mut memory = HashMap::default();
             encode_to_memory(&mut memory, proof_pointer, &proof);
 
@@ -191,10 +189,10 @@ mod tests {
             memory: &mut HashMap<BFieldElement, BFieldElement>,
         ) {
             let pointer_to_proof = stack.pop().unwrap();
-            let proof = *ProofForNdMemory::decode_from_memory(memory, pointer_to_proof).unwrap();
+            let proof = *Proof::decode_from_memory(memory, pointer_to_proof).unwrap();
             let pointer_to_vm_proof_iter =
                 rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator(memory);
-            let vm_proof_iter = VmProofIter::new(pointer_to_proof, &proof.into());
+            let vm_proof_iter = VmProofIter::new(pointer_to_proof, &proof);
             encode_to_memory(memory, pointer_to_vm_proof_iter, &vm_proof_iter);
             stack.push(pointer_to_vm_proof_iter);
         }
