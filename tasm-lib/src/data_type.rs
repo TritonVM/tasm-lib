@@ -50,6 +50,24 @@ impl Display for StructType {
 }
 
 impl DataType {
+    /// See [`BFieldCodec::static_length`].
+    pub(crate) fn static_length(&self) -> Option<usize> {
+        match self {
+            DataType::Bool => bool::static_length(),
+            DataType::U32 => u32::static_length(),
+            DataType::U64 => u64::static_length(),
+            DataType::U128 => u128::static_length(),
+            DataType::Bfe => BFieldElement::static_length(),
+            DataType::Xfe => XFieldElement::static_length(),
+            DataType::Digest => Digest::static_length(),
+            DataType::List(_) => None,
+            DataType::Array(a) => Some(a.length * a.element_type.static_length()?),
+            DataType::Tuple(t) => t.iter().map(|dt| dt.static_length()).sum(),
+            DataType::VoidPointer => None,
+            DataType::StructRef(s) => s.fields.iter().map(|(_, dt)| dt.static_length()).sum(),
+        }
+    }
+
     /// Return a string which can be used as part of function labels in Triton-VM
     pub fn label_friendly_name(&self) -> String {
         match self {
@@ -92,8 +110,8 @@ impl DataType {
             DataType::Digest => Digest::LEN,
             DataType::List(_) => 1,
             DataType::Array(_) => 1,
-            DataType::VoidPointer => 1,
             DataType::Tuple(t) => t.iter().map(|dt| dt.stack_size()).sum(),
+            DataType::VoidPointer => 1,
             DataType::StructRef(_) => 1,
         }
     }
@@ -491,5 +509,101 @@ mod tests {
         vm_state.run().unwrap();
         let read = Literal::pop_from_stack(literal.data_type(), &mut vm_state.op_stack.stack);
         assert_eq!(literal, read);
+    }
+
+    #[test]
+    fn static_lengths_match_up_for_vectors() {
+        assert_eq!(
+            <Vec<XFieldElement>>::static_length(),
+            DataType::List(Box::new(DataType::Xfe)).static_length()
+        );
+    }
+
+    #[test]
+    fn static_lengths_match_up_for_array_with_static_length_data_type() {
+        assert_eq!(
+            <[BFieldElement; 42]>::static_length(),
+            DataType::Array(Box::new(ArrayType {
+                element_type: DataType::Bfe,
+                length: 42
+            }))
+            .static_length()
+        );
+    }
+
+    #[test]
+    fn static_lengths_match_up_for_array_with_dynamic_length_data_type() {
+        assert_eq!(
+            <[Vec<BFieldElement>; 42]>::static_length(),
+            DataType::Array(Box::new(ArrayType {
+                element_type: DataType::List(Box::new(DataType::Bfe)),
+                length: 42
+            }))
+            .static_length()
+        );
+    }
+
+    #[test]
+    fn static_lengths_match_up_for_tuple_with_only_static_length_types() {
+        assert_eq!(
+            <(XFieldElement, BFieldElement)>::static_length(),
+            DataType::Tuple(vec![DataType::Xfe, DataType::Bfe]).static_length()
+        );
+    }
+
+    #[test]
+    fn static_lengths_match_up_for_tuple_with_dynamic_length_types() {
+        assert_eq!(
+            <(XFieldElement, Vec<BFieldElement>)>::static_length(),
+            DataType::Tuple(vec![DataType::Xfe, DataType::List(Box::new(DataType::Bfe))])
+                .static_length()
+        );
+    }
+
+    #[test]
+    fn static_length_of_void_pointer_is_unknown() {
+        assert!(DataType::VoidPointer.static_length().is_none());
+    }
+
+    #[test]
+    fn static_lengths_match_up_for_struct_with_only_static_length_types() {
+        #[derive(Debug, Clone, BFieldCodec)]
+        struct StructTyStatic {
+            u32: u32,
+            u64: u64,
+        }
+
+        let struct_ty_static = StructType {
+            name: "struct".to_owned(),
+            fields: vec![
+                ("u32".to_owned(), DataType::U32),
+                ("u64".to_owned(), DataType::U64),
+            ],
+        };
+        assert_eq!(
+            StructTyStatic::static_length(),
+            DataType::StructRef(struct_ty_static).static_length()
+        );
+    }
+
+    #[test]
+    fn static_lengths_match_up_for_struct_with_dynamic_length_types() {
+        #[derive(Debug, Clone, BFieldCodec)]
+        struct StructTyDyn {
+            digest: Digest,
+            list: Vec<BFieldElement>,
+        }
+
+        let struct_ty_dyn = StructType {
+            name: "struct".to_owned(),
+            fields: vec![
+                ("digest".to_owned(), DataType::Digest),
+                ("list".to_owned(), DataType::List(Box::new(DataType::Bfe))),
+            ],
+        };
+        assert_eq!(
+            StructTyDyn::static_length(),
+            DataType::StructRef(struct_ty_dyn).static_length()
+        );
     }
 }

@@ -74,12 +74,24 @@ impl<const NUM_INPUT_LISTS: usize> ChainMap<NUM_INPUT_LISTS> {
     ///
     /// - if the input type takes up [`OpStackElement::COUNT`] or more words
     /// - if the output type takes up [`OpStackElement::COUNT`]` - 1` or more words
+    /// - if the input type does not have a [static length][len]
+    /// - if the output type does not have a [static length][len]
+    ///
+    /// [len]: BFieldCodec::static_length
     pub fn new(f: InnerFunction) -> Self {
         // need instruction `place {input_type.stack_size()}`
-        assert!(f.domain().stack_size() < OpStackElement::COUNT);
+        let input_len = f
+            .domain()
+            .static_length()
+            .expect("input type's encoding length must be static");
+        assert!(input_len < OpStackElement::COUNT);
 
         // need instruction `pick {output_type.stack_size() + 1}`
-        assert!(f.range().stack_size() + 1 < OpStackElement::COUNT);
+        let output_len = f
+            .range()
+            .static_length()
+            .expect("output type's encoding length must be static");
+        assert!(output_len + 1 < OpStackElement::COUNT);
 
         Self { f }
     }
@@ -756,6 +768,17 @@ mod tests {
         test_case::<10>(guard);
         test_case::<11>(guard);
         test_case::<12>(guard);
+    }
+
+    #[test]
+    #[should_panic(expected = "static")]
+    fn mapping_over_dynamic_length_items_causes_a_panic() {
+        let raw_code = InnerFunction::RawCode(RawCode::new(
+            triton_asm!(irrelevant_label: return),
+            DataType::List(Box::new(DataType::Bfe)),
+            DataType::Digest,
+        ));
+        let _map = Map::new(raw_code);
     }
 }
 
