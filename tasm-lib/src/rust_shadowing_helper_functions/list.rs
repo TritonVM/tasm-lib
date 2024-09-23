@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use num::Zero;
+use rand::thread_rng;
 use triton_vm::prelude::*;
 use twenty_first::math::other::random_elements;
 
@@ -73,13 +74,12 @@ pub fn insert_random_list(
     list_length: usize,
     memory: &mut HashMap<BFieldElement, BFieldElement>,
 ) {
-    list_new(list_pointer, memory);
-
-    let random_values = element_type.random_elements(list_length);
-
-    for element in random_values {
-        list_push(list_pointer, element, memory, element_type.stack_size());
-    }
+    let list = element_type.random_list(&mut thread_rng(), list_length);
+    let indexed_list = list
+        .into_iter()
+        .enumerate()
+        .map(|(i, v)| (list_pointer + bfe!(i as u64), v));
+    memory.extend(indexed_list);
 }
 
 // TODO: Get rid of this stupid "helper" function
@@ -109,14 +109,14 @@ pub fn list_push(
     assert_eq!(
         element_length,
         value.len(),
-        "Length must match indicated length"
+        "Length must match indicated length. Types with dynamic length are not supported."
     );
     let list_length: usize = memory[&list_pointer].value().try_into().unwrap();
     memory.get_mut(&list_pointer).unwrap().increment();
 
-    for (i, &word) in value.iter().enumerate() {
+    for (i, word) in value.into_iter().enumerate() {
         let word_offset = (LIST_METADATA_SIZE + element_length * list_length + i) as u64;
-        let word_index = list_pointer + BFieldElement::new(word_offset);
+        let word_index = list_pointer + bfe!(word_offset);
         memory.insert(word_index, word);
     }
 }

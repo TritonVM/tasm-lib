@@ -64,10 +64,8 @@ impl Procedure for WriteToStdout {
     ) -> ProcedureInitialState {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
         let mut stack = empty_stack();
-        let random_value = self.data_type.seeded_random_elements(1, &mut rng);
-        for elem in random_value[0].clone().into_iter().rev() {
-            stack.push(elem);
-        }
+        let random_value = self.data_type.seeded_random_element(&mut rng);
+        stack.extend(random_value.into_iter().rev());
 
         ProcedureInitialState {
             stack,

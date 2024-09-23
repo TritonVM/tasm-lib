@@ -276,58 +276,57 @@ impl DataType {
         ]
     }
 
-    pub fn seeded_random_elements(
-        &self,
-        count: usize,
-        rng: &mut impl Rng,
-    ) -> Vec<Vec<BFieldElement>> {
+    pub fn random_elements(&self, count: usize) -> Vec<Vec<BFieldElement>> {
+        (0..count)
+            .map(|_| self.seeded_random_element(&mut thread_rng()))
+            .collect()
+    }
+
+    pub fn seeded_random_element(&self, rng: &mut impl Rng) -> Vec<BFieldElement> {
         match self {
-            DataType::Bool => {
-                let bools: Vec<bool> = (0..count).map(|_| rng.gen_bool(0.5)).collect();
-                bools
-                    .iter()
-                    .map(|x| vec![BFieldElement::new(*x as u64)])
-                    .collect_vec()
+            DataType::Bool => rng.gen::<bool>().encode(),
+            DataType::U32 => rng.gen::<u32>().encode(),
+            DataType::U64 => rng.gen::<u64>().encode(),
+            DataType::U128 => rng.gen::<u128>().encode(),
+            DataType::Bfe => rng.gen::<BFieldElement>().encode(),
+            DataType::Xfe => rng.gen::<XFieldElement>().encode(),
+            DataType::Digest => rng.gen::<Digest>().encode(),
+            DataType::List(e) => {
+                let len = rng.gen_range(0..20);
+                e.random_list(rng, len)
             }
-            DataType::U32 => (0..count)
-                .map(|_| vec![BFieldElement::new(rng.gen_range(0..=u32::MAX as u64))])
-                .collect_vec(),
-            DataType::U64 => (0..2 * count)
-                .map(|_| BFieldElement::new(rng.gen_range(0..=u32::MAX as u64)))
-                .tuples()
-                .map(|(a, b)| vec![a, b])
-                .collect_vec(),
-            DataType::U128 => (0..4 * count)
-                .map(|_| BFieldElement::new(rng.gen_range(0..=u32::MAX as u64)))
-                .tuples()
-                .map(|(a, b, c, d)| vec![a, b, c, d])
-                .collect_vec(),
-            DataType::Bfe => (0..count)
-                .map(|_| vec![BFieldElement::new(rng.gen_range(0..=BFieldElement::MAX))])
-                .collect_vec(),
-            DataType::Xfe => (0..count)
-                .map(|_| vec![random(), random(), random()])
-                .collect_vec(),
-            DataType::Digest => (0..Digest::LEN * count)
-                .map(|_| BFieldElement::new(rng.gen_range(0..=BFieldElement::MAX)))
-                .tuples()
-                .map(|(a, b, c, d, e)| vec![a, b, c, d, e])
-                .collect_vec(),
-            DataType::List(_) => panic!("Random generation of lists is not supported"),
-            DataType::Array(_) => panic!("Random generation of arrays is not supported"),
-            DataType::VoidPointer => (0..count)
-                .map(|_| vec![random::<BFieldElement>()])
-                .collect_vec(),
-            DataType::Tuple(v) => (0..count)
-                .map(|_| v.iter().flat_map(|dt| dt.random_elements(1)).concat())
+            DataType::Array(a) => Self::random_array(rng, a),
+            DataType::Tuple(tys) => tys
+                .iter()
+                .flat_map(|ty| ty.seeded_random_element(rng))
                 .collect(),
+            DataType::VoidPointer => vec![rng.gen()],
             DataType::StructRef(_) => panic!("Random generation of structs is not supported"),
         }
     }
 
-    pub fn random_elements(&self, count: usize) -> Vec<Vec<BFieldElement>> {
-        let mut rng = thread_rng();
-        self.seeded_random_elements(count, &mut rng)
+    /// A list of given length with random elements of type `self`.
+    pub(crate) fn random_list(&self, rng: &mut impl Rng, len: usize) -> Vec<BFieldElement> {
+        let maybe_prepend_elem_len = |elem: Vec<_>| {
+            if self.static_length().is_some() {
+                elem
+            } else {
+                [bfe_vec![elem.len() as u64], elem].concat()
+            }
+        };
+
+        let elements = (0..len)
+            .map(|_| self.seeded_random_element(rng))
+            .flat_map(maybe_prepend_elem_len)
+            .collect();
+
+        [bfe_vec![len as u64], elements].concat()
+    }
+
+    pub(crate) fn random_array(rng: &mut impl Rng, array_ty: &ArrayType) -> Vec<BFieldElement> {
+        (0..array_ty.length)
+            .flat_map(|_| array_ty.element_type.seeded_random_element(rng))
+            .collect()
     }
 }
 
@@ -489,6 +488,7 @@ impl Literal {
 
 #[cfg(test)]
 mod tests {
+    use proptest::prop_assert;
     use proptest_arbitrary_interop::arb;
     use test_strategy::proptest;
 
@@ -605,5 +605,62 @@ mod tests {
             StructTyDyn::static_length(),
             DataType::StructRef(struct_ty_dyn).static_length()
         );
+    }
+
+    #[test]
+    fn random_list_of_lists_can_be_generated() {
+        let mut rng = StdRng::seed_from_u64(5950175350772851878);
+        let element_type = DataType::List(Box::new(DataType::Digest));
+        let _list = element_type.random_list(&mut rng, 10);
+    }
+
+    #[proptest]
+    fn random_list_conforms_to_bfield_codec(#[strategy(..255_usize)] len: usize, seed: u64) {
+        let mut rng = StdRng::seed_from_u64(seed);
+        let element_type = DataType::Digest;
+        let list = element_type.random_list(&mut rng, len);
+        prop_assert!(<Vec<Digest>>::decode(&list).is_ok());
+    }
+
+    #[proptest]
+    fn random_list_of_lists_conforms_to_bfield_codec(
+        #[strategy(..255_usize)] len: usize,
+        seed: u64,
+    ) {
+        let mut rng = StdRng::seed_from_u64(seed);
+        let element_type = DataType::List(Box::new(DataType::Digest));
+        let list = element_type.random_list(&mut rng, len);
+        prop_assert!(<Vec<Vec<Digest>>>::decode(&list).is_ok());
+    }
+
+    #[proptest]
+    fn random_array_conforms_to_bfield_codec(seed: u64) {
+        const LEN: usize = 42;
+
+        let mut rng = StdRng::seed_from_u64(seed);
+        let array_type = ArrayType {
+            element_type: DataType::Digest,
+            length: LEN,
+        };
+        let array = DataType::random_array(&mut rng, &array_type);
+        prop_assert!(<[Digest; LEN]>::decode(&array).is_ok());
+    }
+
+    #[proptest]
+    fn random_array_of_arrays_conforms_to_bfield_codec(seed: u64) {
+        const INNER_LEN: usize = 42;
+        const OUTER_LEN: usize = 13;
+
+        let mut rng = StdRng::seed_from_u64(seed);
+        let inner_type = ArrayType {
+            element_type: DataType::Digest,
+            length: INNER_LEN,
+        };
+        let outer_type = ArrayType {
+            element_type: DataType::Array(Box::new(inner_type)),
+            length: OUTER_LEN,
+        };
+        let array = DataType::random_array(&mut rng, &outer_type);
+        prop_assert!(<[[Digest; INNER_LEN]; OUTER_LEN]>::decode(&array).is_ok());
     }
 }

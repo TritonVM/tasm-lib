@@ -309,9 +309,9 @@ mod tests {
                 Some(BenchmarkCase::WorstCase) => 400,
                 None => rng.gen_range(1..400),
             };
-            let haystack_elements = self
-                .element_type
-                .seeded_random_elements(list_length, &mut rng);
+            let haystack_elements = (0..list_length)
+                .map(|_| self.element_type.seeded_random_element(&mut rng))
+                .collect_vec();
 
             let list_pointer: BFieldElement = rng.gen();
 
@@ -319,9 +319,8 @@ mod tests {
                 Some(BenchmarkCase::CommonCase) => haystack_elements[list_length / 2].clone(),
                 Some(BenchmarkCase::WorstCase) => haystack_elements[list_length / 2].clone(),
                 None => {
-                    let expect_match = rng.gen_bool(0.5);
                     // An element is guaranteed to exist, as the initial length is never 0
-                    if expect_match {
+                    if rng.gen() {
                         haystack_elements
                             .choose(&mut rng)
                             .as_ref()
@@ -333,7 +332,7 @@ mod tests {
                         // $ list_length / element-type-value-space $. But
                         // since the rust-shadowing agrees with the TASM code,
                         // the test will not fail.
-                        self.element_type.seeded_random_elements(1, &mut rng)[0].clone()
+                        self.element_type.seeded_random_element(&mut rng)
                     }
                 }
             };
