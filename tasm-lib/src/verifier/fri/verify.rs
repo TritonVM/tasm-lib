@@ -167,18 +167,6 @@ impl BasicSnippet for FriSnippet {
         let get_xfe_from_list = library.import(Box::new(Get::new(DataType::Xfe)));
         let get_digest_from_list = library.import(Box::new(Get::new(DataType::Digest)));
         let sample_indices = library.import(Box::new(SampleIndices));
-
-        let assert_no_auth_paths_in_memory = triton_asm!(
-            // _ *fri_response
-
-            dup 0
-            {&FriResponse::compute_size_and_assert_valid_size_indicator(library)}
-            // _ *fri_response fri_response_size
-
-            pop 1
-            // _
-        );
-
         let verify_authentication_paths_for_leaf_and_index_list =
             library.import(Box::new(VerifyFriAuthenticationPaths));
         let zip_index_xfe = library.import(Box::new(Zip::new(DataType::U32, DataType::Xfe)));
@@ -450,9 +438,6 @@ impl BasicSnippet for FriSnippet {
                 // dequeue proof item as fri response
                 dup 8                       // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword *roots *alphas dom_len *indices *proof_iter
                 call {vm_proof_iter_dequeue_next_as_fri_response}
-                                            // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword *roots *alphas dom_len *indices *fri_response
-
-                {&assert_no_auth_paths_in_memory}
                                             // _ *vm_proof_iter *fri_verify num_rounds last_round_max_degree *last_codeword *roots *alphas dom_len *indices *fri_response
 
                 // assert correct length of number of leafs
@@ -1208,7 +1193,6 @@ mod test {
     use crate::traits::procedure::Procedure;
     use crate::traits::procedure::ProcedureInitialState;
     use crate::traits::procedure::ShadowedProcedure;
-    use crate::verifier::proof_for_nd_memory::strip_non_memory_items;
 
     impl FriVerify {
         pub fn new(
@@ -1305,9 +1289,8 @@ mod test {
             // uses highly specific knowledge about `BFieldCodec`
             let proof_iter_current_item_pointer = vm_proof_iter_pointer + BFieldElement::new(2);
 
-            let stripped_proof_stream = strip_non_memory_items(proof_stream);
             let fri_verify_pointer =
-                encode_to_memory(&mut memory, vm_proof_iter_pointer, &stripped_proof_stream);
+                encode_to_memory(&mut memory, vm_proof_iter_pointer, &proof_stream);
             let proof_iter_pointer =
                 encode_to_memory(&mut memory, fri_verify_pointer, &self.test_instance);
             encode_to_memory(
