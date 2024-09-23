@@ -30,7 +30,8 @@ pub(super) mod vm_proof_iter_struct {
 
     use crate::prelude::TasmObject;
 
-    #[derive(Debug, Clone, Eq, PartialEq, BFieldCodec, TasmObject)]
+    /// Represent Triton VM's knowledge about a proof.
+    #[derive(Debug, Clone, Copy, Eq, PartialEq, BFieldCodec, TasmObject)]
     pub(crate) struct VmProofIter {
         pub(crate) current_item_count: u32,
         pub(crate) total_item_count: u32,
@@ -40,9 +41,9 @@ pub(super) mod vm_proof_iter_struct {
     }
 
     impl VmProofIter {
-        pub(crate) fn new(proof_pointer: BFieldElement, proof_stream: &ProofStream) -> Self {
-            let proof: Proof = proof_stream.into();
-            let proof_length = proof.encode().len();
+        pub(crate) fn new(proof_pointer: BFieldElement, proof: &Proof) -> Self {
+            let proof_length = proof.0.len() + 1;
+            let proof_stream: ProofStream = proof.try_into().unwrap();
             VmProofIter {
                 current_item_count: 0,
                 total_item_count: proof_stream.items.len().try_into().unwrap(),
@@ -50,7 +51,7 @@ pub(super) mod vm_proof_iter_struct {
                 proof_length: proof_length.try_into().unwrap(),
 
                 // uses highly specific knowledge of `BFieldCodec`
-                current_item_pointer: proof_pointer + bfe!(2),
+                current_item_pointer: proof_pointer + bfe!(4),
             }
         }
     }

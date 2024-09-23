@@ -148,17 +148,9 @@ mod tests {
         ) {
             let pointer_to_proof = stack.pop().unwrap();
             let proof = *ProofForNdMemory::decode_from_memory(memory, pointer_to_proof).unwrap();
-            let as_proof_stream: ProofStream = (&proof).try_into().unwrap();
-            let pointer_to_first_element = pointer_to_proof + bfe!(Self::FIRST_PROOF_ITEM_OFFSET);
             let pointer_to_vm_proof_iter =
                 rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator(memory);
-            let vm_proof_iter = VmProofIter {
-                current_item_count: 0,
-                total_item_count: as_proof_stream.items.len().try_into().unwrap(),
-                proof_start_pointer: pointer_to_proof,
-                proof_length: (proof.0.len() + 1).try_into().unwrap(),
-                current_item_pointer: pointer_to_first_element,
-            };
+            let vm_proof_iter = VmProofIter::new(pointer_to_proof, &proof.into());
             encode_to_memory(memory, pointer_to_vm_proof_iter, &vm_proof_iter);
             stack.push(pointer_to_vm_proof_iter);
         }

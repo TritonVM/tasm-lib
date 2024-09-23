@@ -64,16 +64,20 @@ impl DequeueNextAs {
         }
     }
 
+    /// Increment the counter of proof items already dequeued.
+    ///
     /// ```text
     /// BEFORE: _ *vm_proof_iter
     /// AFTER:  _ *vm_proof_iter
     /// ```
     fn increment_current_item_count(&self) -> Vec<LabelledInstruction> {
+        const CURRENT_ITEM_COUNT_OFFSET: BFieldElement = BFieldElement::new(4);
+
         triton_asm!(
             // _ *proof_item_iter
 
             dup 0
-            addi 4
+            addi {CURRENT_ITEM_COUNT_OFFSET}
             // _ *proof_item_iter *current_item_count
 
             read_mem 1
@@ -544,28 +548,26 @@ mod test {
         ) -> ProcedureInitialState {
             let mut rng = StdRng::from_seed(seed);
             let mut proof_stream = ProofStream::new();
-            proof_stream.enqueue(self.pseudorandom_proof_item(rng.gen()));
+            proof_stream.enqueue(Self::pseudorandom_proof_item(self.proof_item, rng.gen()));
 
             let other_item_type = ProofItemVariant::iter().choose(&mut rng).unwrap();
-            let other_dequeue_next_as = DequeueNextAs::new(other_item_type);
-            proof_stream.enqueue(other_dequeue_next_as.pseudorandom_proof_item(rng.gen()));
+            proof_stream.enqueue(Self::pseudorandom_proof_item(other_item_type, rng.gen()));
 
-            self.initial_state_from_proof_stream_and_address(proof_stream, rng.gen())
+            self.initial_state_from_proof_and_address(proof_stream.into(), rng.gen())
         }
     }
 
     impl DequeueNextAs {
-        fn initial_state_from_proof_stream_and_address(
+        fn initial_state_from_proof_and_address(
             &self,
-            proof_stream: ProofStream,
-            address: BFieldElement,
+            proof: Proof,
+            proof_address: BFieldElement,
         ) -> ProcedureInitialState {
             let mut ram = HashMap::new();
-            encode_to_memory(&mut ram, address, &proof_stream);
+            encode_to_memory(&mut ram, proof_address, &proof);
 
             let proof_iter_address = dynamic_allocator(&mut ram);
-
-            let vm_proof_iter_init_state = VmProofIter::new(address, &proof_stream);
+            let vm_proof_iter_init_state = VmProofIter::new(proof_address, &proof);
             encode_to_memory(&mut ram, proof_iter_address, &vm_proof_iter_init_state);
 
             ProcedureInitialState {
@@ -583,51 +585,67 @@ mod test {
             Self { proof_item }
         }
 
-        /// An item to be `Dequeued`, matching the variant in `self`.
-        fn pseudorandom_proof_item(&self, seed: [u8; 32]) -> ProofItem {
+        pub(crate) fn pseudorandom_proof_stream(
+            proof_items_variants: Vec<ProofItemVariant>,
+            seed: [u8; 32],
+        ) -> ProofStream {
+            let mut rng: StdRng = SeedableRng::from_seed(seed);
+
+            let mut proof_stream = ProofStream::new();
+            for &proof_item in &proof_items_variants {
+                let item = DequeueNextAs::pseudorandom_proof_item(proof_item, rng.gen());
+                proof_stream.enqueue(item);
+            }
+
+            proof_stream
+        }
+
+        fn pseudorandom_proof_item(
+            proof_item_variant: ProofItemVariant,
+            seed: [u8; 32],
+        ) -> ProofItem {
             let mut rng = StdRng::from_seed(seed);
             let proof_stream_seed: [u8; 10000] = rng.gen();
             let mut unstructured = Unstructured::new(&proof_stream_seed);
 
-            match &self.proof_item {
-                ProofItemVariant::MerkleRoot => {
+            use ProofItemVariant::*;
+            match proof_item_variant {
+                MerkleRoot => {
                     ProofItem::MerkleRoot(Arbitrary::arbitrary(&mut unstructured).unwrap())
                 }
-                ProofItemVariant::OutOfDomainMainRow => {
+                OutOfDomainMainRow => {
                     ProofItem::OutOfDomainMainRow(Arbitrary::arbitrary(&mut unstructured).unwrap())
                 }
-                ProofItemVariant::OutOfDomainAuxRow => {
+                OutOfDomainAuxRow => {
                     ProofItem::OutOfDomainAuxRow(Arbitrary::arbitrary(&mut unstructured).unwrap())
                 }
-                ProofItemVariant::OutOfDomainQuotientSegments => {
-                    ProofItem::OutOfDomainQuotientSegments(
-                        Arbitrary::arbitrary(&mut unstructured).unwrap(),
-                    )
-                }
-                ProofItemVariant::AuthenticationStructure => ProofItem::AuthenticationStructure(
+                OutOfDomainQuotientSegments => ProofItem::OutOfDomainQuotientSegments(
                     Arbitrary::arbitrary(&mut unstructured).unwrap(),
                 ),
-                ProofItemVariant::MasterMainTableRows => {
+                AuthenticationStructure => ProofItem::AuthenticationStructure(
+                    Arbitrary::arbitrary(&mut unstructured).unwrap(),
+                ),
+                MasterMainTableRows => {
                     ProofItem::MasterMainTableRows(Arbitrary::arbitrary(&mut unstructured).unwrap())
                 }
-                ProofItemVariant::MasterAuxTableRows => {
+                MasterAuxTableRows => {
                     ProofItem::MasterAuxTableRows(Arbitrary::arbitrary(&mut unstructured).unwrap())
                 }
-                ProofItemVariant::Log2PaddedHeight => {
+                Log2PaddedHeight => {
                     ProofItem::Log2PaddedHeight(Arbitrary::arbitrary(&mut unstructured).unwrap())
                 }
-                ProofItemVariant::QuotientSegmentsElements => ProofItem::QuotientSegmentsElements(
+                QuotientSegmentsElements => ProofItem::QuotientSegmentsElements(
                     Arbitrary::arbitrary(&mut unstructured).unwrap(),
                 ),
-                ProofItemVariant::FriCodeword => {
+                FriCodeword => {
                     ProofItem::FriCodeword(Arbitrary::arbitrary(&mut unstructured).unwrap())
                 }
-                ProofItemVariant::FriPolynomial => {
+                FriPolynomial => {
                     ProofItem::FriPolynomial(Arbitrary::arbitrary(&mut unstructured).unwrap())
                 }
-                ProofItemVariant::FriResponse => {
+                FriResponse => {
                     // This code requires the authentication paths field to be empty
-                    let fri_response: FriResponse = FriResponse {
+                    let fri_response = triton_vm::proof_item::FriResponse {
                         auth_structure: vec![],
                         revealed_leaves: Arbitrary::arbitrary(&mut unstructured).unwrap(),
                     };
@@ -687,9 +705,9 @@ mod test {
         let proof_item = ProofItem::MasterMainTableRows(dummy_master_table_rows);
         let mut proof_stream = ProofStream::new();
         proof_stream.enqueue(proof_item);
-        let address = BFieldElement::zero();
+        let proof_ptr = BFieldElement::zero();
         DequeueNextAs::new(ProofItemVariant::MasterMainTableRows)
-            .initial_state_from_proof_stream_and_address(proof_stream, address)
+            .initial_state_from_proof_and_address(proof_stream.into(), proof_ptr)
     }
 
     #[test]
@@ -774,14 +792,14 @@ mod test {
     }
 
     fn dequeueing_is_equivalent_in_rust_and_tasm_prop(proof_item_variant: ProofItemVariant) {
-        let dequeue_next_as = DequeueNextAs::new(proof_item_variant);
         let mut proof_stream = ProofStream::new();
-        let proof_item = dequeue_next_as.pseudorandom_proof_item(random());
+        let proof_item = DequeueNextAs::pseudorandom_proof_item(proof_item_variant, random());
         proof_stream.enqueue(proof_item);
 
-        let address = BFieldElement::new(14);
+        let dequeue_next_as = DequeueNextAs::new(proof_item_variant);
+        let proof_ptr = BFieldElement::new(14);
         let init_state =
-            dequeue_next_as.initial_state_from_proof_stream_and_address(proof_stream, address);
+            dequeue_next_as.initial_state_from_proof_and_address(proof_stream.into(), proof_ptr);
         dequeue_next_as.test_rust_equivalence(init_state);
     }
 
@@ -859,19 +877,15 @@ mod test {
             _: Option<BenchmarkCase>,
         ) -> ProcedureInitialState {
             let mut rng = StdRng::from_seed(seed);
-            let mut proof_stream = ProofStream::new();
-            for &proof_item in &self.proof_items {
-                let dequeue_next_as = DequeueNextAs { proof_item };
-                let item = dequeue_next_as.pseudorandom_proof_item(rng.gen());
-                proof_stream.enqueue(item);
-            }
+            let proof_stream =
+                DequeueNextAs::pseudorandom_proof_stream(self.proof_items.clone(), rng.gen());
 
             // We just use the state-initialization method from the `[DequeueNextAs]` snippet.
             // This is OK as long as we don't read the program hash which we don't do in this
             // snippet.
             let dummy_snippet_for_state_init = DequeueNextAs::new(ProofItemVariant::MerkleRoot);
             dummy_snippet_for_state_init
-                .initial_state_from_proof_stream_and_address(proof_stream, rng.gen())
+                .initial_state_from_proof_and_address(proof_stream.into(), rng.gen())
         }
     }
 
