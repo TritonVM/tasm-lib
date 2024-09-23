@@ -36,6 +36,7 @@ use crate::verifier::master_table::verify_table_rows::VerifyTableRows;
 use crate::verifier::out_of_domain_points::OodPoint;
 use crate::verifier::out_of_domain_points::OutOfDomainPoints;
 use crate::verifier::vm_proof_iter::dequeue_next_as::DequeueNextAs;
+use crate::verifier::vm_proof_iter::drop::Drop;
 use crate::verifier::vm_proof_iter::new::New;
 
 /// Verify a STARK proof.
@@ -302,6 +303,7 @@ impl BasicSnippet for StarkVerify {
         let entrypoint = self.entrypoint();
 
         let proof_to_vm_proof_iter = library.import(Box::new(New));
+        let drop_vm_proof_iter = library.import(Box::new(Drop));
 
         let ood_curr_row_main_and_aux_value_pointer_alloc =
             library.kmalloc(EXTENSION_DEGREE.try_into().unwrap());
@@ -1039,10 +1041,10 @@ impl BasicSnippet for StarkVerify {
                 assert
                 // _ *beqd_ws *p_iter *oodpnts *fri *btrows *odd_brow_next *etrows *ood_erow_nxt *ood_brow_curr *ood_erow_curr *fri_revealed *qseg_elems num_colli
 
-                /* Clean up stack */
+                /* Clean up stack and drop p_iter, ensuring that it ends up in a consistent state */
                 swap 12
                 swap 11
-                pop 1
+                call {drop_vm_proof_iter}
                 // _ num_colli *beqd_ws *oodpnts *fri *btrows *odd_brow_next *etrows *ood_erow_nxt *ood_brow_curr *ood_erow_curr *fri_revealed *qseg_elems
 
                 /* Sum out-of-domain values */
