@@ -88,6 +88,7 @@ mod tests {
     use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
     use triton_vm::twenty_first::prelude::*;
 
+    use super::SampleScalarsStaticLengthDynMalloc;
     use crate::memory::dyn_malloc::DYN_MALLOC_FIRST_ADDRESS;
     use crate::rust_shadowing_helper_functions;
     use crate::test_helpers::tasm_final_state;
@@ -97,8 +98,6 @@ mod tests {
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
     use crate::VmHasher;
-
-    use super::SampleScalarsStaticLengthDynMalloc;
 
     impl Procedure for SampleScalarsStaticLengthDynMalloc {
         fn rust_shadow(
@@ -192,10 +191,9 @@ mod tests {
 
 #[cfg(test)]
 mod bench {
+    use super::*;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn bench_10() {

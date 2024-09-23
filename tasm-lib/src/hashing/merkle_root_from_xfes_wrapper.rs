@@ -118,6 +118,7 @@ mod tests {
     use test_strategy::proptest;
     use triton_vm::twenty_first::prelude::*;
 
+    use super::*;
     use crate::library::STATIC_MEMORY_FIRST_ADDRESS;
     use crate::memory::encode_to_memory;
     use crate::prelude::TasmObject;
@@ -126,8 +127,6 @@ mod tests {
     use crate::traits::function::FunctionInitialState;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[proptest(cases = 4)]
     fn merkle_root_from_xfes_wrapper_pbt_pbt() {
@@ -216,10 +215,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
+    use super::*;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn merkle_root_wrapper_bench() {

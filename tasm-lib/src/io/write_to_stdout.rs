@@ -78,10 +78,9 @@ impl Procedure for WriteToStdout {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn write_to_stdout_auto_test() {
@@ -93,10 +92,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
+    use super::*;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn bench_for_digest_writing() {

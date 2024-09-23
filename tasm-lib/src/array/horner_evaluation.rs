@@ -106,6 +106,7 @@ mod test {
     use rand::prelude::*;
     use triton_vm::twenty_first::prelude::*;
 
+    use super::*;
     use crate::empty_stack;
     use crate::rust_shadowing_helper_functions::array::array_get;
     use crate::rust_shadowing_helper_functions::array::insert_as_array;
@@ -113,8 +114,6 @@ mod test {
     use crate::traits::function::FunctionInitialState;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     impl Function for HornerEvaluation {
         fn rust_shadow(
@@ -202,10 +201,9 @@ mod test {
 
 #[cfg(test)]
 mod benches {
+    use super::*;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn horner_evaluation_100() {

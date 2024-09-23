@@ -164,10 +164,9 @@ impl Closure for CollinearYXfe {
 
 #[cfg(test)]
 mod test {
+    use super::CollinearYXfe;
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::CollinearYXfe;
 
     #[test]
     fn test() {
@@ -177,10 +176,9 @@ mod test {
 
 #[cfg(test)]
 mod bench {
+    use super::CollinearYXfe;
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::CollinearYXfe;
 
     #[test]
     fn bench_colinear_y() {

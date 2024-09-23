@@ -1180,6 +1180,7 @@ mod test {
     use triton_vm::twenty_first::math::traits::PrimitiveRootOfUnity;
     use triton_vm::twenty_first::util_types::algebraic_hasher::Sponge;
 
+    use super::*;
     use crate::empty_stack;
     use crate::memory::dyn_malloc::DYN_MALLOC_FIRST_ADDRESS;
     use crate::memory::encode_to_memory;
@@ -1192,8 +1193,6 @@ mod test {
     use crate::traits::procedure::Procedure;
     use crate::traits::procedure::ProcedureInitialState;
     use crate::traits::procedure::ShadowedProcedure;
-
-    use super::*;
 
     impl FriVerify {
         pub fn new(
@@ -1673,6 +1672,7 @@ mod bench {
     use std::path::Path;
     use std::path::PathBuf;
 
+    use super::*;
     use crate::generate_full_profile;
     use crate::test_helpers::prepend_program_with_sponge_init;
     use crate::test_helpers::prepend_program_with_stack_setup;
@@ -1680,8 +1680,6 @@ mod bench {
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
     use crate::verifier::fri::verify::test::TestCase;
-
-    use super::*;
 
     #[test]
     fn bench() {

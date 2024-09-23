@@ -6,6 +6,7 @@ use rand::prelude::*;
 use triton_vm::isa::parser::tokenize;
 use triton_vm::prelude::*;
 
+use super::inner_function::InnerFunction;
 use crate::data_type::DataType;
 use crate::empty_stack;
 use crate::library::Library;
@@ -20,8 +21,6 @@ use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::traits::function::Function;
 use crate::traits::function::FunctionInitialState;
-
-use super::inner_function::InnerFunction;
 
 /// Filters a given list for elements that satisfy a predicate. A new
 /// list is created, containing only those elements that satisfy the
@@ -284,6 +283,7 @@ mod tests {
     use triton_vm::twenty_first::prelude::AlgebraicHasher;
     use twenty_first::math::other::random_elements;
 
+    use super::*;
     use crate::arithmetic;
     use crate::list::higher_order::inner_function::RawCode;
     use crate::traits::deprecated_snippet::DeprecatedSnippet;
@@ -291,8 +291,6 @@ mod tests {
     use crate::traits::rust_shadow::RustShadow;
     use crate::InitVmState;
     use crate::VmHasher;
-
-    use super::*;
 
     #[derive(Debug, Clone)]
     pub struct TestHashXFieldElementLsb;
@@ -499,11 +497,10 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use crate::traits::function::ShadowedFunction;
-    use crate::traits::rust_shadow::RustShadow;
-
     use super::tests::TestHashXFieldElementLsb;
     use super::*;
+    use crate::traits::function::ShadowedFunction;
+    use crate::traits::rust_shadow::RustShadow;
 
     #[test]
     fn filter_benchmark() {

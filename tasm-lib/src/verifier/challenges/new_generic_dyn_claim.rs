@@ -226,6 +226,7 @@ mod tests {
     use triton_vm::twenty_first::math::other::random_elements;
     use triton_vm::twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
+    use super::*;
     use crate::memory::encode_to_memory;
     use crate::rust_shadowing_helper_functions::array::insert_as_array;
     use crate::rust_shadowing_helper_functions::claim::load_claim_from_memory;
@@ -237,8 +238,6 @@ mod tests {
     use crate::traits::rust_shadow::RustShadow;
     use crate::verifier::challenges::shared::conventional_challenges_pointer;
     use crate::VmHasher;
-
-    use super::*;
 
     impl Procedure for NewGenericDynClaim {
         fn rust_shadow(

@@ -1,7 +1,8 @@
+use triton_vm::prelude::*;
+
 use crate::data_type::DataType;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::Library;
-use triton_vm::prelude::*;
 
 /// Returns `true` if the list contains an element with the given value.
 ///
@@ -151,6 +152,7 @@ mod tests {
     use rand::Rng;
     use rand::SeedableRng;
 
+    use super::*;
     use crate::library::STATIC_MEMORY_FIRST_ADDRESS;
     use crate::rust_shadowing_helper_functions::list::load_list_unstructured;
     use crate::snippet_bencher::BenchmarkCase;
@@ -159,8 +161,6 @@ mod tests {
     use crate::traits::function::FunctionInitialState;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     impl Contains {
         fn static_pointer_isolated_run(&self) -> BFieldElement {
@@ -403,10 +403,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
+    use super::*;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn contains_bench() {

@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+
 use triton_vm::isa::instruction::AnInstruction;
 use triton_vm::prelude::*;
 

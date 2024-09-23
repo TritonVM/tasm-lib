@@ -238,9 +238,8 @@ fn prepare_state(a: u64, b: u64) -> InitVmState {
 
 #[cfg(test)]
 mod tests {
-    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
-
     use super::*;
+    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     #[test]
     fn safe_mul_u64_test() {
@@ -250,9 +249,8 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use crate::snippet_bencher::bench_and_write;
-
     use super::*;
+    use crate::snippet_bencher::bench_and_write;
 
     #[test]
     fn safe_u64_benchmark() {

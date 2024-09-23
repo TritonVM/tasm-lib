@@ -143,10 +143,9 @@ impl MerkleStepU64Index {
 mod tests {
     use itertools::Itertools;
 
+    use super::*;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn prop() {

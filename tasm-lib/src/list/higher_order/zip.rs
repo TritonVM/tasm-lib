@@ -278,12 +278,11 @@ mod tests {
     use proptest_arbitrary_interop::arb;
     use test_strategy::proptest;
 
+    use super::*;
     use crate::rust_shadowing_helper_functions::list;
     use crate::structure::tasm_object::MemoryIter;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn prop_test_xfe_digest() {
@@ -346,10 +345,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
+    use super::*;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn zip_benchmark() {

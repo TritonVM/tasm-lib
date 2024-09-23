@@ -180,14 +180,13 @@ mod tests {
     use triton_vm::prelude::triton_asm;
     use triton_vm::prelude::Program;
 
+    use super::*;
     use crate::data_type::DataType;
     use crate::empty_stack;
     use crate::memory::memcpy::MemCpy;
     use crate::mmr::calculate_new_peaks_from_leaf_mutation::MmrCalculateNewPeaksFromLeafMutationMtIndices;
     use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
     use crate::traits::deprecated_snippet::DeprecatedSnippet;
-
-    use super::*;
 
     #[derive(Debug)]
     struct DummyTestSnippetA;

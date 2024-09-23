@@ -161,6 +161,7 @@ mod test {
     use test_strategy::proptest;
     use triton_vm::prelude::*;
 
+    use super::*;
     use crate::rust_shadowing_helper_functions::array::array_from_memory;
     use crate::rust_shadowing_helper_functions::array::insert_random_array;
     use crate::snippet_bencher::BenchmarkCase;
@@ -168,8 +169,6 @@ mod test {
     use crate::traits::function::FunctionInitialState;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn three_rows_tvm_parameters_xfe_main_test() {
@@ -340,10 +339,9 @@ mod test {
 mod benches {
     use triton_vm::stark::NUM_RANDOMIZER_POLYNOMIALS;
 
+    use super::*;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn inner_product_of_three_rows_bench_current_tvm_main_is_bfe() {

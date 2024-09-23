@@ -2,7 +2,6 @@ use triton_vm::prelude::*;
 use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
 use crate::data_type::DataType;
-
 use crate::traits::basic_snippet::BasicSnippet;
 
 /// Verify Merkle authentication paths in a FRI context.
@@ -135,15 +134,6 @@ impl BasicSnippet for VerifyFriAuthenticationPaths {
 
 #[cfg(test)]
 mod test {
-    use crate::rust_shadowing_helper_functions;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::test_helpers::negative_test;
-    use crate::traits::algorithm::Algorithm;
-    use crate::traits::algorithm::AlgorithmInitialState;
-    use crate::traits::algorithm::ShadowedAlgorithm;
-    use crate::traits::rust_shadow::RustShadow;
-    use crate::Digest;
-
     use std::collections::HashMap;
 
     use itertools::Itertools;
@@ -154,6 +144,14 @@ mod test {
     use triton_vm::twenty_first::prelude::*;
 
     use super::*;
+    use crate::rust_shadowing_helper_functions;
+    use crate::snippet_bencher::BenchmarkCase;
+    use crate::test_helpers::negative_test;
+    use crate::traits::algorithm::Algorithm;
+    use crate::traits::algorithm::AlgorithmInitialState;
+    use crate::traits::algorithm::ShadowedAlgorithm;
+    use crate::traits::rust_shadow::RustShadow;
+    use crate::Digest;
 
     #[derive(Clone, Debug, EnumIter, Copy)]
     enum IndexType {
@@ -413,10 +411,9 @@ mod test {
 
 #[cfg(test)]
 mod benches {
+    use super::*;
     use crate::traits::algorithm::ShadowedAlgorithm;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn vap4lail_benchmark() {

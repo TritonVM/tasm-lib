@@ -108,13 +108,12 @@ mod tests {
     use triton_vm::air::cross_table_argument::CrossTableArg;
     use triton_vm::air::cross_table_argument::EvalArg;
 
+    use super::*;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::traits::function::Function;
     use crate::traits::function::FunctionInitialState;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     impl<const N: usize> Function for ComputeTerminalConstSizedDynamicSymbolsReversed<N> {
         fn rust_shadow(
@@ -251,10 +250,9 @@ mod tests {
 mod bench {
     use triton_vm::twenty_first::math::tip5::Digest;
 
+    use super::*;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn bench_const_sized_terminal_calc_rev_5() {

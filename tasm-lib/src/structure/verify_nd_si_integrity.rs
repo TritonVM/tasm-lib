@@ -80,13 +80,6 @@ mod tests {
     use std::collections::HashMap;
     use std::fmt::Debug;
 
-    use crate::memory::encode_to_memory;
-    use crate::neptune::neptune_like_types_for_tests::*;
-    use crate::snippet_bencher::BenchmarkCase;
-    use crate::traits::accessor::Accessor;
-    use crate::traits::accessor::AccessorInitialState;
-    use crate::traits::accessor::ShadowedAccessor;
-    use crate::traits::rust_shadow::RustShadow;
     use arbitrary::Arbitrary;
     use arbitrary::Unstructured;
     use num_traits::ConstZero;
@@ -96,6 +89,13 @@ mod tests {
     use twenty_first::util_types::mmr::mmr_successor_proof::MmrSuccessorProof;
 
     use super::*;
+    use crate::memory::encode_to_memory;
+    use crate::neptune::neptune_like_types_for_tests::*;
+    use crate::snippet_bencher::BenchmarkCase;
+    use crate::traits::accessor::Accessor;
+    use crate::traits::accessor::AccessorInitialState;
+    use crate::traits::accessor::ShadowedAccessor;
+    use crate::traits::rust_shadow::RustShadow;
 
     impl<T: TasmObject + BFieldCodec + for<'a> Arbitrary<'a> + Debug + Clone> VerifyNdSiIntegrity<T> {
         fn initial_state(&self, address: BFieldElement, t: T) -> AccessorInitialState {
@@ -169,9 +169,8 @@ mod tests {
     }
 
     mod simple_struct {
-        use crate::test_helpers::negative_test;
-
         use super::*;
+        use crate::test_helpers::negative_test;
 
         #[derive(Debug, Clone, TasmObject, BFieldCodec, Arbitrary)]
         struct TestStruct {
@@ -270,11 +269,11 @@ mod tests {
     }
 
     mod option_types {
-        use crate::test_helpers::negative_test;
         use rand::thread_rng;
         use rand::RngCore;
 
         use super::*;
+        use crate::test_helpers::negative_test;
 
         #[derive(Debug, Clone, TasmObject, BFieldCodec, Arbitrary)]
         struct StatSizedPayload {
@@ -678,12 +677,11 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
+    use super::*;
     use crate::neptune::neptune_like_types_for_tests::ProofCollectionLookalike;
     use crate::neptune::neptune_like_types_for_tests::TransactionKernelLookalike;
     use crate::traits::accessor::ShadowedAccessor;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn bench_proof_collection_lookalike() {

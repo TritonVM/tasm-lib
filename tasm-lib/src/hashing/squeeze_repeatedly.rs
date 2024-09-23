@@ -124,6 +124,7 @@ impl Procedure for SqueezeRepeatedly {
 mod test {
     use rand::prelude::*;
 
+    use super::*;
     use crate::test_helpers::rust_final_state;
     use crate::test_helpers::tasm_final_state;
     use crate::test_helpers::verify_memory_equivalence;
@@ -134,8 +135,6 @@ mod test {
     use crate::traits::procedure::ProcedureInitialState;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn test() {
@@ -184,10 +183,9 @@ mod test {
 
 #[cfg(test)]
 mod benches {
+    use super::*;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn squeeze_repeatedly_bench() {

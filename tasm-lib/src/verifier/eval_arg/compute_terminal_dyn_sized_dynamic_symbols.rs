@@ -135,14 +135,13 @@ mod tests {
     use triton_vm::air::cross_table_argument::CrossTableArg;
     use triton_vm::air::cross_table_argument::EvalArg;
 
+    use super::*;
     use crate::rust_shadowing_helper_functions::list::insert_random_list;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::traits::function::Function;
     use crate::traits::function::FunctionInitialState;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     impl Function for ComputeTerminalDynSizedDynamicSymbols {
         fn rust_shadow(
@@ -274,10 +273,9 @@ mod tests {
 
 #[cfg(test)]
 mod bench {
+    use super::*;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn compute_terminal() {

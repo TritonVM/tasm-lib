@@ -172,9 +172,8 @@ impl DeprecatedSnippet for GetLength {
 
 #[cfg(test)]
 mod tests {
-    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
-
     use super::GetLength;
+    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     #[test]
     fn get_length_test() {
@@ -184,9 +183,8 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use crate::snippet_bencher::bench_and_write;
-
     use super::GetLength;
+    use crate::snippet_bencher::bench_and_write;
 
     #[test]
     fn get_length_benchmark() {

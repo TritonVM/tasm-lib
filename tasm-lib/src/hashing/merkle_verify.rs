@@ -1,7 +1,8 @@
+use triton_vm::prelude::*;
+
 use crate::data_type::DataType;
 use crate::library::Library;
 use crate::traits::basic_snippet::BasicSnippet;
-use triton_vm::prelude::*;
 
 /// Verify membership in a Merkle tree.
 ///
@@ -120,6 +121,7 @@ mod tests {
     use rand::prelude::*;
     use triton_vm::twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
+    use super::*;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::test_helpers::negative_test;
     use crate::traits::read_only_algorithm::ReadOnlyAlgorithm;
@@ -127,8 +129,6 @@ mod tests {
     use crate::traits::read_only_algorithm::ShadowedReadOnlyAlgorithm;
     use crate::traits::rust_shadow::RustShadow;
     use crate::VmHasher;
-
-    use super::*;
 
     #[test]
     fn merkle_verify_test() {
@@ -294,10 +294,9 @@ mod tests {
 
 #[cfg(test)]
 mod bench {
+    use super::MerkleVerify;
     use crate::traits::read_only_algorithm::ShadowedReadOnlyAlgorithm;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::MerkleVerify;
 
     #[test]
     fn merkle_verify_bench() {

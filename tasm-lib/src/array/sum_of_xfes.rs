@@ -91,6 +91,7 @@ mod tests {
     use rand::prelude::*;
     use triton_vm::twenty_first::math::b_field_element::BFieldElement;
 
+    use super::*;
     use crate::rust_shadowing_helper_functions::array::insert_as_array;
     use crate::rust_shadowing_helper_functions::array::insert_random_array;
     use crate::snippet_bencher::BenchmarkCase;
@@ -99,8 +100,6 @@ mod tests {
     use crate::traits::function::FunctionInitialState;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     impl Function for SumOfXfes {
         fn rust_shadow(
@@ -232,10 +231,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
+    use super::*;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn sum_xfes_bench_100() {

@@ -71,6 +71,7 @@ mod test {
     use triton_vm::fri::Fri;
     use triton_vm::twenty_first::math::traits::PrimitiveRootOfUnity;
 
+    use super::*;
     use crate::memory::dyn_malloc::DYN_MALLOC_ADDRESS;
     use crate::memory::encode_to_memory;
     use crate::prelude::TasmObject;
@@ -79,8 +80,6 @@ mod test {
     use crate::traits::function::FunctionInitialState;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     impl Function for NumberOfRounds {
         fn rust_shadow(

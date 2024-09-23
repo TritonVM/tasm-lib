@@ -159,11 +159,10 @@ mod tests {
     use triton_vm::twenty_first::math::traits::ModPowU32;
     use triton_vm::twenty_first::math::traits::PrimitiveRootOfUnity;
 
+    use super::*;
     use crate::empty_stack;
     use crate::execute_test;
     use crate::linker::link_for_isolated_run;
-
-    use super::*;
 
     #[test]
     fn divide_out_zerofiers_test() {
@@ -341,13 +340,12 @@ mod bench {
     use rand::prelude::*;
     use twenty_first::math::traits::PrimitiveRootOfUnity;
 
+    use super::*;
     use crate::empty_stack;
     use crate::traits::function::Function;
     use crate::traits::function::FunctionInitialState;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn bench_divide_out_zerofiers() {

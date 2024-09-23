@@ -57,14 +57,13 @@ impl BasicSnippet for New {
 mod tests {
     use std::collections::HashMap;
 
+    use super::*;
     use crate::rust_shadowing_helper_functions;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::traits::function::Function;
     use crate::traits::function::FunctionInitialState;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn vm_proof_iter_new_pbt() {

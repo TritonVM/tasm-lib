@@ -55,11 +55,11 @@ pub fn bench_and_profile_program<P: CompiledProgram>(
 ) {
     use std::fs::create_dir_all;
     use std::fs::File;
+    use std::io::Write;
     use std::path::Path;
     use std::path::PathBuf;
 
     use crate::snippet_bencher::NamedBenchmarkResult;
-    use std::io::Write;
 
     let (program_instructions, library) = P::code();
     let library_instructions = library.all_imports();
@@ -152,10 +152,9 @@ mod test {
 
 #[cfg(test)]
 mod benches {
-    use crate::snippet_bencher::BenchmarkCase;
-
     use super::test::FiboTest;
     use super::*;
+    use crate::snippet_bencher::BenchmarkCase;
 
     #[test]
     fn bench_fibo() {

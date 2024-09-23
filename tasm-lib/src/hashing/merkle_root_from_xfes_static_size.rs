@@ -114,6 +114,7 @@ mod test {
     use rand::prelude::*;
     use test_strategy::proptest;
 
+    use super::*;
     use crate::memory::encode_to_memory;
     use crate::rust_shadowing_helper_functions::array::array_from_memory;
     use crate::rust_shadowing_helper_functions::array::insert_as_array;
@@ -122,8 +123,6 @@ mod test {
     use crate::traits::function::FunctionInitialState;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     impl Function for MerkleRootFromXfesStaticSize {
         fn rust_shadow(
@@ -216,10 +215,9 @@ mod test {
 mod benches {
     use test::STATIC_MEMORY_POINTER_FOR_TESTS;
 
+    use super::*;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     fn bench_case(log2_length: u8) {
         let shadowed_function = MerkleRootFromXfesStaticSize {

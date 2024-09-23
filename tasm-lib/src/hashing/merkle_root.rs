@@ -271,10 +271,9 @@ impl MerkleRoot {
 
 #[cfg(test)]
 mod test {
+    use super::MerkleRoot;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::MerkleRoot;
 
     #[test]
     fn test() {
@@ -284,10 +283,9 @@ mod test {
 
 #[cfg(test)]
 mod benches {
+    use super::MerkleRoot;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::MerkleRoot;
 
     #[test]
     fn merkle_root_bench() {

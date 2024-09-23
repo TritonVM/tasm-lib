@@ -91,13 +91,12 @@ mod tests {
     use itertools::Itertools;
     use rand::prelude::*;
 
+    use super::*;
     use crate::test_helpers::negative_test;
     use crate::traits::closure::Closure;
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
     use crate::InitVmState;
-
-    use super::*;
 
     impl Closure for NextPowerOfTwo {
         fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
@@ -184,10 +183,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
+    use super::*;
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn npo2_u32_bench() {

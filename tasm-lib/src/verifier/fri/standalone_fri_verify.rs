@@ -2,13 +2,12 @@ use std::collections::HashMap;
 
 use triton_vm::prelude::*;
 
+use super::verify::FriSnippet;
+use super::verify::FriVerify;
 use crate::library::Library;
 use crate::memory::encode_to_memory;
 use crate::memory::FIRST_NON_DETERMINISTICALLY_INITIALIZED_MEMORY_ADDRESS;
 use crate::traits::compiled_program::CompiledProgram;
-
-use super::verify::FriSnippet;
-use super::verify::FriVerify;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 struct StandaloneFriVerify {
@@ -101,10 +100,9 @@ impl CompiledProgram for StandaloneFriVerify {
 
 #[cfg(test)]
 mod bench {
+    use super::*;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::traits::compiled_program::bench_and_profile_program;
-
-    use super::*;
 
     #[ignore = "Very slow, about 340s on my powerful laptop"]
     #[test]

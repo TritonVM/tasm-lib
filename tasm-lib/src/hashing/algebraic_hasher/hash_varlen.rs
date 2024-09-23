@@ -147,11 +147,10 @@ impl Procedure for HashVarlen {
 mod tests {
     use rand::prelude::*;
 
+    use super::*;
     use crate::test_helpers::tasm_final_state;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn test() {
@@ -194,10 +193,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
+    use super::*;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn benchmark() {

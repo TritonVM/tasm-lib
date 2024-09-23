@@ -237,10 +237,9 @@ impl Function for BagPeaks {
 
 #[cfg(test)]
 mod tests {
+    use super::BagPeaks;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::BagPeaks;
 
     #[test]
     fn prop() {
@@ -250,10 +249,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
+    use super::BagPeaks;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::BagPeaks;
 
     #[test]
     fn bag_peaks_benchmark() {

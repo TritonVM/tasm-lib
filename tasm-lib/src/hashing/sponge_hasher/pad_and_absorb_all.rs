@@ -59,6 +59,7 @@ mod test {
     use triton_vm::prelude::*;
     use triton_vm::twenty_first::prelude::Sponge;
 
+    use super::*;
     use crate::empty_stack;
     use crate::rust_shadowing_helper_functions::list::insert_random_list;
     use crate::snippet_bencher::BenchmarkCase;
@@ -67,8 +68,6 @@ mod test {
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
     use crate::VmHasher;
-
-    use super::*;
 
     impl PadAndAbsorbAll {
         fn init_memory_and_stack(

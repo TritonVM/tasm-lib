@@ -264,6 +264,7 @@ mod tests {
     use tip5::Digest;
     use twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
+    use super::*;
     use crate::library::STATIC_MEMORY_FIRST_ADDRESS;
     use crate::list::LIST_METADATA_SIZE;
     use crate::memory::encode_to_memory;
@@ -276,8 +277,6 @@ mod tests {
     use crate::traits::function::FunctionInitialState;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn returns_true_on_multiset_equality() {
@@ -616,10 +615,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
+    use super::*;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn multiset_eq_u64s_bench() {

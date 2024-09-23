@@ -250,10 +250,9 @@ impl AbsorbMultiple {
 
 #[cfg(test)]
 mod test {
+    use super::AbsorbMultiple;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::AbsorbMultiple;
 
     #[test]
     fn test() {
@@ -263,10 +262,9 @@ mod test {
 
 #[cfg(test)]
 mod benches {
+    use super::AbsorbMultiple;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::AbsorbMultiple;
 
     #[test]
     fn benchmark() {

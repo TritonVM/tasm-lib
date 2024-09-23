@@ -10,6 +10,8 @@ use twenty_first::util_types::mmr::mmr_accumulator::util::mmra_with_mps;
 use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
 use twenty_first::util_types::mmr::mmr_trait::Mmr;
 
+use super::leaf_index_to_mt_index_and_peak_index::MmrLeafIndexToMtIndexAndPeakIndex;
+use super::MAX_MMR_HEIGHT;
 use crate::arithmetic::u64::div2_u64::Div2U64;
 use crate::data_type::DataType;
 use crate::empty_stack;
@@ -21,9 +23,6 @@ use crate::rust_shadowing_helper_functions;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::Digest;
 use crate::InitVmState;
-
-use super::leaf_index_to_mt_index_and_peak_index::MmrLeafIndexToMtIndexAndPeakIndex;
-use super::MAX_MMR_HEIGHT;
 
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct MmrVerifyFromMemory;
@@ -371,11 +370,10 @@ mod tests {
     use itertools::Itertools;
     use twenty_first::prelude::AlgebraicHasher;
 
+    use super::*;
     use crate::empty_stack;
     use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
     use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
-
-    use super::*;
 
     #[test]
     fn verify_from_memory_test() {
@@ -581,9 +579,8 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use crate::snippet_bencher::bench_and_write;
-
     use super::*;
+    use crate::snippet_bencher::bench_and_write;
 
     #[test]
     fn verify_from_memory_benchmark() {

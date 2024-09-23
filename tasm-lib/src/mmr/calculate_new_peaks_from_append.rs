@@ -321,10 +321,9 @@ mod tests {
     use twenty_first::math::other::random_elements;
     use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
 
+    use super::*;
     use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
     use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
-
-    use super::*;
 
     #[test]
     fn calculate_new_peaks_from_append_test_lists() {
@@ -509,9 +508,8 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use crate::snippet_bencher::bench_and_write;
-
     use super::*;
+    use crate::snippet_bencher::bench_and_write;
 
     #[test]
     fn calculate_new_peaks_from_append_benchmark() {

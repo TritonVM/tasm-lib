@@ -187,6 +187,7 @@ mod test {
     use twenty_first::util_types::merkle_tree::CpuParallel;
     use twenty_first::util_types::merkle_tree::MerkleTree;
 
+    use super::*;
     use crate::memory::encode_to_memory;
     use crate::prelude::TasmObject;
     use crate::rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator;
@@ -199,8 +200,6 @@ mod test {
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
     use crate::InitVmState;
-
-    use super::*;
 
     impl Function for MerkleRootFromXfesGeneric {
         fn rust_shadow(
@@ -330,10 +329,9 @@ mod test {
 
 #[cfg(test)]
 mod benches {
+    use super::*;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn merkle_root_bench() {

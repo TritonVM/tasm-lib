@@ -45,10 +45,9 @@ mod tests {
     use std::cell::RefCell;
     use std::rc::Rc;
 
+    use super::*;
     use crate::execute_with_terminal_state;
     use crate::linker::link_for_isolated_run;
-
-    use super::*;
 
     #[derive(Debug, Clone, Eq, PartialEq)]
     struct ProgramSetup {

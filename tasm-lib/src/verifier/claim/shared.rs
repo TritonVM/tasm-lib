@@ -32,8 +32,9 @@ pub(crate) fn insert_claim_into_static_memory(
     // will be assigned to address `-2` if no other static memory allocations have occurred
     // before it.
 
-    use crate::memory::encode_to_memory;
     use triton_vm::prelude::*;
+
+    use crate::memory::encode_to_memory;
     let size_of_encoded_claim: u32 = claim.encode().len().try_into().unwrap();
     let size_as_i32: i32 = size_of_encoded_claim.try_into().unwrap();
     let claim_pointer = bfe!(-size_as_i32 - 1);

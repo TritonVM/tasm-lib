@@ -250,11 +250,10 @@ mod tests {
     use num::Zero;
     use BFieldElement;
 
+    use super::*;
     use crate::empty_stack;
     use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
     use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
-
-    use super::*;
 
     #[test]
     fn sub_u128_test() {
@@ -377,9 +376,8 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use crate::snippet_bencher::bench_and_write;
-
     use super::*;
+    use crate::snippet_bencher::bench_and_write;
 
     #[test]
     fn sub_u128_benchmark() {

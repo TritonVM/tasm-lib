@@ -268,6 +268,7 @@ mod test {
     use triton_vm::twenty_first::math::polynomial::Polynomial;
     use triton_vm::twenty_first::prelude::Sponge;
 
+    use super::*;
     use crate::empty_stack;
     use crate::execute_with_terminal_state;
     use crate::linker::link_for_isolated_run;
@@ -278,8 +279,6 @@ mod test {
     use crate::traits::procedure::Procedure;
     use crate::traits::procedure::ProcedureInitialState;
     use crate::traits::procedure::ShadowedProcedure;
-
-    use super::*;
 
     #[derive(Debug)]
     struct RustShadowForDequeueNextAs<'a> {

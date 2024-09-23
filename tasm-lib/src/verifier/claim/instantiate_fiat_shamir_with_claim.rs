@@ -74,18 +74,18 @@ impl BasicSnippet for InstantiateFiatShamirWithClaim {
 
 #[cfg(test)]
 mod tests {
-    use rand::prelude::*;
     use std::collections::HashMap;
+
+    use rand::prelude::*;
     use triton_vm::twenty_first::math::other::random_elements;
     use triton_vm::twenty_first::util_types::algebraic_hasher::Sponge;
 
+    use super::*;
     use crate::memory::encode_to_memory;
     use crate::rust_shadowing_helper_functions::claim::load_claim_from_memory;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::traits::procedure::Procedure;
     use crate::traits::procedure::ProcedureInitialState;
-
-    use super::*;
 
     impl Procedure for InstantiateFiatShamirWithClaim {
         fn rust_shadow(
@@ -163,10 +163,9 @@ mod tests {
 
 #[cfg(test)]
 mod test {
+    use super::*;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn test() {
@@ -176,10 +175,9 @@ mod test {
 
 #[cfg(test)]
 mod benches {
+    use super::*;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn benchmark() {

@@ -220,10 +220,9 @@ impl Procedure for SampleIndices {
 
 #[cfg(test)]
 mod test {
+    use super::*;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn test() {
@@ -233,10 +232,9 @@ mod test {
 
 #[cfg(test)]
 mod bench {
+    use super::*;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn bench() {

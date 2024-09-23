@@ -45,9 +45,8 @@ impl BasicSnippet for ReadAndVerifyOwnProgramDigestFromStdIn {
 
 #[cfg(test)]
 mod tests {
-    use crate::execute_with_terminal_state;
-
     use super::*;
+    use crate::execute_with_terminal_state;
 
     #[derive(Debug, Clone, Eq, PartialEq)]
     struct ProgramSetup {

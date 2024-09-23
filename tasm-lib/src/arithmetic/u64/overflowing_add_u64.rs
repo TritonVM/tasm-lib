@@ -97,11 +97,10 @@ impl Closure for OverflowingAdd {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::test_helpers::test_rust_equivalence_given_complete_state;
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn u64_overflowing_add_pbt() {
@@ -152,10 +151,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
+    use super::*;
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn u64_overflowing_add_bench() {

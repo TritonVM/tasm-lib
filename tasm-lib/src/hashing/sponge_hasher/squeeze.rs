@@ -74,6 +74,7 @@ mod test {
     use rand::prelude::*;
     use triton_vm::twenty_first::prelude::Sponge;
 
+    use super::*;
     use crate::empty_stack;
     use crate::memory::dyn_malloc;
     use crate::memory::dyn_malloc::DYN_MALLOC_ADDRESS;
@@ -84,8 +85,6 @@ mod test {
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
     use crate::VmHasher;
-
-    use super::*;
 
     impl Procedure for Squeeze {
         fn rust_shadow(
@@ -142,10 +141,9 @@ mod test {
 
 #[cfg(test)]
 mod benches {
+    use super::*;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn bench() {

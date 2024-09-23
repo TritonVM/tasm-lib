@@ -108,6 +108,7 @@ mod tests {
     use triton_vm::air::cross_table_argument::CrossTableArg;
     use triton_vm::air::cross_table_argument::EvalArg;
 
+    use super::*;
     use crate::rust_shadowing_helper_functions::array::insert_as_array;
     use crate::rust_shadowing_helper_functions::list::list_insert;
     use crate::snippet_bencher::BenchmarkCase;
@@ -119,8 +120,6 @@ mod tests {
     use crate::verifier::eval_arg::compute_terminal_const_sized_dynamic_symbols_reversed::ComputeTerminalConstSizedDynamicSymbolsReversed;
     use crate::verifier::eval_arg::compute_terminal_dyn_sized_dynamic_symbols::ComputeTerminalDynSizedDynamicSymbols;
     use crate::verifier::eval_arg::compute_terminal_from_digest::ComputeTerminalFromDigestInitialIsOne;
-
-    use super::*;
 
     impl<const N: usize> Closure for ComputeTerminalConstSizedStaticSymbols<N> {
         fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
@@ -426,10 +425,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
+    use super::*;
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn compute_terminal_lookup_table() {

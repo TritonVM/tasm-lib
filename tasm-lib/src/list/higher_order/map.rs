@@ -245,6 +245,7 @@ mod tests {
     use triton_vm::twenty_first::math::other::random_elements;
     use triton_vm::twenty_first::prelude::*;
 
+    use super::*;
     use crate::arithmetic;
     use crate::data_type::DataType;
     use crate::library::Library;
@@ -267,8 +268,6 @@ mod tests {
     use crate::twenty_first::prelude::x_field_element::EXTENSION_DEGREE;
     use crate::InitVmState;
     use crate::VmHasher;
-
-    use super::*;
 
     impl<const NUM_INPUT_LISTS: usize> ChainMap<NUM_INPUT_LISTS> {
         fn init_state(
@@ -747,12 +746,11 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
+    use super::tests::TestHashXFieldElement;
+    use super::*;
     use crate::list::higher_order::inner_function::InnerFunction;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::tests::TestHashXFieldElement;
-    use super::*;
 
     #[test]
     fn map_benchmark() {

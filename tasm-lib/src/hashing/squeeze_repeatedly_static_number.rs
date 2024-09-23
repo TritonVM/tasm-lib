@@ -75,7 +75,6 @@ mod tests {
     use rand::prelude::*;
 
     use super::*;
-
     use crate::hashing::squeeze_repeatedly::SqueezeRepeatedly;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::test_helpers::tasm_final_state;
@@ -187,10 +186,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
+    use super::*;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn bench_10() {

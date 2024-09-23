@@ -1,7 +1,8 @@
+use triton_vm::prelude::*;
+
 use crate::data_type::DataType;
 use crate::hashing::absorb_multiple_static_size::AbsorbMultipleStaticSize;
 use crate::traits::basic_snippet::BasicSnippet;
-use triton_vm::prelude::*;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct HashStaticSize {
@@ -61,14 +62,13 @@ mod tests {
     use triton_vm::twenty_first::math::tip5::Digest;
     use triton_vm::twenty_first::util_types::algebraic_hasher::Sponge;
 
+    use super::*;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::traits::procedure::Procedure;
     use crate::traits::procedure::ProcedureInitialState;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
     use crate::VmHasher;
-
-    use super::*;
 
     #[test]
     fn hash_static_size_small_pbt() {
@@ -156,10 +156,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
+    use super::HashStaticSize;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::HashStaticSize;
 
     // Picked to be the size of a main table row at time of writing
     #[test]

@@ -119,10 +119,9 @@ impl DeprecatedSnippet for Or {
 mod tests {
     use std::collections::HashMap;
 
+    use super::*;
     use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
     use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
-
-    use super::*;
 
     #[test]
     fn snippet_test() {

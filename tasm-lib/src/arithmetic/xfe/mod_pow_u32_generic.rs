@@ -153,6 +153,7 @@ mod tests {
     use triton_vm::prelude::*;
     use triton_vm::twenty_first::math::traits::ModPowU32;
 
+    use super::*;
     use crate::empty_stack;
     use crate::execute_with_terminal_state;
     use crate::linker::link_for_isolated_run;
@@ -160,8 +161,6 @@ mod tests {
     use crate::traits::closure::Closure;
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     impl Closure for XfeModPowU32Generic {
         fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
@@ -260,10 +259,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
+    use super::*;
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn xfe_mod_pow_benchmark() {

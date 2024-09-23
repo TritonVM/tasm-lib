@@ -1,9 +1,8 @@
 use std::collections::HashMap;
 
 use itertools::Itertools;
-use triton_vm::prelude::*;
-
 use tasm_lib::list::LIST_METADATA_SIZE;
+use triton_vm::prelude::*;
 
 use crate::data_type::DataType;
 use crate::empty_stack;
@@ -201,10 +200,9 @@ impl DeprecatedSnippet for Range {
 mod tests {
     use triton_vm::error::InstructionError;
 
+    use super::*;
     use crate::execute_with_terminal_state;
     use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
-
-    use super::*;
 
     #[test]
     fn new_snippet_test() {
@@ -228,9 +226,8 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use crate::snippet_bencher::bench_and_write;
-
     use super::*;
+    use crate::snippet_bencher::bench_and_write;
 
     #[test]
     fn benchmark() {

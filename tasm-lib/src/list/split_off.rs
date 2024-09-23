@@ -136,6 +136,7 @@ mod tests {
 
     use rand::prelude::*;
 
+    use super::*;
     use crate::rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator;
     use crate::rust_shadowing_helper_functions::list::insert_random_list;
     use crate::rust_shadowing_helper_functions::list::list_set_length;
@@ -147,8 +148,6 @@ mod tests {
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
     use crate::InitVmState;
-
-    use super::*;
 
     #[test]
     fn split_off_pbt() {
@@ -255,10 +254,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
+    use super::*;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn split_off_bench() {

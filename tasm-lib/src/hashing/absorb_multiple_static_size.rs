@@ -181,10 +181,9 @@ mod test {
     use proptest_arbitrary_interop::arb;
     use test_strategy::proptest;
 
+    use super::AbsorbMultipleStaticSize;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::AbsorbMultipleStaticSize;
 
     #[test]
     fn absorb_multiple_static_size_0() {
@@ -220,10 +219,9 @@ mod test {
 
 #[cfg(test)]
 mod benches {
+    use super::AbsorbMultipleStaticSize;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::AbsorbMultipleStaticSize;
 
     #[test]
     fn absorb_multiple_static_size_benchmark_102() {

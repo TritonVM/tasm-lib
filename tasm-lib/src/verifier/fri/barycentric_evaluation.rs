@@ -235,6 +235,7 @@ mod tests {
     use twenty_first::math::traits::Inverse;
     use twenty_first::math::traits::PrimitiveRootOfUnity;
 
+    use super::*;
     use crate::library::STATIC_MEMORY_FIRST_ADDRESS;
     use crate::rust_shadowing_helper_functions::list::list_insert;
     use crate::rust_shadowing_helper_functions::list::load_list_with_copy_elements;
@@ -243,8 +244,6 @@ mod tests {
     use crate::traits::function::FunctionInitialState;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn barycentric_evaluation_pbt() {
@@ -366,10 +365,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
+    use super::*;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn bench_barycentric_evaluation() {

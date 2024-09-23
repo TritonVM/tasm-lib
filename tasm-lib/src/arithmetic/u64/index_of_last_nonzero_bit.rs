@@ -1,15 +1,14 @@
 use rand::prelude::*;
 use triton_vm::prelude::*;
 
+use super::decr_u64::DecrU64;
+use super::xor_u64::XorU64;
 use crate::arithmetic::u64::and_u64::AndU64;
 use crate::arithmetic::u64::log_2_floor_u64::Log2FloorU64;
 use crate::data_type::DataType;
 use crate::empty_stack;
 use crate::traits::deprecated_snippet::DeprecatedSnippet;
 use crate::InitVmState;
-
-use super::decr_u64::DecrU64;
-use super::xor_u64::XorU64;
 
 #[derive(Clone, Debug)]
 pub struct IndexOfLastNonZeroBitU64;
@@ -144,10 +143,9 @@ mod tests {
 
     use num::Zero;
 
+    use super::*;
     use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
     use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
-
-    use super::*;
 
     #[test]
     fn index_of_last_nonzero_bit_test() {
@@ -246,9 +244,8 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use crate::snippet_bencher::bench_and_write;
-
     use super::*;
+    use crate::snippet_bencher::bench_and_write;
 
     #[test]
     fn index_of_last_nonzero_bit_benchmark() {

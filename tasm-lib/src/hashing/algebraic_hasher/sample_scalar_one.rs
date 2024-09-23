@@ -56,13 +56,12 @@ mod tests {
     use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
     use triton_vm::twenty_first::util_types::algebraic_hasher::Sponge;
 
+    use super::*;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::traits::procedure::Procedure;
     use crate::traits::procedure::ProcedureInitialState;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn sample_scalar_one_test() {

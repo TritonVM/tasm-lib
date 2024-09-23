@@ -341,10 +341,9 @@ fn get_swbf_indices<H: AlgebraicHasher>(
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn test() {
@@ -358,10 +357,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
+    use super::*;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn bench() {

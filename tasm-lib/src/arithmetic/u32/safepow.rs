@@ -191,13 +191,12 @@ impl Closure for Safepow {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::test_helpers::negative_test;
     use crate::test_helpers::test_rust_equivalence_given_complete_state;
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
     use crate::InitVmState;
-
-    use super::*;
 
     #[test]
     fn u32_pow_pbt() {
@@ -317,10 +316,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
+    use super::*;
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn u32_pow_bench() {

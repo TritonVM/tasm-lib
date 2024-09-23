@@ -219,6 +219,7 @@ mod tests {
     use triton_vm::twenty_first::util_types::merkle_tree::MerkleTreeInclusionProof;
     use twenty_first::prelude::MerkleTreeMaker;
 
+    use super::*;
     use crate::memory::encode_to_memory;
     use crate::rust_shadowing_helper_functions::list::list_insert;
     use crate::snippet_bencher::BenchmarkCase;
@@ -227,8 +228,6 @@ mod tests {
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
     use crate::VmHasher;
-
-    use super::*;
 
     #[test]
     fn verify_table_pbt_main() {
@@ -258,9 +257,8 @@ mod tests {
         use rand::prelude::*;
         use strum::IntoEnumIterator;
 
-        use crate::test_helpers::negative_test;
-
         use super::*;
+        use crate::test_helpers::negative_test;
 
         #[test]
         fn verify_bad_auth_path_crashes_vm() {
@@ -482,10 +480,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
+    use super::*;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn verify_table_bench_main() {

@@ -123,6 +123,7 @@ mod tests {
     use rand::prelude::*;
     use test_strategy::proptest;
 
+    use super::*;
     use crate::memory::encode_to_memory;
     use crate::rust_shadowing_helper_functions;
     use crate::snippet_bencher::BenchmarkCase;
@@ -131,8 +132,6 @@ mod tests {
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
     use crate::verifier::fri::verify::FriVerify;
-
-    use super::*;
 
     #[test]
     fn fri_param_derivation_default_stark_pbt() {

@@ -95,9 +95,8 @@ impl DeprecatedSnippet for BfeAdd {
 
 #[cfg(test)]
 mod tests {
-    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
-
     use super::*;
+    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     #[test]
     fn bfe_add_test() {
@@ -107,9 +106,8 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use crate::snippet_bencher::bench_and_write;
-
     use super::*;
+    use crate::snippet_bencher::bench_and_write;
 
     #[test]
     fn bfe_add_benchmark() {

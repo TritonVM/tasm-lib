@@ -76,14 +76,13 @@ mod tests {
     use triton_vm::prelude::*;
     use triton_vm::twenty_first::math::traits::ModPowU32;
 
+    use super::*;
     use crate::arithmetic::xfe::mod_pow_u32_generic::XfeModPowU32Generic;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::test_helpers::test_rust_equivalence_given_complete_state;
     use crate::traits::closure::Closure;
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     impl Closure for ToThePowerOfPowerOf2 {
         fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
@@ -195,10 +194,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
+    use super::*;
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn xfe_mod_pow_benchmark() {

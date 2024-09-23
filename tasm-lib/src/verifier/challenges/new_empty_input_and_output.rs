@@ -161,6 +161,7 @@ mod tests {
     use triton_vm::challenges::Challenges;
     use triton_vm::twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
+    use super::*;
     use crate::rust_shadowing_helper_functions::array::insert_as_array;
     use crate::traits::basic_snippet::BasicSnippet;
     use crate::traits::procedure::Procedure;
@@ -169,8 +170,6 @@ mod tests {
     use crate::traits::rust_shadow::RustShadow;
     use crate::verifier::challenges::shared;
     use crate::VmHasher;
-
-    use super::*;
 
     impl Procedure for NewEmptyInputAndOutput {
         fn rust_shadow(
@@ -248,11 +247,10 @@ mod tests {
 mod benches {
     use triton_vm::challenges::Challenges;
 
+    use super::*;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
     use crate::verifier::challenges::shared;
-
-    use super::*;
 
     #[test]
     fn bench_for_challenges_calc_for_recufier() {

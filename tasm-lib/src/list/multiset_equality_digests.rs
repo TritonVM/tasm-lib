@@ -239,6 +239,7 @@ mod tests {
     use tip5::Digest;
     use twenty_first::math::other::random_elements;
 
+    use super::*;
     use crate::empty_stack;
     use crate::rust_shadowing_helper_functions;
     use crate::rust_shadowing_helper_functions::list::load_list_with_copy_elements;
@@ -247,8 +248,6 @@ mod tests {
     use crate::traits::function::FunctionInitialState;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn prop_test() {
@@ -426,10 +425,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
+    use super::*;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn multiset_eq_digests_benchmark() {

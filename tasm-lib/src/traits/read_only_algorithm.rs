@@ -6,6 +6,8 @@ use std::rc::Rc;
 use rand::prelude::*;
 use triton_vm::prelude::*;
 
+use super::basic_snippet::BasicSnippet;
+use super::rust_shadow::RustShadow;
 use crate::linker::execute_bench;
 use crate::linker::link_for_isolated_run;
 use crate::snippet_bencher::write_benchmarks;
@@ -14,9 +16,6 @@ use crate::snippet_bencher::NamedBenchmarkResult;
 use crate::test_helpers::test_rust_equivalence_given_complete_state;
 use crate::InitVmState;
 use crate::VmHasher;
-
-use super::basic_snippet::BasicSnippet;
-use super::rust_shadow::RustShadow;
 
 /// An ReadOnlyAlgorithm can read memory and take ND_input.
 ///

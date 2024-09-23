@@ -82,6 +82,7 @@ pub(crate) mod tests {
     use triton_vm::twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
     use triton_vm::twenty_first::util_types::algebraic_hasher::Sponge;
 
+    use super::*;
     use crate::rust_shadowing_helper_functions::array::array_get;
     use crate::rust_shadowing_helper_functions::array::insert_as_array;
     use crate::test_helpers::tasm_final_state;
@@ -90,8 +91,6 @@ pub(crate) mod tests {
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
     use crate::VmHasher;
-
-    use super::*;
 
     impl Procedure for SampleScalarsStaticLengthStaticPointer {
         fn rust_shadow(
@@ -192,11 +191,10 @@ pub(crate) mod tests {
 
 #[cfg(test)]
 mod bench {
+    use super::*;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
     use crate::verifier::challenges::shared::conventional_challenges_pointer;
-
-    use super::*;
 
     #[test]
     fn bench_10() {

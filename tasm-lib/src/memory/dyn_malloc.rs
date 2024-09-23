@@ -190,12 +190,11 @@ mod tests {
     use proptest_arbitrary_interop::arb;
     use test_strategy::proptest;
 
+    use super::*;
     use crate::test_helpers::negative_test;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
     use crate::InitVmState;
-
-    use super::*;
 
     #[test]
     fn expected_address_chosen_for_dyn_malloc() {
@@ -319,10 +318,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
+    use super::*;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn dyn_malloc_benchmark() {

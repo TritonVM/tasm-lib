@@ -66,6 +66,7 @@ mod test {
     use rand::prelude::*;
     use triton_vm::twenty_first::prelude::BFieldElement;
 
+    use super::*;
     use crate::empty_stack;
     use crate::memory::encode_to_memory;
     use crate::snippet_bencher::BenchmarkCase;
@@ -74,8 +75,6 @@ mod test {
     use crate::traits::function::FunctionInitialState;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     impl Function for GetCollinearityCheckX {
         fn rust_shadow(
@@ -147,10 +146,9 @@ mod test {
 
 #[cfg(test)]
 mod bench {
+    use super::GetCollinearityCheckX;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::GetCollinearityCheckX;
 
     #[test]
     fn bench() {

@@ -18,13 +18,12 @@ use std::time::SystemTime;
 
 use anyhow::bail;
 use itertools::Itertools;
+use library::Library;
+use memory::dyn_malloc;
 use num_traits::Zero;
 use snippet_bencher::BenchmarkResult;
 use triton_vm::isa::op_stack::NUM_OP_STACK_REGISTERS;
 use triton_vm::prelude::*;
-
-use library::Library;
-use memory::dyn_malloc;
 
 pub mod arithmetic;
 pub mod array;

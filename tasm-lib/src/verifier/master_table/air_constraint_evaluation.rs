@@ -309,6 +309,7 @@ mod tests {
     use triton_vm::table::master_table::MasterTable;
     use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
+    use super::*;
     use crate::execute_test;
     use crate::library::STATIC_MEMORY_LAST_ADDRESS;
     use crate::linker::link_for_isolated_run;
@@ -318,8 +319,6 @@ mod tests {
     use crate::structure::tasm_object::decode_from_memory_with_size;
     use crate::traits::function::Function;
     use crate::traits::function::FunctionInitialState;
-
-    use super::*;
 
     #[test]
     fn conventional_air_constraint_memory_layouts_are_integral() {
@@ -650,10 +649,9 @@ mod tests {
 
 #[cfg(test)]
 mod bench {
+    use super::*;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn bench_air_constraint_evaluation() {

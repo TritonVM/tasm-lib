@@ -381,14 +381,13 @@ mod test {
     use triton_vm::twenty_first::util_types::mmr::shared_advanced::get_peak_heights;
     use triton_vm::twenty_first::util_types::mmr::shared_basic::leaf_index_to_mt_index_and_peak_index;
 
+    use super::*;
     use crate::empty_stack;
     use crate::memory::encode_to_memory;
     use crate::traits::mem_preserver::MemPreserver;
     use crate::traits::mem_preserver::MemPreserverInitialState;
     use crate::twenty_first::prelude::AlgebraicHasher;
     use crate::twenty_first::prelude::Mmr;
-
-    use super::*;
 
     fn num_digests_to_read(old_mmr: &MmrAccumulator, new_mmr: &MmrAccumulator) -> usize {
         if new_mmr.num_leafs() <= old_mmr.num_leafs() {
@@ -677,10 +676,9 @@ mod test {
 
 #[cfg(test)]
 mod bench {
+    use super::*;
     use crate::traits::mem_preserver::ShadowedMemPreserver;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn verify_mmr_successor_benchmark() {

@@ -112,6 +112,7 @@ mod tests {
     use test_strategy::proptest;
     use triton_vm::twenty_first::prelude::*;
 
+    use super::*;
     use crate::memory::encode_to_memory;
     use crate::rust_shadowing_helper_functions::array::array_from_memory;
     use crate::rust_shadowing_helper_functions::array::insert_as_array;
@@ -120,8 +121,6 @@ mod tests {
     use crate::traits::function::FunctionInitialState;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     impl Function for MerkleRootStaticSize {
         fn rust_shadow(
@@ -200,10 +199,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
+    use super::*;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     fn bench_case(log2_length: u8) {
         let shadowed_function = MerkleRootStaticSize {

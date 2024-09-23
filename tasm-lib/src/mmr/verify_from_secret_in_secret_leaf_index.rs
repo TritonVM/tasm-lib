@@ -1,13 +1,12 @@
 use triton_vm::prelude::*;
 
+use super::leaf_index_to_mt_index_and_peak_index::MmrLeafIndexToMtIndexAndPeakIndex;
 use crate::arithmetic::u64::eq_u64::EqU64;
 use crate::data_type::DataType;
 use crate::hashing::merkle_step_u64_index::MerkleStepU64Index;
 use crate::library::Library;
 use crate::list::get::Get;
 use crate::traits::basic_snippet::BasicSnippet;
-
-use super::leaf_index_to_mt_index_and_peak_index::MmrLeafIndexToMtIndexAndPeakIndex;
 
 /// Verify that a digest is a leaf in the MMR accumulator. Takes both authentication path and
 /// leaf index from secret-in. Crashes the VM if the authentication fails.
@@ -107,10 +106,9 @@ impl BasicSnippet for MmrVerifyFromSecretInSecretLeafIndex {
 
 #[cfg(test)]
 mod benches {
+    use super::*;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn verify_from_secret_in_benchmark() {
@@ -133,6 +131,7 @@ mod tests {
     use triton_vm::twenty_first::util_types::mmr::mmr_trait::Mmr;
     use triton_vm::twenty_first::util_types::mmr::shared_basic::leaf_index_to_mt_index_and_peak_index;
 
+    use super::*;
     use crate::rust_shadowing_helper_functions;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::test_helpers::negative_test;
@@ -142,8 +141,6 @@ mod tests {
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
     use crate::VmHasher;
-
-    use super::*;
 
     #[test]
     fn prop() {

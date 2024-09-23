@@ -115,6 +115,7 @@ pub mod tests {
     use itertools::Itertools;
     use test_strategy::proptest;
 
+    use super::*;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::traits::procedure::Procedure;
     use crate::traits::procedure::ProcedureInitialState;
@@ -122,8 +123,6 @@ pub mod tests {
     use crate::traits::rust_shadow::RustShadow;
     use crate::verifier::claim::shared::insert_claim_into_static_memory;
     use crate::VmHasher;
-
-    use super::*;
 
     #[test]
     fn new_recursive_claim_small_params_pbt() {

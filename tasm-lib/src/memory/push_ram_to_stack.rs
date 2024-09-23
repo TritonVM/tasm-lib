@@ -117,11 +117,10 @@ impl PushRamToStack {
 mod tests {
     use num_traits::One;
 
+    use super::*;
     use crate::test_helpers::tasm_final_state;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn push_ram_to_stack_test() {
@@ -154,10 +153,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
+    use super::*;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn push_ram_to_stack_bench() {

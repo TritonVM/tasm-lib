@@ -4,10 +4,9 @@ use triton_vm::prelude::*;
 use twenty_first::error::BFieldCodecError;
 use twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
+use super::tasm_object::Result;
 use crate::data_type::DataType;
 use crate::prelude::TasmObject;
-
-use super::tasm_object::Result;
 
 impl<const N: usize, T: BFieldCodec + TasmObject> TasmObject for [T; N] {
     fn label_friendly_name() -> String {
@@ -766,9 +765,8 @@ mod tests {
 
     use rand::random;
 
-    use crate::memory::encode_to_memory;
-
     use super::*;
+    use crate::memory::encode_to_memory;
 
     fn decode_iter_prop<T: TasmObject + BFieldCodec + Eq + Debug>(obj_written: T) {
         let mut memory = HashMap::default();

@@ -2,13 +2,12 @@ use std::collections::HashMap;
 
 use triton_vm::prelude::*;
 
+use super::InputSource;
 use crate::data_type::DataType;
 use crate::empty_stack;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::procedure::Procedure;
 use crate::traits::procedure::ProcedureInitialState;
-
-use super::InputSource;
 
 /// Move an element of type `DataType` from standard-in or secret-in's token stream to the stack
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -89,10 +88,9 @@ impl Procedure for ReadInput {
 
 #[cfg(test)]
 mod test {
+    use super::*;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn test() {
@@ -113,10 +111,9 @@ mod test {
 
 #[cfg(test)]
 mod benches {
+    use super::*;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn bench_for_digest_reading() {

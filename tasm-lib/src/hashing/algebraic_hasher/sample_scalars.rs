@@ -87,6 +87,7 @@ mod test {
     use rand::prelude::*;
     use triton_vm::twenty_first::prelude::*;
 
+    use super::*;
     use crate::empty_stack;
     use crate::memory::dyn_malloc::DYN_MALLOC_FIRST_ADDRESS;
     use crate::memory::encode_to_memory;
@@ -99,8 +100,6 @@ mod test {
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
     use crate::VmHasher;
-
-    use super::*;
 
     impl Procedure for SampleScalars {
         fn rust_shadow(
@@ -254,10 +253,9 @@ mod test {
 
 #[cfg(test)]
 mod bench {
+    use super::*;
     use crate::traits::procedure::ShadowedProcedure;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn bench() {

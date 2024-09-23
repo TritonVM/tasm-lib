@@ -109,6 +109,7 @@ mod test {
     use triton_vm::twenty_first::math::polynomial::Polynomial;
     use triton_vm::twenty_first::xfe_vec;
 
+    use super::HornerEvaluationDynamicLength;
     use crate::memory::encode_to_memory;
     use crate::prelude::TasmObject;
     use crate::snippet_bencher::BenchmarkCase;
@@ -117,8 +118,6 @@ mod test {
     use crate::traits::function::FunctionInitialState;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::HornerEvaluationDynamicLength;
 
     impl HornerEvaluationDynamicLength {
         fn prepare_state(
@@ -208,10 +207,9 @@ mod test {
 
 #[cfg(test)]
 mod bench {
+    use super::HornerEvaluationDynamicLength;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::HornerEvaluationDynamicLength;
 
     #[test]
     fn bench() {

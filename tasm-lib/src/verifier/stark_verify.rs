@@ -2,6 +2,7 @@ use itertools::Itertools;
 use triton_vm::challenges::Challenges;
 use triton_vm::prelude::*;
 use triton_vm::proof_item::ProofItemVariant;
+use triton_vm::proof_stream::ProofStream;
 use triton_vm::table::master_table::MasterAuxTable;
 use triton_vm::table::master_table::MasterMainTable;
 use triton_vm::table::master_table::MasterTable;
@@ -10,6 +11,8 @@ use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 use triton_vm::twenty_first::prelude::AlgebraicHasher;
 use twenty_first::prelude::MerkleTreeInclusionProof;
 
+use super::master_table::air_constraint_evaluation::AirConstraintEvaluation;
+use super::master_table::air_constraint_evaluation::MemoryLayout;
 use crate::arithmetic::bfe::primitive_root_of_unity::PrimitiveRootOfUnity;
 use crate::array::horner_evaluation::HornerEvaluation;
 use crate::array::inner_product_of_three_rows_with_weights::InnerProductOfThreeRowsWithWeights;
@@ -34,10 +37,6 @@ use crate::verifier::out_of_domain_points::OodPoint;
 use crate::verifier::out_of_domain_points::OutOfDomainPoints;
 use crate::verifier::vm_proof_iter::dequeue_next_as::DequeueNextAs;
 use crate::verifier::vm_proof_iter::new::New;
-use triton_vm::proof_stream::ProofStream;
-
-use super::master_table::air_constraint_evaluation::AirConstraintEvaluation;
-use super::master_table::air_constraint_evaluation::MemoryLayout;
 
 /// Verify a STARK proof.
 ///
@@ -1220,7 +1219,9 @@ pub mod tests {
     use std::collections::HashMap;
 
     use derive_tasm_object::TasmObject;
+    use num_traits::ConstZero;
 
+    use super::*;
     use crate::execute_test;
     use crate::maybe_write_debuggable_program_to_disk;
     use crate::memory::encode_to_memory;
@@ -1228,9 +1229,6 @@ pub mod tests {
     use crate::test_helpers::maybe_write_tvm_output_to_disk;
     use crate::verifier::claim::shared::insert_claim_into_static_memory;
     use crate::verifier::master_table::air_constraint_evaluation::an_integral_but_profane_dynamic_memory_layout;
-    use num_traits::ConstZero;
-
-    use super::*;
 
     #[ignore = "Used for debugging when comparing two versions of the verifier"]
     #[test]
@@ -1610,7 +1608,9 @@ mod benches {
 
     use benches::tests::factorial_program_with_io;
     use benches::tests::prove_and_get_non_determinism_and_claim;
+    use num_traits::ConstZero;
 
+    use super::*;
     use crate::generate_full_profile;
     use crate::linker::execute_bench;
     use crate::linker::link_for_isolated_run;
@@ -1620,9 +1620,6 @@ mod benches {
     use crate::snippet_bencher::NamedBenchmarkResult;
     use crate::test_helpers::prepend_program_with_stack_setup;
     use crate::verifier::claim::shared::insert_claim_into_static_memory;
-    use num_traits::ConstZero;
-
-    use super::*;
 
     #[ignore = "Used for profiling the verification of a proof stored on disk."]
     #[test]

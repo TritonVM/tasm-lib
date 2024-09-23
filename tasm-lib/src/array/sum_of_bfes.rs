@@ -78,18 +78,17 @@ mod tests {
     use std::collections::HashMap;
 
     use num::Zero;
+    use num_traits::ConstZero;
     use rand::prelude::*;
     use triton_vm::twenty_first::math::b_field_element::BFieldElement;
 
+    use super::*;
     use crate::rust_shadowing_helper_functions::array::insert_random_array;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::traits::function::Function;
     use crate::traits::function::FunctionInitialState;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-    use num_traits::ConstZero;
-
-    use super::*;
 
     impl Function for SumOfBfes {
         fn rust_shadow(
@@ -161,10 +160,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
+    use super::*;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn sum_bfes_bench_100() {

@@ -520,6 +520,7 @@ mod test {
     use itertools::Itertools;
     use rand::prelude::*;
 
+    use super::*;
     use crate::structure::tasm_object::TasmObject;
     use crate::test_helpers::rust_final_state;
     use crate::test_helpers::tasm_final_state;
@@ -527,8 +528,6 @@ mod test {
     use crate::test_helpers::verify_stack_growth;
     use crate::traits::function::Function;
     use crate::traits::function::ShadowedFunction;
-
-    use super::*;
 
     #[test]
     fn test() {
@@ -590,10 +589,9 @@ mod test {
 
 #[cfg(test)]
 mod benches {
+    use super::*;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn xfe_ntt_benchmark() {

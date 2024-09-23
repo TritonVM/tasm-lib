@@ -196,9 +196,8 @@ impl DeprecatedSnippet for Commit {
 
 #[cfg(test)]
 mod tests {
-    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
-
     use super::Commit;
+    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     #[test]
     fn new_prop_test() {
@@ -208,9 +207,8 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use crate::snippet_bencher::bench_and_write;
-
     use super::*;
+    use crate::snippet_bencher::bench_and_write;
 
     #[test]
     fn commit_benchmark() {

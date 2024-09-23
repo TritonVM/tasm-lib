@@ -218,6 +218,7 @@ impl DeprecatedSnippet for LtU64PreserveArgs {
 mod tests {
     use rand::prelude::*;
 
+    use super::*;
     use crate::empty_stack;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::test_helpers::test_rust_equivalence_given_complete_state;
@@ -226,8 +227,6 @@ mod tests {
     use crate::traits::closure::Closure;
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     // FIXME: Use `rng.gen()` after this is released:
     // https://github.com/Neptune-Crypto/twenty-first/pull/80
@@ -455,11 +454,10 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
+    use super::*;
     use crate::snippet_bencher::bench_and_write;
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn lt_u64_benchmark_other() {

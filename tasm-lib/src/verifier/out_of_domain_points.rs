@@ -135,14 +135,13 @@ mod tests {
     use triton_vm::twenty_first::math::traits::ModPowU32;
     use triton_vm::twenty_first::math::traits::PrimitiveRootOfUnity;
 
+    use super::*;
     use crate::rust_shadowing_helper_functions::array::insert_as_array;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::traits::function::Function;
     use crate::traits::function::FunctionInitialState;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn ood_points_pbt() {
@@ -214,10 +213,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
+    use super::*;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn ood_points_pbt_bench() {

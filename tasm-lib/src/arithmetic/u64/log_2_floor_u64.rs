@@ -77,6 +77,7 @@ mod tests {
     use rand::RngCore;
     use rand::SeedableRng;
 
+    use super::*;
     use crate::empty_stack;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::test_helpers::negative_test;
@@ -85,8 +86,6 @@ mod tests {
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
     use crate::InitVmState;
-
-    use super::*;
 
     impl Log2FloorU64 {
         fn init_state(&self, x: u64) -> Vec<BFieldElement> {
@@ -275,10 +274,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
+    use super::*;
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn log_2_floor_u64_benchmark() {

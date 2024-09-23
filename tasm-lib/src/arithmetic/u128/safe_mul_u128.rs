@@ -456,9 +456,8 @@ fn prepare_state(a: u128, b: u128) -> InitVmState {
 mod tests {
     use rand::prelude::*;
 
-    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
-
     use super::*;
+    use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
 
     #[test]
     fn safe_mul_u128_test() {
@@ -681,9 +680,8 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use crate::snippet_bencher::bench_and_write;
-
     use super::*;
+    use crate::snippet_bencher::bench_and_write;
 
     #[test]
     fn safe_u128_benchmark() {

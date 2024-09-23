@@ -1,12 +1,11 @@
 use std::collections::HashMap;
 use std::error::Error;
 
+pub use derive_tasm_object::TasmObject;
 use itertools::Itertools;
 use num_traits::ConstZero;
 use num_traits::Zero;
 use triton_vm::prelude::*;
-
-pub use derive_tasm_object::TasmObject;
 
 use crate::library::Library;
 
@@ -214,6 +213,7 @@ mod test {
     use rand::prelude::*;
     use triton_vm::proof_item::FriResponse;
 
+    use super::*;
     use crate::data_type::DataType;
     use crate::empty_stack;
     use crate::execute_with_terminal_state;
@@ -223,8 +223,6 @@ mod test {
     use crate::memory::FIRST_NON_DETERMINISTICALLY_INITIALIZED_MEMORY_ADDRESS;
     use crate::structure::tasm_object::TasmObject;
     use crate::Digest;
-
-    use super::*;
 
     #[derive(Debug, Clone, PartialEq, Eq, BFieldCodec, TasmObject, Arbitrary)]
     struct InnerStruct(XFieldElement, u32);
@@ -281,9 +279,8 @@ mod test {
         use num_traits::ConstZero;
         use twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
-        use crate::maybe_write_debuggable_program_to_disk;
-
         use super::*;
+        use crate::maybe_write_debuggable_program_to_disk;
 
         #[test]
         fn load_and_decode_struct_with_named_fields_from_memory() {

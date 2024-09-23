@@ -4,9 +4,8 @@ use std::rc::Rc;
 
 use triton_vm::prelude::*;
 
-use crate::VmHasher;
-
 use super::basic_snippet::BasicSnippet;
+use crate::VmHasher;
 
 pub trait RustShadow {
     fn inner(&self) -> Rc<RefCell<dyn BasicSnippet>>;

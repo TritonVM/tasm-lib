@@ -6,6 +6,7 @@ use rand::prelude::*;
 use triton_vm::isa::parser::tokenize;
 use triton_vm::prelude::*;
 
+use super::inner_function::InnerFunction;
 use crate::data_type::DataType;
 use crate::empty_stack;
 use crate::library::Library;
@@ -20,8 +21,6 @@ use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::function::Function;
 use crate::traits::function::FunctionInitialState;
 use crate::InitVmState;
-
-use super::inner_function::InnerFunction;
 
 /// Runs a predicate over all elements of a list and returns true only if all elements satisfy the
 /// predicate.
@@ -244,6 +243,7 @@ mod tests {
     use num::One;
     use triton_vm::twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
+    use super::*;
     use crate::arithmetic;
     use crate::list::higher_order::inner_function::RawCode;
     use crate::test_helpers::test_rust_equivalence_given_complete_state;
@@ -251,8 +251,6 @@ mod tests {
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
     use crate::VmHasher;
-
-    use super::*;
 
     #[test]
     fn prop_test() {
@@ -519,10 +517,9 @@ mod tests {
 #[cfg(test)]
 mod benches {
     use self::tests::TestHashXFieldElementLsb;
+    use super::*;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
-
-    use super::*;
 
     #[test]
     fn all_benchmark() {

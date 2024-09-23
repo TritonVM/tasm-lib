@@ -5,6 +5,7 @@ use triton_vm::isa::parser::to_labelled_instructions;
 use triton_vm::isa::parser::tokenize;
 use triton_vm::prelude::*;
 
+use super::basic_snippet::BasicSnippet;
 use crate::data_type::DataType;
 use crate::execute_bench_deprecated;
 use crate::execute_test;
@@ -12,8 +13,6 @@ use crate::execute_with_terminal_state;
 use crate::library::Library;
 use crate::snippet_bencher::BenchmarkResult;
 use crate::InitVmState;
-
-use super::basic_snippet::BasicSnippet;
 
 pub trait DeprecatedSnippet {
     /// The name of a Snippet
@@ -248,12 +247,11 @@ pub(crate) mod tests {
 
     use itertools::Itertools;
 
+    use super::*;
     use crate::arithmetic;
     use crate::test_helpers::test_rust_equivalence_given_execution_state_deprecated;
     use crate::traits::rust_shadow::RustShadow;
     use crate::VmHasher;
-
-    use super::*;
 
     pub(crate) struct DeprecatedSnippetWrapper<S: DeprecatedSnippet> {
         pub(crate) deprecated_snippet: S,
