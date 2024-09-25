@@ -7,6 +7,7 @@ use rand::Rng;
 use rand::SeedableRng;
 use strum::EnumCount;
 use tasm_lib::list::higher_order::inner_function::InnerFunction;
+use tasm_lib::structure::tasm_object::DEFAULT_MAX_DYN_FIELD_SIZE;
 use triton_vm::isa;
 use triton_vm::isa::op_stack::OpStackElement;
 use triton_vm::isa::parser::tokenize;
@@ -305,8 +306,14 @@ impl<const NUM_INPUT_LISTS: usize> ChainMap<NUM_INPUT_LISTS> {
             call {push}
                         // _ fill i in_list_len *out_list *in_list[i]_si
 
-            /* advance item iterator */
+            /* check field size is reasonable */
             read_mem 1
+            push {DEFAULT_MAX_DYN_FIELD_SIZE}
+                        hint default_max_dyn_field_size: u32 = stack[0]
+            dup 2       // _ fill i in_list_len *out_list l[i]_len (*in_list[i]_si-1) max l[i]_len
+            lt assert   // _ fill i in_list_len *out_list l[i]_len (*in_list[i]_si-1)
+
+            /* advance item iterator */
             addi 2
             add
                         // _ fill i in_list_len *out_list *in_list[i+1]_si
