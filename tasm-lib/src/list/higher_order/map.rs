@@ -16,11 +16,13 @@ use triton_vm::prelude::*;
 use crate::data_type::DataType;
 use crate::library::Library;
 use crate::list::new::New;
+use crate::list::push::Push;
 use crate::prelude::BasicSnippet;
 use crate::rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator;
 use crate::rust_shadowing_helper_functions::list::insert_random_list;
 use crate::rust_shadowing_helper_functions::list::list_get;
 use crate::rust_shadowing_helper_functions::list::list_get_length;
+use crate::rust_shadowing_helper_functions::list::list_pointer_to_elem_pointer;
 use crate::rust_shadowing_helper_functions::list::list_set;
 use crate::rust_shadowing_helper_functions::list::list_set_length;
 use crate::snippet_bencher::BenchmarkCase;
@@ -39,21 +41,37 @@ const INNER_FN_INCORRECT_NUM_INPUTS: &str = "Inner function in `map` only works 
 /// extended documentation.
 pub type Map = ChainMap<1>;
 
-/// Applies a given function to every element of all given lists, collecting the
-/// new elements into a new list.
+/// Applies a given function `f` to every element of all given lists, collecting
+/// the new elements into a new list.
 ///
-/// The stack layout is independent of the concrete list currently being
-/// processed. This allows the [`InnerFunction`] to use runtime parameters
-/// from the stack. Note that the chain map requires a certain number of stack
-/// registers for internal purposes. This number can be accessed through
-/// [`ChainMap::NUM_INTERNAL_REGISTERS`]. The stack layout upon starting
-/// execution of the `InnerFunction` is:
+/// The given function `f` must produce elements of a type for which the encoded
+/// length is [statically known][len]. The input type may have either
+/// statically or dynamically known length:
+/// - In the static case, the entire element is placed on the stack before
+///     passing control to `f`.
+/// - In the dynamic case, a memory pointer to the encoded element is placed on
+///     the stack before passing control to `f`. The input list must be encoded
+///     according to [`BFieldCodec`]. Otherwise, behavior is undefined.
+///
+/// The stack layout is independent of the list currently being processed. This
+/// allows the [`InnerFunction`] `f` to use runtime parameters from the stack.
+/// Note that the chain map requires a certain number of stack registers for
+/// internal purposes. This number can be accessed through
+/// [`ChainMap::NUM_INTERNAL_REGISTERS`]. As mentioned above, the stack layout
+/// upon starting execution of `f` depends on the input type's
+/// [static length][len]. In the static case, the stack layout is:
 ///
 /// ```txt
-/// // _ <accessible> [_; ChainMap::<N>::NUM_INTERNAL_REGISTERS] [input_element]
+/// // _ <accessible> [_; ChainMap::<N>::NUM_INTERNAL_REGISTERS] [input_element; len]
 /// ```
 ///
-/// The special case of one input list is also accessible through [`Map`].
+/// In the case of input elements with a dynamic length, the stack layout is:
+///
+/// ```txt
+/// // _ <accessible> [_; ChainMap::<N>::NUM_INTERNAL_REGISTERS] *elem_i
+/// ```
+///
+/// [len]: BFieldCodec::static_length
 pub struct ChainMap<const NUM_INPUT_LISTS: usize> {
     f: InnerFunction,
 }
@@ -72,19 +90,17 @@ impl<const NUM_INPUT_LISTS: usize> ChainMap<NUM_INPUT_LISTS> {
 
     /// # Panics
     ///
-    /// - if the input type takes up [`OpStackElement::COUNT`] or more words
+    /// - if the input type has [static length] _and_ takes up
+    ///     [`OpStackElement::COUNT`] or more words
     /// - if the output type takes up [`OpStackElement::COUNT`]` - 1` or more words
-    /// - if the input type does not have a [static length][len]
     /// - if the output type does not have a [static length][len]
     ///
     /// [len]: BFieldCodec::static_length
     pub fn new(f: InnerFunction) -> Self {
-        // need instruction `place {input_type.stack_size()}`
-        let input_len = f
-            .domain()
-            .static_length()
-            .expect("input type's encoding length must be static");
-        assert!(input_len < OpStackElement::COUNT);
+        if let Some(input_len) = f.domain().static_length() {
+            // need instruction `place {input_type.stack_size()}`
+            assert!(input_len < OpStackElement::COUNT);
+        }
 
         // need instruction `pick {output_type.stack_size() + 1}`
         let output_len = f
@@ -123,40 +139,27 @@ impl<const NUM_INPUT_LISTS: usize> BasicSnippet for ChainMap<NUM_INPUT_LISTS> {
     }
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
+        if self.f.domain().static_length().is_some() {
+            self.code_for_static_len_input_type(library)
+        } else {
+            self.code_for_dyn_len_input_type(library)
+        }
+    }
+}
+
+struct DecomposedInnerFunction<'body> {
+    exec_or_call: Vec<LabelledInstruction>,
+    fn_body: Option<&'body [LabelledInstruction]>,
+}
+
+impl<const NUM_INPUT_LISTS: usize> ChainMap<NUM_INPUT_LISTS> {
+    fn code_for_static_len_input_type(&self, library: &mut Library) -> Vec<LabelledInstruction> {
         let input_type = self.f.domain();
         let output_type = self.f.range();
+        assert!(input_type.static_length().is_some());
+
         let new_list = library.import(Box::new(New::new(output_type.clone())));
-
-        let exec_or_call_inner_function = match &self.f {
-            InnerFunction::RawCode(code) => {
-                // Inlining saves two clock cycles per iteration. If the function cannot be
-                // inlined, it needs to be appended to the function body.
-                code.inlined_body()
-                    .unwrap_or(triton_asm!(call {code.entrypoint()}))
-            }
-            InnerFunction::DeprecatedSnippet(sn) => {
-                assert_eq!(1, sn.input_types().len(), "{INNER_FN_INCORRECT_NUM_INPUTS}");
-                let fn_body = sn.function_code(library);
-                let (_, instructions) = tokenize(&fn_body).unwrap();
-                let labelled_instructions = isa::parser::to_labelled_instructions(&instructions);
-                let label = library.explicit_import(&sn.entrypoint_name(), &labelled_instructions);
-                triton_asm!(call { label })
-            }
-            InnerFunction::BasicSnippet(snippet) => {
-                assert_eq!(1, snippet.inputs().len(), "{INNER_FN_INCORRECT_NUM_INPUTS}");
-                let labelled_instructions = snippet.annotated_code(library);
-                let label = library.explicit_import(&snippet.entrypoint(), &labelled_instructions);
-                triton_asm!(call { label })
-            }
-            InnerFunction::NoFunctionBody(lnat) => {
-                triton_asm!(call { lnat.label_name })
-            }
-        };
-
-        let maybe_inner_function_body = match &self.f {
-            InnerFunction::RawCode(code) if code.inlined_body().is_none() => &code.function,
-            _ => &vec![],
-        };
+        let inner_fn = self.decompose_inner_fn(library);
 
         let entrypoint = self.entrypoint();
         let main_loop_fn = format!("{entrypoint}_loop");
@@ -168,13 +171,6 @@ impl<const NUM_INPUT_LISTS: usize> BasicSnippet for ChainMap<NUM_INPUT_LISTS> {
         let adjust_output_list_pointer = match output_type.stack_size() {
             0 | 1 => triton_asm!(),
             n => triton_asm!(addi {-(n as i32 - 1)}),
-        };
-        let pop_input_lists = match NUM_INPUT_LISTS {
-            0 => triton_asm!(),
-            i @ 0..=5 => triton_asm!(pop { i }),
-            i @ 6..=10 => triton_asm!(pop 5 pop { i - 5 }),
-            i @ 11..=15 => triton_asm!(pop 5 pop 5 pop { i - 10 }),
-            _ => panic!("too many input lists"),
         };
 
         let main_loop_body = triton_asm! {
@@ -192,7 +188,7 @@ impl<const NUM_INPUT_LISTS: usize> BasicSnippet for ChainMap<NUM_INPUT_LISTS> {
                         // _ *end_condition_in_list *output_elem *prev_input_elem [input_elem]
 
             /* map */
-            {&exec_or_call_inner_function}
+            {&inner_fn.exec_or_call}
                         // _ *end_condition_in_list *output_elem *prev_input_elem [output_elem]
 
             /* write */
@@ -263,12 +259,181 @@ impl<const NUM_INPUT_LISTS: usize> BasicSnippet for ChainMap<NUM_INPUT_LISTS> {
                     hint chain_map_output_list: Pointer = stack[0]
                 {&map_all_lists}
                 place {NUM_INPUT_LISTS}
-                {&pop_input_lists}
+                {&Self::pop_input_lists()}
                 return
             {main_loop_fn}:
                 {&main_loop_body}
-            {&maybe_inner_function_body}
+            {&inner_fn.fn_body.unwrap_or_default()}
         }
+    }
+
+    fn code_for_dyn_len_input_type(&self, library: &mut Library) -> Vec<LabelledInstruction> {
+        let input_type = self.f.domain();
+        let output_type = self.f.range();
+        assert!(input_type.static_length().is_none());
+
+        let new_list = library.import(Box::new(New::new(output_type.clone())));
+        let push = library.import(Box::new(Push::new(output_type.clone())));
+        let inner_fn = self.decompose_inner_fn(library);
+
+        let entrypoint = self.entrypoint();
+        let main_loop_fn = format!("{entrypoint}_loop");
+
+        let main_loop_body = triton_asm! {
+            //                ⬐ for Self::NUM_INTERNAL_REGISTERS
+            // BEFORE:    _ fill 0           in_list_len *out_list *in_list[0]_si
+            // INVARIANT: _ fill i           in_list_len *out_list *in_list[i]_si
+            // AFTER:     _ fill in_list_len in_list_len *out_list garbage
+
+            /* maybe return */
+            dup 3
+            dup 3
+            eq
+            skiz return
+
+            /* place element pointer */
+            dup 0
+            addi 1      // _ fill i in_list_len *out_list *in_list[i]_si *in_list[i]
+
+            /* map */
+            {&inner_fn.exec_or_call}
+                        // _ fill i in_list_len *out_list *in_list[i]_si [out_elem]
+
+            /* write */
+            dup {output_type.stack_size() + 1}
+            place {output_type.stack_size()}
+            call {push}
+                        // _ fill i in_list_len *out_list *in_list[i]_si
+
+            /* advance item iterator */
+            read_mem 1
+            addi 2
+            add
+                        // _ fill i in_list_len *out_list *in_list[i+1]_si
+
+            /* advance i */
+            pick 3
+            addi 1
+            place 3
+                        // _ fill (i+i) in_list_len *out_list *in_list[i+1]_si
+
+            recurse
+        };
+
+        let map_one_list = triton_asm! {
+            // BEFORE: _ [fill; M]   [*in_list; N-M]   *out_list
+            // AFTER:  _ [fill; M+1] [*in_list; N-M-1] *out_list
+
+            /* read in_list length */
+            pick 1
+            read_mem 1  hint in_list_len = stack[1]
+            addi 2      // _ [_; M] [_; N-M-1] *out_list in_list_len *in_list[0]_si
+
+
+            /* setup for main loop */
+            pick 2
+            place 1
+            push 0      hint filler = stack[0]
+            place 3
+            push 0      hint index = stack[0]
+            place 3
+                        // _ [_; M] [_; N-M-1] fill 0 in_list_len *out_list *in_list[0]_si
+
+            call {main_loop_fn}
+
+            /* clean up */
+            pick 1
+            place 4
+            pop 3
+            place {NUM_INPUT_LISTS}
+                        // _ [_; M+1] [_; N-M-1] *out_list
+        };
+        let map_all_lists = vec![map_one_list; NUM_INPUT_LISTS].concat();
+
+        triton_asm! {
+            // BEFORE: _ [*in_list; N]
+            // AFTER:  _ *out_list
+            {entrypoint}:
+                call {new_list}
+                    hint chain_map_output_list: Pointer = stack[0]
+                {&map_all_lists}
+                place {NUM_INPUT_LISTS}
+                {&Self::pop_input_lists()}
+                return
+            {main_loop_fn}:
+                {&main_loop_body}
+            {&inner_fn.fn_body.unwrap_or_default()}
+        }
+    }
+
+    fn decompose_inner_fn(&self, library: &mut Library) -> DecomposedInnerFunction {
+        let exec_or_call = match &self.f {
+            InnerFunction::RawCode(code) => {
+                // Inlining saves two clock cycles per iteration. If the function cannot be
+                // inlined, it needs to be appended to the function body.
+                code.inlined_body()
+                    .unwrap_or(triton_asm!(call {code.entrypoint()}))
+            }
+            InnerFunction::DeprecatedSnippet(sn) => {
+                assert_eq!(1, sn.input_types().len(), "{INNER_FN_INCORRECT_NUM_INPUTS}");
+                let fn_body = sn.function_code(library);
+                let (_, instructions) = tokenize(&fn_body).unwrap();
+                let labelled_instructions = isa::parser::to_labelled_instructions(&instructions);
+                let label = library.explicit_import(&sn.entrypoint_name(), &labelled_instructions);
+                triton_asm!(call { label })
+            }
+            InnerFunction::BasicSnippet(snippet) => {
+                assert_eq!(1, snippet.inputs().len(), "{INNER_FN_INCORRECT_NUM_INPUTS}");
+                let labelled_instructions = snippet.annotated_code(library);
+                let label = library.explicit_import(&snippet.entrypoint(), &labelled_instructions);
+                triton_asm!(call { label })
+            }
+            InnerFunction::NoFunctionBody(lnat) => {
+                triton_asm!(call { lnat.label_name })
+            }
+        };
+
+        let fn_body = if let InnerFunction::RawCode(c) = &self.f {
+            c.inlined_body().is_none().then_some(c.function.as_slice())
+        } else {
+            None
+        };
+
+        DecomposedInnerFunction {
+            exec_or_call,
+            fn_body,
+        }
+    }
+
+    fn pop_input_lists() -> Vec<LabelledInstruction> {
+        match NUM_INPUT_LISTS {
+            0 => triton_asm!(),
+            i @ 1..=5 => triton_asm!(pop { i }),
+            i @ 6..=10 => triton_asm!(pop 5 pop { i - 5 }),
+            i @ 11..=15 => triton_asm!(pop 5 pop 5 pop { i - 10 }),
+            _ => unreachable!("see compile time checks for `NUM_INPUT_LISTS`"),
+        }
+    }
+
+    fn init_state(
+        &self,
+        environment_args: impl IntoIterator<Item = BFieldElement>,
+        list_lengths: [u16; NUM_INPUT_LISTS],
+    ) -> FunctionInitialState {
+        let input_type = self.f.domain();
+        let mut stack = self.init_stack_for_isolated_run();
+        let mut memory = HashMap::default();
+
+        stack.extend(environment_args);
+
+        for list_length in list_lengths {
+            let list_length = usize::from(list_length);
+            let list_pointer = dynamic_allocator(&mut memory);
+            insert_random_list(&input_type, list_pointer, list_length, &mut memory);
+            stack.push(list_pointer);
+        }
+
+        FunctionInitialState { stack, memory }
     }
 }
 
@@ -297,8 +462,14 @@ impl<const NUM_INPUT_LISTS: usize> Function for ChainMap<NUM_INPUT_LISTS> {
             let input_list_len = list_get_length(input_list_pointer, memory);
 
             for i in (0..input_list_len).rev() {
-                let elem = list_get(input_list_pointer, i, memory, input_type.stack_size());
-                stack.extend(elem.into_iter().rev());
+                if input_type.static_length().is_some() {
+                    let elem = list_get(input_list_pointer, i, memory, input_type.stack_size());
+                    stack.extend(elem.into_iter().rev());
+                } else {
+                    let pointer =
+                        list_pointer_to_elem_pointer(input_list_pointer, i, memory, &input_type);
+                    stack.push(pointer);
+                };
                 self.f.apply(stack, memory);
                 let elem = (0..output_type.stack_size())
                     .map(|_| stack.pop().unwrap())
@@ -333,29 +504,6 @@ impl<const NUM_INPUT_LISTS: usize> Function for ChainMap<NUM_INPUT_LISTS> {
         let list_lengths = list_lengths.map(Into::into);
 
         self.init_state(environment_args, list_lengths)
-    }
-}
-
-impl<const NUM_INPUT_LISTS: usize> ChainMap<NUM_INPUT_LISTS> {
-    fn init_state(
-        &self,
-        environment_args: impl IntoIterator<Item = BFieldElement>,
-        list_lengths: [u16; NUM_INPUT_LISTS],
-    ) -> FunctionInitialState {
-        let input_type = self.f.domain();
-        let mut stack = self.init_stack_for_isolated_run();
-        let mut memory = HashMap::default();
-
-        stack.extend(environment_args);
-
-        for list_length in list_lengths {
-            let list_length = usize::from(list_length);
-            let list_pointer = dynamic_allocator(&mut memory);
-            insert_random_list(&input_type, list_pointer, list_length, &mut memory);
-            stack.push(list_pointer);
-        }
-
-        FunctionInitialState { stack, memory }
     }
 }
 
@@ -632,9 +780,7 @@ mod tests {
     fn test_with_raw_function_square_on_xfe() {
         let f = || {
             InnerFunction::RawCode(RawCode::new(
-                triton_asm!(
-                    square_xfe: dup 2 dup 2 dup 2 xx_mul return
-                ),
+                triton_asm!(square_xfe: dup 2 dup 2 dup 2 xx_mul return),
                 DataType::Xfe,
                 DataType::Xfe,
             ))
@@ -646,9 +792,7 @@ mod tests {
     fn test_with_raw_function_xfe_to_digest() {
         let f = || {
             InnerFunction::RawCode(RawCode::new(
-                triton_asm!(
-                    xfe_to_digest: push 0 push 0 return
-                ),
+                triton_asm!(xfe_to_digest: push 0 push 0 return),
                 DataType::Xfe,
                 DataType::Digest,
             ))
@@ -660,9 +804,7 @@ mod tests {
     fn test_with_raw_function_digest_to_xfe() {
         let f = || {
             InnerFunction::RawCode(RawCode::new(
-                triton_asm!(
-                    xfe_to_digest: pop 2 return
-                ),
+                triton_asm!(xfe_to_digest: pop 2 return),
                 DataType::Digest,
                 DataType::Xfe,
             ))
@@ -771,14 +913,31 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "static")]
-    fn mapping_over_dynamic_length_items_causes_a_panic() {
-        let raw_code = InnerFunction::RawCode(RawCode::new(
-            triton_asm!(irrelevant_label: return),
-            DataType::List(Box::new(DataType::Bfe)),
-            DataType::Digest,
-        ));
-        let _map = Map::new(raw_code);
+    fn mapping_over_dynamic_length_items_works() {
+        let f = || {
+            InnerFunction::RawCode(RawCode::new(
+                triton_asm!(just_forty_twos: pop 1 push 42 return),
+                DataType::List(Box::new(DataType::Bfe)),
+                DataType::Bfe,
+            ))
+        };
+        assert!(f().domain().static_length().is_none());
+
+        test_chain_map_with_different_num_input_lists(f);
+    }
+
+    #[test]
+    fn mapping_over_list_of_lists_writing_their_lengths_works() {
+        let f = || {
+            InnerFunction::RawCode(RawCode::new(
+                triton_asm!(write_list_length: read_mem 1 pop 1 return),
+                DataType::List(Box::new(DataType::Bfe)),
+                DataType::Bfe,
+            ))
+        };
+        assert!(f().domain().static_length().is_none());
+
+        test_chain_map_with_different_num_input_lists(f);
     }
 }
 
@@ -793,6 +952,6 @@ mod benches {
     #[test]
     fn map_benchmark() {
         let f = InnerFunction::DeprecatedSnippet(Box::new(TestHashXFieldElement));
-        ShadowedFunction::new(Map { f }).bench();
+        ShadowedFunction::new(Map::new(f)).bench();
     }
 }
