@@ -953,12 +953,23 @@ mod benches {
     use super::tests::TestHashXFieldElement;
     use super::*;
     use crate::list::higher_order::inner_function::InnerFunction;
+    use crate::list::higher_order::inner_function::RawCode;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
 
     #[test]
     fn map_benchmark() {
         let f = InnerFunction::DeprecatedSnippet(Box::new(TestHashXFieldElement));
+        ShadowedFunction::new(Map::new(f)).bench();
+    }
+
+    #[test]
+    fn map_with_dyn_items_benchmark() {
+        let f = InnerFunction::RawCode(RawCode::new(
+            triton_asm!(dyn_length_elements: pop 1 push 42 return),
+            DataType::List(Box::new(DataType::Bfe)),
+            DataType::Bfe,
+        ));
         ShadowedFunction::new(Map::new(f)).bench();
     }
 }
