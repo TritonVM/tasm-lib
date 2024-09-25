@@ -178,14 +178,14 @@ impl DataType {
         crate::io::write_words(self.stack_size())
     }
 
-    /// Return the code that compares two elements of this type.
+    /// Return the code that compares two elements of this stack-size.
     ///
     /// ```text
     /// BEFORE: _ [self] [other]
     /// AFTER: _ (self == other)
     /// ```
-    pub fn compare(&self) -> Vec<LabelledInstruction> {
-        match self.stack_size() {
+    pub fn compare_elem_of_stack_size(stack_size: usize) -> Vec<LabelledInstruction> {
+        match stack_size {
             0 => triton_asm!(push 1),
             1 => triton_asm!(eq),
             n => {
@@ -202,6 +202,16 @@ impl DataType {
                 [first_cmps, last_cmp, boolean_ands].concat()
             }
         }
+    }
+
+    /// Return the code that compares two elements of this type.
+    ///
+    /// ```text
+    /// BEFORE: _ [self] [other]
+    /// AFTER: _ (self == other)
+    /// ```
+    pub fn compare(&self) -> Vec<LabelledInstruction> {
+        DataType::compare_elem_of_stack_size(self.stack_size())
     }
 
     /// Return a string matching how the variant looks in source code
