@@ -141,7 +141,7 @@ pub fn list_pop(
     (0..element_length).map(read_word).collect()
 }
 
-/// A pointer to the `i`th element in the list.
+/// A pointer to the `i`th element in the list, as well as the size of that element.
 ///
 /// # Panics
 ///
@@ -151,19 +151,21 @@ pub fn list_pointer_to_elem_pointer(
     i: usize,
     memory: &HashMap<BFieldElement, BFieldElement>,
     element_type: &DataType,
-) -> BFieldElement {
+) -> (usize, BFieldElement) {
     let list_len = list_get_length(list_pointer, memory);
     assert!(i < list_len, "Index {i} out of bounds for len {list_len}.");
 
-    if let Some(element_len) = element_type.static_length() {
-        return list_pointer + bfe!((LIST_METADATA_SIZE + i * element_len) as u64);
+    if let Some(element_size) = element_type.static_length() {
+        let elem_ptr = list_pointer + bfe!((LIST_METADATA_SIZE + i * element_size) as u64);
+        return (element_size, elem_ptr);
     }
 
     let mut elem_pointer = list_pointer + bfe!(LIST_METADATA_SIZE as u64);
     for _ in 0..i {
         elem_pointer += memory[&elem_pointer] + BFieldElement::ONE;
     }
-    elem_pointer + BFieldElement::ONE
+    let elem_size = usize::try_from(memory[&elem_pointer].value()).unwrap();
+    (elem_size, elem_pointer + BFieldElement::ONE)
 }
 
 /// Read an element from a list.
@@ -219,6 +221,10 @@ pub fn list_set_length(
 
 #[cfg(test)]
 mod tests {
+    use proptest::prop_assert_eq;
+    use proptest_arbitrary_interop::arb;
+    use test_strategy::proptest;
+
     use super::*;
 
     #[test]
@@ -232,15 +238,13 @@ mod tests {
         assert_eq!(new_length, list_get_length(list_pointer, &memory));
     }
 
-    #[test]
-    fn element_pointer_from_list_pointer_on_static_list_with_static_length_items() {
-        let digest_0 = Digest::new(bfe_array![25, 26, 27, 28, 29]);
-        let digest_1 = Digest::new(bfe_array![35, 36, 37, 38, 39]);
-        let digest_2 = Digest::new(bfe_array![45, 46, 47, 48, 49]);
-        let list = vec![digest_0, digest_1, digest_2].encode();
-
-        let list_pointer = bfe!(42);
+    #[proptest]
+    fn element_pointer_from_list_pointer_on_static_list_with_static_length_items(
+        #[strategy(arb())] list: Vec<Digest>,
+        #[strategy(arb())] list_pointer: BFieldElement,
+    ) {
         let indexed_list = list
+            .encode()
             .into_iter()
             .enumerate()
             .map(|(i, v)| (list_pointer + bfe!(i as u64), v));
@@ -249,24 +253,21 @@ mod tests {
         memory.extend(indexed_list);
 
         let data_type = DataType::Digest;
-        let elem_0_pointer = list_pointer_to_elem_pointer(list_pointer, 0, &memory, &data_type);
-        let elem_1_pointer = list_pointer_to_elem_pointer(list_pointer, 1, &memory, &data_type);
-        let elem_2_pointer = list_pointer_to_elem_pointer(list_pointer, 2, &memory, &data_type);
-
-        assert_eq!(digest_0.values()[0], memory[&elem_0_pointer]);
-        assert_eq!(digest_1.values()[0], memory[&elem_1_pointer]);
-        assert_eq!(digest_2.values()[0], memory[&elem_2_pointer]);
+        for (i, digest) in list.into_iter().enumerate() {
+            dbg!(i);
+            let (len, ptr) = list_pointer_to_elem_pointer(list_pointer, i, &memory, &data_type);
+            prop_assert_eq!(Digest::LEN, len);
+            prop_assert_eq!(digest.values()[0], memory[&ptr]);
+        }
     }
 
-    #[test]
-    fn element_pointer_from_list_pointer_on_static_list_with_dyn_length_items() {
-        let elem_0 = bfe_vec![25, 26, 27, 28];
-        let elem_1 = bfe_vec![35, 36, 37, 38, 39, 40];
-        let elem_2 = bfe_vec![45, 46];
-        let list = vec![elem_0.clone(), elem_1.clone(), elem_2.clone()].encode();
-
-        let list_pointer = bfe!(42);
+    #[proptest]
+    fn element_pointer_from_list_pointer_on_static_list_with_dyn_length_items(
+        #[strategy(arb())] list: Vec<Vec<BFieldElement>>,
+        #[strategy(arb())] list_pointer: BFieldElement,
+    ) {
         let indexed_list = list
+            .encode()
             .into_iter()
             .enumerate()
             .map(|(i, v)| (list_pointer + bfe!(i as u64), v));
@@ -275,12 +276,11 @@ mod tests {
         memory.extend(indexed_list);
 
         let data_type = DataType::List(Box::new(DataType::Bfe));
-        let elem_0_pointer = list_pointer_to_elem_pointer(list_pointer, 0, &memory, &data_type);
-        let elem_1_pointer = list_pointer_to_elem_pointer(list_pointer, 1, &memory, &data_type);
-        let elem_2_pointer = list_pointer_to_elem_pointer(list_pointer, 2, &memory, &data_type);
-
-        assert_eq!(bfe!(elem_0.len() as u64), memory[&elem_0_pointer]);
-        assert_eq!(bfe!(elem_1.len() as u64), memory[&elem_1_pointer]);
-        assert_eq!(bfe!(elem_2.len() as u64), memory[&elem_2_pointer]);
+        for (i, inner_list) in list.into_iter().enumerate() {
+            dbg!(i);
+            let (len, ptr) = list_pointer_to_elem_pointer(list_pointer, i, &memory, &data_type);
+            prop_assert_eq!(inner_list.encode().len(), len);
+            prop_assert_eq!(bfe!(inner_list.len() as u64), memory[&ptr]);
+        }
     }
 }

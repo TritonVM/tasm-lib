@@ -50,9 +50,10 @@ pub type Map = ChainMap<1>;
 /// statically or dynamically known length:
 /// - In the static case, the entire element is placed on the stack before
 ///     passing control to `f`.
-/// - In the dynamic case, a memory pointer to the encoded element is placed on
-///     the stack before passing control to `f`. The input list must be encoded
-///     according to [`BFieldCodec`]. Otherwise, behavior is undefined.
+/// - In the dynamic case, a memory pointer to the encoded element and the
+///     item's length is placed on the stack before passing control to `f`. The
+///     input list **must** be encoded according to [`BFieldCodec`]. Otherwise,
+///     behavior of `ChainMap` is undefined!
 ///
 /// The stack layout is independent of the list currently being processed. This
 /// allows the [`InnerFunction`] `f` to use runtime parameters from the stack.
@@ -69,7 +70,7 @@ pub type Map = ChainMap<1>;
 /// In the case of input elements with a dynamic length, the stack layout is:
 ///
 /// ```txt
-/// // _ <accessible> [_; ChainMap::<N>::NUM_INTERNAL_REGISTERS] *elem_i
+/// // _ <accessible> [_; ChainMap::<N>::NUM_INTERNAL_REGISTERS] *elem_i elem_i_len
 /// ```
 ///
 /// [len]: BFieldCodec::static_length
@@ -292,9 +293,25 @@ impl<const NUM_INPUT_LISTS: usize> ChainMap<NUM_INPUT_LISTS> {
             eq
             skiz return
 
-            /* place element pointer */
-            dup 0
-            addi 1      // _ fill i in_list_len *out_list *in_list[i]_si *in_list[i]
+            /* read field size */
+            read_mem 1  hint item_len = stack[0]
+            addi 2      // _ fill i in_list_len *out_list elem_len *in_list[i]
+
+            /* check field size is reasonable */
+            push {DEFAULT_MAX_DYN_FIELD_SIZE}
+                        hint default_max_dyn_field_size = stack[0]
+            dup 2       // _ fill i in_list_len *out_list l[i]_len *in_list[i] max l[i]_len
+            lt
+            assert      // _ fill i in_list_len *out_list l[i]_len *in_list[i]
+
+            /* advance item iterator */
+            dup 1
+            dup 1
+            add
+            place 2
+
+            /* prepare for inner function */
+            place 1     // _ fill i in_list_len *out_list *in_list[i+1]_si *in_list[i] l[i]_len
 
             /* map */
             {&inner_fn.exec_or_call}
@@ -305,18 +322,6 @@ impl<const NUM_INPUT_LISTS: usize> ChainMap<NUM_INPUT_LISTS> {
             place {output_type.stack_size()}
             call {push}
                         // _ fill i in_list_len *out_list *in_list[i]_si
-
-            /* check field size is reasonable */
-            read_mem 1
-            push {DEFAULT_MAX_DYN_FIELD_SIZE}
-                        hint default_max_dyn_field_size: u32 = stack[0]
-            dup 2       // _ fill i in_list_len *out_list l[i]_len (*in_list[i]_si-1) max l[i]_len
-            lt assert   // _ fill i in_list_len *out_list l[i]_len (*in_list[i]_si-1)
-
-            /* advance item iterator */
-            addi 2
-            add
-                        // _ fill i in_list_len *out_list *in_list[i+1]_si
 
             /* advance i */
             pick 3
@@ -473,9 +478,10 @@ impl<const NUM_INPUT_LISTS: usize> Function for ChainMap<NUM_INPUT_LISTS> {
                     let elem = list_get(input_list_pointer, i, memory, input_type.stack_size());
                     stack.extend(elem.into_iter().rev());
                 } else {
-                    let pointer =
+                    let (len, ptr) =
                         list_pointer_to_elem_pointer(input_list_pointer, i, memory, &input_type);
-                    stack.push(pointer);
+                    stack.push(ptr);
+                    stack.push(bfe!(len as u64));
                 };
                 self.f.apply(stack, memory);
                 let elem = (0..output_type.stack_size())
@@ -923,7 +929,7 @@ mod tests {
     fn mapping_over_dynamic_length_items_works() {
         let f = || {
             InnerFunction::RawCode(RawCode::new(
-                triton_asm!(just_forty_twos: pop 1 push 42 return),
+                triton_asm!(just_forty_twos: pop 2 push 42 return),
                 DataType::List(Box::new(DataType::Bfe)),
                 DataType::Bfe,
             ))
@@ -937,7 +943,7 @@ mod tests {
     fn mapping_over_list_of_lists_writing_their_lengths_works() {
         let f = || {
             InnerFunction::RawCode(RawCode::new(
-                triton_asm!(write_list_length: read_mem 1 pop 1 return),
+                triton_asm!(write_list_length: pop 1 read_mem 1 pop 1 return),
                 DataType::List(Box::new(DataType::Bfe)),
                 DataType::Bfe,
             ))
@@ -966,7 +972,7 @@ mod benches {
     #[test]
     fn map_with_dyn_items_benchmark() {
         let f = InnerFunction::RawCode(RawCode::new(
-            triton_asm!(dyn_length_elements: pop 1 push 42 return),
+            triton_asm!(dyn_length_elements: pop 2 push 42 return),
             DataType::List(Box::new(DataType::Bfe)),
             DataType::Bfe,
         ));
