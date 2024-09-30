@@ -10,7 +10,7 @@ license = "Apache-2.0"
 
 [dev-dependencies]
 color-eyre = "0.6"
-proptest = "1.4"
+proptest = "1.5"
 proptest-arbitrary-interop = "0.1"
 test-strategy = "0.3"
 rayon = "1"
@@ -29,7 +29,7 @@ rand = "0.8.5"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 strum = { version = "0.26", features = ["derive"] }
-triton-vm = { version = "0.42.0", default-features = false }
+triton-vm = { version = "0.42.1", default-features = false }
 
 [dev-dependencies.cargo-husky]
 version = "1"
