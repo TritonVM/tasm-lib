@@ -105,18 +105,12 @@ where
     }
 
     fn test(&self) {
-        for (i, corner_case) in self
+        for corner_case in self
             .read_only_algorithm
             .borrow()
             .corner_case_initial_states()
             .into_iter()
-            .enumerate()
         {
-            println!(
-                "testing {} corner case number {i}",
-                self.read_only_algorithm.borrow().entrypoint(),
-            );
-
             let stdin = vec![];
             test_rust_equivalence_given_complete_state(
                 self,
@@ -133,11 +127,6 @@ where
         let mut rng: StdRng = SeedableRng::from_seed(seed);
         for _ in 0..num_states {
             let seed: [u8; 32] = rng.gen();
-            println!(
-                "testing {} common case with seed: {:#4x?}",
-                self.read_only_algorithm.borrow().entrypoint(),
-                seed
-            );
             let ReadOnlyAlgorithmInitialState {
                 stack,
                 nondeterminism,

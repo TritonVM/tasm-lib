@@ -90,11 +90,6 @@ impl<C: Closure + 'static> RustShadow for ShadowedClosure<C> {
 
         for _ in 0..num_states {
             let seed: [u8; 32] = rng.gen();
-            println!(
-                "testing {} common case with seed: {:x?}",
-                self.closure.borrow().entrypoint(),
-                seed
-            );
             let stack = self.closure.borrow().pseudorandom_initial_state(seed, None);
 
             let stdin = vec![];

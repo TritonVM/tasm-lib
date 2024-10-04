@@ -124,15 +124,12 @@ where
 
     /// Test rust-tasm equivalence.
     fn test(&self) {
-        let entrypoint = self.function.borrow().entrypoint();
-        for (i, cornercase_test) in self
+        for cornercase_test in self
             .function
             .borrow()
             .corner_case_initial_states()
             .into_iter()
-            .enumerate()
         {
-            println!("testing {entrypoint} corner case number {i}");
             self.test_initial_state(cornercase_test);
         }
 
@@ -141,7 +138,6 @@ where
 
         for _ in 0..num_rng_states {
             let seed: [u8; 32] = rng.gen();
-            println!("testing {entrypoint} with seed: {:#03x?}", seed);
             self.test_initial_state(
                 self.function
                     .borrow()

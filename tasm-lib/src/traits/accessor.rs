@@ -99,18 +99,12 @@ where
     }
 
     fn test(&self) {
-        for (i, corner_case) in self
+        for corner_case in self
             .accessor
             .borrow()
             .corner_case_initial_states()
             .into_iter()
-            .enumerate()
         {
-            println!(
-                "testing {} corner case number {i}",
-                self.accessor.borrow().entrypoint(),
-            );
-
             let stdin = vec![];
             let nd = NonDeterminism::default().with_ram(corner_case.memory);
             test_rust_equivalence_given_complete_state(
@@ -128,11 +122,6 @@ where
         let mut rng: StdRng = SeedableRng::from_seed(seed);
         for _ in 0..num_states {
             let seed: [u8; 32] = rng.gen();
-            println!(
-                "testing {} common case with seed: {:#4x?}",
-                self.accessor.borrow().entrypoint(),
-                seed
-            );
             let AccessorInitialState { stack, memory } = self
                 .accessor
                 .borrow()

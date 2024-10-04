@@ -2,7 +2,6 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use itertools::Itertools;
 use rand::prelude::*;
 use triton_vm::prelude::*;
 
@@ -117,23 +116,13 @@ impl<P: Procedure + 'static> RustShadow for ShadowedProcedure<P> {
         let seed: [u8; 32] = thread_rng().gen();
         let mut rng: StdRng = SeedableRng::from_seed(seed);
         let procedure = &self.procedure.borrow();
-        let entrypoint = procedure.entrypoint();
 
-        for (i, corner_case) in procedure
-            .corner_case_initial_states()
-            .into_iter()
-            .enumerate()
-        {
-            println!("testing {entrypoint} corner case number {i}");
+        for corner_case in procedure.corner_case_initial_states().into_iter() {
             self.test_initial_state(corner_case);
         }
 
         for _ in 0..num_states {
             let seed: [u8; 32] = rng.gen();
-            println!(
-                "testing {entrypoint} common case with seed: [{}]",
-                seed.iter().map(|h| format!("{:#04x}", h)).join(", ")
-            );
             let state = procedure.pseudorandom_initial_state(seed, None);
 
             self.test_initial_state(state);
