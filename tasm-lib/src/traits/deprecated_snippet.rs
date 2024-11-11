@@ -109,7 +109,7 @@ pub trait DeprecatedSnippet {
         let code = self.link_for_isolated_run();
         let program = Program::new(&code);
         let tvm_result =
-            execute_with_terminal_state(&program, &std_in, stack, &nondeterminism, None);
+            execute_with_terminal_state(program, &std_in, stack, &nondeterminism, None);
 
         let final_state = tvm_result?;
 

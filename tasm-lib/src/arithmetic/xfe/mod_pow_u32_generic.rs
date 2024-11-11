@@ -226,7 +226,6 @@ mod tests {
         let xfe_14 = XFieldElement::new([bfe_14, bfe_14, bfe_14]);
         let xfe_14: Vec<_> = xfe_14.coefficients.into_iter().rev().collect();
         let code = link_for_isolated_run(Rc::new(RefCell::new(XfeModPowU32Generic)));
-        let program = Program::new(&code);
 
         for exponent in [
             1u64 << 32,
@@ -243,7 +242,7 @@ mod tests {
             ]
             .concat();
             let tvm_result = execute_with_terminal_state(
-                &program,
+                Program::new(&code),
                 &[],
                 &init_stack,
                 &NonDeterminism::default(),

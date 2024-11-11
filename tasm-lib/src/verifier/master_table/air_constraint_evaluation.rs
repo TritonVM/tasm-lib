@@ -370,13 +370,8 @@ mod tests {
         let program = triton_program!(halt);
         let claim = Claim::about_program(&program);
 
-        let proof = triton_vm::prove(
-            Stark::default(),
-            &claim,
-            &program,
-            NonDeterminism::default(),
-        )
-        .unwrap();
+        let proof =
+            triton_vm::prove(Stark::default(), &claim, program, NonDeterminism::default()).unwrap();
 
         const PROOF_ADDRESS: BFieldElement = BFieldElement::ZERO;
         let mut memory = HashMap::<BFieldElement, BFieldElement>::new();

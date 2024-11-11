@@ -189,11 +189,7 @@ mod tests {
                 stack.pop().unwrap(),
             ]);
 
-            let claim = Claim {
-                program_digest,
-                input: vec![],
-                output: vec![],
-            };
+            let claim = Claim::new(program_digest);
             let challenges = sponge.sample_scalars(self.num_of_fiat_shamir_challenges);
             let challenges = Challenges::new(challenges, &claim);
             println!(

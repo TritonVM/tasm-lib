@@ -169,6 +169,8 @@ mod tests {
     }
 
     mod simple_struct {
+        use triton_vm::isa::error::AssertionError;
+
         use super::*;
         use crate::test_helpers::negative_test;
 
@@ -239,10 +241,12 @@ mod tests {
             init_state
                 .memory
                 .insert(begin_address, true_value + bfe!(1));
+
+            let assertion_failure = InstructionError::AssertionFailed(AssertionError::new(1, 0));
             negative_test(
                 &ShadowedAccessor::new(snippet),
                 init_state.into(),
-                &[InstructionError::AssertionFailed],
+                &[assertion_failure],
             )
         }
 
@@ -260,20 +264,20 @@ mod tests {
             init_state
                 .memory
                 .insert(vec_digest_len_indicator, true_value + bfe!(1));
+
+            let assertion_failure = InstructionError::AssertionFailed(AssertionError::new(1, 0));
             negative_test(
                 &ShadowedAccessor::new(snippet),
                 init_state.into(),
-                &[InstructionError::AssertionFailed],
+                &[assertion_failure],
             )
         }
     }
 
     mod option_types {
-        use rand::thread_rng;
-        use rand::RngCore;
-
         use super::*;
         use crate::test_helpers::negative_test;
+        use triton_vm::isa::error::AssertionError;
 
         #[derive(Debug, Clone, TasmObject, BFieldCodec, Arbitrary)]
         struct StatSizedPayload {
@@ -311,22 +315,23 @@ mod tests {
             };
 
             let begin_address = bfe!(4);
-            let mut randomness = [0u8; 100_000];
-            thread_rng().fill_bytes(&mut randomness);
+            let randomness = rand::random::<[u8; 100_000]>();
             let obj = snippet.prepare_random_object(&randomness);
             let true_init_state = snippet.initial_state(begin_address, obj.clone());
 
             /*  Lie about size of field 'd'*/
             let mut manipulated_si_outer = true_init_state.clone();
-            let outer_option_payload_si_ptr = begin_address; // The field size-indicator of `d` field
+            let outer_option_payload_si_ptr = begin_address; // field size-indicator of `d` field
             let true_value = true_init_state.memory[&outer_option_payload_si_ptr];
             manipulated_si_outer
                 .memory
                 .insert(outer_option_payload_si_ptr, true_value + bfe!(1));
+
+            let assertion_failure = InstructionError::AssertionFailed(AssertionError::new(1, 0));
             negative_test(
                 &ShadowedAccessor::new(snippet),
                 manipulated_si_outer.into(),
-                &[InstructionError::AssertionFailed],
+                &[assertion_failure],
             );
         }
 
@@ -343,10 +348,12 @@ mod tests {
             manipulated_init_state
                 .memory
                 .insert(option_discriminant_ptr, bfe!(2));
+
+            let assertion_failure = InstructionError::AssertionFailed(AssertionError::new(1, 0));
             negative_test(
                 &ShadowedAccessor::new(snippet.clone()),
                 manipulated_init_state.into(),
-                &[InstructionError::AssertionFailed],
+                &[assertion_failure],
             );
         }
 
@@ -370,20 +377,23 @@ mod tests {
             add_one
                 .memory
                 .insert(len_of_dyn_sized_list_elem_0, true_value + bfe!(1));
+
+            let assertion_failure = [InstructionError::AssertionFailed(AssertionError::new(1, 0))];
             negative_test(
                 &ShadowedAccessor::new(snippet.clone()),
                 add_one.into(),
-                &[InstructionError::AssertionFailed],
+                &assertion_failure,
             );
 
             let mut sub_one = true_init_state.clone();
             sub_one
                 .memory
                 .insert(len_of_dyn_sized_list_elem_0, true_value - bfe!(1));
+
             negative_test(
                 &ShadowedAccessor::new(snippet),
                 sub_one.into(),
-                &[InstructionError::AssertionFailed],
+                &assertion_failure,
             );
         }
     }

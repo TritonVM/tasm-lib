@@ -512,7 +512,7 @@ mod tests {
         );
 
         let mut vm_state = VMState::new(
-            &Program::new(&code),
+            Program::new(&code),
             PublicInput::default(),
             NonDeterminism::default(),
         );

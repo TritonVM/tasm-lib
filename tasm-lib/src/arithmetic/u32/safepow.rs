@@ -197,6 +197,7 @@ mod tests {
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
     use crate::InitVmState;
+    use triton_vm::isa::error::AssertionError;
 
     #[test]
     fn u32_pow_pbt() {
@@ -236,19 +237,8 @@ mod tests {
             (1, u32::MAX - 3),
             (0, u32::MAX - 3),
         ] {
-            let init_stack = [
-                empty_stack(),
-                vec![
-                    BFieldElement::new(base as u64),
-                    BFieldElement::new(exp as u64),
-                ],
-            ]
-            .concat();
-            let expected_final_stack = [
-                empty_stack(),
-                vec![BFieldElement::new(base.pow(exp) as u64)],
-            ]
-            .concat();
+            let init_stack = [empty_stack(), bfe_vec![base, exp,]].concat();
+            let expected_final_stack = [empty_stack(), bfe_vec![base.pow(exp)]].concat();
             let _vm_output_state = test_rust_equivalence_given_complete_state(
                 &closure,
                 &init_stack,
@@ -296,19 +286,14 @@ mod tests {
             (1 << 8, 16),
             (1 << 8, 32),
         ] {
-            let init_stack = [
-                safe_pow.init_stack_for_isolated_run(),
-                vec![
-                    BFieldElement::new(base as u64),
-                    BFieldElement::new(exp as u64),
-                ],
-            ]
-            .concat();
+            let init_stack =
+                [safe_pow.init_stack_for_isolated_run(), bfe_vec![base, exp,]].concat();
 
+            let assertion_failure = InstructionError::AssertionFailed(AssertionError::new(1, 0));
             negative_test(
                 &ShadowedClosure::new(safe_pow),
                 InitVmState::with_stack(init_stack),
-                &[InstructionError::AssertionFailed],
+                &[assertion_failure],
             );
         }
     }

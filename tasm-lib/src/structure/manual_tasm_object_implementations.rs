@@ -587,7 +587,7 @@ impl<T: TasmObject + BFieldCodec, S: TasmObject + BFieldCodec> TasmObject for (T
     }
 }
 
-impl TasmObject for Polynomial<XFieldElement> {
+impl TasmObject for Polynomial<'_, XFieldElement> {
     fn label_friendly_name() -> String {
         "polynomial_xfe".to_owned()
     }

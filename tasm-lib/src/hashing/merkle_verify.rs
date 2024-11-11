@@ -118,7 +118,10 @@ mod tests {
     use std::collections::VecDeque;
 
     use itertools::Itertools;
+    use proptest_arbitrary_interop::arb;
     use rand::prelude::*;
+    use test_strategy::proptest;
+    use triton_vm::isa::error::AssertionError;
     use triton_vm::twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
     use super::*;
@@ -135,62 +138,31 @@ mod tests {
         ShadowedReadOnlyAlgorithm::new(MerkleVerify).test()
     }
 
-    #[test]
-    fn merkle_verify_negative_test() {
-        let seed: [u8; 32] = thread_rng().gen();
-        for i in 0..=4 {
-            let mut init_state = MerkleVerify.pseudorandom_initial_state(seed, None);
-            let len = init_state.stack.len();
-            let height: usize = len - 7;
-            let leaf: usize = len - 1;
-            let leaf_index: usize = len - 6;
-            let root: usize = len - 8;
+    #[proptest]
+    fn merkle_tree_verification_fails_if_setup_stack_is_disturbed_slightly(
+        seed: [u8; 32],
+        #[strategy(0_usize..=11)] perturbation_index: usize,
+        #[filter(#perturbation != 0)] perturbation: i8,
+        #[strategy(arb())] additional_bogus_tree_nodes: [Digest; 32],
+    ) {
+        let mut initial_state = MerkleVerify.pseudorandom_initial_state(seed, None);
+        let top_of_stack = initial_state.stack.len() - 1;
+        initial_state.stack[top_of_stack - perturbation_index] += bfe!(perturbation);
 
-            // BEFORE: _ [root; 5] tree_height leaf_index [leaf; 5]
-            let allowed_error_codes = match i {
-                0 => {
-                    println!("now testing: too high height");
-                    init_state.nondeterminism.digests.push(random());
-                    init_state.stack[height].increment();
-                    vec![
-                        InstructionError::VectorAssertionFailed(0),
-                        InstructionError::AssertionFailed,
-                    ]
-                }
-                1 => {
-                    println!("now testing: too small height");
-                    init_state.nondeterminism.digests.push(random());
-                    init_state.stack[height].decrement();
-                    vec![
-                        InstructionError::VectorAssertionFailed(0),
-                        InstructionError::AssertionFailed,
-                    ]
-                }
-                2 => {
-                    println!("now testing: corrupt leaf");
-                    init_state.stack[leaf].increment();
-                    vec![InstructionError::VectorAssertionFailed(0)]
-                }
-                3 => {
-                    println!("now testing: wrong leaf index");
-                    init_state.stack[leaf_index] =
-                        BFieldElement::new(init_state.stack[leaf_index].value() ^ 1);
-                    vec![InstructionError::VectorAssertionFailed(0)]
-                }
-                4 => {
-                    println!("now testing: corrupt root");
-                    init_state.stack[root].increment();
-                    vec![InstructionError::VectorAssertionFailed(0)]
-                }
-                _ => unreachable!(),
-            };
+        // if the expected tree height is increased, additional internal nodes are needed
+        initial_state
+            .nondeterminism
+            .digests
+            .extend(additional_bogus_tree_nodes);
 
-            negative_test(
-                &ShadowedReadOnlyAlgorithm::new(MerkleVerify),
-                init_state.into(),
-                &allowed_error_codes,
-            );
-        }
+        let assertion_error = AssertionError::new(1, 0);
+        let assertion_failure = InstructionError::AssertionFailed(assertion_error.clone());
+        let vector_assertion_failure = InstructionError::VectorAssertionFailed(0, assertion_error);
+        negative_test(
+            &ShadowedReadOnlyAlgorithm::new(MerkleVerify),
+            initial_state.into(),
+            &[assertion_failure, vector_assertion_failure],
+        );
     }
 
     impl ReadOnlyAlgorithm for MerkleVerify {

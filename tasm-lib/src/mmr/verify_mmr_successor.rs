@@ -376,6 +376,7 @@ mod test {
     use tasm_lib::traits::mem_preserver::ShadowedMemPreserver;
     use tasm_lib::traits::rust_shadow::RustShadow;
     use triton_vm::error::InstructionError;
+    use triton_vm::isa::error::AssertionError;
     use triton_vm::twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
     use triton_vm::twenty_first::util_types::mmr::mmr_successor_proof::MmrSuccessorProof;
     use triton_vm::twenty_first::util_types::mmr::shared_advanced::get_peak_heights;
@@ -635,13 +636,11 @@ mod test {
     fn verify_mmr_successor_negative_test() {
         for (i, init_state) in failing_initial_states().into_iter().enumerate() {
             println!("Trying failing initial state {i}.");
+            let assertion_failure = InstructionError::AssertionFailed(AssertionError::new(1, 0));
             negative_test(
                 &ShadowedMemPreserver::new(VerifyMmrSuccessor),
                 init_state.into(),
-                &[
-                    InstructionError::AssertionFailed,
-                    InstructionError::EmptySecretDigestInput,
-                ],
+                &[assertion_failure, InstructionError::EmptySecretDigestInput],
             );
         }
     }

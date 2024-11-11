@@ -72,14 +72,11 @@ impl RawCode {
         let Some(labelled_instruction) = first_label_or_instruction else {
             panic!("Inner function must start with a label. Got neither labels nor instructions.")
         };
-        match labelled_instruction {
-            LabelledInstruction::Instruction(instruction) => {
-                panic!("Inner function must start with a label. Got: {instruction}")
-            }
-            LabelledInstruction::Label(label) => label.to_owned(),
-            LabelledInstruction::Breakpoint => unreachable!(),
-            LabelledInstruction::TypeHint(_) => unreachable!(),
-        }
+        let LabelledInstruction::Label(label) = labelled_instruction else {
+            panic!("Inner function must start with a label. Got: {labelled_instruction}");
+        };
+
+        label.to_string()
     }
 
     /// Returns `Some(code)` iff the raw code is a function that can be inlined
@@ -206,7 +203,7 @@ impl InnerFunction {
             {&instructions}
         );
         let program = Program::new(&instructions);
-        let mut vmstate = VMState::new(&program, PublicInput::default(), NonDeterminism::default());
+        let mut vmstate = VMState::new(program, PublicInput::default(), NonDeterminism::default());
         vmstate.op_stack.stack.clone_from(stack);
         vmstate.ram.clone_from(memory);
         vmstate.run().unwrap();

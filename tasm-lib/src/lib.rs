@@ -102,7 +102,7 @@ pub fn empty_stack() -> Vec<BFieldElement> {
 }
 
 pub fn push_encodable<T: BFieldCodec>(stack: &mut Vec<BFieldElement>, value: &T) {
-    stack.append(&mut value.encode().into_iter().rev().collect());
+    stack.extend(value.encode().into_iter().rev());
 }
 
 /// Execute a Triton-VM program and return its output and execution trace length
@@ -118,10 +118,10 @@ pub fn execute_bench_deprecated(
     let public_input = PublicInput::new(std_in.clone());
     let program = Program::new(code);
 
-    let mut vm_state = VMState::new(&program, public_input, nondeterminism.clone());
+    let mut vm_state = VMState::new(program.clone(), public_input, nondeterminism.clone());
     vm_state.op_stack.stack.clone_from(&init_stack);
 
-    let (simulation_trace, terminal_state) = VM::trace_execution_of_state(&program, vm_state)?;
+    let (simulation_trace, terminal_state) = VM::trace_execution_of_state(vm_state)?;
 
     let jump_stack = &terminal_state.jump_stack;
     if !jump_stack.is_empty() {
@@ -146,13 +146,7 @@ pub fn execute_bench_deprecated(
     // produced proofs here should be valid.
     // If you run this, make sure `opt-level` is set to 3.
     if std::env::var("DYING_TO_PROVE").is_ok() {
-        prove_and_verify(
-            &program,
-            &std_in,
-            &nondeterminism,
-            &terminal_state.public_output,
-            Some(init_stack),
-        );
+        prove_and_verify(program, &std_in, &nondeterminism, Some(init_stack));
     }
 
     stack.clone_from(&terminal_state.op_stack.stack);
@@ -174,7 +168,11 @@ pub fn execute_test(
     let public_input = PublicInput::new(std_in.clone());
     let program = Program::new(code);
 
-    let mut vm_state = VMState::new(&program, public_input.clone(), nondeterminism.clone());
+    let mut vm_state = VMState::new(
+        program.clone(),
+        public_input.clone(),
+        nondeterminism.clone(),
+    );
     vm_state.op_stack.stack.clone_from(&init_stack);
     vm_state.sponge = maybe_sponge;
 
@@ -215,13 +213,7 @@ pub fn execute_test(
     // produced proofs here should be valid.
     // If you run this, make sure `opt-level` is set to 3.
     if std::env::var("DYING_TO_PROVE").is_ok() {
-        prove_and_verify(
-            &program,
-            &std_in,
-            &nondeterminism,
-            &terminal_state.public_output,
-            Some(init_stack),
-        );
+        prove_and_verify(program, &std_in, &nondeterminism, Some(init_stack));
     }
 
     stack.clone_from(&terminal_state.op_stack.stack);
@@ -253,18 +245,18 @@ pub fn maybe_write_debuggable_program_to_disk(program: &Program, vm_state: &VMSt
 
 /// Prepare state and run Triton VM
 pub fn execute_with_terminal_state(
-    program: &Program,
+    program: Program,
     std_in: &[BFieldElement],
     stack: &[BFieldElement],
     nondeterminism: &NonDeterminism,
     maybe_sponge: Option<VmHasher>,
 ) -> Result<VMState, InstructionError> {
     let public_input = PublicInput::new(std_in.into());
-    let mut vm_state = VMState::new(program, public_input, nondeterminism.to_owned());
+    let mut vm_state = VMState::new(program.clone(), public_input, nondeterminism.to_owned());
     stack.clone_into(&mut vm_state.op_stack.stack);
     vm_state.sponge = maybe_sponge;
 
-    maybe_write_debuggable_program_to_disk(program, &vm_state);
+    maybe_write_debuggable_program_to_disk(&program, &vm_state);
     match vm_state.run() {
         Ok(()) => {
             println!("Triton VM execution successful.");
@@ -289,10 +281,9 @@ pub fn execute_with_terminal_state(
 /// are ignored.
 /// If you run this, make sure `opt-level` is set to 3.
 pub fn prove_and_verify(
-    program: &Program,
+    program: Program,
     std_in: &[BFieldElement],
     nondeterminism: &NonDeterminism,
-    output: &[BFieldElement],
     init_stack: Option<Vec<BFieldElement>>,
 ) {
     let labelled_instructions = program.labelled_instructions();
@@ -305,22 +296,20 @@ pub fn prove_and_verify(
     // Construct the program that initializes the stack to the expected start value.
     // If this is not done, a stack underflow will occur for most programs
     let program = match &init_stack {
-        Some(init_stack) => prepend_program_with_stack_setup(init_stack, program),
-        None => program.to_owned(),
+        Some(init_stack) => prepend_program_with_stack_setup(init_stack, &program),
+        None => program,
     };
 
-    let (aet, _) = VM::trace_execution(
-        &program,
+    let claim = Claim::about_program(&program).with_input(std_in.to_owned());
+    let (aet, public_output) = VM::trace_execution(
+        program.clone(),
         PublicInput::new(std_in.to_owned()),
         nondeterminism.clone(),
     )
     .unwrap();
+    let claim = claim.with_output(public_output);
 
     let stark = Stark::default();
-    let claim = Claim::about_program(&program)
-        .with_output(output.to_owned())
-        .with_input(std_in.to_owned());
-
     let tick = SystemTime::now();
     triton_vm::profiler::start(timing_report_label);
     let proof = stark.prove(&claim, &aet).unwrap();
@@ -328,7 +317,7 @@ pub fn prove_and_verify(
     let measured_time = tick.elapsed().expect("Don't mess with time");
 
     let padded_height = proof.padded_height().unwrap();
-    let fri = stark.derive_fri(padded_height).unwrap();
+    let fri = stark.fri(padded_height).unwrap();
     let report = profile
         .with_cycle_count(aet.processor_trace.nrows())
         .with_padded_height(padded_height)
@@ -359,8 +348,7 @@ pub fn prove_and_verify(
 
     assert!(
         triton_vm::verify(stark, &claim, &proof),
-        "Generated proof must verify for program:\n {}",
-        program,
+        "Generated proof must verify for program:\n{program}",
     );
 }
 
@@ -372,6 +360,6 @@ pub fn generate_full_profile(
     nondeterminism: &NonDeterminism,
 ) -> String {
     let (_output, profile) =
-        VM::profile(&program, public_input.clone(), nondeterminism.clone()).unwrap();
+        VM::profile(program, public_input.clone(), nondeterminism.clone()).unwrap();
     format!("{name}:\n{profile}")
 }

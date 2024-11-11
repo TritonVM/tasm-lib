@@ -189,6 +189,7 @@ impl Function for DynMalloc {
 mod tests {
     use proptest_arbitrary_interop::arb;
     use test_strategy::proptest;
+    use triton_vm::isa::error::AssertionError;
 
     use super::*;
     use crate::test_helpers::negative_test;
@@ -219,11 +220,9 @@ mod tests {
                 .collect();
             let init_state =
                 InitVmState::with_stack_and_memory(init_stack, memory_filled_dyn_malloc);
-            negative_test(
-                &shadowed_snippet,
-                init_state,
-                &[InstructionError::AssertionFailed],
-            );
+
+            let assertion_failure = InstructionError::AssertionFailed(AssertionError::new(1, 0));
+            negative_test(&shadowed_snippet, init_state, &[assertion_failure]);
         }
 
         // Last page has been allocated, next call must fail

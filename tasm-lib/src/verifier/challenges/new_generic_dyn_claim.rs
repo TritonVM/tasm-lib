@@ -274,11 +274,9 @@ mod tests {
                 None => (rng.gen_range(0..1000), rng.gen_range(0..1000)),
             };
 
-            let claim = Claim {
-                program_digest: rng.gen(),
-                input: random_elements(input_length),
-                output: random_elements(output_length),
-            };
+            let claim = Claim::new(rng.gen())
+                .with_input(random_elements(input_length))
+                .with_output(random_elements(output_length));
 
             let mut memory = HashMap::default();
 

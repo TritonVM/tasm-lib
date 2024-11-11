@@ -135,6 +135,7 @@ mod tests {
     use std::collections::HashMap;
 
     use rand::prelude::*;
+    use triton_vm::isa::error::AssertionError;
 
     use super::*;
     use crate::rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator;
@@ -179,10 +180,11 @@ mod tests {
         init_stack.push(BFieldElement::new(at as u64));
         insert_random_list(&element_type, list_pointer, list_length, &mut memory);
 
+        let assertion_failure = InstructionError::AssertionFailed(AssertionError::new(1, 0));
         negative_test(
             &ShadowedFunction::new(snippet),
             InitVmState::with_stack_and_memory(init_stack, memory),
-            &[InstructionError::AssertionFailed],
+            &[assertion_failure],
         );
     }
 

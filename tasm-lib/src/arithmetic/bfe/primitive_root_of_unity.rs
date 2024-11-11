@@ -368,18 +368,14 @@ impl Closure for PrimitiveRootOfUnity {
             Some(BenchmarkCase::CommonCase) => 1024,
             Some(BenchmarkCase::WorstCase) => 1u64 << 32,
             None => {
-                let mut rng = StdRng::from_seed(seed);
-                let log = rng.gen_range(1..=32);
-                1u64 << log
+                let log_order = StdRng::from_seed(seed).gen_range(1..=32);
+                1u64 << log_order
             }
         };
 
         [
             empty_stack(),
-            vec![
-                BFieldElement::new(order >> 32),
-                BFieldElement::new(order & u32::MAX as u64),
-            ],
+            bfe_vec![order >> 32, order & u32::MAX as u64],
         ]
         .concat()
     }
@@ -387,6 +383,7 @@ impl Closure for PrimitiveRootOfUnity {
 
 #[cfg(test)]
 mod tests {
+    use triton_vm::isa::error::AssertionError;
     use triton_vm::prelude::*;
 
     use super::*;
@@ -453,10 +450,11 @@ mod tests {
                 init_stack.push(*elem);
             }
 
+            let assertion_failure = InstructionError::AssertionFailed(AssertionError::new(1, 0));
             negative_test(
                 &ShadowedClosure::new(PrimitiveRootOfUnity),
                 InitVmState::with_stack(init_stack),
-                &[InstructionError::AssertionFailed],
+                &[assertion_failure],
             );
         }
     }

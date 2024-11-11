@@ -108,6 +108,7 @@ mod tests {
     use rand::rngs::StdRng;
     use rand::Rng;
     use rand::SeedableRng;
+    use triton_vm::isa::error::AssertionError;
 
     use super::*;
     use crate::snippet_bencher::BenchmarkCase;
@@ -138,6 +139,9 @@ mod tests {
     fn add_u128_overflow_test() {
         let snippet = SafeAddU128;
 
+        let assertion_failure_after_instruction_eq =
+            || InstructionError::AssertionFailed(AssertionError::new(1, 0));
+
         for (a, b) in [
             (1u128 << 127, 1u128 << 127),
             (u128::MAX, u128::MAX),
@@ -156,12 +160,12 @@ mod tests {
             negative_test(
                 &ShadowedClosure::new(snippet),
                 InitVmState::with_stack(snippet.setup_init_stack(a, b)),
-                &[InstructionError::AssertionFailed],
+                &[assertion_failure_after_instruction_eq()],
             );
             negative_test(
                 &ShadowedClosure::new(snippet),
                 InitVmState::with_stack(snippet.setup_init_stack(b, a)),
-                &[InstructionError::AssertionFailed],
+                &[assertion_failure_after_instruction_eq()],
             );
         }
 
@@ -170,17 +174,19 @@ mod tests {
             let b = 1u128 << i;
 
             // sanity check of test input values
-            assert!(a.wrapping_add(b).is_zero());
+            let (wrapped_add, is_overflow) = a.overflowing_add(b);
+            assert!(is_overflow, "i = {i}. a = {a}, b = {b}");
+            assert!(wrapped_add.is_zero());
 
             negative_test(
                 &ShadowedClosure::new(snippet),
                 InitVmState::with_stack(snippet.setup_init_stack(a, b)),
-                &[InstructionError::AssertionFailed],
+                &[assertion_failure_after_instruction_eq()],
             );
             negative_test(
                 &ShadowedClosure::new(snippet),
                 InitVmState::with_stack(snippet.setup_init_stack(b, a)),
-                &[InstructionError::AssertionFailed],
+                &[assertion_failure_after_instruction_eq()],
             );
         }
     }

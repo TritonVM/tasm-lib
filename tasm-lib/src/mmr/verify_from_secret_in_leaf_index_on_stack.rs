@@ -97,6 +97,7 @@ mod tests {
     use proptest_arbitrary_interop::arb;
     use rand::prelude::*;
     use test_strategy::proptest;
+    use triton_vm::isa::error::AssertionError;
     use triton_vm::twenty_first::math::other::random_elements;
     use triton_vm::twenty_first::util_types::mmr::mmr_accumulator::util::mmra_with_mps;
     use triton_vm::twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
@@ -144,10 +145,12 @@ mod tests {
             padded_auth_path,
         );
 
+        let assertion_failure =
+            InstructionError::VectorAssertionFailed(0, AssertionError::new(1, 0));
         negative_test(
             &ShadowedProcedure::new(MmrVerifyFromSecretInLeafIndexOnStack),
             init_state.into(),
-            &[InstructionError::VectorAssertionFailed(0)],
+            &[assertion_failure],
         );
 
         // Sanity check

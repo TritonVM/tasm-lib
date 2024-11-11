@@ -1139,6 +1139,7 @@ impl crate::tasm_lib::structure::tasm_object::TasmObject for Claim {
             output,
             input,
             program_digest,
+            version: ::triton_vm::proof::CURRENT_VERSION,
         }))
     }
 }

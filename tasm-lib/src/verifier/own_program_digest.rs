@@ -74,7 +74,7 @@ mod tests {
         let test_setup = test_program();
 
         let vm_end_state = execute_with_terminal_state(
-            &test_setup.program,
+            test_setup.program,
             &[],
             &test_setup.init_stack,
             &NonDeterminism::default(),

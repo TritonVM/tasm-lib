@@ -141,6 +141,7 @@ mod test {
     use rand::prelude::*;
     use strum::EnumIter;
     use strum::IntoEnumIterator;
+    use triton_vm::isa::error::AssertionError;
     use triton_vm::twenty_first::prelude::*;
 
     use super::*;
@@ -400,10 +401,13 @@ mod test {
                 _ => unreachable!(), // no change; should be valid
             }
 
+            let assertion_error = AssertionError::new(1, 0);
+            let vector_assertion_failure =
+                InstructionError::VectorAssertionFailed(0, assertion_error);
             negative_test(
                 &ShadowedAlgorithm::new(vap4lail),
                 initial_state.into(),
-                &[InstructionError::VectorAssertionFailed(0)],
+                &[vector_assertion_failure],
             );
         }
     }

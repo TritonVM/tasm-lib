@@ -81,7 +81,7 @@ mod tests {
 
         let std_in = test_setup.program_digest.reversed().values();
         let vm_end_state = execute_with_terminal_state(
-            &test_setup.program,
+            test_setup.program,
             &std_in,
             &test_setup.init_stack,
             &NonDeterminism::default(),
@@ -104,13 +104,13 @@ mod tests {
 
         let bad_std_in = Digest::default().encode();
         let execution_result = execute_with_terminal_state(
-            &test_setup.program,
+            test_setup.program,
             &bad_std_in,
             &test_setup.init_stack,
             &NonDeterminism::default(),
             None,
         );
         let err = execution_result.unwrap_err();
-        assert_eq!(InstructionError::VectorAssertionFailed(0), err);
+        assert!(matches!(err, InstructionError::VectorAssertionFailed(0, _)));
     }
 }

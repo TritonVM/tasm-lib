@@ -78,7 +78,7 @@ impl StarkVerify {
     /// consumed when this snippets verifies the given proof.
     pub fn number_of_nondeterministic_digests_consumed(&self, proof: &Proof) -> usize {
         let padded_height = proof.padded_height().unwrap();
-        let fri_params = self.stark.derive_fri(padded_height).unwrap();
+        let fri_params = self.stark.fri(padded_height).unwrap();
         let num_fri_rounds = fri_params.num_rounds();
 
         let mut j = 0;
@@ -220,7 +220,7 @@ impl StarkVerify {
 
             // FRI digests
             let padded_height = 1 << log2_padded_height;
-            let fri = self.stark.derive_fri(padded_height).unwrap();
+            let fri = self.stark.fri(padded_height).unwrap();
             let fri_proof_stream = proof_stream.clone();
             let fri_verify_result = fri.verify(&mut proof_stream).unwrap();
             let indices = fri_verify_result.iter().map(|(i, _)| *i).collect_vec();
@@ -1294,13 +1294,13 @@ pub mod tests {
     /// height for crude benchmarking.
     fn test_verify_and_report_basic_features(
         inner_nondeterminism: NonDeterminism,
-        inner_program: &Program,
+        inner_program: Program,
         inner_public_input: &[BFieldElement],
         stark: Stark,
         layout: MemoryLayout,
     ) -> (usize, usize) {
         let (mut non_determinism, claim_for_proof) = prove_and_get_non_determinism_and_claim(
-            inner_program,
+            inner_program.clone(),
             inner_public_input,
             inner_nondeterminism.clone(),
             &stark,
@@ -1323,7 +1323,7 @@ pub mod tests {
         let code = snippet.link_for_isolated_run_populated_static_memory(claim_size);
 
         let program = Program::new(&code);
-        let mut vm_state = VMState::new(&program, [].into(), non_determinism.clone());
+        let mut vm_state = VMState::new(program.clone(), [].into(), non_determinism.clone());
         vm_state.op_stack.stack = init_stack.clone();
         maybe_write_debuggable_program_to_disk(&program, &vm_state);
 
@@ -1357,7 +1357,7 @@ pub mod tests {
             let stark = Stark::new(160, log2_of_fri_expansion_factor);
             let (cycle_count, inner_padded_height) = test_verify_and_report_basic_features(
                 NonDeterminism::default(),
-                &factorial_program,
+                factorial_program,
                 &[FACTORIAL_ARGUMENT.into()],
                 stark,
                 MemoryLayout::conventional_static(),
@@ -1380,7 +1380,7 @@ pub mod tests {
         let stark = Stark::default();
         let (cycle_count, inner_padded_height) = test_verify_and_report_basic_features(
             NonDeterminism::default(),
-            &factorial_program,
+            factorial_program,
             &[FACTORIAL_ARGUMENT.into()],
             stark,
             mem_layout,
@@ -1445,24 +1445,18 @@ pub mod tests {
     /// the caller will then have to put into memory. Proof is stored on first
     /// address of the ND-memory region.
     pub fn prove_and_get_non_determinism_and_claim(
-        inner_program: &Program,
+        inner_program: Program,
         inner_public_input: &[BFieldElement],
         inner_nondeterminism: NonDeterminism,
         stark: &Stark,
-    ) -> (NonDeterminism, triton_vm::proof::Claim) {
+    ) -> (NonDeterminism, Claim) {
         println!("Generating proof for non-determinism");
 
-        let (aet, inner_output) = VM::trace_execution(
-            inner_program,
-            inner_public_input.into(),
-            inner_nondeterminism.clone(),
-        )
-        .unwrap();
-        let claim = Claim {
-            program_digest: inner_program.hash(),
-            input: inner_public_input.to_vec(),
-            output: inner_output,
-        };
+        let inner_input = inner_public_input.to_vec();
+        let claim = Claim::about_program(&inner_program).with_input(inner_input.clone());
+        let (aet, inner_output) =
+            VM::trace_execution(inner_program, inner_input.into(), inner_nondeterminism).unwrap();
+        let claim = claim.with_output(inner_output);
 
         triton_vm::profiler::start("inner program");
         let proof = stark.prove(&claim, &aet).unwrap();
@@ -1471,7 +1465,7 @@ pub mod tests {
         let report = profile
             .with_cycle_count(aet.processor_trace.nrows())
             .with_padded_height(padded_height)
-            .with_fri_domain_len(stark.derive_fri(padded_height).unwrap().domain.length);
+            .with_fri_domain_len(stark.fri(padded_height).unwrap().domain.length);
         println!("Done generating proof for non-determinism");
         println!("{report}");
 
@@ -1559,10 +1553,13 @@ pub mod tests {
 
         let inner_input_1 = bfe_vec![3];
         let factorial_program = factorial_program_with_io();
-        let (aet_1, inner_output_1) =
-            VM::trace_execution(&factorial_program, inner_input_1.clone().into(), [].into())
-                .unwrap();
-        let claim_1 = Claim::new(factorial_program.hash())
+        let (aet_1, inner_output_1) = VM::trace_execution(
+            factorial_program.clone(),
+            inner_input_1.clone().into(),
+            [].into(),
+        )
+        .unwrap();
+        let claim_1 = Claim::about_program(&factorial_program)
             .with_input(inner_input_1.clone())
             .with_output(inner_output_1.clone());
         let proof_1 = stark.prove(&claim_1, &aet_1).unwrap();
@@ -1570,10 +1567,13 @@ pub mod tests {
         println!("padded_height_1: {padded_height_1}");
 
         let inner_input_2 = bfe_vec![24];
-        let (aet_2, inner_output_2) =
-            VM::trace_execution(&factorial_program, inner_input_2.clone().into(), [].into())
-                .unwrap();
-        let claim_2 = Claim::new(factorial_program.hash())
+        let (aet_2, inner_output_2) = VM::trace_execution(
+            factorial_program.clone(),
+            inner_input_2.clone().into(),
+            [].into(),
+        )
+        .unwrap();
+        let claim_2 = Claim::about_program(&factorial_program)
             .with_input(inner_input_2.clone())
             .with_output(inner_output_2.clone());
         let proof_2 = stark.prove(&claim_2, &aet_2).unwrap();
@@ -1611,18 +1611,17 @@ pub mod tests {
         );
 
         let program = Program::new(&verify_two_proofs_program);
-
         let vm_state = VMState::new(
-            &program,
+            program.clone(),
             outer_input.clone().into(),
             outer_nondeterminism.clone(),
         );
         maybe_write_debuggable_program_to_disk(&program, &vm_state);
-        VM::run(&program, outer_input.into(), outer_nondeterminism)
+        VM::run(program, outer_input.into(), outer_nondeterminism)
             .expect("could not verify two STARK proofs");
 
         println!(
-            "fact({}) == {}  /\\  fact({}) == {}",
+            "fact({}) == {} ∧ fact({}) == {}",
             inner_input_1[0], inner_output_1[0], inner_input_2[0], inner_output_2[0]
         );
 
@@ -1785,9 +1784,8 @@ mod benches {
         stark: Stark,
         mem_layout: MemoryLayout,
     ) {
-        let factorial_program = factorial_program_with_io();
         let (mut non_determinism, claim_for_proof) = prove_and_get_non_determinism_and_claim(
-            &factorial_program,
+            factorial_program_with_io(),
             &[bfe!(factorial_argument)],
             NonDeterminism::default(),
             &stark,

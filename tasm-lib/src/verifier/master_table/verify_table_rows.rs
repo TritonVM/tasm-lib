@@ -254,8 +254,10 @@ mod tests {
     }
 
     mod negative_tests {
+
         use rand::prelude::*;
         use strum::IntoEnumIterator;
+        use triton_vm::isa::error::AssertionError;
 
         use super::*;
         use crate::test_helpers::negative_test;
@@ -272,10 +274,12 @@ mod tests {
                 let num_digests = init_state.nondeterminism.digests.len();
                 init_state.nondeterminism.digests[rng.gen_range(0..num_digests)] = rng.gen();
 
+                let vector_assertion_failure =
+                    InstructionError::VectorAssertionFailed(0, AssertionError::new(1, 0));
                 negative_test(
                     &ShadowedProcedure::new(snippet),
                     init_state.into(),
-                    &[InstructionError::VectorAssertionFailed(0)],
+                    &[vector_assertion_failure],
                 );
             }
         }
@@ -294,10 +298,12 @@ mod tests {
                 let init_stack_length = init_state.stack.len();
                 init_state.stack[init_stack_length - 5].increment();
 
+                let assertion_failure =
+                    InstructionError::AssertionFailed(AssertionError::new(1, 0));
                 negative_test(
                     &ShadowedProcedure::new(snippet),
                     init_state.into(),
-                    &[InstructionError::AssertionFailed],
+                    &[assertion_failure],
                 );
             }
         }

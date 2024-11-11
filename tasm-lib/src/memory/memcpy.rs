@@ -339,6 +339,7 @@ mod tests {
     use crate::test_helpers::negative_test;
     use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
     use crate::traits::deprecated_snippet::tests::DeprecatedSnippetWrapper;
+    use triton_vm::isa::error::AssertionError;
 
     #[test]
     fn memcpy_test() {
@@ -361,11 +362,9 @@ mod tests {
             nondeterminism: NonDeterminism::default(),
             sponge: None,
         };
-        negative_test(
-            &snippet_struct,
-            init_state,
-            &[InstructionError::AssertionFailed],
-        );
+
+        let assertion_failure = InstructionError::AssertionFailed(AssertionError::new(1, 0));
+        negative_test(&snippet_struct, init_state, &[assertion_failure]);
     }
 }
 

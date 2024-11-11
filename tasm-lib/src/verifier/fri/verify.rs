@@ -3,7 +3,6 @@ use itertools::Itertools;
 use num::Zero;
 use triton_vm::arithmetic_domain::ArithmeticDomain;
 use triton_vm::error::FriValidationError;
-use triton_vm::fri::barycentric_evaluate;
 use triton_vm::fri::Fri;
 use triton_vm::prelude::*;
 use triton_vm::proof_item::FriResponse;
@@ -13,6 +12,7 @@ use triton_vm::twenty_first::math::polynomial::Polynomial;
 use triton_vm::twenty_first::math::traits::ModPowU32;
 use triton_vm::twenty_first::math::x_field_element::EXTENSION_DEGREE;
 use triton_vm::twenty_first::util_types::merkle_tree::MerkleTreeInclusionProof;
+use twenty_first::math::polynomial::barycentric_evaluate;
 use twenty_first::prelude::MerkleTreeMaker;
 use twenty_first::util_types::merkle_tree::CpuParallel;
 use twenty_first::util_types::merkle_tree::MerkleTree;
@@ -1177,7 +1177,6 @@ mod test {
     use triton_vm::proof_item::ProofItem;
     use triton_vm::proof_stream::ProofStream;
     use triton_vm::twenty_first::math::ntt::ntt;
-    use triton_vm::twenty_first::math::traits::PrimitiveRootOfUnity;
     use triton_vm::twenty_first::util_types::algebraic_hasher::Sponge;
 
     use super::*;
@@ -1230,10 +1229,7 @@ mod test {
 
             let mut codeword = polynomial_coefficients;
             codeword.resize(self.domain_length as usize, XFieldElement::zero());
-            let primitive_root =
-                BFieldElement::primitive_root_of_unity(self.domain_length as u64).unwrap();
-            let log_2_of_n = self.domain_length.ilog2();
-            ntt::<XFieldElement>(&mut codeword, primitive_root, log_2_of_n);
+            ntt(&mut codeword);
 
             let mut proof_stream = ProofStream::new();
             let fri = self.to_fri();
@@ -1452,7 +1448,7 @@ mod test {
             const SECURITY_LEVEL: usize = 160;
             let stark = Stark::new(SECURITY_LEVEL, log2_expansion_factor);
 
-            let fri_verify: FriVerify = stark.derive_fri(inner_padded_height).unwrap().into();
+            let fri_verify: FriVerify = stark.fri(inner_padded_height).unwrap().into();
 
             let coefficients = Self::thirty_two_coefficients();
 
@@ -1471,10 +1467,7 @@ mod test {
             let mut codeword = self.polynomial_coefficients.clone();
             codeword.resize(domain_length as usize, XFieldElement::zero());
 
-            let root_of_unity =
-                BFieldElement::primitive_root_of_unity(domain_length as u64).unwrap();
-            let log_2_of_n = domain_length.ilog2();
-            ntt::<XFieldElement>(&mut codeword, root_of_unity, log_2_of_n);
+            ntt(&mut codeword);
             codeword
         }
 
@@ -1718,7 +1711,7 @@ mod bench {
             inner_padded_height,
             stark.fri_expansion_factor.ilog2() as usize,
         );
-        let fri_params = stark.derive_fri(inner_padded_height).unwrap();
+        let fri_params = stark.fri(inner_padded_height).unwrap();
         let name = format!(
             "fri_verify_expansion_factor_inner_padded_height_{}_expansion_factor_{}",
             inner_padded_height, fri_params.expansion_factor

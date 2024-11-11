@@ -72,6 +72,7 @@ mod tests {
     use rand::Rng;
     use rand::SeedableRng;
     use triton_vm::error::InstructionError;
+    use triton_vm::isa::error::AssertionError;
     use triton_vm::prelude::bfe;
     use triton_vm::prelude::BFieldElement;
     use triton_vm::proof_item::ProofItemVariant;
@@ -107,11 +108,11 @@ mod tests {
             current_item_pointer: correct_proof_end + bfe!(4),
         };
 
-        let bad_init_state = Drop.init_state(bad_proof_length);
+        let assertion_failure = InstructionError::AssertionFailed(AssertionError::new(1, 0));
         negative_test(
             &ShadowedAccessor::new(Drop),
-            bad_init_state.into(),
-            &[InstructionError::AssertionFailed],
+            Drop.init_state(bad_proof_length).into(),
+            &[assertion_failure],
         );
     }
 
@@ -128,11 +129,11 @@ mod tests {
             current_item_pointer: correct_proof_end,
         };
 
-        let bad_init_state = Drop.init_state(bad_proof_length);
+        let assertion_failure = InstructionError::AssertionFailed(AssertionError::new(1, 0));
         negative_test(
             &ShadowedAccessor::new(Drop),
-            bad_init_state.into(),
-            &[InstructionError::AssertionFailed],
+            Drop.init_state(bad_proof_length).into(),
+            &[assertion_failure],
         );
     }
 

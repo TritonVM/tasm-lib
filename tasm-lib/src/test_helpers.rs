@@ -521,32 +521,26 @@ pub fn negative_test<T: RustShadow>(
 
     // Run on Triton
     let code = snippet_struct.inner().borrow().link_for_isolated_run();
-    let program = Program::new(&code);
     let tvm_result = execute_with_terminal_state(
-        &program,
+        Program::new(&code),
         &init_state.public_input,
         &init_state.stack,
         &init_state.nondeterminism,
         init_state.sponge,
     );
 
-    let rust_failed_successfully = rust_result.is_err();
     assert!(
-        rust_failed_successfully,
+        rust_result.is_err(),
         "Failed to fail: Rust-shadowing must panic in negative test case"
     );
 
-    let tvm_failed_successfully = tvm_result.is_err();
-    assert!(
-        tvm_failed_successfully,
-        "Failed to fail: TVM-execution must crash in negative test case"
-    );
-
-    let err = tvm_result.unwrap_err();
+    let err = tvm_result
+        .err()
+        .expect("Failed to fail: Triton VM execution must crash in negative test case");
     assert!(
         allowed_failure_codes.contains(&err),
-        "Triton VM execution must fail with one of the expected errors:\n{}\n\n Got:\n{err}",
-        allowed_failure_codes.iter().join(",")
+        "Triton VM execution must fail with one of the expected errors:\n- {}\n\n Got:\n{err}",
+        allowed_failure_codes.iter().join("\n -")
     );
 }
 

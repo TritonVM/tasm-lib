@@ -68,7 +68,7 @@ impl BasicSnippet for NextPowerOfTwo {
                     // _ (log_2_floor(value - 1) + 1)
 
                     push 2
-                    // _  (log_2_floor(value - 1) + 1) 2
+                    // _ (log_2_floor(value - 1) + 1) 2
 
                     pow
                     // _ npo2(self_)
@@ -90,6 +90,7 @@ impl BasicSnippet for NextPowerOfTwo {
 mod tests {
     use itertools::Itertools;
     use rand::prelude::*;
+    use triton_vm::isa::error::AssertionError;
 
     use super::*;
     use crate::test_helpers::negative_test;
@@ -119,11 +120,11 @@ mod tests {
                 }
             };
 
-            self.prepare_vm_state(self_)
+            self.prepare_vm_stack(self_)
         }
 
         fn corner_case_initial_states(&self) -> Vec<Vec<BFieldElement>> {
-            let small_inputs = (0u32..=66).map(|i| self.prepare_vm_state(i)).collect_vec();
+            let small_inputs = (0u32..=66).map(|i| self.prepare_vm_stack(i)).collect_vec();
             let big_but_valid_inputs = [
                 1u32 << 31,
                 (1u32 << 31) - 1,
@@ -133,7 +134,7 @@ mod tests {
                 (1u32 << 31) - 5,
             ]
             .into_iter()
-            .map(|i| self.prepare_vm_state(i))
+            .map(|i| self.prepare_vm_stack(i))
             .collect_vec();
 
             [small_inputs, big_but_valid_inputs].concat()
@@ -141,12 +142,8 @@ mod tests {
     }
 
     impl NextPowerOfTwo {
-        fn prepare_vm_state(&self, self_: u32) -> Vec<BFieldElement> {
-            [
-                self.init_stack_for_isolated_run(),
-                vec![BFieldElement::new(self_ as u64)],
-            ]
-            .concat()
+        fn prepare_vm_stack(&self, self_: u32) -> Vec<BFieldElement> {
+            [self.init_stack_for_isolated_run(), bfe_vec![self_]].concat()
         }
     }
 
@@ -165,17 +162,14 @@ mod tests {
             u32::MAX - 1,
             u32::MAX,
         ] {
-            let init_stack = [
-                NextPowerOfTwo.init_stack_for_isolated_run(),
-                vec![BFieldElement::new(self_ as u64)],
-            ]
-            .concat();
-
+            let init_stack = NextPowerOfTwo.prepare_vm_stack(self_);
             let init_state = InitVmState::with_stack(init_stack);
+
+            let assertion_failure = InstructionError::AssertionFailed(AssertionError::new(1, 0));
             negative_test(
                 &ShadowedClosure::new(NextPowerOfTwo),
                 init_state,
-                &[InstructionError::AssertionFailed],
+                &[assertion_failure],
             );
         }
     }

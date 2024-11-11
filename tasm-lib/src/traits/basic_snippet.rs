@@ -169,7 +169,7 @@ mod tests {
         let program = DummySnippet.link_for_isolated_run();
         let program = Program::new(&program);
         let init_vm_state =
-            triton_vm::vm::VMState::new(&program, Default::default(), Default::default());
+            triton_vm::vm::VMState::new(program, Default::default(), Default::default());
 
         assert_eq!(init_vm_state.op_stack.stack, calculated_init_stack);
     }

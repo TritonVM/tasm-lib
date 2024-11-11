@@ -138,6 +138,7 @@ impl DeprecatedSnippet for DecrU64 {
 mod tests {
     use num::Zero;
     use rand::prelude::*;
+    use triton_vm::isa::error::AssertionError;
 
     use super::*;
     use crate::empty_stack;
@@ -168,10 +169,11 @@ mod tests {
         let mut stack = DecrU64.init_stack_for_isolated_run();
         push_encodable(&mut stack, &U32s::<2>::zero());
         let snippet = DeprecatedSnippetWrapper::new(snippet);
+        let assertion_failure = InstructionError::AssertionFailed(AssertionError::new(1, 0));
         negative_test(
             &snippet,
             InitVmState::with_stack(stack),
-            &[InstructionError::AssertionFailed],
+            &[assertion_failure],
         );
     }
 

@@ -99,7 +99,7 @@ pub fn extract_fri_proof(
     );
 
     let padded_height = 1 << log2_padded_height;
-    let fri = stark.derive_fri(padded_height).unwrap();
+    let fri = stark.fri(padded_height).unwrap();
     let fri_proof_stream = proof_stream.clone();
     let fri_verify_result = fri.verify(&mut proof_stream).unwrap();
     let indices = fri_verify_result.iter().map(|(i, _)| *i).collect_vec();
@@ -197,10 +197,9 @@ mod tests {
         let public_input = [];
         let non_determinism = NonDeterminism::default();
         let (stark, claim, proof) =
-            triton_vm::prove_program(&simple_program, public_input.into(), non_determinism)
-                .unwrap();
+            triton_vm::prove_program(simple_program, public_input.into(), non_determinism).unwrap();
         let padded_height = proof.padded_height().unwrap();
-        let fri = stark.derive_fri(padded_height).unwrap();
+        let fri = stark.fri(padded_height).unwrap();
 
         let proof_stream = ProofStream::try_from(&proof).unwrap();
         let mut fri_proof_stream =

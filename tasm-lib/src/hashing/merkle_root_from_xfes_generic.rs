@@ -183,6 +183,7 @@ mod test {
     use num::One;
     use num::Zero;
     use rand::prelude::*;
+    use triton_vm::isa::error::AssertionError;
     use twenty_first::prelude::MerkleTreeMaker;
     use twenty_first::util_types::merkle_tree::CpuParallel;
     use twenty_first::util_types::merkle_tree::MerkleTree;
@@ -302,26 +303,25 @@ mod test {
 
     #[test]
     fn cannot_handle_input_list_of_length_one() {
-        let height_0 = MerkleRootFromXfesGeneric
-            .init_state(vec![XFieldElement::one(); 1], BFieldElement::zero());
+        let height_0 = MerkleRootFromXfesGeneric.init_state(xfe_vec![1], bfe!(0));
+        let assertion_failure = InstructionError::AssertionFailed(AssertionError::new(1, 0));
         negative_test(
             &ShadowedFunction::new(MerkleRootFromXfesGeneric),
             InitVmState::with_stack_and_memory(height_0.stack, height_0.memory),
-            &[InstructionError::AssertionFailed],
+            &[assertion_failure],
         );
     }
 
     #[test]
     fn cannot_handle_input_list_of_length_not_pow2() {
+        let assertion_failure = || InstructionError::AssertionFailed(AssertionError::new(1, 0));
+
         for bad_length in [3, 5, 6, 7, 9, 10, 11, 12, 13, 14, 15, 17] {
-            let init_state = MerkleRootFromXfesGeneric.init_state(
-                vec![XFieldElement::one(); bad_length],
-                BFieldElement::zero(),
-            );
+            let init_state = MerkleRootFromXfesGeneric.init_state(xfe_vec![1; bad_length], bfe!(0));
             negative_test(
                 &ShadowedFunction::new(MerkleRootFromXfesGeneric),
                 InitVmState::with_stack_and_memory(init_state.stack, init_state.memory),
-                &[InstructionError::AssertionFailed],
+                &[assertion_failure()],
             );
         }
     }

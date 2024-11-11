@@ -34,13 +34,11 @@ impl BasicSnippet for NewRecursive {
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
-        let claim_size = Claim {
-            program_digest: Digest::default(),
-            input: vec![BFieldElement::ZERO; self.input_size],
-            output: vec![BFieldElement::ZERO; self.output_size],
-        }
-        .encode()
-        .len();
+        let claim_size = Claim::new(Digest::default())
+            .with_input(vec![BFieldElement::ZERO; self.input_size])
+            .with_output(vec![BFieldElement::ZERO; self.output_size])
+            .encode()
+            .len();
         let claim_alloc = library.kmalloc(claim_size.try_into().unwrap());
         const METADATA_SIZE_FOR_FIELD_WITH_VEC_VALUE: usize = 2;
         let output_field_pointer = claim_alloc.write_address();
@@ -175,12 +173,9 @@ pub mod tests {
 
             let program_digest = Digest::new([stack[4], stack[3], stack[2], stack[1], stack[0]]);
 
-            let claim = Claim {
-                program_digest,
-                input,
-                output,
-            };
-
+            let claim = Claim::new(program_digest)
+                .with_input(input)
+                .with_output(output);
             let (claim_pointer, _claim_size) = insert_claim_into_static_memory(memory, &claim);
 
             stack.push(claim_pointer);

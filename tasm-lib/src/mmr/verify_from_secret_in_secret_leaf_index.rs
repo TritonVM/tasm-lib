@@ -123,6 +123,7 @@ mod tests {
     use itertools::Itertools;
     use num::One;
     use rand::prelude::*;
+    use triton_vm::isa::error::AssertionError;
     use triton_vm::twenty_first::math::other::random_elements;
     use triton_vm::twenty_first::prelude::AlgebraicHasher;
     use triton_vm::twenty_first::util_types::mmr::mmr_accumulator::util::mmra_with_mps;
@@ -422,10 +423,12 @@ mod tests {
         ) {
             let init_state = self.prepare_state(mmr, claimed_leaf, leaf_index, auth_path.clone());
 
+            let assertion_failure =
+                InstructionError::VectorAssertionFailed(0, AssertionError::new(1, 0));
             negative_test(
                 &ShadowedProcedure::new(MmrVerifyFromSecretInSecretLeafIndex),
                 init_state.into(),
-                &[InstructionError::VectorAssertionFailed(0)],
+                &[assertion_failure],
             );
 
             // Sanity check
