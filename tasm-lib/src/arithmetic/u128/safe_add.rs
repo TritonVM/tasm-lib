@@ -93,7 +93,7 @@ impl BasicSnippet for SafeAddU128 {
 
                 push 0
                 eq
-                assert
+                assert error_id 170
                 // _ sum_3 sum_2 sum_1 sum_0
 
                 return
@@ -108,11 +108,10 @@ mod tests {
     use rand::rngs::StdRng;
     use rand::Rng;
     use rand::SeedableRng;
-    use triton_vm::isa::error::AssertionError;
+    use tasm_lib::test_helpers::test_assertion_failure;
 
     use super::*;
     use crate::snippet_bencher::BenchmarkCase;
-    use crate::test_helpers::negative_test;
     use crate::test_helpers::test_rust_equivalence_given_complete_state;
     use crate::traits::closure::Closure;
     use crate::traits::closure::ShadowedClosure;
@@ -139,9 +138,6 @@ mod tests {
     fn add_u128_overflow_test() {
         let snippet = SafeAddU128;
 
-        let assertion_failure_after_instruction_eq =
-            || InstructionError::AssertionFailed(AssertionError::new(1, 0));
-
         for (a, b) in [
             (1u128 << 127, 1u128 << 127),
             (u128::MAX, u128::MAX),
@@ -157,15 +153,15 @@ mod tests {
             (u128::MAX, 1 << 97),
             (u128::MAX - 1, 2),
         ] {
-            negative_test(
+            test_assertion_failure(
                 &ShadowedClosure::new(snippet),
                 InitVmState::with_stack(snippet.setup_init_stack(a, b)),
-                &[assertion_failure_after_instruction_eq()],
+                &[170],
             );
-            negative_test(
+            test_assertion_failure(
                 &ShadowedClosure::new(snippet),
                 InitVmState::with_stack(snippet.setup_init_stack(b, a)),
-                &[assertion_failure_after_instruction_eq()],
+                &[170],
             );
         }
 
@@ -178,15 +174,15 @@ mod tests {
             assert!(is_overflow, "i = {i}. a = {a}, b = {b}");
             assert!(wrapped_add.is_zero());
 
-            negative_test(
+            test_assertion_failure(
                 &ShadowedClosure::new(snippet),
                 InitVmState::with_stack(snippet.setup_init_stack(a, b)),
-                &[assertion_failure_after_instruction_eq()],
+                &[170],
             );
-            negative_test(
+            test_assertion_failure(
                 &ShadowedClosure::new(snippet),
                 InitVmState::with_stack(snippet.setup_init_stack(b, a)),
-                &[assertion_failure_after_instruction_eq()],
+                &[170],
             );
         }
     }

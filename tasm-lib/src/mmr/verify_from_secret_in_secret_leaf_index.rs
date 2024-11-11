@@ -76,7 +76,7 @@ impl BasicSnippet for MmrVerifyFromSecretInSecretLeafIndex {
                 dup 8 dup 8 call {list_get}
                 // _ leaf_index_hi leaf_index_lo *peaks peak_index mt_index_hi mt_index_lo [digest (acc_hash)] [digest (peaks[peak_index])]
 
-                assert_vector
+                assert_vector error_id 20
                 // _ leaf_index_hi leaf_index_lo *peaks peak_index mt_index_hi mt_index_lo [digest (acc_hash)]
 
                 pop 5
@@ -123,19 +123,18 @@ mod tests {
     use itertools::Itertools;
     use num::One;
     use rand::prelude::*;
-    use triton_vm::isa::error::AssertionError;
-    use triton_vm::twenty_first::math::other::random_elements;
-    use triton_vm::twenty_first::prelude::AlgebraicHasher;
-    use triton_vm::twenty_first::util_types::mmr::mmr_accumulator::util::mmra_with_mps;
-    use triton_vm::twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
-    use triton_vm::twenty_first::util_types::mmr::mmr_membership_proof::MmrMembershipProof;
-    use triton_vm::twenty_first::util_types::mmr::mmr_trait::Mmr;
-    use triton_vm::twenty_first::util_types::mmr::shared_basic::leaf_index_to_mt_index_and_peak_index;
+    use tasm_lib::test_helpers::test_assertion_failure;
+    use twenty_first::math::other::random_elements;
+    use twenty_first::prelude::AlgebraicHasher;
+    use twenty_first::util_types::mmr::mmr_accumulator::util::mmra_with_mps;
+    use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
+    use twenty_first::util_types::mmr::mmr_membership_proof::MmrMembershipProof;
+    use twenty_first::util_types::mmr::mmr_trait::Mmr;
+    use twenty_first::util_types::mmr::shared_basic::leaf_index_to_mt_index_and_peak_index;
 
     use super::*;
     use crate::rust_shadowing_helper_functions;
     use crate::snippet_bencher::BenchmarkCase;
-    use crate::test_helpers::negative_test;
     use crate::test_helpers::test_rust_equivalence_given_complete_state;
     use crate::traits::procedure::Procedure;
     use crate::traits::procedure::ProcedureInitialState;
@@ -316,17 +315,13 @@ mod tests {
             let peaks_count: u64 = memory[&peaks_pointer].value();
             let mut peaks: Vec<Digest> = vec![];
             for i in 0..peaks_count {
-                let digest = Digest::new(
-                    rust_shadowing_helper_functions::list::list_get(
-                        peaks_pointer,
-                        i as usize,
-                        memory,
-                        Digest::LEN,
-                    )
-                    .try_into()
-                    .unwrap(),
+                let digest_innards = rust_shadowing_helper_functions::list::list_get(
+                    peaks_pointer,
+                    i as usize,
+                    memory,
+                    Digest::LEN,
                 );
-                peaks.push(digest);
+                peaks.push(Digest::new(digest_innards.try_into().unwrap()));
             }
             let leaf_index_hi: u32 = nondeterminism.individual_tokens[0]
                 .value()
@@ -423,12 +418,10 @@ mod tests {
         ) {
             let init_state = self.prepare_state(mmr, claimed_leaf, leaf_index, auth_path.clone());
 
-            let assertion_failure =
-                InstructionError::VectorAssertionFailed(0, AssertionError::new(1, 0));
-            negative_test(
+            test_assertion_failure(
                 &ShadowedProcedure::new(MmrVerifyFromSecretInSecretLeafIndex),
                 init_state.into(),
-                &[assertion_failure],
+                &[20],
             );
 
             // Sanity check

@@ -84,10 +84,9 @@ impl BasicSnippet for VerifyFriAuthenticationPaths {
                 push 1
                 // _ dom_len_minus_one xor_bitflag *value *a_indices *a_indices[n] [root] 1
 
-                dup 6
+                pick 6
                 read_mem 1
-                swap 8
-                pop 1
+                place 7
                 // _ dom_len_minus_one xor_bitflag *value *a_indices *a_indices[n]' [root] 1 ia_0[n]
 
                 dup 11
@@ -102,27 +101,22 @@ impl BasicSnippet for VerifyFriAuthenticationPaths {
                 push 0
                 // _ dom_len_minus_one xor_bitflag *value *a_indices *a_indices[n]' [root] 1 i_r[n] 0 0
 
-                dup 11
+                pick 11
                 read_mem {EXTENSION_DEGREE}
-                swap 15
-                pop 1
+                place 14
                 // _ dom_len_minus_one xor_bitflag *value' *a_indices *a_indices[n]' [root] 1 i_r[n] 0 0 [xfe]
 
                 call {loop_over_auth_paths_label}
                 // _ dom_len_minus_one xor_bitflag *value' *a_indices *a_indices[n]' [root] 1 1 [calculated_root]
                 // _ dom_len_minus_one xor_bitflag *value' *a_indices *a_indices[n]' [root] 1 1 cr4 cr3 cr2 cr1 cr0
 
-                swap 2
-                swap 4
-                swap 6
-                pop 1
-                swap 2
-                swap 4
-                pop 1
+                pick 5 pick 6
+                pop 2
                 // _ dom_len_minus_one xor_bitflag *value' *a_indices *a_indices[n]' [root] cr4 cr3 cr2 cr1 cr0
                 // _ dom_len_minus_one xor_bitflag *value' *a_indices *a_indices[n]' [root] [calculated_root]
 
                 assert_vector
+                    error_id 30
                 // _ dom_len_minus_one xor_bitflag *value *a_indices *a_indices[n]' [root]
 
                 recurse_or_return
@@ -137,17 +131,18 @@ mod test {
     use std::collections::HashMap;
 
     use itertools::Itertools;
+    use proptest::prop_assume;
     use rand::distributions::Standard;
     use rand::prelude::*;
     use strum::EnumIter;
     use strum::IntoEnumIterator;
-    use triton_vm::isa::error::AssertionError;
+    use tasm_lib::test_helpers::test_assertion_failure;
+    use test_strategy::proptest;
     use triton_vm::twenty_first::prelude::*;
 
     use super::*;
     use crate::rust_shadowing_helper_functions;
     use crate::snippet_bencher::BenchmarkCase;
-    use crate::test_helpers::negative_test;
     use crate::traits::algorithm::Algorithm;
     use crate::traits::algorithm::AlgorithmInitialState;
     use crate::traits::algorithm::ShadowedAlgorithm;
@@ -162,7 +157,7 @@ mod test {
 
     impl Distribution<IndexType> for Standard {
         fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> IndexType {
-            if rng.gen_bool(0.5) {
+            if rng.gen() {
                 IndexType::A
             } else {
                 IndexType::B
@@ -233,7 +228,7 @@ mod test {
         fn pseudorandom_initial_state(
             &self,
             seed: [u8; 32],
-            bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
+            bench_case: Option<BenchmarkCase>,
         ) -> AlgorithmInitialState {
             let mut rng: StdRng = SeedableRng::from_seed(seed);
 
@@ -288,7 +283,7 @@ mod test {
                 .collect_vec();
             let leafs_as_digest: Vec<Digest> =
                 xfe_leafs.iter().map(|&xfe| xfe.into()).collect_vec();
-            let tree = CpuParallel::from_digests(&leafs_as_digest).unwrap();
+            let tree = MerkleTree::new::<CpuParallel>(&leafs_as_digest).unwrap();
             let root = tree.root();
 
             let a_indices = (0..num_indices)
@@ -365,51 +360,94 @@ mod test {
         ShadowedAlgorithm::new(VerifyFriAuthenticationPaths).test();
     }
 
-    #[test]
-    fn leaf_index_indices_auth_path_negative_test() {
-        let mut rng = thread_rng();
-        let seed: [u8; 32] = rng.gen();
-        let vap4lail = VerifyFriAuthenticationPaths;
-        for i in 0..4 {
-            let mut initial_state = vap4lail.pseudorandom_initial_state(seed, None);
-            let stack_size = initial_state.stack.len();
+    #[proptest]
+    fn fri_authentication_fails_if_root_is_disturbed_slightly(
+        seed: [u8; 32],
+        #[strategy(0_usize..5)] perturbation_index: usize,
+        #[filter(#perturbation != 0)] perturbation: i8,
+    ) {
+        let mut initial_state = VerifyFriAuthenticationPaths.pseudorandom_initial_state(seed, None);
+        let top_of_stack = initial_state.stack.len() - 1;
+        initial_state.stack[top_of_stack - perturbation_index] += bfe!(perturbation);
 
-            match i {
-                0 => {
-                    // change root; must fail
-                    initial_state.stack[stack_size - 1] += BFieldElement::new(1);
-                }
-                1 => {
-                    // change `xor_bitflag`; must fail
-                    initial_state.stack[stack_size - 9] *= bfe!(2);
-                }
-                2 => {
-                    // change an `a_index`;  must fail
-                    let a_indices_pointer = initial_state.stack[stack_size - 7];
-                    let first_element_pointer = a_indices_pointer + bfe!(1);
-                    let index = initial_state
-                        .nondeterminism
-                        .ram
-                        .get_mut(&first_element_pointer)
-                        .unwrap();
-                    index.increment();
-                }
-                3 => {
-                    // change authentication path; must fail
-                    initial_state.nondeterminism.digests[0].0[0].increment();
-                }
-                _ => unreachable!(), // no change; should be valid
-            }
+        test_assertion_failure(
+            &ShadowedAlgorithm::new(VerifyFriAuthenticationPaths),
+            initial_state.into(),
+            &[30],
+        );
+    }
 
-            let assertion_error = AssertionError::new(1, 0);
-            let vector_assertion_failure =
-                InstructionError::VectorAssertionFailed(0, assertion_error);
-            negative_test(
-                &ShadowedAlgorithm::new(vap4lail),
-                initial_state.into(),
-                &[vector_assertion_failure],
-            );
-        }
+    #[proptest]
+    fn fri_authentication_fails_if_xor_bitflag_is_disturbed_slightly(seed: [u8; 32]) {
+        let mut initial_state = VerifyFriAuthenticationPaths.pseudorandom_initial_state(seed, None);
+        let top_of_stack = initial_state.stack.len() - 1;
+        let xor_bitflag = initial_state.stack.get_mut(top_of_stack - 8).unwrap();
+        *xor_bitflag *= bfe!(2); // todo: generalize this perturbation
+        prop_assume!(u32::try_from(*xor_bitflag).is_ok());
+
+        test_assertion_failure(
+            &ShadowedAlgorithm::new(VerifyFriAuthenticationPaths),
+            initial_state.into(),
+            &[30],
+        );
+    }
+
+    #[proptest]
+    fn fri_authentication_fails_if_authentication_path_is_disturbed_slightly(
+        seed: [u8; 32],
+        digest_index: usize,
+        #[strategy(0_usize..5)] perturbation_index: usize,
+        #[filter(#perturbation != 0)] perturbation: i8,
+    ) {
+        let mut initial_state = VerifyFriAuthenticationPaths.pseudorandom_initial_state(seed, None);
+        let auth_paths = &mut initial_state.nondeterminism.digests;
+        let digest_index = digest_index % auth_paths.len();
+        let auth_path_element = &mut auth_paths[digest_index];
+        let Digest(ref mut auth_path_element_innards) = auth_path_element;
+        auth_path_element_innards[perturbation_index] += bfe!(perturbation);
+
+        test_assertion_failure(
+            &ShadowedAlgorithm::new(VerifyFriAuthenticationPaths),
+            initial_state.into(),
+            &[30],
+        );
+    }
+
+    #[proptest]
+    fn fri_authentication_fails_if_a_index_is_disturbed_slightly(
+        seed: [u8; 32],
+        perturbation_index: usize,
+        #[filter(#perturbation != 0)] perturbation: i8,
+    ) {
+        let perturbation = bfe!(perturbation);
+
+        let mut initial_state = VerifyFriAuthenticationPaths.pseudorandom_initial_state(seed, None);
+        let top_of_stack = initial_state.stack.len() - 1;
+
+        let a_indices_pointer = initial_state.stack[top_of_stack - 6];
+        let a_indices_len = initial_state.nondeterminism.ram[&a_indices_pointer].value() as usize;
+        let perturbation_index = bfe!(perturbation_index % a_indices_len);
+
+        let perturbation_pointer = a_indices_pointer + bfe!(1) + perturbation_index;
+        let ram = &mut initial_state.nondeterminism.ram;
+        let a_index = ram.get_mut(&perturbation_pointer).unwrap();
+
+        let old_a_index = a_index.value();
+        *a_index += perturbation;
+        let new_a_index = a_index.value();
+        prop_assume!(u32::try_from(*a_index).is_ok());
+
+        // ensure meaningful perturbation
+        let dom_len_minus_one = initial_state.stack[top_of_stack - 9].value();
+        let xor_bitflag = initial_state.stack[top_of_stack - 8].value();
+        let node_index = |i| (i & dom_len_minus_one) ^ xor_bitflag;
+        prop_assume!(node_index(old_a_index) != node_index(new_a_index));
+
+        test_assertion_failure(
+            &ShadowedAlgorithm::new(VerifyFriAuthenticationPaths),
+            initial_state.into(),
+            &[30],
+        );
     }
 }
 

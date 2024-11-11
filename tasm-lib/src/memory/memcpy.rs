@@ -88,7 +88,7 @@ impl DeprecatedSnippet for MemCpy {
             lt
             // _ read_source write_dest (num_words < MAX)
 
-            assert
+            assert error_id 60
             // _ read_source write_dest
 
 
@@ -336,10 +336,9 @@ impl DeprecatedSnippet for MemCpy {
 mod tests {
     use super::*;
     use crate::prelude::BasicSnippet;
-    use crate::test_helpers::negative_test;
+    use crate::test_helpers::test_assertion_failure;
     use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
     use crate::traits::deprecated_snippet::tests::DeprecatedSnippetWrapper;
-    use triton_vm::isa::error::AssertionError;
 
     #[test]
     fn memcpy_test() {
@@ -363,8 +362,7 @@ mod tests {
             sponge: None,
         };
 
-        let assertion_failure = InstructionError::AssertionFailed(AssertionError::new(1, 0));
-        negative_test(&snippet_struct, init_state, &[assertion_failure]);
+        test_assertion_failure(&snippet_struct, init_state, &[60]);
     }
 }
 

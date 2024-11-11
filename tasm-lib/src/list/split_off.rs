@@ -66,7 +66,7 @@ impl BasicSnippet for SplitOff {
                 eq
                 // _ *list at original_length (at <= original_length)
 
-                assert
+                assert error_id 80
 
                 // Write new length
                 dup 1
@@ -135,7 +135,6 @@ mod tests {
     use std::collections::HashMap;
 
     use rand::prelude::*;
-    use triton_vm::isa::error::AssertionError;
 
     use super::*;
     use crate::rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator;
@@ -143,7 +142,7 @@ mod tests {
     use crate::rust_shadowing_helper_functions::list::list_set_length;
     use crate::rust_shadowing_helper_functions::list::load_list_unstructured;
     use crate::snippet_bencher::BenchmarkCase;
-    use crate::test_helpers::negative_test;
+    use crate::test_helpers::test_assertion_failure;
     use crate::traits::function::Function;
     use crate::traits::function::FunctionInitialState;
     use crate::traits::function::ShadowedFunction;
@@ -180,11 +179,10 @@ mod tests {
         init_stack.push(BFieldElement::new(at as u64));
         insert_random_list(&element_type, list_pointer, list_length, &mut memory);
 
-        let assertion_failure = InstructionError::AssertionFailed(AssertionError::new(1, 0));
-        negative_test(
+        test_assertion_failure(
             &ShadowedFunction::new(snippet),
             InitVmState::with_stack_and_memory(init_stack, memory),
-            &[assertion_failure],
+            &[80],
         );
     }
 

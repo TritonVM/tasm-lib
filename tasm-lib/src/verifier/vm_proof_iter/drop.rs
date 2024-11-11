@@ -50,11 +50,11 @@ impl BasicSnippet for Drop {
                 eq
                 // _ current_item_count total_item_count (current_item_pointer == proof_start_pointer + proof_length + 1)
 
-                assert
+                assert error_id 50
                 // _ current_item_count total_item_count
 
                 eq
-                assert
+                assert error_id 60
                 // _
 
                 return
@@ -71,8 +71,6 @@ mod tests {
     use rand::rngs::StdRng;
     use rand::Rng;
     use rand::SeedableRng;
-    use triton_vm::error::InstructionError;
-    use triton_vm::isa::error::AssertionError;
     use triton_vm::prelude::bfe;
     use triton_vm::prelude::BFieldElement;
     use triton_vm::proof_item::ProofItemVariant;
@@ -82,7 +80,7 @@ mod tests {
     use crate::memory::encode_to_memory;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::structure::tasm_object::TasmObject;
-    use crate::test_helpers::negative_test;
+    use crate::test_helpers::test_assertion_failure;
     use crate::traits::accessor::Accessor;
     use crate::traits::accessor::AccessorInitialState;
     use crate::traits::accessor::ShadowedAccessor;
@@ -108,11 +106,10 @@ mod tests {
             current_item_pointer: correct_proof_end + bfe!(4),
         };
 
-        let assertion_failure = InstructionError::AssertionFailed(AssertionError::new(1, 0));
-        negative_test(
+        test_assertion_failure(
             &ShadowedAccessor::new(Drop),
             Drop.init_state(bad_proof_length).into(),
-            &[assertion_failure],
+            &[50],
         );
     }
 
@@ -129,11 +126,10 @@ mod tests {
             current_item_pointer: correct_proof_end,
         };
 
-        let assertion_failure = InstructionError::AssertionFailed(AssertionError::new(1, 0));
-        negative_test(
+        test_assertion_failure(
             &ShadowedAccessor::new(Drop),
             Drop.init_state(bad_proof_length).into(),
-            &[assertion_failure],
+            &[50],
         );
     }
 

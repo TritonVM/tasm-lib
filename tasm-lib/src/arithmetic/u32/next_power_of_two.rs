@@ -79,7 +79,7 @@ impl BasicSnippet for NextPowerOfTwo {
                     eq
                     push 0
                     eq
-                    assert
+                    assert error_id 130
 
                     return
         )
@@ -90,10 +90,9 @@ impl BasicSnippet for NextPowerOfTwo {
 mod tests {
     use itertools::Itertools;
     use rand::prelude::*;
-    use triton_vm::isa::error::AssertionError;
 
     use super::*;
-    use crate::test_helpers::negative_test;
+    use crate::test_helpers::test_assertion_failure;
     use crate::traits::closure::Closure;
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
@@ -165,12 +164,7 @@ mod tests {
             let init_stack = NextPowerOfTwo.prepare_vm_stack(self_);
             let init_state = InitVmState::with_stack(init_stack);
 
-            let assertion_failure = InstructionError::AssertionFailed(AssertionError::new(1, 0));
-            negative_test(
-                &ShadowedClosure::new(NextPowerOfTwo),
-                init_state,
-                &[assertion_failure],
-            );
+            test_assertion_failure(&ShadowedClosure::new(NextPowerOfTwo), init_state, &[130]);
         }
     }
 }

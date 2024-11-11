@@ -137,7 +137,7 @@ impl BasicSnippet for VerifyTableRows {
                 pop 1
                 // _ remaining_iterations num_leaves *merkle_tree_root *fri_revealed_leaf_index_next *row_elem_next [mt_root] [calculated_root]
 
-                assert_vector
+                assert_vector error_id 40
                 // _ remaining_iterations num_leaves *merkle_tree_root *fri_revealed_leaf_index_next *row_elem_next [mt_root]
 
                 swap 9
@@ -170,7 +170,7 @@ impl BasicSnippet for VerifyTableRows {
 
                 dup 5
                 eq
-                assert
+                assert error_id 41
                 // _ num_combination_codeword_checks merkle_tree_height *merkle_tree_root (*fri_revealed_first_elem.0) *table_rows[0]
 
                 swap 3
@@ -254,19 +254,15 @@ mod tests {
     }
 
     mod negative_tests {
-
-        use rand::prelude::*;
         use strum::IntoEnumIterator;
-        use triton_vm::isa::error::AssertionError;
+        use tasm_lib::test_helpers::test_assertion_failure;
+        use test_strategy::proptest;
 
         use super::*;
-        use crate::test_helpers::negative_test;
 
-        #[test]
-        fn verify_bad_auth_path_crashes_vm() {
-            let mut rng = thread_rng();
-            let mut seed = [0u8; 32];
-            rng.fill_bytes(&mut seed);
+        #[proptest(cases = 50)]
+        fn verify_bad_auth_path_crashes_vm(seed: [u8; 32]) {
+            let mut rng = StdRng::from_seed(seed);
             let snippets = ColumnType::iter().map(|column_type| VerifyTableRows { column_type });
 
             for snippet in snippets {
@@ -274,23 +270,13 @@ mod tests {
                 let num_digests = init_state.nondeterminism.digests.len();
                 init_state.nondeterminism.digests[rng.gen_range(0..num_digests)] = rng.gen();
 
-                let vector_assertion_failure =
-                    InstructionError::VectorAssertionFailed(0, AssertionError::new(1, 0));
-                negative_test(
-                    &ShadowedProcedure::new(snippet),
-                    init_state.into(),
-                    &[vector_assertion_failure],
-                );
+                test_assertion_failure(&ShadowedProcedure::new(snippet), init_state.into(), &[40]);
             }
         }
 
-        #[test]
-        fn verify_bad_row_list_length() {
-            let mut rng = thread_rng();
-            let mut seed = [0u8; 32];
-            rng.fill_bytes(&mut seed);
+        #[proptest(cases = 50)]
+        fn verify_bad_row_list_length(seed: [u8; 32]) {
             let snippets = ColumnType::iter().map(|column_type| VerifyTableRows { column_type });
-
             for snippet in snippets {
                 let mut init_state = snippet.pseudorandom_initial_state(seed, None);
 
@@ -298,13 +284,7 @@ mod tests {
                 let init_stack_length = init_state.stack.len();
                 init_state.stack[init_stack_length - 5].increment();
 
-                let assertion_failure =
-                    InstructionError::AssertionFailed(AssertionError::new(1, 0));
-                negative_test(
-                    &ShadowedProcedure::new(snippet),
-                    init_state.into(),
-                    &[assertion_failure],
-                );
+                test_assertion_failure(&ShadowedProcedure::new(snippet), init_state.into(), &[41]);
             }
         }
     }

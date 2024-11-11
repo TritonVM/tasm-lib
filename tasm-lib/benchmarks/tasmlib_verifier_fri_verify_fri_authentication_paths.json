@@ -2,10 +2,10 @@
   {
     "name": "tasmlib_verifier_fri_verify_fri_authentication_paths",
     "benchmark_result": {
-      "clock_cycle_count": 3606,
-      "hash_table_height": 4836,
+      "clock_cycle_count": 3126,
+      "hash_table_height": 4830,
       "u32_table_height": 5551,
-      "op_stack_table_height": 1770,
+      "op_stack_table_height": 1450,
       "ram_table_height": 320
     },
     "case": "CommonCase"
@@ -13,10 +13,10 @@
   {
     "name": "tasmlib_verifier_fri_verify_fri_authentication_paths",
     "benchmark_result": {
-      "clock_cycle_count": 5206,
-      "hash_table_height": 9636,
+      "clock_cycle_count": 4726,
+      "hash_table_height": 9630,
       "u32_table_height": 20943,
-      "op_stack_table_height": 1770,
+      "op_stack_table_height": 1450,
       "ram_table_height": 320
     },
     "case": "WorstCase"

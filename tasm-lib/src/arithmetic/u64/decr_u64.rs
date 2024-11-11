@@ -66,7 +66,7 @@ impl DeprecatedSnippet for DecrU64 {
                 eq
                 push 0
                 eq
-                assert
+                assert error_id 110
                 push {U32_MAX}
                 return
         )
@@ -138,12 +138,11 @@ impl DeprecatedSnippet for DecrU64 {
 mod tests {
     use num::Zero;
     use rand::prelude::*;
-    use triton_vm::isa::error::AssertionError;
 
     use super::*;
     use crate::empty_stack;
     use crate::push_encodable;
-    use crate::test_helpers::negative_test;
+    use crate::test_helpers::test_assertion_failure;
     use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
     use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
     use crate::traits::basic_snippet::BasicSnippet;
@@ -169,12 +168,8 @@ mod tests {
         let mut stack = DecrU64.init_stack_for_isolated_run();
         push_encodable(&mut stack, &U32s::<2>::zero());
         let snippet = DeprecatedSnippetWrapper::new(snippet);
-        let assertion_failure = InstructionError::AssertionFailed(AssertionError::new(1, 0));
-        negative_test(
-            &snippet,
-            InitVmState::with_stack(stack),
-            &[assertion_failure],
-        );
+
+        test_assertion_failure(&snippet, InitVmState::with_stack(stack), &[110]);
     }
 
     #[test]

@@ -75,7 +75,7 @@ impl DeprecatedSnippet for SafeMulU64 {
                     // crash if `lhs_hi * rhs_hi != 0`
                     push 0
                     eq
-                    assert
+                    assert error_id 100
                     // _ (lhs_lo * rhs_lo) (lhs_lo * rhs_hi) (rhs_lo * lhs_hi)
 
                     // rename to: a, b, c:
@@ -86,7 +86,7 @@ impl DeprecatedSnippet for SafeMulU64 {
                     swap 1
                     push 0
                     eq
-                    assert
+                    assert error_id 101
                     // _ a b c_lo
 
                     swap 1
@@ -94,7 +94,7 @@ impl DeprecatedSnippet for SafeMulU64 {
                     swap 1
                     push 0
                     eq
-                    assert
+                    assert error_id 102
                     // _ a c_lo b_lo
 
                     swap 2
@@ -112,7 +112,7 @@ impl DeprecatedSnippet for SafeMulU64 {
                     swap 1
                     push 0
                     eq
-                    assert
+                    assert error_id 103
                     // _ a_lo (c_lo + a_hi + b_lo)_lo
 
                     swap 1
@@ -195,10 +195,9 @@ mod tests {
     use std::collections::HashMap;
 
     use num::Zero;
-    use triton_vm::isa::error::AssertionError;
 
     use super::*;
-    use crate::test_helpers::negative_test;
+    use crate::test_helpers::test_assertion_failure;
     use crate::test_helpers::test_rust_equivalence_given_input_values_deprecated;
     use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
     use crate::traits::basic_snippet::BasicSnippet;
@@ -222,48 +221,41 @@ mod tests {
     #[test]
     fn overflow_test_1() {
         // Crash because (rhs_hi * lhs_hi) != 0
-        let assertion_failure = InstructionError::AssertionFailed(AssertionError::new(1, 0));
 
-        negative_test(
+        test_assertion_failure(
             &DeprecatedSnippetWrapper::new(SafeMulU64),
             SafeMulU64::initial_test_state(1 << 32, 1 << 32),
-            &[assertion_failure],
+            &[100],
         );
     }
 
     #[test]
     fn overflow_test_2() {
         // Crash because (rhs_lo * lhs_hi)_hi != 0
-        let assertion_failure = InstructionError::AssertionFailed(AssertionError::new(1, 0));
-
-        negative_test(
+        test_assertion_failure(
             &DeprecatedSnippetWrapper::new(SafeMulU64),
             SafeMulU64::initial_test_state(1 << 31, 1 << 33),
-            &[assertion_failure],
+            &[102],
         );
     }
 
     #[test]
     fn overflow_test_3() {
         // Crash because (lhs_lo * rhs_hi)_hi != 0
-        let assertion_failure = InstructionError::AssertionFailed(AssertionError::new(1, 0));
-
-        negative_test(
+        test_assertion_failure(
             &DeprecatedSnippetWrapper::new(SafeMulU64),
             SafeMulU64::initial_test_state(1 << 33, 1 << 31),
-            &[assertion_failure],
+            &[101],
         );
     }
 
     #[test]
     fn overflow_test_4() {
         // Crash because (c_lo + a_hi + b_lo)_hi != 0
-        let assertion_failure = InstructionError::AssertionFailed(AssertionError::new(1, 0));
-
-        negative_test(
+        test_assertion_failure(
             &DeprecatedSnippetWrapper::new(SafeMulU64),
             SafeMulU64::initial_test_state((1 << 33) + 5, (1 << 31) - 1),
-            &[assertion_failure],
+            &[103],
         );
     }
 

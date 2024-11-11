@@ -84,7 +84,7 @@ impl BasicSnippet for Safepow {
                 // _ [bpow2_u64] i acc
 
                 // Verify that `bpow2_u64` does not exceed `u32::MAX`
-                dup 3 push 0 eq assert
+                dup 3 push 0 eq assert error_id 120
 
                 // _ 0 bpow2 i acc
                 dup 1
@@ -137,7 +137,7 @@ impl BasicSnippet for Safepow {
                 mul
                 // _ 0 bpow2 i (acc * bpow2)
 
-                split swap 1 push 0 eq assert
+                split swap 1 push 0 eq assert error_id 121
                 // _ 0 bpow2 i new_acc
 
                 return
@@ -192,12 +192,11 @@ impl Closure for Safepow {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_helpers::negative_test;
+    use crate::test_helpers::test_assertion_failure;
     use crate::test_helpers::test_rust_equivalence_given_complete_state;
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
     use crate::InitVmState;
-    use triton_vm::isa::error::AssertionError;
 
     #[test]
     fn u32_pow_pbt() {
@@ -286,14 +285,12 @@ mod tests {
             (1 << 8, 16),
             (1 << 8, 32),
         ] {
-            let init_stack =
-                [safe_pow.init_stack_for_isolated_run(), bfe_vec![base, exp,]].concat();
+            let init_stack = [safe_pow.init_stack_for_isolated_run(), bfe_vec![base, exp]].concat();
 
-            let assertion_failure = InstructionError::AssertionFailed(AssertionError::new(1, 0));
-            negative_test(
+            test_assertion_failure(
                 &ShadowedClosure::new(safe_pow),
                 InitVmState::with_stack(init_stack),
-                &[assertion_failure],
+                &[120, 121],
             );
         }
     }

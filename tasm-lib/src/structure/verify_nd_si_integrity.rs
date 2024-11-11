@@ -20,7 +20,7 @@ pub struct VerifyNdSiIntegrity<PreloadedData: TasmObject + BFieldCodec + Clone +
 impl<T: TasmObject + BFieldCodec + Clone + Debug> Default for VerifyNdSiIntegrity<T> {
     fn default() -> Self {
         Self {
-            _phantom_data: Default::default(),
+            _phantom_data: PhantomData,
         }
     }
 }
@@ -35,10 +35,8 @@ impl<T: TasmObject + BFieldCodec + Clone + Debug> BasicSnippet for VerifyNdSiInt
     }
 
     fn entrypoint(&self) -> String {
-        format!(
-            "tasmlib_structure_verify_nd_si_integrity___{}",
-            T::label_friendly_name()
-        )
+        let name = T::label_friendly_name();
+        format!("tasmlib_structure_verify_nd_si_integrity___{name}")
     }
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
@@ -169,10 +167,9 @@ mod tests {
     }
 
     mod simple_struct {
-        use triton_vm::isa::error::AssertionError;
-
         use super::*;
         use crate::test_helpers::negative_test;
+        use crate::test_helpers::test_assertion_failure;
 
         #[derive(Debug, Clone, TasmObject, BFieldCodec, Arbitrary)]
         struct TestStruct {
@@ -242,12 +239,7 @@ mod tests {
                 .memory
                 .insert(begin_address, true_value + bfe!(1));
 
-            let assertion_failure = InstructionError::AssertionFailed(AssertionError::new(1, 0));
-            negative_test(
-                &ShadowedAccessor::new(snippet),
-                init_state.into(),
-                &[assertion_failure],
-            )
+            test_assertion_failure(&ShadowedAccessor::new(snippet), init_state.into(), &[])
         }
 
         #[test]
@@ -265,19 +257,13 @@ mod tests {
                 .memory
                 .insert(vec_digest_len_indicator, true_value + bfe!(1));
 
-            let assertion_failure = InstructionError::AssertionFailed(AssertionError::new(1, 0));
-            negative_test(
-                &ShadowedAccessor::new(snippet),
-                init_state.into(),
-                &[assertion_failure],
-            )
+            test_assertion_failure(&ShadowedAccessor::new(snippet), init_state.into(), &[])
         }
     }
 
     mod option_types {
         use super::*;
-        use crate::test_helpers::negative_test;
-        use triton_vm::isa::error::AssertionError;
+        use crate::test_helpers::test_assertion_failure;
 
         #[derive(Debug, Clone, TasmObject, BFieldCodec, Arbitrary)]
         struct StatSizedPayload {
@@ -327,11 +313,10 @@ mod tests {
                 .memory
                 .insert(outer_option_payload_si_ptr, true_value + bfe!(1));
 
-            let assertion_failure = InstructionError::AssertionFailed(AssertionError::new(1, 0));
-            negative_test(
+            test_assertion_failure(
                 &ShadowedAccessor::new(snippet),
                 manipulated_si_outer.into(),
-                &[assertion_failure],
+                &[],
             );
         }
 
@@ -349,11 +334,10 @@ mod tests {
                 .memory
                 .insert(option_discriminant_ptr, bfe!(2));
 
-            let assertion_failure = InstructionError::AssertionFailed(AssertionError::new(1, 0));
-            negative_test(
+            test_assertion_failure(
                 &ShadowedAccessor::new(snippet.clone()),
                 manipulated_init_state.into(),
-                &[assertion_failure],
+                &[],
             );
         }
 
@@ -378,23 +362,14 @@ mod tests {
                 .memory
                 .insert(len_of_dyn_sized_list_elem_0, true_value + bfe!(1));
 
-            let assertion_failure = [InstructionError::AssertionFailed(AssertionError::new(1, 0))];
-            negative_test(
-                &ShadowedAccessor::new(snippet.clone()),
-                add_one.into(),
-                &assertion_failure,
-            );
+            test_assertion_failure(&ShadowedAccessor::new(snippet.clone()), add_one.into(), &[]);
 
             let mut sub_one = true_init_state.clone();
             sub_one
                 .memory
                 .insert(len_of_dyn_sized_list_elem_0, true_value - bfe!(1));
 
-            negative_test(
-                &ShadowedAccessor::new(snippet),
-                sub_one.into(),
-                &assertion_failure,
-            );
+            test_assertion_failure(&ShadowedAccessor::new(snippet), sub_one.into(), &[]);
         }
     }
 

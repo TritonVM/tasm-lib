@@ -486,12 +486,12 @@ fn link_for_isolated_run<T: RustShadow>(snippet_struct: &T) -> Vec<LabelledInstr
 }
 
 #[allow(dead_code)]
-pub fn test_rust_equivalence_given_execution_state<T: RustShadow>(
-    snippet_struct: &T,
+pub fn test_rust_equivalence_given_execution_state<S: RustShadow>(
+    snippet_struct: &S,
     execution_state: InitVmState,
 ) -> VMState {
     let nondeterminism = execution_state.nondeterminism;
-    test_rust_equivalence_given_complete_state::<T>(
+    test_rust_equivalence_given_complete_state::<S>(
         snippet_struct,
         &execution_state.stack,
         &execution_state.public_input,
@@ -502,15 +502,53 @@ pub fn test_rust_equivalence_given_execution_state<T: RustShadow>(
 }
 
 pub fn negative_test<T: RustShadow>(
-    snippet_struct: &T,
-    init_state: InitVmState,
-    allowed_failure_codes: &[InstructionError],
+    snippet: &T,
+    initial_state: InitVmState,
+    allowed_errors: &[InstructionError],
 ) {
+    let err = instruction_error_from_failing_code(snippet, initial_state);
+    assert!(
+        allowed_errors.contains(&err),
+        "Triton VM execution must fail with one of the expected errors:\n- {}\n\n Got:\n{err}",
+        allowed_errors.iter().join("\n- ")
+    );
+}
+
+#[cfg(test)]
+pub(crate) fn test_assertion_failure<S: RustShadow>(
+    snippet_struct: &S,
+    initial_state: InitVmState,
+    expected_error_ids: &[i128],
+) {
+    let err = instruction_error_from_failing_code(snippet_struct, initial_state);
+    let maybe_error_id = match err {
+        InstructionError::AssertionFailed(err)
+        | InstructionError::VectorAssertionFailed(_, err) => err.id,
+        _ => panic!("Triton VM execution failed, but not due to an assertion. Instead, got: {err}"),
+    };
+    let error_id = maybe_error_id.expect(
+        "Triton VM execution failed due to unfulfilled assertion, but that assertion has no \
+        error ID. See `tasm-lib/src/assertion_error_ids.md` to grab a unique ID.",
+    );
+    let expected_error_ids_str = expected_error_ids.iter().join(", ");
+    assert!(
+        expected_error_ids.contains(&error_id),
+        "error ID {error_id} ∉ {{{expected_error_ids_str}}}\nTriton VM execution failed due to \
+         unfulfilled assertion with error ID {error_id}, but expected one of the following IDs: \
+         {{{expected_error_ids_str}}}",
+    );
+}
+
+fn instruction_error_from_failing_code<S: RustShadow>(
+    snippet: &S,
+    init_state: InitVmState,
+) -> InstructionError {
+    // `AssertUnwindSafe` is fine because the caught panic is discarded immediately
     let rust_result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         let mut rust_stack = init_state.stack.clone();
         let mut rust_memory = init_state.nondeterminism.ram.clone();
         let mut rust_sponge = init_state.sponge.clone();
-        snippet_struct.rust_shadow_wrapper(
+        snippet.rust_shadow_wrapper(
             &init_state.public_input,
             &init_state.nondeterminism,
             &mut rust_stack,
@@ -518,9 +556,12 @@ pub fn negative_test<T: RustShadow>(
             &mut rust_sponge,
         )
     }));
+    assert!(
+        rust_result.is_err(),
+        "Failed to fail: Rust-shadowing must panic in negative test case"
+    );
 
-    // Run on Triton
-    let code = snippet_struct.inner().borrow().link_for_isolated_run();
+    let code = snippet.inner().borrow().link_for_isolated_run();
     let tvm_result = execute_with_terminal_state(
         Program::new(&code),
         &init_state.public_input,
@@ -529,19 +570,7 @@ pub fn negative_test<T: RustShadow>(
         init_state.sponge,
     );
 
-    assert!(
-        rust_result.is_err(),
-        "Failed to fail: Rust-shadowing must panic in negative test case"
-    );
-
-    let err = tvm_result
-        .err()
-        .expect("Failed to fail: Triton VM execution must crash in negative test case");
-    assert!(
-        allowed_failure_codes.contains(&err),
-        "Triton VM execution must fail with one of the expected errors:\n- {}\n\n Got:\n{err}",
-        allowed_failure_codes.iter().join("\n -")
-    );
+    tvm_result.expect_err("Failed to fail: Triton VM execution must crash in negative test case")
 }
 
 pub fn prepend_program_with_stack_setup(

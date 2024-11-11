@@ -54,7 +54,7 @@ impl BasicSnippet for PrimitiveRootOfUnity {
             dup 1
             push 0
             eq
-            assert
+            assert error_id 140
 
             // Now we only have to check `order_lo`. We can ignore `order_hi` as we've
             // verified that it's 0 in case the order was not $1^{32}$.
@@ -334,7 +334,7 @@ impl BasicSnippet for PrimitiveRootOfUnity {
             // Result found:     _  order_hi order_lo root ((root == 1) || (root_hi != 0))
             // Result not found: _  order_hi order_lo ((order_lo == 1) || (0 != 0))
 
-            assert
+            assert error_id 141
             // Result found:     _  order_hi order_lo root
             // Result not found: VM crashed
 
@@ -365,29 +365,23 @@ impl Closure for PrimitiveRootOfUnity {
         bench_case: Option<BenchmarkCase>,
     ) -> Vec<BFieldElement> {
         let order = match bench_case {
-            Some(BenchmarkCase::CommonCase) => 1024,
-            Some(BenchmarkCase::WorstCase) => 1u64 << 32,
-            None => {
-                let log_order = StdRng::from_seed(seed).gen_range(1..=32);
-                1u64 << log_order
-            }
+            Some(BenchmarkCase::CommonCase) => 1_u64 << 10,
+            Some(BenchmarkCase::WorstCase) => 1 << 32,
+            None => 1 << StdRng::from_seed(seed).gen_range(1..=32),
         };
 
-        [
-            empty_stack(),
-            bfe_vec![order >> 32, order & u32::MAX as u64],
-        ]
-        .concat()
+        let mut stack = empty_stack();
+        stack.extend(order.encode().iter().rev());
+        stack
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use triton_vm::isa::error::AssertionError;
+    use tasm_lib::test_helpers::test_assertion_failure;
     use triton_vm::prelude::*;
 
     use super::*;
-    use crate::test_helpers::negative_test;
     use crate::test_helpers::test_rust_equivalence_given_complete_state;
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
@@ -422,39 +416,22 @@ mod tests {
 
     #[test]
     fn primitive_root_negative_test() {
-        for order in [
-            0u64,
-            3,
-            5,
-            6,
-            7,
-            9,
-            10,
-            11,
-            12,
-            13,
-            14,
-            15,
-            17,
-            18,
-            (1 << 32) - 2,
-            (1 << 32) - 1,
-            (1 << 32) + 1,
-            (1 << 32) + 2,
-            1 << 33,
-            1 << 34,
-            1 << 63,
-        ] {
-            let mut init_stack = empty_stack();
-            for elem in order.encode().iter().rev() {
-                init_stack.push(*elem);
-            }
+        let small_non_powers_of_two = (0_u64..100).filter(|x| !x.is_power_of_two());
+        let larger_non_powers_of_two = (1_u64..50).map(|x| (1 << 32) - x);
+        let too_large_powers_of_two = (33..64).map(|x| 1_u64 << x);
 
-            let assertion_failure = InstructionError::AssertionFailed(AssertionError::new(1, 0));
-            negative_test(
+        for order in small_non_powers_of_two
+            .chain(larger_non_powers_of_two)
+            .chain(too_large_powers_of_two)
+        {
+            dbg!(order);
+            let mut init_stack = empty_stack();
+            init_stack.extend(order.encode().iter().rev());
+
+            test_assertion_failure(
                 &ShadowedClosure::new(PrimitiveRootOfUnity),
                 InitVmState::with_stack(init_stack),
-                &[assertion_failure],
+                &[140, 141],
             );
         }
     }
