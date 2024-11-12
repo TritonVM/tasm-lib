@@ -1,4 +1,5 @@
 use const_format::formatcp;
+use triton_vm::air::challenge_id::ChallengeId;
 use triton_vm::challenges::Challenges;
 use triton_vm::proof_item::ProofItemVariant;
 use triton_vm::table::master_table::MasterAuxTable;
@@ -475,7 +476,7 @@ pub fn name_to_snippet(fn_name: &str) -> Box<dyn BasicSnippet> {
         "tasmlib_verifier_claim_instantiate_fiat_shamir_with_claim" => {
             Box::new(InstantiateFiatShamirWithClaim)
         }
-        CHALLENGES_NEW_FROM_DYN_CLAIM => Box::new(NewGenericDynClaim::new(Challenges::SAMPLE_COUNT, Challenges::COUNT - Challenges::SAMPLE_COUNT, challenges::shared::conventional_challenges_pointer())),
+        CHALLENGES_NEW_FROM_DYN_CLAIM => Box::new(NewGenericDynClaim::new(Challenges::SAMPLE_COUNT, ChallengeId::NUM_DERIVED_CHALLENGES, challenges::shared::conventional_challenges_pointer())),
 
         // memory
         "tasmlib_memory_dyn_malloc" => Box::new(DynMalloc),

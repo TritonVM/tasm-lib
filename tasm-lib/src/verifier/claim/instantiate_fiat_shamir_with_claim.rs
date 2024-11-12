@@ -37,8 +37,7 @@ impl BasicSnippet for InstantiateFiatShamirWithClaim {
             // _ output_size (*output - 1)
 
             dup 1
-            push 2
-            add
+            addi 2
             add
             // _ output_size (*output + 1 + output_size)
             // _ output_size *input_size
@@ -47,8 +46,7 @@ impl BasicSnippet for InstantiateFiatShamirWithClaim {
             pop 1
             // _ output_size input_size
 
-            push {Digest::LEN + 2}
-            add
+            addi {Digest::LEN + 1 + 2} // fields `program_digest` & `version`, plus 2
             add
             // _ size
 

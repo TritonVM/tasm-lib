@@ -45,7 +45,9 @@ impl BasicSnippet for NewRecursive {
         let output_field_size: u32 = (1 + self.output_size).try_into().unwrap();
         let input_field_pointer = output_field_pointer + bfe!(output_field_size + 1);
         let input_field_size: u32 = (1 + self.input_size).try_into().unwrap();
-        let digest_field_pointer = input_field_pointer + bfe!(input_field_size + 1);
+        let version_field_pointer = input_field_pointer + bfe!(input_field_size + 1);
+        let version_field_size = 1;
+        let digest_field_pointer = version_field_pointer + bfe!(version_field_size);
 
         let read_output_value = InputSource::SecretIn.read_words(self.output_size);
         let write_output_value_and_metadata = write_words_to_memory_pop_pointer(
@@ -55,6 +57,7 @@ impl BasicSnippet for NewRecursive {
         let write_input_value_and_metadata = write_words_to_memory_pop_pointer(
             self.input_size + METADATA_SIZE_FOR_FIELD_WITH_VEC_VALUE,
         );
+        let write_version_to_memory = write_words_to_memory_pop_pointer(version_field_size);
         let dup_own_program_digest =
             vec![triton_asm!(dup {NUM_OP_STACK_REGISTERS - 1}); Digest::LEN].concat();
         let write_digest_to_memory = write_words_to_memory_pop_pointer(Digest::LEN);
@@ -85,6 +88,11 @@ impl BasicSnippet for NewRecursive {
                 // _ [input] input_size input_field_size *input_field_size
 
                 {&write_input_value_and_metadata}
+                // _
+
+                push {triton_vm::proof::CURRENT_VERSION}
+                push {version_field_pointer}
+                {&write_version_to_memory}
                 // _
 
                 // Write own digest to claim. It is assumed that own program digest occupies stack

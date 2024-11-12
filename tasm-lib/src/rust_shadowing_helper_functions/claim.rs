@@ -21,7 +21,8 @@ pub fn load_claim_from_memory(
         .get(&input_field_size_pointer)
         .unwrap_or(&BFieldElement::zero())
         .value();
-    let size = input_field_size + output_field_size + Digest::LEN as u64 + 2;
+    let version_field_size = 1;
+    let size = input_field_size + output_field_size + version_field_size + Digest::LEN as u64 + 2;
 
     // Load `Claim` struct into memory
     // Notice that it's important to use the `Claim` type from Triton VM here, as it

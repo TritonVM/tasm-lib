@@ -95,7 +95,10 @@ mod tests {
     use crate::traits::accessor::ShadowedAccessor;
     use crate::traits::rust_shadow::RustShadow;
 
-    impl<T: TasmObject + BFieldCodec + for<'a> Arbitrary<'a> + Debug + Clone> VerifyNdSiIntegrity<T> {
+    impl<T> VerifyNdSiIntegrity<T>
+    where
+        T: TasmObject + BFieldCodec + for<'a> Arbitrary<'a> + Debug + Clone,
+    {
         fn initial_state(&self, address: BFieldElement, t: T) -> AccessorInitialState {
             let mut memory = HashMap::default();
             encode_to_memory(&mut memory, address, &t);
@@ -112,8 +115,9 @@ mod tests {
         }
     }
 
-    impl<T: TasmObject + BFieldCodec + for<'a> Arbitrary<'a> + Debug + Clone> Accessor
-        for VerifyNdSiIntegrity<T>
+    impl<T> Accessor for VerifyNdSiIntegrity<T>
+    where
+        T: TasmObject + BFieldCodec + for<'a> Arbitrary<'a> + Debug + Clone,
     {
         fn rust_shadow(
             &self,
@@ -166,6 +170,23 @@ mod tests {
         }
     }
 
+    macro_rules! test_case {
+        (fn $test_name:ident for $t:ty) => {
+            #[test]
+            fn $test_name() {
+                ShadowedAccessor::new(VerifyNdSiIntegrity::<$t>::default()).test();
+            }
+        };
+        (fn $test_name:ident for new type $t:ty: $($type_declaration:tt)*) => {
+            #[test]
+            fn $test_name() {
+                #[derive(Debug, Clone, TasmObject, BFieldCodec, Arbitrary)]
+                $($type_declaration)*
+                ShadowedAccessor::new(VerifyNdSiIntegrity::<$t>::default()).test();
+            }
+        };
+    }
+
     mod simple_struct {
         use super::*;
         use crate::test_helpers::negative_test;
@@ -178,21 +199,13 @@ mod tests {
             c: Vec<Digest>,
         }
 
-        #[test]
-        fn test_pbt_simple_struct() {
-            let snippet: VerifyNdSiIntegrity<TestStruct> = VerifyNdSiIntegrity {
-                _phantom_data: PhantomData,
-            };
-            ShadowedAccessor::new(snippet).test();
-        }
+        test_case! { fn test_pbt_simple_struct for TestStruct }
 
         #[test]
         fn struct_not_contained_in_nd_region() {
-            let snippet: VerifyNdSiIntegrity<TestStruct> = VerifyNdSiIntegrity {
-                _phantom_data: PhantomData,
-            };
+            let snippet = VerifyNdSiIntegrity::<TestStruct>::default();
 
-            let t: TestStruct = snippet.prepare_random_object(&[]);
+            let t = snippet.prepare_random_object(&[]);
             let begin_address = bfe!((1u64 << 32) - 4);
             let init_state = snippet.initial_state(begin_address, t.clone());
 
@@ -209,9 +222,7 @@ mod tests {
 
         #[test]
         fn struct_does_not_start_in_nd_region() {
-            let snippet: VerifyNdSiIntegrity<TestStruct> = VerifyNdSiIntegrity {
-                _phantom_data: PhantomData,
-            };
+            let snippet = VerifyNdSiIntegrity::<TestStruct>::default();
 
             let begin_address = bfe!(-4);
             let init_state =
@@ -227,9 +238,7 @@ mod tests {
 
         #[test]
         fn lie_about_digest_vec_size() {
-            let snippet: VerifyNdSiIntegrity<TestStruct> = VerifyNdSiIntegrity {
-                _phantom_data: PhantomData,
-            };
+            let snippet = VerifyNdSiIntegrity::<TestStruct>::default();
 
             let begin_address = bfe!(4);
             let mut init_state =
@@ -244,9 +253,7 @@ mod tests {
 
         #[test]
         fn lie_about_digest_vec_len() {
-            let snippet: VerifyNdSiIntegrity<TestStruct> = VerifyNdSiIntegrity {
-                _phantom_data: PhantomData,
-            };
+            let snippet = VerifyNdSiIntegrity::<TestStruct>::default();
 
             let begin_address = bfe!(4);
             let mut init_state =
@@ -278,27 +285,12 @@ mod tests {
             d: Option<Vec<Option<BFieldElement>>>,
         }
 
-        #[test]
-        fn test_option_stat_sized_elem() {
-            let snippet: VerifyNdSiIntegrity<StatSizedPayload> = VerifyNdSiIntegrity {
-                _phantom_data: PhantomData,
-            };
-            ShadowedAccessor::new(snippet).test();
-        }
-
-        #[test]
-        fn test_option_dyn_sized_elem() {
-            let snippet: VerifyNdSiIntegrity<DynSizedPayload> = VerifyNdSiIntegrity {
-                _phantom_data: PhantomData,
-            };
-            ShadowedAccessor::new(snippet).test();
-        }
+        test_case! {fn test_option_stat_sized_elem for StatSizedPayload }
+        test_case! {fn test_option_dyn_sized_elem for DynSizedPayload }
 
         #[test]
         fn lie_about_option_payload_field_size() {
-            let snippet: VerifyNdSiIntegrity<DynSizedPayload> = VerifyNdSiIntegrity {
-                _phantom_data: PhantomData,
-            };
+            let snippet = VerifyNdSiIntegrity::<DynSizedPayload>::default();
 
             let begin_address = bfe!(4);
             let randomness = rand::random::<[u8; 100_000]>();
@@ -322,9 +314,7 @@ mod tests {
 
         #[test]
         fn illegal_discriminant_value_for_option() {
-            let snippet: VerifyNdSiIntegrity<DynSizedPayload> = VerifyNdSiIntegrity {
-                _phantom_data: PhantomData,
-            };
+            let snippet = VerifyNdSiIntegrity::<DynSizedPayload>::default();
 
             let obj = DynSizedPayload::default();
             let begin_address = bfe!(4);
@@ -343,9 +333,7 @@ mod tests {
 
         #[test]
         fn lie_about_option_payload_size() {
-            let snippet: VerifyNdSiIntegrity<DynSizedPayload> = VerifyNdSiIntegrity {
-                _phantom_data: PhantomData,
-            };
+            let snippet = VerifyNdSiIntegrity::<DynSizedPayload>::default();
 
             let obj = DynSizedPayload {
                 d: Some(vec![Some(bfe!(14)), None, Some(bfe!(15))]),
@@ -377,291 +365,49 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_stat_sized_tuple() {
-        #[derive(Debug, Clone, TasmObject, BFieldCodec, Arbitrary)]
-        struct TestStruct {
-            a: (Digest, XFieldElement),
-        }
-        let snippet: VerifyNdSiIntegrity<TestStruct> = VerifyNdSiIntegrity {
-            _phantom_data: PhantomData,
-        };
-        ShadowedAccessor::new(snippet).test();
+    test_case! { fn test_stat_sized_tuple for new type TestStruct:
+        struct TestStruct { field: (Digest, XFieldElement) }
     }
 
-    #[test]
-    fn test_dyn_state_sized_tuple_right_dyn() {
-        #[derive(Debug, Clone, TasmObject, BFieldCodec, Arbitrary)]
-        struct RightIsDyn {
-            a: (Digest, Vec<XFieldElement>),
-        }
-        let snippet: VerifyNdSiIntegrity<RightIsDyn> = VerifyNdSiIntegrity {
-            _phantom_data: PhantomData,
-        };
-        ShadowedAccessor::new(snippet).test();
+    test_case! { fn test_dyn_state_sized_tuple_right_dyn for new type RightIsDyn:
+        struct RightIsDyn { field: (Digest, Vec<XFieldElement>) }
     }
 
-    #[test]
-    fn test_dyn_state_sized_tuple_left_dyn() {
-        #[derive(Debug, Clone, TasmObject, BFieldCodec, Arbitrary)]
-        struct LeftIsDyn {
-            a: (Vec<XFieldElement>, Digest),
-        }
-        let snippet: VerifyNdSiIntegrity<LeftIsDyn> = VerifyNdSiIntegrity {
-            _phantom_data: PhantomData,
-        };
-        ShadowedAccessor::new(snippet).test();
+    test_case! { fn test_dyn_state_sized_tuple_left_dyn for new type LeftIsDyn:
+        struct LeftIsDyn { field: (Vec<XFieldElement>, Digest) }
     }
 
-    #[test]
-    fn test_dyn_state_sized_tuple_both_dyn() {
-        #[derive(Debug, Clone, TasmObject, BFieldCodec, Arbitrary)]
-        struct BothDyn {
-            a: (Vec<XFieldElement>, Vec<XFieldElement>),
-        }
-        let snippet: VerifyNdSiIntegrity<BothDyn> = VerifyNdSiIntegrity {
-            _phantom_data: PhantomData,
-        };
-        ShadowedAccessor::new(snippet).test();
+    test_case! { fn test_dyn_state_sized_tuple_both_dyn for new type BothDyn:
+        struct BothDyn { field: (Vec<XFieldElement>, Vec<XFieldElement>) }
     }
 
-    #[test]
-    fn test_pbt_proof() {
-        let snippet: VerifyNdSiIntegrity<Proof> = VerifyNdSiIntegrity {
-            _phantom_data: PhantomData,
-        };
-        ShadowedAccessor::new(snippet).test();
-    }
-
-    #[test]
-    fn test_pbt_coin() {
-        let snippet: VerifyNdSiIntegrity<CoinLookalike> = VerifyNdSiIntegrity {
-            _phantom_data: PhantomData,
-        };
-        ShadowedAccessor::new(snippet).test();
-    }
-
-    #[test]
-    fn pbt_utxo() {
-        let snippet: VerifyNdSiIntegrity<UtxoLookalike> = VerifyNdSiIntegrity {
-            _phantom_data: PhantomData,
-        };
-        ShadowedAccessor::new(snippet).test();
-    }
-
-    #[test]
-    fn pbt_salted_utxos() {
-        let snippet: VerifyNdSiIntegrity<SaltedUtxosLookalike> = VerifyNdSiIntegrity {
-            _phantom_data: PhantomData,
-        };
-        ShadowedAccessor::new(snippet).test();
-    }
-
-    #[test]
-    fn pbt_collect_lock_scripts_witness() {
-        let snippet: VerifyNdSiIntegrity<CollectLockScriptsWitnessLookalike> =
-            VerifyNdSiIntegrity {
-                _phantom_data: PhantomData,
-            };
-        ShadowedAccessor::new(snippet).test();
-    }
-
-    #[test]
-    fn pbt_collect_type_scripts_witness() {
-        let snippet: VerifyNdSiIntegrity<CollectTypeScriptsWitnessLookalike> =
-            VerifyNdSiIntegrity {
-                _phantom_data: PhantomData,
-            };
-        ShadowedAccessor::new(snippet).test();
-    }
-
-    #[test]
-    fn test_pbt_claim() {
-        let snippet: VerifyNdSiIntegrity<Claim> = VerifyNdSiIntegrity {
-            _phantom_data: PhantomData,
-        };
-        ShadowedAccessor::new(snippet).test();
-    }
-
-    #[test]
-    fn test_neptune_coins() {
-        let snippet: VerifyNdSiIntegrity<NeptuneCoinsLookalike> = VerifyNdSiIntegrity {
-            _phantom_data: PhantomData,
-        };
-        ShadowedAccessor::new(snippet).test();
-    }
-
-    #[test]
-    fn test_option_neptune_coins() {
-        let snippet: VerifyNdSiIntegrity<Option<NeptuneCoinsLookalike>> = VerifyNdSiIntegrity {
-            _phantom_data: PhantomData,
-        };
-        ShadowedAccessor::new(snippet).test();
-    }
-
-    #[test]
-    fn test_chunk() {
-        let snippet: VerifyNdSiIntegrity<ChunkLookalike> = VerifyNdSiIntegrity {
-            _phantom_data: PhantomData,
-        };
-        ShadowedAccessor::new(snippet).test();
-    }
-
-    #[test]
-    fn test_chunk_dictionary() {
-        let snippet: VerifyNdSiIntegrity<ChunkDictionaryLookalike> = VerifyNdSiIntegrity {
-            _phantom_data: PhantomData,
-        };
-        ShadowedAccessor::new(snippet).test();
-    }
-
-    #[test]
-    fn test_pbt_proof_collection_lookalike() {
-        let snippet: VerifyNdSiIntegrity<ProofCollectionLookalike> = VerifyNdSiIntegrity {
-            _phantom_data: PhantomData,
-        };
-        ShadowedAccessor::new(snippet).test();
-    }
-
-    #[test]
-    fn test_absolute_index_set_lookalike() {
-        let snippet: VerifyNdSiIntegrity<AbsoluteIndexSetLookalike> = VerifyNdSiIntegrity {
-            _phantom_data: PhantomData,
-        };
-        ShadowedAccessor::new(snippet).test();
-    }
-
-    #[test]
-    fn test_removal_record_lookalike() {
-        let snippet: VerifyNdSiIntegrity<RemovalRecordLookalike> = VerifyNdSiIntegrity {
-            _phantom_data: PhantomData,
-        };
-        ShadowedAccessor::new(snippet).test();
-    }
-
-    #[test]
-    fn test_addition_record_lookalike() {
-        let snippet: VerifyNdSiIntegrity<AdditionRecordLookalike> = VerifyNdSiIntegrity {
-            _phantom_data: PhantomData,
-        };
-        ShadowedAccessor::new(snippet).test();
-    }
-
-    #[test]
-    fn test_public_announcement_lookalike() {
-        let snippet: VerifyNdSiIntegrity<PublicAnnouncementLookalike> = VerifyNdSiIntegrity {
-            _phantom_data: PhantomData,
-        };
-        ShadowedAccessor::new(snippet).test();
-    }
-
-    #[test]
-    fn test_timestamp_lookalike() {
-        let snippet: VerifyNdSiIntegrity<TimestampLookalike> = VerifyNdSiIntegrity {
-            _phantom_data: PhantomData,
-        };
-        ShadowedAccessor::new(snippet).test();
-    }
-
-    #[test]
-    fn test_transaction_kernel_lookalike() {
-        let snippet: VerifyNdSiIntegrity<TransactionKernelLookalike> = VerifyNdSiIntegrity {
-            _phantom_data: PhantomData,
-        };
-        ShadowedAccessor::new(snippet).test();
-    }
-
-    #[test]
-    fn test_kernel_to_outputs_witness_lookalike() {
-        let snippet: VerifyNdSiIntegrity<KernelToOutputsWitnessLookalike> = VerifyNdSiIntegrity {
-            _phantom_data: PhantomData,
-        };
-        ShadowedAccessor::new(snippet).test();
-    }
-
-    #[test]
-    fn test_merge_witness_lookalike() {
-        let snippet: VerifyNdSiIntegrity<MergeWitnessLookalike> = VerifyNdSiIntegrity {
-            _phantom_data: PhantomData,
-        };
-        ShadowedAccessor::new(snippet).test();
-    }
-
-    #[test]
-    fn test_ms_membership_proof_lookalike() {
-        let snippet: VerifyNdSiIntegrity<MsMembershipProofLookalike> = VerifyNdSiIntegrity {
-            _phantom_data: PhantomData,
-        };
-        ShadowedAccessor::new(snippet).test();
-    }
-
-    #[test]
-    fn test_removal_records_witness_lookalike() {
-        let snippet: VerifyNdSiIntegrity<RemovalRecordsIntegrityWitnessLookalike> =
-            VerifyNdSiIntegrity {
-                _phantom_data: PhantomData,
-            };
-        ShadowedAccessor::new(snippet).test();
-    }
-
-    #[test]
-    fn test_update_witness_lookalike() {
-        let snippet: VerifyNdSiIntegrity<UpdateWitnessLookalike> = VerifyNdSiIntegrity {
-            _phantom_data: PhantomData,
-        };
-        ShadowedAccessor::new(snippet).test();
-    }
-
-    #[test]
-    fn test_lock_script_and_witness_lookalike() {
-        let snippet: VerifyNdSiIntegrity<LockScriptAndWitnessLookalike> = VerifyNdSiIntegrity {
-            _phantom_data: PhantomData,
-        };
-        ShadowedAccessor::new(snippet).test();
-    }
-
-    #[test]
-    fn test_mutator_set_accumulator_lookalike() {
-        let snippet: VerifyNdSiIntegrity<MutatorSetAccumulatorLookalike> = VerifyNdSiIntegrity {
-            _phantom_data: PhantomData,
-        };
-        ShadowedAccessor::new(snippet).test();
-    }
-
-    #[test]
-    fn test_primitive_witness_lookalike() {
-        let snippet: VerifyNdSiIntegrity<PrimitiveWitnessLookalike> = VerifyNdSiIntegrity {
-            _phantom_data: PhantomData,
-        };
-        ShadowedAccessor::new(snippet).test();
-    }
-
-    #[test]
-    fn test_mmr_successor_proof_auto_derived_code() {
-        // TODO:
-        // Test to verify that the auto-derived code for `MmrSuccessorProof`
-        // handles size-indicator verification correctly. `MmrSuccessorProof`
-        // is wrapped in another type since `Arbitrary` was not implemented for
-        // upstream `MmrSuccessorProof` at the time of writing. Once it is,
-        // feel free to simplify this test.
-        #[derive(Debug, Clone, BFieldCodec, TasmObject)]
-        struct MmrSuccessorProofWrapper {
-            pub msp: MmrSuccessorProof,
-        }
-
-        impl<'a> Arbitrary<'a> for MmrSuccessorProofWrapper {
-            fn arbitrary(u: &mut Unstructured) -> arbitrary::Result<Self> {
-                let digests = <Vec<Digest> as Arbitrary>::arbitrary(u)?;
-                Ok(Self {
-                    msp: MmrSuccessorProof { paths: digests },
-                })
-            }
-        }
-        let snippet: VerifyNdSiIntegrity<MmrSuccessorProofWrapper> = VerifyNdSiIntegrity {
-            _phantom_data: PhantomData,
-        };
-        ShadowedAccessor::new(snippet).test();
-    }
+    test_case! { fn proof for Proof }
+    test_case! { fn coin for CoinLookalike }
+    test_case! { fn utxo for UtxoLookalike }
+    test_case! { fn salted_utxos for SaltedUtxosLookalike }
+    test_case! { fn collect_lock_scripts_witness for CollectLockScriptsWitnessLookalike }
+    test_case! { fn collect_type_scripts_witness for CollectTypeScriptsWitnessLookalike }
+    test_case! { fn claim for Claim }
+    test_case! { fn neptune_coins for NeptuneCoinsLookalike }
+    test_case! { fn option_neptune_coins for Option<NeptuneCoinsLookalike> }
+    test_case! { fn chunk for ChunkLookalike }
+    test_case! { fn chunk_dictionary for ChunkDictionaryLookalike }
+    test_case! { fn proof_collection for ProofCollectionLookalike }
+    test_case! { fn absolute_index_set for AbsoluteIndexSetLookalike }
+    test_case! { fn removal_record for RemovalRecordLookalike }
+    test_case! { fn addition_record for AdditionRecordLookalike }
+    test_case! { fn public_announcement for PublicAnnouncementLookalike }
+    test_case! { fn timestamp for TimestampLookalike }
+    test_case! { fn transaction_kernel for TransactionKernelLookalike }
+    test_case! { fn kernel_to_outputs_witness for KernelToOutputsWitnessLookalike }
+    test_case! { fn merge_witness for MergeWitnessLookalike }
+    test_case! { fn ms_membership_proof for MsMembershipProofLookalike }
+    test_case! { fn removal_records_witness for RemovalRecordsIntegrityWitnessLookalike }
+    test_case! { fn update_witness for UpdateWitnessLookalike }
+    test_case! { fn lock_script_and_witness for LockScriptAndWitnessLookalike }
+    test_case! { fn mutator_set_accumulator for MutatorSetAccumulatorLookalike }
+    test_case! { fn primitive_witness for PrimitiveWitnessLookalike }
+    test_case! { fn mmr_successor_proof for MmrSuccessorProof }
 }
 
 #[cfg(test)]
@@ -674,17 +420,11 @@ mod benches {
 
     #[test]
     fn bench_proof_collection_lookalike() {
-        let snippet: VerifyNdSiIntegrity<ProofCollectionLookalike> = VerifyNdSiIntegrity {
-            _phantom_data: PhantomData,
-        };
-        ShadowedAccessor::new(snippet).bench();
+        ShadowedAccessor::new(VerifyNdSiIntegrity::<ProofCollectionLookalike>::default()).bench();
     }
 
     #[test]
     fn bench_transaction_kernel_lookalike() {
-        let snippet: VerifyNdSiIntegrity<TransactionKernelLookalike> = VerifyNdSiIntegrity {
-            _phantom_data: PhantomData,
-        };
-        ShadowedAccessor::new(snippet).bench();
+        ShadowedAccessor::new(VerifyNdSiIntegrity::<TransactionKernelLookalike>::default()).bench();
     }
 }
