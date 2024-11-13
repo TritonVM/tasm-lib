@@ -1244,7 +1244,7 @@ pub mod tests {
 
     use super::*;
     use crate::execute_test;
-    use crate::maybe_write_debuggable_program_to_disk;
+    use crate::maybe_write_debuggable_vm_state_to_disk;
     use crate::memory::encode_to_memory;
     use crate::memory::FIRST_NON_DETERMINISTICALLY_INITIALIZED_MEMORY_ADDRESS;
     use crate::test_helpers::maybe_write_tvm_output_to_disk;
@@ -1323,9 +1323,9 @@ pub mod tests {
         let code = snippet.link_for_isolated_run_populated_static_memory(claim_size);
 
         let program = Program::new(&code);
-        let mut vm_state = VMState::new(program.clone(), [].into(), non_determinism.clone());
+        let mut vm_state = VMState::new(program, [].into(), non_determinism.clone());
         vm_state.op_stack.stack = init_stack.clone();
-        maybe_write_debuggable_program_to_disk(&program, &vm_state);
+        maybe_write_debuggable_vm_state_to_disk(&vm_state);
 
         let final_tasm_state = execute_test(
             &code,
@@ -1616,7 +1616,7 @@ pub mod tests {
             outer_input.clone().into(),
             outer_nondeterminism.clone(),
         );
-        maybe_write_debuggable_program_to_disk(&program, &vm_state);
+        maybe_write_debuggable_vm_state_to_disk(&vm_state);
         VM::run(program, outer_input.into(), outer_nondeterminism)
             .expect("could not verify two STARK proofs");
 

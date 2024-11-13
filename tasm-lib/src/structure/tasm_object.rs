@@ -280,7 +280,7 @@ mod test {
         use twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
         use super::*;
-        use crate::maybe_write_debuggable_program_to_disk;
+        use crate::maybe_write_debuggable_vm_state_to_disk;
 
         #[test]
         fn load_and_decode_struct_with_named_fields_from_memory() {
@@ -377,7 +377,7 @@ mod test {
                 PublicInput::default(),
                 no_messed_nd.clone(),
             );
-            maybe_write_debuggable_program_to_disk(&program, &vm_state_pass);
+            maybe_write_debuggable_vm_state_to_disk(&vm_state_pass);
             vm_state_pass.run().unwrap();
 
             let expected_output_len = expected_stack.len();
@@ -398,7 +398,7 @@ mod test {
                 PublicInput::default(),
                 messed_up_nd_0.clone(),
             );
-            maybe_write_debuggable_program_to_disk(&program, &vm_state_fail0);
+            maybe_write_debuggable_vm_state_to_disk(&vm_state_fail0);
             let instruction_error0 = vm_state_fail0.run().unwrap_err();
             assert!(matches!(
                 instruction_error0,
@@ -415,7 +415,7 @@ mod test {
                 PublicInput::default(),
                 messed_up_nd_1.clone(),
             );
-            maybe_write_debuggable_program_to_disk(&program, &vm_state_fail1);
+            maybe_write_debuggable_vm_state_to_disk(&vm_state_fail1);
             let instruction_error1 = vm_state_fail1.run().unwrap_err();
             let expected_err =
                 InstructionError::OpStackError(OpStackError::FailedU32Conversion(negative_number));
@@ -439,7 +439,7 @@ mod test {
                     PublicInput::default(),
                     messed_up_nd_2.clone(),
                 );
-                maybe_write_debuggable_program_to_disk(&program, &vm_state_fail2);
+                maybe_write_debuggable_vm_state_to_disk(&vm_state_fail2);
                 let instruction_error2 = vm_state_fail2.run().unwrap_err();
                 assert!(matches!(
                     instruction_error2,
@@ -453,12 +453,9 @@ mod test {
                     messed_up_memory[&address_for_manipulated_si] - bfe!(1),
                 );
                 let messed_up_nd_3 = NonDeterminism::default().with_ram(messed_up_memory.clone());
-                let mut vm_state_fail3 = VMState::new(
-                    program.clone(),
-                    PublicInput::default(),
-                    messed_up_nd_3.clone(),
-                );
-                maybe_write_debuggable_program_to_disk(&program, &vm_state_fail3);
+                let mut vm_state_fail3 =
+                    VMState::new(program, PublicInput::default(), messed_up_nd_3.clone());
+                maybe_write_debuggable_vm_state_to_disk(&vm_state_fail3);
                 let instruction_error3 = vm_state_fail3.run().unwrap_err();
                 assert!(matches!(
                     instruction_error3,
@@ -725,12 +722,8 @@ mod test {
             let mut no_messed_memory = HashMap::new();
             encode_to_memory(&mut no_messed_memory, OBJ_POINTER, &random_object);
             let no_messed_nd = NonDeterminism::default().with_ram(no_messed_memory.clone());
-            let mut vm_state = VMState::new(
-                program.clone(),
-                PublicInput::default(),
-                no_messed_nd.clone(),
-            );
-            maybe_write_debuggable_program_to_disk(&program, &vm_state);
+            let mut vm_state = VMState::new(program, PublicInput::default(), no_messed_nd.clone());
+            maybe_write_debuggable_vm_state_to_disk(&vm_state);
             vm_state.run().unwrap();
 
             let expected_stack = vec![bfe!(random_object.encode().len() as u64)];

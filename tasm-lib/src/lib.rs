@@ -176,7 +176,7 @@ pub fn execute_test(
     vm_state.op_stack.stack.clone_from(&init_stack);
     vm_state.sponge = maybe_sponge;
 
-    maybe_write_debuggable_program_to_disk(&program, &vm_state);
+    maybe_write_debuggable_vm_state_to_disk(&vm_state);
 
     if let Err(err) = vm_state.run() {
         panic!("{err}\n\nFinal state was: {vm_state}")
@@ -220,17 +220,33 @@ pub fn execute_test(
     terminal_state
 }
 
-/// If the environment variable “TRITON_TUI” is set, write
-/// 1. the program to file `program.tasm`, and
-/// 2. the VM state to file `vm_state.json`.
+#[deprecated(
+    since = "0.3.0",
+    note = "\
+        Use `maybe_write_debuggable_vm_state_to_disk` instead. Explanation: \
+        The program is now included in the VM's state and no longer needed separately.\
+    "
+)]
+pub fn maybe_write_debuggable_program_to_disk(program: &Program, vm_state: &VMState) {
+    let Ok(_) = std::env::var("TASMLIB_TRITON_TUI") else {
+        return;
+    };
+
+    let mut program_file = std::fs::File::create("program.tasm").unwrap();
+    write!(program_file, "{program}").unwrap();
+    maybe_write_debuggable_vm_state_to_disk(vm_state);
+}
+
+/// If the environment variable “TRITON_TUI” is set, write the initial VM state
+/// to file `vm_state.json`.
 ///
-/// These files can be used to debug the program using the [Triton TUI]:
+/// This file can be used to debug the program using the [Triton TUI]:
 /// ```sh
-/// triton-tui program.tasm --initial-state vm_state.json
+/// triton-tui --initial-state vm_state.json
 /// ```
 ///
 /// [Triton TUI]: https://crates.io/crates/triton-tui
-pub fn maybe_write_debuggable_program_to_disk(program: &Program, vm_state: &VMState) {
+pub fn maybe_write_debuggable_vm_state_to_disk(vm_state: &VMState) {
     let Ok(_) = std::env::var("TASMLIB_TRITON_TUI") else {
         return;
     };
@@ -238,9 +254,6 @@ pub fn maybe_write_debuggable_program_to_disk(program: &Program, vm_state: &VMSt
     let mut state_file = std::fs::File::create("vm_state.json").unwrap();
     let state = serde_json::to_string(&vm_state).unwrap();
     write!(state_file, "{state}").unwrap();
-
-    let mut program_file = std::fs::File::create("program.tasm").unwrap();
-    write!(program_file, "{program}").unwrap();
 }
 
 /// Prepare state and run Triton VM
@@ -252,11 +265,11 @@ pub fn execute_with_terminal_state(
     maybe_sponge: Option<VmHasher>,
 ) -> Result<VMState, InstructionError> {
     let public_input = PublicInput::new(std_in.into());
-    let mut vm_state = VMState::new(program.clone(), public_input, nondeterminism.to_owned());
+    let mut vm_state = VMState::new(program, public_input, nondeterminism.to_owned());
     stack.clone_into(&mut vm_state.op_stack.stack);
     vm_state.sponge = maybe_sponge;
 
-    maybe_write_debuggable_program_to_disk(&program, &vm_state);
+    maybe_write_debuggable_vm_state_to_disk(&vm_state);
     match vm_state.run() {
         Ok(()) => {
             println!("Triton VM execution successful.");
