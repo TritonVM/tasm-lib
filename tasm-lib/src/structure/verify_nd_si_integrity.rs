@@ -239,7 +239,7 @@ mod tests {
                 .memory
                 .insert(begin_address, true_value + bfe!(1));
 
-            test_assertion_failure(&ShadowedAccessor::new(snippet), init_state.into(), &[])
+            test_assertion_failure(&ShadowedAccessor::new(snippet), init_state.into(), &[181])
         }
 
         #[test]
@@ -257,7 +257,7 @@ mod tests {
                 .memory
                 .insert(vec_digest_len_indicator, true_value + bfe!(1));
 
-            test_assertion_failure(&ShadowedAccessor::new(snippet), init_state.into(), &[])
+            test_assertion_failure(&ShadowedAccessor::new(snippet), init_state.into(), &[181])
         }
     }
 
@@ -316,7 +316,7 @@ mod tests {
             test_assertion_failure(
                 &ShadowedAccessor::new(snippet),
                 manipulated_si_outer.into(),
-                &[],
+                &[181],
             );
         }
 
@@ -337,7 +337,7 @@ mod tests {
             test_assertion_failure(
                 &ShadowedAccessor::new(snippet.clone()),
                 manipulated_init_state.into(),
-                &[],
+                &[200],
             );
         }
 
@@ -362,14 +362,18 @@ mod tests {
                 .memory
                 .insert(len_of_dyn_sized_list_elem_0, true_value + bfe!(1));
 
-            test_assertion_failure(&ShadowedAccessor::new(snippet.clone()), add_one.into(), &[]);
+            test_assertion_failure(
+                &ShadowedAccessor::new(snippet.clone()),
+                add_one.into(),
+                &[211],
+            );
 
             let mut sub_one = true_init_state.clone();
             sub_one
                 .memory
                 .insert(len_of_dyn_sized_list_elem_0, true_value - bfe!(1));
 
-            test_assertion_failure(&ShadowedAccessor::new(snippet), sub_one.into(), &[]);
+            test_assertion_failure(&ShadowedAccessor::new(snippet), sub_one.into(), &[211]);
         }
     }
 

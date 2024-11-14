@@ -3,26 +3,26 @@
 //! Example usage:
 //! ```no_compile
 //! #[derive(BFieldCodec, TasmObject)]
-//! pub struct Foo<T: BFieldCodec> {
+//! struct Foo<T: BFieldCodec> {
 //!     t_list: Vec<T>,
 //! }
 //! ```
 //!
 //! notes:
-//!  1. BFieldCodec derive is required else build error will result.
+//!  1. An implementation of `BFieldCodec` is required, else compilation will
+//!     fail. It is recommended to derive `BFieldCodec`.
+//!  2. If the target struct has a `where` clause with a trailing comma,
+//!     compilation will fail.
 //!
-//!  2. If the target struct has a where clause with a trailing
-//!     comma, a build error will result.
-//!
-//!     see: <https://github.com/TritonVM/tasm-lib/issues/91>
+//!     See also: <https://github.com/TritonVM/tasm-lib/issues/91>
 //!
 //!     Example: do not do this.
 //! ```no_compile
-//!     #[derive(BFieldCodec, TasmObject)]
-//!     pub struct Foo<T>
-//!     where T: BFieldCodec, {
-//!         t_list: Vec<T>,
-//!     }
+//! #[derive(BFieldCodec, TasmObject)]
+//! struct Foo<T>
+//! where
+//!     T: BFieldCodec, { … }
+//! //                ^
 //! ```
 
 extern crate proc_macro;
@@ -42,9 +42,9 @@ pub fn derive_tasm_object(input: proc_macro::TokenStream) -> proc_macro::TokenSt
 struct ParseResult {
     field_names: Vec<syn::Ident>,
     field_types: Vec<syn::Type>,
-    getters: Vec<quote::__private::TokenStream>,
-    sizers: Vec<quote::__private::TokenStream>,
-    jumpers: Vec<quote::__private::TokenStream>,
+    getters: Vec<TokenStream>,
+    sizers: Vec<TokenStream>,
+    jumpers: Vec<TokenStream>,
     ignored_fields: Vec<syn::Field>,
 }
 
@@ -78,6 +78,7 @@ fn generate_integral_size_indicators_code(parse_result: &ParseResult) -> TokenSt
                         // _ accumulated_size indicated_field_size (*field-2) (MAX > indicated_field_size)
 
                         assert.clone(),
+                        assertion_context_field_size_too_big.clone(),
                         // _ accumulated_size indicated_field_size (*field-2)
 
                         addi2.clone(),
@@ -94,6 +95,7 @@ fn generate_integral_size_indicators_code(parse_result: &ParseResult) -> TokenSt
                         eq.clone(),
                         // _ accumulated_size indicated_field_size *field (computed_size == indicated_field_size)
                         assert.clone(),
+                        assertion_context_field_size_unequal_computed.clone(),
                         // _ accumulated_size indicated_field_size *field
 
                         dup1.clone(),
@@ -126,6 +128,8 @@ fn generate_integral_size_indicators_code(parse_result: &ParseResult) -> TokenSt
         let swap2 = crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Swap(crate::triton_vm::isa::op_stack::OpStackElement::ST2));
         let lt = crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Lt);
         let assert = crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Assert);
+        let assertion_context_field_size_too_big = crate::triton_vm::isa::instruction::LabelledInstruction::AssertionContext(crate::triton_vm::isa::instruction::AssertionContext::ID(180_i128));
+        let assertion_context_field_size_unequal_computed = crate::triton_vm::isa::instruction::LabelledInstruction::AssertionContext(crate::triton_vm::isa::instruction::AssertionContext::ID(181_i128));
         let eq = crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Eq);
         let add = crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Add);
         let read_mem1 = crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::ReadMem(crate::triton_vm::isa::op_stack::NumberOfWords::N1));
@@ -476,7 +480,7 @@ fn generate_tokens_for_struct_with_named_fields(fields: &syn::FieldsNamed) -> Pa
 ///
 /// The complication arises from *field_start == *field when the field size is statically
 /// known, but otherwise *field_start+1 == *field.
-fn generate_tasm_for_getter_postprocess(field_type: &syn::Type) -> quote::__private::TokenStream {
+fn generate_tasm_for_getter_postprocess(field_type: &syn::Type) -> TokenStream {
     quote! {
         if <#field_type as crate::twenty_first::math::bfield_codec::BFieldCodec>::static_length().is_some() {
             [
@@ -498,7 +502,7 @@ fn generate_tasm_for_getter_postprocess(field_type: &syn::Type) -> quote::__priv
 ///
 /// The complication arises from *field_start == *field when the field size is statically
 /// known, but otherwise *field_start+1 == *field.
-fn generate_tasm_for_sizer_postprocess(field_type: &syn::Type) -> quote::__private::TokenStream {
+fn generate_tasm_for_sizer_postprocess(field_type: &syn::Type) -> TokenStream {
     quote! {
         if <#field_type as crate::twenty_first::math::bfield_codec::BFieldCodec>::static_length().is_some() {
             ::std::vec::Vec::<crate::triton_vm::isa::instruction::LabelledInstruction>::new()
@@ -518,9 +522,7 @@ fn generate_tasm_for_sizer_postprocess(field_type: &syn::Type) -> quote::__priva
 /// This function generates tasm code that
 ///  - assumes the stack is in the state _ *field_start
 ///  - leaves the stack in the state _ *field_start jump_amount
-fn generate_tasm_for_extend_field_start_with_jump_amount(
-    field_type: &syn::Type,
-) -> quote::__private::TokenStream {
+fn generate_tasm_for_extend_field_start_with_jump_amount(field_type: &syn::Type) -> TokenStream {
     quote! {
         if let Some(size) = <#field_type as crate::twenty_first::math::bfield_codec::BFieldCodec>::static_length() {
             [
@@ -538,6 +540,7 @@ fn generate_tasm_for_extend_field_start_with_jump_amount(
                 crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Lt),
                 // _ si (*object-1) (si < MAX)
                 crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Assert),
+                crate::triton_vm::isa::instruction::LabelledInstruction::AssertionContext(crate::triton_vm::isa::instruction::AssertionContext::ID(182_i128)),
                 // _ si (*object-1)
                 crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::AddI(crate::BFieldElement::new(1u64))),
                 crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Swap(crate::triton_vm::isa::op_stack::OpStackElement::ST1)),
@@ -600,10 +603,7 @@ fn generate_tokens_for_struct_with_unnamed_fields(fields: &syn::FieldsUnnamed) -
     }
 }
 
-fn get_field_decoder(
-    field_name: syn::Ident,
-    field_type: syn::Type,
-) -> quote::__private::TokenStream {
+fn get_field_decoder(field_name: syn::Ident, field_type: syn::Type) -> TokenStream {
     quote! {
         let length : usize = if let Some(static_length) = <#field_type as crate::twenty_first::math::bfield_codec::BFieldCodec>::static_length() {
             static_length

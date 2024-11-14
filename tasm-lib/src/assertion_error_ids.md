@@ -34,3 +34,7 @@ often.
 |  140..150 | [`PrimitiveRootOfUnity`](arithmetic/bfe/primitive_root_of_unity.rs)                         |
 |  150..170 | [`VerifyMmrSuccessor`](mmr/verify_mmr_successor.rs)                                         |
 |  170..180 | [`SafeAddU128`](arithmetic/u128/safe_add.rs)                                                |
+|  180..200 | `TasmObject` derive macro                                                                   |
+|  200..210 | [`TasmObject` for `Option<T>`](structure/manual_tasm_object_implementations.rs)             |
+|  210..220 | [`TasmObject` for `Vec<T>`](structure/manual_tasm_object_implementations.rs)                |
+|  220..230 | [`TasmObject` for `(T, S)`](structure/manual_tasm_object_implementations.rs)                |

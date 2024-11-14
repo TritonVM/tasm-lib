@@ -1,5 +1,4 @@
 use itertools::Itertools;
-use num::Zero;
 use triton_vm::prelude::*;
 use twenty_first::error::BFieldCodecError;
 use twenty_first::math::x_field_element::EXTENSION_DEGREE;
@@ -9,7 +8,10 @@ use super::tasm_object::Result;
 use crate::data_type::DataType;
 use crate::prelude::TasmObject;
 
-impl<const N: usize, T: BFieldCodec + TasmObject> TasmObject for [T; N] {
+impl<const N: usize, T> TasmObject for [T; N]
+where
+    T: BFieldCodec + TasmObject,
+{
     fn label_friendly_name() -> String {
         format!("array{}___{}", N, T::label_friendly_name())
     }
@@ -48,7 +50,10 @@ impl<const N: usize, T: BFieldCodec + TasmObject> TasmObject for [T; N] {
     }
 }
 
-impl<T: BFieldCodec + TasmObject> TasmObject for Vec<T> {
+impl<T> TasmObject for Vec<T>
+where
+    T: BFieldCodec + TasmObject,
+{
     fn label_friendly_name() -> String {
         format!("vec___{}", T::label_friendly_name())
     }
@@ -65,26 +70,8 @@ impl<T: BFieldCodec + TasmObject> TasmObject for Vec<T> {
         panic!("`Vec` does not have fields; cannot access them")
     }
 
-    fn decode_iter<Itr: Iterator<Item = BFieldElement>>(iterator: &mut Itr) -> Result<Box<Self>> {
-        let length = iterator.next().unwrap().value() as usize;
-        let mut vector = vec![];
-        for _ in 0..length {
-            let sequence_length = if let Some(static_size) = T::static_length() {
-                static_size
-            } else {
-                iterator.next().unwrap().value() as usize
-            };
-            let sequence = (0..sequence_length)
-                .map(|_| iterator.next().unwrap())
-                .collect_vec();
-            let object = *T::decode(&sequence).map_err(|e| e.into())?;
-            vector.push(object);
-        }
-        Ok(Box::new(vector))
-    }
-
     fn compute_size_and_assert_valid_size_indicator(
-        library: &mut crate::tasm_lib::Library,
+        library: &mut tasm_lib::Library,
     ) -> Vec<LabelledInstruction> {
         if let Some(static_size) = T::static_length() {
             // _ *list_len
@@ -127,7 +114,7 @@ impl<T: BFieldCodec + TasmObject> TasmObject for Vec<T> {
                     push {T::MAX_OFFSET}
                     dup 2
                     lt
-                    assert
+                    assert error_id 210
                     // _ remaining_elements acc_size element_si (*element_si-1)
 
                     addi 2
@@ -139,7 +126,7 @@ impl<T: BFieldCodec + TasmObject> TasmObject for Vec<T> {
 
                     dup 2
                     eq
-                    assert
+                    assert error_id 211
                     // _ remaining_elements acc_size element_si *element
 
                     dup 2
@@ -197,6 +184,27 @@ impl<T: BFieldCodec + TasmObject> TasmObject for Vec<T> {
             )
         }
     }
+
+    fn decode_iter<Itr: Iterator<Item = BFieldElement>>(iterator: &mut Itr) -> Result<Box<Self>> {
+        let vec_length = iterator.next().ok_or(BFieldCodecError::SequenceTooShort)?;
+        let mut vector = vec![];
+        for _ in 0..vec_length.value() {
+            let item_length = if let Some(static_length) = T::static_length() {
+                static_length
+            } else {
+                let dynamic_length = iterator.next().ok_or(BFieldCodecError::SequenceTooShort)?;
+                usize::try_from(dynamic_length.value())?
+            };
+            let item_sequence = (0..item_length)
+                .map(|_| iterator.next())
+                .collect::<Option<Vec<_>>>()
+                .ok_or(BFieldCodecError::SequenceTooShort)?;
+            let item = *T::decode(&item_sequence).map_err(|e| e.into())?;
+            vector.push(item);
+        }
+
+        Ok(Box::new(vector))
+    }
 }
 
 impl TasmObject for BFieldElement {
@@ -205,28 +213,26 @@ impl TasmObject for BFieldElement {
     }
 
     fn get_field(_field_name: &str) -> Vec<LabelledInstruction> {
-        unreachable!()
+        panic!()
     }
 
     fn get_field_with_size(_field_name: &str) -> Vec<LabelledInstruction> {
-        unreachable!()
+        panic!()
     }
 
     fn get_field_start_with_jump_distance(_field_name: &str) -> Vec<LabelledInstruction> {
-        unreachable!()
+        panic!()
     }
 
     fn compute_size_and_assert_valid_size_indicator(
-        _library: &mut crate::tasm_lib::Library,
+        _library: &mut tasm_lib::Library,
     ) -> Vec<LabelledInstruction> {
-        unreachable!("Size is known statically for BFieldElement encoding")
+        panic!("Size is known statically for BFieldElement encoding")
     }
 
     fn decode_iter<Itr: Iterator<Item = BFieldElement>>(iterator: &mut Itr) -> Result<Box<Self>> {
-        match iterator.next() {
-            Some(word) => Ok(Box::new(word)),
-            None => Err(Box::new(BFieldCodecError::SequenceTooShort)),
-        }
+        let word = iterator.next().ok_or(BFieldCodecError::SequenceTooShort)?;
+        Ok(Box::new(word))
     }
 }
 
@@ -236,33 +242,29 @@ impl TasmObject for XFieldElement {
     }
 
     fn get_field(_field_name: &str) -> Vec<LabelledInstruction> {
-        unreachable!()
+        panic!()
     }
 
     fn get_field_with_size(_field_name: &str) -> Vec<LabelledInstruction> {
-        unreachable!()
+        panic!()
     }
 
     fn get_field_start_with_jump_distance(_field_name: &str) -> Vec<LabelledInstruction> {
-        unreachable!()
+        panic!()
     }
 
     fn compute_size_and_assert_valid_size_indicator(
-        _library: &mut crate::tasm_lib::Library,
+        _library: &mut tasm_lib::Library,
     ) -> Vec<LabelledInstruction> {
-        unreachable!("Size is known statically for XFieldElement encoding")
+        panic!("Size is known statically for XFieldElement encoding")
     }
 
     fn decode_iter<Itr: Iterator<Item = BFieldElement>>(iterator: &mut Itr) -> Result<Box<Self>> {
-        let mut xfe = XFieldElement::zero();
-        for i in 0..EXTENSION_DEGREE {
-            match iterator.next() {
-                Some(word) => xfe.coefficients[i] = word,
-                None => return Err(Box::new(BFieldCodecError::SequenceTooShort)),
-            }
-        }
+        let (c_0, c_1, c_2) = iterator
+            .next_tuple()
+            .ok_or(BFieldCodecError::SequenceTooShort)?;
 
-        Ok(Box::new(xfe))
+        Ok(Box::new(XFieldElement::new([c_0, c_1, c_2])))
     }
 }
 
@@ -272,33 +274,29 @@ impl TasmObject for Digest {
     }
 
     fn get_field(_field_name: &str) -> Vec<LabelledInstruction> {
-        unreachable!()
+        panic!()
     }
 
     fn get_field_with_size(_field_name: &str) -> Vec<LabelledInstruction> {
-        unreachable!()
+        panic!()
     }
 
     fn get_field_start_with_jump_distance(_field_name: &str) -> Vec<LabelledInstruction> {
-        unreachable!()
+        panic!()
     }
 
     fn compute_size_and_assert_valid_size_indicator(
-        _library: &mut crate::tasm_lib::Library,
+        _library: &mut tasm_lib::Library,
     ) -> Vec<LabelledInstruction> {
-        unreachable!("Size is known statically for Digest encoding")
+        panic!("Size is known statically for Digest encoding")
     }
 
     fn decode_iter<Itr: Iterator<Item = BFieldElement>>(iterator: &mut Itr) -> Result<Box<Self>> {
-        let mut digest = Digest::default();
-        for i in 0..Digest::LEN {
-            match iterator.next() {
-                Some(word) => digest.0[i] = word,
-                None => return Err(Box::new(BFieldCodecError::SequenceTooShort)),
-            }
-        }
+        let (d_0, d_1, d_2, d_3, d_4) = iterator
+            .next_tuple()
+            .ok_or(BFieldCodecError::SequenceTooShort)?;
 
-        Ok(Box::new(digest))
+        Ok(Box::new(Digest::new([d_0, d_1, d_2, d_3, d_4])))
     }
 }
 
@@ -308,34 +306,29 @@ impl TasmObject for bool {
     }
 
     fn get_field(_field_name: &str) -> Vec<LabelledInstruction> {
-        unreachable!()
+        panic!()
     }
 
     fn get_field_with_size(_field_name: &str) -> Vec<LabelledInstruction> {
-        unreachable!()
+        panic!()
     }
 
     fn get_field_start_with_jump_distance(_field_name: &str) -> Vec<LabelledInstruction> {
-        unreachable!()
+        panic!()
     }
 
     fn compute_size_and_assert_valid_size_indicator(
-        _library: &mut crate::tasm_lib::Library,
+        _library: &mut tasm_lib::Library,
     ) -> Vec<LabelledInstruction> {
-        unreachable!("Size is known statically for bool encoding")
+        panic!("Size is known statically for bool encoding")
     }
 
     fn decode_iter<Itr: Iterator<Item = BFieldElement>>(iterator: &mut Itr) -> Result<Box<Self>> {
-        match iterator.next() {
-            Some(word) => {
-                let bool_val: bool = match word.value() {
-                    0 => false,
-                    1 => true,
-                    _ => return Err(Box::new(BFieldCodecError::ElementOutOfRange)),
-                };
-                Ok(Box::new(bool_val))
-            }
-            None => Err(Box::new(BFieldCodecError::SequenceTooShort)),
+        let the_bool = iterator.next().ok_or(BFieldCodecError::SequenceTooShort)?;
+        match the_bool.value() {
+            0 => Ok(Box::new(false)),
+            1 => Ok(Box::new(true)),
+            _ => Err(Box::new(BFieldCodecError::SequenceTooShort)),
         }
     }
 }
@@ -346,34 +339,31 @@ impl TasmObject for u32 {
     }
 
     fn get_field(_field_name: &str) -> Vec<LabelledInstruction> {
-        unreachable!()
+        panic!()
     }
 
     fn get_field_with_size(_field_name: &str) -> Vec<LabelledInstruction> {
-        unreachable!()
+        panic!()
     }
 
     fn get_field_start_with_jump_distance(_field_name: &str) -> Vec<LabelledInstruction> {
-        unreachable!()
+        panic!()
     }
 
     fn compute_size_and_assert_valid_size_indicator(
-        _library: &mut crate::tasm_lib::Library,
+        _library: &mut tasm_lib::Library,
     ) -> Vec<LabelledInstruction> {
-        unreachable!("Size is known statically for u32 encoding")
+        panic!("Size is known statically for u32 encoding")
     }
 
     fn decode_iter<Itr: Iterator<Item = BFieldElement>>(iterator: &mut Itr) -> Result<Box<Self>> {
-        match iterator.next() {
-            Some(word) => {
-                let u32_val: u32 = match word.value().try_into() {
-                    Ok(u32_val) => u32_val,
-                    Err(_) => return Err(Box::new(BFieldCodecError::ElementOutOfRange)),
-                };
-                Ok(Box::new(u32_val))
-            }
-            None => Err(Box::new(BFieldCodecError::SequenceTooShort)),
-        }
+        let word = iterator
+            .next()
+            .ok_or(BFieldCodecError::SequenceTooShort)?
+            .try_into()
+            .map_err(|_| BFieldCodecError::ElementOutOfRange)?;
+
+        Ok(Box::new(word))
     }
 }
 
@@ -383,39 +373,33 @@ impl TasmObject for u64 {
     }
 
     fn get_field(_field_name: &str) -> Vec<LabelledInstruction> {
-        unreachable!()
+        panic!()
     }
 
     fn get_field_with_size(_field_name: &str) -> Vec<LabelledInstruction> {
-        unreachable!()
+        panic!()
     }
 
     fn get_field_start_with_jump_distance(_field_name: &str) -> Vec<LabelledInstruction> {
-        unreachable!()
+        panic!()
     }
 
     fn compute_size_and_assert_valid_size_indicator(
-        _library: &mut crate::tasm_lib::Library,
+        _library: &mut tasm_lib::Library,
     ) -> Vec<LabelledInstruction> {
-        unreachable!("Size is known statically for u64 encoding")
+        panic!("Size is known statically for u64 encoding")
     }
 
     fn decode_iter<Itr: Iterator<Item = BFieldElement>>(iterator: &mut Itr) -> Result<Box<Self>> {
-        let mut val: u64 = 0;
-        for i in 0..u64::static_length().unwrap() {
-            match iterator.next() {
-                Some(word) => {
-                    let u32_val: u32 = match word.value().try_into() {
-                        Ok(u32_val) => u32_val,
-                        Err(_) => return Err(Box::new(BFieldCodecError::ElementOutOfRange)),
-                    };
-                    val |= (u32_val as u64) << (32 * i);
-                }
-                None => return Err(Box::new(BFieldCodecError::SequenceTooShort)),
-            }
-        }
+        let (val_lo, val_hi) = iterator
+            .next_tuple()
+            .ok_or(BFieldCodecError::SequenceTooShort)?;
 
-        Ok(Box::new(val))
+        let too_big = |_| BFieldCodecError::ElementOutOfRange;
+        let val_lo = u64::from(u32::try_from(val_lo).map_err(too_big)?);
+        let val_hi = u64::from(u32::try_from(val_hi).map_err(too_big)?);
+
+        Ok(Box::new((val_hi << 32) + val_lo))
     }
 }
 
@@ -425,43 +409,43 @@ impl TasmObject for u128 {
     }
 
     fn get_field(_field_name: &str) -> Vec<LabelledInstruction> {
-        unreachable!()
+        panic!()
     }
 
     fn get_field_with_size(_field_name: &str) -> Vec<LabelledInstruction> {
-        unreachable!()
+        panic!()
     }
 
     fn get_field_start_with_jump_distance(_field_name: &str) -> Vec<LabelledInstruction> {
-        unreachable!()
+        panic!()
     }
 
     fn compute_size_and_assert_valid_size_indicator(
-        _library: &mut crate::tasm_lib::Library,
+        _library: &mut tasm_lib::Library,
     ) -> Vec<LabelledInstruction> {
-        unreachable!("Size is known statically for u128 encoding")
+        panic!("Size is known statically for u128 encoding")
     }
 
     fn decode_iter<Itr: Iterator<Item = BFieldElement>>(iterator: &mut Itr) -> Result<Box<Self>> {
-        let mut val: u128 = 0;
-        for i in 0..u128::static_length().unwrap() {
-            match iterator.next() {
-                Some(word) => {
-                    let u32_val: u32 = match word.value().try_into() {
-                        Ok(u32_val) => u32_val,
-                        Err(_) => return Err(Box::new(BFieldCodecError::ElementOutOfRange)),
-                    };
-                    val |= (u32_val as u128) << (32 * i);
-                }
-                None => return Err(Box::new(BFieldCodecError::SequenceTooShort)),
-            }
-        }
+        let (lolo, lohi, hilo, hihi) = iterator
+            .next_tuple()
+            .ok_or(BFieldCodecError::SequenceTooShort)?;
 
-        Ok(Box::new(val))
+        let too_big = |_| BFieldCodecError::ElementOutOfRange;
+        let lolo = u128::from(u32::try_from(lolo).map_err(too_big)?);
+        let lohi = u128::from(u32::try_from(lohi).map_err(too_big)?);
+        let hilo = u128::from(u32::try_from(hilo).map_err(too_big)?);
+        let hihi = u128::from(u32::try_from(hihi).map_err(too_big)?);
+
+        Ok(Box::new((hihi << 96) + (hilo << 64) + (lohi << 32) + lolo))
     }
 }
 
-impl<T: TasmObject + BFieldCodec, S: TasmObject + BFieldCodec> TasmObject for (T, S) {
+impl<T, S> TasmObject for (T, S)
+where
+    T: TasmObject + BFieldCodec,
+    S: TasmObject + BFieldCodec,
+{
     fn label_friendly_name() -> String {
         format!(
             "tuple_L_{}_{}_R",
@@ -483,7 +467,7 @@ impl<T: TasmObject + BFieldCodec, S: TasmObject + BFieldCodec> TasmObject for (T
     }
 
     fn compute_size_and_assert_valid_size_indicator(
-        library: &mut crate::tasm_lib::Library,
+        library: &mut tasm_lib::Library,
     ) -> Vec<LabelledInstruction> {
         let size_left = match T::static_length() {
             Some(static_size) => triton_asm!(
@@ -510,7 +494,7 @@ impl<T: TasmObject + BFieldCodec, S: TasmObject + BFieldCodec> TasmObject for (T
 
                     dup 1
                     eq
-                    assert
+                    assert error_id 220
                     // _ left_size
 
                     addi 1
@@ -546,7 +530,7 @@ impl<T: TasmObject + BFieldCodec, S: TasmObject + BFieldCodec> TasmObject for (T
 
                     dup 1
                     eq
-                    assert
+                    assert error_id 221
                     // _ *right_si right_size
 
                     /* Include size of size-indicator */
@@ -556,7 +540,6 @@ impl<T: TasmObject + BFieldCodec, S: TasmObject + BFieldCodec> TasmObject for (T
             }
         };
 
-        // panic!("Size is known statically for u32 encoding")
         triton_asm!(
             // _ *tuple
 
@@ -662,7 +645,7 @@ impl TasmObject for Proof {
     }
 
     fn compute_size_and_assert_valid_size_indicator(
-        _library: &mut crate::tasm_lib::Library,
+        _library: &mut tasm_lib::Library,
     ) -> Vec<LabelledInstruction> {
         // Proofs are special, as the fields of a proof is only accessed through
         // the [`DequeueNextAs`](crate::verifier::vm_proof_iter::dequeue_next_as)
@@ -684,50 +667,33 @@ impl TasmObject for Proof {
     }
 
     fn decode_iter<Itr: Iterator<Item = BFieldElement>>(iterator: &mut Itr) -> Result<Box<Self>> {
-        match iterator.next() {
-            Some(_field_0_size) => Ok(Box::new(Self(*Vec::<BFieldElement>::decode_iter(
-                iterator,
-            )?))),
-            None => Err(Box::new(BFieldCodecError::SequenceTooShort)),
-        }
+        let _ = iterator.next().ok_or(BFieldCodecError::SequenceTooShort)?;
+        Ok(Box::new(Self(*Vec::decode_iter(iterator)?)))
     }
 }
 
-impl<T: TasmObject + BFieldCodec> TasmObject for Option<T> {
+impl<T> TasmObject for Option<T>
+where
+    T: TasmObject + BFieldCodec,
+{
     fn label_friendly_name() -> String {
         format!("option_L_{}_R", T::label_friendly_name())
     }
 
     fn get_field(_field_name: &str) -> Vec<LabelledInstruction> {
-        unreachable!("cannot get field of an option type");
+        panic!("cannot get field of an option type");
     }
 
     fn get_field_with_size(_field_name: &str) -> Vec<LabelledInstruction> {
-        unreachable!("cannot get field with size of an option type");
+        panic!("cannot get field with size of an option type");
     }
 
     fn get_field_start_with_jump_distance(_field_name: &str) -> Vec<LabelledInstruction> {
-        unreachable!("cannot get field start with jump distance of an option type");
-    }
-
-    fn decode_iter<Itr: Iterator<Item = BFieldElement>>(iterator: &mut Itr) -> Result<Box<Self>> {
-        match iterator.next() {
-            Some(token) => {
-                if token == BFieldElement::new(0) {
-                    Ok(Box::new(None))
-                } else if token == BFieldElement::new(1) {
-                    let t: T = *T::decode_iter(iterator)?;
-                    Ok(Box::new(Some(t)))
-                } else {
-                    Err(Box::new(BFieldCodecError::ElementOutOfRange))
-                }
-            }
-            None => Err(Box::new(BFieldCodecError::SequenceTooShort)),
-        }
+        panic!("cannot get field start with jump distance of an option type");
     }
 
     fn compute_size_and_assert_valid_size_indicator(
-        library: &mut crate::tasm_lib::Library,
+        library: &mut tasm_lib::Library,
     ) -> Vec<LabelledInstruction> {
         let get_payload_size = match T::static_length() {
             Some(static_size) => triton_asm!(
@@ -790,7 +756,7 @@ impl<T: TasmObject + BFieldCodec> TasmObject for Option<T> {
             add
             // _ discriminant (*discriminant + 1) ((discriminant == 0) || (discriminant == 1))
 
-            assert
+            assert error_id 200
 
             swap 1
             // _ (*discriminant + 1) discriminant
@@ -813,6 +779,12 @@ impl<T: TasmObject + BFieldCodec> TasmObject for Option<T> {
 
             // _ total_size
         )
+    }
+
+    fn decode_iter<Itr: Iterator<Item = BFieldElement>>(iterator: &mut Itr) -> Result<Box<Self>> {
+        let is_some = *bool::decode_iter(iterator)?;
+        let the_option = is_some.then(|| T::decode_iter(iterator)).transpose()?;
+        Ok(Box::new(the_option.map(|t| *t)))
     }
 }
 
