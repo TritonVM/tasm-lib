@@ -64,9 +64,9 @@ impl BasicSnippet for MmrVerifyFromSecretInLeafIndexOnStack {
                 // _ *peaks [leaf] [leaf_count] [leaf_index]
 
                 call {leaf_index_to_mt_index}
-                // _ *peaks [leaf]  mt_index_hi mt_index_lo peak_index
+                // _ *peaks [leaf] mt_index_hi mt_index_lo peak_index
 
-                swap 7 swap 4 swap 1 swap 5 swap 2 swap 6 swap 3
+                place 7 place 6 place 6
                 // _ *peaks peak_index mt_index_hi mt_index_lo [digest (leaf_digest)]
 
                 call {auth_path_loop_label}
@@ -75,7 +75,7 @@ impl BasicSnippet for MmrVerifyFromSecretInLeafIndexOnStack {
                 dup 8 dup 8 call {list_get}
                 // _ *peaks peak_index 0 1 [acc_hash_result] [expected_root]
 
-                assert_vector
+                assert_vector error_id 10
                 // _ *peaks peak_index 0 1 [acc_hash_result]
 
                 pop 5
@@ -96,18 +96,18 @@ mod tests {
 
     use proptest_arbitrary_interop::arb;
     use rand::prelude::*;
+    use tasm_lib::test_helpers::test_assertion_failure;
     use test_strategy::proptest;
-    use triton_vm::twenty_first::math::other::random_elements;
-    use triton_vm::twenty_first::util_types::mmr::mmr_accumulator::util::mmra_with_mps;
-    use triton_vm::twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
-    use triton_vm::twenty_first::util_types::mmr::mmr_membership_proof::MmrMembershipProof;
-    use triton_vm::twenty_first::util_types::mmr::mmr_trait::Mmr;
-    use triton_vm::twenty_first::util_types::mmr::shared_basic::leaf_index_to_mt_index_and_peak_index;
+    use twenty_first::math::other::random_elements;
+    use twenty_first::util_types::mmr::mmr_accumulator::util::mmra_with_mps;
+    use twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
+    use twenty_first::util_types::mmr::mmr_membership_proof::MmrMembershipProof;
+    use twenty_first::util_types::mmr::mmr_trait::Mmr;
+    use twenty_first::util_types::mmr::shared_basic::leaf_index_to_mt_index_and_peak_index;
 
     use super::*;
     use crate::rust_shadowing_helper_functions;
     use crate::snippet_bencher::BenchmarkCase;
-    use crate::test_helpers::negative_test;
     use crate::traits::procedure::Procedure;
     use crate::traits::procedure::ProcedureInitialState;
     use crate::traits::procedure::ShadowedProcedure;
@@ -121,10 +121,10 @@ mod tests {
 
     #[proptest(cases = 32)]
     fn negative_test_bad_leaf_index(
-        #[strategy(0u64..(1u64 << 62))] leaf_count: u64,
-        #[strategy(0u64..(#leaf_count))] real_leaf_index: u64,
-        #[filter(#real_leaf_index!=#bad_leaf_index)]
-        #[strategy(0u64..(#leaf_count))]
+        #[strategy(0_u64..1 << 62)] leaf_count: u64,
+        #[strategy(0_u64..#leaf_count)] real_leaf_index: u64,
+        #[strategy(0..#leaf_count)]
+        #[filter(#real_leaf_index != #bad_leaf_index)]
         bad_leaf_index: u64,
         #[strategy(arb())] leaf: Digest,
         #[strategy(arb())] peaks_pointer: BFieldElement,
@@ -135,7 +135,7 @@ mod tests {
         // Extend the auth path to ensure that execution does not run out of digests in non-
         // determinism since this would result in another error code in TVM than the one we intend
         // to get: vector assertion error.
-        let padded_auth_path: Vec<Digest> = [auth_path.clone(), random_elements(64)].concat();
+        let padded_auth_path = [auth_path.clone(), random_elements(64)].concat();
         let init_state = MmrVerifyFromSecretInLeafIndexOnStack.prepare_state(
             &mmr,
             peaks_pointer,
@@ -144,10 +144,10 @@ mod tests {
             padded_auth_path,
         );
 
-        negative_test(
+        test_assertion_failure(
             &ShadowedProcedure::new(MmrVerifyFromSecretInLeafIndexOnStack),
             init_state.into(),
-            &[InstructionError::VectorAssertionFailed(0)],
+            &[10],
         );
 
         // Sanity check

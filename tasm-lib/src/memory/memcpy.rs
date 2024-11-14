@@ -88,7 +88,7 @@ impl DeprecatedSnippet for MemCpy {
             lt
             // _ read_source write_dest (num_words < MAX)
 
-            assert
+            assert error_id 60
             // _ read_source write_dest
 
 
@@ -336,7 +336,7 @@ impl DeprecatedSnippet for MemCpy {
 mod tests {
     use super::*;
     use crate::prelude::BasicSnippet;
-    use crate::test_helpers::negative_test;
+    use crate::test_helpers::test_assertion_failure;
     use crate::test_helpers::test_rust_equivalence_multiple_deprecated;
     use crate::traits::deprecated_snippet::tests::DeprecatedSnippetWrapper;
 
@@ -361,11 +361,8 @@ mod tests {
             nondeterminism: NonDeterminism::default(),
             sponge: None,
         };
-        negative_test(
-            &snippet_struct,
-            init_state,
-            &[InstructionError::AssertionFailed],
-        );
+
+        test_assertion_failure(&snippet_struct, init_state, &[60]);
     }
 }
 

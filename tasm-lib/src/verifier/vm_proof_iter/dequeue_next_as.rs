@@ -671,9 +671,8 @@ mod test {
         let dequeue_next_as = DequeueNextAs::new(ProofItemVariant::MasterMainTableRows);
         let initial_state = initial_state_with_too_big_master_table_rows();
         let code = link_for_isolated_run(Rc::new(RefCell::new(dequeue_next_as)));
-        let program = Program::new(&code);
         let tvm_result = execute_with_terminal_state(
-            &program,
+            Program::new(&code),
             &[],
             &initial_state.stack,
             &initial_state.nondeterminism,
@@ -697,7 +696,7 @@ mod test {
             "Test case: Too big dynamically-sized proof item must fail on both platforms."
         );
         let err = tvm_result.unwrap_err();
-        assert_eq!(InstructionError::AssertionFailed, err);
+        assert!(matches!(err, InstructionError::AssertionFailed(_)));
     }
 
     fn initial_state_with_too_big_master_table_rows() -> ProcedureInitialState {
@@ -715,9 +714,8 @@ mod test {
         let dequeue_next_as = DequeueNextAs::new(ProofItemVariant::FriPolynomial);
         let initial_state = initial_state_with_trailing_zeros_in_xfe_poly_encoding();
         let code = link_for_isolated_run(Rc::new(RefCell::new(dequeue_next_as)));
-        let program = Program::new(&code);
         let tvm_result = execute_with_terminal_state(
-            &program,
+            Program::new(&code),
             &[],
             &initial_state.stack,
             &initial_state.nondeterminism,
@@ -741,7 +739,7 @@ mod test {
             "Test case: Too big dynamically-sized proof item must fail on both platforms."
         );
         let err = tvm_result.unwrap_err();
-        assert_eq!(InstructionError::AssertionFailed, err);
+        assert!(matches!(err, InstructionError::AssertionFailed(_)));
     }
 
     fn initial_state_with_trailing_zeros_in_xfe_poly_encoding() -> ProcedureInitialState {

@@ -22,7 +22,7 @@ pub trait CompiledProgram {
         nondeterminism: &NonDeterminism,
     ) -> Result<Vec<BFieldElement>> {
         VM::run(
-            &Self::program(),
+            Self::program(),
             public_input.clone(),
             nondeterminism.clone(),
         )
@@ -67,8 +67,12 @@ pub fn bench_and_profile_program<P: CompiledProgram>(
     let program = Program::new(&all_instructions);
 
     // run in trace mode to get table heights
-    let (aet, _output) =
-        VM::trace_execution(&program, public_input.clone(), nondeterminism.clone()).unwrap();
+    let (aet, _output) = VM::trace_execution(
+        program.clone(),
+        public_input.clone(),
+        nondeterminism.clone(),
+    )
+    .unwrap();
     let benchmark_result = BenchmarkResult::new(&aet);
     let benchmark = NamedBenchmarkResult {
         name: name.to_owned(),

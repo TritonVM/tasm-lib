@@ -40,6 +40,17 @@ impl BasicSnippet for MerkleVerify {
             // BEFORE: _ [root; 5] tree_height leaf_index [leaf; 5]
             // AFTER:  _
             {entrypoint}:
+                /* Assert reasonable tree height
+                 *
+                 * Don't rely on `pow`'s `is_u32` and `assert leaf_index < num_leaves` only:
+                 * Since bfe!(2)^3784253760 == 1 ∧ 3784253760 < 4294967295 == u32::MAX, weird
+                 * things are possible. It is not immediately obvious how this translates into
+                 * an attack, but there's no point in leaving a potential attack vector open.
+                 */
+                push 32
+                dup 7
+                lt
+                assert error_id 0
 
                 /* Calculate node index from tree height and leaf index */
                 dup 6
@@ -50,15 +61,14 @@ impl BasicSnippet for MerkleVerify {
                 dup 0 dup 7 lt
                 // _ [root; 5] tree_height leaf_index [leaf; 5] num_leaves (leaf_index < num_leaves)
 
-                assert
+                assert error_id 1
                 // _ [root; 5] tree_height leaf_index [leaf; 5] num_leaves
 
-                dup 6
+                pick 6
                 add
-                // _ [root; 5] tree_height leaf_index [leaf; 5] node_index
+                // _ [root; 5] tree_height [leaf; 5] node_index
 
-                swap 6
-                pop 1
+                place 5
                 // _ [root; 5] tree_height node_index [leaf; 5]
 
                 dup 6
@@ -68,25 +78,13 @@ impl BasicSnippet for MerkleVerify {
                 // _ [root; 5] [0|1] [0|1] [calculated_root; 5]
 
                 /* compare calculated and provided root */
-                // _ [root; 5] g1 g0 cr4 cr3 cr2 cr1 cr0
 
-                swap 2
-                swap 4
-                swap 6
-                // _ [root; 5] cr4 g0 cr2 cr3 cr0 cr1 g1
-
-                pop 1
-                // _ [root; 5] cr4 g0 cr2 cr3 cr0 cr1
-
-                swap 2
-                swap 4
-                // _ [root; 5] cr4 cr3 cr2 cr1 cr0 g0
-
-                pop 1
-                // _ [root; 5] cr4 cr3 cr2 cr1 cr0
+                pick 5
+                pick 6
+                pop 2
                 // _ [root; 5] [calculated_root; 5]
 
-                assert_vector
+                assert_vector error_id 2
                 pop 5
 
                 return
@@ -118,12 +116,17 @@ mod tests {
     use std::collections::VecDeque;
 
     use itertools::Itertools;
+    use proptest::collection::vec;
+    use proptest::prop_assume;
+    use proptest_arbitrary_interop::arb;
     use rand::prelude::*;
+    use test_strategy::proptest;
     use triton_vm::twenty_first::util_types::algebraic_hasher::AlgebraicHasher;
 
     use super::*;
     use crate::snippet_bencher::BenchmarkCase;
     use crate::test_helpers::negative_test;
+    use crate::test_helpers::test_assertion_failure;
     use crate::traits::read_only_algorithm::ReadOnlyAlgorithm;
     use crate::traits::read_only_algorithm::ReadOnlyAlgorithmInitialState;
     use crate::traits::read_only_algorithm::ShadowedReadOnlyAlgorithm;
@@ -135,62 +138,146 @@ mod tests {
         ShadowedReadOnlyAlgorithm::new(MerkleVerify).test()
     }
 
-    #[test]
-    fn merkle_verify_negative_test() {
-        let seed: [u8; 32] = thread_rng().gen();
-        for i in 0..=4 {
-            let mut init_state = MerkleVerify.pseudorandom_initial_state(seed, None);
-            let len = init_state.stack.len();
-            let height: usize = len - 7;
-            let leaf: usize = len - 1;
-            let leaf_index: usize = len - 6;
-            let root: usize = len - 8;
+    #[proptest]
+    fn merkle_tree_verification_fails_if_leaf_is_disturbed_slightly(
+        seed: [u8; 32],
+        #[strategy(0_usize..5)] perturbation_index: usize,
+        #[filter(#perturbation != 0)] perturbation: i8,
+    ) {
+        let mut initial_state = MerkleVerify.pseudorandom_initial_state(seed, None);
+        let top_of_stack = initial_state.stack.len() - 1;
+        initial_state.stack[top_of_stack - perturbation_index] += bfe!(perturbation);
 
-            // BEFORE: _ [root; 5] tree_height leaf_index [leaf; 5]
-            let allowed_error_codes = match i {
-                0 => {
-                    println!("now testing: too high height");
-                    init_state.nondeterminism.digests.push(random());
-                    init_state.stack[height].increment();
-                    vec![
-                        InstructionError::VectorAssertionFailed(0),
-                        InstructionError::AssertionFailed,
-                    ]
-                }
-                1 => {
-                    println!("now testing: too small height");
-                    init_state.nondeterminism.digests.push(random());
-                    init_state.stack[height].decrement();
-                    vec![
-                        InstructionError::VectorAssertionFailed(0),
-                        InstructionError::AssertionFailed,
-                    ]
-                }
-                2 => {
-                    println!("now testing: corrupt leaf");
-                    init_state.stack[leaf].increment();
-                    vec![InstructionError::VectorAssertionFailed(0)]
-                }
-                3 => {
-                    println!("now testing: wrong leaf index");
-                    init_state.stack[leaf_index] =
-                        BFieldElement::new(init_state.stack[leaf_index].value() ^ 1);
-                    vec![InstructionError::VectorAssertionFailed(0)]
-                }
-                4 => {
-                    println!("now testing: corrupt root");
-                    init_state.stack[root].increment();
-                    vec![InstructionError::VectorAssertionFailed(0)]
-                }
-                _ => unreachable!(),
-            };
+        test_assertion_failure(
+            &ShadowedReadOnlyAlgorithm::new(MerkleVerify),
+            initial_state.into(),
+            &[2],
+        );
+    }
 
-            negative_test(
-                &ShadowedReadOnlyAlgorithm::new(MerkleVerify),
-                init_state.into(),
-                &allowed_error_codes,
-            );
-        }
+    #[proptest]
+    fn merkle_tree_verification_fails_if_leaf_index_is_disturbed_slightly(
+        seed: [u8; 32],
+        #[filter(#perturbation != 0)] perturbation: i8,
+    ) {
+        let mut initial_state = MerkleVerify.pseudorandom_initial_state(seed, None);
+        let top_of_stack = initial_state.stack.len() - 1;
+        let leaf_index_index = top_of_stack - 5;
+        initial_state.stack[leaf_index_index] += bfe!(perturbation);
+
+        // out-of-range leaf indices are tested separately
+        let leaf_index = initial_state.stack[leaf_index_index];
+        prop_assume!(u32::try_from(leaf_index).is_ok());
+
+        test_assertion_failure(
+            &ShadowedReadOnlyAlgorithm::new(MerkleVerify),
+            initial_state.into(),
+            &[1, 2],
+        );
+    }
+
+    #[proptest]
+    fn merkle_tree_verification_fails_if_leaf_index_is_out_of_range(
+        seed: [u8; 32],
+        #[strategy(u64::from(u32::MAX)..=BFieldElement::MAX)]
+        #[map(BFieldElement::new)]
+        leaf_index: BFieldElement,
+    ) {
+        let mut initial_state = MerkleVerify.pseudorandom_initial_state(seed, None);
+        let top_of_stack = initial_state.stack.len() - 1;
+        let leaf_index_index = top_of_stack - 5;
+        initial_state.stack[leaf_index_index] = leaf_index;
+
+        negative_test(
+            &ShadowedReadOnlyAlgorithm::new(MerkleVerify),
+            initial_state.into(),
+            &[OpStackError::FailedU32Conversion(leaf_index).into()],
+        );
+    }
+
+    #[proptest]
+    fn merkle_tree_verification_fails_if_tree_height_is_disturbed_slightly(
+        seed: [u8; 32],
+        #[strategy(-32_i8..32)]
+        #[filter(#perturbation != 0)]
+        perturbation: i8,
+        #[strategy(vec(arb(), #perturbation.clamp(0, 32) as usize))]
+        additional_bogus_tree_nodes: Vec<Digest>,
+    ) {
+        let mut initial_state = MerkleVerify.pseudorandom_initial_state(seed, None);
+        let top_of_stack = initial_state.stack.len() - 1;
+        let tree_height_index = top_of_stack - 6;
+        initial_state.stack[tree_height_index] += bfe!(perturbation);
+
+        // out-of-range tree heights are tested separately
+        let perturbed_tree_height = initial_state.stack[tree_height_index];
+        prop_assume!(u32::try_from(perturbed_tree_height).is_ok());
+        prop_assume!(perturbed_tree_height.value() < 32);
+
+        // if the expected tree height is increased, additional internal nodes are needed
+        initial_state
+            .nondeterminism
+            .digests
+            .extend(additional_bogus_tree_nodes);
+
+        test_assertion_failure(
+            &ShadowedReadOnlyAlgorithm::new(MerkleVerify),
+            initial_state.into(),
+            &[1, 2],
+        );
+    }
+
+    #[proptest]
+    fn merkle_tree_verification_fails_if_tree_height_is_too_large(
+        seed: [u8; 32],
+        #[strategy(32_u32..)] tree_height: u32,
+    ) {
+        let mut initial_state = MerkleVerify.pseudorandom_initial_state(seed, None);
+        let top_of_stack = initial_state.stack.len() - 1;
+        let tree_height_index = top_of_stack - 6;
+        initial_state.stack[tree_height_index] = bfe!(tree_height);
+
+        test_assertion_failure(
+            &ShadowedReadOnlyAlgorithm::new(MerkleVerify),
+            initial_state.into(),
+            &[0],
+        );
+    }
+
+    #[proptest]
+    fn merkle_tree_verification_fails_if_tree_height_is_way_too_large(
+        seed: [u8; 32],
+        #[strategy(u64::from(u32::MAX)..=BFieldElement::MAX)]
+        #[map(BFieldElement::new)]
+        tree_height: BFieldElement,
+    ) {
+        let mut initial_state = MerkleVerify.pseudorandom_initial_state(seed, None);
+        let top_of_stack = initial_state.stack.len() - 1;
+        let tree_height_index = top_of_stack - 6;
+        initial_state.stack[tree_height_index] = tree_height;
+
+        negative_test(
+            &ShadowedReadOnlyAlgorithm::new(MerkleVerify),
+            initial_state.into(),
+            &[OpStackError::FailedU32Conversion(tree_height).into()],
+        );
+    }
+
+    #[proptest]
+    fn merkle_tree_verification_fails_if_root_is_disturbed_slightly(
+        seed: [u8; 32],
+        #[strategy(7_usize..12)] perturbation_index: usize,
+        #[filter(#perturbation != 0)] perturbation: i8,
+    ) {
+        let mut initial_state = MerkleVerify.pseudorandom_initial_state(seed, None);
+        let top_of_stack = initial_state.stack.len() - 1;
+        initial_state.stack[top_of_stack - perturbation_index] += bfe!(perturbation);
+
+        test_assertion_failure(
+            &ShadowedReadOnlyAlgorithm::new(MerkleVerify),
+            initial_state.into(),
+            &[2],
+        );
     }
 
     impl ReadOnlyAlgorithm for MerkleVerify {

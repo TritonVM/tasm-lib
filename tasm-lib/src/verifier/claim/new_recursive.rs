@@ -34,20 +34,20 @@ impl BasicSnippet for NewRecursive {
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
         let entrypoint = self.entrypoint();
-        let claim_size = Claim {
-            program_digest: Digest::default(),
-            input: vec![BFieldElement::ZERO; self.input_size],
-            output: vec![BFieldElement::ZERO; self.output_size],
-        }
-        .encode()
-        .len();
+        let claim_size = Claim::new(Digest::default())
+            .with_input(vec![BFieldElement::ZERO; self.input_size])
+            .with_output(vec![BFieldElement::ZERO; self.output_size])
+            .encode()
+            .len();
         let claim_alloc = library.kmalloc(claim_size.try_into().unwrap());
         const METADATA_SIZE_FOR_FIELD_WITH_VEC_VALUE: usize = 2;
         let output_field_pointer = claim_alloc.write_address();
         let output_field_size: u32 = (1 + self.output_size).try_into().unwrap();
         let input_field_pointer = output_field_pointer + bfe!(output_field_size + 1);
         let input_field_size: u32 = (1 + self.input_size).try_into().unwrap();
-        let digest_field_pointer = input_field_pointer + bfe!(input_field_size + 1);
+        let version_field_pointer = input_field_pointer + bfe!(input_field_size + 1);
+        let version_field_size = 1;
+        let digest_field_pointer = version_field_pointer + bfe!(version_field_size);
 
         let read_output_value = InputSource::SecretIn.read_words(self.output_size);
         let write_output_value_and_metadata = write_words_to_memory_pop_pointer(
@@ -57,6 +57,7 @@ impl BasicSnippet for NewRecursive {
         let write_input_value_and_metadata = write_words_to_memory_pop_pointer(
             self.input_size + METADATA_SIZE_FOR_FIELD_WITH_VEC_VALUE,
         );
+        let write_version_to_memory = write_words_to_memory_pop_pointer(version_field_size);
         let dup_own_program_digest =
             vec![triton_asm!(dup {NUM_OP_STACK_REGISTERS - 1}); Digest::LEN].concat();
         let write_digest_to_memory = write_words_to_memory_pop_pointer(Digest::LEN);
@@ -87,6 +88,11 @@ impl BasicSnippet for NewRecursive {
                 // _ [input] input_size input_field_size *input_field_size
 
                 {&write_input_value_and_metadata}
+                // _
+
+                push {triton_vm::proof::CURRENT_VERSION}
+                push {version_field_pointer}
+                {&write_version_to_memory}
                 // _
 
                 // Write own digest to claim. It is assumed that own program digest occupies stack
@@ -175,12 +181,9 @@ pub mod tests {
 
             let program_digest = Digest::new([stack[4], stack[3], stack[2], stack[1], stack[0]]);
 
-            let claim = Claim {
-                program_digest,
-                input,
-                output,
-            };
-
+            let claim = Claim::new(program_digest)
+                .with_input(input)
+                .with_output(output);
             let (claim_pointer, _claim_size) = insert_claim_into_static_memory(memory, &claim);
 
             stack.push(claim_pointer);

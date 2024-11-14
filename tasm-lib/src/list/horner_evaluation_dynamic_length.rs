@@ -154,7 +154,7 @@ mod test {
             let coefficients = *Vec::<XFieldElement>::decode_from_memory(memory, address).unwrap();
             let polynomial = Polynomial::new(coefficients);
 
-            let value = polynomial.evaluate(x);
+            let value = polynomial.evaluate_in_same_field(x);
             stack.push(value.coefficients[2]);
             stack.push(value.coefficients[1]);
             stack.push(value.coefficients[0]);

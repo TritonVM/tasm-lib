@@ -208,19 +208,20 @@ mod tests {
     fn new_snippet_test() {
         test_rust_equivalence_multiple_deprecated(&Range, true);
     }
+
     #[test]
     fn bad_range_test() {
         let init_state = Range::init_state(13, 12);
         let snippet = Range;
         let terminal_state = execute_with_terminal_state(
-            &Program::new(&snippet.link_for_isolated_run()),
+            Program::new(&snippet.link_for_isolated_run()),
             &init_state.public_input,
             &init_state.stack,
             &NonDeterminism::default(),
             None,
         );
         let err = terminal_state.unwrap_err();
-        assert_eq!(InstructionError::AssertionFailed, err);
+        assert!(matches!(err, InstructionError::AssertionFailed(_)));
     }
 }
 

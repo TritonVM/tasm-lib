@@ -280,7 +280,7 @@ mod test {
         use twenty_first::math::x_field_element::EXTENSION_DEGREE;
 
         use super::*;
-        use crate::maybe_write_debuggable_program_to_disk;
+        use crate::maybe_write_debuggable_vm_state_to_disk;
 
         #[test]
         fn load_and_decode_struct_with_named_fields_from_memory() {
@@ -361,7 +361,7 @@ mod test {
         /// Verify correct field-macro behavior when the size-indicators have
         /// illegal values.
         fn prop_negative_test_messed_up_size_indicators<T: BFieldCodec>(
-            program: &Program,
+            program: Program,
             tuple_struct: &T,
             obj_pointer: BFieldElement,
             offset_for_manipulated_si: BFieldElement,
@@ -372,9 +372,12 @@ mod test {
             let mut no_messed_memory = HashMap::new();
             encode_to_memory(&mut no_messed_memory, obj_pointer, tuple_struct);
             let no_messed_nd = NonDeterminism::default().with_ram(no_messed_memory.clone());
-            let mut vm_state_pass =
-                VMState::new(program, PublicInput::default(), no_messed_nd.clone());
-            maybe_write_debuggable_program_to_disk(program, &vm_state_pass);
+            let mut vm_state_pass = VMState::new(
+                program.clone(),
+                PublicInput::default(),
+                no_messed_nd.clone(),
+            );
+            maybe_write_debuggable_vm_state_to_disk(&vm_state_pass);
             vm_state_pass.run().unwrap();
 
             let expected_output_len = expected_stack.len();
@@ -390,20 +393,29 @@ mod test {
                 bfe!(TupleStruct::MAX_OFFSET + 1),
             );
             let messed_up_nd_0 = NonDeterminism::default().with_ram(messed_up_memory.clone());
-            let mut vm_state_fail0 =
-                VMState::new(program, PublicInput::default(), messed_up_nd_0.clone());
-            maybe_write_debuggable_program_to_disk(program, &vm_state_fail0);
+            let mut vm_state_fail0 = VMState::new(
+                program.clone(),
+                PublicInput::default(),
+                messed_up_nd_0.clone(),
+            );
+            maybe_write_debuggable_vm_state_to_disk(&vm_state_fail0);
             let instruction_error0 = vm_state_fail0.run().unwrap_err();
-            assert_eq!(InstructionError::AssertionFailed, instruction_error0,);
+            assert!(matches!(
+                instruction_error0,
+                InstructionError::AssertionFailed(_)
+            ));
 
             // Messed-up encoding fails: Negative sizes banned
             let negative_number = bfe!(-42);
             messed_up_memory = no_messed_memory.clone();
             messed_up_memory.insert(obj_pointer + offset_for_manipulated_si, negative_number);
             let messed_up_nd_1 = NonDeterminism::default().with_ram(messed_up_memory.clone());
-            let mut vm_state_fail1 =
-                VMState::new(program, PublicInput::default(), messed_up_nd_1.clone());
-            maybe_write_debuggable_program_to_disk(program, &vm_state_fail1);
+            let mut vm_state_fail1 = VMState::new(
+                program.clone(),
+                PublicInput::default(),
+                messed_up_nd_1.clone(),
+            );
+            maybe_write_debuggable_vm_state_to_disk(&vm_state_fail1);
             let instruction_error1 = vm_state_fail1.run().unwrap_err();
             let expected_err =
                 InstructionError::OpStackError(OpStackError::FailedU32Conversion(negative_number));
@@ -422,11 +434,17 @@ mod test {
                     messed_up_memory[&address_for_manipulated_si] + bfe!(1),
                 );
                 let messed_up_nd_2 = NonDeterminism::default().with_ram(messed_up_memory.clone());
-                let mut vm_state_fail2 =
-                    VMState::new(program, PublicInput::default(), messed_up_nd_2.clone());
-                maybe_write_debuggable_program_to_disk(program, &vm_state_fail2);
+                let mut vm_state_fail2 = VMState::new(
+                    program.clone(),
+                    PublicInput::default(),
+                    messed_up_nd_2.clone(),
+                );
+                maybe_write_debuggable_vm_state_to_disk(&vm_state_fail2);
                 let instruction_error2 = vm_state_fail2.run().unwrap_err();
-                assert_eq!(InstructionError::AssertionFailed, instruction_error2,);
+                assert!(matches!(
+                    instruction_error2,
+                    InstructionError::AssertionFailed(_)
+                ));
 
                 // Messed-up encoding fails: Size-indicator is *one* too small
                 messed_up_memory = no_messed_memory.clone();
@@ -437,9 +455,12 @@ mod test {
                 let messed_up_nd_3 = NonDeterminism::default().with_ram(messed_up_memory.clone());
                 let mut vm_state_fail3 =
                     VMState::new(program, PublicInput::default(), messed_up_nd_3.clone());
-                maybe_write_debuggable_program_to_disk(program, &vm_state_fail3);
+                maybe_write_debuggable_vm_state_to_disk(&vm_state_fail3);
                 let instruction_error3 = vm_state_fail3.run().unwrap_err();
-                assert_eq!(InstructionError::AssertionFailed, instruction_error3,);
+                assert!(matches!(
+                    instruction_error3,
+                    InstructionError::AssertionFailed(_)
+                ));
             }
         }
 
@@ -481,11 +502,10 @@ mod test {
                 halt
             );
 
-            let program = Program::new(&code_using_field_getter);
             let expected_stack_benign = random_object.c.values();
             let offset_for_manipulated_si = bfe!(0);
             prop_negative_test_messed_up_size_indicators(
-                &program,
+                Program::new(&code_using_field_getter),
                 &random_object,
                 START_OF_OBJ,
                 offset_for_manipulated_si,
@@ -517,12 +537,11 @@ mod test {
                 halt
             );
 
-            let program = Program::new(&code_using_field_and_size_getter);
             let expected_field_size = bfe!(random_object.3.len() as u64 * Digest::LEN as u64 + 1);
             let expected_list_len = bfe!(random_object.3.len() as u64);
             let expected_stack_benign_nd = [expected_list_len, expected_field_size];
             prop_negative_test_messed_up_size_indicators(
-                &program,
+                Program::new(&code_using_field_and_size_getter),
                 &random_object,
                 START_OF_OBJ,
                 bfe!(Digest::LEN as u64),
@@ -553,10 +572,9 @@ mod test {
                 halt
             );
 
-            let program = Program::new(&code_using_field_getter);
             let expected_output_benign_nd = random_object.4.values();
             prop_negative_test_messed_up_size_indicators(
-                &program,
+                Program::new(&code_using_field_getter),
                 &random_object,
                 START_OF_OBJ,
                 bfe!(Digest::LEN as u64),
@@ -584,7 +602,6 @@ mod test {
                 halt
             );
 
-            let program = Program::new(&code_using_size_integrity_code);
             let expected_stack_benign = [bfe!(random_object.encode().len() as u64)];
 
             // mess up size-indicator of all size-indicators
@@ -606,7 +623,7 @@ mod test {
                 size_indicator_for_xfe_vec,
             ] {
                 prop_negative_test_messed_up_size_indicators(
-                    &program,
+                    Program::new(&code_using_size_integrity_code),
                     &random_object,
                     OBJ_POINTER,
                     bfe!(size_indicator_offset as u64),
@@ -654,7 +671,6 @@ mod test {
             );
 
             let random_obj = random_struct(random());
-            let program = Program::new(&code_using_size_integrity_code);
             let expected_stack_benign = [bfe!(random_obj.encode().len() as u64)];
 
             const SIZE_OF_SIZE_INDICATOR: usize = 1;
@@ -663,7 +679,7 @@ mod test {
                 + SIZE_OF_SIZE_INDICATOR
                 + SIZE_OF_LENGTH_INDICATOR;
             prop_negative_test_messed_up_size_indicators(
-                &program,
+                Program::new(&code_using_size_integrity_code),
                 &random_obj,
                 OBJ_POINTER,
                 bfe!(offset_for_vec_vec_digest_size_indicator as u64),
@@ -706,8 +722,8 @@ mod test {
             let mut no_messed_memory = HashMap::new();
             encode_to_memory(&mut no_messed_memory, OBJ_POINTER, &random_object);
             let no_messed_nd = NonDeterminism::default().with_ram(no_messed_memory.clone());
-            let mut vm_state = VMState::new(&program, PublicInput::default(), no_messed_nd.clone());
-            maybe_write_debuggable_program_to_disk(&program, &vm_state);
+            let mut vm_state = VMState::new(program, PublicInput::default(), no_messed_nd.clone());
+            maybe_write_debuggable_vm_state_to_disk(&vm_state);
             vm_state.run().unwrap();
 
             let expected_stack = vec![bfe!(random_object.encode().len() as u64)];
@@ -852,7 +868,7 @@ mod test {
             let program = Program::new(&instructions);
             let nondeterminism = NonDeterminism::new(vec![]).with_ram(memory);
             let final_state =
-                execute_with_terminal_state(&program, &[], &stack, &nondeterminism, None).unwrap();
+                execute_with_terminal_state(program, &[], &stack, &nondeterminism, None).unwrap();
             final_state.op_stack.stack
         }
     }

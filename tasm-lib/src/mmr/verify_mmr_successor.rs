@@ -163,7 +163,7 @@ impl BasicSnippet for VerifyMmrSuccessor {
             push 0 eq
             // _ *old_mmr *new_mmr (new_num_leafs >= old_num_leafs)
 
-            assert
+            assert error_id 150
             // _ *old_mmr *new_mmr
 
 
@@ -174,7 +174,7 @@ impl BasicSnippet for VerifyMmrSuccessor {
             dup 1 {&num_leafs} call {popcount_u64}
             // _ *old_mmr *new_mmr new_num_peaks (popcount of new_num_leafs)
 
-            eq assert
+            eq assert error_id 151
             // _ *old_mmr *new_mmr
 
 
@@ -266,7 +266,7 @@ impl BasicSnippet for VerifyMmrSuccessor {
                 add read_mem {Digest::LEN} pop 1
                 // _ *new_mmr *current_peak *end_of_memory [running_leaf_count] [num_leafs_remaining*] old_height peak_index [1] [some_new_peak] [new_peaks[peak_index]]
 
-                {&compare_digests} assert
+                {&compare_digests} assert error_id 152
                 // _ *new_mmr *current_peak *end_of_memory [running_leaf_count] [num_leafs_remaining*] old_height peak_index [1]
 
 
@@ -332,7 +332,7 @@ impl BasicSnippet for VerifyMmrSuccessor {
                 {&compare_digests}
                 // _ *old_mmr *new_mmr 0 (new_bagged == old_bagged)
 
-                assert
+                assert error_id 153
                 // _ *old_mmr *new_mmr 0
 
                 pop 3
@@ -372,10 +372,10 @@ mod test {
     use rand::SeedableRng;
     use tasm_lib::prelude::TasmObject;
     use tasm_lib::snippet_bencher::BenchmarkCase;
-    use tasm_lib::test_helpers::negative_test;
     use tasm_lib::traits::mem_preserver::ShadowedMemPreserver;
     use tasm_lib::traits::rust_shadow::RustShadow;
-    use triton_vm::error::InstructionError;
+    use triton_vm::isa::error::AssertionError;
+    use triton_vm::isa::instruction::AssertionContext;
     use triton_vm::twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
     use triton_vm::twenty_first::util_types::mmr::mmr_successor_proof::MmrSuccessorProof;
     use triton_vm::twenty_first::util_types::mmr::shared_advanced::get_peak_heights;
@@ -384,6 +384,7 @@ mod test {
     use super::*;
     use crate::empty_stack;
     use crate::memory::encode_to_memory;
+    use crate::test_helpers::negative_test;
     use crate::traits::mem_preserver::MemPreserver;
     use crate::traits::mem_preserver::MemPreserverInitialState;
     use crate::twenty_first::prelude::AlgebraicHasher;
@@ -633,15 +634,23 @@ mod test {
 
     #[test]
     fn verify_mmr_successor_negative_test() {
+        // this is a bit round-about because it tests for assertion failures _and_
+        // a different kind of error, which is not really supported
+        let assertion_error = |id| AssertionError::new(1, 0).with_context(AssertionContext::ID(id));
+        let expected_errors = [
+            InstructionError::AssertionFailed(assertion_error(150)),
+            InstructionError::AssertionFailed(assertion_error(151)),
+            InstructionError::AssertionFailed(assertion_error(152)),
+            InstructionError::AssertionFailed(assertion_error(153)),
+            InstructionError::EmptySecretDigestInput,
+        ];
+
         for (i, init_state) in failing_initial_states().into_iter().enumerate() {
             println!("Trying failing initial state {i}.");
             negative_test(
                 &ShadowedMemPreserver::new(VerifyMmrSuccessor),
                 init_state.into(),
-                &[
-                    InstructionError::AssertionFailed,
-                    InstructionError::EmptySecretDigestInput,
-                ],
+                &expected_errors,
             );
         }
     }

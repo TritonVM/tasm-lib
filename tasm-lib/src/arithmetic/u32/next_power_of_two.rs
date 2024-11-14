@@ -68,7 +68,7 @@ impl BasicSnippet for NextPowerOfTwo {
                     // _ (log_2_floor(value - 1) + 1)
 
                     push 2
-                    // _  (log_2_floor(value - 1) + 1) 2
+                    // _ (log_2_floor(value - 1) + 1) 2
 
                     pow
                     // _ npo2(self_)
@@ -79,7 +79,7 @@ impl BasicSnippet for NextPowerOfTwo {
                     eq
                     push 0
                     eq
-                    assert
+                    assert error_id 130
 
                     return
         )
@@ -92,7 +92,7 @@ mod tests {
     use rand::prelude::*;
 
     use super::*;
-    use crate::test_helpers::negative_test;
+    use crate::test_helpers::test_assertion_failure;
     use crate::traits::closure::Closure;
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
@@ -119,11 +119,11 @@ mod tests {
                 }
             };
 
-            self.prepare_vm_state(self_)
+            self.prepare_vm_stack(self_)
         }
 
         fn corner_case_initial_states(&self) -> Vec<Vec<BFieldElement>> {
-            let small_inputs = (0u32..=66).map(|i| self.prepare_vm_state(i)).collect_vec();
+            let small_inputs = (0u32..=66).map(|i| self.prepare_vm_stack(i)).collect_vec();
             let big_but_valid_inputs = [
                 1u32 << 31,
                 (1u32 << 31) - 1,
@@ -133,7 +133,7 @@ mod tests {
                 (1u32 << 31) - 5,
             ]
             .into_iter()
-            .map(|i| self.prepare_vm_state(i))
+            .map(|i| self.prepare_vm_stack(i))
             .collect_vec();
 
             [small_inputs, big_but_valid_inputs].concat()
@@ -141,12 +141,8 @@ mod tests {
     }
 
     impl NextPowerOfTwo {
-        fn prepare_vm_state(&self, self_: u32) -> Vec<BFieldElement> {
-            [
-                self.init_stack_for_isolated_run(),
-                vec![BFieldElement::new(self_ as u64)],
-            ]
-            .concat()
+        fn prepare_vm_stack(&self, self_: u32) -> Vec<BFieldElement> {
+            [self.init_stack_for_isolated_run(), bfe_vec![self_]].concat()
         }
     }
 
@@ -165,18 +161,10 @@ mod tests {
             u32::MAX - 1,
             u32::MAX,
         ] {
-            let init_stack = [
-                NextPowerOfTwo.init_stack_for_isolated_run(),
-                vec![BFieldElement::new(self_ as u64)],
-            ]
-            .concat();
-
+            let init_stack = NextPowerOfTwo.prepare_vm_stack(self_);
             let init_state = InitVmState::with_stack(init_stack);
-            negative_test(
-                &ShadowedClosure::new(NextPowerOfTwo),
-                init_state,
-                &[InstructionError::AssertionFailed],
-            );
+
+            test_assertion_failure(&ShadowedClosure::new(NextPowerOfTwo), init_state, &[130]);
         }
     }
 }

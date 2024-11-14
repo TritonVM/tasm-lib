@@ -479,13 +479,11 @@ impl Function for XfeNtt {
         stack: &mut Vec<BFieldElement>,
         memory: &mut HashMap<BFieldElement, BFieldElement>,
     ) {
-        let omega = stack.pop().unwrap();
+        let _root_of_unity = stack.pop().unwrap();
         let input_pointer = stack.pop().unwrap();
 
         let mut vector = *Vec::<XFieldElement>::decode_from_memory(memory, input_pointer).unwrap();
-        let n = vector.len();
-
-        ntt(&mut vector, omega, n.ilog2());
+        ntt(&mut vector);
 
         encode_to_memory(memory, input_pointer, &vector);
     }

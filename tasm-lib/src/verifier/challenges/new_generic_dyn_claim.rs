@@ -18,6 +18,7 @@ use crate::verifier::eval_arg::compute_terminal_dyn_sized_dynamic_symbols::Compu
 use crate::verifier::eval_arg::compute_terminal_from_digest::ComputeTerminalFromDigestInitialIsOne;
 
 /// Calculate a `Challenges` structure from a claim that is only known at runtime
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct NewGenericDynClaim {
     num_of_fiat_shamir_challenges: usize,
     num_of_claim_derived_challenges: usize,
@@ -30,11 +31,9 @@ impl NewGenericDynClaim {
     /// An instantiation of this snippet that contains the same number of
     /// challenges that TVM uses in its STARK engine
     pub fn tvm_challenges(challenges_pointer: BFieldElement) -> Self {
-        const NUMBER_OF_CLAIM_DERIVED_CHALLENGES: usize = 4;
-
         Self {
-            num_of_fiat_shamir_challenges: Challenges::COUNT - NUMBER_OF_CLAIM_DERIVED_CHALLENGES,
-            num_of_claim_derived_challenges: NUMBER_OF_CLAIM_DERIVED_CHALLENGES,
+            num_of_fiat_shamir_challenges: Challenges::SAMPLE_COUNT,
+            num_of_claim_derived_challenges: ChallengeId::NUM_DERIVED_CHALLENGES,
             challenges_pointer,
         }
     }
@@ -169,8 +168,7 @@ impl BasicSnippet for NewGenericDynClaim {
                 read_mem 1
                 // _ inputs_len (*inputs-1)
 
-                push {1 + Digest::LEN}
-                add
+                addi {1 + 1 + Digest::LEN} // skip field `version` (of length 1)
                 add
                 // _ *digest_last_word
 
@@ -243,7 +241,7 @@ mod tests {
         fn rust_shadow(
             &self,
             stack: &mut Vec<BFieldElement>,
-            memory: &mut std::collections::HashMap<BFieldElement, BFieldElement>,
+            memory: &mut HashMap<BFieldElement, BFieldElement>,
             _nondeterminism: &NonDeterminism,
             _public_input: &[BFieldElement],
             sponge: &mut Option<VmHasher>,
@@ -265,7 +263,7 @@ mod tests {
         fn pseudorandom_initial_state(
             &self,
             seed: [u8; 32],
-            bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
+            bench_case: Option<BenchmarkCase>,
         ) -> ProcedureInitialState {
             let mut rng: StdRng = SeedableRng::from_seed(seed);
             let (input_length, output_length) = match bench_case {
@@ -274,11 +272,9 @@ mod tests {
                 None => (rng.gen_range(0..1000), rng.gen_range(0..1000)),
             };
 
-            let claim = Claim {
-                program_digest: rng.gen(),
-                input: random_elements(input_length),
-                output: random_elements(output_length),
-            };
+            let claim = Claim::new(rng.gen())
+                .with_input(random_elements(input_length))
+                .with_output(random_elements(output_length));
 
             let mut memory = HashMap::default();
 

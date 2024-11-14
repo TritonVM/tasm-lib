@@ -153,10 +153,7 @@ mod tests {
             memory: &mut HashMap<BFieldElement, BFieldElement>,
         ) {
             let padded_height: u32 = stack.pop().unwrap().try_into().unwrap();
-            let fri_from_tvm = self
-                .stark
-                .derive_fri(padded_height.try_into().unwrap())
-                .unwrap();
+            let fri_from_tvm = self.stark.fri(padded_height.try_into().unwrap()).unwrap();
             let local_fri: FriVerify = fri_from_tvm.into();
             let fri_pointer =
                 rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator(memory);
@@ -181,7 +178,7 @@ mod tests {
                     // the type used to hold this value is a `u32` in this repo. I think such a
                     // large FRI domain is unfeasible anyway, so I'm reasonably comfortable
                     // excluding that option.
-                    while self.stark.derive_fri(padded_height as usize * 2).is_err() {
+                    while self.stark.fri(padded_height as usize * 2).is_err() {
                         padded_height /= 2;
                     }
 

@@ -14,7 +14,7 @@ use crate::traits::basic_snippet::BasicSnippet;
 ///
 /// [^1]: and partly for historic reasons
 ///
-/// [debugging]: crate::maybe_write_debuggable_program_to_disk
+/// [debugging]: crate::maybe_write_debuggable_vm_state_to_disk
 const STATIC_MEMORY_FIRST_ADDRESS_AS_U64: u64 = BFieldElement::MAX - 1;
 pub const STATIC_MEMORY_FIRST_ADDRESS: BFieldElement =
     BFieldElement::new(STATIC_MEMORY_FIRST_ADDRESS_AS_U64);

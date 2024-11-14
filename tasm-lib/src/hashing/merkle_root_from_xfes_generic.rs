@@ -92,13 +92,13 @@ impl BasicSnippet for MerkleRootFromXfesGeneric {
                 pop_count
                 push 1
                 eq
-                assert
+                assert error_id 90
                 dup 0
                 push 1
                 eq
                 push 0
                 eq
-                assert
+                assert error_id 91
                 // _ *xfes len
 
                 push 2
@@ -194,7 +194,7 @@ mod test {
     use crate::rust_shadowing_helper_functions::list::list_new;
     use crate::rust_shadowing_helper_functions::list::list_push;
     use crate::snippet_bencher::BenchmarkCase;
-    use crate::test_helpers::negative_test;
+    use crate::test_helpers::test_assertion_failure;
     use crate::traits::function::Function;
     use crate::traits::function::FunctionInitialState;
     use crate::traits::function::ShadowedFunction;
@@ -302,26 +302,22 @@ mod test {
 
     #[test]
     fn cannot_handle_input_list_of_length_one() {
-        let height_0 = MerkleRootFromXfesGeneric
-            .init_state(vec![XFieldElement::one(); 1], BFieldElement::zero());
-        negative_test(
+        let height_0 = MerkleRootFromXfesGeneric.init_state(xfe_vec![1], bfe!(0));
+        test_assertion_failure(
             &ShadowedFunction::new(MerkleRootFromXfesGeneric),
             InitVmState::with_stack_and_memory(height_0.stack, height_0.memory),
-            &[InstructionError::AssertionFailed],
+            &[91],
         );
     }
 
     #[test]
     fn cannot_handle_input_list_of_length_not_pow2() {
         for bad_length in [3, 5, 6, 7, 9, 10, 11, 12, 13, 14, 15, 17] {
-            let init_state = MerkleRootFromXfesGeneric.init_state(
-                vec![XFieldElement::one(); bad_length],
-                BFieldElement::zero(),
-            );
-            negative_test(
+            let init_state = MerkleRootFromXfesGeneric.init_state(xfe_vec![1; bad_length], bfe!(0));
+            test_assertion_failure(
                 &ShadowedFunction::new(MerkleRootFromXfesGeneric),
                 InitVmState::with_stack_and_memory(init_state.stack, init_state.memory),
-                &[InstructionError::AssertionFailed],
+                &[90],
             );
         }
     }

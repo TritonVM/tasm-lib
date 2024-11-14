@@ -229,9 +229,9 @@ mod tests {
 
     use itertools::Itertools;
     use rand::prelude::*;
-    use triton_vm::fri::barycentric_evaluate;
     use triton_vm::twenty_first::math::other::random_elements;
     use triton_vm::twenty_first::xfe_vec;
+    use twenty_first::math::polynomial::barycentric_evaluate;
     use twenty_first::math::traits::Inverse;
     use twenty_first::math::traits::PrimitiveRootOfUnity;
 

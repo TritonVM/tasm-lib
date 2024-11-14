@@ -78,7 +78,7 @@ impl BasicSnippet for DynMalloc {
             push {NUM_ALLOCATABLE_PAGES}
             dup 1
             lt                              // _ page_idx (page_idx < NUM_ALLOCATABLE_PAGES)
-            assert
+            assert error_id 70
 
             // update dynamic allocator state
             dup 0                           // _ page_idx page_idx
@@ -192,6 +192,7 @@ mod tests {
 
     use super::*;
     use crate::test_helpers::negative_test;
+    use crate::test_helpers::test_assertion_failure;
     use crate::traits::function::ShadowedFunction;
     use crate::traits::rust_shadow::RustShadow;
     use crate::InitVmState;
@@ -219,11 +220,8 @@ mod tests {
                 .collect();
             let init_state =
                 InitVmState::with_stack_and_memory(init_stack, memory_filled_dyn_malloc);
-            negative_test(
-                &shadowed_snippet,
-                init_state,
-                &[InstructionError::AssertionFailed],
-            );
+
+            test_assertion_failure(&shadowed_snippet, init_state, &[70]);
         }
 
         // Last page has been allocated, next call must fail
