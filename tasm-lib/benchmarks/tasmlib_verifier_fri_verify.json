@@ -2,7 +2,7 @@
   {
     "name": "tasmlib_verifier_fri_verify",
     "benchmark_result": {
-      "clock_cycle_count": 44157,
+      "clock_cycle_count": 44155,
       "hash_table_height": 14790,
       "u32_table_height": 17988,
       "op_stack_table_height": 42385,
@@ -13,7 +13,7 @@
   {
     "name": "tasmlib_verifier_fri_verify",
     "benchmark_result": {
-      "clock_cycle_count": 44157,
+      "clock_cycle_count": 44155,
       "hash_table_height": 14790,
       "u32_table_height": 17384,
       "op_stack_table_height": 42385,

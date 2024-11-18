@@ -75,8 +75,8 @@ impl BasicSnippet for BarycentricEvaluation {
         let numerator_from_partial_sums_loop_label =
             format!("{entrypoint}_numerator_from_partial_sums");
         let numerator_from_partial_sums_loop_code = triton_asm!(
-            // BEGIN:     _ *ptec *partial_terms[0] 0 [0]   *codeword[0]
-            // INVARIANT: _ *ptec *partial_terms[n] 0 [acc] *codeword[n]
+            // BEGIN:     _ *ptec *partial_terms[0] 0 [0; 3]   *codeword[0]
+            // INVARIANT: _ *ptec *partial_terms[n] 0 [acc; 3] *codeword[n]
             {numerator_from_partial_sums_loop_label}:
                 pick 5
                 xx_dot_step
@@ -119,7 +119,7 @@ impl BasicSnippet for BarycentricEvaluation {
                 pop 1
                 // _ *codeword [-indeterminate] codeword_len
 
-                /* assert `codeword_len <= MAX_CODEWORD_LENGTH`` */
+                /* assert `codeword_len <= MAX_CODEWORD_LENGTH` */
                 push {MAX_CODEWORD_LENGTH + 1}
                 dup 1
                 lt
@@ -166,48 +166,46 @@ impl BasicSnippet for BarycentricEvaluation {
                 push {partial_terms_alloc.write_address()}
                 push 0
                 push 0 push 0 push 0
-                // _ (*partial_terms_last_word+1) *codeword *partial_terms[0] 0 [acc]
+                // _ (*partial_terms_last_word+1) *codeword *partial_terms[0] 0 [acc; 3]
 
                 pick 5
                 addi 1
-                // _ (*partial_terms_last_word+1) *partial_terms[0] 0 [acc] *codeword[0]
+                // _ (*partial_terms_last_word+1) *partial_terms[0] 0 [acc; 3] *codeword[0]
 
                 call {numerator_from_partial_sums_loop_label}
-                // _ (*partial_terms_last_word+1) (*partial_terms_last_word+1) 0 [numerator] *codeword[last + 1]
+                hint numerator: XFieldElement = stack[1..4]
+                // _ (*partial_terms_last_word+1) (*partial_terms_last_word+1) 0 [numerator; 3] *codeword[last + 1]
 
                 pick 4
-                pop 2
-                // _ (*partial_terms_last_word+1) (*partial_terms_last_word+1) [numerator]
-                hint numerator: XFieldElement = stack[0..3]
+                pick 5
+                pop 3
+                // _ (*partial_terms_last_word+1) [numerator; 3]
 
-                place 4
-                place 4
-                place 4
-                pop 1
+                pick 3
                 addi -1
-                // _ [numerator] *partial_terms_last_word
+                // _ [numerator; 3] *partial_terms_last_word
 
                 push 0
                 push 0
                 push 0
                 push 0
                 push 0
-                // _ [numerator] *partial_terms_last_word 0 0 [0]
+                // _ [numerator; 3] *partial_terms_last_word 0 0 [0]
 
                 push {partial_terms_alloc.write_address() - bfe!(1)}
                 hint loop_end_condition = stack[0]
                 place 6
-                // _ [numerator] (*partial_terms - 1) *partial_terms_last_word 0 0 [0]
+                // _ [numerator; 3] (*partial_terms - 1) *partial_terms_last_word 0 0 [0]
 
                 call {denominator_from_partial_sums_loop_label}
                 hint denominator: XFieldElement = stack[0..2]
-                // _ [numerator] (*partial_terms - 1) *partial_terms_last_word 0 0 [denominator]
+                // _ [numerator; 3] (*partial_terms - 1) (*partial_terms - 1) 0 0 [denominator]
 
                 place 6
                 place 6
                 place 6
                 pop 4
-                // _ [numerator] [denominator]
+                // _ [numerator; 3] [denominator]
 
                 x_invert
                 xx_mul
