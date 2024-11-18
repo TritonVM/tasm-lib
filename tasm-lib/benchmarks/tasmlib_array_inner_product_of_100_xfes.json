@@ -2,7 +2,7 @@
   {
     "name": "tasmlib_array_inner_product_of_100_xfes",
     "benchmark_result": {
-      "clock_cycle_count": 110,
+      "clock_cycle_count": 109,
       "hash_table_height": 72,
       "u32_table_height": 0,
       "op_stack_table_height": 5,
@@ -13,7 +13,7 @@
   {
     "name": "tasmlib_array_inner_product_of_100_xfes",
     "benchmark_result": {
-      "clock_cycle_count": 110,
+      "clock_cycle_count": 109,
       "hash_table_height": 72,
       "u32_table_height": 0,
       "op_stack_table_height": 5,

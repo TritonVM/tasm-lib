@@ -52,10 +52,8 @@ impl BasicSnippet for InnerProductOfXfes {
                 push 0
                 // _ *a *b 0 0 0
 
-                swap 4
-                swap 1
-                swap 3
-                // _ 0 0 0 *a *b
+                pick 4
+                pick 4
                 // _ 0 0 0 *a *b
 
                 {&accumulate_all_indices}
