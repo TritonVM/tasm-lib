@@ -513,8 +513,7 @@ pub fn negative_test<T: RustShadow>(
     );
 }
 
-#[cfg(test)]
-pub(crate) fn test_assertion_failure<S: RustShadow>(
+pub fn test_assertion_failure<S: RustShadow>(
     snippet_struct: &S,
     initial_state: InitVmState,
     expected_error_ids: &[i128],
