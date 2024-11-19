@@ -74,8 +74,8 @@ impl StarkVerify {
         }
     }
 
-    /// Computes and returns the number of nondeterministic digests that will be
-    /// consumed when this snippets verifies the given proof.
+    /// The number of nondeterministic digests that will be
+    /// consumed when this snippet verifies the given proof.
     pub fn number_of_nondeterministic_digests_consumed(&self, proof: &Proof) -> usize {
         let padded_height = proof.padded_height().unwrap();
         let fri_params = self.stark.fri(padded_height).unwrap();
@@ -95,10 +95,9 @@ impl StarkVerify {
         acc
     }
 
-    /// Computes and returns the number of nondeterministic individual tokens that
-    /// will be consumed when this snippets verifies the given (claim,proof) pair.
-    /// Right now this number is zero because the snippet does not consume any,
-    /// but that might change in the future.
+    /// The number of nondeterministic individual tokens that will be consumed when
+    /// this snippet verifies the given (claim, proof) pair.
+    // Right now this number is zero, but that might change in the future.
     pub fn number_of_nondeterministic_tokens_consumed(
         &self,
         _proof: &Proof,
@@ -501,7 +500,7 @@ impl BasicSnippet for StarkVerify {
                     call {dynamic_eval}
                     // _ ... padded_height *proof_iter *air_evaluation_result
 
-                    swap 1 pop 1
+                    pick 1 pop 1
                     // _ ... padded_height *air_evaluation_result
                 }
             }
@@ -517,41 +516,23 @@ impl BasicSnippet for StarkVerify {
         };
 
         let challenges_ptr = self.memory_layout.challenges_pointer();
-        let verify_challenges_pointer = triton_asm!(
-            push {challenges_ptr}
-            eq
-            assert
-        );
 
         let assert_top_two_xfes_eq = triton_asm!(
             // _ y2 y1 y0 x2 x1 x0
-
-            swap 4
+            pick 3
             eq
-            assert
-            // _ y2 x0 y0 x2
+            assert error_id 230
 
-            swap 2
+            // _ y2 y1 x2 x1
+            pick 2
             eq
-            assert
+            assert error_id 231
+
             // _ y2 x2
-
             eq
-            assert
+            assert error_id 232
+
             // _
-        );
-
-        let swap_top_two_xfes = triton_asm!(
-            // _ y2 y1 y0 x2 x1 x0
-            swap 3
-            swap 1
-            swap 4
-            swap 1
-            swap 2
-            swap 5
-            swap 2
-
-            // _ x2 x1 x0 y2 y1 y0
         );
 
         let main_loop_label = format!("{entrypoint}_main_loop");
@@ -559,10 +540,9 @@ impl BasicSnippet for StarkVerify {
             //                                                        (u32, XFieldElement)
             // _ remaining_rounds fri_gen fri_offset *etrow *btrow *qseg_elem *fri_revealed_idx *beqd_ws *oodpnts
             // Calculate `current_fri_domain_value`
-            dup 2
+            pick 2
             read_mem 1
-            swap 4
-            pop 1
+            place 3
             // _ remaining_rounds fri_gen fri_offset *etrow *btrow *qseg_elem *fri_revealed_xfe *beqd_ws *oodpnts fri_idx
 
             dup 8
@@ -583,14 +563,12 @@ impl BasicSnippet for StarkVerify {
             // _ remaining_rounds fri_gen fri_offset *etrow *btrow *qseg_elem *fri_revealed_xfe *beqd_ws *oodpnts (-fdom_pnt) [be_opnd_elem]
 
             // Update `*btrow` and `*etrow` pointer values to point to previous element
-            swap 9
-            push {-((EXTENSION_DEGREE * MasterAuxTable::NUM_COLUMNS) as i32)}
-            add
-            swap 9
-            swap 8
-            push {-(MasterMainTable::NUM_COLUMNS as i32)}
-            add
-            swap 8
+            pick 9
+            addi {-bfe!(EXTENSION_DEGREE * MasterAuxTable::NUM_COLUMNS)}
+            place 9
+            pick 8
+            addi {-bfe!(MasterMainTable::NUM_COLUMNS)}
+            place 8
             // _ remaining_rounds fri_gen fri_offset *etrow_prev *btrow_prev *qseg_elem *fri_revealed_xfe *beqd_ws *oodpnts (-fdom_pnt) [be_opnd_elem]
 
             push -1
@@ -615,10 +593,9 @@ impl BasicSnippet for StarkVerify {
             call {inner_product_4_xfes}
             // _ remaining_rounds fri_gen fri_offset *etrow_prev *btrow_prev *qseg_elem *fri_revealed_xfe *beqd_ws *oodpnts (-fdom_pnt) [-be_opnd_elem] [1/(oodp_pow_nsegs - fdom_pnt)] [inner_prod]
 
-            swap 13
-            push {-((NUM_QUOTIENT_SEGMENTS * EXTENSION_DEGREE) as i32)}
-            add
-            swap 13
+            pick 13
+            addi {-bfe!(NUM_QUOTIENT_SEGMENTS * EXTENSION_DEGREE)}
+            place 13
             // _ remaining_rounds fri_gen fri_offset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *beqd_ws *oodpnts (-fdom_pnt) [-be_opnd_elem] [1/(oodp_pow_nsegs - fdom_pnt)] [inner_prod]
 
             push -1
@@ -681,7 +658,9 @@ impl BasicSnippet for StarkVerify {
             // _ remaining_rounds fri_gen fri_offset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *beqd_ws *oodpnts (-fdom_pnt) [-be_opnd_elem] [dv2 + dv0]
             hint dv2_plus_dv0: XFieldElement = stack[0..3]
 
-            {&swap_top_two_xfes}
+            pick 5
+            pick 5
+            pick 5
             // _ remaining_rounds fri_gen fri_offset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *beqd_ws *oodpnts (-fdom_pnt) [dv2 + dv0] [-be_opnd_elem]
 
             push {ood_next_row_main_and_aux_value_pointer_alloc.read_address()}
@@ -715,15 +694,13 @@ impl BasicSnippet for StarkVerify {
             // _ remaining_rounds fri_gen fri_offset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *beqd_ws *oodpnts (-fdom_pnt) [dv2 + dv0 + dv1]
             // _ remaining_rounds fri_gen fri_offset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *beqd_ws *oodpnts (-fdom_pnt) [deep_value]
 
-            swap 1
-            swap 2
-            swap 3
-            // _ remaining_rounds fri_gen fri_offset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *beqd_ws *oodpnts [deep_value] (-fdom_pnt)
-
-            swap 6
-            read_mem {EXTENSION_DEGREE}
-            swap 9
+            pick 3
             pop 1
+            // _ remaining_rounds fri_gen fri_offset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_xfe *beqd_ws *oodpnts [deep_value]
+
+            pick 5
+            read_mem {EXTENSION_DEGREE}
+            place 8
             // _ remaining_rounds fri_gen fri_offset *etrow_prev *btrow_prev *qseg_elem_prev *fri_revealed_idx_prev *beqd_ws *oodpnts [deep_value] [fri_revealed_value]
 
             {&assert_top_two_xfes_eq}
@@ -744,10 +721,9 @@ impl BasicSnippet for StarkVerify {
                 {&main_loop_body}
 
                 // Update counter
-                swap 8
-                push -1
-                add
-                swap 8
+                pick 8
+                addi -1
+                place 8
                 recurse
         );
 
@@ -800,7 +776,9 @@ impl BasicSnippet for StarkVerify {
                 // _ *b_mr *p_iter padded_height *fri *challenges
 
                 // verify that the challenges are stored at the right place
-                {&verify_challenges_pointer}
+                push {challenges_ptr}
+                eq
+                assert error_id 233
                 // _ *b_mr *p_iter padded_height *fri
 
                 dup 2
@@ -884,12 +862,9 @@ impl BasicSnippet for StarkVerify {
 
 
                 /* Calculate inner product `out_of_domain_quotient_value` */
-                swap 2
-                swap 4
-                swap 9
-                swap 1
-                swap 3
-                swap 7
+                pick 4 place 9
+                pick 3 place 6
+                pick 8 pick 6
                 // _ *b_mr *p_iter *oodpnts *fri *e_mr *odd_brow_nxt *quot_mr *ood_erow_nxt *ood_brow_curr *ood_erow_curr [sum_of_evaluated_out_of_domain_quotient_segments] *quot_cw_ws *quotient_summands
 
                 call {inner_product_quotient_summands}
@@ -938,10 +913,7 @@ impl BasicSnippet for StarkVerify {
                 log_2_floor
                 // _ *beqd_ws *p_iter *oodpnts *fri *e_mr *odd_brow_nxt *quot_mr *ood_erow_nxt *ood_brow_curr *ood_erow_curr *b_mr *fri_revealed *btrows num_colli mt_height
 
-                swap 1
-                swap 2
-                swap 3
-                swap 4
+                pick 4
                 // _ *beqd_ws *p_iter *oodpnts *fri *e_mr *odd_brow_nxt *quot_mr *ood_erow_nxt *ood_brow_curr *ood_erow_curr *fri_revealed *btrows num_colli mt_height *b_mr
 
                 dup 4
@@ -969,7 +941,7 @@ impl BasicSnippet for StarkVerify {
                 call {next_as_auxtablerows}
                 // _ *beqd_ws *p_iter *oodpnts *fri *btrows *odd_brow_nxt *quot_mr *ood_erow_nxt *ood_brow_curr *ood_erow_curr *fri_revealed *e_mr *etrows
 
-                swap 1
+                pick 1
                 // _ *beqd_ws *p_iter *oodpnts *fri *btrows *odd_brow_nxt *quot_mr *ood_erow_nxt *ood_brow_curr *ood_erow_curr *fri_revealed *etrows *e_mr
 
                 dup 9
@@ -983,8 +955,7 @@ impl BasicSnippet for StarkVerify {
                 log_2_floor
                 // _ *beqd_ws *p_iter *oodpnts *fri *btrows *odd_brow_next *quot_mr *ood_erow_nxt *ood_brow_curr *ood_erow_curr *fri_revealed *etrows *e_mr num_colli mt_height
 
-                swap 1
-                swap 2
+                pick 2
                 dup 4
                 dup 4
                 // _ *beqd_ws *p_iter *oodpnts *fri *btrows *odd_brow_next *quot_mr *ood_erow_nxt *ood_brow_curr *ood_erow_curr *fri_revealed *etrows num_colli mt_height *e_mr *fri_revealed *etrows
@@ -1017,8 +988,7 @@ impl BasicSnippet for StarkVerify {
                 log_2_floor
                 // _ *beqd_ws *p_iter *oodpnts *fri *btrows *odd_brow_next *etrows *ood_erow_nxt *ood_brow_curr *ood_erow_curr *fri_revealed *qseg_elems *quot_mr num_colli mt_height
 
-                swap 1
-                swap 2
+                pick 2
                 // _ *beqd_ws *p_iter *oodpnts *fri *btrows *odd_brow_next *etrows *ood_erow_nxt *ood_brow_curr *ood_erow_curr *fri_revealed *qseg_elems num_colli mt_height *quot_mr
 
                 dup 4
@@ -1043,7 +1013,7 @@ impl BasicSnippet for StarkVerify {
                 pop 1
                 dup 1
                 eq
-                assert
+                assert error_id 234
                 // _ *beqd_ws *p_iter *oodpnts *fri *btrows *odd_brow_next *etrows *ood_erow_nxt *ood_brow_curr *ood_erow_curr *fri_revealed *qseg_elems num_colli
 
                 // assert!(num_combination_codeword_checks == main_table_rows.len());
@@ -1052,7 +1022,7 @@ impl BasicSnippet for StarkVerify {
                 pop 1
                 dup 1
                 eq
-                assert
+                assert error_id 235
 
                 // assert!(num_combination_codeword_checks == aux_table_rows.len())
                 dup 6
@@ -1060,7 +1030,7 @@ impl BasicSnippet for StarkVerify {
                 pop 1
                 dup 1
                 eq
-                assert
+                assert error_id 236
 
                 // assert!(num_combination_codeword_checks == quotient_segment_elements.len());
                 dup 1
@@ -1068,7 +1038,7 @@ impl BasicSnippet for StarkVerify {
                 pop 1
                 dup 1
                 eq
-                assert
+                assert error_id 237
                 // _ *beqd_ws *p_iter *oodpnts *fri *btrows *odd_brow_next *etrows *ood_erow_nxt *ood_brow_curr *ood_erow_curr *fri_revealed *qseg_elems num_colli
 
 
@@ -1160,65 +1130,56 @@ impl BasicSnippet for StarkVerify {
                 // high-to-low in the main loop
 
                 // Adjust *fri_revealed (list) to point to last word
-                swap 3
+                pick 3
                 dup 8
                 push {EXTENSION_DEGREE + 1} // size of element in `fri_revealed` list
                 mul
                 add
                 hint fri_revealed_elem = stack[0]
-                swap 3
+                place 3
 
                 // Adjust *btrows (list) to point to last element
-                swap 4
-                push 1
-                add
+                pick 4
+                addi 1
+                dup 8
+                addi -1
                 push {MasterMainTable::NUM_COLUMNS} // size of element of main row list
-                dup 9
-                push -1
-                add
                 mul
                 add
                 hint main_table_row = stack[0]
-                swap 4
+                place 4
 
                 // Adjust *etrows (list) to point to last element
-                swap 2
-                push 1
-                add
+                pick 2
+                addi 1
+                dup 8
+                addi -1
                 push {MasterAuxTable::NUM_COLUMNS * EXTENSION_DEGREE} // size of element of aux row list
-                dup 9
-                push -1
-                add
                 mul
                 add
                 hint aux_table_row = stack[0]
-                swap 2
+                place 2
 
                 // Adjust *qseg_elems to point to last element
-                swap 5
-                push 1
-                add
+                pick 5
+                addi 1
+                dup 8
+                addi -1
                 push {NUM_QUOTIENT_SEGMENTS * EXTENSION_DEGREE} // size of element of quot row list
-                dup 9
-                push -1
-                add
                 mul
                 add
                 hint quotient_segment_elem = stack[0]
-                swap 5
+                place 5
 
                 // _ num_colli *beqd_ws *oodpnts *qseg_elems *btrows *fri_revealed *etrows fri_offset fri_gen
 
-                /* Reorganize stack for main-loop, to keep all necessary words accessible without spilling */
-                swap 7
-                swap 1
-                swap 6
-                swap 2
-                swap 5
-                // _ num_colli fri_gen fri_offset *etrows_last_elem *btrows *fri_revealed *oodpnts *beqd_ws *qseg_elems
-
-                swap 3
-                swap 2
+                /* reorganize stack for main-loop */
+                place 7
+                place 6
+                place 5
+                place 4
+                place 4
+                place 3
                 // _ num_colli fri_gen fri_offset *etrows_last_elem *btrows_last_elem *qseg_elems_last_elem *fri_revealed_last_elem *beqd_ws *oodpnts
 
                 call {main_loop_label}
@@ -1428,9 +1389,9 @@ pub mod tests {
                 // else: multiply accumulator with n and recurse
                 dup 1            // n acc n
                 mul              // n acc·n
-                swap 1           // acc·n n
-                push -1 add      // acc·n n-1
-                swap 1           // n-1 acc·n
+                pick 1           // acc·n n
+                addi -1          // acc·n n-1
+                place 1          // n-1 acc·n
 
                 recurse
         )

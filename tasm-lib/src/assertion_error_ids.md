@@ -38,3 +38,4 @@ often.
 |  200..210 | [`TasmObject` for `Option<T>`](structure/manual_tasm_object_implementations.rs)             |
 |  210..220 | [`TasmObject` for `Vec<T>`](structure/manual_tasm_object_implementations.rs)                |
 |  220..230 | [`TasmObject` for `(T, S)`](structure/manual_tasm_object_implementations.rs)                |
+|  230..300 | [`StarkVerify`](verifier/stark_verify.rs)                                                   |
