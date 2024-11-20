@@ -4,6 +4,8 @@ use crate::data_type::DataType;
 use crate::library::Library;
 use crate::traits::basic_snippet::BasicSnippet;
 
+pub const MERKLE_AUTHENTICATION_ROOT_MISMATCH_ERROR: i128 = 2;
+
 /// Verify membership in a Merkle tree.
 ///
 /// MerkleVerify -- verify that a leaf lives in a Merkle tree,
@@ -84,7 +86,7 @@ impl BasicSnippet for MerkleVerify {
                 pop 2
                 // _ [root; 5] [calculated_root; 5]
 
-                assert_vector error_id 2
+                assert_vector error_id {MERKLE_AUTHENTICATION_ROOT_MISMATCH_ERROR}
                 pop 5
 
                 return
