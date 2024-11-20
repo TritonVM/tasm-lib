@@ -71,13 +71,13 @@ impl BasicSnippet for New {
                 addi 1
                 dup 2
                 eq
-                assert
+                assert error_id 300
                 // _ *first_proof_item current_proof_item num_proof_items *proof proof_len (proof_len - 2)
 
                 addi 2
                 dup 1
                 eq
-                assert
+                assert error_id 301
                 // _ *first_proof_item current_proof_item num_proof_items *proof proof_len
 
 
@@ -87,14 +87,14 @@ impl BasicSnippet for New {
                 lt
                 // _ *first_proof_item current_proof_item num_proof_items *proof proof_len (proof_len < MAX_SIZE)
 
-                assert
+                assert error_id 302
 
                 push {Self::MAX_NUM_PROOF_ITEMS}
                 dup 3
                 lt
                 // _ *first_proof_item current_proof_item num_proof_items *proof proof_len (num_proof_items < MAX_NUM_ITEMS)
 
-                assert
+                assert error_id 303
                 // _ *first_proof_item current_proof_item num_proof_items *proof proof_len
 
 

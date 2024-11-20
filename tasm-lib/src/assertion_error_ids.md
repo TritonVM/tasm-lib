@@ -22,14 +22,14 @@ often.
 |    20..30 | [`MmrVerifyFromSecretInSecretLeafIndex`](mmr/verify_from_secret_in_secret_leaf_index.rs)    |
 |    30..40 | [`VerifyFriAuthenticationPaths`](verifier/fri/verify_fri_authentication_paths.rs)           |
 |    40..50 | [`VerifyTableRows`](verifier/master_table/verify_table_rows.rs)                             |
-|    50..60 | [`Drop`](verifier/vm_proof_iter/drop.rs)                                                    |                                                    
+|    50..60 | [`Drop`](verifier/vm_proof_iter/drop.rs)                                                    |
 |    60..70 | [`MemCpy`](memory/memcpy.rs)                                                                |
 |    70..80 | [`DynMalloc`](memory/dyn_malloc.rs)                                                         |
 |    80..90 | [`SplitOff`](list/split_off.rs)                                                             |
 |   90..100 | [`MerkleRootFromXfesGeneric`](hashing/merkle_root_from_xfes_generic.rs)                     |
-|  100..110 | [`SafeMulU64`](arithmetic/u64/safe_mul_u64.rs)                                              |                                              
+|  100..110 | [`SafeMulU64`](arithmetic/u64/safe_mul_u64.rs)                                              |
 |  110..120 | [`DecrU64`](arithmetic/u64/decr_u64.rs)                                                     |
-|  120..130 | [`Safepow`](arithmetic/u32/safepow.rs)                                                      |                                                      
+|  120..130 | [`Safepow`](arithmetic/u32/safepow.rs)                                                      |
 |  130..140 | [`NextPowerOfTwo`](arithmetic/u32/next_power_of_two.rs)                                     |
 |  140..150 | [`PrimitiveRootOfUnity`](arithmetic/bfe/primitive_root_of_unity.rs)                         |
 |  150..170 | [`VerifyMmrSuccessor`](mmr/verify_mmr_successor.rs)                                         |
@@ -39,3 +39,4 @@ often.
 |  210..220 | [`TasmObject` for `Vec<T>`](structure/manual_tasm_object_implementations.rs)                |
 |  220..230 | [`TasmObject` for `(T, S)`](structure/manual_tasm_object_implementations.rs)                |
 |  230..300 | [`StarkVerify`](verifier/stark_verify.rs)                                                   |
+|  300..310 | [`vm_proof_iter::New`](verifier/vm_proof_iter/new.rs)                                       |
