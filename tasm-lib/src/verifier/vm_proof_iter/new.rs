@@ -138,8 +138,11 @@ impl BasicSnippet for New {
 mod tests {
     use std::collections::HashMap;
 
+    use arbitrary::Arbitrary;
+    use arbitrary::Unstructured;
     use rand::rngs::StdRng;
     use rand::Rng;
+    use rand::RngCore;
     use rand::SeedableRng;
     use triton_vm::proof_item::ProofItem;
     use triton_vm::proof_stream::ProofStream;
@@ -204,8 +207,16 @@ mod tests {
         ) -> FunctionInitialState {
             let mut rng: StdRng = SeedableRng::from_seed(seed);
             let proof_pointer = bfe!(rng.gen_range(0..(1 << 20)));
+            let mut bytes = [0u8; 1_000_000];
+            rng.fill_bytes(&mut bytes);
+            let mut unstructured = Unstructured::new(&bytes);
 
-            let proof_items = vec![ProofItem::MerkleRoot(rng.gen())];
+            let proof_item_count = rng.gen_range(10..25);
+            let mut proof_items = vec![];
+            for _ in 0..proof_item_count {
+                let proof_item = ProofItem::arbitrary(&mut unstructured).unwrap();
+                proof_items.push(proof_item);
+            }
 
             self.init_state(proof_items, proof_pointer)
         }
