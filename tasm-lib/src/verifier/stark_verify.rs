@@ -1527,7 +1527,7 @@ pub mod tests {
         let padded_height_1 = proof_1.padded_height().unwrap();
         println!("padded_height_1: {padded_height_1}");
 
-        let inner_input_2 = bfe_vec![24];
+        let inner_input_2 = bfe_vec![25];
         let (aet_2, inner_output_2) = VM::trace_execution(
             factorial_program.clone(),
             inner_input_2.clone().into(),
