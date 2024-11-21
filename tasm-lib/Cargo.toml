@@ -12,7 +12,7 @@ license = "Apache-2.0"
 color-eyre = "0.6"
 proptest = "1.5"
 proptest-arbitrary-interop = "0.1"
-test-strategy = "0.3"
+test-strategy = "0.4"
 rayon = "1"
 
 [dependencies]
