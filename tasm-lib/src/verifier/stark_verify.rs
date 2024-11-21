@@ -77,6 +77,8 @@ impl StarkVerify {
     /// The number of nondeterministic digests that will be
     /// consumed when this snippet verifies the given proof.
     pub fn number_of_nondeterministic_digests_consumed(&self, proof: &Proof) -> usize {
+        const NUM_FULL_DOMAIN_AUTH_PATHS: usize = 4;
+
         let padded_height = proof.padded_height().unwrap();
         let fri_params = self.stark.fri(padded_height).unwrap();
         let num_fri_rounds = fri_params.num_rounds();
@@ -84,7 +86,6 @@ impl StarkVerify {
         let mut j = 0;
         let mut tree_height: usize = fri_params.domain.length.ilog2().try_into().unwrap();
 
-        const NUM_FULL_DOMAIN_AUTH_PATHS: usize = 4;
         let mut acc = NUM_FULL_DOMAIN_AUTH_PATHS * tree_height * fri_params.num_collinearity_checks;
         while j < num_fri_rounds {
             acc += fri_params.num_collinearity_checks * tree_height;
@@ -121,176 +122,176 @@ impl StarkVerify {
     }
 
     fn extract_nondeterministic_digests(&self, proof: &Proof, claim: &Claim) -> Vec<Digest> {
-        {
-            // We do need to carefully update the sponge state because otherwise
-            // we end up sampling indices that generate different authentication
-            // paths.
-            let mut proof_stream = ProofStream::try_from(proof).unwrap();
-            let log2_padded_height = proof_stream
-                .dequeue()
-                .unwrap()
-                .try_into_log2_padded_height()
-                .unwrap();
-            proof_stream.alter_fiat_shamir_state_with(claim);
+        const NUM_DEEP_CODEWORD_COMPONENTS: usize = 3;
 
-            // Main-table Merkle root
-            let _main_table_root = proof_stream
-                .dequeue()
-                .unwrap()
-                .try_into_merkle_root()
-                .unwrap();
-
-            // Auxiliary challenge weights
-            let _challenges = proof_stream.sample_scalars(Challenges::SAMPLE_COUNT);
-
-            // Auxiliary-table Merkle root
-            let _aux_mt_root = proof_stream
-                .dequeue()
-                .unwrap()
-                .try_into_merkle_root()
-                .unwrap();
-
-            // Quotient codeword weights
-            proof_stream.sample_scalars(MasterAuxTable::NUM_CONSTRAINTS);
-
-            // Quotient codeword Merkle root
-            let _quotient_root = proof_stream
-                .dequeue()
-                .unwrap()
-                .try_into_merkle_root()
-                .unwrap();
-
-            // Out-of-domain point current row
-            let _out_of_domain_point_curr_row = proof_stream.sample_scalars(1);
-
-            // Five out-of-domain values
-            proof_stream
-                .dequeue()
-                .unwrap()
-                .try_into_out_of_domain_main_row()
-                .unwrap();
-            proof_stream
-                .dequeue()
-                .unwrap()
-                .try_into_out_of_domain_aux_row()
-                .unwrap();
-            proof_stream
-                .dequeue()
-                .unwrap()
-                .try_into_out_of_domain_main_row()
-                .unwrap();
-            proof_stream
-                .dequeue()
-                .unwrap()
-                .try_into_out_of_domain_aux_row()
-                .unwrap();
-            proof_stream
-                .dequeue()
-                .unwrap()
-                .try_into_out_of_domain_quot_segments()
-                .unwrap();
-
-            // `beqd_weights`
-            const NUM_DEEP_CODEWORD_COMPONENTS: usize = 3;
-            proof_stream.sample_scalars(
-                MasterMainTable::NUM_COLUMNS
-                    + MasterAuxTable::NUM_COLUMNS
-                    + NUM_QUOTIENT_SEGMENTS
-                    + NUM_DEEP_CODEWORD_COMPONENTS,
-            );
-
-            fn extract_paths<R: BFieldCodec>(
-                indices: Vec<usize>,
-                leaf_preimages: Vec<R>,
-                tree_height: usize,
-                authentication_structure: Vec<Digest>,
-            ) -> Vec<Vec<Digest>> {
-                MerkleTreeInclusionProof {
-                    tree_height,
-                    indexed_leafs: indices
-                        .into_iter()
-                        .zip(leaf_preimages.iter().map(Tip5::hash))
-                        .collect_vec(),
-                    authentication_structure,
-                }
-                .into_authentication_paths()
-                .unwrap()
+        fn extract_paths<R: BFieldCodec>(
+            indices: Vec<usize>,
+            leaf_preimages: Vec<R>,
+            tree_height: usize,
+            authentication_structure: Vec<Digest>,
+        ) -> Vec<Vec<Digest>> {
+            let indexed_leafs = indices
+                .into_iter()
+                .zip(leaf_preimages.iter().map(Tip5::hash))
+                .collect();
+            MerkleTreeInclusionProof {
+                tree_height,
+                indexed_leafs,
+                authentication_structure,
             }
-
-            // FRI digests
-            let padded_height = 1 << log2_padded_height;
-            let fri = self.stark.fri(padded_height).unwrap();
-            let fri_proof_stream = proof_stream.clone();
-            let fri_verify_result = fri.verify(&mut proof_stream).unwrap();
-            let indices = fri_verify_result.iter().map(|(i, _)| *i).collect_vec();
-            let tree_height = fri.domain.length.ilog2() as usize;
-            let fri_digests =
-                FriVerify::from(fri).extract_digests_required_for_proving(&fri_proof_stream);
-
-            // main
-            let main_table_rows = proof_stream
-                .dequeue()
-                .unwrap()
-                .try_into_master_main_table_rows()
-                .unwrap();
-            let main_authentication_structure = proof_stream
-                .dequeue()
-                .unwrap()
-                .try_into_authentication_structure()
-                .unwrap();
-            let main_tree_auth_paths = extract_paths(
-                indices.clone(),
-                main_table_rows,
-                tree_height,
-                main_authentication_structure,
-            );
-
-            // aux
-            let aux_table_rows = proof_stream
-                .dequeue()
-                .unwrap()
-                .try_into_master_aux_table_rows()
-                .unwrap();
-            let aux_authentication_structure = proof_stream
-                .dequeue()
-                .unwrap()
-                .try_into_authentication_structure()
-                .unwrap();
-            let aux_tree_auth_paths = extract_paths(
-                indices.clone(),
-                aux_table_rows,
-                tree_height,
-                aux_authentication_structure,
-            );
-
-            // quotient
-            let quot_table_rows = proof_stream
-                .dequeue()
-                .unwrap()
-                .try_into_quot_segments_elements()
-                .unwrap();
-            let quot_authentication_structure = proof_stream
-                .dequeue()
-                .unwrap()
-                .try_into_authentication_structure()
-                .unwrap();
-            let quot_tree_auth_paths = extract_paths(
-                indices,
-                quot_table_rows,
-                tree_height,
-                quot_authentication_structure,
-            );
-
-            let stark_digests = [
-                main_tree_auth_paths,
-                aux_tree_auth_paths,
-                quot_tree_auth_paths,
-            ]
-            .concat()
-            .concat();
-
-            [fri_digests, stark_digests].concat()
+            .into_authentication_paths()
+            .unwrap()
         }
+
+        // We do need to carefully update the sponge state because otherwise
+        // we end up sampling indices that generate different authentication
+        // paths.
+        let mut proof_stream = ProofStream::try_from(proof).unwrap();
+        let log2_padded_height = proof_stream
+            .dequeue()
+            .unwrap()
+            .try_into_log2_padded_height()
+            .unwrap();
+        proof_stream.alter_fiat_shamir_state_with(claim);
+
+        // Main-table Merkle root
+        let _main_table_root = proof_stream
+            .dequeue()
+            .unwrap()
+            .try_into_merkle_root()
+            .unwrap();
+
+        // Auxiliary challenge weights
+        let _challenges = proof_stream.sample_scalars(Challenges::SAMPLE_COUNT);
+
+        // Auxiliary-table Merkle root
+        let _aux_mt_root = proof_stream
+            .dequeue()
+            .unwrap()
+            .try_into_merkle_root()
+            .unwrap();
+
+        // Quotient codeword weights
+        proof_stream.sample_scalars(MasterAuxTable::NUM_CONSTRAINTS);
+
+        // Quotient codeword Merkle root
+        let _quotient_root = proof_stream
+            .dequeue()
+            .unwrap()
+            .try_into_merkle_root()
+            .unwrap();
+
+        // Out-of-domain point current row
+        let _out_of_domain_point_curr_row = proof_stream.sample_scalars(1);
+
+        // Five out-of-domain values
+        proof_stream
+            .dequeue()
+            .unwrap()
+            .try_into_out_of_domain_main_row()
+            .unwrap();
+        proof_stream
+            .dequeue()
+            .unwrap()
+            .try_into_out_of_domain_aux_row()
+            .unwrap();
+        proof_stream
+            .dequeue()
+            .unwrap()
+            .try_into_out_of_domain_main_row()
+            .unwrap();
+        proof_stream
+            .dequeue()
+            .unwrap()
+            .try_into_out_of_domain_aux_row()
+            .unwrap();
+        proof_stream
+            .dequeue()
+            .unwrap()
+            .try_into_out_of_domain_quot_segments()
+            .unwrap();
+
+        // `beqd_weights`
+        proof_stream.sample_scalars(
+            MasterMainTable::NUM_COLUMNS
+                + MasterAuxTable::NUM_COLUMNS
+                + NUM_QUOTIENT_SEGMENTS
+                + NUM_DEEP_CODEWORD_COMPONENTS,
+        );
+
+        // FRI digests
+        let padded_height = 1 << log2_padded_height;
+        let fri = self.stark.fri(padded_height).unwrap();
+        let fri_proof_stream = proof_stream.clone();
+        let fri_verify_result = fri.verify(&mut proof_stream).unwrap();
+        let indices = fri_verify_result.iter().map(|(i, _)| *i).collect_vec();
+        let tree_height = fri.domain.length.ilog2() as usize;
+        let fri_digests =
+            FriVerify::from(fri).extract_digests_required_for_proving(&fri_proof_stream);
+
+        // main
+        let main_table_rows = proof_stream
+            .dequeue()
+            .unwrap()
+            .try_into_master_main_table_rows()
+            .unwrap();
+        let main_authentication_structure = proof_stream
+            .dequeue()
+            .unwrap()
+            .try_into_authentication_structure()
+            .unwrap();
+        let main_tree_auth_paths = extract_paths(
+            indices.clone(),
+            main_table_rows,
+            tree_height,
+            main_authentication_structure,
+        );
+
+        // aux
+        let aux_table_rows = proof_stream
+            .dequeue()
+            .unwrap()
+            .try_into_master_aux_table_rows()
+            .unwrap();
+        let aux_authentication_structure = proof_stream
+            .dequeue()
+            .unwrap()
+            .try_into_authentication_structure()
+            .unwrap();
+        let aux_tree_auth_paths = extract_paths(
+            indices.clone(),
+            aux_table_rows,
+            tree_height,
+            aux_authentication_structure,
+        );
+
+        // quotient
+        let quot_table_rows = proof_stream
+            .dequeue()
+            .unwrap()
+            .try_into_quot_segments_elements()
+            .unwrap();
+        let quot_authentication_structure = proof_stream
+            .dequeue()
+            .unwrap()
+            .try_into_authentication_structure()
+            .unwrap();
+        let quot_tree_auth_paths = extract_paths(
+            indices,
+            quot_table_rows,
+            tree_height,
+            quot_authentication_structure,
+        );
+
+        let stark_digests = [
+            main_tree_auth_paths,
+            aux_tree_auth_paths,
+            quot_tree_auth_paths,
+        ]
+        .concat()
+        .concat();
+
+        [fri_digests, stark_digests].concat()
     }
 }
 
@@ -313,6 +314,22 @@ impl BasicSnippet for StarkVerify {
     }
 
     fn code(&self, library: &mut Library) -> Vec<LabelledInstruction> {
+        const NUM_DEEP_CODEWORD_COMPONENTS: usize = 3;
+        const NUM_OOD_ROWS_WO_QUOTIENT: u32 = 4;
+
+        fn fri_snippet() -> FriSnippet {
+            #[cfg(not(test))]
+            {
+                FriSnippet {}
+            }
+            #[cfg(test)]
+            {
+                FriSnippet {
+                    test_instance: FriVerify::dummy(),
+                }
+            }
+        }
+
         let entrypoint = self.entrypoint();
 
         let proof_to_vm_proof_iter = library.import(Box::new(New));
@@ -365,19 +382,6 @@ impl BasicSnippet for StarkVerify {
         let domain_offset_field = field!(FriVerify::domain_offset);
         let domain_generator_field = field!(FriVerify::domain_generator);
 
-        fn fri_snippet() -> FriSnippet {
-            #[cfg(not(test))]
-            {
-                FriSnippet {}
-            }
-            #[cfg(test)]
-            {
-                FriSnippet {
-                    test_instance: FriVerify::dummy(),
-                }
-            }
-        }
-
         let fri_verify = library.import(Box::new(fri_snippet()));
 
         let get_challenges = library.import(Box::new(
@@ -400,7 +404,6 @@ impl BasicSnippet for StarkVerify {
             library.import(Box::new(HornerEvaluation {
                 num_coefficients: NUM_QUOTIENT_SEGMENTS,
             }));
-        const NUM_DEEP_CODEWORD_COMPONENTS: usize = 3;
         let sample_beqd_weights = library.import(Box::new(SampleScalarsStaticLengthDynMalloc {
             num_elements: MasterMainTable::NUM_COLUMNS
                 + MasterAuxTable::NUM_COLUMNS
@@ -461,7 +464,6 @@ impl BasicSnippet for StarkVerify {
             // _ *proof_iter *curr_main *curr_aux *next_main *next_aux
         };
 
-        const NUM_OOD_ROWS_WO_QUOTIENT: u32 = 4;
         // BEFORE:
         // _ *p_iter - - - *quot_cw_ws - dom_gen [out_of_domain_curr_row] padded_height *proof_iter *curr_main *curr_aux *next_main *next_aux
         // AFTER:
@@ -1337,6 +1339,7 @@ pub mod tests {
 
     fn verify_tvm_proof_factorial_program_basic_properties(mem_layout: MemoryLayout) {
         const FACTORIAL_ARGUMENT: u32 = 3;
+
         let factorial_program = factorial_program_with_io();
         let stark = Stark::default();
         let (cycle_count, inner_padded_height) = test_verify_and_report_basic_features(
