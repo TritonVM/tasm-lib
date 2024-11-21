@@ -98,7 +98,7 @@ impl BasicSnippet for New {
                 // _ *first_proof_item current_proof_item num_proof_items *proof proof_len
 
 
-                /* Verify that all of Proof lives in ND memory */
+                /* Verify that entire proof lives in first memory page */
                 dup 1
                 pop_count
                 pop 1
@@ -207,16 +207,14 @@ mod tests {
         ) -> FunctionInitialState {
             let mut rng: StdRng = SeedableRng::from_seed(seed);
             let proof_pointer = bfe!(rng.gen_range(0..(1 << 20)));
-            let mut bytes = [0u8; 1_000_000];
-            rng.fill_bytes(&mut bytes);
-            let mut unstructured = Unstructured::new(&bytes);
 
-            let proof_item_count = rng.gen_range(10..25);
-            let mut proof_items = vec![];
-            for _ in 0..proof_item_count {
-                let proof_item = ProofItem::arbitrary(&mut unstructured).unwrap();
-                proof_items.push(proof_item);
-            }
+            // put randomness on heap because stack might be too small
+            let mut randomness = vec![0; 1_000_000];
+            rng.fill_bytes(&mut randomness);
+            let mut unstructured = Unstructured::new(&randomness);
+            let proof_items = (0..rng.gen_range(10..25))
+                .map(|_| ProofItem::arbitrary(&mut unstructured).unwrap())
+                .collect();
 
             self.init_state(proof_items, proof_pointer)
         }
