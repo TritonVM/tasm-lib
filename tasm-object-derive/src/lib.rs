@@ -33,9 +33,9 @@ use syn::DeriveInput;
 
 /// Derives `TasmObject` for structs.
 #[proc_macro_derive(TasmObject, attributes(tasm_object))]
-pub fn derive_tasm_object(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+pub fn tasm_object_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let ast = syn::parse(input).unwrap();
-    impl_derive_tasm_object_macro(ast).into()
+    impl_tasm_object_derive_macro(ast).into()
 }
 
 #[derive(Clone)]
@@ -175,7 +175,7 @@ fn generate_integral_size_indicators_code(parse_result: &ParseResult) -> TokenSt
     integral_size_indicators_code
 }
 
-fn impl_derive_tasm_object_macro(ast: DeriveInput) -> TokenStream {
+fn impl_tasm_object_derive_macro(ast: DeriveInput) -> TokenStream {
     let parse_result = generate_parse_result(&ast);
 
     // generate clauses for match statements
@@ -628,7 +628,7 @@ mod tests {
             #[derive(TasmObject)]
             struct UnitStruct;
         };
-        let _rust_code = impl_derive_tasm_object_macro(ast);
+        let _rust_code = impl_tasm_object_derive_macro(ast);
     }
 
     #[test]
@@ -637,7 +637,7 @@ mod tests {
             #[derive(TasmObject)]
             struct TupleStruct(u64, u32);
         };
-        let _rust_code = impl_derive_tasm_object_macro(ast);
+        let _rust_code = impl_tasm_object_derive_macro(ast);
     }
 
     #[test]
@@ -651,7 +651,7 @@ mod tests {
                 ignored_field: bool,
             }
         };
-        let _rust_code = impl_derive_tasm_object_macro(ast);
+        let _rust_code = impl_tasm_object_derive_macro(ast);
     }
 
     #[test]
@@ -667,7 +667,7 @@ mod tests {
                 IgnoredVariant,
             }
         };
-        let _rust_code = impl_derive_tasm_object_macro(ast);
+        let _rust_code = impl_tasm_object_derive_macro(ast);
     }
 
     #[test]
@@ -676,7 +676,7 @@ mod tests {
             #[derive(TasmObject)]
             struct TupleStruct<T>(T, (T, T));
         };
-        let _rust_code = impl_derive_tasm_object_macro(ast);
+        let _rust_code = impl_tasm_object_derive_macro(ast);
     }
 
     #[test]
@@ -690,7 +690,7 @@ mod tests {
                 ignored_field: bool,
             }
         };
-        let _rust_code = impl_derive_tasm_object_macro(ast);
+        let _rust_code = impl_tasm_object_derive_macro(ast);
     }
 
     #[test]
@@ -706,7 +706,7 @@ mod tests {
                 IgnoredVariant,
             }
         };
-        let _rust_code = impl_derive_tasm_object_macro(ast);
+        let _rust_code = impl_tasm_object_derive_macro(ast);
     }
 
     #[test]
@@ -718,6 +718,6 @@ mod tests {
                 pub my_vec: Vec<BFieldElement>,
             }
         };
-        let _rust_code = impl_derive_tasm_object_macro(ast);
+        let _rust_code = impl_tasm_object_derive_macro(ast);
     }
 }

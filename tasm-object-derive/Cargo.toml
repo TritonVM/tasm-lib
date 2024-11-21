@@ -1,0 +1,22 @@
+[package]
+name = "tasm-object-derive"
+description = """
+Derive-macro for TasmObject.
+"""
+
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+repository.workspace = true
+readme.workspace = true
+
+[dependencies]
+quote = "1.0"
+syn = { version = "^2", features = ["full", "derive"] }
+proc-macro2 = "1.0"
+
+[lib]
+proc-macro = true

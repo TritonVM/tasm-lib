@@ -1202,8 +1202,8 @@ pub mod tests {
 
     use std::collections::HashMap;
 
-    use derive_tasm_object::TasmObject;
     use num_traits::ConstZero;
+    use tasm_object_derive::TasmObject;
 
     use super::*;
     use crate::execute_test;

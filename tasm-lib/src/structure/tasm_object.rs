@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 use std::error::Error;
 
-pub use derive_tasm_object::TasmObject;
 use itertools::Itertools;
 use num_traits::ConstZero;
 use num_traits::Zero;
+pub use tasm_object_derive::TasmObject;
 use triton_vm::prelude::*;
 
 use crate::library::Library;
