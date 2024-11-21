@@ -109,7 +109,7 @@ impl BasicSnippet for VerifyMmrSuccessor {
 
         triton_asm! {
             // BEFORE: _ *old_mmr *new_mmr
-            // AFTER: _
+            // AFTER:  _
             {entrypoint}:
 
             /* tests before preparing loop */
@@ -308,14 +308,14 @@ impl BasicSnippet for VerifyMmrSuccessor {
                 recurse
 
             // BEFORE: _ *old_mmr *new_mmr 0
-            // AFTER: _ 1
+            // AFTER:  _ 1
             {cleanup_and_return}:
                 pop 3
                 push 1
                 return
 
             // BEFORE: _ *old_mmr *new_mmr 0
-            // AFTER: _ 1
+            // AFTER:  _ 1
             {assert_mmrs_equal}:
                 dup 1 {&field_peaks}
                 // _ *old_mmr *new_mmr 0 *new_mmr_peaks

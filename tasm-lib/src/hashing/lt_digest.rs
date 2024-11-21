@@ -104,7 +104,7 @@ impl BasicSnippet for LtDigest {
 
         triton_asm!(
             // BEFORE: _ *lhs *rhs
-            // AFTER: _ (lhs > rhs)
+            // AFTER:  _ (lhs > rhs)
             {entrypoint}:
                 // _ *lhs *rhs
 

@@ -182,7 +182,7 @@ impl DataType {
     ///
     /// ```text
     /// BEFORE: _ [self] [other]
-    /// AFTER: _ (self == other)
+    /// AFTER:  _ (self == other)
     /// ```
     pub fn compare_elem_of_stack_size(stack_size: usize) -> Vec<LabelledInstruction> {
         match stack_size {
@@ -208,7 +208,7 @@ impl DataType {
     ///
     /// ```text
     /// BEFORE: _ [self] [other]
-    /// AFTER: _ (self == other)
+    /// AFTER:  _ (self == other)
     /// ```
     pub fn compare(&self) -> Vec<LabelledInstruction> {
         DataType::compare_elem_of_stack_size(self.stack_size())

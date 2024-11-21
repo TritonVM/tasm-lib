@@ -73,7 +73,7 @@ impl BasicSnippet for HornerEvaluation {
 
         triton_asm! {
             // BEFORE: _ *coefficients x2 x1 x0
-            // AFTER: _ v2 v1 v0
+            // AFTER:  _ v2 v1 v0
             {entrypoint}:
                 // point to the last element of the array
                 swap 3

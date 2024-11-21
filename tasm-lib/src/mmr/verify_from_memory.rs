@@ -153,7 +153,7 @@ impl DeprecatedSnippet for MmrVerifyFromMemory {
         );
 
         let loop_code = triton_asm!(
-                // BEFORE/AFTER: _ *auth_path[n] peak_index mt_index_hi mt_index_lo [digest (acc_hash)]
+                // INVARIANT: _ *auth_path[n] peak_index mt_index_hi mt_index_lo [digest (acc_hash)]
                 {loop_label}:
                     dup 6 push 0 eq
                     dup 6 push 1 eq

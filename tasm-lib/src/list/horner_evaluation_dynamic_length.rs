@@ -35,7 +35,7 @@ impl BasicSnippet for HornerEvaluationDynamicLength {
         let entrypoint = self.entrypoint();
         let horner_iteration = triton_asm! {
             // BEFORE: _ *ptr [x] [acc]
-            // AFTER: _ *ptr-3 [x] [acc*x+ct]
+            // AFTER:  _ *ptr-3 [x] [acc*x+ct]
             dup 5 dup 5 dup 5   // _ *ptr [x] [acc] [x]
             xx_mul               // _ *ptr [x] [x*acc]
             dup 6               // _ *ptr [x] [x*acc] *ptr

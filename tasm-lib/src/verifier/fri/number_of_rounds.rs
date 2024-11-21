@@ -29,7 +29,7 @@ impl BasicSnippet for NumberOfRounds {
 
         triton_asm! {
             // BEFORE: _ *fri_verify
-            // AFTER: _  num_rounds
+            // AFTER:  _  num_rounds
             {entrypoint}:
                 // calculate number of rounds
                 dup 0 {&domain_length}      // _ *fri_verify *domain_length

@@ -51,7 +51,7 @@ pub(crate) const NUM_PROOF_ITEMS_EXCLUDING_FRI: usize = 15;
 ///
 /// Stack signature:
 ///  - BEFORE: _ *claim *proof
-///  - AFTER: _
+///  - AFTER:  _
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct StarkVerify {

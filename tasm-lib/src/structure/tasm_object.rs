@@ -73,7 +73,7 @@ pub trait TasmObject {
     ///
     /// ```text
     /// BEFORE: _ *object
-    /// AFTER: _ calculated_size
+    /// AFTER:  _ calculated_size
     /// ```
     fn compute_size_and_assert_valid_size_indicator(
         library: &mut Library,

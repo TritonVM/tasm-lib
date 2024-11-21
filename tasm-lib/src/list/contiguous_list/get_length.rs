@@ -34,8 +34,7 @@ struct DummyInnerDataStructure {
 /// for lists of elements with statically known size is trivial.
 ///
 /// BEFORE: _ *contiguous_list
-///
-/// AFTER: _ length
+/// AFTER:  _ length
 impl GetLength {
     pub(super) fn pseudorandom_input_state(seed: [u8; 32], length: usize) -> InitVmState {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
