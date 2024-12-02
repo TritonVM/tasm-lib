@@ -192,7 +192,7 @@ impl<'a> MemoryIter<'a> {
     }
 }
 
-impl<'a> Iterator for MemoryIter<'a> {
+impl Iterator for MemoryIter<'_> {
     type Item = BFieldElement;
 
     fn next(&mut self) -> Option<Self::Item> {

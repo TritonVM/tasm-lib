@@ -17,7 +17,7 @@ pub struct SampleScalarsStaticLengthDynMalloc {
 
 impl SampleScalarsStaticLengthDynMalloc {
     pub(super) fn num_squeezes(num_elements: usize) -> usize {
-        (num_elements * EXTENSION_DEGREE + RATE - 1) / RATE
+        (num_elements * EXTENSION_DEGREE).div_ceil(RATE)
     }
 }
 

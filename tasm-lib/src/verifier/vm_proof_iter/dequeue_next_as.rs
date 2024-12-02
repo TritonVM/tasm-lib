@@ -416,7 +416,7 @@ mod test {
         sponge: &'a mut Tip5,
     }
 
-    impl<'a> RustShadowForDequeueNextAs<'a> {
+    impl RustShadowForDequeueNextAs<'_> {
         fn execute(&mut self) -> Vec<BFieldElement> {
             self.assert_correct_discriminant();
             self.maybe_alter_fiat_shamir_heuristic_with_proof_item();
