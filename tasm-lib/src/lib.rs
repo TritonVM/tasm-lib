@@ -237,7 +237,7 @@ pub fn maybe_write_debuggable_program_to_disk(program: &Program, vm_state: &VMSt
     maybe_write_debuggable_vm_state_to_disk(vm_state);
 }
 
-/// If the environment variable “TRITON_TUI” is set, write the initial VM state
+/// If the environment variable TASMLIB_TRITON_TUI is set, write the initial VM state
 /// to file `vm_state.json`.
 ///
 /// This file can be used to debug the program using the [Triton TUI]:
