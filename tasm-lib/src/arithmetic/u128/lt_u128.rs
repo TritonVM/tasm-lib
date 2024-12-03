@@ -14,14 +14,13 @@ use crate::prelude::BasicSnippet;
 pub struct LtU128;
 
 impl BasicSnippet for LtU128 {
-    fn inputs(&self) -> Vec<(crate::data_type::DataType, String)> {
-        vec![
-            (DataType::U128, "rhs".to_string()),
-            (DataType::U128, "lhs".to_string()),
-        ]
+    fn inputs(&self) -> Vec<(DataType, String)> {
+        ["rhs", "lhs"]
+            .map(|s| (DataType::U128, s.to_string()))
+            .to_vec()
     }
 
-    fn outputs(&self) -> Vec<(crate::data_type::DataType, String)> {
+    fn outputs(&self) -> Vec<(DataType, String)> {
         vec![(DataType::Bool, "cmp".to_string())]
     }
 
@@ -75,14 +74,11 @@ impl BasicSnippet for LtU128 {
 
 #[cfg(test)]
 mod test {
-
     use itertools::Itertools;
-    use num::bigint::ToBigUint;
     use rand::rngs::StdRng;
-    use rand::thread_rng;
     use rand::Rng;
-    use rand::RngCore;
     use rand::SeedableRng;
+    use test_strategy::proptest;
     use triton_vm::prelude::bfe;
     use triton_vm::prelude::BFieldElement;
 
@@ -90,55 +86,33 @@ mod test {
     use crate::traits::closure::Closure;
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
+    use crate::twenty_first::prelude::BFieldCodec;
     use crate::InitVmState;
 
     use super::*;
 
     impl LtU128 {
-        fn prepare_stack(&self, lhs: u128, rhs: u128) -> Vec<BFieldElement> {
-            let init_stack = self.init_stack_for_isolated_run();
-            let rhs_limbs = rhs
-                .to_biguint()
-                .unwrap()
-                .iter_u32_digits()
-                .pad_using(4, |_| 0)
-                .collect_vec();
-            let lhs_limbs = lhs
-                .to_biguint()
-                .unwrap()
-                .iter_u32_digits()
-                .pad_using(4, |_| 0)
-                .collect_vec();
+        fn prepare_stack(&self, left: u128, right: u128) -> Vec<BFieldElement> {
+            let u128_for_stack = |v: u128| v.encode().into_iter().rev();
 
-            [
-                init_stack,
-                rhs_limbs.into_iter().map(|l| bfe!(l)).rev().collect_vec(),
-                lhs_limbs.into_iter().map(|l| bfe!(l)).rev().collect_vec(),
-            ]
-            .concat()
+            let mut stack = self.init_stack_for_isolated_run();
+            stack.extend(u128_for_stack(right));
+            stack.extend(u128_for_stack(left));
+
+            stack
         }
     }
 
     impl Closure for LtU128 {
-        fn rust_shadow(&self, stack: &mut Vec<triton_vm::prelude::BFieldElement>) {
-            let mut left_limbs = vec![];
-            for _ in 0..4 {
-                left_limbs.push(stack.pop().unwrap().value() as u32);
-            }
-            let mut right_limbs = vec![];
-            for _ in 0..4 {
-                right_limbs.push(stack.pop().unwrap().value() as u32);
+        fn rust_shadow(&self, stack: &mut Vec<BFieldElement>) {
+            fn pop_u128(stack: &mut Vec<BFieldElement>) -> u128 {
+                let num_limbs = u128::static_length().unwrap();
+                let limbs = (0..num_limbs).map(|_| stack.pop().unwrap()).collect_vec();
+                *BFieldCodec::decode(&limbs).unwrap()
             }
 
-            let right = right_limbs
-                .into_iter()
-                .rev()
-                .fold(0u128, |acc, limb| (acc << 32) | (limb as u128));
-            let left = left_limbs
-                .into_iter()
-                .rev()
-                .fold(0u128, |acc, limb| (acc << 32) | (limb as u128));
-
+            let left = pop_u128(stack);
+            let right = pop_u128(stack);
             stack.push(bfe!((left < right) as u64));
         }
 
@@ -146,8 +120,8 @@ mod test {
             &self,
             seed: [u8; 32],
             _bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
-        ) -> Vec<triton_vm::prelude::BFieldElement> {
-            let mut rng: StdRng = SeedableRng::from_seed(seed);
+        ) -> Vec<BFieldElement> {
+            let mut rng = StdRng::from_seed(seed);
             self.prepare_stack(rng.gen(), rng.gen())
         }
     }
@@ -157,64 +131,61 @@ mod test {
         ShadowedClosure::new(LtU128).test()
     }
 
-    fn test_rust_tasm_equivalence(lhs: u128, rhs: u128) {
-        let initial_state = InitVmState::with_stack(LtU128.prepare_stack(lhs, rhs));
+    fn test_rust_tasm_equivalence(left: u128, right: u128) {
+        let initial_state = InitVmState::with_stack(LtU128.prepare_stack(left, right));
         test_rust_equivalence_given_execution_state(&ShadowedClosure::new(LtU128), initial_state);
     }
 
     #[test]
     fn lt_u128_unit_test() {
-        test_rust_tasm_equivalence(18446744073709551616, 4294967296);
-        test_rust_tasm_equivalence(4294967296, 18446744073709551616);
+        test_rust_tasm_equivalence(1 << 64, 1 << 32);
+        test_rust_tasm_equivalence(1 << 32, 1 << 64);
     }
 
     #[test]
     fn lt_u128_edge_cases_test() {
-        let boundary_points = [0u128, 1 << 32, 1 << 64, 1 << 96, u128::MAX];
-        for left_boundary in boundary_points {
-            for lhs in [
-                left_boundary.checked_sub(1),
-                Some(left_boundary),
-                left_boundary.checked_add(1),
-            ]
+        let boundary_points = [0, 1 << 32, 1 << 64, 1 << 96, u128::MAX]
             .into_iter()
+            .flat_map(|p| [p.checked_sub(1), Some(p), p.checked_add(1)])
             .flatten()
-            {
-                for right_boundary in boundary_points {
-                    for rhs in [
-                        right_boundary.checked_sub(1),
-                        Some(right_boundary),
-                        right_boundary.checked_add(1),
-                    ]
-                    .into_iter()
-                    .flatten()
-                    {
-                        test_rust_tasm_equivalence(lhs, rhs);
-                    }
-                }
-            }
+            .collect_vec();
+
+        for (&left, &right) in boundary_points.iter().cartesian_product(&boundary_points) {
+            test_rust_tasm_equivalence(left, right);
         }
     }
 
-    #[test]
-    fn lt_u128_randomized_test_identical_args() {
-        let mut rng = thread_rng();
-        let lhs = rng.gen();
-        test_rust_tasm_equivalence(lhs, lhs);
+    #[proptest]
+    fn lt_u128_randomized_test_identical_args(v: u128) {
+        test_rust_tasm_equivalence(v, v);
+    }
+
+    #[proptest]
+    fn lt_u128_randomized_test_identical_top_limbs(left: u128, right: u128) {
+        test_rust_tasm_equivalence(left, replace_bottom_n_bits::<32>(left, right));
+        test_rust_tasm_equivalence(left, replace_bottom_n_bits::<64>(left, right));
+        test_rust_tasm_equivalence(left, replace_bottom_n_bits::<96>(left, right));
+    }
+
+    /// Modify the first argument by replacing its least-significant 0 <= `N` < 128
+    /// bits with those of the second argument.
+    const fn replace_bottom_n_bits<const N: u8>(left: u128, right: u128) -> u128 {
+        let bottom_bits_mask = (1 << N) - 1;
+
+        ((left >> N) << N) | (right & bottom_bits_mask)
     }
 
     #[test]
-    fn lt_u128_randomized_test_identical_top_limbs() {
-        let mut rng = thread_rng();
-        let lhs: u128 = rng.gen();
-        for num in 1..=3 {
-            let mut rhs = lhs;
-            for i in 0..num {
-                rhs |= (rng.next_u32() as u128) << (32 * i);
-            }
-            test_rust_tasm_equivalence(lhs, rhs);
-            test_rust_tasm_equivalence(rhs, lhs);
+    fn bit_replacement_works_as_expected() {
+        const fn abcd0xf<const N: u8>() -> u128 {
+            replace_bottom_n_bits::<N>(0xaaaa_aaaa_bbbb_bbbb_cccc_cccc_dddd_dddd, u128::MAX)
         }
+
+        assert_eq!(0xaaaa_aaaa_bbbb_bbbb_cccc_cccc_dddd_dddd, abcd0xf::<0>());
+        assert_eq!(0xaaaa_aaaa_bbbb_bbbb_cccc_cccc_ffff_ffff, abcd0xf::<32>());
+        assert_eq!(0xaaaa_aaaa_bbbb_bbbb_ffff_ffff_ffff_ffff, abcd0xf::<64>());
+        assert_eq!(0xaaaa_aaaa_ffff_ffff_ffff_ffff_ffff_ffff, abcd0xf::<96>());
+        assert_eq!(0xffff_ffff_ffff_ffff_ffff_ffff_ffff_ffff, abcd0xf::<127>());
     }
 }
 
