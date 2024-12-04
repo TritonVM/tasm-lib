@@ -59,249 +59,45 @@ impl BasicSnippet for PrimitiveRootOfUnity {
             // Now we only have to check `order_lo`. We can ignore `order_hi` as we've
             // verified that it's 0 in case the order was not $1^{32}$.
 
-            // check if order is 1
-            dup 0
-            push 1
-            eq
-            // _  order_hi order_lo (order_lo == 1)
-            skiz
-                push 1
-            // _  order_hi order_lo {root}
-
-            // check if order is 2
-            dup 0
-            push 2
-            eq
-            // _  order_hi order_lo (order_lo == 2)
-            skiz
-                push 18446744069414584320
-            // _  order_hi order_lo {root}
-
-            // 4
-            dup 0
-            push 4
-            eq
-            // _  order_hi order_lo (order_lo == 4)
-            skiz
-                push 281474976710656
-            // _  order_hi order_lo {root}
-
-            // 8
-            dup 0
-            push 8
-            eq
-            skiz
-                push 18446744069397807105
-
-            // 16
-            dup 0
-            push 16
-            eq
-            skiz
-                push 17293822564807737345
-
-            // 32
-            dup 0
-            push 32
-            eq
-            skiz
-                push 70368744161280
-
-            // 1 << 6
-            dup 0
-            push 64
-            eq
-            skiz
-                push 549755813888
-
-            // 1 << 7
-            dup 0
-            push 128
-            eq
-            skiz
-                push 17870292113338400769
-
-            // 1 << 8
-            dup 0
-            push 256
-            eq
-            skiz
-                push 13797081185216407910
-
-
-            // 1 << 9
-            dup 0
-            push 512
-            eq
-            skiz
-                push 1803076106186727246
-
-            // 1 << 10
-            dup 0
-            push 1024
-            eq
-            skiz
-                push 11353340290879379826
-
-            // 1 << 11
-            dup 0
-            push 2048
-            eq
-            skiz
-                push 455906449640507599
-
-            // 1 << 12
-            dup 0
-            push 4096
-            eq
-            skiz
-                push 17492915097719143606
-
-
-            // 1 << 13
-            dup 0
-            push 8192
-            eq
-            skiz
-                push 1532612707718625687
-
-            // 1 << 14
-            dup 0
-            push 16384
-            eq
-            skiz
-                push 16207902636198568418
-
-            // 1 << 15
-            dup 0
-            push 32768
-            eq
-            skiz
-                push 17776499369601055404
-
-            // 1 << 16
-            dup 0
-            push 65536
-            eq
-            skiz
-                push 6115771955107415310
-
-
-            // 1 << 17
-            dup 0
-            push 131072
-            eq
-            skiz
-                push 12380578893860276750
-
-            // 1 << 18
-            dup 0
-            push 262144
-            eq
-            skiz
-                push 9306717745644682924
-
-            // 1 << 19
-            dup 0
-            push 524288
-            eq
-            skiz
-                push 18146160046829613826
-
-            // 1 << 20
-            dup 0
-            push 1048576
-            eq
-            skiz
-                push 3511170319078647661
-
-
-            // 1 << 21
-            dup 0
-            push 2097152
-            eq
-            skiz
-                push 17654865857378133588
-
-            // 1 << 22
-            dup 0
-            push 4194304
-            eq
-            skiz
-                push 5416168637041100469
-
-
-            // 1 << 23
-            dup 0
-            push 8388608
-            eq
-            skiz
-                push 16905767614792059275
-
-
-            // 1 << 24
-            dup 0
-            push 16777216
-            eq
-            skiz
-                push 9713644485405565297
-
-
-            // 1 << 25
-            dup 0
-            push 33554432
-            eq
-            skiz
-                push 5456943929260765144
-
-            // 1 << 26
-            dup 0
-            push 67108864
-            eq
-            skiz
-                push 17096174751763063430
-
-            // 1 << 27
-            dup 0
-            push 134217728
-            eq
-            skiz
-                push 1213594585890690845
-
-            // 1 << 28
-            dup 0
-            push 268435456
-            eq
-            skiz
-                push 6414415596519834757
-
-            // 1 << 29
-            dup 0
-            push 536870912
-            eq
-            skiz
-                push 16116352524544190054
-
-            // 1 << 30
-            dup 0
-            push 1073741824
-            eq
-            skiz
-                push 9123114210336311365
-
-            // 1 << 31
-            dup 0
-            push 2147483648
-            eq
-            skiz
-                push 4614640910117430873
+            dup 0 push 1             eq skiz push 1
+            dup 0 push {1_u32 << 1}  eq skiz push 18446744069414584320
+            dup 0 push {1_u32 << 2}  eq skiz push 281474976710656
+            dup 0 push {1_u32 << 3}  eq skiz push 18446744069397807105
+            dup 0 push {1_u32 << 4}  eq skiz push 17293822564807737345
+            dup 0 push {1_u32 << 5}  eq skiz push 70368744161280
+            dup 0 push {1_u32 << 6}  eq skiz push 549755813888
+            dup 0 push {1_u32 << 7}  eq skiz push 17870292113338400769
+            dup 0 push {1_u32 << 8}  eq skiz push 13797081185216407910
+            dup 0 push {1_u32 << 9}  eq skiz push 1803076106186727246
+            dup 0 push {1_u32 << 10} eq skiz push 11353340290879379826
+            dup 0 push {1_u32 << 11} eq skiz push 455906449640507599
+            dup 0 push {1_u32 << 12} eq skiz push 17492915097719143606
+            dup 0 push {1_u32 << 13} eq skiz push 1532612707718625687
+            dup 0 push {1_u32 << 14} eq skiz push 16207902636198568418
+            dup 0 push {1_u32 << 15} eq skiz push 17776499369601055404
+            dup 0 push {1_u32 << 16} eq skiz push 6115771955107415310
+            dup 0 push {1_u32 << 17} eq skiz push 12380578893860276750
+            dup 0 push {1_u32 << 18} eq skiz push 9306717745644682924
+            dup 0 push {1_u32 << 19} eq skiz push 18146160046829613826
+            dup 0 push {1_u32 << 20} eq skiz push 3511170319078647661
+            dup 0 push {1_u32 << 21} eq skiz push 17654865857378133588
+            dup 0 push {1_u32 << 22} eq skiz push 5416168637041100469
+            dup 0 push {1_u32 << 23} eq skiz push 16905767614792059275
+            dup 0 push {1_u32 << 24} eq skiz push 9713644485405565297
+            dup 0 push {1_u32 << 25} eq skiz push 5456943929260765144
+            dup 0 push {1_u32 << 26} eq skiz push 17096174751763063430
+            dup 0 push {1_u32 << 27} eq skiz push 1213594585890690845
+            dup 0 push {1_u32 << 28} eq skiz push 6414415596519834757
+            dup 0 push {1_u32 << 29} eq skiz push 16116352524544190054
+            dup 0 push {1_u32 << 30} eq skiz push 9123114210336311365
+            dup 0 push {1_u32 << 31} eq skiz push 4614640910117430873
 
             // Since all roots happen to be larger than `u32::MAX`, or `1` we can
             // test if the top element is a root or not. If this assumption
             // were to change, VM execution would crash here, and tests would
             // catch that.
 
-            // stack if result found:     _ // _  order_hi order_lo root
+            // stack if result found:     _ order_hi order_lo root
             // stack if result not found: _ order_hi order_lo
 
             dup 0
@@ -317,28 +113,28 @@ impl BasicSnippet for PrimitiveRootOfUnity {
 
             pop 1
             // Result found:     _ order_hi order_lo root (root == 1) root_hi
-            // Result not found: _  order_hi order_lo (order_lo == 1) 0
+            // Result not found: _ order_hi order_lo (order_lo == 1) 0
 
             push 0
             eq
             push 0
             eq
-            // Result found:     _  order_hi order_lo root (root == 1) (root_hi != 0)
-            // Result not found: _  order_hi order_lo (order_lo == 1) (0 != 0)
+            // Result found:     _ order_hi order_lo root (root == 1) (root_hi != 0)
+            // Result not found: _ order_hi order_lo (order_lo == 1) (0 != 0)
 
             add
             push 0
             eq
             push 0
             eq
-            // Result found:     _  order_hi order_lo root ((root == 1) || (root_hi != 0))
-            // Result not found: _  order_hi order_lo ((order_lo == 1) || (0 != 0))
+            // Result found:     _ order_hi order_lo root ((root == 1) || (root_hi != 0))
+            // Result not found: _ order_hi order_lo ((order_lo == 1) || (0 != 0))
 
             assert error_id 141
-            // Result found:     _  order_hi order_lo root
+            // Result found:     _ order_hi order_lo root
             // Result not found: VM crashed
 
-            swap 2
+            place 2
             pop 2
 
             return
