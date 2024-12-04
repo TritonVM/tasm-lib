@@ -108,7 +108,7 @@ mod tests {
             seed: [u8; 32],
             bench_case: Option<BenchmarkCase>,
         ) -> ProcedureInitialState {
-            let mut rng: StdRng = SeedableRng::from_seed(seed);
+            let mut rng = StdRng::from_seed(seed);
 
             let (input_length, output_length) = match bench_case {
                 Some(BenchmarkCase::CommonCase) => (0, 0),

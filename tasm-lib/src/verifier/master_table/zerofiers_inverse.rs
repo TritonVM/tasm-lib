@@ -254,7 +254,7 @@ mod tests {
             seed: [u8; 32],
             _bench_case: Option<BenchmarkCase>,
         ) -> FunctionInitialState {
-            let mut rng: StdRng = SeedableRng::from_seed(seed);
+            let mut rng = StdRng::from_seed(seed);
             let ood_current_row: XFieldElement = rng.gen();
             let log_2_padded_height: u32 = rng.gen_range(8..32);
             let padded_height = 2u32.pow(log_2_padded_height);

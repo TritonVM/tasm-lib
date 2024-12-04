@@ -149,7 +149,7 @@ mod tests {
             seed: [u8; 32],
             _: Option<BenchmarkCase>,
         ) -> FunctionInitialState {
-            let mut rng: StdRng = SeedableRng::from_seed(seed);
+            let mut rng = StdRng::from_seed(seed);
             let leafs = (0..self.num_leaves()).map(|_| rng.gen()).collect_vec();
             self.init_state(leafs)
         }

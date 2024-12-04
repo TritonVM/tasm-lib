@@ -172,7 +172,7 @@ impl Algorithm for SwapUnchecked {
         seed: [u8; 32],
         _bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
     ) -> AlgorithmInitialState {
-        let mut rng: StdRng = SeedableRng::from_seed(seed);
+        let mut rng = StdRng::from_seed(seed);
         let list_pointer = BFieldElement::new(rng.gen());
         let list_length = rng.gen_range(1..200);
         let a = rng.gen_range(0..list_length);

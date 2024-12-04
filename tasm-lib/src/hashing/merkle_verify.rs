@@ -334,7 +334,7 @@ mod tests {
         ) -> ReadOnlyAlgorithmInitialState {
             {
                 // BEFORE: _ [root; 5] tree_height leaf_index [leaf; 5]
-                let mut rng: StdRng = SeedableRng::from_seed(seed);
+                let mut rng = StdRng::from_seed(seed);
                 let tree_height = match maybe_bench_case {
                     Some(BenchmarkCase::CommonCase) => 6,
                     Some(BenchmarkCase::WorstCase) => 20,

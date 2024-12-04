@@ -172,7 +172,7 @@ mod tests {
             seed: [u8; 32],
             bench_case: Option<BenchmarkCase>,
         ) -> FunctionInitialState {
-            let mut rng: StdRng = SeedableRng::from_seed(seed);
+            let mut rng = StdRng::from_seed(seed);
             let num_leafs = match bench_case {
                 Some(BenchmarkCase::CommonCase) => 512,
                 Some(BenchmarkCase::WorstCase) => 1024,

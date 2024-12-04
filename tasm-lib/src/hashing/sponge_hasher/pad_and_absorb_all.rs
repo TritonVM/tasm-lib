@@ -109,7 +109,7 @@ mod test {
             seed: [u8; 32],
             bench_case: Option<BenchmarkCase>,
         ) -> ProcedureInitialState {
-            let mut rng: StdRng = SeedableRng::from_seed(seed);
+            let mut rng = StdRng::from_seed(seed);
             let mut bytes = [0u8; 400];
             rng.fill_bytes(&mut bytes);
             let mut unstructured = Unstructured::new(&bytes);
@@ -140,7 +140,7 @@ mod test {
             };
             let empty_input_random_sponge = {
                 let (memory, stack) = self.init_memory_and_stack(0);
-                let mut rng: StdRng = SeedableRng::from_seed([12u8; 32]);
+                let mut rng = StdRng::from_seed([12u8; 32]);
                 let mut bytes = [0u8; 400];
                 rng.fill_bytes(&mut bytes);
                 let mut unstructured = Unstructured::new(&bytes);

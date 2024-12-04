@@ -493,7 +493,7 @@ impl Function for XfeNtt {
         seed: [u8; 32],
         bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
     ) -> FunctionInitialState {
-        let mut rng: StdRng = SeedableRng::from_seed(seed);
+        let mut rng = StdRng::from_seed(seed);
         let n = match bench_case {
             Some(crate::snippet_bencher::BenchmarkCase::CommonCase) => 256,
             Some(crate::snippet_bencher::BenchmarkCase::WorstCase) => 512,

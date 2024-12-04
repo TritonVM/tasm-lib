@@ -457,7 +457,7 @@ mod tests {
             _bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
         ) -> FunctionInitialState {
             // Used for benchmarking
-            let mut rng: StdRng = SeedableRng::from_seed(seed);
+            let mut rng = StdRng::from_seed(seed);
             let input_values = Self::random_input_values(&mut rng);
             let (memory, stack) = self.prepare_tvm_memory_and_stack(input_values);
 
@@ -485,7 +485,7 @@ mod tests {
 
     impl AirConstraintEvaluation {
         fn test_equivalence_with_host_machine_evaluation(&self, seed: [u8; 32]) {
-            let mut rng: StdRng = SeedableRng::from_seed(seed);
+            let mut rng = StdRng::from_seed(seed);
             let input_values = Self::random_input_values(&mut rng);
 
             let (tasm_result, _) = self.tasm_result(input_values.clone());

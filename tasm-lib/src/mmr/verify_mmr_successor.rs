@@ -424,7 +424,7 @@ mod test {
         let seed: u64 = seed.0[0].value();
         let seed: [u8; 8] = seed.to_be_bytes();
         let seed: [u8; 32] = seed.repeat(4).try_into().unwrap();
-        let mut rng: StdRng = SeedableRng::from_seed(seed);
+        let mut rng = StdRng::from_seed(seed);
         let old_mmr_address: u32 = rng.gen_range(0..1 << 30);
         let new_mmr_address: u32 = old_mmr_address + rng.gen_range(0..1 << 28);
         let old_mmr_address = bfe!(old_mmr_address);
@@ -565,7 +565,7 @@ mod test {
             seed: [u8; 32],
             bench_case: Option<BenchmarkCase>,
         ) -> MemPreserverInitialState {
-            let mut rng: StdRng = SeedableRng::from_seed(seed);
+            let mut rng = StdRng::from_seed(seed);
             let old_num_leafs = match bench_case {
                 Some(BenchmarkCase::WorstCase) => u64::MAX >> 2,
                 Some(BenchmarkCase::CommonCase) => u32::MAX as u64,

@@ -290,7 +290,7 @@ mod tests {
         let mut rng = thread_rng();
         let mut seed = [0u8; 32];
         rng.fill_bytes(&mut seed);
-        let mut rng: StdRng = SeedableRng::from_seed(seed);
+        let mut rng = StdRng::from_seed(seed);
 
         for length in (0..10).chain(1000..1001) {
             let init_state = snippet.random_equal_multisets(length, &mut rng);
@@ -318,7 +318,7 @@ mod tests {
         let mut rng = thread_rng();
         let mut seed = [0u8; 32];
         rng.fill_bytes(&mut seed);
-        let mut rng: StdRng = SeedableRng::from_seed(seed);
+        let mut rng = StdRng::from_seed(seed);
 
         for length in (1..10).chain(1000..1001) {
             let init_state = snippet.random_same_length_mutated_elements(length, 1, 1, &mut rng);
@@ -396,7 +396,7 @@ mod tests {
             seed: [u8; 32],
             bench_case: Option<BenchmarkCase>,
         ) -> FunctionInitialState {
-            let mut rng: StdRng = SeedableRng::from_seed(seed);
+            let mut rng = StdRng::from_seed(seed);
 
             match bench_case {
                 // Common case: 2 * 45 ~ 2 inputs
@@ -432,7 +432,7 @@ mod tests {
 
         fn corner_case_initial_states(&self) -> Vec<FunctionInitialState> {
             let seed = [111u8; 32];
-            let mut rng: StdRng = SeedableRng::from_seed(seed);
+            let mut rng = StdRng::from_seed(seed);
 
             let length_0_length_1 = self.random_unequal_length_lists(0, 1, &mut rng);
             let length_1_length_0 = self.random_unequal_length_lists(1, 0, &mut rng);

@@ -422,7 +422,7 @@ mod tests {
                 ),
                 Some(BenchmarkCase::WorstCase) => self.init_state(u64::MAX, u64::MAX - 1),
                 None => {
-                    let mut rng: StdRng = SeedableRng::from_seed(seed);
+                    let mut rng = StdRng::from_seed(seed);
                     self.init_state(rng.gen(), rng.gen())
                 }
             }

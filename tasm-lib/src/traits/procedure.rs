@@ -114,7 +114,7 @@ impl<P: Procedure + 'static> RustShadow for ShadowedProcedure<P> {
     fn test(&self) {
         let num_states = 5;
         let seed: [u8; 32] = thread_rng().gen();
-        let mut rng: StdRng = SeedableRng::from_seed(seed);
+        let mut rng = StdRng::from_seed(seed);
         let procedure = &self.procedure.borrow();
 
         for corner_case in procedure.corner_case_initial_states().into_iter() {
@@ -130,7 +130,7 @@ impl<P: Procedure + 'static> RustShadow for ShadowedProcedure<P> {
     }
 
     fn bench(&self) {
-        let mut rng: StdRng = SeedableRng::from_seed(
+        let mut rng = StdRng::from_seed(
             hex::decode("73a24b6b8b32e4d7d563a4d9a85f476573a24b6b8b32e4d7d563a4d9a85f4765")
                 .unwrap()
                 .try_into()

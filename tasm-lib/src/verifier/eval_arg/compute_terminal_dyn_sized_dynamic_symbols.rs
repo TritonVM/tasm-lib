@@ -182,7 +182,7 @@ mod tests {
             seed: [u8; 32],
             bench_case: Option<BenchmarkCase>,
         ) -> FunctionInitialState {
-            let mut rng: StdRng = SeedableRng::from_seed(seed);
+            let mut rng = StdRng::from_seed(seed);
             let symbols_length = match bench_case {
                 Some(BenchmarkCase::CommonCase) => 30,
                 Some(BenchmarkCase::WorstCase) => 100,
@@ -200,7 +200,7 @@ mod tests {
         }
 
         fn corner_case_initial_states(&self) -> Vec<FunctionInitialState> {
-            let mut rng: StdRng = SeedableRng::from_seed([101u8; 32]);
+            let mut rng = StdRng::from_seed([101u8; 32]);
             let symbols_pointer = rng.gen();
             let rand_initial = rng.gen();
             let rand_challenge = rng.gen();

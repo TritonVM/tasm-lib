@@ -117,7 +117,7 @@ mod tests {
                 Some(BenchmarkCase::CommonCase) => self.init_state(u64::from(u32::MAX)),
                 Some(BenchmarkCase::WorstCase) => self.init_state(u64::MAX),
                 None => {
-                    let mut rng: StdRng = SeedableRng::from_seed(seed);
+                    let mut rng = StdRng::from_seed(seed);
                     self.init_state(rng.next_u64())
                 }
             }

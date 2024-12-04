@@ -147,7 +147,7 @@ impl Procedure for AbsorbMultipleStaticSize {
         seed: [u8; 32],
         _bench_case: Option<BenchmarkCase>,
     ) -> ProcedureInitialState {
-        let mut rng: StdRng = SeedableRng::from_seed(seed);
+        let mut rng = StdRng::from_seed(seed);
 
         // sample address
         let address = BFieldElement::new(rng.next_u64() % (1 << 20));

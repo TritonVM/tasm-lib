@@ -226,7 +226,7 @@ mod tests {
             seed: [u8; 32],
             bench_case: Option<BenchmarkCase>,
         ) -> ProcedureInitialState {
-            let mut rng: StdRng = SeedableRng::from_seed(seed);
+            let mut rng = StdRng::from_seed(seed);
 
             let (leaf_count, leaf_index) = match bench_case {
                 Some(BenchmarkCase::CommonCase) => (1u64 << 32, 1 << 31),

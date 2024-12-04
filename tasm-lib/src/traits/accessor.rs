@@ -119,7 +119,7 @@ where
 
         let num_states = 10;
         let seed: [u8; 32] = thread_rng().gen();
-        let mut rng: StdRng = SeedableRng::from_seed(seed);
+        let mut rng = StdRng::from_seed(seed);
         for _ in 0..num_states {
             let seed: [u8; 32] = rng.gen();
             let AccessorInitialState { stack, memory } = self
@@ -134,7 +134,7 @@ where
     }
 
     fn bench(&self) {
-        let mut rng: StdRng = SeedableRng::from_seed(
+        let mut rng = StdRng::from_seed(
             hex::decode("73a24b6b8b32e4d7d563a4d9a85f476573a24b6b8b32e4d7d563a4d9a85f4765")
                 .unwrap()
                 .try_into()

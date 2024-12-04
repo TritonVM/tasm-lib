@@ -134,7 +134,7 @@ impl Procedure for HashVarlen {
             Some(BenchmarkCase::CommonCase) => 25,
             Some(BenchmarkCase::WorstCase) => 1000,
             None => {
-                let mut rng: StdRng = SeedableRng::from_seed(seed);
+                let mut rng = StdRng::from_seed(seed);
                 rng.gen_range(0..400)
             }
         };

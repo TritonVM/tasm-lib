@@ -146,7 +146,7 @@ mod test {
             seed: [u8; 32],
             bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
         ) -> ProcedureInitialState {
-            let mut rng: StdRng = SeedableRng::from_seed(seed);
+            let mut rng = StdRng::from_seed(seed);
             let num_scalars = match bench_case {
                 Some(BenchmarkCase::CommonCase) => 10,
                 Some(BenchmarkCase::WorstCase) => 100,

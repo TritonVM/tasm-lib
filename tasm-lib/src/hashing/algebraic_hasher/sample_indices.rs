@@ -181,7 +181,7 @@ impl Procedure for SampleIndices {
         seed: [u8; 32],
         bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
     ) -> ProcedureInitialState {
-        let mut rng: StdRng = SeedableRng::from_seed(seed);
+        let mut rng = StdRng::from_seed(seed);
         let number = if let Some(case) = bench_case {
             match case {
                 // For FRI num_collinearity checks is 80 for expansion factor 4

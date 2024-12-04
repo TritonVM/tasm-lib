@@ -185,7 +185,7 @@ mod tests {
                 Some(BenchmarkCase::CommonCase) => 1u64 << 20,
                 Some(BenchmarkCase::WorstCase) => 1u64 << 24,
                 None => {
-                    let mut rng: StdRng = SeedableRng::from_seed(seed);
+                    let mut rng = StdRng::from_seed(seed);
                     1u64 << rng.gen_range(8..=32)
                 }
             };

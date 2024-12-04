@@ -205,7 +205,7 @@ mod tests {
             seed: [u8; 32],
             _bench_case: Option<BenchmarkCase>,
         ) -> FunctionInitialState {
-            let mut rng: StdRng = SeedableRng::from_seed(seed);
+            let mut rng = StdRng::from_seed(seed);
             let proof_pointer = bfe!(rng.gen_range(0..(1 << 20)));
 
             // put randomness on heap because stack might be too small

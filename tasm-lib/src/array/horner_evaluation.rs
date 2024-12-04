@@ -159,7 +159,7 @@ mod test {
             seed: [u8; 32],
             _bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
         ) -> crate::traits::function::FunctionInitialState {
-            let mut rng: StdRng = SeedableRng::from_seed(seed);
+            let mut rng = StdRng::from_seed(seed);
 
             // sample coefficients
             let coefficients = (0..self.num_coefficients)

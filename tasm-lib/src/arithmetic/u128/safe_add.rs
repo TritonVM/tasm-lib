@@ -247,7 +247,7 @@ mod tests {
             seed: [u8; 32],
             _bench_case: Option<BenchmarkCase>,
         ) -> Vec<BFieldElement> {
-            let mut rng: StdRng = SeedableRng::from_seed(seed);
+            let mut rng = StdRng::from_seed(seed);
             let lhs: u128 = rng.gen();
             let lhs = lhs / 2;
             let rhs: u128 = rng.gen();

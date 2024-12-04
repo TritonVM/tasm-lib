@@ -240,7 +240,7 @@ impl Function for Zip {
         seed: [u8; 32],
         _bench_case: Option<snippet_bencher::BenchmarkCase>,
     ) -> FunctionInitialState {
-        let mut rng: StdRng = SeedableRng::from_seed(seed);
+        let mut rng = StdRng::from_seed(seed);
         let list_len = rng.gen_range(0..20);
         let execution_state = self.generate_input_state(list_len, list_len);
         FunctionInitialState {

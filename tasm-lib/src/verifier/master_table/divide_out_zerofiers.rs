@@ -174,7 +174,7 @@ mod tests {
 
     impl DivideOutZerofiers {
         fn test_equivalence_with_host_machine(&self, seed: [u8; 32]) {
-            let mut rng: StdRng = SeedableRng::from_seed(seed);
+            let mut rng = StdRng::from_seed(seed);
             let (air_evaluation_result, ood_point_curr_row, padded_height, trace_domain_generator) =
                 Self::random_input_values(&mut rng);
 
@@ -371,7 +371,7 @@ mod bench {
             _bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
         ) -> FunctionInitialState {
             // Used for benchmarking
-            let mut rng: StdRng = SeedableRng::from_seed(seed);
+            let mut rng = StdRng::from_seed(seed);
             let air_evaluation_result =
                 rng.gen::<[XFieldElement; MasterAuxTable::NUM_CONSTRAINTS]>();
             let ood_point_current_row = rng.gen::<XFieldElement>();

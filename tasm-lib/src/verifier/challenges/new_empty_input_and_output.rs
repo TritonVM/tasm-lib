@@ -213,7 +213,7 @@ mod tests {
             seed: [u8; 32],
             _bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
         ) -> ProcedureInitialState {
-            let mut rng: StdRng = SeedableRng::from_seed(seed);
+            let mut rng = StdRng::from_seed(seed);
             let program_digest: Digest = rng.gen();
             let challenge = program_digest.0.into_iter().rev().collect_vec();
             let stack = [self.init_stack_for_isolated_run(), challenge].concat();

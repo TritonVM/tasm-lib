@@ -62,7 +62,7 @@ impl Procedure for WriteToStdout {
         seed: [u8; 32],
         _bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
     ) -> ProcedureInitialState {
-        let mut rng: StdRng = SeedableRng::from_seed(seed);
+        let mut rng = StdRng::from_seed(seed);
         let mut stack = empty_stack();
         let random_value = self.data_type.seeded_random_element(&mut rng);
         stack.extend(random_value.into_iter().rev());

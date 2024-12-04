@@ -138,7 +138,7 @@ pub(crate) mod tests {
             seed: [u8; 32],
             _bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
         ) -> ProcedureInitialState {
-            let mut rng: StdRng = SeedableRng::from_seed(seed);
+            let mut rng = StdRng::from_seed(seed);
             let stack = self.init_stack_for_isolated_run();
             let sponge = Tip5 { state: rng.gen() };
 

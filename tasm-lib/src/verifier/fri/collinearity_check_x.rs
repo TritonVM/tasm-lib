@@ -104,7 +104,7 @@ mod test {
             seed: [u8; 32],
             bench_case: Option<BenchmarkCase>,
         ) -> FunctionInitialState {
-            let mut rng: StdRng = SeedableRng::from_seed(seed);
+            let mut rng = StdRng::from_seed(seed);
             let round = if let Some(case) = bench_case {
                 match case {
                     BenchmarkCase::CommonCase => 10,

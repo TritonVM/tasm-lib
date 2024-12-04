@@ -226,7 +226,7 @@ impl Function for All {
                 (execution_state.stack, execution_state.nondeterminism.ram)
             }
             None => {
-                let mut rng: StdRng = SeedableRng::from_seed(seed);
+                let mut rng = StdRng::from_seed(seed);
                 let list_pointer = BFieldElement::new(rng.next_u64() % (1 << 20));
                 let list_length = 1 << (rng.next_u32() as usize % 4);
                 let execution_state = self.generate_input_state(list_pointer, list_length, true);

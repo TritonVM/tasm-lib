@@ -173,7 +173,7 @@ mod tests {
             seed: [u8; 32],
             bench_case: Option<BenchmarkCase>,
         ) -> AccessorInitialState {
-            let mut rng: StdRng = SeedableRng::from_seed(seed);
+            let mut rng = StdRng::from_seed(seed);
 
             let fake_proof_stream = match bench_case {
                 Some(BenchmarkCase::CommonCase) => {

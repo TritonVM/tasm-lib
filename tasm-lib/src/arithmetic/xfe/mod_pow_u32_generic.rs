@@ -182,7 +182,7 @@ mod tests {
             seed: [u8; 32],
             bench_case: Option<crate::snippet_bencher::BenchmarkCase>,
         ) -> Vec<BFieldElement> {
-            let mut rng: StdRng = SeedableRng::from_seed(seed);
+            let mut rng = StdRng::from_seed(seed);
             let exponent = match bench_case {
                 Some(BenchmarkCase::CommonCase) => 1 << 25,
                 Some(BenchmarkCase::WorstCase) => u32::MAX,

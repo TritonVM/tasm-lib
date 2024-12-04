@@ -128,7 +128,7 @@ mod tests {
             seed: [u8; 32],
             _bench_case: Option<BenchmarkCase>,
         ) -> FunctionInitialState {
-            let mut rng: StdRng = SeedableRng::from_seed(seed);
+            let mut rng = StdRng::from_seed(seed);
             let array_pointer_a = BFieldElement::new(rng.gen());
             let mut array_pointer_b = BFieldElement::new(rng.gen());
             while array_pointer_a.value().abs_diff(array_pointer_b.value())

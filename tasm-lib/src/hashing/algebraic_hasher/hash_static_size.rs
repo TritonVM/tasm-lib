@@ -137,7 +137,7 @@ mod tests {
             seed: [u8; 32],
             _bench_case: Option<BenchmarkCase>,
         ) -> ProcedureInitialState {
-            let mut rng: StdRng = SeedableRng::from_seed(seed);
+            let mut rng = StdRng::from_seed(seed);
             let memory_start: BFieldElement = rng.gen();
             let memory: HashMap<BFieldElement, BFieldElement> = (0..self.size)
                 .map(|i| (memory_start + BFieldElement::new(i as u64), rng.gen()))

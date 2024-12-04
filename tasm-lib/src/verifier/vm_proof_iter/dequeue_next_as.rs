@@ -589,7 +589,7 @@ mod test {
             proof_items_variants: Vec<ProofItemVariant>,
             seed: [u8; 32],
         ) -> ProofStream {
-            let mut rng: StdRng = SeedableRng::from_seed(seed);
+            let mut rng = StdRng::from_seed(seed);
 
             let mut proof_stream = ProofStream::new();
             for &proof_item in &proof_items_variants {

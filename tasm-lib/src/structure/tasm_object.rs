@@ -240,7 +240,7 @@ mod test {
         }
 
         fn pseudorandom_object(seed: [u8; 32]) -> OuterStruct {
-            let mut rng: StdRng = SeedableRng::from_seed(seed);
+            let mut rng = StdRng::from_seed(seed);
             let a = (0..19)
                 .map(|_| if rng.gen() { Some(rng.gen()) } else { None })
                 .collect_vec();
@@ -351,7 +351,7 @@ mod test {
         );
 
         fn prepare_random_tuple_struct(seed: [u8; 32]) -> TupleStruct {
-            let mut rng: StdRng = SeedableRng::from_seed(seed);
+            let mut rng = StdRng::from_seed(seed);
             let mut randomness = [0u8; 100000];
             rng.fill_bytes(&mut randomness);
             let mut unstructured = Unstructured::new(&randomness);
@@ -475,7 +475,7 @@ mod test {
             }
 
             fn prepare_random_object(seed: [u8; 32]) -> WithNamedFields {
-                let mut rng: StdRng = SeedableRng::from_seed(seed);
+                let mut rng = StdRng::from_seed(seed);
                 let mut randomness = [0u8; 100000];
                 rng.fill_bytes(&mut randomness);
                 let mut unstructured = Unstructured::new(&randomness);
@@ -643,7 +643,7 @@ mod test {
             }
 
             fn random_struct(seed: [u8; 32]) -> ListDynSizedElements {
-                let mut rng: StdRng = SeedableRng::from_seed(seed);
+                let mut rng = StdRng::from_seed(seed);
                 let mut randomness = [0u8; 100000];
                 rng.fill_bytes(&mut randomness);
                 let mut unstructured = Unstructured::new(&randomness);

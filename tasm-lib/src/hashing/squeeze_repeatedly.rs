@@ -98,7 +98,7 @@ impl Procedure for SqueezeRepeatedly {
         seed: [u8; 32],
         bench_case: Option<BenchmarkCase>,
     ) -> ProcedureInitialState {
-        let mut rng: StdRng = SeedableRng::from_seed(seed);
+        let mut rng = StdRng::from_seed(seed);
         let num_squeezes = match bench_case {
             Some(BenchmarkCase::CommonCase) => 10,
             Some(BenchmarkCase::WorstCase) => 200,

@@ -286,7 +286,7 @@ mod tests {
                 Some(BenchmarkCase::CommonCase) => self.random_equal_lists(2),
                 Some(BenchmarkCase::WorstCase) => self.random_equal_lists(100),
                 None => {
-                    let mut rng: StdRng = SeedableRng::from_seed(seed);
+                    let mut rng = StdRng::from_seed(seed);
                     let length = rng.gen_range(1..50);
                     let index = rng.gen_range(0..length);
                     let digest_word_index = rng.gen_range(0..Digest::LEN);

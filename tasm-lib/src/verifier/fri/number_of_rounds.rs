@@ -96,7 +96,7 @@ mod test {
             seed: [u8; 32],
             bench_case: Option<BenchmarkCase>,
         ) -> FunctionInitialState {
-            let mut rng: StdRng = SeedableRng::from_seed(seed);
+            let mut rng = StdRng::from_seed(seed);
             let rate_entropy = rng.gen_range(1..16);
             let num_colinearity_checks = f64::ceil(160.0 / (rate_entropy as f64)) as usize;
             let domain_length = match bench_case {

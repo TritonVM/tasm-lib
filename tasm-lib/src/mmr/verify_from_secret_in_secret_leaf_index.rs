@@ -360,7 +360,7 @@ mod tests {
             seed: [u8; 32],
             bench_case: Option<BenchmarkCase>,
         ) -> ProcedureInitialState {
-            let mut rng: StdRng = SeedableRng::from_seed(seed);
+            let mut rng = StdRng::from_seed(seed);
             let leaf_count = rng.gen_range(1..10000);
             let leaf_index = rng.gen_range(0..leaf_count);
 

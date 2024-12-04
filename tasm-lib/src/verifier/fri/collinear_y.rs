@@ -155,7 +155,7 @@ impl Closure for CollinearYXfe {
         const NUM_ELEMENTS_PER_COORDINATE: usize = EXTENSION_DEGREE;
         const NUM_ELEMENTS: usize = NUM_ELEMENTS_PER_COORDINATE * NUM_COORDINATES;
 
-        let mut rng: StdRng = SeedableRng::from_seed(seed);
+        let mut rng = StdRng::from_seed(seed);
         let elements: [BFieldElement; NUM_ELEMENTS] = rng.gen();
 
         [empty_stack(), elements.to_vec()].concat()

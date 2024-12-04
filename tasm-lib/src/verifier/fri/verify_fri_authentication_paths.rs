@@ -230,7 +230,7 @@ mod test {
             seed: [u8; 32],
             bench_case: Option<BenchmarkCase>,
         ) -> AlgorithmInitialState {
-            let mut rng: StdRng = SeedableRng::from_seed(seed);
+            let mut rng = StdRng::from_seed(seed);
 
             // determine sizes
             let (height, num_indices) = match bench_case {
@@ -245,7 +245,7 @@ mod test {
         }
 
         fn corner_case_initial_states(&self) -> Vec<AlgorithmInitialState> {
-            let mut rng: StdRng = SeedableRng::from_seed([42u8; 32]);
+            let mut rng = StdRng::from_seed([42u8; 32]);
 
             let mut test_cases = vec![];
             for index_type in IndexType::iter() {

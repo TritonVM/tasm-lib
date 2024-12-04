@@ -101,7 +101,7 @@ impl Procedure for MerkleStepU64Index {
         seed: [u8; 32],
         bench_case: Option<BenchmarkCase>,
     ) -> ProcedureInitialState {
-        let mut rng: StdRng = SeedableRng::from_seed(seed);
+        let mut rng = StdRng::from_seed(seed);
 
         let (stack, nondeterminism) = match bench_case {
             Some(BenchmarkCase::CommonCase) => self.prepare_stack_and_non_determinism(1 << 33),

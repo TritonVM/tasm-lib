@@ -170,7 +170,7 @@ mod tests {
                 Some(BenchmarkCase::CommonCase) => 2u32.pow(21),
                 Some(BenchmarkCase::WorstCase) => 2u32.pow(23),
                 None => {
-                    let mut rng: StdRng = SeedableRng::from_seed(seed);
+                    let mut rng = StdRng::from_seed(seed);
                     let mut padded_height = 2u32.pow(rng.gen_range(8..=25));
 
                     // Don't test parameters that result in too big FRI domains, i.e. larger

@@ -216,7 +216,7 @@ impl Function for BagPeaks {
             Some(BenchmarkCase::CommonCase) => self.input_state(30),
             Some(BenchmarkCase::WorstCase) => self.input_state(60),
             None => {
-                let mut rng: StdRng = SeedableRng::from_seed(seed);
+                let mut rng = StdRng::from_seed(seed);
                 self.input_state(rng.gen_range(0..=63))
             }
         }
