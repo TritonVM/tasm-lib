@@ -1423,7 +1423,12 @@ pub mod tests {
         let claim = claim.with_output(inner_output);
 
         triton_vm::profiler::start("inner program");
-        let proof = stark.prove(&claim, &aet).unwrap();
+        let seed = [
+            227, 232, 115, 183, 84, 194, 68, 59, 166, 60, 140, 218, 88, 117, 227, 129, 10, 121,
+            108, 40, 65, 125, 143, 31, 155, 128, 202, 75, 218, 44, 120, 170,
+        ];
+        let prover = Prover::new(*stark).set_randomness_seed_which_may_break_zero_knowledge(seed);
+        let proof = prover.prove(&claim, &aet).unwrap();
         let profile = triton_vm::profiler::finish();
         let padded_height = proof.padded_height().unwrap();
         let report = profile

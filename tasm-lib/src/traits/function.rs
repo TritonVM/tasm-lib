@@ -124,37 +124,30 @@ where
 
     /// Test rust-tasm equivalence.
     fn test(&self) {
-        for cornercase_test in self
-            .function
-            .borrow()
-            .corner_case_initial_states()
-            .into_iter()
-        {
-            self.test_initial_state(cornercase_test);
+        for cornercase_state in self.function.borrow().corner_case_initial_states() {
+            self.test_initial_state(cornercase_state);
         }
 
         let num_rng_states = 5;
         let mut rng = thread_rng();
 
         for _ in 0..num_rng_states {
-            let seed: [u8; 32] = rng.gen();
-            self.test_initial_state(
-                self.function
-                    .borrow()
-                    .pseudorandom_initial_state(seed, None),
-            )
+            let initial_state = self
+                .function
+                .borrow()
+                .pseudorandom_initial_state(rng.gen(), None);
+            self.test_initial_state(initial_state)
         }
     }
 
     /// Count number of cycles and other performance indicators and save them in directory
     /// benchmarks/.
     fn bench(&self) {
-        let mut rng = StdRng::from_seed(
-            hex::decode("73a24b6b8b32e4d7d563a4d9a85f476573a24b6b8b32e4d7d563a4d9a85f4765")
-                .unwrap()
-                .try_into()
-                .unwrap(),
-        );
+        let seed = hex::decode("73a24b6b8b32e4d7d563a4d9a85f476573a24b6b8b32e4d7d563a4d9a85f4765")
+            .unwrap()
+            .try_into()
+            .unwrap();
+        let mut rng = StdRng::from_seed(seed);
         let mut benchmarks = Vec::with_capacity(2);
 
         for bench_case in [BenchmarkCase::CommonCase, BenchmarkCase::WorstCase] {

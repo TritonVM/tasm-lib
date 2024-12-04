@@ -79,7 +79,7 @@ pub fn insert_random_list(
     let indexed_list = list
         .into_iter()
         .enumerate()
-        .map(|(i, v)| (list_pointer + bfe!(i as u64), v));
+        .map(|(i, v)| (list_pointer + bfe!(i), v));
     memory.extend(indexed_list);
 }
 
@@ -156,11 +156,11 @@ pub fn list_pointer_to_elem_pointer(
     assert!(i < list_len, "Index {i} out of bounds for len {list_len}.");
 
     if let Some(element_size) = element_type.static_length() {
-        let elem_ptr = list_pointer + bfe!((LIST_METADATA_SIZE + i * element_size) as u64);
+        let elem_ptr = list_pointer + bfe!(LIST_METADATA_SIZE + i * element_size);
         return (element_size, elem_ptr);
     }
 
-    let mut elem_pointer = list_pointer + bfe!(LIST_METADATA_SIZE as u64);
+    let mut elem_pointer = list_pointer + bfe!(LIST_METADATA_SIZE);
     for _ in 0..i {
         elem_pointer += memory[&elem_pointer] + BFieldElement::ONE;
     }
@@ -247,7 +247,7 @@ mod tests {
             .encode()
             .into_iter()
             .enumerate()
-            .map(|(i, v)| (list_pointer + bfe!(i as u64), v));
+            .map(|(i, v)| (list_pointer + bfe!(i), v));
 
         let mut memory = HashMap::default();
         memory.extend(indexed_list);
@@ -270,7 +270,7 @@ mod tests {
             .encode()
             .into_iter()
             .enumerate()
-            .map(|(i, v)| (list_pointer + bfe!(i as u64), v));
+            .map(|(i, v)| (list_pointer + bfe!(i), v));
 
         let mut memory = HashMap::default();
         memory.extend(indexed_list);
@@ -280,7 +280,7 @@ mod tests {
             dbg!(i);
             let (len, ptr) = list_pointer_to_elem_pointer(list_pointer, i, &memory, &data_type);
             prop_assert_eq!(inner_list.encode().len(), len);
-            prop_assert_eq!(bfe!(inner_list.len() as u64), memory[&ptr]);
+            prop_assert_eq!(bfe!(inner_list.len()), memory[&ptr]);
         }
     }
 }

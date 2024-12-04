@@ -20,7 +20,6 @@ use crate::list::new::New;
 use crate::list::push::Push;
 use crate::prelude::BasicSnippet;
 use crate::rust_shadowing_helper_functions::dyn_malloc::dynamic_allocator;
-use crate::rust_shadowing_helper_functions::list::insert_random_list;
 use crate::rust_shadowing_helper_functions::list::list_get;
 use crate::rust_shadowing_helper_functions::list::list_get_length;
 use crate::rust_shadowing_helper_functions::list::list_pointer_to_elem_pointer;
@@ -443,17 +442,25 @@ impl<const NUM_INPUT_LISTS: usize> ChainMap<NUM_INPUT_LISTS> {
         &self,
         environment_args: impl IntoIterator<Item = BFieldElement>,
         list_lengths: [u16; NUM_INPUT_LISTS],
+        seed: <StdRng as SeedableRng>::Seed,
     ) -> FunctionInitialState {
         let input_type = self.f.domain();
         let mut stack = self.init_stack_for_isolated_run();
         let mut memory = HashMap::default();
+        let mut rng = StdRng::from_seed(seed);
 
         stack.extend(environment_args);
 
         for list_length in list_lengths {
             let list_length = usize::from(list_length);
+            let list = input_type.random_list(&mut rng, list_length);
             let list_pointer = dynamic_allocator(&mut memory);
-            insert_random_list(&input_type, list_pointer, list_length, &mut memory);
+            let indexed_list = list
+                .into_iter()
+                .enumerate()
+                .map(|(i, v)| (list_pointer + bfe!(i), v));
+
+            memory.extend(indexed_list);
             stack.push(list_pointer);
         }
 
@@ -528,7 +535,7 @@ impl<const NUM_INPUT_LISTS: usize> Function for ChainMap<NUM_INPUT_LISTS> {
         };
         let list_lengths = list_lengths.map(Into::into);
 
-        self.init_state(environment_args, list_lengths)
+        self.init_state(environment_args, list_lengths, rng.gen())
     }
 }
 
@@ -897,7 +904,7 @@ mod tests {
         let snippet = Map::new(raw_code);
         let encoded_u128 = random::<u128>().encode();
         let input_list_len = rand::thread_rng().gen_range(0u16..200);
-        let initial_state = snippet.init_state(encoded_u128, [input_list_len]);
+        let initial_state = snippet.init_state(encoded_u128, [input_list_len], random());
         test_rust_equivalence_given_execution_state(
             &ShadowedFunction::new(snippet),
             initial_state.into(),
@@ -914,7 +921,7 @@ mod tests {
                 DataType::Tuple(vec![]),
             ));
             let snippet = ChainMap::<N>::new(raw_code);
-            let initial_state = snippet.init_state(vec![guard], [1; N]);
+            let initial_state = snippet.init_state(vec![guard], [1; N], random());
             test_rust_equivalence_given_execution_state(
                 &ShadowedFunction::new(snippet),
                 initial_state.into(),
