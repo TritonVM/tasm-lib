@@ -56,7 +56,7 @@ fn generate_integral_size_indicators_code(parse_result: &ParseResult) -> TokenSt
             #integral_size_indicators_code
             // _ accumulated_size *field_start
             if let Some(static_length) = <#field_type as crate::triton_vm::twenty_first::math::bfield_codec::BFieldCodec>::static_length() {
-                let addi_len = crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::AddI(crate::BFieldElement::new(static_length as u64)));
+                let addi_len = crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::AddI(crate::BFieldElement::from(static_length)));
                 [
                     // _ accumulated_size *field
                     addi_len.clone(),
@@ -526,7 +526,7 @@ fn generate_tasm_for_extend_field_start_with_jump_amount(field_type: &syn::Type)
     quote! {
         if let Some(size) = <#field_type as crate::twenty_first::math::bfield_codec::BFieldCodec>::static_length() {
             [
-                crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Push(crate::BFieldElement::new(size as u64)))
+                crate::triton_vm::isa::instruction::LabelledInstruction::Instruction(crate::triton_vm::isa::instruction::AnInstruction::Push(crate::BFieldElement::from(size)))
             ].to_vec()
         } else {
             [
@@ -605,12 +605,15 @@ fn generate_tokens_for_struct_with_unnamed_fields(fields: &syn::FieldsUnnamed) -
 
 fn get_field_decoder(field_name: syn::Ident, field_type: syn::Type) -> TokenStream {
     quote! {
-        let length : usize = if let Some(static_length) = <#field_type as crate::twenty_first::math::bfield_codec::BFieldCodec>::static_length() {
+        let length: usize = if let Some(static_length) = <#field_type as crate::twenty_first::math::bfield_codec::BFieldCodec>::static_length() {
             static_length
         } else {
-            iterator.next().unwrap().value() as usize
+            iterator.next().ok_or("iterator exhausted")?.try_into()?
         };
-        let sequence = (0..length).map(|_| iterator.next().unwrap()).collect::<Vec<_>>();
+        let sequence = (0..length)
+            .map(|_| iterator.next())
+            .collect::<core::option::Option<std::vec::Vec<_>>>()
+            .ok_or("iterator exhausted")?;
         let #field_name : #field_type = *crate::twenty_first::math::bfield_codec::BFieldCodec::decode(&sequence)?;
     }
 }

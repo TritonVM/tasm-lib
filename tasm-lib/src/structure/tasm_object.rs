@@ -210,7 +210,10 @@ impl Iterator for MemoryIter<'_> {
 mod test {
     use arbitrary::Arbitrary;
     use arbitrary::Unstructured;
+    use proptest::prelude::*;
+    use proptest_arbitrary_interop::arb;
     use rand::prelude::*;
+    use test_strategy::proptest;
     use triton_vm::proof_item::FriResponse;
 
     use super::*;
@@ -889,5 +892,19 @@ mod test {
 
         let none_decoded = *Option::<Vec<Digest>>::decode_from_memory(&ram, none_address).unwrap();
         assert!(none_decoded.is_none());
+    }
+
+    #[proptest]
+    fn iter_decoding_too_short_sequence_does_not_panic(
+        #[strategy(arb())] object: Vec<Vec<Digest>>,
+        num_elements_to_drop: usize,
+    ) {
+        let encoding = object.encode();
+        let encoding_len = encoding.len();
+        let num_elements_to_drop = num_elements_to_drop % encoding_len;
+        prop_assume!(num_elements_to_drop != 0);
+
+        let mut object_iter = encoding.into_iter().dropping_back(num_elements_to_drop);
+        prop_assert!(<Vec<Vec<Digest>>>::decode_iter(&mut object_iter).is_err());
     }
 }
