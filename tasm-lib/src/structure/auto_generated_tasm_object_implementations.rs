@@ -1,8 +1,119 @@
-pub mod claim;
-pub mod fri_response;
-pub mod mmr_accumulator;
-pub mod mmr_membership_proof;
-pub mod mmr_successor_proof;
+// Contains field-by-field copies of various types defined outside this
+// repository to derive `TasmObject` on. These “fake” types are then used
+// to implement `TasmObject` for the actual type by forwarding function calls.
 
-// This module contains output from `cargo expand` for types not defined in
-// this repository.
+use triton_vm::fri::AuthenticationStructure;
+use triton_vm::prelude::*;
+use triton_vm::proof_item::FriResponse;
+
+use crate::library::Library;
+use crate::prelude::TasmObject;
+use crate::twenty_first::prelude::MmrMembershipProof;
+use crate::twenty_first::util_types::mmr::mmr_accumulator::MmrAccumulator;
+use crate::twenty_first::util_types::mmr::mmr_successor_proof::MmrSuccessorProof;
+
+macro_rules! derive_tasm_object_for {
+    ($actual:ident using $fake:ident {$($field:ident: $field_type:ty,)* $(,)?}) => {
+        #[derive(TasmObject)]
+        struct $fake { $($field: $field_type),* }
+
+        impl TasmObject for $actual {
+            fn label_friendly_name() -> String {
+                stringify!($actual).to_string()
+            }
+
+            fn get_field(field_name: &str) -> Vec<LabelledInstruction> {
+                $fake::get_field(field_name)
+            }
+
+            fn get_field_with_size(field_name: &str) -> Vec<LabelledInstruction> {
+                $fake::get_field_with_size(field_name)
+            }
+
+            fn get_field_start_with_jump_distance(field_name: &str) -> Vec<LabelledInstruction> {
+                $fake::get_field_start_with_jump_distance(field_name)
+            }
+
+            fn compute_size_and_assert_valid_size_indicator(
+                library: &mut Library,
+            ) -> Vec<LabelledInstruction> {
+                $fake::compute_size_and_assert_valid_size_indicator(library)
+            }
+
+            fn decode_iter<Itr: Iterator<Item = BFieldElement>>(
+                iterator: &mut Itr,
+            ) -> Result<Box<Self>, Box<dyn core::error::Error + Send + Sync>> {
+                let $fake { $($field),* } = *$fake::decode_iter(iterator)?;
+                Ok(Box::new(Self { $($field),* }))
+            }
+        }
+    };
+}
+
+derive_tasm_object_for!(
+    Claim using FakeClaim {
+        program_digest: Digest,
+        version: u32,
+        input: Vec<BFieldElement>,
+        output: Vec<BFieldElement>,
+    }
+);
+
+derive_tasm_object_for!(
+    FriResponse using FakeFriResponse {
+        auth_structure: AuthenticationStructure,
+        revealed_leaves: Vec<XFieldElement>,
+    }
+);
+
+derive_tasm_object_for!(
+    MmrMembershipProof using FakeMmrMembershipProof {
+        authentication_path: Vec<Digest>,
+    }
+);
+
+derive_tasm_object_for!(
+    MmrSuccessorProof using FakeMmrSuccessorProof {
+        paths: Vec<Digest>,
+    }
+);
+
+// can't use macro: MmrAccumulator has private fields and uses a dedicated
+// constructor
+#[derive(TasmObject)]
+struct FakeMmrAccumulator {
+    leaf_count: u64,
+    peaks: Vec<Digest>,
+}
+
+impl TasmObject for MmrAccumulator {
+    fn label_friendly_name() -> String {
+        "MmrAccumulator".to_string()
+    }
+
+    fn get_field(field_name: &str) -> Vec<LabelledInstruction> {
+        FakeMmrAccumulator::get_field(field_name)
+    }
+
+    fn get_field_with_size(field_name: &str) -> Vec<LabelledInstruction> {
+        FakeMmrAccumulator::get_field_with_size(field_name)
+    }
+
+    fn get_field_start_with_jump_distance(field_name: &str) -> Vec<LabelledInstruction> {
+        FakeMmrAccumulator::get_field_start_with_jump_distance(field_name)
+    }
+
+    fn compute_size_and_assert_valid_size_indicator(
+        library: &mut Library,
+    ) -> Vec<LabelledInstruction> {
+        FakeMmrAccumulator::compute_size_and_assert_valid_size_indicator(library)
+    }
+
+    fn decode_iter<Itr: Iterator<Item = BFieldElement>>(
+        iterator: &mut Itr,
+    ) -> Result<Box<Self>, Box<dyn core::error::Error + Send + Sync>> {
+        let FakeMmrAccumulator { leaf_count, peaks } = *FakeMmrAccumulator::decode_iter(iterator)?;
+
+        Ok(Box::new(Self::init(peaks, leaf_count)))
+    }
+}
