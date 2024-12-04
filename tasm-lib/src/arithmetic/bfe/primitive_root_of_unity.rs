@@ -9,6 +9,18 @@ use crate::snippet_bencher::BenchmarkCase;
 use crate::traits::basic_snippet::BasicSnippet;
 use crate::traits::closure::Closure;
 
+/// Fetch the primitive root of unity of the given order.
+///
+/// ### Pre-conditions
+///
+/// - the order is a power of two
+/// - the order is not 0
+/// - the order is less than or equal to 2^32
+///
+/// ### Post-conditions
+///
+/// - the root is a primitive root of the given order for the field with
+///   [`BFieldElement::P`] elements
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct PrimitiveRootOfUnity;
 
@@ -26,10 +38,10 @@ impl BasicSnippet for PrimitiveRootOfUnity {
     }
 
     fn code(&self, _library: &mut crate::library::Library) -> Vec<LabelledInstruction> {
-        let entrypoint = self.entrypoint();
+        let root_of_pow = |pow: u64| BFieldElement::primitive_root_of_unity(1 << pow).unwrap();
 
         triton_asm!(
-            {entrypoint}:
+            {self.entrypoint()}:
             // _ order_hi order_lo
 
             // First check if order i $1^{32}$.
@@ -46,10 +58,12 @@ impl BasicSnippet for PrimitiveRootOfUnity {
             // _ order_hi order_lo (order_hi == 1 && order_lo == 0)
 
             skiz
-                push 1753635133440165772
+                push {root_of_pow(32)}
             // _ order_hi order_lo [root]
 
-            // at this point `st1` *must* be zero.
+            // at this point `st1` *must* be zero:
+            // if order == 2^32:      _ 1 0        root
+            // any other legal order: _ 0 order_lo
 
             dup 1
             push 0
@@ -58,41 +72,43 @@ impl BasicSnippet for PrimitiveRootOfUnity {
 
             // Now we only have to check `order_lo`. We can ignore `order_hi` as we've
             // verified that it's 0 in case the order was not $1^{32}$.
+            // Furthermore, the primitive root of order 2^32 is not itself a legal order
+            // of some other primitive root.
 
-            dup 0 push 1             eq skiz push 1
-            dup 0 push {1_u32 << 1}  eq skiz push 18446744069414584320
-            dup 0 push {1_u32 << 2}  eq skiz push 281474976710656
-            dup 0 push {1_u32 << 3}  eq skiz push 18446744069397807105
-            dup 0 push {1_u32 << 4}  eq skiz push 17293822564807737345
-            dup 0 push {1_u32 << 5}  eq skiz push 70368744161280
-            dup 0 push {1_u32 << 6}  eq skiz push 549755813888
-            dup 0 push {1_u32 << 7}  eq skiz push 17870292113338400769
-            dup 0 push {1_u32 << 8}  eq skiz push 13797081185216407910
-            dup 0 push {1_u32 << 9}  eq skiz push 1803076106186727246
-            dup 0 push {1_u32 << 10} eq skiz push 11353340290879379826
-            dup 0 push {1_u32 << 11} eq skiz push 455906449640507599
-            dup 0 push {1_u32 << 12} eq skiz push 17492915097719143606
-            dup 0 push {1_u32 << 13} eq skiz push 1532612707718625687
-            dup 0 push {1_u32 << 14} eq skiz push 16207902636198568418
-            dup 0 push {1_u32 << 15} eq skiz push 17776499369601055404
-            dup 0 push {1_u32 << 16} eq skiz push 6115771955107415310
-            dup 0 push {1_u32 << 17} eq skiz push 12380578893860276750
-            dup 0 push {1_u32 << 18} eq skiz push 9306717745644682924
-            dup 0 push {1_u32 << 19} eq skiz push 18146160046829613826
-            dup 0 push {1_u32 << 20} eq skiz push 3511170319078647661
-            dup 0 push {1_u32 << 21} eq skiz push 17654865857378133588
-            dup 0 push {1_u32 << 22} eq skiz push 5416168637041100469
-            dup 0 push {1_u32 << 23} eq skiz push 16905767614792059275
-            dup 0 push {1_u32 << 24} eq skiz push 9713644485405565297
-            dup 0 push {1_u32 << 25} eq skiz push 5456943929260765144
-            dup 0 push {1_u32 << 26} eq skiz push 17096174751763063430
-            dup 0 push {1_u32 << 27} eq skiz push 1213594585890690845
-            dup 0 push {1_u32 << 28} eq skiz push 6414415596519834757
-            dup 0 push {1_u32 << 29} eq skiz push 16116352524544190054
-            dup 0 push {1_u32 << 30} eq skiz push 9123114210336311365
-            dup 0 push {1_u32 << 31} eq skiz push 4614640910117430873
+            dup 0 push 1             eq skiz push {root_of_pow(0)}
+            dup 0 push {1_u32 << 1}  eq skiz push {root_of_pow(1)}
+            dup 0 push {1_u32 << 2}  eq skiz push {root_of_pow(2)}
+            dup 0 push {1_u32 << 3}  eq skiz push {root_of_pow(3)}
+            dup 0 push {1_u32 << 4}  eq skiz push {root_of_pow(4)}
+            dup 0 push {1_u32 << 5}  eq skiz push {root_of_pow(5)}
+            dup 0 push {1_u32 << 6}  eq skiz push {root_of_pow(6)}
+            dup 0 push {1_u32 << 7}  eq skiz push {root_of_pow(7)}
+            dup 0 push {1_u32 << 8}  eq skiz push {root_of_pow(8)}
+            dup 0 push {1_u32 << 9}  eq skiz push {root_of_pow(9)}
+            dup 0 push {1_u32 << 10} eq skiz push {root_of_pow(10)}
+            dup 0 push {1_u32 << 11} eq skiz push {root_of_pow(11)}
+            dup 0 push {1_u32 << 12} eq skiz push {root_of_pow(12)}
+            dup 0 push {1_u32 << 13} eq skiz push {root_of_pow(13)}
+            dup 0 push {1_u32 << 14} eq skiz push {root_of_pow(14)}
+            dup 0 push {1_u32 << 15} eq skiz push {root_of_pow(15)}
+            dup 0 push {1_u32 << 16} eq skiz push {root_of_pow(16)}
+            dup 0 push {1_u32 << 17} eq skiz push {root_of_pow(17)}
+            dup 0 push {1_u32 << 18} eq skiz push {root_of_pow(18)}
+            dup 0 push {1_u32 << 19} eq skiz push {root_of_pow(19)}
+            dup 0 push {1_u32 << 20} eq skiz push {root_of_pow(20)}
+            dup 0 push {1_u32 << 21} eq skiz push {root_of_pow(21)}
+            dup 0 push {1_u32 << 22} eq skiz push {root_of_pow(22)}
+            dup 0 push {1_u32 << 23} eq skiz push {root_of_pow(23)}
+            dup 0 push {1_u32 << 24} eq skiz push {root_of_pow(24)}
+            dup 0 push {1_u32 << 25} eq skiz push {root_of_pow(25)}
+            dup 0 push {1_u32 << 26} eq skiz push {root_of_pow(26)}
+            dup 0 push {1_u32 << 27} eq skiz push {root_of_pow(27)}
+            dup 0 push {1_u32 << 28} eq skiz push {root_of_pow(28)}
+            dup 0 push {1_u32 << 29} eq skiz push {root_of_pow(29)}
+            dup 0 push {1_u32 << 30} eq skiz push {root_of_pow(30)}
+            dup 0 push {1_u32 << 31} eq skiz push {root_of_pow(31)}
 
-            // Since all roots happen to be larger than `u32::MAX`, or `1` we can
+            // Since all roots happen to be either 1 or larger than `u32::MAX`, we can
             // test if the top element is a root or not. If this assumption
             // were to change, VM execution would crash here, and tests would
             // catch that.
@@ -103,24 +119,30 @@ impl BasicSnippet for PrimitiveRootOfUnity {
             dup 0
             push 1
             eq
-            // stack if result found:     _ order_hi order_lo root (root == 1)
-            // stack if result not found: _ order_hi order_lo (order_lo == 1)
+            // Result found:     _ order_hi order_lo root (root == 1)
+            // Result not found: _ order_hi order_lo (order_lo == 1)
+            //      If order_lo is 1, a primitive root exists, i.e., a result was found. This
+            //      contradicts this case's assumption. Therefore, order_lo cannot be 1 here,
+            //      and the stack is:
+            //                   _ order_hi order_lo 0
 
             dup 1
             split
             // Result found:     _ order_hi order_lo root (root == 1) root_hi root_lo
-            // Result not found: _ order_hi order_lo (order_lo == 1) 0 order_lo
+            // Result not found: _ order_hi order_lo 0 0 order_lo
 
             pop 1
             // Result found:     _ order_hi order_lo root (root == 1) root_hi
-            // Result not found: _ order_hi order_lo (order_lo == 1) 0
+            // Result not found: _ order_hi order_lo 0 0
 
             push 0
             eq
             push 0
             eq
             // Result found:     _ order_hi order_lo root (root == 1) (root_hi != 0)
-            // Result not found: _ order_hi order_lo (order_lo == 1) (0 != 0)
+            // Result not found: _ order_hi order_lo 0 (0 != 0)
+            //                                         ~~~~~~~~
+            //                                           == 0
 
             add
             push 0
@@ -128,7 +150,9 @@ impl BasicSnippet for PrimitiveRootOfUnity {
             push 0
             eq
             // Result found:     _ order_hi order_lo root ((root == 1) || (root_hi != 0))
-            // Result not found: _ order_hi order_lo ((order_lo == 1) || (0 != 0))
+            // Result not found: _ order_hi order_lo (0 || 0)
+            //                                       ~~~~~~~~
+            //                                         == 0
 
             assert error_id 141
             // Result found:     _ order_hi order_lo root
@@ -138,7 +162,6 @@ impl BasicSnippet for PrimitiveRootOfUnity {
             pop 2
 
             return
-
         )
     }
 }
@@ -182,6 +205,26 @@ mod tests {
     use crate::traits::closure::ShadowedClosure;
     use crate::traits::rust_shadow::RustShadow;
     use crate::InitVmState;
+
+    #[test]
+    fn primitive_root_of_order_2_pow_32_is_not_a_legal_order() {
+        let root = BFieldElement::primitive_root_of_unity(1 << 32).unwrap();
+
+        // this assumption is made in the snippet
+        assert!(BFieldElement::primitive_root_of_unity(root.value()).is_none());
+    }
+
+    #[test]
+    fn all_primitive_roots_are_either_1_or_larger_than_u32_max() {
+        for pow in 1..=32 {
+            let root = BFieldElement::primitive_root_of_unity(1 << pow)
+                .unwrap()
+                .value();
+
+            // this assumption is made in the snippet
+            assert!(root == 1 || root > u64::from(u32::MAX));
+        }
+    }
 
     #[test]
     fn primitive_root_of_unity_pbt() {
