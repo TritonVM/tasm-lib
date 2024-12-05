@@ -2,10 +2,10 @@
   {
     "name": "tasmlib_verifier_fri_barycentric_evaluation",
     "benchmark_result": {
-      "clock_cycle_count": 6104,
-      "hash_table_height": 270,
-      "u32_table_height": 50,
-      "op_stack_table_height": 4811,
+      "clock_cycle_count": 6110,
+      "hash_table_height": 276,
+      "u32_table_height": 60,
+      "op_stack_table_height": 4817,
       "ram_table_height": 3073
     },
     "case": "CommonCase"
@@ -13,10 +13,10 @@
   {
     "name": "tasmlib_verifier_fri_barycentric_evaluation",
     "benchmark_result": {
-      "clock_cycle_count": 11992,
-      "hash_table_height": 270,
-      "u32_table_height": 49,
-      "op_stack_table_height": 9419,
+      "clock_cycle_count": 11998,
+      "hash_table_height": 276,
+      "u32_table_height": 60,
+      "op_stack_table_height": 9425,
       "ram_table_height": 6145
     },
     "case": "WorstCase"

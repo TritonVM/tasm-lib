@@ -13,6 +13,7 @@ use crate::traits::closure::Closure;
 ///
 /// ### Pre-conditions
 ///
+/// - the order is [encoded](BFieldCodec) correctly
 /// - the order is a power of two
 /// - the order is not 0
 /// - the order is less than or equal to 2^32
@@ -44,7 +45,16 @@ impl BasicSnippet for PrimitiveRootOfUnity {
             {self.entrypoint()}:
             // _ order_hi order_lo
 
-            // First check if order i $1^{32}$.
+            /* Assert correct encoding of the input. `order_hi` is checked later. */
+
+            dup 0
+            split
+            pop 1
+            push 0
+            eq
+            assert error_id 142
+
+            /* check if order is 2^32, i.e., (order_hi, order_lo) == (1, 0) */
 
             dup 1
             push 1
@@ -61,19 +71,21 @@ impl BasicSnippet for PrimitiveRootOfUnity {
                 push {root_of_pow(32)}
             // _ order_hi order_lo [root]
 
-            // at this point `st1` *must* be zero:
-            // if order == 2^32:      _ 1 0        root
-            // any other legal order: _ 0 order_lo
+            /* At this point, `st1` *must* be zero:
+             * if order == 2^32:      _ 1 0        root
+             * any other legal order: _ 0 order_lo
+             */
 
             dup 1
             push 0
             eq
             assert error_id 140
 
-            // Now we only have to check `order_lo`. We can ignore `order_hi` as we've
-            // verified that it's 0 in case the order was not $1^{32}$.
-            // Furthermore, the primitive root of order 2^32 is not itself a legal order
-            // of some other primitive root.
+            /* Now we only have to check `order_lo`. We can ignore `order_hi` as we've
+             * verified that it's 0 in case the order was not $1^{32}$.
+             * Furthermore, the primitive root of order 2^32 is not itself a legal order
+             * of some other primitive root.
+             */
 
             dup 0 push 1             eq skiz push {root_of_pow(0)}
             dup 0 push {1_u32 << 1}  eq skiz push {root_of_pow(1)}
@@ -108,10 +120,11 @@ impl BasicSnippet for PrimitiveRootOfUnity {
             dup 0 push {1_u32 << 30} eq skiz push {root_of_pow(30)}
             dup 0 push {1_u32 << 31} eq skiz push {root_of_pow(31)}
 
-            // Since all roots happen to be either 1 or larger than `u32::MAX`, we can
-            // test if the top element is a root or not. If this assumption
-            // were to change, VM execution would crash here, and tests would
-            // catch that.
+            /* Since all roots happen to be either 1 or larger than `u32::MAX`, we can
+             * test if the top element is a root or not. If this assumption
+             * were to change, VM execution would crash here, and tests would
+             * catch that.
+             */
 
             // stack if result found:     _ order_hi order_lo root
             // stack if result not found: _ order_hi order_lo
@@ -197,7 +210,9 @@ impl Closure for PrimitiveRootOfUnity {
 
 #[cfg(test)]
 mod tests {
+    use proptest::prelude::*;
     use tasm_lib::test_helpers::test_assertion_failure;
+    use test_strategy::proptest;
     use triton_vm::prelude::*;
 
     use super::*;
@@ -273,6 +288,26 @@ mod tests {
                 &[140, 141],
             );
         }
+    }
+
+    #[proptest]
+    fn triton_vm_crashes_if_order_lo_is_not_u32(
+        #[strategy(1_u8..=32)] log_2_order: u8,
+        #[strategy(0..=u32::MAX)]
+        #[map(u64::from)]
+        noise: u64,
+    ) {
+        let [mut order_lo, order_hi] = (1_u64 << log_2_order).encode()[..] else {
+            unreachable!()
+        };
+        order_lo += bfe!(noise << 32);
+        prop_assume!((order_lo.value() >> 32) == noise); // no finite-field wrap-around shenanigans
+
+        test_assertion_failure(
+            &ShadowedClosure::new(PrimitiveRootOfUnity),
+            InitVmState::with_stack([empty_stack(), vec![order_hi, order_lo]].concat()),
+            &[142],
+        );
     }
 }
 
